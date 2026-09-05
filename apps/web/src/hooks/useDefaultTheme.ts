@@ -6,6 +6,11 @@ import { primaryServerSettingsAtom } from "../state/server";
 import { getThemeDefinition, singleAppearanceOf, subscribeToCustomThemes } from "../themePalette";
 import { useTheme } from "./useTheme";
 
+/**
+ * Scoped per environment: each machine's `t2code theme set` is its own act, so
+ * hopping between primary environments neither replays one environment's
+ * theme over the user's pick nor swallows another's.
+ */
 const APPLIED_DEFAULT_THEME_STORAGE_PREFIX = "t3code:default-theme-applied:v2:";
 
 /** Include set time so reasserting the same theme still applies. */
@@ -43,6 +48,14 @@ function writeAppliedGeneration(storageKey: string, generation: string): void {
   } catch {}
 }
 
+/**
+ * Applies the environment's theme (`t2code theme set <id>`). Each set switches
+ * this client once — live when connected, on the next connect otherwise —
+ * and then steps aside: a theme the user picks in Settings afterwards wins
+ * until the environment's theme is set again. The environment's own published
+ * themes are valid targets, which is why this waits for an id that does not
+ * resolve yet — the setting and the palette it names arrive independently.
+ */
 export function useDefaultThemeAdoption(): void {
   const environmentId = useAtomValue(primaryEnvironmentIdAtom);
   const settings = useAtomValue(primaryServerSettingsAtom);
