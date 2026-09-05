@@ -228,7 +228,7 @@ describe("t2code pair", () => {
       const rendered = String(
         typeof error === "object" && error !== null && "cause" in error ? error.cause : error,
       );
-      assert.include(rendered, "No running T3 Code server found.");
+      assert.include(rendered, "No running T2 Code server found.");
       assert.include(rendered, "npx @t2code/cli serve");
       assert.include(rendered, "npx @t2code/cli connect");
     }).pipe(Effect.provide(NodeServices.layer)),
@@ -259,7 +259,7 @@ describe("t2code pair", () => {
         const rendered = String(
           typeof error === "object" && error !== null && "cause" in error ? error.cause : error,
         );
-        assert.include(rendered, "No running T3 Code server found.");
+        assert.include(rendered, "No running T2 Code server found.");
       }),
     ).pipe(Effect.provide(NodeServices.layer)),
   );
@@ -285,7 +285,7 @@ describe("t2code pair", () => {
       const rendered = String(
         typeof error === "object" && error !== null && "cause" in error ? error.cause : error,
       );
-      assert.include(rendered, "No running T3 Code server found.");
+      assert.include(rendered, "No running T2 Code server found.");
     }).pipe(Effect.provide(NodeServices.layer)),
   );
 });

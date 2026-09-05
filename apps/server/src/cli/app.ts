@@ -59,7 +59,7 @@ export class DesktopAppUnreachableError extends Schema.TaggedErrorClass<DesktopA
   },
 ) {
   override get message(): string {
-    return "Could not reach the T3 Code desktop app. Start or update the desktop app on this machine, then run `t2code app` again. A running T3 Code server is not enough.";
+    return "Could not reach the T2 Code desktop app. Start or update the desktop app on this machine, then run `t2code app` again. A running T2 Code server is not enough.";
   }
 }
 
@@ -73,7 +73,7 @@ export class DesktopAppRequestFailedError extends Schema.TaggedErrorClass<Deskto
   },
 ) {
   override get message(): string {
-    return `T3 Code could not open ${this.workspaceRoot} (${this.code}).`;
+    return `T2 Code could not open ${this.workspaceRoot} (${this.code}).`;
   }
 }
 
@@ -246,7 +246,7 @@ const runAppCommand = Effect.fn("cli.app")(function* (flags: {
     });
   }
 
-  yield* Console.log(`Opened ${workspaceRoot} in T3 Code.`);
+  yield* Console.log(`Opened ${workspaceRoot} in T2 Code.`);
 });
 
 export const appCommand = Command.make("app", {
@@ -256,6 +256,6 @@ export const appCommand = Command.make("app", {
     Argument.optional,
   ),
 }).pipe(
-  Command.withDescription("Open a project in the running T3 Code desktop app."),
+  Command.withDescription("Open a project in the running T2 Code desktop app."),
   Command.withHandler(runAppCommand),
 );
