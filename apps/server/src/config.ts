@@ -13,7 +13,7 @@ import { DEFAULT_SIGNAL_EXPORT, type SignalExport } from "@t3tools/shared/observ
 import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
 import packageJson from "../package.json" with { type: "json" };
 
-export const DEFAULT_PORT = 3773;
+export const DEFAULT_PORT = 3772;
 
 export const RuntimeMode = Schema.Literals(["web", "desktop"]);
 export type RuntimeMode = typeof RuntimeMode.Type;

@@ -3,7 +3,7 @@ import { expect, it } from "@effect/vitest";
 import { resolveHeadlessConnectionString } from "./startupAccess.ts";
 
 it("resolves wildcard hosts to a concrete external interface when one is available", () => {
-  const connectionString = resolveHeadlessConnectionString("0.0.0.0", 3773, {
+  const connectionString = resolveHeadlessConnectionString("0.0.0.0", 3772, {
     en0: [
       {
         address: "192.168.1.42",
@@ -26,5 +26,5 @@ it("resolves wildcard hosts to a concrete external interface when one is availab
     ],
   });
 
-  expect(connectionString).toBe("http://192.168.1.42:3773");
+  expect(connectionString).toBe("http://192.168.1.42:3772");
 });

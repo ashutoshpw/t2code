@@ -39,8 +39,8 @@ const layerCliRuntime = Layer.mergeAll(NodeServices.layer, NetService.layer);
 const baseState = {
   version: 1,
   pid: 123,
-  port: 3_773,
-  origin: "http://127.0.0.1:3773",
+  port: 3_772,
+  origin: "http://127.0.0.1:3772",
   startedAt: "2026-06-20T00:00:00.000Z",
 } as const satisfies PersistedServerRuntimeState;
 
@@ -64,6 +64,17 @@ describe("pair tailscale local target", () => {
     expect(
       resolveTailscaleLocalTarget({ ...baseState, devUrl: "https://localhost:5733/" }),
     ).toBeInstanceOf(DevServerNotProxiableError);
+  });
+
+  it("proxies the backend port directly otherwise", () => {
+    expect(resolveTailscaleLocalTarget(baseState)).toEqual({ localPort: 3_772 });
+    expect(resolveTailscaleLocalTarget({ ...baseState, host: "0.0.0.0" })).toEqual({
+      localPort: 3_772,
+    });
+    expect(resolveTailscaleLocalTarget({ ...baseState, host: "192.168.1.42" })).toEqual({
+      localPort: 3_772,
+      localHost: "192.168.1.42",
+    });
   });
 });
 
