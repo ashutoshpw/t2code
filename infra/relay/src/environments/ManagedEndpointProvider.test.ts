@@ -420,7 +420,7 @@ describe("ManagedEndpointProvider", () => {
       const result = yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       expect(result.runtime.connectorToken).toBe("connector-token");
@@ -438,7 +438,7 @@ describe("ManagedEndpointProvider", () => {
       const result = yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       expect(result).toEqual({
@@ -478,7 +478,7 @@ describe("ManagedEndpointProvider", () => {
           ingress: [
             {
               hostname,
-              service: "http://127.0.0.1:3773",
+              service: "http://127.0.0.1:3772",
             },
             { service: "http_status:404" },
           ],
@@ -513,7 +513,7 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       expect(limitCalls).toEqual([{ userId: "user_ABC", environmentId: "env_ABC" }]);
@@ -546,7 +546,7 @@ describe("ManagedEndpointProvider", () => {
         provider.provision({
           userId: "user_ABC",
           environmentId: "env_ABC",
-          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         }),
       );
 
@@ -575,7 +575,7 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       const requestedName = (
@@ -622,7 +622,7 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env-ipv6",
-        origin: { localHttpHost: "::1", localHttpPort: 3773 },
+        origin: { localHttpHost: "::1", localHttpPort: 3772 },
       });
 
       expect(
@@ -631,7 +631,7 @@ describe("ManagedEndpointProvider", () => {
         tunnelConfig: {
           ingress: [
             {
-              service: "http://[::1]:3773",
+              service: "http://[::1]:3772",
             },
             { service: "http_status:404" },
           ],
@@ -649,7 +649,7 @@ describe("ManagedEndpointProvider", () => {
         provider.provision({
           userId: "user_ABC",
           environmentId: "env_ABC",
-          origin: { localHttpHost: "192.168.1.10", localHttpPort: 3773 },
+          origin: { localHttpHost: "192.168.1.10", localHttpPort: 3772 },
         }),
       );
 
@@ -661,7 +661,7 @@ describe("ManagedEndpointProvider", () => {
           userId: "user_ABC",
           environmentId: "env_ABC",
           host: "192.168.1.10",
-          port: 3773,
+          port: 3772,
         });
       }
     }).pipe(Effect.provide(layerProvider(makeTunnelClient(), makeDnsClient(dnsCalls))));
@@ -695,7 +695,7 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       expect(dnsCalls.map((call) => call.operation)).toEqual(["listRecords", "updateRecord"]);
@@ -722,7 +722,7 @@ describe("ManagedEndpointProvider", () => {
       const request = {
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       } as const;
       yield* provider.provision(request);
       yield* provider.provision(request);
@@ -769,7 +769,7 @@ describe("ManagedEndpointProvider", () => {
       const request = {
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       } as const;
       yield* provider.provision(request);
       yield* dnsClient.deleteRecord("created-record-id");
@@ -821,7 +821,7 @@ describe("ManagedEndpointProvider", () => {
       const request = {
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       } as const;
       yield* provider.provision(request);
       const error = yield* Effect.flip(provider.provision(request));
@@ -861,7 +861,7 @@ describe("ManagedEndpointProvider", () => {
         const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
         yield* provider.provision({
           ...key,
-          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         });
         yield* provider.deprovision(key);
 
@@ -905,7 +905,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       const request = {
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       } as const;
       yield* provider.provision(request);
       const unlinkTarget = yield* provider.prepareDeprovision(key);
@@ -942,7 +942,7 @@ describe("ManagedEndpointProvider", () => {
     return Effect.gen(function* () {
       const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
-      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3773 } as const;
+      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3772 } as const;
       const first = yield* provider.provision({ ...key, origin });
       const released = yield* provider.release(key);
       const second = yield* provider.provision({ ...key, origin });
@@ -1030,7 +1030,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       const released = yield* provider.release(key);
 
@@ -1541,7 +1541,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       yield* provider.release(key);
     }).pipe(Effect.provide(layer));
@@ -1607,7 +1607,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       const error = yield* Effect.flip(provider.release(key));
 
@@ -1701,7 +1701,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       const first = yield* Effect.result(provider.deprovision(key));
       expect(first._tag).toBe("Failure");
@@ -1763,7 +1763,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       yield* provider.deprovision(key);
 
@@ -1779,12 +1779,12 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env_shared",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       yield* provider.provision({
         userId: "user_DEF",
         environmentId: "env_shared",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       expect(
@@ -1831,7 +1831,7 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       expect(dnsCalls.map((call) => call.operation)).toEqual([
@@ -1856,7 +1856,7 @@ describe("ManagedEndpointProvider", () => {
         provider.provision({
           userId: "user_ABC",
           environmentId: "env_ABC",
-          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         }),
       );
 
@@ -1896,7 +1896,7 @@ describe("ManagedEndpointProvider", () => {
         provider.provision({
           userId: "user_ABC",
           environmentId: "env_ABC",
-          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         }),
       );
 
