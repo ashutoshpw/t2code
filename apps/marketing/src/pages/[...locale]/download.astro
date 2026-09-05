@@ -25,13 +25,13 @@ const imageProps = {
 ---
 
 <Layout
-  title={t.title}
-  description={t.description}
+  title="Download T2 Code for macOS, Windows, and Linux | T2 Code"
+  description="Download the official T2 Code desktop app for macOS, Windows, or Linux, or get the iOS and Android apps. t2.codes is the only official download site."
   jsonLd={[
     softwareJsonLd(),
     breadcrumbJsonLd([
-      { name: "T3 Code", path: localizedHref(locale, "/") },
-      { name: t.breadcrumb, path: localizedHref(locale, "/download") },
+      { name: "T2 Code", path: "/" },
+      { name: "Download", path: "/download" },
     ]),
   ]}
   locale={locale}
@@ -51,7 +51,7 @@ const imageProps = {
           <Image class="head-icon--stable" src={iconStable} width={64} height={64} loading="eager" {...imageProps} />
           <Image class="head-icon--nightly" src={iconNightly} width={64} height={64} loading="eager" {...imageProps} />
         </span>
-        <h1 class="heading">{t.heading}</h1>
+        <h1 class="heading">Download T2 Code</h1>
       </div>
       <div class="channel-toggle" role="tablist" aria-label={t.channelLabel} data-rise style="--d:90ms">
         <span class="channel-thumb" aria-hidden="true"></span>
@@ -172,13 +172,13 @@ const imageProps = {
           <svg class="platform-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7l5 5-5 5M12 17h7"/></svg>
           <h2 class="platform-name">{t.terminal}</h2>
         </div>
-        <code class="cli-line cli-line--stable">curl -fsSL https://t3.codes/install.sh | sh</code>
-        <code class="cli-line cli-line--stable">irm https://t3.codes/install.ps1 | iex</code>
-        <code class="cli-line cli-line--nightly">curl -fsSL https://t3.codes/install.sh | T3CODE_CHANNEL=nightly sh</code>
-        <code class="cli-line cli-line--nightly">$env:T3CODE_CHANNEL="nightly"; irm https://t3.codes/install.ps1 | iex</code>
+        <code class="cli-line cli-line--stable">curl -fsSL https://t2.codes/install.sh | sh</code>
+        <code class="cli-line cli-line--stable">irm https://t2.codes/install.ps1 | iex</code>
+        <code class="cli-line cli-line--nightly">curl -fsSL https://t2.codes/install.sh | T2CODE_CHANNEL=nightly sh</code>
+        <code class="cli-line cli-line--nightly">$env:T2CODE_CHANNEL="nightly"; irm https://t2.codes/install.ps1 | iex</code>
         <p class="cli-note">{t.tryOnce}</p>
-        <code class="cli-line cli-line--stable">npx t3@latest</code>
-        <code class="cli-line cli-line--nightly">npx t3@nightly</code>
+        <code class="cli-line cli-line--stable">npx @t2code/cli@latest</code>
+        <code class="cli-line cli-line--nightly">npx @t2code/cli@nightly</code>
       </section>
     </div>
 

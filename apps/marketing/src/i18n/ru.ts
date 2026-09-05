@@ -2,13 +2,13 @@ import type { Messages } from "./en";
 
 export const ru: Messages = {
   layout: {
-    defaultTitle: "T3 Code",
-    defaultDescription: "T3 Code. Открытый пульт управления ИИ-агентами для программирования.",
+    defaultTitle: "T2 Code",
+    defaultDescription: "T2 Code. Открытый пульт управления ИИ-агентами для программирования.",
     socialImageAlt:
-      "T3 Code: открытый пульт управления ИИ-агентами для программирования. Claude Code, Codex, Cursor, OpenCode, Grok и Antigravity.",
-    homeLabel: "Главная страница T3 Code",
+      "T2 Code: открытый пульт управления ИИ-агентами для программирования. Claude Code, Codex, Cursor, OpenCode, Grok и Antigravity.",
+    homeLabel: "Главная страница T2 Code",
     download: "Скачать",
-    starsLabel: "Поставить звезду T3 Code на GitHub, звёзд: {stars}",
+    starsLabel: "Поставить звезду T2 Code на GitHub, звёзд: {stars}",
     githubStars: "{stars} звёзд на GitHub",
     language: "Язык",
     mitLicensed: "Лицензия MIT",
@@ -19,8 +19,8 @@ export const ru: Messages = {
     security: "Безопасность",
   },
   home: {
-    title: "T3 Code | Открытый пульт управления ИИ-агентами для программирования",
-    description: "T3 Code. Открытый пульт управления ИИ-агентами для программирования.",
+    title: "T2 Code | Открытый пульт управления ИИ-агентами для программирования",
+    description: "T2 Code. Открытый пульт управления ИИ-агентами для программирования.",
     heroTitle: ["Открытый пульт", "управления", "ИИ-агентами для кода."],
     heroSub:
       "Управляйте Claude Code, Codex, Antigravity, OpenCode, Cursor и Grok из одного окна. Пользуйтесь своей подпиской. Форкайте всё целиком.",
@@ -29,14 +29,14 @@ export const ru: Messages = {
     downloadForLinux: "Скачать для Linux",
     sourceLink: "Украдите наш код (легально)",
     alsoOnPhone: "Есть и для телефона:",
-    screenshotAlt: "T3 Code запускает субагентов Claude, Codex, Muse и Gemini в одном треде",
+    screenshotAlt: "T2 Code запускает субагентов Claude, Codex, Muse и Gemini в одном треде",
     endorsementsTitle: "Нас терпят более {users} разработчиков",
     endorsementsSub: "Некоторые даже написали об этом в X.",
     endorsementsLabel: "Отзывы разработчиков",
     readPost: "Читать пост {handle} в X",
     harnessTitle: "Со своей подпиской",
     harnessBody:
-      "T3 Code не перепродаёт токены. Подключайте Claude Code, Codex, Antigravity, OpenCode, Cursor или Grok с учётными данными, которые у вас уже есть. Мы управляем агентами, тариф остаётся вашим.",
+      "T2 Code не перепродаёт токены. Подключайте Claude Code, Codex, Antigravity, OpenCode, Cursor или Grok с учётными данными, которые у вас уже есть. Мы управляем агентами, тариф остаётся вашим.",
     googleSignIn: "Вход через Google",
     harnessPoints: [
       "Никакой перепродажи ключей. Никаких лимитов.",
@@ -44,7 +44,7 @@ export const ru: Messages = {
       "Новые агенты каждую неделю.",
     ],
     gitVisualLabel:
-      "Схема работы с Git в T3 Code: просмотр диффа, коммит и пуш изменений, создание пул-реквеста.",
+      "Схема работы с Git в T2 Code: просмотр диффа, коммит и пуш изменений, создание пул-реквеста.",
     prReady: "Готово",
     prCommits: "3 коммита",
     viewDiff: "Открыть дифф",
@@ -70,15 +70,15 @@ export const ru: Messages = {
     browseSource: "Исходный код",
     ctaTitle: "Ваши агенты заслуживают лучшего, чем терминал.",
     ctaSub:
-      "T3 Code бесплатный, открытый и быстрый. Установите его, подключите подписку, за которую уже платите, и дайте агентам поработать.",
+      "T2 Code бесплатный, открытый и быстрый. Установите его, подключите подписку, за которую уже платите, и дайте агентам поработать.",
     otherPlatforms: "Другие платформы",
   },
   download: {
-    title: "Скачать T3 Code для macOS, Windows и Linux | T3 Code",
+    title: "Скачать T2 Code для macOS, Windows и Linux | T2 Code",
     description:
-      "Скачайте официальное десктопное приложение T3 Code для macOS, Windows или Linux либо приложения для iOS и Android. Единственный официальный сайт для загрузки: t3.codes.",
+      "Скачайте официальное десктопное приложение T2 Code для macOS, Windows или Linux либо приложения для iOS и Android. Единственный официальный сайт для загрузки: t2.codes.",
     breadcrumb: "Скачать",
-    heading: "Скачать T3 Code",
+    heading: "Скачать T2 Code",
     channelLabel: "Канал релизов",
     stable: "Стабильный",
     nightly: "Nightly",
