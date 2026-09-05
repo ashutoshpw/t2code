@@ -31,7 +31,7 @@ it("launch prompt stays a single argv-safe line naming the prompt file", () => {
 it("context file labels the CLI version as the CLI's, not the user's build", () => {
   const context = buildTriageContext({
     ...contextInput,
-    entry: { kind: "cli", cliVersion: "0.0.42", launchedAs: "npx t3 triage" },
+    entry: { kind: "cli", cliVersion: "0.0.42", launchedAs: "npx @t2code/cli triage" },
     server: "running (pid 42, http://127.0.0.1:3773, version 0.0.43-nightly.20260923.2173)",
   });
   assert.notInclude(context, "Installed version");
@@ -48,7 +48,7 @@ it("in-app context warns the agent off its own server and points at the clone in
     server: "running (pid 42, version 0.1.1); this session runs inside it",
     sourceClone: {
       _tag: "cloning",
-      directory: "/home/u/.t3/source/abc123",
+      directory: "/home/u/.t2/source/abc123",
       ref: "v0.1.1",
       commit: "abc123",
       serverVersion: "0.1.1",
@@ -57,7 +57,7 @@ it("in-app context warns the agent off its own server and points at the clone in
   assert.notInclude(context, "Triage CLI version");
   assert.include(context, "- Started from: T3 Code Desktop version 0.1.1 on macos (");
   assert.include(context, "## This session runs inside T3 Code");
-  assert.include(context, "/home/u/.t3/source/abc123  (v0.1.1, commit abc123)");
+  assert.include(context, "/home/u/.t2/source/abc123  (v0.1.1, commit abc123)");
   assert.include(context, "Wait for it instead of\ncloning again.");
 });
 
@@ -66,17 +66,17 @@ const contextInput = {
   os: "linux x64 (7.2.0)",
   nodeVersion: "v26.8.2",
   paths: {
-    stateDir: "/home/u/.t3/userdata",
-    dbPath: "/home/u/.t3/userdata/state.sqlite",
-    settingsPath: "/home/u/.t3/userdata/settings.json",
-    logsDir: "/home/u/.t3/userdata/logs",
-    serviceLogPath: "/home/u/.t3/userdata/logs/boot-service.log",
-    desktopBackendLogGlob: "/home/u/.t3/userdata/logs/server-child*.log*",
-    serverTracePath: "/home/u/.t3/userdata/logs/server.trace.ndjson",
-    providerEventLogPath: "/home/u/.t3/userdata/logs/provider/events.log",
-    terminalLogsDir: "/home/u/.t3/userdata/logs/terminals",
-    providerStatusCacheDir: "/home/u/.t3/caches",
-    secretsDir: "/home/u/.t3/userdata/secrets",
-    sourceCacheDir: "/home/u/.t3/source",
+    stateDir: "/home/u/.t2/userdata",
+    dbPath: "/home/u/.t2/userdata/state.sqlite",
+    settingsPath: "/home/u/.t2/userdata/settings.json",
+    logsDir: "/home/u/.t2/userdata/logs",
+    serviceLogPath: "/home/u/.t2/userdata/logs/boot-service.log",
+    desktopBackendLogGlob: "/home/u/.t2/userdata/logs/server-child*.log*",
+    serverTracePath: "/home/u/.t2/userdata/logs/server.trace.ndjson",
+    providerEventLogPath: "/home/u/.t2/userdata/logs/provider/events.log",
+    terminalLogsDir: "/home/u/.t2/userdata/logs/terminals",
+    providerStatusCacheDir: "/home/u/.t2/caches",
+    secretsDir: "/home/u/.t2/userdata/secrets",
+    sourceCacheDir: "/home/u/.t2/source",
   },
 } satisfies Omit<TriageContextInput, "entry" | "server">;

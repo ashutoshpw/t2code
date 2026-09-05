@@ -212,4 +212,4 @@ export class SourceControlProvider extends Context.Service<
       readonly force?: boolean;
     }) => Effect.Effect<void, SourceControlProviderError>;
   }
->()("@t3tools/source-control-core/server/SourceControlProvider") {}
+>()("@t2code/source-control-core/server/SourceControlProvider") {}

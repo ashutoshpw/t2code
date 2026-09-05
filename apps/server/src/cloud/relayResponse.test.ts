@@ -41,6 +41,42 @@ it("reports a transport failure category without exposing request or cause detai
   expect(shouldRetryRelayRequest(error)).toBe(true);
 });
 
+it.effect("reports the tunnel limit and relay trace instead of a generic 403", () =>
+  Effect.gen(function* () {
+    const error = yield* filterRelayResponse(
+      response(403, {
+        _tag: "RelayEnvironmentLinkLimitExceededError",
+        code: "environment_link_limit_exceeded",
+        maxTunnels: 3,
+        traceId: "trace-limit",
+      }),
+    ).pipe(Effect.mapError(relayRequestError), Effect.flip);
+
+    expect(error).toMatchObject({ _tag: "RelayRequestError", rejection: "forbidden" });
+    expect(error.message).toContain("at most 3 tunnels");
+    expect(error.message).toContain("Unlink an unused environment");
+    expect(error.message).toContain("Trace ID: trace-limit");
+  }),
+);
+
+it.effect("makes revoked authorization actionable and non-retryable", () =>
+  Effect.gen(function* () {
+    const error = yield* filterRelayResponse(
+      response(401, {
+        _tag: "RelayAuthInvalidError",
+        code: "auth_invalid",
+        reason: "invalid_bearer",
+        traceId: "trace-auth",
+      }),
+    ).pipe(Effect.mapError(relayRequestError), Effect.flip);
+
+    expect(error).toMatchObject({ _tag: "RelayRequestError", rejection: "unauthorized" });
+    expect(error.message).toContain("invalid_bearer");
+    expect(error.message).toContain("t2code connect login");
+    expect(error.message).toContain("Trace ID: trace-auth");
+  }),
+);
+
 it.effect("retries an expired link proof but not a revoked bearer, both 401", () =>
   Effect.gen(function* () {
     const expired = yield* filterRelayResponse(

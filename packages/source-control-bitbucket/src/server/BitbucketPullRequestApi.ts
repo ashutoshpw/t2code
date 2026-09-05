@@ -270,7 +270,7 @@ export class BitbucketPullRequestApi extends Context.Service<
       readonly resolved: boolean;
     }) => Effect.Effect<void, BitbucketPullRequestApiError>;
   }
->()("@t3tools/source-control-bitbucket/server/BitbucketPullRequestApi") {}
+>()("@t2code/source-control-bitbucket/server/BitbucketPullRequestApi") {}
 
 function repositorySegments(
   repository: string,

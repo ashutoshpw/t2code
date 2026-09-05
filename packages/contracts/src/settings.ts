@@ -282,9 +282,17 @@ const QuitConfirmationModeSetting = Schema.Union([QuitConfirmationMode, LegacyCo
 export const FontFamilyPreference = Schema.String.check(Schema.isMaxLength(200));
 export type FontFamilyPreference = typeof FontFamilyPreference.Type;
 
-/** Clients apply each environment theme set once; later local choices persist until the next set. Empty clears it. */
+/**
+ * The environment's theme, set with `t2code theme set <id>`. Each client applies
+ * it once per value — live when connected, on its next connect otherwise — so
+ * setting it switches every client, while a theme a user picks in Settings
+ * afterwards sticks until the next set. Empty means "no environment theme",
+ * which is also how it is cleared.
+ */
 export const DefaultThemePreference = Schema.String.check(Schema.isMaxLength(64));
-// Excluded from RPC patches so t3 theme set can validate syntax and resolvability.
+// Deliberately absent from ServerSettingsPatch: `t2code theme set` checks that an
+// id is syntactically valid and actually resolvable, and a generic RPC patch
+// would let a client write a theme no client can resolve, bypassing both.
 export type DefaultThemePreference = typeof DefaultThemePreference.Type;
 
 export const DEFAULT_BROWSER_VIEWPORT: PreviewViewportSetting = FILL_PREVIEW_VIEWPORT;
@@ -1279,7 +1287,11 @@ export const ServerSettings = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_BACKGROUND_ACTIVITY_PROFILE)),
   ),
   defaultTheme: DefaultThemePreference.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
-  /** Distinguishes repeated sets of the same theme so clients apply each one. */
+  /**
+   * When the environment's theme was last set, so clients can tell a re-set of
+   * the same value from one they already applied: `t2 theme set` must act even
+   * when it names the theme it named before.
+   */
   defaultThemeSetAt: Schema.String.check(Schema.isMaxLength(64)).pipe(
     Schema.withDecodingDefault(Effect.succeed("")),
   ),

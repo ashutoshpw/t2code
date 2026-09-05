@@ -403,7 +403,7 @@ export class GitLabPullRequestCli extends Context.Service<
       readonly reacted: boolean;
     }) => Effect.Effect<void, GitLabPullRequestCliError>;
   }
->()("@t3tools/source-control-gitlab/server/GitLabPullRequestCli") {}
+>()("@t2code/source-control-gitlab/server/GitLabPullRequestCli") {}
 
 function projectPath(repository: string): string {
   return encodeURIComponent(repository.trim());
