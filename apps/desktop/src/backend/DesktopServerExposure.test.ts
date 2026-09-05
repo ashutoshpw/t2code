@@ -443,4 +443,104 @@ describe("DesktopServerExposure", () => {
       },
     ),
   );
+
+  it.effect("advertises loopback, LAN, and configured manual endpoints from runtime state", () =>
+    withHarness(
+      lanNetworkInterfaces,
+      Effect.gen(function* () {
+        const serverExposure = yield* DesktopServerExposure.DesktopServerExposure;
+        yield* serverExposure.configureFromSettings({ port: 3772 });
+        yield* serverExposure.setMode("network-accessible");
+
+        const endpoints = yield* serverExposure.getAdvertisedEndpoints;
+        assert.deepEqual(endpoints, [
+          {
+            id: "desktop-loopback:3772",
+            label: "This machine",
+            provider: {
+              id: "desktop-core",
+              label: "Desktop",
+              kind: "core",
+              isAddon: false,
+            },
+            httpBaseUrl: "http://127.0.0.1:3772/",
+            wsBaseUrl: "ws://127.0.0.1:3772/",
+            reachability: "loopback",
+            compatibility: {
+              hostedHttpsApp: "mixed-content-blocked",
+              desktopApp: "compatible",
+            },
+            source: "desktop-core",
+            status: "available",
+            description: "Loopback endpoint for this desktop app.",
+          },
+          {
+            id: "desktop-lan:http://192.168.1.20:3772",
+            label: "Local network",
+            provider: {
+              id: "desktop-core",
+              label: "Desktop",
+              kind: "core",
+              isAddon: false,
+            },
+            httpBaseUrl: "http://192.168.1.20:3772/",
+            wsBaseUrl: "ws://192.168.1.20:3772/",
+            reachability: "lan",
+            compatibility: {
+              hostedHttpsApp: "mixed-content-blocked",
+              desktopApp: "compatible",
+            },
+            source: "desktop-core",
+            status: "available",
+            isDefault: true,
+            description: "Reachable from devices on the same network.",
+          },
+          {
+            id: "manual:https://desktop.example.ts.net",
+            label: "Custom HTTPS",
+            provider: {
+              id: "manual",
+              label: "Manual",
+              kind: "manual",
+              isAddon: false,
+            },
+            httpBaseUrl: "https://desktop.example.ts.net/",
+            wsBaseUrl: "wss://desktop.example.ts.net/",
+            reachability: "public",
+            compatibility: {
+              hostedHttpsApp: "compatible",
+              desktopApp: "compatible",
+            },
+            source: "user",
+            status: "unknown",
+            description: "User-configured HTTPS endpoint for this desktop backend.",
+          },
+          {
+            id: "manual:http://desktop.example.test:3772",
+            label: "Custom endpoint",
+            provider: {
+              id: "manual",
+              label: "Manual",
+              kind: "manual",
+              isAddon: false,
+            },
+            httpBaseUrl: "http://desktop.example.test:3772/",
+            wsBaseUrl: "ws://desktop.example.test:3772/",
+            reachability: "public",
+            compatibility: {
+              hostedHttpsApp: "mixed-content-blocked",
+              desktopApp: "compatible",
+            },
+            source: "user",
+            status: "unknown",
+            description: "User-configured endpoint for this desktop backend.",
+          },
+        ]);
+      }),
+      {
+        T3CODE_DESKTOP_HTTPS_ENDPOINTS:
+          "https://desktop.example.ts.net,http://desktop.example.test:3772,not-a-url",
+      },
+    ),
+  );
 });
