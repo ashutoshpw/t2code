@@ -444,7 +444,7 @@ export const PullRequestsToolkitRegistrationLive = McpServer.toolkit(PullRequest
 );
 
 const McpTransportLive = McpServer.layerHttp({
-  name: "T3 Code",
+  name: "T2 Code",
   version: packageJson.version,
   path: "/mcp",
   protocols: [McpProtocol.v2025_06_18],
