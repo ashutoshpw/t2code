@@ -3743,7 +3743,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     private: true,
     packageManager: rootPackageJson.packageManager,
     description:
-      "T3 Code is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.",
+      "T2 Code is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.",
     license: "MIT",
     homepage: "https://t3.codes",
     author: "T3 Tools",
