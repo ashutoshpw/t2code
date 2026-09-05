@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(async (_tabId: string, _url: string): Promise<void> => undefined),
   rememberPreviewUrl: vi.fn(),
-  readPreparedConnection: vi.fn(() => ({ httpBaseUrl: "http://172.25.85.75:3773" })),
+  readPreparedConnection: vi.fn(() => ({ httpBaseUrl: "http://172.25.85.75:3772" })),
   readEnvironmentScope: vi.fn(() => true),
   setAnnotationSendEnabled: vi.fn(async (): Promise<void> => undefined),
   cancelPickElement: vi.fn(async () => undefined),

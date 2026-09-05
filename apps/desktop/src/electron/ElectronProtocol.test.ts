@@ -83,7 +83,8 @@ describe("ElectronProtocol", () => {
           const protocol = yield* ElectronProtocol.ElectronProtocol;
           yield* protocol.registerDesktopProtocol({
             scheme: "t3code-dev",
-            targetOrigin: new URL("http://127.0.0.1:3773/"),
+            targetOrigin: new URL("http://127.0.0.1:3772/"),
+            backendOrigin: new URL("http://127.0.0.1:3774/"),
             clerkFrontendApiHostname: "clerk.t3.codes",
           });
           assert.isDefined(handler);
@@ -124,7 +125,7 @@ describe("ElectronProtocol", () => {
         handleMock.mock.calls.map((call) => call[0]),
         ["t3code-dev"],
       );
-      assert.equal(netFetchMock.mock.calls[0]?.[0], "http://127.0.0.1:3773/api/health?verbose=1");
+      assert.equal(netFetchMock.mock.calls[0]?.[0], "http://127.0.0.1:3772/api/health?verbose=1");
       const forwardedHeaders = new Headers(netFetchMock.mock.calls[0]?.[1]?.headers);
       assert.equal(forwardedHeaders.get("accept"), "application/json");
       assert.isNull(forwardedHeaders.get("origin"));
@@ -146,7 +147,8 @@ describe("ElectronProtocol", () => {
           const protocol = yield* ElectronProtocol.ElectronProtocol;
           yield* protocol.registerDesktopProtocol({
             scheme: "t3code",
-            targetOrigin: new URL("http://127.0.0.1:3773/"),
+            targetOrigin: new URL("http://127.0.0.1:3772/"),
+            backendOrigin: new URL("http://127.0.0.1:3772/"),
             clerkFrontendApiHostname: undefined,
           });
           return yield* Effect.promise(() => handler!(new Request("t3code://other/")));
@@ -174,6 +176,7 @@ describe("ElectronProtocol", () => {
           yield* protocol.registerDesktopProtocol({
             scheme: "t3code-dev",
             targetOrigin: new URL("http://127.0.0.1:5733/"),
+            backendOrigin: new URL("http://127.0.0.1:3772/"),
             clerkFrontendApiHostname: undefined,
           });
           const fiber = yield* Effect.forkChild(
@@ -244,7 +247,8 @@ describe("ElectronProtocol", () => {
       const error = yield* Effect.scoped(
         protocol.registerDesktopProtocol({
           scheme: "t3code-dev",
-          targetOrigin: new URL("http://127.0.0.1:3773/"),
+          targetOrigin: new URL("http://127.0.0.1:3772/"),
+          backendOrigin: new URL("http://127.0.0.1:3774/"),
           clerkFrontendApiHostname: undefined,
         }),
       ).pipe(Effect.flip);
@@ -268,7 +272,8 @@ describe("ElectronProtocol", () => {
         Effect.scoped(
           protocol.registerDesktopProtocol({
             scheme: "t3code",
-            targetOrigin: new URL("http://127.0.0.1:3773/"),
+            targetOrigin: new URL("http://127.0.0.1:3772/"),
+            backendOrigin: new URL("http://127.0.0.1:3772/"),
             clerkFrontendApiHostname: undefined,
           }),
         ),
@@ -288,7 +293,8 @@ describe("ElectronProtocol", () => {
   it("keeps executable sources host-restricted while allowing runtime network resources", () => {
     const policy = ElectronProtocol.makeDesktopContentSecurityPolicy({
       scheme: "t3code",
-      targetOrigin: new URL("http://127.0.0.1:3773/"),
+      targetOrigin: new URL("http://127.0.0.1:3772/"),
+      backendOrigin: new URL("http://127.0.0.1:3772/"),
       clerkFrontendApiHostname: "clerk.t3.codes",
     });
     const directives = Object.fromEntries(

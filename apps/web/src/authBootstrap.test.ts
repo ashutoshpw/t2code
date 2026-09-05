@@ -84,8 +84,8 @@ function installDesktopBootstrap() {
       {
         id: "primary",
         label: "Local environment",
-        httpBaseUrl: "http://localhost:3773",
-        wsBaseUrl: "ws://localhost:3773",
+        httpBaseUrl: "http://localhost:3772",
+        wsBaseUrl: "ws://localhost:3772",
         bootstrapToken: "desktop-bootstrap-token",
       },
     ],
@@ -166,8 +166,8 @@ describe("resolveInitialServerAuthGateState", () => {
         {
           id: "primary",
           label: "Windows",
-          httpBaseUrl: "http://localhost:3773",
-          wsBaseUrl: "ws://localhost:3773",
+          httpBaseUrl: "http://localhost:3772",
+          wsBaseUrl: "ws://localhost:3772",
           bootstrapToken: "desktop-bootstrap-token",
         },
       ],
@@ -224,8 +224,8 @@ describe("resolveInitialServerAuthGateState", () => {
         {
           id: "primary",
           label: "Windows",
-          httpBaseUrl: "http://127.0.0.1:3773",
-          wsBaseUrl: "ws://127.0.0.1:3773",
+          httpBaseUrl: "http://127.0.0.1:3772",
+          wsBaseUrl: "ws://127.0.0.1:3772",
         },
       ],
     } as unknown as DesktopBridge;
@@ -600,8 +600,8 @@ describe("resolveInitialServerAuthGateState", () => {
         {
           id: "primary",
           label: "Windows",
-          httpBaseUrl: "http://localhost:3773",
-          wsBaseUrl: "ws://localhost:3773",
+          httpBaseUrl: "http://localhost:3772",
+          wsBaseUrl: "ws://localhost:3772",
           bootstrapToken: "desktop-bootstrap-token",
         },
       ],

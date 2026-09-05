@@ -90,7 +90,7 @@ it.layer(NodeServices.layer)("EnvironmentAuthPolicy.layer", (it) => {
       expect(descriptor.policy).toBe("loopback-browser");
       expect(descriptor.bootstrapMethods).toEqual(["one-time-token"]);
       expect(descriptor.serverUpdateScope).toBe("environment:maintain");
-      expect(descriptor.sessionCookieName).toMatch(/^t3_session_3773_[a-f0-9]{12}$/);
+      expect(descriptor.sessionCookieName).toMatch(/^t3_session_3772_[a-f0-9]{12}$/);
     }).pipe(
       Effect.provide(
         layerEnvironmentAuthPolicy({

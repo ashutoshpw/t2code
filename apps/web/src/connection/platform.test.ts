@@ -275,7 +275,7 @@ describe("desktop-local bearer cache across token changes", () => {
 describe("primary topology cache", () => {
   const registration = {} as never;
   const cached = {
-    signature: "primary|http://127.0.0.1:3773/|ws://127.0.0.1:3773/",
+    signature: "primary|http://127.0.0.1:3772/|ws://127.0.0.1:3772/",
     registration,
   };
   const previous = new Map([[PRIMARY_LOCAL_ENVIRONMENT_ID, cached]]);
