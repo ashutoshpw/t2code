@@ -12,7 +12,7 @@ export class EnvironmentAuthPolicy extends Context.Service<
   {
     readonly getDescriptor: () => Effect.Effect<ServerAuthDescriptor>;
   }
->()("t3/auth/EnvironmentAuthPolicy") {}
+>()("@t2code/cli/auth/EnvironmentAuthPolicy") {}
 
 /** @public */
 export const make = Effect.gen(function* () {

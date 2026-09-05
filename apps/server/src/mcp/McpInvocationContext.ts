@@ -52,7 +52,7 @@ export interface McpInvocationScope {
 export class McpInvocationContext extends Context.Service<
   McpInvocationContext,
   McpInvocationScope
->()("t3/mcp/McpInvocationContext") {}
+>()("@t2code/cli/mcp/McpInvocationContext") {}
 
 /**
  * `McpSchema.EnabledWhen` for tools a delegated child must not see or call.

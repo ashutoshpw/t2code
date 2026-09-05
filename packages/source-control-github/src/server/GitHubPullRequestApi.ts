@@ -743,7 +743,7 @@ export class GitHubPullRequestApi extends Context.Service<
       readonly body: string;
     }) => Effect.Effect<void, GitHubPullRequestApiError>;
   }
->()("@t3tools/source-control-github/server/GitHubPullRequestApi") {}
+>()("@t2code/source-control-github/server/GitHubPullRequestApi") {}
 
 function parseRepositorySelector(value: string): {
   readonly owner: string;
