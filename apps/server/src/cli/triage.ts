@@ -1,3 +1,14 @@
+/**
+ * `t2code triage` - hand a misbehaving install to the user's own coding agent.
+ *
+ * The command is deliberately thin: it writes a `context.md` with machine facts
+ * (version, paths, server liveness), then launches claude or codex
+ * interactively, seeded with the playbook from `triagePrompt.ts`. The agent
+ * asks the user what went wrong, investigates, and files the issue; the
+ * harness's own permission prompts gate anything it wants to run. With no
+ * agent CLI installed, the prompt and context are written to disk for the user
+ * to paste into whatever agent they do have.
+ */
 // @effect-diagnostics nodeBuiltinImport:off
 import * as NodeChildProcess from "node:child_process";
 import * as NodeReadlinePromises from "node:readline/promises";
@@ -123,6 +134,8 @@ export const triageCommand = Command.make("triage", {
   Command.withHandler((flags) =>
     Effect.gen(function* () {
       // Triage is a user-facing feature: always the userdata state, never dev.
+      // --base-dir wins; T3CODE_HOME is its documented env equivalent (same
+      // precedence as `t2code pair`).
       const explicitBaseDir = Option.getOrUndefined(flags.baseDir);
       const envHome = yield* Config.String("T3CODE_HOME").pipe(Config.option);
       const baseDir = yield* resolveBaseDir(explicitBaseDir ?? Option.getOrUndefined(envHome));

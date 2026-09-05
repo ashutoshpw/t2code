@@ -48,6 +48,7 @@ import { isExactServiceVersion, SERVICE_LAUNCHER_PROTOCOL } from "./serviceProto
 
 // A staged runtime's cold start can take over a minute on a loaded, swapping host.
 const PREFLIGHT_TIMEOUT = Duration.minutes(3);
+const CLI_PACKAGE_NAME = "@t2code/cli";
 
 export function resolveServerSelfUpdateCapability(input: {
   readonly desktopManaged: boolean;
@@ -72,7 +73,7 @@ export class ServerSelfUpdate extends Context.Service<
       onHandoffAccepted?: () => Effect.Effect<void>,
     ) => Effect.Effect<never, ServerSelfUpdateError>;
   }
->()("t3/cloud/selfUpdate/ServerSelfUpdate") {}
+>()("@t2code/cli/cloud/selfUpdate/ServerSelfUpdate") {}
 
 /**
  * A server starting from the runtime its launcher settled on means runtimes left by earlier
@@ -185,7 +186,7 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
     }
     if (capability === null) {
       return yield* failWith(
-        "Remote updates require the T3 Code background service. Run `t3 service install` on the server machine.",
+        "Remote updates require the T3 Code background service. Run `t2code service install` on the server machine.",
       );
     }
 
@@ -193,7 +194,7 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
     if (unsafeCrossing !== null) return yield* failWith(unsafeCrossing);
     const targetVersion = input.targetVersion.trim();
     if (!isExactServiceVersion(targetVersion)) {
-      return yield* failWith(`'${targetVersion}' is not an exact t3 version.`);
+      return yield* failWith(`'${targetVersion}' is not an exact t2code version.`);
     }
     if (yield* Ref.getAndSet(inFlight, true)) {
       return yield* failWith("A server update is already in progress.");
@@ -288,7 +289,7 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
           }
           if (mirror !== undefined && isUnpublishedRelease(error)) {
             return failWith(
-              `${mirror.organization}'s update mirror has no t3@${targetVersion} for this machine.`,
+              `${mirror.organization}'s update mirror has no ${CLI_PACKAGE_NAME}@${targetVersion} for this machine.`,
               error,
             );
           }
@@ -299,7 +300,7 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
             .filter((part) => part !== undefined)
             .join(" ");
           return failWith(
-            `Could not prepare t3@${targetVersion} while ${error.step}${downloadFailure ? ` (${downloadFailure})` : ""}.`,
+            `Could not prepare ${CLI_PACKAGE_NAME}@${targetVersion} while ${error.step}${downloadFailure ? ` (${downloadFailure})` : ""}.`,
             error,
           );
         }),
