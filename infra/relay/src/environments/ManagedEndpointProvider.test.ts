@@ -439,7 +439,7 @@ describe("ManagedEndpointProvider", () => {
       const result = yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       expect(result).toEqual({
@@ -479,7 +479,7 @@ describe("ManagedEndpointProvider", () => {
           ingress: [
             {
               hostname,
-              service: "http://127.0.0.1:3773",
+              service: "http://127.0.0.1:3772",
             },
             { service: "http_status:404" },
           ],
@@ -523,7 +523,7 @@ describe("ManagedEndpointProvider", () => {
         provider.provision({
           userId: "user_ABC",
           environmentId: "env_ABC",
-          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         }),
       );
 
@@ -552,7 +552,7 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       const requestedName = (
@@ -599,7 +599,7 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env-ipv6",
-        origin: { localHttpHost: "::1", localHttpPort: 3773 },
+        origin: { localHttpHost: "::1", localHttpPort: 3772 },
       });
 
       expect(
@@ -608,7 +608,7 @@ describe("ManagedEndpointProvider", () => {
         tunnelConfig: {
           ingress: [
             {
-              service: "http://[::1]:3773",
+              service: "http://[::1]:3772",
             },
             { service: "http_status:404" },
           ],
@@ -626,7 +626,7 @@ describe("ManagedEndpointProvider", () => {
         provider.provision({
           userId: "user_ABC",
           environmentId: "env_ABC",
-          origin: { localHttpHost: "192.168.1.10", localHttpPort: 3773 },
+          origin: { localHttpHost: "192.168.1.10", localHttpPort: 3772 },
         }),
       );
 
@@ -638,7 +638,7 @@ describe("ManagedEndpointProvider", () => {
           userId: "user_ABC",
           environmentId: "env_ABC",
           host: "192.168.1.10",
-          port: 3773,
+          port: 3772,
         });
       }
     }).pipe(Effect.provide(layerProvider(makeTunnelClient(), makeDnsClient(dnsCalls))));
@@ -659,7 +659,7 @@ describe("ManagedEndpointProvider", () => {
       const request = {
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       } as const;
       yield* provider.provision(request);
       yield* provider.provision(request);
@@ -706,7 +706,7 @@ describe("ManagedEndpointProvider", () => {
       const request = {
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       } as const;
       const provisioned = yield* provider.provision(request);
       tunnelCalls.length = 0;
@@ -890,7 +890,7 @@ describe("ManagedEndpointProvider", () => {
       const request = {
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       } as const;
       yield* provider.provision(request);
       const error = yield* Effect.flip(provider.provision(request));
@@ -930,7 +930,7 @@ describe("ManagedEndpointProvider", () => {
         const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
         yield* provider.provision({
           ...key,
-          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         });
         yield* provider.deprovision(key);
 
@@ -974,7 +974,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       const request = {
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       } as const;
       yield* provider.provision(request);
       const unlinkTarget = yield* provider.prepareDeprovision(key);
@@ -1011,7 +1011,7 @@ describe("ManagedEndpointProvider", () => {
     return Effect.gen(function* () {
       const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
-      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3773 } as const;
+      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3772 } as const;
       const first = yield* provider.provision({ ...key, origin });
       const released = yield* provider.release(key);
       const second = yield* provider.provision({ ...key, origin });
@@ -1071,7 +1071,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       const released = yield* provider.release(key);
 
@@ -1438,6 +1438,75 @@ describe("ManagedEndpointProvider", () => {
     }).pipe(Effect.provide(layer));
   });
 
+  it.effect("keeps a tunnel when a new provision replaces the release generation", () => {
+    const tunnelCalls: TunnelCall[] = [];
+    const allocations = makeAllocations();
+    const replaced = ManagedEndpointAllocations.ManagedEndpointAllocations.of({
+      ...allocations,
+      claimRelease: (input) =>
+        allocations.claimRelease(input).pipe(
+          Effect.tap((claimedGeneration) =>
+            claimedGeneration === null
+              ? Effect.void
+              : allocations
+                  .recordTunnel({
+                    userId: input.userId,
+                    environmentId: input.environmentId,
+                    tunnelId: "replacement-tunnel",
+                    generation: claimedGeneration,
+                  })
+                  .pipe(Effect.asVoid),
+          ),
+        ),
+    });
+    const layer = layerProvider(makePersistentTunnelClient(tunnelCalls), makeDnsClient(), replaced);
+
+    return Effect.gen(function* () {
+      const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
+      const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
+      yield* provider.provision({
+        ...key,
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+      });
+
+      expect(
+        yield* provider.release({
+          ...key,
+          expectedTunnelId: "tunnel-id",
+          expectedStatus: "down",
+          expectedInactiveBefore: "2026-06-01T00:05:00.000Z",
+        }),
+      ).toBe(false);
+      expect(tunnelCalls.map((call) => call.operation)).not.toContain("delete");
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("treats an already deleted tunnel as successfully released", () => {
+    const notFound = { _tag: "NotFound" } as const;
+    const tunnelClient = ManagedEndpointProvider.ManagedEndpointTunnelClient.of({
+      ...makeTunnelClient(),
+      delete: (tunnelId) =>
+        Effect.fail(
+          new ManagedEndpointProvider.ManagedEndpointTunnelClientError({
+            operation: "delete",
+            tunnelId,
+            cause: notFound,
+          }),
+        ),
+    });
+    const layer = layerProvider(tunnelClient, makeDnsClient(), makeAllocations());
+
+    return Effect.gen(function* () {
+      const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
+      const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
+      yield* provider.provision({
+        ...key,
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
+      });
+      yield* provider.release(key);
+    }).pipe(Effect.provide(layer));
+  });
+
   it.effect.each([
     { name: "the tunnel is gone", tunnelRemoved: true, released: true },
     { name: "the tunnel still exists", tunnelRemoved: false, released: false },
@@ -1547,7 +1616,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       const first = yield* Effect.result(provider.deprovision(key));
       expect(first._tag).toBe("Failure");
@@ -1655,7 +1724,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       yield* provider.deprovision(key);
 
@@ -1671,12 +1740,12 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env_shared",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       yield* provider.provision({
         userId: "user_DEF",
         environmentId: "env_shared",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       expect(
@@ -1723,7 +1792,7 @@ describe("ManagedEndpointProvider", () => {
       yield* provider.provision({
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
 
       expect(dnsCalls.map((call) => call.operation)).toEqual([
@@ -1748,7 +1817,7 @@ describe("ManagedEndpointProvider", () => {
         provider.provision({
           userId: "user_ABC",
           environmentId: "env_ABC",
-          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+          origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         }),
       );
 

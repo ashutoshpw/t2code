@@ -71,13 +71,13 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
         expect(descriptor.policy).toBe("loopback-browser");
         expect(descriptor.bootstrapMethods).toEqual(["one-time-token"]);
         expect(descriptor.serverUpdateScope).toBe("environment:maintain");
-        expect(descriptor.sessionCookieName).toMatch(/^t3_session_3773_[a-f0-9]{12}$/);
+        expect(descriptor.sessionCookieName).toMatch(/^t3_session_3772_[a-f0-9]{12}$/);
       }).pipe(
         Effect.provide(
           layerEnvironmentAuthPolicy({
             mode: "web",
             host: "127.0.0.1",
-            port: 3773,
+            port: 3772,
           }),
         ),
       ),

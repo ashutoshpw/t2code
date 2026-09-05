@@ -17,11 +17,30 @@ const ipv4 = (address: string, internal = false): NodeOS.NetworkInterfaceInfo =>
 });
 
 it("resolves wildcard hosts to a concrete external interface when one is available", () => {
-  const connectionString = resolveHeadlessConnectionString("0.0.0.0", 3773, {
-    interfaces: { en0: [ipv4("192.168.1.42")], lo0: [ipv4("127.0.0.1", true)] },
+  const connectionString = resolveHeadlessConnectionString("0.0.0.0", 3772, {
+    en0: [
+      {
+        address: "192.168.1.42",
+        netmask: "255.255.255.0",
+        family: "IPv4",
+        mac: "00:00:00:00:00:00",
+        internal: false,
+        cidr: "192.168.1.42/24",
+      },
+    ],
+    lo0: [
+      {
+        address: "127.0.0.1",
+        netmask: "255.0.0.0",
+        family: "IPv4",
+        mac: "00:00:00:00:00:00",
+        internal: true,
+        cidr: "127.0.0.1/8",
+      },
+    ],
   });
 
-  expect(connectionString).toBe("http://192.168.1.42:3773");
+  expect(connectionString).toBe("http://192.168.1.42:3772");
 });
 
 it("skips public and container addresses for a private-network listener", () => {
