@@ -264,6 +264,23 @@ describe("t2 pair", () => {
     ).pipe(Effect.provide(NodeServices.layer)),
   );
 
+  it.effect("directs to t3 serve or t3 connect when no server is running", () =>
+    Effect.gen(function* () {
+      const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-pair-none-test-"));
+
+      const error = yield* provideCliTestLayers(
+        runCli(["pair", "--base-dir", baseDir]).pipe(Effect.flip),
+      );
+
+      const rendered = String(
+        typeof error === "object" && error !== null && "cause" in error ? error.cause : error,
+      );
+      assert.include(rendered, "No running T2 Code server found.");
+      assert.include(rendered, "npx @t2code/cli serve");
+      assert.include(rendered, "npx @t2code/cli connect");
+    }).pipe(Effect.provide(NodeServices.layer)),
+  );
+
   it.effect("ignores runtime state whose recorded pid is no longer alive", () =>
     withDescriptorServer((origin) =>
       Effect.gen(function* () {
@@ -285,7 +302,7 @@ describe("t2 pair", () => {
         const rendered = String(
           typeof error === "object" && error !== null && "cause" in error ? error.cause : error,
         );
-        assert.include(rendered, "No running T3 Code server found.");
+        assert.include(rendered, "No running T2 Code server found.");
       }),
     ).pipe(Effect.provide(NodeServices.layer)),
   );
@@ -321,7 +338,7 @@ describe("t2 pair", () => {
           ),
         );
 
-        assert.include(String(error), "No running T3 Code server found.");
+        assert.include(String(error), "No running T2 Code server found.");
         assert.notInclude(String(error), sharedHome);
         assert.deepEqual(NodeFS.readdirSync(NodePath.join(sharedHome, "userdata")), [
           "server-runtime.json",
@@ -369,7 +386,7 @@ describe("t2 pair", () => {
   it.effect("explains a tailnet without HTTPS serve instead of running tailscale serve", () =>
     withDescriptorServer((origin) =>
       Effect.gen(function* () {
-        const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-pair-ts-test-"));
+        const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-pair-ts-test-"));
         yield* persistServerRuntimeState({
           path: NodePath.join(baseDir, "userdata", "server-runtime.json"),
           state: yield* makePersistedServerRuntimeState({

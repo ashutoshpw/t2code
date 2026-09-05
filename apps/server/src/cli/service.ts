@@ -70,10 +70,10 @@ function formatServiceChange(
 
 function formatServiceStatus(status: BootService.BootServiceStatus, cliVersion: string): string {
   if (!status.supported) {
-    return "T3 Code service\n  Status: unavailable on this machine\n  Supported on: Linux with systemd, macOS with launchd";
+    return "T2 Code service\n  Status: unavailable on this machine\n  Supported on: Linux with systemd, macOS with launchd";
   }
   if (!status.installed) {
-    return "T3 Code service\n  Status: not installed\n  Next: Run `t2code service install`.";
+    return "T2 Code service\n  Status: not installed\n  Next: Run `t2code service install`.";
   }
   const installedVersion = status.installedVersion ?? cliVersion;
   const problems = (status.problems ?? []).map(
@@ -85,7 +85,7 @@ function formatServiceStatus(status: BootService.BootServiceStatus, cliVersion: 
     compareExactServiceVersions(status.installedVersion, cliVersion) > 0
   ) {
     return [
-      "T3 Code service",
+      "T2 Code service",
       `  Status: installed · ${packageJson.name}@${installedVersion} (newer than this ${packageJson.name}@${cliVersion} CLI)`,
       `  Unit: ${status.unitPath}`,
       `  Logs: ${status.logPath}`,
@@ -94,7 +94,7 @@ function formatServiceStatus(status: BootService.BootServiceStatus, cliVersion: 
     ].join("\n");
   }
   return [
-    "T3 Code service",
+    "T2 Code service",
     `  Status: ${status.current ? `installed · ${packageJson.name}@${installedVersion}` : "needs an update or repair"}`,
     `  Unit: ${status.unitPath}`,
     `  Logs: ${status.logPath}`,
@@ -121,7 +121,7 @@ const serviceReconcileFlags = {
 };
 
 const serviceInstallCommand = Command.make("install", serviceReconcileFlags).pipe(
-  Command.withDescription("Install T3 Code as a background service for this user."),
+  Command.withDescription("Install T2 Code as a background service for this user."),
   Command.withHandler((flags) =>
     runServiceCommand(
       flags,
@@ -188,7 +188,7 @@ const serviceRestartCommand = Command.make("restart", projectLocationFlags).pipe
 );
 
 const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).pipe(
-  Command.withDescription("Stop and remove the T3 Code background service."),
+  Command.withDescription("Stop and remove the T2 Code background service."),
   Command.withHandler((flags) =>
     runServiceCommand(
       flags,
@@ -196,7 +196,7 @@ const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).
         const service = yield* BootService.BootService;
         const removed = yield* service.uninstall;
         yield* Console.log(
-          removed ? "Removed the T3 Code service." : "T3 Code service is not installed.",
+          removed ? "Removed the T2 Code service." : "T2 Code service is not installed.",
         );
       }),
     ),
@@ -204,7 +204,7 @@ const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).
 );
 
 const serviceStatusCommand = Command.make("status", projectLocationFlags).pipe(
-  Command.withDescription("Show whether the T3 Code background service is installed."),
+  Command.withDescription("Show whether the T2 Code background service is installed."),
   Command.withHandler((flags) =>
     runServiceCommand(
       flags,
@@ -226,7 +226,7 @@ export const offerServiceDuringOnboarding = Effect.gen(function* () {
     return "skipped" as const;
   }
   if (installed && current) {
-    yield* Console.log("T3 Code is already set up to run in the background on this machine.");
+    yield* Console.log("T2 Code is already set up to run in the background on this machine.");
     return "ready" as const;
   }
   for (const problem of status.problems ?? []) {
@@ -246,11 +246,11 @@ export const offerServiceDuringOnboarding = Effect.gen(function* () {
   const wanted = yield* Prompt.run(
     Prompt.Confirm({
       message: installed
-        ? "The installed T3 Code service needs an update or repair. Update it now?"
+        ? "The installed T2 Code service needs an update or repair. Update it now?"
         : platform === "darwin"
-          ? "Run T3 Code in the background whenever you log in to this Mac? " +
+          ? "Run T2 Code in the background whenever you log in to this Mac? " +
             "It stays reachable through T3 Connect while you are logged in."
-          : "Run T3 Code in the background whenever this machine boots? " +
+          : "Run T2 Code in the background whenever this machine boots? " +
             "It stays reachable through T3 Connect even after you log out.",
       initial: true,
     }),
@@ -299,7 +299,7 @@ export const recoverServiceOnboardingOffer = <R>(
   );
 
 export const serviceCommand = Command.make("service").pipe(
-  Command.withDescription("Manage the T3 Code background service."),
+  Command.withDescription("Manage the T2 Code background service."),
   Command.withSubcommands([
     serviceInstallCommand,
     serviceRestartCommand,
