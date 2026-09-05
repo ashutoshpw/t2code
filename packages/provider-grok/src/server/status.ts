@@ -413,7 +413,7 @@ export const checkGrokProviderStatus = Effect.fn("checkGrokProviderStatus")(func
         version: null,
         status: "warning",
         auth: { status: "unknown" },
-        message: "Grok is disabled in T3 Code settings.",
+        message: "Grok is disabled in T2 Code settings.",
       },
     });
   }

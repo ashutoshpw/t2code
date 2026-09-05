@@ -5,9 +5,9 @@ import type {
   ServerProviderAuth,
   ServerProviderModel,
   ServerProviderState,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { CursorSettings } from "../settings.ts";
-import { createModelCapabilities } from "@t3tools/shared/model";
+import { createModelCapabilities } from "@t2code/shared/model";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -263,7 +263,7 @@ export const checkCursorProviderStatus = Effect.fn("checkCursorProviderStatus")(
         version: null,
         status: "warning",
         auth: { status: "unknown" },
-        message: "Cursor is disabled in T3 Code settings.",
+        message: "Cursor is disabled in T2 Code settings.",
       },
     });
   }

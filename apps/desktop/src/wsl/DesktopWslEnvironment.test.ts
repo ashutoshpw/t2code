@@ -92,6 +92,198 @@ describe("WSL runtime cache", () => {
     expect(script).toContain("/1.2.3_x64__touch__tmp_nope");
     expect(script).not.toContain(runtimeId);
   });
+
+  it("installs through a temporary directory and only reuses valid completed caches", () => {
+    const script = buildWslRuntimeInstallScript(
+      "/mnt/c/Program Files/T2 Code/wsl-runtime.tar.gz",
+      "1.2.3-x64",
+      "b".repeat(64),
+    );
+
+    expect(script).toContain('runtime_parent="$HOME/.t3/wsl-runtime"');
+    expect(script).toContain('  [ -f "$ready_marker" ] &&');
+    expect(script).toContain('    runtime_entry_runs "$runtime_root" &&');
+    expect(script).toContain("if runtime_is_ready; then");
+    expect(script).not.toContain("bin.mjs");
+    expect(script).not.toContain("node-pty");
+    expect(script).toContain("trap 'exit 1' HUP INT TERM");
+    expect(script).toContain('exec 9> "$runtime_lock"');
+    expect(script).toContain("flock -x 9");
+    expect(script).not.toContain('rm -rf "$runtime_lock"');
+    expect(script).toContain('mv -T "$runtime_root" "$runtime_stale"');
+    expect(script).toContain('mktemp -d "$runtime_parent/.1.2.3-x64.tmp.XXXXXX"');
+    // The release archive wraps everything in one `t3-<version>-linux-x64/`
+    // directory; stripping it puts the executable at `$runtime_root/t3`.
+    expect(script).toContain(
+      "tar -xzf '/mnt/c/Program Files/T2 Code/wsl-runtime.tar.gz' -C \"$runtime_tmp\" --strip-components=1",
+    );
+    expect(script).toContain('if ! runtime_entry_runs "$runtime_tmp"; then');
+    expect(script).toContain('mv -T "$runtime_tmp" "$runtime_root"');
+    expect(script).not.toContain('rm -rf "$runtime_root"');
+
+    const lockAcquired = script.indexOf("flock -x 9");
+    const readinessAfterLock = script.indexOf("if runtime_is_ready; then", lockAcquired + 1);
+    const existingRuntimeMoved = script.indexOf('mv -T "$runtime_root" "$runtime_stale"');
+    expect(lockAcquired).toBeGreaterThan(-1);
+    expect(readinessAfterLock).toBeGreaterThan(lockAcquired);
+    expect(existingRuntimeMoved).toBeGreaterThan(readinessAfterLock);
+  });
+
+  it("verifies the archive digest before extracting, and only on a cache miss", () => {
+    const script = buildWslRuntimeInstallScript(
+      "/mnt/c/Program Files/T2 Code/wsl-runtime.tar.gz",
+      "1.2.3-x64",
+      "b".repeat(64),
+    );
+
+    const expected = "b".repeat(64);
+    expect(script).toContain(
+      "archive_sha=$(sha256sum '/mnt/c/Program Files/T2 Code/wsl-runtime.tar.gz' | cut -d ' ' -f 1)",
+    );
+    expect(script).toContain(`if [ "$archive_sha" != '${expected}' ]; then`);
+
+    const readyShortCircuit = script.indexOf("if runtime_is_ready; then");
+    const digestChecked = script.indexOf("archive_sha=$(sha256sum");
+    const existingRuntimeMoved = script.indexOf('mv -T "$runtime_root" "$runtime_stale"');
+    const extracted = script.indexOf("tar -xzf");
+    expect(digestChecked).toBeGreaterThan(readyShortCircuit);
+    expect(existingRuntimeMoved).toBeGreaterThan(digestChecked);
+    expect(extracted).toBeGreaterThan(digestChecked);
+  });
+
+  it("moves an in-use runtime aside instead of deleting it under a live backend", () => {
+    const script = buildWslRuntimeInstallScript(
+      "/mnt/c/Program Files/T2 Code/wsl-runtime.tar.gz",
+      "sha256-" + "c".repeat(64),
+      "b".repeat(64),
+    );
+
+    expect(script).toContain('grep -qF -- "$1/" /proc/[0-9]*/cmdline 2>/dev/null');
+    expect(script).toContain("  [ -d /proc/1 ] || return 0");
+    expect(script).toContain('  if runtime_in_use "$runtime_root"; then');
+
+    // A process's cmdline keeps the pre-rename path, so the question is only
+    // answerable before the move.
+    const inUseChecked = script.indexOf('if runtime_in_use "$runtime_root"; then');
+    const moved = script.indexOf('mv -T "$runtime_root" "$runtime_stale"');
+    expect(inUseChecked).toBeGreaterThan(-1);
+    expect(inUseChecked).toBeLessThan(moved);
+
+    const kept = script.indexOf('touch "$runtime_stale"');
+    const deleted = script.indexOf('rm -rf "$runtime_stale"');
+    expect(kept).toBeGreaterThan(moved);
+    expect(deleted).toBeGreaterThan(kept);
+  });
+
+  it("treats a runtime whose executable no longer runs as a cache miss", () => {
+    const script = buildWslRuntimeInstallScript(
+      "/mnt/c/Program Files/T2 Code/wsl-runtime.tar.gz",
+      "1.2.3-x64",
+      "b".repeat(64),
+    );
+
+    expect(script).toContain('  [ -x "$1/t3" ] && "$1/t3" --version >/dev/null 2>&1');
+
+    const entryCheckDefined = script.indexOf("runtime_entry_runs() {");
+    const readinessDefined = script.indexOf("runtime_is_ready() {");
+    const readyShortCircuit = script.indexOf("if runtime_is_ready; then");
+    expect(entryCheckDefined).toBeGreaterThan(-1);
+    expect(entryCheckDefined).toBeLessThan(readinessDefined);
+    expect(readinessDefined).toBeLessThan(readyShortCircuit);
+  });
+
+  it("re-hashes the executable against the digest the install recorded", () => {
+    const script = buildWslRuntimeInstallScript(
+      "/mnt/c/Program Files/T2 Code/wsl-runtime.tar.gz",
+      "1.2.3-x64",
+      "b".repeat(64),
+    );
+
+    expect(script).toContain(`  sha256sum "$1/t3" 2>/dev/null | cut -d ' ' -f 1`);
+    expect(script).toContain(
+      '    [ "$recorded_entry_digest" = "$(runtime_server_entry_digest "$runtime_root")" ]',
+    );
+    expect(script).toContain('    [ -n "$recorded_entry_digest" ] &&');
+    expect(script).toContain(
+      `printf '%s\\n' "$installed_entry_digest" > "$runtime_tmp/.t3code-wsl-runtime-ready"`,
+    );
+
+    const extracted = script.indexOf("tar -xzf");
+    const digestRecorded = script.indexOf(
+      'installed_entry_digest=$(runtime_server_entry_digest "$runtime_tmp")',
+    );
+    const markerWritten = script.indexOf('> "$runtime_tmp/.t3code-wsl-runtime-ready"');
+    const promoted = script.indexOf('mv -T "$runtime_tmp" "$runtime_root"');
+    expect(digestRecorded).toBeGreaterThan(extracted);
+    expect(markerWritten).toBeGreaterThan(digestRecorded);
+    expect(promoted).toBeGreaterThan(markerWritten);
+  });
+
+  it("refuses to mark an archive whose executable does not run as ready", () => {
+    const script = buildWslRuntimeInstallScript(
+      "/mnt/c/Program Files/T2 Code/wsl-runtime.tar.gz",
+      "1.2.3-x64",
+      "b".repeat(64),
+    );
+
+    expect(script).toContain('if ! runtime_entry_runs "$runtime_tmp"; then');
+
+    const payloadValidated = script.indexOf('runtime_entry_runs "$runtime_tmp"');
+    const markerWritten = script.indexOf('> "$runtime_tmp/.t3code-wsl-runtime-ready"');
+    const promoted = script.indexOf('mv -T "$runtime_tmp" "$runtime_root"');
+    expect(payloadValidated).toBeGreaterThan(-1);
+    expect(markerWritten).toBeGreaterThan(payloadValidated);
+    expect(promoted).toBeGreaterThan(payloadValidated);
+  });
+
+  it("parses only absolute Linux runtime paths", () => {
+    expect(parseWslRuntimeRoot("runtimeRoot:/home/josh/.t3/wsl-runtime/1.2.3-x64\n")).toBe(
+      "/home/josh/.t3/wsl-runtime/1.2.3-x64",
+    );
+    expect(parseWslRuntimeRoot("runtimeRoot:relative/path\n")).toBeNull();
+    expect(parseWslRuntimeRoot("noise\n")).toBeNull();
+  });
+
+  it("prunes completed runtimes except the current and newest previous cache", () => {
+    const script = buildWslRuntimePruneScript("1.2.3/x64");
+
+    expect(script).toContain('current_runtime="$runtime_parent/1.2.3_x64"');
+    expect(script).toContain('[ "$candidate" -nt "$previous_runtime" ]');
+    expect(script).toContain('[ "$candidate" != "$current_runtime" ] || continue');
+    expect(script).toContain('[ "$candidate" != "$previous_runtime" ] || continue');
+    expect(script).toContain('[ -f "$candidate/.t3code-wsl-runtime-ready" ] || continue');
+    expect(script).toContain('rm -rf -- "$candidate"');
+  });
+
+  it("never deletes a runtime another backend is running from", () => {
+    const script = buildWslRuntimePruneScript("1.2.3/x64");
+
+    expect(script).toContain('  grep -qF -- "$1/" /proc/[0-9]*/cmdline 2>/dev/null');
+    expect(script).toContain('  ! runtime_in_use "$candidate" || continue');
+
+    expect(script).toContain("[ -d /proc/1 ] || exit 0");
+
+    const inUseChecked = script.indexOf('! runtime_in_use "$candidate"');
+    const removed = script.indexOf('rm -rf -- "$candidate"');
+    expect(inUseChecked).toBeGreaterThan(-1);
+    expect(removed).toBeGreaterThan(inUseChecked);
+  });
+
+  it("sweeps orphaned install scratch directories the ready-marker loops cannot see", () => {
+    const script = buildWslRuntimePruneScript("1.2.3/x64");
+
+    expect(script).toContain(
+      'for scratch in "$runtime_parent"/.*.tmp.* "$runtime_parent"/.*.stale.*; do',
+    );
+    expect(script).toContain('find "$scratch" -maxdepth 0 -mmin +120');
+  });
+
+  it("invalidates a cache by dropping its ready marker, not the tree", () => {
+    const script = buildWslRuntimeInvalidateScript("1.2.3/x64");
+
+    expect(script).toContain('rm -f "$HOME/.t3/wsl-runtime/1.2.3_x64/.t3code-wsl-runtime-ready"');
+    expect(script).not.toContain("rm -rf");
+  });
 });
 
 describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed)", () => {
