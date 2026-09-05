@@ -4,7 +4,7 @@ import {
   type ServerProviderSkill,
   type ServerProviderSlashCommand,
   settingsSecretLiteral,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { OpenCodeSettings } from "../settings.ts";
 import * as Cause from "effect/Cause";
 import * as Schema from "effect/Schema";
@@ -13,8 +13,8 @@ import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Schedule from "effect/Schedule";
 
-import { createModelCapabilities } from "@t3tools/shared/model";
-import { compareSemverVersions } from "@t3tools/shared/semver";
+import { createModelCapabilities } from "@t2code/shared/model";
+import { compareSemverVersions } from "@t2code/shared/semver";
 import {
   buildServerProvider,
   COMPACT_SLASH_COMMAND,
@@ -787,8 +787,8 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
         status: "warning",
         auth: { status: "unknown" },
         message: isExternalServer
-          ? "OpenCode is disabled in T3 Code settings. A server URL is configured."
-          : "OpenCode is disabled in T3 Code settings.",
+          ? "OpenCode is disabled in T2 Code settings. A server URL is configured."
+          : "OpenCode is disabled in T2 Code settings.",
       },
     });
   }

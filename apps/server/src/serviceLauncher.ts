@@ -1259,7 +1259,7 @@ export interface LauncherOptions {
 export async function main(options: LauncherOptions = {}): Promise<void> {
   const baseDir = (options.baseDir ?? process.env.T3CODE_HOME)?.trim();
   if (baseDir === undefined || baseDir === "") {
-    throw new Error("T3CODE_HOME is required by the T3 Code service launcher.");
+    throw new Error("T3CODE_HOME is required by the T2 Code service launcher.");
   }
   const output =
     options.logFile === undefined ? undefined : NodeFS.openSync(options.logFile, "a", 0o600);
