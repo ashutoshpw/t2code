@@ -27,7 +27,7 @@ export function CompactBrandTitle(
   return (
     <View
       aria-level={1}
-      accessibilityLabel={props.accessibilityLabel ?? "T3 Code, Threads"}
+      accessibilityLabel={props.accessibilityLabel ?? "T2 Code, Threads"}
       accessible
       role="heading"
       className="flex-row items-center gap-1.5"
