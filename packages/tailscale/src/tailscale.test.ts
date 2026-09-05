@@ -238,7 +238,7 @@ describe("tailscale", () => {
       assert.equal(statusError.subcommand, "status");
       assert.strictEqual(statusError.cause, defect);
 
-      const serveError = yield* ensureTailscaleServe({ localPort: 13773, servePort: 8443 }).pipe(
+      const serveError = yield* ensureTailscaleServe({ localPort: 13772, servePort: 8443 }).pipe(
         Effect.flip,
         Effect.provide(layer),
       );
@@ -324,11 +324,11 @@ describe("tailscale", () => {
   it.effect("configures tailscale serve through the process spawner service", () => {
     const layer = mockSpawnerLayer((command, args) => {
       assert.equal(command, "tailscale");
-      assert.deepEqual(args, ["serve", "--bg", "--https=8443", "http://127.0.0.1:13773"]);
+      assert.deepEqual(args, ["serve", "--bg", "--https=8443", "http://127.0.0.1:13772"]);
       return {};
     });
 
-    return ensureTailscaleServe({ localPort: 13773, servePort: 8443 }).pipe(Effect.provide(layer));
+    return ensureTailscaleServe({ localPort: 13772, servePort: 8443 }).pipe(Effect.provide(layer));
   });
 
   it.effect("retains tailscale serve exit diagnostics", () => {
@@ -338,7 +338,7 @@ describe("tailscale", () => {
     }));
 
     return Effect.gen(function* () {
-      const error = yield* ensureTailscaleServe({ localPort: 13773, servePort: 8443 }).pipe(
+      const error = yield* ensureTailscaleServe({ localPort: 13772, servePort: 8443 }).pipe(
         Effect.flip,
         Effect.provide(layer),
       );

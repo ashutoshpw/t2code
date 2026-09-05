@@ -668,7 +668,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       const resolved = yield* resolveServerConfig(
         {
           mode: Option.some("web"),
-          port: Option.some(3773),
+          port: Option.some(3772),
           host: Option.none(),
           baseDir: Option.some(baseDir),
           cwd: Option.none(),
@@ -704,7 +704,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         logLevel: "Info",
         ...defaultObservabilityConfig,
         mode: "web",
-        port: 3773,
+        port: 3772,
         cwd: process.cwd(),
         baseDir,
         ...derivedPaths,

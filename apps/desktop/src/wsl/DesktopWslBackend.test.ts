@@ -53,9 +53,9 @@ const primarySnapshot: DesktopBackendSnapshot = {
 const serverExposureLayer = Layer.succeed(DesktopServerExposure.DesktopServerExposure, {
   getState: Effect.die("unexpected getState"),
   backendConfig: Effect.succeed({
-    port: 3773,
+    port: 3772,
     bindHost: "127.0.0.1",
-    httpBaseUrl: new URL("http://127.0.0.1:3773"),
+    httpBaseUrl: new URL("http://127.0.0.1:3772"),
     tailscaleServeEnabled: false,
     tailscaleServePort: 443,
   }),
