@@ -175,6 +175,66 @@ describe("DesktopAppIdentity", () => {
     ),
   );
 
+  it.effect("preserves failures while inspecting the legacy userData path", () => {
+    const legacyPath = "/Users/alice/Library/Application Support/T3 Code (Dev)";
+    const cause = PlatformError.systemError({
+      _tag: "PermissionDenied",
+      module: "FileSystem",
+      method: "exists",
+      description: "permission denied",
+      pathOrDescriptor: legacyPath,
+    });
+
+    return withIdentity(
+      Effect.gen(function* () {
+        const identity = yield* DesktopAppIdentity.DesktopAppIdentity;
+        const error = yield* identity.resolveUserDataPath.pipe(Effect.flip);
+
+        assert.instanceOf(error, DesktopUserData.DesktopUserDataInitializationError);
+        assert.equal(error.resourcePath, legacyPath);
+        assert.strictEqual(error.cause, cause);
+        assert.equal(
+          error.message,
+          `Could not initialize Electron user data during inspect at ${legacyPath} (PermissionDenied).`,
+        );
+      }),
+      {
+        legacyPathProbeError: cause,
+        environment: { env: { VITE_DEV_SERVER_URL: "http://localhost:5173" } },
+      },
+    );
+  });
+
+  it.effect("configures app identity from the environment commit override", () => {
+    const calls: ElectronAppCalls = {
+      setAboutPanelOptions: [],
+      setDockIcon: [],
+      setName: [],
+    };
+
+    return withIdentity(
+      Effect.gen(function* () {
+        const identity = yield* DesktopAppIdentity.DesktopAppIdentity;
+        yield* identity.configure;
+
+        assert.deepEqual(calls.setName, ["T2 Code Beta"]);
+        assert.equal(calls.setAboutPanelOptions[0]?.applicationName, "T2 Code (Beta)");
+        assert.equal(calls.setAboutPanelOptions[0]?.applicationVersion, "1.2.3");
+        assert.equal(calls.setAboutPanelOptions[0]?.version, "0123456789ab");
+        assert.deepEqual(calls.setDockIcon, []);
+      }),
+      {
+        calls,
+        environment: {
+          env: {
+            T3CODE_COMMIT_HASH: "0123456789abcdef",
+          },
+        },
+        pngIconPath: Option.some("/icon.png"),
+      },
+    );
+  });
+
   it.effect.each([
     { stage: "Beta", environment: {} },
     {

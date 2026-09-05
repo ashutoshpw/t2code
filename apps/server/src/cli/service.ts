@@ -147,10 +147,10 @@ function formatServiceStatus(
   protection?: ServiceProtection.ServiceProtectionState,
 ): string {
   if (!status.supported) {
-    return "T3 Code service\n  Status: unavailable on this machine\n  Supported on: Linux with systemd, macOS with launchd";
+    return "T2 Code service\n  Status: unavailable on this machine\n  Supported on: Linux with systemd, macOS with launchd";
   }
   if (!status.installed) {
-    return "T3 Code service\n  Status: not installed\n  Next: Run `t2code service install`.";
+    return "T2 Code service\n  Status: not installed\n  Next: Run `t2code service install`.";
   }
   const installedVersion = status.installedVersion ?? cliVersion;
   const problems = (status.problems ?? []).map(
@@ -162,7 +162,7 @@ function formatServiceStatus(
     compareExactServiceVersions(status.installedVersion, cliVersion) > 0
   ) {
     return [
-      "T3 Code service",
+      "T2 Code service",
       `  Status: installed · ${packageJson.name}@${installedVersion} (newer than this ${packageJson.name}@${cliVersion} CLI)`,
       `  Unit: ${status.unitPath}`,
       `  Logs: ${status.logPath}`,
@@ -172,7 +172,7 @@ function formatServiceStatus(
     ].join("\n");
   }
   return [
-    "T3 Code service",
+    "T2 Code service",
     `  Status: ${status.current ? `installed · ${packageJson.name}@${installedVersion}` : "needs an update or repair"}`,
     `  Unit: ${status.unitPath}`,
     `  Logs: ${status.logPath}`,
@@ -201,7 +201,7 @@ const serviceReconcileFlags = {
 
 const serviceInstallCommand = Command.make("install", serviceReconcileFlags).pipe(
   Command.withDescription(
-    "Install T3 Code as a background service for this user. `t3 up` also chooses how your other devices reach it.",
+    "Install T2 Code as a background service for this user. `t2code up` also chooses how your other devices reach it.",
   ),
   Command.withHandler((flags) =>
     runServiceCommand(
@@ -272,7 +272,7 @@ const serviceRestartCommand = Command.make("restart", projectLocationFlags).pipe
 );
 
 const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).pipe(
-  Command.withDescription("Stop and remove the T3 Code background service."),
+  Command.withDescription("Stop and remove the T2 Code background service."),
   Command.withHandler((flags) =>
     runServiceCommand(
       flags,
@@ -296,7 +296,7 @@ const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).
         }
         const removed = yield* service.uninstall;
         yield* Console.log(
-          removed ? "Removed the T3 Code service." : "T3 Code service is not installed.",
+          removed ? "Removed the T2 Code service." : "T2 Code service is not installed.",
         );
       }),
     ),
@@ -304,7 +304,7 @@ const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).
 );
 
 const serviceStatusCommand = Command.make("status", projectLocationFlags).pipe(
-  Command.withDescription("Show whether the T3 Code background service is installed."),
+  Command.withDescription("Show whether the T2 Code background service is installed."),
   Command.withHandler((flags) =>
     runServiceCommand(
       flags,
@@ -434,7 +434,7 @@ const serviceProtectCommand = Command.make("protect", {
 );
 
 export const serviceCommand = Command.make("service").pipe(
-  Command.withDescription("Manage the T3 Code background service."),
+  Command.withDescription("Manage the T2 Code background service."),
   Command.withSubcommands([
     serviceInstallCommand,
     serviceRestartCommand,
