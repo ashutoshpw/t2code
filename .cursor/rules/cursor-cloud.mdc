@@ -23,7 +23,7 @@ Pre-installed and wired into login shells (`~/.bashrc`/`~/.profile`): Node 24 (v
 ## Running the web app
 
 - `npm run dev` (from repo root) starts contracts (watch), web (Vite, port 5733), and the server
-  (`node --watch`, port 13773) together, auto-wiring `VITE_HTTP_URL`/`VITE_WS_URL`. Use
+  (`node --watch`, port 13772) together, auto-wiring `VITE_HTTP_URL`/`VITE_WS_URL`. Use
   `npm run dev:server` / `npm run dev:web` for one side. If base ports are taken it auto-offsets to
   the next free pair, so read the actual ports from stdout. Avoid production `build`/`start` in dev.
 - Auth/pairing: the server is unauthenticated by default and prints a pairing URL to stdout on startup
