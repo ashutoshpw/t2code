@@ -87,4 +87,4 @@ If completion is uncertain, keep the environment alive and mention that it is re
 - If the pairing URL is no longer visible, create a replacement token with both `--dev-url` and `--base-url`.
 - If the replacement token is rejected, verify that the CLI and server use the identical absolute base directory and web URL.
 - If the UI shows unexpected data, verify that every command uses the identical explicit base directory before editing anything.
-- If ports move because another instance is running, trust the current dev-runner output rather than assuming ports `13773` and `5733`.
+- If ports move because another instance is running, trust the current dev-runner output rather than assuming ports `13772` and `5733`.
