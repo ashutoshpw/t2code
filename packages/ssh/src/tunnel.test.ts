@@ -411,7 +411,7 @@ describe("ssh tunnel scripts", () => {
             });
           }
           if (args.includes("sh") && args.includes("--")) {
-            return makeSuccessfulProcess('{"remotePort":3773}\n');
+            return makeSuccessfulProcess('{"remotePort":3772}\n');
           }
           if (args.includes("sh")) {
             stopCommandCount += 1;
@@ -536,7 +536,7 @@ describe("ssh tunnel scripts", () => {
                 launches += 1;
                 remoteRunning = true;
               }
-              return makeSuccessfulProcess('{"remotePort":3773}\n');
+              return makeSuccessfulProcess('{"remotePort":3772}\n');
             }
             const stop = makeSuccessfulProcess('{"stopped":true}\n');
             if (!isTarget) return stop;

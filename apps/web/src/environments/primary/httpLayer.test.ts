@@ -20,14 +20,14 @@ describe.sequential("primary environment HTTP layer", () => {
       configurable: true,
       value: {
         location: {
-          href: "http://127.0.0.1:3773/settings",
-          origin: "http://127.0.0.1:3773",
+          href: "http://127.0.0.1:3772/settings",
+          origin: "http://127.0.0.1:3772",
         },
       },
     });
 
     return Effect.gen(function* () {
-      yield* HttpClient.get("http://127.0.0.1:3773/api/auth/session");
+      yield* HttpClient.get("http://127.0.0.1:3772/api/auth/session");
 
       const request = new Request(fetchMock.mock.calls[0]?.[0], fetchMock.mock.calls[0]?.[1]);
       expect(request.credentials).toBe("include");
@@ -45,8 +45,8 @@ describe.sequential("primary environment HTTP layer", () => {
         desktopBridge: {
           getLocalEnvironmentBootstrap: () => ({
             label: "Local environment",
-            httpBaseUrl: "http://127.0.0.1:3773",
-            wsBaseUrl: "ws://127.0.0.1:3773",
+            httpBaseUrl: "http://127.0.0.1:3772",
+            wsBaseUrl: "ws://127.0.0.1:3772",
             bootstrapToken: "desktop-bootstrap-token",
           }),
           getLocalEnvironmentBearerToken: vi.fn().mockResolvedValue("desktop-bearer-token"),
@@ -55,7 +55,7 @@ describe.sequential("primary environment HTTP layer", () => {
     });
 
     return Effect.gen(function* () {
-      yield* HttpClient.get("http://127.0.0.1:3773/api/connect/link-state");
+      yield* HttpClient.get("http://127.0.0.1:3772/api/connect/link-state");
 
       const request = new Request(fetchMock.mock.calls[0]?.[0], fetchMock.mock.calls[0]?.[1]);
       expect(request.credentials).not.toBe("include");

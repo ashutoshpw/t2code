@@ -102,7 +102,7 @@ it.effect("enqueueCommand fails queued work when readiness fails", () =>
         new ServerRuntimeStartup.ServerRuntimeStartupError({
           mode: "web",
           host: "127.0.0.1",
-          port: 3773,
+          port: 3772,
           cause: new Error("test startup failure"),
         }),
       );

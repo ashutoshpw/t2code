@@ -397,13 +397,13 @@ describe("DesktopServerExposure", () => {
       lanNetworkInterfaces,
       Effect.gen(function* () {
         const serverExposure = yield* DesktopServerExposure.DesktopServerExposure;
-        yield* serverExposure.configureFromSettings({ port: 3773 });
+        yield* serverExposure.configureFromSettings({ port: 3772 });
         yield* serverExposure.setMode("network-accessible");
 
         const endpoints = yield* serverExposure.getAdvertisedEndpoints;
         assert.deepEqual(endpoints, [
           {
-            id: "desktop-loopback:3773",
+            id: "desktop-loopback:3772",
             label: "This machine",
             provider: {
               id: "desktop-core",
@@ -411,8 +411,8 @@ describe("DesktopServerExposure", () => {
               kind: "core",
               isAddon: false,
             },
-            httpBaseUrl: "http://127.0.0.1:3773/",
-            wsBaseUrl: "ws://127.0.0.1:3773/",
+            httpBaseUrl: "http://127.0.0.1:3772/",
+            wsBaseUrl: "ws://127.0.0.1:3772/",
             reachability: "loopback",
             compatibility: {
               hostedHttpsApp: "mixed-content-blocked",
@@ -423,7 +423,7 @@ describe("DesktopServerExposure", () => {
             description: "Loopback endpoint for this desktop app.",
           },
           {
-            id: "desktop-lan:http://192.168.1.20:3773",
+            id: "desktop-lan:http://192.168.1.20:3772",
             label: "Local network",
             provider: {
               id: "desktop-core",
@@ -431,8 +431,8 @@ describe("DesktopServerExposure", () => {
               kind: "core",
               isAddon: false,
             },
-            httpBaseUrl: "http://192.168.1.20:3773/",
-            wsBaseUrl: "ws://192.168.1.20:3773/",
+            httpBaseUrl: "http://192.168.1.20:3772/",
+            wsBaseUrl: "ws://192.168.1.20:3772/",
             reachability: "lan",
             compatibility: {
               hostedHttpsApp: "mixed-content-blocked",
@@ -464,7 +464,7 @@ describe("DesktopServerExposure", () => {
             description: "User-configured HTTPS endpoint for this desktop backend.",
           },
           {
-            id: "manual:http://desktop.example.test:3773",
+            id: "manual:http://desktop.example.test:3772",
             label: "Custom endpoint",
             provider: {
               id: "manual",
@@ -472,8 +472,8 @@ describe("DesktopServerExposure", () => {
               kind: "manual",
               isAddon: false,
             },
-            httpBaseUrl: "http://desktop.example.test:3773/",
-            wsBaseUrl: "ws://desktop.example.test:3773/",
+            httpBaseUrl: "http://desktop.example.test:3772/",
+            wsBaseUrl: "ws://desktop.example.test:3772/",
             reachability: "public",
             compatibility: {
               hostedHttpsApp: "mixed-content-blocked",
@@ -487,7 +487,7 @@ describe("DesktopServerExposure", () => {
       }),
       {
         T3CODE_DESKTOP_HTTPS_ENDPOINTS:
-          "https://desktop.example.ts.net,http://desktop.example.test:3773,not-a-url",
+          "https://desktop.example.ts.net,http://desktop.example.test:3772,not-a-url",
       },
     ),
   );

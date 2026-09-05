@@ -66,7 +66,7 @@ const devServerInput = {
   autoBootstrapProjectFromCwd: undefined,
   logWebSocketEvents: undefined,
   host: undefined,
-  port: 13_773,
+  port: 13_772,
   devUrl: undefined,
   dryRun: false,
   share: false,
@@ -338,12 +338,12 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         const env = yield* createDevRunnerEnv({
           mode: "dev:desktop",
           baseEnv: {
-            T3CODE_PORT: "13773",
+            T3CODE_PORT: "13772",
             T3CODE_MODE: "web",
             T3CODE_NO_BROWSER: "0",
             T3CODE_HOST: "0.0.0.0",
             VITE_DEV_SERVER_URL: "http://127.0.0.1:8526",
-            VITE_WS_URL: "ws://localhost:13773",
+            VITE_WS_URL: "ws://localhost:13772",
           },
           serverOffset: 0,
           webOffset: 0,
@@ -385,7 +385,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.T3CODE_PORT, "13773");
+        assert.equal(env.T3CODE_PORT, "13772");
         assert.equal(env.PORT, "5733");
       }),
     );
@@ -415,7 +415,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
 
           assert.equal(env.VITE_HTTP_URL, undefined);
           assert.equal(env.VITE_WS_URL, undefined);
-          assert.equal(env.T3CODE_PORT, "13773");
+          assert.equal(env.T3CODE_PORT, "13772");
           // Deleting the keys is not sufficient — vite.config.ts merges
           // `.env`/`.env.local` underneath this env and would revive them, so
           // the intent has to be stated positively.
@@ -443,7 +443,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         });
 
         assert.equal(env.T3CODE_SINGLE_ORIGIN_DEV, undefined);
-        assert.equal(env.VITE_HTTP_URL, "http://127.0.0.1:13773");
+        assert.equal(env.VITE_HTTP_URL, "http://127.0.0.1:13772");
       }),
     );
 
@@ -464,7 +464,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         });
 
         assert.equal(env.T3CODE_SINGLE_ORIGIN_DEV, undefined);
-        assert.equal(env.VITE_HTTP_URL, "http://localhost:13773");
+        assert.equal(env.VITE_HTTP_URL, "http://localhost:13772");
       }),
     );
 
@@ -553,8 +553,8 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.VITE_HTTP_URL, "http://127.0.0.1:13773");
-        assert.equal(env.VITE_WS_URL, "ws://127.0.0.1:13773");
+        assert.equal(env.VITE_HTTP_URL, "http://127.0.0.1:13772");
+        assert.equal(env.VITE_WS_URL, "ws://127.0.0.1:13772");
       }),
     );
   });
@@ -575,7 +575,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
 
     it.effect("advances until all required ports are available", () =>
       Effect.gen(function* () {
-        const taken = new Set([13773, 5733, 13774, 5734]);
+        const taken = new Set([13772, 13773, 5733, 5734]);
         const offset = yield* findFirstAvailableOffset({
           startOffset: 0,
           requireServerPort: true,
@@ -603,7 +603,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
 
         assert.equal(offset, 834);
         assert.deepStrictEqual(probed, [
-          { port: 14_607, role: "server" },
+          { port: 14_606, role: "server" },
           { port: 6567, role: "web" },
         ]);
       }),
@@ -638,7 +638,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
     it.effect("reports the exhausted range and required port set", () =>
       Effect.gen(function* () {
         const error = yield* findFirstAvailableOffset({
-          startOffset: 51_763,
+          startOffset: 51_764,
           requireServerPort: true,
           requireWebPort: false,
           checkPortAvailability: () => Effect.succeed(true),
@@ -647,10 +647,10 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         if (error._tag !== "DevRunnerPortExhaustedError") {
           assert.fail(`Unexpected error: ${error._tag}`);
         }
-        assert.equal(error.startOffset, 51_763);
+        assert.equal(error.startOffset, 51_764);
         assert.equal(error.requireServerPort, true);
         assert.equal(error.requireWebPort, false);
-        assert.equal(error.baseServerPort, 13_773);
+        assert.equal(error.baseServerPort, 13_772);
         assert.equal(error.baseWebPort, 5_733);
         assert.equal(error.maximumPort, 65_535);
         assert.ok(!("cause" in error));
@@ -678,7 +678,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         const calls: Array<[number, string]> = [];
 
         const available = yield* checkPortAvailabilityOnHosts(
-          13_773,
+          13_772,
           ["127.0.0.1", "0.0.0.0", "::"],
           (port, host) =>
             Effect.promise(async () => {
@@ -693,9 +693,9 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
 
         assert.equal(available, true);
         assert.deepStrictEqual(calls, [
-          [13_773, "127.0.0.1"],
-          [13_773, "0.0.0.0"],
-          [13_773, "::"],
+          [13_772, "127.0.0.1"],
+          [13_772, "0.0.0.0"],
+          [13_772, "::"],
         ]);
       }),
     );
@@ -747,7 +747,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         });
 
         assert.deepStrictEqual(probed, [
-          { port: 13_773, role: "server" },
+          { port: 13_772, role: "server" },
           { port: 5733, role: "web" },
         ]);
       }),
@@ -757,7 +757,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
   describe("resolveModePortOffsets", () => {
     it.effect("uses a shared fallback offset for dev mode", () =>
       Effect.gen(function* () {
-        const taken = new Set([13773, 5733]);
+        const taken = new Set([13772, 5733]);
         const offsets = yield* resolveModePortOffsets({
           mode: "dev",
           startOffset: 0,
@@ -787,7 +787,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
 
     it.effect("shifts only server offset for dev:server", () =>
       Effect.gen(function* () {
-        const taken = new Set([13773]);
+        const taken = new Set([13772]);
         const offsets = yield* resolveModePortOffsets({
           mode: "dev:server",
           startOffset: 0,
