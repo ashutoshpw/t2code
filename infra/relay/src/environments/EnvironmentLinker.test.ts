@@ -92,7 +92,7 @@ const makeRequest = Effect.gen(function* () {
       wsBaseUrl: "wss://env.example.test/",
       providerKind: "manual",
     },
-    origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+    origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
     scopes: ["agent_activity_notifications", "managed_tunnels"],
   } satisfies RelayEnvironmentLinkProofPayload;
   return {
@@ -212,11 +212,11 @@ describe("EnvironmentLinker", () => {
         },
         environmentPublicKey: environmentKeyPair.publicKey.trim(),
         endpoint: {
-          httpBaseUrl: "http://127.0.0.1:3773/",
-          wsBaseUrl: "ws://127.0.0.1:3773/",
+          httpBaseUrl: "http://127.0.0.1:3772/",
+          wsBaseUrl: "ws://127.0.0.1:3772/",
           providerKind: "manual",
         },
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         scopes: ["agent_activity_notifications"],
       } satisfies RelayEnvironmentLinkProofPayload;
       const request = {
@@ -229,7 +229,7 @@ describe("EnvironmentLinker", () => {
       const result = yield* linker.link({ userId: "user_123", request });
       expect(result.environmentCredential).toBe("t3env_credential_secret");
       expect(result.endpointRuntime).toBeNull();
-      expect(persistedEndpoint).toBe("http://127.0.0.1:3773/");
+      expect(persistedEndpoint).toBe("http://127.0.0.1:3772/");
       // Downgrading from a managed link must release the previously provisioned
       // tunnel; nothing else cleans it up before a full unlink.
       expect(deprovisionedEnvironmentId).toBe("env-link-test");

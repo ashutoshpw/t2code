@@ -14,10 +14,10 @@ describe("hostedPairing", () => {
   });
 
   it("reads hosted pairing host and query token parameters", () => {
-    const url = new URL("https://app.t3.codes/pair?host=100.64.1.2:3773&token=ABCD1234");
+    const url = new URL("https://app.t3.codes/pair?host=100.64.1.2:3772&token=ABCD1234");
 
     expect(readHostedPairingRequest(url)).toEqual({
-      host: "100.64.1.2:3773",
+      host: "100.64.1.2:3772",
       token: "ABCD1234",
       label: "",
     });
@@ -29,7 +29,7 @@ describe("hostedPairing", () => {
 
     const url = new URL(
       buildHostedPairingUrl({
-        host: "https://backend.example.com:3773",
+        host: "https://backend.example.com:3772",
         token: "pairing-token",
         label: "Workstation",
       }),
@@ -37,7 +37,7 @@ describe("hostedPairing", () => {
 
     expect(url.origin).toBe("https://preview.t3.codes");
     expect(url.pathname).toBe("/pair");
-    expect(url.searchParams.get("host")).toBe("https://backend.example.com:3773");
+    expect(url.searchParams.get("host")).toBe("https://backend.example.com:3772");
     expect(url.searchParams.get("label")).toBe("Workstation");
     expect(url.searchParams.has("token")).toBe(false);
     expect(url.hash).toBe("#token=pairing-token");

@@ -105,7 +105,7 @@ actual web and server ports. For example, with the default ports:
 
 ```sh
 VITE_DEV_SERVER_URL=http://127.0.0.1:5733 \
-T3CODE_PORT=13773 \
+T3CODE_PORT=13772 \
   "/Applications/T3 Code (Alpha).app/Contents/MacOS/T3 Code (Alpha)"
 ```
 

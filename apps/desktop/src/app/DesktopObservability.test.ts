@@ -153,7 +153,7 @@ describe("DesktopObservability", () => {
         const factory = yield* DesktopObservability.DesktopBackendOutputLogFactory;
         const outputLog = yield* factory.forInstance("primary");
         yield* outputLog.beginSession({
-          details: "pid=123 port=3773 cwd=/repo",
+          details: "pid=123 port=3772 cwd=/repo",
         });
         yield* outputLog.writeOutputChunk("stdout", new TextEncoder().encode("hello server\n"));
         assert.isFalse(yield* fileSystem.exists(logPath));
@@ -179,7 +179,7 @@ describe("DesktopObservability", () => {
       assert.equal(start.annotations.runId, "test-run");
       assert.equal(start.annotations.instanceId, "primary");
       assert.equal(start.annotations.phase, "START");
-      assert.equal(start.annotations.details, "pid=123 port=3773 cwd=/repo");
+      assert.equal(start.annotations.details, "pid=123 port=3772 cwd=/repo");
 
       assert.equal(output.message, "backend child process output");
       assert.equal(output.level, "INFO");

@@ -1733,7 +1733,7 @@ it.layer(
       const { manager, ptyAdapter } = yield* createManager(5, {
         env: {
           PORT: "5173",
-          T3CODE_PORT: "3773",
+          T3CODE_PORT: "3772",
           VITE_DEV_SERVER_URL: "http://localhost:5173",
           TEST_TERMINAL_KEEP: "keep-me",
         },

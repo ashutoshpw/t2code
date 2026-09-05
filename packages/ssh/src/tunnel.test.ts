@@ -407,7 +407,7 @@ describe("ssh tunnel scripts", () => {
           });
         }
         if (args.includes("sh") && args.includes("--")) {
-          return makeSuccessfulProcess('{"remotePort":3773}\n');
+          return makeSuccessfulProcess('{"remotePort":3772}\n');
         }
         if (args.includes("sh")) {
           stopCommandCount += 1;

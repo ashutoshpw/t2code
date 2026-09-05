@@ -14,7 +14,7 @@ import * as ServerSecretStore from "./ServerSecretStore.ts";
 import * as SessionStore from "./SessionStore.ts";
 
 /** Pinned so dev-mode cookie tests can assert the port-scoped name. */
-const TEST_SERVER_PORT = 13_773;
+const TEST_SERVER_PORT = 13_772;
 
 const makeServerConfigLayer = (overrides?: Partial<ServerConfig.ServerConfig["Service"]>) =>
   Layer.effect(
@@ -255,7 +255,7 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
       const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
       const sessions = yield* SessionStore.SessionStore;
 
-      const pairingUrl = yield* serverAuth.issueStartupPairingUrl("http://127.0.0.1:3773");
+      const pairingUrl = yield* serverAuth.issueStartupPairingUrl("http://127.0.0.1:3772");
       const token = new URLSearchParams(new URL(pairingUrl).hash.slice(1)).get("token");
       const listedPairingLinks = yield* serverAuth.listPairingLinks();
       expect(token).toBeTruthy();
