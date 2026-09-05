@@ -105,7 +105,7 @@ const startupDependencies = Layer.mergeAll(
   Layer.succeed(
     HttpServer.HttpServer,
     HttpServer.HttpServer.of({
-      address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3773),
+      address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3772),
       serve: (() => Effect.void) as HttpServer.HttpServer["Service"]["serve"],
     }),
   ),

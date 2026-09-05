@@ -76,7 +76,7 @@ describe("environmentBootstrap", () => {
   it("attaches the bootstrapped environment descriptor to the primary environment", () => {
     vi.stubGlobal("window", {
       location: {
-        origin: "http://localhost:3773",
+        origin: "http://localhost:3772",
       },
       desktopBridge: undefined,
     });
@@ -99,8 +99,8 @@ describe("environmentBootstrap", () => {
       source: "window-origin",
       environmentId: "environment-local",
       target: {
-        httpBaseUrl: "http://localhost:3773/",
-        wsBaseUrl: "ws://localhost:3773/",
+        httpBaseUrl: "http://localhost:3772/",
+        wsBaseUrl: "ws://localhost:3772/",
       },
     });
   });
@@ -195,8 +195,8 @@ describe("environmentBootstrap", () => {
           {
             id: "primary",
             label: "Windows",
-            httpBaseUrl: "http://127.0.0.1:3773",
-            wsBaseUrl: "ws://127.0.0.1:3773",
+            httpBaseUrl: "http://127.0.0.1:3772",
+            wsBaseUrl: "ws://127.0.0.1:3772",
             bootstrapToken: "desktop-bootstrap-token",
           },
         ],
@@ -237,7 +237,7 @@ describe("environmentBootstrap", () => {
           {
             id: "primary",
             label: "Local environment",
-            httpBaseUrl: "http://127.0.0.1:3773",
+            httpBaseUrl: "http://127.0.0.1:3772",
             bootstrapToken: "desktop-bootstrap-token",
           },
         ],
