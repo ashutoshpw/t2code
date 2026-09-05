@@ -276,7 +276,7 @@ describe("tailscale", () => {
       assert.equal(statusError.subcommand, "status");
       assert.strictEqual(statusError.cause, defect);
 
-      const serveError = yield* ensureTailscaleServe({ localPort: 13773, servePort: 8443 }).pipe(
+      const serveError = yield* ensureTailscaleServe({ localPort: 13772, servePort: 8443 }).pipe(
         Effect.flip,
         Effect.provide(layer),
       );

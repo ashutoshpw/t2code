@@ -4,8 +4,8 @@ import { buildPairingUrl, extractPairingUrlFromQrPayload, parsePairingUrl } from
 
 describe("buildPairingUrl", () => {
   it("uses HTTP for a schemeless IP address", () => {
-    expect(buildPairingUrl("192.168.1.100:3773", "pairing-token")).toBe(
-      "http://192.168.1.100:3773/#token=pairing-token",
+    expect(buildPairingUrl("192.168.1.100:3772", "pairing-token")).toBe(
+      "http://192.168.1.100:3772/#token=pairing-token",
     );
   });
 
@@ -16,8 +16,8 @@ describe("buildPairingUrl", () => {
   });
 
   it("preserves an explicit scheme for an IP address", () => {
-    expect(buildPairingUrl("https://192.168.1.100:3773", "pairing-token")).toBe(
-      "https://192.168.1.100:3773/#token=pairing-token",
+    expect(buildPairingUrl("https://192.168.1.100:3772", "pairing-token")).toBe(
+      "https://192.168.1.100:3772/#token=pairing-token",
     );
   });
 });

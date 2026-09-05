@@ -17,7 +17,10 @@ import * as ServerSecretStore from "./ServerSecretStore.ts";
 import * as SessionStore from "./SessionStore.ts";
 import * as ManagedPolicy from "../policy/ManagedPolicy.ts";
 
-const TEST_SERVER_PORT = 13_773;
+/** Pinned so dev-mode cookie tests can assert the port-scoped name. */
+const TEST_SERVER_PORT = 13_772;
+const isPairingCredentialIssueError = Schema.is(PairingGrantStore.PairingCredentialIssueError);
+const isPersistenceSqlError = Schema.is(PersistenceErrors.PersistenceSqlError);
 
 const layerServerConfig = (overrides?: Partial<ServerConfig.ServerConfig["Service"]>) =>
   Layer.effect(
@@ -487,7 +490,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
         const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
         const sessions = yield* SessionStore.SessionStore;
 
-        const pairingUrl = yield* serverAuth.issueStartupPairingUrl("http://127.0.0.1:3773");
+        const pairingUrl = yield* serverAuth.issueStartupPairingUrl("http://127.0.0.1:3772");
         const token = new URLSearchParams(new URL(pairingUrl).hash.slice(1)).get("token");
         const listedPairingLinks = yield* serverAuth.listPairingLinks();
         expect(token).toBeTruthy();
@@ -595,12 +598,12 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
             {
               url: "/ws",
               cookies: { [sessions.cookieName]: exchanged.sessionToken },
-              headers: { host: "192.168.1.50:3773", ...headers },
+              headers: { host: "192.168.1.50:3772", ...headers },
             } as never,
             "rpc",
           );
 
-        yield* upgrade({ origin: "http://192.168.1.50:3773" });
+        yield* upgrade({ origin: "http://192.168.1.50:3772" });
         yield* upgrade({
           origin: "https://box.tail1234.ts.net",
           "x-forwarded-host": "box.tail1234.ts.net",
@@ -636,11 +639,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
         const post = (headers: Record<string, string>) =>
           serverAuth.authenticateHttpRequest({
             cookies: { [sessions.cookieName]: exchanged.sessionToken },
-            headers: { host: "localhost:13773", ...headers },
+            headers: { host: "localhost:13772", ...headers },
           } as never);
 
         yield* post({ origin: "http://192.168.1.50:5733", "sec-fetch-site": "same-origin" });
-        yield* post({ origin: "http://localhost:13773" });
+        yield* post({ origin: "http://localhost:13772" });
 
         const otherPort = yield* Effect.flip(
           post({ origin: "http://localhost:3000", "sec-fetch-site": "same-site" }),
@@ -648,7 +651,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
         expect(otherPort._tag).toBe("ServerAuthInvalidCredentialError");
         const state = yield* serverAuth.getSessionState({
           cookies: { [sessions.cookieName]: exchanged.sessionToken },
-          headers: { host: "localhost:13773", origin: "http://localhost:3000" },
+          headers: { host: "localhost:13772", origin: "http://localhost:3000" },
         } as never);
         expect(state.authenticated).toBe(false);
       }).pipe(Effect.provide(layerEnvironmentAuth({ mode: "web" }))),
@@ -664,7 +667,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
             url: "/ws",
             cookies: {},
             headers: {
-              host: "192.168.1.50:3773",
+              host: "192.168.1.50:3772",
               origin: "http://192.168.1.50:8080",
               authorization: `${scheme} ${bearer.token}`,
             },
@@ -690,7 +693,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
           { proofKeyThumbprint: key.thumbprint },
         );
         const session = yield* sessions.verify(exchanged.access_token);
-        const host = "192.168.1.50:3773";
+        const host = "192.168.1.50:3772";
         const socketUrl = `http://${host}/ws`;
         const iat = Math.floor((yield* DateTime.now).epochMilliseconds / 1_000);
         const upgrade = (ticket: string, use: "rpc" | "media", proof?: string) =>
@@ -804,12 +807,12 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
           method: "GET",
           url: `/ws?wsTicket=${Redacted.value(rpc.ticket)}&dpop=${key.sign({
             method: "GET",
-            url: "http://192.168.1.50:3773/ws",
+            url: "http://192.168.1.50:3772/ws",
             token: Redacted.value(rpc.ticket),
             iat: Math.floor((yield* DateTime.now).epochMilliseconds / 1_000),
           })}`,
           cookies: {},
-          headers: { host: "192.168.1.50:3773" },
+          headers: { host: "192.168.1.50:3772" },
         } as never;
 
         yield* serverAuth.authenticateWebSocketUpgrade(request, "rpc");
