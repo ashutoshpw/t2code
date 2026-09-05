@@ -40,9 +40,9 @@ describe("desktop local connection identity", () => {
   it("does not classify the primary environment as desktop-local", () => {
     const target = new PrimaryConnectionTarget({
       environmentId: EnvironmentId.make("environment-primary"),
-      httpBaseUrl: "http://127.0.0.1:3773",
+      httpBaseUrl: "http://127.0.0.1:3772",
       label: "This device",
-      wsBaseUrl: "ws://127.0.0.1:3773",
+      wsBaseUrl: "ws://127.0.0.1:3772",
     });
 
     expect(isDesktopLocalConnectionTarget(target)).toBe(false);
