@@ -144,7 +144,7 @@ const withDescriptorServer = <A, E, R>(run: (origin: string) => Effect.Effect<A,
     (server) => Effect.sync(() => server.close()),
   );
 
-describe("t3 pair", () => {
+describe("t2code pair", () => {
   it.effect("mints a token and prints a QR pairing URL for a live server", () =>
     withDescriptorServer((origin) =>
       Effect.gen(function* () {
@@ -179,7 +179,7 @@ describe("t3 pair", () => {
           readonly scopes: ReadonlyArray<string>;
         }>;
         assert.equal(credentials.length, 1);
-        assert.equal(credentials[0]?.label, "t3 pair");
+        assert.equal(credentials[0]?.label, "t2code pair");
         assert.deepEqual(credentials[0]?.scopes, AuthStandardClientScopes);
       }),
     ).pipe(

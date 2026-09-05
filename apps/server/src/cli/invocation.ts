@@ -17,6 +17,7 @@ import { isCommandAvailable } from "@t3tools/shared/shell";
 import packageJson from "../../package.json" with { type: "json" };
 
 export type CliRunner = "npx" | "pnpm dlx" | "bunx";
+const CLI_COMMAND = "t2code";
 
 /**
  * How the CLI was launched, judged by where its entry script lives. Each
@@ -28,7 +29,7 @@ export type CliRunner = "npx" | "pnpm dlx" | "bunx";
  *   bunx     ~/.bun/install/cache/... or $TMPDIR/bunx-<uid>-<spec>/...
  *
  * Global installs and repo checkouts match none of these and return null.
- * Detection is best-effort; callers must fail closed to a plain `t3` command.
+ * Detection is best-effort; callers must fail closed to a plain `t2code` command.
  */
 function detectCliRunner(entryPath: string): CliRunner | null {
   const path = entryPath.replaceAll("\\", "/");
@@ -111,20 +112,20 @@ export const resolveServerInstallation = Effect.gen(function* () {
 }).pipe(Effect.orElseSucceed(() => null));
 
 /**
- * The `t3` package spec to suggest. The literal spec the user typed (e.g.
- * `t3@nightly`) is resolved away before our process starts, so re-derive it
+ * The `@t2code/cli` package spec to suggest. The literal spec the user typed (e.g.
+ * `@t2code/cli@nightly`) is resolved away before our process starts, so re-derive it
  * from the running version: nightly builds re-suggest the nightly channel,
  * anything else suggests the bare package.
  */
 function suggestedPackageSpec(version: string): string {
   const channel = /^[^-+]+-(nightly|preview)\./.exec(version)?.[1];
-  return channel === undefined ? "t3" : `t3@${channel}`;
+  return channel === undefined ? "@t2code/cli" : `@t2code/cli@${channel}`;
 }
 
 /**
- * Render a `t3 <subcommand>` suggestion that matches how this process was
- * launched, so copy/pasting it actually works: `npx t3 connect` suggests
- * `npx t3 serve`, a global install suggests `t3 serve`, and a nightly build
+ * Render a `t2code <subcommand>` suggestion that matches how this process was
+ * launched, so copy/pasting it actually works: `npx @t2code/cli connect` suggests
+ * `npx @t2code/cli serve`, a global install suggests `t2code serve`, and a nightly build
  * keeps the `@nightly` tag.
  */
 export function formatCliCommand(input: {
@@ -134,7 +135,7 @@ export function formatCliCommand(input: {
 }): string {
   const runner = detectCliRunner(input.entryPath);
   if (runner === null) {
-    return `t3 ${input.subcommand}`;
+    return `${CLI_COMMAND} ${input.subcommand}`;
   }
   return `${runner} ${suggestedPackageSpec(input.version)} ${input.subcommand}`;
 }

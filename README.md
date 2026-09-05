@@ -25,18 +25,10 @@ We wanted something performant, remote-ready, and truly open. If we ever go the 
 ### Command line
 
 ```bash
-curl -fsSL https://t3.codes/install.sh | sh
+npx @t2code/cli@latest
 ```
 
-On Windows, in PowerShell:
-
-```powershell
-irm https://t3.codes/install.ps1 | iex
-```
-
-Then run `t3` to start the server and open the local web app. `t3 service install` keeps it running in the background, `t3 update` moves to a newer release, and `t3 --help` has the full reference.
-
-To try it once without installing, run `npx t3@latest` instead.
+This starts the server and opens the local web app. `npx @t2code/cli service install` keeps it running in the background, `npx @t2code/cli update` moves to a newer release, and `npx @t2code/cli --help` has the full reference.
 
 ### Desktop app
 

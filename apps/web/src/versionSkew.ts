@@ -126,11 +126,11 @@ export function manualServerUpdateCommand(
 ): string {
   if (installation?.kind === "npm-global") {
     const prefix = `'${installation.prefix.replaceAll("'", "'\\''")}'`;
-    return `npm install --global --prefix ${prefix} t3@${targetVersion}`;
+    return `npm install --global --prefix ${prefix} @t2code/cli@${targetVersion}`;
   }
   const runner =
     installation?.kind === "pnpm-dlx" ? "pnpm dlx" : installation?.kind === "bunx" ? "bunx" : "npx";
-  return `${runner} t3@${targetVersion}`;
+  return `${runner} @t2code/cli@${targetVersion}`;
 }
 
 export function serverUpdateGuidance(capability: ServerSelfUpdateCapability): string {

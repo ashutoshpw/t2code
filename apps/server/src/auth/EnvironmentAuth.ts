@@ -572,7 +572,7 @@ export class EnvironmentAuth extends Context.Service<
       request: HttpServerRequest.HttpServerRequest,
     ) => Effect.Effect<AuthenticatedSession, ServerAuthCredentialError | ServerAuthInternalError>;
   }
->()("t3/auth/EnvironmentAuth") {}
+>()("@t2code/cli/auth/EnvironmentAuth") {}
 
 type BootstrapExchangeResult = {
   readonly response: AuthBrowserSessionResult;

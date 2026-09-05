@@ -1226,13 +1226,13 @@ export interface DesktopBridge {
   downloadUpdate: () => Promise<DesktopUpdateActionResult>;
   installUpdate: () => Promise<DesktopUpdateActionResult>;
   onUpdateState: (listener: (state: DesktopUpdateState) => void) => () => void;
-  /** Settings → `t3` command. Optional: older desktop builds lack it. */
+  /** Settings → `t2` command. Optional: older desktop builds lack it. */
   cliCommand?: {
     getState: () => Promise<DesktopCliCommandState>;
     install: () => Promise<DesktopCliCommandState>;
     uninstall: () => Promise<DesktopCliCommandState>;
   };
-  /** Present when the desktop shell accepts `t3 app` activation requests. */
+  /** Present when the desktop shell accepts `t2 app` activation requests. */
   appActivation?: {
     setReady: (ready: boolean) => Promise<void>;
     complete: (response: DesktopAppActivationResponse) => Promise<void>;
