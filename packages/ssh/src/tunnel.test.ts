@@ -242,7 +242,7 @@ describe("ssh tunnel scripts", () => {
     assert.notInclude(script, "npx");
   });
 
-  it("uses the remote t3 runner for launch and pairing scripts", () => {
+  it("uses the remote t2code runner for launch and pairing scripts", () => {
     const target = {
       alias: "devbox",
       hostname: "devbox.example.com",
