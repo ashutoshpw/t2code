@@ -1658,7 +1658,7 @@ const assertBrowserApiCorsPreflightHeaders = (
     "traceparent",
   ]);
 };
-const crossOriginClientOrigin = "http://remote-client.test:3773";
+const crossOriginClientOrigin = "http://remote-client.test:3772";
 
 const getWsServerUrl = (
   pathname = "",
@@ -2725,7 +2725,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           },
           origin: {
             localHttpHost: "192.168.1.42",
-            localHttpPort: 3773,
+            localHttpPort: 3772,
           },
         }),
       });
