@@ -179,6 +179,151 @@ describe("ServerUpdateAction", () => {
     await click(screen, "Update");
     expect(testState.updateServer).not.toHaveBeenCalled();
   });
+
+  it.each([
+    [
+      { kind: "npm-global", prefix: "/opt/node" },
+      "Copy update command",
+      "npm install --global --prefix '/opt/node' t3@0.0.45",
+      "Update command copied",
+      "then restart t3",
+    ],
+    [
+      { kind: "npx" },
+      "Copy relaunch command",
+      "npx t3@0.0.45",
+      "Relaunch command copied",
+      "This does not update an installed t3 command.",
+    ],
+    [
+      undefined,
+      "Copy relaunch command",
+      "npx t3@0.0.45",
+      "Relaunch command copied",
+      "This does not update an installed t3 command.",
+    ],
+  ] satisfies ReadonlyArray<
+    readonly [ServerInstallation | undefined, string, string, string, string]
+  >)(
+    "copies an honest manual command for %j without invoking remote update",
+    async (installation, label, command, title, guidance) => {
+      await renderAction({ selfUpdate: null, installation, targetVersion: "0.0.45" });
+      await click(label);
+      expect(testState.clipboard).toHaveBeenCalledWith(command);
+      expect(testState.toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title,
+          description: expect.stringContaining(guidance),
+        }),
+      );
+      expect(testState.updateServer).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports success only after the shared update flow reconnects", async () => {
+    testState.updateServer.mockResolvedValue(success());
+
+    await renderAction();
+    await click("Update");
+
+    expect(testState.updateServer).toHaveBeenCalledWith({
+      environmentId: "env-test",
+      input: { targetVersion: "0.0.31" },
+    });
+    expect(testState.toast).toHaveBeenCalledWith({
+      type: "success",
+      title: "Test server updated",
+      description: "Reconnected on @t2code/cli@0.0.31.",
+    });
+  });
+
+  it("reports one result when the update action is double-clicked", async () => {
+    let finishUpdate: (() => void) | undefined;
+    testState.updateServer.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishUpdate = () => resolve(success());
+        }),
+    );
+
+    await renderAction();
+    await act(async () => {
+      button("Update")!.click();
+      button("Update")!.click();
+    });
+
+    expect(testState.updateServer).toHaveBeenCalledTimes(1);
+    await act(async () => finishUpdate?.());
+    expect(testState.toast).toHaveBeenCalledTimes(1);
+  });
+
+  it("quietly releases the action when the operation is interrupted", async () => {
+    testState.updateServer.mockResolvedValue(AsyncResult.failure(Cause.interrupt()));
+
+    await renderAction();
+    await click("Update");
+
+    expect(testState.toast).not.toHaveBeenCalled();
+  });
+
+  it("keeps the manual instruction for desktop servers without remote update support", async () => {
+    await renderAction({ selfUpdate: "desktop-managed" });
+
+    expect(container.textContent).toBe(
+      "Update the desktop app on that machine to update this server.",
+    );
+    expect(button()).toBeUndefined();
+  });
+
+  it("updates remote desktop apps through the shared update flow after confirmation", async () => {
+    registerConfirmDialogHost();
+    testState.updateServer.mockResolvedValue(success("desktop-app", "0.0.34"));
+
+    await renderAction({ selfUpdate: "desktop-managed", desktopAppUpdate: true });
+    await click("Update");
+    expect(readConfirmDialogState()).toEqual(
+      expect.objectContaining({
+        status: "confirming",
+        message: expect.stringContaining("Test server"),
+      }),
+    );
+    await act(async () => respondToConfirmDialog(true));
+
+    expect(testState.updateServer).toHaveBeenCalledWith({
+      environmentId: "env-test",
+      input: { targetVersion: "0.0.31" },
+    });
+    expect(testState.toast).toHaveBeenCalledWith({
+      type: "success",
+      title: "Test server updated",
+      description: "Desktop app relaunched on 0.0.34.",
+    });
+  });
+
+  it("leaves thread continuation off by default", async () => {
+    testState.updateServer.mockResolvedValue(success());
+
+    await renderAction({ threadContinuation: true });
+    await click("Update");
+
+    expect(testState.updateServer).toHaveBeenCalledWith({
+      environmentId: "env-test",
+      input: { targetVersion: "0.0.31" },
+    });
+  });
+
+  it("applies the saved thread continuation preference automatically", async () => {
+    testState.updateServer.mockResolvedValue(success());
+    testState.continueThreadsAfterServerUpdate = true;
+
+    await renderAction({ threadContinuation: true });
+    await click("Update");
+
+    expect(testState.updateServer).toHaveBeenCalledWith({
+      environmentId: "env-test",
+      input: { targetVersion: "0.0.31", continueRunningThreads: true },
+    });
+  });
 });
 
 describe("ServerUpdatesAction", () => {
