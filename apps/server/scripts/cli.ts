@@ -42,7 +42,7 @@ interface PackageJson {
   engines: Record<string, string>;
   files: string[];
   dependencies: Record<string, string>;
-  overrides: Record<string, string>;
+  overrides?: Record<string, string>;
 }
 
 const PackageJsonPrettyJson = fromJsonStringPretty(Schema.Unknown);
@@ -184,13 +184,15 @@ interface PublishCommandConfig {
   readonly tag: string;
   readonly provenance: boolean;
   readonly dryRun: boolean;
+  readonly otp?: string | undefined;
+  readonly interactive: boolean;
 }
 
 const createVpPmPublishArgs = (config: PublishCommandConfig): ReadonlyArray<string> => {
   const args = [
     "publish",
     "--filter",
-    "t3",
+    serverPackageJson.name,
     "--access",
     config.access,
     "--tag",
@@ -200,6 +202,17 @@ const createVpPmPublishArgs = (config: PublishCommandConfig): ReadonlyArray<stri
 
   if (config.provenance) args.push("--provenance");
   if (config.dryRun) args.push("--dry-run");
+  if (config.otp !== undefined) args.push("--otp", config.otp);
+
+  return args;
+};
+
+const createNpmPublishArgs = (config: PublishCommandConfig): ReadonlyArray<string> => {
+  const args = ["publish", "--access", config.access, "--tag", config.tag];
+
+  if (config.provenance) args.push("--provenance");
+  if (config.dryRun) args.push("--dry-run");
+  if (config.otp !== undefined) args.push("--otp", config.otp);
 
   return args;
 };
@@ -212,6 +225,14 @@ const publishCmd = Command.make(
     appVersion: Flag.string("app-version").pipe(Flag.optional),
     provenance: Flag.boolean("provenance").pipe(Flag.withDefault(false)),
     dryRun: Flag.boolean("dry-run").pipe(Flag.withDefault(false)),
+    otp: Flag.string("otp").pipe(
+      Flag.withDescription("One-time password for npm authentication (local publishing only)."),
+      Flag.optional,
+    ),
+    interactive: Flag.boolean("interactive").pipe(
+      Flag.withDescription("Run local npm publishing with inherited terminal input and output."),
+      Flag.withDefault(false),
+    ),
     verbose: Flag.boolean("verbose").pipe(Flag.withDefault(false)),
   },
   (config) =>
@@ -221,6 +242,8 @@ const publishCmd = Command.make(
       const repoRoot = yield* RepoRoot;
       const serverDir = path.join(repoRoot, "apps/server");
       const packageJsonPath = path.join(serverDir, "package.json");
+      const otp = Option.getOrUndefined(config.otp);
+      const useNpm = otp !== undefined || config.interactive;
 
       // Assert build assets exist
       for (const relPath of [
@@ -254,11 +277,18 @@ const publishCmd = Command.make(
               workspaceCatalog,
               "apps/server",
             ),
-            overrides: resolveCatalogDependencies(
-              workspaceOverrides,
-              workspaceCatalog,
-              "apps/server",
-            ),
+            // The workspace overrides use pnpm's `parent>child` selectors, which npm
+            // rejects while reading package metadata. Local OTP publishes use npm, so
+            // leave those workspace-only overrides out of the temporary manifest.
+            ...(!useNpm
+              ? {
+                  overrides: resolveCatalogDependencies(
+                    workspaceOverrides,
+                    workspaceCatalog,
+                    "apps/server",
+                  ),
+                }
+              : {}),
           };
 
           return {
@@ -267,8 +297,9 @@ const publishCmd = Command.make(
             icons: yield* preparePublishIcons(repoRoot, serverDir, version),
           };
         }),
-        // Use: pnpm publish from the workspace root so pnpm-only workspace
-        // config, including override selectors, is interpreted correctly.
+        // Use: pnpm publish from the workspace root so pnpm-only workspace config,
+        // including override selectors, is interpreted correctly. The local OTP path
+        // uses npm from the package directory instead.
         (resource) =>
           Effect.gen(function* () {
             yield* fs.writeFileString(packageJsonPath, `${resource.packageJsonString}\n`);
@@ -277,14 +308,34 @@ const publishCmd = Command.make(
             }
             yield* Effect.log("[cli] Applied package metadata and publish icon overrides");
 
-            const args = createVpPmPublishArgs(config);
-            const spawnCommand = yield* resolveSpawnCommand("vp", ["pm", ...args]);
+            const publishConfig = {
+              access: config.access,
+              tag: config.tag,
+              provenance: config.provenance,
+              dryRun: config.dryRun,
+              otp,
+              interactive: config.interactive,
+            } satisfies PublishCommandConfig;
+            // Vite+ routes publish through pnpm, whose publish adapter advertises npm's
+            // web-auth flow even when a classic OTP is supplied. Use npm for local OTP
+            // or interactive publishes so npm can handle terminal authentication; CI/OIDC
+            // stays on Vite+.
+            const executable = useNpm ? "npm" : "vp";
+            const args = useNpm
+              ? createNpmPublishArgs(publishConfig)
+              : createVpPmPublishArgs(publishConfig);
+            const commandArgs = useNpm ? args : ["pm", ...args];
+            const spawnCommand = yield* resolveSpawnCommand(executable, commandArgs);
 
-            yield* Effect.log(`[cli] Running: vp pm ${args.join(" ")}`);
+            const logArgs = commandArgs.map((arg, index) =>
+              index > 0 && commandArgs[index - 1] === "--otp" ? "<redacted>" : arg,
+            );
+            yield* Effect.log(`[cli] Running: ${executable} ${logArgs.join(" ")}`);
             yield* runCommand(
               ChildProcess.make(spawnCommand.command, spawnCommand.args, {
-                cwd: repoRoot,
-                stdout: config.verbose ? "inherit" : "ignore",
+                cwd: useNpm ? serverDir : repoRoot,
+                stdin: config.interactive ? "inherit" : undefined,
+                stdout: config.verbose || config.interactive ? "inherit" : "ignore",
                 stderr: "inherit",
                 shell: spawnCommand.shell,
               }),

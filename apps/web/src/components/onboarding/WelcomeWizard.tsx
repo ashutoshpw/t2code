@@ -119,7 +119,7 @@ export function WelcomeWizard({
 }: {
   /**
    * Whether the "Local Only" card is offered. True whenever the app is served
-   * by an authenticated primary server — desktop, `npx t3`, or a dev server —
+   * by an authenticated primary server — desktop, `npx @t2code/cli`, or a dev server —
    * since that server is "this machine" regardless of the hostname the app
    * was opened from. Only hosted-static (app.t3.codes) has no local server.
    */
@@ -413,12 +413,12 @@ function ConnectionOption({
 
 // ── Step 2: T3 Connect (sign in, then connect machines) ──────
 
-const CONNECT_LOGIN_COMMAND = "npx t3 connect";
+const CONNECT_LOGIN_COMMAND = "npx @t2code/cli connect";
 
 /**
  * Sign-in and machine-connection combined: signed out shows the Clerk prompt,
  * signed in forks on account state — zero connected machines blocks on the
- * `npx t3 connect` command and auto-advance is left to the user pressing
+ * `npx @t2code/cli connect` command and auto-advance is left to the user pressing
  * Continue once their machine appears; existing machines show a confirmation
  * list with the command folded away. There is deliberately no "primary
  * machine" selection.
@@ -491,7 +491,7 @@ function ConnectMachinesStep({
               <CommandBlock command={CONNECT_LOGIN_COMMAND} className="mt-2" />
               <p className="mt-2 text-xs text-muted-foreground">
                 Keep T3 Code running on that computer. If it is not running, open T3 Code or run{" "}
-                <code className="font-mono">npx t3 serve</code>.
+                <code className="font-mono">npx @t2code/cli serve</code>.
               </p>
             </CollapsiblePanel>
           </Collapsible>
@@ -504,7 +504,7 @@ function ConnectMachinesStep({
           <CommandBlock command={CONNECT_LOGIN_COMMAND} className="mt-7" prominent />
           <p className="mt-2 text-xs text-muted-foreground">
             Keep T3 Code running on that computer. If it is not running, open T3 Code or run{" "}
-            <code className="font-mono">npx t3 serve</code>.
+            <code className="font-mono">npx @t2code/cli serve</code>.
           </p>
           <div className="mt-5 overflow-hidden border-y border-border">
             <CloudEnvironmentConnectRows
@@ -539,7 +539,7 @@ function ConnectMachinesStep({
 // ── Step 2′: Direct pairing ──────────────────────────────────
 
 /**
- * Server-minted pairing, D-B treatment: numbered steps, `t3 pair` on the
+ * Server-minted pairing, D-B treatment: numbered steps, `t2code pair` on the
  * server, paste the URL here. Registers the remote environment in this
  * browser's catalog (same path the hosted /pair surface uses).
  */
@@ -589,10 +589,10 @@ function PairDirectStep({
           <p className="text-sm text-muted-foreground">
             <span className="font-mono text-muted-foreground/70">01</span> Run this on your server
           </p>
-          <CommandBlock command="npx t3 pair" className="mt-2" />
+          <CommandBlock command="npx @t2code/cli pair" className="mt-2" />
           <p className="mt-2 text-xs text-muted-foreground">
-            Start the server with <code className="font-mono">npx t3 serve</code> first. Add{" "}
-            <code className="font-mono">--tailscale</code> to use your tailnet.
+            Start the server with <code className="font-mono">npx @t2code/cli serve</code> first.
+            Add <code className="font-mono">--tailscale</code> to use your tailnet.
           </p>
         </div>
         <div>
