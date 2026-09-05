@@ -30,7 +30,7 @@ jobs:
   build:
     name: Build preview JS bundle
     if: github.event.label.name == 'preview:mac'
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       # This repository is public, so Git needs no credentials. checkout's
@@ -70,7 +70,7 @@ jobs:
 
           base_version="$(node -p "require('./apps/desktop/package.json').version")"
           node scripts/update-release-package-versions.ts "${base_version}-pr.${PR_NUMBER}.${GITHUB_RUN_NUMBER}"
-          # Public T3 Connect identifiers (Clerk publishable key, relay URL).
+          # Public T2 Connect identifiers (Clerk publishable key, relay URL).
           cp .env.example .env
 
       - uses: ./.github/actions/setup-apt-mirrors
