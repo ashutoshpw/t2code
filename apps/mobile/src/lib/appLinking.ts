@@ -10,13 +10,13 @@ export function shouldHandleAppLink(url: string, cloudConfigured: boolean): bool
   return (
     !url.includes("expo-development-client") &&
     !url.includes("://expo-sharing") &&
-    !/^t3code(-dev|-preview)?:\/*$/.test(url) &&
+    !/^(?:t2|t3)code(-dev|-preview)?:\/*$/.test(url) &&
     (cloudConfigured || !CLOUD_ONLY_LINK_PATH.test(url.split(/[?#]/)[0] ?? ""))
   );
 }
 
 /**
- * Screens that only exist with T3 Connect configured. A build without it has
+ * Screens that only exist with T2 Connect configured. A build without it has
  * no entry points to them, so a link must not open one empty. Anchored to the
  * app-relative path (after `exp://host/--/` in Expo Go) so a file route whose
  * path merely ends in one of these names still opens.
