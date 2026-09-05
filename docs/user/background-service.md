@@ -7,17 +7,17 @@ to keep a terminal open.
 
 Run these commands on the machine that will host T3 Code:
 
-| Task                            | Command                           |
-| ------------------------------- | --------------------------------- |
-| Install and start               | `npx t3@latest service install`   |
-| Inspect status and log location | `npx t3@latest service status`    |
-| Update or repair                | `npx t3@latest service update`    |
-| Stop and remove from startup    | `npx t3@latest service uninstall` |
+| Task                            | Command                                    |
+| ------------------------------- | ------------------------------------------ |
+| Install and start               | `npx @t2code/cli@latest service install`   |
+| Inspect status and log location | `npx @t2code/cli@latest service status`    |
+| Update or repair                | `npx @t2code/cli@latest service update`    |
+| Stop and remove from startup    | `npx @t2code/cli@latest service uninstall` |
 
 Uninstalling the service leaves your projects, threads, and settings intact.
 
 Install and update use the version of the CLI you invoke. For nightly, use
-`npx t3@nightly service update`; replace `nightly` with an exact version to pin
+`npx @t2code/cli@nightly service update`; replace `nightly` with an exact version to pin
 one. An older CLI refuses to replace a newer service unless you explicitly add
 `--allow-downgrade`.
 
@@ -43,7 +43,7 @@ separately. Signing out of T3 Connect does not stop or uninstall the service.
 
 ## Troubleshooting
 
-Start with `t3 service status` on the host. It prints the log path and, on Linux,
+Start with `t2code service status` on the host. It prints the log path and, on Linux,
 checks whether the installed service is running, enabled, and allowed to survive
 logout.
 
@@ -62,7 +62,7 @@ ssh -t your-server 'sudo loginctl enable-linger "$(id -un)"'
 
 Then retry service setup as your normal user. Run only the `loginctl` command
 with sudo; running T3 Code as root creates a separate installation and Connect
-identity. Without administrator access, run `t3 serve` in a terminal and keep
+identity. Without administrator access, run `t2code serve` in a terminal and keep
 that session open.
 
 | Status problem                          | Next step                                                                                                                      |
