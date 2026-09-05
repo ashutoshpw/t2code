@@ -61,7 +61,7 @@ jobs:
   android:
     name: Android ${{ matrix.abi }}
     if: github.repository == 'pingdotgg/t3code' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'android')
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -142,19 +142,21 @@ jobs:
 
       # Pull requests build cold: their code must not write Gradle or ccache state that
       # the runs holding the cache login restore.
-      - name: Mount build cache
+      - name: Restore build cache
         if: github.event_name != 'pull_request'
-        uses: useblacksmith/stickydisk@v1
+        uses: actions/cache@v6
         with:
-          key: ${{ github.repository }}-android-dev-client-${{ matrix.abi }}
           path: ~/.cache/t3-android-dev-client
+          key: ${{ github.repository }}-android-dev-client-${{ matrix.abi }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ github.repository }}-android-dev-client-${{ matrix.abi }}-
 
       - name: Configure Gradle and ccache
         run: |
           mkdir -p "$GRADLE_USER_HOME" "$CCACHE_DIR"
-          # No daemon: nothing should hold the sticky disk open when it is committed.
+          # No daemon: a lingering daemon keeps files open while the cache saves.
           printf 'org.gradle.caching=true\norg.gradle.daemon=false\n' > "$GRADLE_USER_HOME/gradle.properties"
-          sudo sed -i 's|http://|https://|g' /etc/apt/blacksmith-ubuntu-mirrors.txt /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i 's|http://|https://|g' /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update -qq && sudo apt-get install -y -qq ccache
           ccache --zero-stats
 
@@ -219,7 +221,7 @@ jobs:
   ios:
     name: iOS simulator
     if: github.repository == 'pingdotgg/t3code' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'ios')
-    runs-on: blacksmith-12vcpu-macos-26
+    runs-on: macos-26
     timeout-minutes: 60
     concurrency:
       group: mobile-dev-client-ios-${{ github.event_name == 'pull_request' && github.event.pull_request.number || inputs.fingerprint || github.sha }}
