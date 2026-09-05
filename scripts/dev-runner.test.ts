@@ -70,6 +70,83 @@ const devServerInput = {
 } as const;
 
 it.layer(NodeServices.layer)("dev-runner", (it) => {
+  it.effect("accepts a dry run without the optional browser flag", () =>
+    Effect.gen(function* () {
+      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+      const path = yield* Path.Path;
+      const output = yield* spawner.string(
+        ChildProcess.make(process.execPath, ["scripts/dev-runner.ts", "dev", "--dry-run"], {
+          cwd: path.resolve(import.meta.dirname, ".."),
+        }),
+      );
+
+      assert.include(output, "[dev-runner] mode=dev");
+    }),
+  );
+
+  describe("getDevRunnerModeArgs", () => {
+    it.effect("lets Vite+ honor the desktop dev task graph", () =>
+      Effect.sync(() => {
+        assert.deepStrictEqual(getDevRunnerModeArgs("dev:desktop"), [
+          "run",
+          "--filter=@t3tools/desktop",
+          "--filter=@t3tools/web",
+          "dev",
+        ]);
+      }),
+    );
+
+    it.effect("places Vite+ run flags before the task name", () =>
+      Effect.sync(() => {
+        assert.deepStrictEqual(getDevRunnerModeArgs("dev"), [
+          "run",
+          "--filter=@t3tools/contracts",
+          "--filter=@t3tools/web",
+          "--filter=@t2code/cli",
+          "--parallel",
+          "dev",
+        ]);
+      }),
+    );
+  });
+
+  describe("resolveOffset", () => {
+    it.effect("uses explicit T3CODE_PORT_OFFSET when provided", () =>
+      Effect.gen(function* () {
+        const result = yield* resolveOffset({ portOffset: 12, devInstance: undefined });
+        assert.deepStrictEqual(result, {
+          offset: 12,
+          source: "T3CODE_PORT_OFFSET=12",
+        });
+      }),
+    );
+
+    it.effect("hashes non-numeric instance values", () =>
+      Effect.gen(function* () {
+        const result = yield* resolveOffset({
+          portOffset: undefined,
+          devInstance: "feature-branch",
+        });
+        assert.ok(result.offset >= 1);
+        assert.ok(result.offset <= 3000);
+      }),
+    );
+
+    it.effect("returns structured context for a negative port offset", () =>
+      Effect.gen(function* () {
+        const error = yield* resolveOffset({ portOffset: -1, devInstance: undefined }).pipe(
+          Effect.flip,
+        );
+
+        assert.equal(error._tag, "DevRunnerInvalidPortOffsetError");
+        assert.equal(error.configKey, "T3CODE_PORT_OFFSET");
+        assert.equal(error.portOffset, -1);
+        assert.equal(error.minimum, 0);
+        assert.ok(!("cause" in error));
+      }),
+    );
+  });
+
   describe("createDevRunnerEnv", () => {
     it.effect("forwards the reusable auth token to web dev and removes it for desktop", () =>
       Effect.gen(function* () {

@@ -206,7 +206,7 @@ export class DesktopTelemetryReceiver extends Context.Service<
       Scope.Scope
     >;
   }
->()("t3/resourceTelemetry/DesktopTelemetryReceiver") {}
+>()("@t2code/cli/resourceTelemetry/DesktopTelemetryReceiver") {}
 
 class DesktopShellCertificatesUpdateFailed extends Schema.TaggedError<DesktopShellCertificatesUpdateFailed>()(
   "DesktopShellCertificatesUpdateFailed",
