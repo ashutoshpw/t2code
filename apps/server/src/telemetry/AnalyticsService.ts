@@ -106,7 +106,8 @@ export class AnalyticsService extends Context.Service<
       observedBy: "server" | "client",
     ) => Effect.Effect<void>;
   }
->()("t3/telemetry/AnalyticsService") {
+>()("@t2code/cli/telemetry/AnalyticsService") {
+  /** No-op layer for callers that intentionally disable telemetry. */
   static readonly layerTest = Layer.succeed(
     AnalyticsService,
     AnalyticsService.of({

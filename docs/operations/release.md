@@ -42,12 +42,12 @@ the version.
   - Nightly runs are always GitHub prereleases and never marked latest.
   - Automatically generated release notes are pinned to the previous tag in the same channel, so stable compares to the previous stable tag and nightly compares to the previous nightly tag.
 - Includes Electron auto-update metadata (for example `latest*.yml`, `nightly*.yml`, and `*.blockmap`) in release assets.
-- Builds a self-contained CLI archive per platform (`t3-<version>-<platform>-<arch>.tar.gz`, `.zip` on Windows) in the same job as that target's desktop artifact and attaches them to the GitHub Release with a `SHA256SUMS` file, on every channel, for five targets: macOS arm64, Linux x64 and arm64, Windows x64 and arm64. Every archive is smoke-tested on hardware of its own architecture, and every one but the Windows archives is also built and signed there. There is no macOS x64 archive: Node single-executables are unsupported on x64 macOS (the SEA docs list macOS as arm64 only) and the binary segfaults on start; the x64 desktop app is Electron and unaffected.
-  - The archive holds the server as a Node single-executable (`scripts/build-cli-archive.ts`), so unpacking it needs neither Node, npm, nor a compiler. It is the only form in which T3 Code manages a runtime: the desktop's SSH environments, the boot service, `t3 update`, and the install scripts all download and verify this archive against `SHA256SUMS`. The `t3` npm package exists for people who run `npx t3` or `npm install -g t3` themselves, and it downloads this same archive too; nothing in the product installs from npm. The `curl | sh` installers are `scripts/install.sh` and `scripts/install.ps1`; the marketing site copies them into its `public/` at build time (`apps/marketing/scripts/stage-install-scripts.mjs`) and serves them at `t3.codes/install.sh` and `/install.ps1`.
-  - The root `package.json` pins `engines.node` to the exact Node version used by development, CI and standalone executables. Keep it exact: cross-target builds download that version, and native executable builds reject a different host Node version. Runtime changes need a new T3 release version because installed runtimes are cached by that version.
+- Builds a self-contained CLI archive per platform (`t2-<version>-<platform>-<arch>.tar.gz`, `.zip` on Windows) in the same job as that target's desktop artifact and attaches them to the GitHub Release with a `SHA256SUMS` file, on every channel, for five targets: macOS arm64, Linux x64 and arm64, Windows x64 and arm64. Every archive is smoke-tested on hardware of its own architecture, and every one but the Windows archives is also built and signed there. There is no macOS x64 archive: Node single-executables are unsupported on x64 macOS (the SEA docs list macOS as arm64 only) and the binary segfaults on start; the x64 desktop app is Electron and unaffected.
+  - The archive holds the server as a Node single-executable (`scripts/build-cli-archive.ts`), so unpacking it needs neither Node, npm, nor a compiler. It is the only form in which T2 Code manages a runtime: the desktop's SSH environments, the boot service, `t2 update`, and the install scripts all download and verify this archive against `SHA256SUMS`. The `t2` npm package exists for people who run `npx t2` or `npm install -g t2` themselves, and it downloads this same archive too; nothing in the product installs from npm. The `curl | sh` installers are `scripts/install.sh` and `scripts/install.ps1`; the marketing site copies them into its `public/` at build time (`apps/marketing/scripts/stage-install-scripts.mjs`) and serves them at `t2.codes/install.sh` and `/install.ps1`.
+  - The root `package.json` pins `engines.node` to the exact Node version used by development, CI and standalone executables. Keep it exact: cross-target builds download that version, and native executable builds reject a different host Node version. Runtime changes need a new T2 release version because installed runtimes are cached by that version.
   - macOS archives are signed with the Developer ID certificate and notarized when the Apple secrets are present (ad hoc otherwise, which still runs from `curl`/`tar` installs). Windows executables use the same Azure Trusted Signing setup as the installer. Every native addon in the macOS archive is signed too, since the hardened runtime refuses unsigned libraries.
   - Each archive is extracted and executed (`scripts/smoke-cli-archive.ts`) on its build runner, or on the `verify_runner` for Windows.
-- After the GitHub Release is published, publishes the `t3` npm package with OIDC trusted publishing from the same workflow file. It is only a launcher (`scripts/npm-launcher/t3.mjs`): on first run it downloads its exact version's CLI archive from the GitHub Release, verifies it against `SHA256SUMS`, and unpacks it into `<T3 home>/runtime/versions/<version>`, the layout the install scripts and `t3 update` share. The executables are not on npm. They used to be, as `@t3code/t3-<platform>-<arch>` optional dependencies, but npm's publish-time scanning held those 80-250 MB packages back for up to an hour after the launcher was live, and every install in that window got a launcher with no executable. Those packages stay on npm at their old versions and get no new ones. Because the launcher reads from the release, `publish_cli` runs after `release`, never before.
+- After the GitHub Release is published, publishes the `t2` npm package with OIDC trusted publishing from the same workflow file. It is only a launcher (`scripts/npm-launcher/t2.mjs`): on first run it downloads its exact version's CLI archive from the GitHub Release, verifies it against `SHA256SUMS`, and unpacks it into `<T2 home>/runtime/versions/<version>`, the layout the install scripts and `t2 update` share. The executables are not on npm. They used to be, as `@t2code/t2-<platform>-<arch>` optional dependencies, but npm's publish-time scanning held those 80-250 MB packages back for up to an hour after the launcher was live, and every install in that window got a launcher with no executable. Those packages stay on npm at their old versions and get no new ones. Because the launcher reads from the release, `publish_cli` runs after `release`, never before.
   - stable releases publish npm dist-tag `latest`
   - nightly releases publish npm dist-tag `nightly`
   - preview releases publish npm dist-tag `preview`, which nothing resolves unless asked for by name
@@ -415,7 +415,7 @@ One-time Vercel dashboard setup:
 
 Connected servers update to the client's exact version, not to an npm dist-tag. Servers that update
 themselves download that version's CLI archive from the GitHub Release; servers run through npm are
-handed a `t3@<version>` command to run. Every released client version must therefore have its
+handed a `t2@<version>` command to run. Every released client version must therefore have its
 release archives, and then its npm launcher, available before users can receive that client.
 
 The workflow enforces this ordering:
@@ -436,12 +436,12 @@ depends on npm, and it works once `publish_cli` finishes.
 Preserve these dependencies when changing the release graph. Publishing a client first would leave
 the **Update server** action targeting a package version that does not exist yet.
 
-For a release smoke test, confirm `npm view t3@<version> version` returns the expected version, then
+For a release smoke test, confirm `npm view @t2code/cli@<version> version` returns the expected version, then
 connect the new client to a server on the previous version and verify that the update action
 reconnects to the matching server. When the release adds database migrations, verify that the
 remote update applies them and reconnects. A failed trial must restore the database snapshot and
 restart the previous server. If the installed launcher does not support the target protocol,
-verify that the update stops before restart and run `npx t3@<version> service update` once on the
+verify that the update stops before restart and run `npx @t2code/cli@<version> service update` once on the
 server machine. Also test the manual or desktop-managed guidance when those environments are
 available.
 
@@ -523,7 +523,7 @@ Checklist:
 1. Confirm the npm org owns package `t3`.
 2. For `t3`, configure a Trusted Publisher in the npm package settings:
    - Provider: GitHub Actions
-   - Repository: this repo
+   - Repository: `ashutoshpw/t2code`
    - Workflow file: `.github/workflows/release.yml`
    - Environment (if used): match your npm trusted publishing config
 3. Ensure npm account and org policies allow trusted publishing for the package.
@@ -531,10 +531,41 @@ Checklist:
    launcher with npm dist-tag `latest`.
 5. Nightly runs publish with npm dist-tag `nightly`; preview runs with `preview`.
 
+If the package has not been created on npm yet, bootstrap it with one local authenticated publish,
+then add the Trusted Publisher under the new package's settings for future releases.
+
+For a local first publish, build the package and run the wrapper with a new version. Use
+`--interactive` to let npm receive terminal input and prompt for web/OTP authentication:
+
+```bash
+vp run --filter @t2code/cli build
+node apps/server/scripts/cli.ts publish \
+  --access public \
+  --tag latest \
+  --app-version 0.0.39 \
+  --interactive \
+  --verbose
+```
+
+If npm requires a classic OTP, pass it explicitly instead; the wrapper redacts it from its log output:
+
+```bash
+read -r "NPM_OTP?Enter your current npm OTP: "
+node apps/server/scripts/cli.ts publish \
+  --access public \
+  --tag latest \
+  --app-version 0.0.39 \
+  --otp "$NPM_OTP" \
+  --verbose
+unset NPM_OTP
+```
+
+Do not commit or store the OTP. Trusted publishing in GitHub Actions does not require this flag.
+
 ## 1) Release validation and unsigned builds
 
 There is no dry-run tag path. Pushing any accepted non-nightly tag, including
-`v0.0.0-test.1`, classifies the run as the stable channel. It publishes `t3` with npm dist-tag
+`v0.0.0-test.1`, classifies the run as the stable channel. It publishes `@t2code/cli` with npm dist-tag
 `latest`, creates a real GitHub Release, aliases the hosted app to `latest.app.t3.codes` and
 `app.t3.codes`, and can commit a version bump to `main` in the finalize job. Do not push a test tag
 to validate the workflow.

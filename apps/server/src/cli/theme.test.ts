@@ -46,7 +46,15 @@ const writeSettings = (baseDir: string, settings: Record<string, unknown>) => {
   NodeFS.writeFileSync(settingsPathFor(baseDir), `${JSON.stringify(settings, null, 2)}\n`);
 };
 
-describe("t3 theme", () => {
+describe("t2code theme", () => {
+  it.effect("writes a default theme when no settings file exists yet", () =>
+    Effect.gen(function* () {
+      const baseDir = makeBaseDir();
+      yield* runCli(["theme", "set", "ocean", "--base-dir", baseDir]);
+      assert.equal(readSettings(baseDir).defaultTheme, "ocean");
+    }),
+  );
+
   it.effect("preserves settings it does not recognise", () =>
     Effect.gen(function* () {
       const baseDir = makeBaseDir();

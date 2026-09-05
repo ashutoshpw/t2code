@@ -72,7 +72,7 @@ function formatServiceStatus(status: BootService.BootServiceStatus, cliVersion: 
     return "T3 Code service\n  Status: unavailable on this machine\n  Supported on: Linux with systemd, macOS with launchd";
   }
   if (!status.installed) {
-    return "T3 Code service\n  Status: not installed\n  Next: Run `t3 service install`.";
+    return "T3 Code service\n  Status: not installed\n  Next: Run `t2code service install`.";
   }
   const installedVersion = status.installedVersion ?? cliVersion;
   const problems = (status.problems ?? []).map(
@@ -85,20 +85,20 @@ function formatServiceStatus(status: BootService.BootServiceStatus, cliVersion: 
   ) {
     return [
       "T3 Code service",
-      `  Status: installed · t3@${installedVersion} (newer than this t3@${cliVersion} CLI)`,
+      `  Status: installed · ${packageJson.name}@${installedVersion} (newer than this ${packageJson.name}@${cliVersion} CLI)`,
       `  Unit: ${status.unitPath}`,
       `  Logs: ${status.logPath}`,
       ...problems,
-      `  Next: Run \`t3 update ${installedVersion}\` to match it, or pass \`--allow-downgrade\` to \`t3 service install\` explicitly.`,
+      `  Next: Run \`t3 update ${installedVersion}\` to match it, or pass \`--allow-downgrade\` to \`t2code service install\` explicitly.`,
     ].join("\n");
   }
   return [
     "T3 Code service",
-    `  Status: ${status.current ? `installed · t3@${installedVersion}` : "needs an update or repair"}`,
+    `  Status: ${status.current ? `installed · ${packageJson.name}@${installedVersion}` : "needs an update or repair"}`,
     `  Unit: ${status.unitPath}`,
     `  Logs: ${status.logPath}`,
     ...problems,
-    ...(status.current ? [] : ["  Next: Run `t3 service install` to repair it."]),
+    ...(status.current ? [] : ["  Next: Run `t2code service install` to repair it."]),
   ].join("\n");
 }
 
@@ -128,7 +128,7 @@ const serviceInstallCommand = Command.make("install", serviceReconcileFlags).pip
         const result = yield* reconcileService({ allowDowngrade: flags.allowDowngrade });
         if (!result.changed) {
           yield* Console.log(
-            `T3 Code service is already installed with t3@${packageJson.version}.`,
+            `T3 Code service is already installed with ${packageJson.name}@${packageJson.version}.`,
           );
           return;
         }
@@ -150,7 +150,9 @@ const serviceUpdateCommand = Command.make("update", serviceReconcileFlags).pipe(
         );
         const result = yield* reconcileService({ allowDowngrade: flags.allowDowngrade });
         if (!result.changed) {
-          yield* Console.log(`T3 Code service is already using t3@${packageJson.version}.`);
+          yield* Console.log(
+            `T3 Code service is already using ${packageJson.name}@${packageJson.version}.`,
+          );
           return;
         }
         yield* Console.log(formatServiceChange(result));
@@ -235,7 +237,7 @@ export const offerServiceDuringOnboarding = Effect.gen(function* () {
     compareExactServiceVersions(status.installedVersion, packageJson.version) > 0
   ) {
     yield* Console.log(
-      `A newer t3@${status.installedVersion} background service is installed. Leaving it unchanged.`,
+      `A newer ${packageJson.name}@${status.installedVersion} background service is installed. Leaving it unchanged.`,
     );
     return "skipped" as const;
   }

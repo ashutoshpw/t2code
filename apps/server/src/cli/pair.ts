@@ -1,3 +1,14 @@
+/**
+ * `t2code pair` - mint a pairing token for an already-running server and print it
+ * as a QR code, without restarting anything.
+ *
+ * Discovery reads the `server-runtime.json` a live server persists next to its
+ * database, then confirms the process is actually answering by fetching its
+ * public environment descriptor. Inside a linked git worktree the worktree's
+ * own `.t3` is checked first (matching dev-runner precedence); otherwise the
+ * shared T3 home. `--tailscale` publishes the server over Tailscale Serve
+ * HTTPS and pairs through the tailnet URL instead.
+ */
 import {
   type AuthEnvironmentScope,
   AuthStandardClientScopes,
@@ -72,7 +83,7 @@ export class NoRunningServerError extends Schema.TaggedError<NoRunningServerErro
       ...(this.inLinkedWorktree
         ? ["In a linked worktree, pass --base-dir to pair with a server outside it."]
         : []),
-      "Start one with `npx t3 serve`, or connect this machine with T3 Connect: `npx t3 connect`.",
+      "Start one with `npx t2 serve`, or connect this machine with T2 Connect: `npx t2 connect`.",
     ].join("\n");
   }
 }
@@ -208,7 +219,7 @@ const probeEnvironmentDescriptor: (
     );
     // Bad-gateway family means a proxy (Tailscale Serve) answered for a
     // backend that is gone — a stale mapping, not a live occupant. Treating
-    // it as unreachable lets `t3 pair --tailscale` repair its own mapping
+    // it as unreachable lets `t2code pair --tailscale` repair its own mapping
     // after the server's port changed.
     if (response.status === 502 || response.status === 503 || response.status === 504) {
       return { _tag: "unreachable" } as const;
@@ -238,10 +249,10 @@ const discoverPairTarget = Effect.fn("pair.discoverPairTarget")(function* (
     bases.push(yield* resolveBaseDir(explicitBaseDir));
   } else {
     // Same precedence as dev-runner: inside a linked worktree only its own
-    // `.t3` counts. Minting opens the target database with this checkout's
+    // `.t2` counts. Minting opens the target database with this checkout's
     // migrations, so falling back to the shared home could migrate the live
     // install with unreleased schema.
-    const worktreeHome = yield* resolveWorktreeT3Home(yield* HostProcess.WorkingDirectory);
+    const worktreeHome = yield* resolveWorktreeT2Home(yield* HostProcess.WorkingDirectory);
     if (worktreeHome !== undefined) {
       bases.push(worktreeHome);
       inLinkedWorktree = true;
@@ -437,7 +448,7 @@ const mintPairingLink = Effect.fn("pair.mintPairingLink")(function* (input: {
     return yield* environmentAuth.createPairingLink({
       scopes: input.scopes,
       subject: "one-time-token",
-      label: Option.getOrElse(input.label, () => "t3 pair"),
+      label: Option.getOrElse(input.label, () => "t2code pair"),
       ...(Option.isSome(input.ttl) ? { ttl: input.ttl.value } : {}),
     });
   }).pipe(

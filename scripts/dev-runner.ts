@@ -75,11 +75,11 @@ const MODE_ARGS = {
     "run",
     "--filter=@t3tools/contracts",
     "--filter=@t3tools/web",
-    "--filter=t3",
+    "--filter=@t2code/cli",
     "--parallel",
     "dev",
   ],
-  "dev:server": ["run", "--filter=t3", "dev"],
+  "dev:server": ["run", "--filter=@t2code/cli", "dev"],
   "dev:web": ["run", "--filter=@t3tools/web", "dev"],
   "dev:desktop": ["run", "--filter=@t3tools/desktop", "--filter=@t3tools/web", "dev"],
 } as const satisfies Record<string, ReadonlyArray<string>>;
@@ -364,8 +364,47 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       // single-origin mode.
       output.T3CODE_SINGLE_ORIGIN_DEV = "1";
     } else {
-      output.VITE_HTTP_URL = `http://localhost:${serverPort}`;
-      output.VITE_WS_URL = `ws://localhost:${serverPort}`;
+      delete output.T3CODE_HOME;
+    }
+
+    // A dev-runner server is never launcher-managed. When the shell that runs
+    // this script was itself spawned by the machine's managed T3 Code service (an
+    // agent working inside T3 Code), these leak through and the child server
+    // fails startup with "The service launcher started a different t2code version"
+    // (serviceLauncherClient.ts resolveStartup).
+    delete output.T3_SERVICE_LAUNCHER_CONTEXT;
+    delete output.T3_BOOT_SERVICE_UNIT;
+
+    if (!isDesktopMode) {
+      output.T3CODE_PORT = String(serverPort);
+      // HOST is Vite's own bind address, and the desktop branch below is the
+      // only place we set it. An inherited one (an exported HOST, a container,
+      // a `HOST=0.0.0.0 npm start` habit) would otherwise reach Vite and pin
+      // its HMR socket to that address — see the `explicitHost` gate in
+      // apps/web/vite.config.ts.
+      delete output.HOST;
+      if (mode === "dev" || mode === "dev:web") {
+        // Browser dev is single-origin: everything (including /ws) is proxied
+        // through Vite, so the client must resolve its backend from
+        // window.location.origin rather than a baked-in localhost URL.
+        delete output.VITE_HTTP_URL;
+        delete output.VITE_WS_URL;
+        // Deleting is not enough on its own: vite.config.ts calls loadRepoEnv,
+        // which merges `.env`/`.env.local` *under* this env, so a developer
+        // with either URL in their `.env` would get it back and silently lose
+        // single-origin mode.
+        output.T3CODE_SINGLE_ORIGIN_DEV = "1";
+      } else {
+        output.VITE_HTTP_URL = `http://localhost:${serverPort}`;
+        output.VITE_WS_URL = `ws://localhost:${serverPort}`;
+        delete output.T3CODE_SINGLE_ORIGIN_DEV;
+      }
+    } else {
+      output.T3CODE_PORT = String(serverPort);
+      output.VITE_HTTP_URL = `http://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
+      output.VITE_WS_URL = `ws://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
+      // Desktop pins the renderer to loopback on purpose; an ambient marker
+      // must not make Vite drop those URLs.
       delete output.T3CODE_SINGLE_ORIGIN_DEV;
     }
   } else {
