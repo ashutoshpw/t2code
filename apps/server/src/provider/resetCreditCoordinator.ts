@@ -32,7 +32,7 @@ export class ResetCreditCoordinator extends Context.Service<
       isSettled?: (error: E) => boolean,
     ) => Effect.Effect<ProviderConsumeResetCreditOutcome, E | PlatformError.PlatformError, R>;
   }
->()("t3/provider/resetCreditCoordinator") {}
+>()("@t2code/cli/provider/resetCreditCoordinator") {}
 
 /** @public */
 /** @public Service construction is part of the canonical Effect module API. */

@@ -1216,7 +1216,7 @@ export class AcpSessionRuntime extends Context.Service<
       payload: unknown,
     ) => Effect.Effect<void, EffectAcpErrors.AcpError>;
   }
->()("@t3tools/provider-acp/server/AcpSessionRuntime") {}
+>()("@t2code/provider-acp/server/AcpSessionRuntime") {}
 
 interface AcpStartedState extends AcpSessionRuntimeStartResult {}
 

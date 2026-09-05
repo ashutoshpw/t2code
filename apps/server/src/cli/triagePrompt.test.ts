@@ -44,7 +44,7 @@ it("context file carries every path the playbook depends on", () => {
     cliVersion: "0.0.33",
     os: "linux x64 (7.0.0)",
     nodeVersion: "v24.0.0",
-    launchedAs: "npx t3 triage",
+    launchedAs: "npx @t2code/cli triage",
     server: "running (pid 42, http://127.0.0.1:4501)",
     paths: {
       stateDir: "/home/u/.t3/userdata",
@@ -68,32 +68,32 @@ it("context file carries every path the playbook depends on", () => {
   assert.include(context, "/home/u/.t3/userdata/logs/provider/events.log");
   assert.include(context, "/home/u/.t3/userdata/secrets");
   assert.include(context, "/home/u/.t3/source");
-  assert.include(context, "npx t3 triage");
+  assert.include(context, "npx t2 triage");
 });
 
 it("context file labels the CLI version as the CLI's, not the user's build", () => {
-  // `npx t3 triage` can resolve a different `t3` than the app the bug
+  // `npx t2 triage` can resolve a different `t2` than the app the bug
   // happened on (#13337), so the agent must not read it as the user's version.
   const context = buildTriageContext({
     generatedAt: "2026-09-24T00:00:00.000Z",
     cliVersion: "0.0.42",
     os: "linux x64 (7.2.0)",
     nodeVersion: "v26.8.2",
-    launchedAs: "npx t3 triage",
-    server: "running (pid 42, http://127.0.0.1:3773, version 0.0.43-nightly.20260923.2173)",
+    launchedAs: "npx t2 triage",
+    server: "running (pid 42, http://127.0.0.1:3772, version 0.0.43-nightly.20260923.2173)",
     paths: {
-      stateDir: "/home/u/.t3/userdata",
-      dbPath: "/home/u/.t3/userdata/state.sqlite",
-      settingsPath: "/home/u/.t3/userdata/settings.json",
-      logsDir: "/home/u/.t3/userdata/logs",
-      serviceLogPath: "/home/u/.t3/userdata/logs/boot-service.log",
-      desktopBackendLogGlob: "/home/u/.t3/userdata/logs/server-child*.log*",
-      serverTracePath: "/home/u/.t3/userdata/logs/server.trace.ndjson",
-      providerEventLogPath: "/home/u/.t3/userdata/logs/provider/events.log",
-      terminalLogsDir: "/home/u/.t3/userdata/logs/terminals",
-      providerStatusCacheDir: "/home/u/.t3/caches",
-      secretsDir: "/home/u/.t3/userdata/secrets",
-      sourceCacheDir: "/home/u/.t3/source",
+      stateDir: "/home/u/.t2/userdata",
+      dbPath: "/home/u/.t2/userdata/state.sqlite",
+      settingsPath: "/home/u/.t2/userdata/settings.json",
+      logsDir: "/home/u/.t2/userdata/logs",
+      serviceLogPath: "/home/u/.t2/userdata/logs/boot-service.log",
+      desktopBackendLogGlob: "/home/u/.t2/userdata/logs/server-child*.log*",
+      serverTracePath: "/home/u/.t2/userdata/logs/server.trace.ndjson",
+      providerEventLogPath: "/home/u/.t2/userdata/logs/provider/events.log",
+      terminalLogsDir: "/home/u/.t2/userdata/logs/terminals",
+      providerStatusCacheDir: "/home/u/.t2/caches",
+      secretsDir: "/home/u/.t2/userdata/secrets",
+      sourceCacheDir: "/home/u/.t2/source",
     },
   });
   assert.notInclude(context, "Installed version");

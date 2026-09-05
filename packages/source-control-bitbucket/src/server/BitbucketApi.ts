@@ -375,7 +375,7 @@ export class BitbucketApi extends Context.Service<
       readonly force?: boolean;
     }) => Effect.Effect<void, BitbucketApiError>;
   }
->()("@t3tools/source-control-bitbucket/server/BitbucketApi") {}
+>()("@t2code/source-control-bitbucket/server/BitbucketApi") {}
 
 function nonEmpty(value: string | undefined): Option.Option<string> {
   const trimmed = value?.trim();
