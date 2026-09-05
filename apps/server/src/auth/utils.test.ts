@@ -110,7 +110,7 @@ describe("session cookie isolation", () => {
   it("isolates remote web servers by server state", () => {
     const first = resolveSessionCookieName({
       mode: "web",
-      port: 3773,
+      port: 3772,
       host: "192.168.1.50",
       instanceKey: "/srv/t3-one",
       environmentId: "environment-one",
@@ -149,5 +149,40 @@ describe("session cookie isolation", () => {
     });
 
     expect(first).toBe(second);
+  });
+
+  it("retains desktop port scoping", () => {
+    expect(
+      resolveSessionCookieName({
+        mode: "desktop",
+        port: 3772,
+        host: "127.0.0.1",
+        instanceKey: "/tmp/desktop",
+        environmentId: "environment-one",
+        development: true,
+      }),
+    ).toBe("t3_session_3772");
+  });
+
+  it("isolates development servers even when they bind a wildcard host", () => {
+    expect(
+      resolveSessionCookieName({
+        mode: "web",
+        port: 5775,
+        host: "0.0.0.0",
+        instanceKey: "/tmp/t3-wildcard-dev",
+        environmentId: "environment-one",
+        development: true,
+      }),
+    ).toMatch(/^t3_session_5775_[a-f0-9]{12}$/);
+  });
+
+  it("classifies loopback aliases separately from remotely reachable hosts", () => {
+    expect(isRemoteReachableHost(undefined)).toBe(false);
+    expect(isRemoteReachableHost("localhost")).toBe(false);
+    expect(isRemoteReachableHost("127.12.0.1")).toBe(false);
+    expect(isRemoteReachableHost("[::1]")).toBe(false);
+    expect(isRemoteReachableHost("0.0.0.0")).toBe(true);
+    expect(isRemoteReachableHost("192.168.1.50")).toBe(true);
   });
 });
