@@ -57,6 +57,14 @@ import {
 
 const OTLP_TRACES_PROXY_PATH = "/api/observability/v1/traces";
 const LOOPBACK_HOSTNAMES = new Set(["127.0.0.1", "::1", "localhost"]);
+// Both generations of desktop renderer origins are trusted: pre-rename
+// desktop builds present t3code://app against servers served by newer code.
+const DESKTOP_RENDERER_ORIGINS = [
+  "t2code://app",
+  "t2code-dev://app",
+  "t3code://app",
+  "t3code-dev://app",
+];
 const SVG_CONTENT_SECURITY_POLICY = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
 // The sandbox gives the document an opaque origin: scripts run, but same-origin
 // cookies, storage, and API calls are out of reach. No modals: agent HTML can
