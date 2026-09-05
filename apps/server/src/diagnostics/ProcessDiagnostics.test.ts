@@ -71,7 +71,7 @@ describe("ProcessDiagnostics", () => {
           startTimeMs: 1_000,
           runTimeMs: 60_000,
           name: "node",
-          command: "t3 server",
+          command: "t2code server",
           status: "Running",
           cpuPercent: 0,
           cpuTimeMs: 100,
