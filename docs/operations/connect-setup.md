@@ -38,7 +38,7 @@ depend on. The deploy wrapper writes the resulting relay URL back to the root `.
 
 In Clerk's OAuth applications settings:
 
-1. Create a public OAuth application for the T3 CLI, using authorization-code exchange with PKCE.
+1. Create a public OAuth application for the t2code CLI, using authorization-code exchange with PKCE.
 2. Allow both redirect URIs: `http://127.0.0.1:34338/callback` and
    `https://app.t3.codes/connect/callback`. A custom `T3CODE_HOSTED_APP_URL` needs its own
    `/connect/callback` URL. Headless and SSH authorization depend on the hosted redirect.

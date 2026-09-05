@@ -19,15 +19,18 @@ import {
 
 import * as ProcessRunner from "../processRunner.ts";
 
+const CLI_PACKAGE_NAME = "@t2code/cli";
+
 /**
  * A pinned runtime is an exact t3 release archive unpacked into
  * <baseDir>/runtime/versions/<version>: the self-contained executable, the
  * web client, and the native packages beside it. The boot service points its
  * unit or launch agent at the executable, and server self-update installs the
  * target version here before switching over. The runtime never depends on a
- * Node or npm on the machine; the only npm involvement in T3 Code is the `t3`
- * package for people who prefer `npx t3` or `npm install -g t3`, and even a
- * CLI installed that way pins an archive when it sets up the service.
+ * Node or npm on the machine; the only npm involvement in T3 Code is the
+ * `@t2code/cli` package for people who prefer `npx @t2code/cli` or
+ * `npm install -g @t2code/cli`, and even a CLI installed that way pins an
+ * archive when it sets up the service.
  */
 const PINNED_RUNTIME_DIR = "runtime";
 const PINNED_RUNTIME_INSTALL_TIMEOUT = Duration.minutes(10);

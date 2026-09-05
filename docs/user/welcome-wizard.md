@@ -13,12 +13,12 @@ browser.
 You can add more computers before continuing:
 
 - **T3 Connect** connects computers that are signed in to your account. Run
-  `npx t3 connect` on each computer you want to add, then start T3 Code or run
-  `npx t3 serve` so the computer stays available.
+  `npx @t2code/cli connect` on each computer you want to add, then start T3 Code or run
+  `npx @t2code/cli serve` so the computer stays available.
 - **Add a computer** connects directly to a server on your network or tailnet.
-  Start the server with `npx t3 serve`, then run `npx t3 pair --tailscale` and
-  paste the pairing link. You can also run `npx t3 serve --host <address>` and
-  use `npx t3 pair` when the server is already reachable on your network.
+  Start the server with `npx @t2code/cli serve`, then run `npx @t2code/cli pair --tailscale` and
+  paste the pairing link. You can also run `npx @t2code/cli serve --host <address>` and
+  use `npx @t2code/cli pair` when the server is already reachable on your network.
 
 Saved computers and computers discovered through T3 Connect are selected by
 default. Uncheck any you do not want to set up; this does not disconnect them.

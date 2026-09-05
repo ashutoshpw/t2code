@@ -37,6 +37,7 @@ import {
 } from "./serviceProtocol.ts";
 
 const BOOT_SERVICE_NAME = "t3code";
+const CLI_PACKAGE_NAME = "@t2code/cli";
 const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // `.service` suffix keeps the label distinct from the desktop app's bundle id
 // (com.t3tools.t3code), so launchd and TCC records never collide.
@@ -459,11 +460,11 @@ export function formatBootServiceProblem(problem: BootServiceProblem): string {
     case "linger-disabled":
       return 'Lingering is disabled. T3 Code will stop when your last login session ends and will not start at boot. Run `sudo loginctl enable-linger "$(id -un)"` on this machine, then retry the service command as your normal user.';
     case "service-disabled":
-      return "The service is not enabled to start automatically. Run `t3 service install` to repair it.";
+      return "The service is not enabled to start automatically. Run `t2code service install` to repair it.";
     case "service-stopped":
-      return "The service is not running. Check the service log and `systemctl --user status t3code.service`, then run `t3 service install`.";
+      return "The service is not running. Check the service log and `systemctl --user status t3code.service`, then run `t2code service install`.";
     case "restart-pending":
-      return "A newer version is installed but the service is still running the previous one. Run `t3 service restart` to switch.";
+      return "A newer version is installed but the service is still running the previous one. Run `t2code service restart` to switch.";
   }
 }
 
@@ -493,7 +494,7 @@ export class BootServiceDowngradeRefusedError extends Schema.TaggedError<BootSer
   },
 ) {
   override get message(): string {
-    return `Refusing to replace t3@${this.installedVersion} with older t3@${this.targetVersion}. Run the command again with --allow-downgrade to continue.`;
+    return `Refusing to replace ${CLI_PACKAGE_NAME}@${this.installedVersion} with older ${CLI_PACKAGE_NAME}@${this.targetVersion}. Run the command again with --allow-downgrade to continue.`;
   }
 }
 
@@ -544,7 +545,7 @@ export class BootService extends Context.Service<
     readonly uninstall: Effect.Effect<boolean, BootServiceError>;
     readonly status: Effect.Effect<BootServiceStatus, BootServiceError>;
   }
->()("t3/cloud/bootService") {}
+>()("@t2code/cli/cloud/bootService") {}
 
 export interface BootServiceHost {
   readonly execPath: string;
@@ -780,7 +781,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
             Effect.mapError(
               (cause) =>
                 new PinnedRuntimeInstallError({
-                  step: "verifying the pinned t3 runtime",
+                  step: "verifying the pinned t2code runtime",
                   cause,
                 }),
             ),
@@ -790,7 +791,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
                 ? Effect.void
                 : Effect.fail(
                     new PinnedRuntimeInstallError({
-                      step: "verifying the pinned t3 runtime",
+                      step: "verifying the pinned t2code runtime",
                       exitCode: Number(result.code),
                       stdoutLength: result.stdout.length,
                       stderrLength: result.stderr.length,

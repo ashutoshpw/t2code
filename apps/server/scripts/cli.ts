@@ -182,6 +182,14 @@ const publishCmd = Command.make(
     access: Flag.string("access").pipe(Flag.withDefault("public")),
     provenance: Flag.boolean("provenance").pipe(Flag.withDefault(false)),
     dryRun: Flag.boolean("dry-run").pipe(Flag.withDefault(false)),
+    otp: Flag.string("otp").pipe(
+      Flag.withDescription("One-time password for npm authentication (local publishing only)."),
+      Flag.optional,
+    ),
+    interactive: Flag.boolean("interactive").pipe(
+      Flag.withDescription("Run local npm publishing with inherited terminal input and output."),
+      Flag.withDefault(false),
+    ),
     verbose: Flag.boolean("verbose").pipe(Flag.withDefault(false)),
   },
   (config) =>
