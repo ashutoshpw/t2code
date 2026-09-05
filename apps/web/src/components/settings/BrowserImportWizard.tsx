@@ -319,8 +319,8 @@ function FullDiskAccessStep({
         {!permission.isReady(["fullDiskAccess"]) ? (
           <p className="mt-3 text-xs text-muted-foreground">
             {stillRequired
-              ? "Access is still required. Quit and reopen T3 Code if you just allowed it, then retry the import."
-              : "If access doesn't update after you allow it, quit and reopen T3 Code, then retry the import."}
+              ? "Access is still required. Quit and reopen T2 Code if you just allowed it, then retry the import."
+              : "If access doesn't update after you allow it, quit and reopen T2 Code, then retry the import."}
           </p>
         ) : null}
       </DialogPanel>
