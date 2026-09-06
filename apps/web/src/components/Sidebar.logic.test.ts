@@ -49,15 +49,15 @@ import {
   type SidebarSection,
   resolveSidebarDropVerb,
 } from "./Sidebar.logic";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import { sortSettledThreads } from "@t3tools/client-runtime/state/thread-sort";
+import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
+import { sortSettledThreads } from "@t2code/client-runtime/state/thread-sort";
 import {
   EnvironmentId,
   OrchestrationLatestTurn,
   ProjectId,
   ProviderInstanceId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   DEFAULT_INTERACTION_MODE,

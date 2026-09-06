@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { ThreadId } from "@t3tools/contracts";
+import { ThreadId } from "@t2code/contracts";
 
 import {
   commandDetailRepeatsCommand,

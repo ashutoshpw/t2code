@@ -10,7 +10,7 @@ import {
   type LimitPoolMember,
   type LimitPoolWindow,
   remainingPercent,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 import { AlertTriangleIcon, TicketIcon } from "lucide-react";
 import { Fragment, type ReactNode, useState } from "react";
 

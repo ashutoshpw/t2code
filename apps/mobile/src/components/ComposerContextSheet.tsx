@@ -1,6 +1,10 @@
 import { SourceFileSurface } from "../features/files/SourceFileSurface";
 import { filePreviewKind } from "@t2code/shared/filePreview";
-import type { ComposerContextRecord, ElementContextSource, EnvironmentId } from "@t2code/contracts";
+import type {
+  ComposerContextRecord,
+  ElementContextSource,
+  EnvironmentId,
+} from "@t2code/contracts";
 import { formatAttachmentSize } from "@t2code/client-runtime/state/attachments";
 import { videoMimeType } from "@t2code/shared/video";
 import { useState } from "react";

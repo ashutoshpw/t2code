@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
-import { EnvironmentId } from "@t3tools/contracts";
+import { EnvironmentId } from "@t2code/contracts";
 import {
   collectLimitAccounts,
   collectLimitNotices,
@@ -12,7 +12,7 @@ import {
   remainingPercent,
   type LimitAccount,
   type LimitPoolWindow,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 import { Fragment, type ReactNode, useId, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Defs, Path, Pattern, Rect, Svg } from "react-native-svg";

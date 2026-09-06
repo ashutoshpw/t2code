@@ -17,14 +17,14 @@ import {
   type EditorId,
   type FileManagerRevealKind,
   type LaunchEditorInput,
-} from "@t3tools/contracts";
-import { resolveEditorCommand } from "@t3tools/shared/editor";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+} from "@t2code/contracts";
+import { resolveEditorCommand } from "@t2code/shared/editor";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 import {
   isCommandAvailable,
   resolveSpawnCommand,
   withPathDirectoryListings,
-} from "@t3tools/shared/shell";
+} from "@t2code/shared/shell";
 import * as Clock from "effect/Clock";
 import * as Config from "effect/Config";
 import * as Context from "effect/Context";
@@ -50,7 +50,7 @@ export {
   ExternalLauncherEditorSpawnError,
   ExternalLauncherUnknownEditorError,
   ExternalLauncherUnsupportedEditorError,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 export type { LaunchEditorInput };
 interface EditorLaunch {
   readonly editor: EditorId;

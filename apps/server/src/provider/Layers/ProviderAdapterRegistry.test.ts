@@ -3,7 +3,7 @@ import {
   ProviderDriverKind,
   ThreadId,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { it, assert, vi } from "@effect/vitest";
 
 import * as Effect from "effect/Effect";

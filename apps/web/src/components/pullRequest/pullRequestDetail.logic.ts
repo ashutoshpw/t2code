@@ -24,11 +24,11 @@ import {
   type ThreadLinkedPullRequest,
   type ThreadPullRequestLink,
   type VcsRef,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   threadPullRequestKeysEqual,
   visibleThreadPullRequests,
-} from "@t3tools/shared/threadPullRequests";
+} from "@t2code/shared/threadPullRequests";
 
 import { inferReviewCommentFenceLanguage, type ReviewCommentContext } from "~/reviewCommentContext";
 import { reviewCommentContextId } from "~/lib/composerContextRecords";
@@ -138,22 +138,6 @@ export function pullRequestCheckoutCommand(
     case "unknown":
       return null;
   }
-}
-
-/** Build a checkout command from identity metadata while the detail request is still pending. */
-export function loadingPullRequestCheckoutCommand(
-  reference: PullRequestRef,
-  identity: RepositoryIdentity | null | undefined,
-): string | null {
-  const host = reference.host?.trim().toLowerCase();
-  const provider =
-    identity?.provider ??
-    (host === "github.com" ? "github" : host === "gitlab.com" ? "gitlab" : null);
-  if (provider !== "github" && provider !== "gitlab" && provider !== "azure-devops") return null;
-  if (identity?.provider !== undefined && host && pullRequestHostOf(identity, provider) !== host) {
-    return null;
-  }
-  return pullRequestCheckoutCommand(provider, reference.number, "");
 }
 
 /** Activity changes only when the same host resource reports a newer revision. */

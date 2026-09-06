@@ -7,7 +7,7 @@ import {
   type StaticScreenProps,
 } from "@react-navigation/native";
 import { SymbolView } from "../../components/AppSymbol";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -98,24 +98,28 @@ function NewTaskHeader(props: {
       title={props.title}
       subtitle={props.subtitle ?? undefined}
       sidebar={false}
-      backInSplitView={{
-        accessibilityLabel: "Go back",
-        icon: "chevron.left",
-      }}
-      options={{ headerBackVisible: !layout.usesSplitView }}
       hideBottomBorder
       onBack={() => navigation.goBack()}
-      actions={
-        props.canAddProject
+      actions={[
+        ...(Platform.OS === "ios" && layout.usesSplitView
+          ? [
+              {
+                accessibilityLabel: "Close new task",
+                icon: "xmark" as const,
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          : []),
+        ...(props.canAddProject
           ? [
               {
                 accessibilityLabel: "Add project",
-                icon: "plus",
+                icon: "plus" as const,
                 onPress: () => navigation.dispatch(StackActions.push("AddProject")),
               },
             ]
-          : []
-      }
+          : []),
+      ]}
       search={{
         value: props.searchText,
         onChangeText: props.onSearchTextChange,
