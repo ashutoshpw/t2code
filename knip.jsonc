@@ -29,7 +29,7 @@
       ],
       // Keep the transitive Effect runtime pinned for standalone npm installs.
       // The Vite+ web build prerequisite.
-      "ignoreDependencies": ["@effect/platform-node-shared", "@t3tools/web"],
+      "ignoreDependencies": ["@effect/platform-node-shared", "@t2code/web"],
     },
     "apps/desktop": {
       // Electron loads these bundles by filename rather than importing them.
