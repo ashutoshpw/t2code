@@ -72,7 +72,7 @@ export class EnvironmentPublishSignatures extends Context.Service<
       readonly request: RelayAgentActivityPublishRequest;
     }) => Effect.Effect<void, EnvironmentPublishSignatureError>;
   }
->()("t3code-relay/environments/EnvironmentPublishSignatures") {}
+>()("t2code-relay/environments/EnvironmentPublishSignatures") {}
 
 function environmentPublishReplayThumbprintData(input: {
   readonly environmentId: string;

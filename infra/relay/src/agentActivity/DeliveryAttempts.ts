@@ -65,7 +65,7 @@ export class DeliveryAttempts extends Context.Service<
     /** Delete attempts untouched for the retention period; returns how many were removed. */
     readonly pruneExpired: Effect.Effect<number, DeliveryAttemptRecordPersistenceError>;
   }
->()("t3code-relay/agentActivity/DeliveryAttempts") {}
+>()("t2code-relay/agentActivity/DeliveryAttempts") {}
 
 const SOURCE_JOB_CLAIM_LEASE_MINUTES = 10;
 export const DELIVERY_ATTEMPT_RETENTION_DAYS = 7;

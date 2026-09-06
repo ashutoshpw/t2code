@@ -15,7 +15,7 @@ const provideEnv = (env: Readonly<Record<string, string>>) =>
 
 it.effect("rejects an insecure runtime relay URL override", () =>
   makeRelayUrlConfig("https://embedded.example.test").pipe(
-    provideEnv({ T3CODE_RELAY_URL: "http://runtime.example.test" }),
+    provideEnv({ T2CODE_RELAY_URL: "http://runtime.example.test" }),
     Effect.flip,
   ),
 );
@@ -71,9 +71,9 @@ it("product opt-out disables relay tracing with either built-in or runtime crede
     resolveRelayClientTracingConfig(
       {
         ...env,
-        T3CODE_RELAY_CLIENT_OTLP_TRACES_URL: "https://runtime.example.test/v1/traces",
-        T3CODE_RELAY_CLIENT_OTLP_TRACES_DATASET: "runtime-dataset",
-        T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN: "runtime-token",
+        T2CODE_RELAY_CLIENT_OTLP_TRACES_URL: "https://runtime.example.test/v1/traces",
+        T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET: "runtime-dataset",
+        T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN: "runtime-token",
       },
       fallback,
     ),
