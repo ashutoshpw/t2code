@@ -1,4 +1,4 @@
-package expo.modules.t3reviewdiff
+package expo.modules.t2reviewdiff
 
 import android.graphics.Color
 import android.view.View
@@ -20,7 +20,7 @@ import org.robolectric.annotation.GraphicsMode
 class ReviewDiffGeometryTest {
   @Test
   fun geometryChangesKeepTheVisibleRowAndClampWithinShortenedRows() {
-    val parent = T3ReviewDiffView(RuntimeEnvironment.getApplication(), AppContext())
+    val parent = T2ReviewDiffView(RuntimeEnvironment.getApplication(), AppContext())
     val canvas = parent.getChildAt(0)
     val spec = View.MeasureSpec.makeMeasureSpec(390, View.MeasureSpec.EXACTLY)
     canvas.measure(spec, spec)
@@ -79,7 +79,7 @@ class ReviewDiffGeometryTest {
 
   @Test
   fun stickyHeadersUseTheHeaderIndexAndKeepPushOffAndHitTesting() {
-    val parent = T3ReviewDiffView(RuntimeEnvironment.getApplication(), AppContext())
+    val parent = T2ReviewDiffView(RuntimeEnvironment.getApplication(), AppContext())
     val canvas = parent.getChildAt(0)
     val spec = View.MeasureSpec.makeMeasureSpec(320, View.MeasureSpec.EXACTLY)
     canvas.measure(spec, spec)
@@ -115,7 +115,7 @@ class ReviewDiffGeometryTest {
 
   @Test
   fun asciiSyntaxArrivalDoesNotRebuildWrappedOffsetsOrRetainPerRowLayouts() {
-    val parent = T3ReviewDiffView(RuntimeEnvironment.getApplication(), AppContext())
+    val parent = T2ReviewDiffView(RuntimeEnvironment.getApplication(), AppContext())
     val canvas = parent.getChildAt(0)
     val spec = View.MeasureSpec.makeMeasureSpec(320, View.MeasureSpec.EXACTLY)
     canvas.measure(spec, spec)
@@ -204,7 +204,7 @@ class ReviewDiffGeometryTest {
 
   @Test
   fun unwrappedColorAndUnderlinePatchesDoNotReadOffscreenRows() {
-    val parent = T3ReviewDiffView(RuntimeEnvironment.getApplication(), AppContext())
+    val parent = T2ReviewDiffView(RuntimeEnvironment.getApplication(), AppContext())
     val canvas = parent.getChildAt(0)
     try {
       val rows = CountingRows(List(10000) { row("row:$it", "const value = $it") })
