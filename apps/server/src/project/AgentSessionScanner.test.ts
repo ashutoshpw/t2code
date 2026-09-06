@@ -83,16 +83,29 @@ const runScan = (input: ScannerTestInput) =>
     return yield* scanner.scan;
   }).pipe(Effect.provide(layerScannerTest(input)));
 
-const runRecentThreadOutcomes = (input: ScannerTestInput & { readonly workspaceRoot: string }) =>
+const runRecentThreadOutcomes = (
+  input: ScannerTestInput & {
+    readonly workspaceRoot: string;
+    readonly sinceMs?: number;
+  },
+) =>
   Effect.gen(function* () {
     const scanner = yield* AgentSessionScanner.AgentSessionScanner;
-    return yield* scanner.recentThreads(input.workspaceRoot).pipe(
-      Stream.runCollect,
-      Effect.map((outcomes) => Array.from(outcomes)),
-    );
+    return yield* scanner
+      .recentThreads(
+        input.workspaceRoot,
+        [],
+        input.sinceMs === undefined ? {} : { sinceMs: input.sinceMs },
+      )
+      .pipe(
+        Stream.runCollect,
+        Effect.map((outcomes) => Array.from(outcomes)),
+      );
   }).pipe(Effect.provide(layerScannerTest(input)));
 
-const runRecentThreads = (input: ScannerTestInput & { readonly workspaceRoot: string }) =>
+const runRecentThreads = (
+  input: ScannerTestInput & { readonly workspaceRoot: string; readonly sinceMs?: number },
+) =>
   runRecentThreadOutcomes(input).pipe(
     Effect.map((outcomes) =>
       outcomes.flatMap((outcome) => (outcome._tag === "Importable" ? [outcome.thread] : [])),
@@ -1065,6 +1078,103 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
           ["Review this code", "Looks good"],
           ["Fix the project", "Done"],
         ]);
+      }),
+    );
+
+    it.effect("sinceMs widens the default 30-day recency window", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
+        const codexHomePath = yield* makeTempDir("t3code-codex-home-");
+        const workspace = yield* makeTempDir("t3code-workspace-");
+        const directory = path.join(claudeHomePath, "projects", "-selected");
+        const contents = [
+          encodeTranscriptRecord({
+            type: "user",
+            cwd: workspace,
+            sessionId: "claude-old",
+            timestamp: "2026-06-01T12:00:00.000Z",
+            message: { role: "user", content: "Older work" },
+          }),
+          encodeTranscriptRecord({
+            type: "assistant",
+            sessionId: "claude-old",
+            timestamp: "2026-06-01T12:01:00.000Z",
+            message: { role: "assistant", content: [{ type: "text", text: "Done" }] },
+          }),
+        ].join("\n");
+        yield* writeTranscript({
+          filePath: path.join(directory, "claude-old.jsonl"),
+          contents,
+          mtimeMs: nowMs - 31 * 24 * 60 * 60 * 1000,
+        });
+
+        const input = { claudeHomePath, codexHomePath, workspaceRoot: workspace };
+        const defaultWindow = yield* runRecentThreads(input);
+        const widenedWindow = yield* runRecentThreads({
+          ...input,
+          sinceMs: nowMs - 40 * 24 * 60 * 60 * 1000,
+        });
+        // A since in the future imports nothing, matching the default window's future-mtime guard.
+        const futureSince = yield* runRecentThreads({ ...input, sinceMs: nowMs + 1_000 });
+
+        expect(defaultWindow.map((thread) => thread.providerSessionId)).toEqual([]);
+        expect(widenedWindow.map((thread) => thread.providerSessionId)).toEqual(["claude-old"]);
+        expect(widenedWindow[0]?.messages.map((message) => message.text)).toEqual([
+          "Older work",
+          "Done",
+        ]);
+        expect(futureSince).toEqual([]);
+      }),
+    );
+
+    it.effect("imports history recorded with a case alias", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const fileSystem = yield* FileSystem.FileSystem;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
+        const codexHomePath = yield* makeTempDir("t3code-codex-home-");
+        const workspace = yield* makeTempDir("t3code-workspace-");
+        const workspaceAlias = path.join(
+          path.dirname(workspace),
+          path.basename(workspace).toUpperCase(),
+        );
+
+        yield* writeTranscript({
+          filePath: path.join(claudeHomePath, "projects", "-alias", "case-session.jsonl"),
+          contents: [
+            encodeTranscriptRecord({
+              type: "user",
+              cwd: workspaceAlias,
+              sessionId: "case-session",
+              timestamp: "2026-08-24T10:00:00.000Z",
+              message: { role: "user", content: "Import case alias history" },
+            }),
+            encodeTranscriptRecord({
+              type: "assistant",
+              sessionId: "case-session",
+              timestamp: "2026-08-24T10:01:00.000Z",
+              message: { role: "assistant", content: "Imported" },
+            }),
+          ].join("\n"),
+          mtimeMs: nowMs,
+        });
+
+        const simulatedFileSystem = FileSystem.FileSystem.of({
+          ...fileSystem,
+          stat: (filePath) => fileSystem.stat(filePath === workspaceAlias ? workspace : filePath),
+        });
+        const threads = yield* runRecentThreads({
+          claudeHomePath,
+          codexHomePath,
+          workspaceRoot: workspace,
+        }).pipe(Effect.provideService(FileSystem.FileSystem, simulatedFileSystem));
+
+        expect(threads.map((thread) => thread.providerSessionId)).toEqual(["case-session"]);
       }),
     );
 
