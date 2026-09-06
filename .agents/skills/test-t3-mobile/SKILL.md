@@ -36,7 +36,7 @@ For a read-only decision, use `check` in place of `ensure`. Exit 0 means compati
 
 A JavaScript-only diff, bundle identifier, app version, or recent install date does not prove native compatibility. Always check the whole checkout. Expo fingerprints are computed locally with `APP_VARIANT=development`; no EAS credentials or cloud build are required. Generated `ios/` and `android/` directories are excluded by `.fingerprintignore`, so edit native source modules or config plugins rather than generated output.
 
-The development identity is `T3 Code Dev`, bundle/package `com.t3tools.t3code.dev`, scheme `t3code-dev`. If a build fails, investigate the build error and fix the local prerequisites. Report the concrete failure if it cannot be resolved, not “no compatible client.”
+The development identity is `T3 Code Dev`, bundle/package `codes.t2.mobile.dev`, scheme `t3code-dev`. If a build fails, investigate the build error and fix the local prerequisites. Report the concrete failure if it cannot be resolved, not “no compatible client.”
 
 ## Start one disposable T3 environment
 
@@ -100,11 +100,12 @@ Use `ios-debugger-agent` to select one UDID and set these XcodeBuildMCP session 
 - Scheme: `T3CodeDev`
 - Configuration: `Debug`
 - Simulator ID: the selected UDID
-- Bundle ID: `com.t3tools.t3code.dev`
+- Bundle ID: `codes.t2.mobile.dev`
 
 After `ensure` succeeds, open the Metro URL:
 
 ```bash
+xcrun simctl get_app_container <simulator-udid> codes.t2.mobile.dev app
 xcrun simctl openurl <simulator-udid> <printed-dev-client-url>
 ```
 
@@ -115,11 +116,12 @@ Accept the iOS confirmation prompt and dismiss the developer menu when it obscur
 Use the emulator serial already checked by `ensure`:
 
 ```bash
+adb -s <emulator-serial> shell pm path codes.t2.mobile.dev
 adb -s <emulator-serial> reverse tcp:<metro-port> tcp:<metro-port>
 adb -s <emulator-serial> shell am start -W \
   -a android.intent.action.VIEW \
   -d '<printed-dev-client-url>' \
-  com.t3tools.t3code.dev
+  codes.t2.mobile.dev
 ```
 
 Do not start, stop, erase, or reconfigure an emulator owned by another task. Track and later stop only processes owned by this test.
