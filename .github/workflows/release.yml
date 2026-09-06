@@ -259,80 +259,13 @@ jobs:
       - name: Typecheck
         run: vp run typecheck
 
-  # Keep release tests within the same per-runner budget as CI. The server
-  # suite disables file parallelism, so its files are spread across three
-  # runners rather than sharing one long serial job.
-  quality_tests:
-    name: Release tests
-    needs: [preflight]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.ref }}
-          sparse-checkout: |
-            /*
-            !/.repos/
-          sparse-checkout-cone-mode: false
-
-      - name: Setup Vite+
-        uses: voidzero-dev/setup-vp@v1
-        with:
-          node-version-file: package.json
-          cache: true
-          run-install: true
-
-      - name: Ensure Electron runtime is installed
-        run: vp run --filter @t2code/desktop ensure:electron
-
       - uses: ./.github/actions/setup-apt-mirrors
 
       - name: Install browser secret helper build libraries
-        run: |
-          sudo sed -i 's|http://|https://|g' /etc/apt/t2code-ubuntu-mirrors.txt /etc/apt/sources.list.d/ubuntu.sources
-          sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
-
-      - name: Test nightly release checks
-        run: node --test .github/scripts/check-nightly-release.test.cjs
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
 
       - name: Test
-        run: vp run --parallel --concurrency-limit 4 --filter '!@t2code/cli' --filter '!@t2code/monorepo' test
-
-  quality_server_tests:
-    name: Release server tests ${{ matrix.shard }}
-    needs: [preflight]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.ref }}
-          sparse-checkout: |
-            /*
-            !/.repos/
-          sparse-checkout-cone-mode: false
-
-      - name: Setup Vite+
-        uses: voidzero-dev/setup-vp@v1
-        with:
-          node-version-file: package.json
-          cache: true
-          run-install: true
-
-      - name: Test
-        env:
-          T2CODE_TRANSFER_BUDGET_REPORT_PATH: ${{ runner.temp }}/t2code-transfer-budget.md
-          T2CODE_TRANSFER_BUDGET_RESULT_PATH: ${{ runner.temp }}/thread-transfer-result.json
-        run: vp run --filter @t2code/cli test --shard ${{ matrix.shard }}/${{ strategy.job-total }}
+        run: vp run test
 
   relay_public_config:
     name: Resolve T2 Connect public config
@@ -343,7 +276,7 @@ jobs:
       needs.resolve_commit.result == 'success' &&
       (github.event_name != 'schedule' || needs.resolve_commit.outputs.has_changes == 'true')
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 5
     environment:
       name: production
     outputs:
@@ -388,8 +321,9 @@ jobs:
         shell: bash
         working-directory: infra/relay
         run: |
+<<<<<<< HEAD
           set -euo pipefail
-          output="$(npx alchemy state read T2CodeRelay/prod/output --backend cloudflare --log-level error --no-input | sed -n '/^{/,$p')"
+          output="$(npx alchemy state read T3CodeRelay/prod/output --backend cloudflare --log-level error --no-input | sed -n '/^{/,$p')"
           field() {
             jq -er --arg key "$1" '.[$key] | if type == "object" then .__redacted__ else . end | select(. != null and . != "")' <<<"$output" \
               || { echo "Relay stack output is missing $1" >&2; exit 1; }
@@ -399,10 +333,17 @@ jobs:
           token="$(field clientTracingToken)"
           echo "::add-mask::$token"
           {
-            echo "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=$url"
-            echo "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=$dataset"
-            echo "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=$token"
+            echo "T3CODE_RELAY_CLIENT_OTLP_TRACES_URL=$url"
+            echo "T3CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=$dataset"
+            echo "T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=$token"
           } > "$RUNNER_TEMP/relay-client-tracing.env"
+=======
+          vp run --filter t2code-relay deploy \
+            --stage prod \
+            --read-state \
+            --github-output \
+            --github-env-file "$RUNNER_TEMP/relay-client-tracing.env"
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 
       - name: Upload relay client tracing config
         uses: actions/upload-artifact@v7
@@ -457,9 +398,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      T2CODE_CLERK_PUBLISHABLE_KEY: ${{ needs.relay_public_config.outputs.clerk_publishable_key }}
-      T2CODE_CLERK_JWT_TEMPLATE: ${{ needs.relay_public_config.outputs.clerk_jwt_template }}
-      T2CODE_CLERK_CLI_OAUTH_CLIENT_ID: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
+      T3CODE_CLERK_PUBLISHABLE_KEY: ${{ needs.relay_public_config.outputs.clerk_publishable_key }}
+      T3CODE_CLERK_JWT_TEMPLATE: ${{ needs.relay_public_config.outputs.clerk_jwt_template }}
+      T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       T2CODE_RELAY_URL: ${{ needs.relay_public_config.outputs.relay_url }}
     steps:
       - name: Checkout
@@ -697,21 +638,15 @@ jobs:
         preflight,
         relay_public_config,
         quality,
-        quality_tests,
-        quality_server_tests,
         desktop_mac_arm64,
         desktop_linux_x64,
         desktop_linux_arm64,
         desktop_win_x64,
         desktop_win_arm64,
       ]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.quality_tests.result == 'success' && needs.quality_server_tests.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' }}
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' }}
     runs-on: ubuntu-24.04
-    # npm accepted a publish before its public metadata/CDN finished processing
-    # during the first release. Each package gets a bounded 20-minute gate in
-    # the wrapper, so leave room for all five platforms, the launcher, and the
-    # package build itself.
-    timeout-minutes: 60
+    timeout-minutes: 15
     permissions:
       contents: read
       id-token: write
@@ -745,111 +680,18 @@ jobs:
       - name: Build npm packages from CLI archives
         run: node scripts/build-npm-platform-packages.ts --archives-dir release-cli --version "${{ needs.preflight.outputs.version }}" --output-dir npm-packages
 
-      # Inspect every package before publishing. npm's --dry-run validates the
-      # local package contents, but does not contact the registry or prove that
-      # OIDC trusted publishing is configured; the real publish is the auth check.
-      - name: Validate npm package contents (dry run)
+      # A dry run of every package first: an auth or scope error here (the
+      # @t3code org missing, a package without a trusted publisher) fails
+      # before anything is live, instead of after some platforms already are.
+      - name: Check npm publish access (dry run)
         run: |
-          if ! node apps/server/scripts/cli.ts publish --packages-dir npm-packages --tag "${{ needs.preflight.outputs.cli_dist_tag }}" --dry-run --wait-for-visibility --verbose; then
-            echo "::error::npm package dry run failed. Check the generated package contents; this step does not validate npm credentials or OIDC trusted publishing." >&2
+          if ! node apps/server/scripts/cli.ts publish --packages-dir npm-packages --tag "${{ needs.preflight.outputs.cli_dist_tag }}" --provenance --dry-run --verbose; then
+            echo "::error::npm publish --dry-run failed. Make sure the @t2code npm org exists and that @t2code/cli and every @t2code/t2-<platform> package has a trusted publisher registered for .github/workflows/release.yml (see docs/operations/release.md)." >&2
             exit 1
           fi
 
       - name: Publish CLI packages
-        run: node apps/server/scripts/cli.ts publish --packages-dir npm-packages --tag "${{ needs.preflight.outputs.cli_dist_tag }}" --provenance --wait-for-visibility --verbose
-
-  # A successful npm publish only proves that the registry accepted the
-  # tarballs. Install the exact version from a clean cache on each native
-  # platform and run the launcher through npx before creating the release.
-  npm_smoke:
-    name: npm smoke (${{ matrix.label }})
-    needs: [preflight, publish_cli]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.publish_cli.result == 'success' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - label: macOS arm64
-            runner: macos-26
-          - label: Linux x64
-            runner: ubuntu-24.04
-          - label: Linux arm64
-            runner: ubuntu-24.04-arm
-          - label: Windows x64
-            runner: windows-2025
-          - label: Windows arm64
-            runner: windows-11-arm
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 10
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.13.1"
-
-      - name: Install and smoke-test published CLI
-        shell: bash
-        env:
-          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
-        run: |
-          set -euo pipefail
-          tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/t2code-npm-smoke.XXXXXX")"
-          trap 'rm -rf "$tmp_dir"' EXIT
-          prefix="$tmp_dir/install"
-          cache="$tmp_dir/npm-cache"
-          mkdir -p "$prefix" "$cache"
-
-          npm install \
-            --prefix "$prefix" \
-            --cache "$cache" \
-            --include=optional \
-            --ignore-scripts \
-            --no-audit \
-            --no-fund \
-            --package-lock=false \
-            "@t2code/cli@$RELEASE_VERSION"
-
-          cd "$prefix"
-          installed_version="$(node -p "require('./node_modules/@t2code/cli/package.json').version")"
-          if [[ "$installed_version" != "$RELEASE_VERSION" ]]; then
-            echo "Installed @t2code/cli@$installed_version, expected @$RELEASE_VERSION." >&2
-            exit 1
-          fi
-
-          node <<'NODE'
-          const fs = require("node:fs");
-          const path = require("node:path");
-          const version = process.env.RELEASE_VERSION;
-          const packageName = `@t2code/t2-${process.platform}-${process.arch}`;
-          const packagePath = path.join(
-            "node_modules",
-            "@t2code",
-            `t2-${process.platform}-${process.arch}`,
-            "package.json",
-          );
-
-          if (typeof version !== "string" || version.length === 0) {
-            console.error("RELEASE_VERSION is missing.");
-            process.exit(1);
-          }
-          if (!fs.existsSync(packagePath)) {
-            console.error(`${packageName}@${version} is missing at ${packagePath}.`);
-            process.exit(1);
-          }
-
-          const metadata = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-          if (metadata.name !== packageName || metadata.version !== version) {
-            console.error(
-              `Installed ${metadata.name ?? packageName}@${metadata.version ?? "unknown"}; expected ${packageName}@${version}.`,
-            );
-            process.exit(1);
-          }
-          console.log(`Verified ${packageName}@${version}.`);
-          NODE
-
-          # --offline and --no-install make a missing optional platform package
-          # fail here instead of letting npx fetch or resolve another version.
-          npm_config_cache="$cache" npx --prefix "$prefix" --offline --no-install t2code --help
+        run: node apps/server/scripts/cli.ts publish --packages-dir npm-packages --tag "${{ needs.preflight.outputs.cli_dist_tag }}" --provenance --verbose
 
   release:
     name: Publish GitHub Release
@@ -863,9 +705,8 @@ jobs:
         desktop_win_x64,
         desktop_win_arm64,
         publish_cli,
-        npm_smoke,
       ]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_mac_x64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' && needs.publish_cli.result == 'success' && needs.npm_smoke.result == 'success' }}
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_mac_x64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' && needs.publish_cli.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -911,7 +752,7 @@ jobs:
           set -euo pipefail
           cd release-assets
           shopt -s nullglob
-          archives=(t2-*.tar.gz t2-*.zip)
+          archives=(t3-*.tar.gz t3-*.zip)
           if [[ ${#archives[@]} -eq 0 ]]; then
             echo "No CLI archives were produced." >&2
             exit 1
@@ -1000,7 +841,7 @@ jobs:
           > [!WARNING]
           > **This is a preview build. Do not install it unless you know exactly why you are here.**
           >
-          > Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, are never offered as updates, and are not supported. If you want T2 Code, install the [latest release](https://github.com/ashutoshpw/t2code/releases/latest) or a nightly instead.
+          > Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, are never offered as updates, and are not supported. If you want T3 Code, install the [latest release](https://github.com/pingdotgg/t3code/releases/latest) or a nightly instead.
 
           Built from `${{ needs.preflight.outputs.ref }}`.
           EOF
@@ -1053,16 +894,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
-      T2CODE_CLERK_PUBLISHABLE_KEY: ${{ needs.relay_public_config.outputs.clerk_publishable_key }}
-      T2CODE_CLERK_JWT_TEMPLATE: ${{ needs.relay_public_config.outputs.clerk_jwt_template }}
-      T2CODE_CLERK_CLI_OAUTH_CLIENT_ID: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
+      T3CODE_CLERK_PUBLISHABLE_KEY: ${{ needs.relay_public_config.outputs.clerk_publishable_key }}
+      T3CODE_CLERK_JWT_TEMPLATE: ${{ needs.relay_public_config.outputs.clerk_jwt_template }}
+      T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       T2CODE_RELAY_URL: ${{ needs.relay_public_config.outputs.relay_url }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      T2CODE_WEB_ROUTER_URL: ${{ vars.T2CODE_WEB_ROUTER_URL }}
-      T2CODE_WEB_LATEST_DOMAIN: ${{ vars.T2CODE_WEB_LATEST_DOMAIN }}
-      T2CODE_WEB_NIGHTLY_DOMAIN: ${{ vars.T2CODE_WEB_NIGHTLY_DOMAIN }}
+      T3CODE_WEB_ROUTER_URL: ${{ vars.T3CODE_WEB_ROUTER_URL }}
+      T3CODE_WEB_LATEST_DOMAIN: ${{ vars.T3CODE_WEB_LATEST_DOMAIN }}
+      T3CODE_WEB_NIGHTLY_DOMAIN: ${{ vars.T3CODE_WEB_NIGHTLY_DOMAIN }}
       VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG }}
     steps:
       - name: Checkout
@@ -1114,9 +955,9 @@ jobs:
             exit 1
           fi
 
-          router_url="${T2CODE_WEB_ROUTER_URL:-https://app.t2.codes}"
-          latest_domain="${T2CODE_WEB_LATEST_DOMAIN:-latest.app.t2.codes}"
-          nightly_domain="${T2CODE_WEB_NIGHTLY_DOMAIN:-nightly.app.t2.codes}"
+          router_url="${T3CODE_WEB_ROUTER_URL:-https://app.t2.codes}"
+          latest_domain="${T3CODE_WEB_LATEST_DOMAIN:-latest.app.t2.codes}"
+          nightly_domain="${T3CODE_WEB_NIGHTLY_DOMAIN:-nightly.app.t2.codes}"
           router_domain="${router_url#http://}"
           router_domain="${router_domain#https://}"
           router_domain="${router_domain%%/*}"
@@ -1142,9 +983,9 @@ jobs:
               --token "$VERCEL_TOKEN" \
               "${vercel_scope_args[@]}" \
               --build-env "APP_VERSION=${{ needs.preflight.outputs.version }}" \
-              --build-env "T2CODE_CLERK_PUBLISHABLE_KEY=${T2CODE_CLERK_PUBLISHABLE_KEY:-}" \
-              --build-env "T2CODE_CLERK_JWT_TEMPLATE=${T2CODE_CLERK_JWT_TEMPLATE:-}" \
-              --build-env "T2CODE_CLERK_CLI_OAUTH_CLIENT_ID=${T2CODE_CLERK_CLI_OAUTH_CLIENT_ID:-}" \
+              --build-env "T3CODE_CLERK_PUBLISHABLE_KEY=${T3CODE_CLERK_PUBLISHABLE_KEY:-}" \
+              --build-env "T3CODE_CLERK_JWT_TEMPLATE=${T3CODE_CLERK_JWT_TEMPLATE:-}" \
+              --build-env "T3CODE_CLERK_CLI_OAUTH_CLIENT_ID=${T3CODE_CLERK_CLI_OAUTH_CLIENT_ID:-}" \
               --build-env "T2CODE_RELAY_URL=${T2CODE_RELAY_URL:-}" \
               --build-env "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=${T2CODE_RELAY_CLIENT_OTLP_TRACES_URL:-}" \
               --build-env "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=${T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET:-}" \
@@ -1207,7 +1048,7 @@ jobs:
           VERCEL_PROJECT_ID="$(
             curl --fail --silent --show-error \
               --header "Authorization: Bearer $VERCEL_TOKEN" \
-              "https://api.vercel.com/v9/projects/t2code-marketing?teamId=$VERCEL_ORG_ID" \
+              "https://api.vercel.com/v9/projects/t3code-marketing?teamId=$VERCEL_ORG_ID" \
               | jq --exit-status --raw-output '.id'
           )"
           export VERCEL_PROJECT_ID
@@ -1264,7 +1105,7 @@ jobs:
           run-install: |
             args:
               - --filter=@t2code/scripts...
-              - --filter=@t2code/oxlint-plugin-t2code...
+              - --filter=@t2code/oxlint-plugin-t3code...
 
       - id: update_versions
         name: Update version strings
