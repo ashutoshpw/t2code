@@ -183,12 +183,14 @@ const runImport = (input: {
   readonly directory: ProviderSessionDirectory.ProviderSessionDirectory["Service"];
   readonly snapshots: ReturnType<typeof makeSnapshotsLayer>;
   readonly expectedWorkspaceRoot?: string;
+  readonly since?: string | null;
 }) =>
   importRecentAgentThreads({
     projectId: PROJECT_ID,
     ...(input.expectedWorkspaceRoot === undefined
       ? {}
       : { expectedWorkspaceRoot: input.expectedWorkspaceRoot }),
+    ...(input.since === undefined ? {} : { since: input.since }),
   }).pipe(
     Effect.provideService(AgentSessionScanner.AgentSessionScanner, input.scanner),
     Effect.provideService(OrchestrationEngine.OrchestrationEngineService, input.engine),
@@ -314,6 +316,50 @@ it.layer(NodeServices.layer)("AgentSessionImporter", (it) => {
 
         expect(error).toEqual(new AgentSessionImportProjectChangedError({ projectId: PROJECT_ID }));
         expect(recentThreads).not.toHaveBeenCalled();
+      }),
+    );
+
+    it.effect("passes the since window to the scanner", () =>
+      Effect.gen(function* () {
+        const calls: Array<readonly [string, unknown]> = [];
+        const scanner = AgentSessionScanner.AgentSessionScanner.of({
+          scan: Effect.die("unused"),
+          recentThreads: (workspaceRoot, completedSources, options) => {
+            calls.push([workspaceRoot, options]);
+            return Stream.empty;
+          },
+        });
+        const base = {
+          scanner,
+          engine: OrchestrationEngine.OrchestrationEngineService.of({
+            dispatch: () => Effect.die("unused"),
+            readEvents: () => Stream.empty,
+            readThreadEvents: () => Stream.empty,
+            getThreadReplayStats: () => Effect.die("unused"),
+            streamDomainEvents: Stream.empty,
+            subscribeDomainEvents: Effect.succeed(Stream.empty),
+            latestSequence: Effect.succeed(0),
+          }),
+          directory: ProviderSessionDirectory.ProviderSessionDirectory.of({
+            upsert: () => Effect.die("unused"),
+            getProvider: () => Effect.die("unused"),
+            recordImportedTranscript: () => Effect.void,
+            getBinding: () => Effect.succeed(Option.none()),
+            listThreadIds: () => Effect.die("unused"),
+            listBindings: () => Effect.die("unused"),
+          }),
+          snapshots: makeSnapshotsLayer({ project: makeProject() }),
+        };
+
+        yield* runImport(base);
+        yield* runImport({ ...base, since: null });
+        yield* runImport({ ...base, since: "2026-06-01T00:00:00.000Z" });
+
+        expect(calls.map(([, options]) => options)).toEqual([
+          undefined,
+          undefined,
+          { sinceMs: Date.parse("2026-06-01T00:00:00.000Z") },
+        ]);
       }),
     );
 
