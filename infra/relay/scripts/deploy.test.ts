@@ -9,6 +9,7 @@ import {
   missingRelayPublicConfigFields,
   publicConfigFromOutput,
   reconcileRootEnvPublicConfig,
+  reconcileRootEnvRelayUrl,
   RelayDeployError,
   RelayDeployPublicConfigUnavailableError,
   serializeGithubOutput,
@@ -93,20 +94,20 @@ describe("reconcileRootEnvPublicConfig", () => {
     mobileTracingDataset: "t3-code-mobile-traces-dev",
     mobileTracingToken: "xaat-public-ingest",
     clientTracingUrl: "https://api.axiom.co/v1/traces",
-    clientTracingDataset: "t3-code-relay-client-traces-dev",
+    clientTracingDataset: "t2-code-relay-client-traces-dev",
     clientTracingToken: "xaat-relay-client-ingest",
   } as const;
 
   it("adds the complete local client config", () => {
     expect(reconcileRootEnvPublicConfig("", config)).toBe(
       [
-        "T3CODE_RELAY_URL=https://relay.example.test",
+        "T2CODE_RELAY_URL=https://relay.example.test",
         "T3CODE_MOBILE_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
         "T3CODE_MOBILE_OTLP_TRACES_DATASET=t3-code-mobile-traces-dev",
         "T3CODE_MOBILE_OTLP_TRACES_TOKEN=xaat-public-ingest",
-        "T3CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
-        "T3CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=t3-code-relay-client-traces-dev",
-        "T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=xaat-relay-client-ingest",
+        "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
+        "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=t2-code-relay-client-traces-dev",
+        "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=xaat-relay-client-ingest",
         "",
       ].join("\n"),
     );
@@ -117,13 +118,13 @@ describe("reconcileRootEnvPublicConfig", () => {
       reconcileRootEnvPublicConfig(
         [
           "T3CODE_CLERK_PUBLISHABLE_KEY=pk_test_example",
-          "T3CODE_RELAY_URL=https://old.example.test",
+          "T2CODE_RELAY_URL=https://old.example.test",
           "T3CODE_MOBILE_OTLP_TRACES_URL=https://old.example.test/v1/traces",
           "T3CODE_MOBILE_OTLP_TRACES_DATASET=old-dataset",
           "T3CODE_MOBILE_OTLP_TRACES_TOKEN=old-token",
-          "T3CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://old.example.test/v1/traces",
-          "T3CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=old-client-dataset",
-          "T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=old-client-token",
+          "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://old.example.test/v1/traces",
+          "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=old-client-dataset",
+          "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=old-client-token",
           "",
         ].join("\n"),
         config,
@@ -131,15 +132,35 @@ describe("reconcileRootEnvPublicConfig", () => {
     ).toBe(
       [
         "T3CODE_CLERK_PUBLISHABLE_KEY=pk_test_example",
-        "T3CODE_RELAY_URL=https://relay.example.test",
+        "T2CODE_RELAY_URL=https://relay.example.test",
         "T3CODE_MOBILE_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
         "T3CODE_MOBILE_OTLP_TRACES_DATASET=t3-code-mobile-traces-dev",
         "T3CODE_MOBILE_OTLP_TRACES_TOKEN=xaat-public-ingest",
-        "T3CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
-        "T3CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=t3-code-relay-client-traces-dev",
-        "T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=xaat-relay-client-ingest",
+        "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
+        "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=t2-code-relay-client-traces-dev",
+        "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=xaat-relay-client-ingest",
         "",
       ].join("\n"),
+    );
+  });
+});
+
+describe("reconcileRootEnvRelayUrl", () => {
+  it("replaces legacy relay keys while preserving unrelated configuration", () => {
+    expect(
+      reconcileRootEnvRelayUrl(
+        [
+          "T3CODE_CLERK_PUBLISHABLE_KEY=pk_test_example",
+          "T3CODE_RELAY_URL=https://relay.t3.codes",
+          "VITE_T3CODE_RELAY_URL=https://relay.t3.codes",
+          "T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=legacy-token",
+          "VITE_RELAY_OTLP_TRACES_TOKEN=legacy-alias-token",
+          "",
+        ].join("\n"),
+        "https://relay.t2.codes",
+      ),
+    ).toBe(
+      "T3CODE_CLERK_PUBLISHABLE_KEY=pk_test_example\nT2CODE_RELAY_URL=https://relay.t2.codes\n",
     );
   });
 });
@@ -170,9 +191,9 @@ describe("serializeRelayClientTracingEnvironment", () => {
       }),
     ).toBe(
       [
-        "T3CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
-        "T3CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=relay",
-        "T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=client-token",
+        "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
+        "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=relay",
+        "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=client-token",
         "",
       ].join("\n"),
     );
