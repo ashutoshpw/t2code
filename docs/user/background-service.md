@@ -1,11 +1,11 @@
-# Running T3 Code in the background
+# Running T2 Code in the background
 
-On Linux and macOS, T3 Code can run as a service for your user so you do not need
+On Linux and macOS, T2 Code can run as a service for your user so you do not need
 to keep a terminal open.
 
 ## Manage the service
 
-Run these commands on the machine that will host T3 Code:
+Run these commands on the machine that will host T2 Code:
 
 | Task                            | Command                                    |
 | ------------------------------- | ------------------------------------------ |
@@ -23,11 +23,11 @@ one. An older CLI refuses to replace a newer service unless you explicitly add
 
 Updating restarts the server. Finish active work first, and wait for any remote
 update already in progress. To match a remote client's version, follow
-[Updating T3 Code](./updating.md).
+[Updating T2 Code](./updating.md).
 
 ## Platform support
 
-Linux needs systemd user services. Setup enables lingering so T3 Code starts at
+Linux needs systemd user services. Setup enables lingering so T2 Code starts at
 boot and keeps running after logout. If this needs administrator permission,
 setup prints a recovery command before changing the service.
 
@@ -61,7 +61,7 @@ ssh -t your-server 'sudo loginctl enable-linger "$(id -un)"'
 ```
 
 Then retry service setup as your normal user. Run only the `loginctl` command
-with sudo; running T3 Code as root creates a separate installation and Connect
+with sudo; running T2 Code as root creates a separate installation and Connect
 identity. Without administrator access, run `t2code serve` in a terminal and keep
 that session open.
 
@@ -69,7 +69,7 @@ that session open.
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `linger-unavailable`                    | Run `loginctl show-user "$(id -un)" --property=Linger` and check that systemd-logind is available.                             |
 | `user-manager-unavailable`              | Run `systemctl --user status` in a login session for the service user; check your distribution's systemd user-session support. |
-| `service-disabled` or `service-stopped` | Read the log and `systemctl --user status t3code.service`, then use the repair command printed by T3 Code.                     |
+| `service-disabled` or `service-stopped` | Read the log and `systemctl --user status t3code.service`, then use the repair command printed by T2 Code.                     |
 
 On macOS, check **System Settings → General → Login Items** if the service no
 longer starts at login. If agent work cannot access Desktop, Documents, or
