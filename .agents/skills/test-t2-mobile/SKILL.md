@@ -1,11 +1,11 @@
 ---
-name: test-t3-mobile
-description: Launch and test T3 Code Mobile on an iOS Simulator or Android Emulator against disposable local T3 environments, including Metro and dev-client reuse, native rebuild decisions, per-client pairing, seeded projects, semantic UI control, screenshots, and iOS serve-sim streaming. Use after mobile UI or native changes, when reproducing phone or tablet behavior, pairing an emulator to isolated state, or verifying mobile behavior on macOS, Linux, or Windows.
+name: test-t2-mobile
+description: Launch and test T2 Code Mobile on an iOS Simulator or Android Emulator against disposable local T2 environments, including Metro and dev-client reuse, native rebuild decisions, per-client pairing, seeded projects, semantic UI control, screenshots, and iOS serve-sim streaming. Use after mobile UI or native changes, when reproducing phone or tablet behavior, pairing an emulator to isolated state, or verifying mobile behavior on macOS, Linux, or Windows.
 ---
 
-# Test T3 Mobile
+# Test T2 Mobile
 
-Run one focused, end-to-end mobile verification pass against disposable T3 state. Use the sibling [`test-t3-app`](../test-t3-app/SKILL.md) skill as the detailed reference for pairing-token semantics and SQLite fixtures.
+Run one focused, end-to-end mobile verification pass against disposable T2 state. Use the sibling [`test-t3-app`](../test-t3-app/SKILL.md) skill as the detailed reference for pairing-token semantics and SQLite fixtures.
 
 Command examples use POSIX shell syntax. On Windows, use PowerShell equivalents: set variables with `$env:NAME = "value"`, use an explicit temporary directory from `[System.IO.Path]::GetTempPath()`, and run multiline examples on one line or with PowerShell backticks. Use `$env:ANDROID_HOME\platform-tools\adb.exe` when `adb` is not already on `PATH`.
 
@@ -28,13 +28,13 @@ Do not treat unavailable iOS tooling as a blocker when Android is a valid repres
 
 The development identity on both platforms is:
 
-- App: `T3 Code Dev`
+- App: `T2 Code Dev`
 - Bundle/package identifier: `codes.t2.mobile.dev`
-- URL scheme: `t3code-dev`
+- URL scheme: `t2code-dev`
 
 Bundle or package presence proves the correct variant, not native compatibility. Reuse it only when the current changes did not alter its Expo SDK, native dependencies, config plugins, entitlements, generated project, or native source.
 
-## Start one disposable T3 environment
+## Start one disposable T2 environment
 
 Run backend commands from the repository root. Use the ignored, worktree-local `.t3` directory or create a fresh directory with the host OS's temporary-directory mechanism. An explicit base directory stores state in `<base-dir>/userdata`; never point testing at shared `~/.t3` state.
 
@@ -72,14 +72,14 @@ Enter the complete `http://` origin to make the test transport explicit. Bare IP
 
 Run Metro from `apps/mobile`.
 
-1. Inspect any process on the intended Metro port and its `/status` response. Reuse it only when it is healthy, belongs to this worktree, and matches `APP_VARIANT=development`, `--dev-client`, and scheme `t3code-dev`.
+1. Inspect any process on the intended Metro port and its `/status` response. Reuse it only when it is healthy, belongs to this worktree, and matches `APP_VARIANT=development`, `--dev-client`, and scheme `t2code-dev`.
 2. Never kill another worktree's Metro. Use a free explicit port when necessary.
 3. Run `vp run dev:client` on the standard port. For another port, retain the complete development identity:
 
    ```bash
    APP_VARIANT=development vp exec expo start \
      --dev-client \
-     --scheme t3code-dev \
+     --scheme t2code-dev \
      --lan \
      --port <metro-port>
    ```
@@ -92,8 +92,8 @@ Run Metro from `apps/mobile`.
 
 Use `ios-debugger-agent` to select one UDID and set these XcodeBuildMCP session defaults:
 
-- Workspace: `<repo>/apps/mobile/ios/T3CodeDev.xcworkspace`
-- Scheme: `T3CodeDev`
+- Workspace: `<repo>/apps/mobile/ios/T2CodeDev.xcworkspace`
+- Scheme: `T2CodeDev`
 - Configuration: `Debug`
 - Simulator ID: the selected UDID
 - Bundle ID: `codes.t2.mobile.dev`
@@ -127,10 +127,10 @@ Do not start, stop, erase, or reconfigure an emulator owned by another task. Tra
 Use the bundled helper from the repository root. It issues a fresh credential against the running backend's exact base directory, opens the existing Add Environment route with the credential in an encoded query parameter, and asks that route to connect once:
 
 ```bash
-.agents/skills/test-t3-mobile/scripts/pair-client.sh \
+.agents/skills/test-t2-mobile/scripts/pair-client.sh \
   ios <simulator-udid> <server-port> <base-dir>
 
-.agents/skills/test-t3-mobile/scripts/pair-client.sh \
+.agents/skills/test-t2-mobile/scripts/pair-client.sh \
   android <emulator-serial> <server-port> <base-dir>
 ```
 
@@ -139,7 +139,7 @@ Run only the command for the selected platform. The helper uses `http://127.0.0.
 The helper opens this registered route:
 
 ```text
-t3code-dev://connections/new?pairingUrl=<encoded-pairing-url>&autoConnect=1
+t2code-dev://connections/new?pairingUrl=<encoded-pairing-url>&autoConnect=1
 ```
 
 The Add Environment route owns the behavior: `pairingUrl` prefills its normal host and token inputs, while `autoConnect=1` submits once in development builds and returns to Home after success. Without `autoConnect`, the same route only prefills the form for manual inspection.
@@ -154,7 +154,7 @@ Pairing credentials are secret, short-lived, and single-use. Create a different 
 
 ### iOS
 
-Use `snapshot_ui` and current element references from XcodeBuildMCP for taps and typing. Stream the same UDID through `ios-simulator-browser` so the user can watch in T3 Code when the host supports it. Use the stream as a visual feed rather than a reason to switch to fragile browser coordinates.
+Use `snapshot_ui` and current element references from XcodeBuildMCP for taps and typing. Stream the same UDID through `ios-simulator-browser` so the user can watch in T2 Code when the host supports it. Use the stream as a visual feed rather than a reason to switch to fragile browser coordinates.
 
 ### Android
 
@@ -168,7 +168,7 @@ Exercise only the affected flow on one representative device unless the change s
 
 1. Confirm the app connected to the intended disposable environment instead of merely rendering an empty disconnected state.
 2. Capture the relevant final state.
-3. Remove the disposable environment from T3 Code Dev.
+3. Remove the disposable environment from T2 Code Dev.
 4. Remove any `adb reverse` rule created for this test with `adb -s <emulator-serial> reverse --remove tcp:<metro-port>`.
 5. Stop only the serve-sim, Metro, backend, emulator, and log processes started by this test.
 6. Remove only base directories and temporary Git repositories deliberately created for this test. Preserve them when they contain useful reproduction evidence.
