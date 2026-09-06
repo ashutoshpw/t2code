@@ -12,13 +12,17 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as SchemaIssue from "effect/SchemaIssue";
 
+<<<<<<< HEAD
 declare const __T3CODE_BUILD_RELAY_URL__: string | undefined;
 declare const __T3CODE_BUILD_CHANNEL__: "nightly" | "latest" | undefined;
+=======
+declare const __T2CODE_BUILD_RELAY_URL__: string | undefined;
+>>>>>>> 10d5e3d32b (refactor(relay): migrate T3 relay identity to T2)
 declare const __T3CODE_BUILD_CLERK_PUBLISHABLE_KEY__: string | undefined;
 declare const __T3CODE_BUILD_CLERK_CLI_OAUTH_CLIENT_ID__: string | undefined;
-declare const __T3CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_URL__: string | undefined;
-declare const __T3CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_DATASET__: string | undefined;
-declare const __T3CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_TOKEN__: string | undefined;
+declare const __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_URL__: string | undefined;
+declare const __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_DATASET__: string | undefined;
+declare const __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_TOKEN__: string | undefined;
 
 const CLOUD_CLI_OAUTH_LOOPBACK_PORT = 34338;
 const CLOUD_CLI_OAUTH_SCOPES = CONNECT_OAUTH_SCOPES;
@@ -52,9 +56,9 @@ function normalizeSecureUrl(value: string): string | null {
 }
 
 const buildTimeRelayUrl =
-  typeof __T3CODE_BUILD_RELAY_URL__ === "undefined"
+  typeof __T2CODE_BUILD_RELAY_URL__ === "undefined"
     ? ""
-    : (normalizeSecureRelayUrl(__T3CODE_BUILD_RELAY_URL__) ?? "");
+    : (normalizeSecureRelayUrl(__T2CODE_BUILD_RELAY_URL__) ?? "");
 const buildTimeClerkPublishableKey = readBuildTimeValue(
   typeof __T3CODE_BUILD_CLERK_PUBLISHABLE_KEY__ === "undefined"
     ? undefined
@@ -67,19 +71,19 @@ const buildTimeClerkCliOAuthClientId = readBuildTimeValue(
 );
 const buildTimeRelayClientTracing = {
   tracesUrl: readBuildTimeValue(
-    typeof __T3CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_URL__ === "undefined"
+    typeof __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_URL__ === "undefined"
       ? undefined
-      : __T3CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_URL__,
+      : __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_URL__,
   ),
   tracesDataset: readBuildTimeValue(
-    typeof __T3CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_DATASET__ === "undefined"
+    typeof __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_DATASET__ === "undefined"
       ? undefined
-      : __T3CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_DATASET__,
+      : __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_DATASET__,
   ),
   tracesToken: readBuildTimeValue(
-    typeof __T3CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_TOKEN__ === "undefined"
+    typeof __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_TOKEN__ === "undefined"
       ? undefined
-      : __T3CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_TOKEN__,
+      : __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_TOKEN__,
   ),
 } as const;
 
@@ -91,10 +95,10 @@ export function resolveRelayClientTracingConfig(
     return null;
   }
 
-  const tracesUrl = env.T3CODE_RELAY_CLIENT_OTLP_TRACES_URL?.trim() || fallback.tracesUrl;
+  const tracesUrl = env.T2CODE_RELAY_CLIENT_OTLP_TRACES_URL?.trim() || fallback.tracesUrl;
   const tracesDataset =
-    env.T3CODE_RELAY_CLIENT_OTLP_TRACES_DATASET?.trim() || fallback.tracesDataset;
-  const tracesToken = env.T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN?.trim() || fallback.tracesToken;
+    env.T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET?.trim() || fallback.tracesDataset;
+  const tracesToken = env.T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN?.trim() || fallback.tracesToken;
   const normalizedTracesUrl = normalizeSecureUrl(tracesUrl);
   return normalizedTracesUrl && tracesDataset && tracesToken
     ? { tracesUrl: normalizedTracesUrl, tracesDataset, tracesToken }
@@ -102,7 +106,7 @@ export function resolveRelayClientTracingConfig(
 }
 
 export function makeRelayUrlConfig(fallback = buildTimeRelayUrl) {
-  const runtimeConfig = Config.NonEmptyString("T3CODE_RELAY_URL");
+  const runtimeConfig = Config.NonEmptyString("T2CODE_RELAY_URL");
   return (fallback ? runtimeConfig.pipe(Config.withDefault(fallback)) : runtimeConfig).pipe(
     Config.mapEffect(validateRelayUrl),
   );
@@ -219,7 +223,7 @@ export function makeCloudCliOAuthConfig({
 export const cloudCliOAuthConfig = makeCloudCliOAuthConfig();
 
 export const hasCloudPublicConfig = Boolean(
-  (normalizeSecureRelayUrl(process.env.T3CODE_RELAY_URL ?? "") ?? buildTimeRelayUrl) &&
+  (normalizeSecureRelayUrl(process.env.T2CODE_RELAY_URL ?? "") ?? buildTimeRelayUrl) &&
   (process.env.T3CODE_CLERK_PUBLISHABLE_KEY?.trim() || buildTimeClerkPublishableKey) &&
   (process.env.T3CODE_CLERK_CLI_OAUTH_CLIENT_ID?.trim() || buildTimeClerkCliOAuthClientId),
 );
