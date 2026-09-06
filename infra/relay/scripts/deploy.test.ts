@@ -102,9 +102,9 @@ describe("reconcileRootEnvPublicConfig", () => {
     expect(reconcileRootEnvPublicConfig("", config)).toBe(
       [
         "T2CODE_RELAY_URL=https://relay.example.test",
-        "T3CODE_MOBILE_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
-        "T3CODE_MOBILE_OTLP_TRACES_DATASET=t3-code-mobile-traces-dev",
-        "T3CODE_MOBILE_OTLP_TRACES_TOKEN=xaat-public-ingest",
+        "T2CODE_MOBILE_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
+        "T2CODE_MOBILE_OTLP_TRACES_DATASET=t3-code-mobile-traces-dev",
+        "T2CODE_MOBILE_OTLP_TRACES_TOKEN=xaat-public-ingest",
         "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
         "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=t2-code-relay-client-traces-dev",
         "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=xaat-relay-client-ingest",
@@ -119,9 +119,9 @@ describe("reconcileRootEnvPublicConfig", () => {
         [
           "T3CODE_CLERK_PUBLISHABLE_KEY=pk_test_example",
           "T2CODE_RELAY_URL=https://old.example.test",
-          "T3CODE_MOBILE_OTLP_TRACES_URL=https://old.example.test/v1/traces",
-          "T3CODE_MOBILE_OTLP_TRACES_DATASET=old-dataset",
-          "T3CODE_MOBILE_OTLP_TRACES_TOKEN=old-token",
+          "T2CODE_MOBILE_OTLP_TRACES_URL=https://old.example.test/v1/traces",
+          "T2CODE_MOBILE_OTLP_TRACES_DATASET=old-dataset",
+          "T2CODE_MOBILE_OTLP_TRACES_TOKEN=old-token",
           "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://old.example.test/v1/traces",
           "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=old-client-dataset",
           "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=old-client-token",
@@ -133,9 +133,9 @@ describe("reconcileRootEnvPublicConfig", () => {
       [
         "T3CODE_CLERK_PUBLISHABLE_KEY=pk_test_example",
         "T2CODE_RELAY_URL=https://relay.example.test",
-        "T3CODE_MOBILE_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
-        "T3CODE_MOBILE_OTLP_TRACES_DATASET=t3-code-mobile-traces-dev",
-        "T3CODE_MOBILE_OTLP_TRACES_TOKEN=xaat-public-ingest",
+        "T2CODE_MOBILE_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
+        "T2CODE_MOBILE_OTLP_TRACES_DATASET=t3-code-mobile-traces-dev",
+        "T2CODE_MOBILE_OTLP_TRACES_TOKEN=xaat-public-ingest",
         "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=https://api.axiom.co/v1/traces",
         "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=t2-code-relay-client-traces-dev",
         "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=xaat-relay-client-ingest",
