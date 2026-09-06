@@ -1,4 +1,12 @@
-import { ChevronsLeftRightEllipsisIcon, PlusIcon, QrCodeIcon, TerminalIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronsLeftRightEllipsisIcon,
+  PencilIcon,
+  PlusIcon,
+  QrCodeIcon,
+  TerminalIcon,
+  XIcon,
+} from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
 import {
   type KeyboardEvent,
@@ -147,6 +155,7 @@ import {
 } from "~/state/environments";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { primaryServerKeybindingsAtom, serverEnvironment } from "~/state/server";
+import { useEnvironmentSessionState } from "~/state/session";
 import { ConnectionStatusDot } from "../ConnectionStatusDot";
 import { ServerUpdateAction, ServerUpdateProgress } from "../ServerUpdateAction";
 import { CloudEnvironmentConnectRows } from "../cloud/CloudEnvironmentConnectList";
@@ -1398,13 +1407,182 @@ function NetworkAccessDescription({
 
 type SavedBackendListRowProps = {
   environment: EnvironmentPresentation;
+  environmentLabels: ReadonlyArray<{
+    readonly environmentId: EnvironmentId;
+    readonly label: string;
+  }>;
   removingEnvironmentId: EnvironmentId | null;
   onConnect: (environmentId: EnvironmentId) => void;
   onRemove: (environmentId: EnvironmentId) => void;
 };
 
+function EnvironmentLabelControl({
+  environmentId,
+  label,
+  environmentLabels,
+  canRename,
+  showValue = false,
+  valueClassName = "text-[13px] text-muted-foreground",
+  valueElement: ValueElement = "span",
+}: {
+  readonly environmentId: EnvironmentId;
+  readonly label: string;
+  readonly environmentLabels: ReadonlyArray<{
+    readonly environmentId: EnvironmentId;
+    readonly label: string;
+  }>;
+  readonly canRename: boolean;
+  readonly showValue?: boolean;
+  readonly valueClassName?: string;
+  readonly valueElement?: "span" | "h3";
+}) {
+  const renameEnvironment = useAtomCommand(serverEnvironment.updateEnvironmentLabel, {
+    reportFailure: false,
+  });
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(label);
+  const [saving, setSaving] = useState(false);
+  const [pendingDuplicateLabel, setPendingDuplicateLabel] = useState<string | null>(null);
+  // Renaming is the only path that sets a pending confirmation, so losing the
+  // capability simply hides the dialog; no effect needed to clear it.
+  const activeDuplicateLabel = canRename ? pendingDuplicateLabel : null;
+
+  if (!canRename && !showValue) return null;
+
+  const cancel = () => {
+    setValue(label);
+    setEditing(false);
+  };
+  const save = async (nextLabel: string) => {
+    setSaving(true);
+    const result = await renameEnvironment({ environmentId, input: nextLabel });
+    setSaving(false);
+    if (result._tag === "Success") {
+      setEditing(false);
+      return;
+    }
+    if (!isAtomCommandInterrupted(result)) {
+      const error = squashAtomCommandFailure(result);
+      toastManager.add(
+        stackedThreadToast({
+          type: "error",
+          title: "Could not rename environment",
+          description:
+            error instanceof Error ? error.message : "The environment name was not saved.",
+        }),
+      );
+    }
+  };
+
+  if (!editing || !canRename) {
+    return (
+      <>
+        {showValue ? <ValueElement className={valueClassName}>{label}</ValueElement> : null}
+        {canRename ? (
+          <Button
+            size="icon-micro"
+            variant="ghost-muted"
+            aria-label={`Rename ${label}`}
+            onClick={() => {
+              setValue(label);
+              setEditing(true);
+            }}
+          >
+            <PencilIcon className="size-3" />
+          </Button>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <form
+        className="flex min-w-0 items-center gap-1.5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const nextLabel = value.trim();
+          const duplicate =
+            nextLabel.length > 0 &&
+            environmentLabels.some(
+              (environment) =>
+                environment.environmentId !== environmentId && environment.label === nextLabel,
+            );
+          if (duplicate) {
+            setPendingDuplicateLabel(nextLabel);
+            return;
+          }
+          void save(nextLabel);
+        }}
+      >
+        <Input
+          autoFocus
+          size="compact"
+          className="w-48"
+          aria-label="Environment name"
+          maxLength={40}
+          value={value}
+          disabled={saving}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.stopPropagation();
+            cancel();
+          }}
+        />
+        <Button size="icon-xs" type="submit" disabled={saving} aria-label="Save environment name">
+          {saving ? <Spinner className="size-3" /> : <CheckIcon className="size-3" />}
+        </Button>
+        <Button
+          size="icon-xs"
+          type="button"
+          variant="ghost"
+          disabled={saving}
+          aria-label="Cancel environment rename"
+          onClick={cancel}
+        >
+          <XIcon className="size-3" />
+        </Button>
+      </form>
+      <AlertDialog
+        open={activeDuplicateLabel !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDuplicateLabel(null);
+        }}
+      >
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Use this name twice?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Another environment is already named “{activeDuplicateLabel}”. Both environments will
+              use the same name.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button type="button" variant="outline" />}>
+              Cancel
+            </AlertDialogClose>
+            <Button
+              type="button"
+              onClick={() => {
+                const nextLabel = activeDuplicateLabel;
+                setPendingDuplicateLabel(null);
+                if (nextLabel !== null) void save(nextLabel);
+              }}
+            >
+              Use name
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
+    </>
+  );
+}
+
 function SavedBackendListRow({
   environment,
+  environmentLabels,
   removingEnvironmentId,
   onConnect,
   onRemove,
@@ -1412,6 +1590,13 @@ function SavedBackendListRow({
   const environmentId = environment.environmentId;
   const connectionState = environment.connection.phase;
   const isConnected = connectionState === "connected";
+  const sessionState = useEnvironmentSessionState(environmentId);
+  const canRename =
+    isConnected &&
+    Boolean(
+      sessionState.data?.authenticated &&
+      sessionState.data.scopes?.includes(AuthOrchestrationOperateScope),
+    );
   const isConnecting = connectionState === "connecting" || connectionState === "reconnecting";
   const stateDotClassName =
     connectionState === "connected"
@@ -1488,9 +1673,15 @@ function SavedBackendListRow({
               kind={resolveEnvironmentMachineKind(environment.serverConfig)}
               className="size-3.5 shrink-0 text-muted-foreground"
             />
-            <h3 className="min-w-0 truncate text-sm font-medium text-foreground">
-              {environment.label}
-            </h3>
+            <EnvironmentLabelControl
+              environmentId={environmentId}
+              label={environment.label}
+              environmentLabels={environmentLabels}
+              canRename={canRename}
+              showValue
+              valueClassName="text-sm font-medium text-foreground"
+              valueElement="h3"
+            />
           </div>
           {metadataBits.length > 0 ? (
             <p className="truncate text-xs text-muted-foreground">{metadataBits.join(" · ")}</p>
@@ -1898,6 +2089,15 @@ export function ConnectionsSettings() {
   );
   const canManageLocalBackend = currentSessionScopes?.includes(AuthAccessWriteScope) ?? false;
   const canManageRelay = currentSessionScopes?.includes(AuthRelayWriteScope) ?? false;
+  const canRenamePrimary = currentSessionScopes?.includes(AuthOrchestrationOperateScope) ?? false;
+  const environmentLabels = useMemo(
+    () =>
+      environments.map((environment) => ({
+        environmentId: environment.environmentId,
+        label: environment.label,
+      })),
+    [environments],
+  );
   const authAccessChanges = useEnvironmentQuery(
     canManageLocalBackend && primaryEnvironmentId !== null
       ? authEnvironment.accessChanges({
@@ -3134,6 +3334,21 @@ export function ConnectionsSettings() {
       {canManageLocalBackend ? (
         <>
           <SettingsSection {...searchableSetting("connections-environment")}>
+            {primaryEnvironment && primaryEnvironmentId ? (
+              <SettingsRow
+                title="Environment name"
+                description="Shown to clients connected to this environment. Clear the name to use the machine name."
+                control={
+                  <EnvironmentLabelControl
+                    environmentId={primaryEnvironmentId}
+                    label={primaryEnvironment.label}
+                    environmentLabels={environmentLabels}
+                    canRename={canRenamePrimary}
+                    showValue
+                  />
+                }
+              />
+            ) : null}
             {primaryVersionMismatch || primaryServerUpdateState.status !== "idle" ? (
               <SettingsRow
                 title={
@@ -3510,6 +3725,21 @@ export function ConnectionsSettings() {
         </>
       ) : (
         <SettingsSection {...searchableSetting("connections-environment")}>
+          {primaryEnvironment && primaryEnvironmentId ? (
+            <SettingsRow
+              title="Environment name"
+              description="Shown to clients connected to this environment. Clear the name to use the machine name."
+              control={
+                <EnvironmentLabelControl
+                  environmentId={primaryEnvironmentId}
+                  label={primaryEnvironment.label}
+                  environmentLabels={environmentLabels}
+                  canRename={canRenamePrimary}
+                  showValue
+                />
+              }
+            />
+          ) : null}
           <SettingsRow
             title="Administrative access"
             description="Pairing links and client-session management require the access:write scope for this backend."
@@ -3586,6 +3816,7 @@ export function ConnectionsSettings() {
           <SavedBackendListRow
             key={environment.environmentId}
             environment={environment}
+            environmentLabels={environmentLabels}
             removingEnvironmentId={removingSavedEnvironmentId}
             onConnect={handleConnectSavedBackend}
             onRemove={handleRemoveSavedBackend}
