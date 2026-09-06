@@ -290,7 +290,7 @@ async function initializeRepository(input: {
   await runGit(input.workspaceRoot, ["commit", "-m", input.commitMessage]);
 }
 
-async function seedT3CodeWorkspace(workspaceRoot: string): Promise<void> {
+async function seedT2CodeWorkspace(workspaceRoot: string): Promise<void> {
   await NodeFSP.mkdir(NodePath.join(workspaceRoot, "apps/mobile/src/features/home"), {
     recursive: true,
   });
@@ -651,7 +651,7 @@ export async function seedShowcaseEnvironment(input: {
   if (!workspaceRoot) throw new Error("The primary showcase workspace is not configured.");
   const dbPath = NodePath.join(input.baseDir, "userdata", "state.sqlite");
   if (primaryProject.id === SHOWCASE_PROJECT_ID) {
-    await seedT3CodeWorkspace(workspaceRoot);
+    await seedT2CodeWorkspace(workspaceRoot);
   }
   await Promise.all(
     projects
