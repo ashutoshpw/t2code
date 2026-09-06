@@ -91,7 +91,7 @@ it("reports a newer installed service and tells the CLI to catch up to it", () =
   );
 
   assert.include(output, "@t2code/cli@0.0.32-nightly.1 (newer than this @t2code/cli@0.0.31 CLI)");
-  assert.include(output, "Run `t3 update 0.0.32-nightly.1` to match it");
+  assert.include(output, "Run `t2code update 0.0.32-nightly.1` to match it");
   assert.notInclude(output, "npx");
 });
 

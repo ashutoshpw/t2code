@@ -113,7 +113,7 @@ export const tweets = [
   },
   {
     handle: "iamkaffe",
-    content: "T3Code was the first one to truly care about Linux users.",
+    content: "T2 Code was the first one to truly care about Linux users.",
     link: "https://x.com/iamkaffe/status/2054675539311411280",
   },
   {
