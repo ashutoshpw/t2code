@@ -79,6 +79,7 @@ import { Toggle, ToggleGroup } from "../ui/toggle-group";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { AddProviderInstanceDialog } from "./AddProviderInstanceDialog";
+import { ImportHistoryDialog } from "./ImportHistoryDialog";
 import { ExpandableText } from "./ExpandableText";
 import { ProviderInstanceCard } from "./ProviderInstanceCard";
 import { UsageProviderSettings } from "./UsageProviderSettings";
@@ -585,6 +586,7 @@ export function EnvironmentProviderSettings({
   });
   const [isRefreshingProviders, setIsRefreshingProviders] = useState(false);
   const [isAddInstanceDialogOpen, setIsAddInstanceDialogOpen] = useState(false);
+  const [isHistoryImportDialogOpen, setIsHistoryImportDialogOpen] = useState(false);
   const [selectedInstanceId, setSelectedInstanceId] = useState<ProviderInstanceId | null>(
     targetInstanceId ?? null,
   );
@@ -1089,6 +1091,24 @@ export function EnvironmentProviderSettings({
         readOnly={readOnly}
       />
 
+      <SettingsSection title="History import">
+        <SettingsRow
+          id={searchableSetting("agent-history-import").id}
+          title={searchableSetting("agent-history-import").title}
+          description={`Find Claude Code and Codex conversations on ${environmentLabel} and import them as threads. Imported conversations continue with the original agent.`}
+          control={
+            <span
+              inert={readOnly}
+              className={cn("flex shrink-0 items-center", readOnly && "select-none opacity-50")}
+            >
+              <Button size="sm" onClick={() => setIsHistoryImportDialogOpen(true)}>
+                Import chats
+              </Button>
+            </span>
+          }
+        />
+      </SettingsSection>
+
       <SettingsSection title="Advanced">
         <SettingsRow
           id={searchableSetting("provider-health-check-interval").id}
@@ -1168,6 +1188,14 @@ export function EnvironmentProviderSettings({
           environmentId={environmentId}
           environmentLabel={environmentLabel}
           onOpenChange={setIsAddInstanceDialogOpen}
+        />
+      ) : null}
+
+      {isHistoryImportDialogOpen ? (
+        <ImportHistoryDialog
+          environmentId={environmentId}
+          environmentLabel={environmentLabel}
+          onOpenChange={setIsHistoryImportDialogOpen}
         />
       ) : null}
     </>

@@ -19,6 +19,7 @@ import {
 } from "@t2code/contracts";
 import { normalizeProjectPathForComparison } from "@t2code/shared/path";
 import * as Crypto from "effect/Crypto";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
@@ -131,6 +132,9 @@ export const importRecentAgentThreads = Effect.fn("importRecentAgentThreads")(fu
   const threads = scanner.recentThreads(
     workspaceRoot,
     completedSources.map((entry) => entry.source),
+    input.since == null
+      ? undefined
+      : { sinceMs: DateTime.toEpochMillis(DateTime.makeUnsafe(input.since)) },
   );
   const importedThreadIds = new Set<ThreadId>();
   let importedCount = 0;
