@@ -27,9 +27,9 @@ describe("loadRepoEnv", () => {
     expect(env.EXPO_PUBLIC_CLERK_JWT_TEMPLATE).toBeUndefined();
     expect(env.T2CODE_RELAY_URL).toBeUndefined();
     expect(env.VITE_T2CODE_RELAY_URL).toBeUndefined();
-    expect(env.T3CODE_MOBILE_OTLP_TRACES_URL).toBeUndefined();
-    expect(env.T3CODE_MOBILE_OTLP_TRACES_DATASET).toBeUndefined();
-    expect(env.T3CODE_MOBILE_OTLP_TRACES_TOKEN).toBeUndefined();
+    expect(env.T2CODE_MOBILE_OTLP_TRACES_URL).toBeUndefined();
+    expect(env.T2CODE_MOBILE_OTLP_TRACES_DATASET).toBeUndefined();
+    expect(env.T2CODE_MOBILE_OTLP_TRACES_TOKEN).toBeUndefined();
     expect(env.EXPO_PUBLIC_OTLP_TRACES_URL).toBeUndefined();
     expect(env.EXPO_PUBLIC_OTLP_TRACES_DATASET).toBeUndefined();
     expect(env.EXPO_PUBLIC_OTLP_TRACES_TOKEN).toBeUndefined();
@@ -128,18 +128,18 @@ describe("loadRepoEnv", () => {
       loadRepoEnv({
         baseEnv: {
           T2CODE_RELAY_URL: "https://relay.example.test",
-          T3CODE_MOBILE_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-          T3CODE_MOBILE_OTLP_TRACES_DATASET: "mobile-traces",
-          T3CODE_MOBILE_OTLP_TRACES_TOKEN: "mobile-token",
+          T2CODE_MOBILE_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
+          T2CODE_MOBILE_OTLP_TRACES_DATASET: "mobile-traces",
+          T2CODE_MOBILE_OTLP_TRACES_TOKEN: "mobile-token",
         },
         repoRoot: makeTemporaryDirectory(),
       }),
     ).toEqual({
       T2CODE_RELAY_URL: "https://relay.example.test",
       VITE_T2CODE_RELAY_URL: "https://relay.example.test",
-      T3CODE_MOBILE_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-      T3CODE_MOBILE_OTLP_TRACES_DATASET: "mobile-traces",
-      T3CODE_MOBILE_OTLP_TRACES_TOKEN: "mobile-token",
+      T2CODE_MOBILE_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
+      T2CODE_MOBILE_OTLP_TRACES_DATASET: "mobile-traces",
+      T2CODE_MOBILE_OTLP_TRACES_TOKEN: "mobile-token",
       EXPO_PUBLIC_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
       EXPO_PUBLIC_OTLP_TRACES_DATASET: "mobile-traces",
       EXPO_PUBLIC_OTLP_TRACES_TOKEN: "mobile-token",
