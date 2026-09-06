@@ -14,9 +14,9 @@ import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 import { assert, it } from "@effect/vitest";
 
-import { CheckpointRef, GitCommandError, VcsProcessExitError } from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
+import { CheckpointRef, GitCommandError, VcsProcessExitError } from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { symlinksSupported } from "@t2code/shared/testing/symlinks";
 import * as ServerConfig from "../config.ts";
 import * as CheckpointStore from "../checkpointing/CheckpointStore.ts";
 import * as ProcessRunner from "../processRunner.ts";

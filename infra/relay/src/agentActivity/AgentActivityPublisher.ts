@@ -10,7 +10,7 @@ import type {
   RelayAgentActivityState,
   RelayDeliveryResult,
   RelayPublishResponse,
-} from "@t3tools/contracts/relay";
+} from "@t2code/contracts/relay";
 import * as Arr from "effect/Array";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";

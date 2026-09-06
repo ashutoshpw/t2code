@@ -1,4 +1,4 @@
-import { ProjectId, type ThreadPullRequestLink } from "@t3tools/contracts";
+import { ProjectId, type ThreadPullRequestLink } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { presentThreadLinkedPullRequests, resolveThreadPrSource } from "./thread-pr-presentation";

@@ -5,9 +5,9 @@ import {
   AuthTokenExchangeGrantType,
   type ClientConnectionMethod,
   type AuthEnvironmentScope,
-} from "@t3tools/contracts";
-import { encodeOAuthScope } from "@t3tools/shared/oauthScope";
-import { hashTelemetryId } from "@t3tools/shared/telemetryId";
+} from "@t2code/contracts";
+import { encodeOAuthScope } from "@t2code/shared/oauthScope";
+import { hashTelemetryId } from "@t2code/shared/telemetryId";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import { environmentEndpointUrl } from "../environment/endpoint.ts";

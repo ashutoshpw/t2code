@@ -7,7 +7,7 @@ import {
   PullRequestListResult,
   pullRequestHostOf,
   resolvePullRequestAuthorFilter,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type {
   ProjectId,
   RepositoryIdentity,
@@ -21,7 +21,7 @@ import type {
   PullRequestListFilters,
   PullRequestListState,
   PullRequestState,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { sourceControlRepositorySelector } from "@t3tools/shared/sourceControl";
 

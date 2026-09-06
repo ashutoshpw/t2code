@@ -11,9 +11,9 @@ import * as Stream from "effect/Stream";
 import {
   SourceControlProviderError,
   type SourceControlProviderDiscoveryItem,
-} from "@t3tools/contracts";
-import type {} from "@t3tools/contracts";
-import { detectSourceControlProviderFromRemoteUrl } from "@t3tools/shared/sourceControl";
+} from "@t2code/contracts";
+import type {} from "@t2code/contracts";
+import { detectSourceControlProviderFromRemoteUrl } from "@t2code/shared/sourceControl";
 
 import * as BuiltInDrivers from "./builtInDrivers.ts";
 import * as SourceControlProvider from "@t3tools/source-control-core/server/SourceControlProvider";

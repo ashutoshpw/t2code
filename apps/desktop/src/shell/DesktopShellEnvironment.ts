@@ -71,7 +71,7 @@ export class DesktopShellEnvironment extends Context.Service<
     // Reuses the installation result; false leaves server hydration enabled.
     readonly installIntoProcess: Effect.Effect<boolean>;
   }
->()("@t3tools/desktop/shell/DesktopShellEnvironment") {}
+>()("@t2code/desktop/shell/DesktopShellEnvironment") {}
 
 const LOGIN_SHELL_ENV_NAMES = [
   "PATH",

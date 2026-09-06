@@ -8,13 +8,13 @@ import * as Schema from "effect/Schema";
 import {
   SourceControlProviderKind as SourceControlProviderKindSchema,
   type SourceControlProviderKind,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 const FALLBACK_COOLDOWN = Duration.seconds(30);
 const MAX_FALLBACK_COOLDOWN = Duration.minutes(15);
 
 export const CredentialScope = Context.Reference<string>(
-  "@t3tools/source-control-core/server/SourceControlRateLimit/CredentialScope",
+  "@t2code/source-control-core/server/SourceControlRateLimit/CredentialScope",
   {
     defaultValue: () => "",
   },
@@ -26,7 +26,7 @@ export const CredentialScope = Context.Reference<string>(
  * exhausted the quota.
  */
 export const Interactive = Context.Reference<boolean>(
-  "@t3tools/source-control-core/server/SourceControlRateLimit/Interactive",
+  "@t2code/source-control-core/server/SourceControlRateLimit/Interactive",
   { defaultValue: () => false },
 );
 

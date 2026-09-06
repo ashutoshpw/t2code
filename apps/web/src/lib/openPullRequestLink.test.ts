@@ -9,7 +9,7 @@ import {
   parseChangeRequestUrl,
   pullRequestCandidateUrlFromReferenceAutolink,
 } from "./openPullRequestLink";
-import { ProjectId, type RepositoryIdentity } from "@t3tools/contracts";
+import { ProjectId, type RepositoryIdentity } from "@t2code/contracts";
 
 function repositoryIdentity(
   provider: string,

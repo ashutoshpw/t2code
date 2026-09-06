@@ -18,8 +18,8 @@ import {
   VcsProcessSpawnError,
   VcsProcessStdinWriteError,
   VcsProcessTimeoutError,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 import * as ProcessRunner from "../processRunner.ts";
 

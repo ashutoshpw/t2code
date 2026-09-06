@@ -3,7 +3,7 @@ import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
 import { CheckIcon } from "lucide-react";
 import { useState } from "react";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import {
   type AcpRegistrySearchAgent,
   AuthProvidersManageScope,
@@ -12,7 +12,7 @@ import {
   type EnvironmentId,
   type ProviderInstanceConfig,
   type ProviderInstanceEnvironmentVariable,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   useEnvironmentSettings,
@@ -55,7 +55,7 @@ import { ProviderEnvironmentSection } from "./ProviderInstanceCard";
 
 /**
  * Output is trimmed to 48 chars so the final composed id stays under the 64-char slug cap
- * enforced by `ProviderInstanceId` in `@t3tools/contracts`.
+ * enforced by `ProviderInstanceId` in `@t2code/contracts`.
  */
 function slugifyLabel(value: string): string {
   return value

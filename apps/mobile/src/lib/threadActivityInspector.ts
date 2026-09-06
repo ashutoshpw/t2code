@@ -1,8 +1,8 @@
-import type { V2ItemSupport } from "@t3tools/client-runtime/state/item-support";
-import { toolItemForDisplay } from "@t3tools/client-runtime/work-log/presentation";
-import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
-import type { ThreadId } from "@t3tools/contracts";
-import { formatDuration } from "@t3tools/shared/orchestrationTiming";
+import type { V2ItemSupport } from "@t2code/client-runtime/state/item-support";
+import { toolItemForDisplay } from "@t2code/client-runtime/work-log/presentation";
+import { formatDiffCount } from "@t2code/client-runtime/diff-count";
+import type { ThreadId } from "@t2code/contracts";
+import { formatDuration } from "@t2code/shared/orchestrationTiming";
 import * as DateTime from "effect/DateTime";
 
 import type { ThreadFeedActivity } from "./threadActivity";

@@ -1,4 +1,4 @@
-import type { ProviderInteractionMode } from "@t3tools/contracts";
+import type { ProviderInteractionMode } from "@t2code/contracts";
 
 /**
  * Authored as self-contained sections so a provider that limits the size of

@@ -20,11 +20,11 @@ import {
   type ChangeRequest,
   type SourceControlProviderDiscoveryItem,
   type SourceControlRepositoryCloneUrls,
-} from "@t3tools/contracts";
-import { normalizeGitRemoteUrl } from "@t3tools/shared/git";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { decodeJsonResult } from "@t3tools/shared/schemaJson";
-import { isSshRemoteUrl } from "@t3tools/shared/sourceControl";
+} from "@t2code/contracts";
+import { normalizeGitRemoteUrl } from "@t2code/shared/git";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { decodeJsonResult } from "@t2code/shared/schemaJson";
+import { isSshRemoteUrl } from "@t2code/shared/sourceControl";
 
 import * as GitHubRest from "./GitHubRest.ts";
 import * as GitHubRequestPolicy from "./GitHubRequestPolicy.ts";

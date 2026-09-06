@@ -4,8 +4,8 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import type * as PlatformError from "effect/PlatformError";
 import * as Result from "effect/Result";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveSymlinkTarget } from "@t3tools/shared/symlink";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { resolveSymlinkTarget } from "@t2code/shared/symlink";
 
 /**
  * Windows refuses to rename over or away from a file another process holds open

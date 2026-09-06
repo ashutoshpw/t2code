@@ -1,4 +1,4 @@
-import type { EnvironmentId, EnvironmentMachineKind, ProjectId } from "@t3tools/contracts";
+import type { EnvironmentId, EnvironmentMachineKind, ProjectId } from "@t2code/contracts";
 
 export interface AssignableProject {
   readonly id: ProjectId;

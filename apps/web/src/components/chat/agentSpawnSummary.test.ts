@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { RuntimeSubagent } from "@t3tools/client-runtime/state/subagentRuntime";
+import type { RuntimeSubagent } from "@t2code/client-runtime/state/subagentRuntime";
 import { deriveAgentSpawnSummary } from "./agentSpawnSummary";
 
 const agent = (status: RuntimeSubagent["status"]) => ({ kind: "subagent" as const, status });

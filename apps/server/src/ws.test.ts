@@ -11,7 +11,7 @@ import {
   type OrchestrationProjectShell,
   type ServerConfig,
   type ServerConfigStreamEvent,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

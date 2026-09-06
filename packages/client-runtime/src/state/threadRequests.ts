@@ -7,7 +7,7 @@ import type {
   ProviderApprovalDecision,
   ProviderRequestKind,
   RuntimeRequestId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import type { AtomCommandResult } from "./runtime.ts";
 import type { ThreadStructure, ThreadStructureVisibleTurnItem } from "./models.ts";

@@ -12,7 +12,7 @@ import type {
   CommandId,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Clock from "effect/Clock";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";

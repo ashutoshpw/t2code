@@ -5,8 +5,8 @@ import type {
   TerminalSessionSnapshot,
   TerminalSummary,
   ThreadId,
-} from "@t3tools/contracts";
-import { DEFAULT_MAX_TERMINAL_BUFFER_BYTES } from "@t3tools/contracts";
+} from "@t2code/contracts";
+import { DEFAULT_MAX_TERMINAL_BUFFER_BYTES } from "@t2code/contracts";
 import {
   appendOutput,
   EMPTY_TERMINAL_OUTPUT_STATE,

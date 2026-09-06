@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema";
 import * as Effect from "effect/Effect";
 import { limitTitleMessage } from "./threadTitleContext.ts";
-import type { BranchNamingOptions, ChatAttachment } from "@t3tools/contracts";
+import type { BranchNamingOptions, ChatAttachment } from "@t2code/contracts";
 
 import { limitSection } from "./textGenerationUtils.ts";
 import type { ReviewGuideStackLayer } from "./textGeneration.ts";

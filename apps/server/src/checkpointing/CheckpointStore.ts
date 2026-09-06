@@ -1,4 +1,4 @@
-import { VcsUnsupportedOperationError, type CheckpointRef } from "@t3tools/contracts";
+import { VcsUnsupportedOperationError, type CheckpointRef } from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

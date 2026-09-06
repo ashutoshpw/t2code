@@ -10,9 +10,9 @@ import {
   ProviderInstanceId,
   ProviderSessionId,
   ThreadId,
-} from "@t3tools/contracts";
-import { pendingBackgroundTurnItems } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+} from "@t2code/contracts";
+import { pendingBackgroundTurnItems } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
+import { resolveSelfInvocation } from "@t2code/shared/nodeRuntime";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
 import * as DateTime from "effect/DateTime";

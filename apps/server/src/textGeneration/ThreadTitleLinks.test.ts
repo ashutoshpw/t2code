@@ -3,7 +3,7 @@ import { expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as Layer from "effect/Layer";
-import { SourceControlProviderError } from "@t3tools/contracts";
+import { SourceControlProviderError } from "@t2code/contracts";
 import { resolveThreadTitleLinks } from "./ThreadTitleLinks.ts";
 import * as SourceControlProviderRegistry from "../sourceControl/SourceControlProviderRegistry.ts";
 

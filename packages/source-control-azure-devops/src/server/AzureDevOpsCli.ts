@@ -9,7 +9,7 @@ import {
   TrimmedNonEmptyString,
   type SourceControlRepositoryVisibility,
   type VcsError,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import {

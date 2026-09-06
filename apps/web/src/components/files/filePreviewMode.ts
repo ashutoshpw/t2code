@@ -1,5 +1,5 @@
-import type { AssetResource, ProjectReadFileError, ScopedThreadRef } from "@t3tools/contracts";
-import { isHostPath, workspaceRelativeFilePath } from "@t3tools/shared/path";
+import type { AssetResource, ProjectReadFileError, ScopedThreadRef } from "@t2code/contracts";
+import { isHostPath, workspaceRelativeFilePath } from "@t2code/shared/path";
 
 export function resolveFilePreviewPath(path: string | null, cwd: string): string | null {
   if (path === null) return null;

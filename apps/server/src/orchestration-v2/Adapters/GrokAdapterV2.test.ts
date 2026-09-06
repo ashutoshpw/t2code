@@ -11,10 +11,10 @@ import {
   ProviderSessionId,
   type RuntimeMode,
   ThreadId,
-} from "@t3tools/contracts";
-import { GrokSettings } from "@t3tools/provider-grok/settings";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+} from "@t2code/contracts";
+import { GrokSettings } from "@t2code/provider-grok/settings";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { resolveSelfInvocation } from "@t2code/shared/nodeRuntime";
 import * as EffectAcpErrors from "effect-acp/errors";
 import { xAiRateLimitedErrorCode } from "@t3tools/provider-grok/testing";
 import { assert, describe, it } from "@effect/vitest";

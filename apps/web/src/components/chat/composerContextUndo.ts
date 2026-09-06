@@ -1,4 +1,4 @@
-import type { PreviewAnnotationPayload, ThreadContextRecord } from "@t3tools/contracts";
+import type { PreviewAnnotationPayload, ThreadContextRecord } from "@t2code/contracts";
 import { useEffect, useState } from "react";
 
 import type { ComposerFileAttachment, ComposerImageAttachment } from "../../composerDraftStore";

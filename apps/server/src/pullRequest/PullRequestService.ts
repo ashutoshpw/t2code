@@ -2,9 +2,9 @@ import {
   canonicalRepositoryKey,
   isSshRemoteUrl,
   sourceControlRepositorySelector,
-} from "@t3tools/shared/sourceControl";
-import { normalizeGitRemoteUrl } from "@t3tools/shared/git";
-import { parseDiffFilePaths } from "@t3tools/source-control-core/server/diffFileRevisions";
+} from "@t2code/shared/sourceControl";
+import { normalizeGitRemoteUrl } from "@t2code/shared/git";
+import { parseDiffFilePaths } from "@t2code/source-control-core/server/diffFileRevisions";
 import * as Cache from "effect/Cache";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
@@ -76,9 +76,9 @@ import {
   type SourceControlProviderInfo,
   SourceControlProviderKind,
   type ThreadPullRequestKey,
-} from "@t3tools/contracts";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
-import { detectSourceControlProviderFromRemoteUrl } from "@t3tools/shared/sourceControl";
+} from "@t2code/contracts";
+import { resolveProjectSettings } from "@t2code/shared/projectSettings";
+import { detectSourceControlProviderFromRemoteUrl } from "@t2code/shared/sourceControl";
 
 import * as ProjectService from "../project/ProjectService.ts";
 import * as ServerSettings from "../serverSettings.ts";

@@ -2,8 +2,8 @@ import type {
   ChatAttachment,
   OrchestrationV2ProjectedTurnItem,
   OrchestrationV2ProviderCapabilities,
-} from "@t3tools/contracts";
-import { copySorted } from "@t3tools/shared/Array";
+} from "@t2code/contracts";
+import { copySorted } from "@t2code/shared/Array";
 
 import type { ThreadStructure } from "./models.ts";
 

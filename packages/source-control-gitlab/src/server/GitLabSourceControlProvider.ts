@@ -2,8 +2,8 @@ import { SourceControlProviderKind } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
-import { SourceControlProviderError, type ChangeRequest } from "@t3tools/contracts";
-import { detectSourceControlProviderFromRemoteUrl } from "@t3tools/shared/sourceControl";
+import { SourceControlProviderError, type ChangeRequest } from "@t2code/contracts";
+import { detectSourceControlProviderFromRemoteUrl } from "@t2code/shared/sourceControl";
 
 import * as GitLabCli from "./GitLabCli.ts";
 import * as GitLabChangeRequestTemplate from "./gitLabChangeRequestTemplate.ts";

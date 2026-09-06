@@ -13,7 +13,7 @@ import {
   GitCommandError,
   SourceControlProviderError,
   type SourceControlCloneRepositoryInput,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as ServerConfig from "../config.ts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";

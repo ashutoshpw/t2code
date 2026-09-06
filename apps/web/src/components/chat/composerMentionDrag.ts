@@ -1,8 +1,8 @@
-import { PullRequestContextMetadata } from "@t3tools/contracts";
-import { serializeComposerFileLink } from "@t3tools/shared/composerTrigger";
+import { PullRequestContextMetadata } from "@t2code/contracts";
+import { serializeComposerFileLink } from "@t2code/shared/composerTrigger";
 import { Option, Schema } from "effect";
 
-export const COMPOSER_MENTION_DRAG_TYPE = "application/x-t3code-composer-mention";
+export const COMPOSER_MENTION_DRAG_TYPE = "application/x-t2code-composer-mention";
 
 /**
  * Drag payload type carrying a pull request, as JSON `PullRequestContextMetadata`. Set on drags

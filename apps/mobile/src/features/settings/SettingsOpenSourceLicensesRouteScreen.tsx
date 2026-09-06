@@ -9,7 +9,7 @@ import {
   formatLicenseBundles,
   thirdPartyLicenseEntryKey,
   type ThirdPartyLicenseEntry,
-} from "@t3tools/shared/thirdPartyLicenses";
+} from "@t2code/shared/thirdPartyLicenses";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Linking, Platform, Pressable, type TextInputInstance, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

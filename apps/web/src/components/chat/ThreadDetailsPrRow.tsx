@@ -1,10 +1,10 @@
 import { PullRequestChangeBreakdownRows } from "../pullRequest/PullRequestChangeBreakdownStat";
 import { ThreadDetailsControl } from "./ThreadDetailsControl";
 import { PullRequestGlyph } from "../pullRequest/pullRequestIcons";
-import { selectEnvironmentQueryData } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import type { EnvironmentId, ProjectId, PullRequestRef } from "@t3tools/contracts";
-import { sourceControlRepositorySelector } from "@t3tools/shared/sourceControl";
+import { selectEnvironmentQueryData } from "@t2code/client-runtime/state/runtime";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
+import type { EnvironmentId, ProjectId, PullRequestRef } from "@t2code/contracts";
+import { sourceControlRepositorySelector } from "@t2code/shared/sourceControl";
 import {
   ArrowUpRightIcon,
   EyeIcon,

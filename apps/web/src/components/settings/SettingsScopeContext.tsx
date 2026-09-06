@@ -1,5 +1,5 @@
-import { type EnvironmentId, T3_PROJECT_FILE_NAME, type T3ProjectFile } from "@t3tools/contracts";
-import { parseT3ProjectFile } from "@t3tools/shared/t3ProjectFile";
+import { type EnvironmentId, T2_PROJECT_FILE_NAME, type T2ProjectFile } from "@t2code/contracts";
+import { parseT2ProjectFile } from "@t2code/shared/t2ProjectFile";
 import { useAtomValue } from "@effect/atom-react";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";
