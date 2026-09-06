@@ -356,8 +356,8 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
     }
 
     // A dev-runner server is never launcher-managed. When the shell that runs
-    // this script was itself spawned by the machine's managed T3 Code service (an
-    // agent working inside T3 Code), these leak through and the child server
+    // this script was itself spawned by the machine's managed T2 Code service (an
+    // agent working inside T2 Code), these leak through and the child server
     // fails startup with "The service launcher started a different t2code version"
     // (serviceLauncherClient.ts resolveStartup).
     delete output.T3_SERVICE_LAUNCHER_CONTEXT;
@@ -950,7 +950,7 @@ const devRunnerCli = Command.make("dev-runner", {
   ),
   t3Home: Flag.String("home-dir").pipe(
     Flag.withDescription(
-      "Explicit T3 Code data directory; runtime state is stored under userdata (equivalent to T3CODE_HOME). Inside a git worktree this defaults to that worktree's own .t3 so dev state stays off the shared home.",
+      "Explicit T2 Code data directory; runtime state is stored under userdata (equivalent to T3CODE_HOME). Inside a git worktree this defaults to that worktree's own .t3 so dev state stays off the shared home.",
     ),
     Flag.optional,
     Flag.map(Option.getOrUndefined),

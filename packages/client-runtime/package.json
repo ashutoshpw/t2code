@@ -1,5 +1,5 @@
 {
-  "name": "@t3tools/client-runtime",
+  "name": "@t2code/client-runtime",
   "private": true,
   "type": "module",
   "exports": {
@@ -486,10 +486,10 @@
   },
   "dependencies": {
     "@pierre/diffs": "catalog:",
-    "@t3tools/contracts": "workspace:*",
-    "@t3tools/shared": "workspace:*",
-    "@t3tools/source-control-core": "workspace:*",
-    "@t3tools/source-control-definitions": "workspace:*",
+    "@t2code/contracts": "workspace:*",
+    "@t2code/shared": "workspace:*",
+    "@t2code/source-control-core": "workspace:*",
+    "@t2code/source-control-definitions": "workspace:*",
     "effect": "catalog:",
     "three": "0.180.0"
   },
