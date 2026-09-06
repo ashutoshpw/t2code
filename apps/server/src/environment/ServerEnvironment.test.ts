@@ -1,4 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import { HostProcessEnvironment } from "@t2code/shared/hostProcess";
 import { expect, it } from "@effect/vitest";
 import * as Crypto from "effect/Crypto";
 import * as Deferred from "effect/Deferred";
@@ -10,6 +11,7 @@ import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import { SERVICE_LAUNCHER_CONTEXT_ENV } from "../cloud/serviceProtocol.ts";
 import {
   PUBLISH_AGENT_ACTIVITY_SECRET,
   RELAY_ENVIRONMENT_CREDENTIAL_SECRET,
@@ -72,7 +74,15 @@ const makeServerConfig = Effect.fn(function* (baseDir: string) {
   } satisfies ServerConfig.ServerConfig["Service"];
 });
 
-it.layer(NodeServices.layer)("ServerEnvironmentLive", (it) => {
+const testNodeServices = Layer.merge(
+  NodeServices.layer,
+  Layer.succeed(HostProcessEnvironment, {
+    ...process.env,
+    [SERVICE_LAUNCHER_CONTEXT_ENV]: undefined,
+  }),
+);
+
+it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
   it.effect.each([
     { name: "missing", content: undefined },
     { name: "empty", content: "" },
@@ -255,6 +265,28 @@ it.layer(NodeServices.layer)("ServerEnvironmentLive", (it) => {
 
       const web = yield* describeWith({ mode: "web", desktopTelemetryControlFd: 5 });
       expect(web.capabilities.desktopAppUpdate).toBeUndefined();
+    }),
+  );
+
+  it.effect("uses a custom label until it is cleared", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-server-environment-label-test-",
+      });
+
+      const labels = yield* Effect.gen(function* () {
+        const serverEnvironment = yield* ServerEnvironment.ServerEnvironment;
+        const reported = (yield* serverEnvironment.getDescriptor).label;
+        yield* serverEnvironment.setEnvironmentLabel("Build server");
+        const custom = (yield* serverEnvironment.getDescriptor).label;
+        yield* serverEnvironment.setEnvironmentLabel("");
+        const reset = (yield* serverEnvironment.getDescriptor).label;
+        return { reported, custom, reset };
+      }).pipe(Effect.provide(makeServerEnvironmentLayer(baseDir)));
+
+      expect(labels.custom).toBe("Build server");
+      expect(labels.reset).toBe(labels.reported);
     }),
   );
 
