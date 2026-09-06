@@ -1,11 +1,11 @@
 # Source control
 
-T3 Code integrates with GitHub, GitLab, Bitbucket, and Azure DevOps to clone and publish
+T2 Code integrates with GitHub, GitLab, Bitbucket, and Azure DevOps to clone and publish
 repositories, create pull requests, and review changes.
 
 ## Connect an account
 
-Install Git and configure authentication on the machine running your T3 Code server. For a remote
+Install Git and configure authentication on the machine running your T2 Code server. For a remote
 environment, do this on the remote machine. After signing in, open **Settings → Source Control**
 and choose **Rescan**.
 
@@ -64,7 +64,7 @@ make your first commit before pushing.
 
 ## Create a pull request
 
-Use a thread's Git actions to commit, push, and create a pull request. T3 Code can generate commit
+Use a thread's Git actions to commit, push, and create a pull request. T2 Code can generate commit
 messages, review titles, and descriptions from your changes.
 
 Choose the writing style and model in **Settings → Source Control**. **Repository conventions**
