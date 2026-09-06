@@ -1,31 +1,31 @@
 # Remote access
 
-Connect a phone, browser, or another desktop app to T3 Code running on a different
+Connect a phone, browser, or another desktop app to T2 Code running on a different
 machine. That machine must stay running and reachable while you work.
 
-## T3 Connect
+## T2 Connect
 
-T3 Connect makes an environment available to your other devices without setting
+T2 Connect makes an environment available to your other devices without setting
 up router forwarding. In the desktop app on the host, open **Settings →
-Connections**, sign in, and enable **T3 Connect** for that environment.
+Connections**, sign in, and enable **T2 Connect** for that environment.
 
 For a command-line host, run:
 
 ```bash
-t3 connect
+npx @t2code/cli connect
 ```
 
 Follow the sign-in instructions. Setup offers a
 [background service](./background-service.md); if you decline it, start the
-server with `t3 serve`. Saving your sign-in alone does not make the machine
+server with `npx @t2code/cli serve`. Saving your sign-in alone does not make the machine
 reachable.
 
-On your other device, sign in to the same T3 Connect account and choose the
+On your other device, sign in to the same T2 Connect account and choose the
 environment. Over SSH, the CLI prints a browser link and a short code. Open the
 link on any device, confirm the code matches, and approve. The CLI continues on
 its own, so you do not need to forward an OAuth callback port.
 
-T3 Connect renews access credentials when needed without disconnecting a healthy
+T2 Connect renews access credentials when needed without disconnecting a healthy
 connection. Pull request diffs and provider settings keep working after the
 previous credential expires. A failed renewal affects that request; it does not
 disconnect an otherwise healthy conversation.
@@ -42,13 +42,13 @@ For a command-line host, replace `<private-ip>` with the host's LAN or tailnet
 address:
 
 ```bash
-t3 serve --host <private-ip>
+npx @t2code/cli serve --host <private-ip>
 ```
 
 If a server is already running, generate a fresh link without restarting it:
 
 ```bash
-t3 pair
+npx @t2code/cli pair
 ```
 
 Scan the QR code on your phone or paste the pairing URL into **Add environment**
@@ -65,30 +65,30 @@ another link to share.
 ### Reach one machine several ways
 
 A machine can have more than one route: LAN, Tailscale, a public URL, SSH, or
-T3 Connect. To add one, choose **Add route** in the machine's route list, or
-next to it in the T3 Connect list. Pairing the same machine again over another
+T2 Connect. To add one, choose **Add route** in the machine's route list, or
+next to it in the T2 Connect list. Pairing the same machine again over another
 address also adds a route instead of a second machine. A new route is placed by
 speed, in that order, and you can reorder routes at any time.
 
-While connected through T3 Connect or a paired address, T3 Code also learns the
+While connected through T2 Connect or a paired address, T2 Code also learns the
 machine's current LAN and Tailscale addresses and adds them as routes, so
-pairing once through T3 Connect is enough to use the LAN at home. When the
+pairing once through T2 Connect is enough to use the LAN at home. When the
 machine's LAN address changes, for example after it joins another Wi-Fi network,
 the learned route follows it. The machine must allow network access for its LAN
 address to be learned. You can reorder a learned route, but not remove it; it
 goes away with the route it was learned through, or when the machine stops
 reporting that address.
 
-T3 Code connects over the first route that answers. Away from home, a LAN
+T2 Code connects over the first route that answers. Away from home, a LAN
 address that does not answer is checked briefly and skipped. It is only tried
 again, after the other routes, if none of them connect. While connected over a
-later route, T3 Code checks the earlier ones when your network changes, when you
+later route, T2 Code checks the earlier ones when your network changes, when you
 return to the app, and every minute, and moves back as soon as one works.
 
 On web and desktop, select the route count under the machine's name in
 **Settings → Connections** to see its routes. Drag a route to change the order,
 or remove it. On mobile, open the machine under **Settings → Environments** and
-choose **Edit**. Signing out of T3 Connect removes only that route; a machine
+choose **Edit**. Signing out of T2 Connect removes only that route; a machine
 you can still reach another way stays saved.
 
 ### Balance new threads across machines
@@ -117,13 +117,13 @@ HTTPS** in **Settings → Connections**. Turn it off there to remove that route.
 To start a command-line server with Tailscale HTTPS:
 
 ```bash
-t3 serve --tailscale-serve
+npx @t2code/cli serve --tailscale-serve
 ```
 
 For an already-running server:
 
 ```bash
-t3 pair --tailscale
+npx @t2code/cli pair --tailscale
 ```
 
 The pairing link uses an address such as `https://machine.tailnet.ts.net/`.
@@ -135,11 +135,11 @@ tailscale serve --https=443 off
 ```
 
 If that port is already in use, choose another with
-`--tailscale-serve-port`. See `t3 pair --help` for other pairing options.
+`--tailscale-serve-port`. See `npx @t2code/cli pair --help` for other pairing options.
 
 ### Hosted web app
 
-[app.t3.codes](https://app.t3.codes) needs an HTTPS endpoint. It connects directly
+[app.t2.codes](https://app.t2.codes) needs an HTTPS endpoint. It connects directly
 to your server; a hosted pairing link does not make an unreachable backend
 reachable or convert HTTP to HTTPS.
 
@@ -150,13 +150,13 @@ scheme uses HTTP, so include `https://` when your server uses HTTPS.
 ## Desktop-managed SSH
 
 In the desktop app, open **Settings → Connections → Add environment**, choose
-**SSH**, and enter a host or SSH alias such as `user@example.com`. T3 Code starts
+**SSH**, and enter a host or SSH alias such as `user@example.com`. T2 Code starts
 or reuses a server there and opens the port forward for you. Projects, provider
 credentials, and agent work stay on the remote machine.
 
 The remote host must be Linux or an Apple Silicon Mac with `curl` or `wget`,
 `tar`, `sha256sum` or `shasum`, and [provider setup](./install.md#providers).
-The first launch downloads T2 Code's server to `~/.t3/runtime` on the host, so
+The first launch downloads T2 Code's server to `~/.t2/runtime` on the host, so
 it takes longer than later ones.
 Provider CLIs must be on the `PATH` of a non-interactive login shell there;
 check with:
@@ -166,7 +166,7 @@ ssh user@example.com 'sh -lc "command -v claude codex"'
 ```
 
 If SSH reconnecting fails after an app update, retry the launch once. Removing
-the connection stops a server that T3 Code launched; a server that was already
+the connection stops a server that T2 Code launched; a server that was already
 running is left alone.
 
 For Antigravity's Google callback on a remote host, see
@@ -180,7 +180,7 @@ directly. Every other device, and the desktop app for other environments,
 streams them from the host. Agents keep using them while no device is
 connected, and `localhost` addresses reach servers on the host.
 
-The first tab downloads a headless Chrome, about 120 MB, into the T3 home. It
+The first tab downloads a headless Chrome, about 120 MB, into the T2 home. It
 is the same browser [HTML renders](html-renders.md) use, so a host downloads it
 only once. Some Linux hosts need [setup](#browser-host-setup) before it can
 start.
@@ -208,22 +208,22 @@ the server says so at startup, and browser tabs and HTML previews show the
 command to run on the host:
 
 ```sh
-sudo t3 browser setup
+sudo npx @t2code/cli browser setup
 ```
 
 The server shows the exact line for how you started it, such as
-`sudo npx t3 browser setup`, and keeps your `PATH` when Node is installed only
-for your user. Where `t3` is not on your `PATH`, such as with only the
-desktop app installed, it names the full path of the app's own `t3` instead. It allows Chrome's sandbox with an AppArmor profile and installs
+`sudo npx @t2code/cli browser setup`, and keeps your `PATH` when Node is installed only
+for your user. Where `t2code` is not on your `PATH`, such as with only the
+desktop app installed, it names the full path of the app's own `t2code` instead. It allows Chrome's sandbox with an AppArmor profile and installs
 any missing libraries with apt. It is safe to run again. Without `sudo`, it
 only reports what it would change.
 
 The browser always runs in Chrome's sandbox. Where you cannot change the host,
-set `T3CODE_SERVER_BROWSER_SANDBOX=0` for the environment to run without it.
+set `T2CODE_SERVER_BROWSER_SANDBOX=0` for the environment to run without it.
 
 ## Connect an outside agent
 
-Claude Code, Codex, ChatGPT and other agents T3 Code did not start can drive
+Claude Code, Codex, ChatGPT and other agents T2 Code did not start can drive
 threads on an environment through its MCP server. See
 [outside agents](./outside-agents.md) for setup.
 
@@ -232,7 +232,7 @@ threads on an environment through its MCP server. See
 On the host, **Settings → Connections** lets authorized administrators create
 pairing links and revoke client sessions. Revoking an unused link prevents new
 pairings; revoke a device's session to remove its existing access. Command-line
-management is available through `t3 auth --help`.
+management is available through `npx @t2code/cli auth --help`.
 
 A session with an open connection stays listed after its access credential
 expires.
@@ -240,11 +240,11 @@ expires.
 To choose a token's permissions, pass `--scope` once for each scope you want:
 
 ```sh
-npx t3 pair --scope orchestration:read --scope relay:read
+npx @t2code/cli pair --scope orchestration:read --scope relay:read
 ```
 
 The selected scopes replace the default permissions. The same option works with
-`npx t3 auth pairing create` and `npx t3 auth session issue`; each command's
+`npx @t2code/cli auth pairing create` and `npx @t2code/cli auth session issue`; each command's
 `--help` lists the available scopes. Without `--scope`, pairing tokens retain
 standard client permissions and issued bearer sessions retain administrative
 permissions.
@@ -277,60 +277,60 @@ a client's permissions.
 local changes. Add `filesystem:write` to allow editing files or saving plans to
 the workspace. These scopes control direct file access from the client.
 
-To remove an environment from T3 Connect, open your account menu's **T3 Connect**
-page, or **Settings → T3 Connect** on mobile, and choose **Deregister**. This
+To remove an environment from T2 Connect, open your account menu's **T2 Connect**
+page, or **Settings → T2 Connect** on mobile, and choose **Deregister**. This
 revokes its cloud access and frees its host space even when the environment is
 offline or has been wiped. Removing an environment from a device's connection
 settings only forgets it on that device; it stays registered to your account.
 
-When idle tunnel cleanup is enabled, T3 Connect removes a linked environment's
+When idle tunnel cleanup is enabled, T2 Connect removes a linked environment's
 tunnel after it stays offline for several minutes. The environment stays linked
-and keeps the same address. When the host starts again or wakes, T3 Connect
+and keeps the same address. When the host starts again or wakes, T2 Connect
 creates a replacement tunnel on its own. You do not need to pair again. Cleanup
 usually runs five to ten minutes after the tunnel goes down.
 
-T3 Connect also removes the tunnel of an environment running an older version of
-T3 Code once it has been offline for seven days. That environment shows a message
-asking you to update. Start T3 Code on that computer and update it to the latest
+T2 Connect also removes the tunnel of an environment running an older version of
+T2 Code once it has been offline for seven days. That environment shows a message
+asking you to update. Start T2 Code on that computer and update it to the latest
 version; it reconnects at the same address without pairing again.
 
-On a command-line host, `t3 connect unlink` disables exposure while retaining
-your login; `t3 connect logout` also clears that login. Background-service
+On a command-line host, `t2code connect unlink` disables exposure while retaining
+your login; `t2code connect logout` also clears that login. Background-service
 [removal](./background-service.md#manage-the-service) is separate.
 
 Treat pairing URLs and authorization codes as passwords. Do not include them in
 screenshots, logs, or bug reports.
 
-## T3 Connect troubleshooting
+## T2 Connect troubleshooting
 
-Run `t3 connect status` on the host to inspect saved authorization and link
+Run `t2code connect status` on the host to inspect saved authorization and link
 configuration. It is not a live reachability check. If the environment appears
-offline, run `t3 service status` and read the displayed log. If it disappears
+offline, run `t2code service status` and read the displayed log. If it disappears
 when SSH closes, see [background-service troubleshooting](./background-service.md#troubleshooting).
 
 | Error                                                     | Recovery                                                                                                                                    |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `environment_link_limit_exceeded` or managed tunnel limit | Deregister an unused environment, then restart T3 Code on the host.                                                                         |
-| `auth_invalid` or `invalid_bearer`                        | Run `t3 connect login`. If credentials were revoked, run `t3 connect logout`, then `t3 connect` again. Restart the server after signing in. |
-| Expired or invalid link proof                             | Check the host's date and time, update T3 Code, then restart it.                                                                            |
+| `environment_link_limit_exceeded` or managed tunnel limit | Deregister an unused environment, then restart T2 Code on the host.                                                                         |
+| `auth_invalid` or `invalid_bearer`                        | Run `t2code connect login`. If credentials were revoked, run `t2code connect logout`, then `t2code connect` again. Restart the server after signing in. |
+| Expired or invalid link proof                             | Check the host's date and time, update T2 Code, then restart it.                                                                            |
 | HTTP 403 without a recognized error                       | Check relay access, proxies, and firewall rules. Keep any Cloudflare Ray ID for a bug report.                                               |
 | HTTP 408, 429, or 5xx                                     | Check network and relay availability. Startup retries temporary failures for up to ten minutes.                                             |
 
 After fixing a permanent rejection, restart the host's server. On Linux, use
-`systemctl --user restart t3code.service` for the background service. For a
-foreground server, stop it and run `t3 serve` again with your usual options.
+`systemctl --user restart t2code.service` for the background service. For a
+foreground server, stop it and run `npx @t2code/cli serve` again with your usual options.
 Include the diagnostic message and trace ID when reporting a persistent failure.
 
 For a connection that still fails after linking, check the date and time on both
-devices. For server version warnings, follow [Updating T3 Code](./updating.md).
+devices. For server version warnings, follow [Updating T2 Code](./updating.md).
 
 ## Using the Desktop App as a Remote Only
 
 If a computer should only drive work running elsewhere, turn off its local environment. In the
 desktop app, open **Settings → Connections** and switch off **Local
-environment**. T3 Code restarts without a local server: no local agents or terminals run, WSL
+environment**. T2 Code restarts without a local server: no local agents or terminals run, WSL
 backends stay off, and other devices can no longer connect to this computer. Your projects,
-history, and saved connections are kept, and you keep working through pairing, T3 Connect, or SSH.
+history, and saved connections are kept, and you keep working through pairing, T2 Connect, or SSH.
 
 Switch **Local environment** back on in the same place to restart with your previous local
 settings.
