@@ -162,6 +162,7 @@ function harness() {
     }),
     Layer.succeed(EnvironmentLinks, {
       upsert: () => Effect.void,
+      updateLabel: () => Effect.void,
       listUsersForEnvironment: () => Effect.succeed(["user"]),
       listDeliveryUsersForEnvironment: (input) =>
         Effect.sync(() =>
