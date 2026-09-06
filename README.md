@@ -36,7 +36,7 @@ Tip: Use `npx @t2code/cli@latest --help` for the full CLI reference.
 
 ### Desktop app
 
-Install the latest version of the desktop app from [GitHub Releases](https://github.com/pingdotgg/t3code/releases), or from your favorite package registry:
+Install the latest version of the desktop app from [GitHub Releases](https://github.com/ashutoshpw/t2code/releases), or from your favorite package registry:
 
 #### Windows (`winget`)
 
@@ -47,13 +47,13 @@ winget install T3Tools.T3Code
 #### Windows (`scoop`)
 
 ```bash
-scoop install extras/t3code
+scoop install extras/t2code
 ```
 
 #### macOS (Homebrew)
 
 ```bash
-brew install --cask t3-code
+brew install --cask t2-code
 ```
 
 #### Debian, Ubuntu (`.deb`)
