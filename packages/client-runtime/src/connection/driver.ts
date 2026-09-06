@@ -62,7 +62,7 @@ export class ConnectionDriver extends Context.Service<
       route: ConnectionRoute,
     ) => Effect.Effect<boolean>;
   }
->()("@t3tools/client-runtime/connection/driver/ConnectionDriver") {}
+>()("@t2code/client-runtime/connection/driver/ConnectionDriver") {}
 
 export const connectOverRoutes = Effect.fn("ConnectionDriver.connectOverRoutes")(function* <R>(
   entry: ConnectionCatalogEntry,

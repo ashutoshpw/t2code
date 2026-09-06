@@ -2,10 +2,10 @@ import { resolvePullRequestAuthorFilter, SourceControlProviderKind } from "@t3to
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as Result from "effect/Result";
-import type { PullRequestCapabilities, PullRequestViewerPermissions } from "@t3tools/contracts";
-import { decodeJsonResult } from "@t3tools/shared/schemaJson";
+import type { PullRequestCapabilities, PullRequestViewerPermissions } from "@t2code/contracts";
+import { decodeJsonResult } from "@t2code/shared/schemaJson";
 import * as ForgejoCli from "./ForgejoCli.ts";
-import { parseDiffFileRevisions } from "@t3tools/source-control-core/server/diffFileRevisions";
+import { parseDiffFileRevisions } from "@t2code/source-control-core/server/diffFileRevisions";
 import {
   PullRequestProviderError,
   type ProviderChangeRequestDetail,

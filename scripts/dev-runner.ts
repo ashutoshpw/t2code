@@ -4,10 +4,10 @@ import * as NodeOS from "node:os";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as NetService from "@t3tools/shared/Net";
-import { resolveGitWorktreePath, resolveWorktreeT3Home } from "@t3tools/shared/devHome";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+import * as NetService from "@t2code/shared/Net";
+import { resolveGitWorktreePath, resolveWorktreeT2Home } from "@t2code/shared/devHome";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -66,7 +66,7 @@ export const DEFAULT_T3_HOME = Effect.map(Effect.service(Path.Path), (path) =>
 const MODE_ARGS = {
   dev: [
     "run",
-    "--filter=@t3tools/contracts",
+    "--filter=@t2code/contracts",
     "--filter=@t2code/web",
     "--filter=@t2code/cli",
     "--parallel",
@@ -74,7 +74,7 @@ const MODE_ARGS = {
   ],
   "dev:server": ["run", "--filter=@t2code/cli", "dev"],
   "dev:web": ["run", "--filter=@t2code/web", "dev"],
-  "dev:desktop": ["run", "--filter=@t3tools/desktop", "--filter=@t2code/web", "dev"],
+  "dev:desktop": ["run", "--filter=@t2code/desktop", "--filter=@t2code/web", "dev"],
 } as const satisfies Record<string, ReadonlyArray<string>>;
 
 // `--built`: the web package rebuilds into apps/web/dist and the backend serves
@@ -752,13 +752,31 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
     worktreePath,
   });
 
-  const { serverOffset, webOffset } = yield* resolveModePortOffsets({
-    mode: input.mode,
-    startOffset: offset,
-    hasExplicitServerPort: input.port !== undefined,
-    hasExplicitDevUrl: input.devUrl !== undefined,
-    checkPortAvailability: makeDefaultCheckPortAvailability(input.host),
-  });
+    const hostEnvironment = yield* HostProcess.Environment;
+    // A dev server started inside a worktree defaults to that worktree's own
+    // (gitignored) `.t3` — see @t2code/shared/devHome for why this must
+    // outrank an ambient T3CODE_HOME. `--home-dir` still wins.
+    const worktreeHome = yield* resolveWorktreeT3Home(yield* HostProcess.WorkingDirectory);
+    // Trim before choosing: `--home-dir ""` is not a selection, and treating it
+    // as one would skip the worktree default and land on the shared home —
+    // exactly the outcome this precedence exists to prevent.
+    const resolvedT3Home =
+      (input.t3Home?.trim() || undefined) ??
+      worktreeHome ??
+      (hostEnvironment.T3CODE_HOME?.trim() || undefined);
+    const env = yield* createDevRunnerEnv({
+      mode: input.mode,
+      baseEnv: hostEnvironment,
+      serverOffset,
+      webOffset,
+      t3Home: resolvedT3Home,
+      browser: input.browser,
+      autoBootstrapProjectFromCwd: input.autoBootstrapProjectFromCwd,
+      logWebSocketEvents: input.logWebSocketEvents,
+      host: input.host,
+      port: input.port,
+      devUrl: input.devUrl,
+    });
 
   const hostEnvironment = yield* HostProcess.Environment;
   // A dev server started inside a worktree defaults to that worktree's own

@@ -20,9 +20,9 @@ import {
   ThreadLinkedPullRequest,
   ThreadPullRequestLink,
   TurnItemId,
-} from "@t3tools/contracts";
-import * as KeyedLock from "@t3tools/shared/KeyedLock";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+} from "@t2code/contracts";
+import * as KeyedLock from "@t2code/shared/KeyedLock";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";

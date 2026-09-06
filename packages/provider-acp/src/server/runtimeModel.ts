@@ -9,13 +9,13 @@ import * as EffectAcpSchemaV1 from "effect-acp/schema-v1";
 import {
   deriveToolActivityPresentation,
   mergeToolActivityData,
-} from "@t3tools/shared/toolActivity";
-import { T3_MCP_TOOL_NAMES } from "@t3tools/shared/t3McpToolPresentation";
+} from "@t2code/shared/toolActivity";
+import { T3_MCP_TOOL_NAMES } from "@t2code/shared/t3McpToolPresentation";
 import type {
   OrchestrationV2ProviderThreadNativeMetadata,
   ThreadTokenUsageSnapshot,
   ToolLifecycleItemType,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1080,7 +1080,12 @@ const T3_MCP_TITLE_SUFFIX_CALL =
  */
 const T3_MCP_BARE_TITLE_CALL = /^(?:Running )?(?<tool>[A-Za-z0-9_]+)(?::\s*\{|$)/;
 
-/** ACP lacks typed MCP calls; recognize provider metadata and terminal fallback commands. */
+/**
+ * ACP has no typed MCP tool-call item, so agents surface MCP calls in agent-specific shapes:
+ * codex-acp tags execute calls with `rawInput.server`/`rawInput.tool`, while agents on T2's
+ * terminal fallback run the `acp-mcp-call <tool>` CLI through their command or an embedded client
+ * terminal.
+ */
 export function extractMcpToolCallIdentity(
   toolCall: AcpToolCallState,
   options?: {

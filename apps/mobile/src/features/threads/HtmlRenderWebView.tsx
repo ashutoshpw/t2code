@@ -1,6 +1,6 @@
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { useNavigation } from "@react-navigation/native";
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type { EnvironmentId, ThreadId } from "@t2code/contracts";
 import {
   htmlRenderFileName,
   htmlRenderFrameHeight,
@@ -8,7 +8,7 @@ import {
   htmlRenderThemeMessage,
   type HtmlRenderReference,
   type HtmlRenderTheme,
-} from "@t3tools/shared/htmlRender";
+} from "@t2code/shared/htmlRender";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, View, type ColorValue } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";

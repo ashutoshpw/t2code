@@ -18,7 +18,7 @@ import {
   PreviewAutomationError,
   type RunId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import packageJson from "../../package.json" with { type: "json" };
 import * as ServerConfig from "../config.ts";

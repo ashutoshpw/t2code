@@ -1,14 +1,14 @@
 import { Tooltip, TooltipTrigger, TooltipPopup } from "../ui/tooltip";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId, PullRequestRef, ScopedThreadRef, ThreadId } from "@t3tools/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { settlePromise, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import type { EnvironmentId, PullRequestRef, ScopedThreadRef, ThreadId } from "@t2code/contracts";
 import { CheckIcon, MessageSquareIcon } from "lucide-react";
 import { useState } from "react";
-import { threadPullRequestLinkMode } from "@t3tools/client-runtime/thread-pull-request-compatibility";
+import { threadPullRequestLinkMode } from "@t2code/client-runtime/thread-pull-request-compatibility";
 import { usePullRequestLinking } from "~/hooks/usePullRequestLinking";
 
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { normalizeThreadPullRequestKey } from "@t3tools/client-runtime/thread-pull-requests";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { normalizeThreadPullRequestKey } from "@t2code/client-runtime/thread-pull-requests";
 import { useProjects, useServerConfigs, useThreadShell, useThreadShells } from "~/state/entities";
 import { pullRequestEnvironment } from "~/state/pullRequests";
 import { useEnvironmentQuery } from "~/state/query";

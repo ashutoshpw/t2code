@@ -1,4 +1,4 @@
-import type { PullRequestListEntry, PullRequestSummary } from "@t3tools/contracts";
+import type { PullRequestListEntry, PullRequestSummary } from "@t2code/contracts";
 import {
   ArrowLeftIcon,
   ChevronRightIcon,

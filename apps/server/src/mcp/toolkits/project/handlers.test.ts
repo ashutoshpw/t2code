@@ -6,7 +6,7 @@ import {
   type Project as ProjectRecord,
   type ModelSelection,
   type RuntimeMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Effect from "effect/Effect";

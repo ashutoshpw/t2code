@@ -3,7 +3,7 @@ import type {
   AuthClientPresentationMetadata,
   ClientOs,
   DesktopBridge,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 interface BrowserIdentity {
   readonly userAgent: string;

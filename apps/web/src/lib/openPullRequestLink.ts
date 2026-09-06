@@ -1,4 +1,4 @@
-import type { EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
+import type { EnvironmentId, ScopedThreadRef } from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
@@ -6,12 +6,17 @@ import { type MouseEvent } from "react";
 import {
   resolveChangeRequestLinkTarget,
   resolvePullRequestPreviewTarget,
-} from "@t3tools/client-runtime/change-request-links";
+} from "@t2code/client-runtime/change-request-links";
+import {
+  sourceControlClients,
+  type ChangeRequestLink,
+} from "@t2code/client-runtime/source-control-clients";
 
 import { useOpenLink } from "../browser/useOpenLink";
 import { useClientSettings } from "../hooks/useSettings";
 import { stackedThreadToast, toastManager } from "../components/ui/toast";
 import { useRightPanelStore } from "../rightPanelStore";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
 
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { readProjects, useProjects } from "../state/entities";

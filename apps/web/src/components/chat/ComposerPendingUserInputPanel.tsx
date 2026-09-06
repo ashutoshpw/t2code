@@ -1,4 +1,4 @@
-import { type RuntimeRequestId, type ScopedThreadRef } from "@t3tools/contracts";
+import { type RuntimeRequestId, type ScopedThreadRef } from "@t2code/contracts";
 import { memo, use, useEffect, useEffectEvent, useRef, useState } from "react";
 import { BackgroundThreadContext } from "./backgroundThread";
 import { useStableCallback } from "~/hooks/useStableCallback";

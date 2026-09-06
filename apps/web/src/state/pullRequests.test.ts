@@ -1,4 +1,4 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
 import {
   EnvironmentId,
   ProjectId,
@@ -6,7 +6,7 @@ import {
   type PullRequestListInput,
   type PullRequestListResult,
   type PullRequestSummary,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import {
@@ -217,11 +217,11 @@ describe("pull request list answers across a reload", () => {
       provider: SourceControlProviderKind.make("github"),
       host: "github.com",
       projectId: ProjectId.make("project-1"),
-      projectTitle: "t3code",
-      repository: "pingdotgg/t3code",
+      projectTitle: "t2code",
+      repository: "pingdotgg/t2code",
       number,
       title: `Pull request ${number}`,
-      url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+      url: `https://github.com/pingdotgg/t2code/pull/${number}`,
       author: { login: "octocat", name: null, avatarUrl: null },
       headBranch: `feat/branch-${number}`,
       baseBranch: "main",
@@ -249,9 +249,9 @@ describe("pull request list answers across a reload", () => {
           detail: null,
         },
       ],
-      errors: [{ projectId: ProjectId.make("project-1"), projectTitle: "t3code", message: "boom" }],
+      errors: [{ projectId: ProjectId.make("project-1"), projectTitle: "t2code", message: "boom" }],
       truncated: true,
-      nextCursors: { "pingdotgg/t3code": "cursor-1" },
+      nextCursors: { "pingdotgg/t2code": "cursor-1" },
     }) as PullRequestListResult;
   const local = EnvironmentId.make("env-local");
   const remote = EnvironmentId.make("env-remote");
@@ -308,7 +308,7 @@ describe("pull request list answers across a reload", () => {
     rememberPullRequestListAnswer(storage, { environmentId: local, input }, answer(rows));
     const searched = { ...input, query: "fix" };
     rememberPullRequestListAnswer(storage, { environmentId: local, input: searched }, answer(rows));
-    const continued = { ...input, cursors: { "pingdotgg/t3code": "cursor-1" } };
+    const continued = { ...input, cursors: { "pingdotgg/t2code": "cursor-1" } };
     rememberPullRequestListAnswer(
       storage,
       { environmentId: local, input: continued },

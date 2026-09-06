@@ -1,4 +1,4 @@
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId } from "@t2code/contracts";
 import { ExternalLinkIcon } from "lucide-react";
 import { useState } from "react";
 

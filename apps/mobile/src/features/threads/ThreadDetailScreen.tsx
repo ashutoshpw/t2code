@@ -5,12 +5,12 @@ import {
   isAtomCommandInterrupted,
   settlePromise,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import { AsyncResult, Atom } from "effect/reactivity";
 import * as Dialog from "../../components/ui/Dialog";
 import { useAtomMount, useAtomValue } from "@effect/atom-react";
-import { parseThreadKey, threadKey } from "@t3tools/client-runtime/state/entities";
-import { createThreadVisitTracker } from "@t3tools/client-runtime/state/thread-visits";
+import { parseThreadKey, threadKey } from "@t2code/client-runtime/state/entities";
+import { createThreadVisitTracker } from "@t2code/client-runtime/state/thread-visits";
 import { useChildThreadInputs, useThreadReportedModelSelection } from "../../state/entities";
 import { UsageLimitRecoveryCard } from "./UsageLimitRecoveryCard";
 import { ChatGptUsageLimitNotice } from "./ChatGptUsageLimitNotice";
@@ -20,20 +20,20 @@ import {
   threadWokeAt,
   isThreadWokeUnseen,
   snoozeWakeLabel,
-} from "@t3tools/client-runtime/state/thread-settled";
+} from "@t2code/client-runtime/state/thread-settled";
 import type { WorktreeSetupCardProps } from "./worktree-setup-card";
 import type { ComposerTextPaste } from "../../native/T3ComposerEditor.types";
-import { type EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
-import type { HandoffEndpoints } from "@t3tools/client-runtime/handoff";
-import { queuedRunEditBlockedReason } from "@t3tools/client-runtime/queued-run-edit";
+import { type EnvironmentConnectionPhase } from "@t2code/client-runtime/connection";
+import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
+import type { HandoffEndpoints } from "@t2code/client-runtime/handoff";
+import { queuedRunEditBlockedReason } from "@t2code/client-runtime/queued-run-edit";
 import {
   childThreadInputsTitle,
   type CodexFeedbackSubmission,
   type EnvironmentThreadStatus,
-} from "@t3tools/client-runtime/state/threads";
+} from "@t2code/client-runtime/state/threads";
 import { useKeyboardChatComposerInset, useKeyboardScrollToEnd } from "@legendapp/list/keyboard";
-import { resolveProviderSkillsForCwd } from "@t3tools/client-runtime/providerSkills";
+import { resolveProviderSkillsForCwd } from "@t2code/client-runtime/providerSkills";
 import type { LegendListRef } from "@legendapp/list/react-native";
 import { HeaderHeightContext } from "@react-navigation/elements";
 import { NativeLayoutObserver } from "../../native/NativeLayoutObserver";
@@ -46,31 +46,31 @@ import type {
   ScopedThreadRef,
   ServerConfig as T3ServerConfig,
   UsageLimitsReport,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   appendCodexArtifactTemplateUsePrompt,
   type CodexArtifactTemplate,
-} from "@t3tools/shared/codexArtifactTemplates";
+} from "@t2code/shared/codexArtifactTemplates";
 import {
   declinePendingApprovals,
   sendApprovalFeedback,
   type ApprovalResponder,
   type ThreadUserInputQuestion,
-} from "@t3tools/client-runtime/state/thread-requests";
+} from "@t2code/client-runtime/state/thread-requests";
 import {
   presentPendingBackgroundWork,
   presentProviderGoal,
-} from "@t3tools/client-runtime/state/thread-execution";
-import { resolveSubagentPillSegment } from "@t3tools/client-runtime/state/thread-subagents";
+} from "@t2code/client-runtime/state/thread-execution";
+import { resolveSubagentPillSegment } from "@t2code/client-runtime/state/thread-subagents";
 import {
   formatModelSelectionEffort,
   type ProviderSubagentStatus,
-} from "@t3tools/client-runtime/state/thread-execution";
-import { formatModelSlugName, resolveSelectableModel } from "@t3tools/shared/model";
-import { isProviderNativeSubagentThread } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/thread-execution";
+import { formatModelSlugName, resolveSelectableModel } from "@t2code/shared/model";
+import { isProviderNativeSubagentThread } from "@t2code/contracts";
 import type { QueuedRunEdit } from "../../state/queued-run-edit";
 import type { FollowUpBehavior } from "../../lib/followUpBehavior";
-import type { ActiveTurnComposerAction } from "@t3tools/client-runtime/state/composer-dispatch";
+import type { ActiveTurnComposerAction } from "@t2code/client-runtime/state/composer-dispatch";
 import * as Haptics from "expo-haptics";
 import {
   useCallback,
@@ -121,7 +121,7 @@ import {
   useNativeLayoutMetrics,
 } from "../../native/native-layout-metrics";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
-import { collectProviderUsageLimits } from "@t3tools/shared/usageLimits";
+import { collectProviderUsageLimits } from "@t2code/shared/usageLimits";
 import type { ComposerEditorHandle } from "../../components/ComposerEditor";
 import type { StatusTone } from "../../components/StatusPill";
 import { getComposerDraftSnapshot } from "../../state/use-composer-drafts";

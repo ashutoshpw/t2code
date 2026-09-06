@@ -3,8 +3,8 @@ import { formatFilePathForClipboard } from "@t3tools/client-runtime/media-action
 import { readLocalApi } from "../localApi";
 import { stackedThreadToast, toastManager } from "./ui/toast";
 import { ComposerContextLabel } from "./ComposerContextLabel";
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import type { EnvironmentId, ProjectId, ThreadId } from "@t3tools/contracts";
+import { scopeProjectRef, scopeThreadRef } from "@t2code/client-runtime/environment";
+import type { EnvironmentId, ProjectId, ThreadId } from "@t2code/contracts";
 import {
   ChevronDownIcon,
   FolderGit2Icon,

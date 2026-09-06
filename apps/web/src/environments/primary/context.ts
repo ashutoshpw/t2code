@@ -1,4 +1,4 @@
-import type { ExecutionEnvironmentDescriptor } from "@t3tools/contracts";
+import type { ExecutionEnvironmentDescriptor } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 
 import { PrimaryEnvironmentRequestError, retryTransientBootstrap } from "./auth";

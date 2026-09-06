@@ -1,10 +1,10 @@
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import type { EnvironmentId, ThreadId } from "@t2code/contracts";
 import {
   formatThreadLink,
   percentDecodedThreadLinkId,
   resolveThreadLinkRef,
-} from "@t3tools/shared/threadLinks";
+} from "@t2code/shared/threadLinks";
 
 import { useThreadRefs, useThreadShell } from "../../state/entities";
 import { ThreadContextChip } from "../ThreadContextChip";

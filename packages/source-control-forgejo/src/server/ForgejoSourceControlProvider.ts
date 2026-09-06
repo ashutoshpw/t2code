@@ -3,8 +3,8 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Schema from "effect/Schema";
 import * as Result from "effect/Result";
-import { SourceControlProviderError } from "@t3tools/contracts";
-import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
+import { SourceControlProviderError } from "@t2code/contracts";
+import * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
 import * as ForgejoCli from "./ForgejoCli.ts";
 import * as SourceControlProvider from "@t3tools/source-control-core/server/SourceControlProvider";
 import {

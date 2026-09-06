@@ -8,7 +8,7 @@ import {
   type PullRequestThreadCommentsResult,
   type ThreadPullRequestLink,
   type ThreadPullRequestWatch,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   normalizeThreadPullRequestKey,
   threadPullRequestKeyOf,

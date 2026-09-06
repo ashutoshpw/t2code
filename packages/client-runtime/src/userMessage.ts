@@ -4,7 +4,7 @@ import {
   type OrchestrationV2CreationSource,
   type OrchestrationV2IdleCompaction,
   ScheduledTaskId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 /** The working row while T3 Code's own compaction runs. */
 export const IDLE_COMPACTING_LABELS = {

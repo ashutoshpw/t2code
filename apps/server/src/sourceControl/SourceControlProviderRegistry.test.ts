@@ -16,15 +16,15 @@ import {
   DEFAULT_SERVER_SETTINGS,
   VcsProcessSpawnError,
   VcsProcessTimeoutError,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type {
   SourceControlCliDiscoverySpec,
   SourceControlManagedCliDiscoverySpec,
   SourceControlProviderDiscoverySpec,
-} from "@t3tools/source-control-core/server/discovery";
-import type * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
-import { fakeSourceControlProvider } from "@t3tools/source-control-testing/fakeSourceControlDriver";
-import * as TestSourceControlHost from "@t3tools/source-control-testing/TestSourceControlHost";
+} from "@t2code/source-control-core/server/discovery";
+import type * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
+import { fakeSourceControlProvider } from "@t2code/source-control-testing/fakeSourceControlDriver";
+import * as TestSourceControlHost from "@t2code/source-control-testing/TestSourceControlHost";
 
 import * as ServerSettings from "../serverSettings.ts";
 import * as ServerConfig from "../config.ts";

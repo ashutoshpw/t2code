@@ -1,17 +1,17 @@
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 import * as Dialog from "../components/ui/Dialog";
 import {
   threadRuntimeIsActive,
   type EnvironmentProject,
   type EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
+} from "@t2code/client-runtime/state/shell";
 import {
   type AtomCommand,
   type AtomCommandResult,
   runAtomCommand,
-} from "@t3tools/client-runtime/state/runtime";
-import { threadFamilyRead, type ThreadFamilyRead } from "@t3tools/client-runtime/state/threads";
-import { deriveThreadTitleSeed } from "@t3tools/client-runtime/operations";
+} from "@t2code/client-runtime/state/runtime";
+import { threadFamilyRead, type ThreadFamilyRead } from "@t2code/client-runtime/state/threads";
+import { deriveThreadTitleSeed } from "@t2code/client-runtime/operations";
 import {
   AuthOrchestrationOperateScope,
   CommandId,
@@ -20,8 +20,8 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type EnvironmentId,
   type MessageId,
-} from "@t3tools/contracts";
-import { buildTemporaryWorktreeBranchName } from "@t3tools/shared/git";
+} from "@t2code/contracts";
+import { buildTemporaryWorktreeBranchName } from "@t2code/shared/git";
 import * as Cause from "effect/Cause";
 import { AsyncResult, Atom } from "effect/reactivity";
 

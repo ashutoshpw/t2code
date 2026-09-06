@@ -23,7 +23,7 @@ import {
   type ProviderApprovalDecision,
   type RuntimeRequestId,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   type PendingThreadRequests,
   type ThreadUserInputQuestion,
@@ -32,8 +32,8 @@ import {
   resolvedQuestionDraftKeys,
   seedUserInputDraftAnswers,
   userInputDraftKey,
-} from "@t3tools/client-runtime/state/thread-requests";
-import { AuthOrchestrationOperateScope } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/thread-requests";
+import { AuthOrchestrationOperateScope } from "@t2code/contracts";
 import { Atom } from "effect/reactivity";
 
 import { environmentThreadDetails, threadEnvironment } from "../state/threads";
@@ -338,7 +338,7 @@ export function useSelectedThreadRequests() {
     if (userInputResponsesInFlight.current.has(responseKey)) return;
     const attachmentsByQuestionId = new Map<
       string,
-      import("@t3tools/contracts").UserInputAttachments[string]
+      import("@t2code/contracts").UserInputAttachments[string]
     >();
     for (const question of activePendingUserInput.questions) {
       const key = questionAttachmentDraftKey(

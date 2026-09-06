@@ -2,7 +2,7 @@ import { Button } from "./ui/Button";
 import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import { AsyncResult } from "effect/reactivity";
 import * as Dialog from "./ui/Dialog";
-import type { ComposerContextRecord, EnvironmentId } from "@t3tools/contracts";
+import type { ComposerContextRecord, EnvironmentId } from "@t2code/contracts";
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { useId, useState } from "react";

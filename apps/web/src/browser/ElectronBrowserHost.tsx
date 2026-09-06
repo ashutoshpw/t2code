@@ -1,11 +1,11 @@
-import { parseScopedThreadKey } from "@t3tools/client-runtime/environment";
+import { parseScopedThreadKey } from "@t2code/client-runtime/environment";
 import {
   AuthPreviewOperateScope,
   type DesktopPreviewBridge,
   type DesktopPreviewOpenLinkEvent,
   type EnvironmentId,
   FILL_PREVIEW_VIEWPORT,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
 import { type ComponentProps, useState } from "react";

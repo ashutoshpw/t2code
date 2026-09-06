@@ -1,6 +1,10 @@
-// Loopback-only hubs expose shell execution or unauthenticated actions.
-// Proxy with environment read scope for streams and operate scope for input and tuning.
-import { AuthOrchestrationReadScope, AuthOrchestrationOperateScope } from "@t3tools/contracts";
+/**
+ * The hub binds loopback and is never reachable directly: serve-sim exposes a shell-exec route
+ * and serve-emu's action routes are unauthenticated, so the only way to a device stream is
+ * through this route, which requires an environment session with read scope (operate scope for
+ * input and tuning).
+ */
+import { AuthOrchestrationReadScope, AuthOrchestrationOperateScope } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import {
