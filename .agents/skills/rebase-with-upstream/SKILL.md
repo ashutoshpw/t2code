@@ -28,6 +28,14 @@ This fork tracks `pingdotgg/t3code` (upstream) and publishes as **T2 Code** on `
 
 ## Rebrand audit (the part that actually catches failures)
 
+The repo ships a brand guard: pre-commit and pre-push hooks run `scripts/check-rebrand.ts` (staged lines / pushed ranges) and fail on re-introduced T3 strings. Run the same audit over the whole tree before pushing:
+
+```sh
+node scripts/check-rebrand.ts --tree
+```
+
+Hits that are genuinely intentional (legacy compat, upstream references) get exempted via the allowlists in `scripts/check-rebrand.ts` or `scripts/rebrand-baseline.json` (`node scripts/check-rebrand.ts --update-baseline`) — review that diff like code, never `--no-verify`.
+
 Upstream's new tests hardcode `T3` copy that the rebrand commits predate. These failures hide: CI jobs fail fast per package, so later suites never run and each push reveals one more. Do not trust a single green suite — sweep everything.
 
 1. Grep for brand strings across tests and copy-bearing files:
