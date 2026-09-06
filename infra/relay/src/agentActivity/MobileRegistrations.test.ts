@@ -106,6 +106,7 @@ function makeEnvironmentLinks(
   overrides: Partial<EnvironmentLinks.EnvironmentLinks["Service"]> = {},
 ): EnvironmentLinks.EnvironmentLinks["Service"] {
   return {
+    updateLabel: () => Effect.void,
     upsert: () => Effect.void,
     listDeliveryUsersForEnvironment: () =>
       Effect.succeed([

@@ -12,6 +12,7 @@ import * as HostProcess from "@t2code/shared/HostProcess";
 import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import { SERVICE_LAUNCHER_CONTEXT_ENV } from "../cloud/serviceProtocol.ts";
 import {
   PUBLISH_AGENT_ACTIVITY_SECRET,
   RELAY_ENVIRONMENT_CREDENTIAL_SECRET,
@@ -73,7 +74,15 @@ const makeServerConfig = Effect.fn(function* (baseDir: string) {
   } satisfies ServerConfig.ServerConfig["Service"];
 });
 
-it.layer(NodeServices.layer)("ServerEnvironmentLive", (it) => {
+const testNodeServices = Layer.merge(
+  NodeServices.layer,
+  Layer.succeed(HostProcessEnvironment, {
+    ...process.env,
+    [SERVICE_LAUNCHER_CONTEXT_ENV]: undefined,
+  }),
+);
+
+it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
   it.effect("publishes proven install ownership only for manually updated servers", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -264,6 +273,130 @@ it.layer(NodeServices.layer)("ServerEnvironmentLive", (it) => {
         const disabled = yield* serverEnvironment.getDescriptor;
         expect(disabled.capabilities.agentActivityPublishing).toBe(false);
       }).pipe(Effect.provide(layerTest));
+    }),
+  );
+
+  it.effect("advertises desktopAppUpdate only with desktop mode and the control fd", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-server-environment-desktop-update-test-",
+      });
+      const serverConfig = yield* makeServerConfig(baseDir);
+      yield* fileSystem.makeDirectory(serverConfig.stateDir, { recursive: true });
+
+      const describeWith = (overrides: Partial<ServerConfig.ServerConfig["Service"]>) =>
+        Effect.gen(function* () {
+          const serverEnvironment = yield* ServerEnvironment.ServerEnvironment;
+          return yield* serverEnvironment.getDescriptor;
+        }).pipe(
+          Effect.provide(
+            ServerEnvironment.layer.pipe(
+              Layer.provide(ServerSecretStore.layer),
+              Layer.provide(ServerConfig.layer({ ...serverConfig, ...overrides })),
+            ),
+          ),
+        );
+
+      const withFd = yield* describeWith({ mode: "desktop", desktopTelemetryControlFd: 5 });
+      expect(withFd.capabilities.serverSelfUpdate).toBe("desktop-managed");
+      expect(withFd.capabilities.desktopAppUpdate).toBe(true);
+      expect(withFd.capabilities.serverSelfUpdateProgress).toBe(true);
+      expect(withFd.capabilities.serverUpdateThreadContinuation).toBeUndefined();
+
+      const withoutFd = yield* describeWith({ mode: "desktop" });
+      expect(withoutFd.capabilities.serverSelfUpdate).toBe("desktop-managed");
+      expect(withoutFd.capabilities.desktopAppUpdate).toBeUndefined();
+      expect(withoutFd.capabilities.serverSelfUpdateProgress).toBeUndefined();
+      expect(withoutFd.capabilities.serverUpdateThreadContinuation).toBeUndefined();
+
+      const web = yield* describeWith({ mode: "web", desktopTelemetryControlFd: 5 });
+      expect(web.capabilities.desktopAppUpdate).toBeUndefined();
+    }),
+  );
+
+  it.effect("uses a custom label until it is cleared", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-server-environment-label-test-",
+      });
+
+      const labels = yield* Effect.gen(function* () {
+        const serverEnvironment = yield* ServerEnvironment.ServerEnvironment;
+        const reported = (yield* serverEnvironment.getDescriptor).label;
+        yield* serverEnvironment.setEnvironmentLabel("Build server");
+        const custom = (yield* serverEnvironment.getDescriptor).label;
+        yield* serverEnvironment.setEnvironmentLabel("");
+        const reset = (yield* serverEnvironment.getDescriptor).label;
+        return { reported, custom, reset };
+      }).pipe(Effect.provide(makeServerEnvironmentLayer(baseDir)));
+
+      expect(labels.custom).toBe("Build server");
+      expect(labels.reset).toBe(labels.reported);
+    }),
+  );
+
+  it.effect("structures persisted environment id filesystem failures", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-server-environment-error-test-",
+      });
+      const serverConfig = yield* makeServerConfig(baseDir);
+      const environmentIdPath = serverConfig.environmentIdPath;
+      const tempPath = `${environmentIdPath}.tmp`;
+      const methodByOperation = {
+        check: "exists",
+        read: "readFileString",
+        write: "writeFileString",
+      } as const;
+
+      for (const operation of ["check", "read", "write"] as const) {
+        const writeAttempts: string[] = [];
+        const cause = PlatformError.systemError({
+          _tag: "PermissionDenied",
+          module: "FileSystem",
+          method: methodByOperation[operation],
+          description: "permission denied",
+          pathOrDescriptor: environmentIdPath,
+        });
+        const layerFailingFileSystem = FileSystem.layerNoop({
+          exists: () =>
+            operation === "check" ? Effect.fail(cause) : Effect.succeed(operation === "read"),
+          readFileString: () => Effect.fail(cause),
+          makeTempFileScoped: () => Effect.succeed(tempPath),
+          writeFileString: (path) => {
+            writeAttempts.push(path);
+            return Effect.fail(cause);
+          },
+        });
+
+        const error = yield* Effect.gen(function* () {
+          const serverEnvironment = yield* ServerEnvironment.ServerEnvironment;
+          return yield* serverEnvironment.getDescriptor;
+        }).pipe(
+          Effect.provide(
+            ServerEnvironment.layer.pipe(
+              Layer.provide(layerEmptySecretStore),
+              Layer.provide(Layer.merge(ServerConfig.layer(serverConfig), layerFailingFileSystem)),
+            ),
+          ),
+          Effect.flip,
+        );
+
+        expect(isServerEnvironmentIdPersistenceError(error)).toBe(true);
+        if (!isServerEnvironmentIdPersistenceError(error)) {
+          throw error;
+        }
+        expect(error.operation).toBe(operation);
+        expect(error.environmentIdPath).toBe(environmentIdPath);
+        expect(error.cause).toBe(cause);
+        expect(error.message).toBe(
+          `Server environment ID ${operation} failed at '${environmentIdPath}'.`,
+        );
+        expect(writeAttempts).toEqual(operation === "write" ? [tempPath] : []);
+      }
     }),
   );
 });

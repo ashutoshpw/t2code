@@ -1,4 +1,4 @@
-package expo.modules.t3reviewdiff
+package expo.modules.t2reviewdiff
 
 import android.app.Activity
 import android.graphics.Bitmap
@@ -26,7 +26,7 @@ class ReviewDiffViewportTest {
   fun resetDiscardsOldRowsAndPendingDecodeBeforePublishingTheNewDestination() {
     val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
     val appContext = AppContext()
-    val view = T3ReviewDiffView(activity, appContext)
+    val view = T2ReviewDiffView(activity, appContext)
     val decoder = ManualDecoder()
     view.javaClass.getDeclaredField("payloadDecodeExecutor").apply { isAccessible = true }
       .set(view, decoder)
@@ -80,7 +80,7 @@ class ReviewDiffViewportTest {
   fun decodedRowsWaitForTheReplacementFilePropBeforePublishingAViewport() {
     val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
     val appContext = AppContext()
-    val view = T3ReviewDiffView(activity, appContext)
+    val view = T2ReviewDiffView(activity, appContext)
     val decoder = ManualDecoder()
     view.javaClass.getDeclaredField("payloadDecodeExecutor").apply { isAccessible = true }
       .set(view, decoder)
@@ -121,7 +121,7 @@ class ReviewDiffViewportTest {
   fun collapsedFilesKeepViewportIndicesInTheFullPayload() {
     val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
     val appContext = AppContext()
-    val view = T3ReviewDiffView(activity, appContext)
+    val view = T2ReviewDiffView(activity, appContext)
     val decoder = ManualDecoder()
     view.javaClass.getDeclaredField("payloadDecodeExecutor").apply { isAccessible = true }
       .set(view, decoder)

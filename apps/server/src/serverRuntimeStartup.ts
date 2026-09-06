@@ -24,9 +24,14 @@ import * as Path from "effect/Path";
 import * as Queue from "effect/Queue";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
+import * as Scope from "effect/Scope";
+import * as Stream from "effect/Stream";
 
 import * as ServerConfig from "./config.ts";
+import * as ServerSecretStore from "./auth/ServerSecretStore.ts";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import * as ServiceLauncherClient from "./cloud/serviceLauncherClient.ts";
+import { runEnvironmentLabelRelaySync } from "./cloud/EnvironmentLabelRelaySync.ts";
 import { flushCompileCache } from "./compileCache.ts";
 import * as Keybindings from "./keybindings.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
@@ -54,6 +59,22 @@ import {
   isWildcardHost,
   issueHeadlessServeAccessInfo,
 } from "./startupAccess.ts";
+
+export const runEnvironmentLabelUpdates = Effect.fn("runEnvironmentLabelUpdates")(function* (
+  scope: Scope.Scope,
+) {
+  const settings = yield* ServerSettings.ServerSettingsService;
+  const environment = yield* ServerEnvironment.ServerEnvironment;
+  const changes = yield* settings.subscribeChanges.pipe(Scope.provide(scope));
+  const initialSettings = yield* settings.getSettings;
+
+  yield* environment.setEnvironmentLabel(initialSettings.environmentLabel);
+  return yield* changes.pipe(
+    Stream.runForEach((next) => environment.setEnvironmentLabel(next.environmentLabel)),
+    Scope.provide(scope),
+    Effect.forkIn(scope),
+  );
+});
 
 export class ServerRuntimeStartupError extends Schema.TaggedError<ServerRuntimeStartupError>()(
   "ServerRuntimeStartupError",
@@ -580,29 +601,44 @@ const make = Effect.fn("serverRuntimeStartup.make")(function* (options?: Startup
       forkParked,
     );
 
-    const importPendingTranscripts = legacyV1ThreadImporter.importPendingTranscripts.pipe(
-      Effect.tap((summary) =>
-        summary.importedThreadCount === 0
-          ? Effect.void
-          : Effect.logInfo("Hydrated legacy v1 thread transcripts", summary),
-      ),
-    );
-    yield* (
-      legacyMigrationThreadCount > 0
-        ? importPendingTranscripts.pipe(
-            Effect.tap(() =>
-              lifecycleEvents.publish({
-                version: 1,
-                type: "legacyThreadMigration",
-                payload: {
-                  status: "complete",
-                  totalThreadCount: legacyMigrationThreadCount,
-                },
-              }),
-            ),
-          )
-        : importPendingTranscripts
-    ).pipe(forkParked);
+      // The label subscription and the relay sync both live as long as the
+      // server does; upstream's startup no longer carries the sequential
+      // reactor scope this used to hang off, so they get a dedicated one.
+      const labelScope = yield* Scope.make("environment-label");
+      yield* Effect.addFinalizer(() => Scope.close(labelScope, Exit.void));
+      yield* runEnvironmentLabelUpdates(labelScope);
+      // The sync reads relay credentials from the secret store and performs
+      // its own HTTP; both layers are bound here so the startup requirement
+      // stays narrow (matches how the reactor binds the relay publisher).
+      yield* runEnvironmentLabelRelaySync().pipe(
+        Effect.provide(Layer.merge(ServerSecretStore.layer, FetchHttpClient.layer)),
+        Scope.provide(labelScope),
+        Effect.forkScoped,
+      );
+
+      const importPendingTranscripts = legacyV1ThreadImporter.importPendingTranscripts.pipe(
+        Effect.tap((summary) =>
+          summary.importedThreadCount === 0
+            ? Effect.void
+            : Effect.logInfo("Hydrated legacy v1 thread transcripts", summary),
+        ),
+      );
+      yield* (
+        legacyMigrationThreadCount > 0
+          ? importPendingTranscripts.pipe(
+              Effect.tap(() =>
+                lifecycleEvents.publish({
+                  version: 1,
+                  type: "legacyThreadMigration",
+                  payload: {
+                    status: "complete",
+                    totalThreadCount: legacyMigrationThreadCount,
+                  },
+                }),
+              ),
+            )
+          : importPendingTranscripts
+      ).pipe(forkParked);
 
     yield* forkParked(
       Effect.gen(function* () {
