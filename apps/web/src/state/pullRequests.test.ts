@@ -1,4 +1,4 @@
-import { ProjectId, type PullRequestSummary } from "@t3tools/contracts";
+import { ProjectId, type PullRequestSummary } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { newestPullRequestObservation, newestPullRequestSummary } from "./pullRequests";

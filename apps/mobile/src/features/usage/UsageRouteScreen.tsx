@@ -1,6 +1,6 @@
 import { ChatGptUsageSummary } from "./ChatGptUsageSummary";
 import { ScreenScrollView as ScrollView } from "../../components/ScreenScrollView";
-import { EnvironmentId, USAGE_CONTRACT_VERSION } from "@t3tools/contracts";
+import { EnvironmentId, USAGE_CONTRACT_VERSION } from "@t2code/contracts";
 import { type RouteProp, useIsFocused, useNavigation, useRoute } from "@react-navigation/native";
 import { cursorKeychainAccessEnvironments } from "@t3tools/client-runtime/state/usage";
 import {
@@ -8,7 +8,7 @@ import {
   isModelCostUnknown,
   type DailyTotals,
   type MergedUsage,
-} from "@t3tools/shared/usageMerge";
+} from "@t2code/shared/usageMerge";
 import {
   enumerateDays,
   enumerateHourStarts,
@@ -20,7 +20,7 @@ import {
   formatUsageContractMismatch,
   formatUsd,
   makeWindow,
-} from "@t3tools/shared/usageFormat";
+} from "@t2code/shared/usageFormat";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, RefreshControl, View } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";

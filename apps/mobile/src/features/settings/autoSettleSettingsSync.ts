@@ -1,4 +1,4 @@
-import type { EnvironmentId, ProjectId, ServerSettings } from "@t3tools/contracts";
+import type { EnvironmentId, ProjectId, ServerSettings } from "@t2code/contracts";
 
 export type AutoSettleSettings = Pick<
   ServerSettings,

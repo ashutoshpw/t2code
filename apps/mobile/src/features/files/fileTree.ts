@@ -1,5 +1,5 @@
-import type { ProjectEntry } from "@t3tools/contracts";
-import { normalizeSearchQuery, scoreQueryMatch } from "@t3tools/shared/searchRanking";
+import type { ProjectEntry } from "@t2code/contracts";
+import { normalizeSearchQuery, scoreQueryMatch } from "@t2code/shared/searchRanking";
 
 export interface FileTreeNode {
   readonly path: string;

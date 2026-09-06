@@ -12,11 +12,11 @@ import {
   EnvironmentOrchestrationHttpApi,
   ProviderInstanceId,
   ThreadId,
-} from "@t3tools/contracts";
-import * as NetService from "@t3tools/shared/Net";
-import { HostProcessEnvironment } from "@t3tools/shared/hostProcess";
-import { DEFAULT_SIGNAL_EXPORT } from "@t3tools/shared/observability";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
+} from "@t2code/contracts";
+import * as NetService from "@t2code/shared/Net";
+import { HostProcessEnvironment } from "@t2code/shared/hostProcess";
+import { DEFAULT_SIGNAL_EXPORT } from "@t2code/shared/observability";
+import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as DateTime from "effect/DateTime";

@@ -1,5 +1,5 @@
-import { EnvironmentRegistry } from "@t3tools/client-runtime/connection";
-import { createRuntimeCommand } from "@t3tools/client-runtime/state/runtime";
+import { EnvironmentRegistry } from "@t2code/client-runtime/connection";
+import { createRuntimeCommand } from "@t2code/client-runtime/state/runtime";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as SubscriptionRef from "effect/SubscriptionRef";

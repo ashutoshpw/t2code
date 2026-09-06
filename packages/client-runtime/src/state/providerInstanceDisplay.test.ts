@@ -1,4 +1,4 @@
-import { ProviderDriverKind, ProviderInstanceId } from "@t3tools/contracts";
+import { ProviderDriverKind, ProviderInstanceId } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import {

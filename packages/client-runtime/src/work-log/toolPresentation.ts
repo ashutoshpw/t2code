@@ -3,7 +3,7 @@ import type {
   ToolActivityNativeAppReference,
   ToolActivitySource,
   ToolActivitySurface,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 export interface ExtractedToolActivityPresentation {
   readonly toolSurface?: ToolActivitySurface;

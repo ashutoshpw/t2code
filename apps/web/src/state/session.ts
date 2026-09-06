@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
-import { createEnvironmentSessionAtoms } from "@t3tools/client-runtime/state/session";
-import type { EnvironmentId } from "@t3tools/contracts";
+import { createEnvironmentSessionAtoms } from "@t2code/client-runtime/state/session";
+import type { EnvironmentId } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/unstable/reactivity";
 

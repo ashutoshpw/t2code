@@ -1,5 +1,5 @@
-import { executeAtomQuery } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId, ProjectEntry } from "@t3tools/contracts";
+import { executeAtomQuery } from "@t2code/client-runtime/state/runtime";
+import type { EnvironmentId, ProjectEntry } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 

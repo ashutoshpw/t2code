@@ -15,9 +15,9 @@ import {
   type EnvironmentId,
   type UsageSummary,
   type UsageSummaryInput,
-} from "@t3tools/contracts";
-import { needsCursorKeychainAccess, refreshUsage } from "@t3tools/client-runtime/state/usage";
-import { mergeUsage, type EnvironmentUsage, type MergedUsage } from "@t3tools/shared/usageMerge";
+} from "@t2code/contracts";
+import { needsCursorKeychainAccess, refreshUsage } from "@t2code/client-runtime/state/usage";
+import { mergeUsage, type EnvironmentUsage, type MergedUsage } from "@t2code/shared/usageMerge";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/unstable/reactivity";
 import { useCallback, useMemo } from "react";

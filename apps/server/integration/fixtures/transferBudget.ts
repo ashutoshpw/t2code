@@ -1,4 +1,4 @@
-import { EventId, ProviderDriverKind } from "@t3tools/contracts";
+import { EventId, ProviderDriverKind } from "@t2code/contracts";
 
 import type {
   FixtureProviderRuntimeEvent,

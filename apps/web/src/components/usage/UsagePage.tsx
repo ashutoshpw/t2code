@@ -7,7 +7,7 @@ import {
   USAGE_CONTRACT_VERSION,
   type EnvironmentId,
   type UsageProviderKind,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   CircleAlertIcon,
   ChevronDownIcon,
@@ -19,16 +19,14 @@ import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import {
   cursorKeychainAccessEnvironments,
   refreshUsageLimits,
-} from "@t3tools/client-runtime/state/usage";
-
+} from "@t2code/client-runtime/state/usage";
 import {
   isCompatibleUsageContractVersion,
   isModelCostUnknown,
   type DailyTotals,
   type HourlyTotals,
   type MergedUsage,
-} from "@t3tools/shared/usageMerge";
-
+} from "@t2code/shared/usageMerge";
 import { isElectron } from "../../env";
 import { cn } from "../../lib/utils";
 import { environmentPresentations } from "../../state/presentation";
@@ -50,7 +48,7 @@ import {
   formatUsageContractMismatch,
   formatUsd,
   makeWindow,
-} from "@t3tools/shared/usageFormat";
+} from "@t2code/shared/usageFormat";
 import { Button, InlineButton } from "../ui/button";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
 import {

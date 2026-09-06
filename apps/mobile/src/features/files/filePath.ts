@@ -1,7 +1,7 @@
 import {
   isWorkspaceAudioPreviewPath,
   isWorkspaceVideoPreviewPath,
-} from "@t3tools/shared/filePreview";
+} from "@t2code/shared/filePreview";
 
 export interface FileBreadcrumb {
   readonly label: string;
