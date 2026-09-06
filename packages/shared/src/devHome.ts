@@ -1,4 +1,12 @@
-/** Worktrees use isolated .t3 state; ambient T3CODE_HOME could otherwise select the live userdata database. */
+/**
+ * Where development state lives, and how to keep it away from the shared
+ * `~/.t3` that a user's installed T2 Code runs against.
+ *
+ * A linked git worktree gets its own (gitignored) `.t3`: feature work in a
+ * throwaway branch must not share a database with the real app, and an ambient
+ * `T3CODE_HOME` counts as an explicit base dir — flipping the state directory
+ * from `<base>/dev` to `<base>/userdata`, the live production database.
+ */
 
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
