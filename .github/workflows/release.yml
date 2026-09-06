@@ -775,7 +775,7 @@ jobs:
           run-install: |
             args:
               - --filter=@t2code/cli...
-              - --filter=@t3tools/web...
+              - --filter=@t2code/web...
               - --filter=@t3tools/scripts...
 
       - name: Download relay client tracing config
@@ -795,7 +795,7 @@ jobs:
       - name: Align package versions to release version
         run: node scripts/update-release-package-versions.ts "${{ needs.preflight.outputs.version }}"
 
-      # The @t2code/cli build task depends on @t3tools/web#build, so the web client is
+      # The @t2code/cli build task depends on @t2code/web#build, so the web client is
       # built (once) as part of this step.
       - name: Build CLI package
         run: vp run --filter @t2code/cli build
@@ -953,7 +953,7 @@ jobs:
           run-install: |
             args:
               - --filter=@t3tools/scripts...
-              - --filter=@t3tools/web...
+              - --filter=@t2code/web...
 
       - name: Download relay client tracing config
         uses: actions/download-artifact@v8

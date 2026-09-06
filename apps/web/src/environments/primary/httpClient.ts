@@ -8,7 +8,7 @@ import { resolvePrimaryEnvironmentHttpUrl } from "./target";
 export class PrimaryEnvironmentHttpClient extends Context.Service<
   PrimaryEnvironmentHttpClient,
   Effect.Success<ReturnType<typeof makeEnvironmentHttpApiClient>>
->()("@t3tools/web/environments/primary/httpClient/PrimaryEnvironmentHttpClient") {}
+>()("@t2code/web/environments/primary/httpClient/PrimaryEnvironmentHttpClient") {}
 
 const make = Effect.suspend(() =>
   makeEnvironmentHttpApiClient(resolvePrimaryEnvironmentHttpUrl("/")),

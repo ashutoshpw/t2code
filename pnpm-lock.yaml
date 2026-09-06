@@ -512,6 +512,9 @@ importers:
       '@effect/vitest':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(patch_hash=a16b1e870d8c29e4a98b17cc4c638a4ff471753d8ca3487f78a22b759caf951b)(effect@4.0.0-beta.103(patch_hash=af36b7948b6f9c56623074662b51dade5699880c1a7c71245de73e13c3185fb6))
+      '@t2code/web':
+        specifier: workspace:*
+        version: link:../web
       '@t3tools/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -521,9 +524,6 @@ importers:
       '@t3tools/tailscale':
         specifier: workspace:*
         version: link:../../packages/tailscale
-      '@t3tools/web':
-        specifier: workspace:*
-        version: link:../web
       '@types/bun':
         specifier: 1.3.14
         version: 1.3.14
