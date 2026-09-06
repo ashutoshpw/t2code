@@ -4,13 +4,13 @@ import {
   AuthProvidersManageScope,
   type EnvironmentId,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   isAtomCommandInterrupted,
   settlePromise,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 
 import { cn } from "~/lib/utils";
 import { serverEnvironment } from "~/state/server";

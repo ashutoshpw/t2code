@@ -1,4 +1,4 @@
-import { parseSemver } from "@t3tools/shared/semver";
+import { parseSemver } from "@t2code/shared/semver";
 import * as Cache from "effect/Cache";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";

@@ -1,4 +1,4 @@
-import type { PullRequestCheck } from "@t3tools/contracts";
+import type { PullRequestCheck } from "@t2code/contracts";
 
 function isAtLeastAsNew(candidate: string | null, kept: string | null): boolean {
   if (candidate === null) return kept === null;

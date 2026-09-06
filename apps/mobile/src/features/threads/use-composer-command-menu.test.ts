@@ -4,7 +4,7 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 

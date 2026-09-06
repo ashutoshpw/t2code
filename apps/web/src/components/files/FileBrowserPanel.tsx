@@ -3,15 +3,16 @@ import type {
   ContextMenuItem as TreeContextMenuItem,
   ContextMenuOpenContext as TreeContextMenuOpenContext,
 } from "@pierre/trees";
-import type { EnvironmentId, ProjectEntry } from "@t3tools/contracts";
+import type { EnvironmentId, ProjectEntry } from "@t2code/contracts";
 import { FileTree, useFileTree, useFileTreeSearch, useFileTreeSelector } from "@pierre/trees/react";
-import { settlePromise } from "@t3tools/client-runtime/state/runtime";
-import { serializeComposerFileLink } from "@t3tools/shared/composerTrigger";
+import { settlePromise } from "@t2code/client-runtime/state/runtime";
+import { serializeComposerFileLink } from "@t2code/shared/composerTrigger";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Cause from "effect/Cause";
 import { ChevronsDownUp, ChevronsUpDown } from "lucide";
 import { useEffect, useRef, useState } from "react";
 
+import { makeWorkspaceFileDropHandlers } from "~/components/chat/workspaceFileDrop";
 import { Button } from "~/components/ui/button";
 import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
 import { MorphIcon } from "~/components/MorphIcon";
@@ -24,6 +25,7 @@ import { useTheme } from "~/hooks/useTheme";
 import { useWorkspaceMutationRefresh } from "~/hooks/useWorkspaceMutationRefresh";
 import { useFileContextMenu, type FileContextMenuAction } from "~/fileContextMenu";
 import { readLocalApi } from "~/localApi";
+import { uploadWorkspaceFiles, type WorkspaceFileUploadProgress } from "~/lib/workspaceFileUploads";
 import { T3_PIERRE_ICONS } from "~/pierre-icons";
 import { PIERRE_TREE_UNSAFE_CSS, pierreTreeStyle } from "~/pierre-tree-theme";
 
@@ -505,8 +507,12 @@ export default function FileBrowserPanel({
   return (
     <div
       ref={panelRef}
-      className="flex min-h-0 flex-1 flex-col bg-background"
+      className="relative flex min-h-0 flex-1 flex-col bg-background"
       data-file-browser-panel={`${environmentId}:${cwd}`}
+      onDragEnter={fileDropHandlers.onDragEnter}
+      onDragOver={fileDropHandlers.onDragOver}
+      onDragLeave={fileDropHandlers.onDragLeave}
+      onDrop={fileDropHandlers.onDrop}
     >
       <div
         className="flex h-10 min-h-10 shrink-0 items-center gap-1 border-b border-border/60 bg-background px-2 in-data-[preview-panel-mode=inline]:mb-1 in-data-[preview-panel-mode=inline]:h-9 in-data-[preview-panel-mode=inline]:min-h-9 in-data-[preview-panel-mode=inline]:border-b-transparent"
@@ -567,12 +573,33 @@ export default function FileBrowserPanel({
           Loading files…
         </div>
       )}
+      {fileUploadProgress ? (
+        <div role="status" className="px-3 py-1 text-xs text-muted-foreground">
+          {fileUploadProgress.completedFiles < fileUploadProgress.files
+            ? `Uploading ${fileUploadProgress.files === 1 ? "file" : `${fileUploadProgress.completedFiles + 1} of ${fileUploadProgress.files} files`}… ${Math.round(fileUploadProgress.fraction * 100)}%`
+            : "Finishing upload…"}
+        </div>
+      ) : null}
       <FileTree
         model={model}
         aria-label={`${projectName} files`}
         className="min-h-0 flex-1 overflow-hidden"
         style={pierreTreeStyle(resolvedTheme)}
       />
+      {isFileDragActive ? (
+        <div
+          className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-xl border-2 border-dashed border-primary/60 bg-primary/[0.035]"
+          data-file-browser-drop-overlay="true"
+        >
+          <div
+            role="status"
+            className="flex items-center gap-2 rounded-full border border-primary/25 bg-background/95 px-4 py-2.5 text-sm font-medium text-foreground shadow-lg"
+          >
+            <UploadIcon className="size-4 text-primary" aria-hidden="true" />
+            Drop files to upload
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

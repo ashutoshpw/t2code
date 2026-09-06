@@ -9,13 +9,13 @@ import {
   type StaticScreenProps,
 } from "@react-navigation/native";
 import { SymbolView } from "../../components/ui/AppSymbol";
-import { availableScratchWorkspaceRoot } from "@t3tools/client-runtime/operations/projects";
-import { isScratchProject } from "@t3tools/client-runtime/state/projects";
+import { availableScratchWorkspaceRoot } from "@t2code/client-runtime/operations/projects";
+import { isScratchProject } from "@t2code/client-runtime/state/projects";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+} from "@t2code/client-runtime/state/runtime";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -115,24 +115,28 @@ function NewTaskHeader(props: {
       title={props.title}
       subtitle={props.subtitle ?? undefined}
       sidebar={false}
-      backInSplitView={{
-        accessibilityLabel: "Go back",
-        icon: "chevron.left",
-      }}
-      options={{ headerBackVisible: !layout.usesSplitView }}
       hideBottomBorder
       onBack={() => navigation.goBack()}
-      actions={
-        props.canAddProject
+      actions={[
+        ...(Platform.OS === "ios" && layout.usesSplitView
+          ? [
+              {
+                accessibilityLabel: "Close new task",
+                icon: "xmark" as const,
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          : []),
+        ...(props.canAddProject
           ? [
               {
                 accessibilityLabel: "Add project",
-                icon: "plus",
+                icon: "plus" as const,
                 onPress: () => navigation.dispatch(StackActions.push("AddProject")),
               },
             ]
-          : []
-      }
+          : []),
+      ]}
       search={{
         value: props.searchText,
         onChangeText: props.onSearchTextChange,

@@ -1,4 +1,4 @@
-import { ProviderDriverKind, ProviderSetupError } from "@t3tools/contracts";
+import { ProviderDriverKind, ProviderSetupError } from "@t2code/contracts";
 import { CursorSettings } from "../settings.ts";
 import * as Effect from "effect/Effect";
 import * as Crypto from "effect/Crypto";

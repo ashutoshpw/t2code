@@ -5,7 +5,7 @@ import type {
   OrchestrationV2TurnItem,
   ProviderInstanceId,
   ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 export type HandoffTimelineRun = Pick<
   OrchestrationV2Run,

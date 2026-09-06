@@ -8,11 +8,11 @@ import {
   extractCopilotSubagentUpdate,
   makeCopilotSubagentRouting,
 } from "./copilotAcp.ts";
-import { defaultInstanceIdForDriver, ProviderDriverKind } from "@t3tools/contracts";
-import { readCustomModelEntries } from "@t3tools/shared/model";
+import { defaultInstanceIdForDriver, ProviderDriverKind } from "@t2code/contracts";
+import { readCustomModelEntries } from "@t2code/shared/model";
 import { AcpRegistrySettings } from "../settings.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveSelfInvocation, type SelfInvocation } from "@t3tools/shared/nodeRuntime";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { resolveSelfInvocation, type SelfInvocation } from "@t2code/shared/nodeRuntime";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";

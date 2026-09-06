@@ -31,15 +31,15 @@ import {
   ClaudeSettings,
   CodexSettings,
   ProviderInstanceId,
-} from "@t3tools/contracts";
-import { makeKeyedCoalescingWorker } from "@t3tools/shared/KeyedCoalescingWorker";
-import * as KeyedLock from "@t3tools/shared/KeyedLock";
-import { AgentScope } from "@t3tools/shared/AgentScope";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { mergePathEntries } from "@t3tools/shared/shell";
+} from "@t2code/contracts";
+import { makeKeyedCoalescingWorker } from "@t2code/shared/KeyedCoalescingWorker";
+import * as KeyedLock from "@t2code/shared/KeyedLock";
+import { AgentScope } from "@t2code/shared/AgentScope";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { mergePathEntries } from "@t2code/shared/shell";
 
-import { acpRegistryManagedBinaryDirectories } from "@t3tools/provider-acp-registry/server";
-import { getTerminalLabel } from "@t3tools/shared/terminalLabels";
+import { acpRegistryManagedBinaryDirectories } from "@t2code/provider-acp-registry/server";
+import { getTerminalLabel } from "@t2code/shared/terminalLabels";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
 import * as Context from "effect/Context";

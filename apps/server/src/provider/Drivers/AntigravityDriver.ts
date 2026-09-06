@@ -1,12 +1,12 @@
-import { withAgentDeviceEnvironment } from "@t3tools/provider-core/server/mcpSession";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import { AntigravitySettings, ProviderDriverKind, ProviderSetupError } from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+import { withAgentDeviceEnvironment } from "@t2code/provider-core/server/mcpSession";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import { AntigravitySettings, ProviderDriverKind, ProviderSetupError } from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { resolveSelfInvocation } from "@t2code/shared/nodeRuntime";
 import {
   NodeRuntimeUnavailableError,
   nodeRuntimeUnavailableMessage,
-} from "@t3tools/shared/nodeRuntime";
+} from "@t2code/shared/nodeRuntime";
 import * as Crypto from "effect/Crypto";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";

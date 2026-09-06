@@ -1,5 +1,5 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
-import { ProjectId, type ThreadPullRequestLink, type VcsStatusResult } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
+import { ProjectId, type ThreadPullRequestLink, type VcsStatusResult } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import {

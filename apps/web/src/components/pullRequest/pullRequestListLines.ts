@@ -1,5 +1,5 @@
-import type { ThreadPullRequestLink } from "@t3tools/contracts";
-import type { ThreadPullRequestChain } from "@t3tools/shared/threadPullRequests";
+import type { ThreadPullRequestLink } from "@t2code/contracts";
+import type { ThreadPullRequestChain } from "@t2code/shared/threadPullRequests";
 
 export interface PullRequestListLine {
   readonly link: ThreadPullRequestLink;

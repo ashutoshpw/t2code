@@ -1,5 +1,5 @@
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
+import type { EnvironmentId, ThreadId } from "@t2code/contracts";
+import { formatDiffCount } from "@t2code/client-runtime/diff-count";
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { nativeHeaderScrollEdgeEffects } from "../../native/StackHeader";
@@ -259,7 +259,7 @@ const ReviewFileNavigatorRow = memo(function ReviewFileNavigatorRow(props: {
         Platform.OS === "android"
           ? cn(
               "mt-1 min-h-12 justify-center rounded-[20px] px-3 py-2 active:bg-subtle",
-              selected && "bg-subtle-strong",
+              selected && "bg-thread-selected",
             )
           : selected
             ? "mt-1 min-h-12 justify-center rounded-xl bg-subtle-strong px-3 py-2"
@@ -278,10 +278,10 @@ const ReviewFileNavigatorRow = memo(function ReviewFileNavigatorRow(props: {
         {file.path}
       </Text>
       <View className="mt-1 flex-row gap-2">
-        <Text className="text-2xs font-t3-bold text-adaptive-emerald-700-300">
+        <Text className="text-2xs font-t2-bold text-adaptive-emerald-700-300">
           +{formatDiffCount(file.additions)}
         </Text>
-        <Text className="text-2xs font-t3-bold text-adaptive-rose-700-300">
+        <Text className="text-2xs font-t2-bold text-adaptive-rose-700-300">
           -{formatDiffCount(file.deletions)}
         </Text>
       </View>

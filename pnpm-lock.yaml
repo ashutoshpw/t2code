@@ -216,19 +216,19 @@ importers:
       '@napi-rs/keyring':
         specifier: ^1.3.0
         version: 1.3.0
-      '@t3tools/client-runtime':
+      '@t2code/client-runtime':
         specifier: workspace:*
         version: link:../../packages/client-runtime
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@t3tools/ssh':
+      '@t2code/ssh':
         specifier: workspace:*
         version: link:../../packages/ssh
-      '@t3tools/tailscale':
+      '@t2code/tailscale':
         specifier: workspace:*
         version: link:../../packages/tailscale
       dbus-next:
@@ -286,7 +286,7 @@ importers:
 
   apps/marketing:
     dependencies:
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       astro:
@@ -365,43 +365,43 @@ importers:
       '@shikijs/themes':
         specifier: 4.2.0
         version: 4.2.0
-      '@t3tools/client-runtime':
+      '@t2code/client-runtime':
         specifier: workspace:*
         version: link:../../packages/client-runtime
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/mobile-review-diff-native':
-        specifier: file:./modules/t3-review-diff
-        version: file:apps/mobile/modules/t3-review-diff
-      '@t3tools/mobile-source-text':
-        specifier: file:./modules/t3-source-text
-        version: file:apps/mobile/modules/t3-source-text(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)
-      '@t3tools/mobile-terminal-native':
-        specifier: file:./modules/t3-terminal
-        version: file:apps/mobile/modules/t3-terminal
-      '@t3tools/provider-acp-registry':
+      '@t2code/mobile-review-diff-native':
+        specifier: file:./modules/t2-review-diff
+        version: file:apps/mobile/modules/t2-review-diff
+      '@t2code/mobile-source-text':
+        specifier: file:./modules/t2-source-text
+        version: file:apps/mobile/modules/t2-source-text(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)
+      '@t2code/mobile-terminal-native':
+        specifier: file:./modules/t2-terminal
+        version: file:apps/mobile/modules/t2-terminal
+      '@t2code/provider-acp-registry':
         specifier: workspace:*
         version: link:../../packages/provider-acp-registry
-      '@t3tools/provider-core':
+      '@t2code/provider-core':
         specifier: workspace:*
         version: link:../../packages/provider-core
-      '@t3tools/provider-cursor':
+      '@t2code/provider-cursor':
         specifier: workspace:*
         version: link:../../packages/provider-cursor
-      '@t3tools/provider-grok':
+      '@t2code/provider-grok':
         specifier: workspace:*
         version: link:../../packages/provider-grok
-      '@t3tools/provider-muse':
+      '@t2code/provider-muse':
         specifier: workspace:*
         version: link:../../packages/provider-muse
-      '@t3tools/provider-opencode':
+      '@t2code/provider-opencode':
         specifier: workspace:*
         version: link:../../packages/provider-opencode
-      '@t3tools/provider-pi':
+      '@t2code/provider-pi':
         specifier: workspace:*
         version: link:../../packages/provider-pi
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@tabler/icons-react-native':
@@ -721,25 +721,25 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.29.0
         version: 1.29.0(zod@4.6.5)
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/provider-testing':
+      '@t2code/provider-testing':
         specifier: workspace:*
         version: link:../../packages/provider-testing
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@t3tools/source-control-testing':
+      '@t2code/source-control-testing':
         specifier: workspace:*
         version: link:../../packages/source-control-testing
-      '@t3tools/ssh':
+      '@t2code/ssh':
         specifier: workspace:*
         version: link:../../packages/ssh
-      '@t3tools/tailscale':
+      '@t2code/tailscale':
         specifier: workspace:*
         version: link:../../packages/tailscale
-      '@t3tools/web':
+      '@t2code/web':
         specifier: workspace:*
         version: link:../web
       '@types/node':
@@ -808,34 +808,34 @@ importers:
       '@pierre/trees':
         specifier: 1.0.0-beta.6
         version: 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.3.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@4.2.0)
-      '@t3tools/client-runtime':
+      '@t2code/client-runtime':
         specifier: workspace:*
         version: link:../../packages/client-runtime
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/provider-acp-registry':
+      '@t2code/provider-acp-registry':
         specifier: workspace:*
         version: link:../../packages/provider-acp-registry
-      '@t3tools/provider-core':
+      '@t2code/provider-core':
         specifier: workspace:*
         version: link:../../packages/provider-core
-      '@t3tools/provider-cursor':
+      '@t2code/provider-cursor':
         specifier: workspace:*
         version: link:../../packages/provider-cursor
-      '@t3tools/provider-grok':
+      '@t2code/provider-grok':
         specifier: workspace:*
         version: link:../../packages/provider-grok
-      '@t3tools/provider-muse':
+      '@t2code/provider-muse':
         specifier: workspace:*
         version: link:../../packages/provider-muse
-      '@t3tools/provider-opencode':
+      '@t2code/provider-opencode':
         specifier: workspace:*
         version: link:../../packages/provider-opencode
-      '@t3tools/provider-pi':
+      '@t2code/provider-pi':
         specifier: workspace:*
         version: link:../../packages/provider-pi
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@tanstack/react-pacer':
@@ -1034,13 +1034,13 @@ importers:
       '@noble/hashes':
         specifier: 'catalog:'
         version: 1.8.0
-      '@t3tools/client-runtime':
+      '@t2code/client-runtime':
         specifier: workspace:*
         version: link:../../packages/client-runtime
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       alchemy:
@@ -1102,10 +1102,10 @@ importers:
       '@pierre/diffs':
         specifier: 'catalog:'
         version: 1.5.2(patch_hash=298e94372dbd51846a4e26ece2ecc3e22eb1f94b0450b1f1a9c6fec127809be7)(@shikijs/themes@4.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../shared
       '@t3tools/source-control-azure-devops':
@@ -1523,7 +1523,7 @@ importers:
       '@noble/hashes':
         specifier: 'catalog:'
         version: 1.8.0
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../contracts
       effect:
@@ -1814,10 +1814,10 @@ importers:
 
   packages/ssh:
     dependencies:
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1839,7 +1839,7 @@ importers:
 
   packages/tailscale:
     dependencies:
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1867,10 +1867,10 @@ importers:
       '@electron/osx-sign':
         specifier: 2.7.0
         version: 2.7.0
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../packages/shared
-      '@t3tools/tailscale':
+      '@t2code/tailscale':
         specifier: workspace:*
         version: link:../packages/tailscale
       effect:
@@ -6088,16 +6088,16 @@ packages:
     resolution: {integrity: sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==}
     engines: {node: '>=10'}
 
-  '@t3tools/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff':
-    resolution: {directory: apps/mobile/modules/t3-review-diff, type: directory}
+  '@t2code/mobile-review-diff-native@file:apps/mobile/modules/t2-review-diff':
+    resolution: {directory: apps/mobile/modules/t2-review-diff, type: directory}
 
-  '@t3tools/mobile-source-text@file:apps/mobile/modules/t3-source-text':
-    resolution: {directory: apps/mobile/modules/t3-source-text, type: directory}
+  '@t2code/mobile-source-text@file:apps/mobile/modules/t2-source-text':
+    resolution: {directory: apps/mobile/modules/t2-source-text, type: directory}
     peerDependencies:
       react: '*'
       react-native: '*'
 
-  '@t3tools/mobile-terminal-native@file:apps/mobile/modules/t3-terminal':
+  '@t2code/mobile-terminal-native@file:apps/mobile/modules/t2-terminal':
     resolution: {directory: apps/mobile/modules/t3-terminal, type: directory}
 
   '@tabler/icons-react-native@3.44.0':
@@ -16817,14 +16817,14 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
-  '@t3tools/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff': {}
+  '@t2code/mobile-review-diff-native@file:apps/mobile/modules/t2-review-diff': {}
 
-  '@t3tools/mobile-source-text@file:apps/mobile/modules/t3-source-text(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)':
+  '@t2code/mobile-source-text@file:apps/mobile/modules/t2-source-text(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)':
     dependencies:
       react: 19.3.0
       react-native: 0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6)
 
-  '@t3tools/mobile-terminal-native@file:apps/mobile/modules/t3-terminal': {}
+  '@t2code/mobile-terminal-native@file:apps/mobile/modules/t2-terminal': {}
 
   '@tabler/icons-react-native@3.44.0(react-native-svg@15.16.0(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0))(react@19.3.0)':
     dependencies:
