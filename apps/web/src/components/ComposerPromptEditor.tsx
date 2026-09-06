@@ -7,7 +7,10 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
-import { type ComposerContextClipboardFragment, type ServerProviderSkill } from "@t2code/contracts";
+import {
+  type ComposerContextClipboardFragment,
+  type ServerProviderSkill,
+} from "@t2code/contracts";
 import {
   COMPOSER_CONTEXT_CLIPBOARD_MIME,
   encodeComposerContextClipboardHtml,

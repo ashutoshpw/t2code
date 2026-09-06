@@ -1,8 +1,8 @@
-import type { AssistantCitation } from "@t3tools/contracts";
+import type { AssistantCitation } from "@t2code/contracts";
 import {
   serializeAssistantCitation,
   withAssistantCitationComment,
-} from "@t3tools/shared/assistantCitations";
+} from "@t2code/shared/assistantCitations";
 import {
   splitPromptIntoComposerSegments,
   type ComposerPromptSegment,

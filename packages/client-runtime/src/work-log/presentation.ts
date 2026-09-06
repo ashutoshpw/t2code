@@ -5,11 +5,11 @@ import {
   type ThreadId,
   type ToolActivitySource,
   type ToolLifecycleItemType,
-} from "@t3tools/contracts";
-import { classifyMarkdownImageSource } from "@t3tools/client-runtime/markdown-images";
-import { resolveMediaSource } from "@t3tools/client-runtime/media-source";
-import { parseChangeRequestUrl } from "@t3tools/shared/changeRequestUrl";
-import { isWorkspaceImagePreviewPath } from "@t3tools/shared/filePreview";
+} from "@t2code/contracts";
+import { classifyMarkdownImageSource } from "@t2code/client-runtime/markdown-images";
+import { resolveMediaSource } from "@t2code/client-runtime/media-source";
+import { parseChangeRequestUrl } from "@t2code/shared/changeRequestUrl";
+import { isWorkspaceImagePreviewPath } from "@t2code/shared/filePreview";
 
 export function isWorktreeSetupActivity(kind: string): boolean {
   return kind === "setup-script.requested" || kind === "setup-script.started";

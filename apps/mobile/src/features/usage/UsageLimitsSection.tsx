@@ -7,7 +7,7 @@ import type {
   ServerProviderResetCredits,
   ServerProviderUsageWindow,
   UsageProviderKind,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   elapsedShare,
   formatDuration,
@@ -15,7 +15,7 @@ import {
   limitsNotice,
   paceOf,
   remainingPercent,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 import { type ReactNode, useState } from "react";
 import { Alert, Pressable, View } from "react-native";
 

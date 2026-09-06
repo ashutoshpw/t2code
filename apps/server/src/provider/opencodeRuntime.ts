@@ -1,6 +1,6 @@
 import * as NodeURL from "node:url";
 
-import type { ChatAttachment, ProviderApprovalDecision, RuntimeMode } from "@t3tools/contracts";
+import type { ChatAttachment, ProviderApprovalDecision, RuntimeMode } from "@t2code/contracts";
 import {
   createOpencodeClient,
   type Agent,
@@ -31,10 +31,10 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 import { isWindowsCommandNotFound } from "../processRunner.ts";
 import { collectStreamAsString } from "./providerSnapshot.ts";
-import * as NetService from "@t3tools/shared/Net";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { compareSemverVersions, parseSemver } from "@t3tools/shared/semver";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+import * as NetService from "@t2code/shared/Net";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { compareSemverVersions, parseSemver } from "@t2code/shared/semver";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
 const encodeUnknownJsonStringExit = Schema.encodeUnknownExit(Schema.fromJsonString(Schema.Unknown));
 const OPENCODE_EMPTY_CONFIG_CONTENT = "{}";
 

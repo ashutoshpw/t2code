@@ -2,7 +2,7 @@ import {
   BUILT_IN_THEMES,
   T3_CHAT_THEME,
   getThemeColorsForAppearance,
-} from "@t3tools/shared/themePalettes";
+} from "@t2code/shared/themePalettes";
 
 import {
   getMobileThemeVariables,

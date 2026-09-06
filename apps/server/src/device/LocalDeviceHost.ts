@@ -15,11 +15,11 @@ import {
   type DevicePlatform,
   type DevicePlatformAvailability,
   LOCAL_DEVICE_HOST_ID,
-} from "@t3tools/contracts";
-import { waitForHttpReady } from "@t3tools/shared/httpReadiness";
-import { HostProcessEnvironment, HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import * as NetService from "@t3tools/shared/Net";
-import { isCommandAvailable } from "@t3tools/shared/shell";
+} from "@t2code/contracts";
+import { waitForHttpReady } from "@t2code/shared/httpReadiness";
+import { HostProcessEnvironment, HostProcessPlatform } from "@t2code/shared/hostProcess";
+import * as NetService from "@t2code/shared/Net";
+import { isCommandAvailable } from "@t2code/shared/shell";
 import * as Clock from "effect/Clock";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";

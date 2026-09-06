@@ -15,13 +15,13 @@ const repoRoot = NodePath.resolve(desktopDir, "..", "..");
 const devBundleIdSuffix = NodePath.basename(repoRoot)
   .toLowerCase()
   .replaceAll(/[^a-z0-9]+/g, "");
-export const APP_DISPLAY_NAME = isDevelopment ? "T2 Code (Dev)" : "T2 Code (Alpha)";
-export const APP_BUNDLE_ID = isDevelopment
-  ? `com.t3tools.t3code.dev.${devBundleIdSuffix || "local"}`
-  : "com.t3tools.t3code";
+const APP_DISPLAY_NAME = isDevelopment ? "T2 Code (Dev)" : "T2 Code (Alpha)";
+const APP_BUNDLE_ID = isDevelopment
+  ? `codes.t2.desktop.dev.${devBundleIdSuffix || "local"}`
+  : "codes.t2.desktop";
 // Register both the rebranded and legacy schemes so deep links and OAuth
 // callbacks from installs that predate the T2 Code rename keep working.
-const APP_PROTOCOL_SCHEMES = isDevelopment ? ["t2code-dev", "t3code-dev"] : ["t2code", "t3code"];
+const APP_PROTOCOL_SCHEMES = isDevelopment ? ["t2code-dev"] : ["t2code"];
 const LAUNCHER_VERSION = 19;
 const developmentMacIconPngPath = NodePath.join(
   repoRoot,
@@ -138,7 +138,7 @@ export function makeDevelopmentLauncherScript({
   return [
     "#!/bin/sh",
     `if [ -f ${shellSingleQuote(environmentFilePath)} ]; then . ${shellSingleQuote(environmentFilePath)}; fi`,
-    `exec ${shellSingleQuote(electronBinaryPath)} --t3code-dev-root=${shellSingleQuote(desktopRoot)} ${shellSingleQuote(mainEntryPath)} "$@"`,
+    `exec ${shellSingleQuote(electronBinaryPath)} --t2code-dev-root=${shellSingleQuote(desktopRoot)} ${shellSingleQuote(mainEntryPath)} "$@"`,
     "",
   ].join("\n");
 }

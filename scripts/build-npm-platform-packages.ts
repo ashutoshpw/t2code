@@ -34,10 +34,10 @@ import {
   CLI_ARCHIVE_PLATFORM_KEYS,
   cliArchiveFileName,
   type CliArchivePlatformKey,
-} from "@t3tools/shared/cliRelease";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { fromJsonStringPretty } from "@t3tools/shared/schemaJson";
-import { isCommandAvailable } from "@t3tools/shared/shell";
+} from "@t2code/shared/cliRelease";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { fromJsonStringPretty } from "@t2code/shared/schemaJson";
+import { isCommandAvailable } from "@t2code/shared/shell";
 import serverPackageJson from "../apps/server/package.json" with { type: "json" };
 
 import { windowsSystemTar } from "./build-cli-archive.ts";

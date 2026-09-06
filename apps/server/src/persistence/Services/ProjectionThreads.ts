@@ -17,7 +17,7 @@ import {
   ThreadLinkedPullRequest,
   ThreadId,
   TurnId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import * as Context from "effect/Context";

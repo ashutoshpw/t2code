@@ -1,5 +1,5 @@
 // @effect-diagnostics nodeBuiltinImport:off - exercises concurrent real CLI subprocesses.
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 import { describe, expect, it } from "@effect/vitest";
 import * as NodeChildProcess from "node:child_process";
 import * as NodeUtil from "node:util";

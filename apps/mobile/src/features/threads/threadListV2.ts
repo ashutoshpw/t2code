@@ -1,20 +1,20 @@
-import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
+import { threadPullRequestSearchTerms } from "@t2code/shared/threadPullRequests";
 import {
   effectiveSnoozed,
   hasQueuedTurnStart,
   QUEUED_TURN_START_GRACE_MS,
   resolveSnoozePresets,
   snoozeWakeLabel,
-} from "@t3tools/client-runtime/state/thread-settled";
-import type { SnoozePreset } from "@t3tools/client-runtime/state/thread-settled";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
+} from "@t2code/client-runtime/state/thread-settled";
+import type { SnoozePreset } from "@t2code/client-runtime/state/thread-settled";
+import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
+import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
 import {
   sortActiveThreadsByOrderKey,
   resolveSettledThreadTimestamp,
   sortPinnedThreadsByOrderKey,
-} from "@t3tools/client-runtime/state/thread-sort";
-import type { EnvironmentId, ProjectId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/thread-sort";
+import type { EnvironmentId, ProjectId } from "@t2code/contracts";
 
 import type { PendingNewTask } from "../../state/use-pending-new-tasks";
 

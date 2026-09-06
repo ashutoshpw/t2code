@@ -1,5 +1,5 @@
 import { resolvePlanFollowUpSubmission } from "../../proposedPlan";
-import { serializeLegacyContextMessage } from "@t3tools/shared/composerContextLegacySend";
+import { serializeLegacyContextMessage } from "@t2code/shared/composerContextLegacySend";
 import {
   PullRequestAction,
   type PullRequestCheck,
@@ -7,7 +7,7 @@ import {
   type PullRequestDetail,
   type PullRequestDetailView,
   type PullRequestReviewThread,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 import { formatInlineContextReference } from "~/lib/composerContextReferences";
 import { buildMessageContext, reviewCommentContextReference } from "~/lib/composerContextRecords";

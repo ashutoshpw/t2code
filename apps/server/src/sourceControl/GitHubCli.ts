@@ -12,7 +12,7 @@ import {
   TrimmedNonEmptyString,
   type SourceControlRepositoryVisibility,
   type VcsError,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as VcsProcess from "../vcs/VcsProcess.ts";
 import {
@@ -28,7 +28,7 @@ export const PinnedGitHubCredential = Context.Reference<{
   readonly host: string;
   readonly token: Redacted.Redacted<string>;
   readonly credentialFingerprint: string;
-} | null>("t3/sourceControl/PinnedGitHubCredential", { defaultValue: () => null });
+} | null>("@t2code/cli/sourceControl/PinnedGitHubCredential", { defaultValue: () => null });
 
 function targetsVerifiedHost(args: ReadonlyArray<string>, host: string): boolean {
   const hosts: Array<string | null> = [];

@@ -1,4 +1,4 @@
-import { formatDuration } from "@t3tools/shared/orchestrationTiming";
+import { formatDuration } from "@t2code/shared/orchestrationTiming";
 import { GlassContainer, GlassView } from "expo-glass-effect";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {

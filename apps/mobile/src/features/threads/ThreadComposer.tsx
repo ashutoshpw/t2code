@@ -1,8 +1,8 @@
 import type { ComposerTextPaste } from "../../native/T3ComposerEditor.types";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import { useAtomValue } from "@effect/atom-react";
-import { clampFileAttachmentUploadBytes } from "@t3tools/client-runtime/state/attachments";
-import { pastedTextDisposition, replaceTextSelection } from "@t3tools/client-runtime/text-paste";
+import { clampFileAttachmentUploadBytes } from "@t2code/client-runtime/state/attachments";
+import { pastedTextDisposition, replaceTextSelection } from "@t2code/client-runtime/text-paste";
 import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
@@ -14,12 +14,12 @@ import {
   type RuntimeMode,
   type ServerConfig as T3ServerConfig,
   type UsageLimitsReport,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   collectProviderUsageLimits,
   hasProviderUsageLimits,
   isUsageLimitsCommand,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 import { StackActions, useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { ReactNode } from "react";
 import {
@@ -57,7 +57,7 @@ import {
 } from "../../state/use-composer-drafts";
 import type { ComposerDocumentAttachment } from "../../lib/composerContext";
 import { useProject } from "../../state/entities";
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
+import { scopeProjectRef } from "@t2code/client-runtime/environment";
 
 import { AppText as Text } from "../../components/AppText";
 import { ComposerAttachmentButton } from "../../components/ComposerAttachmentButton";

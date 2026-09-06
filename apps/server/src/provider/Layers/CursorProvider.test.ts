@@ -8,8 +8,8 @@ import * as Path from "effect/Path";
 import type * as ChildProcessSpawner from "effect/unstable/process/ChildProcessSpawner";
 import { describe, expect, it } from "vite-plus/test";
 import type * as EffectAcpSchema from "effect-acp/schema";
-import type { CursorSettings } from "@t3tools/contracts";
-import { createModelCapabilities } from "@t3tools/shared/model";
+import type { CursorSettings } from "@t2code/contracts";
+import { createModelCapabilities } from "@t2code/shared/model";
 
 import {
   buildCursorProviderSnapshot,
@@ -31,7 +31,7 @@ import {
   rewriteCursorSkillMentions,
 } from "../Drivers/CursorSkills.ts";
 import { execScriptSource, writeFakeCli } from "../../testUtils/fakeCli.ts";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 
 const runNode = <A, E>(
   effect: Effect.Effect<

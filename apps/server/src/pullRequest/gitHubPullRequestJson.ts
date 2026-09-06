@@ -29,8 +29,8 @@ import type {
   PullRequestLabelCandidateList,
   PullRequestState,
   PullRequestThreadComment,
-} from "@t3tools/contracts";
-import { decodeJsonResult } from "@t3tools/shared/schemaJson";
+} from "@t2code/contracts";
+import { decodeJsonResult } from "@t2code/shared/schemaJson";
 
 import { dedupeChecks } from "./pullRequestChecks.ts";
 

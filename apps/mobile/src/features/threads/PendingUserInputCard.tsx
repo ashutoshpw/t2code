@@ -1,5 +1,5 @@
 import { QuestionAttachments } from "./QuestionAttachments";
-import type { ApprovalRequestId, UserInputQuestion } from "@t3tools/contracts";
+import type { ApprovalRequestId, UserInputQuestion } from "@t2code/contracts";
 import { useCallback, useRef } from "react";
 import { Platform, Pressable, ScrollView, View, type LayoutChangeEvent } from "react-native";
 import Animated, {

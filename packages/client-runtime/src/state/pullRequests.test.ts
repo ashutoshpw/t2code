@@ -4,7 +4,7 @@ import {
   PullRequestOperationError,
   WS_METHODS,
   type PullRequestStack,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { expect, it } from "@effect/vitest";
 import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";

@@ -34,7 +34,7 @@ import {
   type DeviceHostSummary,
   LOCAL_DEVICE_HOST_ID,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import { ensureAgentDevice } from "./DeviceToolchain.ts";

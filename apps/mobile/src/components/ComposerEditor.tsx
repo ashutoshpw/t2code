@@ -1,9 +1,9 @@
-import { ComposerContextId } from "@t3tools/contracts";
+import { ComposerContextId } from "@t2code/contracts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "react-native";
-import type { EnvironmentId } from "@t3tools/contracts";
-import { encodeComposerContextFragment } from "@t3tools/shared/composerContextClipboard";
-import { collectComposerContextReferences } from "@t3tools/shared/composerContextReferences";
+import type { EnvironmentId } from "@t2code/contracts";
+import { encodeComposerContextFragment } from "@t2code/shared/composerContextClipboard";
+import { collectComposerContextReferences } from "@t2code/shared/composerContextReferences";
 import { ComposerEditor as NativeComposerEditor } from "../native/T3ComposerEditor";
 import type { ComposerEditorProps as NativeComposerEditorProps } from "../native/T3ComposerEditor";
 import {

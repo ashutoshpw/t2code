@@ -23,8 +23,8 @@ import {
   ThreadId,
   TurnId,
   type ProviderRuntimeEvent,
-} from "@t3tools/contracts";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+} from "@t2code/contracts";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 
 import { ServerConfig } from "../../config.ts";
 import { execScriptSource, writeFakeCli } from "../../testUtils/fakeCli.ts";
