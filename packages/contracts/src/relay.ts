@@ -989,6 +989,11 @@ export const RelayT3ChatLinkRequestResponse = Schema.Struct({
 });
 export type RelayT3ChatLinkRequestResponse = typeof RelayT3ChatLinkRequestResponse.Type;
 
+export const RelayEnvironmentLabelUpdateRequest = Schema.Struct({
+  label: TrimmedNonEmptyString,
+});
+export type RelayEnvironmentLabelUpdateRequest = typeof RelayEnvironmentLabelUpdateRequest.Type;
+
 export const RelayPublishResponse = Schema.Struct({
   ok: Schema.Boolean,
   deliveries: Schema.Array(RelayDeliveryResult),
@@ -1268,6 +1273,12 @@ const RelayServerGroup = HttpApiGroup.make("server")
       OpenApi.Summary,
       "Deliver webhook requests held while the environment was offline now",
     ),
+    HttpApiEndpoint.put("updateEnvironmentLabel", "/v1/environments/:environmentId/label", {
+      params: Schema.Struct({ environmentId: EnvironmentId }),
+      payload: RelayEnvironmentLabelUpdateRequest,
+      success: RelayOkResponse,
+      error: RelayAuthAndInternalErrors,
+    }).annotate(OpenApi.Summary, "Update an environment label"),
   )
   .annotate(OpenApi.Description, "Environment-authenticated activity publication.")
   .middleware(RelayEnvironmentAuth);

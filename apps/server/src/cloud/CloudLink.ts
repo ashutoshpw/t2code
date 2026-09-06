@@ -99,6 +99,7 @@ import { getOrCreateEnvironmentKeyPairFromSecretStore } from "./environmentKeys.
 import * as ConnectReachability from "./ConnectReachability.ts";
 import * as ManagedEndpointRuntime from "./ManagedEndpointRuntime.ts";
 import { relayUrlConfig } from "./publicConfig.ts";
+import { synchronizeCurrentEnvironmentLabelWithRelay } from "./EnvironmentLabelRelaySync.ts";
 import {
   filterRelayResponse,
   relayRequestError,
@@ -794,6 +795,13 @@ const make = Effect.gen(function* () {
       if (endpointRuntimeJson !== null) {
         yield* secrets.set(CLOUD_ENDPOINT_RUNTIME_CONFIG, stringToBytes(endpointRuntimeJson));
       }
+      yield* synchronizeCurrentEnvironmentLabelWithRelay().pipe(
+        Effect.catch((cause) =>
+          Effect.logWarning("failed to synchronize environment label after relay configuration", {
+            cause,
+          }),
+        ),
+      );
       if (payload.endpointRuntime === null || options?.confirmedOrigin === undefined) {
         return {
           ok: true,

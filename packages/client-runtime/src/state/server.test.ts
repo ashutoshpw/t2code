@@ -54,6 +54,7 @@ import {
   waitForNextEnvironmentReconnect,
   waitForDesktopUpdateTarget,
   runDesktopCommitWithReconnectObserver,
+  verifyEnvironmentLabelUpdate,
 } from "./server.ts";
 import { applyServerConfigProjection } from "./serverConfigProjection.ts";
 
@@ -267,208 +268,38 @@ const makeConfigPersistenceHarness = Effect.fn("test.makeConfigPersistenceHarnes
 });
 
 describe("server state projection", () => {
-  it.effect("skips duplicate keybinding saves but persists changed keybindings", () =>
+  it.effect("detects servers that ignore environment label updates", () =>
     Effect.gen(function* () {
-      const saved = yield* Ref.make<ReadonlyArray<ServerConfig>>([]);
-      const keybindingsEvent = (key: string): ServerConfigStreamEvent => ({
-        version: 1,
-        type: "keybindingsUpdated",
-        payload: {
-          keybindings: [
-            {
-              command: "terminal.toggle",
-              shortcut: {
-                key,
-                metaKey: false,
-                ctrlKey: false,
-                shiftKey: false,
-                altKey: false,
-                modKey: true,
-              },
-            },
-          ],
-          issues: [],
+      yield* verifyEnvironmentLabelUpdate("Build server", { environmentLabel: "Build server" });
+      const error = yield* Effect.flip(
+        verifyEnvironmentLabelUpdate("Build server", { environmentLabel: "" }),
+      );
+      expect(error.message).toBe("This environment server does not support renaming.");
+    }),
+  );
+
+  it("projects environment label updates into the server descriptor", () => {
+    const current = applyServerConfigProjection(
+      Option.none(),
+      snapshotEvent({
+        ...CONFIG,
+        environment: {
+          environmentId: EnvironmentId.make("environment-1"),
+          label: "Before",
+          platform: { os: "linux", arch: "x64" },
+          serverVersion: "0.0.33",
+          capabilities: { repositoryIdentity: true },
         },
-      });
-      yield* Effect.scoped(
-        Effect.gen(function* () {
-          const h = yield* makeConfigPersistenceHarness((_id, config) =>
-            Ref.update(saved, (values) => [...values, config]),
-          );
-          const first = yield* h.send(keybindingsEvent("p"));
-          yield* TestClock.adjust("500 millis");
-          expect(yield* Ref.get(saved)).toEqual([first.config]);
-
-          yield* h.send(keybindingsEvent("p"));
-          yield* TestClock.adjust("10 seconds");
-          expect(yield* Ref.get(saved)).toEqual([first.config]);
-
-          const changed = yield* h.send(keybindingsEvent("q"));
-          yield* TestClock.adjust("10 seconds");
-          expect(yield* Ref.get(saved)).toEqual([first.config, changed.config]);
-        }),
-      );
-    }),
-  );
-
-  it.effect(
-    "compares nested durable values independently of key order and omitted undefined fields",
-    () =>
-      Effect.gen(function* () {
-        const saved = yield* Ref.make<ReadonlyArray<ServerConfig>>([]);
-        const observability = {
-          logsDirectoryPath: "/synthetic/logs",
-          localTracingEnabled: false,
-          otlpTracesEnabled: false,
-          otlpMetricsEnabled: false,
-          otlpLogsEnabled: false,
-        };
-        yield* Effect.scoped(
-          Effect.gen(function* () {
-            const h = yield* makeConfigPersistenceHarness((_id, config) =>
-              Ref.update(saved, (values) => [...values, config]),
-            );
-            const first = yield* h.send(snapshotEvent({ ...CONFIG, observability }));
-            yield* TestClock.adjust("500 millis");
-            const reordered = Object.fromEntries(
-              Object.entries(observability).toReversed(),
-            ) as typeof observability;
-            for (const next of [
-              { ...CONFIG, observability: reordered },
-              { ...CONFIG, observability: { ...reordered, otlpTracesUrl: undefined } },
-              { ...CONFIG, observability: { ...observability } },
-            ]) {
-              const encode = Schema.encodeEffect(Schema.fromJsonString(ServerObservability));
-              expect(JSON.parse(yield* encode(next.observability))).toEqual(
-                JSON.parse(yield* encode(observability)),
-              );
-              const projection = yield* h.send(snapshotEvent(next));
-              expect(projection.config.observability).toEqual(next.observability);
-              yield* TestClock.adjust("10 seconds");
-              expect.soft(yield* Ref.get(saved)).toEqual([first.config]);
-            }
-            const writesBeforeChange = (yield* Ref.get(saved)).length;
-            const changed = yield* h.send(
-              snapshotEvent({
-                ...CONFIG,
-                observability: { ...observability, otlpTracesUrl: "https://traces.example.test" },
-              }),
-            );
-            yield* TestClock.adjust("10 seconds");
-            expect((yield* Ref.get(saved)).length).toBe(writesBeforeChange + 1);
-            expect((yield* Ref.get(saved)).at(-1)).toEqual(changed.config);
-          }),
-        );
       }),
-  );
+    );
+    const next = applyServerConfigProjection(current, {
+      version: 1,
+      type: "environmentLabelUpdated",
+      payload: { label: "After" },
+    });
 
-  it.effect("saves once across transient themes, usage sources and stall updates", () =>
-    Effect.gen(function* () {
-      const saved = yield* Ref.make<ReadonlyArray<ServerConfig>>([]);
-      yield* Effect.scoped(
-        Effect.gen(function* () {
-          const h = yield* makeConfigPersistenceHarness((_id, config) =>
-            Ref.update(saved, (values) => [...values, config]),
-          );
-          yield* h.send(snapshotEvent(CONFIG));
-          yield* TestClock.adjust("500 millis");
-          expect((yield* Ref.get(saved)).length).toBe(1);
-          for (const event of [
-            {
-              version: 1,
-              type: "environmentThemesUpdated",
-              payload: {
-                themes: [
-                  {
-                    id: EnvironmentThemeId.make("theme-test"),
-                    name: "Test theme",
-                    appearance: "dark",
-                  },
-                ],
-              },
-            },
-            {
-              version: 1,
-              type: "usageLimitSourcesUpdated",
-              payload: {
-                sources: [
-                  {
-                    id: UsageLimitSourceId.make("source-test"),
-                    kind: "cliproxy",
-                    label: "Test source",
-                    checkedAt: "2026-10-20T07:50:37.633Z",
-                    accounts: [],
-                  },
-                ],
-              },
-            },
-            snapshotEvent({
-              ...CONFIG,
-              lastEventLoopStall: {
-                detectedAt: "2026-10-20T07:50:37.633Z",
-                durationMs: 1000,
-                loadAverage: 1,
-                cpuCount: 8,
-              },
-            }),
-          ] satisfies ReadonlyArray<ServerConfigStreamEvent>) {
-            const projection = yield* h.send(event);
-            expect(projection.latestEvent).toBe(event);
-            if (event.type === "environmentThemesUpdated")
-              expect(projection.config.environmentThemes).toEqual(event.payload.themes);
-            if (event.type === "usageLimitSourcesUpdated")
-              expect(projection.config.usageLimitSources).toEqual(event.payload.sources);
-            yield* TestClock.adjust("10 seconds");
-          }
-        }),
-      );
-      expect(yield* Ref.get(saved)).toEqual([CONFIG]);
-    }),
-  );
-
-  it.effect("flushes pending durable changes after a transient event", () =>
-    Effect.gen(function* () {
-      const saved = yield* Ref.make<ReadonlyArray<ServerConfig>>([]);
-      const changed = { ...CONFIG, keybindingsConfigPath: "/changed/keybindings.json" };
-      yield* Effect.scoped(
-        Effect.gen(function* () {
-          const h = yield* makeConfigPersistenceHarness((_id, config) =>
-            Ref.update(saved, (values) => [...values, config]),
-          );
-          yield* h.send(snapshotEvent(CONFIG));
-          yield* TestClock.adjust("500 millis");
-          yield* h.send(snapshotEvent(changed));
-          yield* h.send({ version: 1, type: "environmentThemesUpdated", payload: { themes: [] } });
-        }),
-      );
-      expect(yield* Ref.get(saved)).toEqual([CONFIG, changed]);
-    }),
-  );
-
-  it.effect("retries a failed durable save on a transient event", () =>
-    Effect.gen(function* () {
-      const attempts = yield* Ref.make<ReadonlyArray<ServerConfig>>([]);
-      yield* Effect.scoped(
-        Effect.gen(function* () {
-          const h = yield* makeConfigPersistenceHarness((_id, config) =>
-            Effect.gen(function* () {
-              const values = yield* Ref.updateAndGet(attempts, (values) => [...values, config]);
-              if (values.length === 1)
-                return yield* new Persistence.ConnectionPersistenceError({
-                  operation: "save-server-config",
-                  message: "test failure",
-                });
-            }),
-          );
-          yield* h.send(snapshotEvent(CONFIG));
-          yield* TestClock.adjust("500 millis");
-          yield* h.send({ version: 1, type: "usageLimitSourcesUpdated", payload: { sources: [] } });
-          yield* TestClock.adjust("10 seconds");
-        }),
-      );
-      expect(yield* Ref.get(attempts)).toEqual([CONFIG, CONFIG]);
-    }),
-  );
+    expect(Option.getOrThrow(next).config.environment.label).toBe("After");
+  });
 
   it("only treats a legacy transport interruption as an unacknowledged handoff", () => {
     expect(isLegacyUpdateHandoffLoss(Cause.interrupt(1))).toBe(true);

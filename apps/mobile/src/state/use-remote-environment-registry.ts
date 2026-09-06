@@ -1,6 +1,7 @@
 import * as Dialog from "../components/ui/Dialog";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigation } from "@react-navigation/native";
+import { useCallback } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult, Atom } from "effect/reactivity";
@@ -156,14 +157,22 @@ export function useRemoteConnections() {
   const onConnectPress = (pairingUrl?: string, expectedEnvironmentId?: EnvironmentId) =>
     pairEnvironment(pairingUrl ?? connectionPairingUrl, expectedEnvironmentId);
 
-  const onReconnectEnvironment = (environmentId: EnvironmentId) =>
-    controller.retryEnvironment(environmentId);
-  const onSetEnvironmentEnabled = (environmentId: EnvironmentId, enabled: boolean) =>
-    controller.setEnvironmentEnabled(environmentId, enabled);
-  const onUpdateEnvironment = (
-    environmentId: EnvironmentId,
-    updates: { readonly label: string; readonly displayUrl: string },
-  ) => controller.updateEnvironment(environmentId, updates);
+  const onReconnectEnvironment = useCallback(
+    (environmentId: EnvironmentId) => controller.retryEnvironment(environmentId),
+    [controller],
+  );
+  const onSetEnvironmentEnabled = useCallback(
+    (environmentId: EnvironmentId, enabled: boolean) =>
+      controller.setEnvironmentEnabled(environmentId, enabled),
+    [controller],
+  );
+  const onUpdateEnvironment = useCallback(
+    (
+      environmentId: EnvironmentId,
+      updates: { readonly label?: string; readonly displayUrl: string },
+    ) => controller.updateEnvironment(environmentId, updates),
+    [controller],
+  );
 
   const onRemoveEnvironmentPress = (environmentId: EnvironmentId) => {
     const environment = connectedEnvironments.find(

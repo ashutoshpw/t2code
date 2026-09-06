@@ -48,9 +48,9 @@ def sources = files(
   fileTree('stubs') { include '**/*.kt' },
   fileTree('src/test/kotlin') { include '**/*.kt' },
   fileTree("${moduleRoot}/android/src/test/java") { include '**/*.kt' },
-  fileTree("${moduleRoot}/android/src/main/java/expo/modules/t3reviewdiff") {
+  fileTree("${moduleRoot}/android/src/main/java/expo/modules/t2reviewdiff") {
     include '**/*.kt'
-    exclude '**/T3ReviewDiffModule.kt'
+    exclude '**/T2ReviewDiffModule.kt'
   },
 )
 
