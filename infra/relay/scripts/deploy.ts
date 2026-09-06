@@ -101,9 +101,9 @@ export interface RelayPublicConfig {
 const publicConfigEnvEntries = (config: RelayPublicConfig) =>
   ({
     T2CODE_RELAY_URL: config.relayUrl,
-    T3CODE_MOBILE_OTLP_TRACES_URL: config.mobileTracingUrl,
-    T3CODE_MOBILE_OTLP_TRACES_DATASET: config.mobileTracingDataset,
-    T3CODE_MOBILE_OTLP_TRACES_TOKEN: config.mobileTracingToken,
+    T2CODE_MOBILE_OTLP_TRACES_URL: config.mobileTracingUrl,
+    T2CODE_MOBILE_OTLP_TRACES_DATASET: config.mobileTracingDataset,
+    T2CODE_MOBILE_OTLP_TRACES_TOKEN: config.mobileTracingToken,
     T2CODE_RELAY_CLIENT_OTLP_TRACES_URL: config.clientTracingUrl,
     T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET: config.clientTracingDataset,
     T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN: config.clientTracingToken,
@@ -143,6 +143,7 @@ export function reconcileRootEnvRelayUrl(contents: string, relayUrl: string): st
     .filter((line) => !line.startsWith("T3CODE_RELAY_CLIENT_OTLP_TRACES_"))
     .filter((line) => !line.startsWith("VITE_RELAY_OTLP_TRACES_"))
     .filter((line) => !line.startsWith("T3CODE_MOBILE_OTLP_TRACES_"))
+    .filter((line) => !line.startsWith("T2CODE_MOBILE_OTLP_TRACES_"))
     .filter((line) => !line.startsWith("T2CODE_RELAY_CLIENT_OTLP_TRACES_"))
     .join("\n");
 }
