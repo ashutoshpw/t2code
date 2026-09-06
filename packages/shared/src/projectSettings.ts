@@ -7,7 +7,7 @@ import {
   type ServerSettings,
   type ThreadEnvMode,
   type WorktreeCleanupRules,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { isModelSelectionProviderEnabled } from "./serverSettings.ts";
 
 export type ProjectSettingSource = "environment" | "project";

@@ -1,4 +1,4 @@
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type { EnvironmentId, ThreadId } from "@t2code/contracts";
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import { nativeHeaderScrollEdgeEffects } from "../../native/StackHeader";
 import { ScreenHeader } from "../../components/ScreenHeader";
@@ -262,7 +262,7 @@ const ReviewFileNavigatorRow = memo(function ReviewFileNavigatorRow(props: {
         Platform.OS === "android"
           ? cn(
               "mt-1 min-h-12 justify-center rounded-[20px] px-3 py-2 active:bg-subtle",
-              selected && "bg-subtle-strong",
+              selected && "bg-thread-selected",
             )
           : selected
             ? "mt-1 min-h-12 justify-center rounded-xl bg-subtle-strong px-3 py-2"
@@ -281,10 +281,8 @@ const ReviewFileNavigatorRow = memo(function ReviewFileNavigatorRow(props: {
         {file.path}
       </Text>
       <View className="mt-1 flex-row gap-2">
-        <Text className="text-2xs font-t3-bold text-adaptive-emerald-700-300">
-          +{file.additions}
-        </Text>
-        <Text className="text-2xs font-t3-bold text-adaptive-rose-700-300">-{file.deletions}</Text>
+        <Text className="text-2xs font-t3-bold text-emerald-600">+{file.additions}</Text>
+        <Text className="text-2xs font-t3-bold text-rose-600">-{file.deletions}</Text>
       </View>
     </Pressable>
   );

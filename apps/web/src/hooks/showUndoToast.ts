@@ -2,7 +2,7 @@ import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 
 import { stackedThreadToast, toastManager } from "../components/ui/toast";
 import type * as ThreadUndo from "./threadUndo";
