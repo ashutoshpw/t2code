@@ -1,5 +1,5 @@
 // Exercise the real UIScrollView/geometry update path with a preceding large file.
-private extension T3ReviewDiffView {
+private extension T2ReviewDiffView {
   func checkRowAnchoring() throws {
     frame = CGRect(x: 0, y: 0, width: 390, height: 600)
     layoutSubviews()
@@ -50,4 +50,4 @@ private extension T3ReviewDiffView {
     print("Passed viewport row anchors for wrap, font, width, intra-row clamp, initial file, and reset")
   }
 }
-try T3ReviewDiffView().checkRowAnchoring()
+try T2ReviewDiffView().checkRowAnchoring()
