@@ -1,8 +1,8 @@
 import type {
   EnvironmentProject,
   EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
-import { EnvironmentId, ProjectId, ThreadId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/shell";
+import { EnvironmentId, ProjectId, ThreadId } from "@t2code/contracts";
 import { assert, it } from "@effect/vitest";
 
 import {

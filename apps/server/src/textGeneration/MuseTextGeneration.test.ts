@@ -6,8 +6,8 @@ import {
   MuseSettings,
   ProviderInstanceId,
   type ServerProviderModel,
-} from "@t3tools/contracts";
-import { createModelSelection } from "@t3tools/shared/model";
+} from "@t2code/contracts";
+import { createModelSelection } from "@t2code/shared/model";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as Schema from "effect/Schema";

@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ORCHESTRATION_PROTOCOL_VERSION } from "@t3tools/contracts";
+import { ORCHESTRATION_PROTOCOL_VERSION } from "@t2code/contracts";
 import { expect, it } from "@effect/vitest";
 import * as Crypto from "effect/Crypto";
 import * as Deferred from "effect/Deferred";
@@ -9,14 +9,14 @@ import * as Layer from "effect/Layer";
 import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 
-import { DEFAULT_SIGNAL_EXPORT } from "@t3tools/shared/observability";
+import { DEFAULT_SIGNAL_EXPORT } from "@t2code/shared/observability";
 import {
   HostProcessArguments,
   HostProcessEnvironment,
   HostProcessIsExecutable,
   HostProcessPlatform,
-} from "@t3tools/shared/hostProcess";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
+} from "@t2code/shared/hostProcess";
+import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import {

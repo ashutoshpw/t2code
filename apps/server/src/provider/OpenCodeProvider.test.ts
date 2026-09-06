@@ -12,7 +12,7 @@ import * as TestClock from "effect/testing/TestClock";
 import { HttpClient, HttpClientResponse } from "effect/http";
 import { beforeEach } from "vite-plus/test";
 
-import { OpenCodeSettings } from "@t3tools/contracts";
+import { OpenCodeSettings } from "@t2code/contracts";
 import * as ServerConfig from "../config.ts";
 import * as OpenCodeRuntime from "./opencodeRuntime.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";

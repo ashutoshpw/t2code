@@ -10,7 +10,7 @@ import * as Queue from "effect/Queue";
 import * as Schema from "effect/Schema";
 import { ChildProcessSpawner } from "effect/process";
 
-import { TextGenerationError, type PiSettings } from "@t3tools/contracts";
+import { TextGenerationError, type PiSettings } from "@t2code/contracts";
 
 import { makePiRpcConnection, parsePiModelSlug } from "../orchestration-v2/Adapters/PiRpc.ts";
 import {

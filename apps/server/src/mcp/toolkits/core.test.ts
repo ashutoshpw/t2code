@@ -12,7 +12,7 @@ import {
   RunId,
   ThreadId,
   type OrchestrationV2ThreadShell,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
@@ -62,8 +62,8 @@ import {
   resolveT3McpToolDefinition,
   resolveT3McpToolPresentation,
   resolveT3McpToolSummaryAction,
-} from "@t3tools/shared/t3McpToolPresentation";
-import { htmlRenderFromToolItem } from "@t3tools/shared/toolOutput";
+} from "@t2code/shared/t3McpToolPresentation";
+import { htmlRenderFromToolItem } from "@t2code/shared/toolOutput";
 
 const decodeMcpAttachmentInput = Schema.decodeUnknownEffect(McpAttachmentInput);
 

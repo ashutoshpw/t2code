@@ -9,7 +9,7 @@ import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 import { ChildProcessSpawner } from "effect/process";
 
-import { GitCommandError, SourceControlProviderError } from "@t3tools/contracts";
+import { GitCommandError, SourceControlProviderError } from "@t2code/contracts";
 
 import * as ServerConfig from "../config.ts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";

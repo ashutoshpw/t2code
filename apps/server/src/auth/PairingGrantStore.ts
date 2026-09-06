@@ -4,11 +4,11 @@ import {
   type AuthEnvironmentScope,
   type AuthPairingLink,
   type ServerAuthBootstrapMethod,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   DESKTOP_BOOTSTRAP_TOKEN_WINDOW_MS,
   isValidDesktopBootstrapToken,
-} from "@t3tools/shared/desktopBootstrapToken";
+} from "@t2code/shared/desktopBootstrapToken";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";

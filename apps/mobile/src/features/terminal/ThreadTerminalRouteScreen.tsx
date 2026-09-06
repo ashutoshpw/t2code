@@ -5,8 +5,8 @@ import {
   EnvironmentId,
   ThreadId,
   sessionGrantsScope,
-} from "@t3tools/contracts";
-import { type KnownTerminalSession } from "@t3tools/client-runtime/state/terminal";
+} from "@t2code/contracts";
+import { type KnownTerminalSession } from "@t2code/client-runtime/state/terminal";
 import { SymbolView } from "../../components/AppSymbol";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { useNativeColumnLayoutMetrics } from "../../native/native-layout-metrics";

@@ -1,4 +1,4 @@
-import type { ScopedThreadRef } from "@t3tools/contracts";
+import type { ScopedThreadRef } from "@t2code/contracts";
 import { useSyncExternalStore } from "react";
 
 /**

@@ -1,13 +1,13 @@
 import type { MediaActionsSource } from "../lib/mediaActionsSource";
 import { useNavigation } from "@react-navigation/native";
-import type { MediaActionId } from "@t3tools/client-runtime/media-actions";
+import type { MediaActionId } from "@t2code/client-runtime/media-actions";
 import {
   AuthFilesystemReadScope,
   type EnvironmentId,
   sessionGrantsScope,
   type SessionGrantInput,
-} from "@t3tools/contracts";
-import { normalizeNativeMarkdownUrl } from "@t3tools/mobile-markdown-text/links";
+} from "@t2code/contracts";
+import { normalizeNativeMarkdownUrl } from "@t2code/mobile-markdown-text/links";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
 import { useEffect, useRef, useState } from "react";

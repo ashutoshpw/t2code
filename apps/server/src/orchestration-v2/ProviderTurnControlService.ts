@@ -1,4 +1,4 @@
-import { projectComposerContextForProvider } from "@t3tools/shared/composerContextReferences";
+import { projectComposerContextForProvider } from "@t2code/shared/composerContextReferences";
 import {
   MessageId,
   ProviderSessionId,
@@ -6,7 +6,7 @@ import {
   ProviderTurnId,
   RunAttemptId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";

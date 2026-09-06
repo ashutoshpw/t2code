@@ -197,19 +197,19 @@ importers:
       '@napi-rs/keyring':
         specifier: ^1.3.0
         version: 1.3.0
-      '@t3tools/client-runtime':
+      '@t2code/client-runtime':
         specifier: workspace:*
         version: link:../../packages/client-runtime
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@t3tools/ssh':
+      '@t2code/ssh':
         specifier: workspace:*
         version: link:../../packages/ssh
-      '@t3tools/tailscale':
+      '@t2code/tailscale':
         specifier: workspace:*
         version: link:../../packages/tailscale
       dbus-next:
@@ -261,7 +261,7 @@ importers:
 
   apps/marketing:
     dependencies:
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       astro:
@@ -337,22 +337,22 @@ importers:
       '@shikijs/themes':
         specifier: 4.2.0
         version: 4.2.0
-      '@t3tools/client-runtime':
+      '@t2code/client-runtime':
         specifier: workspace:*
         version: link:../../packages/client-runtime
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/mobile-markdown-text':
+      '@t2code/mobile-markdown-text':
         specifier: file:./modules/t3-markdown-text
         version: file:apps/mobile/modules/t3-markdown-text(afae94297d61d3a65abc2214f9b05422)
-      '@t3tools/mobile-review-diff-native':
+      '@t2code/mobile-review-diff-native':
         specifier: file:./modules/t3-review-diff
         version: file:apps/mobile/modules/t3-review-diff
-      '@t3tools/mobile-terminal-native':
+      '@t2code/mobile-terminal-native':
         specifier: file:./modules/t3-terminal
         version: file:apps/mobile/modules/t3-terminal
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@tabler/icons-react-native':
@@ -630,19 +630,19 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.29.0
         version: 1.29.0(zod@4.6.5)
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@t3tools/ssh':
+      '@t2code/ssh':
         specifier: workspace:*
         version: link:../../packages/ssh
-      '@t3tools/tailscale':
+      '@t2code/tailscale':
         specifier: workspace:*
         version: link:../../packages/tailscale
-      '@t3tools/web':
+      '@t2code/web':
         specifier: workspace:*
         version: link:../web
       '@types/node':
@@ -708,13 +708,13 @@ importers:
       '@pierre/trees':
         specifier: 1.0.0-beta.6
         version: 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.3.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(shiki@4.2.0)
-      '@t3tools/client-runtime':
+      '@t2code/client-runtime':
         specifier: workspace:*
         version: link:../../packages/client-runtime
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@tanstack/react-pacer':
@@ -907,13 +907,13 @@ importers:
       '@noble/hashes':
         specifier: 'catalog:'
         version: 1.8.0
-      '@t3tools/client-runtime':
+      '@t2code/client-runtime':
         specifier: workspace:*
         version: link:../../packages/client-runtime
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       alchemy:
@@ -972,10 +972,10 @@ importers:
 
   packages/client-runtime:
     dependencies:
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1060,7 +1060,7 @@ importers:
       '@noble/hashes':
         specifier: 'catalog:'
         version: 1.8.0
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../contracts
       effect:
@@ -1121,10 +1121,10 @@ importers:
 
   packages/ssh:
     dependencies:
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1146,7 +1146,7 @@ importers:
 
   packages/tailscale:
     dependencies:
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../shared
       effect:
@@ -1174,10 +1174,10 @@ importers:
       '@electron/osx-sign':
         specifier: 2.7.0
         version: 2.7.0
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../packages/shared
-      '@t3tools/tailscale':
+      '@t2code/tailscale':
         specifier: workspace:*
         version: link:../packages/tailscale
       effect:
@@ -5096,11 +5096,11 @@ packages:
     resolution: {integrity: sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==}
     engines: {node: '>=10'}
 
-  '@t3tools/mobile-markdown-text@file:apps/mobile/modules/t3-markdown-text':
+  '@t2code/mobile-markdown-text@file:apps/mobile/modules/t3-markdown-text':
     resolution: {directory: apps/mobile/modules/t3-markdown-text, type: directory}
     peerDependencies:
-      '@t3tools/client-runtime': '*'
-      '@t3tools/shared': '*'
+      '@t2code/client-runtime': '*'
+      '@t2code/shared': '*'
       expo: '*'
       expo-asset: '*'
       expo-clipboard: '*'
@@ -5110,10 +5110,10 @@ packages:
       react-native: '*'
       react-native-nitro-markdown: '*'
 
-  '@t3tools/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff':
+  '@t2code/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff':
     resolution: {directory: apps/mobile/modules/t3-review-diff, type: directory}
 
-  '@t3tools/mobile-terminal-native@file:apps/mobile/modules/t3-terminal':
+  '@t2code/mobile-terminal-native@file:apps/mobile/modules/t3-terminal':
     resolution: {directory: apps/mobile/modules/t3-terminal, type: directory}
 
   '@tabler/icons-react-native@3.44.0':
@@ -15570,10 +15570,10 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
-  '@t3tools/mobile-markdown-text@file:apps/mobile/modules/t3-markdown-text(afae94297d61d3a65abc2214f9b05422)':
+  '@t2code/mobile-markdown-text@file:apps/mobile/modules/t3-markdown-text(afae94297d61d3a65abc2214f9b05422)':
     dependencies:
-      '@t3tools/client-runtime': link:packages/client-runtime
-      '@t3tools/shared': link:packages/shared
+      '@t2code/client-runtime': link:packages/client-runtime
+      '@t2code/shared': link:packages/shared
       expo: 58.0.2(56fc8ddb8129740412739f0f0a6ee025)
       expo-asset: 58.0.10(expo@58.0.2)(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)(typescript@7.0.2)
       expo-clipboard: 58.0.3(expo@58.0.2)(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)
@@ -15583,9 +15583,9 @@ snapshots:
       react-native: 0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6)
       react-native-nitro-markdown: 0.5.8(patch_hash=642b47830730acff3761fe29cf54271d18b493c0070c750097850b7ea032e00c)(react-native-nitro-modules@0.35.9(patch_hash=daf4a639ce3f951af630a3711e4082d58e3a11e5a79f45efb0b59925327ebde2)(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0))(react-native-svg@15.15.5(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0)
 
-  '@t3tools/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff': {}
+  '@t2code/mobile-review-diff-native@file:apps/mobile/modules/t3-review-diff': {}
 
-  '@t3tools/mobile-terminal-native@file:apps/mobile/modules/t3-terminal': {}
+  '@t2code/mobile-terminal-native@file:apps/mobile/modules/t3-terminal': {}
 
   '@tabler/icons-react-native@3.44.0(react-native-svg@15.15.5(react-native@0.88.0-rc.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0-rc.3(@babel/core@7.29.7)(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6))(react@19.3.0))(react@19.3.0)':
     dependencies:

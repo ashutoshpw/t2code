@@ -1,13 +1,13 @@
 import { useAtomValue } from "@effect/atom-react";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { resolveHandoffEndpoints } from "@t3tools/client-runtime/handoff";
-import { resolveProviderInstanceDisplayName } from "@t3tools/client-runtime/state/provider-instance-display";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { resolveHandoffEndpoints } from "@t2code/client-runtime/handoff";
+import { resolveProviderInstanceDisplayName } from "@t2code/client-runtime/state/provider-instance-display";
 import type {
   EnvironmentId,
   OrchestrationV2ProjectedTurnItem,
   ProviderInstanceId,
   ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { Atom } from "effect/reactivity";
 import { Fragment, useMemo } from "react";
 import { Alert, Pressable, View, type ColorValue } from "react-native";

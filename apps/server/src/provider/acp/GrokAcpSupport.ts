@@ -5,15 +5,15 @@ import {
   type ProviderApprovalOption,
   ProviderDriverKind,
   type RuntimeMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Scope from "effect/Scope";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as EffectAcpErrors from "effect-acp/errors";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { normalizeModelSlug } from "@t3tools/shared/model";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { normalizeModelSlug } from "@t2code/shared/model";
 
 import * as AcpSessionRuntime from "./AcpSessionRuntime.ts";
 import { makeXAiPromptCompletionRuntime } from "./XAiAcpExtension.ts";
@@ -189,7 +189,7 @@ export const makeGrokAcpRuntime = (
   });
 
 /**
- * T3's built-in Grok slug. It is the CLI's product name, not a model id the ACP accepts,
+ * T2's built-in Grok slug. It is the CLI's product name, not a model id the ACP accepts,
  * so selecting it means "use whatever model the Grok session currently runs on".
  */
 export const GROK_DEFAULT_MODEL_SLUG = "grok-build";

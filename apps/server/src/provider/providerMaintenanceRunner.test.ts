@@ -4,8 +4,8 @@ import {
   ProviderInstanceId,
   type ServerProvider,
   type ServerProviderUpdateState,
-} from "@t3tools/contracts";
-import { ServerProviderUpdateError } from "@t3tools/contracts";
+} from "@t2code/contracts";
+import { ServerProviderUpdateError } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Deferred from "effect/Deferred";
 import * as Duration from "effect/Duration";
@@ -20,8 +20,8 @@ import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 import { HttpClient, HttpClientResponse } from "effect/http";
 import { ChildProcessSpawner } from "effect/process";
-import { HostProcessEnvironment, HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { SpawnExecutableResolution } from "@t3tools/shared/shell";
+import { HostProcessEnvironment, HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { SpawnExecutableResolution } from "@t2code/shared/shell";
 
 import * as ProviderRegistry from "./ProviderRegistry.ts";
 import * as ModelManifest from "./ModelManifest.ts";

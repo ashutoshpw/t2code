@@ -1,5 +1,5 @@
-import { EnvironmentId, ProjectId, ThreadId } from "@t3tools/contracts";
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { EnvironmentId, ProjectId, ThreadId } from "@t2code/contracts";
+import { scopeProjectRef, scopeThreadRef } from "@t2code/client-runtime/environment";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { toastManager } from "../components/ui/toast";

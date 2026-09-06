@@ -1,6 +1,6 @@
-import { HostProcessEnvironment } from "@t3tools/shared/hostProcess";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
-import { DEFAULT_SIGNAL_EXPORT } from "@t3tools/shared/observability";
+import { HostProcessEnvironment } from "@t2code/shared/hostProcess";
+import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
+import { DEFAULT_SIGNAL_EXPORT } from "@t2code/shared/observability";
 import type { InteractionUpdate, RunResult } from "@cursor/sdk";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
@@ -9,7 +9,7 @@ import {
   ThreadId,
   type ModelSelection,
   type ProviderReplayTranscript,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";

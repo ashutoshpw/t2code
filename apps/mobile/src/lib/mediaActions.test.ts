@@ -3,7 +3,7 @@ import {
   EnvironmentId,
   ThreadId,
   type AuthSessionState,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { AsyncResult } from "effect/reactivity";
 import { beforeEach, expect, it, vi } from "vite-plus/test";
 
@@ -26,7 +26,7 @@ vi.mock("react-native", () => ({ Alert: { alert: vi.fn() } }));
 vi.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: state.navigate }),
 }));
-vi.mock("@t3tools/mobile-markdown-text/links", () => ({
+vi.mock("@t2code/mobile-markdown-text/links", () => ({
   normalizeNativeMarkdownUrl: (uri: string) => uri,
 }));
 vi.mock("../state/assets", () => ({

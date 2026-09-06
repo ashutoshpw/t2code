@@ -31,9 +31,9 @@ import type {
   PullRequestLabelCandidateList,
   PullRequestState,
   PullRequestThreadComment,
-} from "@t3tools/contracts";
-import { quoteGitPatchPath } from "@t3tools/shared/gitPatchPath";
-import { decodeJsonResult } from "@t3tools/shared/schemaJson";
+} from "@t2code/contracts";
+import { quoteGitPatchPath } from "@t2code/shared/gitPatchPath";
+import { decodeJsonResult } from "@t2code/shared/schemaJson";
 
 import { aliasedGraphQlDocument, type GraphQlDocument } from "../sourceControl/githubGraphQl.ts";
 import { dedupeChecks } from "./pullRequestChecks.ts";

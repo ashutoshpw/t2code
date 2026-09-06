@@ -8,14 +8,14 @@ import {
   latestRootProviderFailure,
   runRanAfter,
   usageLimitBlockedRun,
-} from "@t3tools/shared/orchestrationV2ThreadError";
-import { threadPullRequestsOf } from "@t3tools/shared/threadPullRequests";
+} from "@t2code/shared/orchestrationV2ThreadError";
+import { threadPullRequestsOf } from "@t2code/shared/threadPullRequests";
 import {
   normalizeThreadPullRequestKey,
   visibleThreadPullRequests,
   threadPullRequestKeysEqual,
   legacyThreadPullRequestKey,
-} from "@t3tools/shared/threadPullRequests";
+} from "@t2code/shared/threadPullRequests";
 import {
   ORCHESTRATION_V2_WORKSPACE_PREPARATION_FAILURE_CODE,
   type ChatAttachment,
@@ -58,12 +58,12 @@ import {
   ThreadLinkedPullRequest,
   ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
-import { modelSelectionsEqual } from "@t3tools/shared/model";
+} from "@t2code/contracts";
+import { modelSelectionsEqual } from "@t2code/shared/model";
 import {
   derivePendingBackgroundWork,
   pendingBackgroundTurnItems,
-} from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
+} from "@t2code/shared/orchestrationV2PendingBackgroundWork";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -406,7 +406,7 @@ function wakeWorkStartedAt(
 export function isNativeMaintenanceCommand(message: {
   readonly text: string;
   readonly attachments: ReadonlyArray<ChatAttachment>;
-  readonly context?: import("@t3tools/contracts").OrchestrationMessageContext | undefined;
+  readonly context?: import("@t2code/contracts").OrchestrationMessageContext | undefined;
 }): boolean {
   return (
     message.attachments.length === 0 &&
@@ -3750,7 +3750,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
     readonly messageId: OrchestrationV2ConversationMessage["id"];
     readonly text: string;
     readonly attachments: ReadonlyArray<ChatAttachment>;
-    readonly context?: import("@t3tools/contracts").OrchestrationMessageContext | undefined;
+    readonly context?: import("@t2code/contracts").OrchestrationMessageContext | undefined;
     readonly createdBy: OrchestrationV2ConversationMessage["createdBy"];
     readonly creationSource: OrchestrationV2ConversationMessage["creationSource"];
     readonly scheduledTaskId?: OrchestrationV2ConversationMessage["scheduledTaskId"];

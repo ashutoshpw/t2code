@@ -10,9 +10,9 @@ import {
   type OrchestrationV2AppThread,
   type ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
-import { mcpAppToolCallableByApp, type McpAppReference } from "@t3tools/shared/mcpApp";
-import { mcpAppFromToolItem } from "@t3tools/shared/toolOutput";
+} from "@t2code/contracts";
+import { mcpAppToolCallableByApp, type McpAppReference } from "@t2code/shared/mcpApp";
+import { mcpAppFromToolItem } from "@t2code/shared/toolOutput";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

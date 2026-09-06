@@ -7,8 +7,8 @@
  * @module textGeneration/OpenCode2TextGeneration
  */
 import { AbsolutePath, Location, Model, Provider, Session } from "@opencode/client/effect";
-import { TextGenerationError } from "@t3tools/contracts";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
+import { TextGenerationError } from "@t2code/contracts";
+import { getModelSelectionStringOptionValue } from "@t2code/shared/model";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";

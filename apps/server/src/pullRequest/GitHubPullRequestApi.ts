@@ -40,7 +40,7 @@ import {
   type PullRequestThreadCommentsResult,
   type PullRequestUpdateMethod,
   type PullRequestPreview,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as GitHubApi from "../sourceControl/GitHubApi.ts";
 import { readGraphQlPages } from "../sourceControl/githubGraphQl.ts";

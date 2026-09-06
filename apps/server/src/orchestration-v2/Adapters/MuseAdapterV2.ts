@@ -20,8 +20,8 @@ import {
   type OrchestrationV2PlanStep,
   type RuntimeRequestId,
   type ServerProviderModel,
-} from "@t3tools/contracts";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
+} from "@t2code/contracts";
+import { getModelSelectionStringOptionValue } from "@t2code/shared/model";
 import * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";

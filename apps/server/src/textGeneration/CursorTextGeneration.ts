@@ -11,7 +11,7 @@ import {
   type CursorSettings,
   type ProviderSetupError,
   TextGenerationError,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as TextGenerationOperations from "./TextGenerationOperations.ts";
 import { cursorSdkModelSelection } from "../provider/cursorSdkModel.ts";

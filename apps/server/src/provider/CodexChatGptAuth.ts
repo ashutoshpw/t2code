@@ -7,8 +7,8 @@ import {
   type ChatGptReconnectProfile,
   type ChatGptTransferredProfile,
   type ProviderInstanceId,
-} from "@t3tools/contracts";
-import { codexCallbackUrl } from "@t3tools/shared/codexAuthHandoff";
+} from "@t2code/contracts";
+import { codexCallbackUrl } from "@t2code/shared/codexAuthHandoff";
 import * as Clock from "effect/Clock";
 import * as Cause from "effect/Cause";
 import * as AnalyticsService from "../telemetry/AnalyticsService.ts";

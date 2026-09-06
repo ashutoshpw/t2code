@@ -12,9 +12,8 @@ import {
   type LimitPoolMember,
   type LimitPoolWindow,
   remainingPercent,
-} from "@t3tools/shared/usageLimits";
-import { AlertTriangleIcon, ExternalLinkIcon, TicketIcon } from "lucide-react";
-import { Fragment, type ReactNode, useState } from "react";
+} from "@t2code/shared/usageLimits";
+import { AlertTriangleIcon, ExternalLinkIcon, TicketIcon } from "lucide-react";import { Fragment, type ReactNode, useState } from "react";
 
 import { ensureLocalApi } from "../../localApi";
 import { usePrimarySettings } from "../../hooks/useSettings";

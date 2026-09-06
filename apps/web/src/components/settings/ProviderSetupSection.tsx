@@ -2,14 +2,14 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import {
   ANTIGRAVITY_AUTH_METHODS,
   type AntigravityAuthMethod,
   type EnvironmentId,
   type ProviderInstanceId,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useRef, useState } from "react";
 import { Trash2Icon } from "lucide-react";
 

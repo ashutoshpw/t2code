@@ -1,4 +1,4 @@
-import type { EnvironmentId, SourceControlProviderAuth } from "@t3tools/contracts";
+import type { EnvironmentId, SourceControlProviderAuth } from "@t2code/contracts";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useState } from "react";
 

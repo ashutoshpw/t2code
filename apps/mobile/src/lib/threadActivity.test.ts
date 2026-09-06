@@ -18,9 +18,9 @@ import {
   type OrchestrationV2RunAttempt,
   type OrchestrationV2ProjectedTurnItem,
   type OrchestrationV2TurnItem,
-} from "@t3tools/contracts";
-import { resolveUserMessagePresentation } from "@t3tools/client-runtime/user-message";
-import { summarizeToolGroup } from "@t3tools/client-runtime/work-log/presentation";
+} from "@t2code/contracts";
+import { resolveUserMessagePresentation } from "@t2code/client-runtime/user-message";
+import { summarizeToolGroup } from "@t2code/client-runtime/work-log/presentation";
 import * as DateTime from "effect/DateTime";
 import { describe, expect, it } from "vite-plus/test";
 

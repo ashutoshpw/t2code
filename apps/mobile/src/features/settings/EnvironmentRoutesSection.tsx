@@ -8,8 +8,8 @@ import {
   connectionRouteLabel,
   connectionRoutes,
   isLearned,
-} from "@t3tools/client-runtime/connection";
-import type { EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/connection";
+import type { EnvironmentId } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Platform, Pressable, View } from "react-native";

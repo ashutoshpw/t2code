@@ -1,5 +1,5 @@
-import * as KeyedLock from "@t3tools/shared/KeyedLock";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+import * as KeyedLock from "@t2code/shared/KeyedLock";
+import { resolveProjectSettings } from "@t2code/shared/projectSettings";
 import {
   ModelSelection,
   OrchestrationV2DomainEvent,
@@ -10,7 +10,7 @@ import {
   ProviderSessionId,
   ThreadId,
   type ProviderThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";

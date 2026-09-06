@@ -9,7 +9,7 @@ import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import { ChildProcessSpawner } from "effect/process";
 import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/http";
-import { VcsProcessSpawnError } from "@t3tools/contracts";
+import { VcsProcessSpawnError } from "@t2code/contracts";
 
 import * as ServerSettings from "../serverSettings.ts";
 import * as ServerConfig from "../config.ts";

@@ -56,8 +56,8 @@ import {
   type ScheduledTaskUpsertInput,
   type ServerProvider,
   ThreadId,
-} from "@t3tools/contracts";
-import { runRanAfter } from "@t3tools/shared/orchestrationV2ThreadError";
+} from "@t2code/contracts";
+import { runRanAfter } from "@t2code/shared/orchestrationV2ThreadError";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";

@@ -1,6 +1,6 @@
-import { remapComposerContextAttachments } from "@t3tools/shared/composerContextReferences";
+import { remapComposerContextAttachments } from "@t2code/shared/composerContextReferences";
 import { appendUserInputAttachmentPaths } from "../provider/userInputAttachments.ts";
-import type { ChatAttachment, OrchestrationV2Command } from "@t3tools/contracts";
+import type { ChatAttachment, OrchestrationV2Command } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { resolveAttachmentPath } from "../attachmentStore.ts";
@@ -62,7 +62,7 @@ export const dispatchCommand = Effect.fn("ThreadMessageIntake.dispatchCommand")(
     // rollback boundary: any failure before dispatch removes every new copy.
     const claimedPaths: string[] = [];
     const prepared = yield* Effect.gen(function* () {
-      const attachmentsByQuestionId: import("@t3tools/contracts").UserInputAttachments = {};
+      const attachmentsByQuestionId: import("@t2code/contracts").UserInputAttachments = {};
       for (const [questionId, attachments] of Object.entries(incomingByQuestionId)) {
         const claimed = yield* AttachmentClaims.claimPendingAttachments({
           threadId: command.threadId,

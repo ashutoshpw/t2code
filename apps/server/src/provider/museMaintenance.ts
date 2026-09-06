@@ -1,5 +1,5 @@
-import { ProviderDriverKind, type ServerProvider } from "@t3tools/contracts";
-import { compareSemverVersions } from "@t3tools/shared/semver";
+import { ProviderDriverKind, type ServerProvider } from "@t2code/contracts";
+import { compareSemverVersions } from "@t2code/shared/semver";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";

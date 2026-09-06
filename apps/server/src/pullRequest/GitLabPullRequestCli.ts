@@ -18,7 +18,7 @@ import type {
   PullRequestReviewThread,
   PullRequestReviewVerdict,
   PullRequestReviewerCandidateList,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as GitLabCli from "../sourceControl/GitLabCli.ts";
 import {

@@ -1,14 +1,14 @@
 // @effect-diagnostics nodeBuiltinImport:off - plain local servers stand in for LAN services.
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
-import { ThreadId } from "@t3tools/contracts";
-import { HostProcessEnvironment } from "@t3tools/shared/hostProcess";
+import { ThreadId } from "@t2code/contracts";
+import { HostProcessEnvironment } from "@t2code/shared/hostProcess";
 import {
   HTML_RENDER_MEASURE_FONTS,
   HTML_RENDER_MEASURE_WIDTHS,
   htmlRenderTheme,
-} from "@t3tools/shared/htmlRender";
-import { T3_CODE_DARK_THEME_COLORS } from "@t3tools/shared/themePalettes";
+} from "@t2code/shared/htmlRender";
+import { T3_CODE_DARK_THEME_COLORS } from "@t2code/shared/themePalettes";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Base64 from "effect/encoding/Base64";

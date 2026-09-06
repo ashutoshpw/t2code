@@ -1,8 +1,8 @@
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import { NonNegativeInt, TextGenerationError, type OpenCodeSettings } from "@t3tools/contracts";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
+import { NonNegativeInt, TextGenerationError, type OpenCodeSettings } from "@t2code/contracts";
+import { getModelSelectionStringOptionValue } from "@t2code/shared/model";
 
 import * as ServerConfig from "../config.ts";
 import { resolveAttachmentPath } from "../attachmentStore.ts";

@@ -1,12 +1,12 @@
 import { useAtomValue } from "@effect/atom-react";
-import { resolveFilesystemReadAccess } from "@t3tools/client-runtime/state/filesystem";
+import { resolveFilesystemReadAccess } from "@t2code/client-runtime/state/filesystem";
 import {
   assetUrlStateFromResult,
   createAssetEnvironmentAtoms,
   createProjectFaviconUrlAtomFamily,
   EMPTY_ASSET_URL_ATOM,
-} from "@t3tools/client-runtime/state/assets";
-import type { AssetResource, EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/assets";
+import type { AssetResource, EnvironmentId } from "@t2code/contracts";
 import { useCallback } from "react";
 
 import { connectionAtomRuntime } from "../connection/runtime";

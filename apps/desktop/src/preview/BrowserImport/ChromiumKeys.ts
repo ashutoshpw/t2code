@@ -19,7 +19,7 @@
  */
 import * as NodeCrypto from "node:crypto";
 
-import { HostProcessEnvironment } from "@t3tools/shared/hostProcess";
+import { HostProcessEnvironment } from "@t2code/shared/hostProcess";
 
 import * as Effect from "effect/Effect";
 import * as Base64 from "effect/encoding/Base64";

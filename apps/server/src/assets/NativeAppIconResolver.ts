@@ -1,4 +1,4 @@
-import type { ToolActivityNativeAppReference } from "@t3tools/contracts";
+import type { ToolActivityNativeAppReference } from "@t2code/contracts";
 import * as Cache from "effect/Cache";
 import * as Cause from "effect/Cause";
 import * as Crypto from "effect/Crypto";
@@ -15,7 +15,7 @@ import * as PlatformError from "effect/PlatformError";
 import * as Semaphore from "effect/Semaphore";
 import * as Hex from "effect/encoding/Hex";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 
 import * as ServerConfig from "../config.ts";
 

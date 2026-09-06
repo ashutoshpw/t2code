@@ -7,7 +7,7 @@ import * as PlatformError from "effect/PlatformError";
 import * as TestClock from "effect/testing/TestClock";
 import * as Tracer from "effect/Tracer";
 import { ChildProcessSpawner } from "effect/process";
-import { VcsProcessSpawnError, VcsProcessTimeoutError } from "@t3tools/contracts";
+import { VcsProcessSpawnError, VcsProcessTimeoutError } from "@t2code/contracts";
 import { HttpClient, HttpClientResponse, type HttpClientRequest } from "effect/http";
 
 import * as GitHubApi from "./GitHubApi.ts";

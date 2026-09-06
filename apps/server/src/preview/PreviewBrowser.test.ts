@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
-import { HostProcessArchitecture, HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { HostProcessArchitecture, HostProcessPlatform } from "@t2code/shared/hostProcess";
 import * as Deferred from "effect/Deferred";
 import * as Crypto from "effect/Crypto";
 import type * as Duration from "effect/Duration";

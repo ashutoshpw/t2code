@@ -1,9 +1,9 @@
-import type { ProjectId, ScopedThreadRef, ThreadPullRequestLink } from "@t3tools/contracts";
-import { detectSourceControlProviderFromRemoteUrl } from "@t3tools/shared/sourceControl";
+import type { ProjectId, ScopedThreadRef, ThreadPullRequestLink } from "@t2code/contracts";
+import { detectSourceControlProviderFromRemoteUrl } from "@t2code/shared/sourceControl";
 import {
   resolveThreadPullRequestChains,
   visibleThreadPullRequests,
-} from "@t3tools/shared/threadPullRequests";
+} from "@t2code/shared/threadPullRequests";
 import {
   ArrowUpRightIcon,
   EyeIcon,

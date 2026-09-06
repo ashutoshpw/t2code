@@ -1,5 +1,5 @@
-import { runRanAfter } from "@t3tools/shared/orchestrationV2ThreadError";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+import { runRanAfter } from "@t2code/shared/orchestrationV2ThreadError";
+import { resolveProjectSettings } from "@t2code/shared/projectSettings";
 import {
   CommandId,
   type OrchestrationV2DomainEvent,
@@ -8,7 +8,7 @@ import {
   type OrchestrationV2Subagent,
   type OrchestrationV2ThreadProjection,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";

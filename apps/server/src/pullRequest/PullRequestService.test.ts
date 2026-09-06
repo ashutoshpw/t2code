@@ -18,11 +18,11 @@ import type {
   PullRequestReviewCapabilities,
   PullRequestReviewerCapabilities,
   SourceControlProviderKind,
-} from "@t3tools/contracts";
-import { DEFAULT_SERVER_SETTINGS } from "@t3tools/contracts/settings";
-import type { ServerSettings } from "@t3tools/contracts";
+} from "@t2code/contracts";
+import { DEFAULT_SERVER_SETTINGS } from "@t2code/contracts/settings";
+import type { ServerSettings } from "@t2code/contracts";
 import * as ServerSettingsService from "../serverSettings.ts";
-import { PullRequestOperationError } from "@t3tools/contracts";
+import { PullRequestOperationError } from "@t2code/contracts";
 
 import * as ProjectService from "../project/ProjectService.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";

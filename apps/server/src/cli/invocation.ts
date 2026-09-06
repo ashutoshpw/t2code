@@ -4,15 +4,15 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 
-import type { ServerInstallation } from "@t3tools/contracts";
+import type { ServerInstallation } from "@t2code/contracts";
 import {
   HostProcessArguments,
   HostProcessEnvironment,
   HostProcessExecutablePath,
   HostProcessIsExecutable,
   HostProcessPlatform,
-} from "@t3tools/shared/hostProcess";
-import { isCommandAvailable } from "@t3tools/shared/shell";
+} from "@t2code/shared/hostProcess";
+import { isCommandAvailable } from "@t2code/shared/shell";
 
 import packageJson from "../../package.json" with { type: "json" };
 

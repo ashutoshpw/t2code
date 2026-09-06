@@ -1,7 +1,7 @@
 import {
   ORCHESTRATION_CACHE_SCHEMA_VERSION,
   StoredOrchestrationShellSnapshot,
-} from "@t3tools/client-runtime/platform";
+} from "@t2code/client-runtime/platform";
 import {
   CommandId,
   EnvironmentId,
@@ -12,7 +12,7 @@ import {
   type OrchestrationV2ThreadDetailSnapshot,
   type ThreadPullRequestLink,
   type VcsListRefsResult,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";

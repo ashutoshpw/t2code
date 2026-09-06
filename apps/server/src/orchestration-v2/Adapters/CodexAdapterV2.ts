@@ -28,12 +28,12 @@ import {
   OrchestrationV2ProviderGoal,
   ProviderDriverKind,
   type ProviderSetupError,
-} from "@t3tools/contracts";
-import { SKILL_MENTION_PATTERN } from "@t3tools/shared/composerInlineTokens";
-import { HostProcessEnvironment } from "@t3tools/shared/hostProcess";
-import { dynamicToolTitle } from "@t3tools/shared/toolActivity";
-import { getModelSelectionStringOptionValue, modelSelectionsEqual } from "@t3tools/shared/model";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+} from "@t2code/contracts";
+import { SKILL_MENTION_PATTERN } from "@t2code/shared/composerInlineTokens";
+import { HostProcessEnvironment } from "@t2code/shared/hostProcess";
+import { dynamicToolTitle } from "@t2code/shared/toolActivity";
+import { getModelSelectionStringOptionValue, modelSelectionsEqual } from "@t2code/shared/model";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
 import type {
   ChatAttachment,
   OrchestrationV2AppThread,
@@ -61,7 +61,7 @@ import type {
   RuntimeMode,
   RuntimeRequestId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as CodexClient from "effect-codex-app-server/client";
 import * as CodexErrors from "effect-codex-app-server/errors";
 import * as CodexSchema from "effect-codex-app-server/schema";
@@ -114,7 +114,7 @@ import {
   MCP_APP_MIME_TYPE,
   MCP_APP_OUTPUT_KEY,
   MCP_APP_RESOURCE_SCHEME,
-} from "@t3tools/shared/mcpApp";
+} from "@t2code/shared/mcpApp";
 import { snapshotMcpApp } from "../../mcpApps/McpAppSnapshot.ts";
 import {
   ProviderAdapterDriverCreateError,

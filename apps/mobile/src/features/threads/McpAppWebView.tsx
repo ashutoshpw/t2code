@@ -1,4 +1,4 @@
-import type { EnvironmentId, ThreadId, TurnItemId } from "@t3tools/contracts";
+import type { EnvironmentId, ThreadId, TurnItemId } from "@t2code/contracts";
 import {
   makeMcpAppHost,
   McpAppHostRefusal,
@@ -7,16 +7,16 @@ import {
   type McpAppCallToolResult,
   type McpAppHost,
   type McpAppHostContext,
-} from "@t3tools/client-runtime/mcp-apps";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import { CommandId, MessageId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/mcp-apps";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import { CommandId, MessageId } from "@t2code/contracts";
 import {
   mcpAppAllowAttribute,
   mcpAppFileName,
   mcpAppReferencesEqual,
   type McpAppReference,
-} from "@t3tools/shared/mcpApp";
+} from "@t2code/shared/mcpApp";
 import * as Predicate from "effect/Predicate";
 import Constants from "expo-constants";
 import { useNavigation } from "@react-navigation/native";

@@ -4,7 +4,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import * as Redacted from "effect/Redacted";
-import type { PullRequestCheck } from "@t3tools/contracts";
+import type { PullRequestCheck } from "@t2code/contracts";
 
 import * as GitHubApi from "../sourceControl/GitHubApi.ts";
 import { KnownWorkflowRuns, makeChecksRevalidator } from "./gitHubConditionalChecks.ts";

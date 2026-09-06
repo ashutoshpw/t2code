@@ -9,7 +9,7 @@ import {
   WS_METHODS,
   type PullRequestStack,
   type AuthSessionState,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { expect, it } from "@effect/vitest";
 import * as Data from "effect/Data";
 import * as Deferred from "effect/Deferred";

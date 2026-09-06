@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { ThreadId, TurnItemId, type OrchestrationV2TurnItem } from "@t3tools/contracts";
+import { ThreadId, TurnItemId, type OrchestrationV2TurnItem } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
-import { T3_MCP_TOOL_NAMES } from "@t3tools/shared/t3McpToolPresentation";
+import { T3_MCP_TOOL_NAMES } from "@t2code/shared/t3McpToolPresentation";
 
 import {
   commandDetailRepeatsCommand,
@@ -280,13 +280,13 @@ describe("resolveWorkEntryToolPresentation", () => {
         toolData: { server: "t3-code", tool },
         toolLifecycleStatus: "completed",
         itemType: "dynamic_tool",
-        toolSource: { key: "t3-code", name: "T3 Code", kind: "integration" },
+        toolSource: { key: "t3-code", name: "T2 Code", kind: "integration" },
       };
       const presentation = resolveWorkEntryToolPresentation(entry);
       expect(presentation, tool).not.toBeNull();
       expect(presentation?.displayName, tool).not.toContain(tool);
       const summary = summarizeToolGroup([entry]);
-      expect(summary.summary, tool).not.toMatch(/Used (?:1 tool|T3 Code integration)/);
+      expect(summary.summary, tool).not.toMatch(/Used (?:1 tool|T2 Code integration)/);
       expect(summary.hasFailure, tool).toBe(false);
       const failed = { ...entry, toolLifecycleStatus: "failed" as const };
       expect(resolveWorkEntryToolPresentation(failed)?.displayName, tool).toMatch(/^Failed to /);
@@ -883,7 +883,7 @@ describe("pull request tool presentation", () => {
       tone: "tool",
       itemType: "dynamic_tool",
       toolLifecycleStatus: "completed",
-      toolSource: { key: "t3-code", name: "T3 Code", kind: "integration" },
+      toolSource: { key: "t3-code", name: "T2 Code", kind: "integration" },
     };
     const list: WorkLogPresentationEntry = {
       ...link,

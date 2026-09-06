@@ -1,12 +1,12 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
-import { AcpRegistrySettings, ProviderDriverKind, ProviderInstanceId } from "@t3tools/contracts";
+import { AcpRegistrySettings, ProviderDriverKind, ProviderInstanceId } from "@t2code/contracts";
 import {
   HostProcessArchitecture,
   HostProcessEnvironment,
   HostProcessPlatform,
-} from "@t3tools/shared/hostProcess";
-import { SpawnExecutableResolution } from "@t3tools/shared/shell";
+} from "@t2code/shared/hostProcess";
+import { SpawnExecutableResolution } from "@t2code/shared/shell";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";

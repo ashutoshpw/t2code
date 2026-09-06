@@ -1,4 +1,4 @@
-import { presentThreadShell } from "@t3tools/client-runtime/state/models";
+import { presentThreadShell } from "@t2code/client-runtime/state/models";
 import * as DateTime from "effect/DateTime";
 import { deriveActiveWorkStartedAt } from "../session-logic.ts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -60,9 +60,9 @@ import {
   type SidebarSection,
   resolveSidebarDropVerb,
 } from "./Sidebar.logic";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import { sortSettledThreads } from "@t3tools/client-runtime/state/thread-sort";
-import { EnvironmentId, ProjectId, ProviderInstanceId, RunId, ThreadId } from "@t3tools/contracts";
+import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
+import { sortSettledThreads } from "@t2code/client-runtime/state/thread-sort";
+import { EnvironmentId, ProjectId, ProviderInstanceId, RunId, ThreadId } from "@t2code/contracts";
 
 import {
   DEFAULT_INTERACTION_MODE,
@@ -79,16 +79,16 @@ describe("resolveSidebarRowAccessibility", () => {
     {
       title: "Can you audit the UI?",
       statusLabel: "Working",
-      projectDisplayName: "T3 Code",
+      projectDisplayName: "T2 Code",
       isActive: true,
-      expected: { label: "Can you audit the UI?, Working, T3 Code", current: "page" },
+      expected: { label: "Can you audit the UI?, Working, T2 Code", current: "page" },
     },
     {
       title: "The audit is done",
       statusLabel: null,
-      projectDisplayName: "T3 Code",
+      projectDisplayName: "T2 Code",
       isActive: false,
-      expected: { label: "The audit is done, T3 Code", current: undefined },
+      expected: { label: "The audit is done, T2 Code", current: undefined },
     },
     {
       title: "Untitled task",

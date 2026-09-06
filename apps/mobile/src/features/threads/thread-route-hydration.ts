@@ -1,6 +1,6 @@
-import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
-import type { EnvironmentShellStatus } from "@t3tools/client-runtime/state/shell";
-import type { EnvironmentThreadStatus } from "@t3tools/client-runtime/state/threads";
+import type { EnvironmentConnectionPhase } from "@t2code/client-runtime/connection";
+import type { EnvironmentShellStatus } from "@t2code/client-runtime/state/shell";
+import type { EnvironmentThreadStatus } from "@t2code/client-runtime/state/threads";
 
 /**
  * Reports whether the route-local projections can still yield the requested

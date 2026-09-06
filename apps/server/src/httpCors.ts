@@ -1,4 +1,4 @@
-import { ORCHESTRATION_PROTOCOL_HEADER } from "@t3tools/contracts";
+import { ORCHESTRATION_PROTOCOL_HEADER } from "@t2code/contracts";
 
 export const browserApiCorsAllowedMethods = ["GET", "POST", "OPTIONS"] as const;
 export const browserApiCorsAllowedHeaders = [

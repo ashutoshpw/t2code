@@ -3,8 +3,8 @@ import type {
   ProjectId,
   ThreadId,
   ThreadPullRequestKey,
-} from "@t3tools/contracts";
-import { normalizeThreadPullRequestKey } from "@t3tools/shared/threadPullRequests";
+} from "@t2code/contracts";
+import { normalizeThreadPullRequestKey } from "@t2code/shared/threadPullRequests";
 
 type LinkingCapabilities = Pick<
   ExecutionEnvironmentCapabilities,

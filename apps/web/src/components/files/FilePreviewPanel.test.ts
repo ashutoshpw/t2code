@@ -1,4 +1,4 @@
-import { ProjectReadFileError } from "@t3tools/contracts";
+import { ProjectReadFileError } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import { describe, expect, it } from "vite-plus/test";
 

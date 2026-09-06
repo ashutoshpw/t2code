@@ -9,9 +9,9 @@ import {
 import * as Haptics from "expo-haptics";
 import { KeyboardAwareLegendList } from "@legendapp/list/keyboard";
 import { useViewabilityAmount, type LegendListRef } from "@legendapp/list/react-native";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { resolveUserMessagePresentation } from "@t3tools/client-runtime/user-message";
-import { canForkProjectedAssistantItem } from "@t3tools/client-runtime/state/thread-workflows";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { resolveUserMessagePresentation } from "@t2code/client-runtime/user-message";
+import { canForkProjectedAssistantItem } from "@t2code/client-runtime/state/thread-workflows";
 import {
   type OrchestrationMessageContext,
   ThreadId,
@@ -22,38 +22,38 @@ import {
   type MessageId,
   type OrchestrationV2ProjectedTurnItem,
   type RunId,
-} from "@t3tools/contracts";
-import { renderAssistantCitationsAsText } from "@t3tools/shared/assistantCitations";
-import { encodeComposerContextFragment } from "@t3tools/shared/composerContextClipboard";
-import { parseThreadLinkHref } from "@t3tools/shared/threadLinks";
+} from "@t2code/contracts";
+import { renderAssistantCitationsAsText } from "@t2code/shared/assistantCitations";
+import { encodeComposerContextFragment } from "@t2code/shared/composerContextClipboard";
+import { parseThreadLinkHref } from "@t2code/shared/threadLinks";
 import {
   parseComposerContextHref,
   collectComposerContextReferences,
   replaceComposerContextReferences,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 import { ComposerContextSheet } from "../../components/ComposerContextSheet";
 import { writeComposerContextClipboard } from "../../lib/composerContextClipboard";
 import {
   codexArtifactTemplatePresentationLabel,
   type CodexArtifactTemplate,
-} from "@t3tools/shared/codexArtifactTemplates";
-import { resolveAssetUrl } from "@t3tools/client-runtime/state/assets";
-import { isMarkdownFileLinkLabel } from "@t3tools/shared/markdownLinks";
+} from "@t2code/shared/codexArtifactTemplates";
+import { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
+import { isMarkdownFileLinkLabel } from "@t2code/shared/markdownLinks";
 import { getTextContent, type MarkdownNode } from "react-native-nitro-markdown/headless";
-import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { formatAttachmentSize } from "@t2code/client-runtime/state/attachments";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import {
   classifyMarkdownImageSource,
   markdownImageSourceFragment,
-} from "@t3tools/client-runtime/markdown-images";
-import { resolveViewedImageAsset } from "@t3tools/client-runtime/work-log/presentation";
+} from "@t2code/client-runtime/markdown-images";
+import { resolveViewedImageAsset } from "@t2code/client-runtime/work-log/presentation";
 import {
   renderCodexFileCitationsAsMarkdown,
   splitCodexArtifactTemplateMarkdown,
-} from "@t3tools/shared/codexMarkdownDirectives";
-import { CHAT_LIST_ANCHOR_OFFSET, resolveChatListAnchoredEndSpace } from "@t3tools/shared/chatList";
-import { imageMimeType } from "@t3tools/shared/image";
-import { videoMimeType } from "@t3tools/shared/video";
+} from "@t2code/shared/codexMarkdownDirectives";
+import { CHAT_LIST_ANCHOR_OFFSET, resolveChatListAnchoredEndSpace } from "@t2code/shared/chatList";
+import { imageMimeType } from "@t2code/shared/image";
+import { videoMimeType } from "@t2code/shared/video";
 import { SymbolView, type AppSymbolName } from "../../components/AppSymbol";
 import { HeaderHeightContext } from "@react-navigation/elements";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -107,7 +107,7 @@ import { copyTextWithHaptic } from "../../lib/copyTextWithHaptic";
 import { tryOpenExternalUrl } from "../../lib/openExternalUrl";
 import { downloadAndShareAttachment } from "../../lib/attachmentDownload";
 import { hasWideMarkdownBlock } from "../../lib/wideMarkdownBlocks";
-import { faviconUrlForOrigin } from "@t3tools/shared/favicon";
+import { faviconUrlForOrigin } from "@t2code/shared/favicon";
 import {
   hasNativeSelectableMarkdownText,
   SelectableMarkdownText,
@@ -149,15 +149,15 @@ import {
   resolveNativeMarkdownTypography,
 } from "../../lib/appearancePreferences";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
-import { markdownFileIconSource } from "@t3tools/mobile-markdown-text/file-icons";
+import { markdownFileIconSource } from "@t2code/mobile-markdown-text/file-icons";
 import { PierreEntryIcon } from "../../components/PierreEntryIcon";
-import { markdownLinkIconSource } from "@t3tools/mobile-markdown-text/link-icons";
+import { markdownLinkIconSource } from "@t2code/mobile-markdown-text/link-icons";
 import {
   normalizeNativeMarkdownUrl,
   resolveMarkdownInlineCodePresentation,
   resolveMarkdownLinkIcon,
   resolveMarkdownLinkPresentation,
-} from "@t3tools/mobile-markdown-text/links";
+} from "@t2code/mobile-markdown-text/links";
 import {
   failedFeedRunIds,
   deriveThreadFeedPresentation,
@@ -186,7 +186,7 @@ import {
 import { appendPendingThreadMessages, type PendingThreadFeedEntry } from "./pending-thread-feed";
 import type { QueuedThreadMessage } from "../../state/thread-outbox-model";
 import { resolveThreadFeedFixedItemSize } from "./thread-feed-item-size";
-import { htmlRenderFrameHeight } from "@t3tools/shared/htmlRender";
+import { htmlRenderFrameHeight } from "@t2code/shared/htmlRender";
 import { htmlRenderRowHeight, ThreadHtmlRender } from "./HtmlRenderWebView";
 import { mcpAppRowHeight, ThreadMcpApp } from "./McpAppWebView";
 import { useMarkdownCodeHighlight } from "./markdownCodeHighlightState";

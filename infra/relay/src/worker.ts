@@ -18,7 +18,7 @@ import * as HttpRouter from "effect/http/HttpRouter";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import * as HttpApiScalar from "effect/http-api/HttpApiScalar";
 
-import { RelayApi } from "@t3tools/contracts/relay";
+import { RelayApi } from "@t2code/contracts/relay";
 
 import {
   RELAY_HTTP_ROUTER_CONFIG,

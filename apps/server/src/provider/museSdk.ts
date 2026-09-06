@@ -6,7 +6,7 @@ import {
   type ProcessExit,
   type SpawnedMspConnection,
 } from "@muse-code/sdk";
-import type { RuntimeMode } from "@t3tools/contracts";
+import type { RuntimeMode } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 
 export interface MuseSdkHost {

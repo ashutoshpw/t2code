@@ -8,10 +8,10 @@ import * as Path from "effect/Path";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
-import { createModelSelection } from "@t3tools/shared/model";
+import { createModelSelection } from "@t2code/shared/model";
 import { expect } from "vite-plus/test";
 
-import { CodexSettings, ProviderInstanceId, TextGenerationError } from "@t3tools/contracts";
+import { CodexSettings, ProviderInstanceId, TextGenerationError } from "@t2code/contracts";
 
 import * as ServerConfig from "../config.ts";
 import * as TextGeneration from "./TextGeneration.ts";
@@ -288,7 +288,7 @@ it.layer(layerCodexTextGenerationTest)("CodexTextGeneration", (it) => {
     ),
   );
 
-  it.effect("uses T3CODE_CODEX_LAUNCH_ARGS for codex exec over settings", () =>
+  it.effect("uses T2CODE_CODEX_LAUNCH_ARGS for codex exec over settings", () =>
     withFakeCodexEnv(
       {
         output: JSON.stringify({
@@ -296,7 +296,7 @@ it.layer(layerCodexTextGenerationTest)("CodexTextGeneration", (it) => {
           body: "",
         }),
         launchArgs: "--enable settings-feature",
-        environment: { ...process.env, T3CODE_CODEX_LAUNCH_ARGS: " --strict-config --listen off " },
+        environment: { ...process.env, T2CODE_CODEX_LAUNCH_ARGS: " --strict-config --listen off " },
         requireArg: "--strict-config",
         forbidArg: "settings-feature",
       },

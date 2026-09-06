@@ -11,17 +11,17 @@ import {
   type AcpRegistryDistribution as AcpRegistryDistributionKind,
   type AcpRegistryDistributionPreference,
   type AcpRegistrySettings,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   HostProcessArchitecture,
   HostProcessEnvironment,
   HostProcessPlatform,
-} from "@t3tools/shared/hostProcess";
+} from "@t2code/shared/hostProcess";
 import {
   mergePathEntries,
   resolveSpawnCommand,
   SpawnExecutableResolution,
-} from "@t3tools/shared/shell";
+} from "@t2code/shared/shell";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";

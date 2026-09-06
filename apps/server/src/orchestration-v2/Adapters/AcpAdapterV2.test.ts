@@ -26,9 +26,9 @@ import {
   RunId,
   ThreadId,
   type OrchestrationV2ProviderThread,
-} from "@t3tools/contracts";
-import { HostProcessIsExecutable, HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+} from "@t2code/contracts";
+import { HostProcessIsExecutable, HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { resolveSelfInvocation } from "@t2code/shared/nodeRuntime";
 import * as DateTime from "effect/DateTime";
 import * as Crypto from "effect/Crypto";
 import * as Deferred from "effect/Deferred";

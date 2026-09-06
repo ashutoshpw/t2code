@@ -26,8 +26,8 @@ import * as EffectAcpClient from "effect-acp/client";
 import * as EffectAcpErrors from "effect-acp/errors";
 import type * as EffectAcpSchema from "effect-acp/compat";
 import type * as EffectAcpProtocol from "effect-acp/protocol";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 
 import { signalProcessGroup } from "../../process/processGroup.ts";
 import { appendAcpStderrTail, sanitizeAcpStderrExcerpt } from "./AcpStderr.ts";

@@ -1,4 +1,4 @@
-import { remapComposerContextAttachments } from "@t3tools/shared/composerContextReferences";
+import { remapComposerContextAttachments } from "@t2code/shared/composerContextReferences";
 import {
   type ThreadLinkedPullRequest,
   CommandId,
@@ -25,10 +25,10 @@ import {
   type ThreadId,
   type ThreadEnvMode,
   type UploadChatAttachment,
-} from "@t3tools/contracts";
-import { modelSelectionCommandType } from "@t3tools/shared/model";
-import { derivePendingBackgroundWork } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
-import { visibleThreadPullRequests } from "@t3tools/shared/threadPullRequests";
+} from "@t2code/contracts";
+import { modelSelectionCommandType } from "@t2code/shared/model";
+import { derivePendingBackgroundWork } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
+import { visibleThreadPullRequests } from "@t2code/shared/threadPullRequests";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 
@@ -122,7 +122,7 @@ export interface VisitThreadInput extends ThreadCommandInput {
 export type MarkThreadUnreadInput = ThreadCommandInput;
 
 export interface UpdateThreadMetadataInput extends ThreadCommandInput {
-  readonly limitRecovery?: import("@t3tools/contracts").OrchestrationV2LimitRecoveryUpdate | null;
+  readonly limitRecovery?: import("@t2code/contracts").OrchestrationV2LimitRecoveryUpdate | null;
   readonly title?: string;
   readonly modelSelection?: ModelSelection;
   readonly branch?: string | null;
@@ -170,7 +170,7 @@ export interface StartThreadTurnInput extends ThreadCommandInput {
     readonly role: "user";
     readonly text: string;
     readonly attachments: ReadonlyArray<ChatAttachment | UploadChatAttachment>;
-    readonly context?: import("@t3tools/contracts").OrchestrationMessageContext;
+    readonly context?: import("@t2code/contracts").OrchestrationMessageContext;
   };
   readonly modelSelection?: ModelSelection;
   readonly titleSeed?: string;
@@ -195,7 +195,7 @@ export interface RespondToThreadApprovalInput extends ThreadCommandInput {
 export interface RespondToThreadUserInputInput extends ThreadCommandInput {
   readonly requestId: RuntimeRequestId;
   readonly answers: ProviderUserInputAnswers;
-  readonly attachmentsByQuestionId?: import("@t3tools/contracts").UserInputAttachments;
+  readonly attachmentsByQuestionId?: import("@t2code/contracts").UserInputAttachments;
 }
 
 export interface DismissThreadUserInputInput extends ThreadCommandInput {
@@ -254,7 +254,7 @@ export interface EditQueuedRunInput extends ThreadCommandInput {
   readonly edit?: {
     readonly messageId: MessageId;
     readonly attachments: ReadonlyArray<ChatAttachment | UploadChatAttachment>;
-    readonly context?: import("@t3tools/contracts").OrchestrationMessageContext;
+    readonly context?: import("@t2code/contracts").OrchestrationMessageContext;
   };
 }
 

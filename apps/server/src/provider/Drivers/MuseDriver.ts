@@ -1,5 +1,5 @@
-import { MuseSettings, ProviderDriverKind } from "@t3tools/contracts";
-import { HostProcessEnvironment } from "@t3tools/shared/hostProcess";
+import { MuseSettings, ProviderDriverKind } from "@t2code/contracts";
+import { HostProcessEnvironment } from "@t2code/shared/hostProcess";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";

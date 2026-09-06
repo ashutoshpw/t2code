@@ -2,7 +2,7 @@ import { RegistryContext } from "@effect/atom-react";
 import type {
   DeleteProjectInput,
   UpdateProjectInput,
-} from "@t3tools/client-runtime/state/projects";
+} from "@t2code/client-runtime/state/projects";
 import {
   AuthOrchestrationOperateScope,
   AuthSettingsWriteScope,
@@ -15,9 +15,9 @@ import {
   type AuthSessionState,
   type ResolvedKeybindingsConfig,
   type ServerProvider,
-} from "@t3tools/contracts";
-import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
-import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t3tools/shared/keybindings";
+} from "@t2code/contracts";
+import { DEFAULT_CLIENT_SETTINGS } from "@t2code/contracts/settings";
+import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t2code/shared/keybindings";
 import * as Cause from "effect/Cause";
 import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
 import { cloneElement, type ReactElement, type ReactNode } from "react";
@@ -59,7 +59,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("~/connection/runtime", () => ({ connectionAtomRuntime: undefined }));
-vi.mock("@t3tools/client-runtime/state/session", () => ({
+vi.mock("@t2code/client-runtime/state/session", () => ({
   createEnvironmentSessionAtoms: () => ({
     sessionStateAtom: (id: EnvironmentId) => state.sessions.get(id)!,
   }),

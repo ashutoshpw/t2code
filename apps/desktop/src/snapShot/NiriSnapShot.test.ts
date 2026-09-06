@@ -109,11 +109,11 @@ afterEach(async () => {
 });
 
 it("selects the native adapter without needing a portal or GNOME extension", async () => {
-  expect(await getLinuxCaptureSupport("com.t3tools.T3Code")).toEqual({
+  expect(await getLinuxCaptureSupport("t2code")).toEqual({
     linuxBackend: "niri",
     linuxFeedbackAvailable: false,
   });
-  const snapshot = await captureLinuxWindow("com.t3tools.T3Code");
+  const snapshot = await captureLinuxWindow("t2code");
   expect(snapshot?.png).toEqual(png);
   expect(snapshot?.window).toMatchObject({
     processId: 123,
@@ -197,7 +197,7 @@ it("rejects compositor errors and cleans up its temporary image", async () => {
       send(socket, { Err: "window disappeared" });
     } else await original(request, socket);
   };
-  await expect(captureLinuxWindow("com.t3tools.T3Code")).rejects.toThrow("window disappeared");
+  await expect(captureLinuxWindow("t2code")).rejects.toThrow("window disappeared");
   expect(await NodeFSP.stat(NodePath.dirname(capturePath!)).catch(() => undefined)).toBeUndefined();
 });
 

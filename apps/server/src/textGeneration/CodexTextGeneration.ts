@@ -12,8 +12,8 @@ import {
   DEFAULT_TEXT_GENERATION_REASONING_EFFORT,
   type ServerProviderModel,
   TextGenerationError,
-} from "@t3tools/contracts";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+} from "@t2code/contracts";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
 
 import { resolveAttachmentPath } from "../attachmentStore.ts";
 import * as ServerConfig from "../config.ts";
@@ -21,7 +21,7 @@ import { expandHomePath } from "../pathExpansion.ts";
 import { codexExecLaunchArgs, resolveCodexLaunchArgs } from "../provider/codexLaunchArgs.ts";
 import * as TextGenerationOperations from "./TextGenerationOperations.ts";
 import { normalizeCliError, toJsonSchemaObject } from "./TextGenerationUtils.ts";
-import { codexModelFamily, getModelSelectionStringOptionValue } from "@t3tools/shared/model";
+import { codexModelFamily, getModelSelectionStringOptionValue } from "@t2code/shared/model";
 import { getCodexServiceTierOptionValue } from "../codexModelOptions.ts";
 
 const CODEX_TIMEOUT_MS = 180_000;
@@ -36,7 +36,7 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
   getModels: Effect.Effect<ReadonlyArray<ServerProviderModel>> = Effect.succeed([]),
   resolveRuntime?: Effect.Effect<
     import("../provider/CodexManagedRuntime.ts").CodexEffectiveRuntime,
-    import("@t3tools/contracts").ProviderSetupError,
+    import("@t2code/contracts").ProviderSetupError,
     Scope.Scope
   >,
 ) {

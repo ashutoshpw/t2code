@@ -1,21 +1,20 @@
 import type {
   EnvironmentProject,
   EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
+} from "@t2code/client-runtime/state/shell";
 import { LegendList } from "@legendapp/list/react-native";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
   type EnvironmentMachineKind,
   resolveEnvironmentMachineKind,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useNavigation } from "@react-navigation/native";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { SymbolView } from "../../components/AppSymbol";
 import { useCallback, useMemo, useRef, type ComponentProps } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   RefreshControl,
   useWindowDimensions,
@@ -66,6 +65,9 @@ function ArchivedThreadsHeader(props: {
         compactPlaceholder: "Search",
         mode: "inline",
         compactToolbar: width < 700,
+        onRefresh: props.onRefresh,
+        refreshInToolbar: true,
+        refreshAccessibilityLabel: "Refresh archived threads",
       }}
       menus={[
         {
@@ -110,15 +112,6 @@ function ArchivedThreadsHeader(props: {
                 },
               ],
             },
-            ...(Platform.OS === "android"
-              ? [
-                  {
-                    id: "refresh",
-                    title: "Refresh archived threads",
-                    onPress: props.onRefresh,
-                  },
-                ]
-              : []),
           ],
         },
       ]}

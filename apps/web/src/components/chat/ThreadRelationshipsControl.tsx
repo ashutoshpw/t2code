@@ -4,12 +4,12 @@ import { ThreadDetailsSection } from "./ThreadDetailsSection";
 import { CollapsibleSectionHeader, SectionHeaderStatus } from "../ui/collapsible-section-header";
 import { SubagentTooltipContent } from "./SubagentTooltipContent";
 import { PullRequestGlyph } from "../pullRequest/pullRequestIcons";
-import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopedThreadKey, scopeThreadRef } from "@t2code/client-runtime/environment";
 import {
   projectedSubagentsToRuntime,
   type RuntimeSubagent,
-} from "@t3tools/client-runtime/state/subagentRuntime";
-import { formatSubagentDisplayTitle } from "@t3tools/client-runtime/state/subagent-display";
+} from "@t2code/client-runtime/state/subagentRuntime";
+import { formatSubagentDisplayTitle } from "@t2code/client-runtime/state/subagent-display";
 import {
   deriveThreadRelationshipGraph,
   immediateThreadRelationships,
@@ -19,13 +19,13 @@ import {
   resolveMergeBackTargetThreadId,
   type ThreadRelationshipEdge,
   type ThreadRelationshipWalkRow,
-} from "@t3tools/client-runtime/state/thread-relationships";
+} from "@t2code/client-runtime/state/thread-relationships";
 import {
   canDetachThreadProviderSession,
   resolveLatestMergeBackRun,
-} from "@t3tools/client-runtime/state/thread-workflows";
-import type { EnvironmentId, OrchestrationV2ThreadShell, ThreadId } from "@t3tools/contracts";
-import { deriveSubagentElapsedMs } from "@t3tools/shared/orchestrationTiming";
+} from "@t2code/client-runtime/state/thread-workflows";
+import type { EnvironmentId, OrchestrationV2ThreadShell, ThreadId } from "@t2code/contracts";
+import { deriveSubagentElapsedMs } from "@t2code/shared/orchestrationTiming";
 import { groupBy } from "effect/Array";
 import * as DateTime from "effect/DateTime";
 import { useNavigate } from "@tanstack/react-router";

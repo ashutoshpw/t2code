@@ -1,5 +1,5 @@
-import type { ConnectionCatalogEntry } from "@t3tools/client-runtime/connection";
-import type { ServerConfig } from "@t3tools/contracts";
+import type { ConnectionCatalogEntry } from "@t2code/client-runtime/connection";
+import type { ServerConfig } from "@t2code/contracts";
 import { useMemo } from "react";
 
 import { useEnvironments, usePrimaryEnvironmentId } from "~/state/environments";

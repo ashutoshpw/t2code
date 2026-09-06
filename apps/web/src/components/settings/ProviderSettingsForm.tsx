@@ -8,7 +8,7 @@ import type {
   ProviderSettingsFormControl,
   ProviderSettingsFormOption,
   ProviderSettingsFormSchemaAnnotation,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { PlusIcon, XIcon } from "lucide-react";
 
 import { cn } from "../../lib/utils";

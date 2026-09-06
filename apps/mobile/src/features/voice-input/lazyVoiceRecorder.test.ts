@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { VoiceInputController } from "@t3tools/client-runtime/voice-input";
+import { VoiceInputController } from "@t2code/client-runtime/voice-input";
 
 import { createLazyVoiceRecorder } from "./lazyVoiceRecorder";
 

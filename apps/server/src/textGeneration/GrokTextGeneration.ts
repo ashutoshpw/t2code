@@ -6,8 +6,8 @@ import * as Schema from "effect/Schema";
 import { ChildProcessSpawner } from "effect/process";
 import type * as EffectAcpErrors from "effect-acp/errors";
 
-import { type GrokSettings, TextGenerationError } from "@t3tools/contracts";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
+import { type GrokSettings, TextGenerationError } from "@t2code/contracts";
+import { getModelSelectionStringOptionValue } from "@t2code/shared/model";
 
 import * as TextGenerationOperations from "./TextGenerationOperations.ts";
 import {

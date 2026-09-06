@@ -3,7 +3,7 @@ import type {
   OrchestrationV2ProviderThread,
   OrchestrationV2TurnItem,
   ThreadTokenUsageSnapshot,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 
 function asFiniteNumber(value: unknown): number | null {

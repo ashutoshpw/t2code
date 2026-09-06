@@ -1,7 +1,7 @@
-import * as HttpObservability from "@t3tools/shared/httpObservability";
-import { makeLocalFileTracer, makeTraceSink } from "@t3tools/shared/observability";
-import * as SharedObservability from "@t3tools/shared/observability";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
+import * as HttpObservability from "@t2code/shared/httpObservability";
+import { makeLocalFileTracer, makeTraceSink } from "@t2code/shared/observability";
+import * as SharedObservability from "@t2code/shared/observability";
+import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as References from "effect/References";

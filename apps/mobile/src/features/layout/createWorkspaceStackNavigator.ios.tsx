@@ -22,7 +22,7 @@ import {
 import { use, useCallback, useEffect, useMemo, useRef, type ComponentProps } from "react";
 import { View } from "react-native";
 import { Split, type SplitHostCommands } from "react-native-screens";
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { EnvironmentId, ThreadId } from "@t2code/contracts";
 import { scopedThreadKey } from "../../lib/scopedEntities";
 
 import { useAdaptiveWorkspaceLayout } from "./AdaptiveWorkspaceLayout";

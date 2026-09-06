@@ -1,13 +1,13 @@
 import { ThreadDetailsControl } from "./chat/ThreadDetailsControl";
 import { ComposerContextLabel } from "./ComposerContextLabel";
 import { useSupportsMultiplePullRequests } from "~/hooks/useSupportsMultiplePullRequests";
-import { resolveThreadCurrentPullRequestLink } from "@t3tools/shared/threadPullRequests";
+import { resolveThreadCurrentPullRequestLink } from "@t2code/shared/threadPullRequests";
 import { useRightPanelStore } from "../rightPanelStore";
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopeProjectRef, scopeThreadRef } from "@t2code/client-runtime/environment";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import {
   AuthOrchestrationOperateScope,
   AuthSourceControlWriteScope,
@@ -15,7 +15,7 @@ import {
   type EnvironmentId,
   type VcsRef,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { ChevronDownIcon, GitBranchIcon } from "lucide-react";
 import {
   useCallback,

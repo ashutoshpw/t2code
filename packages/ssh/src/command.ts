@@ -1,5 +1,5 @@
-import type { DesktopSshEnvironmentTarget } from "@t3tools/contracts";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import type { DesktopSshEnvironmentTarget } from "@t2code/contracts";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 import * as Crypto from "effect/Crypto";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";

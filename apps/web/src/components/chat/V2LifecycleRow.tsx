@@ -1,18 +1,18 @@
 import { ThreadHoverCardPopup } from "../ThreadHoverCard";
 import { AgentElapsed } from "./AgentElapsed";
-import { projectedSubagentsToRuntime } from "@t3tools/client-runtime/state/subagentRuntime";
+import { projectedSubagentsToRuntime } from "@t2code/client-runtime/state/subagentRuntime";
 import type { ReactNode } from "react";
 import { useThreadShell, useProject } from "../../state/entities";
 import { SubagentTooltipContent } from "./SubagentTooltipContent";
 import { useAtomValue } from "@effect/atom-react";
-import { scopeThreadRef, scopeProjectRef } from "@t3tools/client-runtime/environment";
+import { scopeThreadRef, scopeProjectRef } from "@t2code/client-runtime/environment";
 import { environmentThreadDetails } from "../../state/threads";
 import { MiddleTruncate } from "../ui/middle-truncate";
 import * as DateTime from "effect/DateTime";
 import { WorkLogRow } from "./WorkLog";
-import { resolveHandoffEndpoints, type HandoffTimelineRun } from "@t3tools/client-runtime/handoff";
+import { resolveHandoffEndpoints, type HandoffTimelineRun } from "@t2code/client-runtime/handoff";
 import { Fragment } from "react";
-import { formatSubagentDisplayTitle } from "@t3tools/client-runtime/state/subagent-display";
+import { formatSubagentDisplayTitle } from "@t2code/client-runtime/state/subagent-display";
 import {
   ProviderDriverKind,
   type OrchestrationV2Notification,
@@ -24,8 +24,8 @@ import {
   type EnvironmentId,
   type NodeId,
   type ScopedThreadRef,
-} from "@t3tools/contracts";
-import type { TimestampFormat } from "@t3tools/contracts/settings";
+} from "@t2code/contracts";
+import type { TimestampFormat } from "@t2code/contracts/settings";
 import {
   BotIcon,
   ChevronRightIcon,
@@ -61,7 +61,7 @@ export function isV2LifecycleItem(item: OrchestrationV2TurnItem): boolean {
   return LIFECYCLE_TYPES.has(item.type);
 }
 
-export type { HandoffTimelineRun } from "@t3tools/client-runtime/handoff";
+export type { HandoffTimelineRun } from "@t2code/client-runtime/handoff";
 
 export function V2LifecycleRow(props: {
   readonly item: OrchestrationV2TurnItem;

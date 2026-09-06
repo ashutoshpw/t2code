@@ -8,14 +8,14 @@ import {
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { SpawnExecutableResolution } from "@t3tools/shared/shell";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { SpawnExecutableResolution } from "@t2code/shared/shell";
 import {
   ProviderReplayEntry,
   type ModelSelection,
   type ProviderApprovalDecision,
   type ProviderReplayTranscript,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Duration from "effect/Duration";
 import * as Crypto from "effect/Crypto";

@@ -1,4 +1,4 @@
-import { BranchNamingMode, type ServerSettingsPatch } from "@t3tools/contracts";
+import { BranchNamingMode, type ServerSettingsPatch } from "@t2code/contracts";
 import { useRef } from "react";
 import { View } from "react-native";
 

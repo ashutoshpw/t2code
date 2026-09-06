@@ -5,7 +5,7 @@ import type {
   PullRequestCheck,
   PullRequestReaction,
   PullRequestViewerPermissions,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as GitHubApi from "../sourceControl/GitHubApi.ts";
 import * as GitHubPullRequestApi from "./GitHubPullRequestApi.ts";

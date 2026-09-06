@@ -29,7 +29,7 @@ import type {
   GitManagerServiceError,
   GitPreparePullRequestThreadInput,
   ModelSelection,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   DEFAULT_SERVER_SETTINGS,
@@ -41,7 +41,7 @@ import {
   SourceControlProviderError as SourceControlProviderFailure,
   TextGenerationError,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import { decodeGitHubPullRequestListJson } from "../sourceControl/gitHubPullRequests.ts";
 import * as GitLabCli from "../sourceControl/GitLabCli.ts";

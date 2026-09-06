@@ -1,5 +1,5 @@
-import type { MuseSettings, ServerProviderModel } from "@t3tools/contracts";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+import type { MuseSettings, ServerProviderModel } from "@t2code/contracts";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";

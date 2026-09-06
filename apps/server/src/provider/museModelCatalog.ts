@@ -1,6 +1,6 @@
 import type { SendUserTurnOptions } from "@muse-code/sdk";
-import type { ModelCapabilities, MuseSettings, ServerProviderModel } from "@t3tools/contracts";
-import { createModelCapabilities, getProviderOptionDescriptors } from "@t3tools/shared/model";
+import type { ModelCapabilities, MuseSettings, ServerProviderModel } from "@t2code/contracts";
+import { createModelCapabilities, getProviderOptionDescriptors } from "@t2code/shared/model";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { createMuseSdkHost, createMuseSdkHostEffect, type MuseSdkHost } from "./museSdk.ts";

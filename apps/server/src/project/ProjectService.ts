@@ -7,8 +7,8 @@ import {
   type ProjectUpdatePayload,
   type ProjectSnapshot,
   type ThreadId,
-} from "@t3tools/contracts";
-import * as KeyedLock from "@t3tools/shared/KeyedLock";
+} from "@t2code/contracts";
+import * as KeyedLock from "@t2code/shared/KeyedLock";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";

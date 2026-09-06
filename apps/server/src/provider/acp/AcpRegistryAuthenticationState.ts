@@ -2,7 +2,7 @@ import type {
   AcpRegistrySettings,
   ProviderInstanceEnvironment,
   ProviderInstanceId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 import * as Hex from "effect/encoding/Hex";

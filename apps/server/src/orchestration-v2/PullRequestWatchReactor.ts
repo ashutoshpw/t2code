@@ -8,12 +8,12 @@ import {
   type PullRequestThreadCommentsResult,
   type ThreadPullRequestLink,
   type ThreadPullRequestWatch,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   normalizeThreadPullRequestKey,
   threadPullRequestKeyOf,
   visibleThreadPullRequests,
-} from "@t3tools/shared/threadPullRequests";
+} from "@t2code/shared/threadPullRequests";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";

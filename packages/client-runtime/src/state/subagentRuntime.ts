@@ -3,8 +3,8 @@
  * web agent rows render.
  */
 import * as DateTime from "effect/DateTime";
-import type { OrchestrationV2Subagent, OrchestrationV2TurnItem } from "@t3tools/contracts";
-import { isOrchestrationV2WorkActive } from "@t3tools/contracts";
+import type { OrchestrationV2Subagent, OrchestrationV2TurnItem } from "@t2code/contracts";
+import { isOrchestrationV2WorkActive } from "@t2code/contracts";
 
 export type RuntimeSubagentStatus =
   | "pending"

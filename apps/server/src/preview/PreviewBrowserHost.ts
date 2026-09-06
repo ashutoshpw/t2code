@@ -7,7 +7,7 @@
  * gets the command instead, and only the operator's explicit
  * `T3CODE_SERVER_BROWSER_SANDBOX=0` launches without it.
  */
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Schema from "effect/Schema";

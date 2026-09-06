@@ -10,9 +10,9 @@
  *   node scripts/record-grok-acp-replay-fixture.ts --scenario simple
  */
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { GrokSettings, type ProviderReplayEntry } from "@t3tools/contracts";
-import { HostProcessEnvironment, HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+import { GrokSettings, type ProviderReplayEntry } from "@t2code/contracts";
+import { HostProcessEnvironment, HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { resolveSelfInvocation } from "@t2code/shared/nodeRuntime";
 import * as Clock from "effect/Clock";
 import * as Console from "effect/Console";
 import * as Crypto from "effect/Crypto";

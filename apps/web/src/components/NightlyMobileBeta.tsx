@@ -1,4 +1,4 @@
-import { parseSemver } from "@t3tools/shared/semver";
+import { parseSemver } from "@t2code/shared/semver";
 import { useNavigate } from "@tanstack/react-router";
 import * as Schema from "effect/Schema";
 import { SmartphoneIcon } from "lucide-react";

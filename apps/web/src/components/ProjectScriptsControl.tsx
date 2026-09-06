@@ -5,14 +5,14 @@ import {
   type ProjectScript,
   type T3ProjectFileScript,
   type ResolvedKeybindingsConfig,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
-import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t3tools/shared/keybindings";
+import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t2code/shared/keybindings";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import { projectScriptMenuLabel } from "@t3tools/shared/projectScripts";
+} from "@t2code/client-runtime/state/runtime";
+import { projectScriptMenuLabel } from "@t2code/shared/projectScripts";
 import { ChevronDownIcon, DownloadIcon, PlusIcon, SettingsIcon, WrenchIcon } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 

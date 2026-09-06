@@ -8,8 +8,8 @@ import {
   AssetPreviewTypeValidationError,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
-import { PROJECT_FAVICON_FALLBACK_MARKER } from "@t3tools/shared/projectFavicon";
+} from "@t2code/contracts";
+import { PROJECT_FAVICON_FALLBACK_MARKER } from "@t2code/shared/projectFavicon";
 import { describe, expect, it } from "@effect/vitest";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";
@@ -34,7 +34,7 @@ import { assetFileResponse } from "../http.ts";
 import { ASSET_ROUTE_PREFIX, issueAssetUrl, resolveAsset } from "./AssetAccess.ts";
 import * as NativeAppIconResolver from "./NativeAppIconResolver.ts";
 import { openMediaFile } from "./MediaFile.ts";
-import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
+import { symlinksSupported } from "@t2code/shared/testing/symlinks";
 import * as GitHubCredentials from "../sourceControl/GitHubCredentials.ts";
 import { githubMediaResponse } from "./GitHubMediaFetch.ts";
 

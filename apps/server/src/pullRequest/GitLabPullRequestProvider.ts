@@ -3,7 +3,7 @@ import type {
   PullRequestCapabilities,
   PullRequestReaction,
   PullRequestViewerPermissions,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as GitLabPullRequestCli from "./GitLabPullRequestCli.ts";
 import {

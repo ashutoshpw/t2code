@@ -288,7 +288,7 @@ jobs:
           run-install: true
 
       - name: Ensure Electron runtime is installed
-        run: vp run --filter @t3tools/desktop ensure:electron
+        run: vp run --filter @t2code/desktop ensure:electron
 
       - uses: ./.github/actions/setup-apt-mirrors
 
@@ -298,7 +298,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config build-essential
 
       - name: Test
-        run: vp run --parallel --concurrency-limit 4 --filter '!t3' --filter '!@t3tools/monorepo' test
+        run: vp run --parallel --concurrency-limit 4 --filter '!@t2code/cli' --filter '!@t2code/monorepo' test
 
   test_server:
     name: Release server tests ${{ matrix.shard }}
@@ -329,7 +329,7 @@ jobs:
 
       # No Electron setup here: `t3` (apps/server) has no Electron dependency
       # and none of its tests touch the runtime. Only the non-server `test`
-      # job, which covers @t3tools/desktop, needs the download.
+      # job, which covers @t2code/desktop, needs the download.
       - name: Install Chromium for server browser integration tests
         run: node apps/server/node_modules/playwright-core/cli.js install --with-deps --only-shell chromium
 
@@ -378,7 +378,7 @@ jobs:
           cache: true
           run-install: |
             args:
-              - --filter=t3code-relay...
+              - --filter=t2code-relay...
 
       # The deployed stack's outputs, read from Alchemy's state store without
       # planning or applying. Select the backend explicitly to avoid loading
@@ -518,7 +518,7 @@ jobs:
       - name: Install browser secret helper build libraries
         run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
 
-      # Runs t3#build (which depends on @t2code/web#build) and
+      # Runs @t2code/cli#build (which depends on @t2code/web#build) and
       # @t2code/desktop#build, so apps/server/dist holds the server bundle
       # plus the web client and apps/desktop/dist-electron the Electron main.
       - name: Build JS bundle
@@ -1284,7 +1284,7 @@ jobs:
           run-install: |
             args:
               - --filter=@t2code/scripts...
-              - --filter=@t2code/oxlint-plugin-t3code...
+              - --filter=@t2code/oxlint-plugin-t2code...
 
       - id: update_versions
         name: Update version strings

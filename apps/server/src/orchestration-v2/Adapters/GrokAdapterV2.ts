@@ -4,15 +4,15 @@ import {
   isXAiTaskCompletedWakeNotification,
   xAiRateLimitedErrorCode,
 } from "../../provider/acp/XAiAcpExtension.ts";
-import { HostProcessEnvironment, HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { resolveSelfInvocation, type SelfInvocation } from "@t3tools/shared/nodeRuntime";
+import { HostProcessEnvironment, HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { resolveSelfInvocation, type SelfInvocation } from "@t2code/shared/nodeRuntime";
 import {
   defaultInstanceIdForDriver,
   GrokSettings,
   ProviderDriverKind,
   type OrchestrationV2ProviderCapabilities,
   type RuntimeMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";

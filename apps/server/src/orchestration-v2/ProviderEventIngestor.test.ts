@@ -18,7 +18,7 @@ import {
   RunId,
   RuntimeRequestId,
   TurnItemId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
 import * as Fiber from "effect/Fiber";
@@ -27,7 +27,7 @@ import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 
-import { toolOutputImages } from "@t3tools/shared/toolOutput";
+import { toolOutputImages } from "@t2code/shared/toolOutput";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import * as EventSink from "./EventSink.ts";
 import * as EventStore from "./EventStore.ts";

@@ -1,4 +1,4 @@
-import type { OrchestrationV2TurnItem, OrchestrationV2TurnItemStatus } from "@t3tools/contracts";
+import type { OrchestrationV2TurnItem, OrchestrationV2TurnItemStatus } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 
 import type { MuseItem } from "../../provider/museProtocol.ts";

@@ -3,7 +3,7 @@ import {
   collectLimitPools,
   type LimitAccount,
   type LimitPresentations,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 
 export interface SubscriptionUsageSnapshot {
   url?: string;

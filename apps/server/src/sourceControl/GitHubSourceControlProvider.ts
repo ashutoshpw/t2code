@@ -16,11 +16,11 @@ import {
   type GitHubSettings,
   type SourceControlProviderDiscoveryItem,
   type SourceControlRepositoryCloneUrls,
-} from "@t3tools/contracts";
-import { normalizeGitRemoteUrl } from "@t3tools/shared/git";
-import { HostProcessEnvironment } from "@t3tools/shared/hostProcess";
-import { decodeJsonResult } from "@t3tools/shared/schemaJson";
-import { isSshRemoteUrl } from "@t3tools/shared/sourceControl";
+} from "@t2code/contracts";
+import { normalizeGitRemoteUrl } from "@t2code/shared/git";
+import { HostProcessEnvironment } from "@t2code/shared/hostProcess";
+import { decodeJsonResult } from "@t2code/shared/schemaJson";
+import { isSshRemoteUrl } from "@t2code/shared/sourceControl";
 
 import * as ServerSettings from "../serverSettings.ts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";

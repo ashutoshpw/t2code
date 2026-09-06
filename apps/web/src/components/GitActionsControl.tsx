@@ -4,11 +4,11 @@ import {
   AuthOrchestrationOperateScope,
   AuthSourceControlWriteScope,
   type ScopedThreadRef,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import type {
   GitRunStackedActionResult,
   GitStackedAction,
@@ -18,7 +18,7 @@ import type {
   SourceControlPublishRepositoryResult,
   SourceControlRepositoryVisibility,
   VcsStatusResult,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import * as Option from "effect/Option";
 import {
