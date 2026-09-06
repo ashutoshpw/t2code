@@ -113,6 +113,7 @@ import {
   ScheduledTaskThreadPickerRouteScreen,
 } from "./features/settings/ScheduledTaskPickerScreens";
 import { SettingsKeyboardRouteScreen } from "./features/settings/SettingsKeyboardRouteScreen";
+import { SettingsEnvironmentRenameRouteScreen } from "./features/settings/SettingsEnvironmentRenameRouteScreen";
 import { SettingsLegalRouteScreen } from "./features/settings/SettingsLegalRouteScreen";
 import { SettingsVoiceRouteScreen } from "./features/settings/SettingsVoiceRouteScreen";
 import { SettingsVoiceModelsRouteScreen } from "./features/settings/SettingsVoiceModelsRouteScreen";
@@ -727,6 +728,33 @@ const RootStackConfig = createWorkspaceStackNavigator({
       screen: ConnectionsNewRouteScreen,
       linking: "connections/new",
       options: sheetRoute({ title: "Add Environment", detent: 0.55, maxDetent: 0.7 }),
+    }),
+    EnvironmentRename: createNativeStackScreen({
+      screen: SettingsEnvironmentRenameRouteScreen,
+      linking: "environment-rename",
+      options: {
+        title: "Rename Environment",
+        ...FORM_SHEET_PRESENTATION_OPTIONS,
+        sheetAllowedDetents: [0.4],
+        sheetGrabberVisible: true,
+      },
+    }),
+    NewTaskSheet: createNativeStackScreen({
+      screen: NewTaskSheetStack,
+      linking: "new",
+      // A screen's layout replaces the navigator's screenLayout.
+      layout: ({ children, route }) => (
+        <GuardedScreenLayout route={route}>
+          <NewTaskFlowProvider>
+            <View className="flex-1 bg-sheet-solid">{children}</View>
+          </NewTaskFlowProvider>
+        </GuardedScreenLayout>
+      ),
+      options: {
+        ...NESTED_NAVIGATOR_OPTIONS,
+        gestureEnabled: true,
+        headerShown: false,
+      },
     }),
     NotFound: createNativeStackScreen({
       screen: NotFoundScreen,
