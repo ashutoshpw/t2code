@@ -56,6 +56,7 @@ import { SettingsClientStorageRouteScreen } from "./features/settings/SettingsCl
 import { SettingsDiagnosticsRouteScreen } from "./features/diagnostics/SettingsDiagnosticsRouteScreen";
 import { SettingsAuthRouteScreen } from "./features/settings/SettingsAuthRouteScreen";
 import { SettingsEnvironmentsRouteScreen } from "./features/settings/SettingsEnvironmentsRouteScreen";
+import { SettingsEnvironmentRenameRouteScreen } from "./features/settings/SettingsEnvironmentRenameRouteScreen";
 import { SettingsLegalRouteScreen } from "./features/settings/SettingsLegalRouteScreen";
 import {
   SettingsOpenSourceLicenseRouteScreen,
@@ -663,6 +664,16 @@ export const RootStack = createNativeStackNavigator({
       options: {
         ...FORM_SHEET_PRESENTATION_OPTIONS,
         sheetAllowedDetents: [0.55, 0.7],
+        sheetGrabberVisible: true,
+      },
+    }),
+    EnvironmentRename: createNativeStackScreen({
+      screen: SettingsEnvironmentRenameRouteScreen,
+      linking: "environment-rename",
+      options: {
+        title: "Rename Environment",
+        ...FORM_SHEET_PRESENTATION_OPTIONS,
+        sheetAllowedDetents: [0.4],
         sheetGrabberVisible: true,
       },
     }),
