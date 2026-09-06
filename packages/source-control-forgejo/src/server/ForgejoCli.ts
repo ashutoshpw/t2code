@@ -148,7 +148,7 @@ export class ForgejoCli extends Context.Service<
       input: ForgejoApiInput,
     ) => Effect.Effect<SourceControlHost.SourceControlProcessOutput, ForgejoCliError>;
   }
->()("@t3tools/source-control-forgejo/server/ForgejoCli") {}
+>()("@t2code/source-control-forgejo/server/ForgejoCli") {}
 
 export function parseForgejoRemote(value: string) {
   if (/^(?:https?|ssh):\/\//i.test(value)) {

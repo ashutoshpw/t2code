@@ -1147,6 +1147,7 @@ export const layerServerApi = HttpApiBuilder.group(
     const publisher = yield* AgentActivityPublisher.AgentActivityPublisher;
     const publishSignatures = yield* EnvironmentPublishSignatures.EnvironmentPublishSignatures;
     const heldHooks = yield* HeldHooks.HeldHooks;
+    const links = yield* EnvironmentLinks.EnvironmentLinks;
     const requireOwnEnvironment = (environmentId: string) =>
       Effect.gen(function* () {
         const principal = yield* RelayEnvironmentPrincipal;
@@ -1388,6 +1389,22 @@ export const layerServerApi = HttpApiBuilder.group(
           });
           return { pending };
         }, mapRelayCommonApiErrors("not_authorized")),
+      )
+      .handle(
+        "updateEnvironmentLabel",
+        Effect.fn("relay.api.server.updateEnvironmentLabel")(function* (args) {
+          const { params, payload } = args;
+          const principal = yield* RelayEnvironmentPrincipal;
+          if (principal.environmentId !== params.environmentId) {
+            return yield* new HttpApiError.Unauthorized({});
+          }
+          yield* links.updateLabel({
+            environmentId: params.environmentId,
+            environmentPublicKey: principal.environmentPublicKey,
+            label: payload.label,
+          });
+          return { ok: true as const };
+        }, mapRelayCommonApiErrors("not_authorized")),
       );
   }),
 );
@@ -1420,6 +1437,7 @@ const RelayCommonPersistenceError = Schema.Union([
   EnvironmentLinks.EnvironmentLinkListPersistenceError,
   EnvironmentLinks.EnvironmentLinkLookupPersistenceError,
   EnvironmentLinks.EnvironmentLinkRevokePersistenceError,
+  EnvironmentLinks.EnvironmentLabelUpdatePersistenceError,
   ManagedEndpointAllocations.ManagedEndpointAllocationPersistenceError,
   EnvironmentCredentials.EnvironmentCredentialAuthenticatePersistenceError,
   EnvironmentCredentials.EnvironmentCredentialRevokePersistenceError,
