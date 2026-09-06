@@ -178,7 +178,10 @@ export function SettingsOpenSourceLicensesRouteScreen() {
         }
         ListHeaderComponent={
           Platform.OS !== "ios" ? (
-            <View className="px-5 pt-4 pb-5">
+            <View className="gap-4 px-5 pt-4 pb-5">
+              <Text className="text-base leading-normal text-foreground-muted">
+                Notices for dependencies, assets, and optional tools used by T2 Code Mobile.
+              </Text>
               <TextInput
                 accessibilityLabel="Search open-source licenses"
                 autoCapitalize="none"
@@ -189,6 +192,11 @@ export function SettingsOpenSourceLicensesRouteScreen() {
                 returnKeyType="search"
                 value={query}
               />
+              <Text className="tabular-nums text-sm text-foreground-muted">
+                {filteredEntries.length === entries.length
+                  ? `${String(entries.length)} notices`
+                  : `${String(filteredEntries.length)} of ${String(entries.length)} notices`}
+              </Text>
             </View>
           ) : null
         }

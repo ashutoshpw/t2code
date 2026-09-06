@@ -111,7 +111,7 @@ export function launcherOwnsVersionsDir(
 
 /**
  * The launcher the install scripts leave behind: a symlink at `<bin>/t3` on
- * POSIX, a `t3.cmd` shim on Windows. `t3 update` repoints it so the next `t3`
+ * POSIX, a `t3.cmd` shim on Windows. `t2code update` repoints it so the next `t3`
  * invocation is the new version. Only a launcher that already points into
  * this home's `runtime/versions` tree is touched; a plain copy of the
  * executable, or a launcher for some other install, is left alone.
@@ -371,7 +371,7 @@ const runUpdate = Effect.fn("cli.update.run")(function* (input: {
         `t3@${targetVersion} is a preview build.`,
         "  Preview builds are cut by maintainers from unreleased branches to exercise the release",
         "  pipeline. They can be broken, receive no fixes, and are never offered as updates; you",
-        `  will have to switch back to ${currentChannel} yourself with \`t3 update --channel ${currentChannel} --allow-downgrade\`.`,
+        `  will have to switch back to ${currentChannel} yourself with \`t2code update --channel ${currentChannel} --allow-downgrade\`.`,
       ].join("\n"),
     );
     if (!(process.stdin.isTTY && process.stdout.isTTY)) {
@@ -471,7 +471,7 @@ const runUpdate = Effect.fn("cli.update.run")(function* (input: {
       ).pipe(Effect.catchTag("QuitError", () => Effect.succeed(false)));
     } else {
       yield* Console.log(
-        "  Not a terminal, so the service keeps running its current version. Rerun with --yes to restart it now, or run `t3 service restart` later.",
+        "  Not a terminal, so the service keeps running its current version. Rerun with --yes to restart it now, or run `t2code service restart` later.",
       );
     }
   }
@@ -535,7 +535,7 @@ const runUpdate = Effect.fn("cli.update.run")(function* (input: {
   // downloaded runtime has already proven it runs (the `--version` check
   // above), and doing it here rather than through the target's own CLI means
   // a downgrade to a version without today's commands still works. The unit
-  // is rewritten either way so a later `t3 service restart` lands on the new
+  // is rewritten either way so a later `t2code service restart` lands on the new
   // version; only the restart itself waits for the user's answer.
   let serviceUpdated = false;
   if (serviceInstalled && !serviceCurrent) {
@@ -573,7 +573,7 @@ const runUpdate = Effect.fn("cli.update.run")(function* (input: {
     yield* Console.log(`  Background service already on ${targetVersion}`);
   } else if (serviceInstalled) {
     yield* Console.log(
-      `  Background service still running ${serviceVersion ?? "an unknown version"}. Run \`t3 service restart\` when you are ready to switch it to ${targetVersion}.`,
+      `  Background service still running ${serviceVersion ?? "an unknown version"}. Run \`t2code service restart\` when you are ready to switch it to ${targetVersion}.`,
     );
   } else if (status.installed && !servesThisHome) {
     yield* Console.log(

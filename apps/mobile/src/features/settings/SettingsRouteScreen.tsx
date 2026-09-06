@@ -570,7 +570,7 @@ function ConfiguredSettingsRouteScreen() {
                 void openAndroidLiveUpdateSettings().catch(() => {
                   Alert.alert(
                     "Couldn't open Settings",
-                    "Open Android Settings, select T3 Code, then enable Live Updates in Notifications.",
+                    "Open Android Settings, select T2 Code, then enable Live Updates in Notifications.",
                   );
                 });
               }}

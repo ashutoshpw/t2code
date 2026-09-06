@@ -72,7 +72,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
       projects: [
         {
           environmentId: localEnvironmentId,
-          title: "T3 Code",
+          title: "T2 Code",
           workspaceRoot: "/Users/theo/Projects/t3code",
         },
         {
@@ -85,7 +85,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
     });
 
     expect(metadata.searchTerms).toEqual([
-      "T3 Code",
+      "T2 Code",
       "/Users/theo/Projects/t3code",
       "Local",
       "t3code",
@@ -102,7 +102,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
         {
           kind: "action",
           value: "project:t3code",
-          title: "T3 Code",
+          title: "T2 Code",
           searchTerms: metadata.searchTerms,
           icon: null,
           run: async () => undefined,
@@ -118,12 +118,12 @@ describe("buildCommandPaletteProjectMetadata", () => {
       projects: [
         {
           environmentId: remoteEnvironmentId,
-          title: "T3 Code",
+          title: "T2 Code",
           workspaceRoot: "/srv/t3code",
         },
         {
           environmentId: remoteEnvironmentId,
-          title: "T3 Code worktree",
+          title: "T2 Code worktree",
           workspaceRoot: "/srv/t3code-feature",
         },
       ],
@@ -139,12 +139,12 @@ describe("buildCommandPaletteProjectMetadata", () => {
       projects: [
         {
           environmentId: remoteEnvironmentId,
-          title: "T3 Code",
+          title: "T2 Code",
           workspaceRoot: "/srv/t3code",
         },
         {
           environmentId: secondRemoteEnvironmentId,
-          title: "T3 Code mirror",
+          title: "T2 Code mirror",
           workspaceRoot: "/srv/mirror/t3code",
         },
       ],
@@ -162,7 +162,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
       projects: [
         {
           environmentId: remoteEnvironmentId,
-          title: "T3 Code",
+          title: "T2 Code",
           workspaceRoot: "/srv/t3code",
         },
       ],
