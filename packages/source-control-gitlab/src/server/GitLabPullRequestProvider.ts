@@ -1,4 +1,4 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
 import * as Cache from "effect/Cache";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -7,7 +7,7 @@ import type {
   PullRequestCapabilities,
   PullRequestReaction,
   PullRequestViewerPermissions,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as GitLabPullRequestCli from "./GitLabPullRequestCli.ts";
 import {
@@ -16,7 +16,7 @@ import {
   type ProviderChangeRequestActivity,
   type ProviderChangeRequestDetail,
   type PullRequestProviderApi,
-} from "@t3tools/source-control-core/server/PullRequestProvider";
+} from "@t2code/source-control-core/server/PullRequestProvider";
 import { definition } from "../shared/definition.ts";
 
 const CAPABILITIES: PullRequestCapabilities = {

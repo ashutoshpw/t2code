@@ -1,4 +1,4 @@
-import type { WorktreeSetupSnapshot } from "@t3tools/contracts";
+import type { WorktreeSetupSnapshot } from "@t2code/contracts";
 
 export function resolveVisibleWorktreeSetup(input: {
   live: WorktreeSetupSnapshot | null;

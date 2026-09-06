@@ -4,8 +4,8 @@ import {
   ProviderDriverKind,
   type ProviderInstanceId,
   type ServerProviderModel,
-} from "@t3tools/contracts";
-import { type CustomModelDefinition, normalizeCustomModelSlug } from "@t3tools/shared/model";
+} from "@t2code/contracts";
+import { type CustomModelDefinition, normalizeCustomModelSlug } from "@t2code/shared/model";
 
 import { useStableCallback } from "../../hooks/useStableCallback";
 import { cn } from "../../lib/utils";

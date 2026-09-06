@@ -2,7 +2,7 @@ import {
   normalizeProviderAccentColor,
   resolveProviderInstanceDisplayName,
   shouldShowInstanceBadge,
-} from "@t3tools/client-runtime/state/provider-instance-display";
+} from "@t2code/client-runtime/state/provider-instance-display";
 
 import type {
   ModelCapabilities,
@@ -10,13 +10,13 @@ import type {
   ProjectId,
   RuntimeMode,
   ServerConfig as T3ServerConfig,
-} from "@t3tools/contracts";
-import { isProviderDriverKind, resolveProjectProviderInstanceEnabled } from "@t3tools/contracts";
+} from "@t2code/contracts";
+import { isProviderDriverKind, resolveProjectProviderInstanceEnabled } from "@t2code/contracts";
 import {
   buildExplicitProviderOptionSelectionsFromDescriptors,
   getProviderOptionDescriptors,
-} from "@t3tools/shared/model";
-import { resolveModelShortName } from "@t3tools/client-runtime/provider-clients";
+} from "@t2code/shared/model";
+import { resolveModelShortName } from "@t2code/client-runtime/provider-clients";
 
 export type ModelOption = {
   readonly key: string;

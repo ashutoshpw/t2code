@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { GuestMessageId } from "@t3tools/contracts";
-import { ATTACHMENT_ONLY_BOOTSTRAP_PROMPT } from "@t3tools/shared/composerContextReferences";
+import { GuestMessageId } from "@t2code/contracts";
+import { ATTACHMENT_ONLY_BOOTSTRAP_PROMPT } from "@t2code/shared/composerContextReferences";
 
 import { resolveUserMessagePresentation } from "./userMessage.ts";
 

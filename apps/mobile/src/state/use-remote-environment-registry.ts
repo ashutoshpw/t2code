@@ -1,10 +1,10 @@
 import * as Dialog from "../components/ui/Dialog";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigation } from "@react-navigation/native";
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult, Atom } from "effect/reactivity";
-import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
+import { runAtomCommand } from "@t2code/client-runtime/state/runtime";
 
 import { hasCloudPublicConfig } from "../features/cloud/publicConfig";
 import { useConnectionController } from "../features/connection/useConnectionController";

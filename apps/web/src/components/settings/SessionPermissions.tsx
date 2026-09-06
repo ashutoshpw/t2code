@@ -1,8 +1,8 @@
-import { type EnvironmentId, sessionGrantsScope } from "@t3tools/contracts";
+import { type EnvironmentId, sessionGrantsScope } from "@t2code/contracts";
 import {
   AUTH_SCOPE_OPTIONS,
   sessionPermissionsUnavailableMessage,
-} from "@t3tools/shared/authScopeOptions";
+} from "@t2code/shared/authScopeOptions";
 import { useEnvironmentSessionState } from "~/state/session";
 
 export function SessionPermissions({

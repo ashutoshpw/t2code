@@ -1,12 +1,12 @@
-import type { ServerUpdateState } from "@t3tools/client-runtime/state/server";
+import type { ServerUpdateState } from "@t2code/client-runtime/state/server";
 import type {
   DesktopUpdateChannel,
   EnvironmentId,
   ServerConfig,
   ServerSelfUpdateCapability,
-} from "@t3tools/contracts";
-import { cliReleaseChannelOf, desktopUpdateChannelOf } from "@t3tools/shared/cliRelease";
-import { compareSemverVersions } from "@t3tools/shared/semver";
+} from "@t2code/contracts";
+import { cliReleaseChannelOf, desktopUpdateChannelOf } from "@t2code/shared/cliRelease";
+import { compareSemverVersions } from "@t2code/shared/semver";
 
 import {
   resolveServerSelfUpdateCapability,

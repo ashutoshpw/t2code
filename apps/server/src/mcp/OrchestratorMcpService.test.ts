@@ -21,8 +21,8 @@ import {
   type OrchestrationV2ServerCommand,
   type OrchestrationV2ThreadProjection,
   type ServerProvider,
-} from "@t3tools/contracts";
-import { checkpointWorkspace } from "@t3tools/provider-testing/replayWorkspace";
+} from "@t2code/contracts";
+import { checkpointWorkspace } from "@t2code/provider-testing/replayWorkspace";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -62,7 +62,7 @@ import type { McpInvocationScope } from "./McpInvocationContext.ts";
 import { idleThreadProjection, liveThreadShell } from "./McpToolAccess.testkit.ts";
 import * as OrchestratorMcpService from "./OrchestratorMcpService.ts";
 import { resolveRuntimeMode } from "./delegatedTaskModes.ts";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import type * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 
 const decodeTarget = Schema.decodeUnknownEffect(OrchestratorMcpTarget);
 

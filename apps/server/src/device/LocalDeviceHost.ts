@@ -1,21 +1,25 @@
 import { pruneLocalDeviceTools } from "./deviceToolMaintenance.ts";
-import { deviceToolInstallMessage } from "@t3tools/contracts";
-// The hub runs at origin root; T3 strips its prefix and the Device panel derives stream URLs from it.
+import { deviceToolInstallMessage } from "@t2code/contracts";
+/**
+ * The hub runs in its standalone mode (origin root). The T3 proxy strips its
+ * own prefix, and the Device panel derives stream and socket URLs from the
+ * prefix itself rather than from anything the hub prints.
+ */
 import {
   type DeviceHostSummary,
   type DevicePlatform,
   type DevicePlatformAvailability,
   LOCAL_DEVICE_HOST_ID,
   LOCAL_DEVICE_HOST_LABEL,
-} from "@t3tools/contracts";
-import { waitForHttpReady } from "@t3tools/shared/httpReadiness";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import { waitForHttpReady } from "@t2code/shared/httpReadiness";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import {
   resolveNodeExecutable,
   type NodeRuntimeUnavailableError,
-} from "@t3tools/shared/nodeRuntime";
-import * as NetService from "@t3tools/shared/Net";
-import { isCommandAvailable } from "@t3tools/shared/shell";
+} from "@t2code/shared/nodeRuntime";
+import * as NetService from "@t2code/shared/Net";
+import { isCommandAvailable } from "@t2code/shared/shell";
 import * as Clock from "effect/Clock";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -33,7 +37,7 @@ import { HttpClient } from "effect/http";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import { writeFileStringAtomically } from "@t3tools/shared/atomicWrite";
+import { writeFileStringAtomically } from "@t2code/shared/atomicWrite";
 import * as ServerConfig from "../config.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as DeviceHost from "./DeviceHost.ts";

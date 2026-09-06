@@ -1,7 +1,7 @@
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
-import { DEFAULT_SIGNAL_EXPORT } from "@t3tools/shared/observability";
+import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
+import { DEFAULT_SIGNAL_EXPORT } from "@t2code/shared/observability";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import type { ProviderDriverKind, ProviderReplayTranscript } from "@t3tools/contracts";
+import type { ProviderDriverKind, ProviderReplayTranscript } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -16,7 +16,7 @@ import * as ServerConfig from "../../config.ts";
 import * as SqlitePersistence from "../../persistence/Sqlite.ts";
 import * as ServerSettings from "../../serverSettings.ts";
 import * as ThreadManagementService from "../ThreadManagementService.ts";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
 import * as McpSessionRegistryTestkit from "../../mcp/McpSessionRegistry.testkit.ts";
 import * as VcsDriverRegistry from "../../vcs/VcsDriverRegistry.ts";
 import * as GitVcsDriver from "../../vcs/GitVcsDriver.ts";
@@ -31,13 +31,13 @@ import * as EffectOutbox from "../EffectOutbox.ts";
 import * as EffectWorker from "../EffectWorker.ts";
 import * as EventSink from "../EventSink.ts";
 import * as EventStore from "../EventStore.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import * as Orchestrator from "../Orchestrator.ts";
 import * as ProjectionStore from "../ProjectionStore.ts";
 import * as ProjectStore from "../ProjectStore.ts";
 import * as ProviderAdapterRegistry from "../ProviderAdapterRegistry.ts";
 import * as ProviderAuthService from "../../provider/ProviderAuthService.ts";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+import * as ProviderContinuationRequests from "@t2code/provider-core/server/ProviderContinuationRequests";
 import * as ProviderContinuationService from "../ProviderContinuationService.ts";
 import * as ProviderEventIngestor from "../ProviderEventIngestor.ts";
 import * as ProviderInstanceRegistry from "../../provider/ProviderInstanceRegistry.ts";
@@ -67,7 +67,7 @@ import {
 import {
   makeProviderReplayGate,
   type ProviderReplayGate,
-} from "@t3tools/provider-testing/replayGate";
+} from "@t2code/provider-testing/replayGate";
 
 export function makeReplayServerConfig(
   scenario: string,

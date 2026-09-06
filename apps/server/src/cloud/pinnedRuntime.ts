@@ -18,9 +18,9 @@ import {
   cliArchiveTarCommand,
   cliReleaseDownloadBaseUrl,
   parseChecksums,
-} from "@t3tools/shared/cliRelease";
+} from "@t2code/shared/cliRelease";
 
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 import * as ProcessRunner from "../processRunner.ts";
 import { isExactServiceVersion, parseServiceState, SERVICE_STATE_FILE } from "./serviceProtocol.ts";

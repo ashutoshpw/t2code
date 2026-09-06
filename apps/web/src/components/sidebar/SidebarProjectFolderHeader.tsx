@@ -1,5 +1,5 @@
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/models";
-import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
+import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/models";
+import { scopedThreadKey, scopeThreadRef } from "@t2code/client-runtime/environment";
 import { ChevronDownIcon, SquarePenIcon } from "lucide-react";
 import { memo } from "react";
 

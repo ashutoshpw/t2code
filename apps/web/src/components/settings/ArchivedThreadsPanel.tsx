@@ -1,14 +1,14 @@
 import { settingsScopeEnvironmentLabels } from "./settingsScopeAxis";
 import { Spinner } from "~/components/ui/spinner";
 import { ArchiveIcon, ArchiveX } from "lucide-react";
-import { type ScopedThreadRef } from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { presentThreadShell } from "@t3tools/client-runtime/state/shell";
+import { type ScopedThreadRef } from "@t2code/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { presentThreadShell } from "@t2code/client-runtime/state/shell";
 import {
   isAtomCommandInterrupted,
   settlePromise,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { useThreadActions } from "../../hooks/useThreadActions";
 import { readLocalApi } from "../../localApi";

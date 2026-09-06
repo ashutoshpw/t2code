@@ -18,8 +18,8 @@ import {
   type StorageCleanupSettings,
   type TerminalMetadataStreamEvent,
   type TerminalSummary,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as ServerConfig from "./config.ts";
 import * as StorageCleanup from "./storageCleanup.ts";
 import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
@@ -44,7 +44,7 @@ import {
   ThreadId,
   type OrchestrationV2DomainEvent,
   type OrchestrationV2ThreadShell,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import {
   storageCleanupActivityAt,
@@ -262,7 +262,7 @@ const cleanupFixture = (
     yield* fs.makeDirectory(config.worktreesDir, { recursive: true });
     const worktree = `${config.worktreesDir}/feature`;
     yield* command(repo, ["worktree", "add", "-b", "feature", worktree]);
-    let settings: import("@t3tools/contracts").ServerSettings = {
+    let settings: import("@t2code/contracts").ServerSettings = {
       ...DEFAULT_SERVER_SETTINGS,
       storageCleanup,
     };

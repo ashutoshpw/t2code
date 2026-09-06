@@ -1,4 +1,4 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
 import { assert, describe, expect, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 import {
@@ -18,8 +18,8 @@ import {
   type PullRequestSummary,
   type ServerSettings as ContractServerSettings,
   type ServerSettingsPatch,
-} from "@t3tools/contracts";
-import { applyServerSettingsPatch } from "@t3tools/shared/serverSettings";
+} from "@t2code/contracts";
+import { applyServerSettingsPatch } from "@t2code/shared/serverSettings";
 import * as Crypto from "effect/Crypto";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";

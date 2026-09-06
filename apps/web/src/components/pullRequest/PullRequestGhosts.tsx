@@ -1,4 +1,4 @@
-import type { PullRequestListEntry, PullRequestSummary } from "@t3tools/contracts";
+import type { PullRequestListEntry, PullRequestSummary } from "@t2code/contracts";
 import {
   ArrowLeftIcon,
   ChevronRightIcon,
@@ -14,7 +14,7 @@ import {
   capitalizeTerm,
   sourceControlClients,
   type ChangeRequestTerminology,
-} from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/source-control-clients";
 
 import { readLocalApi } from "~/localApi";
 import { cn } from "~/lib/utils";

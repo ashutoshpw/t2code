@@ -3,12 +3,12 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import {
   AuthProvidersManageScope,
   type ProviderAuthResponse,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, TextInput, useWindowDimensions, View } from "react-native";

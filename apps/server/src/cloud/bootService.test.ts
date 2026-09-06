@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -84,6 +84,13 @@ it.each([
   ).toBe(program);
 });
 
+const macRuntime = "/Users/theo/.t3/runtime/versions/1.2.3/t3";
+const macPlan = {
+  program: [macRuntime, "__service-launcher"],
+  baseDir: "/Users/theo/.t3",
+  logPath: "/Users/theo/.t3/userdata/logs/boot-service.log",
+  unitPath: "/Users/theo/Library/LaunchAgents/codes.t2.desktop.service.plist",
+};
 const macInstallerPath =
   "/opt/homebrew/bin:/Users/theo/.npm-global/bin:/Users/theo/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin";
 
@@ -422,7 +429,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
           platform === "linux"
             ? ["systemctl --user stop t3code.service", "systemctl --user restart t3code.service"]
             : [
-                "launchctl bootout --wait gui/501/com.t3tools.t3code.service",
+                "launchctl bootout --wait gui/501/codes.t2.desktop.service",
                 `launchctl bootstrap gui/501 ${plan.unitPath}`,
               ],
         );
@@ -767,7 +774,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
 
       expect(
         plan.unitPath.endsWith(
-          path.join("Library", "LaunchAgents", "com.t3tools.t3code.service.plist"),
+          path.join("Library", "LaunchAgents", "codes.t2.desktop.service.plist"),
         ),
       ).toBe(true);
       expect(yield* fs.readFileString(plan.unitPath)).toContain(
@@ -787,8 +794,9 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(yield* service.uninstall).toBe(true);
       expect((yield* service.status).installed).toBe(false);
       expect(commands.some((command) => command.startsWith("systemctl "))).toBe(false);
-      // launchd can take 90s to bootout; the runner's 60s default could let bootstrap race it.
-      expect(timeouts.get("launchctl bootout --wait gui/501/com.t3tools.t3code.service")).toEqual(
+      // A bootout can block up to the plist's 90s ExitTimeOut; the runner's
+      // 60s default would cancel it and let bootstrap race a loaded job.
+      expect(timeouts.get("launchctl bootout --wait gui/501/codes.t2.desktop.service")).toEqual(
         Duration.seconds(120),
       );
     }),
@@ -850,7 +858,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
     Effect.gen(function* () {
       const { service, control } = yield* makeHarness("darwin");
       yield* service.install();
-      control.failCommand = "launchctl bootout --wait gui/501/com.t3tools.t3code.service";
+      control.failCommand = "launchctl bootout --wait gui/501/codes.t2.desktop.service";
 
       yield* service.install();
       expect((yield* service.status).current).toBe(true);

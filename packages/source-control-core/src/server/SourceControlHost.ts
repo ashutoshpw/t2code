@@ -8,7 +8,7 @@ import type {
   VcsProcessExitFailureKind,
   VcsSwitchRefInput,
   VcsSwitchRefResult,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
 import type * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
@@ -133,4 +133,4 @@ export class SourceControlHost extends Context.Service<
       ) => Effect.Effect<VcsSwitchRefResult, GitCommandError>;
     };
   }
->()("@t3tools/source-control-core/server/SourceControlHost") {}
+>()("@t2code/source-control-core/server/SourceControlHost") {}

@@ -6,15 +6,15 @@ import {
   type ProviderOptionSelection,
   type ScopedThreadRef,
   type ServerProviderModel,
-} from "@t3tools/contracts";
-import type { EffortDisplay } from "@t3tools/contracts/settings";
+} from "@t2code/contracts";
+import type { EffortDisplay } from "@t2code/contracts/settings";
 import {
   buildExplicitProviderOptionSelectionsFromDescriptors,
   getProviderOptionCurrentValue,
   getProviderOptionDescriptors,
   isClaudeUltrathinkPrompt,
   normalizeModelSlug,
-} from "@t3tools/shared/model";
+} from "@t2code/shared/model";
 import type { ReactNode } from "react";
 
 import type { DraftId } from "../../composerDraftStore";

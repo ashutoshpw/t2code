@@ -5,8 +5,8 @@ import {
   type EnvironmentId,
   type ScopedProjectRef,
   type SidebarProjectGroupingMode,
-} from "@t3tools/contracts";
-import type { ClientSettings } from "@t3tools/contracts/settings";
+} from "@t2code/contracts";
+import type { ClientSettings } from "@t2code/contracts/settings";
 
 import type { EnvironmentProject } from "./models.ts";
 import { normalizeProjectPathForComparison } from "./projects.ts";

@@ -8,23 +8,23 @@ import * as Path from "effect/Path";
 import type * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 
-import type { OtlpEndpointSource } from "@t3tools/contracts";
+import type { OtlpEndpointSource } from "@t2code/contracts";
 import { sweepStalePendingAttachments } from "./attachmentStore.ts";
 import {
   DEFAULT_SIGNAL_EXPORT,
   nodeProcessRuntimeAttributes,
   processServiceInstanceId,
   type SignalExport,
-} from "@t3tools/shared/observability";
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
-import { type ReleaseChannel, releaseResourceAttributes } from "@t3tools/shared/releaseResource";
+} from "@t2code/shared/observability";
+import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
+import { type ReleaseChannel, releaseResourceAttributes } from "@t2code/shared/releaseResource";
 import packageJson from "../package.json" with { type: "json" };
 
 // Official release workflows set this telemetry channel; other builds report dev.
-// Unlike __T3CODE_BUILD_CHANNEL__, this is not the sign-in page's latest/nightly channel.
-declare const __T3CODE_TELEMETRY_CHANNEL__: ReleaseChannel | undefined;
+// Unlike __T2CODE_BUILD_CHANNEL__, this is not the sign-in page's latest/nightly channel.
+declare const __T2CODE_TELEMETRY_CHANNEL__: ReleaseChannel | undefined;
 export const telemetryChannel: ReleaseChannel =
-  typeof __T3CODE_TELEMETRY_CHANNEL__ === "undefined" ? "dev" : __T3CODE_TELEMETRY_CHANNEL__;
+  typeof __T2CODE_TELEMETRY_CHANNEL__ === "undefined" ? "dev" : __T2CODE_TELEMETRY_CHANNEL__;
 
 export const DEFAULT_PORT = 3772;
 
@@ -121,12 +121,12 @@ export const otlpResource = (
   config: Pick<ServerConfig["Service"], "mode" | "otelEnvironment">,
   hostName: string,
 ) => ({
-  serviceName: "t3code-server",
+  serviceName: "t2code-server",
   serviceVersion: packageJson.version,
   attributes: {
-    "service.namespace": "t3code",
+    "service.namespace": "t2code",
     "service.runtime": "t3-server",
-    "t3code.server.managed_by": config.mode === "desktop" ? "desktop" : "standalone",
+    "t2code.server.managed_by": config.mode === "desktop" ? "desktop" : "standalone",
     "service.instance.id": processServiceInstanceId(config.otelEnvironment.resourceAttributes),
     ...releaseResourceAttributes(telemetryChannel, config.otelEnvironment.resourceAttributes),
     "host.name": config.otelEnvironment.resourceAttributes["host.name"] || hostName,

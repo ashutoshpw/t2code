@@ -1,12 +1,12 @@
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import type { EnvironmentId } from "@t3tools/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import type { EnvironmentId } from "@t2code/contracts";
 import {
   formatThreadLink,
   guessThreadLinkRef,
   percentDecodedThreadLinkId,
   type ThreadLink,
   unknownThreadLinkLabel,
-} from "@t3tools/shared/threadLinks";
+} from "@t2code/shared/threadLinks";
 
 import { useThreadRefs, useThreadShell } from "../../state/entities";
 import { UnresolvedChip } from "../contextChipParts";

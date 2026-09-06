@@ -4,7 +4,7 @@ import type {
   OrchestrationV2TurnItem,
   ProviderInstanceId,
   ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import type { ThreadStructure } from "./state/models.ts";
 

@@ -2,13 +2,13 @@ import type {
   OrchestrationThreadSearchMatch,
   OrchestrationV2SearchThreadResult,
   ScopedThreadRef,
-} from "@t3tools/contracts";
-import { scopedThreadKey } from "@t3tools/client-runtime/environment";
+} from "@t2code/contracts";
+import { scopedThreadKey } from "@t2code/client-runtime/environment";
 import {
   findSearchTokenRanges,
   messagePhrase,
   messageSearchTokens,
-} from "@t3tools/shared/paletteSearch";
+} from "@t2code/shared/paletteSearch";
 import { create } from "zustand";
 import type { ThreadFindPositionReader, ThreadFindStart } from "./threadFind";
 

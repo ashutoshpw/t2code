@@ -19,8 +19,8 @@ import {
   type ProviderInteractionMode,
   type RuntimeMode,
   type ServerProvider,
-} from "@t3tools/contracts";
-import type { EffortDisplay } from "@t3tools/contracts/settings";
+} from "@t2code/contracts";
+import type { EffortDisplay } from "@t2code/contracts/settings";
 import { cn } from "~/lib/utils";
 import { shortcutLabelForCommand } from "../../keybindings";
 import {

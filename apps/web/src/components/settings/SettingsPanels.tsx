@@ -11,7 +11,7 @@ import {
   ProviderDriverKind,
   type ProviderInstanceId,
   type SidebarProjectGroupingMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   DEFAULT_UNIFIED_SETTINGS,
   type DiffLayout,
@@ -20,9 +20,9 @@ import {
   type ResponseStreamingMode,
   type QuitConfirmationMode,
   SidebarProjectSortOrder,
-} from "@t3tools/contracts/settings";
-import { desktopUpdateChannelOf } from "@t3tools/shared/cliRelease";
-import { createModelSelection } from "@t3tools/shared/model";
+} from "@t2code/contracts/settings";
+import { desktopUpdateChannelOf } from "@t2code/shared/cliRelease";
+import { createModelSelection } from "@t2code/shared/model";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 import { APP_VERSION, HOSTED_APP_CHANNEL, HOSTED_APP_CHANNEL_LABEL } from "../../branding";

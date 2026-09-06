@@ -1,7 +1,7 @@
 import { useActiveNewTask } from "../../state/active-new-task";
 import { ThreadUndoNotice } from "../home/ThreadUndoNotice";
 import { useAndroidControlSizing } from "../../components/ui/useAndroidControlSizing";
-import { resolveScratchProjectScopeKey } from "@t3tools/client-runtime/state/project-grouping";
+import { resolveScratchProjectScopeKey } from "@t2code/client-runtime/state/project-grouping";
 import {
   useAppearancePreferences,
   useAndroidFloatingTabs,
@@ -9,8 +9,8 @@ import {
 import type {
   EnvironmentProject,
   EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
+} from "@t2code/client-runtime/state/shell";
+import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
 import { THREAD_SIDEBAR_ROW_LAYOUT } from "./threadListAnimations";
 import type { MenuAction } from "@react-native-menu/menu";

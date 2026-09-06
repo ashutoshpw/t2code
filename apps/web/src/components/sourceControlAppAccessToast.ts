@@ -1,6 +1,6 @@
-import type { EnvironmentId } from "@t3tools/contracts";
-import { appSignInTargetForRemote } from "@t3tools/client-runtime/source-control-clients";
-import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
+import type { EnvironmentId } from "@t2code/contracts";
+import { appSignInTargetForRemote } from "@t2code/client-runtime/source-control-clients";
+import { runAtomCommand } from "@t2code/client-runtime/state/runtime";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { sourceControlEnvironment } from "../state/sourceControl";
 import { toastManager } from "./ui/toast";

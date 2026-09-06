@@ -6,7 +6,7 @@ import {
   type DeviceEasAccount,
   type EasDeviceHostConfig,
   type EnvironmentId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { XIcon } from "lucide-react";
 
 import { deviceEasAccountCheck, deviceEnvironment } from "../../state/device";

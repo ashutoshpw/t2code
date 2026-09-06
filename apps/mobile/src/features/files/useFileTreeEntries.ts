@@ -1,6 +1,6 @@
 import { useAtomMount, useAtomSubscribe } from "@effect/atom-react";
-import { executeAtomQuery } from "@t3tools/client-runtime/state/runtime";
-import { ProjectListEntriesError, type EnvironmentId, type ProjectEntry } from "@t3tools/contracts";
+import { executeAtomQuery } from "@t2code/client-runtime/state/runtime";
+import { ProjectListEntriesError, type EnvironmentId, type ProjectEntry } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Atom } from "effect/reactivity";

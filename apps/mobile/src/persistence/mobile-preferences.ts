@@ -13,7 +13,7 @@ import {
   type ProviderInstanceId,
   type PullRequestMergeMethod,
   type SidebarProjectGroupingMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { AndroidNavigationStyle } from "../lib/androidNavigationStyle";
 import type { ComposerEnterBehavior } from "../lib/composerEnterBehavior";
 import type { FollowUpBehavior } from "../lib/followUpBehavior";
@@ -165,7 +165,7 @@ export class MobilePreferencesStore extends Context.Service<
       transform: (current: Preferences) => Partial<Preferences>,
     ) => Effect.Effect<Preferences, MobilePreferencesSaveError>;
   }
->()("@t3tools/mobile/persistence/MobilePreferencesStore") {}
+>()("@t2code/mobile/persistence/MobilePreferencesStore") {}
 
 function sanitizePreferences(parsed: Preferences): Preferences {
   const preferences: {

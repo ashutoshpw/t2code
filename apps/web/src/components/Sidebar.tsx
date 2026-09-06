@@ -1,6 +1,6 @@
 import { attachSidebarTree, SIDEBAR_TREE_PROPS } from "../lib/sidebarTree";
-import { type EnvironmentId, type ScopedProjectRef } from "@t3tools/contracts";
-import type { EnvironmentServerConfig } from "@t3tools/client-runtime/connection";
+import { type EnvironmentId, type ScopedProjectRef } from "@t2code/contracts";
+import type { EnvironmentServerConfig } from "@t2code/client-runtime/connection";
 import { ThreadContextDragGhost } from "./chat/ThreadContextDragGhost";
 import {
   dropThreadContext,
@@ -28,37 +28,37 @@ import {
   canSnooze,
   effectiveSnoozed,
   threadWokeAt,
-} from "@t3tools/client-runtime/state/thread-settled";
+} from "@t2code/client-runtime/state/thread-settled";
 import {
   createInboxReturnTracker,
   isThreadWorking,
-} from "@t3tools/client-runtime/state/thread-inbox";
-import { sortSettledThreads } from "@t3tools/client-runtime/state/thread-sort";
+} from "@t2code/client-runtime/state/thread-inbox";
+import { sortSettledThreads } from "@t2code/client-runtime/state/thread-sort";
 import {
   nextShownOrder,
   threadSearchMatchKey,
   threadSearchSubject,
   type ShownOrder,
-} from "@t3tools/client-runtime/state/thread-search";
-import { foldSearchQuery, rankMessageMatches } from "@t3tools/shared/paletteSearch";
+} from "@t2code/client-runtime/state/thread-search";
+import { foldSearchQuery, rankMessageMatches } from "@t2code/shared/paletteSearch";
 import { findForMessageMatch, openThreadFindOnQuery } from "./chat/threadFindStore";
 import {
   threadRuntimeCanArchive,
   type EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/models";
+} from "@t2code/client-runtime/state/models";
 import {
   parseScopedThreadKey,
   scopeProjectRef,
   scopeThreadRef,
   scopedThreadKey,
-} from "@t3tools/client-runtime/environment";
+} from "@t2code/client-runtime/environment";
 import {
   AuthOrchestrationOperateScope,
   ProjectId,
   type ScopedThreadRef,
   type ThreadId,
-} from "@t3tools/contracts";
-import type { OlderSettledScope } from "@t3tools/client-runtime/state/threads";
+} from "@t2code/contracts";
+import type { OlderSettledScope } from "@t2code/client-runtime/state/threads";
 
 import {
   CheckIcon,
@@ -86,7 +86,7 @@ import {
   settlePromise,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import { isElectron } from "../env";
 import {
   resolveShortcutCommand,
@@ -103,7 +103,7 @@ import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../termina
 import { isMacPlatform } from "~/lib/utils";
 import { readLocalApi } from "../localApi";
 import { useSidebarPendingFileDropStore } from "../sidebarPendingFileDropStore";
-import { selectProjectGroupingSettings } from "@t3tools/client-runtime/state/project-grouping";
+import { selectProjectGroupingSettings } from "@t2code/client-runtime/state/project-grouping";
 import {
   projectGroupsSpanEnvironments,
   resolveSidebarProjectScopeKeys,
@@ -161,7 +161,7 @@ import {
   resolveThreadRouteTarget,
 } from "../threadRoutes";
 import type { SidebarThreadSummary } from "../types";
-import { isScratchProject } from "@t3tools/client-runtime/state/projects";
+import { isScratchProject } from "@t2code/client-runtime/state/projects";
 import { cn } from "~/lib/utils";
 import { ProjectEnvironmentBadge } from "./ProjectEnvironmentBadge";
 import {
@@ -227,7 +227,7 @@ import {
 } from "./sidebar/routeReveal";
 import { stackedThreadToast, toastManager } from "./ui/toast";
 import { copyThreadReference } from "../lib/copyThreadReference";
-import { threadChipCopyTarget } from "@t3tools/client-runtime/thread-reference";
+import { threadChipCopyTarget } from "@t2code/client-runtime/thread-reference";
 import { Button } from "./ui/button";
 import {
   Combobox,

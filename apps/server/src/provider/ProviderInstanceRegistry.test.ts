@@ -16,10 +16,10 @@ import {
   ProviderInstanceId,
   SecretProviderId,
   type SecretReference,
-} from "@t3tools/contracts";
-import * as ProviderLatestVersions from "@t3tools/provider-core/server/ProviderLatestVersions";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import * as ProviderLatestVersions from "@t2code/provider-core/server/ProviderLatestVersions";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -38,13 +38,13 @@ import { ClaudeDriver, type ClaudeDriverEnv } from "./Drivers/ClaudeDriver.ts";
 import { CodexDriver, type CodexDriverEnv } from "./Drivers/CodexDriver.ts";
 import * as ModelManifest from "./ModelManifest.ts";
 import * as ResetCreditCoordinator from "./resetCreditCoordinator.ts";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
+import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
 import { makeProviderInstanceRegistry } from "./ProviderInstanceRegistry.ts";
 import * as ProviderOrchestrationAdapterInfrastructure from "./ProviderOrchestrationAdapterInfrastructure.ts";
 import * as PortScanner from "../preview/PortScanner.ts";
 import * as ProviderHostLive from "./ProviderHostLive.ts";
-import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
-import type { AnyProviderDriver, ProviderInstance } from "@t3tools/provider-core/server/driver";
+import * as SecretResolver from "@t2code/secret-provider-core/server/SecretResolver";
+import type { AnyProviderDriver, ProviderInstance } from "@t2code/provider-core/server/driver";
 
 vi.mock("@anthropic-ai/claude-agent-sdk", { spy: true });
 

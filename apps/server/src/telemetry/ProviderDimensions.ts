@@ -2,7 +2,7 @@ import type {
   ModelSelection,
   OrchestrationV2ThreadShell,
   ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 /**
  * Drivers whose model catalogs are published by the vendor. Other drivers

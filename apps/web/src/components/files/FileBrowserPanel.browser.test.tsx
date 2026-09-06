@@ -1,4 +1,4 @@
-import { EnvironmentId, type ProjectEntry } from "@t3tools/contracts";
+import { EnvironmentId, type ProjectEntry } from "@t2code/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { COMPOSER_MENTION_DRAG_TYPE } from "~/components/chat/composerMentionDrag";

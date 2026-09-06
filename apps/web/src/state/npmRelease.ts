@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import { npmReleaseDatabaseMigration } from "@t3tools/shared/cliRelease";
+import { npmReleaseDatabaseMigration } from "@t2code/shared/cliRelease";
 import * as Effect from "effect/Effect";
 import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/http";
 import { AsyncResult, Atom } from "effect/reactivity";

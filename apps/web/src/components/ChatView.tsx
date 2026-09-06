@@ -207,7 +207,7 @@ import { focusTerminalOnThreadEnter, getTerminalFocusOwner } from "../lib/termin
 import {
   deriveLogicalProjectKeyFromSettings,
   selectProjectGroupingSettings,
-} from "@t3tools/client-runtime/state/project-grouping";
+} from "@t2code/client-runtime/state/project-grouping";
 import {
   isSameSidebarThreadRef,
   useSidebarPendingFileDropStore,
@@ -355,7 +355,7 @@ import { ChatRightPanel } from "./chat/ChatRightPanel";
 import { useDraftEnvironmentRouting } from "./chat/useDraftEnvironmentRouting";
 import { branchMismatchBannerItem } from "./chat/ThreadActivityBanners";
 import { ThreadNow } from "./chat/ThreadNow";
-import type { ThreadStructure } from "@t3tools/client-runtime/state/shell";
+import type { ThreadStructure } from "@t2code/client-runtime/state/shell";
 import { useDelayedStatus } from "../hooks/useDelayedStatus";
 import { useTimelineFollow } from "./chat/useTimelineFollow";
 import {

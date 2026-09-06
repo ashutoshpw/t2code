@@ -3,11 +3,11 @@ import {
   type EnvironmentId,
   type ProjectId,
   resolveEnvironmentMachineKind,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { isDesktopLocalConnectionTarget } from "../connection/desktopLocal";
 import { useClientSettings } from "../hooks/useSettings";
-import { getProjectOrderKey } from "@t3tools/client-runtime/state/project-grouping";
+import { getProjectOrderKey } from "@t2code/client-runtime/state/project-grouping";
 import { useProjects, useThreadShells } from "../state/entities";
 import { useEnvironments, usePrimaryEnvironmentId } from "../state/environments";
 import { buildSidebarProjectSnapshots } from "../sidebarProjectGrouping";

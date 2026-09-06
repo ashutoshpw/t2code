@@ -1,4 +1,4 @@
-import type { RuntimeMode } from "@t3tools/contracts";
+import type { RuntimeMode } from "@t2code/contracts";
 import { type LucideIcon, LockIcon, PenLineIcon, ShieldOffIcon, SparklesIcon } from "lucide-react";
 
 export const runtimeModeConfig: Record<

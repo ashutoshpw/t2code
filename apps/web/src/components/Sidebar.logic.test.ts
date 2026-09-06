@@ -1,5 +1,5 @@
-import { presentThreadShell } from "@t3tools/client-runtime/state/models";
-import { isThreadWorking as isSidebarThreadWorking } from "@t3tools/client-runtime/state/thread-inbox";
+import { presentThreadShell } from "@t2code/client-runtime/state/models";
+import { isThreadWorking as isSidebarThreadWorking } from "@t2code/client-runtime/state/thread-inbox";
 import * as DateTime from "effect/DateTime";
 import { deriveActiveWorkStartedAt } from "../session-logic.ts";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -37,8 +37,8 @@ import {
   sidebarFolderExpansionKeys,
 } from "./Sidebar.logic";
 import { resolveProjectExpanded } from "../uiStateStore";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import { EnvironmentId, ProjectId, ProviderInstanceId, RunId, ThreadId } from "@t3tools/contracts";
+import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
+import { EnvironmentId, ProjectId, ProviderInstanceId, RunId, ThreadId } from "@t2code/contracts";
 
 import {
   DEFAULT_INTERACTION_MODE,

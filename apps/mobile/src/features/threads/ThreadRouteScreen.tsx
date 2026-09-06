@@ -42,7 +42,7 @@ import { vcsEnvironment } from "../../state/vcs";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingScreen } from "../../components/LoadingScreen";
 import { scopedThreadKey } from "../../lib/scopedEntities";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { useThreadShell } from "../../state/entities";
 import { NATIVE_LIQUID_GLASS_SUPPORTED } from "../../native/native-glass";
 import { connectionTone } from "../connection/connectionTone";

@@ -10,7 +10,7 @@ import {
   type ModelSelection,
   type RuntimeMode,
   type OrchestrationV2ThreadShell,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Cause from "effect/Cause";

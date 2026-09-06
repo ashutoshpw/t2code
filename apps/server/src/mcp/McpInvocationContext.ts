@@ -8,11 +8,11 @@ import {
   type ProviderInteractionMode,
   type RuntimeMode,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
-import { formatThreadLink } from "@t3tools/shared/threadLinks";
+import { formatThreadLink } from "@t2code/shared/threadLinks";
 
 const ALL_MCP_CAPABILITIES = [
   "preview",

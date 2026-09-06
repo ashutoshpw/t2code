@@ -14,11 +14,11 @@ import {
   type SourceControlProviderAuth,
   type SourceControlRepositoryCloneUrls,
   type SourceControlRepositoryVisibility,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
-import { sanitizeBranchFragment } from "@t3tools/shared/git";
-import { isSshRemoteUrl } from "@t3tools/shared/sourceControl";
-import { recognizeRemoteWith } from "@t3tools/source-control-core/shared/definition";
+import { sanitizeBranchFragment } from "@t2code/shared/git";
+import { isSshRemoteUrl } from "@t2code/shared/sourceControl";
+import { recognizeRemoteWith } from "@t2code/source-control-core/shared/definition";
 import { definition } from "../shared/definition.ts";
 
 import {
@@ -27,13 +27,13 @@ import {
   normalizeBitbucketPullRequestRecord,
   type NormalizedBitbucketPullRequestRecord,
 } from "./bitbucketPullRequests.ts";
-import { collectUint8StreamText } from "@t3tools/provider-core/server/collectStreamText";
-import * as SourceControlProvider from "@t3tools/source-control-core/server/SourceControlProvider";
-import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
-import { readSourceControlHostSettings } from "@t3tools/source-control-core/shared/definition";
+import { collectUint8StreamText } from "@t2code/provider-core/server/collectStreamText";
+import * as SourceControlProvider from "@t2code/source-control-core/server/SourceControlProvider";
+import * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
+import { readSourceControlHostSettings } from "@t2code/source-control-core/shared/definition";
 
 import * as BitbucketClient from "../shared/definition.ts";
-import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
+import * as SourceControlRateLimit from "@t2code/source-control-core/server/SourceControlRateLimit";
 
 const DEFAULT_API_BASE_URL = "https://api.bitbucket.org/2.0";
 const DEFAULT_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;

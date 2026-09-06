@@ -3,8 +3,8 @@ import type {
   EnvironmentMachineKind,
   ScopedThreadRef,
   ThreadId,
-} from "@t3tools/contracts";
-import { foldSearchQuery, rankSearchItems, scoreThreadSearch } from "@t3tools/shared/paletteSearch";
+} from "@t2code/contracts";
+import { foldSearchQuery, rankSearchItems, scoreThreadSearch } from "@t2code/shared/paletteSearch";
 
 import type { EnvironmentThreadShell } from "./state/models.ts";
 import { threadSearchSubject, type ThreadSearchShell } from "./state/threadSearch.ts";

@@ -7,8 +7,8 @@ import type {
   ScopedThreadRef,
   ThreadLinkedPullRequest,
   ThreadPullRequestLink,
-} from "@t3tools/contracts";
-import { scopedThreadKey } from "@t3tools/client-runtime/environment";
+} from "@t2code/contracts";
+import { scopedThreadKey } from "@t2code/client-runtime/environment";
 import { lazy, Suspense } from "react";
 import type { ComposerImageAttachment, DraftId } from "../../composerDraftStore";
 import type { ShortcutMatchContext } from "../../keybindings";

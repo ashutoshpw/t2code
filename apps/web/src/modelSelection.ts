@@ -7,16 +7,16 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   type CustomModelDefinition,
   createModelSelection,
   normalizeCustomModelSlug,
   readCustomModelEntries,
   resolveSelectableModel,
-} from "@t3tools/shared/model";
+} from "@t2code/shared/model";
 import { getComposerProviderState } from "./components/chat/composerProviderState";
-import { UnifiedSettings } from "@t3tools/contracts/settings";
+import { UnifiedSettings } from "@t2code/contracts/settings";
 import * as Arr from "effect/Array";
 import * as Result from "effect/Result";
 import {
@@ -31,7 +31,7 @@ import {
   NO_PROVIDER_MODEL_SELECTION,
 } from "./providerInstances";
 import { sortModelsForProviderInstance } from "./modelOrdering";
-import { resolveModelShortName } from "@t3tools/client-runtime/provider-clients";
+import { resolveModelShortName } from "@t2code/client-runtime/provider-clients";
 
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 const DEFAULT_TEXT_GENERATION_INSTANCE_ID = ProviderInstanceId.make("codex");

@@ -9,15 +9,15 @@ import { it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
-import { createModelSelection } from "@t3tools/shared/model";
+import { createModelSelection } from "@t2code/shared/model";
 import { expect } from "vite-plus/test";
-import { ProviderInstanceId } from "@t3tools/contracts";
-import { GrokSettings } from "@t3tools/provider-grok/settings";
+import { ProviderInstanceId } from "@t2code/contracts";
+import { GrokSettings } from "@t2code/provider-grok/settings";
 
 import * as ServerConfig from "../config.ts";
 import * as TextGeneration from "./TextGeneration.ts";
-import { makeGrokTextGeneration } from "@t3tools/provider-grok/testing";
-import { execScriptSource, writeFakeCli } from "@t3tools/provider-testing/fakeCli";
+import { makeGrokTextGeneration } from "@t2code/provider-grok/testing";
+import { execScriptSource, writeFakeCli } from "@t2code/provider-testing/fakeCli";
 const decodeGrokSettings = Schema.decodeSync(GrokSettings);
 
 const __dirname = NodePath.dirname(NodeURL.fileURLToPath(import.meta.url));

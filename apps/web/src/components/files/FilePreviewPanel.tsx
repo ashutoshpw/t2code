@@ -7,9 +7,9 @@ import {
   type EnvironmentId,
   type ResolvedKeybindingsConfig,
   type ScopedThreadRef,
-} from "@t3tools/contracts";
-import { filePreviewDelimiter } from "@t3tools/shared/delimitedPreview";
-import { AuthFilesystemWriteScope } from "@t3tools/contracts";
+} from "@t2code/contracts";
+import { filePreviewDelimiter } from "@t2code/shared/delimitedPreview";
+import { AuthFilesystemWriteScope } from "@t2code/contracts";
 import {
   isWorkspaceAudioPreviewPath,
   isWorkspaceImagePreviewPath,
@@ -17,7 +17,7 @@ import {
   isWorkspaceVideoPreviewPath,
   officePreviewKind,
   binaryPreviewKind,
-} from "@t3tools/shared/filePreview";
+} from "@t2code/shared/filePreview";
 import { useAtomMount, useAtomValue } from "@effect/atom-react";
 import { Atom } from "effect/reactivity";
 import {
@@ -42,8 +42,8 @@ import { useFilesystemReadAccess } from "~/state/filesystem";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import { mediaFileReference } from "@t3tools/client-runtime/media-reference";
+} from "@t2code/client-runtime/state/runtime";
+import { mediaFileReference } from "@t2code/client-runtime/media-reference";
 import { FolderTree, Globe2, WrapTextIcon } from "lucide-react";
 import { Code2, Eye, Table2 } from "lucide";
 import * as Schema from "effect/Schema";
@@ -63,8 +63,8 @@ import { resolveDiffThemeName } from "~/lib/diffRendering";
 import { PREFERRED_HIGHLIGHTER } from "~/lib/syntaxHighlighting";
 import { cn } from "~/lib/utils";
 import type { ChatFileAttachment } from "~/types";
-import { isHostPath } from "@t3tools/shared/path";
-import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
+import { isHostPath } from "@t2code/shared/path";
+import { resolvePathLinkTarget } from "@t2code/shared/fileLinks";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
 import { type DraftId, useComposerDraftStore } from "~/composerDraftStore";
@@ -156,10 +156,10 @@ const MermaidFilePreview = lazy(() =>
   import("./MermaidFilePreview").then((module) => ({ default: module.MermaidFilePreview })),
 );
 
-const FILE_EXPLORER_STORAGE_KEY = "t3code.fileExplorerOpen";
-const RENDER_MARKDOWN_STORAGE_KEY = "t3code.renderMarkdown";
-const RENDER_BROWSER_FILE_STORAGE_KEY = "t3code.renderBrowserFile";
-const RENDER_TABLE_STORAGE_KEY = "t3code.renderTable";
+const FILE_EXPLORER_STORAGE_KEY = "t2code.fileExplorerOpen";
+const RENDER_MARKDOWN_STORAGE_KEY = "t2code.renderMarkdown";
+const RENDER_BROWSER_FILE_STORAGE_KEY = "t2code.renderBrowserFile";
+const RENDER_TABLE_STORAGE_KEY = "t2code.renderTable";
 type FilePostRender = <LAnnotation>(
   fileContainer: HTMLElement,
   instance: FileInstance<LAnnotation, undefined>,
@@ -1085,7 +1085,7 @@ export default function FilePreviewPanel({
   const isMarkdown = previewPath ? isMarkdownPreviewFile(previewPath) : false;
   const isMermaid = previewPath !== null && /\.(mmd|mermaid)$/i.test(previewPath);
   const [renderMermaidPreferred, setRenderMermaidPreferred] = useLocalStorage(
-    "t3code.renderMermaid",
+    "t2code.renderMermaid",
     true,
     Schema.Boolean,
   );

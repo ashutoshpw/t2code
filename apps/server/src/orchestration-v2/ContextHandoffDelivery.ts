@@ -1,16 +1,16 @@
 import type {
   OrchestrationV2ContextHandoff,
   OrchestrationV2ProviderThread,
-} from "@t3tools/contracts";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import { ContextHandoffBudgetError } from "@t3tools/provider-core/server/failure";
+} from "@t2code/contracts";
+import type * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
+import { ContextHandoffBudgetError } from "@t2code/provider-core/server/failure";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import {
   historyCost,
   renderHistory,
   selectHistory,
-} from "@t3tools/provider-core/server/handoffBudget";
+} from "@t2code/provider-core/server/handoffBudget";
 
 /** Persist around injection; ambiguous delivery requires a fresh native thread. Call unsent if refused before prompt consumption. */
 export const deliverContextHandoffs = Effect.fn("orchestrationV2.deliverContextHandoffs")(

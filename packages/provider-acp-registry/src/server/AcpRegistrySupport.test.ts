@@ -4,10 +4,10 @@ import {
   DEFAULT_SERVER_SETTINGS,
   ProviderDriverKind,
   ProviderInstanceId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { AcpRegistrySettings } from "../settings.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { SpawnExecutableResolution } from "@t3tools/shared/shell";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { SpawnExecutableResolution } from "@t2code/shared/shell";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -22,7 +22,7 @@ import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
 import * as AcpRegistrySupport from "./AcpRegistrySupport.ts";
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
+import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
 
 const registryUrl = "https://registry.test/registry.json";
 const archiveUrl = "https://registry.test/example-agent.bin";

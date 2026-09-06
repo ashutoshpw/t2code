@@ -11,7 +11,7 @@ import {
   TurnItemId,
   ScheduledTaskId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { LegendListRef } from "@legendapp/list/react";
 import { createRef, Profiler, StrictMode, type ComponentProps, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -26,7 +26,7 @@ import {
   deriveTimelineEntriesFromVisibleTurnItems,
 } from "../../session-logic";
 import { remarkThoughtPreview } from "./TimelineWorkEntryRow.logic";
-import { parseMarkdownWithMath } from "@t3tools/shared/markdownMath";
+import { parseMarkdownWithMath } from "@t2code/shared/markdownMath";
 import { collectThreadFindRanges } from "./threadFindHighlights";
 import { toastManager } from "../ui/toast";
 import type { CitedHistory } from "./citationProcedure";

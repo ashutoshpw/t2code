@@ -2,15 +2,15 @@ import type {
   OrchestrationV2PendingBackgroundTask,
   OrchestrationV2ProviderGoal,
   ThreadId,
-} from "@t3tools/contracts";
-import type { EnvironmentThreadShell, ThreadStructure } from "@t3tools/client-runtime/state/shell";
+} from "@t2code/contracts";
+import type { EnvironmentThreadShell, ThreadStructure } from "@t2code/client-runtime/state/shell";
 import {
   presentPendingBackgroundWork,
   presentProviderGoal,
   type RunStopPresentation,
-} from "@t3tools/client-runtime/state/thread-execution";
-import { childThreadInputsTitle } from "@t3tools/client-runtime/state/threads";
-import { formatDuration } from "@t3tools/shared/orchestrationTiming";
+} from "@t2code/client-runtime/state/thread-execution";
+import { childThreadInputsTitle } from "@t2code/client-runtime/state/threads";
+import { formatDuration } from "@t2code/shared/orchestrationTiming";
 import * as DateTime from "effect/DateTime";
 import {
   CircleDashedIcon,

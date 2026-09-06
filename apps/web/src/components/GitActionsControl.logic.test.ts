@@ -1,6 +1,6 @@
-import { SourceControlProviderKind, type VcsStatusResult } from "@t3tools/contracts";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { resolveAutoFeatureBranchName } from "@t3tools/shared/git";
+import { SourceControlProviderKind, type VcsStatusResult } from "@t2code/contracts";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { resolveAutoFeatureBranchName } from "@t2code/shared/git";
 import { assert, describe, it } from "vite-plus/test";
 import {
   buildMenuItems,

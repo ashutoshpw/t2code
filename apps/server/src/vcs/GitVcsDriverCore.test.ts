@@ -3,7 +3,7 @@ import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodeURL from "node:url";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import { assert, it, describe } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -29,8 +29,8 @@ import {
   type ReviewDiffFileContentsInput,
   type ReviewDiffPreviewResult,
   type WorktreeSubmodules,
-} from "@t3tools/contracts";
-import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
+} from "@t2code/contracts";
+import { symlinksSupported } from "@t2code/shared/testing/symlinks";
 import * as ServerConfig from "../config.ts";
 import {
   makeGitVcsDriverCore,

@@ -7,7 +7,7 @@ import {
   RunId,
   type ChatAttachment,
   type OrchestrationMessageContext,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { appAtomRegistry } from "./atom-registry";
 import {

@@ -3,10 +3,10 @@
 import * as NodeFS from "node:fs";
 import * as NodePath from "node:path";
 
-import type { ThreadId } from "@t3tools/contracts";
-import type * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
-import { makeAsyncRotatingFileSink } from "@t3tools/shared/logging";
-import { errorTag } from "@t3tools/shared/observability";
+import type { ThreadId } from "@t2code/contracts";
+import type * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
+import { makeAsyncRotatingFileSink } from "@t2code/shared/logging";
+import { errorTag } from "@t2code/shared/observability";
 import * as Clock from "effect/Clock";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";

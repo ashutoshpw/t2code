@@ -1,38 +1,38 @@
-import { resolveThreadWorkingStartedAt } from "@t3tools/client-runtime/state/models";
-import { isShownUnderParent } from "@t3tools/client-runtime/state/threads";
-import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
-import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
+import { resolveThreadWorkingStartedAt } from "@t2code/client-runtime/state/models";
+import { isShownUnderParent } from "@t2code/client-runtime/state/threads";
+import { backgroundWorkHoldsCompletion } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
+import { threadPullRequestSearchTerms } from "@t2code/shared/threadPullRequests";
 import * as React from "react";
 import {
   isAtomCommandInterrupted,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import { defaultAnimateLayoutChanges, type AnimateLayoutChanges } from "@dnd-kit/sortable";
 import {
   threadSearchMatchKey,
   threadSearchSubject,
   type ThreadSearchShell,
-} from "@t3tools/client-runtime/state/thread-search";
-import { foldSearchQuery, rankSearchItems, scoreThreadSearch } from "@t3tools/shared/paletteSearch";
-import type { ContextMenuItem, EnvironmentId, ThreadId } from "@t3tools/contracts";
-import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@t3tools/contracts/settings";
+} from "@t2code/client-runtime/state/thread-search";
+import { foldSearchQuery, rankSearchItems, scoreThreadSearch } from "@t2code/shared/paletteSearch";
+import type { ContextMenuItem, EnvironmentId, ThreadId } from "@t2code/contracts";
+import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@t2code/contracts/settings";
 import type { AsyncResult } from "effect/reactivity";
 import {
   effectiveSnoozed,
   type ThreadSnoozeShell,
-} from "@t3tools/client-runtime/state/thread-settled";
+} from "@t2code/client-runtime/state/thread-settled";
 import {
   getThreadSortTimestamp,
   planPinnedReorder,
   sortThreads,
   toSortableTimestamp,
   type ThreadSortInput,
-} from "@t3tools/client-runtime/state/thread-sort";
+} from "@t2code/client-runtime/state/thread-sort";
 import type { SidebarThreadSummary, Thread } from "../types";
 import { normalizeSearchText } from "../lib/utils";
 import { isLatestRunSettled } from "../session-logic";
 import { observeIntersection } from "../lib/observeIntersection";
-import { deadlineAfter, deadlineStore } from "@t3tools/client-runtime/clock";
+import { deadlineAfter, deadlineStore } from "@t2code/client-runtime/clock";
 import { useDeadlinePassed } from "../hooks/useDeadline";
 import { legacyProjectCwdPreferenceKey } from "../uiStateStore";
 
@@ -970,14 +970,14 @@ export function firstValidTimestampMs(
   return 0;
 }
 
-export { sortActiveThreadsByOrderKey as sortThreadsForSidebar } from "@t3tools/client-runtime/state/thread-sort";
+export { sortActiveThreadsByOrderKey as sortThreadsForSidebar } from "@t2code/client-runtime/state/thread-sort";
 export {
   sortInboxThreadsByReturn,
   sortWorkingThreadsBySend,
-} from "@t3tools/client-runtime/state/thread-inbox";
+} from "@t2code/client-runtime/state/thread-inbox";
 
-export { pinOrderKeyBetween } from "@t3tools/client-runtime/state/thread-sort";
-export { sortPinnedThreadsByOrderKey as sortPinnedThreadsForSidebar } from "@t3tools/client-runtime/state/thread-sort";
+export { pinOrderKeyBetween } from "@t2code/client-runtime/state/thread-sort";
+export { sortPinnedThreadsByOrderKey as sortPinnedThreadsForSidebar } from "@t2code/client-runtime/state/thread-sort";
 
 const EMPTY_CONTENT_MATCH_KEYS: ReadonlySet<string> = new Set<string>();
 

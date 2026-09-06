@@ -19,9 +19,9 @@ import {
   type OrchestrationV2TurnItem,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
-import { chatMarkdownImageSources } from "@t3tools/shared/markdownPipeline";
-import { htmlRenderFromToolItem } from "@t3tools/shared/toolOutput";
+} from "@t2code/contracts";
+import { chatMarkdownImageSources } from "@t2code/shared/markdownPipeline";
+import { htmlRenderFromToolItem } from "@t2code/shared/toolOutput";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";

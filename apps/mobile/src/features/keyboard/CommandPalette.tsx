@@ -7,8 +7,8 @@ import {
   threadSearchSubject,
   type EnvironmentThreadSearchMatch,
   type ShownOrder,
-} from "@t3tools/client-runtime/state/thread-search";
-import { THREAD_JUMP_KEYBINDING_COMMANDS } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/thread-search";
+import { THREAD_JUMP_KEYBINDING_COMMANDS } from "@t2code/contracts";
 import {
   foldSearchQuery,
   PALETTE_MESSAGE_LIMIT,
@@ -16,7 +16,7 @@ import {
   splitSearchText,
   pickedQuery,
   threadRecentUse,
-} from "@t3tools/shared/paletteSearch";
+} from "@t2code/shared/paletteSearch";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,

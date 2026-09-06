@@ -15,11 +15,11 @@ import {
   RunId,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import type * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as FileSystem from "effect/FileSystem";

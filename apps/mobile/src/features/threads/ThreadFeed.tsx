@@ -29,16 +29,16 @@ import {
 import * as Haptics from "expo-haptics";
 import { KeyboardAwareLegendList } from "@legendapp/list/keyboard";
 import { useViewabilityAmount, type LegendListRef } from "@legendapp/list/react-native";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import type { HandoffEndpoints } from "@t3tools/client-runtime/handoff";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import type { HandoffEndpoints } from "@t2code/client-runtime/handoff";
 import {
   IDLE_COMPACTING_LABELS,
   resolveUserMessagePresentation,
-} from "@t3tools/client-runtime/user-message";
-import { canForkProjectedAssistantItem } from "@t3tools/client-runtime/state/thread-workflows";
-import type { ThreadCheckpointSummary } from "@t3tools/client-runtime/state/thread-checkpoints";
-import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
-import type { WorkflowOpening } from "@t3tools/client-runtime/state/subagentRuntime";
+} from "@t2code/client-runtime/user-message";
+import { canForkProjectedAssistantItem } from "@t2code/client-runtime/state/thread-workflows";
+import type { ThreadCheckpointSummary } from "@t2code/client-runtime/state/thread-checkpoints";
+import { formatDiffCount } from "@t2code/client-runtime/diff-count";
+import type { WorkflowOpening } from "@t2code/client-runtime/state/subagentRuntime";
 import {
   AuthFilesystemReadScope,
   idleCompactionOf,
@@ -53,42 +53,42 @@ import {
   type RunId,
   type ScheduledTaskId,
   type ScopedThreadRef,
-} from "@t3tools/contracts";
-import { renderAssistantCitationsAsText } from "@t3tools/shared/assistantCitations";
-import { encodeComposerContextFragment } from "@t3tools/shared/composerContextClipboard";
-import { parseThreadLinkHref } from "@t3tools/shared/threadLinks";
-import { PROMPT_LINK_MAX_PROMPT_LENGTH } from "@t3tools/shared/promptLinks";
+} from "@t2code/contracts";
+import { renderAssistantCitationsAsText } from "@t2code/shared/assistantCitations";
+import { encodeComposerContextFragment } from "@t2code/shared/composerContextClipboard";
+import { parseThreadLinkHref } from "@t2code/shared/threadLinks";
+import { PROMPT_LINK_MAX_PROMPT_LENGTH } from "@t2code/shared/promptLinks";
 import {
   parseComposerContextHref,
   collectComposerContextReferences,
   replaceComposerContextReferences,
   formatComposerContextReference,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 import { ComposerContextSheet } from "../../components/ComposerContextSheet";
 import { writeComposerContextClipboard } from "../../lib/composerContextClipboard";
 import {
   codexArtifactTemplatePresentationLabel,
   type CodexArtifactTemplate,
-} from "@t3tools/shared/codexArtifactTemplates";
-import { resolveAssetUrl } from "@t3tools/client-runtime/state/assets";
-import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
+} from "@t2code/shared/codexArtifactTemplates";
+import { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
+import { formatAttachmentSize } from "@t2code/client-runtime/state/attachments";
 import {
   executeAtomQuery,
   settlePromise,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import {
   classifyMarkdownImageSource,
   markdownImageSourceFragment,
-} from "@t3tools/client-runtime/markdown-images";
-import { resolveViewedImageAsset } from "@t3tools/client-runtime/work-log/presentation";
+} from "@t2code/client-runtime/markdown-images";
+import { resolveViewedImageAsset } from "@t2code/client-runtime/work-log/presentation";
 import {
   renderCodexInlineDirectivesAsMarkdown,
   splitCodexArtifactTemplateMarkdown,
-} from "@t3tools/shared/codexMarkdownDirectives";
-import { CHAT_LIST_ANCHOR_OFFSET, resolveChatListAnchoredEndSpace } from "@t3tools/shared/chatList";
-import { imageMimeType } from "@t3tools/shared/image";
-import { videoMimeType } from "@t3tools/shared/video";
+} from "@t2code/shared/codexMarkdownDirectives";
+import { CHAT_LIST_ANCHOR_OFFSET, resolveChatListAnchoredEndSpace } from "@t2code/shared/chatList";
+import { imageMimeType } from "@t2code/shared/image";
+import { videoMimeType } from "@t2code/shared/video";
 import { SymbolView, type AppSymbolName } from "../../components/ui/AppSymbol";
 import { HeaderHeightContext } from "@react-navigation/elements";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -226,7 +226,7 @@ import {
 } from "./pending-thread-feed";
 import type { QueuedThreadMessage } from "../../state/thread-outbox-model";
 import { resolveThreadFeedFixedItemSize } from "./thread-feed-item-size";
-import { htmlRenderFrameHeight } from "@t3tools/shared/htmlRender";
+import { htmlRenderFrameHeight } from "@t2code/shared/htmlRender";
 import { htmlRenderRowHeight, ThreadHtmlRender } from "./HtmlRenderWebView";
 import { ThreadMcpApp } from "./McpAppWebView";
 import { assetEnvironment, useAssetUrl, useRefreshAssetUrl } from "../../state/assets";
@@ -237,7 +237,7 @@ import {
   needsWorkspaceBasenameLookup,
   pickWorkspaceBasenameMatch,
   WORKSPACE_BASENAME_LOOKUP_LIMIT,
-} from "@t3tools/client-runtime/workspace-basename-lookup";
+} from "@t2code/client-runtime/workspace-basename-lookup";
 import {
   resolveThreadLink,
   useLiveThreadLinkLabels,

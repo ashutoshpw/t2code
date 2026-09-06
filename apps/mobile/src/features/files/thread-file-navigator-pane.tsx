@@ -1,6 +1,6 @@
-import { resolveFilesystemReadAccess } from "@t3tools/client-runtime/state/filesystem";
+import { resolveFilesystemReadAccess } from "@t2code/client-runtime/state/filesystem";
 import { environmentSession } from "../../state/session";
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId } from "@t2code/contracts";
 import { SymbolView } from "../../components/ui/AppSymbol";
 import { ScreenContent } from "../../components/ui/ScreenContent";
 import { useState, type ComponentProps } from "react";

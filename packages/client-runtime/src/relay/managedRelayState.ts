@@ -1,5 +1,5 @@
-import type { EnvironmentId } from "@t3tools/contracts";
-import { decodeRelayJwt } from "@t3tools/shared/relayJwt";
+import type { EnvironmentId } from "@t2code/contracts";
+import { decodeRelayJwt } from "@t2code/shared/relayJwt";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Data from "effect/Data";

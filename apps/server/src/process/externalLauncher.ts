@@ -11,14 +11,14 @@ import {
   type EditorId,
   type FileManagerRevealKind,
   type LaunchEditorInput,
-} from "@t3tools/contracts";
-import { resolveEditorCommand } from "@t3tools/shared/editor";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import { resolveEditorCommand } from "@t2code/shared/editor";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import {
   isCommandAvailable,
   resolveSpawnCommand,
   withPathDirectoryListings,
-} from "@t3tools/shared/shell";
+} from "@t2code/shared/shell";
 import * as Clock from "effect/Clock";
 import * as Config from "effect/Config";
 import * as Context from "effect/Context";
@@ -45,7 +45,7 @@ export {
   ExternalLauncherUnknownEditorError,
   ExternalLauncherUnsupportedEditorError,
   ExternalLauncherUnsupportedTargetError,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 export type { LaunchEditorInput };
 interface EditorLaunch {
   readonly editor: EditorId;
@@ -447,7 +447,13 @@ const resolveFileManagerRevealKind = Effect.fn("externalLauncher.resolveFileMana
   },
 );
 
-// Shared scans must survive caller timeouts/disconnects; monotonic expiry prevents clock rollback extending stale entries.
+// Callers apply a timeout (`resolveAvailableEditorsForConfig`) and disconnect
+// mid-connect; neither may cancel a scan other connects are waiting on, or
+// throw away work a slow host (a busy server at startup, a long PATH) needs
+// more than one connect to finish. Expiry uses the monotonic clock
+// (Clock.monotonicTimeNanos), matching the command-resolution cache in
+// @t2code/shared/shell, so a backward wall-clock adjustment cannot keep an
+// expired entry alive.
 const EDITOR_DISCOVERY_CACHE_TTL_NANOS = 60_000_000_000n;
 
 interface EditorDiscoveryCacheEntry {

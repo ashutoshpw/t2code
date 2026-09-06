@@ -122,15 +122,7 @@ function getAppStateFromPath(path: string, options: Parameters<typeof getStateFr
 }
 
 const appLinking = {
-  prefixes: [
-    Linking.createURL("/"),
-    "t2code://",
-    "t2code-dev://",
-    "t2code-preview://",
-    "t3code://",
-    "t3code-dev://",
-    "t3code-preview://",
-  ],
+  prefixes: [Linking.createURL("/"), "t2code://", "t2code-dev://", "t2code-preview://"],
   // Keep the compact thread list available beneath a directly opened thread.
   config: { initialRouteName: "Home" },
   filter: (url: string) => shouldHandleAppLink(url, hasCloudPublicConfig()),

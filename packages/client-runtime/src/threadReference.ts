@@ -2,11 +2,11 @@ import type {
   ComposerContextClipboardFragment,
   ScopedThreadRef,
   ThreadPullRequestLink,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   formatComposerContextReference,
   threadContextRecord,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 
 import { resolveThreadCurrentPullRequestLink } from "./threadPullRequests.ts";
 

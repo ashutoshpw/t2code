@@ -1,4 +1,4 @@
-import { AuthPreviewOperateScope, type EnvironmentId } from "@t3tools/contracts";
+import { AuthPreviewOperateScope, type EnvironmentId } from "@t2code/contracts";
 import type { AnyRouter } from "@tanstack/react-router";
 
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
@@ -11,7 +11,7 @@ import { createNewThreadHandler, resolveDefaultProjectRef } from "../hooks/useHa
 import { createScratchProjectActions } from "../hooks/useScratchProject";
 import { getClientSettings } from "../hooks/useSettings";
 import { startNewThreadFromContext } from "../lib/chatThreadActions";
-import { selectProjectGroupingSettings } from "@t3tools/client-runtime/state/project-grouping";
+import { selectProjectGroupingSettings } from "@t2code/client-runtime/state/project-grouping";
 import { selectActiveRightPanel, useRightPanelStore } from "../rightPanelStore";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { buildSidebarProjectSnapshots } from "../sidebarProjectGrouping";

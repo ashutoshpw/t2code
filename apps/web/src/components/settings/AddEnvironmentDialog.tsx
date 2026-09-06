@@ -5,15 +5,15 @@ import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 
 import {
   type DesktopDiscoveredSshHost,
   type DesktopSshEnvironmentTarget,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   RelayConnectionRegistration,
   RelayConnectionTarget,
-} from "@t3tools/client-runtime/connection";
+} from "@t2code/client-runtime/connection";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import * as Option from "effect/Option";
 
 import { cn } from "../../lib/utils";

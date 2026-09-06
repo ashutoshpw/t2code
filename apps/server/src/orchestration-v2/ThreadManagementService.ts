@@ -1,7 +1,7 @@
 import type {
   OrchestrationV2SearchThreadInput,
   OrchestrationV2SearchThreadResult,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type {
   ProjectionRecordField,
   ProjectionRecordFilter,
@@ -39,10 +39,10 @@ import {
   type ScheduledTaskId,
   ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
-import { delegatedTaskProgress } from "@t3tools/provider-core/server/subagentProjection";
-import { threadTranscriptHeader } from "@t3tools/shared/threadTranscript";
-import { AgentScope } from "@t3tools/shared/AgentScope";
+} from "@t2code/contracts";
+import { delegatedTaskProgress } from "@t2code/provider-core/server/subagentProjection";
+import { threadTranscriptHeader } from "@t2code/shared/threadTranscript";
+import { AgentScope } from "@t2code/shared/AgentScope";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";

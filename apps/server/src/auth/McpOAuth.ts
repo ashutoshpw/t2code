@@ -15,8 +15,8 @@ import {
   AuthOrchestrationReadScope,
   MCP_PEER_LINK_SOFTWARE_ID,
   mcpClientScopes,
-} from "@t3tools/contracts";
-import { encodeOAuthScope } from "@t3tools/shared/oauthScope";
+} from "@t2code/contracts";
+import { encodeOAuthScope } from "@t2code/shared/oauthScope";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";

@@ -9,7 +9,7 @@ import type {
   PullRequestInvolvement,
   PullRequestListState,
   PullRequestMergeMethod,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as AzureDevOpsCli from "./AzureDevOpsCli.ts";
 import {
@@ -26,7 +26,7 @@ import {
   type AzureDevOpsPullRequest,
   type AzureDevOpsRepositoryLocation,
 } from "./azureDevOpsPullRequestJson.ts";
-import type { ProviderListCursor } from "@t3tools/source-control-core/server/PullRequestProvider";
+import type { ProviderListCursor } from "@t2code/source-control-core/server/PullRequestProvider";
 
 export class AzureDevOpsPullRequestReadError extends Schema.TaggedError<AzureDevOpsPullRequestReadError>()(
   "AzureDevOpsPullRequestReadError",

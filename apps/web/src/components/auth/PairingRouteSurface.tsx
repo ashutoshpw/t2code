@@ -1,6 +1,6 @@
 import { Alert, AlertDescription } from "../ui/alert";
-import type { AuthSessionState } from "@t3tools/contracts";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import type { AuthSessionState } from "@t2code/contracts";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import React, { startTransition, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { connectPairing } from "../../connection/onboarding";

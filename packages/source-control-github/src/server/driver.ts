@@ -1,9 +1,9 @@
-import { SourceControlSignInError, type SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlSignInError, type SourceControlProviderKind } from "@t2code/contracts";
 import {
   defineSourceControlDriver,
   withOwnServices,
   type SourceControlSignIn,
-} from "@t3tools/source-control-core/server/driver";
+} from "@t2code/source-control-core/server/driver";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 

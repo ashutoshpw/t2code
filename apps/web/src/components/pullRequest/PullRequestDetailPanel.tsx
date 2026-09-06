@@ -1,17 +1,17 @@
-import { projectChangeRequestUrl } from "@t3tools/client-runtime/change-request-links";
-import { normalizeThreadPullRequestKey } from "@t3tools/client-runtime/thread-pull-requests";
-import { changeRequestReferenceAutolinker } from "@t3tools/client-runtime/pull-request-markdown";
+import { projectChangeRequestUrl } from "@t2code/client-runtime/change-request-links";
+import { normalizeThreadPullRequestKey } from "@t2code/client-runtime/thread-pull-requests";
+import { changeRequestReferenceAutolinker } from "@t2code/client-runtime/pull-request-markdown";
 import { useAtomValue } from "@effect/atom-react";
 import { usePullRequestStack } from "~/state/usePullRequestStack";
 import {
   scopedThreadKey,
   scopeProjectRef,
   scopeThreadRef,
-} from "@t3tools/client-runtime/environment";
+} from "@t2code/client-runtime/environment";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import {
   AuthOrchestrationOperateScope,
   AuthSourceControlWriteScope,
@@ -25,7 +25,7 @@ import {
   type PullRequestReviewGuideStop,
   resolveEnvironmentMachineKind,
   type ScopedThreadRef,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   ArrowDownUpIcon,
   ArrowLeftIcon,
@@ -71,7 +71,7 @@ import { PullRequestChangeBreakdownStat } from "./PullRequestChangeBreakdownStat
 import {
   capitalizeTerm,
   sourceControlClients,
-} from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/source-control-clients";
 import { PullRequestThreadLinks } from "./PullRequestThreadLinks";
 import { vcsEnvironment } from "~/state/vcs";
 import { RelativeTime } from "~/components/RelativeTime";

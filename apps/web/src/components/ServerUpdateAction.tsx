@@ -3,7 +3,7 @@ import {
   AuthEnvironmentMaintainScope,
   type AuthSessionState,
   sessionGrantsScope,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { AsyncResult } from "effect/reactivity";
 import { environmentSession } from "~/state/session";
 import type {
@@ -11,13 +11,13 @@ import type {
   EnvironmentId,
   ServerInstallation,
   ServerSelfUpdateCapability,
-} from "@t3tools/contracts";
-import type { ServerUpdateStage, ServerUpdateState } from "@t3tools/client-runtime/state/server";
+} from "@t2code/contracts";
+import type { ServerUpdateStage, ServerUpdateState } from "@t2code/client-runtime/state/server";
 import {
   isAtomCommandInterrupted,
   settlePromise,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import { CircleArrowUpIcon } from "lucide-react";
 import { type ComponentProps, useRef, useState } from "react";
 
@@ -28,7 +28,7 @@ import { appAtomRegistry } from "~/rpc/atomRegistry";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { manualServerUpdateCommand } from "~/versionSkew";
 import { useServerConfigs } from "~/state/entities";
-import { crossesReleaseTrack } from "@t3tools/shared/cliRelease";
+import { crossesReleaseTrack } from "@t2code/shared/cliRelease";
 import { Button } from "./ui/button";
 import { toastManager } from "./ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";

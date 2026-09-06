@@ -1,12 +1,12 @@
-import { PrimaryConnectionTarget } from "@t3tools/client-runtime/connection";
-import { createEnvironmentThreadShellAtoms } from "@t3tools/client-runtime/state/threads";
+import { PrimaryConnectionTarget } from "@t2code/client-runtime/connection";
+import { createEnvironmentThreadShellAtoms } from "@t2code/client-runtime/state/threads";
 import {
   applyShellStreamEvent,
   createEnvironmentSnapshotAtom,
   EMPTY_SHELL_STATE,
   type EnvironmentShellState,
   type EnvironmentShellStatus,
-} from "@t3tools/client-runtime/state/shell";
+} from "@t2code/client-runtime/state/shell";
 import {
   v2ShellSnapshot,
   v2ThreadShell,
@@ -25,7 +25,7 @@ import {
   type OrchestrationV2ThreadShell,
   type OrchestrationV2ShellSnapshot,
   type ModelSelection,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { onTestFinished, vi } from "vite-plus/test";
 
 const composerDraftFileMocks = vi.hoisted(() => {
@@ -146,7 +146,7 @@ vi.mock("../lib/uuid", () => ({ uuidv4: () => "uuid", randomHex: () => "0000" })
 vi.mock("./assets", () => ({ assetEnvironment: {} }));
 vi.mock("./attachments", () => ({ attachmentEnvironment: {} }));
 vi.mock("./session", () => ({ environmentSession: {} }));
-vi.mock("@t3tools/client-runtime/state/runtime", () => ({
+vi.mock("@t2code/client-runtime/state/runtime", () => ({
   createEnvironmentRpcCommand: () => Symbol("rpc-command"),
   executeAtomQuery: () => {
     throw new Error("Unexpected network query in the inline read test");
@@ -169,7 +169,7 @@ import type { DraftComposerAttachment } from "../lib/composerImages";
 import {
   collectComposerContextReferences,
   formatComposerContextReference,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 import { appAtomRegistry } from "./atom-registry";
 import { startComposerDraftOperation } from "./composerDraftOperations";
 import { threadOutboxManager } from "./thread-outbox";

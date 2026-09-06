@@ -1,10 +1,10 @@
-import type { ThreadStructure, ThreadStructureTurnItem } from "@t3tools/client-runtime/state/shell";
+import type { ThreadStructure, ThreadStructureTurnItem } from "@t2code/client-runtime/state/shell";
 import type {
   OrchestrationV2ProviderTurn,
   OrchestrationV2ProviderTurnTokenUsage,
   OrchestrationV2ProviderThread,
   ThreadTokenUsageSnapshot,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 
 function asFiniteNumber(value: unknown): number | null {

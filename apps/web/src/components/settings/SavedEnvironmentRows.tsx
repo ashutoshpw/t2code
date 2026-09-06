@@ -13,13 +13,13 @@ import {
   connectReachabilityHelpUrl,
   formatConnectReachable,
   resolveEnvironmentMachineKind,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   connectionRoutes,
   hasSavedBearerRoute,
   connectionStatusText,
   environmentMcpUrl,
-} from "@t3tools/client-runtime/connection";
+} from "@t2code/client-runtime/connection";
 import * as Option from "effect/Option";
 
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";

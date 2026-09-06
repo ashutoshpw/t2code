@@ -6,7 +6,7 @@ import {
   selectableProviderOptionChoices,
   REASONING_SELECT_DESCRIPTOR_IDS,
   ULTRATHINK_PROMPT_PREFIX,
-} from "@t3tools/client-runtime/model-traits";
+} from "@t2code/client-runtime/model-traits";
 import {
   type ModelSelection,
   type ProviderDriverKind,
@@ -15,15 +15,15 @@ import {
   type ProviderOptionSelection,
   type ScopedThreadRef,
   type ServerProviderModel,
-} from "@t3tools/contracts";
-import type { EffortDisplay } from "@t3tools/contracts/settings";
+} from "@t2code/contracts";
+import type { EffortDisplay } from "@t2code/contracts/settings";
 import {
   buildProviderOptionSelectionsFromDescriptors,
   getProviderOptionCurrentLabel,
   getProviderOptionDescriptors,
   isClaudeUltrathinkPrompt,
   normalizeModelSlug,
-} from "@t3tools/shared/model";
+} from "@t2code/shared/model";
 import { memo, type ReactNode, useRef } from "react";
 import { GaugeIcon, ZapIcon } from "lucide-react";
 import {
