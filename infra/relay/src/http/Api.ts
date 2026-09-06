@@ -879,7 +879,6 @@ export const serverApi = HttpApiBuilder.group(
   Effect.fnUntraced(function* (handlers) {
     const publisher = yield* AgentActivityPublisher.AgentActivityPublisher;
     const publishSignatures = yield* EnvironmentPublishSignatures.EnvironmentPublishSignatures;
-    const links = yield* EnvironmentLinks.EnvironmentLinks;
     const publishHandlers = handlers.handle(
       "publishAgentActivity",
       Effect.fn("relay.api.server.publishAgentActivity")(
@@ -1022,6 +1021,7 @@ export const serverApi = HttpApiBuilder.group(
         if (principal.environmentId !== params.environmentId) {
           return yield* new HttpApiError.Unauthorized({});
         }
+        const links = yield* EnvironmentLinks.EnvironmentLinks;
         yield* links.updateLabel({
           environmentId: params.environmentId,
           environmentPublicKey: principal.environmentPublicKey,
