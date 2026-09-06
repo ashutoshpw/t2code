@@ -10,7 +10,7 @@ This document covers the unified release workflow for stable and nightly desktop
 - Triggers:
   - manual `workflow_dispatch` with `channel=stable`, the normal way to ship stable
   - push tag matching `v*.*.*` for a stable release of an explicit commit
-  - scheduled nightly check every 30 minutes
+  - scheduled nightly check every 12 hours
   - manual `workflow_dispatch` with `channel=nightly`
 - A manual stable release builds the commit of the latest published nightly, not `main` HEAD.
   Nightly is the release candidate: verify the nightly, then promote it. Merges to `main` keep
@@ -178,7 +178,7 @@ One-time Vercel dashboard setup:
 
 - Workflow: `.github/workflows/release.yml`
 - Triggers:
-  - scheduled check every 30 minutes
+  - scheduled check every 12 hours
   - manual `workflow_dispatch` with `channel=nightly`
 - Automatic nightlies require new commits and at least six hours since the last nightly was published, including manual nightlies.
 - Manual nightlies bypass the time and change checks. Nightly runs remain serialized. Scheduled runs wait for an active nightly to finish, then check the publication gap before building.
