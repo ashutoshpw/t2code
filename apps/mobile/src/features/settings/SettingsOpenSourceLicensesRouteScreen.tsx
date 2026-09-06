@@ -156,6 +156,11 @@ export function SettingsOpenSourceLicensesRouteScreen() {
                 placeholder="Search packages"
                 value={query}
               />
+              <Text className="tabular-nums text-sm text-foreground-muted">
+                {filteredEntries.length === entries.length
+                  ? `${String(entries.length)} notices`
+                  : `${String(filteredEntries.length)} of ${String(entries.length)} notices`}
+              </Text>
             </View>
           ) : null
         }
