@@ -1,9 +1,9 @@
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { EnvironmentId, ThreadId } from "@t2code/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { describe, expect, it } from "vite-plus/test";
 import { formatInlineContextReference } from "../../lib/composerContextReferences";
 import { threadContextReference } from "../../lib/composerContextRecords";
-import { threadContextRecord } from "@t3tools/shared/composerContextReferences";
+import { threadContextRecord } from "@t2code/shared/composerContextReferences";
 import {
   approvalRedirectNotice,
   loadBalancingSendWarning,

@@ -1,4 +1,4 @@
-import type { ProviderUserInputAnswers, UserInputQuestion } from "@t3tools/contracts";
+import type { ProviderUserInputAnswers, UserInputQuestion } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -8,8 +8,8 @@ import * as Schema from "effect/Schema";
 import * as EffectAcpErrors from "effect-acp/errors";
 import type * as EffectAcpSchema from "effect-acp/compat";
 
-import type * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
-import type { AcpToolCallState } from "@t3tools/provider-acp/server/runtimeModel";
+import type * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
+import type { AcpToolCallState } from "@t2code/provider-acp/server/runtimeModel";
 
 export const xAiRateLimitedErrorCode = -32003;
 const completedXAiPromptIdLimit = 128;
@@ -938,7 +938,10 @@ export interface XAiExitPlanModeResponse {
   readonly feedback?: string;
 }
 
-/** Abandon the native approval gate after T3 captures the plan; implementation uses T3 UI. */
+/**
+ * Client captured the plan for T2's proposed-plan card. Abandon the native
+ * Grok plan-approval gate so the turn unblocks; the user implements via T3 UI.
+ */
 export function makeXAiExitPlanModeCapturedResponse(feedback?: string): XAiExitPlanModeResponse {
   return {
     outcome: "abandoned",

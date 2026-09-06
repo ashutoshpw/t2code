@@ -1,4 +1,4 @@
-import type { FilePreviewKind } from "@t3tools/shared/filePreview";
+import type { FilePreviewKind } from "@t2code/shared/filePreview";
 
 export function attachmentDocumentPresentation(input: {
   kind: FilePreviewKind;

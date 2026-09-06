@@ -5,7 +5,7 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   ProjectId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   scheduledTaskDefaultModel,
   DEFAULT_SCHEDULE,

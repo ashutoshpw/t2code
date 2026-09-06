@@ -1,8 +1,8 @@
-import { resolveUserMessagePresentation } from "@t3tools/client-runtime/user-message";
+import { resolveUserMessagePresentation } from "@t2code/client-runtime/user-message";
 import {
   ATTACHMENT_ONLY_BOOTSTRAP_PROMPT,
   collectComposerContextReferences,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 import { PLAN_IMPLEMENTATION_PROMPT_PREFIX } from "../../proposedPlan";
 
 const CLAUDE_ULTRATHINK_PREFIX = "Ultrathink:\n";

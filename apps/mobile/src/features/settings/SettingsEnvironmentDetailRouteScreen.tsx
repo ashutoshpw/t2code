@@ -7,9 +7,9 @@ import {
   managedUpdatesDenial,
   type EnvironmentId,
   type ServerProvider,
-} from "@t3tools/contracts";
-import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import { sessionPermissionsUnavailableMessage } from "@t3tools/shared/authScopeOptions";
+} from "@t2code/contracts";
+import { settlePromise, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import { sessionPermissionsUnavailableMessage } from "@t2code/shared/authScopeOptions";
 import * as Cause from "effect/Cause";
 import * as Exit from "effect/Exit";
 import { AsyncResult } from "effect/reactivity";

@@ -3,7 +3,7 @@ import {
   type OrchestrationV2ThreadShell,
   ProjectId,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Effect from "effect/Effect";

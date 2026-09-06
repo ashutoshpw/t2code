@@ -32,14 +32,14 @@ import {
   type ReviewDiffFileStat,
   type ReviewDiffPreviewSource,
   type VcsRef,
-} from "@t3tools/contracts";
-import { dedupeRemoteBranchesWithLocalMatches } from "@t3tools/shared/git";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { compactTraceAttributes } from "@t3tools/shared/observability";
-import { decodeJsonResult } from "@t3tools/shared/schemaJson";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
-import { parseT3ProjectFile } from "@t3tools/shared/t3ProjectFile";
-import { resolveProjectFileBackedSetting } from "@t3tools/shared/projectSettings";
+} from "@t2code/contracts";
+import { dedupeRemoteBranchesWithLocalMatches } from "@t2code/shared/git";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { compactTraceAttributes } from "@t2code/shared/observability";
+import { decodeJsonResult } from "@t2code/shared/schemaJson";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
+import { parseT2ProjectFile } from "@t2code/shared/t2ProjectFile";
+import { resolveProjectFileBackedSetting } from "@t2code/shared/projectSettings";
 import { gitCommandDuration, gitCommandsTotal, withMetrics } from "../observability/Metrics.ts";
 import * as GitVcsDriver from "./GitVcsDriver.ts";
 import { removeEmptyDirectory } from "./removeEmptyDirectory.ts";

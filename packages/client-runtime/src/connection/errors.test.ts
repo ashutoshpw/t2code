@@ -2,7 +2,7 @@ import {
   RelayAuthInvalidError,
   RelayEnvironmentConnectNotAuthorizedError,
   RelayEnvironmentEndpointTimedOutError,
-} from "@t3tools/contracts/relay";
+} from "@t2code/contracts/relay";
 import { describe, expect, it } from "@effect/vitest";
 
 import { mapManagedRelayError, mapRemoteDpopEnvironmentError } from "./errors.ts";

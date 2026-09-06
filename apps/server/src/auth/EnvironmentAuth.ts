@@ -22,9 +22,9 @@ import {
   DpopFailureReason,
   type DpopFailureReason as DpopFailureReasonType,
   mcpClientScopes,
-} from "@t3tools/contracts";
-import { isLocalLoopbackHost } from "@t3tools/shared/hostClassification";
-import { encodeOAuthScope } from "@t3tools/shared/oauthScope";
+} from "@t2code/contracts";
+import { isLocalLoopbackHost } from "@t2code/shared/hostClassification";
+import { encodeOAuthScope } from "@t2code/shared/oauthScope";
 import * as Context from "effect/Context";
 import * as Digest from "effect/crypto/Digest";
 import * as DateTime from "effect/DateTime";

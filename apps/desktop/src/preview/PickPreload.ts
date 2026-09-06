@@ -12,7 +12,7 @@ import type {
   PreviewAnnotationStrokeTarget,
   PreviewAnnotationStyleChange,
   PreviewAnnotationSubmission,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { createAnnotationIdSource } from "./AnnotationIds.ts";
 import { resolveAnnotationSubmission } from "./AnnotationKeyboard.ts";

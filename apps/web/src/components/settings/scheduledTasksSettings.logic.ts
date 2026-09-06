@@ -1,4 +1,4 @@
-import { isWebhookDedupeTemplate } from "@t3tools/contracts";
+import { isWebhookDedupeTemplate } from "@t2code/contracts";
 import {
   EnvironmentId,
   MAX_WEBHOOK_DELIVERY_AGE_MINUTES,
@@ -10,19 +10,19 @@ import {
   type RuntimeMode,
   type ProviderInteractionMode,
   type ServerSettings,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   parseMaxDeliveryAge,
   parseWebhookFilterDrafts,
   webhookFilterDrafts,
   webhookFilterDraftsChanged,
   type WebhookFilterDraft,
-} from "@t3tools/client-runtime/scheduled-task-webhook";
+} from "@t2code/client-runtime/scheduled-task-webhook";
 
 import {
   resolveProjectSettings,
   type LegacyProjectSettingsFields,
-} from "@t3tools/shared/projectSettings";
+} from "@t2code/shared/projectSettings";
 import type { ProviderInstanceEntry } from "../../providerInstances";
 
 import type { ResolvedSettingsScope } from "./settingsScope";

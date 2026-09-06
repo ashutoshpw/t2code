@@ -1,9 +1,9 @@
-import { EnvironmentId, ThreadId, type ThreadPullRequestLink } from "@t3tools/contracts";
+import { EnvironmentId, ThreadId, type ThreadPullRequestLink } from "@t2code/contracts";
 import {
   decodeComposerContextFragment,
   encodeComposerContextFragment,
-} from "@t3tools/shared/composerContextClipboard";
-import { threadLinkContextReferences } from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextClipboard";
+import { threadLinkContextReferences } from "@t2code/shared/composerContextReferences";
 import { describe, expect, it } from "vite-plus/test";
 
 import { resolveThreadReferenceCopyTarget } from "./threadReference.ts";

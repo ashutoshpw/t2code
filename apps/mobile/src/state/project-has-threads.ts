@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import type { EnvironmentId, ProjectId } from "@t3tools/contracts";
+import type { EnvironmentId, ProjectId } from "@t2code/contracts";
 import { Atom } from "effect/reactivity";
 
 import { environmentThreadShells, olderSettledThreads } from "./threads";

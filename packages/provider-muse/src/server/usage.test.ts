@@ -1,7 +1,7 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ProviderInstanceId } from "@t3tools/contracts";
-import { totalTokens } from "@t3tools/provider-core/server/usage";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import { ProviderInstanceId } from "@t2code/contracts";
+import { totalTokens } from "@t2code/provider-core/server/usage";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as Deferred from "effect/Deferred";
 import * as Fiber from "effect/Fiber";

@@ -13,7 +13,7 @@
 import * as NodeChildProcess from "node:child_process";
 import * as NodeReadlinePromises from "node:readline/promises";
 
-import { isCommandAvailable, resolveSpawnCommand } from "@t3tools/shared/shell";
+import { isCommandAvailable, resolveSpawnCommand } from "@t2code/shared/shell";
 import * as Config from "effect/Config";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";

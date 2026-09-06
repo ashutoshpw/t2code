@@ -2,14 +2,14 @@ import {
   ClientCapabilities,
   PlatformConnectionSource,
   Persistence,
-} from "@t3tools/client-runtime/platform";
+} from "@t2code/client-runtime/platform";
 import {
   ConnectionBlockedError,
   ConnectionTransientError,
   Connectivity,
   Wakeups,
-} from "@t3tools/client-runtime/connection";
-import { managedRelayAccountChanges, managedRelaySessionAtom } from "@t3tools/client-runtime/relay";
+} from "@t2code/client-runtime/connection";
+import { managedRelayAccountChanges, managedRelaySessionAtom } from "@t2code/client-runtime/relay";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

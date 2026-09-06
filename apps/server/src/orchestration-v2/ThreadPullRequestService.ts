@@ -5,8 +5,8 @@ import {
   type OrchestrationV2ThreadShell,
   type ThreadId,
   type ThreadLinkedPullRequest,
-} from "@t3tools/contracts";
-import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
+} from "@t2code/contracts";
+import { makeDrainableWorker } from "@t2code/shared/DrainableWorker";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";

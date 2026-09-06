@@ -20,9 +20,9 @@ import {
   ThreadLinkedPullRequest,
   ThreadPullRequestLink,
   TurnItemId,
-} from "@t3tools/contracts";
-import * as KeyedLock from "@t3tools/shared/KeyedLock";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+} from "@t2code/contracts";
+import * as KeyedLock from "@t2code/shared/KeyedLock";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
@@ -33,7 +33,7 @@ import * as Schema from "effect/Schema";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import * as EventSink from "../EventSink.ts";
-import { randomUuidV4 } from "@t3tools/provider-core/server/randomUuid";
+import { randomUuidV4 } from "@t2code/provider-core/server/randomUuid";
 
 const IMPORT_EVENT_PREFIX = "migration:v1";
 const TRANSCRIPT_EVENT_BATCH_SIZE = 100;

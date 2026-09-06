@@ -1,5 +1,5 @@
-import { EnvironmentId } from "@t3tools/contracts";
-import { type EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
+import { EnvironmentId } from "@t2code/contracts";
+import { type EnvironmentConnectionPhase } from "@t2code/client-runtime/connection";
 
 export interface SavedRemoteConnection {
   readonly environmentId: EnvironmentId;

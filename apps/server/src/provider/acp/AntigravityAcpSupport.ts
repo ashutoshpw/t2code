@@ -5,8 +5,8 @@ import {
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
   type ProviderSendTurnInput,
   type RuntimeMode,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -22,7 +22,7 @@ import {
   makeAntigravityStderrHandler,
   makeAntigravityStdoutTransform,
 } from "../antigravityAuthSupport.ts";
-import * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
+import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
 import { normalizeAntigravitySessionUpdate } from "./AntigravityProtocol.ts";
 
 export interface AntigravityAcpRuntimeInput extends Omit<

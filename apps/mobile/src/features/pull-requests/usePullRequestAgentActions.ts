@@ -1,4 +1,4 @@
-import type { PullRequestDetail } from "@t3tools/contracts";
+import type { PullRequestDetail } from "@t2code/contracts";
 import {
   pullRequestAgentActions,
   pullRequestAgentThread,

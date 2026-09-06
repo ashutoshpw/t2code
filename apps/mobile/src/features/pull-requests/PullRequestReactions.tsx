@@ -6,12 +6,12 @@ import {
   pullRequestReactionName,
   pullRequestReactionTooltip,
   pullRequestReactionsSignature,
-} from "@t3tools/client-runtime/pull-request-reactions";
+} from "@t2code/client-runtime/pull-request-reactions";
 import type {
   PullRequestComment,
   PullRequestReaction,
   PullRequestReactionContent,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { AsyncResult } from "effect/reactivity";
 import { useState } from "react";
 import { Pressable, View } from "react-native";

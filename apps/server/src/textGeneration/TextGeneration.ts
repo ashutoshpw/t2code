@@ -1,24 +1,24 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import type { ModelSelection, ProviderInstanceId } from "@t3tools/contracts";
+import type { ModelSelection, ProviderInstanceId } from "@t2code/contracts";
 import {
   isProviderAvailable,
   isProviderTextGenerationCapable,
   resolveProjectProviderInstanceEnabled,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
-import { exhaustedUsageWindow } from "@t3tools/shared/usageLimits";
+import { exhaustedUsageWindow } from "@t2code/shared/usageLimits";
 import {
   defaultTextGenerationModel,
   fallbackTextGenerationModelSelection,
-} from "@t3tools/shared/serverSettings";
+} from "@t2code/shared/serverSettings";
 import * as ServerSettings from "../serverSettings.ts";
-import type { ProviderTextGeneration } from "@t3tools/provider-core/server/textGeneration";
-import { TextGenerationError } from "@t3tools/contracts";
+import type { ProviderTextGeneration } from "@t2code/provider-core/server/textGeneration";
+import { TextGenerationError } from "@t2code/contracts";
 
 import * as ProviderInstanceRegistry from "../provider/ProviderInstanceRegistry.ts";
-import type { ProviderInstance } from "@t3tools/provider-core/server/driver";
+import type { ProviderInstance } from "@t2code/provider-core/server/driver";
 import * as SourceControlProviderRegistry from "../sourceControl/SourceControlProviderRegistry.ts";
 import * as ThreadTitleLinks from "./ThreadTitleLinks.ts";
 
@@ -33,7 +33,7 @@ export type {
   ReviewGuideGenerationResult,
   ThreadTitleGenerationInput,
   ThreadTitleGenerationResult,
-} from "@t3tools/provider-core/server/textGeneration";
+} from "@t2code/provider-core/server/textGeneration";
 
 export class TextGeneration extends Context.Service<TextGeneration, ProviderTextGeneration>()(
   "t2/textGeneration/TextGeneration",

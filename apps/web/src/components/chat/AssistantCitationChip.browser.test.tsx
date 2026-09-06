@@ -3,7 +3,7 @@ import {
   EnvironmentId,
   MessageId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useState, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";

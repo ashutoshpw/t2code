@@ -1,6 +1,6 @@
 import * as Dialog from "./ui/Dialog";
 import { requireNativeModule } from "expo";
-import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { settlePromise, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import { AsyncResult } from "effect/reactivity";
 import { useEffect, useEffectEvent, useId } from "react";
 
