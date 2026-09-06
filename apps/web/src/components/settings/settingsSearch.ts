@@ -352,6 +352,15 @@ export const SETTINGS_SEARCH_ITEMS = [
     providerSettingsOnly: true,
   },
   {
+    id: "agent-history-import",
+    title: "Import chat history",
+    to: "/settings/providers",
+    searchTerms: [
+      "import chats conversations history claude codex sessions projects backfill onboarding date range",
+    ],
+    providerSettingsOnly: true,
+  },
+  {
     id: "agent-browser-access",
     title: "Agent browser access",
     to: "/settings/projects",

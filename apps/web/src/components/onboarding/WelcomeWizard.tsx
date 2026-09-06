@@ -3,7 +3,6 @@ import { useAtomValue } from "@effect/atom-react";
 import type {
   AgentSessionProjectCandidate,
   EnvironmentId,
-  ProjectId,
   ScopedProjectRef,
   ServerConfig,
   ServerProvider,
@@ -13,7 +12,7 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t2code/client-runtime/state/runtime";
-import { CommandId, ProviderDriverKind, ThreadId } from "@t2code/contracts";
+import { ProviderDriverKind, ThreadId } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import {
   ArrowRightIcon,
@@ -38,7 +37,6 @@ import { useCompleteOnboarding } from "../../onboarding/firstRun";
 import {
   partitionOnboardingProjects,
   resolveOnboardingLandingProject,
-  resolveOnboardingProjectId,
 } from "../../onboarding/projectImport.logic";
 import {
   getOnboardingProviderState,
@@ -50,7 +48,7 @@ import {
   resolveOnboardingTargetEnvironment,
 } from "../../onboarding/targetEnvironment.logic";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
-import { newProjectId, randomUUID } from "../../lib/utils";
+import { randomUUID } from "../../lib/utils";
 import { agentSessionImport, agentSessionScan } from "../../state/agentSessions";
 import { readProjects, useProjects } from "../../state/entities";
 import { useEnvironments, usePrimaryEnvironment } from "../../state/environments";
@@ -64,6 +62,11 @@ import { isElectron } from "../../env";
 import { formatRelativeTimeLabel } from "../../timestampFormat";
 import { getProviderSummary } from "../settings/providerStatus";
 import { getDriverOption } from "../settings/providerDriverMeta";
+import {
+  createAgentHistoryImportState,
+  describeAgentHistoryImportOutcome,
+  runAgentHistoryImport,
+} from "../agentSessionImport/importHistory.logic";
 import { CloudEnvironmentConnectRows } from "../cloud/CloudEnvironmentConnectList";
 import { TerminalViewport } from "../ThreadTerminalDrawer";
 import { Button } from "../ui/button";
@@ -1039,27 +1042,22 @@ function ImportStep({
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState("");
   const [landingProject, setLandingProject] = useState<ScopedProjectRef | null>(null);
-  // Keep project creation attempts separate from completed history imports so both can retry.
-  const importedProjectsRef = useRef(new Map<string, ScopedProjectRef>());
-  const projectsWithImportedHistoryRef = useRef(new Map<string, ScopedProjectRef>());
+  // Retry bookkeeping is shared with the settings import dialog; the wizard
+  // only adds landing-project resolution on top.
+  const importStateRef = useRef(createAgentHistoryImportState());
   const lastImportSelectionRef = useRef<ReadonlyArray<string>>([]);
-  const projectAttemptsRef = useRef(
-    new Map<string, { readonly projectId: ProjectId; readonly commandId: CommandId }>(),
-  );
   const importGenerationRef = useRef(0);
 
   // Candidate paths are per-environment; a target switch would otherwise
   // leave stale entries in the deselection set (and stale success records).
   useEffect(() => {
     importGenerationRef.current += 1;
+    importStateRef.current = createAgentHistoryImportState();
     setDeselected(new Set());
     setIsImporting(false);
     setImportError("");
     setLandingProject(null);
-    importedProjectsRef.current = new Map();
-    projectsWithImportedHistoryRef.current = new Map();
     lastImportSelectionRef.current = [];
-    projectAttemptsRef.current = new Map();
     return () => {
       importGenerationRef.current += 1;
     };
@@ -1095,17 +1093,17 @@ function ImportStep({
   ) : null;
 
   const finishAfterImport = () => {
-    const projectRef = resolveOnboardingLandingProject(
+    const projectId = resolveOnboardingLandingProject(
       lastImportSelectionRef.current,
-      projectsWithImportedHistoryRef.current,
-      importedProjectsRef.current,
+      importStateRef.current.projectsWithImportedHistory,
+      importStateRef.current.completedProjects,
     );
-    if (projectRef === undefined) {
+    if (projectId === undefined || environmentId === null) {
       void onDone();
       return;
     }
     setIsImporting(true);
-    setLandingProject(projectRef);
+    setLandingProject(scopeProjectRef(environmentId, projectId));
   };
 
   const runImport = async (selection: ReadonlyArray<AgentSessionProjectCandidate>) => {
@@ -1117,112 +1115,35 @@ function ImportStep({
     setImportError("");
     lastImportSelectionRef.current = selection.map((candidate) => candidate.path);
     const importGeneration = importGenerationRef.current;
-    const importedProjects = importedProjectsRef.current;
-    const projectAttempts = projectAttemptsRef.current;
+    const importState = importStateRef.current;
     // Interrupted imports are neither failures nor successes — the command was
     // superseded or the environment dropped — but they still didn't land, so
     // they must not read as "imported everything". Retries skip paths that
     // already landed this session (re-creating them would only trip the
     // duplicate-root invariant and read as a failure).
-    let importedProjectsCount =
-      importedProjects.size > 0
-        ? selection.filter((candidate) => importedProjects.has(candidate.path)).length
-        : 0;
-    let importedThreadCount = 0;
-    let skippedThreadCount = 0;
-    let shouldRefreshScan = false;
-    for (const candidate of selection) {
-      if (
-        importGeneration !== importGenerationRef.current ||
-        importedProjects !== importedProjectsRef.current
-      ) {
-        return;
-      }
-      if (importedProjects.has(candidate.path)) continue;
-      let projectId = resolveOnboardingProjectId(readProjects(), environmentId, candidate);
-      if (projectId === null) {
-        let attempt = projectAttempts.get(candidate.path);
-        if (attempt === undefined) {
-          const nextProjectId = newProjectId();
-          attempt = {
-            projectId: nextProjectId,
-            commandId: CommandId.make(`onboarding:project:create:${nextProjectId}`),
-          };
-          projectAttempts.set(candidate.path, attempt);
-        }
-        projectId = attempt.projectId;
-        const result = await createProject({
-          environmentId,
-          input: {
-            projectId,
-            commandId: attempt.commandId,
-            title: candidate.title,
-            workspaceRoot: candidate.path,
-            createWorkspaceRootIfMissing: false,
-            defaultModelSelection: null,
-          },
-        });
-        if (
-          importGeneration !== importGenerationRef.current ||
-          importedProjects !== importedProjectsRef.current
-        ) {
-          return;
-        }
-        if (result._tag !== "Success") {
-          if (!isAtomCommandInterrupted(result)) {
-            projectAttempts.delete(candidate.path);
-            shouldRefreshScan = true;
-          }
-          continue;
-        }
-      }
-
-      const threadImportResult = await importThreads({
-        environmentId,
-        input: { projectId, expectedWorkspaceRoot: candidate.path },
-      });
-      if (
-        importGeneration !== importGenerationRef.current ||
-        importedProjects !== importedProjectsRef.current
-      ) {
-        return;
-      }
-      if (threadImportResult._tag === "Success") {
-        importedThreadCount += threadImportResult.value.importedCount;
-        skippedThreadCount += threadImportResult.value.skippedCount;
-        if (threadImportResult.value.importedCount > 0) {
-          projectsWithImportedHistoryRef.current.set(
-            candidate.path,
-            scopeProjectRef(environmentId, projectId),
-          );
-        }
-        if (threadImportResult.value.skippedCount === 0) {
-          importedProjectsCount += 1;
-          importedProjects.set(candidate.path, scopeProjectRef(environmentId, projectId));
-        }
-      } else if (!isAtomCommandInterrupted(threadImportResult)) {
-        projectAttempts.delete(candidate.path);
-        shouldRefreshScan = true;
-      }
-    }
-    if (shouldRefreshScan) scan.refresh();
+    const summary = await runAgentHistoryImport({
+      environmentId,
+      selection,
+      since: null,
+      state: importState,
+      isCancelled: () =>
+        importGeneration !== importGenerationRef.current || importState !== importStateRef.current,
+      commandIdPrefix: "onboarding",
+      listProjects: () => readProjects(),
+      createProject: (request) => createProject(request),
+      importThreads: (request) => importThreads(request),
+    });
+    if (summary.interrupted) return;
+    if (summary.shouldRefreshScan) scan.refresh();
     setIsImporting(false);
-    if (importedProjectsCount < selection.length) {
-      if (importedThreadCount > 0 && skippedThreadCount > 0) {
-        setImportError(
-          `Imported ${importedThreadCount} ${importedThreadCount === 1 ? "thread" : "threads"}. ${skippedThreadCount} ${skippedThreadCount === 1 ? "thread" : "threads"} could not be imported.`,
-        );
-      } else if (skippedThreadCount > 0) {
-        setImportError(
-          `${skippedThreadCount} ${skippedThreadCount === 1 ? "thread could" : "threads could"} not be imported.`,
-        );
-      } else if (importedThreadCount > 0) {
-        setImportError(
-          `Imported ${importedThreadCount} ${importedThreadCount === 1 ? "thread" : "threads"}. Some thread history could not be imported.`,
-        );
-      } else {
-        setImportError("Could not import thread history.");
-      }
+    const error = describeAgentHistoryImportOutcome({
+      completedCount: summary.completedCount,
+      selectionCount: selection.length,
+      importedThreadCount: summary.importedThreadCount,
+      skippedThreadCount: summary.skippedThreadCount,
+    });
+    if (error !== null) {
+      setImportError(error);
       return;
     }
     finishAfterImport();

@@ -1,3 +1,5 @@
+import * as DateTime from "effect/DateTime";
+import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { IsoDateTime, NonNegativeInt, ProjectId, TrimmedNonEmptyString } from "./baseSchemas.ts";
 import { ProviderInstanceId } from "./providerInstance.ts";
@@ -5,6 +7,13 @@ import { ProviderInstanceId } from "./providerInstance.ts";
 /** Coding agent home directories the scanner knows how to read. */
 export const AgentSessionSource = Schema.Literals(["claudeAgent", "codex"]);
 export type AgentSessionSource = typeof AgentSessionSource.Type;
+
+/** `since` windows are optional and may be null, so decode-time parsing keeps malformed bounds out of the importer. */
+const ParseableIsoDateTime = IsoDateTime.check(
+  Schema.makeFilter((value) => Option.isSome(DateTime.make(value)), {
+    title: "ParseableIsoDateTime",
+  }),
+);
 
 /** File identity saved with an imported session so bounded retries can skip unchanged history. */
 export const AgentSessionImportSource = Schema.Struct({
@@ -58,6 +67,11 @@ export type AgentSessionScanResult = typeof AgentSessionScanResult.Type;
 export const AgentSessionImportInput = Schema.Struct({
   projectId: ProjectId,
   expectedWorkspaceRoot: Schema.optional(TrimmedNonEmptyString),
+  /**
+   * Inclusive lower bound on transcript modification time. Absent or null
+   * keeps the scanner's default 30-day recency window.
+   */
+  since: Schema.optional(Schema.NullOr(ParseableIsoDateTime)),
 });
 export type AgentSessionImportInput = typeof AgentSessionImportInput.Type;
 
