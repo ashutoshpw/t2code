@@ -11,7 +11,9 @@ export const makeRelayEnvironmentClient = (connection: {
 }) =>
   HttpApiClient.make(RelayApi, {
     baseUrl: connection.url,
-    transformClient: HttpClient.mapRequest(
-      HttpClientRequest.setHeader("authorization", `Bearer ${connection.environmentCredential}`),
-    ),
+    transformClient: relayEnvironmentClient(connection.environmentCredential),
   }).pipe(Effect.provide(FetchHttpClient.layer));
+
+export function relayEnvironmentClient(token: string) {
+  return HttpClient.mapRequest(HttpClientRequest.setHeader("authorization", `Bearer ${token}`));
+}
