@@ -208,6 +208,7 @@ function makeLinks(
   overrides: Partial<EnvironmentLinks.RelayLinkedEnvironmentRecord> = {},
 ): EnvironmentLinks.EnvironmentLinks["Service"] {
   return {
+    updateLabel: () => Effect.void,
     upsert: () => Effect.void,
     listDeliveryUsersForEnvironment: () => Effect.succeed([]),
     listForUser: () => Effect.succeed([]),

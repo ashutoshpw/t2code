@@ -158,7 +158,7 @@ export function useRemoteConnections() {
   const onUpdateEnvironment = useCallback(
     (
       environmentId: EnvironmentId,
-      updates: { readonly label: string; readonly displayUrl: string },
+      updates: { readonly label?: string; readonly displayUrl: string },
     ) => controller.updateEnvironment(environmentId, updates),
     [controller],
   );
