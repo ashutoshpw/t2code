@@ -74,10 +74,10 @@ deploying the production stage, provision or update the following external resou
 - Update GitHub Actions, Vercel, and EAS environments to use `T2CODE_RELAY_URL` and the new relay
   tracing variables before publishing clients.
 
-The Alchemy stack is now named `T2CodeRelay`. The physical PlanetScale database remains
-`t3coderelay` intentionally so the deployment continues using existing relay state; do not rename
-that database while rolling out the new stack identity. Existing link-challenge JWTs retain their
-wire type so short-lived challenges issued before the rollout can still be redeemed afterward.
+The Alchemy stack is named `T2CodeRelay`. The relay database lives in a retained Neon project
+named `t2coderelay`; the prod stage owns it and personal stages branch from it. Existing
+link-challenge JWTs retain their wire type so short-lived challenges issued before the rollout can
+still be redeemed afterward.
 
 ## Desktop OAuth redirects
 
