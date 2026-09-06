@@ -480,6 +480,12 @@ export interface BootServiceStatus {
   readonly installed: boolean;
   readonly current: boolean;
   readonly installedVersion?: string;
+  /**
+   * The T3 home the installed unit serves. The unit name is fixed per user,
+   * so a caller working against another base dir must not treat this service
+   * as its own; `t2code update --base-dir` learned that by restarting the live
+   * server of the machine it ran on.
+   */
   readonly installedBaseDir?: string;
   readonly problems?: ReadonlyArray<BootServiceProblem>;
   readonly unitPath: string;
@@ -491,6 +497,11 @@ export class BootService extends Context.Service<
   {
     readonly install: (options?: {
       readonly allowDowngrade?: boolean;
+      /**
+       * Write the unit for this version but leave the service on whatever it
+       * is running now. `t2code update` uses this when the user declines the
+       * restart, so a later `t2code service restart` lands on the new version.
+       */
       readonly start?: boolean;
     }) => Effect.Effect<BootServicePlan, BootServiceError>;
     /**
