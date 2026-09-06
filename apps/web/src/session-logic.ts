@@ -2,13 +2,13 @@ import * as Option from "effect/Option";
 import * as Arr from "effect/Array";
 import * as Schema from "effect/Schema";
 import { shallow } from "zustand/vanilla/shallow";
-import { isBackgroundTaskActivity } from "@t3tools/client-runtime/state/subagentRuntime";
+import { isBackgroundTaskActivity } from "@t2code/client-runtime/state/subagentRuntime";
 import {
   commandDetailRepeatsCommand,
   extractCommandOutputText,
   isWorktreeSetupActivity,
-} from "@t3tools/client-runtime/work-log/presentation";
-import { extractToolActivityPresentation } from "@t3tools/client-runtime/work-log/tool-presentation";
+} from "@t2code/client-runtime/work-log/presentation";
+import { extractToolActivityPresentation } from "@t2code/client-runtime/work-log/tool-presentation";
 import {
   ApprovalRequestId,
   isToolLifecycleItemType,
@@ -22,7 +22,7 @@ import {
   type UserInputQuestion,
   type ThreadId,
   type TurnId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   isImageAttachment,
@@ -35,7 +35,7 @@ import {
   type TurnDiffSummary,
 } from "./types";
 
-export { formatDuration } from "@t3tools/shared/orchestrationTiming";
+export { formatDuration } from "@t2code/shared/orchestrationTiming";
 
 export type WorkLogToolLifecycleStatus =
   | "inProgress"
@@ -58,9 +58,9 @@ export interface WorkLogEntry {
   changedFiles?: ReadonlyArray<string>;
   tone: "thinking" | "tool" | "info" | "error";
   toolTitle?: string;
-  toolSurface?: import("@t3tools/contracts").ToolActivitySurface;
-  toolIcon?: import("@t3tools/contracts").ToolActivityIcon;
-  toolSource?: import("@t3tools/contracts").ToolActivitySource;
+  toolSurface?: import("@t2code/contracts").ToolActivitySurface;
+  toolIcon?: import("@t2code/contracts").ToolActivityIcon;
+  toolSource?: import("@t2code/contracts").ToolActivitySource;
   toolData?: unknown;
   itemType?: ToolLifecycleItemType;
   requestKind?: PendingApproval["requestKind"];

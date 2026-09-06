@@ -1,4 +1,4 @@
-import type { RelayManagedEndpoint } from "@t3tools/contracts/relay";
+import type { RelayManagedEndpoint } from "@t2code/contracts/relay";
 import { and, eq } from "drizzle-orm";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";

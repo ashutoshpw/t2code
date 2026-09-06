@@ -5,8 +5,8 @@ import {
   settlePromise,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
+} from "@t2code/client-runtime/state/runtime";
+import { scopeProjectRef, scopeThreadRef } from "@t2code/client-runtime/environment";
 import { AsyncResult } from "effect/unstable/reactivity";
 import {
   deriveProjectGroupingOverrideKey,
@@ -24,15 +24,15 @@ import {
   type SidebarProjectGroupingMode,
   type T3ProjectFileScript,
   type ThreadEnvMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { resolveEnvModeLabel } from "../BranchToolbar.logic";
-import { createModelSelection } from "@t3tools/shared/model";
-import { resolveProjectAutoPull } from "@t3tools/shared/serverSettings";
+import { createModelSelection } from "@t2code/shared/model";
+import { resolveProjectAutoPull } from "@t2code/shared/serverSettings";
 import {
   projectScriptsInheritDefaults,
   resolveProjectScripts,
-} from "@t3tools/shared/projectScripts";
-import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t3tools/shared/keybindings";
+} from "@t2code/shared/projectScripts";
+import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t2code/shared/keybindings";
 import { useNavigate } from "@tanstack/react-router";
 import * as Equal from "effect/Equal";
 import * as Cause from "effect/Cause";

@@ -24,7 +24,7 @@ import {
   type ServerProviderModel,
   type ServerSettings,
   type ServerProviderState,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { formatProviderDriverKindLabel } from "./providerModels";
 

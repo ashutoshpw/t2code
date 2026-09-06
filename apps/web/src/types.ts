@@ -11,15 +11,15 @@ import type {
   ProjectScript as ContractProjectScript,
   ProviderInteractionMode,
   RuntimeMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type {
   EnvironmentProject,
   EnvironmentThread,
   EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
-import { videoMimeType } from "@t3tools/shared/video";
+} from "@t2code/client-runtime/state/shell";
+import { videoMimeType } from "@t2code/shared/video";
 
-export { videoMimeType } from "@t3tools/shared/video";
+export { videoMimeType } from "@t2code/shared/video";
 
 export type SessionPhase = "disconnected" | "connecting" | "ready" | "running";
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";

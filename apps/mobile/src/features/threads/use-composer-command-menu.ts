@@ -1,22 +1,22 @@
-import type { EnvironmentId, ProviderInteractionMode, ServerProvider } from "@t3tools/contracts";
-import { USAGE_LIMITS_COMMAND } from "@t3tools/shared/usageLimits";
+import type { EnvironmentId, ProviderInteractionMode, ServerProvider } from "@t2code/contracts";
+import { USAGE_LIMITS_COMMAND } from "@t2code/shared/usageLimits";
 import {
   detectComposerTrigger,
   replaceTextRange,
   serializeComposerFileLink,
   type ComposerTrigger,
-} from "@t3tools/shared/composerTrigger";
+} from "@t2code/shared/composerTrigger";
 import {
   insertRankedSearchResult,
   normalizeSearchQuery,
   scoreQueryMatch,
-} from "@t3tools/shared/searchRanking";
+} from "@t2code/shared/searchRanking";
 import {
   dedupeProviderSkillsByName,
   getProviderSkillsForSlashMenu,
   isProviderSkillUserInvocable,
   resolveProviderSkillsForCwd,
-} from "@t3tools/client-runtime/providerSkills";
+} from "@t2code/client-runtime/providerSkills";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ComposerEditorSelection } from "../../components/ComposerEditor";

@@ -2,7 +2,7 @@ import {
   MessageId,
   type OrchestrationMessage,
   type ProviderUploadFeedbackResult,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   isAtomCommandInterrupted,

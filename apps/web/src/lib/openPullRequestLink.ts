@@ -3,16 +3,16 @@ import type {
   RepositoryIdentity,
   ScopedThreadRef,
   ThreadLinkedPullRequest,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent, useCallback } from "react";
 
-import { pullRequestHostOf, type SourceControlProviderKind } from "@t3tools/contracts";
+import { pullRequestHostOf, type SourceControlProviderKind } from "@t2code/contracts";
 
 import { useOpenLink } from "../browser/useOpenLink";
 import { stackedThreadToast, toastManager } from "../components/ui/toast";
 import { useRightPanelStore } from "../rightPanelStore";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
 
 import { useProjects, useServerConfigs } from "../state/entities";
 import { usePrimaryEnvironmentId } from "../state/environments";

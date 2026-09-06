@@ -10,7 +10,7 @@ import {
   ThreadId,
   TurnId,
   ProviderInstanceId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Option from "effect/Option";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";

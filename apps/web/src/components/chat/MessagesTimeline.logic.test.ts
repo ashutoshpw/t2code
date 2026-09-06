@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { CheckpointRef, MessageId, TurnId } from "@t3tools/contracts";
+import { CheckpointRef, MessageId, TurnId } from "@t2code/contracts";
 import {
   computeStableMessagesTimelineRows,
   computeMessageDurationStart,

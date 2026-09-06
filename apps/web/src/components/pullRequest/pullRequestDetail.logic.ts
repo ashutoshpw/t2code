@@ -17,7 +17,7 @@ import {
   type PullRequestUpdateMethod,
   type SourceControlProviderKind,
   type VcsRef,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { inferReviewCommentFenceLanguage, type ReviewCommentContext } from "~/reviewCommentContext";
 

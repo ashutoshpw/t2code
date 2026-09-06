@@ -1,6 +1,6 @@
-import type { Discovery } from "@t3tools/client-runtime/relay";
-import type { AtomCommandResult } from "@t3tools/client-runtime/state/runtime";
-import { EnvironmentId } from "@t3tools/contracts";
+import type { Discovery } from "@t2code/client-runtime/relay";
+import type { AtomCommandResult } from "@t2code/client-runtime/state/runtime";
+import { EnvironmentId } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { act, type ButtonHTMLAttributes } from "react";

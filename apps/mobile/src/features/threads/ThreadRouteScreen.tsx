@@ -12,16 +12,13 @@ import {
   EnvironmentId,
   ThreadId,
   type ProjectScript,
-} from "@t3tools/contracts";
-import {
-  requestOlderThreadTurns,
-  threadHasOlderTurns,
-} from "@t3tools/client-runtime/state/threads";
+} from "@t2code/contracts";
+import { requestOlderThreadTurns, threadHasOlderTurns } from "@t2code/client-runtime/state/threads";
 import {
   projectScriptCwd,
   projectScriptRuntimeEnv,
   resolveProjectScripts,
-} from "@t3tools/shared/projectScripts";
+} from "@t2code/shared/projectScripts";
 import { Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useWorkspaceState } from "../../state/workspace";

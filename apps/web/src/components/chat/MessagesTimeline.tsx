@@ -6,29 +6,29 @@ import {
   type ServerProviderSkill,
   type ToolActivityIcon,
   type TurnId,
-} from "@t3tools/contracts";
-import { parseScopedThreadKey } from "@t3tools/client-runtime/environment";
-import type { CodexArtifactTemplate } from "@t3tools/client-runtime/codex-artifact-templates";
+} from "@t2code/contracts";
+import { parseScopedThreadKey } from "@t2code/client-runtime/environment";
+import type { CodexArtifactTemplate } from "@t2code/client-runtime/codex-artifact-templates";
 import {
   resolveWorkEntryToolPresentation,
   resolveViewedImageAsset,
   workEntryViewedImagePath,
-} from "@t3tools/client-runtime/work-log/presentation";
-import { resolveWorkGroupScrollAnchor } from "@t3tools/client-runtime/work-log/scroll-anchor";
-import type { AgentPanelModel } from "@t3tools/client-runtime/state/subagentRuntime";
+} from "@t2code/client-runtime/work-log/presentation";
+import { resolveWorkGroupScrollAnchor } from "@t2code/client-runtime/work-log/scroll-anchor";
+import type { AgentPanelModel } from "@t2code/client-runtime/state/subagentRuntime";
 import {
   emptyAgentPanelModel,
   formatSubagentTokenCount,
-} from "@t3tools/client-runtime/state/subagentRuntime";
+} from "@t2code/client-runtime/state/subagentRuntime";
 
 const EMPTY_AGENT_PANEL_MODEL = emptyAgentPanelModel();
 const NOOP_OPEN_AGENTS = () => {};
 const NOOP_USE_ARTIFACT_TEMPLATE = () => {};
 const NOOP_OPEN_ATTACHMENT = (_attachment: ChatFileAttachment) => {};
-import { resolveChatListAnchoredEndSpace } from "@t3tools/shared/chatList";
-import { toolActivityFaviconUrl } from "@t3tools/shared/favicon";
-import { formatDuration } from "@t3tools/shared/orchestrationTiming";
-import { getProjectFaviconCacheKey } from "@t3tools/shared/projectFavicon";
+import { resolveChatListAnchoredEndSpace } from "@t2code/shared/chatList";
+import { toolActivityFaviconUrl } from "@t2code/shared/favicon";
+import { formatDuration } from "@t2code/shared/orchestrationTiming";
+import { getProjectFaviconCacheKey } from "@t2code/shared/projectFavicon";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
 import {
   createContext,
@@ -168,7 +168,7 @@ import {
 } from "~/lib/previewAnnotation";
 import { cn } from "~/lib/utils";
 import { useUiStateStore } from "~/uiStateStore";
-import { type TimestampFormat } from "@t3tools/contracts/settings";
+import { type TimestampFormat } from "@t2code/contracts/settings";
 import { formatChatTimestampTooltip, formatDayAwareTimestamp } from "../../timestampFormat";
 import {
   buildInlineTerminalContextText,

@@ -13,7 +13,7 @@ import {
   ThreadId,
   TurnId,
   IsoDateTime,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import * as Context from "effect/Context";
 import * as Struct from "effect/Struct";

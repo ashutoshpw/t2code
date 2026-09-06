@@ -1,4 +1,4 @@
-import type { ProjectId, ProjectScript, ServerSettings } from "@t3tools/contracts";
+import type { ProjectId, ProjectScript, ServerSettings } from "@t2code/contracts";
 
 /** Missing entries preserve existing actions; null explicitly resets a checkout to machine defaults. */
 export function resolveProjectScripts(

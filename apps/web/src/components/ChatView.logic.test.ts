@@ -9,13 +9,13 @@ import {
   type ServerProvider,
   ThreadId,
   TurnId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { Thread, ThreadShell, TurnDiffSummary } from "../types";
 import type { TimelineEntry } from "../session-logic";
 import { deriveProviderInstanceEntries, NO_PROVIDER_MODEL_SELECTION } from "../providerInstances";
-import type { CodexArtifactTemplate } from "@t3tools/client-runtime/codex-artifact-templates";
+import type { CodexArtifactTemplate } from "@t2code/client-runtime/codex-artifact-templates";
 import type { RightPanelSurface } from "../rightPanelStore";
 import {
   MAX_HIDDEN_MOUNTED_PREVIEW_THREADS,

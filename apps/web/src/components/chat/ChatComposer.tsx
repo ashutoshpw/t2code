@@ -13,17 +13,17 @@ import type {
   ScopedThreadRef,
   ServerProvider,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   ProviderDriverKind,
   ProviderInstanceId,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
-} from "@t3tools/contracts";
-import type { EnvironmentConnectionPresentation } from "@t3tools/client-runtime/connection";
-import { serializeComposerFileLink } from "@t3tools/shared/composerTrigger";
-import { createModelSelection, normalizeModelSlug } from "@t3tools/shared/model";
-import { USAGE_LIMITS_COMMAND } from "@t3tools/shared/usageLimits";
+} from "@t2code/contracts";
+import type { EnvironmentConnectionPresentation } from "@t2code/client-runtime/connection";
+import { serializeComposerFileLink } from "@t2code/shared/composerTrigger";
+import { createModelSelection, normalizeModelSlug } from "@t2code/shared/model";
+import { USAGE_LIMITS_COMMAND } from "@t2code/shared/usageLimits";
 import {
   Fragment,
   memo,
@@ -111,7 +111,7 @@ import { compressImageForStash, prepareImageForAttachment } from "../../lib/imag
 import {
   fileAttachmentTooLargeMessage,
   formatAttachmentSize,
-} from "@t3tools/client-runtime/state/attachments";
+} from "@t2code/client-runtime/state/attachments";
 import {
   attachmentsToReleaseOnUploadCapabilityLoss,
   classifyComposerAttachmentFile,
@@ -803,7 +803,7 @@ import {
   type ProviderInstanceEntry,
 } from "../../providerInstances";
 import { type AppModelOption, getAppModelOptionsForInstance } from "../../modelSelection";
-import type { UnifiedSettings } from "@t3tools/contracts/settings";
+import type { UnifiedSettings } from "@t2code/contracts/settings";
 import { type ChatMessage, type SessionPhase, type Thread, videoMimeType } from "../../types";
 import {
   buildComposerPromptHistoryEntries,
@@ -819,7 +819,7 @@ import {
   getProviderSkillsForSlashMenu,
   resolveProviderSkillsForCwd,
   resolveProviderSlashCommandsForCwd,
-} from "@t3tools/client-runtime/providerSkills";
+} from "@t2code/client-runtime/providerSkills";
 import { searchProviderSkills } from "../../providerSkillSearch";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useAtomCommand } from "../../state/use-atom-command";

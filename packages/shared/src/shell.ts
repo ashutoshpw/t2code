@@ -133,7 +133,7 @@ function resolveSpawnExecutableWithNode(
 }
 
 export const SpawnExecutableResolution = Context.Reference<SpawnExecutableResolver>(
-  "@t3tools/shared/shell/SpawnExecutableResolution",
+  "@t2code/shared/shell/SpawnExecutableResolution",
   {
     defaultValue: () => resolveSpawnExecutableWithNode,
   },
@@ -320,14 +320,14 @@ export type WindowsShellEnvironmentReader = (
 ) => Partial<Record<string, string>>;
 
 export const WindowsShellEnvironment = Context.Reference<WindowsShellEnvironmentReader>(
-  "@t3tools/shared/shell/WindowsShellEnvironment",
+  "@t2code/shared/shell/WindowsShellEnvironment",
   {
     defaultValue: () => readEnvironmentFromWindowsShell,
   },
 );
 
 export const CommandAvailability = Context.Reference<CommandAvailabilityChecker>(
-  "@t3tools/shared/shell/CommandAvailability",
+  "@t2code/shared/shell/CommandAvailability",
   {
     defaultValue: () => isCommandAvailable,
   },
@@ -506,7 +506,7 @@ interface CommandResolutionCacheEntry {
 // so tests and embedders can provide an isolated instance; the default is a
 // single process-wide map shared by all consumers.
 export const CommandResolutionCache = Context.Reference<Map<string, CommandResolutionCacheEntry>>(
-  "@t3tools/shared/shell/CommandResolutionCache",
+  "@t2code/shared/shell/CommandResolutionCache",
   {
     defaultValue: () => new Map(),
   },

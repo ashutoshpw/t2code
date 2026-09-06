@@ -1,15 +1,15 @@
 import {
   AVAILABLE_CONNECTION_STATE,
   connectionProjectionPhase,
-} from "@t3tools/client-runtime/connection";
+} from "@t2code/client-runtime/connection";
 import {
   createEnvironmentShellAtoms,
   createEnvironmentSnapshotAtom,
   createShellEnvironmentAtoms,
   type EnvironmentShellState,
-} from "@t3tools/client-runtime/state/shell";
-import type { EnvironmentCatalogState } from "@t3tools/client-runtime/state/connections";
-import type { EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/shell";
+import type { EnvironmentCatalogState } from "@t2code/client-runtime/state/connections";
+import type { EnvironmentId } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/unstable/reactivity";
 

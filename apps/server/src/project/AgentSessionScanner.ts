@@ -26,7 +26,7 @@ import {
   type AgentSessionProjectCandidate,
   type AgentSessionScanResult,
   type ProviderInstanceConfig,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -37,8 +37,8 @@ import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 
-import { HostProcessEnvironment, HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { normalizeProjectPathForComparison } from "@t3tools/shared/path";
+import { HostProcessEnvironment, HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { normalizeProjectPathForComparison } from "@t2code/shared/path";
 
 import * as ServerConfig from "../config.ts";
 import * as ProjectionSnapshotQuery from "../orchestration/Services/ProjectionSnapshotQuery.ts";

@@ -15,7 +15,7 @@ import {
   TurnId,
   type OrchestrationEvent,
   ProviderInstanceId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it as effectIt } from "@effect/vitest";
 import * as Effect from "effect/Effect";

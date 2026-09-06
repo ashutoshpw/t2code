@@ -5,7 +5,7 @@ import {
   MessageId,
   ProviderInstanceId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { onTestFinished, vi } from "vite-plus/test";
 
 const composerDraftFileMocks = vi.hoisted(() => {
@@ -126,7 +126,7 @@ vi.mock("../lib/uuid", () => ({ uuidv4: () => "uuid", randomHex: () => "0000" })
 vi.mock("./assets", () => ({ assetEnvironment: {} }));
 vi.mock("./attachments", () => ({ attachmentEnvironment: {} }));
 vi.mock("./session", () => ({ environmentSession: {} }));
-vi.mock("@t3tools/client-runtime/state/runtime", () => ({
+vi.mock("@t2code/client-runtime/state/runtime", () => ({
   createEnvironmentRpcCommand: () => Symbol("rpc-command"),
   executeAtomQuery: () => {
     throw new Error("Unexpected network query in the inline read test");

@@ -11,9 +11,9 @@ import type {
   OrchestrationThread,
   OrchestrationThreadActivity,
   TurnId,
-} from "@t3tools/contracts";
-import { isImportedAgentSessionMessageId } from "@t3tools/contracts";
-import { compareDateTimeStrings } from "@t3tools/shared/dateTime";
+} from "@t2code/contracts";
+import { isImportedAgentSessionMessageId } from "@t2code/contracts";
+import { compareDateTimeStrings } from "@t2code/shared/dateTime";
 
 export type ThreadDetailReducerResult =
   | { readonly kind: "updated"; readonly thread: OrchestrationThread }

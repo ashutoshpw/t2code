@@ -44,7 +44,7 @@ import {
   ProjectId,
   ProviderInstanceId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   DEFAULT_INTERACTION_MODE,
