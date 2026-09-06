@@ -17,7 +17,7 @@ the version.
     and nightly dispatches must select `main`; preview may select any branch. The channel defaults
     to preview so an omitted selection cannot publish a stable release.
   - push tag matching `v*.*.*` for a stable release of an explicit commit
-  - scheduled nightly check every 30 minutes
+  - scheduled nightly check every 12 hours
   - manual `workflow_dispatch` with `channel=nightly`
   - manual `workflow_dispatch` with `channel=preview`, the maintainers' test train. It exercises the release flow up to a draft release (build, sign, notarize, smoke) for a commit that end users must never receive, which is how an unmerged branch or a risky change gets a real release run before it lands. It builds the triggering commit with nightly's versioning under the `preview` prerelease identifier (`0.0.41-preview.<date>.<run>`) and leaves its GitHub prerelease as a draft. It publishes nothing to npm. It stays a draft because a draft has no git tag, and published preview tags hide nightlies from the updater (see [Update feed](#update-feed)). Do not publish a preview draft by hand. Preview is not on the schedule, its desktop builds carry no update feed, and no updater manifest (`latest*.yml`, `nightly*.yml`, blockmaps) is attached, so a stable or nightly install cannot be offered one. The only ways onto a new preview are by hand: the draft release, which maintainers can open, and the run's Actions artifacts. A draft's files are not public, so `T3CODE_CHANNEL=preview` and `t3 update --channel preview` see only previews published before this rule, and a fresh `npx t3@preview` fails while npm's `preview` dist-tag names a draft. Rebase a branch onto `main` before dispatching a preview from it. The run uses the branch's own `release.yml`, and an older copy publishes the preview with a tag. The release itself is named as a maintainer test build and its body is a warning rather than generated notes: a changelog of unmerged branch history is not a changelog, and nightly and stable notes are unaffected because each series resolves its previous tag within its own channel. The hosted web app, AUR, and Discord announcements are skipped. Keep it; it costs nothing when idle.
 - A manual stable release builds the commit of the latest published nightly, not `main` HEAD.
@@ -411,7 +411,7 @@ One-time Vercel dashboard setup:
 
 - Workflow: `.github/workflows/release.yml`
 - Triggers:
-  - scheduled check every 30 minutes
+  - scheduled check every 12 hours
   - manual `workflow_dispatch` with `channel=nightly`
 - Automatic nightlies require new commits and at least six hours since the last nightly was published, including manual nightlies.
 - To pause automatic nightlies, run `gh variable set PAUSE_NIGHTLY -b true -R pingdotgg/t3code`. Scheduled runs then skip. Stable, preview, and manual nightly runs are unaffected. Resume with `gh variable delete PAUSE_NIGHTLY -R pingdotgg/t3code`.
