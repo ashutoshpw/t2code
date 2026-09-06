@@ -460,7 +460,7 @@ describe("DesktopWindow", () => {
 
       yield* Effect.gen(function* () {
         const desktopWindow = yield* DesktopWindow.DesktopWindow;
-        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3773"));
+        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3772"));
         const attach = host.webContentsListeners.get("did-attach-webview");
         assert.isDefined(attach);
         attach({}, guest);
@@ -1415,16 +1415,16 @@ describe("DesktopWindow", () => {
         createCount,
         mainWindow,
         onReveal: () => {
-          foreground = "T3 Code";
+          foreground = "T2 Code";
           operations.push("reveal");
         },
       });
 
       yield* Effect.gen(function* () {
         const desktopWindow = yield* DesktopWindow.DesktopWindow;
-        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3773"));
+        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3772"));
         yield* desktopWindow.dispatchSnapShotEvent({ type: "started", id: captureOne });
-        assert.equal(foreground, "T3 Code");
+        assert.equal(foreground, "T2 Code");
         foreground = "Explorer";
         yield* desktopWindow.dispatchSnapShotEvent({ type: "ready", id: captureOne });
         yield* desktopWindow.dispatchSnapShotEvent({ type: "failed", id: captureTwo });
@@ -1456,7 +1456,7 @@ describe("DesktopWindow", () => {
 
       yield* Effect.gen(function* () {
         const desktopWindow = yield* DesktopWindow.DesktopWindow;
-        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3773"));
+        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3772"));
         yield* Effect.exit(
           desktopWindow.dispatchSnapShotEvent({ type: "started", id: captureOne }),
         );
@@ -1495,7 +1495,7 @@ describe("DesktopWindow", () => {
 
       yield* Effect.gen(function* () {
         const desktopWindow = yield* DesktopWindow.DesktopWindow;
-        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3773"));
+        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3772"));
         fakeWindow.isDestroyed.mockReturnValue(true);
         yield* Ref.set(mainWindow, Option.none());
         yield* desktopWindow.dispatchSnapShotEvent({ type: "ready", id: captureOne });
