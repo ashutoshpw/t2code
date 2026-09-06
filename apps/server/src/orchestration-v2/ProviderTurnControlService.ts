@@ -1,4 +1,4 @@
-import { projectComposerContextForProvider } from "@t3tools/shared/composerContextReferences";
+import { projectComposerContextForProvider } from "@t2code/shared/composerContextReferences";
 import {
   MessageId,
   type ModelSelection,
@@ -8,7 +8,7 @@ import {
   ProviderTurnId,
   RunAttemptId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Clock from "effect/Clock";
 import type * as DateTime from "effect/DateTime";
 import * as Context from "effect/Context";
@@ -17,7 +17,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 import * as ProjectionStore from "./ProjectionStore.ts";
 import * as ProviderSessionManager from "./ProviderSessionManager.ts";
 

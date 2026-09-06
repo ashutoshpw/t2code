@@ -5,7 +5,7 @@ import {
   type OrchestrationV2ThreadLinkMetadata,
   type OrchestrationGetTurnDiffResult,
   type OrchestrationV2GetTurnItemInput,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";

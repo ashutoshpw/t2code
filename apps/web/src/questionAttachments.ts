@@ -1,18 +1,18 @@
-import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import type { PendingUserInputDraftAnswer } from "@t3tools/client-runtime/state/pending-user-input";
+import { scopedThreadKey, scopeThreadRef } from "@t2code/client-runtime/environment";
+import type { PendingUserInputDraftAnswer } from "@t2code/client-runtime/state/pending-user-input";
 import {
   onThreadRequestsResolved,
   pruneResolvedUserInputDrafts,
   resolvedQuestionDraftKeys,
   userInputDraftKey,
-} from "@t3tools/client-runtime/state/thread-requests";
+} from "@t2code/client-runtime/state/thread-requests";
 import type {
   EnvironmentId,
   RuntimeRequestId,
   ScopedThreadRef,
   ThreadContextRecord,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { create } from "zustand";
 import { DraftId, useComposerDraftStore } from "./composerDraftStore";
 import { releaseDraftAttachments } from "./lib/attachmentUploadQueue";

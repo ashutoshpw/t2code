@@ -1,4 +1,4 @@
-import { ClaudeSettings, ProviderDriverKind } from "@t3tools/contracts";
+import { ClaudeSettings, ProviderDriverKind } from "@t2code/contracts";
 import * as Cache from "effect/Cache";
 import * as Duration from "effect/Duration";
 import * as SecureRandom from "effect/crypto/SecureRandom";
@@ -12,11 +12,11 @@ import { HttpClient } from "effect/http";
 import { ChildProcessSpawner } from "effect/process";
 
 import { makeClaudeTextGeneration } from "../../textGeneration/ClaudeTextGeneration.ts";
-import * as ProviderLatestVersions from "@t3tools/provider-core/server/ProviderLatestVersions";
-import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
+import * as ProviderLatestVersions from "@t2code/provider-core/server/ProviderLatestVersions";
+import * as ProviderHost from "@t2code/provider-core/server/ProviderHost";
 import * as ServerConfig from "../../config.ts";
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
+import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
+import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
 import {
   createClaudeAdapterV2,
   type ClaudeAdapterV2DriverEnv,
@@ -33,28 +33,28 @@ import {
   probeClaudeWorkspaceSnapshot,
   type ClaudeCapabilitiesProbe,
 } from "../ClaudeProvider.ts";
-import { makeManagedServerProvider } from "@t3tools/provider-core/server/managedProvider";
-import * as ModelCatalog from "@t3tools/provider-core/server/ModelCatalog";
+import { makeManagedServerProvider } from "@t2code/provider-core/server/managedProvider";
+import * as ModelCatalog from "@t2code/provider-core/server/ModelCatalog";
 import { resolveClaudeModelCatalog } from "../ClaudeModelCatalog.ts";
 import {
   defaultProviderContinuationIdentity,
   type ProviderDriver,
   type ProviderInstance,
-} from "@t3tools/provider-core/server/driver";
-import { withInstanceIdentity } from "@t3tools/provider-core/server/instanceIdentity";
-import { enrichProviderSnapshotWithVersionAdvisory } from "@t3tools/provider-core/server/maintenanceResolver";
+} from "@t2code/provider-core/server/driver";
+import { withInstanceIdentity } from "@t2code/provider-core/server/instanceIdentity";
+import { enrichProviderSnapshotWithVersionAdvisory } from "@t2code/provider-core/server/maintenanceResolver";
 import {
   haveProviderSnapshotSettingsChanged,
   makeProviderSnapshotSettingsSource,
   type ProviderSnapshotSettings,
-} from "@t3tools/provider-core/server/snapshotSettings";
+} from "@t2code/provider-core/server/snapshotSettings";
 import {
   makeClaudeCapabilitiesCacheKey,
   makeClaudeContinuationGroupKey,
   mergeClaudeProcessEnvironment,
   resolveClaudeHomePath,
 } from "./ClaudeHome.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import { makeClaudeMaintenanceResolution } from "./ClaudeMaintenance.ts";
 const decodeClaudeSettings = Schema.decodeSync(ClaudeSettings);
 

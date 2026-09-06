@@ -34,9 +34,9 @@ import {
   type VcsStatusInput,
   type VcsStatusResult,
   type WorktreeSubmodules,
-} from "@t3tools/contracts";
-import { isMissingExecutable } from "@t3tools/source-control-core/server/discovery";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import { isMissingExecutable } from "@t2code/source-control-core/server/discovery";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import {
   makeGitVcsDriverCore,
   PATCH_RENDER_PREFIX_ARGS,

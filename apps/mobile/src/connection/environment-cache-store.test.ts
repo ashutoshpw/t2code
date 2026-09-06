@@ -4,7 +4,7 @@ import {
   COMPACT_THREAD_CACHE_SCHEMA_VERSION,
   type ConnectionPersistenceError,
   StoredOrchestrationThreadSnapshot,
-} from "@t3tools/client-runtime/platform";
+} from "@t2code/client-runtime/platform";
 import {
   CommandId,
   EnvironmentId,
@@ -16,7 +16,7 @@ import {
   type OrchestrationV2ShellSnapshot,
   type OrchestrationV2ThreadDetailSnapshot,
   type ThreadPullRequestLink,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -575,9 +575,9 @@ describe("mobile SQLite environment cache store", () => {
       );
       const link: ThreadPullRequestLink = {
         host: "github.com",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 42,
-        url: "https://github.com/pingdotgg/t3code/pull/42",
+        url: "https://github.com/pingdotgg/t2code/pull/42",
         source: "agent",
         linkedAt: "2026-07-29T12:00:00.000Z",
         snapshot: null,
@@ -609,9 +609,9 @@ describe("mobile SQLite environment cache store", () => {
       );
       const link: ThreadPullRequestLink = {
         host: "github.com",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 5,
-        url: "https://github.com/pingdotgg/t3code/pull/5",
+        url: "https://github.com/pingdotgg/t2code/pull/5",
         source: "agent",
         linkedAt: "2026-07-29T12:00:00.000Z",
         snapshot: null,

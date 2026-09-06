@@ -5,7 +5,7 @@ import {
   listLoginShellCandidates,
   readUserLoginShell,
   setWindowsPath,
-} from "@t3tools/shared/shell";
+} from "@t2code/shared/shell";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -84,7 +84,7 @@ export class DesktopShellEnvironment extends Context.Service<
     readonly awaitUserShellDiscovery: Effect.Effect<boolean>;
     readonly updates: Stream.Stream<DesktopShellEnvironmentSnapshot>;
   }
->()("@t3tools/desktop/shell/DesktopShellEnvironment") {}
+>()("@t2code/desktop/shell/DesktopShellEnvironment") {}
 
 const LOGIN_SHELL_ENV_NAMES = [
   "PATH",

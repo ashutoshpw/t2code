@@ -10,8 +10,8 @@ import {
   type SecretReference,
   type SecretRequestAnswerInput,
   type ThreadId,
-} from "@t3tools/contracts";
-import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
+} from "@t2code/contracts";
+import * as SecretResolver from "@t2code/secret-provider-core/server/SecretResolver";
 
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";

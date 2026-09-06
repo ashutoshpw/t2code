@@ -4,7 +4,7 @@ import {
   type EnvironmentCloudLinkStateResult,
   type EnvironmentCloudPreferencesRequest,
   type EnvironmentCloudRelayConfigResult,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   RelayCloudEnvironmentHealthProofPayload,
   type RelayCloudEnvironmentHealthRequest,
@@ -26,8 +26,8 @@ import {
   RelayManagedEndpointRecoveryResponse,
   type RelayManagedEndpointRuntimeConfig,
   RelayOkResponse,
-} from "@t3tools/contracts/relay";
-import { withRelayClientTracing } from "@t3tools/shared/relayTracing";
+} from "@t2code/contracts/relay";
+import { withRelayClientTracing } from "@t2code/shared/relayTracing";
 import {
   decodeRelayJwt,
   normalizeRelayIssuer,
@@ -38,8 +38,8 @@ import {
   RELAY_MINT_REQUEST_TYP,
   RELAY_MINT_RESPONSE_TYP,
   verifyRelayJwt,
-} from "@t3tools/shared/relayJwt";
-import { isSecureRelayUrl } from "@t3tools/shared/relayUrl";
+} from "@t2code/shared/relayJwt";
+import { isSecureRelayUrl } from "@t2code/shared/relayUrl";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Signature from "effect/crypto/Signature";

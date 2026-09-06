@@ -8,7 +8,7 @@ import {
   OrchestratorMcpThreadReadResult,
   OrchestratorMcpThreadWaitInput,
   OrchestratorMcpThreadWaitResult,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as Digest from "effect/crypto/Digest";
 import * as DateTime from "effect/DateTime";

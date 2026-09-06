@@ -13,7 +13,7 @@ import {
   type AgentSessionProjectGit,
   type AgentSessionScanResult,
   type ProviderInstanceConfig,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
@@ -26,19 +26,19 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 
-import { isBareGitConfig, parseOriginUrlFromGitConfig } from "@t3tools/shared/git";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { normalizeProjectPathForComparison } from "@t3tools/shared/path";
-import { repositoryPathFromRemoteUrl } from "@t3tools/source-control-core/server/SourceControlProvider";
+import { isBareGitConfig, parseOriginUrlFromGitConfig } from "@t2code/shared/git";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { normalizeProjectPathForComparison } from "@t2code/shared/path";
+import { repositoryPathFromRemoteUrl } from "@t2code/source-control-core/server/SourceControlProvider";
 
 import * as ServerConfig from "../config.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as ProjectStore from "../orchestration-v2/ProjectStore.ts";
 import * as ProviderSessionRuntime from "../persistence/ProviderSessionRuntime.ts";
 import { resolveCodexHomeLayout } from "../provider/Drivers/CodexHomeLayout.ts";
-import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
-import { piHome, resolvePiSessionsDir } from "@t3tools/provider-pi/server/usage";
+import { mergeProviderInstanceEnvironment } from "@t2code/provider-core/server/instanceEnvironment";
+import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
+import { piHome, resolvePiSessionsDir } from "@t2code/provider-pi/server/usage";
 import * as ServerSettings from "../serverSettings.ts";
 import { sourceControlDefinitions } from "../sourceControl/sourceControlDefinitions.ts";
 import {

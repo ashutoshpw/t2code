@@ -10,7 +10,7 @@ import {
   pullRequestConversationThreads,
   type PullRequestActivity,
   type PullRequestComment,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { StackActions, type NavigationProp } from "@react-navigation/native";
 import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";

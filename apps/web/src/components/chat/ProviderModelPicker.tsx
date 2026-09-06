@@ -4,7 +4,7 @@ import {
   type EnvironmentId,
   type ProviderDriverKind,
   type ResolvedKeybindingsConfig,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { RegistryContext } from "@effect/atom-react";
 import {
   createContext,

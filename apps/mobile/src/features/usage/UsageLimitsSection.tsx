@@ -9,7 +9,7 @@ import {
   type ServerProvider,
   type ServerProviderResetCredits,
   type ServerProviderUsageWindow,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   type ResetCreditChoice,
   resetCreditChoices,
@@ -18,7 +18,7 @@ import {
   paceOf,
   paceRemainingPercent,
   remainingPercent,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 import { type ReactNode, useContext, useRef, useState } from "react";
 import { Atom } from "effect/reactivity";
 import { Linking, Pressable, View } from "react-native";

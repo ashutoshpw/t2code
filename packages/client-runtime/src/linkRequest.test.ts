@@ -1,5 +1,5 @@
-import { EnvironmentId, type ServerConfig, ThreadId, TurnItemId } from "@t3tools/contracts";
-import type { RelayEnvironmentStatusResponse } from "@t3tools/contracts/relay";
+import { EnvironmentId, type ServerConfig, ThreadId, TurnItemId } from "@t2code/contracts";
+import type { RelayEnvironmentStatusResponse } from "@t2code/contracts/relay";
 import * as Option from "effect/Option";
 import { describe, expect, it } from "vite-plus/test";
 

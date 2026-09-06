@@ -1,10 +1,9 @@
-import { isTransportConnectionErrorMessage } from "@t3tools/client-runtime/errors";
+import { isTransportConnectionErrorMessage } from "@t2code/client-runtime/errors";
 import {
   clampFileAttachmentUploadBytes,
   fileAttachmentTooLargeMessage,
-} from "@t3tools/client-runtime/state/attachments";
-import type { EnvironmentShellStatus } from "@t3tools/client-runtime/state/shell";
-import type { ThreadFamilyRead } from "@t3tools/client-runtime/state/threads";
+} from "@t2code/client-runtime/state/attachments";
+import type { EnvironmentShellStatus } from "@t2code/client-runtime/state/shell";
 import {
   CommandId,
   DEFAULT_PROVIDER_INTERACTION_MODE,
@@ -23,12 +22,12 @@ import {
   type RuntimeMode as RuntimeModeType,
   type ServerProvider,
   type ServerProviderModel,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 
 import { DraftComposerAttachmentSchema } from "../lib/composer-image-schema";
 import { withImplicitFastModeSelection } from "../lib/providerOptions";
-import type { ComposerDispatchMode } from "@t3tools/client-runtime/state/composer-dispatch";
+import type { ComposerDispatchMode } from "@t2code/client-runtime/state/composer-dispatch";
 import type { DraftComposerAttachment } from "../lib/composerImages";
 import { scopedThreadKey } from "../lib/scopedEntities";
 

@@ -4,7 +4,7 @@ import {
   ASSISTANT_CITATION_MAX_ID_LENGTH,
   ASSISTANT_CITATION_MAX_TEXT_LENGTH,
   AssistantCitation,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 

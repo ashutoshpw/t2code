@@ -1,11 +1,11 @@
 import { documentChipKindForFileName } from "~/pierre-icons";
-import { isSvgAttachment } from "@t3tools/shared/image";
+import { isSvgAttachment } from "@t2code/shared/image";
 import { useRenderedAppearance } from "../../hooks/useTheme";
 import { PullRequestGlyph } from "../pullRequest/pullRequestIcons";
 import { ReadOnlySourcePreview } from "../files/AttachmentFilePreview";
 import { useRightPanelStore } from "~/rightPanelStore";
-import { COMPOSER_CONTEXT_KINDS } from "@t3tools/contracts";
-import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
+import { COMPOSER_CONTEXT_KINDS } from "@t2code/contracts";
+import { formatAttachmentSize } from "@t2code/client-runtime/state/attachments";
 import { use, type ReactNode } from "react";
 import { FileDiff } from "@pierre/diffs/react";
 import { DiffWorkerPoolProvider } from "../DiffWorkerPoolProvider";
@@ -26,7 +26,7 @@ import { EnvironmentContextChip } from "../EnvironmentContextChip";
 import { ThreadContextChip } from "../ThreadContextChip";
 import { ResponseReplyCard } from "./AssistantCitationChip";
 import { MessageCircleIcon, MousePointerClickIcon, PaintbrushIcon } from "lucide-react";
-import type { ComposerContextId, KnownComposerContextRecord } from "@t3tools/contracts";
+import type { ComposerContextId, KnownComposerContextRecord } from "@t2code/contracts";
 import { buildExpandedImagePreview } from "./ExpandedImagePreview";
 import { WorkspaceEntryIcon, WorkspaceEntryTooltip } from "./WorkspaceEntryIcon";
 import { TerminalContextInlineChip } from "./TerminalContextInlineChip";
@@ -45,7 +45,7 @@ import {
   pullRequestContextKindLabel,
   reviewCommentContextLabel,
 } from "~/lib/composerContextRecords";
-import { formatComposerContextReference } from "@t3tools/shared/composerContextReferences";
+import { formatComposerContextReference } from "@t2code/shared/composerContextReferences";
 import { ContextChip, ContextChipLabel, type ContextChipKind } from "../ContextChip";
 import { createContextPresentationRegistry } from "../contextPresentationRegistry";
 import type { ChatMarkdownContextReference } from "../ChatMarkdown";
@@ -266,7 +266,7 @@ function UserMessageElementDetails({
 }
 
 interface UserMessageContextRenderContext {
-  environmentId: import("@t3tools/contracts").EnvironmentId;
+  environmentId: import("@t2code/contracts").EnvironmentId;
   reference: ChatMarkdownContextReference;
   annotationImage: ChatImageAttachment | null;
   attachment: ChatImageAttachment | ChatFileAttachment | null;

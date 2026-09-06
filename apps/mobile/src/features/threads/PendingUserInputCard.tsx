@@ -1,12 +1,12 @@
 import { Button } from "../../components/ui/Button";
 import { QuestionAttachments } from "./QuestionAttachments";
-import type { EnvironmentId, RuntimeRequestId, ThreadId } from "@t3tools/contracts";
-import type { ThreadUserInputQuestion } from "@t3tools/client-runtime/state/thread-requests";
+import type { EnvironmentId, RuntimeRequestId, ThreadId } from "@t2code/contracts";
+import type { ThreadUserInputQuestion } from "@t2code/client-runtime/state/thread-requests";
 import {
   markdownProseDirection,
   textDirection,
   type TextDirection,
-} from "@t3tools/shared/textDirection";
+} from "@t2code/shared/textDirection";
 import { useNavigation } from "@react-navigation/native";
 import { useRef } from "react";
 import { Platform, Pressable, ScrollView, View, type LayoutChangeEvent } from "react-native";
@@ -34,7 +34,7 @@ import { useLiveThreadLinkLabels } from "../../state/entities";
 import {
   isPendingUserInputOptionSelected,
   type PendingUserInputDraftAnswer,
-} from "@t3tools/client-runtime/state/pending-user-input";
+} from "@t2code/client-runtime/state/pending-user-input";
 import type { PendingUserInput } from "../../lib/threadActivity";
 
 export interface PendingUserInputCardProps {

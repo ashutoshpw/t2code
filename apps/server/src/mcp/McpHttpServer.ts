@@ -22,7 +22,7 @@ import {
   type RunId,
   RuntimeMode,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import packageJson from "../../package.json" with { type: "json" };
 import { parseBearerToken } from "../auth/EnvironmentAuth.ts";

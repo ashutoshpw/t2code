@@ -1,5 +1,5 @@
-import type { DeviceHubAccess } from "@t3tools/client-runtime/device/hub-access";
-import type { DevicePlatform } from "@t3tools/contracts";
+import type { DeviceHubAccess } from "@t2code/client-runtime/device/hub-access";
+import type { DevicePlatform } from "@t2code/contracts";
 import type { PlatformOSType } from "react-native";
 
 export interface DeviceStreamConfiguration {

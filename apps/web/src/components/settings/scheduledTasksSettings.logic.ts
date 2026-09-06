@@ -1,4 +1,4 @@
-import { isListedThreadLineage, isWebhookDedupeTemplate } from "@t3tools/contracts";
+import { isListedThreadLineage, isWebhookDedupeTemplate } from "@t2code/contracts";
 import {
   EnvironmentId,
   MAX_WEBHOOK_DELIVERY_AGE_MINUTES,
@@ -14,21 +14,21 @@ import {
   type ProviderInteractionMode,
   type ServerSettings,
   type ThreadId,
-} from "@t3tools/contracts";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/models";
+} from "@t2code/contracts";
+import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/models";
 import {
   parseMaxDeliveryAge,
   parseWebhookFilterDrafts,
   webhookFilterDrafts,
   webhookFilterDraftsChanged,
   type WebhookFilterDraft,
-} from "@t3tools/client-runtime/scheduled-task-webhook";
-import { scheduleTimeZoneLabel } from "@t3tools/client-runtime/scheduled-task-time-zone";
+} from "@t2code/client-runtime/scheduled-task-webhook";
+import { scheduleTimeZoneLabel } from "@t2code/client-runtime/scheduled-task-time-zone";
 
 import {
   resolveProjectSettings,
   type LegacyProjectSettingsFields,
-} from "@t3tools/shared/projectSettings";
+} from "@t2code/shared/projectSettings";
 import type { ProviderInstanceEntry } from "../../providerInstances";
 
 import type { ResolvedSettingsScope } from "./settingsScope";

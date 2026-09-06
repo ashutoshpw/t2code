@@ -52,7 +52,7 @@ import {
   type RichTextMark,
 } from "~/composer-rich-text";
 import { collectInlineContextIds } from "~/lib/composerContextReferences";
-import { composerMathRanges } from "@t3tools/shared/composerInlineTokens";
+import { composerMathRanges } from "@t2code/shared/composerInlineTokens";
 
 export type SkillMeta = { label: string; description: string | null };
 

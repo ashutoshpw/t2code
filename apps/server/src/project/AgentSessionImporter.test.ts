@@ -13,11 +13,11 @@ import {
   type OrchestrationV2AppThread,
   type OrchestrationV2DomainEvent,
   type OrchestrationV2ProviderThread,
-} from "@t3tools/contracts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as KeyedLock from "@t3tools/shared/KeyedLock";
-import * as AcpRegistryRuntimeCoordinator from "@t3tools/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+} from "@t2code/contracts";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
+import * as KeyedLock from "@t2code/shared/KeyedLock";
+import * as AcpRegistryRuntimeCoordinator from "@t2code/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";

@@ -1,11 +1,11 @@
 import { useComposerMenuState } from "../chat/useComposerMenuState";
 import { useOrchestrationCommand } from "../../state/use-orchestration-command";
-import { AuthOrchestrationOperateScope } from "@t3tools/contracts";
+import { AuthOrchestrationOperateScope } from "@t2code/contracts";
 import { useEnvironmentsWithScope } from "../../state/session";
-import { mapAtomCommandResult, settlePromise } from "@t3tools/client-runtime/state/runtime";
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { planProjectRemoval } from "@t3tools/client-runtime/state/projects";
-import { type EnvironmentId, type SidebarProjectGroupingMode } from "@t3tools/contracts";
+import { mapAtomCommandResult, settlePromise } from "@t2code/client-runtime/state/runtime";
+import { scopeProjectRef, scopeThreadRef } from "@t2code/client-runtime/environment";
+import { planProjectRemoval } from "@t2code/client-runtime/state/projects";
+import { type EnvironmentId, type SidebarProjectGroupingMode } from "@t2code/contracts";
 import {
   checkProjectAccess,
   reportProjectFailure,

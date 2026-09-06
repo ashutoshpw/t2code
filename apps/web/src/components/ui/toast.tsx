@@ -9,7 +9,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { type ScopedThreadRef, type ThreadId } from "@t3tools/contracts";
+import { type ScopedThreadRef, type ThreadId } from "@t2code/contracts";
 import {
   CircleAlertIcon,
   CircleCheckIcon,

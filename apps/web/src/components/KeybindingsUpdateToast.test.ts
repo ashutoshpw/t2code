@@ -1,4 +1,4 @@
-import type { ServerConfigStreamEvent } from "@t3tools/contracts";
+import type { ServerConfigStreamEvent } from "@t2code/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 const mocks = vi.hoisted(() => ({

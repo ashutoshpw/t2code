@@ -11,10 +11,10 @@ import { THREAD_SIDEBAR_ROW_LAYOUT } from "../threads/threadListAnimations";
 import {
   type EnvironmentProject,
   type EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
-import { pickableProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import { type EnvironmentId, type SidebarProjectGroupingMode } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/shell";
+import { pickableProjectGroups } from "@t2code/client-runtime/state/project-grouping";
+import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
+import { type EnvironmentId, type SidebarProjectGroupingMode } from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { use, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import {

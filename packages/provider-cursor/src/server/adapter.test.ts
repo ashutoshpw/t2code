@@ -15,7 +15,7 @@ import {
   RunAttemptId,
   RunId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
@@ -28,11 +28,11 @@ import * as Path from "effect/Path";
 import * as Stream from "effect/Stream";
 import { vi } from "vite-plus/test";
 
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
+import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
+import { makeProviderFailure } from "@t2code/provider-core/server/failure";
 import {
   cursorMcpServers,
   cursorRuntimeAgentPolicy,

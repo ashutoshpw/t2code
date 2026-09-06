@@ -17,7 +17,7 @@ import {
   ScheduledTaskId,
   ThreadId,
   type OrchestrationV2Subagent,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import {
   createRef,
@@ -47,7 +47,7 @@ import type { Root } from "mdast";
 import { ViewedImagesTimelineRow } from "./TimelineWorkEntryRow";
 import { remarkThoughtPreview, THOUGHT_PREVIEW_MAX_LENGTH } from "./TimelineWorkEntryRow.logic";
 import { TimelineRowCtx } from "./timelineRowContext";
-import { parseMarkdownWithMath } from "@t3tools/shared/markdownMath";
+import { parseMarkdownWithMath } from "@t2code/shared/markdownMath";
 import { collectThreadFindRanges } from "./threadFindHighlights";
 import { toastManager } from "../ui/toast";
 import type { CitedHistory } from "./citationProcedure";
@@ -56,8 +56,8 @@ import { rememberTimelinePosition } from "./timelineScrollAnchoring";
 import {
   COMPOSER_CONTEXT_CLIPBOARD_MIME,
   decodeComposerContextFragment,
-} from "@t3tools/shared/composerContextClipboard";
-import { collectComposerContextReferences } from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextClipboard";
+import { collectComposerContextReferences } from "@t2code/shared/composerContextReferences";
 
 const environmentQuery = vi.hoisted(() => ({
   error: "Pull request not found" as string | null,

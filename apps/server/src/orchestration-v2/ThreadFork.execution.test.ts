@@ -16,7 +16,7 @@ import {
   RunId,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -31,7 +31,7 @@ import * as EventSink from "./EventSink.ts";
 import * as Orchestrator from "./Orchestrator.ts";
 import * as ProviderAdapterRegistry from "./ProviderAdapterRegistry.ts";
 import * as ProviderReplayHarness from "./testkit/ProviderReplayHarness.ts";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 
 const forkCases = (
   [
@@ -1270,7 +1270,7 @@ it.effect("a side chat opened during the parent's first turn starts from a diges
     assert.notInclude(handoff!.summaryText, "PARENT_QUEUED_MARKER");
     assert.include(handoff!.summaryText, "- User: PARENT_IMPORTED_MARKER");
     assert.include(handoff!.summaryText, "- User: PARENT_RUNNING_MARKER");
-    assert.include(handoff!.summaryText, `t3_thread_read on thread ${parentId}`);
+    assert.include(handoff!.summaryText, `t2_thread_read on thread ${parentId}`);
     assert.equal(
       started.messages.find((message) => message.role === "user")?.text,
       "What is the main thread doing?",

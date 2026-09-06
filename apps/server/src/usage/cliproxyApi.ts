@@ -4,8 +4,8 @@ import {
   type ProviderConsumeResetCreditResult,
   type UsageLimitSourceAccount,
   type UsageLimitSourceConfig,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Cause from "effect/Cause";
 import * as Digest from "effect/crypto/Digest";
 import * as DateTime from "effect/DateTime";
@@ -31,7 +31,7 @@ import {
 import {
   makeUnavailableUsageLimits,
   makeUsageLimits,
-} from "@t3tools/provider-core/server/usageLimits";
+} from "@t2code/provider-core/server/usageLimits";
 
 /** A hub with its management key already read from wherever the setting keeps it. */
 export interface CliproxyHub {

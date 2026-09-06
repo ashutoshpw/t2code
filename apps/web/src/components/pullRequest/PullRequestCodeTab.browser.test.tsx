@@ -6,12 +6,12 @@ import {
   SourceControlProviderKind,
   type PullRequestDetailView,
   type PullRequestDiffResult,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { expect, it, vi } from "vite-plus/test";
 
 import "~/index.css";
 import { __setClientSettingsForTests } from "../../hooks/useSettings";
-import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
+import { DEFAULT_CLIENT_SETTINGS } from "@t2code/contracts/settings";
 
 const { diffAtom, pagedDiffAtom } = await vi.hoisted(async () => {
   const { AsyncResult, Atom } = await import("effect/reactivity");

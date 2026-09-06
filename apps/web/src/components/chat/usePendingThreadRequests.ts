@@ -1,4 +1,4 @@
-import type { ThreadStructure } from "@t3tools/client-runtime/state/shell";
+import type { ThreadStructure } from "@t2code/client-runtime/state/shell";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
@@ -7,16 +7,16 @@ import {
   type ScopedThreadRef,
   type ThreadId,
   type UserInputAttachments,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   derivePendingThreadRequests,
   seedUserInputDraftAnswers,
   userInputDraftKey,
-} from "@t3tools/client-runtime/state/thread-requests";
+} from "@t2code/client-runtime/state/thread-requests";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import { useRef, useState, type RefObject, type SetStateAction } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { type DraftId, useComposerDraftStore } from "../../composerDraftStore";
@@ -27,7 +27,7 @@ import {
   setPendingUserInputCustomAnswer,
   togglePendingUserInputOptionSelection,
   type PendingUserInputDraftAnswer,
-} from "@t3tools/client-runtime/state/pending-user-input";
+} from "@t2code/client-runtime/state/pending-user-input";
 import {
   carryDisplacedCustomAnswerIntoPrompt,
   derivePendingUserInputProgress,

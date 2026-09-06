@@ -2,7 +2,7 @@ import {
   type ProviderInstanceId,
   textGeneratorForSelection,
   type UnifiedSettings,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { mergeEnvironmentSettings } from "../../hooks/useSettings";
 import { getCustomModelOptionsByInstance } from "../../modelSelection";

@@ -1,4 +1,4 @@
-import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
+import { OrchestrationDispatchCommandError } from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Orchestrator from "./orchestration-v2/Orchestrator.ts";
@@ -97,7 +97,7 @@ import {
   type PullRequestRef,
   WS_METHODS,
   WsRpcGroup,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   HttpRouter,
   HttpServerRequest,
@@ -162,7 +162,7 @@ import {
   projectThreadProjectionForWire,
   threadStreamEventItem,
 } from "./orchestration-v2/WireProjection.ts";
-import { dedupeSnapshotBodies } from "@t3tools/shared/orchestrationV2DedupedBodies";
+import { dedupeSnapshotBodies } from "@t2code/shared/orchestrationV2DedupedBodies";
 import * as ProjectStore from "./orchestration-v2/ProjectStore.ts";
 import * as ThreadSearch from "./orchestration-v2/ThreadSearch.ts";
 import * as OrchestrationEventStore from "./persistence/OrchestrationEventStore.ts";
@@ -170,8 +170,8 @@ import { userFacingDispatchErrorMessage } from "./orchestration-v2/UserFacingErr
 import * as ProviderRegistry from "./provider/ProviderRegistry.ts";
 import * as AcpRegistrySessions from "./provider/AcpRegistrySessions.ts";
 import * as ProviderInstanceRegistry from "./provider/ProviderInstanceRegistry.ts";
-import * as AcpRegistrySupport from "@t3tools/provider-acp-registry/server/AcpRegistrySupport";
-import * as AcpRegistryRuntimeCoordinator from "@t3tools/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
+import * as AcpRegistrySupport from "@t2code/provider-acp-registry/server/AcpRegistrySupport";
+import * as AcpRegistryRuntimeCoordinator from "@t2code/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
 import * as ProviderMaintenanceRunner from "./provider/providerMaintenanceRunner.ts";
 import * as ProviderAuthService from "./provider/ProviderAuthService.ts";
 import * as ProviderInstallation from "./provider/providerInstallation.ts";
@@ -258,18 +258,18 @@ import * as VcsProjectConfig from "./vcs/VcsProjectConfig.ts";
 import * as PairingGrantStore from "./auth/PairingGrantStore.ts";
 import * as SessionStore from "./auth/SessionStore.ts";
 import { failEnvironmentAuthInvalid, failEnvironmentInternal } from "./auth/http.ts";
-import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
-import { isNetworkPath } from "@t3tools/shared/path";
-import * as RelayClient from "@t3tools/shared/relayClient";
+import * as SourceControlRateLimit from "@t2code/source-control-core/server/SourceControlRateLimit";
+import { isNetworkPath } from "@t2code/shared/path";
+import * as RelayClient from "@t2code/shared/relayClient";
 import {
   SOCKET_FRAME_PARTS_QUERY_PARAM,
   splitLargeSocketFrames,
-} from "@t3tools/shared/socketFrameParts";
-import { isTelemetryIdHash } from "@t3tools/shared/telemetryId";
+} from "@t2code/shared/socketFrameParts";
+import { isTelemetryIdHash } from "@t2code/shared/telemetryId";
 import {
   sameUsageLimitCommandCoverage,
   withUsageLimitsCommands,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 import * as AgentSessionScanner from "./project/AgentSessionScanner.ts";
 import * as AgentSessionImporter from "./project/AgentSessionImporter.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";

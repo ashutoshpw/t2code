@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
-import { serverUpdateStateAtom } from "@t3tools/client-runtime/state/server";
-import { EnvironmentId, type ServerConfig } from "@t3tools/contracts";
+import { serverUpdateStateAtom } from "@t2code/client-runtime/state/server";
+import { EnvironmentId, type ServerConfig } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { AsyncResult, Atom } from "effect/reactivity";

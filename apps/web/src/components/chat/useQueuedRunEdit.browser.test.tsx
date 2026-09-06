@@ -1,4 +1,4 @@
-import type { ThreadStructure } from "@t3tools/client-runtime/state/shell";
+import type { ThreadStructure } from "@t2code/client-runtime/state/shell";
 import {
   EnvironmentId,
   ChatAttachmentId,
@@ -6,7 +6,7 @@ import {
   RunId,
   ThreadId,
   type ScopedThreadRef,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useImperativeHandle, type RefObject } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 import {

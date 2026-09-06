@@ -6,7 +6,8 @@ import {
   type ProviderOptionSelection,
   type ScopedThreadRef,
   type ServerProviderModel,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
+import type { EffortDisplay } from "@t2code/contracts/settings";
 import {
   buildExplicitProviderOptionSelectionsFromDescriptors,
   getProviderOptionCurrentValue,
@@ -14,7 +15,7 @@ import {
   isClaudeUltrathinkPrompt,
   normalizeModelSlug,
   withImplicitFastModeDefault,
-} from "@t3tools/shared/model";
+} from "@t2code/shared/model";
 
 import type { DraftId } from "../../composerDraftStore";
 import { getProviderModelCapabilities } from "../../providerModels";

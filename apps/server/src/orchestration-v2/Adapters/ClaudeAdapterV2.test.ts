@@ -53,8 +53,8 @@ import {
   RunAttemptId,
   RunId,
   ThreadId,
-} from "@t3tools/contracts";
-import { mcpAppFromToolItem } from "@t3tools/shared/toolOutput";
+} from "@t2code/contracts";
+import { mcpAppFromToolItem } from "@t2code/shared/toolOutput";
 import { assert, describe, it } from "@effect/vitest";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
@@ -75,19 +75,19 @@ import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 import { Tool } from "effect/ai";
-import { formatClaudeResumeCompactionQuestion } from "@t3tools/shared/claudeCompaction";
-import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
-import { SpawnExecutableResolution } from "@t3tools/shared/shell";
+import { formatClaudeResumeCompactionQuestion } from "@t2code/shared/claudeCompaction";
+import { backgroundWorkHoldsCompletion } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { getModelSelectionStringOptionValue } from "@t2code/shared/model";
+import { SpawnExecutableResolution } from "@t2code/shared/shell";
 
 import * as PortScanner from "../../preview/PortScanner.ts";
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import { WorkflowAgentTranscriptReadObserver } from "../workflowAgentTranscript.ts";
 import * as ServerConfig from "../../config.ts";
-import * as McpProviderSession from "@t3tools/provider-core/server/mcpSession";
-import { T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH } from "@t3tools/provider-core/server/orchestrationInstructions";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
+import * as McpProviderSession from "@t2code/provider-core/server/mcpSession";
+import { T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH } from "@t2code/provider-core/server/orchestrationInstructions";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
 import { PreviewControlsToolkit } from "../../mcp/toolkits/previewControls/tools.ts";
 import { HtmlToolkit } from "../../mcp/toolkits/html/tools.ts";
 import { EnvironmentToolkit } from "../../mcp/toolkits/environment/tools.ts";
@@ -100,12 +100,12 @@ import {
   BUNDLED_CLAUDE_MODEL_CATALOG,
   type ClaudeModelCatalog,
 } from "../../provider/ClaudeModelCatalog.ts";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import type * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
+import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
+import type * as ProviderContinuationRequests from "@t2code/provider-core/server/ProviderContinuationRequests";
+import { makeProviderFailure } from "@t2code/provider-core/server/failure";
 import * as ClaudeAdapterV2 from "./ClaudeAdapterV2.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import * as ProviderInstallationGate from "../../provider/ProviderInstallationGate.ts";
 import { ClaudeOrchestratorReplayHarness } from "./ClaudeAdapterV2.testkit.ts";
 import { provideDeterministicTestRuntime } from "../testkit/DeterministicRuntime.ts";

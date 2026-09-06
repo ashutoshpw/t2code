@@ -1,6 +1,6 @@
-import { shouldPreserveAssistantLineBreaks } from "@t3tools/shared/markdownPipeline";
-import { type RunId, type TurnItemId } from "@t3tools/contracts";
-import { canForkProjectedAssistantItem } from "@t3tools/client-runtime/state/thread-workflows";
+import { shouldPreserveAssistantLineBreaks } from "@t2code/shared/markdownPipeline";
+import { type RunId, type TurnItemId } from "@t2code/contracts";
+import { canForkProjectedAssistantItem } from "@t2code/client-runtime/state/thread-workflows";
 import { memo, use, useState } from "react";
 import { type ChatMessage, type TurnDiffSummary } from "../../types";
 import ChatMarkdown from "../ChatMarkdown";

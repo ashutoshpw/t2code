@@ -4,7 +4,7 @@ import type {
   ResponseContextRecord,
   RuntimeRequestId,
   WorktreeSetupSnapshot,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   type EnvironmentId,
   type MessageId,
@@ -15,19 +15,19 @@ import {
   type RunId,
   ThreadId,
   type TurnItemId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { AsyncResult, Atom } from "effect/reactivity";
-import type { CommandOutputView } from "@t3tools/client-runtime/state/command-output";
-import type { WorkflowOpening } from "@t3tools/client-runtime/state/subagentRuntime";
+import type { CommandOutputView } from "@t2code/client-runtime/state/command-output";
+import type { WorkflowOpening } from "@t2code/client-runtime/state/subagentRuntime";
 import { useEffect, useRef, createContext, type MouseEvent, type ReactNode } from "react";
 import { type LegendListRef } from "@legendapp/list/react";
-import type { CodexArtifactTemplate } from "@t3tools/shared/codexArtifactTemplates";
+import type { CodexArtifactTemplate } from "@t2code/shared/codexArtifactTemplates";
 import type { PendingApproval } from "../../session-logic";
 import { type ChatFileAttachment } from "../../types";
 import { ExpandedImagePreview } from "./ExpandedImagePreview";
 import { type AssistantCitationTarget } from "./AssistantCitationSource";
 import { type MessagesTimelineRow, type WorkGroupScrollAnchor } from "./MessagesTimeline.logic";
-import { type TimestampFormat } from "@t3tools/contracts/settings";
+import { type TimestampFormat } from "@t2code/contracts/settings";
 import type { TurnItemDetailSource } from "../../state/queries";
 import { type HandoffTimelineRun } from "./V2LifecycleRow";
 
@@ -138,7 +138,7 @@ export type TimelineRow = MessagesTimelineRow;
 
 export function useInitialOutputReady(pending: boolean, onReady: (() => void) | undefined) {
   const notified = useRef(false);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- reveals a disclosure after its first async output commits
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- reveals a disclosure after its first async output commits
   useEffect(() => {
     if (!pending && !notified.current) {
       notified.current = true;

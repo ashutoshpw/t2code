@@ -1,10 +1,10 @@
 import { useAtomRefresh, useAtomValue } from "@effect/atom-react";
-import { type EnvironmentId, type ProviderInstanceId } from "@t3tools/contracts";
+import { type EnvironmentId, type ProviderInstanceId } from "@t2code/contracts";
 import {
   createProviderWorkspaceSnapshotRefreshAtomFamily,
   isProviderWorkspaceSnapshotScanning,
   type ProviderWorkspaceSnapshotRefreshState,
-} from "@t3tools/client-runtime/providerSkills";
+} from "@t2code/client-runtime/providerSkills";
 import { Atom } from "effect/reactivity";
 
 import { serverEnvironment } from "../../state/server";

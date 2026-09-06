@@ -1,4 +1,4 @@
-import type { EnvironmentId, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
+import type { EnvironmentId, ProviderInstanceId, ThreadId } from "@t2code/contracts";
 
 /**
  * Sent by MCP clients that cannot defer tools themselves. The T3 MCP server then

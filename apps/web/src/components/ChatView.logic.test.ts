@@ -10,7 +10,7 @@ import {
   deriveThreadPendingBackgroundTasks,
 } from "./ChatView.logic";
 import { recallCheckoutIsRepo, rememberCheckoutIsRepo } from "./ChatView.logic";
-import { ProviderDriverKind, type ServerProvider } from "@t3tools/contracts";
+import { ProviderDriverKind, type ServerProvider } from "@t2code/contracts";
 import { deriveProviderInstanceEntries } from "../providerInstances";
 import { ensureInlineContextReferences } from "../lib/composerContextReferences";
 import {
@@ -32,7 +32,7 @@ import {
   TurnItemId,
   type OrchestrationV2ProjectedTurnItem,
   type WorktreeSetupSnapshot,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Option from "effect/Option";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";

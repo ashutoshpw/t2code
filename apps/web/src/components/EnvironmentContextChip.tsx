@@ -1,4 +1,4 @@
-import { type EnvironmentContextRecord, resolveEnvironmentMachineKind } from "@t3tools/contracts";
+import { type EnvironmentContextRecord, resolveEnvironmentMachineKind } from "@t2code/contracts";
 
 import { useEnvironment } from "~/state/environments";
 import { ContextChip, ContextChipLabel } from "./ContextChip";

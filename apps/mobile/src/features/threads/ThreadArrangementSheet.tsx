@@ -2,9 +2,9 @@ import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { SheetHeader } from "../../components/ui/SheetHeader";
 import { appAtomRegistry } from "../../state/atom-registry";
 import { useAtomValue } from "@effect/atom-react";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
-import { effectiveSnoozed } from "@t3tools/client-runtime/state/thread-settled";
-import { sortInboxThreadsByReturn } from "@t3tools/client-runtime/state/thread-inbox";
+import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
+import { effectiveSnoozed } from "@t2code/client-runtime/state/thread-settled";
+import { sortInboxThreadsByReturn } from "@t2code/client-runtime/state/thread-inbox";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Modal, Pressable, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
@@ -19,7 +19,7 @@ import { deriveThreadArrangementSizing } from "../../lib/layout";
 import { environmentServerConfigsAtom } from "../../state/server";
 import { threadListEnvironmentsAtom } from "../../state/presentation";
 import { environmentThreadShells } from "../../state/threads";
-import { sortSettledThreads } from "@t3tools/client-runtime/state/thread-sort";
+import { sortSettledThreads } from "@t2code/client-runtime/state/thread-sort";
 import { useOlderSettledShelf, useOlderSettledShelfGrowth } from "../../state/olderSettledShelf";
 import {
   pendingThreadOrderAtom,

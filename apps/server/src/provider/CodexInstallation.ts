@@ -3,11 +3,11 @@ import {
   ProviderDriverKind,
   type ProviderInstallState,
   type ServerProviderCompatibilityAdvisory,
-} from "@t3tools/contracts";
-import { cliArchiveTarCommand } from "@t3tools/shared/cliRelease";
-import { compareSemverVersions } from "@t3tools/shared/semver";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveCommandPath, resolveSpawnCommand } from "@t3tools/shared/shell";
+} from "@t2code/contracts";
+import { cliArchiveTarCommand } from "@t2code/shared/cliRelease";
+import { compareSemverVersions } from "@t2code/shared/semver";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { resolveCommandPath, resolveSpawnCommand } from "@t2code/shared/shell";
 import * as Clock from "effect/Clock";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";

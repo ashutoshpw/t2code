@@ -1,11 +1,11 @@
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId } from "@t2code/contracts";
 import {
   formatHostedThreadLink,
   guessThreadLinkRef,
   threadLinkCandidates,
   type ThreadLink,
   unknownThreadLinkLabel,
-} from "@t3tools/shared/threadLinks";
+} from "@t2code/shared/threadLinks";
 
 import { configuredHostedAppUrl } from "../../hostedPairing";
 import { useThreadRefs, useThreadShell } from "../../state/entities";

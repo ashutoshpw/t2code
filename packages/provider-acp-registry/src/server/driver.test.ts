@@ -1,10 +1,10 @@
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { AcpRegistryOperationError, ProviderInstanceId } from "@t3tools/contracts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
+import { AcpRegistryOperationError, ProviderInstanceId } from "@t2code/contracts";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
+import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
 import { AcpRegistrySettings } from "../settings.ts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";

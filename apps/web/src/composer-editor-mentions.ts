@@ -1,12 +1,12 @@
-import { collectComposerModelMentions } from "@t3tools/client-runtime/composer-model-mentions";
-import type { AssistantCitation } from "@t3tools/contracts";
-import { collectAssistantCitations } from "@t3tools/shared/assistantCitations";
-import { collectComposerContextReferences } from "@t3tools/shared/composerContextReferences";
+import { collectComposerModelMentions } from "@t2code/client-runtime/composer-model-mentions";
+import type { AssistantCitation } from "@t2code/contracts";
+import { collectAssistantCitations } from "@t2code/shared/assistantCitations";
+import { collectComposerContextReferences } from "@t2code/shared/composerContextReferences";
 import {
   collectComposerInlineTokens,
   composerMathRanges,
   type ComposerInlineToken,
-} from "@t3tools/shared/composerInlineTokens";
+} from "@t2code/shared/composerInlineTokens";
 
 export type ComposerPromptSegment =
   | {

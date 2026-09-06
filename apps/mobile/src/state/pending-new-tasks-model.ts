@@ -1,5 +1,5 @@
-import type { EnvironmentShellStatus } from "@t3tools/client-runtime/state/shell";
-import type { EnvironmentId, MessageId, ProjectId } from "@t3tools/contracts";
+import type { EnvironmentShellStatus } from "@t2code/client-runtime/state/shell";
+import type { EnvironmentId, MessageId, ProjectId } from "@t2code/contracts";
 
 import { deriveThreadTitleFromPrompt } from "../lib/projectThreadStartTurn";
 import {
