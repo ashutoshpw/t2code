@@ -645,7 +645,7 @@ jobs:
         run: node scripts/build-npm-platform-packages.ts --archives-dir release-cli --version "${{ needs.preflight.outputs.version }}" --output-dir npm-packages
 
       # A dry run of every package first: an auth or scope error here (the
-      # @t3code org missing, a package without a trusted publisher) fails
+      # @t2code org missing, a package without a trusted publisher) fails
       # before anything is live, instead of after some platforms already are.
       - name: Check npm publish access (dry run)
         run: |
