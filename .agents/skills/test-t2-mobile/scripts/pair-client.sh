@@ -9,11 +9,31 @@ usage() {
 
 [[ $# -ge 5 ]] || usage
 
+<<<<<<< HEAD
 server_port="$1"
 base_dir="$2"
 mobile_origin="$3"
 agent_device_command="$4"
 shift 4
+=======
+platform="$1"
+device_id="$2"
+server_port="$3"
+base_dir="$4"
+url_scheme="${5:-t2code-dev}"
+
+case "$platform" in
+  ios)
+    mobile_origin="http://127.0.0.1:${server_port}"
+    ;;
+  android)
+    mobile_origin="http://10.0.2.2:${server_port}"
+    ;;
+  *)
+    usage
+    ;;
+esac
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"

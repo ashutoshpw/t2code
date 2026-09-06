@@ -1,6 +1,11 @@
 import { ScreenScrollView as ScrollView } from "../../components/ScreenScrollView";
 import { useNavigation } from "@react-navigation/native";
+<<<<<<< HEAD
 import type { EnvironmentId } from "@t3tools/contracts";
+=======
+import { SymbolView } from "../../components/AppSymbol";
+import type { EnvironmentId } from "@t2code/contracts";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import { useCallback, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

@@ -7,8 +7,12 @@ import {
   THREAD_JUMP_KEYBINDING_COMMANDS,
   type ModelPickerJumpKeybindingCommand,
   type ThreadJumpKeybindingCommand,
+<<<<<<< HEAD
 } from "@t3tools/contracts";
 import { isElectron } from "./env";
+=======
+} from "@t2code/contracts";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import { isMacPlatform } from "./lib/utils";
 
 export interface ShortcutEventLike {

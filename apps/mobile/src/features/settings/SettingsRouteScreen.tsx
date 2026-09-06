@@ -1,12 +1,62 @@
 import { ScreenScrollView as ScrollView } from "../../components/ScreenScrollView";
 import { useAuth, useUser } from "@clerk/expo";
 import { useNavigation } from "@react-navigation/native";
+<<<<<<< HEAD
 import { Platform, View } from "react-native";
 import { deriveProjectGroupLabel } from "@t3tools/client-runtime/state/project-grouping";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { hasCloudPublicConfig } from "../cloud/publicConfig";
 import { WorkspaceSidebarToolbar } from "../layout/workspace-sidebar-toolbar";
+=======
+import { NativeStackScreenOptions } from "../../native/StackHeader";
+import { SymbolView } from "../../components/AppSymbol";
+import * as Effect from "effect/Effect";
+import { AsyncResult } from "effect/unstable/reactivity";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Alert, Linking, Platform, Pressable, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import {
+  isAtomCommandInterrupted,
+  reportAtomCommandResult,
+  settleAsyncResult,
+  settlePromise,
+  squashAtomCommandFailure,
+} from "@t2code/client-runtime/state/runtime";
+import { AppText as Text } from "../../components/AppText";
+import { supportsAgentAwarenessPush } from "../agent-awareness/capabilities";
+import {
+  openAndroidLiveUpdateSettings,
+  supportsAndroidLiveUpdateSettings,
+} from "../agent-awareness/androidNotifications";
+import { setLiveActivityUpdatesEnabled } from "../agent-awareness/liveActivityPreferences";
+import { requestAgentNotificationPermission } from "../agent-awareness/notificationPermissions";
+import {
+  getAgentAwarenessRegistrationStatus,
+  refreshAgentAwarenessRegistration,
+  subscribeAgentAwarenessRegistrationStatus,
+} from "../agent-awareness/remoteRegistration";
+import { refreshManagedRelayEnvironments } from "../cloud/managedRelayState";
+import { hasCloudPublicConfig, resolveRelayClerkTokenOptions } from "../cloud/publicConfig";
+import { withNativeGlassHeaderItem } from "../layout/native-glass-header-items";
+import { WorkspaceSidebarToolbar } from "../layout/workspace-sidebar-toolbar";
+import { runtime } from "../../lib/runtime";
+import { cn } from "../../lib/cn";
+import { mobilePreferencesAtom, updateMobilePreferencesAtom } from "../../state/preferences";
+import { serverEnvironment } from "../../state/server";
+import { useAtomCommand } from "../../state/use-atom-command";
+import { useEnvironments } from "../../state/environments";
+import { DEFAULT_SERVER_SETTINGS, ServerSettingsPatch } from "@t2code/contracts";
+import { supportsSharedSettingsSync } from "@t2code/client-runtime/state/shared-settings";
+import { useThreadListV2Enabled } from "../threads/use-thread-list-v2-enabled";
+import {
+  type AppUpdateCheckState,
+  isAppUpdateCheckAvailable,
+  registerHiddenUpdateTap,
+  runAppUpdateCheck,
+} from "../updates/app-updates";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import { useSavedRemoteConnections } from "../../state/use-remote-environment-registry";
 import { SettingsRow } from "./components/SettingsRow";
 import { SettingsSection } from "./components/SettingsSection";

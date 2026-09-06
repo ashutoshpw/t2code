@@ -14,7 +14,11 @@ import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { assert, it } from "@effect/vitest";
 
+<<<<<<< HEAD
 import { CheckpointRef, GitCommandError, VcsProcessExitError } from "@t3tools/contracts";
+=======
+import { CheckpointRef, GitCommandError } from "@t2code/contracts";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import * as ServerConfig from "../config.ts";
 import * as CheckpointStore from "../checkpointing/CheckpointStore.ts";
 import * as ProcessRunner from "../processRunner.ts";

@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import type { EnvironmentMachineKind } from "@t3tools/contracts";
 import { SymbolView, type AppSymbolName } from "./AppSymbol";
+=======
+import type { EnvironmentMachineKind } from "@t2code/contracts";
+import type { SFSymbol } from "expo-symbols";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 
 const SYMBOL_BY_KIND: Record<EnvironmentMachineKind, AppSymbolName> = {
   server: "server.rack",

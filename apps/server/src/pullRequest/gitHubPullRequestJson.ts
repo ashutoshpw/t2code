@@ -31,9 +31,14 @@ import type {
   PullRequestLabelCandidateList,
   PullRequestState,
   PullRequestThreadComment,
+<<<<<<< HEAD
 } from "@t3tools/contracts";
 import { quoteGitPatchPath } from "@t3tools/shared/gitPatchPath";
 import { decodeJsonResult } from "@t3tools/shared/schemaJson";
+=======
+} from "@t2code/contracts";
+import { decodeJsonResult } from "@t2code/shared/schemaJson";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 
 import { dedupeChecks } from "./pullRequestChecks.ts";
 

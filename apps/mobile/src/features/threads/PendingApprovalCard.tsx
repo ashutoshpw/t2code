@@ -3,8 +3,13 @@ import type {
   ApprovalRequestId,
   ProviderApprovalDecision,
   ProviderApprovalOption,
+<<<<<<< HEAD
 } from "@t3tools/contracts";
 import { View } from "react-native";
+=======
+} from "@t2code/contracts";
+import { Pressable, View } from "react-native";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 
 import { AppText as Text } from "../../components/AppText";
 import type { PendingApproval } from "../../lib/threadActivity";

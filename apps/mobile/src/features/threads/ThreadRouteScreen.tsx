@@ -5,11 +5,16 @@ import {
   clearComposerDraftContent,
 } from "../../state/use-composer-drafts";
 import { useWorktreeSetup } from "./use-worktree-setup";
+<<<<<<< HEAD
 import { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { ScreenHeaderButton } from "../../components/ScreenHeaderButton";
 import type { ScreenHeaderAction } from "../../components/ScreenHeader.types";
 import { useThreadHeaderOptions } from "./useThreadHeaderOptions";
+=======
+import { worktreeSetupAgentStarted } from "@t2code/client-runtime/worktree-setup";
+import { NativeStackScreenOptions } from "../../native/StackHeader";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import {
   StackActions,
   useFocusEffect,

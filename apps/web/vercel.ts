@@ -30,7 +30,7 @@ export const config: VercelConfig = {
     deploymentEnabled: false,
   },
   installCommand:
-    "npm install -g vite-plus && vp install --ignore-scripts --filter '@t3tools/scripts...' --filter '@t2code/web...'",
+    "npm install -g vite-plus && vp install --ignore-scripts --filter '@t2code/scripts...' --filter '@t2code/web...'",
   routes: [
     {
       src: "/__t3code/channel",

@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { type TurnId } from "@t3tools/contracts";
 import { type MouseEvent, memo, useCallback, useMemo, useState } from "react";
+=======
+import { type TurnId } from "@t2code/contracts";
+import { memo, useCallback, useMemo, useState } from "react";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import { type TurnDiffFileChange } from "../../types";
 import {
   buildTurnDiffTree,

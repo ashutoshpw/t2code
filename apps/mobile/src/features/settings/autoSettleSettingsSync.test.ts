@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { DEFAULT_SERVER_SETTINGS, EnvironmentId, ProjectId } from "@t3tools/contracts";
+=======
+import { DEFAULT_SERVER_SETTINGS, EnvironmentId } from "@t2code/contracts";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import { describe, expect, it } from "vite-plus/test";
 
 import { planAutoSettleSettingsSync } from "./autoSettleSettingsSync";

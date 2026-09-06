@@ -10,8 +10,12 @@ import {
   pullRequestCandidateUrlFromReferenceAutolink,
   shouldOpenPullRequestExternally,
 } from "./openPullRequestLink";
+<<<<<<< HEAD
 import { ProjectId, type RepositoryIdentity } from "@t3tools/contracts";
 import { normalizeGitRemoteUrl } from "@t3tools/shared/git";
+=======
+import { ProjectId, type RepositoryIdentity } from "@t2code/contracts";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 
 function repositoryIdentity(
   provider: string,

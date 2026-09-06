@@ -1,6 +1,10 @@
 import * as Effect from "effect/Effect";
+<<<<<<< HEAD
 import * as Semaphore from "effect/Semaphore";
 import type { PullRequestCapabilities, PullRequestViewerPermissions } from "@t3tools/contracts";
+=======
+import type { PullRequestCapabilities, PullRequestViewerPermissions } from "@t2code/contracts";
+>>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 
 import * as AzureDevOpsPullRequestCli from "./AzureDevOpsPullRequestCli.ts";
 import {
