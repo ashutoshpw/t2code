@@ -1,5 +1,5 @@
-import type { BrowserImportSource } from "@t3tools/contracts";
-import { BROWSER_IMPORT_FAILURE_COPY } from "@t3tools/contracts";
+import type { BrowserImportSource } from "@t2code/contracts";
+import { BROWSER_IMPORT_FAILURE_COPY } from "@t2code/contracts";
 import { ArrowDownIcon, ArrowRightIcon, CheckIcon } from "lucide-react";
 import { useRef, useState } from "react";
 

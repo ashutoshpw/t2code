@@ -1,13 +1,13 @@
 import {
   requestKindFromRequestType,
   type PendingApproval,
-} from "@t3tools/client-runtime/pending-requests";
-import { UserInputAttachmentAnswerPayload } from "@t3tools/contracts";
+} from "@t2code/client-runtime/pending-requests";
+import { UserInputAttachmentAnswerPayload } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import * as Arr from "effect/Array";
 import { shallow } from "zustand/vanilla/shallow";
-import { isBackgroundTaskActivity } from "@t3tools/client-runtime/state/subagentRuntime";
+import { isBackgroundTaskActivity } from "@t2code/client-runtime/state/subagentRuntime";
 import {
   commandDetailRepeatsCommand,
   extractCommandOutputText,
@@ -17,8 +17,8 @@ import {
   workEntryIndicatesToolSuccess,
   workLogEntryIsToolLike,
   type WorkLogToolLifecycleStatus,
-} from "@t3tools/client-runtime/work-log/presentation";
-import { extractToolActivityPresentation } from "@t3tools/client-runtime/work-log/tool-presentation";
+} from "@t2code/client-runtime/work-log/presentation";
+import { extractToolActivityPresentation } from "@t2code/client-runtime/work-log/tool-presentation";
 import {
   isToolLifecycleItemType,
   type AssetResource,
@@ -28,7 +28,7 @@ import {
   type ToolLifecycleItemType,
   type ThreadId,
   type TurnId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   isImageAttachment,
@@ -41,16 +41,16 @@ import {
   type TurnDiffSummary,
 } from "./types";
 
-export type { PendingApproval, PendingUserInput } from "@t3tools/client-runtime/pending-requests";
+export type { PendingApproval, PendingUserInput } from "@t2code/client-runtime/pending-requests";
 
-export { formatDuration } from "@t3tools/shared/orchestrationTiming";
+export { formatDuration } from "@t2code/shared/orchestrationTiming";
 
 export {
   workEntryDisplayIndicatesToolFailure,
   workEntryIndicatesToolSuccess,
   workLogEntryIsToolLike,
   type WorkLogToolLifecycleStatus,
-} from "@t3tools/client-runtime/work-log/presentation";
+} from "@t2code/client-runtime/work-log/presentation";
 
 export interface WorkLogEntry {
   questionAnswer?: UserInputAttachmentAnswerPayload;
@@ -67,9 +67,9 @@ export interface WorkLogEntry {
   changedFiles?: ReadonlyArray<string>;
   tone: "thinking" | "tool" | "info" | "error";
   toolTitle?: string;
-  toolSurface?: import("@t3tools/contracts").ToolActivitySurface;
-  toolIcon?: import("@t3tools/contracts").ToolActivityIcon;
-  toolSource?: import("@t3tools/contracts").ToolActivitySource;
+  toolSurface?: import("@t2code/contracts").ToolActivitySurface;
+  toolIcon?: import("@t2code/contracts").ToolActivityIcon;
+  toolSource?: import("@t2code/contracts").ToolActivitySource;
   toolData?: unknown;
   itemType?: ToolLifecycleItemType;
   requestKind?: PendingApproval["requestKind"];

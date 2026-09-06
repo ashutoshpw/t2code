@@ -11,8 +11,8 @@ import {
   ProviderInstanceId,
   ServerSettingsError,
   TerminalProviderInstanceNotFoundError,
-} from "@t3tools/contracts";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+} from "@t2code/contracts";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 import * as Data from "effect/Data";
 import * as Clock from "effect/Clock";
 import * as Deferred from "effect/Deferred";

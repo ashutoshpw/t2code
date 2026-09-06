@@ -1,4 +1,4 @@
-import type { PreviewViewportSetting } from "@t3tools/contracts";
+import type { PreviewViewportSetting } from "@t2code/contracts";
 
 import type { BrowserSurfaceContentPresentation } from "~/browser/browserSurfaceStore";
 import {

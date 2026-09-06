@@ -32,11 +32,11 @@ import {
   type ProviderDriverKind,
   type ProviderRuntimeEvent,
   type ProviderSession,
-} from "@t3tools/contracts";
-import { expandAssistantCitationsForProvider } from "@t3tools/shared/assistantCitations";
-import { causeErrorTag } from "@t3tools/shared/observability";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
-import { resolveProjectAgentBrowserAccess } from "@t3tools/shared/serverSettings";
+} from "@t2code/contracts";
+import { expandAssistantCitationsForProvider } from "@t2code/shared/assistantCitations";
+import { causeErrorTag } from "@t2code/shared/observability";
+import { getModelSelectionStringOptionValue } from "@t2code/shared/model";
+import { resolveProjectAgentBrowserAccess } from "@t2code/shared/serverSettings";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";

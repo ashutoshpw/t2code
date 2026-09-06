@@ -2,7 +2,7 @@ import type {
   EnvironmentId,
   UserInputAttachmentAnswerPayload,
   UserInputAttachments,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { Image, Linking, Pressable, View } from "react-native";
 import { AppText as Text } from "../../components/AppText";
 import { useAssetUrl } from "../../state/assets";

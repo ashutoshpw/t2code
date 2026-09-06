@@ -1,8 +1,8 @@
-import type { ScopedThreadRef, ThreadPullRequestLink } from "@t3tools/contracts";
+import type { ScopedThreadRef, ThreadPullRequestLink } from "@t2code/contracts";
 import {
   resolveThreadPullRequestChains,
   visibleThreadPullRequests,
-} from "@t3tools/shared/threadPullRequests";
+} from "@t2code/shared/threadPullRequests";
 import {
   GitPullRequestArrow,
   LayersIcon,

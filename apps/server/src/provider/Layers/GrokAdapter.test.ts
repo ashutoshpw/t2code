@@ -23,7 +23,7 @@ import {
   ThreadId,
   TurnId,
   type ProviderRuntimeEvent,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { ServerConfig } from "../../config.ts";
 import {
@@ -34,7 +34,7 @@ import {
   selectGrokPermissionOptionId,
 } from "./GrokAdapter.ts";
 import { execScriptSource, writeFakeCli } from "../../testUtils/fakeCli.ts";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 const decodeGrokSettings = Schema.decodeSync(GrokSettings);
 
 const __dirname = NodePath.dirname(NodeURL.fileURLToPath(import.meta.url));

@@ -1,4 +1,4 @@
-import { siblingPullRequestUrl } from "@t3tools/shared/changeRequestUrl";
+import { siblingPullRequestUrl } from "@t2code/shared/changeRequestUrl";
 import {
   CommandId,
   type OrchestrationThreadShell,
@@ -7,13 +7,13 @@ import {
   type ThreadPullRequestLink,
   type ThreadPullRequestSnapshot,
   type ThreadPullRequestStack,
-} from "@t3tools/contracts";
-import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
+} from "@t2code/contracts";
+import { makeDrainableWorker } from "@t2code/shared/DrainableWorker";
 import {
   threadPullRequestKeyOf,
   threadPullRequestKeysEqual,
   visibleThreadPullRequests,
-} from "@t3tools/shared/threadPullRequests";
+} from "@t2code/shared/threadPullRequests";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -119,7 +119,7 @@ export class PullRequestSyncReactor extends Context.Service<
     /** Force the next sweep to re-read this pull request, even when its snapshot is terminal. */
     readonly requestSync: (key: ThreadPullRequestKey) => Effect.Effect<void>;
   }
->()("t3/orchestration/PullRequestSyncReactor") {}
+>()("@t2code/cli/orchestration/PullRequestSyncReactor") {}
 
 /** @public Service construction is part of the canonical Effect module API. */
 export const make = Effect.gen(function* () {

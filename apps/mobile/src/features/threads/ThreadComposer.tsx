@@ -9,12 +9,12 @@ import type {
   RuntimeMode,
   ServerConfig as T3ServerConfig,
   UsageLimitsReport,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   collectProviderUsageLimits,
   hasProviderUsageLimits,
   isUsageLimitsCommand,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 import { StackActions, useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { ReactNode } from "react";
 import {

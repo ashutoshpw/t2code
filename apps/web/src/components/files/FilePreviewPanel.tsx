@@ -5,11 +5,11 @@ import type {
   EnvironmentId,
   ResolvedKeybindingsConfig,
   ScopedThreadRef,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   isWorkspaceImagePreviewPath,
   isWorkspaceVideoPreviewPath,
-} from "@t3tools/shared/filePreview";
+} from "@t2code/shared/filePreview";
 import { VirtualizedFile, type SelectedLineRange } from "@pierre/diffs";
 import { Editor } from "@pierre/diffs/editor";
 import { EditProvider, File, type FileOptions, Virtualizer } from "@pierre/diffs/react";
@@ -17,8 +17,8 @@ import { DiffWorkerPoolProvider } from "../DiffWorkerPoolProvider";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import { mediaFileReference } from "@t3tools/client-runtime/media-reference";
+} from "@t2code/client-runtime/state/runtime";
+import { mediaFileReference } from "@t2code/client-runtime/media-reference";
 import { Code2, Eye, FolderTree, Globe2 } from "lucide-react";
 import * as Schema from "effect/Schema";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

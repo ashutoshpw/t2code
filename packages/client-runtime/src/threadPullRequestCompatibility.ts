@@ -3,7 +3,7 @@ import type {
   ProjectId,
   ThreadId,
   ThreadPullRequestKey,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 type LinkingCapabilities = Pick<
   ExecutionEnvironmentCapabilities,

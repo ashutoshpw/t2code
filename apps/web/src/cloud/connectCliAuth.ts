@@ -4,8 +4,8 @@ import {
   connectLoopbackRedirectUri,
   CONNECT_OAUTH_SCOPES,
   type ConnectAuthorizeRequest,
-} from "@t3tools/shared/connectAuth";
-import { clerkFrontendApiUrlFromPublishableKey } from "@t3tools/shared/relayAuth";
+} from "@t2code/shared/connectAuth";
+import { clerkFrontendApiUrlFromPublishableKey } from "@t2code/shared/relayAuth";
 
 import { configuredHostedAppUrl, isHostedStaticApp } from "../hostedPairing";
 import { hasCloudPublicConfig, resolveCloudPublicConfig, trimNonEmpty } from "./publicConfig";

@@ -1,4 +1,4 @@
-import { resolveEnvironmentMachineKind } from "@t3tools/contracts";
+import { resolveEnvironmentMachineKind } from "@t2code/contracts";
 import { ChevronDownIcon, FolderIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";

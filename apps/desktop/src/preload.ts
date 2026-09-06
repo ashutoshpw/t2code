@@ -4,7 +4,7 @@ import type {
   DesktopPreviewRecordingFrame,
   DesktopPreviewTabState,
   DesktopSnapShotEvent,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { exposeClerkBridge } from "@clerk/electron/preload";
 import { contextBridge, ipcRenderer } from "electron";
 

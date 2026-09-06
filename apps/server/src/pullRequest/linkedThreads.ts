@@ -1,9 +1,9 @@
-import { normalizeThreadPullRequestKey } from "@t3tools/shared/threadPullRequests";
+import { normalizeThreadPullRequestKey } from "@t2code/shared/threadPullRequests";
 import {
   PullRequestLinkedThreadsResult,
   PullRequestOperationError,
   type ThreadPullRequestKey,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as SqlClient from "effect/unstable/sql/SqlClient";

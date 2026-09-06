@@ -7,7 +7,7 @@ import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
 
-import { clerkFrontendApiHostnameFromPublishableKey } from "@t3tools/shared/relayAuth";
+import { clerkFrontendApiHostnameFromPublishableKey } from "@t2code/shared/relayAuth";
 import * as ElectronApp from "../electron/ElectronApp.ts";
 import * as ElectronProtocol from "../electron/ElectronProtocol.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
@@ -51,7 +51,7 @@ export class DesktopClerk extends Context.Service<
       ElectronApp.ElectronApp | ElectronWindow.ElectronWindow | Scope.Scope
     >;
   }
->()("@t3tools/desktop/app/DesktopClerk") {}
+>()("@t2code/desktop/app/DesktopClerk") {}
 
 function resolveDesktopClerkFrontendApiHostname(
   publishableKey: string | undefined,
@@ -91,9 +91,8 @@ export const make = Effect.gen(function* () {
   // Electron scopes the single-instance lock to the userData directory and
   // creates that directory when the lock is acquired. The SDK bridge takes
   // the lock at creation, so userData must already point at the real
-  // directory here — under the default productName-derived path, acquiring
-  // the lock would create "T3 Code (Alpha)" and make the legacy-install
-  // detection in resolveUserDataPath match on fresh installs.
+  // directory here — otherwise the lock would create a second directory
+  // alongside the one the app actually uses.
   const userDataPath = yield* DesktopAppIdentity.resolveUserDataPath;
   yield* electronApp.setPath("userData", userDataPath);
 

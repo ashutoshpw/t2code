@@ -8,7 +8,7 @@ import type {
   ProviderOptionSelection,
   RuntimeMode,
   ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   CommandId,
   DEFAULT_PROVIDER_INTERACTION_MODE,
@@ -16,12 +16,12 @@ import {
   MessageId,
   T3_PROJECT_FILE_NAME,
   ThreadId,
-} from "@t3tools/contracts";
-import { parseT3ProjectFile } from "@t3tools/shared/t3ProjectFile";
+} from "@t2code/contracts";
+import { parseT3ProjectFile } from "@t2code/shared/t3ProjectFile";
 import {
   isDefaultThreadEnvModeSettled,
   resolveDefaultThreadEnvMode,
-} from "@t3tools/shared/threadEnvMode";
+} from "@t2code/shared/threadEnvMode";
 import * as Arr from "effect/Array";
 import { pipe } from "effect/Function";
 
@@ -78,8 +78,8 @@ import {
   setPendingConnectionError,
   useSavedRemoteConnections,
 } from "../../state/use-remote-environment-registry";
-import { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import { type VcsRef } from "@t3tools/client-runtime/state/vcs";
+import { EnvironmentProject } from "@t2code/client-runtime/state/shell";
+import { type VcsRef } from "@t2code/client-runtime/state/vcs";
 import {
   buildHomeProjectScopes,
   sortHomeProjectScopes,

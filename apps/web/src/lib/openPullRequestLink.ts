@@ -1,18 +1,18 @@
-import type { EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
+import type { EnvironmentId, ScopedThreadRef } from "@t2code/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent, useCallback } from "react";
 
-import { pullRequestHostOf, type SourceControlProviderKind } from "@t3tools/contracts";
-import { parseChangeRequestUrl, type ChangeRequestLink } from "@t3tools/shared/changeRequestUrl";
+import { pullRequestHostOf, type SourceControlProviderKind } from "@t2code/contracts";
+import { parseChangeRequestUrl, type ChangeRequestLink } from "@t2code/shared/changeRequestUrl";
 import {
   canonicalRepositoryKey,
   sourceControlRepositorySelector,
-} from "@t3tools/shared/sourceControl";
+} from "@t2code/shared/sourceControl";
 
 import { useOpenLink } from "../browser/useOpenLink";
 import { stackedThreadToast, toastManager } from "../components/ui/toast";
 import { useRightPanelStore } from "../rightPanelStore";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
 
 import { useProjects, useServerConfigs } from "../state/entities";
 import { usePrimaryEnvironmentId } from "../state/environments";
@@ -24,7 +24,7 @@ export {
   pullRequestCandidateUrlFromReferenceAutolink,
   matchesLinkedPullRequestUrl,
   changeRequestRepositoryUrl,
-} from "@t3tools/shared/changeRequestUrl";
+} from "@t2code/shared/changeRequestUrl";
 
 /**
  * Returns a click handler that opens a pull request URL in the system browser.

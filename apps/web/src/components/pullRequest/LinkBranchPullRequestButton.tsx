@@ -1,4 +1,4 @@
-import type { ScopedThreadRef } from "@t3tools/contracts";
+import type { ScopedThreadRef } from "@t2code/contracts";
 import { Link2 } from "lucide-react";
 import { useState } from "react";
 import { usePullRequestLinking } from "~/hooks/usePullRequestLinking";

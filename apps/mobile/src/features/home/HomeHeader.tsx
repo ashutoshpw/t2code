@@ -1,5 +1,5 @@
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
-import type { EnvironmentId, SidebarThreadSortOrder } from "@t3tools/contracts";
+import type { EnvironmentId, SidebarThreadSortOrder } from "@t2code/contracts";
 import type { MenuAction } from "@react-native-menu/menu";
 import Constants from "expo-constants";
 import { NativeHeaderToolbar, NativeStackScreenOptions } from "../../native/StackHeader";

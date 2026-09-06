@@ -5,8 +5,8 @@ import {
   type ModelSelection,
   type ProviderInstanceId,
   type ServerSettingsPatch,
-} from "@t3tools/contracts";
-import { createModelSelection } from "@t3tools/shared/model";
+} from "@t2code/contracts";
+import { createModelSelection } from "@t2code/shared/model";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { Trash2Icon } from "lucide-react";

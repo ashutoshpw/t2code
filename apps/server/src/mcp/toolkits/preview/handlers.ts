@@ -16,7 +16,7 @@ import {
   type PreviewAutomationSnapshot,
   type PreviewAutomationStatus,
   type PreviewTabId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   parseAttachmentUuid,
@@ -56,7 +56,7 @@ const invoke = Effect.fn("PreviewToolkit.invoke")(function* <A>(
   tabId?: PreviewTabId,
 ): Effect.fn.Return<
   A,
-  import("@t3tools/contracts").PreviewAutomationError,
+  import("@t2code/contracts").PreviewAutomationError,
   McpInvocationContext.McpInvocationContext | PreviewAutomationBroker.PreviewAutomationBroker
 > {
   const scope = yield* McpInvocationContext.requireMcpCapability("preview");

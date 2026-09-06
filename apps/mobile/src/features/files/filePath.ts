@@ -1,4 +1,4 @@
-import { isWorkspaceVideoPreviewPath } from "@t3tools/shared/filePreview";
+import { isWorkspaceVideoPreviewPath } from "@t2code/shared/filePreview";
 
 export interface FileBreadcrumb {
   readonly label: string;

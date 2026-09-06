@@ -1,5 +1,5 @@
-import type { RelayManagedEndpointRuntimeConfig } from "@t3tools/contracts/relay";
-import * as RelayClient from "@t3tools/shared/relayClient";
+import type { RelayManagedEndpointRuntimeConfig } from "@t2code/contracts/relay";
+import * as RelayClient from "@t2code/shared/relayClient";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";

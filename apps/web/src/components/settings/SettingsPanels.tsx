@@ -11,13 +11,13 @@ import {
   type ProviderInstanceId,
   type ScopedThreadRef,
   type SidebarProjectGroupingMode,
-} from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+} from "@t2code/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import {
   isAtomCommandInterrupted,
   settlePromise,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import {
   DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE,
   DEFAULT_UNIFIED_SETTINGS,
@@ -40,9 +40,9 @@ import {
   MIN_SIDEBAR_AUTO_SETTLE_AFTER_DAYS,
   MIN_TERMINAL_FONT_SIZE,
   type QuitConfirmationMode,
-} from "@t3tools/contracts/settings";
-import { resolveServerBackgroundActivitySettings } from "@t3tools/shared/backgroundActivitySettings";
-import { createModelSelection } from "@t3tools/shared/model";
+} from "@t2code/contracts/settings";
+import { resolveServerBackgroundActivitySettings } from "@t2code/shared/backgroundActivitySettings";
+import { createModelSelection } from "@t2code/shared/model";
 import * as Duration from "effect/Duration";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";

@@ -9,8 +9,8 @@ import {
   ProviderInstanceId,
   ThreadId,
   TurnId,
-} from "@t3tools/contracts";
-import { resolveProjectAutoPull } from "@t3tools/shared/serverSettings";
+} from "@t2code/contracts";
+import { resolveProjectAutoPull } from "@t2code/shared/serverSettings";
 import * as Cause from "effect/Cause";
 import * as Console from "effect/Console";
 import * as Context from "effect/Context";

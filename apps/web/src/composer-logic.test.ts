@@ -1,9 +1,9 @@
-import { EnvironmentId, MessageId, ThreadId, type AssistantCitation } from "@t3tools/contracts";
+import { EnvironmentId, MessageId, ThreadId, type AssistantCitation } from "@t2code/contracts";
 import {
   collectAssistantCitations,
   expandAssistantCitationsForProvider,
   serializeAssistantCitation,
-} from "@t3tools/shared/assistantCitations";
+} from "@t2code/shared/assistantCitations";
 import { describe, expect, it } from "vite-plus/test";
 
 import {

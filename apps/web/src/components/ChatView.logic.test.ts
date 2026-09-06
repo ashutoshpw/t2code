@@ -8,13 +8,13 @@ import {
   type ServerProvider,
   ThreadId,
   TurnId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { Thread, ThreadShell, TurnDiffSummary } from "../types";
 import { deriveProviderInstanceEntries, NO_PROVIDER_MODEL_SELECTION } from "../providerInstances";
-import type { CodexArtifactTemplate } from "@t3tools/client-runtime/codex-artifact-templates";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import type { CodexArtifactTemplate } from "@t2code/client-runtime/codex-artifact-templates";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import {
   type RightPanelSurface,
   pullRequestSurface,

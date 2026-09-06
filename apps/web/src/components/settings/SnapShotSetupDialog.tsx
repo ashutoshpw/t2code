@@ -2,7 +2,7 @@ import {
   isModifierPairShortcut,
   type DesktopSnapShotSetupAction,
   type DesktopSnapShotState,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { CircleCheckIcon } from "lucide-react";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { CaptureShortcutConfig } from "./CaptureShortcutConfig";
