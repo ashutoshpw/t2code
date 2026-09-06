@@ -22,13 +22,12 @@ This starts the server and opens the local web app. Run
 
 ## Desktop app
 
-Download a release from [GitHub Releases](https://github.com/pingdotgg/t3code/releases),
+Download a release from [GitHub Releases](https://github.com/ashutoshpw/t2code/releases),
 or use a package manager:
 
 | Platform           | Install                         |
 | ------------------ | ------------------------------- |
 | Windows            | `winget install T3Tools.T3Code` |
-| macOS              | `brew install --cask t3-code`   |
 | Arch Linux         | `yay -S t3code-bin`             |
 | Arch Linux nightly | `yay -S t3code-nightly-bin`     |
 
