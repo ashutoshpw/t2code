@@ -272,6 +272,48 @@ describe("RelayClient", () => {
       ),
     ),
   );
+  it.effect.skipIf(windowsHost)(
+    "resolves explicit overrides before managed and PATH executables",
+    () =>
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t3-cloudflared-test-",
+        });
+        const overridePath = `${baseDir}/override-cloudflared`;
+        yield* fileSystem.writeFileString(overridePath, "override");
+        yield* fileSystem.chmod(overridePath, 0o755);
+        const manager = yield* RelayClient.makeCloudflaredRelayClient({
+          baseDir,
+        });
+
+        expect(
+          yield* manager.resolve.pipe(
+            Effect.provideService(
+              ConfigProvider.ConfigProvider,
+              ConfigProvider.fromEnv({
+                env: { PATH: "", T2CODE_CLOUDFLARED_PATH: overridePath },
+              }),
+            ),
+          ),
+        ).toEqual({
+          status: "available",
+          executablePath: overridePath,
+          source: "override",
+          version: RelayClient.CLOUDFLARED_VERSION,
+        });
+      }).pipe(
+        Effect.scoped,
+        Effect.provide(
+          Layer.mergeAll(
+            NodeServices.layer,
+            layerHttpClient(new Uint8Array()),
+            layerSpawner([]),
+            layerHostRuntime(),
+          ),
+        ),
+      ),
+  );
 
   it.effect.skipIf(windowsHost)(
     "downloads, verifies, validates, and atomically installs the managed executable",
