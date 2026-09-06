@@ -6,7 +6,7 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import * as Drizzle from "alchemy/Drizzle";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Planetscale from "alchemy/Planetscale";
+import * as Neon from "alchemy/Neon";
 
 import { PublishClientConfig, tokenDigest } from "./src/clientConfig.ts";
 import * as RelayDb from "./src/db.ts";
@@ -59,8 +59,8 @@ export default Alchemy.Stack(
     });
 
     return {
-      databaseName: db.database.name,
-      databaseBranchName: db.branch?.name ?? "main",
+      databaseName: db.project.databaseName,
+      databaseBranchName: db.branch?.branchName ?? "main",
       hyperdriveName: hyperdrive.name,
       workerName: api.workerName,
       url: api.url,
