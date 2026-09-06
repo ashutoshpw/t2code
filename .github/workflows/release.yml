@@ -7,8 +7,8 @@ on:
       - "!v*-nightly.*"
       - "!v*-preview.*"
   schedule:
-    # Off minute zero: GitHub delays scheduled runs most at the top of the hour.
-    - cron: "38 */12 * * *"
+    # Avoid minute zero, when GitHub scheduled jobs are busiest.
+    - cron: "8,38 * * * *"
   workflow_dispatch:
     inputs:
       channel:
@@ -202,7 +202,7 @@ jobs:
             echo "release_channel=stable" >> "$GITHUB_OUTPUT"
             echo "version=$version" >> "$GITHUB_OUTPUT"
             echo "tag=v$version" >> "$GITHUB_OUTPUT"
-            echo "name=T2 Code v$version" >> "$GITHUB_OUTPUT"
+            echo "name=T3 Code v$version" >> "$GITHUB_OUTPUT"
             echo "cli_dist_tag=latest" >> "$GITHUB_OUTPUT"
             if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
@@ -293,7 +293,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config build-essential
 
       - name: Test
-        run: vp run --parallel --concurrency-limit 4 --filter '!@t2code/cli' --filter '!@t3tools/monorepo' --filter '!@t3tools/web' test
+        run: vp run --parallel --concurrency-limit 4 --filter '!@t2code/cli' --filter '!@t3tools/monorepo' --filter '!@t2code/web' test
 
   # Web browser tests time out when they share a runner with the other package
   # suites: Chromium gets too little CPU and diff workers miss their 10s start budget.
@@ -342,12 +342,12 @@ jobs:
           fi
 
       - name: Test
-        run: vp run --filter @t3tools/web test
+        run: vp run --filter @t2code/web test
 
       # Browser tests run source modules; this boots the production chunk graph.
       - name: Boot the built web client
         run: |
-          vp run --filter @t3tools/web build
+          vp run --filter @t2code/web build
           node apps/web/scripts/verify-built-boot.ts
 
   # Server test files run one at a time, so more small runners beat fewer big ones.
@@ -530,7 +530,7 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup-ci-deps
         with:
-          install-args: --filter=@t2code/cli... --filter=@t3tools/web... --filter=@t3tools/desktop... --filter=@t3tools/scripts...
+          install-args: --filter=@t2code/cli... --filter=@t2code/web... --filter=@t3tools/desktop... --filter=@t3tools/scripts...
         env:
           pnpm_config_cache_dir: ${{ runner.temp }}/pnpm-metadata
 
@@ -558,7 +558,7 @@ jobs:
       - name: Install browser secret helper build libraries
         run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
 
-      # Runs @t2code/cli#build (which depends on @t3tools/web#build) and
+      # Runs @t2code/cli#build (which depends on @t2code/web#build) and
       # @t3tools/desktop#build, so apps/server/dist holds the server bundle
       # plus the web client and apps/desktop/dist-electron the Electron main.
       # The release channel is already stable, nightly, or preview. Builds in
@@ -1065,7 +1065,7 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup-ci-deps
         with:
-          install-args: --filter=@t3tools/scripts... --filter=@t3tools/web...
+          install-args: --filter=@t3tools/scripts... --filter=@t2code/web...
 
       - name: Download relay client tracing config
         uses: actions/download-artifact@v8
@@ -1233,7 +1233,7 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup-ci-deps
         with:
-          install-args: --filter=@t3tools/marketing...
+          install-args: --filter=@t2code/marketing...
 
       - id: deploy
         name: Build staged deployment
