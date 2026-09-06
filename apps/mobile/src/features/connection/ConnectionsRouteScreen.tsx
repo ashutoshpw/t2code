@@ -64,6 +64,7 @@ export function ConnectionsRouteScreen() {
           paddingTop: 16,
         }}
       >
+<<<<<<< HEAD
         <LocalEnvironmentList
           environments={connectedEnvironments}
           expandedId={expandedId}
@@ -73,6 +74,47 @@ export function ConnectionsRouteScreen() {
           onSetEnabled={onSetEnvironmentEnabled}
           onUpdate={onUpdateEnvironment}
         />
+=======
+        {hasEnvironments ? (
+          <View collapsable={false} className="overflow-hidden rounded-[24px] bg-card">
+            {connectedEnvironments.map((environment, index) => (
+              <View
+                key={environment.environmentId}
+                collapsable={false}
+                className={cn(index !== 0 && "border-t border-border")}
+              >
+                <ConnectionEnvironmentRow
+                  environment={environment}
+                  expanded={expandedId === environment.environmentId}
+                  onToggle={() => handleToggle(environment.environmentId)}
+                  onReconnect={onReconnectEnvironment}
+                  onRemove={onRemoveEnvironmentPress}
+                  onSetEnabled={onSetEnvironmentEnabled}
+                  onUpdate={onUpdateEnvironment}
+                  onRename={(environmentId) =>
+                    navigation.navigate("EnvironmentRename", { environmentId })
+                  }
+                />
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View collapsable={false} className="items-center gap-3 rounded-[24px] bg-card px-6 py-8">
+            <View className="h-12 w-12 items-center justify-center rounded-[16px] bg-subtle">
+              <SymbolView
+                name="point.3.connected.trianglepath.dotted"
+                size={20}
+                tintColorClassName={"accent-icon-muted"}
+                type="monochrome"
+              />
+            </View>
+            <Text className="text-center text-sm leading-normal text-foreground-muted">
+              No environments connected yet.{"\n"}Tap{" "}
+              <Text className="font-t3-bold text-foreground">+</Text> to add one.
+            </Text>
+          </View>
+        )}
+>>>>>>> 5f7ae83a7 (feat: let users rename environments)
         <GitHubRoutingSettings />
       </ScrollView>
     </View>

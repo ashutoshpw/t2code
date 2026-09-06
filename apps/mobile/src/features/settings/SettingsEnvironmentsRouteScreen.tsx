@@ -54,7 +54,7 @@ export function SettingsEnvironmentsRouteScreen() {
   const handleUpdateEnvironment = useCallback(
     (
       environmentId: EnvironmentId,
-      updates: { readonly label: string; readonly displayUrl: string },
+      updates: { readonly label?: string; readonly displayUrl: string },
     ) => {
       if (!SHOWCASE_ENABLED) return onUpdateEnvironment(environmentId, updates);
       const actualEnvironment = environmentSections.localEnvironments.find(
@@ -103,6 +103,7 @@ export function SettingsEnvironmentsRouteScreen() {
           paddingBottom: Math.max(insets.bottom, 18) + 18,
         }}
       >
+<<<<<<< HEAD
         <LocalEnvironmentList
           environments={localEnvironments}
           expandedId={expandedId}
@@ -112,6 +113,47 @@ export function SettingsEnvironmentsRouteScreen() {
           onSetEnabled={onSetEnvironmentEnabled}
           onUpdate={handleUpdateEnvironment}
         />
+=======
+        {hasLocalEnvironments ? (
+          <View collapsable={false} className="overflow-hidden rounded-[24px] bg-card">
+            {localEnvironments.map((environment, index) => (
+              <View
+                key={environment.environmentId}
+                collapsable={false}
+                className={cn(index !== 0 && "border-t border-border")}
+              >
+                <ConnectionEnvironmentRow
+                  environment={environment}
+                  expanded={expandedId === environment.environmentId}
+                  onToggle={() => handleToggle(environment.environmentId)}
+                  onReconnect={onReconnectEnvironment}
+                  onRemove={onRemoveEnvironmentPress}
+                  onSetEnabled={onSetEnvironmentEnabled}
+                  onUpdate={handleUpdateEnvironment}
+                  onRename={(environmentId) =>
+                    navigation.navigate("EnvironmentRename", { environmentId })
+                  }
+                />
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View collapsable={false} className="items-center gap-3 rounded-[24px] bg-card px-6 py-8">
+            <View className="h-12 w-12 items-center justify-center rounded-[16px] bg-subtle">
+              <SymbolView
+                name="point.3.connected.trianglepath.dotted"
+                size={20}
+                tintColorClassName={"accent-icon-muted"}
+                type="monochrome"
+              />
+            </View>
+            <Text className="text-center text-sm leading-normal text-foreground-muted">
+              No environments connected yet.{"\n"}Tap{" "}
+              <Text className="font-t3-bold text-foreground">+</Text> to add one.
+            </Text>
+          </View>
+        )}
+>>>>>>> 5f7ae83a7 (feat: let users rename environments)
 
         {/* Always mounted: already-connected relay environments must stay
             visible (and removable) even when cloud config is missing or the

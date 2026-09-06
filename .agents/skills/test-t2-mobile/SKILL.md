@@ -49,7 +49,7 @@ arguments stored in `agent_device_command` and the Bash array
 `agent_device_target_args`:
 
 ```bash
-.agents/skills/test-t3-mobile/scripts/pair-client.sh \
+.agents/skills/test-t2-mobile/scripts/pair-client.sh \
   <server-port> <base-dir> <device-reachable-backend-origin> \
   "$agent_device_command" "${agent_device_target_args[@]}"
 ```

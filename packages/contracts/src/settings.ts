@@ -1053,6 +1053,9 @@ export const ServerSettings = Schema.Struct({
       Effect.succeed(Schema.decodeUnknownSync(StorageCleanupSettings)({})),
     ),
   ),
+  environmentLabel: TrimmedString.check(Schema.isMaxLength(40)).pipe(
+    Schema.withDecodingDefault(Effect.succeed("")),
+  ),
   // How assistant text reaches clients during a turn. Deliberately a fresh
   // key (was `enableLegacyTokenStreaming`, before that
   // `enableAssistantStreaming`): decoding drops the old key, so everyone,
@@ -1419,6 +1422,7 @@ export const ServerSettingsPatch = Schema.Struct({
     }),
   ),
   // Server settings
+  environmentLabel: Schema.optionalKey(TrimmedString.check(Schema.isMaxLength(40))),
   responseStreamingMode: Schema.optionalKey(ResponseStreamingMode),
   enableProviderUpdateChecks: Schema.optionalKey(Schema.Boolean),
   continueThreadsAfterServerUpdate: Schema.optionalKey(Schema.Boolean),
