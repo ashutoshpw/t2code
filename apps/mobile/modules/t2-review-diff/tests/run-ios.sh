@@ -10,7 +10,7 @@ python3 - "$module_dir" "$output/main.swift" <<'PYTHON'
 import sys
 from pathlib import Path
 module = Path(sys.argv[1])
-source = (module / "ios/T3ReviewDiffView.swift").read_text()
+source = (module / "ios/T2ReviewDiffView.swift").read_text()
 source = source.replace("import ExpoModulesCore\n", "")
 # Count entry into the real decoder without replacing the production queue or lifecycle.
 row_decode = "try JSONDecoder().decode([ReviewDiffNativeRow].self, from: data)"

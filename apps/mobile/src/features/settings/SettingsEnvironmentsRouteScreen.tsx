@@ -67,7 +67,7 @@ export function SettingsEnvironmentsRouteScreen() {
   };
   const handleUpdateEnvironment = (
     environmentId: EnvironmentId,
-    updates: { readonly label: string; readonly displayUrl: string },
+    updates: { readonly label?: string; readonly displayUrl: string },
   ) => {
     if (!SHOWCASE_ENABLED) return onUpdateEnvironment(environmentId, updates);
     const actualEnvironment = environmentSections.localEnvironments.find(
@@ -137,6 +137,7 @@ export function SettingsEnvironmentsRouteScreen() {
           onRemove={onRemoveEnvironmentPress}
           onSetEnabled={onSetEnvironmentEnabled}
           onUpdate={handleUpdateEnvironment}
+          onRename={(environmentId) => navigation.navigate("EnvironmentRename", { environmentId })}
         />
 
         {/* Keep connected relays visible and removable without cloud config or sign-in; this component gates discovery. */}
