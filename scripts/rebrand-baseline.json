@@ -125,7 +125,7 @@
   },
   {
     "file": "apps/web/src/components/CommandPalette.logic.test.ts",
-    "line": "expect(item?.description).toBe(\"T3 Code \u00b7 #feat/search\");"
+    "line": "expect(item?.description).toBe(\"T3 Code · #feat/search\");"
   },
   {
     "file": "apps/web/src/components/CommandPalette.logic.test.ts",
@@ -137,11 +137,11 @@
   },
   {
     "file": "apps/web/src/components/pullRequest/PullRequestListFilters.test.tsx",
-    "line": "title: \"T3 Code \u00b7 one\","
+    "line": "title: \"T3 Code · one\","
   },
   {
     "file": "apps/web/src/components/pullRequest/PullRequestListFilters.test.tsx",
-    "line": "title: \"T3 Code \u00b7 two\","
+    "line": "title: \"T3 Code · two\","
   },
   {
     "file": "apps/web/src/components/pullRequest/PullRequestListFilters.test.tsx",
@@ -181,7 +181,7 @@
   },
   {
     "file": "oxlint-plugin-t3code/rules/no-native-title-tooltip.test.ts",
-    "line": "rule.valid(\"allows document.title assignments\", `document.title = \"Thread \u00b7 T3 Code\";`);"
+    "line": "rule.valid(\"allows document.title assignments\", `document.title = \"Thread · T3 Code\";`);"
   },
   {
     "file": "packages/client-runtime/src/authorization/layer.test.ts",
