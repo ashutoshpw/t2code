@@ -28,7 +28,7 @@ import {
   localSnoozeTime,
   resolveCustomSnooze,
   type CustomSnoozeInput,
-} from "@t3tools/client-runtime/state/thread-settled";
+} from "@t2code/client-runtime/state/thread-settled";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, View } from "react-native";
 import { AppText } from "../../components/AppText";

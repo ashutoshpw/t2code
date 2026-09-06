@@ -35,18 +35,6 @@ const GUARDED_FILES = new Set([
 // and vendored upstream-owned native modules.
 const GUARDED_DIRS = [".agents/", "apps/mobile/modules/"];
 
-// Files that dual-register or assert the legacy t3code deep-link schemes so
-// existing installs keep working (see the "rebrand: rename app identity" commit).
-const SCHEME_LEGACY_FILES = new Set([
-  "apps/desktop/scripts/electron-launcher.mjs",
-  "apps/desktop/src/app/DesktopClerk.test.ts",
-  "apps/desktop/src/app/DesktopLinuxUrlHandler.test.ts",
-  "apps/desktop/src/electron/ElectronProtocol.test.ts",
-  "apps/desktop/src/electron/ElectronProtocol.ts",
-  "scripts/build-desktop-artifact.test.ts",
-  "scripts/build-desktop-artifact.ts",
-]);
-
 type Rule = {
   id: string;
   hint: string;
@@ -61,8 +49,13 @@ const RULES: Rule[] = [
   },
   {
     id: "t3-cli-scope",
-    hint: 'the fork CLI package is "@t2code/cli"; "@t3code/" only exists upstream',
+    hint: 'the fork CLI package is "@t2code/cli"; upstream ships it unscoped as "t3", so "@t3code/" is at best an invented half-rename',
     violates: (_file, line) => /@t3code\//.test(line),
+  },
+  {
+    id: "t3tools-scope",
+    hint: 'fork internal packages are "@t2code/*"; "@t2code/" only exists upstream (.agents/ and apps/mobile/modules/ are exempt dirs)',
+    violates: (_file, line) => /@t3tools\//.test(line),
   },
   {
     id: "t3-port",
@@ -71,20 +64,13 @@ const RULES: Rule[] = [
   },
   {
     id: "t3-scheme",
-    hint: 'deep-link schemes are "t2code"/"t2code-dev"; bare "t3code" schemes are legacy-only (dual-registration lines or the legacy-file allowlist)',
-    violates: (file, line) =>
-      /scheme/i.test(line) &&
-      /(['"])t3code(-dev)?\1/.test(line) &&
-      !line.includes("t2code") &&
-      !SCHEME_LEGACY_FILES.has(file),
+    hint: 'deep-link schemes are "t2code"/"t2code-dev"; bare "t3code" schemes no longer exist in the fork',
+    violates: (_file, line) => /scheme/i.test(line) && /(['"])t3code(-dev)?\1/.test(line),
   },
   {
     id: "t3-scheme-preview",
-    hint: 'the preview scheme is "t2code-preview"; "t3code-preview" only survives in legacy storage partitions and apps/mobile/src/App.tsx',
-    violates: (file, line) =>
-      /t3code-preview/.test(line) &&
-      !line.includes("persist:") &&
-      file !== "apps/mobile/src/App.tsx",
+    hint: 'the preview scheme is "t2code-preview"; "t3code-preview" only survives in legacy storage partition names',
+    violates: (file, line) => /t3code-preview/.test(line) && !line.includes("persist:"),
   },
 ];
 
