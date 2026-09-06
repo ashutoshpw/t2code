@@ -742,69 +742,6 @@ jobs:
         test_web,
         test_server,
         desktop_mac_arm64,
-<<<<<<< HEAD
-=======
-        desktop_linux_x64,
-        desktop_linux_arm64,
-        desktop_win_x64,
-        desktop_win_arm64,
-      ]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.ref }}
-          sparse-checkout: |
-            /*
-            !/.repos/
-          sparse-checkout-cone-mode: false
-
-      - name: Setup Vite+
-        uses: voidzero-dev/setup-vp@v1
-        with:
-          node-version-file: package.json
-          cache: true
-          run-install: |
-            args:
-              - --filter=@t2code/cli...
-              - --filter=@t2code/scripts...
-
-      - name: Download all CLI archives
-        uses: actions/download-artifact@v8
-        with:
-          pattern: cli-*
-          merge-multiple: true
-          path: release-cli
-
-      - name: Build npm packages from CLI archives
-        run: node scripts/build-npm-platform-packages.ts --archives-dir release-cli --version "${{ needs.preflight.outputs.version }}" --output-dir npm-packages
-
-      # A dry run of every package first: an auth or scope error here (the
-      # @t3code org missing, a package without a trusted publisher) fails
-      # before anything is live, instead of after some platforms already are.
-      - name: Check npm publish access (dry run)
-        run: |
-          if ! node apps/server/scripts/cli.ts publish --packages-dir npm-packages --tag "${{ needs.preflight.outputs.cli_dist_tag }}" --provenance --dry-run --verbose; then
-            echo "::error::npm publish --dry-run failed. Make sure the @t2code npm org exists and that @t2code/cli and every @t2code/t2-<platform> package has a trusted publisher registered for .github/workflows/release.yml (see docs/operations/release.md)." >&2
-            exit 1
-          fi
-
-      - name: Publish CLI packages
-        run: node apps/server/scripts/cli.ts publish --packages-dir npm-packages --tag "${{ needs.preflight.outputs.cli_dist_tag }}" --provenance --verbose
-
-  release:
-    name: Publish GitHub Release
-    needs:
-      [
-        preflight,
-        desktop_mac_arm64,
->>>>>>> 90c5c91560 (chore(release): default hosted web domains to t2.codes)
         desktop_mac_x64,
         desktop_linux_x64,
         desktop_linux_arm64,
@@ -1434,16 +1371,7 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup-ci-deps
         with:
-<<<<<<< HEAD
           install-args: --filter=@t2code/scripts... --filter=@t2code/oxlint-plugin-t3code...
-=======
-          node-version-file: package.json
-          cache: true
-          run-install: |
-            args:
-              - --filter=@t2code/scripts...
-              - --filter=@t2code/oxlint-plugin-t3code...
->>>>>>> 90c5c91560 (chore(release): default hosted web domains to t2.codes)
 
       - id: update_versions
         name: Update version strings
