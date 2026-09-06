@@ -83,6 +83,7 @@ const startupDependencies = Layer.mergeAll(
   ServerLifecycleEvents.layer,
   Layer.succeed(ServerEnvironment.ServerEnvironment, {
     getEnvironmentId: Effect.succeed(EnvironmentId.make("environment-startup-orphan")),
+    setEnvironmentLabel: () => Effect.void,
     getDescriptor: Effect.succeed({
       environmentId: EnvironmentId.make("environment-startup-orphan"),
       label: "Startup orphan test",

@@ -5,12 +5,12 @@
   "expo-module": {
     "ios": {
       "modules": [
-        "T3ReviewDiffModule"
+        "T2ReviewDiffModule"
       ]
     },
     "android": {
       "modules": [
-        "expo.modules.t3reviewdiff.T3ReviewDiffModule"
+        "expo.modules.t2reviewdiff.T2ReviewDiffModule"
       ]
     }
   }
