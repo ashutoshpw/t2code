@@ -1,6 +1,6 @@
 import * as Dialog from "../../components/ui/Dialog";
-import { resolveAssetUrl } from "@t3tools/client-runtime/state/assets";
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
+import type { EnvironmentId, ThreadId } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { useEffect, useRef } from "react";
 

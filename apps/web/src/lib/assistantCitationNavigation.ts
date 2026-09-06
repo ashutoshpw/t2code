@@ -5,12 +5,12 @@ import type {
   OrchestrationV2ThreadShell,
   ScopedThreadRef,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useRouter, type AnyRouter } from "@tanstack/react-router";
 import {
   formatAssistantCitationHref,
   parseAssistantCitationHref,
-} from "@t3tools/shared/assistantCitations";
+} from "@t2code/shared/assistantCitations";
 import * as Base64Url from "effect/encoding/Base64Url";
 import * as Result from "effect/Result";
 import { useEffect } from "react";

@@ -15,15 +15,15 @@ import {
   EnvironmentHttpUnauthorizedError,
   EnvironmentId,
   WS_METHODS,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   type RelayEnvironmentLinkResponse,
   type RelayManagedEndpointProviderKind,
-} from "@t3tools/contracts/relay";
-import { EnvironmentRegistry, EnvironmentSupervisor } from "@t3tools/client-runtime/connection";
-import { request, runStream } from "@t3tools/client-runtime/rpc";
-import { ManagedRelay, relayRequestFailureDetail } from "@t3tools/client-runtime/relay";
-import { executeConnectedEnvironmentHttpRequest } from "@t3tools/client-runtime/state/environmentHttpAuth";
+} from "@t2code/contracts/relay";
+import { EnvironmentRegistry, EnvironmentSupervisor } from "@t2code/client-runtime/connection";
+import { request, runStream } from "@t2code/client-runtime/rpc";
+import { ManagedRelay, relayRequestFailureDetail } from "@t2code/client-runtime/relay";
+import { executeConnectedEnvironmentHttpRequest } from "@t2code/client-runtime/state/environmentHttpAuth";
 
 import { resolveCloudPublicConfig } from "./publicConfig";
 import {

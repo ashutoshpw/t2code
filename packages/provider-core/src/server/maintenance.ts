@@ -1,4 +1,4 @@
-import type { ProviderDriverKind } from "@t3tools/contracts";
+import type { ProviderDriverKind } from "@t2code/contracts";
 import type * as Effect from "effect/Effect";
 
 export interface ProviderMaintenanceCapabilities {

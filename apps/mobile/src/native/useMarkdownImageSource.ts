@@ -1,9 +1,9 @@
-import { resolveFilesystemReadAccess } from "@t3tools/client-runtime/state/filesystem";
+import { resolveFilesystemReadAccess } from "@t2code/client-runtime/state/filesystem";
 import { useEnvironmentPresentation } from "../state/presentation";
 import { useEnvironmentQuery } from "../state/query";
 import { resolveMobileMarkdownMediaSource } from "../lib/markdownMediaSource";
-import { resolveAssetUrl } from "@t3tools/client-runtime/state/assets";
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
+import type { EnvironmentId, ThreadId } from "@t2code/contracts";
 import type { MarkdownImageSourceResolver } from "./SelectableMarkdownText.types";
 import { normalizeNativeMarkdownUrl } from "../lib/markdownLinks";
 import { useCallback } from "react";

@@ -1,4 +1,4 @@
-import type { ComposerContextRecord, EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type { ComposerContextRecord, EnvironmentId, ThreadId } from "@t2code/contracts";
 import {
   composerChipSizeSuffix,
   contextChipIcon,
@@ -15,8 +15,8 @@ import type {
 import {
   formatComposerContextHref,
   parseComposerContextHref,
-} from "@t3tools/shared/composerContextReferences";
-import { hasThreadLinks, parseThreadLinkHref } from "@t3tools/shared/threadLinks";
+} from "@t2code/shared/composerContextReferences";
+import { hasThreadLinks, parseThreadLinkHref } from "@t2code/shared/threadLinks";
 
 export function enrichedContextLinkPresentation(
   href: string,

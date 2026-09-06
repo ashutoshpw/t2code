@@ -2,8 +2,8 @@ import {
   createPullRequestEnvironmentAtoms,
   createPullRequestStackAtomFamily,
   patchPullRequestListEntries,
-} from "@t3tools/client-runtime/state/pull-requests";
-import type { EnvironmentId, PullRequestListInput } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/pull-requests";
+import type { EnvironmentId, PullRequestListInput } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";

@@ -3,7 +3,7 @@ import type {
   ChatAttachment,
   ServerSettings,
   ServerSettingsError,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
 import type * as Option from "effect/Option";
@@ -52,4 +52,4 @@ export class ProviderHost extends Context.Service<
       bindingId: string,
     ) => Effect.Effect<ProviderCredentials>;
   }
->()("@t3tools/provider-core/server/ProviderHost") {}
+>()("@t2code/provider-core/server/ProviderHost") {}

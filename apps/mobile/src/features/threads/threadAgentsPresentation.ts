@@ -2,20 +2,20 @@ import {
   formatSubagentDisplayTitle,
   resolveSubagentMetadata,
   subagentDetailPreview,
-} from "@t3tools/client-runtime/state/subagent-display";
+} from "@t2code/client-runtime/state/subagent-display";
 import {
   isActiveSubagentStatus,
   type RuntimeSubagent,
   type SubagentWorkflowGroup,
-} from "@t3tools/client-runtime/state/subagentRuntime";
-import { REASONING_EFFORT_OPTION_IDS } from "@t3tools/client-runtime/state/thread-execution";
+} from "@t2code/client-runtime/state/subagentRuntime";
+import { REASONING_EFFORT_OPTION_IDS } from "@t2code/client-runtime/state/thread-execution";
 import type {
   EnvironmentId,
   OrchestrationV2Subagent,
   ServerProvider,
   ThreadId,
-} from "@t3tools/contracts";
-import { resolveSelectableModel } from "@t3tools/shared/model";
+} from "@t2code/contracts";
+import { resolveSelectableModel } from "@t2code/shared/model";
 
 import { subagentCardDetail } from "./subagent-card-presentation";
 
