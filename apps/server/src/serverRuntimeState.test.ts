@@ -66,12 +66,12 @@ describe("serverRuntimeState", () => {
     Effect.gen(function* () {
       const managed = yield* ServerRuntimeState.makePersistedServerRuntimeState({
         config: { host: undefined, devUrl: undefined },
-        port: 13_773,
+        port: 13_772,
         serviceManaged: true,
       });
       const manual = yield* ServerRuntimeState.makePersistedServerRuntimeState({
         config: { host: undefined, devUrl: undefined },
-        port: 13_773,
+        port: 13_772,
       });
 
       assert.isTrue(managed.serviceManaged);
