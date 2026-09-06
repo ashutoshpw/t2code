@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test T2 Mobile"
+  short_description: "Test T2 Code on iOS or Android"
+  default_prompt: "Use $test-t2-mobile to launch T2 Code against an isolated backend and verify the affected flow on an available simulator or emulator."
