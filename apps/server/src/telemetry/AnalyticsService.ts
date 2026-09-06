@@ -63,7 +63,7 @@ const REJECTED_BATCH_STATUSES = new Set([400, 401, 413]);
  * reports "dev". It is separate from `__T3CODE_BUILD_CHANNEL__`, which names
  * stable "latest" and preview "nightly" for the sign-in page.
  */
-declare const __T3CODE_TELEMETRY_CHANNEL__: "stable" | "nightly" | "preview" | "dev" | undefined;
+declare const __T2CODE_TELEMETRY_CHANNEL__: "stable" | "nightly" | "preview" | "dev" | undefined;
 
 /** `random` is in [0, 1). */
 function retryDelayMs(failures: number, random: number): number {
@@ -155,7 +155,7 @@ export const make = Effect.gen(function* () {
   const flushLock = yield* Semaphore.make(1);
   const clientType = serverConfig.mode === "desktop" ? "desktop-app" : "cli-web-client";
   const telemetryChannel =
-    typeof __T3CODE_TELEMETRY_CHANNEL__ === "undefined" ? "dev" : __T3CODE_TELEMETRY_CHANNEL__;
+    typeof __T2CODE_TELEMETRY_CHANNEL__ === "undefined" ? "dev" : __T2CODE_TELEMETRY_CHANNEL__;
   const hostPlatform = yield* HostProcess.Platform;
   const hostArchitecture = yield* HostProcess.Architecture;
 
