@@ -25,7 +25,7 @@ export function configureAndroidAgentNotifications(
   native?.configure?.(
     deviceId,
     userId,
-    (Array.isArray(scheme) ? scheme[0] : scheme) ?? "t3code",
+    (Array.isArray(scheme) ? scheme[0] : scheme) ?? "t2code",
     ongoingEnabled,
   );
 }

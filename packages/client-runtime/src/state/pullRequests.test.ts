@@ -284,8 +284,8 @@ const makeTestRuntime = Effect.fn("makeTestRuntime")(function* (
   const localTarget = new PrimaryConnectionTarget({
     environmentId: EnvironmentId.make("local-environment"),
     label: "Local environment",
-    httpBaseUrl: "http://localhost:3773",
-    wsBaseUrl: "ws://localhost:3773",
+    httpBaseUrl: "http://localhost:3772",
+    wsBaseUrl: "ws://localhost:3772",
   });
   const localSupervisor = {
     ...supervisor,

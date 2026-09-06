@@ -5,7 +5,7 @@ desktop, web, or mobile app. Set up the machine where the agents will work first
 
 ## Requirements
 
-`npx t3` needs Node.js only to run npm itself; the CLI it installs is a
+`npx @t2code/cli` needs Node.js only to run npm itself; the CLI it installs is a
 self-contained executable. SSH hosts and WSL backends need Node.js 22.16+
 (22.x), 23.11+ (23.x), or 24.10 and later. The native desktop app includes its
 server runtime.

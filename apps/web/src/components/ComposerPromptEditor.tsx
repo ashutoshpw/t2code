@@ -7,15 +7,12 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
-import {
-  type ComposerContextClipboardFragment,
-  type ServerProviderSkill,
-} from "@t3tools/contracts";
+import { type ComposerContextClipboardFragment, type ServerProviderSkill } from "@t2code/contracts";
 import {
   COMPOSER_CONTEXT_CLIPBOARD_MIME,
   encodeComposerContextClipboardHtml,
-} from "@t3tools/shared/composerContextClipboard";
-import { serializeComposerFileLink } from "@t3tools/shared/composerTrigger";
+} from "@t2code/shared/composerContextClipboard";
+import { serializeComposerFileLink } from "@t2code/shared/composerTrigger";
 import {
   $applyNodeReplacement,
   $createRangeSelectionFromDom,
@@ -100,7 +97,7 @@ import {
   ComposerContextRecordsContext,
   type ComposerDraftContextRecords,
 } from "./composerContextPresentation";
-import { formatProviderSkillDisplayName } from "@t3tools/client-runtime/providerSkills";
+import { formatProviderSkillDisplayName } from "@t2code/client-runtime/providerSkills";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { registerComposerInlineTokenPaste } from "./composerInlineTokenPaste";
 import { didComposerSelectionChangeVisibly } from "./composerSelection";

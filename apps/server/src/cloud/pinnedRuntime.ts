@@ -27,7 +27,7 @@ const CLI_PACKAGE_NAME = "@t2code/cli";
  * web client, and the native packages beside it. The boot service points its
  * unit or launch agent at the executable, and server self-update installs the
  * target version here before switching over. The runtime never depends on a
- * Node or npm on the machine; the only npm involvement in T3 Code is the
+ * Node or npm on the machine; the only npm involvement in T2 Code is the
  * `@t2code/cli` package for people who prefer `npx @t2code/cli` or
  * `npm install -g @t2code/cli`, and even a CLI installed that way pins an
  * archive when it sets up the service.
