@@ -1,0 +1,174 @@
+[
+  {
+    "file": ".cursor/rules/cursor-cloud.mdc",
+    "line": "description: Cursor Cloud environment setup and run notes for T3 Code (Cursor-specific; not for other editors/CI)"
+  },
+  {
+    "file": ".cursor/rules/cursor-cloud.mdc",
+    "line": "These notes apply only to Cursor Cloud agents (kept out of the shared `AGENTS.md` since T3 Code is"
+  },
+  {
+    "file": ".devcontainer/devcontainer.json",
+    "line": "\"name\": \"T3 Code Dev\","
+  },
+  {
+    "file": "apps/desktop/src/app/DesktopAppIdentity.test.ts",
+    "line": "input.legacyPathExists === true && path.includes(\"T3 Code (Alpha)\"),"
+  },
+  {
+    "file": "apps/desktop/src/app/DesktopAppIdentity.test.ts",
+    "line": "name: Effect.succeed(\"T3 Code\"),"
+  },
+  {
+    "file": "apps/desktop/src/app/DesktopClerk.test.ts",
+    "line": "legacyUserDataDirName: isDevelopment ? \"T3 Code (Dev)\" : \"T3 Code (Alpha)\","
+  },
+  {
+    "file": "apps/desktop/src/app/DesktopClerk.ts",
+    "line": "// the lock would create \"T3 Code (Alpha)\" and make the legacy-install"
+  },
+  {
+    "file": "apps/desktop/src/app/DesktopEnvironment.ts",
+    "line": "const legacyUserDataDirName = isDevelopment ? \"T3 Code (Dev)\" : \"T3 Code (Alpha)\";"
+  },
+  {
+    "file": "apps/desktop/src/app/DesktopLifecycle.test.ts",
+    "line": "name: Effect.succeed(\"T3 Code\"),"
+  },
+  {
+    "file": "apps/desktop/src/electron/ElectronApp.test.ts",
+    "line": "name: \"T3 Code\","
+  },
+  {
+    "file": "apps/desktop/src/electron/ElectronWindow.test.ts",
+    "line": "assert.equal(error.message, 'Failed to create Electron BrowserWindow \"T3 Code\" (1100x780).');"
+  },
+  {
+    "file": "apps/desktop/src/electron/ElectronWindow.test.ts",
+    "line": "title: \"T3 Code\","
+  },
+  {
+    "file": "apps/desktop/src/preview/BrowserSession.ts",
+    "line": "const PREVIEW_EPHEMERAL_PARTITION_PREFIX = \"t3code-preview-ephemeral-\";"
+  },
+  {
+    "file": "apps/desktop/src/telemetry/DesktopTelemetryPublisher.test.ts",
+    "line": "name: Effect.succeed(\"T3 Code\"),"
+  },
+  {
+    "file": "apps/desktop/src/window/DesktopApplicationMenu.test.ts",
+    "line": "name: Effect.succeed(\"T3 Code\"),"
+  },
+  {
+    "file": "apps/mobile/plugins/withIosCocoaPodsUuidCache.cjs",
+    "line": "Pod::UI.puts \"T3Code: reset CocoaPods UUID allocator at #{next_index} (#{existing_uuids.length} existing objects)\""
+  },
+  {
+    "file": "apps/mobile/src/features/archive/archivedThreadList.test.ts",
+    "line": "const firstProject = makeProject({ id: ProjectId.make(\"project-1\"), title: \"T3 Code\" });"
+  },
+  {
+    "file": "apps/mobile/src/features/archive/archivedThreadList.test.ts",
+    "line": "const project = makeProject({ id: ProjectId.make(\"project-1\"), title: \"T3 Code\" });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
+    "line": "const group = buildGroups([project], threads, { searchQuery: \"T3 Code\" })[0];"
+  },
+  {
+    "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
+    "line": "displayName: \"T3 Code\","
+  },
+  {
+    "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
+    "line": "title: \"T3 Code\","
+  },
+  {
+    "file": "apps/mobile/src/features/showcase/showcasePendingTasks.test.ts",
+    "line": "title: \"T3 Code\","
+  },
+  {
+    "file": "apps/mobile/src/features/threads/new-task-project-selection.test.ts",
+    "line": "title: \"T3 Code\","
+  },
+  {
+    "file": "apps/server/src/auth/EnvironmentAuth.test.ts",
+    "line": "{ ...requestMetadata, label: \"T3 Code Desktop\" },"
+  },
+  {
+    "file": "apps/server/src/auth/utils.test.ts",
+    "line": "label: \"T3 Code Mobile\","
+  },
+  {
+    "file": "apps/server/src/relay/AgentAwarenessRelay.test.ts",
+    "line": "title: \"T3 Code\","
+  },
+  {
+    "file": "apps/server/src/server.test.ts",
+    "line": "label: \"T3 Code Mobile\","
+  },
+  {
+    "file": "apps/web/src/authBootstrap.test.ts",
+    "line": "vi.stubGlobal(\"document\", { title: \"T3 Code\" });"
+  },
+  {
+    "file": "apps/web/src/components/CommandPalette.logic.test.ts",
+    "line": "expect(item?.description).toBe(\"T3 Code · #feat/search\");"
+  },
+  {
+    "file": "apps/web/src/components/CommandPalette.logic.test.ts",
+    "line": "expect(item?.description).toBe(\"T3 Code:feat/search:wt\");"
+  },
+  {
+    "file": "apps/web/src/components/CommandPalette.logic.test.ts",
+    "line": "projectTitleById: new Map([[PROJECT_ID, \"T3 Code\"]]),"
+  },
+  {
+    "file": "apps/web/src/components/pullRequest/PullRequestListFilters.test.tsx",
+    "line": "title: \"T3 Code · one\","
+  },
+  {
+    "file": "apps/web/src/components/pullRequest/PullRequestListFilters.test.tsx",
+    "line": "title: \"T3 Code · two\","
+  },
+  {
+    "file": "apps/web/src/components/pullRequest/PullRequestListFilters.test.tsx",
+    "line": "title: \"T3 Code\","
+  },
+  {
+    "file": "oxlint-plugin-t3code/rules/no-native-title-tooltip.test.ts",
+    "line": "rule.valid(\"allows document.title assignments\", `document.title = \"Thread · T3 Code\";`);"
+  },
+  {
+    "file": "packages/client-runtime/src/authorization/layer.test.ts",
+    "line": "label: \"T3 Code Test\","
+  },
+  {
+    "file": "packages/client-runtime/src/authorization/remote.test.ts",
+    "line": "label: \"T3 Code Mobile\","
+  },
+  {
+    "file": "packages/client-runtime/src/authorization/remote.test.ts",
+    "line": "label: \"T3 Code Web\","
+  },
+  {
+    "file": "packages/client-runtime/src/connection/onboarding.test.ts",
+    "line": "expect(tokenParams.get(\"client_label\")).toBe(\"T3 Code Test\");"
+  },
+  {
+    "file": "packages/client-runtime/src/connection/onboarding.test.ts",
+    "line": "label: \"T3 Code Test\","
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectGrouping.test.ts",
+    "line": "\"T3 Code\","
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectGrouping.test.ts",
+    "line": "displayName: \"T3 Code\","
+  },
+  {
+    "file": "packages/client-runtime/src/state/threadReducer.test.ts",
+    "line": "title: \"T3 Code\","
+  }
+]
