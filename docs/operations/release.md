@@ -108,7 +108,7 @@ Personal stages reference the production-owned zones.
 Developers deploy personal stages locally rather than through pull-request automation:
 
 ```sh
-vp run --filter t3code-relay deploy -- --stage "$USER" --env-file .env.local
+vp run --filter t2code-relay deploy -- --stage "$USER" --env-file .env.local
 ```
 
 ## Marketing site deployment

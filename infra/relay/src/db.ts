@@ -16,14 +16,14 @@ export class RelayDb extends Context.Service<
   EffectPgDatabase & {
     readonly $client: PgClient;
   }
->()("t3code-relay/db/RelayDb") {}
+>()("t2code-relay/db/RelayDb") {}
 
 export class RelayTransactions extends Context.Service<
   RelayTransactions,
   {
     readonly withTransaction: RelayDb["Service"]["$client"]["withTransaction"];
   }
->()("t3code-relay/db/RelayTransactions") {
+>()("t2code-relay/db/RelayTransactions") {
   static readonly layer = Layer.effect(
     RelayTransactions,
     Effect.gen(function* () {
@@ -47,6 +47,8 @@ export const PlanetscaleDatabase = Effect.gen(function* () {
   const database =
     mode === "shared-database"
       ? yield* Planetscale.PostgresDatabase("RelayPostgresDatabase", {
+          // This physical database already holds production relay state; keep its
+          // name stable while the logical relay identity moves to T2 Code.
           name: "t3coderelay",
           region: { slug: "us-west" },
           clusterSize: "PS_20",
