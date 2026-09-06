@@ -78,6 +78,9 @@ export function ConnectionsRouteScreen() {
                   onRemove={onRemoveEnvironmentPress}
                   onSetEnabled={onSetEnvironmentEnabled}
                   onUpdate={onUpdateEnvironment}
+                  onRename={(environmentId) =>
+                    navigation.navigate("EnvironmentRename", { environmentId })
+                  }
                 />
               </View>
             ))}
