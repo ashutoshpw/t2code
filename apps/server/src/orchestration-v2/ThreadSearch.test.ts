@@ -7,7 +7,7 @@ import {
   ThreadId,
   type OrchestrationV2DomainEvent,
   type ThreadLinkedPullRequest,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";

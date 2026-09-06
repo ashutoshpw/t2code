@@ -97,7 +97,7 @@ function cleanupStaleDevApps() {
   const escapedDesktopDir = desktopDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   NodeChildProcess.spawnSync(
     "pkill",
-    ["-f", "--", `(^| )--t3code-dev-root=${escapedDesktopDir}( |$)`],
+    ["-f", "--", `(^| )--t2code-dev-root=${escapedDesktopDir}( |$)`],
     {
       stdio: "ignore",
     },
@@ -114,7 +114,7 @@ function startApp() {
     : [];
   const launchArgs = devProtocolClient
     ? electronArgs
-    : [...electronArgs, `--t3code-dev-root=${desktopDir}`, "dist-electron/main.cjs"];
+    : [...electronArgs, `--t2code-dev-root=${desktopDir}`, "dist-electron/main.cjs"];
   const electronCommand = resolveElectronLaunchCommand(launchArgs);
   const app = NodeChildProcess.spawn(electronCommand.electronPath, electronCommand.args, {
     cwd: desktopDir,

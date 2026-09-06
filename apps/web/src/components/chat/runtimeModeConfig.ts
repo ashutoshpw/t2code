@@ -2,7 +2,7 @@ import {
   managedRuntimeModeDenial,
   type ManagedPolicySummary,
   type RuntimeMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { type LucideIcon, LockIcon, PenLineIcon, ShieldOffIcon, SparklesIcon } from "lucide-react";
 
 export const runtimeModeConfig: Record<

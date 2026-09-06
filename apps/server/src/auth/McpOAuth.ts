@@ -16,9 +16,9 @@ import {
   MCP_PEER_LINK_SOFTWARE_ID,
   mcpClientScopes,
   type RuntimeMode,
-} from "@t3tools/contracts";
-import { DEFAULT_HOSTED_APP_URL } from "@t3tools/shared/connectAuth";
-import { encodeOAuthScope } from "@t3tools/shared/oauthScope";
+} from "@t2code/contracts";
+import { DEFAULT_HOSTED_APP_URL } from "@t2code/shared/connectAuth";
+import { encodeOAuthScope } from "@t2code/shared/oauthScope";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Digest from "effect/crypto/Digest";

@@ -35,7 +35,7 @@ import type {
   ScopedThreadRef,
   ServerProvider,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   EnvironmentRequestInvalidError,
   AuthOrchestrationOperateScope,
@@ -44,16 +44,16 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
-} from "@t3tools/contracts";
-import type { EnvironmentConnectionPresentation } from "@t3tools/client-runtime/connection";
-import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/contracts";
+import type { EnvironmentConnectionPresentation } from "@t2code/client-runtime/connection";
+import { settlePromise, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import * as Schema from "effect/Schema";
-import { isPasteAsTextShortcut } from "@t3tools/client-runtime/text-paste";
-import { serializeComposerFileLink } from "@t3tools/shared/composerTrigger";
+import { isPasteAsTextShortcut } from "@t2code/client-runtime/text-paste";
+import { serializeComposerFileLink } from "@t2code/shared/composerTrigger";
 import { folderDropTarget, resolveDroppedFolderPath } from "./folderDrop";
 import { splitTransferredFiles } from "./workspaceFileDrop";
-import { createModelSelection, normalizeModelSlug } from "@t3tools/shared/model";
-import { USAGE_LIMITS_COMMAND } from "@t3tools/shared/usageLimits";
+import { createModelSelection, normalizeModelSlug } from "@t2code/shared/model";
+import { USAGE_LIMITS_COMMAND } from "@t2code/shared/usageLimits";
 import {
   memo,
   use,
@@ -150,7 +150,7 @@ import {
 import {
   threadContextRecord,
   toKindScopedComposerContextId,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 import {
   shouldUseCompactComposerPrimaryActions,
   shouldUseCompactComposerFooter,
@@ -191,8 +191,8 @@ import { rememberCopiedComposerAttachments } from "~/lib/copiedComposerAttachmen
 import { useThreadContextDrop, threadContextDropTargetProps } from "./threadContextDrag";
 import { readThreadShell } from "~/state/entities";
 import { useLinkedEnvironments } from "~/state/peerLinks";
-import { encodeComposerContextFragment } from "@t3tools/shared/composerContextClipboard";
-import type { ComposerContextRecord, ThreadPullRequestLink } from "@t3tools/contracts";
+import { encodeComposerContextFragment } from "@t2code/shared/composerContextClipboard";
+import type { ComposerContextRecord, ThreadPullRequestLink } from "@t2code/contracts";
 import { threadContextAttachment } from "~/lib/threadContextAttachment";
 import {
   type ComposerCommandItem,
@@ -241,13 +241,13 @@ import { toastManager } from "../ui/toast";
 import { BuildingIcon, PlayIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { useManagedPolicy } from "../../state/managedPolicy";
-import { proposedPlanTitle } from "@t3tools/shared/proposedPlanText";
+import { proposedPlanTitle } from "@t2code/shared/proposedPlanText";
 import { hasProviderSetup } from "./ProviderStatusBanner";
 import { type AppModelOption, getAppModelOptionsForInstance } from "../../modelSelection";
-import type { UnifiedSettings } from "@t3tools/contracts/settings";
+import type { UnifiedSettings } from "@t2code/contracts/settings";
 import { isVideoAttachment, type SessionPhase, type Thread, type ThreadShell } from "../../types";
 import { type ComposerPromptHistoryPosition } from "./composerPromptHistory";
-import type { PendingUserInputDraftAnswer } from "@t3tools/client-runtime/state/pending-user-input";
+import type { PendingUserInputDraftAnswer } from "@t2code/client-runtime/state/pending-user-input";
 import type {
   LatestProposedPlanState,
   PendingApproval,
@@ -257,12 +257,12 @@ import type {
 import {
   resolveComposerDispatchMode,
   type ComposerDispatchMode,
-} from "@t3tools/client-runtime/state/composer-dispatch";
-import { deriveLatestContextWindowSnapshot } from "@t3tools/client-runtime/state/context-window";
+} from "@t2code/client-runtime/state/composer-dispatch";
+import { deriveLatestContextWindowSnapshot } from "@t2code/client-runtime/state/context-window";
 import {
   resolveProviderSkillsForCwd,
   resolveProviderSlashCommandsForCwd,
-} from "@t3tools/client-runtime/providerSkills";
+} from "@t2code/client-runtime/providerSkills";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useSoftwareKeyboardOpen } from "../../hooks/useSoftwareKeyboardOpen";
 import { useStableCallback } from "../../hooks/useStableCallback";

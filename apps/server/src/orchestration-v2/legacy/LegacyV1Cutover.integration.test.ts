@@ -13,8 +13,8 @@ import {
   type OrchestrationV2ProviderSession,
   type OrchestrationV2ProviderThread,
   type OrchestrationV2ThreadProjection,
-} from "@t3tools/contracts";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+} from "@t2code/contracts";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Digest from "effect/crypto/Digest";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -48,8 +48,8 @@ import * as ProjectionReplay from "../testkit/ProjectionReplay.ts";
 import * as ProjectionStore from "../ProjectionStore.ts";
 import * as ProviderAdapterRegistry from "../ProviderAdapterRegistry.ts";
 import * as ProviderReplayHarness from "../testkit/ProviderReplayHarness.ts";
-import { checkpointWorkspace } from "@t3tools/provider-testing/replayWorkspace";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import { checkpointWorkspace } from "@t2code/provider-testing/replayWorkspace";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 
 const PROJECT_ID = "project:cutover";
 const ACTIVE_THREAD = "thread:cutover:active";

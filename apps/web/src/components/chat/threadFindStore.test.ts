@@ -1,5 +1,5 @@
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { EnvironmentId, MessageId, ThreadId } from "@t3tools/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { EnvironmentId, MessageId, ThreadId } from "@t2code/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import {

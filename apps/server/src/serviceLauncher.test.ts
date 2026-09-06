@@ -5,8 +5,8 @@ import * as NodeFS from "node:fs";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import { SERVER_EXIT_CODE_STATE_DIR_OWNED } from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import { SERVER_EXIT_CODE_STATE_DIR_OWNED } from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";

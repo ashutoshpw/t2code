@@ -1,9 +1,9 @@
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import { type ChatAttachment, type ModelSelection, TextGenerationError } from "@t3tools/contracts";
-import { formatGeneratedBranchName, sanitizeFeatureBranchName } from "@t3tools/shared/git";
-import { extractJsonObject } from "@t3tools/shared/schemaJson";
+import { type ChatAttachment, type ModelSelection, TextGenerationError } from "@t2code/contracts";
+import { formatGeneratedBranchName, sanitizeFeatureBranchName } from "@t2code/shared/git";
+import { extractJsonObject } from "@t2code/shared/schemaJson";
 
 import type { ProviderTextGeneration } from "./textGeneration.ts";
 import {

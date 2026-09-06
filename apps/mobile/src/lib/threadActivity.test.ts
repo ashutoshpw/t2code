@@ -16,9 +16,9 @@ import {
   type OrchestrationV2RunAttempt,
   type OrchestrationV2ProjectedTurnItem,
   type OrchestrationV2TurnItem,
-} from "@t3tools/contracts";
-import { deriveThreadCheckpointSummaries } from "@t3tools/client-runtime/state/thread-checkpoints";
-import { summarizeToolGroup } from "@t3tools/client-runtime/work-log/presentation";
+} from "@t2code/contracts";
+import { deriveThreadCheckpointSummaries } from "@t2code/client-runtime/state/thread-checkpoints";
+import { summarizeToolGroup } from "@t2code/client-runtime/work-log/presentation";
 import { getReviewSectionIdForCheckpoint } from "../features/review/reviewModel";
 import * as DateTime from "effect/DateTime";
 import { describe, expect, it } from "vite-plus/test";

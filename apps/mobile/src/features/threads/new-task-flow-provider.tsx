@@ -1,5 +1,5 @@
 import { ActiveNewTaskContext } from "../../state/active-new-task";
-import { resolveNewThreadModelSelection } from "@t3tools/shared/usageLimits";
+import { resolveNewThreadModelSelection } from "@t2code/shared/usageLimits";
 import { useNowMinuteMs } from "../../lib/clock";
 import * as Dialog from "../../components/ui/Dialog";
 import React, { useEffect, useRef, useState } from "react";
@@ -11,15 +11,15 @@ import type {
   ProviderOptionSelection,
   RuntimeMode,
   ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   CommandId,
   DEFAULT_PROVIDER_INTERACTION_MODE,
   MessageId,
   repositoryGroupingKeyOf,
   ThreadId,
-} from "@t3tools/contracts";
-import { threadContextsOutsideEnvironment } from "@t3tools/shared/composerContextReferences";
+} from "@t2code/contracts";
+import { threadContextsOutsideEnvironment } from "@t2code/shared/composerContextReferences";
 import * as Arr from "effect/Array";
 import { pipe } from "effect/Function";
 
@@ -70,13 +70,13 @@ import {
   useRemoteConnectionStatus,
   useSavedRemoteConnections,
 } from "../../state/use-remote-environment-registry";
-import { availableScratchWorkspaceRoot } from "@t3tools/client-runtime/operations/projects";
+import { availableScratchWorkspaceRoot } from "@t2code/client-runtime/operations/projects";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import { type VcsRef } from "@t3tools/client-runtime/state/vcs";
+} from "@t2code/client-runtime/state/runtime";
+import { EnvironmentProject } from "@t2code/client-runtime/state/shell";
+import { type VcsRef } from "@t2code/client-runtime/state/vcs";
 import {
   buildHomeProjectScopes,
   sortHomeProjectScopes,
