@@ -594,8 +594,8 @@ function PairingForm({
             </p>
             <CommandBlock command="npx @t2code/cli pair" className="mt-2" />
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              Start T2 Code first, or run <code className="font-mono">npx @t2code/cli serve</code>. Add{" "}
-              <code className="font-mono">--tailscale</code> to use your tailnet.
+              Start T2 Code first, or run <code className="font-mono">npx @t2code/cli serve</code>.
+              Add <code className="font-mono">--tailscale</code> to use your tailnet.
             </p>
           </CollapsiblePanel>
         </Collapsible>
