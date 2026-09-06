@@ -19,7 +19,7 @@ For another deployment, set these values in the repository-root `.env` or `.env.
 T3CODE_CLERK_PUBLISHABLE_KEY=<publishable key>
 T3CODE_CLERK_JWT_TEMPLATE=<JWT template name>
 T3CODE_CLERK_CLI_OAUTH_CLIENT_ID=<public OAuth application client ID>
-T3CODE_RELAY_URL=https://relay.example.com
+T2CODE_RELAY_URL=https://relay.t2.codes
 ```
 
 Process variables take precedence over `.env.local`, then `.env`. Use these canonical names;
@@ -48,16 +48,36 @@ In Clerk's OAuth applications settings:
 
 ## JWT template
 
-Create a Clerk JWT template named `t3-relay` with claims:
+Create a Clerk JWT template named `t2-relay` with claims:
 
 ```json
-{ "aud": "t3-code-relay" }
+{ "aud": "t2-code-relay" }
 ```
 
-Set `T3CODE_CLERK_JWT_TEMPLATE=t3-relay` for clients and
-`CLERK_JWT_AUDIENCE=t3-code-relay` for the relay. The production relay deployment environment
+Set `T3CODE_CLERK_JWT_TEMPLATE=t2-relay` for clients and
+`CLERK_JWT_AUDIENCE=t2-code-relay` for the relay. The production relay deployment environment
 also defines `CLERK_JWT_TEMPLATE`. The audience stays the same across relay stages; the relay
 URL selects the deployment.
+
+### Relay identity migration
+
+The T2 relay migration changes the deployment and public configuration identities together. Before
+deploying the production stage, provision or update the following external resources:
+
+- Point the hosted relay and managed-endpoint DNS zones at the T2 relay deployment (the repository
+  example uses `relay.t2.codes` and `t2coderelay.com`).
+- Create the `t2-relay` Clerk JWT template with the `t2-code-relay` audience, then update
+  `T3CODE_CLERK_JWT_TEMPLATE`, `CLERK_JWT_TEMPLATE`, and `CLERK_JWT_AUDIENCE` in relay, CI, and
+  client environments.
+- Provision the `t2-code-relay-*` Axiom datasets, ingest tokens, and recent-spans view, and replace
+  the corresponding `T3CODE_RELAY_CLIENT_*` variables with `T2CODE_RELAY_CLIENT_*`.
+- Update GitHub Actions, Vercel, and EAS environments to use `T2CODE_RELAY_URL` and the new relay
+  tracing variables before publishing clients.
+
+The Alchemy stack is now named `T2CodeRelay`. The physical PlanetScale database remains
+`t3coderelay` intentionally so the deployment continues using existing relay state; do not rename
+that database while rolling out the new stack identity. Existing link-challenge JWTs retain their
+wire type so short-lived challenges issued before the rollout can still be redeemed afterward.
 
 ## Desktop OAuth redirects
 
