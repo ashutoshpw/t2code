@@ -1,13 +1,13 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { GrokSettings } from "@t3tools/provider-grok/settings";
+import { GrokSettings } from "@t2code/provider-grok/settings";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { resolveSelfInvocation } from "@t2code/shared/nodeRuntime";
 
 import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
 import { GROK_ACP_CANCEL_META, GROK_ACP_INITIALIZE_META } from "@t3tools/provider-grok/testing";

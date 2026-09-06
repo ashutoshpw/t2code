@@ -1,4 +1,4 @@
-import { EnvironmentId } from "@t3tools/contracts";
+import { EnvironmentId } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 import { usagePriceCell, usagePriceTableChanges, type UsagePriceDraft } from "./usagePriceTable";
 import type { UsagePriceTarget } from "./usagePriceTargets";

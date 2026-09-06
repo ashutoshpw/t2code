@@ -24,7 +24,7 @@ import type {
   GitActionProgressEvent,
   GitPreparePullRequestThreadInput,
   ModelSelection,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   DEFAULT_SERVER_SETTINGS,
@@ -39,7 +39,7 @@ import {
   TextGenerationError,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import * as TextGeneration from "../textGeneration/TextGeneration.ts";
 import {

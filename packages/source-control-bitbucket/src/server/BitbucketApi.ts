@@ -14,11 +14,11 @@ import {
   type SourceControlProviderAuth,
   type SourceControlRepositoryCloneUrls,
   type SourceControlRepositoryVisibility,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
-import { sanitizeBranchFragment } from "@t3tools/shared/git";
-import { isSshRemoteUrl } from "@t3tools/shared/sourceControl";
-import { recognizeRemoteWith } from "@t3tools/source-control-core/shared/definition";
+import { sanitizeBranchFragment } from "@t2code/shared/git";
+import { isSshRemoteUrl } from "@t2code/shared/sourceControl";
+import { recognizeRemoteWith } from "@t2code/source-control-core/shared/definition";
 import { definition } from "../shared/definition.ts";
 
 import {

@@ -5,9 +5,9 @@ import {
   blockedAssetUrlState,
   EMPTY_ASSET_URL_ATOM,
   resolveAssetUrl,
-} from "@t3tools/client-runtime/state/assets";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { AssetResource, EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/assets";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import type { AssetResource, EnvironmentId } from "@t2code/contracts";
 import { AsyncResult } from "effect/reactivity";
 
 import { assetEnvironment } from "~/state/assets";
@@ -15,7 +15,7 @@ import { useFilesystemReadAccess } from "~/state/filesystem";
 import { usePreparedConnection } from "~/state/session";
 import { useAtomQueryRunner } from "~/state/use-atom-query-runner";
 
-export { resolveAssetUrl } from "@t3tools/client-runtime/state/assets";
+export { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
 
 export type AssetUrlState = RuntimeAssetUrlState & { readonly waiting?: boolean };
 

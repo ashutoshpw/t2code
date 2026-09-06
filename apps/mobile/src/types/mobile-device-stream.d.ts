@@ -1,4 +1,4 @@
-declare module "@t3tools/mobile-device-stream" {
+declare module "@t2code/mobile-device-stream" {
   const script: string;
   export default script;
 }

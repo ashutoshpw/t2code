@@ -1,5 +1,5 @@
-import { FILL_PREVIEW_VIEWPORT, type ScopedThreadRef } from "@t3tools/contracts";
-import { previewPdfAssetUrl } from "@t3tools/shared/preview";
+import { FILL_PREVIEW_VIEWPORT, type ScopedThreadRef } from "@t2code/contracts";
+import { previewPdfAssetUrl } from "@t2code/shared/preview";
 import { useEnvironmentHttpBaseUrl } from "~/state/environments";
 import { PanelRightIcon, PictureInPicture2, XIcon } from "lucide-react";
 import {
@@ -46,8 +46,8 @@ import { useRightPanelStore } from "~/rightPanelStore";
 import { useDeviceState } from "~/state/device";
 
 import { DeviceStreamView } from "../device/DeviceStreamView";
-import type { DeviceScreenSize } from "@t3tools/client-runtime/device/stream";
-import type { PreviewStreamViewport } from "@t3tools/client-runtime/preview/server-browser-stream";
+import type { DeviceScreenSize } from "@t2code/client-runtime/device/stream";
+import type { PreviewStreamViewport } from "@t2code/client-runtime/preview/server-browser-stream";
 import { previewBridge } from "./previewBridge";
 import { showPreviewPopup } from "./showPreviewPopup";
 import {

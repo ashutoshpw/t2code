@@ -1,8 +1,8 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { type ProviderReplayEntry } from "@t3tools/contracts";
-import { GrokSettings } from "@t3tools/provider-grok/settings";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+import { type ProviderReplayEntry } from "@t2code/contracts";
+import { GrokSettings } from "@t2code/provider-grok/settings";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { resolveSelfInvocation } from "@t2code/shared/nodeRuntime";
 import * as Clock from "effect/Clock";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";

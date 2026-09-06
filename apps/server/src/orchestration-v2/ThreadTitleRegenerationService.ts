@@ -1,11 +1,11 @@
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+import { resolveProjectSettings } from "@t2code/shared/projectSettings";
 import {
   CommandId,
   type ChatAttachment,
   type MessageId,
   type ServerSettingsError,
   type ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";

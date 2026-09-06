@@ -9,7 +9,7 @@ import type {
   OrchestrationV2ThreadProjection,
   OrchestrationV2ThreadStreamItem,
   OrchestrationV2TurnItem,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   dedupeSubagentBodies,
   dedupeTurnItemBodies,
@@ -19,7 +19,7 @@ import {
   omitToolOutputImageData,
   toolOutputImages,
   toolOutputIndicatesFailure,
-} from "@t3tools/shared/toolOutput";
+} from "@t2code/shared/toolOutput";
 
 const MAX_DETAIL_STRING_BYTES = 32_768;
 const MAX_DYNAMIC_VALUE_BYTES = 16_384;

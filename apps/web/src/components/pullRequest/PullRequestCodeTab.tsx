@@ -13,7 +13,7 @@ import type {
   PullRequestReviewPosition,
   PullRequestReviewThread,
   PullRequestThreadCommentsResult,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   ChevronDownIcon,
   ChevronRightIcon,

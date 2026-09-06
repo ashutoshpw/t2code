@@ -6,9 +6,9 @@ import {
   buildMenuItems,
   getGitActionDisabledReason,
   requiresDefaultBranchConfirmation,
-} from "@t3tools/client-runtime/state/vcs";
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/state/vcs";
+import { EnvironmentId, ThreadId } from "@t2code/contracts";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 import {
   CommonActions,
   StackActions,

@@ -24,7 +24,7 @@ import { Platform, View } from "react-native";
 import { useWorkspaceSurface } from "../workspace/useWorkspaceSurface";
 import { useDeviceType } from "../../native/native-layout-metrics";
 import { useCompactWorkspaceTabs } from "../workspace/useSystemWorkspaceTabBar";
-import { deriveProjectGroupLabel } from "@t3tools/client-runtime/state/project-grouping";
+import { deriveProjectGroupLabel } from "@t2code/client-runtime/state/project-grouping";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { hasCloudPublicConfig } from "../cloud/publicConfig";
@@ -221,61 +221,82 @@ function useSettingsIndexSections(): SettingsListSection[] {
           members: scopedProjectMembers,
         })
       : (selectedProject?.label ?? "Unavailable project");
-  const page = (
-    target: SettingsPageTarget,
-    icon: SettingsListRow["icon"],
-    label: string,
-    extra?: Pick<SettingsListRow, "disabled" | "value">,
-  ): SettingsListRow => ({ id: target, icon, label, target, ...extra });
-  const serverPage = (target: SettingsPageTarget, icon: SettingsListRow["icon"], label: string) =>
-    page(target, icon, label, { disabled: noServerTargets });
-  return [
-    {
-      title: "Interface",
-      rows: [
-        page("SettingsAppearance", "paintbrush", "Appearance"),
-        ...(navigationCustomizationAvailable()
-          ? [page("SettingsNavigation", "line.3.horizontal", "Navigation tabs")]
-          : []),
-        ...(Platform.OS === "ios"
-          ? [
-              page("SettingsKeyboard", "keyboard", "Keyboard"),
-              page("SettingsMicrophone", "mic", "Microphone"),
-            ]
-          : []),
-      ],
-    },
-    {
-      title: "Automations",
-      rows: [page("SettingsScheduledTasks", "clock", "Scheduled tasks")],
-    },
-    {
-      title: "Projects & threads",
-      rows: [
-        ...(selectedProjectKey !== null
-          ? [page("SettingsProjectOverview", "folder", "Overview", { value: projectLabel })]
-          : []),
-        page("SettingsOrganization", "folder", "Organization"),
-        page("SettingsThreads", "text.bubble", "Thread behavior"),
-        page("SettingsFollowUp", "arrow.turn.left.up", "Follow-ups"),
-        page("SettingsArchive", "archivebox", "Archived Threads"),
-      ],
-    },
-    {
-      title: "Server settings",
-      rows: [
-        serverPage("SettingsProviderAccounts", "person.crop.circle", "Provider accounts"),
-        serverPage("SettingsEnvironmentNewThreads", "text.bubble", "New threads"),
-        serverPage("SettingsEnvironmentSourceControl", "arrow.triangle.branch", "Source control"),
-        serverPage("SettingsEnvironmentAgentBehavior", "text.alignleft", "Agent behavior"),
-        serverPage("SettingsEnvironmentMaintenance", "arrow.clockwise", "Maintenance"),
-      ],
-    },
-    {
-      title: "App",
-      rows: [page("SettingsAbout", "info.circle", "About T3 Code")],
-    },
-  ];
+  return (
+    <>
+      <SettingsSection title="Interface">
+        <SettingsRow icon="paintbrush" label="Appearance" target="SettingsAppearance" />
+        {navigationCustomizationAvailable() ? (
+          <SettingsRow
+            icon="line.3.horizontal"
+            label="Navigation tabs"
+            target="SettingsNavigation"
+          />
+        ) : null}
+        {Platform.OS === "ios" ? (
+          <>
+            <SettingsRow icon="keyboard" label="Keyboard" target="SettingsKeyboard" />
+            <SettingsRow icon="mic" label="Microphone" target="SettingsMicrophone" />
+          </>
+        ) : null}
+      </SettingsSection>
+
+      <SettingsSection title="Automations">
+        <SettingsRow icon="clock" label="Scheduled tasks" target="SettingsScheduledTasks" />
+      </SettingsSection>
+
+      <SettingsSection title="Projects & threads">
+        {selectedProjectKey !== null ? (
+          <SettingsRow
+            icon="folder"
+            label="Overview"
+            value={projectLabel}
+            target="SettingsProjectOverview"
+          />
+        ) : null}
+        <SettingsRow icon="folder" label="Organization" target="SettingsOrganization" />
+        <SettingsRow icon="text.bubble" label="Thread behavior" target="SettingsThreads" />
+        <SettingsRow icon="arrow.turn.left.up" label="Follow-ups" target="SettingsFollowUp" />
+        <SettingsRow icon="archivebox" label="Archived Threads" target="SettingsArchive" />
+      </SettingsSection>
+
+      <SettingsSection title="Server settings">
+        <SettingsRow
+          icon="person.crop.circle"
+          label="Provider accounts"
+          target="SettingsProviderAccounts"
+          disabled={noServerTargets}
+        />
+        <SettingsRow
+          icon="text.bubble"
+          label="New threads"
+          target="SettingsEnvironmentNewThreads"
+          disabled={noServerTargets}
+        />
+        <SettingsRow
+          icon="arrow.triangle.branch"
+          label="Source control"
+          target="SettingsEnvironmentSourceControl"
+          disabled={noServerTargets}
+        />
+        <SettingsRow
+          icon="text.alignleft"
+          label="Agent behavior"
+          target="SettingsEnvironmentAgentBehavior"
+          disabled={noServerTargets}
+        />
+        <SettingsRow
+          icon="arrow.clockwise"
+          label="Maintenance"
+          target="SettingsEnvironmentMaintenance"
+          disabled={noServerTargets}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="App">
+        <SettingsRow icon="info.circle" label="About T2 Code" target="SettingsAbout" />
+      </SettingsSection>
+    </>
+  );
 }
 
 function useOverflowRows(): SettingsListRow[] {

@@ -1,9 +1,9 @@
-import { createServerEnvironmentAtoms } from "@t3tools/client-runtime/state/server";
+import { createServerEnvironmentAtoms } from "@t2code/client-runtime/state/server";
 import {
   createOutdatedServerDescriptionCommand,
   createOutdatedServerUpdateCommand,
-} from "@t3tools/client-runtime/state/outdatedServerUpdate";
-import { createEnvironmentServerConfigsAtom } from "@t3tools/client-runtime/state/shell";
+} from "@t2code/client-runtime/state/outdatedServerUpdate";
+import { createEnvironmentServerConfigsAtom } from "@t2code/client-runtime/state/shell";
 
 import { environmentCatalog } from "../connection/catalog";
 import { connectionAtomRuntime } from "../connection/runtime";

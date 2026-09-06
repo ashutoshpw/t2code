@@ -3,21 +3,21 @@ import type {
   ScopedThreadRef,
   ThreadLinkedPullRequest,
   ThreadPullRequestLink,
-} from "@t3tools/contracts";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+} from "@t2code/contracts";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import {
   planThreadPullRequestMutation,
   threadPullRequestLinkMode,
-} from "@t3tools/client-runtime/thread-pull-request-compatibility";
+} from "@t2code/client-runtime/thread-pull-request-compatibility";
 import {
   threadPullRequestKeysEqual,
   visibleThreadPullRequests,
-} from "@t3tools/client-runtime/thread-pull-requests";
-import { findProjectForChangeRequest } from "@t3tools/client-runtime/change-request-links";
+} from "@t2code/client-runtime/thread-pull-requests";
+import { findProjectForChangeRequest } from "@t2code/client-runtime/change-request-links";
 import {
   sourceControlClients,
   type ChangeRequestLink,

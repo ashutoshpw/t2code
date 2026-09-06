@@ -2,16 +2,16 @@ import type {
   GitRunStackedActionResult,
   GitStackedAction,
   VcsStatusResult,
-} from "@t3tools/contracts";
-import { isTemporaryWorktreeBranch } from "@t3tools/shared/git";
-import type { ChangeRequestTerminology } from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/contracts";
+import { isTemporaryWorktreeBranch } from "@t2code/shared/git";
+import type { ChangeRequestTerminology } from "@t2code/client-runtime/source-control-clients";
 import {
   changeRequestTerminologyFor,
   type DefaultBranchActionDialogCopy,
   type DefaultBranchConfirmableAction,
   type GitActionIconName,
   type GitDialogAction,
-} from "@t3tools/client-runtime/state/vcs";
+} from "@t2code/client-runtime/state/vcs";
 
 export {
   requiresDefaultBranchConfirmation,
@@ -426,4 +426,4 @@ export function resolveLiveThreadBranchUpdate(input: {
   };
 }
 
-export { resolveAutoFeatureBranchName } from "@t3tools/shared/git";
+export { resolveAutoFeatureBranchName } from "@t2code/shared/git";

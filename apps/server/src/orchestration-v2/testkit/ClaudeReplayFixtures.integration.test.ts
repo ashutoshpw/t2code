@@ -6,7 +6,7 @@ import {
   MessageId,
   ProviderDriverKind,
   type ProviderReplayEntry,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 
 import { ClaudeOrchestratorReplayHarness } from "../Adapters/ClaudeAdapterV2.testkit.ts";

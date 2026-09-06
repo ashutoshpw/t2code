@@ -9,8 +9,8 @@ import * as NodeSqlite from "node:sqlite";
 import { assert, describe, it } from "@effect/vitest";
 import { vi } from "vite-plus/test";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { mergeUsage } from "@t3tools/shared/usageMerge";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { mergeUsage } from "@t2code/shared/usageMerge";
 import {
   EnvironmentId,
   ProviderDriverKind,
@@ -19,7 +19,7 @@ import {
   type UsageSource,
   type UsageSummary,
   type UsageSummaryInput,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Duration from "effect/Duration";
 import * as Clock from "effect/Clock";
 import * as Deferred from "effect/Deferred";

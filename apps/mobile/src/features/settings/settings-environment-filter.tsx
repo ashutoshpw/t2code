@@ -1,14 +1,6 @@
-import type { EnvironmentId } from "@t3tools/contracts";
-import { buildProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type Dispatch,
-  type ReactNode,
-  type SetStateAction,
-} from "react";
+import type { EnvironmentId } from "@t2code/contracts";
+import { buildProjectGroups } from "@t2code/client-runtime/state/project-grouping";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 import { useEnvironments, type EnvironmentPresentation } from "../../state/environments";
 import { useProjects } from "../../state/entities";

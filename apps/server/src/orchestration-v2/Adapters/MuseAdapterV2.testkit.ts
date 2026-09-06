@@ -6,8 +6,8 @@ import {
   ProviderReplayEntry,
   type ProviderReplayEntry as ProviderReplayEntryType,
   type ProviderReplayTranscript,
-} from "@t3tools/contracts";
-import { MuseSettings } from "@t3tools/provider-muse/settings";
+} from "@t2code/contracts";
+import { MuseSettings } from "@t2code/provider-muse/settings";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";

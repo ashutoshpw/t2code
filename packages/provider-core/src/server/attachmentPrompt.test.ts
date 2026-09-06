@@ -2,7 +2,7 @@ import {
   ChatAttachmentId,
   ChatImageAttachment,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { assert, describe, it } from "@effect/vitest";
 
 import { providerMessageTextWithAttachmentPaths } from "./attachmentPrompt.ts";

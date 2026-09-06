@@ -1,4 +1,4 @@
-import { EnvironmentHttpCommonError } from "@t3tools/contracts";
+import { EnvironmentHttpCommonError } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -88,7 +88,7 @@ export class ShellSnapshotLoader extends Context.Service<
       options?: { readonly omitIdleSubagents?: boolean },
     ) => Effect.Effect<Option.Option<DeferredShellSnapshot>>;
   }
->()("@t3tools/client-runtime/state/shellSnapshotHttp/ShellSnapshotLoader") {}
+>()("@t2code/client-runtime/state/shellSnapshotHttp/ShellSnapshotLoader") {}
 
 export const layer: Layer.Layer<ShellSnapshotLoader, never, HttpClient.HttpClient> = Layer.effect(
   ShellSnapshotLoader,

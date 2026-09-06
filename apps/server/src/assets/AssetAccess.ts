@@ -1,4 +1,4 @@
-import type { AssetResource } from "@t3tools/contracts";
+import type { AssetResource } from "@t2code/contracts";
 import {
   AssetAttachmentNotFoundError,
   AssetSourceControlMediaUrlValidationError,
@@ -17,7 +17,7 @@ import {
   ThreadId,
   ToolActivityNativeAppReference,
   TurnItemId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   audioMimeTypeFromExtension,
   hostPreviewMimeTypeFromExtension,
@@ -25,19 +25,19 @@ import {
   isWorkspacePreviewEntryPath,
   WORKSPACE_BROWSER_PREVIEW_EXTENSIONS,
   WORKSPACE_IMAGE_PREVIEW_EXTENSIONS,
-} from "@t3tools/shared/filePreview";
+} from "@t2code/shared/filePreview";
 import {
   IMAGE_DIMENSIONS_HEADER_BYTES,
   readImageDimensions,
   type ImageDimensions,
-} from "@t3tools/shared/imageDimensions";
-import { MCP_APP_MAX_HTML_BYTES } from "@t3tools/shared/mcpApp";
+} from "@t2code/shared/imageDimensions";
+import { MCP_APP_MAX_HTML_BYTES } from "@t2code/shared/mcpApp";
 import {
   isProjectFaviconPath,
   PROJECT_FAVICON_FALLBACK_MARKER,
-} from "@t3tools/shared/projectFavicon";
-import { isNetworkPath } from "@t3tools/shared/path";
-import { MAX_TOOL_OUTPUT_IMAGE_BASE64_LENGTH, toolOutputImages } from "@t3tools/shared/toolOutput";
+} from "@t2code/shared/projectFavicon";
+import { isNetworkPath } from "@t2code/shared/path";
+import { MAX_TOOL_OUTPUT_IMAGE_BASE64_LENGTH, toolOutputImages } from "@t2code/shared/toolOutput";
 import * as Clock from "effect/Clock";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";

@@ -5,7 +5,7 @@ import type {
   UsageDay,
   UsageResolution,
   UsageTokenTotals,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { EMPTY_TOTALS, type UsageRecord } from "@t3tools/provider-core/server/usage";
 import { cacheSavingsUsd, priceUsage, type RateTable } from "./usagePricing.ts";

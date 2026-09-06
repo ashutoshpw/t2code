@@ -8,7 +8,7 @@ import type {
   SelectedFields,
   TranscriptUsageFormat,
   UsageRecord,
-} from "@t3tools/provider-core/server/usage";
+} from "@t2code/provider-core/server/usage";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 

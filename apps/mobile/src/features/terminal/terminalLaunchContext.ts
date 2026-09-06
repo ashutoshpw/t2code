@@ -1,4 +1,4 @@
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type { EnvironmentId, ThreadId } from "@t2code/contracts";
 import { useEffect, useState } from "react";
 
 interface TerminalLocationLike {

@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import type { PullRequestAction } from "@t3tools/contracts";
+import type { PullRequestAction } from "@t2code/contracts";
 import { createContext, use, type ReactNode } from "react";
 import type { ChangeRequestTerminology } from "@t3tools/client-runtime/source-control-clients";
 

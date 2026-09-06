@@ -7,7 +7,7 @@ import {
   PullRequestListProjectError,
   PullRequestListResult,
   resolvePullRequestAuthorFilter,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type {
   ProjectId,
   RepositoryIdentity,
@@ -20,7 +20,7 @@ import type {
   PullRequestListFilters,
   PullRequestListState,
   PullRequestState,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import { toSortableTimestamp } from "../../lib/threadSort";
 import type { PullRequestListSort } from "./pullRequestListPreferences";
