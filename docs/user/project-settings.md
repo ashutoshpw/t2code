@@ -33,3 +33,16 @@ upstream.
 T2 Code only pulls when it can fast-forward and the checkout has no changed files, untracked files,
 or local commits. It skips checkouts on another branch or without an upstream. If a checkout has
 local work, resolve it yourself before automatic pulls can resume.
+
+## Import chat history
+
+Conversations started outside T2 Code can be brought in later. **Settings → Providers → Import
+chats** finds Claude Code and Codex conversations on the machine, creates a project per working
+directory, and imports the conversation history as threads. Pick how far back to look — the last
+30 days, a specific date, or all time. Run import again to pick up conversations that were out of
+range or added since; completed conversations are never imported twice.
+
+Sending a message in an imported conversation continues it with the original agent, so the
+provider's own session history stays intact. Import keeps the visible conversation text (the most
+recent 200 messages per conversation) and omits tool activity and attachments. The same import
+runs during the welcome wizard on a new installation.
