@@ -136,7 +136,7 @@ export class EnvironmentLinks extends Context.Service<
       readonly label: string;
     }) => Effect.Effect<void, EnvironmentLabelUpdatePersistenceError>;
   }
->()("t3code-relay/environments/EnvironmentLinks") {}
+>()("t2code-relay/environments/EnvironmentLinks") {}
 
 function agentAwarenessDeliveryUserKeyCondition(input: {
   readonly environmentId: string;
