@@ -1,10 +1,10 @@
-import { EnvironmentId, USAGE_CONTRACT_VERSION } from "@t3tools/contracts";
+import { EnvironmentId, USAGE_CONTRACT_VERSION } from "@t2code/contracts";
 import { useNavigation } from "@react-navigation/native";
 import {
   isCompatibleUsageContractVersion,
   type DailyTotals,
   type MergedUsage,
-} from "@t3tools/shared/usageMerge";
+} from "@t2code/shared/usageMerge";
 import {
   enumerateDays,
   enumerateHourStarts,
@@ -15,7 +15,7 @@ import {
   formatTokens,
   formatUsd,
   makeWindow,
-} from "@t3tools/shared/usageFormat";
+} from "@t2code/shared/usageFormat";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import Animated, { Easing, FadeIn, LinearTransition, ReduceMotion } from "react-native-reanimated";

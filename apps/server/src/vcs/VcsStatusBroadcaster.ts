@@ -20,9 +20,9 @@ import type {
   VcsStatusRemoteResult,
   VcsStatusResult,
   VcsStatusStreamEvent,
-} from "@t3tools/contracts";
-import { mergeGitStatusParts } from "@t3tools/shared/git";
-import { resolveProjectAutoPull } from "@t3tools/shared/serverSettings";
+} from "@t2code/contracts";
+import { mergeGitStatusParts } from "@t2code/shared/git";
+import { resolveProjectAutoPull } from "@t2code/shared/serverSettings";
 
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
 import * as GitWorkflowService from "../git/GitWorkflowService.ts";

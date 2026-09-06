@@ -17,7 +17,7 @@ import {
   type ServerProviderUsageWindow,
   type UsageLimitSourceSnapshot,
   type UsageLimitSourceSnapshots,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import * as DateTime from "effect/DateTime";
 

@@ -16,7 +16,7 @@ import {
   type OrchestrationThreadActivity,
   type ProviderRuntimeEvent,
   RuntimeRequestId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cache from "effect/Cache";
 import * as Cause from "effect/Cause";
 import * as Crypto from "effect/Crypto";
@@ -27,8 +27,8 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Predicate from "effect/Predicate";
 import * as Stream from "effect/Stream";
-import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
-import { formatTokens } from "@t3tools/shared/usageFormat";
+import { makeDrainableWorker } from "@t2code/shared/DrainableWorker";
+import { formatTokens } from "@t2code/shared/usageFormat";
 
 import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";

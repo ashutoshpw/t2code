@@ -1,5 +1,5 @@
-import type { EnvironmentId } from "@t3tools/contracts";
-import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t3tools/shared/keybindings";
+import type { EnvironmentId } from "@t2code/contracts";
+import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t2code/shared/keybindings";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useEnvironments } from "../../state/environments";

@@ -3,14 +3,14 @@ import {
   type OpenCodeSettings,
   type ServerProviderModel,
   type ServerProviderSkill,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Data from "effect/Data";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 
-import { createModelCapabilities } from "@t3tools/shared/model";
-import { compareSemverVersions } from "@t3tools/shared/semver";
+import { createModelCapabilities } from "@t2code/shared/model";
+import { compareSemverVersions } from "@t2code/shared/semver";
 import {
   buildServerProvider,
   COMPACT_SLASH_COMMAND,

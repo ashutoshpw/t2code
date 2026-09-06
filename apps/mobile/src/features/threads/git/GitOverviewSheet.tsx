@@ -3,8 +3,8 @@ import {
   buildMenuItems,
   getGitActionDisabledReason,
   requiresDefaultBranchConfirmation,
-} from "@t3tools/client-runtime/state/vcs";
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/vcs";
+import { EnvironmentId, ThreadId } from "@t2code/contracts";
 import {
   CommonActions,
   StackActions,

@@ -11,7 +11,7 @@ import type {
   DesktopCaptureConfigApplied,
   DesktopCaptureConfigPreview,
   DesktopCaptureConfigRequest,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   captureConfigKeys,
   editCaptureConfig,

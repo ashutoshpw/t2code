@@ -1,4 +1,4 @@
-import { derivePendingRequests } from "@t3tools/client-runtime/pending-requests";
+import { derivePendingRequests } from "@t2code/client-runtime/pending-requests";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -11,7 +11,7 @@ import {
   TurnId,
   type OrchestrationThread,
   type OrchestrationThreadActivity,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 import {
   agentSpawnSummary,
@@ -2049,7 +2049,7 @@ describe("buildThreadFeed", () => {
       createdAt: string,
       status: ThreadFeedActivity["status"] = "success",
       toolSurface?: "browser" | "computer",
-      toolIcon?: import("@t3tools/contracts").ToolActivityIcon,
+      toolIcon?: import("@t2code/contracts").ToolActivityIcon,
     ): ThreadFeedActivity => ({
       id,
       createdAt,

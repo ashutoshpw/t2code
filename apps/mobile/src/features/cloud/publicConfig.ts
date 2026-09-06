@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
-import { relayClerkTokenOptions } from "@t3tools/shared/relayAuth";
-import { normalizeSecureRelayUrl } from "@t3tools/shared/relayUrl";
+import { relayClerkTokenOptions } from "@t2code/shared/relayAuth";
+import { normalizeSecureRelayUrl } from "@t2code/shared/relayUrl";
 import * as Schema from "effect/Schema";
 
 export class CloudPublicConfigMissingError extends Schema.TaggedError<CloudPublicConfigMissingError>()(

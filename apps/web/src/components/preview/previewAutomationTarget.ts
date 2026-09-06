@@ -1,4 +1,4 @@
-import type { PreviewSessionSnapshot } from "@t3tools/contracts";
+import type { PreviewSessionSnapshot } from "@t2code/contracts";
 
 interface PreviewAutomationSessionIndex {
   readonly snapshot: PreviewSessionSnapshot | null;

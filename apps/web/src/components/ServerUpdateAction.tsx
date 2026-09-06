@@ -1,9 +1,9 @@
-import type { EnvironmentId, ServerSelfUpdateCapability } from "@t3tools/contracts";
-import type { ServerUpdateStage, ServerUpdateState } from "@t3tools/client-runtime/state/server";
+import type { EnvironmentId, ServerSelfUpdateCapability } from "@t2code/contracts";
+import type { ServerUpdateStage, ServerUpdateState } from "@t2code/client-runtime/state/server";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import { type ComponentProps, useRef, useState } from "react";
 
 import { requestConfirmDialog } from "~/confirmDialog";

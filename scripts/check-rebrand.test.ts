@@ -40,6 +40,22 @@ describe("check-rebrand", () => {
     expect(violations.map((v) => v.rule.id)).toEqual(["t3-cli-scope"]);
   });
 
+  it("flags the upstream internal package scope", () => {
+    const violations = findViolations(
+      [
+        { file: "apps/web/src/example.ts", line: `import { Overview } from "@t3tools/contracts";` },
+        {
+          file: "packages/shared/src/example.ts",
+          line: `import { hostProcess } from "@t3tools/shared/hostProcess";`,
+        },
+        { file: "apps/web/src/example.ts", line: `appId: "com.t3tools.t3code"` },
+        { file: "apps/web/src/example.ts", line: `git@github.com:T3Tools/T3Code.git` },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3tools-scope", "t3tools-scope"]);
+  });
+
   it("flags the upstream port including separator literals", () => {
     const violations = findViolations(
       [
@@ -52,7 +68,7 @@ describe("check-rebrand", () => {
     expect(violations.map((v) => v.rule.id)).toEqual(["t3-port", "t3-port"]);
   });
 
-  it("flags quoted legacy schemes except dual-registration lines and legacy files", () => {
+  it("flags every quoted legacy scheme line, including dual registrations", () => {
     const violations = findViolations(
       [
         { file: "apps/desktop/src/app/NewWindow.ts", line: `scheme: "t3code",` },
@@ -68,10 +84,11 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.file)).toEqual(["apps/desktop/src/app/NewWindow.ts"]);
+    expect(violations).toHaveLength(3);
+    expect(new Set(violations.map((v) => v.rule.id))).toEqual(new Set(["t3-scheme"]));
   });
 
-  it("flags the legacy preview scheme except partitions and the mobile legacy list", () => {
+  it("flags the legacy preview scheme except storage partition names", () => {
     const violations = findViolations(
       [
         { file: "apps/mobile/src/App.tsx", line: `"t3code-preview://",` },
@@ -83,7 +100,10 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.file)).toEqual(["apps/web/src/example.ts"]);
+    expect(violations.map((v) => v.file)).toEqual([
+      "apps/mobile/src/App.tsx",
+      "apps/web/src/example.ts",
+    ]);
   });
 
   it("honors baseline entries for known legacy-compat strings", () => {

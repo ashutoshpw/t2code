@@ -1,11 +1,11 @@
-import { MAX_SCRIPT_ID_LENGTH } from "@t3tools/contracts";
+import { MAX_SCRIPT_ID_LENGTH } from "@t2code/contracts";
 import { shortcutLabelForCommand } from "./keybindings";
 import { describe, expect, it } from "vite-plus/test";
 import {
   projectScriptCwd,
   projectScriptRuntimeEnv,
   setupProjectScript,
-} from "@t3tools/shared/projectScripts";
+} from "@t2code/shared/projectScripts";
 
 import {
   buildProjectScript,

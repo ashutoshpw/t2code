@@ -13,10 +13,10 @@ import {
   type DirectoryRecord,
 } from "@electron/asar";
 
-import { fromYaml } from "@t3tools/shared/schemaYaml";
-import { HostProcessArchitecture, HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { clerkFrontendApiHostnameFromPublishableKey } from "@t3tools/shared/relayAuth";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+import { fromYaml } from "@t2code/shared/schemaYaml";
+import { HostProcessArchitecture, HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { clerkFrontendApiHostnameFromPublishableKey } from "@t2code/shared/relayAuth";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
 import rootPackageJson from "../package.json" with { type: "json" };
 import desktopPackageJson from "../apps/desktop/package.json" with { type: "json" };
 import gnomeCaptureBundle from "../apps/desktop/gnome-extension/bundle.json" with { type: "json" };
@@ -53,7 +53,7 @@ import { Command, Flag } from "effect/unstable/cli";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 const LINUX_ICON_SIZES = [16, 22, 24, 32, 48, 64, 128, 256, 512] as const;
-const DESKTOP_APP_ID = "com.t3tools.t3code";
+const DESKTOP_APP_ID = "codes.t2.desktop";
 const APPLE_TEAM_ID_PATTERN = /^[A-Z0-9]{10}$/u;
 
 const BuildPlatform = Schema.Literals(["mac", "linux", "win"]);
@@ -939,7 +939,7 @@ interface StagePackageJson {
   readonly name: string;
   readonly version: string;
   readonly buildVersion: string;
-  readonly t3codeCommitHash: string;
+  readonly t2codeCommitHash: string;
   readonly private: true;
   readonly packageManager: string;
   readonly description: string;
@@ -2668,7 +2668,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   const buildConfig: Record<string, unknown> = {
     appId: DESKTOP_APP_ID,
     productName: resolveDesktopProductName(version),
-    artifactName: "T3-Code-${version}-${arch}.${ext}",
+    artifactName: "codes.t2.desktop-${version}-${arch}.${ext}",
     electronLanguages: [...DESKTOP_ELECTRON_LANGUAGES],
     files: [
       ...DESKTOP_FILE_EXCLUSIONS,
@@ -2720,7 +2720,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       protocols: [
         {
           name: "T2 Code",
-          schemes: ["t2code", "t2code-dev", "t3code", "t3code-dev"],
+          schemes: ["t2code", "t2code-dev"],
         },
       ],
       ...(signed ? { sign: path.join(repoRoot, "scripts/sign-macos.ts") } : {}),
@@ -2758,21 +2758,21 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   if (platform === "linux") {
     buildConfig.linux = {
       target: [target],
-      executableName: "t3code",
+      executableName: "t2code",
       icon: "icons",
       category: "Development",
       // electron-builder turns these into MimeType=x-scheme-handler/<scheme>;
       // in the .desktop entry (Exec already gets %U), so browsers can hand
-      // t2code:// (and legacy t3code://) OAuth callbacks to the app.
+      // t2code:// OAuth callbacks to the app.
       protocols: [
         {
           name: "T2 Code",
-          schemes: ["t2code", "t2code-dev", "t3code", "t3code-dev"],
+          schemes: ["t2code", "t2code-dev"],
         },
       ],
       desktop: {
         entry: {
-          StartupWMClass: "t3code",
+          StartupWMClass: "t2code",
         },
       },
     };
@@ -2826,7 +2826,7 @@ const assertPlatformBuildResources = Effect.fn("assertPlatformBuildResources")(f
 // backend never compiles on the user's machine. node-pty publishes no Linux
 // prebuilt and the WSL Linux Node can't load the Windows/Electron binary, so the
 // Linux CI job builds pty.node and hands it here. We drop it into the staged
-// node-pty's prebuilds/linux-<arch>/ with a t3code marker the WSL preflight
+// node-pty's prebuilds/linux-<arch>/ with a t2code marker the WSL preflight
 // checks (arch + node-pty version; the binary is N-API, hence ABI-stable across
 // Node versions). A missing prebuild is a warning, not an error, so local and
 // non-Windows builds still succeed — they just won't ship a working WSL backend.
@@ -2884,7 +2884,7 @@ const stageWslNodePtyPrebuild = Effect.fn("stageWslNodePtyPrebuild")(function* (
   yield* fs.makeDirectory(prebuildDir, { recursive: true });
   yield* fs.copyFile(input.prebuildPath, path.join(prebuildDir, "pty.node"));
   const markerJson = yield* encodeJsonString({ arch: linuxArch, nodePtyVersion });
-  yield* fs.writeFileString(path.join(prebuildDir, "t3code-wsl-node-pty.json"), `${markerJson}\n`);
+  yield* fs.writeFileString(path.join(prebuildDir, "t2code-wsl-node-pty.json"), `${markerJson}\n`);
 
   yield* Effect.log(
     `[desktop-artifact] Staged WSL node-pty prebuild (linux-${linuxArch}, node-pty ${nodePtyVersion}).`,
@@ -3023,7 +3023,7 @@ export const stageWindowsServerSidecar = Effect.fn("stageWindowsServerSidecar")(
     sidecarDependencies,
   );
   const sidecarPackageJson = {
-    name: "t3code-server",
+    name: "t2code-server",
     version: input.appVersion,
     private: true,
     packageManager: rootPackageJson.packageManager,
@@ -3399,7 +3399,7 @@ export const validateWindowsPackagedPayload = Effect.fn(
         ? []
         : [
             `node_modules/node-pty/prebuilds/linux-${wslArch}/pty.node`,
-            `node_modules/node-pty/prebuilds/linux-${wslArch}/t3code-wsl-node-pty.json`,
+            `node_modules/node-pty/prebuilds/linux-${wslArch}/t2code-wsl-node-pty.json`,
           ]),
     ];
     const missingMembers = requiredMembers.filter((member) => !members.includes(member));
@@ -3767,10 +3767,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       ? path.join(stageAppDir, WINDOWS_SERVER_RESOURCE_SOURCE_DIR, WINDOWS_SERVER_ASAR_RESOURCE)
       : undefined;
   const stagePackageJson: StagePackageJson = {
-    name: "t3code",
+    name: "t2code",
     version: appVersion,
     buildVersion: appVersion,
-    t3codeCommitHash: commitHash,
+    t2codeCommitHash: commitHash,
     private: true,
     packageManager: rootPackageJson.packageManager,
     description: "T2 Code desktop build",
@@ -3901,7 +3901,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const builderArgs = [
     "exec",
     "--filter",
-    "@t3tools/desktop",
+    "@t2code/desktop",
     "--",
     "electron-builder",
     "--projectDir",
@@ -3919,7 +3919,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       shell: builderCommand.shell,
     }),
     {
-      label: `vp exec --filter @t3tools/desktop -- electron-builder --projectDir ${stageAppDir} ${platformConfig.cliFlag} --${options.arch} --publish never`,
+      label: `vp exec --filter @t2code/desktop -- electron-builder --projectDir ${stageAppDir} ${platformConfig.cliFlag} --${options.arch} --publish never`,
       verbose: options.verbose,
     },
   );

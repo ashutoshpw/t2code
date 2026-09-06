@@ -7,9 +7,9 @@ import type {
   ServerProviderAuth,
   ServerProviderModel,
   ServerProviderState,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type * as EffectAcpSchema from "effect-acp/schema";
-import { causeErrorTag } from "@t3tools/shared/observability";
+import { causeErrorTag } from "@t2code/shared/observability";
 import * as Cache from "effect/Cache";
 import * as Duration from "effect/Duration";
 import * as Crypto from "effect/Crypto";
@@ -29,8 +29,8 @@ import {
   createModelCapabilities,
   getProviderOptionBooleanSelectionValue,
   getProviderOptionStringSelectionValue,
-} from "@t3tools/shared/model";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+} from "@t2code/shared/model";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
 
 import {
   buildBooleanOptionDescriptor,

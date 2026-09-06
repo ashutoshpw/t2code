@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -89,7 +89,7 @@ describe("DesktopPreReadyPlatform", () => {
           desktopName = name;
         });
         writeFileSyncMock.mockImplementation((path: string, contents: string) => {
-          if (path === "/xdg/applications/com.t3tools.T3Code.desktop") desktopEntry = contents;
+          if (path === "/xdg/applications/t2code.desktop") desktopEntry = contents;
         });
 
         return Effect.scoped(
@@ -101,7 +101,7 @@ describe("DesktopPreReadyPlatform", () => {
               ),
             );
             const identity = yield* Effect.promise(() => portalIdentity);
-            assert.equal(identity.desktopName, "com.t3tools.T3Code.desktop");
+            assert.equal(identity.desktopName, "t2code.desktop");
             assert.include(identity.desktopEntry ?? "", 'Exec="/Applications/current.AppImage" %U');
             assert.include(identity.desktopEntry ?? "", "Name=T2 Code (Alpha)");
             assert.include(identity.desktopEntry ?? "", "MimeType=x-scheme-handler/t2code;");
@@ -128,7 +128,7 @@ describe("DesktopPreReadyPlatform", () => {
     () =>
       Effect.gen(function* () {
         class ClerkShaped extends Context.Service<ClerkShaped, { readonly ready: true }>()(
-          "@t3tools/desktop/app/DesktopPreReadyPlatform.test/ClerkShaped",
+          "@t2code/desktop/app/DesktopPreReadyPlatform.test/ClerkShaped",
         ) {}
 
         const events: Array<string> = [];
