@@ -415,7 +415,15 @@ const runRelayDeploy = Effect.fn("relay.deploy.run")(
         Layer.mergeAll(
           Layer.effect(
             AlchemyContext,
-            AlchemyContext.pipe(Effect.map((context) => ({ ...context, adopt: options.adopt }))),
+            AlchemyContext.pipe(
+              Effect.map((context) => ({
+                ...context,
+                adopt: options.adopt,
+                // `--yes` also authorizes auto-bootstrapping the Cloudflare
+                // state store, mirroring alchemy's own deploy command.
+                updateStateStore: options.yes,
+              })),
+            ),
           ),
           Layer.succeed(AdoptPolicy, options.adopt),
           Layer.succeed(AuthProviders, {}),
