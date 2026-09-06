@@ -95,5 +95,17 @@ export function applyServerConfigProjection(
         latestEvent: event,
         source: "live",
       }));
+    case "environmentLabelUpdated":
+      return Option.map(current, (projection) => ({
+        config: {
+          ...projection.config,
+          environment: {
+            ...projection.config.environment,
+            label: event.payload.label,
+          },
+        },
+        latestEvent: event,
+        source: "live",
+      }));
   }
 }

@@ -1,5 +1,5 @@
 /**
- * The T3 Connect link lifecycle of this environment: linking it to the relay,
+ * The T2 Connect link lifecycle of this environment: linking it to the relay,
  * applying and reading the link, unlinking, answering the relay's signed health
  * and mint requests, and keeping the managed tunnel registered, recovered and
  * released. HTTP handlers, server startup and shutdown all go through it.
@@ -101,6 +101,7 @@ import {
 import { getOrCreateEnvironmentKeyPairFromSecretStore } from "./environmentKeys.ts";
 import * as ManagedEndpointRuntime from "./ManagedEndpointRuntime.ts";
 import { relayUrlConfig } from "./publicConfig.ts";
+import { synchronizeCurrentEnvironmentLabelWithRelay } from "./EnvironmentLabelRelaySync.ts";
 import {
   filterRelayResponse,
   relayRequestError,
@@ -837,6 +838,13 @@ const make = Effect.gen(function* () {
       } else {
         yield* secrets.remove(CLOUD_ENDPOINT_RUNTIME_CONFIG);
       }
+      yield* synchronizeCurrentEnvironmentLabelWithRelay().pipe(
+        Effect.catch((cause) =>
+          Effect.logWarning("failed to synchronize environment label after relay configuration", {
+            cause,
+          }),
+        ),
+      );
       if (payload.endpointRuntime === null || options?.confirmedOrigin === undefined) {
         return {
           ok: true,

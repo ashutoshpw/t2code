@@ -253,6 +253,7 @@ const makeTestRelay = Effect.fnUntraced(function* (
     Effect.provideService(ThreadManagementService.ThreadManagementService, threads),
     Effect.provideService(ServerEnvironment.ServerEnvironment, {
       getEnvironmentId: Effect.succeed(EnvironmentId.make("relay-environment")),
+      setEnvironmentLabel: () => Effect.void,
       getDescriptor: unused(),
     }),
     Effect.provideService(ProjectService.ProjectService, {

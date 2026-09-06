@@ -3023,11 +3023,26 @@ const layerWsRpc = (
                     )
                   : Stream.empty;
               const settingsUpdates = serverSettings.streamChanges.pipe(
-                Stream.map((settings) => ServerSettings.redactServerSettingsForClient(settings)),
                 Stream.map((settings) => ({
                   version: 1 as const,
                   type: "settingsUpdated" as const,
-                  payload: { settings },
+                  payload: {
+                    settings: ServerSettings.redactServerSettingsForClient(settings),
+                  },
+                })),
+              );
+              const environmentLabelUpdates = serverSettings.streamChanges.pipe(
+                Stream.map((settings) => settings.environmentLabel),
+                Stream.changes,
+                Stream.mapEffect((environmentLabel) =>
+                  serverEnvironment
+                    .setEnvironmentLabel(environmentLabel)
+                    .pipe(Effect.andThen(serverEnvironment.getDescriptor)),
+                ),
+                Stream.map((environment) => ({
+                  version: 1 as const,
+                  type: "environmentLabelUpdated" as const,
+                  payload: { label: environment.label },
                 })),
               );
 
@@ -3037,7 +3052,10 @@ const layerWsRpc = (
                   providerStatuses,
                   Stream.merge(
                     settingsUpdates,
-                    Stream.merge(environmentThemeUpdates, usageLimitSourceUpdates),
+                    Stream.merge(
+                      environmentThemeUpdates,
+                      Stream.merge(usageLimitSourceUpdates, environmentLabelUpdates),
+                    ),
                   ),
                 ),
               );

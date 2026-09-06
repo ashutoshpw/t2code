@@ -2,6 +2,7 @@ import { assert, it } from "@effect/vitest";
 import {
   DEFAULT_SERVER_SETTINGS,
   DEFAULT_MODEL,
+  EnvironmentId,
   ProjectId,
   ProviderInstanceId,
 } from "@t2code/contracts";
@@ -10,10 +11,13 @@ import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
 import * as Ref from "effect/Ref";
-
+import * as Stream from "effect/Stream";
+import * as Scope from "effect/Scope";
+import * as PubSub from "effect/PubSub";
 import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
-
 import * as ServerConfig from "./config.ts";
+import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
+import * as ServerSettings from "./serverSettings.ts";
 import * as ServerRuntimeStartup from "./serverRuntimeStartup.ts";
 
 it("uses the canonical Codex model for auto-bootstrap", () => {
@@ -193,4 +197,44 @@ it.effect("automatic pull only updates enabled, behind, clean default-branch che
     ).pipe(Effect.provideService(GitVcsDriver.GitVcsDriver, git));
     assert.deepStrictEqual(pulled, ["/inherited"]);
   }),
+);
+
+it.effect("environment label updates subscribe before reading the initial snapshot", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const changes = yield* PubSub.unbounded<typeof DEFAULT_SERVER_SETTINGS>();
+      const appliedLabels = yield* Ref.make<ReadonlyArray<string>>([]);
+      const freshLabelApplied = yield* Deferred.make<void>();
+      const staleSettings = { ...DEFAULT_SERVER_SETTINGS, environmentLabel: "stale" };
+      const freshSettings = { ...DEFAULT_SERVER_SETTINGS, environmentLabel: "fresh" };
+      const scope = yield* Scope.Scope;
+
+      const fiber = yield* ServerRuntimeStartup.runEnvironmentLabelUpdates(scope).pipe(
+        Effect.provideService(ServerSettings.ServerSettingsService, {
+          start: Effect.void,
+          ready: Effect.void,
+          getSettings: PubSub.publish(changes, freshSettings).pipe(Effect.as(staleSettings)),
+          updateSettings: () => Effect.die("unused"),
+          streamChanges: Stream.empty,
+          subscribeChanges: PubSub.subscribe(changes).pipe(
+            Effect.map((subscription) => Stream.fromSubscription(subscription)),
+          ),
+        }),
+        Effect.provideService(ServerEnvironment.ServerEnvironment, {
+          getEnvironmentId: Effect.succeed(EnvironmentId.make("environment-test")),
+          getDescriptor: Effect.die("unused"),
+          setEnvironmentLabel: (label) =>
+            Ref.update(appliedLabels, (labels) => [...labels, label]).pipe(
+              Effect.andThen(
+                label === "fresh" ? Deferred.succeed(freshLabelApplied, undefined) : Effect.void,
+              ),
+            ),
+        }),
+      );
+
+      yield* Deferred.await(freshLabelApplied);
+      assert.deepStrictEqual(yield* Ref.get(appliedLabels), ["stale", "fresh"]);
+      yield* Fiber.interrupt(fiber);
+    }),
+  ),
 );

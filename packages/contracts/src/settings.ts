@@ -1288,6 +1288,9 @@ export const ServerSettings = Schema.Struct({
   previousWorktreesDirectories: Schema.Array(TrimmedString).pipe(
     Schema.withDecodingDefault(Effect.succeed([])),
   ),
+  environmentLabel: TrimmedString.check(Schema.isMaxLength(40)).pipe(
+    Schema.withDecodingDefault(Effect.succeed("")),
+  ),
   responseStreamingMode: ResponseStreamingMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("paragraph" as const)),
   ),
@@ -1701,6 +1704,7 @@ export const ServerSettingsPatch = Schema.Struct({
   ),
   worktreesDirectory: Schema.optionalKey(TrimmedString),
   // Server settings
+  environmentLabel: Schema.optionalKey(TrimmedString.check(Schema.isMaxLength(40))),
   responseStreamingMode: Schema.optionalKey(ResponseStreamingMode),
   enableProviderUpdateChecks: Schema.optionalKey(Schema.Boolean),
   continueThreadsAfterServerUpdate: Schema.optionalKey(Schema.Boolean),
