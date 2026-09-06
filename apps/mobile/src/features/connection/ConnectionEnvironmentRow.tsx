@@ -2,7 +2,11 @@ import { ConnectionTraceId } from "./ConnectionTraceId";
 import { SymbolView } from "../../components/AppSymbol";
 import { connectionStatusText } from "@t2code/client-runtime/connection";
 import type { AtomCommandResult } from "@t2code/client-runtime/state/runtime";
-import { type EnvironmentId, resolveEnvironmentMachineKind } from "@t2code/contracts";
+import {
+  AuthOrchestrationOperateScope,
+  type EnvironmentId,
+  resolveEnvironmentMachineKind,
+} from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/unstable/reactivity";
@@ -20,6 +24,7 @@ import type { ConnectedEnvironmentSummary } from "../../state/remote-runtime-typ
 import { serverEnvironment } from "../../state/server";
 import { ConnectionFormField } from "./ConnectionFormField";
 import { ConnectionStatusDot } from "./ConnectionStatusDot";
+import { useEnvironmentSessionState } from "../../state/session";
 
 function connectionStatusLabel(environment: ConnectedEnvironmentSummary): string | null {
   if (!environment.isEnabled && environment.connectionState !== "unsupported") {
@@ -40,12 +45,12 @@ export function ConnectionEnvironmentRow(props: {
   readonly onReconnect: (environmentId: EnvironmentId) => void;
   readonly onRemove: (environmentId: EnvironmentId) => void;
   readonly onSetEnabled: (environmentId: EnvironmentId, enabled: boolean) => void;
+  readonly onRename: (environmentId: EnvironmentId) => void;
   readonly onUpdate: (
     environmentId: EnvironmentId,
-    updates: { readonly label: string; readonly displayUrl: string },
+    updates: { readonly label?: string; readonly displayUrl: string },
   ) => Promise<AtomCommandResult<unknown, unknown>>;
 }) {
-  const [label, setLabel] = useState(props.environment.environmentLabel);
   const [url, setUrl] = useState(props.environment.displayUrl);
   const [label, setLabel] = useState(props.environment.environmentLabel);
   const serverConfig = useAtomValue(
@@ -61,9 +66,15 @@ export function ConnectionEnvironmentRow(props: {
     enabled &&
     (props.environment.connectionState === "connecting" ||
       props.environment.connectionState === "reconnecting");
+  const sessionState = useEnvironmentSessionState(props.environment.environmentId);
+  const canRename =
+    props.environment.connectionState === "connected" &&
+    Boolean(
+      sessionState.data?.authenticated &&
+      sessionState.data.scopes?.includes(AuthOrchestrationOperateScope),
+    );
   const handleSave = useCallback(async () => {
     const result = await props.onUpdate(props.environment.environmentId, {
-      label: label.trim(),
       displayUrl: url.trim(),
     });
     if (AsyncResult.isSuccess(result)) {
@@ -75,7 +86,7 @@ export function ConnectionEnvironmentRow(props: {
       "Could not update environment",
       error instanceof Error ? error.message : "The environment could not be updated.",
     );
-  }, [label, url, props]);
+  }, [url, props]);
 
   return (
     <Animated.View layout={LinearTransition.duration(250)} className="bg-grouped-card">
@@ -138,15 +149,35 @@ export function ConnectionEnvironmentRow(props: {
           onValueChange={(next) => props.onSetEnabled(props.environment.environmentId, next)}
           value={enabled}
         />
-        <SymbolView
-          name={props.opensDetails ? "chevron.right" : "chevron.down"}
-          size={12}
-          tintColorClassName="accent-icon-subtle"
-          type="monochrome"
-          style={{
-            transform: [{ rotate: props.expanded ? "180deg" : "0deg" }],
-          }}
-        />
+        <View className="flex-row items-center gap-2">
+          {canRename ? (
+            <Pressable
+              accessibilityLabel={`Rename ${props.environment.environmentLabel}`}
+              accessibilityRole="button"
+              className="h-8 w-8 items-center justify-center rounded-full active:bg-subtle"
+              onPress={(event) => {
+                event.stopPropagation();
+                props.onRename(props.environment.environmentId);
+              }}
+            >
+              <SymbolView
+                name="pencil"
+                size={13}
+                tintColorClassName={"accent-icon-subtle"}
+                type="monochrome"
+              />
+            </Pressable>
+          ) : null}
+          <SymbolView
+            name={props.opensDetails ? "chevron.right" : "chevron.down"}
+            size={12}
+            tintColorClassName={"accent-icon-subtle"}
+            type="monochrome"
+            style={{
+              transform: [{ rotate: props.expanded ? "180deg" : "0deg" }],
+            }}
+          />
+        </View>
       </Pressable>
 
       {props.expanded ? (
