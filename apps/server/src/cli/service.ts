@@ -88,7 +88,7 @@ export function formatServiceStatus(
       `  Unit: ${status.unitPath}`,
       `  Logs: ${status.logPath}`,
       ...problems,
-      `  Next: Run \`t3 update ${installedVersion}\` to match it, or pass \`--allow-downgrade\` to \`t2code service install\` explicitly.`,
+      `  Next: Run \`t2code update ${installedVersion}\` to match it, or pass \`--allow-downgrade\` to \`t2code service install\` explicitly.`,
     ].join("\n");
   }
   return [
@@ -139,17 +139,17 @@ const serviceInstallCommand = Command.make("install", serviceReconcileFlags).pip
   ),
 );
 
-// Kept one release for muscle memory and old docs. It did what `t3 service
-// install` does; the way to move to a newer release is `t3 update`.
+// Kept one release for muscle memory and old docs. It did what `t2code service
+// install` does; the way to move to a newer release is `t2code update`.
 const serviceUpdateCommand = Command.make("update", serviceReconcileFlags).pipe(
-  Command.withDescription("Deprecated. Run `t3 update` to move to a newer release."),
+  Command.withDescription("Deprecated. Run `t2code update` to move to a newer release."),
   Command.unlisted,
   Command.withHandler((flags) =>
     runServiceCommand(
       flags,
       Effect.gen(function* () {
         yield* Console.log(
-          "`t3 service update` is deprecated: run `t3 update` to move to a newer release, or `t3 service install` to repair the service. Repairing now.",
+          "`t2code service update` is deprecated: run `t2code update` to move to a newer release, or `t2code service install` to repair the service. Repairing now.",
         );
         const result = yield* reconcileService({ allowDowngrade: flags.allowDowngrade });
         if (!result.changed) {
@@ -168,7 +168,7 @@ const serviceUpdateCommand = Command.make("update", serviceReconcileFlags).pipe(
 
 const serviceRestartCommand = Command.make("restart", projectLocationFlags).pipe(
   Command.withDescription(
-    "Restart the background service. Picks up a version installed by `t3 update` that was not restarted at the time.",
+    "Restart the background service. Picks up a version installed by `t2code update` that was not restarted at the time.",
   ),
   Command.withHandler((flags) =>
     runServiceCommand(
@@ -179,8 +179,8 @@ const serviceRestartCommand = Command.make("restart", projectLocationFlags).pipe
         const restarted = yield* service.restart;
         yield* Console.log(
           restarted
-            ? `Restarted the T3 Code service${status.installedVersion === undefined ? "" : ` on t3@${status.installedVersion}`}.`
-            : "T3 Code service is not installed.",
+            ? `Restarted the T2 Code service${status.installedVersion === undefined ? "" : ` on t3@${status.installedVersion}`}.`
+            : "T2 Code service is not installed.",
         );
       }),
     ),

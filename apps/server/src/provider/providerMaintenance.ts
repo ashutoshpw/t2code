@@ -2,11 +2,11 @@ import {
   ProviderDriverKind,
   type ServerProvider,
   type ServerProviderVersionAdvisory,
-} from "@t3tools/contracts";
-import { compareSemverVersions } from "@t3tools/shared/semver";
-import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { causeErrorTag } from "@t3tools/shared/observability";
-import { resolveCommandPath } from "@t3tools/shared/shell";
+} from "@t2code/contracts";
+import { compareSemverVersions } from "@t2code/shared/semver";
+import { HostProcessPlatform } from "@t2code/shared/hostProcess";
+import { causeErrorTag } from "@t2code/shared/observability";
+import { resolveCommandPath } from "@t2code/shared/shell";
 import * as Cache from "effect/Cache";
 import * as Config from "effect/Config";
 import * as Context from "effect/Context";
@@ -129,7 +129,7 @@ export interface ProviderVersionCacheEntry {
 }
 
 export const ProviderVersionCache = Context.Reference<Map<string, ProviderVersionCacheEntry>>(
-  "@t3tools/server/providerMaintenance/ProviderVersionCache",
+  "@t2code/server/providerMaintenance/ProviderVersionCache",
   {
     defaultValue: () => new Map(),
   },
@@ -397,7 +397,7 @@ const runHomebrew = Effect.fn("runHomebrew")(function* (
 /**
  * Derive update capabilities from where the executable actually lives. Every
  * package-manager branch has evidence that the named tool owns that path, so
- * T3 Code never runs a package manager against an install it did not create.
+ * T2 Code never runs a package manager against an install it did not create.
  * An unproven install falls back to the provider's own updater, which detects
  * its installer itself, and stays manual-only without one.
  */
