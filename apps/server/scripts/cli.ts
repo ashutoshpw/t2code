@@ -155,7 +155,7 @@ const buildExeCmd = Command.make(
 );
 
 /**
- * Publishes the `t3.tgz` launcher scripts/build-npm-launcher.ts produced. The
+ * Publishes the `t2.tgz` launcher scripts/build-npm-launcher.ts produced. The
  * launcher downloads its executable from the GitHub Release, so the release
  * workflow runs this only after that release is published.
  */
@@ -176,7 +176,19 @@ const publishCmd = Command.make(
       const path = yield* Path.Path;
       const fs = yield* FileSystem.FileSystem;
       const packagesDir = path.resolve(config.packagesDir);
-      const launcherTarball = path.join(packagesDir, "t3.tgz");
+      const scopeDir = path.join(packagesDir, "@t2code");
+      const launcherTarball = path.join(packagesDir, "@t2code/cli.tgz");
+      const platformTarballs = (yield* fs
+        .readDirectory(scopeDir)
+        .pipe(Effect.orElseSucceed((): ReadonlyArray<string> => [])))
+        .filter((entry) => entry.startsWith("t2-") && entry.endsWith(".tgz"))
+        .sort()
+        .map((entry) => path.join(scopeDir, entry));
+      if (platformTarballs.length === 0) {
+        return yield* new ServerCliBuildAssetMissingError({
+          assetPath: path.join(scopeDir, "t2-<platform>.tgz"),
+        });
+      }
       if (!(yield* fs.exists(launcherTarball))) {
         return yield* new ServerCliBuildAssetMissingError({ assetPath: launcherTarball });
       }
@@ -195,7 +207,7 @@ const publishCmd = Command.make(
         }),
       );
     }),
-).pipe(Command.withDescription("Publish the t3 launcher to npm."));
+).pipe(Command.withDescription("Publish the t2 launcher to npm."));
 
 const cli = Command.make("cli").pipe(
   Command.withDescription("T3 server build & publish CLI."),

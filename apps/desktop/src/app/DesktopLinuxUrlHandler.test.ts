@@ -28,10 +28,10 @@ const makeEnvironment = (path: Path.Path, overrides: Record<string, unknown> = {
     isPackaged: true,
     isDevelopment: false,
     displayName: "T2 Code (Alpha)",
-    linuxDesktopEntryName: "com.t3tools.T3Code.desktop",
-    linuxWmClass: "t3code",
+    linuxDesktopEntryName: "t2code.desktop",
+    linuxWmClass: "t2code",
     linuxApplicationsDir: "/home/alice/.local/share/applications",
-    appImagePath: Option.some("/home/alice/Applications/T3-Code.AppImage"),
+    appImagePath: Option.some("/home/alice/Applications/T2-Code.AppImage"),
     path,
     ...overrides,
   } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]);
@@ -160,21 +160,48 @@ describe("DesktopLinuxUrlHandler", () => {
   it("renders a scheme-handler desktop entry with freedesktop Exec quoting", () => {
     const entry = DesktopLinuxUrlHandler.renderUrlHandlerDesktopEntry({
       displayName: "T2 Code (Nightly)",
-      execTarget: '/home/al ice/Apps/T3 "100%" $HOME\\x.AppImage',
-      scheme: "t3code",
-      iconPath: "/home/al ice/icons/T3\\x.png",
+      execTarget: '/home/al ice/Apps/T2 "100%" $HOME\\x.AppImage',
+      scheme: "t2code",
+      iconPath: "/home/al ice/icons/T2\\x.png",
     });
 
     assert.include(entry, "[Desktop Entry]");
     assert.include(entry, "Name=T2 Code (Nightly)");
     assert.include(
       entry,
-      'Exec="/home/al ice/Apps/T3 \\\\"100%%\\\\" \\\\$HOME\\\\\\\\x.AppImage" %U',
+      'Exec="/home/al ice/Apps/T2 \\\\"100%%\\\\" \\\\$HOME\\\\\\\\x.AppImage" %U',
     );
     assert.include(entry, "NoDisplay=true");
     assert.notInclude(entry, "StartupWMClass=");
-    assert.include(entry, "MimeType=x-scheme-handler/t3code;");
-    assert.include(entry, "Icon=/home/al ice/icons/T3\\\\x.png");
+    assert.include(entry, "MimeType=x-scheme-handler/t2code;");
+    assert.include(entry, "Icon=/home/al ice/icons/T2\\\\x.png");
+  });
+
+  it("carries structured context on registration errors", () => {
+    const writeError = new DesktopLinuxUrlHandler.DesktopLinuxUrlHandlerRegistrationError({
+      step: "write-desktop-entry",
+      scheme: "t2code",
+      desktopEntryPath: "/home/alice/.local/share/applications/t2code.desktop",
+      cause: new Error("boom"),
+    });
+    assert.equal(
+      writeError.message,
+      "Failed to register the t2code:// URL handler (step: write-desktop-entry).",
+    );
+    assert.equal(
+      writeError.desktopEntryPath,
+      "/home/alice/.local/share/applications/t2code.desktop",
+    );
+
+    const exitError = new DesktopLinuxUrlHandler.DesktopLinuxUrlHandlerRegistrationError({
+      step: "set-default-handler",
+      scheme: "t2code",
+      exitCode: 4,
+    });
+    assert.equal(
+      exitError.message,
+      "Failed to register the t2code:// URL handler (step: set-default-handler, xdg-mime exit code 4).",
+    );
   });
 
   it.effect(
@@ -189,13 +216,13 @@ describe("DesktopLinuxUrlHandler", () => {
         assert.equal(recorded.files.length, 1);
         assert.equal(
           recorded.files[0]?.path,
-          "/home/alice/.local/share/applications/com.t3tools.T3Code.desktop",
+          "/home/alice/.local/share/applications/t2code.desktop",
         );
         assert.include(
           recorded.files[0]?.content,
-          "Exec=/home/alice/Applications/T3-Code.AppImage %U",
+          "Exec=/home/alice/Applications/T2-Code.AppImage %U",
         );
-        assert.include(recorded.files[0]?.content, "MimeType=x-scheme-handler/t3code;");
+        assert.include(recorded.files[0]?.content, "MimeType=x-scheme-handler/t2code;");
         assert.deepEqual(recorded.commands, [
           {
             command: "update-desktop-database",
@@ -203,13 +230,12 @@ describe("DesktopLinuxUrlHandler", () => {
           },
           {
             command: "xdg-mime",
-            args: ["default", "com.t3tools.T3Code.desktop", "x-scheme-handler/t3code"],
+            args: ["default", "t2code.desktop", "x-scheme-handler/t2code"],
           },
         ]);
       });
     },
   );
-
   it.effect("falls back to the process executable outside an AppImage", () => {
     const recorded = emptyRecording();
 
@@ -234,11 +260,10 @@ describe("DesktopLinuxUrlHandler", () => {
     return Effect.gen(function* () {
       yield* runRegister(recorded, {
         existingEntry: DesktopLinuxUrlHandler.renderUrlHandlerDesktopEntry({
-          displayName: "T3 Code (Alpha)",
-          execTarget: "/home/alice/Applications/T3-Code.AppImage",
-          scheme: "t3code",
-          iconPath: "/home/alice/.local/share/icons/com.t3tools.T3Code.desktop.png",
-        }),
+          displayName: "T2 Code (Alpha)",
+          execTarget: "/home/alice/Applications/T2-Code.AppImage",
+          scheme: "t2code",
+          iconPath: "/home/alice/.local/share/icons/t2code.desktop.png",        }),
       });
 
       assert.deepEqual(recorded.files, []);
@@ -250,7 +275,7 @@ describe("DesktopLinuxUrlHandler", () => {
         },
         {
           command: "xdg-mime",
-          args: ["default", "com.t3tools.T3Code.desktop", "x-scheme-handler/t3code"],
+          args: ["default", "t2code.desktop", "x-scheme-handler/t2code"],
         },
       ]);
     });
@@ -258,20 +283,20 @@ describe("DesktopLinuxUrlHandler", () => {
 
   it.effect("installs a persistent icon even when the desktop entry is already current", () => {
     const recorded = emptyRecording();
-    const iconPath = "/home/alice/.local/share/icons/com.t3tools.T3Code.desktop.png";
+    const iconPath = "/home/alice/.local/share/icons/t2code.desktop.png";
     return Effect.gen(function* () {
       yield* runRegister(recorded, {
-        iconSource: "/tmp/.mount_T3/resources/icon.png",
+        iconSource: "/tmp/.mount_T2/resources/icon.png",
         existingEntry: DesktopLinuxUrlHandler.renderUrlHandlerDesktopEntry({
-          displayName: "T3 Code (Alpha)",
-          execTarget: "/home/alice/Applications/T3-Code.AppImage",
-          scheme: "t3code",
+          displayName: "T2 Code (Alpha)",
+          execTarget: "/home/alice/Applications/T2-Code.AppImage",
+          scheme: "t2code",
           iconPath,
         }),
       });
       assert.deepEqual(recorded.files, []);
       assert.deepEqual(recorded.copies, [
-        { source: "/tmp/.mount_T3/resources/icon.png", destination: iconPath },
+        { source: "/tmp/.mount_T2/resources/icon.png", destination: iconPath },
       ]);
       assert.equal(recorded.commands.at(-1)?.command, "xdg-mime");
     });
@@ -281,7 +306,7 @@ describe("DesktopLinuxUrlHandler", () => {
     const recorded = emptyRecording();
     return Effect.gen(function* () {
       yield* runRegister(recorded, {
-        iconSource: "/tmp/.mount_T3/resources/icon.png",
+        iconSource: "/tmp/.mount_T2/resources/icon.png",
         iconCopyError: PlatformError.systemError({
           _tag: "PermissionDenied",
           module: "FileSystem",
@@ -306,14 +331,14 @@ describe("DesktopLinuxUrlHandler", () => {
       yield* runRegister(unpackaged, {
         environment: {
           isPackaged: false,
-          linuxDesktopEntryName: "com.t3tools.T3Code.Development.desktop",
+          linuxDesktopEntryName: "t2code-dev.desktop",
         },
       });
 
       assert.deepEqual(nonLinux.files, []);
       assert.equal(
         unpackaged.files[0]?.path,
-        "/home/alice/.local/share/applications/com.t3tools.T3Code.Development.desktop",
+        "/home/alice/.local/share/applications/t2code-dev.desktop",
       );
       assert.deepEqual(unpackaged.commands, []);
     });
@@ -333,7 +358,7 @@ describe("DesktopLinuxUrlHandler", () => {
           module: "FileSystem",
           method: "writeFileString",
           description: "read-only filesystem",
-          pathOrDescriptor: "/home/alice/.local/share/applications/com.t3tools.T3Code.desktop",
+          pathOrDescriptor: "/home/alice/.local/share/applications/t2code.desktop",
         }),
       });
 
