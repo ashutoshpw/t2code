@@ -94,7 +94,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         assert.deepStrictEqual(getDevRunnerModeArgs("dev:desktop"), [
           "run",
           "--filter=@t3tools/desktop",
-          "--filter=@t3tools/web",
+          "--filter=@t2code/web",
           "dev",
         ]);
       }),
@@ -105,7 +105,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         assert.deepStrictEqual(getDevRunnerModeArgs("dev"), [
           "run",
           "--filter=@t3tools/contracts",
-          "--filter=@t3tools/web",
+          "--filter=@t2code/web",
           "--filter=@t2code/cli",
           "--parallel",
           "dev",
