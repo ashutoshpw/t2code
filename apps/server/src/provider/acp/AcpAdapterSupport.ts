@@ -81,11 +81,6 @@ export function selectAcpPermissionOptionId(
     (entry) => entry.kind === kind && entry.optionId.trim().length > 0,
   );
   if (option !== undefined) return option.optionId;
-  if (decision === "decline") {
-    return request.options.find(
-      (entry) => entry.kind === "reject_always" && entry.optionId.trim().length > 0,
-    )?.optionId;
-  }
   return undefined;
 }
 
@@ -102,7 +97,9 @@ export function acpApprovalOptions(
   if (hasOption("allow_always")) {
     options.push({ decision: "acceptForSession", label: "Allow for this thread" });
   }
-  if (hasOption("reject_once") || hasOption("reject_always")) {
+  // The public contract has no persistent-denial decision. Never surface a
+  // generic "Deny" action that would silently select ACP's reject_always kind.
+  if (hasOption("reject_once")) {
     options.push({ decision: "decline", label: "Deny" });
   }
   options.push({ decision: "cancel", label: "Cancel" });

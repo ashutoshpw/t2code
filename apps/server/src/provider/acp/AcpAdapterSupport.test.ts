@@ -55,7 +55,7 @@ describe("AcpAdapterSupport", () => {
         },
         "decline",
       ),
-    ).toBe("opaque-always-deny");
+    ).toBeUndefined();
   });
 
   it("advertises only decisions represented by ACP option kinds", () => {
@@ -72,6 +72,13 @@ describe("AcpAdapterSupport", () => {
       { decision: "decline", label: "Deny" },
       { decision: "cancel", label: "Cancel" },
     ]);
+
+    expect(
+      acpApprovalOptions({
+        ...request,
+        options: [{ optionId: "reject-all", name: "Reject all", kind: "reject_always" }],
+      }),
+    ).toEqual([{ decision: "cancel", label: "Cancel" }]);
   });
 
   it("maps ACP request errors to provider adapter request errors", () => {
