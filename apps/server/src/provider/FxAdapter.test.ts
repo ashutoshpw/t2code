@@ -75,10 +75,9 @@ function collectFxEvents(
   );
 }
 
-const fxAdapterTestLayer = ServerConfig.layerTest(
-  process.cwd(),
-  { prefix: "t3code-fx-adapter-test-" },
-).pipe(Layer.provideMerge(NodeServices.layer));
+const fxAdapterTestLayer = ServerConfig.layerTest(process.cwd(), {
+  prefix: "t3code-fx-adapter-test-",
+}).pipe(Layer.provideMerge(NodeServices.layer));
 
 const runFxAdapterTest = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(Effect.scoped, Effect.provide(fxAdapterTestLayer));
