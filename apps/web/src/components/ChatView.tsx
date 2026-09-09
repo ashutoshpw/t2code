@@ -239,7 +239,7 @@ import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../termina
 import { useKnownTerminalSessions, useThreadRunningTerminalIds } from "../state/terminalSessions";
 import { useEnvironmentQueryRefresh } from "../state/query";
 import { useEnvironmentScope } from "~/state/session";
-import { primaryServerKeybindingsAtom, serverEnvironment } from "../state/server";
+import { primaryServerKeybindingsAtom, primaryServerSettingsAtom, serverEnvironment } from "../state/server";
 import { hostEnvironmentIdAtom } from "../state/primaryEnvironment";
 import { threadEnvironment } from "../state/threads";
 import {
