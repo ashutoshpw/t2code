@@ -296,7 +296,7 @@ function applyRequestedSessionConfiguration<E>(input: {
       return;
     }
 
-    yield* input.runtime.setMode(requestedModeId).pipe(
+    yield* setCursorSessionMode(input.runtime, requestedModeId).pipe(
       Effect.mapError((cause) =>
         input.mapError({
           cause,
@@ -314,6 +314,27 @@ function selectAutoApprovedPermissionOption(
     selectAcpPermissionOptionId(request, "acceptForSession") ??
     selectAcpPermissionOptionId(request, "accept")
   );
+}
+
+function isAcpMethodNotFound(cause: unknown): boolean {
+  return Schema.is(EffectAcpErrors.AcpRequestError)(cause) && cause.code === -32601;
+}
+
+/**
+ * Prefer ACP's native mode request, retaining the config-option fallback for
+ * older Cursor agents that only expose `mode` through session configuration.
+ */
+function setCursorSessionMode(
+  runtime: AcpSessionRuntime.AcpSessionRuntime["Service"],
+  modeId: string,
+): Effect.Effect<EffectAcpSchema.SetSessionModeResponse, EffectAcpErrors.AcpError> {
+  return runtime
+    .setSessionMode(modeId)
+    .pipe(
+      Effect.catch((cause) =>
+        isAcpMethodNotFound(cause) ? runtime.setMode(modeId) : Effect.fail(cause),
+      ),
+    );
 }
 
 export function makeCursorAdapter(

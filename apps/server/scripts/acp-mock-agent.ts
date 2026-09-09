@@ -51,6 +51,7 @@ const emitOverlappingXAiPromptCompleteOutOfOrder =
   process.env.T3_ACP_EMIT_OVERLAPPING_XAI_PROMPT_COMPLETE_OUT_OF_ORDER === "1";
 const failPrompt = process.env.T3_ACP_FAIL_PROMPT === "1";
 const failSetConfigOption = process.env.T3_ACP_FAIL_SET_CONFIG_OPTION === "1";
+const disableNativeMode = process.env.T3_ACP_DISABLE_NATIVE_MODE === "1";
 const exitOnSetConfigOption = process.env.T3_ACP_EXIT_ON_SET_CONFIG_OPTION === "1";
 const promptResponseText = process.env.T3_ACP_PROMPT_RESPONSE_TEXT;
 const initialGrokReasoningEffort =
@@ -535,6 +536,9 @@ const program = Effect.gen(function* () {
 
   yield* agent.handleSetSessionMode((request) =>
     Effect.gen(function* () {
+      if (disableNativeMode) {
+        return yield* AcpError.AcpRequestError.methodNotFound("session/set_mode");
+      }
       if (!availableModes.some((mode) => mode.id === request.modeId)) {
         return yield* AcpError.AcpRequestError.invalidParams(
           `Unknown mock mode id: ${request.modeId}`,
