@@ -3,11 +3,14 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   applyGitStatusStreamEvent,
+  buildGeneratedWorktreeBranchName,
   buildTemporaryWorktreeBranchName,
   isTemporaryWorktreeBranch,
   normalizeGitRemoteUrl,
   parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
   parseOriginUrlFromGitConfig,
+  sanitizeWorktreeBranchPrefix,
+  temporaryWorktreeBranchPrefixes,
   WORKTREE_BRANCH_PREFIX,
 } from "./git.ts";
 
@@ -177,6 +180,47 @@ describe("isTemporaryWorktreeBranch", () => {
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/feature/demo`)).toBe(false);
     expect(isTemporaryWorktreeBranch("main")).toBe(false);
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef-extra`)).toBe(false);
+  });
+
+  it("still recognizes the legacy t3code prefix without configuration", () => {
+    expect(isTemporaryWorktreeBranch("t3code/deadbeef")).toBe(true);
+    expect(isTemporaryWorktreeBranch("t3code/f4ae4e0e-f971-4d48-b4f2-9cf0aa54ab12")).toBe(true);
+    expect(isTemporaryWorktreeBranch("t3code/feature/demo")).toBe(false);
+  });
+
+  it("recognizes a configured custom prefix alongside the defaults", () => {
+    const prefixes = temporaryWorktreeBranchPrefixes("acme");
+    expect(isTemporaryWorktreeBranch("acme/deadbeef", prefixes)).toBe(true);
+    expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef`, prefixes)).toBe(true);
+    expect(isTemporaryWorktreeBranch("t3code/deadbeef", prefixes)).toBe(true);
+    expect(isTemporaryWorktreeBranch("acme/feature/demo", prefixes)).toBe(false);
+    // A custom prefix equal to a default never duplicates or displaces.
+    expect(temporaryWorktreeBranchPrefixes(WORKTREE_BRANCH_PREFIX)).toEqual([
+      WORKTREE_BRANCH_PREFIX,
+      "t3code",
+    ]);
+  });
+
+  it("sanitizes configured prefixes to a single safe path segment", () => {
+    expect(sanitizeWorktreeBranchPrefix("Acme Corp")).toBe("acme-corp");
+    expect(sanitizeWorktreeBranchPrefix("--weird--prefix--")).toBe("weird-prefix");
+    expect(sanitizeWorktreeBranchPrefix("has/slashes")).toBe("has-slashes");
+    expect(sanitizeWorktreeBranchPrefix("")).toBe(WORKTREE_BRANCH_PREFIX);
+    expect(sanitizeWorktreeBranchPrefix("///")).toBe(WORKTREE_BRANCH_PREFIX);
+    expect(sanitizeWorktreeBranchPrefix("x".repeat(40))).toBe("x".repeat(32));
+  });
+
+  it("builds a generated branch name under the configured prefix", () => {
+    expect(buildGeneratedWorktreeBranchName("Fix Toast Copy")).toBe(
+      `${WORKTREE_BRANCH_PREFIX}/fix-toast-copy`,
+    );
+    expect(buildGeneratedWorktreeBranchName("refs/heads/Feature/Demo", "acme")).toBe(
+      "acme/feature/demo",
+    );
+    expect(buildGeneratedWorktreeBranchName(`${WORKTREE_BRANCH_PREFIX}/already`, "acme")).toBe(
+      "acme/already",
+    );
+    expect(buildGeneratedWorktreeBranchName("!!!")).toBe(`${WORKTREE_BRANCH_PREFIX}/update`);
   });
 });
 
