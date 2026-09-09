@@ -585,6 +585,7 @@ cursorAdapterTestLayer("CursorAdapterLive", (it) => {
               (entry.params as Record<string, unknown> | undefined)?.configId === "mode"),
         );
       assert.isDefined(modeRequest);
+      assert.equal(modeRequest?.method, "session/set_mode");
       assert.equal(
         (modeRequest?.params as Record<string, unknown> | undefined)?.sessionId,
         "mock-session-1",
@@ -613,7 +614,7 @@ cursorAdapterTestLayer("CursorAdapterLive", (it) => {
         const argvLogPath = NodePath.join(tempDir, "argv.txt");
         yield* Effect.promise(() => NodeFSP.writeFile(requestLogPath, "", "utf8"));
         const wrapperPath = yield* Effect.promise(() =>
-          makeProbeWrapper(requestLogPath, argvLogPath),
+          makeProbeWrapper(requestLogPath, argvLogPath, { T3_ACP_DISABLE_NATIVE_MODE: "1" }),
         );
         yield* serverSettings.updateSettings({
           providers: { cursor: { binaryPath: wrapperPath } },
@@ -649,6 +650,10 @@ cursorAdapterTestLayer("CursorAdapterLive", (it) => {
           "fast",
           "mode",
         ]);
+        assert.equal(
+          requestsAfterStart.filter((entry) => entry.method === "session/set_mode").length,
+          1,
+        );
 
         yield* adapter.sendTurn({
           threadId,
@@ -667,6 +672,10 @@ cursorAdapterTestLayer("CursorAdapterLive", (it) => {
             : [],
         );
         assert.deepStrictEqual(finalConfigIds, ["model", "reasoning", "context", "fast", "mode"]);
+        assert.equal(
+          finalRequests.filter((entry) => entry.method === "session/set_mode").length,
+          1,
+        );
         assert.equal(finalRequests.filter((entry) => entry.method === "session/prompt").length, 1);
       }),
   );
