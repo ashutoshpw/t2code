@@ -4,6 +4,7 @@ import * as EffectAcpSchema from "effect-acp/schema";
 import { ProviderDriverKind } from "@t2code/contracts";
 
 import {
+  acpApprovalOptions,
   acpPermissionOutcome,
   mapAcpToAdapterError,
   selectAcpPermissionOptionId,
@@ -32,6 +33,9 @@ describe("AcpAdapterSupport", () => {
     expect(selectAcpPermissionOptionId(request, "cancel")).toBeUndefined();
     expect(selectAcpPermissionOptionId({ ...request, options: [] }, "accept")).toBeUndefined();
     expect(
+      selectAcpPermissionOptionId({ ...request, options: [] }, "acceptAlways"),
+    ).toBeUndefined();
+    expect(
       selectAcpPermissionOptionId(
         {
           ...request,
@@ -43,6 +47,31 @@ describe("AcpAdapterSupport", () => {
         "accept",
       ),
     ).toBe("opaque-once");
+    expect(
+      selectAcpPermissionOptionId(
+        {
+          ...request,
+          options: [{ optionId: "opaque-always-deny", name: "Reject all", kind: "reject_always" }],
+        },
+        "decline",
+      ),
+    ).toBe("opaque-always-deny");
+  });
+
+  it("advertises only decisions represented by ACP option kinds", () => {
+    const request = {
+      sessionId: "session-1",
+      toolCall: { toolCallId: "tool-1", title: "Run" },
+      options: [
+        { optionId: "once", name: "Once", kind: "allow_once" },
+        { optionId: "reject", name: "Reject", kind: "reject_once" },
+      ],
+    } satisfies EffectAcpSchema.RequestPermissionRequest;
+    expect(acpApprovalOptions(request)).toEqual([
+      { decision: "accept", label: "Allow once" },
+      { decision: "decline", label: "Deny" },
+      { decision: "cancel", label: "Cancel" },
+    ]);
   });
 
   it("maps ACP request errors to provider adapter request errors", () => {
