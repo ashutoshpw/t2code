@@ -2,6 +2,12 @@ import {
   AntigravitySettings,
   ClaudeSettings,
   CodexSettings,
+  CursorSettings,
+  FxSettings,
+  GrokSettings,
+  OpenCodeSettings,
+  PiSettings,
+  MuseSettings,
   ProviderDriverKind,
 } from "@t2code/contracts";
 import { acpRegistryClient } from "@t2code/provider-acp-registry/client";
