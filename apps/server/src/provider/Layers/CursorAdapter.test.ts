@@ -752,6 +752,12 @@ cursorAdapterTestLayer("CursorAdapterLive", (it) => {
             assert.equal(String(requestOpened.turnId), String(turn.turnId));
             assert.equal(requestOpened.payload.requestType, "exec_command_approval");
             assert.equal(requestOpened.payload.detail, "cat server/package.json");
+            assert.deepEqual(requestOpened.payload.options, [
+              { decision: "accept", label: "Allow once" },
+              { decision: "acceptForSession", label: "Allow for this thread" },
+              { decision: "decline", label: "Deny" },
+              { decision: "cancel", label: "Cancel" },
+            ]);
           }
 
           const requestResolved = turnEvents.find((event) => event.type === "request.resolved");
