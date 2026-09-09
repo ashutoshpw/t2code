@@ -721,10 +721,9 @@ export const FxSettings = makeProviderSettingsSchema(
         providerSettingsForm: { placeholder: "fx", clearWhenEmpty: "omit" },
       }),
     ),
-    // fx discovers its usable model catalog through ACP. Keep this legacy
-    // field for custom settings compatibility; the server does not invent
-    // model IDs when the catalog is unavailable.
-    customModels: Schema.Array(Schema.String).pipe(
+    // fx discovers its usable model catalog through ACP. Keep custom model
+    // entries compatible with the other provider settings.
+    customModels: Schema.Array(CustomModelSetting).pipe(
       Schema.withDecodingDefault(Effect.succeed([])),
       Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
     ),
@@ -1234,7 +1233,7 @@ const GrokSettingsPatch = Schema.Struct({
 const FxSettingsPatch = Schema.Struct({
   enabled: Schema.optionalKey(Schema.Boolean),
   binaryPath: Schema.optionalKey(TrimmedString),
-  customModels: Schema.optionalKey(Schema.Array(Schema.String)),
+  customModels: Schema.optionalKey(Schema.Array(CustomModelSetting)),
 });
 
 const AntigravitySettingsPatch = Schema.Struct({
