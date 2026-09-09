@@ -15,7 +15,12 @@ import {
 } from "@t2code/contracts";
 import { assistantCitationsToPlainText } from "@t2code/shared/assistantCitations";
 import { projectComposerContextForProvider } from "@t2code/shared/composerContextReferences";
-import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@t2code/shared/git";
+import {
+  buildGeneratedWorktreeBranchName,
+  isTemporaryWorktreeBranch,
+  sanitizeWorktreeBranchPrefix,
+  temporaryWorktreeBranchPrefixes,
+} from "@t2code/shared/git";
 import * as Cache from "effect/Cache";
 import * as Cause from "effect/Cause";
 import * as Crypto from "effect/Crypto";
@@ -184,29 +189,6 @@ function stalePendingRequestDetail(
   requestId: string,
 ): string {
   return `Stale pending ${requestKind} request: ${requestId}. Provider callback state does not survive app restarts or recovered sessions. Restart the turn to continue.`;
-}
-
-function buildGeneratedWorktreeBranchName(raw: string): string {
-  const normalized = raw
-    .trim()
-    .toLowerCase()
-    .replace(/^refs\/heads\//, "")
-    .replace(/['"`]/g, "");
-
-  const withoutPrefix = normalized.startsWith(`${WORKTREE_BRANCH_PREFIX}/`)
-    ? normalized.slice(`${WORKTREE_BRANCH_PREFIX}/`.length)
-    : normalized;
-
-  const branchFragment = withoutPrefix
-    .replace(/[^a-z0-9/_-]+/g, "-")
-    .replace(/\/+/g, "/")
-    .replace(/-+/g, "-")
-    .replace(/^[./_-]+|[./_-]+$/g, "")
-    .slice(0, 64)
-    .replace(/[./_-]+$/g, "");
-
-  const safeFragment = branchFragment.length > 0 ? branchFragment : "update";
-  return `${WORKTREE_BRANCH_PREFIX}/${safeFragment}`;
 }
 
 const make = Effect.gen(function* () {
@@ -894,15 +876,17 @@ const make = Effect.gen(function* () {
     if (!input.branch || !input.worktreePath) {
       return;
     }
-    if (!isTemporaryWorktreeBranch(input.branch)) {
-      return;
-    }
 
     const oldBranch = input.branch;
     const cwd = input.worktreePath;
     const attachments = input.attachments ?? [];
     yield* Effect.gen(function* () {
       const settings = yield* projectSettingsForThread(input.threadId);
+      const branchPrefix = sanitizeWorktreeBranchPrefix(settings.worktreeBranchPrefix);
+      if (!isTemporaryWorktreeBranch(oldBranch, temporaryWorktreeBranchPrefixes(branchPrefix))) {
+        return;
+      }
+
       const modelSelection =
         settings.sourceControlWriterModelSelection === null
           ? settings.textGenerationModelSelection
@@ -919,7 +903,7 @@ const make = Effect.gen(function* () {
       });
       if (!generated) return;
 
-      const targetBranch = buildGeneratedWorktreeBranchName(generated.branch);
+      const targetBranch = buildGeneratedWorktreeBranchName(generated.branch, branchPrefix);
       if (targetBranch === oldBranch) return;
 
       const renamed = yield* gitWorkflow.renameBranch({ cwd, oldBranch, newBranch: targetBranch });
