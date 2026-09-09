@@ -40,6 +40,7 @@ import {
 const FX_PRESENTATION = {
   displayName: "FX",
   badgeLabel: "Early Access",
+  supportsTextGeneration: false,
   // FX has ask/code permission modes but no T2 plan mode. Hiding the plan
   // toggle avoids presenting a plan workflow that the provider cannot honor.
   showInteractionModeToggle: false,
