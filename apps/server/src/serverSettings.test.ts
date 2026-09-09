@@ -1330,6 +1330,25 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           otlpTracesUrl: "http://localhost:4318/v1/traces",
           otlpMetricsUrl: "http://localhost:4318/v1/metrics",
         },
+        providers: {
+          codex: {
+            binaryPath: "/opt/homebrew/bin/codex",
+          },
+          cursor: {
+            enabled: false,
+          },
+          fx: {
+            enabled: false,
+          },
+          grok: {
+            enabled: false,
+          },
+          opencode: {
+            enabled: false,
+            serverUrl: "http://127.0.0.1:4096",
+            serverPassword: "secret-password",
+          },
+        },
         backgroundActivity: {
           schemaVersion: 1,
           profile: "custom",
