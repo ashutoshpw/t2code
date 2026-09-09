@@ -50,7 +50,7 @@ import {
   ProviderAdapterSessionNotFoundError,
   ProviderAdapterValidationError,
 } from "../Errors.ts";
-import { acpPermissionOutcome, mapAcpToAdapterError } from "../acp/AcpAdapterSupport.ts";
+import { mapAcpToAdapterError, selectAcpPermissionOptionId } from "../acp/AcpAdapterSupport.ts";
 import type * as AcpSessionRuntime from "../acp/AcpSessionRuntime.ts";
 import {
   makeAcpAssistantItemEvent,
@@ -306,17 +306,10 @@ function applyRequestedSessionConfiguration<E>(input: {
 function selectAutoApprovedPermissionOption(
   request: EffectAcpSchema.RequestPermissionRequest,
 ): string | undefined {
-  const allowAlwaysOption = request.options.find((option) => option.kind === "allow_always");
-  if (typeof allowAlwaysOption?.optionId === "string" && allowAlwaysOption.optionId.trim()) {
-    return allowAlwaysOption.optionId.trim();
-  }
-
-  const allowOnceOption = request.options.find((option) => option.kind === "allow_once");
-  if (typeof allowOnceOption?.optionId === "string" && allowOnceOption.optionId.trim()) {
-    return allowOnceOption.optionId.trim();
-  }
-
-  return undefined;
+  return (
+    selectAcpPermissionOptionId(request, "acceptForSession") ??
+    selectAcpPermissionOptionId(request, "accept")
+  );
 }
 
 export function makeCursorAdapter(
@@ -732,13 +725,14 @@ export function makeCursorAdapter(
                       decision: resolved,
                     }),
                   );
+                  const selectedOptionId = selectAcpPermissionOptionId(params, resolved);
                   return {
                     outcome:
-                      resolved === "cancel"
+                      selectedOptionId === undefined
                         ? ({ outcome: "cancelled" } as const)
                         : {
                             outcome: "selected" as const,
-                            optionId: acpPermissionOutcome(resolved),
+                            optionId: selectedOptionId,
                           },
                   };
                 }),
