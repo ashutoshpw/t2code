@@ -649,7 +649,7 @@ describe("fx model presentation defaults", () => {
 
     expect(FX_DEFAULT_MODEL).toBe("default");
     expect(DEFAULT_MODEL_BY_PROVIDER[fx]).toBe(FX_DEFAULT_MODEL);
-    expect(DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER[fx]).toBe(FX_DEFAULT_MODEL);
+    expect(DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER[fx]).toBeUndefined();
     expect(PROVIDER_DISPLAY_NAMES[fx]).toBe("fx");
   });
 });
