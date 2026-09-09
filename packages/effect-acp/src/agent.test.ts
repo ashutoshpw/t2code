@@ -31,6 +31,8 @@ const SessionCancelNotification = jsonRpcNotification(
   "session/cancel",
   AcpSchema.CancelNotification,
 );
+const SetSessionModeRequest = jsonRpcRequest("session/set_mode", AcpSchema.SetSessionModeRequest);
+const SetSessionModeResponse = jsonRpcResponse(AcpSchema.SetSessionModeResponse);
 const ExtPingNotification = jsonRpcNotification("x/ping", Schema.Struct({ count: Schema.Number }));
 const ExtRequest = jsonRpcRequest("x/test", Schema.Struct({ hello: Schema.String }));
 const ExtResponse = jsonRpcResponse(Schema.Struct({ ok: Schema.Boolean }));
@@ -38,12 +40,16 @@ const decodeRequestPermissionRequest = Schema.decodeEffect(
   Schema.fromJsonString(RequestPermissionRequest),
 );
 const decodeInitializeResponse = Schema.decodeEffect(Schema.fromJsonString(InitializeResponse));
+const decodeSetSessionModeResponse = Schema.decodeEffect(
+  Schema.fromJsonString(SetSessionModeResponse),
+);
 
 it.effect("effect-acp agent handles core agent requests and outbound client requests", () =>
   Effect.gen(function* () {
     const { stdio, input, output } = yield* makeInMemoryStdio();
     const cancelNotifications = yield* Ref.make<Array<string>>([]);
     const extNotifications = yield* Ref.make<Array<number>>([]);
+    const modeRequests = yield* Ref.make<Array<string>>([]);
     const cancelReceived = yield* Deferred.make<void>();
     const extReceived = yield* Deferred.make<void>();
     const scope = yield* Scope.make();
@@ -65,6 +71,11 @@ it.effect("effect-acp agent handles core agent requests and outbound client requ
       yield* agent.handleCancel((notification) =>
         Ref.update(cancelNotifications, (current) => [...current, notification.sessionId]).pipe(
           Effect.andThen(Deferred.succeed(cancelReceived, undefined)),
+        ),
+      );
+      yield* agent.handleSetSessionMode((request) =>
+        Ref.update(modeRequests, (current) => [...current, request.modeId]).pipe(
+          Effect.andThen(Effect.succeed({})),
         ),
       );
       yield* agent.handleExtNotification(
@@ -151,6 +162,27 @@ it.effect("effect-acp agent handles core agent requests and outbound client requ
           },
         },
       });
+
+      yield* Queue.offer(
+        input,
+        yield* encodeJsonl(SetSessionModeRequest, {
+          jsonrpc: "2.0",
+          id: 3,
+          method: "session/set_mode",
+          params: {
+            sessionId: "session-1",
+            modeId: "code",
+          },
+          headers: [],
+        }),
+      );
+      const modeResponse = yield* decodeSetSessionModeResponse(yield* Queue.take(output));
+      assert.deepEqual(modeResponse, {
+        jsonrpc: "2.0",
+        id: 3,
+        result: {},
+      });
+      assert.deepEqual(yield* Ref.get(modeRequests), ["code"]);
 
       yield* Queue.offer(
         input,

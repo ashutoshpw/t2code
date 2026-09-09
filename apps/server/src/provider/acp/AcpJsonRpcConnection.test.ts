@@ -32,6 +32,66 @@ const mockRuntimeOptions = {
 } satisfies AcpSessionRuntime.AcpSessionRuntimeOptions;
 
 describe("AcpSessionRuntime", () => {
+  it.effect("sends authenticate when an auth method is configured", () =>
+    Effect.gen(function* () {
+      const requestMethods: Array<string> = [];
+      const runtime = yield* AcpSessionRuntime.make({
+        ...mockRuntimeOptions,
+        requestLogger: (event) =>
+          Effect.sync(() => {
+            if (event.status === "started") requestMethods.push(event.method);
+          }),
+      });
+
+      yield* runtime.start();
+
+      expect(requestMethods).toEqual(["initialize", "authenticate", "session/new"]);
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("skips authenticate when no auth method is configured", () =>
+    Effect.gen(function* () {
+      const requestMethods: Array<string> = [];
+      const runtime = yield* AcpSessionRuntime.make({
+        spawn: { ...mockRuntimeOptions.spawn, env: { T3_ACP_NO_AUTH: "1" } },
+        cwd: mockRuntimeOptions.cwd,
+        clientInfo: mockRuntimeOptions.clientInfo,
+        requestLogger: (event) =>
+          Effect.sync(() => {
+            if (event.status === "started") requestMethods.push(event.method);
+          }),
+      });
+
+      const started = yield* runtime.start();
+
+      expect(requestMethods).toEqual(["initialize", "session/new"]);
+      expect(started.initializeResult.authMethods).toEqual([]);
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("uses session/set_mode for modes and session/set_config_option for models", () =>
+    Effect.gen(function* () {
+      const requestMethods: Array<string> = [];
+      const runtime = yield* AcpSessionRuntime.make({
+        ...mockRuntimeOptions,
+        requestLogger: (event) =>
+          Effect.sync(() => {
+            if (event.status === "started") requestMethods.push(event.method);
+          }),
+      });
+
+      yield* runtime.start();
+      yield* runtime.setSessionMode("code");
+      yield* runtime.setConfigOption("model", "composer-2");
+
+      expect(requestMethods).toContain("session/set_mode");
+      expect(requestMethods).toContain("session/set_config_option");
+      expect(requestMethods.indexOf("session/set_mode")).toBeLessThan(
+        requestMethods.indexOf("session/set_config_option"),
+      );
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
   for (const setupMethod of ["session/new", "session/resume"] as const) {
     it.effect(`buffers root metadata while ${setupMethod} startup is still pending`, () =>
       Effect.gen(function* () {
