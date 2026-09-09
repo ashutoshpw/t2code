@@ -100,7 +100,8 @@ import {
 import { useThreadProjection, useThreadShell } from "~/state/entities";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
 import { useEnvironmentQuery } from "~/state/query";
-import { serverEnvironment } from "~/state/server";
+import { serverEnvironment, primaryServerSettingsAtom } from "~/state/server";
+import { temporaryWorktreeBranchPrefixes } from "@t2code/shared/git";
 import { sourceControlEnvironment } from "~/state/sourceControl";
 import { threadEnvironment } from "~/state/threads";
 import { useAtomCommand } from "~/state/use-atom-command";
@@ -1088,6 +1089,11 @@ export default function GitActionsControl({
   const hasPrimaryRemote = gitStatus?.hasPrimaryRemote ?? false;
   const gitStatusForActions = gitStatus;
   const changesTotals = gitStatusForActions?.branchChanges ?? gitStatusForActions?.workingTree;
+  const primaryServerSettings = useAtomValue(primaryServerSettingsAtom);
+  const temporaryBranchPrefixes = useMemo(
+    () => temporaryWorktreeBranchPrefixes(primaryServerSettings.worktreeBranchPrefix),
+    [primaryServerSettings.worktreeBranchPrefix],
+  );
 
   const allFiles = gitStatusForActions?.workingTree.files ?? [];
   const selectedFiles = allFiles.filter((f) => !excludedFiles.has(f.path));
@@ -1114,6 +1120,7 @@ export default function GitActionsControl({
     const branchUpdate = resolveLiveThreadBranchUpdate({
       threadBranch: activeDraftThread?.branch ?? null,
       gitStatus: gitStatusForActions,
+      temporaryBranchPrefixes,
     });
     if (!branchUpdate) {
       return;
@@ -1126,6 +1133,8 @@ export default function GitActionsControl({
     gitStatusForActions,
     isGitActionRunning,
     isSelectingWorktreeBase,
+    persistThreadBranchSync,
+    temporaryBranchPrefixes,
   ]);
 
   const isDefaultRef = gitStatusForActions?.isDefaultRef ?? false;

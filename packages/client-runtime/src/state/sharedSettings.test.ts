@@ -104,12 +104,14 @@ describe("splitSharedServerPatch", () => {
       enableAgentBrowserAccess: false,
       defaultThreadEnvMode: "worktree",
       newWorktreesStartFromOrigin: true,
+      worktreeBranchPrefix: "acme",
     });
     expect(sharedPatch).toEqual({
       sidebarAutoSettleAfterDays: 7,
       sidebarAutoSettleOnMerge: false,
       continueThreadsAfterServerUpdate: true,
       newWorktreesStartFromOrigin: true,
+      worktreeBranchPrefix: "acme",
     });
     expect(localPatch).toEqual({
       enableAgentBrowserAccess: false,
@@ -131,6 +133,7 @@ describe("pickSharedServerSettings", () => {
       "snoozeLimitedThreads",
       "sourceControlWritingStyle",
       "textGenerationModelSelection",
+      "worktreeBranchPrefix",
     ]);
   });
 });

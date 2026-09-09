@@ -45,6 +45,11 @@ import {
   ProviderDriverKind,
 } from "./providerInstance.ts";
 import { PullRequestMergeMethod } from "./pullRequest.ts";
+import {
+  MAX_WORKTREE_BRANCH_PREFIX_LENGTH,
+  WORKTREE_BRANCH_PREFIX,
+  WORKTREE_BRANCH_PREFIX_PATTERN,
+} from "./git.ts";
 
 export const TimestampFormat = Schema.Literals(["locale", "12-hour", "24-hour"]);
 export type TimestampFormat = typeof TimestampFormat.Type;
@@ -1236,13 +1241,23 @@ export const ServerSettings = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(true)),
   ),
   /**
-   * Null defers to the repository's t3.json, then to recursive. A value
+   * Null defers to the repository's t2.json, then to recursive. A value
    * picked on a newer server decodes as null here rather than failing the
    * whole settings snapshot for an older client.
    */
   worktreeSubmodules: ForwardCompatibleNullable(WorktreeSubmodules).pipe(
     Schema.withDecodingDefault(Effect.succeed(null)),
   ),
+  /**
+   * Namespace for branches T2 Code creates inside thread worktrees. Single git
+   * path segment (no slashes). Decoding is lenient — a hand-edited
+   * settings.json never breaks settings load; every consumer sanitizes via
+   * `sanitizeWorktreeBranchPrefix`. The strict pattern lives on the patch so a
+   * bad value fails the one update instead of the whole settings file.
+   */
+  worktreeBranchPrefix: TrimmedString.check(
+    Schema.isMaxLength(MAX_WORKTREE_BRANCH_PREFIX_LENGTH),
+  ).pipe(Schema.withDecodingDefault(Effect.succeed(WORKTREE_BRANCH_PREFIX))),
   addProjectBaseDirectory: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
   textGenerationModelSelection: ModelSelection.pipe(
     Schema.withDecodingDefault(
@@ -1590,6 +1605,12 @@ export const ServerSettingsPatch = Schema.Struct({
   defaultThreadEnvMode: Schema.optionalKey(Schema.NullOr(ThreadEnvMode)),
   newWorktreesStartFromOrigin: Schema.optionalKey(Schema.Boolean),
   worktreeSubmodules: Schema.optionalKey(Schema.NullOr(WorktreeSubmodules)),
+  worktreeBranchPrefix: Schema.optionalKey(
+    TrimmedString.check(
+      Schema.isMaxLength(MAX_WORKTREE_BRANCH_PREFIX_LENGTH),
+      Schema.isPattern(WORKTREE_BRANCH_PREFIX_PATTERN),
+    ),
+  ),
   addProjectBaseDirectory: Schema.optionalKey(TrimmedString),
   textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
   branchNamingMode: Schema.optionalKey(BranchNamingMode),

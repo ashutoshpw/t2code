@@ -354,6 +354,7 @@ import {
   environmentServerConfigsAtom,
   primaryServerAvailableEditorsAtom,
   primaryServerKeybindingsAtom,
+  primaryServerSettingsAtom,
   serverEnvironment,
 } from "../state/server";
 import { threadEnvironment } from "../state/threads";
@@ -2305,6 +2306,7 @@ export default function ChatView(props: ChatViewProps) {
   const serverUpdateState = useAtomValue(
     serverEnvironment.updateStateAtom(serverUpdateEnvironmentId),
   );
+  const primaryServerSettings = useAtomValue(primaryServerSettingsAtom);
   const [dismissedServerUpdateState, setDismissedServerUpdateState] = useState<
     typeof serverUpdateState | null
   >(null);
