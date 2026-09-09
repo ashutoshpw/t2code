@@ -9,6 +9,7 @@ import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
+import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import {
@@ -74,16 +75,17 @@ function collectFxEvents(
   );
 }
 
-const fxAdapterTestLayer = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(
-    Effect.scoped,
-    Effect.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3code-fx-adapter-test-" })),
-    Effect.provide(NodeServices.layer),
-  );
+const fxAdapterTestLayer = ServerConfig.layerTest(
+  process.cwd(),
+  { prefix: "t3code-fx-adapter-test-" },
+).pipe(Layer.provideMerge(NodeServices.layer));
+
+const runFxAdapterTest = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  effect.pipe(Effect.scoped, Effect.provide(fxAdapterTestLayer));
 
 describe("FxAdapter", () => {
   it.effect("starts native ACP, applies model and mode, and translates approval events", () =>
-    fxAdapterTestLayer(
+    runFxAdapterTest(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
@@ -154,7 +156,7 @@ describe("FxAdapter", () => {
   );
 
   it.effect("auto-approves full-access permissions without ACP mode downgrade", () =>
-    fxAdapterTestLayer(
+    runFxAdapterTest(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
@@ -195,7 +197,7 @@ describe("FxAdapter", () => {
   );
 
   it.effect("auto-approves edit permissions while keeping command approvals interactive", () =>
-    fxAdapterTestLayer(
+    runFxAdapterTest(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
@@ -240,7 +242,7 @@ describe("FxAdapter", () => {
   );
 
   it.effect("keeps command approvals interactive in auto-accept-edits mode", () =>
-    fxAdapterTestLayer(
+    runFxAdapterTest(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
@@ -279,7 +281,7 @@ describe("FxAdapter", () => {
   );
 
   it.effect("waits for native cancellation before replacing a running prompt", () =>
-    fxAdapterTestLayer(
+    runFxAdapterTest(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
@@ -345,7 +347,7 @@ describe("FxAdapter", () => {
   );
 
   it.effect("marks an explicitly interrupted FX turn cancelled once", () =>
-    fxAdapterTestLayer(
+    runFxAdapterTest(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
