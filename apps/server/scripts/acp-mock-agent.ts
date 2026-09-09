@@ -34,6 +34,8 @@ const emitActiveToolThenHang = process.env.T3_ACP_EMIT_ACTIVE_TOOL_THEN_HANG ===
 const emitForeignSessionUpdates = process.env.T3_ACP_EMIT_FOREIGN_SESSION_UPDATES === "1";
 const waitForResumeRelease = process.env.T3_ACP_WAIT_FOR_RESUME_RELEASE === "1";
 const completeFirstPromptOnCancel = process.env.T3_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL === "1";
+const autoFinishCancel = process.env.T3_ACP_AUTO_FINISH_CANCEL === "1";
+const emitEditPermission = process.env.T3_ACP_EMIT_EDIT_PERMISSION === "1";
 const floodStderr = process.env.T3_ACP_FLOOD_STDERR === "1";
 const hangPromptForever = process.env.T3_ACP_HANG_PROMPT_FOREVER === "1";
 const hangFirstPromptForever = process.env.T3_ACP_HANG_FIRST_PROMPT_FOREVER === "1";
@@ -612,6 +614,9 @@ const program = Effect.gen(function* () {
       cancelledSessions.add(cancelledSessionId);
       if (completeFirstPromptOnCancel) {
         yield* Deferred.succeed(nativeCancelRequested, undefined);
+        if (autoFinishCancel) {
+          yield* Deferred.succeed(nativeCancelRelease, undefined);
+        }
         yield* agent.client.sessionUpdate({
           sessionId: cancelledSessionId,
           update: {
@@ -958,7 +963,7 @@ const program = Effect.gen(function* () {
             toolCall: {
               toolCallId: index === 0 ? toolCallId : `${toolCallId}-${index + 1}`,
               title: process.env.T3_ACP_PERMISSION_TITLE ?? `\`${command}\``,
-              kind: "execute",
+              kind: emitEditPermission ? "edit" : "execute",
               status: "pending",
               rawInput: {
                 variant: "Bash",

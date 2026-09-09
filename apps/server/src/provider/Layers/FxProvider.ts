@@ -147,7 +147,7 @@ export function parseFxModelsOutput(output: string): FxModelsOutput | undefined 
   return { models };
 }
 
-export function displayNameFromFxModelSlug(slug: string): string {
+function displayNameFromFxModelSlug(slug: string): string {
   const tail = slug.includes("/") ? slug.slice(slug.lastIndexOf("/") + 1) : slug;
   const words = tail.split(/[-_.]+/g).filter(Boolean);
   return words.length > 0

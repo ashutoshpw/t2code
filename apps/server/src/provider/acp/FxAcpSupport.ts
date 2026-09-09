@@ -87,8 +87,7 @@ export const makeFxAcpRuntime = (
   });
 
 /** FX's ACP model selector is a standard config option with this stable id. */
-export const FX_MODEL_CONFIG_ID = "model" as const;
-export const FX_MODE_CONFIG_ID = "mode" as const;
+const FX_MODEL_CONFIG_ID = "model" as const;
 export const FX_ASK_MODE_ID = "ask" as const;
 export const FX_CODE_MODE_ID = "code" as const;
 
@@ -155,7 +154,7 @@ export interface FxAcpModeSelectionErrorContext {
 }
 
 /** Apply the FX mode only when the agent advertised the requested option. */
-export function applyFxAcpModeSelection<E>(input: {
+function applyFxAcpModeSelection<E>(input: {
   readonly runtime: Pick<
     AcpSessionRuntime.AcpSessionRuntime["Service"],
     "getModeState" | "setSessionMode"
