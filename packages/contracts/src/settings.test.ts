@@ -300,6 +300,44 @@ describe("ServerSettings worktree defaults", () => {
       encode(decodeServerSettings({ defaultThreadEnvMode: "worktree" })).defaultThreadEnvMode,
     ).toBe("worktree");
   });
+
+  it("defaults start-from-origin on for legacy configs", () => {
+    expect(decodeServerSettings({}).newWorktreesStartFromOrigin).toBe(true);
+  });
+
+  it("accepts start-from-origin updates", () => {
+    expect(
+      decodeServerSettingsPatch({ newWorktreesStartFromOrigin: false }).newWorktreesStartFromOrigin,
+    ).toBe(false);
+  });
+
+  it("defaults worktree submodules to inherit and tolerates unknown modes", () => {
+    expect(decodeServerSettings({}).worktreeSubmodules).toBeNull();
+    expect(decodeServerSettings({ worktreeSubmodules: "top-level" }).worktreeSubmodules).toBe(
+      "top-level",
+    );
+    expect(decodeServerSettings({ worktreeSubmodules: "shallow" }).worktreeSubmodules).toBeNull();
+    expect(decodeServerSettingsPatch({ worktreeSubmodules: null }).worktreeSubmodules).toBeNull();
+  });
+
+  it("defaults the worktree branch prefix to the fork namespace", () => {
+    expect(decodeServerSettings({}).worktreeBranchPrefix).toBe("t2code");
+  });
+
+  it("accepts a valid worktree branch prefix update and rejects invalid ones", () => {
+    expect(decodeServerSettingsPatch({ worktreeBranchPrefix: "acme" }).worktreeBranchPrefix).toBe(
+      "acme",
+    );
+    expect(() => decodeServerSettingsPatch({ worktreeBranchPrefix: "has/slash" })).toThrow();
+    expect(() => decodeServerSettingsPatch({ worktreeBranchPrefix: "-leading" })).toThrow();
+    expect(() => decodeServerSettingsPatch({ worktreeBranchPrefix: "Upper Case" })).toThrow();
+  });
+
+  it("decodes a lenient stored prefix so a hand-edited settings file still loads", () => {
+    expect(decodeServerSettings({ worktreeBranchPrefix: "Has Space" }).worktreeBranchPrefix).toBe(
+      "Has Space",
+    );
+  });
 });
 
 describe("ServerSettings.sourceControlWritingStyle", () => {

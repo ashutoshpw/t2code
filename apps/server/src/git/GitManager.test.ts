@@ -4270,6 +4270,118 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     }),
   );
 
+  it.effect("preserves both branch materialization failures when the fallback also fails", () =>
+    Effect.gen(function* () {
+      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      yield* initRepo(repoDir);
+      const originDir = yield* createBareRemote();
+      yield* runGit(repoDir, ["remote", "add", "origin", originDir]);
+      yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
+
+      const missingForkDir = NodePath.join(repoDir, "missing-fork.git");
+      const { manager } = yield* makeManager({
+        ghScenario: {
+          pullRequest: {
+            number: 93,
+            title: "Missing fork branch",
+            url: "https://github.com/pingdotgg/codething-mvp/pull/93",
+            baseRefName: "main",
+            headRefName: "feature/missing-fork-branch",
+            state: "open",
+            isCrossRepository: true,
+            headRepositoryNameWithOwner: "octocat/codething-mvp",
+            headRepositoryOwnerLogin: "octocat",
+          },
+          repositoryCloneUrls: {
+            "octocat/codething-mvp": {
+              url: missingForkDir,
+              sshUrl: missingForkDir,
+            },
+          },
+        },
+      });
+
+      const error = yield* preparePullRequestThread(manager, {
+        cwd: repoDir,
+        reference: "93",
+        mode: "worktree",
+      }).pipe(Effect.flip);
+
+      if (error._tag !== "GitPullRequestMaterializationError") {
+        return yield* Effect.die(error);
+      }
+      expect(error).toMatchObject({
+        cwd: repoDir,
+        pullRequestNumber: 93,
+        headRepository: "octocat/codething-mvp",
+        headBranch: "feature/missing-fork-branch",
+        localBranch: "t2code/pr-93/feature/missing-fork-branch",
+      });
+      if (!(error.cause instanceof AggregateError)) {
+        return yield* Effect.die(error.cause);
+      }
+      expect(error.cause.errors).toHaveLength(2);
+      expect(error.cause.errors).toEqual([
+        expect.objectContaining({ _tag: "GitCommandError" }),
+        expect.objectContaining({ _tag: "GitCommandError" }),
+      ]);
+      expect(error.cause.cause).toBe(error.cause.errors[0]);
+    }),
+  );
+
+  it.effect("launches setup when creating a new PR worktree", () =>
+    Effect.gen(function* () {
+      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      yield* initRepo(repoDir);
+      const remoteDir = yield* createBareRemote();
+      yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
+      yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
+      yield* runGit(repoDir, ["checkout", "-b", "feature/pr-worktree-setup"]);
+      NodeFS.writeFileSync(NodePath.join(repoDir, "setup.txt"), "setup\n");
+      yield* runGit(repoDir, ["add", "setup.txt"]);
+      yield* runGit(repoDir, ["commit", "-m", "PR worktree setup branch"]);
+      yield* runGit(repoDir, ["push", "-u", "origin", "feature/pr-worktree-setup"]);
+      yield* runGit(repoDir, ["push", "origin", "HEAD:refs/pull/177/head"]);
+      yield* runGit(repoDir, ["checkout", "main"]);
+
+      const setupCalls: ProjectSetupScriptRunner.ProjectSetupScriptRunnerInput[] = [];
+      const { manager } = yield* makeManager({
+        ghScenario: {
+          pullRequest: {
+            number: 177,
+            title: "Worktree setup PR",
+            url: "https://github.com/pingdotgg/codething-mvp/pull/177",
+            baseRefName: "main",
+            headRefName: "feature/pr-worktree-setup",
+            state: "open",
+          },
+        },
+        setupScriptRunner: {
+          runForThread: (setupInput) =>
+            Effect.sync(() => {
+              setupCalls.push(setupInput);
+              return { status: "no-script" as const };
+            }),
+        },
+      });
+
+      const result = yield* preparePullRequestThread(manager, {
+        cwd: repoDir,
+        reference: "177",
+        mode: "worktree",
+        threadId: asThreadId("thread-pr-setup"),
+      });
+
+      expect(result.worktreePath).not.toBeNull();
+      expect(setupCalls).toHaveLength(1);
+      expect(setupCalls[0]).toEqual({
+        threadId: "thread-pr-setup",
+        projectCwd: repoDir,
+        worktreePath: result.worktreePath as string,
+      });
+    }),
+  );
+
   it.effect("preserves fork upstream tracking when preparing a worktree PR thread", () =>
     Effect.gen(function* () {
       const repoDir = yield* makeTempDir("t3code-git-manager-");
@@ -4901,6 +5013,126 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
         localMainBefore,
       );
     }),
+  );
+
+  it.effect(
+    "does not block fork PR worktree prep when the fork head branch collides with root main",
+    () =>
+      Effect.gen(function* () {
+        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        yield* initRepo(repoDir);
+        const originDir = yield* createBareRemote();
+        const forkDir = yield* createBareRemote();
+        yield* runGit(repoDir, ["remote", "add", "origin", originDir]);
+        yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
+        yield* runGit(repoDir, ["remote", "add", "fork-seed", forkDir]);
+        yield* runGit(repoDir, ["checkout", "-b", "fork-main-source"]);
+        NodeFS.writeFileSync(NodePath.join(repoDir, "fork-main.txt"), "fork main\n");
+        yield* runGit(repoDir, ["add", "fork-main.txt"]);
+        yield* runGit(repoDir, ["commit", "-m", "Fork main branch"]);
+        yield* runGit(repoDir, ["push", "-u", "fork-seed", "fork-main-source:main"]);
+        yield* runGit(repoDir, ["checkout", "main"]);
+        const mainBefore = (yield* runGit(repoDir, ["rev-parse", "main"])).stdout.trim();
+
+        const { manager } = yield* makeManager({
+          ghScenario: {
+            pullRequest: {
+              number: 91,
+              title: "Fork main PR",
+              url: "https://github.com/pingdotgg/codething-mvp/pull/91",
+              baseRefName: "main",
+              headRefName: "main",
+              state: "open",
+              isCrossRepository: true,
+              headRepositoryNameWithOwner: "octocat/codething-mvp",
+              headRepositoryOwnerLogin: "octocat",
+            },
+            repositoryCloneUrls: {
+              "octocat/codething-mvp": {
+                url: forkDir,
+                sshUrl: forkDir,
+              },
+            },
+          },
+        });
+
+        const result = yield* preparePullRequestThread(manager, {
+          cwd: repoDir,
+          reference: "91",
+          mode: "worktree",
+        });
+
+        expect(result.branch).toBe("t2code/pr-91/main");
+        expect(result.worktreePath).not.toBeNull();
+        expect((yield* runGit(repoDir, ["branch", "--show-current"])).stdout.trim()).toBe("main");
+        expect((yield* runGit(repoDir, ["rev-parse", "main"])).stdout.trim()).toBe(mainBefore);
+        expect(
+          (yield* runGit(result.worktreePath as string, [
+            "branch",
+            "--show-current",
+          ])).stdout.trim(),
+        ).toBe("t2code/pr-91/main");
+      }),
+  );
+
+  it.effect(
+    "does not overwrite an existing local main branch when preparing a fork PR worktree",
+    () =>
+      Effect.gen(function* () {
+        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        yield* initRepo(repoDir);
+        const originDir = yield* createBareRemote();
+        const forkDir = yield* createBareRemote();
+        yield* runGit(repoDir, ["remote", "add", "origin", originDir]);
+        yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
+        yield* runGit(repoDir, ["remote", "add", "fork-seed", forkDir]);
+        yield* runGit(repoDir, ["checkout", "-b", "fork-main-source"]);
+        NodeFS.writeFileSync(NodePath.join(repoDir, "fork-main-second.txt"), "fork main second\n");
+        yield* runGit(repoDir, ["add", "fork-main-second.txt"]);
+        yield* runGit(repoDir, ["commit", "-m", "Fork main second branch"]);
+        yield* runGit(repoDir, ["push", "-u", "fork-seed", "fork-main-source:main"]);
+        yield* runGit(repoDir, ["checkout", "main"]);
+        const localMainBefore = (yield* runGit(repoDir, ["rev-parse", "main"])).stdout.trim();
+        yield* runGit(repoDir, ["checkout", "-b", "feature/root-branch"]);
+
+        const { manager } = yield* makeManager({
+          ghScenario: {
+            pullRequest: {
+              number: 92,
+              title: "Fork main overwrite PR",
+              url: "https://github.com/pingdotgg/codething-mvp/pull/92",
+              baseRefName: "main",
+              headRefName: "main",
+              state: "open",
+              isCrossRepository: true,
+              headRepositoryNameWithOwner: "octocat/codething-mvp",
+              headRepositoryOwnerLogin: "octocat",
+            },
+            repositoryCloneUrls: {
+              "octocat/codething-mvp": {
+                url: forkDir,
+                sshUrl: forkDir,
+              },
+            },
+          },
+        });
+
+        const result = yield* preparePullRequestThread(manager, {
+          cwd: repoDir,
+          reference: "92",
+          mode: "worktree",
+        });
+
+        expect(result.branch).toBe("t2code/pr-92/main");
+        expect((yield* runGit(repoDir, ["rev-parse", "main"])).stdout.trim()).toBe(localMainBefore);
+        expect(
+          (yield* runGit(result.worktreePath as string, [
+            "rev-parse",
+            "--abbrev-ref",
+            "@{upstream}",
+          ])).stdout.trim(),
+        ).toBe("fork-seed/main");
+      }),
   );
 
   it.effect("reuses an existing PR worktree and restores fork upstream tracking", () =>

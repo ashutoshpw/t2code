@@ -9,6 +9,124 @@ import { filterSharedServerPatch, pickSharedServerSettings } from "./sharedSetti
 
 const restartCapabilities = { threadRestartContinuation: true };
 
+describe("supportsSharedSettingsSync", () => {
+  it("accepts only connected servers that advertise the shared-settings capability", () => {
+    expect(
+      supportsSharedSettingsSync({
+        connection: { phase: "connected" },
+        serverConfig: { environment: { capabilities: { threadAutoSettlement: true } } },
+      }),
+    ).toBe(true);
+    expect(
+      supportsSharedSettingsSync({
+        connection: { phase: "connected" },
+        serverConfig: { environment: { capabilities: {} } },
+      }),
+    ).toBe(false);
+    expect(
+      supportsSharedSettingsSync({
+        connection: { phase: "reconnecting" },
+        serverConfig: { environment: { capabilities: { threadAutoSettlement: true } } },
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("splitSharedServerPatch", () => {
+  it("keeps project overrides local: project ids belong to one environment", () => {
+    const patch = {
+      projectSettingsOverrides: { [ProjectId.make("project")]: { defaultAutoPull: true } },
+      sidebarAutoSettleOnMerge: false,
+    };
+    expect(splitSharedServerPatch(patch)).toEqual({
+      sharedPatch: { sidebarAutoSettleOnMerge: false },
+      localPatch: { projectSettingsOverrides: patch.projectSettingsOverrides },
+    });
+  });
+
+  it.each([
+    {
+      instanceId: ProviderInstanceId.make("codex"),
+      model: "gpt-5.6-sol",
+      options: [{ id: "reasoningEffort", value: "low" }],
+    },
+    {
+      instanceId: ProviderInstanceId.make("claudeAgent"),
+      model: "claude-sonnet-4-6",
+      options: [{ id: "effort", value: "high" }],
+    },
+    DEFAULT_SERVER_SETTINGS.textGenerationModelSelection,
+  ])("shares the text generation model and options, including reset (%j)", (selection) => {
+    const patch = { textGenerationModelSelection: selection };
+    expect(splitSharedServerPatch(patch)).toEqual({ sharedPatch: patch, localPatch: {} });
+    expect(pickSharedServerSettings({ ...DEFAULT_SERVER_SETTINGS, ...patch })).toMatchObject(patch);
+    const environment = {
+      environmentId: boxId,
+      label: "Remote Box",
+      syncEligible: true,
+      settings: {
+        ...DEFAULT_SERVER_SETTINGS,
+        textGenerationModelSelection: { ...selection, model: "different-model" },
+      },
+    };
+    const input = {
+      primaryEnvironmentId: primaryId,
+      primarySettings: { ...DEFAULT_SERVER_SETTINGS, ...patch },
+      environments: [environment],
+    };
+    expect(findSharedSettingsMismatches(input)).toEqual([
+      { environmentId: boxId, label: "Remote Box" },
+    ]);
+    expect(
+      findSharedSettingsMismatches({
+        ...input,
+        environments: [{ ...environment, settings: input.primarySettings }],
+      }),
+    ).toEqual([]);
+  });
+
+  it("routes preference keys to the shared patch and machine keys to the local patch", () => {
+    const { sharedPatch, localPatch } = splitSharedServerPatch({
+      sidebarAutoSettleAfterDays: 7,
+      sidebarAutoSettleOnMerge: false,
+      continueThreadsAfterServerUpdate: true,
+      enableAgentBrowserAccess: false,
+      defaultThreadEnvMode: "worktree",
+      newWorktreesStartFromOrigin: true,
+      worktreeBranchPrefix: "acme",
+    });
+    expect(sharedPatch).toEqual({
+      sidebarAutoSettleAfterDays: 7,
+      sidebarAutoSettleOnMerge: false,
+      continueThreadsAfterServerUpdate: true,
+      newWorktreesStartFromOrigin: true,
+      worktreeBranchPrefix: "acme",
+    });
+    expect(localPatch).toEqual({
+      enableAgentBrowserAccess: false,
+      defaultThreadEnvMode: "worktree",
+    });
+  });
+});
+
+describe("pickSharedServerSettings", () => {
+  it("returns only the shared keys", () => {
+    expect(
+      Object.keys(pickSharedServerSettings(DEFAULT_SERVER_SETTINGS, restartCapabilities)).sort(),
+    ).toEqual([
+      "autoResumeLimitedThreads",
+      "continueThreadsAfterServerUpdate",
+      "newWorktreesStartFromOrigin",
+      "sidebarAutoSettleAfterDays",
+      "sidebarAutoSettleOnMerge",
+      "snoozeLimitedThreads",
+      "sourceControlWritingStyle",
+      "textGenerationModelSelection",
+      "worktreeBranchPrefix",
+    ]);
+  });
+});
+
 describe("filterSharedServerPatch", () => {
   it.each([true, false])(
     "resets a disabled default provider only on the originating environment (%s)",
