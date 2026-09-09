@@ -19,7 +19,11 @@ import * as Option from "effect/Option";
 import type * as PlatformError from "effect/PlatformError";
 import * as Stream from "effect/Stream";
 import { makeDrainableWorker } from "@t2code/shared/DrainableWorker";
-import { isTemporaryWorktreeBranch } from "@t2code/shared/git";
+import {
+  isTemporaryWorktreeBranch,
+  sanitizeWorktreeBranchPrefix,
+  temporaryWorktreeBranchPrefixes,
+} from "@t2code/shared/git";
 
 import { parseTurnDiffFilesFromNumstat } from "../../checkpointing/Diffs.ts";
 import {
@@ -28,6 +32,7 @@ import {
 } from "../../checkpointing/Utils.ts";
 import * as CheckpointStore from "../../checkpointing/CheckpointStore.ts";
 import { ProviderService } from "../../provider/Services/ProviderService.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import { CheckpointReactor, type CheckpointReactorShape } from "../Services/CheckpointReactor.ts";
 import { forkParked } from "../../serverActivation.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
@@ -89,6 +94,7 @@ const make = Effect.gen(function* () {
   const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
   const vcsStatusBroadcaster = yield* VcsStatusBroadcaster;
   const pullRequests = yield* PullRequestService.PullRequestService;
+  const serverSettingsService = yield* ServerSettingsService;
   const startedTurns = new Map<ThreadId, TurnId>();
   const pending = new Set<ThreadId>();
 
@@ -550,7 +556,14 @@ const make = Effect.gen(function* () {
     // Detached HEAD has no branch to adopt; a temporary placeholder checkout
     // means the first-turn auto-rename is still in flight — don't race it.
     const checkedOutBranch = input.local.refName;
-    if (checkedOutBranch === null || isTemporaryWorktreeBranch(checkedOutBranch)) {
+    const { worktreeBranchPrefix } = yield* serverSettingsService.getSettings;
+    if (
+      checkedOutBranch === null ||
+      isTemporaryWorktreeBranch(
+        checkedOutBranch,
+        temporaryWorktreeBranchPrefixes(sanitizeWorktreeBranchPrefix(worktreeBranchPrefix)),
+      )
+    ) {
       return;
     }
 

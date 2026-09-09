@@ -49,6 +49,7 @@ import {
   pickSharedServerSettings,
   supportsSharedSettingsSync,
 } from "@t2code/client-runtime/state/shared-settings";
+import { sanitizeWorktreeBranchPrefix } from "@t2code/shared/git";
 import { useThreadListV2Enabled } from "../threads/use-thread-list-v2-enabled";
 import {
   type AppUpdateCheckState,
@@ -580,6 +581,7 @@ function GeneralSettingsSection() {
     <SettingsSection title="General">
       <SettingsRow icon="folder" label="Project Grouping" target="SettingsProjectGrouping" />
       <AutoSettleSettingsRows />
+      <WorktreeBranchPrefixSettingsRow />
       <SettingsRow icon="chart.bar.xaxis" label="Usage" target="SettingsUsage" />
     </SettingsSection>
   );
@@ -717,6 +719,67 @@ function AutoSettleSettingsRows() {
         </View>
       ) : null}
     </>
+  );
+}
+
+/**
+ * The worktree branch namespace is a user preference every server has to
+ * hold. Same fan-out model as auto-settlement: the first eligible sync target
+ * provides the reference value and edits go to every eligible target.
+ */
+function WorktreeBranchPrefixSettingsRow() {
+  const { environments } = useEnvironments();
+  const updateSettings = useAtomCommand(serverEnvironment.updateSettings, {
+    label: "server settings update",
+    reportFailure: true,
+  });
+
+  const syncTargets = environments.filter(supportsSharedSettingsSync);
+  const reference = syncTargets[0] ?? null;
+  const referenceSettings = reference?.serverConfig?.settings ?? null;
+
+  const [prefixDraft, setPrefixDraft] = useState<string | null>(null);
+
+  if (reference === null || referenceSettings === null) {
+    return null;
+  }
+
+  const writeToAll = (patch: ServerSettingsPatch) => {
+    for (const environment of syncTargets) {
+      void updateSettings({ environmentId: environment.environmentId, input: { patch } });
+    }
+  };
+
+  const worktreeBranchPrefix = referenceSettings.worktreeBranchPrefix;
+  const commitPrefix = () => {
+    const draft = (prefixDraft ?? "").trim();
+    setPrefixDraft(null);
+    const sanitized = sanitizeWorktreeBranchPrefix(draft);
+    if (sanitized !== worktreeBranchPrefix) {
+      writeToAll({ worktreeBranchPrefix: sanitized });
+    }
+  };
+
+  return (
+    <View className="flex-row items-center gap-4 border-t border-border-subtle p-4">
+      <View className="min-w-0 flex-1">
+        <Text className="text-lg text-foreground">Worktree branch prefix</Text>
+        <Text className="text-sm text-foreground-muted" numberOfLines={2}>
+          Namespace for branches created in thread worktrees
+        </Text>
+      </View>
+      <TextInput
+        className="min-h-10 w-28 rounded-xl px-3 py-2 text-center text-base"
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="done"
+        value={prefixDraft ?? worktreeBranchPrefix}
+        onChangeText={setPrefixDraft}
+        onBlur={commitPrefix}
+        onSubmitEditing={commitPrefix}
+        accessibilityLabel="Worktree branch prefix"
+      />
+    </View>
   );
 }
 
