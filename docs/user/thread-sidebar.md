@@ -10,6 +10,11 @@ and mode selections, unless the destination project has its own model default.
 Its branch and workspace mode come from your configured defaults. To continue in
 an existing worktree, use **New thread in this worktree** from the branch toolbar.
 
+A new worktree starts on a placeholder branch like `t2code/a1b2c3d4`. After your
+first message, T2 Code renames it to a semantic branch in the same namespace,
+such as `t2code/fix-toast-copy`. You can change the namespace in
+Settings → General → Worktree branch prefix.
+
 When you change a new thread's project, T2 Code stays in the current environment
 if that project exists there. Otherwise it selects an environment that has it.
 
