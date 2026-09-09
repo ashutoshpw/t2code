@@ -1,4 +1,5 @@
 import type { VcsStatusResult } from "@t2code/contracts";
+import { temporaryWorktreeBranchPrefixes } from "@t2code/shared/git";
 import { assert, describe, it } from "vite-plus/test";
 import {
   buildGitActionProgressStages,
@@ -1109,6 +1110,26 @@ describe("resolveLiveThreadBranchUpdate", () => {
     });
 
     assert.deepEqual(update, { branch: "feature/diff-panel-toggle" });
+  });
+
+  it("treats a configured custom prefix as temporary alongside the defaults", () => {
+    const prefixes = temporaryWorktreeBranchPrefixes("acme");
+    assert.equal(
+      resolveLiveThreadBranchUpdate({
+        threadBranch: "acme/github-query-rate-limit",
+        gitStatus: status({ refName: "acme/bda76797" }),
+        temporaryBranchPrefixes: prefixes,
+      }),
+      null,
+    );
+    assert.equal(
+      resolveLiveThreadBranchUpdate({
+        threadBranch: "feature/semantic",
+        gitStatus: status({ refName: "acme/bda76797" }),
+        temporaryBranchPrefixes: prefixes,
+      }),
+      null,
+    );
   });
 });
 
