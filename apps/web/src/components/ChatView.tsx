@@ -224,6 +224,7 @@ import { useEnvironmentScope } from "~/state/session";
 import {
   primaryServerAvailableEditorsAtom,
   primaryServerKeybindingsAtom,
+  primaryServerSettingsAtom,
   serverEnvironment,
 } from "../state/server";
 import { threadEnvironment } from "../state/threads";
