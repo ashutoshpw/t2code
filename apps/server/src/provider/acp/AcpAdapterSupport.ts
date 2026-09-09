@@ -69,5 +69,6 @@ export function selectAcpPermissionOptionId(
       : decision === "accept"
         ? "allow_once"
         : "reject_once";
-  return request.options.find((option) => option.kind === kind)?.optionId;
+  return request.options.find((option) => option.kind === kind && option.optionId.length > 0)
+    ?.optionId;
 }
