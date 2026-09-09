@@ -22,6 +22,119 @@ import {
 } from "./modelOptions";
 
 describe("mobile model options", () => {
+  it("presents fx catalog models with fx routing metadata", () => {
+    const config = {
+      providers: [
+        {
+          instanceId: "fx",
+          driver: "fx",
+          displayName: "fx",
+          enabled: true,
+          installed: true,
+          auth: { status: "authenticated" },
+          models: [
+            {
+              slug: "default",
+              name: "Default",
+              isCustom: false,
+              capabilities: null,
+            },
+          ],
+        },
+      ],
+    } as unknown as ServerConfig;
+
+    expect(buildModelOptions(config, null)).toMatchObject([
+      {
+        key: "fx:default",
+        label: "Default",
+        providerKey: "fx",
+        providerLabel: "fx",
+        providerDriver: "fx",
+        selection: { instanceId: "fx", model: "default" },
+      },
+    ]);
+  });
+
+  it("groups models by provider and flags legacy entries", () => {
+    const config = {
+      providers: [
+        {
+          instanceId: "codex",
+          driver: "codex",
+          displayName: "Codex",
+          enabled: true,
+          installed: true,
+          auth: { status: "authenticated" },
+          models: [
+            {
+              slug: "gpt-5.6-sol",
+              name: "GPT-5.6 Sol",
+              isCustom: false,
+              capabilities: null,
+            },
+            {
+              slug: "gpt-5.4",
+              name: "GPT-5.4",
+              isCustom: false,
+              isLegacy: true,
+              capabilities: null,
+            },
+          ],
+        },
+      ],
+    } as unknown as ServerConfig;
+
+    expect(groupByProvider(buildModelOptions(config, null, undefined, null))).toMatchObject([
+      {
+        providerKey: "codex",
+        providerLabel: "Codex",
+        models: [
+          { key: "codex:gpt-5.6-sol", label: "GPT-5.6 Sol", subtitle: "", isLegacy: false },
+          { key: "codex:gpt-5.4", label: "GPT-5.4", isLegacy: true },
+        ],
+      },
+    ]);
+  });
+
+  it("carries configured ACP identity into model and provider catalogs", () => {
+    const iconUrl = "https://cdn.agentclientprotocol.com/registry/v1/latest/antigravity-acp.svg";
+    const config = {
+      providers: [
+        {
+          instanceId: "acpRegistry_antigravity",
+          driver: "acpRegistry",
+          displayName: "Antigravity",
+          iconUrl,
+          enabled: true,
+          installed: true,
+          auth: { status: "authenticated" },
+          models: [
+            {
+              slug: "default",
+              name: "Default",
+              isCustom: false,
+              capabilities: null,
+            },
+          ],
+        },
+      ],
+    } as unknown as ServerConfig;
+
+    const [group] = groupByProvider(buildModelOptions(config, null, undefined, null));
+
+    expect(group).toMatchObject({
+      providerKey: "acpRegistry_antigravity",
+      providerLabel: "Antigravity",
+      models: [
+        {
+          providerDriver: "acpRegistry",
+          providerIconUrl: iconUrl,
+        },
+      ],
+    });
+  });
+
   it("distinguishes same-name OpenCode models without changing their routing", () => {
     const sources = [
       { id: "anthropic", label: "Anthropic" },
