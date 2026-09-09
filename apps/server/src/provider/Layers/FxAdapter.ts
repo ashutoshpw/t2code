@@ -72,6 +72,7 @@ import {
   resolveFxAcpBaseModelId,
 } from "../acp/FxAcpSupport.ts";
 import type { FxAdapterShape } from "../Services/FxAdapter.ts";
+import type { AcpSessionRuntimeStartResult } from "../acp/AcpSessionRuntime.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
 const PROVIDER = ProviderDriverKind.make("fx");
@@ -81,7 +82,6 @@ const FX_RESUME_VERSION = 1 as const;
 // the complete JSON-RPC line, so image files need to fit after base64, JSON,
 // the session id, and the runtime instructions are included.
 export const FX_MAX_ACP_FRAME_BYTES = 8 * 1024 * 1024;
-export const FX_MAX_IMAGE_ATTACHMENT_BYTES = 8 * 1024 * 1024;
 
 const FX_MAX_REQUEST_ID = Number.MAX_SAFE_INTEGER;
 
@@ -183,6 +183,19 @@ function detailForPermission(request: EffectAcpSchema.RequestPermissionRequest):
   );
 }
 
+function isEditPermissionKind(kind: string): boolean {
+  switch (kind.trim().toLowerCase()) {
+    case "edit":
+    case "delete":
+    case "move":
+    case "file-change":
+    case "file_change":
+      return true;
+    default:
+      return false;
+  }
+}
+
 interface PendingApproval {
   readonly decision: Deferred.Deferred<ProviderApprovalDecision>;
 }
@@ -199,6 +212,7 @@ interface FxSessionContext {
   session: ProviderSession;
   readonly scope: Scope.Closeable;
   readonly acp: AcpSessionRuntime.AcpSessionRuntime["Service"];
+  readonly supportsImages: boolean;
   notificationFiber: Fiber.Fiber<void, never> | undefined;
   readonly pendingApprovals: Map<ApprovalRequestId, PendingApproval>;
   readonly turns: Array<{ id: TurnId; items: Array<unknown> }>;
@@ -219,6 +233,20 @@ export interface FxAdapterLiveOptions {
   readonly instanceId?: ProviderInstanceId;
   /** Test hook for replacing the captured settings before each session. */
   readonly resolveSettings?: Effect.Effect<FxSettings>;
+  /** Publishes the ACP session's initial model/config metadata to the provider snapshot. */
+  readonly onSessionStarted?: (
+    started: AcpSessionRuntimeStartResult,
+    cwd: string,
+  ) => Effect.Effect<void>;
+  /** Publishes workspace-scoped ACP slash commands to the provider snapshot. */
+  readonly onAvailableCommands?: (
+    commands: ReadonlyArray<EffectAcpSchema.AvailableCommand>,
+    cwd: string,
+  ) => Effect.Effect<void>;
+  /** Publishes live ACP model/config changes to the provider snapshot. */
+  readonly onConfigOptionsUpdated?: (
+    configOptions: ReadonlyArray<EffectAcpSchema.SessionConfigOption>,
+  ) => Effect.Effect<void>;
 }
 
 export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOptions) {
@@ -525,7 +553,8 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
 
           const cwd = path.resolve(input.cwd.trim());
           const modelSelection = input.modelSelection;
-          const initialModel = resolveFxAcpBaseModelId(modelSelection?.model);
+          const initialModelSelection = modelSelection?.model?.trim();
+          const initialModel = resolveFxAcpBaseModelId(initialModelSelection);
           const existing = sessions.get(input.threadId);
           if (existing && !existing.stopped) {
             yield* stopSessionInternal(existing);
@@ -554,6 +583,7 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
             ...(options?.environment ? { environment: options.environment } : {}),
             childProcessSpawner,
             cwd,
+            runtimeMode: input.runtimeMode,
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientInfo: { name: "t3-code", version: "0.0.0" },
             ...(mcpSession
@@ -592,7 +622,12 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
             yield* acp.handleRequestPermission((params) =>
               Effect.gen(function* () {
                 yield* logNative(input.threadId, "session/request_permission", params);
-                if (input.runtimeMode === "full-access") {
+                const permissionRequest = parsePermissionRequest(params);
+                if (
+                  (input.runtimeMode === "auto-accept-edits" &&
+                    isEditPermissionKind(permissionRequest.kind)) ||
+                  input.runtimeMode === "full-access"
+                ) {
                   const optionId =
                     selectFxPermissionOptionId(params, "acceptForSession") ??
                     selectFxPermissionOptionId(params, "accept");
@@ -604,7 +639,6 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
                 const requestId = ApprovalRequestId.make(yield* randomUUIDv4);
                 const runtimeRequestId = RuntimeRequestId.make(requestId);
                 const decision = yield* Deferred.make<ProviderApprovalDecision>();
-                const permissionRequest = parsePermissionRequest(params);
                 pendingApprovals.set(requestId, { decision });
                 yield* offerRuntimeEvent(
                   makeAcpRequestOpenedEvent({
@@ -649,7 +683,9 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
                 ),
               ),
             );
-            return yield* acp.start();
+            const started = yield* acp.start();
+            yield* options?.onSessionStarted?.(started, cwd) ?? Effect.void;
+            return started;
           }).pipe(
             Effect.mapError((error) =>
               mapAcpToAdapterError(PROVIDER, input.threadId, "session/start", error),
@@ -659,7 +695,7 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
           yield* applyFxAcpSessionConfiguration({
             runtime: acp,
             runtimeMode: input.runtimeMode,
-            ...(initialModel !== undefined ? { model: initialModel } : {}),
+            ...(initialModelSelection !== undefined ? { model: initialModelSelection } : {}),
             mapError: ({ cause, method }) =>
               mapAcpToAdapterError(PROVIDER, input.threadId, method, cause),
           });
@@ -687,6 +723,8 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
             session,
             scope: sessionScope,
             acp,
+            supportsImages:
+              started.initializeResult.agentCapabilities?.promptCapabilities?.image === true,
             notificationFiber: undefined,
             pendingApprovals,
             turns: [],
@@ -706,8 +744,17 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
                     yield* Deferred.succeed(event.acknowledge, undefined);
                     return;
                   case "ModeChanged":
+                    return;
                   case "AvailableCommandsUpdated":
+                    if (ctx.session.cwd) {
+                      yield* (
+                        options?.onAvailableCommands?.(event.availableCommands, ctx.session.cwd) ??
+                          Effect.void
+                      );
+                    }
+                    return;
                   case "ConfigOptionsUpdated":
+                    yield* options?.onConfigOptionsUpdated?.(event.configOptions) ?? Effect.void;
                     return;
                   case "ConnectionTerminated":
                     yield* stopSessionInternal(ctx, {
@@ -844,32 +891,6 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
 
                 const steeringTurnId = ctx.activeTurnId;
                 const turnId = steeringTurnId ?? TurnId.make(yield* randomUUIDv4);
-                const state: FxPromptState = {
-                  turnId,
-                  epoch: ctx.promptEpoch + 1,
-                  settled: false,
-                };
-                ctx.promptEpoch = state.epoch;
-                ctx.promptStates.set(state.epoch, state);
-                tracked = { ctx, state };
-                ctx.activeTurnId = turnId;
-                ctx.session = {
-                  ...ctx.session,
-                  status: steeringTurnId === undefined ? "connecting" : "running",
-                  activeTurnId: turnId,
-                  updatedAt: yield* nowIso,
-                };
-                if (steeringTurnId === undefined) {
-                  ctx.lastPlanFingerprint = undefined;
-                  yield* offerRuntimeEvent({
-                    type: "turn.started",
-                    ...(yield* makeEventStamp()),
-                    provider: PROVIDER,
-                    threadId: input.threadId,
-                    turnId,
-                    payload: {},
-                  });
-                }
 
                 const rawPrompt = input.input?.trim() ?? "";
                 const promptParts: Array<EffectAcpSchema.ContentBlock> = [];
@@ -877,10 +898,20 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
                   promptParts.push({ type: "text", text: rawPrompt });
                 }
                 for (const attachment of input.attachments ?? []) {
-                  // File attachments are described by ProviderService's path hint;
-                  // FX's native ACP extension accepts image blocks only.
                   if (attachment.type !== "image") {
-                    continue;
+                    return yield* new ProviderAdapterValidationError({
+                      provider: PROVIDER,
+                      operation: "sendTurn",
+                      issue:
+                        "FX ACP supports image attachments only; remove file attachments and retry.",
+                    });
+                  }
+                  if (!ctx.supportsImages) {
+                    return yield* new ProviderAdapterValidationError({
+                      provider: PROVIDER,
+                      operation: "sendTurn",
+                      issue: "The FX ACP session does not advertise image prompt support.",
+                    });
                   }
                   const attachmentPath = resolveAttachmentPath({
                     attachmentsDir: serverConfig.attachmentsDir,
@@ -904,12 +935,11 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
                         }),
                     ),
                   );
-                  const fileSize = Number(fileInfo.size);
-                  if (fileInfo.type !== "File" || fileSize > FX_MAX_IMAGE_ATTACHMENT_BYTES) {
+                  if (fileInfo.type !== "File") {
                     return yield* new ProviderAdapterValidationError({
                       provider: PROVIDER,
                       operation: "sendTurn",
-                      issue: `FX image attachments must be files no larger than ${FX_MAX_IMAGE_ATTACHMENT_BYTES} bytes.`,
+                      issue: "FX image attachments must resolve to regular files.",
                     });
                   }
                   const bytes = yield* fileSystem.readFile(attachmentPath).pipe(
@@ -923,13 +953,6 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
                         }),
                     ),
                   );
-                  if (bytes.byteLength > FX_MAX_IMAGE_ATTACHMENT_BYTES) {
-                    return yield* new ProviderAdapterValidationError({
-                      provider: PROVIDER,
-                      operation: "sendTurn",
-                      issue: `FX image attachments must be no larger than ${FX_MAX_IMAGE_ATTACHMENT_BYTES} bytes.`,
-                    });
-                  }
                   promptParts.push({
                     type: "image",
                     data: Buffer.from(bytes).toString("base64"),
@@ -947,6 +970,7 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
 
                 const modelSelection = input.modelSelection;
                 const requestedModel = modelSelection?.model ?? ctx.session.model;
+                const requestedModelSelection = requestedModel?.trim();
                 const resolvedModel = resolveFxAcpBaseModelId(requestedModel);
                 const runtimeInstructions = buildRuntimeInstructions({
                   harness: "FX",
@@ -965,6 +989,18 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
                   });
                 }
 
+                // Validate and construct the complete prompt before changing
+                // the active turn. An invalid steering request must leave the
+                // provider's existing prompt and turn intact.
+                const state: FxPromptState = {
+                  turnId,
+                  epoch: ctx.promptEpoch + 1,
+                  settled: false,
+                };
+                ctx.promptEpoch = state.epoch;
+                ctx.promptStates.set(state.epoch, state);
+                tracked = { ctx, state };
+
                 if (steeringTurnId !== undefined) {
                   yield* settlePendingApprovalsAsCancelled(ctx.pendingApprovals);
                   yield* ctx.acp.cancel.pipe(
@@ -973,13 +1009,33 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
                     ),
                   );
                 }
+                ctx.activeTurnId = turnId;
+                ctx.session = {
+                  ...ctx.session,
+                  status: steeringTurnId === undefined ? "connecting" : "running",
+                  activeTurnId: turnId,
+                  updatedAt: yield* nowIso,
+                };
+                if (steeringTurnId === undefined) {
+                  ctx.lastPlanFingerprint = undefined;
+                  yield* offerRuntimeEvent({
+                    type: "turn.started",
+                    ...(yield* makeEventStamp()),
+                    provider: PROVIDER,
+                    threadId: input.threadId,
+                    turnId,
+                    payload: {},
+                  });
+                }
                 yield* applyFxAcpSessionConfiguration({
                   runtime: ctx.acp,
                   runtimeMode: ctx.session.runtimeMode,
                   ...(input.interactionMode !== undefined
                     ? { interactionMode: input.interactionMode }
                     : {}),
-                  ...(resolvedModel !== undefined ? { model: resolvedModel } : {}),
+                  ...(requestedModelSelection !== undefined
+                    ? { model: requestedModelSelection }
+                    : {}),
                   mapError: ({ cause, method }) =>
                     mapAcpToAdapterError(PROVIDER, input.threadId, method, cause),
                 });
@@ -1080,18 +1136,29 @@ export function makeFxAdapter(fxSettings: FxSettings, options?: FxAdapterLiveOpt
               }
 
               yield* settlePendingApprovalsAsCancelled(ctx.pendingApprovals);
-              // Mark the turn terminal before awaiting the provider. This keeps
-              // a late prompt response from producing a duplicate completion or
-              // resurrecting the session while cancellation is in flight.
-              yield* finishTurn({
-                ctx,
-                turnId: activeTurnId,
-                state: "cancelled",
-                stopReason: "cancelled",
-              });
+              // FX accepts a replacement prompt only after the old prompt has
+              // fully settled. The runtime's wait-for-prompt cancellation
+              // gives us that confirmation, so keep the old turn identity
+              // visible until cancel succeeds and then emit one terminal event.
               yield* ctx.acp.cancel.pipe(
                 Effect.mapError((error) =>
                   mapAcpToAdapterError(PROVIDER, threadId, "session/cancel", error),
+                ),
+                Effect.tap(() =>
+                  finishTurn({
+                    ctx,
+                    turnId: activeTurnId,
+                    state: "cancelled",
+                    stopReason: "cancelled",
+                  }).pipe(Effect.asVoid),
+                ),
+                Effect.tapError((error) =>
+                  finishTurn({
+                    ctx,
+                    turnId: activeTurnId,
+                    state: "failed",
+                    errorMessage: error.message,
+                  }).pipe(Effect.ignore),
                 ),
               );
             }),
