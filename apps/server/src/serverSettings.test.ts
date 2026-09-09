@@ -1037,6 +1037,9 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           cursor: {
             enabled: false,
           },
+          fx: {
+            enabled: false,
+          },
           grok: {
             enabled: false,
           },
