@@ -16,64 +16,69 @@ import type * as AcpCompat from "effect-acp/compat";
 
 import { beginAcpMockPrompt } from "./acpMockCancellationState.ts";
 
-const requestLogPath = process.env.T3_ACP_REQUEST_LOG_PATH;
-const antigravityProfile = process.env.T3_ACP_ANTIGRAVITY === "1";
-const noAuthProfile = process.env.T3_ACP_NO_AUTH === "1";
-const emitToolCalls = process.env.T3_ACP_EMIT_TOOL_CALLS === "1";
-const emitInterleavedAssistantToolCalls =
-  process.env.T3_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS === "1";
-const emitV2Fidelity = process.env.T3_ACP_EMIT_V2_FIDELITY === "1";
-const emitNotice = process.env.T3_ACP_EMIT_NOTICE === "1";
-const vibeRetryOutcome = process.env.T3_ACP_VIBE_RETRY_OUTCOME;
-const emitGenericToolPlaceholders = process.env.T3_ACP_EMIT_GENERIC_TOOL_PLACEHOLDERS === "1";
-const emitInTurnTaskOutputThenLateDuplicate =
-  process.env.T3_ACP_EMIT_IN_TURN_TASKOUTPUT_THEN_LATE_DUPLICATE === "1";
-const emitBackgroundToolDuringAnswer =
-  process.env.T3_ACP_EMIT_BACKGROUND_TOOL_DURING_ANSWER === "1";
-const emitMcpToolApprovalElicitation =
-  process.env.T3_ACP_EMIT_MCP_TOOL_APPROVAL_ELICITATION === "1";
-const grokKillTaskShape = process.env.T3_ACP_GROK_KILL_TASK_SHAPE;
-const emitGrokBackgroundTaskPoll = process.env.T3_ACP_GROK_BACKGROUND_TASK_COMPLETION === "poll";
-const emitForeignSessionUpdates = process.env.T3_ACP_EMIT_FOREIGN_SESSION_UPDATES === "1";
-const omitInitializeModelState = process.env.T3_ACP_OMIT_INITIALIZE_MODEL_STATE === "1";
-const completeFirstPromptOnCancel = process.env.T3_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL === "1";
-const floodStderr = process.env.T3_ACP_FLOOD_STDERR === "1";
-const hangPromptForever = process.env.T3_ACP_HANG_PROMPT_FOREVER === "1";
-const emitTrackedToolCallKindThenHang = process.env.T3_ACP_EMIT_TRACKED_TOOL_CALL_KIND_THEN_HANG;
-const clientFsProbePath = process.env.T3_ACP_CLIENT_FS_PROBE_PATH;
-const clientFsProbeLogPath = process.env.T3_ACP_CLIENT_FS_PROBE_LOG_PATH;
-const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
-const emitEmptySuccessfulBash = process.env.T3_ACP_EMIT_EMPTY_SUCCESSFUL_BASH === "1";
-const emitEmptySuccessfulBashThenHang =
-  process.env.T3_ACP_EMIT_EMPTY_SUCCESSFUL_BASH_THEN_HANG === "1";
-const failLoadSession = process.env.T3_ACP_FAIL_LOAD_SESSION === "1";
-const failLoadSessionAfterConfigReplay =
-  process.env.T3_ACP_FAIL_LOAD_SESSION_AFTER_CONFIG_REPLAY === "1";
-const emitLoadReplay = process.env.T3_ACP_EMIT_LOAD_REPLAY === "1";
-const failPrompt = process.env.T3_ACP_FAIL_PROMPT === "1";
-const failPromptOrdinal = Number(process.env.T3_ACP_FAIL_PROMPT_ORDINAL);
+const emitTrackedToolCallKindThenHang = process.env.T2_ACP_EMIT_TRACKED_TOOL_CALL_KIND_THEN_HANG;
+const exitLogPath = process.env.T2_ACP_EXIT_LOG_PATH;
+const autoFinishCancel = process.env.T2_ACP_AUTO_FINISH_CANCEL === "1";
+const emitPostSettleMonitorFlow = process.env.T2_ACP_EMIT_POST_SETTLE_MONITOR_FLOW === "1";
+const injectedReportTriggerPath = process.env.T2_ACP_INJECTED_REPORT_TRIGGER_PATH;
+const emitAskQuestion = process.env.T2_ACP_EMIT_ASK_QUESTION === "1";
+const emitElicitation = process.env.T2_ACP_EMIT_ELICITATION === "1";
+const emitUrlElicitation = process.env.T2_ACP_EMIT_URL_ELICITATION === "1";
+const emitXAiAskUserQuestion = process.env.T2_ACP_EMIT_XAI_ASK_USER_QUESTION === "1";
+const emitXAiExitPlanMode = process.env.T2_ACP_EMIT_XAI_EXIT_PLAN_MODE === "1";
+const emitXAiPlanMdWrite = process.env.T2_ACP_EMIT_XAI_PLAN_MD_WRITE === "1";
+const emitXAiPromptCompleteThenHang = process.env.T2_ACP_EMIT_XAI_PROMPT_COMPLETE_THEN_HANG === "1";
+const emitXAiRateLimitThenHang = process.env.T2_ACP_EMIT_XAI_RATE_LIMIT_THEN_HANG === "1";
+const emitXAiAskUserQuestionThenHang =
+  process.env.T2_ACP_EMIT_XAI_ASK_USER_QUESTION_THEN_HANG === "1";
+const emitContentThenHang = process.env.T2_ACP_EMIT_CONTENT_THEN_HANG === "1";
+const emitPlanThenHang = process.env.T2_ACP_EMIT_PLAN_THEN_HANG === "1";
+const emitActiveToolThenHang = process.env.T2_ACP_EMIT_ACTIVE_TOOL_THEN_HANG === "1";
+const emitGrokMonitorPostTurnPoll = process.env.T2_ACP_EMIT_GROK_MONITOR_POST_TURN_POLL === "1";
+const emitGrokBackgroundTaskStarted = process.env.T2_ACP_EMIT_GROK_BACKGROUND_TASK_STARTED === "1";
+const waitForResumeRelease = process.env.T2_ACP_WAIT_FOR_RESUME_RELEASE === "1";
+const hangAfterPermission = process.env.T2_ACP_HANG_AFTER_PERMISSION === "1";
+const hangFirstPromptForever = process.env.T2_ACP_HANG_FIRST_PROMPT_FOREVER === "1";
+const emitLateUpdateAfterCancel = process.env.T2_ACP_EMIT_LATE_UPDATE_AFTER_CANCEL === "1";
+const emitTaskBackgroundedAfterCancel =
+  process.env.T2_ACP_EMIT_TASK_BACKGROUNDED_AFTER_CANCEL === "1";
+const residualCallbackResponseLogPath = process.env.T2_ACP_RESIDUAL_CALLBACK_RESPONSE_LOG_PATH;
+const residualCallbackTriggerPath = process.env.T2_ACP_RESIDUAL_CALLBACK_TRIGGER_PATH;
+const exitAfterResidualCallbacks = process.env.T2_ACP_EXIT_AFTER_RESIDUAL_CALLBACKS === "1";
+const emitRunningCommandThenHang = process.env.T2_ACP_EMIT_RUNNING_COMMAND_THEN_HANG === "1";
+const emitRunningCommandThenHangOnFirstPrompt =
+  process.env.T2_ACP_EMIT_RUNNING_COMMAND_THEN_HANG_FIRST_PROMPT === "1";
+const exitOnCancel = process.env.T2_ACP_EXIT_ON_CANCEL === "1";
+const runningCommandIgnoresTerm = process.env.T2_ACP_RUNNING_COMMAND_IGNORE_TERM === "1";
+const runningCommandPidPath = process.env.T2_ACP_RUNNING_COMMAND_PID_PATH;
+const runningCommandSeparateSession = process.env.T2_ACP_RUNNING_COMMAND_SEPARATE_SESSION === "1";
+const exitAfterRunningCommandLaunch = process.env.T2_ACP_EXIT_AFTER_RUNNING_COMMAND_LAUNCH === "1";
+const omitXAiPromptCompleteStopReason =
+  process.env.T2_ACP_OMIT_XAI_PROMPT_COMPLETE_STOP_REASON === "1";
+const hangLoadSessionAfterReplay = process.env.T2_ACP_HANG_LOAD_SESSION_AFTER_REPLAY === "1";
+const delayLoadSessionAfterReplay = process.env.T2_ACP_DELAY_LOAD_SESSION_AFTER_REPLAY === "1";
+const loadSessionDelayMs = Number(process.env.T2_ACP_LOAD_SESSION_DELAY_MS ?? "5000");
+const emitStaleXAiPromptCompleteBeforeSecondHang =
+  process.env.T2_ACP_EMIT_STALE_XAI_PROMPT_COMPLETE_BEFORE_SECOND_HANG === "1";
+const emitOverlappingXAiPromptCompleteOutOfOrder =
+  process.env.T2_ACP_EMIT_OVERLAPPING_XAI_PROMPT_COMPLETE_OUT_OF_ORDER === "1";
 const compactionPromptOrdinals = new Set(
-  (process.env.T3_ACP_COMPACTION_PROMPT_ORDINALS ?? "").split(",").map(Number),
+  (process.env.T2_ACP_COMPACTION_PROMPT_ORDINALS ?? "").split(",").map(Number),
 );
-const failSetConfigOption = process.env.T3_ACP_FAIL_SET_CONFIG_OPTION === "1";
-const failSetModeConfigOption = process.env.T3_ACP_FAIL_SET_MODE_CONFIG_OPTION === "1";
-const exitOnSetConfigOption = process.env.T3_ACP_EXIT_ON_SET_CONFIG_OPTION === "1";
-const omitModelConfigOption = process.env.T3_ACP_OMIT_MODEL_CONFIG_OPTION === "1";
-const emitEmptyDefaultAgentOption = process.env.T3_ACP_EMIT_EMPTY_DEFAULT_AGENT_OPTION === "1";
-const promptResponseText = process.env.T3_ACP_PROMPT_RESPONSE_TEXT;
-const promptDelayMs = Number(process.env.T3_ACP_PROMPT_DELAY_MS ?? "0");
-const supportsSessionLifecycle = process.env.T3_ACP_SESSION_LIFECYCLE === "1";
-const supportsAcpMcp = process.env.T3_ACP_MCP_ACP === "1";
-const supportsV2Management = process.env.T3_ACP_V2_MANAGEMENT === "1";
-const advertisedAuthMethodId = process.env.T3_ACP_AUTH_METHOD_ID?.trim();
-const initializeAuthMethodId =
-  advertisedAuthMethodId ?? (supportsSessionLifecycle ? "test" : undefined);
-const requiresAuthentication = process.env.T3_ACP_REQUIRE_AUTH === "1";
-const permissionOptionIds = {
-  allowOnce: "allow-once",
-  allowAlways: "allow-always",
-  rejectOnce: "reject-once",
-};
+const initialGrokReasoningEffort =
+  process.env.T2_ACP_INITIAL_GROK_REASONING_EFFORT?.trim() || undefined;
+const omitSessionListHandler = process.env.T2_ACP_OMIT_SESSION_LIST_HANDLER === "1";
+const commandAdvertisementDelayMs = Number(
+  process.env.T2_ACP_COMMAND_ADVERTISEMENT_DELAY_MS ?? "-1",
+);
+  allowOnce: process.env.T2_ACP_ALLOW_ONCE_OPTION_ID ?? "allow-once",
+  allowAlways: process.env.T2_ACP_ALLOW_ALWAYS_OPTION_ID ?? "allow-always",
+  rejectOnce: process.env.T2_ACP_REJECT_ONCE_OPTION_ID ?? "reject-once",
+const omitAllowAlways = process.env.T2_ACP_OMIT_ALLOW_ALWAYS === "1";
+const permissionRequestCount = Math.max(
+  1,
+  Number(process.env.T2_ACP_PERMISSION_REQUEST_COUNT ?? "1") || 1,
+);
 const sessionId = "mock-session-1";
 
 let currentModeId = antigravityProfile ? "default" : "ask";
@@ -358,10 +363,10 @@ function modeState(): AcpCompat.SessionModeState {
 // Grok ACP advertises versioned model ids, never the CLI product name.
 const grokAcpModels: ReadonlyArray<AcpCompat.ModelInfo> = [
   {
-    modelId: "grok-4.6",
+    modelId: process.env.T2_ACP_GROK_MODEL ?? "grok-4.6",
     name: "Grok 4.6",
     _meta: {
-      totalContextTokens: 500_000,
+      totalContextTokens: Number(process.env.T2_ACP_GROK_CONTEXT_TOKENS ?? 500_000),
       contextWindows: [256_000, 500_000],
       supportsReasoningEffort: true,
       reasoningEffort: "high",
@@ -381,7 +386,7 @@ function modelState(): AcpCompat.SessionModelState {
   }
   const modelId = grokAcpModels.some((model) => model.modelId === currentModelId)
     ? currentModelId
-    : "grok-4.6";
+    : (process.env.T2_ACP_GROK_MODEL ?? "grok-4.6");
   return {
     currentModelId: modelId,
     availableModels: grokAcpModels,
@@ -775,6 +780,9 @@ const program = Effect.gen(function* () {
       cancelledSessions.add(cancelledSessionId);
       if (completeFirstPromptOnCancel) {
         yield* Deferred.succeed(nativeCancelRequested, undefined);
+        if (autoFinishCancel) {
+          yield* Deferred.succeed(nativeCancelRelease, undefined);
+        }
         yield* agent.client.sessionUpdate({
           sessionId: cancelledSessionId,
           update: {
@@ -791,7 +799,7 @@ const program = Effect.gen(function* () {
       const requestedSessionId = String(request.sessionId ?? sessionId);
       beginAcpMockPrompt(cancelledSessions, requestedSessionId);
       promptCount += 1;
-      const idleError = process.env.T3_ACP_IDLE_ERROR;
+      const idleError = process.env.T2_ACP_IDLE_ERROR;
       if (idleError === "grok-background" && promptCount === 1) {
         // The structured completion lands before the prompt settles, so it is buffered.
         const taskId = "call-idle-error-background";
@@ -908,6 +916,12 @@ const program = Effect.gen(function* () {
           Effect.forkDetach,
         );
         return {};
+      }
+      if (
+        process.env.T2_ACP_CRASH_PROMPT === "1" &&
+        request.prompt.some((part) => part.type === "text" && part.text === "crash now")
+      ) {
+        return yield* Effect.sync(() => process.exit(23));
       }
 
       if (clientFsProbePath !== undefined && clientFsProbeLogPath !== undefined) {
@@ -1165,7 +1179,7 @@ const program = Effect.gen(function* () {
                 sources: [
                   { type: "url", url: "https://t3.codes" },
                   { type: "url", url: "https://t3.codes" },
-                  { type: "url", url: "https://github.com/pingdotgg/t3code" },
+                  { type: "url", url: "https://github.com/pingdotgg/t2code" },
                 ],
               },
               id: "grok-web-search",
@@ -1181,9 +1195,9 @@ const program = Effect.gen(function* () {
             rawInput: { variant: "WebFetch", url: "https://t3.codes" },
             rawOutput: {
               type: "WebFetch",
-              Content: { url: "https://t3.codes", content: "T3 Code page" },
+              Content: { url: "https://t3.codes", content: "T2 Code page" },
             },
-            content: [{ type: "content", content: { type: "text", text: "T3 Code page" } }],
+            content: [{ type: "content", content: { type: "text", text: "T2 Code page" } }],
           },
           {
             sessionUpdate: "tool_call_update",
@@ -1532,21 +1546,35 @@ const program = Effect.gen(function* () {
         ];
 
         let cancelled = cancelledSessions.delete(requestedSessionId);
-        const command = "cat server/package.json";
-        const permission = yield* agent.client.requestPermission({
-          sessionId: requestedSessionId,
-          title: `\`${command}\``,
-          subject: {
-            type: "tool_call",
-            toolCall: {
-              toolCallId,
-              title: `\`${command}\``,
-              kind: "execute",
-              status: "pending",
-              rawInput: {
-                variant: "Bash",
-                command,
-                description: "Read package metadata",
+        for (let index = 0; index < permissionRequestCount; index++) {
+          const command =
+            index > 0
+              ? (process.env.T2_ACP_SECOND_PERMISSION_COMMAND ?? "cat server/package.json")
+              : "cat server/package.json";
+          const permission = yield* agent.client.requestPermission({
+            sessionId: requestedSessionId,
+            title: process.env.T2_ACP_PERMISSION_TITLE ?? `\`${command}\``,
+            subject: {
+              type: "tool_call",
+              toolCall: {
+                toolCallId: index === 0 ? toolCallId : `${toolCallId}-${index + 1}`,
+                title: process.env.T2_ACP_PERMISSION_TITLE ?? `\`${command}\``,
+                kind: "execute",
+                status: "pending",
+                rawInput: {
+                  variant: "Bash",
+                  command,
+                  description: index === 0 ? "Read package metadata" : "Read it again",
+                },
+                content: [
+                  {
+                    type: "content",
+                    content: {
+                      type: "text",
+                      text: `Not in allowlist: ${command}`,
+                    },
+                  },
+                ],
               },
               content: [
                 {
@@ -1701,6 +1729,217 @@ const program = Effect.gen(function* () {
         return yield* finishPrompt(requestedSessionId, "end_turn");
       }
 
+      if (emitPostSettleMonitorFlow) {
+        const monitorToolCallId = "tool-call-monitor-1";
+
+        yield* agent.client.sessionUpdate({
+          sessionId: requestedSessionId,
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId: monitorToolCallId,
+            title: "Monitor: mock background task",
+            kind: "execute",
+            status: "pending",
+            rawInput: {},
+          },
+        });
+
+        yield* agent.client.sessionUpdate({
+          sessionId: requestedSessionId,
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId: monitorToolCallId,
+            status: "in_progress",
+          },
+        });
+
+        yield* Effect.gen(function* () {
+          yield* Effect.sleep("150 millis");
+          yield* Effect.sync(() => {
+            writeJsonRpcNotification("session/update", {
+              sessionId: requestedSessionId,
+              update: {
+                sessionUpdate: "user_message_chunk",
+                messageId: "mock-user-message",
+                content: {
+                  type: "text",
+                  text: 'Monitor "task-monitor-1" ended: [monitor ended: exit 0]',
+                },
+              },
+            });
+            writeJsonRpcNotification("session/update", {
+              sessionId: requestedSessionId,
+              update: {
+                sessionUpdate: "tool_call_update",
+                toolCallId: "tool-call-fetch-1",
+                title: "get_command_or_subagent_output",
+                kind: "other",
+                status: "pending",
+                rawInput: { task_id: "task-monitor-1" },
+              },
+            });
+            writeJsonRpcNotification("session/update", {
+              sessionId: requestedSessionId,
+              update: {
+                sessionUpdate: "tool_call_update",
+                toolCallId: "tool-call-fetch-1",
+                status: "completed",
+                rawOutput: { output: "MONITOR_LISTING_TOKEN" },
+              },
+            });
+          });
+          if (injectedReportTriggerPath === undefined) return;
+          while (!(yield* Effect.sync(() => NodeFS.existsSync(injectedReportTriggerPath)))) {
+            yield* Effect.sleep("20 millis");
+          }
+          yield* Effect.sync(() => {
+            writeJsonRpcNotification("session/update", {
+              sessionId: requestedSessionId,
+              update: {
+                sessionUpdate: "agent_message_chunk",
+                messageId: "mock-agent-message",
+                content: { type: "text", text: "Monitor finished. MONITOR_REPORT_TOKEN" },
+              },
+            });
+          });
+        }).pipe(Effect.forkDetach);
+
+        return yield* finishPrompt(requestedSessionId, "end_turn");
+      }
+
+      if (emitAskQuestion) {
+        yield* agent.client.extRequest("cursor/ask_question", {
+          toolCallId: "ask-question-tool-call-1",
+          title: "Question",
+          questions: [
+            {
+              id: "scope",
+              prompt: "Which scope?",
+              options: [
+                { id: "workspace", label: "Workspace" },
+                { id: "session", label: "Session" },
+              ],
+            },
+          ],
+        });
+
+        return yield* finishPrompt(requestedSessionId, "end_turn");
+      }
+
+      if (emitXAiAskUserQuestion || emitXAiAskUserQuestionThenHang) {
+        const result = yield* agent.client.extRequest("_x.ai/ask_user_question", {
+          method: "x.ai/ask_user_question",
+          params: {
+            sessionId: requestedSessionId,
+            toolCallId: "ask-user-question-tool-call-1",
+            questions: [
+              {
+                question: "Which scope should Grok use?",
+                multiSelect: null,
+                options: [
+                  { label: "Workspace", description: "Use the current workspace" },
+                  { label: "Session", description: "Only use this session" },
+                ],
+              },
+            ],
+            mode: "default",
+          },
+        });
+        if (typeof result !== "object" || result === null || !("outcome" in result)) {
+          throw new Error("Expected _x.ai/ask_user_question response outcome.");
+        }
+        if (result.outcome === "cancelled") {
+          return yield* finishPrompt(requestedSessionId, "end_turn");
+        }
+        if (
+          result.outcome !== "accepted" ||
+          !("answers" in result) ||
+          typeof result.answers !== "object" ||
+          result.answers === null
+        ) {
+          throw new Error("Expected accepted _x.ai/ask_user_question response answers.");
+        }
+
+        if (emitXAiAskUserQuestionThenHang) {
+          return yield* Effect.never;
+        }
+
+        return yield* finishPrompt(requestedSessionId, "end_turn");
+      }
+
+      if (emitXAiPlanMdWrite) {
+        // isGrokPlanMarkdownPath requires Grok's session layout.
+        const planRoot = process.env.T2_ACP_PLAN_ROOT ?? "/tmp/mock-home/.grok";
+        const planPath = `${planRoot}/sessions/${requestedSessionId}/plan.md`;
+        const planBody = "# Mock plan\n\n- Write the feature\n- Add a test\n- Ship it\n";
+        yield* agent.client.sessionUpdate({
+          sessionId: requestedSessionId,
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId: "enter-plan-mode-1",
+            title: "enter_plan_mode",
+            kind: "other",
+            status: "completed",
+            rawInput: { variant: "EnterPlanMode" },
+          },
+        });
+        yield* agent.client.sessionUpdate({
+          sessionId: requestedSessionId,
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId: "plan-md-write-1",
+            title: "write",
+            kind: "edit",
+            status: "pending",
+            rawInput: { file_path: planPath, content: planBody },
+          },
+        });
+        yield* agent.client.sessionUpdate({
+          sessionId: requestedSessionId,
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId: "plan-md-write-1",
+            kind: "edit",
+            status: "completed",
+            title: `Write \`${planPath}\``,
+            rawInput: { file_path: planPath, content: planBody },
+            content: [
+              {
+                type: "diff",
+                path: planPath,
+                oldText: "",
+                newText: planBody,
+              },
+            ],
+          },
+        });
+        return yield* finishPrompt(requestedSessionId, "end_turn");
+      }
+
+      if (emitXAiExitPlanMode) {
+        const result = yield* agent.client.extRequest("_x.ai/exit_plan_mode", {
+          method: "x.ai/exit_plan_mode",
+          params: {
+            sessionId: requestedSessionId,
+            toolCallId: "exit-plan-mode-tool-call-1",
+            planContent: "# Exit plan\n\n- Step one\n- Step two\n",
+          },
+        });
+        if (typeof result !== "object" || result === null || !("outcome" in result)) {
+          throw new Error("Expected _x.ai/exit_plan_mode response outcome.");
+        }
+        if (
+          result.outcome !== "abandoned" &&
+          result.outcome !== "approved" &&
+          result.outcome !== "request_changes"
+        ) {
+          throw new Error(
+            `Expected exit_plan_mode outcome abandoned|approved|request_changes, got ${String(result.outcome)}`,
+          );
+        }
+        return yield* finishPrompt(requestedSessionId, "end_turn");
+      }
+
       if (emitForeignSessionUpdates) {
         yield* agent.client.sessionUpdate({
           sessionId: requestedSessionId,
@@ -1779,8 +2018,8 @@ const program = Effect.gen(function* () {
   yield* agent.handleUnknownExtRequest((method, params) => {
     if (method === "_test/environment") {
       return Effect.succeed({
-        inherited: process.env.T3_ACP_RUNTIME_AMBIENT === "sentinel",
-        explicit: process.env.T3_ACP_RUNTIME_EXPLICIT === "kept",
+        inherited: process.env.T2_ACP_RUNTIME_AMBIENT === "sentinel",
+        explicit: process.env.T2_ACP_RUNTIME_EXPLICIT === "kept",
       });
     }
     if (method === "_test/finish-cancel") {
