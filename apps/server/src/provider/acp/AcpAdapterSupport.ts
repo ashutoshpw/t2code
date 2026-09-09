@@ -1,5 +1,6 @@
 import {
   type ProviderApprovalDecision,
+  type ProviderApprovalOption,
   type ProviderDriverKind,
   type ThreadId,
 } from "@t2code/contracts";
@@ -61,13 +62,48 @@ export function selectAcpPermissionOptionId(
   request: EffectAcpSchema.RequestPermissionRequest,
   decision: ProviderApprovalDecision,
 ): string | undefined {
-  if (decision === "cancel") return undefined;
-  const kind =
-    decision === "acceptForSession"
-      ? "allow_always"
-      : decision === "accept"
-        ? "allow_once"
-        : "reject_once";
-  return request.options.find((option) => option.kind === kind && option.optionId.length > 0)
-    ?.optionId;
+  const kind = (() => {
+    switch (decision) {
+      case "acceptForSession":
+      case "acceptAlways":
+        return "allow_always" as const;
+      case "accept":
+        return "allow_once" as const;
+      case "decline":
+        return "reject_once" as const;
+      case "cancel":
+        return undefined;
+    }
+  })();
+  if (kind === undefined) return undefined;
+  const option = request.options.find(
+    (entry) => entry.kind === kind && entry.optionId.trim().length > 0,
+  );
+  if (option !== undefined) return option.optionId;
+  if (decision === "decline") {
+    return request.options.find(
+      (entry) => entry.kind === "reject_always" && entry.optionId.trim().length > 0,
+    )?.optionId;
+  }
+  return undefined;
+}
+
+/** Advertise only approval decisions backed by the ACP request's option IDs. */
+export function acpApprovalOptions(
+  request: EffectAcpSchema.RequestPermissionRequest,
+): ReadonlyArray<ProviderApprovalOption> {
+  const options: ProviderApprovalOption[] = [];
+  const hasOption = (kind: EffectAcpSchema.PermissionOption["kind"]) =>
+    request.options.some((entry) => entry.kind === kind && entry.optionId.trim().length > 0);
+  if (hasOption("allow_once")) {
+    options.push({ decision: "accept", label: "Allow once" });
+  }
+  if (hasOption("allow_always")) {
+    options.push({ decision: "acceptForSession", label: "Allow for this thread" });
+  }
+  if (hasOption("reject_once") || hasOption("reject_always")) {
+    options.push({ decision: "decline", label: "Deny" });
+  }
+  options.push({ decision: "cancel", label: "Cancel" });
+  return options;
 }
