@@ -6,16 +6,99 @@ import type {
   VcsStatusResult,
   VcsStatusStreamEvent,
 } from "@t2code/contracts";
+import { LEGACY_WORKTREE_BRANCH_PREFIXES, WORKTREE_BRANCH_PREFIX } from "@t2code/contracts";
 import * as Arr from "effect/Array";
 import * as Result from "effect/Result";
 
-export const WORKTREE_BRANCH_PREFIX = "t3";
+export { LEGACY_WORKTREE_BRANCH_PREFIXES, WORKTREE_BRANCH_PREFIX };
+
+// Canonical form is `<prefix>/<8 hex>`. Older builds generated `t3code/<uuid>`
+// via Crypto.randomUUID() (always RFC 4122 v4), so the matcher also accepts exactly
+// that shape — version nibble `4`, variant nibble `[89ab]` — to keep those threads
+// eligible for branch regeneration without loosening beyond what was ever generated.
 const TEMP_WORKTREE_HEX_TOKEN = "[0-9a-f]{8}";
-const TEMP_WORKTREE_UUID_V4_TOKEN =
-  "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-const TEMP_WORKTREE_BRANCH_PATTERN = new RegExp(
-  `^(?:${WORKTREE_BRANCH_PREFIX}[-/]${TEMP_WORKTREE_HEX_TOKEN}|t3code(?:[-/]${TEMP_WORKTREE_HEX_TOKEN}|\\/${TEMP_WORKTREE_UUID_V4_TOKEN}))$`,
-);
+const TEMP_WORKTREE_BRANCH_SUFFIX =
+  "(?:[0-9a-f]{8}|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})";
+const tempWorktreeBranchPatternCache = new Map<string, RegExp>();
+
+function escapeRegExpFragment(raw: string): string {
+  return raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Recognized temporary-branch prefixes: the configured server prefix (when the
+ * caller knows it) ahead of the canonical default and the legacy upstream
+ * prefix, which must stay recognized forever so existing threads keep working.
+ */
+export function temporaryWorktreeBranchPrefixes(
+  configuredPrefix?: string | null,
+): ReadonlyArray<string> {
+  const prefixes = [WORKTREE_BRANCH_PREFIX, ...LEGACY_WORKTREE_BRANCH_PREFIXES];
+  const configured = sanitizeWorktreeBranchPrefix(configuredPrefix ?? "");
+  if (!prefixes.includes(configured)) {
+    prefixes.unshift(configured);
+  }
+  return prefixes;
+}
+
+function temporaryWorktreeBranchPattern(prefixes: ReadonlyArray<string>): RegExp {
+  const key = prefixes.join("|");
+  const cached = tempWorktreeBranchPatternCache.get(key);
+  if (cached) return cached;
+  const prefixAlternation = prefixes.map(escapeRegExpFragment).join("|");
+  const pattern = new RegExp(
+    `^(?:(?:${prefixAlternation})\\/${TEMP_WORKTREE_BRANCH_SUFFIX}|(?:${prefixAlternation})-${TEMP_WORKTREE_HEX_TOKEN})$`,
+  );
+  tempWorktreeBranchPatternCache.set(key, pattern);
+  return pattern;
+}
+
+/** Sanitize an arbitrary string into a valid single-segment branch prefix. */
+export function sanitizeWorktreeBranchPrefix(raw: string): string {
+  const prefix = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32)
+    .replace(/-+$/g, "");
+  return prefix.length > 0 ? prefix : WORKTREE_BRANCH_PREFIX;
+}
+
+/**
+ * Turn an LLM-generated branch suggestion into the worktree-namespace branch
+ * name `<prefix>/<slug>`: lowercase, sanitized fragment, prefix re-applied.
+ */
+export function buildGeneratedWorktreeBranchName(
+  raw: string,
+  prefix: string = WORKTREE_BRANCH_PREFIX,
+): string {
+  const branchPrefix = sanitizeWorktreeBranchPrefix(prefix);
+  const normalized = raw
+    .trim()
+    .toLowerCase()
+    .replace(/^refs\/heads\//, "")
+    .replace(/['"`]/g, "");
+
+  // A generated suggestion may echo any namespace we own (the configured one
+  // or a default/legacy one); strip it so the prefix below is the only one.
+  const withoutPrefix = temporaryWorktreeBranchPrefixes(branchPrefix).reduce(
+    (acc, namespace) => (acc.startsWith(`${namespace}/`) ? acc.slice(namespace.length + 1) : acc),
+    normalized,
+  );
+
+  const branchFragment = withoutPrefix
+    .replace(/[^a-z0-9/_-]+/g, "-")
+    .replace(/\/+/g, "/")
+    .replace(/-+/g, "-")
+    .replace(/^[./_-]+|[./_-]+$/g, "")
+    .slice(0, 64)
+    .replace(/[./_-]+$/g, "");
+
+  const safeFragment = branchFragment.length > 0 ? branchFragment : "update";
+  return `${branchPrefix}/${safeFragment}`;
+}
 
 export function sanitizeBranchFragment(raw: string): string {
   const normalized = raw
@@ -100,24 +183,34 @@ export function deriveLocalBranchNameFromRemoteRef(branchName: string): string {
 
 export function buildTemporaryWorktreeBranchName(
   randomHex: (byteLength: number) => string,
+  prefix: string = WORKTREE_BRANCH_PREFIX,
 ): string {
   const token = randomHex(4)
     .toLowerCase()
     .replace(/[^0-9a-f]/g, "")
     .slice(0, 8);
-  return `${WORKTREE_BRANCH_PREFIX}/${token}`;
+  return `${sanitizeWorktreeBranchPrefix(prefix)}/${token}`;
 }
 
-/** Flatten temporary t3/<hex> refs because an existing t3 branch blocks nested refs. */
-export function flattenTemporaryWorktreeBranchName(refName: string): string {
+/**
+ * Git stores refs as paths, so a plain prefix branch makes every nested ref
+ * below it impossible. Move a temporary branch to the flat sibling form.
+ */
+export function flattenTemporaryWorktreeBranchName(
+  refName: string,
+  prefix: string = WORKTREE_BRANCH_PREFIX,
+): string {
   const normalized = refName.trim().toLowerCase();
-  const tokenStart = normalized.search(/[-/]/) + 1;
+  const tokenStart = normalized.search(/[-/]) + 1;
   const token = normalized.slice(tokenStart, tokenStart + 8);
-  return `${WORKTREE_BRANCH_PREFIX}-${token}`;
+  return `${sanitizeWorktreeBranchPrefix(prefix)}-${token}`;
 }
 
-export function isTemporaryWorktreeBranch(refName: string): boolean {
-  return TEMP_WORKTREE_BRANCH_PATTERN.test(refName.trim().toLowerCase());
+export function isTemporaryWorktreeBranch(
+  refName: string,
+  prefixes: ReadonlyArray<string> = temporaryWorktreeBranchPrefixes(),
+): boolean {
+  return temporaryWorktreeBranchPattern(prefixes).test(refName.trim().toLowerCase());
 }
 
 function lowerCaseRemote(value: string): string {

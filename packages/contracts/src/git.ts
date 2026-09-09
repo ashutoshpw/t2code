@@ -15,6 +15,20 @@ const TrimmedNonEmptyStringSchema = TrimmedNonEmptyString;
 const GitFilePath = Schema.String.check(Schema.isNonEmpty());
 const GIT_LIST_BRANCHES_MAX_LIMIT = 200;
 
+/**
+ * Namespace for branches T2 Code creates inside thread worktrees: temporary
+ * `prefix/<8 hex>` placeholders, the first-turn LLM rename target
+ * `prefix/<slug>`, and cross-repo PR checkouts `prefix/pr-<n>/<head>`.
+ * Configurable via the `worktreeBranchPrefix` server setting; the legacy
+ * upstream prefix is always still recognized so existing threads keep working.
+ */
+export const WORKTREE_BRANCH_PREFIX = "t2code";
+export const LEGACY_WORKTREE_BRANCH_PREFIXES = ["t3code"] as const;
+export const WORKTREE_BRANCH_PREFIX_PATTERN = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+export const MAX_WORKTREE_BRANCH_PREFIX_LENGTH = 32;
+
+// Domain Types
+
 export const GitStackedAction = Schema.Literals([
   "commit",
   "push",

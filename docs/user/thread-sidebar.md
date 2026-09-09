@@ -16,6 +16,11 @@ project picker opens. Turn off **Settings → General → Use last project** to
 choose a project every time. When you pick a project that is on more than one
 machine, the thread starts on a connected one if any is connected.
 
+A new worktree starts on a placeholder branch like `t2code/a1b2c3d4`. After your
+first message, T2 Code renames it to a semantic branch in the same namespace,
+such as `t2code/fix-toast-copy`. You can change the namespace in
+Settings → General → Worktree branch prefix.
+
 When you change a new thread's project, T2 Code stays in the current environment
 if that project exists there. Otherwise it selects an environment that has it.
 
