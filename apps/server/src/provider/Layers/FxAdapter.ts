@@ -140,19 +140,25 @@ function settlePendingApprovalsAsCancelled(
 function permissionOptionsFromAcp(
   options: ReadonlyArray<EffectAcpSchema.PermissionOption>,
 ): ReadonlyArray<ProviderApprovalOption> {
-  return options.flatMap((option) => {
+  const approvalOptions = options.flatMap((option) => {
     const label = option.name.trim();
     if (label.length === 0 || option.optionId.trim().length === 0) {
       return [];
     }
-    const decision: ProviderApprovalDecision =
-      option.kind === "allow_always"
-        ? "acceptForSession"
-        : option.kind === "allow_once"
-          ? "accept"
-          : "decline";
-    return [{ decision, label }];
+    switch (option.kind) {
+      case "allow_always":
+        return [{ decision: "acceptForSession" as const, label }];
+      case "allow_once":
+        return [{ decision: "accept" as const, label }];
+      case "reject_once":
+        return [{ decision: "decline" as const, label }];
+      case "reject_always":
+        // T2 has no persistent-denial decision. Do not expose this option as
+        // a generic decline action that would silently reject future requests.
+        return [];
+    }
   });
+  return [...approvalOptions, { decision: "cancel", label: "Cancel" }];
 }
 
 function selectFxPermissionOptionId(
@@ -167,9 +173,7 @@ function selectFxPermissionOptionId(
     return selected;
   }
   if (normalizedDecision === "decline") {
-    return request.options.find(
-      (option) => option.kind === "reject_always" && option.optionId.trim().length > 0,
-    )?.optionId;
+    return undefined;
   }
   return undefined;
 }
