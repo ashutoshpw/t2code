@@ -85,6 +85,41 @@ describe("searchSettings", () => {
     ).toEqual(["network-access", "connections-environment"]);
   });
 
+  it("finds settings that used to be reachable only through their section", () => {
+    expect(searchSettings("pull request template")[0]?.id).toBe("follow-change-request-templates");
+    expect(searchSettings("git security keys")[0]?.id).toBe("git-fetch-interval");
+    expect(searchSettings("push notifications")[0]?.id).toBe("publish-agent-activity");
+    expect(searchSettings("battery saver")[0]?.id).toBe("background-activity");
+    expect(searchSettings("binary path")[0]?.id).toBe("providers");
+    expect(searchSettings("Antigravity")[0]?.id).toBe("providers");
+    expect(searchSettings("fx")[0]?.id).toBe("providers");
+    expect(searchSettings("Google sign in")[0]?.id).toBe("providers");
+    expect(searchSettings("authorized clients")[0]?.id).toBe("connections-environment");
+    expect(searchSettings("administrative access")[0]?.id).toBe("connections-environment");
+  });
+
+  it("lists thread confirmations in panel order", () => {
+    expect(searchSettings("confirmation").map((item) => item.id)).toEqual([
+      "unpin-confirmation",
+      "archive-confirmation",
+      "delete-confirmation",
+    ]);
+  });
+
+  it.each(["usage providers", "CLIProxyAPI", "CLI proxy hub", "management key"])(
+    "finds usage-provider management by %s",
+    (query) => {
+      expect(searchSettings(query)[0]).toMatchObject({
+        id: "usage-providers",
+        to: "/settings/providers",
+      });
+    },
+  );
+
+  it("returns no results for an empty query", () => {
+    expect(searchSettings("   ", ITEMS)).toEqual([]);
+  });
+
   it("hides desktop-only settings from browser search", () => {
     expect(SETTINGS_SEARCH_ITEMS.some((item) => item.id === "quit-confirmation")).toBe(true);
     expect(searchSettings("hold to quit")).toEqual([]);
