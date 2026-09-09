@@ -140,24 +140,26 @@ function settlePendingApprovalsAsCancelled(
 function permissionOptionsFromAcp(
   options: ReadonlyArray<EffectAcpSchema.PermissionOption>,
 ): ReadonlyArray<ProviderApprovalOption> {
-  const approvalOptions = options.flatMap((option) => {
-    const label = option.name.trim();
-    if (label.length === 0 || option.optionId.trim().length === 0) {
-      return [];
-    }
-    switch (option.kind) {
-      case "allow_always":
-        return [{ decision: "acceptForSession" as const, label }];
-      case "allow_once":
-        return [{ decision: "accept" as const, label }];
-      case "reject_once":
-        return [{ decision: "decline" as const, label }];
-      case "reject_always":
-        // T2 has no persistent-denial decision. Do not expose this option as
-        // a generic decline action that would silently reject future requests.
+  const approvalOptions: Array<ProviderApprovalOption> = options.flatMap(
+    (option): ReadonlyArray<ProviderApprovalOption> => {
+      const label = option.name.trim();
+      if (label.length === 0 || option.optionId.trim().length === 0) {
         return [];
-    }
-  });
+      }
+      switch (option.kind) {
+        case "allow_always":
+          return [{ decision: "acceptForSession" as const, label }];
+        case "allow_once":
+          return [{ decision: "accept" as const, label }];
+        case "reject_once":
+          return [{ decision: "decline" as const, label }];
+        case "reject_always":
+          // T2 has no persistent-denial decision. Do not expose this option as
+          // a generic decline action that would silently reject future requests.
+          return [];
+      }
+    },
+  );
   return [...approvalOptions, { decision: "cancel", label: "Cancel" }];
 }
 
