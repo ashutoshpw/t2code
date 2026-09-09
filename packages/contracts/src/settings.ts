@@ -33,6 +33,11 @@ import {
   type ProviderDriverKind,
 } from "./providerInstance.ts";
 import { PullRequestMergeMethod } from "./pullRequest.ts";
+import {
+  MAX_WORKTREE_BRANCH_PREFIX_LENGTH,
+  WORKTREE_BRANCH_PREFIX,
+  WORKTREE_BRANCH_PREFIX_PATTERN,
+} from "./git.ts";
 
 // ── Client Settings (local-only) ───────────────────────────────
 
@@ -1012,6 +1017,16 @@ export const ServerSettings = Schema.Struct({
   newWorktreesStartFromOrigin: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(true)),
   ),
+  /**
+   * Namespace for branches T2 Code creates inside thread worktrees. Single git
+   * path segment (no slashes). Decoding is lenient — a hand-edited
+   * settings.json never breaks settings load; every consumer sanitizes via
+   * `sanitizeWorktreeBranchPrefix`. The strict pattern lives on the patch so a
+   * bad value fails the one update instead of the whole settings file.
+   */
+  worktreeBranchPrefix: TrimmedString.check(
+    Schema.isMaxLength(MAX_WORKTREE_BRANCH_PREFIX_LENGTH),
+  ).pipe(Schema.withDecodingDefault(Effect.succeed(WORKTREE_BRANCH_PREFIX))),
   addProjectBaseDirectory: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
   textGenerationModelSelection: ModelSelection.pipe(
     Schema.withDecodingDefault(
@@ -1254,6 +1269,12 @@ export const ServerSettingsPatch = Schema.Struct({
   environmentIcon: Schema.optionalKey(Schema.NullOr(EnvironmentMachineKind)),
   defaultThreadEnvMode: Schema.optionalKey(ThreadEnvMode),
   newWorktreesStartFromOrigin: Schema.optionalKey(Schema.Boolean),
+  worktreeBranchPrefix: Schema.optionalKey(
+    TrimmedString.check(
+      Schema.isMaxLength(MAX_WORKTREE_BRANCH_PREFIX_LENGTH),
+      Schema.isPattern(WORKTREE_BRANCH_PREFIX_PATTERN),
+    ),
+  ),
   addProjectBaseDirectory: Schema.optionalKey(TrimmedString),
   textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
   sourceControlWritingStyle: Schema.optionalKey(

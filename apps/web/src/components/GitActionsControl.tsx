@@ -89,7 +89,8 @@ import {
 } from "~/lib/sourceControlActions";
 import { useThreadShell } from "~/state/entities";
 import { useEnvironmentQuery } from "~/state/query";
-import { serverEnvironment } from "~/state/server";
+import { serverEnvironment, primaryServerSettingsAtom } from "~/state/server";
+import { temporaryWorktreeBranchPrefixes } from "@t2code/shared/git";
 import { sourceControlEnvironment } from "~/state/sourceControl";
 import { threadEnvironment } from "~/state/threads";
 import { useAtomCommand } from "~/state/use-atom-command";
@@ -1059,6 +1060,11 @@ export default function GitActionsControl({
   const isRepo = gitStatus?.isRepo ?? true;
   const hasPrimaryRemote = gitStatus?.hasPrimaryRemote ?? false;
   const gitStatusForActions = gitStatus;
+  const primaryServerSettings = useAtomValue(primaryServerSettingsAtom);
+  const temporaryBranchPrefixes = useMemo(
+    () => temporaryWorktreeBranchPrefixes(primaryServerSettings.worktreeBranchPrefix),
+    [primaryServerSettings.worktreeBranchPrefix],
+  );
 
   const allFiles = gitStatusForActions?.workingTree.files ?? [];
   const selectedFiles = allFiles.filter((f) => !excludedFiles.has(f.path));
@@ -1085,6 +1091,7 @@ export default function GitActionsControl({
     const branchUpdate = resolveLiveThreadBranchUpdate({
       threadBranch: activeDraftThread?.branch ?? null,
       gitStatus: gitStatusForActions,
+      temporaryBranchPrefixes,
     });
     if (!branchUpdate) {
       return;
@@ -1098,6 +1105,7 @@ export default function GitActionsControl({
     isGitActionRunning,
     isSelectingWorktreeBase,
     persistThreadBranchSync,
+    temporaryBranchPrefixes,
   ]);
 
   const isDefaultRef = useMemo(() => {

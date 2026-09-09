@@ -616,6 +616,25 @@ describe("ServerSettings worktree defaults", () => {
       decodeServerSettingsPatch({ newWorktreesStartFromOrigin: false }).newWorktreesStartFromOrigin,
     ).toBe(false);
   });
+
+  it("defaults the worktree branch prefix to the fork namespace", () => {
+    expect(decodeServerSettings({}).worktreeBranchPrefix).toBe("t2code");
+  });
+
+  it("accepts a valid worktree branch prefix update and rejects invalid ones", () => {
+    expect(decodeServerSettingsPatch({ worktreeBranchPrefix: "acme" }).worktreeBranchPrefix).toBe(
+      "acme",
+    );
+    expect(() => decodeServerSettingsPatch({ worktreeBranchPrefix: "has/slash" })).toThrow();
+    expect(() => decodeServerSettingsPatch({ worktreeBranchPrefix: "-leading" })).toThrow();
+    expect(() => decodeServerSettingsPatch({ worktreeBranchPrefix: "Upper Case" })).toThrow();
+  });
+
+  it("decodes a lenient stored prefix so a hand-edited settings file still loads", () => {
+    expect(decodeServerSettings({ worktreeBranchPrefix: "Has Space" }).worktreeBranchPrefix).toBe(
+      "Has Space",
+    );
+  });
 });
 
 describe("ServerSettings.sourceControlWritingStyle", () => {
