@@ -5,6 +5,7 @@ import * as NodeURL from "node:url";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, expect, it } from "@effect/vitest";
+import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
@@ -139,6 +140,7 @@ describe("FxAdapter", () => {
             { decision: "accept", label: "Allow once" },
             { decision: "acceptForSession", label: "Allow always" },
             { decision: "decline", label: "Reject" },
+            { decision: "cancel", label: "Cancel" },
           ]);
         }
         assert.includeMembers(
@@ -194,6 +196,212 @@ describe("FxAdapter", () => {
         );
         assert.notInclude(methods, "session/set_mode");
         assert.notInclude(methods, "authenticate");
+      }),
+    ),
+  );
+
+  it.effect("auto-approves edit permissions while keeping command approvals interactive", () =>
+    fxAdapterTestLayer(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const directory = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t3code-fx-auto-edits-",
+        });
+        const requestLogPath = NodePath.join(directory, "requests.ndjson");
+        const fxPath = yield* Effect.promise(() =>
+          makeFxMock(directory, requestLogPath, {
+            T3_ACP_EMIT_TOOL_CALLS: "1",
+            T3_ACP_EMIT_EDIT_PERMISSION: "1",
+          }),
+        );
+        const adapter = yield* makeFxAdapter(
+          decodeFxSettings({ enabled: true, binaryPath: fxPath }),
+          { instanceId: fxInstanceId },
+        );
+        const events: ProviderRuntimeEvent[] = [];
+        const eventFiber = yield* collectFxEvents(adapter, events).pipe(Effect.forkChild);
+        const threadId = ThreadId.make("fx-auto-edits-thread");
+
+        yield* adapter.startSession({
+          threadId,
+          provider: ProviderDriverKind.make("fx"),
+          providerInstanceId: fxInstanceId,
+          cwd: process.cwd(),
+          runtimeMode: "auto-accept-edits",
+        });
+        yield* adapter.sendTurn({ threadId, input: "edit a file", attachments: [] });
+        yield* adapter.stopSession(threadId);
+        yield* Fiber.interrupt(eventFiber);
+
+        assert.notInclude(
+          events.map((event) => event.type),
+          "request.opened",
+        );
+        assert.include(
+          yield* Effect.promise(() => readRequestMethods(requestLogPath)),
+          "session/prompt",
+        );
+      }),
+    ),
+  );
+
+  it.effect("keeps command approvals interactive in auto-accept-edits mode", () =>
+    fxAdapterTestLayer(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const directory = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t3code-fx-auto-command-",
+        });
+        const requestLogPath = NodePath.join(directory, "requests.ndjson");
+        const fxPath = yield* Effect.promise(() =>
+          makeFxMock(directory, requestLogPath, { T3_ACP_EMIT_TOOL_CALLS: "1" }),
+        );
+        const adapter = yield* makeFxAdapter(
+          decodeFxSettings({ enabled: true, binaryPath: fxPath }),
+          { instanceId: fxInstanceId },
+        );
+        const events: ProviderRuntimeEvent[] = [];
+        const eventFiber = yield* collectFxEvents(adapter, events).pipe(Effect.forkChild);
+        const threadId = ThreadId.make("fx-auto-command-thread");
+
+        yield* adapter.startSession({
+          threadId,
+          provider: ProviderDriverKind.make("fx"),
+          providerInstanceId: fxInstanceId,
+          cwd: process.cwd(),
+          runtimeMode: "auto-accept-edits",
+        });
+        yield* adapter.sendTurn({ threadId, input: "run a command", attachments: [] });
+        yield* adapter.stopSession(threadId);
+        yield* Fiber.interrupt(eventFiber);
+
+        const opened = events.find((event) => event.type === "request.opened");
+        assert.isDefined(opened);
+        if (opened?.type === "request.opened") {
+          assert.equal(opened.payload.requestType, "exec_command_approval");
+        }
+      }),
+    ),
+  );
+
+  it.effect("waits for native cancellation before replacing a running prompt", () =>
+    fxAdapterTestLayer(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const directory = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t3code-fx-steering-",
+        });
+        const requestLogPath = NodePath.join(directory, "requests.ndjson");
+        const fxPath = yield* Effect.promise(() =>
+          makeFxMock(directory, requestLogPath, {
+            T3_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1",
+            T3_ACP_AUTO_FINISH_CANCEL: "1",
+          }),
+        );
+        const adapter = yield* makeFxAdapter(
+          decodeFxSettings({ enabled: true, binaryPath: fxPath }),
+          { instanceId: fxInstanceId },
+        );
+        const events: ProviderRuntimeEvent[] = [];
+        const firstPromptStarted = yield* Deferred.make<void>();
+        const eventFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+          Effect.gen(function* () {
+            events.push(event);
+            if (event.type === "item.updated" && String(event.itemId) === "native-cancel-tool") {
+              yield* Deferred.succeed(firstPromptStarted, undefined).pipe(Effect.ignore);
+            }
+          }),
+        ).pipe(Effect.forkChild);
+        const threadId = ThreadId.make("fx-steering-thread");
+
+        yield* adapter.startSession({
+          threadId,
+          provider: ProviderDriverKind.make("fx"),
+          providerInstanceId: fxInstanceId,
+          cwd: process.cwd(),
+          runtimeMode: "auto",
+        });
+        const firstTurn = yield* adapter
+          .sendTurn({ threadId, input: "first prompt", attachments: [] })
+          .pipe(Effect.forkChild);
+        yield* Deferred.await(firstPromptStarted);
+        const secondTurn = yield* adapter
+          .sendTurn({ threadId, input: "steer this prompt", attachments: [] })
+          .pipe(Effect.forkChild);
+
+        yield* Fiber.join(secondTurn);
+        yield* Fiber.join(firstTurn);
+        yield* adapter.stopSession(threadId);
+        yield* Fiber.interrupt(eventFiber);
+
+        const methods = yield* Effect.promise(() => readRequestMethods(requestLogPath));
+        const cancelIndex = methods.indexOf("session/cancel");
+        const promptIndices = methods.flatMap((method, index) =>
+          method === "session/prompt" ? [index] : [],
+        );
+        assert.isAtLeast(cancelIndex, 0);
+        assert.isAtLeast(promptIndices.length, 2);
+        assert.isBelow(cancelIndex, promptIndices[promptIndices.length - 1]!);
+        assert.lengthOf(
+          events.filter((event) => event.type === "turn.completed"),
+          1,
+        );
+      }),
+    ),
+  );
+
+  it.effect("marks an explicitly interrupted FX turn cancelled once", () =>
+    fxAdapterTestLayer(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const directory = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t3code-fx-interrupt-",
+        });
+        const requestLogPath = NodePath.join(directory, "requests.ndjson");
+        const fxPath = yield* Effect.promise(() =>
+          makeFxMock(directory, requestLogPath, {
+            T3_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1",
+            T3_ACP_AUTO_FINISH_CANCEL: "1",
+          }),
+        );
+        const adapter = yield* makeFxAdapter(
+          decodeFxSettings({ enabled: true, binaryPath: fxPath }),
+          { instanceId: fxInstanceId },
+        );
+        const events: ProviderRuntimeEvent[] = [];
+        const firstPromptStarted = yield* Deferred.make<void>();
+        const eventFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+          Effect.gen(function* () {
+            events.push(event);
+            if (event.type === "item.updated" && String(event.itemId) === "native-cancel-tool") {
+              yield* Deferred.succeed(firstPromptStarted, undefined).pipe(Effect.ignore);
+            }
+          }),
+        ).pipe(Effect.forkChild);
+        const threadId = ThreadId.make("fx-interrupt-thread");
+
+        yield* adapter.startSession({
+          threadId,
+          provider: ProviderDriverKind.make("fx"),
+          providerInstanceId: fxInstanceId,
+          cwd: process.cwd(),
+          runtimeMode: "auto",
+        });
+        const turn = yield* adapter
+          .sendTurn({ threadId, input: "interrupt this prompt", attachments: [] })
+          .pipe(Effect.forkChild);
+        yield* Deferred.await(firstPromptStarted);
+        yield* adapter.interruptTurn(threadId);
+        yield* Fiber.join(turn);
+        yield* adapter.stopSession(threadId);
+        yield* Fiber.interrupt(eventFiber);
+
+        const completed = events.filter((event) => event.type === "turn.completed");
+        assert.lengthOf(completed, 1);
+        if (completed[0]?.type === "turn.completed") {
+          assert.equal(completed[0].payload.state, "cancelled");
+          assert.equal(completed[0].payload.stopReason, "cancelled");
+        }
       }),
     ),
   );
