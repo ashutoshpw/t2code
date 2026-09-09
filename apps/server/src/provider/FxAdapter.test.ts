@@ -22,6 +22,7 @@ import {
 
 import { ServerConfig } from "../../config.ts";
 import { execScriptSource, writeFakeCli } from "../../testUtils/fakeCli.ts";
+import type { FxAdapterShape } from "../Services/FxAdapter.ts";
 import { makeFxAdapter } from "./FxAdapter.ts";
 
 import { encodedFxPromptFrameBytes, FX_MAX_ACP_FRAME_BYTES } from "./FxAdapter.ts";
@@ -56,14 +57,7 @@ async function readRequestMethods(path: string): Promise<ReadonlyArray<string>> 
 }
 
 function collectFxEvents(
-  adapter: {
-    readonly streamEvents: Stream.Stream<ProviderRuntimeEvent>;
-    readonly respondToRequest: (
-      threadId: ThreadId,
-      requestId: ApprovalRequestId,
-      decision: "accept" | "acceptForSession" | "acceptAlways" | "decline" | "cancel",
-    ) => Effect.Effect<void, unknown>;
-  },
+  adapter: Pick<FxAdapterShape, "streamEvents" | "respondToRequest">,
   events: ProviderRuntimeEvent[],
 ) {
   return Stream.runForEach(adapter.streamEvents, (event) =>
