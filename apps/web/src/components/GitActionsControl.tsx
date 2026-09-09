@@ -93,7 +93,8 @@ import {
 import { useQuietThreadProjection, useQuietThreadShell } from "~/state/entities";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
 import { useEnvironmentQuery } from "~/state/query";
-import { serverEnvironment } from "~/state/server";
+import { serverEnvironment, primaryServerSettingsAtom } from "~/state/server";
+import { temporaryWorktreeBranchPrefixes } from "@t2code/shared/git";
 import { sourceControlEnvironment } from "~/state/sourceControl";
 import { threadEnvironment } from "~/state/threads";
 import { useAtomCommand } from "~/state/use-atom-command";
@@ -1056,6 +1057,11 @@ export default function GitActionsControl({
       ? "Uncommitted"
       : `vs ${resolvedChangesTotals.baseRef}`
     : null;
+  const primaryServerSettings = useAtomValue(primaryServerSettingsAtom);
+  const temporaryBranchPrefixes = useMemo(
+    () => temporaryWorktreeBranchPrefixes(primaryServerSettings.worktreeBranchPrefix),
+    [primaryServerSettings.worktreeBranchPrefix],
+  );
 
   const allFiles = gitStatusForActions?.workingTree.files ?? [];
   // Changed-file paths are repository-relative, so they must resolve against
@@ -1086,6 +1092,7 @@ export default function GitActionsControl({
     const branchUpdate = resolveLiveThreadBranchUpdate({
       threadBranch: activeDraftThread?.branch ?? null,
       gitStatus: gitStatusForActions,
+      temporaryBranchPrefixes,
     });
     if (!branchUpdate) {
       return;
@@ -1098,6 +1105,8 @@ export default function GitActionsControl({
     gitStatusForActions,
     isGitActionRunning,
     isSelectingWorktreeBase,
+    persistThreadBranchSync,
+    temporaryBranchPrefixes,
   ]);
 
   const isDefaultRef = gitStatusForActions?.isDefaultRef ?? false;

@@ -27,6 +27,8 @@ import {
 import { desktopUpdateChannelOf } from "@t2code/shared/cliRelease";
 import { createModelSelection } from "@t2code/shared/model";
 import { resolvePastedPath } from "@t2code/shared/path";
+import { sanitizeWorktreeBranchPrefix } from "@t2code/shared/git";
+import * as Duration from "effect/Duration";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 import { APP_VERSION, HOSTED_APP_CHANNEL, HOSTED_APP_CHANNEL_LABEL } from "../../branding";
@@ -675,6 +677,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       providerHealthRefreshInterval: DEFAULT_UNIFIED_SETTINGS.providerHealthRefreshInterval,
       defaultThreadEnvMode: DEFAULT_UNIFIED_SETTINGS.defaultThreadEnvMode,
       newWorktreesStartFromOrigin: DEFAULT_UNIFIED_SETTINGS.newWorktreesStartFromOrigin,
+      worktreeBranchPrefix: DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix,
       addProjectBaseDirectory: DEFAULT_UNIFIED_SETTINGS.addProjectBaseDirectory,
       ghqCloneLayout: DEFAULT_UNIFIED_SETTINGS.ghqCloneLayout,
       confirmThreadArchive: DEFAULT_UNIFIED_SETTINGS.confirmThreadArchive,
@@ -1584,6 +1587,36 @@ export function ThreadsSettingsPanel() {
   return (
     <SettingsPageContainer>
       <SettingsSection id="new-projects" title="New projects">
+        <SettingsRow
+          serverScoped
+          {...searchableSetting("worktree-branch-prefix")}
+          description="Namespace for the branches T2 Code creates inside thread worktrees. Lowercase letters, digits, and dashes only."
+          resetAction={
+            settings.worktreeBranchPrefix !== DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix ? (
+              <SettingResetButton
+                label="worktree branch prefix"
+                onClick={() =>
+                  updateSettings({
+                    worktreeBranchPrefix: DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <DraftInput
+              size="sm"
+              className="w-full sm:w-72"
+              value={settings.worktreeBranchPrefix}
+              onCommit={(next) =>
+                updateSettings({ worktreeBranchPrefix: sanitizeWorktreeBranchPrefix(next) })
+              }
+              placeholder={DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix}
+              spellCheck={false}
+              aria-label="Worktree branch prefix"
+            />
+          }
+        />
         <SettingsRow
           serverScoped
           settingKeys={["addProjectBaseDirectory"]}
