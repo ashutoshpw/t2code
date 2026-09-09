@@ -173,6 +173,7 @@ it.layer(NodeServices.layer)("checkFxProviderStatus", (it) => {
         );
 
         expect(snapshot.status).toBe("ready");
+        expect(snapshot.supportsTextGeneration).toBe(false);
         expect(snapshot.installed).toBe(true);
         expect(snapshot.version).toBe("0.3.0");
         expect(snapshot.auth.status).toBe("authenticated");
