@@ -50,7 +50,11 @@ import {
   ProviderAdapterSessionNotFoundError,
   ProviderAdapterValidationError,
 } from "../Errors.ts";
-import { mapAcpToAdapterError, selectAcpPermissionOptionId } from "../acp/AcpAdapterSupport.ts";
+import {
+  acpApprovalOptions,
+  mapAcpToAdapterError,
+  selectAcpPermissionOptionId,
+} from "../acp/AcpAdapterSupport.ts";
 import type * as AcpSessionRuntime from "../acp/AcpSessionRuntime.ts";
 import {
   makeAcpAssistantItemEvent,
@@ -713,6 +717,7 @@ export function makeCursorAdapter(
                       turnId: ctx?.activeTurnId,
                       requestId: runtimeRequestId,
                       permissionRequest,
+                      approvalOptions: acpApprovalOptions(params),
                       detail:
                         permissionRequest.detail ??
                         encodeJsonStringForDiagnostics(params)?.slice(0, 2000) ??
