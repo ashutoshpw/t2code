@@ -1004,6 +1004,104 @@ it.layer(NodeServices.layer)("server settings", (it) => {
     }).pipe(Effect.provide(layerServerSettings())),
   );
 
+  it.effect("folds in-config enabled flags arriving through updates", () =>
+    Effect.gen(function* () {
+      const serverSettings = yield* ServerSettingsModule.ServerSettingsService;
+      const grokId = ProviderInstanceId.make("grok");
+
+      const next = yield* serverSettings.updateSettings({
+        providerInstances: {
+          [grokId]: {
+            driver: ProviderDriverKind.make("grok"),
+            enabled: true,
+            config: { enabled: false, binaryPath: "/opt/grok" },
+          },
+        },
+      });
+
+      assert.deepEqual(next.providerInstances[grokId], {
+        driver: ProviderDriverKind.make("grok"),
+        enabled: false,
+        config: { binaryPath: "/opt/grok" },
+      });
+    }).pipe(Effect.provide(layerServerSettings())),
+  );
+
+  it.effect("trims observability settings when updates are applied", () =>
+    Effect.gen(function* () {
+      const serverSettings = yield* ServerSettingsModule.ServerSettingsService;
+
+      const next = yield* serverSettings.updateSettings({
+        addProjectBaseDirectory: "  ~/Development  ",
+        observability: {
+          otlpTracesUrl: "  http://localhost:4318/v1/traces  ",
+          otlpMetricsUrl: "  http://localhost:4318/v1/metrics  ",
+          otlpLogsUrl: "  http://localhost:4318/v1/logs  ",
+        },
+      });
+
+      assert.equal(next.addProjectBaseDirectory, "~/Development");
+      assert.deepEqual(next.observability, {
+        otlpTracesUrl: "http://localhost:4318/v1/traces",
+        otlpMetricsUrl: "http://localhost:4318/v1/metrics",
+        otlpLogsUrl: "http://localhost:4318/v1/logs",
+      });
+    }).pipe(Effect.provide(layerServerSettings())),
+  );
+
+  it.effect("writes only non-default settings to disk", () =>
+    Effect.gen(function* () {
+      const serverSettings = yield* ServerSettingsModule.ServerSettingsService;
+      const serverConfig = yield* ServerConfig.ServerConfig;
+      const fileSystem = yield* FileSystem.FileSystem;
+      yield* serverSettings.updateSettings({
+        addProjectBaseDirectory: "~/Development",
+        observability: {
+          otlpTracesUrl: "http://localhost:4318/v1/traces",
+          otlpMetricsUrl: "http://localhost:4318/v1/metrics",
+        },
+        automaticGitFetchInterval: Duration.seconds(10),
+      });
+
+      const raw = yield* fileSystem.readFileString(serverConfig.settingsPath);
+      assert.deepEqual(JSON.parse(raw), {
+        addProjectBaseDirectory: "~/Development",
+        observability: {
+          otlpTracesUrl: "http://localhost:4318/v1/traces",
+          otlpMetricsUrl: "http://localhost:4318/v1/metrics",
+        },
+        providers: {
+          codex: {
+            binaryPath: "/opt/homebrew/bin/codex",
+          },
+          cursor: {
+            enabled: false,
+          },
+          fx: {
+            enabled: false,
+          },
+          grok: {
+            enabled: false,
+          },
+          opencode: {
+            enabled: false,
+            serverUrl: "http://127.0.0.1:4096",
+            serverPassword: "secret-password",
+          },
+        },
+        backgroundActivity: {
+          schemaVersion: 1,
+          profile: "custom",
+          baseProfile: "balanced",
+          overrides: {
+            automaticGitFetchInterval: 10_000,
+          },
+        },
+        automaticGitFetchInterval: 10_000,
+      });
+    }).pipe(Effect.provide(layerServerSettings())),
+  );
+
   it.effect("keeps the inline value on disk when secret migration fails", () => {
     const cause = new ServerSecretStore.SecretStorePersistError({
       resource: "provider environment secret",
