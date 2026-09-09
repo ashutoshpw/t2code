@@ -18,6 +18,7 @@ describe("AcpAdapterSupport", () => {
 
   it("returns the exact advertised option IDs for each decision", () => {
     const request = {
+      sessionId: "session-1",
       toolCall: { toolCallId: "tool-1", title: "Run" },
       options: [
         { optionId: "opaque_allow-always", name: "Always", kind: "allow_always" },
