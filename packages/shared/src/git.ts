@@ -11,7 +11,7 @@ import * as Arr from "effect/Array";
 import * as Result from "effect/Result";
 import { detectSourceControlProviderFromRemoteUrl } from "./sourceControl.ts";
 
-export { LEGACY_WORKTREE_BRANCH_PREFIXES, WORKTREE_BRANCH_PREFIX };
+export { WORKTREE_BRANCH_PREFIX };
 
 // Canonical form is `<prefix>/<8 hex>`. Older builds generated `t3code/<uuid>`
 // via Crypto.randomUUID() (always RFC 4122 v4), so the matcher also accepts exactly
