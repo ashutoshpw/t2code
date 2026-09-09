@@ -310,7 +310,8 @@ const make = Effect.gen(function* () {
       let branch: string | null;
       if (input.workspaceStrategy.type === "worktree" && requestedBranch === undefined) {
         const uuid = yield* randomUuidV4;
-        branch = buildTemporaryWorktreeBranchName(() => uuid.replaceAll("-", ""));
+        const { worktreeBranchPrefix } = yield* serverSettings.getSettings;
+        branch = buildTemporaryWorktreeBranchName(() => uuid.replaceAll("-", ""), worktreeBranchPrefix);
       } else {
         branch = requestedBranch ?? null;
       }
