@@ -5,6 +5,7 @@ import {
 } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import * as EffectAcpErrors from "effect-acp/errors";
+import * as EffectAcpSchema from "effect-acp/schema";
 
 import {
   ProviderAdapterRequestError,
@@ -53,4 +54,19 @@ export function acpPermissionOutcome(decision: ProviderApprovalDecision): string
     default:
       return "reject-once";
   }
+}
+
+/** Select the agent-advertised option for a public approval decision. */
+export function selectAcpPermissionOptionId(
+  request: EffectAcpSchema.RequestPermissionRequest,
+  decision: ProviderApprovalDecision,
+): string | undefined {
+  if (decision === "cancel") return undefined;
+  const kind =
+    decision === "acceptForSession"
+      ? "allow_always"
+      : decision === "accept"
+        ? "allow_once"
+        : "reject_once";
+  return request.options.find((option) => option.kind === kind)?.optionId;
 }
