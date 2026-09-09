@@ -32,6 +32,8 @@ const SessionCancelNotification = jsonRpcNotification(
   "session/cancel",
   AcpSchema.CancelSessionNotification,
 );
+const SetSessionModeRequest = jsonRpcRequest("session/set_mode", AcpSchema.SetSessionModeRequest);
+const SetSessionModeResponse = jsonRpcResponse(AcpSchema.SetSessionModeResponse);
 const ExtPingNotification = jsonRpcNotification("x/ping", Schema.Struct({ count: Schema.Number }));
 const ExtRequest = jsonRpcRequest("x/test", Schema.Struct({ hello: Schema.String }));
 const ExtResponse = jsonRpcResponse(Schema.Struct({ ok: Schema.Boolean }));
@@ -86,6 +88,11 @@ it.effect("effect-acp agent handles core agent requests and outbound client requ
       yield* agent.handleCancel((notification) =>
         Ref.update(cancelNotifications, (current) => [...current, notification.sessionId]).pipe(
           Effect.andThen(Deferred.succeed(cancelReceived, undefined)),
+        ),
+      );
+      yield* agent.handleSetSessionMode((request) =>
+        Ref.update(modeRequests, (current) => [...current, request.modeId]).pipe(
+          Effect.andThen(Effect.succeed({})),
         ),
       );
       yield* agent.handleExtNotification(
