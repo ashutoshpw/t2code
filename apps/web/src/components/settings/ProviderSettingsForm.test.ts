@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import { ProviderDriverKind } from "@t2code/contracts";
 
+import { PROVIDER_ICON_BY_PROVIDER } from "../chat/providerIconUtils";
+import { FxIcon } from "../Icons";
 import { DRIVER_OPTION_BY_VALUE } from "./providerDriverMeta";
 import {
   deriveProviderSettingsFields,
@@ -68,6 +70,18 @@ describe("ProviderSettingsForm helpers", () => {
       "autoCompactWindow",
       "launchArgs",
     ]);
+  });
+
+  it("registers fx with its icon, early-access badge, and binary setting", () => {
+    const fx = DRIVER_OPTION_BY_VALUE[ProviderDriverKind.make("fx")];
+    expect(fx).toMatchObject({
+      label: "fx",
+      badgeLabel: "Early Access",
+      icon: FxIcon,
+    });
+    expect(fx).toBeDefined();
+    expect(PROVIDER_ICON_BY_PROVIDER[fx!.value]).toBe(FxIcon);
+    expect(deriveProviderSettingsFields(fx!).map((field) => field.key)).toEqual(["binaryPath"]);
   });
 
   it("preserves unknown config keys while omitting empty configurable fields", () => {

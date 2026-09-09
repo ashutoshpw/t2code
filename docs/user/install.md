@@ -104,9 +104,9 @@ computer.
 | Claude      | Install [Claude Code](https://claude.com/product/claude-code), then run `claude auth login`.                                                              |
 | Cursor      | Install [Cursor CLI](https://cursor.com/cli), then run `agent login`.                                                                                     |
 | Grok Build  | Install [Grok Build CLI](https://x.ai/cli), then run `grok login`.                                                                                        |
+| fx          | Install [fx](https://fx.sh), then run `fx login codex`, `fx login grok`, or `fx login`.      |
 | OpenCode    | Install [OpenCode](https://opencode.ai), then run `opencode auth login`.                                                                                  |
-| Antigravity | Install and sign in with Google from T2 Code's provider settings.                                                                                         |
-Provider CLIs must be on the server's `PATH`. If T2 Code cannot find one, set its
+| Antigravity | Install and sign in with Google from T2 Code's provider settings.                                                                                         |Provider CLIs must be on the server's `PATH`. If T2 Code cannot find one, set its
 **Binary path** in provider settings, especially when using a version manager.
 Cursor's executable is `cursor-agent`, although its login command is
 `agent login`. Codex connected through ChatGPT and Antigravity can use their
@@ -131,8 +131,8 @@ base URL. Mark secret values as sensitive; after saving, T2 Code does not displa
 their original values.
 
 For provider-specific setup and accounts, see [Codex](./providers-codex.md),
-[Claude](./providers-claude.md), [OpenCode](./providers-opencode.md), and
-[Antigravity](./providers-antigravity.md).
+[Claude](./providers-claude.md), [fx](./providers-fx.md),
+[OpenCode](./providers-opencode.md), and [Antigravity](./providers-antigravity.md).
 
 ## Next steps
 
