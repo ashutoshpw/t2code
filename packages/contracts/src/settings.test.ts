@@ -4,6 +4,12 @@ import * as Schema from "effect/Schema";
 import { type CommandId, ProjectId } from "./baseSchemas.ts";
 import { ProviderDriverKind, ProviderInstanceId } from "./providerInstance.ts";
 import {
+  DEFAULT_MODEL_BY_PROVIDER,
+  DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER,
+  FX_DEFAULT_MODEL,
+  PROVIDER_DISPLAY_NAMES,
+} from "./model.ts";
+import {
   ClientSettingsSchema,
   ClientSettingsPatch,
   ClaudeSettings,
@@ -22,6 +28,7 @@ const decodeServerSettings = Schema.decodeUnknownSync(ServerSettings);
 const decodeServerSettingsPatch = Schema.decodeUnknownSync(ServerSettingsPatch);
 const encodeServerSettings = Schema.encodeSync(ServerSettings);
 const decodeClaudeSettings = Schema.decodeUnknownSync(ClaudeSettings);
+const decodeFxSettings = Schema.decodeUnknownSync(FxSettings);
 
 describe("ServerSettings response streaming", () => {
   it("defaults to paragraph buffering", () => {
@@ -869,6 +876,45 @@ describe("provider enabled defaults", () => {
     expect(
       resolveProviderInstanceEnabled({ driver: codex, enabled: false, config: { enabled: true } }),
     ).toBe(false);
+  });
+});
+
+describe("FxSettings", () => {
+  it("keeps fx opt-in and resolves its default binary", () => {
+    expect(decodeFxSettings({})).toEqual({
+      enabled: false,
+      binaryPath: "fx",
+      customModels: [],
+    });
+  });
+
+  it("round-trips its legacy custom model list and patch", () => {
+    expect(
+      decodeServerSettingsPatch({
+        providers: {
+          fx: {
+            enabled: true,
+            binaryPath: "  /opt/fx  ",
+            customModels: ["gateway-model"],
+          },
+        },
+      }).providers?.fx,
+    ).toEqual({
+      enabled: true,
+      binaryPath: "/opt/fx",
+      customModels: ["gateway-model"],
+    });
+  });
+});
+
+describe("fx model presentation defaults", () => {
+  it("uses only the generic active-model sentinel", () => {
+    const fx = ProviderDriverKind.make("fx");
+
+    expect(FX_DEFAULT_MODEL).toBe("default");
+    expect(DEFAULT_MODEL_BY_PROVIDER[fx]).toBe(FX_DEFAULT_MODEL);
+    expect(DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER[fx]).toBe(FX_DEFAULT_MODEL);
+    expect(PROVIDER_DISPLAY_NAMES[fx]).toBe("fx");
   });
 });
 
