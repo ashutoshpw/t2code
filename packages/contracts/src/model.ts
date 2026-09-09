@@ -146,6 +146,7 @@ export type CustomModelSetting = typeof CustomModelSetting.Type;
 const CODEX_DRIVER_KIND = ProviderDriverKind.make("codex");
 const CLAUDE_DRIVER_KIND = ProviderDriverKind.make("claudeAgent");
 const CURSOR_DRIVER_KIND = ProviderDriverKind.make("cursor");
+const FX_DRIVER_KIND = ProviderDriverKind.make("fx");
 const GROK_DRIVER_KIND = ProviderDriverKind.make("grok");
 const MUSE_DRIVER_KIND = ProviderDriverKind.make("muse");
 const PI_DRIVER_KIND = ProviderDriverKind.make("pi");
@@ -153,6 +154,8 @@ const ACP_REGISTRY_DRIVER_KIND = ProviderDriverKind.make("acpRegistry");
 const OPENCODE_DRIVER_KIND = ProviderDriverKind.make("opencode");
 
 export const DEFAULT_MODEL = "gpt-6-astra";
+/** Sentinel used when fx has not reported a concrete model catalog yet. */
+export const FX_DEFAULT_MODEL = "default";
 
 /**
  * Codex default-model preference, most preferred first. The provider snapshot
@@ -176,6 +179,7 @@ export const DEFAULT_MODEL_BY_PROVIDER: Partial<Record<ProviderDriverKind, strin
   [CODEX_DRIVER_KIND]: DEFAULT_MODEL,
   [CLAUDE_DRIVER_KIND]: "claude-fable-5-1",
   [CURSOR_DRIVER_KIND]: "auto",
+  [FX_DRIVER_KIND]: FX_DEFAULT_MODEL,
   // Product slug, not an ACP model id. The Grok adapter treats it as "the session's current model".
   [GROK_DRIVER_KIND]: "grok-build",
   [MUSE_DRIVER_KIND]: MUSE_DEFAULT_MODEL,
@@ -194,6 +198,7 @@ export const DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER: Partial<
   [ProviderDriverKind.make("antigravity")]: ANTIGRAVITY_DEFAULT_MODEL,
   [CLAUDE_DRIVER_KIND]: "claude-haiku-4-5",
   [CURSOR_DRIVER_KIND]: "composer-2",
+  [FX_DRIVER_KIND]: FX_DEFAULT_MODEL,
   [OPENCODE_DRIVER_KIND]: "openai/gpt-5",
 };
 
@@ -230,6 +235,7 @@ export const PROVIDER_DISPLAY_NAMES: Partial<Record<ProviderDriverKind, string>>
   [CODEX_DRIVER_KIND]: "Codex",
   [CLAUDE_DRIVER_KIND]: "Claude",
   [CURSOR_DRIVER_KIND]: "Cursor",
+  [FX_DRIVER_KIND]: "fx",
   [GROK_DRIVER_KIND]: "Grok",
   [MUSE_DRIVER_KIND]: "Muse Code",
   [ACP_REGISTRY_DRIVER_KIND]: "ACP Registry",
