@@ -13,6 +13,40 @@ import {
 } from "./modelOptions";
 
 describe("mobile model options", () => {
+  it("presents fx catalog models with fx routing metadata", () => {
+    const config = {
+      providers: [
+        {
+          instanceId: "fx",
+          driver: "fx",
+          displayName: "fx",
+          enabled: true,
+          installed: true,
+          auth: { status: "authenticated" },
+          models: [
+            {
+              slug: "default",
+              name: "Default",
+              isCustom: false,
+              capabilities: null,
+            },
+          ],
+        },
+      ],
+    } as unknown as ServerConfig;
+
+    expect(buildModelOptions(config, null)).toMatchObject([
+      {
+        key: "fx:default",
+        label: "Default",
+        providerKey: "fx",
+        providerLabel: "fx",
+        providerDriver: "fx",
+        selection: { instanceId: "fx", model: "default" },
+      },
+    ]);
+  });
+
   it("groups models by provider and flags legacy entries", () => {
     const config = {
       providers: [

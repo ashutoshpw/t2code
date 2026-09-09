@@ -7,6 +7,7 @@ import {
   AntigravityIcon,
   ClaudeAI,
   CursorIcon,
+  FxIcon,
   GrokIcon,
   MuseIcon,
   Icon,
@@ -22,13 +23,14 @@ import {
   resolveOfficialAcpRegistryIconUrl,
 } from "../settings/AcpRegistryIcon";
 
-const PROVIDER_ICON_BY_PROVIDER: Partial<Record<ProviderDriverKind, Icon>> = {
+export const PROVIDER_ICON_BY_PROVIDER: Partial<Record<ProviderDriverKind, Icon>> = {
   [ProviderDriverKind.make("codex")]: OpenAI,
   [ProviderDriverKind.make("claudeAgent")]: ClaudeAI,
   [ProviderDriverKind.make("opencode")]: OpenCodeIcon,
   [ProviderDriverKind.make("cursor")]: CursorIcon,
   [ProviderDriverKind.make("grok")]: GrokIcon,
   [ProviderDriverKind.make("muse")]: MuseIcon,
+  [ProviderDriverKind.make("fx")]: FxIcon,
   [ProviderDriverKind.make("antigravity")]: AntigravityIcon,
   [ProviderDriverKind.make("pi")]: PiAgentIcon,
 };
