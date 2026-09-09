@@ -24,6 +24,7 @@ This fork tracks `pingdotgg/t3code` (upstream) and publishes as **T2 Code** on `
 2. Conflict policy — the fork's rebrand wins for user-facing copy, but upstream's structural changes win:
    - If upstream refactored code the rebrand renamed (extracted variables, moved strings), re-apply the rebrand _inside upstream's new shape_. Example: upstream hoisted an `installArgs` array for an npm fallback path; keep the hoist, keep the `@t2code/cli` package name.
    - Watch for upstream swapping npm packages (`t3` vs `@t2code/cli`) and URLs (keep upstream repo URLs like `github.com/pingdotgg/t3code` — those are intentional).
+   - Ask the user before adopting any new GitHub Actions entry or edit to an existing one in the fork.
 3. Fold conflict fixes into the fork commit they belong to (`git commit --fixup=<sha>` + `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash upstream/main`) so history stays at the fork's usual 7-ish commits.
 
 ## Rebrand audit (the part that actually catches failures)
