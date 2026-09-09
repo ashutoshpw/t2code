@@ -1,4 +1,5 @@
 import type { VcsStatusResult } from "@t2code/contracts";
+import { temporaryWorktreeBranchPrefixes } from "@t2code/shared/git";
 import { assert, describe, it } from "vite-plus/test";
 import {
   buildMenuItems,
@@ -169,6 +170,47 @@ describe("resolveLiveThreadBranchUpdate", () => {
     });
 
     assert.equal(update, null);
+  });
+
+  it("allows a temporary worktree ref to reconcile to a semantic branch", () => {
+    const update = resolveLiveThreadBranchUpdate({
+      threadBranch: "t3code/a9628676",
+      gitStatus: status({ refName: "feature/diff-panel-toggle" }),
+    });
+
+    assert.deepEqual(update, { branch: "feature/diff-panel-toggle" });
+  });
+
+  it("treats a configured custom prefix as temporary alongside the defaults", () => {
+    const prefixes = temporaryWorktreeBranchPrefixes("acme");
+    assert.equal(
+      resolveLiveThreadBranchUpdate({
+        threadBranch: "acme/github-query-rate-limit",
+        gitStatus: status({ refName: "acme/bda76797" }),
+        temporaryBranchPrefixes: prefixes,
+      }),
+      null,
+    );
+    assert.equal(
+      resolveLiveThreadBranchUpdate({
+        threadBranch: "feature/semantic",
+        gitStatus: status({ refName: "acme/bda76797" }),
+        temporaryBranchPrefixes: prefixes,
+      }),
+      null,
+    );
+  });
+});
+
+describe("resolveThreadBranchMetadataPatch", () => {
+  it("does not overwrite worktree metadata while reconciling a branch", () => {
+    assert.deepEqual(
+      resolveThreadBranchMetadataPatch("feature/current-ref", "feature/previous-ref"),
+      {
+        branch: "feature/current-ref",
+        expectedBranch: "feature/previous-ref",
+      },
+    );
   });
 });
 
