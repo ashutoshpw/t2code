@@ -2686,6 +2686,25 @@ export const make = (
             );
           }),
         ),
+      setSessionMode: (modeId) =>
+        Effect.gen(function* () {
+          const modeState = yield* Ref.get(modeStateRef);
+          if (modeState?.currentModeId === modeId) {
+            return {} satisfies EffectAcpSchema.SetSessionModeResponse;
+          }
+          const started = yield* getStartedState;
+          const requestPayload = {
+            sessionId: started.sessionId,
+            modeId,
+          } satisfies EffectAcpSchema.SetSessionModeRequest;
+          const response = yield* runLoggedRequest(
+            "session/set_mode",
+            requestPayload,
+            acp.agent.setSessionMode(requestPayload),
+          );
+          yield* updateCurrentModeId(modeId);
+          return response;
+        }),
       setConfigOption,
       setModel: (model) =>
         getStartedState.pipe(
