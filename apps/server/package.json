@@ -39,7 +39,6 @@
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",
-    "@t2code/web": "workspace:*",
     "@t2code/contracts": "workspace:*",
     "@t2code/shared": "workspace:*",
     "@t2code/ssh": "workspace:*",
