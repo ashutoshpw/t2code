@@ -230,6 +230,7 @@ describe("connection onboarding", () => {
               wsBaseUrl: "ws://old.example.test/",
             }),
           ),
+          enabled: true,
         }),
         credential: Option.some(new BearerConnectionCredential({ token: "bearer-token" })),
       });
@@ -269,6 +270,7 @@ describe("connection onboarding", () => {
               wsBaseUrl: "ws://old.example.test/",
             }),
           ),
+          enabled: true,
         }),
         credential: Option.some(new BearerConnectionCredential({ token: "bearer-token" })),
       }).pipe(Effect.flip);
