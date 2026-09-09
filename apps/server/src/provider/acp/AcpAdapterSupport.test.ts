@@ -1,14 +1,35 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as EffectAcpErrors from "effect-acp/errors";
+import * as EffectAcpSchema from "effect-acp/schema";
 import { ProviderDriverKind } from "@t2code/contracts";
 
-import { acpPermissionOutcome, mapAcpToAdapterError } from "./AcpAdapterSupport.ts";
+import {
+  acpPermissionOutcome,
+  mapAcpToAdapterError,
+  selectAcpPermissionOptionId,
+} from "./AcpAdapterSupport.ts";
 
 describe("AcpAdapterSupport", () => {
   it("maps ACP approval decisions to permission outcomes", () => {
     expect(acpPermissionOutcome("accept")).toBe("allow-once");
     expect(acpPermissionOutcome("acceptForSession")).toBe("allow-always");
     expect(acpPermissionOutcome("decline")).toBe("reject-once");
+  });
+
+  it("returns the exact advertised option IDs for each decision", () => {
+    const request = {
+      toolCall: { toolCallId: "tool-1", title: "Run" },
+      options: [
+        { optionId: "opaque_allow-always", name: "Always", kind: "allow_always" },
+        { optionId: "allow_once_native", name: "Once", kind: "allow_once" },
+        { optionId: "reject__once", name: "Reject", kind: "reject_once" },
+      ],
+    } satisfies EffectAcpSchema.RequestPermissionRequest;
+    expect(selectAcpPermissionOptionId(request, "acceptForSession")).toBe("opaque_allow-always");
+    expect(selectAcpPermissionOptionId(request, "accept")).toBe("allow_once_native");
+    expect(selectAcpPermissionOptionId(request, "decline")).toBe("reject__once");
+    expect(selectAcpPermissionOptionId(request, "cancel")).toBeUndefined();
+    expect(selectAcpPermissionOptionId({ ...request, options: [] }, "accept")).toBeUndefined();
   });
 
   it("maps ACP request errors to provider adapter request errors", () => {
