@@ -30,6 +30,18 @@ describe("AcpAdapterSupport", () => {
     expect(selectAcpPermissionOptionId(request, "decline")).toBe("reject__once");
     expect(selectAcpPermissionOptionId(request, "cancel")).toBeUndefined();
     expect(selectAcpPermissionOptionId({ ...request, options: [] }, "accept")).toBeUndefined();
+    expect(
+      selectAcpPermissionOptionId(
+        {
+          ...request,
+          options: [
+            { optionId: "", name: "Invalid", kind: "allow_once" },
+            { optionId: "opaque-once", name: "Once", kind: "allow_once" },
+          ],
+        },
+        "accept",
+      ),
+    ).toBe("opaque-once");
   });
 
   it("maps ACP request errors to provider adapter request errors", () => {
