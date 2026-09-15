@@ -46,7 +46,18 @@ const LEGACY_WORDMARK_PATH_FINGERPRINT =
 // Upstream repository fixtures intentionally retain the original owner. They
 // exercise URL/repository normalization and are not package or product brand
 // references that the fork should rename.
-const UPSTREAM_T3TOOLS_REPOSITORY_REFERENCE = /(?:github\.com|gitlab\.com)(?::|\/)t3tools\//i;
+const UPSTREAM_T3TOOLS_REPOSITORY_PREFIX = /(?:github\.com|gitlab\.com)(?::|\/)$/i;
+const T3TOOLS_WORD = /\bt3tools\b/gi;
+
+function hasUnapprovedT3ToolsReference(line: string): boolean {
+  for (const match of line.matchAll(T3TOOLS_WORD)) {
+    const index = match.index;
+    if (index === undefined || !UPSTREAM_T3TOOLS_REPOSITORY_PREFIX.test(line.slice(0, index))) {
+      return true;
+    }
+  }
+  return false;
+}
 
 type Rule = {
   id: string;
@@ -93,8 +104,7 @@ const RULES: Rule[] = [
   {
     id: "t3tools-brand",
     hint: 'repository-owned identifiers use "t2code"; preserve an existing compatibility/upstream hit only with an exact baseline entry',
-    violates: (_file, line) =>
-      /\bt3tools\b/i.test(line) && !UPSTREAM_T3TOOLS_REPOSITORY_REFERENCE.test(line),
+    violates: (_file, line) => hasUnapprovedT3ToolsReference(line),
   },
   {
     id: "t3-port",
