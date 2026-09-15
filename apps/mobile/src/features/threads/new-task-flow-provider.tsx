@@ -15,11 +15,11 @@ import {
   DEFAULT_RUNTIME_MODE,
   DEFAULT_SERVER_SETTINGS,
   MessageId,
-  T3_PROJECT_FILE_NAME,
+  T2_PROJECT_FILE_NAME,
   ThreadId,
 } from "@t2code/contracts";
 import { resolveProjectSettings } from "@t2code/shared/projectSettings";
-import { parseT3ProjectFile } from "@t2code/shared/t3ProjectFile";
+import { parseT2ProjectFile } from "@t2code/shared/t2ProjectFile";
 import {
   isDefaultThreadEnvModeSettled,
   resolveDefaultThreadEnvMode,
@@ -421,20 +421,20 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
   const attachments = selectedProjectDraft.attachments;
   // Default mode until the user picks one explicitly — same resolution web
   // uses for new draft threads: per-project setting, then the repo's
-  // checked-in t3.json, then the server's configured default.
-  const t3ProjectFileQuery = useEnvironmentQuery(
+  // checked-in t2.json, then the server's configured default.
+  const t2ProjectFileQuery = useEnvironmentQuery(
     selectedProject !== null && selectedProject.workspaceRoot !== ""
       ? projectEnvironment.readFile({
           environmentId: selectedProject.environmentId,
-          input: { cwd: selectedProject.workspaceRoot, relativePath: T3_PROJECT_FILE_NAME },
+          input: { cwd: selectedProject.workspaceRoot, relativePath: T2_PROJECT_FILE_NAME },
         })
       : null,
   );
-  const t3ProjectFileData = t3ProjectFileQuery.data as ProjectReadFileResult | null;
-  const t3ProjectFileDefaultMode = useMemo(() => {
-    if (t3ProjectFileData === null || t3ProjectFileData.truncated) return null;
-    return parseT3ProjectFile(t3ProjectFileData.contents)?.defaultThreadEnvMode ?? null;
-  }, [t3ProjectFileData]);
+  const t2ProjectFileData = t2ProjectFileQuery.data as ProjectReadFileResult | null;
+  const t2ProjectFileDefaultMode = useMemo(() => {
+    if (t2ProjectFileData === null || t2ProjectFileData.truncated) return null;
+    return parseT2ProjectFile(t2ProjectFileData.contents)?.defaultThreadEnvMode ?? null;
+  }, [t2ProjectFileData]);
   // Environment settings with the project's overrides applied; the
   // aggregate's own legacy fields still count until the server folds them.
   const projectSettings = useMemo(
@@ -452,16 +452,16 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
       : undefined;
   const defaultWorkspaceMode: WorkspaceMode = resolveDefaultThreadEnvMode({
     projectSetting: projectThreadEnvMode,
-    projectFile: t3ProjectFileDefaultMode,
+    projectFile: t2ProjectFileDefaultMode,
     globalDefault: projectSettings.settings.defaultThreadEnvMode,
   });
   // While unsettled the resolved default is provisional. Nothing may write
   // it into the draft during that window (the auto-branch effect does), or
-  // the frozen interim value beats the t3.json default once it loads.
+  // the frozen interim value beats the t2.json default once it loads.
   const defaultWorkspaceModeSettled = isDefaultThreadEnvModeSettled({
     explicitMode: selectedProjectDraft.workspaceSelection?.mode,
     projectSetting: projectThreadEnvMode,
-    projectFilePending: t3ProjectFileQuery.isPending,
+    projectFilePending: t2ProjectFileQuery.isPending,
   });
   const workspaceMode = selectedProjectDraft.workspaceSelection?.mode ?? defaultWorkspaceMode;
   const selectedBranchName = selectedProjectDraft.workspaceSelection?.branch ?? null;
