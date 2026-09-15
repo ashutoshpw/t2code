@@ -9,7 +9,15 @@ import * as Sink from "effect/Sink";
 import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
-import { awaitCliNotarization, signMacArchiveContents } from "./build-cli-archive.ts";
+import { describe, expect, it } from "vite-plus/test";
+
+import {
+  awaitCliNotarization,
+  cliArchiveFileName,
+  cliArchivePlatformKey,
+  cliArchiveStem,
+  signMacArchiveContents,
+} from "./build-cli-archive.ts";
 
 const signedEnv = {
   T3CODE_CLI_MAC_SIGN_IDENTITY: "Developer ID Application: Test (TEAM)",
@@ -213,4 +221,18 @@ it.layer(NodeServices.layer)("build-cli-archive notarization", (it) => {
       assert.isTrue(notarySubcommands(stub.calls)[0]?.includes("--wait"));
     }).pipe(Effect.scoped),
   );
+
+describe("build-cli-archive naming", () => {
+  it("uses the canonical public archive prefix", () => {
+    expect(cliArchivePlatformKey("linux", "x64")).toBe("linux-x64");
+    expect(cliArchiveStem("1.2.3", "linux", "x64")).toBe("t2-1.2.3-linux-x64");
+    expect(cliArchiveFileName("1.2.3", "win", "arm64")).toBe("t2-1.2.3-win32-arm64.zip");
+  });
+
+  it("does not claim an unsupported macOS x64 release archive", () => {
+    expect(cliArchivePlatformKey("mac", "x64")).toBeUndefined();
+    expect(cliArchiveStem("1.2.3", "mac", "x64")).toBeUndefined();
+    expect(cliArchiveFileName("1.2.3", "mac", "x64")).toBeUndefined();
+  });
+});
 });
