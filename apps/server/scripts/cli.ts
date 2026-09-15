@@ -13,6 +13,7 @@ import { DEVELOPMENT_ICON_OVERRIDES } from "../../../scripts/lib/brand-assets.ts
 import { findEsmImportsOfExternalPackages } from "../../../scripts/lib/cli-executable-imports.ts";
 import rootPackageJson from "../../../package.json" with { type: "json" };
 import { resolveSpawnCommand } from "@t2code/shared/shell";
+import { createNpmPublishInvocation } from "./npmPublish.ts";
 import {
   ServerCliBuildAssetMissingError,
   ServerCliCommandExitError,
@@ -25,7 +26,10 @@ const RepoRoot = Effect.service(Path.Path).pipe(
   Effect.flatMap((path) => path.fromFileUrl(new URL("../../..", import.meta.url))),
 );
 
-const runCommand = Effect.fn("runCommand")(function* (command: ChildProcess.StandardCommand) {
+const runCommand = Effect.fn("runCommand")(function* (
+  command: ChildProcess.StandardCommand,
+  errorArgs: ReadonlyArray<string> = command.args,
+) {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const child = yield* spawner.spawn(command);
   const exitCode = yield* child.exitCode;
@@ -33,7 +37,7 @@ const runCommand = Effect.fn("runCommand")(function* (command: ChildProcess.Stan
   if (exitCode !== 0) {
     return yield* new ServerCliCommandExitError({
       command: command.command,
-      args: command.args,
+      args: errorArgs,
       cwd: command.options.cwd,
       exitCode,
     });
@@ -170,6 +174,14 @@ const publishCmd = Command.make(
     provenance: Flag.Boolean("provenance").pipe(Flag.withDefault(false)),
     dryRun: Flag.Boolean("dry-run").pipe(Flag.withDefault(false)),
     verbose: Flag.Boolean("verbose").pipe(Flag.withDefault(false)),
+    otp: Flag.String("otp").pipe(
+      Flag.withDescription("One-time password for npm authentication (local publishing only)."),
+      Flag.optional,
+    ),
+    interactive: Flag.Boolean("interactive").pipe(
+      Flag.withDescription("Run local npm publishing with inherited terminal input and output."),
+      Flag.withDefault(false),
+    ),
   },
   (config) =>
     Effect.gen(function* () {
@@ -197,7 +209,7 @@ const publishCmd = Command.make(
       if (config.provenance) args.push("--provenance");
       if (config.dryRun) args.push("--dry-run");
       const spawnCommand = yield* resolveSpawnCommand("npm", [...args, launcherTarball]);
-      yield* Effect.log(`[cli] npm ${args.join(" ")} t3.tgz`);
+      yield* Effect.log(`[cli] npm ${args.join(" ")} t2.tgz`);
       yield* runCommand(
         ChildProcess.make(spawnCommand.command, spawnCommand.args, {
           cwd: packagesDir,

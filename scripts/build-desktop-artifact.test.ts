@@ -59,6 +59,9 @@ import {
   WSL_RUNTIME_ARCHIVE_HASH_EXTRA_RESOURCE,
   WSL_RUNTIME_ARCHIVE_HASH_NAME,
   WSL_RUNTIME_ARCHIVE_NAME,
+  WSL_RUNTIME_EXTRA_RESOURCES,
+  WslRuntimeArchiveMissingError,
+  legacyWslRuntimeArchiveStem,
   wslRuntimeArchiveStem,
 } from "./build-desktop-artifact.ts";
 import {
@@ -131,7 +134,7 @@ const WINDOWS_PAYLOAD_FIXTURE_VERSION = "1.2.3";
 const makeWindowsPayloadFixture = Effect.fn("test.makeWindowsPayloadFixture")(function* (input: {
   readonly copyUnpackedNatives: boolean;
   readonly serverEntrySource?: string;
-  readonly wslRuntime?: "valid" | "loose-server-tree" | "missing-pty" | "bad-digest";
+  readonly wslRuntime?: "valid" | "legacy" | "loose-server-tree" | "missing-pty" | "bad-digest";
   readonly targetArch?: "x64" | "arm64";
   readonly ptyPrebuildArch?: "x64" | "arm64";
 }) {
@@ -171,7 +174,10 @@ const makeWindowsPayloadFixture = Effect.fn("test.makeWindowsPayloadFixture")(fu
   yield* fs.writeFileString(path.join(packagedAppDir, "chrome_crashpad_handler.exe"), "crashpad");
 
   if (input.wslRuntime !== undefined) {
-    const stem = wslRuntimeArchiveStem(WINDOWS_PAYLOAD_FIXTURE_VERSION, input.targetArch ?? "x64");
+    const stem =
+      input.wslRuntime === "legacy"
+        ? legacyWslRuntimeArchiveStem(WINDOWS_PAYLOAD_FIXTURE_VERSION, "x64")
+        : wslRuntimeArchiveStem(WINDOWS_PAYLOAD_FIXTURE_VERSION, input.targetArch ?? "x64");
     const sourceArchivePath =
       input.wslRuntime === "loose-server-tree"
         ? yield* makeLinuxCliArchiveFixture({
@@ -1178,6 +1184,26 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       ),
   );
 
+  it.effect("accepts a historical Linux CLI archive stem in a Windows package", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fixture = yield* makeWindowsPayloadFixture({
+          copyUnpackedNatives: true,
+          wslRuntime: "legacy",
+        });
+        const result = yield* validateWindowsPackagedPayload({
+          stageDistDir: fixture.stageDistDir,
+          appExecutableName: fixture.appExecutableName,
+          targetArch: "x64",
+          appVersion: WINDOWS_PAYLOAD_FIXTURE_VERSION,
+          expectWslRuntime: true,
+        });
+
+        assert.equal(result.packagedAppDir, fixture.packagedAppDir);
+      }),
+    ).pipe(Effect.provideService(HostProcessPlatform, "linux")),
+  );
+
   it.effect("rejects an embedded archive built for a different release version", () =>
     Effect.scoped(
       Effect.gen(function* () {
@@ -1778,10 +1804,96 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     ),
   );
 
+  it.effect("uses the nightly DMG background for nightly macOS builds", () =>
+    Effect.gen(function* () {
+      const config = yield* createBuildConfig(
+        "mac",
+        "dmg",
+        "1.2.3-nightly.20260815.1",
+        false,
+        false,
+        undefined,
+        undefined,
+      );
+
+      assert.equal(
+        (config.dmg as Record<string, unknown>).background,
+        "dmg/dmg-background-nightly.png",
+      );
+    }).pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: {} })))),
+  );
+
+  it.effect("configures Windows executable metadata and native signing extensions", () =>
+    Effect.gen(function* () {
+      const config = yield* createBuildConfig(
+        "win",
+        "nsis",
+        "1.2.3",
+        false,
+        false,
+        undefined,
+        undefined,
+      );
+
+      const win = config.win as Record<string, unknown>;
+      assert.equal(win.icon, "icon.ico");
+      assert.deepStrictEqual(win.signExts, [".node", ".dll"]);
+      assert.equal(win.signAndEditExecutable, true);
+      assert.notProperty(win, "azureSignOptions");
+    }).pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: {} })))),
+  );
+
+  it("stages the resource monitor as an external executable resource", () => {
+    assert.deepStrictEqual(DESKTOP_EXTRA_RESOURCES, [
+      {
+        from: "apps/desktop/prod-resources/cursor-sdk",
+        to: "node_modules/@cursor",
+      },
+      {
+        from: "apps/desktop/prod-resources/resource-monitor",
+        to: "resource-monitor",
+      },
+    ]);
+    assert.deepStrictEqual(resolveResourceMonitorRustTargets("mac", "universal"), [
+      "aarch64-apple-darwin",
+      "x86_64-apple-darwin",
+    ]);
+    assert.deepStrictEqual(resolveResourceMonitorRustTargets("linux", "x64"), [
+      "x86_64-unknown-linux-gnu",
+    ]);
+    assert.deepStrictEqual(resolveResourceMonitorRustTargets("win", "arm64"), [
+      "aarch64-pc-windows-msvc",
+    ]);
+    assert.equal(resourceMonitorExecutableName("mac"), "t3-resource-monitor");
+    assert.equal(resourceMonitorExecutableName("win"), "t3-resource-monitor.exe");
+  });
+
+  it("ships the Linux CLI release archive as the WSL runtime", () => {
+    assert.equal(WSL_RUNTIME_ARCHIVE_NAME, "wsl-runtime.tar.gz");
+    assert.equal(WSL_RUNTIME_ARCHIVE_HASH_NAME, "wsl-runtime.tar.gz.sha256");
+    assert.deepStrictEqual(WSL_RUNTIME_ARCHIVE_EXTRA_RESOURCE, {
+      from: "apps/desktop/prod-resources/wsl-runtime.tar.gz",
+      to: "wsl-runtime.tar.gz",
+    });
+    assert.deepStrictEqual(WSL_RUNTIME_ARCHIVE_HASH_EXTRA_RESOURCE, {
+      from: "apps/desktop/prod-resources/wsl-runtime.tar.gz.sha256",
+      to: "wsl-runtime.tar.gz.sha256",
+    });
+    // Both the staging and the packaging config hang off this one decision:
+    // Windows only, and only when CI handed the build a Linux CLI archive.
+    const runtimeArchivePath = "/tmp/t2-1.2.3-linux-x64.tar.gz";
+    assert.isTrue(bundlesWslRuntime({ platform: "win", runtimeArchivePath }));
+    assert.isFalse(bundlesWslRuntime({ platform: "win", runtimeArchivePath: undefined }));
+    assert.isFalse(bundlesWslRuntime({ platform: "linux", runtimeArchivePath }));
+    assert.isFalse(bundlesWslRuntime({ platform: "mac", runtimeArchivePath }));
+    assert.equal(wslRuntimeArchiveStem("1.2.3", "x64"), "t2-1.2.3-linux-x64");
+    assert.equal(legacyWslRuntimeArchiveStem("1.2.3", "x64"), "t3-1.2.3-linux-x64");
+  });
+
   it("parses Windows bsdtar member listings with CRLF line endings", () => {
     assert.deepStrictEqual(
-      parseWslRuntimeArchiveMembers("./t3-1.2.3-linux-x64/t3\r\nt3-1.2.3-linux-x64/client/\r\n"),
-      ["t3-1.2.3-linux-x64/t3", "t3-1.2.3-linux-x64/client"],
+      parseWslRuntimeArchiveMembers("./t2-1.2.3-linux-x64/t3\r\nt2-1.2.3-linux-x64/client/\r\n"),
+      ["t2-1.2.3-linux-x64/t3", "t2-1.2.3-linux-x64/client"],
     );
   });
 
@@ -1793,7 +1905,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-wsl-runtime-stage-" });
         const sourceArchivePath = yield* makeLinuxCliArchiveFixture({
           root,
-          stem: "t3-1.2.3-linux-x64",
+          stem: "t2-1.2.3-linux-x64",
         });
         const stageAppDir = path.join(root, "app");
         const archivePath = path.join(stageAppDir, WSL_RUNTIME_ARCHIVE_EXTRA_RESOURCE.from);
@@ -1810,6 +1922,153 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         assert.equal(hash, `${NodeCrypto.createHash("sha256").update(source).digest("hex")}\n`);
       }),
     ),
+  );
+
+  it.effect("fails when the Linux CLI archive handed to the build does not exist", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-wsl-runtime-missing-" });
+        const error = yield* stageWslRuntimeArchive({
+          sourceArchivePath: path.join(root, "t2-1.2.3-linux-x64.tar.gz"),
+          archivePath: path.join(root, WSL_RUNTIME_ARCHIVE_NAME),
+          hashPath: path.join(root, WSL_RUNTIME_ARCHIVE_HASH_NAME),
+        }).pipe(Effect.flip);
+
+        assert.instanceOf(error, WslRuntimeArchiveMissingError);
+      }),
+    ),
+  );
+
+  it("promotes target fff binaries to direct staged dependencies", () => {
+    assert.deepStrictEqual(resolveFffNativeDependencies("mac", "arm64", "0.9.4"), {
+      "@ff-labs/fff-bin-darwin-arm64": "0.9.4",
+    });
+    assert.deepStrictEqual(resolveFffNativeDependencies("mac", "universal", "0.9.4"), {
+      "@ff-labs/fff-bin-darwin-arm64": "0.9.4",
+      "@ff-labs/fff-bin-darwin-x64": "0.9.4",
+    });
+    assert.deepStrictEqual(resolveFffNativeDependencies("win", "x64", "0.9.4"), {
+      "@ff-labs/fff-bin-win32-x64": "0.9.4",
+    });
+    assert.deepStrictEqual(resolveFffNativeDependencies("linux", "x64", "0.9.4"), {
+      "@ff-labs/fff-bin-linux-x64-gnu": "0.9.4",
+      "@ff-labs/fff-bin-linux-x64-musl": "0.9.4",
+    });
+    assert.deepStrictEqual(resolveFffNativeDependencies("linux", "arm64", "0.9.4"), {
+      "@ff-labs/fff-bin-linux-arm64-gnu": "0.9.4",
+      "@ff-labs/fff-bin-linux-arm64-musl": "0.9.4",
+    });
+  });
+
+  it("resolves target Clerk passkey native artifacts", () => {
+    assert.deepStrictEqual(resolveClerkPasskeyNativeArtifacts("mac", "universal"), [
+      {
+        packageName: "@clerk/electron-passkeys-darwin-arm64",
+        binaryFileName: "electron-passkeys.darwin-arm64.node",
+      },
+      {
+        packageName: "@clerk/electron-passkeys-darwin-x64",
+        binaryFileName: "electron-passkeys.darwin-x64.node",
+      },
+    ]);
+    assert.deepStrictEqual(resolveClerkPasskeyNativeArtifacts("win", "x64"), [
+      {
+        packageName: "@clerk/electron-passkeys-win32-x64-msvc",
+        binaryFileName: "electron-passkeys.win32-x64-msvc.node",
+      },
+    ]);
+    assert.deepStrictEqual(resolveClerkPasskeyNativeArtifacts("linux", "x64"), []);
+  });
+
+  it("falls back to the default mock update port when the configured port is blank", () => {
+    assert.equal(resolveMockUpdateServerUrl(undefined), "http://localhost:3000");
+    assert.equal(resolveMockUpdateServerUrl(4123), "http://localhost:4123");
+  });
+
+  it("derives the electron-builder package manager user agent from packageManager", () => {
+    assert.equal(resolvePackageManagerUserAgent("pnpm@11.10.0"), "pnpm/11.10.0");
+    assert.equal(resolvePackageManagerUserAgent(" yarn@4.9.2 "), "yarn/4.9.2");
+    assert.equal(resolvePackageManagerUserAgent("pnpm"), "pnpm");
+  });
+
+  it.effect("normalizes mock update server ports from env-style strings", () =>
+    Effect.gen(function* () {
+      assert.equal(yield* resolveMockUpdateServerPort(undefined), undefined);
+      assert.equal(yield* resolveMockUpdateServerPort(""), undefined);
+      assert.equal(yield* resolveMockUpdateServerPort("   "), undefined);
+      assert.equal(yield* resolveMockUpdateServerPort("4123"), 4123);
+    }),
+  );
+
+  it.effect("rejects non-numeric or out-of-range mock update ports", () =>
+    Effect.gen(function* () {
+      const invalidPorts = ["abc", "12.5", "0", "65536"];
+      for (const port of invalidPorts) {
+        const exit = yield* Effect.exit(resolveMockUpdateServerPort(port));
+        assert.equal(exit._tag, "Failure");
+      }
+    }),
+  );
+
+  it("classifies invalid configured ports with the decoder's number grammar", () => {
+    const cause = new Error("invalid configured port");
+
+    assert.equal(
+      InvalidMockUpdateServerPortError.fromConfigValue("0x10", cause).reason,
+      "not-numeric",
+    );
+    assert.equal(
+      InvalidMockUpdateServerPortError.fromConfigValue("12.5", cause).reason,
+      "not-integer",
+    );
+    assert.equal(
+      InvalidMockUpdateServerPortError.fromConfigValue("65536", cause).reason,
+      "out-of-range",
+    );
+    assert.strictEqual(
+      InvalidMockUpdateServerPortError.fromConfigValue("0x10", cause).cause,
+      cause,
+    );
+  });
+
+  it.effect("resolves default platform and architecture from host references", () =>
+    Effect.gen(function* () {
+      const resolved = yield* resolveBuildOptions({
+        platform: Option.none(),
+        target: Option.none(),
+        arch: Option.none(),
+        buildVersion: Option.none(),
+        outputDir: Option.none(),
+        skipBuild: Option.none(),
+        keepStage: Option.none(),
+        signed: Option.none(),
+        verbose: Option.none(),
+        mockUpdates: Option.none(),
+        mockUpdateServerPort: Option.none(),
+        wslRuntime: Option.none(),
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(HostProcess.Platform, "win32"),
+            Layer.succeed(HostProcess.Architecture, "x64"),
+            ConfigProvider.layer(
+              ConfigProvider.fromEnv({
+                env: {
+                  PROCESSOR_ARCHITECTURE: "AMD64",
+                  PROCESSOR_ARCHITEW6432: "ARM64",
+                },
+              }),
+            ),
+          ),
+        ),
+      );
+
+      assert.equal(resolved.platform, "win");
+      assert.equal(resolved.target, "nsis");
+      assert.equal(resolved.arch, "arm64");
+    }),
   );
 
   it.effect("rejects universal builds on Linux and Windows before staging binaries", () =>
