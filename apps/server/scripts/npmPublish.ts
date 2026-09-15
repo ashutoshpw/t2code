@@ -1,7 +1,7 @@
 // @effect-diagnostics nodeBuiltinImport:off - npm publish probes run on plain Node streams and fetch APIs.
-import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { setTimeout as sleepFor } from "node:timers/promises";
+import * as NodeCrypto from "node:crypto";
+import * as NodeFS from "node:fs";
+import * as NodeTimersPromises from "node:timers/promises";
 import * as Effect from "effect/Effect";
 
 export const DEFAULT_NPM_REGISTRY_URL = "https://registry.npmjs.org";
@@ -235,7 +235,7 @@ const streamSha512 = async (response: Response): Promise<string> => {
     throw new Error("tarball response has no body");
   }
 
-  const hash = createHash("sha512");
+  const hash = NodeCrypto.createHash("sha512");
   const reader = response.body.getReader();
   try {
     while (true) {
@@ -251,8 +251,8 @@ const streamSha512 = async (response: Response): Promise<string> => {
 
 /** Hashes a local package tarball without retaining its bytes in memory. */
 export async function sha512File(filePath: string): Promise<string> {
-  const hash = createHash("sha512");
-  for await (const chunk of createReadStream(filePath)) {
+  const hash = NodeCrypto.createHash("sha512");
+  for await (const chunk of NodeFS.createReadStream(filePath)) {
     hash.update(chunk);
   }
   return `sha512-${hash.digest("base64")}`;
@@ -415,7 +415,8 @@ const resolveVisibilityWaitConfig = (
   const registryUrl = options.registryUrl ?? DEFAULT_NPM_REGISTRY_URL;
   const fetcher = options.fetch ?? globalThis.fetch.bind(globalThis);
   const sleep =
-    options.sleep ?? ((milliseconds: number) => sleepFor(milliseconds).then(() => undefined));
+    options.sleep ??
+    ((milliseconds: number) => NodeTimersPromises.setTimeout(milliseconds).then(() => undefined));
   const now = options.now ?? Date.now;
 
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
