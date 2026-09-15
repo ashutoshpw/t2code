@@ -128,10 +128,18 @@ describe("check-rebrand", () => {
           file: "packages/shared/src/git.test.ts",
           line: `git@github.com:T3Tools/T3Code.git`,
         },
+        {
+          file: "apps/web/src/example.ts",
+          line: `const metadata = "https://github.com/t3tools/t3code (com.t3tools.t3code)";`,
+        },
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3tools-brand", "t3tools-brand"]);
+    expect(violations.map((v) => v.rule.id)).toEqual([
+      "t3tools-brand",
+      "t3tools-brand",
+      "t3tools-brand",
+    ]);
   });
 
   it("flags the upstream port including separator literals", () => {
