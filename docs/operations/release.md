@@ -42,7 +42,7 @@ This document covers the unified release workflow for stable and nightly desktop
   - The executable is built with a Node that supports `--build-sea` (`VP_NODE_VERSION=26.8.2`, kept in step with `SEA_NODE_VERSION` in `apps/server/vite.config.ts`), while the repo stays on `engines.node`.
   - macOS archives are signed with the Developer ID certificate and notarized when the Apple secrets are present (ad hoc otherwise, which still runs from `curl`/`tar` installs). Windows executables use the same Azure Trusted Signing setup as the installer. Every native addon in the macOS archive is signed too, since the hardened runtime refuses unsigned libraries.
   - Each archive is extracted and executed on its build runner (`scripts/smoke-cli-archive.ts`) before it is uploaded.
-- Publishes the CLI to npm with OIDC trusted publishing from the same workflow file, as the same bytes the GitHub Release carries: `scripts/build-npm-platform-packages.ts` unpacks the five CLI archives into `@t2code/t2-<platform>-<arch>` packages (each with `os`/`cpu` set so npm installs only the matching one) and generates the `@t2code/cli` launcher, whose `bin/t2code.js` lists them as `optionalDependencies` and execs the installed executable. `npx @t2code/cli` therefore needs Node only to run the launcher, never to run the server. `node apps/server/scripts/cli.ts publish` publishes the platform packages first and the launcher last, after a `--dry-run` pass over all of them that validates local package contents; the dry run does not contact npm or prove registry authentication.
+- Publishes the CLI to npm with OIDC trusted publishing from the same workflow file, as the same bytes the GitHub Release carries: `scripts/build-npm-platform-packages.ts` unpacks the five CLI archives into `@t2code/t2-<platform>-<arch>` packages (each with `os`/`cpu` set so npm installs only the matching one) and generates the `@t2code/cli` launcher, whose `bin/t2code.js` lists them as `optionalDependencies` and execs the installed executable. `npx @t2code/cli` therefore needs Node only to run the launcher, never to run the server. `node apps/server/scripts/cli.ts publish` validates all generated package metadata before publishing, publishes every platform package first, and then publishes the launcher. In CI, `--wait-for-visibility` gates the platform phase on the public npm install metadata and an integrity-checked tarball download before the launcher is published, then applies the same gate to the launcher; each phase has a bounded 20-minute wait. The `--dry-run` pass validates local package contents only and never contacts npm or waits for registry processing.
   - stable releases publish npm dist-tag `latest`
   - nightly releases publish npm dist-tag `nightly`
   - preview releases publish npm dist-tag `preview`; the launcher's existing `latest` remains unchanged, while npm may assign an initial `latest` tag when a platform package is first bootstrapped
@@ -246,8 +246,10 @@ The workflow enforces this ordering:
 Preserve these dependencies when changing the release graph. Publishing a client first would leave
 the **Update server** action targeting a package version that does not exist yet.
 
-For a release smoke test, confirm `npm view @t2code/cli@<version> version` returns the expected version, then
-connect the new client to a server on the previous version and verify that the update action
+For a release smoke test, confirm an unauthenticated `npm view @t2code/cli@<version> version` returns
+the expected version and run `npx @t2code/cli@<version> --version` on the target platform. The release
+workflow already performs the metadata and tarball integrity gate before it completes. Then connect
+the new client to a server on the previous version and verify that the update action
 reconnects to the matching server. When the release adds database migrations, verify that the
 remote update applies them and reconnects. A failed trial must restore the database snapshot and
 restart the previous server. If the installed launcher does not support the target protocol,
@@ -348,7 +350,11 @@ Checklist:
    - Environment: leave blank
      The `--dry-run` invocation in `publish_cli` only validates local package contents. It does not
      contact npm's registry or verify credentials or Trusted Publisher configuration; the real
-     publish step performs that check.
+     publish step performs that check. The real invocation also passes `--wait-for-visibility`:
+     platform publishes complete first, then the wrapper checks npm's install metadata and streams
+     each public tarball through its advertised integrity hash before publishing the launcher. Both
+     phases fail closed after 20 minutes if npm has accepted the upload but has not made it
+     installable.
 3. Ensure npm account and org policies allow trusted publishing for every package.
 
 The release job intentionally authenticates with npm through GitHub OIDC (`id-token: write`) and
