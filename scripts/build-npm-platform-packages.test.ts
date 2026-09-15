@@ -44,14 +44,14 @@ const run = Effect.fn("test.run")(function* (
 });
 
 /** A tar.gz laid out like build-cli-archive.ts writes, with a stub `t3` that echoes its args. */
-const makeFakeArchives = Effect.fn("test.makeFakeArchives")(function* () {
+const makeFakeArchives = Effect.fn("test.makeFakeArchives")(function* (prefix: "t2" | "t3" = "t2") {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-npm-packages-test-" });
   const archivesDir = path.join(root, "archives");
   yield* fs.makeDirectory(archivesDir);
   for (const key of KEYS) {
-    const stem = `t3-${VERSION}-${key}`;
+    const stem = `${prefix}-${VERSION}-${key}`;
     const stage = path.join(root, "stage", key);
     const contentDir = path.join(stage, stem);
     for (const dir of ["client", "resource-monitor", "node_modules/node-pty"]) {
@@ -87,6 +87,25 @@ it.layer(NodeServices.layer)("build-npm-platform-packages", (it) => {
         "win32-arm64",
         "win32-x64",
       ]);
+    }),
+  );
+
+  it.effect("accepts historical t3 archives when current names are absent", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const fixture = yield* makeFakeArchives("t3");
+      const outputs = yield* buildNpmPlatformPackages({
+        ...fixture,
+        version: VERSION,
+        allowMissing: true,
+      });
+
+      assert.deepStrictEqual(
+        outputs.map((output) => output.name),
+        ["@t2code/t2-darwin-arm64", "@t2code/t2-linux-x64", "@t2code/cli"],
+      );
+      assert.isTrue(yield* fs.exists(path.join(fixture.outputDir, "@t2code/t2-linux-x64/t3")));
     }),
   );
 
@@ -202,7 +221,7 @@ it.layer(NodeServices.layer)("build-npm-platform-packages", (it) => {
       assert.equal(unsupported.exitCode, 1);
       assert.include(unsupported.stderr, "linux-x64");
       assert.include(unsupported.stderr, "win32-arm64");
-      assert.include(unsupported.stderr, "https://github.com/pingdotgg/t3code/releases");
+      assert.include(unsupported.stderr, "https://github.com/ashutoshpw/t2code/releases");
     }),
   );
 });
