@@ -449,8 +449,10 @@ depends on npm, and it works once `publish_cli` finishes.
 Preserve these dependencies when changing the release graph. Publishing a client first would leave
 the **Update server** action targeting a package version that does not exist yet.
 
-For a release smoke test, confirm `npm view @t2code/cli@<version> version` returns the expected version, then
-connect the new client to a server on the previous version and verify that the update action
+For a release smoke test, confirm an unauthenticated `npm view @t2code/cli@<version> version` returns
+the expected version and run `npx @t2code/cli@<version> --version` on the target platform. The release
+workflow already performs the metadata and tarball integrity gate before it completes. Then connect
+the new client to a server on the previous version and verify that the update action
 reconnects to the matching server. When the release adds database migrations, verify that the
 remote update applies them and reconnects. A failed trial must restore the database snapshot and
 restart the previous server. If the installed launcher does not support the target protocol,
