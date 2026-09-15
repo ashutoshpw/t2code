@@ -4,6 +4,7 @@ import * as NodeCrypto from "node:crypto";
 import * as Alchemy from "alchemy";
 import * as Axiom from "@alchemy.run/axiom";
 import * as Cloudflare from "@alchemy.run/cloudflare";
+import { adopt } from "alchemy/AdoptPolicy";
 import * as Output from "alchemy/Output";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
@@ -36,7 +37,7 @@ export const RelayObservability = Effect.gen(function* () {
     description: "T2 Code relay Worker HTTP request spans.",
     retentionDays: 30,
     useRetentionPeriod: true,
-  });
+  }).pipe(adopt(true));
 
   const workerIngestToken = yield* Axiom.ApiToken("RelayWorkerAxiomIngestToken", {
     name: relayResourceNameForStage("t2-code-relay-otel-ingest", stage),
