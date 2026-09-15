@@ -112,7 +112,26 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3tools-scope", "t3tools-scope"]);
+    expect(violations.map((v) => v.rule.id)).toEqual([
+      "t3tools-scope",
+      "t3tools-scope",
+      "t3tools-brand",
+    ]);
+  });
+
+  it("flags repository-owned t3tools metadata while retaining upstream repository fixtures", () => {
+    const violations = findViolations(
+      [
+        { file: "apps/mobile/src/example.ts", line: `const homepage = "https://t3tools.com";` },
+        { file: "apps/web/src/example.ts", line: `namespace: "t3tools-composer-editor"` },
+        {
+          file: "packages/shared/src/git.test.ts",
+          line: `git@github.com:T3Tools/T3Code.git`,
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3tools-brand", "t3tools-brand"]);
   });
 
   it("flags the upstream port including separator literals", () => {
