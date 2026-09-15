@@ -17,7 +17,7 @@
 # instead of fetching the release again.
 set -eu
 
-repo="pingdotgg/t3code"
+repo="ashutoshpw/t2code"
 base_url="${T3CODE_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}"
 t3_home="${T3CODE_HOME:-$HOME/.t3}"
 bin_dir="${T3CODE_INSTALL_BIN_DIR:-$HOME/.local/bin}"
@@ -172,8 +172,10 @@ case "$version" in
     ;;
 esac
 
-stem="t3-${version}-${platform}-${arch}"
+stem="t2-${version}-${platform}-${arch}"
+legacy_stem="t3-${version}-${platform}-${arch}"
 archive="${stem}.tar.gz"
+legacy_archive="${legacy_stem}.tar.gz"
 versions_dir="${t3_home}/runtime/versions"
 target_dir="${versions_dir}/${version}"
 
@@ -196,6 +198,17 @@ else
     fail "t3 ${version} has no release archive for ${platform}-${arch}; releases before the self-contained CLI can only be installed with \`npm install -g t3@${version}\`"
   elif [ "$fetch_status" -ne 0 ]; then
     fail "could not download the release checksums"
+  fi
+  # Releases before the public rename only list the t3 archive name. Prefer
+  # the current name when both are present, while keeping those releases
+  # installable without a second speculative download.
+  if ! grep -q " \*\{0,1\}${archive}\$" "${staging}/SHA256SUMS"; then
+    if grep -q " \*\{0,1\}${legacy_archive}\$" "${staging}/SHA256SUMS"; then
+      stem="$legacy_stem"
+      archive="$legacy_archive"
+    else
+      fail "neither ${archive} nor ${legacy_archive} is listed in SHA256SUMS"
+    fi
   fi
   download "${base_url}/v${version}/${archive}" "${staging}/${archive}"
 
