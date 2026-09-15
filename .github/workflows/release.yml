@@ -1211,7 +1211,7 @@ jobs:
           VERCEL_PROJECT_ID="$(
             curl --fail --silent --show-error \
               --header "Authorization: Bearer $VERCEL_TOKEN" \
-              "https://api.vercel.com/v9/projects/t3code-marketing?teamId=$VERCEL_ORG_ID" \
+              "https://api.vercel.com/v9/projects/t2code-marketing?teamId=$VERCEL_ORG_ID" \
               | jq --exit-status --raw-output '.id'
           )"
           export VERCEL_PROJECT_ID
