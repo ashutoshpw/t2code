@@ -43,6 +43,11 @@ const GUARDED_DIRS = [".agents/", "apps/mobile/modules/"];
 const LEGACY_WORDMARK_PATH_FINGERPRINT =
   /M86\.7253\s+93\.96\s*C82\.832\s+93\.96\s+78\.9653\s+93\.4533\s+75\.1253\s+92\.44/;
 
+// Upstream repository fixtures intentionally retain the original owner. They
+// exercise URL/repository normalization and are not package or product brand
+// references that the fork should rename.
+const UPSTREAM_T3TOOLS_REPOSITORY_REFERENCE = /(?:github\.com|gitlab\.com)(?::|\/)t3tools\//i;
+
 type Rule = {
   id: string;
   hint: string;
@@ -84,6 +89,12 @@ const RULES: Rule[] = [
     id: "t3tools-scope",
     hint: 'fork internal packages are "@t2code/*"; "@t2code/" only exists upstream (.agents/ and apps/mobile/modules/ are exempt dirs)',
     violates: (_file, line) => /@t3tools\//.test(line),
+  },
+  {
+    id: "t3tools-brand",
+    hint: 'repository-owned identifiers use "t2code"; preserve an existing compatibility/upstream hit only with an exact baseline entry',
+    violates: (_file, line) =>
+      /\bt3tools\b/i.test(line) && !UPSTREAM_T3TOOLS_REPOSITORY_REFERENCE.test(line),
   },
   {
     id: "t3-port",
@@ -274,10 +285,11 @@ export function main(argv: string[]): number {
     const seen = new Set<string>();
     const entries: Entry[] = [];
     for (const entry of withLines) {
-      if (current.has(baselineKey(entry))) continue; // keep as-is
-      if (!RULES.some((rule) => rule.violates(entry.file, entry.line))) continue;
       const key = baselineKey(entry);
       if (seen.has(key)) continue;
+      if (!current.has(key) && !RULES.some((rule) => rule.violates(entry.file, entry.line))) {
+        continue;
+      }
       seen.add(key);
       const [file, line] = key.split("\u0000");
       entries.push({ file: file as string, line: line as string });
