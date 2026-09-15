@@ -2085,7 +2085,7 @@ export function ComposerPromptEditor({
   const initialSkillMetadataRef = useRef(skillMetadataByName(skills));
   const initialConfig = useMemo<InitialConfigType>(
     () => ({
-      namespace: "t3tools-composer-editor",
+      namespace: "t2code-composer-editor",
       editable: true,
       nodes: [
         ComposerMentionNode,

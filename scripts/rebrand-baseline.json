@@ -1,39 +1,11 @@
 [
   {
     "file": ".cursor/rules/cursor-cloud.mdc",
-    "line": "These notes apply only to Cursor Cloud agents (kept out of the shared `AGENTS.md` since T3 Code is"
-  },
-  {
-    "file": ".cursor/rules/cursor-cloud.mdc",
     "line": "description: Cursor Cloud environment setup and run notes for T3 Code (Cursor-specific; not for other editors/CI)"
   },
   {
-    "file": ".devcontainer/devcontainer.json",
-    "line": "\"name\": \"T3 Code Dev\","
-  },
-  {
-    "file": ".github/workflows/release.yml",
-    "line": "> Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, are never offered as updates, and are not supported. If you want T3 Code, install the [latest release](https://github.com/pingdotgg/t3code/releases/latest) or a nightly instead."
-  },
-  {
-    "file": "apps/desktop/src/app/DesktopAppIdentity.test.ts",
-    "line": "input.legacyPathExists === true && path.includes(\"T3 Code (Alpha)\"),"
-  },
-  {
-    "file": "apps/desktop/src/app/DesktopAppIdentity.test.ts",
-    "line": "name: Effect.succeed(\"T3 Code\"),"
-  },
-  {
-    "file": "apps/desktop/src/app/DesktopClerk.test.ts",
-    "line": "legacyUserDataDirName: isDevelopment ? \"T3 Code (Dev)\" : \"T3 Code (Alpha)\","
-  },
-  {
-    "file": "apps/desktop/src/app/DesktopClerk.ts",
-    "line": "// the lock would create \"T3 Code (Alpha)\" and make the legacy-install"
-  },
-  {
-    "file": "apps/desktop/src/app/DesktopEnvironment.ts",
-    "line": "const legacyUserDataDirName = isDevelopment ? \"T3 Code (Dev)\" : \"T3 Code (Alpha)\";"
+    "file": ".cursor/rules/cursor-cloud.mdc",
+    "line": "These notes apply only to Cursor Cloud agents (kept out of the shared `AGENTS.md` since T3 Code is"
   },
   {
     "file": "apps/desktop/src/app/DesktopLifecycle.test.ts",
@@ -44,16 +16,36 @@
     "line": "name: \"T3 Code\","
   },
   {
-    "file": "apps/desktop/src/electron/ElectronWindow.test.ts",
-    "line": "assert.equal(error.message, 'Failed to create Electron BrowserWindow \"T3 Code\" (1100x780).');"
-  },
-  {
-    "file": "apps/desktop/src/electron/ElectronWindow.test.ts",
-    "line": "title: \"T3 Code\","
-  },
-  {
     "file": "apps/desktop/src/preview/BrowserSession.ts",
     "line": "const PREVIEW_EPHEMERAL_PARTITION_PREFIX = \"t3code-preview-ephemeral-\";"
+  },
+  {
+    "file": "apps/desktop/src/snapShot/captureConfigEdit.test.ts",
+    "line": "const other = captureConfigBinding(\"niri\", \"com.t3tools.Other\", \"Ctrl+Alt+4\");"
+  },
+  {
+    "file": "apps/desktop/src/snapShot/linuxCaptureSession.ts",
+    "line": "export const NIRI_CAPTURE_INTERFACE = \"com.t3tools.SnapShot\";"
+  },
+  {
+    "file": "apps/desktop/src/snapShot/linuxCaptureSession.ts",
+    "line": "export const NIRI_CAPTURE_PATH = \"/com/t3tools/SnapShot\";"
+  },
+  {
+    "file": "apps/desktop/src/snapShot/LinuxSnapShot.dbus.test.ts",
+    "line": "\"/com/t3tools/SnapShot\","
+  },
+  {
+    "file": "apps/desktop/src/snapShot/LinuxSnapShot.dbus.test.ts",
+    "line": "\"com.t3tools.SnapShot.Capture\","
+  },
+  {
+    "file": "apps/desktop/src/snapShot/LinuxSnapShot.dbus.test.ts",
+    "line": "interface: \"com.t3tools.SnapShot\","
+  },
+  {
+    "file": "apps/desktop/src/snapShot/LinuxSnapShot.dbus.test.ts",
+    "line": "path: \"/com/t3tools/SnapShot\","
   },
   {
     "file": "apps/desktop/src/telemetry/DesktopTelemetryPublisher.test.ts",
@@ -64,8 +56,16 @@
     "line": "name: Effect.succeed(\"T3 Code\"),"
   },
   {
+    "file": "apps/marketing/src/lib/site.ts",
+    "line": "\"https://play.google.com/store/apps/details?id=com.t3tools.t3code\";"
+  },
+  {
     "file": "apps/mobile/plugins/withIosCocoaPodsUuidCache.cjs",
     "line": "Pod::UI.puts \"T3Code: reset CocoaPods UUID allocator at #{next_index} (#{existing_uuids.length} existing objects)\""
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/remoteRegistration.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.preview\","
   },
   {
     "file": "apps/mobile/src/features/archive/archivedThreadList.test.ts",
@@ -85,6 +85,10 @@
   },
   {
     "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
+    "line": "owner: \"t3tools\","
+  },
+  {
+    "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
     "line": "title: \"T3 Code\","
   },
   {
@@ -96,6 +100,10 @@
     "line": "title: \"T3 Code\","
   },
   {
+    "file": "apps/mobile/src/state/use-thread-pr.test.ts",
+    "line": "repository: \"t3tools/t3code\","
+  },
+  {
     "file": "apps/server/src/auth/EnvironmentAuth.test.ts",
     "line": "{ ...requestMetadata, label: \"T3 Code Desktop\" },"
   },
@@ -104,12 +112,96 @@
     "line": "label: \"T3 Code Mobile\","
   },
   {
+    "file": "apps/server/src/git/linkCreatedPullRequest.test.ts",
+    "line": "repository: \"t3tools/t3code\","
+  },
+  {
+    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
+    "line": "displayName: \"T3Tools/T3Code\","
+  },
+  {
     "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
     "line": "name: \"T3Code\","
   },
   {
+    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
+    "line": "owner: \"T3Tools\","
+  },
+  {
+    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
+    "line": "repository: \"t3tools/other\","
+  },
+  {
+    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
+    "line": "repository: \"T3Tools/Other\","
+  },
+  {
+    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
+    "line": "repository: \"t3tools/t3code\","
+  },
+  {
+    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
+    "line": "url: \"http://forge.example:3000/t3tools/t3code/pulls/42\","
+  },
+  {
+    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
+    "line": "displayName: \"t3tools/t3code\","
+  },
+  {
+    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
+    "line": "repository: \"t3tools/t3code\","
+  },
+  {
+    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
+    "line": "repository: \"T3Tools/T3Code\","
+  },
+  {
+    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
+    "line": "url: \"http://forge.example:3000/t3tools/t3code/pulls/42\","
+  },
+  {
+    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
+    "line": "url: \"http://forge.example:4000/t3tools/t3code/pulls/42\","
+  },
+  {
+    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
+    "line": "url: \"https://github.enterprise.test/t3tools/t3code/pull/42\","
+  },
+  {
+    "file": "apps/server/src/orchestration/projector.pullRequests.test.ts",
+    "line": "displayName: \"t3tools/t3code\","
+  },
+  {
+    "file": "apps/server/src/orchestration/projector.pullRequests.test.ts",
+    "line": "repository: \"t3tools/t3code\","
+  },
+  {
+    "file": "apps/server/src/orchestration/projector.pullRequests.test.ts",
+    "line": "repository: \"T3Tools/T3Code\","
+  },
+  {
+    "file": "apps/server/src/orchestration/projector.pullRequests.test.ts",
+    "line": "url: \"https://GitLab.example.com/t3tools/t3code/-/merge_requests/42\","
+  },
+  {
     "file": "apps/server/src/orchestration/projector.test.ts",
     "line": "title: \"T3 Code\","
+  },
+  {
+    "file": "apps/server/src/project/RepositoryIdentityResolver.test.ts",
+    "line": "expect(identity?.displayName).toBe(\"t3tools/platform/t3code\");"
+  },
+  {
+    "file": "apps/server/src/project/RepositoryIdentityResolver.test.ts",
+    "line": "expect(identity?.displayName).toBe(\"t3tools/t3code\");"
+  },
+  {
+    "file": "apps/server/src/project/RepositoryIdentityResolver.test.ts",
+    "line": "expect(identity?.owner).toBe(\"t3tools\");"
+  },
+  {
+    "file": "apps/server/src/project/RepositoryIdentityResolver.test.ts",
+    "line": "expect(refreshedIdentity?.displayName).toBe(\"t3tools/t3code-next\");"
   },
   {
     "file": "apps/server/src/relay/AgentAwarenessRelay.test.ts",
@@ -148,36 +240,200 @@
     "line": "title: \"T3 Code\","
   },
   {
-    "file": "docs/operations/release.md",
-    "line": "- Publishes the CLI npm packages (`t3` and `@t3code/t3-<platform>-<arch>`) to the `nightly` npm dist-tag using the same nightly version."
+    "file": "apps/web/src/composer-logic.test.ts",
+    "line": "repository: \"t3tools/other\","
+  },
+  {
+    "file": "apps/web/src/composer-logic.test.ts",
+    "line": "repository: \"t3tools/t3code\","
+  },
+  {
+    "file": "apps/web/src/composer-logic.test.ts",
+    "line": "repository: \"T3Tools/T3Code\","
+  },
+  {
+    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
+    "line": "// two-segment owner/name form would look for `t3tools/t3code` and find nothing."
+  },
+  {
+    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
+    "line": "displayName: \"t3tools/platform/t3code\","
+  },
+  {
+    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
+    "line": "owner: \"t3tools\","
+  },
+  {
+    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
+    "line": "repository: \"t3tools/platform/t3code\","
+  },
+  {
+    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
+    "line": "repository: \"t3tools/t3code\","
+  },
+  {
+    "file": "docs/internals/linux-snap-shot.md",
+    "line": "`<app-id>.SnapShot` on the session bus and exports `com.t3tools.SnapShot.Capture`; the config"
+  },
+  {
+    "file": "docs/operations/android-notifications.md",
+    "line": "1. Create a Firebase project and register each Android application identifier you intend to build: `com.t3tools.t3code.dev`, `com.t3tools.t3code.preview`, or `com.t3tools.t3code`."
+  },
+  {
+    "file": "docs/operations/android-notifications.md",
+    "line": "Building with `APP_VARIANT=production` selects `com.t3tools.t3code` and its corresponding Clerk callback. Set the same variant during prebuild and bundling, and supply a Google services file that includes that package. Keep OTA updates disabled for a private binary. A locally signed build with this package cannot update an official installation signed by the maintainer or coexist with it; removing that installation also removes its app-local data. The development package remains a separate app."
+  },
+  {
+    "file": "docs/operations/android-notifications.md",
+    "line": "clerk://com.t3tools.t3code.dev.callback"
+  },
+  {
+    "file": "docs/operations/connect-setup.md",
+    "line": "`webcredentials.apps` must include `<TEAM_ID>.com.t3tools.t3code`."
+  },
+  {
+    "file": "docs/operations/connect-setup.md",
+    "line": "For a production macOS app with bundle ID `com.t3tools.t3code`:"
   },
   {
     "file": "docs/operations/release.md",
-    "line": "- Publishes the CLI to npm with OIDC trusted publishing from the same workflow file, as the same bytes the GitHub Release carries: `scripts/build-npm-platform-packages.ts` unpacks the five CLI archives into `@t3code/t3-<platform>-<arch>` packages (each with `os`/`cpu` set so npm installs only the matching one) and generates the `t3` launcher, whose `bin/t3.js` lists them as `optionalDependencies` and execs the installed executable. `npx @t2code/cli` therefore needs Node only to run the launcher, never to run the server. `node apps/server/scripts/cli.ts publish` publishes the platform packages first and the launcher last, after a `--dry-run` pass over all of them so an auth or scope error fails before anything is live."
+    "line": "- Confirm the provisioning profile belongs to `APPLE_TEAM_ID.com.t3tools.t3code` and includes"
   },
   {
     "file": "docs/operations/release.md",
-    "line": "- one-time setup: the `@t3code` npm scope (org) must exist, and `t3` and each `@t3code/t3-<platform>-<arch>` package needs a trusted publisher registered for this workflow file (see below)."
+    "line": "2. Create an explicit App ID for `com.t3tools.t3code` and enable Associated Domains."
   },
   {
-    "file": "docs/operations/release.md",
-    "line": "2. For `t3` and each `@t3code/t3-<platform>-<arch>` package, configure a Trusted Publisher in the"
+    "file": "docs/user/background-service.md",
+    "line": "`~/Library/LaunchAgents/com.t3tools.t3code.service.plist`."
   },
   {
-    "file": "docs/operations/release.md",
-    "line": "`@t3code/t3-linux-arm64`, `@t3code/t3-linux-x64`, `@t3code/t3-win32-arm64`,"
+    "file": "docs/user/install.md",
+    "line": "[Google Play](https://play.google.com/store/apps/details?id=com.t3tools.t3code)."
   },
   {
-    "file": "docs/operations/release.md",
-    "line": "`@t3code/t3-win32-x64`."
+    "file": "docs/user/install.md",
+    "line": "| Windows            | `winget install T3Tools.T3Code` |"
   },
   {
-    "file": "docs/operations/release.md",
-    "line": "each `@t3code/t3-<platform>-<arch>.tgz` and finally on `t3.tgz`, the launcher. The script publishes"
+    "file": "infra/relay/src/agentActivity/ApnsClient.test.ts",
+    "line": "bundleId: \"com.t3tools.test\","
   },
   {
-    "file": "docs/operations/release.md",
-    "line": "packages are published per release: `t3`, `@t3code/t3-darwin-arm64`, `@t3code/t3-darwin-x64`,"
+    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
+    "line": ": { bundleId: \"com.t3tools.t3code.dev\", apsEnvironment: \"sandbox\" as const }),"
+  },
+  {
+    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
+    "line": "\"com.t3tools.t3code.preview.push-type.liveactivity\","
+  },
+  {
+    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
+    "line": "{ ...target, bundle_id: \"com.t3tools.t3code.preview\", aps_environment: \"sandbox\" },"
+  },
+  {
+    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
+    "line": "`${changed === \"bundle\" ? \"com.t3tools.t3code.preview\" : \"com.t3tools.t3code.dev\"}${kind === \"live_activity_update\" ? \".push-type.liveactivity\" : \"\"}`,"
+  },
+  {
+    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
+    "line": "bundle_id: \"com.t3tools.t3code.preview\","
+  },
+  {
+    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.dev\","
+  },
+  {
+    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.preview\","
+  },
+  {
+    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
+    "line": "changed === \"bundle\" ? \"com.t3tools.t3code.preview\" : \"com.t3tools.t3code.dev\","
+  },
+  {
+    "file": "infra/relay/src/agentActivity/ApnsDeliveryQueue.test.ts",
+    "line": "bundleId: \"com.t3tools.test\","
+  },
+  {
+    "file": "infra/relay/src/agentActivity/Devices.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.preview\" as RelayDeviceRegistrationRequest[\"bundleId\"],"
+  },
+  {
+    "file": "infra/relay/src/agentActivity/Devices.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.preview\","
+  },
+  {
+    "file": "infra/relay/src/agentActivity/FcmClient.test.ts",
+    "line": "packageName: \"com.t3tools.t3code.dev\","
+  },
+  {
+    "file": "infra/relay/src/agentActivity/FcmDeliveries.test.ts",
+    "line": "bundle_id: \"com.t3tools.t3code.dev\","
+  },
+  {
+    "file": "infra/relay/src/auth/RelayTokens.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.dev\","
+  },
+  {
+    "file": "infra/relay/src/environments/EnvironmentConnector.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.dev\","
+  },
+  {
+    "file": "infra/relay/src/environments/EnvironmentLinker.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.dev\","
+  },
+  {
+    "file": "infra/relay/src/environments/EnvironmentPublishSignatures.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.dev\","
+  },
+  {
+    "file": "infra/relay/src/environments/ManagedEndpointProvider.test.ts",
+    "line": "bundleId: \"com.t3tools.t3code.dev\","
+  },
+  {
+    "file": "native/kde-snap-shot/src/feedback.qml",
+    "line": "dbusInterface: \"com.t3tools.KdeCapture.Feedback\""
+  },
+  {
+    "file": "native/kde-snap-shot/src/feedback.qml",
+    "line": "path: \"/com/t3tools/KdeCapture/Feedback\""
+  },
+  {
+    "file": "native/kde-snap-shot/src/feedback.rs",
+    "line": "\"com.t3tools.KdeCapture.Feedback\","
+  },
+  {
+    "file": "native/kde-snap-shot/src/feedback.rs",
+    "line": "#[zbus::interface(name = \"com.t3tools.KdeCapture.Feedback\")]"
+  },
+  {
+    "file": "native/kde-snap-shot/src/feedback.rs",
+    "line": "const OBJECT: &str = \"/com/t3tools/KdeCapture/Feedback\";"
+  },
+  {
+    "file": "native/kde-snap-shot/src/main.rs",
+    "line": ".remove::<ScriptReply, _>(\"/com/t3tools/KdeCapture\")?;"
+  },
+  {
+    "file": "native/kde-snap-shot/src/main.rs",
+    "line": "\"/com/t3tools/KdeCapture\","
+  },
+  {
+    "file": "native/kde-snap-shot/src/main.rs",
+    "line": "\"function reply(value) {{ callDBus({destination}, '/com/t3tools/KdeCapture', 'com.t3tools.KdeCapture', 'Reply', JSON.stringify(value)); }}\\ntry {{ {body} }} catch (error) {{ reply({{error: String(error)}}); }}\""
+  },
+  {
+    "file": "native/kde-snap-shot/src/main.rs",
+    "line": "#[zbus::interface(name = \"com.t3tools.KdeCapture\")]"
+  },
+  {
+    "file": "native/kde-snap-shot/src/transport_tests.rs",
+    "line": "\"/com/t3tools/KdeCapture\","
+  },
+  {
+    "file": "native/kde-snap-shot/src/transport_tests.rs",
+    "line": "Some(\"com.t3tools.KdeCapture\"),"
   },
   {
     "file": "oxlint-plugin-t3code/rules/no-native-title-tooltip.test.ts",
@@ -212,6 +468,18 @@
     "line": "displayName: \"T3 Code\","
   },
   {
+    "file": "packages/client-runtime/src/state/projectGrouping.test.ts",
+    "line": "owner: \"t3tools\","
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.test.ts",
+    "line": "nameWithOwner: \"t3tools/t3code\","
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.test.ts",
+    "line": "repository: \"t3tools/t3code\","
+  },
+  {
     "file": "packages/client-runtime/src/state/threadReducer.test.ts",
     "line": "title: \"T3 Code\","
   },
@@ -220,8 +488,24 @@
     "line": "toolSource: { key: \"t3-code\", name: \"T3 Code\", kind: \"integration\" },"
   },
   {
-    "file": "scripts/build-desktop-artifact.ts",
-    "line": "schemes: [\"t2code\", \"t2code-dev\", \"t3code\", \"t3code-dev\"],"
+    "file": "packages/shared/src/changeRequestUrl.test.ts",
+    "line": ").toEqual({ host: \"gitlab.com\", repository: \"t3tools/platform/t3code\", number: 42 });"
+  },
+  {
+    "file": "packages/shared/src/changeRequestUrl.test.ts",
+    "line": "repository: \"t3tools/t3code\","
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": ").toBe(\"T3Tools/T3Code\");"
+  },
+  {
+    "file": "README.md",
+    "line": "T2 Code is an \"agent harness control surface\". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code)), [web app](https://app.t3.codes) and [Electron-based desktop app](https://t3.codes)."
+  },
+  {
+    "file": "README.md",
+    "line": "winget install T3Tools.T3Code"
   },
   {
     "file": "scripts/install.ps1",
