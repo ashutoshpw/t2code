@@ -59,6 +59,15 @@ export class ServerCliExecutableImportError extends Schema.TaggedError<ServerCli
   }
 }
 
+export class ServerCliNpmPublishError extends Schema.TaggedError<ServerCliNpmPublishError>()(
+  "ServerCliNpmPublishError",
+  { detail: Schema.String },
+) {
+  override get message(): string {
+    return this.detail;
+  }
+}
+
 export class ServerCliBootstrapTooLargeError extends Schema.TaggedError<ServerCliBootstrapTooLargeError>()(
   "ServerCliBootstrapTooLargeError",
   {
