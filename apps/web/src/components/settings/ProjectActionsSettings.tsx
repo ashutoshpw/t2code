@@ -1,4 +1,4 @@
-import { EnvironmentId, type T3ProjectFileScript } from "@t2code/contracts";
+import { EnvironmentId, type T2ProjectFileScript } from "@t2code/contracts";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
@@ -6,7 +6,7 @@ import {
 import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t2code/shared/keybindings";
 import { ChevronDownIcon, PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { useT3ProjectFileState } from "../../hooks/useT3ProjectFileScripts";
+import { useT2ProjectFileState } from "../../hooks/useT2ProjectFileScripts";
 import { useEnvironments } from "../../state/environments";
 import {
   EMPTY_PROJECT_SCRIPT_INPUT,
@@ -85,16 +85,16 @@ export function ProjectActionsSettings() {
     }),
   );
 
-  // A project's t3.json can declare actions to import. Read it from the
+  // A project's t2.json can declare actions to import. Read it from the
   // representative checkout; the imported action still fans out.
   const representativeMember = target?.projectId ? memberById.get(target.projectId) : undefined;
-  const t3File = useT3ProjectFileState(
+  const t2File = useT2ProjectFileState(
     representativeMember?.environmentId ?? EnvironmentId.make("none"),
     representativeMember?.workspaceRoot ?? null,
   );
   const importableScripts = useMemo(
     () =>
-      t3File.scripts.filter(
+      t2File.scripts.filter(
         (fileScript) =>
           !scripts.some(
             (script) =>
@@ -102,10 +102,10 @@ export function ProjectActionsSettings() {
               script.name.toLowerCase() === fileScript.name.toLowerCase(),
           ),
       ),
-    [scripts, t3File.scripts],
+    [scripts, t2File.scripts],
   );
   const importFileScript = useCallback(
-    async (fileScript: T3ProjectFileScript) => {
+    async (fileScript: T2ProjectFileScript) => {
       const payload: NewProjectScriptInput = {
         name: fileScript.name,
         command: fileScript.command,
@@ -158,7 +158,7 @@ export function ProjectActionsSettings() {
                 </MenuTrigger>
                 <MenuPopup align="end" className="w-72">
                   <MenuGroup>
-                    <MenuGroupLabel>Import from t3.json</MenuGroupLabel>
+                    <MenuGroupLabel>Import from t2.json</MenuGroupLabel>
                     <p className="px-2 pb-2 text-pretty text-sm text-muted-foreground">
                       Add actions declared by this checkout without editing them first.
                     </p>
@@ -206,10 +206,10 @@ export function ProjectActionsSettings() {
           onEdit={(script) => setRequest(editorRequestForScript(script, keybindings))}
         />
       )}
-      {t3File.status === "invalid" ? (
+      {t2File.status === "invalid" ? (
         <SettingsRow
-          title="t3.json is invalid"
-          description="A t3.json exists in this checkout but fails to parse, so every action and icon it declares is ignored. Check the JSON syntax and icon values."
+          title="t2.json is invalid"
+          description="A t2.json exists in this checkout but fails to parse, so every action and icon it declares is ignored. Check the JSON syntax and icon values."
           className="text-warning"
         />
       ) : null}

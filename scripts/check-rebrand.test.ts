@@ -69,6 +69,18 @@ describe("check-rebrand", () => {
     expect(findViolations(entries, EMPTY_BASELINE)).toEqual([]);
   });
 
+  it("flags the upstream root project file", () => {
+    const violations = findViolations(
+      [
+        { file: "t3.json", line: "{" },
+        { file: "t3.json", line: '  \"scripts\": []' },
+      ],
+      EMPTY_BASELINE,
+    );
+
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3-project-file"]);
+  });
+
   it("flags T3 Code copy on added lines", () => {
     const violations = findViolations(
       [{ file: "apps/web/src/example.ts", line: `const TITLE = "T3 Code";` }],
