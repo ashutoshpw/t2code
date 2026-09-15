@@ -13,13 +13,23 @@ import { DEVELOPMENT_ICON_OVERRIDES } from "../../../scripts/lib/brand-assets.ts
 import { findEsmImportsOfExternalPackages } from "../../../scripts/lib/cli-executable-imports.ts";
 import rootPackageJson from "../../../package.json" with { type: "json" };
 import { resolveSpawnCommand } from "@t2code/shared/shell";
-import { createNpmPublishInvocation } from "./npmPublish.ts";
+import {
+  createNpmPublishInvocation,
+  createNpmPublishPlan,
+  type NpmPackageArtifactMetadata,
+  runNpmPublishPlan,
+  parseNpmPackageManifest,
+  sha512File,
+  waitForNpmPackagesVisibility,
+  waitForNpmPackageVisibility,
+} from "./npmPublish.ts";
 import {
   ServerCliBuildAssetMissingError,
   ServerCliCommandExitError,
   ServerCliDevelopmentIconSourceMissingError,
   ServerCliDevelopmentIconTargetMissingError,
   ServerCliExecutableImportError,
+  ServerCliNpmPublishError,
 } from "./cliErrors.ts";
 
 const RepoRoot = Effect.service(Path.Path).pipe(
@@ -172,6 +182,12 @@ const publishCmd = Command.make(
     provenance: Flag.Boolean("provenance").pipe(Flag.withDefault(false)),
     dryRun: Flag.Boolean("dry-run").pipe(Flag.withDefault(false)),
     verbose: Flag.Boolean("verbose").pipe(Flag.withDefault(false)),
+    waitForVisibility: Flag.Boolean("wait-for-visibility").pipe(
+      Flag.withDescription(
+        "After real publishes, wait for the exact package versions and tarballs to be public on npm.",
+      ),
+      Flag.withDefault(false),
+    ),
     otp: Flag.String("otp").pipe(
       Flag.withDescription("One-time password for npm authentication (local publishing only)."),
       Flag.optional,
