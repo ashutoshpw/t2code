@@ -1,1 +1,4 @@
+#!/usr/bin/env sh
+set -eu
+
 node scripts/check-rebrand.ts --push
