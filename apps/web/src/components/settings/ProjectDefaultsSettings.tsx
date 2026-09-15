@@ -214,7 +214,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       description={
         isProjectScope
           ? "Where new threads in this project start."
-          : "Where new threads start. Projects and their t3.json can override it."
+          : "Where new threads start. Projects and their t2.json can override it."
       }
       resetAction={
         !isProjectScope && settings.defaultThreadEnvMode !== null ? (
