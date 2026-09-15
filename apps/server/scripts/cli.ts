@@ -12,13 +12,23 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { DEVELOPMENT_ICON_OVERRIDES } from "../../../scripts/lib/brand-assets.ts";
 import { findEsmImportsOfExternalPackages } from "../../../scripts/lib/cli-executable-imports.ts";
 import { resolveSpawnCommand } from "@t2code/shared/shell";
-import { createNpmPublishInvocation } from "./npmPublish.ts";
+import {
+  createNpmPublishInvocation,
+  createNpmPublishPlan,
+  type NpmPackageArtifactMetadata,
+  runNpmPublishPlan,
+  parseNpmPackageManifest,
+  sha512File,
+  waitForNpmPackagesVisibility,
+  waitForNpmPackageVisibility,
+} from "./npmPublish.ts";
 import {
   ServerCliBuildAssetMissingError,
   ServerCliCommandExitError,
   ServerCliDevelopmentIconSourceMissingError,
   ServerCliDevelopmentIconTargetMissingError,
   ServerCliExecutableImportError,
+  ServerCliNpmPublishError,
 } from "./cliErrors.ts";
 
 const RepoRoot = Effect.service(Path.Path).pipe(
@@ -187,6 +197,12 @@ const publishCmd = Command.make(
     provenance: Flag.Boolean("provenance").pipe(Flag.withDefault(false)),
     dryRun: Flag.Boolean("dry-run").pipe(Flag.withDefault(false)),
     verbose: Flag.Boolean("verbose").pipe(Flag.withDefault(false)),
+    waitForVisibility: Flag.Boolean("wait-for-visibility").pipe(
+      Flag.withDescription(
+        "After real publishes, wait for the exact package versions and tarballs to be public on npm.",
+      ),
+      Flag.withDefault(false),
+    ),
     otp: Flag.String("otp").pipe(
       Flag.withDescription("One-time password for npm authentication (local publishing only)."),
       Flag.optional,
@@ -220,6 +236,67 @@ const publishCmd = Command.make(
         return yield* new ServerCliBuildAssetMissingError({ assetPath: launcherTarball });
       }
 
+      const allTarballs = [...platformTarballs, launcherTarball];
+      const manifests = new Map<string, NpmPackageArtifactMetadata>();
+      for (const tarball of allTarballs) {
+        const metadataPath = path.join(scopeDir, path.basename(tarball, ".tgz"), "package.json");
+        const metadataJson = yield* fs.readFileString(metadataPath);
+        const manifest = yield* Effect.try({
+          try: () =>
+            parseNpmPackageManifest(
+              // The package directory is emitted beside the tarball by the
+              // package builder and is the source package.json carried by it.
+              // Read it before publishing so a malformed or stale launcher
+              // cannot leave a partially usable release behind.
+              metadataJson,
+              metadataPath,
+            ),
+          catch: (cause) =>
+            new ServerCliNpmPublishError({
+              detail: `Invalid npm package metadata at ${metadataPath}: ${cause instanceof Error ? cause.message : String(cause)}`,
+            }),
+        });
+        const integrity = yield* Effect.tryPromise({
+          try: () => sha512File(tarball),
+          catch: (cause) =>
+            new ServerCliNpmPublishError({
+              detail: `Unable to hash npm package tarball ${tarball}: ${cause instanceof Error ? cause.message : String(cause)}`,
+            }),
+        });
+        manifests.set(tarball, { ...manifest, integrity });
+      }
+
+      const launcherManifest = manifests.get(launcherTarball);
+      if (launcherManifest === undefined) {
+        return yield* new ServerCliNpmPublishError({
+          detail: "Missing launcher package metadata.",
+        });
+      }
+      const platformMetadata = platformTarballs.map((tarball) => manifests.get(tarball)!);
+      const releaseVersions = new Set(
+        [...platformMetadata, launcherManifest].map((manifest) => manifest.version),
+      );
+      if (releaseVersions.size !== 1) {
+        return yield* new ServerCliNpmPublishError({
+          detail: `npm package metadata has inconsistent versions: ${[...releaseVersions].join(", ")}.`,
+        });
+      }
+      const expectedOptionalDependencies = Object.fromEntries(
+        platformMetadata.map((manifest) => [manifest.name, manifest.version]),
+      );
+      const optionalDependenciesMatch =
+        Object.keys(launcherManifest.optionalDependencies).length ===
+          Object.keys(expectedOptionalDependencies).length &&
+        Object.entries(expectedOptionalDependencies).every(
+          ([name, version]) => launcherManifest.optionalDependencies[name] === version,
+        );
+      if (launcherManifest.name !== "@t2code/cli" || !optionalDependenciesMatch) {
+        return yield* new ServerCliNpmPublishError({
+          detail:
+            "The launcher optionalDependencies do not exactly match the platform package metadata.",
+        });
+      }
+
       const invocation = createNpmPublishInvocation({
         access: config.access,
         tag: config.tag,
@@ -230,20 +307,72 @@ const publishCmd = Command.make(
         verbose: config.verbose,
       });
 
-      for (const tarball of [...platformTarballs, launcherTarball]) {
-        const spawnCommand = yield* resolveSpawnCommand("npm", [...invocation.args, tarball]);
-        yield* Effect.log(`[cli] npm ${[...invocation.logArgs, path.basename(tarball)].join(" ")}`);
-        yield* runCommand(
-          ChildProcess.make(spawnCommand.command, spawnCommand.args, {
-            cwd: packagesDir,
-            stdin: invocation.stdin,
-            stdout: invocation.stdout,
-            stderr: invocation.stderr,
-            shell: spawnCommand.shell,
-          }),
-          [...invocation.errorArgs, path.basename(tarball)],
-        );
-      }
+      const publishTarball = (tarball: string) =>
+        Effect.gen(function* () {
+          const spawnCommand = yield* resolveSpawnCommand("npm", [...invocation.args, tarball]);
+          yield* Effect.log(
+            `[cli] npm ${[...invocation.logArgs, path.basename(tarball)].join(" ")}`,
+          );
+          yield* runCommand(
+            ChildProcess.make(spawnCommand.command, spawnCommand.args, {
+              cwd: packagesDir,
+              stdin: invocation.stdin,
+              stdout: invocation.stdout,
+              stderr: invocation.stderr,
+              shell: spawnCommand.shell,
+            }),
+            [...invocation.errorArgs, path.basename(tarball)],
+          );
+        });
+
+      const platformArtifacts = platformTarballs.map((tarball) => ({
+        tarball,
+        packageMetadata: manifests.get(tarball)!,
+      }));
+      const launcherArtifact = { tarball: launcherTarball, packageMetadata: launcherManifest };
+      const plan = createNpmPublishPlan(
+        platformArtifacts,
+        launcherArtifact,
+        config.waitForVisibility && !config.dryRun,
+      );
+
+      yield* runNpmPublishPlan(plan, (step) =>
+        Effect.gen(function* () {
+          switch (step._tag) {
+            case "publish":
+              yield* publishTarball(step.artifact.tarball);
+              return;
+            case "wait-for-platforms": {
+              const visible = yield* Effect.tryPromise({
+                try: () => waitForNpmPackagesVisibility(step.packages),
+                catch: (cause) =>
+                  new ServerCliNpmPublishError({
+                    detail: `npm platform packages were published but are not publicly installable: ${cause instanceof Error ? cause.message : String(cause)}`,
+                  }),
+              });
+              for (const packageMetadata of visible) {
+                yield* Effect.log(
+                  `[cli] npm package ${packageMetadata.name}@${packageMetadata.version} is publicly installable`,
+                );
+              }
+              return;
+            }
+            case "wait-for-launcher": {
+              const visible = yield* Effect.tryPromise({
+                try: () => waitForNpmPackageVisibility(step.packageMetadata),
+                catch: (cause) =>
+                  new ServerCliNpmPublishError({
+                    detail: `npm launcher ${step.packageMetadata.name}@${step.packageMetadata.version} was published but is not publicly installable: ${cause instanceof Error ? cause.message : String(cause)}`,
+                  }),
+              });
+              yield* Effect.log(
+                `[cli] npm package ${visible.name}@${visible.version} is publicly installable`,
+              );
+              return;
+            }
+          }
+        }),
+      );
     }),
 ).pipe(
   Command.withDescription(
