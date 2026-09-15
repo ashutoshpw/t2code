@@ -503,7 +503,8 @@ if ! t3_runtime_ready; then
     x86_64 | amd64) T3_ARCH="x64" ;;
     *) printf 'Remote host %s has no t3 release archive.\\n' "$(uname -m)" >&2; exit 1 ;;
   esac
-  T3_ARCHIVE="t3-$T3_ARCHIVE_VERSION-$T3_PLATFORM-$T3_ARCH.tar.gz"
+  T3_ARCHIVE="t2-$T3_ARCHIVE_VERSION-$T3_PLATFORM-$T3_ARCH.tar.gz"
+  T3_LEGACY_ARCHIVE="t3-$T3_ARCHIVE_VERSION-$T3_PLATFORM-$T3_ARCH.tar.gz"
   T3_STAGING="$(mktemp -d "$HOME/.t3/runtime/versions/.staging-XXXXXX")"
   trap 'rm -rf "$T3_STAGING" "$T3_LOCK"' EXIT
   t3_fetch() {
@@ -513,6 +514,14 @@ if ! t3_runtime_ready; then
     fi
   }
   t3_fetch "$T3_RELEASE_BASE_URL/v$T3_ARCHIVE_VERSION/SHA256SUMS" "$T3_STAGING/SHA256SUMS" @@T3_ARCHIVE_CHECKSUMS_SECONDS@@
+  if ! grep -q " \\*\\{0,1\\}$T3_ARCHIVE$" "$T3_STAGING/SHA256SUMS"; then
+    if grep -q " \\*\\{0,1\\}$T3_LEGACY_ARCHIVE$" "$T3_STAGING/SHA256SUMS"; then
+      T3_ARCHIVE="$T3_LEGACY_ARCHIVE"
+    else
+      printf 'Neither %s nor %s is listed in SHA256SUMS.\\n' "$T3_ARCHIVE" "$T3_LEGACY_ARCHIVE" >&2
+      exit 1
+    fi
+  fi
   t3_fetch "$T3_RELEASE_BASE_URL/v$T3_ARCHIVE_VERSION/$T3_ARCHIVE" "$T3_STAGING/$T3_ARCHIVE" @@T3_ARCHIVE_DOWNLOAD_SECONDS@@
   T3_EXPECTED="$(grep " \\*\\{0,1\\}$T3_ARCHIVE$" "$T3_STAGING/SHA256SUMS" | cut -d' ' -f1)"
   if command -v sha256sum >/dev/null 2>&1; then
