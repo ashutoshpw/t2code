@@ -34,7 +34,7 @@ import {
   resolveNewDraftStartFromOrigin,
   resolveNewThreadModelSelectionOverride,
 } from "../lib/chatThreadActions";
-import { readT3ProjectFile } from "../lib/t3ProjectFileDefaults";
+import { readT2ProjectFile } from "../lib/t2ProjectFileDefaults";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { environmentServerConfigsAtom } from "../state/server";
 import { resolveThreadRouteTarget } from "../threadRoutes";
@@ -178,13 +178,69 @@ export function useNewThreadHandler() {
       readThreadShell(storedDraftThreadRef) === null
         ? storedDraftThread
         : null;
-    if (storedDraftThreadRef && reusableStoredDraftThread === null) {
-      markPromotedDraftThreadByRef(storedDraftThreadRef);
-    }
-    const emptyStoredDraftThread =
-      reusableStoredDraftThread &&
-      !composerDraftHasUserContent(getComposerDraft(reusableStoredDraftThread.draftId))
-        ? reusableStoredDraftThread
+      const carryModelSelection =
+        composerModelSelection ?? carrySourceShell?.modelSelection ?? null;
+      const carryInteractionMode =
+        carrySourceComposer?.interactionMode ??
+        carrySourceShell?.interactionMode ??
+        carrySourceDraft?.interactionMode ??
+        null;
+      const project = projects.find(
+        (candidate) =>
+          candidate.id === projectRef.projectId &&
+          candidate.environmentId === projectRef.environmentId,
+      );
+      const abandonedSinceRequest = () =>
+        routeChangedSinceRequest() || (project !== undefined && readProject(projectRef) === null);
+      const projectSettings = resolveProjectSettings(
+        targetServerSettings,
+        project?.id ?? null,
+        project,
+      );
+      const projectDefaultModelSelection = projectSettings.settings.defaultModelSelection;
+      const defaultRuntimeMode = projectSettings.settings.defaultRuntimeMode;
+      const resolveModelSelectionOverride = (destinationDraftId: DraftId) =>
+        resolveNewThreadModelSelectionOverride({
+          projectDefaultSelection: projectDefaultModelSelection ?? null,
+          carrySelection: carryModelSelection,
+          carrySourceDraftId:
+            currentRouteTarget?.kind === "draft" ? currentRouteTarget.draftId : null,
+          destinationDraftId,
+        });
+      const resolveDefaultEnvMode = async (): Promise<DraftThreadEnvMode> => {
+        const consultProjectFile =
+          project !== undefined && projectSettings.settings.defaultThreadEnvMode === null;
+        const projectFile = consultProjectFile
+          ? await readT2ProjectFile(project.environmentId, project.workspaceRoot)
+          : null;
+<<<<<<< HEAD
+        return resolveNewThreadEnvMode({
+          projectSettings: resolveProjectSettings(
+            targetServerSettings,
+            project?.id ?? null,
+            project,
+            projectFile,
+          ),
+          workspaceRoot: project?.workspaceRoot ?? null,
+          newProjectsRoot: environmentServerConfigs.get(projectRef.environmentId)?.newProjectsRoot,
+          projectHasThreads: readThreadShells().some(
+            (thread) =>
+              thread.environmentId === projectRef.environmentId &&
+              thread.projectId === projectRef.projectId,
+          ),
+        });
+      };
+      const logicalProjectKey = project
+        ? deriveLogicalProjectKeyFromSettings(project, projectGroupingSettings)
+        : scopedProjectKey(projectRef);
+      const hasBranchOption = options?.branch !== undefined;
+      const hasWorktreePathOption = options?.worktreePath !== undefined;
+      const hasEnvModeOption = options?.envMode !== undefined;
+      const hasStartFromOriginOption = options?.startFromOrigin !== undefined;
+      const storedDraftThread = getDraftSessionByLogicalProjectKey(logicalProjectKey);
+      const storedDraftThreadRef = storedDraftThread
+        ? scopeThreadRef(storedDraftThread.environmentId, storedDraftThread.threadId)
+>>>>>>> f391d5e631 (fix(project): migrate checked-in config to t2.json (#7))
         : null;
     const latestActiveDraftThread: DraftThreadState | null = currentRouteTarget
       ? currentRouteTarget.kind === "server"

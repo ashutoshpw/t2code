@@ -5,12 +5,14 @@ import { ThreadEnvMode, WorktreeSubmodules } from "./environment.ts";
 import { ProjectScriptIcon } from "./project.ts";
 import type { ProjectScopedServerSettingKey, ServerSettings } from "./settings.ts";
 
-export const T3_PROJECT_FILE_NAME = "t3.json";
+/** File name of the checked-in T2 project file, resolved at the workspace root. */
+export const T2_PROJECT_FILE_NAME = "t2.json";
 
-export const T3_PROJECT_FILE_SCHEMA_URL = "https://t3.codes/schema/t3.json";
+/** Public URL of the published JSON Schema for {@link T2ProjectFile}. */
+export const T2_PROJECT_FILE_SCHEMA_URL = "https://t3.codes/schema/t2.json";
 
-const T3_PROJECT_FILE_PATH_MAX_LENGTH = 512;
-const T3_PROJECT_FILE_MAX_SCRIPTS = 50;
+const T2_PROJECT_FILE_PATH_MAX_LENGTH = 512;
+const T2_PROJECT_FILE_MAX_SCRIPTS = 50;
 
 // Annotations go on the encoded (string) side so they survive into the
 // published JSON Schema; decoding still trims and re-validates non-emptiness.
@@ -23,7 +25,7 @@ const trimmedNonEmpty = (annotations: { readonly description: string }, maxLengt
   return encoded.pipe(Schema.decodeTo(encoded, SchemaTransformation.trim()));
 };
 
-export const T3ProjectFileScript = Schema.Struct({
+export const T2ProjectFileScript = Schema.Struct({
   name: trimmedNonEmpty({
     description: "Display name for the script, shown in the T2 Code scripts menu.",
   }),
@@ -68,12 +70,12 @@ export const T3ProjectFileScript = Schema.Struct({
 }).annotate({
   description: "A project script that team members can import into T2 Code.",
 });
-export type T3ProjectFileScript = typeof T3ProjectFileScript.Type;
+export type T2ProjectFileScript = typeof T2ProjectFileScript.Type;
 
-export const T3ProjectFile = Schema.Struct({
+export const T2ProjectFile = Schema.Struct({
   $schema: Schema.optionalKey(
     Schema.String.annotate({
-      description: `URL of the JSON Schema for this file, typically "${T3_PROJECT_FILE_SCHEMA_URL}".`,
+      description: `URL of the JSON Schema for this file, typically "${T2_PROJECT_FILE_SCHEMA_URL}".`,
     }),
   ),
   iconPath: Schema.optionalKey(
@@ -82,7 +84,7 @@ export const T3ProjectFile = Schema.Struct({
         description:
           'Workspace-relative path to the project icon (e.g. "assets/logo.svg"). Checked before T2 Code\'s built-in icon locations.',
       },
-      T3_PROJECT_FILE_PATH_MAX_LENGTH,
+      T2_PROJECT_FILE_PATH_MAX_LENGTH,
     ),
   ),
   defaultThreadEnvMode: Schema.optionalKey(
@@ -98,23 +100,23 @@ export const T3ProjectFile = Schema.Struct({
     }),
   ),
   scripts: Schema.optionalKey(
-    Schema.Array(T3ProjectFileScript)
+    Schema.Array(T2ProjectFileScript)
       .annotate({
         description: "Project scripts shared with everyone who opens this repository in T2 Code.",
       })
-      .check(Schema.isMaxLength(T3_PROJECT_FILE_MAX_SCRIPTS)),
+      .check(Schema.isMaxLength(T2_PROJECT_FILE_MAX_SCRIPTS)),
   ),
 }).annotate({
-  title: "T3 project file",
+  title: "T2 project file",
   description:
-    "Checked-in project configuration for T2 Code (t3.json at the repository root). See https://t3.codes for documentation.",
+    "Checked-in project configuration for T2 Code (t2.json at the repository root). See https://t3.codes for documentation.",
 });
-export type T3ProjectFile = typeof T3ProjectFile.Type;
+export type T2ProjectFile = typeof T2ProjectFile.Type;
 
 /**
  * A key here must be nullable on `ServerSettings` (null means inherit) so both
  * the project override and the environment value can defer to the file; `field`
- * names the t3.json field carrying the same value and `builtIn` is what applies
+ * names the t2.json field carrying the same value and `builtIn` is what applies
  * when every tier is unset.
  */
 export const PROJECT_FILE_BACKED_SETTINGS = {
@@ -126,12 +128,12 @@ export const PROJECT_FILE_BACKED_SETTINGS = {
   // in settings.ts), so it cannot be file-backed and is excluded here.
   readonly [K in ProjectScopedServerSettingKey & keyof ServerSettings]?: {
     readonly field: {
-      readonly [F in keyof T3ProjectFile]: T3ProjectFile[F] extends
+      readonly [F in keyof T2ProjectFile]: T2ProjectFile[F] extends
         | Exclude<ServerSettings[K], null>
         | undefined
         ? F
         : never;
-    }[keyof T3ProjectFile];
+    }[keyof T2ProjectFile];
     readonly builtIn: Exclude<ServerSettings[K], null>;
   };
 };
