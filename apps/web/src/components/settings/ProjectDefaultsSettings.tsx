@@ -7,7 +7,7 @@ import {
 import { createModelSelection } from "@t2code/shared/model";
 import { useNavigate } from "@tanstack/react-router";
 
-import { useT3ProjectFileState } from "../../hooks/useT3ProjectFileScripts";
+import { useT2ProjectFileState } from "../../hooks/useT2ProjectFileScripts";
 import { getCustomModelOptionsByInstance } from "../../modelSelection";
 import {
   applyProviderInstanceSettings,
@@ -79,20 +79,20 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
   const isProjectScope = scope.kind === "project" || scope.kind === "checkout";
   const unavailable = connectedEnvironments.length === 0;
 
-  // A checkout's t3.json wins over the environment default when the project
+  // A checkout's t2.json wins over the environment default when the project
   // has no override of its own; show which one "inherit" resolves to.
   const checkout = scope.kind === "checkout" ? scope.checkout : null;
   // The query is disabled without a checkout, so any id satisfies the hook.
-  const t3File = useT3ProjectFileState(
+  const t2File = useT2ProjectFileState(
     checkout?.environmentId ?? EnvironmentId.make("none"),
     category === "general" && checkout ? checkout.workspaceRoot : null,
   );
-  const repositoryEnvMode = t3File.file?.defaultThreadEnvMode ?? null;
+  const repositoryEnvMode = t2File.file?.defaultThreadEnvMode ?? null;
   const inheritedEnvModeLabel =
     workspaceSource === "project"
       ? null
       : repositoryEnvMode
-        ? `${resolveEnvModeLabel(repositoryEnvMode)} (t3.json)`
+        ? `${resolveEnvModeLabel(repositoryEnvMode)} (t2.json)`
         : null;
 
   function modelDisabledReason(instanceId: ProviderInstanceId, model: string): string | null {
@@ -292,8 +292,8 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             title="Workspace"
             description={
               isProjectScope
-                ? "Where new threads in this project start. A t3.json preference applies when the project has no override."
-                : "Where new threads start, unless overridden by the project or t3.json."
+                ? "Where new threads in this project start. A t2.json preference applies when the project has no override."
+                : "Where new threads start, unless overridden by the project or t2.json."
             }
             status={
               inheritedEnvModeLabel ? `Repository default: ${inheritedEnvModeLabel}` : undefined
