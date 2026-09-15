@@ -2,8 +2,9 @@
 // @effect-diagnostics nodeBuiltinImport:off globalConsole:off - zero-dependency git hook CLI; uses Node builtins and console directly.
 // Brand guard for the T2 Code fork (ashutoshpw/t2code, upstream pingdotgg/t3code).
 // Fails when a T3-brand string that the rebrand renamed is re-introduced on an
-// added line. This keeps rebase conflict resolutions honest: upstream commits
-// routinely carry T3 copy that the fork's rebrand commits predate.
+// added line, or when the upstream root project file is restored. This keeps
+// rebase conflict resolutions honest: upstream commits routinely carry T3
+// copy and configuration that the fork's rebrand commits predate.
 //
 // Modes:
 //   --staged            added lines in the git index (pre-commit)
@@ -64,6 +65,17 @@ type Rule = {
   hint: string;
   violates: (file: string, line: string) => boolean;
 };
+
+const FORBIDDEN_FILE_RULES: ReadonlyMap<string, Rule> = new Map([
+  [
+    "t3.json",
+    {
+      id: "t3-project-file",
+      hint: 'the fork uses "t2.json" for checked-in project configuration; remove the upstream "t3.json" file',
+      violates: (file) => file === "t3.json",
+    },
+  ],
+]);
 
 const RULES: Rule[] = [
   {
@@ -151,7 +163,16 @@ function ruleFor(file: string, line: string, baseline: Set<string>): Rule | unde
 
 export function findViolations(entries: Entry[], baseline: Set<string>): Violation[] {
   const violations: Violation[] = [];
+  const reportedForbiddenFiles = new Set<string>();
   for (const entry of entries) {
+    const forbiddenFileRule = FORBIDDEN_FILE_RULES.get(entry.file);
+    if (forbiddenFileRule) {
+      if (!reportedForbiddenFiles.has(entry.file)) {
+        reportedForbiddenFiles.add(entry.file);
+        violations.push({ ...entry, rule: forbiddenFileRule });
+      }
+      continue;
+    }
     const rule = ruleFor(entry.file, entry.line, baseline);
     if (rule) violations.push({ ...entry, rule });
   }
@@ -195,7 +216,14 @@ function addedLinesFromDiff(diff: string): Entry[] {
 }
 
 function collectStaged(): Entry[] {
-  return addedLinesFromDiff(git(["diff", "--cached", "-U0"]));
+  const entries = addedLinesFromDiff(git(["diff", "--cached", "-U0"]));
+  const stagedFiles = new Set(git(["ls-files", "--cached", "-z"]).split("\0").filter(Boolean));
+  for (const file of FORBIDDEN_FILE_RULES.keys()) {
+    if (stagedFiles.has(file) && !entries.some((entry) => entry.file === file)) {
+      entries.push({ file, line: "" });
+    }
+  }
+  return entries;
 }
 
 function collectRange(range: string): Entry[] {
@@ -223,6 +251,11 @@ function collectPush(): Entry[] {
     // Function.prototype.apply can pass at once, so append iteratively.
     for (const entry of addedLinesFromDiff(git(["diff", "-U0", `${base}..${localSha}`]))) {
       entries.push(entry);
+    }
+    for (const file of FORBIDDEN_FILE_RULES.keys()) {
+      if (git(["ls-tree", "-r", "--name-only", localSha, "--", file]).trim() === file) {
+        entries.push({ file, line: "" });
+      }
     }
   }
   return entries;
@@ -256,7 +289,7 @@ function scanTree(): { entries: Entry[]; withLines: Array<Entry & { num: number 
 
 function report(violations: Violation[], scope: string, withNumbers?: Map<string, number>): number {
   console.error(
-    `rebrand guard: ${violations.length} T3-brand string(s) added by this ${scope}. The fork ships as "T2 Code".`,
+    `rebrand guard: ${violations.length} rebrand violation(s) found in this ${scope}. The fork ships as "T2 Code".`,
   );
   for (const v of violations) {
     const num = withNumbers?.get(baselineKey(v));
