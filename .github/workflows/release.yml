@@ -259,13 +259,80 @@ jobs:
       - name: Typecheck
         run: vp run typecheck
 
+  # Keep release tests within the same per-runner budget as CI. The server
+  # suite disables file parallelism, so its files are spread across three
+  # runners rather than sharing one long serial job.
+  quality_tests:
+    name: Release tests
+    needs: [preflight]
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.preflight.outputs.ref }}
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+
+      - name: Ensure Electron runtime is installed
+        run: vp run --filter @t2code/desktop ensure:electron
+
       - uses: ./.github/actions/setup-apt-mirrors
 
       - name: Install browser secret helper build libraries
-        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
+        run: |
+          sudo sed -i 's|http://|https://|g' /etc/apt/t3code-ubuntu-mirrors.txt /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
+
+      - name: Test nightly release checks
+        run: node --test .github/scripts/check-nightly-release.test.cjs
 
       - name: Test
-        run: vp run test
+        run: vp run --parallel --concurrency-limit 4 --filter '!@t2code/cli' --filter '!@t2code/monorepo' test
+
+  quality_server_tests:
+    name: Release server tests ${{ matrix.shard }}
+    needs: [preflight]
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.preflight.outputs.ref }}
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+
+      - name: Test
+        env:
+          T3CODE_TRANSFER_BUDGET_REPORT_PATH: ${{ runner.temp }}/t3code-transfer-budget.md
+          T3CODE_TRANSFER_BUDGET_RESULT_PATH: ${{ runner.temp }}/thread-transfer-result.json
+        run: vp run --filter @t2code/cli test --shard ${{ matrix.shard }}/${{ strategy.job-total }}
 
   relay_public_config:
     name: Resolve T2 Connect public config
@@ -276,7 +343,7 @@ jobs:
       needs.resolve_commit.result == 'success' &&
       (github.event_name != 'schedule' || needs.resolve_commit.outputs.has_changes == 'true')
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 45
     environment:
       name: production
     outputs:
@@ -321,29 +388,25 @@ jobs:
         shell: bash
         working-directory: infra/relay
         run: |
-<<<<<<< HEAD
           set -euo pipefail
-          output="$(npx alchemy state read T3CodeRelay/prod/output --backend cloudflare --log-level error --no-input | sed -n '/^{/,$p')"
-          field() {
-            jq -er --arg key "$1" '.[$key] | if type == "object" then .__redacted__ else . end | select(. != null and . != "")' <<<"$output" \
-              || { echo "Relay stack output is missing $1" >&2; exit 1; }
-          }
-          url="$(field clientTracingUrl)"
-          dataset="$(field clientTracingDataset)"
-          token="$(field clientTracingToken)"
-          echo "::add-mask::$token"
-          {
-            echo "T3CODE_RELAY_CLIENT_OTLP_TRACES_URL=$url"
-            echo "T3CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=$dataset"
-            echo "T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=$token"
-          } > "$RUNNER_TEMP/relay-client-tracing.env"
-=======
-          vp run --filter t2code-relay deploy \
-            --stage prod \
-            --read-state \
-            --github-output \
-            --github-env-file "$RUNNER_TEMP/relay-client-tracing.env"
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
+          max_attempts=60
+          for ((attempt=1; attempt<=max_attempts; attempt++)); do
+            if vp run --filter t2code-relay deploy \
+              --stage prod \
+              --read-state \
+              --github-output \
+              --github-env-file "$RUNNER_TEMP/relay-client-tracing.env"; then
+              exit 0
+            fi
+
+            if (( attempt == max_attempts )); then
+              echo "Relay production state was not ready after $max_attempts attempts." >&2
+              exit 1
+            fi
+
+            echo "Relay production state is not ready (attempt $attempt/$max_attempts); retrying in 30 seconds."
+            sleep 30
+          done
 
       - name: Upload relay client tracing config
         uses: actions/upload-artifact@v7
@@ -638,13 +701,15 @@ jobs:
         preflight,
         relay_public_config,
         quality,
+        quality_tests,
+        quality_server_tests,
         desktop_mac_arm64,
         desktop_linux_x64,
         desktop_linux_arm64,
         desktop_win_x64,
         desktop_win_arm64,
       ]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' }}
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.quality_tests.result == 'success' && needs.quality_server_tests.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
