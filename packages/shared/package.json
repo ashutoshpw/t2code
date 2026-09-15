@@ -334,6 +334,10 @@
     "./cliRelease": {
       "types": "./src/cliRelease.ts",
       "import": "./src/cliRelease.ts"
+    },
+    "./t2Wordmark": {
+      "types": "./src/t2Wordmark.ts",
+      "import": "./src/t2Wordmark.ts"
     }
   },
   "scripts": {
