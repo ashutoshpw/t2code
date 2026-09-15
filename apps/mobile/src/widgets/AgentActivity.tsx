@@ -240,7 +240,7 @@ export function AgentActivity(
     <HStack
       modifiers={[frame({ width: height * 1.5, height }), foregroundStyle(color), ...modifiers]}
     >
-      <Image assetName="T3Mark" modifiers={[resizable()]} />
+      <Image assetName="T2Mark" modifiers={[resizable()]} />
     </HStack>
   );
 

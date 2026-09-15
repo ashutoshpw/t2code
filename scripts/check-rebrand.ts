@@ -35,6 +35,14 @@ const GUARDED_FILES = new Set([
 // and vendored upstream-owned native modules.
 const GUARDED_DIRS = [".agents/", "apps/mobile/modules/"];
 
+// These are intentionally narrower than a bare `T3` search. T3 remains in
+// protocol/runtime compatibility names, while these identifiers and the path
+// below are the retired first-party wordmark implementation.
+// The fingerprint starts at the old second glyph because T2 intentionally
+// retains the shared leading T contour.
+const LEGACY_WORDMARK_PATH_FINGERPRINT =
+  /M86\.7253\s+93\.96\s*C82\.832\s+93\.96\s+78\.9653\s+93\.4533\s+75\.1253\s+92\.44/;
+
 type Rule = {
   id: string;
   hint: string;
@@ -42,6 +50,26 @@ type Rule = {
 };
 
 const RULES: Rule[] = [
+  {
+    id: "t3-wordmark-ref",
+    hint: 'the retired wordmark component is "T2Wordmark"; do not reintroduce "T3Wordmark"',
+    violates: (_file, line) => /\bT3Wordmark\b/.test(line),
+  },
+  {
+    id: "t3-mark-ref",
+    hint: 'the retired widget asset is "T2Mark"; do not reintroduce "T3Mark"',
+    violates: (_file, line) => /\bT3Mark\b/.test(line),
+  },
+  {
+    id: "t3-wordmark-label",
+    hint: 'the wordmark accessibility label is "T2", not the bare legacy label "T3"',
+    violates: (_file, line) => /(?:aria-label|accessibilityLabel)\s*=\s*(["'])T3\1/.test(line),
+  },
+  {
+    id: "t3-wordmark-path",
+    hint: "replace the retired T3 wordmark SVG path with the canonical T2 wordmark asset",
+    violates: (_file, line) => LEGACY_WORDMARK_PATH_FINGERPRINT.test(line),
+  },
   {
     id: "t3-copy",
     hint: 'user-facing copy is "T2 Code"; "T3 Code"/"T3Code" only survives as legacy-compat strings listed in the baseline',
