@@ -1,2 +1,5 @@
+#!/usr/bin/env sh
+set -eu
+
 vp staged
 node scripts/check-rebrand.ts --staged
