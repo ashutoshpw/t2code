@@ -4,12 +4,12 @@ import * as NodeFS from "node:fs";
 import * as NodeTimersPromises from "node:timers/promises";
 import * as Effect from "effect/Effect";
 
-export const DEFAULT_NPM_REGISTRY_URL = "https://registry.npmjs.org";
+const DEFAULT_NPM_REGISTRY_URL = "https://registry.npmjs.org";
 
 /** npm can accept a publish before its package metadata and tarball are public. */
-export const DEFAULT_NPM_VISIBILITY_TIMEOUT_MS = 20 * 60 * 1000;
-export const DEFAULT_NPM_VISIBILITY_RETRY_DELAY_MS = 5 * 1000;
-export const DEFAULT_NPM_VISIBILITY_MAX_RETRY_DELAY_MS = 30 * 1000;
+const DEFAULT_NPM_VISIBILITY_TIMEOUT_MS = 20 * 60 * 1000;
+const DEFAULT_NPM_VISIBILITY_RETRY_DELAY_MS = 5 * 1000;
+const DEFAULT_NPM_VISIBILITY_MAX_RETRY_DELAY_MS = 30 * 1000;
 const NPM_VISIBILITY_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 
 export interface NpmPackageMetadata {
@@ -101,7 +101,7 @@ export interface NpmPackageVisibilityOptions {
   readonly now?: () => number;
 }
 
-export class NpmPackageVisibilityError extends Error {
+class NpmPackageVisibilityError extends Error {
   readonly packageName: string;
   readonly version: string;
   readonly attempts: number;
