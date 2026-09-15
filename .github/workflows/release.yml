@@ -395,7 +395,7 @@ jobs:
       needs.resolve_commit.result == 'success' &&
       (github.event_name != 'schedule' || needs.resolve_commit.outputs.has_changes == 'true')
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 45
     environment:
       name: production
     outputs:
@@ -436,11 +436,25 @@ jobs:
         shell: bash
         working-directory: infra/relay
         run: |
-          vp run --filter t2code-relay deploy \
-            --stage prod \
-            --read-state \
-            --github-output \
-            --github-env-file "$RUNNER_TEMP/relay-client-tracing.env"
+          set -euo pipefail
+          max_attempts=60
+          for ((attempt=1; attempt<=max_attempts; attempt++)); do
+            if vp run --filter t2code-relay deploy \
+              --stage prod \
+              --read-state \
+              --github-output \
+              --github-env-file "$RUNNER_TEMP/relay-client-tracing.env"; then
+              exit 0
+            fi
+
+            if (( attempt == max_attempts )); then
+              echo "Relay production state was not ready after $max_attempts attempts." >&2
+              exit 1
+            fi
+
+            echo "Relay production state is not ready (attempt $attempt/$max_attempts); retrying in 30 seconds."
+            sleep 30
+          done
 
       - name: Upload relay client tracing config
         uses: actions/upload-artifact@v7
