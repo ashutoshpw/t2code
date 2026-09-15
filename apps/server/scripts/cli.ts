@@ -10,13 +10,9 @@ import { Command, Flag } from "effect/unstable/cli";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 import { DEVELOPMENT_ICON_OVERRIDES } from "../../../scripts/lib/brand-assets.ts";
-<<<<<<< HEAD
 import { findEsmImportsOfExternalPackages } from "../../../scripts/lib/cli-executable-imports.ts";
 import { resolveSpawnCommand } from "@t2code/shared/shell";
-=======
-import { findEsmImportsOfExternalPackages } from "../../../scripts/lib/cli-external-packages.ts";
-import { resolveSpawnCommand } from "@t2code/shared/shell";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
+import { createNpmPublishInvocation } from "./npmPublish.ts";
 import {
   ServerCliBuildAssetMissingError,
   ServerCliCommandExitError,
@@ -29,7 +25,10 @@ const RepoRoot = Effect.service(Path.Path).pipe(
   Effect.flatMap((path) => path.fromFileUrl(new URL("../../..", import.meta.url))),
 );
 
-const runCommand = Effect.fn("runCommand")(function* (command: ChildProcess.StandardCommand) {
+const runCommand = Effect.fn("runCommand")(function* (
+  command: ChildProcess.StandardCommand,
+  errorArgs: ReadonlyArray<string> = command.args,
+) {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const child = yield* spawner.spawn(command);
   const exitCode = yield* child.exitCode;
@@ -37,7 +36,7 @@ const runCommand = Effect.fn("runCommand")(function* (command: ChildProcess.Stan
   if (exitCode !== 0) {
     return yield* new ServerCliCommandExitError({
       command: command.command,
-      args: command.args,
+      args: errorArgs,
       cwd: command.options.cwd,
       exitCode,
     });
@@ -188,6 +187,14 @@ const publishCmd = Command.make(
     provenance: Flag.Boolean("provenance").pipe(Flag.withDefault(false)),
     dryRun: Flag.Boolean("dry-run").pipe(Flag.withDefault(false)),
     verbose: Flag.Boolean("verbose").pipe(Flag.withDefault(false)),
+    otp: Flag.String("otp").pipe(
+      Flag.withDescription("One-time password for npm authentication (local publishing only)."),
+      Flag.optional,
+    ),
+    interactive: Flag.Boolean("interactive").pipe(
+      Flag.withDescription("Run local npm publishing with inherited terminal input and output."),
+      Flag.withDefault(false),
+    ),
   },
   (config) =>
     Effect.gen(function* () {
@@ -213,20 +220,28 @@ const publishCmd = Command.make(
         return yield* new ServerCliBuildAssetMissingError({ assetPath: launcherTarball });
       }
 
-      const args = ["publish", "--access", config.access, "--tag", config.tag];
-      if (config.provenance) args.push("--provenance");
-      if (config.dryRun) args.push("--dry-run");
+      const invocation = createNpmPublishInvocation({
+        access: config.access,
+        tag: config.tag,
+        provenance: config.provenance,
+        dryRun: config.dryRun,
+        otp: Option.getOrUndefined(config.otp),
+        interactive: config.interactive,
+        verbose: config.verbose,
+      });
 
       for (const tarball of [...platformTarballs, launcherTarball]) {
-        const spawnCommand = yield* resolveSpawnCommand("npm", [...args, tarball]);
-        yield* Effect.log(`[cli] npm ${args.join(" ")} ${path.basename(tarball)}`);
+        const spawnCommand = yield* resolveSpawnCommand("npm", [...invocation.args, tarball]);
+        yield* Effect.log(`[cli] npm ${[...invocation.logArgs, path.basename(tarball)].join(" ")}`);
         yield* runCommand(
           ChildProcess.make(spawnCommand.command, spawnCommand.args, {
             cwd: packagesDir,
-            stdout: config.verbose ? "inherit" : "ignore",
-            stderr: "inherit",
+            stdin: invocation.stdin,
+            stdout: invocation.stdout,
+            stderr: invocation.stderr,
             shell: spawnCommand.shell,
           }),
+          [...invocation.errorArgs, path.basename(tarball)],
         );
       }
     }),
