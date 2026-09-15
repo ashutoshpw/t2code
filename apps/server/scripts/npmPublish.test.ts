@@ -1,6 +1,9 @@
-import { createHash } from "node:crypto";
+import * as NodeCrypto from "node:crypto";
 
+import { it as effectIt } from "@effect/vitest";
+import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -20,7 +23,7 @@ const tarballUrl =
   "https://registry.npmjs.org/@t2code/t2-linux-x64/-/t2-linux-x64-0.0.41-nightly.20260915.1.tgz";
 
 const tarballIntegrity = (bytes: Uint8Array): string =>
-  `sha512-${createHash("sha512").update(bytes).digest("base64")}`;
+  `sha512-${NodeCrypto.createHash("sha512").update(bytes).digest("base64")}`;
 
 const registryMetadata = (integrity: string) => ({
   name: packageName,
@@ -385,32 +388,35 @@ const planStepLabel = (step: NpmPublishPlanStep): string => {
 };
 
 describe("runNpmPublishPlan", () => {
-  it("runs platform publishes, one shared platform gate, launcher publish, and launcher gate in order", async () => {
-    const { platformPackages, launcherPackage } = publishPlanFixture();
-    const events: Array<string> = [];
+  effectIt.effect(
+    "runs platform publishes, one shared platform gate, launcher publish, and launcher gate in order",
+    () =>
+      Effect.gen(function* () {
+        const { platformPackages, launcherPackage } = publishPlanFixture();
+        const events: Array<string> = [];
 
-    await Effect.runPromise(
-      runNpmPublishPlan(createNpmPublishPlan(platformPackages, launcherPackage, true), (step) =>
-        Effect.sync(() => events.push(planStepLabel(step))),
-      ),
-    );
+        yield* runNpmPublishPlan(
+          createNpmPublishPlan(platformPackages, launcherPackage, true),
+          (step) => Effect.sync(() => events.push(planStepLabel(step))),
+        );
 
-    expect(events).toEqual([
-      "publish:t2-linux-x64.tgz",
-      "publish:t2-win32-x64.tgz",
-      "wait-for-platforms",
-      "publish:cli.tgz",
-      "wait-for-launcher",
-    ]);
-  });
+        expect(events).toEqual([
+          "publish:t2-linux-x64.tgz",
+          "publish:t2-win32-x64.tgz",
+          "wait-for-platforms",
+          "publish:cli.tgz",
+          "wait-for-launcher",
+        ]);
+      }),
+  );
 
-  it("stops before launcher publication when the shared platform gate fails", async () => {
-    const { platformPackages, launcherPackage } = publishPlanFixture();
-    const events: Array<string> = [];
-    const gateFailure = new Error("platform package is not publicly installable");
+  effectIt.effect("stops before launcher publication when the shared platform gate fails", () =>
+    Effect.gen(function* () {
+      const { platformPackages, launcherPackage } = publishPlanFixture();
+      const events: Array<string> = [];
+      const gateFailure = new Error("platform package is not publicly installable");
 
-    await expect(
-      Effect.runPromise(
+      const exit = yield* Effect.exit(
         runNpmPublishPlan(createNpmPublishPlan(platformPackages, launcherPackage, true), (step) =>
           Effect.gen(function* () {
             events.push(planStepLabel(step));
@@ -419,57 +425,68 @@ describe("runNpmPublishPlan", () => {
             }
           }),
         ),
-      ),
-    ).rejects.toBe(gateFailure);
+      );
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (Exit.isFailure(exit)) {
+        expect(Cause.squash(exit.cause)).toBe(gateFailure);
+      }
 
-    expect(events).toEqual([
-      "publish:t2-linux-x64.tgz",
-      "publish:t2-win32-x64.tgz",
-      "wait-for-platforms",
-    ]);
-  });
+      expect(events).toEqual([
+        "publish:t2-linux-x64.tgz",
+        "publish:t2-win32-x64.tgz",
+        "wait-for-platforms",
+      ]);
+    }),
+  );
 
-  it("does not add visibility gates to a dry-run plan", async () => {
-    const { platformPackages, launcherPackage } = publishPlanFixture();
-    const events: Array<string> = [];
+  effectIt.effect("does not add visibility gates to a dry-run plan", () =>
+    Effect.gen(function* () {
+      const { platformPackages, launcherPackage } = publishPlanFixture();
+      const events: Array<string> = [];
 
-    await Effect.runPromise(
-      runNpmPublishPlan(createNpmPublishPlan(platformPackages, launcherPackage, false), (step) =>
-        Effect.sync(() => events.push(planStepLabel(step))),
-      ),
-    );
+      yield* runNpmPublishPlan(
+        createNpmPublishPlan(platformPackages, launcherPackage, false),
+        (step) => Effect.sync(() => events.push(planStepLabel(step))),
+      );
 
-    expect(events).toEqual([
-      "publish:t2-linux-x64.tgz",
-      "publish:t2-win32-x64.tgz",
-      "publish:cli.tgz",
-    ]);
-  });
+      expect(events).toEqual([
+        "publish:t2-linux-x64.tgz",
+        "publish:t2-win32-x64.tgz",
+        "publish:cli.tgz",
+      ]);
+    }),
+  );
 
-  it("runs the launcher gate after launcher publication and propagates its failure", async () => {
-    const { platformPackages, launcherPackage } = publishPlanFixture();
-    const events: Array<string> = [];
-    const gateFailure = new Error("launcher is not publicly installable");
+  effectIt.effect(
+    "runs the launcher gate after launcher publication and propagates its failure",
+    () =>
+      Effect.gen(function* () {
+        const { platformPackages, launcherPackage } = publishPlanFixture();
+        const events: Array<string> = [];
+        const gateFailure = new Error("launcher is not publicly installable");
 
-    await expect(
-      Effect.runPromise(
-        runNpmPublishPlan(createNpmPublishPlan(platformPackages, launcherPackage, true), (step) =>
-          Effect.gen(function* () {
-            events.push(planStepLabel(step));
-            if (step._tag === "wait-for-launcher") {
-              return yield* Effect.fail(gateFailure);
-            }
-          }),
-        ),
-      ),
-    ).rejects.toBe(gateFailure);
+        const exit = yield* Effect.exit(
+          runNpmPublishPlan(createNpmPublishPlan(platformPackages, launcherPackage, true), (step) =>
+            Effect.gen(function* () {
+              events.push(planStepLabel(step));
+              if (step._tag === "wait-for-launcher") {
+                return yield* Effect.fail(gateFailure);
+              }
+            }),
+          ),
+        );
+        expect(Exit.isFailure(exit)).toBe(true);
+        if (Exit.isFailure(exit)) {
+          expect(Cause.squash(exit.cause)).toBe(gateFailure);
+        }
 
-    expect(events).toEqual([
-      "publish:t2-linux-x64.tgz",
-      "publish:t2-win32-x64.tgz",
-      "wait-for-platforms",
-      "publish:cli.tgz",
-      "wait-for-launcher",
-    ]);
-  });
+        expect(events).toEqual([
+          "publish:t2-linux-x64.tgz",
+          "publish:t2-win32-x64.tgz",
+          "wait-for-platforms",
+          "publish:cli.tgz",
+          "wait-for-launcher",
+        ]);
+      }),
+  );
 });
