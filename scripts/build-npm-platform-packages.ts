@@ -33,7 +33,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 import {
   CLI_ARCHIVE_PLATFORM_KEYS,
-  cliArchiveFileName,
+  cliArchiveFileNames,
   type CliArchivePlatformKey,
 } from "@t2code/shared/cliRelease";
 import { HostProcessPlatform } from "@t2code/shared/hostProcess";
@@ -163,7 +163,7 @@ export function npmPlatformPackageReadme(platformKey: CliArchivePlatformKey): st
     `npx ${NPM_LAUNCHER_PACKAGE_NAME}@latest`,
     "```",
     "",
-    "Source and documentation: https://github.com/pingdotgg/t3code",
+    "Source and documentation: https://github.com/ashutoshpw/t2code",
     "",
   ].join("\n");
 }
@@ -210,7 +210,7 @@ try {
       "t2code: no T2 Code CLI build is available for this platform (" + key + ").",
       "Supported platforms: " + SUPPORTED.join(", ") + ".",
       "If yours is listed, reinstall ${NPM_LAUNCHER_PACKAGE_NAME} so npm fetches its optional dependency.",
-      "The desktop app and release archives are at https://github.com/pingdotgg/t3code/releases",
+      "The desktop app and release archives are at https://github.com/ashutoshpw/t2code/releases",
       "",
     ].join("\\n"),
   );
@@ -414,10 +414,13 @@ export const buildNpmPlatformPackages = Effect.fn("buildNpmPlatformPackages")(fu
 
   const present = yield* fs.readDirectory(input.archivesDir);
   const archives = CLI_ARCHIVE_PLATFORM_KEYS.flatMap((key) => {
-    const fileName = cliArchiveFileName(input.version, key);
-    return present.includes(fileName)
-      ? [{ key, archive: path.join(input.archivesDir, fileName) }]
-      : [];
+    // Prefer the current public name, but let maintainers bootstrap npm from
+    // releases published before the archive rename.
+    const fileName = cliArchiveFileNames(input.version, key).find((candidate) =>
+      present.includes(candidate),
+    );
+    if (fileName === undefined) return [];
+    return [{ key, archive: path.join(input.archivesDir, fileName) }];
   });
   const missing = CLI_ARCHIVE_PLATFORM_KEYS.filter(
     (key) => !archives.some((entry) => entry.key === key),
@@ -463,7 +466,7 @@ const command = Command.make(
   "build-npm-platform-packages",
   {
     archivesDir: Flag.string("archives-dir").pipe(
-      Flag.withDescription("Directory holding the release's t3-<version>-<platform> archives."),
+      Flag.withDescription("Directory holding the release's t2-<version>-<platform> archives."),
     ),
     version: Flag.string("version").pipe(
       Flag.withDescription(

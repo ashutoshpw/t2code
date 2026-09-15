@@ -16,7 +16,7 @@
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$repo = "pingdotgg/t3code"
+$repo = "ashutoshpw/t2code"
 $baseUrl = if ($env:T3CODE_RELEASE_BASE_URL) { $env:T3CODE_RELEASE_BASE_URL.TrimEnd("/") } else { "https://github.com/$repo/releases/download" }
 $t3Home = if ($env:T3CODE_HOME) { $env:T3CODE_HOME } else { Join-Path $HOME ".t3" }
 $binDir = if ($env:T3CODE_INSTALL_BIN_DIR) { $env:T3CODE_INSTALL_BIN_DIR } else { Join-Path $HOME ".local\bin" }
@@ -60,8 +60,10 @@ if ($version -match '-preview\.') {
   }
 }
 
-$stem = "t3-$version-win32-$arch"
+$stem = "t2-$version-win32-$arch"
+$legacyStem = "t3-$version-win32-$arch"
 $archive = "$stem.zip"
+$legacyArchive = "$legacyStem.zip"
 $versionsDir = Join-Path $t3Home "runtime\versions"
 $targetDir = Join-Path $versionsDir $version
 $marker = Join-Path $targetDir ".install-complete"
@@ -82,6 +84,15 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
         Fail "t3 $version has no release archive for win32-$arch; releases before the self-contained CLI can only be installed with 'npm install -g t3@$version'"
       }
       throw
+    }
+    $checksumLines = Get-Content (Join-Path $staging "SHA256SUMS")
+    if (-not ($checksumLines | Where-Object { $_ -match "\s\*?$([regex]::Escape($archive))$" })) {
+      if ($checksumLines | Where-Object { $_ -match "\s\*?$([regex]::Escape($legacyArchive))$" }) {
+        $stem = $legacyStem
+        $archive = $legacyArchive
+      } else {
+        Fail "neither $archive nor $legacyArchive is listed in SHA256SUMS"
+      }
     }
     Invoke-WebRequest -Uri "$baseUrl/v$version/$archive" -OutFile (Join-Path $staging $archive) -UseBasicParsing
 

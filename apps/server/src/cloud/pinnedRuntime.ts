@@ -10,7 +10,7 @@ import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstab
 
 import {
   CLI_RELEASE_CHECKSUMS_FILE,
-  cliArchiveFileName,
+  cliArchiveFileNames,
   cliArchivePlatformKey,
   cliArchiveTarCommand,
   cliReleaseDownloadBaseUrl,
@@ -162,7 +162,8 @@ const installFromArchive = Effect.fn("cloud.pinned_runtime.install_archive")(fun
   }
   const httpClient = input.httpClient;
   const baseUrl = cliReleaseDownloadBaseUrl(input.version, input.releaseBaseUrl);
-  const fileName = cliArchiveFileName(input.version, platformKey);
+  const archiveNames = cliArchiveFileNames(input.version, platformKey);
+  const [currentFileName] = archiveNames;
 
   const checksums = parseChecksums(
     new TextDecoder().decode(
@@ -173,10 +174,14 @@ const installFromArchive = Effect.fn("cloud.pinned_runtime.install_archive")(fun
       ),
     ),
   );
-  const expected = checksums.get(fileName);
+  // Historical releases only list the pre-rebrand t3 name. Select from the
+  // checksum manifest so the fallback remains covered by the same integrity
+  // check and does not require a speculative 404 request.
+  const fileName = archiveNames.find((candidate) => checksums.has(candidate));
+  const expected = fileName === undefined ? undefined : checksums.get(fileName);
   if (expected === undefined) {
     return yield* new PinnedRuntimeInstallError({
-      step: `finding ${fileName} in the t3 release checksums`,
+      step: `finding ${currentFileName} (or its legacy name) in the release checksums`,
     });
   }
   const archive = yield* fetchReleaseAsset(

@@ -118,10 +118,14 @@ describe("ssh tunnel scripts", () => {
     assert.include(script, "T3_NODE_SCRIPT_PATH=''");
     assert.include(
       script,
-      "T3_RELEASE_BASE_URL='https://github.com/pingdotgg/t3code/releases/download'",
+      "T3_RELEASE_BASE_URL='https://github.com/ashutoshpw/t2code/releases/download'",
     );
     assert.include(script, 'T3_RUNTIME_DIR="$HOME/.t3/runtime/versions/$T3_ARCHIVE_VERSION"');
-    assert.include(script, 'T3_ARCHIVE="t3-$T3_ARCHIVE_VERSION-$T3_PLATFORM-$T3_ARCH.tar.gz"');
+    assert.include(script, 'T3_ARCHIVE="t2-$T3_ARCHIVE_VERSION-$T3_PLATFORM-$T3_ARCH.tar.gz"');
+    assert.include(
+      script,
+      'T3_LEGACY_ARCHIVE="t3-$T3_ARCHIVE_VERSION-$T3_PLATFORM-$T3_ARCH.tar.gz"',
+    );
     assert.include(script, "SHA256SUMS");
     assert.include(script, 'exec "$T3_RUNTIME_DIR/t3" "$@"');
     assert.notInclude(script, "npx");
@@ -737,11 +741,11 @@ describe("archive runner script", () => {
   // A fake "executable" that answers --version, packed the way the release
   // workflow packs the real archive: one top-level directory named after the
   // stem, checksummed in SHA256SUMS.
-  const makeMirror = Effect.fn("makeMirror")(function* (root: string) {
+  const makeMirror = Effect.fn("makeMirror")(function* (root: string, prefix: "t2" | "t3" = "t2") {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const platform = hostPlatform === "darwin" ? "darwin" : "linux";
     const arch = hostArch === "arm64" ? "arm64" : "x64";
-    const stem = `t3-${archiveVersion}-${platform}-${arch}`;
+    const stem = `${prefix}-${archiveVersion}-${platform}-${arch}`;
     const stage = `${root}/stage/${stem}`;
     const release = `${root}/mirror/v${archiveVersion}`;
     const script = [
@@ -801,6 +805,29 @@ describe("archive runner script", () => {
         const afterUnowned = yield* runRunner(home, runner);
         assert.equal(afterUnowned.exitCode, 0, afterUnowned.stderr);
         assert.isFalse(yield* fs.exists(lock));
+      }).pipe(Effect.provide(NodeServices.layer)),
+    60_000,
+  );
+
+  it.effect.skipIf(windowsHost)(
+    "falls back to a historical t3 archive when the current name is absent",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-archive-runner-legacy-" });
+        const releaseBaseUrl = yield* makeMirror(root, "t3");
+        const runner = `${root}/run-t3.sh`;
+        yield* fs.writeFileString(
+          runner,
+          buildRemoteT3RunnerScript({ archiveVersion, releaseBaseUrl }),
+        );
+        const home = `${root}/home`;
+        yield* fs.makeDirectory(home, { recursive: true });
+
+        const result = yield* runRunner(home, runner);
+        assert.equal(result.exitCode, 0, result.stderr);
+        assert.include(result.stdout, `t3 v${archiveVersion}`);
+        assert.isTrue(yield* fs.exists(`${home}/.t3/runtime/versions/${archiveVersion}/t3`));
       }).pipe(Effect.provide(NodeServices.layer)),
     60_000,
   );
