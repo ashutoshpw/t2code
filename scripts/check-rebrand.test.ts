@@ -10,6 +10,65 @@ const REAL_BASELINE = new Set<string>([
 ]);
 
 describe("check-rebrand", () => {
+  it("flags retired wordmark and widget mark references without matching similar module names", () => {
+    const violations = findViolations(
+      [
+        {
+          file: "apps/web/src/components/SidebarChrome.tsx",
+          line: `import { T3Wordmark } from "../T3Wordmark";`,
+        },
+        {
+          file: "apps/mobile/src/widgets/AgentActivity.tsx",
+          line: `<Image assetName="T3Mark" modifiers={[resizable()]} />`,
+        },
+        {
+          file: "packages/shared/src/example.ts",
+          line: `import T3MarkdownText from "./T3MarkdownText";`,
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3-wordmark-ref", "t3-mark-ref"]);
+  });
+
+  it("flags the bare legacy wordmark accessibility labels only", () => {
+    const violations = findViolations(
+      [
+        { file: "apps/web/src/example.tsx", line: `<svg aria-label="T3" />` },
+        { file: "apps/mobile/src/example.tsx", line: `<Svg accessibilityLabel='T3' />` },
+        { file: "apps/web/src/example.tsx", line: `<svg aria-label="T3 badge" />` },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3-wordmark-label", "t3-wordmark-label"]);
+  });
+
+  it("flags the retired wordmark path fingerprint without matching a different path", () => {
+    const violations = findViolations(
+      [
+        {
+          file: "assets/prod/logo.svg",
+          line: `<path d="M33.4509 93V47.56H15.5309V37H64.3309V47.56H46.4109V93H33.4509 M86.7253 93.96C82.832 93.96 78.9653 93.4533 75.1253 92.44" />`,
+        },
+        {
+          file: "assets/prod/t2-logo.svg",
+          line: `<path d="M33.4509 93V47.56H15.5309V37H64.3309 M65.3653 93.96V86.04" />`,
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3-wordmark-path"]);
+  });
+
+  it("leaves compatibility values and guard fixtures outside the narrow rules", () => {
+    const entries = [
+      { file: "apps/server/src/runtime.ts", line: `const protocolName = "T3";` },
+      { file: "scripts/check-rebrand.ts", line: `const guarded = "T3Wordmark";` },
+      { file: "scripts/check-rebrand.test.ts", line: `const fixture = "T3Mark";` },
+    ];
+    expect(findViolations(entries, EMPTY_BASELINE)).toEqual([]);
+  });
+
   it("flags T3 Code copy on added lines", () => {
     const violations = findViolations(
       [{ file: "apps/web/src/example.ts", line: `const TITLE = "T3 Code";` }],

@@ -119,7 +119,7 @@ import ChatMarkdown, { ChatMarkdownAssetImage } from "../ChatMarkdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Root, RootContent } from "mdast";
-import { T3Wordmark } from "../T3Wordmark";
+import { T2Wordmark } from "../T2Wordmark";
 import { ThreadContextChip } from "../ThreadContextChip";
 import {
   BotIcon,
@@ -5139,7 +5139,7 @@ function WorkEntryIcon({ name, className }: { name: WorkEntryIconName; className
     case "device":
       return <SmartphoneIcon className={className} aria-hidden />;
     case "t3-code":
-      return <T3Wordmark className={className} aria-hidden />;
+      return <T2Wordmark className={className} aria-hidden />;
     case "check":
       return <CheckIcon className={className} aria-hidden />;
     case "circle-alert":

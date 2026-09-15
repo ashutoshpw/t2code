@@ -458,6 +458,10 @@
     "./mcpApp": {
       "types": "./src/mcpApp.ts",
       "import": "./src/mcpApp.ts"
+    },
+    "./t2Wordmark": {
+      "types": "./src/t2Wordmark.ts",
+      "import": "./src/t2Wordmark.ts"
     }
   },
   "scripts": {
