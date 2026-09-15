@@ -42,6 +42,12 @@ import {
 } from "./build-desktop-artifact.ts";
 import { selectCliRuntimeExternalDependencies } from "./lib/cli-external-packages.ts";
 import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
+import {
+  cliArchivePlatformKey as sharedCliArchivePlatformKey,
+  cliArchiveFileName as sharedCliArchiveFileName,
+  cliArchiveStem as sharedCliArchiveStem,
+  type CliArchivePlatformKey,
+} from "@t2code/shared/cliRelease";
 
 const BuildPlatform = Schema.Literals(["mac", "linux", "win"]);
 const BuildArch = Schema.Literals(["arm64", "x64"]);
@@ -91,20 +97,40 @@ export class CliArchiveInputMissingError extends Schema.TaggedError<CliArchiveIn
   }
 }
 
+export class CliArchiveUnsupportedTargetError extends Schema.TaggedError<CliArchiveUnsupportedTargetError>()(
+  "CliArchiveUnsupportedTargetError",
+  { platform: BuildPlatform, arch: BuildArch },
+) {
+  override get message(): string {
+    return `No CLI release archive is published for ${this.platform}-${this.arch}.`;
+  }
+}
+
 /** Platform/arch pair as it appears in archive names and `process.platform`/`process.arch`. */
-export function cliArchivePlatformKey(platform: BuildPlatform, arch: BuildArch): string {
+export function cliArchivePlatformKey(
+  platform: BuildPlatform,
+  arch: BuildArch,
+): CliArchivePlatformKey | undefined {
   const nodePlatform = platform === "mac" ? "darwin" : platform === "win" ? "win32" : "linux";
-  return `${nodePlatform}-${arch}`;
+  return sharedCliArchivePlatformKey(nodePlatform, arch);
 }
 
-export function cliArchiveStem(version: string, platform: BuildPlatform, arch: BuildArch): string {
-  return `t3-${version}-${cliArchivePlatformKey(platform, arch)}`;
+export function cliArchiveStem(
+  version: string,
+  platform: BuildPlatform,
+  arch: BuildArch,
+): string | undefined {
+  const platformKey = cliArchivePlatformKey(platform, arch);
+  return platformKey === undefined ? undefined : sharedCliArchiveStem(version, platformKey);
 }
 
-export function cliArchiveFileName(version: string, platform: BuildPlatform, arch: BuildArch) {
-  // gzip rather than xz: GNU tar needs an external xz binary for -J, which
-  // minimal hosts lack, while every tar (and Node's zlib) handles gzip alone.
-  return `${cliArchiveStem(version, platform, arch)}.${platform === "win" ? "zip" : "tar.gz"}`;
+export function cliArchiveFileName(
+  version: string,
+  platform: BuildPlatform,
+  arch: BuildArch,
+): string | undefined {
+  const platformKey = cliArchivePlatformKey(platform, arch);
+  return platformKey === undefined ? undefined : sharedCliArchiveFileName(version, platformKey);
 }
 
 /** The bsdtar Windows ships in System32; resolves regardless of which tar is first on PATH. */
@@ -223,6 +249,12 @@ const stageRuntimeExternals = Effect.fn("stageRuntimeExternals")(function* (inpu
   // resolves packages by directory. node-pty ships every platform's prebuilds
   // in one package (58 MB); only the archive's own platform loads.
   const platformKey = cliArchivePlatformKey(input.platform, input.arch);
+  if (platformKey === undefined) {
+    return yield* new CliArchiveUnsupportedTargetError({
+      platform: input.platform,
+      arch: input.arch,
+    });
+  }
   const prebuildsDir = path.join(input.stageDir, "node_modules/node-pty/prebuilds");
   const foreignPrebuilds = (yield* fs
     .readDirectory(prebuildsDir)
@@ -501,6 +533,12 @@ const buildCliArchive = Effect.fn("buildCliArchive")(function* (input: {
   );
 
   const stem = cliArchiveStem(input.version, input.platform, input.arch);
+  if (stem === undefined) {
+    return yield* new CliArchiveUnsupportedTargetError({
+      platform: input.platform,
+      arch: input.arch,
+    });
+  }
   const stageRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-cli-archive-" });
   const contentDir = path.join(stageRoot, stem);
   yield* fs.makeDirectory(contentDir, { recursive: true });
@@ -528,10 +566,14 @@ const buildCliArchive = Effect.fn("buildCliArchive")(function* (input: {
   }
 
   yield* fs.makeDirectory(input.outputDir, { recursive: true });
-  const archivePath = path.join(
-    input.outputDir,
-    cliArchiveFileName(input.version, input.platform, input.arch),
-  );
+  const archiveFileName = cliArchiveFileName(input.version, input.platform, input.arch);
+  if (archiveFileName === undefined) {
+    return yield* new CliArchiveUnsupportedTargetError({
+      platform: input.platform,
+      arch: input.arch,
+    });
+  }
+  const archivePath = path.join(input.outputDir, archiveFileName);
   yield* fs.remove(archivePath, { force: true });
   if (input.platform === "win") {
     // Windows ships bsdtar, which writes zip natively. Name it by path: under
