@@ -19,6 +19,11 @@ import { fromYaml } from "@t2code/shared/schemaYaml";
 import * as HostProcess from "@t2code/shared/HostProcess";
 import { clerkFrontendApiHostnameFromPublishableKey } from "@t2code/shared/relayAuth";
 import { resolveSpawnCommand } from "@t2code/shared/shell";
+import {
+  CLI_ARCHIVE_LEGACY_PREFIX,
+  cliArchiveStem as sharedCliArchiveStem,
+  type CliArchivePlatformKey,
+} from "@t2code/shared/cliRelease";
 import rootPackageJson from "../package.json" with { type: "json" };
 import desktopPackageJson from "../apps/desktop/package.json" with { type: "json" };
 import gnomeCaptureBundle from "../apps/desktop/gnome-extension/bundle.json" with { type: "json" };
@@ -67,6 +72,9 @@ const APPLE_TEAM_ID_PATTERN = /^[A-Z0-9]{10}$/u;
 
 const BuildPlatform = Schema.Literals(["mac", "linux", "win"]);
 const BuildArch = Schema.Literals(["arm64", "x64", "universal"]);
+type DesktopRuntimeArch = Exclude<typeof BuildArch.Type, "universal">;
+const isDesktopRuntimeArch = (arch: typeof BuildArch.Type): arch is DesktopRuntimeArch =>
+  arch !== "universal";
 
 const WorkspaceConfig = Schema.Struct({
   catalog: Schema.optional(Schema.Record(Schema.String, Schema.String)),
@@ -3017,9 +3025,22 @@ export const stageWslRuntimeArchive = Effect.fn("stageWslRuntimeArchive")(functi
   );
 });
 
-// Match cliArchiveStem without its circular import. WSL uses the Windows host's architecture.
-export const wslRuntimeArchiveStem = (version: string, arch: typeof BuildArch.Type): string =>
-  `t3-${version}-linux-${arch}`;
+// WSL runs the same CPU arch as the Windows host. The legacy stem is accepted
+// when validating a manually supplied archive from before the public rename.
+const wslRuntimePlatformKey = (arch: DesktopRuntimeArch): CliArchivePlatformKey =>
+  arch === "arm64" ? "linux-arm64" : "linux-x64";
+
+export const wslRuntimeArchiveStem = (version: string, arch: DesktopRuntimeArch): string =>
+  sharedCliArchiveStem(version, wslRuntimePlatformKey(arch));
+export const legacyWslRuntimeArchiveStem = (version: string, arch: DesktopRuntimeArch): string =>
+  sharedCliArchiveStem(version, wslRuntimePlatformKey(arch), CLI_ARCHIVE_LEGACY_PREFIX);
+export const wslRuntimeArchiveStems = (
+  version: string,
+  arch: DesktopRuntimeArch,
+): readonly [string, string] => [
+  wslRuntimeArchiveStem(version, arch),
+  legacyWslRuntimeArchiveStem(version, arch),
+];
 
 export const parseWslRuntimeArchiveMembers = (listing: string): ReadonlyArray<string> =>
   listing
@@ -3204,7 +3225,7 @@ export const verifyWindowsPrimaryFffNativeLoad = Effect.fn(
   readonly packagedAppDir: string;
   readonly asarPath: string;
   readonly appExecutableName: string;
-  readonly targetArch: typeof BuildArch.Type;
+  readonly targetArch: DesktopRuntimeArch;
   readonly verbose: boolean;
 }) {
   const hostPlatform = yield* HostProcess.Platform;
@@ -3310,7 +3331,10 @@ export const validateWindowsPackagedPayload = Effect.fn(
 )(function* (input: {
   readonly stageDistDir: string;
   readonly appExecutableName: string;
-  readonly targetArch: typeof BuildArch.Type;
+  readonly targetArch: DesktopRuntimeArch;
+  // The version the embedded Linux CLI archive must carry; its top-level
+  // directory is named t2-<version>-linux-<arch> (historical t3- stems are
+  // accepted when validating a manually supplied archive).
   readonly appVersion: string;
   readonly expectWslRuntime?: boolean;
   readonly fileLimit?: number;
@@ -3470,13 +3494,15 @@ export const validateWindowsPackagedPayload = Effect.fn(
       );
     }
     const members = parseWslRuntimeArchiveMembers(listing.stdout);
-    // The WSL installer finds t3 under the archive's single stem-named directory.
-    const stem = wslRuntimeArchiveStem(input.appVersion, input.targetArch);
+    // A release archive unpacks to one directory named after its stem; the
+    // desktop app's WSL install script relies on that layout to find `t3`.
+    const expectedStems = wslRuntimeArchiveStems(input.appVersion, input.targetArch);
     const topLevel = new Set(members.map((member) => member.split("/")[0]));
-    if (topLevel.size !== 1 || !topLevel.has(stem)) {
+    const stem = expectedStems.find((candidate) => topLevel.has(candidate));
+    if (topLevel.size !== 1 || stem === undefined) {
       return yield* invalidWslRuntime(
         new Error(
-          `WSL runtime archive must contain a single top-level directory ${stem}, found ${[...topLevel].join(", ") || "nothing"}`,
+          `WSL runtime archive must contain a single top-level directory ${expectedStems.join(" or ")}, found ${[...topLevel].join(", ") || "nothing"}`,
         ),
       );
     }
@@ -4011,6 +4037,13 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   }
 
   if (options.platform === "win") {
+    if (!isDesktopRuntimeArch(options.arch)) {
+      return yield* new UnsupportedDesktopBuildArchitectureError({
+        platform: options.platform,
+        arch: options.arch,
+        supportedArchitectures: [...PLATFORM_CONFIG.win.archChoices],
+      });
+    }
     yield* validateWindowsPackagedPayload({
       stageDistDir,
       appExecutableName: `${resolveDesktopProductName(appVersion)}.exe`,

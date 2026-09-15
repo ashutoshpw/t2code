@@ -19,8 +19,7 @@ the version.
   - push tag matching `v*.*.*` for a stable release of an explicit commit
   - scheduled nightly check every 12 hours
   - manual `workflow_dispatch` with `channel=nightly`
-  - manual `workflow_dispatch` with `channel=preview`, the maintainers' test train. It exercises the whole release flow (build, sign, notarize, smoke, publish) for a commit that end users must never receive, which is how an unmerged branch or a risky change gets a real release run before it lands. It builds the triggering commit with nightly's versioning under the `preview` prerelease identifier (`0.0.41-preview.<date>.<run>`) and publishes a GitHub prerelease plus the npm packages under the `preview` dist-tag. Nothing ever selects preview on its own: Nothing ever selects preview on its own: it is not on the schedule, no default npm dist-tag points at it, its desktop builds carry no update feed, and no updater manifest (`latest*.yml`, `nightly*.yml`, blockmaps) is attached, so a stable or nightly install cannot be offered one. The only ways onto it are downloading the release by hand, `npx @t2code/cli@preview`, `T3CODE_CHANNEL=preview` for the install scripts, or `t2code update --channel preview` from a terminal; each prints a warning, and the CLI asks for confirmation when the running build is not itself a preview. The release itself is named as a maintainer test build and its body is a warning rather than generated notes: a changelog of unmerged branch history is not a changelog, and nightly and stable notes are unaffected because each series resolves its previous tag within its own channel. The hosted web app, AUR, and Discord announcements are skipped. Keep it; it costs nothing when idle.
-(rebrand: sweep remaining T3 Code copy to T2 Code)
+  - manual `workflow_dispatch` with `channel=preview`, the maintainers' test train. It exercises the whole release flow (build, sign, notarize, smoke, publish) for a commit that end users must never receive, which is how an unmerged branch or a risky change gets a real release run before it lands. It builds the triggering commit with nightly's versioning under the `preview` prerelease identifier (`0.0.41-preview.<date>.<run>`) and publishes a GitHub prerelease plus the npm packages under the `preview` dist-tag. Nothing in the launcher selects preview on its own: it is not on the schedule, the launcher's existing `latest` tag is unchanged, its desktop builds carry no update feed, and no updater manifest (`latest*.yml`, `nightly*.yml`, blockmaps) is attached, so a stable or nightly install cannot be offered one. A newly bootstrapped platform package may receive npm's initial `latest` tag as well. The only ways onto it are downloading the release by hand, `npx @t2code/cli@preview`, `T3CODE_CHANNEL=preview` for the install scripts, or `t2code update --channel preview` from a terminal; each prints a warning, and the CLI asks for confirmation when the running build is not itself a preview. The release itself is named as a maintainer test build and its body is a warning rather than generated notes: a changelog of unmerged branch history is not a changelog, and nightly and stable notes are unaffected because each series resolves its previous tag within its own channel. The hosted web app, AUR, and Discord announcements are skipped. Keep it; it costs nothing when idle.
 - A manual stable release builds the commit of the latest published nightly, not `main` HEAD.
   Nightly is the release candidate: verify the nightly, then promote it. Merges to `main` keep
   landing while you verify and never leak into the stable build.
@@ -52,7 +51,7 @@ the version.
   - stable releases publish npm dist-tag `latest`
   - nightly releases publish npm dist-tag `nightly`
   - preview releases publish npm dist-tag `preview`, which nothing resolves unless asked for by name
-  - one-time setup: package `t3` needs a trusted publisher registered for this workflow file (see below).
+  - one-time setup: package `t2` needs a trusted publisher registered for this workflow file (see below).
 - Builds the hosted web app on Vercel while the desktop jobs run, and makes it live only after a release is published:
   - stable releases are aliased to the `latest` hosted app channel
   - nightly releases are aliased to the `nightly` hosted app channel
@@ -413,7 +412,7 @@ One-time Vercel dashboard setup:
   - `make_latest` is always `false`
 - Uses the next stable patch version as the nightly base. For example, `0.0.17` produces nightlies on `0.0.18-nightly.*`.
 - Publishes Electron auto-update metadata to the dedicated `nightly` updater channel, so desktop users can opt into that track independently from stable.
-- Publishes the `t3` npm launcher to the `nightly` npm dist-tag using the same nightly version.
+- Publishes the `t2` npm launcher to the `nightly` npm dist-tag using the same nightly version.
 - Does not commit version bumps back to `main`.
 
 ## Server self-update release invariant
@@ -479,7 +478,8 @@ executables declared as unpacked by that archive must be present at the matching
 paths below `resources/server.asar.unpacked`. The Windows-native backend reads
 the archive in place through Electron. Packaged Windows builds also ship
 `resources/wsl-runtime.tar.gz` plus its SHA-256 sidecar: the Linux CLI archive
-(`t3-<version>-linux-<arch>.tar.gz`, the same arch as the Windows host) built
+(`t2-<version>-linux-<arch>.tar.gz`, the same arch as the Windows host; older manually
+supplied archives may retain the historical `t3-` stem) built
 by the Linux desktop job and handed to the Windows desktop build as
 `--wsl-runtime`, copied in verbatim so WSL runs the exact bytes a Linux user
 downloads. WSL verifies and extracts that archive
@@ -503,7 +503,8 @@ break:
 - A Windows build given `--wsl-runtime` omits the WSL archive or SHA-256
   sidecar, or the sidecar digest does not match the emitted archive.
 - The emitted WSL archive is not a Linux CLI release archive: it must unpack to
-  a single `t3-<version>-linux-<arch>` directory holding `t3`, `client/`, and
+  a single `t2-<version>-linux-<arch>` directory (or the historical
+  `t3-<version>-linux-<arch>` stem for a manually supplied older archive) holding `t3`, `client/`, and
   `node_modules/` with the Linux node-pty binary, and must not carry a loose
   server bundle (`bin.mjs`).
 - The external Windows resource monitor is absent.
@@ -521,12 +522,12 @@ blockmaps, with a 60 MB maximum for a representative sidecar-to-sidecar update.
 
 After the GitHub Release is published, the workflow runs `node scripts/build-npm-launcher.ts`, then
 `node apps/server/scripts/cli.ts publish --packages-dir npm-packages`, which runs `npm publish` on
-`t3.tgz`. That is the only package published per release.
+`t2.tgz`. That is the only package published per release.
 
 Checklist:
 
-1. Confirm the npm org owns package `t3`.
-2. For `t3`, configure a Trusted Publisher in the npm package settings:
+1. Confirm the npm org owns package `t2`.
+2. For `t2`, configure a Trusted Publisher in the npm package settings:
    - Provider: GitHub Actions
    - Repository: `ashutoshpw/t2code`
    - Workflow file: `.github/workflows/release.yml`
@@ -536,36 +537,54 @@ Checklist:
    launcher with npm dist-tag `latest`.
 5. Nightly runs publish with npm dist-tag `nightly`; preview runs with `preview`.
 
-If the package has not been created on npm yet, bootstrap it with one local authenticated publish,
-then add the Trusted Publisher under the new package's settings for future releases.
-
-For a local first publish, build the package and run the wrapper with a new version. Use
-`--interactive` to let npm receive terminal input and prompt for web/OTP authentication:
+If any package has not been created on npm yet, build the package directory from the release's CLI
+archives, bootstrap all generated packages with one local authenticated publish, then add the
+Trusted Publisher under each package's settings for future releases. The package version is
+already embedded in the generated tarballs; do not pass an `--app-version` override.
 
 ```bash
-vp run --filter @t2code/cli build
+node scripts/build-npm-platform-packages.ts \
+  --archives-dir /path/to/cli-archives \
+  --version 0.0.41-preview.20260915.33 \
+  --output-dir /path/to/npm-packages
+```
+
+Authenticate locally first, verify the account, then run the wrapper against the generated package
+directory. Use the dist-tag matching the release channel (`preview` below; use `latest` for a
+stable bootstrap):
+
+```bash
+npm login --registry=https://registry.npmjs.org/ --auth-type=web
+npm whoami --registry=https://registry.npmjs.org/
 node apps/server/scripts/cli.ts publish \
+  --packages-dir /path/to/npm-packages \
   --access public \
-  --tag latest \
-  --app-version 0.0.39 \
+  --tag preview \
   --interactive \
   --verbose
 ```
 
-If npm requires a classic OTP, pass it explicitly instead; the wrapper redacts it from its log output:
+`--interactive` passes npm's stdin and stdout through to the terminal. It does not replace
+`npm login`, and it is intended for local publishing only.
+
+If npm requires a classic OTP, pass it explicitly; the wrapper redacts it from its logs and errors:
 
 ```bash
-read -r "NPM_OTP?Enter your current npm OTP: "
+read -r -s -p "Enter your current npm OTP: " NPM_OTP
+printf '\n'
 node apps/server/scripts/cli.ts publish \
+  --packages-dir /path/to/npm-packages \
   --access public \
-  --tag latest \
-  --app-version 0.0.39 \
+  --tag preview \
+  --interactive \
   --otp "$NPM_OTP" \
   --verbose
 unset NPM_OTP
 ```
 
-Do not commit or store the OTP. Trusted publishing in GitHub Actions does not require this flag.
+Do not commit or store the OTP. Do not pass `--provenance` to a local publish; provenance is
+generated in the GitHub Actions job through OIDC, and Trusted Publishing there does not require
+an OTP flag.
 
 ## 1) Release validation and unsigned builds
 
