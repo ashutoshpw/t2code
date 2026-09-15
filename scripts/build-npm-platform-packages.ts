@@ -157,16 +157,30 @@ const { dirname, join } = require("node:path");
 
 const SUPPORTED = [${CLI_ARCHIVE_PLATFORM_KEYS.map((key) => `"${key}"`).join(", ")}];
 const key = process.platform + "-" + process.arch;
+const platformPackage = "${NPM_PLATFORM_PACKAGE_SCOPE}/t2-" + key;
+const launcherVersion = require("../package.json").version;
+
+if (!SUPPORTED.includes(key)) {
+  process.stderr.write(
+    [
+      "t2code: this platform is not supported (" + key + ").",
+      "Supported platforms: " + SUPPORTED.join(", ") + ".",
+      "The desktop app and release archives are at https://github.com/ashutoshpw/t2code/releases",
+      "",
+    ].join("\\n"),
+  );
+  process.exit(1);
+}
 
 let packageDir;
 try {
-  packageDir = dirname(require.resolve("${NPM_PLATFORM_PACKAGE_SCOPE}/t2-" + key + "/package.json"));
+  packageDir = dirname(require.resolve(platformPackage + "/package.json"));
 } catch {
   process.stderr.write(
     [
-      "t2code: no T2 Code CLI build is available for this platform (" + key + ").",
-      "Supported platforms: " + SUPPORTED.join(", ") + ".",
-      "If yours is listed, reinstall ${NPM_LAUNCHER_PACKAGE_NAME} so npm fetches its optional dependency.",
+      "t2code: the optional package " + platformPackage + " is missing for this supported platform (" + key + ").",
+      "Reinstall ${NPM_LAUNCHER_PACKAGE_NAME}@" + launcherVersion + " with optional dependencies enabled: npm install --include=optional ${NPM_LAUNCHER_PACKAGE_NAME}@" + launcherVersion + ".",
+      "If it is still missing, check npm's install output and registry/network settings.",
       "The desktop app and release archives are at https://github.com/ashutoshpw/t2code/releases",
       "",
     ].join("\\n"),

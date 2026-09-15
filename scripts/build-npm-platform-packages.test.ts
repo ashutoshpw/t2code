@@ -214,14 +214,33 @@ it.layer(NodeServices.layer)("build-npm-platform-packages", (it) => {
       assert.equal(passthrough.stdout.trim(), "stub linux-x64 serve --port 1234");
       assert.equal(passthrough.exitCode, 7);
 
-      const unsupported = yield* run(process.execPath, ["bin/t2code.js", "--version"], {
+      const missingOptional = yield* run(process.execPath, ["bin/t2code.js", "--version"], {
         cwd: launcherDir,
         env: { ...env, NODE_PATH: path.join(fixture.root, "nowhere") },
       });
+      assert.equal(missingOptional.exitCode, 1);
+      assert.include(
+        missingOptional.stderr,
+        "the optional package @t2code/t2-linux-x64 is missing for this supported platform (linux-x64)",
+      );
+      assert.include(
+        missingOptional.stderr,
+        "Reinstall @t2code/cli@1.2.3 with optional dependencies enabled",
+      );
+      assert.include(missingOptional.stderr, "https://github.com/ashutoshpw/t2code/releases");
+
+      const unsupported = yield* run(
+        process.execPath,
+        [
+          "-e",
+          'Object.defineProperty(process, "platform", { value: "freebsd" }); require("./bin/t2code.js");',
+        ],
+        { cwd: launcherDir, env },
+      );
       assert.equal(unsupported.exitCode, 1);
-      assert.include(unsupported.stderr, "linux-x64");
-      assert.include(unsupported.stderr, "win32-arm64");
-      assert.include(unsupported.stderr, "https://github.com/ashutoshpw/t2code/releases");
+      assert.include(unsupported.stderr, "this platform is not supported (freebsd-x64)");
+      assert.include(unsupported.stderr, "Supported platforms: ");
+      assert.notInclude(unsupported.stderr, "optional package");
     }),
   );
 });
