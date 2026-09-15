@@ -12,7 +12,7 @@ export const CLI_RELEASE_CHECKSUMS_FILE = "SHA256SUMS";
 export const CLI_RELEASE_BASE_URL_ENV = "T3CODE_RELEASE_BASE_URL";
 
 /** Prefix used by newly published self-contained CLI release archives. */
-export const CLI_ARCHIVE_PREFIX = "t2";
+const CLI_ARCHIVE_PREFIX = "t2";
 /** Prefix used by archives published before the fork's public rename. */
 export const CLI_ARCHIVE_LEGACY_PREFIX = "t3";
 
@@ -72,10 +72,7 @@ export function cliArchiveFileName(version: string, platformKey: CliArchivePlatf
 }
 
 /** Historical name retained so installers can consume already-published releases. */
-export function cliLegacyArchiveFileName(
-  version: string,
-  platformKey: CliArchivePlatformKey,
-): string {
+function cliLegacyArchiveFileName(version: string, platformKey: CliArchivePlatformKey): string {
   return `${cliArchiveStem(version, platformKey, CLI_ARCHIVE_LEGACY_PREFIX)}.${cliArchiveExtension(platformKey)}`;
 }
 
