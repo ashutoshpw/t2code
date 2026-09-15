@@ -41,10 +41,10 @@ Upstream's new tests hardcode `T3` copy that the rebrand commits predate. These 
 
 1. Grep for brand strings across tests and copy-bearing files:
    ```sh
-   rg -n "T3 Code|T3_CODE|@t3code/cli|@t2code/" -g '!node_modules' -g '!.t3' -g '!.repos' -g '!patches/**'
+   rg -n "T3 Code|T3_CODE|@t3code/cli|@t3tools/|t3tools|@t2code/" -g '!node_modules' -g '!.t3' -g '!.repos' -g '!patches/**'
    ```
 2. Classify each hit:
-   - **Intentional, leave alone:** upstream repo URLs, upstream `@t2code/*` package scope (upstream's CLI is unscoped `t3`; the fork's packages are `@t2code/*` — any `@t2code/` or `@t3code/` outside exempt dirs is a rebase gap), vendored `.repos/`, git blob SHAs inside `patches/`, historical validation notes in comments, mock strings echoed verbatim by both source and test.
+   - **Intentional, leave alone:** upstream repo URLs, compatibility-bound platform identifiers, upstream `@t2code/*` package scope (upstream's CLI is unscoped `t3`; the fork's packages are `@t2code/*` — any `@t2code/` or `@t3code/` outside exempt dirs is a rebase gap), vendored `.repos/`, git blob SHAs inside `patches/`, historical validation notes in comments, mock strings echoed verbatim by both source and test. Existing `t3tools` exceptions must be exact baseline entries; do not add a blanket directory exemption for new hits.
    - **Must be T2:** user-facing copy, error messages, announcements, embedded playbook/prompt text, release names, showcase data — anywhere the source was rebranded but a test fixture or doc still says T3.
 3. The reliable signal is execution, not eyeballing: run every test file that mentions brand copy, plus every test file touched by the rebase. A test that passes is fine regardless of why; a mismatch always shows up as `expected 'T2 …' to equal 'T3 …'` (or the reverse).
 4. Known traps from past rebases:
