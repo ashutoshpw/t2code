@@ -21,7 +21,7 @@ import {
   DEFAULT_SERVER_SETTINGS,
   MessageId,
   repositoryGroupingKeyOf,
-  T3_PROJECT_FILE_NAME,
+  T2_PROJECT_FILE_NAME,
   ThreadId,
 } from "@t2code/contracts";
 import { sanitizeNewRefName } from "@t2code/shared/git";
@@ -487,28 +487,29 @@ export function NewTaskFlowProvider(
   const { canReadFiles } = fileAccess;
   const fileAccessPending =
     selectedProject !== null && selectedProject.workspaceRoot !== "" && fileAccess.isPending;
-  const t3ProjectFileQuery = useEnvironmentQuery(
+  const t2ProjectFileQuery = useEnvironmentQuery(
     canReadFiles && selectedProject !== null && selectedProject.workspaceRoot !== ""
       ? projectEnvironment.readFile({
           environmentId: selectedProject.environmentId,
           input: {
             cwd: selectedProject.workspaceRoot,
-            relativePath: T3_PROJECT_FILE_NAME,
+            relativePath: T2_PROJECT_FILE_NAME,
             allowMissing: true,
           },
         })
       : null,
   );
-  const t3ProjectFileData = t3ProjectFileQuery.data as ProjectReadFileResult | null;
-  const t3ProjectFile =
-    t3ProjectFileData === null || t3ProjectFileData.exists === false || t3ProjectFileData.truncated
+  const t2ProjectFileData = t2ProjectFileQuery.data as ProjectReadFileResult | null;
+  const t2ProjectFile =
+    t2ProjectFileData === null || t2ProjectFileData.exists === false || t2ProjectFileData.truncated
       ? null
-      : parseT3ProjectFile(t3ProjectFileData.contents);
+      : parseT2ProjectFile(t2ProjectFileData.contents);
   const projectSettings = resolveProjectSettings(
     selectedEnvironmentServerConfig?.settings ?? DEFAULT_SERVER_SETTINGS,
     selectedProject?.id ?? null,
     selectedProject,
-    t3ProjectFile,
+    t2ProjectFile,
+  );
   );
   const canChooseWorkspace = !isScratchDraft;
   const selectedProjectHasThreads =
@@ -526,12 +527,14 @@ export function NewTaskFlowProvider(
         projectHasThreads: selectedProjectHasThreads,
       })
     : "local";
-  // Do not persist the provisional workspace default while t3.json is loading; it would override
-  // the file's eventual default.
+  // While the file read is pending and nothing above it decided, the
+  // resolved default is provisional. Nothing may write it into the draft
+  // during that window (the auto-branch effect does), or the frozen interim
+  // value beats the t2.json default once it loads.
   const defaultWorkspaceModeSettled =
     selectedProjectDraft.workspaceSelection?.mode !== undefined ||
     projectSettings.sources.defaultThreadEnvMode !== "environment" ||
-    (!t3ProjectFileQuery.isPending && !fileAccessPending);
+    (!t2ProjectFileQuery.isPending && !fileAccessPending);
   const workspaceSelection = resolveNewTaskWorkspaceSelection({
     selection: canChooseWorkspace ? selectedProjectDraft.workspaceSelection : undefined,
     fallback: { mode: defaultWorkspaceMode, branch: null, worktreePath: null },
