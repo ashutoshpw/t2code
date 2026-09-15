@@ -341,7 +341,10 @@
     },
     "./gitPatchPath": {
       "types": "./src/gitPatchPath.ts",
-      "import": "./src/gitPatchPath.ts"
+      "import": "./src/gitPatchPath.ts",
+    "./t2Wordmark": {
+      "types": "./src/t2Wordmark.ts",
+      "import": "./src/t2Wordmark.ts"
     }
   },
   "scripts": {

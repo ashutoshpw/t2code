@@ -6,9 +6,35 @@ The three Icon Composer projects are the source of truth for full application ic
 - `nightly/app-icon.icon`
 - `prod/app-icon.icon`
 
-Each project uses `text.svg` for the T3 mark and `background.svg` when the background is a vector layer. Additional layers use semantic names that describe their role and placement.
+Each project uses `text.svg` for the T2 wordmark and `background.svg` when the background is a vector layer. Additional layers use semantic names that describe their role and placement.
 
-Run `vp run icons:export` from the repository root to regenerate the tracked iOS, Linux, Windows, and web assets. The development web exports are also copied to `apps/web/public` for the browser favicon and splash screen. Run `vp run icons:check` to verify that the generated assets and public copies match their sources without changing files.
+On macOS, run `vp run icons:export` from the repository root to regenerate the tracked iOS,
+Linux, Windows, and web assets with Icon Composer. The development web exports are also copied to
+`apps/web/public` for the browser favicon and splash screen. Run `vp run icons:check` to verify that
+the native-generated assets and public copies match their sources without changing files.
+
+## Portable exports
+
+Icon Composer is macOS-only. `vp run icons:export:portable` is the cross-platform
+fallback used by Linux and CI: it renders the same checked-in SVG layers and canonical T2 path
+with Sharp, then writes the iOS/universal PNGs, safe-area macOS PNGs, web sizes, ICO files,
+marketing icons, and the `/95` concept artwork. The portable macOS output keeps the classic
+824px body inset in a transparent 1024px canvas but does not include Icon Composer's native
+shadow treatment.
+
+Run `vp run icons:check:portable` to verify every portable output without changing files. The
+portable export command also regenerates the development copies under `apps/web/public` and the
+static marketing favicons. Native and portable exports intentionally differ in Icon Composer's
+native shadow treatment; use the matching check command for the export path you selected. Keep the
+legacy `t3-black-*` filenames until their consumers are deliberately migrated.
+
+The vector layers are deterministic, but the `/95` concept labels use the host's
+`Arial, Helvetica, sans-serif` fallback. Their bytes can therefore differ between machines with
+different installed fonts; run the portable check in the same font environment used for export.
+
+The marketing `apps/marketing/src/assets/app-desktop.webp` file is a captured product screenshot,
+not a standalone brand asset. It is intentionally outside this generator and needs a fresh product
+capture before its embedded UI branding can be updated.
 
 Exporting requires Icon Composer 2 or newer on macOS. The script selects the newest compatible exporter from Xcode or a standalone Icon Composer installation and pins design generation 26. Set `ICON_COMPOSER_TOOL` to the full path of `Icon Composer.app/Contents/Executables/ictool` to override automatic discovery.
 
@@ -58,10 +84,13 @@ is instead rendered from the same Icon Composer SVG sources by `vp run icons:exp
 
 - `apps/mobile/assets/android-icon-foreground.png`: the shared transparent wordmark, sized to stay
   inside the safe zone
+- `apps/mobile/assets/android-icon-mark.png` and `android-notification-icon.png`: transparent
+  white wordmarks for Android's monochrome and notification resources
 - `apps/mobile/assets/android-icon-background-dev.png` and `-nightly.png`: full-bleed variant
   artwork (blueprint grid and annotations; night sky and clouds). Production uses a solid color.
 - `apps/mobile/assets/android-splash-icon-*.png`: the two layers composed into one 288dp image, so
   the splash mask reproduces the launcher icon's framing.
 
-Rerun the export after changing a layer SVG. `android-icon-mark.png` remains a flat silhouette for
-Android's monochrome themed icon.
+Rerun the export after changing a layer SVG or the canonical wordmark. The Android wordmark
+resources are generated from the production `text.svg`; the launcher and splash variants retain
+their channel-specific backgrounds.

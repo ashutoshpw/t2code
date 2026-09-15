@@ -34,6 +34,10 @@ const TEXT = { x: 15.53, y: 37, width: 94.5, height: 57 };
 // guaranteed), so 0.48 leaves the letters at ~72% of the mask with room for the
 // launcher's own zoom effects.
 const WORDMARK_FRACTION = 0.48;
+// The monochrome and notification resources predate this renderer and use a larger
+// mark. Keep their established visual scale while sourcing the path from production.
+const MONOCHROME_WORDMARK_FRACTION = 0.646;
+const NOTIFICATION_WORDMARK_FRACTION = 0.66;
 // Icon Composer positions layers on a 1024pt canvas, with translation relative to center.
 const COMPOSER_CANVAS_PT = 1024;
 const SVG_DENSITY = 300;
@@ -46,8 +50,8 @@ export class AndroidIconRenderError extends Schema.TaggedError<AndroidIconRender
   { layer: Schema.String, cause: Schema.Defect() },
 ) {}
 
-const wordmarkTransform = (size: number) => {
-  const scale = (size * WORDMARK_FRACTION) / TEXT.width;
+const wordmarkTransform = (size: number, fraction: number) => {
+  const scale = (size * fraction) / TEXT.width;
   const tx = (size - TEXT.width * scale) / 2 - TEXT.x * scale;
   const ty = (size - TEXT.height * scale) / 2 - TEXT.y * scale;
   return `translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${scale.toFixed(4)})`;
@@ -103,17 +107,43 @@ const readLayerSource = Effect.fn("androidIcons.readLayerSource")(function* (
   );
 });
 
-const renderForeground = Effect.fn("androidIcons.renderForeground")(function* (
+const renderWordmark = Effect.fn("androidIcons.renderWordmark")(function* (
   repositoryRoot: string,
   size: number,
+  fraction: number,
+  layer: string,
 ) {
   const text = yield* readLayerSource(repositoryRoot, "prod", "text.svg");
   const paths = text.match(/<path[^>]*\/>/g) ?? [];
   return yield* rasterize(
-    "foreground",
-    canvasSvg(size, `<g transform="${wordmarkTransform(size)}">${paths.join("")}</g>`),
+    layer,
+    canvasSvg(size, `<g transform="${wordmarkTransform(size, fraction)}">${paths.join("")}</g>`),
     size,
   );
+});
+
+const renderForeground = Effect.fn("androidIcons.renderForeground")(function* (
+  repositoryRoot: string,
+  size: number,
+) {
+  return yield* renderWordmark(repositoryRoot, size, WORDMARK_FRACTION, "foreground");
+});
+
+const renderMonochromeIcon = Effect.fn("androidIcons.renderMonochromeIcon")(function* (
+  repositoryRoot: string,
+) {
+  return yield* renderWordmark(
+    repositoryRoot,
+    ADAPTIVE_CANVAS,
+    MONOCHROME_WORDMARK_FRACTION,
+    "monochrome",
+  );
+});
+
+const renderNotificationIcon = Effect.fn("androidIcons.renderNotificationIcon")(function* (
+  repositoryRoot: string,
+) {
+  return yield* renderWordmark(repositoryRoot, 96, NOTIFICATION_WORDMARK_FRACTION, "notification");
 });
 
 const renderDevelopmentBackground = Effect.fn("androidIcons.renderDevelopmentBackground")(
@@ -127,7 +157,10 @@ const renderDevelopmentBackground = Effect.fn("androidIcons.renderDevelopmentBac
     const background = yield* rasterize("dev-background", fullBleed(paper), size);
     const overlay = yield* rasterize(
       "dev-annotations",
-      canvasSvg(size, `${defs}<g transform="${wordmarkTransform(size)}">${body}</g>`),
+      canvasSvg(
+        size,
+        `${defs}<g transform="${wordmarkTransform(size, WORDMARK_FRACTION)}">${body}</g>`,
+      ),
       size,
     );
     return yield* composite("dev-background", background, [{ input: overlay }]);
@@ -212,6 +245,8 @@ const exportAndroidIcons = Effect.gen(function* () {
   const repositoryRoot = path.resolve(import.meta.dirname, "..");
   const outputs = [
     ["android-icon-foreground.png", yield* renderForeground(repositoryRoot, ADAPTIVE_CANVAS)],
+    ["android-icon-mark.png", yield* renderMonochromeIcon(repositoryRoot)],
+    ["android-notification-icon.png", yield* renderNotificationIcon(repositoryRoot)],
     [
       "android-icon-background-dev.png",
       yield* renderDevelopmentBackground(repositoryRoot, ADAPTIVE_CANVAS),
