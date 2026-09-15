@@ -1,6 +1,19 @@
-const CLI_RELEASE_REPOSITORY = "pingdotgg/t3code";
+/**
+ * Naming shared by the release workflow, the runtime installers, and
+ * install scripts for the per-platform CLI archives attached to GitHub
+ * Releases. Every consumer derives the current and historical file names from
+ * a version and platform key, so new releases can use the public `t2-` name
+ * while consumers continue installing older `t3-` assets.
+ */
+
+const CLI_RELEASE_REPOSITORY = "ashutoshpw/t2code";
 export const CLI_RELEASE_CHECKSUMS_FILE = "SHA256SUMS";
 export const CLI_RELEASE_BASE_URL_ENV = "T3CODE_RELEASE_BASE_URL";
+
+/** Prefix used by newly published self-contained CLI release archives. */
+export const CLI_ARCHIVE_PREFIX = "t2";
+/** Prefix used by archives published before the fork's public rename. */
+export const CLI_ARCHIVE_LEGACY_PREFIX = "t3";
 
 /**
  * Kept in step with the build_linux_cli matrix, build_windows_arm64_cli, and
@@ -41,8 +54,35 @@ export function cliArchiveTarCommand(
   return `${systemRoot}\\System32\\tar.exe`;
 }
 
+export function cliArchiveStem(
+  version: string,
+  platformKey: CliArchivePlatformKey,
+  prefix: string = CLI_ARCHIVE_PREFIX,
+): string {
+  return `${prefix}-${version}-${platformKey}`;
+}
+
+const cliArchiveExtension = (platformKey: CliArchivePlatformKey): "zip" | "tar.gz" =>
+  platformKey.startsWith("win32") ? "zip" : "tar.gz";
+
 export function cliArchiveFileName(version: string, platformKey: CliArchivePlatformKey): string {
-  return `t3-${version}-${platformKey}.${platformKey.startsWith("win32") ? "zip" : "tar.gz"}`;
+  return `${cliArchiveStem(version, platformKey)}.${cliArchiveExtension(platformKey)}`;
+}
+
+/** Historical name retained so installers can consume already-published releases. */
+export function cliLegacyArchiveFileName(
+  version: string,
+  platformKey: CliArchivePlatformKey,
+): string {
+  return `${cliArchiveStem(version, platformKey, CLI_ARCHIVE_LEGACY_PREFIX)}.${cliArchiveExtension(platformKey)}`;
+}
+
+/** Candidate names in preference order: current public name, then historical name. */
+export function cliArchiveFileNames(
+  version: string,
+  platformKey: CliArchivePlatformKey,
+): readonly [string, string] {
+  return [cliArchiveFileName(version, platformKey), cliLegacyArchiveFileName(version, platformKey)];
 }
 
 const CLI_RELEASE_DEFAULT_BASE_URL = `https://github.com/${CLI_RELEASE_REPOSITORY}/releases/download`;
