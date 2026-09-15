@@ -215,7 +215,7 @@ jobs run, and promotes it with `vercel promote` after the release is published.
 Stable releases do not deploy the marketing site because they can promote an
 older nightly commit.
 
-The job looks up the `t3code-marketing` project using the existing `VERCEL_TOKEN`
+The job looks up the `t2code-marketing` project using the existing `VERCEL_TOKEN`
 and `VERCEL_ORG_ID` secrets. It also respects the optional `VERCEL_TEAM_SLUG`
 variable. The Vercel project's root directory must be `apps/marketing`.
 Git deployments remain disabled in `apps/marketing/vercel.ts`.
