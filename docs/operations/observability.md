@@ -6,7 +6,7 @@ T2 Code has one server-side observability model:
 
 - pretty logs go to stdout for humans
 - completed spans go to a local NDJSON trace file
-- traces, metrics, and logs can also be exported over OTLP to a real backend like Grafana LGTM
+- traces and metrics can also be exported over OTLP to a real backend like Grafana LGTM
 
 The local trace file is the persisted source of truth for normal local launches. Those launches do not
 write a separate server log file, but SSH-managed launches also persist the remote process's
@@ -22,15 +22,8 @@ Logs are human-facing:
 - format: `Logger.consolePretty()`
 - normal local persistence: none
 - SSH-managed launch persistence: `~/.t3/ssh-launch/<state>/server.log`
-- remote export: OTLP only, when configured
 
 If you want a log message to show up in the trace file, emit it inside an active span with `Effect.log...`. `Logger.tracerLogger` will attach it as a span event.
-
-Configuring a logs endpoint takes over that job. The server then exports log records, which cover
-every message instead of only the ones inside an active span and carry the trace and span ids so
-they still line up with the trace. `Logger.tracerLogger` is dropped in that mode, so the same
-message is not exported twice and the trace file stops carrying log messages. stdout output and
-SSH-managed launch persistence stay unchanged either way.
 
 ### Traces
 
@@ -126,10 +119,9 @@ Default Grafana login:
 #### 2. Export OTLP env vars
 
 ```bash
-export T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces
-export T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
-export T3CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs
-export T3CODE_OTLP_SERVICE_NAME=t3-local
+export T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces
+export T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
+export T2CODE_OTLP_SERVICE_NAME=t3-local
 ```
 
 Optional:
@@ -161,25 +153,23 @@ node --run dev:desktop
 
 Packaged desktop app:
 
-Launch the actual app executable from the same shell so the desktop app and embedded backend inherit `T3CODE_OTLP_*`.
+Launch the actual app executable from the same shell so the desktop app and embedded backend inherit `T2CODE_OTLP_*`.
 
 macOS app bundle example:
 
 ```bash
-T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
-T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
-T3CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs \
-T3CODE_OTLP_SERVICE_NAME=t3-desktop \
+T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
+T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
+T2CODE_OTLP_SERVICE_NAME=t3-desktop \
 "/Applications/T2 Code.app/Contents/MacOS/T2 Code"
 ```
 
 Direct binary example:
 
 ```bash
-T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
-T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
-T3CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs \
-T3CODE_OTLP_SERVICE_NAME=t3-desktop \
+T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
+T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
+T2CODE_OTLP_SERVICE_NAME=t3-desktop \
 ./path/to/your/desktop-app-binary
 ```
 
@@ -199,7 +189,7 @@ Resolve the path for the launch mode once. Production and explicitly configured 
 state under the base directory's `userdata` folder:
 
 ```bash
-TRACE_FILE="${T3CODE_HOME:-$HOME/.t3}/userdata/logs/server.trace.ndjson"
+TRACE_FILE="${T2CODE_HOME:-$HOME/.t3}/userdata/logs/server.trace.ndjson"
 ```
 
 A dev server started from a linked worktree defaults to that worktree's local home:
@@ -401,7 +391,7 @@ If you need those later, add client-side instrumentation or a dedicated server f
 
 Usually one of these is true:
 
-- `T3CODE_OTLP_TRACES_URL` was not set
+- `T2CODE_OTLP_TRACES_URL` was not set
 - the app was launched from a different environment than the one where you exported the vars
 - the app was not fully restarted after changing env
 - Grafana is looking at the wrong time range or service name
@@ -519,16 +509,7 @@ It provides:
 - local NDJSON tracer
 - optional OTLP trace exporter
 - optional OTLP metrics exporter
-- optional OTLP log exporter
 - Effect trace-level and timing refs
-
-The desktop main process is a second producer, assembled in
-`apps/desktop/src/app/DesktopObservability.ts`. It reads the same `T3CODE_OTLP_*` names and the same
-Settings entries as the backend it supervises, and covers work the backend cannot see: app startup,
-window and menu handling, backend supervision, and updates. It reports as service `desktop`
-regardless of `T3CODE_OTLP_SERVICE_NAME`, so a collector shows it alongside the backend rather than
-mixed into it. It exports traces and logs only; the main process records no metrics, so the metrics
-endpoint applies to the backend alone.
 
 ### Env Vars
 
@@ -543,17 +524,15 @@ Local trace file:
 
 OTLP export:
 
-- `T3CODE_OTLP_TRACES_URL`: OTLP trace endpoint
-- `T3CODE_OTLP_METRICS_URL`: OTLP metric endpoint
-- `T3CODE_OTLP_LOGS_URL`: OTLP log endpoint
-- `T3CODE_OTLP_EXPORT_INTERVAL_MS`: export interval, default `10000`
-- `T3CODE_OTLP_SERVICE_NAME`: service name, default `t3-server`
-- `T3CODE_OTLP_HEADERS`: extra headers for all three exporters, same format as
+- `T2CODE_OTLP_TRACES_URL`: OTLP trace endpoint
+- `T2CODE_OTLP_METRICS_URL`: OTLP metric endpoint
+- `T2CODE_OTLP_EXPORT_INTERVAL_MS`: export interval, default `10000`
+- `T2CODE_OTLP_SERVICE_NAME`: service name, default `t2-server`
+- `T2CODE_OTLP_HEADERS`: extra headers for both exporters, same format as
   `OTEL_EXPORTER_OTLP_HEADERS`: comma-separated `key=value` pairs with percent-encoded values.
-- `T3CODE_OTLP_PROTOCOL`: `http/json` (default) or `http/protobuf`
+- `T2CODE_OTLP_PROTOCOL`: `http/json` (default) or `http/protobuf`
 
-If the OTLP URLs are unset, local tracing still works, metrics stay in-process only, and logs stay
-on stdout only.
+If the OTLP URLs are unset, local tracing still works and metrics stay in-process only.
 
 ### What Is Instrumented Today
 

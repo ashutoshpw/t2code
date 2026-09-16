@@ -345,7 +345,16 @@
     },
     "./gitPatchPath": {
       "types": "./src/gitPatchPath.ts",
-      "import": "./src/gitPatchPath.ts",
+      "import": "./src/gitPatchPath.ts"
+    },
+    "./legacyEnv": {
+      "types": "./src/legacyEnv.ts",
+      "import": "./src/legacyEnv.ts"
+    },
+    "./legacyEnvConfig": {
+      "types": "./src/legacyEnvConfig.ts",
+      "import": "./src/legacyEnvConfig.ts"
+    },
     "./t2Wordmark": {
       "types": "./src/t2Wordmark.ts",
       "import": "./src/t2Wordmark.ts"

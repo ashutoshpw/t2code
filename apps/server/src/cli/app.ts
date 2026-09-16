@@ -24,6 +24,7 @@ import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import { Argument, Command } from "effect/unstable/cli";
 
+import { envStringConfig } from "@t2code/shared/legacyEnvConfig";
 import { expandHomePath, resolveBaseDir } from "../os-jank.ts";
 import { baseDirFlag } from "./config.ts";
 
@@ -178,7 +179,7 @@ function sendDesktopAppActivationRequest(input: {
 }
 
 const appEnvironment = Config.all({
-  t3Home: Config.String("T3CODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  t3Home: envStringConfig("T2CODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
   sshConnection: Config.String("SSH_CONNECTION").pipe(Config.option),
   sshTty: Config.String("SSH_TTY").pipe(Config.option),
 });
