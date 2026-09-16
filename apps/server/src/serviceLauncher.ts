@@ -1263,7 +1263,9 @@ export interface LauncherOptions {
 }
 
 export async function main(options: LauncherOptions = {}): Promise<void> {
-  const baseDir = (options.baseDir ?? process.env.T2CODE_HOME)?.trim();
+  // Installed units written by older builds export the legacy T3CODE_HOME
+  // spelling; the launcher runs against whatever unit is on disk.
+  const baseDir = (options.baseDir ?? process.env.T2CODE_HOME ?? process.env.T3CODE_HOME)?.trim();
   if (baseDir === undefined || baseDir === "") {
     throw new Error("T2CODE_HOME is required by the T2 Code service launcher.");
   }

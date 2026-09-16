@@ -368,6 +368,7 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       output.T2CODE_SINGLE_ORIGIN_DEV = "1";
     } else {
       delete output.T2CODE_HOME;
+      delete output.T3CODE_HOME;
     }
 
     // A dev-runner server is never launcher-managed. When the shell that runs
@@ -409,6 +410,11 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       // Desktop pins the renderer to loopback on purpose; an ambient marker
       // must not make Vite drop those URLs.
       delete output.T2CODE_SINGLE_ORIGIN_DEV;
+      delete output.T2CODE_MODE;
+      delete output.T2CODE_NO_BROWSER;
+      delete output.T2CODE_HOST;
+      delete output.T2CODE_DEV_AUTH_TOKEN;
+      delete output.T3CODE_DEV_AUTH_TOKEN;
     }
   } else {
     output.T2CODE_PORT = String(serverPort);
@@ -767,7 +773,7 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
     worktreePath,
   });
 
-    const hostEnvironment = yield* HostProcess.Environment;
+  const hostEnvironment = yield* HostProcess.Environment;
   // A dev server started inside a worktree defaults to that worktree's own
   // (gitignored) `.t2` — see @t2code/shared/devHome for why this must
   // outrank an ambient T2CODE_HOME. `--home-dir` still wins.
@@ -778,7 +784,8 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
   const resolvedT2Home =
     (input.t2Home?.trim() || undefined) ??
     worktreeHome ??
-    (hostEnvironment.T2CODE_HOME?.trim() || undefined);
+    (hostEnvironment.T2CODE_HOME?.trim() || undefined) ??
+    (hostEnvironment.T3CODE_HOME?.trim() || undefined);
   const env = yield* createDevRunnerEnv({
     mode: input.mode,
     baseEnv: hostEnvironment,

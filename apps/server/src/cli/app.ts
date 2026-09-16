@@ -16,6 +16,7 @@ import {
   type DesktopAppControlAddress,
 } from "@t2code/shared/desktopAppControl";
 import * as HostProcess from "@t2code/shared/HostProcess";
+import { envStringConfig } from "@t2code/shared/legacyEnvConfig";
 import * as Config from "effect/Config";
 import * as Console from "effect/Console";
 import * as SecureRandom from "effect/crypto/SecureRandom";
@@ -25,6 +26,7 @@ import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import { Argument, Command } from "effect/cli";
 
+import { envStringConfig } from "@t2code/shared/legacyEnvConfig";
 import { expandHomePath, resolveBaseDir } from "../os-jank.ts";
 import { baseDirFlag } from "./config.ts";
 
@@ -192,7 +194,7 @@ async function sendDesktopAppActivationRequest(input: {
 }
 
 const appEnvironment = Config.all({
-  t3Home: Config.String("T2CODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  t3Home: envStringConfig("T2CODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
   sshConnection: Config.String("SSH_CONNECTION").pipe(Config.option),
   sshTty: Config.String("SSH_TTY").pipe(Config.option),
 });
