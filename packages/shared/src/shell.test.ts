@@ -160,12 +160,12 @@ describe("readEnvironmentFromLoginShell", () => {
       ) => string
     >(() =>
       [
-        "__T3CODE_ENV_PATH_START__",
+        "__T2CODE_ENV_PATH_START__",
         "/a:/b",
-        "__T3CODE_ENV_PATH_END__",
-        "__T3CODE_ENV_SSH_AUTH_SOCK_START__",
+        "__T2CODE_ENV_PATH_END__",
+        "__T2CODE_ENV_SSH_AUTH_SOCK_START__",
         "/tmp/secretive.sock",
-        "__T3CODE_ENV_SSH_AUTH_SOCK_END__",
+        "__T2CODE_ENV_SSH_AUTH_SOCK_END__",
       ].join("\n"),
     );
 
@@ -192,11 +192,11 @@ describe("readEnvironmentFromLoginShell", () => {
       ) => string
     >(() =>
       [
-        "__T3CODE_ENV_PATH_START__",
+        "__T2CODE_ENV_PATH_START__",
         "/a:/b",
-        "__T3CODE_ENV_PATH_END__",
-        "__T3CODE_ENV_SSH_AUTH_SOCK_START__",
-        "__T3CODE_ENV_SSH_AUTH_SOCK_END__",
+        "__T2CODE_ENV_PATH_END__",
+        "__T2CODE_ENV_SSH_AUTH_SOCK_START__",
+        "__T2CODE_ENV_SSH_AUTH_SOCK_END__",
       ].join("\n"),
     );
 
@@ -214,9 +214,9 @@ describe("readEnvironmentFromLoginShell", () => {
       ) => string
     >(() =>
       [
-        "__T3CODE_ENV_CUSTOM_VAR_START__",
+        "__T2CODE_ENV_CUSTOM_VAR_START__",
         "  first\nsecond  ",
-        "__T3CODE_ENV_CUSTOM_VAR_END__",
+        "__T2CODE_ENV_CUSTOM_VAR_END__",
       ].join("\n"),
     );
 

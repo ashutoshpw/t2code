@@ -11,12 +11,12 @@ export const isSupportedLauncherProtocol = (
   protocol: unknown,
 ): protocol is SupportedLauncherProtocol =>
   protocol === 3 || protocol === SERVICE_LAUNCHER_PROTOCOL;
-export const SERVICE_LAUNCHER_CONTEXT_ENV = "T3_SERVICE_LAUNCHER_CONTEXT";
+export const SERVICE_LAUNCHER_CONTEXT_ENV = "T2_SERVICE_LAUNCHER_CONTEXT";
 export const SERVICE_ENV_FILE = "service.env";
 export const SERVICE_STATE_FILE = "service-state.json";
 /** Set by the unit or launch agent to its own file name, so the launcher can
     find the definition that started it. */
-export const SERVICE_UNIT_ENV = "T3_BOOT_SERVICE_UNIT";
+export const SERVICE_UNIT_ENV = "T2_BOOT_SERVICE_UNIT";
 /** Written before explicit stop to distinguish shutdown from update handoff. */
 export const SERVICE_STOP_MARKER_FILE = ".service-stopping";
 /** Written by `t2code update` when the unit was repointed at a new version but the
@@ -51,7 +51,7 @@ export const disabledServiceTask = (taskXml: string): string =>
 
 export function serviceUnitEnvironmentValueOf(
   contents: string,
-  name: "T3CODE_HOME" | "T3CODE_INSTALL_BIN_DIR",
+  name: "T2CODE_HOME" | "T3CODE_INSTALL_BIN_DIR",
 ): string | undefined {
   const systemd = new RegExp(`^Environment=${name}=(.*)$`, "m").exec(contents)?.[1];
   if (systemd !== undefined) return unquoteSystemdValue(systemd.trim());
@@ -60,7 +60,7 @@ export function serviceUnitEnvironmentValueOf(
 }
 
 export function serviceUnitBaseDirOf(contents: string): string | undefined {
-  const unix = serviceUnitEnvironmentValueOf(contents, "T3CODE_HOME");
+  const unix = serviceUnitEnvironmentValueOf(contents, "T2CODE_HOME");
   if (unix !== undefined) return unix;
   const task = /<Arguments>[^<]* "--base-dir" "([^"]*)"/.exec(contents)?.[1];
   return task === undefined ? undefined : unquoteWindowsArgument(task);

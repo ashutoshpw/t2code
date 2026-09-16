@@ -16,7 +16,7 @@ import {
   ORCHESTRATION_PROTOCOL_VERSION,
   PortSchema,
 } from "@t2code/contracts";
-import { resolveWorktreeT3Home } from "@t2code/shared/devHome";
+import { resolveWorktreeT2Home } from "@t2code/shared/devHome";
 import * as HostProcess from "@t2code/shared/HostProcess";
 import { formatHostForUrl, isWildcardHost } from "@t2code/shared/hostClassification";
 import { DEFAULT_SIGNAL_EXPORT } from "@t2code/shared/observability";

@@ -331,7 +331,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
                   : { PATH: environmentPath }),
                 ...(insideService
                   ? {
-                      T3_BOOT_SERVICE_UNIT:
+                      T2_BOOT_SERVICE_UNIT:
                         platform === "win32" ? "t3code-task.xml" : "t3code.service",
                     }
                   : {}),
@@ -1212,7 +1212,7 @@ process.disconnect();
         "--quiet",
         `--property=StandardOutput=append:${plan.logPath}`,
         `--property=StandardError=append:${plan.logPath}`,
-        "--setenv=T3_BOOT_SERVICE_UNIT=",
+        "--setenv=T2_BOOT_SERVICE_UNIT=",
         pinnedRuntimePaths(path, baseDir, "1.2.4", "linux").entryPath,
         "service",
         "install",
