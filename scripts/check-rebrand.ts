@@ -33,8 +33,8 @@ const GUARDED_FILES = new Set([
   "scripts/rebrand-baseline.json",
 ]);
 // Trees where T3 mentions are the point: fork tooling describing the upstream,
-// and vendored upstream-owned native modules.
-const GUARDED_DIRS = [".agents/", "apps/mobile/modules/"];
+// the vendored upstream checkout, and vendored upstream-owned native modules.
+const GUARDED_DIRS = [".agents/", ".repos/", "apps/mobile/modules/"];
 
 // These are intentionally narrower than a bare `T3` search. T3 remains in
 // protocol/runtime compatibility names, while these identifiers and the path
@@ -80,11 +80,8 @@ const FORBIDDEN_FILE_RULES: ReadonlyMap<string, Rule> = new Map([
 const RULES: Rule[] = [
   {
     id: "t3-connect-copy",
-    hint: 'client and CLI copy uses "T2 Connect"; preserve compatibility identifiers separately',
-    violates: (file, line) =>
-      /^(?:apps\/(?:web|mobile|server)\/|packages\/(?:client-runtime|shared)\/|docs\/user\/)/.test(
-        file,
-      ) && /\bT3\s+Connect\b/.test(line),
+    hint: 'connect branding is "T2 Connect"; compatibility identifiers (module names, route ids, token types) are preserved separately',
+    violates: (_file, line) => /\bT3\s+Connect\b/.test(line),
   },
   {
     id: "t3-wordmark-ref",
@@ -117,6 +114,11 @@ const RULES: Rule[] = [
     violates: (_file, line) => /@t3code\//.test(line),
   },
   {
+    id: "t3-scope",
+    hint: 'the fork package scope is "@t2code"; "@t3/" is an invented upstream-adjacent scope',
+    violates: (_file, line) => /@t3\//.test(line),
+  },
+  {
     id: "t3tools-scope",
     hint: 'fork internal packages are "@t2code/*"; "@t2code/" only exists upstream (.agents/ and apps/mobile/modules/ are exempt dirs)',
     violates: (_file, line) => /@t3tools\//.test(line),
@@ -142,6 +144,20 @@ const RULES: Rule[] = [
     violates: (file, line) => /t3code-preview/.test(line) && !line.includes("persist:"),
   },
 ];
+
+// Line rules only see added lines, so a renamed or newly added path carrying a
+// T3 name would slip through. Path rules run once per file. "t3" not followed
+// by a digit avoids false positives like "bit31" in vendored hashes.
+const T3_BRAND_PATH = /t3(?![0-9])/i;
+const PATH_RULES: Rule[] = [
+  {
+    id: "t3-named-path",
+    hint: "tracked paths do not carry T3 names; grandfather an existing path with a baseline entry whose line is empty",
+    violates: (file) => T3_BRAND_PATH.test(file),
+  },
+];
+
+const pathBaselineKey = (file: string): string => `${file}\u0000`;
 
 type Entry = { file: string; line: string };
 type Violation = Entry & { rule: Rule };
@@ -172,6 +188,7 @@ function ruleFor(file: string, line: string, baseline: Set<string>): Rule | unde
 export function findViolations(entries: Entry[], baseline: Set<string>): Violation[] {
   const violations: Violation[] = [];
   const reportedForbiddenFiles = new Set<string>();
+  const reportedPaths = new Set<string>();
   for (const entry of entries) {
     const forbiddenFileRule = FORBIDDEN_FILE_RULES.get(entry.file);
     if (forbiddenFileRule) {
@@ -180,6 +197,13 @@ export function findViolations(entries: Entry[], baseline: Set<string>): Violati
         violations.push({ ...entry, rule: forbiddenFileRule });
       }
       continue;
+    }
+    if (!isExemptPath(entry.file) && !baseline.has(pathBaselineKey(entry.file))) {
+      const pathRule = PATH_RULES.find((rule) => rule.violates(entry.file, entry.line));
+      if (pathRule && !reportedPaths.has(entry.file)) {
+        reportedPaths.add(entry.file);
+        violations.push({ file: entry.file, line: `<path> ${entry.file}`, rule: pathRule });
+      }
     }
     const rule = ruleFor(entry.file, entry.line, baseline);
     if (rule) violations.push({ ...entry, rule });
@@ -223,9 +247,18 @@ function addedLinesFromDiff(diff: string): Entry[] {
   return entries.filter((entry) => entry.file !== "");
 }
 
+// Collectors emit one { file, line: "" } entry per T3-named path so
+// findViolations can flag the path itself; it dedupes per file and honors the
+// baseline via pathBaselineKey.
+
 function collectStaged(): Entry[] {
   const entries = addedLinesFromDiff(git(["diff", "--cached", "-U0"]));
   const stagedFiles = new Set(git(["ls-files", "--cached", "-z"]).split("\0").filter(Boolean));
+  for (const file of stagedFiles) {
+    if (isExemptPath(file)) continue;
+    if (!PATH_RULES.some((rule) => rule.violates(file, ""))) continue;
+    entries.push({ file, line: "" });
+  }
   for (const file of FORBIDDEN_FILE_RULES.keys()) {
     if (stagedFiles.has(file) && !entries.some((entry) => entry.file === file)) {
       entries.push({ file, line: "" });
@@ -260,6 +293,13 @@ function collectPush(): Entry[] {
     for (const entry of addedLinesFromDiff(git(["diff", "-U0", `${base}..${localSha}`]))) {
       entries.push(entry);
     }
+    for (const file of git(["diff", "--name-only", "-z", `${base}..${localSha}`])
+      .split("\0")
+      .filter(Boolean)) {
+      if (isExemptPath(file)) continue;
+      if (!PATH_RULES.some((rule) => rule.violates(file, ""))) continue;
+      entries.push({ file, line: "" });
+    }
     for (const file of FORBIDDEN_FILE_RULES.keys()) {
       if (git(["ls-tree", "-r", "--name-only", localSha, "--", file]).trim() === file) {
         entries.push({ file, line: "" });
@@ -269,13 +309,21 @@ function collectPush(): Entry[] {
   return entries;
 }
 
-function scanTree(): { entries: Entry[]; withLines: Array<Entry & { num: number }> } {
+function scanTree(): {
+  entries: Entry[];
+  withLines: Array<Entry & { num: number }>;
+  files: string[];
+} {
   const entries: Entry[] = [];
   const withLines: Array<Entry & { num: number }> = [];
   const files = git(["ls-files", "-z"])
     .split("\0")
     .filter((file) => file && !isExemptPath(file));
   for (const file of files) {
+    if (PATH_RULES.some((rule) => rule.violates(file, ""))) {
+      // Path-level signal, before the binary skip so t3-named assets are seen.
+      entries.push({ file, line: "" });
+    }
     const full = NodePath.join(REPO_ROOT, file);
     let stat;
     try {
@@ -292,7 +340,7 @@ function scanTree(): { entries: Entry[]; withLines: Array<Entry & { num: number 
       withLines.push({ file, line, num: i + 1 });
     }
   }
-  return { entries, withLines };
+  return { entries, withLines, files };
 }
 
 function report(violations: Violation[], scope: string, withNumbers?: Map<string, number>): number {
@@ -331,7 +379,7 @@ export function main(argv: string[]): number {
   if (argv.includes("--help") || argv.includes("-h")) return usage();
 
   if (argv.includes("--update-baseline")) {
-    const { withLines } = scanTree();
+    const { withLines, files } = scanTree();
     const current = new Set(loadBaseline());
     const seen = new Set<string>();
     const entries: Entry[] = [];
@@ -344,6 +392,13 @@ export function main(argv: string[]): number {
       seen.add(key);
       const [file, line] = key.split("\u0000");
       entries.push({ file: file as string, line: line as string });
+    }
+    for (const file of files) {
+      if (!PATH_RULES.some((rule) => rule.violates(file, ""))) continue;
+      const key = pathBaselineKey(file);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      entries.push({ file, line: "" });
     }
     entries.sort((a, b) => a.file.localeCompare(b.file) || a.line.localeCompare(b.line));
     NodeFS.writeFileSync(BASELINE_PATH, `${JSON.stringify(entries, null, 2)}\n`);
