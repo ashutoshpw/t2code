@@ -14,7 +14,7 @@ raw provider events, or child-agent output.
 
 ## Relay connection diagnostics
 
-T3 Code sends relay connection traces to Axiom to diagnose T3 Connect connectivity. These are
+T2 Code sends relay connection traces to Axiom to diagnose T2 Connect connectivity. These are
 separate from product events. Depending on the client version, traces can include connection
 timings, environment identifiers and the connected machine's name. Failed spans can include error
 messages and stack traces; error text can quote a value the app was handling.
