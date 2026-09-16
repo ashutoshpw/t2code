@@ -79,7 +79,7 @@ export class NoRunningServerError extends Schema.TaggedError<NoRunningServerErro
     return [
       "No running T2 Code server found.",
       ...this.checkedStatePaths.map((statePath) => `  checked ${statePath}`),
-      "Start one with `npx @t2code/cli serve`, or connect this machine with T3 Connect: `npx @t2code/cli connect`.",
+      "Start one with `npx @t2code/cli serve`, or connect this machine with T2 Connect: `npx @t2code/cli connect`.",
     ].join("\n");
   }
 }
