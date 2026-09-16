@@ -3,11 +3,11 @@
 Connect a phone, browser, or another desktop app to T2 Code running on a different
 machine. That machine must stay running and reachable while you work.
 
-## T3 Connect
+## T2 Connect
 
-T3 Connect makes an environment available to your other devices without setting
+T2 Connect makes an environment available to your other devices without setting
 up router forwarding. In the desktop app on the host, open **Settings →
-Connections**, sign in, and enable **T3 Connect** for that environment.
+Connections**, sign in, and enable **T2 Connect** for that environment.
 
 For a command-line host, run:
 
@@ -20,11 +20,11 @@ Follow the sign-in instructions. Setup offers a
 server with `npx @t2code/cli serve`. Saving your sign-in alone does not make the machine
 reachable.
 
-On your other device, sign in to the same T3 Connect account and choose the
+On your other device, sign in to the same T2 Connect account and choose the
 environment. Over SSH, the CLI prints a browser link and accepts the returned
 authorization code, so you do not need to forward an OAuth callback port.
 
-T3 Connect renews access credentials when needed without disconnecting a healthy
+T2 Connect renews access credentials when needed without disconnecting a healthy
 connection. Pull request diffs and provider settings keep working after the
 previous credential expires. A failed renewal affects that request; it does not
 disconnect an otherwise healthy conversation.
@@ -153,8 +153,8 @@ management is available through `npx @t2code/cli auth --help`.
 A session with an open connection stays listed after its access credential
 expires.
 
-To remove an environment from T3 Connect, open your account menu's **T3 Connect**
-page, or **Settings → T3 Connect** on mobile, and choose **Deregister**. This
+To remove an environment from T2 Connect, open your account menu's **T2 Connect**
+page, or **Settings → T2 Connect** on mobile, and choose **Deregister**. This
 revokes its cloud access and frees its host space even when the environment is
 offline or has been wiped.
 
@@ -165,7 +165,7 @@ your login; `t2code connect logout` also clears that login. Background-service
 Treat pairing URLs and authorization codes as passwords. Do not include them in
 screenshots, logs, or bug reports.
 
-## T3 Connect troubleshooting
+## T2 Connect troubleshooting
 
 Run `t2code connect status` on the host to inspect saved authorization and link
 configuration. It is not a live reachability check. If the environment appears
@@ -194,7 +194,7 @@ If a computer should only drive work running elsewhere, turn off its local envir
 desktop app, open **Settings → Connections** and switch off **Local
 environment**. T2 Code restarts without a local server: no local agents or terminals run, WSL
 backends stay off, and other devices can no longer connect to this computer. Your projects,
-history, and saved connections are kept, and you keep working through pairing, T3 Connect, or SSH.
+history, and saved connections are kept, and you keep working through pairing, T2 Connect, or SSH.
 
 Switch **Local environment** back on in the same place to restart with your previous local
 settings.
