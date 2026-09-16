@@ -25,7 +25,9 @@ export function uploadBytes(input: {
         // path already exists.
         reject(
           new Error(
-            xhr.status === 409 ? "A file already exists at the upload path" : `Upload rejected (${xhr.status})`,
+            xhr.status === 409
+              ? "A file already exists at the upload path"
+              : `Upload rejected (${xhr.status})`,
           ),
         );
       }
