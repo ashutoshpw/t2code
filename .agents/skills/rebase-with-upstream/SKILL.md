@@ -30,6 +30,7 @@ This fork tracks `pingdotgg/t3code` (upstream) and publishes as **T2 Code** on `
 1. `git rebase upstream/main`.
 2. Conflict policy — the fork's rebrand wins for user-facing copy, but upstream's structural changes win:
    - If upstream refactored code the rebrand renamed (extracted variables, moved strings), re-apply the rebrand _inside upstream's new shape_. Example: upstream hoisted an `installArgs` array for an npm fallback path; keep the hoist, keep the `@t2code/cli` package name.
+   - Env vars belong to the T2 namespace (`T2CODE_*`/`T2_*`). Upstream's new env reads and writes must be renamed inside upstream's new shape, and upstream's new tests that assert env names flip with them. External inputs keep working through the legacy-name seam (`@t2code/shared/legacyEnv`, its config helpers in `@t2code/shared/legacyEnvConfig`, and baseline-grandfathered fallback lines) — do not re-widen that seam during a rebase; new upstream variables get T2 names only.
    - Watch for upstream swapping npm packages (`t3` vs `@t2code/cli`) and URLs (keep upstream repo URLs like `github.com/pingdotgg/t3code` — those are intentional).
    - Ask the user before adopting any new GitHub Actions entry or edit to an existing one in the fork.
 3. Fold conflict fixes into the fork commit they belong to (`git commit --fixup=<sha>` + `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash upstream/main`) so history stays at the fork's usual 7-ish commits.
@@ -54,3 +55,15 @@ Upstream's new tests hardcode `T3` copy that the rebrand commits predate. These 
 1. Run targeted typecheck for the packages the rebase touched (e.g. `pnpm --filter @t2code/cli run typecheck`).
 2. Update `origin/main` with `git push --force-with-lease origin main` — a rebase always rewrites the fork's main.
 3. Poll CI on the pushed head. When a job fails, check whether it is a new rebrand gap (fix, fixup into the right commit, push) or a masked suite that now runs for the first time (expect a few rounds on busy rebases). Stop when every check is green on the latest commit.
+
+## Report what changed
+
+A finished rebase is not just a green push — close every run with a short summary the user can scan. Keep it to bullets, one line each; cite `file:line` when pointing at a specific decision.
+
+1. **The rebase**: upstream range (old tip → new tip), how many upstream commits were picked up, how many fork commits replayed, and the pushed head SHA.
+2. **Conflict work**: the resolutions that mattered, not every file — structural calls (whose side won and why), rebrands re-applied inside upstream's new shape, and any fork commit that became obsolete, was dropped, or was folded away.
+3. **Rebrand gaps found**: what the audit caught and fixed, plus keeper classifications worth remembering (things that look like gaps but are intentional).
+4. **Verification**: what actually ran — guard, typechecks, test suites — and their results. Note anything that could not be verified locally and is only covered by CI.
+5. **Flags for the user**: pre-existing failures, deliberate deviations from upstream, removed legacy seams, and anything that needs a decision (e.g. a URL a rename would 404).
+
+If a round was aborted, or CI is not green on the latest commit, say so explicitly instead of implying success.
