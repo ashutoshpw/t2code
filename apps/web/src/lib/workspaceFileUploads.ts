@@ -1,12 +1,6 @@
-import {
-  PROJECT_FILE_UPLOAD_MAX_BYTES,
-  type EnvironmentId,
-} from "@t2code/contracts";
+import { PROJECT_FILE_UPLOAD_MAX_BYTES, type EnvironmentId } from "@t2code/contracts";
 import { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
-import {
-  runAtomCommand,
-  squashAtomCommandFailure,
-} from "@t2code/client-runtime/state/runtime";
+import { runAtomCommand, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { projectEnvironment } from "../state/projects";
@@ -46,7 +40,8 @@ export async function uploadWorkspaceFiles(input: {
     input.onProgress({
       files: files.length,
       completedFiles,
-      fraction: totalBytes === 0 ? 1 : loadedBytes.reduce((sum, loaded) => sum + loaded, 0) / totalBytes,
+      fraction:
+        totalBytes === 0 ? 1 : loadedBytes.reduce((sum, loaded) => sum + loaded, 0) / totalBytes,
     });
   };
   emitProgress();
@@ -64,7 +59,9 @@ export async function uploadWorkspaceFiles(input: {
       return fail("The file is empty");
     }
     if (file.size > PROJECT_FILE_UPLOAD_MAX_BYTES) {
-      return fail(`'${file.name}' exceeds the ${Math.floor(PROJECT_FILE_UPLOAD_MAX_BYTES / (1024 * 1024))} MB upload limit`);
+      return fail(
+        `'${file.name}' exceeds the ${Math.floor(PROJECT_FILE_UPLOAD_MAX_BYTES / (1024 * 1024))} MB upload limit`,
+      );
     }
 
     const minted = await runAtomCommand(

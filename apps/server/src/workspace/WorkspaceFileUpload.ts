@@ -57,9 +57,7 @@ const encodeProjectFileUploadClaims = Schema.encodeSync(projectFileUploadClaimsJ
 
 function decodeClaims(encodedPayload: string): ProjectFileUploadClaims | null {
   try {
-    return Option.getOrNull(
-      decodeProjectFileUploadClaims(base64UrlDecodeUtf8(encodedPayload)),
-    );
+    return Option.getOrNull(decodeProjectFileUploadClaims(base64UrlDecodeUtf8(encodedPayload)));
   } catch {
     return null;
   }
@@ -135,30 +133,30 @@ export const issueProjectFileUploadUrl = Effect.fn("WorkspaceFileUpload.issueUrl
   };
 });
 
-export const validateProjectFileUploadToken = Effect.fn(
-  "WorkspaceFileUpload.validateToken",
-)(function* (token: string) {
-  const [encodedPayload, signature, unexpectedSegment] = token.split(".");
-  if (!encodedPayload || !signature || unexpectedSegment) {
-    return null;
-  }
+export const validateProjectFileUploadToken = Effect.fn("WorkspaceFileUpload.validateToken")(
+  function* (token: string) {
+    const [encodedPayload, signature, unexpectedSegment] = token.split(".");
+    if (!encodedPayload || !signature || unexpectedSegment) {
+      return null;
+    }
 
-  const secret = yield* loadSigningSecret.pipe(
-    Effect.tapError((cause) =>
-      Effect.logError("Failed to load the workspace file upload signing key.", { cause }),
-    ),
-    Effect.orElseSucceed(() => null),
-  );
-  if (!secret || !timingSafeEqualBase64Url(signature, signPayload(encodedPayload, secret))) {
-    return null;
-  }
+    const secret = yield* loadSigningSecret.pipe(
+      Effect.tapError((cause) =>
+        Effect.logError("Failed to load the workspace file upload signing key.", { cause }),
+      ),
+      Effect.orElseSucceed(() => null),
+    );
+    if (!secret || !timingSafeEqualBase64Url(signature, signPayload(encodedPayload, secret))) {
+      return null;
+    }
 
-  const claims = decodeClaims(encodedPayload);
-  if (!claims || claims.expiresAt <= (yield* Clock.currentTimeMillis)) {
-    return null;
-  }
-  return claims;
-});
+    const claims = decodeClaims(encodedPayload);
+    if (!claims || claims.expiresAt <= (yield* Clock.currentTimeMillis)) {
+      return null;
+    }
+    return claims;
+  },
+);
 
 export type StoreProjectFileUploadResult =
   | { readonly ok: true }
@@ -178,16 +176,21 @@ export const storeProjectFileUpload = Effect.fn("WorkspaceFileUpload.store")(fun
   }
 
   const workspacePaths = yield* WorkspacePaths.WorkspacePaths;
-  const target = yield* workspacePaths.resolveRelativePathWithinRoot({
-    workspaceRoot: claims.cwd,
-    relativePath: claims.relativePath,
-  }).pipe(
-    Effect.mapError(() => ({
-      ok: false,
-      status: 400,
-      detail: "Upload path resolves outside the workspace root.",
-    }) satisfies StoreProjectFileUploadResult),
-  );
+  const target = yield* workspacePaths
+    .resolveRelativePathWithinRoot({
+      workspaceRoot: claims.cwd,
+      relativePath: claims.relativePath,
+    })
+    .pipe(
+      Effect.mapError(
+        () =>
+          ({
+            ok: false,
+            status: 400,
+            detail: "Upload path resolves outside the workspace root.",
+          }) satisfies StoreProjectFileUploadResult,
+      ),
+    );
 
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
