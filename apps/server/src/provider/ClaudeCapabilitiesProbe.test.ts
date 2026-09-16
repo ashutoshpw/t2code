@@ -269,7 +269,7 @@ it.layer(NodeServices.layer)("Claude capability probe SDK boundary", (it) => {
         decodeClaudeSettings({ binaryPath: executablePath }),
         {
           ...process.env,
-          T3_PROBE_INVOCATION_PATH: invocationPath,
+          T2_PROBE_INVOCATION_PATH: invocationPath,
           ENABLE_CLAUDEAI_MCP_SERVERS: "true",
         },
         workspaceCwd,

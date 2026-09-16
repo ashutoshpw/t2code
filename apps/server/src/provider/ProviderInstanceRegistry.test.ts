@@ -389,7 +389,7 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
           enabled: true,
           environment: [
             {
-              name: "T3_CODEX_COLLAB_SCRIPT",
+              name: "T2_CODEX_COLLAB_SCRIPT",
               value: fixtures.codexScriptPath,
               sensitive: false,
             },

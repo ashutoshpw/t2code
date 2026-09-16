@@ -38,7 +38,7 @@ const layerEnvironment = (input: {
         NodeServices.layer,
         DesktopConfig.layerTest({
           T3CODE_HOME: input.baseDir,
-          T3CODE_MODE: "desktop",
+          T2CODE_MODE: "desktop",
         }),
       ),
     ),

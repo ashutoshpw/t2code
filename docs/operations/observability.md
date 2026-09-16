@@ -72,9 +72,9 @@ it to measure background work or to compare two builds.
 t3 trace summary --since 30m --limit 40
 ```
 
-It reads `T3CODE_TRACE_FILE` if set, else `<home>/userdata/logs/server.trace.ndjson` for
-`--base-dir` or `T3CODE_HOME`, plus the `T3CODE_TRACE_MAX_FILES` rotated backups. For a dev run or
-a copied file, set `T3CODE_TRACE_FILE`. `--since 30m` keeps spans that ended in the last 30
+It reads `T2CODE_TRACE_FILE` if set, else `<home>/userdata/logs/server.trace.ndjson` for
+`--base-dir` or `T2CODE_HOME`, plus the `T2CODE_TRACE_MAX_FILES` rotated backups. For a dev run or
+a copied file, set `T2CODE_TRACE_FILE`. `--since 30m` keeps spans that ended in the last 30
 minutes. The rate is per minute between the first and last span end.
 
 ### Metrics
@@ -92,7 +92,7 @@ If OTLP is not configured, metrics still exist in-process, but you will not have
 `apps/server/src/observability/EventLoopMonitor.ts` samples the server's event loop every 30 s. When
 the loop stalled for more than 2 s since the previous sample, it records a root
 `server.eventLoop.stall` span with a warning. The span has trace level `Warn`, so it stays when
-`T3CODE_TRACE_MIN_LEVEL` is `Warn`. The warning shows in Settings > Diagnostics unless OTLP logs are
+`T2CODE_TRACE_MIN_LEVEL` is `Warn`. The warning shows in Settings > Diagnostics unless OTLP logs are
 on. The span time is when the sample ran, not when the stall happened.
 
 Some delay is not recorded:
@@ -182,8 +182,8 @@ export OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=development
 Optional:
 
 ```bash
-export T3CODE_TRACE_MIN_LEVEL=Info
-export T3CODE_TRACE_TIMING_ENABLED=true
+export T2CODE_TRACE_MIN_LEVEL=Info
+export T2CODE_TRACE_TIMING_ENABLED=true
 ```
 
 #### 3. Launch the app from that same shell
@@ -216,7 +216,6 @@ macOS app bundle example:
 T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
 T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
 T3CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs \
-T3CODE_OTLP_SERVICE_NAME=t3-desktop \
 "/Applications/T2 Code.app/Contents/MacOS/T2 Code"
 ```
 
@@ -245,7 +244,7 @@ Resolve the path for the launch mode once. Production and explicitly configured 
 state under the base directory's `userdata` folder:
 
 ```bash
-TRACE_FILE="${T3CODE_HOME:-$HOME/.t3}/userdata/logs/server.trace.ndjson"
+TRACE_FILE="${T2CODE_HOME:-$HOME/.t3}/userdata/logs/server.trace.ndjson"
 ```
 
 A dev server started from a linked worktree defaults to that worktree's local home:
@@ -577,12 +576,12 @@ to the backend alone.
 
 Local trace file:
 
-- `T3CODE_TRACE_FILE`: override trace file path
-- `T3CODE_TRACE_MAX_BYTES`: per-file rotation size, default `10485760`
-- `T3CODE_TRACE_MAX_FILES`: rotated file count, default `10`
-- `T3CODE_TRACE_BATCH_WINDOW_MS`: flush window, default `1000`
-- `T3CODE_TRACE_MIN_LEVEL`: minimum trace level, default `Info`
-- `T3CODE_TRACE_TIMING_ENABLED`: enable timing metadata, default `true`
+- `T2CODE_TRACE_FILE`: override trace file path
+- `T2CODE_TRACE_MAX_BYTES`: per-file rotation size, default `10485760`
+- `T2CODE_TRACE_MAX_FILES`: rotated file count, default `10`
+- `T2CODE_TRACE_BATCH_WINDOW_MS`: flush window, default `1000`
+- `T2CODE_TRACE_MIN_LEVEL`: minimum trace level, default `Info`
+- `T2CODE_TRACE_TIMING_ENABLED`: enable timing metadata, default `true`
 
 OTLP export:
 
@@ -665,7 +664,7 @@ handler exits on `SIGUSR2`. After a crash the file can keep a stale pid that now
 different process, so check the pid first.
 
 ```bash
-pid="$(jq .pid "${T3CODE_HOME:-$HOME/.t3}/userdata/server-runtime.json")"
+pid="$(jq .pid "${T2CODE_HOME:-$HOME/.t3}/userdata/server-runtime.json")"
 ps -p "$pid" -o command=
 ```
 
