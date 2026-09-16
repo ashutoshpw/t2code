@@ -9,6 +9,7 @@ import {
   updateFeedFileName,
   type CliReleaseChannel,
 } from "@t2code/shared/cliRelease";
+import { envWithLegacyFallback } from "@t2code/shared/legacyEnv";
 import * as Console from "effect/Console";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -224,7 +225,9 @@ export const findWindowsShim = Effect.fn("cli.update.find_windows_shim")(functio
   const path = yield* Path.Path;
   const environment = yield* HostProcess.Environment;
   const candidates = [
-    ...(environment["T3CODE_INSTALL_BIN_DIR"] ? [environment["T3CODE_INSTALL_BIN_DIR"]] : []),
+    ...(envWithLegacyFallback(environment, "T2CODE_INSTALL_BIN_DIR")
+      ? [envWithLegacyFallback(environment, "T2CODE_INSTALL_BIN_DIR") as string]
+      : []),
     ...(environment["PATH"] ?? environment["Path"] ?? "").split(";"),
   ].filter((entry) => entry.trim().length > 0);
   for (const directory of candidates) {
@@ -611,11 +614,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
           ? `the version before ${serviceVersion}`
           : serviceVersion;
     yield* Console.log(
-<<<<<<< HEAD
-      `  Background service still running ${running}. Run \`t3 service restart\` when you are ready to switch it to ${targetVersion}.`,
-=======
       `  Background service still running ${serviceVersion ?? "an unknown version"}. Run \`t2code service restart\` when you are ready to switch it to ${targetVersion}.`,
->>>>>>> bf374d3c8d (rebrand: sweep remaining T3 Code copy to T2 Code)
     );
   } else if (status.installed && !servesThisHome) {
     yield* Console.log(
