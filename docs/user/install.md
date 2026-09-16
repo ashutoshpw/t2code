@@ -122,6 +122,7 @@ Install T2 Code from the
 [Google Play](https://play.google.com/store/apps/details?id=codes.t2.mobile).
 The phone connects to a server on another machine. Follow
 [remote access](./remote-access.md) to link it through T2 Connect or a pairing URL.
+<<<<<<< HEAD
 
 Nightly builds need the beta app. The store apps cannot connect to them. A Nightly build also
 shows these links as QR codes in **Settings → General → Mobile app**.
@@ -130,6 +131,8 @@ shows these links as QR codes in **Settings → General → Mobile app**.
 - **Android:** join the [beta group](https://groups.google.com/g/t3-code-v2-beta). With the same
   Google account, open the [Google Play testing page](https://play.google.com/apps/testing/codes.t2.mobile)
   and become a tester.
+=======
+>>>>>>> 3948fa1d2 (fix(rebrand): rebrand T3 Connect display copy to T2 Connect)
 
 If the app crashes during launch, open Settings → Diagnostics on the next launch
 that succeeds. It lists startup crashes from the last 7 days with the error and

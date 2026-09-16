@@ -79,6 +79,14 @@ const FORBIDDEN_FILE_RULES: ReadonlyMap<string, Rule> = new Map([
 
 const RULES: Rule[] = [
   {
+    id: "t3-connect-copy",
+    hint: 'client and CLI copy uses "T2 Connect"; preserve compatibility identifiers separately',
+    violates: (file, line) =>
+      /^(?:apps\/(?:web|mobile|server)\/|packages\/(?:client-runtime|shared)\/|docs\/user\/)/.test(
+        file,
+      ) && /\bT3\s+Connect\b/.test(line),
+  },
+  {
     id: "t3-wordmark-ref",
     hint: 'the retired wordmark component is "T2Wordmark"; do not reintroduce "T3Wordmark"',
     violates: (_file, line) => /\bT3Wordmark\b/.test(line),
