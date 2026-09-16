@@ -46,7 +46,7 @@ describe("AcpSessionRuntime", () => {
             ? {
                 spawn: {
                   ...mockRuntimeOptions.spawn,
-                  env: { T3_ACP_SESSION_LIFECYCLE: "1" },
+                  env: { T2_ACP_SESSION_LIFECYCLE: "1" },
                 },
                 resumeSessionId: "mock-session-1",
                 resumeMethod: "resume" as const,
@@ -118,7 +118,7 @@ describe("AcpSessionRuntime", () => {
         ...mockRuntimeOptions,
         spawn: {
           ...mockRuntimeOptions.spawn,
-          env: { T3_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1" },
+          env: { T2_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1" },
         },
         cancelBehavior: "wait-for-prompt",
         requestLogger: (event) =>
@@ -258,7 +258,7 @@ describe("AcpSessionRuntime", () => {
         ...mockRuntimeOptions,
         spawn: {
           ...mockRuntimeOptions.spawn,
-          env: { T3_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1" },
+          env: { T2_ACP_COMPLETE_FIRST_PROMPT_ON_CANCEL: "1" },
         },
         cancelBehavior: "wait-for-prompt",
       });
@@ -299,7 +299,7 @@ describe("AcpSessionRuntime", () => {
       });
       const runtime = yield* AcpSessionRuntime.make({
         ...mockRuntimeOptions,
-        spawn: { ...mockRuntimeOptions.spawn, env: { T3_ACP_FLOOD_STDERR: "1" } },
+        spawn: { ...mockRuntimeOptions.spawn, env: { T2_ACP_FLOOD_STDERR: "1" } },
         onStderr: () => Effect.fail(failure),
       });
       expect(yield* runtime.start().pipe(Effect.flip)).toBe(failure);
@@ -368,7 +368,7 @@ describe("AcpSessionRuntime", () => {
         yield* Effect.gen(function* () {
           const runtime = yield* AcpSessionRuntime.make({
             ...mockRuntimeOptions,
-            spawn: { ...mockRuntimeOptions.spawn, env: { T3_ACP_FLOOD_STDERR: "1" } },
+            spawn: { ...mockRuntimeOptions.spawn, env: { T2_ACP_FLOOD_STDERR: "1" } },
             ...(logStderr
               ? {
                   onStderr: (text: string) =>
@@ -421,14 +421,14 @@ describe("AcpSessionRuntime", () => {
     Effect.gen(function* () {
       yield* Effect.acquireRelease(
         Effect.sync(() => {
-          const previous = process.env.T3_ACP_RUNTIME_AMBIENT;
-          process.env.T3_ACP_RUNTIME_AMBIENT = "sentinel";
+          const previous = process.env.T2_ACP_RUNTIME_AMBIENT;
+          process.env.T2_ACP_RUNTIME_AMBIENT = "sentinel";
           return previous;
         }),
         (previous) =>
           Effect.sync(() => {
-            if (previous === undefined) delete process.env.T3_ACP_RUNTIME_AMBIENT;
-            else process.env.T3_ACP_RUNTIME_AMBIENT = previous;
+            if (previous === undefined) delete process.env.T2_ACP_RUNTIME_AMBIENT;
+            else process.env.T2_ACP_RUNTIME_AMBIENT = previous;
           }),
       );
       const runtime = yield* AcpSessionRuntime.make({
@@ -437,7 +437,7 @@ describe("AcpSessionRuntime", () => {
           command: process.execPath,
           args: mockAgentArgs,
           extendEnv: false,
-          env: { T3_ACP_RUNTIME_EXPLICIT: "kept" },
+          env: { T2_ACP_RUNTIME_EXPLICIT: "kept" },
         },
       });
       yield* runtime.initialize();
@@ -477,7 +477,7 @@ describe("AcpSessionRuntime", () => {
           spawn: {
             command: mockAgentCommand,
             args: mockAgentArgs,
-            env: { T3_ACP_MCP_ACP: "1" },
+            env: { T2_ACP_MCP_ACP: "1" },
           },
           cwd: process.cwd(),
           clientInfo: { name: "t3-test", version: "0.0.0" },
@@ -531,11 +531,42 @@ describe("AcpSessionRuntime", () => {
           spawn: {
             command: mockAgentCommand,
             args: mockAgentArgs,
-            env: { T3_ACP_V2_MANAGEMENT: "1" },
+            env: { T2_ACP_V2_MANAGEMENT: "1" },
           },
           cwd: process.cwd(),
           clientInfo: { name: "t3-test", version: "0.0.0" },
           authMethodId: "test",
+          requestLogger: (event) =>
+            Effect.sync(() => {
+              requestEvents.push(event);
+            }),
+        }),
+      ),
+      Effect.scoped,
+      Effect.provide(NodeServices.layer),
+    );
+  });
+
+  it.effect("does not authenticate when an advertised method is not required", () => {
+    const requestEvents: Array<AcpSessionRuntime.AcpSessionRequestLogEvent> = [];
+    return Effect.gen(function* () {
+      const runtime = yield* AcpSessionRuntime.AcpSessionRuntime;
+      yield* runtime.start();
+
+      expect(
+        requestEvents.filter((event) => event.status === "started").map((event) => event.method),
+      ).toEqual(["initialize", "session/new"]);
+    }).pipe(
+      Effect.provide(
+        AcpSessionRuntime.layer({
+          authMethodId: "test",
+          spawn: {
+            command: mockAgentCommand,
+            args: mockAgentArgs,
+            env: { T2_ACP_AUTH_METHOD_ID: "test" },
+          },
+          cwd: process.cwd(),
+          clientInfo: { name: "t3-test", version: "0.0.0" },
           requestLogger: (event) =>
             Effect.sync(() => {
               requestEvents.push(event);
@@ -574,8 +605,8 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_AUTH_METHOD_ID: "test",
-              T3_ACP_REQUIRE_AUTH: "1",
+              T2_ACP_AUTH_METHOD_ID: "test",
+              T2_ACP_REQUIRE_AUTH: "1",
             },
           },
           cwd: process.cwd(),
@@ -612,8 +643,8 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_AUTH_METHOD_ID: "test",
-              T3_ACP_REQUIRE_AUTH: "1",
+              T2_ACP_AUTH_METHOD_ID: "test",
+              T2_ACP_REQUIRE_AUTH: "1",
             },
           },
           cwd: process.cwd(),
@@ -758,7 +789,7 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_EMIT_FOREIGN_SESSION_UPDATES: "1",
+              T2_ACP_EMIT_FOREIGN_SESSION_UPDATES: "1",
             },
           },
           cwd: process.cwd(),
@@ -770,6 +801,100 @@ describe("AcpSessionRuntime", () => {
       Effect.provide(NodeServices.layer),
     ),
   );
+
+  it.effect("supports successive standard ACP prompts", () =>
+    Effect.gen(function* () {
+      const runtime = yield* AcpSessionRuntime.AcpSessionRuntime;
+      yield* runtime.start();
+
+      const firstPromptResult = yield* runtime.prompt({
+        prompt: [{ type: "text", text: "first" }],
+      });
+      const secondPromptResult = yield* runtime.prompt({
+        prompt: [{ type: "text", text: "second" }],
+      });
+
+      expect(firstPromptResult).toMatchObject({ stopReason: "end_turn" });
+      expect(secondPromptResult).toMatchObject({ stopReason: "end_turn" });
+    }).pipe(
+      Effect.provide(
+        AcpSessionRuntime.layer({
+          spawn: {
+            command: mockAgentCommand,
+            args: mockAgentArgs,
+          },
+          cwd: process.cwd(),
+          clientInfo: { name: "t3-test", version: "0.0.0" },
+          authMethodId: "test",
+        }),
+      ),
+      Effect.scoped,
+      Effect.provide(NodeServices.layer),
+    ),
+  );
+
+  it.effect("releases a fully silent prompt and forwards configured cancel metadata", () => {
+    const protocolEvents: Array<EffectAcpProtocol.AcpProtocolLogEvent> = [];
+    return Effect.gen(function* () {
+      const runtime = yield* AcpSessionRuntime.AcpSessionRuntime;
+      yield* runtime.start();
+
+      const promptFiber = yield* runtime
+        .prompt({
+          prompt: [{ type: "text", text: "hang forever" }],
+        })
+        .pipe(Effect.forkChild({ startImmediately: true }));
+
+      yield* TestClock.adjust("500 millis");
+      yield* runtime.cancel;
+      yield* Effect.yieldNow;
+      yield* Effect.yieldNow;
+
+      expect(
+        protocolEvents.some(
+          (event) =>
+            event.direction === "outgoing" &&
+            event.stage === "raw" &&
+            typeof event.payload === "string" &&
+            event.payload.includes('"method":"session/cancel"') &&
+            event.payload.includes('"cancelTrigger":"ctrl_c"'),
+        ),
+      ).toBe(true);
+
+      const firstPromptResult = yield* Fiber.join(promptFiber);
+      expect(firstPromptResult).toMatchObject({ stopReason: "cancelled" });
+
+      const secondPromptResult = yield* runtime.prompt({
+        prompt: [{ type: "text", text: "second" }],
+      });
+      expect(secondPromptResult).toMatchObject({ stopReason: "end_turn" });
+    }).pipe(
+      Effect.provide(
+        AcpSessionRuntime.layer({
+          spawn: {
+            command: mockAgentCommand,
+            args: mockAgentArgs,
+            env: {
+              T2_ACP_HANG_FIRST_PROMPT_FOREVER: "1",
+            },
+          },
+          cwd: process.cwd(),
+          clientInfo: { name: "t3-test", version: "0.0.0" },
+          authMethodId: "test",
+          cancelMeta: { cancelTrigger: "ctrl_c" },
+          protocolLogging: {
+            logOutgoing: true,
+            logger: (event) =>
+              Effect.sync(() => {
+                protocolEvents.push(event);
+              }),
+          },
+        }),
+      ),
+      Effect.scoped,
+      Effect.provide(NodeServices.layer),
+    );
+  });
 
   it.effect("segments assistant text around ACP tool calls", () =>
     Effect.gen(function* () {
@@ -819,7 +944,7 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS: "1",
+              T2_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS: "1",
             },
           },
           cwd: process.cwd(),
@@ -866,7 +991,7 @@ describe("AcpSessionRuntime", () => {
           spawn: {
             command: mockAgentCommand,
             args: mockAgentArgs,
-            env: { T3_ACP_EMIT_BACKGROUND_TOOL_DURING_ANSWER: "1" },
+            env: { T2_ACP_EMIT_BACKGROUND_TOOL_DURING_ANSWER: "1" },
           },
           cwd: process.cwd(),
           clientInfo: { name: "t3-test", version: "0.0.0" },
@@ -912,7 +1037,7 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_EMIT_GENERIC_TOOL_PLACEHOLDERS: "1",
+              T2_ACP_EMIT_GENERIC_TOOL_PLACEHOLDERS: "1",
             },
           },
           cwd: process.cwd(),
@@ -974,8 +1099,39 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_SESSION_LIFECYCLE: "1",
+              T2_ACP_SESSION_LIFECYCLE: "1",
             },
+          },
+          cwd: process.cwd(),
+          clientInfo: { name: "t3-test", version: "0.0.0" },
+          requestLogger: (event) =>
+            Effect.sync(() => {
+              requestEvents.push(event);
+            }),
+        }),
+      ),
+      Effect.scoped,
+      Effect.provide(NodeServices.layer),
+    );
+  });
+
+  it.effect("lists sessions without creating a disposable session", () => {
+    const requestEvents: Array<AcpSessionRuntime.AcpSessionRequestLogEvent> = [];
+    return Effect.gen(function* () {
+      const runtime = yield* AcpSessionRuntime.AcpSessionRuntime;
+      const listed = yield* runtime.listSessions();
+
+      expect(listed.sessions).toHaveLength(1);
+      expect(
+        requestEvents.filter((event) => event.status === "started").map((event) => event.method),
+      ).toEqual(["initialize", "session/list"]);
+    }).pipe(
+      Effect.provide(
+        AcpSessionRuntime.layer({
+          spawn: {
+            command: mockAgentCommand,
+            args: mockAgentArgs,
+            env: { T2_ACP_SESSION_LIFECYCLE: "1" },
           },
           cwd: process.cwd(),
           clientInfo: { name: "t3-test", version: "0.0.0" },
@@ -1025,8 +1181,8 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_REQUIRE_AUTH: "1",
-              T3_ACP_SESSION_LIFECYCLE: "1",
+              T2_ACP_REQUIRE_AUTH: "1",
+              T2_ACP_SESSION_LIFECYCLE: "1",
             },
           },
           cwd: process.cwd(),
@@ -1054,7 +1210,7 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_FAIL_LOAD_SESSION: "1",
+              T2_ACP_FAIL_LOAD_SESSION: "1",
             },
           },
           cwd: process.cwd(),
@@ -1086,7 +1242,7 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_FAIL_LOAD_SESSION_AFTER_CONFIG_REPLAY: "1",
+              T2_ACP_FAIL_LOAD_SESSION_AFTER_CONFIG_REPLAY: "1",
             },
           },
           cwd: process.cwd(),
@@ -1122,7 +1278,7 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_EMIT_LOAD_REPLAY: "1",
+              T2_ACP_EMIT_LOAD_REPLAY: "1",
             },
           },
           cwd: process.cwd(),
@@ -1132,6 +1288,129 @@ describe("AcpSessionRuntime", () => {
       ),
       Effect.scoped,
       Effect.provide(NodeServices.layer),
+    ),
+  );
+
+  it.effect("keeps active-session updates while loading a different session", () =>
+    Effect.gen(function* () {
+      const loadStarted = yield* Deferred.make<void>();
+      const runtime = yield* AcpSessionRuntime.make({
+        authMethodId: "test",
+        spawn: {
+          command: mockAgentCommand,
+          args: mockAgentArgs,
+          env: {
+            T2_ACP_DELAY_LOAD_SESSION_AFTER_REPLAY: "1",
+            T2_ACP_LOAD_SESSION_DELAY_MS: "250",
+          },
+        },
+        cwd: process.cwd(),
+        sessionLoadTimeout: "2 seconds",
+        clientInfo: { name: "t3-test", version: "0.0.0" },
+        requestLogger: (event) =>
+          event.method === "session/load" && event.status === "started"
+            ? Deferred.succeed(loadStarted, undefined).pipe(Effect.asVoid)
+            : Effect.void,
+      });
+      yield* runtime.start();
+
+      const eventsFiber = yield* Stream.runCollect(Stream.take(runtime.getEvents(), 4)).pipe(
+        Effect.forkChild({ startImmediately: true }),
+      );
+      const loadFiber = yield* runtime
+        .loadSession("mock-session-2")
+        .pipe(Effect.forkChild({ startImmediately: true }));
+      yield* Deferred.await(loadStarted);
+
+      yield* runtime.prompt({
+        prompt: [{ type: "text", text: "active session prompt" }],
+      });
+      const events = Array.from(yield* Fiber.join(eventsFiber).pipe(Effect.timeout("2 seconds")));
+      expect(events.map((event) => event._tag)).toEqual([
+        "PlanUpdated",
+        "AssistantItemStarted",
+        "ContentDelta",
+        "AssistantItemCompleted",
+      ]);
+      expect(
+        events.some((event) => event._tag === "ContentDelta" && event.text === "hello from mock"),
+      ).toBe(true);
+
+      const loaded = yield* Fiber.join(loadFiber).pipe(Effect.timeout("2 seconds"));
+      expect(loaded.sessionId).toBe("mock-session-2");
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer), TestClock.withLive),
+  );
+
+  it.effect("completes session/load after replay becomes idle while its RPC stays pending", () =>
+    Effect.gen(function* () {
+      const runtime = yield* AcpSessionRuntime.AcpSessionRuntime;
+      const started = yield* runtime.start().pipe(Effect.timeout("2 seconds"));
+
+      expect(started.sessionId).toBe("mock-session-1");
+      expect(started.sessionSetupResult._meta).toMatchObject({
+        t3SessionLoadReady: "replay_idle",
+      });
+
+      const unexpectedReplayEvent = yield* Stream.runHead(runtime.getEvents()).pipe(
+        Effect.timeoutOption("100 millis"),
+      );
+      expect(Option.isNone(unexpectedReplayEvent)).toBe(true);
+    }).pipe(
+      Effect.provide(
+        AcpSessionRuntime.layer({
+          authMethodId: "test",
+          spawn: {
+            command: mockAgentCommand,
+            args: mockAgentArgs,
+            env: {
+              T2_ACP_HANG_LOAD_SESSION_AFTER_REPLAY: "1",
+              T2_ACP_LOAD_SESSION_DELAY_MS: "10000",
+            },
+          },
+          cwd: process.cwd(),
+          resumeSessionId: "mock-session-1",
+          sessionLoadReplayIdleGap: "50 millis",
+          sessionLoadTimeout: "1 second",
+          clientInfo: { name: "t3-test", version: "0.0.0" },
+        }),
+      ),
+      Effect.scoped,
+      Effect.provide(NodeServices.layer),
+      TestClock.withLive,
+    ),
+  );
+
+  it.effect("completes ad-hoc loadSession after replay becomes idle while RPC stays pending", () =>
+    Effect.gen(function* () {
+      const runtime = yield* AcpSessionRuntime.AcpSessionRuntime;
+      yield* runtime.start();
+      const loaded = yield* runtime.loadSession("mock-session-1").pipe(Effect.timeout("2 seconds"));
+
+      expect(loaded.sessionId).toBe("mock-session-1");
+      expect(loaded.sessionSetupResult._meta).toMatchObject({
+        t3SessionLoadReady: "replay_idle",
+      });
+    }).pipe(
+      Effect.provide(
+        AcpSessionRuntime.layer({
+          authMethodId: "test",
+          spawn: {
+            command: mockAgentCommand,
+            args: mockAgentArgs,
+            env: {
+              T2_ACP_HANG_LOAD_SESSION_AFTER_REPLAY: "1",
+              T2_ACP_LOAD_SESSION_DELAY_MS: "10000",
+            },
+          },
+          cwd: process.cwd(),
+          sessionLoadReplayIdleGap: "50 millis",
+          sessionLoadTimeout: "1 second",
+          clientInfo: { name: "t3-test", version: "0.0.0" },
+        }),
+      ),
+      Effect.scoped,
+      Effect.provide(NodeServices.layer),
+      TestClock.withLive,
     ),
   );
 
@@ -1172,7 +1451,7 @@ describe("AcpSessionRuntime", () => {
             command: mockAgentCommand,
             args: mockAgentArgs,
             env: {
-              T3_ACP_REQUEST_LOG_PATH: requestLogPath,
+              T2_ACP_REQUEST_LOG_PATH: requestLogPath,
             },
           },
           cwd: process.cwd(),
