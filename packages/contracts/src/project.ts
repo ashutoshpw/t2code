@@ -281,6 +281,68 @@ export const ProjectWriteFileResult = Schema.Struct({
 });
 export type ProjectWriteFileResult = typeof ProjectWriteFileResult.Type;
 
+export const PROJECT_FILE_UPLOAD_URL_TTL_MS = 10 * 60_000;
+/**
+ * Matches the chat attachment cap: it stays under common tunnel upload limits
+ * and keeps a bad drag from streaming unbounded bytes to the workspace.
+ */
+export const PROJECT_FILE_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Mints a one-shot signed upload URL so a client can POST workspace file bytes
+ * to the environment host over HTTP (WS carries no body streams). The URL is
+ * the only transport for the bytes; this RPC itself never sees file contents.
+ */
+export const ProjectFileCreateUploadUrlInput = Schema.Struct({
+  cwd: TrimmedNonEmptyString,
+  relativePath: TrimmedNonEmptyString.check(Schema.isMaxLength(PROJECT_WRITE_FILE_PATH_MAX_LENGTH)),
+  sizeBytes: NonNegativeInt.check(
+    Schema.isGreaterThanOrEqualTo(1),
+    Schema.isLessThanOrEqualTo(PROJECT_FILE_UPLOAD_MAX_BYTES),
+  ),
+});
+export type ProjectFileCreateUploadUrlInput = typeof ProjectFileCreateUploadUrlInput.Type;
+
+export const ProjectFileCreateUploadUrlResult = Schema.Struct({
+  relativeUrl: TrimmedNonEmptyString.check(Schema.isMaxLength(4096)),
+  expiresAt: Schema.Number,
+});
+export type ProjectFileCreateUploadUrlResult = typeof ProjectFileCreateUploadUrlResult.Type;
+
+export class ProjectFileUploadError extends Schema.TaggedError<ProjectFileUploadError>()(
+  "ProjectFileUploadError",
+  {
+    cwd: Schema.optional(TrimmedNonEmptyString),
+    relativePath: Schema.optional(TrimmedNonEmptyString),
+    failure: Schema.optional(
+      Schema.Literals([
+        "workspace_path_outside_root",
+        "already_exists",
+        "signing_key",
+        "operation_failed",
+      ]),
+    ),
+    message: TrimmedNonEmptyString,
+    cause: Schema.optional(Schema.Defect()),
+  },
+) {
+  // @effect-diagnostics-next-line overriddenSchemaConstructor:off
+  constructor(props: {
+    readonly cwd?: string;
+    readonly relativePath?: string;
+    readonly failure?: ProjectFileUploadError["failure"];
+    readonly message?: string;
+    readonly cause?: unknown;
+  }) {
+    super({
+      ...props,
+      message:
+        decodedProjectErrorMessage(props) ??
+        `Failed to prepare the workspace file upload for '${props.relativePath}' in '${props.cwd}'.`,
+    } as any);
+  }
+}
+
 export class ProjectWriteFileError extends Schema.TaggedError<ProjectWriteFileError>()(
   "ProjectWriteFileError",
   {
