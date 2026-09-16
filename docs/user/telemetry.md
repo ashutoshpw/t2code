@@ -12,7 +12,7 @@ are sent only when they appear in a provider's public model list.
 Events do not include prompts, responses, file contents, authentication tokens, conversation IDs,
 raw provider events, or child-agent output.
 
-T3 Code also sends relay connection traces to Axiom to diagnose T3 Connect connectivity.
+T2 Code also sends relay connection traces to Axiom to diagnose T2 Connect connectivity.
 
 To disable product events and relay tracing, set `T3CODE_TELEMETRY_ENABLED=false` in the server's
 environment before starting it. Relay tracing also stops when `T3CODE_OTEL_SDK_DISABLED` or
