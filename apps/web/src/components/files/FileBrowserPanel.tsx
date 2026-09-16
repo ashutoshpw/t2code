@@ -169,6 +169,7 @@ export default function FileBrowserPanel({
   const fileDropHandlers = makeWorkspaceFileDropHandlers({
     setDragActive: setIsFileDragActive,
     addFiles: startFileUpload,
+    addFolders: () => {},
   });
   const entries = useMemo(() => {
     const result = new Map(directoryEntries.map((entry) => [entry.path, entry]));

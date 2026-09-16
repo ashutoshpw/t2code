@@ -34,7 +34,7 @@ export async function uploadWorkspaceFiles(input: {
   }
 
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-  const loadedBytes = new Array<number>(files.length).fill(0);
+  const loadedBytes = Array.from<number>({ length: files.length }).fill(0);
   let completedFiles = 0;
   const emitProgress = () => {
     input.onProgress({
@@ -79,13 +79,16 @@ export async function uploadWorkspaceFiles(input: {
     }
 
     const connection = readPreparedConnection(input.environmentId);
-    if (!connection) {
+    const url = connection
+      ? resolveAssetUrl(connection.httpBaseUrl, minted.value.relativeUrl)
+      : null;
+    if (!url) {
       return fail("Not connected");
     }
 
     try {
       await uploadBytes({
-        url: resolveAssetUrl(connection.httpBaseUrl, minted.value.relativeUrl),
+        url,
         file,
         mimeType: file.type || "application/octet-stream",
         onProgress: (fraction) => {
