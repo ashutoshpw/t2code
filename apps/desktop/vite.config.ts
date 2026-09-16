@@ -16,7 +16,7 @@ const isMainProcessExternal = (id: string) =>
 const shouldLaunchElectronAfterPack = process.env.T2CODE_DESKTOP_DEV === "1";
 const publicConfigDefine = {
   __T2CODE_BUILD_CLERK_PUBLISHABLE_KEY__: JSON.stringify(
-    repoEnv.T3CODE_CLERK_PUBLISHABLE_KEY?.trim() ?? "",
+    (repoEnv.T2CODE_CLERK_PUBLISHABLE_KEY ?? repoEnv.T3CODE_CLERK_PUBLISHABLE_KEY)?.trim() ?? "",
   ),
 };
 
