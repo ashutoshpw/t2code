@@ -3,13 +3,13 @@ import { createDebugLogger } from "../../lib/debugLog";
 /**
  * Debug logging for the mobile terminal pipeline. Prefix: `[t3-terminal]`.
  *
- * Enabled when `__DEV__` is true, or set `globalThis.__T3_TERMINAL_DEBUG__`
+ * Enabled when `__DEV__` is true, or set `globalThis.__T2_TERMINAL_DEBUG__`
  * (or the shared `globalThis.__T3_DEBUG__` filter) in a JS debugger / Metro
  * console to trace release/TestFlight builds.
  */
 const logger = createDebugLogger("terminal", {
   enabledInDev: true,
-  legacyGlobalFlag: "__T3_TERMINAL_DEBUG__",
+  legacyGlobalFlag: "__T2_TERMINAL_DEBUG__",
 });
 
 export function isTerminalDebugEnabled(): boolean {
