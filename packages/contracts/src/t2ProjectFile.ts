@@ -95,7 +95,7 @@ export const T2ProjectFile = Schema.Struct({
   worktreeSubmodules: Schema.optionalKey(
     WorktreeSubmodules.annotate({
       description:
-        'How new worktrees populate git submodules: "recursive" (the default) initializes nested submodules too, "top-level" initializes only those declared by this repository, and "none" leaves every submodule empty for a setup script to handle. A project or environment setting in T3 Code overrides this.',
+        'How new worktrees populate git submodules: "recursive" (the default) initializes nested submodules too, "top-level" initializes only those declared by this repository, and "none" leaves every submodule empty for a setup script to handle. A project or environment setting in T2 Code overrides this.',
     }),
   ),
   scripts: Schema.optionalKey(
@@ -108,7 +108,7 @@ export const T2ProjectFile = Schema.Struct({
 }).annotate({
   title: "T2 project file",
   description:
-    "Checked-in project configuration for T2 Code (t2.json at the repository root). See https://t3.codes for documentation.",
+    "Checked-in project configuration for T2 Code (t2.json at the repository root). See https://t2.codes for documentation.",
 });
 export type T2ProjectFile = typeof T2ProjectFile.Type;
 
