@@ -35,6 +35,58 @@ describe("check-rebrand", () => {
     expect(violations.map((v) => v.rule.id)).toEqual(Array(4).fill("t3-connect-copy"));
   });
 
+  it("rejects Connect copy outside the client surfaces too", () => {
+    const violations = findViolations(
+      [
+        { file: "packages/contracts/src/relay.ts", line: "// T3 Connect relay link" },
+        { file: "AGENTS.md", line: "leaning in fully with T3 Connect" },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3-connect-copy", "t3-connect-copy"]);
+  });
+
+  it("flags the invented @t3 package scope", () => {
+    const violations = findViolations(
+      [{ file: "apps/web/src/example.ts", line: `import { x } from "@t3/util";` }],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3-scope"]);
+  });
+
+  it("flags T3-named paths once per file, including binary assets", () => {
+    const violations = findViolations(
+      [
+        { file: "apps/web/src/components/T3Sidebar.tsx", line: "export function T3Sidebar()" },
+        {
+          file: "apps/web/src/components/T3Sidebar.tsx",
+          line: "export const T3SidebarProps = {};",
+        },
+        { file: "apps/marketing/public/t3-hero.png", line: "" },
+        { file: "packages/shared/src/bit31-ordering.ts", line: "const order = 31;" },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.filter((v) => v.rule.id === "t3-named-path").map((v) => v.file)).toEqual([
+      "apps/web/src/components/T3Sidebar.tsx",
+      "apps/marketing/public/t3-hero.png",
+    ]);
+  });
+
+  it("honors baseline path entries and exempt dirs for t3-named paths", () => {
+    const entries = [
+      { file: "apps/server/scripts/t3-sqlite-state.ts", line: "const x = 1;" },
+      { file: "apps/mobile/modules/t3-terminal/T3TerminalModule.swift", line: "let x = 1" },
+    ];
+    const baseline = new Set<string>(["apps/server/scripts/t3-sqlite-state.ts\u0000"]);
+    expect(findViolations(entries, baseline)).toEqual([]);
+    expect(
+      findViolations(entries, EMPTY_BASELINE)
+        .filter((v) => v.rule.id === "t3-named-path")
+        .map((v) => v.file),
+    ).toEqual(["apps/server/scripts/t3-sqlite-state.ts"]);
+  });
+
   it("flags retired wordmark and widget mark references without matching similar module names", () => {
     const violations = findViolations(
       [
