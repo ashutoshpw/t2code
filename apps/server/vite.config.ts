@@ -28,21 +28,20 @@ if (!TELEMETRY_CHANNELS.includes(telemetryChannel)) {
   );
 }
 
-// tsdown SEA needs one chunk (sourcemaps count) and Node >=25.7, so package separately.
-// TEMPORARY one-time Node fix. Remove when fixed: https://github.com/nodejs/node/issues/67048
-// "1" builds dist-exe/t3 here; "bundle" stops at bin.mjs for scripts/cli.ts to inject (linux-arm64).
-const packMode = process.env.T3CODE_PACK_EXE;
-const packExecutable = packMode === "1" || packMode === "bundle";
-// TEMPORARY one-time Node fix. Remove when fixed: https://github.com/nodejs/node/issues/67048
-// No linux-arm64: --build-sea output cannot load on 16/64 KiB page kernels, so it builds natively.
+// `build:exe` wraps the same bundle in a Node single-executable. tsdown's exe
+// step refuses multi-chunk output and counts the sourcemap as a chunk, and the
+// executable needs a host Node that supports `--build-sea` (25.7+), so this is
+// a separate mode rather than a second entry in the default build.
+const packExecutable = process.env.T2CODE_PACK_EXE === "1";
 const SEA_TARGETS = {
   "darwin-arm64": { platform: "darwin", arch: "arm64" },
   "darwin-x64": { platform: "darwin", arch: "x64" },
+  "linux-arm64": { platform: "linux", arch: "arm64" },
   "linux-x64": { platform: "linux", arch: "x64" },
   "win-arm64": { platform: "win", arch: "arm64" },
   "win-x64": { platform: "win", arch: "x64" },
 } as const;
-const packExecutableTarget = process.env.T3CODE_PACK_EXE_TARGET?.trim();
+const packExecutableTarget = process.env.T2CODE_PACK_EXE_TARGET?.trim();
 const cliNodeVersion = rootPackageJson.engines.node;
 if (packExecutable && !packExecutableTarget && process.versions.node !== cliNodeVersion) {
   throw new Error(
@@ -51,7 +50,7 @@ if (packExecutable && !packExecutableTarget && process.versions.node !== cliNode
 }
 if (packExecutableTarget && !Object.hasOwn(SEA_TARGETS, packExecutableTarget)) {
   throw new Error(
-    `T3CODE_PACK_EXE_TARGET must be one of ${Object.keys(SEA_TARGETS).join(", ")}, got "${packExecutableTarget}".`,
+    `T2CODE_PACK_EXE_TARGET must be one of ${Object.keys(SEA_TARGETS).join(", ")}, got "${packExecutableTarget}".`,
   );
 }
 const packExecutableTargets = packExecutableTarget
@@ -87,10 +86,7 @@ export default mergeConfig(
       outDir: packExecutable ? "dist-exe" : "dist",
       sourcemap: !packExecutable,
       clean: true,
-      // TEMPORARY one-time Node fix. Remove when fixed: https://github.com/nodejs/node/issues/67048
-      // SEA can only resolve built-ins; keep dynamic imports inside its one module.
-      ...(packExecutable ? { outputOptions: { codeSplitting: false } } : {}),
-      ...(packMode === "1"
+      ...(packExecutable
         ? {
             exe: {
               fileName: "t3",
@@ -111,13 +107,13 @@ export default mergeConfig(
         js: "#!/usr/bin/env node\n",
       },
       define: {
-        __T3CODE_BUILD_CHANNEL__: JSON.stringify(cliBuildChannel),
+        __T2CODE_BUILD_CHANNEL__: JSON.stringify(cliBuildChannel),
         __T2CODE_TELEMETRY_CHANNEL__: JSON.stringify(telemetryChannel),
         __T2CODE_BUILD_RELAY_URL__: JSON.stringify(repoEnv.T2CODE_RELAY_URL?.trim() ?? ""),
-        __T3CODE_BUILD_CLERK_PUBLISHABLE_KEY__: JSON.stringify(
+        __T2CODE_BUILD_CLERK_PUBLISHABLE_KEY__: JSON.stringify(
           repoEnv.T3CODE_CLERK_PUBLISHABLE_KEY?.trim() ?? "",
         ),
-        __T3CODE_BUILD_CLERK_CLI_OAUTH_CLIENT_ID__: JSON.stringify(
+        __T2CODE_BUILD_CLERK_CLI_OAUTH_CLIENT_ID__: JSON.stringify(
           repoEnv.T3CODE_CLERK_CLI_OAUTH_CLIENT_ID?.trim() ?? "",
         ),
         __T2CODE_BUILD_RELAY_CLIENT_OTLP_TRACES_URL__: JSON.stringify(

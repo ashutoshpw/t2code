@@ -197,21 +197,11 @@ export const deregisterManagedRelayEnvironment = Effect.fn(
   registry: AtomRegistry.AtomRegistry,
   input: { readonly accountId: string; readonly environmentId: EnvironmentId },
 ) {
-<<<<<<< HEAD
   const clerkToken = yield* requireSessionClerkToken(
     registry,
     input.accountId,
     "deregistering an environment",
   );
-=======
-  const session = registry.get(managedRelaySessionAtom);
-  if (!session || session.accountId !== input.accountId) {
-    return yield* new ManagedRelaySessionError({
-      message: "Sign in to T2 Connect before deregistering an environment.",
-    });
-  }
-  const clerkToken = yield* readSessionClerkToken(session);
->>>>>>> bf648f5a (fix(rebrand): rebrand T3 Connect display copy to T2 Connect)
   const relay = yield* ManagedRelay.ManagedRelayClient;
   yield* relay.unlinkEnvironment({ clerkToken, environmentId: input.environmentId });
 });
