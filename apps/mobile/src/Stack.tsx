@@ -1162,7 +1162,7 @@ const RootStackConfig = createWorkspaceStackNavigator({
       options: {
         // Android root formSheets lack a native stack bar; the route provides its own sheet AppBar.
         ...(Platform.OS === "android" ? { headerShown: false } : SHEET_SOLID_HEADER_OPTIONS),
-        title: "Set up T3 Connect",
+        title: "Set up T2 Connect",
         gestureEnabled: true,
         ...HORIZONTAL_FORM_SHEET_OPTIONS,
         sheetAllowedDetents: formSheetDetents(0.6, 0.95),

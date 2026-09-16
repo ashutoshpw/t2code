@@ -435,6 +435,7 @@ const serviceProtectCommand = Command.make("protect", {
   ),
 );
 
+
 export const serviceCommand = Command.make("service").pipe(
   Command.withDescription("Manage the T2 Code background service."),
   Command.withSubcommands([
