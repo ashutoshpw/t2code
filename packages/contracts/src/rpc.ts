@@ -145,6 +145,9 @@ import {
   RelayClientStatusSchema,
 } from "./relayClient.ts";
 import {
+  ProjectFileCreateUploadUrlInput,
+  ProjectFileCreateUploadUrlResult,
+  ProjectFileUploadError,
   ProjectListEntriesError,
   ProjectListEntriesInput,
   ProjectListEntriesResult,
@@ -279,6 +282,7 @@ export const WS_METHODS = {
   projectsSearchContents: "projects.searchContents",
   projectsSearchEntries: "projects.searchEntries",
   projectsWriteFile: "projects.writeFile",
+  projectsCreateFileUploadUrl: "projects.createFileUploadUrl",
 
   // Shell methods
   shellOpenInEditor: "shell.openInEditor",
@@ -921,6 +925,12 @@ const WsProjectsWriteFileRpc = Rpc.make(WS_METHODS.projectsWriteFile, {
   error: Schema.Union([ProjectWriteFileError, EnvironmentAuthorizationError]),
 });
 
+const WsProjectsCreateFileUploadUrlRpc = Rpc.make(WS_METHODS.projectsCreateFileUploadUrl, {
+  payload: ProjectFileCreateUploadUrlInput,
+  success: ProjectFileCreateUploadUrlResult,
+  error: Schema.Union([ProjectFileUploadError, EnvironmentAuthorizationError]),
+});
+
 const WsShellOpenInEditorRpc = Rpc.make(WS_METHODS.shellOpenInEditor, {
   payload: LaunchEditorInput,
   error: Schema.Union([ExternalLauncherError, EnvironmentAuthorizationError]),
@@ -1431,6 +1441,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsProjectsSearchContentsRpc,
   WsProjectsSearchEntriesRpc,
   WsProjectsWriteFileRpc,
+  WsProjectsCreateFileUploadUrlRpc,
   WsShellOpenInEditorRpc,
   WsFilesystemBrowseRpc,
   WsAgentSessionsScanRpc,

@@ -35,6 +35,11 @@ import {
   storeAttachmentUpload,
   validateAttachmentUploadToken,
 } from "./assets/AttachmentUpload.ts";
+import {
+  PROJECT_FILE_UPLOAD_ROUTE_PREFIX,
+  storeProjectFileUpload,
+  validateProjectFileUploadToken,
+} from "./workspace/WorkspaceFileUpload.ts";
 import * as BrowserTraceCollector from "./observability/BrowserTraceCollector.ts";
 import * as EnvironmentAuth from "./auth/EnvironmentAuth.ts";
 import { traceRelayRequest } from "./cloud/traceRelayRequest.ts";
@@ -241,7 +246,7 @@ export const browserApiCorsLayer = Layer.unwrap(
     // Dev uses credentialed requests from Vite or the Electron custom origin, so both must be
     // explicit. Packaged desktop omits credentials and uses Effect's default wildcard origin.
     //
-    // T3CODE_DEV_ALLOWED_ORIGINS covers dev servers reached from a second
+    // T2CODE_DEV_ALLOWED_ORIGINS covers dev servers reached from a second
     // origin — a tailnet name, a LAN IP, a phone. Browser dev normally proxies
     // through Vite and is same-origin (no preflight at all), so this is a
     // safety net for the desktop renderer and any direct-to-backend caller.
@@ -442,6 +447,48 @@ export const attachmentUploadRouteLayer = HttpRouter.add(
     // Keep the request stream in the route scope until the response is sent.
     const bodyPull = yield* Stream.toPull(request.stream);
     const stored = yield* storeAttachmentUpload(claims, Stream.fromPull(Effect.succeed(bodyPull)));
+    return stored.ok
+      ? HttpServerResponse.empty({ status: 204 })
+      : HttpServerResponse.text(stored.detail, { status: stored.status });
+  }),
+);
+
+export const projectFileUploadRouteLayer = HttpRouter.add(
+  "POST",
+  `${PROJECT_FILE_UPLOAD_ROUTE_PREFIX}/*`,
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const url = HttpServerRequest.toURL(request);
+    if (Option.isNone(url)) {
+      return HttpServerResponse.text("Bad Request", { status: 400 });
+    }
+
+    const token = url.value.pathname.slice(`${PROJECT_FILE_UPLOAD_ROUTE_PREFIX}/`.length);
+    if (!token) {
+      return HttpServerResponse.text("Not Found", { status: 404 });
+    }
+    const claims = yield* validateProjectFileUploadToken(token);
+    if (!claims) {
+      return HttpServerResponse.text("Not Found", { status: 404 });
+    }
+
+    const contentLengthHeader = request.headers["content-length"];
+    if (
+      contentLengthHeader !== undefined &&
+      (!Number.isInteger(Number(contentLengthHeader)) ||
+        Number(contentLengthHeader) !== claims.sizeBytes)
+    ) {
+      return HttpServerResponse.text("Content-Length must match the upload size.", {
+        status: 400,
+      });
+    }
+
+    // Keep the request stream in the route scope until the response is sent.
+    const bodyPull = yield* Stream.toPull(request.stream);
+    const stored = yield* storeProjectFileUpload(
+      claims,
+      Stream.fromPull(Effect.succeed(bodyPull)),
+    );
     return stored.ok
       ? HttpServerResponse.empty({ status: 204 })
       : HttpServerResponse.text(stored.detail, { status: stored.status });

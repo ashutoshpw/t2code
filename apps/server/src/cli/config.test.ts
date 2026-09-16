@@ -194,17 +194,17 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_LOG_LEVEL: "Warn",
-                  T3CODE_MODE: "desktop",
-                  T3CODE_PORT: "4001",
-                  T3CODE_HOST: "0.0.0.0",
+                  T2CODE_LOG_LEVEL: "Warn",
+                  T2CODE_MODE: "desktop",
+                  T2CODE_PORT: "4001",
+                  T2CODE_HOST: "0.0.0.0",
                   T3CODE_HOME: baseDir,
                   VITE_DEV_SERVER_URL: "http://127.0.0.1:5173",
-                  T3CODE_DEV_ALLOWED_ORIGINS:
+                  T2CODE_DEV_ALLOWED_ORIGINS:
                     "https://host.example.ts.net, https://phone.example.ts.net ",
-                  T3CODE_NO_BROWSER: "true",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
-                  T3CODE_LOG_WS_EVENTS: "true",
+                  T2CODE_NO_BROWSER: "true",
+                  T2CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
+                  T2CODE_LOG_WS_EVENTS: "true",
                 },
               }),
             ),
@@ -267,15 +267,15 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_LOG_LEVEL: "Warn",
-                  T3CODE_MODE: "desktop",
-                  T3CODE_PORT: "4001",
-                  T3CODE_HOST: "0.0.0.0",
+                  T2CODE_LOG_LEVEL: "Warn",
+                  T2CODE_MODE: "desktop",
+                  T2CODE_PORT: "4001",
+                  T2CODE_HOST: "0.0.0.0",
                   T3CODE_HOME: join(NodeOS.tmpdir(), "ignored-base"),
                   VITE_DEV_SERVER_URL: "http://127.0.0.1:5173",
-                  T3CODE_NO_BROWSER: "false",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
-                  T3CODE_LOG_WS_EVENTS: "false",
+                  T2CODE_NO_BROWSER: "false",
+                  T2CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
+                  T2CODE_LOG_WS_EVENTS: "false",
                 },
               }),
             ),
@@ -345,10 +345,10 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_BOOTSTRAP_FD: String(fd),
-                  T3CODE_NO_BROWSER: "true",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
-                  T3CODE_LOG_WS_EVENTS: "true",
+                  T2CODE_BOOTSTRAP_FD: String(fd),
+                  T2CODE_NO_BROWSER: "true",
+                  T2CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+                  T2CODE_LOG_WS_EVENTS: "true",
                 },
               }),
             ),
@@ -424,7 +424,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_BOOTSTRAP_FD: String(fd),
+                  T2CODE_BOOTSTRAP_FD: String(fd),
                 },
               }),
             ),
@@ -554,12 +554,12 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_MODE: "web",
-                  T3CODE_BOOTSTRAP_FD: String(fd),
+                  T2CODE_MODE: "web",
+                  T2CODE_BOOTSTRAP_FD: String(fd),
                   T3CODE_HOME: baseDir,
-                  T3CODE_NO_BROWSER: "true",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
-                  T3CODE_LOG_WS_EVENTS: "true",
+                  T2CODE_NO_BROWSER: "true",
+                  T2CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+                  T2CODE_LOG_WS_EVENTS: "true",
                 },
               }),
             ),
@@ -690,8 +690,8 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_NO_BROWSER: "false",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+                  T2CODE_NO_BROWSER: "false",
+                  T2CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
                 },
               }),
             ),
