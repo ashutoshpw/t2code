@@ -112,9 +112,12 @@ export class ProjectSetupScriptRunner extends Context.Service<
   }
 >()("@t2code/cli/project/ProjectSetupScriptRunner") {}
 
-/** @public */
-// Random per-run tokens prevent script output from spoofing completion.
-const COMPLETION_SENTINEL_PREFIX = "__T3_SETUP_DONE__";
+/** @public Service construction is part of the canonical Effect module API. */
+/**
+ * Each run gets its own random token so script output cannot spoof completion, and the sentinel
+ * pattern is built per run from it.
+ */
+const COMPLETION_SENTINEL_PREFIX = "__T2_SETUP_DONE__";
 const OUTPUT_LINE_MAX_LENGTH = 400;
 const PARTIAL_LINE_MAX_LENGTH = 4_096;
 
