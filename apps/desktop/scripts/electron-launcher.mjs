@@ -111,15 +111,22 @@ function shellSingleQuote(value) {
 }
 
 export function makeDevelopmentEnvironmentScript(environment) {
+  // The maintainer's shell may still export the legacy T3CODE_* spellings
+  // until the migration window closes; the server honors both.
+  const firstSet = (...names) =>
+    names.map((name) => environment[name]).find((value) => value !== undefined);
   const envEntries = [
     ["VITE_DEV_SERVER_URL", environment.VITE_DEV_SERVER_URL],
     ["T2CODE_PORT", environment.T2CODE_PORT],
-    ["T3CODE_HOME", environment.T3CODE_HOME],
+    ["T2CODE_HOME", firstSet("T2CODE_HOME", "T3CODE_HOME")],
     ["T2CODE_COMMIT_HASH", environment.T2CODE_COMMIT_HASH],
-    ["T3CODE_OTLP_TRACES_URL", environment.T3CODE_OTLP_TRACES_URL],
-    ["T3CODE_OTLP_EXPORT_INTERVAL_MS", environment.T3CODE_OTLP_EXPORT_INTERVAL_MS],
-    ["T3CODE_OTLP_HEADERS", environment.T3CODE_OTLP_HEADERS],
-    ["T3CODE_OTLP_PROTOCOL", environment.T3CODE_OTLP_PROTOCOL],
+    ["T2CODE_OTLP_TRACES_URL", firstSet("T2CODE_OTLP_TRACES_URL", "T3CODE_OTLP_TRACES_URL")],
+    [
+      "T2CODE_OTLP_EXPORT_INTERVAL_MS",
+      firstSet("T2CODE_OTLP_EXPORT_INTERVAL_MS", "T3CODE_OTLP_EXPORT_INTERVAL_MS"),
+    ],
+    ["T2CODE_OTLP_HEADERS", environment.T2CODE_OTLP_HEADERS],
+    ["T2CODE_OTLP_PROTOCOL", environment.T2CODE_OTLP_PROTOCOL],
     ["T2CODE_DESKTOP_APP_USER_MODEL_ID", APP_BUNDLE_ID],
   ].filter((entry) => typeof entry[1] === "string" && entry[1].trim().length > 0);
   return [

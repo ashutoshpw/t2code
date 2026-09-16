@@ -54,7 +54,8 @@ function resolveEarlyDesktopSettingsPath(input: {
   readonly homeDirectory: string;
   readonly joinPath: JoinPath;
 }): string {
-  const t3Home = Option.fromUndefinedOr(input.env.T3CODE_HOME);
+  // Legacy T3CODE_HOME is honored until installed units and shells migrate.
+  const t3Home = Option.fromUndefinedOr(input.env.T2CODE_HOME ?? input.env.T3CODE_HOME);
   const baseDir = resolveDesktopBaseDir({
     homeDirectory: input.homeDirectory,
     joinPath: input.joinPath,

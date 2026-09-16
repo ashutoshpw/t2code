@@ -1835,7 +1835,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     const configuration = resolveMacPasskeySigningConfiguration({
       T2CODE_APPLE_TEAM_ID: "abc1234567",
       T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
-      T3CODE_CLERK_PUBLISHABLE_KEY: `pk_test_${btoa("example.clerk.accounts.dev$")}`,
+      T2CODE_CLERK_PUBLISHABLE_KEY: `pk_test_${btoa("example.clerk.accounts.dev$")}`,
     });
 
     assert.deepStrictEqual(configuration, {
@@ -1850,7 +1850,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     const configuration = resolveMacPasskeySigningConfiguration({
       T2CODE_APPLE_TEAM_ID: "ABC1234567",
       T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
-      T3CODE_CLERK_PASSKEY_RP_DOMAINS:
+      T2CODE_CLERK_PASSKEY_RP_DOMAINS:
         " Clerk.Example.com,example.clerk.accounts.dev,clerk.example.com ",
     });
     const entitlements = renderMacPasskeyEntitlements(configuration);
@@ -1877,7 +1877,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
 
     const missingProfileError = captureError({
       T2CODE_APPLE_TEAM_ID: "ABC1234567",
-      T3CODE_CLERK_PASSKEY_RP_DOMAINS: "example.clerk.accounts.dev",
+      T2CODE_CLERK_PASSKEY_RP_DOMAINS: "example.clerk.accounts.dev",
     });
     assert.instanceOf(missingProfileError, MissingMacPasskeyProvisioningProfileError);
     assert.equal(
@@ -1890,7 +1890,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     const invalidDomainError = captureError({
       T2CODE_APPLE_TEAM_ID: "ABC1234567",
       T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
-      T3CODE_CLERK_PASSKEY_RP_DOMAINS: unsafeDomain,
+      T2CODE_CLERK_PASSKEY_RP_DOMAINS: unsafeDomain,
     });
     assert.instanceOf(invalidDomainError, InvalidMacPasskeyRpDomainError);
     assert.equal(invalidDomainError.reason, "scheme-not-allowed");
@@ -1908,18 +1908,18 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         resolveMacPasskeySigningConfiguration({
           T2CODE_APPLE_TEAM_ID: "ABC1234567",
           T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
-          T3CODE_CLERK_PASSKEY_RP_DOMAINS: "example.clerk.accounts.dev:8443",
+          T2CODE_CLERK_PASSKEY_RP_DOMAINS: "example.clerk.accounts.dev:8443",
         }),
       /Invalid passkey RP domain/u,
     );
     const invalidPublishableKeyError = captureError({
       T2CODE_APPLE_TEAM_ID: "ABC1234567",
       T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
-      T3CODE_CLERK_PUBLISHABLE_KEY: "pk_test_%",
+      T2CODE_CLERK_PUBLISHABLE_KEY: "pk_test_%",
     });
     assert.instanceOf(invalidPublishableKeyError, InvalidMacPasskeyPublishableKeyError);
     assert.ok(invalidPublishableKeyError.cause);
-    assert.equal(invalidPublishableKeyError.message, "T3CODE_CLERK_PUBLISHABLE_KEY is invalid.");
+    assert.equal(invalidPublishableKeyError.message, "T2CODE_CLERK_PUBLISHABLE_KEY is invalid.");
     assert.notProperty(invalidPublishableKeyError, "publishableKey");
     assert.notInclude(invalidPublishableKeyError.message, "pk_test_%");
   });

@@ -71,8 +71,8 @@ reduced-capability local build. Personal Team builds omit the widget and share e
 entitlement, and native Sign in with Apple entitlement; builds without this opt-in are unchanged.
 
 ```bash
-T3CODE_IOS_PERSONAL_TEAM=1 \
-T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.t3code.dev \
+T2CODE_IOS_PERSONAL_TEAM=1 \
+T2CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.t3code.dev \
 vp run ios:dev
 ```
 
@@ -85,8 +85,8 @@ vp run ios:release
 The Personal Team equivalent also needs a unique bundle identifier:
 
 ```bash
-T3CODE_IOS_PERSONAL_TEAM=1 \
-T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.t3code \
+T2CODE_IOS_PERSONAL_TEAM=1 \
+T2CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.t3code \
 vp run ios:release
 ```
 
@@ -125,8 +125,8 @@ Preview and production variants use Expo fingerprinting so OTA updates only reac
 
 The development variant uses `appVersion` to avoid recalculating the native fingerprint for each Metro launch manifest. `MOBILE_VERSION_POLICY` can override either default. If you distribute a custom Release build with the development identity and publish OTA updates to it, set `MOBILE_VERSION_POLICY=fingerprint` for both its build and updates. Changing the runtime policy requires a native rebuild for OTA matching; an existing dev client can still load local Metro bundles.
 
-For preview or production EAS environments, set `T3CODE_CLERK_PUBLISHABLE_KEY`,
-`T3CODE_CLERK_JWT_TEMPLATE`, and `T2CODE_RELAY_URL`
+For preview or production EAS environments, set `T2CODE_CLERK_PUBLISHABLE_KEY`,
+`T2CODE_CLERK_JWT_TEMPLATE`, and `T2CODE_RELAY_URL`
 as EAS environment variables. Expo config maps the canonical values into the mobile build.
 
 Create a PR preview dev-client build manually:

@@ -27,8 +27,8 @@ import * as Schema from "effect/Schema";
 import { Command, Flag } from "effect/unstable/cli";
 
 import packageJson from "../../package.json" with { type: "json" };
-import * as BootService from "../cloud/bootService.ts";
-import * as ServerConfig from "../config.ts";
+import { envStringConfig } from "@t2code/shared/legacyEnvConfig";
+import * as BootService from "../cloud/bootService.ts";import * as ServerConfig from "../config.ts";
 import { resolveBaseDir } from "../os-jank.ts";
 import { isProcessAlive, readPersistedServerRuntimeState } from "../serverRuntimeState.ts";
 import { baseDirFlag } from "./config.ts";
@@ -167,10 +167,10 @@ export const triageCommand = Command.make("triage", {
       const path = yield* Path.Path;
 
       // Triage is a user-facing feature: always the userdata state, never dev.
-      // --base-dir wins; T3CODE_HOME is its documented env equivalent (same
+      // --base-dir wins; T2CODE_HOME is its documented env equivalent (same
       // precedence as `t2code pair`).
       const explicitBaseDir = Option.getOrUndefined(flags.baseDir);
-      const envHome = yield* Config.String("T3CODE_HOME").pipe(Config.option);
+      const envHome = yield* envStringConfig("T2CODE_HOME").pipe(Config.option);
       const baseDir = yield* resolveBaseDir(explicitBaseDir ?? Option.getOrUndefined(envHome));
       const paths = yield* ServerConfig.deriveServerPaths(baseDir, undefined, {});
 

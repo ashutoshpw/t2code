@@ -39,7 +39,7 @@ describe("hasCloudPublicConfig", () => {
     vi.stubEnv("VITE_CLERK_JWT_TEMPLATE", "");
 
     expect(() => resolveRelayClerkTokenOptions()).toThrowError(
-      new CloudPublicConfigMissingError({ key: "T3CODE_CLERK_JWT_TEMPLATE" }),
+      new CloudPublicConfigMissingError({ key: "T2CODE_CLERK_JWT_TEMPLATE" }),
     );
   });
 });

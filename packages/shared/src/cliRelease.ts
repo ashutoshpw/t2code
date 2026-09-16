@@ -9,7 +9,9 @@
 const CLI_RELEASE_REPOSITORY = "ashutoshpw/t2code";
 export const CLI_RELEASE_CHECKSUMS_FILE = "SHA256SUMS";
 /** Overrides the download origin for mirrors and air-gapped installs. */
-export const CLI_RELEASE_BASE_URL_ENV = "T3CODE_RELEASE_BASE_URL";
+export const CLI_RELEASE_BASE_URL_ENV = "T2CODE_RELEASE_BASE_URL";
+/** Pre-rename name, still honored by the update paths during the migration window. */
+export const CLI_RELEASE_BASE_URL_LEGACY_ENV = "T3CODE_RELEASE_BASE_URL";
 
 /** Prefix used by newly published self-contained CLI release archives. */
 const CLI_ARCHIVE_PREFIX = "t2";

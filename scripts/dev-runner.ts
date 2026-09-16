@@ -327,6 +327,7 @@ export function createDevRunnerEnv({
       output.T2CODE_HOME = resolvedBaseDir;
     } else {
       delete output.T2CODE_HOME;
+      delete output.T3CODE_HOME;
     }
 
     // A dev-runner server is never launcher-managed. When the shell that runs
@@ -378,6 +379,7 @@ export function createDevRunnerEnv({
       delete output.T2CODE_NO_BROWSER;
       delete output.T2CODE_HOST;
       delete output.T2CODE_DEV_AUTH_TOKEN;
+      delete output.T3CODE_DEV_AUTH_TOKEN;
     }
 
     if (!isDesktopMode && host !== undefined) {
@@ -674,7 +676,8 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
     const resolvedT3Home =
       (input.t3Home?.trim() || undefined) ??
       worktreeHome ??
-      (hostEnvironment.T2CODE_HOME?.trim() || undefined);
+      (hostEnvironment.T2CODE_HOME?.trim() || undefined) ??
+      (hostEnvironment.T3CODE_HOME?.trim() || undefined);
     const env = yield* createDevRunnerEnv({
       mode: input.mode,
       baseEnv: hostEnvironment,
