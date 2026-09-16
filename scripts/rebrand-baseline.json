@@ -884,6 +884,10 @@
     "line": ""
   },
   {
+    "file": "oxlint-plugin-t3code/rules/no-hermes-unsupported-array-methods.ts",
+    "line": ""
+  },
+  {
     "file": "oxlint-plugin-t3code/rules/no-hermes-unsupported-apis.test.ts",
     "line": ""
   },
