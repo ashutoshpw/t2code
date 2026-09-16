@@ -3051,9 +3051,13 @@ const makeWsRpcLayer = (
             { "rpc.aggregate": "workspace" },
           ),
         [WS_METHODS.projectsCreateFileUploadUrl]: (input) =>
-          observeRpcEffect(WS_METHODS.projectsCreateFileUploadUrl, issueProjectFileUploadUrl(input), {
-            "rpc.aggregate": "workspace",
-          }),
+          observeRpcEffect(
+            WS_METHODS.projectsCreateFileUploadUrl,
+            issueProjectFileUploadUrl(input),
+            {
+              "rpc.aggregate": "workspace",
+            },
+          ),
         [WS_METHODS.shellOpenInEditor]: (input) =>
           observeRpcEffect(WS_METHODS.shellOpenInEditor, externalLauncher.launchEditor(input), {
             "rpc.aggregate": "workspace",
