@@ -39,28 +39,28 @@ installing one.
 
 `t2code uninstall` removes the background service, the `t2code` launcher, and the
 downloaded versions after showing you the list and asking once. Your projects,
-threads, and settings under `~/.t3/userdata` are kept, along with `service.env`
+threads, and settings under `~/.t2/userdata` are kept, along with `service.env`
 under T3 home. Pass `--yes` from a script.
 
 ## Local network access
 
 A new service answers only on this machine. Other devices reach it through
-T3 Connect, or directly once you choose the local network in `t3 up` (or run
-`t3 up --lan`, which sets `T3CODE_LAN=true` in `service.env`). It then listens on
+T2 Connect, or directly once you choose the local network in `t2 up` (or run
+`t2 up --lan`, which sets `T3CODE_LAN=true` in `service.env`). It then listens on
 your local network and Tailscale addresses, so the desktop and mobile apps on
-the same network connect directly instead of through T3 Connect. It still does
+the same network connect directly instead of through T2 Connect. It still does
 not answer on public addresses. Anyone on the same network can reach the port,
-so a pairing code is all that keeps them out. The hosted web app at app.t3.codes
-stays on T3 Connect, because browsers block plain HTTP from an HTTPS page.
+so a pairing code is all that keeps them out. The hosted web app at app.t2.codes
+stays on T2 Connect, because browsers block plain HTTP from an HTTPS page.
 
 A service installed before `T3CODE_LAN` existed keeps listening on the local
-network. `t3 status` says so, and `t3 up --no-lan` turns it off. Any
+network. `t2 status` says so, and `t2 up --no-lan` turns it off. Any
 `T3CODE_HOST` value replaces this setting.
 
 ## Configure the service environment
 
 Put custom environment variables in `service.env` under the service's T3 home
-directory, normally `~/.t3/service.env`. This file survives service installation
+directory, normally `~/.t2/service.env`. This file survives service installation
 and updates. For example:
 
 ```dotenv
@@ -73,13 +73,13 @@ literal: shell commands and variable expansion are not evaluated. Entries
 override the inherited service environment, except for `PATH`, `T3CODE_HOME`,
 `T3_BOOT_SERVICE_UNIT`, and `T3_SERVICE_LAUNCHER_CONTEXT` (including case variants).
 
-Run `t3 service restart` after changing the file. Changes apply when the service
+Run `t2 service restart` after changing the file. Changes apply when the service
 starts again; switching the server version alone keeps the current values.
-For a service installed before env-file support, run `t3 service install` once
+For a service installed before env-file support, run `t2 service install` once
 with an up-to-date CLI.
 A missing file is ignored; other read failures stop service startup.
 If the file contains credentials, restrict access to that file with `chmod 600`
-(for the default T3 home, `chmod 600 ~/.t3/service.env`).
+(for the default T3 home, `chmod 600 ~/.t2/service.env`).
 
 ## Platform support
 
@@ -93,13 +93,13 @@ nobody is logged in at the Mac's screen can fail at the final start step; the
 service is still installed and will start at the next login.
 
 Windows background services are not supported. To keep a Windows host available
-through T3 Connect, leave the desktop app running with its local environment
-enabled, or keep `t3 serve` running in a terminal. Minimize the desktop app rather
-than closing its last window, which stops its local server. Linking T3 Connect
+through T2 Connect, leave the desktop app running with its local environment
+enabled, or keep `t2 serve` running in a terminal. Minimize the desktop app rather
+than closing its last window, which stops its local server. Linking T2 Connect
 does not configure automatic startup at Windows sign-in.
 
-`t3 up` installs the service when you set up T3 Connect, but the two are managed
-separately. Signing out of T3 Connect does not stop or uninstall the service.
+`t2 up` installs the service when you set up T2 Connect, but the two are managed
+separately. Signing out of T2 Connect does not stop or uninstall the service.
 
 ## Keep the server responsive when agents use all memory
 
@@ -109,15 +109,15 @@ server, because only an administrator can reserve memory for it. Run, as your
 normal user:
 
 ```sh
-t3 service protect
+t2 service protect
 ```
 
 It shows the system settings it will change, asks before applying them, and
 then asks for your sudo password. If the machine runs Tailscale or SSH, it
 also offers to protect them, so you can still reach the machine. Memory
 protection takes effect at once. The server's protection from the kernel's
-out-of-memory killer takes effect after `t3 service restart`. `t3 service status` reports whether
-the protection is in place, and `t3 service protect --undo` removes it.
+out-of-memory killer takes effect after `t2 service restart`. `t2 service status` reports whether
+the protection is in place, and `t2 service protect --undo` removes it.
 
 ## Troubleshooting
 
@@ -156,25 +156,25 @@ Downloads, it may need Full Disk Access for the `t2code` executable listed in
 `ProgramArguments` in
 `~/Library/LaunchAgents/com.t3tools.t3code.service.plist`.
 
-For failures after signing in to T3 Connect, see
-[connection troubleshooting](./t3-connect-troubleshooting.md).
+For failures after signing in to T2 Connect, see
+[connection troubleshooting](./t2-connect-troubleshooting.md).
 
 ## Reclaim database space
 
-T3 Code removes internal history older than a day on its own while it runs;
+T2 Code removes internal history older than a day on its own while it runs;
 your conversations are kept. Databases created before this shrank automatically
 still hold the freed space on disk until a one-time offline repair returns it
 and turns on automatic shrinking. Settings > Maintenance (web and desktop) or
 Settings > Maintenance (mobile) suggests the repair when at least 1 GiB can be
 reclaimed.
 
-When the desktop app or the background service runs T3 Code on that machine,
-select **Reclaim** in Settings on web or desktop. T3 Code checks for free disk
+When the desktop app or the background service runs T2 Code on that machine,
+select **Reclaim** in Settings on web or desktop. T2 Code checks for free disk
 space, then stops, repairs the database, and starts again. It is offline while
 the repair runs, and running agents stop. If the repair fails, Settings shows
 why.
 
-In other cases, such as a server you started by hand, run `t3 doctor` on the
+In other cases, such as a server you started by hand, run `t2 doctor` on the
 machine that hosts the environment. It reports the database size and the
 space it can reclaim, then asks which repairs to run;
 pass `--fix` to run the recommended ones without a prompt (for scripts), or
@@ -191,6 +191,6 @@ system temporary directory (on Linux and macOS, `TMPDIR`, or `/var/tmp` when it
 is not set) and once next to the database for its write-ahead log.
 
 If you upgraded from a version before 0.1.0, its database (`state.sqlite`) is
-still kept next to the current one so you can roll back. `t3 doctor` offers to
+still kept next to the current one so you can roll back. `t2 doctor` offers to
 delete it, but never selects that repair for you and `--fix` skips it: once it
 is gone, a version before 0.1.0 starts with no threads or settings.

@@ -713,7 +713,7 @@ const RootStackConfig = createWorkspaceStackNavigator({
       screen: ConnectOnboardingRouteScreen,
       linking: "connect-onboarding",
       options: sheetRoute({
-        title: "Set up T3 Connect",
+        title: "Set up T2 Connect",
         header: "solid",
         detent: 0.6,
         androidMaxDetent: 0.95,
