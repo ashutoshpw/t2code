@@ -2,6 +2,7 @@ import { OtlpHeadersFromString, OtlpProtocol } from "@t2code/shared/observabilit
 import * as Config from "effect/Config";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Option from "effect/Option";
+import { envIntConfig, envStringConfig } from "@t2code/shared/legacyEnvConfig";
 
 const trimNonEmptyOption = (value: string): Option.Option<string> => {
   const trimmed = value.trim();
@@ -9,7 +10,10 @@ const trimNonEmptyOption = (value: string): Option.Option<string> => {
 };
 
 const trimmedString = (name: string) =>
-  Config.String(name).pipe(Config.option, Config.map(Option.flatMap(trimNonEmptyOption)));
+  envStringConfig(name).pipe(Config.option, Config.map(Option.flatMap(trimNonEmptyOption)));
+
+const optionalIntWithDefault = (name: string, fallback: number) =>
+  envIntConfig(name).pipe(Config.withDefault(fallback));
 
 const optionalBoolean = (name: string) =>
   Config.Boolean(name).pipe(Config.option, Config.map(Option.getOrElse(() => false)));
@@ -46,9 +50,7 @@ export const DesktopConfig = Config.all({
   desktopLanHostOverride: trimmedString("T2CODE_DESKTOP_LAN_HOST"),
   desktopHttpsEndpointUrls: commaSeparatedStrings("T2CODE_DESKTOP_HTTPS_ENDPOINTS"),
   otlpTracesUrl: trimmedString("T2CODE_OTLP_TRACES_URL"),
-  otlpExportIntervalMs: Config.Int("T2CODE_OTLP_EXPORT_INTERVAL_MS").pipe(
-    Config.withDefault(10_000),
-  ),
+  otlpExportIntervalMs: optionalIntWithDefault("T2CODE_OTLP_EXPORT_INTERVAL_MS", 10_000),
   otlpHeaders: Config.schema(OtlpHeadersFromString, "T2CODE_OTLP_HEADERS").pipe(Config.option),
   otlpProtocol: Config.schema(OtlpProtocol, "T2CODE_OTLP_PROTOCOL").pipe(
     Config.withDefault("http/json"),
