@@ -16,6 +16,7 @@ import * as SchemaTransformation from "effect/SchemaTransformation";
 import { Argument, Flag } from "effect/unstable/cli";
 
 import { readBootstrapEnvelope } from "../bootstrap.ts";
+import { envIntConfig, envRedactedConfig, envStringConfig } from "@t2code/shared/legacyEnvConfig";
 import * as ServerConfig from "../config.ts";
 import { expandHomePath, resolveBaseDir } from "../os-jank.ts";
 
@@ -88,18 +89,20 @@ const EnvServerConfig = Config.all({
   traceMaxBytes: Config.Int("T2CODE_TRACE_MAX_BYTES").pipe(Config.withDefault(10 * 1024 * 1024)),
   traceMaxFiles: Config.Int("T2CODE_TRACE_MAX_FILES").pipe(Config.withDefault(10)),
   traceBatchWindowMs: Config.Int("T2CODE_TRACE_BATCH_WINDOW_MS").pipe(Config.withDefault(1_000)),
-  otlpTracesUrl: Config.String("T2CODE_OTLP_TRACES_URL").pipe(
+  otlpTracesUrl: envStringConfig("T2CODE_OTLP_TRACES_URL").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  otlpMetricsUrl: Config.String("T2CODE_OTLP_METRICS_URL").pipe(
+  otlpMetricsUrl: envStringConfig("T2CODE_OTLP_METRICS_URL").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  otlpExportIntervalMs: Config.Int("T2CODE_OTLP_EXPORT_INTERVAL_MS").pipe(
+  otlpExportIntervalMs: envIntConfig("T2CODE_OTLP_EXPORT_INTERVAL_MS").pipe(
     Config.withDefault(10_000),
   ),
-  otlpServiceName: Config.String("T2CODE_OTLP_SERVICE_NAME").pipe(Config.withDefault("t3-server")),
+  otlpServiceName: envStringConfig("T2CODE_OTLP_SERVICE_NAME").pipe(
+    Config.withDefault("t2-server"),
+  ),
   otlpHeaders: Config.schema(OtlpHeadersFromString, "T2CODE_OTLP_HEADERS").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
@@ -113,7 +116,7 @@ const EnvServerConfig = Config.all({
   ),
   port: Config.Port("T2CODE_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
   host: Config.String("T2CODE_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  t3Home: Config.String("T2CODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  t3Home: envStringConfig("T2CODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
   devUrl: Config.URL("VITE_DEV_SERVER_URL").pipe(Config.option, Config.map(Option.getOrUndefined)),
   devAllowedOrigins: Config.String("T2CODE_DEV_ALLOWED_ORIGINS").pipe(
     Config.withDefault(""),
@@ -150,7 +153,7 @@ const EnvServerConfig = Config.all({
   ),
 });
 
-const DevAuthTokenConfig = Config.Redacted("T2CODE_DEV_AUTH_TOKEN").pipe(
+const DevAuthTokenConfig = envRedactedConfig("T2CODE_DEV_AUTH_TOKEN").pipe(
   Config.map((token) => Redacted.make(Redacted.value(token).trim())),
   Config.mapEffect((token) =>
     Redacted.value(token).length === 0 || Redacted.value(token).length >= 32
