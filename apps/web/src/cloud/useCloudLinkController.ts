@@ -70,13 +70,13 @@ export function useCloudLinkController() {
   const [operationError, setOperationError] = useState<string | null>(null);
 
   const reportUpdateFailure = (cause: unknown) => {
-    const message = cause instanceof Error ? cause.message : "Could not update T3 Connect access.";
+    const message = cause instanceof Error ? cause.message : "Could not update T2 Connect access.";
     const traceId = findErrorTraceId(cause);
-    console.error("[t3-connect] Could not update T3 Connect", { message, traceId, cause });
+    console.error("[t3-connect] Could not update T2 Connect", { message, traceId, cause });
     setOperationError(traceId ? `${message} Trace ID: ${traceId}` : message);
     toastManager.add({
       type: "error",
-      title: "Could not update T3 Connect",
+      title: "Could not update T2 Connect",
       description: message,
       data: traceId
         ? {
@@ -133,7 +133,8 @@ export function useCloudLinkController() {
 
     // A failed mutation may have partially applied, so refresh server state on every exit.
     if (!wantsLink) {
-      // Unlink needs no relay token; failed token reads must still allow it.
+      // Unlink works without a relay token — a failed token read must not
+      // leave the user unable to turn T2 Connect off.
       const unlinkResult = await unlinkPrimaryEnvironment({
         target,
         clerkToken: tokenResult._tag === "Success" ? (tokenResult.value ?? null) : null,
@@ -154,7 +155,7 @@ export function useCloudLinkController() {
       }
       const clerkToken = tokenResult.value;
       if (!clerkToken) {
-        reportUpdateFailure(new Error("Sign in to T3 Connect before enabling this."));
+        reportUpdateFailure(new Error("Sign in to T2 Connect before enabling this."));
         return false;
       }
       const currentManagedTunnel = isManagedTunnelActive(currentLinkState, relayProviderKind);

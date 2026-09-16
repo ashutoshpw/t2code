@@ -35,7 +35,7 @@ import {
   resolveNewThreadModelSelectionOverride,
 } from "../lib/chatThreadActions";
 import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
-import { readT3ProjectFile } from "../lib/t3ProjectFileDefaults";
+import { readT2ProjectFile } from "../lib/t2ProjectFileDefaults";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { environmentSummaries } from "../state/presentation";
 import { environmentServerConfigsAtom } from "../state/server";
@@ -155,7 +155,7 @@ export function createNewThreadHandler(router: AnyRouter) {
           .get(environmentSummaries.connectedEnvironmentIdsAtom)
           .includes(project.environmentId);
       const projectFile = consultProjectFile
-        ? await readT3ProjectFile(project.environmentId, project.workspaceRoot)
+        ? await readT2ProjectFile(project.environmentId, project.workspaceRoot)
         : null;
       return resolveNewThreadEnvMode({
         projectSettings: resolveProjectSettings(
@@ -257,7 +257,6 @@ export function createNewThreadHandler(router: AnyRouter) {
       const storedDraftThread = getDraftSessionByLogicalProjectKey(logicalProjectKey);
       const storedDraftThreadRef = storedDraftThread
         ? scopeThreadRef(storedDraftThread.environmentId, storedDraftThread.threadId)
->>>>>>> f391d5e631 (fix(project): migrate checked-in config to t2.json (#7))
         : null;
     const latestActiveDraftThread: DraftThreadState | null = currentRouteTarget
       ? currentRouteTarget.kind === "server"
