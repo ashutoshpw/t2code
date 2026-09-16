@@ -191,10 +191,10 @@ describe("check-rebrand", () => {
   it("flags the upstream internal package scope", () => {
     const violations = findViolations(
       [
-        { file: "apps/web/src/example.ts", line: `import { Overview } from "@t2code/contracts";` },
+        { file: "apps/web/src/example.ts", line: `import { Overview } from "@t3tools/contracts";` },
         {
           file: "packages/shared/src/example.ts",
-          line: `import { hostProcess } from "@t2code/shared/hostProcess";`,
+          line: `import { hostProcess } from "@t3tools/shared/hostProcess";`,
         },
         { file: "apps/web/src/example.ts", line: `appId: "com.t3tools.t3code"` },
         { file: "apps/web/src/example.ts", line: `git@github.com:T3Tools/T3Code.git` },
@@ -304,5 +304,56 @@ describe("check-rebrand", () => {
       EMPTY_BASELINE,
     );
     expect(violations).toEqual([]);
+  });
+
+  it("flags legacy env names outside the compat surfaces", () => {
+    const violations = findViolations(
+      [
+        { file: "apps/server/src/cli/config.ts", line: 'Config.string("T3CODE_HOME")' },
+        { file: "packages/ssh/src/tunnel.ts", line: "T3_ARCHIVE_VERSION=@@T3_ARCHIVE_VERSION@@" },
+        { file: "apps/web/src/example.ts", line: "process.env.T3_RELEASE_BASE_URL" },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t3-env-name"));
+  });
+
+  it("allows retained T3 identifiers that are not env vars", () => {
+    const violations = findViolations(
+      [
+        {
+          file: "packages/shared/src/themePalettes.ts",
+          line: "export const T3_CHAT_THEME: ThemeDefinition = {",
+        },
+        {
+          file: "apps/web/src/pierre-icons.ts",
+          line: "export const T3_FILE_ICON_SPRITE = `...`;",
+        },
+        {
+          file: "packages/client-runtime/src/work-log/presentation.ts",
+          line: "const T3_MCP_TOOL_LABELS: Record<string, Labels> = {",
+        },
+        {
+          file: "apps/web/src/themePalette.ts",
+          line: 'const LEGACY_T3_CHAT_DARK_THEME_ID = "t3-chat-dark";',
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations).toEqual([]);
+  });
+
+  it("honors baseline entries for legacy env fallback lines", () => {
+    const legacyFallbackLine = '["T2CODE_HOME", firstSet("T2CODE_HOME", "T3CODE_HOME")],';
+    const entries = [
+      { file: "apps/desktop/scripts/electron-launcher.mjs", line: legacyFallbackLine },
+    ];
+    expect(findViolations(entries, EMPTY_BASELINE).map((v) => v.rule.id)).toEqual(["t3-env-name"]);
+    expect(
+      findViolations(
+        entries,
+        new Set([`apps/desktop/scripts/electron-launcher.mjs\u0000${legacyFallbackLine}`]),
+      ),
+    ).toEqual([]);
   });
 });
