@@ -485,10 +485,7 @@ export const projectFileUploadRouteLayer = HttpRouter.add(
 
     // Keep the request stream in the route scope until the response is sent.
     const bodyPull = yield* Stream.toPull(request.stream);
-    const stored = yield* storeProjectFileUpload(
-      claims,
-      Stream.fromPull(Effect.succeed(bodyPull)),
-    );
+    const stored = yield* storeProjectFileUpload(claims, Stream.fromPull(Effect.succeed(bodyPull)));
     return stored.ok
       ? HttpServerResponse.empty({ status: 204 })
       : HttpServerResponse.text(stored.detail, { status: stored.status });
