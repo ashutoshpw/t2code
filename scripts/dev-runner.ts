@@ -320,7 +320,7 @@ export function createDevRunnerEnv({
   return Effect.gen(function* () {
     const serverPort = port ?? BASE_SERVER_PORT + serverOffset;
     const webPort = BASE_WEB_PORT + webOffset;
-    // Precedence (--home-dir > worktree .t3 > ambient T3CODE_HOME) is resolved
+    // Precedence (--home-dir > worktree .t3 > ambient T2CODE_HOME) is resolved
     // by the caller; an unset t3Home here genuinely means "use the default".
     const configuredBaseDir = t3Home?.trim() || undefined;
     const resolvedBaseDir = yield* resolveBaseDir(configuredBaseDir);
@@ -335,8 +335,9 @@ export function createDevRunnerEnv({
     };
 
     if (configuredBaseDir !== undefined) {
-      output.T3CODE_HOME = resolvedBaseDir;
+      output.T2CODE_HOME = resolvedBaseDir;
     } else {
+      delete output.T2CODE_HOME;
       delete output.T3CODE_HOME;
     }
 
@@ -388,6 +389,7 @@ export function createDevRunnerEnv({
       delete output.T2CODE_MODE;
       delete output.T2CODE_NO_BROWSER;
       delete output.T2CODE_HOST;
+      delete output.T2CODE_DEV_AUTH_TOKEN;
       delete output.T3CODE_DEV_AUTH_TOKEN;
     }
 
@@ -677,7 +679,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
     const hostEnvironment = yield* HostProcessEnvironment;
     // A dev server started inside a worktree defaults to that worktree's own
     // (gitignored) `.t3` — see @t2code/shared/devHome for why this must
-    // outrank an ambient T3CODE_HOME. `--home-dir` still wins.
+    // outrank an ambient T2CODE_HOME. `--home-dir` still wins.
     const worktreeHome = yield* resolveWorktreeT3Home(yield* HostProcessWorkingDirectory);
     // Trim before choosing: `--home-dir ""` is not a selection, and treating it
     // as one would skip the worktree default and land on the shared home —
@@ -685,6 +687,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
     const resolvedT3Home =
       (input.t3Home?.trim() || undefined) ??
       worktreeHome ??
+      (hostEnvironment.T2CODE_HOME?.trim() || undefined) ??
       (hostEnvironment.T3CODE_HOME?.trim() || undefined);
     const env = yield* createDevRunnerEnv({
       mode: input.mode,
@@ -704,7 +707,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       serverOffset !== offset || webOffset !== offset
         ? ` selectedOffset(server=${serverOffset},web=${webOffset})`
         : "";
-    const baseDir = env.T3CODE_HOME ?? (yield* DEFAULT_T3_HOME);
+    const baseDir = env.T2CODE_HOME ?? (yield* DEFAULT_T3_HOME);
 
     yield* Effect.logInfo(
       `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T2CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
@@ -861,7 +864,7 @@ const devRunnerCli = Command.make("dev-runner", {
   ),
   t3Home: Flag.string("home-dir").pipe(
     Flag.withDescription(
-      "Explicit T2 Code data directory; runtime state is stored under userdata (equivalent to T3CODE_HOME). Inside a git worktree this defaults to that worktree's own .t3 so dev state stays off the shared home.",
+      "Explicit T2 Code data directory; runtime state is stored under userdata (equivalent to T2CODE_HOME). Inside a git worktree this defaults to that worktree's own .t3 so dev state stays off the shared home.",
     ),
     Flag.optional,
     Flag.map(Option.getOrUndefined),

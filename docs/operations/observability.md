@@ -119,9 +119,9 @@ Default Grafana login:
 #### 2. Export OTLP env vars
 
 ```bash
-export T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces
-export T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
-export T3CODE_OTLP_SERVICE_NAME=t3-local
+export T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces
+export T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
+export T2CODE_OTLP_SERVICE_NAME=t3-local
 ```
 
 Optional:
@@ -153,23 +153,23 @@ node --run dev:desktop
 
 Packaged desktop app:
 
-Launch the actual app executable from the same shell so the desktop app and embedded backend inherit `T3CODE_OTLP_*`.
+Launch the actual app executable from the same shell so the desktop app and embedded backend inherit `T2CODE_OTLP_*`.
 
 macOS app bundle example:
 
 ```bash
-T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
-T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
-T3CODE_OTLP_SERVICE_NAME=t3-desktop \
+T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
+T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
+T2CODE_OTLP_SERVICE_NAME=t3-desktop \
 "/Applications/T2 Code.app/Contents/MacOS/T2 Code"
 ```
 
 Direct binary example:
 
 ```bash
-T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
-T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
-T3CODE_OTLP_SERVICE_NAME=t3-desktop \
+T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
+T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
+T2CODE_OTLP_SERVICE_NAME=t3-desktop \
 ./path/to/your/desktop-app-binary
 ```
 
@@ -189,7 +189,7 @@ Resolve the path for the launch mode once. Production and explicitly configured 
 state under the base directory's `userdata` folder:
 
 ```bash
-TRACE_FILE="${T3CODE_HOME:-$HOME/.t3}/userdata/logs/server.trace.ndjson"
+TRACE_FILE="${T2CODE_HOME:-$HOME/.t3}/userdata/logs/server.trace.ndjson"
 ```
 
 A dev server started from a linked worktree defaults to that worktree's local home:
@@ -391,7 +391,7 @@ If you need those later, add client-side instrumentation or a dedicated server f
 
 Usually one of these is true:
 
-- `T3CODE_OTLP_TRACES_URL` was not set
+- `T2CODE_OTLP_TRACES_URL` was not set
 - the app was launched from a different environment than the one where you exported the vars
 - the app was not fully restarted after changing env
 - Grafana is looking at the wrong time range or service name
@@ -524,13 +524,13 @@ Local trace file:
 
 OTLP export:
 
-- `T3CODE_OTLP_TRACES_URL`: OTLP trace endpoint
-- `T3CODE_OTLP_METRICS_URL`: OTLP metric endpoint
-- `T3CODE_OTLP_EXPORT_INTERVAL_MS`: export interval, default `10000`
-- `T3CODE_OTLP_SERVICE_NAME`: service name, default `t3-server`
-- `T3CODE_OTLP_HEADERS`: extra headers for both exporters, same format as
+- `T2CODE_OTLP_TRACES_URL`: OTLP trace endpoint
+- `T2CODE_OTLP_METRICS_URL`: OTLP metric endpoint
+- `T2CODE_OTLP_EXPORT_INTERVAL_MS`: export interval, default `10000`
+- `T2CODE_OTLP_SERVICE_NAME`: service name, default `t2-server`
+- `T2CODE_OTLP_HEADERS`: extra headers for both exporters, same format as
   `OTEL_EXPORTER_OTLP_HEADERS`: comma-separated `key=value` pairs with percent-encoded values.
-- `T3CODE_OTLP_PROTOCOL`: `http/json` (default) or `http/protobuf`
+- `T2CODE_OTLP_PROTOCOL`: `http/json` (default) or `http/protobuf`
 
 If the OTLP URLs are unset, local tracing still works and metrics stay in-process only.
 

@@ -45,15 +45,15 @@ describe("DesktopEnvironment", () => {
       const environment = yield* makeEnvironment(
         {},
         {
-          T3CODE_HOME: " /tmp/t3 ",
+          T2CODE_HOME: " /tmp/t3 ",
           T2CODE_COMMIT_HASH: " 0123456789abcdef ",
           T2CODE_PORT: "4949",
           VITE_DEV_SERVER_URL: "http://localhost:5173",
           T2CODE_DEV_REMOTE_SERVER_ENTRY_PATH: " /remote/server.mjs ",
-          T3CODE_OTLP_TRACES_URL: " http://127.0.0.1:4318/v1/traces ",
-          T3CODE_OTLP_EXPORT_INTERVAL_MS: "2500",
-          T3CODE_OTLP_HEADERS: "authorization=Basic%20abc%3D%3D,x-tenant=t3",
-          T3CODE_OTLP_PROTOCOL: "http/protobuf",
+          T2CODE_OTLP_TRACES_URL: " http://127.0.0.1:4318/v1/traces ",
+          T2CODE_OTLP_EXPORT_INTERVAL_MS: "2500",
+          T2CODE_OTLP_HEADERS: "authorization=Basic%20abc%3D%3D,x-tenant=t3",
+          T2CODE_OTLP_PROTOCOL: "http/protobuf",
         },
       );
 
@@ -103,7 +103,7 @@ describe("DesktopEnvironment", () => {
       const environment = yield* makeEnvironment(
         {},
         {
-          T3CODE_HOME: "/tmp/t3",
+          T2CODE_HOME: "/tmp/t3",
         },
       );
 

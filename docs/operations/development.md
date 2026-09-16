@@ -26,7 +26,7 @@ Add `--browser` to open a browser automatically.
 
 ### State and ports
 
-Linked worktrees default to their own `.t3/userdata`, even when `T3CODE_HOME` is set.
+Linked worktrees default to their own `.t3/userdata`, even when `T2CODE_HOME` is set.
 The main checkout defaults to `~/.t3/dev/userdata`. An explicit `--home-dir` wins in both cases.
 Never run a development server against the live `~/.t3/userdata`.
 See [test data](../../AGENTS.md#test-data) for copying a consistent database snapshot.
@@ -73,7 +73,7 @@ openssl rand -hex 32
 Put that value in the main checkout's gitignored `.env`:
 
 ```dotenv
-T3CODE_DEV_AUTH_TOKEN=<the value generated above>
+T2CODE_DEV_AUTH_TOKEN=<the value generated above>
 ```
 
 The `t2.json` Setup Worktree commands on Unix and Windows link that file to each worktree's
@@ -83,7 +83,7 @@ environment values override `.env`, so no per-worktree export is needed after se
 For a manual worktree or launcher without that link, export the same fixed value instead:
 
 ```sh
-export T3CODE_DEV_AUTH_TOKEN="<the value generated above>"
+export T2CODE_DEV_AUTH_TOKEN="<the value generated above>"
 ```
 
 Do not generate a new value at startup. Start or restart `vp run dev --share` after configuration,

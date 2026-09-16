@@ -51,7 +51,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     otlpTracesUrl: undefined,
     otlpMetricsUrl: undefined,
     otlpExportIntervalMs: 10_000,
-    otlpServiceName: "t3-server",
+    otlpServiceName: "t2-server",
     otlpHeaders: undefined,
     otlpProtocol: "http/json",
     devAllowedOrigins: [],
@@ -99,7 +99,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       const configLayer = ConfigProvider.layer(
         ConfigProvider.fromEnv({
           env: {
-            T3CODE_DEV_AUTH_TOKEN: "  reusable-dev-auth-token-that-is-long-enough  ",
+            T2CODE_DEV_AUTH_TOKEN: "  reusable-dev-auth-token-that-is-long-enough  ",
           },
         }),
       );
@@ -117,6 +117,35 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       }
       expect(Redacted.value(web.devAuthToken)).toBe("reusable-dev-auth-token-that-is-long-enough");
       expect(desktop.devAuthToken).toBeUndefined();
+    }),
+  );
+
+  it.effect("honors the legacy T3CODE_HOME env spelling", () =>
+    Effect.gen(function* () {
+      const baseDir = yield* FileSystem.FileSystem.pipe(
+        Effect.flatMap((fs) => fs.makeTempDirectoryScoped({ prefix: "t2-cli-legacy-home-" })),
+      );
+      const flags = {
+        mode: Option.some("desktop" as const),
+        port: Option.some(8788),
+        host: Option.none<string>(),
+        baseDir: Option.none<string>(),
+        cwd: Option.none<string>(),
+        devUrl: Option.none<URL>(),
+        noBrowser: Option.some(true),
+        bootstrapFd: Option.none<number>(),
+        autoBootstrapProjectFromCwd: Option.none<boolean>(),
+        logWebSocketEvents: Option.none<boolean>(),
+        tailscaleServeEnabled: Option.none<boolean>(),
+        tailscaleServePort: Option.none<number>(),
+      };
+      const configLayer = ConfigProvider.layer(
+        ConfigProvider.fromEnv({ env: { T3CODE_HOME: baseDir } }),
+      );
+      const resolved = yield* resolveServerConfig(flags, Option.none()).pipe(
+        Effect.provide(Layer.mergeAll(configLayer, NetService.layer)),
+      );
+      expect(resolved.baseDir).toBe(baseDir);
     }),
   );
 
@@ -141,7 +170,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         tailscaleServePort: Option.none<number>(),
       };
       const configLayer = ConfigProvider.layer(
-        ConfigProvider.fromEnv({ env: { T3CODE_DEV_AUTH_TOKEN: secret } }),
+        ConfigProvider.fromEnv({ env: { T2CODE_DEV_AUTH_TOKEN: secret } }),
       );
       const error = yield* resolveServerConfig(flags, Option.none()).pipe(
         Effect.provide(Layer.mergeAll(configLayer, NetService.layer)),
@@ -198,7 +227,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
                   T2CODE_MODE: "desktop",
                   T2CODE_PORT: "4001",
                   T2CODE_HOST: "0.0.0.0",
-                  T3CODE_HOME: baseDir,
+                  T2CODE_HOME: baseDir,
                   VITE_DEV_SERVER_URL: "http://127.0.0.1:5173",
                   T2CODE_DEV_ALLOWED_ORIGINS:
                     "https://host.example.ts.net, https://phone.example.ts.net ",
@@ -271,7 +300,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
                   T2CODE_MODE: "desktop",
                   T2CODE_PORT: "4001",
                   T2CODE_HOST: "0.0.0.0",
-                  T3CODE_HOME: join(NodeOS.tmpdir(), "ignored-base"),
+                  T2CODE_HOME: join(NodeOS.tmpdir(), "ignored-base"),
                   VITE_DEV_SERVER_URL: "http://127.0.0.1:5173",
                   T2CODE_NO_BROWSER: "false",
                   T2CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
@@ -556,7 +585,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
                 env: {
                   T2CODE_MODE: "web",
                   T2CODE_BOOTSTRAP_FD: String(fd),
-                  T3CODE_HOME: baseDir,
+                  T2CODE_HOME: baseDir,
                   T2CODE_NO_BROWSER: "true",
                   T2CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
                   T2CODE_LOG_WS_EVENTS: "true",
@@ -730,7 +759,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       const resolved = yield* resolveServerConfig(
         {
           mode: Option.some("web"),
-          port: Option.some(3773),
+          port: Option.some(3772),
           host: Option.none(),
           baseDir: Option.some(baseDir),
           cwd: Option.none(),
@@ -749,7 +778,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_OTLP_HEADERS: "authorization=Basic%20abc%3D%3D,x-tenant=t3",
+                  T2CODE_OTLP_HEADERS: "authorization=Basic%20abc%3D%3D,x-tenant=t3",
                 },
               }),
             ),
@@ -773,7 +802,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       const resolved = yield* resolveServerConfig(
         {
           mode: Option.some("web"),
-          port: Option.some(3773),
+          port: Option.some(3772),
           host: Option.none(),
           baseDir: Option.some(baseDir),
           cwd: Option.none(),
@@ -792,8 +821,8 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_OTLP_HEADERS: "authorization=Bearer abc==, x-tenant=t3",
-                  T3CODE_OTLP_TRACES_URL: "http://collector.internal:4318",
+                  T2CODE_OTLP_HEADERS: "authorization=Bearer abc==, x-tenant=t3",
+                  T2CODE_OTLP_TRACES_URL: "http://collector.internal:4318",
                 },
               }),
             ),
@@ -818,7 +847,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       const resolved = yield* resolveServerConfig(
         {
           mode: Option.some("web"),
-          port: Option.some(3773),
+          port: Option.some(3772),
           host: Option.none(),
           baseDir: Option.some(baseDir),
           cwd: Option.none(),
@@ -835,7 +864,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         Effect.provide(
           Layer.mergeAll(
             ConfigProvider.layer(
-              ConfigProvider.fromEnv({ env: { T3CODE_OTLP_PROTOCOL: "http/protobuf" } }),
+              ConfigProvider.fromEnv({ env: { T2CODE_OTLP_PROTOCOL: "http/protobuf" } }),
             ),
             NetService.layer,
           ),
