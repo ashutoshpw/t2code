@@ -43,7 +43,7 @@ const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // (codes.t2.desktop), so launchd and TCC records never collide.
 const BOOT_SERVICE_LAUNCHD_LABEL = "codes.t2.desktop.service";
 const BOOT_SERVICE_PLIST_FILE = `${BOOT_SERVICE_LAUNCHD_LABEL}.plist`;
-const BOOT_SERVICE_UNIT_ENV = "T3_BOOT_SERVICE_UNIT";
+const BOOT_SERVICE_UNIT_ENV = "T2_BOOT_SERVICE_UNIT";
 
 /** systemd expands `%` specifiers, including in unquoted append-log paths. */
 function escapeSystemdSpecifiers(value: string): string {

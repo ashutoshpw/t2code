@@ -161,7 +161,7 @@ const makeExitLogFixture = Effect.fn("makeExitLogFixture")(function* (prefix: st
   return {
     exitLogPath,
     wrapperPath: yield* makeMockAgentWrapper({
-      T3_ACP_EXIT_LOG_PATH: exitLogPath,
+      T2_ACP_EXIT_LOG_PATH: exitLogPath,
     }),
   };
 });
@@ -715,7 +715,7 @@ describe("checkCursorProviderStatus", () => {
         },
         {
           ...process.env,
-          T3_ACP_REQUEST_LOG_PATH: requestLogPath,
+          T2_ACP_REQUEST_LOG_PATH: requestLogPath,
         },
       ),
     );
@@ -744,7 +744,7 @@ describe("discoverCursorModelsViaAcp", () => {
         };
         const discover = yield* makeCursorModelDiscovery(settings, {
           ...process.env,
-          T3_ACP_REQUEST_LOG_PATH: requestLogPath,
+          T2_ACP_REQUEST_LOG_PATH: requestLogPath,
         });
         const about = {
           version: "2026.08.11",

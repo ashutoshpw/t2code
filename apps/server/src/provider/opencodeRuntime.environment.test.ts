@@ -203,8 +203,8 @@ server.listen(0, "127.0.0.1", () => {
           [
             ...(isWindows ? ["@echo off"] : ["#!/bin/sh"]),
             isWindows
-              ? '"%T3_TEST_NODE_BINARY%" "%T3_TEST_OPENCODE_SCRIPT%" %*'
-              : 'exec "$T3_TEST_NODE_BINARY" "$T3_TEST_OPENCODE_SCRIPT" "$@"',
+              ? '"%T2_TEST_NODE_BINARY%" "%T2_TEST_OPENCODE_SCRIPT%" %*'
+              : 'exec "$T2_TEST_NODE_BINARY" "$T2_TEST_OPENCODE_SCRIPT" "$@"',
             "",
           ].join("\n"),
         );
@@ -219,8 +219,8 @@ server.listen(0, "127.0.0.1", () => {
           port: 0,
           environment: {
             ...environment,
-            T3_TEST_NODE_BINARY: executablePath,
-            T3_TEST_OPENCODE_SCRIPT: scriptPath,
+            T2_TEST_NODE_BINARY: executablePath,
+            T2_TEST_OPENCODE_SCRIPT: scriptPath,
           },
         });
         const response = yield* HttpClient.get(`${server.url}/output`);

@@ -102,5 +102,11 @@ export function createProjectEnvironmentAtoms<R, E>(
           JSON.stringify([environmentId, input.cwd, input.relativePath]),
       },
     }),
+    // Mints a signed upload URL; the bytes move over HTTP (see the web
+    // workspaceFileUploads helper), so no queue or serialization applies.
+    createFileUploadUrl: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:projects:create-file-upload-url",
+      tag: WS_METHODS.projectsCreateFileUploadUrl,
+    }),
   };
 }
