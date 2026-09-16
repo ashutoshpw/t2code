@@ -31,6 +31,8 @@ const GUARDED_FILES = new Set([
   "scripts/check-rebrand.ts",
   "scripts/check-rebrand.test.ts",
   "scripts/rebrand-baseline.json",
+  "packages/shared/src/legacyEnv.ts",
+  "packages/shared/src/legacyEnv.test.ts",
 ]);
 // Trees where T3 mentions are the point: fork tooling describing the upstream,
 // the vendored upstream checkout, and vendored upstream-owned native modules.
@@ -49,6 +51,30 @@ const LEGACY_WORDMARK_PATH_FINGERPRINT =
 // references that the fork should rename.
 const UPSTREAM_T3TOOLS_REPOSITORY_PREFIX = /(?:github\.com|gitlab\.com)(?::|\/)$/i;
 const T3TOOLS_WORD = /\bt3tools\b/gi;
+
+// The env namespace is T2CODE_*/T2_*. Legacy T3CODE_*/T3_* names survive only
+// as compat data in the guarded seam files, baseline-grandfathered compat
+// lines, and these retained identifiers — which are plain code constants
+// (theme names, prompt text, icon sprite labels), not environment variables.
+const RETAINED_T3_IDENTIFIERS = new Set([
+  "T3_CHAT_THEME",
+  "T3_CHAT_THEME_ID",
+  "T3_CODE_BROWSER_TOOL_INSTRUCTIONS",
+  "T3_CODE_DARK_THEME_COLORS",
+  "T3_CODE_DEVICE_TOOL_INSTRUCTIONS",
+  "T3_CODE_LIGHT_THEME_COLORS",
+  "T3_CODE_OAUTH_REFERRER",
+  "T3_PIERRE_ICONS",
+  "T3_FILE_ICON_SPRITE",
+  "T3_MCP_TOOL_LABELS",
+]);
+
+function hasLegacyEnvName(line: string): boolean {
+  for (const match of line.matchAll(/(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+/g)) {
+    if (!RETAINED_T3_IDENTIFIERS.has(match[0])) return true;
+  }
+  return false;
+}
 
 function hasUnapprovedT3ToolsReference(line: string): boolean {
   for (const match of line.matchAll(T3TOOLS_WORD)) {
@@ -142,6 +168,11 @@ const RULES: Rule[] = [
     id: "t3-scheme-preview",
     hint: 'the preview scheme is "t2code-preview"; "t3code-preview" only survives in legacy storage partition names',
     violates: (file, line) => /t3code-preview/.test(line) && !line.includes("persist:"),
+  },
+  {
+    id: "t3-env-name",
+    hint: "env vars use the T2CODE_/T2_ namespace; legacy T3CODE_/T3_ spellings only in @t2code/shared/legacyEnv, its test, and baseline-grandfathered compat lines",
+    violates: (_file, line) => hasLegacyEnvName(line),
   },
 ];
 
