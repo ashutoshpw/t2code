@@ -182,8 +182,8 @@ export OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=development
 Optional:
 
 ```bash
-export T3CODE_TRACE_MIN_LEVEL=Info
-export T3CODE_TRACE_TIMING_ENABLED=true
+export T2CODE_TRACE_MIN_LEVEL=Info
+export T2CODE_TRACE_TIMING_ENABLED=true
 ```
 
 #### 3. Launch the app from that same shell
@@ -216,7 +216,6 @@ macOS app bundle example:
 T3CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces \
 T3CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics \
 T3CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs \
-T3CODE_OTLP_SERVICE_NAME=t3-desktop \
 "/Applications/T2 Code.app/Contents/MacOS/T2 Code"
 ```
 
@@ -582,12 +581,12 @@ to the backend alone.
 
 Local trace file:
 
-- `T3CODE_TRACE_FILE`: override trace file path
-- `T3CODE_TRACE_MAX_BYTES`: per-file rotation size, default `10485760`
-- `T3CODE_TRACE_MAX_FILES`: rotated file count, default `10`
-- `T3CODE_TRACE_BATCH_WINDOW_MS`: flush window, default `200`
-- `T3CODE_TRACE_MIN_LEVEL`: minimum trace level, default `Info`
-- `T3CODE_TRACE_TIMING_ENABLED`: enable timing metadata, default `true`
+- `T2CODE_TRACE_FILE`: override trace file path
+- `T2CODE_TRACE_MAX_BYTES`: per-file rotation size, default `10485760`
+- `T2CODE_TRACE_MAX_FILES`: rotated file count, default `10`
+- `T2CODE_TRACE_BATCH_WINDOW_MS`: flush window, default `200`
+- `T2CODE_TRACE_MIN_LEVEL`: minimum trace level, default `Info`
+- `T2CODE_TRACE_TIMING_ENABLED`: enable timing metadata, default `true`
 
 OTLP export:
 

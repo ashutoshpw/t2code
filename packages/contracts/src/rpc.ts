@@ -162,6 +162,9 @@ import {
   ProjectCreateNewInput,
   ProjectCreateNewResult,
   ProjectEnsureScratchResult,
+  ProjectFileCreateUploadUrlInput,
+  ProjectFileCreateUploadUrlResult,
+  ProjectFileUploadError,
   ProjectListEntriesError,
   ProjectListEntriesInput,
   ProjectListEntriesResult,
@@ -298,6 +301,7 @@ export const WS_METHODS = {
   projectsWriteFile: "projects.writeFile",
   projectsEnsureScratch: "projects.ensureScratch",
   projectsCreateNew: "projects.createNew",
+  projectsCreateFileUploadUrl: "projects.createFileUploadUrl",
 
   // Shell methods
   shellOpenInEditor: "shell.openInEditor",
@@ -1013,6 +1017,12 @@ const WsProjectsCreateNewRpc = Rpc.make(WS_METHODS.projectsCreateNew, {
   error: Schema.Union([OrchestrationDispatchCommandError, EnvironmentAuthorizationError]),
 });
 
+const WsProjectsCreateFileUploadUrlRpc = Rpc.make(WS_METHODS.projectsCreateFileUploadUrl, {
+  payload: ProjectFileCreateUploadUrlInput,
+  success: ProjectFileCreateUploadUrlResult,
+  error: Schema.Union([ProjectFileUploadError, EnvironmentAuthorizationError]),
+});
+
 const WsShellOpenInEditorRpc = Rpc.make(WS_METHODS.shellOpenInEditor, {
   payload: LaunchEditorInput,
   error: Schema.Union([ExternalLauncherError, EnvironmentAuthorizationError]),
@@ -1533,6 +1543,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsProjectsEnsureScratchRpc,
   WsProjectsCreateNewRpc,
   WsProjectsWriteFileRpc,
+  WsProjectsCreateFileUploadUrlRpc,
   WsShellOpenInEditorRpc,
   WsFilesystemBrowseRpc,
   WsAgentSessionsScanRpc,

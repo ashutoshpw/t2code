@@ -122,8 +122,8 @@ For a production macOS app with bundle ID `com.t3tools.t3code`:
 Local signed builds additionally use:
 
 ```dotenv
-T3CODE_APPLE_TEAM_ID=ABC1234567
-T3CODE_MACOS_PROVISIONING_PROFILE=/absolute/path/to/t3code.provisionprofile
+T2CODE_APPLE_TEAM_ID=ABC1234567
+T2CODE_MACOS_PROVISIONING_PROFILE=/absolute/path/to/t3code.provisionprofile
 # Override only when the RP domain differs from the Clerk Frontend API hostname.
 T3CODE_CLERK_PASSKEY_RP_DOMAINS=example.clerk.accounts.dev,clerk.example.com
 ```
@@ -138,7 +138,7 @@ actual web and server ports. For example, with the default ports:
 
 ```sh
 VITE_DEV_SERVER_URL=http://127.0.0.1:5733 \
-T3CODE_PORT=13772 \
+T2CODE_PORT=13772 \
   "/Applications/T2 Code (Alpha).app/Contents/MacOS/T2 Code (Alpha)"
 ```
 

@@ -334,8 +334,8 @@ it.layer(layer)("AntigravityAdapter", (it) => {
                 cwd: input.cwd,
                 env: {
                   ...process.env,
-                  T3_ACP_ANTIGRAVITY: "1",
-                  T3_ACP_REQUEST_LOG_PATH: requestLog,
+                  T2_ACP_ANTIGRAVITY: "1",
+                  T2_ACP_REQUEST_LOG_PATH: requestLog,
                 },
                 extendEnv: false,
               },
