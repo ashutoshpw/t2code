@@ -62,7 +62,7 @@ export const resolveGitWorktreePath = Effect.fn("devHome.resolveGitWorktreePath"
  * Deliberately does not require the directory to exist yet: falling back
  * because it is missing would send callers at the shared home.
  */
-export const resolveWorktreeT3Home = Effect.fn("devHome.resolveWorktreeT3Home")(function* (
+export const resolveWorktreeT2Home = Effect.fn("devHome.resolveWorktreeT2Home")(function* (
   cwd: string,
 ): Effect.fn.Return<string | undefined, never, FileSystem.FileSystem | Path.Path> {
   const worktreePath = yield* resolveGitWorktreePath(cwd);

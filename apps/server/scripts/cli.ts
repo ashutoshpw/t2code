@@ -11,9 +11,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 import { DEVELOPMENT_ICON_OVERRIDES } from "../../../scripts/lib/brand-assets.ts";
 import { findEsmImportsOfExternalPackages } from "../../../scripts/lib/cli-executable-imports.ts";
-import { injectLinuxArm64Sea } from "../../../scripts/lib/linux-arm64-sea.ts";
 import rootPackageJson from "../../../package.json" with { type: "json" };
-import * as HostProcess from "@t2code/shared/HostProcess";
 import { resolveSpawnCommand } from "@t2code/shared/shell";
 import {
   createNpmPublishInvocation,
@@ -149,9 +147,9 @@ const buildExeCmd = Command.make(
             cwd: serverDir,
             env: {
               ...process.env,
-              T3CODE_PACK_EXE: packMode,
-              T3CODE_CLI_ASSET_DIR: cliAssetDir,
-              T3CODE_PACK_EXE_TARGET: target ?? "",
+              T2CODE_PACK_EXE: packMode,
+              T2CODE_CLI_ASSET_DIR: cliAssetDir,
+              T2CODE_PACK_EXE_TARGET: target ?? "",
             },
             stdout: config.verbose ? "inherit" : "ignore",
             stderr: "inherit",
@@ -195,7 +193,7 @@ const buildExeCmd = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    `Build the server as a Node single-executable. Native builds require Node ${rootPackageJson.engines.node}; explicit cross-target builds need a Node 25.7+ host for --build-sea. Linux ARM64 builds only on a Linux ARM64 host. The binary still resolves native packages from a node_modules tree beside it.`,
+    `Build the server as a Node single-executable. Native builds require Node ${rootPackageJson.engines.node}; explicit cross-target builds need a Node 25.7+ host for --build-sea. The binary still resolves native packages from a node_modules tree beside it.`,
   ),
 );
 
