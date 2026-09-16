@@ -7,7 +7,7 @@ turn result, duration, and main-agent token totals when available.
 Events do not include prompts, responses, file contents, authentication tokens, conversation IDs,
 raw provider events, or child-agent output. Child-agent token use is excluded from the totals.
 
-To disable collection, set `T3CODE_TELEMETRY_ENABLED=false` in the server's environment before
+To disable collection, set `T2CODE_TELEMETRY_ENABLED=false` in the server's environment before
 starting it. This stops product events from being recorded or sent.
 
 The desktop app reads the variable from your shell profile (for example `~/.zshrc`) on macOS and

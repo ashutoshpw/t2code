@@ -627,9 +627,11 @@ export class Launcher {
 }
 
 export async function main(): Promise<void> {
-  const baseDir = process.env.T3CODE_HOME?.trim();
+  // Installed units written by older builds export the legacy T3CODE_HOME
+  // spelling; the launcher runs against whatever unit is on disk.
+  const baseDir = (process.env.T2CODE_HOME ?? process.env.T3CODE_HOME)?.trim();
   if (baseDir === undefined || baseDir === "") {
-    throw new Error("T3CODE_HOME is required by the T2 Code service launcher.");
+    throw new Error("T2CODE_HOME is required by the T2 Code service launcher.");
   }
   const statePath = NodePath.join(baseDir, "runtime", SERVICE_STATE_FILE);
   const state = await readServiceState(statePath);
