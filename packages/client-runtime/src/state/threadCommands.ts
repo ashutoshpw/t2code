@@ -1,10 +1,6 @@
 import * as Crypto from "effect/Crypto";
 import { Atom } from "effect/unstable/reactivity";
-import {
-  WS_METHODS,
-  type EnvironmentId,
-  type OrchestrationShellSnapshot,
-} from "@t2code/contracts";
+import { WS_METHODS, type EnvironmentId, type OrchestrationShellSnapshot } from "@t2code/contracts";
 
 import { createOptimisticThreadLifecycle } from "./threadLifecycle.ts";
 import { canSnooze } from "./threadSettled.ts";
