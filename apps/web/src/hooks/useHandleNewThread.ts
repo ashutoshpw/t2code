@@ -287,7 +287,6 @@ export function createNewThreadHandler(router: AnyRouter) {
       const storedDraftThread = getDraftSessionByLogicalProjectKey(logicalProjectKey);
       const storedDraftThreadRef = storedDraftThread
         ? scopeThreadRef(storedDraftThread.environmentId, storedDraftThread.threadId)
->>>>>>> f391d5e631 (fix(project): migrate checked-in config to t2.json (#7))
         : null;
     const latestActiveDraftThread: DraftThreadState | null = currentRouteTarget
       ? currentRouteTarget.kind === "server"

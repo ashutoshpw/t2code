@@ -54,13 +54,16 @@ function ConfiguredT3ConnectSidebarSignIn() {
   if (!isLoaded || isSignedIn) return null;
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <SidebarMenuButton onClick={openAuthPrompt}>
-          <LogInIcon />
-          <span>Sign in to T3 Connect</span>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    </SidebarMenu>
+    <>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton onClick={openAuthPrompt}>
+            <LogInIcon />
+            <span>Sign in to T2 Connect</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+      {authPrompt}
+    </>
   );
 }
