@@ -119,7 +119,7 @@ const authorizeCli = Effect.fn("cloud.cli.authorize")(function* (options: {
   const existing = yield* tokens.getExisting.pipe(
     Effect.catchTags({
       CloudCliCredentialRefreshError: () =>
-        Console.log("T3 Connect sign-in expired. Sign in again.").pipe(Effect.as(Option.none())),
+        Console.log("T2 Connect sign-in expired. Sign in again.").pipe(Effect.as(Option.none())),
     }),
   );
   if (Option.isSome(existing)) {
@@ -208,7 +208,7 @@ function formatCloudStatus(status: CloudCliStatus, options?: { readonly json?: b
           : undefined;
 
   return [
-    "T3 Connect",
+    "T2 Connect",
     `  Exposure: ${status.desired ? "enabled" : "disabled"}`,
     `  Authorization: ${status.authenticated ? "stored credential" : "missing"}`,
     `  Environment link: ${provisioned}`,
@@ -237,7 +237,7 @@ const CLOUD_CLI_LIVE_SERVER_TIMEOUT = Duration.seconds(5);
 const confirmRelayClientInstall = (version: string) =>
   Prompt.run(
     Prompt.Confirm({
-      message: `The T3 relay client is required for T3 Connect. Download and install version ${version}?`,
+      message: `The T3 relay client is required for T2 Connect. Download and install version ${version}?`,
       initial: false,
     }),
   );
@@ -413,7 +413,7 @@ const logCloudDisconnectFailure = (
   clearAuthorization: boolean,
   cause: Cause.Cause<unknown>,
 ) =>
-  Effect.logWarning("T3 Connect disconnect operation failed.").pipe(
+  Effect.logWarning("T2 Connect disconnect operation failed.").pipe(
     Effect.annotateLogs({
       operation,
       clearAuthorization,
@@ -464,14 +464,14 @@ const reportCloudDisconnectResults = Effect.fn("cloud.cli.report_disconnect_resu
         input.liveResult.cause,
       );
       yield* Console.warn(
-        "T3 Connect is disabled, but the running server could not stop its tunnel.\nRestart that server to stop the connector.",
+        "T2 Connect is disabled, but the running server could not stop its tunnel.\nRestart that server to stop the connector.",
       );
     } else {
-      yield* Console.log("T3 Connect is disabled locally.");
+      yield* Console.log("T2 Connect is disabled locally.");
       // A killed server cannot stop the connector it started, and nothing adopts it on restart.
       if (input.liveResult.status === "server-gone") {
         yield* Console.warn(
-          "The server that ran T3 Connect is gone, but its cloudflared process may still be running.\nStop that process if it is.",
+          "The server that ran T2 Connect is gone, but its cloudflared process may still be running.\nStop that process if it is.",
         );
       }
     }
@@ -518,7 +518,7 @@ export const disconnectCloud = Effect.fn("cloud.cli.disconnect")(function* (opti
 
   if (options.clearAuthorization) {
     yield* Console.log(
-      "Signed out of T3 Connect locally.\nThe background service is managed separately with `t2code service`.",
+      "Signed out of T2 Connect locally.\nThe background service is managed separately with `t2code service`.",
     );
   }
   return liveResult;
@@ -602,7 +602,7 @@ const linkEnvironmentForConnect = Effect.fn("cloud.cli.link_environment")(functi
         : reportRelayClientInstallProgress,
     );
     if (Option.isNone(installed)) {
-      yield* Console.log("T3 Connect setup cancelled. The relay client was not installed.");
+      yield* Console.log("T2 Connect setup cancelled. The relay client was not installed.");
       return null;
     }
     if (options.installRelayClient !== true) {
@@ -627,13 +627,13 @@ const connectLoginCommand = Command.make("login", {
   ...projectLocationFlags,
   headless: headlessFlag,
 }).pipe(
-  Command.withDescription("Authorize the T3 Connect CLI without enabling remote access."),
+  Command.withDescription("Authorize the T2 Connect CLI without enabling remote access."),
   Command.withHandler((flags) =>
     runCloudCommand(
       flags,
       Effect.gen(function* () {
         yield* requireConnectAllowed;
-        yield* Console.log("T3 Connect\n");
+        yield* Console.log("T2 Connect\n");
         const identity = yield* authorizeCli(flags);
         yield* Console.log(`✓ Signed in${connectedAs(identity)}`);
       }),
@@ -651,13 +651,13 @@ const connectLinkCommand = Command.make("link", {
     Flag.withDefault(false),
   ),
 }).pipe(
-  Command.withDescription("Authorize this environment for T3 Connect on next start."),
+  Command.withDescription("Authorize this environment for T2 Connect on next start."),
   Command.withHandler((flags) =>
     runCloudCommand(
       flags,
       Effect.gen(function* () {
         yield* requireConnectAllowed;
-        yield* Console.log("T3 Connect\n");
+        yield* Console.log("T2 Connect\n");
         const linked = yield* linkEnvironmentForConnect(flags);
         if (linked) {
           const serveCommand = yield* resolveCliCommand("serve");
@@ -677,7 +677,7 @@ const connectStatusCommand = Command.make("status", {
   json: jsonFlag,
 }).pipe(
   Command.withDescription(
-    "Show T3 Connect setup and check that other devices can reach this machine.",
+    "Show T2 Connect setup and check that other devices can reach this machine.",
   ),
   Command.withHandler((flags) =>
     runCloudCommand(
@@ -762,7 +762,7 @@ const connectPublishCommand = Command.make("publish", {
           const linkedNow = Option.isSome(yield* secrets.get(CLOUD_LINKED_USER_ID));
           if (!linkedNow && (yield* CliState.readCliDesiredLinkMode) === "publish_only") {
             yield* CliState.setCliDesiredCloudLink(false);
-            yield* Console.log("Cancelled the pending publish-only T3 Connect link.");
+            yield* Console.log("Cancelled the pending publish-only T2 Connect link.");
           }
           yield* Console.log("Publishing agent activity disabled.");
           return;
@@ -786,7 +786,7 @@ const connectPublishCommand = Command.make("publish", {
         // link is pending at all.
         if (yield* CliState.readCliDesiredCloudLink) {
           yield* Console.log(
-            "A T3 Connect link is already pending. Start T3 to finish provisioning it; publishing starts once it links.",
+            "A T2 Connect link is already pending. Start T3 to finish provisioning it; publishing starts once it links.",
           );
           return;
         }
@@ -802,7 +802,7 @@ const connectPublishCommand = Command.make("publish", {
 const connectUnlinkCommand = Command.make("unlink", {
   ...projectLocationFlags,
 }).pipe(
-  Command.withDescription("Disable T3 Connect while retaining the stored authorization."),
+  Command.withDescription("Disable T2 Connect while retaining the stored authorization."),
   Command.withHandler((flags) =>
     runCloudCommand(flags, disconnectCloud({ clearAuthorization: false })),
   ),
@@ -811,13 +811,13 @@ const connectUnlinkCommand = Command.make("unlink", {
 const connectLogoutCommand = Command.make("logout", {
   ...projectLocationFlags,
 }).pipe(
-  Command.withDescription("Disable T3 Connect and clear the stored CLI authorization."),
+  Command.withDescription("Disable T2 Connect and clear the stored CLI authorization."),
   Command.withHandler((flags) =>
     runCloudCommand(flags, disconnectCloud({ clearAuthorization: true })),
   ),
 );
 
-// `t3 connect` itself is `t3 up --connect`, in up.ts.
+// `t2 connect` itself is `t2 up --connect`, in up.ts.
 export const connectSubcommands = [
   connectLoginCommand,
   connectLinkCommand,
