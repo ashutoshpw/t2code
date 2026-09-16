@@ -143,7 +143,7 @@ on web and desktop. The store apps work with both stable and Nightly servers. Te
 
 - **iPhone and iPad:** TestFlight is invite-only.
 - **Android:** download an APK from the
-  [Android beta releases](https://github.com/pingdotgg/t2code/releases?q=android-beta-).
+  [Android beta releases](https://github.com/ashutoshpw/t2code/releases?q=android-beta-).
 
 If the app crashes during launch, open Settings → Diagnostics on the next launch
 that succeeds. It lists startup crashes from the last 7 days with the error and

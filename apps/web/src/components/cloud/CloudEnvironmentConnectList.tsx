@@ -154,11 +154,11 @@ export function CloudEnvironmentConnectRows({
       toastManager.add({
         type: "success",
         title: savedWithoutRelay.has(environment.environmentId)
-          ? "T3 Connect route added"
+          ? "T2 Connect route added"
           : "Environment added",
         description: savedWithoutRelay.has(environment.environmentId)
-          ? `${environment.label} falls back to T3 Connect when its other routes are unreachable.`
-          : `Connecting to ${environment.label} through T3 Connect.`,
+          ? `${environment.label} falls back to T2 Connect when its other routes are unreachable.`
+          : `Connecting to ${environment.label} through T2 Connect.`,
       });
       return true;
     }
@@ -167,7 +167,7 @@ export function CloudEnvironmentConnectRows({
     }
     const cause = squashAtomCommandFailure(result);
     const message =
-      cause instanceof Error ? cause.message : "Could not connect the T3 Connect environment.";
+      cause instanceof Error ? cause.message : "Could not connect the T2 Connect environment.";
     const traceId = findErrorTraceId(cause);
     console.error("[t3-connect] Could not connect environment", { message, traceId, cause });
     toastManager.add({
@@ -186,7 +186,9 @@ export function CloudEnvironmentConnectRows({
     return false;
   };
 
-  // Omit machines saved over other routes; onboarding selection must not add a T3 Connect route.
+  // During onboarding selection a machine saved over another route already
+  // has its own row elsewhere, and selecting it must not add a T2 Connect
+  // route as a side effect, so it is left out here.
   const isVisibleEnvironment = (environmentId: EnvironmentId) =>
     environmentId !== primaryEnvironmentId &&
     (showSavedEnvironments || !savedById.has(environmentId)) &&
@@ -289,7 +291,7 @@ export function CloudEnvironmentConnectRows({
       return (
         <div className={ITEM_ROW_CLASSNAME}>
           <p className="text-sm font-medium text-destructive">
-            Could not load T3 Connect environments
+            Could not load T2 Connect environments
           </p>
           <p className="mt-1 text-xs text-muted-foreground">{discoveryProblem}</p>
           <Button
@@ -348,23 +350,23 @@ export function CloudEnvironmentConnectRows({
             ? "bg-warning"
             : "bg-muted-foreground/35";
     const notAdded = savedWithoutRelay.has(environment.environmentId)
-      ? "Saved without T3 Connect"
+      ? "Saved without T2 Connect"
       : "Not added";
     const statusText =
       unsupported && !savedEnvironment
-        ? `T3 Connect · ${notAdded} · Client not supported`
+        ? `T2 Connect · ${notAdded} · Client not supported`
         : offlineReason !== null
           ? offlineReason
           : savedConnection
             ? savedConnection.statusText
             : availability === "online"
-              ? `T3 Connect · ${notAdded} · Relay online`
+              ? `T2 Connect · ${notAdded} · Relay online`
               : availability === "offline"
-                ? `T3 Connect · ${notAdded} · Relay offline`
+                ? `T2 Connect · ${notAdded} · Relay offline`
                 : availability === "checking"
-                  ? `T3 Connect · ${notAdded} · Checking relay status…`
+                  ? `T2 Connect · ${notAdded} · Checking relay status…`
                   : (Option.getOrNull(error)?.message ??
-                    `T3 Connect · ${notAdded} · Relay status unavailable`);
+                    `T2 Connect · ${notAdded} · Relay status unavailable`);
     if (selection) {
       return (
         <label

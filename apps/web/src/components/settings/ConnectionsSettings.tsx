@@ -84,7 +84,7 @@ import {
   supportsDesktopAppUpdate,
 } from "~/versionSkew";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
-import { RemoveT3ConnectEnvironmentDialog } from "../clerk/RemoveT3ConnectEnvironmentDialog";
+import { RemoveT2ConnectEnvironmentDialog } from "../clerk/RemoveT2ConnectEnvironmentDialog";
 import { authEnvironment } from "~/state/auth";
 import { environmentCatalog } from "~/connection/catalog";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
@@ -598,13 +598,13 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
     }
   };
 
-  // Removing a T3 Connect route preserves account registration; use a separate dialog pointing to
+  // Removing a T2 Connect route preserves account registration; use a separate dialog pointing to
   // deregistration.
-  const [pendingT3ConnectRemoval, setPendingT3ConnectRemoval] =
+  const [pendingT2ConnectRemoval, setPendingT2ConnectRemoval] =
     useState<EnvironmentPresentation | null>(null);
   const handleRemoveSavedBackend = async (environment: EnvironmentPresentation) => {
     if (environment.relayManaged && hasCloudPublicConfig()) {
-      setPendingT3ConnectRemoval(environment);
+      setPendingT2ConnectRemoval(environment);
       return;
     }
     const confirmed = await requestConfirmDialog(
@@ -1210,7 +1210,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                 <AlertDialogDescription>
                   {pendingDesktopServerExposureMode === "network-accessible"
                     ? "Let your other devices connect to T2 Code over the network. Pair devices to give them access. T2 Code will restart."
-                    : "Devices connected over your local network will disconnect. Existing tunnels, such as T3 Connect or Tailscale HTTPS, keep working. T2 Code will restart."}
+                    : "Devices connected over your local network will disconnect. Existing tunnels, such as T2 Connect or Tailscale HTTPS, keep working. T2 Code will restart."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1534,13 +1534,13 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
         />
       </SettingsSection>
       {hasCloudPublicConfig() ? (
-        <RemoveT3ConnectEnvironmentDialog
-          environmentLabel={pendingT3ConnectRemoval?.label ?? null}
-          onCancel={() => setPendingT3ConnectRemoval(null)}
+        <RemoveT2ConnectEnvironmentDialog
+          environmentLabel={pendingT2ConnectRemoval?.label ?? null}
+          onCancel={() => setPendingT2ConnectRemoval(null)}
           onConfirm={() => {
-            if (!pendingT3ConnectRemoval) return;
-            setPendingT3ConnectRemoval(null);
-            void removeSavedBackend(pendingT3ConnectRemoval);
+            if (!pendingT2ConnectRemoval) return;
+            setPendingT2ConnectRemoval(null);
+            void removeSavedBackend(pendingT2ConnectRemoval);
           }}
         />
       ) : null}

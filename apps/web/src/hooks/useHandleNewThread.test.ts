@@ -201,7 +201,10 @@ vi.mock("../lib/chatThreadActions", async (importOriginal) => ({
   hasExplicitComposerModelSelection: () => false,
   resolveNewThreadModelSelectionOverride: () => null,
 }));
+<<<<<<< HEAD
 vi.mock("../providerInstances", () => ({ resolveDefaultProviderModelSelection: () => null }));
+=======
+>>>>>>> bf648f5a (fix(rebrand): rebrand T3 Connect display copy to T2 Connect)
 vi.mock("../lib/t2ProjectFileDefaults", () => ({
   readT2ProjectFile: () => testState.projectFileRead,
 }));

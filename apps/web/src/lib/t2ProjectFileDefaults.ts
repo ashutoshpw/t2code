@@ -9,10 +9,21 @@ import {
 import { appAtomRegistry } from "~/rpc/atomRegistry";
 
 /**
+<<<<<<< HEAD
  * Read and decode the project's checked-in `t2.json`; imperative counterpart
  * to `useT2ProjectFileState` for the new-thread path. The query atom caches
  * per (environment, cwd) and optimistic writes overlay it, matching what
  * `useProjectFileQuery` renders. Missing, truncated, or invalid files are null.
+=======
+ * Read and decode the project's checked-in `t2.json`.
+ *
+ * Imperative counterpart to `useT2ProjectFileState` for the new-thread path,
+ * which resolves defaults at call time rather than render time. The file
+ * query atom caches per (environment, cwd), so repeat calls don't re-fetch.
+ * Optimistic in-app writes overlay the query result, matching what
+ * `useProjectFileQuery` renders. Missing, truncated, or invalid files
+ * resolve to null.
+>>>>>>> bf648f5a (fix(rebrand): rebrand T3 Connect display copy to T2 Connect)
  */
 export async function readT2ProjectFile(
   environmentId: EnvironmentId,

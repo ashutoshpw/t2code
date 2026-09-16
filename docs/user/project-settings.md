@@ -165,7 +165,7 @@ New worktrees initialize git submodules recursively. If that step is slow becaus
 declares many nested submodules, set **Submodules** in **Settings → Worktrees** under Advanced (with the project
 selected to override it there) to **Top level only** to stop at the ones the repository declares
 itself, or **Skip** to leave them for a setup script. It resolves in the same order as the
-workspace default: a `"worktreeSubmodules"` value in the `t3.json` of the branch being checked out
+workspace default: a `"worktreeSubmodules"` value in the `t2.json` of the branch being checked out
 applies when the project and environment are both on **Inherit**.
 
 ## Worktree location
