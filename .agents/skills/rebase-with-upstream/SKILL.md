@@ -36,7 +36,7 @@ This fork tracks `pingdotgg/t3code` (upstream) and publishes as **T2 Code** on `
 
 ## Rebrand audit (the part that actually catches failures)
 
-The repo ships a brand guard: pre-commit and pre-push hooks run `scripts/check-rebrand.ts` (staged lines / pushed ranges) and fail on re-introduced T3 strings. Run the same audit over the whole tree before pushing:
+The repo ships a brand guard: pre-commit and pre-push hooks run `scripts/check-rebrand.ts` (added staged lines, pushed ranges, and tracked paths) and fail on re-introduced T3 strings — copy, package scopes, ports, schemes, and T3-named file paths alike. Run the same audit over the whole tree before pushing:
 
 ```sh
 node scripts/check-rebrand.ts --tree
@@ -46,19 +46,8 @@ Hits that are genuinely intentional (legacy compat, upstream references) get exe
 
 Upstream's new tests hardcode `T3` copy that the rebrand commits predate. These failures hide: CI jobs fail fast per package, so later suites never run and each push reveals one more. Do not trust a single green suite — sweep everything.
 
-1. Grep for brand strings across tests and copy-bearing files:
-   ```sh
-   rg -n "T3 Code|T3_CODE|@t3code/cli|@t3tools/|t3tools|@t2code/" -g '!node_modules' -g '!.t3' -g '!.repos' -g '!patches/**'
-   ```
-2. Classify each hit:
-   - **Intentional, leave alone:** upstream repo URLs, compatibility-bound platform identifiers, upstream `@t2code/*` package scope (upstream's CLI is unscoped `t3`; the fork's packages are `@t2code/*` — any `@t2code/` or `@t3code/` outside exempt dirs is a rebase gap), vendored `.repos/`, git blob SHAs inside `patches/`, historical validation notes in comments, mock strings echoed verbatim by both source and test. Existing `t3tools` exceptions must be exact baseline entries; do not add a blanket directory exemption for new hits.
-   - **Must be T2:** user-facing copy, error messages, announcements, embedded playbook/prompt text, release names, showcase data — anywhere the source was rebranded but a test fixture or doc still says T3.
-3. The reliable signal is execution, not eyeballing: run every test file that mentions brand copy, plus every test file touched by the rebase. A test that passes is fine regardless of why; a mismatch always shows up as `expected 'T2 …' to equal 'T3 …'` (or the reverse).
-4. Known traps from past rebases:
-   - **Numeric literals with separators**: `3_773` and `13_773` do not match a `3773` grep. Search `\d_773`, `13_773`, `14_607`-style derived literals separately.
-   - **Derived expectations**: tests that compute ports from a base constant shift by one when the base moves; exhaustion-boundary tests (e.g. `startOffset` where `base + offset > 65535`) must be recomputed, not string-replaced.
-   - **Embedded copies that must stay byte-identical**: `apps/server/src/cli/triagePrompt.ts` (`TRIAGE_PLAYBOOK`) and `.github/triage/PLAYBOOK.md` must match exactly — rebrand both or neither.
-   - **Fixtures as inputs vs expectations**: a `releaseName` a test feeds in and asserts back verbatim can stay as-is only if it is not rebranded upstream; if the real producer (e.g. `resolve-nightly-release.ts`) emits T2, rebrand the fixture too so the test stays realistic.
+1. Grep and classify hits per [BRAND-AUDIT.md](./BRAND-AUDIT.md) — the full rule table, the compat-vs-must-rebrand taxonomy, and known traps from past rebases.
+2. The reliable signal is execution, not eyeballing: run every test file that mentions brand copy, plus every test file touched by the rebase. A test that passes is fine regardless of why; a mismatch always shows up as `expected 'T2 …' to equal 'T3 …'` (or the reverse).
 
 ## Verify and push
 
