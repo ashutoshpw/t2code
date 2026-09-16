@@ -18,11 +18,11 @@ describe("loadRepoEnv", () => {
   it("does not project cloud configuration for an unconfigured clone", () => {
     const env = loadRepoEnv({ baseEnv: {}, repoRoot: makeTemporaryDirectory() });
 
-    expect(env.T3CODE_CLERK_PUBLISHABLE_KEY).toBeUndefined();
-    expect(env.T3CODE_CLERK_CLI_OAUTH_CLIENT_ID).toBeUndefined();
+    expect(env.T2CODE_CLERK_PUBLISHABLE_KEY).toBeUndefined();
+    expect(env.T2CODE_CLERK_CLI_OAUTH_CLIENT_ID).toBeUndefined();
     expect(env.VITE_CLERK_PUBLISHABLE_KEY).toBeUndefined();
     expect(env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY).toBeUndefined();
-    expect(env.T3CODE_CLERK_JWT_TEMPLATE).toBeUndefined();
+    expect(env.T2CODE_CLERK_JWT_TEMPLATE).toBeUndefined();
     expect(env.VITE_CLERK_JWT_TEMPLATE).toBeUndefined();
     expect(env.EXPO_PUBLIC_CLERK_JWT_TEMPLATE).toBeUndefined();
     expect(env.T2CODE_RELAY_URL).toBeUndefined();
@@ -55,22 +55,26 @@ describe("loadRepoEnv", () => {
     expect(loadRepoEnv({ baseEnv: {}, repoRoot }).T2CODE_RELAY_URL).toBe(
       "https://local.example.test",
     );
+    // The root env files above use the legacy T3CODE_CLERK_* spellings; they
+    // must still resolve and project under the new names.
+    expect(loadRepoEnv({ baseEnv: {}, repoRoot }).T2CODE_CLERK_PUBLISHABLE_KEY).toBe("pk_local");
+    expect(loadRepoEnv({ baseEnv: {}, repoRoot }).T2CODE_CLERK_JWT_TEMPLATE).toBe("template_local");
     expect(
       loadRepoEnv({
         baseEnv: {
-          T3CODE_CLERK_PUBLISHABLE_KEY: "pk_ci",
-          T3CODE_CLERK_JWT_TEMPLATE: "template_ci",
-          T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: "oauth_ci",
+          T2CODE_CLERK_PUBLISHABLE_KEY: "pk_ci",
+          T2CODE_CLERK_JWT_TEMPLATE: "template_ci",
+          T2CODE_CLERK_CLI_OAUTH_CLIENT_ID: "oauth_ci",
           T2CODE_RELAY_URL: "https://ci.example.test",
         },
         repoRoot,
       }),
     ).toMatchObject({
-      T3CODE_CLERK_PUBLISHABLE_KEY: "pk_ci",
-      T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: "oauth_ci",
+      T2CODE_CLERK_PUBLISHABLE_KEY: "pk_ci",
+      T2CODE_CLERK_CLI_OAUTH_CLIENT_ID: "oauth_ci",
       VITE_CLERK_PUBLISHABLE_KEY: "pk_ci",
       EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_ci",
-      T3CODE_CLERK_JWT_TEMPLATE: "template_ci",
+      T2CODE_CLERK_JWT_TEMPLATE: "template_ci",
       VITE_CLERK_JWT_TEMPLATE: "template_ci",
       EXPO_PUBLIC_CLERK_JWT_TEMPLATE: "template_ci",
       T2CODE_RELAY_URL: "https://ci.example.test",
@@ -83,7 +87,7 @@ describe("loadRepoEnv", () => {
       resolvePublicConfig({
         VITE_CLERK_PUBLISHABLE_KEY: "pk_legacy",
         VITE_CLERK_JWT_TEMPLATE: "template_legacy",
-        T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: "oauth_canonical",
+        T2CODE_CLERK_CLI_OAUTH_CLIENT_ID: "oauth_canonical",
         VITE_T2CODE_RELAY_URL: "https://legacy.example.test",
         EXPO_PUBLIC_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
         EXPO_PUBLIC_OTLP_TRACES_DATASET: "mobile-traces",

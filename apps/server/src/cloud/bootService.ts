@@ -12,7 +12,10 @@ import * as Path from "effect/Path";
 import { HttpClient } from "effect/http";
 import * as Schema from "effect/Schema";
 
-import { CLI_RELEASE_BASE_URL_ENV } from "@t2code/shared/cliRelease";
+import {
+  CLI_RELEASE_BASE_URL_ENV,
+  CLI_RELEASE_BASE_URL_LEGACY_ENV,
+} from "@t2code/shared/cliRelease";
 
 import * as ProcessRunner from "../processRunner.ts";
 import {
@@ -55,8 +58,15 @@ function quoteSystemdValue(value: string): string {
     : escaped;
 }
 
+/**
+ * Reads the pinned base dir back out of a rendered unit or plist. Units
+ * written by older installs carry the legacy `T3CODE_HOME` key, so both
+ * spellings parse; only values this file writes are expected, so a quoted
+ * systemd value is unquoted and unescaped the same way `quoteSystemdValue`
+ * produced it.
+ */
 export function bootServiceBaseDirOf(contents: string): string | undefined {
-  const systemd = /^Environment=T2CODE_HOME=(.*)$/m.exec(contents)?.[1];
+  const systemd = /^Environment=(?:T2CODE|T3CODE)_HOME=(.*)$/m.exec(contents)?.[1];
   if (systemd !== undefined) {
     const raw = systemd.trim();
     const unquoted =
@@ -65,7 +75,9 @@ export function bootServiceBaseDirOf(contents: string): string | undefined {
         : raw;
     return unquoted.replaceAll("%%", "%");
   }
-  const plist = /<key>T2CODE_HOME<\/key>\s*<string>([^<]*)<\/string>/.exec(contents)?.[1];
+  const plist = /<key>(?:T2CODE|T3CODE)_HOME<\/key>\s*<string>([^<]*)<\/string>/.exec(
+    contents,
+  )?.[1];
   if (plist !== undefined) {
     return plist.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
   }
@@ -542,7 +554,9 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
   const uid = yield* HostProcess.UserId;
   const httpClient = yield* HttpClient.HttpClient;
   const releaseBaseUrl = Option.getOrUndefined(
-    yield* Config.String(CLI_RELEASE_BASE_URL_ENV).pipe(Config.option),
+    yield* Config.String(CLI_RELEASE_BASE_URL_ENV)
+      .pipe(Config.orElse(() => Config.String(CLI_RELEASE_BASE_URL_LEGACY_ENV)))
+      .pipe(Config.option),
   );
   const homeDir = yield* Config.String("HOME").pipe(Config.withDefault(""));
   const installerPath = yield* Config.String("PATH").pipe(Config.withDefault(""));
