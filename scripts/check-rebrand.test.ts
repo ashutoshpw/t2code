@@ -10,6 +10,31 @@ const REAL_BASELINE = new Set<string>([
 ]);
 
 describe("check-rebrand", () => {
+  it("rejects old Connect display copy while preserving compatibility identifiers", () => {
+    const violations = findViolations(
+      [
+        { file: "apps/web/src/example.tsx", line: "<h2>T3 Connect</h2>" },
+        { file: "apps/mobile/src/example.tsx", line: 'title: "T3 Connect"' },
+        {
+          file: "packages/client-runtime/src/example.ts",
+          line: 'message: "Sign in to T3 Connect"',
+        },
+        { file: "docs/user/remote-access.md", line: "## T3 Connect" },
+        { file: "apps/web/src/example.tsx", line: "<h2>T2 Connect</h2>" },
+        {
+          file: "apps/web/src/example.tsx",
+          line: 'import { T3ConnectUserProfilePage } from "./T3ConnectUserProfilePage";',
+        },
+        {
+          file: "packages/shared/src/example.ts",
+          line: 'const tokenType = "t3-link-challenge+jwt";',
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(4).fill("t3-connect-copy"));
+  });
+
   it("flags retired wordmark and widget mark references without matching similar module names", () => {
     const violations = findViolations(
       [

@@ -34,7 +34,7 @@ function renderRow({
   );
 }
 
-describe("T3 Connect environment row", () => {
+describe("T2 Connect environment row", () => {
   it("keeps deregistration confirmation inline and collapsed by default", () => {
     const markup = renderRow();
 
