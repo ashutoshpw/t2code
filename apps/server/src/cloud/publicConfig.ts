@@ -110,7 +110,7 @@ export function makeRelayUrlConfig(fallback = buildTimeRelayUrl) {
 export const relayUrlConfig = makeRelayUrlConfig();
 
 export const hostedAppUrlConfig = makePublicValueConfig(
-  "T3CODE_HOSTED_APP_URL",
+  "T2CODE_HOSTED_APP_URL",
   DEFAULT_HOSTED_APP_URL,
 ).pipe(Config.mapEffect(validateHostedAppUrl));
 
@@ -143,10 +143,14 @@ function validateHostedAppUrl(value: string) {
 }
 
 function makePublicValueConfig(name: string, fallback: string) {
-  const runtimeConfig = Config.NonEmptyString(name);
-  return (fallback ? runtimeConfig.pipe(Config.withDefault(fallback)) : runtimeConfig).pipe(
-    Config.map((value) => value.trim()),
-  );
+  const read = (valueName: string) =>
+    fallback
+      ? Config.NonEmptyString(valueName).pipe(Config.withDefault(fallback))
+      : Config.NonEmptyString(valueName);
+  const legacyName = legacyEnvName(name);
+  const runtimeConfig =
+    legacyName === undefined ? read(name) : read(name).pipe(Config.orElse(() => read(legacyName)));
+  return runtimeConfig.pipe(Config.map((value) => value.trim()));
 }
 
 export interface CloudCliOAuthConfig {
@@ -167,11 +171,11 @@ export function makeCloudCliOAuthConfig({
 } = {}) {
   return Config.all({
     clerkPublishableKey: makePublicValueConfig(
-      "T3CODE_CLERK_PUBLISHABLE_KEY",
+      "T2CODE_CLERK_PUBLISHABLE_KEY",
       clerkPublishableKeyFallback,
     ),
     clientId: makePublicValueConfig(
-      "T3CODE_CLERK_CLI_OAUTH_CLIENT_ID",
+      "T2CODE_CLERK_CLI_OAUTH_CLIENT_ID",
       clerkCliOAuthClientIdFallback,
     ),
   }).pipe(
@@ -206,6 +210,8 @@ export const cloudCliOAuthConfig = makeCloudCliOAuthConfig();
 
 export const hasCloudPublicConfig = Boolean(
   (normalizeSecureRelayUrl(process.env.T2CODE_RELAY_URL ?? "") ?? buildTimeRelayUrl) &&
-  (process.env.T3CODE_CLERK_PUBLISHABLE_KEY?.trim() || buildTimeClerkPublishableKey) &&
-  (process.env.T3CODE_CLERK_CLI_OAUTH_CLIENT_ID?.trim() || buildTimeClerkCliOAuthClientId),
+  (envWithLegacyFallback(process.env, "T2CODE_CLERK_PUBLISHABLE_KEY")?.trim() ||
+    buildTimeClerkPublishableKey) &&
+  (envWithLegacyFallback(process.env, "T2CODE_CLERK_CLI_OAUTH_CLIENT_ID")?.trim() ||
+    buildTimeClerkCliOAuthClientId),
 );

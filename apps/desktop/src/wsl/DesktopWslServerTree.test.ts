@@ -35,7 +35,7 @@ const layerEnvironment = (input: {
       Layer.mergeAll(
         NodeServices.layer,
         DesktopConfig.layerTest({
-          T3CODE_HOME: input.baseDir,
+          T2CODE_HOME: input.baseDir,
           T2CODE_MODE: "desktop",
         }),
       ),
@@ -225,6 +225,8 @@ describe("DesktopWslServerTree", () => {
         });
         yield* fileSystem.writeFileString(path.join(serverRoot, "apps/server/dist/bin.mjs"), "x");
 
+        // T2CODE_HOME is set to tempDir, so the desktop state dir resolves to
+        // <tempDir>/userdata (no .t3 segment).
         const treeRoot = path.join(tempDir, "userdata", "wsl-server-tree");
         yield* fileSystem.makeDirectory(path.join(treeRoot, "1.0.0"), { recursive: true });
         yield* fileSystem.makeDirectory(path.join(treeRoot, "1.2.3.partial"), { recursive: true });
