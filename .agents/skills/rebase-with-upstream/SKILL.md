@@ -11,8 +11,15 @@ This fork tracks `pingdotgg/t3code` (upstream) and publishes as **T2 Code** on `
 
 1. Work from a clean tree with local `main` == `origin/main`.
 2. `git fetch origin main && git fetch upstream main`.
-3. Review divergence: `git rev-list --left-right --count origin/main...upstream/main`.
-4. Dry-run the conflict surface (Git < 2.38 lacks `merge-tree --write-tree`; use the legacy form):
+3. Gate on CI before touching history — a rebase rewrites `main`, so starting from a red base makes the post-push loop chase failures the rebase never caused:
+   ```sh
+   gh run list --repo ashutoshpw/t2code --branch main --commit "$(git rev-parse origin/main)"
+   ```
+   - Any run still `queued` or `in_progress`: wait for it to finish before continuing.
+   - Any run concluding `failure` or `cancelled`: abort. Report the failing checks and stop — do not rebase until `origin/main` is green or the user explicitly says go.
+   - No runs for that SHA at all: suspicious rather than green; confirm with the user first.
+4. Review divergence: `git rev-list --left-right --count origin/main...upstream/main`.
+5. Dry-run the conflict surface (Git < 2.38 lacks `merge-tree --write-tree`; use the legacy form):
    ```sh
    git merge-tree "$(git merge-base upstream/main origin/main)" upstream/main origin/main
    ```
