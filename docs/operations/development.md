@@ -32,7 +32,7 @@ Never run a development server against the live `~/.t3/userdata`.
 See [test data](../../AGENTS.md#test-data) for copying a consistent database snapshot.
 
 Read ports from the `[dev-runner]` output. Worktrees derive stable preferences from their paths,
-but occupied ports can shift them. `T3CODE_PORT_OFFSET` or `T3CODE_DEV_INSTANCE` can select a
+but occupied ports can shift them. `T2CODE_PORT_OFFSET` or `T2CODE_DEV_INSTANCE` can select a
 different preference when needed.
 
 ### Sharing and remote debugging
@@ -45,7 +45,7 @@ Leave `VITE_HTTP_URL` and `VITE_WS_URL` unset. Vite proxies the backend through 
 origin so the same build works over localhost and remote connections.
 
 Shared runs enable bundled dev to avoid a network round trip for each import level.
-`T3CODE_BUNDLED_DEV=0` opts out when debugging bundler differences. Two reload traps matter
+`T2CODE_BUNDLED_DEV=0` opts out when debugging bundler differences. Two reload traps matter
 when changing this setup:
 
 - The web entry must dynamically import the app so React refresh initializes before application

@@ -261,7 +261,7 @@ it.layer(NodeServices.layer)("service state persistence", (it) => {
       yield* fs.writeFileString(databasePath, "before trial");
       const encodedDatabasePath = JSON.stringify(databasePath);
       const childSource = `
-const context = JSON.parse(process.env.T3_SERVICE_LAUNCHER_CONTEXT);
+const context = JSON.parse(process.env.T2_SERVICE_LAUNCHER_CONTEXT);
 if (context.update?.status === "pending") {
   process.send({ type: "prepared", updateId: context.update.id });
   process.on("message", (message) => {
@@ -314,7 +314,7 @@ if (context.update?.status === "pending") {
       yield* fs.writeFileString(databasePath, "before trial");
       const encodedDatabasePath = JSON.stringify(databasePath);
       const childSource = `
-const context = JSON.parse(process.env.T3_SERVICE_LAUNCHER_CONTEXT);
+const context = JSON.parse(process.env.T2_SERVICE_LAUNCHER_CONTEXT);
 if (context.update?.status === "pending") {
   process.send({ type: "prepared", updateId: "wrong-update" });
 } else if (context.update === undefined) {
@@ -366,13 +366,13 @@ if (context.update?.status === "pending") {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-launcher-slow-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-launcher-slow-" });
         const statePath = path.join(root, "runtime", "service-state.json");
         const databasePath = path.join(root, "userdata", "state.sqlite");
         yield* fs.makeDirectory(path.dirname(databasePath), { recursive: true });
         yield* fs.writeFileString(databasePath, "before trial");
         const childSource = `
-const context = JSON.parse(process.env.T3_SERVICE_LAUNCHER_CONTEXT);
+const context = JSON.parse(process.env.T2_SERVICE_LAUNCHER_CONTEXT);
 if (context.update?.status !== "pending") process.exit(0);
 process.on("message", (message) => {
   if (message.type === "test-prepare") process.send({ type: "prepared", updateId: context.update.id });
@@ -439,7 +439,7 @@ setInterval(() => {}, 1_000);
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-launcher-db-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-launcher-db-" });
         const statePath = path.join(root, "runtime", "service-state.json");
         const databasePath = path.join(root, "userdata", "state.sqlite");
         const databaseFile =
@@ -458,7 +458,7 @@ setInterval(() => {}, 1_000);
         const encodedDatabasePath = JSON.stringify(databasePath);
         const childSource = `
 import { realpathSync, unlinkSync, writeFileSync } from "node:fs";
-const context = JSON.parse(process.env.T3_SERVICE_LAUNCHER_CONTEXT);
+const context = JSON.parse(process.env.T2_SERVICE_LAUNCHER_CONTEXT);
 if (context.update?.status === "pending") {
   writeFileSync(context.update.dbPath, "database after migration");
   writeFileSync(context.update.dbPath + "-wal", "trial wal");

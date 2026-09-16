@@ -26,7 +26,7 @@ Object.assign(process.env, repoEnv);
 // the absence of VITE_HTTP_URL/VITE_WS_URL: the runner deletes those keys but
 // `loadRepoEnv` merges `.env`/`.env.local` *underneath* the process env, so a
 // developer with either URL in their `.env` gets it back here.
-const isSingleOriginDev = process.env.T3CODE_SINGLE_ORIGIN_DEV === "1";
+const isSingleOriginDev = process.env.T2CODE_SINGLE_ORIGIN_DEV === "1";
 
 const port = Number(process.env.PORT ?? 5733);
 const explicitHost = process.env.HOST?.trim();
@@ -55,9 +55,9 @@ const configuredHostedAppUrl = (() => {
   }
   return undefined;
 })();
-const sourcemapEnv = process.env.T3CODE_WEB_SOURCEMAP?.trim().toLowerCase();
+const sourcemapEnv = process.env.T2CODE_WEB_SOURCEMAP?.trim().toLowerCase();
 
-const bundledDevEnv = process.env.T3CODE_BUNDLED_DEV?.trim().toLowerCase();
+const bundledDevEnv = process.env.T2CODE_BUNDLED_DEV?.trim().toLowerCase();
 const bundledDev = bundledDevEnv === "1" || bundledDevEnv === "true";
 
 const buildSourcemap: boolean | "hidden" =
@@ -138,7 +138,7 @@ function resolveDevProxyTarget(
   }
 }
 
-const devProxyTarget = resolveDevProxyTarget(process.env.T3CODE_PORT, configuredWsUrl);
+const devProxyTarget = resolveDevProxyTarget(process.env.T2CODE_PORT, configuredWsUrl);
 
 // Brotli quality 5 keeps encode time in the hundreds of ms; the default
 // (quality 11) would trade the transfer stall for an equally long encode stall.
@@ -159,7 +159,7 @@ function devCompressionPlugin(): Plugin {
 // Vite rejects requests whose Host header isn't localhost, which blocks sharing
 // a dev server over Tailscale/LAN. Tailnet names are safe to allow wholesale:
 // the DNS is controlled by tailscale, so they can't be rebound by an attacker.
-const configuredAllowedHosts = (process.env.T3CODE_DEV_ALLOWED_HOSTS ?? "")
+const configuredAllowedHosts = (process.env.T2CODE_DEV_ALLOWED_HOSTS ?? "")
   .split(",")
   .map((entry) => entry.trim())
   .filter((entry) => entry.length > 0);

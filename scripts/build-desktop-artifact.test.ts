@@ -302,7 +302,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
           ConfigProvider.layer(
             ConfigProvider.fromEnv({
               env: {
-                T3CODE_DESKTOP_UPDATE_REPOSITORY: "pingdotgg/t3code",
+                T2CODE_DESKTOP_UPDATE_REPOSITORY: "pingdotgg/t3code",
               },
             }),
           ),
@@ -978,7 +978,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
           Effect.provide(
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
-                env: { T3CODE_DESKTOP_REUSE_RESOURCE_MONITOR: "true" },
+                env: { T2CODE_DESKTOP_REUSE_RESOURCE_MONITOR: "true" },
               }),
             ),
           ),
@@ -1140,7 +1140,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
                 ConfigProvider.fromEnv({
                   env: {
                     npm_config_python: pythonPath,
-                    T3CODE_DESKTOP_REUSE_RESOURCE_MONITOR: "true",
+                    T2CODE_DESKTOP_REUSE_RESOURCE_MONITOR: "true",
                   },
                 }),
               ),
@@ -1186,7 +1186,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
               spawner,
               ConfigProvider.layer(
                 ConfigProvider.fromEnv({
-                  env: { T3CODE_DESKTOP_REUSE_RESOURCE_MONITOR: "true" },
+                  env: { T2CODE_DESKTOP_REUSE_RESOURCE_MONITOR: "true" },
                 }),
               ),
             ),
@@ -1932,8 +1932,8 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
 
   it("derives macOS passkey signing configuration from the Clerk publishable key", () => {
     const configuration = resolveMacPasskeySigningConfiguration({
-      T3CODE_APPLE_TEAM_ID: "abc1234567",
-      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T2CODE_APPLE_TEAM_ID: "abc1234567",
+      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
       T3CODE_CLERK_PUBLISHABLE_KEY: `pk_test_${btoa("example.clerk.accounts.dev$")}`,
     });
 
@@ -1947,8 +1947,8 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
 
   it("normalizes explicit macOS passkey RP domains and renders required entitlements", () => {
     const configuration = resolveMacPasskeySigningConfiguration({
-      T3CODE_APPLE_TEAM_ID: "ABC1234567",
-      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T2CODE_APPLE_TEAM_ID: "ABC1234567",
+      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
       T3CODE_CLERK_PASSKEY_RP_DOMAINS:
         " Clerk.Example.com,example.clerk.accounts.dev,clerk.example.com ",
     });
@@ -2047,20 +2047,20 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     };
 
     const missingProfileError = captureError({
-      T3CODE_APPLE_TEAM_ID: "ABC1234567",
+      T2CODE_APPLE_TEAM_ID: "ABC1234567",
       T3CODE_CLERK_PASSKEY_RP_DOMAINS: "example.clerk.accounts.dev",
     });
     assert.instanceOf(missingProfileError, MissingMacPasskeyProvisioningProfileError);
     assert.equal(
       missingProfileError.message,
-      "T3CODE_MACOS_PROVISIONING_PROFILE must point to an Associated Domains provisioning profile.",
+      "T2CODE_MACOS_PROVISIONING_PROFILE must point to an Associated Domains provisioning profile.",
     );
 
     const unsafeDomain =
       "https://domain-user:domain-secret@example.clerk.accounts.dev/path?token=query-secret";
     const invalidDomainError = captureError({
-      T3CODE_APPLE_TEAM_ID: "ABC1234567",
-      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T2CODE_APPLE_TEAM_ID: "ABC1234567",
+      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
       T3CODE_CLERK_PASSKEY_RP_DOMAINS: unsafeDomain,
     });
     assert.instanceOf(invalidDomainError, InvalidMacPasskeyRpDomainError);
@@ -2077,15 +2077,15 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     assert.throws(
       () =>
         resolveMacPasskeySigningConfiguration({
-          T3CODE_APPLE_TEAM_ID: "ABC1234567",
-          T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+          T2CODE_APPLE_TEAM_ID: "ABC1234567",
+          T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
           T3CODE_CLERK_PASSKEY_RP_DOMAINS: "example.clerk.accounts.dev:8443",
         }),
       /Invalid passkey RP domain/u,
     );
     const invalidPublishableKeyError = captureError({
-      T3CODE_APPLE_TEAM_ID: "ABC1234567",
-      T3CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T2CODE_APPLE_TEAM_ID: "ABC1234567",
+      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
       T3CODE_CLERK_PUBLISHABLE_KEY: "pk_test_%",
     });
     assert.instanceOf(invalidPublishableKeyError, InvalidMacPasskeyPublishableKeyError);
@@ -2449,11 +2449,11 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
           ConfigProvider.layer(
             ConfigProvider.fromEnv({
               env: {
-                T3CODE_DESKTOP_SKIP_BUILD: "true",
-                T3CODE_DESKTOP_KEEP_STAGE: "true",
-                T3CODE_DESKTOP_SIGNED: "true",
-                T3CODE_DESKTOP_VERBOSE: "true",
-                T3CODE_DESKTOP_MOCK_UPDATES: "true",
+                T2CODE_DESKTOP_SKIP_BUILD: "true",
+                T2CODE_DESKTOP_KEEP_STAGE: "true",
+                T2CODE_DESKTOP_SIGNED: "true",
+                T2CODE_DESKTOP_VERBOSE: "true",
+                T2CODE_DESKTOP_MOCK_UPDATES: "true",
               },
             }),
           ),
