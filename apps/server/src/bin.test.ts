@@ -462,15 +462,15 @@ it.layer(NodeServices.layer)("bin cli parsing", (it) => {
         assert.fail(`Expected ShowHelp, got ${error._tag}`);
       }
       assert.deepEqual(error.commandPath, ["t2code", "connect"]);
-      assert.include(error.errors[0]?.message ?? "", "missing T3 Connect public configuration");
+      assert.include(error.errors[0]?.message ?? "", "missing T2 Connect public configuration");
 
       const output = (yield* TestConsole.errorLines).join("\n");
       assert.include(output, "ERROR");
-      assert.include(output, "missing T3 Connect public configuration");
+      assert.include(output, "missing T2 Connect public configuration");
     }).pipe(Effect.provide(Layer.mergeAll(CliRuntimeLayer, TestConsole.layer))),
   );
 
-  it.effect("exposes service lifecycle commands without T3 Connect configuration", () =>
+  it.effect("exposes service lifecycle commands without T2 Connect configuration", () =>
     Effect.gen(function* () {
       const { output } = yield* captureStdout(runCli(["service", "--help"], noConnectCli));
 
@@ -516,10 +516,10 @@ it.layer(NodeServices.layer)("bin cli parsing", (it) => {
         runConnectCli(["connect", "status", "--base-dir", baseDir]),
       );
 
-      assert.include(output, "T3 Connect\n  Exposure: disabled");
+      assert.include(output, "T2 Connect\n  Exposure: disabled");
       assert.include(output, "  Authorization: missing");
       assert.include(output, "  Environment link: not provisioned");
-      assert.include(output, "Next: Run `t2code connect link` to authorize and enable T3 Connect.");
+      assert.include(output, "Next: Run `t2code connect link` to authorize and enable T2 Connect.");
     }),
   );
 
@@ -567,7 +567,7 @@ it.layer(NodeServices.layer)("bin cli parsing", (it) => {
         runConnectCli(["connect", "unlink", "--base-dir", baseDir]),
       );
 
-      assert.equal(output, "T3 Connect is disabled locally.");
+      assert.equal(output, "T2 Connect is disabled locally.");
     }),
   );
 
@@ -587,7 +587,7 @@ it.layer(NodeServices.layer)("bin cli parsing", (it) => {
 
       assert.equal(
         output,
-        "Signed out of T3 Connect locally.\nThe background service is managed separately with `t2code service`.",
+        "Signed out of T2 Connect locally.\nThe background service is managed separately with `t2code service`.",
       );
       assert.isFalse(NodeFS.existsSync(tokenPath));
     }),
