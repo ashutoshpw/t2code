@@ -119,9 +119,10 @@ describe("WorkspaceFileUpload", () => {
       const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
       const { claims } = yield* mintToken(cwd, "assets/logo.png");
 
-      expect(
-        yield* storeProjectFileUpload(claims, new Uint8Array([1, 2, 3])),
-      ).toMatchObject({ ok: false, status: 400 });
+      expect(yield* storeProjectFileUpload(claims, new Uint8Array([1, 2, 3]))).toMatchObject({
+        ok: false,
+        status: 400,
+      });
       expect(
         yield* storeProjectFileUpload(
           claims,
@@ -134,9 +135,10 @@ describe("WorkspaceFileUpload", () => {
       );
       expect(NodeFS.readdirSync(NodePath.join(cwd, "assets"))).toEqual(["logo.png"]);
       // The second store attempt must not clobber the freshly written file.
-      expect(
-        yield* storeProjectFileUpload(claims, new Uint8Array(6)),
-      ).toMatchObject({ ok: false, status: 409 });
+      expect(yield* storeProjectFileUpload(claims, new Uint8Array(6))).toMatchObject({
+        ok: false,
+        status: 409,
+      });
       expect(NodeFS.readFileSync(NodePath.join(cwd, "assets/logo.png"))).toEqual(
         Buffer.from([1, 2, 3, 4, 5, 6]),
       );
@@ -151,9 +153,10 @@ describe("WorkspaceFileUpload", () => {
       const cwd = yield* makeWorkspaceRoot;
       const { claims } = yield* mintToken(cwd, "logo.png");
 
-      expect(
-        yield* storeProjectFileUpload(claims, Stream.make(new Uint8Array(7))),
-      ).toMatchObject({ ok: false, status: 400 });
+      expect(yield* storeProjectFileUpload(claims, Stream.make(new Uint8Array(7)))).toMatchObject({
+        ok: false,
+        status: 400,
+      });
       expect(NodeFS.readdirSync(cwd)).toEqual([]);
     }).pipe(Effect.provide(testLayer)),
   );
