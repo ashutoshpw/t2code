@@ -76,9 +76,12 @@ describe("check-rebrand", () => {
   it("honors baseline path entries and exempt dirs for t3-named paths", () => {
     const entries = [
       { file: "apps/server/scripts/t3-sqlite-state.ts", line: "const x = 1;" },
-      { file: "apps/mobile/modules/t2-terminal/T3TerminalModule.swift", line: "let x = 1" },
+      { file: ".agents/skills/t3-note/SKILL.md", line: "let x = 1" },
     ];
-    const baseline = new Set<string>(["apps/server/scripts/t3-sqlite-state.ts\u0000"]);
+    const baseline = new Set<string>([
+      ".agents/skills/t3-note/SKILL.md\u0000",
+      "apps/server/scripts/t3-sqlite-state.ts\u0000",
+    ]);
     expect(findViolations(entries, baseline)).toEqual([]);
     expect(
       findViolations(entries, EMPTY_BASELINE)
@@ -182,7 +185,7 @@ describe("check-rebrand", () => {
 
   it("flags the upstream CLI scope", () => {
     const violations = findViolations(
-      [{ file: "apps/web/src/example.ts", line: `import cli from "@t2code/cli";` }],
+      [{ file: "apps/web/src/example.ts", line: `import cli from "@t3code/cli";` }],
       EMPTY_BASELINE,
     );
     expect(violations.map((v) => v.rule.id)).toEqual(["t3-cli-scope"]);
@@ -196,7 +199,7 @@ describe("check-rebrand", () => {
           file: "packages/shared/src/example.ts",
           line: `import { hostProcess } from "@t3tools/shared/hostProcess";`,
         },
-        { file: "apps/web/src/example.ts", line: `appId: "com.t2tools.t2code"` },
+        { file: "apps/web/src/example.ts", line: `appId: "com.t3tools.t3code"` },
         { file: "apps/web/src/example.ts", line: `git@github.com:T3Tools/T3Code.git` },
       ],
       EMPTY_BASELINE,
@@ -219,7 +222,7 @@ describe("check-rebrand", () => {
         },
         {
           file: "apps/web/src/example.ts",
-          line: `const metadata = "https://github.com/t3tools/t3code (com.t2tools.t2code)";`,
+          line: `const metadata = "https://github.com/t3tools/t3code (com.t3tools.t3code)";`,
         },
       ],
       EMPTY_BASELINE,
@@ -296,10 +299,6 @@ describe("check-rebrand", () => {
           file: ".agents/skills/rebase-with-upstream/SKILL.md",
           line: "onto upstream T3 Code (pingdotgg/t3code)",
         },
-        {
-          file: "apps/mobile/modules/t2-terminal/T3TerminalNative.podspec",
-          line: `s.summary = "T3 Code terminal"`,
-        },
       ],
       EMPTY_BASELINE,
     );
@@ -309,38 +308,26 @@ describe("check-rebrand", () => {
   it("flags legacy env names outside the compat surfaces", () => {
     const violations = findViolations(
       [
-        { file: "apps/server/src/cli/config.ts", line: 'Config.string("T3CODE_HOME")' },
+        { file: "apps/server/src/cli/config.ts", line: 'Config.String("T3CODE_HOME")' },
         { file: "packages/ssh/src/tunnel.ts", line: "T3_ARCHIVE_VERSION=@@T3_ARCHIVE_VERSION@@" },
         { file: "apps/web/src/example.ts", line: "process.env.T3_RELEASE_BASE_URL" },
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t2-env-name"));
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t3-env-name"));
   });
 
-  it("allows retained T3 identifiers that are not env vars", () => {
+  it("flags former retained T3 identifiers after the migration removed them", () => {
     const violations = findViolations(
       [
         {
           file: "packages/shared/src/themePalettes.ts",
           line: "export const T3_CHAT_THEME: ThemeDefinition = {",
         },
-        {
-          file: "apps/web/src/pierre-icons.ts",
-          line: "export const T3_FILE_ICON_SPRITE = `...`;",
-        },
-        {
-          file: "packages/client-runtime/src/work-log/presentation.ts",
-          line: "const T3_MCP_TOOL_LABELS: Record<string, Labels> = {",
-        },
-        {
-          file: "apps/web/src/themePalette.ts",
-          line: 'const LEGACY_T3_CHAT_DARK_THEME_ID = "t3-chat-dark";',
-        },
       ],
       EMPTY_BASELINE,
     );
-    expect(violations).toEqual([]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3-env-name"]);
   });
 
   it("honors baseline entries for legacy env fallback lines", () => {
@@ -348,7 +335,7 @@ describe("check-rebrand", () => {
     const entries = [
       { file: "apps/desktop/scripts/electron-launcher.mjs", line: legacyFallbackLine },
     ];
-    expect(findViolations(entries, EMPTY_BASELINE).map((v) => v.rule.id)).toEqual(["t2-env-name"]);
+    expect(findViolations(entries, EMPTY_BASELINE).map((v) => v.rule.id)).toEqual(["t3-env-name"]);
     expect(
       findViolations(
         entries,
