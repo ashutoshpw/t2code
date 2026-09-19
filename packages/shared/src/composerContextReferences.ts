@@ -18,15 +18,12 @@ const CONTEXT_PROTOCOL = "t2-context:";
 const LEGACY_CONTEXT_PROTOCOL = "t3-context:";
 const COMPOSER_CONTEXT_HREF_PREFIX = `${CONTEXT_PROTOCOL}//v1/`;
 const LEGACY_CONTEXT_HREF_PREFIX = `${LEGACY_CONTEXT_PROTOCOL}//v1/`;
+const CONTEXT_HREF_PREFIX_PATTERN = `(?:${COMPOSER_CONTEXT_HREF_PREFIX}|${LEGACY_CONTEXT_HREF_PREFIX})`;
 const CONTEXT_KIND_PATTERN = /^[a-z][a-z0-9-]{0,39}$/;
 const CONTEXT_ID_PATTERN = /^[a-z0-9_-]{1,128}$/i;
 const MAX_LINK_LABEL_LENGTH = 512;
 const CONTEXT_LINK = new RegExp(
-  String.raw`(!?)\[([^\]\n]{0,${MAX_LINK_LABEL_LENGTH}})\]\((${COMPOSER_CONTEXT_HREF_PREFIX}[^\s)]{1,200})\)`,
-  "g",
-);
-const LEGACY_CONTEXT_LINK = new RegExp(
-  String.raw`(!?)\[([^\]\n]{0,${MAX_LINK_LABEL_LENGTH}})\]\((${LEGACY_CONTEXT_HREF_PREFIX}[^\s)]{1,200})\)`,
+  String.raw`(!?)\[([^\]\n]{0,${MAX_LINK_LABEL_LENGTH}})\]\(((?:${CONTEXT_HREF_PREFIX_PATTERN})[^\s)]{1,200})\)`,
   "g",
 );
 
