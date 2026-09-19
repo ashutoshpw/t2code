@@ -53,8 +53,7 @@ jobs:
               - --filter=t2code-relay...
 
       - name: Deploy production relay stage
-        id: deploy
-        run: vp run --filter t2code-relay deploy --stage prod --yes --github-output
+        run: vp run --filter t2code-relay deploy --stage prod --yes --no-input
         env:
           # The PublishClientConfig action writes the client env here instead
           # of the repo-root .env; nothing on the runner reads it.
