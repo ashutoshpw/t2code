@@ -308,7 +308,7 @@ describe("EnvironmentConnector", () => {
         environmentId: "env-connector-test",
       });
 
-      expect(seenUrls).toEqual(["https://env.example.test/api/t3-connect/health"]);
+      expect(seenUrls).toEqual(["https://env.example.test/api/t2-connect/health"]);
       expect(seenProofs[0]).toMatchObject({
         iss: "https://relay.example.test",
         aud: "t2-env:env-connector-test",
