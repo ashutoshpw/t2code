@@ -195,7 +195,7 @@ describe("index.html boot script", () => {
       prefersDark: true,
     },
     {
-      name: "legacy t3-chat-dark resolves to dark T3 Chat",
+      name: "legacy t2-chat-dark resolves to dark T3 Chat",
       storage: { [THEME_STORAGE_KEY]: "t2-chat-dark" },
       prefersDark: true,
     },
