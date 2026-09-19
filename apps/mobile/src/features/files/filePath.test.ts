@@ -48,15 +48,15 @@ describe("file preview types", () => {
 describe("fileHeaderSubtitle", () => {
   it("places a workspace file under its project", () => {
     expect(
-      fileHeaderSubtitle("t3code", "apps/mobile/src/features/threads/fileChipMenu.test.ts"),
-    ).toBe("t3code · apps/mobile/src/features/threads");
+      fileHeaderSubtitle("t2code", "apps/mobile/src/features/threads/fileChipMenu.test.ts"),
+    ).toBe("t2code · apps/mobile/src/features/threads");
   });
 
   it("shows only the directory for a host file outside the workspace", () => {
-    expect(fileHeaderSubtitle("t3code", "/tmp/report.md")).toBe("/tmp");
+    expect(fileHeaderSubtitle("t2code", "/tmp/report.md")).toBe("/tmp");
   });
 
   it("shows only the project for a file at the workspace root", () => {
-    expect(fileHeaderSubtitle("t3code", "README.md")).toBe("t3code");
+    expect(fileHeaderSubtitle("t2code", "README.md")).toBe("t2code");
   });
 });

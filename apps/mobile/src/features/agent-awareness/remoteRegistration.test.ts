@@ -892,7 +892,7 @@ describe("makeRelayDeviceRegistrationRequest", () => {
     armAgentAwarenessLiveActivityForLocalWork({
       environmentId: "env-1" as EnvironmentId,
       threadTitle: "Fix the flaky test",
-      projectTitle: "t3code",
+      projectTitle: "t2code",
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -911,7 +911,7 @@ describe("makeRelayDeviceRegistrationRequest", () => {
     armAgentAwarenessLiveActivityForLocalWork({
       environmentId: "env-publishing" as EnvironmentId,
       threadTitle: "Fix the flaky test",
-      projectTitle: "t3code",
+      projectTitle: "t2code",
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(widgetMocks.start).toHaveBeenCalledTimes(1);
@@ -923,7 +923,7 @@ describe("makeRelayDeviceRegistrationRequest", () => {
     armAgentAwarenessLiveActivityForLocalWork({
       environmentId: "env-pre-capability" as EnvironmentId,
       threadTitle: "Fix the flaky test",
-      projectTitle: "t3code",
+      projectTitle: "t2code",
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(widgetMocks.start).toHaveBeenCalledTimes(1);

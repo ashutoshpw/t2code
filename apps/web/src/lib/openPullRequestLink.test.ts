@@ -135,20 +135,20 @@ describe("pullRequestCandidateUrlFromReferenceAutolink", () => {
   it("turns GitHub's shared issue route into a pull request candidate", () => {
     expect(
       pullRequestCandidateUrlFromReferenceAutolink(
-        "https://github.com/pingdotgg/t3code/issues/8600#issuecomment-1",
+        "https://github.com/pingdotgg/t2code/issues/8600#issuecomment-1",
       ),
-    ).toBe("https://github.com/pingdotgg/t3code/pull/8600#issuecomment-1");
+    ).toBe("https://github.com/pingdotgg/t2code/pull/8600#issuecomment-1");
   });
 
   it("does not reinterpret other issue hosts or malformed references", () => {
     expect(
       pullRequestCandidateUrlFromReferenceAutolink(
-        "https://gitlab.com/pingdotgg/t3code/-/issues/8600",
+        "https://gitlab.com/pingdotgg/t2code/-/issues/8600",
       ),
     ).toBeNull();
     expect(
       pullRequestCandidateUrlFromReferenceAutolink(
-        "https://github.com/pingdotgg/t3code/issues/not-a-number",
+        "https://github.com/pingdotgg/t2code/issues/not-a-number",
       ),
     ).toBeNull();
   });
@@ -157,9 +157,9 @@ describe("pullRequestCandidateUrlFromReferenceAutolink", () => {
 describe("matchesLinkedPullRequestUrl", () => {
   const linkedPullRequest = {
     projectId: ProjectId.make("project-1"),
-    repository: "pingdotgg/t3code",
+    repository: "pingdotgg/t2code",
     number: 42,
-    url: "https://github.com/pingdotgg/t3code/pull/42",
+    url: "https://github.com/pingdotgg/t2code/pull/42",
   };
 
   it("matches the same pull request without looking up its project", () => {
@@ -188,7 +188,7 @@ describe("matchesLinkedPullRequestUrl", () => {
     expect(
       matchesLinkedPullRequestUrl(
         linkedPullRequest,
-        "https://github.com:8443/pingdotgg/t3code/pull/42",
+        "https://github.com:8443/pingdotgg/t2code/pull/42",
       ),
     ).toBe(true);
   });
@@ -204,12 +204,12 @@ describe("matchesLinkedPullRequestUrl", () => {
 
   it("rejects a different pull request or host", () => {
     expect(
-      matchesLinkedPullRequestUrl(linkedPullRequest, "https://github.com/pingdotgg/t3code/pull/43"),
+      matchesLinkedPullRequestUrl(linkedPullRequest, "https://github.com/pingdotgg/t2code/pull/43"),
     ).toBe(false);
     expect(
       matchesLinkedPullRequestUrl(
         linkedPullRequest,
-        "https://github.example.com/pingdotgg/t3code/pull/42",
+        "https://github.example.com/pingdotgg/t2code/pull/42",
       ),
     ).toBe(false);
   });
@@ -367,17 +367,17 @@ describe("findProjectForChangeRequest", () => {
   it("matches a nested GitLab group by the whole path below the host", () => {
     const projects = [
       project({
-        canonicalKey: "gitlab.com/t3tools/platform/t3code",
+        canonicalKey: "gitlab.com/t2tools/platform/t2code",
         provider: "gitlab",
-        displayName: "t3tools/platform/t3code",
-        owner: "t3tools",
-        name: "t3code",
+        displayName: "t2tools/platform/t2code",
+        owner: "t2tools",
+        name: "t2code",
       }),
     ];
     expect(
       findProjectForChangeRequest(projects, {
         host: "gitlab.com",
-        repository: "t3tools/platform/t3code",
+        repository: "t2tools/platform/t2code",
         number: 42,
       }),
     ).toBe(projects[0]);
@@ -386,16 +386,16 @@ describe("findProjectForChangeRequest", () => {
   it("keeps two hosts apart, so an Enterprise link does not open the public one", () => {
     const projects = [
       project({
-        canonicalKey: "github.com/pingdotgg/t3code",
+        canonicalKey: "github.com/pingdotgg/t2code",
         provider: "github",
         owner: "pingdotgg",
-        name: "t3code",
+        name: "t2code",
       }),
     ];
     expect(
       findProjectForChangeRequest(projects, {
         host: "github.acme.test",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 1,
       }),
     ).toBeUndefined();
@@ -411,14 +411,14 @@ describe("findProjectForChangeRequest", () => {
         canonicalKey,
         provider: "azure-devops",
         displayName: canonicalKey.split("/").slice(1).join("/"),
-        owner: "t3tools",
-        name: "t3code",
+        owner: "t2tools",
+        name: "t2code",
       }),
     ];
     expect(
       findProjectForChangeRequest(projects, {
         host: "dev.azure.com",
-        repository: "t3tools/platform/_git/t3code",
+        repository: "t2tools/platform/_git/t2code",
         number: 1,
       }),
     ).toBe(projects[0]);
@@ -427,16 +427,16 @@ describe("findProjectForChangeRequest", () => {
   it("claims nothing for a lookalike host, which is what keeps a link a link", () => {
     const projects = [
       project({
-        canonicalKey: "github.com/pingdotgg/t3code",
+        canonicalKey: "github.com/pingdotgg/t2code",
         provider: "github",
         owner: "pingdotgg",
-        name: "t3code",
+        name: "t2code",
       }),
     ];
     expect(
       findProjectForChangeRequest(projects, {
         host: "github.com-evil.test",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 1,
       }),
     ).toBeUndefined();

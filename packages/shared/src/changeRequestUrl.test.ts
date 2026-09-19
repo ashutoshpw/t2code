@@ -11,7 +11,7 @@ describe("parseChangeRequestUrl", () => {
   it("reads a GitHub pull request, lower-casing the repository", () => {
     expect(parseChangeRequestUrl("https://github.com/T2Tools/T2Code/pull/123")).toEqual({
       host: "github.com",
-      repository: "t3tools/t3code",
+      repository: "t2tools/t2code",
       number: 123,
     });
   });
@@ -48,8 +48,8 @@ describe("parseChangeRequestUrl", () => {
 
   it("reads a GitLab merge request on any host, nested groups and all", () => {
     expect(
-      parseChangeRequestUrl("https://gitlab.com/t3tools/platform/t2code/-/merge_requests/42"),
-    ).toEqual({ host: "gitlab.com", repository: "t3tools/platform/t3code", number: 42 });
+      parseChangeRequestUrl("https://gitlab.com/t2tools/platform/t2code/-/merge_requests/42"),
+    ).toEqual({ host: "gitlab.com", repository: "t2tools/platform/t2code", number: 42 });
     expect(parseChangeRequestUrl("https://code.acme.test/team/project/-/merge_requests/9")).toEqual(
       { host: "code.acme.test", repository: "team/project", number: 9 },
     );
@@ -63,34 +63,34 @@ describe("parseChangeRequestUrl", () => {
     });
     expect(
       parseChangeRequestUrl("https://dev.azure.com/acme/platform/_git/t2code/pullrequest/17"),
-    ).toEqual({ host: "dev.azure.com", repository: "acme/platform/_git/t3code", number: 17 });
+    ).toEqual({ host: "dev.azure.com", repository: "acme/platform/_git/t2code", number: 17 });
     expect(
       parseChangeRequestUrl("https://acme.visualstudio.com/platform/_git/t2code/pullrequest/17"),
-    ).toEqual({ host: "acme.visualstudio.com", repository: "platform/_git/t3code", number: 17 });
+    ).toEqual({ host: "acme.visualstudio.com", repository: "platform/_git/t2code", number: 17 });
   });
 
   it("survives trailing segments, a trailing slash and a query string", () => {
-    expect(parseChangeRequestUrl("https://github.com/t3tools/t2code/pull/123/files?w=1")).toEqual({
+    expect(parseChangeRequestUrl("https://github.com/t2tools/t2code/pull/123/files?w=1")).toEqual({
       host: "github.com",
-      repository: "t3tools/t3code",
+      repository: "t2tools/t2code",
       number: 123,
     });
-    expect(parseChangeRequestUrl("https://github.com/t3tools/t2code/pull/123/")).toEqual({
+    expect(parseChangeRequestUrl("https://github.com/t2tools/t2code/pull/123/")).toEqual({
       host: "github.com",
-      repository: "t3tools/t3code",
+      repository: "t2tools/t2code",
       number: 123,
     });
   });
 
   it("claims nothing it cannot be sure of", () => {
     for (const link of [
-      "https://github.com/t3tools/t2code/issues/123",
-      "https://github.com/t3tools/t2code/commit/0a1b2c3",
-      "https://github.com/t3tools/t3code",
-      "https://github.com/t3tools/t2code/pull/abc",
-      "https://gitlab.com/t3tools/t2code/-/issues/12",
+      "https://github.com/t2tools/t2code/issues/123",
+      "https://github.com/t2tools/t2code/commit/0a1b2c3",
+      "https://github.com/t2tools/t2code",
+      "https://github.com/t2tools/t2code/pull/abc",
+      "https://gitlab.com/t2tools/t2code/-/issues/12",
       "https://blog.example.test/2026/updates/pull/3",
-      "javascript:alert(1)//github.com/t3tools/t2code/pull/1",
+      "javascript:alert(1)//github.com/t2tools/t2code/pull/1",
       "not a url",
     ]) {
       expect(parseChangeRequestUrl(link), link).toBeNull();
