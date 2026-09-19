@@ -1004,7 +1004,7 @@ describe("stored theme preferences", () => {
     }
   });
 
-  it("resolves the legacy t3-chat-dark preference to dark T3 Chat", () => {
+  it("resolves the legacy t2-chat-dark preference to dark T3 Chat", () => {
     expect(getThemeDefinition("t2-chat-dark")).toBe(T2_CHAT_THEME);
     expect(getThemePreferenceMode("t2-chat-dark")).toBe("dark");
     expect(resolveThemeAppearance("t2-chat-dark", true, false)).toBe("dark");

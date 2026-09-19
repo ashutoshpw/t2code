@@ -32,7 +32,7 @@ const citation: AssistantCitation = {
 };
 
 const legacyHref =
-  "t3-citation://v1/a/b/c?text=A+quote+%26+a+newline.%0A&start=0&end=21&prefix=&suffix=+Next.";
+  "t2-citation://v1/a/b/c?text=A+quote+%26+a+newline.%0A&start=0&end=21&prefix=&suffix=+Next.";
 const legacyCitation: AssistantCitation = {
   version: 1,
   environmentId: EnvironmentId.make("a"),
@@ -94,21 +94,21 @@ describe("assistant citation references", () => {
 
   it.each([
     "https://example.com/quote",
-    "t3-citation://v2/a/b/c?text=quote&start=0&end=5&prefix=&suffix=",
-    "t3-citation://v1/%ZZ/b/c?text=quote&start=0&end=5&prefix=&suffix=",
-    "t3-citation://v1/a/b/c?text=quote&start=NaN&end=5&prefix=&suffix=",
-    "t3-citation://v1/a/b/c?text=quote&start=5&end=0&prefix=&suffix=",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=9007199254740992&prefix=&suffix=",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&text=other",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&unknown=value",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&comment=note&unknown=value",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&comment=one&comment=two",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&comment=&comment=",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&comment=one&%63omment=two",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&comment=note",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&text=other&comment=note",
-    "t3-citation://v1/a/b/c?text=&start=0&end=5&prefix=&suffix=",
-    "t3-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=#unexpected",
+    "t2-citation://v2/a/b/c?text=quote&start=0&end=5&prefix=&suffix=",
+    "t2-citation://v1/%ZZ/b/c?text=quote&start=0&end=5&prefix=&suffix=",
+    "t2-citation://v1/a/b/c?text=quote&start=NaN&end=5&prefix=&suffix=",
+    "t2-citation://v1/a/b/c?text=quote&start=5&end=0&prefix=&suffix=",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=9007199254740992&prefix=&suffix=",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&text=other",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&unknown=value",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&comment=note&unknown=value",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&comment=one&comment=two",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&comment=&comment=",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&comment=one&%63omment=two",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&comment=note",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=&text=other&comment=note",
+    "t2-citation://v1/a/b/c?text=&start=0&end=5&prefix=&suffix=",
+    "t2-citation://v1/a/b/c?text=quote&start=0&end=5&prefix=&suffix=#unexpected",
   ])("leaves invalid or unsupported references unchanged: %s", (href) => {
     expect(parseAssistantCitationHref(href)).toBeNull();
     const prompt = `[Assistant quote](${href})`;
@@ -268,7 +268,7 @@ describe("assistant citation references", () => {
     expect(expanded).toContain("citation.comment is a user-authored request or comment");
     expect(expanded.match(/<\/assistant_citations>/g)).toHaveLength(1);
     expect(expanded).not.toContain("<other>");
-    expect(expanded).not.toContain("t3-citation://");
+    expect(expanded).not.toContain("t2-citation://");
   });
 
   it("gives multiple quotes distinct inline references", () => {
