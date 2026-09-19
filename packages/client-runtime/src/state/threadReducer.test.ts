@@ -352,16 +352,16 @@ describe("applyThreadDetailEvent", () => {
       (field) => {
         const linkedPullRequest = {
           projectId: ProjectId.make("project-1"),
-          repository: "pingdotgg/t3code",
+          repository: "pingdotgg/t2code",
           number: 42,
-          url: "https://github.com/pingdotgg/t3code/pull/42",
+          url: "https://github.com/pingdotgg/t2code/pull/42",
         };
         const otherField =
           field === "linkedPullRequest" ? "branchPullRequest" : "linkedPullRequest";
         const otherPullRequest = {
           ...linkedPullRequest,
           number: 43,
-          url: "https://github.com/pingdotgg/t3code/pull/43",
+          url: "https://github.com/pingdotgg/t2code/pull/43",
         };
         const linked = applyThreadDetailEvent(
           { ...baseThread, [otherField]: otherPullRequest },
@@ -411,15 +411,15 @@ describe("applyThreadDetailEvent", () => {
   describe("thread pull request links", () => {
     const link = {
       host: "github.com",
-      repository: "pingdotgg/t3code",
+      repository: "pingdotgg/t2code",
       number: 42,
-      url: "https://github.com/pingdotgg/t3code/pull/42",
+      url: "https://github.com/pingdotgg/t2code/pull/42",
       source: "manual" as const,
       linkedAt: "2026-04-01T05:00:00.000Z",
       snapshot: null,
       stack: null,
     };
-    const key = { host: "github.com", repository: "pingdotgg/t3code", number: 42 };
+    const key = { host: "github.com", repository: "pingdotgg/t2code", number: 42 };
     const linkEvent = (sequence: number) =>
       ({
         ...baseEventFields,

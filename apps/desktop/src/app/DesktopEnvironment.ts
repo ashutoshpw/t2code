@@ -185,7 +185,7 @@ const make = Effect.fn("desktop.environment.make")(function* (
     joinPath: path.join,
     t2Home: config.t2Home,
   });
-  const userDataDirName = isDevelopment ? "t3code-dev" : "t3code";
+  const userDataDirName = isDevelopment ? "t2code-dev" : "t2code";
   const linuxApplicationsDir = path.join(
     Option.getOrElse(config.xdgDataHome, () => path.join(homeDirectory, ".local", "share")),
     "applications",

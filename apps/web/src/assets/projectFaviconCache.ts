@@ -5,7 +5,7 @@ import {
   PROJECT_FAVICON_THUMBNAIL_SIZE,
 } from "@t2code/client-runtime/project-favicon-cache";
 
-const DATABASE_NAME = "t3code:project-favicons";
+const DATABASE_NAME = "t2code:project-favicons";
 const DATABASE_VERSION = 2;
 const STORE_NAME = "images";
 let database: Promise<IDBDatabase> | undefined;

@@ -74,12 +74,12 @@ describe("buildCommandPaletteProjectMetadata", () => {
         {
           environmentId: localEnvironmentId,
           title: "T2 Code",
-          workspaceRoot: "/Users/theo/Projects/t3code",
+          workspaceRoot: "/Users/theo/Projects/t2code",
         },
         {
           environmentId: remoteEnvironmentId,
-          title: "t3code",
-          workspaceRoot: "/srv/t3code",
+          title: "t2code",
+          workspaceRoot: "/srv/t2code",
         },
       ],
       locationByEnvironmentId: locations,
@@ -87,10 +87,10 @@ describe("buildCommandPaletteProjectMetadata", () => {
 
     expect(metadata.searchTerms).toEqual([
       "T2 Code",
-      "/Users/theo/Projects/t3code",
+      "/Users/theo/Projects/t2code",
       "Local",
-      "t3code",
-      "/srv/t3code",
+      "t2code",
+      "/srv/t2code",
       "Build box",
     ]);
     expect(metadata.environmentLabels).toEqual(["Local", "Build box"]);
@@ -102,7 +102,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
       projectSearchItems: [
         {
           kind: "action",
-          value: "project:t3code",
+          value: "project:t2code",
           title: "T2 Code",
           searchTerms: metadata.searchTerms,
           icon: null,
@@ -120,12 +120,12 @@ describe("buildCommandPaletteProjectMetadata", () => {
         {
           environmentId: remoteEnvironmentId,
           title: "T2 Code",
-          workspaceRoot: "/srv/t3code",
+          workspaceRoot: "/srv/t2code",
         },
         {
           environmentId: remoteEnvironmentId,
           title: "T2 Code worktree",
-          workspaceRoot: "/srv/t3code-feature",
+          workspaceRoot: "/srv/t2code-feature",
         },
       ],
       locationByEnvironmentId: locations,
@@ -141,12 +141,12 @@ describe("buildCommandPaletteProjectMetadata", () => {
         {
           environmentId: remoteEnvironmentId,
           title: "T2 Code",
-          workspaceRoot: "/srv/t3code",
+          workspaceRoot: "/srv/t2code",
         },
         {
           environmentId: secondRemoteEnvironmentId,
           title: "T2 Code mirror",
-          workspaceRoot: "/srv/mirror/t3code",
+          workspaceRoot: "/srv/mirror/t2code",
         },
       ],
       locationByEnvironmentId: new Map([
@@ -164,7 +164,7 @@ describe("buildCommandPaletteProjectMetadata", () => {
         {
           environmentId: remoteEnvironmentId,
           title: "T2 Code",
-          workspaceRoot: "/srv/t3code",
+          workspaceRoot: "/srv/t2code",
         },
       ],
       locationByEnvironmentId: new Map(),
@@ -735,8 +735,8 @@ describe("filterPinnedBrowseEntries", () => {
 it.each([
   "#10839",
   "10839",
-  "pingdotgg/t3code#10839",
-  "https://github.com/pingdotgg/t3code/pull/10839",
+  "pingdotgg/t2code#10839",
+  "https://github.com/pingdotgg/t2code/pull/10839",
 ])("finds linked threads from PR query %s", (query) => {
   const items = buildThreadActionItems({
     threads: [
@@ -745,9 +745,9 @@ it.each([
         pullRequests: [
           {
             host: "github.com",
-            repository: "pingdotgg/t3code",
+            repository: "pingdotgg/t2code",
             number: 10839,
-            url: "https://github.com/pingdotgg/t3code/pull/10839",
+            url: "https://github.com/pingdotgg/t2code/pull/10839",
             source: "manual",
             linkedAt: "2026-09-08T00:00:00Z",
             snapshot: null,

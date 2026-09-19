@@ -117,7 +117,7 @@ export const SHOWCASE_PROJECTS = [
     id: "t2code",
     title: "T2 Code",
     directory: "t2code",
-    repositoryUrl: "https://github.com/pingdotgg/t3code.git",
+    repositoryUrl: "https://github.com/ashutoshpw/t2code.git",
     favicon: PROJECT_FAVICONS.t2code,
   },
   {
@@ -305,7 +305,7 @@ async function seedT2CodeWorkspace(workspaceRoot: string): Promise<void> {
   );
   await initializeRepository({
     workspaceRoot,
-    repositoryUrl: "https://github.com/pingdotgg/t3code.git",
+    repositoryUrl: "https://github.com/ashutoshpw/t2code.git",
     commitMessage: "Show connected environments",
   });
   await runGit(workspaceRoot, ["checkout", "-b", "feat/remote-command-center"]);

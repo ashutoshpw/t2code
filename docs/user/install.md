@@ -29,10 +29,10 @@ Node.js for `npx`).
 
 There is no `t2code` executable for Intel Macs (the desktop app is available). To
 run a server there, build it from source with Node.js 24 and `vp`
-([Install vp](https://github.com/pingdotgg/t3code#install-vp)):
+([Install vp](https://github.com/ashutoshpw/t2code#install-vp)):
 
 ```bash
-git clone https://github.com/pingdotgg/t3code
+git clone https://github.com/ashutoshpw/t2code
 cd t2code && vp i && vp run build:desktop
 node apps/server/dist/bin.mjs
 ```

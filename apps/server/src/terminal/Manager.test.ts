@@ -254,7 +254,7 @@ const createManager = (
   Effect.flatMap(Effect.service(FileSystem.FileSystem), (fs) =>
     Effect.gen(function* () {
       const { join } = yield* Path.Path;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3code-terminal-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2code-terminal-" });
       const logsDir = join(baseDir, "userdata", "logs", "terminals");
       const ptyAdapter = options.ptyAdapter ?? new FakePtyAdapter();
 
@@ -2273,7 +2273,7 @@ it.layer(
           Layer.provide(ServerSecretStore.layer),
           Layer.provide(SqlitePersistenceMemory),
           Layer.provide(
-            ServerConfig.layerTest(process.cwd(), { prefix: "t3code-terminal-provider-restart-" }),
+            ServerConfig.layerTest(process.cwd(), { prefix: "t2code-terminal-provider-restart-" }),
           ),
         ),
       ),

@@ -189,7 +189,7 @@ Required Vercel domains:
 The router domain uses `apps/web/vercel.ts` routes. Users opt into a channel by
 visiting `/__t2code/channel?channel=latest` or
 `/__t2code/channel?channel=nightly`; the router stores the
-`t3code_web_channel` cookie and rewrites future requests on `app.t2.codes` to
+`t2code_web_channel` cookie and rewrites future requests on `app.t2.codes` to
 the matching channel alias.
 
 The release deploy job rewrites release package versions before upload so the

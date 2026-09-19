@@ -9,10 +9,10 @@ it("batches codesign calls without changing existing signing options", async () 
   const options = {
     app: "/tmp/T3 Code.app",
     identity: "Developer ID Application: T3 Tools, Inc.",
-    keychain: "/tmp/t3code.keychain",
-    provisioningProfile: "/tmp/t3code.provisionprofile",
+    keychain: "/tmp/t2code.keychain",
+    provisioningProfile: "/tmp/t2code.provisionprofile",
     optionsForFile: () => ({
-      entitlements: "/tmp/t3code.entitlements.plist",
+      entitlements: "/tmp/t2code.entitlements.plist",
       hardenedRuntime: true,
     }),
   } satisfies SignOptions;
