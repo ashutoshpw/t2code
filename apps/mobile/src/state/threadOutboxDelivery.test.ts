@@ -255,7 +255,7 @@ describe("thread outbox attachment preparation", () => {
       queuedMessage({
         messageId: "message-reused-upload-race",
         text: "original text",
-        fileUri: "file:///documents/t3-composer-attachments/reused.pdf",
+        fileUri: "file:///documents/t2-composer-attachments/reused.pdf",
       }),
       "pending-reused-upload",
     );
@@ -288,7 +288,7 @@ describe("thread outbox attachment preparation", () => {
     const message = queuedMessage({
       messageId: "message-new-upload-revision",
       text: "upload this file",
-      fileUri: "file:///documents/t3-composer-attachments/new.pdf",
+      fileUri: "file:///documents/t2-composer-attachments/new.pdf",
     });
     const uploadedAttachments = message.attachments.map((attachment) =>
       attachment.type === "file"
@@ -458,7 +458,7 @@ describe("thread outbox drain delivery cleanup", () => {
     const message = queuedMessage({
       messageId: "message-edited",
       text: "original",
-      fileUri: "file:///documents/t3-composer-attachments/report.pdf",
+      fileUri: "file:///documents/t2-composer-attachments/report.pdf",
     });
     await harness.manager.enqueue(message);
     const deliveryRevision = harness.manager.revisionOf(message.messageId);
@@ -490,7 +490,7 @@ describe("thread outbox drain delivery cleanup", () => {
     const message = queuedMessage({
       messageId: "message-editor-removal-race",
       text: "keep editor changes",
-      fileUri: "file:///documents/t3-composer-attachments/editor-race.pdf",
+      fileUri: "file:///documents/t2-composer-attachments/editor-race.pdf",
     });
     const removeStarted = Promise.withResolvers<void>();
     const removeBarrier = Promise.withResolvers<void>();
@@ -517,7 +517,7 @@ describe("thread outbox delivered creation recovery", () => {
     const message = queuedMessage({
       messageId: "message-recovery-race",
       text: "original queued text",
-      fileUri: "file:///documents/t3-composer-attachments/report.pdf",
+      fileUri: "file:///documents/t2-composer-attachments/report.pdf",
     });
     const originalMergeComposerDraftContent = composerDrafts.mergeComposerDraftContent;
     const mergeCompleted = Promise.withResolvers<void>();
@@ -557,7 +557,7 @@ describe("thread outbox delivered creation recovery", () => {
     const message = queuedMessage({
       messageId: "message-recovery-editor",
       text: "recover this text",
-      fileUri: "file:///documents/t3-composer-attachments/editor.pdf",
+      fileUri: "file:///documents/t2-composer-attachments/editor.pdf",
     });
     const originalMergeComposerDraftContent = composerDrafts.mergeComposerDraftContent;
     const mergeCompleted = Promise.withResolvers<void>();
@@ -595,7 +595,7 @@ describe("thread outbox delivered creation recovery", () => {
     const message = queuedMessage({
       messageId: "message-recovery-removal",
       text: "recover once",
-      fileUri: "file:///documents/t3-composer-attachments/retry.pdf",
+      fileUri: "file:///documents/t2-composer-attachments/retry.pdf",
     });
     const draftKey = `${message.environmentId}:${message.threadId}`;
     const removeSpy = vi
