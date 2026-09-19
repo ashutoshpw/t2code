@@ -1,4 +1,4 @@
-import type { EnvironmentTheme } from "@t3tools/contracts";
+import type { EnvironmentTheme } from "@t2code/contracts";
 import * as Equal from "effect/Equal";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
@@ -36,11 +36,11 @@ const EMBER_THEME_ID = "ember" as const;
 const IRIS_THEME_ID = "iris" as const;
 export const THEME_FILE_VERSION = 1 as const;
 export const CUSTOM_THEMES_STORAGE_KEY = "t2code:themes:v1";
-export const THEME_FOLLOW_SYSTEM_STORAGE_KEY = "t3code:theme-follow-system";
-export const THEME_APPEARANCE_MODE_STORAGE_KEY = "t3code:theme-appearance-mode";
-export const THEME_HALVES_STORAGE_KEY = "t3code:theme-halves:v1";
+export const THEME_FOLLOW_SYSTEM_STORAGE_KEY = "t2code:theme-follow-system";
+export const THEME_APPEARANCE_MODE_STORAGE_KEY = "t2code:theme-appearance-mode";
+export const THEME_HALVES_STORAGE_KEY = "t2code:theme-halves:v1";
 
-const LEGACY_T3_CHAT_DARK_THEME_ID = "t2-chat-dark";
+const LEGACY_T2_CHAT_DARK_THEME_ID = "t2-chat-dark";
 
 export const ThemePreference = Schema.String;
 export type ThemePreference = typeof ThemePreference.Type;
@@ -365,7 +365,7 @@ export function subscribeToCustomThemes(listener: () => void): () => void {
 }
 
 const LEGACY_THEME_ID_ALIASES: Readonly<Record<string, string>> = {
-  [LEGACY_T3_CHAT_DARK_THEME_ID]: T2_CHAT_THEME_ID,
+  [LEGACY_T2_CHAT_DARK_THEME_ID]: T2_CHAT_THEME_ID,
   "t3-grove": GROVE_THEME_ID,
   "t3-ocean": OCEAN_THEME_ID,
   "t3-ember": EMBER_THEME_ID,
@@ -377,7 +377,7 @@ function normalizeThemeId(themeId: string): string {
 }
 
 export function canonicalThemePreference(theme: string): string {
-  return theme === LEGACY_T3_CHAT_DARK_THEME_ID ? theme : normalizeThemeId(theme);
+  return theme === LEGACY_T2_CHAT_DARK_THEME_ID ? theme : normalizeThemeId(theme);
 }
 
 function themeIdFromPreference(theme: ThemePreference): string {
@@ -385,7 +385,7 @@ function themeIdFromPreference(theme: ThemePreference): string {
 }
 
 function legacyThemeMode(theme: ThemePreference): ThemeAppearance | null {
-  return theme === LEGACY_T3_CHAT_DARK_THEME_ID ? "dark" : null;
+  return theme === LEGACY_T2_CHAT_DARK_THEME_ID ? "dark" : null;
 }
 
 /**

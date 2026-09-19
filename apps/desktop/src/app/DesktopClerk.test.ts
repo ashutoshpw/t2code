@@ -133,7 +133,7 @@ describe("DesktopClerk", () => {
       ]);
       assert.equal(cleanup.mock.calls.length, 1);
       assert.deepEqual(events, [
-        "setPath:userData:/tmp/app-data/t3code-dev",
+        "setPath:userData:/tmp/app-data/t2code-dev",
         "requestSingleInstanceLock",
         "on:second-instance",
         "createClerkBridge",
@@ -166,7 +166,7 @@ describe("DesktopClerk", () => {
       name: "development",
       isDevelopment: true,
       platform: "win32" as const,
-      userData: "/tmp/app-data/t3code-dev",
+      userData: "/tmp/app-data/t2code-dev",
     },
   ])(
     "creates the bridge before startup can yield to the event loop ($name)",
