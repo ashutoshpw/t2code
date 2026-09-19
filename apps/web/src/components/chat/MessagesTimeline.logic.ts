@@ -553,6 +553,7 @@ type MessagesTimelineRowContent =
       summaryKind: ToolGroupSummaryKind;
       toolSurface?: WorkLogEntry["toolSurface"];
       toolIcon?: WorkLogEntry["toolIcon"];
+      summaryToolIcon?: "browser" | "device" | "t2-code" | "pull-request";
       hasFailure: boolean;
     }
   | {
