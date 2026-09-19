@@ -631,12 +631,12 @@ export function PullRequestSummaryTab({
     onRevealSettled?.(revealUrl);
   });
   const editingDescription = bodyScope?.url === detail.url;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- scrolls to a linked section, description or heading once it renders
+  // oxlint-disable-next-line t2code/react-effect-budget -- scrolls to a linked section, description or heading once it renders
   useEffect(() => {
     revealSummary();
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- retries once the description markdown renders, including after its editor closes
   }, [revealUrl, description, checksReveals, descriptionReveals, editingDescription]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- the hold observes DOM outside React and must end with the tab
+  // oxlint-disable-next-line t2code/react-effect-budget -- the hold observes DOM outside React and must end with the tab
   useEffect(() => () => stopHolding.current?.(), []);
   // Checkbox ticks and the editor share one draft, so each starts from the other's latest body.
   const saveDescription = async (body: string) => {

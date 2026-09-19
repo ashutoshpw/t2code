@@ -16,14 +16,14 @@ export function PreviewFindBar({ tabId, focusRequestId, onClose }: PreviewFindBa
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<{ active: number; matches: number } | null>(null);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- focuses and selects the input DOM node when the bar opens or a find shortcut fires
+  // oxlint-disable-next-line t2code/react-effect-budget -- focuses and selects the input DOM node when the bar opens or a find shortcut fires
   useEffect(() => {
     inputRef.current?.focus();
     inputRef.current?.select();
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- Each find shortcut bumps the request id, so an already-open bar refocuses and reselects its query.
   }, [focusRequestId]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to Chromium find results for this tab and stops the search on unmount
+  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to Chromium find results for this tab and stops the search on unmount
   useEffect(() => {
     if (!previewBridge) return;
     const unsubscribe = previewBridge.onFindResult((event) => {

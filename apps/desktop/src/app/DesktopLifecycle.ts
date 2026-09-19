@@ -9,7 +9,7 @@ import * as Scope from "effect/Scope";
 
 import type * as Electron from "electron";
 
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 import { makeComponentLogger } from "./DesktopObservability.ts";

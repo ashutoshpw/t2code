@@ -14,10 +14,7 @@ import { CliError } from "effect/cli";
 import { HttpClient } from "effect/http";
 import * as Schema from "effect/Schema";
 
-import {
-  CLI_RELEASE_BASE_URL_ENV,
-  CLI_RELEASE_BASE_URL_LEGACY_ENV,
-} from "@t2code/shared/cliRelease";
+import { CLI_RELEASE_BASE_URL_ENV } from "@t2code/shared/cliRelease";
 
 import * as ProcessRunner from "../processRunner.ts";
 import { acquireServiceSelectionLock } from "./serviceSelectionLock.ts";
@@ -56,7 +53,7 @@ export {
   serviceUnitProgramOf as bootServiceProgramOf,
 } from "./serviceProtocol.ts";
 
-const BOOT_SERVICE_NAME = "t3code";
+const BOOT_SERVICE_NAME = "t2code";
 export const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // `.service` suffix keeps the label distinct from the desktop app's bundle id
 // (com.t2tools.t2code), so launchd and TCC records never collide.
@@ -790,9 +787,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
   const uid = yield* HostProcess.UserId;
   const httpClient = yield* HttpClient.HttpClient;
   const releaseBaseUrl = Option.getOrUndefined(
-    yield* Config.String(CLI_RELEASE_BASE_URL_ENV)
-      .pipe(Config.orElse(() => Config.String(CLI_RELEASE_BASE_URL_LEGACY_ENV)))
-      .pipe(Config.option),
+    yield* Config.String(CLI_RELEASE_BASE_URL_ENV).pipe(Config.option),
   );
   const homeDir = yield* Config.String(platform === "win32" ? "USERPROFILE" : "HOME").pipe(
     Config.withDefault(""),

@@ -27,7 +27,7 @@ import * as Queue from "effect/Queue";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 
-import { AgentScope } from "@t3tools/shared/AgentScope";
+import { AgentScope } from "@t2code/shared/AgentScope";
 
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as ServerSettings from "../serverSettings.ts";

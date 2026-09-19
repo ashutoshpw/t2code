@@ -9,7 +9,6 @@ export const CLI_RELEASE_CHECKSUMS_FILE = "SHA256SUMS";
 /** Overrides the download origin for mirrors and air-gapped installs. */
 export const CLI_RELEASE_BASE_URL_ENV = "T2CODE_RELEASE_BASE_URL";
 /** Pre-rename name, still honored by the update paths during the migration window. */
-export const CLI_RELEASE_BASE_URL_LEGACY_ENV = "T3CODE_RELEASE_BASE_URL";
 
 <<<<<<< HEAD
 // Keep archive keys aligned with the Linux matrix, Windows ARM64 build, and cli_archive rows in release.yml,

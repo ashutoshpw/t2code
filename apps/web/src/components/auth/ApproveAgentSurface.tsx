@@ -93,7 +93,7 @@ export function ApproveAgentSurface() {
     clerk.openSignIn(resolveClerkSignInProps(window.location.href, isElectron));
   const openSignInOnLoad = useEffectEvent(openSignIn);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- opens Clerk sign-in once Clerk has loaded and nobody is signed in
+  // oxlint-disable-next-line t2code/react-effect-budget -- opens Clerk sign-in once Clerk has loaded and nobody is signed in
   useEffect(() => {
     if (!isLoaded || isSignedIn || signInOpened.current || framed) return;
     signInOpened.current = true;

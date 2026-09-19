@@ -222,6 +222,9 @@ const CHAT_MARKDOWN_SANITIZE_SCHEMA = {
     href: [
       ...(defaultSchema.protocols?.href ?? []),
       "file",
+      "t2-citation",
+      "t2-context",
+      // Drafts saved by pre-rename builds still embed the old schemes.
       "t3-citation",
       "t3-context",
       THREAD_LINK_PROTOCOL,

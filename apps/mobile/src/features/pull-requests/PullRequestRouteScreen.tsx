@@ -454,7 +454,7 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
       selectSection("overview");
     }
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- a link selects its native PR section or diff even when the route is reused
+  // oxlint-disable-next-line t2code/react-effect-budget -- a link selects its native PR section or diff even when the route is reused
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- URL navigation selects the PR section and makes its target visible
     followLink();
@@ -494,7 +494,7 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
     }
   });
   const targetThreadId = activityContent.targetThread?.id;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- reveals the requested activity once its asynchronous rows arrive
+  // oxlint-disable-next-line t2code/react-effect-budget -- reveals the requested activity once its asynchronous rows arrive
   useEffect(() => {
     revealActivity();
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- reruns when activity resolves the URL target, even a thread the filter hides
@@ -1119,7 +1119,7 @@ function PullRequestFileRouteContent({ route }: PullRequestFileRouteProps) {
   });
   // Subscribed for the whole screen, so a pick made while the diff is still loading is kept for
   // the first draw.
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to pull request file jump requests for the screen's lifetime
+  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to pull request file jump requests for the screen's lifetime
   useEffect(() => subscribePullRequestFileJump(jumpScope, (path) => jumpToFile(path)), [jumpScope]);
   const { nativeReviewDiffStyle } = useAppearanceCodeSurface();
   const { themeAppearance, appearance, setCodeWordBreak } = useAppearancePreferences();
@@ -1134,7 +1134,7 @@ function PullRequestFileRouteContent({ route }: PullRequestFileRouteProps) {
     canHighlight: true,
   });
   const [NativeDiffView] = useState(() => resolveNativeReviewDiffView());
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- requests the next page of the paged diff query until the jump target file has loaded
+  // oxlint-disable-next-line t2code/react-effect-budget -- requests the next page of the paged diff query until the jump target file has loaded
   useEffect(() => {
     if (!targetFile) loadMore();
   }, [targetFile, loadMore]);

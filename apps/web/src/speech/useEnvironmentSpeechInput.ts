@@ -208,12 +208,12 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     text?: string;
   } | null>(null);
   const latestRef = useRef({ input, clientSettings, cleanupPrepared, projectWords });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     latestRef.current = { input, clientSettings, cleanupPrepared, projectWords };
   });
   const draftRevisionRef = useRef({ ownerKey: input.ownerKey, text: input.draftText, revision: 0 });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- tracks committed draft revisions so a late transcript cannot overwrite an edited draft
+  // oxlint-disable-next-line t2code/react-effect-budget -- tracks committed draft revisions so a late transcript cannot overwrite an edited draft
   useEffect(() => {
     const revision = draftRevisionRef.current;
     if (revision.ownerKey !== input.ownerKey || revision.text !== input.draftText) {
@@ -225,7 +225,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     }
   }, [input.ownerKey, input.draftText]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- owns the recording controller bound to the consented destination; it is disposed with the consent
+  // oxlint-disable-next-line t2code/react-effect-budget -- owns the recording controller bound to the consented destination; it is disposed with the consent
   useEffect(() => {
     if (!prepared || !grantId || typeof navigator === "undefined") return;
     const hasAudioConsent = bindAudioGrant(grantId);
@@ -376,7 +376,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     };
   }, [prepared, grantId, cloudProvider, cloudModel]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- probes the chosen environment's speech status once its connection is available
+  // oxlint-disable-next-line t2code/react-effect-budget -- probes the chosen environment's speech status once its connection is available
   useEffect(() => {
     if (!prepared || cloudProvider) return;
     let disposed = false;
@@ -394,7 +394,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
   const currentStatus = !cloudProvider && status?.prepared === prepared ? status.value : null;
   const setupModelId = setup.model?.id;
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- polls download progress while the setup dialog owns an active model download
+  // oxlint-disable-next-line t2code/react-effect-budget -- polls download progress while the setup dialog owns an active model download
   useEffect(() => {
     if (!setup.open || !setup.downloading || !prepared || !setupModelId) return;
     let disposed = false;
@@ -420,7 +420,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
   }, [prepared, setup.downloading, setup.open, setupModelId]);
 
   const previousOwnerRef = useRef(input.ownerKey);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- abandons the recording and any queued submission when the draft's owner changes
+  // oxlint-disable-next-line t2code/react-effect-budget -- abandons the recording and any queued submission when the draft's owner changes
   useEffect(() => {
     if (previousOwnerRef.current === input.ownerKey && !input.disabled) return;
     previousOwnerRef.current = input.ownerKey;
@@ -429,7 +429,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     controllerRef.current?.ownerChanged();
   }, [input.ownerKey, input.disabled]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- delivers a queued submission only after the transcript has committed to the draft
+  // oxlint-disable-next-line t2code/react-effect-budget -- delivers a queued submission only after the transcript has committed to the draft
   useEffect(() => {
     const pending = pendingSubmissionRef.current;
     if (state.phase !== "idle" || !pending) return;

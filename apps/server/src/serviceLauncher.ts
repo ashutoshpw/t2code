@@ -60,7 +60,7 @@ interface ManagedChild {
 
 const runtimePaths = (baseDir: string, version: string) => {
   const versionDir = NodePath.join(baseDir, "runtime", "versions", version);
-  // oxlint-disable-next-line t3code/no-global-process-runtime -- Standalone launcher has no Effect runtime.
+  // oxlint-disable-next-line t2code/no-global-process-runtime -- Standalone launcher has no Effect runtime.
   const executableName = process.platform === "win32" ? "t3.exe" : "t3";
   return {
     versionDir,
@@ -1263,9 +1263,7 @@ export interface LauncherOptions {
 }
 
 export async function main(options: LauncherOptions = {}): Promise<void> {
-  // Installed units written by older builds export the legacy T3CODE_HOME
-  // spelling; the launcher runs against whatever unit is on disk.
-  const baseDir = (options.baseDir ?? process.env.T2CODE_HOME ?? process.env.T3CODE_HOME)?.trim();
+  const baseDir = (options.baseDir ?? process.env.T2CODE_HOME)?.trim();
   if (baseDir === undefined || baseDir === "") {
     throw new Error("T2CODE_HOME is required by the T2 Code service launcher.");
   }

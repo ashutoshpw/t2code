@@ -9,7 +9,6 @@ import {
   updateFeedFileName,
   type CliReleaseChannel,
 } from "@t2code/shared/cliRelease";
-import { envWithLegacyFallback } from "@t2code/shared/legacyEnv";
 import * as Console from "effect/Console";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -225,9 +224,7 @@ export const findWindowsShim = Effect.fn("cli.update.find_windows_shim")(functio
   const path = yield* Path.Path;
   const environment = yield* HostProcess.Environment;
   const candidates = [
-    ...(envWithLegacyFallback(environment, "T2CODE_INSTALL_BIN_DIR")
-      ? [envWithLegacyFallback(environment, "T2CODE_INSTALL_BIN_DIR") as string]
-      : []),
+    ...(environment.T2CODE_INSTALL_BIN_DIR ? [environment.T2CODE_INSTALL_BIN_DIR] : []),
     ...(environment["PATH"] ?? environment["Path"] ?? "").split(";"),
   ].filter((entry) => entry.trim().length > 0);
   for (const directory of candidates) {

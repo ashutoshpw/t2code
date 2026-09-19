@@ -1,4 +1,4 @@
-import { EnvironmentId, ProjectId, ThreadId } from "@t3tools/contracts";
+import { EnvironmentId, ProjectId, ThreadId } from "@t2code/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
@@ -38,7 +38,7 @@ describe("CommandPalette open intents", () => {
         <div
           data-thread-context-drop="true"
           ref={(node) => {
-            node?.addEventListener("t3-thread-context-drop", onDrop);
+            node?.addEventListener("t2-thread-context-drop", onDrop);
           }}
           style={{ position: "fixed", bottom: 0, width: 300, height: 100 }}
         >

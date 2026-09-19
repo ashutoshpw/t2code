@@ -659,7 +659,7 @@ function useVoiceModels(prepared: PreparedConnection | null) {
       }
     },
   );
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- loads the environment's model catalog when its connection becomes available
+  // oxlint-disable-next-line t2code/react-effect-budget -- loads the environment's model catalog when its connection becomes available
   useEffect(() => {
     epoch.current += 1;
     if (prepared) void refresh(prepared, "foreground");
@@ -670,7 +670,7 @@ function useVoiceModels(prepared: PreparedConnection | null) {
   const downloading =
     requestedDownload !== null ||
     models.some((model) => model.state === "downloading" || model.state === "verifying");
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- polls progress while a local request or the environment reports an active download
+  // oxlint-disable-next-line t2code/react-effect-budget -- polls progress while a local request or the environment reports an active download
   useEffect(() => {
     if (!prepared || !downloading) return;
     let cancelled = false;
@@ -1072,7 +1072,7 @@ function TranscriptionTest(props: {
   const draft = transcript ?? "";
   const [showTranscript, setShowTranscript] = useState(false);
   const draftRef = useRef(draft);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- publishes the committed draft to the asynchronous transcription controller
+  // oxlint-disable-next-line t2code/react-effect-budget -- publishes the committed draft to the asynchronous transcription controller
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
@@ -1212,7 +1212,7 @@ export function VoiceSettingsPanel() {
       setMicrophones([]);
     }
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to microphone device changes while settings are open
+  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to microphone device changes while settings are open
   useEffect(() => {
     queueMicrotask(() => void refreshMicrophones());
     const mediaDevices = navigator.mediaDevices;

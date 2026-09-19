@@ -137,7 +137,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   const isStopDisabled = stopPhase === "pending" || stopPhase === "landed";
   const stopLabel =
     stopPhase === "landed" ? "Stopped" : stopPhase === "pending" ? "Stopping" : "Stop generation";
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- timer that re-enables Stop if the interrupt never settles
+  // oxlint-disable-next-line t2code/react-effect-budget -- timer that re-enables Stop if the interrupt never settles
   useEffect(() => {
     if (stopPhase !== "pending") return;
     const timeout = setTimeout(() => setStopPhase("timedOut"), STOP_PENDING_MAX_MS);

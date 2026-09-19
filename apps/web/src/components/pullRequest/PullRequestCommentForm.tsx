@@ -55,7 +55,7 @@ export function PullRequestCommentForm({
     disabled: !active || locked,
   });
   const { cancel } = speech;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- discards a recording when the hidden form can no longer be submitted
+  // oxlint-disable-next-line t2code/react-effect-budget -- discards a recording when the hidden form can no longer be submitted
   useEffect(() => {
     if (!active) cancel();
   }, [active, cancel]);

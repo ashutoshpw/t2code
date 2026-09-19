@@ -245,7 +245,7 @@ export function useReviewDiffData(input: {
   });
   const pendingReviewCommentCount = inlineReviewComments.length;
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- records review perf marks and diagnostic logs once a parsed diff has committed
+  // oxlint-disable-next-line t2code/react-effect-budget -- records review perf marks and diagnostic logs once a parsed diff has committed
   useEffect(() => {
     if (parsedDiff.kind !== "files") {
       return;

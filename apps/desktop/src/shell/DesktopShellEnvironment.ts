@@ -1,4 +1,4 @@
-import { DesktopShellEnvironmentSnapshot, ShellEnvironmentPatch } from "@t3tools/contracts";
+import { DesktopShellEnvironmentSnapshot, ShellEnvironmentPatch } from "@t2code/contracts";
 import {
   applyShellEnvironment,
   buildEnvironmentCaptureCommand,

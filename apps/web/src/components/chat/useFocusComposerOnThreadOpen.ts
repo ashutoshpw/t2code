@@ -6,7 +6,7 @@ export function useFocusComposerOnThreadOpen(
   enabled: boolean,
   focusComposer: () => void,
 ) {
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- schedules a frame to focus the composer DOM element when a thread opens with the terminal closed
+  // oxlint-disable-next-line t2code/react-effect-budget -- schedules a frame to focus the composer DOM element when a thread opens with the terminal closed
   useEffect(() => {
     if (!threadId || !enabled) return;
     const frame = window.requestAnimationFrame(() => {

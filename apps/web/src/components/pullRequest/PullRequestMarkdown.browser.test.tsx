@@ -1,5 +1,5 @@
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { type AssetResource, EnvironmentId } from "@t3tools/contracts";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { type AssetResource, EnvironmentId } from "@t2code/contracts";
 import { expect, it, vi } from "vite-plus/test";
 
 import { render } from "../../../test/render";

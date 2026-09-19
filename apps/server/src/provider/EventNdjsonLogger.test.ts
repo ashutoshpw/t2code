@@ -63,7 +63,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
     const secret = "secret-circular-event-value";
 
     return Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "provider-native.ndjson");
       const circular: Record<string, unknown> = { secret };
       circular.self = circular;
@@ -90,7 +90,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
     "falls back to a global segment when orchestration thread id is missing or invalid",
     () =>
       Effect.gen(function* () {
-        const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+        const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
         const basePath = NodePath.join(tempDir, "provider-canonical.ndjson");
 
         try {
@@ -120,9 +120,45 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
       }),
   );
 
+  it.effect("shares one thread writer across native and canonical streams", () =>
+    Effect.gen(function* () {
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
+      const basePath = NodePath.join(tempDir, "events.log");
+
+      try {
+        const store = yield* makeEventNdjsonLogStore(basePath, { batchWindowMs: 0 });
+        const native = store.logger("native");
+        const canonical = store.logger("canonical");
+        const threadId = ThreadId.make("thread-shared");
+
+        yield* native.write({ id: "native-event" }, threadId);
+        yield* canonical.write({ type: "item.completed", id: "canonical-event" }, threadId);
+        yield* store.close();
+
+        const lines = NodeFS.readFileSync(ownedLogPath(basePath, "thread-shared"), "utf8")
+          .trim()
+          .split("\n")
+          .map(parseLogLine);
+
+        assert.deepEqual(
+          lines.map(({ stream, payload }) => ({ stream, payload })),
+          [
+            { stream: "NTIVE", payload: '{"id":"native-event"}' },
+            {
+              stream: "CANON",
+              payload: '{"type":"item.completed","id":"canonical-event"}',
+            },
+          ],
+        );
+      } finally {
+        NodeFS.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }),
+  );
+
   it.effect("keeps long thread ids that share a prefix in separate files", () =>
     Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "events.log");
       const prefix =
         "thread:delegated-task:command%3Amcp%3A00000000-0000-4000-8000-000000000000%3Adelegate-task%3A";
@@ -155,7 +191,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
 
   it.effect("keeps shared store views non-owning when one adapter closes", () =>
     Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "events.log");
 
       try {
@@ -192,7 +228,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
 
   it.effect("does not strand a later batch after an interrupted write", () =>
     Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "events.log");
       const threadPath = ownedLogPath(basePath, "thread-interrupted");
 
@@ -217,9 +253,203 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
     }),
   );
 
+  it.effect("drops transient provider events before serialization", () =>
+    Effect.gen(function* () {
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
+      const basePath = NodePath.join(tempDir, "events.log");
+
+      try {
+        const store = yield* makeEventNdjsonLogStore(basePath, { batchWindowMs: 0 });
+        const canonical = store.logger("canonical");
+        const native = store.logger("native");
+        const threadId = ThreadId.make("thread-filtered");
+        const circularDelta: Record<string, unknown> = { type: "content.delta" };
+        circularDelta["self"] = circularDelta;
+
+        yield* canonical.write(circularDelta, threadId);
+        yield* canonical.write({ type: "item.completed", id: "final" }, threadId);
+        yield* native.write({ type: "content.delta", id: "native-delta" }, threadId);
+        yield* native.write(
+          { method: "item/agentMessage/delta", payload: circularDelta },
+          threadId,
+        );
+        yield* native.write(
+          { method: "thread/realtime/outputAudio/delta", payload: circularDelta },
+          threadId,
+        );
+        yield* native.write(
+          { method: "thread/realtime/transcript/delta", payload: circularDelta },
+          threadId,
+        );
+        yield* native.write({ method: "turn/diff/updated", payload: circularDelta }, threadId);
+        yield* native.write(
+          {
+            event: {
+              direction: "incoming",
+              stage: "decoded",
+              payload: {
+                method: "turn/diff/updated",
+                get params() {
+                  throw new Error("unused diff snapshots must not be traversed");
+                },
+              },
+            },
+          },
+          threadId,
+        );
+        yield* native.write(
+          {
+            event: {
+              method: "claude/stream_event/content_block_delta/text_delta",
+              payload: circularDelta,
+            },
+          },
+          threadId,
+        );
+        yield* native.write(
+          {
+            event: {
+              method: "session/update",
+              payload: { update: { sessionUpdate: "agent_message_chunk" } },
+            },
+          },
+          threadId,
+        );
+        yield* native.write(
+          {
+            event: {
+              direction: "incoming",
+              stage: "decoded",
+              payload: { method: "item/commandExecution/outputDelta", params: circularDelta },
+            },
+          },
+          threadId,
+        );
+        yield* native.write(
+          {
+            event: {
+              direction: "incoming",
+              stage: "decoded",
+              payload: {
+                type: "stream_event",
+                event: { type: "content_block_delta", delta: circularDelta },
+              },
+            },
+          },
+          threadId,
+        );
+        yield* native.write(
+          {
+            event: {
+              direction: "incoming",
+              stage: "raw",
+              get payload() {
+                throw new Error("raw frames must not be inspected");
+              },
+            },
+          },
+          threadId,
+        );
+        yield* native.write(
+          {
+            event: {
+              type: "message.part.updated",
+              payload: { properties: { part: { type: "text" } } },
+            },
+          },
+          threadId,
+        );
+        yield* native.write(
+          {
+            event: {
+              type: "message.part.updated",
+              payload: {
+                properties: {
+                  part: { type: "tool", state: { status: "running", output: "progress" } },
+                },
+              },
+            },
+          },
+          threadId,
+        );
+        yield* native.write({ type: "turn.completed", id: "native-final" }, threadId);
+        yield* store.close();
+
+        const lines = NodeFS.readFileSync(ownedLogPath(basePath, "thread-filtered"), "utf8")
+          .trim()
+          .split("\n")
+          .map(parseLogLine);
+
+        assert.deepEqual(
+          lines.map(({ stream, payload }) => ({ stream, payload })),
+          [
+            { stream: "CANON", payload: '{"type":"item.completed","id":"final"}' },
+            { stream: "NTIVE", payload: '{"type":"turn.completed","id":"native-final"}' },
+          ],
+        );
+      } finally {
+        NodeFS.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }),
+  );
+
+  it.effect(
+    "drops Claude thinking-token counters while keeping system and terminal usage records",
+    () =>
+      Effect.gen(function* () {
+        const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
+        const basePath = NodePath.join(tempDir, "events.log");
+        const threadId = ThreadId.make("claude-thinking-tokens");
+        const counter = {
+          direction: "incoming",
+          stage: "decoded",
+          payload: {
+            type: "system",
+            subtype: "thinking_tokens",
+            estimated_tokens: 50,
+            estimated_tokens_delta: 50,
+          },
+        };
+        const retained = [
+          { type: "system", subtype: "init", session_id: "claude-session" },
+          {
+            type: "stream_event",
+            event: { type: "message_delta", usage: { output_tokens: 10 } },
+          },
+          {
+            type: "result",
+            subtype: "success",
+            usage: { output_tokens: 10, output_tokens_details: { thinking_tokens: 5 } },
+          },
+        ].map((payload) => ({ event: { direction: "incoming", stage: "decoded", payload } }));
+
+        try {
+          const store = yield* makeEventNdjsonLogStore(basePath, { batchWindowMs: 0 });
+          const native = store.logger("native");
+          yield* native.write(counter, threadId);
+          yield* native.write({ provider: "claudeAgent", event: counter }, threadId);
+          for (const event of retained) {
+            yield* native.write(event, threadId);
+          }
+          yield* store.close();
+
+          const records = NodeFS.readFileSync(
+            ownedLogPath(basePath, "claude-thinking-tokens"),
+            "utf8",
+          )
+            .trim()
+            .split("\n")
+            .map((line) => decodeUnknownJson(parseLogLine(line).payload));
+          assert.deepEqual(records, retained);
+        } finally {
+          NodeFS.rmSync(tempDir, { recursive: true, force: true });
+        }
+      }),
+  );
+
   it.effect("summarizes large histories without reading their items", () =>
     Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "events.log");
       const turns = Array.from({ length: 10_000 });
       Object.defineProperty(turns, 0, {
@@ -257,7 +487,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
 
   it.effect("bounds oversized records while retaining failure details", () =>
     Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "events.log");
 
       try {
@@ -301,7 +531,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
 
   it.effect("bounds canonical diff snapshots before serializing their duplicate payloads", () =>
     Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "events.log");
       const threadId = ThreadId.make("large-diff");
       const diff = "diff-payload".repeat(128 * 1_024);
@@ -332,7 +562,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
 
   it.effect("serializes concurrent first writes for the same segment", () =>
     Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "provider-canonical.ndjson");
 
       try {
@@ -368,7 +598,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
 
   it.effect("rotates per-thread files when max size is exceeded", () =>
     Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "provider-native.ndjson");
 
       try {
@@ -419,7 +649,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
 
   it.effect("retires a thread log once a retention interval passes without writes", () =>
     Effect.gen(function* () {
-      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+      const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
       const basePath = NodePath.join(tempDir, "events.log");
       const finishedPath = ownedLogPath(basePath, "finished");
       const activePath = ownedLogPath(basePath, "active");
@@ -503,7 +733,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
     "keeps unrelated work responsive and drains before close while a disk write is held",
     () =>
       Effect.gen(function* () {
-        const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+        const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
         const basePath = NodePath.join(tempDir, "events.log");
         const fs = yield* FileSystem.FileSystem;
         const started = yield* Deferred.make<void>();

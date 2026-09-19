@@ -2,7 +2,7 @@ module.exports = {
   dependency: {
     platforms: {
       ios: {
-        podspecPath: "T3SourceText.podspec",
+        podspecPath: "T2SourceText.podspec",
       },
       android: null,
     },

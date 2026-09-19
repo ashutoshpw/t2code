@@ -12,7 +12,7 @@ const FOLDED_HEIGHT_REM = 11;
 export function useTallEnoughToFold(enabled = true) {
   const ref = useRef<HTMLDivElement>(null);
   const [tallEnough, setTallEnough] = useState(false);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- the fold depends on the rendered height, which only the DOM knows
+  // oxlint-disable-next-line t2code/react-effect-budget -- the fold depends on the rendered height, which only the DOM knows
   useLayoutEffect(() => {
     const content = ref.current;
     if (!enabled || !content) return;

@@ -73,7 +73,7 @@ The bundled protocol XML ships with the helper because its BSD license requires 
 ## Niri
 
 Niri does not implement the global-shortcut portal. While capture is enabled the app owns
-`<app-id>.SnapShot` on the session bus and exports `com.t3tools.SnapShot.Capture`; the config
+`<app-id>.SnapShot` on the session bus and exports `com.t2tools.SnapShot.Capture`; the config
 binding spawns `gdbus` to call it. Development and packaged app IDs use separate names so a dev
 build does not steal the user's binding.
 

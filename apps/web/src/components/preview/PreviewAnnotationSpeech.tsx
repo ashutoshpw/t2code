@@ -43,7 +43,7 @@ export function PreviewAnnotationSpeech({
   const [text, setText] = useState("");
   const keys = useRef<DictationKeyHandlers | null>(null);
   const guestFocused = useRef(false);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- notices focus returning from the preview guest to this window
+  // oxlint-disable-next-line t2code/react-effect-budget -- notices focus returning from the preview guest to this window
   useEffect(() => {
     const onFocus = () => {
       guestFocused.current = false;
@@ -103,7 +103,7 @@ export function PreviewAnnotationSpeech({
     blocksSubmission,
   };
   const current = useRef({ speech, voiceState });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- publishes committed speech actions and state to the desktop IPC listener
+  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed speech actions and state to the desktop IPC listener
   useEffect(() => {
     current.current = { speech, voiceState };
   });
@@ -121,11 +121,11 @@ export function PreviewAnnotationSpeech({
       }
     },
   );
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- mirrors every committed voice state change into the preview guest
+  // oxlint-disable-next-line t2code/react-effect-budget -- mirrors every committed voice state change into the preview guest
   useEffect(() => {
     void publish(voiceState, null);
   }, [publish, voiceState]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to gestures the preview guest relays for this session
+  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to gestures the preview guest relays for this session
   useEffect(
     () =>
       previewBridge?.annotationVoice.onEvent(
