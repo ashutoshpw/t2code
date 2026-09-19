@@ -72,7 +72,7 @@ export interface DpopProofKeyPair {
   readonly publicJwk: DpopPublicJwk;
 }
 
-const DPOP_PROOF_KEY_STORAGE_KEY = "t3code.cloud.dpop-proof-key";
+const DPOP_PROOF_KEY_STORAGE_KEY = "t2code.cloud.dpop-proof-key";
 
 interface NativeDpopKeys {
   /** A 32-byte private scalar followed by its 65-byte uncompressed public point. */
