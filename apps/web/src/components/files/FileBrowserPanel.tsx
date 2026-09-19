@@ -24,7 +24,8 @@ import { useTheme } from "~/hooks/useTheme";
 import { useWorkspaceMutationRefresh } from "~/hooks/useWorkspaceMutationRefresh";
 import { useFileContextMenu, type FileContextMenuAction } from "~/fileContextMenu";
 import { readLocalApi } from "~/localApi";
-import { T3_PIERRE_ICONS } from "~/pierre-icons";
+import { uploadWorkspaceFiles, type WorkspaceFileUploadProgress } from "~/lib/workspaceFileUploads";
+import { T2_PIERRE_ICONS } from "~/pierre-icons";
 import { PIERRE_TREE_UNSAFE_CSS, pierreTreeStyle } from "~/pierre-tree-theme";
 
 import { joinHostPath } from "./filePath";
@@ -271,7 +272,7 @@ export default function FileBrowserPanel({
     fileTreeSearchMode: "hide-non-matches",
     flattenEmptyDirectories: true,
     initialExpansion: "closed",
-    icons: T3_PIERRE_ICONS,
+    icons: T2_PIERRE_ICONS,
     onSelectionChange: (selectedPaths) => {
       // Update drag selection even for reveals so subsequent drags cannot use stale paths.
       dragMention.handleSelectionChange(selectedPaths);
@@ -296,7 +297,7 @@ export default function FileBrowserPanel({
     onSearchChange: (value) => setQuery(value ?? ""),
     unsafeCSS: PIERRE_TREE_UNSAFE_CSS,
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- makes the Pierre tree model re-render row decorations when loading directories change
+  // oxlint-disable-next-line t3code/react-effect-budget -- makes the Pierre tree model re-render row decorations when loading directories change
   useEffect(() => {
     if (loadingDirectoriesRef.current === loadingDirectories) return;
     loadingDirectoriesRef.current = loadingDirectories;
@@ -322,7 +323,7 @@ export default function FileBrowserPanel({
     search.close();
   };
   const expandedPathsRef = useRef(new Set<string>());
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to the Pierre tree model to load directories as they are expanded
+  // oxlint-disable-next-line t3code/react-effect-budget -- subscribes to the Pierre tree model to load directories as they are expanded
   useEffect(() => {
     const currentPaths = new Set(directoryPaths);
     for (const path of expandedPathsRef.current) {
@@ -346,7 +347,7 @@ export default function FileBrowserPanel({
     loadExpanded();
     return model.subscribe(loadExpanded);
   }, [directoryPaths, load, model]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- pushes ignored-file status into the imperative Pierre tree model
+  // oxlint-disable-next-line t3code/react-effect-budget -- pushes ignored-file status into the imperative Pierre tree model
   useEffect(() => {
     model.setGitStatus(
       entries
@@ -357,7 +358,7 @@ export default function FileBrowserPanel({
         })),
     );
   }, [entries, model]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- loads the selected file's ancestor directories and aborts on cleanup
+  // oxlint-disable-next-line t3code/react-effect-budget -- loads the selected file's ancestor directories and aborts on cleanup
   useEffect(() => {
     if (!selectedPath) return;
     const controller = new AbortController();
@@ -388,7 +389,7 @@ export default function FileBrowserPanel({
     resourceKey: `files:${environmentId}:${cwd}`,
   });
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- applies tree path changes to the imperative Pierre tree model as a reset or batch update
+  // oxlint-disable-next-line t3code/react-effect-budget -- applies tree path changes to the imperative Pierre tree model as a reset or batch update
   useEffect(() => {
     if (!ready) return;
     if (previousTreePathsRef.current === treePaths) return;
@@ -403,13 +404,13 @@ export default function FileBrowserPanel({
     if (updates.length > 0) model.batch(updates);
   }, [ready, entryKinds, model, treePaths]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- expands every directory in the Pierre tree model while expand-all is on and no search is active
+  // oxlint-disable-next-line t3code/react-effect-budget -- expands every directory in the Pierre tree model while expand-all is on and no search is active
   useEffect(() => {
     if (expandAll && !query.trim())
       setAllDirectoriesExpanded(model, expandableDirectoryPaths, true);
   }, [expandableDirectoryPaths, expandAll, model, query]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- reveals an externally selected path in the Pierre tree model by expanding, selecting and scrolling
+  // oxlint-disable-next-line t3code/react-effect-budget -- reveals an externally selected path in the Pierre tree model by expanding, selecting and scrolling
   useEffect(() => {
     if (!selectedPath) {
       handledRevealRef.current = null;

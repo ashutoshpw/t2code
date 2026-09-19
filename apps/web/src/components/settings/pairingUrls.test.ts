@@ -15,10 +15,10 @@ describe("settings pairing URL helpers", () => {
   });
 
   it("uses hosted pairing URLs for HTTPS endpoints", () => {
-    vi.stubEnv("VITE_HOSTED_APP_URL", "https://preview.t3.codes");
+    vi.stubEnv("VITE_HOSTED_APP_URL", "https://preview.t2.codes");
 
     expect(resolveHostedPairingUrl("https://host.tailnet.example.ts.net:3772", "PAIRCODE")).toBe(
-      "https://preview.t3.codes/pair?host=https%3A%2F%2Fhost.tailnet.example.ts.net%3A3772#token=PAIRCODE",
+      "https://preview.t2.codes/pair?host=https%3A%2F%2Fhost.tailnet.example.ts.net%3A3772#token=PAIRCODE",
     );
   });
 });

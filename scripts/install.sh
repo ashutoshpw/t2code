@@ -8,11 +8,10 @@
 #   T2CODE_CHANNEL           release train to follow: stable, nightly, or preview
 #                            (default: stable; preview is a maintainers' test train)
 #   T2CODE_VERSION           exact version to install (overrides T2CODE_CHANNEL)
-#   T2CODE_HOME              T2 home directory (default: ~/.t3)
+#   T2CODE_HOME              T2 home directory (default: ~/.t2)
 #   T2CODE_INSTALL_BIN_DIR   where the `t3` symlink goes (default: ~/.local/bin)
 #   T2CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
-# The pre-rename T3CODE_* spellings of these variables are still honored.
 #
 # The archive is unpacked into $T2CODE_HOME/runtime/versions/<version>, the
 # same layout `t3 service install` uses, so the service reuses this download
@@ -20,19 +19,19 @@
 set -eu
 
 repo="ashutoshpw/t2code"
-base_url="${T2CODE_RELEASE_BASE_URL:-${T3CODE_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}}"
-t3_home="${T2CODE_HOME:-${T3CODE_HOME:-$HOME/.t3}}"
-case "$t3_home" in
+base_url="${T2CODE_RELEASE_BASE_URL:-${T2CODE_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}}"
+t2_home="${T2CODE_HOME:-${T2CODE_HOME:-$HOME/.t2}}"
+case "$t2_home" in
   /*) ;;
   *)
     # Preserve cwd's trailing newlines; trim only pwd's newline and the sentinel.
-    t3_cwd="$(pwd -P && printf .)"
-    t3_home="${t3_cwd%??}/$t3_home"
+    t2_cwd="$(pwd -P && printf .)"
+    t2_home="${t2_cwd%??}/$t2_home"
     ;;
 esac
-bin_dir="${T2CODE_INSTALL_BIN_DIR:-${T3CODE_INSTALL_BIN_DIR:-$HOME/.local/bin}}"
+bin_dir="${T2CODE_INSTALL_BIN_DIR:-$HOME/.local/bin}"
 # Trailing slashes would put `//` in the paths the t3 command guard compares.
-while [ "${t3_home%/}" != "$t3_home" ] && [ "$t3_home" != / ]; do t3_home="${t3_home%/}"; done
+while [ "${t2_home%/}" != "$t2_home" ] && [ "$t2_home" != / ]; do t2_home="${t2_home%/}"; done
 while [ "${bin_dir%/}" != "$bin_dir" ] && [ "$bin_dir" != / ]; do bin_dir="${bin_dir%/}"; done
 # Absolute, so the PATH hint never adds a folder that changes with the working directory.
 case "$bin_dir" in /*) ;; *) bin_dir="$PWD/$bin_dir" ;; esac
@@ -160,8 +159,8 @@ else
   fail "sha256sum or shasum is required"
 fi
 
-channel="${T2CODE_CHANNEL:-${T3CODE_CHANNEL:-stable}}"
-version="${T2CODE_VERSION:-${T3CODE_VERSION:-}}"
+channel="${T2CODE_CHANNEL:-stable}"
+version="${T2CODE_VERSION:-}"
 if [ -z "$version" ]; then
   case "$channel" in
     stable) tag_pattern='v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)' ;;
@@ -193,7 +192,7 @@ case "$version" in
       "  Preview builds are cut by maintainers from unreleased branches to exercise the release" \
       "  pipeline. They can be broken, receive no fixes, and are never offered as updates." \
       "  Set T2CODE_CHANNEL=stable (the default) for a supported build." >&2
-    if [ "$channel" != "preview" ] && [ -z "${T2CODE_VERSION:-}${T3CODE_VERSION:-}" ]; then
+    if [ "$channel" != "preview" ] && [ -z "${T2CODE_VERSION:-}" ]; then
       fail "refusing a preview build that was not explicitly requested"
     fi
     ;;
@@ -203,7 +202,7 @@ stem="t2-${version}-${platform}-${arch}"
 legacy_stem="t3-${version}-${platform}-${arch}"
 archive="${stem}.tar.gz"
 legacy_archive="${legacy_stem}.tar.gz"
-versions_dir="${t3_home}/runtime/versions"
+versions_dir="${t2_home}/runtime/versions"
 target_dir="${versions_dir}/${version}"
 
 if [ -f "${target_dir}/.install-complete" ] && [ "$(cat "${target_dir}/.install-complete")" = "$version" ]; then
@@ -280,7 +279,7 @@ if [ -e "${bin_dir}/t3" ] || [ -L "${bin_dir}/t3" ]; then
       */./* | */../* | */. | */..) ;;
       *)
         if version_t3 "$existing" "$versions_dir" || version_t3 "$existing" "$real_versions_dir" ||
-          [ "$existing" = "${t3_home}/bin/t3" ]; then owned=true; fi
+          [ "$existing" = "${t2_home}/bin/t3" ]; then owned=true; fi
         ;;
     esac
     if [ -n "$existing_dir" ] && version_t3 "${existing_dir}/${existing##*/}" "$real_versions_dir"; then
@@ -298,7 +297,7 @@ else
 fi
 # Pruning keeps what this launcher points at; a background service cannot see bin_dir otherwise.
 launcher="$(CDPATH='' cd -P -- "$bin_dir" && pwd)/t3"
-launchers="${t3_home}/runtime/launchers"
+launchers="${t2_home}/runtime/launchers"
 grep -qxF "$launcher" "$launchers" 2>/dev/null || printf '%s\n' "$launcher" >> "$launchers"
 if "$interactive"; then printf '\r\033[2K' >&2; fi
 printf '  %sInstalled T2 Code %s%s\n\n' "$green" "$version" "$reset" >&2

@@ -3,7 +3,7 @@ import { Atom } from "effect/reactivity";
 import {
   ATTACHMENT_ONLY_BOOTSTRAP_PROMPT,
   restoreAttachmentOnlyBootstrapPrompt,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 import {
   ChatAttachmentId,
   ComposerContextId,

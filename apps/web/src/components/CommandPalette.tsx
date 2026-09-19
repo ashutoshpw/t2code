@@ -141,7 +141,7 @@ import {
   useVisibleThreadShells,
   waitForProject,
 } from "../state/entities";
-import { visibleLinkedThreads } from "@t3tools/client-runtime/state/threads";
+import { visibleLinkedThreads } from "@t2code/client-runtime/state/threads";
 import { resolveThreadActionProjectRef, startNewThreadFromContext } from "../lib/chatThreadActions";
 import {
   appendBrowsePathSegment,
@@ -261,7 +261,7 @@ import { suggestAppAccessForRemote } from "./sourceControlAppAccessToast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { ComposerHandleContext, useComposerHandleContext } from "../composerHandleContext";
 import type { ChatComposerHandle } from "./chat/ChatComposer";
-import { pickableProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
+import { pickableProjectGroups } from "@t2code/client-runtime/state/project-grouping";
 import { buildSidebarProjectPickerEntries } from "../sidebarProjectGrouping";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { readPullRequestListPreferences } from "~/components/pullRequest/pullRequestListPreferences";
@@ -768,7 +768,7 @@ function OpenCommandPaletteDialog(props: {
     });
   };
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- invalidates the browse navigation coordinator and in-flight clone lookups when the palette session unmounts
+  // oxlint-disable-next-line t3code/react-effect-budget -- invalidates the browse navigation coordinator and in-flight clone lookups when the palette session unmounts
   useEffect(
     () => () => {
       browseNavigation.invalidate();

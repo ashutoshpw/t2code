@@ -93,7 +93,7 @@ place of `Cmd`. The on-screen keyboard's Return always inserts a new line.
 ## Edit the configuration file
 
 Keybindings live on the environment's machine, in
-`~/.t3/userdata/keybindings.json` by default. You can edit this file directly.
+`~/.t2/userdata/keybindings.json` by default. You can edit this file directly.
 It is a JSON array of rules:
 
 ```json

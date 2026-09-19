@@ -173,10 +173,10 @@ export class ThemeTargetMissingError extends Schema.TaggedError<ThemeTargetMissi
   }
 }
 
-const envT3Home = envStringConfig("T2CODE_HOME").pipe(Config.option);
+const envT2Home = Config.String("T2CODE_HOME").pipe(Config.option);
 
 const resolveThemePaths = Effect.fn(function* (explicitBaseDir: Option.Option<string>) {
-  const envHome = Option.filter(yield* envT3Home, (value) => value.trim().length > 0);
+  const envHome = Option.filter(yield* envT2Home, (value) => value.trim().length > 0);
   const configuredBaseDir = Option.orElse(explicitBaseDir, () => envHome);
   const baseDir = yield* resolveBaseDir(Option.getOrUndefined(configuredBaseDir));
   const derivedPaths = yield* ServerConfig.deriveServerPaths(baseDir, undefined, {

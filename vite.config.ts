@@ -218,7 +218,7 @@ export default defineConfig({
       "apps/mobile/uniwind-types.d.ts",
     ],
     plugins: ["eslint", "oxc", "react", "unicorn", "typescript"],
-    jsPlugins: ["./oxlint-plugin-t3code/index.ts", "@shadcn/lint"],
+    jsPlugins: ["./oxlint-plugin-t2code/index.ts", "@shadcn/lint"],
     settings: {
       shadcn: { ui: "~/components/ui" },
     },
@@ -369,7 +369,7 @@ export default defineConfig({
       },
       {
         files: ["packages/shared/src/HostProcess.ts"],
-        rules: { "t3code/no-global-process-runtime": "off" },
+        rules: { "t2code/no-global-process-runtime": "off" },
       },
       {
         // The `t3` npm launcher is published as plain, dependency-free Node.
@@ -462,10 +462,7 @@ export default defineConfig({
       },
       {
         files: ["apps/mobile/src/**"],
-        rules: {
-          "t3code/no-mobile-uniwind-theme-escape-hatches": "error",
-          "t3code/require-registered-list-scroll": "error",
-        },
+        rules: { "t2code/no-mobile-uniwind-theme-escape-hatches": "error" },
       },
       {
         files: ["apps/mobile/src/**"],
@@ -598,7 +595,7 @@ export default defineConfig({
           "packages/shared/src/**",
         ],
         excludeFiles: ["**/*.test.ts", "**/*.test.tsx"],
-        rules: { "t3code/no-hermes-unsupported-apis": "error" },
+        rules: { "t2code/no-hermes-unsupported-apis": "error" },
       },
       {
         // Directives hide bailouts from mobile's compiler-coverage check; retain hooks until its allowlist is empty.
@@ -635,13 +632,13 @@ export default defineConfig({
           "apps/mobile/src/features/threads/thread-list-v2-items.tsx",
           "apps/mobile/src/components/ui/SecretTextInput.android.tsx",
           "apps/mobile/src/lib/useMobileNavigationTheme.ts",
-          "apps/mobile/src/native/T3ComposerEditor.ios.tsx",
-          "apps/mobile/src/native/T3ComposerEditor.native.tsx",
+          "apps/mobile/src/native/T2ComposerEditor.ios.tsx",
+          "apps/mobile/src/native/T2ComposerEditor.native.tsx",
           "apps/mobile/src/native/SelectableMarkdownText.tsx",
           "apps/mobile/src/native/useEnrichedLinkVariants.ts",
         ],
         rules: {
-          "t3code/no-mobile-uniwind-theme-escape-hatches": ["error", { allowUniwindTheme: true }],
+          "t2code/no-mobile-uniwind-theme-escape-hatches": ["error", { allowUniwindTheme: true }],
         },
       },
     ],

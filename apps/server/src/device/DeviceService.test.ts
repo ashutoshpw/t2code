@@ -20,7 +20,7 @@ import * as Exit from "effect/Exit";
 import * as Deferred from "effect/Deferred";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
-import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
+import * as SecretResolver from "@t2code/secret-provider-core/server/SecretResolver";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as PubSub from "effect/PubSub";

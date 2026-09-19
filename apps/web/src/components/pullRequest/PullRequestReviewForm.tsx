@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode, type RefObject } from "react";
 
 import { TextFieldSpeechControls, useTextFieldSpeech } from "~/speech/useTextFieldSpeech";
 import { pullRequestEnvironment } from "~/state/pullRequests";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 
 import { isCommentSubmitShortcut } from "../diffs/commentSubmitShortcut";
 import { Button } from "../ui/button";

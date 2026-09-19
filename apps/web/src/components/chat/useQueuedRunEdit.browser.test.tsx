@@ -9,7 +9,7 @@ import {
 } from "@t2code/contracts";
 import { useImperativeHandle, type RefObject } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { ATTACHMENT_ONLY_BOOTSTRAP_PROMPT } from "@t3tools/shared/composerContextReferences";
+import { ATTACHMENT_ONLY_BOOTSTRAP_PROMPT } from "@t2code/shared/composerContextReferences";
 import { toastManager } from "../ui/toast";
 
 import { act, render } from "../../../test/render";

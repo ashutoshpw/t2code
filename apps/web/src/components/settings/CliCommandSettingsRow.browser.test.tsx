@@ -1,5 +1,5 @@
 import { RegistryContext } from "@effect/atom-react";
-import type { DesktopCliCommandState } from "@t3tools/contracts";
+import type { DesktopCliCommandState } from "@t2code/contracts";
 import { AtomRegistry } from "effect/reactivity";
 import { expect, it, vi } from "vite-plus/test";
 
