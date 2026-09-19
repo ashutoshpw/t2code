@@ -13,7 +13,7 @@ export class CaptureSetupRequiredError extends Error {
     super(`${state} Open Settings → SnapShots to continue setup.`, options);
   }
 }
-export const NIRI_CAPTURE_PATH = "/com/t3tools/SnapShot";
+export const NIRI_CAPTURE_PATH = "/com/t2tools/SnapShot";
 export const NIRI_CAPTURE_INTERFACE = "com.t2tools.SnapShot";
 
 function isDesktopSession(env: NodeJS.ProcessEnv, desktop: string): boolean {
