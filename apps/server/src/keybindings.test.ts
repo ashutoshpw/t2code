@@ -28,7 +28,7 @@ const layerKeybindings = () => {
     Layer.provideMerge(
       Layer.fresh(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "t3code-keybindings-test-",
+          prefix: "t2code-keybindings-test-",
         }),
       ),
     ),

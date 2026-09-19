@@ -472,7 +472,7 @@ function buildSnapShotTimelineEntry(previewUrl?: string) {
             kind: "snap-shot" as const,
             capturedAt: "2026-03-17T19:12:28.000Z",
             appName: "Terminal",
-            windowTitle: "t3code — Tests",
+            windowTitle: "t2code — Tests",
             appIconDataUrl: "data:image/png;base64,aWNvbg==",
           },
         },

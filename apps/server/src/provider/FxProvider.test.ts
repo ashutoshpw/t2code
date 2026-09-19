@@ -144,7 +144,7 @@ it.layer(NodeServices.layer)("checkFxProviderStatus", (it) => {
         const fileSystem = yield* FileSystem.FileSystem;
         const workspace = yield* fileSystem.makeTempDirectoryScoped({
           directory: NodeOS.tmpdir(),
-          prefix: "t3code-fx-provider-",
+          prefix: "t2code-fx-provider-",
         });
         const fxPath = writeFakeCli({
           directory: workspace,

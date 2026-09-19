@@ -42,7 +42,7 @@ describe("extractPairingUrlFromQrPayload", () => {
     ).toBe("https://remote.example.com/pair#token=pairing-token");
   });
 
-  it("still unwraps legacy t3code deep links", () => {
+  it("still unwraps legacy t2code deep links", () => {
     expect(
       extractPairingUrlFromQrPayload(
         "t2code://pair?pairingUrl=https%3A%2F%2Fremote.example.com%2Fpair%23token%3Dpairing-token",

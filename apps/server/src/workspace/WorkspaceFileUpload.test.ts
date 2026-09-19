@@ -31,7 +31,7 @@ const testLayer = ServerSecretStore.layer.pipe(
 const makeWorkspaceRoot = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const root = yield* fileSystem.makeTempDirectoryScoped({
-    prefix: "t3code-project-file-upload-",
+    prefix: "t2code-project-file-upload-",
   });
   return root;
 });
