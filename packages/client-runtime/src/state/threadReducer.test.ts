@@ -703,7 +703,7 @@ describe("applyThreadDetailEvent", () => {
           threadId: ThreadId.make("thread-1"),
           messageId: MessageId.make("msg-with-context"),
           role: "user",
-          text: "Watch [demo.mp4](t3-context://v1/file/video-1).",
+          text: "Watch [demo.mp4](t2-context://v1/file/video-1).",
           context,
           turnId: null,
           streaming: false,

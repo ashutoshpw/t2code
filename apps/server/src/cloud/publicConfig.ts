@@ -4,7 +4,6 @@ import {
   DEFAULT_HOSTED_APP_URL,
 } from "@t2code/shared/connectAuth";
 import { clerkFrontendApiUrlFromPublishableKey } from "@t2code/shared/relayAuth";
-import { legacyEnvName, envWithLegacyFallback } from "@t2code/shared/legacyEnv";
 import { normalizeSecureRelayUrl } from "@t2code/shared/relayUrl";
 import * as Config from "effect/Config";
 import * as ConfigProvider from "effect/ConfigProvider";
@@ -144,13 +143,9 @@ function validateHostedAppUrl(value: string) {
 }
 
 function makePublicValueConfig(name: string, fallback: string) {
-  const read = (valueName: string) =>
-    fallback
-      ? Config.NonEmptyString(valueName).pipe(Config.withDefault(fallback))
-      : Config.NonEmptyString(valueName);
-  const legacyName = legacyEnvName(name);
-  const runtimeConfig =
-    legacyName === undefined ? read(name) : read(name).pipe(Config.orElse(() => read(legacyName)));
+  const runtimeConfig = fallback
+    ? Config.NonEmptyString(name).pipe(Config.withDefault(fallback))
+    : Config.NonEmptyString(name);
   return runtimeConfig.pipe(Config.map((value) => value.trim()));
 }
 
@@ -218,8 +213,6 @@ export const cloudCliOAuthConfig = makeCloudCliOAuthConfig();
 
 export const hasCloudPublicConfig = Boolean(
   (normalizeSecureRelayUrl(process.env.T2CODE_RELAY_URL ?? "") ?? buildTimeRelayUrl) &&
-  (envWithLegacyFallback(process.env, "T2CODE_CLERK_PUBLISHABLE_KEY")?.trim() ||
-    buildTimeClerkPublishableKey) &&
-  (envWithLegacyFallback(process.env, "T2CODE_CLERK_CLI_OAUTH_CLIENT_ID")?.trim() ||
-    buildTimeClerkCliOAuthClientId),
+  (process.env.T2CODE_CLERK_PUBLISHABLE_KEY?.trim() || buildTimeClerkPublishableKey) &&
+  (process.env.T2CODE_CLERK_CLI_OAUTH_CLIENT_ID?.trim() || buildTimeClerkCliOAuthClientId),
 );

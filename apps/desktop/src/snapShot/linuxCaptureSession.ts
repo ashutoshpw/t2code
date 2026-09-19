@@ -9,7 +9,7 @@ import { nativeImage } from "electron";
 
 export const HYPRLAND_CAPTURE_ACTION = "capture-window";
 export const NIRI_CAPTURE_PATH = "/com/t3tools/SnapShot";
-export const NIRI_CAPTURE_INTERFACE = "com.t3tools.SnapShot";
+export const NIRI_CAPTURE_INTERFACE = "com.t2tools.SnapShot";
 
 function isDesktopSession(env: NodeJS.ProcessEnv, desktop: string): boolean {
   return (

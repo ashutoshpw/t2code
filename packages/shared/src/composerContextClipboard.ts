@@ -27,9 +27,9 @@ export function encodeComposerContextClipboardHtml(
   html?: string,
 ): string {
   if (html !== undefined)
-    return `<div data-t3-context-fragment="${encodeURIComponent(fragment)}">${html}</div>`;
+    return `<div data-t2-context-fragment="${encodeURIComponent(fragment)}">${html}</div>`;
   const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  return `<pre data-t3-context-fragment="${encodeURIComponent(fragment)}">${escaped}</pre>`;
+  return `<pre data-t2-context-fragment="${encodeURIComponent(fragment)}">${escaped}</pre>`;
 }
 
 export function decodeComposerContextClipboardHtml(
@@ -38,7 +38,11 @@ export function decodeComposerContextClipboardHtml(
   // `encodeURIComponent` expands one non-ASCII code unit to up to nine characters, so a
   // fragment just under the limit must still survive the round trip through the attribute.
   if (!html || html.length > MAX_FRAGMENT_CHARS * 9 + HTML_WRAPPER_SLACK_CHARS) return null;
-  const encoded = /data-t3-context-fragment=["']([^"']+)["']/.exec(html)?.[1];
+  // Clipboard HTML from pre-rename builds carries the old data-t3-context-fragment
+  // attribute; both spellings are accepted on read.
+  const encoded =
+    /data-t2-context-fragment=["']([^"']+)["']/.exec(html)?.[1] ??
+    /data-t3-context-fragment=["']([^"']+)["']/.exec(html)?.[1];
   if (!encoded) return null;
   try {
     return decodeComposerContextFragment(decodeURIComponent(encoded));

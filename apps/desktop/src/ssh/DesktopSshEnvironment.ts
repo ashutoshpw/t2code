@@ -65,7 +65,7 @@ export class DesktopSshEnvironment extends Context.Service<
 >()("@t2code/desktop/ssh/DesktopSshEnvironment") {}
 
 export interface DesktopSshEnvironmentLayerOptions {
-  readonly resolveCliRunner?: Effect.Effect<SshTunnel.RemoteT3RunnerOptions>;
+  readonly resolveCliRunner?: Effect.Effect<SshTunnel.RemoteT2RunnerOptions>;
 }
 
 function discoverDesktopSshHostsEffect(input?: { readonly homeDir?: string }) {

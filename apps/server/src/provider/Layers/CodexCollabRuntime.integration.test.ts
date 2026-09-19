@@ -648,7 +648,7 @@ describe("CodexSessionRuntime collab integration", () => {
         binaryPath: peerPath,
         cwd: "/tmp",
         runtimeMode: "full-access",
-        environment: { ...process.env, T3_CODEX_COLLAB_SCRIPT: scriptPath },
+        environment: { ...process.env, T2_CODEX_COLLAB_SCRIPT: scriptPath },
       });
 
       // One consumer for the whole stream: `events` is a plain queue stream,

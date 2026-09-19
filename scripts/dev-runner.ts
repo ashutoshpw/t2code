@@ -5,7 +5,7 @@ import * as NodeOS from "node:os";
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NetService from "@t2code/shared/Net";
-import { resolveGitWorktreePath, resolveWorktreeT3Home } from "@t2code/shared/devHome";
+import { resolveGitWorktreePath, resolveWorktreeT2Home } from "@t2code/shared/devHome";
 import { HostProcessEnvironment, HostProcessWorkingDirectory } from "@t2code/shared/hostProcess";
 import { resolveSpawnCommand } from "@t2code/shared/shell";
 import * as Config from "effect/Config";
@@ -68,7 +68,7 @@ export function isProxiableBindHost(host: string): boolean {
 }
 
 export const DEFAULT_T3_HOME = Effect.map(Effect.service(Path.Path), (path) =>
-  path.join(NodeOS.homedir(), ".t3"),
+  path.join(NodeOS.homedir(), ".t2"),
 );
 
 const MODE_ARGS = {
@@ -284,7 +284,7 @@ interface CreateDevRunnerEnvInput {
   readonly baseEnv: NodeJS.ProcessEnv;
   readonly serverOffset: number;
   readonly webOffset: number;
-  readonly t3Home: string | undefined;
+  readonly t2Home: string | undefined;
   readonly browser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
   readonly logWebSocketEvents: boolean | undefined;
@@ -298,7 +298,7 @@ export function createDevRunnerEnv({
   baseEnv,
   serverOffset,
   webOffset,
-  t3Home,
+  t2Home,
   browser,
   autoBootstrapProjectFromCwd,
   logWebSocketEvents,
@@ -309,9 +309,9 @@ export function createDevRunnerEnv({
   return Effect.gen(function* () {
     const serverPort = port ?? BASE_SERVER_PORT + serverOffset;
     const webPort = BASE_WEB_PORT + webOffset;
-    // Precedence (--home-dir > worktree .t3 > ambient T2CODE_HOME) is resolved
-    // by the caller; an unset t3Home here genuinely means "use the default".
-    const configuredBaseDir = t3Home?.trim() || undefined;
+    // Precedence (--home-dir > worktree .t2 > ambient T2CODE_HOME) is resolved
+    // by the caller; an unset t2Home here genuinely means "use the default".
+    const configuredBaseDir = t2Home?.trim() || undefined;
     const resolvedBaseDir = yield* resolveBaseDir(configuredBaseDir);
     const isDesktopMode = mode === "dev:desktop";
 
@@ -327,7 +327,6 @@ export function createDevRunnerEnv({
       output.T2CODE_HOME = resolvedBaseDir;
     } else {
       delete output.T2CODE_HOME;
-      delete output.T3CODE_HOME;
     }
 
     // A dev-runner server is never launcher-managed. When the shell that runs
@@ -379,7 +378,6 @@ export function createDevRunnerEnv({
       delete output.T2CODE_NO_BROWSER;
       delete output.T2CODE_HOST;
       delete output.T2CODE_DEV_AUTH_TOKEN;
-      delete output.T3CODE_DEV_AUTH_TOKEN;
     }
 
     if (!isDesktopMode && host !== undefined) {
@@ -610,7 +608,7 @@ export function resolveModePortOffsets<R = NetService.NetService>({
 
 interface DevRunnerCliInput {
   readonly mode: DevMode;
-  readonly t3Home: string | undefined;
+  readonly t2Home: string | undefined;
   readonly browser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
   readonly logWebSocketEvents: boolean | undefined;
@@ -667,23 +665,23 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
 
     const hostEnvironment = yield* HostProcessEnvironment;
     // A dev server started inside a worktree defaults to that worktree's own
-    // (gitignored) `.t3` — see @t2code/shared/devHome for why this must
+    // (gitignored) `.t2` — see @t2code/shared/devHome for why this must
     // outrank an ambient T2CODE_HOME. `--home-dir` still wins.
-    const worktreeHome = yield* resolveWorktreeT3Home(yield* HostProcessWorkingDirectory);
+    const worktreeHome = yield* resolveWorktreeT2Home(yield* HostProcessWorkingDirectory);
     // Trim before choosing: `--home-dir ""` is not a selection, and treating it
     // as one would skip the worktree default and land on the shared home —
     // exactly the outcome this precedence exists to prevent.
-    const resolvedT3Home =
-      (input.t3Home?.trim() || undefined) ??
+    const resolvedT2Home =
+      (input.t2Home?.trim() || undefined) ??
       worktreeHome ??
       (hostEnvironment.T2CODE_HOME?.trim() || undefined) ??
-      (hostEnvironment.T3CODE_HOME?.trim() || undefined);
+      (hostEnvironment.T2CODE_HOME?.trim() || undefined);
     const env = yield* createDevRunnerEnv({
       mode: input.mode,
       baseEnv: hostEnvironment,
       serverOffset,
       webOffset,
-      t3Home: resolvedT3Home,
+      t2Home: resolvedT2Home,
       browser: input.browser,
       autoBootstrapProjectFromCwd: input.autoBootstrapProjectFromCwd,
       logWebSocketEvents: input.logWebSocketEvents,
@@ -851,9 +849,9 @@ const devRunnerCli = Command.make("dev-runner", {
   mode: Argument.Literals("mode", DEV_RUNNER_MODES).pipe(
     Argument.withDescription("Development mode to run."),
   ),
-  t3Home: Flag.String("home-dir").pipe(
+  t2Home: Flag.String("home-dir").pipe(
     Flag.withDescription(
-      "Explicit T2 Code data directory; runtime state is stored under userdata (equivalent to T2CODE_HOME). Inside a git worktree this defaults to that worktree's own .t3 so dev state stays off the shared home.",
+      "Explicit T2 Code data directory; runtime state is stored under userdata (equivalent to T2CODE_HOME). Inside a git worktree this defaults to that worktree's own .t2 so dev state stays off the shared home.",
     ),
     Flag.optional,
     Flag.map(Option.getOrUndefined),

@@ -30,7 +30,7 @@ const developmentMacIconPngPath = NodePath.join(
   "blueprint-macos-1024.png",
 );
 const productionMacIconPngPath = NodePath.join(repoRoot, "assets", "prod", "black-macos-1024.png");
-// oxlint-disable-next-line t3code/no-global-process-runtime -- Standalone launcher script has no Effect runtime.
+// oxlint-disable-next-line t2code/no-global-process-runtime -- Standalone launcher script has no Effect runtime.
 const hostPlatform = NodeOS.platform();
 
 function setPlistString(plistPath, key, value) {
@@ -111,20 +111,13 @@ function shellSingleQuote(value) {
 }
 
 export function makeDevelopmentEnvironmentScript(environment) {
-  // The maintainer's shell may still export the legacy T3CODE_* spellings
-  // until the migration window closes; the server honors both.
-  const firstSet = (...names) =>
-    names.map((name) => environment[name]).find((value) => value !== undefined);
   const envEntries = [
     ["VITE_DEV_SERVER_URL", environment.VITE_DEV_SERVER_URL],
     ["T2CODE_PORT", environment.T2CODE_PORT],
-    ["T2CODE_HOME", firstSet("T2CODE_HOME", "T3CODE_HOME")],
+    ["T2CODE_HOME", environment.T2CODE_HOME],
     ["T2CODE_COMMIT_HASH", environment.T2CODE_COMMIT_HASH],
-    ["T2CODE_OTLP_TRACES_URL", firstSet("T2CODE_OTLP_TRACES_URL", "T3CODE_OTLP_TRACES_URL")],
-    [
-      "T2CODE_OTLP_EXPORT_INTERVAL_MS",
-      firstSet("T2CODE_OTLP_EXPORT_INTERVAL_MS", "T3CODE_OTLP_EXPORT_INTERVAL_MS"),
-    ],
+    ["T2CODE_OTLP_TRACES_URL", environment.T2CODE_OTLP_TRACES_URL],
+    ["T2CODE_OTLP_EXPORT_INTERVAL_MS", environment.T2CODE_OTLP_EXPORT_INTERVAL_MS],
     ["T2CODE_OTLP_HEADERS", environment.T2CODE_OTLP_HEADERS],
     ["T2CODE_OTLP_PROTOCOL", environment.T2CODE_OTLP_PROTOCOL],
     ["T2CODE_DESKTOP_APP_USER_MODEL_ID", APP_BUNDLE_ID],

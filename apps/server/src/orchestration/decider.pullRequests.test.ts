@@ -41,7 +41,7 @@ function makeLink(overrides: Partial<ThreadPullRequestLink> = {}): ThreadPullReq
     host: "github.com",
     repository: "t3tools/t3code",
     number: 42,
-    url: "https://github.com/t3tools/t3code/pull/42",
+    url: "https://github.com/t3tools/t2code/pull/42",
     source: "manual",
     linkedAt: NOW,
     snapshot: null,
@@ -119,7 +119,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
     Effect.gen(function* () {
       const existing = makeLink({
         host: "forge.example",
-        url: "http://forge.example:3000/t3tools/t3code/pulls/42",
+        url: "http://forge.example:3000/t3tools/t2code/pulls/42",
       });
       let model = makeReadModel([existing]);
       const command = yield* decodeCommand({
@@ -129,7 +129,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
         host: "forge.example",
         repository: "t3tools/t3code",
         number: 42,
-        url: "http://forge.example:4000/t3tools/t3code/pulls/42",
+        url: "http://forge.example:4000/t3tools/t2code/pulls/42",
         source: "manual",
       });
       const linked = expectSingleEvent(
@@ -163,7 +163,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
       const own = makeLink();
       const foreign = makeLink({
         host: "github.enterprise.test",
-        url: "https://github.enterprise.test/t3tools/t3code/pull/42",
+        url: "https://github.enterprise.test/t3tools/t2code/pull/42",
         linkedAt: "2026-01-02T00:00:00Z",
       });
       const command = yield* decodeCommand({
@@ -194,7 +194,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
           projectId: "project-1",
           repository: "t3tools/t3code",
           number: 99,
-          url: "https://github.com/t3tools/t3code/pull/99",
+          url: "https://github.com/t3tools/t2code/pull/99",
         },
       });
       const decided = yield* decideOrchestrationCommand({ readModel: model, command });
@@ -319,9 +319,9 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
           commandId: CommandId.make("cmd-link"),
           threadId: THREAD_ID,
           host: " GitHub.com ",
-          repository: "T3Tools/T3Code",
+          repository: "T2Tools/T2Code",
           number: 42,
-          url: "https://github.com/t3tools/t3code/pull/42",
+          url: "https://github.com/t3tools/t2code/pull/42",
           source: "manual",
         },
         readModel: makeReadModel([]),
@@ -332,7 +332,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
         host: "github.com",
         repository: "t3tools/t3code",
         number: 42,
-        url: "https://github.com/t3tools/t3code/pull/42",
+        url: "https://github.com/t3tools/t2code/pull/42",
         source: "manual",
         linkedAt: event.payload.updatedAt,
         snapshot: null,
@@ -352,7 +352,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
           host: "GITHUB.COM",
           repository: "t3tools/t3code",
           number: 42,
-          url: "https://github.com/t3tools/t3code/pull/42",
+          url: "https://github.com/t3tools/t2code/pull/42",
           source: "agent",
         },
         readModel: makeReadModel([makeLink()]),
@@ -370,7 +370,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
           kind: "native",
           id: "stack-1",
           number: 1,
-          url: "https://github.com/t3tools/t3code/stack/1",
+          url: "https://github.com/t3tools/t2code/stack/1",
           base: "main",
           layers: [{ number: 42, headBranch: "feat/links", state: "open" }],
         },
@@ -383,7 +383,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
           host: "github.com",
           repository: "t3tools/t3code",
           number: 42,
-          url: "https://github.com/t3tools/t3code/pull/42",
+          url: "https://github.com/t3tools/t2code/pull/42",
           source: "manual",
         },
         readModel: makeReadModel([dismissed]),
@@ -404,7 +404,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
           host: "github.com",
           repository: "t3tools/t3code",
           number: 42,
-          url: "https://github.com/t3tools/t3code/pull/42",
+          url: "https://github.com/t3tools/t2code/pull/42",
           source: "stack",
         },
         readModel: makeReadModel([makeLink({ source: "stack-dismissed" })]),
@@ -466,7 +466,7 @@ it.layer(NodeServices.layer)("pull request link decider", (it) => {
             kind: "native",
             id: "stack-1",
             number: 1,
-            url: "https://github.com/t3tools/t3code/stack/1",
+            url: "https://github.com/t3tools/t2code/stack/1",
             base: "main",
             layers: [
               { number: 42, headBranch: "first", state: "open" },

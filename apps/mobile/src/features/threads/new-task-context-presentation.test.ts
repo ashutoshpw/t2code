@@ -41,14 +41,14 @@ describe("resolveNewTaskLocalWorkspaceSelection", () => {
     expect(
       resolveNewTaskLocalWorkspaceSelection({
         branches: [
-          { name: "feature/split", current: true, worktreePath: "/repo/.t3/worktrees/split" },
+          { name: "feature/split", current: true, worktreePath: "/repo/.t2/worktrees/split" },
           { name: "main", current: false, worktreePath: "/repo" },
         ],
         projectCwd: "/repo",
       }),
     ).toEqual({
       branch: "feature/split",
-      worktreePath: "/repo/.t3/worktrees/split",
+      worktreePath: "/repo/.t2/worktrees/split",
       awaitsCurrentBranch: false,
     });
   });
@@ -60,9 +60,9 @@ describe("resolveNewTaskBranchWorktreePath", () => {
       resolveNewTaskBranchWorktreePath({
         workspaceMode: "local",
         projectCwd: "/repo",
-        branchWorktreePath: "/repo/.t3/worktrees/feature",
+        branchWorktreePath: "/repo/.t2/worktrees/feature",
       }),
-    ).toBe("/repo/.t3/worktrees/feature");
+    ).toBe("/repo/.t2/worktrees/feature");
   });
 
   it("keeps the project checkout represented by a null override", () => {
@@ -80,7 +80,7 @@ describe("resolveNewTaskBranchWorktreePath", () => {
       resolveNewTaskBranchWorktreePath({
         workspaceMode: "worktree",
         projectCwd: "/repo",
-        branchWorktreePath: "/repo/.t3/worktrees/feature",
+        branchWorktreePath: "/repo/.t2/worktrees/feature",
       }),
     ).toBeNull();
   });

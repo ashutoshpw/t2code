@@ -71,7 +71,7 @@ export function normalizeCompactToolLabel(value: string): string {
   return value.replace(/\s+(?:complete|completed)\s*$/i, "").trim();
 }
 
-const T3_MCP_TOOL_LABELS: Record<
+const T2_MCP_TOOL_LABELS: Record<
   string,
   readonly [action: string, running: string, completed: string, detail: string]
 > = {
@@ -131,7 +131,7 @@ const PR_TOOL_ACTIONS: Readonly<Record<string, ToolGroupAction>> = {
   list_thread_pull_requests: "list-prs",
 };
 
-function resolveT3McpToolPresentation(
+function resolveT2McpToolPresentation(
   value: string | undefined,
   status: string | undefined,
   data?: unknown,
@@ -141,9 +141,9 @@ function resolveT3McpToolPresentation(
     /^(?:mcp__(?:t3-code|t3_code|t3code)__|(?:t3-code|t3_code|t3code)(?:[.:/]|\s*·\s*))/i,
     "",
   );
-  if (!Object.hasOwn(T3_MCP_TOOL_LABELS, name)) return null;
+  if (!Object.hasOwn(T2_MCP_TOOL_LABELS, name)) return null;
 
-  const [action, running, completed, detail] = T3_MCP_TOOL_LABELS[name]!;
+  const [action, running, completed, detail] = T2_MCP_TOOL_LABELS[name]!;
   const verb =
     status === "inProgress"
       ? running
@@ -206,16 +206,16 @@ export function resolveWorkEntryToolPresentation(
       "tool" in data &&
       typeof data.tool === "string"
     ) {
-      return resolveT3McpToolPresentation(`${data.server}.${data.tool}`, status, data);
+      return resolveT2McpToolPresentation(`${data.server}.${data.tool}`, status, data);
     }
     if ("toolName" in data && typeof data.toolName === "string") {
-      return resolveT3McpToolPresentation(data.toolName, status, data);
+      return resolveT2McpToolPresentation(data.toolName, status, data);
     }
   }
 
   return (
-    resolveT3McpToolPresentation(entry.toolTitle, status, data) ??
-    resolveT3McpToolPresentation(entry.label, status, data)
+    resolveT2McpToolPresentation(entry.toolTitle, status, data) ??
+    resolveT2McpToolPresentation(entry.label, status, data)
   );
 }
 

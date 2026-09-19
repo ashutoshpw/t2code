@@ -9,7 +9,7 @@ import type { ProjectScopedServerSettingKey, ServerSettings } from "./settings.t
 export const T2_PROJECT_FILE_NAME = "t2.json";
 
 /** Public URL of the published JSON Schema for {@link T2ProjectFile}. */
-export const T2_PROJECT_FILE_SCHEMA_URL = "https://t3.codes/schema/t2.json";
+export const T2_PROJECT_FILE_SCHEMA_URL = "https://t2.codes/schema/t2.json";
 
 const T2_PROJECT_FILE_PATH_MAX_LENGTH = 512;
 const T2_PROJECT_FILE_MAX_SCRIPTS = 50;
@@ -90,7 +90,7 @@ export const T2ProjectFile = Schema.Struct({
   worktreeSubmodules: Schema.optionalKey(
     WorktreeSubmodules.annotate({
       description:
-        'How new worktrees populate git submodules: "recursive" (the default) initializes nested submodules too, "top-level" initializes only those declared by this repository, and "none" leaves every submodule empty for a setup script to handle. A project or environment setting in T3 Code overrides this.',
+        'How new worktrees populate git submodules: "recursive" (the default) initializes nested submodules too, "top-level" initializes only those declared by this repository, and "none" leaves every submodule empty for a setup script to handle. A project or environment setting in T2 Code overrides this.',
     }),
   ),
   scripts: Schema.optionalKey(
@@ -103,16 +103,15 @@ export const T2ProjectFile = Schema.Struct({
 }).annotate({
   title: "T2 project file",
   description:
-    "Checked-in project configuration for T2 Code (t2.json at the repository root). See https://t3.codes for documentation.",
+    "Checked-in project configuration for T2 Code (t2.json at the repository root). See https://t2.codes for documentation.",
 });
-<<<<<<< HEAD:packages/contracts/src/t3ProjectFile.ts
-export type T3ProjectFile = typeof T3ProjectFile.Type;
+export type T2ProjectFile = typeof T2ProjectFile.Type;
 
 /**
- * Settings a repository can also declare in t3.json. A key here must be
+ * Settings a repository can also declare in t2.json. A key here must be
  * nullable on `ServerSettings` (null means inherit) so both the project
  * override and the environment value can defer to the file; `field` names
- * the t3.json field carrying the same value and `builtIn` is what applies
+ * the t2.json field carrying the same value and `builtIn` is what applies
  * when every tier is unset. `resolveProjectSettings` walks project override,
  * environment value, file, built-in, so listing a key here is the whole
  * change for a new file-backed setting.
@@ -123,12 +122,12 @@ export const PROJECT_FILE_BACKED_SETTINGS = {
 } as const satisfies {
   readonly [K in ProjectScopedServerSettingKey]?: {
     readonly field: {
-      readonly [F in keyof T3ProjectFile]: T3ProjectFile[F] extends
+      readonly [F in keyof T2ProjectFile]: T2ProjectFile[F] extends
         | Exclude<ServerSettings[K], null>
         | undefined
         ? F
         : never;
-    }[keyof T3ProjectFile];
+    }[keyof T2ProjectFile];
     readonly builtIn: Exclude<ServerSettings[K], null>;
   };
 };
@@ -136,12 +135,9 @@ export type ProjectFileBackedSettingKey = keyof typeof PROJECT_FILE_BACKED_SETTI
 
 /**
  * `ServerSettings` with every file-backed key resolved to a concrete value.
- * What `resolveProjectSettings(...).settings` produces once a t3.json (or
+ * What `resolveProjectSettings(...).settings` produces once a t2.json (or
  * its absence) has been accounted for.
  */
 export type ResolvedServerSettings = Omit<ServerSettings, ProjectFileBackedSettingKey> & {
   readonly [K in ProjectFileBackedSettingKey]: Exclude<ServerSettings[K], null>;
 };
-=======
-export type T2ProjectFile = typeof T2ProjectFile.Type;
->>>>>>> 74eaa6cbe (fix(project): migrate checked-in config to t2.json (#7)):packages/contracts/src/t2ProjectFile.ts

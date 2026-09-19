@@ -58,7 +58,7 @@ const target: TargetRow = {
   platform: "android",
   ios_major_version: null,
   app_version: null,
-  bundle_id: "com.t3tools.t3code.dev",
+  bundle_id: "com.t2tools.t2code.dev",
   aps_environment: null,
   push_token: "fcm-token",
   push_to_start_token: null,
@@ -162,6 +162,7 @@ function harness() {
     }),
     Layer.succeed(EnvironmentLinks, {
       upsert: () => Effect.void,
+      updateLabel: () => Effect.void,
       listDeliveryUsersForEnvironment: (input) =>
         Effect.sync(() =>
           current.linked && !current.revokedEnvironments.includes(input.environmentId)

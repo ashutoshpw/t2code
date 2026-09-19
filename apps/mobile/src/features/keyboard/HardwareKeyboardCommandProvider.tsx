@@ -14,7 +14,7 @@ import {
 } from "react";
 
 import { tryCopyTextWithHaptic } from "../../lib/copyTextWithHaptic";
-import { T3KeyboardCommands } from "../../native/T3KeyboardCommands";
+import { T2KeyboardCommands } from "../../native/T2KeyboardCommands";
 import { useThreadShell } from "../../state/entities";
 import type { GitActionProgress } from "../../state/use-vcs-action-state";
 import { GitActionProgressOverlay } from "../threads/GitActionProgressOverlay";
@@ -185,9 +185,9 @@ export function HardwareKeyboardCommandProvider({
 
   return (
     <CommandPaletteContext value={palette}>
-      <T3KeyboardCommands enabledCommands={enabledCommands} onCommand={onCommand}>
+      <T2KeyboardCommands enabledCommands={enabledCommands} onCommand={onCommand}>
         {children}
-      </T3KeyboardCommands>
+      </T2KeyboardCommands>
       <GitActionProgressOverlay progress={copyFeedback} onDismiss={dismissCopyFeedback} />
     </CommandPaletteContext>
   );

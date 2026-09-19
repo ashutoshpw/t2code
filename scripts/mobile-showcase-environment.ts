@@ -7,7 +7,7 @@ import * as NodeUtil from "node:util";
 
 const execFile = NodeUtil.promisify(NodeChildProcess.execFile);
 
-export const SHOWCASE_PROJECT_ID = "t3code";
+export const SHOWCASE_PROJECT_ID = "t2code";
 export const SHOWCASE_THREAD_ID = "remote-command-center";
 export const SHOWCASE_TERMINAL_ID = "term-1";
 
@@ -52,7 +52,7 @@ const PROJECT_SCRIPTS = JSON.stringify([
 ]);
 
 const SHOWCASE_TERMINAL_PROMPT =
-  "\u001b[1;32m→\u001b[0m \u001b[1;36mt3code\u001b[0m \u001b[1;34mgit:(\u001b[1;31mfeat/remote-command-center\u001b[1;34m)\u001b[0m \u001b[1;33m✗\u001b[0m ";
+  "\u001b[1;32m→\u001b[0m \u001b[1;36mt2code\u001b[0m \u001b[1;34mgit:(\u001b[1;31mfeat/remote-command-center\u001b[1;34m)\u001b[0m \u001b[1;33m✗\u001b[0m ";
 
 // A dev-server startup mirroring the web settings' terminal font preview:
 // zsh-style prompt, brand line, addresses, the thread's 612-test summary,
@@ -65,7 +65,7 @@ export const SHOWCASE_TERMINAL_BUFFER = [
   "",
   "  \u001b[32m→\u001b[0m  \u001b[2mLocal:\u001b[0m    \u001b[4;36mhttp://127.0.0.1:5173/\u001b[0m",
   "  \u001b[32m→\u001b[0m  \u001b[2mNetwork:\u001b[0m  \u001b[4;36mhttp://192.168.1.24:5173/\u001b[0m",
-  "  \u001b[32m→\u001b[0m  \u001b[2mProject:\u001b[0m  \u001b[1mt3code\u001b[0m \u001b[2m— ~/Code/t3code\u001b[0m",
+  "  \u001b[32m→\u001b[0m  \u001b[2mProject:\u001b[0m  \u001b[1mt2code\u001b[0m \u001b[2m— ~/Code/t2code\u001b[0m",
   "",
   "  \u001b[32m✓ 612 passed\u001b[0m   \u001b[33m△ 2 warnings\u001b[0m   \u001b[31m✗ 0 failed\u001b[0m",
   "",
@@ -100,7 +100,7 @@ export function RemoteHandoffCard(props: { machine: string; latencyMs: number })
 `;
 
 const PROJECT_FAVICONS = {
-  t3code: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  t2code: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <rect width="128" height="128" rx="10" fill="#000"/>
   <path d="M33.4509 93V47.56H15.5309V37H64.3309V47.56H46.4109V93H33.4509Z M65.3653 93.96V86.04Q71.1972 81.96 76.7103 77.88Q82.2233 73.8 86.5972 69.76Q90.9712 65.72 93.5227 61.88Q96.0741 58.04 96.0741 54.44Q96.0741 52.2 95.1629 50.32Q94.2516 48.44 92.2925 47.28Q90.3333 46.12 87.144 46.12Q83.9546 46.12 81.7676 47.4Q79.5807 48.68 78.4872 50.8Q77.3937 52.92 77.3937 55.56H65.4564Q65.7298 49.4 68.6458 45.24Q71.5617 41.08 76.4824 39.04Q81.4031 37 87.5085 37Q94.2516 37 98.899 39.2Q103.5463 41.4 105.9611 45.16Q108.3759 48.92 108.3759 53.8Q108.3759 57.48 106.8723 61Q105.3688 64.52 102.6806 67.84Q99.9925 71.16 96.6209 74.2Q93.2493 77.24 89.6043 80Q85.9594 82.76 82.4966 85.16H109.925V93.96Z" fill="#fff"/>
 </svg>`,
@@ -121,11 +121,11 @@ const PROJECT_FAVICONS = {
 
 export const SHOWCASE_PROJECTS = [
   {
-    id: "t3code",
+    id: "t2code",
     title: "T2 Code",
-    directory: "t3code",
+    directory: "t2code",
     repositoryUrl: "https://github.com/pingdotgg/t3code.git",
-    favicon: PROJECT_FAVICONS.t3code,
+    favicon: PROJECT_FAVICONS.t2code,
   },
   {
     id: "react",
@@ -147,7 +147,7 @@ export const SHOWCASE_ENVIRONMENTS = [
   {
     id: "moonbase-terminal",
     label: "Moonbase Terminal",
-    projectIds: ["t3code"],
+    projectIds: ["t2code"],
   },
   {
     id: "suspense-station",
@@ -164,7 +164,7 @@ export const SHOWCASE_ENVIRONMENTS = [
 export const SHOWCASE_THREADS = [
   {
     id: SHOWCASE_THREAD_ID,
-    projectId: "t3code",
+    projectId: "t2code",
     title: "Make remote coding feel local ✦",
     branch: "feat/remote-command-center",
     minutesAgo: 3,
@@ -175,7 +175,7 @@ export const SHOWCASE_THREADS = [
   },
   {
     id: "pocket-command-center",
-    projectId: "t3code",
+    projectId: "t2code",
     title: "Put the command center in your pocket",
     branch: "feat/pocket-command-center",
     minutesAgo: 21,
@@ -236,7 +236,7 @@ export const SHOWCASE_THREADS = [
   // a store screenshot has to show that history exists, not just imply it.
   {
     id: "handoff-haptics",
-    projectId: "t3code",
+    projectId: "t2code",
     title: "Tune the handoff haptics",
     branch: "feat/handoff-haptics",
     minutesAgo: 5 * 60,
@@ -303,9 +303,9 @@ async function seedT2CodeWorkspace(workspaceRoot: string): Promise<void> {
   });
   await NodeFSP.writeFile(
     NodePath.join(workspaceRoot, "package.json"),
-    `${JSON.stringify({ name: "t3code", private: true, scripts: { test: "vp test" } }, null, 2)}\n`,
+    `${JSON.stringify({ name: "t2code", private: true, scripts: { test: "vp test" } }, null, 2)}\n`,
   );
-  await NodeFSP.writeFile(NodePath.join(workspaceRoot, "favicon.svg"), PROJECT_FAVICONS.t3code);
+  await NodeFSP.writeFile(NodePath.join(workspaceRoot, "favicon.svg"), PROJECT_FAVICONS.t2code);
   await NodeFSP.writeFile(
     NodePath.join(workspaceRoot, "apps/mobile/src/features/home/environmentPresence.ts"),
     BASE_ENVIRONMENT_PRESENCE,

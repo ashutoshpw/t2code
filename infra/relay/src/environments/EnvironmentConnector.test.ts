@@ -68,7 +68,7 @@ const settings = RelayConfiguration.RelayConfiguration.of({
     teamId: "team-id",
     keyId: "key-id",
     privateKey: Redacted.make("private-key"),
-    bundleId: "com.t3tools.t3code.dev",
+    bundleId: "com.t2tools.t2code.dev",
   },
   apnsDeliveryJobSigningSecret: Redacted.make("job-secret"),
   clerkSecretKey: Redacted.make("clerk-secret"),
@@ -100,7 +100,7 @@ function signMintResponse(
 ): RelayEnvironmentMintResponse {
   const requestProof = decodeRequestProof<RelayCloudMintCredentialProofPayload>(request.proof);
   const payload = {
-    iss: `t3-env:${requestProof.environmentId}`,
+    iss: `t2-env:${requestProof.environmentId}`,
     aud: "https://relay.example.test",
     sub: requestProof.environmentId,
     jti: "mint-response-jti",
@@ -127,7 +127,7 @@ function signHealthResponse(
 ): RelayEnvironmentHealthResponse {
   const requestProof = decodeRequestProof<RelayCloudEnvironmentHealthProofPayload>(request.proof);
   const payload = {
-    iss: `t3-env:${requestProof.environmentId}`,
+    iss: `t2-env:${requestProof.environmentId}`,
     aud: "https://relay.example.test",
     sub: requestProof.environmentId,
     jti: "health-response-jti",
@@ -311,7 +311,7 @@ describe("EnvironmentConnector", () => {
       expect(seenUrls).toEqual(["https://env.example.test/api/t3-connect/health"]);
       expect(seenProofs[0]).toMatchObject({
         iss: "https://relay.example.test",
-        aud: "t3-env:env-connector-test",
+        aud: "t2-env:env-connector-test",
         sub: "user_123",
         environmentId: "env-connector-test",
         scope: ["environment:status"],
@@ -675,10 +675,10 @@ describe("EnvironmentConnector", () => {
         deviceId: "device-123",
       });
 
-      expect(seenUrls).toEqual(["https://env.example.test/api/t3-connect/mint-credential"]);
+      expect(seenUrls).toEqual(["https://env.example.test/api/t2-connect/mint-credential"]);
       expect(seenProofs[0]).toMatchObject({
         iss: "https://relay.example.test",
-        aud: "t3-env:env-connector-test",
+        aud: "t2-env:env-connector-test",
         sub: "user_123",
         environmentId: "env-connector-test",
         clientProofKeyThumbprint: "client-proof-key-thumbprint",

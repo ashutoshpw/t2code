@@ -58,7 +58,7 @@ it.runIf(hasDbus)("captures through real D-Bus marshalling on a private bus", as
     server = sessionBus({ busAddress: String(address) });
     server.on("error", () => undefined);
     await server.requestName("org.freedesktop.portal.Desktop", NameFlag.DO_NOT_QUEUE);
-    await server.requestName("org.gnome.Shell.Extensions.T3SnapShot", NameFlag.DO_NOT_QUEUE);
+    await server.requestName("org.gnome.Shell.Extensions.T2SnapShot", NameFlag.DO_NOT_QUEUE);
     await server.requestName("org.gnome.Shell", NameFlag.DO_NOT_QUEUE);
     await server.requestName("org.kde.KWin.ScreenShot2", NameFlag.DO_NOT_QUEUE);
     const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0]);
@@ -222,7 +222,7 @@ it.runIf(hasDbus)("captures through real D-Bus marshalling on a private bus", as
       "--object-path",
       "/com/t3tools/SnapShot",
       "--method",
-      "com.t3tools.SnapShot.Capture",
+      "com.t2tools.SnapShot.Capture",
     ];
     // Exercise the actual command copied to Niri's configuration, including gdbus introspection.
     await new Promise<void>((resolve, reject) => {
@@ -242,7 +242,7 @@ it.runIf(hasDbus)("captures through real D-Bus marshalling on a private bus", as
       new Message({
         destination: "t2code.NiriTest.SnapShot",
         path: "/com/t3tools/SnapShot",
-        interface: "com.t3tools.SnapShot",
+        interface: "com.t2tools.SnapShot",
         member: "Capture",
         signature: "s",
         body: ["not allowed"],

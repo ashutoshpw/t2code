@@ -33,7 +33,7 @@ export function MaterialNewThreadButton(props: {
         type="monochrome"
       />
       {props.extended && props.expanded !== false ? (
-        <AppText className="text-[16px] font-t3-medium text-primary-foreground">New thread</AppText>
+        <AppText className="text-[16px] font-t2-medium text-primary-foreground">New thread</AppText>
       ) : null}
     </Pressable>
   );

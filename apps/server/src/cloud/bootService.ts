@@ -16,10 +16,7 @@ import * as Path from "effect/Path";
 import { HttpClient } from "effect/unstable/http";
 import * as Schema from "effect/Schema";
 
-import {
-  CLI_RELEASE_BASE_URL_ENV,
-  CLI_RELEASE_BASE_URL_LEGACY_ENV,
-} from "@t2code/shared/cliRelease";
+import { CLI_RELEASE_BASE_URL_ENV } from "@t2code/shared/cliRelease";
 
 import * as ProcessRunner from "../processRunner.ts";
 import {
@@ -39,7 +36,7 @@ import {
   type ServiceState,
 } from "./serviceProtocol.ts";
 
-const BOOT_SERVICE_NAME = "t3code";
+const BOOT_SERVICE_NAME = "t2code";
 const CLI_PACKAGE_NAME = "@t2code/cli";
 const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // `.service` suffix keeps the label distinct from the desktop app's bundle id
@@ -63,14 +60,12 @@ function quoteSystemdValue(value: string): string {
 }
 
 /**
- * Reads the pinned base dir back out of a rendered unit or plist. Units
- * written by older installs carry the legacy `T3CODE_HOME` key, so both
- * spellings parse; only values this file writes are expected, so a quoted
- * systemd value is unquoted and unescaped the same way `quoteSystemdValue`
- * produced it.
+ * Reads the pinned base dir back out of a rendered unit or plist. Only values
+ * this file writes are expected, so a quoted systemd value is unquoted and
+ * unescaped the same way `quoteSystemdValue` produced it.
  */
 export function bootServiceBaseDirOf(contents: string): string | undefined {
-  const systemd = /^Environment=(?:T2CODE|T3CODE)_HOME=(.*)$/m.exec(contents)?.[1];
+  const systemd = /^Environment=T2CODE_HOME=(.*)$/m.exec(contents)?.[1];
   if (systemd !== undefined) {
     const raw = systemd.trim();
     const unquoted =
@@ -79,9 +74,7 @@ export function bootServiceBaseDirOf(contents: string): string | undefined {
         : raw;
     return unquoted.replaceAll("%%", "%");
   }
-  const plist = /<key>(?:T2CODE|T3CODE)_HOME<\/key>\s*<string>([^<]*)<\/string>/.exec(
-    contents,
-  )?.[1];
+  const plist = /<key>T2CODE_HOME<\/key>\s*<string>([^<]*)<\/string>/.exec(contents)?.[1];
   if (plist !== undefined) {
     return plist.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
   }
@@ -471,7 +464,7 @@ export function formatBootServiceProblem(problem: BootServiceProblem): string {
     case "service-disabled":
       return "The service is not enabled to start automatically. Run `t2code service install` to repair it.";
     case "service-stopped":
-      return "The service is not running. Check the service log and `systemctl --user status t3code.service`, then run `t2code service install`.";
+      return "The service is not running. Check the service log and `systemctl --user status t2code.service`, then run `t2code service install`.";
     case "restart-pending":
       return "A newer version is installed but the service is still running the previous one. Run `t2code service restart` to switch.";
   }
@@ -572,9 +565,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
   const uid = yield* HostProcessUserId;
   const httpClient = yield* HttpClient.HttpClient;
   const releaseBaseUrl = Option.getOrUndefined(
-    yield* Config.String(CLI_RELEASE_BASE_URL_ENV)
-      .pipe(Config.orElse(() => Config.String(CLI_RELEASE_BASE_URL_LEGACY_ENV)))
-      .pipe(Config.option),
+    yield* Config.String(CLI_RELEASE_BASE_URL_ENV).pipe(Config.option),
   );
   const homeDir = yield* Config.String("HOME").pipe(Config.withDefault(""));
   const installerPath = yield* Config.String("PATH").pipe(Config.withDefault(""));

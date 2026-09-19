@@ -188,7 +188,7 @@ export async function openAttachmentInViewer(input: {
     const endHandoff = beginForegroundHandoff();
     try {
       await requireNativeModule<{ openFile(uri: string, mimeType: string): Promise<void> }>(
-        "T3NativeControls",
+        "T2NativeControls",
       ).openFile(
         cached.file.uri,
         input.attachment.mimeType.split(";", 1)[0]?.trim() || "application/octet-stream",

@@ -29,11 +29,7 @@ import {
   resolveNewDraftStartFromOrigin,
   resolveNewThreadModelSelectionOverride,
 } from "../lib/chatThreadActions";
-<<<<<<< HEAD
-import { readT3ProjectFile } from "../lib/t3ProjectFileDefaults";
-=======
-import { readT2ProjectFileDefaultThreadEnvMode } from "../lib/t2ProjectFileDefaults";
->>>>>>> 74eaa6cbe (fix(project): migrate checked-in config to t2.json (#7))
+import { readT2ProjectFile } from "../lib/t2ProjectFileDefaults";
 import { environmentServerConfigsAtom } from "../state/server";
 import { resolveThreadRouteTarget } from "../threadRoutes";
 import { legacyProjectCwdPreferenceKey, useUiStateStore } from "../uiStateStore";
@@ -153,11 +149,10 @@ export function useNewThreadHandler() {
       // skipped entirely when a higher-priority source decides, and its
       // query atom caches per project after the first call.
       const resolveDefaultEnvMode = async (): Promise<DraftThreadEnvMode> => {
-<<<<<<< HEAD
         const consultProjectFile =
           project !== undefined && projectSettings.settings.defaultThreadEnvMode === null;
         const projectFile = consultProjectFile
-          ? await readT3ProjectFile(project.environmentId, project.workspaceRoot)
+          ? await readT2ProjectFile(project.environmentId, project.workspaceRoot)
           : null;
         return resolveProjectSettings(
           targetServerSettings,
@@ -165,19 +160,6 @@ export function useNewThreadHandler() {
           project,
           projectFile,
         ).settings.defaultThreadEnvMode;
-=======
-        const consultProjectFile = project !== undefined && projectThreadEnvMode == null;
-        return resolveDefaultThreadEnvMode({
-          projectSetting: projectThreadEnvMode,
-          projectFile: consultProjectFile
-            ? await readT2ProjectFileDefaultThreadEnvMode(
-                project.environmentId,
-                project.workspaceRoot,
-              )
-            : null,
-          globalDefault: projectSettings.settings.defaultThreadEnvMode,
-        });
->>>>>>> 74eaa6cbe (fix(project): migrate checked-in config to t2.json (#7))
       };
       const logicalProjectKey = project
         ? deriveLogicalProjectKeyFromSettings(project, projectGroupingSettings)

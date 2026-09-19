@@ -20,7 +20,7 @@ describe("electron development launcher", () => {
     const environmentScript = makeDevelopmentEnvironmentScript({
       VITE_DEV_SERVER_URL: "http://127.0.0.1:8526",
       T2CODE_PORT: "16566",
-      T3CODE_HOME: "/tmp/t3",
+      T2CODE_HOME: "/tmp/t2",
       T2CODE_OTLP_PROTOCOL: "http/protobuf",
     });
 
@@ -28,10 +28,9 @@ describe("electron development launcher", () => {
       environmentScript,
       "if [ -z \"${VITE_DEV_SERVER_URL:-}\" ]; then export VITE_DEV_SERVER_URL='http://127.0.0.1:8526'; fi",
     );
-    // The legacy T3CODE_HOME spelling is exported under the new name.
     assert.include(
       environmentScript,
-      "if [ -z \"${T2CODE_HOME:-}\" ]; then export T2CODE_HOME='/tmp/t3'; fi",
+      "if [ -z \"${T2CODE_HOME:-}\" ]; then export T2CODE_HOME='/tmp/t2'; fi",
     );
     assert.include(
       environmentScript,

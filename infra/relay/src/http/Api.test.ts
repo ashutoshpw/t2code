@@ -78,7 +78,7 @@ const relaySettings: RelayConfiguration.RelayConfiguration["Service"] = {
     teamId: "apns-team",
     keyId: "apns-key",
     privateKey: Redacted.make("apns-private-key"),
-    bundleId: "com.example.t3",
+    bundleId: "com.example.t2",
     environment: "sandbox",
   },
   clerkSecretKey: Redacted.make("clerk-secret-key"),

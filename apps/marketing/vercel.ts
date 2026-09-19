@@ -28,7 +28,7 @@ export const config: VercelConfig = {
   redirects: [
     {
       source: "/app",
-      destination: "https://app.t3.codes",
+      destination: "https://app.t2.codes",
       permanent: true,
     },
   ],

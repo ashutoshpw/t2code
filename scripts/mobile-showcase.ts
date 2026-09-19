@@ -34,7 +34,7 @@ const REPO_ROOT = NodePath.resolve(NodePath.dirname(NodeURL.fileURLToPath(import
 const MOBILE_ROOT = NodePath.join(REPO_ROOT, "apps/mobile");
 const ANDROID_PACKAGE = "codes.t2.mobile";
 const APP_SCHEME = "t2code";
-const IOS_READY_FILENAME = "T3ShowcaseReadyScene";
+const IOS_READY_FILENAME = "T2ShowcaseReadyScene";
 const SERVER_HOST = "0.0.0.0";
 const IOS_SIMULATOR_ARCH = NodeProcess.arch === "arm64" ? "arm64" : "x86_64";
 const IOS_APP_PATH = NodePath.join(
@@ -1128,7 +1128,7 @@ async function captureIos(
   const metroUrl = `http://${metroHost}:${config.metroPort}?disableOnboarding=1`;
   const scenePath = NodePath.join(
     await iosAppContainer(simulator.udid),
-    "Library/Caches/T3ShowcaseScene",
+    "Library/Caches/T2ShowcaseScene",
   );
   const readyPath = NodePath.join(
     await iosAppContainer(simulator.udid),

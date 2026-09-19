@@ -33,7 +33,7 @@ run a server there, build it from source with Node.js 24 and `vp`
 
 ```bash
 git clone https://github.com/pingdotgg/t3code
-cd t3code && vp i && vp run build:desktop
+cd t2code && vp i && vp run build:desktop
 node apps/server/dist/bin.mjs
 ```
 
@@ -48,10 +48,9 @@ or use a package manager:
 
 | Platform           | Install                            |
 | ------------------ | ---------------------------------- |
-| Windows            | `winget install T3Tools.T3Code`    |
-| Debian, Ubuntu     | `sudo apt install ./T3-Code-*.deb` |
-| Arch Linux         | `yay -S t3code-bin`                |
-| Arch Linux nightly | `yay -S t3code-nightly-bin`        |
+| Debian, Ubuntu     | `sudo apt install ./T2-Code-*.deb` |
+| Arch Linux         | `yay -S t2code-bin`                |
+| Arch Linux nightly | `yay -S t2code-nightly-bin`        |
 
 The `.deb` updates itself like the other desktop builds. It asks for your
 password to install each update. If your desktop has no password prompt, the
@@ -81,7 +80,7 @@ command cannot reach the app, start or update the desktop app and try again.
 
 Install T2 Code from the
 [App Store](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or
-[Google Play](https://play.google.com/store/apps/details?id=com.t3tools.t3code).
+[Google Play](https://play.google.com/store/apps/details?id=com.t2tools.t2code).
 The phone connects to a server on another machine. Follow
 [remote access](./remote-access.md) to link it through T2 Connect or a pairing URL.
 

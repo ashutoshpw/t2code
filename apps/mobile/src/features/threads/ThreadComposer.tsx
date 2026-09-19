@@ -1,6 +1,5 @@
 import { ChatGptUsageLimitNotice } from "./ChatGptUsageLimitNotice";
-import type { ComposerTextPaste } from "../../native/T3ComposerEditor.types";
-import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
+import type { ComposerTextPaste } from "../../native/T2ComposerEditor.types";import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import { useAtomValue } from "@effect/atom-react";
 import { clampFileAttachmentUploadBytes } from "@t2code/client-runtime/state/attachments";
 import { pastedTextDisposition, replaceTextSelection } from "@t2code/client-runtime/text-paste";
@@ -13,7 +12,7 @@ import {
   type OrchestrationThreadShell,
   type ProviderInteractionMode,
   type RuntimeMode,
-  type ServerConfig as T3ServerConfig,
+  type ServerConfig as T2ServerConfig,
   type UsageLimitsReport,
 } from "@t2code/contracts";
 import {
@@ -133,7 +132,7 @@ export interface ThreadComposerProps {
   readonly environmentLabel: string | null;
   readonly selectedThread: OrchestrationThreadShell;
   readonly hasCompactableConversation: boolean;
-  readonly serverConfig: T3ServerConfig | null;
+  readonly serverConfig: T2ServerConfig | null;
   readonly queueCount: number;
   readonly environmentId: EnvironmentId;
   readonly projectCwd: string | null;
@@ -883,7 +882,7 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
                 ))}
                 {stripAttachments.length > 3 ? (
                   <View className="size-[30px] items-center justify-center rounded-lg bg-subtle-strong">
-                    <Text className="text-foreground-muted text-2xs font-t3-bold">
+                    <Text className="text-foreground-muted text-2xs font-t2-bold">
                       +{stripAttachments.length - 3}
                     </Text>
                   </View>

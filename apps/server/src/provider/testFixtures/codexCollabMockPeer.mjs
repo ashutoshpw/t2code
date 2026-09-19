@@ -41,7 +41,7 @@ rl.on("line", (line) => {
     const request = openServerRequests.get(id);
     openServerRequests.delete(id);
     NodeFS.appendFileSync(
-      `${process.env.T3_CODEX_COLLAB_SCRIPT}.approvalResponses`,
+      `${process.env.T2_CODEX_COLLAB_SCRIPT}.approvalResponses`,
       `${JSON.stringify({ id, label: request.label, result: message.result ?? null })}\n`,
     );
     write({

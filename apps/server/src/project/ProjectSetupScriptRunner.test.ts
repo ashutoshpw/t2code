@@ -119,9 +119,6 @@ describe("ProjectSetupScriptRunner", () => {
         env: {
           T2CODE_PROJECT_ROOT: "/repo/project",
           T2CODE_WORKTREE_PATH: "/repo/worktrees/a",
-          // Legacy spellings stay available to existing project scripts.
-          T3CODE_PROJECT_ROOT: "/repo/project",
-          T3CODE_WORKTREE_PATH: "/repo/worktrees/a",
           NO_COLOR: "1",
           FORCE_COLOR: "0",
         },
@@ -225,8 +222,6 @@ describe("ProjectSetupScriptRunner", () => {
           env: {
             T2CODE_PROJECT_ROOT: "/repo/project",
             T2CODE_WORKTREE_PATH: "/repo/worktrees/a",
-            T3CODE_PROJECT_ROOT: "/repo/project",
-            T3CODE_WORKTREE_PATH: "/repo/worktrees/a",
             NO_COLOR: "1",
             FORCE_COLOR: "0",
           },

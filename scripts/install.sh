@@ -8,11 +8,10 @@
 #   T2CODE_CHANNEL           release train to follow: stable, nightly, or preview
 #                            (default: stable; preview is a maintainers' test train)
 #   T2CODE_VERSION           exact version to install (overrides T2CODE_CHANNEL)
-#   T2CODE_HOME              T2 home directory (default: ~/.t3)
+#   T2CODE_HOME              T2 home directory (default: ~/.t2)
 #   T2CODE_INSTALL_BIN_DIR   where the `t3` symlink goes (default: ~/.local/bin)
 #   T2CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
-# The pre-rename T3CODE_* spellings of these variables are still honored.
 #
 # The archive is unpacked into $T2CODE_HOME/runtime/versions/<version>, the
 # same layout `t3 service install` uses, so the service reuses this download
@@ -20,9 +19,9 @@
 set -eu
 
 repo="ashutoshpw/t2code"
-base_url="${T2CODE_RELEASE_BASE_URL:-${T3CODE_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}}"
-t3_home="${T2CODE_HOME:-${T3CODE_HOME:-$HOME/.t3}}"
-bin_dir="${T2CODE_INSTALL_BIN_DIR:-${T3CODE_INSTALL_BIN_DIR:-$HOME/.local/bin}}"
+base_url="${T2CODE_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}"
+t2_home="${T2CODE_HOME:-$HOME/.t2}"
+bin_dir="${T2CODE_INSTALL_BIN_DIR:-$HOME/.local/bin}"
 
 fail() {
   printf '\nt3 install: %s\n' "$1" >&2
@@ -144,8 +143,8 @@ else
   fail "sha256sum or shasum is required"
 fi
 
-channel="${T2CODE_CHANNEL:-${T3CODE_CHANNEL:-stable}}"
-version="${T2CODE_VERSION:-${T3CODE_VERSION:-}}"
+channel="${T2CODE_CHANNEL:-stable}"
+version="${T2CODE_VERSION:-}"
 if [ -z "$version" ]; then
   # Tags are v<semver>; the channel is the prerelease identifier, or none for
   # stable. Only tags of the requested train are considered, so a stable
@@ -168,7 +167,7 @@ case "$version" in
       "  Preview builds are cut by maintainers from unreleased branches to exercise the release" \
       "  pipeline. They can be broken, receive no fixes, and are never offered as updates." \
       "  Set T2CODE_CHANNEL=stable (the default) for a supported build." >&2
-    if [ "$channel" != "preview" ] && [ -z "${T2CODE_VERSION:-}${T3CODE_VERSION:-}" ]; then
+    if [ "$channel" != "preview" ] && [ -z "${T2CODE_VERSION:-}" ]; then
       fail "refusing a preview build that was not explicitly requested"
     fi
     ;;
@@ -178,7 +177,7 @@ stem="t2-${version}-${platform}-${arch}"
 legacy_stem="t3-${version}-${platform}-${arch}"
 archive="${stem}.tar.gz"
 legacy_archive="${legacy_stem}.tar.gz"
-versions_dir="${t3_home}/runtime/versions"
+versions_dir="${t2_home}/runtime/versions"
 target_dir="${versions_dir}/${version}"
 
 if [ -f "${target_dir}/.install-complete" ] && [ "$(cat "${target_dir}/.install-complete")" = "$version" ]; then
