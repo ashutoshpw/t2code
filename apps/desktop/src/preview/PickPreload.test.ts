@@ -42,12 +42,12 @@ it("switches tools from the keyboard after a toolbar button is clicked", () => {
 
   region.focus();
   region.click();
-  expect(document.documentElement.getAttribute("data-t3code-annotation-tool")).toBe("marquee");
+  expect(document.documentElement.getAttribute("data-t2code-annotation-tool")).toBe("marquee");
 
   region.dispatchEvent(new KeyboardEvent("keydown", { key: "v", bubbles: true, composed: true }));
 
   expect(
-    document.documentElement.getAttribute("data-t3code-annotation-tool"),
+    document.documentElement.getAttribute("data-t2code-annotation-tool"),
     "V should switch to Select while focus is on a toolbar button",
   ).toBe("select");
 });
@@ -60,5 +60,5 @@ it("keeps the tool while typing a tool key in the comment", () => {
   comment.focus();
   comment.dispatchEvent(new KeyboardEvent("keydown", { key: "r", bubbles: true, composed: true }));
 
-  expect(document.documentElement.getAttribute("data-t3code-annotation-tool")).toBe("select");
+  expect(document.documentElement.getAttribute("data-t2code-annotation-tool")).toBe("select");
 });
