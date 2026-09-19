@@ -209,7 +209,7 @@ describe("resolveWorkEntryToolPresentation", () => {
   it.each([
     "mcp__t3-code__preview_click",
     "mcp__t3_code__preview_click",
-    "mcp__t3code__preview_click",
+    "mcp__t2code__preview_click",
     "T3-code.preview_click",
     "t3-code · preview_click completed",
     "t3_code/preview_click",

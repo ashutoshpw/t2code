@@ -2625,8 +2625,8 @@ it.each([
 );
 
 it.each([
-  { names: ["⠙ t3code"], expected: "Verified text" },
-  { names: ["⠋ t3code", "⠙ t3code"], expected: undefined },
+  { names: ["⠙ t2code"], expected: "Verified text" },
+  { names: ["⠋ t2code", "⠙ t2code"], expected: undefined },
 ])("reads a changing Wayland title only when unambiguous: $names", async ({ names, expected }) => {
   vi.stubEnv("XDG_SESSION_TYPE", "wayland");
   const tree = vi.fn(async () => ({ value: "Verified text", children: [] }));
@@ -2642,12 +2642,12 @@ it.each([
     assert.strictEqual(
       await readAccessibleWindowText(
         {
-          title: "⠋ t3code",
+          title: "⠋ t2code",
           bounds: { x: 479, y: 342, width: 700, height: 520 },
           owner: { processId: 123 },
         },
         "linux",
-        "⠋ t3code",
+        "⠋ t2code",
       ),
       expected,
     );

@@ -117,9 +117,9 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       const sql = yield* SqlClient.SqlClient;
       const branchPullRequest = {
         projectId: asProjectId("project-1"),
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 43,
-        url: "https://github.com/pingdotgg/t3code/pull/43",
+        url: "https://github.com/pingdotgg/t2code/pull/43",
       };
 
       yield* sql`DELETE FROM projection_projects`;
@@ -169,9 +169,9 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           (
             'thread-1',
             'github.com',
-            'pingdotgg/t3code',
+            'pingdotgg/t2code',
             41,
-            'https://github.com/pingdotgg/t3code/pull/41',
+            'https://github.com/pingdotgg/t2code/pull/41',
             'created',
             '2026-02-24T00:00:02.500Z',
             '{"state":"merged","title":"Groundwork","headBranch":"feat/groundwork","baseBranch":"main","isDraft":false,"updatedAt":"2026-02-24T00:00:02.600Z","syncedAt":"2026-02-24T00:00:02.700Z"}',
@@ -180,9 +180,9 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           (
             'thread-1',
             'github.com',
-            'pingdotgg/t3code',
+            'pingdotgg/t2code',
             42,
-            'https://github.com/pingdotgg/t3code/pull/42',
+            'https://github.com/pingdotgg/t2code/pull/42',
             'manual',
             '2026-02-24T00:00:03.000Z',
             NULL,
@@ -223,7 +223,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'default',
           NULL,
           NULL,
-          '{"projectId":"project-1","repository":"pingdotgg/t3code","number":41,"url":"https://github.com/pingdotgg/t3code/pull/41"}',
+          '{"projectId":"project-1","repository":"pingdotgg/t2code","number":41,"url":"https://github.com/pingdotgg/t2code/pull/41"}',
           ${encodeThreadLinkedPullRequest(branchPullRequest)},
           'turn-1',
           '2026-02-24T00:00:04.000Z',
@@ -388,9 +388,9 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       const expectedPullRequests: ReadonlyArray<ThreadPullRequestLink> = [
         {
           host: "github.com",
-          repository: "pingdotgg/t3code",
+          repository: "pingdotgg/t2code",
           number: 41,
-          url: "https://github.com/pingdotgg/t3code/pull/41",
+          url: "https://github.com/pingdotgg/t2code/pull/41",
           source: "created",
           linkedAt: "2026-02-24T00:00:02.500Z",
           snapshot: {
@@ -406,9 +406,9 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         },
         {
           host: "github.com",
-          repository: "pingdotgg/t3code",
+          repository: "pingdotgg/t2code",
           number: 42,
-          url: "https://github.com/pingdotgg/t3code/pull/42",
+          url: "https://github.com/pingdotgg/t2code/pull/42",
           source: "manual",
           linkedAt: "2026-02-24T00:00:03.000Z",
           snapshot: null,
@@ -930,9 +930,9 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       const sql = yield* SqlClient.SqlClient;
       const branchPullRequest = {
         projectId: asProjectId("project-archive-test"),
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 43,
-        url: "https://github.com/pingdotgg/t3code/pull/43",
+        url: "https://github.com/pingdotgg/t2code/pull/43",
       };
 
       yield* sql`DELETE FROM projection_projects`;

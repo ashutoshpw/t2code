@@ -311,14 +311,14 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("t3-branch-pr-proje
         yield* projectionPipeline.projectEvent(created);
         const linkedPullRequest = {
           projectId,
-          repository: "pingdotgg/t3code",
+          repository: "pingdotgg/t2code",
           number: 42,
-          url: "https://github.com/pingdotgg/t3code/pull/42",
+          url: "https://github.com/pingdotgg/t2code/pull/42",
         };
         const branchPullRequest = {
           ...linkedPullRequest,
           number: 43,
-          url: "https://github.com/pingdotgg/t3code/pull/43",
+          url: "https://github.com/pingdotgg/t2code/pull/43",
         };
         const updates = [
           { payload: { linkedPullRequest, branchPullRequest }, expected: branchPullRequest },
@@ -838,9 +838,9 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("t3-projection-pull
             threadId,
             link: {
               host: "github.com",
-              repository: "pingdotgg/t3code",
+              repository: "pingdotgg/t2code",
               number: 42,
-              url: "https://github.com/pingdotgg/t3code/pull/42",
+              url: "https://github.com/pingdotgg/t2code/pull/42",
               source: "created",
               linkedAt: "2026-01-01T00:00:02.000Z",
               snapshot: null,
@@ -863,7 +863,7 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("t3-projection-pull
           },
           {
             host: "github.com",
-            repository: "pingdotgg/t3code",
+            repository: "pingdotgg/t2code",
             number: 42,
             source: "created",
             linkedAt: "2026-01-01T00:00:02.000Z",
@@ -890,7 +890,7 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("t3-projection-pull
           payload: {
             threadId,
             host: "github.com",
-            repository: "pingdotgg/t3code",
+            repository: "pingdotgg/t2code",
             number: 42,
             snapshot,
             stack: null,
@@ -903,7 +903,7 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("t3-projection-pull
           payload: {
             threadId,
             host: "github.com",
-            repository: "pingdotgg/t3code",
+            repository: "pingdotgg/t2code",
             number: 99,
             snapshot,
             stack: null,
@@ -991,9 +991,9 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("t3-projection-pull
             threadId,
             link: {
               host: "github.com",
-              repository: "pingdotgg/t3code",
+              repository: "pingdotgg/t2code",
               number: 43,
-              url: "https://github.com/pingdotgg/t3code/pull/43",
+              url: "https://github.com/pingdotgg/t2code/pull/43",
               source: "agent",
               linkedAt: "2026-01-01T00:00:06.000Z",
               snapshot: null,

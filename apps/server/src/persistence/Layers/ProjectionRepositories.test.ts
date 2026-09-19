@@ -473,14 +473,14 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       const threads = yield* ProjectionThreadRepository;
       const linkedPullRequest = {
         projectId: ProjectId.make("project-linked-pr"),
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 42,
-        url: "https://github.com/pingdotgg/t3code/pull/42",
+        url: "https://github.com/pingdotgg/t2code/pull/42",
       };
       const branchPullRequest = {
         ...linkedPullRequest,
         number: 43,
-        url: "https://github.com/pingdotgg/t3code/pull/43",
+        url: "https://github.com/pingdotgg/t2code/pull/43",
       };
 
       yield* threads.upsert({
@@ -590,9 +590,9 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       const unsynced: ProjectionThreadPullRequest = {
         threadId,
         host: "github.com",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 42,
-        url: "https://github.com/pingdotgg/t3code/pull/42",
+        url: "https://github.com/pingdotgg/t2code/pull/42",
         source: "manual",
         linkedAt: "2026-03-24T00:00:00.000Z",
         snapshot: null,
@@ -601,9 +601,9 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       const synced: ProjectionThreadPullRequest = {
         threadId,
         host: "github.com",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 7,
-        url: "https://github.com/pingdotgg/t3code/pull/7",
+        url: "https://github.com/pingdotgg/t2code/pull/7",
         source: "stack",
         linkedAt: "2026-03-23T00:00:00.000Z",
         snapshot: {
@@ -619,7 +619,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
           kind: "native",
           id: "stack-1",
           number: 1,
-          url: "https://github.com/pingdotgg/t3code/stack/1",
+          url: "https://github.com/pingdotgg/t2code/stack/1",
           base: "main",
           layers: [
             { number: 7, headBranch: "feat/links", state: "open" },
@@ -663,7 +663,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       assert.deepStrictEqual(
         yield* pullRequests.listByPullRequest({
           host: "github.com",
-          repository: "pingdotgg/t3code",
+          repository: "pingdotgg/t2code",
           number: 42,
         }),
         [unsynced, sharedOnOtherThread],
@@ -677,7 +677,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       yield* pullRequests.delete({
         threadId,
         host: "github.com",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 7,
       });
       assert.deepStrictEqual(yield* pullRequests.listByThreadId({ threadId }), [resynced]);

@@ -220,7 +220,7 @@ it.runIf(hasDbus)("captures through real D-Bus marshalling on a private bus", as
       "--dest",
       "t2code.NiriTest.SnapShot",
       "--object-path",
-      "/com/t3tools/SnapShot",
+      "/com/t2tools/SnapShot",
       "--method",
       "com.t2tools.SnapShot.Capture",
     ];
@@ -241,7 +241,7 @@ it.runIf(hasDbus)("captures through real D-Bus marshalling on a private bus", as
     const invalid = server.call(
       new Message({
         destination: "t2code.NiriTest.SnapShot",
-        path: "/com/t3tools/SnapShot",
+        path: "/com/t2tools/SnapShot",
         interface: "com.t2tools.SnapShot",
         member: "Capture",
         signature: "s",

@@ -28,7 +28,7 @@ const config = RelayConfiguration.RelayConfiguration.of({
   clerkJwtAudience: "t2-code-relay",
   cloudMintPrivateKey: Redacted.make("cloud-private-key"),
   cloudMintPublicKey: "cloud-public-key",
-  managedEndpointBaseDomain: "t3code.test",
+  managedEndpointBaseDomain: "t2code.test",
   managedEndpointNamespace: "dev_julius",
 });
 

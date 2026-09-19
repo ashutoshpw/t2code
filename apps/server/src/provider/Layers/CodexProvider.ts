@@ -353,8 +353,13 @@ const requestAllCodexModels = Effect.fn("requestAllCodexModels")(function* (
 export function buildCodexInitializeParams(): CodexSchema.V1InitializeParams {
   return {
     clientInfo: {
+<<<<<<< HEAD
       name: "T2 Code",
       title: "T2 Code",
+=======
+      name: "t2code_desktop",
+      title: "T2 Code Desktop",
+>>>>>>> beb8e6cfa (rebrand: sweep remaining t3tools/t3code references to t2)
       version: packageJson.version,
     },
     capabilities: {
