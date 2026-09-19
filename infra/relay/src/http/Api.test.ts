@@ -651,7 +651,15 @@ describe("relay routing fallback", () => {
       const routes = HttpApiBuilder.layer(
         HttpApi.make("RelayApi").add(RelayApi.groups.server),
       ).pipe(
-        Layer.provide(serverApi.pipe(Layer.provide([publisher, signatures]))),
+        Layer.provide(
+          serverApi.pipe(
+            Layer.provide([
+              publisher,
+              signatures,
+              Layer.mock(EnvironmentLinks.EnvironmentLinks, {}),
+            ]),
+          ),
+        ),
         Layer.provide(auth),
         Layer.provide([NodeServices.layer, NodeHttpPlatform.layer, Etag.layerWeak]),
       );
