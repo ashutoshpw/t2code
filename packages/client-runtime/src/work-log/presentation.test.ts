@@ -304,7 +304,7 @@ describe("resolveWorkEntryToolPresentation", () => {
   ])("names a linked change request with its host's term (%s)", (url, target) => {
     expect(
       resolveWorkEntryToolPresentation({
-        label: "T3-code.link_pull_request",
+        label: "T2-code.link_pull_request",
         toolLifecycleStatus: "completed",
         toolData: { arguments: { url } },
       })?.displayName,
