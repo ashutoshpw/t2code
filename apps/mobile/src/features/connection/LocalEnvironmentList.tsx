@@ -1,4 +1,4 @@
-import type { EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId } from "@t2code/contracts";
 import type { ComponentProps } from "react";
 import { View } from "react-native";
 
@@ -15,7 +15,10 @@ export function LocalEnvironmentList({
   expandedId,
   onToggle,
   ...rowActions
-}: Pick<EnvironmentRowProps, "onReconnect" | "onRemove" | "onSetEnabled" | "onUpdate"> & {
+}: Pick<
+  EnvironmentRowProps,
+  "onReconnect" | "onRemove" | "onRename" | "onSetEnabled" | "onUpdate"
+> & {
   readonly environments: ReadonlyArray<EnvironmentRowProps["environment"]>;
   readonly expandedId: EnvironmentId | null;
   readonly onToggle: (environmentId: EnvironmentId) => void;

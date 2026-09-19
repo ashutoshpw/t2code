@@ -53,7 +53,7 @@ import { inlineCodeFilePathCandidate } from "@t2code/client-runtime/markdown-lin
 import { mediaFileReference, mediaUrlReference } from "@t2code/client-runtime/media-reference";
 import { mediaKindFromPath, mediaMimeTypeFromExtension } from "@t2code/shared/filePreview";
 import * as Cause from "effect/Cause";
-import { sourceControlRepositorySelector } from "@t3tools/shared/sourceControl";
+import { sourceControlRepositorySelector } from "@t2code/shared/sourceControl";
 import { AsyncResult } from "effect/unstable/reactivity";
 import React, {
   Children,

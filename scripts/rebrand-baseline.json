@@ -529,11 +529,19 @@
   },
   {
     "file": "apps/web/src/lib/openPullRequestLink.test.ts",
+    "line": "const canonicalKey = normalizeGitRemoteUrl(\"git@ssh.dev.azure.com:v3/T3Tools/Platform/T3Code\");"
+  },
+  {
+    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
     "line": "displayName: \"t3tools/platform/t3code\","
   },
   {
     "file": "apps/web/src/lib/openPullRequestLink.test.ts",
     "line": "owner: \"t3tools\","
+  },
+  {
+    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
+    "line": "repository: \"t3tools/platform/_git/t3code\","
   },
   {
     "file": "apps/web/src/lib/openPullRequestLink.test.ts",
@@ -712,34 +720,6 @@
     "line": "The relay is the hosted control plane for T3 Connect. It helps clients discover and connect to"
   },
   {
-    "file": "infra/relay/scripts/deploy.test.ts",
-    "line": "\"T3CODE_CLERK_PUBLISHABLE_KEY=pk_test_example\","
-  },
-  {
-    "file": "infra/relay/scripts/deploy.test.ts",
-    "line": "\"T3CODE_CLERK_PUBLISHABLE_KEY=pk_test_example\\nT2CODE_RELAY_URL=https://relay.t2.codes\\n\","
-  },
-  {
-    "file": "infra/relay/scripts/deploy.test.ts",
-    "line": "\"T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=legacy-token\","
-  },
-  {
-    "file": "infra/relay/scripts/deploy.test.ts",
-    "line": "\"T3CODE_RELAY_URL=https://relay.t3.codes\","
-  },
-  {
-    "file": "infra/relay/scripts/deploy.ts",
-    "line": ".filter((line) => !line.startsWith(\"T3CODE_MOBILE_OTLP_TRACES_\"))"
-  },
-  {
-    "file": "infra/relay/scripts/deploy.ts",
-    "line": ".filter((line) => !line.startsWith(\"T3CODE_RELAY_CLIENT_OTLP_TRACES_\"))"
-  },
-  {
-    "file": "infra/relay/scripts/deploy.ts",
-    "line": ".filter((line) => !line.startsWith(\"T3CODE_RELAY_URL=\"))"
-  },
-  {
     "file": "infra/relay/src/agentActivity/ApnsClient.test.ts",
     "line": "bundleId: \"com.t3tools.test\","
   },
@@ -884,10 +864,6 @@
     "line": ""
   },
   {
-    "file": "oxlint-plugin-t3code/rules/no-hermes-unsupported-array-methods.ts",
-    "line": ""
-  },
-  {
     "file": "oxlint-plugin-t3code/rules/no-hermes-unsupported-apis.test.ts",
     "line": ""
   },
@@ -1009,7 +985,59 @@
   },
   {
     "file": "packages/shared/src/git.test.ts",
+    "line": "\"dev.azure.com/t3tools/platform/_git/t3code\","
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "\"ssh.dev.azure.com/v3/t3tools/t3code\","
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "\"ssh.dev.azure.com/v4/t3tools/platform/t3code\","
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "\"t3tools.visualstudio.com/platform/_git/t3code\","
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": ").toBe(\"dev.azure.com/t3tools/platform/_git/t3code\");"
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": ").toBe(\"t3tools.visualstudio.com/platform/_git/t3code\");"
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
     "line": ").toBe(\"T3Tools/T3Code\");"
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "expect(normalizeGitRemoteUrl(\"git@ssh.dev.azure.com:v3/T3Tools/Platform/T3Code\")).toBe("
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "expect(normalizeGitRemoteUrl(\"git@ssh.dev.azure.com:v3/T3Tools/T3Code\")).toBe("
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "expect(normalizeGitRemoteUrl(\"git@ssh.dev.azure.com:v4/T3Tools/Platform/T3Code\")).toBe("
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "expect(normalizeGitRemoteUrl(\"https://T3Tools.visualstudio.com/Platform/_git/T3Code\")).toBe("
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "expect(normalizeGitRemoteUrl(\"ssh://git@ssh.dev.azure.com:22/v3/T3Tools/Platform/T3Code\")).toBe("
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "normalizeGitRemoteUrl(\"https://T3Tools@dev.azure.com/T3Tools/Platform/_git/T3Code\"),"
+  },
+  {
+    "file": "packages/shared/src/git.test.ts",
+    "line": "normalizeGitRemoteUrl(\"T3Tools@vs-ssh.visualstudio.com:v3/T3Tools/Platform/T3Code\"),"
   },
   {
     "file": "packages/shared/src/projectScripts.ts",
@@ -1018,6 +1046,14 @@
   {
     "file": "packages/shared/src/projectScripts.ts",
     "line": "T3CODE_PROJECT_ROOT: input.project.cwd,"
+  },
+  {
+    "file": "packages/shared/src/sourceControl.test.ts",
+    "line": "expect(selector).toBe(\"t3tools/t3code\");"
+  },
+  {
+    "file": "packages/shared/src/sourceControl.test.ts",
+    "line": "owner: \"t3tools\","
   },
   {
     "file": "packaging/aur/t3code-bin/PKGBUILD",
@@ -1057,10 +1093,6 @@
   },
   {
     "file": "scripts/install.ps1",
-    "line": "# Installs the T3 Code CLI from a GitHub Release archive on Windows. Needs"
-  },
-  {
-    "file": "scripts/install.ps1",
     "line": "$baseUrl = if ($env:T2CODE_RELEASE_BASE_URL) { $env:T2CODE_RELEASE_BASE_URL.TrimEnd(\"/\") } elseif ($env:T3CODE_RELEASE_BASE_URL) { $env:T3CODE_RELEASE_BASE_URL.TrimEnd(\"/\") } else { \"https://github.com/$repo/releases/download\" }"
   },
   {
@@ -1082,10 +1114,6 @@
   {
     "file": "scripts/install.ps1",
     "line": "if ($channel -ne \"preview\" -and -not ($env:T2CODE_VERSION -or $env:T3CODE_VERSION)) {"
-  },
-  {
-    "file": "scripts/install.sh",
-    "line": "# Installs the T3 Code CLI from a GitHub Release archive. Needs only sh, tar,"
   },
   {
     "file": "scripts/install.sh",

@@ -1,11 +1,7 @@
 import { parsePatchFiles } from "@pierre/diffs/utils/parsePatchFiles";
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs/types";
-<<<<<<< HEAD
-import type { OrchestrationCheckpointSummary, ReviewDiffPreviewSource } from "@t3tools/contracts";
-import { unquoteGitPatchPath } from "@t3tools/shared/gitPatchPath";
-=======
 import type { OrchestrationCheckpointSummary, ReviewDiffPreviewSource } from "@t2code/contracts";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
+import { unquoteGitPatchPath } from "@t2code/shared/gitPatchPath";
 import * as Arr from "effect/Array";
 import { pipe } from "effect/Function";
 import * as Order from "effect/Order";

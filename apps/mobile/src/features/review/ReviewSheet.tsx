@@ -1,9 +1,4 @@
-<<<<<<< HEAD
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
-=======
 import type { EnvironmentId, ThreadId } from "@t2code/contracts";
-import type { MenuAction } from "@react-native-menu/menu";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import { nativeHeaderScrollEdgeEffects } from "../../native/StackHeader";
 import { ScreenHeader } from "../../components/ScreenHeader";

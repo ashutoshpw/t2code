@@ -1,11 +1,6 @@
 import { ScreenScrollView as ScrollView } from "../../components/ScreenScrollView";
 import { useNavigation } from "@react-navigation/native";
-<<<<<<< HEAD
-import type { EnvironmentId } from "@t3tools/contracts";
-=======
-import { SymbolView } from "../../components/AppSymbol";
 import type { EnvironmentId } from "@t2code/contracts";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import { useCallback, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -103,7 +98,6 @@ export function SettingsEnvironmentsRouteScreen() {
           paddingBottom: Math.max(insets.bottom, 18) + 18,
         }}
       >
-<<<<<<< HEAD
         <LocalEnvironmentList
           environments={localEnvironments}
           expandedId={expandedId}
@@ -112,48 +106,8 @@ export function SettingsEnvironmentsRouteScreen() {
           onRemove={onRemoveEnvironmentPress}
           onSetEnabled={onSetEnvironmentEnabled}
           onUpdate={handleUpdateEnvironment}
+          onRename={(environmentId) => navigation.navigate("EnvironmentRename", { environmentId })}
         />
-=======
-        {hasLocalEnvironments ? (
-          <View collapsable={false} className="overflow-hidden rounded-[24px] bg-card">
-            {localEnvironments.map((environment, index) => (
-              <View
-                key={environment.environmentId}
-                collapsable={false}
-                className={cn(index !== 0 && "border-t border-border")}
-              >
-                <ConnectionEnvironmentRow
-                  environment={environment}
-                  expanded={expandedId === environment.environmentId}
-                  onToggle={() => handleToggle(environment.environmentId)}
-                  onReconnect={onReconnectEnvironment}
-                  onRemove={onRemoveEnvironmentPress}
-                  onSetEnabled={onSetEnvironmentEnabled}
-                  onUpdate={handleUpdateEnvironment}
-                  onRename={(environmentId) =>
-                    navigation.navigate("EnvironmentRename", { environmentId })
-                  }
-                />
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View collapsable={false} className="items-center gap-3 rounded-[24px] bg-card px-6 py-8">
-            <View className="h-12 w-12 items-center justify-center rounded-[16px] bg-subtle">
-              <SymbolView
-                name="point.3.connected.trianglepath.dotted"
-                size={20}
-                tintColorClassName={"accent-icon-muted"}
-                type="monochrome"
-              />
-            </View>
-            <Text className="text-center text-sm leading-normal text-foreground-muted">
-              No environments connected yet.{"\n"}Tap{" "}
-              <Text className="font-t3-bold text-foreground">+</Text> to add one.
-            </Text>
-          </View>
-        )}
->>>>>>> 5f7ae83a7 (feat: let users rename environments)
 
         {/* Always mounted: already-connected relay environments must stay
             visible (and removable) even when cloud config is missing or the

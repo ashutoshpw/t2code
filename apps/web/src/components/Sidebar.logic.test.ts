@@ -51,7 +51,7 @@ import {
   type SidebarSection,
   resolveSidebarDropVerb,
 } from "./Sidebar.logic";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
+import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
 import {
   EnvironmentId,
   OrchestrationLatestTurn,

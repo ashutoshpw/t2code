@@ -10,12 +10,8 @@
  */
 import * as NodeOS from "node:os";
 
-<<<<<<< HEAD
-import type { ServerProviderSkill } from "@t3tools/contracts";
-import * as ByteSize from "effect/ByteSize";
-=======
 import type { ServerProviderSkill } from "@t2code/contracts";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
+import * as ByteSize from "effect/ByteSize";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";

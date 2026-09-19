@@ -7,13 +7,8 @@ import {
   type StaticScreenProps,
 } from "@react-navigation/native";
 import { SymbolView } from "../../components/AppSymbol";
-<<<<<<< HEAD
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import { useEffect, useRef, useState } from "react";
-=======
 import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
-import { useEffect, useRef } from "react";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cn } from "../../lib/cn";

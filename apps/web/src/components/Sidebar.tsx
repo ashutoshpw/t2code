@@ -20,19 +20,13 @@ import {
   canSnooze,
   effectiveSnoozed,
   threadWokeAt,
-<<<<<<< HEAD
-} from "@t3tools/client-runtime/state/thread-settled";
-import { resolveSettledThreadTimestamp } from "@t3tools/client-runtime/state/thread-sort";
+} from "@t2code/client-runtime/state/thread-settled";
+import { resolveSettledThreadTimestamp } from "@t2code/client-runtime/state/thread-sort";
 import {
   threadSearchMatchKey,
   type EnvironmentThreadSearchMatch,
-} from "@t3tools/client-runtime/state/thread-search";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/models";
-=======
-} from "@t2code/client-runtime/state/thread-settled";
-import { resolveSettledThreadTimestamp } from "@t2code/client-runtime/state/thread-sort";
+} from "@t2code/client-runtime/state/thread-search";
 import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/models";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import {
   parseScopedThreadKey,
   scopeProjectRef,

@@ -14,14 +14,7 @@
  *
  * @module usageScanCache
  */
-<<<<<<< HEAD
-import type { UsageProviderKind } from "@t3tools/contracts";
-=======
-// @effect-diagnostics nodeBuiltinImport:off
-import * as NodePath from "node:path";
-
 import type { UsageProviderKind } from "@t2code/contracts";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 
 import { GUARD_LENGTH, type TranscriptParsePosition } from "./usageTranscriptReader.ts";
 import type { CodexScanState, UsageRecord } from "./usageTranscripts.ts";

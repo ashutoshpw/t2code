@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import type { EnvironmentId, ProjectId, ServerSettings } from "@t3tools/contracts";
-=======
-import type { EnvironmentId, ServerSettings } from "@t2code/contracts";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
+import type { EnvironmentId, ProjectId, ServerSettings } from "@t2code/contracts";
 
 export type AutoSettleSettings = Pick<
   ServerSettings,

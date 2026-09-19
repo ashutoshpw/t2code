@@ -2,12 +2,8 @@ import {
   canonicalRepositoryKey,
   isSshRemoteUrl,
   sourceControlRepositorySelector,
-<<<<<<< HEAD
-} from "@t3tools/shared/sourceControl";
-import { normalizeGitRemoteUrl } from "@t3tools/shared/git";
-=======
 } from "@t2code/shared/sourceControl";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
+import { normalizeGitRemoteUrl } from "@t2code/shared/git";
 import * as Cache from "effect/Cache";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";

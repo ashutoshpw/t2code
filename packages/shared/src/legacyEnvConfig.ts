@@ -19,13 +19,13 @@ const withLegacyFallback = <A>(
 };
 
 export const envStringConfig = (name: string): Config.Config<string> =>
-  withLegacyFallback(name, Config.string);
+  withLegacyFallback(name, Config.String);
 
 export const envIntConfig = (name: string): Config.Config<number> =>
-  withLegacyFallback(name, Config.int);
+  withLegacyFallback(name, Config.Int);
 
 export const envBooleanConfig = (name: string): Config.Config<boolean> =>
-  withLegacyFallback(name, Config.boolean);
+  withLegacyFallback(name, Config.Boolean);
 
 export const envRedactedConfig = (name: string): Config.Config<Redacted.Redacted> =>
-  withLegacyFallback(name, Config.redacted);
+  withLegacyFallback(name, Config.Redacted);

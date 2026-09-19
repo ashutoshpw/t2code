@@ -1,11 +1,5 @@
-<<<<<<< HEAD
-import { DEFAULT_TERMINAL_ID, EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { type KnownTerminalSession } from "@t3tools/client-runtime/state/terminal";
-=======
 import { DEFAULT_TERMINAL_ID, EnvironmentId, ThreadId } from "@t2code/contracts";
 import { type KnownTerminalSession } from "@t2code/client-runtime/state/terminal";
-import type { MenuAction } from "@react-native-menu/menu";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import { SymbolView } from "../../components/AppSymbol";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { StackActions, useNavigation, type StaticScreenProps } from "@react-navigation/native";

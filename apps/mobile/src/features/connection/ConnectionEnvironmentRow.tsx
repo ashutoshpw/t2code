@@ -51,6 +51,7 @@ export function ConnectionEnvironmentRow(props: {
   ) => Promise<AtomCommandResult<unknown, unknown>>;
 }) {
   const [url, setUrl] = useState(props.environment.displayUrl);
+  const [label, setLabel] = useState(props.environment.environmentLabel);
   const serverConfig = useAtomValue(
     serverEnvironment.configValueAtom(props.environment.environmentId),
   );
@@ -184,7 +185,6 @@ export function ConnectionEnvironmentRow(props: {
             </Text>
           ) : (
             <>
-<<<<<<< HEAD
               <ConnectionFormField
                 label="Label"
                 autoCapitalize="words"
@@ -203,22 +203,6 @@ export function ConnectionEnvironmentRow(props: {
                 value={url}
                 onChangeText={setUrl}
               />
-=======
-              <View className="gap-1.5">
-                <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
-                  URL
-                </Text>
-                <TextInput
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  placeholder="192.168.1.100:8080"
-                  value={url}
-                  onChangeText={setUrl}
-                  className="rounded-[14px] border border-input-border bg-input px-4 py-3 text-base text-foreground"
-                />
-              </View>
->>>>>>> 5f7ae83a7 (feat: let users rename environments)
             </>
           )}
 

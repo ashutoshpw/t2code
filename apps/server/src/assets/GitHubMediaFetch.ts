@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 import * as Mime from "effect/unstable/http/Mime";
-import { githubMediaFileName } from "@t3tools/shared/githubMedia";
-=======
-import Mime from "@effect/platform-node/Mime";
 import { githubMediaFileName } from "@t2code/shared/githubMedia";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";

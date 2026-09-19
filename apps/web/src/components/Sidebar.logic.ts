@@ -4,16 +4,10 @@ import { defaultAnimateLayoutChanges, type AnimateLayoutChanges } from "@dnd-kit
 import {
   isAtomCommandInterrupted,
   type AtomCommandResult,
-<<<<<<< HEAD
-} from "@t3tools/client-runtime/state/runtime";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import type { ContextMenuItem, EnvironmentId, ThreadId } from "@t3tools/contracts";
-import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@t3tools/contracts/settings";
-=======
 } from "@t2code/client-runtime/state/runtime";
-import type { ContextMenuItem } from "@t2code/contracts";
+import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
+import type { ContextMenuItem, EnvironmentId, ThreadId } from "@t2code/contracts";
 import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@t2code/contracts/settings";
->>>>>>> 7b901800f (rebrand: move remaining @t3tools packages to the @t2code namespace)
 import type { AsyncResult } from "effect/unstable/reactivity";
 import { planPinnedReorder } from "@t2code/client-runtime/state/thread-sort";
 import {
