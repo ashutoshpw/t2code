@@ -4946,7 +4946,7 @@ type WorkEntryIconName =
   | "square-pen"
   | "terminal"
   | "pull-request"
-  | "t3-code"
+  | "t2-code"
   | "wrench"
   | "x"
   | "zap";
