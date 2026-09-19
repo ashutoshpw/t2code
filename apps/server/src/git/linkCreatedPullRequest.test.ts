@@ -144,7 +144,7 @@ describe("linkCreatedPullRequest", () => {
         result: prResult({
           status: "created",
           number: 42,
-          url: "https://github.com/t3tools/t3code/pull/42",
+          url: "https://github.com/t3tools/t2code/pull/42",
         }),
         commandId,
       }).pipe(Effect.provide(layerDependenciesFor(dispatch)));
@@ -157,10 +157,56 @@ describe("linkCreatedPullRequest", () => {
           host: "github.com",
           repository: "t3tools/t3code",
           number: 42,
-          url: "https://github.com/t3tools/t3code/pull/42",
+          url: "https://github.com/t3tools/t2code/pull/42",
           source: "created",
         },
       ]);
+    }),
+  );
+
+  it.effect("dispatches nothing when the action produced no pull request", () =>
+    Effect.gen(function* () {
+      const { commands, dispatch } = yield* recordingDispatch();
+      const layerDependencies = layerDependenciesFor(dispatch);
+      yield* linkCreatedPullRequest({
+        threadId: THREAD_ID,
+        result: prResult({ status: "skipped_not_requested" }),
+        commandId,
+      }).pipe(Effect.provide(layerDependencies));
+      yield* linkCreatedPullRequest({
+        threadId: THREAD_ID,
+        result: prResult({ status: "created", url: "https://github.com/t3tools/t2code/pull/42" }),
+        commandId,
+      }).pipe(Effect.provide(layerDependencies));
+
+      expect(yield* Ref.get(commands)).toEqual([]);
+    }),
+  );
+
+  it.effect("swallows an already-linked rejection and other dispatch failures", () =>
+    Effect.gen(function* () {
+      const rejecting: Orchestrator.OrchestratorV2Shape["dispatch"] = (command) =>
+        Effect.fail(
+          new Orchestrator.OrchestratorDispatchError({
+            commandId: command.commandId,
+            commandType: command.type,
+            cause: "already linked",
+          }),
+        );
+      const result = prResult({
+        status: "opened_existing",
+        number: 7,
+        url: "https://github.com/t3tools/t2code/pull/7",
+      });
+      yield* linkCreatedPullRequest({ threadId: THREAD_ID, result, commandId }).pipe(
+        Effect.provide(layerDependenciesFor(rejecting)),
+      );
+      yield* linkCreatedPullRequest({ threadId: THREAD_ID, result, commandId }).pipe(
+        Effect.provide(layerDependenciesFor(() => Effect.die(new Error("engine down")))),
+      );
+      yield* linkCreatedPullRequest({ threadId: THREAD_ID, result, commandId }).pipe(
+        Effect.provide(layerDependenciesFor(() => Effect.die(new Error("unreachable")), null)),
+      );
     }),
   );
 });

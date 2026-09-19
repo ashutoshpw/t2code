@@ -80,7 +80,6 @@ describe("ElectronProtocol", () => {
           yield* protocol.registerDesktopProtocol({
             scheme: "t2code-dev",
             targetOrigin: new URL("http://127.0.0.1:3772/"),
-            backendOrigin: new URL("http://127.0.0.1:3774/"),
             clerkFrontendApiHostname: "clerk.t2.codes",
           });
           assert.isDefined(handler);
@@ -323,7 +322,6 @@ describe("ElectronProtocol", () => {
     const policy = ElectronProtocol.makeDesktopContentSecurityPolicy({
       scheme: "t2code",
       targetOrigin: new URL("http://127.0.0.1:3772/"),
-      backendOrigin: new URL("http://127.0.0.1:3772/"),
       clerkFrontendApiHostname: "clerk.t2.codes",
     });
     const directives = Object.fromEntries(

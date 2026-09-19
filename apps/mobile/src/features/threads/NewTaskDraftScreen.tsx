@@ -370,7 +370,7 @@ export function NewTaskDraftScreen(props: {
     (hasImportedIncomingShare && !incomingShare) ||
     isIncomingShareUnavailable;
   const appliedInitialProjectKeyRef = useRef<string | null>(null);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- ends the picker return once the project arrives, else replaces the route with the picker next frame
+  // oxlint-disable-next-line t3code/react-effect-budget -- ends the picker return once the project arrives, else replaces the route with the picker next frame
   useEffect(() => {
     if (isReturningToProjectPicker && requestedInitialProjectAvailable) {
       // oxlint-disable-next-line react/set-state-in-effect -- Ends the return-to-picker flow once the requested project arrives from the catalog.
@@ -397,7 +397,7 @@ export function NewTaskDraftScreen(props: {
   const lastInitialProjectRefRef = useRef(props.initialProjectRef);
   const initialPickerRef = useRef<"open" | "dismissed" | null>(null);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- applies the route or catalog project to the draft once projects load, or opens the picker in the navigator
+  // oxlint-disable-next-line t3code/react-effect-budget -- applies the route or catalog project to the draft once projects load, or opens the picker in the navigator
   useEffect(() => {
     if (props.draftId) {
       return;
@@ -497,7 +497,7 @@ export function NewTaskDraftScreen(props: {
   ]);
 
   const { loadBranches } = flow;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- requests the selected project's branch list from the server once per project
+  // oxlint-disable-next-line t3code/react-effect-budget -- requests the selected project's branch list from the server once per project
   useEffect(() => {
     if (!selectedProject) {
       loadedBranchesProjectKeyRef.current = null;
@@ -745,11 +745,11 @@ export function NewTaskDraftScreen(props: {
   ) : (
     <View className="items-center gap-6 px-6" testID="new-task-hero">
       <View className="w-full items-center gap-1.5">
-        <Text className="text-center text-2xl font-t3-medium tracking-tight text-foreground">
+        <Text className="text-center text-2xl font-t2-medium tracking-tight text-foreground">
           What should we build
         </Text>
         <View className="max-w-full flex-row items-center justify-center">
-          <Text className="text-2xl font-t3-medium tracking-tight text-foreground">in </Text>
+          <Text className="text-2xl font-t2-medium tracking-tight text-foreground">in </Text>
           <Pressable
             accessibilityHint="Opens the project picker"
             accessibilityLabel={selectedProjectLabel ?? selectedProject.title}
@@ -759,13 +759,13 @@ export function NewTaskDraftScreen(props: {
             className="min-w-0 max-w-[250px] border-b border-foreground-muted active:opacity-65"
           >
             <Text
-              className="text-2xl font-t3-medium tracking-tight text-foreground"
+              className="text-2xl font-t2-medium tracking-tight text-foreground"
               numberOfLines={1}
             >
               {selectedProjectLabel ?? selectedProject.title}
             </Text>
           </Pressable>
-          <Text className="text-2xl font-t3-medium tracking-tight text-foreground">?</Text>
+          <Text className="text-2xl font-t2-medium tracking-tight text-foreground">?</Text>
         </View>
       </View>
 

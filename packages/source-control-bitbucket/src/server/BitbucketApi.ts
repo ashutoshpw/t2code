@@ -43,12 +43,12 @@ const BITBUCKET_API_REQUEST_TIMEOUT = "30 seconds";
 const CONCURRENCY = 4;
 
 const BitbucketApiEnvConfig = Config.all({
-  baseUrl: envStringConfig("T2CODE_BITBUCKET_API_BASE_URL").pipe(
+  baseUrl: Config.String("T2CODE_BITBUCKET_API_BASE_URL").pipe(
     Config.withDefault(DEFAULT_API_BASE_URL),
   ),
-  accessToken: envStringConfig("T2CODE_BITBUCKET_ACCESS_TOKEN").pipe(Config.option),
-  email: envStringConfig("T2CODE_BITBUCKET_EMAIL").pipe(Config.option),
-  apiToken: envStringConfig("T2CODE_BITBUCKET_API_TOKEN").pipe(Config.option),
+  accessToken: Config.String("T2CODE_BITBUCKET_ACCESS_TOKEN").pipe(Config.option),
+  email: Config.String("T2CODE_BITBUCKET_EMAIL").pipe(Config.option),
+  apiToken: Config.String("T2CODE_BITBUCKET_API_TOKEN").pipe(Config.option),
 });
 
 const BitbucketApiOperation = Schema.Literals([

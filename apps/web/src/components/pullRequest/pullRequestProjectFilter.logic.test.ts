@@ -59,6 +59,20 @@ describe("pull request project filter choices", () => {
     expect(findScopedProject(choices, cups, "worktree")).toBeDefined();
   });
 
+  it("matches canonical repositories regardless of casing", () => {
+    const main = project("main");
+    const worktree = project("worktree", nucbox, "GitHub.com/PingDotGG/T2Code");
+
+    expect(pullRequestFilterProjects([main, worktree], labels)).toEqual([main]);
+  });
+
+  it("does not add a server suffix after duplicate checkouts have collapsed", () => {
+    const main = project("main");
+
+    expect(pullRequestFilterProjects([main, project("worktree")], labels)).toEqual([main]);
+    expect(main.title).toBe("t3code");
+  });
+
   it("distinguishes same-named repositories on one server by checkout path", () => {
     const projects = [
       project("upstream"),

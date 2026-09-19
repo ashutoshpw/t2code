@@ -12,10 +12,7 @@ import * as Path from "effect/Path";
 import { HttpClient } from "effect/http";
 import * as Schema from "effect/Schema";
 
-import {
-  CLI_RELEASE_BASE_URL_ENV,
-  CLI_RELEASE_BASE_URL_LEGACY_ENV,
-} from "@t2code/shared/cliRelease";
+import { CLI_RELEASE_BASE_URL_ENV } from "@t2code/shared/cliRelease";
 
 import * as ProcessRunner from "../processRunner.ts";
 import {
@@ -35,7 +32,7 @@ import {
   type ServiceState,
 } from "./serviceProtocol.ts";
 
-const BOOT_SERVICE_NAME = "t3code";
+const BOOT_SERVICE_NAME = "t2code";
 export const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // `.service` suffix keeps the label distinct from the desktop app's bundle id
 // (com.t2tools.t2code), so launchd and TCC records never collide.
@@ -436,7 +433,7 @@ export function formatBootServiceProblem(problem: BootServiceProblem): string {
     case "service-disabled":
       return "The service is not enabled to start automatically. Run `t2code service install` to repair it.";
     case "service-stopped":
-      return "The service is not running. Check the service log and `systemctl --user status t3code.service`, then run `t2code service install`.";
+      return "The service is not running. Check the service log and `systemctl --user status t2code.service`, then run `t2code service install`.";
     case "restart-pending":
       return "A newer version is installed but the service is still running the previous one. Run `t2code service restart` to switch.";
   }
@@ -545,9 +542,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
   const uid = yield* HostProcess.UserId;
   const httpClient = yield* HttpClient.HttpClient;
   const releaseBaseUrl = Option.getOrUndefined(
-    yield* Config.String(CLI_RELEASE_BASE_URL_ENV)
-      .pipe(Config.orElse(() => Config.String(CLI_RELEASE_BASE_URL_LEGACY_ENV)))
-      .pipe(Config.option),
+    yield* Config.String(CLI_RELEASE_BASE_URL_ENV).pipe(Config.option),
   );
   const homeDir = yield* Config.String("HOME").pipe(Config.withDefault(""));
   const installerPath = yield* Config.String("PATH").pipe(Config.withDefault(""));

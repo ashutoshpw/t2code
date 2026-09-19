@@ -244,7 +244,7 @@ describe("CodexAdapterV2 runtime policy", () => {
         kind: "untrusted",
         value: "Filtered to overdue",
       });
-      assert.isDefined(withT3.additionalContext?.["t3_code_runtime"]);
+      assert.isDefined(withT3.additionalContext?.["t2_code_runtime"]);
     }),
   );
 });
@@ -1905,7 +1905,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
           hasT3Mcp: true,
         });
         assert.include(
-          params.additionalContext?.t3_code_orchestration_01?.value ?? "",
+          params.additionalContext?.t2_code_orchestration_01?.value ?? "",
           "delegate_task",
         );
         const entries = codexReplayPreamble({ nativeThreadId, nativeTurnId, prompt: "work" });

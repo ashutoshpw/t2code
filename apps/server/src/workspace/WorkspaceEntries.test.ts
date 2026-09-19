@@ -34,7 +34,7 @@ const layerTest = Layer.empty.pipe(
 const makeTempDir = Effect.fn(function* (opts?: { prefix?: string; git?: boolean }) {
   const fileSystem = yield* FileSystem.FileSystem;
   const dir = yield* fileSystem.makeTempDirectoryScoped({
-    prefix: opts?.prefix ?? "t3code-workspace-entries-",
+    prefix: opts?.prefix ?? "t2code-workspace-entries-",
   });
   if (opts?.git) {
     yield* git(dir, ["init"]);
@@ -310,7 +310,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
   describe("search", () => {
     it.effect("applies the file filter before limiting search results", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-file-limit-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-file-limit-" });
         yield* writeTextFile(cwd, "src/index.ts");
         yield* writeTextFile(cwd, "src/internal.ts");
 
@@ -331,7 +331,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
 
     it.effect("excludes gitignored paths for git repositories", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-gitignore-", git: true });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-gitignore-", git: true });
         yield* writeTextFile(cwd, ".gitignore", ".convex/\nconvex/\nignored.txt\n");
         yield* writeTextFile(cwd, "src/keep.ts", "export {};");
         yield* writeTextFile(cwd, "ignored.txt", "ignore me");
@@ -352,7 +352,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
     it.effect("excludes tracked paths that match ignore rules", () =>
       Effect.gen(function* () {
         const cwd = yield* makeTempDir({
-          prefix: "t3code-workspace-tracked-gitignore-",
+          prefix: "t2code-workspace-tracked-gitignore-",
           git: true,
         });
         yield* writeTextFile(cwd, ".convex/local-storage/data.json", "{}");
@@ -373,7 +373,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
   describe("searchContents", () => {
     it.effect("returns content matches with file paths, line numbers, and ranges", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-content-search-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-content-search-" });
         yield* writeTextFile(
           cwd,
           "src/shapes.ts",
@@ -402,7 +402,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
 
     it.effect("honors case sensitivity and gitignore rules", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-content-ignore-", git: true });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-content-ignore-", git: true });
         yield* writeTextFile(cwd, ".gitignore", "ignored.txt\n");
         yield* writeTextFile(cwd, "src/keep.ts", "square\nSquare\n");
         yield* writeTextFile(cwd, "ignored.txt", "Square\n");
@@ -424,7 +424,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
 
     it.effect("finds later whole-word matches in a file after rejected raw matches", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-content-late-whole-word-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-content-late-whole-word-" });
         yield* writeTextFile(cwd, "src/words.ts", `${"afoo\n".repeat(10)}foo\n`);
 
         const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
@@ -449,7 +449,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
 
     it.effect("treats astral-plane letters as whole word characters", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-content-astral-word-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-content-astral-word-" });
         yield* writeTextFile(cwd, "src/words.ts", "𐐀foo foo foo𐐀\n");
 
         const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
@@ -474,7 +474,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
 
     it.effect("matches punctuation-edged whole-word queries including adjacent occurrences", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-content-punctuation-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-content-punctuation-" });
         yield* writeTextFile(cwd, "src/words.ts", "-foo- -foo- -foo-\n");
 
         const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
@@ -502,7 +502,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
 
     it.effect("caps matches per file so one dense file cannot fill the page", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-content-per-file-cap-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-content-per-file-cap-" });
         yield* writeTextFile(cwd, "src/dense.ts", "needle\n".repeat(300));
         yield* writeTextFile(cwd, "src/other.ts", "needle\n");
 
@@ -527,7 +527,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
 
     it.effect("preserves regex escapes during case-insensitive searches", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-content-regex-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-content-regex-" });
         yield* writeTextFile(cwd, "src/shapes.ts", "Square\nsquare\n");
 
         const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
@@ -546,7 +546,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
 
     it.effect("maps multi-byte lines to string-indexed ranges", () =>
       Effect.gen(function* () {
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-content-multibyte-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-content-multibyte-" });
         yield* writeTextFile(cwd, "src/notes.ts", 'const label = "héllo wörld";\n');
 
         const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
@@ -572,7 +572,7 @@ it.layer(layerTest, { excludeTestServices: true })("WorkspaceEntries", (it) => {
       Effect.gen(function* () {
         const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
         const path = yield* Path.Path;
-        const cwd = yield* makeTempDir({ prefix: "t3code-workspace-browse-hidden-" });
+        const cwd = yield* makeTempDir({ prefix: "t2code-workspace-browse-hidden-" });
         yield* writeTextFile(cwd, ".config/settings.json", "{}");
         yield* writeTextFile(cwd, "config/settings.json", "{}");
         const cwdWithSeparator = yield* appendSeparator(cwd);

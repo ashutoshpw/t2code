@@ -41,7 +41,7 @@ import { cn } from "../../lib/cn";
 import { deriveBottomControlInsets } from "../../lib/reserved-regions";
 import { scopedProjectKey, scopedThreadKey } from "../../lib/scopedEntities";
 import { useNativeLayoutMetrics } from "../../native/native-layout-metrics";
-import { T3KeyboardCommands } from "../../native/T3KeyboardCommands";
+import { T2KeyboardCommands } from "../../native/T2KeyboardCommands";
 import {
   useProjects,
   useServerConfigs,
@@ -544,7 +544,7 @@ export function CommandPalette(props: {
   // The native list follows the highlighted row. Key presses move it, but so do
   // live thread updates and late message matches that reorder or drop the
   // selected row under a kept selection, so no single handler owns the scroll.
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- scrolls the native list to the highlighted row, which key presses and live result updates both move
+  // oxlint-disable-next-line t3code/react-effect-budget -- scrolls the native list to the highlighted row, which key presses and live result updates both move
   useEffect(() => {
     if (selectedIndex === 0) {
       // Centering before the list measures its height scrolls half the first row out of view.
@@ -565,7 +565,7 @@ export function CommandPalette(props: {
     props.onClose();
     pendingAction.current?.();
   };
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- clears the dismiss fallback timer on unmount
+  // oxlint-disable-next-line t3code/react-effect-budget -- clears the dismiss fallback timer on unmount
   useEffect(
     () => () => {
       if (dismissFallback.current !== null) clearTimeout(dismissFallback.current);
@@ -606,7 +606,7 @@ export function CommandPalette(props: {
       onDismiss={handleDismissed}
     >
       <GestureHandlerRootView className="flex-1">
-        <T3KeyboardCommands enabledCommands={PALETTE_COMMANDS} onCommand={onCommand}>
+        <T2KeyboardCommands enabledCommands={PALETTE_COMMANDS} onCommand={onCommand}>
           <KeyboardAvoidingView
             behavior="padding"
             className="flex-1 items-center justify-center py-4"
@@ -714,7 +714,7 @@ export function CommandPalette(props: {
               />
             </GlassSurface>
           </KeyboardAvoidingView>
-        </T3KeyboardCommands>
+        </T2KeyboardCommands>
       </GestureHandlerRootView>
     </Modal>
   );

@@ -271,7 +271,7 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
     scratchStartInFlightRef.current = false;
   }
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- navigates to the incoming share's reserved destination draft once its project loads and the screen is focused
+  // oxlint-disable-next-line t3code/react-effect-budget -- navigates to the incoming share's reserved destination draft once its project loads and the screen is focused
   useEffect(() => {
     const destination = incomingShare?.destination;
     if (!destination) {
@@ -392,7 +392,7 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
               {projectEmptyState.loading ? (
                 <AppActivityIndicator colorClassName="accent-icon-muted" />
               ) : null}
-              <Text className="text-center text-lg font-t3-bold text-foreground">
+              <Text className="text-center text-lg font-t2-bold text-foreground">
                 {projectEmptyState.title}
               </Text>
               <Text className="text-center text-sm leading-normal text-foreground-muted">
@@ -446,7 +446,7 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
             </View>
           ) : visibleScopes.length === 0 ? (
             <View className="items-center gap-2 px-6 py-8">
-              <Text className="text-center text-lg font-t3-bold text-foreground">
+              <Text className="text-center text-lg font-t2-bold text-foreground">
                 No matching projects
               </Text>
               <Text className="text-center text-sm leading-normal text-foreground-muted">
@@ -520,7 +520,7 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
                         />
                       </View>
                       <View className="min-w-0 flex-1">
-                        <Text className={cn("text-base leading-snug", "font-t3-bold")}>
+                        <Text className={cn("text-base leading-snug", "font-t2-bold")}>
                           {scope.title}
                         </Text>
                         <Text

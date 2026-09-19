@@ -65,7 +65,7 @@ export function ThreadScreenHost({ children }: { readonly children: ReactNode })
 
 export function ThreadScreenBinding(props: ThreadDetailScreenProps) {
   const store = useContext(ThreadScreenContext)!;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- publishes the route's thread screen props to the external store the outlet reads
+  // oxlint-disable-next-line t3code/react-effect-budget -- publishes the route's thread screen props to the external store the outlet reads
   useLayoutEffect(() => {
     store.publish({ props });
   });
@@ -80,7 +80,7 @@ export function ThreadScreenFallback({
   readonly header?: ReactNode;
 }) {
   const store = useContext(ThreadScreenContext)!;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- publishes the fallback content and header to the external store the outlet reads
+  // oxlint-disable-next-line t3code/react-effect-budget -- publishes the fallback content and header to the external store the outlet reads
   useLayoutEffect(() => {
     store.publish({ fallback: children, header });
   });

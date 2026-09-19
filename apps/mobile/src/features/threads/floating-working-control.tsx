@@ -106,7 +106,7 @@ export function FloatingWorkingControl(props: {
   );
   const separationProgress = useSharedValue(props.showScrollToEnd ? 1 : 0);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- animates the Reanimated separation value when scroll-to-end visibility changes
+  // oxlint-disable-next-line t3code/react-effect-budget -- animates the Reanimated separation value when scroll-to-end visibility changes
   useEffect(() => {
     separationProgress.set(withTiming(props.showScrollToEnd ? 1 : 0, CONTROL_TIMING));
   }, [props.showScrollToEnd, separationProgress]);
@@ -136,7 +136,7 @@ export function FloatingWorkingControl(props: {
   };
   const hasStatus = props.status !== null;
   const hasCapsule = hasStatus || hasQueue || hasAgents || hasPreview;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- clears the Reanimated capsule width value and measured width when the status goes away
+  // oxlint-disable-next-line t3code/react-effect-budget -- clears the Reanimated capsule width value and measured width when the status goes away
   useEffect(() => {
     if (!hasStatus) {
       measuredWidthRef.current = null;
@@ -363,7 +363,7 @@ function CompactingLabel(props: { readonly onLayout: (event: LayoutChangeEvent) 
         tintColorClassName="foreground"
         type="monochrome"
       />
-      <Text className="font-t3-medium text-xs text-foreground">Compacting…</Text>
+      <Text className="font-t2-medium text-xs text-foreground">Compacting…</Text>
     </StatusLabelRow>
   );
 }
@@ -381,7 +381,7 @@ function FloatingStatusLabel(props: {
         onLayout={props.onLayout}
       >
         <AppActivityIndicator size="small" colorClassName="accent-icon-muted" />
-        <Text className="shrink font-t3-medium text-xs text-foreground" numberOfLines={1}>
+        <Text className="shrink font-t2-medium text-xs text-foreground" numberOfLines={1}>
           {props.status.label}
         </Text>
       </StatusLabelRow>
@@ -423,7 +423,7 @@ function FloatingStatusLabel(props: {
           <View className="h-2 w-2 rounded-full bg-red-500" />
         )}
         <Text
-          className="max-w-[260px] shrink font-t3-medium text-xs text-foreground"
+          className="max-w-[260px] shrink font-t2-medium text-xs text-foreground"
           numberOfLines={1}
         >
           {props.status.label}
@@ -528,7 +528,7 @@ function FloatingStatusLabel(props: {
         />
         <ShimmeringWorkContent
           className="flex-none"
-          textClassName="font-t3-medium"
+          textClassName="font-t2-medium"
           compact
           icon="arrow.triangle.branch"
           iconSubtleColor="transparent"

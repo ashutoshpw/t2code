@@ -857,6 +857,14 @@ describe("asking about a change rather than working on it", () => {
     });
     expect(submission).toEqual({ text: draftText, interactionMode: "plan" });
     expect(context?.records[0]).toMatchObject({ pullRequest: base });
+    const legacyText = serializeLegacyContextMessage({
+      text: submission.text,
+      records: context!.records,
+    });
+    expect(legacyText).toContain(base.url);
+    expect(legacyText).toContain(prose);
+    expect(legacyText).not.toContain("PLEASE IMPLEMENT THIS PLAN");
+    expect(legacyText).not.toContain("t2-context://");
   });
 
   it("puts the reader's request in the composer and the selected lines in chips", () => {
@@ -1086,7 +1094,7 @@ describe("pull request panel context beside a thread", () => {
 
   it("recognizes an unsynced manual link, and matches host and repository case-insensitively", () => {
     const thread = { projectId: "proj-a", pullRequests: [link(7, { host: "GitHub.com" })] };
-    expect(pullRequestPanelContext(thread, surface(7, { repository: "PingDotGG/T3Code" }))).toBe(
+    expect(pullRequestPanelContext(thread, surface(7, { repository: "PingDotGG/T2Code" }))).toBe(
       "thread",
     );
     expect(pullRequestPanelContext(thread, surface(7, { host: undefined }))).toBe("thread");

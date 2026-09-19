@@ -313,7 +313,7 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     onDiffPanelOpen?.();
   });
   const onOpenTurnDiffStable = useStableCallback(onOpenTurnDiff);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to the preview action bus to toggle the preview panel
+  // oxlint-disable-next-line t3code/react-effect-budget -- subscribes to the preview action bus to toggle the preview panel
   useEffect(
     () =>
       subscribePreviewAction((action) => {

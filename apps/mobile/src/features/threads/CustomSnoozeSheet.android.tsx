@@ -55,13 +55,13 @@ const units = [
 ] as const;
 
 function systemUses24HourClock() {
-  return requireNativeModule<{ is24HourFormat(): boolean }>("T3NativeControls").is24HourFormat();
+  return requireNativeModule<{ is24HourFormat(): boolean }>("T2NativeControls").is24HourFormat();
 }
 
 export function CustomSnoozeSheet(props: Props) {
   const { themeAppearance, themeVariables: colors } = useAppearancePreferences();
   const [is24Hour, setIs24Hour] = useState(systemUses24HourClock);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to AppState to re-read the native 24-hour clock setting when the app resumes
+  // oxlint-disable-next-line t3code/react-effect-budget -- subscribes to AppState to re-read the native 24-hour clock setting when the app resumes
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") setIs24Hour(systemUses24HourClock());

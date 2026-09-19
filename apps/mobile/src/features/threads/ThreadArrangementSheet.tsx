@@ -258,12 +258,12 @@ function ThreadArrangementSheet(props: { onClose: () => void }) {
   const orderVersion = rows
     .map((row) => `${row.key}:${row.thread?.pinOrderKey}:${row.thread?.activeOrderKey}`)
     .join("|");
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- cancels the in-progress drag gesture when the thread order changes underneath it
+  // oxlint-disable-next-line t3code/react-effect-budget -- cancels the in-progress drag gesture when the thread order changes underneath it
   useEffect(() => {
     // oxlint-disable-next-line react/exhaustive-effect-dependencies, react/set-state-in-effect -- A changed thread order cancels the in-progress drag and clears its preview; stop only touches refs and state setters.
     stop();
   }, [orderVersion]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- cancels the pending drag animation frame on unmount
+  // oxlint-disable-next-line t3code/react-effect-budget -- cancels the pending drag animation frame on unmount
   useEffect(
     () => () => {
       if (frame.current !== null) cancelAnimationFrame(frame.current);
@@ -527,7 +527,7 @@ function ThreadArrangementSheet(props: { onClose: () => void }) {
                                 setExpanded((value) => ({ ...value, [section]: !value[section] }));
                             }}
                           >
-                            <Text className="text-sm font-t3-semibold text-foreground-muted">
+                            <Text className="text-sm font-t2-semibold text-foreground-muted">
                               {item.section[0]!.toUpperCase() + item.section.slice(1)} (
                               {item.section === "settled"
                                 ? settledCount
@@ -548,7 +548,7 @@ function ThreadArrangementSheet(props: { onClose: () => void }) {
                   >
                     <Text
                       numberOfLines={visiblePreview.destination?.section ? 1 : 2}
-                      className="text-base font-t3-medium"
+                      className="text-base font-t2-medium"
                     >
                       {visiblePreview.thread.title}
                     </Text>

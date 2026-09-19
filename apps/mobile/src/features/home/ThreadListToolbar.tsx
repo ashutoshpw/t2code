@@ -56,7 +56,7 @@ export function ThreadListToolbar(props: {
     Keyboard.dismiss();
   };
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to BackHandler while searching to close search on Android back
+  // oxlint-disable-next-line t3code/react-effect-budget -- subscribes to BackHandler while searching to close search on Android back
   useEffect(() => {
     if (!searching || !listFocused) return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
