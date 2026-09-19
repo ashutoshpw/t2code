@@ -11,8 +11,10 @@ the panel reports unavailable, explain the blocker and stop verification.
 Do not install or switch to another automation system. For native mobile
 testing, use [test-t3-mobile](../test-t3-mobile/SKILL.md).
 =======
+
 Use this skill for the web client. For iOS Simulator, Android Emulator, or physical-device testing against an isolated T3 backend, use the sibling [`test-t2-mobile`](../test-t2-mobile/SKILL.md) skill.
->>>>>>> 33713115f (chore(agents): rename test-t3-mobile skill to test-t2-mobile)
+
+> > > > > > > 33713115f (chore(agents): rename test-t3-mobile skill to test-t2-mobile)
 
 ## Start the app
 
