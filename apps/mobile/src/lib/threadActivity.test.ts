@@ -1288,7 +1288,7 @@ describe("buildThreadFeed", () => {
       source: "raw MCP browser identity",
       label: "Call MCP tool",
       title: "Call MCP tool",
-      item: { server: "t3-code", tool: "preview_navigate" },
+      item: { server: "t2-code", tool: "preview_navigate" },
       status: "inProgress",
       displayName: "Navigating the preview browser",
       icon: "browser",
@@ -1297,15 +1297,15 @@ describe("buildThreadFeed", () => {
       source: "raw MCP orchestration identity",
       label: "Call MCP tool",
       title: "Call MCP tool",
-      item: { server: "t3-code", tool: "task_status" },
+      item: { server: "t2-code", tool: "task_status" },
       status: "inProgress",
       displayName: "Getting delegated task status",
-      icon: "t3-code",
+      icon: "t2-code",
     },
     {
       source: "provider-qualified title",
       label: "Call MCP tool",
-      title: "mcp__t3-code__preview_snapshot",
+      title: "mcp__t2-code__preview_snapshot",
       item: undefined,
       status: "inProgress",
       displayName: "Taking a snapshot of the preview page",
@@ -1313,18 +1313,18 @@ describe("buildThreadFeed", () => {
     },
     {
       source: "provider-qualified label",
-      label: "mcp__t3-code__task_status",
+      label: "mcp__t2-code__task_status",
       title: undefined,
       item: undefined,
       status: "inProgress",
       displayName: "Getting delegated task status",
-      icon: "t3-code",
+      icon: "t2-code",
     },
     {
       source: "browser identity without lifecycle status",
       label: "Call MCP tool",
       title: "Call MCP tool",
-      item: { server: "t3-code", tool: "preview_click" },
+      item: { server: "t2-code", tool: "preview_click" },
       status: undefined,
       displayName: "Clicking in the preview browser",
       liveDisplayName: "Clicking in the preview browser",
@@ -1335,12 +1335,12 @@ describe("buildThreadFeed", () => {
       source: "orchestration identity without lifecycle status",
       label: "Call MCP tool",
       title: "Call MCP tool",
-      item: { server: "t3-code", tool: "task_status" },
+      item: { server: "t2-code", tool: "task_status" },
       status: undefined,
       displayName: "Getting delegated task status",
       liveDisplayName: "Getting delegated task status",
       settledDisplayName: "Got delegated task status",
-      icon: "t3-code",
+      icon: "t2-code",
     },
   ])(
     "uses friendly row and running labels from $source",
@@ -1432,7 +1432,7 @@ describe("buildThreadFeed", () => {
   it("retains Claude MCP metadata behind friendly row and running labels", () => {
     const turnId = TurnId.make("turn-claude-mcp");
     const toolData = {
-      toolName: "mcp__t3-code__preview_click",
+      toolName: "mcp__t2-code__preview_click",
       input: { locator: { role: "button", name: "Continue" } },
       result: { content: "Clicked Continue" },
     };
@@ -1526,7 +1526,7 @@ describe("buildThreadFeed", () => {
       const toolCallId = "preview-click";
       const groupId = `work-group:tool:${turnId}:${toolCallId}`;
       const toolData = {
-        server: "t3-code",
+        server: "t2-code",
         tool: "preview_click",
         arguments: { locator: { role: "button", name: "Continue" } },
       };
@@ -1696,7 +1696,7 @@ describe("buildThreadFeed", () => {
                   }
                 : {
                     itemType: "mcp_tool_call",
-                    data: { item: { server: "t3-code", tool: "preview_click" } },
+                    data: { item: { server: "t2-code", tool: "preview_click" } },
                   }),
             },
           }),

@@ -180,7 +180,7 @@ function resolveT2McpToolPresentation(
           ? ("browser" as const)
           : name.startsWith("device_")
             ? ("device" as const)
-            : ("t3-code" as const),
+            : ("t2-code" as const),
     ...(actionKind === undefined ? {} : { action: actionKind }),
   };
 }
