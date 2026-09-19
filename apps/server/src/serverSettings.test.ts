@@ -41,7 +41,7 @@ const layerServerSettings = () =>
     Layer.provideMerge(
       Layer.fresh(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "t3code-server-settings-test-",
+          prefix: "t2code-server-settings-test-",
         }),
       ),
     ),
@@ -254,6 +254,154 @@ it.layer(NodeServices.layer)("server settings", (it) => {
         yield* fs.readFileString(linkedSettingsPath),
       );
       assert.equal(persisted.responseStreamingMode, "paragraph");
+    }).pipe(Effect.provide(layerServerSettings())),
+  );
+
+  it.effect("reloads when the destination of a symlinked settings file changes", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const config = yield* ServerConfig.ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const service = yield* ServerSettingsModule.ServerSettingsService;
+        const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t3-settings-dotfiles-" });
+        const linkedSettingsPath = path.join(dotfiles, "settings.json");
+        yield* fs.writeFileString(linkedSettingsPath, `{ "responseStreamingMode": "turn" }`);
+        yield* fs.remove(config.settingsPath, { force: true });
+        yield* fs.symlink(linkedSettingsPath, config.settingsPath);
+        yield* service.start;
+        const changes = yield* service.subscribeChanges;
+
+        yield* writeFileStringAtomically({
+          filePath: linkedSettingsPath,
+          contents: `{ "responseStreamingMode": "paragraph" }`,
+        });
+
+        const change = yield* changes.pipe(Stream.runHead, Effect.timeout("2 seconds"));
+        assert.equal(Option.getOrUndefined(change)?.responseStreamingMode, "paragraph");
+      }),
+    ).pipe(TestClock.withLive, Effect.provide(layerServerSettings())),
+  );
+
+  it.effect("follows a settings link that is repointed to another directory", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const config = yield* ServerConfig.ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const service = yield* ServerSettingsModule.ServerSettingsService;
+        const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t3-settings-dotfiles-" });
+        const firstSettingsPath = path.join(dotfiles, "first", "settings.json");
+        const secondSettingsPath = path.join(dotfiles, "second", "settings.json");
+        yield* fs.makeDirectory(path.dirname(firstSettingsPath), { recursive: true });
+        yield* fs.makeDirectory(path.dirname(secondSettingsPath), { recursive: true });
+        yield* fs.writeFileString(firstSettingsPath, `{ "responseStreamingMode": "turn" }`);
+        yield* fs.writeFileString(secondSettingsPath, `{ "responseStreamingMode": "paragraph" }`);
+        yield* fs.remove(config.settingsPath, { force: true });
+        yield* fs.symlink(firstSettingsPath, config.settingsPath);
+        yield* service.start;
+
+        const repointChanges = yield* service.subscribeChanges;
+        yield* fs.remove(config.settingsPath);
+        yield* fs.symlink(secondSettingsPath, config.settingsPath);
+        const repointed = yield* repointChanges.pipe(Stream.runHead, Effect.timeout("2 seconds"));
+        assert.equal(Option.getOrUndefined(repointed)?.responseStreamingMode, "paragraph");
+
+        const editChanges = yield* service.subscribeChanges;
+        yield* writeFileStringAtomically({
+          filePath: secondSettingsPath,
+          contents: `{ "responseStreamingMode": "turn" }`,
+        });
+        const edited = yield* editChanges.pipe(Stream.runHead, Effect.timeout("2 seconds"));
+        assert.equal(Option.getOrUndefined(edited)?.responseStreamingMode, "turn");
+      }),
+    ).pipe(TestClock.withLive, Effect.provide(layerServerSettings())),
+  );
+
+  it.effect("reloads when a dangling settings link gets its destination", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const config = yield* ServerConfig.ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const service = yield* ServerSettingsModule.ServerSettingsService;
+        const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t3-settings-dotfiles-" });
+        const linkedSettingsPath = path.join(dotfiles, "not-yet", "settings.json");
+        yield* fs.remove(config.settingsPath, { force: true });
+        yield* fs.symlink(linkedSettingsPath, config.settingsPath);
+        yield* service.start;
+        const changes = yield* service.subscribeChanges;
+
+        yield* writeFileStringAtomically({
+          filePath: linkedSettingsPath,
+          contents: `{ "responseStreamingMode": "paragraph" }`,
+        });
+
+        const change = yield* changes.pipe(Stream.runHead, Effect.timeout("2 seconds"));
+        assert.equal(Option.getOrUndefined(change)?.responseStreamingMode, "paragraph");
+      }),
+    ).pipe(TestClock.withLive, Effect.provide(layerServerSettings())),
+  );
+
+  it.effect("preserves context when reading a provider environment secret fails", () => {
+    const platformCause = PlatformError.systemError({
+      _tag: "PermissionDenied",
+      module: "FileSystem",
+      method: "readFile",
+      pathOrDescriptor: "provider environment secret",
+      description: "Secret backend unavailable.",
+    });
+    const cause = new ServerSecretStore.SecretStoreReadError({
+      resource: "provider environment secret",
+      cause: platformCause,
+    });
+    const layerConfig = Layer.fresh(
+      ServerConfig.layerTest(process.cwd(), {
+        prefix: "t2code-server-settings-secret-failure-test-",
+      }),
+    );
+    const layerSettings = ServerSettingsModule.layer.pipe(
+      Layer.provide(layerFailingSecretStore(cause)),
+      Layer.provideMerge(Layer.fresh(SqlitePersistence.layerMemory)),
+      Layer.provideMerge(layerConfig),
+    );
+
+    return Effect.gen(function* () {
+      const serverConfig = yield* ServerConfig.ServerConfig;
+      const fileSystem = yield* FileSystem.FileSystem;
+      const serverSettings = yield* ServerSettingsModule.ServerSettingsService;
+      yield* fileSystem.writeFileString(
+        serverConfig.settingsPath,
+        '{"providerInstances":{"codex_personal":{"driver":"codex","environment":[{"name":"OPENROUTER_API_KEY","value":"","sensitive":true,"valueRedacted":true}],"config":{}}}}',
+      );
+
+      const error = yield* Effect.flip(serverSettings.getSettings);
+
+      assert.deepInclude(error, {
+        _tag: "ServerSettingsError",
+        operation: "read-secret",
+        providerInstanceId: "codex_personal",
+        environmentVariable: "OPENROUTER_API_KEY",
+      });
+      assert.strictEqual(error.cause, cause);
+      assert.notInclude(error.message, cause.message);
+    }).pipe(Effect.provide(layerSettings));
+  });
+
+  it.effect("identifies provider history query failures", () =>
+    Effect.gen(function* () {
+      const serverConfig = yield* ServerConfig.ServerConfig;
+      const serverSettings = yield* ServerSettingsModule.ServerSettingsService;
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`DROP TABLE projection_thread_sessions`;
+
+      const error = yield* Effect.flip(serverSettings.getSettings);
+
+      assert.deepInclude(error, {
+        _tag: "ServerSettingsError",
+        operation: "read-provider-history",
+        settingsPath: serverConfig.settingsPath,
+      });
     }).pipe(Effect.provide(layerServerSettings())),
   );
 
@@ -1120,7 +1268,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
       Layer.provideMerge(
         Layer.fresh(
           ServerConfig.layerTest(process.cwd(), {
-            prefix: "t3code-inline-secret-failure-test-",
+            prefix: "t2code-inline-secret-failure-test-",
           }),
         ),
       ),
@@ -1771,7 +1919,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
         Layer.provideMerge(
           Layer.fresh(
             ServerConfig.layerTest(process.cwd(), {
-              prefix: "t3code-server-settings-materialization-failure-test-",
+              prefix: "t2code-server-settings-materialization-failure-test-",
             }),
           ),
         ),

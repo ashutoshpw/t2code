@@ -76,7 +76,7 @@ function collectFxEvents(
 }
 
 const fxAdapterTestLayer = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3code-fx-adapter-test-",
+  prefix: "t2code-fx-adapter-test-",
 }).pipe(Layer.provideMerge(NodeServices.layer));
 
 const runFxAdapterTest = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
@@ -88,7 +88,7 @@ describe("FxAdapter", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3code-fx-mock-",
+          prefix: "t2code-fx-mock-",
         });
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
@@ -159,7 +159,7 @@ describe("FxAdapter", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3code-fx-full-access-",
+          prefix: "t2code-fx-full-access-",
         });
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
@@ -200,7 +200,7 @@ describe("FxAdapter", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3code-fx-auto-edits-",
+          prefix: "t2code-fx-auto-edits-",
         });
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
@@ -245,7 +245,7 @@ describe("FxAdapter", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3code-fx-auto-command-",
+          prefix: "t2code-fx-auto-command-",
         });
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
@@ -284,7 +284,7 @@ describe("FxAdapter", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3code-fx-steering-",
+          prefix: "t2code-fx-steering-",
         });
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>
@@ -350,7 +350,7 @@ describe("FxAdapter", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3code-fx-interrupt-",
+          prefix: "t2code-fx-interrupt-",
         });
         const requestLogPath = NodePath.join(directory, "requests.ndjson");
         const fxPath = yield* Effect.promise(() =>

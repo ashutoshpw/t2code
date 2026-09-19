@@ -129,7 +129,7 @@ type ReviewAnnotation = DiffLineAnnotation<ReviewAnnotationGroup>;
 
 const COMMIT_PAGE_SIZE = 10;
 
-const PULL_REQUEST_FILE_TREE_STORAGE_KEY = "t3code.pullRequestFileTreeOpen";
+const PULL_REQUEST_FILE_TREE_STORAGE_KEY = "t2code.pullRequestFileTreeOpen";
 
 interface DiffSlice {
   readonly cursor: string | null;

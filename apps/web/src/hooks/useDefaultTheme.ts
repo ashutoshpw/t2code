@@ -11,7 +11,7 @@ import { useTheme } from "./useTheme";
  * hopping between primary environments neither replays one environment's
  * theme over the user's pick nor swallows another's.
  */
-const APPLIED_DEFAULT_THEME_STORAGE_PREFIX = "t3code:default-theme-applied:v2:";
+const APPLIED_DEFAULT_THEME_STORAGE_PREFIX = "t2code:default-theme-applied:v2:";
 
 /** Include set time so reasserting the same theme still applies. */
 export function defaultThemeGeneration(theme: string, setAt: string): string {
