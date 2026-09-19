@@ -115,7 +115,7 @@ function makeLink(
     host: "github.com",
     repository: "t2tools/t2code",
     number,
-    url: `https://github.com/t3tools/t2code/pull/${number}`,
+    url: `https://github.com/t2tools/t2code/pull/${number}`,
     source: "manual",
     linkedAt: "2026-08-10T00:00:00.000Z",
     snapshot:
@@ -381,9 +381,9 @@ describe("pull request toolkit handlers", () => {
       });
       expect(result).toEqual({
         host: "github.com",
-        repository: "t3tools/other",
+        repository: "t2tools/other",
         number: 7,
-        url: "https://github.com/t3tools/other/pull/7",
+        url: "https://github.com/t2tools/other/pull/7",
         alreadyLinked: false,
       });
     }),
@@ -466,7 +466,7 @@ describe("pull request toolkit handlers", () => {
           command.type === "thread.pull-request.link" ? "already linked" : null,
       });
       const result = yield* harness.call("link_pull_request", {
-        url: "https://github.com/t3tools/t2code/pull/123",
+        url: "https://github.com/t2tools/t2code/pull/123",
       });
       expect(result.alreadyLinked).toBe(true);
     }),
@@ -492,7 +492,7 @@ describe("pull request toolkit handlers", () => {
         wasLinked: true,
       });
       const missing = yield* harness.call("unlink_pull_request", {
-        url: "https://github.com/t3tools/t2code/pull/9",
+        url: "https://github.com/t2tools/t2code/pull/9",
       });
       expect(missing.wasLinked).toBe(false);
       expect(yield* Ref.get(harness.commands)).toMatchObject([
@@ -506,7 +506,7 @@ describe("pull request toolkit handlers", () => {
       makeThread([
         makeLink(42, {
           host: "forge.example",
-          url: "http://forge.example:3000/t3tools/t2code/pulls/42",
+          url: "http://forge.example:3000/t2tools/t2code/pulls/42",
         }),
       ]),
     );
@@ -530,7 +530,7 @@ describe("pull request toolkit handlers", () => {
         host: "github.com",
         repository: "t2tools/t2code",
         number: 3,
-        url: "https://github.com/t3tools/t2code/pull/3",
+        url: "https://github.com/t2tools/t2code/pull/3",
         source: "agent",
         watching: false,
         state: "open",
@@ -561,7 +561,7 @@ describe("listThreadPullRequests", () => {
       kind: "native" as const,
       id: "stack-1",
       number: 1,
-      url: "https://github.com/t3tools/t2code/stack/1",
+      url: "https://github.com/t2tools/t2code/stack/1",
       base: "main",
       layers: [
         { number: 1, headBranch: "a", state: "open" as const },
