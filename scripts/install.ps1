@@ -7,11 +7,10 @@
 #   T2CODE_CHANNEL           release train to follow: stable, nightly, or preview
 #                            (default: stable; preview is a maintainers' test train)
 #   T2CODE_VERSION           exact version to install (overrides T2CODE_CHANNEL)
-#   T2CODE_HOME              T2 home directory (default: ~\.t3)
+#   T2CODE_HOME              T2 home directory (default: ~\.t2)
 #   T2CODE_INSTALL_BIN_DIR   where t3.exe is linked (default: ~\.local\bin)
 #   T2CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
-# The pre-rename T3CODE_* spellings of these variables are still honored.
 #
 # The archive is unpacked into $T2CODE_HOME\runtime\versions\<version>, the
 # same layout `t3 service install` uses, so the service reuses this download.
@@ -19,9 +18,9 @@ $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $repo = "ashutoshpw/t2code"
-$baseUrl = if ($env:T2CODE_RELEASE_BASE_URL) { $env:T2CODE_RELEASE_BASE_URL.TrimEnd("/") } elseif ($env:T3CODE_RELEASE_BASE_URL) { $env:T3CODE_RELEASE_BASE_URL.TrimEnd("/") } else { "https://github.com/$repo/releases/download" }
-$t3Home = if ($env:T2CODE_HOME) { $env:T2CODE_HOME } elseif ($env:T3CODE_HOME) { $env:T3CODE_HOME } else { Join-Path $HOME ".t3" }
-$binDir = if ($env:T2CODE_INSTALL_BIN_DIR) { $env:T2CODE_INSTALL_BIN_DIR } elseif ($env:T3CODE_INSTALL_BIN_DIR) { $env:T3CODE_INSTALL_BIN_DIR } else { Join-Path $HOME ".local\bin" }
+$baseUrl = if ($env:T2CODE_RELEASE_BASE_URL) { $env:T2CODE_RELEASE_BASE_URL.TrimEnd("/") } else { "https://github.com/$repo/releases/download" }
+$t2Home = if ($env:T2CODE_HOME) { $env:T2CODE_HOME } else { Join-Path $HOME ".t2" }
+$binDir = if ($env:T2CODE_INSTALL_BIN_DIR) { $env:T2CODE_INSTALL_BIN_DIR } else { Join-Path $HOME ".local\bin" }
 
 function Fail([string] $message) {
   Write-Error "t3 install: $message"
@@ -129,8 +128,8 @@ $arch = switch ($rawArch) {
   default { Fail "unsupported architecture $rawArch" }
 }
 
-$channel = if ($env:T2CODE_CHANNEL) { $env:T2CODE_CHANNEL } elseif ($env:T3CODE_CHANNEL) { $env:T3CODE_CHANNEL } else { "stable" }
-$version = if ($env:T2CODE_VERSION) { $env:T2CODE_VERSION } else { $env:T3CODE_VERSION }
+$channel = if ($env:T2CODE_CHANNEL) { $env:T2CODE_CHANNEL } else { "stable" }
+$version = if ($env:T2CODE_VERSION) { $env:T2CODE_VERSION } else { "" }
 if (-not $version) {
   # Tags are v<semver>; the channel is the prerelease identifier, or none for
   # stable. Only tags of the requested train are considered, so a stable
@@ -148,7 +147,7 @@ if (-not $version) {
 }
 if ($version -match '-preview\.') {
   Write-Warning "t3 $version is a preview build. Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, and are never offered as updates. Set T2CODE_CHANNEL=stable (the default) for a supported build."
-  if ($channel -ne "preview" -and -not ($env:T2CODE_VERSION -or $env:T3CODE_VERSION)) {
+  if ($channel -ne "preview" -and -not ($env:T2CODE_VERSION)) {
     Fail "refusing a preview build that was not explicitly requested"
   }
 }
@@ -157,7 +156,7 @@ $stem = "t2-$version-win32-$arch"
 $legacyStem = "t3-$version-win32-$arch"
 $archive = "$stem.zip"
 $legacyArchive = "$legacyStem.zip"
-$versionsDir = Join-Path $t3Home "runtime\versions"
+$versionsDir = Join-Path $t2Home "runtime\versions"
 $targetDir = Join-Path $versionsDir $version
 $marker = Join-Path $targetDir ".install-complete"
 

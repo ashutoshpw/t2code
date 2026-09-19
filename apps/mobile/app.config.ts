@@ -9,15 +9,12 @@ const repoEnv = loadRepoEnv();
 Object.assign(process.env, repoEnv);
 
 const APP_VARIANT = resolveAppVariant(repoEnv.APP_VARIANT);
-const isIosPersonalTeamBuild =
-  (repoEnv.T2CODE_IOS_PERSONAL_TEAM ?? repoEnv.T3CODE_IOS_PERSONAL_TEAM) === "1";
+const isIosPersonalTeamBuild = repoEnv.T2CODE_IOS_PERSONAL_TEAM === "1";
 const runtimeVersionPolicy =
   process.env.MOBILE_VERSION_POLICY ??
   (APP_VARIANT === "development" ? "appVersion" : "fingerprint");
 
-const personalTeamBundleIdentifier = (
-  repoEnv.T2CODE_IOS_PERSONAL_TEAM_BUNDLE_ID ?? repoEnv.T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID
-)?.trim();
+const personalTeamBundleIdentifier = repoEnv.T2CODE_IOS_PERSONAL_TEAM_BUNDLE_ID?.trim();
 const IOS_BUNDLE_IDENTIFIER_PATTERN = /^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/;
 
 const fromRepoRoot = (relativePath: string) => `../../${relativePath}`;
@@ -229,7 +226,7 @@ const sharingPlugin: NonNullable<ExpoConfig["plugins"]>[number] = [
 
 const config: ExpoConfig = {
   name: variant.appName,
-  slug: "t3-code",
+  slug: "t2-code",
   platforms: ["ios", "android"],
   scheme: variant.scheme,
   version: "2.0.0",
@@ -243,8 +240,7 @@ const config: ExpoConfig = {
   icon: variant.assets.appIcon,
   userInterfaceStyle: "automatic",
   updates: {
-    enabled:
-      (repoEnv.T2CODE_MOBILE_UPDATES_ENABLED ?? repoEnv.T3CODE_MOBILE_UPDATES_ENABLED) !== "0",
+    enabled: repoEnv.T2CODE_MOBILE_UPDATES_ENABLED !== "0",
     url: "https://u.expo.dev/d763fcb8-d37c-41ea-a773-b54a0ab4a454",
     checkAutomatically: "ON_LOAD",
     fallbackToCacheTimeout: 0,
@@ -298,11 +294,9 @@ const config: ExpoConfig = {
   android: {
     icon: variant.assets.appIcon,
     package: variant.androidPackage,
-    ...((repoEnv.T2CODE_ANDROID_GOOGLE_SERVICES_FILE ?? repoEnv.T3CODE_ANDROID_GOOGLE_SERVICES_FILE)
+    ...(repoEnv.T2CODE_ANDROID_GOOGLE_SERVICES_FILE
       ? {
-          googleServicesFile:
-            repoEnv.T2CODE_ANDROID_GOOGLE_SERVICES_FILE ??
-            repoEnv.T3CODE_ANDROID_GOOGLE_SERVICES_FILE,
+          googleServicesFile: repoEnv.T2CODE_ANDROID_GOOGLE_SERVICES_FILE,
         }
       : {}),
     adaptiveIcon: {

@@ -1,6 +1,6 @@
 import { AuthOrchestrationOperateScope } from "@t2code/contracts";
 import { readEnvironmentScope } from "./session";
-import type { ComposerTextPaste } from "../native/T3ComposerEditor.types";
+import type { ComposerTextPaste } from "../native/T2ComposerEditor.types";
 import { useAtomValue } from "@effect/atom-react";
 import { threadRuntimeIsActive } from "@t2code/client-runtime/state/shell";
 import {

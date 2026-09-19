@@ -12,7 +12,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import * as NodeNet from "node:net";
 
 import { remoteStateKey } from "./command.ts";
-import { buildRemoteStopScript, buildRemoteT3RunnerScript } from "./tunnel.ts";
+import { buildRemoteStopScript, buildRemoteT2RunnerScript } from "./tunnel.ts";
 
 const Started = Schema.Struct({
   pid: Schema.Number,
@@ -67,7 +67,7 @@ server.listen(Number(process.env.T2_TEST_PORT ?? 0), "127.0.0.1", () => {
                 },
                 detached: false,
                 stdin: Stream.make(
-                  new TextEncoder().encode(buildRemoteT3RunnerScript({ nodeScriptPath: cliPath })),
+                  new TextEncoder().encode(buildRemoteT2RunnerScript({ nodeScriptPath: cliPath })),
                 ),
               }),
             );

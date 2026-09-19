@@ -647,7 +647,7 @@ const writeAtomically = Effect.fn("iconExport.writeAtomically")(function* (
   const temporaryPath = yield* fs
     .makeTempFileScoped({
       directory: targetDirectory,
-      prefix: ".t3-icon-export-",
+      prefix: ".t2-icon-export-",
       suffix: ".tmp",
     })
     .pipe(

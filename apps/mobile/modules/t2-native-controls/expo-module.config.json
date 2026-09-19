@@ -1,0 +1,12 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["T2NativeControlsModule", "T2KeyboardCommandsModule"]
+  },
+  "android": {
+    "modules": [
+      "expo.modules.t2nativecontrols.T2NativeControlsModule",
+      "expo.modules.t2nativecontrols.T2KeyboardCommandsModule"
+    ]
+  }
+}

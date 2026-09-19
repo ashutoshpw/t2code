@@ -15,7 +15,7 @@ import {
   ExecutionEnvironmentDescriptor,
   PortSchema,
 } from "@t2code/contracts";
-import { resolveWorktreeT3Home } from "@t2code/shared/devHome";
+import { resolveWorktreeT2Home } from "@t2code/shared/devHome";
 import { DEFAULT_SIGNAL_EXPORT } from "@t2code/shared/observability";
 import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
 import {
@@ -37,7 +37,6 @@ import { Command, Flag, GlobalFlag } from "effect/cli";
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 
 import * as EnvironmentAuth from "../auth/EnvironmentAuth.ts";
-import { envStringConfig } from "@t2code/shared/legacyEnvConfig";
 import * as ServerConfig from "../config.ts";
 import { resolveBaseDir } from "../os-jank.ts";
 import {
@@ -247,11 +246,11 @@ const discoverPairTarget = Effect.fn("pair.discoverPairTarget")(function* (
     // Same precedence as dev-runner: inside a linked worktree its own `.t3`
     // outranks the shared home, so `t2code pair` in a worktree pairs with the dev
     // server under test rather than the daily-driver install.
-    const worktreeHome = yield* resolveWorktreeT3Home(process.cwd());
+    const worktreeHome = yield* resolveWorktreeT2Home(process.cwd());
     if (worktreeHome !== undefined) {
       bases.push(worktreeHome);
     }
-    const envHome = yield* envStringConfig("T2CODE_HOME").pipe(Config.option);
+    const envHome = yield* Config.String("T2CODE_HOME").pipe(Config.option);
     bases.push(yield* resolveBaseDir(Option.getOrUndefined(envHome)));
   }
 

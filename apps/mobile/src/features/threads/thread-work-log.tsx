@@ -1355,7 +1355,7 @@ export const ThreadAgentSpawnCard = memo(function ThreadAgentSpawnCard(props: {
           <View className="min-w-0 flex-1 gap-0.5">
             <Text
               key={props.rowSizing.textSizeKey}
-              className="font-t3-medium text-sm text-foreground"
+              className="font-t2-medium text-sm text-foreground"
               numberOfLines={1}
             >
               {summary.title}

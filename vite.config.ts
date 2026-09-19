@@ -124,7 +124,7 @@ export default defineConfig({
       "apps/mobile/uniwind-types.d.ts",
     ],
     plugins: ["eslint", "oxc", "react", "unicorn", "typescript"],
-    jsPlugins: ["./oxlint-plugin-t3code/index.ts", "@shadcn/lint"],
+    jsPlugins: ["./oxlint-plugin-t2code/index.ts", "@shadcn/lint"],
     settings: {
       shadcn: { ui: "~/components/ui" },
     },
@@ -219,7 +219,7 @@ export default defineConfig({
       {
         // The one place that reads the host platform to seed the injected references.
         files: ["packages/shared/src/hostProcess.ts"],
-        rules: { "t3code/no-global-process-runtime": "off" },
+        rules: { "t2code/no-global-process-runtime": "off" },
       },
       {
         // The registration helpers that only accept handlers built by McpToolAccess.
@@ -247,7 +247,7 @@ export default defineConfig({
       },
       {
         files: ["apps/mobile/src/**"],
-        rules: { "t3code/no-mobile-uniwind-theme-escape-hatches": "error" },
+        rules: { "t2code/no-mobile-uniwind-theme-escape-hatches": "error" },
       },
       {
         // Every class in web code must be one Tailwind generates: a typo or a class nothing
@@ -345,7 +345,7 @@ export default defineConfig({
           "packages/shared/src/**",
         ],
         excludeFiles: ["**/*.test.ts", "**/*.test.tsx"],
-        rules: { "t3code/no-hermes-unsupported-apis": "error" },
+        rules: { "t2code/no-hermes-unsupported-apis": "error" },
       },
       {
         // Reviewed native and third-party interop boundaries that cannot consume a className.
@@ -375,12 +375,12 @@ export default defineConfig({
           "apps/mobile/src/features/threads/thread-list-items.tsx",
           "apps/mobile/src/features/threads/thread-list-v2-items.tsx",
           "apps/mobile/src/lib/useMobileNavigationTheme.ts",
-          "apps/mobile/src/native/T3ComposerEditor.ios.tsx",
-          "apps/mobile/src/native/T3ComposerEditor.native.tsx",
+          "apps/mobile/src/native/T2ComposerEditor.ios.tsx",
+          "apps/mobile/src/native/T2ComposerEditor.native.tsx",
           "apps/mobile/src/native/SelectableMarkdownText.android.tsx",
         ],
         rules: {
-          "t3code/no-mobile-uniwind-theme-escape-hatches": ["error", { allowUniwindTheme: true }],
+          "t2code/no-mobile-uniwind-theme-escape-hatches": ["error", { allowUniwindTheme: true }],
         },
       },
     ],

@@ -71,7 +71,7 @@ function normalizeSelectionOptions(
 
 /** Whether a known Antigravity selection needs setup or a different model. */
 export function isModelSelectionUnavailable(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   selection: ModelSelection | null | undefined,
 ): boolean {
   if (!config || !selection) {
@@ -99,7 +99,7 @@ export function isModelSelectionUnavailable(
  * are disabled, missing, or signed out. Without config, keep stored selections.
  */
 export function resolveSelectableModelSelection(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   selection: ModelSelection | null,
 ): ModelSelection | null {
   if (!selection || !config) {
@@ -127,7 +127,7 @@ export function resolveSelectableModelSelection(
  * the settings sheet are unaffected.
  */
 export function resolveDefaultableModelSelection(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   selection: ModelSelection | null,
 ): ModelSelection | null {
   const usable = resolveSelectableModelSelection(config, selection);
@@ -156,7 +156,7 @@ export function resolveNewTaskModelSelection(input: {
 }
 
 export function buildModelOptions(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   fallbackModelSelection: ModelSelection | null,
   providerInstanceId?: ModelSelection["instanceId"],
 ): ReadonlyArray<ModelOption> {

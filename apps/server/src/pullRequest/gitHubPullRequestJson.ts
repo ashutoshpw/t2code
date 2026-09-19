@@ -803,6 +803,10 @@ export function decodeActorAvatarsJson(
   return Result.succeed(avatarsByLogin);
 }
 
+export const PULL_REQUEST_LIST_JSON_FIELDS =
+  "number,title,url,author,headRefName,baseRefName,state,isDraft,mergeable,reviewDecision,additions,deletions,createdAt,updatedAt,mergedAt,reviewRequests,latestReviews,labels,statusCheckRollup";
+
+export const PULL_REQUEST_DETAIL_JSON_FIELDS = `${PULL_REQUEST_LIST_JSON_FIELDS},body,changedFiles,closedAt,isCrossRepository,headRepositoryOwner,headRefOid,autoMergeRequest`;
 /**
  * Pull refs let the comparison share the detail read without first resolving a fork branch.
  * `isRequired` is asked for on github.com only: an older Enterprise server may not know it, and

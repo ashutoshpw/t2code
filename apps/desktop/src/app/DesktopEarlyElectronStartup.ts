@@ -54,18 +54,17 @@ function resolveEarlyDesktopSettingsPath(input: {
   readonly homeDirectory: string;
   readonly joinPath: JoinPath;
 }): string {
-  // Legacy T3CODE_HOME is honored until installed units and shells migrate.
-  const t3Home = Option.fromUndefinedOr(input.env.T2CODE_HOME ?? input.env.T3CODE_HOME);
+  const t2Home = Option.fromUndefinedOr(input.env.T2CODE_HOME);
   const baseDir = resolveDesktopBaseDir({
     homeDirectory: input.homeDirectory,
     joinPath: input.joinPath,
-    t3Home,
+    t2Home,
   });
   const stateDir = resolveDesktopStateDir({
     baseDir,
     isDevelopment: isDevelopmentEnvironment(input.env),
     joinPath: input.joinPath,
-    t3Home,
+    t2Home,
   });
   return input.joinPath(stateDir, "desktop-settings.json");
 }

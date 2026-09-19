@@ -1,6 +1,6 @@
 # T2 Code
 
-T2 Code is an "agent harness control surface". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code)), [web app](https://app.t3.codes) and [Electron-based desktop app](https://t3.codes).
+T2 Code is an "agent harness control surface". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t2tools.t2code)), [web app](https://app.t2.codes) and [Electron-based desktop app](https://t3.codes).
 
 Works with your subscriptions on Claude Code, Codex, Cursor, Grok Build, fx, OpenCode, and Google Antigravity. If they're set up on your computer, T2 Code can control them.
 
@@ -39,18 +39,12 @@ Tip: Use `npx @t2code/cli@latest --help` for the full CLI reference.
 
 Install the latest version of the desktop app from [GitHub Releases](https://github.com/ashutoshpw/t2code/releases), or from your favorite package registry:
 
-#### Windows (`winget`)
-
-```bash
-winget install T3Tools.T3Code
-```
-
 #### Debian, Ubuntu (`.deb`)
 
-Download the `.deb` from [GitHub Releases](https://github.com/pingdotgg/t3code/releases), then:
+Download the `.deb` from [GitHub Releases](https://github.com/ashutoshpw/t2code/releases), then:
 
 ```bash
-sudo apt install ./T3-Code-*.deb
+sudo apt install ./T2-Code-*.deb
 ```
 
 #### Arch Linux (AUR)
@@ -58,13 +52,13 @@ sudo apt install ./T3-Code-*.deb
 Stable:
 
 ```bash
-yay -S t3code-bin
+yay -S t2code-bin
 ```
 
 Nightly:
 
 ```bash
-yay -S t3code-nightly-bin
+yay -S t2code-nightly-bin
 ```
 
 The AUR packaging is maintained in this repository under [`packaging/aur`](./packaging/aur).

@@ -1,7 +1,7 @@
-export const BUILT_IN_THEME_IDS = ["t3-chat", "grove", "ocean", "ember", "iris"] as const;
+export const BUILT_IN_THEME_IDS = ["t2-chat", "grove", "ocean", "ember", "iris"] as const;
 
-/** The standard T3 Code palette, kept separate from the optional built-in theme library. */
-export const MOBILE_DEFAULT_THEME_ID = "t3-code";
+/** The standard T2 Code palette, kept separate from the optional built-in theme library. */
+export const MOBILE_DEFAULT_THEME_ID = "t2-code";
 
 /**
  * Every palette the mobile app can render. Declared here so host-side tooling
@@ -21,7 +21,7 @@ export const RESERVED_THEME_IDS: ReadonlySet<string> = new Set([
   "light",
   "dark",
   ...BUILT_IN_THEME_IDS,
-  "t3-chat-dark",
+  "t2-chat-dark",
   "t3-grove",
   "t3-ocean",
   "t3-ember",
@@ -126,13 +126,13 @@ export type ThemeDefinition = Readonly<{
 }>;
 
 /**
- * The palette T3 Code wears with no theme installed, captured from the app's
+ * The palette T2 Code wears with no theme installed, captured from the app's
  * stock tokens (index.css) so a draft seeded from the default look paints the
  * pixels the user is already seeing. Alpha-bearing tokens are flattened over
  * their real backdrops (canvas, or the sidebar for its rows) because theme
  * colors are stored as opaque OKLCH tokens.
  */
-export const T3_CODE_LIGHT_THEME_COLORS: ThemeColors = {
+export const T2_CODE_LIGHT_THEME_COLORS: ThemeColors = {
   searchMatchBackground: "#fce8c0",
   searchMatchForeground: "#27272a",
   searchMatchActiveBackground: "#eea52b",
@@ -196,7 +196,7 @@ export const T3_CODE_LIGHT_THEME_COLORS: ThemeColors = {
   terminalScrollbarHover: "#bdbdbd",
 };
 
-export const T3_CODE_DARK_THEME_COLORS: ThemeColors = {
+export const T2_CODE_DARK_THEME_COLORS: ThemeColors = {
   searchMatchBackground: "#533e16",
   searchMatchForeground: "#f5f5f5",
   searchMatchActiveBackground: "#eea52b",
@@ -260,8 +260,8 @@ export const T3_CODE_DARK_THEME_COLORS: ThemeColors = {
   terminalScrollbarHover: "#363636",
 };
 
-export const T3_CHAT_THEME: ThemeDefinition = {
-  id: "t3-chat",
+export const T2_CHAT_THEME: ThemeDefinition = {
+  id: "t2-chat",
   label: "T3 Chat",
   appearance: "light",
   colors: {
@@ -936,7 +936,7 @@ export const IRIS_THEME: ThemeDefinition = {
 };
 
 export const BUILT_IN_THEMES: ReadonlyArray<ThemeDefinition> = [
-  T3_CHAT_THEME,
+  T2_CHAT_THEME,
   GROVE_THEME,
   OCEAN_THEME,
   EMBER_THEME,

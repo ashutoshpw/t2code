@@ -1,4 +1,4 @@
-import type { ComposerTextPaste } from "../../native/T3ComposerEditor.types";
+import type { ComposerTextPaste } from "../../native/T2ComposerEditor.types";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
 import { useAtomValue } from "@effect/atom-react";
@@ -13,7 +13,7 @@ import {
   type ModelSelection,
   type ProviderInteractionMode,
   type RuntimeMode,
-  type ServerConfig as T3ServerConfig,
+  type ServerConfig as T2ServerConfig,
   type UsageLimitsReport,
 } from "@t2code/contracts";
 import {
@@ -158,7 +158,7 @@ export interface ThreadComposerProps {
   readonly selectedThread: EnvironmentThreadShell;
   readonly reportedModelSelection?: ModelSelection | null;
   readonly hasCompactableConversation: boolean;
-  readonly serverConfig: T3ServerConfig | null;
+  readonly serverConfig: T2ServerConfig | null;
   readonly queueCount: number;
   readonly activeThreadBusy: boolean;
   readonly canStopThread: boolean;
@@ -1039,7 +1039,7 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
                 ))}
                 {stripAttachments.length > 3 ? (
                   <View className="size-[30px] items-center justify-center rounded-lg bg-subtle-strong">
-                    <Text className="text-foreground-muted text-2xs font-t3-bold">
+                    <Text className="text-foreground-muted text-2xs font-t2-bold">
                       +{stripAttachments.length - 3}
                     </Text>
                   </View>

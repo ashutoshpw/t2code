@@ -118,7 +118,7 @@ describe("thread outbox", () => {
   it("retains structured context through a persisted offline queue round trip", () => {
     const message: QueuedThreadMessage = {
       ...queuedMessage({ messageId: "context-message", createdAt: "2026-09-06T12:00:00.000Z" }),
-      text: "[Build](t3-context://v1/terminal/build-output)",
+      text: "[Build](t2-context://v1/terminal/build-output)",
       context: {
         version: 1,
         records: [

@@ -19,7 +19,7 @@ const config = RelayConfiguration.RelayConfiguration.of({
     teamId: "team-id",
     keyId: "key-id",
     privateKey: Redacted.make("private-key"),
-    bundleId: "com.t3tools.t3code.dev",
+    bundleId: "com.t2tools.t2code.dev",
   },
   apnsDeliveryJobSigningSecret: Redacted.make("job-secret"),
   clerkSecretKey: Redacted.make("clerk-secret"),
@@ -594,7 +594,7 @@ describe("ManagedEndpointProvider", () => {
       expect(configBody).toMatchObject({
         ingress: [
           {
-            hostname: expect.stringMatching(/^dev-julius-[a-f0-9]{16}\.t3code\.test$/),
+            hostname: expect.stringMatching(/^dev-julius-[a-f0-9]{16}\.t2code\.test$/),
           },
           { service: "http_status:404" },
         ],

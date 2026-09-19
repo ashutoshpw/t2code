@@ -67,7 +67,7 @@ const terminal = {
   text: "Build failed",
 };
 const clipboard = {
-  text: "![Checkout](t3-context://v1/image/image-source) [Build](t3-context://v1/terminal/terminal-source)",
+  text: "![Checkout](t2-context://v1/image/image-source) [Build](t2-context://v1/terminal/terminal-source)",
   fragment: encodeComposerContextFragment({
     version: 1,
     source: { environmentId: EnvironmentId.make("source") },

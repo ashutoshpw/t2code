@@ -1115,7 +1115,7 @@ async function captureIos(
   const metroUrl = `http://${metroHost}:${config.metroPort}?${DEV_CLIENT_LAUNCH_FLAGS}`;
   const scenePath = NodePath.join(
     await iosAppContainer(simulator.udid),
-    "Library/Caches/T3ShowcaseScene",
+    "Library/Caches/T2ShowcaseScene",
   );
   const readyPath = NodePath.join(
     await iosAppContainer(simulator.udid),
