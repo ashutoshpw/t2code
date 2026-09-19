@@ -168,7 +168,7 @@ describe("splitPromptIntoComposerSegments", () => {
   });
 
   it("keeps malformed citation links as editable text", () => {
-    const prompt = "[Assistant quote](t3-citation://v1/env/thread/message?text=missing+metadata)";
+    const prompt = "[Assistant quote](t2-citation://v1/env/thread/message?text=missing+metadata)";
 
     expect(splitPromptIntoComposerSegments(prompt)).toEqual([{ type: "text", text: prompt }]);
   });

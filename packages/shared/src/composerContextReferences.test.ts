@@ -32,7 +32,7 @@ describe("href codec", () => {
       "t2-context://v1/Image/ctx_1",
       "t2-context://v1/image/ctx 1",
       "https://v1/image/ctx_1",
-      "t3-citation://v1/a/b/c",
+      "t2-citation://v1/a/b/c",
     ]) {
       expect(parseComposerContextHref(bad), bad).toBeNull();
     }
