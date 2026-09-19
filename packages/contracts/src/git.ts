@@ -15,7 +15,7 @@ const GIT_LIST_BRANCHES_MAX_LIMIT = 200;
  * upstream prefix is always still recognized so existing threads keep working.
  */
 export const WORKTREE_BRANCH_PREFIX = "t2code";
-export const LEGACY_WORKTREE_BRANCH_PREFIXES = ["t3code"] as const;
+export const LEGACY_WORKTREE_BRANCH_PREFIXES = ["t2code"] as const;
 export const WORKTREE_BRANCH_PREFIX_PATTERN = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 export const MAX_WORKTREE_BRANCH_PREFIX_LENGTH = 32;
 

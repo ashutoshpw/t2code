@@ -142,7 +142,7 @@ describe("DesktopAppIdentity", () => {
         const identity = yield* DesktopAppIdentity.DesktopAppIdentity;
         const userDataPath = yield* identity.resolveUserDataPath;
 
-        assert.equal(userDataPath, "/Users/alice/Library/Application Support/t3code");
+        assert.equal(userDataPath, "/Users/alice/Library/Application Support/t2code");
       }),
     ),
   );

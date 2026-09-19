@@ -77,7 +77,7 @@ const readField = (stdout: string, field: string) => {
 
 // Stands in for the release's self-contained `t3` executable: the install
 // script only asks it for `--version`.
-const SERVER_ENTRY_SOURCE = '#!/bin/sh\necho "t3code wsl runtime test server 0.0.0"\n';
+const SERVER_ENTRY_SOURCE = '#!/bin/sh\necho "t2code wsl runtime test server 0.0.0"\n';
 
 const makeDistroListSpawner = (result: { readonly stdout?: string; readonly exitCode?: number }) =>
   ChildProcessSpawner.make(() =>

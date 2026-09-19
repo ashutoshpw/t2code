@@ -7771,7 +7771,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const parentDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-ws-project-clone-" });
-      const destinationPath = path.join(parentDir, "t3code");
+      const destinationPath = path.join(parentDir, "t2code");
       const projectId = ProjectId.make("project-clone-1");
       const dispatched: Array<string> = [];
       const cloneGate = yield* Deferred.make<void>();
@@ -7818,9 +7818,9 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           Effect.gen(function* () {
             const started = yield* client[WS_METHODS.projectCloneStart]({
               projectId,
-              title: "t3code",
+              title: "t2code",
               createdAt: "2026-01-01T00:00:00.000Z",
-              remoteUrl: "git@github.com:octocat/t3code.git",
+              remoteUrl: "git@github.com:octocat/t2code.git",
               destinationPath,
             });
             assert.equal(started.cwd, destinationPath);

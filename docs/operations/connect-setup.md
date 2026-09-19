@@ -123,7 +123,7 @@ Local signed builds additionally use:
 
 ```dotenv
 T2CODE_APPLE_TEAM_ID=ABC1234567
-T2CODE_MACOS_PROVISIONING_PROFILE=/absolute/path/to/t3code.provisionprofile
+T2CODE_MACOS_PROVISIONING_PROFILE=/absolute/path/to/t2code.provisionprofile
 # Override only when the RP domain differs from the Clerk Frontend API hostname.
 T2CODE_CLERK_PASSKEY_RP_DOMAINS=example.clerk.accounts.dev,clerk.example.com
 ```

@@ -83,7 +83,7 @@ describe("DesktopPreReadyPlatform", () => {
         vi.stubEnv("XDG_DATA_HOME", "/xdg");
         vi.stubEnv("APPIMAGE", "/Applications/current.AppImage");
         getSwitchValueMock.mockReturnValue("");
-        let desktopName = "t3code.desktop";
+        let desktopName = "t2code.desktop";
         let desktopEntry = previousEntry;
         setDesktopNameMock.mockImplementation((name: string) => {
           desktopName = name;

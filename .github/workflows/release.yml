@@ -292,7 +292,7 @@ jobs:
 
       - name: Install browser secret helper build libraries
         run: |
-          sudo sed -i 's|http://|https://|g' /etc/apt/t3code-ubuntu-mirrors.txt /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i 's|http://|https://|g' /etc/apt/t2code-ubuntu-mirrors.txt /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
 
       - name: Test nightly release checks
@@ -330,7 +330,7 @@ jobs:
 
       - name: Test
         env:
-          T2CODE_TRANSFER_BUDGET_REPORT_PATH: ${{ runner.temp }}/t3code-transfer-budget.md
+          T2CODE_TRANSFER_BUDGET_REPORT_PATH: ${{ runner.temp }}/t2code-transfer-budget.md
           T2CODE_TRANSFER_BUDGET_RESULT_PATH: ${{ runner.temp }}/thread-transfer-result.json
         run: vp run --filter @t2code/cli test --shard ${{ matrix.shard }}/${{ strategy.job-total }}
 
@@ -389,24 +389,20 @@ jobs:
         working-directory: infra/relay
         run: |
           set -euo pipefail
-          max_attempts=60
-          for ((attempt=1; attempt<=max_attempts; attempt++)); do
-            if vp run --filter t2code-relay deploy \
-              --stage prod \
-              --read-state \
-              --github-output \
-              --github-env-file "$RUNNER_TEMP/relay-client-tracing.env"; then
-              exit 0
-            fi
-
-            if (( attempt == max_attempts )); then
-              echo "Relay production state was not ready after $max_attempts attempts." >&2
-              exit 1
-            fi
-
-            echo "Relay production state is not ready (attempt $attempt/$max_attempts); retrying in 30 seconds."
-            sleep 30
-          done
+          output="$(npx alchemy state read T2CodeRelay/prod/output --backend cloudflare --log-level error --no-input | sed -n '/^{/,$p')"
+          field() {
+            jq -er --arg key "$1" '.[$key] | if type == "object" then .__redacted__ else . end | select(. != null and . != "")' <<<"$output" \
+              || { echo "Relay stack output is missing $1" >&2; exit 1; }
+          }
+          url="$(field clientTracingUrl)"
+          dataset="$(field clientTracingDataset)"
+          token="$(field clientTracingToken)"
+          echo "::add-mask::$token"
+          {
+            echo "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=$url"
+            echo "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=$dataset"
+            echo "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=$token"
+          } > "$RUNNER_TEMP/relay-client-tracing.env"
 
       - name: Upload relay client tracing config
         uses: actions/upload-artifact@v7
@@ -1269,7 +1265,7 @@ jobs:
           run-install: |
             args:
               - --filter=@t2code/scripts...
-              - --filter=@t2code/oxlint-plugin-t3code...
+              - --filter=@t2code/oxlint-plugin-t2code...
 
       - id: update_versions
         name: Update version strings

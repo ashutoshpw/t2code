@@ -76,7 +76,7 @@ dependencies represented at their boundary rather than mocking internal behavior
 
 ## Deployment
 
-The relay deploys with the Alchemy CLI (`vp run --filter t3code-relay deploy` is `alchemy deploy`
+The relay deploys with the Alchemy CLI (`vp run --filter t2code-relay deploy` is `alchemy deploy`
 in this directory):
 
 ```sh

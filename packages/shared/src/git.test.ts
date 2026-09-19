@@ -17,22 +17,22 @@ import {
 describe("normalizeGitRemoteUrl", () => {
   it("canonicalizes equivalent GitHub remotes across protocol variants", () => {
     expect(normalizeGitRemoteUrl("git@github.com:T2Tools/T2Code.git")).toBe(
-      "github.com/t3tools/t3code",
+      "github.com/t2tools/t2code",
     );
     expect(normalizeGitRemoteUrl("https://github.com/T2Tools/T2Code.git")).toBe(
-      "github.com/t3tools/t3code",
+      "github.com/t2tools/t2code",
     );
     expect(normalizeGitRemoteUrl("ssh://git@github.com/T2Tools/T2Code")).toBe(
-      "github.com/t3tools/t3code",
+      "github.com/t2tools/t2code",
     );
   });
 
   it("preserves nested group paths for providers like GitLab", () => {
     expect(normalizeGitRemoteUrl("git@gitlab.com:T2Tools/platform/T2Code.git")).toBe(
-      "gitlab.com/t3tools/platform/t3code",
+      "gitlab.com/t2tools/platform/t2code",
     );
     expect(normalizeGitRemoteUrl("https://gitlab.com/T2Tools/platform/T2Code.git")).toBe(
-      "gitlab.com/t3tools/platform/t3code",
+      "gitlab.com/t2tools/platform/t2code",
     );
   });
 
@@ -56,22 +56,22 @@ describe("normalizeGitRemoteUrl", () => {
 
   it("gives an Azure DevOps repository the same key over SSH as over HTTPS", () => {
     expect(normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T2Tools/Platform/T2Code")).toBe(
-      "dev.azure.com/t3tools/platform/_git/t3code",
+      "dev.azure.com/t2tools/platform/_git/t2code",
     );
     expect(normalizeGitRemoteUrl("ssh://git@ssh.dev.azure.com:22/v3/T2Tools/Platform/T2Code")).toBe(
-      "dev.azure.com/t3tools/platform/_git/t3code",
+      "dev.azure.com/t2tools/platform/_git/t2code",
     );
     expect(
       normalizeGitRemoteUrl("https://T2Tools@dev.azure.com/T2Tools/Platform/_git/T2Code"),
-    ).toBe("dev.azure.com/t3tools/platform/_git/t3code");
+    ).toBe("dev.azure.com/t2tools/platform/_git/t2code");
   });
 
   it("puts the organization back in the host on the name dev.azure.com replaced", () => {
     expect(
       normalizeGitRemoteUrl("T2Tools@vs-ssh.visualstudio.com:v3/T2Tools/Platform/T2Code"),
-    ).toBe("t2tools.visualstudio.com/platform/_git/t3code");
+    ).toBe("t2tools.visualstudio.com/platform/_git/t2code");
     expect(normalizeGitRemoteUrl("https://T2Tools.visualstudio.com/Platform/_git/T2Code")).toBe(
-      "t2tools.visualstudio.com/platform/_git/t3code",
+      "t2tools.visualstudio.com/platform/_git/t2code",
     );
   });
 
@@ -79,10 +79,10 @@ describe("normalizeGitRemoteUrl", () => {
     // Not `v3`, and not four segments: rewriting either would invent a repository that the web
     // spelling has no name for, so the remote stands as it arrived.
     expect(normalizeGitRemoteUrl("git@ssh.dev.azure.com:v4/T2Tools/Platform/T2Code")).toBe(
-      "ssh.dev.azure.com/v4/t3tools/platform/t3code",
+      "ssh.dev.azure.com/v4/t2tools/platform/t2code",
     );
     expect(normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T2Tools/T2Code")).toBe(
-      "ssh.dev.azure.com/v3/t3tools/t3code",
+      "ssh.dev.azure.com/v3/t2tools/t2code",
     );
   });
 });
@@ -95,12 +95,12 @@ describe("parseOriginUrlFromGitConfig", () => {
       '[remote "upstream"]',
       "\turl = https://github.com/other/repo.git",
       '[remote "origin"]',
-      "\turl = git@github.com:pingdotgg/t3code.git",
+      "\turl = git@github.com:pingdotgg/t2code.git",
       "\tfetch = +refs/heads/*:refs/remotes/origin/*",
       '[branch "main"]',
       "\tremote = origin",
     ].join("\n");
-    expect(parseOriginUrlFromGitConfig(config)).toBe("git@github.com:pingdotgg/t3code.git");
+    expect(parseOriginUrlFromGitConfig(config)).toBe("git@github.com:pingdotgg/t2code.git");
   });
 
   it("strips inline comments and quotes from the url value", () => {
@@ -214,7 +214,7 @@ describe("isTemporaryWorktreeBranch", () => {
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef-extra`)).toBe(false);
   });
 
-  it("still recognizes the legacy t3code prefix without configuration", () => {
+  it("still recognizes the legacy t2code prefix without configuration", () => {
     expect(isTemporaryWorktreeBranch("t2code/deadbeef")).toBe(true);
     expect(isTemporaryWorktreeBranch("t2code/f4ae4e0e-f971-4d48-b4f2-9cf0aa54ab12")).toBe(true);
     expect(isTemporaryWorktreeBranch("t2code/feature/demo")).toBe(false);
@@ -229,7 +229,7 @@ describe("isTemporaryWorktreeBranch", () => {
     // A custom prefix equal to a default never duplicates or displaces.
     expect(temporaryWorktreeBranchPrefixes(WORKTREE_BRANCH_PREFIX)).toEqual([
       WORKTREE_BRANCH_PREFIX,
-      "t3code",
+      "t2code",
     ]);
   });
 

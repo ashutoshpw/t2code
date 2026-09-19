@@ -75,15 +75,15 @@ describe("load balancing shared project machines", () => {
   });
 });
 const repositoryIdentity = {
-  canonicalKey: "github.com/t3tools/t3code",
+  canonicalKey: "github.com/t2tools/t2code",
   locator: {
     source: "git-remote" as const,
     remoteName: "upstream",
-    remoteUrl: "https://github.com/t3tools/t3code.git",
+    remoteUrl: "https://github.com/t2tools/t2code.git",
   },
   provider: "github",
-  owner: "t3tools",
-  name: "t3code",
+  owner: "t2tools",
+  name: "t2code",
   displayName: "T3 Code",
 };
 
@@ -119,18 +119,18 @@ function settings(
 describe("buildProjectGroups", () => {
   it("preserves every physical clone as a selectable member in repository modes", () => {
     const projects = [
-      makeProject("t3code", "/work/t3code"),
-      makeProject("t3code-2", "/work/t3code-2"),
-      makeProject("t3code-3", "/work/t3code-3"),
+      makeProject("t2code", "/work/t2code"),
+      makeProject("t2code-2", "/work/t2code-2"),
+      makeProject("t2code-3", "/work/t2code-3"),
     ];
 
     for (const mode of ["repository", "repository_path"] as const) {
       const groups = buildProjectGroups({ projects, settings: settings(mode) });
       expect(groups).toHaveLength(1);
       expect(groups[0]?.members.map((member) => member.project.id)).toEqual([
-        "t3code",
-        "t3code-2",
-        "t3code-3",
+        "t2code",
+        "t2code-2",
+        "t2code-3",
       ]);
       expect(groups[0]?.memberProjectRefs).toHaveLength(3);
     }
@@ -138,8 +138,8 @@ describe("buildProjectGroups", () => {
 
   it("uses a shared custom title as the repository group's label", () => {
     const projects = [
-      makeProject("first", "/work/t3code", { title: "Custom project" }),
-      makeProject("second", "/work/t3code-2", { title: "Custom project" }),
+      makeProject("first", "/work/t2code", { title: "Custom project" }),
+      makeProject("second", "/work/t2code-2", { title: "Custom project" }),
     ];
 
     expect(buildProjectGroups({ projects, settings: settings("repository") })[0]?.label).toBe(
@@ -149,8 +149,8 @@ describe("buildProjectGroups", () => {
 
   it("keeps the repository label when shared titles match its repository name", () => {
     const projects = [
-      makeProject("first", "/work/t3code", { title: "t3code" }),
-      makeProject("second", "/work/t3code-2", { title: "t3code" }),
+      makeProject("first", "/work/t2code", { title: "t2code" }),
+      makeProject("second", "/work/t2code-2", { title: "t2code" }),
     ];
 
     expect(buildProjectGroups({ projects, settings: settings("repository") })[0]?.label).toBe(
@@ -160,21 +160,21 @@ describe("buildProjectGroups", () => {
 
   it("keeps physical clones in separate groups when requested", () => {
     const projects = [
-      makeProject("t3code", "/work/t3code"),
-      makeProject("t3code-2", "/work/t3code-2"),
-      makeProject("t3code-3", "/work/t3code-3"),
+      makeProject("t2code", "/work/t2code"),
+      makeProject("t2code-2", "/work/t2code-2"),
+      makeProject("t2code-3", "/work/t2code-3"),
     ];
 
     const groups = buildProjectGroups({ projects, settings: settings("separate") });
     expect(groups).toHaveLength(3);
     expect(groups.flatMap((group) => group.members)).toHaveLength(3);
-    expect(groups.map((group) => group.label)).toEqual(["t3code", "t3code-2", "t3code-3"]);
+    expect(groups.map((group) => group.label)).toEqual(["t2code", "t2code-2", "t2code-3"]);
   });
 
   it("applies a physical-project override without dropping its siblings", () => {
-    const first = makeProject("t3code", "/work/t3code");
-    const second = makeProject("t3code-2", "/work/t3code-2");
-    const third = makeProject("t3code-3", "/work/t3code-3");
+    const first = makeProject("t2code", "/work/t2code");
+    const second = makeProject("t2code-2", "/work/t2code-2");
+    const third = makeProject("t2code-3", "/work/t2code-3");
     const groups = buildProjectGroups({
       projects: [first, second, third],
       settings: settings("repository", {
@@ -184,14 +184,14 @@ describe("buildProjectGroups", () => {
 
     expect(groups).toHaveLength(2);
     expect(groups.flatMap((group) => group.members.map((member) => member.project.id))).toEqual([
-      "t3code",
-      "t3code-3",
-      "t3code-2",
+      "t2code",
+      "t2code-3",
+      "t2code-2",
     ]);
   });
 
   it("dedupes stale registrations at one physical path using the freshest project", () => {
-    const stale = makeProject("stale", "/work/t3code", {
+    const stale = makeProject("stale", "/work/t2code", {
       repositoryIdentity: null,
       updatedAt: "2026-07-01T00:00:00.000Z",
     });
@@ -210,14 +210,14 @@ describe("buildProjectGroups", () => {
   });
 
   it("uses repository identity from a duplicate registration when the winner lacks it", () => {
-    const identified = makeProject("identified", "/work/t3code", {
+    const identified = makeProject("identified", "/work/t2code", {
       updatedAt: "2026-07-01T00:00:00.000Z",
     });
     const freshUnidentified = makeProject("fresh", "/work/t2code/", {
       repositoryIdentity: null,
       updatedAt: "2026-07-02T00:00:00.000Z",
     });
-    const sibling = makeProject("sibling", "/work/t3code-2");
+    const sibling = makeProject("sibling", "/work/t2code-2");
 
     const groups = buildProjectGroups({
       projects: [identified, freshUnidentified, sibling],
@@ -230,18 +230,18 @@ describe("buildProjectGroups", () => {
   it("uses the freshest winner's repository identity when stale duplicates disagree", () => {
     const staleIdentity = {
       ...repositoryIdentity,
-      canonicalKey: "github.com/t3tools/old-repository",
+      canonicalKey: "github.com/t2tools/old-repository",
       name: "old-repository",
       displayName: "Old Repository",
     };
-    const stale = makeProject("stale", "/work/t3code", {
+    const stale = makeProject("stale", "/work/t2code", {
       repositoryIdentity: staleIdentity,
       updatedAt: "2026-07-01T00:00:00.000Z",
     });
     const fresh = makeProject("fresh", "/work/t2code/", {
       updatedAt: "2026-07-02T00:00:00.000Z",
     });
-    const sibling = makeProject("sibling", "/work/t3code-2");
+    const sibling = makeProject("sibling", "/work/t2code-2");
 
     const groups = buildProjectGroups({
       projects: [stale, fresh, sibling],
@@ -254,22 +254,22 @@ describe("buildProjectGroups", () => {
   it("uses the freshest identity-bearing duplicate when the winner lacks identity", () => {
     const staleIdentity = {
       ...repositoryIdentity,
-      canonicalKey: "github.com/t3tools/old-repository",
+      canonicalKey: "github.com/t2tools/old-repository",
       name: "old-repository",
       displayName: "Old Repository",
     };
-    const staleIdentified = makeProject("stale-identified", "/work/t3code", {
+    const staleIdentified = makeProject("stale-identified", "/work/t2code", {
       repositoryIdentity: staleIdentity,
       updatedAt: "2026-07-01T00:00:00.000Z",
     });
     const freshIdentified = makeProject("fresh-identified", "/work/t2code/", {
       updatedAt: "2026-07-02T00:00:00.000Z",
     });
-    const winner = makeProject("winner", "/work/t3code", {
+    const winner = makeProject("winner", "/work/t2code", {
       repositoryIdentity: null,
       updatedAt: "2026-07-03T00:00:00.000Z",
     });
-    const sibling = makeProject("sibling", "/work/t3code-2");
+    const sibling = makeProject("sibling", "/work/t2code-2");
 
     const groups = buildProjectGroups({
       projects: [staleIdentified, freshIdentified, winner, sibling],

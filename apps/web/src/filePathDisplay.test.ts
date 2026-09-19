@@ -7,7 +7,7 @@ describe("formatWorkspaceRelativePath", () => {
     expect(
       formatWorkspaceRelativePath(
         "C:/Users/mike/dev-stuff/t2code/apps/web/src/session-logic.ts:501",
-        "C:/Users/mike/dev-stuff/t3code",
+        "C:/Users/mike/dev-stuff/t2code",
       ),
     ).toBe("t2code/apps/web/src/session-logic.ts:501");
   });
@@ -16,7 +16,7 @@ describe("formatWorkspaceRelativePath", () => {
     expect(
       formatWorkspaceRelativePath(
         "apps/web/src/session-logic.ts:501",
-        "C:/Users/mike/dev-stuff/t3code",
+        "C:/Users/mike/dev-stuff/t2code",
       ),
     ).toBe("t2code/apps/web/src/session-logic.ts:501");
   });
@@ -25,7 +25,7 @@ describe("formatWorkspaceRelativePath", () => {
     expect(
       formatWorkspaceRelativePath(
         "t2code/apps/web/src/session-logic.ts:501",
-        "C:/Users/mike/dev-stuff/t3code",
+        "C:/Users/mike/dev-stuff/t2code",
       ),
     ).toBe("t2code/apps/web/src/session-logic.ts:501");
   });
@@ -34,7 +34,7 @@ describe("formatWorkspaceRelativePath", () => {
     expect(
       formatWorkspaceRelativePath(
         "/C:/Users/mike/dev-stuff/t2code/apps/web/src/session-logic.ts:501:9",
-        "C:/Users/mike/dev-stuff/t3code",
+        "C:/Users/mike/dev-stuff/t2code",
       ),
     ).toBe("t2code/apps/web/src/session-logic.ts:501:9");
   });
