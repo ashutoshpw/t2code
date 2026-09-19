@@ -71,7 +71,7 @@ Linked worktrees default to their own `.t2/userdata`, even when `T2CODE_HOME` is
 The main checkout defaults to `~/.t2/dev`. An explicit `--home-dir` wins in both cases.
 The first start in a worktree seeds its empty database from a read-only copy of
 `~/.t2/userdata`; `--no-seed` or `T2CODE_DEV_SEED=0` skips that.
-Never run a development server against the live `~/.t3/userdata`.
+Never run a development server against the live `~/.t2/userdata`.
 See [test data](../../AGENTS.md#test-data) for copying a consistent database snapshot.
 
 Read ports from the `[dev-runner]` output. Worktrees derive stable preferences from their paths,

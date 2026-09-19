@@ -83,7 +83,7 @@ import {
   supportsServerUpdateThreadContinuation,
 } from "~/versionSkew";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
-import { RemoveT3ConnectEnvironmentDialog } from "../clerk/RemoveT3ConnectEnvironmentDialog";
+import { RemoveT2ConnectEnvironmentDialog } from "../clerk/RemoveT2ConnectEnvironmentDialog";
 import { authEnvironment } from "~/state/auth";
 import { environmentCatalog } from "~/connection/catalog";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
@@ -1379,8 +1379,8 @@ export function ConnectionsSettings() {
     }
   };
 
-  // Removing a T3 Connect route preserves account registration; use a separate dialog pointing to
-  // deregistration.
+  // T2 Connect environments get their own dialog: removing one here leaves its
+  // account registration, so it points to where that can be deregistered.
   const [pendingT3ConnectRemoval, setPendingT3ConnectRemoval] =
     useState<EnvironmentPresentation | null>(null);
   const handleRemoveSavedBackend = async (environment: EnvironmentPresentation) => {
@@ -2012,7 +2012,7 @@ export function ConnectionsSettings() {
                 <AlertDialogDescription>
                   {pendingDesktopServerExposureMode === "network-accessible"
                     ? "Let your other devices connect to T2 Code over the network. Pair devices to give them access. T2 Code will restart."
-                    : "Devices connected over your local network will disconnect. Existing tunnels, such as T3 Connect or Tailscale HTTPS, keep working. T2 Code will restart."}
+                    : "Devices connected over your local network will disconnect. Existing tunnels, such as T2 Connect or Tailscale HTTPS, keep working. T2 Code will restart."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -2335,7 +2335,7 @@ export function ConnectionsSettings() {
         />
       </SettingsSection>
       {hasCloudPublicConfig() ? (
-        <RemoveT3ConnectEnvironmentDialog
+        <RemoveT2ConnectEnvironmentDialog
           environmentLabel={pendingT3ConnectRemoval?.label ?? null}
           onCancel={() => setPendingT3ConnectRemoval(null)}
           onConfirm={() => {

@@ -372,7 +372,7 @@ export function ComposerToolbarButton(props: {
       {props.label ? (
         <Text
           className={cn(
-            "shrink text-center text-sm font-t3-bold",
+            "shrink text-center text-sm font-t2-bold",
             variant === "primary"
               ? props.disabled
                 ? "text-foreground-muted"

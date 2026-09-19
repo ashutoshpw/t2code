@@ -814,7 +814,7 @@ class EnvironmentConnectHttpApi extends HttpApiGroup.make("connect")
     }).middleware(EnvironmentAuthenticatedAuth),
   )
   .add(
-    HttpApiEndpoint.post("health", "/api/t3-connect/health", {
+    HttpApiEndpoint.post("health", "/api/t2-connect/health", {
       payload: RelayCloudEnvironmentHealthRequest,
       success: RelayEnvironmentHealthResponse,
       error: EnvironmentHttpCloudErrors,
@@ -828,7 +828,7 @@ class EnvironmentConnectHttpApi extends HttpApiGroup.make("connect")
     }),
   )
   .add(
-    HttpApiEndpoint.post("t3MintCredential", "/api/t3-connect/mint-credential", {
+    HttpApiEndpoint.post("t2MintCredential", "/api/t2-connect/mint-credential", {
       payload: RelayCloudMintCredentialRequest,
       success: RelayEnvironmentMintResponse,
       error: EnvironmentHttpCloudErrors,

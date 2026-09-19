@@ -53,7 +53,7 @@ function entry(
     provider: SourceControlProviderKind.make("github"),
     host: "github.com",
     projectId: "project-1",
-    projectTitle: "t3code",
+    projectTitle: "t2code",
     repository: "pingdotgg/t3code",
     title: "Add the pull requests page",
     url: `https://github.com/pingdotgg/t3code/pull/${overrides.number}`,

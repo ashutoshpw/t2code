@@ -249,8 +249,12 @@ const runWslShell = (
 
 const shellQuote = (value: string): string => `'${value.replaceAll("'", "'\\''")}'`;
 
-const WSL_RUNTIME_READY_MARKER = ".t3code-wsl-runtime-ready";
-const WSL_RUNTIME_SELECTED_MARKER = ".t3code-wsl-runtime-selected";
+// Holds the sha256 of the runtime's `t3` executable, written when the install
+// promotes a verified tree. Presence alone only says an install once finished
+// here; the digest is what lets a later launch prove the entry still is what
+// that install wrote.
+const WSL_RUNTIME_READY_MARKER = ".t2code-wsl-runtime-ready";
+const WSL_RUNTIME_SELECTED_MARKER = ".t2code-wsl-runtime-selected";
 const WSL_RUNTIME_SELECTION_GRACE_MINUTES = 5;
 
 const sanitizeWslRuntimeId = (value: string): string => value.replace(/[^A-Za-z0-9._-]/g, "_");
@@ -263,7 +267,7 @@ export const buildWslRuntimeInstallScript = (
   const safeRuntimeId = sanitizeWslRuntimeId(runtimeId);
   return [
     "set -eu",
-    'runtime_parent="$HOME/.t3/wsl-runtime"',
+    'runtime_parent="$HOME/.t2/wsl-runtime"',
     `runtime_root="$runtime_parent/${safeRuntimeId}"`,
     `ready_marker="$runtime_root/${WSL_RUNTIME_READY_MARKER}"`,
     "runtime_entry_runs() {",
@@ -355,7 +359,7 @@ export const buildWslRuntimePruneScript = (runtimeId: string): string => {
   const safeRuntimeId = sanitizeWslRuntimeId(runtimeId);
   return [
     "set -eu",
-    'runtime_parent="$HOME/.t3/wsl-runtime"',
+    'runtime_parent="$HOME/.t2/wsl-runtime"',
     `current_runtime="$runtime_parent/${safeRuntimeId}"`,
     '[ -d "$runtime_parent" ] || exit 0',
     // Serialize pruning so backends cannot select and delete different previous caches.
@@ -406,7 +410,7 @@ export const buildWslRuntimeInvalidateScript = (runtimeId: string): string => {
   const safeRuntimeId = sanitizeWslRuntimeId(runtimeId);
   return [
     "set -eu",
-    `rm -f "$HOME/.t3/wsl-runtime/${safeRuntimeId}/${WSL_RUNTIME_READY_MARKER}"`,
+    `rm -f "$HOME/.t2/wsl-runtime/${safeRuntimeId}/${WSL_RUNTIME_READY_MARKER}"`,
   ].join("\n");
 };
 

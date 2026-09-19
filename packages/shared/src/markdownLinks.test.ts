@@ -36,7 +36,7 @@ describe("inlineCodeFilePathCandidate", () => {
 describe("parseMarkdownFileLink", () => {
   it.each([
     ["C:%5Crepo%5Cimage.png", "C:\\repo\\image.png"],
-    ["</D:/Programme/t3code/ChatMarkdown.tsx:1>", "D:/Programme/t3code/ChatMarkdown.tsx"],
+    ["</D:/Programme/t2code/ChatMarkdown.tsx:1>", "D:/Programme/t2code/ChatMarkdown.tsx"],
     ["file://localhost/home/me/notes.md", "/home/me/notes.md"],
   ])("recognizes %s as a file", (href, path) => {
     expect(parseMarkdownFileLink(href)?.path).toBe(path);
@@ -79,6 +79,23 @@ describe("workspaceRelativeFilePath", () => {
   it.each([
     ["/repo/project", "/repo/project", "."],
     ["C:/", "c:/", "."],
+    ["/repo/project/src/main.ts", "/repo/project", "src/main.ts"],
+    ["/repo/project/src/main.ts", "/repo/project/", "src/main.ts"],
+    ["C:\\Users\\mike\\t3code\\apps\\web\\a.ts", "C:/Users/mike/t3code", "apps/web/a.ts"],
+    ["/C:/Users/mike/t2code/apps/web/a.ts", "C:/Users/mike/t3code", "apps/web/a.ts"],
+    ["/Repo/Project/src/main.ts", "/repo/project", null],
+    ["/tmp/case/project/probe.txt", "/tmp/case/Project", null],
+    ["//tmp/case/project/probe.txt", "//tmp/case/Project", null],
+    ["/tmp/case/Project/probe.txt", "/tmp/case/Project", "probe.txt"],
+    ["C:/USERS/mike/t2code/main.ts", "c:/users/MIKE/t3code", "main.ts"],
+    ["/C:/USERS/mike/t2code/main.ts", "/c:/users/MIKE/t3code", "main.ts"],
+    ["\\\\server\\share\\PROJECT\\main.ts", "\\\\Server\\Share\\Project", "main.ts"],
+    ["/tmp/repo/file.ts", "/", "tmp/repo/file.ts"],
+    ["C:/Users/MIKE/main.ts", "c:/", "Users/MIKE/main.ts"],
+    ["\\\\server\\SHARE\\file.ts", "\\\\Server\\Share\\", "file.ts"],
+    ["/tmp/repo/file.ts ", "/tmp/repo", "file.ts "],
+    ["/tmp/report.ts", "/repo/project", null],
+    ["/repo/project-two/a.ts", "/repo/project", null],
     ["/repo/project/a.ts", undefined, null],
   ])("relates %s to %s", (path, workspaceRoot, relativePath) => {
     expect(workspaceRelativeFilePath(path, workspaceRoot)).toBe(relativePath);

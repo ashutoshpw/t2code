@@ -109,7 +109,7 @@ const withHarness = <A, E, R>(
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-      prefix: "t3-desktop-backend-config-test-",
+      prefix: "t2-desktop-backend-config-test-",
     });
 
     return yield* effect.pipe(
@@ -156,7 +156,7 @@ const withPackagedWslHarness = <A, E, R>(
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-      prefix: "t3-desktop-backend-config-test-",
+      prefix: "t2-desktop-backend-config-test-",
     });
     const archivePath = path.join(baseDir, "wsl-runtime.tar.gz");
     const hashPath = `${archivePath}.sha256`;
@@ -245,7 +245,7 @@ describe("DesktopBackendConfiguration", () => {
         assert.equal(first.bootstrap.noBrowser, true);
         assert.equal(first.bootstrap.port, 4888);
         assert.equal(first.bootstrap.host, "0.0.0.0");
-        assert.equal(first.bootstrap.t3Home, environment.baseDir);
+        assert.equal(first.bootstrap.t2Home, environment.baseDir);
         assert.equal(first.bootstrap.tailscaleServeEnabled, true);
         assert.equal(first.bootstrap.tailscaleServePort, 8443);
         assert.match(first.bootstrap.desktopBootstrapSecret ?? "", /^[0-9a-f]{64}$/i);
@@ -273,7 +273,7 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
       const resourcesPath = path.join(baseDir, "resources");
 
@@ -319,7 +319,7 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
       const entryPath = path.join(baseDir, "apps/server/dist/bin.mjs");
       yield* fileSystem.makeDirectory(path.dirname(entryPath), { recursive: true });
@@ -382,7 +382,7 @@ describe("DesktopBackendConfiguration", () => {
     }> = [];
     const observedProbeRoots: string[] = [];
     let legacyCleanupCount = 0;
-    const linuxAppRoot = "/home/test/.t3/wsl-runtime/1.2.3-x64";
+    const linuxAppRoot = "/home/test/.t2/wsl-runtime/1.2.3-x64";
     const resolvedPath = "/home/test/.local/bin:/usr/bin:/bin";
 
     return withPackagedWslHarness(
@@ -518,7 +518,7 @@ describe("DesktopBackendConfiguration", () => {
 
   it.effect("resolveWsl retires a staged runtime whose executable does not start", () => {
     const archiveHash = "c".repeat(64);
-    const stagedAppRoot = `/home/test/.t3/wsl-runtime/sha256-${archiveHash}`;
+    const stagedAppRoot = `/home/test/.t2/wsl-runtime/sha256-${archiveHash}`;
     const observedProbeRoots: string[] = [];
     const observedNodePtyRoots: string[] = [];
     const invalidatedRuntimeIds: string[] = [];
@@ -560,7 +560,7 @@ describe("DesktopBackendConfiguration", () => {
   });
 
   it.effect("resolveWsl keeps WSL retryable when the mounted fallback fails transiently", () => {
-    const stagedAppRoot = "/home/test/.t3/wsl-runtime/cache";
+    const stagedAppRoot = "/home/test/.t2/wsl-runtime/cache";
     const invalidatedRuntimeIds: string[] = [];
     return withPackagedWslHarness(
       {
@@ -600,7 +600,7 @@ describe("DesktopBackendConfiguration", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "t2-desktop-backend-config-test-",
         });
         const entryPath = path.join(baseDir, "apps/server/dist/bin.mjs");
         yield* fileSystem.makeDirectory(path.dirname(entryPath), { recursive: true });
@@ -676,6 +676,227 @@ describe("DesktopBackendConfiguration", () => {
         assert.equal(wsl.bootstrap.desktopBootstrapToken, primary.bootstrap.desktopBootstrapToken);
       }),
     ),
+  );
+
+  it.effect("resolvePrimary surfaces persisted backend observability endpoints", () =>
+    withHarness(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const environment = yield* DesktopEnvironment.DesktopEnvironment;
+        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
+
+        yield* fileSystem.makeDirectory(environment.path.dirname(environment.serverSettingsPath), {
+          recursive: true,
+        });
+        yield* fileSystem.writeFileString(
+          environment.serverSettingsPath,
+          yield* encodePersistedServerObservabilitySettingsDocument({
+            observability: {
+              otlpTracesUrl: " http://127.0.0.1:4318/v1/traces ",
+              otlpMetricsUrl: " http://127.0.0.1:4318/v1/metrics ",
+              otlpLogsUrl: " http://127.0.0.1:4318/v1/logs ",
+            },
+          }),
+        );
+
+        const config = yield* configuration.resolvePrimary;
+        assert.equal(config.bootstrap.otlpTracesUrl, "http://127.0.0.1:4318/v1/traces");
+        assert.equal(config.bootstrap.otlpMetricsUrl, "http://127.0.0.1:4318/v1/metrics");
+        assert.equal(config.bootstrap.otlpLogsUrl, "http://127.0.0.1:4318/v1/logs");
+      }),
+    ),
+  );
+
+  it.effect("resolvePrimary omits backend observability endpoints when settings are missing", () =>
+    withHarness(
+      Effect.gen(function* () {
+        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
+        const config = yield* configuration.resolvePrimary;
+
+        assert.isUndefined(config.bootstrap.otlpTracesUrl);
+        assert.isUndefined(config.bootstrap.otlpMetricsUrl);
+        assert.isUndefined(config.bootstrap.otlpLogsUrl);
+      }),
+    ),
+  );
+
+  it.effect("resolveWsl carries environment-configured observability endpoints", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-desktop-backend-config-test-",
+      });
+
+      yield* Effect.gen(function* () {
+        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
+        const config = yield* configuration.resolveWsl({ port: 5050, distro: null });
+
+        assert.equal(config.bootstrap.otlpTracesUrl, "http://127.0.0.1:4318/v1/traces");
+        assert.equal(config.bootstrap.otlpMetricsUrl, "http://127.0.0.1:4318/v1/metrics");
+        assert.equal(config.bootstrap.otlpLogsUrl, "http://127.0.0.1:4318/v1/logs");
+        assert.notInclude(config.env.WSLENV ?? "", "T2CODE_OTLP_LOGS_URL");
+      }).pipe(
+        Effect.provide(
+          layerBackendConfiguration().pipe(
+            Layer.provideMerge(layerServerExposure),
+            Layer.provideMerge(DesktopAppSettings.layerTest()),
+            Layer.provideMerge(DesktopWslServerTree.layerTest()),
+            Layer.provideMerge(
+              DesktopWslEnvironment.layerTest({
+                isAvailable: true,
+                windowsToWslPath: () => Option.some("/mnt/c/repo/apps/server/src/index.ts"),
+                getDistroIp: () => Option.some("172.27.0.99"),
+              }),
+            ),
+            Layer.provideMerge(
+              layerEnvironment(baseDir, {
+                platform: "win32",
+                otlpTracesUrl: " http://127.0.0.1:4318/v1/traces ",
+                otlpMetricsUrl: " http://127.0.0.1:4318/v1/metrics ",
+                otlpLogsUrl: " http://127.0.0.1:4318/v1/logs ",
+              }),
+            ),
+          ),
+        ),
+      );
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("environment observability endpoints win over the persisted settings file", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-desktop-backend-config-test-",
+      });
+
+      yield* Effect.gen(function* () {
+        const environment = yield* DesktopEnvironment.DesktopEnvironment;
+        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
+
+        yield* fileSystem.makeDirectory(environment.path.dirname(environment.serverSettingsPath), {
+          recursive: true,
+        });
+        yield* fileSystem.writeFileString(
+          environment.serverSettingsPath,
+          yield* encodePersistedServerObservabilitySettingsDocument({
+            observability: {
+              otlpTracesUrl: "http://persisted:4318/v1/traces",
+              otlpMetricsUrl: "http://persisted:4318/v1/metrics",
+              otlpLogsUrl: "http://persisted:4318/v1/logs",
+            },
+          }),
+        );
+
+        const config = yield* configuration.resolvePrimary;
+        assert.equal(config.bootstrap.otlpLogsUrl, "http://env:4318/v1/logs");
+        assert.equal(config.bootstrap.otlpTracesUrl, "http://persisted:4318/v1/traces");
+        assert.equal(config.bootstrap.otlpMetricsUrl, "http://persisted:4318/v1/metrics");
+      }).pipe(
+        Effect.provide(
+          layerBackendConfiguration().pipe(
+            Layer.provideMerge(layerServerExposure),
+            Layer.provideMerge(DesktopAppSettings.layerTest()),
+            Layer.provideMerge(DesktopWslServerTree.layerTest()),
+            Layer.provideMerge(DesktopWslEnvironment.layerTest()),
+            Layer.provideMerge(
+              layerEnvironment(baseDir, { otlpLogsUrl: "http://env:4318/v1/logs" }),
+            ),
+          ),
+        ),
+      );
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("logs structured context when persisted observability settings cannot be read", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t2-desktop-backend-config-test-",
+      });
+      const settingsPath = path.join(baseDir, "userdata", "settings.json");
+      const cause = PlatformError.systemError({
+        _tag: "PermissionDenied",
+        module: "FileSystem",
+        method: "readFileString",
+        pathOrDescriptor: settingsPath,
+      });
+      const messages: Array<unknown> = [];
+      const logger = Logger.make(({ message }) => {
+        messages.push(message);
+      });
+      const layerFailingFileSystem = Layer.succeed(
+        FileSystem.FileSystem,
+        FileSystem.makeNoop({
+          readFileString: () => Effect.fail(cause),
+        }),
+      );
+
+      const config = yield* Effect.gen(function* () {
+        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
+        return yield* configuration.resolvePrimary;
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            layerBackendConfiguration().pipe(
+              Layer.provideMerge(layerServerExposure),
+              Layer.provideMerge(DesktopAppSettings.layerTest()),
+              Layer.provideMerge(DesktopWslServerTree.layerTest()),
+              Layer.provideMerge(DesktopWslEnvironment.layerTest()),
+              Layer.provideMerge(layerEnvironment(baseDir)),
+              Layer.provideMerge(layerFailingFileSystem),
+            ),
+            Logger.layer([logger], { mergeWithExisting: false }),
+          ),
+        ),
+      );
+
+      assert.isUndefined(config.bootstrap.otlpTracesUrl);
+      assert.isUndefined(config.bootstrap.otlpMetricsUrl);
+      assert.isUndefined(config.bootstrap.otlpLogsUrl);
+
+      const error = messages
+        .flatMap((message) => (Array.isArray(message) ? message : [message]))
+        .find(isDesktopBackendObservabilitySettingsReadError);
+      assert.isDefined(error);
+      assert.equal(error.settingsPath, settingsPath);
+      assert.equal(error.cause, cause);
+      assert.equal(
+        error.message,
+        `Failed to read persisted backend observability settings at ${settingsPath}.`,
+      );
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("resolvePrimary captures backend output in dev so child logs can be persisted", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t2-desktop-backend-config-test-",
+      });
+
+      yield* Effect.gen(function* () {
+        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
+        const config = yield* configuration.resolvePrimary;
+        assert.equal(config.captureOutput, true);
+        assert.notInclude(config.args, "--require");
+      }).pipe(
+        Effect.provide(
+          layerBackendConfiguration().pipe(
+            Layer.provideMerge(layerServerExposure),
+            Layer.provideMerge(DesktopAppSettings.layerTest()),
+            Layer.provideMerge(DesktopWslServerTree.layerTest()),
+            Layer.provideMerge(DesktopWslEnvironment.layerTest()),
+            Layer.provideMerge(
+              layerEnvironment(baseDir, {
+                isPackaged: false,
+                devServerUrl: "http://127.0.0.1:5733",
+              }),
+            ),
+          ),
+        ),
+      );
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 
   it.effect("resolveWsl carries the kill switch into the distro", () =>
@@ -795,7 +1016,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
 
       const previousWslEnv = process.env.WSLENV;
@@ -863,7 +1084,7 @@ describe("DesktopBackendConfiguration", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "t2-desktop-backend-config-test-",
         });
 
         yield* Effect.gen(function* () {
@@ -872,7 +1093,7 @@ describe("DesktopBackendConfiguration", () => {
           const config = yield* configuration.resolvePrimary;
 
           assert.equal(config.executablePath, process.execPath);
-          assert.equal(config.bootstrap.t3Home, environment.baseDir);
+          assert.equal(config.bootstrap.t2Home, environment.baseDir);
           assert.isTrue(Option.isNone(config.preflightFailure));
         }).pipe(
           Effect.provide(
@@ -900,7 +1121,7 @@ describe("DesktopBackendConfiguration", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "t2-desktop-backend-config-test-",
         });
 
         yield* Effect.gen(function* () {
@@ -941,7 +1162,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -975,12 +1196,12 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
       const resourcesPath = path.join(baseDir, "resources");
       const dirname = `${resourcesPath}/app.asar/apps/desktop/dist-electron`;
-      const embeddedMonitorPath = `${resourcesPath}/app.asar/apps/desktop/prod-resources/resource-monitor/t3-resource-monitor`;
-      const monitorPath = path.join(resourcesPath, "resource-monitor/t3-resource-monitor");
+      const embeddedMonitorPath = `${resourcesPath}/app.asar/apps/desktop/prod-resources/resource-monitor/t2-resource-monitor`;
+      const monitorPath = path.join(resourcesPath, "resource-monitor/t2-resource-monitor");
       yield* fileSystem.makeDirectory(
         `${resourcesPath}/app.asar/apps/desktop/prod-resources/resource-monitor`,
         { recursive: true },
@@ -1020,7 +1241,7 @@ describe("DesktopBackendConfiguration", () => {
   );
 
   it("resolvePrimaryLabel is runSync-safe against the real WSL availability probe", async () => {
-    // oxlint-disable-next-line t3code/no-manual-effect-runtime-in-tests -- This test intentionally replicates the sync IPC handler's runSync path to catch a regression to async-only resolution; it.effect would mask it.
+    // oxlint-disable-next-line t2code/no-manual-effect-runtime-in-tests -- This test intentionally replicates the sync IPC handler's runSync path to catch a regression to async-only resolution; it.effect would mask it.
     const runtime = ManagedRuntime.make(
       layerBackendConfiguration().pipe(
         Layer.provideMerge(layerServerExposure),
@@ -1043,7 +1264,7 @@ describe("DesktopBackendConfiguration", () => {
       const configuration = await runtime.runPromise(
         DesktopBackendConfiguration.DesktopBackendConfiguration,
       );
-      // oxlint-disable-next-line t3code/no-manual-effect-runtime-in-tests -- Same reason: this is the synchronous resolution the IPC handler performs.
+      // oxlint-disable-next-line t2code/no-manual-effect-runtime-in-tests -- Same reason: this is the synchronous resolution the IPC handler performs.
       const label = Effect.runSync(configuration.resolvePrimaryLabel);
       assert.equal(typeof label, "string");
     } finally {

@@ -1,10 +1,38 @@
 #!/usr/bin/env node
 
+/**
+ * Rebuild an isolated dev database from a pruned snapshot of the real
+ * ~/.t2 database, then run this checkout's migrations against it.
+ *
+ * `vp run migrate-dev-db` from a worktree:
+ *   1. Nukes `<worktree>/.t3/userdata/statev2.sqlite`.
+ *   2. Copies a slice of the real db (`~/.t3/userdata/statev2.sqlite`,
+ *      attached read-only): the schema, and every row except those of
+ *      deleted, archived, and settled threads, which are nearly all of a
+ *      long-lived database. It then prunes that to the most recently updated
+ *      projects and, per project, the most recent threads that have fully
+ *      stopped, with
+ *      their forks and subagents. Working, settled, and archived threads, and
+ *      threads with pending recovery, are skipped, and scheduled tasks and
+ *      queued effects are dropped, so the dev server never adopts live work.
+ *      Auth sessions, pairing links, command receipts, and provider
+ *      runtime rows are dropped — pair a fresh browser against dev.
+ *   3. Runs migrations on the result. Because the clone carries the real
+ *      `effect_sql_migrations` table, this proves a new migration applies
+ *      on top of the real applied set, and the slot check below catches
+ *      the silent failure where two branches claim the same
+ *      `Migrations/NNN_` id (the second one's CREATE TABLE is skipped).
+ *
+ * The event log (`orchestration_events`) is pruned per stream while
+ * `sqlite_sequence` and the projection cursors carry over untouched, so new events keep appending
+ * after the old high-water mark and projection cursors never rewind.
+ */
+
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeOS from "node:os";
 import * as NodeURL from "node:url";
-import { resolveWorktreeT3Home } from "@t2code/shared/devHome";
+import { resolveWorktreeT2Home } from "@t2code/shared/devHome";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -25,7 +53,7 @@ export class MigrateDevDbNotInWorktreeError extends Schema.TaggedError<MigrateDe
   {},
 ) {
   override get message(): string {
-    return "Not inside a linked git worktree. Pass --base-dir to target an isolated .t3 directory.";
+    return "Not inside a linked git worktree. Pass --base-dir to target an isolated .t2 directory.";
   }
 }
 
@@ -34,7 +62,7 @@ export class MigrateDevDbSharedHomeError extends Schema.TaggedError<MigrateDevDb
   {},
 ) {
   override get message(): string {
-    return "Refusing to rebuild the shared ~/.t3 database. Use an isolated --base-dir.";
+    return "Refusing to rebuild the shared ~/.t2 database. Use an isolated --base-dir.";
   }
 }
 
@@ -439,7 +467,7 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
 
-  const sharedHome = path.resolve(options.sharedHome ?? path.join(NodeOS.homedir(), ".t3"));
+  const sharedHome = path.resolve(options.sharedHome ?? path.join(NodeOS.homedir(), ".t2"));
   const sourcePath = path.resolve(
     input.source ?? path.join(sharedHome, "userdata", "statev2.sqlite"),
   );
@@ -447,7 +475,7 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   const baseDir =
     input.baseDir !== undefined
       ? path.resolve(input.baseDir)
-      : yield* resolveWorktreeT3Home(process.cwd());
+      : yield* resolveWorktreeT2Home(process.cwd());
   if (baseDir === undefined) {
     return yield* new MigrateDevDbNotInWorktreeError();
   }
@@ -586,7 +614,7 @@ export const migrateDevDbCommand = Command.make(
     ),
     baseDir: Flag.String("base-dir").pipe(
       Flag.optional,
-      Flag.withDescription("Isolated .t3 directory. Defaults to the current worktree's .t3."),
+      Flag.withDescription("Isolated .t2 directory. Defaults to the current worktree's .t2."),
     ),
     source: Flag.String("source").pipe(
       Flag.optional,
@@ -617,7 +645,7 @@ export const migrateDevDbCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Rebuild the worktree dev database from a pruned snapshot of the real ~/.t3 data, then run migrations.",
+    "Rebuild the worktree dev database from a pruned snapshot of the real ~/.t2 data, then run migrations.",
   ),
 );
 

@@ -141,7 +141,7 @@ it.effect("launches an installed editor with platform-safe arguments", () =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
+    const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-editors-" });
     yield* fileSystem.writeFileString(path.join(binDir, "code.CMD"), "@echo off\r\n");
 
     let spawned: ChildProcess.StandardCommand | undefined;
@@ -197,7 +197,7 @@ it.effect.skipIf(windowsHost)(
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
+      const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-editors-" });
       for (const name of ["explorer.exe", "powershell.exe", "xdg-open"]) {
         const filePath = path.join(binDir, name);
         yield* fileSystem.writeFileString(filePath, "#!/bin/sh\n");
@@ -252,7 +252,7 @@ for (const wsl of [false, true]) {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
+        const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-editors-" });
         for (const name of ["xdg-open", "xdg-mime", "gdbus", ...(wsl ? ["explorer.exe"] : [])]) {
           const filePath = path.join(binDir, name);
           yield* fileSystem.writeFileString(filePath, "#!/bin/sh\n");

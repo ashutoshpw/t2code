@@ -334,7 +334,7 @@ const main = Command.make(
       });
     const recordPath = path.join(
       home,
-      ".cache/t3code/native-clients",
+      ".cache/t2code/native-clients",
       platform,
       `${yield* digest(device)}.json`,
     );
@@ -379,9 +379,9 @@ const main = Command.make(
             [
               "xcodebuild",
               "-workspace",
-              path.join(mobile, "ios/T3CodeDev.xcworkspace"),
+              path.join(mobile, "ios/T2CodeDev.xcworkspace"),
               "-scheme",
-              "T3CodeDev",
+              "T2CodeDev",
               "-configuration",
               "Debug",
               "-destination",
@@ -398,7 +398,7 @@ const main = Command.make(
               "simctl",
               "install",
               device,
-              path.join(output, "Build/Products/Debug-iphonesimulator/T3CodeDev.app"),
+              path.join(output, "Build/Products/Debug-iphonesimulator/T2CodeDev.app"),
             ],
             true,
           );

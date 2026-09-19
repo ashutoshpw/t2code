@@ -21,17 +21,33 @@ import {
   serviceStateHasPendingUpdate,
 } from "./serviceProtocol.ts";
 
+const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t3";
+const linuxPlan = {
+  program: [linuxRuntime, "__service-launcher"],
+  baseDir: "/home/theo/.t2",
+  logPath: "/home/theo/.t2/userdata/logs/boot-service.log",
+  unitPath: "/home/theo/.config/systemd/user/t2code.service",
+};
+
+it("runs the pinned runtime's own executable as the systemd launcher", () => {
+  const unit = BootService.renderBootServiceUnit(linuxPlan);
+
+  expect(unit).toContain(`ExecStart=${linuxRuntime} __service-launcher`);
+  expect(unit).toContain("KillMode=mixed");
+  expect(unit).not.toContain("node");
+});
+
 it("reads the served T3 home back out of a rendered unit or plist", () => {
   const plan = (baseDir: string) => ({
     program: [`${baseDir}/runtime/versions/1.2.3/t3`, "__service-launcher"],
     baseDir,
     logPath: `${baseDir}/userdata/logs/boot-service.log`,
-    unitPath: "/home/theo/.config/systemd/user/t3code.service",
+    unitPath: "/home/theo/.config/systemd/user/t2code.service",
   });
 
   expect(
-    BootService.bootServiceBaseDirOf(BootService.renderBootServiceUnit(plan("/home/theo/.t3"))),
-  ).toBe("/home/theo/.t3");
+    BootService.bootServiceBaseDirOf(BootService.renderBootServiceUnit(plan("/home/theo/.t2"))),
+  ).toBe("/home/theo/.t2");
   expect(
     BootService.bootServiceBaseDirOf(
       BootService.renderBootServiceUnit(plan("/home/theo/T3 Data/100%")),
@@ -65,15 +81,61 @@ it.each([
   ).toBe(program);
 });
 
-const macRuntime = "/Users/theo/.t3/runtime/versions/1.2.3/t3";
+const macRuntime = "/Users/theo/.t2/runtime/versions/1.2.3/t3";
 const macPlan = {
   program: [macRuntime, "__service-launcher"],
-  baseDir: "/Users/theo/.t3",
-  logPath: "/Users/theo/.t3/userdata/logs/boot-service.log",
+  baseDir: "/Users/theo/.t2",
+  logPath: "/Users/theo/.t2/userdata/logs/boot-service.log",
   unitPath: "/Users/theo/Library/LaunchAgents/codes.t2.desktop.service.plist",
 };
 const macInstallerPath =
   "/opt/homebrew/bin:/Users/theo/.npm-global/bin:/Users/theo/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin";
+const macRenderOptions = { homeDir: "/Users/theo", environmentPath: macInstallerPath };
+
+it("runs the pinned runtime's own executable as the launch agent", () => {
+  const plist = BootService.renderBootServicePlist(macPlan, macRenderOptions);
+
+  expect(plist).toContain(
+    `  <array>\n    <string>${macRuntime}</string>\n    <string>__service-launcher</string>\n  </array>`,
+  );
+  expect(plist).not.toContain("node</string>");
+});
+
+it("preserves the installer's provider search path in the launch agent", () => {
+  const plist = BootService.renderBootServicePlist(macPlan, macRenderOptions);
+
+  expect(plist).toContain(`    <key>PATH</key>\n    <string>${macInstallerPath}</string>`);
+});
+
+it("restarts the launch agent on the systemd cadence", () => {
+  const plist = BootService.renderBootServicePlist(macPlan, macRenderOptions);
+
+  expect(plist).toContain("<key>RunAtLoad</key>\n  <true/>");
+  expect(plist).toContain("<key>KeepAlive</key>\n  <true/>");
+  expect(plist).toContain("<key>ThrottleInterval</key>\n  <integer>5</integer>");
+  expect(plist).toContain("<key>ExitTimeOut</key>\n  <integer>90</integer>");
+});
+
+it("appends both stdio streams to the boot service log", () => {
+  const plist = BootService.renderBootServicePlist(macPlan, macRenderOptions);
+
+  expect(plist).toContain(
+    "<key>StandardOutPath</key>\n  <string>/Users/theo/.t2/userdata/logs/boot-service.log</string>",
+  );
+  expect(plist).toContain(
+    "<key>StandardErrorPath</key>\n  <string>/Users/theo/.t2/userdata/logs/boot-service.log</string>",
+  );
+});
+
+it("escapes XML in host paths", () => {
+  const plist = BootService.renderBootServicePlist(
+    { ...macPlan, baseDir: "/Users/theo/T3 & <Co>" },
+    { homeDir: "/Users/theo", environmentPath: "/Users/theo/Tools & <Scripts>:/usr/bin" },
+  );
+
+  expect(plist).toContain("<string>/Users/theo/T3 &amp; &lt;Co&gt;</string>");
+  expect(plist).toContain("<string>/Users/theo/Tools &amp; &lt;Scripts&gt;:/usr/bin</string>");
+});
 
 const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
   platform: NodeJS.Platform = "linux",
@@ -82,7 +144,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-boot-service-test-" });
-  const baseDir = path.join(home, ".t3");
+  const baseDir = path.join(home, ".t2");
   const statePath = path.join(baseDir, "runtime", "service-state.json");
   const runtime = pinnedRuntimePaths(path, baseDir, "1.2.3", platform);
   yield* fs.makeDirectory(path.dirname(runtime.entryPath), { recursive: true });
@@ -115,13 +177,13 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
       const failed = command === control.failCommand;
       if (!failed && command === "loginctl enable-linger --no-ask-password 501")
         control.linger = "yes";
-      if (!failed && command === "systemctl --user enable t3code.service") control.enabled = true;
-      if (!failed && command === "systemctl --user restart t3code.service") control.active = true;
-      // A timed-out stop may still stop the service.
-      if (command === "systemctl --user stop t3code.service") control.active = false;
+      if (!failed && command === "systemctl --user enable t2code.service") control.enabled = true;
+      if (!failed && command === "systemctl --user restart t2code.service") control.active = true;
+      // A stop that fails (a timeout, say) has still stopped the service.
+      if (command === "systemctl --user stop t2code.service") control.active = false;
       if (
         control.stateAfterStop !== undefined &&
-        (command === "systemctl --user stop t3code.service" ||
+        (command === "systemctl --user stop t2code.service" ||
           command.startsWith("launchctl bootout --wait "))
       ) {
         yield* fs.writeFileString(statePath, control.stateAfterStop).pipe(Effect.orDie);
@@ -262,7 +324,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         );
         expect(yield* fs.readFileString(statePath)).toBe(before);
         expect(yield* fs.readFileString(plan.unitPath)).toBe(unit);
-        expect(commands).not.toContain("systemctl --user stop t3code.service");
+        expect(commands).not.toContain("systemctl --user stop t2code.service");
       }),
   );
 
@@ -334,8 +396,9 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect((yield* service.status).current).toBe(false);
       expect(yield* service.uninstall).toBe(true);
       expect((yield* service.status).installed).toBe(false);
-      // systemd can take 90s to stop, exceeding the runner's 60s default.
-      expect(timeouts.get("systemctl --user disable --now t3code.service")).toEqual(
+      // The stop can block up to systemd's 90s TimeoutStopSec; the runner's
+      // 60s default would cancel it mid-shutdown.
+      expect(timeouts.get("systemctl --user disable --now t2code.service")).toEqual(
         Duration.seconds(120),
       );
     }),
@@ -408,7 +471,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
           ),
         ).toEqual(
           platform === "linux"
-            ? ["systemctl --user stop t3code.service", "systemctl --user restart t3code.service"]
+            ? ["systemctl --user stop t2code.service", "systemctl --user restart t2code.service"]
             : [
                 "launchctl bootout --wait gui/501/codes.t2.desktop.service",
                 `launchctl bootstrap gui/501 ${plan.unitPath}`,
@@ -605,7 +668,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       const path = yield* Path.Path;
       const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t3-other-home-" });
 
-      const other = yield* makeService(undefined, "1.2.3", path.join(otherHome, ".t3"));
+      const other = yield* makeService(undefined, "1.2.3", path.join(otherHome, ".t2"));
       expect(yield* other.restart).toBe("skipped");
       expect(commands.filter((command) => command.startsWith("systemctl "))).toEqual([]);
     }),
@@ -630,7 +693,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
 
       expect(yield* fs.readFileString(statePath)).toBe(state);
       expect(yield* fs.readFileString(plan.unitPath)).toBe(unit);
-      expect(commands).not.toContain("systemctl --user stop t3code.service");
+      expect(commands).not.toContain("systemctl --user stop t2code.service");
       expect(result).toMatchObject({ handedOff: true, logPath: plan.logPath });
       const handoffs = invocations.filter(({ command }) => command === "systemd-run");
       expect(handoffs).toHaveLength(1);
@@ -640,12 +703,12 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         "--quiet",
         `--property=StandardOutput=append:${plan.logPath}`,
         `--property=StandardError=append:${plan.logPath}`,
-        "--setenv=T3_BOOT_SERVICE_UNIT=",
+        "--setenv=T2_BOOT_SERVICE_UNIT=",
         pinnedRuntimePaths(path, baseDir, "1.2.4", "linux").entryPath,
         "service",
         "install",
         "--base-dir",
-        path.join(home, "T3 Data 100%", "$${UNSET}", "$$literal"),
+        path.join(home, "T2 Data 100%", "$${UNSET}", "$$literal"),
         "--allow-downgrade",
       ]);
 
@@ -706,9 +769,9 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
           (command) => command.startsWith("systemctl ") && !command.includes("show-environment"),
         ),
       ).toEqual([
-        "systemctl --user stop t3code.service",
+        "systemctl --user stop t2code.service",
         "systemctl --user daemon-reload",
-        "systemctl --user restart t3code.service",
+        "systemctl --user restart t2code.service",
       ]);
     }),
   );
@@ -740,8 +803,8 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
             (command) => command.startsWith("systemctl ") && !command.includes("show-environment"),
           ),
         ).toEqual([
-          "systemctl --user stop t3code.service",
-          "systemctl --user restart t3code.service",
+          "systemctl --user stop t2code.service",
+          "systemctl --user restart t2code.service",
         ]);
       }
     }),

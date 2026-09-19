@@ -166,7 +166,7 @@ const makeWindowsPayloadFixture = Effect.fn("test.makeWindowsPayloadFixture")(fu
     );
   }
   yield* fs.writeFileString(
-    path.join(resourcesDir, "resource-monitor/t3-resource-monitor.exe"),
+    path.join(resourcesDir, "resource-monitor/t2-resource-monitor.exe"),
     "monitor",
   );
   const appExecutableName = "t3code.exe";
@@ -975,11 +975,11 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const repoRoot = yield* fs.makeTempDirectoryScoped({
-          prefix: "t3-resource-monitor-cache-test-",
+          prefix: "t2-resource-monitor-cache-test-",
         });
         const binaryPath = path.join(
           repoRoot,
-          "native/resource-monitor/target/x86_64-unknown-linux-gnu/release/t3-resource-monitor",
+          "native/resource-monitor/target/x86_64-unknown-linux-gnu/release/t2-resource-monitor",
         );
         const stageResourcesDir = path.join(repoRoot, "stage");
         yield* fs.makeDirectory(path.dirname(binaryPath), { recursive: true });
@@ -1003,7 +1003,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
 
         assert.equal(
           yield* fs.readFileString(
-            path.join(stageResourcesDir, "resource-monitor/t3-resource-monitor"),
+            path.join(stageResourcesDir, "resource-monitor/t2-resource-monitor"),
           ),
           "cached monitor",
         );
@@ -1627,7 +1627,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         yield* fs.writeFileString(nativePath, "native-binary");
         const resourceMonitorPath = path.join(
           fixture.packagedAppDir,
-          "resources/resource-monitor/t3-resource-monitor.exe",
+          "resources/resource-monitor/t2-resource-monitor.exe",
         );
         yield* fs.remove(resourceMonitorPath);
         yield* fs.makeDirectory(resourceMonitorPath);
@@ -1641,7 +1641,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         assert.instanceOf(resourceMonitorError, WindowsPackagedPayloadValidationError);
         assert.equal(resourceMonitorError.reason, "resource-monitor-missing");
         assert.deepStrictEqual(resourceMonitorError.missingFiles, [
-          "resource-monitor/t3-resource-monitor.exe",
+          "resource-monitor/t2-resource-monitor.exe",
         ]);
       }),
     ),
@@ -1981,8 +1981,8 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     assert.deepStrictEqual(resolveResourceMonitorRustTargets("win", "arm64"), [
       "aarch64-pc-windows-msvc",
     ]);
-    assert.equal(resourceMonitorExecutableName("mac"), "t3-resource-monitor");
-    assert.equal(resourceMonitorExecutableName("win"), "t3-resource-monitor.exe");
+    assert.equal(resourceMonitorExecutableName("mac"), "t2-resource-monitor");
+    assert.equal(resourceMonitorExecutableName("win"), "t2-resource-monitor.exe");
   });
 
   it("ships the Linux CLI release archive as the WSL runtime", () => {

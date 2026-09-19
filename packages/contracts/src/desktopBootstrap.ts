@@ -9,8 +9,10 @@ export const DesktopBackendBootstrap = Schema.Struct({
   mode: Schema.Literal("desktop"),
   noBrowser: Schema.Boolean,
   port: PortSchema,
-  // Omit in WSL to use the Linux home instead of the mapped Windows directory.
-  t3Home: Schema.optional(Schema.String),
+  // Omitted when the desktop launches the backend inside WSL, since the
+  // Windows-side baseDir maps to /mnt/c/... and the Linux side should use its
+  // own home directory instead.
+  t2Home: Schema.optional(Schema.String),
   host: Schema.String,
   desktopBootstrapToken: Schema.String,
   // Present when the desktop rotates the renderer's bootstrap token: the

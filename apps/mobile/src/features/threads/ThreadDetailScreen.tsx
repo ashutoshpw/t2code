@@ -23,7 +23,7 @@ import {
   snoozeWakeLabel,
 } from "@t3tools/client-runtime/state/thread-settled";
 import type { WorktreeSetupCardProps } from "./worktree-setup-card";
-import type { ComposerTextPaste } from "../../native/T3ComposerEditor.types";
+import type { ComposerTextPaste } from "../../native/T2ComposerEditor.types";
 import { type EnvironmentConnectionPhase } from "@t2code/client-runtime/connection";
 import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
 import type { HandoffEndpoints } from "@t2code/client-runtime/handoff";
@@ -259,7 +259,7 @@ export interface ThreadDetailScreenProps {
   readonly selectedThreadQueueCount: number;
   readonly queuedMessages: ReadonlyArray<QueuedThreadMessage>;
   readonly dispatchingMessageId: MessageId | null;
-  readonly serverConfig: T3ServerConfig | null;
+  readonly serverConfig: T2ServerConfig | null;
   readonly layoutVariant?: LayoutVariant;
   readonly usesAutomaticContentInsets?: boolean;
   readonly onHeaderMaterialVisibilityChange?: (visible: boolean) => void;
