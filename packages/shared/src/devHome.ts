@@ -1,8 +1,8 @@
 /**
  * Where development state lives, and how to keep it away from the shared
- * `~/.t3` that a user's installed T2 Code runs against.
+ * `~/.t2` that a user's installed T2 Code runs against.
  *
- * A linked git worktree gets its own (gitignored) `.t3`: feature work in a
+ * A linked git worktree gets its own (gitignored) `.t2`: feature work in a
  * throwaway branch must not share a database with the real app, and an ambient
  * `T2CODE_HOME` counts as an explicit base dir — flipping the state directory
  * from `<base>/dev` to `<base>/userdata`, the live production database.
@@ -62,7 +62,7 @@ export const resolveGitWorktreePath = Effect.fn("devHome.resolveGitWorktreePath"
  * Deliberately does not require the directory to exist yet: falling back
  * because it is missing would send callers at the shared home.
  */
-export const resolveWorktreeT3Home = Effect.fn("devHome.resolveWorktreeT3Home")(function* (
+export const resolveWorktreeT2Home = Effect.fn("devHome.resolveWorktreeT2Home")(function* (
   cwd: string,
 ): Effect.fn.Return<string | undefined, never, FileSystem.FileSystem | Path.Path> {
   const worktreePath = yield* resolveGitWorktreePath(cwd);
@@ -70,5 +70,5 @@ export const resolveWorktreeT3Home = Effect.fn("devHome.resolveWorktreeT3Home")(
     return undefined;
   }
   const path = yield* Path.Path;
-  return path.join(worktreePath, ".t3");
+  return path.join(worktreePath, ".t2");
 });

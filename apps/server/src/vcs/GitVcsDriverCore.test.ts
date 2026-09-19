@@ -4028,7 +4028,7 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
           cwd,
           path: worktreePath,
           refName: resolvedBase.commitSha,
-          newRefName: "t3code/fetched-origin",
+          newRefName: "t2code/fetched-origin",
           baseRefName: resolvedBase.remoteRefName,
         });
 
@@ -4042,7 +4042,7 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
           remoteHead,
         );
         assert.equal(
-          yield* driver.readConfigValue(worktreePath, "branch.t3code/fetched-origin.remote"),
+          yield* driver.readConfigValue(worktreePath, "branch.t2code/fetched-origin.remote"),
           null,
         );
         const status = yield* driver.statusDetails(worktreePath);

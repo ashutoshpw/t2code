@@ -94,7 +94,7 @@ export function SettingsEnvironmentRenameRouteScreen({
           disabled={saving}
           onPress={() => navigation.goBack()}
         >
-          <Text className="font-t3-bold text-foreground">Cancel</Text>
+          <Text className="font-t2-bold text-foreground">Cancel</Text>
         </Pressable>
         <Pressable
           className="min-h-[46px] flex-1 items-center justify-center rounded-[14px] bg-primary active:opacity-70 disabled:opacity-50"
@@ -104,7 +104,7 @@ export function SettingsEnvironmentRenameRouteScreen({
           {saving ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text className="font-t3-bold text-primary-foreground">Save</Text>
+            <Text className="font-t2-bold text-primary-foreground">Save</Text>
           )}
         </Pressable>
       </View>

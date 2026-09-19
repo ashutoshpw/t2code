@@ -91,7 +91,7 @@ describe("ssh tunnel scripts", () => {
       script,
       "T2_RELEASE_BASE_URL='https://github.com/ashutoshpw/t2code/releases/download'",
     );
-    assert.include(script, 'T2_RUNTIME_DIR="$HOME/.t3/runtime/versions/$T2_ARCHIVE_VERSION"');
+    assert.include(script, 'T2_RUNTIME_DIR="$HOME/.t2/runtime/versions/$T2_ARCHIVE_VERSION"');
     assert.include(script, 'T2_ARCHIVE="t2-$T2_ARCHIVE_VERSION-$T2_PLATFORM-$T2_ARCH.tar.gz"');
     assert.include(
       script,
@@ -105,7 +105,7 @@ describe("ssh tunnel scripts", () => {
     assert.notInclude(script, 'exec t3 "$@"');
     assert.include(
       script,
-      'T2_LOCK="$HOME/.t3/runtime/versions/.$T2_ARCHIVE_VERSION.install.lock"',
+      'T2_LOCK="$HOME/.t2/runtime/versions/.$T2_ARCHIVE_VERSION.install.lock"',
     );
     assert.include(script, 'while ! mkdir "$T2_LOCK" 2>/dev/null; do');
     assert.include(script, 'mv "$T2_LOCK/pid.tmp" "$T2_LOCK/pid"');
@@ -915,7 +915,7 @@ describe("archive runner script", () => {
           assert.equal(result.exitCode, 0, result.stderr);
           assert.include(result.stdout, `t3 v${archiveVersion}`);
         }
-        const versionsDir = `${home}/.t3/runtime/versions`;
+        const versionsDir = `${home}/.t2/runtime/versions`;
         assert.deepEqual(yield* fs.readDirectory(versionsDir), [archiveVersion]);
         assert.equal(
           (yield* fs.readFileString(`${versionsDir}/${archiveVersion}/.install-complete`)).trim(),
@@ -948,7 +948,7 @@ describe("archive runner script", () => {
         const runner = `${root}/run-t3.sh`;
         yield* fs.writeFileString(
           runner,
-          buildRemoteT3RunnerScript({ archiveVersion, releaseBaseUrl }),
+          buildRemoteT2RunnerScript({ archiveVersion, releaseBaseUrl }),
         );
         const home = `${root}/home`;
         yield* fs.makeDirectory(home, { recursive: true });
@@ -956,7 +956,7 @@ describe("archive runner script", () => {
         const result = yield* runRunner(home, runner);
         assert.equal(result.exitCode, 0, result.stderr);
         assert.include(result.stdout, `t3 v${archiveVersion}`);
-        assert.isTrue(yield* fs.exists(`${home}/.t3/runtime/versions/${archiveVersion}/t3`));
+        assert.isTrue(yield* fs.exists(`${home}/.t2/runtime/versions/${archiveVersion}/t3`));
       }).pipe(Effect.provide(NodeServices.layer)),
     60_000,
   );

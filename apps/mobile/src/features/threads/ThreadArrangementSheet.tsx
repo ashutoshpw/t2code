@@ -568,7 +568,7 @@ export function ThreadArrangementSheet(props: { onClose: () => void }) {
                                 setExpanded((value) => ({ ...value, [section]: !value[section] }));
                             }}
                           >
-                            <Text className="text-sm font-t3-semibold text-foreground-muted">
+                            <Text className="text-sm font-t2-semibold text-foreground-muted">
                               {item.section[0]!.toUpperCase() + item.section.slice(1)} (
                               {item.section === "settled"
                                 ? settledCount
@@ -589,7 +589,7 @@ export function ThreadArrangementSheet(props: { onClose: () => void }) {
                   >
                     <Text
                       numberOfLines={visiblePreview.destination?.section ? 1 : 2}
-                      className="text-base font-t3-medium"
+                      className="text-base font-t2-medium"
                     >
                       {visiblePreview.thread.title}
                     </Text>

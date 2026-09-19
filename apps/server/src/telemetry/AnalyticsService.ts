@@ -1,5 +1,5 @@
 /**
- * Events go to the T3 Code ingest endpoint, which keeps a copy and forwards
+ * Events go to the T2 Code ingest endpoint, which keeps a copy and forwards
  * them to PostHog. Each event carries a uuid, so PostHog can tell a retried
  * copy from a new event.
  */
@@ -70,7 +70,7 @@ const TelemetryEnvConfig = Config.all({
     Config.withDefault("phc_XOWci4oZP4VvLiEyrFqkFjP4CZn55mjYYBMREK5Wd6m"),
   ),
   posthogHost: envStringConfig("T2CODE_POSTHOG_HOST").pipe(
-    Config.withDefault("https://ingest.t3.codes"),
+    Config.withDefault("https://ingest.t2.codes"),
   ),
   enabled: envBooleanConfig("T2CODE_TELEMETRY_ENABLED").pipe(Config.withDefault(true)),
   flushBatchSize: Config.Number("T2CODE_TELEMETRY_FLUSH_BATCH_SIZE").pipe(Config.withDefault(20)),
