@@ -1202,5 +1202,37 @@
   {
     "file": "scripts/lib/public-config.ts",
     "line": "\"T3CODE_CLERK_PUBLISHABLE_KEY\","
+  },
+  {
+    "file": "apps/mobile/modules/t3-agent-notifications/expo-module.config.json",
+    "line": ""
+  },
+  {
+    "file": "apps/mobile/modules/t3-composer-editor/expo-module.config.json",
+    "line": ""
+  },
+  {
+    "file": "apps/mobile/modules/t3-markdown-text/ios/T3MarkdownTextRunShadowNode.cpp",
+    "line": ""
+  },
+  {
+    "file": "apps/mobile/modules/t3-markdown-text/ios/T3MarkdownTextRunShadowNode.h",
+    "line": ""
+  },
+  {
+    "file": "apps/mobile/modules/t3-native-controls/expo-module.config.json",
+    "line": ""
+  },
+  {
+    "file": "apps/mobile/modules/t3-review-diff/expo-module.config.json",
+    "line": ""
+  },
+  {
+    "file": "apps/mobile/modules/t3-subscription-widget/expo-module.config.json",
+    "line": ""
+  },
+  {
+    "file": "apps/mobile/modules/t3-terminal/expo-module.config.json",
+    "line": ""
   }
 ]
