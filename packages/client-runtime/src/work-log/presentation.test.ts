@@ -300,6 +300,50 @@ describe("resolveWorkEntryToolPresentation", () => {
     ).toBe("Failed to click in the preview browser");
   });
 
+  it.each([
+    ["preview_type", "Typing in the preview browser", "Typed in the preview browser"],
+    [
+      "preview_set_appearance",
+      "Setting preview browser appearance",
+      "Set preview browser appearance",
+    ],
+    [
+      "preview_snapshot",
+      "Taking a snapshot of the preview page",
+      "Took a snapshot of the preview page",
+    ],
+    [
+      "preview_recording_stop",
+      "Stopping recording the preview browser",
+      "Stopped recording the preview browser",
+    ],
+    ["t3_thread_read", "Reading a T3 thread", "Read a T3 thread"],
+    ["t3_thread_send", "Sending to a T3 thread", "Sent to a T3 thread"],
+    [
+      "t3_worktree_handoff",
+      "Handing off thread to a git worktree",
+      "Handed off thread to a git worktree",
+    ],
+  ])("preserves verb forms and the rest of %s's label", (tool, running, completed) => {
+    const entry = { label: `t3-code.${tool}` };
+    expect(
+      resolveWorkEntryToolPresentation({ ...entry, toolLifecycleStatus: "inProgress" })
+        ?.displayName,
+    ).toBe(running);
+    expect(
+      resolveWorkEntryToolPresentation({ ...entry, toolLifecycleStatus: "completed" })?.displayName,
+    ).toBe(completed);
+  });
+
+  it("keeps T2 branding for non-browser tools and falls back to the original tool label", () => {
+    expect(
+      resolveWorkEntryToolPresentation({
+        label: "mcp__t3_code__task_status",
+        toolTitle: "Check the child task",
+      }),
+    ).toEqual({ displayName: "Getting delegated task status", icon: "t2-code" });
+  });
+
   it("does not brand unknown tools or another server's matching tool name", () => {
     for (const label of [
       "mcp__github__preview_click",
