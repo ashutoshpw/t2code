@@ -624,7 +624,7 @@ describe("fix findings handoff", () => {
   const base = {
     number: 42,
     title: "Add the pull requests page",
-    url: "https://github.com/pingdotgg/t3code/pull/42",
+    url: "https://github.com/pingdotgg/t2code/pull/42",
     headBranch: "feat/page",
     baseBranch: "main",
     state: "open" as const,
@@ -729,7 +729,7 @@ describe("findings that cannot be attached", () => {
   const base = {
     number: 42,
     title: "Add the pull requests page",
-    url: "https://github.com/pingdotgg/t3code/pull/42",
+    url: "https://github.com/pingdotgg/t2code/pull/42",
     headBranch: "feat/page",
     baseBranch: "main",
     state: "open" as const,
@@ -795,7 +795,7 @@ describe("one finding handed over on its own", () => {
   const base = {
     number: 42,
     title: "Add the pull requests page",
-    url: "https://github.com/pingdotgg/t3code/pull/42",
+    url: "https://github.com/pingdotgg/t2code/pull/42",
     headBranch: "feat/page",
     baseBranch: "main",
     state: "open" as const,
@@ -913,7 +913,7 @@ describe("asking about a change rather than working on it", () => {
   const base = {
     number: 42,
     title: "Add the pull requests page",
-    url: "https://github.com/pingdotgg/t3code/pull/42",
+    url: "https://github.com/pingdotgg/t2code/pull/42",
     headBranch: "feat/page",
     baseBranch: "main",
     state: "open" as const,
@@ -1019,7 +1019,7 @@ describe("asking about a change rather than working on it", () => {
 });
 
 describe("adding a remark to the chat", () => {
-  const pullRequest = { number: 42, url: "https://github.com/pingdotgg/t3code/pull/42" };
+  const pullRequest = { number: 42, url: "https://github.com/pingdotgg/t2code/pull/42" };
   const remark = (id: string, body: string): PullRequestComment => ({
     id,
     kind: "issue-comment",
@@ -1052,7 +1052,7 @@ describe("adding a remark to the chat", () => {
     const handedOff = buildAskAboutPullRequestHandoff({
       number: 42,
       title: "Add the pull requests page",
-      url: "https://github.com/pingdotgg/t3code/pull/42",
+      url: "https://github.com/pingdotgg/t2code/pull/42",
       headBranch: "feature",
       baseBranch: "main",
       state: "open",
@@ -1064,9 +1064,9 @@ describe("adding a remark to the chat", () => {
         (comment) => comment.id,
       ),
     ).toEqual([
-      "pr-comment:https://github.com/pingdotgg/t3code/pull/42:comment:c1",
-      "pr-comment:https://github.com/pingdotgg/t3code/pull/42:comment:c2",
-      "pull-request-context:https://github.com/pingdotgg/t3code/pull/42",
+      "pr-comment:https://github.com/pingdotgg/t2code/pull/42:comment:c1",
+      "pr-comment:https://github.com/pingdotgg/t2code/pull/42:comment:c2",
+      "pull-request-context:https://github.com/pingdotgg/t2code/pull/42",
     ]);
   });
 
@@ -1289,7 +1289,7 @@ describe("a second handoff into the same composer", () => {
       buildFixFindingsHandoff({
         number,
         title: "Add the pull requests page",
-        url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+        url: `https://github.com/pingdotgg/t2code/pull/${number}`,
         state: "open",
         isDraft: false,
         headBranch: `feat/${number}`,
@@ -1355,7 +1355,7 @@ describe("pull request panel context beside a thread", () => {
     host: "github.com",
     repository: "pingdotgg/t3code",
     number,
-    url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+    url: `https://github.com/pingdotgg/t2code/pull/${number}`,
     source: "manual",
     linkedAt: "2026-09-09T00:00:00Z",
     snapshot: null,
@@ -1385,7 +1385,7 @@ describe("pull request panel context beside a thread", () => {
       projectId: "proj-a",
       repository: "pingdotgg/t3code",
       number: 10856,
-      url: "https://github.com/pingdotgg/t3code/pull/10856",
+      url: "https://github.com/pingdotgg/t2code/pull/10856",
     },
   };
 
@@ -1403,7 +1403,7 @@ describe("pull request panel context beside a thread", () => {
         projectId: "proj-a",
         repository: "pingdotgg/t3code",
         number: 11105,
-        url: "https://github.com/pingdotgg/t3code/pull/11105",
+        url: "https://github.com/pingdotgg/t2code/pull/11105",
       },
     };
     expect(pullRequestPanelContext(thread, surface(11101))).toBe("thread");
@@ -1450,7 +1450,7 @@ describe("pull request panel context beside a thread", () => {
       projectId: "proj-a",
       repository: "pingdotgg/t3code",
       number: 3,
-      url: "https://github.com/pingdotgg/t3code/pull/3",
+      url: "https://github.com/pingdotgg/t2code/pull/3",
     };
     expect(
       pullRequestPanelContext({ projectId: "proj-a", linkedPullRequest: legacy }, surface(3)),
@@ -1469,7 +1469,7 @@ describe("pull request panel context beside a thread", () => {
       projectId: ProjectId.make("proj-a"),
       repository: "pingdotgg/t3code",
       number,
-      url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+      url: `https://github.com/pingdotgg/t2code/pull/${number}`,
     });
 
     it("opens a linked pull request the legacy field never named, ahead of the branch PR", () => {

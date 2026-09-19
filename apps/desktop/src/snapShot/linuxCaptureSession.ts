@@ -17,7 +17,7 @@ export class CaptureSetupRequiredError extends Schema.TaggedError<CaptureSetupRe
     return `${this.state} Open Settings → SnapShots to continue setup.`;
   }
 }
-export const NIRI_CAPTURE_PATH = "/com/t3tools/SnapShot";
+export const NIRI_CAPTURE_PATH = "/com/t2tools/SnapShot";
 export const NIRI_CAPTURE_INTERFACE = "com.t2tools.SnapShot";
 
 function isDesktopSession(env: NodeJS.ProcessEnv, desktop: string): boolean {

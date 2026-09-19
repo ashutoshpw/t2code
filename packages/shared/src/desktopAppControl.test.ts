@@ -26,8 +26,7 @@ describe("resolveDesktopAppControlAddress", () => {
     });
 
     expect(new TextEncoder().encode(first.address).byteLength).toBeLessThanOrEqual(maxBytes);
-    expect(first.directory).toBe(directory);
-    expect(first.address).not.toBe(second.address);
+    expect(first.directory).toBe(directory);    expect(first.address).not.toBe(second.address);
   });
 
   it("uses a Windows named pipe", () => {
@@ -40,6 +39,6 @@ describe("resolveDesktopAppControlAddress", () => {
     });
 
     expect(result.directory).toBeNull();
-    expect(result.address).toMatch(/^\\\\\.\\pipe\\t3code-app-[a-f0-9]{24}$/);
+    expect(result.address).toMatch(/^\\\\\.\\pipe\\t2code-app-[a-f0-9]{24}$/);
   });
 });
