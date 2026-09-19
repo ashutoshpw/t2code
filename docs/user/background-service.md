@@ -40,38 +40,38 @@ installing one.
 `t2code uninstall` removes the background service, the `t2code` launcher, and the
 downloaded versions after showing you the list and asking once. Your projects,
 threads, and settings under `~/.t2/userdata` are kept, along with `service.env`
-under T3 home. Pass `--yes` from a script.
+under T2 home. Pass `--yes` from a script.
 
 ## Local network access
 
 A new service answers only on this machine. Other devices reach it through
 T2 Connect, or directly once you choose the local network in `t2 up` (or run
-`t2 up --lan`, which sets `T3CODE_LAN=true` in `service.env`). It then listens on
+`t2 up --lan`, which sets `T2CODE_LAN=true` in `service.env`). It then listens on
 your local network and Tailscale addresses, so the desktop and mobile apps on
 the same network connect directly instead of through T2 Connect. It still does
 not answer on public addresses. Anyone on the same network can reach the port,
 so a pairing code is all that keeps them out. The hosted web app at app.t2.codes
 stays on T2 Connect, because browsers block plain HTTP from an HTTPS page.
 
-A service installed before `T3CODE_LAN` existed keeps listening on the local
+A service installed before `T2CODE_LAN` existed keeps listening on the local
 network. `t2 status` says so, and `t2 up --no-lan` turns it off. Any
-`T3CODE_HOST` value replaces this setting.
+`T2CODE_HOST` value replaces this setting.
 
 ## Configure the service environment
 
-Put custom environment variables in `service.env` under the service's T3 home
+Put custom environment variables in `service.env` under the service's T2 home
 directory, normally `~/.t2/service.env`. This file survives service installation
 and updates. For example:
 
 ```dotenv
-T3CODE_PORT=3773
-T3CODE_HOST=127.0.0.1
+T2CODE_PORT=3772
+T2CODE_HOST=127.0.0.1
 ```
 
 Use `KEY=VALUE` entries, quoting values that contain spaces or `#`. Values are
 literal: shell commands and variable expansion are not evaluated. Entries
-override the inherited service environment, except for `PATH`, `T3CODE_HOME`,
-`T3_BOOT_SERVICE_UNIT`, and `T3_SERVICE_LAUNCHER_CONTEXT` (including case variants).
+override the inherited service environment, except for `PATH`, `T2CODE_HOME`,
+`T2_BOOT_SERVICE_UNIT`, and `T2_SERVICE_LAUNCHER_CONTEXT` (including case variants).
 
 Run `t2 service restart` after changing the file. Changes apply when the service
 starts again; switching the server version alone keeps the current values.
@@ -79,7 +79,7 @@ For a service installed before env-file support, run `t2 service install` once
 with an up-to-date CLI.
 A missing file is ignored; other read failures stop service startup.
 If the file contains credentials, restrict access to that file with `chmod 600`
-(for the default T3 home, `chmod 600 ~/.t2/service.env`).
+(for the default T2 home, `chmod 600 ~/.t2/service.env`).
 
 ## Platform support
 
@@ -154,7 +154,7 @@ On macOS, check **System Settings → General → Login Items** if the service n
 longer starts at login. If agent work cannot access Desktop, Documents, or
 Downloads, it may need Full Disk Access for the `t2code` executable listed in
 `ProgramArguments` in
-`~/Library/LaunchAgents/com.t3tools.t3code.service.plist`.
+`~/Library/LaunchAgents/com.t2tools.t2code.service.plist`.
 
 For failures after signing in to T2 Connect, see
 [connection troubleshooting](./t2-connect-troubleshooting.md).

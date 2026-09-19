@@ -151,7 +151,7 @@ function OpenVideoPreviewModal(props: {
           onPress={mediaActions.share}
           className="mx-4 my-3 min-h-12 items-center justify-center rounded-xl bg-white/15 px-4"
         >
-          <AppText className="font-t3-medium text-base text-white">
+          <AppText className="font-t2-medium text-base text-white">
             {mediaActions.sharing ? "Opening share sheet..." : "Save or share video"}
           </AppText>
         </Pressable>

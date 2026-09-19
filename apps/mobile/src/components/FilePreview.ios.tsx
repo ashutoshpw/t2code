@@ -20,7 +20,7 @@ const NativeControls = requireNativeModule<{
   ): Promise<void>;
   updateFile(identifier: string, index: number, uri: string | null): Promise<void>;
   dismissFile(identifier: string): Promise<void>;
-}>("T3NativeControls");
+}>("T2NativeControls");
 
 // Null tells the viewer an image failed; undefined means its URL has not arrived yet.
 const nativeUri = (image: FilePreviewImage) => (image.failed ? null : image.uri);
@@ -40,7 +40,7 @@ function NativeFilePreview(props: {
     else Dialog.alert("Could not open preview", "The file could not be loaded. Please try again.");
   });
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- presents the native file preview and dismisses it on cleanup
+  // oxlint-disable-next-line t3code/react-effect-budget -- presents the native file preview and dismisses it on cleanup
   useEffect(() => {
     let canceled = false;
     let presentation: Promise<void>;

@@ -2,7 +2,7 @@ import {
   ManagedPolicyClient,
   ManagedPolicyDocument,
   SERVER_EXIT_CODE_MANAGED_POLICY,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";
@@ -172,7 +172,7 @@ export class WindowsRegistry extends Context.Service<
       subkey: string,
     ) => Effect.Effect<RegistryKey | undefined, WindowsRegistryError>;
   }
->()("@t3tools/shared/managedPolicyFile/WindowsRegistry") {}
+>()("@t2code/shared/managedPolicyFile/WindowsRegistry") {}
 
 // (HKEY)(LONG)0x80000002, sign-extended to 64 bits.
 const HKEY_LOCAL_MACHINE = -0x7ffffffen;

@@ -812,7 +812,7 @@ function AdaptiveWorkspaceLayoutContent(
   const renderedRailWidth = useSharedValue(navigationRailWidth);
   const keyboardHold = useSharedValue(keyboardHoldsSidebar);
   const leavingWorkspacePage = useRef(false);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- animates the Reanimated rail and sidebar width shared values toward the layout's targets
+  // oxlint-disable-next-line t3code/react-effect-budget -- animates the Reanimated rail and sidebar width shared values toward the layout's targets
   useEffect(() => {
     if (nativeWorkspace) return;
     // Released mid-keyboard (the composer blurred), the timing starts where the sidebar is drawn.
