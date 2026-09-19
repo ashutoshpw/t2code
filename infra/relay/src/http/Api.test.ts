@@ -656,7 +656,21 @@ describe("relay routing fallback", () => {
             Layer.provide([
               publisher,
               signatures,
-              Layer.mock(EnvironmentLinks.EnvironmentLinks, {}),
+              Layer.succeed(
+                EnvironmentLinks.EnvironmentLinks,
+                EnvironmentLinks.EnvironmentLinks.of({
+                  updateLabel: () => Effect.die("unused updateLabel"),
+                  upsert: () => Effect.die("unused upsert"),
+                  listUsersForEnvironment: () => Effect.die("unused listUsersForEnvironment"),
+                  listDeliveryUsersForEnvironment: () =>
+                    Effect.die("unused listDeliveryUsersForEnvironment"),
+                  listPublicKeysForEnvironment: () =>
+                    Effect.die("unused listPublicKeysForEnvironment"),
+                  listForUser: () => Effect.die("unused listForUser"),
+                  getForUser: () => Effect.succeed(null),
+                  revokeForUser: () => Effect.succeed(false),
+                }),
+              ),
             ]),
           ),
         ),
