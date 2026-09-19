@@ -615,7 +615,101 @@ describe("relay request tracing", () => {
 describe("relay routing fallback", () => {
   it.effect("publishes activity for escaped delegated thread IDs longer than 100 characters", () =>
     Effect.gen(function* () {
-      expect(true).toBe(true);
+      const environmentId = "environment-1";
+      const environmentPublicKey = "environment-public-key";
+      const published: Array<
+        Parameters<AgentActivityPublisher.AgentActivityPublisher["Service"]["publish"]>[0]
+      > = [];
+      const verified: Array<
+        Parameters<
+          EnvironmentPublishSignatures.EnvironmentPublishSignatures["Service"]["verify"]
+        >[0]
+      > = [];
+      const publisher = Layer.succeed(AgentActivityPublisher.AgentActivityPublisher, {
+        publish: (input) =>
+          Effect.sync(() => {
+            published.push(input);
+            return { ok: true as const, deliveries: [] };
+          }),
+        replayForLiveActivityRegistration: () => Effect.succeed(null),
+      });
+      const signatures = Layer.succeed(EnvironmentPublishSignatures.EnvironmentPublishSignatures, {
+        verify: (input) =>
+          Effect.sync(() => {
+            verified.push(input);
+          }),
+      });
+      const auth = Layer.succeed(RelayEnvironmentAuth, {
+        environmentBearer: (effect) =>
+          effect.pipe(
+            Effect.provideService(RelayEnvironmentPrincipal, {
+              environmentId,
+              environmentPublicKey,
+            }),
+          ),
+      });
+      const environmentLinksLayer = Layer.succeed(
+        EnvironmentLinks.EnvironmentLinks,
+        EnvironmentLinks.EnvironmentLinks.of({
+          updateLabel: () => Effect.die("unused updateLabel"),
+          upsert: () => Effect.die("unused upsert"),
+          listUsersForEnvironment: () => Effect.die("unused listUsersForEnvironment"),
+          listDeliveryUsersForEnvironment: () =>
+            Effect.die("unused listDeliveryUsersForEnvironment"),
+          listPublicKeysForEnvironment: () => Effect.die("unused listPublicKeysForEnvironment"),
+          listForUser: () => Effect.die("unused listForUser"),
+          getForUser: () => Effect.succeed(null),
+          revokeForUser: () => Effect.succeed(false),
+        }),
+      );
+      const routes = HttpApiBuilder.layer(
+        HttpApi.make("RelayApi").add(RelayApi.groups.server),
+      ).pipe(
+        Layer.provide(
+          serverApi.pipe(Layer.provide([publisher, signatures, environmentLinksLayer])),
+        ),
+        Layer.provide(auth),
+        Layer.provide([NodeServices.layer, NodeHttpPlatform.layer, Etag.layerWeak]),
+      );
+      const httpEffect = yield* HttpRouter.toHttpEffect(
+        Layer.mergeAll(routes, relayNotFoundRoute, relayCors),
+      ).pipe(
+        Effect.provide(environmentLinksLayer),
+        Effect.provideService(HttpRouter.RouterConfig, RELAY_HTTP_ROUTER_CONFIG),
+      );
+      const threadIds = [
+        "b7c8c522-d244-43dc-875f-7224fce79912",
+        "t".repeat(512),
+        "thread:delegated-task:command%3Amcp%3Ab7c8c522-d244-43dc-875f-7224fce79912%3Adelegate-task%3Agreet-subagent-20260813",
+      ];
+      for (const threadId of threadIds) {
+        const request = HttpServerRequest.fromWeb(
+          new Request(
+            `https://relay.test/v1/environments/${environmentId}/threads/${encodeURIComponent(threadId)}/agent-activity`,
+            {
+              method: "POST",
+              headers: {
+                authorization: "Bearer environment-credential",
+                "content-type": "application/json",
+              },
+              body: '{"state":null,"proof":"signed-proof"}',
+            },
+          ),
+        );
+        const response = yield* httpEffect.pipe(
+          Effect.provideService(HttpServerRequest.HttpServerRequest, request),
+        );
+        expect(response.status).toBe(200);
+      }
+      expect(published).toEqual(
+        threadIds.map((threadId) => ({
+          environmentId,
+          environmentPublicKey,
+          threadId,
+          state: null,
+        })),
+      );
+      expect(verified.map((input) => input.threadId)).toEqual(threadIds);
     }).pipe(Effect.scoped),
   );
 
