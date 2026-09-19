@@ -18,7 +18,7 @@ const NativeControls = requireNativeModule<{
     identifier: string,
   ): Promise<void>;
   dismissFile(identifier: string): Promise<void>;
-}>("T3NativeControls");
+}>("T2NativeControls");
 
 function NativeFilePreview(props: {
   readonly source: ResolvedFilePreviewSource;

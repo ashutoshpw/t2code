@@ -27,7 +27,7 @@ const status = {
   installed: true,
   current: true,
   unitPath: "/home/me/.config/systemd/user/t3code.service",
-  logPath: "/home/me/.t3/userdata/logs/boot-service.log",
+  logPath: "/home/me/.t2/userdata/logs/boot-service.log",
 } as const;
 
 it("reports the installed service version and host paths", () => {
@@ -37,7 +37,7 @@ it("reports the installed service version and host paths", () => {
       "T2 Code service",
       "  Status: installed · @t2code/cli@0.0.29",
       "  Unit: /home/me/.config/systemd/user/t3code.service",
-      "  Logs: /home/me/.t3/userdata/logs/boot-service.log",
+      "  Logs: /home/me/.t2/userdata/logs/boot-service.log",
     ].join("\n"),
   );
 });

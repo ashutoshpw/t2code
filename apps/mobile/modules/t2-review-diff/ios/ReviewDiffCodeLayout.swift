@@ -4,7 +4,7 @@ import UIKit
 final class ReviewDiffCodeLayout: NSObject {
   // Measurement reuses one engine; only recently drawn rows retain a full TextKit layout.
   private static var measurer: ReviewDiffTextLayout {
-    let key = "T3ReviewDiff.textMeasurer"
+    let key = "T2ReviewDiff.textMeasurer"
     if let layout = Thread.current.threadDictionary[key] as? ReviewDiffTextLayout { return layout }
     let layout = ReviewDiffTextLayout()
     Thread.current.threadDictionary[key] = layout

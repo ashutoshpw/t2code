@@ -28,7 +28,7 @@ const mockAgentArgs = [mockAgentPath];
 const mockRuntimeOptions = {
   spawn: { command: mockAgentCommand, args: mockAgentArgs },
   cwd: process.cwd(),
-  clientInfo: { name: "t3-test", version: "0.0.0" },
+  clientInfo: { name: "t2-test", version: "0.0.0" },
   authMethodId: "test",
 } satisfies AcpSessionRuntime.AcpSessionRuntimeOptions;
 
@@ -565,7 +565,7 @@ describe("AcpSessionRuntime", () => {
               parameterizedModelPicker: true,
             },
           },
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
           requestLogger: (event) =>
             Effect.sync(() => {
@@ -866,7 +866,7 @@ describe("AcpSessionRuntime", () => {
             args: mockAgentArgs,
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -897,7 +897,7 @@ describe("AcpSessionRuntime", () => {
             args: mockAgentArgs,
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -947,7 +947,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -978,7 +978,7 @@ describe("AcpSessionRuntime", () => {
             args: mockAgentArgs,
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -1033,7 +1033,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
           cancelMeta: { cancelTrigger: "ctrl_c" },
           protocolLogging: {
@@ -1102,7 +1102,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -1195,7 +1195,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -1244,7 +1244,7 @@ describe("AcpSessionRuntime", () => {
             args: mockAgentArgs,
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           requestLogger: (event) =>
             Effect.sync(() => {
               requestEvents.push(event);
@@ -1424,7 +1424,7 @@ describe("AcpSessionRuntime", () => {
             args: mockAgentArgs,
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           requestLogger: (event) =>
             Effect.sync(() => {
               requestEvents.push(event);
@@ -1467,7 +1467,7 @@ describe("AcpSessionRuntime", () => {
             args: mockAgentArgs,
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           protocolLogging: {
             logIncoming: true,
             logOutgoing: true,
@@ -1502,7 +1502,7 @@ describe("AcpSessionRuntime", () => {
           },
           cwd: process.cwd(),
           resumeSessionId: "stale-session-id",
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
         }),
       ),
       Effect.scoped,
@@ -1570,7 +1570,7 @@ describe("AcpSessionRuntime", () => {
           },
           cwd: process.cwd(),
           resumeSessionId: "mock-session-1",
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
         }),
       ),
       Effect.scoped,
@@ -1658,7 +1658,7 @@ describe("AcpSessionRuntime", () => {
           resumeSessionId: "mock-session-1",
           sessionLoadReplayIdleGap: "50 millis",
           sessionLoadTimeout: "1 second",
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
         }),
       ),
       Effect.scoped,
@@ -1742,7 +1742,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
         }),
       ),
       Effect.scoped,

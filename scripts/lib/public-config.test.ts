@@ -45,17 +45,16 @@ describe("loadRepoEnv", () => {
     const repoRoot = makeTemporaryDirectory();
     NodeFS.writeFileSync(
       NodePath.join(repoRoot, ".env"),
-      "T3CODE_CLERK_PUBLISHABLE_KEY=pk_root\nT3CODE_CLERK_JWT_TEMPLATE=template_root\nT3CODE_CLERK_CLI_OAUTH_CLIENT_ID=oauth_root\nT2CODE_RELAY_URL=https://root.example.test\n",
+      "T2CODE_CLERK_PUBLISHABLE_KEY=pk_root\nT2CODE_CLERK_JWT_TEMPLATE=template_root\nT2CODE_CLERK_CLI_OAUTH_CLIENT_ID=oauth_root\nT2CODE_RELAY_URL=https://root.example.test\n",
     );
     NodeFS.writeFileSync(
       NodePath.join(repoRoot, ".env.local"),
-      "T3CODE_CLERK_PUBLISHABLE_KEY=pk_local\nT3CODE_CLERK_JWT_TEMPLATE=template_local\nT3CODE_CLERK_CLI_OAUTH_CLIENT_ID=oauth_local\nT2CODE_RELAY_URL=https://local.example.test\n",
+      "T2CODE_CLERK_PUBLISHABLE_KEY=pk_local\nT2CODE_CLERK_JWT_TEMPLATE=template_local\nT2CODE_CLERK_CLI_OAUTH_CLIENT_ID=oauth_local\nT2CODE_RELAY_URL=https://local.example.test\n",
     );
 
     expect(loadRepoEnv({ baseEnv: {}, repoRoot }).T2CODE_RELAY_URL).toBe(
       "https://local.example.test",
     );
-    // The root env files above use the legacy T3CODE_CLERK_* spellings; they
     // must still resolve and project under the new names.
     expect(loadRepoEnv({ baseEnv: {}, repoRoot }).T2CODE_CLERK_PUBLISHABLE_KEY).toBe("pk_local");
     expect(loadRepoEnv({ baseEnv: {}, repoRoot }).T2CODE_CLERK_JWT_TEMPLATE).toBe("template_local");
