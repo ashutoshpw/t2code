@@ -67,7 +67,7 @@ export function isProxiableBindHost(host: string): boolean {
 }
 
 export const DEFAULT_T3_HOME = Effect.map(Effect.service(Path.Path), (path) =>
-  path.join(NodeOS.homedir(), ".t3"),
+  path.join(NodeOS.homedir(), ".t2"),
 );
 
 const MODE_ARGS = {
@@ -294,7 +294,7 @@ interface CreateDevRunnerEnvInput {
   readonly baseEnv: NodeJS.ProcessEnv;
   readonly serverOffset: number;
   readonly webOffset: number;
-  readonly t3Home: string | undefined;
+  readonly t2Home: string | undefined;
   readonly browser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
   readonly logWebSocketEvents: boolean | undefined;
@@ -308,7 +308,7 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
   baseEnv,
   serverOffset,
   webOffset,
-  t3Home,
+  t2Home,
   browser,
   autoBootstrapProjectFromCwd,
   logWebSocketEvents,
@@ -365,7 +365,6 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       output.T2CODE_SINGLE_ORIGIN_DEV = "1";
     } else {
       delete output.T2CODE_HOME;
-      delete output.T3CODE_HOME;
     }
 
     // A dev-runner server is never launcher-managed. When the shell that runs
@@ -411,7 +410,6 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       delete output.T2CODE_NO_BROWSER;
       delete output.T2CODE_HOST;
       delete output.T2CODE_DEV_AUTH_TOKEN;
-      delete output.T3CODE_DEV_AUTH_TOKEN;
     }
   } else {
     output.T3CODE_PORT = String(serverPort);
@@ -715,7 +713,7 @@ const prepareFirstStart = Effect.fn("dev-runner.prepareFirstStart")(function* (i
 
 interface DevRunnerCliInput {
   readonly mode: DevMode;
-  readonly t3Home: string | undefined;
+  readonly t2Home: string | undefined;
   readonly browser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
   readonly logWebSocketEvents: boolean | undefined;
@@ -764,23 +762,23 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
 
     const hostEnvironment = yield* HostProcess.Environment;
     // A dev server started inside a worktree defaults to that worktree's own
-    // (gitignored) `.t3` — see @t2code/shared/devHome for why this must
+    // (gitignored) `.t2` — see @t2code/shared/devHome for why this must
     // outrank an ambient T2CODE_HOME. `--home-dir` still wins.
     const worktreeHome = yield* resolveWorktreeT2Home(yield* HostProcess.WorkingDirectory);
     // Trim before choosing: `--home-dir ""` is not a selection, and treating it
     // as one would skip the worktree default and land on the shared home —
     // exactly the outcome this precedence exists to prevent.
-    const resolvedT3Home =
-      (input.t3Home?.trim() || undefined) ??
+    const resolvedT2Home =
+      (input.t2Home?.trim() || undefined) ??
       worktreeHome ??
       (hostEnvironment.T2CODE_HOME?.trim() || undefined) ??
-      (hostEnvironment.T3CODE_HOME?.trim() || undefined);
+      (hostEnvironment.T2CODE_HOME?.trim() || undefined);
     const env = yield* createDevRunnerEnv({
       mode: input.mode,
       baseEnv: hostEnvironment,
       serverOffset,
       webOffset,
-      t3Home: resolvedT3Home,
+      t2Home: resolvedT2Home,
       browser: input.browser,
       autoBootstrapProjectFromCwd: input.autoBootstrapProjectFromCwd,
       logWebSocketEvents: input.logWebSocketEvents,
@@ -955,9 +953,9 @@ const devRunnerCli = Command.make("dev-runner", {
   mode: Argument.Literals("mode", DEV_RUNNER_MODES).pipe(
     Argument.withDescription("Development mode to run."),
   ),
-  t3Home: Flag.String("home-dir").pipe(
+  t2Home: Flag.String("home-dir").pipe(
     Flag.withDescription(
-      "Explicit T2 Code data directory; runtime state is stored under userdata (equivalent to T2CODE_HOME). Inside a git worktree this defaults to that worktree's own .t3 so dev state stays off the shared home.",
+      "Explicit T2 Code data directory; runtime state is stored under userdata (equivalent to T2CODE_HOME). Inside a git worktree this defaults to that worktree's own .t2 so dev state stays off the shared home.",
     ),
     Flag.optional,
     Flag.map(Option.getOrUndefined),

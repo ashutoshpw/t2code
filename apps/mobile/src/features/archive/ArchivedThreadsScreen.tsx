@@ -148,7 +148,7 @@ function ProjectGroupLabel(props: {
         workspaceRoot={props.project.workspaceRoot}
       />
       <Text
-        className="flex-1 text-xs font-t3-medium tracking-[0.5px] uppercase text-foreground-muted"
+        className="flex-1 text-xs font-t2-medium tracking-[0.5px] uppercase text-foreground-muted"
         numberOfLines={1}
       >
         {props.project.title}
@@ -270,7 +270,7 @@ function ArchivedThreadRow(props: {
 function ArchiveError(props: { readonly message: string; readonly onRetry: () => void }) {
   return (
     <View className="rounded-[20px] border border-danger-border bg-danger p-4">
-      <Text className="text-base font-t3-bold text-danger-foreground">
+      <Text className="text-base font-t2-bold text-danger-foreground">
         Could not load every archive
       </Text>
       <Text className="mt-1 text-sm text-foreground-muted">{props.message}</Text>

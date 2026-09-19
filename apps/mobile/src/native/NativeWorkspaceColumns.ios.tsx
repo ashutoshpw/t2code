@@ -5,8 +5,8 @@ import { useNativeLayoutMetrics } from "./native-layout-metrics";
 
 const nativeControls = requireOptionalNativeModule<{
   readonly supportsWorkspaceColumns?: boolean;
-  readonly ViewPrototypes?: { readonly T3NativeControls_LayoutMetrics?: unknown };
-}>("T3NativeControls");
+  readonly ViewPrototypes?: { readonly T2NativeControls_LayoutMetrics?: unknown };
+}>("T2NativeControls");
 export const NATIVE_WORKSPACE_COLUMNS_SUPPORTED =
   Platform.OS === "ios" && Platform.isPad && nativeControls?.supportsWorkspaceColumns === true;
 

@@ -139,7 +139,7 @@ function normalizeSelectionOptions(
  * outside a project's scope.
  */
 export function isModelSelectionUnavailable(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   selection: ModelSelection | null | undefined,
   projectId: ProjectId | null,
 ): boolean {
@@ -184,7 +184,7 @@ export function describeUnavailableModelSelection(
 }
 
 export function resolveSelectableModelSelection(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   selection: ModelSelection | null,
   projectId: ProjectId | null,
 ): ModelSelection | null {
@@ -208,7 +208,7 @@ export function resolveSelectableModelSelection(
 }
 
 export function resolveDefaultableModelSelection(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   selection: ModelSelection | null,
   projectId: ProjectId | null,
 ): ModelSelection | null {
@@ -238,7 +238,7 @@ export function resolveNewTaskModelSelection(input: {
 }
 
 export function buildModelOptions(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   fallbackModelSelection: ModelSelection | null,
   providerInstanceId: ModelSelection["instanceId"] | undefined,
   projectId: ProjectId | null,

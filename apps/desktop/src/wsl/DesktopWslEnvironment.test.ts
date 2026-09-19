@@ -100,7 +100,7 @@ describe("WSL runtime cache", () => {
       "b".repeat(64),
     );
 
-    expect(script).toContain('runtime_parent="$HOME/.t3/wsl-runtime"');
+    expect(script).toContain('runtime_parent="$HOME/.t2/wsl-runtime"');
     expect(script).toContain('  [ -f "$ready_marker" ] &&');
     expect(script).toContain('    runtime_entry_runs "$runtime_root" &&');
     expect(script).toContain("if runtime_is_ready; then");
@@ -205,14 +205,14 @@ describe("WSL runtime cache", () => {
     );
     expect(script).toContain('    [ -n "$recorded_entry_digest" ] &&');
     expect(script).toContain(
-      `printf '%s\\n' "$installed_entry_digest" > "$runtime_tmp/.t3code-wsl-runtime-ready"`,
+      `printf '%s\\n' "$installed_entry_digest" > "$runtime_tmp/.t2code-wsl-runtime-ready"`,
     );
 
     const extracted = script.indexOf("tar -xzf");
     const digestRecorded = script.indexOf(
       'installed_entry_digest=$(runtime_server_entry_digest "$runtime_tmp")',
     );
-    const markerWritten = script.indexOf('> "$runtime_tmp/.t3code-wsl-runtime-ready"');
+    const markerWritten = script.indexOf('> "$runtime_tmp/.t2code-wsl-runtime-ready"');
     const promoted = script.indexOf('mv -T "$runtime_tmp" "$runtime_root"');
     expect(digestRecorded).toBeGreaterThan(extracted);
     expect(markerWritten).toBeGreaterThan(digestRecorded);
@@ -229,7 +229,7 @@ describe("WSL runtime cache", () => {
     expect(script).toContain('if ! runtime_entry_runs "$runtime_tmp"; then');
 
     const payloadValidated = script.indexOf('runtime_entry_runs "$runtime_tmp"');
-    const markerWritten = script.indexOf('> "$runtime_tmp/.t3code-wsl-runtime-ready"');
+    const markerWritten = script.indexOf('> "$runtime_tmp/.t2code-wsl-runtime-ready"');
     const promoted = script.indexOf('mv -T "$runtime_tmp" "$runtime_root"');
     expect(payloadValidated).toBeGreaterThan(-1);
     expect(markerWritten).toBeGreaterThan(payloadValidated);
@@ -237,8 +237,8 @@ describe("WSL runtime cache", () => {
   });
 
   it("parses only absolute Linux runtime paths", () => {
-    expect(parseWslRuntimeRoot("runtimeRoot:/home/josh/.t3/wsl-runtime/1.2.3-x64\n")).toBe(
-      "/home/josh/.t3/wsl-runtime/1.2.3-x64",
+    expect(parseWslRuntimeRoot("runtimeRoot:/home/josh/.t2/wsl-runtime/1.2.3-x64\n")).toBe(
+      "/home/josh/.t2/wsl-runtime/1.2.3-x64",
     );
     expect(parseWslRuntimeRoot("runtimeRoot:relative/path\n")).toBeNull();
     expect(parseWslRuntimeRoot("noise\n")).toBeNull();
@@ -251,7 +251,7 @@ describe("WSL runtime cache", () => {
     expect(script).toContain('[ "$candidate" -nt "$previous_runtime" ]');
     expect(script).toContain('[ "$candidate" != "$current_runtime" ] || continue');
     expect(script).toContain('[ "$candidate" != "$previous_runtime" ] || continue');
-    expect(script).toContain('[ -f "$candidate/.t3code-wsl-runtime-ready" ] || continue');
+    expect(script).toContain('[ -f "$candidate/.t2code-wsl-runtime-ready" ] || continue');
     expect(script).toContain('rm -rf -- "$candidate"');
   });
 
@@ -281,7 +281,7 @@ describe("WSL runtime cache", () => {
   it("invalidates a cache by dropping its ready marker, not the tree", () => {
     const script = buildWslRuntimeInvalidateScript("1.2.3/x64");
 
-    expect(script).toContain('rm -f "$HOME/.t3/wsl-runtime/1.2.3_x64/.t3code-wsl-runtime-ready"');
+    expect(script).toContain('rm -f "$HOME/.t2/wsl-runtime/1.2.3_x64/.t2code-wsl-runtime-ready"');
     expect(script).not.toContain("rm -rf");
   });
 });
@@ -331,9 +331,9 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
       archivePath,
       archiveSha,
       runtimeId,
-      runtimeParent: `${work}/home/.t3/wsl-runtime`,
-      runtimeRoot: `${work}/home/.t3/wsl-runtime/${runtimeId}`,
-      serverEntry: `${work}/home/.t3/wsl-runtime/${runtimeId}/t3`,
+      runtimeParent: `${work}/home/.t2/wsl-runtime`,
+      runtimeRoot: `${work}/home/.t2/wsl-runtime/${runtimeId}`,
+      serverEntry: `${work}/home/.t2/wsl-runtime/${runtimeId}/t3`,
       installScript,
       install: (archive?: string, sha?: string) => runShell(installScript(archive, sha)),
     };
@@ -554,8 +554,8 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
         "set -eu",
         `runtime_parent=${sh(fixture.runtimeParent)}`,
         'mkdir -p "$runtime_parent/sha256-current" "$runtime_parent/sha256-previous"',
-        'printf ready > "$runtime_parent/sha256-current/.t3code-wsl-runtime-ready"',
-        'printf ready > "$runtime_parent/sha256-previous/.t3code-wsl-runtime-ready"',
+        'printf ready > "$runtime_parent/sha256-current/.t2code-wsl-runtime-ready"',
+        'printf ready > "$runtime_parent/sha256-previous/.t2code-wsl-runtime-ready"',
         `touch -d "10 minutes ago" ${sh(fixture.runtimeRoot)}`,
         'touch -d "1 minute ago" "$runtime_parent/sha256-previous"',
         `cat > ${sh(`${fixture.work}/select.sh`)} <<'T2CODE_SELECT_SCRIPT'`,
@@ -572,15 +572,62 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
     expect(selected.status, `${selected.stdout}\n${selected.stderr}`).toBe(0);
   });
 
+  it("prunes a selected cache after its prepare-to-spawn grace period expires", () => {
+    const fixture = createFixture();
+    expect(fixture.install().status).toBe(0);
+    const result = runShell(
+      [
+        "set -eu",
+        `runtime_parent=${sh(fixture.runtimeParent)}`,
+        'mkdir -p "$runtime_parent/sha256-current" "$runtime_parent/sha256-previous"',
+        'printf ready > "$runtime_parent/sha256-current/.t2code-wsl-runtime-ready"',
+        'printf ready > "$runtime_parent/sha256-previous/.t2code-wsl-runtime-ready"',
+        `touch -d "10 minutes ago" ${sh(fixture.runtimeRoot)}`,
+        `touch -d "10 minutes ago" ${sh(`${fixture.runtimeRoot}/.t2code-wsl-runtime-selected`)}`,
+        'touch -d "1 minute ago" "$runtime_parent/sha256-previous"',
+        `HOME=${sh(`${fixture.work}/home`)}`,
+        "export HOME",
+        buildWslRuntimePruneScript("sha256-current"),
+        `test ! -e ${sh(fixture.runtimeRoot)}`,
+      ].join("\n"),
+    );
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+  });
+
+  it("removes an aged stale tree after replacing an active unready cache", () => {
+    const fixture = createFixture();
+    expect(fixture.install().status).toBe(0);
+    const result = runShell(
+      [
+        "set -eu",
+        `runtime_root=${sh(fixture.runtimeRoot)}`,
+        `runtime_parent=${sh(fixture.runtimeParent)}`,
+        'rm "$runtime_root/.t2code-wsl-runtime-ready"',
+        holdRuntimeBusy('"$runtime_root/t3"'),
+        fixture.installScript(),
+        'stale=$(find "$runtime_parent" -maxdepth 1 -type d -name ".sha256-*.stale.*" -print -quit)',
+        'test -n "$stale"',
+        'touch -d "180 minutes ago" "$stale"',
+        `HOME=${sh(`${fixture.work}/home`)}`,
+        "export HOME",
+        buildWslRuntimePruneScript(fixture.runtimeId),
+        'test ! -e "$stale"',
+      ].join("\n"),
+    );
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+  });
+
   it("prunes old and markerless caches without touching retained, active, locked, or unrelated roots", () => {
     const result = runShell(
       [
         "set -eu",
         "work=$(mktemp -d)",
         'home="$work/home"',
-        'runtime_parent="$home/.t3/wsl-runtime"',
+        'runtime_parent="$home/.t2/wsl-runtime"',
         'mkdir -p "$runtime_parent"',
-        'make_ready() { mkdir -p "$runtime_parent/$1"; printf ready > "$runtime_parent/$1/.t3code-wsl-runtime-ready"; }',
+        'make_ready() { mkdir -p "$runtime_parent/$1"; printf ready > "$runtime_parent/$1/.t2code-wsl-runtime-ready"; }',
         "make_ready sha256-current",
         "make_ready sha256-previous",
         "make_ready sha256-active",

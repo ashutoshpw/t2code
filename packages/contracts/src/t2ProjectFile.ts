@@ -9,7 +9,7 @@ import type { ProjectScopedServerSettingKey, ServerSettings } from "./settings.t
 export const T2_PROJECT_FILE_NAME = "t2.json";
 
 /** Public URL of the published JSON Schema for {@link T2ProjectFile}. */
-export const T2_PROJECT_FILE_SCHEMA_URL = "https://t3.codes/schema/t2.json";
+export const T2_PROJECT_FILE_SCHEMA_URL = "https://t2.codes/schema/t2.json";
 
 const T2_PROJECT_FILE_PATH_MAX_LENGTH = 512;
 const T2_PROJECT_FILE_MAX_SCRIPTS = 50;

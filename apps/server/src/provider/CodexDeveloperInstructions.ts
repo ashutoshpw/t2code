@@ -206,6 +206,11 @@ export function buildCodexDeveloperInstructions(interactionMode: ProviderInterac
  */
 export function buildCodexAdditionalContext(
   runtime: CodexRuntimeInfo,
+  /**
+   * Whether the `t2-code` MCP server is attached to this turn. Callers derive
+   * it from the session's actual MCP configuration rather than re-reading the
+   * setting, so the prompt cannot claim tools the turn doesn't have.
+   */
   toolsAvailable: boolean | T2CodeToolAvailability = true,
 ): Record<string, V2TurnStartParams__AdditionalContextEntry> {
   const tools = toolInstructions(toolsAvailable);

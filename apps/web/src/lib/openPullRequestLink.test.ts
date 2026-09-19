@@ -158,7 +158,7 @@ describe("matchesLinkedPullRequestUrl", () => {
     expect(
       matchesLinkedPullRequestUrl(
         linkedPullRequest,
-        "https://github.com/PingDotGG/T3Code/pull/42/files",
+        "https://github.com/PingDotGG/T2Code/pull/42/files",
       ),
     ).toBe(true);
   });
@@ -330,6 +330,47 @@ describe("findProjectForChangeRequest", () => {
         host: "gitlab.com",
         repository: "t3tools/platform/t3code",
         number: 42,
+      }),
+    ).toBe(projects[0]);
+  });
+
+  it("keeps two hosts apart, so an Enterprise link does not open the public one", () => {
+    const projects = [
+      project({
+        canonicalKey: "github.com/pingdotgg/t3code",
+        provider: "github",
+        owner: "pingdotgg",
+        name: "t3code",
+      }),
+    ];
+    expect(
+      findProjectForChangeRequest(projects, {
+        host: "github.acme.test",
+        repository: "pingdotgg/t3code",
+        number: 1,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("matches an Azure repository cloned over SSH, whose remote shares no part with its URL", () => {
+    // Azure alone addresses one repository under two names: `ssh.dev.azure.com` and `v3/...` over
+    // SSH against `dev.azure.com` and `.../_git/...` everywhere a person sees it. The identity is
+    // recorded in the spelling a link arrives in, so both halves of this comparison line up.
+    const canonicalKey = normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T2Tools/Platform/T2Code");
+    const projects = [
+      project({
+        canonicalKey,
+        provider: "azure-devops",
+        displayName: canonicalKey.split("/").slice(1).join("/"),
+        owner: "t3tools",
+        name: "t3code",
+      }),
+    ];
+    expect(
+      findProjectForChangeRequest(projects, {
+        host: "dev.azure.com",
+        repository: "t3tools/platform/_git/t3code",
+        number: 1,
       }),
     ).toBe(projects[0]);
   });

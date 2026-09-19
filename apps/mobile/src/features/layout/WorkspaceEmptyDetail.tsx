@@ -46,7 +46,7 @@ export function WorkspaceEmptyDetail(props: {
             tintColorClassName="accent-icon-subtle"
             type="hierarchical"
           />
-          <Text className="text-center text-xl font-t3-bold">
+          <Text className="text-center text-xl font-t2-bold">
             {pullRequests ? "Select a pull request" : "Select a thread"}
           </Text>
           <Text className="text-center text-base text-foreground-muted">
@@ -65,7 +65,7 @@ export function WorkspaceEmptyDetail(props: {
                 className="mt-2 flex-row items-center gap-2 rounded-full bg-primary px-5 py-3 active:opacity-70"
                 onPress={props.onStartNewTask}
               >
-                <Text className="text-base font-t3-bold text-primary-foreground">New thread</Text>
+                <Text className="text-base font-t2-bold text-primary-foreground">New thread</Text>
               </Pressable>
             )
           ) : null}
