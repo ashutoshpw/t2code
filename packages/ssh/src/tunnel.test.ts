@@ -21,7 +21,7 @@ import {
   buildRemoteLaunchScript,
   buildRemotePairingScript,
   buildRemoteStopScript,
-  buildRemoteT3RunnerScript,
+  buildRemoteT2RunnerScript,
   SshInvalidArchiveVersionError,
   SshMissingRunnerError,
   describeReadinessCause,
@@ -112,7 +112,7 @@ const NODE_SCRIPT = {
 
 describe("ssh tunnel scripts", () => {
   it("installs and runs the release archive without Node, npm, or npx", () => {
-    const script = buildRemoteT3RunnerScript(ARCHIVE);
+    const script = buildRemoteT2RunnerScript(ARCHIVE);
 
     assert.include(script, "T2_ARCHIVE_VERSION='1.2.3-preview.20260911.4'");
     assert.include(script, "T2_NODE_SCRIPT_PATH=''");
@@ -120,7 +120,7 @@ describe("ssh tunnel scripts", () => {
       script,
       "T2_RELEASE_BASE_URL='https://github.com/ashutoshpw/t2code/releases/download'",
     );
-    assert.include(script, 'T2_RUNTIME_DIR="$HOME/.t3/runtime/versions/$T2_ARCHIVE_VERSION"');
+    assert.include(script, 'T2_RUNTIME_DIR="$HOME/.t2/runtime/versions/$T2_ARCHIVE_VERSION"');
     assert.include(script, 'T2_ARCHIVE="t2-$T2_ARCHIVE_VERSION-$T2_PLATFORM-$T2_ARCH.tar.gz"');
     assert.include(
       script,
@@ -136,7 +136,7 @@ describe("ssh tunnel scripts", () => {
     // the completion marker after acquiring it.
     assert.include(
       script,
-      'T2_LOCK="$HOME/.t3/runtime/versions/.$T2_ARCHIVE_VERSION.install.lock"',
+      'T2_LOCK="$HOME/.t2/runtime/versions/.$T2_ARCHIVE_VERSION.install.lock"',
     );
     // mkdir is the exclusive create; the pid follows atomically. A dead owner
     // is reclaimed at once, a never-published owner after a short grace.
@@ -188,34 +188,34 @@ describe("ssh tunnel scripts", () => {
       "v1.2.3",
     ]) {
       assert.throws(
-        () => buildRemoteT3RunnerScript({ archiveVersion }),
+        () => buildRemoteT2RunnerScript({ archiveVersion }),
         SshInvalidArchiveVersionError,
         undefined,
         archiveVersion,
       );
     }
     assert.include(
-      buildRemoteT3RunnerScript(ARCHIVE),
+      buildRemoteT2RunnerScript(ARCHIVE),
       "T2_ARCHIVE_VERSION='1.2.3-preview.20260911.4'",
     );
   });
 
   it("refuses to build a runner with neither an archive version nor a node script", () => {
     for (const input of [undefined, {}, { archiveVersion: "  " }, { nodeScriptPath: null }]) {
-      assert.throws(() => buildRemoteT3RunnerScript(input), SshMissingRunnerError);
+      assert.throws(() => buildRemoteT2RunnerScript(input), SshMissingRunnerError);
     }
     assert.throws(() => buildRemoteLaunchScript(), SshMissingRunnerError);
   });
 
   it("does not hard-code a remote node engine range", () => {
-    const script = buildRemoteT3RunnerScript(NODE_SCRIPT);
+    const script = buildRemoteT2RunnerScript(NODE_SCRIPT);
 
     assert.include(script, "T2_NODE_ENGINE_RANGE=''");
     assert.notInclude(script, TEST_NODE_ENGINE_RANGE);
   });
 
   it("builds the remote t3 runner with a node script override", () => {
-    const script = buildRemoteT3RunnerScript({
+    const script = buildRemoteT2RunnerScript({
       ...NODE_SCRIPT,
       nodeEngineRange: TEST_NODE_ENGINE_RANGE,
     });
@@ -771,7 +771,7 @@ describe("archive runner script", () => {
         const runner = `${root}/run-t3.sh`;
         yield* fs.writeFileString(
           runner,
-          buildRemoteT3RunnerScript({ archiveVersion, releaseBaseUrl }),
+          buildRemoteT2RunnerScript({ archiveVersion, releaseBaseUrl }),
         );
         const home = `${root}/home`;
         yield* fs.makeDirectory(home, { recursive: true });
@@ -784,7 +784,7 @@ describe("archive runner script", () => {
           assert.equal(result.exitCode, 0, result.stderr);
           assert.include(result.stdout, `t3 v${archiveVersion}`);
         }
-        const versionsDir = `${home}/.t3/runtime/versions`;
+        const versionsDir = `${home}/.t2/runtime/versions`;
         assert.deepEqual(yield* fs.readDirectory(versionsDir), [archiveVersion]);
         assert.equal(
           (yield* fs.readFileString(`${versionsDir}/${archiveVersion}/.install-complete`)).trim(),
@@ -819,7 +819,7 @@ describe("archive runner script", () => {
         const runner = `${root}/run-t3.sh`;
         yield* fs.writeFileString(
           runner,
-          buildRemoteT3RunnerScript({ archiveVersion, releaseBaseUrl }),
+          buildRemoteT2RunnerScript({ archiveVersion, releaseBaseUrl }),
         );
         const home = `${root}/home`;
         yield* fs.makeDirectory(home, { recursive: true });
@@ -827,7 +827,7 @@ describe("archive runner script", () => {
         const result = yield* runRunner(home, runner);
         assert.equal(result.exitCode, 0, result.stderr);
         assert.include(result.stdout, `t3 v${archiveVersion}`);
-        assert.isTrue(yield* fs.exists(`${home}/.t3/runtime/versions/${archiveVersion}/t3`));
+        assert.isTrue(yield* fs.exists(`${home}/.t2/runtime/versions/${archiveVersion}/t3`));
       }).pipe(Effect.provide(NodeServices.layer)),
     60_000,
   );

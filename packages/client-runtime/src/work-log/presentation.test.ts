@@ -558,7 +558,7 @@ describe("resolveViewedImageAsset", () => {
   const threadId = ThreadId.make("thread-1");
 
   it("serves t3 attachment paths in place like any other host path", () => {
-    const path = "/Users/demo/.t3/dev/attachments/11111111-1111-4111-8111-111111111111.png";
+    const path = "/Users/demo/.t2/dev/attachments/11111111-1111-4111-8111-111111111111.png";
     expect(resolveViewedImageAsset(path, { threadId, workspaceRoot: "/workspace" })).toEqual({
       resource: { _tag: "media-file", threadId, path },
       alt: "11111111-1111-4111-8111-111111111111.png",
@@ -590,7 +590,7 @@ describe("pull request tool presentation", () => {
     "mcp__t3-code__link_pull_request",
     "mcp__t3_code__link_pull_request",
     "T3-code · link_pull_request",
-    "t3code/link_pull_request",
+    "t2code/link_pull_request",
     "link_pull_request",
   ])("recognizes the native linking tool: %s", (label) => {
     const entry = { label, tone: "tool" as const, toolLifecycleStatus: "completed" };

@@ -166,7 +166,7 @@ describe("matchesLinkedPullRequestUrl", () => {
     expect(
       matchesLinkedPullRequestUrl(
         linkedPullRequest,
-        "https://github.com/PingDotGG/T3Code/pull/42/files",
+        "https://github.com/PingDotGG/T2Code/pull/42/files",
       ),
     ).toBe(true);
   });
@@ -228,7 +228,7 @@ describe("shouldOpenPullRequestExternally", () => {
 
 describe("parseChangeRequestUrl", () => {
   it("reads a GitHub pull request", () => {
-    expect(parseChangeRequestUrl("https://github.com/T3Tools/T3Code/pull/123")).toEqual({
+    expect(parseChangeRequestUrl("https://github.com/T2Tools/T2Code/pull/123")).toEqual({
       host: "github.com",
       repository: "t3tools/t3code",
       number: 123,
@@ -245,7 +245,7 @@ describe("parseChangeRequestUrl", () => {
 
   it("reads a GitLab merge request, nested groups and all", () => {
     expect(
-      parseChangeRequestUrl("https://gitlab.com/t3tools/platform/t3code/-/merge_requests/42"),
+      parseChangeRequestUrl("https://gitlab.com/t3tools/platform/t2code/-/merge_requests/42"),
     ).toEqual({
       host: "gitlab.com",
       repository: "t3tools/platform/t3code",
@@ -273,14 +273,14 @@ describe("parseChangeRequestUrl", () => {
 
   it("reads both Azure DevOps URL forms, keeping `_git` in the repository path", () => {
     expect(
-      parseChangeRequestUrl("https://dev.azure.com/acme/platform/_git/t3code/pullrequest/17"),
+      parseChangeRequestUrl("https://dev.azure.com/acme/platform/_git/t2code/pullrequest/17"),
     ).toEqual({
       host: "dev.azure.com",
       repository: "acme/platform/_git/t3code",
       number: 17,
     });
     expect(
-      parseChangeRequestUrl("https://acme.visualstudio.com/platform/_git/t3code/pullrequest/17"),
+      parseChangeRequestUrl("https://acme.visualstudio.com/platform/_git/t2code/pullrequest/17"),
     ).toEqual({
       host: "acme.visualstudio.com",
       repository: "platform/_git/t3code",
@@ -289,7 +289,7 @@ describe("parseChangeRequestUrl", () => {
   });
 
   it("survives trailing segments, a trailing slash and a query string", () => {
-    expect(parseChangeRequestUrl("https://github.com/t3tools/t3code/pull/123/files?w=1")).toEqual({
+    expect(parseChangeRequestUrl("https://github.com/t3tools/t2code/pull/123/files?w=1")).toEqual({
       host: "github.com",
       repository: "t3tools/t3code",
       number: 123,
@@ -300,7 +300,7 @@ describe("parseChangeRequestUrl", () => {
     expect(
       parseChangeRequestUrl("https://bitbucket.org/team/repo/pull-requests/5/commits"),
     ).toEqual({ host: "bitbucket.org", repository: "team/repo", number: 5 });
-    expect(parseChangeRequestUrl("https://github.com/t3tools/t3code/pull/123/")).toEqual({
+    expect(parseChangeRequestUrl("https://github.com/t3tools/t2code/pull/123/")).toEqual({
       host: "github.com",
       repository: "t3tools/t3code",
       number: 123,
@@ -309,18 +309,18 @@ describe("parseChangeRequestUrl", () => {
 
   it("claims nothing it cannot be sure of, so the link goes to the browser", () => {
     for (const link of [
-      "https://github.com/t3tools/t3code/issues/123",
-      "https://github.com/t3tools/t3code/commit/0a1b2c3",
+      "https://github.com/t3tools/t2code/issues/123",
+      "https://github.com/t3tools/t2code/commit/0a1b2c3",
       "https://github.com/t3tools/t3code",
-      "https://github.com/t3tools/t3code/pull/abc",
-      "https://gitlab.com/t3tools/t3code/-/snippets/12",
-      "https://gitlab.com/t3tools/t3code/-/issues/12",
+      "https://github.com/t3tools/t2code/pull/abc",
+      "https://gitlab.com/t3tools/t2code/-/snippets/12",
+      "https://gitlab.com/t3tools/t2code/-/issues/12",
       // A path shape that means nothing off its own host.
       "https://blog.example.test/2026/updates/pull/3",
       // A lookalike is deliberately not fought here: `github.com.evil.test` reads as a GitHub
       // Enterprise install and there is no way to tell it from one. It is `findProjectForChange
       // Request` that refuses it, because no project in the workspace is checked out from it.
-      "javascript:alert(1)//github.com/t3tools/t3code/pull/1",
+      "javascript:alert(1)//github.com/t3tools/t2code/pull/1",
       "not a url",
     ]) {
       expect(parseChangeRequestUrl(link), link).toBeNull();
@@ -506,7 +506,7 @@ describe("findProjectForChangeRequest", () => {
     //
     // Derived from the SSH remote the way the server derives it rather than written out, so the
     // day that normalization stops reaching the web spelling this fails here too.
-    const canonicalKey = normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T3Tools/Platform/T3Code");
+    const canonicalKey = normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T2Tools/Platform/T2Code");
     const projects = [
       project({
         canonicalKey,

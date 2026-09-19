@@ -44,7 +44,7 @@ function makeLink(overrides: Partial<ThreadPullRequestLink> = {}): ThreadPullReq
     host: "github.com",
     repository: "t3tools/t3code",
     number: 42,
-    url: "https://github.com/t3tools/t3code/pull/42",
+    url: "https://github.com/t3tools/t2code/pull/42",
     source: "manual",
     linkedAt: NOW,
     snapshot: null,
@@ -149,7 +149,7 @@ it.effect("projects link, sync, and unlink onto the thread", () =>
       projectId: PROJECT_ID,
       repository: "t3tools/t3code",
       number: 42,
-      url: "https://github.com/t3tools/t3code/pull/42",
+      url: "https://github.com/t3tools/t2code/pull/42",
     });
 
     // A second link for the same key replaces in place (used for un-dismiss
@@ -209,7 +209,7 @@ it.effect("projects link, sync, and unlink onto the thread", () =>
 it.effect("ignores a sync for a pull request that is no longer linked", () =>
   Effect.gen(function* () {
     const created = yield* createThread(createEmptyReadModel(NOW));
-    const other = makeLink({ number: 7, url: "https://github.com/t3tools/t3code/pull/7" });
+    const other = makeLink({ number: 7, url: "https://github.com/t3tools/t2code/pull/7" });
     const linked = yield* projectEvent(
       created,
       makeEvent({
@@ -254,7 +254,7 @@ it.effect("mirrors legacy meta-updated links into pullRequests using the project
     const created = yield* createThread(withProject);
     const agentLink = makeLink({
       number: 7,
-      url: "https://github.com/t3tools/t3code/pull/7",
+      url: "https://github.com/t3tools/t2code/pull/7",
       source: "agent",
     });
     const withAgentLink = yield* projectEvent(
@@ -275,9 +275,9 @@ it.effect("mirrors legacy meta-updated links into pullRequests using the project
           threadId: THREAD_ID,
           linkedPullRequest: {
             projectId: PROJECT_ID,
-            repository: "T3Tools/T3Code",
+            repository: "T2Tools/T2Code",
             number: 42,
-            url: "https://github.com/t3tools/t3code/pull/42",
+            url: "https://github.com/t3tools/t2code/pull/42",
           },
           updatedAt: LATER,
         },
@@ -289,7 +289,7 @@ it.effect("mirrors legacy meta-updated links into pullRequests using the project
         host: "github.com",
         repository: "t3tools/t3code",
         number: 42,
-        url: "https://github.com/t3tools/t3code/pull/42",
+        url: "https://github.com/t3tools/t2code/pull/42",
         source: "manual",
         linkedAt: LATER,
         snapshot: null,
@@ -301,7 +301,7 @@ it.effect("mirrors legacy meta-updated links into pullRequests using the project
       projectId: PROJECT_ID,
       repository: "t3tools/t3code",
       number: 42,
-      url: "https://github.com/t3tools/t3code/pull/42",
+      url: "https://github.com/t3tools/t2code/pull/42",
     });
 
     // Null clears only the manual link; the agent's stays.
@@ -318,7 +318,7 @@ it.effect("mirrors legacy meta-updated links into pullRequests using the project
       projectId: PROJECT_ID,
       repository: "t3tools/t3code",
       number: 7,
-      url: "https://github.com/t3tools/t3code/pull/7",
+      url: "https://github.com/t3tools/t2code/pull/7",
     });
   }),
 );
@@ -337,7 +337,7 @@ it.effect("falls back to the link URL host when the project has no repository id
             projectId: PROJECT_ID,
             repository: "t3tools/t3code",
             number: 42,
-            url: "https://GitLab.example.com/t3tools/t3code/-/merge_requests/42",
+            url: "https://GitLab.example.com/t3tools/t2code/-/merge_requests/42",
           },
           updatedAt: LATER,
         },

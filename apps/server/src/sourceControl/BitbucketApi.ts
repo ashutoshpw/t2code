@@ -30,7 +30,6 @@ import { collectUint8StreamText } from "../stream/collectUint8StreamText.ts";
 import * as SourceControlProvider from "./SourceControlProvider.ts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as VcsDriverRegistry from "../vcs/VcsDriverRegistry.ts";
-import { envStringConfig } from "@t2code/shared/legacyEnvConfig";
 import { retryAtFromHeader } from "./SourceControlRateLimit.ts";
 
 const DEFAULT_API_BASE_URL = "https://api.bitbucket.org/2.0";
@@ -40,12 +39,12 @@ const DEFAULT_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
 
 const BitbucketApiEnvConfig = Config.all({
-  baseUrl: envStringConfig("T2CODE_BITBUCKET_API_BASE_URL").pipe(
+  baseUrl: Config.String("T2CODE_BITBUCKET_API_BASE_URL").pipe(
     Config.withDefault(DEFAULT_API_BASE_URL),
   ),
-  accessToken: envStringConfig("T2CODE_BITBUCKET_ACCESS_TOKEN").pipe(Config.option),
-  email: envStringConfig("T2CODE_BITBUCKET_EMAIL").pipe(Config.option),
-  apiToken: envStringConfig("T2CODE_BITBUCKET_API_TOKEN").pipe(Config.option),
+  accessToken: Config.String("T2CODE_BITBUCKET_ACCESS_TOKEN").pipe(Config.option),
+  email: Config.String("T2CODE_BITBUCKET_EMAIL").pipe(Config.option),
+  apiToken: Config.String("T2CODE_BITBUCKET_API_TOKEN").pipe(Config.option),
 });
 
 const BitbucketApiOperation = Schema.Literals([

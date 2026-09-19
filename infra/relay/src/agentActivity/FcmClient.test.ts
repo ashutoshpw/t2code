@@ -50,7 +50,7 @@ const config = {
 } satisfies RelayConfiguration["Service"];
 const input = {
   token: "device-token",
-  packageName: "com.t3tools.t3code.dev",
+  packageName: "com.t2tools.t2code.dev",
   data: { t3_kind: "agent_activity", active: "true" },
   alert: false,
 };

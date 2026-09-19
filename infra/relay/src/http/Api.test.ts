@@ -67,7 +67,7 @@ const relaySettings: RelayConfiguration.RelayConfiguration["Service"] = {
     teamId: "apns-team",
     keyId: "apns-key",
     privateKey: Redacted.make("apns-private-key"),
-    bundleId: "com.example.t3",
+    bundleId: "com.example.t2",
     environment: "sandbox",
   },
   clerkSecretKey: Redacted.make("clerk-secret-key"),
@@ -316,9 +316,7 @@ function relayUnlinkTestLayer(input?: {
       EnvironmentLinks.EnvironmentLinks.of({
         updateLabel: () => Effect.die("unused updateLabel"),
         upsert: () => Effect.die("unused upsert"),
-        listUsersForEnvironment: () => Effect.die("unused listUsersForEnvironment"),
         listDeliveryUsersForEnvironment: () => Effect.die("unused listDeliveryUsersForEnvironment"),
-        listPublicKeysForEnvironment: () => Effect.die("unused listPublicKeysForEnvironment"),
         listForUser: () => Effect.die("unused listForUser"),
         getForUser: input?.getForUser ?? (() => Effect.succeed(null)),
         revokeForUser: input?.revokeForUser ?? (() => Effect.succeed(false)),

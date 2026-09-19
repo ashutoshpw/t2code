@@ -286,7 +286,7 @@ describe("splitPromptIntoComposerSegments", () => {
   });
 
   it("leaves a context link with an unparsable href as text", () => {
-    const prompt = "see [x](t3-context://v1/terminal/ctx 1) now";
+    const prompt = "see [x](t2-context://v1/terminal/ctx 1) now";
     expect(splitPromptIntoComposerSegments(prompt)).toEqual([{ type: "text", text: prompt }]);
   });
 });

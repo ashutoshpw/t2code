@@ -187,8 +187,8 @@ Required Vercel domains:
 - `nightly.app.t2.codes`: channel alias updated by nightly releases.
 
 The router domain uses `apps/web/vercel.ts` routes. Users opt into a channel by
-visiting `/__t3code/channel?channel=latest` or
-`/__t3code/channel?channel=nightly`; the router stores the
+visiting `/__t2code/channel?channel=latest` or
+`/__t2code/channel?channel=nightly`; the router stores the
 `t3code_web_channel` cookie and rewrites future requests on `app.t2.codes` to
 the matching channel alias.
 
@@ -198,7 +198,7 @@ same deployment to both the `latest` channel and the router domain so the router
 rules stay current. Nightly deploys only alias the `nightly` channel. The job
 also passes `VITE_HOSTED_APP_CHANNEL=latest|nightly`, which renders the hosted
 update track selector in the About panel. Changing the selector navigates
-through `/__t3code/channel` on the router domain so the user's channel cookie is
+through `/__t2code/channel` on the router domain so the user's channel cookie is
 updated before redirecting to the hosted app root.
 
 One-time Vercel dashboard setup:
@@ -291,7 +291,7 @@ supplied archives may retain the historical `t3-` stem) built
 by the Linux desktop job and handed to the Windows desktop build as
 `--wsl-runtime`, copied in verbatim so WSL runs the exact bytes a Linux user
 downloads. WSL verifies and extracts that archive
-into `~/.t3/wsl-runtime/sha256-<archive-digest>` inside the selected distro,
+into `~/.t2/wsl-runtime/sha256-<archive-digest>` inside the selected distro,
 then reuses it for later launches of the same update.
 
 Windows keeps JavaScript and package metadata inside `app.asar` and unpacks only
@@ -456,7 +456,7 @@ Checklist:
 
 1. Apple Developer account access:
    - Team has rights to create Developer ID certificates.
-2. Create an explicit App ID for `com.t3tools.t3code` and enable Associated Domains.
+2. Create an explicit App ID for `com.t2tools.t2code` and enable Associated Domains.
 3. Create a `Developer ID Application` certificate and a compatible provisioning profile for that
    App ID with Associated Domains enabled.
 4. Export the certificate + private key as `.p12` from Keychain.
@@ -526,7 +526,7 @@ Checklist:
 
 - macOS build unsigned when expected signed:
   - Check all Apple secrets plus `APPLE_TEAM_ID` are populated and non-empty.
-  - Confirm the provisioning profile belongs to `APPLE_TEAM_ID.com.t3tools.t3code` and includes
+  - Confirm the provisioning profile belongs to `APPLE_TEAM_ID.com.t2tools.t2code` and includes
     Associated Domains.
 - Windows build unsigned when expected signed:
   - Check all Azure ATS and auth secrets are populated and non-empty.

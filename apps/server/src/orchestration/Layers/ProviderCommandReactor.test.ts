@@ -677,7 +677,7 @@ describe("ProviderCommandReactor", () => {
           commandId: CommandId.make("cmd-sign-out-worktree"),
           threadId,
           title: "New thread",
-          branch: "t3code/1234abcd",
+          branch: "t2code/1234abcd",
           worktreePath: NodePath.join(harness.stateDir, "missing-worktree"),
         });
 
@@ -900,7 +900,7 @@ describe("ProviderCommandReactor", () => {
         message: {
           messageId: asMessageId("user-message-with-context"),
           role: "user",
-          text: "Inspect [build](t3-context://v1/terminal/terminal-1)",
+          text: "Inspect [build](t2-context://v1/terminal/terminal-1)",
           attachments: [],
           context: {
             version: 1,
@@ -2551,7 +2551,7 @@ describe("ProviderCommandReactor", () => {
         type: "thread.meta.update",
         commandId: CommandId.make("cmd-thread-branch"),
         threadId: ThreadId.make("thread-1"),
-        branch: "t3code/1234abcd",
+        branch: "t2code/1234abcd",
         worktreePath: "/tmp/provider-project-worktree",
       }),
     );

@@ -3632,7 +3632,7 @@ export function ConnectionsSettings() {
                 <AlertDialogDescription>
                   {pendingDesktopServerExposureMode === "network-accessible"
                     ? "Let your other devices connect to T2 Code over the network. Pair devices to give them access. T2 Code will restart."
-                    : "Devices connected over your local network will disconnect. Existing tunnels, such as T3 Connect or Tailscale HTTPS, keep working. T2 Code will restart."}
+                    : "Devices connected over your local network will disconnect. Existing tunnels, such as T2 Connect or Tailscale HTTPS, keep working. T2 Code will restart."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

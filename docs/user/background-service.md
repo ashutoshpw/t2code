@@ -37,7 +37,7 @@ installing one.
 
 `t2code uninstall` removes the background service, the `t2code` launcher, and the
 downloaded versions after showing you the list and asking once. Your projects,
-threads, and settings under `~/.t3/userdata` are kept. Pass `--yes` from a
+threads, and settings under `~/.t2/userdata` are kept. Pass `--yes` from a
 script.
 
 ## Platform support
@@ -91,7 +91,7 @@ On macOS, check **System Settings → General → Login Items** if the service n
 longer starts at login. If agent work cannot access Desktop, Documents, or
 Downloads, it may need Full Disk Access for the `t2code` executable listed in
 `ProgramArguments` in
-`~/Library/LaunchAgents/com.t3tools.t3code.service.plist`.
+`~/Library/LaunchAgents/com.t2tools.t2code.service.plist`.
 
 For failures after signing in to T2 Connect, see
 [connection troubleshooting](./remote-access.md#t3-connect-troubleshooting).

@@ -39,14 +39,14 @@ export function CompactBrandTitle(
       <T2Wordmark colorClassName="accent-icon" height={15} />
       <Text
         allowFontScaling={props.allowFontScaling}
-        className="font-t3-medium text-[21px] tracking-[-0.5px] text-foreground-muted"
+        className="font-t2-medium text-[21px] tracking-[-0.5px] text-foreground-muted"
       >
         Code
       </Text>
       <View className="rounded-full bg-subtle px-1.5 py-0.5">
         <Text
           allowFontScaling={props.allowFontScaling}
-          className="font-t3-bold text-[9px] tracking-[0.9px] text-foreground-muted uppercase"
+          className="font-t2-bold text-[9px] tracking-[0.9px] text-foreground-muted uppercase"
         >
           {stageLabel}
         </Text>

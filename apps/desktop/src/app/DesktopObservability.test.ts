@@ -389,8 +389,8 @@ describe("DesktopObservability", () => {
         prefix: "t3-desktop-observability-test-",
       });
       const environmentLayer = makeEnvironmentLayer(baseDir, true, {
-        T3CODE_OTLP_LOGS_URL: "https://collector.example.com/v1/logs",
-        T3CODE_OTLP_HEADERS: "x-scope=desktop",
+        T2CODE_OTLP_LOGS_URL: "https://collector.example.com/v1/logs",
+        T2CODE_OTLP_HEADERS: "x-scope=desktop",
       });
       const tracePath = yield* Effect.gen(function* () {
         const environment = yield* DesktopEnvironment.DesktopEnvironment;

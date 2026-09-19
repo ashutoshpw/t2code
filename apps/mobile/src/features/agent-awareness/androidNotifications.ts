@@ -10,7 +10,7 @@ interface AndroidAgentNotifications {
 
 const native =
   Platform.OS === "android"
-    ? requireOptionalNativeModule<AndroidAgentNotifications>("T3AgentNotifications")
+    ? requireOptionalNativeModule<AndroidAgentNotifications>("T2AgentNotifications")
     : null;
 
 export function supportsAndroidAgentNotifications(): boolean {

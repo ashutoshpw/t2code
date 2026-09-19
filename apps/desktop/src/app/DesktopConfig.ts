@@ -2,7 +2,6 @@ import { OtlpHeadersFromString, OtlpProtocol } from "@t2code/shared/observabilit
 import * as Config from "effect/Config";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Option from "effect/Option";
-import { envIntConfig, envStringConfig } from "@t2code/shared/legacyEnvConfig";
 
 const trimNonEmptyOption = (value: string): Option.Option<string> => {
   const trimmed = value.trim();
@@ -10,10 +9,10 @@ const trimNonEmptyOption = (value: string): Option.Option<string> => {
 };
 
 const trimmedString = (name: string) =>
-  envStringConfig(name).pipe(Config.option, Config.map(Option.flatMap(trimNonEmptyOption)));
+  Config.String(name).pipe(Config.option, Config.map(Option.flatMap(trimNonEmptyOption)));
 
 const optionalIntWithDefault = (name: string, fallback: number) =>
-  envIntConfig(name).pipe(Config.withDefault(fallback));
+  Config.Int(name).pipe(Config.withDefault(fallback));
 
 const optionalBoolean = (name: string) =>
   Config.Boolean(name).pipe(Config.option, Config.map(Option.getOrElse(() => false)));
@@ -41,15 +40,17 @@ export const DesktopConfig = Config.all({
   appDataDirectory: trimmedString("APPDATA"),
   xdgConfigHome: trimmedString("XDG_CONFIG_HOME"),
   xdgDataHome: trimmedString("XDG_DATA_HOME"),
-  t3Home: trimmedString("T2CODE_HOME"),
+  t2Home: trimmedString("T2CODE_HOME"),
   devServerUrl: Config.URL("VITE_DEV_SERVER_URL").pipe(Config.option),
   appUserModelIdOverride: trimmedString("T2CODE_DESKTOP_APP_USER_MODEL_ID"),
-  devRemoteT3ServerEntryPath: trimmedString("T2CODE_DEV_REMOTE_T3_SERVER_ENTRY_PATH"),
+  devRemoteServerEntryPath: trimmedString("T2CODE_DEV_REMOTE_SERVER_ENTRY_PATH"),
   configuredBackendPort: Config.Port("T2CODE_PORT").pipe(Config.option),
   commitHashOverride: trimmedString("T2CODE_COMMIT_HASH"),
   desktopLanHostOverride: trimmedString("T2CODE_DESKTOP_LAN_HOST"),
   desktopHttpsEndpointUrls: commaSeparatedStrings("T2CODE_DESKTOP_HTTPS_ENDPOINTS"),
   otlpTracesUrl: trimmedString("T2CODE_OTLP_TRACES_URL"),
+  otlpMetricsUrl: trimmedString("T2CODE_OTLP_METRICS_URL"),
+  otlpLogsUrl: trimmedString("T2CODE_OTLP_LOGS_URL"),
   otlpExportIntervalMs: optionalIntWithDefault("T2CODE_OTLP_EXPORT_INTERVAL_MS", 10_000),
   otlpHeaders: Config.schema(OtlpHeadersFromString, "T2CODE_OTLP_HEADERS").pipe(Config.option),
   otlpProtocol: Config.schema(OtlpProtocol, "T2CODE_OTLP_PROTOCOL").pipe(

@@ -26,9 +26,9 @@ Add `--browser` to open a browser automatically.
 
 ### State and ports
 
-Linked worktrees default to their own `.t3/userdata`, even when `T2CODE_HOME` is set.
-The main checkout defaults to `~/.t3/dev/userdata`. An explicit `--home-dir` wins in both cases.
-Never run a development server against the live `~/.t3/userdata`.
+Linked worktrees default to their own `.t2/userdata`, even when `T2CODE_HOME` is set.
+The main checkout defaults to `~/.t2/dev/userdata`. An explicit `--home-dir` wins in both cases.
+Never run a development server against the live `~/.t2/userdata`.
 See [test data](../../AGENTS.md#test-data) for copying a consistent database snapshot.
 
 Read ports from the `[dev-runner]` output. Worktrees derive stable preferences from their paths,

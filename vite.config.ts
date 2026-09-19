@@ -109,7 +109,7 @@ export default defineConfig({
       "apps/mobile/uniwind-types.d.ts",
     ],
     plugins: ["eslint", "oxc", "react", "unicorn", "typescript"],
-    jsPlugins: ["./oxlint-plugin-t3code/index.ts"],
+    jsPlugins: ["./oxlint-plugin-t2code/index.ts"],
     categories: {
       correctness: "warn",
       suspicious: "warn",
@@ -145,17 +145,17 @@ export default defineConfig({
         "error",
         { paths: [...RESTRICTED_IMPORT_PATHS, RESTRICTED_PULL_REQUEST_GLYPH_IMPORTS] },
       ],
-      "t3code/no-global-process-runtime": "error",
-      "t3code/no-inline-schema-compile": "warn",
-      "t3code/no-manual-effect-runtime-in-tests": "error",
-      "t3code/no-native-title-tooltip": "error",
-      "t3code/namespace-node-imports": "error",
+      "t2code/no-global-process-runtime": "error",
+      "t2code/no-inline-schema-compile": "warn",
+      "t2code/no-manual-effect-runtime-in-tests": "error",
+      "t2code/no-native-title-tooltip": "error",
+      "t2code/namespace-node-imports": "error",
     },
     overrides: [
       {
         // The one place that reads the host platform to seed the injected references.
         files: ["packages/shared/src/hostProcess.ts"],
-        rules: { "t3code/no-global-process-runtime": "off" },
+        rules: { "t2code/no-global-process-runtime": "off" },
       },
       {
         // The one module allowed to name lucide's pull-request glyphs; everything else picks
@@ -165,7 +165,7 @@ export default defineConfig({
       },
       {
         files: ["apps/mobile/src/**"],
-        rules: { "t3code/no-mobile-uniwind-theme-escape-hatches": "error" },
+        rules: { "t2code/no-mobile-uniwind-theme-escape-hatches": "error" },
       },
       {
         // Shared client code must not call APIs missing from Hermes. Our ESNext
@@ -178,7 +178,7 @@ export default defineConfig({
           "packages/shared/src/**",
         ],
         excludeFiles: ["**/*.test.ts", "**/*.test.tsx"],
-        rules: { "t3code/no-hermes-unsupported-apis": "error" },
+        rules: { "t2code/no-hermes-unsupported-apis": "error" },
       },
       {
         // Reviewed native and third-party interop boundaries that cannot consume a className.
@@ -206,12 +206,12 @@ export default defineConfig({
           "apps/mobile/src/features/threads/thread-list-items.tsx",
           "apps/mobile/src/features/threads/thread-list-v2-items.tsx",
           "apps/mobile/src/lib/useMobileNavigationTheme.ts",
-          "apps/mobile/src/native/T3ComposerEditor.ios.tsx",
-          "apps/mobile/src/native/T3ComposerEditor.native.tsx",
+          "apps/mobile/src/native/T2ComposerEditor.ios.tsx",
+          "apps/mobile/src/native/T2ComposerEditor.native.tsx",
           "apps/mobile/src/native/SelectableMarkdownText.android.tsx",
         ],
         rules: {
-          "t3code/no-mobile-uniwind-theme-escape-hatches": ["error", { allowUniwindTheme: true }],
+          "t2code/no-mobile-uniwind-theme-escape-hatches": ["error", { allowUniwindTheme: true }],
         },
       },
       // Legacy manual Effect runners tracked as debt: no net-new occurrences.
@@ -234,7 +234,7 @@ export default defineConfig({
         "apps/server/src/provider/acp/CursorAcpSupport.test.ts": 1,
       }).map(([file, maxOccurrences]) => {
         const rule: ["error", { maxOccurrences: number }] = ["error", { maxOccurrences }];
-        return { files: [file], rules: { "t3code/no-manual-effect-runtime-in-tests": rule } };
+        return { files: [file], rules: { "t2code/no-manual-effect-runtime-in-tests": rule } };
       }),
     ],
     options: {

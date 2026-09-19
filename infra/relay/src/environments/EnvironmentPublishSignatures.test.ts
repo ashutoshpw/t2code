@@ -30,7 +30,7 @@ const config = RelayConfiguration.RelayConfiguration.of({
     teamId: "team-id",
     keyId: "key-id",
     privateKey: Redacted.make("private-key"),
-    bundleId: "com.t3tools.t3code.dev",
+    bundleId: "com.t2tools.t2code.dev",
   },
   apnsDeliveryJobSigningSecret: Redacted.make("job-secret"),
   clerkSecretKey: Redacted.make("clerk-secret"),
@@ -68,7 +68,7 @@ function signTestJwt(payload: object, privateKey: string): string {
 const freshRequest = Effect.gen(function* () {
   const now = yield* DateTime.now;
   const payload = {
-    iss: "t3-env:env",
+    iss: "t2-env:env",
     aud: "https://relay.example.test",
     sub: "env",
     jti: "publish-jti",

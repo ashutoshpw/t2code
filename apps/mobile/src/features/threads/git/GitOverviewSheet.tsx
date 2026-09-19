@@ -314,7 +314,7 @@ export function GitOverviewSheet(props: GitOverviewSheetProps) {
 
       {linkedPrChains.length > 0 ? (
         <View className="gap-2">
-          <Text className="px-1 text-xs font-t3-bold text-foreground-muted">
+          <Text className="px-1 text-xs font-t2-bold text-foreground-muted">
             Linked pull requests
           </Text>
           {linkedPrChains.map((chain) => (
@@ -511,10 +511,10 @@ export function GitOverviewSheet(props: GitOverviewSheetProps) {
               />
             </Pressable>
           )}
-          <Text className="text-xs font-t3-bold tracking-[1px] uppercase text-foreground-muted">
+          <Text className="text-xs font-t2-bold tracking-[1px] uppercase text-foreground-muted">
             Repository
           </Text>
-          <Text className="pr-10 text-xl font-t3-bold">{currentBranchLabel}</Text>
+          <Text className="pr-10 text-xl font-t2-bold">{currentBranchLabel}</Text>
           <Text className="text-foreground-secondary text-sm font-medium leading-normal">
             {currentStatusSummary}
           </Text>

@@ -17,6 +17,7 @@ import {
   type DesktopBackendBootstrap as DesktopBackendBootstrapValue,
 } from "@t2code/contracts";
 import * as NetService from "@t2code/shared/Net";
+import { DEFAULT_SIGNAL_EXPORT } from "@t2code/shared/observability";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { deriveServerPaths } from "../config.ts";
 import { resolveServerConfig } from "./config.ts";
@@ -33,7 +34,7 @@ const makeDesktopBootstrap = (
   mode: "desktop",
   noBrowser: true,
   port: 4888,
-  t3Home: "/tmp/t3-bootstrap-home",
+  t2Home: "/tmp/t3-bootstrap-home",
   host: "127.0.0.1",
   desktopBootstrapToken: "desktop-bootstrap-token",
   tailscaleServeEnabled: false,
@@ -50,10 +51,11 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     traceMaxFiles: 10,
     otlpTracesUrl: undefined,
     otlpMetricsUrl: undefined,
-    otlpExportIntervalMs: 10_000,
+    otlpLogsUrl: undefined,
+    otlpTracesExport: DEFAULT_SIGNAL_EXPORT,
+    otlpMetricsExport: DEFAULT_SIGNAL_EXPORT,
+    otlpLogsExport: DEFAULT_SIGNAL_EXPORT,
     otlpServiceName: "t2-server",
-    otlpHeaders: undefined,
-    otlpProtocol: "http/json",
     devAllowedOrigins: [],
   } as const;
 
@@ -117,35 +119,6 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       }
       expect(Redacted.value(web.devAuthToken)).toBe("reusable-dev-auth-token-that-is-long-enough");
       expect(desktop.devAuthToken).toBeUndefined();
-    }),
-  );
-
-  it.effect("honors the legacy T3CODE_HOME env spelling", () =>
-    Effect.gen(function* () {
-      const baseDir = yield* FileSystem.FileSystem.pipe(
-        Effect.flatMap((fs) => fs.makeTempDirectoryScoped({ prefix: "t2-cli-legacy-home-" })),
-      );
-      const flags = {
-        mode: Option.some("desktop" as const),
-        port: Option.some(8788),
-        host: Option.none<string>(),
-        baseDir: Option.none<string>(),
-        cwd: Option.none<string>(),
-        devUrl: Option.none<URL>(),
-        noBrowser: Option.some(true),
-        bootstrapFd: Option.none<number>(),
-        autoBootstrapProjectFromCwd: Option.none<boolean>(),
-        logWebSocketEvents: Option.none<boolean>(),
-        tailscaleServeEnabled: Option.none<boolean>(),
-        tailscaleServePort: Option.none<number>(),
-      };
-      const configLayer = ConfigProvider.layer(
-        ConfigProvider.fromEnv({ env: { T3CODE_HOME: baseDir } }),
-      );
-      const resolved = yield* resolveServerConfig(flags, Option.none()).pipe(
-        Effect.provide(Layer.mergeAll(configLayer, NetService.layer)),
-      );
-      expect(resolved.baseDir).toBe(baseDir);
     }),
   );
 
@@ -418,7 +391,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         makeDesktopBootstrap({
           port: 4888,
           host: "127.0.0.2",
-          t3Home: "/tmp/t3-bootstrap-home",
+          t2Home: "/tmp/t3-bootstrap-home",
           noBrowser: true,
           desktopBootstrapToken: "desktop-token",
           desktopTelemetryFd: 4,
@@ -427,6 +400,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           tailscaleServePort: 443,
           otlpTracesUrl: "http://localhost:4318/v1/traces",
           otlpMetricsUrl: "http://localhost:4318/v1/metrics",
+          otlpLogsUrl: "http://localhost:4318/v1/logs",
         }),
       );
       const derivedPaths = yield* deriveServerPaths(baseDir, undefined);
@@ -467,6 +441,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         ...defaultObservabilityConfig,
         otlpTracesUrl: "http://localhost:4318/v1/traces",
         otlpMetricsUrl: "http://localhost:4318/v1/metrics",
+        otlpLogsUrl: "http://localhost:4318/v1/logs",
         mode: "desktop",
         port: 4888,
         cwd: process.cwd(),
@@ -549,7 +524,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         makeDesktopBootstrap({
           port: 4888,
           host: "127.0.0.2",
-          t3Home: "/tmp/t3-bootstrap-home",
+          t2Home: "/tmp/t3-bootstrap-home",
           noBrowser: false,
           desktopBootstrapToken: "desktop-token",
           tailscaleServeEnabled: false,
@@ -633,6 +608,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           observability: {
             otlpTracesUrl: "http://localhost:4318/v1/traces",
             otlpMetricsUrl: "http://localhost:4318/v1/metrics",
+            otlpLogsUrl: "http://localhost:4318/v1/logs",
           },
         })}\n`,
       );
@@ -664,11 +640,13 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
 
       expect(resolved.otlpTracesUrl).toBe("http://localhost:4318/v1/traces");
       expect(resolved.otlpMetricsUrl).toBe("http://localhost:4318/v1/metrics");
+      expect(resolved.otlpLogsUrl).toBe("http://localhost:4318/v1/logs");
       expect(resolved).toEqual({
         logLevel: "Info",
         ...defaultObservabilityConfig,
         otlpTracesUrl: "http://localhost:4318/v1/traces",
         otlpMetricsUrl: "http://localhost:4318/v1/metrics",
+        otlpLogsUrl: "http://localhost:4318/v1/logs",
         mode: "desktop",
         port: 4888,
         cwd: process.cwd(),
@@ -787,7 +765,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         ),
       );
 
-      expect(resolved.otlpHeaders).toEqual({
+      expect(resolved.otlpTracesExport.headers).toEqual({
         authorization: "Basic abc==",
         "x-tenant": "t3",
       });
@@ -831,7 +809,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         ),
       );
 
-      expect(resolved.otlpHeaders).toEqual({
+      expect(resolved.otlpTracesExport.headers).toEqual({
         authorization: "Bearer abc==",
         "x-tenant": "t3",
       });
@@ -839,7 +817,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     }),
   );
 
-  it.effect("reads the OTLP protocol from env", () =>
+  it.effect("gives every signal the protocol named without one", () =>
     Effect.gen(function* () {
       const { join } = yield* Path.Path;
       const baseDir = join(NodeOS.tmpdir(), "t3-cli-config-otlp-protocol-base");
@@ -871,7 +849,49 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         ),
       );
 
-      expect(resolved.otlpProtocol).toBe("http/protobuf");
+      expect([
+        resolved.otlpTracesExport.protocol,
+        resolved.otlpMetricsExport.protocol,
+        resolved.otlpLogsExport.protocol,
+      ]).toEqual(["http/protobuf", "http/protobuf", "http/protobuf"]);
+    }),
+  );
+
+  it.effect("reads the OTLP logs URL from env", () =>
+    Effect.gen(function* () {
+      const { join } = yield* Path.Path;
+      const baseDir = join(NodeOS.tmpdir(), "t3-cli-config-otlp-logs-url-base");
+
+      const resolved = yield* resolveServerConfig(
+        {
+          mode: Option.some("web"),
+          port: Option.some(3772),
+          host: Option.none(),
+          baseDir: Option.some(baseDir),
+          cwd: Option.none(),
+          devUrl: Option.none(),
+          noBrowser: Option.none(),
+          bootstrapFd: Option.none(),
+          autoBootstrapProjectFromCwd: Option.none(),
+          logWebSocketEvents: Option.none(),
+          tailscaleServeEnabled: Option.none(),
+          tailscaleServePort: Option.none(),
+        },
+        Option.none(),
+      ).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            ConfigProvider.layer(
+              ConfigProvider.fromEnv({
+                env: { T2CODE_OTLP_LOGS_URL: "http://collector.internal:4318/v1/logs" },
+              }),
+            ),
+            NetService.layer,
+          ),
+        ),
+      );
+
+      expect(resolved.otlpLogsUrl).toBe("http://collector.internal:4318/v1/logs");
     }),
   );
 });

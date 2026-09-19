@@ -128,7 +128,7 @@ impl LoadedScript {
             .call_method(
                 Some(destination.as_str()),
                 "/com/t3tools/KdeCapture",
-                Some("com.t3tools.KdeCapture"),
+                Some("com.t2tools.KdeCapture"),
                 "Reply",
                 &(value,),
             )

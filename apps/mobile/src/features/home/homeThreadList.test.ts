@@ -145,7 +145,7 @@ describe("buildHomeThreadGroups", () => {
       environmentId: remoteEnvironmentId,
       id: ProjectId.make("project-canonical-remote"),
       title: "t3code",
-      workspaceRoot: "/remote/t3code/",
+      workspaceRoot: "/remote/t2code/",
       repositoryIdentity,
       updatedAt: "2026-06-02T00:00:00.000Z",
     });
@@ -210,7 +210,7 @@ describe("buildHomeThreadGroups", () => {
         environmentId: remoteEnvironmentId,
         id: ProjectId.make("project-remote-fresh"),
         title: "t3code",
-        workspaceRoot: "/remote/t3code/",
+        workspaceRoot: "/remote/t2code/",
         updatedAt: "2026-06-02T00:00:00.000Z",
       }),
     ];
@@ -545,14 +545,14 @@ describe("buildHomeThreadGroups", () => {
         environmentId,
         id: ProjectId.make("project-web"),
         title: "Web",
-        workspaceRoot: "/workspaces/t3code/apps/web",
+        workspaceRoot: "/workspaces/t2code/apps/web",
         repositoryIdentity,
       }),
       makeProject({
         environmentId,
         id: ProjectId.make("project-mobile"),
         title: "Mobile",
-        workspaceRoot: "/workspaces/t3code/apps/mobile",
+        workspaceRoot: "/workspaces/t2code/apps/mobile",
         repositoryIdentity,
       }),
     ];

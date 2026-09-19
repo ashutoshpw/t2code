@@ -18,7 +18,7 @@ describe("shouldHandleAppLink", () => {
     expect(shouldHandleAppLink(url)).toBe(true);
   });
 
-  it.each(["t3code://expo-development-client/?url=x", "t3code://expo-sharing/anything"])(
+  it.each(["t2code://expo-development-client/?url=x", "t2code://expo-sharing/anything"])(
     "ignores lifecycle URL %s",
     (url) => {
       expect(shouldHandleAppLink(url)).toBe(false);

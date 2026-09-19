@@ -76,7 +76,7 @@ it("preserves the replaced extension as a recoverable backup", async () => {
   await installGnomeCaptureBundle({ bundle, dataHome });
   await NodeFSP.writeFile(NodePath.join(installedPath(), "custom.txt"), "local change");
   await installGnomeCaptureBundle({ bundle, dataHome });
-  const backups = NodePath.join(dataHome, "t3code/extension-backups");
+  const backups = NodePath.join(dataHome, "t2code/extension-backups");
   const [backup] = await NodeFSP.readdir(backups);
   expect(
     await NodeFSP.readFile(
@@ -189,5 +189,5 @@ it("surfaces desktop rejection and disconnect as actionable failures", async () 
 it("does not offer host extension installation in another desktop or sandbox", () => {
   expect(isGnomeCaptureSession({ XDG_CURRENT_DESKTOP: "ubuntu:GNOME" })).toBe(true);
   expect(isGnomeCaptureSession({ XDG_CURRENT_DESKTOP: "niri", GDMSESSION: "gnome" })).toBe(false);
-  expect(isGnomeCaptureSession({ XDG_CURRENT_DESKTOP: "GNOME", FLATPAK_ID: "com.t3" })).toBe(false);
+  expect(isGnomeCaptureSession({ XDG_CURRENT_DESKTOP: "GNOME", FLATPAK_ID: "com.t2" })).toBe(false);
 });

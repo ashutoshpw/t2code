@@ -1,5 +1,5 @@
 import type { WorktreeSetupCardProps } from "./worktree-setup-card";
-import type { ComposerTextPaste } from "../../native/T3ComposerEditor.types";
+import type { ComposerTextPaste } from "../../native/T2ComposerEditor.types";
 import { type EnvironmentConnectionPhase } from "@t2code/client-runtime/connection";
 import {
   appendCodexArtifactTemplateUsePrompt,
@@ -23,7 +23,7 @@ import type {
   ProviderApprovalDecision,
   ProviderInteractionMode,
   RuntimeMode,
-  ServerConfig as T3ServerConfig,
+  ServerConfig as T2ServerConfig,
   ThreadId,
   UsageLimitsReport,
   UserInputQuestion,
@@ -151,7 +151,7 @@ export interface ThreadDetailScreenProps {
   readonly selectedThreadQueueCount: number;
   readonly queuedMessages: ReadonlyArray<QueuedThreadMessage>;
   readonly dispatchingMessageId: MessageId | null;
-  readonly serverConfig: T3ServerConfig | null;
+  readonly serverConfig: T2ServerConfig | null;
   readonly layoutVariant?: LayoutVariant;
   readonly usesAutomaticContentInsets?: boolean;
   readonly onHeaderMaterialVisibilityChange?: (visible: boolean) => void;

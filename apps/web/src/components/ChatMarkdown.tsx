@@ -219,7 +219,7 @@ interface ChatMarkdownProps {
   imageBaseDir?: string | undefined;
   onImageExpand?: ((preview: ExpandedImagePreview) => void) | undefined;
   extraRemarkPlugins?: NonNullable<ReactMarkdownOptions["remarkPlugins"]>;
-  /** Renders a `t3-context://` link as a chip; without it the link shows its label as text. */
+  /** Renders a `t2-context://` link as a chip; without it the link shows its label as text. */
   renderContextReference?: ((reference: ChatMarkdownContextReference) => ReactNode) | undefined;
   /** Loads GitHub-hosted media through `cwd`'s GitHub credential, which a private repository's
       uploads need; without it those images and videos load unauthenticated and 404. */
@@ -479,8 +479,16 @@ const CHAT_MARKDOWN_SANITIZE_SCHEMA = {
   },
   protocols: {
     ...defaultSchema.protocols,
-    href: [...(defaultSchema.protocols?.href ?? []), "file", "t3-citation", "t3-context"],
-    src: [...(defaultSchema.protocols?.src ?? []), "file", "t3-context"],
+    href: [
+      ...(defaultSchema.protocols?.href ?? []),
+      "file",
+      "t2-citation",
+      "t2-context",
+      // Drafts saved by pre-rename builds still embed the old schemes.
+      "t3-citation",
+      "t3-context",
+    ],
+    src: [...(defaultSchema.protocols?.src ?? []), "file", "t2-context", "t3-context"],
   },
 } satisfies Parameters<typeof rehypeSanitize>[0];
 
