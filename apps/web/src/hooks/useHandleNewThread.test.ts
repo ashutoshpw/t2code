@@ -144,13 +144,9 @@ vi.mock("../lib/chatThreadActions", async (importOriginal) => ({
   hasExplicitComposerModelSelection: () => false,
   resolveNewThreadModelSelectionOverride: () => null,
 }));
-<<<<<<< HEAD
-vi.mock("../lib/t3ProjectFileDefaults", () => ({
-  readT3ProjectFile: () => testState.projectFileRead,
-=======
 vi.mock("../lib/t2ProjectFileDefaults", () => ({
-  readT2ProjectFileDefaultThreadEnvMode: () => testState.projectFileRead,
->>>>>>> 74eaa6cbe (fix(project): migrate checked-in config to t2.json (#7))
+  readT2ProjectFile: () => testState.projectFileRead,
+}));
 }));
 vi.mock("../lib/utils", () => ({
   newDraftId: () => "draft-delayed",

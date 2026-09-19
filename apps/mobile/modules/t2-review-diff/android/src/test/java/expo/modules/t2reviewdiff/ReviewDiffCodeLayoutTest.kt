@@ -1,4 +1,4 @@
-package expo.modules.t3reviewdiff
+package expo.modules.t2reviewdiff
 
 import android.graphics.Bitmap
 import android.graphics.Canvas

@@ -97,7 +97,7 @@ const make = Effect.gen(function* () {
     const secret = yield* randomTokenPart(3);
     return {
       credentialId,
-      token: `t3env_${credentialId}_${secret}`,
+      token: `t2env_${credentialId}_${secret}`,
     };
   });
 

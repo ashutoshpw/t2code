@@ -49,7 +49,7 @@ describe("DesktopEnvironment", () => {
           T2CODE_COMMIT_HASH: " 0123456789abcdef ",
           T2CODE_PORT: "4949",
           VITE_DEV_SERVER_URL: "http://localhost:5173",
-          T2CODE_DEV_REMOTE_T3_SERVER_ENTRY_PATH: " /remote/server.mjs ",
+          T2CODE_DEV_REMOTE_SERVER_ENTRY_PATH: " /remote/server.mjs ",
           T2CODE_OTLP_TRACES_URL: " http://127.0.0.1:4318/v1/traces ",
           T2CODE_OTLP_EXPORT_INTERVAL_MS: "2500",
           T2CODE_OTLP_HEADERS: "authorization=Basic%20abc%3D%3D,x-tenant=t3",
@@ -143,8 +143,8 @@ describe("DesktopEnvironment", () => {
       const environment = yield* makeEnvironment({
         platform: "linux",
         isPackaged: true,
-        appPath: "/tmp/.mount_t3code/resources/app.asar",
-        resourcesPath: "/tmp/.mount_t3code/resources",
+        appPath: "/tmp/.mount_t2code/resources/app.asar",
+        resourcesPath: "/tmp/.mount_t2code/resources",
       });
 
       assert.equal(environment.linuxDesktopEntryName, "t2code.desktop");
@@ -159,8 +159,8 @@ describe("DesktopEnvironment", () => {
       );
       const production = yield* makeEnvironment();
 
-      assert.equal(development.stateDir, "/Users/alice/.t3/dev");
-      assert.equal(production.stateDir, "/Users/alice/.t3/userdata");
+      assert.equal(development.stateDir, "/Users/alice/.t2/dev");
+      assert.equal(production.stateDir, "/Users/alice/.t2/userdata");
     }),
   );
 

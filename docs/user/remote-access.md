@@ -110,7 +110,7 @@ If that port is already in use, choose another with
 
 ### Hosted web app
 
-[app.t3.codes](https://app.t3.codes) needs an HTTPS endpoint. It connects directly
+[app.t2.codes](https://app.t2.codes) needs an HTTPS endpoint. It connects directly
 to your server; a hosted pairing link does not make an unreachable backend
 reachable or convert HTTP to HTTPS.
 
@@ -127,7 +127,7 @@ credentials, and agent work stay on the remote machine.
 
 The remote host must be Linux or an Apple Silicon Mac with `curl` or `wget`,
 `tar`, `sha256sum` or `shasum`, and [provider setup](./install.md#providers).
-The first launch downloads T2 Code's server to `~/.t3/runtime` on the host, so
+The first launch downloads T2 Code's server to `~/.t2/runtime` on the host, so
 it takes longer than later ones.
 Provider CLIs must be on the `PATH` of a non-interactive login shell there;
 check with:

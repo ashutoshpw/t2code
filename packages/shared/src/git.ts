@@ -13,7 +13,7 @@ import { detectSourceControlProviderFromRemoteUrl } from "./sourceControl.ts";
 
 export { WORKTREE_BRANCH_PREFIX };
 
-// Canonical form is `<prefix>/<8 hex>`. Older builds generated `t3code/<uuid>`
+// Canonical form is `<prefix>/<8 hex>`. Older builds generated `t2code/<uuid>`
 // via Crypto.randomUUID() (always RFC 4122 v4), so the matcher also accepts exactly
 // that shape — version nibble `4`, variant nibble `[89ab]` — to keep those threads
 // eligible for branch regeneration without loosening beyond what was ever generated.

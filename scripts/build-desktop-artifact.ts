@@ -136,7 +136,7 @@ export function resolveResourceMonitorRustTargets(
 }
 
 export function resourceMonitorExecutableName(platform: typeof BuildPlatform.Type): string {
-  return platform === "win" ? "t3-resource-monitor.exe" : "t3-resource-monitor";
+  return platform === "win" ? "t2-resource-monitor.exe" : "t2-resource-monitor";
 }
 
 const PLATFORM_CONFIG: Record<typeof BuildPlatform.Type, PlatformConfig> = {
@@ -1245,16 +1245,12 @@ export function resolveMacPasskeySigningConfiguration(
     throw new MissingMacPasskeyProvisioningProfileError();
   }
 
-  const configuredRpDomains = (
-    env.T2CODE_CLERK_PASSKEY_RP_DOMAINS ?? env.T3CODE_CLERK_PASSKEY_RP_DOMAINS
-  )?.trim();
+  const configuredRpDomains = env.T2CODE_CLERK_PASSKEY_RP_DOMAINS?.trim();
   let rpDomains: readonly string[];
   if (configuredRpDomains) {
     rpDomains = configuredRpDomains.split(",").map(normalizePasskeyRpDomain);
   } else {
-    const publishableKey = (
-      env.T2CODE_CLERK_PUBLISHABLE_KEY ?? env.T3CODE_CLERK_PUBLISHABLE_KEY
-    )?.trim();
+    const publishableKey = env.T2CODE_CLERK_PUBLISHABLE_KEY?.trim();
     if (!publishableKey) {
       throw new MissingMacPasskeyDomainConfigurationError();
     }
@@ -2045,7 +2041,7 @@ const verifyPackagedBundleIsSelfContained = Effect.fn("verifyPackagedBundleIsSel
     const path = yield* Path.Path;
 
     const probeRoot = yield* fs.makeTempDirectoryScoped({
-      prefix: "t3code-bundle-selfcheck-",
+      prefix: "t2code-bundle-selfcheck-",
     });
     const extractedApp = path.join(probeRoot, "extracted");
     const probeApp = path.join(probeRoot, "app");
@@ -2366,7 +2362,7 @@ function stageMacIcons(stageResourcesDir: string, sourcePng: string, verbose: bo
     }
 
     const tmpRoot = yield* fs.makeTempDirectoryScoped({
-      prefix: "t3code-icon-build-",
+      prefix: "t2code-icon-build-",
     });
 
     const iconPngPath = path.join(stageResourcesDir, "icon.png");
@@ -2653,7 +2649,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   const buildConfig: Record<string, unknown> = {
     appId: DESKTOP_APP_ID,
     productName: resolveDesktopProductName(version),
-    artifactName: "T3-Code-${version}-${arch}.${ext}",
+    artifactName: "T2-Code-${version}-${arch}.${ext}",
     electronLanguages: [...DESKTOP_ELECTRON_LANGUAGES],
     files: [
       ...DESKTOP_FILE_EXCLUSIONS,
@@ -2751,15 +2747,15 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       // resources/package-type into the .deb only, so electron-updater updates
       // each install in its own format.
       target: target === "AppImage" ? [target, "deb"] : [target],
-      executableName: "t3code",
+      executableName: "t2code",
       icon: "icons",
       category: "Development",
       synopsis: "Desktop GUI for coding agents",
       // Required by the .deb control file.
-      maintainer: "T3 Tools <hello@t3.codes>",
+      maintainer: "T2 Tools <hello@t2.codes>",
       // electron-builder turns these into MimeType=x-scheme-handler/<scheme>;
       // in the .desktop entry (Exec already gets %U), so browsers can hand
-      // t2code:// (and legacy t3code://) OAuth callbacks to the app.
+      // t2code:// OAuth callbacks to the app.
       protocols: [
         {
           name: "T2 Code",
@@ -2768,7 +2764,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       ],
       desktop: {
         entry: {
-          StartupWMClass: "t3code",
+          StartupWMClass: "t2code",
         },
       },
     };
@@ -2952,7 +2948,7 @@ export const stageWindowsServerSidecar = Effect.fn("stageWindowsServerSidecar")(
     sidecarDependencies,
   );
   const sidecarPackageJson = {
-    name: "t3code-server",
+    name: "t2code-server",
     version: input.appVersion,
     private: true,
     packageManager: rootPackageJson.packageManager,
@@ -3072,7 +3068,7 @@ export const verifyWindowsPrimaryFffNativeLoad = Effect.fn(
   if (hostPlatform !== "win32" || hostArchitecture !== input.targetArch) return;
 
   const probeRoot = yield* fs.makeTempDirectoryScoped({
-    prefix: "t3code-windows-primary-native-probe-",
+    prefix: "t2code-windows-primary-native-probe-",
   });
   const fffEntryPath = path.join(
     input.asarPath,
@@ -3237,7 +3233,7 @@ export const validateWindowsPackagedPayload = Effect.fn(
     return yield* new WindowsPackagedPayloadValidationError({
       reason: "resource-monitor-missing",
       packagedAppDir,
-      missingFiles: ["resource-monitor/t3-resource-monitor.exe"],
+      missingFiles: ["resource-monitor/t2-resource-monitor.exe"],
     });
   }
 
@@ -3450,7 +3446,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const commitHash = yield* resolveGitCommitHash(repoRoot);
   const mkdir = options.keepStage ? fs.makeTempDirectory : fs.makeTempDirectoryScoped;
   const stageRoot = yield* mkdir({
-    prefix: `t3code-desktop-${options.platform}-stage-`,
+    prefix: `t2code-desktop-${options.platform}-stage-`,
   });
 
   const stageAppDir = path.join(stageRoot, "app");
@@ -3685,7 +3681,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       ? path.join(stageAppDir, WINDOWS_SERVER_RESOURCE_SOURCE_DIR, WINDOWS_SERVER_ASAR_RESOURCE)
       : undefined;
   const stagePackageJson: StagePackageJson = {
-    name: "t3code",
+    name: "t2code",
     version: appVersion,
     buildVersion: appVersion,
     t2codeCommitHash: commitHash,
@@ -3693,8 +3689,8 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     packageManager: rootPackageJson.packageManager,
     description: "T2 Code desktop build",
     // Required by the .deb control file.
-    homepage: "https://t3.codes",
-    author: "T3 Tools",
+    homepage: "https://t2.codes",
+    author: "T2 Tools",
     main: "apps/desktop/dist-electron/boot.cjs",
     build: yield* createBuildConfig(
       options.platform,

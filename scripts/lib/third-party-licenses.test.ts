@@ -81,14 +81,14 @@ describe("third-party license generation", () => {
     const [config, revision] = await Promise.all([
       NodeFSP.readFile(NodePath.join(REPOSITORY_ROOT, "third-party-licenses.config.json"), "utf8"),
       NodeFSP.readFile(
-        NodePath.join(REPOSITORY_ROOT, "apps/mobile/modules/t3-terminal/Vendor/libghostty/VERSION"),
+        NodePath.join(REPOSITORY_ROOT, "apps/mobile/modules/t2-terminal/Vendor/libghostty/VERSION"),
         "utf8",
       ),
     ]);
 
     expect(config).toContain(revision.trim());
     expect(config).toContain(
-      "https://github.com/Yash-Singh1/ghostty/tree/t3code/custom-io-ordered-feed",
+      "https://github.com/Yash-Singh1/ghostty/tree/t2code/custom-io-ordered-feed",
     );
   });
 

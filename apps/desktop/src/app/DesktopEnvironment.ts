@@ -62,7 +62,7 @@ export class DesktopEnvironment extends Context.Service<
     // extracts on demand (see DesktopWslServerTree).
     readonly serverRoot: string;
     readonly backendEntryPath: string;
-    // Built web client the packaged renderer is served from over t3code://app.
+    // Built web client the packaged renderer is served from over t2code://app.
     readonly clientAssetsDir: string;
     readonly backendCwd: string;
     readonly preloadPath: string;
@@ -168,7 +168,7 @@ const make = Effect.fn("desktop.environment.make")(function* (
   const baseDir = resolveDesktopBaseDir({
     homeDirectory,
     joinPath: path.join,
-    t3Home: config.t3Home,
+    t2Home: config.t2Home,
   });
   const rootDir = path.resolve(input.dirname, "../../..");
   const appRoot = input.isPackaged ? input.appPath : rootDir;
@@ -185,7 +185,7 @@ const make = Effect.fn("desktop.environment.make")(function* (
     baseDir,
     isDevelopment,
     joinPath: path.join,
-    t3Home: config.t3Home,
+    t2Home: config.t2Home,
   });
   const userDataDirName = isDevelopment ? "t3code-dev" : "t3code";
   const linuxApplicationsDir = path.join(

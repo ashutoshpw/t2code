@@ -1,5 +1,5 @@
 import {
-  SelectableMarkdownText as T3SelectableMarkdownText,
+  SelectableMarkdownText as T2SelectableMarkdownText,
   type SelectableMarkdownTextProps,
 } from "@t2code/mobile-markdown-text/renderer";
 import { useMemo } from "react";
@@ -31,7 +31,7 @@ export function SelectableMarkdownText(props: MobileSelectableMarkdownTextProps)
     [props.textStyle, selectionColor, selectionHandleColor],
   );
   return (
-    <T3SelectableMarkdownText
+    <T2SelectableMarkdownText
       {...props}
       textStyle={textStyle}
       highlightCode={highlightCodeSnippet}

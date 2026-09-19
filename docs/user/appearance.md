@@ -37,7 +37,7 @@ change. Export your theme as JSON to share it.
 ## Environment themes
 
 Environment themes and defaults come from the server serving your web app or the desktop app's
-main local environment. app.t3.codes and additional connections do not use them.
+main local environment. app.t2.codes and additional connections do not use them.
 
 Select a published theme in **Settings → Appearance** to follow its palette as the server updates
 it. **Duplicate** makes an independent copy you can edit. A saved custom theme with the same ID
@@ -59,7 +59,7 @@ the default and published themes.
 
 ### Publish a theme
 
-Save a theme exported from T2 Code into `~/.t3/userdata/themes/` on the server, or the `themes`
+Save a theme exported from T2 Code into `~/.t2/userdata/themes/` on the server, or the `themes`
 directory under your custom state directory. The filename supplies the theme ID: `nightfall.json`
 can be selected with `t2code theme set nightfall`. Keep the filename stable when updating its colors.
 Do not use `system`, `light`, `dark`, or a built-in theme's ID.

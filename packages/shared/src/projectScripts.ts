@@ -60,13 +60,9 @@ export function projectScriptRuntimeEnv(
 ): Record<string, string> {
   const env: Record<string, string> = {
     T2CODE_PROJECT_ROOT: input.project.cwd,
-    // Keep the legacy name available to existing project scripts while the
-    // checked-in project file migrates to the T2 namespace.
-    T3CODE_PROJECT_ROOT: input.project.cwd,
   };
   if (input.worktreePath) {
     env.T2CODE_WORKTREE_PATH = input.worktreePath;
-    env.T3CODE_WORKTREE_PATH = input.worktreePath;
   }
   if (input.extraEnv) {
     return { ...env, ...input.extraEnv };

@@ -131,11 +131,6 @@
       "types": "./src/projectSettings.ts",
       "import": "./src/projectSettings.ts"
     },
-<<<<<<< HEAD
-    "./t3ProjectFile": {
-      "types": "./src/t3ProjectFile.ts",
-      "import": "./src/t3ProjectFile.ts"
-=======
     "./threadEnvMode": {
       "types": "./src/threadEnvMode.ts",
       "import": "./src/threadEnvMode.ts"
@@ -143,7 +138,6 @@
     "./t2ProjectFile": {
       "types": "./src/t2ProjectFile.ts",
       "import": "./src/t2ProjectFile.ts"
->>>>>>> 74eaa6cbe (fix(project): migrate checked-in config to t2.json (#7))
     },
     "./orchestrationTiming": {
       "types": "./src/orchestrationTiming.ts",
@@ -356,14 +350,6 @@
     "./gitPatchPath": {
       "types": "./src/gitPatchPath.ts",
       "import": "./src/gitPatchPath.ts"
-    },
-    "./legacyEnv": {
-      "types": "./src/legacyEnv.ts",
-      "import": "./src/legacyEnv.ts"
-    },
-    "./legacyEnvConfig": {
-      "types": "./src/legacyEnvConfig.ts",
-      "import": "./src/legacyEnvConfig.ts"
     },
     "./t2Wordmark": {
       "types": "./src/t2Wordmark.ts",

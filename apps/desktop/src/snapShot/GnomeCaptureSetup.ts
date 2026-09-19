@@ -58,7 +58,7 @@ export async function installGnomeCaptureBundle({ bundle, dataHome }: SetupPaths
     if (installed.version > metadata.version)
       throw new Error("A newer extension is installed. Update T2 Code instead of replacing it.");
   }
-  const staged = await NodeFSP.mkdtemp(NodePath.join(parent, ".t3-capture-install-"));
+  const staged = await NodeFSP.mkdtemp(NodePath.join(parent, ".t2-capture-install-"));
   let backup: string | undefined;
   try {
     for (const name of GNOME_CAPTURE_FILES) {

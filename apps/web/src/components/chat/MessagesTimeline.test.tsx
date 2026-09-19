@@ -1380,7 +1380,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.000Z",
               label: "Updated files",
               tone: "tool",
-              changedFiles: ["C:/Users/mike/dev-stuff/t3code/apps/web/src/session-logic.ts"],
+              changedFiles: ["C:/Users/mike/dev-stuff/t2code/apps/web/src/session-logic.ts"],
             },
           },
         ]}
@@ -1389,7 +1389,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("Changed 1 file");
-    expect(markup).not.toContain("C:/Users/mike/dev-stuff/t3code/apps/web/src/session-logic.ts");
+    expect(markup).not.toContain("C:/Users/mike/dev-stuff/t2code/apps/web/src/session-logic.ts");
   });
 
   it("keeps mixed-success tool groups neutral", () => {
@@ -1918,7 +1918,7 @@ describe("MessagesTimeline", () => {
             message: {
               id: MessageId.make("message-attachments"),
               role: "user",
-              text: "See ![shot.png](t3-context://v1/image/img-1) and [notes.txt](t3-context://v1/file/file-1).",
+              text: "See ![shot.png](t2-context://v1/image/img-1) and [notes.txt](t2-context://v1/file/file-1).",
               attachments: [
                 {
                   type: "image",
@@ -1980,12 +1980,12 @@ describe("MessagesTimeline", () => {
     // Images report their size like every other attachment chip.
     expect(markup).toContain('aria-label="Image attachment, shot.png, 1 KB"');
     // Selection copy re-emits chips as their canonical links.
-    expect(markup).toContain('data-markdown-copy="![shot.png](t3-context://v1/image/img-1)"');
+    expect(markup).toContain('data-markdown-copy="![shot.png](t2-context://v1/image/img-1)"');
     expect(markup).toContain('aria-label="File attachment, notes.txt, 1 KB"');
     expect(markup).toContain(">1 KB</span>");
     expect(markup).not.toContain('aria-label="Download notes.txt"');
     expect(markup).toContain("legacy.txt");
-    expect(markup).not.toContain('href="t3-context://');
+    expect(markup).not.toContain('href="t2-context://');
     // A picture keeps its tile even though it also has a chip: the chip names it, the tile is
     // the only way to see it. A plain file's row is what a chip replaces.
     expect(markup).toContain("grid-cols-2");
@@ -2073,7 +2073,7 @@ describe("MessagesTimeline", () => {
             message: {
               id: MessageId.make("message-structured"),
               role: "user",
-              text: "Compare [Terminal 1 line 4](t3-context://v1/terminal/ctx-t) with [gone](t3-context://v1/future/ctx-x).",
+              text: "Compare [Terminal 1 line 4](t2-context://v1/terminal/ctx-t) with [gone](t2-context://v1/future/ctx-x).",
               context: {
                 version: 1,
                 records: [
@@ -2104,7 +2104,7 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain("Terminal 1 line 4");
     expect(markup).toContain('data-context-unresolved="true"');
     expect(markup).toContain(">gone<");
-    expect(markup).not.toContain('href="t3-context://');
+    expect(markup).not.toContain('href="t2-context://');
   });
 
   it("keeps failed lifecycle entries discoverable in mixed activity summaries", () => {

@@ -77,7 +77,7 @@
         "@t2code/mobile-terminal-native",
       ],
     },
-    "apps/mobile/modules/t3-markdown-text": {
+    "apps/mobile/modules/t2-markdown-text": {
       // React Native codegen discovers component specifications by filename.
       "entry": ["src/*NativeComponent.ts!"],
     },

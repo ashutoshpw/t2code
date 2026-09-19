@@ -44,8 +44,8 @@ rejects direct `crypto.randomUUID()` there.
 [`composerContextReferences.ts`][shared] owns the grammar:
 
 ```text
-[label](t3-context://v1/<kind>/<contextId>)
-![label](t3-context://v1/image/<contextId>)
+[label](t2-context://v1/<kind>/<contextId>)
+![label](t2-context://v1/image/<contextId>)
 ```
 
 The parser accepts exactly the `t3-context:` scheme, the `v1` host, one kind segment matching
@@ -133,7 +133,7 @@ attachments use the same caret-first behavior. Removing a chip in the editor rem
 removing a preview screenshot thumbnail removes its annotation and chip.
 
 The transcript resolves a message with `resolveUserMessageContext`: structured context is used as
-is, older messages are upgraded in memory. `ChatMarkdown` renders `t3-context://` links through
+is, older messages are upgraded in memory. `ChatMarkdown` renders `t2-context://` links through
 `renderContextReference`, which the timeline maps to chips through the web context-presentation
 registry. The registry declares compact, details, and expanded capabilities for every known kind,
 rejects duplicate surface handlers, and provides the unresolved fallback. Terminal excerpts,
