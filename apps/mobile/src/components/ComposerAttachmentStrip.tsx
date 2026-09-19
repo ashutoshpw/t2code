@@ -93,7 +93,7 @@ export function ComposerAttachmentThumbnail(props: ComposerAttachmentThumbnailPr
   );
 }
 
-const PREVIEW_CACHE_DIRECTORY = "t3-composer-previews";
+const PREVIEW_CACHE_DIRECTORY = "t2-composer-previews";
 
 /**
  * Fabric re-parses an image source URL on every layout pass of the node, and a
