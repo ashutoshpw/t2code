@@ -92,12 +92,12 @@ const CONCEPT_OUTPUTS: ReadonlyArray<{
   readonly stem: string;
   readonly sizes: ReadonlyArray<320 | 640 | 960>;
 }> = [
-  { concept: "lime", stem: "t3-code-lime", sizes: [320, 640, 960] },
-  { concept: "clouds", stem: "t3-code-nightly-clouds", sizes: [320, 640, 960] },
-  { concept: "chrome", stem: "t3-code-chrome", sizes: [960] },
-  { concept: "desktop", stem: "t3-code-desktop", sizes: [960] },
-  { concept: "foil", stem: "t3-code-nightly-foil", sizes: [320, 640, 960] },
-  { concept: "lavender", stem: "t3-code-nightly-lavender", sizes: [320, 640, 960] },
+  { concept: "lime", stem: "t2-code-lime", sizes: [320, 640, 960] },
+  { concept: "clouds", stem: "t2-code-nightly-clouds", sizes: [320, 640, 960] },
+  { concept: "chrome", stem: "t2-code-chrome", sizes: [960] },
+  { concept: "desktop", stem: "t2-code-desktop", sizes: [960] },
+  { concept: "foil", stem: "t2-code-nightly-foil", sizes: [320, 640, 960] },
+  { concept: "lavender", stem: "t2-code-nightly-lavender", sizes: [320, 640, 960] },
 ];
 
 const sourceDirectory = (brand: Brand): string =>
@@ -459,7 +459,7 @@ const renderConcepts = async (assets: Map<string, Buffer>): Promise<void> => {
     );
     for (const size of output.sizes) {
       if (size === 960) {
-        addAsset(assets, `apps/marketing/public/95/t3-code-concepts/${output.stem}.webp`, full);
+        addAsset(assets, `apps/marketing/public/95/t2-code-concepts/${output.stem}.webp`, full);
         continue;
       }
       const resized = await sharp(full)
@@ -472,7 +472,7 @@ const renderConcepts = async (assets: Map<string, Buffer>): Promise<void> => {
         .toBuffer();
       addAsset(
         assets,
-        `apps/marketing/public/95/t3-code-concepts/${output.stem}-${size}.webp`,
+        `apps/marketing/public/95/t2-code-concepts/${output.stem}-${size}.webp`,
         resized,
       );
     }
