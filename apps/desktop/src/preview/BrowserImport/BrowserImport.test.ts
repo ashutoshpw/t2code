@@ -37,7 +37,7 @@ const layerRejectedBeforeSession = Layer.succeed(
 
 const withImporter = Effect.fnUntraced(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
-  const home = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-import-" });
+  const home = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2code-import-" });
   const layerEnvironment = Layer.succeed(HostProcess.Environment, { HOME: home });
   const context = yield* sourcePathContext.pipe(
     Effect.provideService(HostProcess.Environment, { HOME: home }),
@@ -56,7 +56,7 @@ const withImporter = Effect.fnUntraced(function* () {
         Layer.provide(layerRejectedBeforeSession),
         Layer.provide(layerEnvironment),
         Layer.provide(Layer.succeed(HostProcess.Platform, "darwin")),
-        Layer.provide(Layer.succeed(HostProcess.ExecutablePath, "/Applications/T3 Code.app")),
+        Layer.provide(Layer.succeed(HostProcess.ExecutablePath, "/Applications/T2 Code.app")),
         Layer.provide(NodeServices.layer),
       ),
     ),
@@ -80,7 +80,7 @@ describe("BrowserImport.importCookies", () => {
             sourceProfileDirectory: "../../../../secrets",
             targetProfileId: "default",
           },
-          scope: "persist:t3code-preview-test",
+          scope: "persist:t2code-preview-test",
           persistent: true,
         })
         .pipe(Effect.flip);
@@ -107,7 +107,7 @@ describe("BrowserImport.importCookies", () => {
               sourceProfileDirectory: "Default",
               targetProfileId: "default",
             },
-            scope: "persist:t3code-preview-test",
+            scope: "persist:t2code-preview-test",
             persistent: true,
           })
           .pipe(Effect.flip);

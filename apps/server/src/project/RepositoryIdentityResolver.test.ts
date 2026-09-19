@@ -25,7 +25,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
   it.effect("refreshes the Git root only when requested", () => {
     const calls: Array<ReadonlyArray<string>> = [];
     let rootPath = "/repo";
-    let remoteUrl = "git@github.com:T2Tools/t3code.git";
+    let remoteUrl = "git@github.com:T2Tools/t2code.git";
     let refinements = 0;
     let refinementFails = false;
     const layerProcessRunner = Layer.succeed(ProcessRunner.ProcessRunner, {
@@ -81,7 +81,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       yield* TestClock.adjust(Duration.minutes(10));
       const second = yield* resolver.resolve("/repo/packages/web");
 
-      expect(first?.canonicalKey).toBe("github.com/t3tools/t3code");
+      expect(first?.canonicalKey).toBe("github.com/t2tools/t2code");
       expect(second).toEqual(first);
       expect(refinements).toBe(1);
       expect(calls).toEqual([
@@ -125,7 +125,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
               ? failed
                 ? ""
                 : "/repo\n"
-              : "origin\tgit@github.com:T2Tools/t3code.git (fetch)\n",
+              : "origin\tgit@github.com:T2Tools/t2code.git (fetch)\n",
             stderr: failed ? "temporary Git failure" : "",
             code: ChildProcessSpawner.ExitCode(failed ? 1 : 0),
             timedOut: false,
@@ -166,7 +166,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       });
 
       yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "origin", "git@github.com:T2Tools/t3code.git"]);
+      yield* git(cwd, ["remote", "add", "origin", "git@github.com:T2Tools/t2code.git"]);
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       const identity = yield* resolver.resolve(cwd);
@@ -177,12 +177,12 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       const resolvedCwd = NodeFS.realpathSync.native(cwd);
 
       expect(identity).not.toBeNull();
-      expect(identity?.canonicalKey).toBe("github.com/t3tools/t3code");
+      expect(identity?.canonicalKey).toBe("github.com/t2tools/t2code");
       expect(normalizeResolvedPath(resolvedIdentityRoot)).toBe(normalizeResolvedPath(resolvedCwd));
-      expect(identity?.displayName).toBe("T3Tools/t3code");
+      expect(identity?.displayName).toBe("t2tools/t2code");
       expect(identity?.provider).toBe("github");
-      expect(identity?.owner).toBe("T3Tools");
-      expect(identity?.name).toBe("t3code");
+      expect(identity?.owner).toBe("T2Tools");
+      expect(identity?.name).toBe("t2code");
       expect(yield* resolver.resolve(path.join(cwd, ".git"))).toBeNull();
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
@@ -191,12 +191,12 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const cwd = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-repository-identity-partial-clone-test-",
+        prefix: "t2-repository-identity-partial-clone-test-",
       });
 
       yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "origin", "git@github.com:T3Tools/t3code.git"]);
-      yield* git(cwd, ["remote", "set-url", "--push", "origin", "git@github.com:T3Tools/push.git"]);
+      yield* git(cwd, ["remote", "add", "origin", "git@github.com:T2Tools/t2code.git"]);
+      yield* git(cwd, ["remote", "set-url", "--push", "origin", "git@github.com:T2Tools/push.git"]);
       yield* git(cwd, ["config", "remote.origin.promisor", "true"]);
       yield* git(cwd, ["config", "remote.origin.partialclonefilter", "blob:none"]);
 
@@ -205,8 +205,8 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       const identity = yield* resolver.resolve(cwd);
-      expect(identity?.canonicalKey).toBe("github.com/t3tools/t3code");
-      expect(identity?.locator.remoteUrl).toBe("git@github.com:T3Tools/t3code.git");
+      expect(identity?.canonicalKey).toBe("github.com/t2tools/t2code");
+      expect(identity?.locator.remoteUrl).toBe("git@github.com:T2Tools/t2code.git");
       expect(identity?.locator.remoteName).toBe("origin");
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
@@ -222,7 +222,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
 
       yield* fileSystem.makeDirectory(nestedWorkspace, { recursive: true });
       yield* git(repoRoot, ["init"]);
-      yield* git(repoRoot, ["remote", "add", "origin", "git@github.com:T2Tools/t3code.git"]);
+      yield* git(repoRoot, ["remote", "add", "origin", "git@github.com:T2Tools/t2code.git"]);
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       const identity = yield* resolver.resolve(nestedWorkspace);
@@ -231,7 +231,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       const resolvedRepoRoot = NodeFS.realpathSync.native(repoRoot);
 
       expect(identity).not.toBeNull();
-      expect(identity?.canonicalKey).toBe("github.com/t3tools/t3code");
+      expect(identity?.canonicalKey).toBe("github.com/t2tools/t2code");
       expect(normalizeResolvedPath(resolvedIdentityRoot)).toBe(
         normalizeResolvedPath(resolvedRepoRoot),
       );
@@ -350,7 +350,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
         });
 
         yield* git(cwd, ["init"]);
-        yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t3code.git"]);
+        yield* git(cwd, ["remote", "add", "origin", "git@github.com:julius/t2code.git"]);
         if (change === "replace") {
           yield* git(cwd, ["remote", "add", "upstream", "git@github.com:T2Tools/previous.git"]);
         }
@@ -358,22 +358,22 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
         const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
         const initialIdentity = yield* resolver.resolve(cwd);
         expect(initialIdentity?.canonicalKey).toBe(
-          change === "add" ? "github.com/julius/t3code" : "github.com/t3tools/previous",
+          change === "add" ? "github.com/julius/t2code" : "github.com/t2tools/previous",
         );
 
         yield* git(cwd, [
           "remote",
           change === "add" ? "add" : "set-url",
           "upstream",
-          "git@github.com:T2Tools/t3code.git",
+          "git@github.com:T2Tools/t2code.git",
         ]);
         expect(yield* resolver.resolve(cwd)).toEqual(initialIdentity);
         const identity = yield* resolver.resolve(cwd, { refresh: true });
 
         expect(identity).not.toBeNull();
         expect(identity?.locator.remoteName).toBe("upstream");
-        expect(identity?.canonicalKey).toBe("github.com/t3tools/t3code");
-        expect(identity?.displayName).toBe("T3Tools/t3code");
+        expect(identity?.canonicalKey).toBe("github.com/t2tools/t2code");
+        expect(identity?.displayName).toBe("t2tools/t2code");
         expect(yield* resolver.resolve(cwd)).toEqual(identity);
       }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
@@ -410,16 +410,16 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       });
 
       yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "origin", "git@gitlab.com:T2Tools/platform/t3code.git"]);
+      yield* git(cwd, ["remote", "add", "origin", "git@gitlab.com:T2Tools/platform/t2code.git"]);
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       const identity = yield* resolver.resolve(cwd);
 
       expect(identity).not.toBeNull();
-      expect(identity?.canonicalKey).toBe("gitlab.com/t3tools/platform/t3code");
-      expect(identity?.displayName).toBe("T3Tools/platform/t3code");
-      expect(identity?.owner).toBe("T3Tools");
-      expect(identity?.name).toBe("t3code");
+      expect(identity?.canonicalKey).toBe("gitlab.com/t2tools/platform/t2code");
+      expect(identity?.displayName).toBe("t2tools/platform/t2code");
+      expect(identity?.owner).toBe("t2tools");
+      expect(identity?.name).toBe("t2code");
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
 
@@ -438,7 +438,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
         const initialIdentity = yield* resolver.resolve(cwd);
         expect(initialIdentity).toBeNull();
 
-        yield* git(cwd, ["remote", "add", "origin", "git@github.com:T2Tools/t3code.git"]);
+        yield* git(cwd, ["remote", "add", "origin", "git@github.com:T2Tools/t2code.git"]);
 
         for (const _attempt of [1, 2, 3]) {
           const cachedIdentity = yield* resolver.resolve(cwd);
@@ -449,8 +449,8 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
 
         const refreshedIdentity = yield* resolver.resolve(cwd);
         expect(refreshedIdentity).not.toBeNull();
-        expect(refreshedIdentity?.canonicalKey).toBe("github.com/t3tools/t3code");
-        expect(refreshedIdentity?.name).toBe("t3code");
+        expect(refreshedIdentity?.canonicalKey).toBe("github.com/t2tools/t2code");
+        expect(refreshedIdentity?.name).toBe("t2code");
       }).pipe(
         Effect.provide(
           Layer.merge(
@@ -472,26 +472,26 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       });
 
       yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "origin", "git@github.com:T2Tools/t3code.git"]);
+      yield* git(cwd, ["remote", "add", "origin", "git@github.com:T2Tools/t2code.git"]);
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       const initialIdentity = yield* resolver.resolve(cwd);
       expect(initialIdentity).not.toBeNull();
-      expect(initialIdentity?.canonicalKey).toBe("github.com/t3tools/t3code");
+      expect(initialIdentity?.canonicalKey).toBe("github.com/t2tools/t2code");
 
-      yield* git(cwd, ["remote", "set-url", "origin", "git@github.com:T2Tools/t3code-next.git"]);
+      yield* git(cwd, ["remote", "set-url", "origin", "git@github.com:T2Tools/t2code-next.git"]);
 
       const cachedIdentity = yield* resolver.resolve(cwd);
       expect(cachedIdentity).not.toBeNull();
-      expect(cachedIdentity?.canonicalKey).toBe("github.com/t3tools/t3code");
+      expect(cachedIdentity?.canonicalKey).toBe("github.com/t2tools/t2code");
 
       yield* TestClock.adjust(Duration.millis(180));
 
       const refreshedIdentity = yield* resolver.resolve(cwd);
       expect(refreshedIdentity).not.toBeNull();
-      expect(refreshedIdentity?.canonicalKey).toBe("github.com/t3tools/t3code-next");
-      expect(refreshedIdentity?.displayName).toBe("T3Tools/t3code-next");
-      expect(refreshedIdentity?.name).toBe("t3code-next");
+      expect(refreshedIdentity?.canonicalKey).toBe("github.com/t2tools/t2code-next");
+      expect(refreshedIdentity?.displayName).toBe("t2tools/t2code-next");
+      expect(refreshedIdentity?.name).toBe("t2code-next");
     }).pipe(
       Effect.provide(
         Layer.merge(

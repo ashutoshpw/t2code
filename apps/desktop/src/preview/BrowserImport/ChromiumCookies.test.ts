@@ -91,7 +91,7 @@ describe("readChromiumCookieDatabase", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3code-missing-key-",
+          prefix: "t2code-missing-key-",
         });
         const filename = `${directory}/Cookies`;
         const key = Buffer.from("0123456789abcdef");
@@ -144,7 +144,7 @@ describe("readChromiumCookieDatabase", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const directory = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3code-chromium-cookies-",
+        prefix: "t2code-chromium-cookies-",
       });
       const filename = `${directory}/Cookies`;
       const key = Buffer.from("0123456789abcdef");
@@ -196,7 +196,7 @@ describe("readChromiumCookieDatabase", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const directory = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3code-chromium-cookies-",
+        prefix: "t2code-chromium-cookies-",
       });
       const filename = `${directory}/Cookies`;
       const key = Buffer.from("0123456789abcdef");
@@ -237,7 +237,7 @@ describe("readChromiumCookieDatabase", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const directory = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3code-chromium-cookies-",
+        prefix: "t2code-chromium-cookies-",
       });
       const filename = `${directory}/Cookies`;
       const cbcV10 = Buffer.from("0123456789abcdef");
@@ -283,7 +283,7 @@ describe("readChromiumCookieDatabase", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const directory = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3code-chromium-cookies-",
+        prefix: "t2code-chromium-cookies-",
       });
       const filename = `${directory}/Cookies`;
       const cbcV10 = Buffer.from("0123456789abcdef");
@@ -331,7 +331,7 @@ describe("readChromiumCookieDatabase", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const directory = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3code-chromium-cookies-",
+        prefix: "t2code-chromium-cookies-",
       });
       const filename = `${directory}/Cookies`;
       const key = Buffer.from("0123456789abcdef");
@@ -369,7 +369,7 @@ describe("readChromiumCookieDatabase", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const directory = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3code-chromium-cookies-",
+        prefix: "t2code-chromium-cookies-",
       });
       const legacyFilename = `${directory}/LegacyCookies`;
       const chipsFilename = `${directory}/ChipsCookies`;

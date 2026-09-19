@@ -246,14 +246,14 @@ describe("uiStateStore persistence", () => {
   });
 
   it("restores the sidebar project scope across reloads", () => {
-    persistState(makeUiState({ sidebarProjectScopeKey: "github.com/pingdotgg/t3code" }));
+    persistState(makeUiState({ sidebarProjectScopeKey: "github.com/pingdotgg/t2code" }));
 
     const persisted = JSON.parse(
       localStorageStub.getItem(PERSISTED_STATE_KEY) ?? "{}",
     ) as PersistedUiState;
 
     expect(parsePersistedState(persisted).sidebarProjectScopeKey).toBe(
-      "github.com/pingdotgg/t3code",
+      "github.com/pingdotgg/t2code",
     );
   });
 });

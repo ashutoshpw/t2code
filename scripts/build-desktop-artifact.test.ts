@@ -169,7 +169,7 @@ const makeWindowsPayloadFixture = Effect.fn("test.makeWindowsPayloadFixture")(fu
     path.join(resourcesDir, "resource-monitor/t2-resource-monitor.exe"),
     "monitor",
   );
-  const appExecutableName = "t3code.exe";
+  const appExecutableName = "t2code.exe";
   yield* fs.writeFileString(path.join(packagedAppDir, appExecutableName), "electron");
   yield* fs.writeFileString(path.join(packagedAppDir, "chrome_crashpad_handler.exe"), "crashpad");
 
@@ -299,7 +299,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-interrupted-build-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-interrupted-build-" });
       const original = '{ "version": "0.0.42", "private": true }\n';
       for (const relativePath of releasePackageFiles) {
         const filePath = path.join(root, relativePath);
@@ -364,7 +364,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-desktop-build-version-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-desktop-build-version-" });
         const packageJson = `{
           "name": "desktop-version-fixture",
           "version": "0.0.42",
@@ -441,7 +441,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-manifest-restore-failure-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-manifest-restore-failure-" });
       yield* fs.writeFileString(
         path.join(root, "package.json"),
         `{
@@ -516,14 +516,14 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         {
           provider: "github",
           owner: "pingdotgg",
-          repo: "t3code",
+          repo: "t2code",
           releaseType: "release",
         },
       ]);
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "pingdotgg/t3code" } }),
+          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "pingdotgg/t2code" } }),
         ),
       ),
     ),
@@ -1217,7 +1217,76 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     ),
   );
 
-  // The fixture's t3code.exe is a text placeholder, not an executable. These
+  it.effect("builds and stages native capture helpers for each Linux architecture", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const repoRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-kde-stage-test-" });
+        const protocols = path.join(repoRoot, "native/hyprland-snap-shot/protocols");
+        yield* fs.makeDirectory(protocols, { recursive: true });
+        yield* fs.writeFileString(path.join(protocols, "capture.xml"), "BSD protocol notice");
+        for (const backend of ["kde", "hyprland"] as const) {
+          for (const [arch, target] of [
+            ["x64", "x86_64-unknown-linux-gnu"],
+            ["arm64", "aarch64-unknown-linux-gnu"],
+          ] as const) {
+            const binary = path.join(
+              repoRoot,
+              `native/${backend}-snap-shot/target`,
+              target,
+              `release/t3-${backend}-snap-shot`,
+            );
+            const stageResourcesDir = path.join(repoRoot, "stage", backend, arch);
+            const spawner = Layer.succeed(
+              ChildProcessSpawner.ChildProcessSpawner,
+              ChildProcessSpawner.make((command) =>
+                Effect.gen(function* () {
+                  assert.equal(command._tag, "StandardCommand");
+                  if (command._tag !== "StandardCommand") return mockProcess(1);
+                  assert.equal(command.command, "cargo");
+                  assert.deepEqual(command.args, [
+                    "build",
+                    "--locked",
+                    "--release",
+                    "--manifest-path",
+                    path.join(repoRoot, `native/${backend}-snap-shot/Cargo.toml`),
+                    "--target",
+                    target,
+                  ]);
+                  yield* fs.makeDirectory(path.dirname(binary), { recursive: true });
+                  yield* fs.writeFileString(binary, `helper-${arch}`);
+                  return mockProcess(0);
+                }),
+              ),
+            );
+            yield* stageLinuxCaptureHelper({
+              backend,
+              repoRoot,
+              stageResourcesDir,
+              arch,
+              verbose: false,
+            }).pipe(Effect.provide(spawner));
+            const installed = path.join(
+              stageResourcesDir,
+              `${backend}-capture/t3-${backend}-snap-shot`,
+            );
+            assert.equal(yield* fs.readFileString(installed), `helper-${arch}`);
+            assert.equal((yield* fs.stat(installed)).mode & 0o777, 0o755);
+            if (backend === "hyprland")
+              assert.equal(
+                yield* fs.readFileString(
+                  path.join(stageResourcesDir, "hyprland-capture/protocols/capture.xml"),
+                ),
+                "BSD protocol notice",
+              );
+          }
+        }
+      }),
+    ),
+  );
+
+  // The fixture's t2code.exe is a text placeholder, not an executable. These
   // cases reach the native-load probe, so pin only that host-platform check to
   // Linux. Host-native paths and the real Windows tar/archive checks still run.
   it.effect("validates every ASAR-unpacked native in the packaged Windows payload", () =>
@@ -1672,7 +1741,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         const path = yield* Path.Path;
         const fixture = yield* makeWindowsPayloadFixture({
           copyUnpackedNatives: true,
-          serverEntrySource: 'import "t3code-deliberately-missing-package";\n',
+          serverEntrySource: 'import "t2code-deliberately-missing-package";\n',
         });
         const error = yield* verifyPackagedBundleIsSelfContained({
           asarPath: path.join(fixture.packagedAppDir, "resources", WINDOWS_SERVER_ASAR_RESOURCE),
@@ -1680,7 +1749,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         }).pipe(Effect.flip);
 
         assert.instanceOf(error, BundleNotSelfContainedError);
-        assert.include(error.output, "t3code-deliberately-missing-package");
+        assert.include(error.output, "t2code-deliberately-missing-package");
       }),
     ),
   );
@@ -1690,7 +1759,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       Effect.gen(function* () {
         const fixture = yield* makeWindowsPayloadFixture({
           copyUnpackedNatives: true,
-          serverEntrySource: 'import "t3code-deliberately-missing-package";\n',
+          serverEntrySource: 'import "t2code-deliberately-missing-package";\n',
         });
         yield* validateWindowsPackagedPayload({
           stageDistDir: fixture.stageDistDir,
@@ -1712,7 +1781,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
   it("derives macOS passkey signing configuration from the Clerk publishable key", () => {
     const configuration = resolveMacPasskeySigningConfiguration({
       T2CODE_APPLE_TEAM_ID: "abc1234567",
-      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t2code.provisionprofile",
       T2CODE_CLERK_PUBLISHABLE_KEY: `pk_test_${btoa("example.clerk.accounts.dev$")}`,
     });
 
@@ -1720,14 +1789,14 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       appId: "codes.t2.desktop",
       teamId: "ABC1234567",
       rpDomains: ["example.clerk.accounts.dev"],
-      provisioningProfilePath: "/tmp/t3code.provisionprofile",
+      provisioningProfilePath: "/tmp/t2code.provisionprofile",
     });
   });
 
   it("normalizes explicit macOS passkey RP domains and renders required entitlements", () => {
     const configuration = resolveMacPasskeySigningConfiguration({
       T2CODE_APPLE_TEAM_ID: "ABC1234567",
-      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t2code.provisionprofile",
       T2CODE_CLERK_PASSKEY_RP_DOMAINS:
         " Clerk.Example.com,example.clerk.accounts.dev,clerk.example.com ",
     });
@@ -1841,7 +1910,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       "https://domain-user:domain-secret@example.clerk.accounts.dev/path?token=query-secret";
     const invalidDomainError = captureError({
       T2CODE_APPLE_TEAM_ID: "ABC1234567",
-      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t2code.provisionprofile",
       T2CODE_CLERK_PASSKEY_RP_DOMAINS: unsafeDomain,
     });
     assert.instanceOf(invalidDomainError, InvalidMacPasskeyRpDomainError);
@@ -1859,14 +1928,14 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       () =>
         resolveMacPasskeySigningConfiguration({
           T2CODE_APPLE_TEAM_ID: "ABC1234567",
-          T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+          T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t2code.provisionprofile",
           T2CODE_CLERK_PASSKEY_RP_DOMAINS: "example.clerk.accounts.dev:8443",
         }),
       /Invalid passkey RP domain/u,
     );
     const invalidPublishableKeyError = captureError({
       T2CODE_APPLE_TEAM_ID: "ABC1234567",
-      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t3code.provisionprofile",
+      T2CODE_MACOS_PROVISIONING_PROFILE: "/tmp/t2code.provisionprofile",
       T2CODE_CLERK_PUBLISHABLE_KEY: "pk_test_%",
     });
     assert.instanceOf(invalidPublishableKeyError, InvalidMacPasskeyPublishableKeyError);
@@ -2266,7 +2335,7 @@ it.effect.skipIf(!symlinksSupported)("rebases packaged links into the isolated t
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3code-copy-symlinks-" });
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2code-copy-symlinks-" });
     const source = path.join(root, "source");
     const destination = path.join(root, "destination");
     const packageDir = path.join(source, "node_modules/.pnpm/example@1/node_modules/example");

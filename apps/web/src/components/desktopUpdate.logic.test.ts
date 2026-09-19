@@ -71,12 +71,12 @@ describe("desktop update UI helpers", () => {
     "owner/repo#notes",
     "owner?tab=notes/repo",
     "owner/repo?tab=notes",
-  ])("falls back to upstream for an invalid configured repository: %s", (repository) => {
+  ])("falls back to the fork repository for an invalid configured repository: %s", (repository) => {
     expect(getDesktopUpdateReleaseHistoryUrl(repository)).toBe(
-      "https://github.com/pingdotgg/t3code/releases",
+      "https://github.com/ashutoshpw/t2code/releases",
     );
     expect(getDesktopUpdateReleaseUrl("1.2.3", repository)).toBe(
-      "https://github.com/pingdotgg/t3code/releases/tag/v1.2.3",
+      "https://github.com/ashutoshpw/t2code/releases/tag/v1.2.3",
     );
   });
 
