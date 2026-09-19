@@ -4,11 +4,11 @@ import {
   type ProviderOptionDescriptor,
   type ServerProviderAuth,
   type ServerProviderModel,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { KiroSettings } from "../settings.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { createModelCapabilities } from "@t3tools/shared/model";
-import { resolveSpawnCommand } from "@t3tools/shared/shell";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { createModelCapabilities } from "@t2code/shared/model";
+import { resolveSpawnCommand } from "@t2code/shared/shell";
 import type * as SecureRandom from "effect/crypto/SecureRandom";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -33,7 +33,7 @@ import {
   providerModelsFromSettings,
   type ServerProviderDraft,
   spawnAndCollect,
-} from "@t3tools/provider-core/server/snapshotProbe";
+} from "@t2code/provider-core/server/snapshotProbe";
 
 const KIRO_DRIVER_KIND = ProviderDriverKind.make("kiro");
 const KIRO_PRESENTATION = {

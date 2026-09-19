@@ -185,7 +185,7 @@ const FallbackTerminalSurface = memo(function FallbackTerminalSurface({
           })}
           onPress={() => props.onInput("\u0003")}
         >
-          <Text className="text-2xs font-t3-bold" style={{ color: theme.foreground }}>
+          <Text className="text-2xs font-t2-bold" style={{ color: theme.foreground }}>
             Ctrl-C
           </Text>
         </Pressable>
@@ -216,7 +216,7 @@ const ReadyTerminalSurface = memo(function ReadyTerminalSurface(props: ReadyTerm
   const writerRef = useRef<ReturnType<typeof createTerminalOutputWriter> | null>(null);
   const [nativeReady, setNativeReady] = useState(false);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- creates the output writer for the native terminal view once it is ready and disposes it on cleanup
+  // oxlint-disable-next-line t3code/react-effect-budget -- creates the output writer for the native terminal view once it is ready and disposes it on cleanup
   useEffect(() => {
     const view = nativeRef.current;
     if (!streaming || !nativeReady || view === null) return;
@@ -228,7 +228,7 @@ const ReadyTerminalSurface = memo(function ReadyTerminalSurface(props: ReadyTerm
     };
   }, [nativeReady, streaming]);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- streams new terminal output into the native terminal view through its writer
+  // oxlint-disable-next-line t3code/react-effect-budget -- streams new terminal output into the native terminal view through its writer
   useEffect(() => {
     if (!streaming || !nativeReady || props.output === null) return;
     void writerRef.current?.write(props.output).catch((error: unknown) => {

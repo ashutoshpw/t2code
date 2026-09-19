@@ -34,6 +34,6 @@ interface NativeProps extends ViewProps {
   shadowRadius?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
 }
 
-export default codegenNativeComponent<NativeProps>("T3SourceTextRun", {
+export default codegenNativeComponent<NativeProps>("T2SourceTextRun", {
   excludedPlatforms: ["android"],
 });

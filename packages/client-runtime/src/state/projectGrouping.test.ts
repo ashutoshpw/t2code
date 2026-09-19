@@ -313,7 +313,7 @@ describe("buildProjectGroups", () => {
       repositoryIdentity: null,
       updatedAt: "2026-07-01T00:00:00.000Z",
     });
-    const fresh = makeProject("fresh", "/work/t3code/", {
+    const fresh = makeProject("fresh", "/work/t2code/", {
       updatedAt: "2026-07-02T00:00:00.000Z",
     });
 
@@ -327,6 +327,24 @@ describe("buildProjectGroups", () => {
     expect(groups[0]?.memberProjectRefs).toHaveLength(2);
   });
 
+  it("uses repository identity from a duplicate registration when the winner lacks it", () => {
+    const identified = makeProject("identified", "/work/t3code", {
+      updatedAt: "2026-07-01T00:00:00.000Z",
+    });
+    const freshUnidentified = makeProject("fresh", "/work/t2code/", {
+      repositoryIdentity: null,
+      updatedAt: "2026-07-02T00:00:00.000Z",
+    });
+    const sibling = makeProject("sibling", "/work/t3code-2");
+
+    const groups = buildProjectGroups({
+      projects: [identified, freshUnidentified, sibling],
+      settings: settings("repository"),
+    });
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.members.map((member) => member.project.id)).toEqual(["fresh", "sibling"]);
+  });
+
   it("uses the freshest winner's repository identity when stale duplicates disagree", () => {
     const staleIdentity = {
       ...repositoryIdentity,
@@ -338,7 +356,7 @@ describe("buildProjectGroups", () => {
       repositoryIdentity: staleIdentity,
       updatedAt: "2026-07-01T00:00:00.000Z",
     });
-    const fresh = makeProject("fresh", "/work/t3code/", {
+    const fresh = makeProject("fresh", "/work/t2code/", {
       updatedAt: "2026-07-02T00:00:00.000Z",
     });
     const sibling = makeProject("sibling", "/work/t3code-2");
@@ -362,7 +380,7 @@ describe("buildProjectGroups", () => {
       repositoryIdentity: staleIdentity,
       updatedAt: "2026-07-01T00:00:00.000Z",
     });
-    const freshIdentified = makeProject("fresh-identified", "/work/t3code/", {
+    const freshIdentified = makeProject("fresh-identified", "/work/t2code/", {
       updatedAt: "2026-07-02T00:00:00.000Z",
     });
     const winner = makeProject("winner", "/work/t3code", {

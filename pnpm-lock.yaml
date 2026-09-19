@@ -1829,16 +1829,16 @@ importers:
 
   packages/provider-kiro:
     dependencies:
-      '@t3tools/contracts':
+      '@t2code/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@t3tools/provider-acp':
+      '@t2code/provider-acp':
         specifier: workspace:*
         version: link:../provider-acp
-      '@t3tools/provider-core':
+      '@t2code/provider-core':
         specifier: workspace:*
         version: link:../provider-core
-      '@t3tools/shared':
+      '@t2code/shared':
         specifier: workspace:*
         version: link:../shared
       effect:

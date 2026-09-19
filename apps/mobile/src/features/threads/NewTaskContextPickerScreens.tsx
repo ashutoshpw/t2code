@@ -153,7 +153,7 @@ function ToggleRow(props: {
       <Text
         className={cn(
           "min-w-0 flex-1 text-base text-foreground",
-          Platform.OS !== "android" && "font-t3-medium",
+          Platform.OS !== "android" && "font-t2-medium",
         )}
         numberOfLines={1}
       >
