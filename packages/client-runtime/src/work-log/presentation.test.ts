@@ -313,13 +313,13 @@ describe("resolveWorkEntryToolPresentation", () => {
     ).toBe(completed);
   });
 
-  it("keeps T3 branding for non-browser tools and falls back to the original tool label", () => {
+  it("keeps T2 branding for non-browser tools and falls back to the original tool label", () => {
     expect(
       resolveWorkEntryToolPresentation({
         label: "mcp__t3_code__task_status",
         toolTitle: "Check the child task",
       }),
-    ).toEqual({ displayName: "Getting delegated task status", icon: "t3-code" });
+    ).toEqual({ displayName: "Getting delegated task status", icon: "t2-code" });
   });
 
   it("does not brand unknown tools or another server's matching tool name", () => {
