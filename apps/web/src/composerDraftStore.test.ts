@@ -3274,7 +3274,7 @@ describe("composerDraftStore attachment references", () => {
         {
           draftsByThreadKey: {
             [threadKeyFor(threadId, TEST_ENVIRONMENT_ID)]: {
-              prompt: `before [notes.txt](t2-context://v1/file/${id}) after`,
+              prompt: `before [notes.txt](t3-context://v1/file/${id}) after`,
               attachments: [],
               files: [{ id, name: "notes.txt", mimeType: "text/plain", sizeBytes: 3 }],
             },
@@ -3284,7 +3284,7 @@ describe("composerDraftStore attachment references", () => {
       );
       useComposerDraftStore.setState(merged);
       const draft = draftFor(threadId, TEST_ENVIRONMENT_ID)!;
-      expect(draft.prompt.match(/t3-context:/g)).toHaveLength(1);
+      expect(draft.prompt.match(/t2-context:/g)).toHaveLength(1);
       expect(draft.prompt).not.toContain(`/file/${id})`);
       useComposerDraftStore.getState().removeFile(threadRef, id);
       expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.prompt).toBe("before after");
@@ -3358,7 +3358,7 @@ describe("composerDraftStore attachment references", () => {
       {
         draftsByThreadKey: {
           [threadKeyFor(threadId, TEST_ENVIRONMENT_ID)]: {
-            prompt: "see ![shot.png](t2-context://v1/image/img-1) after",
+            prompt: "see ![shot.png](t3-context://v1/image/img-1) after",
             attachments: [
               {
                 id: "img-1",
