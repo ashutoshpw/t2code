@@ -92,10 +92,6 @@
     "line": "marketing website at{\" \"}<a href=\"https://t3.codes\">https://t3.codes</a> (the “Site”)."
   },
   {
-    "file": "apps/mobile/modules/t2-composer-editor/expo-module.config.json",
-    "line": ""
-  },
-  {
     "file": "apps/mobile/src/features/archive/archivedThreadList.test.ts",
     "line": "const firstProject = makeProject({ id: ProjectId.make(\"project-1\"), title: \"T3 Code\" });"
   },
