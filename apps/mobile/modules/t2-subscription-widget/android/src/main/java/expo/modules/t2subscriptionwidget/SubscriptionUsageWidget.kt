@@ -30,7 +30,7 @@ class SubscriptionUsageWidget : AppWidgetProvider() {
   }
 
   companion object {
-    const val PREFERENCES = "t3_subscription_widget"
+    const val PREFERENCES = "t2_subscription_widget"
     private const val EXPIRE = "expo.modules.t2subscriptionwidget.EXPIRE"
 
     private fun expiryIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(
@@ -70,45 +70,45 @@ class SubscriptionUsageWidget : AppWidgetProvider() {
       val rows = (0 until (groups.maxOfOrNull { it.size } ?: 0)).flatMap { index ->
         groups.mapNotNull { it.getOrNull(index) }
       }
-      val views = RemoteViews(context.packageName, R.layout.t3_subscription_widget)
+      val views = RemoteViews(context.packageName, R.layout.t2_subscription_widget)
       // Count limits only; "Open app to refresh" placeholders are not entries.
       val limits = rows.count { (_, window) -> window != null }
       // Without limits the layout's plain title stays.
       if (limits > 0) {
         views.setTextViewText(
-          R.id.t3_widget_title,
-          context.getString(R.string.t3_subscription_widget_title_count, limits)
+          R.id.t2_widget_title,
+          context.getString(R.string.t2_subscription_widget_title_count, limits)
         )
         views.setContentDescription(
-          R.id.t3_widget_title,
+          R.id.t2_widget_title,
           context.resources.getQuantityString(
-            R.plurals.t3_subscription_widget_title_description,
+            R.plurals.t2_subscription_widget_title_description,
             limits,
             limits
           )
         )
       }
-      openApp?.let { views.setOnClickPendingIntent(R.id.t3_widget_root, it) }
+      openApp?.let { views.setOnClickPendingIntent(R.id.t2_widget_root, it) }
       openAppIntent(context, id, snapshot, forCollection = true)?.let {
-        views.setPendingIntentTemplate(R.id.t3_widget_rows, it)
+        views.setPendingIntentTemplate(R.id.t2_widget_rows, it)
       }
       val items = RemoteViews.RemoteCollectionItems.Builder()
       rows.forEachIndexed { index, (provider, window) ->
         items.addItem(index.toLong(), rowView(context, provider, window))
       }
-      views.setRemoteAdapter(R.id.t3_widget_rows, items.build())
-      views.setEmptyView(R.id.t3_widget_rows, R.id.t3_widget_empty)
+      views.setRemoteAdapter(R.id.t2_widget_rows, items.build())
+      views.setEmptyView(R.id.t2_widget_rows, R.id.t2_widget_empty)
       val checkedAt = snapshot?.optLong("checkedAt") ?: 0
       val checked = if (checkedAt > 0) {
         val formatted = DateFormat.getDateTimeInstance(
           DateFormat.SHORT,
           DateFormat.SHORT
         ).format(Date(checkedAt))
-        context.getString(R.string.t3_subscription_widget_last_checked, formatted)
+        context.getString(R.string.t2_subscription_widget_last_checked, formatted)
       } else {
-        context.getString(R.string.t3_subscription_widget_unknown_check)
+        context.getString(R.string.t2_subscription_widget_unknown_check)
       }
-      views.setTextViewText(R.id.t3_widget_footer, checked)
+      views.setTextViewText(R.id.t2_widget_footer, checked)
       val alarms = context.getSystemService(AlarmManager::class.java)
       alarms.cancel(expiryIntent(context))
       // Inexact and non-wakeup: the timestamp remains visible if Android delays expiry.
@@ -146,26 +146,26 @@ class SubscriptionUsageWidget : AppWidgetProvider() {
     }
 
     private fun rowView(context: Context, provider: JSONObject, window: JSONObject?): RemoteViews {
-      val child = RemoteViews(context.packageName, R.layout.t3_subscription_widget_row)
+      val child = RemoteViews(context.packageName, R.layout.t2_subscription_widget_row)
       val remaining = window?.optInt("remaining")?.coerceIn(0, 100)
       val detail = provider.optString("detail")
       val label = provider.optString("name")
       val windowLabel = window?.optString("label") ?: detail
-      child.setTextViewText(R.id.t3_widget_label, label)
-      child.setTextViewText(R.id.t3_widget_window, windowLabel)
+      child.setTextViewText(R.id.t2_widget_label, label)
+      child.setTextViewText(R.id.t2_widget_window, windowLabel)
       val percent = remaining?.let {
-        context.getString(R.string.t3_subscription_widget_remaining, it)
+        context.getString(R.string.t2_subscription_widget_remaining, it)
       } ?: "—"
-      child.setTextViewText(R.id.t3_widget_percent, percent)
+      child.setTextViewText(R.id.t2_widget_percent, percent)
       val visibility = if (remaining == null) View.GONE else View.VISIBLE
-      child.setViewVisibility(R.id.t3_widget_progress, visibility)
-      if (remaining != null) child.setProgressBar(R.id.t3_widget_progress, 100, remaining, false)
+      child.setViewVisibility(R.id.t2_widget_progress, visibility)
+      if (remaining != null) child.setProgressBar(R.id.t2_widget_progress, 100, remaining, false)
       val reset = window?.optString("reset")
-        ?: context.getString(R.string.t3_subscription_widget_refresh)
-      child.setTextViewText(R.id.t3_widget_reset, reset)
-      child.setOnClickFillInIntent(R.id.t3_widget_row, Intent())
+        ?: context.getString(R.string.t2_subscription_widget_refresh)
+      child.setTextViewText(R.id.t2_widget_reset, reset)
+      child.setOnClickFillInIntent(R.id.t2_widget_row, Intent())
       child.setContentDescription(
-        R.id.t3_widget_row,
+        R.id.t2_widget_row,
         "$label. $windowLabel. $percent. $reset. $detail"
       )
       return child

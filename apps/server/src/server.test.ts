@@ -2284,7 +2284,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       ]);
       // Desktop, so port-scoped: instances scan for a free port and share
       // 127.0.0.1, and cookies are not scoped by port.
-      assert.isTrue(body.auth.sessionCookieName.startsWith("t3_session_"));
+      assert.isTrue(body.auth.sessionCookieName.startsWith("t2_session_"));
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
@@ -2327,7 +2327,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
       const { cookie } = yield* bootstrapBrowserSession();
       const currentCookie = cookie?.split(";")[0] ?? "";
-      const legacyCookie = currentCookie.replace(/^t3_session_[^=]+=/, "t3_session=");
+      const legacyCookie = currentCookie.replace(/^t2_session_[^=]+=/, "t3_session=");
       const sessionUrl = yield* getHttpServerUrl("/api/auth/session");
       const response = yield* fetchEffect(sessionUrl, {
         headers: { cookie: legacyCookie },

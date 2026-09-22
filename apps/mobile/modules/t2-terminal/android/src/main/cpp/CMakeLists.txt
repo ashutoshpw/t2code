@@ -9,7 +9,7 @@ set_target_properties(
              "${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libghostty-vt.so"
 )
 
-add_library(t2terminal SHARED t3_terminal_jni.cpp)
+add_library(t2terminal SHARED t2_terminal_jni.cpp)
 
 target_include_directories(
   t2terminal
