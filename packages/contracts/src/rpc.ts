@@ -655,7 +655,8 @@ export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProv
     instanceId: Schema.optional(ProviderInstanceId),
     cwd: Schema.optional(TrimmedNonEmptyString),
     fresh: Schema.optional(Schema.Boolean),
-    /** Bypass model caches; explicit rediscovery may open sessions, background refreshes must not. */
+    /** Explicit user request: bypass T2-owned caches and rediscover models.
+     * Background status refreshes must not open agent sessions. */
     refreshModels: Schema.optional(Schema.Boolean),
     /**
      * A model picker opened: refetch a model manifest older than a few minutes and probe providers
