@@ -77,6 +77,21 @@ function hasUnapprovedT3ToolsReference(line: string): boolean {
   return false;
 }
 
+// Mechanical find/replace rebrands produce references that cannot exist: the
+// upstream owner with the fork's repo name, the fork owner with the upstream
+// repo name, or a bundle id no store has. Test fixtures intentionally use
+// synthetic owners, so this rule skips test files.
+const HALF_RENAMED_REFERENCE_PATTERNS = [
+  /pingdotgg\/t2code\b/i,
+  /ashutoshpw\/t3code\b/i,
+  /com\.t2tools\.t2code\b/i,
+];
+
+function hasHalfRenamedReference(file: string, line: string): boolean {
+  if (file.includes(".test.") || file.includes(".spec.")) return false;
+  return HALF_RENAMED_REFERENCE_PATTERNS.some((pattern) => pattern.test(line));
+}
+
 type Rule = {
   id: string;
   hint: string;
@@ -144,6 +159,11 @@ const RULES: Rule[] = [
     id: "t3tools-scope",
     hint: 'fork internal packages are "@t2code/*"; "@t2code/" only exists upstream (.agents/ and apps/mobile/modules/ are exempt dirs)',
     violates: (_file, line) => /@t3tools\//.test(line),
+  },
+  {
+    id: "t3-half-rename",
+    hint: 'a mechanical rename left a reference that cannot exist (upstream owner + fork repo, fork owner + upstream repo, or the unpublished "com.t2tools.t2code" app id)',
+    violates: (file, line) => hasHalfRenamedReference(file, line),
   },
   {
     id: "t3tools-brand",

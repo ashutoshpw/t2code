@@ -109,14 +109,14 @@ Preserve existing entries. These callbacks are separate from the `t2code-dev` / 
 
 ## Desktop passkeys
 
-For a production macOS app with bundle ID `com.t2tools.t2code`:
+For a production macOS app with bundle ID `codes.t2.desktop`:
 
 1. Create an explicit macOS App ID in the Apple Developer portal with **Associated Domains**.
 2. Create a provisioning profile for that App ID and the distribution signing certificate.
 3. In Clerk's Native API settings, add an iOS app with the same Apple Team ID and bundle ID.
    This setting also configures Electron/macOS passkeys.
 4. Check `https://<frontend-api>/.well-known/apple-app-site-association`. Its
-   `webcredentials.apps` must include `<TEAM_ID>.com.t2tools.t2code`.
+   `webcredentials.apps` must include `<TEAM_ID>.codes.t2.desktop`.
 5. Configure signing as described in the [release runbook](./release.md#2-apple-signing--notarization-setup-macos).
 
 Local signed builds additionally use:
