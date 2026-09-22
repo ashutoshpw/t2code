@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { findViolations } from "./check-rebrand.ts";
+import { collectBaselineEntries, findViolations } from "./check-rebrand.ts";
 
 const EMPTY_BASELINE = new Set<string>();
 
@@ -350,6 +350,22 @@ describe("check-rebrand", () => {
       EMPTY_BASELINE,
     );
     expect(violations.map((v) => v.rule.id)).toEqual(["t3-env-name"]);
+  });
+
+  it("keeps only current violations in a refreshed baseline", () => {
+    const entries = collectBaselineEntries(
+      [
+        { file: "README.md", line: "See https://t3.codes", num: 1 },
+        { file: "README.md", line: "The hosted app is https://app.t2.codes", num: 2 },
+        { file: "docs/guide.md", line: "plain T2 copy", num: 1 },
+      ],
+      ["README.md", "docs/guide.md", "apps/web/src/T3Sidebar.tsx"],
+    );
+    const expected = [
+      { file: "README.md", line: "See https://t3.codes" },
+      { file: "apps/web/src/T3Sidebar.tsx", line: "" },
+    ].sort((a, b) => a.file.localeCompare(b.file) || a.line.localeCompare(b.line));
+    expect(entries).toEqual(expected);
   });
 
   it("honors baseline entries for legacy env fallback lines", () => {
