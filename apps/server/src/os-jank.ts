@@ -108,7 +108,7 @@ export const resolveBaseDir = Effect.fn(function* (raw: string | undefined) {
     const fs = yield* FileSystem.FileSystem;
     const baseDir = join(NodeOS.homedir(), ".t2");
     // One-time adoption: a pre-rename data home moves to the T2 location the
-    // first time the server starts with no data of its own. The T3 harness
+    // first time the server starts with no data of its own. The T2 harness
     // keeps owning its own directory afterwards.
     const legacyHome = join(NodeOS.homedir(), ".t3");
     const adopted = yield* fs.exists(legacyHome).pipe(

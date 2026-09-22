@@ -65,7 +65,7 @@ final class T2NativeVideoPresentation: NSObject, AVPlayerViewControllerDelegate,
     do {
       try audioSession.setCategory(.playback, mode: .moviePlayback)
     } catch {
-      NSLog("T3 video audio session: %@", error.localizedDescription)
+      NSLog("T2 video audio session: %@", error.localizedDescription)
     }
     // AVKit exposes programmatic inline-to-full-screen entry through this selector.
     // This is the same guarded entry point used by expo-video's enterFullscreen().

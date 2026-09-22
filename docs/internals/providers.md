@@ -13,7 +13,7 @@ session or catalog state. For a new driver, start with [adding a provider](./add
 
 The `opencode` driver probes the installed version and runs the 1.x or 2.x runtime. OpenCode's MCP
 registrations are directory-scoped, while T2's MCP connection is thread-scoped, so threads in one
-directory must not share one T3 MCP entry.
+directory must not share one T2 MCP entry.
 
 - **1.x** uses one T3-managed chat server per thread, so threads cannot replace each other's
   connection. Catalog and text-generation work can share the
@@ -57,7 +57,7 @@ session creation for this reason. Antigravity likewise reserves authenticated ca
 explicit setup or model refresh; background checks use initialization only.
 
 [Antigravity sign-in](../../apps/server/src/provider/AntigravityAuth.ts) belongs to the initiating
-T3 auth session. The client carries the return URL back to the environment because the provider's
+T2 auth session. The client carries the return URL back to the environment because the provider's
 loopback listener may be on another machine. Forward only the callback for the owned pending flow;
 a successful callback HTTP request is not proof that provider authentication finished. The native
 process owns token exchange and storage.

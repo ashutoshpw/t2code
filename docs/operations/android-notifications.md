@@ -82,7 +82,7 @@ After Android prebuild, run the native presentation regression tests from `apps/
 
 ## Relay deployment
 
-### Local verification with existing T3 services
+### Local verification with existing T2 services
 
 You do not need to duplicate T2 Connect's hosted infrastructure to develop Android push. Keep the normal Clerk login and environment connections. `scripts/android-push-watch.ts` subscribes to one paired environment's shell stream, uses the shared agent-awareness projection, and sends updates through the new FCM client. It holds transient state in memory and needs no hosted database or Clerk secret.
 

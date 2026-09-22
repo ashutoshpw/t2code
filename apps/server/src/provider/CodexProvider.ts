@@ -347,8 +347,10 @@ const requestAllCodexModels = Effect.fn("requestAllCodexModels")(function* (
 export function buildCodexInitializeParams(): CodexSchema.V1InitializeParams {
   return {
     clientInfo: {
-      name: "t2code_desktop",
-      title: "T2 Code Desktop",
+      // Upstream replaced the client slug with the product name for the managed
+      // ChatGPT auth flow, so keep that shape under the fork's name.
+      name: "T2 Code",
+      title: "T2 Code",
       version: packageJson.version,
     },
     capabilities: {
