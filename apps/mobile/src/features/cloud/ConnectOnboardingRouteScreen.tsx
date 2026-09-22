@@ -119,7 +119,7 @@ function ConfiguredConnectOnboardingRouteScreen() {
         ) : (
           <View collapsable={false} className="rounded-[24px] bg-card p-5">
             <Text className="text-sm leading-normal text-foreground-muted">
-              Sign in to your T3 account to set up T2 Connect.
+              Sign in to your T2 account to set up T2 Connect.
             </Text>
           </View>
         )}
