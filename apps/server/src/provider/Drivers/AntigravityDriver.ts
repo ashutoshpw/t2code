@@ -194,7 +194,248 @@ export const AntigravityDriver: ProviderDriver<
             }),
         ),
       );
-      const profile = yield* prepareAntigravityProfile({
+      const profileDirectory = directories.profile;
+      for (const directory of [
+        directories.runtimeTemp,
+        path.join(profileDirectory, "antigravity-acp", "tmp"),
+      ]) {
+        yield* removeAntigravityRuntimeTempDirs(directory).pipe(
+          Effect.provideService(FileSystem.FileSystem, fileSystem),
+        );
+      }
+      const continuationIdentity = defaultProviderContinuationIdentity({
+        driverKind: DRIVER,
+        instanceId,
+      });
+      const stampIdentity = withInstanceIdentity({
+        instanceId,
+        driverKind: DRIVER,
+        displayName,
+        accentColor,
+        continuationGroupKey: continuationIdentity.continuationKey,
+      });
+      const classifyModels = (draft: ServerProviderDraft) =>
+        currentCatalog.pipe(
+          Effect.map((catalog) => stampIdentity(ModelCatalog.applyModelCatalog(draft, catalog))),
+        );
+
+      const makeRuntime = Effect.fn("AntigravityDriver.makeRuntime")(function* (
+        input: Omit<AntigravityAcpRuntimeInput, "spawn" | "childProcessSpawner">,
+      ): Effect.fn.Return<
+        AcpSessionRuntime.AcpSessionRuntime["Service"],
+        AcpError | ProviderSetupError,
+        Scope.Scope
+      > {
+        if (authConfigIssue !== null) {
+          return yield* new ProviderSetupError({
+            instanceId,
+            operation: "configure",
+            detail: authConfigIssue,
+          });
+        }
+        const executable = yield* installation
+          .acquire(settings.binaryPath, processEnvironment)
+          .pipe(
+            Effect.mapError(
+              (cause) =>
+                new ProviderSetupError({
+                  instanceId,
+                  operation: "resolve",
+                  detail: cause.detail,
+                  cause,
+                }),
+            ),
+          );
+        const profile = yield* prepareAntigravityProfile({
+          profileDirectory,
+          baseEnv: processEnvironment,
+          auth,
+          userHome,
+          tempDirectory: directories.runtimeTemp,
+        }).pipe(
+          Effect.provideService(FileSystem.FileSystem, fileSystem),
+          Effect.provideService(Path.Path, path),
+          Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+          Effect.mapError((cause) =>
+            isNodeRuntimeUnavailableError(cause.cause)
+              ? new ProviderSetupError({
+                  instanceId,
+                  operation: "start",
+                  detail: nodeRuntimeUnavailableMessage("Antigravity sign-in"),
+                  cause,
+                })
+              : cause,
+          ),
+        );
+        // Each process unpacks into its own directory that dies with the
+        // runtime scope, after the child is killed. A shared directory would
+        // let one session's teardown delete files a sibling still reads.
+        // Removal is best effort: a handle can outlive the kill on Windows,
+        // and the sweep on the next driver start reclaims what is left.
+        const runtimeTempDirectory = yield* Effect.acquireRelease(
+          fileSystem.makeTempDirectory({ directory: profile.tempDirectory, prefix: "run-" }).pipe(
+            Effect.mapError(
+              (cause) =>
+                new ProviderSetupError({
+                  instanceId,
+                  operation: "start",
+                  detail: "Could not create an Antigravity runtime temp directory.",
+                  cause,
+                }),
+            ),
+          ),
+          (directory) =>
+            fileSystem
+              .remove(directory, { recursive: true, force: true })
+              .pipe(
+                Effect.catch(() =>
+                  Effect.logWarning("Could not remove an Antigravity runtime temp directory."),
+                ),
+              ),
+        );
+        const runtime = yield* makeAntigravityAcpRuntime({
+          ...input,
+          authMethod: auth.authMethod,
+          childProcessSpawner: spawner,
+          spawn: buildAntigravityAcpSpawnInput({
+            installation: executable,
+            profile,
+            cwd: input.cwd,
+            baseEnv: withAgentDeviceEnvironment(processEnvironment, input),
+            auth,
+            runtimeTempDirectory,
+          }),
+        }).pipe(Effect.provideService(Crypto.Crypto, crypto));
+        return {
+          ...runtime,
+          start: () =>
+            runtime
+              .start()
+              .pipe(
+                Effect.tapError((cause): Effect.Effect<void> =>
+                  input.onAuthorizationUrl === undefined && isAntigravitySignInRequiredError(cause)
+                    ? provider.onAuthRequired
+                    : Effect.void,
+                ),
+              ),
+        };
+      });
+
+      const makeDisposableRuntime = Effect.fn("AntigravityDriver.makeDisposableRuntime")(function* (
+        input: Pick<AntigravityAcpRuntimeInput, "onAuthorizationUrl">,
+      ) {
+        const cwd = yield* fileSystem
+          .makeTempDirectoryScoped({ prefix: "t3-antigravity-setup-" })
+          .pipe(
+            Effect.mapError(
+              () =>
+                new ProviderSetupError({
+                  instanceId,
+                  operation: "start",
+                  detail: "Could not create an Antigravity setup workspace.",
+                }),
+            ),
+          );
+        let sessionId: string | undefined;
+        yield* Effect.addFinalizer(() =>
+          removeAntigravitySessionFiles({
+            profileDirectory,
+            sessionId,
+            cwd,
+          }).pipe(
+            Effect.provideService(FileSystem.FileSystem, fileSystem),
+            Effect.provideService(Path.Path, path),
+          ),
+        );
+        const runtime = yield* makeRuntime({
+          cwd,
+          clientInfo: { name: "t2-code-provider-setup", version: "0.0.0" },
+          mcpServers: [],
+          ...(input.onAuthorizationUrl ? { onAuthorizationUrl: input.onAuthorizationUrl } : {}),
+        });
+        return {
+          ...runtime,
+          start: () =>
+            runtime.start().pipe(
+              Effect.tap((started) =>
+                Effect.sync(() => {
+                  sessionId = started.sessionId;
+                }),
+              ),
+            ),
+        };
+      });
+
+      const publishCatalog = (
+        started: AcpSessionRuntime.AcpSessionRuntimeStartResult,
+        runtime: Pick<AcpSessionRuntime.AcpSessionRuntime["Service"], "getEvents" | "drainEvents">,
+      ): Effect.Effect<void> =>
+        Effect.gen(function* () {
+          yield* provider.onSessionStarted(started);
+          yield* Stream.runForEach(runtime.getEvents(), (event) => {
+            if (event._tag === "EventStreamBarrier") {
+              return Deferred.succeed(event.acknowledge, undefined).pipe(Effect.asVoid);
+            }
+            if (event._tag === "ConfigOptionsUpdated") {
+              return provider.onConfigOptionsUpdated(event.configOptions);
+            }
+            return event._tag === "AvailableCommandsUpdated"
+              ? provider.onAvailableCommands(event.availableCommands)
+              : Effect.void;
+          }).pipe(Effect.forkScoped);
+          yield* runtime.drainEvents;
+        }).pipe(Effect.scoped);
+
+      const authFlow: AntigravityAuth = yield* makeAntigravityAuth({
+        instanceId,
+        makeRuntime: makeDisposableRuntime,
+        onAuthenticated: publishCatalog,
+        onSignedOut: Effect.suspend(() => provider.onSignedOut),
+        usesBrowser: antigravityAuthUsesBrowser(auth.authMethod),
+      });
+
+      // The probe must not spawn. The agent is a PyInstaller one-file bundle
+      // that unpacks about 1 GB per launch, and the health check runs every
+      // minute.
+      const probe = Effect.gen(function* () {
+        yield* modelCatalog.refreshInBackground;
+        if (authConfigIssue !== null) {
+          return yield* new ProviderSetupError({
+            instanceId,
+            operation: "configure",
+            detail: authConfigIssue,
+          });
+        }
+        const executable = yield* installation
+          .resolve(settings.binaryPath, processEnvironment)
+          .pipe(
+            Effect.mapError(
+              (cause) =>
+                new ProviderSetupError({
+                  instanceId,
+                  operation: "resolve",
+                  detail: cause.detail,
+                  cause,
+                }),
+            ),
+          );
+        return {
+          protocolVersion: 1,
+          agentCapabilities: {
+            loadSession: true,
+            promptCapabilities: { image: true, audio: true, embeddedContext: true },
+            sessionCapabilities: { list: {}, resume: {} },
+          },
+          authMethods: [{ id: "oauth-personal", name: "Log in with Google" }],
+          agentInfo: {
+            name: "antigravity-acp",
+            title: "Google Antigravity",
+            version: executable.version ?? "unknown",
+          },
+        };
+      });
+
+      const usage = yield* makeAntigravityUsageProbe({
         profileDirectory,
         baseEnv: processEnvironment,
         auth,
