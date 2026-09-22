@@ -40,7 +40,8 @@ function ConfiguredT2ConnectSidebarAvatar() {
         >
           {page.content}
         </UserButton.UserProfilePage>
-      ))}    </UserButton>
+      ))}
+    </UserButton>
   );
 }
 

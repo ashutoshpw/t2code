@@ -159,7 +159,7 @@ export function T2ConnectUserProfilePage() {
     const cause = squashAtomCommandFailure(result);
     const message = cause instanceof Error ? cause.message : "Could not deregister the server.";
     const traceId = findErrorTraceId(cause);
-    console.error("[t3-connect] Could not deregister environment", {
+    console.error("[t2-connect] Could not deregister environment", {
       environmentId: environment.environmentId,
       message,
       traceId,
