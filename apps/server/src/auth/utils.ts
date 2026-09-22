@@ -11,7 +11,7 @@ import { normalizeHostname } from "@t2code/shared/hostClassification";
 import * as Base64Url from "effect/encoding/Base64Url";
 import * as Result from "effect/Result";
 
-const SESSION_COOKIE_NAME = "t3_session";
+const SESSION_COOKIE_NAME = "t2_session";
 
 /** Cookies span ports; use separate names for servers sharing a hostname. */
 export function resolveSessionCookieName(input: {
@@ -48,7 +48,8 @@ export function resolveLegacySessionCookieName(input: {
   readonly development: boolean;
 }): string | undefined {
   return input.mode === "web" && !input.development && isRemoteReachableHost(input.host)
-    ? SESSION_COOKIE_NAME
+    ? // The pre-rename bare cookie name; still accepted so existing remote-web sessions survive.
+      "t3_session"
     : undefined;
 }
 
