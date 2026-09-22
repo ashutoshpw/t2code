@@ -141,7 +141,7 @@ export function ImportHistoryDialog({
             data-slot="dialog-panel"
             className="space-y-4 bg-zinc-25/80 px-6 py-5 ring-1 ring-black/5 dark:bg-white/2 dark:ring-white/5"
           >
-            <div>
+            <div className="mt-2 grid gap-2">
               <div id="import-history-window-label" className="text-sm font-medium text-foreground">
                 How far back?
               </div>
@@ -149,7 +149,7 @@ export function ImportHistoryDialog({
                 value={windowChoice}
                 onValueChange={(value) => setWindowChoice(value as WindowChoice)}
                 aria-labelledby="import-history-window-label"
-                className="mt-2 grid grid-cols-1 gap-2"
+                className="grid grid-cols-1"
               >
                 <RadioPrimitive.Root
                   value="recent"

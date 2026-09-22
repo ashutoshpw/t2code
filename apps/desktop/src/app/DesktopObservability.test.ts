@@ -485,7 +485,7 @@ describe("DesktopObservability", () => {
         prefix: "t3-desktop-observability-test-",
       });
       const layerEnvironment = layerEnvironmentFor(baseDir, true, {
-        T3CODE_OTLP_LOGS_URL: "https://collector.example.com/v1/logs",
+        T2CODE_OTLP_LOGS_URL: "https://collector.example.com/v1/logs",
       });
 
       yield* Effect.scoped(
@@ -568,7 +568,7 @@ describe("DesktopObservability", () => {
         prefix: "t3-desktop-observability-test-",
       });
       const layerEnvironment = layerEnvironmentFor(baseDir, true, {
-        T3CODE_OTLP_LOGS_URL: "https://collector.example.com/v1/logs",
+        T2CODE_OTLP_LOGS_URL: "https://collector.example.com/v1/logs",
       });
 
       yield* Effect.scoped(

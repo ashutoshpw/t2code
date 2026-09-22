@@ -116,7 +116,7 @@ export function GitCommitSheet(_props: GitCommitSheetProps) {
           <View className="gap-3 bg-card p-4 android:rounded-[20px] ios:rounded-[22px] ios:border ios:border-border">
             <View className="android:gap-1 ios:flex-row ios:items-center ios:justify-between ios:gap-3">
               <Text className="text-foreground-muted text-sm font-medium">Branch</Text>
-              <Text className="text-foreground text-base android:font-t3-medium ios:font-t3-bold">
+              <Text className="text-foreground text-base android:font-t2-medium ios:font-t2-bold">
                 {gitStatus.data?.refName ?? "(detached HEAD)"}
               </Text>
             </View>
@@ -130,7 +130,7 @@ export function GitCommitSheet(_props: GitCommitSheetProps) {
           <View className="gap-3 bg-card p-4 android:rounded-[20px] ios:rounded-[22px] ios:border ios:border-border">
             <View className="flex-row items-center justify-between gap-3">
               <View className="gap-1">
-                <Text className="text-foreground text-base android:font-t3-medium ios:font-t3-bold">
+                <Text className="text-foreground text-base android:font-t2-medium ios:font-t2-bold">
                   Files
                 </Text>
                 <Text className="text-foreground-muted text-xs leading-normal">
@@ -143,7 +143,7 @@ export function GitCommitSheet(_props: GitCommitSheetProps) {
                     className="rounded-full px-3 android:min-h-12 android:justify-center android:active:bg-subtle ios:bg-subtle ios:py-2"
                     onPress={() => setExcludedFiles(new Set())}
                   >
-                    <Text className="android:text-primary-text android:text-sm android:font-t3-medium ios:text-foreground ios:text-2xs ios:font-t3-bold ios:uppercase">
+                    <Text className="android:text-primary-text android:text-sm android:font-t2-medium ios:text-foreground ios:text-2xs ios:font-t2-bold ios:uppercase">
                       Reset
                     </Text>
                   </Pressable>
@@ -152,7 +152,7 @@ export function GitCommitSheet(_props: GitCommitSheetProps) {
                   className="rounded-full px-3 android:min-h-12 android:justify-center android:active:bg-subtle ios:bg-subtle ios:py-2"
                   onPress={() => setIsEditingFiles((current) => !current)}
                 >
-                  <Text className="android:text-primary-text android:text-sm android:font-t3-medium ios:text-foreground ios:text-2xs ios:font-t3-bold ios:uppercase">
+                  <Text className="android:text-primary-text android:text-sm android:font-t2-medium ios:text-foreground ios:text-2xs ios:font-t2-bold ios:uppercase">
                     {isEditingFiles ? "Done" : "Edit"}
                   </Text>
                 </Pressable>
@@ -170,10 +170,10 @@ export function GitCommitSheet(_props: GitCommitSheetProps) {
                     <Text className="text-foreground flex-1 text-sm font-medium" numberOfLines={1}>
                       {file.path}
                     </Text>
-                    <Text className="text-xs font-t3-bold text-adaptive-emerald-700-300">
+                    <Text className="text-xs font-t2-bold text-adaptive-emerald-700-300">
                       +{file.insertions}
                     </Text>
-                    <Text className="text-xs font-t3-bold text-adaptive-rose-700-300">
+                    <Text className="text-xs font-t2-bold text-adaptive-rose-700-300">
                       -{file.deletions}
                     </Text>
                   </View>
@@ -238,7 +238,7 @@ export function GitCommitSheet(_props: GitCommitSheetProps) {
                         <View className="flex-1 gap-1">
                           <Text
                             selectable
-                            className={`text-sm font-t3-bold ${included ? "text-foreground" : "text-foreground-muted"}`}
+                            className={`text-sm font-t2-bold ${included ? "text-foreground" : "text-foreground-muted"}`}
                           >
                             {file.path}
                           </Text>
@@ -249,10 +249,10 @@ export function GitCommitSheet(_props: GitCommitSheetProps) {
                           ) : null}
                         </View>
                         <View className="items-end gap-1">
-                          <Text className="text-xs font-t3-bold text-adaptive-emerald-700-300">
+                          <Text className="text-xs font-t2-bold text-adaptive-emerald-700-300">
                             +{file.insertions}
                           </Text>
-                          <Text className="text-xs font-t3-bold text-adaptive-rose-700-300">
+                          <Text className="text-xs font-t2-bold text-adaptive-rose-700-300">
                             -{file.deletions}
                           </Text>
                         </View>
@@ -265,7 +265,7 @@ export function GitCommitSheet(_props: GitCommitSheetProps) {
           </View>
 
           <View className="android:gap-3 android:rounded-[20px] android:bg-card android:p-4 ios:gap-2">
-            <Text className="text-foreground android:text-base android:font-t3-medium ios:text-sm ios:font-t3-bold">
+            <Text className="text-foreground android:text-base android:font-t2-medium ios:text-sm ios:font-t2-bold">
               Commit message
             </Text>
             <TextInput
