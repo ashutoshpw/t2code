@@ -123,7 +123,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
       return;
     Dialog.alert(
       `Update ${environment?.environmentLabel ?? "environment"}?`,
-      `Install T3 Code ${targetVersion}. ${capabilities.serverSelfUpdate === "desktop-managed" ? "The desktop app will close and relaunch." : "The server will restart and reconnect."} Running threads may be interrupted.`,
+      `Install T2 Code ${targetVersion}. ${capabilities.serverSelfUpdate === "desktop-managed" ? "The desktop app will close and relaunch." : "The server will restart and reconnect."} Running threads may be interrupted.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -194,6 +194,9 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                 onRemove={connections.onRemoveEnvironmentPress}
                 onSetEnabled={connections.onSetEnvironmentEnabled}
                 onUpdate={connections.onUpdateEnvironment}
+                onRename={(environmentId) =>
+                  navigation.navigate("EnvironmentRename", { environmentId })
+                }
               />
             </SettingsSection>
             <EnvironmentRoutesSection
@@ -232,7 +235,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
             {notice ? <Text className="px-2 text-sm text-foreground-muted">{notice}</Text> : null}
             {config && !outdated ? (
               <>
-                <SettingsSection title="T3 Code">
+                <SettingsSection title="T2 Code">
                   <View className="gap-1 p-4">
                     <Text className="text-base text-foreground">Version {version}</Text>
                     {managedPolicy ? (
@@ -267,7 +270,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                       <Text className="text-sm text-foreground-muted">
                         {capabilities?.serverSelfUpdate === "desktop-managed"
                           ? "Update the desktop app on this machine."
-                          : "Update and restart T3 Code on this machine."}
+                          : "Update and restart T2 Code on this machine."}
                       </Text>
                     ) : null}
                   </View>
@@ -338,7 +341,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                               iconUrl={provider.iconUrl}
                               size={18}
                             />
-                            <Text className="min-w-0 flex-1 text-base font-t3-medium text-foreground">
+                            <Text className="min-w-0 flex-1 text-base font-t2-medium text-foreground">
                               {provider.displayName ?? provider.driver}
                             </Text>
                           </View>
