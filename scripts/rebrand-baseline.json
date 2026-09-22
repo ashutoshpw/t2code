@@ -1,11 +1,15 @@
 [
   {
-    "file": ".cursor/rules/cursor-cloud.mdc",
-    "line": "description: Cursor Cloud environment setup and run notes for T3 Code (Cursor-specific; not for other editors/CI)"
+    "file": ".github/SECURITY.md",
+    "line": "See the [full security policy](https://t3.codes/security-policy) for reporting details, scope,"
   },
   {
-    "file": ".cursor/rules/cursor-cloud.mdc",
-    "line": "These notes apply only to Cursor Cloud agents (kept out of the shared `AGENTS.md` since T3 Code is"
+    "file": "apps/desktop/gnome-extension/bundle.json",
+    "line": "\"uuid\": \"snap-shot@t3.codes\","
+  },
+  {
+    "file": "apps/desktop/gnome-extension/metadata.json",
+    "line": "\"uuid\": \"snap-shot@t3.codes\","
   },
   {
     "file": "apps/desktop/src/app/DesktopLifecycle.test.ts",
@@ -24,12 +28,68 @@
     "line": "name: Effect.succeed(\"T3 Code\"),"
   },
   {
+    "file": "apps/marketing/astro.config.mjs",
+    "line": "site: \"https://t3.codes\","
+  },
+  {
     "file": "apps/marketing/src/lib/site.ts",
     "line": "\"https://play.google.com/store/apps/details?id=com.t3tools.t3code\";"
   },
   {
+    "file": "apps/marketing/src/pages/95.astro",
+    "line": "<div class=\"address-field sunken\"><RetroIcon name=\"globe\" size={16} /><span>https://t3.codes/95</span></div>"
+  },
+  {
+    "file": "apps/marketing/src/pages/download.astro",
+    "line": "<code class=\"cli-line cli-line--nightly\">$env:T2CODE_CHANNEL=\"nightly\"; irm https://t3.codes/install.ps1 | iex</code>"
+  },
+  {
+    "file": "apps/marketing/src/pages/download.astro",
+    "line": "<code class=\"cli-line cli-line--nightly\">curl -fsSL https://t3.codes/install.sh | T2CODE_CHANNEL=nightly sh</code>"
+  },
+  {
+    "file": "apps/marketing/src/pages/download.astro",
+    "line": "<code class=\"cli-line cli-line--stable\">curl -fsSL https://t3.codes/install.sh | sh</code>"
+  },
+  {
+    "file": "apps/marketing/src/pages/download.astro",
+    "line": "<code class=\"cli-line cli-line--stable\">irm https://t3.codes/install.ps1 | iex</code>"
+  },
+  {
+    "file": "apps/marketing/src/pages/privacy-policy.astro",
+    "line": "{\" \"}<a href=\"https://t3.codes\">https://t3.codes</a> (the “Site”). This Policy applies to"
+  },
+  {
+    "file": "apps/marketing/src/pages/privacy-policy.astro",
+    "line": "description=\"How T3 Tools, Inc. handles information when you use T2 Code, app.t2.codes, and t3.codes.\""
+  },
+  {
+    "file": "apps/marketing/src/pages/privacy-policy.astro",
+    "line": "lede=\"This Privacy Policy describes how T3 Tools, Inc. collects, uses, and shares personal information when you use the T2 Code desktop, mobile, and hosted web applications, visit the t3.codes marketing site, or use the optional T2 Connect service.\""
+  },
+  {
+    "file": "apps/marketing/src/pages/schema/t2.json.ts",
+    "line": "// Rendered at build time; published at https://t3.codes/schema/t2.json so"
+  },
+  {
     "file": "apps/marketing/src/pages/security-policy.astro",
     "line": ">, the optional T3 Connect service, and the T2 Code website at{\" \"}<a href=\"https://t3.codes\""
+  },
+  {
+    "file": "apps/marketing/src/pages/security-policy.astro",
+    "line": ">https://t3.codes</a"
+  },
+  {
+    "file": "apps/marketing/src/pages/terms-of-service.astro",
+    "line": "description=\"The terms that govern your use of T2 Code, app.t2.codes, T2 Connect, and t3.codes.\""
+  },
+  {
+    "file": "apps/marketing/src/pages/terms-of-service.astro",
+    "line": "lede=\"These Terms govern your use of T2 Code, including its desktop, mobile, and hosted applications, the optional T2 Connect service, and the t3.codes website.\""
+  },
+  {
+    "file": "apps/marketing/src/pages/terms-of-service.astro",
+    "line": "marketing website at{\" \"}<a href=\"https://t3.codes\">https://t3.codes</a> (the “Site”)."
   },
   {
     "file": "apps/mobile/modules/t2-composer-editor/expo-module.config.json",
@@ -54,6 +114,34 @@
   {
     "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
     "line": "title: \"T3 Code\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.test.ts",
+    "line": "\"https://t3.codes/download\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.test.ts",
+    "line": "\"https://t3.codes/legal\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.test.ts",
+    "line": "\"https://t3.codes/legal/\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.test.ts",
+    "line": "\"https://t3.codes/privacy-policy?source=app\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.test.ts",
+    "line": "\"https://t3.codes/security-policy\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.test.ts",
+    "line": "\"https://t3.codes/terms-of-service#updates\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.ts",
+    "line": "const DEFAULT_MARKETING_SITE_URL = \"https://t3.codes\";"
   },
   {
     "file": "apps/mobile/src/features/showcase/showcasePendingTasks.test.ts",
@@ -110,6 +198,58 @@
   {
     "file": "apps/web/src/components/pullRequest/PullRequestListFilters.test.tsx",
     "line": "title: \"T3 Code\","
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/core.test.ts",
+    "line": "\"\\x1b]8;;https://t3.codes\\x1b\","
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/runtimeAbi.test.ts",
+    "line": "\"\\u001b[?1000h\\u001b[?1006h\\u001b]8;;https://t3.codes/docs\\u001b\\\\linked\\u001b]8;;\\u001b\\\\ plain\","
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/runtimeAbi.test.ts",
+    "line": "\"https://t3.codes/docs\","
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/surface.test.ts",
+    "line": "...Array.from(\"https://t3.codes\", (character) => cell(character)),"
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/surface.test.ts",
+    "line": "\"https://t3.codes\","
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/surface.test.ts",
+    "line": "const complete = [row(\"https://t3.codes\", false), row(\"\", false)];"
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/surface.test.ts",
+    "line": "const tailCut = [row(\"https://t3.codes\", false, true)];"
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/surface.test.ts",
+    "line": "expect(terminalLinkAtPositionWithRange([row], 0, 2)?.text).toBe(\"https://t3.codes\");"
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/surface.test.ts",
+    "line": "expect(terminalLinkAtPositionWithRange([unwrittenTail], 0, 8)?.text).toBe(\"https://t3.codes\");"
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/surface.test.ts",
+    "line": "expect(terminalLinkAtPositionWithRange(complete, 0, 8)?.text).toBe(\"https://t3.codes\");"
+  },
+  {
+    "file": "apps/web/src/terminal/ghostty/surface.test.ts",
+    "line": "text: \"https://t3.codes\","
+  },
+  {
+    "file": "docs/internals/linux-snap-shot.md",
+    "line": "Source in `apps/desktop/gnome-extension`, UUID `snap-shot@t3.codes`. GNOME only discovers a newly"
+  },
+  {
+    "file": "docs/operations/release.md",
+    "line": "- The archive holds the server as a Node single-executable (`scripts/build-cli-archive.ts`), so unpacking it needs neither Node, npm, nor a compiler. It is the only form in which T2 Code manages a runtime: the desktop's SSH environments, the boot service, `t2code update`, and the install scripts all download and verify this archive against `SHA256SUMS`. The npm packages exist for people who run `npx @t2code/cli` or `npm install -g @t2code/cli` themselves and carry the same archive contents; nothing in the product installs from npm. The `curl | sh` installers are `scripts/install.sh` and `scripts/install.ps1`; the marketing site copies them into its `public/` at build time (`apps/marketing/scripts/stage-install-scripts.mjs`) and serves them at `t3.codes/install.sh` and `/install.ps1`."
   },
   {
     "file": "docs/user/install.md",
@@ -172,7 +312,35 @@
     "line": "title: \"T3 Code\","
   },
   {
+    "file": "packages/contracts/src/t2ProjectFile.test.ts",
+    "line": "$schema: \"https://t3.codes/schema/t2.json\","
+  },
+  {
+    "file": "packages/contracts/src/t2ProjectFile.ts",
+    "line": "\"Checked-in project configuration for T2 Code (t2.json at the repository root). See https://t3.codes for documentation.\","
+  },
+  {
+    "file": "packages/contracts/src/t2ProjectFile.ts",
+    "line": "export const T2_PROJECT_FILE_SCHEMA_URL = \"https://t3.codes/schema/t2.json\";"
+  },
+  {
+    "file": "packages/shared/src/t2ProjectFile.test.ts",
+    "line": "expect(schema.$id).toBe(\"https://t3.codes/schema/t2.json\");"
+  },
+  {
     "file": "README.md",
     "line": "T2 Code is an \"agent harness control surface\". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code)), [web app](https://app.t2.codes) and [Electron-based desktop app](https://github.com/ashutoshpw/t2code/releases)."
+  },
+  {
+    "file": "scripts/install.ps1",
+    "line": "#   irm https://t3.codes/install.ps1 | iex"
+  },
+  {
+    "file": "scripts/install.sh",
+    "line": "#   curl -fsSL https://t3.codes/install.sh | sh"
+  },
+  {
+    "file": "t2.json",
+    "line": "\"$schema\": \"https://t3.codes/schema/t2.json\","
   }
 ]
