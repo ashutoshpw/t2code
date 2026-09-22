@@ -13,6 +13,7 @@ const T2_CODE_DEVICE_TOOL_INSTRUCTIONS = `## T2 Code devices
 
 For iOS Simulators and Android Emulators here, call \`device_list\`, then \`device_open\`. Drive the device with the exact \`agent-device\` launcher and flags it returns, on every command. Prefer \`agent-device snapshot -i\` refs over coordinates. Use \`device_screenshot\` to see the screen. Use \`xcrun simctl\` or \`adb\` only for builds, logs, and ports. If a platform is unavailable, say so.`;
 
+
 export interface T2CodeToolAvailability {
   readonly browser: boolean;
   readonly device: boolean;

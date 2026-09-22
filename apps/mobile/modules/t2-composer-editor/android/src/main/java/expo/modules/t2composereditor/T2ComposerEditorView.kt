@@ -736,7 +736,7 @@ internal class SelectionAwareEditText(
   private fun pasteContextOrImages(): Boolean {
     val payload = T2ComposerClipboard.read(context)
     return when {
-      payload["html"]?.contains("data-t3-context-fragment=") == true -> pasteContext(payload)
+      payload["html"]?.contains("data-t2-context-fragment=") == true -> pasteContext(payload)
       pasteImagesOrInterceptedText() -> true
       isSingleItemClip() && T2ComposerClipboard.hasThreadLink(payload["text"].orEmpty()) ->
         pasteContext(payload)
