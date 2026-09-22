@@ -41,6 +41,7 @@ The repo ships a brand guard: pre-commit and pre-push hooks run `scripts/check-r
 
 ```sh
 node scripts/check-rebrand.ts --tree
+node scripts/check-rebrand.ts --check-baseline
 ```
 
 Hits that are genuinely intentional (legacy compat, upstream references) get exempted via the allowlists in `scripts/check-rebrand.ts` or `scripts/rebrand-baseline.json` (`node scripts/check-rebrand.ts --update-baseline`) — review that diff like code, never `--no-verify`.
