@@ -33,6 +33,354 @@ import {
   type MessagesTimelineRow,
   workEntryDisplayLabel,
 } from "./MessagesTimeline.logic";
+import type { WorkLogEntry } from "../../session-logic";
+
+describe("expanded tool group scrolling", () => {
+  const entries = [{ id: "first" }, { id: "second" }];
+
+  it("follows appended calls only at the hard end", () => {
+    const appended = [...entries, { id: "third" }];
+    expect(shouldFollowWorkGroupAppend(entries, appended, 0)).toBe(true);
+    expect(shouldFollowWorkGroupAppend(entries, appended, 0.5)).toBe(true);
+    expect(shouldFollowWorkGroupAppend(entries, appended, 1)).toBe(true);
+    expect(shouldFollowWorkGroupAppend(entries, appended, 1.01)).toBe(false);
+    expect(shouldFollowWorkGroupAppend(entries, appended, 10)).toBe(false);
+    expect(shouldFollowWorkGroupAppend(entries, appended, Infinity)).toBe(false);
+  });
+
+  it("does not follow output updates, prepends, or replacements", () => {
+    expect(
+      shouldFollowWorkGroupAppend(
+        entries,
+        entries.map((entry) => ({ ...entry })),
+        0,
+      ),
+    ).toBe(false);
+    expect(shouldFollowWorkGroupAppend(entries, [{ id: "older" }, ...entries], 0)).toBe(false);
+    expect(
+      shouldFollowWorkGroupAppend(
+        entries,
+        [{ id: "replacement" }, entries[1]!, { id: "third" }],
+        0,
+      ),
+    ).toBe(false);
+    expect(shouldFollowWorkGroupAppend([], entries, 0)).toBe(false);
+  });
+
+  it("restores the visible tool and its offset inside expanded output", () => {
+    const anchor = { entryId: "second", offset: 120 };
+    expect(resolveWorkGroupScrollIndex(entries, anchor)).toEqual({ index: 1, viewOffset: -120 });
+    expect(resolveWorkGroupScrollIndex([{ id: "older" }, ...entries], anchor)).toEqual({
+      index: 2,
+      viewOffset: -120,
+    });
+  });
+
+  it("starts normally when the saved tool no longer exists", () => {
+    expect(resolveWorkGroupScrollIndex(entries, undefined)).toBeUndefined();
+    expect(
+      resolveWorkGroupScrollIndex(entries, { entryId: "removed", offset: 120 }),
+    ).toBeUndefined();
+  });
+});
+
+describe("work entry labels", () => {
+  it("uses live titles only for active thread shells", () => {
+    const shell = { title: " Review auth flow ", archivedAt: null, deletedAt: null };
+    expect(threadReadTargetTitle(shell)).toBe("Review auth flow");
+    expect(threadReadTargetTitle({ ...shell, title: "Harden session refresh" })).toBe(
+      "Harden session refresh",
+    );
+    expect(threadReadTargetTitle({ ...shell, archivedAt: "2026-10-07T12:00:00Z" })).toBeNull();
+    expect(threadReadTargetTitle({ ...shell, deletedAt: "2026-10-07T12:00:00Z" })).toBeNull();
+    expect(threadReadTargetTitle({ ...shell, title: "  " })).toBeNull();
+    expect(threadReadTargetTitle(null)).toBeNull();
+  });
+
+  const entry = {
+    id: "tool-1",
+    createdAt: "2026-09-01T12:00:00Z",
+    label: "Tool call",
+    tone: "tool" as const,
+  };
+
+  it("previews reasoning in the live row and falls back to a short label while empty", () => {
+    const thought = {
+      ...entry,
+      itemType: "reasoning" as const,
+      tone: "thinking" as const,
+      detail: "Check **ordering** first.",
+      toolLifecycleStatus: "inProgress" as const,
+    };
+    expect(liveWorkEntryLabel(thought, undefined, true)).toBe(thought.detail);
+    expect(
+      liveWorkEntryLabel(
+        { ...thought, detail: "First paragraph.\n\nSecond paragraph." },
+        undefined,
+        true,
+      ),
+    ).toBe("First paragraph. Second paragraph.");
+    expect(liveWorkEntryLabel({ ...thought, detail: "  " }, undefined, true)).toBe("Thinking");
+    expect(
+      liveWorkEntryLabel(
+        { ...thought, detail: "", toolLifecycleStatus: "completed" },
+        undefined,
+        false,
+      ),
+    ).toBe("Thought");
+    expect(
+      liveWorkEntryLabel({ ...thought, toolLifecycleStatus: "completed" }, undefined, false),
+    ).toBe(thought.detail);
+    expect(workEntryDisplayLabel(thought, undefined)).toBe(thought.detail);
+    expect(workEntryIsVisibleInGroup(thought)).toBe(true);
+    expect(workEntryIsVisibleInGroup({ ...thought, toolLifecycleStatus: "completed" })).toBe(true);
+    expect(workEntryIsVisibleInGroup({ ...thought, detail: "  " })).toBe(false);
+  });
+
+  it.each([
+    ["inProgress", "Clicking in the preview browser"],
+    ["completed", "Clicked in the preview browser"],
+    ["failed", "Failed to click in the preview browser"],
+    ["declined", "Declined to click in the preview browser"],
+    ["stopped", "Stopped clicking in the preview browser"],
+  ] as const)("uses the same friendly %s label in both views", (toolLifecycleStatus, label) => {
+    const browserEntry = {
+      ...entry,
+      toolTitle: "t3-code.preview_click",
+      detail: '{"ok":true}',
+      toolLifecycleStatus,
+    };
+    expect(liveWorkEntryLabel(browserEntry, undefined, toolLifecycleStatus === "inProgress")).toBe(
+      label,
+    );
+    expect(workEntryDisplayLabel(browserEntry, undefined)).toBe(label);
+  });
+
+  it.each([
+    ["inProgress", true, "Reading thread"],
+    ["completed", false, "Read thread"],
+    ["failed", false, "Failed to read thread"],
+    ["declined", false, "Declined to read thread"],
+    ["stopped", false, "Stopped reading thread"],
+  ] as const)("names the read thread in the %s label", (toolLifecycleStatus, active, prefix) => {
+    const threadRead = {
+      ...entry,
+      itemType: "dynamic_tool" as const,
+      toolLifecycleStatus,
+      structuredPayload: {
+        type: "dynamic_tool",
+        toolName: "t3-code.t3_thread_read",
+        input: { threadId: " thread-child ", view: "activity" },
+      } as never,
+    };
+    expect(threadReadTargetId(threadRead)).toBe("thread-child");
+    expect(threadReadLabelPrefix(liveWorkEntryLabel(threadRead, undefined, active))).toBe(prefix);
+    expect(threadReadLabelPrefix(workEntryDisplayLabel(threadRead, undefined))).toBe(prefix);
+  });
+
+  it("finds no target for other tools or thread reads without one", () => {
+    const payload = (toolName: string, input: unknown) => ({
+      structuredPayload: { type: "dynamic_tool", toolName, input } as never,
+    });
+    expect(threadReadTargetId(payload("t3-code.t3_thread_wait", { threadId: "t" }))).toBeNull();
+    expect(threadReadTargetId(payload("t3-code.t3_thread_read", { threadId: "  " }))).toBeNull();
+    expect(threadReadTargetId(payload("t3-code.t3_thread_read", null))).toBeNull();
+  });
+
+  it("uses the active summary state for legacy tools without a lifecycle status", () => {
+    const browserEntry = { ...entry, toolTitle: "t3-code.preview_click" };
+    expect(liveWorkEntryLabel(browserEntry, undefined, true)).toBe(
+      "Clicking in the preview browser",
+    );
+    expect(liveWorkEntryLabel(browserEntry, undefined, false)).toBe(
+      "Clicked in the preview browser",
+    );
+  });
+
+  it("keeps the latest live activity in the present tense after the call completes", () => {
+    const browserEntry = {
+      ...entry,
+      toolTitle: "t3-code.preview_click",
+      toolLifecycleStatus: "completed" as const,
+    };
+    expect(liveWorkEntryLabel(browserEntry, undefined, true)).toBe(
+      "Clicking in the preview browser",
+    );
+    expect(liveWorkEntryLabel(browserEntry, undefined, false)).toBe(
+      "Clicked in the preview browser",
+    );
+  });
+
+  it("labels file reads with the path and never the file body", () => {
+    const readEntry = {
+      ...entry,
+      itemType: "dynamic_tool" as const,
+      toolTitle: "Read",
+      label: "Read",
+      detail: "---\nname: env\n---\n cons t x = 1",
+      toolData: { input: { file_path: "src/env.ts" } },
+      structuredPayload: {
+        type: "dynamic_tool",
+        toolName: "Read",
+        input: { file_path: "src/env.ts" },
+      } as NonNullable<WorkLogEntry["structuredPayload"]>,
+    };
+    expect(workEntryDisplayLabel(readEntry, undefined)).toBe("Read src/env.ts");
+    expect(workEntryReadOutput(readEntry, undefined)).toBe("src/env.ts");
+    expect(workEntryReadOutput(readEntry, "/workspace/ohseearr")).toBe(
+      "/workspace/ohseearr/src/env.ts",
+    );
+    expect(
+      workEntryReadOutput(
+        {
+          structuredPayload: {
+            type: "dynamic_tool",
+            toolName: "Read",
+            input: {},
+          } as NonNullable<WorkLogEntry["structuredPayload"]>,
+          toolData: { locations: [{ path: "src/from-location.ts" }] },
+        },
+        "/workspace/ohseearr",
+      ),
+    ).toBe("/workspace/ohseearr/src/from-location.ts");
+    expect(workEntryReadOutput({ detail: "---", toolData: {} }, undefined)).toBeNull();
+  });
+
+  it("labels Claude Grep from structured input instead of a generic tool heading", () => {
+    expect(
+      workEntryDisplayLabel(
+        {
+          ...entry,
+          itemType: "dynamic_tool",
+          toolTitle: "Grep",
+          label: "Grep",
+          toolData: { input: { pattern: "TODO", path: "apps/web" } },
+          structuredPayload: {
+            type: "dynamic_tool",
+            toolName: "Grep",
+            input: { pattern: "TODO", path: "apps/web" },
+          } as NonNullable<WorkLogEntry["structuredPayload"]>,
+        },
+        undefined,
+      ),
+    ).toBe("Searched TODO in web");
+  });
+
+  it("labels file searches with the adapter title and its search target", () => {
+    expect(
+      workEntryDisplayLabel(
+        {
+          ...entry,
+          itemType: "file_search",
+          label: "Searched TODO in web",
+          toolTitle: "Searched TODO in web",
+          detail: "TODO",
+          toolData: { type: "file_search", pattern: "TODO" },
+        },
+        undefined,
+      ),
+    ).toBe("Searched TODO in web");
+  });
+
+  it("keeps a multi-line approval prompt as its label", () => {
+    const prompt = "Allow this command?\nrm -rf dist";
+    expect(
+      workEntryDisplayLabel(
+        { ...entry, itemType: "approval_request", requestKind: "command", detail: prompt },
+        undefined,
+      ),
+    ).toBe(prompt);
+  });
+
+  it("keeps custom titles and output for unrecognized tools", () => {
+    const unknownEntry = { ...entry, toolTitle: "mcp__github__search_issues" };
+    expect(liveWorkEntryLabel(unknownEntry, undefined, true)).toBe("Mcp__github__search_issues");
+    expect(workEntryDisplayLabel({ ...unknownEntry, detail: "Found 3 issues" }, undefined)).toBe(
+      "Found 3 issues",
+    );
+  });
+
+  it("keeps command summaries compact without replacing the full command in expanded rows", () => {
+    const commandEntry = { ...entry, command: "vp test run", detail: "All tests passed" };
+    expect(liveWorkEntryLabel(commandEntry, undefined, true)).toBe("Running vp");
+    expect(liveWorkEntryLabel(commandEntry, undefined, false)).toBe("Ran vp");
+    expect(workEntryDisplayLabel(commandEntry, undefined)).toBe("vp test run");
+  });
+
+  it("summarizes the program inside a shell wrapper while preserving the expanded command", () => {
+    const command = "/bin/zsh -lc 'vp test run apps/web/src/session-logic.test.ts'";
+    const commandEntry = { ...entry, command };
+    expect(liveWorkEntryLabel(commandEntry, undefined, true)).toBe("Running vp");
+    expect(liveWorkEntryLabel(commandEntry, undefined, false)).toBe("Ran vp");
+    expect(workEntryDisplayLabel(commandEntry, undefined)).toBe(
+      "vp test run apps/web/src/session-logic.test.ts",
+    );
+    expect(commandEntry.command).toBe(command);
+  });
+
+  it.each([
+    ["inProgress", "Running vp", "Running vp"],
+    ["completed", "Running vp", "Ran vp"],
+    ["failed", "Failed vp", "Failed vp"],
+    ["declined", "Declined vp", "Declined vp"],
+    ["stopped", "Stopped vp", "Stopped vp"],
+  ] as const)(
+    "uses present tense for a live %s command and the outcome once it is no longer live",
+    (toolLifecycleStatus, liveLabel, settledLabel) => {
+      const commandEntry = {
+        ...entry,
+        command: "/bin/bash -lc 'vp test run'",
+        toolLifecycleStatus,
+      };
+      expect(liveWorkEntryLabel(commandEntry, undefined, true)).toBe(liveLabel);
+      expect(liveWorkEntryLabel(commandEntry, undefined, false)).toBe(settledLabel);
+    },
+  );
+
+  it.each([
+    ["preview_click", "Clicked in the preview browser"],
+    ["task_status", "Got delegated task status"],
+  ] as const)(
+    "renders a settled legacy %s call directly with its completed presentation",
+    (tool, label) => {
+      const rows = deriveMessagesTimelineRows({
+        timelineEntries: [
+          {
+            id: "browser-entry",
+            kind: "work",
+            createdAt: entry.createdAt,
+            entry: {
+              ...entry,
+              itemType: "dynamic_tool",
+              toolData: { server: "t3-code", tool },
+            },
+          },
+        ],
+        isWorking: false,
+        activeTurnStartedAt: null,
+        turnDiffSummaries: [],
+        supportsConversationRollback: false,
+      });
+      const directRow = rows.find((row) => row.kind === "work");
+      expect(directRow).toMatchObject({
+        groupedEntries: [expect.objectContaining({ id: "tool-1" })],
+        isExpandedToolGroup: false,
+        displayLabel: label,
+      });
+    },
+  );
+});
+
+describe("shouldPreserveAssistantLineBreaks", () => {
+  it("preserves Claude insight formatting without changing regular markdown", () => {
+    expect(
+      shouldPreserveAssistantLineBreaks(
+        "★ Insight ─────────────────\\nFirst observation\\nSecond observation\\n─────────────────",
+      ),
+    ).toBe(true);
+    expect(shouldPreserveAssistantLineBreaks("A normal\\nmarkdown paragraph")).toBe(false);
+  });
+});
 
 describe("resolveAssistantMessageCopyState", () => {
   it("copies the rendered representation of Codex directives", () => {

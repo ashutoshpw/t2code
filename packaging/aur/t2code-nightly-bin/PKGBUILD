@@ -76,7 +76,7 @@ package() {
 #!/bin/sh
 exec /opt/t2code-nightly-bin/AppRun "$@"
 EOF
-  ln -s t2code-nightly "$pkgdir/usr/bin/t3-code-nightly-desktop"
+  ln -s t2code-nightly "$pkgdir/usr/bin/t2-code-nightly-desktop"
 
   # Icon lookup only sees sizes registered in hicolor's index.theme (max 512x512).
   local icon size_dir
