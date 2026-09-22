@@ -3879,7 +3879,7 @@ for (const fails of [false, true]) {
       platform: "macos",
       id: 42,
       title: "Setup",
-      owner: { name: "T2 Code", processId: 123, path: "/Applications/T3 Code.app" },
+      owner: { name: "T2 Code", processId: 123, path: "/Applications/T2 Code.app" },
       bounds: { x: 0, y: 0, width: 800, height: 600 },
     };
     activeWindowMock.mockReset().mockResolvedValue(active);

@@ -44,7 +44,7 @@ function makeProject(
 function makeScope(projects: ReadonlyArray<EnvironmentProject>): HomeProjectScope {
   return {
     key: "github.com/t2tools/t2code",
-    title: "T3 Code",
+    title: "T2 Code",
     representative: projects[0]!,
     projects,
     projectRefs: projects.map((project) => ({
@@ -167,7 +167,7 @@ describe("filterProjectScopes", () => {
   });
 
   it("matches logical names and workspace names or paths without case sensitivity", () => {
-    expect(filterProjectScopes(scopes, "  T3 CODE ")).toEqual([code]);
+    expect(filterProjectScopes(scopes, "  T2 CODE ")).toEqual([code]);
     expect(filterProjectScopes(scopes, "DESKTOP")).toEqual([code]);
     expect(filterProjectScopes(scopes, "REMOTE-WORKSPACE")).toEqual([code]);
     expect(filterProjectScopes(scopes, "documentation")).toEqual([docs]);
