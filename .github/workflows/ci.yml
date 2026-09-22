@@ -18,6 +18,9 @@ jobs:
     name: Check
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -26,6 +29,66 @@ jobs:
             /*
             !/.repos/
           sparse-checkout-cone-mode: false
+
+      # Documentation is the allow-list: anything else runs the desktop build.
+      # Detection is API-only and fails open: if the diff cannot be resolved, the build runs.
+      - name: Detect desktop build changes
+        id: detect
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -uo pipefail
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+          fail_open() {
+            echo "$* Running the desktop build."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          count_rows() {
+            printf '%s\n' "$1" | grep -c . || true
+          }
+
+          row='[.filename, (.previous_filename // empty)] | map(select(length > 0)) | @tsv'
+
+          if [[ -n "${PR_NUMBER}" ]]; then
+            # The PR files endpoint stops at 3000 files and pagination cannot
+            # extend it, so cross-check against the count the PR itself reports.
+            expected=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.changed_files') \
+              || fail_open "Could not read the pull request."
+            rows=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --paginate --jq ".[] | ${row}") \
+              || fail_open "Could not resolve changed files."
+
+            listed=$(count_rows "$rows")
+            if [[ "$listed" -lt "$expected" ]]; then
+              fail_open "GitHub listed only ${listed} of ${expected} changed files."
+            fi
+          else
+            rows=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${BEFORE_SHA}...${GITHUB_SHA}" --jq ".files[]? | ${row}") \
+              || fail_open "Could not resolve changed files."
+
+            # The compare endpoint reports at most 300 files and pagination does
+            # not extend that list, so a full list may be hiding build changes.
+            listed=$(count_rows "$rows")
+            if [[ "$listed" -ge 300 ]]; then
+              fail_open "GitHub listed ${listed} changed files, the compare endpoint maximum."
+            fi
+          fi
+
+          paths=$(tr '\t' '\n' <<< "$rows")
+          pattern='^docs/|.*\.md$|^\.github/(ISSUE_TEMPLATE|pr-assets)/|^LICENSE|^\.gitignore$'
+
+          if [[ -n "$paths" ]] && ! grep -qvE "$pattern" <<< "$paths"; then
+            echo "Only documentation or repository metadata changed."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Code or an empty diff was found; running the desktop build."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Reject repository-owned PR assets
         run: |
@@ -56,16 +119,20 @@ jobs:
         run: vpr typecheck
 
       - uses: ./.github/actions/setup-apt-mirrors
+        if: ${{ success() && steps.detect.outputs.changed != 'false' }}
 
       - name: Install browser secret helper build libraries
+        if: ${{ success() && steps.detect.outputs.changed != 'false' }}
         run: |
           sudo sed -i 's|http://|https://|g' /etc/apt/t2code-ubuntu-mirrors.txt /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
 
       - name: Build desktop pipeline
+        if: ${{ success() && steps.detect.outputs.changed != 'false' }}
         run: vp run build:desktop
 
       - name: Verify preload bundle output
+        if: ${{ success() && steps.detect.outputs.changed != 'false' }}
         run: node apps/desktop/scripts/verify-preload-bundle.mjs
 
   # Everything except `@t2code/cli` (apps/server). `--parallel` drops the package
