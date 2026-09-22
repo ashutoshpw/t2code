@@ -2069,7 +2069,7 @@ function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: b
     <>
       {window.desktopBridge ? (
         <SettingsRow
-          title={searchableSetting("t3-connect").title}
+          title={searchableSetting("t2-connect").title}
           description={
             linkRevoked
               ? "This environment was removed from T2 Connect. Turn it on to link it again."

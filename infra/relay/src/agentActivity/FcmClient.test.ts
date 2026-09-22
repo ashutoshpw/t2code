@@ -52,7 +52,7 @@ const config = {
 const input = {
   token: "device-token",
   packageName: "com.t2tools.t2code.dev",
-  data: { t3_kind: "agent_activity", active: "true" },
+  data: { t2_kind: "agent_activity", active: "true" },
   alert: false,
 };
 
