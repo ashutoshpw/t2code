@@ -304,7 +304,7 @@ describe("remote environment authorization", () => {
               policy: "remote-reachable",
               bootstrapMethods: ["one-time-token"],
               sessionMethods: ["browser-session-cookie", "bearer-access-token"],
-              sessionCookieName: "t3_session",
+              sessionCookieName: "t2_session",
             },
             scopes: [
               "orchestration:read",
