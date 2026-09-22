@@ -263,18 +263,18 @@ describe("projectActivityPayload", () => {
     },
     {
       item: {
-        server: "t3-code",
+        server: "t2-code",
         tool: "preview_open",
         result: { structuredContent: { url: "https://example.com/" } },
       },
     },
     {
-      toolName: "mcp__t3-code__preview_navigate",
+      toolName: "mcp__t2-code__preview_navigate",
       result: { content: '{"url":"https://example.com/"}' },
     },
-    { tool: "t3-code_preview_status", state: { output: '{"url":"https://example.com/"}' } },
+    { tool: "t2-code_preview_status", state: { output: '{"url":"https://example.com/"}' } },
     {
-      toolName: "mcp__t3_code__preview_snapshot",
+      toolName: "mcp__t2_code__preview_snapshot",
       result: {
         content: [
           { type: "text", text: '{"url":"https://example.com/"}' },
@@ -283,15 +283,15 @@ describe("projectActivityPayload", () => {
       },
     },
     {
-      toolName: "mcp__t3-code__preview_click",
+      toolName: "mcp__t2-code__preview_click",
       result: { content: '{"toolIcon":{"_tag":"website","pageUrl":"https://example.com/"}}' },
     },
     {
-      toolName: "mcp__t3_code__preview_snapshot",
+      toolName: "mcp__t2_code__preview_snapshot",
       result: { content: '{"url":"https://example.com/"}\n{"accessibilityTree":"truncated' },
     },
     ...[false, true].map((truncated) => ({
-      toolName: "mcp__t3_code__preview_snapshot",
+      toolName: "mcp__t2_code__preview_snapshot",
       result: {
         content: JSON.stringify({
           content: [{ type: "text", text: '{"url":"https://example.com/"}' }],
@@ -310,7 +310,7 @@ describe("projectActivityPayload", () => {
       "recording_start",
       "recording_stop",
     ].map((action) => ({
-      toolName: `mcp__t3_code__preview_${action}`,
+      toolName: `mcp__t2_code__preview_${action}`,
       result: { content: '{"toolIcon":{"_tag":"website","pageUrl":"https://example.com/"}}' },
     })),
   ])("preserves the preview page favicon through result slimming", (data) => {
@@ -323,15 +323,15 @@ describe("projectActivityPayload", () => {
   it.each([
     { toolName: "mcp__other__preview_open", result: { content: '{"url":"https://example.com/"}' } },
     {
-      toolName: "mcp__t3-code__preview_evaluate",
+      toolName: "mcp__t2-code__preview_evaluate",
       result: { content: '{"url":"https://example.com/"}' },
     },
     {
-      toolName: "mcp__t3-code__preview_open",
+      toolName: "mcp__t2-code__preview_open",
       result: { isError: true, content: '{"url":"https://example.com/"}' },
     },
-    { toolName: "mcp__t3-code__preview_open", result: { content: "malformed JSON" } },
-    { toolName: "mcp__t3-code__preview_open", result: { content: '{"url":"about:blank"}' } },
+    { toolName: "mcp__t2-code__preview_open", result: { content: "malformed JSON" } },
+    { toolName: "mcp__t2-code__preview_open", result: { content: '{"url":"about:blank"}' } },
   ])("keeps the fallback for unrelated tools, failed navigation, and missing page URLs", (data) => {
     expect(
       projectActivityPayload(activity({ itemType: "mcp_tool_call", data })).payload,

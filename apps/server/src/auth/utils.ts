@@ -53,17 +53,6 @@ export function resolveSessionCookieName(input: {
   return `${SESSION_COOKIE_NAME}_${input.port}_${instanceHash}`;
 }
 
-export function resolveLegacySessionCookieName(input: {
-  readonly mode: "web" | "desktop";
-  readonly host: string | undefined;
-  readonly development: boolean;
-}): string | undefined {
-  return input.mode === "web" && !input.development && isRemoteReachableHost(input.host)
-    ? // The pre-rename bare cookie name; still accepted so existing remote-web sessions survive.
-      "t3_session"
-    : undefined;
-}
-
 export function isRemoteReachableHost(host: string | undefined): boolean {
   if (host === "0.0.0.0" || host === "::" || host === "[::]") {
     return true;

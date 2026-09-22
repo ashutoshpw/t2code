@@ -855,7 +855,7 @@ describe("deriveWorkLogEntries", () => {
   it("preserves MCP server, tool, arguments, and results for expanded display", () => {
     const item = {
       type: "mcpToolCall",
-      server: "t3-code",
+      server: "t2-code",
       tool: "preview_status",
       arguments: {},
       status: "completed",
@@ -865,10 +865,10 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "mcp-tool-done",
         kind: "tool.completed",
-        summary: "t3-code · preview_status",
+        summary: "t2-code · preview_status",
         payload: {
           itemType: "mcp_tool_call",
-          title: "t3-code · preview_status",
+          title: "t2-code · preview_status",
           toolSurface: "browser",
           toolIcon: { _tag: "website", pageUrl: "https://example.com/checkout" },
           toolSource: {
@@ -882,7 +882,7 @@ describe("deriveWorkLogEntries", () => {
     ];
 
     const [entry] = deriveWorkLogEntries(activities);
-    expect(entry?.toolTitle).toBe("t3-code · preview_status");
+    expect(entry?.toolTitle).toBe("t2-code · preview_status");
     expect(entry?.toolSurface).toBe("browser");
     expect(entry?.toolIcon).toEqual({
       _tag: "website",
@@ -904,7 +904,7 @@ describe("deriveWorkLogEntries", () => {
     "preserves Claude MCP identity behind generic titles while %s",
     (status, displayName) => {
       const data = {
-        toolName: "mcp__t3_code__preview_click",
+        toolName: "mcp__t2_code__preview_click",
         input: { selector: "#submit" },
         ...(status === "inProgress"
           ? {}
@@ -929,7 +929,7 @@ describe("deriveWorkLogEntries", () => {
   it("keeps MCP payloads while collapsing lifecycle updates", () => {
     const item = {
       type: "mcpToolCall",
-      server: "t3-code",
+      server: "t2-code",
       tool: "preview_snapshot",
       arguments: { interactiveOnly: true },
       status: "completed",
@@ -938,7 +938,7 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "mcp-tool-progress",
         kind: "tool.updated",
-        summary: "t3-code · preview_snapshot",
+        summary: "t2-code · preview_snapshot",
         payload: {
           itemType: "mcp_tool_call",
           toolCallId: "call-1",
@@ -949,7 +949,7 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "mcp-tool-complete",
         kind: "tool.completed",
-        summary: "t3-code · preview_snapshot",
+        summary: "t2-code · preview_snapshot",
         payload: {
           itemType: "mcp_tool_call",
           toolCallId: "call-1",

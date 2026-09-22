@@ -22,7 +22,7 @@ public final class T2KeyboardCommandsView: ExpoView {
 
   public override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
     if action == #selector(openCommandPalette) || action == #selector(paletteNext) || action == #selector(palettePrevious) || action == #selector(paletteDismiss),
-       let input = window?.t3FirstResponder as? UITextInput,
+       let input = window?.t2FirstResponder as? UITextInput,
        input.markedTextRange != nil {
       return false
     }
@@ -157,17 +157,17 @@ public final class T2KeyboardCommandsView: ExpoView {
 
   @objc private func reclaimFirstResponderIfAvailable() {
     DispatchQueue.main.async { [weak self] in
-      guard let self, self.window?.t3FirstResponder == nil else { return }
+      guard let self, self.window?.t2FirstResponder == nil else { return }
       self.becomeFirstResponder()
     }
   }
 }
 
 private extension UIView {
-  var t3FirstResponder: UIResponder? {
+  var t2FirstResponder: UIResponder? {
     if isFirstResponder { return self }
     for subview in subviews {
-      if let responder = subview.t3FirstResponder { return responder }
+      if let responder = subview.t2FirstResponder { return responder }
     }
     return nil
   }

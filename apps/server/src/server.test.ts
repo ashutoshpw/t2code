@@ -2312,48 +2312,6 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
-  it.effect("migrates a valid legacy remote-web session cookie", () =>
-    Effect.gen(function* () {
-      yield* buildAppUnderTest({ config: { mode: "web", host: "192.168.1.50" } });
-
-      const { cookie } = yield* bootstrapBrowserSession();
-      const currentCookie = cookie?.split(";")[0] ?? "";
-      const legacyCookie = currentCookie.replace(/^t2_session_[^=]+=/, "t3_session=");
-      const sessionUrl = yield* getHttpServerUrl("/api/auth/session");
-      const response = yield* fetchEffect(sessionUrl, {
-        headers: { cookie: legacyCookie },
-      });
-      const body = yield* responseJsonEffect<{ readonly authenticated: boolean }>(response);
-
-      assert.equal(body.authenticated, true);
-      assert.equal(response.headers["set-cookie"], cookie);
-      assert.equal(response.headers["cache-control"], "no-store");
-    }).pipe(Effect.provide(NodeHttpServer.layerTest)),
-  );
-
-  it.effect.each(["cookie", "bearer"])(
-    "does not migrate a stale legacy cookie when %s auth succeeds",
-    (source) =>
-      Effect.gen(function* () {
-        yield* buildAppUnderTest({ config: { mode: "web", host: "192.168.1.50" } });
-
-        const { cookie } = yield* bootstrapBrowserSession();
-        const sessionCookie = cookie?.split(";")[0] ?? "";
-        const sessionToken = extractSessionTokenFromSetCookie(cookie ?? "");
-        const sessionUrl = yield* getHttpServerUrl("/api/auth/session");
-        const response = yield* fetchEffect(sessionUrl, {
-          headers:
-            source === "cookie"
-              ? { cookie: `${sessionCookie}; t3_session=stale` }
-              : { authorization: `Bearer ${sessionToken}`, cookie: "t3_session=stale" },
-        });
-        const body = yield* responseJsonEffect<{ readonly authenticated: boolean }>(response);
-
-        assert.equal(body.authenticated, true);
-        assert.isUndefined(response.headers["set-cookie"]);
-      }).pipe(Effect.provide(NodeHttpServer.layerTest)),
-  );
-
   it.effect("exchanges a bootstrap grant for a scoped bearer access token", () =>
     Effect.gen(function* () {
       yield* buildAppUnderTest();
@@ -2820,8 +2778,8 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             wsBaseUrl: linkProofUrl
               .replace("http://", "ws://")
               .replace("/api/connect/link-proof", "/ws"),
-            // "manual" and "cloudflare_tunnel" are supported; "t3_relay" is not.
-            providerKind: "t3_relay",
+            // "manual" and "cloudflare_tunnel" are supported; "t2_relay" is not.
+            providerKind: "t2_relay",
           },
           origin: {
             localHttpHost: "127.0.0.1",
