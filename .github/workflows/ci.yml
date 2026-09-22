@@ -138,7 +138,10 @@ jobs:
         with:
           node-version-file: package.json
           cache: true
-          run-install: true
+          # Install the server package and its workspace dependency closure for these shards.
+          run-install: |
+            args:
+              - --filter=@t2code/cli...
 
       # No Electron setup here: `@t2code/cli` (apps/server) has no Electron dependency
       # and none of its tests touch the runtime. Only the non-server `test`
