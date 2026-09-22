@@ -50,6 +50,11 @@ const LEGACY_WORDMARK_PATH_FINGERPRINT =
 const UPSTREAM_T3TOOLS_REPOSITORY_PREFIX = /(?:github\.com|gitlab\.com)(?::|\/)$/i;
 const T3TOOLS_WORD = /\bt3tools\b/gi;
 
+// First-party product URLs: the fork serves app.t2.codes, relay.t2.codes,
+// clerk.t2.codes, and nightly.app.t2.codes. t3.codes and its subdomains are
+// upstream references, so a hit means a link missed the T2 migration.
+const UPSTREAM_FIRST_PARTY_URL = /(?<![\w-])t3\.codes\b/i;
+
 // The env namespace is T2CODE_*/T2_* only: the legacy seam and the retained
 // pre-rename identifiers were removed after the T2 migration completed.
 const RETAINED_T3_IDENTIFIERS = new Set([] as string[]);
@@ -118,6 +123,11 @@ const RULES: Rule[] = [
     id: "t3-copy",
     hint: 'user-facing copy is "T2 Code"; "T3 Code"/"T3Code" only survives as legacy-compat strings listed in the baseline',
     violates: (_file, line) => /(?<![\w/.:-])T3 ?Code(?![\w])/.test(line),
+  },
+  {
+    id: "t3-first-party-url",
+    hint: 'first-party URLs use the T2 domains (app.t2.codes, relay.t2.codes, clerk.t2.codes); "t3.codes" and its subdomains are upstream references',
+    violates: (_file, line) => UPSTREAM_FIRST_PARTY_URL.test(line),
   },
   {
     id: "t3-cli-scope",
