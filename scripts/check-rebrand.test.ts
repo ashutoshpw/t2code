@@ -233,6 +233,25 @@ describe("check-rebrand", () => {
     ]);
   });
 
+  it("flags half-renamed references but not real owner and repo combinations", () => {
+    const violations = findViolations(
+      [
+        { file: "README.md", line: "https://github.com/pingdotgg/t2code/discussions" },
+        { file: "docs/example.md", line: "git@github.com:ashutoshpw/t3code.git" },
+        { file: "apps/mobile/src/example.ts", line: `const bundleId = "com.t2tools.t2code";` },
+        { file: "apps/web/src/sidebar.test.ts", line: `repository: "pingdotgg/t2code"` },
+        { file: "README.md", line: "https://github.com/pingdotgg/t3code/releases" },
+        { file: "README.md", line: "https://github.com/ashutoshpw/t2code/releases" },
+        {
+          file: "apps/mobile/modules/t2-terminal/android/build.gradle",
+          line: "group = 'com.t2tools.terminal'",
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t3-half-rename"));
+  });
+
   it("flags repository-owned t3tools metadata while retaining upstream repository fixtures", () => {
     const violations = findViolations(
       [
