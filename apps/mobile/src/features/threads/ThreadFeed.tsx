@@ -737,7 +737,7 @@ function MessageAttachmentFile(props: {
             )}
           </View>
           <View className="min-w-0 flex-1 gap-1">
-            <Text className="font-t3-medium text-sm text-foreground" numberOfLines={2}>
+            <Text className="font-t2-medium text-sm text-foreground" numberOfLines={2}>
               {attachment.name}
             </Text>
             <Text className="text-xs text-foreground-muted" numberOfLines={1}>
@@ -878,7 +878,7 @@ function ArtifactTemplateCard(props: {
         </View>
       </View>
       <View className="min-w-0 flex-1">
-        <Text className="font-t3-bold text-sm text-foreground" numberOfLines={1}>
+        <Text className="font-t2-bold text-sm text-foreground" numberOfLines={1}>
           {props.template.displayName}
         </Text>
         <Text className="text-xs text-foreground-muted">
@@ -1049,7 +1049,7 @@ function AgentMessageFoldHeader(props: {
       />
       <Text
         numberOfLines={1}
-        className="max-w-[50%] shrink-0 font-t3-medium text-sm text-user-bubble-foreground-muted"
+        className="max-w-[50%] shrink-0 font-t2-medium text-sm text-user-bubble-foreground-muted"
       >
         {label}
       </Text>
@@ -1082,7 +1082,7 @@ function OpenSenderThreadButton(props: {
         })
       }
     >
-      <Text className="font-t3-medium text-xs text-foreground-secondary">Open thread</Text>
+      <Text className="font-t2-medium text-xs text-foreground-secondary">Open thread</Text>
     </Pressable>
   );
 }
@@ -1144,7 +1144,7 @@ function ThreadAutomationMessageRow(props: {
             tintColorClassName="accent-user-bubble-foreground-muted"
             type="monochrome"
           />
-          <Text className="font-t3-medium text-sm text-user-bubble-foreground-muted">
+          <Text className="font-t2-medium text-sm text-user-bubble-foreground-muted">
             Automation
           </Text>
           <Text numberOfLines={1} className="min-w-0 shrink text-sm text-user-bubble-foreground">
@@ -1182,12 +1182,12 @@ function ThreadAutomationMessageRow(props: {
               hitSlop={6}
               onPress={() => openSettings(navigation, "SettingsScheduledTasks")}
             >
-              <Text className="font-t3-medium text-xs text-foreground-secondary">
+              <Text className="font-t2-medium text-xs text-foreground-secondary">
                 Open automation
               </Text>
             </Pressable>
           ) : null}
-          <Text className="font-t3-medium text-xs tabular-nums text-foreground-secondary">
+          <Text className="font-t2-medium text-xs tabular-nums text-foreground-secondary">
             {props.timestampLabel}
           </Text>
           <UserMessageCopyButton
@@ -1611,9 +1611,9 @@ function renderFeedEntry(
           className="mb-5 items-end"
           {...(enterAnimated ? { entering: FadeInUp.duration(220) } : {})}
         >
-          {presentation.attribution === "t3code" ? (
-            <Text className="mb-1 pr-1 font-t3-medium text-2xs text-foreground-muted opacity-60">
-              Sent by T3 Code
+          {presentation.attribution === "t2code" ? (
+            <Text className="mb-1 pr-1 font-t2-medium text-2xs text-foreground-muted opacity-60">
+              Sent by T2 Code
             </Text>
           ) : null}
           {presentation.guestName !== undefined ? (
@@ -1764,7 +1764,7 @@ function renderFeedEntry(
                   className="flex-row items-center gap-1"
                 >
                   <SymbolView name="arrow.uturn.forward" size={12} tintColor={iconSubtleColor} />
-                  <Text className="font-t3-medium text-xs text-foreground-secondary">
+                  <Text className="font-t2-medium text-xs text-foreground-secondary">
                     {intentBadge.label}
                   </Text>
                 </View>
@@ -1774,12 +1774,12 @@ function renderFeedEntry(
                   accessible={false}
                   accessibilityElementsHidden
                   importantForAccessibility="no"
-                  className="font-t3-medium text-xs text-foreground-secondary"
+                  className="font-t2-medium text-xs text-foreground-secondary"
                 >
                   ·
                 </Text>
               ) : null}
-              <Text className="font-t3-medium text-xs tabular-nums text-foreground-secondary">
+              <Text className="font-t2-medium text-xs tabular-nums text-foreground-secondary">
                 {entry.pendingMessage && !entry.acknowledged ? "Pending" : timestampLabel}
               </Text>
               {props.onEditPendingMessage !== null &&
@@ -1880,7 +1880,7 @@ function renderFeedEntry(
                 sourceTitle={props.threadTitle}
               />
             ) : null}
-            <Text className="font-t3-medium text-xs tabular-nums text-foreground-secondary">
+            <Text className="font-t2-medium text-xs tabular-nums text-foreground-secondary">
               {timestampLabel}
             </Text>
           </View>
@@ -1928,10 +1928,10 @@ function TurnDiffStat(props: {
       onPress={() => props.onOpenTurnDiff(props.checkpoint)}
       className="min-h-11 shrink-0 flex-row items-center gap-2 px-2 active:bg-subtle"
     >
-      <Text className="font-t3-medium text-xs tabular-nums text-adaptive-emerald-700-300">
+      <Text className="font-t2-medium text-xs tabular-nums text-adaptive-emerald-700-300">
         +{formatDiffCount(additions)}
       </Text>
-      <Text className="font-t3-medium text-xs tabular-nums text-adaptive-rose-700-300">
+      <Text className="font-t2-medium text-xs tabular-nums text-adaptive-rose-700-300">
         −{formatDiffCount(deletions)}
       </Text>
       <SymbolView name="chevron.right" size={12} tintColorClassName="accent-foreground-muted" />
@@ -2140,7 +2140,7 @@ function ThreadFeedPlaceholder(props: {
       }}
     >
       <View className="max-w-[320px] items-center gap-2">
-        <Text className="text-center font-t3-bold text-lg text-foreground">{props.title}</Text>
+        <Text className="text-center font-t2-bold text-lg text-foreground">{props.title}</Text>
         <Text className="text-center text-sm leading-normal text-foreground-secondary">
           {props.detail}
         </Text>

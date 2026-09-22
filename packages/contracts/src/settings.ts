@@ -1392,7 +1392,10 @@ export const ServerSettings = Schema.Struct({
   environmentIcon: ForwardCompatibleNullable(EnvironmentMachineKind).pipe(
     Schema.withDecodingDefault(Effect.succeed(null)),
   ),
-  /** Null inherits t3.json, then local; omit it on the wire for older clients requiring a literal. */
+  /**
+   * Null means inherit: the repository's t2.json, then "local". Null stays off the wire
+   * so older clients, which require a literal here, keep decoding.
+   */
   defaultThreadEnvMode: OmittedWhenNull(ThreadEnvMode),
   newWorktreesStartFromOrigin: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(true)),

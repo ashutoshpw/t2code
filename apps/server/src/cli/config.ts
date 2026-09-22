@@ -116,6 +116,7 @@ const EnvServerConfig = Config.all({
   otlpExportIntervalMs: Config.Int("T2CODE_OTLP_EXPORT_INTERVAL_MS").pipe(
     Config.withDefault(10_000),
   ),
+
   otlpHeaders: Config.schema(OtlpHeadersFromString, "T2CODE_OTLP_HEADERS").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),

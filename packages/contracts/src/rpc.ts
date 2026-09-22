@@ -635,7 +635,8 @@ export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProv
     instanceId: Schema.optional(ProviderInstanceId),
     cwd: Schema.optional(TrimmedNonEmptyString),
     fresh: Schema.optional(Schema.Boolean),
-    /** Bypass model caches; explicit rediscovery may open sessions, background refreshes must not. */
+    /** Explicit user request: bypass T2-owned caches and rediscover models.
+     * Background status refreshes must not open agent sessions. */
     refreshModels: Schema.optional(Schema.Boolean),
     /** Read secret references again; unlocking a vault can prompt on the host, so only explicit user refreshes ask. */
     reloadSecrets: Schema.optional(Schema.Boolean),
