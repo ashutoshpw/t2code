@@ -169,6 +169,28 @@ describe("check-rebrand", () => {
     expect(violations.map((v) => v.rule.id)).toEqual(["t3-copy"]);
   });
 
+  it("flags upstream first-party domains while leaving repo URLs and lookalikes alone", () => {
+    const violations = findViolations(
+      [
+        { file: "README.md", line: "Download the desktop app from https://t3.codes/download." },
+        { file: "apps/mobile/src/legal.ts", line: `const site = "https://app.t3.codes";` },
+        {
+          file: "scripts/install.sh",
+          line: "curl -fsSL https://nightly.app.t3.codes/install.sh | sh",
+        },
+        { file: ".agents/skills/rebase-with-upstream/SKILL.md", line: "see https://t3.codes" },
+        {
+          file: "README.md",
+          line: "Releases live at https://github.com/pingdotgg/t3code/releases",
+        },
+        { file: "docs/example.md", line: `const domain = "not3.codes";` },
+        { file: "README.md", line: "The hosted app is https://app.t2.codes" },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t3-first-party-url"));
+  });
+
   it("flags T3Code only outside URLs, owners, and identifiers", () => {
     const entries = [
       { file: "packages/shared/src/example.ts", line: `const NAME = "T3Code";` },
