@@ -19,7 +19,7 @@ repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
 if ! pairing_output="$({
-  T3CODE_PORT="$server_port" node apps/server/src/bin.ts auth pairing create \
+  T2CODE_PORT="$server_port" node apps/server/src/bin.ts auth pairing create \
     --base-dir "$base_dir" \
     --base-url "$mobile_origin" \
     --ttl 15m \
@@ -40,7 +40,7 @@ const query = new URLSearchParams({
   pairingUrl: process.env.PAIRING_URL,
   autoConnect: "1",
 });
-process.stdout.write(`t3code-dev://connections/new?${query}`);
+process.stdout.write(`t2code-dev://connections/new?${query}`);
 NODE
 )"
 
