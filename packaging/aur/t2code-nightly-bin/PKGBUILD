@@ -78,7 +78,7 @@ package() {
 # to keep /opt/t2code-nightly-bin/usr/lib etc. out of terminal and agent shells (#28993).
 exec env APPDIR=/opt/t2code-nightly-bin /opt/t2code-nightly-bin/AppRun "$@"
 EOF
-  ln -s t2code-nightly "$pkgdir/usr/bin/t3-code-nightly-desktop"
+  ln -s t2code-nightly "$pkgdir/usr/bin/t2-code-nightly-desktop"
 
   # Icon lookup only sees sizes registered in hicolor's index.theme (max 512x512).
   local icon size_dir

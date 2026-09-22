@@ -154,6 +154,52 @@ const macPlan = {
 };
 const macInstallerPath =
   "/opt/homebrew/bin:/Users/theo/.npm-global/bin:/Users/theo/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin";
+const macRenderOptions = { homeDir: "/Users/theo", environmentPath: macInstallerPath };
+
+it("runs the pinned runtime's own executable as the launch agent", () => {
+  const plist = BootService.renderBootServicePlist(macPlan, macRenderOptions);
+
+  expect(plist).toContain(
+    `  <array>\n    <string>${macRuntime}</string>\n    <string>__service-launcher</string>\n  </array>`,
+  );
+  expect(plist).not.toContain("node</string>");
+});
+
+it("preserves the installer's provider search path in the launch agent", () => {
+  const plist = BootService.renderBootServicePlist(macPlan, macRenderOptions);
+
+  expect(plist).toContain(`    <key>PATH</key>\n    <string>${macInstallerPath}</string>`);
+});
+
+it("restarts the launch agent on the systemd cadence", () => {
+  const plist = BootService.renderBootServicePlist(macPlan, macRenderOptions);
+
+  expect(plist).toContain("<key>RunAtLoad</key>\n  <true/>");
+  expect(plist).toContain("<key>KeepAlive</key>\n  <true/>");
+  expect(plist).toContain("<key>ThrottleInterval</key>\n  <integer>5</integer>");
+  expect(plist).toContain("<key>ExitTimeOut</key>\n  <integer>90</integer>");
+});
+
+it("appends both stdio streams to the boot service log", () => {
+  const plist = BootService.renderBootServicePlist(macPlan, macRenderOptions);
+
+  expect(plist).toContain(
+    "<key>StandardOutPath</key>\n  <string>/Users/theo/.t2/userdata/logs/boot-service.log</string>",
+  );
+  expect(plist).toContain(
+    "<key>StandardErrorPath</key>\n  <string>/Users/theo/.t2/userdata/logs/boot-service.log</string>",
+  );
+});
+
+it("escapes XML in host paths", () => {
+  const plist = BootService.renderBootServicePlist(
+    { ...macPlan, baseDir: "/Users/theo/T2 & <Co>" },
+    { homeDir: "/Users/theo", environmentPath: "/Users/theo/Tools & <Scripts>:/usr/bin" },
+  );
+
+  expect(plist).toContain("<string>/Users/theo/T2 &amp; &lt;Co&gt;</string>");
+  expect(plist).toContain("<string>/Users/theo/Tools &amp; &lt;Scripts&gt;:/usr/bin</string>");
+});
 
 const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
   platform: NodeJS.Platform = "linux",
