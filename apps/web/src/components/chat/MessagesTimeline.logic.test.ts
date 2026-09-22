@@ -146,7 +146,7 @@ describe("work entry labels", () => {
   ] as const)("uses the same friendly %s label in both views", (toolLifecycleStatus, label) => {
     const browserEntry = {
       ...entry,
-      toolTitle: "t3-code.preview_click",
+      toolTitle: "t2-code.preview_click",
       detail: '{"ok":true}',
       toolLifecycleStatus,
     };
@@ -188,7 +188,7 @@ describe("work entry labels", () => {
   });
 
   it("uses the active summary state for legacy tools without a lifecycle status", () => {
-    const browserEntry = { ...entry, toolTitle: "t3-code.preview_click" };
+    const browserEntry = { ...entry, toolTitle: "t2-code.preview_click" };
     expect(liveWorkEntryLabel(browserEntry, undefined, true)).toBe(
       "Clicking in the preview browser",
     );
@@ -200,7 +200,7 @@ describe("work entry labels", () => {
   it("keeps the latest live activity in the present tense after the call completes", () => {
     const browserEntry = {
       ...entry,
-      toolTitle: "t3-code.preview_click",
+      toolTitle: "t2-code.preview_click",
       toolLifecycleStatus: "completed" as const,
     };
     expect(liveWorkEntryLabel(browserEntry, undefined, true)).toBe(
@@ -352,7 +352,7 @@ describe("work entry labels", () => {
             entry: {
               ...entry,
               itemType: "dynamic_tool",
-              toolData: { server: "t3-code", tool },
+              toolData: { server: "t2-code", tool },
             },
           },
         ],
@@ -509,6 +509,73 @@ describe("deriveMessagesTimelineRows", () => {
     expect(entry?.kind === "work" && entry.entry).toMatchObject({
       toolSurface: "computer",
       toolSource: { key: "computer-use", kind: "computer" },
+    });
+  });
+
+  it("presents project MCP calls and summarizes successful clones through the web timeline", () => {
+    const fixture = makeStreamingTimelineFixture();
+    const source = fixture.visibleTurnItems.find((row) => row.item.type === "dynamic_tool")!;
+    if (source.item.type !== "dynamic_tool") throw new Error("Expected tool fixture");
+    const items: OrchestrationV2ProjectedTurnItem["item"][] = [
+      {
+        ...source.item,
+        type: "dynamic_tool",
+        id: TurnItemId.make("list"),
+        status: "completed",
+        title: "Custom provider title",
+        toolName: "T3-code.t3_project_list",
+        input: {},
+        output: { projects: [] },
+      },
+      {
+        ...source.item,
+        type: "dynamic_tool",
+        id: TurnItemId.make("clone"),
+        status: "completed",
+        title: "Custom provider title",
+        toolName: "mcp__t3_code__t3_project_clone",
+        input: {},
+        output: { cwd: "/tmp/repo" },
+      },
+      {
+        ...source.item,
+        type: "dynamic_tool",
+        id: TurnItemId.make("failed-clone"),
+        status: "completed",
+        title: "Custom provider title",
+        toolName: "t3_project_clone",
+        input: {},
+        output: { isError: true },
+      },
+    ];
+    const entries = deriveTimelineEntriesFromVisibleTurnItems({
+      visibleTurnItems: items.map((item, position) => ({
+        ...source,
+        item,
+        position,
+        sourceItemId: item.id,
+      })),
+      optimisticMessages: [],
+    });
+    const work = entries.flatMap((entry) => (entry.kind === "work" ? [entry.entry] : []));
+    expect(workEntryDisplayLabel(work[0]!, undefined)).toBe("Listed projects");
+    expect(workEntryDisplayLabel(work[1]!, undefined)).toBe("Cloned a repository");
+    expect(workEntryDisplayLabel(work[2]!, undefined)).toBe("Failed to clone a repository");
+    expect(
+      resolveTimelineToolPresentation(items[1]!.type === "dynamic_tool" ? items[1].toolName : null)
+        ?.logo,
+    ).toBe("t2-code");
+    const rows = deriveMessagesTimelineRows({
+      timelineEntries: entries,
+      isWorking: false,
+      runningRunId: fixture.runId,
+      activeTurnStartedAt: fixture.time(0),
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+    expect(rows.find((row) => row.kind === "work-toggle")).toMatchObject({
+      summary: "Listed projects 1 time and cloned 1 repository",
+      hasFailure: true,
     });
   });
 
@@ -2832,6 +2899,268 @@ describe("deriveMessagesTimelineRows", () => {
   );
 });
 
+describe("computeStableMessagesTimelineRows", () => {
+  it("replaces a cached work toggle when its icon presentation changes", () => {
+    const initialRow: MessagesTimelineRow = {
+      kind: "work-toggle",
+      id: "work-toggle:1",
+      createdAt: "2026-01-01T00:00:00Z",
+      groupId: "work-group:1",
+      hiddenCount: 1,
+      expanded: false,
+      summary: "Used Browser",
+      summaryKind: "other",
+      toolSurface: "browser",
+      hasFailure: false,
+    };
+    const initial = computeStableMessagesTimelineRows([initialRow], {
+      byId: new Map(),
+      result: [],
+    });
+    const enrichedRow: MessagesTimelineRow = {
+      ...initialRow,
+      toolIcon: { _tag: "website", pageUrl: "https://example.com" },
+    };
+
+    const updated = computeStableMessagesTimelineRows([enrichedRow], initial);
+
+    expect(updated).not.toBe(initial);
+    expect(updated.result[0]).toBe(enrichedRow);
+  });
+
+  it.each(["", " \n"])("keeps Thinking after assistant content grows from %j", (text) => {
+    const startedAt = "2026-01-01T00:00:00Z";
+    const runId = RunId.make("turn-1");
+    const input = {
+      runningRunId: runId,
+      isWorking: true,
+      activeTurnStartedAt: startedAt,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    };
+    const assistantEntry = {
+      id: "assistant-entry",
+      kind: "message" as const,
+      createdAt: startedAt,
+      message: {
+        id: MessageId.make("assistant-1"),
+        role: "assistant" as const,
+        text,
+        runId,
+        createdAt: startedAt,
+        updatedAt: startedAt,
+        streaming: true,
+      },
+    };
+    const initial = computeStableMessagesTimelineRows(
+      deriveMessagesTimelineRows({ ...input, timelineEntries: [assistantEntry] }),
+      { byId: new Map(), result: [] },
+    );
+    const updated = computeStableMessagesTimelineRows(
+      deriveMessagesTimelineRows({
+        ...input,
+        timelineEntries: [
+          {
+            ...assistantEntry,
+            message: { ...assistantEntry.message, text: "I will inspect the repository." },
+          },
+        ],
+      }),
+      initial,
+    );
+
+    const initialThinking = initial.byId.get("live-activity-row");
+    const updatedThinking = updated.byId.get("live-activity-row");
+    expect(initialThinking).toMatchObject({ kind: "thinking" });
+    expect(updatedThinking).toBe(initialThinking);
+    expect(updated.result.at(-1)).toBe(updatedThinking);
+  });
+
+  it("returns the previous result when row order and content are unchanged", () => {
+    const firstUserMessage = {
+      id: "user-1" as never,
+      role: "user" as const,
+      text: "First",
+      runId: null,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+      streaming: false,
+    };
+    const secondUserMessage = {
+      id: "user-2" as never,
+      role: "user" as const,
+      text: "Second",
+      runId: null,
+      createdAt: "2026-01-01T00:00:10Z",
+      updatedAt: "2026-01-01T00:00:10Z",
+      streaming: false,
+    };
+
+    const rows = deriveMessagesTimelineRows({
+      timelineEntries: [
+        {
+          id: "entry-user-1",
+          kind: "message",
+          createdAt: firstUserMessage.createdAt,
+          message: firstUserMessage,
+        },
+        {
+          id: "entry-user-2",
+          kind: "message",
+          createdAt: secondUserMessage.createdAt,
+          message: secondUserMessage,
+        },
+      ],
+      isWorking: false,
+      activeTurnStartedAt: null,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+
+    const initial = computeStableMessagesTimelineRows(rows, {
+      byId: new Map(),
+      result: [],
+    });
+
+    const repeated = computeStableMessagesTimelineRows(rows, initial);
+
+    expect(repeated).toBe(initial);
+    expect(repeated.result).toBe(initial.result);
+  });
+
+  it("reuses work rows when equivalent timeline derivations create new grouped arrays", () => {
+    const firstWorkEntry = {
+      id: "work-1",
+      createdAt: "2026-01-01T00:00:00Z",
+      label: "thinking",
+      detail: "Inspecting repository state",
+      tone: "thinking" as const,
+    };
+    const secondWorkEntry = {
+      id: "work-2",
+      createdAt: "2026-01-01T00:00:01Z",
+      label: "read",
+      detail: "Reading package.json",
+      tone: "tool" as const,
+    };
+
+    const createRows = () =>
+      deriveMessagesTimelineRows({
+        timelineEntries: [
+          {
+            id: "entry-work-1",
+            kind: "work",
+            createdAt: firstWorkEntry.createdAt,
+            entry: firstWorkEntry,
+          },
+          {
+            id: "entry-work-2",
+            kind: "work",
+            createdAt: secondWorkEntry.createdAt,
+            entry: secondWorkEntry,
+          },
+        ],
+        isWorking: false,
+        activeTurnStartedAt: null,
+        turnDiffSummaries: [],
+        supportsConversationRollback: false,
+      });
+
+    const firstRows = createRows();
+    const initial = computeStableMessagesTimelineRows(firstRows, {
+      byId: new Map(),
+      result: [],
+    });
+    const secondRows = createRows();
+
+    expect(secondRows[0]).not.toBe(firstRows[0]);
+
+    const repeated = computeStableMessagesTimelineRows(secondRows, initial);
+
+    expect(repeated).toBe(initial);
+    expect(repeated.result[0]).toBe(initial.result[0]);
+  });
+
+  it("returns a new result when row order changes without content changes", () => {
+    const firstUserMessage = {
+      id: "user-1" as never,
+      role: "user" as const,
+      text: "First",
+      runId: null,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+      streaming: false,
+    };
+    const secondUserMessage = {
+      id: "user-2" as never,
+      role: "user" as const,
+      text: "Second",
+      runId: null,
+      createdAt: "2026-01-01T00:00:10Z",
+      updatedAt: "2026-01-01T00:00:10Z",
+      streaming: false,
+    };
+
+    const firstRows = deriveMessagesTimelineRows({
+      timelineEntries: [
+        {
+          id: "entry-user-1",
+          kind: "message",
+          createdAt: firstUserMessage.createdAt,
+          message: firstUserMessage,
+        },
+        {
+          id: "entry-user-2",
+          kind: "message",
+          createdAt: secondUserMessage.createdAt,
+          message: secondUserMessage,
+        },
+      ],
+      isWorking: false,
+      activeTurnStartedAt: null,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    });
+
+    const initial = computeStableMessagesTimelineRows(firstRows, {
+      byId: new Map(),
+      result: [],
+    });
+
+    const reordered = computeStableMessagesTimelineRows([firstRows[1]!, firstRows[0]!], initial);
+
+    expect(reordered).not.toBe(initial);
+    expect(reordered.result).toEqual([initial.result[1], initial.result[0]]);
+  });
+});
+
+describe("resolveTimelineToolPresentation", () => {
+  it("pretty prints Claude and Cursor T3 MCP tool names", () => {
+    expect(resolveTimelineToolPresentation("mcp__t3-code__t3_thread_read")).toEqual({
+      displayName: "Read a T3 thread",
+      logo: "t2-code",
+    });
+  });
+
+  it("pretty prints Codex T3 MCP tool names", () => {
+    expect(resolveTimelineToolPresentation("t2-code.create_threads")).toEqual({
+      displayName: "Create T3 threads",
+      logo: "t2-code",
+    });
+  });
+
+  it("pretty prints bare T3 MCP toolkit names", () => {
+    expect(resolveTimelineToolPresentation("list_scheduled_tasks")).toEqual({
+      displayName: "List scheduled tasks",
+      logo: "t2-code",
+    });
+  });
+
+  it("keeps unknown MCP tools on the generic renderer path", () => {
+    expect(resolveTimelineToolPresentation("mcp__github__search_issues")).toBeNull();
+  });
+});
+
 describe("v2 run and attempt history", () => {
   it("folds settled-turn commentary and work behind a Worked-for row", () => {
     const timelineEntries = [
@@ -3818,7 +4147,7 @@ describe("linked timeline resources", () => {
               runId,
               type: "dynamic_tool",
               status: failed ? "failed" : status,
-              toolName: "t3-code.delegate_task",
+              toolName: "t2-code.delegate_task",
               input: { task: taskId === "b" ? "a" : taskId, role },
               ...(status === "completed"
                 ? {

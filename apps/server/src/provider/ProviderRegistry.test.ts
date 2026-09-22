@@ -1097,7 +1097,7 @@ it.layer(
         }).pipe(
           Effect.provide(
             ServerConfig.layerTest(process.cwd(), {
-              prefix: "t3-codex-retired-model-cache-",
+              prefix: "t2-codex-retired-model-cache-",
             }).pipe(Layer.provideMerge(NodeServices.layer)),
           ),
         ),
