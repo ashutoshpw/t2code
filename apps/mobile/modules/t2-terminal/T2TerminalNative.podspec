@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
   s.description = 'Native terminal surface bridge used by the T2 Code React Native app.'
   s.homepage = 'https://t2tools.com'
   s.license = { :type => 'UNLICENSED' }
-  s.author = { 'T2 Tools' => 'hello@t2tools.com' }
+  s.author = { 'W3 Dev LLC' => 'hello@t2tools.com' }
   s.platforms = { :ios => '16.1' }
   s.source = { :path => '.' }
   s.source_files = 'ios/**/*.{h,m,mm,swift}'

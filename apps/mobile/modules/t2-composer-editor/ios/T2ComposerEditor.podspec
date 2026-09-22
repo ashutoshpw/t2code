@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
   s.version        = '1.0.0'
   s.summary        = 'Native attributed composer editor for T2 Code mobile.'
   s.description    = 'UIKit-backed rich text composer with atomic skill and file tokens.'
-  s.author         = 'T2 Tools'
+  s.author         = 'W3 Dev LLC'
   s.homepage       = 'https://t2tools.com'
   s.platforms      = {
     :ios => '16.4',
