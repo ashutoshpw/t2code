@@ -2870,7 +2870,7 @@ export function makeOpenCodeAdapter(
               if (mcpSession && !server.external) {
                 yield* runOpenCodeSdk("mcp.add", () =>
                   client.mcp.add({
-                    name: "t3-code",
+                    name: "t2-code",
                     config: {
                       type: "remote",
                       url: mcpSession.endpoint,

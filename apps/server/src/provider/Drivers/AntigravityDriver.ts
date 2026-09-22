@@ -281,7 +281,7 @@ export const AntigravityDriver: ProviderDriver<AntigravitySettings, AntigravityD
         );
         const runtime = yield* makeRuntime({
           cwd,
-          clientInfo: { name: "t3-code-provider-setup", version: "0.0.0" },
+          clientInfo: { name: "t2-code-provider-setup", version: "0.0.0" },
           mcpServers: [],
           ...(input.onAuthorizationUrl ? { onAuthorizationUrl: input.onAuthorizationUrl } : {}),
         });
@@ -413,7 +413,7 @@ export const AntigravityDriver: ProviderDriver<AntigravitySettings, AntigravityD
         makeRuntime: (cwd) =>
           makeRuntime({
             cwd,
-            clientInfo: { name: "t3-code-text", version: "0.0.0" },
+            clientInfo: { name: "t2-code-text", version: "0.0.0" },
             mcpServers: [],
           }),
       });

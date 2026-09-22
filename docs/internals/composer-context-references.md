@@ -169,7 +169,7 @@ remain only for files no chip references.
 ## Clipboard
 
 Every copy path writes the canonical Markdown as `text/plain` and, when the selection holds
-chips, a structured fragment under `web application/x-t3-context-fragment+json`
+chips, a structured fragment under `web application/x-t2-context-fragment+json`
 (`ComposerContextClipboardFragment`: version, source environment/thread/message, records; no
 bytes, no URLs). Composer copy and cut add it through a Lexical command listener; transcript
 selection copy adds it from an `onCopyCapture` on the user message body while chips re-emit their

@@ -43,7 +43,7 @@ internal object T2ComposerClipboard {
         ClipData.newHtmlText(
           "T2 Code",
           text,
-          "<pre data-t3-context-fragment=\"$encoded\">$escaped</pre>"
+          "<pre data-t2-context-fragment=\"$encoded\">$escaped</pre>"
         )
       }
     )

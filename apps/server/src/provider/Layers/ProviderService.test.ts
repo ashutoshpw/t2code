@@ -3529,7 +3529,7 @@ fanout.layer("ProviderServiceLive fanout", (it) => {
       const snapshots = yield* Metric.snapshot;
 
       assert.equal(
-        hasMetricSnapshot(snapshots, "t3_provider_turns_total", {
+        hasMetricSnapshot(snapshots, "t2_provider_turns_total", {
           provider: ProviderDriverKind.make("claudeAgent"),
           operation: "interrupt",
           outcome: "success",
@@ -3537,7 +3537,7 @@ fanout.layer("ProviderServiceLive fanout", (it) => {
         true,
       );
       assert.equal(
-        hasMetricSnapshot(snapshots, "t3_provider_turns_total", {
+        hasMetricSnapshot(snapshots, "t2_provider_turns_total", {
           provider: ProviderDriverKind.make("claudeAgent"),
           operation: "approval-response",
           outcome: "success",
@@ -3545,7 +3545,7 @@ fanout.layer("ProviderServiceLive fanout", (it) => {
         true,
       );
       assert.equal(
-        hasMetricSnapshot(snapshots, "t3_provider_turns_total", {
+        hasMetricSnapshot(snapshots, "t2_provider_turns_total", {
           provider: ProviderDriverKind.make("claudeAgent"),
           operation: "user-input-response",
           outcome: "success",
@@ -3553,7 +3553,7 @@ fanout.layer("ProviderServiceLive fanout", (it) => {
         true,
       );
       assert.equal(
-        hasMetricSnapshot(snapshots, "t3_provider_turns_total", {
+        hasMetricSnapshot(snapshots, "t2_provider_turns_total", {
           provider: ProviderDriverKind.make("claudeAgent"),
           operation: "rollback",
           outcome: "success",
@@ -3561,7 +3561,7 @@ fanout.layer("ProviderServiceLive fanout", (it) => {
         true,
       );
       assert.equal(
-        hasMetricSnapshot(snapshots, "t3_provider_sessions_total", {
+        hasMetricSnapshot(snapshots, "t2_provider_sessions_total", {
           provider: ProviderDriverKind.make("claudeAgent"),
           operation: "stop",
           outcome: "success",
@@ -3594,7 +3594,7 @@ fanout.layer("ProviderServiceLive fanout", (it) => {
         const snapshots = yield* Metric.snapshot;
 
         assert.equal(
-          hasMetricSnapshot(snapshots, "t3_provider_turns_total", {
+          hasMetricSnapshot(snapshots, "t2_provider_turns_total", {
             provider: ProviderDriverKind.make("claudeAgent"),
             operation: "send",
             outcome: "success",
@@ -3602,7 +3602,7 @@ fanout.layer("ProviderServiceLive fanout", (it) => {
           true,
         );
         assert.equal(
-          hasMetricSnapshot(snapshots, "t3_provider_turn_duration", {
+          hasMetricSnapshot(snapshots, "t2_provider_turn_duration", {
             provider: ProviderDriverKind.make("claudeAgent"),
             operation: "send",
           }),

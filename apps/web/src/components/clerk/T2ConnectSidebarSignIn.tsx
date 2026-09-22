@@ -43,7 +43,7 @@ function ConfiguredT2ConnectSidebarAvatar() {
       <UserButton.UserProfilePage
         label="T2 Connect"
         labelIcon={<ServerIcon className="size-4" />}
-        url="t3-connect"
+        url="t2-connect"
       >
         <T2ConnectUserProfilePage />
       </UserButton.UserProfilePage>

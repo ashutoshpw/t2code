@@ -1930,7 +1930,7 @@ function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: b
     <>
       {window.desktopBridge ? (
         <SettingsRow
-          title={searchableSetting("t3-connect").title}
+          title={searchableSetting("t2-connect").title}
           description={
             managedTunnelActive
               ? "This environment is available to your other devices through T2 Connect."
