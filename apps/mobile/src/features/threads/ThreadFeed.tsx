@@ -718,7 +718,7 @@ function MessageAttachmentFile(props: {
             )}
           </View>
           <View className="min-w-0 flex-1 gap-1">
-            <Text className="font-t3-medium text-sm text-foreground" numberOfLines={2}>
+            <Text className="font-t2-medium text-sm text-foreground" numberOfLines={2}>
               {attachment.name}
             </Text>
             <Text className="text-xs text-foreground-muted" numberOfLines={1}>
@@ -816,7 +816,7 @@ function ArtifactTemplateCard(props: {
         </View>
       </View>
       <View className="min-w-0 flex-1">
-        <Text className="font-t3-bold text-sm text-foreground" numberOfLines={1}>
+        <Text className="font-t2-bold text-sm text-foreground" numberOfLines={1}>
           {props.template.displayName}
         </Text>
         <Text className="text-xs text-foreground-muted">
@@ -1425,8 +1425,8 @@ function renderFeedEntry(
           className="mb-5 items-end"
           {...(enterAnimated ? { entering: FadeInUp.duration(220) } : {})}
         >
-          {presentation.attribution === "t3code" ? (
-            <Text className="mb-1 pr-1 font-t3-medium text-2xs text-foreground-muted opacity-60">
+          {presentation.attribution === "t2code" ? (
+            <Text className="mb-1 pr-1 font-t2-medium text-2xs text-foreground-muted opacity-60">
               Sent by T3 Code
             </Text>
           ) : null}
@@ -1561,7 +1561,7 @@ function renderFeedEntry(
                   className="flex-row items-center gap-1"
                 >
                   <SymbolView name="arrow.uturn.forward" size={12} tintColor={iconSubtleColor} />
-                  <Text className="font-t3-medium text-xs text-foreground-secondary">
+                  <Text className="font-t2-medium text-xs text-foreground-secondary">
                     {intentBadge.label}
                   </Text>
                 </View>
@@ -1571,12 +1571,12 @@ function renderFeedEntry(
                   accessible={false}
                   accessibilityElementsHidden
                   importantForAccessibility="no"
-                  className="font-t3-medium text-xs text-foreground-secondary"
+                  className="font-t2-medium text-xs text-foreground-secondary"
                 >
                   ·
                 </Text>
               ) : null}
-              <Text className="font-t3-medium text-xs tabular-nums text-foreground-secondary">
+              <Text className="font-t2-medium text-xs tabular-nums text-foreground-secondary">
                 {entry.pendingMessage && !entry.acknowledged ? "Pending" : timestampLabel}
               </Text>
               {props.onEditPendingMessage !== null &&
@@ -1694,7 +1694,7 @@ function renderFeedEntry(
                 sourceTitle={props.threadTitle}
               />
             ) : null}
-            <Text className="font-t3-medium text-xs tabular-nums text-foreground-secondary">
+            <Text className="font-t2-medium text-xs tabular-nums text-foreground-secondary">
               {timestampLabel}
             </Text>
           </View>
@@ -1949,7 +1949,7 @@ function ThreadFeedPlaceholder(props: {
       }}
     >
       <View className="max-w-[320px] items-center gap-2">
-        <Text className="text-center font-t3-bold text-lg text-foreground">{props.title}</Text>
+        <Text className="text-center font-t2-bold text-lg text-foreground">{props.title}</Text>
         <Text className="text-center text-sm leading-normal text-foreground-secondary">
           {props.detail}
         </Text>

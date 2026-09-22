@@ -1328,7 +1328,7 @@ export const ServerSettings = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(null)),
   ),
   /**
-   * Null means inherit: the repository's t3.json, then "local". Null stays off the wire
+   * Null means inherit: the repository's t2.json, then "local". Null stays off the wire
    * so older clients, which require a literal here, keep decoding.
    */
   defaultThreadEnvMode: OmittedWhenNull(ThreadEnvMode),
