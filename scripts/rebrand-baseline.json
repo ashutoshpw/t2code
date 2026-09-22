@@ -61,11 +61,11 @@
   },
   {
     "file": "apps/marketing/src/pages/privacy-policy.astro",
-    "line": "description=\"How T3 Tools, Inc. handles information when you use T2 Code, app.t2.codes, and t3.codes.\""
+    "line": "description=\"How W3 Dev LLC handles information when you use T2 Code, app.t2.codes, and t3.codes.\""
   },
   {
     "file": "apps/marketing/src/pages/privacy-policy.astro",
-    "line": "lede=\"This Privacy Policy describes how T3 Tools, Inc. collects, uses, and shares personal information when you use the T2 Code desktop, mobile, and hosted web applications, visit the t3.codes marketing site, or use the optional T2 Connect service.\""
+    "line": "lede=\"This Privacy Policy describes how W3 Dev LLC collects, uses, and shares personal information when you use the T2 Code desktop, mobile, and hosted web applications, visit the t3.codes marketing site, or use the optional T2 Connect service.\""
   },
   {
     "file": "apps/marketing/src/pages/schema/t2.json.ts",
