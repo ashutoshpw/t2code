@@ -641,7 +641,7 @@ describe("T3 tool instructions", () => {
 
   it("prefers the product-native preview tools when they are attached", () => {
     const tools = buildCodexAdditionalContext(runtime, true).t3_code_tools?.value ?? "";
-    NodeAssert.match(tools, /t3-code/);
+    NodeAssert.match(tools, /t2-code/);
     NodeAssert.match(tools, /preview_status/);
     NodeAssert.match(tools, /preview_open/);
     NodeAssert.match(tools, /Do not switch to global browser skills/);

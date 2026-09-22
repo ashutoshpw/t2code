@@ -252,6 +252,17 @@ describe("projectActivityPayload", () => {
   it.each([
     {
       item: {
+        server: "t2-code",
+        tool: "preview_open",
+        result: { structuredContent: { url: "https://example.com/" } },
+      },
+    },
+    {
+      toolName: "mcp__t2-code__preview_navigate",
+      result: { content: '{"url":"https://example.com/"}' },
+    },
+    {
+      item: {
         server: "t3-code",
         tool: "preview_open",
         result: { structuredContent: { url: "https://example.com/" } },
