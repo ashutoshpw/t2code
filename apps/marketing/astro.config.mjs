@@ -7,7 +7,7 @@ import { defineConfig } from "astro/config";
 delete process.env.VP_RUN_NODE_CLIENT_PATH;
 
 export default defineConfig({
-  site: "https://t3.codes",
+  site: "https://t2.codes",
   // Vercel 308s `/path/` to `/path` (see vercel.ts), so every internal link and canonical uses one form.
   trailingSlash: "never",
   server: {
