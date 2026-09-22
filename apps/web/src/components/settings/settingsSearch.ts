@@ -796,7 +796,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     wslAvailableOnly: true,
   },
   {
-    id: "t3-connect",
+    id: "t2-connect",
     localEnvironmentOnly: true,
     title: "T2 Connect",
     to: "/settings/connections",

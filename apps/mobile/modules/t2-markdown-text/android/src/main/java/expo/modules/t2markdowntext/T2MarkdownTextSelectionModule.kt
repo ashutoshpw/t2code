@@ -115,7 +115,7 @@ private fun contextClipData(selectedText: String, fragment: String): ClipData {
   return ClipData.newHtmlText(
     null,
     selectedText,
-    "<pre data-t3-context-fragment=\"$attribute\">$escaped</pre>"
+    "<pre data-t2-context-fragment=\"$attribute\">$escaped</pre>"
   )
 }
 

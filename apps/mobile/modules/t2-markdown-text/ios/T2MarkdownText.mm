@@ -84,8 +84,8 @@ using namespace facebook::react;
     NSString *raw = [[NSString alloc] initWithData:encoded encoding:NSUTF8StringEncoding];
     NSString *attribute = [raw stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.alphanumericCharacterSet];
     NSString *escaped = [[[text stringByReplacingOccurrencesOfString:@"&" withString:@"&amp;"] stringByReplacingOccurrencesOfString:@"<" withString:@"&lt;"] stringByReplacingOccurrencesOfString:@">" withString:@"&gt;"];
-    item[@"app.t3.context-fragment"] = encoded;
-    item[@"public.html"] = [[NSString stringWithFormat:@"<pre data-t3-context-fragment=\"%@\">%@</pre>", attribute, escaped] dataUsingEncoding:NSUTF8StringEncoding];
+    item[@"app.t2.context-fragment"] = encoded;
+    item[@"public.html"] = [[NSString stringWithFormat:@"<pre data-t2-context-fragment=\"%@\">%@</pre>", attribute, escaped] dataUsingEncoding:NSUTF8StringEncoding];
   }
   UIPasteboard.generalPasteboard.items = @[item];
 }
