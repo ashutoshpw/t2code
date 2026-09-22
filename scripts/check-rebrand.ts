@@ -146,6 +146,16 @@ const RULES: Rule[] = [
     violates: (_file, line) => UPSTREAM_FIRST_PARTY_URL.test(line),
   },
   {
+    id: "t3-home-copy",
+    hint: 'the data directory is the "T2 home" (T2CODE_HOME, ~/.t2); "T3 home" survives only in the legacy adoption seam',
+    violates: (_file, line) => /\bt3 home\b/i.test(line),
+  },
+  {
+    id: "t3-server-copy",
+    hint: 'user-facing copy says "T2 server"; the legacy "T3 server" transport error string is the only retained spelling',
+    violates: (_file, line) => /\bt3 server\b/i.test(line),
+  },
+  {
     id: "t3-cli-scope",
     hint: 'the fork CLI package is "@t2code/cli"; upstream ships it unscoped as "t3", so "@t2code/" is at best an invented half-rename',
     violates: (_file, line) => /@t3code\//.test(line),
