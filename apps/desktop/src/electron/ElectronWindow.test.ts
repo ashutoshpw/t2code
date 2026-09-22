@@ -258,7 +258,7 @@ describe("ElectronWindow", () => {
     }).pipe(Effect.provide(layerTestFor("win32"))),
   );
 
-  it.effect("focuses the exact T3 window before activating from a shell-hosted app", () =>
+  it.effect("focuses the exact T2 window before activating from a shell-hosted app", () =>
     Effect.gen(function* () {
       const operations: Array<string> = [];
       shellHostedForegroundMock.mockResolvedValue(true);
@@ -304,7 +304,7 @@ describe("ElectronWindow", () => {
     }).pipe(Effect.provide(layerTestFor("win32"))),
   );
 
-  it.effect("prepares the exact T3 window before a capture overlay", () =>
+  it.effect("prepares the exact T2 window before a capture overlay", () =>
     Effect.gen(function* () {
       windowsForegroundPrepareMock.mockResolvedValue(true);
       const window = makeWindowsRevealWindow();
