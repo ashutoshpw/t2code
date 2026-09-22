@@ -14,7 +14,7 @@ import { readPortalPng } from "./linuxCaptureSession.ts";
 import { startNativeCaptureFeedback } from "./NativeCaptureFeedback.ts";
 export { isKdeCaptureSession } from "./linuxCaptureSession.ts";
 
-export const KDE_CAPTURE_EXECUTABLE = "t3-kde-snap-shot";
+export const KDE_CAPTURE_EXECUTABLE = "t2-kde-snap-shot";
 const DESKTOP_FILE = "t2code.KdeCapture.desktop";
 const MARKER = "X-T2Code-Capture-Helper=true";
 const decodeCapabilities = Schema.decodeUnknownSync(
@@ -222,7 +222,7 @@ export async function captureKdeWindow(
   if (state.status !== "ready")
     throw new Error(`${state.message} Open Settings → SnapShots to continue setup.`);
   const { executable } = kdeCapturePaths(paths);
-  const directory = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t3-kde-capture-"));
+  const directory = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t2-kde-capture-"));
   let retained = false;
   const cleanup = () => NodeFSP.rm(directory, { recursive: true, force: true });
   try {
@@ -256,7 +256,7 @@ export async function captureKdeWindow(
         activate: async (title) => {
           targetTitle = title;
           const activation = await NodeFSP.mkdtemp(
-            NodePath.join(NodeOS.tmpdir(), "t3-kde-activate-"),
+            NodePath.join(NodeOS.tmpdir(), "t2-kde-activate-"),
           );
           try {
             await run(

@@ -34,7 +34,7 @@ export const THEME_FOLLOW_SYSTEM_STORAGE_KEY = "t2code:theme-follow-system";
 export const THEME_APPEARANCE_MODE_STORAGE_KEY = "t2code:theme-appearance-mode";
 export const THEME_HALVES_STORAGE_KEY = "t2code:theme-halves:v1";
 
-const LEGACY_T3_CHAT_DARK_THEME_ID = "t2-chat-dark";
+const LEGACY_T2_CHAT_DARK_THEME_ID = "t2-chat-dark";
 
 export const ThemePreference = Schema.String;
 export type ThemePreference = typeof ThemePreference.Type;
@@ -298,7 +298,7 @@ export function subscribeToCustomThemes(listener: () => void): () => void {
 // genuinely T3-branded palette keeps it. Stored preferences and mixes with the
 // old ids stay readable through this alias table.
 const LEGACY_THEME_ID_ALIASES: Readonly<Record<string, string>> = {
-  [LEGACY_T3_CHAT_DARK_THEME_ID]: T2_CHAT_THEME_ID,
+  [LEGACY_T2_CHAT_DARK_THEME_ID]: T2_CHAT_THEME_ID,
   "t3-grove": GROVE_THEME_ID,
   "t3-ocean": OCEAN_THEME_ID,
   "t3-ember": EMBER_THEME_ID,
@@ -315,7 +315,7 @@ function normalizeThemeId(themeId: string): string {
  * still carries the appearance hint getThemePreferenceMode reads.
  */
 export function canonicalThemePreference(theme: string): string {
-  return theme === LEGACY_T3_CHAT_DARK_THEME_ID ? theme : normalizeThemeId(theme);
+  return theme === LEGACY_T2_CHAT_DARK_THEME_ID ? theme : normalizeThemeId(theme);
 }
 
 function themeIdFromPreference(theme: ThemePreference): string {
@@ -325,7 +325,7 @@ function themeIdFromPreference(theme: ThemePreference): string {
 // Older builds stored the dark T3 Chat palette as a separate theme. Keep
 // those preferences readable while mapping them to the dark variant.
 function legacyThemeMode(theme: ThemePreference): ThemeAppearance | null {
-  return theme === LEGACY_T3_CHAT_DARK_THEME_ID ? "dark" : null;
+  return theme === LEGACY_T2_CHAT_DARK_THEME_ID ? "dark" : null;
 }
 
 /**
