@@ -39,7 +39,7 @@ export const makeGrokTextGeneration = Effect.fn("makeGrokTextGeneration")(functi
         grokSettings,
         environment,
         cwd,
-        clientInfo: { name: "t3-code-git-text", version: "0.0.0" },
+        clientInfo: { name: "t2-code-git-text", version: "0.0.0" },
       }).pipe(
         Effect.provideService(SecureRandom.SecureRandom, random),
         Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, commandSpawner),

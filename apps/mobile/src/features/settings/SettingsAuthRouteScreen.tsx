@@ -13,7 +13,7 @@ import { T2ConnectProfilePage } from "../cloud/T2ConnectProfilePage";
 
 const USER_PROFILE_CUSTOM_PAGES = [
   {
-    path: "t3-connect",
+    path: "t2-connect",
     label: "T2 Connect",
     icon: "globe",
     content: <T2ConnectProfilePage />,
