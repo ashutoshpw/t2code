@@ -123,7 +123,7 @@ const config: ShowcaseConfig = {
     {
       id: "iphone-6.5",
       platform: "ios",
-      simulator: "T3 Showcase iPhone 14 Plus",
+      simulator: "T2 Showcase iPhone 14 Plus",
       simulatorDeviceType: "com.apple.CoreSimulator.SimDeviceType.iPhone-14-Plus",
       appearance: "dark",
       theme: DEFAULT_SHOWCASE_THEME,

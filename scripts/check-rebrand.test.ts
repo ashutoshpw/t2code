@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { collectBaselineEntries, findViolations } from "./check-rebrand.ts";
+import {
+  collectBaselineEntries,
+  findUncoveredT3References,
+  findViolations,
+} from "./check-rebrand.ts";
 
 const EMPTY_BASELINE = new Set<string>();
 
@@ -180,6 +184,54 @@ describe("check-rebrand", () => {
       "t3-server-copy",
       "t3-server-copy",
     ]);
+  });
+
+  it("flags T3 noun and possessive copy in any casing", () => {
+    const violations = findViolations(
+      [
+        { file: "apps/server/src/example.ts", line: `const fallback = "T3 environment";` },
+        {
+          file: "packages/client-runtime/src/example.ts",
+          line: `create_threads: ["Create", "Creating", "Created", "T3 threads"],`,
+        },
+        { file: "apps/desktop/src/example.ts", line: "// through the T3 proxy" },
+        {
+          file: "apps/desktop/gnome-extension/example.js",
+          line: "console.warn(`T3 capture unavailable`);",
+        },
+        { file: "apps/mobile/example.kt", line: "The icon is always the T3 mark" },
+        { file: "packages/shared/src/example.ts", line: "A standalone T3 binary runs its CLI" },
+        { file: "apps/desktop/src/example.ts", line: "// multiple T3 windows" },
+        { file: "apps/web/src/example.ts", line: `return "T3 process";` },
+        { file: "apps/server/src/example.ts", line: "// bypasses T3's commands" },
+        { file: "apps/web/src/example.ts", line: "The T2 environment label" },
+        { file: "apps/server/src/example.ts", line: "// bypasses T2's commands" },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual([
+      "t3-noun-copy",
+      "t3-noun-copy",
+      "t3-noun-copy",
+      "t3-noun-copy",
+      "t3-noun-copy",
+      "t3-noun-copy",
+      "t3-noun-copy",
+      "t3-noun-copy",
+      "t3-possessive-copy",
+    ]);
+  });
+
+  it("audits bare T3 references that no rule names", () => {
+    const entries = [
+      { file: "apps/web/src/example.ts", line: `const x = "T3 Connect";`, num: 1 },
+      { file: "apps/web/src/example.ts", line: `const x = "a T3 environment";`, num: 2 },
+      { file: "apps/web/src/example.ts", line: `const label = "T3 Chat";`, num: 3 },
+      { file: "apps/web/src/example.ts", line: `const home = "T3CODE_HOME";`, num: 4 },
+      { file: "apps/web/src/example.ts", line: `const scheme = "t3code";`, num: 5 },
+      { file: "apps/web/src/example.ts", line: `const name = "T3 Tools Inc.";`, num: 6 },
+    ];
+    expect(findUncoveredT3References(entries).map((entry) => entry.num)).toEqual([3, 6]);
   });
 
   it("flags T3 Code copy on added lines", () => {
