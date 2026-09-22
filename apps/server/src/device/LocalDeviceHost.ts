@@ -1,7 +1,14 @@
 import { pruneLocalDeviceTools } from "./deviceToolMaintenance.ts";
 import { deviceToolInstallMessage } from "@t2code/contracts";
 /**
- * The hub runs in its standalone mode (origin root). The T3 proxy strips its
+ * The device host that is this machine.
+ *
+ * Runs expo-device-hub as a supervised child on a loopback port and starts the
+ * agent-device daemon in HTTP mode under a T3-owned state directory. Both are
+ * lazy: the device service requires explicit setup consent before it calls
+ * ensureReady to install tools or start helper processes.
+ *
+ * The hub runs in its standalone mode (origin root). The T2 proxy strips its
  * own prefix, and the Device panel derives stream and socket URLs from the
  * prefix itself rather than from anything the hub prints.
  */
