@@ -55,6 +55,22 @@ const windowsTaskOptions = {
   conhostPath: "C:\\Windows\\System32\\conhost.exe",
 };
 
+const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t3";
+const linuxPlan = {
+  program: [linuxRuntime, "__service-launcher"],
+  baseDir: "/home/theo/.t2",
+  logPath: "/home/theo/.t2/userdata/logs/boot-service.log",
+  unitPath: "/home/theo/.config/systemd/user/t2code.service",
+};
+
+it("runs the pinned runtime's own executable as the systemd launcher", () => {
+  const unit = BootService.renderBootServiceUnit(linuxPlan);
+
+  expect(unit).toContain(`ExecStart=${linuxRuntime} __service-launcher`);
+  expect(unit).toContain("KillMode=mixed");
+  expect(unit).not.toContain("node");
+});
+
 it("reads the served T2 home back out of a rendered unit, plist, or task", () => {
   const plan = (baseDir: string) => ({
     program: [`${baseDir}/runtime/versions/1.2.3/t2`, "__service-launcher"],
