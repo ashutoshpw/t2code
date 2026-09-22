@@ -91,7 +91,7 @@ On macOS, check **System Settings → General → Login Items** if the service n
 longer starts at login. If agent work cannot access Desktop, Documents, or
 Downloads, it may need Full Disk Access for the `t2code` executable listed in
 `ProgramArguments` in
-`~/Library/LaunchAgents/com.t2tools.t2code.service.plist`.
+`~/Library/LaunchAgents/codes.t2.desktop.service.plist`.
 
 For failures after signing in to T2 Connect, see
 [connection troubleshooting](./remote-access.md#t2-connect-troubleshooting).
