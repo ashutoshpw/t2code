@@ -310,7 +310,8 @@ export class SnapShotTransition {
         }
       }
       if (this.waitForCompositorFrame) {
-        // Renderer frames alone can leave a transparent gap; composite the snapshot before revealing T3.
+        // Cover the source with a composited snapshot before the caller reveals T2.
+        // Decoding and renderer animation frames alone can leave a transparent gap.
         await Promise.all(
           overlays.map(async (overlay) => {
             if (this.active !== active || overlay.window.isDestroyed()) return;

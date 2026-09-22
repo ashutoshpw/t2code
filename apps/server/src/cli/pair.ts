@@ -211,7 +211,7 @@ const formatPairOutput = (input: {
   ].join("\n");
 
 /**
- * Three outcomes, because they drive different decisions: a T3 descriptor
+ * Three outcomes, because they drive different decisions: a T2 descriptor
  * (pair with it), nothing answering (safe to configure Tailscale Serve), or
  * something answering that is not a T2 server (do NOT overwrite its mapping).
  */
@@ -394,7 +394,9 @@ const resolveTailscalePairingBase = Effect.fn("pair.resolveTailscalePairingBase"
       servePort: input.servePort,
     });
 
-    // Only unreachable ports or this environment's mappings are safe to reconfigure.
+    // Only an unreachable port, or a mapping already fronting this exact
+    // environment, is safe to (re)configure. Any other responder — T2 or not
+    // — must not have its mapping silently replaced.
     const existing = yield* probeEnvironmentDescriptor(baseUrl);
     if (existing._tag === "descriptor") {
       if (existing.descriptor.environmentId !== input.target.descriptor.environmentId) {
