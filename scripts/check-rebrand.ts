@@ -13,6 +13,7 @@
 //   --range <a..b>      added lines in one diff range
 //   --check-baseline    fail when scripts/rebrand-baseline.json differs from the tree (CI)
 //   --update-baseline   regenerate scripts/rebrand-baseline.json from the tree
+//   --audit             report-only list of bare "T3" tokens no rule names (never fails)
 //
 // Intentional T3 strings (legacy compat, upstream references) are exempted via
 // the allowlists below plus scripts/rebrand-baseline.json. Refresh the baseline
@@ -55,6 +56,15 @@ const T3TOOLS_WORD = /\bt3tools\b/gi;
 // clerk.t2.codes, and nightly.app.t2.codes. t3.codes and its subdomains are
 // upstream references, so a hit means a link missed the T2 migration.
 const UPSTREAM_FIRST_PARTY_URL = /(?<![\w-])t3\.codes\b/i;
+
+// Product nouns that only survive as "T2 <noun>" copy. Bare identifiers like
+// T3ConnectUserProfilePage and T3CODE_HOME are not noun copy and stay.
+const T3_NOUN_COPY =
+  /\bt3 (?:environments?|threads?|prox(?:y|ies)|captures?|marks?|binar(?:y|ies)|windows?|process(?:es)?)\b/i;
+const T3_POSSESSIVE_COPY = /\bt3['’]s\b/i;
+
+// Report-only signal for the audit mode: a bare "T3" token that no rule names.
+const BARE_T3_REFERENCE = /\bT3\b/;
 
 // The env namespace is T2CODE_*/T2_* only: the legacy seam and the retained
 // pre-rename identifiers were removed after the T2 migration completed.
@@ -154,6 +164,16 @@ const RULES: Rule[] = [
     id: "t3-server-copy",
     hint: 'user-facing copy says "T2 server"; the legacy "T3 server" transport error string is the only retained spelling',
     violates: (_file, line) => /\bt3 server\b/i.test(line),
+  },
+  {
+    id: "t3-noun-copy",
+    hint: 'product nouns are "T2 environment", "T2 thread", "T2 proxy", "T2 capture", "T2 mark", "T2 binary", "T2 window", "T2 process"',
+    violates: (_file, line) => T3_NOUN_COPY.test(line),
+  },
+  {
+    id: "t3-possessive-copy",
+    hint: 'copy uses the possessive "T2\'s"; "T3\'s" is a leftover',
+    violates: (_file, line) => T3_POSSESSIVE_COPY.test(line),
   },
   {
     id: "t3-cli-scope",
@@ -428,6 +448,19 @@ export function collectBaselineEntries(
   return entries;
 }
 
+// Report-only triage list: bare "T3" tokens that no rule names. Rule-matched
+// lines are excluded even when a baseline entry exempts them, because those
+// are already enforced or consciously accepted.
+export function findUncoveredT3References(
+  entries: Array<Entry & { num: number }>,
+): Array<Entry & { num: number }> {
+  return entries.filter(
+    (entry) =>
+      BARE_T3_REFERENCE.test(entry.line) &&
+      !RULES.some((rule) => rule.violates(entry.file, entry.line)),
+  );
+}
+
 function report(violations: Violation[], scope: string, withNumbers?: Map<string, number>): number {
   console.error(
     `rebrand guard: ${violations.length} rebrand violation(s) found in this ${scope}. The fork ships as "T2 Code".`,
@@ -455,13 +488,34 @@ Never bypass with --no-verify. Classification guide:
 
 function usage(): number {
   console.error(
-    "usage: node scripts/check-rebrand.ts [--staged | --push | --tree | --range <a..b> | --check-baseline | --update-baseline]",
+    "usage: node scripts/check-rebrand.ts [--staged | --push | --tree | --range <a..b> | --check-baseline | --update-baseline | --audit]",
   );
   return 2;
 }
 
 export function main(argv: string[]): number {
   if (argv.includes("--help") || argv.includes("-h")) return usage();
+
+  if (argv.includes("--audit")) {
+    const { withLines } = scanTree();
+    const hits = findUncoveredT3References(withLines);
+    if (hits.length === 0) {
+      process.stdout.write("rebrand guard: no bare T3 references outside the rules\n");
+      return 0;
+    }
+    console.log(
+      `rebrand guard: ${hits.length} bare "T3" reference(s) not named by a rule (report only):`,
+    );
+    let lastFile = "";
+    for (const hit of hits) {
+      if (hit.file !== lastFile) {
+        console.log(`\n  ${hit.file}`);
+        lastFile = hit.file;
+      }
+      console.log(`    ${hit.num}: ${hit.line.trim()}`);
+    }
+    return 0;
+  }
 
   if (argv.includes("--update-baseline")) {
     const { withLines, files } = scanTree();

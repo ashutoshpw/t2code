@@ -252,6 +252,46 @@
     "line": "[Google Play](https://play.google.com/store/apps/details?id=com.t3tools.t3code)."
   },
   {
+    "file": "infra/relay/migrations/postgres/20260527044716_baseline/migration.sql",
+    "line": "\"environment_label\" text DEFAULT 'T3 Environment' NOT NULL,"
+  },
+  {
+    "file": "infra/relay/migrations/postgres/20260527044716_baseline/snapshot.json",
+    "line": "\"default\": \"'T3 Environment'\","
+  },
+  {
+    "file": "infra/relay/migrations/postgres/20260601225421_add_mobile_device_label/snapshot.json",
+    "line": "\"default\": \"'T3 Environment'\","
+  },
+  {
+    "file": "infra/relay/migrations/postgres/20260603035812_managed_endpoint_allocations/snapshot.json",
+    "line": "\"default\": \"'T3 Environment'\","
+  },
+  {
+    "file": "infra/relay/migrations/postgres/20260706061126_migration/snapshot.json",
+    "line": "\"default\": \"'T3 Environment'\","
+  },
+  {
+    "file": "infra/relay/migrations/postgres/20260727115225_migration/snapshot.json",
+    "line": "\"default\": \"'T3 Environment'\","
+  },
+  {
+    "file": "infra/relay/migrations/postgres/20260727144838_migration/snapshot.json",
+    "line": "\"default\": \"'T3 Environment'\","
+  },
+  {
+    "file": "infra/relay/migrations/postgres/20260906042516_android_devices/snapshot.json",
+    "line": "\"default\": \"'T3 Environment'\","
+  },
+  {
+    "file": "infra/relay/migrations/postgres/20260918175607_long_thread_ids/snapshot.json",
+    "line": "\"default\": \"'T3 Environment'\","
+  },
+  {
+    "file": "infra/relay/src/persistence/schema.ts",
+    "line": "environmentLabel: text(\"environment_label\").notNull().default(\"T3 Environment\"),"
+  },
+  {
     "file": "native/kde-snap-shot/src/feedback.qml",
     "line": "path: \"/com/t3tools/KdeCapture/Feedback\""
   },
