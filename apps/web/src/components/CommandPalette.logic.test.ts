@@ -398,7 +398,7 @@ describe("buildThreadActionItems", () => {
     });
     const items = buildThreadActionItems({
       threads: [idThread, titleThread],
-      projectTitleById: new Map([[PROJECT_ID, "T3 Code"]]),
+      projectTitleById: new Map([[PROJECT_ID, "T2 Code"]]),
       sortOrder: "updated_at",
       icon: null,
       runThread: async (_thread) => undefined,
