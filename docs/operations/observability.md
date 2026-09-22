@@ -366,15 +366,18 @@ Traces are best for one request. Metrics are best for trends.
 
 Good metric families to watch:
 
-- `t3_rpc_request_duration`
-- `t3_provider_turn_duration` (how long the provider adapter takes to start a turn, not the turn's run time)
-- `t3_git_command_duration`
+- `t2_rpc_request_duration`
+- `t2_orchestration_command_duration`
+- `t2_orchestration_command_ack_duration`
+- `t2_provider_turn_duration` (how long the provider adapter takes to start a turn, not the turn's run time)
+- `t2_git_command_duration`
 
 Counters tell you volume and failure rate:
 
-- `t3_rpc_requests_total`
-- `t3_provider_turns_total`
-- `t3_git_commands_total`
+- `t2_rpc_requests_total`
+- `t2_orchestration_commands_total`
+- `t2_provider_turns_total`
+- `t2_git_commands_total`
 
 Webhooks have their own families:
 
@@ -392,7 +395,7 @@ Webhooks have their own families:
 
 `ScheduledTaskService.triggerWebhook` spans carry the same outcome per request, and each run
 started from a delivery is its own `ScheduledTaskService.runWebhookDelivery` trace. For a request
-the relay forwarded, the span also goes to the T3 Connect trace export as a child of the relay's
+the relay forwarded, the span also goes to the T2 Connect trace export as a child of the relay's
 span; requests that reach the environment directly never join a sender's trace.
 
 Use metrics when the question is:
@@ -406,6 +409,21 @@ Use traces when the question is:
 - "what happened in this specific request?"
 - "which child span caused this one slow interaction?"
 - "what logs were emitted inside the failing flow?"
+
+### What The New Ack Metric Means
+
+`t2_orchestration_command_ack_duration` measures:
+
+- start: command dispatch enters the orchestration engine
+- end: the first committed domain event for that command is published by the server
+
+That is a server-side acknowledgment metric. It does not measure:
+
+- websocket transit to the browser
+- client receipt
+- React render time
+
+If you need those later, add client-side instrumentation or a dedicated server fanout metric.
 
 ## Common Workflows
 
@@ -422,6 +440,12 @@ Use traces when the question is:
 1. Search for slow top-level spans in the trace file or Tempo.
 2. Check child spans for sqlite, git, provider, or terminal work.
 3. Look at the matching duration metrics to see whether the slowness is systemic.
+
+### "Did this command take too long to acknowledge?"
+
+1. Check `t2_orchestration_command_ack_duration` by `commandType`.
+2. If it is high, inspect the corresponding orchestration trace.
+3. Look at child spans for projection, sqlite, provider, or git work.
 
 ### "Are git hooks causing latency?"
 
