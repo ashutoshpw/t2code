@@ -569,10 +569,7 @@ function parseDpopToken(request: HttpServerRequest.HttpServerRequest): string | 
   return token.length > 0 ? token : null;
 }
 
-export function selectRequestCredential(
-  request: HttpServerRequest.HttpServerRequest,
-  cookieName: string,
-) {
+function selectRequestCredential(request: HttpServerRequest.HttpServerRequest, cookieName: string) {
   const cookieToken = request.cookies[cookieName];
   if (cookieToken !== undefined) {
     return { token: cookieToken, source: "cookie" } as const;
