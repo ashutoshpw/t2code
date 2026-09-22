@@ -277,10 +277,10 @@ describe("resolveWorkEntryToolPresentation", () => {
         createdAt: "2026-09-19T00:00:00.000Z",
         tone: "tool",
         label: "Custom provider title",
-        toolData: { server: "t3-code", tool },
+        toolData: { server: "t2-code", tool },
         toolLifecycleStatus: "completed",
         itemType: "dynamic_tool",
-        toolSource: { key: "t3-code", name: "T2 Code", kind: "integration" },
+        toolSource: { key: "t2-code", name: "T2 Code", kind: "integration" },
       };
       const presentation = resolveWorkEntryToolPresentation(entry);
       expect(presentation, tool).not.toBeNull();
@@ -329,13 +329,13 @@ describe("resolveWorkEntryToolPresentation", () => {
       itemType: "dynamic_tool",
       toolLifecycleStatus: "completed",
       toolData: {
-        server: "t3-code",
+        server: "t2-code",
         tool: "t3_project_clone",
         arguments: { url: "https://github.com/acme/repo" },
         result: { cwd: "/tmp/repo" },
       },
     };
-    const list = { ...entry, toolData: { server: "t3-code", tool: "t3_project_list" } };
+    const list = { ...entry, toolData: { server: "t2-code", tool: "t3_project_list" } };
     expect(summarizeToolGroup([list, entry])).toEqual({
       summary: "Listed projects 1 time and cloned 1 repository",
       hasFailure: false,
@@ -387,12 +387,12 @@ describe("resolveWorkEntryToolPresentation", () => {
     expect(workEntryIndicatesToolSuccess(childFailure)).toBe(true);
   });
   it.each([
-    "mcp__t3-code__preview_click",
-    "mcp__t3_code__preview_click",
+    "mcp__t2-code__preview_click",
+    "mcp__t2_code__preview_click",
     "mcp__t2code__preview_click",
-    "t3-code.preview_click",
-    "t3-code · preview_click completed",
-    "t3_code/preview_click",
+    "t2-code.preview_click",
+    "t2-code · preview_click completed",
+    "t2_code/preview_click",
     "preview_click",
   ])("recognizes browser tool names across providers: %s", (label) => {
     expect(resolveWorkEntryToolPresentation({ label })).toEqual({
@@ -404,11 +404,11 @@ describe("resolveWorkEntryToolPresentation", () => {
   it("labels device tools with the device icon", () => {
     expect(
       resolveWorkEntryToolPresentation({
-        label: "mcp__t3-code__device_open",
+        label: "mcp__t2-code__device_open",
         toolLifecycleStatus: "completed",
       }),
     ).toEqual({ displayName: "Opened a device in the Device panel", icon: "device" });
-    expect(resolveWorkEntryToolPresentation({ label: "t3-code · device_screenshot" })).toEqual({
+    expect(resolveWorkEntryToolPresentation({ label: "t2-code · device_screenshot" })).toEqual({
       displayName: "Taking a screenshot of the device",
       icon: "device",
     });
@@ -419,7 +419,7 @@ describe("resolveWorkEntryToolPresentation", () => {
       resolveWorkEntryToolPresentation({
         label: "Tool call complete",
         toolTitle: "Inspect the current page",
-        toolData: { server: "t3-code", tool: "preview_snapshot", result: { title: "Example" } },
+        toolData: { server: "t2-code", tool: "preview_snapshot", result: { title: "Example" } },
       }),
     ).toEqual({ displayName: "Taking a snapshot of the preview page", icon: "browser" });
   });
@@ -441,7 +441,7 @@ describe("resolveWorkEntryToolPresentation", () => {
   });
 
   it("uses the summary's state only when the provider omitted a lifecycle status", () => {
-    const entry = { label: "t3-code.preview_click" };
+    const entry = { label: "t2-code.preview_click" };
     expect(resolveWorkEntryToolPresentation(entry, "inProgress")?.displayName).toBe(
       "Clicking in the preview browser",
     );
@@ -475,15 +475,15 @@ describe("resolveWorkEntryToolPresentation", () => {
       "Stopping recording the preview browser",
       "Stopped recording the preview browser",
     ],
-    ["t3_thread_read", "Reading a T2 thread", "Read a T2 thread"],
-    ["t3_thread_send", "Sending to a T2 thread", "Sent to a T2 thread"],
+    ["t2_thread_read", "Reading a T2 thread", "Read a T2 thread"],
+    ["t2_thread_send", "Sending to a T2 thread", "Sent to a T2 thread"],
     [
-      "t3_worktree_handoff",
+      "t2_worktree_handoff",
       "Handing off thread to a git worktree",
       "Handed off thread to a git worktree",
     ],
   ])("preserves verb forms and the rest of %s's label", (tool, running, completed) => {
-    const entry = { label: `t3-code.${tool}` };
+    const entry = { label: `t2-code.${tool}` };
     expect(
       resolveWorkEntryToolPresentation({ ...entry, toolLifecycleStatus: "inProgress" })
         ?.displayName,
@@ -496,7 +496,7 @@ describe("resolveWorkEntryToolPresentation", () => {
   it("keeps T2 branding for non-browser tools and falls back to the original tool label", () => {
     expect(
       resolveWorkEntryToolPresentation({
-        label: "mcp__t3_code__task_status",
+        label: "mcp__t2_code__task_status",
         toolTitle: "Check the child task",
       }),
     ).toEqual({ displayName: "Getting delegated task status", icon: "t2-code" });
@@ -505,8 +505,8 @@ describe("resolveWorkEntryToolPresentation", () => {
   it("does not brand unknown tools or another server's matching tool name", () => {
     for (const label of [
       "mcp__github__preview_click",
-      "t3-code.unknown_tool",
-      "t3-code.toString",
+      "t2-code.unknown_tool",
+      "t2-code.toString",
       "Search files",
     ]) {
       expect(resolveWorkEntryToolPresentation({ label })).toBeNull();
@@ -527,7 +527,7 @@ describe("browser group summaries", () => {
     id: "browser",
     createdAt: "2026-09-01T00:00:00Z",
     label: "MCP tool call",
-    toolData: { server: "t3-code", tool: "preview_click" },
+    toolData: { server: "t2-code", tool: "preview_click" },
     itemType: "dynamic_tool",
     toolLifecycleStatus: "completed",
     tone: "tool",
@@ -569,7 +569,7 @@ describe("browser group summaries", () => {
         commandEntry,
         {
           ...browserEntry,
-          toolData: { server: "t3-code", tool: "task_status" },
+          toolData: { server: "t2-code", tool: "task_status" },
         },
       ]),
     ).toBe("Used browser 1 time, ran 1 command, and performed 1 other action");
@@ -581,7 +581,7 @@ describe("browser group summaries", () => {
         {
           ...browserEntry,
           command: "node inspect-page.js",
-          toolData: { toolName: "mcp__t3_code__preview_evaluate" },
+          toolData: { toolName: "mcp__t2_code__preview_evaluate" },
         },
       ]),
     ).toBe("Used browser 1 time");
@@ -821,9 +821,9 @@ describe("resolveViewedImageAsset", () => {
 
 describe("pull request tool presentation", () => {
   it.each([
-    "mcp__t3-code__link_pull_request",
-    "mcp__t3_code__link_pull_request",
-    "t3-code · link_pull_request",
+    "mcp__t2-code__link_pull_request",
+    "mcp__t2_code__link_pull_request",
+    "t2-code · link_pull_request",
     "t2code/link_pull_request",
     "link_pull_request",
   ])("recognizes the native linking tool: %s", (label) => {
@@ -854,7 +854,7 @@ describe("pull request tool presentation", () => {
         toolTitle: "Custom title",
         toolLifecycleStatus,
         toolData: {
-          server: "t3-code",
+          server: "t2-code",
           tool: "link_pull_request",
           arguments: { url: "https://github.com/acme/web/pull/42" },
         },
@@ -868,7 +868,7 @@ describe("pull request tool presentation", () => {
         label: "MCP tool call",
         toolLifecycleStatus: "completed",
         toolData: {
-          toolName: "mcp__t3-code__unlink_pull_request",
+          toolName: "mcp__t2-code__unlink_pull_request",
           rawInput: { repository: "acme/web", number: 42 },
         },
       }),
@@ -883,11 +883,11 @@ describe("pull request tool presentation", () => {
       tone: "tool",
       itemType: "dynamic_tool",
       toolLifecycleStatus: "completed",
-      toolSource: { key: "t3-code", name: "T2 Code", kind: "integration" },
+      toolSource: { key: "t2-code", name: "T2 Code", kind: "integration" },
     };
     const list: WorkLogPresentationEntry = {
       ...link,
-      label: "t3-code · list_thread_pull_requests",
+      label: "t2-code · list_thread_pull_requests",
     };
     expect(summarizeToolGroup([link, link, list]).summary).toBe(
       "Linked 2 pull requests and checked linked pull requests",
@@ -908,7 +908,7 @@ describe("device group summaries", () => {
     id: tool,
     createdAt: "2026-09-10T00:00:00.000Z",
     label: "MCP tool call",
-    toolData: { server: "t3-code", tool },
+    toolData: { server: "t2-code", tool },
     itemType: "dynamic_tool",
     toolLifecycleStatus: "completed",
     tone: "tool",
@@ -943,7 +943,7 @@ describe("device group summaries", () => {
   it("recognizes Claude tool names and preserves screenshot previews", () => {
     const entry = {
       ...deviceEntry("device_screenshot"),
-      toolData: { toolName: "mcp__t3_code__device_screenshot" },
+      toolData: { toolName: "mcp__t2_code__device_screenshot" },
       viewedImagePath: "/workspace/device.png",
     };
     expect(summarizeToolGroup([entry]).summary).toBe("Used device controls 1 time");
