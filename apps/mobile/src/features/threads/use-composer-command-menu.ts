@@ -120,7 +120,7 @@ export function buildComposerSlashCommandItems(input: {
       ]
     : [];
 
-  // Providers expand commands only at the start of a message. T3 commands
+  // Providers expand commands only at the start of a message. T2 commands
   // change local state and do not have this restriction, except `/clear`.
   if (!input.atMessageStart) return items;
   if (input.offersSideChat) {

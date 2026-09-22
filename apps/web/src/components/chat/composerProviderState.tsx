@@ -64,6 +64,27 @@ export function getComposerPromptInjectionState(prompt: string): ComposerPromptI
   return isClaudeUltrathinkPrompt(prompt) ? "ultrathink" : "none";
 }
 
+/**
+ * Cursor ACP can report `fastMode: true` as the provider default. T2 only
+ * treats Fast as selected when the user chose it (draft/sticky/settings).
+ */
+export function withImplicitFastModeDefault(
+  caps: ModelCapabilities,
+  modelOptions: ReadonlyArray<ProviderOptionSelection> | null | undefined,
+): ReadonlyArray<ProviderOptionSelection> | undefined {
+  const hasExplicitFastMode = modelOptions?.some((selection) => selection.id === "fastMode");
+  if (hasExplicitFastMode) {
+    return modelOptions ?? undefined;
+  }
+  const hasFastModeDescriptor = caps.optionDescriptors?.some(
+    (descriptor) => descriptor.type === "boolean" && descriptor.id === "fastMode",
+  );
+  if (!hasFastModeDescriptor) {
+    return modelOptions ?? undefined;
+  }
+  return [...(modelOptions ?? []), { id: "fastMode", value: false }];
+}
+
 function resolveComposerOptionSelections(
   models: ReadonlyArray<ServerProviderModel>,
   model: string,
