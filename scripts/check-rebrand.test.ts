@@ -161,6 +161,27 @@ describe("check-rebrand", () => {
     expect(violations.map((v) => v.rule.id)).toEqual(["t3-project-file"]);
   });
 
+  it("flags T3 home and T3 server copy in any casing", () => {
+    const violations = findViolations(
+      [
+        {
+          file: "apps/server/src/cli/example.ts",
+          line: `"  A background service is installed for this T3 home."`,
+        },
+        { file: "docs/user/example.md", line: "The connected T3 server manages the device hub." },
+        { file: "apps/web/src/example.tsx", line: `"not a child of the T3 Server"` },
+        { file: "apps/web/src/example.ts", line: "The T2 server chooses tool versions." },
+        { file: "packages/shared/src/example.ts", line: `const legacy = "~/.t3";` },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual([
+      "t3-home-copy",
+      "t3-server-copy",
+      "t3-server-copy",
+    ]);
+  });
+
   it("flags T3 Code copy on added lines", () => {
     const violations = findViolations(
       [{ file: "apps/web/src/example.ts", line: `const TITLE = "T3 Code";` }],
