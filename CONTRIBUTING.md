@@ -19,9 +19,10 @@ the same reasons as a ready PR; converting a PR to draft does not exempt it from
 Focused bug fixes, reliability fixes, performance improvements, and maintenance work are the most
 likely to be accepted. Unsolicited features, opinionated rewrites, and unrelated cleanup are not.
 
-Report bugs in issues. Feature requests and proposals belong in
-[Ideas discussions](https://github.com/pingdotgg/t3code/discussions/categories/ideas).
-Search existing reports, discussions, and documented workflows before starting work.
+Feature requests and proposals belong in
+[Ideas discussions](https://github.com/ashutoshpw/t2code/discussions/categories/ideas).
+
+Report bugs in issues. Search existing reports, discussions, and documented workflows before starting work.
 
 <a id="prior-approval"></a>
 
