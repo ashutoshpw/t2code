@@ -117,25 +117,36 @@ function ConfiguredSettingsRouteScreen() {
       : (user?.primaryEmailAddress?.emailAddress ?? "Signed in");
 
   return (
-    <SettingsList
-      connections={[
-        {
-          id: "account",
-          icon: "person.crop.circle",
-          label: "T3 Account",
-          value: accountLabel,
-          disabled: !isLoaded,
-          onPress: () => navigation.navigate("SettingsAuth"),
-        },
-        environmentsRow(Object.keys(savedConnectionsById).length),
-        {
-          id: "SettingsNotifications",
-          icon: "bell.badge",
-          label: "Notifications",
-          target: "SettingsNotifications",
-        },
-      ]}
-    />
+    <View collapsable={false} className="flex-1">
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+        contentContainerClassName="gap-4 px-5 pt-4"
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 18) + 18 }}
+      >
+        <OverflowSection />
+        <SettingsSection title="Connections">
+          <SettingsRow
+            icon="person.crop.circle"
+            label="T2 Account"
+            value={accountLabel}
+            disabled={!isLoaded}
+            onPress={() => navigation.navigate("SettingsSheet", { screen: "SettingsAuth" })}
+          />
+          <SettingsRow
+            icon="desktopcomputer"
+            label="Environments"
+            value={`${Object.keys(savedConnectionsById).length}`}
+            valuePosition="trailing"
+            target="SettingsEnvironments"
+          />
+          <SettingsRow icon="bell.badge" label="Notifications" target="SettingsNotifications" />
+        </SettingsSection>
+
+        <SettingsIndexSections />
+      </ScrollView>
+    </View>
   );
 }
 
