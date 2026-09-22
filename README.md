@@ -1,6 +1,6 @@
 # T2 Code
 
-T2 Code is an "agent harness control surface". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t2tools.t2code)), [web app](https://app.t2.codes) and [Electron-based desktop app](https://t3.codes).
+T2 Code is an "agent harness control surface". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code)), [web app](https://app.t2.codes) and [Electron-based desktop app](https://github.com/ashutoshpw/t2code/releases).
 
 Works with your subscriptions on Claude Code, Codex, Cursor, Grok Build, fx, OpenCode, and Google Antigravity. If they're set up on your computer, T2 Code can control them.
 
@@ -113,6 +113,6 @@ vp i
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before reporting a bug or opening a PR.
 
-Have a feature request? Start an [Ideas discussion](https://github.com/pingdotgg/t3code/discussions/categories/ideas).
+Have a feature request? Start an [Ideas discussion](https://github.com/ashutoshpw/t2code/discussions/categories/ideas).
 
 Need support? Join the [Discord](https://discord.gg/jn4EGJjrvv).
