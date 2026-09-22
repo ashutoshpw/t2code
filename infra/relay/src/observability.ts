@@ -44,7 +44,7 @@ export const RelayObservability = Effect.gen(function* () {
   });
 
   const mobileIngestToken = yield* Axiom.ApiToken("RelayMobileAxiomIngestToken", {
-    name: relayResourceNameForStage("t3-code-mobile-otel-ingest", stage),
+    name: relayResourceNameForStage("t2-code-mobile-otel-ingest", stage),
     description: "Owned by Alchemy. Scoped OTLP ingest token for T2 Code mobile spans.",
     datasetCapabilities: Output.map(traces.name, (dataset) => ({
       [dataset]: { ingest: ["create" as const] },

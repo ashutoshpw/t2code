@@ -2,7 +2,7 @@
 # Installs the T2 Code CLI from a GitHub Release archive. Needs only sh, tar,
 # sha256sum or shasum, and curl or wget; no Node, npm, or compiler.
 #
-#   curl -fsSL https://t3.codes/install.sh | sh
+#   curl -fsSL https://t2.codes/install.sh | sh
 #
 # Environment:
 #   T2CODE_CHANNEL           release train to follow: stable, nightly, or preview
