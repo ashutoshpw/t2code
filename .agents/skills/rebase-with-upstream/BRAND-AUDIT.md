@@ -54,4 +54,3 @@ rg -no "(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+" -g '!node_modules' -g '!.t3' -g
 - Marketing testimonials in `apps/marketing/src/lib/tweets.ts` quote real people saying "T3" — never rewrite quotes.
 - The `T3 Chat` palette (comments, tests, and the palette label) references the t3.chat product, not this fork.
 - `t2_relay` stays in `RelayManagedEndpointProviderKind`: it is a persisted relay value that the server deliberately rejects, not a current provider.
-- The `~/.t3` home adoption in `apps/server/src/os-jank.ts` is a one-time data migration for pre-rename installs; it is the only remaining legacy path, kept so existing users do not lose their state.
