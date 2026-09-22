@@ -1000,10 +1000,12 @@ describe("DesktopBackendConfiguration", () => {
 
       const previousWslEnv = process.env.WSLENV;
       const previousDisabled = process.env.OTEL_SDK_DISABLED;
+      const previousT2Disabled = process.env.T2CODE_OTEL_SDK_DISABLED;
       const previousTelemetry = process.env.T3CODE_TELEMETRY_ENABLED;
       try {
         delete process.env.WSLENV;
         process.env.OTEL_SDK_DISABLED = "true";
+        process.env.T2CODE_OTEL_SDK_DISABLED = "true";
         process.env.T3CODE_TELEMETRY_ENABLED = "false";
 
         yield* Effect.gen(function* () {
@@ -1011,7 +1013,9 @@ describe("DesktopBackendConfiguration", () => {
           const config = yield* configuration.resolveWsl({ port: 5050, distro: null });
 
           assert.equal(config.env.OTEL_SDK_DISABLED, "true");
+          assert.equal(config.env.T2CODE_OTEL_SDK_DISABLED, "true");
           assert.include((config.env.WSLENV ?? "").split(":"), "OTEL_SDK_DISABLED");
+          assert.include((config.env.WSLENV ?? "").split(":"), "T2CODE_OTEL_SDK_DISABLED");
           assert.equal(config.env.T3CODE_TELEMETRY_ENABLED, "false");
           assert.include((config.env.WSLENV ?? "").split(":"), "T3CODE_TELEMETRY_ENABLED");
         }).pipe(
@@ -1034,6 +1038,7 @@ describe("DesktopBackendConfiguration", () => {
       } finally {
         restoreEnv("WSLENV", previousWslEnv);
         restoreEnv("OTEL_SDK_DISABLED", previousDisabled);
+        restoreEnv("T2CODE_OTEL_SDK_DISABLED", previousT2Disabled);
         restoreEnv("T3CODE_TELEMETRY_ENABLED", previousTelemetry);
       }
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
