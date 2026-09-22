@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.description = "Fabric-backed attributed text and markdown rendering primitives owned by T2 Code."
   s.homepage = "https://t2tools.com"
   s.license = { :type => "MIT", :file => "LICENSE" }
-  s.author = { "T3 Tools" => "hello@t2tools.com" }
+  s.author = { "W3 Dev LLC" => "hello@t2tools.com" }
   s.platforms = { :ios => min_ios_version_supported }
   s.source = { :path => "." }
   s.source_files = "ios/**/*.{h,m,mm,cpp}"
