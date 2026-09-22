@@ -105,21 +105,7 @@ export const expandHomePath = Effect.fn(function* (input: string) {
 export const resolveBaseDir = Effect.fn(function* (raw: string | undefined) {
   const { join, resolve } = yield* Path.Path;
   if (!raw || raw.trim().length === 0) {
-    const fs = yield* FileSystem.FileSystem;
-    const baseDir = join(NodeOS.homedir(), ".t2");
-    // One-time adoption: a pre-rename data home moves to the T2 location the
-    // first time the server starts with no data of its own. The T2 harness
-    // keeps owning its own directory afterwards.
-    const legacyHome = join(NodeOS.homedir(), ".t3");
-    const adopted = yield* fs.exists(legacyHome).pipe(
-      Effect.flatMap(() => fs.exists(baseDir)),
-      Effect.filterOrFail((legacyOnly) => legacyOnly),
-      Effect.ignore,
-    );
-    if (adopted !== undefined) {
-      yield* fs.rename(legacyHome, baseDir);
-    }
-    return baseDir;
+    return join(NodeOS.homedir(), ".t2");
   }
   return resolve(yield* expandHomePath(raw.trim()));
 });
