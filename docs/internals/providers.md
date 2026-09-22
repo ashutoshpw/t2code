@@ -12,7 +12,7 @@ session or catalog state. For a new driver, start with [adding a provider](./add
 ## Process and account isolation
 
 The `opencode` driver probes the installed version and runs the 1.x or 2.x runtime. OpenCode's MCP
-registrations are directory-scoped, while T3's MCP connection is thread-scoped, so threads in one
+registrations are directory-scoped, while T2's MCP connection is thread-scoped, so threads in one
 directory must not share one T3 MCP entry.
 
 - **1.x** uses one T3-managed chat server per thread, so threads cannot replace each other's
@@ -27,7 +27,7 @@ directory must not share one T3 MCP entry.
 External OpenCode servers remain externally owned and can require an external restart to pick up
 configuration changes. OpenCode stores "always" approval grants for the whole project. Automatic
 full-access replies use `once` so they cannot widen a supervised thread's permissions on a shared
-server. On 2.x, a session-wide approval also replies `once` and becomes T3's own rule on that session.
+server. On 2.x, a session-wide approval also replies `once` and becomes T2's own rule on that session.
 
 Pi runs the user's own `pi` install in RPC mode and owns native extension, package, and project
 trust discovery. T3 injects only its namespaced MCP bridge, so a Pi session behaves as it does in
