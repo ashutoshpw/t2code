@@ -1,111 +1,19 @@
 [
   {
     "file": ".cursor/rules/cursor-cloud.mdc",
-    "line": "These notes apply only to Cursor Cloud agents (kept out of the shared `AGENTS.md` since T3 Code is"
-  },
-  {
-    "file": ".cursor/rules/cursor-cloud.mdc",
     "line": "description: Cursor Cloud environment setup and run notes for T3 Code (Cursor-specific; not for other editors/CI)"
   },
   {
-    "file": ".devcontainer/on-create.sh",
-    "line": "cp .env.example .env  optional: enable T3 Connect cloud features"
-  },
-  {
-    "file": ".env.example",
-    "line": "# Optional: T3 Connect source builds"
-  },
-  {
-    "file": ".env.example",
-    "line": "# `cp .env.example .env` enables T3 Connect against the production deployment."
-  },
-  {
-    "file": "AGENTS.md",
-    "line": "The architecture of T2 Code's websocket layer (npx @t2code/cli) enables a lot of awesome remote features. These have become core to the product. Whether users are connecting directly over their local network, using Tailscale, or leaning in fully with T3 Connect (our tunnel solution, also in this repo), we need to make sure new features are properly supported."
-  },
-  {
-    "file": "README.md",
-    "line": "T2 Code is an \"agent harness control surface\". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code)), [web app](https://app.t2.codes) and [Electron-based desktop app](https://github.com/ashutoshpw/t2code/releases)."
-  },
-  {
-    "file": "README.md",
-    "line": "winget install T3Tools.T3Code"
-  },
-  {
-    "file": "apps/desktop/scripts/electron-launcher.mjs",
-    "line": "[\"T2CODE_HOME\", firstSet(\"T2CODE_HOME\", \"T3CODE_HOME\")],"
-  },
-  {
-    "file": "apps/desktop/scripts/electron-launcher.mjs",
-    "line": "[\"T2CODE_OTLP_TRACES_URL\", firstSet(\"T2CODE_OTLP_TRACES_URL\", \"T3CODE_OTLP_TRACES_URL\")],"
-  },
-  {
-    "file": "apps/desktop/scripts/electron-launcher.mjs",
-    "line": "firstSet(\"T2CODE_OTLP_EXPORT_INTERVAL_MS\", \"T3CODE_OTLP_EXPORT_INTERVAL_MS\"),"
-  },
-  {
-    "file": "apps/desktop/scripts/electron-launcher.test.mjs",
-    "line": "// The legacy T3CODE_HOME spelling is exported under the new name."
-  },
-  {
-    "file": "apps/desktop/scripts/electron-launcher.test.mjs",
-    "line": "T3CODE_HOME: \"/tmp/t3\","
-  },
-  {
-    "file": "apps/desktop/src/app/DesktopEarlyElectronStartup.ts",
-    "line": "// Legacy T3CODE_HOME is honored until installed units and shells migrate."
-  },
-  {
-    "file": "apps/desktop/src/app/DesktopEarlyElectronStartup.ts",
-    "line": "const t3Home = Option.fromUndefinedOr(input.env.T2CODE_HOME ?? input.env.T3CODE_HOME);"
+    "file": ".cursor/rules/cursor-cloud.mdc",
+    "line": "These notes apply only to Cursor Cloud agents (kept out of the shared `AGENTS.md` since T3 Code is"
   },
   {
     "file": "apps/desktop/src/app/DesktopLifecycle.test.ts",
     "line": "name: Effect.succeed(\"T3 Code\"),"
   },
   {
-    "file": "apps/desktop/src/backend/DesktopBackendConfiguration.ts",
-    "line": "// Primary wants process.env (PATH, dev-runner's T3CODE_HOME, etc.)."
-  },
-  {
-    "file": "apps/desktop/src/backend/DesktopBackendConfiguration.ts",
-    "line": "if (key === \"T2CODE_HOME\" || key === \"T3CODE_HOME\") continue;"
-  },
-  {
     "file": "apps/desktop/src/electron/ElectronApp.test.ts",
     "line": "name: \"T3 Code\","
-  },
-  {
-    "file": "apps/desktop/src/preview/BrowserSession.ts",
-    "line": "const PREVIEW_EPHEMERAL_PARTITION_PREFIX = \"t3code-preview-ephemeral-\";"
-  },
-  {
-    "file": "apps/desktop/src/snapShot/LinuxSnapShot.dbus.test.ts",
-    "line": "\"/com/t3tools/SnapShot\","
-  },
-  {
-    "file": "apps/desktop/src/snapShot/LinuxSnapShot.dbus.test.ts",
-    "line": "\"com.t3tools.SnapShot.Capture\","
-  },
-  {
-    "file": "apps/desktop/src/snapShot/LinuxSnapShot.dbus.test.ts",
-    "line": "interface: \"com.t3tools.SnapShot\","
-  },
-  {
-    "file": "apps/desktop/src/snapShot/LinuxSnapShot.dbus.test.ts",
-    "line": "path: \"/com/t3tools/SnapShot\","
-  },
-  {
-    "file": "apps/desktop/src/snapShot/captureConfigEdit.test.ts",
-    "line": "const other = captureConfigBinding(\"niri\", \"com.t3tools.Other\", \"Ctrl+Alt+4\");"
-  },
-  {
-    "file": "apps/desktop/src/snapShot/linuxCaptureSession.ts",
-    "line": "export const NIRI_CAPTURE_INTERFACE = \"com.t3tools.SnapShot\";"
-  },
-  {
-    "file": "apps/desktop/src/snapShot/linuxCaptureSession.ts",
-    "line": "export const NIRI_CAPTURE_PATH = \"/com/t3tools/SnapShot\";"
   },
   {
     "file": "apps/desktop/src/telemetry/DesktopTelemetryPublisher.test.ts",
@@ -116,172 +24,16 @@
     "line": "name: Effect.succeed(\"T3 Code\"),"
   },
   {
-    "file": "apps/desktop/vite.config.ts",
-    "line": "(repoEnv.T2CODE_CLERK_PUBLISHABLE_KEY ?? repoEnv.T3CODE_CLERK_PUBLISHABLE_KEY)?.trim() ?? \"\","
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-chrome.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-desktop.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-lime-320.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-lime-640.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-lime.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-nightly-clouds-320.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-nightly-clouds-640.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-nightly-clouds.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-nightly-foil-320.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-nightly-foil-640.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-nightly-foil.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-nightly-lavender-320.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-nightly-lavender-640.webp",
-    "line": ""
-  },
-  {
-    "file": "apps/marketing/public/95/t2-code-concepts/t2-code-nightly-lavender.webp",
-    "line": ""
-  },
-  {
     "file": "apps/marketing/src/lib/site.ts",
     "line": "\"https://play.google.com/store/apps/details?id=com.t3tools.t3code\";"
-  },
-  {
-    "file": "apps/marketing/src/pages/privacy-policy.astro",
-    "line": "<strong>Environment and device information.</strong> If you enable T3 Connect, we"
-  },
-  {
-    "file": "apps/marketing/src/pages/privacy-policy.astro",
-    "line": "To request deletion of your T3 account and associated T3 Connect data, email{\" \"}<a"
-  },
-  {
-    "file": "apps/marketing/src/pages/privacy-policy.astro",
-    "line": "We use Cloudflare for networking, T3 Connect infrastructure, and content delivery.<br />"
-  },
-  {
-    "file": "apps/marketing/src/pages/privacy-policy.astro",
-    "line": "We use Neon to host the database that supports T3 Connect.<br />"
-  },
-  {
-    "file": "apps/marketing/src/pages/privacy-policy.astro",
-    "line": "lede=\"This Privacy Policy describes how T3 Tools, Inc. collects, uses, and shares personal information when you use the T2 Code desktop, mobile, and hosted web applications, visit the t3.codes marketing site, or use the optional T3 Connect service.\""
-  },
-  {
-    "file": "apps/marketing/src/pages/privacy-policy.astro",
-    "line": "{\" \"}<a href=\"https://app.t3.codes\">https://app.t3.codes</a>, or the optional T3 Connect"
   },
   {
     "file": "apps/marketing/src/pages/security-policy.astro",
     "line": ">, the optional T3 Connect service, and the T2 Code website at{\" \"}<a href=\"https://t3.codes\""
   },
   {
-    "file": "apps/marketing/src/pages/terms-of-service.astro",
-    "line": ">, and the optional T3 Connect service (together, the “Services”), as well as the T2 Code"
-  },
-  {
-    "file": "apps/marketing/src/pages/terms-of-service.astro",
-    "line": "description=\"The terms that govern your use of T2 Code, app.t3.codes, T3 Connect, and t3.codes.\""
-  },
-  {
-    "file": "apps/marketing/src/pages/terms-of-service.astro",
-    "line": "for account-backed features, including T3 Connect. You agree to provide accurate account"
-  },
-  {
-    "file": "apps/marketing/src/pages/terms-of-service.astro",
-    "line": "lede=\"These Terms govern your use of T2 Code, including its desktop, mobile, and hosted applications, the optional T3 Connect service, and the t3.codes website.\""
-  },
-  {
-    "file": "apps/mobile/app.config.ts",
-    "line": "(repoEnv.T2CODE_IOS_PERSONAL_TEAM ?? repoEnv.T3CODE_IOS_PERSONAL_TEAM) === \"1\";"
-  },
-  {
-    "file": "apps/mobile/app.config.ts",
-    "line": "(repoEnv.T2CODE_MOBILE_UPDATES_ENABLED ?? repoEnv.T3CODE_MOBILE_UPDATES_ENABLED) !== \"0\","
-  },
-  {
-    "file": "apps/mobile/app.config.ts",
-    "line": "...((repoEnv.T2CODE_ANDROID_GOOGLE_SERVICES_FILE ?? repoEnv.T3CODE_ANDROID_GOOGLE_SERVICES_FILE)"
-  },
-  {
-    "file": "apps/mobile/app.config.ts",
-    "line": "repoEnv.T2CODE_IOS_PERSONAL_TEAM_BUNDLE_ID ?? repoEnv.T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID"
-  },
-  {
-    "file": "apps/mobile/app.config.ts",
-    "line": "repoEnv.T3CODE_ANDROID_GOOGLE_SERVICES_FILE,"
-  },
-  {
     "file": "apps/mobile/modules/t2-composer-editor/expo-module.config.json",
     "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-agent-notifications/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-markdown-text/ios/T3MarkdownTextRunShadowNode.cpp",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-markdown-text/ios/T3MarkdownTextRunShadowNode.h",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-native-controls/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-review-diff/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-subscription-widget/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-terminal/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/plugins/withIosCocoaPodsUuidCache.cjs",
-    "line": "Pod::UI.puts \"T3Code: reset CocoaPods UUID allocator at #{next_index} (#{existing_uuids.length} existing objects)\""
-  },
-  {
-    "file": "apps/mobile/src/features/agent-awareness/remoteRegistration.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.preview\","
   },
   {
     "file": "apps/mobile/src/features/archive/archivedThreadList.test.ts",
@@ -292,20 +44,12 @@
     "line": "const project = makeProject({ id: ProjectId.make(\"project-1\"), title: \"T3 Code\" });"
   },
   {
-    "file": "apps/mobile/src/features/cloud/T3ConnectProfilePage.tsx",
-    "line": ""
-  },
-  {
     "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
     "line": "const group = buildGroups([project], threads, { searchQuery: \"T3 Code\" })[0];"
   },
   {
     "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
     "line": "displayName: \"T3 Code\","
-  },
-  {
-    "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
-    "line": "owner: \"t3tools\","
   },
   {
     "file": "apps/mobile/src/features/home/homeThreadList.test.ts",
@@ -320,50 +64,6 @@
     "line": "title: \"T3 Code\","
   },
   {
-    "file": "apps/mobile/src/native/T3ComposerEditor.android.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/src/native/T3ComposerEditor.ios.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/src/native/T3ComposerEditor.native.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/src/native/T3ComposerEditor.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/src/native/T3ComposerEditor.types.ts",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/src/native/T3KeyboardCommands.android.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/src/native/T3KeyboardCommands.ios.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/src/native/T3KeyboardCommands.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/src/state/use-thread-pr.test.ts",
-    "line": "repository: \"t3tools/t3code\","
-  },
-  {
-    "file": "apps/server/scripts/t3-sqlite-state.test.ts",
-    "line": ""
-  },
-  {
-    "file": "apps/server/scripts/t3-sqlite-state.ts",
-    "line": ""
-  },
-  {
     "file": "apps/server/src/auth/EnvironmentAuth.test.ts",
     "line": "{ ...requestMetadata, label: \"T3 Code Desktop\" },"
   },
@@ -372,116 +72,8 @@
     "line": "label: \"T3 Code Mobile\","
   },
   {
-    "file": "apps/server/src/cli/config.test.ts",
-    "line": "ConfigProvider.fromEnv({ env: { T3CODE_HOME: baseDir } }),"
-  },
-  {
-    "file": "apps/server/src/cli/config.test.ts",
-    "line": "it.effect(\"honors the legacy T3CODE_HOME env spelling\", () =>"
-  },
-  {
-    "file": "apps/server/src/cloud/bootService.ts",
-    "line": "* written by older installs carry the legacy `T3CODE_HOME` key, so both"
-  },
-  {
-    "file": "apps/server/src/git/linkCreatedPullRequest.test.ts",
-    "line": "repository: \"t3tools/t3code\","
-  },
-  {
-    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
-    "line": "displayName: \"T3Tools/T3Code\","
-  },
-  {
-    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
-    "line": "name: \"T3Code\","
-  },
-  {
-    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
-    "line": "owner: \"T3Tools\","
-  },
-  {
-    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
-    "line": "repository: \"T3Tools/Other\","
-  },
-  {
-    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
-    "line": "repository: \"t3tools/other\","
-  },
-  {
-    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
-    "line": "repository: \"t3tools/t3code\","
-  },
-  {
-    "file": "apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts",
-    "line": "url: \"http://forge.example:3000/t3tools/t3code/pulls/42\","
-  },
-  {
-    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
-    "line": "displayName: \"t3tools/t3code\","
-  },
-  {
-    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
-    "line": "repository: \"T3Tools/T3Code\","
-  },
-  {
-    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
-    "line": "repository: \"t3tools/t3code\","
-  },
-  {
-    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
-    "line": "url: \"http://forge.example:3000/t3tools/t3code/pulls/42\","
-  },
-  {
-    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
-    "line": "url: \"http://forge.example:4000/t3tools/t3code/pulls/42\","
-  },
-  {
-    "file": "apps/server/src/orchestration/decider.pullRequests.test.ts",
-    "line": "url: \"https://github.enterprise.test/t3tools/t3code/pull/42\","
-  },
-  {
-    "file": "apps/server/src/orchestration/projector.pullRequests.test.ts",
-    "line": "displayName: \"t3tools/t3code\","
-  },
-  {
-    "file": "apps/server/src/orchestration/projector.pullRequests.test.ts",
-    "line": "repository: \"T3Tools/T3Code\","
-  },
-  {
-    "file": "apps/server/src/orchestration/projector.pullRequests.test.ts",
-    "line": "repository: \"t3tools/t3code\","
-  },
-  {
-    "file": "apps/server/src/orchestration/projector.pullRequests.test.ts",
-    "line": "url: \"https://GitLab.example.com/t3tools/t3code/-/merge_requests/42\","
-  },
-  {
     "file": "apps/server/src/orchestration/projector.test.ts",
     "line": "title: \"T3 Code\","
-  },
-  {
-    "file": "apps/server/src/project/ProjectSetupScriptRunner.test.ts",
-    "line": "T3CODE_PROJECT_ROOT: \"/repo/project\","
-  },
-  {
-    "file": "apps/server/src/project/ProjectSetupScriptRunner.test.ts",
-    "line": "T3CODE_WORKTREE_PATH: \"/repo/worktrees/a\","
-  },
-  {
-    "file": "apps/server/src/project/RepositoryIdentityResolver.test.ts",
-    "line": "expect(identity?.displayName).toBe(\"t3tools/platform/t3code\");"
-  },
-  {
-    "file": "apps/server/src/project/RepositoryIdentityResolver.test.ts",
-    "line": "expect(identity?.displayName).toBe(\"t3tools/t3code\");"
-  },
-  {
-    "file": "apps/server/src/project/RepositoryIdentityResolver.test.ts",
-    "line": "expect(identity?.owner).toBe(\"t3tools\");"
-  },
-  {
-    "file": "apps/server/src/project/RepositoryIdentityResolver.test.ts",
-    "line": "expect(refreshedIdentity?.displayName).toBe(\"t3tools/t3code-next\");"
   },
   {
     "file": "apps/server/src/relay/AgentAwarenessRelay.test.ts",
@@ -490,22 +82,6 @@
   {
     "file": "apps/server/src/server.test.ts",
     "line": "label: \"T3 Code Mobile\","
-  },
-  {
-    "file": "apps/server/src/serviceLauncher.ts",
-    "line": "// Installed units written by older builds export the legacy T3CODE_HOME"
-  },
-  {
-    "file": "apps/server/src/serviceLauncher.ts",
-    "line": "const baseDir = (process.env.T2CODE_HOME ?? process.env.T3CODE_HOME)?.trim();"
-  },
-  {
-    "file": "apps/server/vite.config.ts",
-    "line": "(repoEnv.T2CODE_CLERK_PUBLISHABLE_KEY ?? repoEnv.T3CODE_CLERK_PUBLISHABLE_KEY)?.trim() ??"
-  },
-  {
-    "file": "apps/server/vite.config.ts",
-    "line": "repoEnv.T2CODE_CLERK_CLI_OAUTH_CLIENT_ID ?? repoEnv.T3CODE_CLERK_CLI_OAUTH_CLIENT_ID"
   },
   {
     "file": "apps/web/src/authBootstrap.test.ts",
@@ -524,22 +100,6 @@
     "line": "projectTitleById: new Map([[PROJECT_ID, \"T3 Code\"]]),"
   },
   {
-    "file": "apps/web/src/components/clerk/T3ConnectSidebarSignIn.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/web/src/components/clerk/T3ConnectUserProfilePage.test.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/web/src/components/clerk/T3ConnectUserProfilePage.tsx",
-    "line": ""
-  },
-  {
-    "file": "apps/web/src/components/clerk/useT3ConnectAuthPrompt.tsx",
-    "line": ""
-  },
-  {
     "file": "apps/web/src/components/pullRequest/PullRequestListFilters.test.tsx",
     "line": "title: \"T3 Code · one\","
   },
@@ -552,292 +112,8 @@
     "line": "title: \"T3 Code\","
   },
   {
-    "file": "apps/web/src/composer-logic.test.ts",
-    "line": "repository: \"T3Tools/T3Code\","
-  },
-  {
-    "file": "apps/web/src/composer-logic.test.ts",
-    "line": "repository: \"t3tools/other\","
-  },
-  {
-    "file": "apps/web/src/composer-logic.test.ts",
-    "line": "repository: \"t3tools/t3code\","
-  },
-  {
-    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
-    "line": "// two-segment owner/name form would look for `t3tools/t3code` and find nothing."
-  },
-  {
-    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
-    "line": "const canonicalKey = normalizeGitRemoteUrl(\"git@ssh.dev.azure.com:v3/T3Tools/Platform/T3Code\");"
-  },
-  {
-    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
-    "line": "displayName: \"t3tools/platform/t3code\","
-  },
-  {
-    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
-    "line": "owner: \"t3tools\","
-  },
-  {
-    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
-    "line": "repository: \"t3tools/platform/_git/t3code\","
-  },
-  {
-    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
-    "line": "repository: \"t3tools/platform/t3code\","
-  },
-  {
-    "file": "apps/web/src/lib/openPullRequestLink.test.ts",
-    "line": "repository: \"t3tools/t3code\","
-  },
-  {
-    "file": "apps/web/src/projectScripts.test.ts",
-    "line": "T3CODE_PROJECT_ROOT: \"/repo\","
-  },
-  {
-    "file": "apps/web/src/projectScripts.test.ts",
-    "line": "T3CODE_WORKTREE_PATH: \"/repo/worktree-a\","
-  },
-  {
-    "file": "assets/prod/t3-black-web-apple-touch-180.png",
-    "line": ""
-  },
-  {
-    "file": "assets/prod/t3-black-web-favicon-16x16.png",
-    "line": ""
-  },
-  {
-    "file": "assets/prod/t3-black-web-favicon-32x32.png",
-    "line": ""
-  },
-  {
-    "file": "assets/prod/t3-black-web-favicon.ico",
-    "line": ""
-  },
-  {
-    "file": "assets/prod/t3-black-windows.ico",
-    "line": ""
-  },
-  {
-    "file": "docs/README.md",
-    "line": "- [T3 Connect setup](./operations/connect-setup.md)"
-  },
-  {
-    "file": "docs/README.md",
-    "line": "- [T3 Connect](./internals/t3-connect.md)"
-  },
-  {
-    "file": "docs/internals/devices.md",
-    "line": "Device panel work over Tailscale and T3 Connect, including when an SSH host runs the devices."
-  },
-  {
-    "file": "docs/internals/environment-auth.md",
-    "line": "[T3 Connect](./t3-connect.md). A relay token is never an environment login."
-  },
-  {
-    "file": "docs/internals/linux-snap-shot.md",
-    "line": "`<app-id>.SnapShot` on the session bus and exports `com.t3tools.SnapShot.Capture`; the config"
-  },
-  {
-    "file": "docs/internals/remote.md",
-    "line": "Tailscale, SSH, and T3 Connect change how the client reaches that server; they do"
-  },
-  {
-    "file": "docs/internals/remote.md",
-    "line": "[T3 Connect trust boundary](./t3-connect.md)."
-  },
-  {
-    "file": "docs/internals/t3-connect.md",
-    "line": ""
-  },
-  {
-    "file": "docs/internals/t3-connect.md",
-    "line": "# T3 Connect"
-  },
-  {
-    "file": "docs/internals/t3-connect.md",
-    "line": "T3 Connect uses Clerk for cloud identity. The relay manages environment links,"
-  },
-  {
-    "file": "docs/operations/android-notifications.md",
-    "line": "1. Create a Firebase project and register each Android application identifier you intend to build: `com.t3tools.t3code.dev`, `com.t3tools.t3code.preview`, or `com.t3tools.t3code`."
-  },
-  {
-    "file": "docs/operations/android-notifications.md",
-    "line": "Build the host client and mobile app with the same relay URL and Clerk public configuration. A source server or desktop development build can host the test environment; keep its T3 home separate from an existing installation. Signing into the phone alone does not link a host environment. Use the host client's T3 Connect settings to link it and enable activity publishing. A private Clerk instance also needs its own CLI OAuth application before using `t2code connect login`; the repository's production CLI client ID belongs to the maintainers' instance."
-  },
-  {
-    "file": "docs/operations/android-notifications.md",
-    "line": "Building with `APP_VARIANT=production` selects `com.t3tools.t3code` and its corresponding Clerk callback. Set the same variant during prebuild and bundling, and supply a Google services file that includes that package. Keep OTA updates disabled for a private binary. A locally signed build with this package cannot update an official installation signed by the maintainer or coexist with it; removing that installation also removes its app-local data. The development package remains a separate app."
-  },
-  {
-    "file": "docs/operations/android-notifications.md",
-    "line": "You do not need to duplicate T3 Connect's hosted infrastructure to develop Android push. Keep the normal Clerk login and environment connections. `scripts/android-push-watch.ts` subscribes to one paired environment's shell stream, uses the shared agent-awareness projection, and sends updates through the new FCM client. It holds transient state in memory and needs no hosted database or Clerk secret."
-  },
-  {
-    "file": "docs/operations/android-notifications.md",
-    "line": "clerk://com.t3tools.t3code.dev.callback"
-  },
-  {
-    "file": "docs/operations/connect-setup.md",
-    "line": "# T3 Connect setup"
-  },
-  {
-    "file": "docs/operations/connect-setup.md",
-    "line": "Deployment and client configuration for T3 Connect. The [architecture note](../internals/t3-connect.md)"
-  },
-  {
-    "file": "docs/operations/connect-setup.md",
-    "line": "For a production macOS app with bundle ID `com.t3tools.t3code`:"
-  },
-  {
-    "file": "docs/operations/connect-setup.md",
-    "line": "T3 Connect is disabled in a fresh clone. To build against the production deployment, copy the"
-  },
-  {
-    "file": "docs/operations/connect-setup.md",
-    "line": "`webcredentials.apps` must include `<TEAM_ID>.com.t3tools.t3code`."
-  },
-  {
-    "file": "docs/operations/mobile-app-store-screenshots.md",
-    "line": "the software keyboard, and supplies deterministic T3 Connect discovery rows to the real"
-  },
-  {
-    "file": "docs/operations/release.md",
-    "line": "## T3 Connect relay deployment"
-  },
-  {
-    "file": "docs/operations/release.md",
-    "line": "- Confirm the provisioning profile belongs to `APPLE_TEAM_ID.com.t3tools.t3code` and includes"
-  },
-  {
-    "file": "docs/operations/release.md",
-    "line": "- Reads the shared production T3 Connect relay URL and Clerk client configuration before packaging clients."
-  },
-  {
-    "file": "docs/operations/release.md",
-    "line": "10. Complete the Clerk Native API and AASA setup in [T3 Connect setup](./connect-setup.md#desktop-passkeys)."
-  },
-  {
-    "file": "docs/operations/release.md",
-    "line": "2. Create an explicit App ID for `com.t3tools.t3code` and enable Associated Domains."
-  },
-  {
-    "file": "docs/user/background-service.md",
-    "line": "`~/Library/LaunchAgents/com.t3tools.t3code.service.plist`."
-  },
-  {
     "file": "docs/user/install.md",
     "line": "[Google Play](https://play.google.com/store/apps/details?id=com.t3tools.t3code)."
-  },
-  {
-    "file": "docs/user/install.md",
-    "line": "| Windows            | `winget install T3Tools.T3Code` |"
-  },
-  {
-    "file": "infra/relay/README.md",
-    "line": "# T3 Connect Relay"
-  },
-  {
-    "file": "infra/relay/README.md",
-    "line": "- [T3 Connect architecture](../../docs/internals/t3-connect.md) for environment linking and trust boundaries."
-  },
-  {
-    "file": "infra/relay/README.md",
-    "line": "- [T3 Connect setup](../../docs/operations/connect-setup.md) for Clerk keys, JWT templates, and sign-up restrictions."
-  },
-  {
-    "file": "infra/relay/README.md",
-    "line": "> Sign in to T3 Connect from the app under Settings > Connections."
-  },
-  {
-    "file": "infra/relay/README.md",
-    "line": "See the [T3 Connect architecture note](../../docs/internals/t3-connect.md) for the larger system"
-  },
-  {
-    "file": "infra/relay/README.md",
-    "line": "The relay is the hosted control plane for T3 Connect. It helps clients discover and connect to"
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsClient.test.ts",
-    "line": "bundleId: \"com.t3tools.test\","
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
-    "line": "\"com.t3tools.t3code.preview.push-type.liveactivity\","
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
-    "line": ": { bundleId: \"com.t3tools.t3code.dev\", apsEnvironment: \"sandbox\" as const }),"
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
-    "line": "`${changed === \"bundle\" ? \"com.t3tools.t3code.preview\" : \"com.t3tools.t3code.dev\"}${kind === \"live_activity_update\" ? \".push-type.liveactivity\" : \"\"}`,"
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.dev\","
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.preview\","
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
-    "line": "bundle_id: \"com.t3tools.t3code.preview\","
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
-    "line": "changed === \"bundle\" ? \"com.t3tools.t3code.preview\" : \"com.t3tools.t3code.dev\","
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsDeliveries.test.ts",
-    "line": "{ ...target, bundle_id: \"com.t3tools.t3code.preview\", aps_environment: \"sandbox\" },"
-  },
-  {
-    "file": "infra/relay/src/agentActivity/ApnsDeliveryQueue.test.ts",
-    "line": "bundleId: \"com.t3tools.test\","
-  },
-  {
-    "file": "infra/relay/src/agentActivity/Devices.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.preview\" as RelayDeviceRegistrationRequest[\"bundleId\"],"
-  },
-  {
-    "file": "infra/relay/src/agentActivity/Devices.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.preview\","
-  },
-  {
-    "file": "infra/relay/src/agentActivity/FcmClient.test.ts",
-    "line": "packageName: \"com.t3tools.t3code.dev\","
-  },
-  {
-    "file": "infra/relay/src/agentActivity/FcmDeliveries.test.ts",
-    "line": "bundle_id: \"com.t3tools.t3code.dev\","
-  },
-  {
-    "file": "infra/relay/src/auth/RelayTokens.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.dev\","
-  },
-  {
-    "file": "infra/relay/src/environments/EnvironmentConnector.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.dev\","
-  },
-  {
-    "file": "infra/relay/src/environments/EnvironmentLinker.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.dev\","
-  },
-  {
-    "file": "infra/relay/src/environments/EnvironmentPublishSignatures.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.dev\","
-  },
-  {
-    "file": "infra/relay/src/environments/ManagedEndpointProvider.test.ts",
-    "line": "bundleId: \"com.t3tools.t3code.dev\","
-  },
-  {
-    "file": "native/kde-snap-shot/src/feedback.qml",
-    "line": "dbusInterface: \"com.t3tools.KdeCapture.Feedback\""
   },
   {
     "file": "native/kde-snap-shot/src/feedback.qml",
@@ -845,127 +121,23 @@
   },
   {
     "file": "native/kde-snap-shot/src/feedback.rs",
-    "line": "\"com.t3tools.KdeCapture.Feedback\","
-  },
-  {
-    "file": "native/kde-snap-shot/src/feedback.rs",
-    "line": "#[zbus::interface(name = \"com.t3tools.KdeCapture.Feedback\")]"
-  },
-  {
-    "file": "native/kde-snap-shot/src/feedback.rs",
     "line": "const OBJECT: &str = \"/com/t3tools/KdeCapture/Feedback\";"
-  },
-  {
-    "file": "native/kde-snap-shot/src/main.rs",
-    "line": "\"/com/t3tools/KdeCapture\","
-  },
-  {
-    "file": "native/kde-snap-shot/src/main.rs",
-    "line": "\"function reply(value) {{ callDBus({destination}, '/com/t3tools/KdeCapture', 'com.t3tools.KdeCapture', 'Reply', JSON.stringify(value)); }}\\ntry {{ {body} }} catch (error) {{ reply({{error: String(error)}}); }}\""
-  },
-  {
-    "file": "native/kde-snap-shot/src/main.rs",
-    "line": "#[zbus::interface(name = \"com.t3tools.KdeCapture\")]"
   },
   {
     "file": "native/kde-snap-shot/src/main.rs",
     "line": ".remove::<ScriptReply, _>(\"/com/t3tools/KdeCapture\")?;"
   },
   {
-    "file": "native/kde-snap-shot/src/transport_tests.rs",
+    "file": "native/kde-snap-shot/src/main.rs",
     "line": "\"/com/t3tools/KdeCapture\","
   },
   {
     "file": "native/kde-snap-shot/src/transport_tests.rs",
-    "line": "Some(\"com.t3tools.KdeCapture\"),"
+    "line": "\"/com/t3tools/KdeCapture\","
   },
   {
     "file": "oxlint-plugin-t2code/rules/no-native-title-tooltip.test.ts",
     "line": "rule.valid(\"allows document.title assignments\", `document.title = \"Thread · T3 Code\";`);"
-  },
-  {
-    "file": "oxlint-plugin-t3code/index.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/package.json",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/namespace-node-imports.test.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/namespace-node-imports.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-global-process-runtime.test.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-global-process-runtime.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-hermes-unsupported-apis.test.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-hermes-unsupported-apis.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-hermes-unsupported-array-methods.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-inline-schema-compile.test.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-inline-schema-compile.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-manual-effect-runtime-in-tests.test.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-manual-effect-runtime-in-tests.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-mobile-uniwind-theme-escape-hatches.test.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-mobile-uniwind-theme-escape-hatches.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-native-title-tooltip.test.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-native-title-tooltip.test.ts",
-    "line": "rule.valid(\"allows document.title assignments\", `document.title = \"Thread · T3 Code\";`);"
-  },
-  {
-    "file": "oxlint-plugin-t3code/rules/no-native-title-tooltip.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/test/utils.ts",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/tsconfig.json",
-    "line": ""
-  },
-  {
-    "file": "oxlint-plugin-t3code/utils.ts",
-    "line": ""
   },
   {
     "file": "packages/client-runtime/src/authorization/layer.test.ts",
@@ -996,243 +168,11 @@
     "line": "displayName: \"T3 Code\","
   },
   {
-    "file": "packages/client-runtime/src/state/projectGrouping.test.ts",
-    "line": "owner: \"t3tools\","
-  },
-  {
-    "file": "packages/client-runtime/src/state/sourceControl.test.ts",
-    "line": "nameWithOwner: \"t3tools/t3code\","
-  },
-  {
-    "file": "packages/client-runtime/src/state/sourceControl.test.ts",
-    "line": "repository: \"t3tools/t3code\","
-  },
-  {
     "file": "packages/client-runtime/src/state/threadReducer.test.ts",
     "line": "title: \"T3 Code\","
   },
   {
-    "file": "packages/client-runtime/src/work-log/presentation.test.ts",
-    "line": "toolSource: { key: \"t2-code\", name: \"T3 Code\", kind: \"integration\" },"
-  },
-  {
-    "file": "packages/contracts/src/relay.ts",
-    "line": "\"Clerk session or OAuth bearer token for the signed-in T3 Connect user.\","
-  },
-  {
-    "file": "packages/shared/src/changeRequestUrl.test.ts",
-    "line": ").toEqual({ host: \"gitlab.com\", repository: \"t3tools/platform/t3code\", number: 42 });"
-  },
-  {
-    "file": "packages/shared/src/changeRequestUrl.test.ts",
-    "line": "repository: \"t3tools/t3code\","
-  },
-  {
-    "file": "packages/shared/src/cliRelease.ts",
-    "line": "export const CLI_RELEASE_BASE_URL_LEGACY_ENV = \"T3CODE_RELEASE_BASE_URL\";"
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "\"dev.azure.com/t3tools/platform/_git/t3code\","
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "\"ssh.dev.azure.com/v3/t3tools/t3code\","
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "\"ssh.dev.azure.com/v4/t3tools/platform/t3code\","
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "\"t3tools.visualstudio.com/platform/_git/t3code\","
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": ").toBe(\"T3Tools/T3Code\");"
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": ").toBe(\"dev.azure.com/t3tools/platform/_git/t3code\");"
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": ").toBe(\"t3tools.visualstudio.com/platform/_git/t3code\");"
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "expect(normalizeGitRemoteUrl(\"git@ssh.dev.azure.com:v3/T3Tools/Platform/T3Code\")).toBe("
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "expect(normalizeGitRemoteUrl(\"git@ssh.dev.azure.com:v3/T3Tools/T3Code\")).toBe("
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "expect(normalizeGitRemoteUrl(\"git@ssh.dev.azure.com:v4/T3Tools/Platform/T3Code\")).toBe("
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "expect(normalizeGitRemoteUrl(\"https://T3Tools.visualstudio.com/Platform/_git/T3Code\")).toBe("
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "expect(normalizeGitRemoteUrl(\"ssh://git@ssh.dev.azure.com:22/v3/T3Tools/Platform/T3Code\")).toBe("
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "normalizeGitRemoteUrl(\"T3Tools@vs-ssh.visualstudio.com:v3/T3Tools/Platform/T3Code\"),"
-  },
-  {
-    "file": "packages/shared/src/git.test.ts",
-    "line": "normalizeGitRemoteUrl(\"https://T3Tools@dev.azure.com/T3Tools/Platform/_git/T3Code\"),"
-  },
-  {
-    "file": "packages/shared/src/projectScripts.ts",
-    "line": "T3CODE_PROJECT_ROOT: input.project.cwd,"
-  },
-  {
-    "file": "packages/shared/src/projectScripts.ts",
-    "line": "env.T3CODE_WORKTREE_PATH = input.worktreePath;"
-  },
-  {
-    "file": "packages/shared/src/sourceControl.test.ts",
-    "line": "expect(selector).toBe(\"t3tools/t3code\");"
-  },
-  {
-    "file": "packages/shared/src/sourceControl.test.ts",
-    "line": "owner: \"t3tools\","
-  },
-  {
-    "file": "packaging/aur/t3code-bin/PKGBUILD",
-    "line": ""
-  },
-  {
-    "file": "packaging/aur/t3code-nightly-bin/PKGBUILD",
-    "line": ""
-  },
-  {
-    "file": "scripts/build-desktop-artifact.ts",
-    "line": "env.T2CODE_CLERK_PASSKEY_RP_DOMAINS ?? env.T3CODE_CLERK_PASSKEY_RP_DOMAINS"
-  },
-  {
-    "file": "scripts/build-desktop-artifact.ts",
-    "line": "env.T2CODE_CLERK_PUBLISHABLE_KEY ?? env.T3CODE_CLERK_PUBLISHABLE_KEY"
-  },
-  {
-    "file": "scripts/dev-runner.ts",
-    "line": "(hostEnvironment.T3CODE_HOME?.trim() || undefined);"
-  },
-  {
-    "file": "scripts/dev-runner.ts",
-    "line": "delete output.T3CODE_DEV_AUTH_TOKEN;"
-  },
-  {
-    "file": "scripts/dev-runner.ts",
-    "line": "delete output.T3CODE_HOME;"
-  },
-  {
-    "file": "scripts/install.ps1",
-    "line": "$baseUrl = if ($env:T2CODE_RELEASE_BASE_URL) { $env:T2CODE_RELEASE_BASE_URL.TrimEnd(\"/\") } elseif ($env:T3CODE_RELEASE_BASE_URL) { $env:T3CODE_RELEASE_BASE_URL.TrimEnd(\"/\") } else { \"https://github.com/$repo/releases/download\" }"
-  },
-  {
-    "file": "scripts/install.ps1",
-    "line": "$binDir = if ($env:T2CODE_INSTALL_BIN_DIR) { $env:T2CODE_INSTALL_BIN_DIR } elseif ($env:T3CODE_INSTALL_BIN_DIR) { $env:T3CODE_INSTALL_BIN_DIR } else { Join-Path $HOME \".local\\bin\" }"
-  },
-  {
-    "file": "scripts/install.ps1",
-    "line": "$channel = if ($env:T2CODE_CHANNEL) { $env:T2CODE_CHANNEL } elseif ($env:T3CODE_CHANNEL) { $env:T3CODE_CHANNEL } else { \"stable\" }"
-  },
-  {
-    "file": "scripts/install.ps1",
-    "line": "$t3Home = if ($env:T2CODE_HOME) { $env:T2CODE_HOME } elseif ($env:T3CODE_HOME) { $env:T3CODE_HOME } else { Join-Path $HOME \".t3\" }"
-  },
-  {
-    "file": "scripts/install.ps1",
-    "line": "$version = if ($env:T2CODE_VERSION) { $env:T2CODE_VERSION } else { $env:T3CODE_VERSION }"
-  },
-  {
-    "file": "scripts/install.ps1",
-    "line": "if ($channel -ne \"preview\" -and -not ($env:T2CODE_VERSION -or $env:T3CODE_VERSION)) {"
-  },
-  {
-    "file": "scripts/install.sh",
-    "line": "base_url=\"${T2CODE_RELEASE_BASE_URL:-${T3CODE_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}}\""
-  },
-  {
-    "file": "scripts/install.sh",
-    "line": "bin_dir=\"${T2CODE_INSTALL_BIN_DIR:-${T3CODE_INSTALL_BIN_DIR:-$HOME/.local/bin}}\""
-  },
-  {
-    "file": "scripts/install.sh",
-    "line": "channel=\"${T2CODE_CHANNEL:-${T3CODE_CHANNEL:-stable}}\""
-  },
-  {
-    "file": "scripts/install.sh",
-    "line": "if [ \"$channel\" != \"preview\" ] && [ -z \"${T2CODE_VERSION:-}${T3CODE_VERSION:-}\" ]; then"
-  },
-  {
-    "file": "scripts/install.sh",
-    "line": "t3_home=\"${T2CODE_HOME:-${T3CODE_HOME:-$HOME/.t3}}\""
-  },
-  {
-    "file": "scripts/install.sh",
-    "line": "version=\"${T2CODE_VERSION:-${T3CODE_VERSION:-}}\""
-  },
-  {
-    "file": "scripts/lib/public-config.test.ts",
-    "line": "\"T3CODE_CLERK_PUBLISHABLE_KEY=pk_local\\nT3CODE_CLERK_JWT_TEMPLATE=template_local\\nT3CODE_CLERK_CLI_OAUTH_CLIENT_ID=oauth_local\\nT2CODE_RELAY_URL=https://local.example.test\\n\","
-  },
-  {
-    "file": "scripts/lib/public-config.test.ts",
-    "line": "\"T3CODE_CLERK_PUBLISHABLE_KEY=pk_root\\nT3CODE_CLERK_JWT_TEMPLATE=template_root\\nT3CODE_CLERK_CLI_OAUTH_CLIENT_ID=oauth_root\\nT2CODE_RELAY_URL=https://root.example.test\\n\","
-  },
-  {
-    "file": "scripts/lib/public-config.test.ts",
-    "line": "// The root env files above use the legacy T3CODE_CLERK_* spellings; they"
-  },
-  {
-    "file": "scripts/lib/public-config.ts",
-    "line": "\"T3CODE_CLERK_CLI_OAUTH_CLIENT_ID\","
-  },
-  {
-    "file": "scripts/lib/public-config.ts",
-    "line": "\"T3CODE_CLERK_JWT_TEMPLATE\","
-  },
-  {
-    "file": "scripts/lib/public-config.ts",
-    "line": "\"T3CODE_CLERK_PUBLISHABLE_KEY\","
-  },
-  {
-    "file": "apps/mobile/modules/t3-agent-notifications/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t2-composer-editor/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-markdown-text/ios/T3MarkdownTextRunShadowNode.cpp",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-markdown-text/ios/T3MarkdownTextRunShadowNode.h",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-native-controls/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-review-diff/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-subscription-widget/expo-module.config.json",
-    "line": ""
-  },
-  {
-    "file": "apps/mobile/modules/t3-terminal/expo-module.config.json",
-    "line": ""
+    "file": "README.md",
+    "line": "T2 Code is an \"agent harness control surface\". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code)), [web app](https://app.t2.codes) and [Electron-based desktop app](https://github.com/ashutoshpw/t2code/releases)."
   }
 ]
