@@ -195,18 +195,18 @@ mod tests {
     #[test]
     fn destination_requires_unique_process_and_title() {
         assert!(
-            destination(vec![window(2, "T3")], 1, "T3")
+            destination(vec![window(2, "T2")], 1, "T2")
                 .unwrap()
                 .is_none()
         );
         assert!(
-            destination(vec![window(1, "other")], 1, "T3")
+            destination(vec![window(1, "other")], 1, "T2")
                 .unwrap()
                 .is_none()
         );
-        assert!(destination(vec![window(1, "T3"), window(1, "T3")], 1, "T3").is_err());
+        assert!(destination(vec![window(1, "T2"), window(1, "T2")], 1, "T2").is_err());
         assert!(
-            destination(vec![window(2, "T3"), window(1, "T3")], 1, "T3")
+            destination(vec![window(2, "T2"), window(1, "T2")], 1, "T2")
                 .unwrap()
                 .is_some()
         );

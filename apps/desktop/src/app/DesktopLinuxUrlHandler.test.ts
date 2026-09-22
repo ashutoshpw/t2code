@@ -33,8 +33,7 @@ const makeEnvironment = (path: Path.Path, overrides: Record<string, unknown> = {
     linuxWmClass: "t2code",
     linuxApplicationsDir: "/home/alice/.local/share/applications",
     appImagePath: Option.some("/home/alice/Applications/T2-Code.AppImage"),
-    path,
-    ...overrides,
+    path,    ...overrides,
   } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]);
 
 const mockProcess = (exitCode: number, stalled = false) =>
@@ -215,7 +214,6 @@ describe("DesktopLinuxUrlHandler", () => {
 
       return Effect.gen(function* () {
         yield* runRegister(recorded);
-
         assert.deepEqual(recorded.directories, ["/home/alice/.local/share/applications"]);
         assert.equal(recorded.files.length, 1);
         assert.equal(

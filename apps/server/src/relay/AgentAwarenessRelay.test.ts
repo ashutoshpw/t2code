@@ -360,7 +360,7 @@ describe("signRelayAgentActivityPublishProof", { concurrent: false }, () => {
         projects: [
           {
             id: projectId,
-            title: "T3 Code",
+            title: "T2 Code",
           },
         ],
         threads: [
@@ -504,7 +504,7 @@ describe("signRelayAgentActivityPublishProof", { concurrent: false }, () => {
 
         const project = {
           id: projectId,
-          title: "T3 Code",
+          title: "T2 Code",
           workspaceRoot: "/workspace",
           repositoryIdentity: null,
           defaultModelSelection: null,
@@ -697,7 +697,7 @@ describe("signRelayAgentActivityPublishProof", { concurrent: false }, () => {
 
         const project = {
           id: projectId,
-          title: "T3 Code",
+          title: "T2 Code",
           workspaceRoot: "/workspace",
           repositoryIdentity: null,
           defaultModelSelection: null,
