@@ -158,7 +158,7 @@ describe("resolveProjectSettings", () => {
   });
 });
 
-describe("resolveProjectSettings with a t3.json", () => {
+describe("resolveProjectSettings with a t2.json", () => {
   it("walks project override, environment value, file, then built-in for file-backed keys", () => {
     const file = { defaultThreadEnvMode: "worktree" as const };
     const fromOverride = resolveProjectSettings(
@@ -184,7 +184,7 @@ describe("resolveProjectSettings with a t3.json", () => {
 
     const fromFile = resolveProjectSettings(DEFAULT_SERVER_SETTINGS, projectId, null, file);
     expect(fromFile.settings.defaultThreadEnvMode).toBe("worktree");
-    expect(fromFile.sources.defaultThreadEnvMode).toBe("t3.json");
+    expect(fromFile.sources.defaultThreadEnvMode).toBe("t2.json");
 
     const builtIn = resolveProjectSettings(DEFAULT_SERVER_SETTINGS, projectId, null, null);
     expect(builtIn.settings.defaultThreadEnvMode).toBe("local");
@@ -199,7 +199,7 @@ describe("resolveProjectSettings with a t3.json", () => {
       file,
     );
     expect(nullOverride.settings.defaultThreadEnvMode).toBe("worktree");
-    expect(nullOverride.sources.defaultThreadEnvMode).toBe("t3.json");
+    expect(nullOverride.sources.defaultThreadEnvMode).toBe("t2.json");
     expect(
       resolveProjectSettings(DEFAULT_SERVER_SETTINGS, projectId, null, {}).sources
         .defaultThreadEnvMode,
