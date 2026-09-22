@@ -53,7 +53,5 @@ rg -no "(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+" -g '!node_modules' -g '!.t3' -g
 
 - Marketing testimonials in `apps/marketing/src/lib/tweets.ts` quote real people saying "T3" — never rewrite quotes.
 - The `T3 Chat` palette (comments, tests, and the palette label) references the t3.chat product, not this fork.
-- `packages/client-runtime/src/errors/transport.ts` matches a legacy "Unable to connect to the T3 server WebSocket." error string, and its test asserts the legacy spelling.
-- Work-log fixtures use lowercase `t3-code` on purpose: `packages/client-runtime/src/work-log/presentation.ts` recognizes both `t2-code` and `t3-code` MCP prefixes from older servers.
-- The session cookie is `t2_session`; `apps/server/src/auth/utils.ts` still reads the bare legacy `t3_session` name so remote-web sessions survive the rename.
-- `t3_relay` stays in `RelayManagedEndpointProviderKind`: it is a persisted relay value that the server deliberately rejects, not a current provider.
+- `t2_relay` stays in `RelayManagedEndpointProviderKind`: it is a persisted relay value that the server deliberately rejects, not a current provider.
+- The `~/.t3` home adoption in `apps/server/src/os-jank.ts` is a one-time data migration for pre-rename installs; it is the only remaining legacy path, kept so existing users do not lose their state.
