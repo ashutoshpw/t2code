@@ -179,7 +179,7 @@ jobs:
       - name: Test
         run: vp run --parallel --concurrency-limit 4 --filter '!@t2code/cli' --filter '!@t2code/monorepo' test
 
-  # apps/server sets `fileParallelism: false`, so its 239 files run strictly
+  # apps/server sets `fileParallelism: false`, so its 338 files run strictly
   # one at a time. Sharding spreads them over separate runners instead of
   # separate workers, so no two server test files ever share a machine and the
   # isolation that flag buys is preserved exactly.
