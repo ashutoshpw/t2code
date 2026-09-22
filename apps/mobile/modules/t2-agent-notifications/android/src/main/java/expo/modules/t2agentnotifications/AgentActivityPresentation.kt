@@ -11,6 +11,11 @@ import androidx.core.content.ContextCompat
 
 internal data class ActivityRow(val status: String, val title: String, val project: String)
 
+/**
+ * One entry per relay phase. The status label matches the relay's row wording and the
+ * tint matches the web sidebar pills and the iOS Live Activity so a thread reads the
+ * same on every surface. The icon is always the T2 mark; the chip verb carries the state.
+ */
 internal enum class ActivityPhase(
   val status: String,
   val heading: String,
