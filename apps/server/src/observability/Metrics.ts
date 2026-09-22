@@ -7,11 +7,11 @@ import { dual } from "effect/Function";
 
 import { compactMetricAttributes, outcomeFromExit } from "./Attributes.ts";
 
-export const rpcRequestsTotal = Metric.counter("t3_rpc_requests_total", {
+export const rpcRequestsTotal = Metric.counter("t2_rpc_requests_total", {
   description: "Total RPC requests handled by the websocket RPC server.",
 });
 
-export const rpcRequestDuration = Metric.timer("t3_rpc_request_duration", {
+export const rpcRequestDuration = Metric.timer("t2_rpc_request_duration", {
   description: "RPC request handling duration.",
 });
 
@@ -39,19 +39,19 @@ export const providerTurnDuration = Metric.timer("t3_provider_turn_duration", {
   description: "Time for the provider adapter to start a turn, not how long the turn runs.",
 });
 
-export const gitCommandsTotal = Metric.counter("t3_git_commands_total", {
+export const gitCommandsTotal = Metric.counter("t2_git_commands_total", {
   description: "Total git commands executed by the server runtime.",
 });
 
-export const gitCommandDuration = Metric.timer("t3_git_command_duration", {
+export const gitCommandDuration = Metric.timer("t2_git_command_duration", {
   description: "Git command execution duration.",
 });
 
-export const terminalSessionsTotal = Metric.counter("t3_terminal_sessions_total", {
+export const terminalSessionsTotal = Metric.counter("t2_terminal_sessions_total", {
   description: "Total terminal sessions started.",
 });
 
-export const terminalRestartsTotal = Metric.counter("t3_terminal_restarts_total", {
+export const terminalRestartsTotal = Metric.counter("t2_terminal_restarts_total", {
   description: "Total terminal restart requests handled.",
 });
 
