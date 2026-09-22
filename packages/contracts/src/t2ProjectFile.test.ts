@@ -8,7 +8,7 @@ const decode = Schema.decodeUnknownSync(T2ProjectFile);
 describe("T2ProjectFile", () => {
   it("decodes a full project file", () => {
     const decoded = decode({
-      $schema: "https://t3.codes/schema/t2.json",
+      $schema: "https://t2.codes/schema/t2.json",
       iconPath: "assets/logo.svg",
       scripts: [
         {
