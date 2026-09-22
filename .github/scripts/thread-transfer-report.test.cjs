@@ -79,10 +79,10 @@ test("renders baseline, impact, ceiling, and ceiling changes", () => {
   assert.match(comment, /\+9\.8 KiB \(\+4\.0%\)/);
   assert.match(comment, /This PR changes transfer ceilings/);
   assert.match(comment, /312\.5 KiB → 322\.3 KiB/);
-  assert.match(comment, /<!-- t3-thread-transfer-report -->/);
+  assert.match(comment, /<!-- t2-thread-transfer-report -->/);
   assert.match(
     comment,
-    /<!-- t3-thread-transfer-result-sha:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb -->/,
+    /<!-- t2-thread-transfer-result-sha:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb -->/,
   );
 });
 
@@ -261,7 +261,7 @@ test("preserves a successful result when a same-SHA rerun has no artifact", asyn
         {
           id: 1,
           user: { login: "github-actions[bot]" },
-          body: `<!-- t3-thread-transfer-report -->\n<!-- t3-thread-transfer-result-sha:${sha} -->`,
+          body: `<!-- t2-thread-transfer-report -->\n<!-- t2-thread-transfer-result-sha:${sha} -->`,
         },
       ],
       rest: {

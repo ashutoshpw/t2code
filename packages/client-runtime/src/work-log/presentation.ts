@@ -87,14 +87,14 @@ const T2_MCP_TOOL_LABELS: Record<
   update_scheduled_task: ["Update", "Updating", "Updated", "a scheduled task"],
   delete_scheduled_task: ["Delete", "Deleting", "Deleted", "a scheduled task"],
   create_threads: ["Create", "Creating", "Created", "T2 threads"],
-  t3_thread_start: ["Start", "Starting", "Started", "a T2 thread"],
-  t3_thread_list: ["List", "Listing", "Listed", "T2 threads"],
-  t3_thread_read: ["Read", "Reading", "Read", "a T2 thread"],
-  t3_thread_send: ["Send", "Sending", "Sent", "to a T2 thread"],
-  t3_thread_wait: ["Wait", "Waiting", "Waited", "for a T2 thread"],
-  t3_thread_interrupt: ["Interrupt", "Interrupting", "Interrupted", "a T2 thread"],
-  t3_worktree_handoff: ["Hand off", "Handing off", "Handed off", "thread to a git worktree"],
-  t3_worktree_status: ["Get", "Getting", "Got", "thread worktree status"],
+  t2_thread_start: ["Start", "Starting", "Started", "a T2 thread"],
+  t2_thread_list: ["List", "Listing", "Listed", "T2 threads"],
+  t2_thread_read: ["Read", "Reading", "Read", "a T2 thread"],
+  t2_thread_send: ["Send", "Sending", "Sent", "to a T2 thread"],
+  t2_thread_wait: ["Wait", "Waiting", "Waited", "for a T2 thread"],
+  t2_thread_interrupt: ["Interrupt", "Interrupting", "Interrupted", "a T2 thread"],
+  t2_worktree_handoff: ["Hand off", "Handing off", "Handed off", "thread to a git worktree"],
+  t2_worktree_status: ["Get", "Getting", "Got", "thread worktree status"],
   preview_status: ["Get", "Getting", "Got", "preview browser status"],
   preview_open: ["Open", "Opening", "Opened", "a page in the preview browser"],
   preview_navigate: ["Navigate", "Navigating", "Navigated", "the preview browser"],
@@ -138,7 +138,7 @@ function resolveT2McpToolPresentation(
 ) {
   if (!value) return null;
   const name = normalizeCompactToolLabel(value).replace(
-    /^(?:mcp__(?:t2-code|t2_code|t3-code|t3_code|t2code)__|(?:t2-code|t2_code|t3-code|t3_code|t2code)(?:[.:/]|\s*·\s*))/i,
+    /^(?:mcp__(?:t2-code|t2_code|t2code)__|(?:t2-code|t2_code|t2code)(?:[.:/]|\s*·\s*))/i,
     "",
   );
   if (!Object.hasOwn(T2_MCP_TOOL_LABELS, name)) return null;

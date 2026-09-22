@@ -72,10 +72,6 @@
     "line": "\"/com/t3tools/KdeCapture\","
   },
   {
-    "file": "packages/client-runtime/src/errors/transport.test.ts",
-    "line": "expect(isTransportConnectionErrorMessage(\"Unable to connect to the T3 server WebSocket.\")).toBe("
-  },
-  {
     "file": "README.md",
     "line": "T2 Code is an \"agent harness control surface\". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code)), [web app](https://app.t2.codes) and [Electron-based desktop app](https://github.com/ashutoshpw/t2code/releases)."
   }

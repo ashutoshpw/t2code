@@ -548,8 +548,8 @@ function shouldRetainDecodedRecord(
  * T2 Code runs its own agent sessions inside disposable worktrees. Their
  * transcripts look exactly like user sessions, but re-importing the app's own
  * sandboxes as projects is never right. Matches this server's configured
- * worktrees directory plus the conventional `.t3/worktrees` layout, which
- * also catches sandboxes from other T2 homes on the same machine. Separators
+ * worktrees directory, which also catches sandboxes from other T2 homes on
+ * the same machine. Separators
  * are normalized (and, on Windows, case folded) so the prefix match holds
  * there too. Callers check both the recorded spelling and its realpath so a
  * symlink into the worktrees directory cannot bypass the filter.
@@ -567,8 +567,7 @@ function isT2ManagedWorktree(
   const normalized = normalizeForWorktreeMatch(candidatePath, caseFold);
   return (
     normalized.startsWith(normalizeForWorktreeMatch(worktreesDir, caseFold)) ||
-    normalized.includes("/.t2/worktrees/") ||
-    normalized.includes("/.t3/worktrees/")
+    normalized.includes("/.t2/worktrees/")
   );
 }
 

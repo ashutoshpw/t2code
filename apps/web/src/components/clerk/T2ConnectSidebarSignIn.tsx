@@ -31,7 +31,6 @@ function ConfiguredT2ConnectSidebarAvatar() {
         },
       }}
     >
-<<<<<<< HEAD
       {T2_CONNECT_ACCOUNT_PAGES.map((page) => (
         <UserButton.UserProfilePage
           key={page.url}
@@ -41,24 +40,8 @@ function ConfiguredT2ConnectSidebarAvatar() {
         >
           {page.content}
         </UserButton.UserProfilePage>
-      ))}    </UserButton>
-=======
-      <UserButton.UserProfilePage
-        label="Mobile clients"
-        labelIcon={<SmartphoneIcon className="size-4" />}
-        url="mobile-clients"
-      >
-        <MobileClientsUserProfilePage />
-      </UserButton.UserProfilePage>
-      <UserButton.UserProfilePage
-        label="T2 Connect"
-        labelIcon={<ServerIcon className="size-4" />}
-        url="t2-connect"
-      >
-        <T2ConnectUserProfilePage />
-      </UserButton.UserProfilePage>
+      ))}
     </UserButton>
->>>>>>> 2c17c9f86 (rebrand: scope agent-facing identifiers to t2)
   );
 }
 
