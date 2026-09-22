@@ -94,4 +94,4 @@ Downloads, it may need Full Disk Access for the `t2code` executable listed in
 `~/Library/LaunchAgents/com.t2tools.t2code.service.plist`.
 
 For failures after signing in to T2 Connect, see
-[connection troubleshooting](./remote-access.md#t3-connect-troubleshooting).
+[connection troubleshooting](./remote-access.md#t2-connect-troubleshooting).

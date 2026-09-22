@@ -18,7 +18,7 @@ Lots of apps have gotten bogged down with bad tech decisions and "slop". We have
 
 ### 3. Remote ready
 
-The architecture of T2 Code's websocket layer (npx @t2code/cli) enables a lot of awesome remote features. These have become core to the product. Whether users are connecting directly over their local network, using Tailscale, or leaning in fully with T3 Connect (our tunnel solution, also in this repo), we need to make sure new features are properly supported.
+The architecture of T2 Code's websocket layer (npx @t2code/cli) enables a lot of awesome remote features. These have become core to the product. Whether users are connecting directly over their local network, using Tailscale, or leaning in fully with T2 Connect (our tunnel solution, also in this repo), we need to make sure new features are properly supported.
 
 ### 4. Multi-surface
 
@@ -54,7 +54,7 @@ We need to be on the same page with terminology. When communicating, use this la
 - **project** means an environment-local workspace record rooted at a directory.
 - **thread** means the durable conversation and work history for a project.
 - **turn** means one user-to-agent cycle, including follow-up work such as checkpointing.
-- **T3 home** means the base data directory. Runtime state normally lives below its userdata directory.
+- **T2 home** means the base data directory. Runtime state normally lives below its userdata directory.
 
 ## The three ways to hurt yourself
 

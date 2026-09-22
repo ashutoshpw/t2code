@@ -33,7 +33,7 @@ export class CliUninstallError extends Schema.TaggedError<CliUninstallError>()(
 }
 
 /**
- * What `t2code uninstall` would remove for one T3 home. Computed before anything
+ * What `t2code uninstall` would remove for one T2 home. Computed before anything
  * is touched so the user sees the whole plan in one place.
  */
 export interface UninstallPlan {

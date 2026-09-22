@@ -399,7 +399,7 @@ const runUpdate = Effect.fn("cli.update.run")(function* (input: {
   // Work out everything that will be touched before touching anything, so the
   // user sees one plan and one question rather than a surprise restart.
   const status = yield* service.status;
-  // The unit name is per user, not per T3 home. Only touch the service when it
+  // The unit name is per user, not per T2 home. Only touch the service when it
   // serves the home this update targets; otherwise it belongs to another
   // install on this machine and restarting it would take that server down.
   const servesThisHome =
@@ -468,7 +468,7 @@ const runUpdate = Effect.fn("cli.update.run")(function* (input: {
   let restartService = false;
   if (serviceInstalled && !serviceCurrent) {
     yield* Console.log(
-      "  A background service is installed for this T3 home. Restarting it interrupts anything running in it: agent turns, terminals, remote clients.",
+      "  A background service is installed for this T2 home. Restarting it interrupts anything running in it: agent turns, terminals, remote clients.",
     );
     if (input.assumeYes) {
       restartService = true;
@@ -593,7 +593,7 @@ const runUpdate = Effect.fn("cli.update.run")(function* (input: {
     );
   } else if (status.installed && !servesThisHome) {
     yield* Console.log(
-      `  The background service serves ${status.installedBaseDir ?? "another T3 home"} and was left unchanged.`,
+      `  The background service serves ${status.installedBaseDir ?? "another T2 home"} and was left unchanged.`,
     );
   }
   if (foreground !== undefined) {
