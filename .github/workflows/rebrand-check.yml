@@ -16,3 +16,4 @@ jobs:
           node-version: 24
       - run: node scripts/check-rebrand.ts --tree
       - run: node scripts/check-rebrand.ts --check-baseline
+      - run: node scripts/check-doc-links.ts
