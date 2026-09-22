@@ -141,7 +141,7 @@ it("does not activate T3 until requested, then matches PID and title", async () 
   expect(calls).toContainEqual({ Action: { FocusWindow: { id: 3 } } });
 });
 
-it("waits for the restored T3 window to map instead of polling", async () => {
+it("waits for the restored T2 window to map instead of polling", async () => {
   const snapshot = await captureNiriWindow(socketPath);
   const original = handler;
   handler = async (request, socket) => {

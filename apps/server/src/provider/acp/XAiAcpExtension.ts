@@ -254,7 +254,7 @@ export interface XAiExitPlanModeResponse {
 }
 
 /**
- * Client captured the plan for T3's proposed-plan card. Abandon the native
+ * Client captured the plan for T2's proposed-plan card. Abandon the native
  * Grok plan-approval gate so the turn unblocks; the user implements via T3 UI.
  */
 export function makeXAiExitPlanModeCapturedResponse(feedback?: string): XAiExitPlanModeResponse {

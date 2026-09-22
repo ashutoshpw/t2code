@@ -42,10 +42,11 @@ The repo ships a brand guard: pre-commit and pre-push hooks run `scripts/check-r
 ```sh
 node scripts/check-rebrand.ts --tree
 node scripts/check-rebrand.ts --check-baseline
+node scripts/check-rebrand.ts --audit
 node scripts/check-doc-links.ts
 ```
 
-`check-doc-links.ts` validates relative Markdown targets and heading anchors offline, so a renamed page (like `t3-connect.md` -> `t2-connect.md`) cannot leave stale links behind.
+`check-doc-links.ts` validates relative Markdown targets and heading anchors offline, so a renamed page (like `t3-connect.md` -> `t2-connect.md`) cannot leave stale links behind. `--audit` prints the bare `T3` tokens no rule names (legal entities, compatibility ids, fixtures, and un-rebranded copy) without failing; use its output to decide whether to add a rule or schedule a sweep.
 
 Hits that are genuinely intentional (legacy compat, upstream references) get exempted via the allowlists in `scripts/check-rebrand.ts` or `scripts/rebrand-baseline.json` (`node scripts/check-rebrand.ts --update-baseline`) — review that diff like code, never `--no-verify`.
 
