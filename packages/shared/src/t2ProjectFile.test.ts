@@ -14,7 +14,7 @@ describe("buildT2ProjectFileJsonSchema", () => {
     const schema = buildT2ProjectFileJsonSchema();
 
     expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-    expect(schema.$id).toBe("https://t3.codes/schema/t2.json");
+    expect(schema.$id).toBe("https://t2.codes/schema/t2.json");
     expect(schema.type).toBe("object");
     expect(schema.additionalProperties).toBe(false);
   });
