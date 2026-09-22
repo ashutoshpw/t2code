@@ -7,11 +7,11 @@ import { dual } from "effect/Function";
 
 import { compactMetricAttributes, outcomeFromExit } from "./Attributes.ts";
 
-export const rpcRequestsTotal = Metric.counter("t3_rpc_requests_total", {
+export const rpcRequestsTotal = Metric.counter("t2_rpc_requests_total", {
   description: "Total RPC requests handled by the websocket RPC server.",
 });
 
-export const rpcRequestDuration = Metric.timer("t3_rpc_request_duration", {
+export const rpcRequestDuration = Metric.timer("t2_rpc_request_duration", {
   description: "RPC request handling duration.",
 });
 
@@ -48,50 +48,50 @@ export const providerTurnDuration = Metric.timer("t3_provider_turn_duration", {
 });
 
 // OTLP carries the unit, and Prometheus names the series by it: a unitless gauge gains `_ratio`.
-export const serverResidentBytes = Metric.gauge("t3_server_resident_bytes", {
+export const serverResidentBytes = Metric.gauge("t2_server_resident_bytes", {
   description: "Resident memory of the server process.",
   attributes: { unit: "By" },
 });
 
-export const serverHeapUsedBytes = Metric.gauge("t3_server_heap_used_bytes", {
+export const serverHeapUsedBytes = Metric.gauge("t2_server_heap_used_bytes", {
   description: "JavaScript heap in use by the server process.",
   attributes: { unit: "By" },
 });
 
-export const serverCpuUtilization = Metric.gauge("t3_server_cpu_utilization", {
+export const serverCpuUtilization = Metric.gauge("t2_server_cpu_utilization", {
   description: "CPU time the server used per second over the last sample; 1 is one full core.",
 });
 
-export const serverEventLoopUtilization = Metric.gauge("t3_server_event_loop_utilization", {
+export const serverEventLoopUtilization = Metric.gauge("t2_server_event_loop_utilization", {
   description: "Share of the last sample the server's event loop spent busy.",
 });
 
-export const serverEventLoopDelayMax = Metric.gauge("t3_server_event_loop_delay_max", {
+export const serverEventLoopDelayMax = Metric.gauge("t2_server_event_loop_delay_max", {
   description: "Longest event loop delay over the last sample.",
   attributes: { unit: "ms" },
 });
 
-export const runsTotal = Metric.counter("t3_runs_total", {
+export const runsTotal = Metric.counter("t2_runs_total", {
   description: "Runs that finished, by outcome. A later rollback does not count again.",
 });
 
-export const runDuration = Metric.timer("t3_run_duration", {
+export const runDuration = Metric.timer("t2_run_duration", {
   description: "Wall time of a run, from when it started to its terminal status.",
 });
 
-export const runQueueWait = Metric.timer("t3_run_queue_wait", {
+export const runQueueWait = Metric.timer("t2_run_queue_wait", {
   description: "Time a run waited between being requested and starting.",
 });
 
-export const gitCommandsTotal = Metric.counter("t3_git_commands_total", {
+export const gitCommandsTotal = Metric.counter("t2_git_commands_total", {
   description: "Total git commands executed by the server runtime.",
 });
 
-export const gitCommandDuration = Metric.timer("t3_git_command_duration", {
+export const gitCommandDuration = Metric.timer("t2_git_command_duration", {
   description: "Git command execution duration.",
 });
 
-export const terminalSessionsTotal = Metric.counter("t3_terminal_sessions_total", {
+export const terminalSessionsTotal = Metric.counter("t2_terminal_sessions_total", {
   description: "Total terminal sessions started.",
 });
 

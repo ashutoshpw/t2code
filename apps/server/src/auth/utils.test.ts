@@ -101,8 +101,8 @@ describe("session cookie isolation", () => {
       development: true,
     });
 
-    expect(first).toMatch(/^t3_session_5775_[a-f0-9]{12}$/);
-    expect(second).toMatch(/^t3_session_5775_[a-f0-9]{12}$/);
+    expect(first).toMatch(/^t2_session_5775_[a-f0-9]{12}$/);
+    expect(second).toMatch(/^t2_session_5775_[a-f0-9]{12}$/);
     expect(first).not.toBe(second);
   });
 
@@ -125,8 +125,8 @@ describe("session cookie isolation", () => {
       development: false,
     });
 
-    expect(first).toMatch(/^t3_session_[a-f0-9]{12}$/);
-    expect(second).toMatch(/^t3_session_[a-f0-9]{12}$/);
+    expect(first).toMatch(/^t2_session_[a-f0-9]{12}$/);
+    expect(second).toMatch(/^t2_session_[a-f0-9]{12}$/);
     expect(first).not.toBe(second);
   });
 
@@ -161,7 +161,7 @@ describe("session cookie isolation", () => {
         environmentId: "environment-one",
         development: true,
       }),
-    ).toBe("t3_session_3772");
+    ).toBe("t2_session_3772");
   });
 
   it("isolates development servers even when they bind a wildcard host", () => {
@@ -174,7 +174,7 @@ describe("session cookie isolation", () => {
         environmentId: "environment-one",
         development: true,
       }),
-    ).toMatch(/^t3_session_5775_[a-f0-9]{12}$/);
+    ).toMatch(/^t2_session_5775_[a-f0-9]{12}$/);
   });
 
   it("classifies loopback aliases separately from remotely reachable hosts", () => {
