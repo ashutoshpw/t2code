@@ -26,6 +26,28 @@ describe("isTransportConnectionErrorMessage", () => {
       ),
     ).toBe(false);
   });
+
+  it("returns true for the T3 server WebSocket message", () => {
+    expect(isTransportConnectionErrorMessage("Unable to connect to the T2 server WebSocket.")).toBe(
+      true,
+    );
+  });
+
+  it("returns true for ping timeout", () => {
+    expect(isTransportConnectionErrorMessage("ping timeout")).toBe(true);
+  });
+
+  it("returns false for business logic errors", () => {
+    expect(isTransportConnectionErrorMessage("Thread not found")).toBe(false);
+    expect(isTransportConnectionErrorMessage("Invalid model selection")).toBe(false);
+  });
+
+  it("returns false for null, undefined, and empty strings", () => {
+    expect(isTransportConnectionErrorMessage(null)).toBe(false);
+    expect(isTransportConnectionErrorMessage(undefined)).toBe(false);
+    expect(isTransportConnectionErrorMessage("")).toBe(false);
+    expect(isTransportConnectionErrorMessage("   ")).toBe(false);
+  });
 });
 
 describe("sanitizeThreadErrorMessage", () => {
