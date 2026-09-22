@@ -50,7 +50,7 @@ We need to be on the same page with terminology. When communicating, use this la
 - **agent** means the coding agent a user runs inside T2 Code. Depending on context, that may also include you.
 - **provider** means the agent runtime or harness T2 Code talks to, such as Codex, Claude, Cursor, or OpenCode.
 - **client** means the web, desktop, or mobile UI.
-- **environment** means one running T3 server and the machine, filesystem, provider credentials, and state it owns.
+- **environment** means one running T2 server and the machine, filesystem, provider credentials, and state it owns.
 - **project** means an environment-local workspace record rooted at a directory.
 - **thread** means the durable conversation and work history for a project.
 - **turn** means one user-to-agent cycle, including follow-up work such as checkpointing.
