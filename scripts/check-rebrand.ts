@@ -11,6 +11,7 @@
 //   --push              added lines in every pushed ref range on stdin (pre-push)
 //   --tree              every tracked file (local audit / CI)
 //   --range <a..b>      added lines in one diff range
+//   --check-baseline    fail when scripts/rebrand-baseline.json differs from the tree (CI)
 //   --update-baseline   regenerate scripts/rebrand-baseline.json from the tree
 //
 // Intentional T3 strings (legacy compat, upstream references) are exempted via
@@ -193,11 +194,14 @@ function baselineKey(entry: Entry): string {
 }
 
 function loadBaseline(): Set<string> {
+  return new Set(readBaselineEntries().map(baselineKey));
+}
+
+function readBaselineEntries(): Entry[] {
   try {
-    const entries = JSON.parse(NodeFS.readFileSync(BASELINE_PATH, "utf8")) as Entry[];
-    return new Set(entries.map(baselineKey));
+    return JSON.parse(NodeFS.readFileSync(BASELINE_PATH, "utf8")) as Entry[];
   } catch {
-    return new Set();
+    return [];
   }
 }
 
@@ -369,6 +373,31 @@ function scanTree(): {
   return { entries, withLines, files };
 }
 
+export function collectBaselineEntries(
+  withLines: Array<Entry & { num: number }>,
+  files: string[],
+): Entry[] {
+  const seen = new Set<string>();
+  const entries: Entry[] = [];
+  for (const entry of withLines) {
+    const key = baselineKey(entry);
+    if (seen.has(key)) continue;
+    if (!RULES.some((rule) => rule.violates(entry.file, entry.line))) continue;
+    seen.add(key);
+    const [file, line] = key.split("\u0000");
+    entries.push({ file: file as string, line: line as string });
+  }
+  for (const file of files) {
+    if (!PATH_RULES.some((rule) => rule.violates(file, ""))) continue;
+    const key = pathBaselineKey(file);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push({ file, line: "" });
+  }
+  entries.sort((a, b) => a.file.localeCompare(b.file) || a.line.localeCompare(b.line));
+  return entries;
+}
+
 function report(violations: Violation[], scope: string, withNumbers?: Map<string, number>): number {
   console.error(
     `rebrand guard: ${violations.length} rebrand violation(s) found in this ${scope}. The fork ships as "T2 Code".`,
@@ -396,7 +425,7 @@ Never bypass with --no-verify. Classification guide:
 
 function usage(): number {
   console.error(
-    "usage: node scripts/check-rebrand.ts [--staged | --push | --tree | --range <a..b> | --update-baseline]",
+    "usage: node scripts/check-rebrand.ts [--staged | --push | --tree | --range <a..b> | --check-baseline | --update-baseline]",
   );
   return 2;
 }
@@ -406,30 +435,37 @@ export function main(argv: string[]): number {
 
   if (argv.includes("--update-baseline")) {
     const { withLines, files } = scanTree();
-    const current = new Set(loadBaseline());
-    const seen = new Set<string>();
-    const entries: Entry[] = [];
-    for (const entry of withLines) {
-      const key = baselineKey(entry);
-      if (seen.has(key)) continue;
-      if (!current.has(key) && !RULES.some((rule) => rule.violates(entry.file, entry.line))) {
-        continue;
-      }
-      seen.add(key);
-      const [file, line] = key.split("\u0000");
-      entries.push({ file: file as string, line: line as string });
-    }
-    for (const file of files) {
-      if (!PATH_RULES.some((rule) => rule.violates(file, ""))) continue;
-      const key = pathBaselineKey(file);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      entries.push({ file, line: "" });
-    }
-    entries.sort((a, b) => a.file.localeCompare(b.file) || a.line.localeCompare(b.line));
+    const entries = collectBaselineEntries(withLines, files);
     NodeFS.writeFileSync(BASELINE_PATH, `${JSON.stringify(entries, null, 2)}\n`);
     process.stdout.write(
       `rebrand guard: baseline refreshed with ${entries.length} intentional hit(s)\n`,
+    );
+    return 0;
+  }
+
+  if (argv.includes("--check-baseline")) {
+    const { withLines, files } = scanTree();
+    const expected = collectBaselineEntries(withLines, files);
+    const current = readBaselineEntries();
+    const expectedKeys = new Set(expected.map(baselineKey));
+    const currentKeys = new Set(current.map(baselineKey));
+    const missing = expected.filter((entry) => !currentKeys.has(baselineKey(entry)));
+    const stale = current.filter((entry) => !expectedKeys.has(baselineKey(entry)));
+    if (missing.length > 0 || stale.length > 0) {
+      console.error("rebrand guard: baseline is out of date with the tree.");
+      for (const entry of missing) {
+        console.error(`  missing  ${entry.file}: ${entry.line.trim() || "<path>"}`);
+      }
+      for (const entry of stale) {
+        console.error(`  stale    ${entry.file}: ${entry.line.trim() || "<path>"}`);
+      }
+      console.error(
+        "\nRefresh it and review the diff:\n\n  node scripts/check-rebrand.ts --update-baseline\n",
+      );
+      return 1;
+    }
+    process.stdout.write(
+      `rebrand guard: baseline matches the tree (${expected.length} intentional hit(s))\n`,
     );
     return 0;
   }
