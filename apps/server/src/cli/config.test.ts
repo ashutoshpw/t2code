@@ -123,35 +123,6 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     }),
   );
 
-  it.effect("honors the legacy T3CODE_HOME env spelling", () =>
-    Effect.gen(function* () {
-      const baseDir = yield* FileSystem.FileSystem.pipe(
-        Effect.flatMap((fs) => fs.makeTempDirectoryScoped({ prefix: "t2-cli-legacy-home-" })),
-      );
-      const flags = {
-        mode: Option.some("desktop" as const),
-        port: Option.some(8788),
-        host: Option.none<string>(),
-        baseDir: Option.none<string>(),
-        cwd: Option.none<string>(),
-        devUrl: Option.none<URL>(),
-        noBrowser: Option.some(true),
-        bootstrapFd: Option.none<number>(),
-        autoBootstrapProjectFromCwd: Option.none<boolean>(),
-        logWebSocketEvents: Option.none<boolean>(),
-        tailscaleServeEnabled: Option.none<boolean>(),
-        tailscaleServePort: Option.none<number>(),
-      };
-      const configLayer = ConfigProvider.layer(
-        ConfigProvider.fromEnv({ env: { T3CODE_HOME: baseDir } }),
-      );
-      const resolved = yield* resolveServerConfig(flags, Option.none()).pipe(
-        Effect.provide(Layer.mergeAll(configLayer, NetService.layer)),
-      );
-      expect(resolved.baseDir).toBe(baseDir);
-    }),
-  );
-
   it.effect("does not expose an invalid reusable auth token", () =>
     Effect.gen(function* () {
       const secret = "short-secret";

@@ -6735,7 +6735,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
   );
 
   for (const mode of ["all", "targeted", "background"] as const) {
-    it.effect(`provider refresh invalidates T3 caches before probing (${mode})`, () => {
+    it.effect(`provider refresh invalidates T2 caches before probing (${mode})`, () => {
       const driver = ProviderDriverKind.make("codex");
       const instanceIds = [ProviderInstanceId.make("codex"), ProviderInstanceId.make("codex_work")];
       const packageNames = ["@example/personal", "@example/work"];

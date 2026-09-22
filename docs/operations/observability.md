@@ -607,11 +607,11 @@ If the OTLP URLs are unset, local tracing still works, metrics stay in-process o
 on stdout only.
 ### The Kill Switch
 
-`T3CODE_OTEL_SDK_DISABLED` and `OTEL_SDK_DISABLED` turn off every OTLP export in both the server and
+`T2CODE_OTEL_SDK_DISABLED` and `OTEL_SDK_DISABLED` turn off every OTLP export in both the server and
 the desktop main process, overriding any endpoint from the environment or Settings. Local trace
 files and stdout logs are unaffected.
 
-`T3CODE_OTEL_SDK_DISABLED` wins when set, so `T3CODE_OTEL_SDK_DISABLED=false` re-enables export on a
+`T2CODE_OTEL_SDK_DISABLED` wins when set, so `T2CODE_OTEL_SDK_DISABLED=false` re-enables export on a
 machine that sets `OTEL_SDK_DISABLED` for everything else. It accepts the usual boolean spellings
 (`true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0`, `y`/`n`). `OTEL_SDK_DISABLED` follows the
 OpenTelemetry specification and only `true` disables export, so `OTEL_SDK_DISABLED=1` does not.

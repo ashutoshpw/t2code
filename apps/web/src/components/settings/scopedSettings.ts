@@ -8,7 +8,7 @@ import {
   type ProjectScopedServerSettingKey,
   type ProjectSettingsOverrides,
   ServerSettings,
-  type T3ProjectFile,
+  type T2ProjectFile,
   type ServerSettingsPatch,
 } from "@t2code/contracts";
 import type { EnvironmentConnectionPhase } from "@t2code/client-runtime/connection";
@@ -87,9 +87,9 @@ export interface ScopedSettingsTarget {
 export function resolveScopedSettingsTargets(
   scope: ResolvedSettingsScope,
   connectedEnvironments: readonly ScopedSettingsEnvironment[],
-  // Each member's decoded t3.json, keyed by physical project key, once read.
+  // Each member's decoded t2.json, keyed by physical project key, once read.
   // A member absent here has no file tier yet; null is a missing or invalid file.
-  projectFiles?: ReadonlyMap<string, T3ProjectFile | null>,
+  projectFiles?: ReadonlyMap<string, T2ProjectFile | null>,
 ): readonly ScopedSettingsTarget[] {
   const byId = new Map(
     connectedEnvironments.map((environment) => [environment.environmentId, environment]),
@@ -156,8 +156,8 @@ export function scopedSettingsSource(
     ? "mixed"
     : sources.has("project")
       ? "project"
-      : sources.has("t3.json")
-        ? "t3.json"
+      : sources.has("t2.json")
+        ? "t2.json"
         : "environment";
 }
 

@@ -20,7 +20,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 import {
   GitCommandError,
-  T3_PROJECT_FILE_NAME,
+  T2_PROJECT_FILE_NAME,
   type ReviewDiffFileContentsInput,
   type ReviewDiffPreviewInput,
   type ReviewDiffFileStat,
@@ -32,7 +32,7 @@ import { dedupeRemoteBranchesWithLocalMatches, normalizeGitRemoteUrl } from "@t2
 import { HostProcessPlatform } from "@t2code/shared/hostProcess";
 import { compactTraceAttributes } from "@t2code/shared/observability";
 import { decodeJsonResult } from "@t2code/shared/schemaJson";
-import { parseT3ProjectFile } from "@t2code/shared/t3ProjectFile";
+import { parseT2ProjectFile } from "@t2code/shared/t2ProjectFile";
 import { resolveProjectFileBackedSetting } from "@t2code/shared/projectSettings";
 import { gitCommandDuration, gitCommandsTotal, withMetrics } from "../observability/Metrics.ts";
 import * as GitVcsDriver from "./GitVcsDriver.ts";
@@ -3106,7 +3106,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
     // `.git/modules`, but a first-ever clone needs the network, and failing to
     // populate a submodule must not roll back the caller's thread. Repos with
     // hundreds of nested submodules opt out or stop at the top level; the
-    // caller resolves that from settings, or the checkout's t3.json decides.
+    // caller resolves that from settings, or the checkout's t2.json decides.
     const hasSubmodules = yield* fileSystem
       .exists(path.join(worktreePath, ".gitmodules"))
       .pipe(Effect.orElseSucceed(() => false));
@@ -3117,11 +3117,11 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
           options?.submodules ?? null,
           options?.submodules != null
             ? null
-            : yield* fileSystem.readFileString(path.join(worktreePath, T3_PROJECT_FILE_NAME)).pipe(
+            : yield* fileSystem.readFileString(path.join(worktreePath, T2_PROJECT_FILE_NAME)).pipe(
                 Effect.flatMap((contents) => {
-                  const file = parseT3ProjectFile(contents);
+                  const file = parseT2ProjectFile(contents);
                   return file === null
-                    ? Effect.logWarning("t3.json is invalid; initializing submodules recursively", {
+                    ? Effect.logWarning("t2.json is invalid; initializing submodules recursively", {
                         worktreePath,
                       }).pipe(Effect.as(null))
                     : Effect.succeed(file);
@@ -3131,7 +3131,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
         );
     if (hasSubmodules && submoduleMode.value === "none" && progress?.onSubmodulesDisabled) {
       yield* progress.onSubmodulesDisabled({
-        source: submoduleMode.source === "t3.json" ? "t3.json" : "settings",
+        source: submoduleMode.source === "t2.json" ? "t2.json" : "settings",
       });
     }
     if (submoduleMode.value !== "none") {

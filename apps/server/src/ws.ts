@@ -76,7 +76,6 @@ import {
   WORKTREE_SETUP_ACTIVITY_KIND,
   worktreeSetupActivityId,
   type WorktreeSetupSnapshot,
-  type WorktreeSetupSnapshot,
 } from "@t2code/contracts";
 import { resolveServerBackgroundActivitySettings } from "@t2code/shared/backgroundActivitySettings";
 import { resolveProjectSettings } from "@t2code/shared/projectSettings";
@@ -1045,7 +1044,7 @@ const makeWsRpcLayer = (
         });
 
       // Project setting > environment setting; null when neither is set so
-      // the driver reads the freshly created checkout's own t3.json (the
+      // the driver reads the freshly created checkout's own t2.json (the
       // branch being checked out may declare something the project root does
       // not). Settings that fail to load fall through the same way.
       const resolveBootstrapWorktreeSubmodules = Effect.fnUntraced(function* (input: {
@@ -2360,7 +2359,7 @@ const makeWsRpcLayer = (
           observeRpcEffect(
             WS_METHODS.serverRefreshProviders,
             Effect.gen(function* () {
-              // Only explicit catalog refreshes bypass T3's caches. Workspace
+              // Only explicit catalog refreshes bypass T2's caches. Workspace
               // discovery and background status checks retain their timers.
               if (input.refreshModels) {
                 yield* modelManifest.forceRefresh;

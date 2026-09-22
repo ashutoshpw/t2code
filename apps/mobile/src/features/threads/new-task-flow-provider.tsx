@@ -21,10 +21,6 @@ import {
 import { sanitizeNewRefName } from "@t2code/shared/git";
 import { resolveProjectSettings } from "@t2code/shared/projectSettings";
 import { parseT2ProjectFile } from "@t2code/shared/t2ProjectFile";
-import {
-  isDefaultThreadEnvModeSettled,
-  resolveDefaultThreadEnvMode,
-} from "@t2code/shared/threadEnvMode";
 import * as Arr from "effect/Array";
 import { pipe } from "effect/Function";
 
@@ -456,23 +452,15 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
       ),
     [selectedEnvironmentServerConfig?.settings, selectedProject, t2ProjectFile],
   );
-  const projectThreadEnvMode =
-    projectSettings.sources.defaultThreadEnvMode === "project"
-      ? projectSettings.settings.defaultThreadEnvMode
-      : undefined;
-  const defaultWorkspaceMode: WorkspaceMode = resolveDefaultThreadEnvMode({
-    projectSetting: projectThreadEnvMode,
-    projectFile: t2ProjectFile?.defaultThreadEnvMode ?? null,
-    globalDefault: projectSettings.settings.defaultThreadEnvMode,
-  });
-  // While unsettled the resolved default is provisional. Nothing may write
-  // it into the draft during that window (the auto-branch effect does), or
-  // the frozen interim value beats the t2.json default once it loads.
-  const defaultWorkspaceModeSettled = isDefaultThreadEnvModeSettled({
-    explicitMode: selectedProjectDraft.workspaceSelection?.mode,
-    projectSetting: projectThreadEnvMode,
-    projectFilePending: t2ProjectFileQuery.isPending,
-  });
+  const defaultWorkspaceMode: WorkspaceMode = projectSettings.settings.defaultThreadEnvMode;
+  // While the file read is pending and nothing above it decided, the
+  // resolved default is provisional. Nothing may write it into the draft
+  // during that window (the auto-branch effect does), or the frozen interim
+  // value beats the t2.json default once it loads.
+  const defaultWorkspaceModeSettled =
+    selectedProjectDraft.workspaceSelection?.mode !== undefined ||
+    projectSettings.sources.defaultThreadEnvMode !== "environment" ||
+    !t2ProjectFileQuery.isPending;
   const workspaceMode = selectedProjectDraft.workspaceSelection?.mode ?? defaultWorkspaceMode;
   const selectedBranchName = selectedProjectDraft.workspaceSelection?.branch ?? null;
   const selectedWorktreePath = selectedProjectDraft.workspaceSelection?.worktreePath ?? null;

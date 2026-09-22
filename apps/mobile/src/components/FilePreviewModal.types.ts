@@ -1,4 +1,4 @@
-import type { AssetResource, EnvironmentId } from "@t3tools/contracts";
+import type { AssetResource, EnvironmentId } from "@t2code/contracts";
 
 import type { FileBackedComposerAttachment } from "../lib/composerImages";
 import type { MediaActionsSource } from "../lib/mediaActions";
