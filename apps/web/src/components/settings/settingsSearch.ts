@@ -1219,7 +1219,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     wslAvailableOnly: true,
   },
   {
-    id: "t3-connect",
+    id: "t2-connect",
     localEnvironmentOnly: true,
     title: "T3 Connect",
     to: "/settings/access",
