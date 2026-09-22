@@ -147,7 +147,6 @@ vi.mock("../lib/chatThreadActions", async (importOriginal) => ({
 vi.mock("../lib/t2ProjectFileDefaults", () => ({
   readT2ProjectFile: () => testState.projectFileRead,
 }));
-}));
 vi.mock("../lib/utils", () => ({
   newDraftId: () => "draft-delayed",
   newThreadId: () => "thread-delayed",

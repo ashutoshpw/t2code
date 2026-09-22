@@ -241,7 +241,7 @@ export function T2ConnectUserProfilePage() {
               <EmptyHeader>
                 <EmptyTitle>No T2 Connect environments</EmptyTitle>
                 <EmptyDescription>
-                  Link an environment from its local Settings to make it available through T3
+                  Link an environment from its local Settings to make it available through T2
                   Connect.
                 </EmptyDescription>
               </EmptyHeader>

@@ -962,16 +962,20 @@ describe("DesktopBackendConfiguration", () => {
 
       const previousWslEnv = process.env.WSLENV;
       const previousDisabled = process.env.OTEL_SDK_DISABLED;
+      const previousT2Disabled = process.env.T2CODE_OTEL_SDK_DISABLED;
       try {
         delete process.env.WSLENV;
         process.env.OTEL_SDK_DISABLED = "true";
+        process.env.T2CODE_OTEL_SDK_DISABLED = "true";
 
         yield* Effect.gen(function* () {
           const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
           const config = yield* configuration.resolveWsl({ port: 5050, distro: null });
 
           assert.equal(config.env.OTEL_SDK_DISABLED, "true");
+          assert.equal(config.env.T2CODE_OTEL_SDK_DISABLED, "true");
           assert.include((config.env.WSLENV ?? "").split(":"), "OTEL_SDK_DISABLED");
+          assert.include((config.env.WSLENV ?? "").split(":"), "T2CODE_OTEL_SDK_DISABLED");
         }).pipe(
           Effect.provide(
             DesktopBackendConfiguration.layer.pipe(
@@ -992,6 +996,7 @@ describe("DesktopBackendConfiguration", () => {
       } finally {
         restoreEnv("WSLENV", previousWslEnv);
         restoreEnv("OTEL_SDK_DISABLED", previousDisabled);
+        restoreEnv("T2CODE_OTEL_SDK_DISABLED", previousT2Disabled);
       }
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
