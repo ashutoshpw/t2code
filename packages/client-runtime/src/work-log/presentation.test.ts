@@ -255,7 +255,7 @@ describe("resolveWorkEntryToolPresentation", () => {
     "mcp__t3-code__preview_click",
     "mcp__t3_code__preview_click",
     "mcp__t2code__preview_click",
-    "T3-code.preview_click",
+    "t3-code.preview_click",
     "t3-code · preview_click completed",
     "t3_code/preview_click",
     "preview_click",
@@ -277,7 +277,7 @@ describe("resolveWorkEntryToolPresentation", () => {
   });
 
   it("uses the summary's state only when the provider omitted a lifecycle status", () => {
-    const entry = { label: "T3-code.preview_click" };
+    const entry = { label: "t3-code.preview_click" };
     expect(resolveWorkEntryToolPresentation(entry, "inProgress")?.displayName).toBe(
       "Clicking in the preview browser",
     );
@@ -513,7 +513,7 @@ describe("pull request tool presentation", () => {
   it.each([
     "mcp__t3-code__link_pull_request",
     "mcp__t3_code__link_pull_request",
-    "T3-code · link_pull_request",
+    "t3-code · link_pull_request",
     "t2code/link_pull_request",
     "link_pull_request",
   ])("recognizes the native linking tool: %s", (label) => {
@@ -577,7 +577,7 @@ describe("pull request tool presentation", () => {
     };
     const list: WorkLogPresentationEntry = {
       ...link,
-      label: "T3-code · list_thread_pull_requests",
+      label: "t3-code · list_thread_pull_requests",
     };
     expect(summarizeToolGroup([link, link, list]).summary).toBe(
       "Linked 2 pull requests and checked linked pull requests",
@@ -640,7 +640,7 @@ describe("device group summaries", () => {
     expect(workEntryViewedImagePath(entry)).toBe("/workspace/device.png");
   });
 
-  it("does not classify another server's tools as T3 device controls", () => {
+  it("does not classify another server's tools as T2 device controls", () => {
     expect(
       summarizeToolGroup([
         {
