@@ -216,7 +216,7 @@ function antigravityEnvironment(
         ? { GOOGLE_API_KEY: auth.apiKey }
         : {};
   // It unpacks about 1 GB into the system temp directory per launch and a force
-  // kill leaves that behind. Point it at a T3-owned directory so the driver can
+  // kill leaves that behind. Point it at a T2-owned directory so the driver can
   // reclaim the space.
   const tempDirectory = runtimeTempDirectory ?? profile.tempDirectory;
   return {
@@ -239,7 +239,7 @@ function antigravityEnvironment(
 }
 
 /**
- * The agent reads its user-global skills under `GEMINI_HOME`, which T3 points
+ * The agent reads its user-global skills under `GEMINI_HOME`, which T2 points
  * at the private profile. Link the two skill directories back to the user's
  * real `~/.gemini` so global skills load, while MCP servers, hooks, and
  * credentials stay isolated.
@@ -326,7 +326,7 @@ export const prepareAntigravityProfile = Effect.fn("prepareAntigravityProfile")(
     helperExecutable.includes("%s")
   ) {
     return yield* authSupportError(
-      "The T3 runtime path cannot be used to suppress Antigravity browser launches.",
+      "The T2 runtime path cannot be used to suppress Antigravity browser launches.",
     );
   }
 
