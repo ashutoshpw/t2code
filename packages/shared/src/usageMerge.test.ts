@@ -6,7 +6,8 @@ import {
   type UsageDay,
   type UsageProviderKind,
   UsageSummary,
-} from "@t2code/contracts";import { describe, expect, it } from "vite-plus/test";
+} from "@t2code/contracts";
+import { describe, expect, it } from "vite-plus/test";
 import * as Schema from "effect/Schema";
 
 import { isModelCostUnknown, mergeUsage, type EnvironmentUsage } from "./usageMerge.ts";
