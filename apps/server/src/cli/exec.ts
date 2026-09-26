@@ -167,7 +167,14 @@ export const execCommand = Command.make("exec", {
   Command.withDescription("Run one prompt through a harness CLI and print its final response."),
   Command.withHandler(({ prompt }) =>
     Effect.gen(function* () {
-      const selectedProvider = yield* execProviderGlobalFlag;
+      // Command.run provides every active global setting, so this resolves to
+      // the parsed --provider value there. Reading it as an optional service
+      // keeps the requirement out of the command's context, so every caller
+      // that runs the CLI does not have to supply a default. The setting holds
+      // an Option because the flag is optional, so the lookup flattens twice.
+      const selectedProvider = yield* Effect.serviceOption(execProviderGlobalFlag).pipe(
+        Effect.map(Option.flatten),
+      );
       if (Option.isNone(selectedProvider)) {
         return yield* new ExecProviderRequiredError();
       }
