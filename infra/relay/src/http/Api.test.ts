@@ -324,6 +324,7 @@ function relayUnlinkTestLayer(input?: {
     Layer.succeed(
       EnvironmentLinks.EnvironmentLinks,
       EnvironmentLinks.EnvironmentLinks.of({
+        updateLabel: () => Effect.die("unused updateLabel"),
         upsert: () => Effect.die("unused upsert"),
         listDeliveryUsersForEnvironment: () => Effect.die("unused listDeliveryUsersForEnvironment"),
         listForUser: () => Effect.die("unused listForUser"),
