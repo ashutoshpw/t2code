@@ -3963,7 +3963,9 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
       assert.equal(relayConfigResponse.status, 500);
       assert.equal(relayConfigBody._tag, "EnvironmentHttpInternalServerError");
-      assert.equal(relayRequests.length, 3);
+      // Configuring the link also syncs the environment label to the relay,
+      // which is one more relay call than the upstream request sequence.
+      assert.equal(relayRequests.length, 4);
       assert.deepEqual(appliedRuntimeConfigs, [null]);
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
@@ -4034,7 +4036,9 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         assert.equal(relayConfigResponse.status, 503);
         assert.equal(relayConfigBody._tag, "EnvironmentCloudEndpointUnavailableError");
         assert.equal(relayConfigBody.endpointRuntimeStatus?.status, "disabled");
-        assert.equal(relayRequests.length, 1);
+        // Configuring the link also syncs the environment label to the relay,
+        // which is one more relay call than the upstream request sequence.
+        assert.equal(relayRequests.length, 2);
         assert.deepEqual(appliedRuntimeConfigs, [null]);
         assert.deepEqual(requestedRecoveryConfigs, [
           {
