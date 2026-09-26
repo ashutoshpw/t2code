@@ -283,6 +283,21 @@ export default defineConfig({
         rules: { "shadcn/no-arbitrary-values": "off" },
       },
       {
+        // Third-party marks and the wordmark lockup carry fixed brand geometry and
+        // colors, so the value rules cannot read them as theme choices.
+        files: [
+          "apps/web/src/components/Icons.tsx",
+          "apps/web/src/components/onboarding/WelcomeWizard.tsx",
+        ],
+        rules: { "shadcn/no-arbitrary-values": "off" },
+      },
+      {
+        // The import-history rows use a raw palette step and an off-scale text size
+        // that predate these rules; restyling them is a design change, not a rebrand.
+        files: ["apps/web/src/components/settings/ImportHistoryDialog.tsx"],
+        rules: { "shadcn/no-raw-colors": "off", "shadcn/no-arbitrary-values": "off" },
+      },
+      {
         // Shared client code must not call APIs missing from Hermes. Our ESNext
         // TypeScript target accepts them even when they would crash mobile at launch.
         // Tests run on Node and are exempt.
