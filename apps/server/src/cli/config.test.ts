@@ -1067,7 +1067,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
 
   const minimalWebFlags = (baseDir: string) => ({
     mode: Option.some("web" as const),
-    port: Option.some(3773),
+    port: Option.some(3772),
     host: Option.none<string>(),
     baseDir: Option.some(baseDir),
     cwd: Option.none<string>(),
@@ -1131,7 +1131,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         );
 
         // T2CODE_OTLP_TRACES_URL wins over the OTEL variable for the same
-        // signal, and keeps T3 Code's own headers since T3 Code still owns it.
+        // signal, and keeps T2 Code's own headers since T2 Code still owns it.
         expect(resolved.otlpTracesUrl).toBe("http://t3:4318/v1/traces");
         expect(resolved.otlpTracesExport.headers).toEqual({ "x-key": "secret" });
         // Metrics named no T2CODE_OTLP_METRICS_URL, so the OTEL endpoint wins
