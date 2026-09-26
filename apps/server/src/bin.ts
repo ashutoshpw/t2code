@@ -26,6 +26,7 @@ import { sshHelperCommand } from "./cli/sshHelper.ts";
 import { themeCommand } from "./cli/theme.ts";
 import { traceCommand } from "./cli/trace.ts";
 import { triageCommand } from "./cli/triage.ts";
+import { execCommand, execProviderGlobalFlag } from "./cli/exec.ts";
 
 const CliRuntimeLayer = Layer.mergeAll(NodeServices.layer, NetService.layer);
 
@@ -57,6 +58,7 @@ export const makeCli = ({ cloudEnabled = hasCloudPublicConfig } = {}) =>
   Command.make("t2code", { ...sharedServerCommandFlags }).pipe(
     Command.withDescription("Run the T2 Code server."),
     Command.withHandler((flags) => runServerCommand(flags)),
+    Command.withGlobalFlags([execProviderGlobalFlag]),
     Command.withSubcommands([
       startCommand,
       serveCommand,
@@ -74,6 +76,7 @@ export const makeCli = ({ cloudEnabled = hasCloudPublicConfig } = {}) =>
       themeCommand,
       traceCommand,
       triageCommand,
+      execCommand,
       cloudEnabled ? connectCommand : connectUnavailableCommand,
     ]),
   );

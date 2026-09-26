@@ -22,6 +22,29 @@ npx @t2code/cli@latest
 This starts the server and opens the local web app. Run
 `npx @t2code/cli@latest --help` for command-line options.
 
+### Run one prompt from the terminal
+
+Use `exec` with a harness selector to send one prompt and print its final answer
+without opening the harness's interactive interface:
+
+```bash
+npx @t2code/cli --provider claude exec "Summarize this project"
+```
+
+`--provider` also accepts `-p` (and `--p`). Supported values are `claude`,
+`codex`, `opencode`, `cursor`, `grok`, and `fx`. For example:
+
+```bash
+npx @t2code/cli --p codex exec "Explain the failing test"
+npx @t2code/cli --provider cursor exec "Review this project"
+```
+
+The selected CLI must be installed, authenticated, and on the current shell's
+`PATH`. This command runs it in the current directory and uses that CLI's own
+configuration and permissions; it does not use provider instance settings saved
+in T2 Code. Antigravity is not available here because T2 Code connects to its
+ACP runtime directly instead of invoking a prompt-oriented CLI.
+
 To try T2 Code once without installing it, run `npx @t2code/cli@latest` instead (needs
 Node.js for `npx`).
 
