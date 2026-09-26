@@ -141,7 +141,7 @@ Required `production` environment secrets:
 The relay Worker reads these variables and secrets when it is deployed. Alchemy does not redeploy the
 Worker when only one of these values changes ([alchemy-run/alchemy#1831](https://github.com/alchemy-run/alchemy/issues/1831)),
 so a push to `main` without relay code changes leaves the old value in place. After changing one, run
-the **Deploy T3 Connect relay** workflow manually from `main` with **force** checked.
+the **Deploy T2 Connect relay** workflow manually from `main` with **force** checked.
 
 The account-scoped repository credentials are consumed by Alchemy while provisioning relay stages; they
 are not bound into the relay Worker. The production deployment uses an Axiom personal access token,
@@ -185,12 +185,12 @@ recovery endpoints deployed while current server builds are in use. The nullable
 ### Disposable-host canary
 
 This test has not been run against a real Cloudflare account. Run it against a disposable relay
-stage, test Cloudflare account, disposable host, and disposable T3 home. Keep production cleanup at
-`off` or `dry-run` until it passes. Do not stop a daily-use T3 server.
+stage, test Cloudflare account, disposable host, and disposable T2 home. Keep production cleanup at
+`off` or `dry-run` until it passes. Do not stop a daily-use T2 server.
 
 1. Deploy the disposable stage with cleanup `dry-run`. Link a first disposable environment through
    web or mobile settings and confirm its tunnel is healthy and recovery is registered.
-2. Stop that host and restart the same T3 home on a different local port. Confirm the public
+2. Stop that host and restart the same T2 home on a different local port. Confirm the public
    hostname reaches the new port and sends nothing to the old one.
 3. Link a second disposable environment with a server build that predates recovery registration.
    Capture its managed `cloudflared` child PID, confirm it belongs to that host, and pause only that

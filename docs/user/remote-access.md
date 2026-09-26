@@ -159,9 +159,9 @@ revokes its cloud access and frees its host space even when the environment is
 offline or has been wiped. Removing an environment from a device's connection
 settings only forgets it on that device; it stays registered to your account.
 
-When idle tunnel cleanup is enabled, T3 Connect removes a linked environment's
+When idle tunnel cleanup is enabled, T2 Connect removes a linked environment's
 tunnel after it stays offline for several minutes. The environment stays linked
-and keeps the same address. When the host starts again or wakes, T3 Connect
+and keeps the same address. When the host starts again or wakes, T2 Connect
 creates a replacement tunnel on its own. You do not need to pair again. Cleanup
 usually runs five to ten minutes after the tunnel goes down.
 

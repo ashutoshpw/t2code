@@ -24,7 +24,7 @@ export const DesktopBackendBootstrap = Schema.Struct({
 
 export type DesktopBackendBootstrap = typeof DesktopBackendBootstrap.Type;
 
-/** Written to `<t3Home>/runtime` just before the desktop app stops its
+/** Written to `<t2Home>/runtime` just before the desktop app stops its
     backend to install an update. The updated app starts a new backend right
     away, so a backend that sees a fresh marker at shutdown keeps its managed
     tunnel. */

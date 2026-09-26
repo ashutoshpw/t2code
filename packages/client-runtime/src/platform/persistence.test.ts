@@ -2,7 +2,7 @@ import {
   OrchestrationProjectShell,
   OrchestrationShellSnapshot,
   OrchestrationThreadShell,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Arr from "effect/Array";
 import * as Effect from "effect/Effect";
@@ -40,7 +40,7 @@ describe("encodeShellSnapshotForCache", () => {
         // project field whose encoding differs from the decoded value.
         projects: projects.map((project, index) =>
           index % 2 === 0
-            ? { ...project, projectIcon: { kind: "monogram", text: "T3", color: "blue" } }
+            ? { ...project, projectIcon: { kind: "monogram", text: "T2", color: "blue" } }
             : project,
         ),
         threads,

@@ -106,7 +106,7 @@ const config: ShowcaseConfig = {
       platform: "ios",
       // A disposable device lands on the newest runtime, whose default lock
       // screen wallpaper suits both appearances; a stock one may be older.
-      simulator: "T3 Showcase iPhone 17 Pro Max",
+      simulator: "T2 Showcase iPhone 17 Pro Max",
       simulatorDeviceType: "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max",
       appearance: "dark",
       theme: DEFAULT_SHOWCASE_THEME,

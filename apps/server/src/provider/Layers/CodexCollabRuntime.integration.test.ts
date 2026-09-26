@@ -870,7 +870,7 @@ describe("CodexSessionRuntime collab integration", () => {
 });
 
 describe("CodexSessionRuntime compaction", () => {
-  it.effect("restores T3 context after the root thread compacts", () =>
+  it.effect("restores T2 context after the root thread compacts", () =>
     Effect.gen(function* () {
       const compacted = (threadId: string) => ({
         method: "item/completed",
@@ -902,7 +902,7 @@ describe("CodexSessionRuntime compaction", () => {
         binaryPath: peerPath,
         cwd: NodeOS.tmpdir(),
         runtimeMode: "full-access",
-        environment: { ...process.env, T3_CODEX_COLLAB_SCRIPT: scriptPath },
+        environment: { ...process.env, T2_CODEX_COLLAB_SCRIPT: scriptPath },
         models: Effect.succeed([
           { slug: "gpt-5.6-sol", name: "GPT-5.6 Sol", isCustom: false, capabilities: null },
         ]),
@@ -934,7 +934,7 @@ describe("CodexSessionRuntime compaction", () => {
       assert.lengthOf(texts, 1);
       assert.match(
         texts[0] ?? "",
-        /^<t3_code_runtime><runtime_info>.*as GPT-5\.6 Sol \(model slug: gpt-5\.6-sol\).*<\/t3_code_runtime>$/s,
+        /^<t2_code_runtime><runtime_info>.*as GPT-5\.6 Sol \(model slug: gpt-5\.6-sol\).*<\/t2_code_runtime>$/s,
       );
 
       yield* runtime.close;

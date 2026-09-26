@@ -108,7 +108,7 @@ rl.on("line", (line) => {
   }
   if (method === "thread/inject_items" && script.recordRequests) {
     NodeFS.appendFileSync(
-      `${process.env.T3_CODEX_COLLAB_SCRIPT}.requests`,
+      `${process.env.T2_CODEX_COLLAB_SCRIPT}.requests`,
       `${JSON.stringify({ method, params: message.params })}\n`,
     );
     write({ id, result: {} });

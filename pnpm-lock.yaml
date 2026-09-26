@@ -302,7 +302,7 @@ importers:
         version: link:../../packages/contracts
       '@t2code/mobile-markdown-text':
         specifier: file:./modules/t2-markdown-text
-        version: file:apps/mobile/modules/t2-markdown-text(de813a3ca0260442f8efbedef958be70)
+        version: file:apps/mobile/modules/t2-markdown-text(d796fae943f7f7cb994efba01999dd2c)
       '@t2code/mobile-review-diff-native':
         specifier: file:./modules/t2-review-diff
         version: file:apps/mobile/modules/t2-review-diff
@@ -15153,7 +15153,7 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
-  '@t2code/mobile-markdown-text@file:apps/mobile/modules/t2-markdown-text(de813a3ca0260442f8efbedef958be70)':
+  '@t2code/mobile-markdown-text@file:apps/mobile/modules/t2-markdown-text(d796fae943f7f7cb994efba01999dd2c)':
     dependencies:
       '@t2code/client-runtime': link:packages/client-runtime
       '@t2code/shared': link:packages/shared
