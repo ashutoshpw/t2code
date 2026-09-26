@@ -48,7 +48,7 @@ npx @t2code/cli --provider claude exec "Summarize this project"
 ```
 
 `--provider` also accepts `-p` (and `--p`). Supported values are `claude`,
-`codex`, `opencode`, `cursor`, and `grok`. For example:
+`codex`, `opencode`, `cursor`, `grok`, and `fx`. For example:
 
 ```bash
 npx @t2code/cli --p codex exec "Explain the failing test"
