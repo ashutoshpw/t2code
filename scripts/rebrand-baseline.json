@@ -40,6 +40,10 @@
     "line": "\"default\": \"'T3 Environment'\","
   },
   {
+    "file": "infra/relay/migrations/postgres/20260919015455_managed_endpoint_recovery/snapshot.json",
+    "line": "\"default\": \"'T3 Environment'\","
+  },
+  {
     "file": "infra/relay/src/persistence/schema.ts",
     "line": "environmentLabel: text(\"environment_label\").notNull().default(\"T3 Environment\"),"
   },
