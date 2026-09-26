@@ -126,6 +126,7 @@ it.effect("resolves setup scripts through the standalone project service", () =>
       threadId: "thread-1",
       terminalId: "setup-setup",
       data: "Downloading 10%\rDownloading 20%\r\nDone\n",
+
     });
     assert.deepEqual(lines, ["Downloading 10%", "Downloading 20%", "Done"]);
     yield* listener({ type: "closed", threadId: "thread-1", terminalId: "setup-setup" });
