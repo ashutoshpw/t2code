@@ -12,7 +12,7 @@ import { Argument, Command, Flag, GlobalFlag } from "effect/unstable/cli";
 
 import { isCommandAvailable, resolveSpawnCommand } from "@t2code/shared/shell";
 
-export const EXEC_PROVIDERS = ["claude", "codex", "opencode", "cursor", "grok", "fx"] as const;
+const EXEC_PROVIDERS = ["claude", "codex", "opencode", "cursor", "grok", "fx"] as const;
 export type ExecProvider = (typeof EXEC_PROVIDERS)[number];
 
 export const execProviderGlobalFlag = GlobalFlag.Setting("exec-provider")({
