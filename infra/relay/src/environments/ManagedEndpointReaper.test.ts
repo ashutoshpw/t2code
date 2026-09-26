@@ -13,7 +13,7 @@ import * as ManagedEndpointReaper from "./ManagedEndpointReaper.ts";
 
 const NOW = "2026-08-25T12:00:00.000Z";
 const NOW_MILLIS = DateTime.makeUnsafe(NOW).epochMilliseconds;
-const PREFIX = "t3coderelay-managedendpoint-prod-";
+const PREFIX = "t2coderelay-managedendpoint-prod-";
 
 function tunnel(input: {
   readonly id: string;
@@ -52,7 +52,7 @@ function allocation(input: {
     tunnelName: `${PREFIX}aaaaaaaaaaaaaaaa`,
     dnsRecordId: "dns-1",
     readyAt: "2026-08-25T11:00:00.000Z",
-    origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+    origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
     updatedAt: "2026-08-25T11:00:00.000Z",
     generation: 1,
     recoveryEnabled: input.recoveryEnabled,
@@ -216,12 +216,12 @@ function harness(input?: {
       teamId: "team-id",
       keyId: "key-id",
       privateKey: Redacted.make("private-key"),
-      bundleId: "com.t3tools.t3code.dev",
+      bundleId: "codes.t2.desktop.dev",
     },
     apnsDeliveryJobSigningSecret: Redacted.make("job-secret"),
     clerkSecretKey: Redacted.make("clerk-secret"),
     clerkPublishableKey: "pk_test_test",
-    clerkJwtAudience: "t3-code-relay",
+    clerkJwtAudience: "t2-code-relay",
     cloudMintPrivateKey: Redacted.make("cloud-private-key"),
     cloudMintPublicKey: "cloud-public-key",
     managedEndpointBaseDomain: "example.test",

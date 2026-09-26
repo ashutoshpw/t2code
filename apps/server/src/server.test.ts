@@ -3795,7 +3795,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       };
       const requests = [
         [
-          "/api/t3-connect/health",
+          "/api/t2-connect/health",
           makeCloudEnvironmentHealthRequest({
             privateKey: cloudKeyPair.privateKey,
             environmentId: testEnvironmentDescriptor.environmentId,
@@ -3804,7 +3804,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           }),
         ],
         [
-          "/api/t3-connect/mint-credential",
+          "/api/t2-connect/mint-credential",
           makeCloudMintCredentialRequest({
             privateKey: cloudKeyPair.privateKey,
             environmentId: testEnvironmentDescriptor.environmentId,
