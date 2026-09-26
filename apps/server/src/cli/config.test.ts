@@ -1000,7 +1000,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
 
   const minimalWebFlags = (baseDir: string) => ({
     mode: Option.some("web" as const),
-    port: Option.some(3773),
+    port: Option.some(3772),
     host: Option.none<string>(),
     baseDir: Option.some(baseDir),
     cwd: Option.none<string>(),
@@ -1066,7 +1066,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         );
 
         // T2CODE_OTLP_TRACES_URL wins over the OTEL variable for the same
-        // signal, and keeps T3 Code's own headers since T3 Code still owns it.
+        // signal, and keeps T2 Code's own headers since T2 Code still owns it.
         expect(resolved.otlpTracesUrl).toBe("http://t3:4318/v1/traces");
         expect(resolved.otlpTracesExport.headers).toEqual({ "x-key": "secret" });
         // Metrics named no T2CODE_OTLP_METRICS_URL, so the OTEL endpoint wins
@@ -1077,7 +1077,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           protocol: "http/protobuf",
           headers: { "x-key": "otel" },
         });
-        // Logs named no T3 or OTEL endpoint and a blank bootstrap value, so
+        // Logs named no T2 or OTEL endpoint and a blank bootstrap value, so
         // Settings answers, and logs keep the shared headers since no OTEL
         // endpoint claimed them.
         expect(resolved.otlpLogsUrl).toBe("http://settings:4318/v1/logs");
@@ -1134,7 +1134,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         // T2CODE_OTLP_TRACES_URL still wins outright.
         expect(resolved.otlpTracesUrl).toBe("http://t3:4318/v1/traces");
         // The OTEL endpoint claimed metrics and logs, so neither the bootstrap
-        // envelope nor Settings receives them with T3 Code's headers.
+        // envelope nor Settings receives them with T2 Code's headers.
         expect(resolved.otlpMetricsUrl).toBeUndefined();
         expect(resolved.otlpLogsUrl).toBeUndefined();
       }),

@@ -78,7 +78,7 @@ describe("provider compatibility", () => {
       assert.strictEqual(
         resolveProviderCompatibility(bundled, driver, codexVersion, t3CodeVersion)?.status,
         expected,
-        `T3 Code ${t3CodeVersion} with Codex ${codexVersion}`,
+        `T2 Code ${t3CodeVersion} with Codex ${codexVersion}`,
       );
     }
   });

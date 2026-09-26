@@ -542,7 +542,7 @@ const listPathDirectory = Effect.fnUntraced(function* (
 
 const PathDirectoryListings = Context.Reference<
   Cache.Cache<string, PathDirectoryListing, never, FileSystem.FileSystem> | undefined
->("@t3tools/shared/shell/PathDirectoryListings", { defaultValue: () => undefined });
+>("@t2code/shared/shell/PathDirectoryListings", { defaultValue: () => undefined });
 
 /**
  * Run a batch of command lookups (e.g. editor discovery) that lists each PATH

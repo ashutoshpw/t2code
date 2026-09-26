@@ -920,7 +920,7 @@ describe("AcpSessionRuntime", () => {
           spawn: {
             command: mockAgentCommand,
             args: mockAgentArgs,
-            env: { T3_ACP_EMIT_BACKGROUND_TOOL_DURING_ANSWER: "1" },
+            env: { T2_ACP_EMIT_BACKGROUND_TOOL_DURING_ANSWER: "1" },
           },
           cwd: process.cwd(),
           clientInfo: { name: "t3-test", version: "0.0.0" },

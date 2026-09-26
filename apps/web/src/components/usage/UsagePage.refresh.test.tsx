@@ -1,7 +1,7 @@
 import { EnvironmentId, ProviderInstanceId, USAGE_CONTRACT_VERSION } from "@t2code/contracts";
 import { mergeUsage } from "@t2code/shared/usageMerge";
 import { StrictMode, act } from "react";
-import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t3tools/shared/keybindings";
+import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t2code/shared/keybindings";
 import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 

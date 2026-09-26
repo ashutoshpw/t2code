@@ -1001,6 +1001,7 @@ describe.sequential("startup catch-up", () => {
         Layer.mergeAll(
           Layer.succeed(ServerSecretStore.ServerSecretStore, countingStore),
           Layer.succeed(ServerEnvironment.ServerEnvironment, {
+            setEnvironmentLabel: () => Effect.void,
             getEnvironmentId: Effect.succeed("env-1" as EnvironmentId),
             getDescriptor: Effect.die("unused descriptor"),
           }),

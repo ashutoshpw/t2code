@@ -198,7 +198,7 @@ export function buildCodexDeveloperInstructions(interactionMode: ProviderInterac
 }
 
 /**
- * T3 Code context for `turn/start.additionalContext`. Codex renders each entry
+ * T2 Code context for `turn/start.additionalContext`. Codex renders each entry
  * as a `<key>value</key>` developer message and resends it only when the value
  * changes.
  *
@@ -218,10 +218,10 @@ export function buildCodexAdditionalContext(
   const tools = toolInstructions(toolsAvailable);
   // Separate keys keep each value under Codex's per-entry token cap.
   return {
-    t3_code_runtime: {
+    t2_code_runtime: {
       kind: "application",
       value: buildRuntimeInstructions({ harness: "Codex", ...runtime }),
     },
-    ...(tools ? { t3_code_tools: { kind: "application", value: tools } } : {}),
+    ...(tools ? { t2_code_tools: { kind: "application", value: tools } } : {}),
   };
 }

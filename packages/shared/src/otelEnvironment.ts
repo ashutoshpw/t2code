@@ -18,7 +18,7 @@ import * as SchemaTransformation from "effect/SchemaTransformation";
 
 import { OtlpHeadersFromString, OtlpProtocol, type SignalExport } from "./observability.ts";
 
-/** The signals T3 Code exports, spelled as the variable names spell them. */
+/** The signals T2 Code exports, spelled as the variable names spell them. */
 type OtlpSignalName = "TRACES" | "METRICS" | "LOGS";
 
 /**
@@ -313,9 +313,9 @@ export interface SignalEndpoint {
 
 /**
  * Where one signal exports and how. `T2CODE_OTLP_*_URL` wins outright with
- * T3 Code's own export, then an OTEL endpoint with its own headers and
+ * T2 Code's own export, then an OTEL endpoint with its own headers and
  * protocol, since `T2CODE_OTLP_HEADERS` was written for a different
- * collector, then the first of `fallbackUrls` with T3 Code's own export.
+ * collector, then the first of `fallbackUrls` with T2 Code's own export.
  */
 export const resolveSignalEndpoint = (
   otel: OtelEnvironment,

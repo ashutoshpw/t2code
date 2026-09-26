@@ -65,9 +65,9 @@ it to measure background work or to compare two builds.
 t3 trace summary --since 30m --limit 40
 ```
 
-It reads `T3CODE_TRACE_FILE` if set, else `<home>/userdata/logs/server.trace.ndjson` for
-`--base-dir` or `T3CODE_HOME`, plus the `T3CODE_TRACE_MAX_FILES` rotated backups. For a dev run or
-a copied file, set `T3CODE_TRACE_FILE`. `--since 30m` keeps spans that ended in the last 30
+It reads `T2CODE_TRACE_FILE` if set, else `<home>/userdata/logs/server.trace.ndjson` for
+`--base-dir` or `T2CODE_HOME`, plus the `T2CODE_TRACE_MAX_FILES` rotated backups. For a dev run or
+a copied file, set `T2CODE_TRACE_FILE`. `--since 30m` keeps spans that ended in the last 30
 minutes. The rate is per minute between the first and last span end.
 
 ### Metrics
@@ -85,7 +85,7 @@ If OTLP is not configured, metrics still exist in-process, but you will not have
 `apps/server/src/observability/EventLoopMonitor.ts` samples the server's event loop every 30 s. When
 the loop stalled for more than 2 s since the previous sample, it records a root
 `server.eventLoop.stall` span with a warning. The span has trace level `Warn`, so it stays when
-`T3CODE_TRACE_MIN_LEVEL` is `Warn`. The warning shows in Settings > Diagnostics unless OTLP logs are
+`T2CODE_TRACE_MIN_LEVEL` is `Warn`. The warning shows in Settings > Diagnostics unless OTLP logs are
 on. The span time is when the sample ran, not when the stall happened.
 
 Some delay is not recorded:
@@ -165,7 +165,7 @@ Default Grafana login:
 
 #### 2. Export OTLP env vars
 
-```bash
+````bash
 export T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces
 export T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
 export T2CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs
@@ -176,7 +176,7 @@ Optional:
 ```bash
 export T2CODE_TRACE_MIN_LEVEL=Info
 export T2CODE_TRACE_TIMING_ENABLED=true
-```
+````
 
 #### 3. Launch the app from that same shell
 
@@ -565,6 +565,7 @@ window and menu handling, backend supervision, and updates. It reports as servic
 `t3code-desktop`, so a collector shows it alongside the backend rather than mixed into it. It
 exports traces and logs only; the main process records no metrics, so the metrics endpoint applies
 to the backend alone.
+
 ### Env Vars
 
 Local trace file:
@@ -582,7 +583,7 @@ OTLP export:
 - `T2CODE_OTLP_METRICS_URL`: OTLP metric endpoint
 - `T2CODE_OTLP_LOGS_URL`: OTLP log endpoint
 - `T2CODE_OTLP_EXPORT_INTERVAL_MS`: export interval, default `10000`
-- `T2CODE_OTLP_HEADERS`: extra headers for all three exporters, same format as  `OTEL_EXPORTER_OTLP_HEADERS`: comma-separated `key=value` pairs with percent-encoded values.
+- `T2CODE_OTLP_HEADERS`: extra headers for all three exporters, same format as `OTEL_EXPORTER_OTLP_HEADERS`: comma-separated `key=value` pairs with percent-encoded values.
 - `T2CODE_OTLP_PROTOCOL`: `http/json` (default) or `http/protobuf`
 
 The server and the desktop app also read the standard
@@ -605,6 +606,7 @@ resource attributes, such as `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.na
 
 If the OTLP URLs are unset, local tracing still works, metrics stay in-process only, and logs stay
 on stdout only.
+
 ### The Kill Switch
 
 `T2CODE_OTEL_SDK_DISABLED` and `OTEL_SDK_DISABLED` turn off every OTLP export in both the server and
@@ -651,11 +653,11 @@ handler exits on `SIGUSR2`. After a crash the file can keep a stale pid that now
 different process, so check the pid first.
 
 ```bash
-pid="$(jq .pid "${T3CODE_HOME:-$HOME/.t3}/userdata/server-runtime.json")"
+pid="$(jq .pid "${T2CODE_HOME:-$HOME/.t2}/userdata/server-runtime.json")"
 ps -p "$pid" -o command=
 ```
 
-If `ps` shows the T3 Code server, send the signal:
+If `ps` shows the T2 Code server, send the signal:
 
 ```bash
 kill -USR2 "$pid"

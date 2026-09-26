@@ -188,7 +188,7 @@ function makeAllocations(
     tunnelName: "tunnel-name",
     dnsRecordId: "dns-record-id",
     readyAt: "2026-05-25T00:00:00.000Z",
-    origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+    origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
     updatedAt: "2026-05-25T00:00:00.000Z",
     generation: 1,
   },

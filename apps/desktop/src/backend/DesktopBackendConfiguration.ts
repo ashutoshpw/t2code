@@ -239,7 +239,7 @@ const readPersistedBackendObservabilitySettings = Effect.gen(function* () {
 });
 
 // The bootstrap carries the OTLP endpoints to every backend, including a WSL
-// child that lacks the variables. The T3 URLs also travel as variables in
+// child that lacks the variables. The T2 URLs also travel as variables in
 // WSL_FORWARDED_ENV_NAMES so they outrank a forwarded OTEL endpoint. Env beats
 // the persisted settings file, matching the precedence resolveServerConfig and
 // DesktopObservability apply.
