@@ -391,7 +391,7 @@ describe("ProjectSetupScriptRunner", () => {
       if (result.status !== "started" || !result.completion) {
         return yield* Effect.die("expected an observed setup run");
       }
-      const sentinel = /__T3_SETUP_DONE___[0-9a-f]{32}:/.exec(written)?.[0];
+      const sentinel = /__T2_SETUP_DONE___[0-9a-f]{32}:/.exec(written)?.[0];
       yield* listener!({
         threadId: "thread-1",
         terminalId: "setup-setup",
