@@ -61,6 +61,9 @@ interface UpdatesHarness {
   readonly fullChangelog: () => boolean;
   readonly listenerCount: () => number;
   readonly sentStates: DesktopUpdateState[];
+  // Written by the harness's update-restart marker file stub, and asserted by
+  // the self-updating .deb tests.
+  readonly updateRestartMarkers: Set<string>;
   readonly emit: (eventName: string, payload?: unknown) => void;
 }
 
