@@ -58,6 +58,23 @@ describe("check-rebrand", () => {
     expect(violations.map((v) => v.rule.id)).toEqual(["t3-scope"]);
   });
 
+  it("rejects a stale setup-script completion sentinel", () => {
+    const violations = findViolations(
+      [
+        {
+          file: "apps/server/src/project/ProjectSetupScriptRunner.test.ts",
+          line: "const sentinel = /__T3_SETUP_DONE___[0-9a-f]{32}:/.exec(written)?.[0];",
+        },
+        {
+          file: "apps/server/src/project/ProjectSetupScriptRunner.ts",
+          line: 'const COMPLETION_SENTINEL_PREFIX = "__T2_SETUP_DONE__";',
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3-sentinel"]);
+  });
+
   it("flags T3-named paths once per file, including binary assets", () => {
     const violations = findViolations(
       [

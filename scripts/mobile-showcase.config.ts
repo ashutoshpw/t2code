@@ -86,7 +86,7 @@ const config: ShowcaseConfig = {
     {
       id: "iphone-6.9",
       platform: "ios",
-      simulator: "T3 Showcase iPhone 17 Pro Max",
+      simulator: "T2 Showcase iPhone 17 Pro Max",
       simulatorDeviceType: "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max",
       appearance: "dark",
       theme: DEFAULT_SHOWCASE_THEME,

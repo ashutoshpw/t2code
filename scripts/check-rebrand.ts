@@ -220,6 +220,13 @@ const RULES: Rule[] = [
     hint: "env vars use the T2CODE_/T2_ namespace only",
     violates: (_file, line) => hasLegacyEnvName(line),
   },
+  {
+    // A sentinel the runner and its test both spell out; a stale spelling in one
+    // of them hangs the completion wait instead of failing an assertion.
+    id: "t3-sentinel",
+    hint: 'the setup-script completion sentinel is "__T2_SETUP_DONE__"',
+    violates: (_file, line) => /__T3_SETUP_DONE__/.test(line),
+  },
 ];
 
 // Line rules only see added lines, so a renamed or newly added path carrying a

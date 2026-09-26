@@ -1,4 +1,11 @@
 // @effect-diagnostics nodeBuiltinImport:off - runs before `vp i`, so only Node built-ins exist.
+/**
+ * Worktree setup, run by the t3.json "Setup Worktree" action as
+ * `node scripts/setup-worktree.ts`. Plain Node keeps one command working in
+ * every shell T2 Code spawns (zsh, bash, fish, PowerShell): it installs
+ * dependencies, links the main checkout's gitignored env files into this
+ * worktree, then warms the web dependency cache.
+ */
 import * as NodeChildProcess from "node:child_process";
 import * as NodeFS from "node:fs";
 import * as NodePath from "node:path";
@@ -7,10 +14,10 @@ const ENV_FILES = [".env", NodePath.join("infra", "relay", ".env")];
 
 const worktree = NodePath.dirname(import.meta.dirname);
 
-// T3 runs setup in the background, so agents can start before it ends.
+// T2 runs setup in the background, so agents can start before it ends.
 // `setup-running` holds this PID until setup ends with `setup-done` or
 // `setup-failed`, so agents wait instead of racing it with their own `vp i`.
-const markerDir = NodePath.join(worktree, ".t3");
+const markerDir = NodePath.join(worktree, ".t2");
 const runningMarker = NodePath.join(markerDir, "setup-running");
 const doneMarker = NodePath.join(markerDir, "setup-done");
 const failedMarker = NodePath.join(markerDir, "setup-failed");
@@ -41,9 +48,9 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
   });
 }
 
-const projectRoot = process.env.T3CODE_PROJECT_ROOT;
+const projectRoot = process.env.T2CODE_PROJECT_ROOT;
 if (!projectRoot) {
-  throw new Error("T3CODE_PROJECT_ROOT is not set. Run this through the t3.json setup action.");
+  throw new Error("T2CODE_PROJECT_ROOT is not set. Run this through the t2.json setup action.");
 }
 
 // Use the shell for Windows vp shims. Unattended installs need pnpm's confirmation
