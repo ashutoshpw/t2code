@@ -142,13 +142,13 @@ describe("OtelEnvironment", () => {
       {
         name: "the kill switch wins outright over a valid endpoint",
         env: {
-          T3CODE_OTEL_SDK_DISABLED: "true",
+          T2CODE_OTEL_SDK_DISABLED: "true",
           OTEL_EXPORTER_OTLP_ENDPOINT: "https://collector:4318/base",
         },
         traces: "Unset",
         metrics: "Unset",
         logs: "Unset",
-        warnings: [T3_OFF],
+        warnings: [T2_OFF],
       },
       {
         name: "an exporter of none turns off only its signal",
@@ -239,7 +239,7 @@ describe("OtelEnvironment", () => {
   );
 
   describe("resolveSignalEndpoint", () => {
-    const t3Export = {
+    const t2Export = {
       protocol: "http/json",
       headers: { "x-key": "t3" },
       exportIntervalMs: 5_000,
@@ -257,13 +257,13 @@ describe("OtelEnvironment", () => {
     });
     it.each([
       {
-        name: "T3CODE_OTLP_*_URL wins over an OTEL endpoint",
+        name: "T2CODE_OTLP_*_URL wins over an OTEL endpoint",
         otel: withLogs(otelExport),
         t2Url: "http://t3:4318/v1/logs",
-        expected: { url: "http://t3:4318/v1/logs", export: t3Export },
+        expected: { url: "http://t3:4318/v1/logs", export: t2Export },
       },
       {
-        name: "T3CODE_OTLP_*_URL wins over a signal the OTEL variables turned off",
+        name: "T2CODE_OTLP_*_URL wins over a signal the OTEL variables turned off",
         otel: withLogs(OtelEnvironment.OtelSignal.Off()),
         t2Url: "http://t2:4318/v1/logs",
         expected: {
