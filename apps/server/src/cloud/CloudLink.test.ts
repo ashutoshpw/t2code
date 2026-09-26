@@ -100,7 +100,7 @@ const withService = <A, E>(
       Layer.mock(EnvironmentAuth.EnvironmentAuth)({}),
       Layer.mock(CliTokenManager.CloudCliTokenManager)({}),
       Layer.mock(HttpServer.HttpServer)({
-        address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3773),
+        address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3772),
       }),
       Layer.mock(ServerConfig.ServerConfig)({} as ServerConfig.ServerConfig["Service"]),
       Layer.succeed(

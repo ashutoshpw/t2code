@@ -216,6 +216,7 @@ export function buildCodexAdditionalContext(
   // Separate keys keep each value under Codex's per-entry token cap.
   return {
     t2_code_orchestration: { kind: "application", value: T2_CODE_ORCHESTRATION_INSTRUCTIONS },
+
     t2_code_runtime: {
       kind: "application",
       value: buildRuntimeInstructions({ harness: "Codex", ...runtime }),

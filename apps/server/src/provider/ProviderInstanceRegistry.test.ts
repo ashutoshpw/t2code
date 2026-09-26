@@ -181,6 +181,7 @@ const makeTildeProviderFixtures = Effect.fn(
       new URL("./testing/ProviderInstanceRegistryLive.fixture.mjs", import.meta.url),
     ),
     claudePath,
+
   );
   yield* fileSystem.chmod(claudePath, 0o755);
   yield* fileSystem.makeDirectory(claudeHomePath);
@@ -361,7 +362,7 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
             driver: ProviderDriverKind.make("codex"),
             enabled: true,
             environment: [
-              { name: "T3_CODEX_COLLAB_SCRIPT", value: fixtures.codexScriptPath, sensitive: false },
+              { name: "T2_CODEX_COLLAB_SCRIPT", value: fixtures.codexScriptPath, sensitive: false },
             ],
             config: makeCodexConfig({ enabled: true, binaryPath: fixtures.codexBinaryPath }),
           },
@@ -472,9 +473,9 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
             driver: ProviderDriverKind.make("claudeAgent"),
             enabled: true,
             environment: [
-              { name: "T3_CLAUDE_RESET_MARKER", value: marker, sensitive: false },
+              { name: "T2_CLAUDE_RESET_MARKER", value: marker, sensitive: false },
               ...(claim.usageFailsAfterClaim
-                ? [{ name: "T3_CLAUDE_USAGE_FAILS_AFTER_CLAIM", value: "1", sensitive: false }]
+                ? [{ name: "T2_CLAUDE_USAGE_FAILS_AFTER_CLAIM", value: "1", sensitive: false }]
                 : []),
             ],
             config: makeClaudeConfig({

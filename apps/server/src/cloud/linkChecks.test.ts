@@ -30,11 +30,11 @@ describe("parseManagedEndpointLocalOrigin", () => {
   });
 
   it.each([
-    "ftp://127.0.0.1:3773",
-    "http://user:password@127.0.0.1:3773",
-    "http://127.0.0.1:3773/api",
-    "http://127.0.0.1:3773?mode=test",
-    "http://127.0.0.1:3773#fragment",
+    "ftp://127.0.0.1:3772",
+    "http://user:password@127.0.0.1:3772",
+    "http://127.0.0.1:3772/api",
+    "http://127.0.0.1:3772?mode=test",
+    "http://127.0.0.1:3772#fragment",
   ])("rejects non-origin URL %s", (input) => {
     expect(() => parseManagedEndpointLocalOrigin(input)).toThrow("Invalid local origin");
   });

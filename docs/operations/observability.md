@@ -57,12 +57,12 @@ request.
 
 #### Summarize the trace file
 
-`t3 trace summary` reads the trace file and its rotated backups directly, so it works while the
+`t2code trace summary` reads the trace file and its rotated backups directly, so it works while the
 server is stalled or stopped. It prints counts, rates, and latency percentiles per span name. Use
 it to measure background work or to compare two builds.
 
 ```bash
-t3 trace summary --since 30m --limit 40
+t2code trace summary --since 30m --limit 40
 ```
 
 It reads `T2CODE_TRACE_FILE` if set, else `<home>/userdata/logs/server.trace.ndjson` for
@@ -165,11 +165,12 @@ Default Grafana login:
 
 #### 2. Export OTLP env vars
 
-```bash
+````bash
 export T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces
 export T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
 export T2CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs
-export OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=development```
+export OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=development
+````
 
 Optional:
 
@@ -637,7 +638,7 @@ OpenTelemetry specification and only `true` disables export, so `OTEL_SDK_DISABL
 Values are case-insensitive and trimmed. An unrecognized value is ignored with a startup warning.
 
 `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER`, or `OTEL_LOGS_EXPORTER` set to `none` turns off
-just that signal, overriding an OTEL endpoint and the Settings endpoint. A `T3CODE_OTLP_*_URL` still
+just that signal, overriding an OTEL endpoint and the Settings endpoint. A `T2CODE_OTLP_*_URL` still
 wins for its signal. `otlp` is the default, and any other exporter name, such as `console` or
 `prometheus`, is ignored with a startup warning.
 
@@ -664,7 +665,7 @@ Current high-value span and metric boundaries include:
 ## Heap Snapshots
 
 To see what a long-running server holds in memory, send it `SIGUSR2`. The server writes a V8 heap
-snapshot to its logs dir and logs the path. This works for desktop, `npx t3`, and service installs
+snapshot to its logs dir and logs the path. This works for desktop, `npx @t2code/cli`, and service installs
 on macOS and Linux. Windows has no `SIGUSR2`.
 
 Send the signal to the server pid in `server-runtime.json`, which sits in the server's state dir
@@ -674,11 +675,11 @@ handler exits on `SIGUSR2`. After a crash the file can keep a stale pid that now
 different process, so check the pid first.
 
 ```bash
-pid="$(jq .pid "${T2CODE_HOME:-$HOME/.t3}/userdata/server-runtime.json")"
+pid="$(jq .pid "${T2CODE_HOME:-$HOME/.t2}/userdata/server-runtime.json")"
 ps -p "$pid" -o command=
 ```
 
-If `ps` shows the T3 Code server, send the signal:
+If `ps` shows the T2 Code server, send the signal:
 
 ```bash
 kill -USR2 "$pid"

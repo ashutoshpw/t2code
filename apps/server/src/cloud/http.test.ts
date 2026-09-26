@@ -45,7 +45,7 @@ const answerHealthWith = async (failure: HealthFailure) => {
   });
   try {
     const response = await handler(
-      new Request("http://127.0.0.1/api/t3-connect/health", {
+      new Request("http://127.0.0.1/api/t2-connect/health", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ proof: "proof" }),
