@@ -1081,7 +1081,8 @@ describe("DesktopBackendConfiguration", () => {
       const previousOtlpHeaders = process.env.T2CODE_OTLP_HEADERS;
       const previousOtlpProtocol = process.env.T2CODE_OTLP_PROTOCOL;
       // A developer's own OTEL_* variables would be forwarded too.
-      const ambientOtel = Object.entries(process.env).filter(([name]) => name.startsWith("OTEL_"));      try {
+      const ambientOtel = Object.entries(process.env).filter(([name]) => name.startsWith("OTEL_"));
+      try {
         for (const [name] of ambientOtel) delete process.env[name];
         process.env.WSLENV = "GOPATH/p:OPENAI_API_KEY/u:EMPTY::AZURE_DEVOPS_EXT_PAT/u";
         process.env.OPENAI_API_KEY = "openai-key";
@@ -1139,7 +1140,8 @@ describe("DesktopBackendConfiguration", () => {
         restoreEnv("ANTHROPIC_API_KEY", previousAnthropicKey);
         restoreEnv("T2CODE_OTLP_HEADERS", previousOtlpHeaders);
         restoreEnv("T2CODE_OTLP_PROTOCOL", previousOtlpProtocol);
-        for (const [name, value] of ambientOtel) restoreEnv(name, value);      }
+        for (const [name, value] of ambientOtel) restoreEnv(name, value);
+      }
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 
