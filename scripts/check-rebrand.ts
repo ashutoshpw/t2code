@@ -32,6 +32,7 @@ const BASELINE_PATH = NodePath.join(SELF_DIR, "rebrand-baseline.json");
 const GUARDED_FILES = new Set([
   "scripts/check-rebrand.ts",
   "scripts/check-rebrand.test.ts",
+  "scripts/check-doc-links.ts",
   "scripts/rebrand-baseline.json",
 ]);
 // Trees where T3 mentions are the point: fork tooling describing the upstream
@@ -126,6 +127,14 @@ const RULES: Rule[] = [
     violates: (_file, line) => /\bT3\s+Connect\b/.test(line),
   },
   {
+    // Display copy is one half; Clerk pages, settings ids and routes are the
+    // other, and a route that disagrees with the copy silently breaks the
+    // account modal's start path.
+    id: "t3-connect-id",
+    hint: 'connect routes, Clerk page urls and settings ids are "t2-connect"',
+    violates: (_file, line) => /\bt3-connect\b/.test(line),
+  },
+  {
     id: "t3-wordmark-ref",
     hint: 'the retired wordmark component is "T2Wordmark"; do not reintroduce "T3Wordmark"',
     violates: (_file, line) => /\bT3Wordmark\b/.test(line),
@@ -189,6 +198,16 @@ const RULES: Rule[] = [
     id: "t3tools-scope",
     hint: 'fork internal packages are "@t2code/*"; "@t2code/" only exists upstream (.agents/ and apps/mobile/modules/ are exempt dirs)',
     violates: (_file, line) => /@t3tools\//.test(line),
+  },
+  {
+    // Upstream's own package name made a bare "t3/..." identity correct there;
+    // the fork qualifies every Effect context identity with its package name.
+    id: "t3-context-identity",
+    hint: 'Effect context identities are package-qualified ("@t2code/cli/..."); a bare "t3/..." tag is upstream\'s package name, not the fork\'s',
+    violates: (file, line) =>
+      !file.includes(".test.") &&
+      !file.includes(".spec.") &&
+      /["'`]t3\/[A-Za-z][\w.-]*\//u.test(line),
   },
   {
     id: "t3-half-rename",
