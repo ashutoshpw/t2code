@@ -77,10 +77,10 @@ Credentials are saved on the environment's server, so select a remote environmen
 it. Saved tokens can't be viewed again; enter a new one to replace it, or choose **Remove** to clear
 everything saved for Bitbucket.
 
-If no credentials are saved, T3 Code falls back to these variables in the server's environment.
+If no credentials are saved, T2 Code falls back to these variables in the server's environment.
 Restart the server after changing them:
 
-```bash
+````bash
 export T2CODE_BITBUCKET_ACCESS_TOKEN="your-access-token"
 # or
 export T2CODE_BITBUCKET_EMAIL="you@example.com"
@@ -93,7 +93,7 @@ Install [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/), add the DevOp
 ```bash
 az extension add --name azure-devops
 az login
-```
+````
 
 ### GitCafe
 
