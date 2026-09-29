@@ -590,7 +590,8 @@ function authFromCredential(credential: BitbucketCredential | null): SourceContr
     account: Option.none(),
     host: Option.some("bitbucket.org"),
     detail: Option.some(
-      "Add a Bitbucket token in Settings → Source Control, or set the T2CODE_BITBUCKET_* environment variables on the server.",    ),
+      "Add a Bitbucket token in Settings → Source Control, or set the T2CODE_BITBUCKET_* environment variables on the server.",
+    ),
   };
 }
 
