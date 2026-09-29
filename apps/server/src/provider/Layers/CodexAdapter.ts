@@ -101,7 +101,7 @@ export interface CodexAdapterLiveOptions {
   >;
   readonly resolveRuntime?: Effect.Effect<
     import("../CodexManagedRuntime.ts").CodexEffectiveRuntime,
-    import("@t3tools/contracts").ProviderSetupError,
+    import("@t2code/contracts").ProviderSetupError,
     Scope.Scope
   >;
   readonly onManagedConnectionRevoked?: Effect.Effect<void>;

@@ -1279,7 +1279,8 @@ const PROVIDER_REQUIREMENT: Partial<
     missing:
       "Bitbucket needs API credentials on the server. Add them in Settings → Source Control.",
     unauthenticated:
-      "Bitbucket rejected the configured credentials. Check them in Settings → Source Control.",  },
+      "Bitbucket rejected the configured credentials. Check them in Settings → Source Control.",
+  },
 };
 
 /**

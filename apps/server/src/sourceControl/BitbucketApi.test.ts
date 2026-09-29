@@ -155,7 +155,8 @@ function makeLayer(input: {
           env: input.env ?? {
             T2CODE_BITBUCKET_API_BASE_URL: "https://api.test.local/2.0",
             T2CODE_BITBUCKET_EMAIL: "user@example.com",
-            T2CODE_BITBUCKET_API_TOKEN: "token",          },
+            T2CODE_BITBUCKET_API_TOKEN: "token",
+          },
         }),
       ),
     ),
@@ -564,7 +565,7 @@ it.effect("never puts a saved token that is unsafe for an HTTP header on the wir
 it.effect("reports saved credentials as configured when Bitbucket cannot confirm them", () => {
   const { layer } = makeLayer({
     response: () => new Response(null, { status: 401 }),
-    env: { T3CODE_BITBUCKET_API_BASE_URL: "https://api.test.local/2.0" },
+    env: { T2CODE_BITBUCKET_API_BASE_URL: "https://api.test.local/2.0" },
   });
 
   return Effect.gen(function* () {

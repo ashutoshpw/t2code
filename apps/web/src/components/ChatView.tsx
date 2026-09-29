@@ -1,4 +1,4 @@
-import { isChatGptUsageLimitError } from "@t3tools/shared/usageLimits";
+import { isChatGptUsageLimitError } from "@t2code/shared/usageLimits";
 import { useLoadBalancedEnvironment } from "../hooks/useLoadBalancedEnvironment";
 import { visibleThreadPullRequests } from "@t2code/shared/threadPullRequests";
 import type { UsageLimitSourceSnapshots } from "@t2code/contracts";

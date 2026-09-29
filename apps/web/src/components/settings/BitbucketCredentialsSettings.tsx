@@ -1,4 +1,4 @@
-import type { BitbucketSettings, EnvironmentId } from "@t3tools/contracts";
+import type { BitbucketSettings, EnvironmentId } from "@t2code/contracts";
 import { ExternalLinkIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -196,7 +196,7 @@ export function BitbucketCredentialsSettings({
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             {current === null
-              ? "Without a saved token, the server falls back to its T3CODE_BITBUCKET_* environment variables."
+              ? "Without a saved token, the server falls back to its T2CODE_BITBUCKET_* environment variables."
               : methodIsSaved
                 ? null
                 : `Saving replaces your ${METHODS[current].label.toLowerCase()}.`}

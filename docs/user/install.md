@@ -126,7 +126,7 @@ computer.
 | Claude      | Install [Claude Code](https://claude.com/product/claude-code), then run `claude auth login`.                                                              |
 | Cursor      | Install [Cursor CLI](https://cursor.com/cli), then run `agent login`.                                                                                     |
 | Grok Build  | Install [Grok Build CLI](https://x.ai/cli), then run `grok login`.                                                                                        |
-| fx          | Install [fx](https://fx.sh), then run `fx login codex`, `fx login grok`, or `fx login`.      |
+| fx          | Install [fx](https://fx.sh), then run `fx login codex`, `fx login grok`, or `fx login`.                                                                   |
 | OpenCode    | Install [OpenCode](https://opencode.ai), then run `opencode auth login`.                                                                                  |
 | Antigravity | Install and sign in with Google from T2 Code's provider settings.                                                                                         |
 

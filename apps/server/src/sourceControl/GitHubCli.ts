@@ -36,7 +36,7 @@ export const PinnedGitHubCredential = Context.Reference<{
 } | null>("@t2code/cli/sourceControl/PinnedGitHubCredential", { defaultValue: () => null });
 
 export const AllowGitHubReserve = Context.Reference<boolean>(
-  "t3/sourceControl/AllowGitHubReserve",
+  "@t2code/cli/sourceControl/AllowGitHubReserve",
   { defaultValue: () => false },
 );
 

@@ -41,7 +41,7 @@ export function useT2ConnectAccountPage(): {
     const setTarget = (key: string, element: HTMLDivElement | undefined) =>
       setTargets((current) => ({ ...current, [key]: element }));
     clerk.openUserProfile({
-      __experimental_startPath: "/t3-connect",
+      __experimental_startPath: "/t2-connect",
       customPages: T2_CONNECT_ACCOUNT_PAGES.map((page) => ({
         label: page.label,
         url: page.url,

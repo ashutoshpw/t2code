@@ -2,7 +2,7 @@
 import * as NodeOS from "node:os";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import { CodexSettings, EnvironmentId, ProviderInstanceId } from "@t3tools/contracts";
+import { CodexSettings, EnvironmentId, ProviderInstanceId } from "@t2code/contracts";
 import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -115,7 +115,7 @@ for (const source of ["managed", "local"] as const)
               CODEX_HOME: "/user/.codex",
               OPENAI_API_KEY: "dummy-global-key",
               OPENAI_BASE_URL: "https://user-proxy.test",
-              T3CODE_CODEX_LAUNCH_ARGS: "--config model_provider=global-proxy",
+              T2CODE_CODEX_LAUNCH_ARGS: "--config model_provider=global-proxy",
               PATH: "/usr/bin",
             };
             const runtime = yield* makeCodexManagedRuntime({
@@ -150,7 +150,7 @@ for (const source of ["managed", "local"] as const)
               assert.strictEqual(effective.environment.ACCESS_TOKEN, "dummy-owned-access");
               assert.isUndefined(effective.environment.OPENAI_API_KEY);
               assert.isUndefined(effective.environment.OPENAI_BASE_URL);
-              assert.isUndefined(effective.environment.T3CODE_CODEX_LAUNCH_ARGS);
+              assert.isUndefined(effective.environment.T2CODE_CODEX_LAUNCH_ARGS);
               const args = codexAppServerArgs(effective.config.launchArgs);
               assert.include(
                 args,

@@ -358,7 +358,8 @@
     "./codexAuthHandoff": {
       "types": "./src/codexAuthHandoff.ts",
       "import": "./src/codexAuthHandoff.ts"
-    },    "./t2Wordmark": {
+    },
+    "./t2Wordmark": {
       "types": "./src/t2Wordmark.ts",
       "import": "./src/t2Wordmark.ts"
     }
