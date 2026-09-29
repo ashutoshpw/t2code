@@ -78,7 +78,7 @@ const layerDiscovery = Layer.effect(
   Layer.provideMerge(Layer.mock(VcsDriverRegistry.VcsDriverRegistry)({})),
   Layer.provideMerge(Layer.mock(VcsProcess.VcsProcess)({ run })),
   Layer.provideMerge(
-    ServerConfig.layerTest(process.cwd(), { prefix: "t3-source-control-discovery-" }),
+    ServerConfig.layerTest(process.cwd(), { prefix: "t2-source-control-discovery-" }),
   ),
   Layer.provideMerge(NodeServices.layer),
 );

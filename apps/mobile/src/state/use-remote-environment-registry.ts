@@ -174,21 +174,41 @@ export function useRemoteConnections() {
     [controller],
   );
 
-  const onRemoveEnvironmentPress = (environmentId: EnvironmentId) => {
-    const environment = connectedEnvironments.find(
-      (candidate) => candidate.environmentId === environmentId,
-    );
-    if (!environment) {
-      return;
-    }
-    const remove = {
-      text: "Remove",
-      style: "destructive",
-      onPress: () => {
-        void controller.removeEnvironment(environmentId);
-      },
-    } as const;
-    if (environment.isRelayManaged) {
+  const onRemoveEnvironmentPress = useCallback(
+    (environmentId: EnvironmentId) => {
+      const environment = connectedEnvironments.find(
+        (candidate) => candidate.environmentId === environmentId,
+      );
+      if (!environment) {
+        return;
+      }
+      const remove = {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => {
+          void controller.removeEnvironment(environmentId);
+        },
+      } as const;
+      if (environment.isRelayManaged) {
+        Dialog.alert(
+          "Remove from this device?",
+          `Forget ${environment.environmentLabel} and its cached threads on this device.\n\nIt stays on your T2 Connect account and keeps its host space. Deregister it under T3 Account → T2 Connect to free it.`,
+          [
+            { text: "Cancel", style: "cancel" },
+            // SettingsAuth renders nothing in builds without cloud config.
+            ...(hasCloudPublicConfig()
+              ? [
+                  {
+                    text: "Open T3 Account",
+                    onPress: () => navigation.navigate("SettingsAuth"),
+                  },
+                ]
+              : []),
+            remove,
+          ],
+        );
+        return;
+      }
       Dialog.alert(
         "Remove from this device?",
         `Forget ${environment.environmentLabel} and its cached threads on this device.\n\nIt stays on your T3 Connect account and keeps its host space. Deregister it under T3 Account → T3 Connect to free it.`,
