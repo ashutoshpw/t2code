@@ -12,7 +12,8 @@ import { receiveCodexAuthCallback, CodexAuthCallbackError } from "./CodexAuthCal
 import * as ElectronShell from "../electron/ElectronShell.ts";
 import { providerAuthReturnUrl } from "@t2code/shared/providerAuthReturnUrl";
 import { HostProcessArguments } from "@t2code/shared/hostProcess";
-import { clerkFrontendApiHostnameFromPublishableKey } from "@t2code/shared/relayAuth";import * as ElectronApp from "../electron/ElectronApp.ts";
+import { clerkFrontendApiHostnameFromPublishableKey } from "@t2code/shared/relayAuth";
+import * as ElectronApp from "../electron/ElectronApp.ts";
 import * as ElectronProtocol from "../electron/ElectronProtocol.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
 import * as DesktopUserData from "./DesktopUserData.ts";

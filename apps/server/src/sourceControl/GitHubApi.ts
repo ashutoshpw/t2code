@@ -30,7 +30,7 @@ export const PinnedGitHubCredential = Context.Reference<{
   readonly host: string;
   readonly token: Redacted.Redacted<string>;
   readonly credentialFingerprint: string;
-} | null>("t3/sourceControl/PinnedGitHubCredential", { defaultValue: () => null });
+} | null>("@t2code/cli/sourceControl/PinnedGitHubCredential", { defaultValue: () => null });
 
 /**
  * Set by interactive callers (a user's read or write, not a background sweep). Requests made
@@ -38,7 +38,7 @@ export const PinnedGitHubCredential = Context.Reference<{
  * pull request should not be refused because a background read exhausted the quota.
  */
 export const AllowGitHubReserve = Context.Reference<boolean>(
-  "t3/sourceControl/AllowGitHubReserve",
+  "@t2code/cli/sourceControl/AllowGitHubReserve",
   { defaultValue: () => false },
 );
 

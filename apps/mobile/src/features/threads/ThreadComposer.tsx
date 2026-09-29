@@ -1,6 +1,7 @@
 import type { ComposerTextPaste } from "../../native/T2ComposerEditor.types";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
+
 import { useAtomValue } from "@effect/atom-react";
 import { clampFileAttachmentUploadBytes } from "@t2code/client-runtime/state/attachments";
 import { pastedTextDisposition, replaceTextSelection } from "@t2code/client-runtime/text-paste";

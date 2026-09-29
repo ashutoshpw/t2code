@@ -1063,7 +1063,7 @@ export type UsageLimitSourceConfig = typeof UsageLimitSourceConfig.Type;
 
 /**
  * Bitbucket API credentials for this environment, used before the
- * `T3CODE_BITBUCKET_*` environment variables. The tokens live in the server's
+ * `T2CODE_BITBUCKET_*` environment variables. The tokens live in the server's
  * secret store; settings and clients only see a redaction marker when one is
  * set. The access token wins when both kinds are configured.
  */

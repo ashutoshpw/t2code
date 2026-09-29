@@ -190,7 +190,7 @@ const isExporter = (entry: string): entry is Exporter => EXPORTERS.has(entry);
 
 /**
  * `OTEL_<SIGNAL>_EXPORTER`, a case-insensitive list whose default is `otlp`.
- * Entries T3 Code has no exporter for are named in a warning and dropped, and
+ * Entries T2 Code has no exporter for are named in a warning and dropped, and
  * a list left with nothing to honor reads as unset, as the specification asks
  * of any enum value an implementation does not recognize.
  */
@@ -209,7 +209,7 @@ const exporter = (name: string): Config.Config<Setting<Exporter>> =>
         ? { value }
         : {
             value,
-            warning: `${name} names ${ignored.join(", ")}, which T3 Code does not export to, so ${ignored.length === 1 ? "it was" : "they were"} ignored`,
+            warning: `${name} names ${ignored.join(", ")}, which T2 Code does not export to, so ${ignored.length === 1 ? "it was" : "they were"} ignored`,
           };
     }),
   );

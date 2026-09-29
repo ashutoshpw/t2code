@@ -140,7 +140,7 @@ interface CodexInstallationService {
 export class CodexInstallation extends Context.Service<
   CodexInstallation,
   CodexInstallationService
->()("t3/provider/CodexInstallation") {
+>()("@t2code/cli/provider/CodexInstallation") {
   static readonly layer = Layer.effect(
     CodexInstallation,
     Effect.gen(function* () {
@@ -286,7 +286,7 @@ export const makeCodexInstallation = Effect.fn("makeCodexInstallation")(function
       return executable;
     },
     Effect.mapError(
-      wrapFailure("resolve", "Codex is not installed in T3 Code. Install it to continue."),
+      wrapFailure("resolve", "Codex is not installed in T2 Code. Install it to continue."),
     ),
   );
   const acquire = Effect.fn("CodexInstallation.acquire")(function* () {
@@ -341,7 +341,7 @@ export const makeCodexInstallation = Effect.fn("makeCodexInstallation")(function
       );
       // Keep launcher symlinks intact: version-manager shims dispatch by their invoked name.
       const realExecutablePath = yield* fs.realPath(executablePath);
-      // A PATH entry pointing into T3's download remains a managed installation.
+      // A PATH entry pointing into T2's download remains a managed installation.
       const realManaged = yield* fs.realPath(managedDirectory).pipe(Effect.option);
       if (
         realExecutablePath.startsWith(

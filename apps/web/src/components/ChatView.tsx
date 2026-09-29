@@ -22,6 +22,7 @@ import {
   recallCheckoutIsRepo,
   rememberCheckoutIsRepo,
 } from "./ChatView.logic";
+
 import { useLoadBalancedEnvironment } from "../hooks/useLoadBalancedEnvironment";
 import { useScratchProject } from "../hooks/useScratchProject";
 import { isScratchProject } from "@t2code/client-runtime/state/projects";

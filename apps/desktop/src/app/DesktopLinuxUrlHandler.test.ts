@@ -33,7 +33,8 @@ const makeEnvironment = (path: Path.Path, overrides: Record<string, unknown> = {
     linuxWmClass: "t2code",
     linuxApplicationsDir: "/home/alice/.local/share/applications",
     appImagePath: Option.some("/home/alice/Applications/T2-Code.AppImage"),
-    path,    ...overrides,
+    path,
+    ...overrides,
   } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]);
 
 const mockProcess = (exitCode: number, stalled = false) =>
@@ -260,7 +261,8 @@ describe("DesktopLinuxUrlHandler", () => {
           displayName: "T2 Code (Alpha)",
           execTarget: "/home/alice/Applications/T2-Code.AppImage",
           scheme: "t2code",
-          iconPath: "/home/alice/.local/share/icons/t2code.desktop.png",        }),
+          iconPath: "/home/alice/.local/share/icons/t2code.desktop.png",
+        }),
       });
 
       assert.deepEqual(recorded.files, []);
