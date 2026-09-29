@@ -5,7 +5,7 @@ import {
   HostProcessArchitecture,
   HostProcessEnvironment,
   HostProcessPlatform,
-} from "@t3tools/shared/hostProcess";
+} from "@t2code/shared/hostProcess";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -281,6 +281,9 @@ it.effect("requires an update before running an older activated managed installa
       '{"version":"0.155.1"}',
     );
     const restarted = yield* makeHarness({ baseDir: first.baseDir });
+    // The advisory appends the manifest's recommended range, which moves with
+    // the bundled compatibility policy. What this test pins is that a stale
+    // activation is refused before anything is run.
     expect((yield* Effect.flip(restarted.installation.resolve())).detail).toContain(
       "outside the supported range",
     );

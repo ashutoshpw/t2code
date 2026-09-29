@@ -455,7 +455,6 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
       ),
     [selectedEnvironmentServerConfig?.settings, selectedProject, t2ProjectFile],
   );
-<<<<<<< HEAD
   // A thread without a project runs in a plain folder, so worktree mode
   // would leave it unsendable: it is always local and offers no choice.
   const canChooseWorkspace = !(
