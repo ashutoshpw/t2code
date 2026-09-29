@@ -58,6 +58,51 @@ describe("check-rebrand", () => {
     expect(violations.map((v) => v.rule.id)).toEqual(["t3-scope"]);
   });
 
+  it("flags an unqualified T3 context identity", () => {
+    const violations = findViolations(
+      [
+        {
+          file: "apps/server/src/provider/CodexInstallation.ts",
+          line: '>()("t3/provider/CodexInstallation") {',
+        },
+        {
+          file: "apps/server/src/sourceControl/GitHubCli.ts",
+          line: '  "t3/sourceControl/AllowGitHubReserve",',
+        },
+        {
+          file: "apps/server/src/sourceControl/GitHubCli.ts",
+          line: '>()("@t2code/cli/sourceControl/AllowGitHubReserve", {',
+        },
+        {
+          file: "apps/mobile/src/lib/runtime.test.ts",
+          line: '  "t3/mobile/test/RuntimeValue",',
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual([
+      "t3-context-identity",
+      "t3-context-identity",
+    ]);
+  });
+
+  it("flags a stale connect route id, not just stale connect copy", () => {
+    const violations = findViolations(
+      [
+        {
+          file: "apps/web/src/components/clerk/T2ConnectAccountPages.tsx",
+          line: '      __experimental_startPath: "/t3-connect",',
+        },
+        {
+          file: "apps/web/src/components/settings/settingsSearch.ts",
+          line: '    id: "t2-connect",',
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t3-connect-id"]);
+  });
+
   it("rejects a stale setup-script completion sentinel", () => {
     const violations = findViolations(
       [
