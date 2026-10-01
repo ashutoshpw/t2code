@@ -13,7 +13,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 
-import { newProjectFolderName } from "@t3tools/shared/path";
+import { newProjectFolderName } from "@t2code/shared/path";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 
 // Tailwind 600 shades: dark enough for white initials on every hue.
@@ -74,7 +74,7 @@ function newProjectReadme(name: string): string {
     "",
     `# ${name}`,
     "",
-    "Created in [T3 Code](https://t3.codes).",
+    "Created in [T2 Code](https://t2.codes).",
     "",
   ].join("\n");
 }
