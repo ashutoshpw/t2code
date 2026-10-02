@@ -5,6 +5,7 @@ import * as Effect from "effect/Effect";
 import * as Hex from "effect/encoding/Hex";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
+import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";
@@ -29,7 +30,7 @@ import { isExactServiceVersion, parseServiceState, SERVICE_STATE_FILE } from "./
 const CLI_PACKAGE_NAME = "@t2code/cli";
 
 /**
- * A pinned runtime is an exact t3 release archive unpacked into
+ * A pinned runtime is an exact t2 release archive unpacked into
  * <baseDir>/runtime/versions/<version>: the self-contained executable, the
  * web client, and the native packages beside it. The boot service points its
  * unit or launch agent at the executable, and server self-update installs the
@@ -42,13 +43,16 @@ const CLI_PACKAGE_NAME = "@t2code/cli";
 const PINNED_RUNTIME_DIR = "runtime";
 const PINNED_RUNTIME_INSTALL_TIMEOUT = Duration.minutes(10);
 const PINNED_RUNTIME_DOWNLOAD_STALL_TIMEOUT = Duration.minutes(1);
-const PINNED_RUNTIME_ARCHIVE_FILE = "t3-runtime-archive";
-// Separate layers share one install lock across this process.
+const PINNED_RUNTIME_ARCHIVE_FILE = "t2-runtime-archive";
+// Boot-service setup and remote update can construct separate layers. Serialize
+// the complete install transaction across every caller in this process.
 const pinnedRuntimeInstallLock = Semaphore.makeUnsafe(1);
 
 export interface PinnedRuntimePaths {
   readonly versionDir: string;
   readonly entryPath: string;
+  /** Where runtimes unpacked before the `t3` → `t2` binary rename keep theirs. */
+  readonly legacyEntryPath: string;
   readonly sentinelPath: string;
 }
 
@@ -70,11 +74,39 @@ export function pinnedRuntimePaths(
   platform: NodeJS.Platform,
 ): PinnedRuntimePaths {
   const versionDir = path.join(pinnedRuntimeVersionsDir(path, baseDir), version);
+  const win = platform === "win32";
   return {
     versionDir,
-    entryPath: path.join(versionDir, platform === "win32" ? "t3.exe" : "t3"),
+    entryPath: path.join(versionDir, win ? "t2.exe" : "t2"),
+    legacyEntryPath: path.join(versionDir, win ? "t3.exe" : "t3"),
     sentinelPath: path.join(versionDir, ".install-complete"),
   };
+}
+
+/**
+ * The executable actually present in `versionDir`: `t2` first, then the `t3`
+ * name archives carried before the binary rename. Falls back to the `t2` path
+ * when neither exists so callers still get the path a new install will write.
+ */
+export function resolvePinnedRuntimeEntryPath(
+  fs: FileSystem.FileSystem,
+  paths: PinnedRuntimePaths,
+): Effect.Effect<string, PlatformError.PlatformError> {
+  return fs
+    .exists(paths.entryPath)
+    .pipe(
+      Effect.flatMap((exists) =>
+        exists
+          ? Effect.succeed(paths.entryPath)
+          : fs
+              .exists(paths.legacyEntryPath)
+              .pipe(
+                Effect.map((legacyExists) =>
+                  legacyExists ? paths.legacyEntryPath : paths.entryPath,
+                ),
+              ),
+      ),
+    );
 }
 
 export class PinnedRuntimeInstallError extends Schema.TaggedError<PinnedRuntimeInstallError>()(
@@ -199,7 +231,7 @@ const installFromArchive = Effect.fn("cloud.pinned_runtime.install_archive")(fun
   const platformKey = cliArchivePlatformKey(input.platform, input.arch);
   if (platformKey === undefined) {
     return yield* new PinnedRuntimeInstallError({
-      step: `selecting a t3 release archive for ${input.platform}-${input.arch}`,
+      step: `selecting a t2 release archive for ${input.platform}-${input.arch}`,
     });
   }
   const httpClient = input.httpClient;
@@ -208,18 +240,18 @@ const installFromArchive = Effect.fn("cloud.pinned_runtime.install_archive")(fun
   const archive = yield* fetchReleaseAsset(
     httpClient,
     cliReleaseAssetUrl(input.version, fileName, input.releaseBaseUrl),
-    "downloading the t3 release archive",
+    "downloading the t2 release archive",
     input.onProgress,
   );
   input.onProgress?.({ stage: "verify" });
   const digest = yield* Effect.tryPromise({
     try: () => crypto.subtle.digest("SHA-256", archive),
     catch: (cause) =>
-      new PinnedRuntimeInstallError({ step: "verifying the t3 release archive", cause }),
+      new PinnedRuntimeInstallError({ step: "verifying the t2 release archive", cause }),
   });
   if (Hex.encode(new Uint8Array(digest)) !== expected) {
     return yield* new PinnedRuntimeInstallError({
-      step: "verifying the t3 release archive checksum",
+      step: "verifying the t2 release archive checksum",
     });
   }
 
@@ -228,12 +260,13 @@ const installFromArchive = Effect.fn("cloud.pinned_runtime.install_archive")(fun
     .writeFile(archivePath, archive)
     .pipe(
       Effect.mapError(
-        (cause) => new PinnedRuntimeInstallError({ step: "writing the t3 release archive", cause }),
+        (cause) => new PinnedRuntimeInstallError({ step: "writing the t2 release archive", cause }),
       ),
     );
   input.onProgress?.({ stage: "extract" });
-  const extractStep = "extracting the t3 release archive";
-  // Strip the archive's stem directory so the executable lands at <versionDir>/t3.
+  const extractStep = "extracting the t2 release archive";
+  // The archive wraps everything in one directory named after its stem;
+  // strip it so the executable lands at <versionDir>/t2.
   yield* input.runner
     .run({
       command: cliArchiveTarCommand(input.platform, process.env),
@@ -295,17 +328,35 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
 ) {
   const { fs } = input;
   const paths = pinnedRuntimePaths(input.path, input.baseDir, input.version, input.platform);
-  const [versionDirExists, entryExists, sentinel] = yield* Effect.all([
+  const resolveEntryPath = (resolved: PinnedRuntimePaths) =>
+    resolvePinnedRuntimeEntryPath(fs, resolved).pipe(
+      Effect.mapError(
+        (cause) => new PinnedRuntimeInstallError({ step: "checking the pinned runtime", cause }),
+      ),
+    );
+  const [versionDirExists, resolvedEntryPath, sentinel] = yield* Effect.all([
     fs.exists(paths.versionDir),
-    fs.exists(paths.entryPath),
+    resolveEntryPath(paths),
     fs.readFileString(paths.sentinelPath).pipe(Effect.option),
   ]).pipe(
     Effect.mapError(
       (cause) => new PinnedRuntimeInstallError({ step: "checking the pinned runtime", cause }),
     ),
   );
+  // Runtimes unpacked before the `t3` → `t2` rename only carry the legacy
+  // name; the resolver points entryPath at whichever one exists.
+  const resolvedPaths: PinnedRuntimePaths = { ...paths, entryPath: resolvedEntryPath };
+  const entryPresent =
+    resolvedEntryPath !== paths.entryPath ||
+    (yield* fs
+      .exists(paths.entryPath)
+      .pipe(
+        Effect.mapError(
+          (cause) => new PinnedRuntimeInstallError({ step: "checking the pinned runtime", cause }),
+        ),
+      ));
   const alreadyPinned =
-    entryExists && Option.isSome(sentinel) && sentinel.value.trim() === input.version;
+    entryPresent && Option.isSome(sentinel) && sentinel.value.trim() === input.version;
   if (alreadyPinned) {
     if (input.requirePublishedRelease === true) {
       const platformKey = cliArchivePlatformKey(input.platform, input.arch);
@@ -317,8 +368,8 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
       yield* publishedArchive(input, platformKey);
     }
     input.onProgress?.({ stage: "cached" });
-    yield* input.validate(paths);
-    return paths;
+    yield* input.validate(resolvedPaths);
+    return resolvedPaths;
   }
   if (versionDirExists) {
     yield* fs.remove(paths.versionDir, { recursive: true, force: true }).pipe(
@@ -359,6 +410,10 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
   const stagingPaths: PinnedRuntimePaths = {
     versionDir: stagingDir,
     entryPath: input.path.join(stagingDir, input.path.relative(paths.versionDir, paths.entryPath)),
+    legacyEntryPath: input.path.join(
+      stagingDir,
+      input.path.relative(paths.versionDir, paths.legacyEntryPath),
+    ),
     sentinelPath: input.path.join(stagingDir, ".install-complete"),
   };
 
@@ -366,7 +421,10 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
     yield* installFromArchive(input, stagingDir);
 
     input.onProgress?.({ stage: "validate" });
-    yield* input.validate(stagingPaths);
+    yield* input.validate({
+      ...stagingPaths,
+      entryPath: yield* resolveEntryPath(stagingPaths),
+    });
     yield* fs
       .writeFileString(stagingPaths.sentinelPath, `${input.version}\n`)
       .pipe(
@@ -379,7 +437,7 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
       Effect.as(true),
       Effect.catch((cause) =>
         Effect.all([
-          fs.exists(paths.entryPath),
+          resolveEntryPath(paths).pipe(Effect.flatMap((entry) => fs.exists(entry))),
           fs.readFileString(paths.sentinelPath).pipe(Effect.option),
         ]).pipe(
           Effect.mapError(
@@ -404,8 +462,14 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
         ),
       ),
     );
-    if (!published) yield* input.validate(paths);
-    return paths;
+    // The entry that actually landed: a historical archive can carry `t3`
+    // where a fresh one carried `t2`, so resolve after the publish.
+    const finalPaths: PinnedRuntimePaths = {
+      ...paths,
+      entryPath: yield* resolveEntryPath(paths),
+    };
+    if (!published) yield* input.validate(finalPaths);
+    return finalPaths;
   }).pipe(
     Effect.ensuring(fs.remove(stagingDir, { recursive: true, force: true }).pipe(Effect.ignore)),
   );

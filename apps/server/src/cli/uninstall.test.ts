@@ -8,25 +8,25 @@ import * as HostProcess from "@t2code/shared/HostProcess";
 
 import { findOwnedLauncher, findRecordedLaunchers, spawnWindowsRemoval } from "./uninstall.ts";
 
-it.layer(NodeServices.layer)("t3 uninstall launcher", (it) => {
-  it.effect("claims only a launcher that points into this home's runtime tree", () =>
+it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
+  it.effect("claims only launchers that point into this home's runtime tree", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       // macOS spells the temp folder /var but resolves it to /private/var.
       const root = yield* fs
-        .makeTempDirectoryScoped({ prefix: "t3-uninstall-" })
+        .makeTempDirectoryScoped({ prefix: "t2-uninstall-" })
         .pipe(Effect.flatMap(fs.realPath));
       const versionsDir = path.join(root, "runtime/versions");
-      const exe = path.join(versionsDir, "1.0.0/t3");
-      const otherExe = path.join(root, "other/runtime/versions/1.0.0/t3");
-      const copy = path.join(root, "copy/t3");
+      const exe = path.join(versionsDir, "1.0.0/t2");
+      const otherExe = path.join(root, "other/runtime/versions/1.0.0/t2");
+      const copy = path.join(root, "copy/t2");
       for (const file of [exe, otherExe, copy]) {
         yield* fs.makeDirectory(path.dirname(file), { recursive: true });
         yield* fs.writeFileString(file, "");
       }
-      const ours = path.join(root, "bin/t3");
-      const theirs = path.join(root, "other/bin/t3");
+      const ours = path.join(root, "bin/t2");
+      const theirs = path.join(root, "other/bin/t2");
       yield* fs.makeDirectory(path.dirname(ours), { recursive: true });
       yield* fs.makeDirectory(path.dirname(theirs), { recursive: true });
       yield* fs.symlink(exe, ours);
@@ -39,7 +39,7 @@ it.layer(NodeServices.layer)("t3 uninstall launcher", (it) => {
 
       // On Windows, only the shim exactly as written is ours; a user's wrapper stays.
       const shimDir = path.join(root, "win-bin");
-      const shim = path.join(shimDir, "t3.cmd");
+      const shim = path.join(shimDir, "t2.cmd");
       yield* fs.makeDirectory(shimDir);
       const windowsOwner = (contents: string) =>
         fs
@@ -54,13 +54,13 @@ it.layer(NodeServices.layer)("t3 uninstall launcher", (it) => {
 
       // npx can run another version than the installed one, so uninstall also reads the
       // recorded launchers: through a symlinked home, and dangling after a prune.
-      const throughAlias = path.join(root, "bin/t3-alias");
-      const pruned = path.join(root, "bin/t3-pruned");
+      const throughAlias = path.join(root, "bin/t2-alias");
+      const pruned = path.join(root, "bin/t2-pruned");
       yield* fs.symlink(root, path.join(root, "alias"));
-      yield* fs.symlink(path.join(root, "alias/runtime/versions/1.0.0/t3"), throughAlias);
-      yield* fs.symlink(path.join(versionsDir, "0.9.0/t3"), pruned);
+      yield* fs.symlink(path.join(root, "alias/runtime/versions/1.0.0/t2"), throughAlias);
+      yield* fs.symlink(path.join(versionsDir, "0.9.0/t2"), pruned);
       // Another program inside a version is not a launcher.
-      const sibling = path.join(root, "bin/t3-sibling");
+      const sibling = path.join(root, "bin/t2-sibling");
       yield* fs.symlink(path.join(versionsDir, "1.0.0/node"), sibling);
       yield* fs.writeFileString(
         path.join(root, "runtime/launchers"),
@@ -71,8 +71,8 @@ it.layer(NodeServices.layer)("t3 uninstall launcher", (it) => {
         assert.deepStrictEqual(yield* findRecordedLaunchers(dir), [ours, throughAlias, pruned]);
       }
 
-      // On Windows only an unedited t3.cmd is ours; a hand-edited wrapper belongs to the user.
-      const cmd = path.join(root, "bin/t3.cmd");
+      // On Windows only an unedited t2.cmd is ours; a hand-edited wrapper belongs to the user.
+      const cmd = path.join(root, "bin/t2.cmd");
       const edited = path.join(root, "bin/edited.cmd");
       yield* fs.writeFileString(cmd, `@echo off\r\n"${exe}" %*`);
       yield* fs.writeFileString(edited, `@echo off\r\nset "T3CODE_HOME=D:\\other"\r\n"${exe}" %*`);
