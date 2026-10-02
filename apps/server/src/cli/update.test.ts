@@ -44,16 +44,12 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
       const oldExe = path.join(root, "runtime/versions/1.0.0/t2");
       const newExe = path.join(root, "runtime/versions/2.0.0/t2");
       const launcher = path.join(root, "bin/t2");
-      // Installs carry a `t3` compatibility launcher beside `t2`; both point
-      // at the freshly pinned version after an update.
-      const legacyLauncher = path.join(root, "bin/t3");
       for (const file of [oldExe, newExe]) {
         yield* fs.makeDirectory(path.dirname(file), { recursive: true });
         yield* fs.writeFileString(file, "");
       }
       yield* fs.makeDirectory(path.dirname(launcher), { recursive: true });
       yield* fs.symlink(oldExe, launcher);
-      yield* fs.symlink(oldExe, legacyLauncher);
 
       const repointed = yield* repointLauncher({
         launchedAs: launcher,
@@ -61,7 +57,7 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
         targetEntryPath: newExe,
       });
 
-      assert.deepStrictEqual(Option.getOrUndefined(repointed), `${launcher}, ${legacyLauncher}`);
+      assert.deepStrictEqual(Option.getOrUndefined(repointed), launcher);
       assert.equal(yield* fs.readLink(launcher), newExe);
     }).pipe(Effect.scoped, Effect.provideService(HostProcess.Platform, "linux")),
   );

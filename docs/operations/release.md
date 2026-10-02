@@ -480,8 +480,7 @@ executables declared as unpacked by that archive must be present at the matching
 paths below `resources/server.asar.unpacked`. The Windows-native backend reads
 the archive in place through Electron. Packaged Windows builds also ship
 `resources/wsl-runtime.tar.gz` plus its SHA-256 sidecar: the Linux CLI archive
-(`t2-<version>-linux-<arch>.tar.gz`, the same arch as the Windows host; older manually
-supplied archives may retain the historical `t3-` stem) built
+(`t2-<version>-linux-<arch>.tar.gz`, the same arch as the Windows host) built
 by the Linux desktop job and handed to the Windows desktop build as
 `--wsl-runtime`, copied in verbatim so WSL runs the exact bytes a Linux user
 downloads. WSL verifies and extracts that archive
@@ -505,9 +504,8 @@ break:
 - A Windows build given `--wsl-runtime` omits the WSL archive or SHA-256
   sidecar, or the sidecar digest does not match the emitted archive.
 - The emitted WSL archive is not a Linux CLI release archive: it must unpack to
-  a single `t2-<version>-linux-<arch>` directory (or the historical
-  `t3-<version>-linux-<arch>` stem for a manually supplied older archive) holding `t2`
-  (or legacy `t3`), `client/`, and `node_modules/` with the Linux node-pty binary, and must not carry a loose
+  a single `t2-<version>-linux-<arch>` directory holding `t2`, `client/`, and
+  `node_modules/` with the Linux node-pty binary, and must not carry a loose
   server bundle (`bin.mjs`).
 - The external Windows resource monitor is absent.
 - The unpacked Windows application contains more than 80 files.

@@ -113,7 +113,7 @@ const FORBIDDEN_FILE_RULES: ReadonlyMap<string, Rule> = new Map([
   [
     "t3.json",
     {
-      id: "t3-project-file",
+      id: "t2-project-file",
       hint: 'the fork uses "t2.json" for checked-in project configuration; remove the upstream "t3.json" file',
       violates: (file) => file === "t3.json",
     },
@@ -122,7 +122,7 @@ const FORBIDDEN_FILE_RULES: ReadonlyMap<string, Rule> = new Map([
 
 const RULES: Rule[] = [
   {
-    id: "t3-connect-copy",
+    id: "t2-connect-copy",
     hint: 'connect branding is "T2 Connect"; compatibility identifiers (module names, route ids, token types) are preserved separately',
     violates: (_file, line) => /\bT3\s+Connect\b/.test(line),
   },
@@ -130,67 +130,67 @@ const RULES: Rule[] = [
     // Display copy is one half; Clerk pages, settings ids and routes are the
     // other, and a route that disagrees with the copy silently breaks the
     // account modal's start path.
-    id: "t3-connect-id",
+    id: "t2-connect-id",
     hint: 'connect routes, Clerk page urls and settings ids are "t2-connect"',
     violates: (_file, line) => /\bt3-connect\b/.test(line),
   },
   {
-    id: "t3-wordmark-ref",
+    id: "t2-wordmark-ref",
     hint: 'the retired wordmark component is "T2Wordmark"; do not reintroduce "T3Wordmark"',
     violates: (_file, line) => /\bT3Wordmark\b/.test(line),
   },
   {
-    id: "t3-mark-ref",
+    id: "t2-mark-ref",
     hint: 'the retired widget asset is "T2Mark"; do not reintroduce "T3Mark"',
     violates: (_file, line) => /\bT3Mark\b/.test(line),
   },
   {
-    id: "t3-wordmark-label",
+    id: "t2-wordmark-label",
     hint: 'the wordmark accessibility label is "T2", not the bare legacy label "T3"',
     violates: (_file, line) => /(?:aria-label|accessibilityLabel)\s*=\s*(["'])T3\1/.test(line),
   },
   {
-    id: "t3-wordmark-path",
+    id: "t2-wordmark-path",
     hint: "replace the retired T3 wordmark SVG path with the canonical T2 wordmark asset",
     violates: (_file, line) => LEGACY_WORDMARK_PATH_FINGERPRINT.test(line),
   },
   {
-    id: "t3-copy",
+    id: "t2-copy",
     hint: 'user-facing copy is "T2 Code"; "T3 Code"/"T3Code" only survives as legacy-compat strings listed in the baseline',
     violates: (_file, line) => /(?<![\w/.:-])T3 ?Code(?![\w])/.test(line),
   },
   {
-    id: "t3-first-party-url",
+    id: "t2-first-party-url",
     hint: 'first-party URLs use the T2 domains (app.t2.codes, relay.t2.codes, clerk.t2.codes); "t3.codes" and its subdomains are upstream references',
     violates: (_file, line) => UPSTREAM_FIRST_PARTY_URL.test(line),
   },
   {
-    id: "t3-home-copy",
+    id: "t2-home-copy",
     hint: 'the data directory is the "T2 home" (T2CODE_HOME, ~/.t2); "T3 home" survives only in the legacy adoption seam',
     violates: (_file, line) => /\bt3 home\b/i.test(line),
   },
   {
-    id: "t3-server-copy",
+    id: "t2-server-copy",
     hint: 'user-facing copy says "T2 server"; the legacy "T3 server" transport error string is the only retained spelling',
     violates: (_file, line) => /\bt3 server\b/i.test(line),
   },
   {
-    id: "t3-noun-copy",
+    id: "t2-noun-copy",
     hint: 'product nouns are "T2 environment", "T2 thread", "T2 proxy", "T2 capture", "T2 mark", "T2 binary", "T2 window", "T2 process"',
     violates: (_file, line) => T3_NOUN_COPY.test(line),
   },
   {
-    id: "t3-possessive-copy",
+    id: "t2-possessive-copy",
     hint: 'copy uses the possessive "T2\'s"; "T3\'s" is a leftover',
     violates: (_file, line) => T3_POSSESSIVE_COPY.test(line),
   },
   {
-    id: "t3-cli-scope",
+    id: "t2-cli-scope",
     hint: 'the fork CLI package is "@t2code/cli"; upstream ships it unscoped as "t3", so "@t2code/" is at best an invented half-rename',
     violates: (_file, line) => /@t3code\//.test(line),
   },
   {
-    id: "t3-scope",
+    id: "t2-scope",
     hint: 'the fork package scope is "@t2code"; "@t3/" is an invented upstream-adjacent scope',
     violates: (_file, line) => /@t3\//.test(line),
   },
@@ -202,7 +202,7 @@ const RULES: Rule[] = [
   {
     // Upstream's own package name made a bare "t3/..." identity correct there;
     // the fork qualifies every Effect context identity with its package name.
-    id: "t3-context-identity",
+    id: "t2-context-identity",
     hint: 'Effect context identities are package-qualified ("@t2code/cli/..."); a bare "t3/..." tag is upstream\'s package name, not the fork\'s',
     violates: (file, line) =>
       !file.includes(".test.") &&
@@ -210,7 +210,7 @@ const RULES: Rule[] = [
       /["'`]t3\/[A-Za-z][\w.-]*\//u.test(line),
   },
   {
-    id: "t3-half-rename",
+    id: "t2-half-rename",
     hint: 'a mechanical rename left a reference that cannot exist (upstream owner + fork repo, fork owner + upstream repo, or the unpublished "com.t2tools.t2code" app id)',
     violates: (file, line) => hasHalfRenamedReference(file, line),
   },
@@ -220,29 +220,29 @@ const RULES: Rule[] = [
     violates: (_file, line) => hasUnapprovedT3ToolsReference(line),
   },
   {
-    id: "t3-port",
+    id: "t2-port",
     hint: "the fork's default server port is 3772; 3773 (and derived 3_773/13_773 literals) is upstream-only",
     violates: (_file, line) => /\b(?:3773|3_773|13_773)\b/.test(line),
   },
   {
-    id: "t3-scheme",
+    id: "t2-scheme",
     hint: 'deep-link schemes are "t2code"/"t2code-dev"; bare "t3code" schemes no longer exist in the fork',
     violates: (_file, line) => /scheme/i.test(line) && /(['"])t3code(-dev)?\1/.test(line),
   },
   {
-    id: "t3-scheme-preview",
+    id: "t2-scheme-preview",
     hint: 'the preview scheme is "t2code-preview"; "t3code-preview" only survives in legacy storage partition names',
     violates: (file, line) => /t3code-preview/.test(line) && !line.includes("persist:"),
   },
   {
-    id: "t3-env-name",
+    id: "t2-env-name",
     hint: "env vars use the T2CODE_/T2_ namespace only",
     violates: (_file, line) => hasLegacyEnvName(line),
   },
   {
     // A sentinel the runner and its test both spell out; a stale spelling in one
     // of them hangs the completion wait instead of failing an assertion.
-    id: "t3-sentinel",
+    id: "t2-sentinel",
     hint: 'the setup-script completion sentinel is "__T2_SETUP_DONE__"',
     violates: (_file, line) => /__T3_SETUP_DONE__/.test(line),
   },
@@ -254,7 +254,7 @@ const RULES: Rule[] = [
 const T3_BRAND_PATH = /t3(?![0-9])/i;
 const PATH_RULES: Rule[] = [
   {
-    id: "t3-named-path",
+    id: "t2-named-path",
     hint: "tracked paths do not carry T3 names; grandfather an existing path with a baseline entry whose line is empty",
     violates: (file) => T3_BRAND_PATH.test(file),
   },

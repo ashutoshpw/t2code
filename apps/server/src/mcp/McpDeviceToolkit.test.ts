@@ -148,7 +148,7 @@ const layerTest = McpHttpServer.layerDeviceToolkit.pipe(
   Layer.provideMerge(McpToolAccessTestkit.liveThreadsLayer),
   Layer.provideMerge(layerDeviceServiceMock),
   Layer.provide(layerProjectsMock),
-  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-mcp-device-toolkit-test-" })),
+  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-mcp-device-toolkit-test-" })),
   Layer.provide(NodeServices.layer),
 );
 

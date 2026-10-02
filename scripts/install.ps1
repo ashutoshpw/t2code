@@ -18,11 +18,11 @@ $ErrorActionPreference = "Stop"
 
 $repo = "ashutoshpw/t2code"
 $baseUrl = if ($env:T2CODE_RELEASE_BASE_URL) { $env:T2CODE_RELEASE_BASE_URL.TrimEnd("/") } else { "https://github.com/$repo/releases/download" }
-$t3Home = if ($env:T2CODE_HOME) { $env:T2CODE_HOME } else { Join-Path $HOME ".t2" }
+$t2Home = if ($env:T2CODE_HOME) { $env:T2CODE_HOME } else { Join-Path $HOME ".t2" }
 $binDir = if ($env:T2CODE_INSTALL_BIN_DIR) { $env:T2CODE_INSTALL_BIN_DIR } else { Join-Path $HOME ".local\bin" }
 
 function Fail([string] $message) {
-  Write-Error "t3 install: $message"
+  Write-Error "t2 install: $message"
   exit 1
 }
 
@@ -150,17 +150,15 @@ if (-not $version) {
   $version = $tag.Substring(1)
 }
 if ($version -match '-preview\.') {
-  Write-Warning "t3 $version is a preview build. Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, and are never offered as updates. Set T2CODE_CHANNEL=stable (the default) for a supported build."
+  Write-Warning "t2 $version is a preview build. Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, and are never offered as updates. Set T2CODE_CHANNEL=stable (the default) for a supported build."
   if ($channel -ne "preview" -and -not $env:T2CODE_VERSION) {
     Fail "refusing a preview build that was not explicitly requested"
   }
 }
 
 $stem = "t2-$version-win32-$arch"
-$legacyStem = "t3-$version-win32-$arch"
 $archive = "$stem.zip"
-$legacyArchive = "$legacyStem.zip"
-$versionsDir = Join-Path $t3Home "runtime\versions"
+$versionsDir = Join-Path $t2Home "runtime\versions"
 $targetDir = Join-Path $versionsDir $version
 $marker = Join-Path $targetDir ".install-complete"
 
@@ -179,18 +177,13 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
     } catch {
       $status = $_.Exception.Response.StatusCode.value__
       if ($status -eq 404) {
-        Fail "t3 $version has no release archive for win32-$arch; releases before the self-contained CLI can only be installed with 'npm install -g t3@$version'"
+        Fail "t2 $version has no release archive for win32-$arch; releases before the self-contained CLI can only be installed with 'npm install -g @t2code/cli@$version'"
       }
       throw
     }
     $checksumLines = Get-Content (Join-Path $staging "SHA256SUMS")
     if (-not ($checksumLines | Where-Object { $_ -match "\s\*?$([regex]::Escape($archive))$" })) {
-      if ($checksumLines | Where-Object { $_ -match "\s\*?$([regex]::Escape($legacyArchive))$" }) {
-        $stem = $legacyStem
-        $archive = $legacyArchive
-      } else {
-        Fail "neither $archive nor $legacyArchive is listed in SHA256SUMS"
-      }
+      Fail "$archive is not listed in SHA256SUMS"
     }
     Fetch "$baseUrl/v$version/$archive" (Join-Path $staging $archive) -progress
 
@@ -231,7 +224,7 @@ $shim = Join-Path $binDir "t3.cmd"
 # non-ASCII characters in the user's home path.
 [System.IO.File]::WriteAllText($shim, "@echo off`r`n`"$(Join-Path $targetDir 't2.exe')`" %*", (New-Object System.Text.UTF8Encoding $false))
 # Pruning keeps what this shim points at; a background service cannot see $binDir otherwise.
-$launchers = Join-Path $t3Home "runtime\launchers"
+$launchers = Join-Path $t2Home "runtime\launchers"
 $shimPath = (Resolve-Path $shim).Path
 if (-not ((Test-Path $launchers) -and ((Get-Content $launchers) -contains $shimPath))) {
   [System.IO.File]::AppendAllText($launchers, "$shimPath`r`n", (New-Object System.Text.UTF8Encoding $false))
