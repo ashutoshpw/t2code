@@ -31,6 +31,7 @@ import {
   pinnedRuntimePaths,
   pinnedRuntimeVersionsDir,
   PinnedRuntimeInstallError,
+  resolvePinnedRuntimeEntryPath,
 } from "./pinnedRuntime.ts";
 import {
   SERVICE_LAUNCHER_PROTOCOL,
@@ -1019,6 +1020,13 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
       installBinDir || serviceUnitEnvironmentValueOf(unit, "T3CODE_INSTALL_BIN_DIR");
     return effectiveInstallBinDir ? { ...plan, installBinDir: effectiveInstallBinDir } : plan;
   };
+  // The executable hosts the launcher as a hidden subcommand of itself, so
+  // the unit runs the pinned runtime directly. The entry path is resolved
+  // lazily: runtimes unpacked before the binary rename only carry `t3`.
+  const buildPlan = Effect.map(
+    resolvePinnedRuntimeEntryPath(fs, runtimePaths),
+    (entry): BootServicePlan => ({ ...plan, program: [entry, "__service-launcher"] }),
+  );
   const requireManager = Effect.suspend(() =>
     detectedManager === undefined
       ? new BootServiceUnsupportedError({ platform })
@@ -1375,10 +1383,13 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
               return yield* new BootServiceUpdatePendingError();
             }
           }
-          const unit = manager.render(plan);
+          const resolvedEntry = yield* buildPlan.pipe(
+            Effect.mapError((cause) => new BootServiceInstallError({ cause })),
+          );
+          const unit = manager.render({ ...plan, program: resolvedEntry.program });
           yield* writeDurably(unitPath, unit);
           if (!start && manager.kind === "schtasks") yield* refreshWindowsTask(unit);
-          return plan;
+          return { ...plan, program: resolvedEntry.program };
         }),
       ),
     ).pipe(
@@ -1525,7 +1536,9 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
     }
     const [unit, runtimeEntryExists, runtimeSentinel, stateText] = yield* Effect.all([
       fs.readFileString(unitPath),
-      fs.exists(runtimePaths.entryPath),
+      resolvePinnedRuntimeEntryPath(fs, runtimePaths).pipe(
+        Effect.flatMap((entry) => fs.exists(entry)),
+      ),
       fs.readFileString(runtimePaths.sentinelPath).pipe(Effect.option),
       fs.readFileString(statePath).pipe(Effect.option),
     ]);

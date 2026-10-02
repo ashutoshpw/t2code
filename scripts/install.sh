@@ -9,12 +9,12 @@
 #                            (default: stable; preview is a maintainers' test train)
 #   T2CODE_VERSION           exact version to install (overrides T2CODE_CHANNEL)
 #   T2CODE_HOME              T2 home directory (default: ~/.t2)
-#   T2CODE_INSTALL_BIN_DIR   where the `t3` symlink goes (default: ~/.local/bin)
+#   T2CODE_INSTALL_BIN_DIR   where the `t2` symlink goes (default: ~/.local/bin)
 #   T2CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
 #
 # The archive is unpacked into $T2CODE_HOME/runtime/versions/<version>, the
-# same layout `t3 service install` uses, so the service reuses this download
+# same layout `t2 service install` uses, so the service reuses this download
 # instead of fetching the release again.
 set -eu
 
@@ -37,7 +37,7 @@ while [ "${bin_dir%/}" != "$bin_dir" ] && [ "$bin_dir" != / ]; do bin_dir="${bin
 case "$bin_dir" in /*) ;; *) bin_dir="$PWD/$bin_dir" ;; esac
 
 fail() {
-  printf '\nt3 install: %s\n' "$1" >&2
+  printf '\nt2 install: %s\n' "$1" >&2
   exit 1
 }
 
@@ -212,7 +212,7 @@ fi
 case "$version" in
   *-preview.*)
     printf '%s\n' \
-      "t3 ${version} is a preview build." \
+      "t2 ${version} is a preview build." \
       "  Preview builds are cut by maintainers from unreleased branches to exercise the release" \
       "  pipeline. They can be broken, receive no fixes, and are never offered as updates." \
       "  Set T2CODE_CHANNEL=stable (the default) for a supported build." >&2
@@ -245,7 +245,7 @@ else
   fetch_status=0
   fetch "${base_url}/v${version}/SHA256SUMS" "${staging}/SHA256SUMS" || fetch_status=$?
   if [ "$fetch_status" -eq 44 ]; then
-    fail "t3 ${version} has no release archive for ${platform}-${arch}; releases before the self-contained CLI can only be installed with \`npm install -g t3@${version}\`"
+    fail "t2 ${version} has no release archive for ${platform}-${arch}; releases before the self-contained CLI can only be installed with \`npm install -g @t2code/cli@${version}\`"
   elif [ "$fetch_status" -ne 0 ]; then
     fail "could not download the release checksums"
   fi
@@ -271,7 +271,11 @@ else
   step "Extracting T2 Code..."
   tar -xzf "${staging}/${archive}" -C "$staging" --strip-components=1
   rm -f "${staging}/${archive}" "${staging}/SHA256SUMS"
-  "${staging}/t3" --version >/dev/null || fail "the downloaded executable does not run"
+  # Releases published before the binary rename still carry `t3`.
+  if [ -x "${staging}/t2" ]; then exe=t2; elif [ -x "${staging}/t3" ]; then exe=t3
+  else fail "the archive does not contain a t2 executable"
+  fi
+  "${staging}/${exe}" --version >/dev/null || fail "the downloaded executable does not run"
   printf '%s\n' "$version" > "${staging}/.install-complete"
 
   rm -rf "$target_dir"
@@ -279,48 +283,48 @@ else
   trap - EXIT
 fi
 
-step "Setting up the t3 command..."
+step "Setting up the t2 command..."
 mkdir -p "$bin_dir"
-# Replace only this home's own t3 links: into its versions, or the desktop app's launcher.
+# Replace only this home's own t2 links: into its versions, or the desktop app's launcher.
 # Anything that is not a symlink (a script, a copied binary) belongs to someone else.
-# Exactly <versions>/<version>/t3 ($1 under $2), never another program inside a version.
-version_t3() {
+# Exactly <versions>/<version>/t2 ($1 under $2), never another program inside a version.
+version_t2() {
   case "$1" in "$2"/*) ;; *) return 1 ;; esac
-  case "${1#"$2"/}" in */*/*) return 1 ;; */t3) return 0 ;; *) return 1 ;; esac
+  case "${1#"$2"/}" in */*/*) return 1 ;; */t2) return 0 ;; *) return 1 ;; esac
 }
 slot_empty=true
-if [ -e "${bin_dir}/t3" ] || [ -L "${bin_dir}/t3" ]; then
+if [ -e "${bin_dir}/t2" ] || [ -L "${bin_dir}/t2" ]; then
   slot_empty=false
   owned=false
-  if [ -L "${bin_dir}/t3" ]; then
-    existing="$(readlink "${bin_dir}/t3" 2>/dev/null || true)"
+  if [ -L "${bin_dir}/t2" ]; then
+    existing="$(readlink "${bin_dir}/t2" 2>/dev/null || true)"
     case "$existing" in /*) ;; *) existing="${bin_dir}/${existing}" ;; esac
     real_versions_dir="$(CDPATH='' cd -P -- "$versions_dir" && pwd)"
-    # Through a symlinked T3 home the link text names the alias; resolve its folder to compare.
+    # Through a symlinked T2 home the link text names the alias; resolve its folder to compare.
     existing_dir="$(CDPATH='' cd -P -- "$(dirname -- "$existing")" 2>/dev/null && pwd || true)"
     # The text alone counts only without . or .. segments (a pruned version leaves a dangling link).
     case "$existing" in
       */./* | */../* | */. | */..) ;;
       *)
-        if version_t3 "$existing" "$versions_dir" || version_t3 "$existing" "$real_versions_dir" ||
-          [ "$existing" = "${t2_home}/bin/t3" ]; then owned=true; fi
+        if version_t2 "$existing" "$versions_dir" || version_t2 "$existing" "$real_versions_dir" ||
+          [ "$existing" = "${t2_home}/bin/t2" ]; then owned=true; fi
         ;;
     esac
-    if [ -n "$existing_dir" ] && version_t3 "${existing_dir}/${existing##*/}" "$real_versions_dir"; then
+    if [ -n "$existing_dir" ] && version_t2 "${existing_dir}/${existing##*/}" "$real_versions_dir"; then
       owned=true
     fi
   fi
-  "$owned" || fail "another t3 is already at ${bin_dir}/t3. Remove it and run this again, or run ${target_dir}/t3 directly."
+  "$owned" || fail "another t2 is already at ${bin_dir}/t2. Remove it and run this again, or run ${target_dir}/t2 directly."
 fi
 # An empty spot is linked without -f, so a file that appears after the check above is kept.
 if "$slot_empty"; then
-  ln -s "${target_dir}/t3" "${bin_dir}/t3" || fail "could not link ${bin_dir}/t3; something else was created there."
+  ln -s "${target_dir}/t2" "${bin_dir}/t2" || fail "could not link ${bin_dir}/t2; something else was created there."
 else
   # Known race, accepted: a file written here after the ownership check above is overwritten.
-  ln -sfn "${target_dir}/t3" "${bin_dir}/t3"
+  ln -sfn "${target_dir}/t2" "${bin_dir}/t2"
 fi
 # Pruning keeps what this launcher points at; a background service cannot see bin_dir otherwise.
-launcher="$(CDPATH='' cd -P -- "$bin_dir" && pwd)/t3"
+launcher="$(CDPATH='' cd -P -- "$bin_dir" && pwd)/t2"
 launchers="${t2_home}/runtime/launchers"
 grep -qxF "$launcher" "$launchers" 2>/dev/null || printf '%s\n' "$launcher" >> "$launchers"
 if "$interactive"; then printf '\r\033[2K' >&2; fi

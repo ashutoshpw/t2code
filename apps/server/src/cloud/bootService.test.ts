@@ -55,7 +55,7 @@ const windowsTaskOptions = {
   conhostPath: "C:\\Windows\\System32\\conhost.exe",
 };
 
-const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t3";
+const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t2";
 const linuxPlan = {
   program: [linuxRuntime, "__service-launcher"],
   baseDir: "/home/theo/.t2",
