@@ -439,7 +439,7 @@ describe("video asset byte ranges", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-guarded-current-stat-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-guarded-current-stat-" });
       const filePath = path.join(directory, "clip.mp4");
       for (const [contents, range, method, expected, status, contentRange] of [
         ["1234", undefined, "GET", "1234", 200, null],
@@ -482,7 +482,7 @@ describe("video asset byte ranges", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-guarded-offset-limit-" });
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-guarded-offset-limit-" });
         const filePath = path.join(directory, "clip.mp4");
         yield* fs.writeFileString(filePath, "0123456789");
         const canonicalPath = yield* fs.realPath(filePath);
@@ -524,7 +524,7 @@ describe("video asset byte ranges", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-attachment-media-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-attachment-media-" });
       const filePath = path.join(directory, "audio.wav");
       yield* fs.writeFileString(filePath, "RIFF");
       const canonicalPath = yield* fs.realPath(filePath);
@@ -540,7 +540,7 @@ describe("video asset byte ranges", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-guarded-cleanup-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-guarded-cleanup-" });
       const filePath = path.join(directory, "clip.mp4");
       const bytes = new Uint8Array(1024 * 1024).fill(42);
       yield* fs.writeFile(filePath, bytes);
@@ -587,7 +587,7 @@ describe("video asset byte ranges", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-video-range-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-video-range-" });
       const file = path.join(directory, "clip.mp4");
       yield* fs.writeFileString(file, "0123456789");
       const asset = { path: file, mimeType: "video/mp4" };
@@ -642,7 +642,7 @@ describe("video asset byte ranges", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-audio-range-" });
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-audio-range-" });
         const file = path.join(directory, "recording.wav");
         yield* fs.writeFileString(file, "0123456789");
         const asset = { path: file, mimeType: "audio/wav" };
@@ -670,7 +670,7 @@ describe("video asset byte ranges", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-video-range-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-video-range-" });
       const file = path.join(directory, "clip.mp4");
       yield* fs.writeFileString(file, "0123456789");
       for (const header of ["bytes=10-", "bytes=-0", "bytes=999999999999999999999999-"]) {

@@ -77,7 +77,7 @@ export async function installEnvironmentHttpTest(scenario: EnvironmentHttpTestSc
             calls.descriptor += 1;
             return yield* scenario.descriptor?.() ?? unexpectedEndpoint("metadata.descriptor");
           });
-          return handlers.handle("descriptor", descriptor).handle("descriptorLegacy", descriptor);
+          return handlers.handle("descriptor", descriptor);
         }),
         HttpApiBuilder.group(EnvironmentHttpApi, "auth", (handlers) =>
           handlers

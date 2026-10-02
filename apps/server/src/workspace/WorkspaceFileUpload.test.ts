@@ -22,7 +22,7 @@ import {
 } from "./WorkspaceFileUpload.ts";
 
 const testLayer = ServerSecretStore.layer.pipe(
-  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-project-file-upload-" })),
+  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t2-project-file-upload-" })),
   Layer.provideMerge(WorkspaceEntries.layer.pipe(Layer.provide(WorkspacePaths.layer))),
   Layer.provideMerge(WorkspacePaths.layer),
   Layer.provideMerge(NodeServices.layer),
