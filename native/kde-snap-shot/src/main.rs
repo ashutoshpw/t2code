@@ -101,14 +101,14 @@ fn script(connection: &Connection, directory: &Path, body: &str) -> Result<Strin
     let owner = dbus.get_name_owner("org.kde.KWin".try_into()?)?.to_string();
     let (send, receive) = mpsc::sync_channel(1);
     connection.object_server().at(
-        "/com/t3tools/KdeCapture",
+        "/com/t2code/KdeCapture",
         ScriptReply {
             owner,
             result: send,
         },
     )?;
     let path = directory.join("window.js");
-    let name = format!("t3-capture-{}", std::process::id());
+    let name = format!("t2-capture-{}", std::process::id());
     let destination = serde_json::to_string(
         connection
             .unique_name()
@@ -149,7 +149,7 @@ fn script(connection: &Connection, directory: &Path, body: &str) -> Result<Strin
     })();
     connection
         .object_server()
-        .remove::<ScriptReply, _>("/com/t3tools/KdeCapture")?;
+        .remove::<ScriptReply, _>("/com/t2code/KdeCapture")?;
     let _ = std::fs::remove_file(path);
     result
 }
@@ -192,7 +192,7 @@ fn check(connection: &Connection) -> Result<()> {
     let reply: zbus::Result<HashMap<String, OwnedValue>> = proxy.call(
         "CaptureWindow",
         &(
-            "t3-permission-check-not-a-window",
+            "t2-permission-check-not-a-window",
             HashMap::<&str, Value<'_>>::new(),
             Fd::from(sink.as_fd()),
         ),

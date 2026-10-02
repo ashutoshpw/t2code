@@ -101,12 +101,6 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("installer term
               encoding: "utf8",
             }).trim(),
           ).toBe("t2 v1.2.3");
-          // Scripts and installs written for the old binary name keep working.
-          expect(
-            NodeChildProcess.execFileSync(NodePath.join(root, "bin/t3"), ["--version"], {
-              encoding: "utf8",
-            }).trim(),
-          ).toBe("t2 v1.2.3");
           expect(await NodeFSP.readdir(versions)).toEqual([version]);
         }
       } finally {

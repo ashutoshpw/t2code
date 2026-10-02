@@ -33,7 +33,7 @@ const snapshot: PreviewSessionSnapshot = {
   tabId: "tab-1",
   navStatus: {
     _tag: "Loading",
-    url: "https://t3.chat/",
+    url: "https://example.com/",
     title: "",
   },
   canGoBack: false,
@@ -80,17 +80,17 @@ describe("openPreviewSession", () => {
     await openPreviewSession({
       openPreview: ({ input }) => open(input),
       threadRef,
-      url: "t3.chat",
+      url: "example.com",
     });
 
     expect(open).toHaveBeenCalledWith({
       threadId: "thread-1",
-      url: "t3.chat",
+      url: "example.com",
       viewport: FILL_PREVIEW_VIEWPORT,
       profileId: DEFAULT_BROWSER_PROFILE_ID,
     });
     expect(readThreadPreviewState(threadRef).snapshot).toEqual(snapshot);
-    expect(readThreadPreviewState(threadRef).recentlySeenUrls).toEqual(["https://t3.chat/"]);
+    expect(readThreadPreviewState(threadRef).recentlySeenUrls).toEqual(["https://example.com/"]);
   });
 
   it("returns failures without mutating preview state", async () => {
@@ -99,7 +99,7 @@ describe("openPreviewSession", () => {
     const result = await openPreviewSession({
       openPreview: async () => AsyncResult.failure(Cause.fail(failure)),
       threadRef,
-      url: "t3.chat",
+      url: "example.com",
     });
 
     expect(result._tag).toBe("Failure");
@@ -120,7 +120,7 @@ describe("openPreviewSession", () => {
         browserProfiles: [{ id: "work", name: "Work", kind: "persistent" }],
       });
       const openPreview = vi.fn(async () => AsyncResult.success(snapshot));
-      const input = { openPreview, threadRef, url: "https://t3.chat/" };
+      const input = { openPreview, threadRef, url: "https://example.com/" };
       const open = entryPoint === "session" ? openPreviewSession : openUrlInPreview;
 
       const result = await open(input);

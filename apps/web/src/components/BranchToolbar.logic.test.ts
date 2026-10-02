@@ -31,12 +31,12 @@ describe("resolvePreviousWorktreeSeed", () => {
       resolvePreviousWorktreeSeed({
         threads: [
           {
-            branch: "t3/older",
+            branch: "t2/older",
             worktreePath: "/repo/.t2/worktrees/older",
             updatedAt: "2026-07-20T00:00:00.000Z",
           },
           {
-            branch: "t3/newer",
+            branch: "t2/newer",
             worktreePath: "/repo/.t2/worktrees/newer",
             updatedAt: "2026-07-22T00:00:00.000Z",
           },
@@ -44,7 +44,7 @@ describe("resolvePreviousWorktreeSeed", () => {
         ],
         currentWorktreePath: null,
       }),
-    ).toEqual({ branch: "t3/newer", worktreePath: "/repo/.t2/worktrees/newer" });
+    ).toEqual({ branch: "t2/newer", worktreePath: "/repo/.t2/worktrees/newer" });
   });
 
   it("skips the worktree the composer already points at", () => {
@@ -52,7 +52,7 @@ describe("resolvePreviousWorktreeSeed", () => {
       resolvePreviousWorktreeSeed({
         threads: [
           {
-            branch: "t3/current",
+            branch: "t2/current",
             worktreePath: "/repo/.t2/worktrees/current",
             updatedAt: "2026-07-22T00:00:00.000Z",
           },
@@ -76,18 +76,18 @@ describe("resolvePreviousWorktreeSeed", () => {
       resolvePreviousWorktreeSeed({
         threads: [
           {
-            branch: "t3/archived",
+            branch: "t2/archived",
             worktreePath: "/repo/.t2/worktrees/archived",
             updatedAt: "2026-07-23T00:00:00.000Z",
             archivedAt: "2026-07-23T01:00:00.000Z",
           },
           {
-            branch: "t3/garbage-timestamp",
+            branch: "t2/garbage-timestamp",
             worktreePath: "/repo/.t2/worktrees/garbage",
             updatedAt: "not-a-date",
           },
           {
-            branch: "t3/live",
+            branch: "t2/live",
             worktreePath: "/repo/.t2/worktrees/live",
             updatedAt: "2026-07-21T00:00:00.000Z",
             archivedAt: null,
@@ -95,14 +95,14 @@ describe("resolvePreviousWorktreeSeed", () => {
         ],
         currentWorktreePath: null,
       }),
-    ).toEqual({ branch: "t3/live", worktreePath: "/repo/.t2/worktrees/live" });
+    ).toEqual({ branch: "t2/live", worktreePath: "/repo/.t2/worktrees/live" });
   });
 });
 
 describe("resolvePreviousWorktreeLabel", () => {
   it("includes the branch when known", () => {
-    expect(resolvePreviousWorktreeLabel({ branch: "t3/fix-thing", worktreePath: "/wt" })).toBe(
-      "Previous worktree (t3/fix-thing)",
+    expect(resolvePreviousWorktreeLabel({ branch: "t2/fix-thing", worktreePath: "/wt" })).toBe(
+      "Previous worktree (t2/fix-thing)",
     );
     expect(resolvePreviousWorktreeLabel({ branch: null, worktreePath: "/wt" })).toBe(
       "Previous worktree",

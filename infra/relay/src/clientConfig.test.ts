@@ -73,7 +73,7 @@ describe("PublishClientConfig", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-relay-client-config-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-relay-client-config-" });
       const target = path.join(dir, "client.env");
       yield* fs.writeFileString(target, "KEEP=yes\n");
       const configured = Effect.provide(
@@ -105,7 +105,7 @@ describe("PublishClientConfig", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-relay-client-config-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-relay-client-config-" });
       const target = path.join(dir, "client.env");
       const exit = yield* stack
         .deploy(PublishClientConfig({ ...clientConfig("v1"), url: undefined }))
@@ -127,7 +127,7 @@ describe("PublishClientConfig", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-relay-client-config-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-relay-client-config-" });
       const target = path.join(dir, "client.env");
       const exit = yield* stack
         .deploy(

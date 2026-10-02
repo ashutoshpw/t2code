@@ -33,7 +33,7 @@ function layerManagedRelayTest(
   );
   return ManagedRelay.layer({
     relayUrl,
-    clientId: "t3-mobile",
+    clientId: "t2-mobile",
     ...(accessTokenStore ? { accessTokenStore } : {}),
   }).pipe(Layer.provide(layerSigner), Layer.provide(layerHttpClient));
 }
@@ -204,7 +204,7 @@ describe("ManagedRelayClient", () => {
     let persistedTokens: ReadonlyArray<ManagedRelay.ManagedRelayAccessTokenCacheEntry> = [
       {
         accountId: "user-1",
-        clientId: "t3-mobile",
+        clientId: "t2-mobile",
         relayUrl: "https://relay.example.test",
         thumbprint: "client-thumbprint",
         scopes: [RelayEnvironmentStatusScope],
@@ -370,7 +370,7 @@ describe("ManagedRelayClient", () => {
     let persistedTokens: ReadonlyArray<ManagedRelay.ManagedRelayAccessTokenCacheEntry> = [
       {
         accountId: "user-1",
-        clientId: "t3-mobile",
+        clientId: "t2-mobile",
         relayUrl: "https://relay.example.test",
         thumbprint: "client-thumbprint",
         scopes: [RelayEnvironmentStatusScope],

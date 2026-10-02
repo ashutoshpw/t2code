@@ -114,9 +114,7 @@ export const repointLauncher = Effect.fn("cli.update.repoint_launcher")(function
     const shimPath = yield* findWindowsShim(input.launchedAs);
     if (shimPath === undefined) return Option.none<string>();
     const repointed: string[] = [];
-    // Rewrite both shims in the discovered bin directory: `t3.cmd` is the
-    // compat launcher installs published before the binary rename left behind.
-    for (const name of ["t2.cmd", "t3.cmd"]) {
+    for (const name of ["t2.cmd"]) {
       const candidate = path.join(path.dirname(shimPath), name);
       const current = yield* fs.readFileString(candidate).pipe(Effect.option);
       const quoted = Option.isSome(current) ? /^"([^"]+)"/m.exec(current.value)?.[1] : undefined;
@@ -135,7 +133,7 @@ export const repointLauncher = Effect.fn("cli.update.repoint_launcher")(function
   }
 
   const repointed: string[] = [];
-  for (const name of new Set([path.basename(input.launchedAs), "t2", "t3"])) {
+  for (const name of new Set(["t2", path.basename(input.launchedAs)])) {
     const candidate = path.join(path.dirname(input.launchedAs), name);
     const linkTarget = yield* fs.readLink(candidate).pipe(Effect.option);
     if (Option.isNone(linkTarget)) continue;
@@ -181,9 +179,8 @@ export const resolveLauncherPath = Effect.gen(function* () {
 
 /**
  * On Windows a `.cmd` shim is what PATH resolves, but the executable it runs
- * only ever sees its own path. Walk PATH for a `t2.cmd` (or legacy `t3.cmd`)
- * whose target is the running executable; that is the launcher the install
- * script wrote.
+ * only ever sees its own path. Walk PATH for a `t2.cmd` whose target is the
+ * running executable; that is the launcher the install script wrote.
  */
 export const findWindowsShim = Effect.fn("cli.update.find_windows_shim")(function* (
   executablePath: string,
@@ -196,7 +193,7 @@ export const findWindowsShim = Effect.fn("cli.update.find_windows_shim")(functio
     ...(environment["PATH"] ?? environment["Path"] ?? "").split(";"),
   ].filter((entry) => entry.trim().length > 0);
   for (const directory of candidates) {
-    for (const name of ["t2.cmd", "t3.cmd"]) {
+    for (const name of ["t2.cmd"]) {
       const shimPath = path.join(directory, name);
       const contents = yield* fs.readFileString(shimPath).pipe(Effect.option);
       if (Option.isNone(contents)) continue;

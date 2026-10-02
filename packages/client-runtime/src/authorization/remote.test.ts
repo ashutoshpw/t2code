@@ -122,7 +122,7 @@ describe("remote environment authorization", () => {
         headers: {
           "content-type": "application/x-www-form-urlencoded",
         },
-        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=pairing-token&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token",
+        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=pairing-token&subject_token_type=urn%3At2%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token",
       });
     }),
   );
@@ -163,7 +163,7 @@ describe("remote environment authorization", () => {
         url: "https://remote.example.com/oauth/token",
         method: "POST",
         headers: { dpop: "token-proof", "content-type": "application/x-www-form-urlencoded" },
-        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=one-time-credential&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&client_label=T2+Code+Mobile&client_device_type=mobile&client_os=iOS",
+        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=one-time-credential&subject_token_type=urn%3At2%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&client_label=T2+Code+Mobile&client_device_type=mobile&client_os=iOS",
       });
       expectFetchCall(fetch.calls, 2, {
         url: "https://remote.example.com/api/auth/websocket-ticket",
@@ -205,7 +205,7 @@ describe("remote environment authorization", () => {
       expectFetchCall(fetch.calls, 1, {
         url: "https://remote.example.com/oauth/token",
         method: "POST",
-        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=pairing-token&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&client_label=T2+Code+Mobile&client_device_type=mobile&client_os=iOS",
+        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=pairing-token&subject_token_type=urn%3At2%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&client_label=T2+Code+Mobile&client_device_type=mobile&client_os=iOS",
       });
     }),
   );
@@ -275,7 +275,7 @@ describe("remote environment authorization", () => {
       expectFetchCall(fetch.calls, 1, {
         url: "https://remote.example.com/oauth/token",
         method: "POST",
-        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=pairing-token&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&scope=orchestration%3Aread",
+        body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&subject_token=pairing-token&subject_token_type=urn%3At2%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&scope=orchestration%3Aread",
       });
     }),
   );
@@ -397,46 +397,6 @@ describe("remote environment authorization", () => {
         "Remote environment endpoint http://remote.example.com/.well-known/t2/environment timed out after 25ms.",
       );
     }).pipe(Effect.provide(TestClock.layer())),
-  );
-
-  it.effect("falls back to the legacy well-known path when a pre-rename server 404s", () =>
-    Effect.gen(function* () {
-      const fetch = recordedFetch(
-        Response.json({ message: "not found" }, { status: 404 }),
-        Response.json(
-          {
-            environmentId: "environment-legacy",
-            label: "Legacy environment",
-            platform: {
-              os: "linux",
-              arch: "x64",
-            },
-            serverVersion: "0.0.0-legacy",
-            capabilities: {
-              repositoryIdentity: true,
-            },
-          },
-          { status: 200 },
-        ),
-      );
-
-      const environment = yield* fetchRemoteEnvironmentDescriptor({
-        httpBaseUrl: "https://remote.example.com/",
-      }).pipe(provideRemoteHttp(fetch.fetchFn));
-
-      expect(environment).toMatchObject({
-        environmentId: "environment-legacy",
-        label: "Legacy environment",
-      });
-      expectFetchCall(fetch.calls, 1, {
-        url: "https://remote.example.com/.well-known/t2/environment",
-        method: "GET",
-      });
-      expectFetchCall(fetch.calls, 2, {
-        url: "https://remote.example.com/.well-known/t3/environment",
-        method: "GET",
-      });
-    }),
   );
 
   it.effect("revives declared typed errors from remote auth failures", () =>

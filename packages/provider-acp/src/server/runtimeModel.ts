@@ -1294,7 +1294,7 @@ export function syntheticLoadSessionResponseFromInitialize(
   return {
     ...(modes ? { modes } : {}),
     _meta: {
-      t3SessionLoadReady: "replay_idle",
+      t2SessionLoadReady: "replay_idle",
     },
   };
 }

@@ -64,7 +64,7 @@ describe("Node runtime selection", () => {
         }),
       ).toBe(process.execPath);
     }).pipe(
-      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t3"),
+      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t2"),
       Effect.provideService(HostProcess.IsExecutable, true),
       Effect.provide(NodeServices.layer),
     ),
@@ -102,7 +102,7 @@ describe("Node runtime selection", () => {
       expect(yield* resolveNodeExecutable("Local device support", env)).toBe(node);
     }).pipe(
       Effect.scoped,
-      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t3"),
+      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t2"),
       Effect.provideService(HostProcess.IsExecutable, true),
       Effect.provide(NodeServices.layer),
     ),
@@ -129,7 +129,7 @@ describe("Node runtime selection", () => {
       ).toBe(node);
     }).pipe(
       Effect.scoped,
-      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t3"),
+      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t2"),
       Effect.provideService(HostProcess.IsExecutable, true),
       Effect.provideService(HostProcess.Platform, "win32"),
       Effect.provide(NodeServices.layer),
@@ -163,7 +163,7 @@ describe("Node runtime selection", () => {
       const path = yield* Path.Path;
       const directory = yield* fs.makeTempDirectoryScoped();
       const platform = yield* HostProcess.Platform;
-      const executable = path.join(directory, platform === "win32" ? "t3.exe" : "t3");
+      const executable = path.join(directory, platform === "win32" ? "t2.exe" : "t2");
       const node = path.join(directory, platform === "win32" ? "node.exe" : "node");
       yield* fs.writeFileString(executable, "standalone executable fixture");
       yield* fs.chmod(executable, 0o755);
@@ -192,7 +192,7 @@ describe("Node runtime selection", () => {
       expect(yield* resolveNodeExecutable("Local device support", { PATH: directory })).toBe(node);
     }).pipe(
       Effect.scoped,
-      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t3"),
+      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t2"),
       Effect.provideService(HostProcess.IsExecutable, true),
       Effect.provide(NodeServices.layer),
     ),

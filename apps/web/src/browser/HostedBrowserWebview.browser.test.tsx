@@ -76,7 +76,7 @@ beforeEach(() => {
   mocks.closeTab.mockReset().mockResolvedValue(undefined);
   mocks.registerWebview.mockReset().mockResolvedValue(undefined);
   mocks.getPreviewConfig.mockReset().mockResolvedValue({
-    partition: "persist:t3-preview-work",
+    partition: "persist:t2-preview-work",
     webPreferences: "contextIsolation=yes",
     preloadUrl: null,
   });
@@ -184,7 +184,7 @@ describe("HostedBrowserWebview settings hydration", () => {
     expect(acquire).toHaveBeenCalledExactlyOnceWith(runtimeTabId, undefined);
     expect(mocks.getPreviewConfig).toHaveBeenCalledExactlyOnceWith(threadRef.environmentId, "work");
     expect(guests()).toHaveLength(1);
-    expect(guest()?.getAttribute("partition")).toBe("persist:t3-preview-work");
+    expect(guest()?.getAttribute("partition")).toBe("persist:t2-preview-work");
     expect(guest()?.getAttribute("src")).toBe("https://example.com");
     expect(mocks.createTab).toHaveBeenCalledExactlyOnceWith(runtimeTabId, {
       zoomFactor: 1.25,

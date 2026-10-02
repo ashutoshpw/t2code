@@ -25,7 +25,7 @@ import * as RelayConfiguration from "../Config.ts";
 
 // Link challenges may be issued before a relay rollout and redeemed after it.
 // Keep this wire type stable while the relay's deployment identity moves to T2.
-const LINK_CHALLENGE_TYP = "t3-link-challenge+jwt";
+const LINK_CHALLENGE_TYP = "t2-link-challenge+jwt";
 const ACCESS_TOKEN_TYP = "t2-relay-dpop-access+jwt";
 const LINK_CHALLENGE_KIND = "environment_link_challenge";
 export const RELAY_DPOP_ACCESS_TOKEN_TTL = "30 minutes";

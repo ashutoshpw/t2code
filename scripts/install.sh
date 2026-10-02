@@ -174,9 +174,7 @@ case "$version" in
 esac
 
 stem="t2-${version}-${platform}-${arch}"
-legacy_stem="t3-${version}-${platform}-${arch}"
 archive="${stem}.tar.gz"
-legacy_archive="${legacy_stem}.tar.gz"
 versions_dir="${t2_home}/runtime/versions"
 target_dir="${versions_dir}/${version}"
 
@@ -200,17 +198,8 @@ else
   elif [ "$fetch_status" -ne 0 ]; then
     fail "could not download the release checksums"
   fi
-  # Releases before the public rename only list the t3 archive name. Prefer
-  # the current name when both are present, while keeping those releases
-  # installable without a second speculative download.
-  if ! grep -q " \*\{0,1\}${archive}\$" "${staging}/SHA256SUMS"; then
-    if grep -q " \*\{0,1\}${legacy_archive}\$" "${staging}/SHA256SUMS"; then
-      stem="$legacy_stem"
-      archive="$legacy_archive"
-    else
-      fail "neither ${archive} nor ${legacy_archive} is listed in SHA256SUMS"
-    fi
-  fi
+  grep -q " \*\{0,1\}${archive}\$" "${staging}/SHA256SUMS" \
+    || fail "${archive} is not listed in SHA256SUMS"
   download "${base_url}/v${version}/${archive}" "${staging}/${archive}"
 
   step "Verifying the download..."
@@ -222,11 +211,8 @@ else
   step "Extracting T2 Code..."
   tar -xzf "${staging}/${archive}" -C "$staging" --strip-components=1
   rm -f "${staging}/${archive}" "${staging}/SHA256SUMS"
-  # Releases published before the binary rename still carry `t3`.
-  if [ -x "${staging}/t2" ]; then exe=t2; elif [ -x "${staging}/t3" ]; then exe=t3
-  else fail "the archive does not contain a t2 executable"
-  fi
-  "${staging}/${exe}" --version >/dev/null || fail "the downloaded executable does not run"
+  [ -x "${staging}/t2" ] || fail "the archive does not contain a t2 executable"
+  "${staging}/t2" --version >/dev/null || fail "the downloaded executable does not run"
   printf '%s\n' "$version" > "${staging}/.install-complete"
 
   rm -rf "$target_dir"
@@ -235,14 +221,9 @@ else
 fi
 
 step "Setting up the t2 command..."
-# Releases published before the binary rename still carry `t3`.
-if [ -f "${target_dir}/t2" ]; then exe=t2; elif [ -f "${target_dir}/t3" ]; then exe=t3
-else fail "${target_dir} does not contain a t2 executable"
-fi
+[ -f "${target_dir}/t2" ] || fail "${target_dir} does not contain a t2 executable"
 mkdir -p "$bin_dir"
-ln -sfn "${target_dir}/${exe}" "${bin_dir}/t2"
-# Compat launcher for scripts and installs written for the old binary name.
-ln -sfn "${target_dir}/${exe}" "${bin_dir}/t3"
+ln -sfn "${target_dir}/t2" "${bin_dir}/t2"
 if "$interactive"; then printf '\r\033[2K' >&2; fi
 printf '  %sInstalled T2 Code %s%s\n\n' "$green" "$version" "$reset" >&2
 case ":${PATH}:" in
