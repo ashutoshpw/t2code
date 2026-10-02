@@ -525,7 +525,7 @@ describe("DesktopBackendManager", () => {
 
         assert.equal(readyCount, 0);
         assert.deepEqual(prunedRuntimes, []);
-        assert.deepEqual(requestUrls, ["http://127.0.0.1:3772/.well-known/t3/environment"]);
+        assert.deepEqual(requestUrls, ["http://127.0.0.1:3772/.well-known/t2/environment"]);
 
         yield* TestClock.adjust(Duration.millis(100));
         yield* Deferred.await(backendReady);
@@ -536,8 +536,8 @@ describe("DesktopBackendManager", () => {
         assert.equal(readyCount, 1);
         assert.deepEqual(prunedRuntimes, [["Ubuntu", "1.2.3-x64"]]);
         assert.deepEqual(requestUrls, [
-          "http://127.0.0.1:3772/.well-known/t3/environment",
-          "http://127.0.0.1:3772/.well-known/t3/environment",
+          "http://127.0.0.1:3772/.well-known/t2/environment",
+          "http://127.0.0.1:3772/.well-known/t2/environment",
         ]);
       }).pipe(Effect.provide(TestClock.layer())),
     ),

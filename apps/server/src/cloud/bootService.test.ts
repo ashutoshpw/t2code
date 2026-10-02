@@ -22,7 +22,7 @@ import {
   serviceStateHasPendingUpdate,
 } from "./serviceProtocol.ts";
 
-const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t3";
+const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t2";
 const linuxPlan = {
   program: [linuxRuntime, "__service-launcher"],
   baseDir: "/home/theo/.t2",
