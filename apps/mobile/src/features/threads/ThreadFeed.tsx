@@ -19,6 +19,7 @@ import type {
 import { renderAssistantCitationsAsText } from "@t2code/shared/assistantCitations";
 import { encodeComposerContextFragment } from "@t2code/shared/composerContextClipboard";
 import {
+  formatComposerContextHref,
   parseComposerContextHref,
   collectComposerContextReferences,
   replaceComposerContextReferences,
@@ -1787,7 +1788,7 @@ function UserMessageContent(props: UserMessageContentProps) {
   const { selectedThread } = useThreadSelection();
   const text = replaceComposerContextReferences(props.text, (ref) => {
     const available = props.context?.records.some((record) => record.contextId === ref.contextId);
-    return `[${ref.label}${available ? "" : " (unavailable)"}](t3-context://v1/${ref.kind}/${ref.contextId})`;
+    return `[${ref.label}${available ? "" : " (unavailable)"}](${formatComposerContextHref(ref.kind, ref.contextId)})`;
   });
   const onLinkPress = (href: string) => {
     const reference = parseComposerContextHref(href);

@@ -359,7 +359,7 @@ describe("remote environment authorization", () => {
       });
 
       expectFetchCall(fetch.calls, 1, {
-        url: "https://remote.example.com/.well-known/t3/environment",
+        url: "https://remote.example.com/.well-known/t2/environment",
         method: "GET",
       });
       expectFetchCall(fetch.calls, 2, {
@@ -393,9 +393,49 @@ describe("remote environment authorization", () => {
 
       expect(error).toBeInstanceOf(RemoteEnvironmentAuthTimeoutError);
       expect(error.message).toBe(
-        "Remote environment endpoint http://remote.example.com/.well-known/t3/environment timed out after 25ms.",
+        "Remote environment endpoint http://remote.example.com/.well-known/t2/environment timed out after 25ms.",
       );
     }).pipe(Effect.provide(TestClock.layer())),
+  );
+
+  it.effect("falls back to the legacy well-known path when a pre-rename server 404s", () =>
+    Effect.gen(function* () {
+      const fetch = recordedFetch(
+        Response.json({ message: "not found" }, { status: 404 }),
+        Response.json(
+          {
+            environmentId: "environment-legacy",
+            label: "Legacy environment",
+            platform: {
+              os: "linux",
+              arch: "x64",
+            },
+            serverVersion: "0.0.0-legacy",
+            capabilities: {
+              repositoryIdentity: true,
+            },
+          },
+          { status: 200 },
+        ),
+      );
+
+      const environment = yield* fetchRemoteEnvironmentDescriptor({
+        httpBaseUrl: "https://remote.example.com/",
+      }).pipe(provideRemoteHttp(fetch.fetchFn));
+
+      expect(environment).toMatchObject({
+        environmentId: "environment-legacy",
+        label: "Legacy environment",
+      });
+      expectFetchCall(fetch.calls, 1, {
+        url: "https://remote.example.com/.well-known/t2/environment",
+        method: "GET",
+      });
+      expectFetchCall(fetch.calls, 2, {
+        url: "https://remote.example.com/.well-known/t3/environment",
+        method: "GET",
+      });
+    }),
   );
 
   it.effect("revives declared typed errors from remote auth failures", () =>

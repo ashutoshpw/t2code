@@ -2166,12 +2166,23 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
     Effect.gen(function* () {
       yield* buildAppUnderTest();
 
-      const url = yield* getHttpServerUrl("/.well-known/t3/environment");
+      const url = yield* getHttpServerUrl("/.well-known/t2/environment");
       const response = yield* fetchEffect(url);
       const body = yield* responseJsonEffect<typeof testEnvironmentDescriptor>(response);
 
       assert.equal(response.status, 200);
       assert.deepEqual(body, testEnvironmentDescriptor);
+
+      // Servers published before the binary rename only answered on the old
+      // path; keep it as an alias so older clients can still connect.
+      const legacyResponse = yield* fetchEffect(
+        yield* getHttpServerUrl("/.well-known/t3/environment"),
+      );
+      assert.equal(legacyResponse.status, 200);
+      assert.deepEqual(
+        yield* responseJsonEffect<typeof testEnvironmentDescriptor>(legacyResponse),
+        testEnvironmentDescriptor,
+      );
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
@@ -2224,7 +2235,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         },
       });
 
-      const url = yield* getHttpServerUrl("/.well-known/t3/environment");
+      const url = yield* getHttpServerUrl("/.well-known/t2/environment");
       const response = yield* fetchEffect(url, {
         headers: {
           "accept-encoding": "gzip",
@@ -2243,7 +2254,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
     Effect.gen(function* () {
       yield* buildAppUnderTest();
 
-      const url = yield* getHttpServerUrl("/.well-known/t3/environment");
+      const url = yield* getHttpServerUrl("/.well-known/t2/environment");
       const response = yield* fetchEffect(url, {
         headers: {
           origin: crossOriginClientOrigin,

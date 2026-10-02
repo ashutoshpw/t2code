@@ -17,11 +17,11 @@ const hostArch = NodeOS.arch();
 it.skipIf(hostPlatform === "win32")(
   "keeps service IPC, arguments, and termination connected",
   async () => {
-    const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t3-legacy-launcher-"));
+    const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t2-legacy-launcher-"));
     const entry = NodePath.join(root, "node_modules/@t2code/cli/dist/bin.mjs");
     const executable = NodePath.join(
       root,
-      `node_modules/@t2code/t2-${hostPlatform}-${hostArch}/t3`,
+      `node_modules/@t2code/t2-${hostPlatform}-${hostArch}/t2`,
     );
     await NodeFSP.mkdir(NodePath.dirname(entry), { recursive: true });
     await NodeFSP.mkdir(NodePath.dirname(executable), { recursive: true });

@@ -39,8 +39,8 @@ export class CliUninstallError extends Schema.TaggedError<CliUninstallError>()(
 export interface UninstallPlan {
   /** The background service serves this home and will be stopped and removed. */
   readonly service: boolean;
-  /** The `t3` launcher (symlink or `.cmd` shim) that points into this home's runtime tree. */
-  readonly launcher: string | undefined;
+  /** The `t2`/`t3` launchers (symlinks or `.cmd` shims) that point into this home's runtime tree. */
+  readonly launcher: ReadonlyArray<string>;
   /** `<home>/runtime`, holding every downloaded version, when it exists. */
   readonly runtimeDir: string | undefined;
   /** `<home>/userdata`, which is never removed; shown so the user knows where it is. */
@@ -52,27 +52,37 @@ export interface UninstallPlan {
  * into this home's `runtime/versions` is claimed: a plain copy of the
  * executable, or a launcher for another home, is not ours to delete.
  */
-export const findOwnedLauncher = Effect.fn("cli.uninstall.find_launcher")(function* (input: {
+export const findOwnedLaunchers = Effect.fn("cli.uninstall.find_launchers")(function* (input: {
   readonly launchedAs: string | undefined;
   readonly versionsDir: string;
 }) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const platform = yield* HostProcessPlatform;
-  if (input.launchedAs === undefined) return undefined;
+  if (input.launchedAs === undefined) return [];
   if (platform === "win32") {
     const shimPath = yield* findWindowsShim(input.launchedAs);
-    if (shimPath === undefined) return undefined;
-    const contents = yield* fs.readFileString(shimPath).pipe(Effect.option);
-    const target = Option.isSome(contents) ? /^"([^"]+)"/m.exec(contents.value)?.[1] : undefined;
-    return target !== undefined && launcherOwnsVersionsDir(path, input.versionsDir, target)
-      ? shimPath
-      : undefined;
+    if (shimPath === undefined) return [];
+    const owned: string[] = [];
+    for (const name of ["t2.cmd", "t3.cmd"]) {
+      const candidate = path.join(path.dirname(shimPath), name);
+      const contents = yield* fs.readFileString(candidate).pipe(Effect.option);
+      const target = Option.isSome(contents) ? /^"([^"]+)"/m.exec(contents.value)?.[1] : undefined;
+      if (target !== undefined && launcherOwnsVersionsDir(path, input.versionsDir, target)) {
+        owned.push(candidate);
+      }
+    }
+    return owned;
   }
-  const linkTarget = yield* fs.readLink(input.launchedAs).pipe(Effect.option);
-  if (Option.isNone(linkTarget)) return undefined;
-  const resolved = path.resolve(path.dirname(input.launchedAs), linkTarget.value);
-  return launcherOwnsVersionsDir(path, input.versionsDir, resolved) ? input.launchedAs : undefined;
+  const dir = path.dirname(input.launchedAs);
+  const owned: string[] = [];
+  for (const candidate of new Set([`${dir}/t2`, `${dir}/t3`, input.launchedAs])) {
+    const linkTarget = yield* fs.readLink(candidate).pipe(Effect.option);
+    if (Option.isNone(linkTarget)) continue;
+    const resolved = path.resolve(dir, linkTarget.value);
+    if (launcherOwnsVersionsDir(path, input.versionsDir, resolved)) owned.push(candidate);
+  }
+  return owned;
 });
 
 const planUninstall = Effect.fn("cli.uninstall.plan")(function* (input: {
@@ -90,7 +100,7 @@ const planUninstall = Effect.fn("cli.uninstall.plan")(function* (input: {
   const launchedAs = (yield* HostProcessIsExecutable) ? yield* resolveLauncherPath : undefined;
   const plan: UninstallPlan = {
     service: status.supported && status.installed && servesThisHome,
-    launcher: yield* findOwnedLauncher({ launchedAs, versionsDir }),
+    launcher: yield* findOwnedLaunchers({ launchedAs, versionsDir }),
     runtimeDir: (yield* fs.exists(runtimeDir).pipe(Effect.orElseSucceed(() => false)))
       ? runtimeDir
       : undefined,
@@ -110,7 +120,7 @@ export const uninstallCommand = Command.make("uninstall", {
   ),
 }).pipe(
   Command.withDescription(
-    "Remove t3 from this machine: the background service, the launcher, and every downloaded version. Your projects and threads are kept.",
+    "Remove t2 from this machine: the background service, the launcher, and every downloaded version. Your projects and threads are kept.",
   ),
   Command.withHandler((flags) =>
     Effect.gen(function* () {
@@ -133,11 +143,11 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
   const service = yield* BootService.BootService;
   const plan = yield* planUninstall({ baseDir: input.baseDir });
 
-  if (!plan.service && plan.launcher === undefined && plan.runtimeDir === undefined) {
-    yield* Console.log(`Nothing to remove: t3 is not installed for ${input.baseDir}.`);
+  if (!plan.service && plan.launcher.length === 0 && plan.runtimeDir === undefined) {
+    yield* Console.log(`Nothing to remove: t2 is not installed for ${input.baseDir}.`);
     if (!(yield* HostProcessIsExecutable)) {
       yield* Console.log(
-        "  This t3 runs from a Node script, so it was installed by npm or built from source. Remove it the same way (`npm uninstall -g t3`, or delete the checkout).",
+        "  This t2 runs from a Node script, so it was installed by npm or built from source. Remove it the same way (`npm uninstall -g @t2code/cli`, or delete the checkout).",
       );
     }
     return;
@@ -145,7 +155,9 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
 
   yield* Console.log("This will remove:");
   if (plan.service) yield* Console.log("  the background service (stopping it first)");
-  if (plan.launcher !== undefined) yield* Console.log(`  the launcher at ${plan.launcher}`);
+  for (const launcher of plan.launcher) {
+    yield* Console.log(`  the launcher at ${launcher}`);
+  }
   if (plan.runtimeDir !== undefined) {
     yield* Console.log(`  every downloaded version under ${plan.runtimeDir}`);
   }
@@ -161,7 +173,7 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
       });
     }
     const confirmed = yield* Prompt.run(
-      Prompt.Confirm({ message: "Remove t3 from this machine?", initial: false }),
+      Prompt.Confirm({ message: "Remove t2 from this machine?", initial: false }),
     ).pipe(Effect.catchTag("QuitError", () => Effect.succeed(false)));
     if (!confirmed) {
       yield* Console.log("Left as is.");
@@ -173,16 +185,15 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
     yield* service.uninstall;
     yield* Console.log("Removed the background service.");
   }
-  if (plan.launcher !== undefined) {
+  for (const launcher of plan.launcher) {
     yield* fs
-      .remove(plan.launcher, { force: true })
+      .remove(launcher, { force: true })
       .pipe(
         Effect.mapError(
-          () =>
-            new CliUninstallError({ reason: `Could not remove the launcher at ${plan.launcher}.` }),
+          () => new CliUninstallError({ reason: `Could not remove the launcher at ${launcher}.` }),
         ),
       );
-    yield* Console.log(`Removed ${plan.launcher}.`);
+    yield* Console.log(`Removed ${launcher}.`);
   }
   if (plan.runtimeDir !== undefined) {
     // This process runs from inside runtimeDir. POSIX unlinks a running
@@ -205,7 +216,7 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
             reason: `Could not schedule removal of ${runtimeDir}. Delete it yourself once this window is closed.`,
           }),
       });
-      yield* Console.log(`${runtimeDir} will be removed once t3 exits.`);
+      yield* Console.log(`${runtimeDir} will be removed once t2 exits.`);
     } else {
       yield* fs
         .remove(plan.runtimeDir, { recursive: true, force: true })
