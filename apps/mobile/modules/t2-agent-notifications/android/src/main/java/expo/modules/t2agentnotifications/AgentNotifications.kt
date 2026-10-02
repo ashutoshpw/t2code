@@ -45,8 +45,8 @@ object AgentNotifications {
   private const val STORE = "t2-agent-notifications"
   private const val ACTIVITY_CHANNEL = "agent-activity"
   private const val ALERT_CHANNEL = "agent-alerts"
-  private const val ACTIVITY_TAG = "t3-agent-activity"
-  private const val ALERT_TAG = "t3-agent-alert"
+  private const val ACTIVITY_TAG = "t2-agent-activity"
+  private const val ALERT_TAG = "t2-agent-alert"
   private const val ACTIVITY_ID = 73001
   private const val MAX_MESSAGE_AGE_MS = 10 * 60 * 1000L
   private const val RUNNING_LIFETIME_MS = 2 * 60 * 60 * 1000L

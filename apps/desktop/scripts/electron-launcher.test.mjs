@@ -132,7 +132,7 @@ describe("electron development launcher", () => {
   });
 
   it("restores execute permissions on an unchanged launcher", () => {
-    const directory = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-launcher-"));
+    const directory = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-launcher-"));
     const launcherPath = NodePath.join(directory, "launcher");
     try {
       writeDevelopmentLauncherScript(launcherPath, "/runtime/Electron");

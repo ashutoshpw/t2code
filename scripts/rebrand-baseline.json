@@ -1,9 +1,5 @@
 [
   {
-    "file": "apps/marketing/src/pages/security-policy.astro",
-    "line": ">, the optional T3 Connect service, and the T2 Code website at{\" \"}<a href=\"https://t2.codes\""
-  },
-  {
     "file": "infra/relay/migrations/postgres/20260527044716_baseline/migration.sql",
     "line": "\"environment_label\" text DEFAULT 'T3 Environment' NOT NULL,"
   },
@@ -42,10 +38,6 @@
   {
     "file": "infra/relay/migrations/postgres/20260919015455_managed_endpoint_recovery/snapshot.json",
     "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/src/persistence/schema.ts",
-    "line": "environmentLabel: text(\"environment_label\").notNull().default(\"T3 Environment\"),"
   },
   {
     "file": "native/kde-snap-shot/src/feedback.qml",

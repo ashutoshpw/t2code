@@ -52,7 +52,7 @@ const makeServerSettingsLayerWithSecrets = () =>
     Layer.provideMerge(
       Layer.fresh(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "t3code-server-settings-test-",
+          prefix: "t2code-server-settings-test-",
         }),
       ),
     ),

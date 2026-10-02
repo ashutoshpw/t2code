@@ -1234,7 +1234,7 @@ describe("ManagedEndpointProvider", () => {
           origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
           endpoint: {
             ...provisioned.endpoint,
-            httpBaseUrl: "https://different-host.t3code.test/",
+            httpBaseUrl: "https://different-host.t2code.test/",
           },
         }),
       );

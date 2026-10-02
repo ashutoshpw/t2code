@@ -129,7 +129,7 @@ const devProxyTarget = resolveDevProxyTarget(process.env.T2CODE_PORT, configured
 // (quality 11) would trade the transfer stall for an equally long encode stall.
 function devCompressionPlugin(): Plugin {
   return {
-    name: "t3code:dev-compression",
+    name: "t2code:dev-compression",
     apply: "serve",
     configureServer(server) {
       // compression() is typed against Express's req/res, which extend the
