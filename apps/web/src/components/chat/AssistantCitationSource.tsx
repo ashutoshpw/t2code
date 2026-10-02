@@ -16,7 +16,7 @@ const CITATION_HIGHLIGHT_TOTAL_MS =
 const CITATION_HIGHLIGHT_OPACITY = "--assistant-citation-highlight-opacity";
 // Matches the comment-editing highlight strength in index.css.
 const CITATION_HIGHLIGHT_PEAK = 0.45;
-const COMMENT_HIGHLIGHT_NAME = "t3-assistant-citation-comment";
+const COMMENT_HIGHLIGHT_NAME = "t2-assistant-citation-comment";
 
 /** Keep source text marked while its comment editor is open, without changing native selection. */
 export function observeAssistantCitationCommentSource({
@@ -135,8 +135,8 @@ export function observeAssistantCitationSource({
     selected.range.endContainer === selected.snapshot.endContainer &&
     selected.range.endOffset === selected.snapshot.endOffset;
   const clear = () => {
-    if (highlighted && CSS.highlights.get("t3-assistant-citation") === highlighted) {
-      CSS.highlights.delete("t3-assistant-citation");
+    if (highlighted && CSS.highlights.get("t2-assistant-citation") === highlighted) {
+      CSS.highlights.delete("t2-assistant-citation");
     }
     highlighted = null;
     ownedRange = null;
@@ -223,7 +223,7 @@ export function observeAssistantCitationSource({
     }
     if (typeof Highlight !== "undefined" && typeof CSS !== "undefined" && CSS.highlights) {
       highlighted = new Highlight(range);
-      CSS.highlights.set("t3-assistant-citation", highlighted);
+      CSS.highlights.set("t2-assistant-citation", highlighted);
       ownedRange = range;
       root.dataset.citationHighlighted = "true";
     } else {
@@ -272,7 +272,7 @@ export function observeAssistantCitationSource({
             ],
         { duration: CITATION_HIGHLIGHT_TOTAL_MS, easing: "ease-in-out" },
       );
-      pulseAnimation.id = "t3-assistant-citation-pulse";
+      pulseAnimation.id = "t2-assistant-citation-pulse";
       pulseAnimation.currentTime = Math.max(0, performance.now() - pulse.startedAt);
       void pulseAnimation.finished.then(finishHighlight, () => {});
     }

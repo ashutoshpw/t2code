@@ -327,10 +327,6 @@ export const buildWslRuntimeInstallScript = (
     '    [ "$recorded_entry_digest" = "$(runtime_server_entry_digest "$runtime_root")" ]',
     "}",
     'mkdir -p "$runtime_parent"',
-    // Caches installed before the binary rename keep a working `t3` entry.
-    // Rename it in place so everything below — and the launcher's entry path —
-    // only ever sees `t2`; the recorded digest still matches the same bytes.
-    '  if [ -f "$runtime_root/t3" ] && [ ! -e "$runtime_root/t2" ]; then mv "$runtime_root/t3" "$runtime_root/t2"; fi',
     `runtime_lock="$runtime_parent/.${safeRuntimeId}.install.lock"`,
     "trap 'exit 1' HUP INT TERM",
     'exec 9> "$runtime_lock"',
@@ -386,11 +382,8 @@ export const buildWslRuntimeInstallScript = (
     'cleanup_runtime_install() { rm -rf "$runtime_tmp"; }',
     "trap cleanup_runtime_install EXIT",
     // The release archive has one top-level `t2-<version>-linux-<arch>/`
-    // directory (historical `t3-` stems are accepted by the desktop packager);
-    // strip it so the executable lands at `$runtime_root/t2`.
+    // directory; strip it so the executable lands at `$runtime_root/t2`.
     `tar -xzf ${shellQuote(linuxArchivePath)} -C "$runtime_tmp" --strip-components=1`,
-    // Archives published before the binary rename still carry `t3`.
-    '  if [ -f "$runtime_tmp/t3" ] && [ ! -e "$runtime_tmp/t2" ]; then mv "$runtime_tmp/t3" "$runtime_tmp/t2"; fi',
     // Never write the ready marker over a tree whose executable does not run.
     // Failing here drops out to the mounted-tree fallback, which is
     // recoverable; promoting it would mark the defect ready and cache it.
@@ -558,8 +551,7 @@ NODE`;
 export const buildWslRuntimeProbeScript = (linuxAppRoot: string) =>
   [
     `bash -lc ${shellQuote(`${buildWslNodeEnvPreamble()}${RESOLVED_PATH_LINE}`)} 2>/dev/null || ${RESOLVED_PATH_LINE}`,
-    // Runtimes installed before the binary rename can still carry `t3`.
-    `{ if [ -x ${shellQuote(`${linuxAppRoot}/t2`)} ]; then ${shellQuote(`${linuxAppRoot}/t2`)} --version; elif [ -x ${shellQuote(`${linuxAppRoot}/t3`)} ]; then ${shellQuote(`${linuxAppRoot}/t3`)} --version; else exit 127; fi; } >/dev/null 2>&1`,
+    `${shellQuote(`${linuxAppRoot}/t2`)} --version >/dev/null 2>&1`,
   ].join("\n");
 
 const TOOLCHAIN_CHECK_SCRIPT = [

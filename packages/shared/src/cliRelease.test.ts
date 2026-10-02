@@ -2,7 +2,6 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   cliArchiveFileName,
-  cliArchiveFileNames,
   cliArchivePlatformKey,
   cliArchiveTarCommand,
   cliReleaseDownloadBaseUrl,
@@ -18,13 +17,6 @@ describe("cliRelease", () => {
       "t2-1.2.3-preview.20260911.4-linux-x64.tar.gz",
     );
     expect(cliArchiveFileName("1.2.3", "win32-x64")).toBe("t2-1.2.3-win32-x64.zip");
-  });
-
-  it("prefers current archive names while retaining historical names", () => {
-    expect(cliArchiveFileNames("1.2.3", "linux-x64")).toEqual([
-      "t2-1.2.3-linux-x64.tar.gz",
-      "t3-1.2.3-linux-x64.tar.gz",
-    ]);
   });
 
   it("only maps platforms and architectures that have a release archive", () => {

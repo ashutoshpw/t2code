@@ -320,7 +320,7 @@ describe("assistant citation references", () => {
     const rendered = renderAssistantCitationsAsText(serializeAssistantCitation(citation));
     expect(rendered).toContain("> Assistant quote:");
     expect(rendered).toContain("日本語 🚀");
-    expect(rendered).not.toContain("t3-citation:");
+    expect(rendered).not.toContain("t2-citation:");
     expect(rendered).not.toContain("</assistant_citations>");
   });
 

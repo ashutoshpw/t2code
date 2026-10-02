@@ -89,7 +89,6 @@ import {
   WSL_RUNTIME_ARCHIVE_NAME,
   WSL_RUNTIME_EXTRA_RESOURCES,
   WslRuntimeArchiveMissingError,
-  legacyWslRuntimeArchiveStem,
   wslRuntimeArchiveStem,
 } from "./build-desktop-artifact.ts";
 import { BRAND_ASSET_PATHS } from "./lib/brand-assets.ts";
@@ -218,7 +217,7 @@ const makeWindowsPayloadFixture = Effect.fn("test.makeWindowsPayloadFixture")(fu
   if (input.wslRuntime !== undefined) {
     const stem =
       input.wslRuntime === "legacy"
-        ? legacyWslRuntimeArchiveStem(WINDOWS_PAYLOAD_FIXTURE_VERSION, "x64")
+        ? `t3-${WINDOWS_PAYLOAD_FIXTURE_VERSION}-linux-x64`
         : wslRuntimeArchiveStem(WINDOWS_PAYLOAD_FIXTURE_VERSION, input.targetArch ?? "x64");
     const sourceArchivePath =
       input.wslRuntime === "loose-server-tree"
@@ -1325,22 +1324,23 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       ),
   );
 
-  it.effect("accepts a historical Linux CLI archive stem in a Windows package", () =>
+  it.effect("rejects a historical Linux CLI archive stem in a Windows package", () =>
     Effect.scoped(
       Effect.gen(function* () {
         const fixture = yield* makeWindowsPayloadFixture({
           copyUnpackedNatives: true,
           wslRuntime: "legacy",
         });
-        const result = yield* validateWindowsPackagedPayload({
+        const error = yield* validateWindowsPackagedPayload({
           stageDistDir: fixture.stageDistDir,
           appExecutableName: fixture.appExecutableName,
           targetArch: "x64",
           appVersion: WINDOWS_PAYLOAD_FIXTURE_VERSION,
           expectWslRuntime: true,
-        });
+        }).pipe(Effect.flip);
 
-        assert.equal(result.packagedAppDir, fixture.packagedAppDir);
+        assert.instanceOf(error, WindowsPackagedPayloadValidationError);
+        assert.equal(error.reason, "wsl-runtime-invalid");
       }),
     ).pipe(Effect.provideService(HostProcessPlatform, "linux")),
   );
@@ -2103,7 +2103,6 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     assert.isFalse(bundlesWslRuntime({ platform: "linux", runtimeArchivePath }));
     assert.isFalse(bundlesWslRuntime({ platform: "mac", runtimeArchivePath }));
     assert.equal(wslRuntimeArchiveStem("1.2.3", "x64"), "t2-1.2.3-linux-x64");
-    assert.equal(legacyWslRuntimeArchiveStem("1.2.3", "x64"), "t3-1.2.3-linux-x64");
   });
 
   it("parses Windows bsdtar member listings with CRLF line endings", () => {

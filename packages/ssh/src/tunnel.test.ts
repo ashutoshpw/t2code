@@ -109,16 +109,12 @@ describe("ssh tunnel scripts", () => {
     );
     assert.include(script, 'T2_RUNTIME_DIR="$HOME/.t2/runtime/versions/$T2_ARCHIVE_VERSION"');
     assert.include(script, 'T2_ARCHIVE="t2-$T2_ARCHIVE_VERSION-$T2_PLATFORM-$T2_ARCH.tar.gz"');
-    assert.include(
-      script,
-      'T2_LEGACY_ARCHIVE="t3-$T2_ARCHIVE_VERSION-$T2_PLATFORM-$T2_ARCH.tar.gz"',
-    );
     assert.include(script, "SHA256SUMS");
-    assert.include(script, 'exec "$T2_RUNTIME_DIR/t3" "$@"');
+    assert.include(script, 'exec "$T2_RUNTIME_DIR/t2" "$@"');
     assert.notInclude(script, "npx");
     assert.notInclude(script, "npm exec");
-    assert.notInclude(script, "t3@latest");
-    assert.notInclude(script, 'exec t3 "$@"');
+    assert.notInclude(script, "t2@latest");
+    assert.notInclude(script, 'exec t2 "$@"');
     // Concurrent launches serialize on a per-version mkdir lock and recheck
     // the completion marker after acquiring it.
     assert.include(
@@ -136,9 +132,9 @@ describe("ssh tunnel scripts", () => {
     assert.include(script, '"$T2_STAGING/$T2_ARCHIVE" 240');
     assert.notInclude(script, "T2_LOCK_CANDIDATE");
     assert.notInclude(script, "-mmin");
-    assert.equal(script.split("if ! t3_runtime_ready; then").length - 1, 2);
+    assert.equal(script.split("if ! t2_runtime_ready; then").length - 1, 2);
     assert.isBelow(
-      script.indexOf('"$T2_STAGING/t3" --version'),
+      script.indexOf('"$T2_STAGING/t2" --version'),
       script.indexOf('> "$T2_STAGING/.install-complete"'),
     );
     // Node discovery is defined for the dev path but only ever invoked inside
@@ -155,10 +151,10 @@ describe("ssh tunnel scripts", () => {
 
     const launch = SshTunnel.buildRemoteLaunchScript({
       ...ARCHIVE,
-      releaseBaseUrl: "https://mirror.example/t3/",
+      releaseBaseUrl: "https://mirror.example/t2/",
     });
     assert.include(launch, "T2_ARCHIVE_MODE=1");
-    assert.include(launch, "T2_RELEASE_BASE_URL='https://mirror.example/t3'");
+    assert.include(launch, "T2_RELEASE_BASE_URL='https://mirror.example/t2'");
     assert.include(launch, '"$RUNNER_FILE" __ssh-helper pick-port "$PORT_FILE"');
     assert.include(launch, '"$RUNNER_FILE" __ssh-helper wait-ready "$REMOTE_PORT"');
     assert.include(launch, '"$RUNNER_FILE" __ssh-helper runtime-port "$DEFAULT_RUNTIME_FILE"');
@@ -735,20 +731,25 @@ describe("archive runner script", () => {
   // A fake "executable" that answers --version, packed the way the release
   // workflow packs the real archive: one top-level directory named after the
   // stem, checksummed in SHA256SUMS.
-  const makeMirror = Effect.fn("makeMirror")(function* (root: string, prefix: "t2" | "t3" = "t2") {
+  const makeMirror = Effect.fn("makeMirror")(function* (
+    root: string,
+    options?: { readonly omitArchive?: boolean },
+  ) {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const platform = hostPlatform === "darwin" ? "darwin" : "linux";
     const arch = hostArch === "arm64" ? "arm64" : "x64";
-    const stem = `${prefix}-${archiveVersion}-${platform}-${arch}`;
+    const stem = `t2-${archiveVersion}-${platform}-${arch}`;
     const stage = `${root}/stage/${stem}`;
     const release = `${root}/mirror/v${archiveVersion}`;
     const script = [
       "set -eu",
       `mkdir -p '${stage}' '${release}'`,
-      `printf '#!/bin/sh\\necho t3 v${archiveVersion}\\n' > '${stage}/t3'`,
-      `chmod +x '${stage}/t3'`,
+      `printf '#!/bin/sh\\necho t2 v${archiveVersion}\\n' > '${stage}/t2'`,
+      `chmod +x '${stage}/t2'`,
       `tar -czf '${release}/${stem}.tar.gz' -C '${root}/stage' '${stem}'`,
-      `cd '${release}' && (sha256sum '${stem}.tar.gz' 2>/dev/null || shasum -a 256 '${stem}.tar.gz') > SHA256SUMS`,
+      options?.omitArchive
+        ? `printf '0000000000000000000000000000000000000000000000000000000000000000  unrelated.tar.gz\\n' > '${release}/SHA256SUMS'`
+        : `cd '${release}' && (sha256sum '${stem}.tar.gz' 2>/dev/null || shasum -a 256 '${stem}.tar.gz') > SHA256SUMS`,
     ].join("\n");
     const child = yield* spawner.spawn(ChildProcess.make("sh", ["-c", script]));
     assert.equal(Number(yield* child.exitCode), 0);
@@ -760,9 +761,9 @@ describe("archive runner script", () => {
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-archive-runner-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-archive-runner-" });
         const releaseBaseUrl = yield* makeMirror(root);
-        const runner = `${root}/run-t3.sh`;
+        const runner = `${root}/run-t2.sh`;
         yield* fs.writeFileString(
           runner,
           SshTunnel.buildRemoteT2RunnerScript({ archiveVersion, releaseBaseUrl }),
@@ -776,7 +777,7 @@ describe("archive runner script", () => {
         );
         for (const result of results) {
           assert.equal(result.exitCode, 0, result.stderr);
-          assert.include(result.stdout, `t3 v${archiveVersion}`);
+          assert.include(result.stdout, `t2 v${archiveVersion}`);
         }
         const versionsDir = `${home}/.t2/runtime/versions`;
         assert.deepEqual(yield* fs.readDirectory(versionsDir), [archiveVersion]);
@@ -804,13 +805,13 @@ describe("archive runner script", () => {
   );
 
   it.effect.skipIf(windowsHost)(
-    "falls back to a historical t3 archive when the current name is absent",
+    "fails when the expected archive is not listed in SHA256SUMS",
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-archive-runner-legacy-" });
-        const releaseBaseUrl = yield* makeMirror(root, "t3");
-        const runner = `${root}/run-t3.sh`;
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-archive-runner-missing-" });
+        const releaseBaseUrl = yield* makeMirror(root, { omitArchive: true });
+        const runner = `${root}/run-t2.sh`;
         yield* fs.writeFileString(
           runner,
           SshTunnel.buildRemoteT2RunnerScript({ archiveVersion, releaseBaseUrl }),
@@ -819,9 +820,8 @@ describe("archive runner script", () => {
         yield* fs.makeDirectory(home, { recursive: true });
 
         const result = yield* runRunner(home, runner);
-        assert.equal(result.exitCode, 0, result.stderr);
-        assert.include(result.stdout, `t3 v${archiveVersion}`);
-        assert.isTrue(yield* fs.exists(`${home}/.t2/runtime/versions/${archiveVersion}/t3`));
+        assert.notEqual(result.exitCode, 0);
+        assert.include(result.stderr, "is not listed in SHA256SUMS");
       }).pipe(Effect.provide(NodeServices.layer)),
     60_000,
   );

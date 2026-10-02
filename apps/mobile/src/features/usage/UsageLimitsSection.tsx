@@ -180,7 +180,7 @@ export function AccountLimits(props: {
           className="min-h-11 justify-center"
           onPress={() => void Linking.openURL(externalUsage.url).catch(() => undefined)}
         >
-          <Text className="text-sm font-t3-medium text-primary">Manage usage</Text>
+          <Text className="text-sm font-t2-medium text-primary">Manage usage</Text>
         </Pressable>
       ) : null}
       {props.footer}

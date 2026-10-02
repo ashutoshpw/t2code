@@ -163,12 +163,9 @@ const CHAT_MARKDOWN_SANITIZE_SCHEMA = {
       "file",
       "t2-citation",
       "t2-context",
-      // Drafts saved by pre-rename builds still embed the old schemes.
-      "t3-citation",
-      "t3-context",
       THREAD_LINK_PROTOCOL,
     ],
-    src: [...(defaultSchema.protocols?.src ?? []), "file", "t2-context", "t3-context"],
+    src: [...(defaultSchema.protocols?.src ?? []), "file", "t2-context"],
   },
 } satisfies Parameters<typeof rehypeSanitize>[0];
 

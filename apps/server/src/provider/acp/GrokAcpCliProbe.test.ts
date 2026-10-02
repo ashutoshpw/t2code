@@ -27,7 +27,7 @@ const makeProbeRuntime = Effect.gen(function* () {
     environment: process.env,
     childProcessSpawner,
     cwd: process.cwd(),
-    clientInfo: { name: "t3-grok-probe", version: "0.0.0" },
+    clientInfo: { name: "t2-grok-probe", version: "0.0.0" },
   });
 });
 
@@ -85,7 +85,7 @@ describe.runIf(process.env.T2_GROK_ACP_PROBE === "1")("Grok ACP CLI probe", () =
           childProcessSpawner,
           cwd,
           runtimeMode: "approval-required",
-          clientInfo: { name: "t3-grok-probe", version: "0.0.0" },
+          clientInfo: { name: "t2-grok-probe", version: "0.0.0" },
         });
         yield* runtime.start();
         const chunks: string[] = [];

@@ -13,13 +13,11 @@
 export function legacyCliLauncherScript(): string {
   return `import { spawn } from "node:child_process";
 import { constants } from "node:os";
-import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const packageDir = dirname(require.resolve("@t2code/t2-" + process.platform + "-" + process.arch + "/package.json"));
-const candidates = process.platform === "win32" ? ["t2.exe", "t3.exe"] : ["t2", "t3"];
-const executable = candidates.map((name) => join(packageDir, name)).find((path) => existsSync(path));
+const executable = join(packageDir, process.platform === "win32" ? "t2.exe" : "t2");
 const ipc = process.send !== undefined;
 const child = spawn(executable, process.argv.slice(2), {
   stdio: ipc ? ["inherit", "inherit", "inherit", "ipc"] : "inherit",

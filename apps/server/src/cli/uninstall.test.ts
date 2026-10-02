@@ -22,24 +22,13 @@ it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
         yield* fs.writeFileString(file, "");
       }
       const ours = path.join(root, "bin/t2");
-      // Installs carry a `t3` compatibility launcher beside `t2`; both are
-      // ours when both point into this home's versions tree.
-      const oursLegacy = path.join(root, "bin/t3");
       const theirs = path.join(root, "other/bin/t2");
       yield* fs.makeDirectory(path.dirname(ours), { recursive: true });
       yield* fs.makeDirectory(path.dirname(theirs), { recursive: true });
       yield* fs.symlink(exe, ours);
-      yield* fs.symlink(exe, oursLegacy);
       yield* fs.symlink(otherExe, theirs);
 
-      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: ours, versionsDir }), [
-        ours,
-        oursLegacy,
-      ]);
-      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: oursLegacy, versionsDir }), [
-        ours,
-        oursLegacy,
-      ]);
+      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: ours, versionsDir }), [ours]);
       assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: theirs, versionsDir }), []);
       assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: copy, versionsDir }), []);
       assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: undefined, versionsDir }), []);

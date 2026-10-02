@@ -153,9 +153,7 @@ if ($version -match '-preview\.') {
 }
 
 $stem = "t2-$version-win32-$arch"
-$legacyStem = "t3-$version-win32-$arch"
 $archive = "$stem.zip"
-$legacyArchive = "$legacyStem.zip"
 $versionsDir = Join-Path $t2Home "runtime\versions"
 $targetDir = Join-Path $versionsDir $version
 $marker = Join-Path $targetDir ".install-complete"
@@ -181,12 +179,7 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
     }
     $checksumLines = Get-Content (Join-Path $staging "SHA256SUMS")
     if (-not ($checksumLines | Where-Object { $_ -match "\s\*?$([regex]::Escape($archive))$" })) {
-      if ($checksumLines | Where-Object { $_ -match "\s\*?$([regex]::Escape($legacyArchive))$" }) {
-        $stem = $legacyStem
-        $archive = $legacyArchive
-      } else {
-        Fail "neither $archive nor $legacyArchive is listed in SHA256SUMS"
-      }
+      Fail "$archive is not listed in SHA256SUMS"
     }
     Fetch "$baseUrl/v$version/$archive" (Join-Path $staging $archive) -progress
 
@@ -209,9 +202,7 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
     Get-ChildItem (Join-Path $staging $stem) | Move-Item -Destination $staging
     Remove-Item (Join-Path $staging $stem), (Join-Path $staging $archive), (Join-Path $staging "SHA256SUMS") -Recurse -Force
 
-    # Releases published before the binary rename still carry `t3.exe`.
     $stagingExe = Join-Path $staging "t2.exe"
-    if (-not (Test-Path $stagingExe)) { $stagingExe = Join-Path $staging "t3.exe" }
     if (-not (Test-Path $stagingExe)) { Fail "the archive does not contain a t2 executable" }
     & $stagingExe --version | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail "the downloaded executable does not run" }
@@ -226,18 +217,12 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
 }
 
 Step "Setting up the t2 command..."
-# Releases published before the binary rename still carry `t3.exe`.
 $exe = Join-Path $targetDir "t2.exe"
-if (-not (Test-Path $exe)) { $exe = Join-Path $targetDir "t3.exe" }
 if (-not (Test-Path $exe)) { Fail "$targetDir does not contain a t2 executable" }
 New-Item -ItemType Directory -Force -Path $binDir | Out-Null
 # UTF-8 without a BOM: cmd.exe reads the shim as-is, and ASCII would corrupt
 # non-ASCII characters in the user's home path.
-foreach ($name in @("t2.cmd", "t3.cmd")) {
-  # t3.cmd is the compat launcher for scripts written for the old binary name.
-  $shim = Join-Path $binDir $name
-  [System.IO.File]::WriteAllText($shim, "@echo off`r`n`"$exe`" %*", (New-Object System.Text.UTF8Encoding $false))
-}
+[System.IO.File]::WriteAllText((Join-Path $binDir "t2.cmd"), "@echo off`r`n`"$exe`" %*", (New-Object System.Text.UTF8Encoding $false))
 if ($interactive) { [Console]::Error.Write("`r$esc[2K") }
 [Console]::Error.WriteLine("  ${green}Installed T2 Code $version$reset`n")
 if (($env:PATH -split ";") -notcontains $binDir) {

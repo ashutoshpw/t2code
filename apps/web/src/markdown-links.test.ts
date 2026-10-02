@@ -526,7 +526,7 @@ describe("directory paths with a trailing separator", () => {
 });
 
 it("routes the project-root code link to the workspace explorer", () => {
-  const cwd = "/Users/saphid/.t3/worktrees/ov2-standalone-20260918";
+  const cwd = "/Users/saphid/.t2/worktrees/ov2-standalone-20260918";
   expect(resolveInlineCodeFileLinkMeta(cwd, cwd)).toMatchObject({
     workspaceRelativePath: ".",
     filePath: cwd,

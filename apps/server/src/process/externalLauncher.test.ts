@@ -353,7 +353,7 @@ it.skipIf(process.platform !== "win32")(
   "delivers the raw /select switch for spaced paths through real PowerShell",
   { timeout: 60_000 },
   async () => {
-    const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-reveal-smoke-"));
+    const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-reveal-smoke-"));
     try {
       const recorderPath = NodePath.join(tempDir, "recorder.cmd");
       const outputPath = NodePath.join(tempDir, "argv.txt");
@@ -452,7 +452,7 @@ it.effect.skipIf(windowsHost)(
         const editors = yield* launcher.resolveAvailableEditors();
         yield* launcher.launchEditor({
           editor: "file-manager",
-          cwd: "/home/t3/workspace/media/clip.mp4",
+          cwd: "/home/t2/workspace/media/clip.mp4",
           reveal: true,
         });
         return { kind, editors };
@@ -482,7 +482,7 @@ it.effect.skipIf(windowsHost)(
       const decodedCommand = Buffer.from(encodedCommand, "base64").toString("utf16le");
       assert.equal(
         decodedCommand,
-        "$ProgressPreference = 'SilentlyContinue'; Start-Process 'explorer.exe' -ArgumentList ('/select,\"' + '\\\\wsl.localhost\\Ubuntu-24.04\\home\\t3\\workspace\\media\\clip.mp4' + '\"')",
+        "$ProgressPreference = 'SilentlyContinue'; Start-Process 'explorer.exe' -ArgumentList ('/select,\"' + '\\\\wsl.localhost\\Ubuntu-24.04\\home\\t2\\workspace\\media\\clip.mp4' + '\"')",
       );
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
@@ -544,7 +544,7 @@ it.effect.skipIf(windowsHost)(
         const revealKind = yield* launcher.resolveFileManagerRevealKind();
         yield* launcher.launchEditor({
           editor: "file-manager",
-          cwd: "/home/t3/workspace/media/clip.mp4",
+          cwd: "/home/t2/workspace/media/clip.mp4",
           reveal: true,
         });
         return revealKind;
@@ -572,7 +572,7 @@ it.effect.skipIf(windowsHost)(
       assert.equal(kind, "files");
       const launch = spawnedCommands.find((command) => command.command === "xdg-open");
       assert.ok(launch);
-      assert.deepEqual(launch.args, ["/home/t3/workspace/media"]);
+      assert.deepEqual(launch.args, ["/home/t2/workspace/media"]);
       assert.isUndefined(spawnedCommands.find((command) => command.command === "explorer.exe"));
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
@@ -600,7 +600,7 @@ it.effect.skipIf(windowsHost)(
         const kind = yield* launcher.resolveFileManagerRevealKind();
         yield* launcher.launchEditor({
           editor: "file-manager",
-          cwd: "/home/t3/workspace/media/clip.mp4",
+          cwd: "/home/t2/workspace/media/clip.mp4",
           reveal: true,
         });
         return { editors, kind };
@@ -629,7 +629,7 @@ it.effect.skipIf(windowsHost)(
       assert.equal(result.kind, "files");
       const launch = spawnedCommands.find((command) => command.command === "xdg-open");
       assert.ok(launch);
-      assert.deepEqual(launch.args, ["/home/t3/workspace/media"]);
+      assert.deepEqual(launch.args, ["/home/t2/workspace/media"]);
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
 
@@ -651,7 +651,7 @@ it.effect.skipIf(windowsHost)(
         const launcher = yield* ExternalLauncher.ExternalLauncher;
         yield* launcher.launchEditor({
           editor: "file-manager",
-          cwd: '/home/t3/work "quoted"/clip.mp4',
+          cwd: '/home/t2/work "quoted"/clip.mp4',
           reveal: true,
         });
       }).pipe(
@@ -674,7 +674,7 @@ it.effect.skipIf(windowsHost)(
       // opens the parent directory instead of misparsing a /select argument.
       assert.ok(spawned);
       assert.equal(spawned.command, "explorer.exe");
-      assert.deepEqual(spawned.args, ['\\\\wsl.localhost\\Ubuntu-24.04\\home\\t3\\work "quoted"']);
+      assert.deepEqual(spawned.args, ['\\\\wsl.localhost\\Ubuntu-24.04\\home\\t2\\work "quoted"']);
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
 
@@ -1009,7 +1009,7 @@ for (const { platform, installPath, editor, args } of [
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-editor installs-" });
+        const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-editor installs-" });
         const executable = path.join(home, installPath);
         yield* fs.makeDirectory(path.dirname(executable), { recursive: true });
         yield* fs.writeFileString(executable, "#!/bin/sh\n");
@@ -1184,7 +1184,7 @@ for (const { platform, installPath, onPath } of [
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-agy-cli-" });
+        const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-agy-cli-" });
         const executable = path.join(home, installPath);
         yield* fs.makeDirectory(path.dirname(executable), { recursive: true });
         yield* fs.writeFileString(executable, "#!/bin/sh\n");
@@ -1214,7 +1214,7 @@ it.effect.skipIf(windowsHost)("ignores unusable app bundles and keeps PATH launc
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-editor-priority-" });
+    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-editor-priority-" });
     const executable = path.join(home, "Applications/Cursor.app/Contents/Resources/app/bin/code");
     const env = { HOME: home, PATH: path.join(home, "bin") };
     const discover = Effect.gen(function* () {
@@ -1306,7 +1306,7 @@ it.effect("memoizes editor discovery and refreshes after the cache window", () =
         ConfigProvider.layer(
           ConfigProvider.fromEnv({
             env: {
-              PATH: "C:\\t3-editor-discovery-cache-test",
+              PATH: "C:\\t2-editor-discovery-cache-test",
               PATHEXT: ".COM;.EXE;.BAT;.CMD",
             },
           }),
@@ -1371,7 +1371,7 @@ it.effect("keeps scanning after the caller is interrupted and shares that scan",
         ConfigProvider.layer(
           ConfigProvider.fromEnv({
             env: {
-              PATH: "C:\\t3-editor-discovery-interrupt-test",
+              PATH: "C:\\t2-editor-discovery-interrupt-test",
               PATHEXT: ".COM;.EXE;.BAT;.CMD",
             },
           }),

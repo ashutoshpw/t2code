@@ -22,7 +22,6 @@ import {
 // stands in for tar and drops the executable where extraction would.
 const version = "1.2.3";
 const archiveName = `t2-${version}-linux-x64.tar.gz`;
-const legacyArchiveName = `t3-${version}-linux-x64.tar.gz`;
 const archiveBytes = new TextEncoder().encode("not really a tarball");
 const archiveHex = (bytes: Uint8Array) =>
   Effect.promise(() => crypto.subtle.digest("SHA-256", bytes)).pipe(
@@ -31,7 +30,7 @@ const archiveHex = (bytes: Uint8Array) =>
     ),
   );
 const validChecksums = archiveHex(archiveBytes).pipe(
-  Effect.map((hex) => `${hex}  ${archiveName}\n${hex}  ${legacyArchiveName}\n`),
+  Effect.map((hex) => `${hex}  ${archiveName}\n`),
 );
 const releaseHttpClient = (checksums: string, requests: string[] = []) =>
   HttpClient.make((request) => {
@@ -43,7 +42,7 @@ const extractingRunner = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
   commands: string[] = [],
-  entry: "t2" | "t3" = "t2",
+  entry = "t2",
 ) =>
   ProcessRunner.ProcessRunner.of({
     run: (input) =>
@@ -221,35 +220,6 @@ it.layer(NodeServices.layer)("ensurePinnedRuntimeInstalled", (it) => {
       assert.isTrue(progress.every((event) => event.stage === "download"));
       assert.isTrue(cancelled);
       assert.deepEqual(yield* fs.readDirectory(path.join(baseDir, "runtime", "versions")), []);
-    }),
-  );
-
-  it.effect("falls back to the historical archive name", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pinned-archive-legacy-" });
-      const requests: string[] = [];
-      const paths = yield* ensurePinnedRuntimeInstalled({
-        baseDir,
-        version,
-        fs,
-        path,
-        platform: "linux",
-        arch: "x64",
-        httpClient: releaseHttpClient(
-          (yield* archiveHex(archiveBytes)) + `  ${legacyArchiveName}\n`,
-          requests,
-        ),
-        runner: extractingRunner(fs, path, [], "t3"),
-        validate: (staging) => fs.exists(staging.entryPath).pipe(Effect.asVoid, Effect.orDie),
-      });
-
-      assert.equal(paths.entryPath, path.join(paths.versionDir, "t3"));
-      assert.deepEqual(requests, [
-        `https://github.com/ashutoshpw/t2code/releases/download/v${version}/SHA256SUMS`,
-        `https://github.com/ashutoshpw/t2code/releases/download/v${version}/${legacyArchiveName}`,
-      ]);
     }),
   );
 

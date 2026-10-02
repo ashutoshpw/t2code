@@ -71,7 +71,7 @@ beforeEach(() => {
   mocks.closeTab.mockReset().mockResolvedValue(undefined);
   mocks.registerWebview.mockReset().mockResolvedValue(undefined);
   mocks.getPreviewConfig.mockReset().mockResolvedValue({
-    partition: "persist:t3-preview-work",
+    partition: "persist:t2-preview-work",
     webPreferences: "contextIsolation=yes",
     preloadUrl: null,
   });
@@ -179,7 +179,7 @@ describe("HostedBrowserWebview settings hydration", () => {
     expect(createGuest).toHaveBeenCalledOnce();
     expect(createGuest).toHaveBeenCalledWith(
       expect.objectContaining({
-        partition: "persist:t3-preview-work",
+        partition: "persist:t2-preview-work",
         src: "https://example.com",
       }),
     );

@@ -192,7 +192,7 @@ describe("FCM delivery", () => {
             android: {
               priority: "HIGH",
               ttl: "300s",
-              collapse_key: "t3-agent-activity",
+              collapse_key: "t2-agent-activity",
               restricted_package_name: input.packageName,
             },
           },

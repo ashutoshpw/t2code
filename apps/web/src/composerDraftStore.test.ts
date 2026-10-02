@@ -3406,30 +3406,6 @@ describe("composerDraftStore attachment references", () => {
     expect(edited.prompt).toContain("t2-context://v1/file/file_restored");
   });
 
-  it.each(["old.file:1", "file-1"])(
-    "rewrites persisted attachment references before removal: %s",
-    (id) => {
-      const merged = useComposerDraftStore.persist.getOptions().merge!(
-        {
-          draftsByThreadKey: {
-            [threadKeyFor(threadId, TEST_ENVIRONMENT_ID)]: {
-              prompt: `before [notes.txt](t3-context://v1/file/${id}) after`,
-              attachments: [],
-              files: [{ id, name: "notes.txt", mimeType: "text/plain", sizeBytes: 3 }],
-            },
-          },
-        },
-        useComposerDraftStore.getInitialState(),
-      );
-      useComposerDraftStore.setState(merged);
-      const draft = draftFor(threadId, TEST_ENVIRONMENT_ID)!;
-      expect(draft.prompt.match(/t2-context:/g)).toHaveLength(1);
-      expect(draft.prompt).not.toContain(`/file/${id})`);
-      useComposerDraftStore.getState().removeFile(threadRef, id);
-      expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.prompt).toBe("before after");
-    },
-  );
-
   it.each(["", "Fix this"])("migrates saved element context with prompt %j", (prompt) => {
     const element = {
       id: "old-element",
@@ -3490,31 +3466,6 @@ describe("composerDraftStore attachment references", () => {
       useComposerDraftStore.getInitialState(),
     );
     expect(mergedState.draftsByThreadKey[threadKeyFor(threadId)]?.prompt).toBe(`old ${fileLink} `);
-  });
-
-  it("migrates legacy image references without doubling their image marker", () => {
-    const merged = useComposerDraftStore.persist.getOptions().merge!(
-      {
-        draftsByThreadKey: {
-          [threadKeyFor(threadId, TEST_ENVIRONMENT_ID)]: {
-            prompt: "see ![shot.png](t3-context://v1/image/img-1) after",
-            attachments: [
-              {
-                id: "img-1",
-                name: "shot.png",
-                mimeType: "image/png",
-                sizeBytes: 1,
-                dataUrl: "data:image/png;base64,YQ==",
-              },
-            ],
-          },
-        },
-      },
-      useComposerDraftStore.getInitialState(),
-    );
-    expect(merged.draftsByThreadKey[threadKeyFor(threadId, TEST_ENVIRONMENT_ID)]?.prompt).toBe(
-      "see ![shot.png](t2-context://v1/image/image_img-1) after",
-    );
   });
 
   it("preserves canonical references when another producer ID matches their namespace", () => {

@@ -44,31 +44,31 @@ describe("DesktopEnvironment", () => {
       const environment = yield* makeEnvironment(
         {},
         {
-          T2CODE_HOME: " /tmp/t3 ",
+          T2CODE_HOME: " /tmp/t2 ",
           T2CODE_COMMIT_HASH: " 0123456789abcdef ",
           T2CODE_PORT: "4949",
           VITE_DEV_SERVER_URL: "http://localhost:5173",
           T2CODE_DEV_REMOTE_SERVER_ENTRY_PATH: " /remote/server.mjs ",
           T2CODE_OTLP_TRACES_URL: " http://127.0.0.1:4318/v1/traces ",
           T2CODE_OTLP_EXPORT_INTERVAL_MS: "2500",
-          T2CODE_OTLP_HEADERS: "authorization=Basic%20abc%3D%3D,x-tenant=t3",
+          T2CODE_OTLP_HEADERS: "authorization=Basic%20abc%3D%3D,x-tenant=t2",
           T2CODE_OTLP_PROTOCOL: "http/protobuf",
         },
       );
 
       assert.equal(environment.isDevelopment, true);
       assert.equal(environment.appDataDirectory, "/Users/alice/Library/Application Support");
-      assert.equal(environment.baseDir, "/tmp/t3");
-      assert.equal(environment.stateDir, "/tmp/t3/userdata");
-      assert.equal(environment.desktopSettingsPath, "/tmp/t3/userdata/desktop-settings.json");
-      assert.equal(environment.clientSettingsPath, "/tmp/t3/userdata/client-settings.json");
+      assert.equal(environment.baseDir, "/tmp/t2");
+      assert.equal(environment.stateDir, "/tmp/t2/userdata");
+      assert.equal(environment.desktopSettingsPath, "/tmp/t2/userdata/desktop-settings.json");
+      assert.equal(environment.clientSettingsPath, "/tmp/t2/userdata/client-settings.json");
       assert.equal(
         environment.savedEnvironmentRegistryPath,
-        "/tmp/t3/userdata/saved-environments.json",
+        "/tmp/t2/userdata/saved-environments.json",
       );
-      assert.equal(environment.serverSettingsPath, "/tmp/t3/userdata/settings.json");
-      assert.equal(environment.logDir, "/tmp/t3/userdata/logs");
-      assert.equal(environment.browserArtifactsDir, "/tmp/t3/userdata/browser-artifacts");
+      assert.equal(environment.serverSettingsPath, "/tmp/t2/userdata/settings.json");
+      assert.equal(environment.logDir, "/tmp/t2/userdata/logs");
+      assert.equal(environment.browserArtifactsDir, "/tmp/t2/userdata/browser-artifacts");
       assert.equal(environment.rootDir, "/repo");
       assert.equal(environment.appRoot, "/repo");
       assert.equal(environment.serverRoot, "/repo");
@@ -90,7 +90,7 @@ describe("DesktopEnvironment", () => {
         environment.otlpHeaders,
         Option.some({
           authorization: "Basic abc==",
-          "x-tenant": "t3",
+          "x-tenant": "t2",
         }),
       );
       assert.equal(environment.otlpProtocol, "http/protobuf");
@@ -102,15 +102,15 @@ describe("DesktopEnvironment", () => {
       const environment = yield* makeEnvironment(
         {},
         {
-          T2CODE_HOME: "/tmp/t3",
+          T2CODE_HOME: "/tmp/t2",
         },
       );
 
       assert.equal(environment.isDevelopment, false);
-      assert.equal(environment.stateDir, "/tmp/t3/userdata");
-      assert.equal(environment.logDir, "/tmp/t3/userdata/logs");
-      assert.equal(environment.browserArtifactsDir, "/tmp/t3/userdata/browser-artifacts");
-      assert.equal(environment.serverSettingsPath, "/tmp/t3/userdata/settings.json");
+      assert.equal(environment.stateDir, "/tmp/t2/userdata");
+      assert.equal(environment.logDir, "/tmp/t2/userdata/logs");
+      assert.equal(environment.browserArtifactsDir, "/tmp/t2/userdata/browser-artifacts");
+      assert.equal(environment.serverSettingsPath, "/tmp/t2/userdata/settings.json");
       assert.equal(environment.otlpProtocol, "http/json");
     }),
   );
