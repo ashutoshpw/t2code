@@ -404,7 +404,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const temp = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-target-" });
+      const temp = yield* fs.makeTempDirectoryScoped({ prefix: "t2-device-target-" });
       const platform = yield* HostProcess.Platform;
       const dir = path.join(
         temp,
@@ -476,7 +476,7 @@ if (process.env.AGENT_DEVICE_DAEMON_BASE_URL) process.exit(2);`,
     }).pipe(
       Effect.scoped,
       Effect.provideService(HostProcess.IsExecutable, true),
-      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t3"),
+      Effect.provideService(HostProcess.ExecutablePath, "/packaged/t2"),
       Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
     ),
   );

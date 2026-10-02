@@ -455,15 +455,15 @@ if [ -n "$T2_NODE_SCRIPT_PATH" ]; then
 fi
 T2_ARCHIVE_VERSION=@@T2_ARCHIVE_VERSION@@
 if [ -z "$T2_ARCHIVE_VERSION" ]; then
-  printf 'No t3 release version was provided for the remote runtime.\\n' >&2
+  printf 'No t2 release version was provided for the remote runtime.\\n' >&2
   exit 1
 fi
 # Self-contained release archive: no Node, npm, or compiler on the remote.
-# Unpacked into the pinned-runtime layout so \`t3 service install\` reuses it.
+# Unpacked into the pinned-runtime layout so \`t2 service install\` reuses it.
 T2_RELEASE_BASE_URL=@@T2_RELEASE_BASE_URL@@
 T2_RUNTIME_DIR="$HOME/.t2/runtime/versions/$T2_ARCHIVE_VERSION"
 t2_runtime_ready() {
-  [ -x "$T2_RUNTIME_DIR/t3" ] && [ "$(cat "$T2_RUNTIME_DIR/.install-complete" 2>/dev/null)" = "$T2_ARCHIVE_VERSION" ]
+  [ -x "$T2_RUNTIME_DIR/t2" ] && [ "$(cat "$T2_RUNTIME_DIR/.install-complete" 2>/dev/null)" = "$T2_ARCHIVE_VERSION" ]
 }
 if ! t2_runtime_ready; then
   mkdir -p "$HOME/.t2/runtime/versions"
@@ -488,7 +488,7 @@ if ! t2_runtime_ready; then
       fi
     fi
     if [ "$T2_LOCK_WAITED" -ge @@T2_ARCHIVE_LOCK_WAIT_SECONDS@@ ]; then
-      printf 'Another t3 %s installation has held %s for too long.\\n' "$T2_ARCHIVE_VERSION" "$T2_LOCK" >&2
+      printf 'Another t2 %s installation has held %s for too long.\\n' "$T2_ARCHIVE_VERSION" "$T2_LOCK" >&2
       exit 1
     fi
     sleep 1
@@ -502,10 +502,9 @@ if ! t2_runtime_ready; then
     "Darwin arm64") T2_PLATFORM_KEY="darwin-arm64" ;;
     "Linux arm64" | "Linux aarch64") T2_PLATFORM_KEY="linux-arm64" ;;
     "Linux x86_64" | "Linux amd64") T2_PLATFORM_KEY="linux-x64" ;;
-    *) printf 'Remote host %s has no t3 release archive.\\n' "$(uname -s) $(uname -m)" >&2; exit 1 ;;
+    *) printf 'Remote host %s has no t2 release archive.\\n' "$(uname -s) $(uname -m)" >&2; exit 1 ;;
   esac
   T2_ARCHIVE="t2-$T2_ARCHIVE_VERSION-$T2_PLATFORM_KEY.tar.gz"
-  T2_LEGACY_ARCHIVE="t3-$T2_ARCHIVE_VERSION-$T2_PLATFORM_KEY.tar.gz"
   T2_STAGING="$(mktemp -d "$HOME/.t2/runtime/versions/.staging-XXXXXX")"
   trap 'rm -rf "$T2_STAGING" "$T2_LOCK"' EXIT
   t2_fetch() {
@@ -516,12 +515,8 @@ if ! t2_runtime_ready; then
   }
   t2_fetch "$T2_RELEASE_BASE_URL/v$T2_ARCHIVE_VERSION/SHA256SUMS" "$T2_STAGING/SHA256SUMS" @@T2_ARCHIVE_CHECKSUMS_SECONDS@@
   if ! grep -q " \\*\\{0,1\\}$T2_ARCHIVE$" "$T2_STAGING/SHA256SUMS"; then
-    if grep -q " \\*\\{0,1\\}$T2_LEGACY_ARCHIVE$" "$T2_STAGING/SHA256SUMS"; then
-      T2_ARCHIVE="$T2_LEGACY_ARCHIVE"
-    else
-      printf 'Neither %s nor %s is listed in SHA256SUMS.\\n' "$T2_ARCHIVE" "$T2_LEGACY_ARCHIVE" >&2
-      exit 1
-    fi
+    printf '%s is not listed in SHA256SUMS.\\n' "$T2_ARCHIVE" >&2
+    exit 1
   fi
   t2_fetch "$T2_RELEASE_BASE_URL/v$T2_ARCHIVE_VERSION/$T2_ARCHIVE" "$T2_STAGING/$T2_ARCHIVE" @@T2_ARCHIVE_DOWNLOAD_SECONDS@@
   T2_EXPECTED="$(grep " \\*\\{0,1\\}$T2_ARCHIVE$" "$T2_STAGING/SHA256SUMS" | cut -d' ' -f1)"
@@ -537,8 +532,8 @@ if ! t2_runtime_ready; then
   rm -f "$T2_STAGING/$T2_ARCHIVE" "$T2_STAGING/SHA256SUMS"
   # Prove the binary runs here (libc, arch) before marking it ready, or every
   # later launch would exec a broken install instead of retrying.
-  if ! "$T2_STAGING/t3" --version >/dev/null 2>&1; then
-    printf 'The t3 %s executable does not run on this host.\\n' "$T2_ARCHIVE_VERSION" >&2; exit 1
+  if ! "$T2_STAGING/t2" --version >/dev/null 2>&1; then
+    printf 'The t2 %s executable does not run on this host.\\n' "$T2_ARCHIVE_VERSION" >&2; exit 1
   fi
   printf '%s\\n' "$T2_ARCHIVE_VERSION" > "$T2_STAGING/.install-complete"
   rm -rf "$T2_RUNTIME_DIR"
@@ -548,7 +543,7 @@ if [ -n "\${T2_LOCK:-}" ]; then
   rm -rf "$T2_LOCK"
   trap - EXIT
 fi
-exec "$T2_RUNTIME_DIR/t3" "$@"
+exec "$T2_RUNTIME_DIR/t2" "$@"
 `;
 
 const REMOTE_LAUNCH_SCRIPT = `set -eu
@@ -561,8 +556,8 @@ PORT_FILE="$STATE_DIR/port"
 PID_FILE="$STATE_DIR/pid"
 MANAGED_FILE="$STATE_DIR/managed"
 LOG_FILE="$STATE_DIR/server.log"
-RUNNER_FILE="$STATE_DIR/run-t3.sh"
-RUNNER_NEXT="$STATE_DIR/run-t3.next.$$"
+RUNNER_FILE="$STATE_DIR/run-t2.sh"
+RUNNER_NEXT="$STATE_DIR/run-t2.next.$$"
 LAUNCH_LOCK="$DEFAULT_SERVER_HOME/ssh-launch/.launch.lock"
 LAUNCH_BREAK_LOCK="$LAUNCH_LOCK.break"
 mkdir -p "$STATE_DIR"
@@ -625,9 +620,9 @@ while ! (set -C; printf '%s\\n' "$$" >"$LAUNCH_LOCK") 2>/dev/null; do
   fi
   if [ "$LAUNCH_LOCK_WAITED" -ge @@T2_LAUNCH_LOCK_WAIT_SECONDS@@ ]; then
     if [ -e "$LAUNCH_BREAK_LOCK" ]; then
-      printf 'A T3 server launch stopped while recovering %s. If no launch is running, delete %s.\\n' "$LAUNCH_LOCK" "$LAUNCH_BREAK_LOCK" >&2
+      printf 'A T2 server launch stopped while recovering %s. If no launch is running, delete %s.\\n' "$LAUNCH_LOCK" "$LAUNCH_BREAK_LOCK" >&2
     else
-      printf 'Another T3 server launch has held %s for too long.\\n' "$LAUNCH_LOCK" >&2
+      printf 'Another T2 server launch has held %s for too long.\\n' "$LAUNCH_LOCK" >&2
     fi
     exit 1
   fi
@@ -832,7 +827,7 @@ printf '{"remotePort":%s,"serverKind":"%s"}\\n' "$REMOTE_PORT" "\${REMOTE_MANAGE
 const REMOTE_PAIRING_SCRIPT = `set -eu
 STATE_DIR="$HOME/.t2/ssh-launch/@@T2_STATE_KEY@@"
 DEFAULT_SERVER_HOME="$HOME/.t2"
-RUNNER_FILE="$STATE_DIR/run-t3.sh"
+RUNNER_FILE="$STATE_DIR/run-t2.sh"
 mkdir -p "$STATE_DIR"
 cat >"$RUNNER_FILE" <<'SH'
 @@T2_RUNNER_SCRIPT@@
@@ -878,7 +873,7 @@ export class SshInvalidArchiveVersionError extends Schema.TaggedError<SshInvalid
   { archiveVersion: Schema.String },
 ) {
   override get message(): string {
-    return `'${this.archiveVersion}' is not an exact t3 version and cannot name a runtime directory.`;
+    return `'${this.archiveVersion}' is not an exact t2 version and cannot name a runtime directory.`;
   }
 }
 
@@ -893,7 +888,7 @@ export class SshMissingRunnerError extends Schema.TaggedError<SshMissingRunnerEr
   {},
 ) {
   override get message(): string {
-    return "A remote t3 runner needs an archive version or a node script path.";
+    return "A remote t2 runner needs an archive version or a node script path.";
   }
 }
 

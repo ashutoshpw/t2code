@@ -215,9 +215,6 @@ const CHAT_MARKDOWN_SANITIZE_SCHEMA = {
       "file",
       "t2-citation",
       "t2-context",
-      // Drafts saved by pre-rename builds still embed the old schemes.
-      "t3-citation",
-      "t3-context",
       THREAD_LINK_PROTOCOL,
       // Scheme only: the renderer's URL transform checks the rest of the link shape.
       ...LOCAL_FILE_LINK_SCHEMES,

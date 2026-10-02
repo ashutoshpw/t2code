@@ -148,7 +148,7 @@ case "$(uname -m)" in
   *) fail "unsupported architecture $(uname -m)" ;;
 esac
 if [ "${platform}-${arch}" = darwin-x64 ]; then
-  fail "there is no t3 CLI for Intel Macs. Install the desktop app from https://t3.codes/download, or run a server from source: https://github.com/${repo}/blob/main/docs/user/install.md#intel-macs"
+  fail "there is no t2 CLI for Intel Macs. Install the desktop app from https://t2.codes/download, or run a server from source: https://github.com/${repo}/blob/main/docs/user/install.md#intel-macs"
 fi
 command -v tar >/dev/null 2>&1 || fail "tar is required"
 if command -v sha256sum >/dev/null 2>&1; then
@@ -199,9 +199,7 @@ case "$version" in
 esac
 
 stem="t2-${version}-${platform}-${arch}"
-legacy_stem="t3-${version}-${platform}-${arch}"
 archive="${stem}.tar.gz"
-legacy_archive="${legacy_stem}.tar.gz"
 versions_dir="${t2_home}/runtime/versions"
 target_dir="${versions_dir}/${version}"
 
@@ -225,19 +223,8 @@ else
   elif [ "$fetch_status" -ne 0 ]; then
     fail "could not download the release checksums"
   fi
-  # Releases before the public rename only list the t3 archive name. Prefer
-  # the current name when both are present, while keeping those releases
-  # installable without a second speculative download.
-  if ! grep -q " \*\{0,1\}${archive}\$" "${staging}/SHA256SUMS"; then
-    if grep -q " \*\{0,1\}${legacy_archive}\$" "${staging}/SHA256SUMS"; then
-      stem="$legacy_stem"
-      archive="$legacy_archive"
-    else
-      fail "neither ${archive} nor ${legacy_archive} is listed in SHA256SUMS"
-    fi
-  fi
-  expected="$(grep " \*\{0,1\}${archive}\$" "${staging}/SHA256SUMS" | cut -d' ' -f1)"
-  [ -n "$expected" ] || fail "${archive} is not listed in SHA256SUMS"
+  grep -q " \*\{0,1\}${archive}\$" "${staging}/SHA256SUMS" \
+    || fail "${archive} is not listed in SHA256SUMS"
   download "${base_url}/v${version}/${archive}" "${staging}/${archive}"
 
   step "Verifying the download..."
@@ -247,11 +234,8 @@ else
   step "Extracting T2 Code..."
   tar -xzf "${staging}/${archive}" -C "$staging" --strip-components=1
   rm -f "${staging}/${archive}" "${staging}/SHA256SUMS"
-  # Releases published before the binary rename still carry `t3`.
-  if [ -x "${staging}/t2" ]; then exe=t2; elif [ -x "${staging}/t3" ]; then exe=t3
-  else fail "the archive does not contain a t2 executable"
-  fi
-  "${staging}/${exe}" --version >/dev/null || fail "the downloaded executable does not run"
+  [ -x "${staging}/t2" ] || fail "the archive does not contain a t2 executable"
+  "${staging}/t2" --version >/dev/null || fail "the downloaded executable does not run"
   printf '%s\n' "$version" > "${staging}/.install-complete"
 
   rm -rf "$target_dir"
@@ -260,6 +244,7 @@ else
 fi
 
 step "Setting up the t2 command..."
+[ -f "${target_dir}/t2" ] || fail "${target_dir} does not contain a t2 executable"
 mkdir -p "$bin_dir"
 # Replace only this home's own t2 links: into its versions, or the desktop app's launcher.
 # Anything that is not a symlink (a script, a copied binary) belongs to someone else.

@@ -78,7 +78,7 @@ const ownsLauncher = Effect.fn("cli.uninstall.owns_launcher")(function* (
     .realPath(versionsDir)
     .pipe(Effect.orElseSucceed(() => versionsDir));
   // The link's own text keeps a pruned (dangling) target; the real path sees through a
-  // symlinked T3 home.
+  // symlinked T2 home.
   const targets =
     platform === "win32"
       ? [
