@@ -174,7 +174,7 @@ it.layer(layerTest)("GrokDriver", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-grok-missing-" });
+      const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-grok-missing-" });
       const instance = yield* GrokDriver.create({
         instanceId: ProviderInstanceId.make("grok-missing"),
         displayName: "Grok test",

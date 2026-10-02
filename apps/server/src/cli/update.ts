@@ -123,7 +123,7 @@ export const repointLauncher = Effect.fn("cli.update.repoint_launcher")(function
   }
 
   const repointed: string[] = [];
-  for (const name of new Set([path.basename(input.launchedAs), "t2", "t3"])) {
+  for (const name of new Set(["t2", path.basename(input.launchedAs)])) {
     const candidate = path.join(path.dirname(input.launchedAs), name);
     const linkTarget = yield* fs.readLink(candidate).pipe(Effect.option);
     if (Option.isNone(linkTarget)) continue;
@@ -169,9 +169,8 @@ export const resolveLauncherPath = Effect.gen(function* () {
 
 /**
  * On Windows a `.cmd` shim is what PATH resolves, but the executable it runs
- * only ever sees its own path. Walk PATH for a `t2.cmd` (or legacy `t3.cmd`)
- * whose target is the running executable; that is the launcher the install
- * script wrote.
+ * only ever sees its own path. Walk PATH for a `t2.cmd` whose target is the
+ * running executable; that is the launcher the install script wrote.
  */
 export const findWindowsShim = Effect.fn("cli.update.find_windows_shim")(function* (
   executablePath: string,

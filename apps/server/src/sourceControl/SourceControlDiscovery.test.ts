@@ -42,7 +42,7 @@ const layerSourceControlProviderRegistryTest = (input: {
     Layer.provide(
       Layer.mergeAll(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "t3-source-control-registry-test-",
+          prefix: "t2-source-control-registry-test-",
         }).pipe(Layer.provide(NodeServices.layer)),
         Layer.mock(AzureDevOpsCli.AzureDevOpsCli)({}),
         Layer.mock(AzureDevOpsPullRequestCli.AzureDevOpsPullRequestCli)({}),
@@ -140,7 +140,7 @@ it.effect("reports implemented tools separately from locally available executabl
   const layerTest = SourceControlDiscovery.layer.pipe(
     Layer.provide(
       ServerConfig.layerTest(process.cwd(), {
-        prefix: "t3-source-control-discovery-",
+        prefix: "t2-source-control-discovery-",
       }),
     ),
     Layer.provide(Layer.mock(VcsProcess.VcsProcess)(processMock)),
@@ -304,7 +304,7 @@ Logged in to gitlab.com as gitlab-user
   const layerTest = SourceControlDiscovery.layer.pipe(
     Layer.provide(
       ServerConfig.layerTest(process.cwd(), {
-        prefix: "t3-source-control-auth-discovery-",
+        prefix: "t2-source-control-auth-discovery-",
       }),
     ),
     Layer.provide(Layer.mock(VcsProcess.VcsProcess)(processMock)),
@@ -384,7 +384,7 @@ it.effect(
       const fs = yield* FileSystem.FileSystem;
       const git = yield* VcsProcess.VcsProcess;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-fj-checkout-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-fj-checkout-" });
       const source = path.join(root, "source");
       const cwd = path.join(root, "checkout");
       yield* fs.makeDirectory(source);

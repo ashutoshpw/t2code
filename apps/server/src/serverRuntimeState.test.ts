@@ -247,7 +247,7 @@ describe("server ownership", () => {
               "launchctl print": { code: 113 },
               "launchctl print-disabled": {
                 code: 0,
-                stdout: '"com.t3tools.t3code.service" => false',
+                stdout: '"com.t2tools.t2code.service" => false',
               },
             },
           },
@@ -272,14 +272,14 @@ describe("server ownership", () => {
             environment: { [SERVICE_LAUNCHER_CONTEXT_ENV]: "{}" },
           },
         ] as const) {
-          const { result, t3Home } = yield* startBesideBootService(fixture);
+          const { result, t2Home } = yield* startBesideBootService(fixture);
           assert.equal(result._tag, "Failure");
           if (result._tag !== "Failure") return;
           assert.equal(result.failure._tag, "OlderBootServiceError");
           assert.equal(Runtime.getErrorExitCode(result.failure), 78);
-          assert.include(result.failure.message, t3Home);
-          assert.include(result.failure.message, "t3 update");
-          assert.include(result.failure.message, "t3 service restart");
+          assert.include(result.failure.message, t2Home);
+          assert.include(result.failure.message, "t2 update");
+          assert.include(result.failure.message, "t2 service restart");
           assert.include(result.failure.message, "No server was stopped");
         }
       }).pipe(Effect.provide(NodeServices.layer)),

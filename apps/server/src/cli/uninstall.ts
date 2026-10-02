@@ -38,7 +38,7 @@ export class CliUninstallError extends Schema.TaggedError<CliUninstallError>()(
  */
 export interface UninstallPlan {
   readonly service: boolean;
-  /** The `t2`/`t3` launchers (symlinks or `.cmd` shims) that point into this home's runtime tree. */
+  /** The `t2` launchers (symlinks or `.cmd` shims) that point into this home's runtime tree. */
   readonly launcher: ReadonlyArray<string>;
   /** `<home>/runtime`, holding every downloaded version, when it exists. */
   readonly runtimeDir: string | undefined;
@@ -68,7 +68,7 @@ export const findOwnedLaunchers = Effect.fn("cli.uninstall.find_launchers")(func
   }
   const dir = path.dirname(input.launchedAs);
   const owned: string[] = [];
-  for (const candidate of new Set([`${dir}/t2`, `${dir}/t3`, input.launchedAs])) {
+  for (const candidate of new Set([`${dir}/t2`, input.launchedAs])) {
     const linkTarget = yield* fs.readLink(candidate).pipe(Effect.option);
     if (Option.isNone(linkTarget)) continue;
     const resolved = path.resolve(dir, linkTarget.value);

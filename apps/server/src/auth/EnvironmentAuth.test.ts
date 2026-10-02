@@ -29,7 +29,7 @@ const layerServerConfig = (overrides?: Partial<ServerConfig.ServerConfig["Servic
         port: TEST_SERVER_PORT,
       } satisfies ServerConfig.ServerConfig["Service"];
     }),
-  ).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-auth-server-test-" })));
+  ).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-auth-server-test-" })));
 
 const layerEnvironmentAuth = (overrides?: Partial<ServerConfig.ServerConfig["Service"]>) =>
   EnvironmentAuth.layer.pipe(
@@ -94,7 +94,7 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
       >[0];
 
       const authenticated = yield* serverAuth.authenticateHttpRequest(request);
-      expect(devExchange.cookieName).toMatch(/^t3_dev_session_/);
+      expect(devExchange.cookieName).toMatch(/^t2_dev_session_/);
       expect(devExchange.expireNormalCookie).toBe(true);
       expect(devExchange.response).toMatchObject(authScopeResponse(AuthStandardClientScopes));
       expect(authenticated.scopes).toEqual(["orchestration:read"]);

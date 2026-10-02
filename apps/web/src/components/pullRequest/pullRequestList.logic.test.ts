@@ -441,7 +441,7 @@ describe("remembered pull request list controls", () => {
   // regression: #9188 corrupt stored list controls broke the page
   it("falls back to the default controls when storage is corrupt", () => {
     const storage = makeStorage();
-    storage.setItem("t3.pullRequests.preferences", "{not json");
+    storage.setItem("t2.pullRequests.preferences", "{not json");
     expect(readPullRequestListPreferences(storage)).toEqual({ involvement: "all", state: "open" });
   });
 

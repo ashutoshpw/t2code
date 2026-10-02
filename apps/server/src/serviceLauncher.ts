@@ -59,8 +59,6 @@ const runtimePaths = (baseDir: string, version: string) => {
   return {
     versionDir,
     entryPath: NodePath.join(versionDir, win ? "t2.exe" : "t2"),
-    // Runtimes unpacked before the binary rename carry `t3` instead.
-    legacyEntryPath: NodePath.join(versionDir, win ? "t3.exe" : "t3"),
     sentinelPath: NodePath.join(versionDir, ".install-complete"),
   };
 };
@@ -68,12 +66,10 @@ const runtimePaths = (baseDir: string, version: string) => {
 const resolveRuntimeEntryPath = async (
   paths: ReturnType<typeof runtimePaths>,
 ): Promise<string | undefined> => {
-  for (const candidate of [paths.entryPath, paths.legacyEntryPath]) {
-    try {
-      if ((await NodeFSP.stat(candidate)).isFile()) return candidate;
-    } catch {
-      // Candidate absent; try the next name.
-    }
+  try {
+    if ((await NodeFSP.stat(paths.entryPath)).isFile()) return paths.entryPath;
+  } catch {
+    // Executable absent.
   }
   return undefined;
 };

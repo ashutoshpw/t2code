@@ -270,7 +270,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
     "pins npm updates to the global prefix that owns the package",
     () =>
       Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-npm-capabilities");
+        const tempDir = yield* makeTempDir("t2-npm-capabilities");
         const link = linkIntoPackage(tempDir, "package-tool", [
           "lib",
           "node_modules",
@@ -556,7 +556,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
 
   it.effect("proves Windows npm ownership from the package manifest beside the shim", () =>
     Effect.gen(function* () {
-      const tempDir = yield* makeTempDir("t3-npm-windows-capabilities");
+      const tempDir = yield* makeTempDir("t2-npm-windows-capabilities");
       const shim = NodePath.join(tempDir, "package-tool.cmd");
       NodeFS.mkdirSync(tempDir, { recursive: true });
       NodeFS.writeFileSync(shim, "@echo off\r\n");
@@ -598,7 +598,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
     "switches to pnpm updates when the real path lives in pnpm's global store",
     () =>
       Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-pnpm-capabilities");
+        const tempDir = yield* makeTempDir("t2-pnpm-capabilities");
         const link = linkIntoPackage(tempDir, "package-tool", [
           ".local",
           "share",
@@ -716,7 +716,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
     "switches to bun updates when the resolved binary lives in bun's global bin",
     () =>
       Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-bun-capabilities");
+        const tempDir = yield* makeTempDir("t2-bun-capabilities");
         const bunBinDir = NodePath.join(tempDir, ".bun", "bin");
         writeExecutable(NodePath.join(bunBinDir, "package-tool"));
 
@@ -740,7 +740,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
 
   it.effect.skipIf(windowsHost)("switches to native updates and runs the resolved executable", () =>
     Effect.gen(function* () {
-      const tempDir = yield* makeTempDir("t3-native-capabilities");
+      const tempDir = yield* makeTempDir("t2-native-capabilities");
       const nativeBinDir = NodePath.join(tempDir, ".local", "bin");
       const nativePath = NodePath.join(nativeBinDir, "native-package-tool");
       writeExecutable(nativePath);
@@ -774,7 +774,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
     (launcher, { skip }) => {
       if (windowsHost || (launcher === "symlink" && !symlinksSupported)) skip();
       return Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-native-mise");
+        const tempDir = yield* makeTempDir("t2-native-mise");
         const nativePath = NodePath.join(tempDir, ".local", "bin", "native-package-tool");
         if (launcher === "wrapper") {
           writeExecutable(nativePath);
@@ -811,7 +811,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
     () =>
       Effect.gen(function* () {
         // `brew install node` keeps npm globals inside the node keg.
-        const tempDir = yield* makeTempDir("t3-homebrew-node-capabilities");
+        const tempDir = yield* makeTempDir("t2-homebrew-node-capabilities");
         const keg = NodePath.join(tempDir, "Cellar", "node", "22.1.0");
         const target = NodePath.join(
           keg,
@@ -874,7 +874,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
 
   it.effect.skipIf(windowsHost)("carries the native updater's environment into the action", () =>
     Effect.gen(function* () {
-      const tempDir = yield* makeTempDir("t3-native-env");
+      const tempDir = yield* makeTempDir("t2-native-env");
       const nativePath = NodePath.join(tempDir, ".local", "bin", "native-package-tool");
       writeExecutable(nativePath);
       const resolver = makePackageManagedProviderMaintenanceResolver({
@@ -1004,7 +1004,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
     "stays manual-only when the keg is not under the resolved brew's prefix",
     () =>
       Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-homebrew-foreign-prefix");
+        const tempDir = yield* makeTempDir("t2-homebrew-foreign-prefix");
         const brewBinDir = NodePath.join(tempDir, "brew-bin");
         writeExecutable(NodePath.join(brewBinDir, "brew"));
         const kegBinary = NodePath.join(
@@ -1056,7 +1056,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
     "disables one-click updates for explicit custom binary paths it cannot safely map",
     () =>
       Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-custom-capabilities");
+        const tempDir = yield* makeTempDir("t2-custom-capabilities");
         const customPath = NodePath.join(tempDir, "tools", "package-tool");
         writeExecutable(customPath);
 
