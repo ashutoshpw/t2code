@@ -1835,14 +1835,14 @@ function normalizePersistedDraftsByThreadId(
       }
     }
     const migratedPrompt = promptCandidate.replace(
-      /!?\[([^\]\r\n]*)\]\(t3-context:\/\/v1\/([a-z-]+)\/([^/()\r\n]+)\)/g,
+      /!?\[([^\]\r\n]*)\]\(t2-context:\/\/v1\/([a-z-]+)\/([^/()\r\n]+)\)/g,
       (source, label: string, kind: string, id: string) => {
         const contextId = contextIds.get(`${kind}/${id}`);
         return contextId ? formatInlineContextReference({ kind, contextId, label }) : source;
       },
     );
     const prompt = ensureInlineContextReferences(
-      migrateLegacyTerminalContextPlaceholders(migratedPrompt, terminalContexts),
+      migrateLegacyTerminalContextPlaceholders(promptCandidate, terminalContexts),
       terminalContexts.map((context) => terminalContextReference({ ...context, text: "" })),
     );
     const legacyDraftCandidate = draftValue as LegacyPersistedComposerThreadDraftState;

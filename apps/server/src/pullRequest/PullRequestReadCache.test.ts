@@ -17,10 +17,101 @@ const cacheLayer = (directory: string) =>
   PullRequestReadCache.make.pipe(Effect.provide(KeyValueStore.layerFileSystem(directory)));
 
 it.layer(NodeServices.layer)("PR filesystem cache", (it) => {
-  it.effect("clears in-flight reads before a new service can reuse them", () =>
+  it.effect("prunes entry files written before the max age and keeps fresh ones", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pr-cache-" });
+      yield* TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe("2026-10-01T00:00:00Z")));
+      const cache = yield* cacheLayer(directory);
+      yield* cache.get("old", Effect.succeed("old"), ["pr"]);
+      yield* cache.invalidate("pr");
+      const [stale, revisions] = (yield* fs.readDirectory(directory)).toSorted();
+      assert.strictEqual(revisions, "revisions");
+      yield* cache.get("fresh", Effect.succeed("fresh"));
+      const fresh = (yield* fs.readDirectory(directory)).find(
+        (name) => name !== stale && name !== revisions,
+      );
+      const unrelated = "unrelated.json";
+      yield* fs.writeFileString(`${directory}/${unrelated}`, "{}");
+      const prefixed = "pr-v2-backup.json";
+      yield* fs.writeFileString(`${directory}/${prefixed}`, "{}");
+      const justExpired = Duration.sum(
+        PullRequestReadCache.ENTRY_FILE_MAX_AGE,
+        Duration.seconds(1),
+      );
+      yield* ageFiles(directory, [stale!, revisions!, unrelated, prefixed], justExpired);
+      yield* ageFiles(directory, [fresh!], PullRequestReadCache.ENTRY_FILE_MAX_AGE);
+
+      yield* PullRequestReadCache.pruneExpiredEntryFiles(directory);
+
+      assert.deepStrictEqual(
+        (yield* fs.readDirectory(directory)).toSorted(),
+        [fresh!, revisions!, unrelated, prefixed].toSorted(),
+      );
+    }),
+  );
+
+  it.effect("sweeps the cache directory every hour once the layer is built", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const { providerStatusCacheDir } = yield* ServerConfig.ServerConfig;
+      const directory = `${providerStatusCacheDir}/pull-requests`;
+      yield* TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe("2026-10-01T00:00:00Z")));
+      yield* (yield* cacheLayer(directory)).get("summary", Effect.succeed("cached"));
+      const [entry] = yield* fs.readDirectory(directory);
+      yield* ageFiles(
+        directory,
+        [entry!],
+        Duration.subtract(PullRequestReadCache.ENTRY_FILE_MAX_AGE, Duration.minutes(90)),
+      );
+      const operations = yield* Queue.unbounded<string>();
+      const observedFs = FileSystem.FileSystem.of({
+        ...fs,
+        stat: (path) => fs.stat(path).pipe(Effect.tap(() => Queue.offer(operations, "stat"))),
+        remove: (path, options) =>
+          fs.remove(path, options).pipe(Effect.tap(() => Queue.offer(operations, "remove"))),
+      });
+      yield* Layer.build(
+        PullRequestReadCache.layer.pipe(
+          Layer.provide(Layer.succeed(FileSystem.FileSystem, observedFs)),
+        ),
+      );
+      assert.strictEqual(yield* Queue.take(operations), "stat");
+      yield* TestClock.adjust("1 hour");
+      assert.strictEqual(yield* Queue.take(operations), "stat");
+      assert.deepStrictEqual(yield* fs.readDirectory(directory), [entry]);
+      yield* TestClock.adjust("1 hour");
+      assert.deepStrictEqual(yield* Queue.takeN(operations, 2), ["stat", "remove"]);
+      assert.deepStrictEqual(yield* fs.readDirectory(directory), []);
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-pr-cache-layer-" })),
+    ),
+  );
+
+  it.effect("reuses files after restart and respects the original expiry", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pr-cache-" });
+      let reads = 0;
+      const lookup = Effect.sync(() => String(++reads));
+      const first = yield* cacheLayer(directory);
+      const key = "long/repository/key".repeat(100);
+      assert.strictEqual(yield* first.get(key, lookup), "1");
+      yield* TestClock.adjust("59 seconds");
+      const restarted = yield* cacheLayer(directory);
+      assert.strictEqual(yield* restarted.get(key, lookup), "1");
+      yield* TestClock.adjust("1 second");
+      assert.strictEqual(yield* restarted.get(key, lookup), "2");
+      assert.strictEqual(reads, 2);
+      assert.strictEqual((yield* fs.readDirectory(directory)).length, 1);
+    }),
+  );
+
+  it.effect("clears in-flight reads before a new service can reuse them", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pr-cache-" });
       const started = yield* Deferred.make<void>();
       const release = yield* Deferred.make<void>();
       const cache = yield* cacheLayer(directory);
@@ -49,7 +140,7 @@ it.layer(NodeServices.layer)("PR filesystem cache", (it) => {
   it.effect("invalidates only the changed scope across restarts and coalesces its next reads", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pr-cache-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pr-cache-" });
       let reads = 0;
       const lookup = Effect.sync(() => String(++reads));
       const cache = yield* cacheLayer(directory);
@@ -114,7 +205,7 @@ it.layer(NodeServices.layer)("PR filesystem cache", (it) => {
   it.effect("does not persist failed GitHub reads", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pr-cache-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pr-cache-" });
       const cache = yield* cacheLayer(directory);
       const error = new PullRequestOperationError({ operation: "summary", detail: "unavailable" });
       yield* cache.get("summary", Effect.fail(error)).pipe(Effect.flip);

@@ -88,7 +88,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 5775,
       host: "127.0.0.1",
-      instanceKey: "/tmp/t3-agent-one",
+      instanceKey: "/tmp/t2-agent-one",
       environmentId: "environment-one",
       development: true,
     });
@@ -96,7 +96,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 5775,
       host: "127.0.0.1",
-      instanceKey: "/tmp/t3-agent-two",
+      instanceKey: "/tmp/t2-agent-two",
       environmentId: "environment-two",
       development: true,
     });
@@ -112,7 +112,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 3772,
       host: "192.168.1.50",
-      instanceKey: "/srv/t3-one",
+      instanceKey: "/srv/t2-one",
       environmentId: "environment-one",
       development: false,
     });
@@ -120,7 +120,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 5775,
       host: "192.168.1.50",
-      instanceKey: "/srv/t3-two",
+      instanceKey: "/srv/t2-two",
       environmentId: "environment-two",
       development: false,
     });
@@ -135,7 +135,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 8080,
       host: "0.0.0.0",
-      instanceKey: "/srv/t3",
+      instanceKey: "/srv/t2",
       environmentId: "environment-one",
       development: false,
     });
@@ -143,7 +143,7 @@ describe("session cookie isolation", () => {
       mode: "web",
       port: 9090,
       host: "app.example.com",
-      instanceKey: "/srv/t3",
+      instanceKey: "/srv/t2",
       environmentId: "environment-one",
       development: false,
     });
@@ -170,7 +170,7 @@ describe("session cookie isolation", () => {
         mode: "web",
         port: 5775,
         host: "0.0.0.0",
-        instanceKey: "/tmp/t3-wildcard-dev",
+        instanceKey: "/tmp/t2-wildcard-dev",
         environmentId: "environment-one",
         development: true,
       }),
