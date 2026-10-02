@@ -13,15 +13,15 @@ describe.skipIf(HostProcessPlatform.defaultValue() !== "linux")("installer termi
   it.each([false, true])(
     "preserves download and install behavior (HTTP failure: %s)",
     async (fail) => {
-      const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t3-install-progress-"));
+      const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t2-install-progress-"));
       const version = "1.2.3";
-      const stem = `t3-${version}-linux-${HostProcessArchitecture.defaultValue()}`;
+      const stem = `t2-${version}-linux-${HostProcessArchitecture.defaultValue()}`;
       const archiveName = `${stem}.tar.gz`;
       let resumeDownload: (() => void) | undefined;
       let sawPartialProgress = false;
       let output = "";
       await NodeFSP.mkdir(NodePath.join(root, stem));
-      await NodeFSP.writeFile(NodePath.join(root, stem, "t3"), "#!/bin/sh\necho 't3 v1.2.3'\n", {
+      await NodeFSP.writeFile(NodePath.join(root, stem, "t2"), "#!/bin/sh\necho 't2 v1.2.3'\n", {
         mode: 0o755,
       });
       await NodeFSP.writeFile(
@@ -98,10 +98,16 @@ describe.skipIf(HostProcessPlatform.defaultValue() !== "linux")("installer termi
             await NodeFSP.readFile(NodePath.join(versions, version, ".install-complete"), "utf8"),
           ).toBe("1.2.3\n");
           expect(
+            NodeChildProcess.execFileSync(NodePath.join(root, "bin/t2"), ["--version"], {
+              encoding: "utf8",
+            }).trim(),
+          ).toBe("t2 v1.2.3");
+          // Scripts and installs written for the old binary name keep working.
+          expect(
             NodeChildProcess.execFileSync(NodePath.join(root, "bin/t3"), ["--version"], {
               encoding: "utf8",
             }).trim(),
-          ).toBe("t3 v1.2.3");
+          ).toBe("t2 v1.2.3");
           expect(await NodeFSP.readdir(versions)).toEqual([version]);
         }
       } finally {

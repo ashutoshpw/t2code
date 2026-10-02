@@ -112,7 +112,7 @@ export function npmPlatformPackageManifest(
     repository: serverPackageJson.repository,
     os: [os],
     cpu: [cpu],
-    files: ["t3", "t3.exe", "client", "resource-monitor", "node_modules"],
+    files: ["t2", "t2.exe", "t3", "t3.exe", "client", "resource-monitor", "node_modules"],
     preferUnplugged: true,
     dependencies: Object.fromEntries(bundleDependencies.map((name) => [name, bundled[name]])),
     bundleDependencies,
@@ -196,6 +196,7 @@ export const NPM_LAUNCHER_SCRIPT = `#!/usr/bin/env node
 "use strict";
 const { spawnSync } = require("node:child_process");
 const { constants } = require("node:os");
+const { existsSync } = require("node:fs");
 const { dirname, join } = require("node:path");
 
 const SUPPORTED = [${CLI_ARCHIVE_PLATFORM_KEYS.map((key) => `"${key}"`).join(", ")}];
@@ -231,7 +232,13 @@ try {
   process.exit(1);
 }
 
-const executable = join(packageDir, process.platform === "win32" ? "t3.exe" : "t3");
+const executable = (process.platform === "win32" ? ["t2.exe", "t3.exe"] : ["t2", "t3"])
+  .map((name) => join(packageDir, name))
+  .find((candidate) => existsSync(candidate));
+if (executable === undefined) {
+  process.stderr.write("t2code: " + platformPackage + " does not contain a t2 executable.\\n");
+  process.exit(1);
+}
 const result = spawnSync(executable, process.argv.slice(2), { stdio: "inherit" });
 if (result.error) {
   process.stderr.write("t2code: failed to start " + executable + ": " + result.error.message + "\\n");
@@ -346,16 +353,26 @@ const stagePlatformPackage = Effect.fn("stagePlatformPackage")(function* (input:
   const extractDir = path.join(scratch, "extract");
   yield* fs.makeDirectory(extractDir);
   const contentDir = yield* extractArchive(input.archive, extractDir);
-  const executableName = input.key.startsWith("win32") ? "t3.exe" : "t3";
-  const executable = path.join(contentDir, executableName);
-  if (!(yield* fs.exists(executable))) {
+  // Archives published before the binary rename still carry `t3`; accept both.
+  const executableCandidates = input.key.startsWith("win32") ? ["t2.exe", "t3.exe"] : ["t2", "t3"];
+  let executableName: string | undefined;
+  let executable: string | undefined;
+  for (const candidate of executableCandidates) {
+    const candidatePath = path.join(contentDir, candidate);
+    if (yield* fs.exists(candidatePath)) {
+      executableName = candidate;
+      executable = candidatePath;
+      break;
+    }
+  }
+  if (executableName === undefined || executable === undefined) {
     return yield* new NpmPackagesArchiveLayoutError({
       archive: path.basename(input.archive),
-      detail: `missing ${executableName} at the archive root`,
+      detail: `missing ${executableCandidates.join(" or ")} at the archive root`,
     });
   }
   // The tarball carries the on-disk mode, so the bit must be set before packing.
-  if (executableName === "t3") {
+  if (!executableName.endsWith(".exe")) {
     yield* fs.chmod(executable, 0o755);
   }
   const bundled = yield* readBundledPackages(path.join(contentDir, "node_modules"));

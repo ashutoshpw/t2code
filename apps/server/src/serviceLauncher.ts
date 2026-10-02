@@ -49,12 +49,27 @@ interface ManagedChild {
 const runtimePaths = (baseDir: string, version: string) => {
   const versionDir = NodePath.join(baseDir, "runtime", "versions", version);
   // oxlint-disable-next-line t2code/no-global-process-runtime -- Standalone launcher has no Effect runtime.
-  const executableName = process.platform === "win32" ? "t3.exe" : "t3";
+  const win = process.platform === "win32";
   return {
     versionDir,
-    entryPath: NodePath.join(versionDir, executableName),
+    entryPath: NodePath.join(versionDir, win ? "t2.exe" : "t2"),
+    // Runtimes unpacked before the binary rename carry `t3` instead.
+    legacyEntryPath: NodePath.join(versionDir, win ? "t3.exe" : "t3"),
     sentinelPath: NodePath.join(versionDir, ".install-complete"),
   };
+};
+
+const resolveRuntimeEntryPath = async (
+  paths: ReturnType<typeof runtimePaths>,
+): Promise<string | undefined> => {
+  for (const candidate of [paths.entryPath, paths.legacyEntryPath]) {
+    try {
+      if ((await NodeFSP.stat(candidate)).isFile()) return candidate;
+    } catch {
+      // Candidate absent; try the next name.
+    }
+  }
+  return undefined;
 };
 
 const runtimeSpawnArguments = (paths: ReturnType<typeof runtimePaths>) => ({
@@ -216,11 +231,11 @@ export async function writeServiceState(filePath: string, state: ServiceState): 
 async function runtimeExists(baseDir: string, version: string): Promise<boolean> {
   const paths = runtimePaths(baseDir, version);
   try {
-    const [entry, sentinel] = await Promise.all([
-      NodeFSP.stat(paths.entryPath),
+    const [entryPath, sentinel] = await Promise.all([
+      resolveRuntimeEntryPath(paths),
       NodeFSP.readFile(paths.sentinelPath, "utf8"),
     ]);
-    return entry.isFile() && sentinel.trim() === version;
+    return entryPath !== undefined && sentinel.trim() === version;
   } catch {
     return false;
   }
@@ -420,12 +435,16 @@ export class Launcher {
     }
     if (this.#stopping) return;
     const paths = runtimePaths(this.#baseDir, version);
+    const entryPath = await resolveRuntimeEntryPath(paths);
+    if (entryPath === undefined) {
+      throw new Error(`Selected @t2code/cli@${version} runtime is missing its executable.`);
+    }
     const context: ServiceLauncherContext = {
       protocol: SERVICE_LAUNCHER_PROTOCOL,
       childVersion: version,
       ...(update === undefined ? {} : { update }),
     };
-    const spawnArguments = runtimeSpawnArguments(paths);
+    const spawnArguments = runtimeSpawnArguments({ ...paths, entryPath });
     const child = NodeChildProcess.spawn(spawnArguments.command, spawnArguments.args, {
       env: { ...process.env, [SERVICE_LAUNCHER_CONTEXT_ENV]: JSON.stringify(context) },
       stdio: ["inherit", "inherit", "inherit", "ipc"],

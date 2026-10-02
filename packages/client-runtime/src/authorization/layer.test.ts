@@ -261,7 +261,7 @@ describe("RemoteEnvironmentAuthorization", () => {
       expect(first.socketUrl).toContain("wsTicket=first-ticket");
       expect(second.socketUrl).toContain("wsTicket=second-ticket");
       expect(
-        harness.fetch.calls.filter(([url]) => String(url).endsWith("/.well-known/t3/environment")),
+        harness.fetch.calls.filter(([url]) => String(url).endsWith("/.well-known/t2/environment")),
       ).toHaveLength(1);
       expect(
         harness.fetch.calls.filter(([url]) => String(url).endsWith("/api/auth/websocket-ticket")),
@@ -307,7 +307,7 @@ describe("RemoteEnvironmentAuthorization", () => {
         }),
       );
       expect(
-        harness.fetch.calls.filter(([url]) => String(url).endsWith("/.well-known/t3/environment")),
+        harness.fetch.calls.filter(([url]) => String(url).endsWith("/.well-known/t2/environment")),
       ).toHaveLength(2);
     }),
   );
@@ -746,7 +746,7 @@ describe("RemoteEnvironmentAuthorization", () => {
           },
         ]);
         expect(harness.fetch.calls.map(([url]) => String(url))).toEqual([
-          `${ENDPOINT.httpBaseUrl}/.well-known/t3/environment`,
+          `${ENDPOINT.httpBaseUrl}/.well-known/t2/environment`,
           `${ENDPOINT.httpBaseUrl}/oauth/token`,
         ]);
         expect(yield* Ref.get(harness.proofInputs)).toEqual([

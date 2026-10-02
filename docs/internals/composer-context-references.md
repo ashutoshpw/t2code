@@ -48,7 +48,7 @@ rejects direct `crypto.randomUUID()` there.
 ![label](t2-context://v1/image/<contextId>)
 ```
 
-The parser accepts exactly the `t3-context:` scheme, the `v1` host, one kind segment matching
+The parser accepts the `t2-context:` scheme (and legacy `t3-context:` links stored by pre-rename builds), the `v1` host, one kind segment matching
 `[a-z][a-z0-9-]{0,39}`, and one id segment matching `[a-z0-9_-]{1,128}` case-insensitively. Query
 strings, fragments, credentials, and extra segments are rejected. Labels are sanitized to survive
 a Markdown link (no brackets or line breaks, at most 200 characters, never empty). Links that fail

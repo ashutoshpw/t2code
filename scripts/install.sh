@@ -9,12 +9,12 @@
 #                            (default: stable; preview is a maintainers' test train)
 #   T2CODE_VERSION           exact version to install (overrides T2CODE_CHANNEL)
 #   T2CODE_HOME              T2 home directory (default: ~/.t2)
-#   T2CODE_INSTALL_BIN_DIR   where the `t3` symlink goes (default: ~/.local/bin)
+#   T2CODE_INSTALL_BIN_DIR   where the `t2` symlink goes (default: ~/.local/bin)
 #   T2CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
 #
 # The archive is unpacked into $T2CODE_HOME/runtime/versions/<version>, the
-# same layout `t3 service install` uses, so the service reuses this download
+# same layout `t2 service install` uses, so the service reuses this download
 # instead of fetching the release again.
 set -eu
 
@@ -24,7 +24,7 @@ t2_home="${T2CODE_HOME:-$HOME/.t2}"
 bin_dir="${T2CODE_INSTALL_BIN_DIR:-$HOME/.local/bin}"
 
 fail() {
-  printf '\nt3 install: %s\n' "$1" >&2
+  printf '\nt2 install: %s\n' "$1" >&2
   exit 1
 }
 
@@ -163,7 +163,7 @@ fi
 case "$version" in
   *-preview.*)
     printf '%s\n' \
-      "t3 ${version} is a preview build." \
+      "t2 ${version} is a preview build." \
       "  Preview builds are cut by maintainers from unreleased branches to exercise the release" \
       "  pipeline. They can be broken, receive no fixes, and are never offered as updates." \
       "  Set T2CODE_CHANNEL=stable (the default) for a supported build." >&2
@@ -196,7 +196,7 @@ else
   fetch_status=0
   fetch "${base_url}/v${version}/SHA256SUMS" "${staging}/SHA256SUMS" || fetch_status=$?
   if [ "$fetch_status" -eq 44 ]; then
-    fail "t3 ${version} has no release archive for ${platform}-${arch}; releases before the self-contained CLI can only be installed with \`npm install -g t3@${version}\`"
+    fail "t2 ${version} has no release archive for ${platform}-${arch}; releases before the self-contained CLI can only be installed with \`npm install -g @t2code/cli@${version}\`"
   elif [ "$fetch_status" -ne 0 ]; then
     fail "could not download the release checksums"
   fi
@@ -222,7 +222,11 @@ else
   step "Extracting T2 Code..."
   tar -xzf "${staging}/${archive}" -C "$staging" --strip-components=1
   rm -f "${staging}/${archive}" "${staging}/SHA256SUMS"
-  "${staging}/t3" --version >/dev/null || fail "the downloaded executable does not run"
+  # Releases published before the binary rename still carry `t3`.
+  if [ -x "${staging}/t2" ]; then exe=t2; elif [ -x "${staging}/t3" ]; then exe=t3
+  else fail "the archive does not contain a t2 executable"
+  fi
+  "${staging}/${exe}" --version >/dev/null || fail "the downloaded executable does not run"
   printf '%s\n' "$version" > "${staging}/.install-complete"
 
   rm -rf "$target_dir"
@@ -230,12 +234,18 @@ else
   trap - EXIT
 fi
 
-step "Setting up the t3 command..."
+step "Setting up the t2 command..."
+# Releases published before the binary rename still carry `t3`.
+if [ -f "${target_dir}/t2" ]; then exe=t2; elif [ -f "${target_dir}/t3" ]; then exe=t3
+else fail "${target_dir} does not contain a t2 executable"
+fi
 mkdir -p "$bin_dir"
-ln -sfn "${target_dir}/t3" "${bin_dir}/t3"
+ln -sfn "${target_dir}/${exe}" "${bin_dir}/t2"
+# Compat launcher for scripts and installs written for the old binary name.
+ln -sfn "${target_dir}/${exe}" "${bin_dir}/t3"
 if "$interactive"; then printf '\r\033[2K' >&2; fi
 printf '  %sInstalled T2 Code %s%s\n\n' "$green" "$version" "$reset" >&2
 case ":${PATH}:" in
-  *":${bin_dir}:"*) printf '  Run %st3%s to get started.\n\n' "$bold" "$reset" ;;
-  *) printf '  Add %s to your PATH, then run %st3%s.\n\n' "$bin_dir" "$bold" "$reset" ;;
+  *":${bin_dir}:"*) printf '  Run %st2%s to get started.\n\n' "$bold" "$reset" ;;
+  *) printf '  Add %s to your PATH, then run %st2%s.\n\n' "$bin_dir" "$bold" "$reset" ;;
 esac
