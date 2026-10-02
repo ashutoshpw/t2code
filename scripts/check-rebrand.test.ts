@@ -31,12 +31,12 @@ describe("check-rebrand", () => {
         },
         {
           file: "packages/shared/src/example.ts",
-          line: 'const tokenType = "t3-link-challenge+jwt";',
+          line: 'const tokenType = "t2-link-challenge+jwt";',
         },
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(Array(4).fill("t3-connect-copy"));
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(4).fill("t2-connect-copy"));
   });
 
   it("rejects Connect copy outside the client surfaces too", () => {
@@ -47,7 +47,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-connect-copy", "t3-connect-copy"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-connect-copy", "t2-connect-copy"]);
   });
 
   it("flags the invented @t3 package scope", () => {
@@ -55,7 +55,7 @@ describe("check-rebrand", () => {
       [{ file: "apps/web/src/example.ts", line: `import { x } from "@t3/util";` }],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-scope"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-scope"]);
   });
 
   it("flags an unqualified T3 context identity", () => {
@@ -81,8 +81,8 @@ describe("check-rebrand", () => {
       EMPTY_BASELINE,
     );
     expect(violations.map((v) => v.rule.id)).toEqual([
-      "t3-context-identity",
-      "t3-context-identity",
+      "t2-context-identity",
+      "t2-context-identity",
     ]);
   });
 
@@ -100,7 +100,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-connect-id"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-connect-id"]);
   });
 
   it("rejects a stale setup-script completion sentinel", () => {
@@ -117,7 +117,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-sentinel"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-sentinel"]);
   });
 
   it("flags T3-named paths once per file, including binary assets", () => {
@@ -133,7 +133,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.filter((v) => v.rule.id === "t3-named-path").map((v) => v.file)).toEqual([
+    expect(violations.filter((v) => v.rule.id === "t2-named-path").map((v) => v.file)).toEqual([
       "apps/web/src/components/T3Sidebar.tsx",
       "apps/marketing/public/t3-hero.png",
     ]);
@@ -151,7 +151,7 @@ describe("check-rebrand", () => {
     expect(findViolations(entries, baseline)).toEqual([]);
     expect(
       findViolations(entries, EMPTY_BASELINE)
-        .filter((v) => v.rule.id === "t3-named-path")
+        .filter((v) => v.rule.id === "t2-named-path")
         .map((v) => v.file),
     ).toEqual(["apps/server/scripts/t3-sqlite-state.ts"]);
   });
@@ -174,7 +174,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-wordmark-ref", "t3-mark-ref"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-wordmark-ref", "t2-mark-ref"]);
   });
 
   it("flags the bare legacy wordmark accessibility labels only", () => {
@@ -186,7 +186,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-wordmark-label", "t3-wordmark-label"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-wordmark-label", "t2-wordmark-label"]);
   });
 
   it("flags the retired wordmark path fingerprint without matching a different path", () => {
@@ -203,7 +203,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-wordmark-path"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-wordmark-path"]);
   });
 
   it("leaves compatibility values and guard fixtures outside the narrow rules", () => {
@@ -224,7 +224,7 @@ describe("check-rebrand", () => {
       EMPTY_BASELINE,
     );
 
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-project-file"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-project-file"]);
   });
 
   it("flags T3 home and T3 server copy in any casing", () => {
@@ -242,9 +242,9 @@ describe("check-rebrand", () => {
       EMPTY_BASELINE,
     );
     expect(violations.map((v) => v.rule.id)).toEqual([
-      "t3-home-copy",
-      "t3-server-copy",
-      "t3-server-copy",
+      "t2-home-copy",
+      "t2-server-copy",
+      "t2-server-copy",
     ]);
   });
 
@@ -272,15 +272,15 @@ describe("check-rebrand", () => {
       EMPTY_BASELINE,
     );
     expect(violations.map((v) => v.rule.id)).toEqual([
-      "t3-noun-copy",
-      "t3-noun-copy",
-      "t3-noun-copy",
-      "t3-noun-copy",
-      "t3-noun-copy",
-      "t3-noun-copy",
-      "t3-noun-copy",
-      "t3-noun-copy",
-      "t3-possessive-copy",
+      "t2-noun-copy",
+      "t2-noun-copy",
+      "t2-noun-copy",
+      "t2-noun-copy",
+      "t2-noun-copy",
+      "t2-noun-copy",
+      "t2-noun-copy",
+      "t2-noun-copy",
+      "t2-possessive-copy",
     ]);
   });
 
@@ -301,7 +301,7 @@ describe("check-rebrand", () => {
       [{ file: "apps/web/src/example.ts", line: `const TITLE = "T3 Code";` }],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-copy"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-copy"]);
   });
 
   it("flags upstream first-party domains while leaving repo URLs and lookalikes alone", () => {
@@ -323,7 +323,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t3-first-party-url"));
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t2-first-party-url"));
   });
 
   it("flags T3Code only outside URLs, owners, and identifiers", () => {
@@ -345,7 +345,7 @@ describe("check-rebrand", () => {
       [{ file: "apps/web/src/example.ts", line: `import cli from "@t3code/cli";` }],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-cli-scope"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-cli-scope"]);
   });
 
   it("flags the upstream internal package scope", () => {
@@ -384,7 +384,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t3-half-rename"));
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t2-half-rename"));
   });
 
   it("flags repository-owned t3tools metadata while retaining upstream repository fixtures", () => {
@@ -419,7 +419,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-port", "t3-port"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-port", "t2-port"]);
   });
 
   it("flags every quoted legacy scheme line, including dual registrations", () => {
@@ -439,7 +439,7 @@ describe("check-rebrand", () => {
       EMPTY_BASELINE,
     );
     expect(violations).toHaveLength(3);
-    expect(new Set(violations.map((v) => v.rule.id))).toEqual(new Set(["t3-scheme"]));
+    expect(new Set(violations.map((v) => v.rule.id))).toEqual(new Set(["t2-scheme"]));
   });
 
   it("flags the legacy preview scheme except storage partition names", () => {
@@ -465,7 +465,7 @@ describe("check-rebrand", () => {
       { file: "apps/desktop/src/app/DesktopEnvironment.ts", line: LEGACY_USER_DATA_LINE },
     ];
     expect(findViolations(entries, REAL_BASELINE)).toEqual([]);
-    expect(findViolations(entries, EMPTY_BASELINE).map((v) => v.rule.id)).toEqual(["t3-copy"]);
+    expect(findViolations(entries, EMPTY_BASELINE).map((v) => v.rule.id)).toEqual(["t2-copy"]);
   });
 
   it("exempts fork tooling describing upstream and upstream-owned modules", () => {
@@ -490,7 +490,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t3-env-name"));
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t2-env-name"));
   });
 
   it("flags former retained T3 identifiers after the migration removed them", () => {
@@ -503,7 +503,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(["t3-env-name"]);
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-env-name"]);
   });
 
   it("keeps only current violations in a refreshed baseline", () => {
@@ -527,7 +527,7 @@ describe("check-rebrand", () => {
     const entries = [
       { file: "apps/desktop/scripts/electron-launcher.mjs", line: legacyFallbackLine },
     ];
-    expect(findViolations(entries, EMPTY_BASELINE).map((v) => v.rule.id)).toEqual(["t3-env-name"]);
+    expect(findViolations(entries, EMPTY_BASELINE).map((v) => v.rule.id)).toEqual(["t2-env-name"]);
     expect(
       findViolations(
         entries,
