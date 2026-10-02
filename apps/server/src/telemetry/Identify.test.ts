@@ -95,7 +95,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("telemetry identi
 
       yield* writeHomeFile(homeDirectory, ".codex/auth.json", `{"tokens":{"account_id":"ws-1"}}`);
       assert.deepEqual(yield* identity(), { distinctId: yield* sha256("ws-1"), installId });
-    }).pipe(Effect.provide(layerIdentity("t3-telemetry-identify-install-"))),
+    }).pipe(Effect.provide(layerIdentity("t2-telemetry-identify-install-"))),
   );
 
   it.effect("leaves no torn anonymous id behind when its write fails midway", () =>
@@ -265,7 +265,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("telemetry identi
             .join("\n"),
           privateAccessToken,
         );
-      }).pipe(Effect.provide(layerIdentity("t3-telemetry-identify-decode-", logs)));
+      }).pipe(Effect.provide(layerIdentity("t2-telemetry-identify-decode-", logs)));
     },
   );
 });

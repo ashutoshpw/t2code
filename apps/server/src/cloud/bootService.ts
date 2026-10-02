@@ -31,7 +31,6 @@ import {
   pinnedRuntimePaths,
   pinnedRuntimeVersionsDir,
   PinnedRuntimeInstallError,
-  resolvePinnedRuntimeEntryPath,
 } from "./pinnedRuntime.ts";
 import {
   SERVICE_LAUNCHER_PROTOCOL,
@@ -1021,12 +1020,14 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
     return effectiveInstallBinDir ? { ...plan, installBinDir: effectiveInstallBinDir } : plan;
   };
   // The executable hosts the launcher as a hidden subcommand of itself, so
-  // the unit runs the pinned runtime directly. The entry path is resolved
-  // lazily: runtimes unpacked before the binary rename only carry `t3`.
-  const buildPlan = Effect.map(
-    resolvePinnedRuntimeEntryPath(fs, runtimePaths),
-    (entry): BootServicePlan => ({ ...plan, program: [entry, "__service-launcher"] }),
-  );
+  // the unit runs the pinned runtime directly.
+  const buildPlan = Effect.succeed<BootServicePlan>({
+    program: [runtimePaths.entryPath, "__service-launcher"],
+    baseDir: input.baseDir,
+    logPath,
+    unitPath,
+  });
+
   const requireManager = Effect.suspend(() =>
     detectedManager === undefined
       ? new BootServiceUnsupportedError({ platform })
@@ -1536,9 +1537,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
     }
     const [unit, runtimeEntryExists, runtimeSentinel, stateText] = yield* Effect.all([
       fs.readFileString(unitPath),
-      resolvePinnedRuntimeEntryPath(fs, runtimePaths).pipe(
-        Effect.flatMap((entry) => fs.exists(entry)),
-      ),
+      fs.exists(runtimePaths.entryPath),
       fs.readFileString(runtimePaths.sentinelPath).pipe(Effect.option),
       fs.readFileString(statePath).pipe(Effect.option),
     ]);

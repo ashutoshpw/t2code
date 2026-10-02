@@ -157,7 +157,7 @@ export const repointLauncher = Effect.fn("cli.update.repoint_launcher")(function
   const remember = (launcher: string) =>
     recordPinnedRuntimeLauncher({ baseDir: input.baseDir, launcher }).pipe(
       Effect.mapError(
-        () => new CliUpdateError({ reason: `Could not record the t3 launcher at ${launcher}.` }),
+        () => new CliUpdateError({ reason: `Could not record the t2 launcher at ${launcher}.` }),
       ),
     );
 
@@ -222,9 +222,8 @@ export const resolveLauncherPath = Effect.gen(function* () {
 
 /**
  * On Windows a `.cmd` shim is what PATH resolves, but the executable it runs
- * only ever sees its own path. Walk PATH for a `t2.cmd` (or legacy `t3.cmd`)
- * whose target is the running executable; that is the launcher the install
- * script wrote.
+ * only ever sees its own path. Walk PATH for a `t2.cmd` whose target is the
+ * running executable; that is the launcher the install script wrote.
  */
 export const findWindowsShim = Effect.fn("cli.update.find_windows_shim")(function* (
   executablePath: string,

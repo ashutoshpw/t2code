@@ -8,17 +8,9 @@ export const CLI_RELEASES_PAGE_URL = `https://github.com/${CLI_RELEASE_REPOSITOR
 export const CLI_RELEASE_CHECKSUMS_FILE = "SHA256SUMS";
 /** Overrides the download origin for mirrors and air-gapped installs. */
 export const CLI_RELEASE_BASE_URL_ENV = "T2CODE_RELEASE_BASE_URL";
-/** Pre-rename name, still honored by the update paths during the migration window. */
 
-<<<<<<< HEAD
-// Keep archive keys aligned with the Linux matrix, Windows ARM64 build, and cli_archive rows in release.yml,
-// and with the SSH runner's host check in packages/ssh/src/tunnel.ts.
-// Node single-executables do not support darwin-x64 and segfault at startup.
-=======
-/** Prefix used by newly published self-contained CLI release archives. */
+/** Prefix used by self-contained CLI release archives. */
 const CLI_ARCHIVE_PREFIX = "t2";
-/** Prefix used by archives published before the fork's public rename. */
-export const CLI_ARCHIVE_LEGACY_PREFIX = "t3";
 
 /**
  * Kept in step with the build_linux_cli matrix, build_windows_arm64_cli, and
@@ -28,7 +20,6 @@ export const CLI_ARCHIVE_LEGACY_PREFIX = "t3";
  */
 // No darwin-x64: Node single-executables are unsupported on x64 macOS (the
 // SEA docs list macOS as arm64 only) and the binary segfaults on start.
->>>>>>> 6b98c72db0 (fix(release): align CLI archive and npm publishing)
 const CLI_ARCHIVE_PLATFORM_KEYS = [
   "darwin-arm64",
   "linux-arm64",
@@ -56,12 +47,8 @@ export function cliArchiveTarCommand(
   return `${systemRoot}\\System32\\tar.exe`;
 }
 
-export function cliArchiveStem(
-  version: string,
-  platformKey: CliArchivePlatformKey,
-  prefix: string = CLI_ARCHIVE_PREFIX,
-): string {
-  return `${prefix}-${version}-${platformKey}`;
+export function cliArchiveStem(version: string, platformKey: CliArchivePlatformKey): string {
+  return `${CLI_ARCHIVE_PREFIX}-${version}-${platformKey}`;
 }
 
 const cliArchiveExtension = (platformKey: CliArchivePlatformKey): "zip" | "tar.gz" =>
@@ -69,19 +56,6 @@ const cliArchiveExtension = (platformKey: CliArchivePlatformKey): "zip" | "tar.g
 
 export function cliArchiveFileName(version: string, platformKey: CliArchivePlatformKey): string {
   return `${cliArchiveStem(version, platformKey)}.${cliArchiveExtension(platformKey)}`;
-}
-
-/** Historical name retained so installers can consume already-published releases. */
-function cliLegacyArchiveFileName(version: string, platformKey: CliArchivePlatformKey): string {
-  return `${cliArchiveStem(version, platformKey, CLI_ARCHIVE_LEGACY_PREFIX)}.${cliArchiveExtension(platformKey)}`;
-}
-
-/** Candidate names in preference order: current public name, then historical name. */
-export function cliArchiveFileNames(
-  version: string,
-  platformKey: CliArchivePlatformKey,
-): readonly [string, string] {
-  return [cliArchiveFileName(version, platformKey), cliLegacyArchiveFileName(version, platformKey)];
 }
 
 const CLI_RELEASE_DEFAULT_BASE_URL = `https://github.com/${CLI_RELEASE_REPOSITORY}/releases/download`;
