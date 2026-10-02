@@ -252,7 +252,7 @@ describe("RemoteEnvironmentAuthorization", () => {
       expect(first.socketUrl).toContain("wsTicket=first-ticket");
       expect(second.socketUrl).toContain("wsTicket=second-ticket");
       expect(
-        harness.fetch.calls.filter(([url]) => String(url).endsWith("/.well-known/t3/environment")),
+        harness.fetch.calls.filter(([url]) => String(url).endsWith("/.well-known/t2/environment")),
       ).toHaveLength(1);
       expect(
         harness.fetch.calls.filter(([url]) =>
