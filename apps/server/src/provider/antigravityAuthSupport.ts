@@ -58,7 +58,7 @@ const browserHelperSource =
   `process.stderr.on("error",()=>process.exit(0)).write(` +
   `"${ANTIGRAVITY_AUTH_BROWSER_MARKER}"+JSON.stringify(process.argv[1])+"\\n",` +
   `()=>process.exit(0))`;
-const browserPreflightUrl = "https://example.invalid/t3-antigravity-browser-preflight";
+const browserPreflightUrl = "https://example.invalid/t2-antigravity-browser-preflight";
 
 const removedEnvironmentKeys = new Set([
   "GEMINI_API_KEY",

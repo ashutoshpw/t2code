@@ -8,21 +8,25 @@ import * as HostProcess from "@t2code/shared/HostProcess";
 
 import { repointLauncher, resolveLauncherPath } from "./update.ts";
 
-it.layer(NodeServices.layer)("t3 update launcher", (it) => {
+it.layer(NodeServices.layer)("t2 update launcher", (it) => {
   it.effect("repoints a symlink that lives in a runtime versions tree", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
-      const oldExe = path.join(root, "runtime/versions/1.0.0/t3");
-      const newExe = path.join(root, "runtime/versions/2.0.0/t3");
-      const launcher = path.join(root, "bin/t3");
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" });
+      const oldExe = path.join(root, "runtime/versions/1.0.0/t2");
+      const newExe = path.join(root, "runtime/versions/2.0.0/t2");
+      const launcher = path.join(root, "bin/t2");
+      // Installs carry a `t3` compatibility launcher beside `t2`; both point
+      // at the freshly pinned version after an update.
+      const legacyLauncher = path.join(root, "bin/t3");
       for (const file of [oldExe, newExe]) {
         yield* fs.makeDirectory(path.dirname(file), { recursive: true });
         yield* fs.writeFileString(file, "");
       }
       yield* fs.makeDirectory(path.dirname(launcher), { recursive: true });
       yield* fs.symlink(oldExe, launcher);
+      yield* fs.symlink(oldExe, legacyLauncher);
 
       const repointed = yield* repointLauncher({
         launchedAs: launcher,
@@ -30,7 +34,7 @@ it.layer(NodeServices.layer)("t3 update launcher", (it) => {
         targetEntryPath: newExe,
       });
 
-      assert.deepStrictEqual(Option.getOrUndefined(repointed), launcher);
+      assert.deepStrictEqual(Option.getOrUndefined(repointed), `${launcher}, ${legacyLauncher}`);
       assert.equal(yield* fs.readLink(launcher), newExe);
     }).pipe(Effect.scoped, Effect.provideService(HostProcess.Platform, "linux")),
   );
@@ -39,13 +43,13 @@ it.layer(NodeServices.layer)("t3 update launcher", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
-      const newExe = path.join(root, "runtime/versions/2.0.0/t3");
-      const copy = path.join(root, "copy/t3");
-      const foreign = path.join(root, "foreign/t3");
-      const elsewhere = path.join(root, "elsewhere/t3");
-      const otherHome = path.join(root, "other/runtime/versions/1.0.0/t3");
-      const otherLauncher = path.join(root, "other/bin/t3");
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" });
+      const newExe = path.join(root, "runtime/versions/2.0.0/t2");
+      const copy = path.join(root, "copy/t2");
+      const foreign = path.join(root, "foreign/t2");
+      const elsewhere = path.join(root, "elsewhere/t2");
+      const otherHome = path.join(root, "other/runtime/versions/1.0.0/t2");
+      const otherLauncher = path.join(root, "other/bin/t2");
       for (const file of [newExe, copy, elsewhere, otherHome]) {
         yield* fs.makeDirectory(path.dirname(file), { recursive: true });
         yield* fs.writeFileString(file, "");
@@ -72,25 +76,25 @@ it.layer(NodeServices.layer)("t3 update launcher", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
-      const launcher = path.join(root, "bin/t3");
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" });
+      const launcher = path.join(root, "bin/t2");
       yield* fs.makeDirectory(path.dirname(launcher), { recursive: true });
       yield* fs.writeFileString(launcher, "");
 
       const bare = yield* resolveLauncherPath.pipe(
-        Effect.provideService(HostProcess.InvokedAs, "t3"),
+        Effect.provideService(HostProcess.InvokedAs, "t2"),
         Effect.provideService(HostProcess.Environment, {
           PATH: `${path.join(root, "missing")}:${path.join(root, "bin")}`,
         }),
         Effect.provideService(HostProcess.WorkingDirectory, root),
       );
       const relative = yield* resolveLauncherPath.pipe(
-        Effect.provideService(HostProcess.InvokedAs, "./bin/t3"),
+        Effect.provideService(HostProcess.InvokedAs, "./bin/t2"),
         Effect.provideService(HostProcess.Environment, { PATH: "" }),
         Effect.provideService(HostProcess.WorkingDirectory, root),
       );
       const absent = yield* resolveLauncherPath.pipe(
-        Effect.provideService(HostProcess.InvokedAs, "t3"),
+        Effect.provideService(HostProcess.InvokedAs, "t2"),
         Effect.provideService(HostProcess.Environment, { PATH: path.join(root, "missing") }),
         Effect.provideService(HostProcess.WorkingDirectory, root),
       );

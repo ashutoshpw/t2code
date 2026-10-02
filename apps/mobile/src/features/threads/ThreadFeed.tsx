@@ -35,6 +35,7 @@ import { encodeComposerContextFragment } from "@t2code/shared/composerContextCli
 import { parseThreadLinkHref } from "@t2code/shared/threadLinks";
 import { PROMPT_LINK_MAX_PROMPT_LENGTH } from "@t2code/shared/promptLinks";
 import {
+  formatComposerContextHref,
   parseComposerContextHref,
   collectComposerContextReferences,
   replaceComposerContextReferences,
@@ -1470,7 +1471,7 @@ function UserMessageContent(props: UserMessageContentProps) {
   const liveText = useLiveThreadLinkLabels(props.text, props.environmentId);
   const text = replaceComposerContextReferences(liveText, (ref) => {
     const available = props.context?.records.some((record) => record.contextId === ref.contextId);
-    return `[${ref.label}${available ? "" : " (unavailable)"}](t3-context://v1/${ref.kind}/${ref.contextId})`;
+    return `[${ref.label}${available ? "" : " (unavailable)"}](${formatComposerContextHref(ref.kind, ref.contextId)})`;
   });
   const onLinkPress = (href: string) => {
     const reference = parseComposerContextHref(href);

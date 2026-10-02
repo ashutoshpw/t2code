@@ -8,12 +8,12 @@
 #                            (default: stable; preview is a maintainers' test train)
 #   T2CODE_VERSION           exact version to install (overrides T2CODE_CHANNEL)
 #   T2CODE_HOME              T2 home directory (default: ~\.t2)
-#   T2CODE_INSTALL_BIN_DIR   where t3.exe is linked (default: ~\.local\bin)
+#   T2CODE_INSTALL_BIN_DIR   where t2.exe is linked (default: ~\.local\bin)
 #   T2CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
 #
 # The archive is unpacked into $T2CODE_HOME\runtime\versions\<version>, the
-# same layout `t3 service install` uses, so the service reuses this download.
+# same layout `t2 service install` uses, so the service reuses this download.
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -23,7 +23,7 @@ $t2Home = if ($env:T2CODE_HOME) { $env:T2CODE_HOME } else { Join-Path $HOME ".t2
 $binDir = if ($env:T2CODE_INSTALL_BIN_DIR) { $env:T2CODE_INSTALL_BIN_DIR } else { Join-Path $HOME ".local\bin" }
 
 function Fail([string] $message) {
-  Write-Error "t3 install: $message"
+  Write-Error "t2 install: $message"
   exit 1
 }
 
@@ -140,13 +140,13 @@ if (-not $version) {
     "preview" { '^v\d+\.\d+\.\d+-preview\.\d+\.\d+$' }
     default { Fail "T2CODE_CHANNEL must be stable, nightly, or preview" }
   }
-  $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases?per_page=100" -Headers @{ "User-Agent" = "t3-install" }
+  $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases?per_page=100" -Headers @{ "User-Agent" = "t2-install" }
   $tag = ($releases | Where-Object { -not $_.draft -and $_.tag_name -match $tagPattern } | Select-Object -First 1).tag_name
   if (-not $tag) { Fail "could not find a $channel release; set T2CODE_VERSION" }
   $version = $tag.Substring(1)
 }
 if ($version -match '-preview\.') {
-  Write-Warning "t3 $version is a preview build. Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, and are never offered as updates. Set T2CODE_CHANNEL=stable (the default) for a supported build."
+  Write-Warning "t2 $version is a preview build. Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, and are never offered as updates. Set T2CODE_CHANNEL=stable (the default) for a supported build."
   if ($channel -ne "preview" -and -not ($env:T2CODE_VERSION)) {
     Fail "refusing a preview build that was not explicitly requested"
   }
@@ -175,7 +175,7 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
     } catch {
       $status = $_.Exception.Response.StatusCode.value__
       if ($status -eq 404) {
-        Fail "t3 $version has no release archive for win32-$arch; releases before the self-contained CLI can only be installed with 'npm install -g t3@$version'"
+        Fail "t2 $version has no release archive for win32-$arch; releases before the self-contained CLI can only be installed with 'npm install -g @t2code/cli@$version'"
       }
       throw
     }
@@ -209,7 +209,11 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
     Get-ChildItem (Join-Path $staging $stem) | Move-Item -Destination $staging
     Remove-Item (Join-Path $staging $stem), (Join-Path $staging $archive), (Join-Path $staging "SHA256SUMS") -Recurse -Force
 
-    & (Join-Path $staging "t3.exe") --version | Out-Null
+    # Releases published before the binary rename still carry `t3.exe`.
+    $stagingExe = Join-Path $staging "t2.exe"
+    if (-not (Test-Path $stagingExe)) { $stagingExe = Join-Path $staging "t3.exe" }
+    if (-not (Test-Path $stagingExe)) { Fail "the archive does not contain a t2 executable" }
+    & $stagingExe --version | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail "the downloaded executable does not run" }
     Set-Content -Path (Join-Path $staging ".install-complete") -Value $version -NoNewline
 
@@ -221,16 +225,23 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
   }
 }
 
-Step "Setting up the t3 command..."
+Step "Setting up the t2 command..."
+# Releases published before the binary rename still carry `t3.exe`.
+$exe = Join-Path $targetDir "t2.exe"
+if (-not (Test-Path $exe)) { $exe = Join-Path $targetDir "t3.exe" }
+if (-not (Test-Path $exe)) { Fail "$targetDir does not contain a t2 executable" }
 New-Item -ItemType Directory -Force -Path $binDir | Out-Null
-$shim = Join-Path $binDir "t3.cmd"
 # UTF-8 without a BOM: cmd.exe reads the shim as-is, and ASCII would corrupt
 # non-ASCII characters in the user's home path.
-[System.IO.File]::WriteAllText($shim, "@echo off`r`n`"$(Join-Path $targetDir 't3.exe')`" %*", (New-Object System.Text.UTF8Encoding $false))
+foreach ($name in @("t2.cmd", "t3.cmd")) {
+  # t3.cmd is the compat launcher for scripts written for the old binary name.
+  $shim = Join-Path $binDir $name
+  [System.IO.File]::WriteAllText($shim, "@echo off`r`n`"$exe`" %*", (New-Object System.Text.UTF8Encoding $false))
+}
 if ($interactive) { [Console]::Error.Write("`r$esc[2K") }
 [Console]::Error.WriteLine("  ${green}Installed T2 Code $version$reset`n")
 if (($env:PATH -split ";") -notcontains $binDir) {
-  Write-Host "  Add $binDir to your PATH, then run ${bold}t3$reset.`n"
+  Write-Host "  Add $binDir to your PATH, then run ${bold}t2$reset.`n"
 } else {
-  Write-Host "  Run ${bold}t3$reset to get started.`n"
+  Write-Host "  Run ${bold}t2$reset to get started.`n"
 }
