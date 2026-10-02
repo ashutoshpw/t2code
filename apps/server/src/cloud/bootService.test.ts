@@ -21,7 +21,7 @@ import {
   serviceStateHasPendingUpdate,
 } from "./serviceProtocol.ts";
 
-const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t3";
+const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t2";
 const linuxPlan = {
   program: [linuxRuntime, "__service-launcher"],
   baseDir: "/home/theo/.t2",
@@ -39,7 +39,7 @@ it("runs the pinned runtime's own executable as the systemd launcher", () => {
 
 it("reads the served T2 home back out of a rendered unit or plist", () => {
   const plan = (baseDir: string) => ({
-    program: [`${baseDir}/runtime/versions/1.2.3/t3`, "__service-launcher"],
+    program: [`${baseDir}/runtime/versions/1.2.3/t2`, "__service-launcher"],
     baseDir,
     logPath: `${baseDir}/userdata/logs/boot-service.log`,
     unitPath: "/home/theo/.config/systemd/user/t2code.service",
@@ -100,7 +100,7 @@ it.each([
   ).toBe(program);
 });
 
-const macRuntime = "/Users/theo/.t2/runtime/versions/1.2.3/t3";
+const macRuntime = "/Users/theo/.t2/runtime/versions/1.2.3/t2";
 const macPlan = {
   program: [macRuntime, "__service-launcher"],
   baseDir: "/Users/theo/.t2",
@@ -162,7 +162,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-boot-service-test-" });
+  const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-boot-service-test-" });
   const baseDir = path.join(home, ".t2");
   const statePath = path.join(baseDir, "runtime", "service-state.json");
   const runtime = pinnedRuntimePaths(path, baseDir, "1.2.3", platform);
@@ -249,7 +249,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
         baseDir: serviceBaseDir,
         logsDir: path.join(serviceBaseDir, "userdata", "logs"),
         cliVersion,
-        host: { execPath: "/usr/bin/t3" },
+        host: { execPath: "/usr/bin/t2" },
       });
     }).pipe(
       Effect.provideService(ProcessRunner.ProcessRunner, runner),
@@ -257,7 +257,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
         Layer.mergeAll(
           Layer.succeed(HostProcess.Platform, platform),
           Layer.succeed(HostProcess.UserId, 501),
-          Layer.succeed(HostProcess.ExecutablePath, "/usr/bin/t3"),
+          Layer.succeed(HostProcess.ExecutablePath, "/usr/bin/t2"),
           Layer.succeed(
             HttpClient.HttpClient,
             HttpClient.make(() => Effect.die("no release download expected")),
@@ -685,7 +685,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       yield* service.install();
       commands.length = 0;
       const path = yield* Path.Path;
-      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t3-other-home-" });
+      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t2-other-home-" });
 
       const other = yield* makeService(undefined, "1.2.3", path.join(otherHome, ".t2"));
       expect(yield* other.restart).toBe("skipped");
