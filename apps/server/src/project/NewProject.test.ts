@@ -11,7 +11,7 @@ import * as VcsProcess from "../vcs/VcsProcess.ts";
 import { createNewProjectFolder } from "./NewProject.ts";
 
 const TestLayer = GitVcsDriver.layer.pipe(
-  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-new-project-" })),
+  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-new-project-" })),
   Layer.provideMerge(VcsProcess.layer),
   Layer.provideMerge(NodeServices.layer),
 );
@@ -37,7 +37,7 @@ const withGitEnv = <A, E, R>(
 ) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
-    const emptyConfig = yield* fileSystem.makeTempFileScoped({ prefix: "t3-gitconfig-" });
+    const emptyConfig = yield* fileSystem.makeTempFileScoped({ prefix: "t2-gitconfig-" });
     return yield* Effect.acquireUseRelease(
       Effect.sync(() => {
         const saved = GIT_ENV_KEYS.map((key) => [key, process.env[key]] as const);
@@ -81,7 +81,7 @@ it.layer(TestLayer)("createNewProjectFolder", (it) => {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
           const root = path.join(
-            yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-projects-" }),
+            yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-projects-" }),
             "projects",
           );
 
@@ -126,7 +126,7 @@ it.layer(TestLayer)("createNewProjectFolder", (it) => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-projects-" });
+          const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-projects-" });
 
           const result = yield* createNewProjectFolder({ root, name: "No Identity" });
 

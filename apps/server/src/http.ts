@@ -310,7 +310,7 @@ export const serverEnvironmentHttpApiLayer = HttpApiBuilder.group(
       yield* annotateEnvironmentRequest(args.endpoint.name);
       return yield* serverEnvironment.getDescriptor;
     }, traceRelayRequest);
-    return handlers.handle("descriptor", descriptor).handle("descriptorLegacy", descriptor);
+    return handlers.handle("descriptor", descriptor);
   }),
 );
 

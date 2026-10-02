@@ -18,7 +18,7 @@ const CLIENT_TRACING_RESOURCE = {
   serviceName: "t2code-web",
   attributes: {
     "service.namespace": "t2code",
-    "service.runtime": "t3-web",
+    "service.runtime": "t2-web",
     "service.mode": isElectron ? "electron" : "browser",
     "service.version": APP_VERSION,
   },

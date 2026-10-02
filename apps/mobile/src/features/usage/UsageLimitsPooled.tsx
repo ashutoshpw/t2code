@@ -274,7 +274,7 @@ export function UsageLimitsSection({
       {cursorPromptAt === pools.length ? cursorPrompt : null}
       {externalLinks.map((link) => (
         <View key={link.url} className="gap-3 rounded-xl border border-border-subtle p-4">
-          <Text className="text-base font-t3-medium text-foreground">{link.label}</Text>
+          <Text className="text-base font-t2-medium text-foreground">{link.label}</Text>
           <Text className="text-xs text-foreground-muted">{link.accounts.join(", ")}</Text>
           {link.message ? (
             <Text className="text-sm text-foreground-muted">{link.message}</Text>
@@ -284,7 +284,7 @@ export function UsageLimitsSection({
             className="min-h-11 justify-center"
             onPress={() => void Linking.openURL(link.url).catch(() => undefined)}
           >
-            <Text className="text-sm font-t3-medium text-primary">Manage usage</Text>
+            <Text className="text-sm font-t2-medium text-primary">Manage usage</Text>
           </Pressable>
         </View>
       ))}

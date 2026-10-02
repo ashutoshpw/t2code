@@ -4233,7 +4233,7 @@ const makeNativeOperations = Effect.fn("PreviewManager.makeOperations")(function
           "Page.createIsolatedWorld",
           {
             frameId,
-            worldName: "t3-preview-key-target",
+            worldName: "t2-preview-key-target",
           },
           sessionId,
         )) as { executionContextId?: number };

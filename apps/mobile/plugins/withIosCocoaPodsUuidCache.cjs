@@ -4,7 +4,6 @@ const path = require("node:path");
 const { withDangerousMod } = require("expo/config-plugins");
 
 const MARKER = "# t2code: repair cached CocoaPods UUID allocation before SPM integration";
-const LEGACY_MARKER = "# t3code: repair cached CocoaPods UUID allocation before SPM integration";
 const UUID_REPAIR = `${MARKER}
     pods_project = installer.pods_project
     existing_uuids = pods_project.objects.map(&:uuid)
@@ -33,7 +32,7 @@ module.exports = function withIosCocoaPodsUuidCache(config) {
       const podfilePath = path.join(nextConfig.modRequest.platformProjectRoot, "Podfile");
       const podfile = fs.readFileSync(podfilePath, "utf8");
 
-      if (podfile.includes(MARKER) || podfile.includes(LEGACY_MARKER)) {
+      if (podfile.includes(MARKER)) {
         return nextConfig;
       }
 

@@ -3,7 +3,6 @@ import * as Effect from "effect/Effect";
 import * as Encoding from "effect/Encoding";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
-import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";
@@ -12,7 +11,7 @@ import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstab
 
 import {
   CLI_RELEASE_CHECKSUMS_FILE,
-  cliArchiveFileNames,
+  cliArchiveFileName,
   cliArchivePlatformKey,
   cliArchiveTarCommand,
   cliReleaseDownloadBaseUrl,
@@ -45,8 +44,6 @@ export interface PinnedRuntimePaths {
   readonly versionDir: string;
   /** The executable. Its existence is what marks a runtime as present. */
   readonly entryPath: string;
-  /** Where runtimes unpacked before the `t3` → `t2` binary rename keep theirs. */
-  readonly legacyEntryPath: string;
   readonly sentinelPath: string;
 }
 
@@ -73,35 +70,8 @@ export function pinnedRuntimePaths(
   return {
     versionDir,
     entryPath: path.join(versionDir, win ? "t2.exe" : "t2"),
-    legacyEntryPath: path.join(versionDir, win ? "t3.exe" : "t3"),
     sentinelPath: path.join(versionDir, ".install-complete"),
   };
-}
-
-/**
- * The executable actually present in `versionDir`: `t2` first, then the `t3`
- * name archives carried before the binary rename. Falls back to the `t2` path
- * when neither exists so callers still get the path a new install will write.
- */
-export function resolvePinnedRuntimeEntryPath(
-  fs: FileSystem.FileSystem,
-  paths: PinnedRuntimePaths,
-): Effect.Effect<string, PlatformError.PlatformError> {
-  return fs
-    .exists(paths.entryPath)
-    .pipe(
-      Effect.flatMap((exists) =>
-        exists
-          ? Effect.succeed(paths.entryPath)
-          : fs
-              .exists(paths.legacyEntryPath)
-              .pipe(
-                Effect.map((legacyExists) =>
-                  legacyExists ? paths.legacyEntryPath : paths.entryPath,
-                ),
-              ),
-      ),
-    );
 }
 
 export class PinnedRuntimeInstallError extends Schema.TaggedError<PinnedRuntimeInstallError>()(
@@ -228,8 +198,7 @@ const installFromArchive = Effect.fn("cloud.pinned_runtime.install_archive")(fun
   }
   const httpClient = input.httpClient;
   const baseUrl = cliReleaseDownloadBaseUrl(input.version, input.releaseBaseUrl);
-  const archiveNames = cliArchiveFileNames(input.version, platformKey);
-  const [currentFileName] = archiveNames;
+  const fileName = cliArchiveFileName(input.version, platformKey);
 
   input.onProgress?.({ stage: "download", received: 0, total: undefined });
   const checksums = parseChecksums(
@@ -241,14 +210,10 @@ const installFromArchive = Effect.fn("cloud.pinned_runtime.install_archive")(fun
       ),
     ),
   );
-  // Historical releases only list the pre-rebrand t3 name. Select from the
-  // checksum manifest so the fallback remains covered by the same integrity
-  // check and does not require a speculative 404 request.
-  const fileName = archiveNames.find((candidate) => checksums.has(candidate));
-  const expected = fileName === undefined ? undefined : checksums.get(fileName);
+  const expected = checksums.get(fileName);
   if (expected === undefined) {
     return yield* new PinnedRuntimeInstallError({
-      step: `finding ${currentFileName} (or its legacy name) in the release checksums`,
+      step: `finding ${fileName} in the release checksums`,
     });
   }
   const archive = yield* fetchReleaseAsset(
@@ -308,39 +273,21 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
 ) {
   const { fs } = input;
   const paths = pinnedRuntimePaths(input.path, input.baseDir, input.version, input.platform);
-  const resolveEntryPath = (resolved: PinnedRuntimePaths) =>
-    resolvePinnedRuntimeEntryPath(fs, resolved).pipe(
-      Effect.mapError(
-        (cause) => new PinnedRuntimeInstallError({ step: "checking the pinned runtime", cause }),
-      ),
-    );
-  const [versionDirExists, resolvedEntryPath, sentinel] = yield* Effect.all([
+  const [versionDirExists, entryPresent, sentinel] = yield* Effect.all([
     fs.exists(paths.versionDir),
-    resolveEntryPath(paths),
+    fs.exists(paths.entryPath),
     fs.readFileString(paths.sentinelPath).pipe(Effect.option),
   ]).pipe(
     Effect.mapError(
       (cause) => new PinnedRuntimeInstallError({ step: "checking the pinned runtime", cause }),
     ),
   );
-  // Runtimes unpacked before the `t3` → `t2` rename only carry the legacy
-  // name; the resolver points entryPath at whichever one exists.
-  const resolvedPaths: PinnedRuntimePaths = { ...paths, entryPath: resolvedEntryPath };
-  const entryPresent =
-    resolvedEntryPath !== paths.entryPath ||
-    (yield* fs
-      .exists(paths.entryPath)
-      .pipe(
-        Effect.mapError(
-          (cause) => new PinnedRuntimeInstallError({ step: "checking the pinned runtime", cause }),
-        ),
-      ));
   const alreadyPinned =
     entryPresent && Option.isSome(sentinel) && sentinel.value.trim() === input.version;
   if (alreadyPinned) {
     input.onProgress?.({ stage: "cached" });
-    yield* input.validate(resolvedPaths);
-    return resolvedPaths;
+    yield* input.validate(paths);
+    return paths;
   }
   if (versionDirExists) {
     yield* fs.remove(paths.versionDir, { recursive: true, force: true }).pipe(
@@ -381,10 +328,6 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
   const stagingPaths: PinnedRuntimePaths = {
     versionDir: stagingDir,
     entryPath: input.path.join(stagingDir, input.path.relative(paths.versionDir, paths.entryPath)),
-    legacyEntryPath: input.path.join(
-      stagingDir,
-      input.path.relative(paths.versionDir, paths.legacyEntryPath),
-    ),
     sentinelPath: input.path.join(stagingDir, ".install-complete"),
   };
 
@@ -392,10 +335,7 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
     yield* installFromArchive(input, stagingDir);
 
     input.onProgress?.({ stage: "validate" });
-    yield* input.validate({
-      ...stagingPaths,
-      entryPath: yield* resolveEntryPath(stagingPaths),
-    });
+    yield* input.validate(stagingPaths);
     yield* fs
       .writeFileString(stagingPaths.sentinelPath, `${input.version}\n`)
       .pipe(
@@ -408,7 +348,7 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
       Effect.as(true),
       Effect.catch((cause) =>
         Effect.all([
-          resolveEntryPath(paths).pipe(Effect.flatMap((entry) => fs.exists(entry))),
+          fs.exists(paths.entryPath),
           fs.readFileString(paths.sentinelPath).pipe(Effect.option),
         ]).pipe(
           Effect.mapError(
@@ -433,14 +373,8 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
         ),
       ),
     );
-    // The entry that actually landed: a historical archive can carry `t3`
-    // where a fresh one carried `t2`, so resolve after the publish.
-    const finalPaths: PinnedRuntimePaths = {
-      ...paths,
-      entryPath: yield* resolveEntryPath(paths),
-    };
-    if (!published) yield* input.validate(finalPaths);
-    return finalPaths;
+    if (!published) yield* input.validate(paths);
+    return paths;
   }).pipe(
     Effect.ensuring(fs.remove(stagingDir, { recursive: true, force: true }).pipe(Effect.ignore)),
   );

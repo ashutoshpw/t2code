@@ -242,7 +242,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          t2Home: "/tmp/custom-t3",
+          t2Home: "/tmp/custom-t2",
           browser: false,
           autoBootstrapProjectFromCwd: false,
           logWebSocketEvents: true,
@@ -251,7 +251,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: new URL("http://localhost:7331"),
         });
 
-        assert.equal(env.T2CODE_HOME, path.resolve("/tmp/custom-t3"));
+        assert.equal(env.T2CODE_HOME, path.resolve("/tmp/custom-t2"));
         assert.equal(env.T2CODE_PORT, "4222");
         assert.equal(env.VITE_HTTP_URL, "http://localhost:4222");
         assert.equal(env.VITE_WS_URL, "ws://localhost:4222");
@@ -340,7 +340,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          t2Home: "/tmp/my-t3",
+          t2Home: "/tmp/my-t2",
           browser: undefined,
           autoBootstrapProjectFromCwd: undefined,
           logWebSocketEvents: undefined,
@@ -349,7 +349,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.T2CODE_HOME, path.resolve("/tmp/my-t3"));
+        assert.equal(env.T2CODE_HOME, path.resolve("/tmp/my-t2"));
       }),
     );
 
@@ -368,7 +368,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           },
           serverOffset: 0,
           webOffset: 0,
-          t2Home: "/tmp/my-t3",
+          t2Home: "/tmp/my-t2",
           browser: true,
           autoBootstrapProjectFromCwd: undefined,
           logWebSocketEvents: undefined,
@@ -377,7 +377,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.T2CODE_HOME, path.resolve("/tmp/my-t3"));
+        assert.equal(env.T2CODE_HOME, path.resolve("/tmp/my-t2"));
         assert.equal(env.PORT, "5733");
         assert.equal(env.VITE_DEV_SERVER_URL, "http://127.0.0.1:5733");
         assert.equal(env.HOST, "127.0.0.1");
@@ -1245,7 +1245,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
     describe("t2 home precedence", () => {
       const makeWorktree = Effect.acquireRelease(
         Effect.sync(() => {
-          const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-devrunner-"));
+          const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-devrunner-"));
           NodeFS.writeFileSync(
             NodePath.join(root, ".git"),
             "gitdir: /elsewhere/.git/worktrees/x\n",

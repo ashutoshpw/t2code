@@ -933,7 +933,7 @@ const makeManagedTunnelRecoveryProof = Effect.fn(
   const now = yield* DateTime.now;
   const issuedAt = Math.floor(now.epochMilliseconds / 1_000);
   const claims = {
-    iss: `t3-env:${input.environmentId}`,
+    iss: `t2-env:${input.environmentId}`,
     aud: normalizeRelayIssuer(
       Option.isSome(configuredIssuer) ? bytesToString(configuredIssuer.value) : input.relayUrl,
     ),

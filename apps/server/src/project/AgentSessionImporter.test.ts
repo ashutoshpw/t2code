@@ -602,7 +602,7 @@ const integrationScanner = AgentSessionScanner.AgentSessionScanner.of({
   recentThreads: () => Stream.fromIterable([makeThreadOutcome(integrationThread)]),
 });
 const integrationServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-agent-session-importer-test-",
+  prefix: "t2-agent-session-importer-test-",
 });
 const integrationRuntimeRepository = ProviderSessionRuntime.layer.pipe(
   Layer.provide(SqlitePersistenceMemory),
@@ -704,7 +704,7 @@ it.layer(integrationLayer)("AgentSessionImporter integration", (it) => {
         const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
         yield* TestClock.setTime(nowMs);
         const fixtureDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-import-retry-",
+          prefix: "t2-import-retry-",
         });
         const workspaceRoot = path.join(fixtureDir, "workspace");
         const claudeHomePath = path.join(fixtureDir, "claude");

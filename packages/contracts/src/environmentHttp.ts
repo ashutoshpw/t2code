@@ -408,18 +408,11 @@ export const AuthOtherClientSessionsRevokeResult = Schema.Struct({
 });
 export type AuthOtherClientSessionsRevokeResult = typeof AuthOtherClientSessionsRevokeResult.Type;
 
-class EnvironmentMetadataHttpApi extends HttpApiGroup.make("metadata")
-  .add(
-    HttpApiEndpoint.get("descriptor", "/.well-known/t2/environment", {
-      success: ExecutionEnvironmentDescriptor,
-    }),
-  )
-  // Servers published before the binary rename only answer on the old path.
-  .add(
-    HttpApiEndpoint.get("descriptorLegacy", "/.well-known/t3/environment", {
-      success: ExecutionEnvironmentDescriptor,
-    }),
-  ) {}
+class EnvironmentMetadataHttpApi extends HttpApiGroup.make("metadata").add(
+  HttpApiEndpoint.get("descriptor", "/.well-known/t2/environment", {
+    success: ExecutionEnvironmentDescriptor,
+  }),
+) {}
 
 class EnvironmentAuthHttpApi extends HttpApiGroup.make("auth")
   .add(

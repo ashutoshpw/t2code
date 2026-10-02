@@ -45,7 +45,7 @@ const run = Effect.fn("test.run")(function* (
 });
 
 /** A tar.gz laid out like build-cli-archive.ts writes, with a stub executable that echoes its args. */
-const makeFakeArchives = Effect.fn("test.makeFakeArchives")(function* (prefix: "t2" | "t3" = "t2") {
+const makeFakeArchives = Effect.fn("test.makeFakeArchives")(function* (prefix = "t2") {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-npm-packages-test-" });
@@ -104,25 +104,6 @@ it.layer(NodeServices.layer)("build-npm-platform-packages", (it) => {
     }),
   );
 
-  it.effect("accepts historical t3 archives when current names are absent", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const fixture = yield* makeFakeArchives("t3");
-      const outputs = yield* buildNpmPlatformPackages({
-        ...fixture,
-        version: VERSION,
-        allowMissing: true,
-      });
-
-      assert.deepStrictEqual(
-        outputs.map((output) => output.name),
-        ["@t2code/t2-darwin-arm64", "@t2code/t2-linux-x64", "@t2code/cli"],
-      );
-      assert.isTrue(yield* fs.exists(path.join(fixture.outputDir, "@t2code/t2-linux-x64/t3")));
-    }),
-  );
-
   it.effect("builds platform packages and a launcher that execs the installed one", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -153,8 +134,6 @@ it.layer(NodeServices.layer)("build-npm-platform-packages", (it) => {
       assert.deepStrictEqual(linuxManifest.files, [
         "t2",
         "t2.exe",
-        "t3",
-        "t3.exe",
         "client",
         "resource-monitor",
         "node_modules",

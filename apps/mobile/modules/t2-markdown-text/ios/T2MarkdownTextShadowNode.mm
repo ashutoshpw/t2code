@@ -10,9 +10,9 @@
 namespace facebook::react {
 
 static constexpr Float ParagraphStyleEncodingOffset = 1000;
-static constexpr auto FileAttachmentNativeIdPrefix = "t3-file:";
-static constexpr auto SkillAttachmentNativeIdPrefix = "t3-skill:";
-static constexpr auto LinkAttachmentNativeIdPrefix = "t3-link:";
+static constexpr auto FileAttachmentNativeIdPrefix = "t2-file:";
+static constexpr auto SkillAttachmentNativeIdPrefix = "t2-skill:";
+static constexpr auto LinkAttachmentNativeIdPrefix = "t2-link:";
 
 static void applyParagraphStyles(
     NSMutableAttributedString *attributedString,
@@ -195,7 +195,7 @@ Size T2MarkdownTextShadowNode::measureContent(
               props.shadowRadius - ParagraphStyleEncodingOffset,
           });
         }
-        if (props.nativeId.rfind("t3-chip:", 0) == 0 && fragmentLength > 0) {
+        if (props.nativeId.rfind("t2-chip:", 0) == 0 && fragmentLength > 0) {
           const std::string uri = props.nativeId.substr(3);
           NSMutableDictionary *payload =
               [T2ContextChipPayload([NSString stringWithUTF8String:uri.c_str()]) mutableCopy];

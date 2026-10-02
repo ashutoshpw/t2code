@@ -40,7 +40,7 @@ import * as GitVcsDriver from "./GitVcsDriver.ts";
 const encodeGitCommandError = Schema.encodeEffect(Schema.fromJsonString(GitCommandError));
 
 const ServerConfigLayer = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-git-vcs-driver-test-",
+  prefix: "t2-git-vcs-driver-test-",
 });
 const TestLayer = GitVcsDriver.layer.pipe(
   Layer.provide(ServerConfigLayer),

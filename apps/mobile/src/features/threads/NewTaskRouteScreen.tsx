@@ -520,7 +520,7 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
                     />
                   </View>
                   <View className="min-w-0 flex-1">
-                    <Text className="text-base font-t3-bold leading-snug">No project</Text>
+                    <Text className="text-base font-t2-bold leading-snug">No project</Text>
                     <Text className="text-xs leading-snug text-foreground-muted" numberOfLines={1}>
                       {scratchRowSubtitle}
                     </Text>

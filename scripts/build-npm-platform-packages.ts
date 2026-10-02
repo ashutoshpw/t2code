@@ -33,7 +33,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 import {
   CLI_ARCHIVE_PLATFORM_KEYS,
-  cliArchiveFileNames,
+  cliArchiveFileName,
   type CliArchivePlatformKey,
 } from "@t2code/shared/cliRelease";
 import { HostProcessPlatform } from "@t2code/shared/hostProcess";
@@ -112,7 +112,7 @@ export function npmPlatformPackageManifest(
     repository: serverPackageJson.repository,
     os: [os],
     cpu: [cpu],
-    files: ["t2", "t2.exe", "t3", "t3.exe", "client", "resource-monitor", "node_modules"],
+    files: ["t2", "t2.exe", "client", "resource-monitor", "node_modules"],
     preferUnplugged: true,
     dependencies: Object.fromEntries(bundleDependencies.map((name) => [name, bundled[name]])),
     bundleDependencies,
@@ -232,10 +232,8 @@ try {
   process.exit(1);
 }
 
-const executable = (process.platform === "win32" ? ["t2.exe", "t3.exe"] : ["t2", "t3"])
-  .map((name) => join(packageDir, name))
-  .find((candidate) => existsSync(candidate));
-if (executable === undefined) {
+const executable = join(packageDir, process.platform === "win32" ? "t2.exe" : "t2");
+if (!existsSync(executable)) {
   process.stderr.write("t2code: " + platformPackage + " does not contain a t2 executable.\\n");
   process.exit(1);
 }
@@ -353,22 +351,12 @@ const stagePlatformPackage = Effect.fn("stagePlatformPackage")(function* (input:
   const extractDir = path.join(scratch, "extract");
   yield* fs.makeDirectory(extractDir);
   const contentDir = yield* extractArchive(input.archive, extractDir);
-  // Archives published before the binary rename still carry `t3`; accept both.
-  const executableCandidates = input.key.startsWith("win32") ? ["t2.exe", "t3.exe"] : ["t2", "t3"];
-  let executableName: string | undefined;
-  let executable: string | undefined;
-  for (const candidate of executableCandidates) {
-    const candidatePath = path.join(contentDir, candidate);
-    if (yield* fs.exists(candidatePath)) {
-      executableName = candidate;
-      executable = candidatePath;
-      break;
-    }
-  }
-  if (executableName === undefined || executable === undefined) {
+  const executableName = input.key.startsWith("win32") ? "t2.exe" : "t2";
+  const executable = path.join(contentDir, executableName);
+  if (!(yield* fs.exists(executable))) {
     return yield* new NpmPackagesArchiveLayoutError({
       archive: path.basename(input.archive),
-      detail: `missing ${executableCandidates.join(" or ")} at the archive root`,
+      detail: `missing ${executableName} at the archive root`,
     });
   }
   // The tarball carries the on-disk mode, so the bit must be set before packing.
@@ -445,12 +433,8 @@ export const buildNpmPlatformPackages = Effect.fn("buildNpmPlatformPackages")(fu
 
   const present = yield* fs.readDirectory(input.archivesDir);
   const archives = CLI_ARCHIVE_PLATFORM_KEYS.flatMap((key) => {
-    // Prefer the current public name, but let maintainers bootstrap npm from
-    // releases published before the archive rename.
-    const fileName = cliArchiveFileNames(input.version, key).find((candidate) =>
-      present.includes(candidate),
-    );
-    if (fileName === undefined) return [];
+    const fileName = cliArchiveFileName(input.version, key);
+    if (!present.includes(fileName)) return [];
     return [{ key, archive: path.join(input.archivesDir, fileName) }];
   });
   const missing = CLI_ARCHIVE_PLATFORM_KEYS.filter(

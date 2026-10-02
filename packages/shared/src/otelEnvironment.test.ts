@@ -298,9 +298,9 @@ describe("OtelEnvironment", () => {
       },
       {
         name: "headers are comma-separated pairs with percent-encoded values",
-        env: { ...ENDPOINT, OTEL_EXPORTER_OTLP_HEADERS: "api-key=a%20b,tenant=t3" },
-        traces: { protocol: "http/protobuf", headers: { "api-key": "a b", tenant: "t3" } },
-        logs: { protocol: "http/protobuf", headers: { "api-key": "a b", tenant: "t3" } },
+        env: { ...ENDPOINT, OTEL_EXPORTER_OTLP_HEADERS: "api-key=a%20b,tenant=t2" },
+        traces: { protocol: "http/protobuf", headers: { "api-key": "a b", tenant: "t2" } },
+        logs: { protocol: "http/protobuf", headers: { "api-key": "a b", tenant: "t2" } },
         warnings: [],
       },
       {
@@ -392,7 +392,7 @@ describe("OtelEnvironment", () => {
   describe("resolveSignalEndpoint", () => {
     const t2Export = {
       protocol: "http/json",
-      headers: { "x-key": "t3" },
+      headers: { "x-key": "t2" },
       exportIntervalMs: 5_000,
     } as const;
     const withLogs = (logs: OtelEnvironment.OtelSignal, disabled = false) => ({
@@ -409,14 +409,14 @@ describe("OtelEnvironment", () => {
       {
         name: "T2CODE_OTLP_*_URL wins over an OTEL endpoint",
         otel: withLogs(otelExport),
-        t2Url: "http://t3:4318/v1/logs",
-        expected: { url: "http://t3:4318/v1/logs", export: t2Export },
+        t2Url: "http://t2:4318/v1/logs",
+        expected: { url: "http://t2:4318/v1/logs", export: t2Export },
       },
       {
         name: "T2CODE_OTLP_*_URL wins over a signal the OTEL variables turned off",
         otel: withLogs(OtelEnvironment.OtelSignal.Off()),
-        t2Url: "http://t3:4318/v1/logs",
-        expected: { url: "http://t3:4318/v1/logs", export: t2Export },
+        t2Url: "http://t2:4318/v1/logs",
+        expected: { url: "http://t2:4318/v1/logs", export: t2Export },
       },
       {
         name: "an OTEL endpoint brings its headers and protocol over the fallback",
@@ -446,7 +446,7 @@ describe("OtelEnvironment", () => {
       {
         name: "the kill switch wins over everything",
         otel: withLogs(otelExport, true),
-        t2Url: "http://t3:4318/v1/logs",
+        t2Url: "http://t2:4318/v1/logs",
         expected: undefined,
       },
     ])("$name", ({ otel, t2Url, expected }) => {
@@ -466,16 +466,16 @@ describe("OtelEnvironment", () => {
   it.effect("an exporter of none keeps the Settings endpoint from re-enabling its signal", () =>
     Effect.gen(function* () {
       const otel = yield* load({ OTEL_LOGS_EXPORTER: "none" });
-      const t3 = {
+      const t2 = {
         url: undefined,
         export: { protocol: "http/json", headers: undefined, exportIntervalMs: 10_000 },
       } as const;
       assert.strictEqual(
-        OtelEnvironment.resolveSignalEndpoint(otel, "logs", t3, "http://settings:4318/v1/logs"),
+        OtelEnvironment.resolveSignalEndpoint(otel, "logs", t2, "http://settings:4318/v1/logs"),
         undefined,
       );
       assert.strictEqual(
-        OtelEnvironment.resolveSignalEndpoint(otel, "traces", t3, "http://settings:4318/v1/traces")
+        OtelEnvironment.resolveSignalEndpoint(otel, "traces", t2, "http://settings:4318/v1/traces")
           ?.url,
         "http://settings:4318/v1/traces",
       );
@@ -492,7 +492,7 @@ describe("OtelEnvironment", () => {
           ConfigProvider.fromEnv({ env: { OTEL_RESOURCE_ATTRIBUTES: raw } }),
         );
         const otel = yield* OtelEnvironment.load.pipe(Effect.provide(env));
-        const resource = yield* OtlpResource.fromConfig({ serviceName: "t3" }).pipe(
+        const resource = yield* OtlpResource.fromConfig({ serviceName: "t2" }).pipe(
           Effect.provide(
             Layer.provide(OtelEnvironment.layerResourceAttributes(otel.resourceAttributes), env),
           ),

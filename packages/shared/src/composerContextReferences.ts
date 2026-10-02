@@ -10,20 +10,15 @@ import {
 /**
  * Canonical inline reference: `[label](t2-context://v1/<kind>/<contextId>)`, or the image
  * form `![label](...)`. The link carries position and identity only; the payload lives in the
- * message's context records. Labels are display text and never identity. Links stored by
- * pre-rename builds use `t2-context://` and are still parsed.
+ * message's context records. Labels are display text and never identity.
  */
 
-const CONTEXT_PROTOCOL = "t2-context:";
-const LEGACY_CONTEXT_PROTOCOL = "t3-context:";
-const COMPOSER_CONTEXT_HREF_PREFIX = `${CONTEXT_PROTOCOL}//v1/`;
-const LEGACY_CONTEXT_HREF_PREFIX = `${LEGACY_CONTEXT_PROTOCOL}//v1/`;
-const CONTEXT_HREF_PREFIX_PATTERN = `(?:${COMPOSER_CONTEXT_HREF_PREFIX}|${LEGACY_CONTEXT_HREF_PREFIX})`;
+const COMPOSER_CONTEXT_HREF_PREFIX = "t2-context://v1/";
 const CONTEXT_KIND_PATTERN = /^[a-z][a-z0-9-]{0,39}$/;
 const CONTEXT_ID_PATTERN = /^[a-z0-9_-]{1,128}$/i;
 const MAX_LINK_LABEL_LENGTH = 512;
 const CONTEXT_LINK = new RegExp(
-  String.raw`(!?)\[([^\]\n]{0,${MAX_LINK_LABEL_LENGTH}})\]\(((?:${CONTEXT_HREF_PREFIX_PATTERN})[^\s)]{1,200})\)`,
+  String.raw`(!?)\[([^\]\n]{0,${MAX_LINK_LABEL_LENGTH}})\]\((${COMPOSER_CONTEXT_HREF_PREFIX}[^\s)]{1,200})\)`,
   "g",
 );
 
@@ -34,13 +29,8 @@ export function formatComposerContextHref(kind: ComposerContextKind, contextId: 
 export function parseComposerContextHref(
   href: string,
 ): { kind: ComposerContextKind; contextId: ComposerContextId } | null {
-  const prefix = href.startsWith(COMPOSER_CONTEXT_HREF_PREFIX)
-    ? COMPOSER_CONTEXT_HREF_PREFIX
-    : href.startsWith(LEGACY_CONTEXT_HREF_PREFIX)
-      ? LEGACY_CONTEXT_HREF_PREFIX
-      : null;
-  if (prefix === null) return null;
-  const rest = href.slice(prefix.length);
+  if (!href.startsWith(COMPOSER_CONTEXT_HREF_PREFIX)) return null;
+  const rest = href.slice(COMPOSER_CONTEXT_HREF_PREFIX.length);
   const parts = rest.split("/");
   if (parts.length !== 2) return null;
   const [kind, contextId] = parts as [string, string];
@@ -85,7 +75,7 @@ export function collectComposerContextReferences(
   const occurrences: ComposerContextReferenceOccurrence[] = [];
   // No link can match without the protocol prefix; skip the scan entirely on
   // plain prose so long messages never pay for a regex walk per `[`.
-  if (!text.includes("](t2-context:") && !text.includes("](t3-context:")) return occurrences;
+  if (!text.includes("](t2-context:")) return occurrences;
   for (const match of text.matchAll(CONTEXT_LINK)) {
     const parsed = parseComposerContextHref(match[3]!);
     if (!parsed) continue;
@@ -118,7 +108,7 @@ export function replaceComposerContextReferences(
 // Provider projection
 // ---------------------------------------------------------------------------
 
-const CONTEXT_ENVELOPE_TAG = "t3_context";
+const CONTEXT_ENVELOPE_TAG = "t2_context";
 const CONTEXT_ENTRY_TAG = "context";
 
 function kindDisplayName(kind: ComposerContextKind): string {
@@ -140,7 +130,7 @@ export function formatComposerContextProviderMarker(
 }
 
 /**
- * Captured text is data. A terminal line or PR comment that contains `</t3_context>` or
+ * Captured text is data. A terminal line or PR comment that contains `</t2_context>` or
  * `</context>` must not be able to close the envelope and forge a record.
  */
 function escapeComposerContextPayloadText(text: string): string {

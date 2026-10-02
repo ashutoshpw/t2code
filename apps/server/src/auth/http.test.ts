@@ -34,7 +34,7 @@ const configLayer = Layer.effect(
       devAuthToken: Redacted.make(DEV_TOKEN),
     } satisfies ServerConfig.ServerConfig["Service"];
   }),
-).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-auth-http-test-" })));
+).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-auth-http-test-" })));
 
 const environmentAuthLayer = EnvironmentAuth.layer.pipe(
   Layer.provide(SqlitePersistenceMemory),
@@ -93,7 +93,7 @@ it.effect("sets the selected browser session cookies through the HTTP route", ()
           );
           expect(devResponse.status).toBe(200);
           const devCookies = devResponse.headers.getSetCookie();
-          const devCookie = devCookies.find((cookie) => cookie.startsWith("t3_dev_session_"));
+          const devCookie = devCookies.find((cookie) => cookie.startsWith("t2_dev_session_"));
           expect(devCookie).toContain("HttpOnly");
           expect(devCookie).toContain(`=${DEV_TOKEN};`);
           expect(devCookies).toContainEqual(
@@ -127,7 +127,7 @@ it.effect("sets the selected browser session cookies through the HTTP route", ()
           const restrictedCookies = restrictedResponse.headers.getSetCookie();
           expect(restrictedCookies).toHaveLength(1);
           expect(restrictedCookies[0]).toMatch(/^t2_session_/);
-          expect(restrictedCookies[0]).not.toContain("t3_dev_session_");
+          expect(restrictedCookies[0]).not.toContain("t2_dev_session_");
         }),
       ([environmentA, environmentB]) =>
         Effect.promise(() => Promise.all([environmentA.dispose(), environmentB.dispose()])),

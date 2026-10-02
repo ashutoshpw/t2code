@@ -134,7 +134,7 @@ Item {
     DBusCall {
         id: next
         service: root.bus
-        path: "/com/t3tools/KdeCapture/Feedback"
+        path: "/com/t2code/KdeCapture/Feedback"
         dbusInterface: "com.t2tools.KdeCapture.Feedback"
         method: "Next"
         onFailed: root.finish()
@@ -161,7 +161,7 @@ Item {
     DBusCall {
         id: ready
         service: root.bus
-        path: "/com/t3tools/KdeCapture/Feedback"
+        path: "/com/t2code/KdeCapture/Feedback"
         dbusInterface: "com.t2tools.KdeCapture.Feedback"
         method: "Event"
         arguments: [JSON.stringify({event: "ready", animate: root.options.animate})]
@@ -170,7 +170,7 @@ Item {
     DBusCall {
         id: landed
         service: root.bus
-        path: "/com/t3tools/KdeCapture/Feedback"
+        path: "/com/t2code/KdeCapture/Feedback"
         dbusInterface: "com.t2tools.KdeCapture.Feedback"
         method: "Event"
         arguments: ['{"event":"landed"}']
@@ -179,7 +179,7 @@ Item {
     DBusCall {
         id: done
         service: root.bus
-        path: "/com/t3tools/KdeCapture/Feedback"
+        path: "/com/t2code/KdeCapture/Feedback"
         dbusInterface: "com.t2tools.KdeCapture.Feedback"
         method: "Event"
         arguments: ['{"event":"done"}']

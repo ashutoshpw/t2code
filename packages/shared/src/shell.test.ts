@@ -417,7 +417,7 @@ effectIt.layer(NodeServices.layer)("resolveCommandPath", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-case-sensitive-path-" });
+        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t2-case-sensitive-path-" });
         const executable = path.join(cwd, "audit-command.cmd");
         yield* fs.writeFileString(executable, "@echo off\n");
 
@@ -442,7 +442,7 @@ effectIt.layer(NodeServices.layer)("resolveCommandPath", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-path-cache-" });
+      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t2-path-cache-" });
       const executable = path.join(cwd, "appeared.CMD");
       const options = { env: { PATH: `${cwd};${cwd}`, PATHEXT: ".CMD" } };
 

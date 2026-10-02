@@ -230,7 +230,7 @@ describe("observability", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-trace-sink-" });
+          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-trace-sink-" });
           const tracePath = path.join(tempDir, "shared.trace.ndjson");
 
           const sink = yield* makeTraceSink({
@@ -258,7 +258,7 @@ describe("observability", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-trace-sink-" });
+          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-trace-sink-" });
           const tracePath = path.join(tempDir, "shared.trace.ndjson");
           const reported = yield* Ref.make<ReadonlyArray<TraceSinkFlushStats>>([]);
 
@@ -286,7 +286,7 @@ describe("observability", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-trace-sink-" });
+          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-trace-sink-" });
           const tracePath = path.join(tempDir, "shared.trace.ndjson");
 
           const sink = yield* makeTraceSink({
@@ -327,7 +327,7 @@ describe("observability", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-trace-sink-" });
+          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-trace-sink-" });
           const tracePath = path.join(tempDir, "shared.trace.ndjson");
           const maxBytes = 1_024;
 
@@ -360,7 +360,7 @@ describe("observability", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-trace-sink-" });
+          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-trace-sink-" });
           const tracePath = path.join(tempDir, "shared.trace.ndjson");
           const maxBytes = 1_024;
 
@@ -391,7 +391,7 @@ describe("observability", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-trace-sink-" });
+          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-trace-sink-" });
           const tracePath = path.join(tempDir, "shared.trace.ndjson");
 
           const sink = yield* makeTraceSink({
@@ -429,7 +429,7 @@ describe("observability", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-local-tracer-" });
+          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-local-tracer-" });
           const tracePath = path.join(tempDir, "shared.trace.ndjson");
 
           yield* Effect.scoped(
@@ -487,7 +487,7 @@ describe("observability", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-local-tracer-" });
+          const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-local-tracer-" });
           const tracePath = path.join(tempDir, "shared.trace.ndjson");
 
           yield* Effect.scoped(
@@ -515,13 +515,13 @@ describe("OtlpHeadersFromString", () => {
   it.each([
     {
       name: "decodes percent-encoded values",
-      input: "authorization=Basic%20abc%3D%3D,x-tenant=t3",
-      expected: { authorization: "Basic abc==", "x-tenant": "t3" },
+      input: "authorization=Basic%20abc%3D%3D,x-tenant=t2",
+      expected: { authorization: "Basic abc==", "x-tenant": "t2" },
     },
     {
       name: "ignores whitespace around separators",
-      input: "authorization=Basic%20abc%3D%3D, x-tenant = t3 ,",
-      expected: { authorization: "Basic abc==", "x-tenant": "t3" },
+      input: "authorization=Basic%20abc%3D%3D, x-tenant = t2 ,",
+      expected: { authorization: "Basic abc==", "x-tenant": "t2" },
     },
     {
       name: "keeps literal equals signs inside a value",

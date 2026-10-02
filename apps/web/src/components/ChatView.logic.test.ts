@@ -2169,7 +2169,7 @@ describe("rewind draft recovery", () => {
           {
             turnId: completedTurn.turnId,
             checkpointTurnCount: 1,
-            checkpointRef: CheckpointRef.make("refs/t3/checkpoints/1"),
+            checkpointRef: CheckpointRef.make("refs/t2/checkpoints/1"),
             status: "ready",
             files: [],
             assistantMessageId: null,

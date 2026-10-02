@@ -76,7 +76,7 @@ private final class ComposerContextAccessibilityElement: UIAccessibilityElement 
 }
 
 private final class ComposerTextView: UITextView {
-  private static let pastedImageDirectoryName = "t3-composer-paste"
+  private static let pastedImageDirectoryName = "t2-composer-paste"
   private static let stalePastedImageAge: TimeInterval = 60 * 60
   private static let readOnlyActions = Set([
     "cut:",
@@ -188,7 +188,7 @@ private final class ComposerTextView: UITextView {
     }
     let pasteboard = UIPasteboard.general
     let context = T2ComposerClipboard.read()
-    if !context["fragment", default: ""].isEmpty || context["html", default: ""].contains("data-t3-context-fragment=") {
+    if !context["fragment", default: ""].isEmpty || context["html", default: ""].contains("data-t2-context-fragment=") {
       onPasteContext?(context)
       return
     }

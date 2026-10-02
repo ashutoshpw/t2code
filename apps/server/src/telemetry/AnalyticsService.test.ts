@@ -51,7 +51,7 @@ it.layer(NodeServices.layer)("AnalyticsService test", (it) => {
     Effect.gen(function* () {
       const capturedRequests: Array<RecordedBatchRequest> = [];
       const serverConfigLayer = ServerConfig.ServerConfig.layerTest(process.cwd(), {
-        prefix: "t3-telemetry-base-",
+        prefix: "t2-telemetry-base-",
       });
 
       const telemetryLayer = AnalyticsService.layer.pipe(Layer.provideMerge(serverConfigLayer));
@@ -153,7 +153,7 @@ it.layer(NodeServices.layer)("AnalyticsService test", (it) => {
     Effect.gen(function* () {
       const capturedPaths: Array<string> = [];
       const serverConfigLayer = ServerConfig.ServerConfig.layerTest(process.cwd(), {
-        prefix: "t3-telemetry-disabled-",
+        prefix: "t2-telemetry-disabled-",
       });
       const telemetryLayer = AnalyticsService.layer.pipe(Layer.provideMerge(serverConfigLayer));
       const configLayer = ConfigProvider.layer(

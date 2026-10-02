@@ -38,25 +38,5 @@
   {
     "file": "infra/relay/migrations/postgres/20260919015455_managed_endpoint_recovery/snapshot.json",
     "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "native/kde-snap-shot/src/feedback.qml",
-    "line": "path: \"/com/t3tools/KdeCapture/Feedback\""
-  },
-  {
-    "file": "native/kde-snap-shot/src/feedback.rs",
-    "line": "const OBJECT: &str = \"/com/t3tools/KdeCapture/Feedback\";"
-  },
-  {
-    "file": "native/kde-snap-shot/src/main.rs",
-    "line": ".remove::<ScriptReply, _>(\"/com/t3tools/KdeCapture\")?;"
-  },
-  {
-    "file": "native/kde-snap-shot/src/main.rs",
-    "line": "\"/com/t3tools/KdeCapture\","
-  },
-  {
-    "file": "native/kde-snap-shot/src/transport_tests.rs",
-    "line": "\"/com/t3tools/KdeCapture\","
   }
 ]

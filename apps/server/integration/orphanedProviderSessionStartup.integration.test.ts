@@ -361,7 +361,7 @@ it.effect(
     }).pipe(
       Effect.provide(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "t3-orphaned-provider-session-startup-",
+          prefix: "t2-orphaned-provider-session-startup-",
         }).pipe(Layer.provideMerge(NodeServices.layer)),
       ),
     ),
@@ -480,7 +480,7 @@ it.effect.each(["opt-in desktop restart", "marked remote update"] as const)(
       );
     }).pipe(
       Effect.provide(
-        ServerConfig.layerTest(process.cwd(), { prefix: "t3-restart-newer-turn-" }).pipe(
+        ServerConfig.layerTest(process.cwd(), { prefix: "t2-restart-newer-turn-" }).pipe(
           Layer.provideMerge(NodeServices.layer),
         ),
       ),

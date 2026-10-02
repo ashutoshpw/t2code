@@ -427,7 +427,7 @@ T2MarkdownOutsideTapCoordinatorForWindow(UIWindow *window)
     }
 
     NSURL *link = [NSURL URLWithString:
-        [NSString stringWithFormat:@"t3-markdown-run://%ld", (long)textChild.tag]];
+        [NSString stringWithFormat:@"t2-markdown-run://%ld", (long)textChild.tag]];
     if (link != nil) {
       // A glyph must not be both a link and an attachment. UIKit caches them as
       // different text-item classes and can send `attachment` to a cached link

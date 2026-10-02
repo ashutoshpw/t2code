@@ -245,7 +245,7 @@ export const runSqliteState = Effect.fn("runSqliteState")(function* (
   );
 });
 
-const t3SqliteStateCommand = Command.make(
+const t2SqliteStateCommand = Command.make(
   "t2-sqlite-state",
   {
     operation: Argument.Literals("operation", SqliteStateOperation.literals).pipe(
@@ -277,7 +277,7 @@ const t3SqliteStateCommand = Command.make(
 );
 
 if (import.meta.main) {
-  Command.run(t3SqliteStateCommand, { version: "0.0.0" }).pipe(
+  Command.run(t2SqliteStateCommand, { version: "0.0.0" }).pipe(
     Effect.provide(NodeServices.layer),
     NodeRuntime.runMain,
   );

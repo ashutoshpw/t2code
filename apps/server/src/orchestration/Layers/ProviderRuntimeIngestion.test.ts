@@ -272,7 +272,7 @@ describe("ProviderRuntimeIngestion", () => {
     workspaceSubdirectory?: string;
     isGitRepository?: CheckpointStore.CheckpointStore["Service"]["isGitRepository"];
   }) {
-    const repositoryRoot = makeTempDir("t3-provider-project-");
+    const repositoryRoot = makeTempDir("t2-provider-project-");
     NodeChildProcess.execFileSync("git", ["init", "--initial-branch=main"], {
       cwd: repositoryRoot,
       stdio: "ignore",

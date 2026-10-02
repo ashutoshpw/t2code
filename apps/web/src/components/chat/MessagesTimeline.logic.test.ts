@@ -273,7 +273,7 @@ describe("streaming row projection", () => {
         checkpointLookupReads += 1;
         return 1;
       },
-      checkpointRef: CheckpointRef.make("refs/t3/checkpoints/history-turn"),
+      checkpointRef: CheckpointRef.make("refs/t2/checkpoints/history-turn"),
       status: "ready",
       files: [],
       get assistantMessageId() {
@@ -370,7 +370,7 @@ describe("streaming row projection", () => {
           checkpointLookupReads += 1;
           return index + 1;
         },
-        checkpointRef: CheckpointRef.make(`refs/t3/checkpoints/older-${index}`),
+        checkpointRef: CheckpointRef.make(`refs/t2/checkpoints/older-${index}`),
         status: "ready",
         files: [],
         get assistantMessageId() {

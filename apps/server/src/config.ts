@@ -120,7 +120,7 @@ export const otlpResource = (config: ServerConfig["Service"]) => ({
   serviceName: "t2code-server",
   attributes: {
     "service.namespace": "t2code",
-    "service.runtime": "t3-server",
+    "service.runtime": "t2-server",
     "service.mode": config.mode,
   },
 });

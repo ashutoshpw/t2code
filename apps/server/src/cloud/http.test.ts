@@ -169,7 +169,7 @@ describe("relay request tracing", () => {
         },
       });
       const request = HttpServerRequest.fromWeb(
-        new Request("https://environment.example.test/api/t3-cloud/mint-credential", {
+        new Request("https://environment.example.test/api/t2-cloud/mint-credential", {
           headers: {
             traceparent: "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
           },
@@ -199,7 +199,7 @@ describe("relay request tracing", () => {
         },
       });
       const request = HttpServerRequest.fromWeb(
-        new Request("https://environment.example.test/api/t3-cloud/mint-credential", {
+        new Request("https://environment.example.test/api/t2-cloud/mint-credential", {
           headers: {
             traceparent: "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
           },
@@ -446,7 +446,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
         // The release consults the launcher state file under the configured
         // baseDir, so every harness run gets a scoped temp baseDir.
         Effect.provide(
-          ServerConfigModule.layerTest("/", { prefix: "t3-http-release-test-" }).pipe(
+          ServerConfigModule.layerTest("/", { prefix: "t2-http-release-test-" }).pipe(
             Layer.provideMerge(NodeServices.layer),
           ),
         ),

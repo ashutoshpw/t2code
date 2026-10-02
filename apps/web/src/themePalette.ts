@@ -299,10 +299,10 @@ export function subscribeToCustomThemes(listener: () => void): () => void {
 // old ids stay readable through this alias table.
 const LEGACY_THEME_ID_ALIASES: Readonly<Record<string, string>> = {
   [LEGACY_T2_CHAT_DARK_THEME_ID]: T2_CHAT_THEME_ID,
-  "t3-grove": GROVE_THEME_ID,
-  "t3-ocean": OCEAN_THEME_ID,
-  "t3-ember": EMBER_THEME_ID,
-  "t3-iris": IRIS_THEME_ID,
+  "t2-grove": GROVE_THEME_ID,
+  "t2-ocean": OCEAN_THEME_ID,
+  "t2-ember": EMBER_THEME_ID,
+  "t2-iris": IRIS_THEME_ID,
 };
 
 function normalizeThemeId(themeId: string): string {

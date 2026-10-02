@@ -1778,7 +1778,7 @@ const makeWsRpcLayer = (
 
       const path = yield* Path.Path;
       // Scratch threads run in a plain folder under the data dir. Inside a
-      // checkout (a dev worktree's .t3, a dotfiles home) that folder would
+      // checkout (a dev worktree's .t2, a dotfiles home) that folder would
       // inherit the repo's git status and checkpoints, so it is only offered
       // when the data dir is outside any work tree. Detection failures and
       // defects fail closed and hide the folder, never the config.

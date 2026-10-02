@@ -14,7 +14,7 @@ describe.skipIf(NodeOS.platform() !== "darwin")(
     let executable: string;
 
     beforeAll(() => {
-      directory = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-notifications-test-"));
+      directory = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-notifications-test-"));
       executable = NodePath.join(directory, "notification-regression");
       const source = NodeFS.readFileSync(
         new URL(

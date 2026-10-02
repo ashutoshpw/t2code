@@ -18,7 +18,6 @@ import { HostProcessArchitecture, HostProcessPlatform } from "@t2code/shared/hos
 import { clerkFrontendApiHostnameFromPublishableKey } from "@t2code/shared/relayAuth";
 import { resolveSpawnCommand } from "@t2code/shared/shell";
 import {
-  CLI_ARCHIVE_LEGACY_PREFIX,
   cliArchiveStem as sharedCliArchiveStem,
   type CliArchivePlatformKey,
 } from "@t2code/shared/cliRelease";
@@ -2861,22 +2860,12 @@ export const stageWslRuntimeArchive = Effect.fn("stageWslRuntimeArchive")(functi
   );
 });
 
-// WSL runs the same CPU arch as the Windows host. The legacy stem is accepted
-// when validating a manually supplied archive from before the public rename.
+// WSL runs the same CPU arch as the Windows host.
 const wslRuntimePlatformKey = (arch: DesktopRuntimeArch): CliArchivePlatformKey =>
   arch === "arm64" ? "linux-arm64" : "linux-x64";
 
 export const wslRuntimeArchiveStem = (version: string, arch: DesktopRuntimeArch): string =>
   sharedCliArchiveStem(version, wslRuntimePlatformKey(arch));
-export const legacyWslRuntimeArchiveStem = (version: string, arch: DesktopRuntimeArch): string =>
-  sharedCliArchiveStem(version, wslRuntimePlatformKey(arch), CLI_ARCHIVE_LEGACY_PREFIX);
-export const wslRuntimeArchiveStems = (
-  version: string,
-  arch: DesktopRuntimeArch,
-): readonly [string, string] => [
-  wslRuntimeArchiveStem(version, arch),
-  legacyWslRuntimeArchiveStem(version, arch),
-];
 
 export const parseWslRuntimeArchiveMembers = (listing: string): ReadonlyArray<string> =>
   listing
@@ -3134,8 +3123,7 @@ export const validateWindowsPackagedPayload = Effect.fn(
   readonly appExecutableName: string;
   readonly targetArch: DesktopRuntimeArch;
   // The version the embedded Linux CLI archive must carry; its top-level
-  // directory is named t2-<version>-linux-<arch> (historical t3- stems are
-  // accepted when validating a manually supplied archive).
+  // directory is named t2-<version>-linux-<arch>.
   readonly appVersion: string;
   readonly expectWslRuntime?: boolean;
   readonly fileLimit?: number;
@@ -3302,22 +3290,17 @@ export const validateWindowsPackagedPayload = Effect.fn(
     const members = parseWslRuntimeArchiveMembers(listing.stdout);
     // A release archive unpacks to one directory named after its stem; the
     // desktop app's WSL install script relies on that layout to find `t2`.
-    const expectedStems = wslRuntimeArchiveStems(input.appVersion, input.targetArch);
+    const stem = wslRuntimeArchiveStem(input.appVersion, input.targetArch);
     const topLevel = new Set(members.map((member) => member.split("/")[0]));
-    const stem = expectedStems.find((candidate) => topLevel.has(candidate));
-    if (topLevel.size !== 1 || stem === undefined) {
+    if (topLevel.size !== 1 || !topLevel.has(stem)) {
       return yield* invalidWslRuntime(
         new Error(
-          `WSL runtime archive must contain a single top-level directory ${expectedStems.join(" or ")}, found ${[...topLevel].join(", ") || "nothing"}`,
+          `WSL runtime archive must contain a single top-level directory ${stem}, found ${[...topLevel].join(", ") || "nothing"}`,
         ),
       );
     }
-    const requiredMembers = [`${stem}/client`, `${stem}/node_modules`];
+    const requiredMembers = [`${stem}/t2`, `${stem}/client`, `${stem}/node_modules`];
     const missingMembers = requiredMembers.filter((member) => !members.includes(member));
-    // Archives published before the binary rename still carry `t3`.
-    if (!members.includes(`${stem}/t2`) && !members.includes(`${stem}/t3`)) {
-      missingMembers.push(`${stem}/t2`);
-    }
     // node-pty can load a source build or the prebuild for the WSL target.
     const ptyCandidates = [
       `${stem}/node_modules/node-pty/build/Release/pty.node`,

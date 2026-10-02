@@ -641,7 +641,7 @@ function makeManager(input?: {
   const { service: gitHubCli, ghCalls } = createGitHubCliWithFakeGh(input?.ghScenario);
   const textGeneration = createTextGeneration(input?.textGeneration);
   const serverConfigLayer = ServerConfig.layerTest(process.cwd(), {
-    prefix: "t3-git-manager-test-",
+    prefix: "t2-git-manager-test-",
   });
 
   const serverSettingsLayer = ServerSettings.ServerSettingsService.layerTest(input?.serverSettings);
@@ -713,7 +713,7 @@ function makeManager(input?: {
 const asThreadId = (threadId: string) => threadId as ThreadId;
 
 const GitManagerTestLayer = GitVcsDriver.layer.pipe(
-  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-git-manager-test-" })),
+  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-git-manager-test-" })),
   Layer.provideMerge(VcsProcess.layer),
   Layer.provideMerge(NodeServices.layer),
 );

@@ -16,7 +16,6 @@
  * Subsystems whose traces are useful by default in development (`__DEV__`)
  * opt in with `enabledInDev`; `legacyGlobalFlag` keeps an older
  * subsystem-specific global (e.g. `__T2_CLOUD_DEBUG__`) working.
- * The legacy `__T3_DEBUG__` filter from before the T2 rename still works.
  */
 
 export interface DebugLogger {
@@ -48,7 +47,7 @@ export function createDebugLogger(
     if (options.legacyGlobalFlag !== undefined && globalValue(options.legacyGlobalFlag) === true) {
       return true;
     }
-    const filter = globalValue("__T2_DEBUG__") ?? globalValue("__T3_DEBUG__");
+    const filter = globalValue("__T2_DEBUG__");
     return filter === true || (Array.isArray(filter) && filter.includes(namespace));
   };
   const log = (event: string, data?: Record<string, unknown>) => {

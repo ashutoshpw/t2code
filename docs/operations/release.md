@@ -37,7 +37,7 @@ This document covers the unified release workflow for stable and nightly desktop
   - Nightly runs are always GitHub prereleases and never marked latest.
   - Automatically generated release notes are pinned to the previous tag in the same channel, so stable compares to the previous stable tag and nightly compares to the previous nightly tag.
 - Includes Electron auto-update metadata (for example `latest*.yml`, `nightly*.yml`, and `*.blockmap`) in release assets.
-- Builds a self-contained CLI archive per platform (`t2-<version>-<platform>-<arch>.tar.gz`, `.zip` on Windows) in the same job as that target's desktop artifact and attaches them to the GitHub Release with a `SHA256SUMS` file, on every channel, for five targets: macOS arm64, Linux x64 and arm64, Windows x64 and arm64. Every archive is built, signed, and smoke-tested on hardware of its own architecture. There is no macOS x64 archive: Node single-executables are unsupported on x64 macOS (the SEA docs list macOS as arm64 only) and the binary segfaults on start; the x64 desktop app is Electron and unaffected. Installers and managed runtimes also accept the historical `t3-` filename when consuming older releases; new releases publish only `t2-` archives.
+- Builds a self-contained CLI archive per platform (`t2-<version>-<platform>-<arch>.tar.gz`, `.zip` on Windows) in the same job as that target's desktop artifact and attaches them to the GitHub Release with a `SHA256SUMS` file, on every channel, for five targets: macOS arm64, Linux x64 and arm64, Windows x64 and arm64. Every archive is built, signed, and smoke-tested on hardware of its own architecture. There is no macOS x64 archive: Node single-executables are unsupported on x64 macOS (the SEA docs list macOS as arm64 only) and the binary segfaults on start; the x64 desktop app is Electron and unaffected.
   - The archive holds the server as a Node single-executable (`scripts/build-cli-archive.ts`), so unpacking it needs neither Node, npm, nor a compiler. It is the only form in which T2 Code manages a runtime: the desktop's SSH environments, the boot service, `t2code update`, and the install scripts all download and verify this archive against `SHA256SUMS`. The npm packages exist for people who run `npx @t2code/cli` or `npm install -g @t2code/cli` themselves and carry the same archive contents; nothing in the product installs from npm. The `curl | sh` installers are `scripts/install.sh` and `scripts/install.ps1`; the marketing site copies them into its `public/` at build time (`apps/marketing/scripts/stage-install-scripts.mjs`) and serves them at `t2.codes/install.sh` and `/install.ps1`.
   - The executable is built with a Node that supports `--build-sea` (`VP_NODE_VERSION=26.8.2`, kept in step with `SEA_NODE_VERSION` in `apps/server/vite.config.ts`), while the repo stays on `engines.node`.
   - macOS archives are signed with the Developer ID certificate and notarized when the Apple secrets are present (ad hoc otherwise, which still runs from `curl`/`tar` installs). Windows executables use the same Azure Trusted Signing setup as the installer. Every native addon in the macOS archive is signed too, since the hardened runtime refuses unsigned libraries.
@@ -352,8 +352,7 @@ executables declared as unpacked by that archive must be present at the matching
 paths below `resources/server.asar.unpacked`. The Windows-native backend reads
 the archive in place through Electron. Packaged Windows builds also ship
 `resources/wsl-runtime.tar.gz` plus its SHA-256 sidecar: the Linux CLI archive
-(`t2-<version>-linux-<arch>.tar.gz`, the same arch as the Windows host; older manually
-supplied archives may retain the historical `t3-` stem) built
+(`t2-<version>-linux-<arch>.tar.gz`, the same arch as the Windows host) built
 by the Linux desktop job and handed to the Windows desktop build as
 `--wsl-runtime`, copied in verbatim so WSL runs the exact bytes a Linux user
 downloads. WSL verifies and extracts that archive
@@ -377,9 +376,8 @@ break:
 - A Windows build given `--wsl-runtime` omits the WSL archive or SHA-256
   sidecar, or the sidecar digest does not match the emitted archive.
 - The emitted WSL archive is not a Linux CLI release archive: it must unpack to
-  a single `t2-<version>-linux-<arch>` directory (or the historical
-  `t3-<version>-linux-<arch>` stem for a manually supplied older archive) holding `t2`
-  (or legacy `t3`), `client/`, and `node_modules/` with the Linux node-pty binary, and must not carry a loose
+  a single `t2-<version>-linux-<arch>` directory holding `t2`, `client/`, and
+  `node_modules/` with the Linux node-pty binary, and must not carry a loose
   server bundle (`bin.mjs`).
 - The external Windows resource monitor is absent.
 - The unpacked Windows application contains more than 80 files.
