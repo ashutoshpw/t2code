@@ -22,6 +22,7 @@ import {
   pinnedRuntimePaths,
   pinnedRuntimeVersionsDir,
   PinnedRuntimeInstallError,
+  resolvePinnedRuntimeEntryPath,
 } from "./pinnedRuntime.ts";
 import {
   SERVICE_LAUNCHER_PROTOCOL,
@@ -661,12 +662,18 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
         );
       }),
     ).pipe(Effect.mapError((cause) => new BootServiceInstallError({ cause })));
-  const plan: BootServicePlan = {
-    program: [runtimePaths.entryPath, "__service-launcher"],
-    baseDir: input.baseDir,
-    logPath,
-    unitPath,
-  };
+  // The executable hosts the launcher as a hidden subcommand of itself, so
+  // the unit runs the pinned runtime directly. The entry path is resolved
+  // lazily: runtimes unpacked before the binary rename only carry `t3`.
+  const buildPlan = Effect.map(
+    resolvePinnedRuntimeEntryPath(fs, runtimePaths),
+    (entry): BootServicePlan => ({
+      program: [entry, "__service-launcher"],
+      baseDir: input.baseDir,
+      logPath,
+      unitPath,
+    }),
+  );
 
   const requireManager = Effect.suspend(() =>
     detectedManager === undefined
@@ -876,6 +883,9 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
       yield* runSteps(manager.stop);
     }
 
+    const renderedPlan = yield* buildPlan.pipe(
+      Effect.mapError((cause) => new BootServiceInstallError({ cause })),
+    );
     yield* Effect.gen(function* () {
       if (installed) {
         const previousStateText = yield* fs.readFileString(statePath).pipe(Effect.option);
@@ -921,7 +931,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
           return yield* new BootServiceUpdatePendingError();
         }
       }
-      yield* writeDurably(unitPath, manager.render(plan));
+      yield* writeDurably(unitPath, manager.render(renderedPlan));
 
       if (start) {
         yield* runSteps(manager.activate);
@@ -935,7 +945,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
         installed && start ? runSteps(manager.restart).pipe(Effect.ignore) : Effect.void,
       ),
     );
-    return plan;
+    return renderedPlan;
   });
 
   const restart: BootService["Service"]["restart"] = Effect.gen(function* () {
@@ -1042,7 +1052,9 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
     }
     const [unit, runtimeEntryExists, runtimeSentinel, stateText] = yield* Effect.all([
       fs.readFileString(unitPath),
-      fs.exists(runtimePaths.entryPath),
+      resolvePinnedRuntimeEntryPath(fs, runtimePaths).pipe(
+        Effect.flatMap((entry) => fs.exists(entry)),
+      ),
       fs.readFileString(runtimePaths.sentinelPath).pipe(Effect.option),
       fs.readFileString(statePath).pipe(Effect.option),
     ]);
@@ -1066,7 +1078,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
       problems,
       current:
         problems.length === 0 &&
-        normalizeUnit(unit) === normalizeUnit(detectedManager.render(plan)) &&
+        normalizeUnit(unit) === normalizeUnit(detectedManager.render(yield* buildPlan)) &&
         runtimeEntryExists &&
         Option.isSome(runtimeSentinel) &&
         runtimeSentinel.value.trim() === input.cliVersion &&

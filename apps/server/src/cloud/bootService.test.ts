@@ -21,7 +21,7 @@ import {
   serviceStateHasPendingUpdate,
 } from "./serviceProtocol.ts";
 
-const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t3";
+const linuxRuntime = "/home/theo/.t2/runtime/versions/1.2.3/t2";
 const linuxPlan = {
   program: [linuxRuntime, "__service-launcher"],
   baseDir: "/home/theo/.t2",
@@ -39,7 +39,7 @@ it("runs the pinned runtime's own executable as the systemd launcher", () => {
 
 it("reads the served T2 home back out of a rendered unit or plist", () => {
   const plan = (baseDir: string) => ({
-    program: [`${baseDir}/runtime/versions/1.2.3/t3`, "__service-launcher"],
+    program: [`${baseDir}/runtime/versions/1.2.3/t2`, "__service-launcher"],
     baseDir,
     logPath: `${baseDir}/userdata/logs/boot-service.log`,
     unitPath: "/home/theo/.config/systemd/user/t2code.service",
@@ -66,10 +66,10 @@ it("reads the served T2 home back out of a rendered unit or plist", () => {
 
 it("protects the server unit from agents under CPU and memory pressure", () => {
   const unit = BootService.renderBootServiceUnit({
-    program: ["/home/theo/.t3/runtime/versions/1.2.3/t3", "__service-launcher"],
-    baseDir: "/home/theo/.t3",
-    logPath: "/home/theo/.t3/userdata/logs/boot-service.log",
-    unitPath: "/home/theo/.config/systemd/user/t3code.service",
+    program: ["/home/theo/.t2/runtime/versions/1.2.3/t2", "__service-launcher"],
+    baseDir: "/home/theo/.t2",
+    logPath: "/home/theo/.t2/userdata/logs/boot-service.log",
+    unitPath: "/home/theo/.config/systemd/user/t2code.service",
   });
   const service = unit.slice(unit.indexOf("[Service]"), unit.indexOf("[Install]"));
   for (const line of [
@@ -92,7 +92,7 @@ it.each([
       BootService.renderBootServicePlist(plan, { homeDir: "/Users/theo", environmentPath: "" }),
   ],
 ] as const)("reads the launcher back out of %s", (_, baseDir, render) => {
-  const program = `${baseDir}/runtime/versions/1.2.3/t3`;
+  const program = `${baseDir}/runtime/versions/1.2.3/t2`;
   expect(
     BootService.bootServiceProgramOf(
       render({ program: [program, "__service-launcher"], baseDir, logPath: "/log", unitPath: "" }),
@@ -100,7 +100,7 @@ it.each([
   ).toBe(program);
 });
 
-const macRuntime = "/Users/theo/.t2/runtime/versions/1.2.3/t3";
+const macRuntime = "/Users/theo/.t2/runtime/versions/1.2.3/t2";
 const macPlan = {
   program: [macRuntime, "__service-launcher"],
   baseDir: "/Users/theo/.t2",
@@ -164,7 +164,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-boot-service-test-" });
+  const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-boot-service-test-" });
   const managerUnitDir = path.join(
     managerXdgConfigHome !== undefined && path.isAbsolute(managerXdgConfigHome)
       ? managerXdgConfigHome
@@ -259,7 +259,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
     cliVersion = "1.2.3",
     serviceBaseDir = baseDir,
     insideService = false,
-    hostExecPath = "/usr/bin/t3",
+    hostExecPath = "/usr/bin/t2",
   ) =>
     Effect.gen(function* () {
       const paths = pinnedRuntimePaths(path, serviceBaseDir, cliVersion, platform);
@@ -291,7 +291,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
                 ...(environmentPath === undefined || environmentPath === ""
                   ? {}
                   : { PATH: environmentPath }),
-                ...(insideService ? { T2_BOOT_SERVICE_UNIT: "t3code.service" } : {}),
+                ...(insideService ? { T2_BOOT_SERVICE_UNIT: "t2code.service" } : {}),
               },
             }),
           ),
@@ -700,7 +700,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(failure).toBe("repair failed");
       expect(control.active).toBe(true);
 
-      control.failCommand = "systemctl --user stop t3code.service";
+      control.failCommand = "systemctl --user stop t2code.service";
       let ran = false;
       const stopFailure = yield* service
         .withStopped(
@@ -721,11 +721,11 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       commands.length = 0;
       yield* service.withStopped(Effect.sync(() => commands.push("repair")));
       expect(commands).toEqual([
-        "systemctl --user is-enabled t3code.service",
-        "systemctl --user is-active t3code.service",
-        "systemctl --user stop t3code.service",
+        "systemctl --user is-enabled t2code.service",
+        "systemctl --user is-active t2code.service",
+        "systemctl --user stop t2code.service",
         "repair",
-        "systemctl --user restart t3code.service",
+        "systemctl --user restart t2code.service",
       ]);
       expect(control.active).toBe(true);
       control.enabled = false;
@@ -735,14 +735,14 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       control.enabled = false;
       commands.length = 0;
       yield* service.withStopped(Effect.sync(() => commands.push("repair")));
-      expect(commands).toContain("systemctl --user stop t3code.service");
-      expect(commands).not.toContain("systemctl --user restart t3code.service");
+      expect(commands).toContain("systemctl --user stop t2code.service");
+      expect(commands).not.toContain("systemctl --user restart t2code.service");
       expect(control.active).toBe(false);
       control.enabled = true;
       control.active = true;
 
       const fs = yield* FileSystem.FileSystem;
-      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t3-doctor-other-" });
+      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t2-doctor-other-" });
       const other = yield* makeService(undefined, "1.2.3", otherHome);
       commands.length = 0;
       expect(yield* other.withStopped(Effect.sync(() => control.active))).toBe(true);
@@ -756,7 +756,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       yield* service.install();
       commands.length = 0;
       const path = yield* Path.Path;
-      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t3-other-home-" });
+      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t2-other-home-" });
 
       const other = yield* makeService(undefined, "1.2.3", path.join(otherHome, ".t2"));
       expect(yield* other.restart).toBe("skipped");
@@ -768,7 +768,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
     Effect.gen(function* () {
       const { fs, commands, invocations, control, makeService } = yield* makeHarness();
       const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-handoff-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-handoff-" });
       const baseDir = path.join(home, "T3 Data 100%", "${UNSET}", "$literal");
       const outside = yield* makeService(undefined, "1.2.3", baseDir);
       const plan = yield* outside.install();
@@ -809,7 +809,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(yield* fs.readFileString(statePath)).toBe(state);
       expect(yield* fs.readFileString(plan.unitPath)).toBe(unit);
       expect(control.active).toBe(true);
-      expect(commands).not.toContain("systemctl --user stop t3code.service");
+      expect(commands).not.toContain("systemctl --user stop t2code.service");
     }),
   );
 
@@ -836,8 +836,8 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         const outcome = yield* inside.restart;
         expect(commands).toEqual([
           "systemctl --user daemon-reload",
-          "systemctl --user enable t3code.service",
-          "systemctl --user restart --no-block t3code.service",
+          "systemctl --user enable t2code.service",
+          "systemctl --user restart --no-block t2code.service",
         ]);
         expect(outcome).toBe("queued");
         expect(yield* fs.readFileString(statePath)).toBe(state);
