@@ -110,4 +110,4 @@ must not reject a connection. PostHog person profiles remain disabled.
 
 Dev-runner servers and the CI archive smoke test turn telemetry off, which also
 stops relay tracing, because each would count as a new install. Set
-`T3CODE_TELEMETRY_ENABLED=true` to test analytics or relay tracing from a dev server.
+`T2CODE_TELEMETRY_ENABLED=true` to test analytics or relay tracing from a dev server.

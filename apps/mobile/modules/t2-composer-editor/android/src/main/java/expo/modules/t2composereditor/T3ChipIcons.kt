@@ -1,4 +1,4 @@
-package expo.modules.t3composereditor
+package expo.modules.t2composereditor
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -9,7 +9,7 @@ import android.os.Looper
 import java.net.URL
 import java.util.concurrent.Executors
 
-internal object T3ChipIcons {
+internal object T2ChipIcons {
   private val images = HashMap<String, Bitmap>()
   private val pending = HashMap<String, MutableSet<(String) -> Unit>>()
   private val downloads = Executors.newSingleThreadExecutor()

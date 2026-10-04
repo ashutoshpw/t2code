@@ -62,7 +62,7 @@ import {
   summarizeNativeProtocolPayload,
 } from "@t2code/provider-core/server/nativeProtocolLogging";
 import { mergeProviderInstanceEnvironment } from "@t2code/provider-core/server/instanceEnvironment";
-import { t3OrchestrationSystemPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
+import { t2OrchestrationSystemPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
 import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
 import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
@@ -950,12 +950,12 @@ export const makeOpenCodeAdapterV2 = Effect.fn("makeOpenCodeAdapterV2")(function
         });
 
         const mcpSession = yield* mcpSessions.read(input.threadId);
-        const hasT3Mcp = mcpSession !== undefined && !connection.external;
-        const orchestrationSystemPrompt = t3OrchestrationSystemPrompt(
-          hasT3Mcp,
+        const hasT2Mcp = mcpSession !== undefined && !connection.external;
+        const orchestrationSystemPrompt = t2OrchestrationSystemPrompt(
+          hasT2Mcp,
           mcpSession?.capabilities?.has("device") === true,
         );
-        if (hasT3Mcp) {
+        if (hasT2Mcp) {
           yield* OpenCodeRuntime.runOpenCodeSdk("mcp.add", () =>
             client.mcp.add({
               name: "t3-code",

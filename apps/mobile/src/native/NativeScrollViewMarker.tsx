@@ -15,9 +15,9 @@ function resolveScrollEdgeBleed() {
   try {
     const module = requireOptionalNativeModule<{
       readonly ViewPrototypes?: { readonly T3NativeControls_ScrollEdgeBleed?: unknown };
-    }>("T3NativeControls");
+    }>("T2NativeControls");
     if (!module?.ViewPrototypes?.T3NativeControls_ScrollEdgeBleed) return null;
-    return requireNativeView<ViewProps>("T3NativeControls", "ScrollEdgeBleed");
+    return requireNativeView<ViewProps>("T2NativeControls", "ScrollEdgeBleed");
   } catch {
     return null;
   }

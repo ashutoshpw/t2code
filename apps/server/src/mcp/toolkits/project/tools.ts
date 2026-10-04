@@ -47,7 +47,7 @@ const shared = {
     Crypto.Crypto,
   ],
 };
-const ProjectListTool = Tool.make("t3_project_list", {
+const ProjectListTool = Tool.make("t2_project_list", {
   ...shared,
   description: "List projects. Pages can shift.",
   parameters: Schema.Struct({
@@ -62,7 +62,7 @@ const ProjectListTool = Tool.make("t3_project_list", {
 })
   .annotate(Tool.Readonly, true)
   .annotate(Tool.Destructive, false);
-const ProjectReadTool = Tool.make("t3_project_read", {
+const ProjectReadTool = Tool.make("t2_project_read", {
   ...shared,
   description: "Read one project: workspace and saved scripts.",
   parameters: Schema.Struct({
@@ -72,10 +72,10 @@ const ProjectReadTool = Tool.make("t3_project_read", {
 })
   .annotate(Tool.Readonly, true)
   .annotate(Tool.Destructive, false);
-const ProjectCreateTool = Tool.make("t3_project_create", {
+const ProjectCreateTool = Tool.make("t2_project_create", {
   ...shared,
   description:
-    "Register a project folder. `createWorkspaceRootIfMissing` creates it; a registered folder is rejected. No `workspaceRoot`: makes a git repo from `title` with README, icon, first commit (`commitError` on failure; project still exists). Clone first with `t3_project_clone` if needed.",
+    "Register a project folder. `createWorkspaceRootIfMissing` creates it; a registered folder is rejected. No `workspaceRoot`: makes a git repo from `title` with README, icon, first commit (`commitError` on failure; project still exists). Clone first with `t2_project_clone` if needed.",
   parameters: Schema.Struct({
     environmentId: OrchestratorMcpEnvironmentTarget,
     ...ProjectCreatePayload.fields,
@@ -84,7 +84,7 @@ const ProjectCreateTool = Tool.make("t3_project_create", {
   success: Schema.Struct({ ...Project.fields, commitError: Schema.optional(Schema.String) }),
   dependencies: [...shared.dependencies, ManagedProjectFolders.ManagedProjectFolders],
 }).annotate(Tool.Destructive, true);
-const ProjectUpdateTool = Tool.make("t3_project_update", {
+const ProjectUpdateTool = Tool.make("t2_project_update", {
   ...shared,
   description: "Update one project's settings. Omitted fields are unchanged.",
   parameters: Schema.Struct({
@@ -93,7 +93,7 @@ const ProjectUpdateTool = Tool.make("t3_project_update", {
     ...ProjectUpdatePayload.fields,
   }),
 }).annotate(Tool.Destructive, true);
-const ProjectDeleteTool = Tool.make("t3_project_delete", {
+const ProjectDeleteTool = Tool.make("t2_project_delete", {
   ...shared,
   description: "Delete one project. Nonempty needs `force: true`. Folder on disk stays.",
   parameters: Schema.Struct({
@@ -102,10 +102,10 @@ const ProjectDeleteTool = Tool.make("t3_project_delete", {
     force: Schema.optionalKey(Schema.Boolean),
   }),
 }).annotate(Tool.Destructive, true);
-const ProjectCloneTool = Tool.make("t3_project_clone", {
+const ProjectCloneTool = Tool.make("t2_project_clone", {
   ...shared,
   description:
-    "Clone a repository (`destinationPath` new or empty). Register after with `t3_project_create`, with the same `environmentId`.",
+    "Clone a repository (`destinationPath` new or empty). Register after with `t2_project_create`, with the same `environmentId`.",
   parameters: Schema.Struct({
     environmentId: OrchestratorMcpEnvironmentTarget,
     ...SourceControlCloneRepositoryInput.fields,
@@ -118,10 +118,10 @@ const ProjectCloneTool = Tool.make("t3_project_clone", {
 })
   .annotate(Tool.Destructive, true)
   .annotate(Tool.OpenWorld, true);
-const ThreadLaunchTool = Tool.make("t3_thread_launch", {
+const ThreadLaunchTool = Tool.make("t2_thread_launch", {
   ...shared,
   description:
-    "Create one new top-level thread, bound to its workspace before the agent starts. Task in `message`. Omit `projectId`, model and modes to inherit yours (outside a thread, pass `projectId` or `scratch`); modes cannot exceed yours. After an error or lost reply, retry with the same `clientRequestId`. Follow it with `t3_thread_read` or `t3_thread_wait`. Mention it with its `link`.",
+    "Create one new top-level thread, bound to its workspace before the agent starts. Task in `message`. Omit `projectId`, model and modes to inherit yours (outside a thread, pass `projectId` or `scratch`); modes cannot exceed yours. After an error or lost reply, retry with the same `clientRequestId`. Follow it with `t2_thread_read` or `t2_thread_wait`. Mention it with its `link`.",
   parameters: Schema.Struct({
     environmentId: OrchestratorMcpEnvironmentTarget,
     projectId: Schema.optional(ProjectId),

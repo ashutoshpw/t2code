@@ -34,8 +34,11 @@ import {
   unavailable,
 } from "./threadAccess.ts";
 
-/** Private constructors only enforce types; the token also blocks runtime construction. */
-const builtHere: unique symbol = Symbol("t3/mcp/McpToolAccess/builtHere");
+/**
+ * Their private constructors only stop the type checker; this also stops
+ * `Reflect.construct` and friends at runtime.
+ */
+const builtHere: unique symbol = Symbol("@t2code/cli/mcp/McpToolAccess/builtHere");
 
 const refuseOutsideConstruction = (token: symbol) => {
   if (token !== builtHere) {

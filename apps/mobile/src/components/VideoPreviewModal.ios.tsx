@@ -31,7 +31,7 @@ const NativeControls = requireNativeModule<{
     event: "videoPlaybackChange",
     listener: (event: { identifier: string; isPlaying: boolean }) => void,
   ): { remove(): void };
-}>("T3NativeControls");
+}>("T2NativeControls");
 
 function NativeVideoPreview(props: {
   readonly source: VideoPreviewSource;

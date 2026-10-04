@@ -2858,7 +2858,7 @@ describe("OrchestratorMcpService thread stop", () => {
   it.effect.each([
     { name: "a running turn", queued: false },
     { name: "a running turn with a queued message", queued: true },
-  ])("t3_thread_interrupt stop reports the run it interrupted on $name", ({ queued }) =>
+  ])("t2_thread_interrupt stop reports the run it interrupted on $name", ({ queued }) =>
     Effect.scoped(
       Effect.gen(function* () {
         const cwd = yield* checkpointWorkspace("mcp-thread-stop");

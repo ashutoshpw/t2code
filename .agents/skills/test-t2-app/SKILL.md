@@ -30,7 +30,7 @@ through the real adapter and orchestration. Its models are scenarios:
 Press `Ctrl+Alt+Shift+R` for a picker (GNOME takes that key for screen
 recording), call `window.t3dev.replay("showcase")`
 with `preview_evaluate`, or run
-`node apps/server/src/bin.ts thread start --base-dir .t3 --provider devReplay --model showcase <project> "go"`.
+`node apps/server/src/bin.ts thread start --base-dir .t2 --provider devReplay --model showcase <project> "go"`.
 When the test needs real provider behavior, use that provider's cheapest
 model, such as Haiku for Claude or Luna for Codex.
 

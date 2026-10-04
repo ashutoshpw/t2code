@@ -6,7 +6,7 @@ import { cachedTestTasks } from "./scripts/lib/cached-tests.ts";
 
 const TEST_EXCLUDE = [
   "**/.repos/**",
-  "**/.t3/**",
+  "**/.t2/**",
   "**/node_modules/**",
   "**/dist/**",
   "**/dist-electron/**",
@@ -88,7 +88,7 @@ const taskCacheConfig = {
 export default defineConfig({
   run: {
     cache: taskCacheConfig,
-    tasks: cachedTestTasks(process.env.T3_CACHED_TESTS),
+    tasks: cachedTestTasks(process.env.T2_CACHED_TESTS),
   },
   resolve: {
     alias: {

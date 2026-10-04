@@ -210,7 +210,7 @@ function matchToken(
   ) {
     // A token that opens with punctuation (".ts") brings its own boundary, as in messages.
     if (field.wordStarts[index] || ownBoundary) {
-      // Whole when the match ends where a word ends: "t3c" is a prefix of
+      // Whole when the match ends where a word ends: "t2c" is a prefix of
       // "t3code", ".ts" whole in "index.ts" but a prefix in "parser.tsx".
       const end = index + token.length;
       const whole =
@@ -272,7 +272,7 @@ function matchToken(
 
 /**
  * Short words followed by a short prefix are noise inside a title ("inth" in "in thread").
- * Allow them at its start ("t3co"), before three letters ("gomod"), or a whole word ("vscode").
+ * Allow them at its start ("t2co"), before three letters ("gomod"), or a whole word ("vscode").
  */
 function matchJoinedWords(field: SearchField, token: string): TokenMatch | null {
   const firstWord = field.wordStarts.indexOf(1);

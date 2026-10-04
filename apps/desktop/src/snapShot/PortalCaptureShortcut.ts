@@ -394,7 +394,7 @@ export class PortalCaptureShortcut {
     const created = await this.request("CreateSession", "", [], {
       session_handle_token: new Variant(
         "s",
-        `t3_capture_${NodeCrypto.randomUUID().replaceAll("-", "")}`,
+        `t2_capture_${NodeCrypto.randomUUID().replaceAll("-", "")}`,
       ),
     });
     const session = decodeSession(created).session_handle.value;

@@ -26,7 +26,7 @@ private final class WorkspaceTabBar: UITabBar {
   }
 }
 
-final class T3SidebarTabBarView: ExpoView, UITabBarDelegate {
+final class T2SidebarTabBarView: ExpoView, UITabBarDelegate {
   let onSelectionChange = EventDispatcher()
   let onCompose = EventDispatcher()
   private let tabBar = WorkspaceTabBar()
@@ -97,7 +97,7 @@ final class T3SidebarTabBarView: ExpoView, UITabBarDelegate {
   }
 
   private func prepareItems() {
-    let iconBundle = Bundle(for: Self.self).url(forResource: "T3NativeControlIcons", withExtension: "bundle").flatMap(Bundle.init(url:))
+    let iconBundle = Bundle(for: Self.self).url(forResource: "T2NativeControlIcons", withExtension: "bundle").flatMap(Bundle.init(url:))
     let pullRequestIcon = UIImage(named: "pull-request", in: iconBundle, compatibleWith: nil)?.withRenderingMode(.alwaysTemplate)
     let labels = ["threads": "Chats", "pullRequests": "PRs", "usage": "Usage", "settings": "Settings"]
     let symbols = ["threads": "text.bubble", "usage": "chart.bar.xaxis", "settings": "gearshape"]

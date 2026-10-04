@@ -69,9 +69,7 @@ it.effect("parks automatic pull until activation without delaying command readin
         requeuedEffects: 0,
       };
       const importSummary = { importedThreadCount: 0, importedMessageCount: 0 };
-      const dependencies: Layer.Layer<
-        Layer.Services<ReturnType<typeof ServerRuntimeStartup.layerWithOptions>>
-      > = Layer.mergeAll(
+      const dependencies = Layer.mergeAll(
         Layer.mock(ServerConfig.ServerConfig)({
           ...(yield* ServerConfig.deriveServerPaths(cwd, undefined).pipe(
             Effect.provide(Path.layer),
@@ -99,7 +97,7 @@ it.effect("parks automatic pull until activation without delaying command readin
           mode: "desktop",
           cwd,
           host: "localhost",
-          port: 3773,
+          port: 3772,
           devUrl: undefined,
           noBrowser: true,
           startupPresentation: "browser",
@@ -165,8 +163,9 @@ it.effect("parks automatic pull until activation without delaying command readin
         NodeCrypto.layer,
         Layer.mock(EnvironmentAuth.EnvironmentAuth)({}),
         Layer.mock(ExternalLauncher.ExternalLauncher)({}),
+        FileSystem.layerNoop({}),
         Layer.mock(HttpServer.HttpServer)({
-          address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3773),
+          address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3772),
         }),
         Path.layer,
       );

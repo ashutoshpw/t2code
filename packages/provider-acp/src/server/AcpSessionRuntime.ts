@@ -265,7 +265,7 @@ export function wrapCommandForLinuxCgroup(
         '  case "$line" in 0::*) [ -z "$actual" ] || exit 126; actual=${line#0::};; esac',
         "done < /proc/self/cgroup || exit 125",
         '[ "$actual" = "$expected" ] || exit 126',
-        "unset ELECTRON_RUN_AS_NODE T3_ACP_CGROUP_WRAPPER",
+        "unset ELECTRON_RUN_AS_NODE T2_ACP_CGROUP_WRAPPER",
         "trap 'exit 125' 0",
         // Bash can skip EXIT traps on failed exec; reject invalid targets with path and exit 125.
         '[ -f "$1" ] && [ -x "$1" ] || { printf "%s: %s: not an executable file\\n" "$0" "$1" >&2; exit 125; }',
@@ -1434,7 +1434,7 @@ export const make = Effect.fn("AcpSessionRuntime.make")(function* (
       : {
           ...options.spawn.env,
           ELECTRON_RUN_AS_NODE: "1",
-          T3_ACP_CGROUP_WRAPPER: "1",
+          T2_ACP_CGROUP_WRAPPER: "1",
         };
   const child = yield* spawner
     .spawn(
@@ -1885,7 +1885,7 @@ export const make = Effect.fn("AcpSessionRuntime.make")(function* (
       meta !== null &&
       typeof meta === "object" &&
       !Array.isArray(meta) &&
-      (meta as { readonly t3SessionLoadReady?: unknown }).t3SessionLoadReady === "replay_idle";
+      (meta as { readonly t2SessionLoadReady?: unknown }).t2SessionLoadReady === "replay_idle";
     const extractedModelConfigId = extractModelConfigId(sessionSetupResult);
     const nextModelConfigId =
       extractedModelConfigId ?? (syntheticReplayIdle ? current.modelConfigId : undefined);

@@ -507,7 +507,10 @@ export const OrchestrationV2AppThread = Schema.Struct({
 });
 export type OrchestrationV2AppThread = typeof OrchestrationV2AppThread.Type;
 
-/** Provider-native children cannot receive messages; T3 delegate_task children can. */
+/**
+ * The provider owns its conversation, so it cannot take messages; T2 delegate_task children
+ * (`creationSource: "mcp"`) can.
+ */
 export function isProviderNativeSubagentThread(
   thread: Pick<OrchestrationV2AppThread, "lineage" | "creationSource">,
 ): boolean {

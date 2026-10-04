@@ -61,7 +61,10 @@ import {
   type TurnItemId,
 } from "@t2code/contracts";
 import type { ThreadRunSummary } from "@t2code/client-runtime/state/shell";
-import { resolveT3McpToolDefinition } from "@t2code/shared/t3McpToolPresentation";
+import {
+  resolveT2McpToolDefinition,
+  type T2McpToolPresentation,
+} from "@t2code/shared/t2McpToolPresentation";
 import { compactDynamicToolOutput } from "@t2code/shared/toolOutput";
 import { htmlRenderReferencesEqual, type HtmlRenderReference } from "@t2code/shared/htmlRender";
 import { mcpAppReferencesEqual, type McpAppReference } from "@t2code/shared/mcpApp";
@@ -180,14 +183,14 @@ export function workEntryDisplayLabel(entry: WorkLogEntry, workspaceRoot: string
 export function threadReadTargetId(entry: Pick<WorkLogEntry, "structuredPayload">) {
   const item = entry.structuredPayload;
   if (item?.type !== "dynamic_tool") return null;
-  if (resolveT3McpToolDefinition(item.toolName)?.summaryAction !== "thread-read") return null;
+  if (resolveT2McpToolDefinition(item.toolName)?.summaryAction !== "thread-read") return null;
   const input = item.input;
   const threadId =
     input !== null && typeof input === "object" && "threadId" in input ? input.threadId : null;
   return typeof threadId === "string" && threadId.trim().length > 0 ? threadId.trim() : null;
 }
 
-const THREAD_READ_OBJECT = " a T3 thread";
+const THREAD_READ_OBJECT = " a T2 thread";
 
 export function threadReadTargetTitle(
   shell: Pick<ThreadShell, "title" | "archivedAt" | "deletedAt"> | null,
@@ -643,6 +646,8 @@ export interface StableMessagesTimelineRowsState {
 function workGroupId(timelineEntryId: string): string {
   return `work-group:${timelineEntryId}`;
 }
+
+export type TimelineToolPresentation = T2McpToolPresentation;
 
 function expandedWorkGroupRow(
   groupId: string,
@@ -1322,7 +1327,7 @@ function withoutSubagentDelegationRows(entries: ReadonlyArray<TimelineEntry>) {
       item?.type !== "dynamic_tool" ||
       item.runId === null ||
       (item.status !== "running" && item.status !== "completed") ||
-      resolveT3McpToolDefinition(item.toolName)?.summaryAction !== "delegate"
+      resolveT2McpToolDefinition(item.toolName)?.summaryAction !== "delegate"
     )
       return true;
     const output = compactDynamicToolOutput(item.output);

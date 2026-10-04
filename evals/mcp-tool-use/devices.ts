@@ -684,7 +684,7 @@ export const makeDeviceTools = Effect.fn("evaluateMcpToolUse.makeDeviceTools")(f
     const session = yield* agentDeviceSession(threadId, device.hostId, deviceId);
     owners.push({ deviceId, threadId, session });
   }
-  const config = ServerConfig.layerTest(environment.cwd, `${home}/.t3`);
+  const config = ServerConfig.layerTest(environment.cwd, `${home}/.t2`);
   const files = FileSystem.layerNoop({
     makeDirectory: () => Effect.void,
     writeFileString: () => Effect.void,
@@ -697,7 +697,7 @@ export const makeDeviceTools = Effect.fn("evaluateMcpToolUse.makeDeviceTools")(f
       const path = yield* Path.Path;
       const crypto = yield* Crypto.Crypto;
       const { stateDir } = yield* ServerConfig.ServerConfig;
-      const agentEntry = path.join(home, ".t3", "tools", "agent-device", "bin", "agent-device.mjs");
+      const agentEntry = path.join(home, ".t2", "tools", "agent-device", "bin", "agent-device.mjs");
       const hosts = new Map<DeviceHostId, DeviceHost.DeviceHost["Service"]>([
         [
           LOCAL_DEVICE_HOST_ID,

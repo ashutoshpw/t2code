@@ -1348,7 +1348,7 @@ describe("AcpSessionRuntime", () => {
 
       expect(started.sessionId).toBe("mock-session-1");
       expect(started.sessionSetupResult._meta).toMatchObject({
-        t3SessionLoadReady: "replay_idle",
+        t2SessionLoadReady: "replay_idle",
       });
 
       const unexpectedReplayEvent = yield* Stream.runHead(runtime.getEvents()).pipe(
@@ -1388,7 +1388,7 @@ describe("AcpSessionRuntime", () => {
 
       expect(loaded.sessionId).toBe("mock-session-1");
       expect(loaded.sessionSetupResult._meta).toMatchObject({
-        t3SessionLoadReady: "replay_idle",
+        t2SessionLoadReady: "replay_idle",
       });
     }).pipe(
       Effect.provide(
@@ -1490,7 +1490,7 @@ describe("AcpSessionRuntime", () => {
           spawn: {
             command: mockAgentCommand,
             args: mockAgentArgs,
-            env: { T3_ACP_REQUEST_LOG_PATH: requestLogPath },
+            env: { T2_ACP_REQUEST_LOG_PATH: requestLogPath },
           },
           customModels: ["cline-free/custom-model"],
         }),

@@ -9,7 +9,7 @@ import type {
   ModelSelection,
   ProjectId,
   RuntimeMode,
-  ServerConfig as T3ServerConfig,
+  ServerConfig as T2ServerConfig,
 } from "@t2code/contracts";
 import { isProviderDriverKind, resolveProjectProviderInstanceEnabled } from "@t2code/contracts";
 import {
@@ -44,7 +44,7 @@ export type ModelOption = {
 };
 
 type ProviderUpdateRequired = Pick<
-  T3ServerConfig["providers"][number],
+  T2ServerConfig["providers"][number],
   "driver" | "updateRequiredModels"
 >;
 
@@ -68,7 +68,7 @@ function providerDisplayLabel(provider: {
 }
 
 function isProviderEnabledForProject(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   provider:
     | { readonly instanceId: ModelSelection["instanceId"]; readonly enabled: boolean }
     | undefined,
@@ -83,7 +83,7 @@ function isProviderEnabledForProject(
 }
 
 function isProjectDisabledOverride(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   instanceId: ModelSelection["instanceId"],
   projectId: ProjectId | null,
 ): boolean {
@@ -97,7 +97,7 @@ function isProjectDisabledOverride(
 }
 
 function isDisabledForProject(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   provider:
     | { readonly instanceId: ModelSelection["instanceId"]; readonly enabled: boolean }
     | undefined,
@@ -163,7 +163,7 @@ export function isModelSelectionUnavailable(
 }
 
 export function describeUnavailableModelSelection(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   selection: ModelSelection,
   projectId: ProjectId | null,
 ): { readonly title: string; readonly detail: string } {
@@ -246,7 +246,7 @@ export function buildModelOptions(
   const lockedProvider = config?.providers.find(
     (provider) => provider.instanceId === providerInstanceId,
   );
-  const matchesLockedProvider = (provider: T3ServerConfig["providers"][number]) => {
+  const matchesLockedProvider = (provider: T2ServerConfig["providers"][number]) => {
     if (providerInstanceId === undefined || provider.instanceId === providerInstanceId) return true;
     if (!lockedProvider || provider.driver !== lockedProvider.driver) return false;
     const groupKey = lockedProvider.continuation?.groupKey;

@@ -1338,7 +1338,7 @@ describe("buildThreadFeed", () => {
       ({
         ...base("wait", "2026-06-20T00:00:02.000Z", 1),
         type: "dynamic_tool",
-        toolName: "t3-code.t3_thread_wait",
+        toolName: "t3-code.t2_thread_wait",
         input: { threadId: "thread-child", timeoutMs: 50_000 },
         output: { threadId: "thread-child", status: "timeout" },
         ...overrides,
@@ -1347,7 +1347,7 @@ describe("buildThreadFeed", () => {
       ({
         ...base("read", "2026-06-20T00:00:03.000Z", 2),
         type: "dynamic_tool",
-        toolName: "t3-code.t3_thread_read",
+        toolName: "t3-code.t2_thread_read",
         input: { threadId: "thread-child" },
         output: { messages: [] },
         ...overrides,
@@ -1452,11 +1452,11 @@ describe("buildThreadFeed", () => {
     expect(activity?.workEntry.viewedImagePath).toBe("/workspace/reference.png");
   });
 
-  it("pretty prints T3 MCP dynamic tool activities and attaches the product logo", () => {
+  it("pretty prints T2 MCP dynamic tool activities and attaches the product logo", () => {
     const toolItem: OrchestrationV2TurnItem = {
       ...base("item-t3-tool", "2026-06-20T00:00:04.000Z", 3),
       type: "dynamic_tool",
-      toolName: "mcp__t3-code__t3_thread_read",
+      toolName: "mcp__t2-code__t2_thread_read",
       input: { threadId: "thread-child" },
       output: { messages: [] },
     };
@@ -1464,9 +1464,9 @@ describe("buildThreadFeed", () => {
     const feed = buildThreadFeed([projected(toolItem, 0)]);
     const activity = feed[0]?.type === "activity-group" ? feed[0].activities[0] : null;
 
-    expect(activity?.summary).toBe("Read a T3 thread");
+    expect(activity?.summary).toBe("Read a T2 thread");
     expect(activity?.logo).toBe("t2-code");
-    expect(activity?.getCopyText().split("\n")[0]).toBe("Read a T3 thread");
+    expect(activity?.getCopyText().split("\n")[0]).toBe("Read a T2 thread");
   });
 
   it.each(["cua_repl.js", "node_repl.js", "js"])(
@@ -1519,10 +1519,10 @@ describe("buildThreadFeed", () => {
     );
   });
 
-  it("uses canonical T3 orchestration summaries in compact work groups", () => {
+  it("uses canonical T2 orchestration summaries in compact work groups", () => {
     const rows = [
       projected(command("2026-06-20T00:00:01.000Z"), 0),
-      ...["mcp__t3-code__t3_thread_send", "t3_code.t3_thread_send", "t3_thread_send"].map(
+      ...["mcp__t2-code__t2_thread_send", "t3_code.t2_thread_send", "t2_thread_send"].map(
         (toolName, index) =>
           projected(
             {
@@ -1567,7 +1567,7 @@ describe("buildThreadFeed", () => {
         ...base("list", "2026-09-19T00:00:01.000Z", 1),
         type: "dynamic_tool",
         title: "Custom provider title",
-        toolName: "T3-code.t3_project_list",
+        toolName: "T2-code.t2_project_list",
         input: {},
         output: { projects: [] },
       },
@@ -1575,7 +1575,7 @@ describe("buildThreadFeed", () => {
         ...base("clone", "2026-09-19T00:00:02.000Z", 2),
         type: "dynamic_tool",
         title: "Custom provider title",
-        toolName: "mcp__t3_code__t3_project_clone",
+        toolName: "mcp__t2_code__t2_project_clone",
         input: {},
         output: { cwd: "/tmp/repo" },
       },
@@ -1583,7 +1583,7 @@ describe("buildThreadFeed", () => {
         ...base("failed-clone", "2026-09-19T00:00:03.000Z", 3),
         type: "dynamic_tool",
         title: "Custom provider title",
-        toolName: "t3_project_clone",
+        toolName: "t2_project_clone",
         input: {},
         output: { isError: true },
       },
@@ -1686,7 +1686,7 @@ describe("retained v2 feed presentation", () => {
           {
             ...base(id, "2026-06-20T00:00:02.000Z", index),
             type: "dynamic_tool",
-            toolName: "t3-code.delegate_task",
+            toolName: "t2-code.delegate_task",
             input: { task: "Identical task" },
             output,
             ...overrides,

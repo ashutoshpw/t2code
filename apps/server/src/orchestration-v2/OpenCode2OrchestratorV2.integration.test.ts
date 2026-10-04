@@ -60,14 +60,17 @@ const event = (type: string, data: Record<string, unknown>): ProviderReplayEntry
 });
 const labelled = (entry: ProviderReplayEntry, label: string): ProviderReplayEntry =>
   entry.type === "runtime_exit" ? entry : { ...entry, label };
-/** MCP rules are last-match-wins; allow this thread after denying all T3 servers. */
+/**
+ * T2's own rules after a mode's: every thread's T2 MCP server is denied, and
+ * then this thread's own is allowed again (last match wins).
+ */
 const mcpRules = (name: string) => [
   { action: "t3-code-*", resource: "*", effect: "deny" },
   { action: `t3-code-thread_${name}_*`, resource: "*", effect: "allow" },
 ];
 const FULL_ACCESS = [{ action: "*", resource: "*", effect: "allow" }];
 
-const t3Rules = (name: string) => [...FULL_ACCESS, ...mcpRules(name)];
+const t2Rules = (name: string) => [...FULL_ACCESS, ...mcpRules(name)];
 
 const BUILD_PATHS = [
   {
@@ -185,7 +188,7 @@ const catalogModel = (id: string, name: string) => ({
 const createdSession = (
   directory: string,
   name: string,
-  permissions: ReadonlyArray<unknown> = t3Rules(name),
+  permissions: ReadonlyArray<unknown> = t2Rules(name),
 
   narrows = false,
 ): ReadonlyArray<ProviderReplayEntry> => [
@@ -311,7 +314,7 @@ describe("OpenCode 2 through the orchestrator", () => {
             ...answeredPrompt("FIRST"),
 
             out("session.get", { sessionID: SESSION }),
-            reply("session.get", sessionInfo(cwd, t3Rules(name), name)),
+            reply("session.get", sessionInfo(cwd, t2Rules(name), name)),
             out("session.switchModel", {
               sessionID: SESSION,
               model: { providerID: "opencode", id: "mimo-v2.6-flash-free" },
@@ -349,6 +352,132 @@ describe("OpenCode 2 through the orchestrator", () => {
       }).pipe(Effect.scoped),
   );
 
+  it.effect("moves the session to the thread's new worktree before the next prompt", () =>
+    Effect.gen(function* () {
+      const name = "opencode2-worktree-move";
+      const before = yield* checkpointWorkspace(`${name}-before`);
+      const after = yield* checkpointWorkspace(`${name}-after`);
+      const thread = threadCommands({ name, worktreePath: before });
+      const projection = yield* runScenario({
+        name,
+        threadId: thread.threadId,
+        entries: [
+          ...createdSession(before, name),
+          ...instructionsWritten,
+          ...answeredPrompt("FIRST"),
+          ...directoryModels(after),
+          out("session.get", { sessionID: SESSION }),
+          reply("session.get", sessionInfo(before, t2Rules(name), name)),
+
+          ...noOpenRequests,
+          out("session.move", { sessionID: SESSION, directory: after }),
+          reply("session.move", null),
+
+          ...instructionsWritten,
+          ...answeredPrompt("SECOND"),
+        ],
+        commands: [
+          thread.create,
+          thread.message("first"),
+          {
+            type: "thread.metadata.update",
+            commandId: thread.command("worktree"),
+            threadId: thread.threadId,
+            worktreePath: after,
+          },
+          thread.message("second"),
+        ],
+      });
+      assert.deepEqual(
+        projection.runs.map((run) => run.status),
+        ["completed", "completed"],
+      );
+      assert.lengthOf(projection.providerThreads, 1);
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("gives a session made with older rules T2's rules before its next prompt", () =>
+    Effect.gen(function* () {
+      const name = "opencode2-resume-rules";
+      const before = yield* checkpointWorkspace(`${name}-before`);
+      const after = yield* checkpointWorkspace(`${name}-after`);
+      const thread = threadCommands({ name, worktreePath: before });
+      const projection = yield* runScenario({
+        name,
+        threadId: thread.threadId,
+        entries: [
+          ...createdSession(before, name),
+          ...instructionsWritten,
+          ...answeredPrompt("FIRST"),
+          ...directoryModels(after),
+
+          out("session.get", { sessionID: SESSION }),
+          reply(
+            "session.get",
+            sessionInfo(
+              before,
+              [
+                { action: "*", resource: "*", effect: "allow" },
+                { action: "subagent", resource: "*", effect: "deny" },
+              ],
+              name,
+            ),
+          ),
+          ...noOpenRequests,
+          out("session.update", { sessionID: SESSION, permissions: t2Rules(name) }),
+          reply("session.update", null),
+          out("session.move", { sessionID: SESSION, directory: after }),
+          reply("session.move", null),
+          ...instructionsWritten,
+          ...answeredPrompt("SECOND"),
+        ],
+        commands: [
+          thread.create,
+          thread.message("first"),
+          {
+            type: "thread.metadata.update",
+            commandId: thread.command("worktree"),
+            threadId: thread.threadId,
+            worktreePath: after,
+          },
+          thread.message("second"),
+        ],
+      });
+      assert.deepEqual(
+        projection.runs.map((run) => run.status),
+        ["completed", "completed"],
+      );
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect(
+    "creates a Supervised thread's session with rules that ask before shell and edits",
+    () =>
+      Effect.gen(function* () {
+        const name = "opencode2-supervised-rules";
+        const cwd = yield* checkpointWorkspace(name);
+        const thread = threadCommands({
+          name,
+          worktreePath: cwd,
+          runtimeMode: "approval-required",
+        });
+        const projection = yield* runScenario({
+          name,
+          threadId: thread.threadId,
+          entries: [
+            ...createdSession(cwd, name, supervisedRules(name), true),
+            ...instructionsWritten,
+            ...answeredPrompt("FIRST"),
+          ],
+          commands: [thread.create, thread.message("first")],
+        });
+        assert.deepEqual(
+          projection.runs.map((run) => run.status),
+          ["completed"],
+        );
+      }).pipe(Effect.scoped),
+  );
+
   it.effect("rewrites the session's rules when the thread's mode changes between turns", () =>
     Effect.gen(function* () {
       const name = "opencode2-mode-change";
@@ -370,7 +499,7 @@ describe("OpenCode 2 through the orchestrator", () => {
           ...answeredPrompt("FIRST"),
 
           out("session.get", { sessionID: SESSION }),
-          reply("session.get", sessionInfo(cwd, t3Rules(name), name)),
+          reply("session.get", sessionInfo(cwd, t2Rules(name), name)),
           out("agent.list", "<any>"),
           reply("agent.list", agentList(cwd)),
           out("session.update", { sessionID: SESSION, permissions: autoEditRules(name) }),
@@ -379,7 +508,7 @@ describe("OpenCode 2 through the orchestrator", () => {
 
           out("session.get", { sessionID: SESSION }),
           reply("session.get", sessionInfo(cwd, autoEditRules(name), name)),
-          out("session.update", { sessionID: SESSION, permissions: t3Rules(name) }),
+          out("session.update", { sessionID: SESSION, permissions: t2Rules(name) }),
           reply("session.update", null),
           ...answeredPrompt("THIRD"),
         ],
@@ -417,7 +546,7 @@ describe("OpenCode 2 through the orchestrator", () => {
           ...answeredPrompt("PLANNED"),
           out("session.get", { sessionID: SESSION }),
           reply("session.get", sessionInfo(cwd, planRules(name), name)),
-          out("session.update", { sessionID: SESSION, permissions: t3Rules(name) }),
+          out("session.update", { sessionID: SESSION, permissions: t2Rules(name) }),
           reply("session.update", null),
           out("session.switchAgent", { sessionID: SESSION, agent: "build" }),
           reply("session.switchAgent", null),

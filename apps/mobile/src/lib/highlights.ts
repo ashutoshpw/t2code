@@ -22,7 +22,7 @@ const MAX_HIGHLIGHTED_LINE_LENGTH = 1_000;
 // from binaries built before it shipped, where code renders as plain text.
 const nativeHighlights = requireOptionalNativeModule<{
   tokenize(source: string, language: number): ArrayBuffer | null;
-}>("T3Highlights");
+}>("T2Highlights");
 
 export interface TokenizedCode {
   /** Retained UTF-16 source, compact native records, and line indexes. */

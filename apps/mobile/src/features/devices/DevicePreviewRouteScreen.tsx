@@ -270,7 +270,7 @@ export function DevicePreviewScreen({
           style={{ paddingTop: Math.max(insets.top, 8) }}
         >
           <SheetCloseButton accessibilityLabel="Close device preview" onClose={onClose} />
-          <AppText numberOfLines={1} className="min-w-0 flex-1 font-t3-medium text-sm">
+          <AppText numberOfLines={1} className="min-w-0 flex-1 font-t2-medium text-sm">
             {preview?.name ?? "Devices"}
           </AppText>
           <ControlPill
@@ -334,7 +334,7 @@ export function DevicePreviewScreen({
           <View className="px-3" style={{ paddingTop: Math.max(insets.top, 12) }}>
             <GlassSurface className="flex-row items-center gap-1 p-1">
               <SheetCloseButton accessibilityLabel="Close device preview" onClose={onClose} />
-              <AppText numberOfLines={1} className="flex-1 text-center font-t3-medium text-base">
+              <AppText numberOfLines={1} className="flex-1 text-center font-t2-medium text-base">
                 {preview?.name ?? "Devices"}
               </AppText>
               <ControlPill

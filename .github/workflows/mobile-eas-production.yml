@@ -168,11 +168,11 @@ jobs:
           import { appendFileSync, readFileSync } from "node:fs";
           import { parseEnv } from "node:util";
           const env = parseEnv(readFileSync(".env.local", "utf8"));
-          const googleServicesFile = env.T3CODE_ANDROID_GOOGLE_SERVICES_FILE;
+          const googleServicesFile = env.T2CODE_ANDROID_GOOGLE_SERVICES_FILE;
           if (!googleServicesFile) {
-            throw new Error("T3CODE_ANDROID_GOOGLE_SERVICES_FILE is missing from the production environment");
+            throw new Error("T2CODE_ANDROID_GOOGLE_SERVICES_FILE is missing from the production environment");
           }
-          appendFileSync(process.env.GITHUB_ENV, `T3CODE_ANDROID_GOOGLE_SERVICES_FILE=${googleServicesFile}\n`);
+          appendFileSync(process.env.GITHUB_ENV, `T2CODE_ANDROID_GOOGLE_SERVICES_FILE=${googleServicesFile}\n`);
           NODE
 
       - name: Apply manual version override
@@ -196,10 +196,10 @@ jobs:
             const path = "apps/mobile/app.config.ts";
             const source = fs.readFileSync(path, "utf8");
             const next = source.replace(
-              /^(  version: repoEnv\.T3CODE_MOBILE_VERSION \?\? ")[^"]+(".*)$/m,
+              /^(  version: repoEnv\.T2CODE_MOBILE_VERSION \?\? ")[^"]+(".*)$/m,
               `$1${process.env.RELEASE_VERSION}$2`,
             );
-            if (next === source && !source.includes(`  version: repoEnv.T3CODE_MOBILE_VERSION ?? "${process.env.RELEASE_VERSION}"`)) {
+            if (next === source && !source.includes(`  version: repoEnv.T2CODE_MOBILE_VERSION ?? "${process.env.RELEASE_VERSION}"`)) {
               throw new Error("Could not update app version");
             }
             fs.writeFileSync(path, next);
@@ -227,8 +227,8 @@ jobs:
           MOBILE_BUILD_PROFILE: ${{ inputs.profile || 'production' }}
         run: |
           if [ "$MOBILE_BUILD_PROFILE" = "testflight" ]; then
-            T3CODE_MOBILE_VERSION="$(node -p 'require("./eas.json").build.testflight.env.T3CODE_MOBILE_VERSION')"
-            export T3CODE_MOBILE_VERSION
+            T2CODE_MOBILE_VERSION="$(node -p 'require("./eas.json").build.testflight.env.T2CODE_MOBILE_VERSION')"
+            export T2CODE_MOBILE_VERSION
           fi
           version="$(npx expo config --json --type public | jq -r '.version')"
           {
@@ -280,8 +280,8 @@ jobs:
           OTA_MESSAGE: ${{ inputs.message || format('Production OTA ({0})', github.sha) }}
         run: |
           if [ "$MOBILE_BUILD_PROFILE" = "testflight" ]; then
-            T3CODE_MOBILE_VERSION="$(node -p 'require("./eas.json").build.testflight.env.T3CODE_MOBILE_VERSION')"
-            export T3CODE_MOBILE_VERSION
+            T2CODE_MOBILE_VERSION="$(node -p 'require("./eas.json").build.testflight.env.T2CODE_MOBILE_VERSION')"
+            export T2CODE_MOBILE_VERSION
           fi
           eas update \
             --channel production \
@@ -306,10 +306,10 @@ jobs:
           for target in ios:production ios:testflight android:production; do
             platform="${target%%:*}"
             profile="${target#*:}"
-            unset T3CODE_MOBILE_VERSION
+            unset T2CODE_MOBILE_VERSION
             if [ "$profile" = "testflight" ]; then
-              T3CODE_MOBILE_VERSION="$(node -p 'require("./eas.json").build.testflight.env.T3CODE_MOBILE_VERSION')"
-              export T3CODE_MOBILE_VERSION
+              T2CODE_MOBILE_VERSION="$(node -p 'require("./eas.json").build.testflight.env.T2CODE_MOBILE_VERSION')"
+              export T2CODE_MOBILE_VERSION
             fi
             version="$(npx expo config --json --type public | jq -r '.version')"
             # eas-cli prints an environment-loaded notice to stdout before the

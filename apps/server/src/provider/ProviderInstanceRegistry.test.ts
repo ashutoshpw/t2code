@@ -143,7 +143,6 @@ const makeTildeProviderFixtures = Effect.fn(
       new URL("./testing/ProviderInstanceRegistryLive.fixture.mjs", import.meta.url),
     ),
     claudePath,
-
   );
   yield* fileSystem.chmod(claudePath, 0o755);
   yield* fileSystem.makeDirectory(claudeHomePath);
@@ -294,7 +293,7 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
             driver: ProviderDriverKind.make("claudeAgent"),
             enabled: true,
             // Packaged desktop starts in $HOME, where some claude wrappers refuse to run.
-            environment: [{ name: "T3_CLAUDE_REQUIRED_CWD", value: stateDir, sensitive: false }],
+            environment: [{ name: "T2_CLAUDE_REQUIRED_CWD", value: stateDir, sensitive: false }],
             config: makeClaudeConfig({
               enabled: true,
               binaryPath: fixtures.claudeBinaryPath,
@@ -556,15 +555,15 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
           driver: ProviderDriverKind.make("claudeAgent"),
           enabled: true,
           environment: [
-            { name: "T3_CLAUDE_PROBE_LOG", value: probeLog, sensitive: false },
+            { name: "T2_CLAUDE_PROBE_LOG", value: probeLog, sensitive: false },
             ...(state === "ready"
               ? []
               : [
                   {
                     name:
                       state === "signed-out"
-                        ? "T3_CLAUDE_LOGIN_MARKER"
-                        : "T3_CLAUDE_USAGE_FAILS_UNTIL",
+                        ? "T2_CLAUDE_LOGIN_MARKER"
+                        : "T2_CLAUDE_USAGE_FAILS_UNTIL",
                     value: recovered,
                     sensitive: false,
                   },

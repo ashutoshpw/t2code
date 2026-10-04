@@ -59,8 +59,8 @@ export async function reviewPose(result: PoseResult, outputDirectory: string): P
       "--add-dir",
       outputDirectory,
       "--no-session-persistence",
-      ...(NodeProcess.env.T3_E2E_REVIEW_MODEL
-        ? ["--model", NodeProcess.env.T3_E2E_REVIEW_MODEL]
+      ...(NodeProcess.env.T2_E2E_REVIEW_MODEL
+        ? ["--model", NodeProcess.env.T2_E2E_REVIEW_MODEL]
         : []),
     ],
     { cwd: outputDirectory, timeoutMs: 600_000 },

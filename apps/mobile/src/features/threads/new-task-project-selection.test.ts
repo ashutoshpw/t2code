@@ -43,7 +43,7 @@ function makeProject(
 
 function makeScope(projects: ReadonlyArray<EnvironmentProject>): HomeProjectScope {
   return {
-    key: "github.com/t2tools/t2code",
+    key: "github.com/ashutoshpw/t2code",
     title: "T2 Code",
     representative: projects[0]!,
     projects,
@@ -76,10 +76,10 @@ describe("getProjectScopeSelectionTarget", () => {
 
 describe("resolveEnvironmentProjectMatch", () => {
   it("follows the same repository onto the target machine", () => {
-    const selected = makeProject("t2code", "mac", { repositoryKey: "github.com/t2tools/t2code" });
+    const selected = makeProject("t2code", "mac", { repositoryKey: "github.com/ashutoshpw/t2code" });
     const target = [
       makeProject("other", "server", { repositoryKey: "github.com/t2tools/other" }),
-      makeProject("t2code-clone", "server", { repositoryKey: "github.com/t2tools/t2code" }),
+      makeProject("t2code-clone", "server", { repositoryKey: "github.com/ashutoshpw/t2code" }),
     ];
     expect(resolveEnvironmentProjectMatch(target, selected)).toBe(target[1]);
   });
@@ -101,7 +101,7 @@ describe("resolveEnvironmentProjectMatch", () => {
 
   it("does not treat a known different repository as a basename or title match", () => {
     const selected = makeProject("t2code", "mac", {
-      repositoryKey: "github.com/t2tools/t2code",
+      repositoryKey: "github.com/ashutoshpw/t2code",
       workspaceRoot: "/Users/me/t2code",
     });
     const fork = makeProject("fork", "server", {

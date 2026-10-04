@@ -1,7 +1,7 @@
 /**
  * Records an fx ACP replay transcript through the real orchestrator and
  * FxAdapterV2, teeing only the protocol logger. Run from apps/server with
- * fx 0.0.13 on PATH (or T3_FX_BIN); HOME stays the user's real login:
+ * fx 0.0.13 on PATH (or T2_FX_BIN); HOME stays the user's real login:
  *   node scripts/record-fx-acp-replay-fixture.ts --scenario simple
  */
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -37,7 +37,7 @@ const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 const decodeJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown));
 const HOME_PLACEHOLDER = "/home/fx-replay";
 const FX_INSTANCE_ID = ProviderInstanceId.make("fx");
-const T3_INSTRUCTIONS_BODY = /<t3_code_instructions>\n[\s\S]*?\n<\/t3_code_instructions>/u;
+const T2_INSTRUCTIONS_BODY = /<t2_code_instructions>\n[\s\S]*?\n<\/t2_code_instructions>/u;
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/giu;
 const TOKEN = /\b(?:sk-|gho_|ghp_|xai-|vercel_)[A-Za-z0-9_-]{8,}\b/gu;
 
@@ -209,8 +209,8 @@ function normalizeOutboundFrame(frame: Record<string, unknown>, runtimeInstructi
               ? {
                   ...part,
                   text: part.text.replace(
-                    T3_INSTRUCTIONS_BODY,
-                    "<t3_code_instructions>\n<any>\n</t3_code_instructions>",
+                    T2_INSTRUCTIONS_BODY,
+                    "<t2_code_instructions>\n<any>\n</t2_code_instructions>",
                   ),
                 }
               : part,
@@ -358,7 +358,7 @@ const recordScenario = Effect.fn("recordFxScenario")(function* (fixtureName: str
   };
 
   const tee = makeWireTee();
-  const settings = { ...DEFAULT_FX_SETTINGS, binaryPath: process.env.T3_FX_BIN ?? "fx" };
+  const settings = { ...DEFAULT_FX_SETTINGS, binaryPath: process.env.T2_FX_BIN ?? "fx" };
   const layerRegistry = ProviderAdapterRegistry.layerFromAdaptersEffect(
     Effect.gen(function* () {
       const environment = yield* HostProcess.Environment;

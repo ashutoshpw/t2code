@@ -12,9 +12,9 @@ const { version } = JSON.parse(
 
 const SUPPORTED = ["darwin-arm64", "linux-arm64", "linux-x64", "win32-arm64", "win32-x64"];
 
-function t3Home() {
+function t2Home() {
   const raw = (process.env.T3CODE_HOME || "").trim();
-  if (raw === "") return path.join(os.homedir(), ".t3");
+  if (raw === "") return path.join(os.homedir(), ".t2");
   if (raw === "~") return os.homedir();
   if (raw.startsWith("~/") || raw.startsWith("~\\")) return path.join(os.homedir(), raw.slice(2));
   return path.resolve(raw);
@@ -64,7 +64,7 @@ async function download(url, file) {
 async function install(dir, key) {
   const archive = `t3-${version}-${key}.${process.platform === "win32" ? "zip" : "tar.gz"}`;
   const base = (
-    process.env.T3CODE_RELEASE_BASE_URL || "https://github.com/pingdotgg/t3code/releases/download"
+    process.env.T2CODE_RELEASE_BASE_URL || "https://github.com/pingdotgg/t3code/releases/download"
   ).replace(/\/+$/, "");
   const sums = await (await get(`${base}/v${version}/SHA256SUMS`)).text();
   const expected = /^([0-9a-f]{64})\s+\*?(.+)$/im;
@@ -150,7 +150,7 @@ async function main() {
         "The desktop app is at https://github.com/pingdotgg/t3code/releases",
     );
   }
-  const dir = path.join(t3Home(), "runtime", "versions", version);
+  const dir = path.join(t2Home(), "runtime", "versions", version);
   if (!isComplete(dir)) await install(dir, key);
 
   // Service IPC and signals must reach the child; terminal Ctrl-C already does, so do not forward SIGINT twice.
@@ -161,7 +161,7 @@ async function main() {
     {
       stdio: ipc ? ["inherit", "inherit", "inherit", "ipc"] : "inherit",
       // The executable lives in the T3 home, so this is how it knows npm launched it.
-      env: { ...process.env, T3CODE_NPM_LAUNCHER_PATH: import.meta.filename },
+      env: { ...process.env, T2CODE_NPM_LAUNCHER_PATH: import.meta.filename },
     },
   );
   if (ipc) {

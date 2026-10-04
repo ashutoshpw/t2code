@@ -1,4 +1,4 @@
-package expo.modules.t3nativecontrols
+package expo.modules.t2nativecontrols
 
 import android.content.Context
 import android.view.ViewGroup
@@ -63,45 +63,45 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
 
-class T3WorkspaceNavigationModule : Module() {
+class T2WorkspaceNavigationModule : Module() {
   override fun definition() = ModuleDefinition {
-    Name("T3WorkspaceNavigation")
-    View(T3WorkspaceNavigationView::class) {
-      Prop("tabs") { view: T3WorkspaceNavigationView, value: List<String> -> view.tabs = value }
-      Prop("selectedTab") { view: T3WorkspaceNavigationView, value: String ->
+    Name("T2WorkspaceNavigation")
+    View(T2WorkspaceNavigationView::class) {
+      Prop("tabs") { view: T2WorkspaceNavigationView, value: List<String> -> view.tabs = value }
+      Prop("selectedTab") { view: T2WorkspaceNavigationView, value: String ->
         view.selectedTab = value
       }
-      Prop("rail") { view: T3WorkspaceNavigationView, value: Boolean -> view.rail = value }
-      Prop("dark") { view: T3WorkspaceNavigationView, value: Boolean -> view.dark = value }
-      Prop("textScale") { view: T3WorkspaceNavigationView, value: Float -> view.textScale = value }
-      Prop("newEnabled") { view: T3WorkspaceNavigationView, value: Boolean ->
+      Prop("rail") { view: T2WorkspaceNavigationView, value: Boolean -> view.rail = value }
+      Prop("dark") { view: T2WorkspaceNavigationView, value: Boolean -> view.dark = value }
+      Prop("textScale") { view: T2WorkspaceNavigationView, value: Float -> view.textScale = value }
+      Prop("newEnabled") { view: T2WorkspaceNavigationView, value: Boolean ->
         view.newEnabled = value
       }
-      Prop("safeAreaTop") { view: T3WorkspaceNavigationView, value: Float ->
+      Prop("safeAreaTop") { view: T2WorkspaceNavigationView, value: Float ->
         view.safeAreaTop = value
       }
-      Prop("safeAreaBottom") { view: T3WorkspaceNavigationView, value: Float ->
+      Prop("safeAreaBottom") { view: T2WorkspaceNavigationView, value: Float ->
         view.safeAreaBottom = value
       }
-      Prop("headerHeight") { view: T3WorkspaceNavigationView, value: Float ->
+      Prop("headerHeight") { view: T2WorkspaceNavigationView, value: Float ->
         view.headerHeight = value
       }
-      Prop("containerColor") { view: T3WorkspaceNavigationView, value: Int ->
+      Prop("containerColor") { view: T2WorkspaceNavigationView, value: Int ->
         view.containerColor = value
       }
-      Prop("selectedColor") { view: T3WorkspaceNavigationView, value: Int ->
+      Prop("selectedColor") { view: T2WorkspaceNavigationView, value: Int ->
         view.selectedColor = value
       }
-      Prop("indicatorColor") { view: T3WorkspaceNavigationView, value: Int ->
+      Prop("indicatorColor") { view: T2WorkspaceNavigationView, value: Int ->
         view.indicatorColor = value
       }
-      Prop("unselectedColor") { view: T3WorkspaceNavigationView, value: Int ->
+      Prop("unselectedColor") { view: T2WorkspaceNavigationView, value: Int ->
         view.unselectedColor = value
       }
-      Prop("actionColor") { view: T3WorkspaceNavigationView, value: Int ->
+      Prop("actionColor") { view: T2WorkspaceNavigationView, value: Int ->
         view.actionColor = value
       }
-      Prop("actionContentColor") { view: T3WorkspaceNavigationView, value: Int ->
+      Prop("actionContentColor") { view: T2WorkspaceNavigationView, value: Int ->
         view.actionContentColor = value
       }
       Events("onTabSelected", "onNewThread", "onOverlayChange")
@@ -110,7 +110,7 @@ class T3WorkspaceNavigationModule : Module() {
 }
 
 /** One Material3 selection surface moves from below the list to its leading edge. */
-class T3WorkspaceNavigationView(
+class T2WorkspaceNavigationView(
   context: Context,
   appContext: AppContext
 ) : ExpoView(context, appContext) {
@@ -261,7 +261,7 @@ class T3WorkspaceNavigationView(
             },
           ) {
             Icon(
-              painterResource(R.drawable.t3_menu),
+              painterResource(R.drawable.t2_menu),
               contentDescription = null,
               tint = Color(unselectedColor),
             )
@@ -306,7 +306,7 @@ class T3WorkspaceNavigationView(
         Modifier.padding(start = (FAB_SIZE - ICON_SIZE) / 2).clipToBounds(),
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        Icon(painterResource(R.drawable.t3_new_thread), contentDescription = null)
+        Icon(painterResource(R.drawable.t2_new_thread), contentDescription = null)
         Text(
           "New thread",
           Modifier.padding(start = 12.dp).alpha(labelAlpha(fraction)).clearAndSetSemantics {},
@@ -369,10 +369,10 @@ class T3WorkspaceNavigationView(
   @Composable
   private fun tabIconPainter(tab: String) = painterResource(
     when (tab) {
-      "threads" -> R.drawable.t3_chats
-      "pullRequests" -> R.drawable.t3_pull_requests
-      "usage" -> R.drawable.t3_usage
-      else -> R.drawable.t3_settings
+      "threads" -> R.drawable.t2_chats
+      "pullRequests" -> R.drawable.t2_pull_requests
+      "usage" -> R.drawable.t2_usage
+      else -> R.drawable.t2_settings
     }
   )
 

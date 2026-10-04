@@ -141,8 +141,8 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           yield* encodeUnknownJson({
             version: 1,
             pid,
-            port: 3773,
-            origin: "http://127.0.0.1:3773",
+            port: 3772,
+            origin: "http://127.0.0.1:3772",
             startedAt: "2026-10-01T00:00:00.000Z",
           }),
         );
@@ -1237,7 +1237,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         expect(resolved.otlpLogsUrl).toBe("http://settings:4318/v1/logs");
         expect(resolved.otlpLogsExport.headers).toEqual({ "x-key": "secret" });
         expect(resolved).toMatchObject({
-          otlpTracesVariable: "T3CODE_OTLP_TRACES_URL",
+          otlpTracesVariable: "T2CODE_OTLP_TRACES_URL",
           otlpMetricsVariable: "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
         });
         expect(resolved.otlpLogsVariable).toBeUndefined();
@@ -1330,7 +1330,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         privateNetworkOnly: true,
       });
       // `service.env` reaches the server as its environment.
-      expect(yield* resolveHost({ connected: true, env: { T3CODE_HOST: "127.0.0.1" } })).toEqual({
+      expect(yield* resolveHost({ connected: true, env: { T2CODE_HOST: "127.0.0.1" } })).toEqual({
         host: "127.0.0.1",
         privateNetworkOnly: undefined,
       });

@@ -37,9 +37,9 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-boot-service-" });
-  const t3Home = path.join(root, ".t3");
-  const serviceHome = input.unitServesOtherHome ? path.join(root, "other") : t3Home;
-  for (const home of [t3Home, serviceHome]) {
+  const t2Home = path.join(root, ".t2");
+  const serviceHome = input.unitServesOtherHome ? path.join(root, "other") : t2Home;
+  for (const home of [t2Home, serviceHome]) {
     yield* fs.makeDirectory(path.join(home, "userdata"), { recursive: true });
   }
   yield* fs.makeDirectory(path.join(serviceHome, "runtime"));
@@ -112,7 +112,7 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
       }),
   });
   const result = yield* Effect.scoped(
-    ServerOwnership.acquireServerOwnership(path.join(t3Home, "userdata", "server-runtime.json")),
+    ServerOwnership.acquireServerOwnership(path.join(t2Home, "userdata", "server-runtime.json")),
   ).pipe(
     Effect.provideService(ProcessRunner.ProcessRunner, runner),
     Effect.provideService(HostProcess.Platform, input.platform),
@@ -131,7 +131,7 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
     ["launchctl print", "launchctl print-disabled", "systemctl is-active", "systemctl is-enabled"],
     probes,
   );
-  return { result, t3Home };
+  return { result, t2Home };
 });
 
 describe("server ownership", () => {
@@ -363,12 +363,12 @@ describe("server ownership", () => {
             environment: { [SERVICE_LAUNCHER_CONTEXT_ENV]: "{}" },
           },
         ] as const) {
-          const { result, t3Home } = yield* startBesideBootService(fixture);
+          const { result, t2Home } = yield* startBesideBootService(fixture);
           assert.equal(result._tag, "Failure");
           if (result._tag !== "Failure") return;
           assert.equal(result.failure._tag, "OlderBootServiceError");
           assert.equal(Runtime.getErrorExitCode(result.failure), 78);
-          assert.include(result.failure.message, t3Home);
+          assert.include(result.failure.message, t2Home);
           assert.include(result.failure.message, "t3 update");
           assert.include(result.failure.message, "t3 service restart");
           assert.include(result.failure.message, "No server was stopped");

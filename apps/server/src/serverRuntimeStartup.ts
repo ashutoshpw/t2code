@@ -29,7 +29,7 @@ import * as Stream from "effect/Stream";
 
 import * as ServerConfig from "./config.ts";
 import * as ServerSecretStore from "./auth/ServerSecretStore.ts";
-import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import * as FetchHttpClient from "effect/http/FetchHttpClient";
 import * as ServiceLauncherClient from "./cloud/serviceLauncherClient.ts";
 import { runEnvironmentLabelRelaySync } from "./cloud/EnvironmentLabelRelaySync.ts";
 import { flushCompileCache } from "./compileCache.ts";

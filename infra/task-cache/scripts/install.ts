@@ -84,9 +84,9 @@ const prompt = NodeReadlinePromises.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
-let endpoint = process.env.T3_CACHE_SETUP_URL || defaultEndpoint;
-let name = process.env.T3_CACHE_SETUP_NAME || credentials[endpoint]?.name;
-let token = process.env.T3_CACHE_SETUP_TOKEN || credentials[endpoint]?.token;
+let endpoint = process.env.T2_CACHE_SETUP_URL || defaultEndpoint;
+let name = process.env.T2_CACHE_SETUP_NAME || credentials[endpoint]?.name;
+let token = process.env.T2_CACHE_SETUP_TOKEN || credentials[endpoint]?.token;
 const initialEndpoint = endpoint;
 const initialName = name;
 try {
@@ -97,7 +97,7 @@ try {
     if (process.stdin.isTTY || !token || endpoint !== initialEndpoint || name !== initialName) {
       const savedToken = endpoint === initialEndpoint && name === initialName ? token : undefined;
       if (!process.stdin.isTTY)
-        throw new Error("Use T3_CACHE_SETUP_TOKEN for non-interactive setup.");
+        throw new Error("Use T2_CACHE_SETUP_TOKEN for non-interactive setup.");
       process.stdout.write(
         `Credential token (hidden)${savedToken ? " [Enter keeps saved token]" : ""}: `,
       );

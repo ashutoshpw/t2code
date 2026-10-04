@@ -8,7 +8,7 @@
     "index.ts",
     "LICENSE",
     "UPSTREAM.md",
-    "T3SourceText.podspec",
+    "T2SourceText.podspec",
     "react-native.config.js"
   ],
   "main": "./index.ts",
@@ -19,13 +19,13 @@
     "react-native": "*"
   },
   "codegenConfig": {
-    "name": "T3SourceTextSpec",
+    "name": "T2SourceTextSpec",
     "type": "components",
     "jsSrcsDir": "src",
     "ios": {
       "componentProvider": {
-        "T3SourceText": "T3SourceText",
-        "T3SourceTextRun": "T3SourceTextRun"
+        "T2SourceText": "T2SourceText",
+        "T2SourceTextRun": "T2SourceTextRun"
       }
     },
     "outputDir": {

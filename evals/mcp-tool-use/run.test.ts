@@ -563,8 +563,8 @@ it.each([
   "ssh -L 8095:localhost:8095 build-mac 'cat /tmp/metro.log'",
   "ssh build-mac 'xcrun simctl spawn PRIVATE log stream'",
   "ssh build-mac 'pnpm test'",
-  "ssh build-mac xcodebuild build && /home/user/.t3/device/bin/agent-device snapshot -i",
-  "ssh build-mac 'xcodebuild build' && /home/user/.t3/device/bin/agent-device screenshot /tmp/proof.png",
+  "ssh build-mac xcodebuild build && /home/user/.t2/device/bin/agent-device snapshot -i",
+  "ssh build-mac 'xcodebuild build' && /home/user/.t2/device/bin/agent-device screenshot /tmp/proof.png",
   "cat /home/user/uiux-lab/LAB.md",
   "lab-ui --help",
   "xcrun simctl io PRIVATE screenshot --help",
@@ -637,7 +637,7 @@ it("shares failed device attempts across tools and launcher steps, resetting onl
     failed: true,
     input:
       tool === "Bash"
-        ? { command: "/home/user/.t3/device/bin/agent-device snapshot -i --session t3-eval" }
+        ? { command: "/home/user/.t2/device/bin/agent-device snapshot -i --session t3-eval" }
         : {},
   });
   const calls = [
@@ -707,7 +707,7 @@ it("keeps the shared recovery budget when a case is decoded and graded", () => {
     step,
     tool,
     failed: true,
-    input: tool === "Bash" ? { command: "/home/user/.t3/device/bin/agent-device snapshot -i" } : {},
+    input: tool === "Bash" ? { command: "/home/user/.t2/device/bin/agent-device snapshot -i" } : {},
   }));
   const run = { calls, text: "Canvas is blocked: daemon unavailable.", stopReason: "end_turn" };
   assert.isTrue(
@@ -728,7 +728,7 @@ it.each([
 ] as const)(
   "requires executed managed recording start and stop: %s",
   (_, operations, failed, pass) => {
-    const launcher = "/home/user/.t3/device/bin/agent-device";
+    const launcher = "/home/user/.t2/device/bin/agent-device";
     const command = (operation: string) => {
       const [form, step] = operation.split(" ");
       if (form === "echo") return `echo '${launcher} record ${step}'`;
@@ -923,7 +923,7 @@ it.each([
   ["/usr/bin/nohup", " &"],
   ["", ""],
 ])("shares wrapped literal aliases across recording calls: %s", (wrapper, suffix) => {
-  const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
   const calls = [
     `AD='${launcher}'; DRIVER=$AD`,
     `${wrapper} "\${DRIVER}" record start /tmp/raw.mp4${suffix}`,
@@ -969,7 +969,7 @@ it.each([
   ["max steps", "LAUNCHER record start /tmp/raw.mp4; LAUNCHER record stop", "max_steps", false],
   ["non-shell tool", "LAUNCHER record start /tmp/raw.mp4; LAUNCHER record stop", "end_turn", false],
 ] as const)("rejects recording over-acceptance: %s", (name, command, stopReason, pass) => {
-  const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
   const run = {
     calls: [
       {
@@ -991,7 +991,7 @@ it.each([
 });
 
 it("counts separately observed failed calls without multiplying aggregate failures", () => {
-  const launcher = "/home/user/.t3/device/bin/agent-device";
+  const launcher = "/home/user/.t2/device/bin/agent-device";
   for (const commands of [
     [0, 1, 2].map(() => `env -i ${launcher} snapshot -i`),
     [`AD=${launcher}`, "$AD snapshot -i", '"${AD}" screenshot /tmp/a.png', "$AD snapshot -i"],
@@ -1060,7 +1060,7 @@ it("requires successful managed open and a capture attempt for each UI case", ()
 });
 
 it("requires the recording path in the terminal assistant response", () => {
-  const launcher = "/home/user/.t3/device/bin/agent-device";
+  const launcher = "/home/user/.t2/device/bin/agent-device";
   const calls = ["start /tmp/raw.mp4", "stop"].map((op, step) => ({
     step,
     tool: "Bash",
@@ -1180,7 +1180,7 @@ it.effect("accepts a successful exact-host recovery after a real device_open err
 );
 
 it("keeps subshell-only launcher aliases out of the parent shell", () => {
-  const launcher = "/home/user/.t3/device/bin/agent-device";
+  const launcher = "/home/user/.t2/device/bin/agent-device";
   const command = `(AD=${launcher}); $AD record start /tmp/raw.mp4; $AD record stop`;
   const run = {
     calls: [{ step: 0, tool: "Bash", input: { command }, failed: false }],
@@ -1193,7 +1193,7 @@ it("keeps subshell-only launcher aliases out of the parent shell", () => {
 });
 
 it("does not mistake flag values for recording operations", () => {
-  const launcher = "/home/user/.t3/device/bin/agent-device";
+  const launcher = "/home/user/.t2/device/bin/agent-device";
   const calls = ["start", "stop"].map((op, step) => ({
     step,
     tool: "Bash",
@@ -1261,7 +1261,7 @@ it.each([
 );
 
 it("keeps escaped launcher references literal", () => {
-  const launcher = "/home/user/.t3/device/bin/agent-device";
+  const launcher = "/home/user/.t2/device/bin/agent-device";
   const command = `AD=${launcher}; "\\$AD" record start /tmp/raw.mp4; "\\$AD" record stop`;
   const run = {
     calls: [{ step: 0, tool: "Bash", input: { command }, failed: false }],
@@ -1338,7 +1338,7 @@ it.each([
   ["snapshot -i", true],
 ] as const)("credits only new captures through the returned launcher: %s", (operation, pass) => {
   const c = deviceCases().find((c) => c.id === "HOST-01a")!;
-  const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
   const input = {
     hostId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     deviceId: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB",
@@ -1382,9 +1382,9 @@ it.each([
   (_, launcher, operation, pass) => {
     const primary = { hostId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", deviceId: "PRIMARY" };
     const spare = { hostId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", deviceId: "SPARE" };
-    const shared = "/home/user/.t3/userdata/device/bin/agent-device";
+    const shared = "/home/user/.t2/userdata/device/bin/agent-device";
     const bound = (session: string) =>
-      `/home/user/.t3/userdata/device/targets/${session}/agent-device`;
+      `/home/user/.t2/userdata/device/targets/${session}/agent-device`;
     const open = (step: number, target: typeof primary, session: string) => ({
       step,
       tool: "device_open",
@@ -1458,7 +1458,7 @@ it.each([
 ] as const)(
   "credits a recording start only when the call's status covers it: %s",
   (_, start, output, pass) => {
-    const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+    const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
     const calls = [
       { step: 0, tool: "Bash", failed: false, output, input: { command: `${launcher} ${start}` } },
       { step: 1, tool: "Bash", failed: false, input: { command: `${launcher} record stop` } },
@@ -1485,7 +1485,7 @@ it.each([
 ] as const)(
   "credits a recording a Python script started only with an attributable result: %s",
   (_, output, pass) => {
-    const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+    const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
     const script = `python3 -c "import subprocess; subprocess.run(['${launcher}', 'record', 'start', '/tmp/demo/voice.mp4'])"`;
     const calls = [
       { step: 0, tool: "Bash", failed: false, output, input: { command: script } },
@@ -1527,7 +1527,7 @@ it.each([
   ],
 ] as const)("credits a managed capture in an if statement by its branch: %s", (_, script, pass) => {
   const c = deviceCases().find((c) => c.id === "HOST-01a")!;
-  const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
   const input = {
     hostId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     deviceId: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB",
@@ -1587,7 +1587,7 @@ it.each([
     true,
   ],
 ] as const)("credits a recording only when its commands are reachable: %s", (_, command, pass) => {
-  const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
   const calls = [
     {
       step: 0,
@@ -1618,7 +1618,7 @@ it.each([
 ] as const)(
   "counts agent-device errors a later command masked toward the failure budget: %s",
   (_, output, pass) => {
-    const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+    const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
     const command = `${launcher} snapshot; ${launcher} snapshot; ${launcher} snapshot; echo ok`;
     const calls = [{ step: 0, tool: "Bash", failed: false, output, input: { command } }];
     const checks = gradeDevice({ maxFailedAttemptsPerTurn: 2 }, { calls });
@@ -1643,7 +1643,7 @@ it.each([
     false,
   ],
 ] as const)("credits recordings from scripts only for calls that run: %s", (_, body, pass) => {
-  const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
   // The parser reads literal argv, so each call names the launcher.
   const script = `${body.replaceAll("run(", `require('child_process').execFileSync('${launcher}', `)};`;
   const calls = [
@@ -1667,7 +1667,7 @@ it.each([
 });
 
 it("credits a recording whose result lines carry a symbol prefix", () => {
-  const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
   const calls = [
     {
       step: 0,
@@ -1729,7 +1729,7 @@ it("OWN-03 passes a reported conflict and fails reuse or close of the owner's se
     hostId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     deviceId: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB",
   };
-  const launcher = "/home/user/.t3/userdata/device/targets/t3-acme/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/targets/t3-acme/agent-device";
   const owner = "t3-a062c547ef0b6bf8ee839b67";
   const trace = (command: string, finalText: string): SampleRun => ({
     calls: [
@@ -1946,7 +1946,7 @@ it.each([
   );
 });
 
-const r6Launcher = "/home/user/.t3/userdata/device/targets/t3-proof/agent-device";
+const r6Launcher = "/home/user/.t2/userdata/device/targets/t3-proof/agent-device";
 it.each([
   ["false and", "false && LAUNCHER record start /tmp/raw.mp4; LAUNCHER record stop", false],
   ["dead subshell", "false && (LAUNCHER record start /tmp/raw.mp4; LAUNCHER record stop)", false],
@@ -2291,7 +2291,7 @@ it.each([
 ] as const)(
   "R7 requires attributable recording outcomes: %s",
   (_, source, output, failed, pass) => {
-    const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+    const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
     const calls = [
       {
         step: 0,
@@ -2337,7 +2337,7 @@ it.each([
   ["true && false", false],
   ["test -f flag", false],
 ] as const)("R7 requires certain execution in an elif recording: %s", (condition, pass) => {
-  const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
   const command = `if false; then :; elif ${condition}; then ${launcher} record start /tmp/demo/voice.mp4; fi`;
   const calls = [
     { step: 0, tool: "Bash", failed: false, output: "Recording started", input: { command } },
@@ -2480,7 +2480,7 @@ const fleetTrace = (id: string): SampleRun => {
     hostId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     deviceId: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB",
   };
-  const launcher = "/home/user/.t3/userdata/device/targets/t3-acme/agent-device";
+  const launcher = "/home/user/.t2/userdata/device/targets/t3-acme/agent-device";
   const reports: Record<string, string> = {
     "DISC-01": "build-mac discovery failed. Used spare-mac. /tmp/proof/discovery-settings.png",
     "SESS-01": "Acme Settings: /tmp/proof/app-settings.png",
@@ -2782,7 +2782,7 @@ it("fleet CAP-01 accepts a usable managed recovery, never a zero-size MCP claim"
 it.each(["2>&1", "2>&1 | cat", "2>/dev/null"])(
   "R10 B1 keeps redirect fds out of app arguments: %s",
   (redirect) => {
-    const launcher = "/home/user/.t3/userdata/device/bin/agent-device";
+    const launcher = "/home/user/.t2/userdata/device/bin/agent-device";
     const actions = shellInvocations(`${launcher} open ${redirect}`);
     assert.deepEqual(actions[0]!.words, [launcher, "open"]);
     assert.deepEqual(shellInvocations(`${launcher} open 2 > /tmp/open.log`)[0]!.words, [
@@ -2883,7 +2883,7 @@ it.each(["bound", "shared"])(
     const c = deviceCases().find((c) => c.id === "SESS-01")!;
     const good = fleetTrace(c.id);
     const launcher =
-      form === "bound" ? good.launchers![0]! : "/home/user/.t3/userdata/device/bin/agent-device";
+      form === "bound" ? good.launchers![0]! : "/home/user/.t2/userdata/device/bin/agent-device";
     const flags =
       form === "shared"
         ? " --platform ios --udid BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB --config /home/user/host.json --session t3-acme"
@@ -3053,14 +3053,14 @@ it.effect(
 const capRun6 = [
   {
     ref: "api-dec6-base-claude-opus-5-5#36",
-    launchers: ["/home/user/.t3/userdata/device/bin/agent-device"],
+    launchers: ["/home/user/.t2/userdata/device/bin/agent-device"],
     calls: [
       {
         step: 6,
         tool: "Bash",
         input: {
           command:
-            'D=$(mktemp -d); /home/user/.t3/userdata/device/bin/agent-device screenshot $D/shot.png --platform android --serial emulator-5580 --config /home/user/.t3/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f; echo "exit=$?"; ls -l $D; file $D/shot.png 2>/dev/null',
+            'D=$(mktemp -d); /home/user/.t2/userdata/device/bin/agent-device screenshot $D/shot.png --platform android --serial emulator-5580 --config /home/user/.t2/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f; echo "exit=$?"; ls -l $D; file $D/shot.png 2>/dev/null',
           description: "Retry screenshot via agent-device CLI",
         },
         failed: false,
@@ -3074,14 +3074,14 @@ const capRun6 = [
   },
   {
     ref: "api-dec6-base-claude-opus-5-5#38",
-    launchers: ["/home/user/.t3/userdata/device/bin/agent-device"],
+    launchers: ["/home/user/.t2/userdata/device/bin/agent-device"],
     calls: [
       {
         step: 6,
         tool: "Bash",
         input: {
           command:
-            "mkdir -p /tmp/acme-shot && /home/user/.t3/userdata/device/bin/agent-device screenshot /tmp/acme-shot/settings.png --platform android --serial emulator-5580 --config /home/user/.t3/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f; ls -l /tmp/acme-shot/; file /tmp/acme-shot/settings.png",
+            "mkdir -p /tmp/acme-shot && /home/user/.t2/userdata/device/bin/agent-device screenshot /tmp/acme-shot/settings.png --platform android --serial emulator-5580 --config /home/user/.t2/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f; ls -l /tmp/acme-shot/; file /tmp/acme-shot/settings.png",
           description: "Capture screenshot via agent-device",
         },
         failed: false,
@@ -3095,14 +3095,14 @@ const capRun6 = [
   },
   {
     ref: "api-dec6-base-claude-sonnet-5-5#36",
-    launchers: ["/home/user/.t3/userdata/device/bin/agent-device"],
+    launchers: ["/home/user/.t2/userdata/device/bin/agent-device"],
     calls: [
       {
         step: 5,
         tool: "Bash",
         input: {
           command:
-            'A="/home/user/.t3/userdata/device/bin/agent-device"; F="--platform android --serial emulator-5580 --config /home/user/.t3/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f"; $A screenshot /tmp/acme-settings.png $F; ls -l /tmp/acme-settings.png; file /tmp/acme-settings.png',
+            'A="/home/user/.t2/userdata/device/bin/agent-device"; F="--platform android --serial emulator-5580 --config /home/user/.t2/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f"; $A screenshot /tmp/acme-settings.png $F; ls -l /tmp/acme-settings.png; file /tmp/acme-settings.png',
           description: "Retry screenshot via agent-device",
         },
         failed: false,
@@ -3116,14 +3116,14 @@ const capRun6 = [
   },
   {
     ref: "api-dec6-base-claude-sonnet-5-5#37",
-    launchers: ["/home/user/.t3/userdata/device/bin/agent-device"],
+    launchers: ["/home/user/.t2/userdata/device/bin/agent-device"],
     calls: [
       {
         step: 5,
         tool: "Bash",
         input: {
           command:
-            'AD="/home/user/.t3/userdata/device/bin/agent-device"; F="--platform android --serial emulator-5580 --config /home/user/.t3/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f"; $AD screenshot /tmp/acme-settings.png $F; ls -l /tmp/acme-settings.png; file /tmp/acme-settings.png',
+            'AD="/home/user/.t2/userdata/device/bin/agent-device"; F="--platform android --serial emulator-5580 --config /home/user/.t2/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f"; $AD screenshot /tmp/acme-settings.png $F; ls -l /tmp/acme-settings.png; file /tmp/acme-settings.png',
           description: "Retry screenshot via agent-device",
         },
         failed: false,
@@ -3137,14 +3137,14 @@ const capRun6 = [
   },
   {
     ref: "api-dec6-base-claude-sonnet-5-5#38",
-    launchers: ["/home/user/.t3/userdata/device/bin/agent-device"],
+    launchers: ["/home/user/.t2/userdata/device/bin/agent-device"],
     calls: [
       {
         step: 5,
         tool: "Bash",
         input: {
           command:
-            'A="/home/user/.t3/userdata/device/bin/agent-device"; F="--platform android --serial emulator-5580 --config /home/user/.t3/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f"; mkdir -p /tmp/acme-shot && $A screenshot /tmp/acme-shot/settings.png $F; ls -l /tmp/acme-shot; file /tmp/acme-shot/settings.png',
+            'A="/home/user/.t2/userdata/device/bin/agent-device"; F="--platform android --serial emulator-5580 --config /home/user/.t2/userdata/device/hosts/303617b9730210ef3c86c52d.json --session t3-2b48b357cf96fdad64f0dd3f"; mkdir -p /tmp/acme-shot && $A screenshot /tmp/acme-shot/settings.png $F; ls -l /tmp/acme-shot; file /tmp/acme-shot/settings.png',
           description: "Retry screenshot via agent-device",
         },
         failed: false,
@@ -3158,14 +3158,14 @@ const capRun6 = [
   },
   {
     ref: "api-dec6-cand-claude-opus-5-5#36",
-    launchers: ["/home/user/.t3/userdata/device/targets/t3-2b48b357cf96fdad64f0dd3f/agent-device"],
+    launchers: ["/home/user/.t2/userdata/device/targets/t3-2b48b357cf96fdad64f0dd3f/agent-device"],
     calls: [
       {
         step: 4,
         tool: "Bash",
         input: {
           command:
-            'A=/home/user/.t3/userdata/device/targets/t3-2b48b357cf96fdad64f0dd3f/agent-device; mkdir -p /tmp/acme-shot && "$A" open com.acme.app && "$A" screenshot /tmp/acme-shot/settings.png; echo "exit=$?"; ls -la /tmp/acme-shot/ 2>&1; file /tmp/acme-shot/settings.png 2>&1',
+            'A=/home/user/.t2/userdata/device/targets/t3-2b48b357cf96fdad64f0dd3f/agent-device; mkdir -p /tmp/acme-shot && "$A" open com.acme.app && "$A" screenshot /tmp/acme-shot/settings.png; echo "exit=$?"; ls -la /tmp/acme-shot/ 2>&1; file /tmp/acme-shot/settings.png 2>&1',
           description: "Open Acme app and capture screenshot via agent-device",
         },
         failed: false,
@@ -3179,7 +3179,7 @@ const capRun6 = [
   },
   {
     ref: "api-dec6-base-gpt-6.1-sol#34",
-    launchers: ["/home/user/.t3/userdata/device/bin/agent-device"],
+    launchers: ["/home/user/.t2/userdata/device/bin/agent-device"],
     calls: [
       {
         step: 9,
@@ -3212,7 +3212,7 @@ it.each(["bound", "shared"])("R12 CAP-01 rejects unattributable recovery mutatio
   const c = deviceCases().find((c) => c.id === "CAP-01")!;
   const good = { ...fleetTrace(c.id), finalText: "Verified Settings." };
   const launcher =
-    form === "bound" ? good.launchers![0]! : "/home/user/.t3/userdata/device/bin/agent-device";
+    form === "bound" ? good.launchers![0]! : "/home/user/.t2/userdata/device/bin/agent-device";
   const command = `mkdir -p /tmp/proof && ${launcher} screenshot /tmp/proof/recovered.png; ls -l /tmp/proof; file /tmp/proof/recovered.png`;
   const output =
     "Screenshot saved: /tmp/proof/recovered.png\n/tmp/proof/recovered.png: PNG image data, 1080 x 2400";
@@ -3249,7 +3249,7 @@ it.each(["bound", "shared"])(
     const c = deviceCases().find((c) => c.id === "SESS-01")!;
     const good = fleetTrace(c.id);
     const launcher =
-      form === "bound" ? good.launchers![0]! : "/home/user/.t3/userdata/device/bin/agent-device";
+      form === "bound" ? good.launchers![0]! : "/home/user/.t2/userdata/device/bin/agent-device";
     const flags =
       form === "shared"
         ? " --platform ios --udid BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB --config /home/user/host.json --session t3-acme"

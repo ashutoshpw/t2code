@@ -96,6 +96,29 @@ it("indexes nested disclosure summaries and bodies in rendered order", () => {
   ).toEqual(["Outer", "first", "Inner", "second"]);
 });
 
+it("uses Insight line breaks without splitting ordinary assistant prose", () => {
+  expect(assistantSegments("★ Insight ─────\nfirst line\nsecond line")).toEqual([
+    "★ Insight ─────",
+    " first line",
+    " second line",
+  ]);
+  expect(assistantSegments("first line\nsecond line")).toEqual(["first line second line"]);
+});
+
+it("indexes skill labels in prose but leaves links and code literal", () => {
+  expect(
+    searchableMessageSegments(
+      {
+        role: "assistant",
+        streaming: false,
+        text: "Use $test-t3-app now.\n\n`$test-t3-app`\n\n[$test-t3-app](https://example.com)",
+      },
+      undefined,
+      [{ name: "test-t3-app", displayName: "T2 App Testing" }],
+    ),
+  ).toEqual(["Use T2 App Testing now.", "$test-t3-app", "$test-t3-app"]);
+});
+
 it("indexes the citation chip label instead of its link text", () => {
   const citation = {
     version: 1 as const,

@@ -130,7 +130,7 @@ describe("AcpRuntimeModel", () => {
     } as EffectAcpSchema.InitializeResponse);
 
     expect(response.modes).toBeUndefined();
-    expect(response._meta).toMatchObject({ t3SessionLoadReady: "replay_idle" });
+    expect(response._meta).toMatchObject({ t2SessionLoadReady: "replay_idle" });
   });
 
   it("keeps initialize mode state whose modes have null descriptions", () => {
@@ -923,7 +923,7 @@ describe("AcpRuntimeModel", () => {
   it("turns future ACP content and session updates into explicit placeholders", () => {
     expect(
       acpContentBlockDisplayText({
-        type: "_t3_unknown",
+        type: "_t2_unknown",
         originalType: "chart",
         raw: { type: "chart", points: [] },
       }),
@@ -933,7 +933,7 @@ describe("AcpRuntimeModel", () => {
       parseSessionUpdateEvent({
         sessionId: "session-1",
         update: {
-          sessionUpdate: "_t3_unknown",
+          sessionUpdate: "_t2_unknown",
           originalSessionUpdate: "timeline_update",
           raw: { sessionUpdate: "timeline_update", entries: [] },
         },
@@ -1191,7 +1191,7 @@ describe("extractMcpToolCallIdentity", () => {
       sessionUpdate: "tool_call",
       toolCallId: "exec-f4591587-0754-4bb4-990b-f2767894ba93",
       kind: "execute",
-      title: "mcp.t3-code.orchestrator_capabilities",
+      title: "mcp.t2-code.orchestrator_capabilities",
       status: "in_progress",
       rawInput: { server: "t3-code", tool: "orchestrator_capabilities", arguments: {} },
       _meta: { is_mcp_tool_call: true },
@@ -1203,7 +1203,7 @@ describe("extractMcpToolCallIdentity", () => {
     });
   });
 
-  it("recovers T3 identity from acp-mcp-call fallback commands", () => {
+  it("recovers T2 identity from acp-mcp-call fallback commands", () => {
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "exec-1",
@@ -1218,16 +1218,16 @@ describe("extractMcpToolCallIdentity", () => {
           '/usr/bin/node /srv/t3/bin.ts acp-mcp-call delegate_task {"task":"x"}',
         ],
       }),
-    ).toEqual({ server: "t3-code", tool: "delegate_task", input: { task: "x" } });
+    ).toEqual({ server: "t2-code", tool: "delegate_task", input: { task: "x" } });
   });
 
-  it("recovers T3 identity from pi-acp title-only fallback execs", () => {
+  it("recovers T2 identity from pi-acp title-only fallback execs", () => {
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "call_JdxnvzjHHrbvyASTLVekLYWV|fc_08f5a805a7159aa6016a7ec4afad548191",
       kind: "execute",
       title:
-        '"$T3_ACP_MCP_NODE" "$T3_ACP_MCP_ENTRYPOINT" acp-mcp-call orchestrator_capabilities \'{}\'',
+        '"$T2_ACP_MCP_NODE" "$T2_ACP_MCP_ENTRYPOINT" acp-mcp-call orchestrator_capabilities \'{}\'',
       status: "in_progress",
       rawInput: null,
       content: [
@@ -1240,13 +1240,13 @@ describe("extractMcpToolCallIdentity", () => {
 
     expect(toolCall.title).toBe("Ran command");
     expect(extractMcpToolCallIdentity(toolCall)).toEqual({
-      server: "t3-code",
+      server: "t2-code",
       tool: "orchestrator_capabilities",
       input: {},
     });
   });
 
-  it("recovers T3 identity from server-namespaced titles across titleless updates", () => {
+  it("recovers T2 identity from server-namespaced titles across titleless updates", () => {
     const created = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "chatcmpl-tool-b2a6142ee1a510a5",
@@ -1265,16 +1265,40 @@ describe("extractMcpToolCallIdentity", () => {
     const merged = mergeToolCallState(created, completed);
 
     expect(extractMcpToolCallIdentity(merged)).toEqual({
-      server: "t3-code",
+      server: "t2-code",
       tool: "orchestrator_capabilities",
     });
   });
 
-  it("recovers T3 identity across the registry agents' naming conventions", () => {
+  it("recovers T2 identity from Gemini and qwen MCP-server title templates", () => {
+    const gemini = toolCallFromUpdate({
+      sessionUpdate: "tool_call",
+      toolCallId: "gemini-1",
+      kind: "other",
+      title: "delegate_task (t3-code MCP Server)",
+      status: "in_progress",
+    });
+    const qwen = toolCallFromUpdate({
+      sessionUpdate: "tool_call",
+      toolCallId: "qwen-1",
+      kind: "other",
+      title: 'task_status (t3-code MCP Server): {"taskId":"node:delegated-task:1"}',
+      status: "pending",
+      rawInput: { taskId: "node:delegated-task:1" },
+    });
+
+    expect(extractMcpToolCallIdentity(gemini)).toEqual({
+      server: "t2-code",
+      tool: "delegate_task",
+    });
+    expect(extractMcpToolCallIdentity(qwen)).toEqual({ server: "t2-code", tool: "task_status" });
+  });
+
+  it("recovers T2 identity across the registry agents' naming conventions", () => {
     for (const title of [
       "t3-code___delegate_task",
       "t3-code-delegate_task",
-      'mcp__t3_code__delegate_task: {"mode":"async"}',
+      'mcp__t2_code__delegate_task: {"mode":"async"}',
       't3-code__delegate_task: {"mode":"async"}',
       "delegate_task_t3-code",
       "t3-code/delegate_task",
@@ -1292,13 +1316,14 @@ describe("extractMcpToolCallIdentity", () => {
         status: "pending",
       });
       expect(extractMcpToolCallIdentity(toolCall), title).toEqual({
-        server: "t3-code",
+        server: "t2-code",
         tool: "delegate_task",
       });
     }
   });
 
-  it("does not claim an agent's own tool that shares a T3 tool name", () => {
+  it("does not claim an agent's own tool that shares a T2 tool name", () => {
+    // Hermes' built-in delegate_task, titled "<tool>: <description>" like all its calls.
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "own-delegate-1",
@@ -1309,8 +1334,9 @@ describe("extractMcpToolCallIdentity", () => {
     expect(extractMcpToolCallIdentity(toolCall)).toBeUndefined();
   });
 
-  it("recovers T3 identity from goose _meta despite LLM-rewritten titles", () => {
-    // goose titles change asynchronously; only _meta.goose.toolCall is stable.
+  it("recovers T2 identity from goose _meta despite LLM-rewritten titles", () => {
+    // goose enriches titles asynchronously, so only _meta.goose.toolCall is
+    // stable; shape from crates/goose/src/acp/server/tool_calls/conversion.rs.
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "goose-1",
@@ -1325,25 +1351,27 @@ describe("extractMcpToolCallIdentity", () => {
     });
 
     expect(extractMcpToolCallIdentity(toolCall)).toEqual({
-      server: "t3-code",
+      server: "t2-code",
       tool: "task_status",
     });
   });
 
-  it("recovers T3 identity from qwen serverId meta regardless of prefix format", () => {
-    // qwen-code 0.21.12 serverId asserts MCP origin even when tool prefixes change.
+  it("recovers T2 identity from qwen serverId meta regardless of prefix format", () => {
+    // qwen-code 0.21.12 emits _meta.serverId + _meta.toolName; serverId is an
+    // explicit origin assertion, so a known tool suffix suffices even if the
+    // prefix format changes.
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "qwen-meta-1",
       kind: "other",
       title: "unrelated display title",
       status: "pending",
-      _meta: { toolName: "mcp::t3-code::t3_thread_send", serverId: "t3-code", provenance: "mcp" },
+      _meta: { toolName: "mcp::t3-code::t2_thread_send", serverId: "t3-code", provenance: "mcp" },
     });
 
     expect(extractMcpToolCallIdentity(toolCall)).toEqual({
-      server: "t3-code",
-      tool: "t3_thread_send",
+      server: "t2-code",
+      tool: "t2_thread_send",
     });
   });
 
@@ -1384,7 +1412,7 @@ describe("extractMcpToolCallIdentity", () => {
     },
   );
 
-  it("uses the asserted server instead of a misleading T3 title", () => {
+  it("uses the asserted server instead of a misleading T2 title", () => {
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "foreign-1",

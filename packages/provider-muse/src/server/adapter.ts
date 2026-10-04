@@ -1823,7 +1823,8 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
           const config = mcpSession
             ? {
                 mcpServers: {
-                  // Muse's required default fails runs if T3 tools are unreachable; make them optional.
+                  // Muse defaults to "required", which fails the whole run when T2's
+                  // tools cannot be reached. The agent should still work without them.
                   "t3-code": {
                     transport: "streamableHttp",
                     mode: "optional",
@@ -2070,7 +2071,8 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
                   ...parts,
                 ],
                 displayText: turnInput.message.text || "Image attachment",
-                // Resumed sessions retain old roots; pin edits to the current checkout.
+                // A resumed session keeps the root it was created with; pin it to
+                // this thread's current checkout so edits land where T2 tracks them.
                 workspaceRoots: [workspaceRoot],
                 ifBusy: "queue",
                 ...(effort ? { reasoningEffort: effort } : {}),
@@ -2352,14 +2354,15 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
                 }),
             ),
           ),
-        // Muse rejects completed-turn forks with InvalidCut; use portable handoff without rewinding.
+        // Muse rejects forks at completed-turn boundaries (InvalidCut), so T2 uses
+        // portable context handoff for forks and does not rewind Muse conversations.
         rollbackThread: (args) =>
           Effect.fail(
             new ProviderAdapter.ProviderAdapterRollbackThreadError({
               driver: MUSE_PROVIDER,
               providerThreadId: args.providerThread.id,
               checkpointId: args.target.checkpointId,
-              cause: "Muse Code does not support conversation rollback in T3 Code.",
+              cause: "Muse Code does not support conversation rollback in T2 Code.",
             }),
           ),
         forkThread: (args) =>
@@ -2367,7 +2370,7 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
             new ProviderAdapter.ProviderAdapterForkThreadError({
               driver: MUSE_PROVIDER,
               providerThreadId: args.sourceProviderThread.id,
-              cause: "Muse Code does not support native forks in T3 Code.",
+              cause: "Muse Code does not support native forks in T2 Code.",
             }),
           ),
       };

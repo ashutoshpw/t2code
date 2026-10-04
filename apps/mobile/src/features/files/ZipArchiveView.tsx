@@ -360,7 +360,7 @@ function ZipArchiveProgress(props: {
   const { timeLeft } = props;
   return (
     <View className="flex-1 justify-center gap-3 bg-sheet px-8">
-      <Text className="text-xl font-t3-semibold text-foreground">
+      <Text className="text-xl font-t2-semibold text-foreground">
         {formatAttachmentSize(props.receivedBytes)}
         {props.totalBytes > 0 ? (
           <Text className="text-xl text-foreground-muted">

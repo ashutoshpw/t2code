@@ -5,7 +5,7 @@ group = 'com.t3tools.highlights'
 version = '0.0.0'
 
 android {
-  namespace 'expo.modules.t3highlights'
+  namespace 'expo.modules.t2highlights'
   ndkVersion rootProject.ext.ndkVersion
   compileSdk rootProject.ext.compileSdkVersion
 

@@ -215,7 +215,7 @@ function PairingForm({
           />
 
           <View collapsable={false} className="gap-2">
-            <Text className="px-4 text-sm font-t3-medium text-foreground-muted">Or enter it</Text>
+            <Text className="px-4 text-sm font-t2-medium text-foreground-muted">Or enter it</Text>
             <View
               collapsable={false}
               className={cn(
@@ -226,7 +226,7 @@ function PairingForm({
               <PairingInputRow
                 label="Address"
                 keyboardType="url"
-                placeholder="192.168.1.100:3773"
+                placeholder="192.168.1.100:3772"
                 value={hostInput}
                 onChangeText={handleHostChange}
               />
@@ -254,7 +254,7 @@ function PairingForm({
             </Text>
           </View>
 
-          {hasCloudPublicConfig() ? <T3ConnectSection /> : null}
+          {hasCloudPublicConfig() ? <T2ConnectSection /> : null}
         </View>
       </ScrollView>
     </SettingsScreen>
@@ -338,7 +338,7 @@ function PairingScanCard(props: {
                 weight="light"
               />
               <Text
-                className={cn("font-t3-medium text-sm", light ? "text-black/70" : "text-white/80")}
+                className={cn("font-t2-medium text-sm", light ? "text-black/70" : "text-white/80")}
               >
                 Tap to scan
               </Text>
@@ -353,7 +353,7 @@ function PairingScanCard(props: {
   );
 }
 
-function T3ConnectSection() {
+function T2ConnectSection() {
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const navigation = useNavigation();
   const { connectedEnvironments, onSetEnvironmentEnabled, onRemoveEnvironmentPress } =
@@ -365,7 +365,7 @@ function T3ConnectSection() {
 
   return (
     <View collapsable={false} className="gap-2">
-      <Text className="px-4 text-sm font-t3-medium text-foreground-muted">
+      <Text className="px-4 text-sm font-t2-medium text-foreground-muted">
         Or use the managed relay
       </Text>
       {isSignedIn ? (

@@ -725,7 +725,7 @@ export function NewTaskDraftScreen(props: {
   ) : null;
   const hero = flow.isScratchDraft ? (
     <View className="items-center gap-2 px-6" testID="new-task-hero">
-      <Text className="text-center text-2xl font-t3-medium tracking-tight text-foreground">
+      <Text className="text-center text-2xl font-t2-medium tracking-tight text-foreground">
         What should we work on?
       </Text>
       <View className="flex-row flex-wrap items-center justify-center gap-x-1">

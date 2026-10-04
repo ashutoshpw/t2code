@@ -31,7 +31,7 @@ export class OpenCode2Server extends Context.Service<
 
 /**
  * OpenCode 2 always requires one and prints a generated one to stdout
- * otherwise, so T3 supplies its own and keeps it in memory.
+ * otherwise, so T2 supplies its own and keeps it in memory.
  */
 const generatePassword = Effect.gen(function* () {
   const crypto = yield* Crypto.Crypto;
@@ -39,7 +39,11 @@ const generatePassword = Effect.gen(function* () {
   return Redacted.make(Base64Url.encode(bytes), { label: "OPENCODE_PASSWORD" });
 });
 
-/** OPENCODE_PASSWORD overrides OPENCODE_SERVER_PASSWORD; drop the inherited 1.x variable. */
+/**
+ * `OPENCODE_PASSWORD` wins over `OPENCODE_SERVER_PASSWORD` in OpenCode 2, so
+ * the inherited 1.x variable is dropped to keep the T2 password the only one in
+ * play.
+ */
 export const serverEnvironment = (
   environment: NodeJS.ProcessEnv,
   password: Redacted.Redacted,

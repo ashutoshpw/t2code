@@ -4,12 +4,12 @@ import UIKit.UIGestureRecognizerSubclass
 /// UIKit menu-dismiss taps still reach RN's surface handler (react-native#58983).
 /// Adapted from expo-modules-core's SystemMenuTouchGate (MIT), which only covers SwiftUI windows;
 /// this also covers MenuView buttons and header menus.
-final class T3MenuDismissTouchGate: UIGestureRecognizer, UIGestureRecognizerDelegate {
+final class T2MenuDismissTouchGate: UIGestureRecognizer, UIGestureRecognizerDelegate {
   static func install(in window: UIWindow) {
-    guard !(window.gestureRecognizers ?? []).contains(where: { $0 is T3MenuDismissTouchGate }) else {
+    guard !(window.gestureRecognizers ?? []).contains(where: { $0 is T2MenuDismissTouchGate }) else {
       return
     }
-    window.addGestureRecognizer(T3MenuDismissTouchGate())
+    window.addGestureRecognizer(T2MenuDismissTouchGate())
   }
 
   private init() {
@@ -58,7 +58,7 @@ final class T3MenuDismissTouchGate: UIGestureRecognizer, UIGestureRecognizerDele
   }
 }
 
-public final class T3MenuDismissTouchGateSubscriber: ExpoAppDelegateSubscriber {
+public final class T2MenuDismissTouchGateSubscriber: ExpoAppDelegateSubscriber {
   public func subscriberDidRegister() {
     NotificationCenter.default.addObserver(
       self,
@@ -70,6 +70,6 @@ public final class T3MenuDismissTouchGateSubscriber: ExpoAppDelegateSubscriber {
 
   @objc private func windowDidBecomeVisible(_ notification: Notification) {
     guard let window = notification.object as? UIWindow else { return }
-    T3MenuDismissTouchGate.install(in: window)
+    T2MenuDismissTouchGate.install(in: window)
   }
 }

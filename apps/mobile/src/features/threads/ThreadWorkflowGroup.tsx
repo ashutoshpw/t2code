@@ -185,7 +185,7 @@ function WorkflowMemberRow(props: {
             <Text
               textRole="footnote"
               numberOfLines={1}
-              className="min-w-0 shrink font-t3-medium text-foreground"
+              className="min-w-0 shrink font-t2-medium text-foreground"
             >
               {presentation.title}
             </Text>
@@ -199,7 +199,7 @@ function WorkflowMemberRow(props: {
             </Text>
             <Text
               textRole="label"
-              className={cn("shrink-0 font-t3-medium", SUBAGENT_TONE_TEXT_CLASS[presentation.tone])}
+              className={cn("shrink-0 font-t2-medium", SUBAGENT_TONE_TEXT_CLASS[presentation.tone])}
             >
               {presentation.statusLabel}
             </Text>

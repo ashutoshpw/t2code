@@ -101,7 +101,12 @@ function makeWireTee() {
         }),
     };
   };
-  // Grok can report idle before its wake turns; wait for prompt queues, tasks and subagents to finish.
+  // Grok runs its own wake turns (`task-completed-*`, `notifications-*`,
+  // `subagent-completed-*`) after T2's run can already have settled, and its
+  // session roster can report idle before them. Grok is done when no session
+  // has a queued or running prompt (`x.ai/queue/changed` vs `turn_completed`),
+  // no background task still runs (`background_tasks`), and every spawned
+  // subagent finished (`subagent_spawned` vs `subagent_finished`).
   const grokHasPendingWork = () => {
     const queues = new Map<unknown, Record<string, unknown>>();
     const tasks = new Map<unknown, ReadonlyArray<unknown>>();
@@ -182,7 +187,8 @@ function wireToEntries(wire: ReadonlyArray<WireMessage>): {
     const pending = direction === "outgoing" ? agentRequests : t3Requests;
     const method = pending.get(String(message.id));
     if (method === undefined) {
-      // Grok answers internal requests on this stream; T3 drops them before replay.
+      // Grok answers its own internal requests (e.g. id "skills-reload") on the
+      // shared stream; T2's protocol drops those, so replay never sees them.
       droppedFrames += 1;
       continue;
     }
@@ -201,7 +207,7 @@ function wireToEntries(wire: ReadonlyArray<WireMessage>): {
   return { entries, droppedFrames };
 }
 
-const T3_INSTRUCTIONS_BODY = /<t3_code_instructions>\n[\s\S]*?\n<\/t3_code_instructions>/u;
+const T2_INSTRUCTIONS_BODY = /<t2_code_instructions>\n[\s\S]*?\n<\/t2_code_instructions>/u;
 
 function normalizeOutboundFrame(frame: Record<string, unknown>, runtimeInstructions: string) {
   const params = isRecord(frame.params) ? frame.params : undefined;
@@ -237,8 +243,8 @@ function normalizeOutboundFrame(frame: Record<string, unknown>, runtimeInstructi
               ? {
                   ...part,
                   text: part.text.replace(
-                    T3_INSTRUCTIONS_BODY,
-                    "<t3_code_instructions>\n<any>\n</t3_code_instructions>",
+                    T2_INSTRUCTIONS_BODY,
+                    "<t2_code_instructions>\n<any>\n</t2_code_instructions>",
                   ),
                 }
               : part,
@@ -403,7 +409,7 @@ const recordScenario = Effect.fn("recordGrokScenario")(function* (fixtureName: s
   };
 
   const tee = makeWireTee();
-  const settings = { ...DEFAULT_GROK_SETTINGS, binaryPath: process.env.T3_GROK_BIN ?? "grok" };
+  const settings = { ...DEFAULT_GROK_SETTINGS, binaryPath: process.env.T2_GROK_BIN ?? "grok" };
   const layerRegistry = ProviderAdapterRegistry.layerFromAdaptersEffect(
     Effect.gen(function* () {
       const environment = yield* HostProcess.Environment;
@@ -511,7 +517,7 @@ const recordScenario = Effect.fn("recordGrokScenario")(function* (fixtureName: s
       generatedBy: "live-grok-recorder",
       grokVersion: initializeMeta.agentVersion ?? "unknown",
       normalization:
-        "Session ids are fixed UUIDs, the workspace is <workspace>, HOME is /home/grok-replay and the recording user is grok-replay. T3-owned prompt text, MCP servers and initialize params other than clientCapabilities and _meta are <any>. Personal skills, machine identity, account settings and announcement broadcasts are removed, as are responses to Grok-internal request ids that T3's protocol drops. Timestamps are kept as recorded.",
+        "Session ids are fixed UUIDs, the workspace is <workspace>, HOME is /home/grok-replay and the recording user is grok-replay. T2-owned prompt text, MCP servers and initialize params other than clientCapabilities and _meta are <any>. Personal skills, machine identity, account settings and announcement broadcasts are removed, as are responses to Grok-internal request ids that T2's protocol drops. Timestamps are kept as recorded.",
       droppedFrames,
     },
     entries: [

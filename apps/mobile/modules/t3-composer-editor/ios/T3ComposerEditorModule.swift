@@ -1,7 +1,7 @@
 import ExpoModulesCore
 import UIKit
 
-enum T3ComposerClipboard {
+enum T2ComposerClipboard {
   static let fragmentType = "app.t3.context-fragment"
 
   static func write(text: String, fragment: String) {
@@ -37,71 +37,71 @@ enum T3ComposerClipboard {
 }
 
 @ExpoModule("T3ComposerEditor")
-public class T3ComposerEditorModule: Module {
+public class T2ComposerEditorModule: Module {
   // UIPasteboard is main-thread only, so the member is main-actor isolated.
   @JS
   @MainActor
   func writeContextClipboard(text: String, fragment: String) async {
-    T3ComposerClipboard.write(text: text, fragment: fragment)
+    T2ComposerClipboard.write(text: text, fragment: fragment)
   }
 
   public func definition() -> ModuleDefinition {
-    View(T3ComposerEditorView.self) {
-      Prop("controlledDocumentJson") { (view: T3ComposerEditorView, documentJson: String) in
+    View(T2ComposerEditorView.self) {
+      Prop("controlledDocumentJson") { (view: T2ComposerEditorView, documentJson: String) in
         view.setControlledDocumentJson(documentJson)
       }
-      Prop("themeJson") { (view: T3ComposerEditorView, themeJson: String) in
+      Prop("themeJson") { (view: T2ComposerEditorView, themeJson: String) in
         view.setThemeJson(themeJson)
       }
-      Prop("clipboardFragment") { (view: T3ComposerEditorView, fragment: String) in
+      Prop("clipboardFragment") { (view: T2ComposerEditorView, fragment: String) in
         view.setClipboardFragment(fragment)
       }
-      Prop("placeholder") { (view: T3ComposerEditorView, placeholder: String) in
+      Prop("placeholder") { (view: T2ComposerEditorView, placeholder: String) in
         view.setPlaceholder(placeholder)
       }
-      Prop("fontFamily") { (view: T3ComposerEditorView, fontFamily: String) in
+      Prop("fontFamily") { (view: T2ComposerEditorView, fontFamily: String) in
         view.setFontFamily(fontFamily)
       }
-      Prop("fontSize") { (view: T3ComposerEditorView, fontSize: Double) in
+      Prop("fontSize") { (view: T2ComposerEditorView, fontSize: Double) in
         view.setFontSize(CGFloat(fontSize))
       }
-      Prop("lineHeight") { (view: T3ComposerEditorView, lineHeight: Double) in
+      Prop("lineHeight") { (view: T2ComposerEditorView, lineHeight: Double) in
         view.setLineHeight(CGFloat(lineHeight))
       }
-      Prop("contentInsetVertical") { (view: T3ComposerEditorView, contentInsetVertical: Double) in
+      Prop("contentInsetVertical") { (view: T2ComposerEditorView, contentInsetVertical: Double) in
         view.setContentInsetVertical(CGFloat(contentInsetVertical))
       }
-      Prop("editable") { (view: T3ComposerEditorView, editable: Bool) in
+      Prop("editable") { (view: T2ComposerEditorView, editable: Bool) in
         view.setEditable(editable)
       }
-      Prop("readOnly") { (view: T3ComposerEditorView, readOnly: Bool) in
+      Prop("readOnly") { (view: T2ComposerEditorView, readOnly: Bool) in
         view.setReadOnly(readOnly)
       }
-      Prop("scrollEnabled") { (view: T3ComposerEditorView, scrollEnabled: Bool) in
+      Prop("scrollEnabled") { (view: T2ComposerEditorView, scrollEnabled: Bool) in
         view.setScrollEnabled(scrollEnabled)
       }
-      Prop("autoFocus") { (view: T3ComposerEditorView, autoFocus: Bool) in
+      Prop("autoFocus") { (view: T2ComposerEditorView, autoFocus: Bool) in
         view.setAutoFocus(autoFocus)
       }
-      Prop("autoCorrect") { (view: T3ComposerEditorView, autoCorrect: Bool) in
+      Prop("autoCorrect") { (view: T2ComposerEditorView, autoCorrect: Bool) in
         view.setAutoCorrect(autoCorrect)
       }
-      Prop("spellCheck") { (view: T3ComposerEditorView, spellCheck: Bool) in
+      Prop("spellCheck") { (view: T2ComposerEditorView, spellCheck: Bool) in
         view.setSpellCheck(spellCheck)
       }
-      Prop("submitTitle") { (view: T3ComposerEditorView, title: String) in
+      Prop("submitTitle") { (view: T2ComposerEditorView, title: String) in
         view.setSubmitTitle(title)
       }
-      Prop("alternateSubmitTitle") { (view: T3ComposerEditorView, title: String) in
+      Prop("alternateSubmitTitle") { (view: T2ComposerEditorView, title: String) in
         view.setAlternateSubmitTitle(title)
       }
-      Prop("enterBehavior") { (view: T3ComposerEditorView, behavior: String) in
+      Prop("enterBehavior") { (view: T2ComposerEditorView, behavior: String) in
         view.setEnterBehavior(behavior)
       }
-      Prop("textPasteThresholdBytes") { (view: T3ComposerEditorView, threshold: Int) in
+      Prop("textPasteThresholdBytes") { (view: T2ComposerEditorView, threshold: Int) in
         view.setTextPasteThresholdBytes(threshold)
       }
-      Prop("maxInputChars") { (view: T3ComposerEditorView, maxInputChars: Int) in
+      Prop("maxInputChars") { (view: T2ComposerEditorView, maxInputChars: Int) in
         view.setMaxInputChars(maxInputChars)
       }
 
@@ -118,13 +118,13 @@ public class T3ComposerEditorModule: Module {
         "onComposerContentSizeChange"
       )
 
-      AsyncFunction("focus") { (view: T3ComposerEditorView) in
+      AsyncFunction("focus") { (view: T2ComposerEditorView) in
         view.focusEditor()
       }
-      AsyncFunction("blur") { (view: T3ComposerEditorView) in
+      AsyncFunction("blur") { (view: T2ComposerEditorView) in
         view.blurEditor()
       }
-      AsyncFunction("setSelection") { (view: T3ComposerEditorView, start: Int, end: Int) in
+      AsyncFunction("setSelection") { (view: T2ComposerEditorView, start: Int, end: Int) in
         view.setSelection(start: start, end: end)
       }
     }

@@ -211,7 +211,9 @@ export function acpMcpToolApprovalElicitationDisposition(
   ) {
     return undefined;
   }
-  // T3's authenticated MCP endpoint enforces scope; only explicit approval mode needs a user prompt.
+  // This request comes from T2's authenticated, scope-checked MCP endpoint,
+  // not an arbitrary provider command. Let explicit approval mode surface it
+  // to the user and otherwise allow the endpoint to enforce its own policy.
   return acpPolicyRequiresApproval(runtimePolicy) ? "ask" : "allow";
 }
 

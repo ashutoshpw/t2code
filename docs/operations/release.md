@@ -240,7 +240,7 @@ chart the `attributes.custom.relay.managed_endpoint_reaper.*` fields over time.
 Set the legacy mode back to `off` and deploy if any of these happen:
 
 - `failed` stays above a few per sweep. Read the warning log for the Cloudflare error.
-- Users report an environment that is offline with the update message after they have updated T3
+- Users report an environment that is offline with the update message after they have updated T2
   Code on that computer and restarted it.
 - Relay request errors rise while sweeps run. Deletions share the Postgres connection pool with
   request handlers.
@@ -319,7 +319,7 @@ not guarantee external approval. TestFlight builds expire after 90 days.
 Both release and TestFlight binaries receive compatible production-channel OTAs,
 separated by their major-version fingerprints. Manual `mode=update` uses the
 selected profile's version. Before releasing `3.0.0` to the App Store, advance
-`build.testflight.env.T3CODE_MOBILE_VERSION` in `apps/mobile/eas.json` to the next
+`build.testflight.env.T2CODE_MOBILE_VERSION` in `apps/mobile/eas.json` to the next
 unreleased major and get its first beta build approved.
 
 ## Android APK mirror

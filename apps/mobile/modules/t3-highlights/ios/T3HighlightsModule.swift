@@ -1,10 +1,10 @@
 import ExpoModulesCore
 
-public final class T3HighlightsModule: Module {
+public final class T2HighlightsModule: Module {
   private let lock = NSLock()
 
   public func definition() -> ModuleDefinition {
-    Name("T3Highlights")
+    Name("T2Highlights")
 
     Function("tokenize") { (source: String, language: Int) -> ArrayBuffer? in
       var source = source
@@ -17,7 +17,7 @@ public final class T3HighlightsModule: Module {
   private static func tokenize(_ utf8: UnsafeBufferPointer<UInt8>, language: Int) -> ArrayBuffer? {
     guard let languageId = UInt8(exactly: language) else { return nil }
     var records: UnsafePointer<UInt32>?
-    let count = t3_highlights_tokenize(utf8.baseAddress, utf8.count, languageId, &records)
+    let count = t2_highlights_tokenize(utf8.baseAddress, utf8.count, languageId, &records)
     guard count >= 0 else { return nil }
     let byteCount = Int(count) * MemoryLayout<UInt32>.size
     let buffer = ArrayBuffer(size: byteCount, initializeToZero: false)

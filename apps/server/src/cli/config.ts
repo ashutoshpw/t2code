@@ -341,7 +341,7 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
         isProcessAlive(runtime.value.pid)
       ) {
         return yield* new CliError.UserError({
-          cause: `A T3 Code server is already running for ${baseDir} (pid ${runtime.value.pid}, ${runtime.value.origin}). Connect to that server, stop it before starting another, or use a different --base-dir.`,
+          cause: `A T2 Code server is already running for ${baseDir} (pid ${runtime.value.pid}, ${runtime.value.origin}). Connect to that server, stop it before starting another, or use a different --base-dir.`,
         });
       }
     }
@@ -567,7 +567,7 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
     Option.fromUndefinedOr(bootstrap?.host),
   );
   // A background service exists to be reached from other devices, so it
-  // listens on private networks unless `service.env` sets `T3CODE_HOST`.
+  // listens on private networks unless `service.env` sets `T2CODE_HOST`.
   // Clients then learn its LAN address and prefer it over T3 Connect.
   const privateNetworkOnly =
     Option.isNone(explicitHost) &&
