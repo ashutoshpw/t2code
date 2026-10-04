@@ -132,7 +132,7 @@ function PendingLinkRequest(props: {
   return (
     <View className="mb-3 gap-3 rounded-[20px] border border-border bg-card-alt p-4">
       <View className="gap-1">
-        <Text className="font-t3-bold text-base text-foreground">
+        <Text className="font-t2-bold text-base text-foreground">
           {picksMachine(item)
             ? "Link a machine to this environment"
             : `Link ${target} to this environment`}
@@ -331,7 +331,7 @@ function LinkRequestSheet(props: {
         keyboardShouldPersistTaps="handled"
       >
         <View className="gap-1">
-          <Text className="font-t3-bold text-lg text-foreground">
+          <Text className="font-t2-bold text-lg text-foreground">
             {pickMachine ? "Link a machine" : `Link ${targetName}`}
           </Text>
           <Text className="font-sans text-sm leading-5 text-foreground-muted">

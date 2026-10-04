@@ -1,4 +1,4 @@
-package expo.modules.t3terminal
+package expo.modules.t2terminal
 
 import java.util.ArrayDeque
 

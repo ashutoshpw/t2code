@@ -1,11 +1,11 @@
-package expo.modules.t3terminal
+package expo.modules.t2terminal
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
-class T3TerminalModule : Module() {
+class T2TerminalModule : Module() {
   override fun definition() = ModuleDefinition {
-    Name("T3TerminalSurface")
+    Name("T2TerminalSurface")
 
     // Bumped when native hardware-keyboard handling changes; surfaced in the JS debug
     // logs so a stale native binary is distinguishable from a broken key pipeline.
@@ -14,61 +14,61 @@ class T3TerminalModule : Module() {
       "outputRevision" to 1,
     )
 
-    View(T3TerminalView::class) {
-      AsyncFunction("writeOutput") { view: T3TerminalView, data: String, reset: Boolean ->
+    View(T2TerminalView::class) {
+      AsyncFunction("writeOutput") { view: T2TerminalView, data: String, reset: Boolean ->
         view.writeOutput(data, reset)
       }
 
-      Prop("terminalKey") { view: T3TerminalView, terminalKey: String ->
+      Prop("terminalKey") { view: T2TerminalView, terminalKey: String ->
         view.terminalKey = terminalKey
       }
 
-      Prop("initialBuffer") { view: T3TerminalView, initialBuffer: String ->
+      Prop("initialBuffer") { view: T2TerminalView, initialBuffer: String ->
         view.initialBuffer = initialBuffer
       }
 
-      Prop("fontSize") { view: T3TerminalView, fontSize: Double ->
+      Prop("fontSize") { view: T2TerminalView, fontSize: Double ->
         view.fontSize = fontSize.toFloat()
       }
 
-      Prop("focusRequest") { view: T3TerminalView, focusRequest: Double ->
+      Prop("focusRequest") { view: T2TerminalView, focusRequest: Double ->
         view.focusRequest = focusRequest
       }
 
-      Prop("readOnly") { view: T3TerminalView, readOnly: Boolean ->
+      Prop("readOnly") { view: T2TerminalView, readOnly: Boolean ->
         view.readOnly = readOnly
       }
 
-      Prop("autoFocus") { view: T3TerminalView, autoFocus: Boolean ->
+      Prop("autoFocus") { view: T2TerminalView, autoFocus: Boolean ->
         view.autoFocus = autoFocus
       }
 
-      Prop("appearanceScheme") { view: T3TerminalView, appearanceScheme: String ->
+      Prop("appearanceScheme") { view: T2TerminalView, appearanceScheme: String ->
         view.appearanceScheme = appearanceScheme
       }
 
-      Prop("themeConfig") { view: T3TerminalView, themeConfig: String ->
+      Prop("themeConfig") { view: T2TerminalView, themeConfig: String ->
         view.themeConfig = themeConfig
       }
 
-      Prop("backgroundColor") { view: T3TerminalView, backgroundColor: String ->
+      Prop("backgroundColor") { view: T2TerminalView, backgroundColor: String ->
         view.backgroundColorHex = backgroundColor
       }
 
-      Prop("foregroundColor") { view: T3TerminalView, foregroundColor: String ->
+      Prop("foregroundColor") { view: T2TerminalView, foregroundColor: String ->
         view.foregroundColorHex = foregroundColor
       }
 
-      Prop("mutedForegroundColor") { view: T3TerminalView, mutedForegroundColor: String ->
+      Prop("mutedForegroundColor") { view: T2TerminalView, mutedForegroundColor: String ->
         view.mutedForegroundColorHex = mutedForegroundColor
       }
 
-      Prop("captureRequest") { view: T3TerminalView, request: Double ->
+      Prop("captureRequest") { view: T2TerminalView, request: Double ->
         view.captureRequest = request
       }
       Events("onInput", "onResize", "onCapture")
 
-      OnViewDestroys { view: T3TerminalView ->
+      OnViewDestroys { view: T2TerminalView ->
         view.cleanup()
       }
     }

@@ -248,7 +248,7 @@ export class ServerBrowser extends Context.Service<
 
     readonly profileReporter: Effect.Effect<ProfileReporter, never, Scope.Scope>;
   }
->()("t3/preview/ServerBrowser") {}
+>()("@t2code/cli/preview/ServerBrowser") {}
 
 interface ViewerState {
   readonly id: string;
@@ -264,7 +264,7 @@ interface ViewerState {
 }
 
 interface EncoderWindow {
-  __t3Recorder: {
+  __t2Recorder: {
     cursor(x: number, y: number, click: boolean): void;
     frame(data: string, width: number): Promise<boolean>;
     stop(): Promise<{ mimeType: string | null; count: number; bytes: number }>;
@@ -1406,7 +1406,7 @@ const make = Effect.gen(function* () {
   const assertTabCapacity = (agentSessionId: string) => {
     if (atTabLimit(agentSessionId))
       throw new BrowserControlInterrupted(
-        `Too many server browser tabs are open (${AGENT_TAB_LIMIT} per agent session, ${SERVER_TAB_LIMIT} per server). Close one with t3_preview_close or reuse one from preview_status tabs.`,
+        `Too many server browser tabs are open (${AGENT_TAB_LIMIT} per agent session, ${SERVER_TAB_LIMIT} per server). Close one with t2_preview_close or reuse one from preview_status tabs.`,
         "tabLimit",
       );
   };
@@ -1702,7 +1702,7 @@ const make = Effect.gen(function* () {
         });
         await encoder.evaluate(
           ([data, width]) =>
-            (globalThis as unknown as EncoderWindow).__t3Recorder.frame(data, width),
+            (globalThis as unknown as EncoderWindow).__t2Recorder.frame(data, width),
           [firstFrame, tab.page.viewportSize()?.width ?? UNATTACHED_FILL_VIEWPORT.width] as const,
         );
         const opened = await tab.page.context().newCDPSession(tab.page);
@@ -1713,7 +1713,7 @@ const make = Effect.gen(function* () {
           const delivered: Promise<void> = encoder
             .evaluate(
               ([data, width]) =>
-                (globalThis as unknown as EncoderWindow).__t3Recorder.frame(data, width),
+                (globalThis as unknown as EncoderWindow).__t2Recorder.frame(data, width),
               [frame.data, cssWidth] as const,
             )
             .then(async (accepted) => {
@@ -1788,7 +1788,7 @@ const make = Effect.gen(function* () {
         await Promise.all(recording.framesInFlight);
         await recording.session.detach().catch(constVoid);
         const stopped = await recording.encoder.evaluate(() =>
-          (globalThis as unknown as EncoderWindow).__t3Recorder.stop(),
+          (globalThis as unknown as EncoderWindow).__t2Recorder.stop(),
         );
         mimeType = stopped.mimeType;
         // Checked before the transfer so an oversized video never lands in this process.
@@ -1800,7 +1800,7 @@ const make = Effect.gen(function* () {
         }
         for (let index = 0; index < stopped.count; index += 1) {
           const chunk = await recording.encoder.evaluate(
-            (chunkIndex) => (globalThis as unknown as EncoderWindow).__t3Recorder.chunk(chunkIndex),
+            (chunkIndex) => (globalThis as unknown as EncoderWindow).__t2Recorder.chunk(chunkIndex),
             index,
           );
           chunks.push(Buffer.from(chunk, "base64"));
@@ -1854,7 +1854,7 @@ const make = Effect.gen(function* () {
         void encoder
           ?.evaluate(
             ([px, py, click]) =>
-              (globalThis as unknown as EncoderWindow).__t3Recorder?.cursor(px, py, click),
+              (globalThis as unknown as EncoderWindow).__t2Recorder?.cursor(px, py, click),
             [x, y, next === "click"] as const,
           )
           .catch(constVoid);
@@ -2710,7 +2710,7 @@ const make = Effect.gen(function* () {
     (yield* PreviewBrowserHost.sandboxBlocked)
   ) {
     yield* Effect.logWarning(
-      `This host blocks the sandbox T3's browser runs in, so browser tabs and HTML previews will not start. Run \`${setupCommand}\` once to allow it.`,
+      `This host blocks the sandbox T2's browser runs in, so browser tabs and HTML previews will not start. Run \`${setupCommand}\` once to allow it.`,
     );
   }
 

@@ -30,14 +30,14 @@ class T2ContextChip(
   private val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
     textSize = fontSize
     typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-    color = this@T3ContextChip.color
+    color = this@T2ContextChip.color
   }
   private val em = fontSize
 
   private val detailPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
     textSize = fontSize * 0.84f
     typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-    color = this@T3ContextChip.color
+    color = this@T2ContextChip.color
   }
   private val detailText = if (content.detail.isEmpty()) "" else " ${content.detail}"
   private val detailWidth = if (detailText.isEmpty()) 0f else detailPaint.measureText(detailText)
@@ -46,7 +46,7 @@ class T2ContextChip(
   private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
     if (content.tintsIcon) {
       colorFilter =
-        PorterDuffColorFilter(this@T3ContextChip.color, PorterDuff.Mode.SRC_IN)
+        PorterDuffColorFilter(this@T2ContextChip.color, PorterDuff.Mode.SRC_IN)
     }
   }
   private val padding = density * 5
@@ -68,7 +68,7 @@ class T2ContextChip(
   fun draw(canvas: Canvas, x: Float, y: Float) {
     canvas.save()
     canvas.translate(x, y)
-    T3ChipIcons.cached(iconUri)?.let {
+    T2ChipIcons.cached(iconUri)?.let {
       val top = (height - em) / 2
       canvas.drawBitmap(it, null, RectF(padding, top, padding + em, top + em), iconPaint)
     }

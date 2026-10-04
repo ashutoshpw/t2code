@@ -1,4 +1,4 @@
-package expo.modules.t3agentnotifications
+package expo.modules.t2agentnotifications
 
 import android.app.Activity
 import android.app.AlarmManager

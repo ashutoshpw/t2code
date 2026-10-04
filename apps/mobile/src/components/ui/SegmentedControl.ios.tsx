@@ -19,7 +19,7 @@ const NativeSegmentedControl = requireNativeView<
     appearance: string;
     onSelectionChange: (event: NativeSyntheticEvent<{ index: number }>) => void;
   }
->("T3NativeControls", "SegmentedControl");
+>("T2NativeControls", "SegmentedControl");
 
 export function SegmentedControl<Value extends string | number>(
   props: SegmentedControlProps<Value>,

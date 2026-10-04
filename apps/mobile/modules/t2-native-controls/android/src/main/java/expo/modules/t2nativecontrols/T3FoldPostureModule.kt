@@ -1,4 +1,4 @@
-package expo.modules.t3nativecontrols
+package expo.modules.t2nativecontrols
 
 import android.content.Context
 import android.hardware.Sensor
@@ -18,11 +18,11 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-class T3FoldPostureModule : Module() {
+class T2FoldPostureModule : Module() {
   override fun definition() = ModuleDefinition {
-    Name("T3FoldPosture")
+    Name("T2FoldPosture")
 
-    View(T3FoldPostureView::class) {
+    View(T2FoldPostureView::class) {
       Events("onHingeChange")
     }
   }
@@ -32,7 +32,7 @@ class T3FoldPostureModule : Module() {
  * Reports a vertical hinge, in this view's dp coordinates, while the device is bent like a book.
  * The hinge sensor is only registered while a vertical fold is on screen.
  */
-class T3FoldPostureView(
+class T2FoldPostureView(
   context: Context,
   appContext: AppContext
 ) : ExpoView(context, appContext), SensorEventListener {

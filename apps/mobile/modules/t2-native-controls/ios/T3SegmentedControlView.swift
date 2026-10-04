@@ -1,7 +1,7 @@
 import ExpoModulesCore
 import UIKit
 
-final class T3SegmentedControlView: ExpoView {
+final class T2SegmentedControlView: ExpoView {
   let onSelectionChange = EventDispatcher()
   private let control = UISegmentedControl()
   var labels: [String] = [] {

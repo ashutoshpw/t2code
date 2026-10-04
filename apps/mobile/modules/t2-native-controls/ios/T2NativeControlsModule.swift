@@ -3,11 +3,11 @@ import ExpoModulesCore
 import Security
 import UIKit
 
-@ExpoModule("T3NativeControls")
-public final class T3NativeControlsModule: Module {
-  private let presentationSources = T3PresentationSources()
-  private var videoPresentation: T3NativeVideoPresentation?
-  private var filePresentation: T3NativeFilePresentation?
+@ExpoModule("T2NativeControls")
+public final class T2NativeControlsModule: Module {
+  private let presentationSources = T2PresentationSources()
+  private var videoPresentation: T2NativeVideoPresentation?
+  private var filePresentation: T2NativeFilePresentation?
 
   public func definition() -> ModuleDefinition {
     Events("videoPlaybackChange")
@@ -19,35 +19,35 @@ public final class T3NativeControlsModule: Module {
       }
       return ["supportsWorkspaceColumns": false]
     }
-    View(T3SegmentedControlView.self) {
+    View(T2SegmentedControlView.self) {
       ViewName("SegmentedControl")
       Events("onSelectionChange")
-      Prop("labels") { (view: T3SegmentedControlView, value: [String]) in view.labels = value }
-      Prop("selectedIndex") { (view: T3SegmentedControlView, value: Int) in view.selectedIndex = value }
-      Prop("trackColor") { (view: T3SegmentedControlView, value: UIColor) in view.trackColor = value }
-      Prop("selectedColor") { (view: T3SegmentedControlView, value: UIColor) in view.selectedColor = value }
-      Prop("textColor") { (view: T3SegmentedControlView, value: UIColor) in view.textColor = value }
-      Prop("mutedColor") { (view: T3SegmentedControlView, value: UIColor) in view.mutedColor = value }
-      Prop("appearance") { (view: T3SegmentedControlView, value: String) in view.appearance = value }
+      Prop("labels") { (view: T2SegmentedControlView, value: [String]) in view.labels = value }
+      Prop("selectedIndex") { (view: T2SegmentedControlView, value: Int) in view.selectedIndex = value }
+      Prop("trackColor") { (view: T2SegmentedControlView, value: UIColor) in view.trackColor = value }
+      Prop("selectedColor") { (view: T2SegmentedControlView, value: UIColor) in view.selectedColor = value }
+      Prop("textColor") { (view: T2SegmentedControlView, value: UIColor) in view.textColor = value }
+      Prop("mutedColor") { (view: T2SegmentedControlView, value: UIColor) in view.mutedColor = value }
+      Prop("appearance") { (view: T2SegmentedControlView, value: String) in view.appearance = value }
     }
 
-    View(T3SidebarTabBarView.self) {
+    View(T2SidebarTabBarView.self) {
       ViewName("SidebarTabBar")
       Events("onSelectionChange", "onCompose")
-      Prop("tabs") { (view: T3SidebarTabBarView, value: [String]) in view.tabs = value }
-      Prop("selectedTab") { (view: T3SidebarTabBarView, value: String) in view.selectedTab = value }
-      Prop("selectedColor") { (view: T3SidebarTabBarView, value: UIColor) in view.selectedColor = value }
-      Prop("showsCompose") { (view: T3SidebarTabBarView, value: Bool) in view.showsCompose = value }
-      Prop("compact") { (view: T3SidebarTabBarView, value: Bool) in view.compact = value }
-      Prop("appearance") { (view: T3SidebarTabBarView, value: String) in view.appearance = value }
+      Prop("tabs") { (view: T2SidebarTabBarView, value: [String]) in view.tabs = value }
+      Prop("selectedTab") { (view: T2SidebarTabBarView, value: String) in view.selectedTab = value }
+      Prop("selectedColor") { (view: T2SidebarTabBarView, value: UIColor) in view.selectedColor = value }
+      Prop("showsCompose") { (view: T2SidebarTabBarView, value: Bool) in view.showsCompose = value }
+      Prop("compact") { (view: T2SidebarTabBarView, value: Bool) in view.compact = value }
+      Prop("appearance") { (view: T2SidebarTabBarView, value: String) in view.appearance = value }
     }
 
-    View(T3LayoutMetricsView.self) {
+    View(T2LayoutMetricsView.self) {
       ViewName("LayoutMetrics")
       Events("onMetricsChange")
     }
 
-    View(T3ScrollEdgeBleedView.self) {
+    View(T2ScrollEdgeBleedView.self) {
       ViewName("ScrollEdgeBleed")
     }
 
@@ -90,26 +90,26 @@ public final class T3NativeControlsModule: Module {
       }
     }
 
-    View(T3PresentationSourceView.self) {
+    View(T2PresentationSourceView.self) {
       ViewName("PresentationSource")
-      Prop("identifier") { (view: T3PresentationSourceView, identifier: String) in
+      Prop("identifier") { (view: T2PresentationSourceView, identifier: String) in
         view.sources = self.presentationSources
         view.identifier = identifier
       }
     }
 
-    View(T3FrostedCutoutView.self) {
+    View(T2FrostedCutoutView.self) {
       ViewName("FrostedCutout")
-      Prop("cutoutTop") { (view: T3FrostedCutoutView, value: Double) in view.cutoutTop = CGFloat(value) }
-      Prop("cutoutWidth") { (view: T3FrostedCutoutView, value: Double) in view.cutoutWidth = CGFloat(value) }
-      Prop("cutoutHeight") { (view: T3FrostedCutoutView, value: Double) in view.cutoutHeight = CGFloat(value) }
-      Prop("cutoutRadius") { (view: T3FrostedCutoutView, value: Double) in view.cutoutRadius = CGFloat(value) }
-      Prop("appearance") { (view: T3FrostedCutoutView, value: String) in view.appearance = value }
+      Prop("cutoutTop") { (view: T2FrostedCutoutView, value: Double) in view.cutoutTop = CGFloat(value) }
+      Prop("cutoutWidth") { (view: T2FrostedCutoutView, value: Double) in view.cutoutWidth = CGFloat(value) }
+      Prop("cutoutHeight") { (view: T2FrostedCutoutView, value: Double) in view.cutoutHeight = CGFloat(value) }
+      Prop("cutoutRadius") { (view: T2FrostedCutoutView, value: Double) in view.cutoutRadius = CGFloat(value) }
+      Prop("appearance") { (view: T2FrostedCutoutView, value: String) in view.appearance = value }
     }
 
-    View(T3ContextSheetSizeView.self) {
+    View(T2ContextSheetSizeView.self) {
       ViewName("ContextSheetSize")
-      Prop("contentHeight") { (view: T3ContextSheetSizeView, height: Double) in
+      Prop("contentHeight") { (view: T2ContextSheetSizeView, height: Double) in
         view.contentHeight = CGFloat(height)
       }
     }
@@ -153,7 +153,7 @@ public final class T3NativeControlsModule: Module {
     let mask: UIInterfaceOrientationMask = orientation == "landscape" ? .landscapeRight : .portrait
     for case let windowScene as UIWindowScene in UIApplication.shared.connectedScenes {
       windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { error in
-        NSLog("T3NativeControls applyShowcaseOrientation(\(orientation)) failed: \(error)")
+        NSLog("T2NativeControls applyShowcaseOrientation(\(orientation)) failed: \(error)")
       }
       for window in windowScene.windows {
         window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
@@ -201,7 +201,7 @@ public final class T3NativeControlsModule: Module {
 
   @JS
   func getShowcaseScene() -> String? {
-    let scenePath = NSHomeDirectory() + "/Library/Caches/T3ShowcaseScene"
+    let scenePath = NSHomeDirectory() + "/Library/Caches/T2ShowcaseScene"
     if let storedScene = try? String(contentsOfFile: scenePath, encoding: .utf8)
       .trimmingCharacters(in: .whitespacesAndNewlines), !storedScene.isEmpty {
       return storedScene
@@ -230,7 +230,7 @@ public final class T3NativeControlsModule: Module {
 
   @JS(.concurrent)
   func markShowcaseReady(scene: String) async {
-    let readyPath = NSHomeDirectory() + "/Library/Caches/T3ShowcaseReadyScene"
+    let readyPath = NSHomeDirectory() + "/Library/Caches/T2ShowcaseReadyScene"
     try? scene.write(toFile: readyPath, atomically: true, encoding: .utf8)
   }
 
@@ -243,12 +243,12 @@ public final class T3NativeControlsModule: Module {
       isPlayableURL
     else {
       throw NSError(
-        domain: "T3NativeVideo",
+        domain: "T2NativeVideo",
         code: 2,
         userInfo: [NSLocalizedDescriptionKey: "The video preview is no longer available."]
       )
     }
-    let presentation = T3NativeVideoPresentation(
+    let presentation = T2NativeVideoPresentation(
       identifier: identifier, url: url, title: title,
       onPlaybackChange: { [weak self] isPlaying in
         self?.sendEvent("videoPlaybackChange", ["identifier": identifier, "isPlaying": isPlaying])
@@ -267,11 +267,11 @@ public final class T3NativeControlsModule: Module {
   }
 
   private func makeFilePresentation(sourceIdentifiers: [String], identifier: String,
-                                    promise: Promise) throws -> T3NativeFilePresentation {
+                                    promise: Promise) throws -> T2NativeFilePresentation {
     guard filePresentation == nil, videoPresentation == nil,
       appContext?.utilities?.currentViewController() != nil
     else { throw URLError(.cannotLoadFromNetwork) }
-    let file = T3NativeFilePresentation(identifier: identifier, sources: presentationSources,
+    let file = T2NativeFilePresentation(identifier: identifier, sources: presentationSources,
                                         sourceIdentifiers: sourceIdentifiers) { [weak self] error in
       self?.filePresentation = nil
       if let error { promise.reject(error) } else { promise.resolve(nil) }
@@ -294,7 +294,7 @@ public final class T3NativeControlsModule: Module {
   private func shareFile(url: URL, title: String, sourceIdentifier: String, promise: Promise) throws {
     guard let presenter = appContext?.utilities?.currentViewController() else {
       throw NSError(
-        domain: "T3NativePresentation",
+        domain: "T2NativePresentation",
         code: 2,
         userInfo: [NSLocalizedDescriptionKey: "The presenting screen is no longer open."]
       )

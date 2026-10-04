@@ -50,7 +50,7 @@ class T2ReviewDiffModule : Module() {
       Prop("initialRowIndex") { view: T2ReviewDiffView, initialRowIndex: Double ->
         view.setInitialRowIndex(initialRowIndex)
       }
-      Prop("initialFileId") { view: T3ReviewDiffView, fileId: String ->
+      Prop("initialFileId") { view: T2ReviewDiffView, fileId: String ->
         view.setInitialFileId(fileId)
       }
 

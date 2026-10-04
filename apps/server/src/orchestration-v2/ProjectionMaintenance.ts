@@ -36,7 +36,7 @@ export interface ProjectionMaintenanceV2Shape {
 export class ProjectionMaintenanceV2 extends Context.Service<
   ProjectionMaintenanceV2,
   ProjectionMaintenanceV2Shape
->()("t3/orchestration-v2/ProjectionMaintenance/ProjectionMaintenanceV2") {}
+>()("@t2code/cli/orchestration-v2/ProjectionMaintenance/ProjectionMaintenanceV2") {}
 
 // Reconnect replay and command-id retries read this tail; older cursors resync from a snapshot.
 const RETAINED_EVENT_HISTORY = Duration.days(1);

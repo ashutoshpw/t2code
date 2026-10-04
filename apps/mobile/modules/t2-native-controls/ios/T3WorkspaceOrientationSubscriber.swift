@@ -1,7 +1,7 @@
 import ExpoModulesCore
 import UIKit
 
-public final class T3WorkspaceOrientationSubscriber: ExpoAppDelegateSubscriber {
+public final class T2WorkspaceOrientationSubscriber: ExpoAppDelegateSubscriber {
   private static let hingeWindows = NSHashTable<UIWindow>.weakObjects()
 
   static func allowHingeOrientations(in window: UIWindow) {

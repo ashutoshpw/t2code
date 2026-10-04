@@ -78,7 +78,6 @@ it.live.each(
               Effect.sync(() => {
                 leases--;
               }),
-
             );
             return executable;
           }),
@@ -102,7 +101,7 @@ it.live.each(
           T3CODE_HOME: path.join(sharedHome, "wrong-server-home"),
           OPENAI_API_KEY: "dummy-global-key",
           OPENAI_BASE_URL: "https://user-proxy.test",
-          T3CODE_CODEX_LAUNCH_ARGS: "--config model_provider=global-proxy",
+          T2CODE_CODEX_LAUNCH_ARGS: "--config model_provider=global-proxy",
           PATH: process.env.PATH,
           SystemRoot: process.env.SystemRoot,
         };
@@ -138,7 +137,7 @@ it.live.each(
           assert.isUndefined(effective.environment.ACCESS_TOKEN);
           assert.isUndefined(effective.environment.OPENAI_API_KEY);
           assert.isUndefined(effective.environment.OPENAI_BASE_URL);
-          assert.isUndefined(effective.environment.T3CODE_CODEX_LAUNCH_ARGS);
+          assert.isUndefined(effective.environment.T2CODE_CODEX_LAUNCH_ARGS);
           const args = codexAppServerArgs(effective.config.launchArgs);
           assert.include(args, 'model_provider="openai_token_sharing"');
           const provider = args.find((arg) =>

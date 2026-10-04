@@ -7,7 +7,7 @@ export function GuestMessageName(props: { readonly name: string }) {
   return (
     <Text
       accessibilityLabel={`${props.name} (guest)`}
-      className="mb-1 pr-1 font-t3-medium text-2xs text-adaptive-fuchsia-600-300"
+      className="mb-1 pr-1 font-t2-medium text-2xs text-adaptive-fuchsia-600-300"
       numberOfLines={1}
     >
       {props.name}

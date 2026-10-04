@@ -1626,7 +1626,7 @@ function RunFoldButton({
         <Text
           key={rowSizing.textSizeKey}
           numberOfLines={1}
-          className="shrink font-t3-medium text-sm tabular-nums text-foreground-muted"
+          className="shrink font-t2-medium text-sm tabular-nums text-foreground-muted"
         >
           {entry.label}
           {error ? ` · ${error}` : ""}
