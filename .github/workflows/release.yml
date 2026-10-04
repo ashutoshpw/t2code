@@ -1134,17 +1134,10 @@ jobs:
           fi
 
           router_url="${T2CODE_WEB_ROUTER_URL:-https://app.t2.codes}"
-          latest_domain="${T2CODE_WEB_LATEST_DOMAIN:-latest.app.t2.codes}"
-          nightly_domain="${T2CODE_WEB_NIGHTLY_DOMAIN:-nightly.app.t2.codes}"
-          router_domain="${router_url#http://}"
-          router_domain="${router_domain#https://}"
-          router_domain="${router_domain%%/*}"
 
           if [[ "${{ needs.preflight.outputs.release_channel }}" == "stable" ]]; then
-            channel_domain="$latest_domain"
             channel_name="latest"
           else
-            channel_domain="$nightly_domain"
             channel_name="nightly"
           fi
 
@@ -1171,8 +1164,73 @@ jobs:
               --build-env "VITE_HOSTED_APP_CHANNEL=$channel_name"
           )"
 
-          echo "Aliasing $deployment_url to $channel_domain."
-          vp dlx vercel@53.1.1 alias set "$deployment_url" "$channel_domain" \
+          echo "Staged $deployment_url."
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+  # The web deployment is staged early so the release build does not wait on
+  # Vercel, but it must not take the public domains until the release it links
+  # to exists, so the aliasing happens here.
+  deploy_web:
+    name: Deploy hosted web app
+    needs: [preflight, build_web, release]
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.build_web.result == 'success' && needs.release.result == 'success' && needs.preflight.outputs.release_channel != 'preview' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      DEPLOYMENT_URL: ${{ needs.build_web.outputs.deployment_url }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      T2CODE_WEB_ROUTER_URL: ${{ vars.T2CODE_WEB_ROUTER_URL }}
+      T2CODE_WEB_LATEST_DOMAIN: ${{ vars.T2CODE_WEB_LATEST_DOMAIN }}
+      T2CODE_WEB_NIGHTLY_DOMAIN: ${{ vars.T2CODE_WEB_NIGHTLY_DOMAIN }}
+      VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.preflight.outputs.ref }}
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: false
+          run-install: false
+
+      - name: Alias channel
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DEPLOYMENT_URL:-}" ]]; then
+            echo "Build hosted web app did not report a deployment URL." >&2
+            exit 1
+          fi
+
+          router_url="${T2CODE_WEB_ROUTER_URL:-https://app.t2.codes}"
+          latest_domain="${T2CODE_WEB_LATEST_DOMAIN:-latest.app.t2.codes}"
+          nightly_domain="${T2CODE_WEB_NIGHTLY_DOMAIN:-nightly.app.t2.codes}"
+          router_domain="${router_url#http://}"
+          router_domain="${router_domain#https://}"
+          router_domain="${router_domain%%/*}"
+
+          if [[ "${{ needs.preflight.outputs.release_channel }}" == "stable" ]]; then
+            channel_domain="$latest_domain"
+            channel_name="latest"
+          else
+            channel_domain="$nightly_domain"
+            channel_name="nightly"
+          fi
+
+          vercel_scope_args=(--scope "${VERCEL_TEAM_SLUG:-$VERCEL_ORG_ID}")
+
+          echo "Aliasing $DEPLOYMENT_URL to $channel_domain."
+          vp dlx vercel@53.1.1 alias set "$DEPLOYMENT_URL" "$channel_domain" \
             --token "$VERCEL_TOKEN" \
             "${vercel_scope_args[@]}"
 

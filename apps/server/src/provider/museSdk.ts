@@ -76,7 +76,7 @@ export function museServeArgs(
 /** What T2 sends in MSP `initialize`; only full hosts ask for session MCP servers. */
 export function museInitializeParams(readOnly = false) {
   return {
-    clientInfo: { name: "t3_code", title: "T2 Code", version: "1" },
+    clientInfo: { name: "t2_code", title: "T2 Code", version: "1" },
     capabilities: { requestedCapabilities: readOnly ? [] : ["sessionMcp"] },
   };
 }

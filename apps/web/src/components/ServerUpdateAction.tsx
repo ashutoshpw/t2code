@@ -238,8 +238,8 @@ export function ServerUpdateAction({
           installation?.kind === "npm-global" ? "Update command copied" : "Relaunch command copied",
         description:
           installation?.kind === "npm-global"
-            ? `Run \`${command}\` on ${serverLabel}, then restart t3 with your usual options.`
-            : `Stop t3 on ${serverLabel}, then relaunch with \`${command}\` using the same subcommand and options. This does not update an installed t3 command.`,
+            ? `Run \`${command}\` on ${serverLabel}, then restart t2code with your usual options.`
+            : `Stop t2code on ${serverLabel}, then relaunch with \`${command}\` using the same subcommand and options. This does not update an installed @t2code/cli command.`,
       });
     },
     onError: (error) => {
@@ -372,7 +372,7 @@ export function OutdatedServerUpdateAction({
       toastManager.add({
         type: "success",
         title: `${serverLabel} updated`,
-        description: `Reconnected on t3@${result.value.targetVersion}.`,
+        description: `Reconnected on t2code@${result.value.targetVersion}.`,
       });
     } catch (error) {
       toastManager.add({

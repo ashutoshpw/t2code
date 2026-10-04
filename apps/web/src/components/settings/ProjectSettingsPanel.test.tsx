@@ -1,8 +1,5 @@
 import { RegistryContext } from "@effect/atom-react";
-import type {
-  DeleteProjectInput,
-  UpdateProjectInput,
-} from "@t2code/client-runtime/state/projects";
+import type { DeleteProjectInput, UpdateProjectInput } from "@t2code/client-runtime/state/projects";
 import {
   AuthOrchestrationOperateScope,
   AuthSettingsWriteScope,
@@ -101,8 +98,8 @@ vi.mock("~/hooks/useSettings", () => ({
   usePrimarySettings: () => DEFAULT_SERVER_SETTINGS,
   useEnvironmentSettings: () => DEFAULT_SERVER_SETTINGS,
 }));
-vi.mock("~/hooks/useT3ProjectFileScripts", () => ({
-  useT3ProjectFileState: () => ({
+vi.mock("~/hooks/useT2ProjectFileScripts", () => ({
+  useT2ProjectFileState: () => ({
     status: "valid",
     file: null,
     scripts: [{ name: "Imported", command: "vp test" }],

@@ -767,7 +767,7 @@ export function buildCodexTurnStartParams(input: {
         { kind: "untrusted" as const, value: entry.text },
       ]),
     );
-    const t3Context =
+    const t2Context =
       input.hasT2Mcp === true
         ? buildCodexAdditionalContext(
             { model: input.modelSelection.model, reasoningEffort: effort ?? "medium" },
@@ -778,9 +778,9 @@ export function buildCodexTurnStartParams(input: {
           )
         : undefined;
     const additionalContext =
-      t3Context === undefined && Object.keys(appContext).length === 0
+      t2Context === undefined && Object.keys(appContext).length === 0
         ? undefined
-        : { ...t3Context, ...appContext };
+        : { ...t2Context, ...appContext };
     const collaborationMode: CodexSchema.ClientRequest__CollaborationMode | undefined =
       input.runtimePolicy.interactionMode !== "plan" && developerInstructions === undefined
         ? undefined
@@ -1336,7 +1336,7 @@ export function codexThreadRuntimeParams(input: {
         ? {}
         : {
             mcp_servers: {
-              "t3-code": {
+              "t2-code": {
                 url: mcpSession.endpoint,
                 http_headers: {
                   Authorization: mcpSession.authorizationHeader,

@@ -175,7 +175,7 @@ describe("buildProjectGroups", () => {
 
     const groups = buildProjectGroups({ projects, settings: settings("repository") });
     expect(groups.map((group) => group.key)).toEqual([
-      "github.com/t3tools/t3code",
+      "github.com/t2tools/t2code",
       "github.com/julius/t3code-fork",
     ]);
     expect(groups[1]?.members.map((member) => member.project.id)).toEqual(["fork", "fork-2"]);

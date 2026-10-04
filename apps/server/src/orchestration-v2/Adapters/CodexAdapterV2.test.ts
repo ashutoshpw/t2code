@@ -494,7 +494,7 @@ describe("CodexAdapterV2 runtime policy", () => {
         kind: "untrusted",
         value: "Filtered to overdue",
       });
-      assert.isDefined(withT3.additionalContext?.["t3_code_runtime"]);
+      assert.isDefined(withT3.additionalContext?.["t2_code_runtime"]);
     }),
   );
 
@@ -675,7 +675,7 @@ describe("CodexAdapterV2 process spawning", () => {
           config: {
             "tools.update_plan.enabled": true,
             mcp_servers: {
-              "t3-code": {
+              "t2-code": {
                 url: "http://127.0.0.1:43123/mcp",
                 http_headers: {
                   Authorization: "Bearer secret-codex-token",

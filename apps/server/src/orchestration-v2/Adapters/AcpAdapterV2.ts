@@ -662,7 +662,7 @@ function negotiatedCapabilities(
     },
     tools: {
       ...base.tools,
-      // The stdio bridge (`t3 acp-mcp-bridge`) makes the t3-code MCP toolkit
+      // The stdio bridge (`t2 acp-mcp-bridge`) makes the t2-code MCP toolkit
       // available regardless of the agent's optional http/sse MCP support.
       supportsMcpTools: true,
     },
@@ -690,13 +690,13 @@ function acpMcpContext(threadId: ThreadId | null, self: SelfInvocation): AcpMcpC
   // Stdio is ACP's required baseline MCP transport. Agents that advertise
   // optional http support still routinely fail to wire injected http servers
   // through to their backend (codex-acp 1.2.0 and pi-acp both drop them), so
-  // every ACP session gets the `t3 acp-mcp-bridge` stdio server, which
+  // every ACP session gets the `t2 acp-mcp-bridge` stdio server, which
   // forwards JSON-RPC to T2's authenticated MCP endpoint. The credential
   // travels via environment variables, never the command line.
   return {
     servers: [
       {
-        name: "t3-code",
+        name: "t2-code",
         command: self.command,
         args: [...selfInvocationArgs(self, ["acp-mcp-bridge"])],
         env: [
@@ -706,7 +706,7 @@ function acpMcpContext(threadId: ThreadId | null, self: SelfInvocation): AcpMcpC
         ],
       },
     ],
-    acpServers: [{ type: "acp", name: "t3-code", serverId: "t3-code" }],
+    acpServers: [{ type: "acp", name: "t2-code", serverId: "t2-code" }],
     endpoint: session.endpoint,
     authorization: session.authorizationHeader,
     processEnvironment: {
@@ -2122,7 +2122,7 @@ export function makeAcpAdapterV2(
               elicitation: { form: {}, ...(flavor.onUrlElicitation ? { url: {} } : {}) },
               ...(flavor.clientCapabilitiesMeta ? { _meta: flavor.clientCapabilitiesMeta } : {}),
             },
-            clientInfo: { name: "t3-code", version: "0.0.0" },
+            clientInfo: { name: "t2-code", version: "0.0.0" },
             onTermination,
             onOutgoingResponseFailure: (requestId, error) =>
               Ref.modify(nativeResponseAcknowledgements, (current) => {

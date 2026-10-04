@@ -1,10 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import {
-  AcpRegistrySettings,
-  ProviderInstanceId,
-  type ProviderAuthState,
-} from "@t2code/contracts";
+import { AcpRegistrySettings, ProviderInstanceId, type ProviderAuthState } from "@t2code/contracts";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";

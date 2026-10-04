@@ -1437,7 +1437,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
                 mcpServers: {
                   // Muse defaults to "required", which fails the whole run when T2's
                   // tools cannot be reached. The agent should still work without them.
-                  "t3-code": {
+                  "t2-code": {
                     transport: "streamableHttp",
                     mode: "optional",
                     url: mcpSession.endpoint,

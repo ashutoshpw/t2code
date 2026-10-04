@@ -603,7 +603,7 @@ describe("ManagedEndpointReaper", () => {
       ({ stage, expected }) => {
         const stageLegacyTunnels = legacyTunnels.map((entry) => ({
           ...entry,
-          name: entry.name!.replace(PREFIX, `t3coderelay-managedendpoint-${stage}-`),
+          name: entry.name!.replace(PREFIX, `t2coderelay-managedendpoint-${stage}-`),
         }));
         const state = harness({
           namespace: stage,

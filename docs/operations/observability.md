@@ -165,12 +165,12 @@ Default Grafana login:
 
 #### 2. Export OTLP env vars
 
-````bash
+```bash
 export T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces
 export T2CODE_OTLP_METRICS_URL=http://localhost:4318/v1/metrics
 export T2CODE_OTLP_LOGS_URL=http://localhost:4318/v1/logs
 export OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=development
-````
+```
 
 Optional:
 
@@ -585,6 +585,7 @@ window and menu handling, backend supervision, and updates. It reports as servic
 `t3code-desktop`, so a collector shows it alongside the backend rather than mixed into it. It
 exports traces and logs only; the main process records no metrics, so the metrics endpoint applies
 to the backend alone.
+
 ### Env Vars
 
 Local trace file:
@@ -602,7 +603,7 @@ OTLP export:
 - `T2CODE_OTLP_METRICS_URL`: OTLP metric endpoint
 - `T2CODE_OTLP_LOGS_URL`: OTLP log endpoint
 - `T2CODE_OTLP_EXPORT_INTERVAL_MS`: export interval, default `10000`
-- `T2CODE_OTLP_HEADERS`: extra headers for all three exporters, same format as  `OTEL_EXPORTER_OTLP_HEADERS`: comma-separated `key=value` pairs with percent-encoded values.
+- `T2CODE_OTLP_HEADERS`: extra headers for all three exporters, same format as `OTEL_EXPORTER_OTLP_HEADERS`: comma-separated `key=value` pairs with percent-encoded values.
 - `T2CODE_OTLP_PROTOCOL`: `http/json` (default) or `http/protobuf`
 
 The server and the desktop app also read the standard
@@ -625,6 +626,7 @@ resource attributes, such as `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.na
 
 If the OTLP URLs are unset, local tracing still works, metrics stay in-process only, and logs stay
 on stdout only.
+
 ### The Kill Switch
 
 `T2CODE_OTEL_SDK_DISABLED` and `OTEL_SDK_DISABLED` turn off every OTLP export in both the server and

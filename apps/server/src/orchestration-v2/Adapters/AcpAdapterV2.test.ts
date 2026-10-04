@@ -771,7 +771,7 @@ describe("AcpAdapterV2", () => {
 
       const mcpServer = runtimeInput?.mcpServers[0];
       if (mcpServer === undefined || !("command" in mcpServer)) {
-        return yield* Effect.die("ACP runtime must receive the t3-code stdio MCP server");
+        return yield* Effect.die("ACP runtime must receive the t2-code stdio MCP server");
       }
       assert.equal(mcpServer.command, process.execPath);
       assert.deepEqual(mcpServer.args, ["acp-mcp-bridge"]);
@@ -1455,7 +1455,7 @@ describe("AcpAdapterV2", () => {
           (item) =>
             item.threadId === task?.childThreadId &&
             item.type === "dynamic_tool" &&
-            item.toolName === "t3-code.task_status",
+            item.toolName === "t2-code.task_status",
         ),
       );
       const childMcp = items.find(
@@ -2368,7 +2368,7 @@ describe("AcpAdapterV2", () => {
         mcpServers: [
           {
             type: "stdio",
-            name: "t3-code",
+            name: "t2-code",
             command: process.execPath,
             args: [
               process.argv[1] === undefined ? "t2" : NodePath.resolve(process.argv[1]),

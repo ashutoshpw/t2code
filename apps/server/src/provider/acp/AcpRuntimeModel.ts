@@ -1077,12 +1077,12 @@ function acpMcpFallbackInput(value: string | undefined): Record<string, unknown>
  * shared convention (survey of the 2026-08 registry builds): Kilo and
  * opencode use `t2-code_<tool>`, claude-acp and qwen `mcp__t2-code__<tool>`,
  * Amp `mcp__t2_code__<tool>` (hyphens mangled), droid `t2-code___<tool>`,
- * Copilot `t3-code-<tool>`, cline appends `: <args json>`. T2 always injects
- * its server as "t2-code", and matches are additionally gated on the known
- * T2 tool inventory, so the separator match can stay loose.
+ * Copilot `t2-code-<tool>`, cline appends `: <args json>`. Earlier releases
+ * used `t3-code`; accept that spelling for saved provider sessions. Matches
+ * are gated on the known T2 tool inventory, so separator matching can stay loose.
  */
 const T2_MCP_TITLE_CALL =
-  /^(?:mcp[-_]{1,2})?t3[-_ ]?code[-_.:/ ]{1,3}(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*)(?::.*)?$/i;
+  /^(?:mcp[-_]{1,2})?t[23][-_ ]?code[-_.:/ ]{1,3}(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*)(?::.*)?$/i;
 
 /**
  * Gemini CLI titles injected MCP calls "<tool> (<server> MCP Server)" and
@@ -1090,7 +1090,11 @@ const T2_MCP_TITLE_CALL =
  * tool-first as "<tool>_t2-code".
  */
 const T2_MCP_TITLE_SUFFIX_CALL =
-  /^(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*?)(?: \(t3[-_ ]?code MCP Server\)(?::|$)|[-_.]t3[-_ ]?code$)/i;
+  /^(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*?)(?: \(t[23][-_ ]?code MCP Server\)(?::|$)|[-_.]t[23][-_ ]?code$)/i;
+
+function isT2McpServerName(server: string): boolean {
+  return /^t[23][-_ ]?code$/i.test(server);
+}
 
 /**
  * glm-acp-agent and Kimi CLI register injected MCP tools under their bare
@@ -1138,7 +1142,7 @@ export function extractMcpToolCallIdentity(
   // its toolName identifies the call even under future prefix formats.
   const metaServerId = typeof meta?.serverId === "string" ? meta.serverId.trim() : "";
   const metaToolName = typeof meta?.toolName === "string" ? meta.toolName.trim() : "";
-  if (/^t3[-_ ]?code$/i.test(metaServerId) && metaToolName.length > 0) {
+  if (isT2McpServerName(metaServerId) && metaToolName.length > 0) {
     for (const knownTool of T2_MCP_TOOL_NAMES) {
       const boundary = metaToolName.length - knownTool.length - 1;
       if (
@@ -1154,8 +1158,8 @@ export function extractMcpToolCallIdentity(
   const gooseExtension =
     typeof gooseToolCall?.extensionName === "string" ? gooseToolCall.extensionName.trim() : "";
   const assertsForeignOrigin =
-    (metaServerId.length > 0 && !/^t3[-_ ]?code$/i.test(metaServerId)) ||
-    (gooseExtension.length > 0 && !/^t3[-_ ]?code$/i.test(gooseExtension));
+    (metaServerId.length > 0 && !isT2McpServerName(metaServerId)) ||
+    (gooseExtension.length > 0 && !isT2McpServerName(gooseExtension));
   // A foreign origin never brands as T2. qwen's serverId marks a real MCP
   // server, but goose reports its built-in extensions (developer__shell,
   // edits) the same way as user MCP servers, so goose stays unclassified and
@@ -1177,8 +1181,15 @@ export function extractMcpToolCallIdentity(
   for (const candidate of candidates) {
     const trimmed = candidate.trim();
     const qualified = /^mcp__(.+?)__(.+)$/i.exec(trimmed);
-    if (qualified?.[1] && qualified[2] && !/^t3[-_ ]?code$/i.test(qualified[1]))
-      return { server: qualified[1], tool: qualified[2] };
+    if (qualified?.[1] && qualified[2]) {
+      if (isT2McpServerName(qualified[1])) {
+        if (T2_MCP_TOOL_NAMES.has(qualified[2])) {
+          return { server: "t2-code", tool: qualified[2] };
+        }
+      } else {
+        return { server: qualified[1], tool: qualified[2] };
+      }
+    }
     const match =
       T2_MCP_TITLE_CALL.exec(trimmed) ??
       T2_MCP_TITLE_SUFFIX_CALL.exec(trimmed) ??

@@ -47,7 +47,7 @@ import * as IdAllocator from "../IdAllocator.ts";
 import type { ProviderContinuationRequest } from "../ProviderContinuationRequests.ts";
 import * as ProviderContinuationRequests from "../ProviderContinuationRequests.ts";
 import { OPENCODE_PROVIDER } from "./OpenCodeAdapterV2.ts";
-import { OPENCODE_2_STILL_STOPPING, t3McpServerName } from "./OpenCode2AdapterV2.ts";
+import { OPENCODE_2_STILL_STOPPING, t2McpServerName } from "./OpenCode2AdapterV2.ts";
 import { openCode2ReplayRuntime } from "./OpenCode2AdapterV2.testkit.ts";
 
 const SESSION = "ses_f148ca2deffeJcwCnRQtb0YFNX";
@@ -76,8 +76,8 @@ const durable = { durable: { aggregateID: SESSION, seq: 1, version: 1 } };
 
 /** The rules T2 gives every session it runs, with only this thread's own T2 MCP server allowed. */
 const mcpRules = [
-  { action: "t3-code-*", resource: "*", effect: "deny" },
-  { action: "t3-code-thread_opencode2-adapter_*", resource: "*", effect: "allow" },
+  { action: "t2-code-*", resource: "*", effect: "deny" },
+  { action: "t2-code-thread_opencode2-adapter_*", resource: "*", effect: "allow" },
 ];
 const t3Rules = [{ action: "*", resource: "*", effect: "allow" }, ...mcpRules];
 const sessionInfo = (overrides: Record<string, unknown> = {}) => ({
@@ -172,7 +172,7 @@ const withInstructions = (
         ...entries.slice(0, at),
         out("session.instructions.entry.put", {
           sessionID: SESSION,
-          key: "t3-code",
+          key: "t2-code",
           value: "<any>",
         }),
         reply("session.instructions.entry.put", null),
@@ -2694,7 +2694,7 @@ describe("OpenCode2 adapter", () => {
         yield* Effect.addFinalizer(() =>
           Effect.sync(() => McpProviderSession.clearMcpProviderSession(threadId)),
         );
-        const server = "t3-code-thread_opencode2-adapter";
+        const server = "t2-code-thread_opencode2-adapter";
         const { runtime, thread } = yield* resumed([
           // Registered for the session's directory under the thread's own name;
           // the session's rules allow only this name's tools (see `t3Rules`).
@@ -2728,7 +2728,7 @@ describe("OpenCode2 adapter", () => {
       const child = ThreadId.make(
         "thread:delegated-task:command%3Amcp%3A48bef2bf-6d0e-4f7a-9c3b-2e5d8a1f7c40%3Adelegate-task%3Asubproject-b-round1",
       );
-      const server = "t3-code-aa73fa1e03099934";
+      const server = "t2-code-aa73fa1e03099934";
       McpProviderSession.setMcpProviderSession({
         environmentId: EnvironmentId.make("environment:opencode2-adapter"),
         threadId: child,
@@ -2750,7 +2750,7 @@ describe("OpenCode2 adapter", () => {
           sessionInfo({
             permissions: [
               { action: "*", resource: "*", effect: "allow" },
-              { action: "t3-code-*", resource: "*", effect: "deny" },
+              { action: "t2-code-*", resource: "*", effect: "deny" },
               { action: `${server}_*`, resource: "*", effect: "allow" },
             ],
           }),
@@ -2795,14 +2795,14 @@ describe("OpenCode2 adapter", () => {
         "thread:delegated-task:command%3Amcp%3A48bef2bf-6d0e-4f7a-9c3b-2e5d8a1f7c40%3Adelegate-task%3Around1",
         "thread:delegated-task:command%3Amcp%3A48bef2bf-6d0e-4f7a-9c3b-2e5d8a1f7c40%3Adelegate-task%3Around2",
       ];
-      const names = yield* Effect.forEach(ids, t3McpServerName);
-      for (const name of names) assert.match(name, /^t3-code-[A-Za-z0-9_-]{1,56}$/);
+      const names = yield* Effect.forEach(ids, t2McpServerName);
+      for (const name of names) assert.match(name, /^t2-code-[A-Za-z0-9_-]{1,56}$/);
       assert.equal(new Set(names).size, ids.length);
-      assert.deepEqual(yield* Effect.forEach(ids, t3McpServerName), names);
+      assert.deepEqual(yield* Effect.forEach(ids, t2McpServerName), names);
       // A digested name is the one the synchronous node:crypto version produced.
-      assert.equal(names[0], "t3-code-63abb5df2b188bdd");
+      assert.equal(names[0], "t2-code-63abb5df2b188bdd");
       // A name that already fits stays readable.
-      assert.equal(yield* t3McpServerName(threadId), "t3-code-thread_opencode2-adapter");
+      assert.equal(yield* t2McpServerName(threadId), "t2-code-thread_opencode2-adapter");
     }).pipe(Effect.provide(NodeCrypto.layer)),
   );
 
@@ -3156,7 +3156,7 @@ describe("OpenCode2 adapter", () => {
         ...promptInto(SESSION, "msg_recorded_turn_a"),
         ...steerInto(SESSION, "msg_recorded_steer_a"),
         // The other session gets its own instructions entry before its first prompt.
-        out("session.instructions.entry.put", { sessionID: OTHER, key: "t3-code", value: "<any>" }),
+        out("session.instructions.entry.put", { sessionID: OTHER, key: "t2-code", value: "<any>" }),
         reply("session.instructions.entry.put", null),
         ...promptInto(OTHER, "msg_recorded_turn_b"),
         ...steerInto(OTHER, "msg_recorded_steer_b"),
@@ -3699,8 +3699,8 @@ describe("OpenCode2 adapter", () => {
           sessionID: FORK,
           permissions: [
             { action: "*", resource: "*", effect: "allow" },
-            { action: "t3-code-*", resource: "*", effect: "deny" },
-            { action: "t3-code-thread_opencode2-adapter_fork_*", resource: "*", effect: "allow" },
+            { action: "t2-code-*", resource: "*", effect: "deny" },
+            { action: "t2-code-thread_opencode2-adapter_fork_*", resource: "*", effect: "allow" },
           ],
         }),
         reply("session.update", null),

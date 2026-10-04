@@ -918,11 +918,11 @@ export function makeClaudeQueryOptions(input: {
   return input.cwd === null ? withDirectories : { ...withDirectories, cwd: input.cwd };
 }
 
-export const CLAUDE_T3_MCP_TOOL_WILDCARD = "mcp__t2-code__*";
+export const CLAUDE_T2_MCP_TOOL_WILDCARD = "mcp__t2-code__*";
 
 // Must stay in sync with the Tool.Readonly annotations on OrchestratorToolkit;
 // ClaudeAdapterV2.test.ts cross-checks this list against the toolkit.
-export const CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
+export const CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
   "mcp__t2-code__orchestrator_capabilities",
   "mcp__t2-code__list_scheduled_tasks",
   "mcp__t2-code__t2_thread_list",
@@ -940,8 +940,8 @@ export const CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
   "mcp__t2-code__t2_environment_read",
   "mcp__t2-code__t2_queue_list",
   "mcp__t2-code__t2_queue_read",
-  "mcp__t3-code__html_preview",
-  "mcp__t3-code__html_render",
+  "mcp__t2-code__html_preview",
+  "mcp__t2-code__html_render",
 ];
 
 // Claude Code aborts an HTTP MCP call after 60 s ("The operation timed out.")
@@ -949,10 +949,10 @@ export const CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
 // delegate_task mode=wait) legitimately block for up to an hour
 // (MAX_WAIT_TIMEOUT_MS in OrchestratorMcpService), so the budget sits just
 // above that and the server's own wait timeout is what ends a long call.
-export const CLAUDE_T3_MCP_TOOL_TIMEOUT_MS = 65 * 60 * 1_000;
+export const CLAUDE_T2_MCP_TOOL_TIMEOUT_MS = 65 * 60 * 1_000;
 
 // The SDK's `allowedTools` only pre-approves tool calls; availability is the
-// separate `tools` option. Attaching the t3-code MCP server therefore always
+// separate `tools` option. Attaching the t2-code MCP server therefore always
 // pre-approves its tools (headless modes like `dontAsk` deny anything that is
 // not pre-approved), but read-only sandboxes pre-approve only the annotated
 // read-only orchestrator tools so a read-only session cannot silently spawn
@@ -970,18 +970,18 @@ export function claudeMcpQueryOverrides(input: {
     return input.allowedTools === undefined ? {} : { allowedTools: input.allowedTools };
   }
   const mcpAllowedTools = input.readOnlySandbox
-    ? CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS
-    : [CLAUDE_T3_MCP_TOOL_WILDCARD];
+    ? CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS
+    : [CLAUDE_T2_MCP_TOOL_WILDCARD];
   return {
     allowedTools: Array.from(new Set([...(input.allowedTools ?? []), ...mcpAllowedTools])),
     mcpServers: {
-      "t3-code": {
+      "t2-code": {
         type: "http",
         url: session.endpoint,
         headers: {
           Authorization: session.authorizationHeader,
         },
-        timeout: CLAUDE_T3_MCP_TOOL_TIMEOUT_MS,
+        timeout: CLAUDE_T2_MCP_TOOL_TIMEOUT_MS,
       },
     },
   };

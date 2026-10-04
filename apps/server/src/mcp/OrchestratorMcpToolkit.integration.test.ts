@@ -768,7 +768,7 @@ describe("orchestrator MCP toolkit", () => {
               invokeAs(invocation, name, args);
 
             // Settling would stop the session, so the agent's own turn keeps running.
-            const deferredSettle = yield* invoke("t3_thread_organize", { action: "settle" });
+            const deferredSettle = yield* invoke("t2_thread_organize", { action: "settle" });
             expect(deferredSettle.isError).toBe(false);
             expect(deferredSettle.structuredContent).toEqual({ settlesWhenTurnEnds: true });
             const afterDeferredSettle = yield* orchestrator.getThreadProjection(parentThreadId);
@@ -787,10 +787,10 @@ describe("orchestrator MCP toolkit", () => {
             if (parentRun === undefined || parentRun.rootNodeId === null) {
               return yield* Effect.die(new Error("Parent run missing."));
             }
-            for (const name of ["t3_queue_edit", "t3_queue_cancel"]) {
+            for (const name of ["t2_queue_edit", "t2_queue_cancel"]) {
               const refusedQueueMutation = yield* invoke(name, {
                 queuedRunId: parentRun.id,
-                ...(name === "t3_queue_edit" ? { text: "Keep the active turn." } : {}),
+                ...(name === "t2_queue_edit" ? { text: "Keep the active turn." } : {}),
               });
               expect(refusedQueueMutation.isError).toBe(true);
               expect(refusedQueueMutation.structuredContent).toBeUndefined();
@@ -1243,13 +1243,13 @@ describe("orchestrator MCP toolkit", () => {
               items: [{ queuedRunId: queueRace.queuedRun.id }],
               nextCursor: 1,
             });
-            const queueDefinition = server.tools.find(({ tool }) => tool.name === "t3_queue_list");
+            const queueDefinition = server.tools.find(({ tool }) => tool.name === "t2_queue_list");
             const validateQueue = new AjvJsonSchemaValidator().getValidator(
               queueDefinition!.tool.outputSchema! as JsonSchemaType,
             );
             expect(validateQueue(queueFirstPage.structuredContent).valid).toBe(true);
             const missingThreadId = ThreadId.make("00000000-0000-4000-8000-000000000000");
-            const missingThreadQueue = yield* invoke("t3_queue_list", {
+            const missingThreadQueue = yield* invoke("t2_queue_list", {
               threadId: missingThreadId,
               limit: 1,
             });
@@ -1261,7 +1261,7 @@ describe("orchestrator MCP toolkit", () => {
             });
             expect(missingThreadQueue.structuredContent).toBeUndefined();
             expect(validateQueue({ items: "invalid", nextCursor: null }).valid).toBe(false);
-            const missingThreadRead = yield* invoke("t3_thread_read", {
+            const missingThreadRead = yield* invoke("t2_thread_read", {
               threadId: missingThreadId,
             });
             expect(missingThreadRead.isError).toBe(true);
@@ -2249,7 +2249,7 @@ describe("orchestrator MCP toolkit", () => {
               threadId: emptyThread.threadId,
               snoozedUntil: "2099-01-01T00:00:00.000Z",
             });
-            const snoozedListCall = yield* invoke("t3_thread_list", { snoozed: true, limit: 100 });
+            const snoozedListCall = yield* invoke("t2_thread_list", { snoozed: true, limit: 100 });
             const snoozedList = yield* decodeThreadListResult(
               snoozedListCall.structuredContent,
             ).pipe(Effect.orDie);
@@ -2260,7 +2260,7 @@ describe("orchestrator MCP toolkit", () => {
               snoozed: true,
               snoozedUntil: "2099-01-01T00:00:00.000Z",
             });
-            const snoozedReadCall = yield* invoke("t3_thread_read", {
+            const snoozedReadCall = yield* invoke("t2_thread_read", {
               threadId: emptyThread.threadId,
             });
             const snoozedRead = yield* decodeThreadReadResult(
@@ -2611,7 +2611,7 @@ describe("orchestrator MCP toolkit", () => {
               threadId: foreignThreadId,
               title: "Renamed from another project",
             });
-            const foreignListCall = yield* invoke("t3_thread_list", {
+            const foreignListCall = yield* invoke("t2_thread_list", {
               projectId: "project:mcp-foreign",
             });
             const foreignListed = yield* decodeThreadListResult(

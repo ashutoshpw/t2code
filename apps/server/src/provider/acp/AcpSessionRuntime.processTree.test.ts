@@ -654,8 +654,9 @@ describe("terminatePosixOwnedProcessTree", () => {
 
   it.live("rotates more than 64 live parents without scanning retained tombstones", () =>
     Effect.gen(function* () {
+      const firstParentPid = process.pid + 1_000_000;
       const parents = Array.from({ length: 130 }, (_, index) =>
-        identity(1_000 + index, 100, 1_000 + index, 1_000 + index),
+        identity(firstParentPid + index, 100, firstParentPid + index, firstParentPid + index),
       );
       let childListReads = 0;
       let identityCalls = 0;

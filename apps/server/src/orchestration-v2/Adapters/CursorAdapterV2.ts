@@ -208,7 +208,7 @@ export function cursorMcpServers(threadId: ThreadId): Record<string, McpServerCo
     return undefined;
   }
   return {
-    "t3-code": {
+    "t2-code": {
       type: "http",
       url: session.endpoint,
       headers: {

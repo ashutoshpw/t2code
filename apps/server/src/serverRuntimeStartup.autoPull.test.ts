@@ -8,6 +8,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
+import * as Stream from "effect/Stream";
 import { HttpServer } from "effect/http";
 import * as NetAddress from "effect/net/NetAddress";
 
@@ -123,6 +124,7 @@ it.effect("parks automatic pull until activation without delaying command readin
         Layer.mock(ServerSettings.ServerSettingsService)({
           start: Effect.void,
           getSettings: Effect.succeed({ ...DEFAULT_SERVER_SETTINGS, defaultAutoPull: true }),
+          subscribeChanges: Effect.succeed(Stream.empty),
         }),
         Layer.mock(ServerEnvironment.ServerEnvironment)({
           getDescriptor: Effect.succeed({
@@ -132,6 +134,7 @@ it.effect("parks automatic pull until activation without delaying command readin
             serverVersion: "0.0.0-test",
             capabilities: { repositoryIdentity: true },
           }),
+          setEnvironmentLabel: () => Effect.void,
         }),
         Layer.mock(ProjectStore.ProjectStoreV2)({
           listShells: () => Effect.succeed(snapshot.projects),

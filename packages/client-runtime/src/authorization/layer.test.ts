@@ -376,7 +376,7 @@ describe("RemoteEnvironmentAuthorization", () => {
       expect(authorized.socketUrl).toMatch(/^ws:\/\/192\.168\.1\.10:3772\/ws\?/);
       expect(yield* Ref.get(harness.bootstrapCalls)).toBe(0);
       expect(harness.fetch.calls.map(([url]) => String(url))).toEqual([
-        "http://192.168.1.10:3772/.well-known/t3/environment",
+        "http://192.168.1.10:3772/.well-known/t2/environment",
         "http://192.168.1.10:3772/api/auth/websocket-ticket",
       ]);
     }),
@@ -406,7 +406,7 @@ describe("RemoteEnvironmentAuthorization", () => {
 
       expect(error).toMatchObject({ _tag: "ConnectionBlockedError", reason: "configuration" });
       expect(harness.fetch.calls.map(([url]) => String(url))).toEqual([
-        "http://192.168.1.10:3772/.well-known/t3/environment",
+        "http://192.168.1.10:3772/.well-known/t2/environment",
       ]);
       // The token stays saved for the T2 Connect route.
       expect((yield* Ref.get(harness.tokens)).get(ENVIRONMENT_ID)?.accessToken).toBe(
