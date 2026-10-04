@@ -390,7 +390,7 @@ describe("orchestrator MCP toolkit", () => {
           const followupStartSequence = yield* orchestrator.getThreadEventSequence(
             localChild(delegated.childThreadId),
           );
-          const runningFollowupCall = yield* invoke("t3_thread_send", {
+          const runningFollowupCall = yield* invoke("t2_thread_send", {
             threadId: localChild(delegated.childThreadId),
             message: cancellationPrompt,
             clientRequestId: "delegated-child-replay-running-1",
@@ -418,7 +418,7 @@ describe("orchestrator MCP toolkit", () => {
               ),
             );
 
-          const queuedFollowupCall = yield* invoke("t3_thread_send", {
+          const queuedFollowupCall = yield* invoke("t2_thread_send", {
             threadId: localChild(delegated.childThreadId),
             message: queuedFollowupPrompt,
             mode: "queue",
@@ -483,7 +483,7 @@ describe("orchestrator MCP toolkit", () => {
           const finalSequence = yield* orchestrator.getThreadEventSequence(
             localChild(delegated.childThreadId),
           );
-          const interruptCall = yield* invoke("t3_thread_interrupt", {
+          const interruptCall = yield* invoke("t2_thread_interrupt", {
             threadId: localChild(delegated.childThreadId),
             runId: runningFollowup.runId,
             reason: "Allow the queued replay follow-up to run.",
@@ -626,7 +626,7 @@ describe("orchestrator MCP toolkit", () => {
             },
           });
           const wait = yield* invoke(
-            "t3_thread_wait",
+            "t2_thread_wait",
             { threadId: delegated.childThreadId, runId: queuedFollowup.runId },
             { ...invocation, thread: undefined },
           ).pipe(Effect.withTracer(tracer));
@@ -641,7 +641,7 @@ describe("orchestrator MCP toolkit", () => {
           expect(messageReads).toEqual([]);
           expect(transferReads).toHaveLength(0);
           const settledWait = yield* invoke(
-            "t3_thread_wait",
+            "t2_thread_wait",
             {
               threadId: delegated.childThreadId,
               runId: queuedFollowup.runId,
@@ -663,7 +663,7 @@ describe("orchestrator MCP toolkit", () => {
             messageReads.filter((query) => !query.includes("$.notification.source.kind")),
           ).toHaveLength(1);
           const parentlessRead = yield* invoke(
-            "t3_thread_read",
+            "t2_thread_read",
             {
               threadId: delegated.childThreadId,
               limit: 100,
@@ -679,7 +679,7 @@ describe("orchestrator MCP toolkit", () => {
               ?.completionDelivery?.state,
           ).toBe("claimed");
 
-          const read = yield* invoke("t3_thread_read", {
+          const read = yield* invoke("t2_thread_read", {
             threadId: delegated.childThreadId,
             limit: 100,
             maxCharsPerItem: result === "😀" ? 1 : 20_000,

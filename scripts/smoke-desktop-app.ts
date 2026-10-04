@@ -28,9 +28,9 @@ if (!executable)
 const artifactsDir = NodePath.resolve(values["artifacts-dir"] ?? "desktop-launch-check");
 
 const home = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-desktop-launch-"));
-const t3Home = NodePath.join(home, "t3");
-NodeFS.mkdirSync(NodePath.join(t3Home, "userdata"), { recursive: true });
-NodeFS.copyFileSync(FIXTURE_DB, NodePath.join(t3Home, "userdata/statev2.sqlite"));
+const t2Home = NodePath.join(home, "t3");
+NodeFS.mkdirSync(NodePath.join(t2Home, "userdata"), { recursive: true });
+NodeFS.copyFileSync(FIXTURE_DB, NodePath.join(t2Home, "userdata/statev2.sqlite"));
 
 let step = "launching the app";
 let app: ElectronApplication | undefined;
@@ -45,9 +45,9 @@ try {
       ...process.env,
       XDG_CONFIG_HOME: NodePath.join(home, ".config"),
       XDG_DATA_HOME: NodePath.join(home, ".local/share"),
-      T3CODE_HOME: t3Home,
-      T3CODE_TELEMETRY_ENABLED: "false",
-      T3CODE_DISABLE_AUTO_UPDATE: "true",
+      T3CODE_HOME: t2Home,
+      T2CODE_TELEMETRY_ENABLED: "false",
+      T2CODE_DISABLE_AUTO_UPDATE: "true",
     },
     timeout: STEP_TIMEOUT_MS,
   });
@@ -74,7 +74,7 @@ try {
   console.error(`Desktop launch check failed while ${step}.`);
   NodeFS.mkdirSync(artifactsDir, { recursive: true });
   console.error(error instanceof Error ? error.message : error);
-  const logs = NodePath.join(t3Home, "userdata/logs");
+  const logs = NodePath.join(t2Home, "userdata/logs");
   if (NodeFS.existsSync(logs)) {
     NodeFS.cpSync(logs, NodePath.join(artifactsDir, "logs"), { recursive: true });
     const serverLog = NodePath.join(logs, "server-child.log");

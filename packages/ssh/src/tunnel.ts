@@ -440,10 +440,10 @@ fi
 # Unpacked into the pinned-runtime layout so \`t3 service install\` reuses it.
 T2_RELEASE_BASE_URL=@@T2_RELEASE_BASE_URL@@
 T2_RUNTIME_DIR="$HOME/.t2/runtime/versions/$T2_ARCHIVE_VERSION"
-t3_runtime_ready() {
+t2_runtime_ready() {
   [ -x "$T2_RUNTIME_DIR/t3" ] && [ "$(cat "$T2_RUNTIME_DIR/.install-complete" 2>/dev/null)" = "$T2_ARCHIVE_VERSION" ]
 }
-if ! t3_runtime_ready; then
+if ! t2_runtime_ready; then
   mkdir -p "$HOME/.t2/runtime/versions"
   T2_LOCK="$HOME/.t2/runtime/versions/.$T2_ARCHIVE_VERSION.install.lock"
   # uutils mkdir can report success on EEXIST, so use shell noclobber.
@@ -474,7 +474,7 @@ if ! t3_runtime_ready; then
   done
   trap 'rm -rf "$T2_LOCK"' EXIT
 fi
-if ! t3_runtime_ready; then
+if ! t2_runtime_ready; then
   case "$(uname -s)" in
     Darwin) T2_PLATFORM="darwin" ;;
     Linux) T2_PLATFORM="linux" ;;
@@ -489,13 +489,13 @@ if ! t3_runtime_ready; then
   T2_LEGACY_ARCHIVE="t3-$T2_ARCHIVE_VERSION-$T2_PLATFORM-$T2_ARCH.tar.gz"
   T2_STAGING="$(mktemp -d "$HOME/.t2/runtime/versions/.staging-XXXXXX")"
   trap 'rm -rf "$T2_STAGING" "$T2_LOCK"' EXIT
-  t3_fetch() {
+  t2_fetch() {
     if command -v curl >/dev/null 2>&1; then curl -fsSL --connect-timeout 30 --max-time "$3" "$1" -o "$2"
     elif command -v wget >/dev/null 2>&1; then wget -q --timeout=30 --tries=1 "$1" -O "$2"
     else printf 'Remote host needs curl or wget to download %s.\\n' "$T2_ARCHIVE" >&2; exit 1
     fi
   }
-  t3_fetch "$T2_RELEASE_BASE_URL/v$T2_ARCHIVE_VERSION/SHA256SUMS" "$T2_STAGING/SHA256SUMS" @@T2_ARCHIVE_CHECKSUMS_SECONDS@@
+  t2_fetch "$T2_RELEASE_BASE_URL/v$T2_ARCHIVE_VERSION/SHA256SUMS" "$T2_STAGING/SHA256SUMS" @@T2_ARCHIVE_CHECKSUMS_SECONDS@@
   if ! grep -q " \\*\\{0,1\\}$T2_ARCHIVE$" "$T2_STAGING/SHA256SUMS"; then
     if grep -q " \\*\\{0,1\\}$T2_LEGACY_ARCHIVE$" "$T2_STAGING/SHA256SUMS"; then
       T2_ARCHIVE="$T2_LEGACY_ARCHIVE"
@@ -504,7 +504,7 @@ if ! t3_runtime_ready; then
       exit 1
     fi
   fi
-  t3_fetch "$T2_RELEASE_BASE_URL/v$T2_ARCHIVE_VERSION/$T2_ARCHIVE" "$T2_STAGING/$T2_ARCHIVE" @@T2_ARCHIVE_DOWNLOAD_SECONDS@@
+  t2_fetch "$T2_RELEASE_BASE_URL/v$T2_ARCHIVE_VERSION/$T2_ARCHIVE" "$T2_STAGING/$T2_ARCHIVE" @@T2_ARCHIVE_DOWNLOAD_SECONDS@@
   T2_EXPECTED="$(grep " \\*\\{0,1\\}$T2_ARCHIVE$" "$T2_STAGING/SHA256SUMS" | cut -d' ' -f1)"
   if command -v sha256sum >/dev/null 2>&1; then
     T2_ACTUAL="$(sha256sum "$T2_STAGING/$T2_ARCHIVE" | cut -d' ' -f1)"

@@ -275,7 +275,7 @@ function matchToken(
 
 /**
  * Short words followed by a short prefix are noise inside a title ("inth" in "in thread").
- * Allow them at its start ("t3co"), before three letters ("gomod"), or a whole word ("vscode").
+ * Allow them at its start ("t2co"), before three letters ("gomod"), or a whole word ("vscode").
  */
 function matchJoinedWords(field: SearchField, token: string): TokenMatch | null {
   for (
