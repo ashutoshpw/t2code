@@ -1159,7 +1159,7 @@ export interface DesktopBridge {
 }
 
 /** Renderer callback invoked by Electron with a fresh user gesture before display-media capture. */
-export const DESKTOP_PREVIEW_RECORDING_CAPTURE_TRIGGER = "__t3DesktopPreviewRecordingCapture";
+export const DESKTOP_PREVIEW_RECORDING_CAPTURE_TRIGGER = "__t2DesktopPreviewRecordingCapture";
 
 /**
  * Dictation for the annotation editor drawn inside a preview guest. The guest only shows

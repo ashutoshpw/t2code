@@ -9,7 +9,7 @@ import type {
 import { isOrchestrationV2WorkActive } from "@t2code/contracts";
 import * as Predicate from "effect/Predicate";
 
-import { resolveT3McpToolId } from "./t3McpToolPresentation.ts";
+import { resolveT2McpToolId } from "./t2McpToolPresentation.ts";
 
 const BACKGROUND_TURN_ITEM_TYPES = new Set<OrchestrationV2TurnItem["type"]>([
   "command_execution",
@@ -70,9 +70,9 @@ export function deriveBlockedOnThreadWait(input: {
       continue;
     }
     if (item.type !== "dynamic_tool") return false;
-    const tool = resolveT3McpToolId(item.toolName);
+    const tool = resolveT2McpToolId(item.toolName);
     if (
-      tool !== "t3_thread_wait" &&
+      tool !== "t2_thread_wait" &&
       !(
         tool === "delegate_task" &&
         Predicate.isObject(item.input) &&

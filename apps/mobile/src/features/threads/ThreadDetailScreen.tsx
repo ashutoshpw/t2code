@@ -43,7 +43,7 @@ import type {
   MessageId,
   RuntimeRequestId,
   ScopedThreadRef,
-  ServerConfig as T3ServerConfig,
+  ServerConfig as T2ServerConfig,
   UsageLimitsReport,
   RunId,
 } from "@t2code/contracts";

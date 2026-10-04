@@ -1,6 +1,6 @@
 import {
-  t3ConnectTroubleshootingUrl,
-  type T3ConnectTroubleshootingSection,
+  t2ConnectTroubleshootingUrl,
+  type T2ConnectTroubleshootingSection,
 } from "@t2code/contracts";
 import type { RelayEnvironmentStatusResponse } from "@t2code/contracts/relay";
 import * as DateTime from "effect/DateTime";
@@ -234,7 +234,7 @@ function steps(host: string, located: Located, failure: ConnectionAttemptError |
 function helpSection(
   located: Located,
   failure: ConnectionAttemptError | null,
-): T3ConnectTroubleshootingSection {
+): T2ConnectTroubleshootingSection {
   switch (located.cause) {
     case "offline":
       return "this-device-cant-reach-t3-connect";

@@ -48,9 +48,9 @@ function link(
 ): ThreadPullRequestLink {
   return {
     host: "github.com",
-    repository: "pingdotgg/t2code",
+    repository: "pingdotgg/t3code",
     number,
-    url: `https://github.com/pingdotgg/t2code/pull/${number}`,
+    url: `https://github.com/pingdotgg/t3code/pull/${number}`,
     source: "manual",
     linkedAt: `2026-01-01T00:00:${String(number).padStart(2, "0")}.000Z`,
     snapshot: null,
@@ -167,7 +167,7 @@ describe("resolveThreadCurrentPullRequest", () => {
       kind: "native" as const,
       id: "s1",
       number: 1,
-      url: "https://github.com/pingdotgg/t2code/stacks/1",
+      url: "https://github.com/pingdotgg/t3code/stacks/1",
       base: "main",
       layers: [
         { number: 10, headBranch: "a", state: "open" as const },
@@ -317,7 +317,7 @@ describe("resolveThreadPullRequestChains", () => {
       kind: "native" as const,
       id: "s1",
       number: 1,
-      url: "https://github.com/pingdotgg/t2code/stacks/1",
+      url: "https://github.com/pingdotgg/t3code/stacks/1",
       base: "main",
       layers: [
         { number: 5, headBranch: "a", state: "merged" as const },
@@ -367,7 +367,7 @@ describe("chain selection and badge state", () => {
       kind: "native" as const,
       id: "native-1",
       number: 1,
-      url: "https://github.com/pingdotgg/t2code/stacks/1",
+      url: "https://github.com/pingdotgg/t3code/stacks/1",
       base: "main",
       layers: [
         { number: 2, headBranch: "base", state: "merged" as const },
@@ -473,8 +473,8 @@ describe("threadPullRequestSearchTerms", () => {
       ],
     });
     expect(terms).toContain("#12");
-    expect(terms).toContain("pingdotgg/t2code#12");
-    expect(terms).toContain("https://github.com/pingdotgg/t2code/pull/12");
+    expect(terms).toContain("pingdotgg/t3code#12");
+    expect(terms).toContain("https://github.com/pingdotgg/t3code/pull/12");
     expect(terms).toContain("Fix login");
     expect(terms).toContain("#34");
     expect(terms.join(" ")).not.toContain("56");
@@ -484,9 +484,9 @@ describe("threadPullRequestSearchTerms", () => {
 it("searches the legacy projection when old environments decode to an empty links list", () => {
   const linkedPullRequest = {
     projectId: ProjectId.make("project"),
-    repository: "pingdotgg/t2code",
+    repository: "pingdotgg/t3code",
     number: 12,
-    url: "https://github.com/pingdotgg/t2code/pull/12",
+    url: "https://github.com/pingdotgg/t3code/pull/12",
   };
   expect(threadPullRequestSearchTerms({ pullRequests: [], linkedPullRequest })).toContain("#12");
   expect(

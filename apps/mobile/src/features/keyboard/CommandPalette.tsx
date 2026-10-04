@@ -159,7 +159,7 @@ function PaletteRow(props: {
               ? splitSearchText(props.item.title, props.item.titleRanges).map((part) => (
                   <Text
                     key={part.start}
-                    className={cn("text-base", part.highlighted && "font-t3-bold")}
+                    className={cn("text-base", part.highlighted && "font-t2-bold")}
                   >
                     {part.text}
                   </Text>
@@ -192,7 +192,7 @@ function PaletteRow(props: {
           <Text numberOfLines={1} className={cn("text-sm", mutedForegroundClassName)}>
             {props.item.matchHint.label}:{" "}
             {splitSearchText(props.item.matchHint.text, props.item.matchHint.ranges).map((part) => (
-              <Text key={part.start} className={cn("text-sm", part.highlighted && "font-t3-bold")}>
+              <Text key={part.start} className={cn("text-sm", part.highlighted && "font-t2-bold")}>
                 {part.text}
               </Text>
             ))}

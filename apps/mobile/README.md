@@ -41,8 +41,8 @@ Gradle and ccache state, and a macOS runner for iOS) when `gh` may dispatch work
 Otherwise, or when HEAD lacks your native edits or `T3_NATIVE_CLIENT_BUILD=local` is set, it builds
 on this machine. Main's client is built there on every native change, so most checkouts hit. One iOS simulator build serves every iPhone and iPad simulator, and one APK per
 ABI (x86_64 or arm64-v8a) serves every emulator and phone of that ABI. Build output goes to the
-log file it prints (`T3_NATIVE_CLIENT_VERBOSE=1` streams it instead). Builds are shared back when
-your task-cache login (`bash infra/task-cache/install.sh`) can write. `T3_NATIVE_CLIENT_CACHE=read`
+log file it prints (`T2_NATIVE_CLIENT_VERBOSE=1` streams it instead). Builds are shared back when
+your task-cache login (`bash infra/task-cache/install.sh`) can write. `T2_NATIVE_CLIENT_CACHE=read`
 skips the upload and `off` skips the shared cache. Physical iPhones still use `vp run ios:dev`.
 
 `--session <name>` installs into an agent-device session opened elsewhere, such as a device pool

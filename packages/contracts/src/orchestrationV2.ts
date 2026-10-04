@@ -525,7 +525,10 @@ export const isDelegatedAppThread = (
   // MCP-launched threads store `delegatedFrom: null` at runtime, so check both absent shapes.
   thread.lineage.relationshipToParent === "subagent" || thread.delegatedFrom != null;
 
-/** Provider-native children cannot receive messages; T3 delegate_task children can. */
+/**
+ * The provider owns its conversation, so it cannot take messages; T2 delegate_task children
+ * (`creationSource: "mcp"`) can.
+ */
 export function isProviderNativeSubagentThread(
   thread: Pick<OrchestrationV2AppThread, "lineage" | "creationSource">,
 ): boolean {

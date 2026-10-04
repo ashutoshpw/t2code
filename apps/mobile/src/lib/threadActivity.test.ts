@@ -1421,7 +1421,7 @@ describe("retained v2 feed presentation", () => {
           {
             ...base(id, "2026-06-20T00:00:02.000Z", index),
             type: "dynamic_tool",
-            toolName: "t3-code.delegate_task",
+            toolName: "t2-code.delegate_task",
             input: { task: "Identical task" },
             output,
             ...overrides,

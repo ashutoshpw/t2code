@@ -41,7 +41,7 @@ function FileCardHeader(props: PreviewProps) {
         <PierreEntryIcon path={props.source.name ?? "file"} kind="file" size={26} />
       </View>
       <View className="min-w-0 flex-1 gap-1">
-        <Text className="text-sm font-t3-medium text-foreground" numberOfLines={1}>
+        <Text className="text-sm font-t2-medium text-foreground" numberOfLines={1}>
           {props.source.name}
         </Text>
         <Text className="text-xs text-foreground-muted" numberOfLines={1}>
