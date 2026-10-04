@@ -326,7 +326,11 @@ describe("pull request toolkit handlers", () => {
           { ...closed, snapshot: closed.snapshot && { ...closed.snapshot, state: "closed" } },
         ]),
       });
+<<<<<<< HEAD
       yield* harness.call("watch_pull_request", { repository: "t2tools/t2code", number: 1 });
+=======
+      yield* harness.call("watch_pull_request", { repository: "ashutoshpw/t2code", number: 1 });
+>>>>>>> 1fc185a525 (rebrand: finish the t2 namespace sweep after the orchestrator-v2 merge)
       expect(yield* Ref.get(harness.commands)).toMatchObject([
         { type: "thread.pull-request.watch", number: 1, watching: true },
       ]);
@@ -346,7 +350,11 @@ describe("pull request toolkit handlers", () => {
         },
       });
       const error = yield* harness
+<<<<<<< HEAD
         .call("watch_pull_request", { repository: "t2tools/t2code", number: 1 })
+=======
+        .call("watch_pull_request", { repository: "ashutoshpw/t2code", number: 1 })
+>>>>>>> 1fc185a525 (rebrand: finish the t2 namespace sweep after the orchestrator-v2 merge)
         .pipe(Effect.flip);
       expect(error).toMatchObject({ _tag: "PullRequestWatchFromSubagentError" });
       expect(yield* Ref.get(harness.commands)).toEqual([]);

@@ -23,7 +23,7 @@ const environmentFor = (
     homeDirectory: input.home,
     baseDir: input.baseDir,
     stateDir: path.join(input.baseDir, "userdata"),
-    serverRoot: "/opt/T3 Code/resources/app.asar",
+    serverRoot: "/opt/T2 Code/resources/app.asar",
     appImagePath: Option.none(),
   } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]);
 
@@ -57,8 +57,8 @@ const fakePowerShell = (initial: string) => {
       const env = options.env ?? {};
       let exitCode = 0;
       let stdout = "";
-      if (env.T3_SET === "1") {
-        registry.path = env.T3_PATH ?? "";
+      if (env.T2_SET === "1") {
+        registry.path = env.T2_PATH ?? "";
         registry.writes += 1;
       } else if (registry.failReads) {
         exitCode = 1;

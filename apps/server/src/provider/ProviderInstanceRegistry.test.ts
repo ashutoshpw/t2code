@@ -138,7 +138,6 @@ const makeTildeProviderFixtures = Effect.fn(
       new URL("./testing/ProviderInstanceRegistryLive.fixture.mjs", import.meta.url),
     ),
     claudePath,
-
   );
   yield* fileSystem.chmod(claudePath, 0o755);
   yield* fileSystem.makeDirectory(claudeHomePath);

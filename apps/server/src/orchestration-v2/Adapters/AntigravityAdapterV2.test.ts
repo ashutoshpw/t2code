@@ -153,7 +153,7 @@ describe("AntigravityAdapterV2 client file system", () => {
               command: process.execPath,
               args: [mockAgentPath],
               cwd: input.cwd,
-              env: { T3_ACP_ANTIGRAVITY: "1" },
+              env: { T2_ACP_ANTIGRAVITY: "1" },
             },
           }).pipe(
             Effect.provideService(Crypto.Crypto, crypto),
@@ -309,7 +309,7 @@ describe("AntigravityAdapterV2 workspace changes", () => {
               command: process.execPath,
               args: [mockAgentPath],
               cwd: input.cwd,
-              env: { T3_ACP_ANTIGRAVITY: "1", T3_ACP_HANG_PROMPT_FOREVER: "1" },
+              env: { T2_ACP_ANTIGRAVITY: "1", T2_ACP_HANG_PROMPT_FOREVER: "1" },
             },
           }).pipe(
             Effect.provideService(Crypto.Crypto, crypto),
@@ -479,7 +479,7 @@ describe("AntigravityAdapterV2 html_render pages", () => {
               command: process.execPath,
               args: [mockAgentPath],
               cwd: input.cwd,
-              env: { T3_ACP_ANTIGRAVITY: "1" },
+              env: { T2_ACP_ANTIGRAVITY: "1" },
             },
           }).pipe(
             Effect.provideService(Crypto.Crypto, crypto),

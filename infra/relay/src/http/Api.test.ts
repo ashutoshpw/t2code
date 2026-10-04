@@ -1396,6 +1396,16 @@ describe("relay routing fallback", () => {
             }),
           ),
       });
+      const environmentLinks = EnvironmentLinks.EnvironmentLinks.of({
+        updateLabel: () => Effect.die("unused updateLabel"),
+        upsert: () => Effect.die("unused upsert"),
+        listDeliveryUsersForEnvironment: () => Effect.succeed([]),
+        listForUser: () => Effect.succeed([]),
+        getForUser: () => Effect.succeed(null),
+        findActiveManagedForEnvironment: () => Effect.succeed([]),
+        setHoldWebhooksWhileOffline: () => Effect.void,
+        revokeForUser: () => Effect.succeed(false),
+      });
       const layerRoutes = HttpApiBuilder.layer(
         HttpApi.make("RelayApi").add(RelayApi.groups.server),
       ).pipe(
@@ -1404,21 +1414,7 @@ describe("relay routing fallback", () => {
             HttpRouter.provideRequest(
               Layer.mergeAll(
                 Layer.succeed(RelayConfiguration.RelayConfiguration, relaySettings),
-                Layer.succeed(
-                  EnvironmentLinks.EnvironmentLinks,
-                  EnvironmentLinks.EnvironmentLinks.of({
-                    updateLabel: () => Effect.die("unused updateLabel"),
-                    upsert: () => Effect.die("unused upsert"),
-                    listUsersForEnvironment: () => Effect.die("unused listUsersForEnvironment"),
-                    listDeliveryUsersForEnvironment: () =>
-                      Effect.die("unused listDeliveryUsersForEnvironment"),
-                    listPublicKeysForEnvironment: () =>
-                      Effect.die("unused listPublicKeysForEnvironment"),
-                    listForUser: () => Effect.die("unused listForUser"),
-                    getForUser: () => Effect.succeed(null),
-                    revokeForUser: () => Effect.succeed(false),
-                  }),
-                ),
+                Layer.succeed(EnvironmentLinks.EnvironmentLinks, environmentLinks),
                 Layer.mock(ManagedEndpointAllocations.ManagedEndpointAllocations, {}),
                 Layer.mock(ManagedEndpointProvider.ManagedEndpointProvider, {}),
               ),
@@ -1431,7 +1427,10 @@ describe("relay routing fallback", () => {
       );
       const httpEffect = yield* HttpRouter.toHttpEffect(
         Layer.mergeAll(layerRoutes, RelayHttpApi.layerNotFoundRoute, RelayHttpApi.layerCors),
-      ).pipe(Effect.provideService(HttpRouter.RouterConfig, RELAY_HTTP_ROUTER_CONFIG));
+      ).pipe(
+        Effect.provideService(HttpRouter.RouterConfig, RELAY_HTTP_ROUTER_CONFIG),
+        Effect.provideService(EnvironmentLinks.EnvironmentLinks, environmentLinks),
+      );
       const threadIds = [
         "b7c8c522-d244-43dc-875f-7224fce79912",
         "t".repeat(512),
@@ -1470,7 +1469,7 @@ describe("relay routing fallback", () => {
 });
 
 describe("relay CORS", () => {
-  const origin = "https://app.t3.codes";
+  const origin = "https://app.t2.codes";
 
   class HandlerFailed extends Data.TaggedError("HandlerFailed") {}
 

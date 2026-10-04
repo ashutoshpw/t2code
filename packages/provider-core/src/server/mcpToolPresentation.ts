@@ -1,5 +1,5 @@
 import type { ToolActivityIcon, ToolActivitySource } from "@t2code/contracts";
-import { resolveT3McpToolDefinition } from "@t2code/shared/t3McpToolPresentation";
+import { resolveT2McpToolDefinition } from "@t2code/shared/t2McpToolPresentation";
 
 export function normalizeMcpText(value: unknown, maxLength = 160): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -38,7 +38,7 @@ export function mcpToolPresentation(input: {
     typeof input.toolName === "string" ? /^mcp__(.+?)__(.+)$/i.exec(input.toolName) : null;
   const server = normalizeMcpText(input.serverName ?? qualified?.[1] ?? input.serverDisplayName);
   const tool = normalizeMcpText(qualified?.[2] ?? input.toolName);
-  if (server && tool && resolveT3McpToolDefinition(`${server}.${tool}`)) return {};
+  if (server && tool && resolveT2McpToolDefinition(`${server}.${tool}`)) return {};
   const title =
     normalizeMcpText(input.title) ??
     (server && tool ? normalizeMcpText(tool.replace(/[_-]+/gu, " ")) : undefined);

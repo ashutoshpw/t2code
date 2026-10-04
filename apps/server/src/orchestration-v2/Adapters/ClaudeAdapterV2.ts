@@ -139,9 +139,9 @@ import {
 } from "../../claudeModelOptions.ts";
 import * as ServerConfig from "../../config.ts";
 import * as ServerSettings from "../../serverSettings.ts";
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
-import { spawnAndCollect } from "@t3tools/provider-core/server/snapshotProbe";
-import { signalProcessGroup } from "@t3tools/provider-core/server/processGroup";
+import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
+import { spawnAndCollect } from "@t2code/provider-core/server/snapshotProbe";
+import { signalProcessGroup } from "@t2code/provider-core/server/processGroup";
 import {
   claudeSignedOutMessage,
   makeClaudeEnvironment,
@@ -159,44 +159,44 @@ import {
   boundProviderEventForLogging,
   shouldPersistProviderEvent,
 } from "../../provider/EventNdjsonLogger.ts";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
+import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
 import {
   claudeRateLimitEventToUpdate,
   type ClaudeScopedLimitNames,
 } from "../../provider/claudeUsageLimits.ts";
-import type { ManagedServerProvider } from "@t3tools/provider-core/server/snapshot";
-import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
-import { T3_CODE_ORCHESTRATION_INSTRUCTIONS } from "@t3tools/provider-core/server/orchestrationInstructions";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
+import type { ManagedServerProvider } from "@t2code/provider-core/server/snapshot";
+import { mergeProviderInstanceEnvironment } from "@t2code/provider-core/server/instanceEnvironment";
+import { T2_CODE_ORCHESTRATION_INSTRUCTIONS } from "@t2code/provider-core/server/orchestrationInstructions";
+import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
 import {
   mcpToolPresentation,
   normalizeMcpText,
-} from "@t3tools/provider-core/server/mcpToolPresentation";
-import * as McpProviderSession from "@t3tools/provider-core/server/mcpSession";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+} from "@t2code/provider-core/server/mcpToolPresentation";
+import * as McpProviderSession from "@t2code/provider-core/server/mcpSession";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import {
   makeProviderFailure,
   makeProviderRetryTurnItem,
-} from "@t3tools/provider-core/server/failure";
-import { turnScopedSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
-import { providerMessageTextWithAttachmentPaths } from "@t3tools/provider-core/server/attachmentPrompt";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+} from "@t2code/provider-core/server/failure";
+import { turnScopedSelectionTransition } from "@t2code/provider-core/server/selectionTransition";
+import { providerMessageTextWithAttachmentPaths } from "@t2code/provider-core/server/attachmentPrompt";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 import {
   ProviderAdapterDriverCreateError,
   type ProviderAdapterDriver,
   type ProviderAdapterDriverCreateInput,
-} from "@t3tools/provider-core/server/adapterDriver";
+} from "@t2code/provider-core/server/adapterDriver";
 import {
   type BackgroundWorkReport,
   backgroundWorkNotification,
-} from "@t3tools/provider-core/server/notification";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+} from "@t2code/provider-core/server/notification";
+import * as ProviderContinuationRequests from "@t2code/provider-core/server/ProviderContinuationRequests";
 import {
   makeSubagentChildThread,
   makeSubagentConversationArtifacts,
   subagentThreadTitle,
-} from "@t3tools/provider-core/server/subagentProjection";
+} from "@t2code/provider-core/server/subagentProjection";
 
 export const CLAUDE_PROVIDER = ProviderDriverKind.make("claudeAgent");
 const CLAUDE_AGENT_SDK_QUERY_PROTOCOL = "claude-agent-sdk.query" as const;
@@ -593,7 +593,7 @@ export interface ClaudeAgentSdkQueryRunnerShape {
 export class ClaudeAgentSdkQueryRunner extends Context.Service<
   ClaudeAgentSdkQueryRunner,
   ClaudeAgentSdkQueryRunnerShape
->()("t3/orchestration-v2/Adapters/ClaudeAdapterV2/ClaudeAgentSdkQueryRunner") {}
+>()("@t2code/cli/orchestration-v2/Adapters/ClaudeAdapterV2/ClaudeAgentSdkQueryRunner") {}
 
 export interface ClaudeAgentSdkSessionForkInput {
   readonly sessionId: string;
@@ -1525,9 +1525,7 @@ export function makeClaudeQueryOptions(input: {
       preset: "claude_code" as const,
       append: [
         buildRuntimeInstructions({ harness: "Claude Code" }) +
-          (input.mcpServers === undefined
-            ? ""
-            : T3_CODE_ORCHESTRATION_INSTRUCTIONS + CLAUDE_BACKGROUND_WAIT_INSTRUCTIONS),
+          (input.mcpServers === undefined ? "" : T2_CODE_ORCHESTRATION_INSTRUCTIONS),
         ...launchAppendSystemPrompt,
       ].join("\n\n"),
     },
@@ -1579,7 +1577,7 @@ const readClaudeAppendSystemPromptFile = Effect.fnUntraced(function* (input: {
     );
 });
 
-export const CLAUDE_T3_MCP_TOOL_WILDCARD = "mcp__t3-code__*";
+export const CLAUDE_T2_MCP_TOOL_WILDCARD = "mcp__t2-code__*";
 
 // Keep in sync with OrchestratorToolkit Tool.Readonly annotations; ClaudeAdapterV2.test.ts checks this.
 export const CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
@@ -1598,7 +1596,11 @@ export const CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
   "mcp__t3-code__html_render",
 ];
 
-// T3 waits can block for an hour; exceed Claude's default 60 s timeout.
+// Claude Code aborts an HTTP MCP call after 60 s ("The operation timed out.")
+// unless the server config sets `timeout`. T2's wait tools (t2_thread_wait,
+// delegate_task mode=wait) legitimately block for up to an hour
+// (MAX_WAIT_TIMEOUT_MS in OrchestratorMcpService), so the budget sits just
+// above that and the server's own wait timeout is what ends a long call.
 export const CLAUDE_T3_MCP_TOOL_TIMEOUT_MS = 65 * 60 * 1_000;
 
 // allowedTools pre-approves calls; tools controls availability. Pre-approve T3 tools for headless modes,

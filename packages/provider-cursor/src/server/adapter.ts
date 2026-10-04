@@ -42,10 +42,10 @@ import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 
-import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
-import { mcpToolPresentation } from "@t3tools/provider-core/server/mcpToolPresentation";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as McpProviderSession from "@t3tools/provider-core/server/mcpSession";
+import * as ProviderHost from "@t2code/provider-core/server/ProviderHost";
+import { mcpToolPresentation } from "@t2code/provider-core/server/mcpToolPresentation";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import * as McpProviderSession from "@t2code/provider-core/server/mcpSession";
 import { CursorTransportFailure } from "./transportFailure.ts";
 import { cursorContextWindowTokens, cursorSdkModelSelection } from "./sdkModel.ts";
 import {
@@ -53,27 +53,27 @@ import {
   hasCursorSkillMention,
   rewriteCursorSkillMentions,
 } from "./skills.ts";
-import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
-import { t3OrchestrationPromptForFirstRun } from "@t3tools/provider-core/server/orchestrationInstructions";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
-import { turnScopedSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
+import { mergeProviderInstanceEnvironment } from "@t2code/provider-core/server/instanceEnvironment";
+import { t3OrchestrationPromptForFirstRun } from "@t2code/provider-core/server/orchestrationInstructions";
+import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
+import { makeProviderFailure } from "@t2code/provider-core/server/failure";
+import { turnScopedSelectionTransition } from "@t2code/provider-core/server/selectionTransition";
 import {
   isProviderNativeImageAttachment,
   providerMessageTextWithAttachmentPaths,
-} from "@t3tools/provider-core/server/attachmentPrompt";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+} from "@t2code/provider-core/server/attachmentPrompt";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 import {
   ProviderAdapterDriverCreateError,
   type ProviderAdapterDriver,
   type ProviderAdapterDriverCreateInput,
-} from "@t3tools/provider-core/server/adapterDriver";
+} from "@t2code/provider-core/server/adapterDriver";
 import {
   makeSubagentChildThread,
   makeSubagentConversationArtifacts,
   subagentThreadTitle,
-} from "@t3tools/provider-core/server/subagentProjection";
+} from "@t2code/provider-core/server/subagentProjection";
 import * as CursorAgentSdk from "./CursorAgentSdk.ts";
 import { ConfigurationError } from "./sdk.ts";
 export { cursorSdkModelSelection } from "./sdkModel.ts";
@@ -313,7 +313,7 @@ export function makeCursorAgentOptions(input: {
   const mcpServers = cursorMcpServers(input.mcpSession);
   return {
     model: cursorSdkModelSelection(input.modelSelection),
-    name: `T3 Code ${input.threadId}`,
+    name: `T2 Code ${input.threadId}`,
     mode: input.runtimePolicy.interactionMode === "plan" ? "plan" : "agent",
     ...(input.apiKey === undefined ? {} : { apiKey: input.apiKey }),
     local: {

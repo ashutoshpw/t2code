@@ -425,7 +425,7 @@ describe("AcpRegistrySupport", () => {
     );
   });
 
-  it.effect("installs into T3 home a package and launches its exposed command", () => {
+  it.effect("installs into T2 home a package and launches its exposed command", () => {
     const agent = makeAgent({
       npx: { package: "@example/acp@V1.2.3", args: ["--stdio"] },
     });
@@ -493,6 +493,42 @@ describe("AcpRegistrySupport", () => {
         command: path.join(userGlobalBin, "example-agent"),
         env: { PATH: expect.stringMatching(new RegExp(`^${userGlobalBin}:`, "u")) },
       });
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(
+        layerResolver((request) =>
+          Effect.succeed(HttpClientResponse.fromWeb(request, new Response(makeRegistry(agent)))),
+        ),
+      ),
+    );
+  });
+
+  it.effect("installs into T2 home a uv tool and launches its exposed command", () => {
+    const agent = makeAgent({
+      uvx: { package: "fast-agent-acp==V0.10.1", args: ["--acp"] },
+    });
+    return Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const cacheDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-acp-registry-global-uv-tool-",
+      });
+      const toolchain = yield* makeFakeUvToolchain(cacheDir);
+      const resolver = yield* AcpRegistrySupport.makeAcpRegistryCatalog({
+        cacheDir,
+        toolsDir: `${cacheDir}/tools`,
+        registryUrl,
+      });
+
+      const resolved = yield* resolver.resolve(settings(), "/workspace", toolchain.environment);
+
+      expect(resolved.spawn).toMatchObject({
+        command: toolchain.executablePath,
+        args: ["--acp"],
+        env: { PATH: expect.stringMatching(new RegExp(`^${toolchain.globalBin}:`, "u")) },
+      });
+      expect(yield* fileSystem.readFileString(toolchain.logPath)).toContain(
+        "tool install --force fast-agent-acp==V0.10.1",
+      );
     }).pipe(
       Effect.scoped,
       Effect.provide(
@@ -1048,6 +1084,47 @@ describe("AcpRegistrySupport", () => {
             ),
           ),
         ),
+      ),
+    );
+  });
+
+  it.effect("installs into T2 home package recipes during preparation", () => {
+    const agent = makeAgent({ npx: { package: "@example/acp@1.2.3", args: ["--stdio"] } });
+    const requests: string[] = [];
+
+    return Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const cacheDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-acp-registry-runner-",
+      });
+      const toolchain = yield* makeFakeNpmToolchain(cacheDir);
+      const resolver = yield* AcpRegistrySupport.makeAcpRegistryCatalog({
+        cacheDir,
+        toolsDir: `${cacheDir}/tools`,
+        registryUrl,
+      }).pipe(Effect.provideService(HostProcess.Environment, toolchain.environment));
+      const prepared = yield* resolver.prepare({ agentId: agent.id });
+      expect(prepared).toEqual({
+        agentId: "example-agent",
+        version: "1.2.3",
+        distribution: "npx",
+        prepared: true,
+      });
+      expect(yield* fileSystem.exists(toolchain.executablePath)).toBe(true);
+      expect(yield* fileSystem.exists(toolchain.environment.FAKE_NPM_PREFIX)).toBe(false);
+      expect(yield* fileSystem.readFileString(toolchain.logPath)).toContain(
+        "install --global @example/acp@1.2.3",
+      );
+      expect(requests).toEqual([registryUrl]);
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(
+        layerResolver((request) => {
+          requests.push(request.url);
+          return Effect.succeed(
+            HttpClientResponse.fromWeb(request, new Response(makeRegistry(agent))),
+          );
+        }, process.env),
       ),
     );
   });

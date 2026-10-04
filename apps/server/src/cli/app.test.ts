@@ -141,9 +141,9 @@ const withTempDirectory = <A, E, R>(
     (root) => Effect.promise(() => NodeFSP.rm(root, { recursive: true, force: true })),
   );
 
-describe("t3 server command safety", () => {
+describe("t2 server command safety", () => {
   it.effect("rejects unknown command words without creating a home or project", () =>
-    withTempDirectory("t3-cli-unknown-", (root) =>
+    withTempDirectory("t2code-cli-unknown-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, "home");
         for (const word of [
@@ -166,8 +166,19 @@ describe("t3 server command safety", () => {
     ),
   );
 
+  it.effect("shows help without creating state", () =>
+    withTempDirectory("t2code-cli-help-", (root) =>
+      Effect.gen(function* () {
+        const baseDir = NodePath.join(root, "home");
+        const help = yield* runCli(["help"], { T2CODE_HOME: baseDir }).pipe(Effect.flip);
+        expect(help).toMatchObject({ _tag: "ShowHelp", commandPath: ["t2code"], errors: [] });
+        expect(yield* pathExists(baseDir)).toBe(false);
+      }),
+    ),
+  );
+
   it.effect("refuses manual startup over a live server before creating directories", () =>
-    withTempDirectory("t3-cli-running-", (root) =>
+    withTempDirectory("t2code-cli-running-", (root) =>
       Effect.gen(function* () {
         const baseDir = NodePath.join(root, "home");
         const stateDir = NodePath.join(baseDir, "userdata");
@@ -177,8 +188,8 @@ describe("t3 server command safety", () => {
         const record = yield* encodeRuntimeState({
           version: 1,
           pid: child.pid,
-          port: 3773,
-          origin: "http://127.0.0.1:3773",
+          port: 3772,
+          origin: "http://127.0.0.1:3772",
           startedAt: "2026-10-01T00:00:00.000Z",
           serviceManaged: true,
         });
@@ -195,14 +206,14 @@ describe("t3 server command safety", () => {
           [newDirectory],
           ["start", newDirectory],
         ]) {
-          const error = yield* runCli(args, { T3CODE_HOME: baseDir }).pipe(
+          const error = yield* runCli(args, { T2CODE_HOME: baseDir }).pipe(
             Effect.provideService(
               HostProcess.Platform,
               args[0] === "C:new-project" ? "win32" : platform,
             ),
             Effect.flip,
           );
-          expect(String(error)).toContain("A T3 Code server is already running");
+          expect(String(error)).toContain("A T2 Code server is already running");
           expect(yield* Effect.promise(() => NodeFSP.readFile(statePath, "utf8"))).toBe(record);
           expect(yield* pathExists(newDirectory)).toBe(false);
           expect(yield* Effect.promise(() => NodeFSP.readdir(stateDir))).toEqual([
@@ -226,7 +237,7 @@ describe("t2code app", () => {
         expect(error).toMatchObject({
           _tag: "DesktopAppSshUnsupportedError",
           message:
-            "`t3 app` only controls a desktop app on the same machine. It cannot run over SSH.",
+            "`t2code app` only controls a desktop app on the same machine. It cannot run over SSH.",
         });
         expect(yield* pathExists(baseDir)).toBe(false);
       }),
@@ -245,7 +256,7 @@ describe("t2code app", () => {
         expect(error).toMatchObject({
           _tag: "DesktopAppPlatformUnsupportedError",
           platform: "freebsd",
-          message: "`t3 app` is not supported on freebsd.",
+          message: "`t2code app` is not supported on freebsd.",
         });
         expect(yield* pathExists(baseDir)).toBe(false);
       }),
@@ -340,7 +351,7 @@ describe("t2code app", () => {
   it.effect.each(["failure", "invalid"] as const)(
     "never falls back after the default desktop sends a %s response",
     (responseKind) =>
-      withTempDirectory("t3-app-response-test-", (root) =>
+      withTempDirectory("t2code-app-response-test-", (root) =>
         Effect.gen(function* () {
           const baseDir = NodePath.join(root, ".t2");
           const desktop = yield* fakeDesktop({

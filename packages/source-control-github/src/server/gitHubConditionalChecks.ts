@@ -42,7 +42,7 @@ export type KnownWorkflowRun = typeof WorkflowRunSchema.Type;
 export const KnownWorkflowRuns = Context.Reference<{
   readonly headSha: string;
   readonly runs: ReadonlyArray<KnownWorkflowRun>;
-} | null>("@t3tools/source-control-github/server/gitHubConditionalChecks/KnownWorkflowRuns", {
+} | null>("@t2code/source-control-github/server/gitHubConditionalChecks/KnownWorkflowRuns", {
   defaultValue: () => null,
 });
 

@@ -101,7 +101,7 @@ export class HookRateLimiter extends Context.Service<
     readonly allowHook: (key: string) => Effect.Effect<boolean>;
     readonly allowEndpoint: (endpointKey: string) => Effect.Effect<boolean>;
   }
->()("t3code-relay/hooks/HookForwarder/HookRateLimiter") {}
+>()("t2code-relay/hooks/HookForwarder/HookRateLimiter") {}
 
 export class HookForwarder extends Context.Service<
   HookForwarder,
@@ -110,7 +110,7 @@ export class HookForwarder extends Context.Service<
       request: HttpServerRequest.HttpServerRequest,
     ) => Effect.Effect<HttpServerResponse.HttpServerResponse>;
   }
->()("t3code-relay/hooks/HookForwarder") {}
+>()("t2code-relay/hooks/HookForwarder") {}
 
 class HookBodyTooLarge extends Schema.TaggedError<HookBodyTooLarge>()("HookBodyTooLarge", {}) {}
 

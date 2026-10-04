@@ -39,7 +39,7 @@ export class OpenCodeServerLedger extends Context.Service<
       readonly args: ReadonlyArray<string>;
     }) => Effect.Effect<Effect.Effect<void>>;
   }
->()("@t3tools/provider-opencode/server/OpenCodeServerLedger") {}
+>()("@t2code/provider-opencode/server/OpenCodeServerLedger") {}
 
 const ENTRY_DIRECTORY = "opencode-servers";
 const ENTRY_FILE = /^\d+\.json$/;
@@ -254,7 +254,7 @@ export const make = Effect.fn("OpenCodeServerLedger.make")(function* (input: {
     ) {
       return;
     }
-    yield* Effect.logInfo("Stopping an OpenCode server left by a previous T3 Code server", {
+    yield* Effect.logInfo("Stopping an OpenCode server left by a previous T2 Code server", {
       pid: entry.pgid,
       port: entry.port,
     });

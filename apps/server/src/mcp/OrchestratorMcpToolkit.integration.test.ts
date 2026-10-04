@@ -359,7 +359,7 @@ describe("orchestrator MCP toolkit", () => {
           const followupStartSequence = yield* orchestrator.getThreadEventSequence(
             delegated.childThreadId,
           );
-          const runningFollowupCall = yield* invoke("t3_thread_send", {
+          const runningFollowupCall = yield* invoke("t2_thread_send", {
             threadId: delegated.childThreadId,
             message: cancellationPrompt,
             clientRequestId: "delegated-child-replay-running-1",
@@ -387,7 +387,7 @@ describe("orchestrator MCP toolkit", () => {
               ),
             );
 
-          const queuedFollowupCall = yield* invoke("t3_thread_send", {
+          const queuedFollowupCall = yield* invoke("t2_thread_send", {
             threadId: delegated.childThreadId,
             message: queuedFollowupPrompt,
             mode: "queue",
@@ -450,7 +450,7 @@ describe("orchestrator MCP toolkit", () => {
           });
 
           const finalSequence = yield* orchestrator.getThreadEventSequence(delegated.childThreadId);
-          const interruptCall = yield* invoke("t3_thread_interrupt", {
+          const interruptCall = yield* invoke("t2_thread_interrupt", {
             threadId: delegated.childThreadId,
             runId: runningFollowup.runId,
             reason: "Allow the queued replay follow-up to run.",
@@ -566,7 +566,7 @@ describe("orchestrator MCP toolkit", () => {
           expect(finalStatus.latestTerminalResultContextTransferId).not.toBe(
             delegated.resultContextTransferId,
           );
-          const read = yield* invoke("t3_thread_read", {
+          const read = yield* invoke("t2_thread_read", {
             threadId: delegated.childThreadId,
             limit: 100,
           });

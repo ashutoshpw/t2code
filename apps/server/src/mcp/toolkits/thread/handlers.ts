@@ -111,7 +111,7 @@ export const layer = McpToolAccess.toLayer(ThreadToolkit, {
       };
     }),
   ),
-  t3_thread_search: McpToolAccess.reads((input) =>
+  t2_thread_search: McpToolAccess.reads((input) =>
     Effect.gen(function* () {
       const { caller } = yield* readCaller();
       const threadSearch = yield* ThreadSearch.ThreadSearch;
@@ -319,7 +319,7 @@ export const layer = McpToolAccess.toLayer(ThreadToolkit, {
       }),
     ),
   ),
-  t3_thread_organize: writesThread((input) =>
+  t2_thread_organize: writesThread((input) =>
     Effect.gen(function* () {
       const { threads, projection, caller } = yield* readThread(input.threadId);
       const common = { commandId: yield* newCommandId(), threadId: projection.thread.id };

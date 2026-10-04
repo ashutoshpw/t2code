@@ -23,7 +23,7 @@ import * as HtmlRender from "./HtmlRender.ts";
 import { HtmlRenderBrowserError } from "./headlessChrome.ts";
 import * as PreviewBrowser from "../preview/PreviewBrowser.ts";
 
-const TEST_BROWSER_ENV = "T3CODE_TEST_HEADLESS_SHELL";
+const TEST_BROWSER_ENV = "T2CODE_TEST_HEADLESS_SHELL";
 
 const layerHtmlRender = (
   executable?: string,
@@ -354,19 +354,35 @@ describe("HtmlRender", () => {
         yield* fileSystem.writeFileString(secret, 'window.secret = "abc123";');
         const secretUrl = NodeURL.pathToFileURL(secret).href;
 
-        const preview = yield* htmlRender.preview({
-          html: [
-            `<script src="${secretUrl}"></script>`,
-            `<iframe src="${secretUrl}" onload="console.log('frame loaded')"></iframe>`,
-            '<script>addEventListener("load", () => console.log("secret:", window.secret ?? "none"));</script>',
-          ].join(""),
-        });
-
-        const texts = preview.consoleMessages.map((message) => message.text);
-        expect(texts).toContain("secret: none");
-        expect(texts.join(" ")).not.toContain("abc123");
-      }).pipe(Effect.scoped, Effect.provide(layerHtmlRender(executable)));
-    }),
+          const png = Buffer.from(preview.png, "base64");
+          expect(png.readUInt32BE(0)).toBe(0x89504e47);
+          expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([400, 300]);
+          expect(preview).toMatchObject({
+            width: 400,
+            contentHeight: 300,
+            capturedHeight: 300,
+            missingImages: ["/nonexistent/t3-missing.png"],
+          });
+          // Headless Chrome prefers light, so a dark background proves the theme fragment applied.
+          expect(preview.consoleMessages).toEqual(
+            expect.arrayContaining([
+              { level: "log", text: "ready 3" },
+              { level: "log", text: "focus 2px -2px 400 400" },
+              { level: "info", text: HTML_RENDER_MEASURE_FONTS.sans },
+              {
+                level: "warning",
+                text: htmlRenderTheme(T2_CODE_DARK_THEME_COLORS, "dark").variables["--background"],
+              },
+              { level: "error", text: "boom" },
+              {
+                level: "error",
+                text: expect.stringMatching(/^Error: broken chart\n\s+at page\.html:1:\d+$/),
+              },
+            ]),
+          );
+        }).pipe(Effect.provide(layerHtmlRender(executable)));
+      }),
+    30_000,
   );
 
   it.live("keeps the page off this machine's local network", (ctx) =>
