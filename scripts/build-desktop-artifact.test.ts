@@ -322,13 +322,13 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.deepStrictEqual(latestConfig, {
         provider: "github",
         owner: "pingdotgg",
-        repo: "t2code",
+        repo: "t3code",
         releaseType: "release",
       });
       assert.deepStrictEqual(nightlyConfig, {
         provider: "github",
         owner: "pingdotgg",
-        repo: "t2code",
+        repo: "t3code",
         releaseType: "prerelease",
         channel: "nightly",
       });
@@ -372,7 +372,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         {
           provider: "github",
           owner: "pingdotgg",
-          repo: "t2code",
+          repo: "t3code",
           releaseType: "release",
         },
       ]);
