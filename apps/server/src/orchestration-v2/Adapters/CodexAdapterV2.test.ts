@@ -200,7 +200,7 @@ describe("CodexAdapterV2 runtime policy", () => {
         kind: "untrusted",
         value: "Filtered to overdue",
       });
-      assert.isDefined(withT3.additionalContext?.["t3_code_runtime"]);
+      assert.isDefined(withT3.additionalContext?.["t2_code_runtime"]);
     }),
   );
 
@@ -381,7 +381,7 @@ describe("CodexAdapterV2 process spawning", () => {
           // Codex waits up to 10 s, not 1 s, for MCP servers before the first request (#13437).
           mcp_optional_startup_grace_ms: 10_000,
           mcp_servers: {
-            "t3-code": {
+            "t2-code": {
               url: "http://127.0.0.1:43123/mcp",
               tool_timeout_sec: 3_900,
               http_headers: {
