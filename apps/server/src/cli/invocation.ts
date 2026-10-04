@@ -35,16 +35,17 @@ export function detectCliRunner(entryPath: string): CliRunner | null {
 const InstallManifest = Schema.Struct({
   name: Schema.String,
   version: Schema.String,
-  bin: Schema.optionalKey(Schema.Struct({ t3: Schema.String })),
+  bin: Schema.optionalKey(Schema.Struct({ t2code: Schema.String })),
+  optionalDependencies: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
 });
 const decodeInstallManifest = Schema.decodeUnknownEffect(Schema.fromJsonString(InstallManifest));
 
 /**
- * `T3CODE_NPM_LAUNCHER_PATH` is inherited by child shells, so accept it only for this package
- * version to avoid claiming another `t3` invocation is the npm install.
+ * `T2CODE_NPM_LAUNCHER_PATH` is inherited by child shells, so accept it only for this package
+ * version to avoid claiming another `t2` invocation is the npm install.
  */
 export const resolveEntryPath = Effect.gen(function* () {
-  const npmLauncher = (yield* HostProcess.Environment).T3CODE_NPM_LAUNCHER_PATH?.trim();
+  const npmLauncher = (yield* HostProcess.Environment).T2CODE_NPM_LAUNCHER_PATH?.trim();
   if (npmLauncher) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -53,7 +54,7 @@ export const resolveEntryPath = Effect.gen(function* () {
       .pipe(Effect.flatMap(decodeInstallManifest), Effect.option);
     if (
       Option.isSome(manifest) &&
-      manifest.value.name === "t3" &&
+      manifest.value.name === "@t2code/cli" &&
       manifest.value.version === packageJson.version
     ) {
       return npmLauncher;
@@ -68,7 +69,7 @@ export const resolveServerInstallation = Effect.gen(function* () {
   const path = yield* Path.Path;
   const platform = yield* HostProcess.Platform;
   const entry = yield* fs.realPath(yield* resolveEntryPath);
-  const match = /^(.*)\/lib\/node_modules\/t3\/(?:dist\/bin\.mjs|bin\/t3\.mjs)$/.exec(entry);
+  const match = /^(.*)\/lib\/node_modules\/@t2code\/cli\/(?:dist\/bin\.mjs|bin\/t2code\.mjs)$/.exec(entry);
   if (!match) {
     const runner = detectCliRunner(entry);
     return runner === null
@@ -84,19 +85,19 @@ export const resolveServerInstallation = Effect.gen(function* () {
   )
     return null;
 
-  const packageRoot = path.join(prefix, "lib/node_modules/t3");
+  const packageRoot = path.join(prefix, "lib/node_modules/@t2code/cli");
   const manifest = yield* fs
     .readFileString(path.join(packageRoot, "package.json"))
     .pipe(Effect.flatMap(decodeInstallManifest));
-  if (manifest.name !== "t3" || !manifest.bin) return null;
-  const bin = yield* fs.realPath(path.join(packageRoot, manifest.bin.t3));
-  const globalBin = yield* fs.realPath(path.join(prefix, "bin/t3"));
+  if (manifest.name !== "@t2code/cli" || !manifest.bin) return null;
+  const bin = yield* fs.realPath(path.join(packageRoot, manifest.bin.t2code));
+  const globalBin = yield* fs.realPath(path.join(prefix, "bin/t2code"));
   if (globalBin !== bin || bin !== entry) return null;
   return { kind: "npm-global", prefix } satisfies ServerInstallation;
 }).pipe(Effect.orElseSucceed(() => null));
 
 /**
- * The literal spec the user typed (e.g. `t2@nightly`) is resolved away before
+ * The literal spec the user typed (e.g. `@t2code/cli@nightly`) is resolved away before
  * our process starts, so re-derive it from the running version: nightly builds
  * re-suggest the nightly channel, anything else suggests the bare package.
  */
@@ -135,10 +136,15 @@ const powershellWord = (value: string) =>
 const hostShellWord = (platform: NodeJS.Platform, value: string) =>
   platform === "win32" ? powershellWord(value) : shellWord(value);
 
-/** Script installs have no single launcher; desktop shims and standalone binaries do. */
+/**
+ * The launcher a person can type to run this install when `t2` is not on
+ * PATH: the desktop app's `t2` shim, which the app and the shim itself name in
+ * `T2CODE_CLI_PATH`, or a standalone binary's own path. Script installs (a
+ * repo checkout) have no single launcher and keep plain `t2`.
+ */
 const resolveInstallLauncher = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
-  const shim = (yield* HostProcess.Environment).T3CODE_CLI_PATH?.trim();
+  const shim = (yield* HostProcess.Environment).T2CODE_CLI_PATH?.trim();
   if (shim && (yield* fs.exists(shim).pipe(Effect.orElseSucceed(() => false)))) {
     return Option.some(shim);
   }
@@ -148,7 +154,7 @@ const resolveInstallLauncher = Effect.gen(function* () {
 });
 
 /**
- * Uses this install's `t3` on PATH, the originating runner, or its absolute launcher path.
+ * Uses this install's `t2code` on PATH, the originating runner, or its absolute launcher path.
  * Arguments are quoted for POSIX shells or PowerShell on Windows.
  */
 export const resolveHostCliCommand = Effect.fn("invocation.resolveHostCliCommand")(function* (
@@ -159,10 +165,10 @@ export const resolveHostCliCommand = Effect.fn("invocation.resolveHostCliCommand
   const withArgs = (prefix: string) =>
     [prefix, ...args.map((arg) => hostShellWord(platform, arg))].join(" ");
   const command = yield* resolveCliCommand(subcommand);
-  if (command !== `t3 ${subcommand}`) return { command: withArgs(command), launcher: false };
-  const onPath = yield* resolveCommandPath("t3");
+  if (command !== `t2code ${subcommand}`) return { command: withArgs(command), launcher: false };
+  const onPath = yield* resolveCommandPath("t2code");
   if (onPath !== null) {
-    const shim = (yield* HostProcess.Environment).T3CODE_CLI_PATH?.trim();
+    const shim = (yield* HostProcess.Environment).T2CODE_CLI_PATH?.trim();
     const fs = yield* FileSystem.FileSystem;
     const real = (file: string) => fs.realPath(file).pipe(Effect.orElseSucceed(() => null));
     const shimReal = shim ? yield* real(shim) : null;
@@ -180,7 +186,7 @@ export const resolveHostCliCommand = Effect.fn("invocation.resolveHostCliCommand
 
 /**
  * `sudo` resets PATH on most distributions, which drops a user-installed Node
- * (nvm, fnm, a tarball) and with it `npx` or a global `t3`, so the command
+ * (nvm, fnm, a tarball) and with it `npx` or a global `t2`, so the command
  * carries PATH through unless Node is on root's PATH too. An absolute launcher
  * needs neither.
  */

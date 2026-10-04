@@ -27,9 +27,9 @@ import {
 import { usePrimaryManagedPolicy } from "~/state/managedPolicy";
 import { environmentSession, readEnvironmentScope, useEnvironmentScope } from "~/state/session";
 import {
-  type T3ConnectAccountPageUrl,
-  useT3ConnectAccountPage,
-} from "../clerk/T3ConnectAccountPages";
+  type T2ConnectAccountPageUrl,
+  useT2ConnectAccountPage,
+} from "../clerk/T2ConnectAccountPages";
 import { CloudEnvironmentConnectRows } from "./CloudEnvironmentConnectList";
 import { TunnelLimitAlert } from "./TunnelUsage";
 import { Button } from "../ui/button";
@@ -78,7 +78,7 @@ function ConfiguredConnectOnboardingDialog() {
     primaryEnvironmentId === null ? environmentsReady : primarySessionState._tag !== "Initial";
 
   const controller = useCloudLinkController(primaryEnvironmentId);
-  const accountPage = useT3ConnectAccountPage();
+  const accountPage = useT2ConnectAccountPage();
   const showPublishStep = canManageRelay && controller.linkState.target !== null;
   const steps: ReadonlyArray<OnboardingStep> = showPublishStep
     ? ["publish", "devices"]
@@ -199,7 +199,7 @@ function ConfiguredConnectOnboardingDialog() {
   const openAccountPage = accountPage.open;
   // The account page is a Clerk modal, so close this dialog before it opens.
   const leaveForAccountPage = openAccountPage
-    ? (page: T3ConnectAccountPageUrl) => {
+    ? (page: T2ConnectAccountPageUrl) => {
         complete();
         openAccountPage(page);
       }
@@ -327,7 +327,7 @@ function PublishStep({
   readonly disabled: boolean;
   readonly operationError: string | null;
   readonly tunnelLimit: number | null;
-  readonly onOpenAccountPage: ((page: T3ConnectAccountPageUrl) => void) | null;
+  readonly onOpenAccountPage: ((page: T2ConnectAccountPageUrl) => void) | null;
   readonly onExposeEnvironmentChange: (enabled: boolean) => void;
   readonly onPublishAgentActivityChange: (enabled: boolean) => void;
 }) {
@@ -360,7 +360,7 @@ function PublishStep({
 function OnboardingTunnelLimitAlert({
   onOpenAccountPage,
 }: {
-  readonly onOpenAccountPage: ((page: T3ConnectAccountPageUrl) => void) | null;
+  readonly onOpenAccountPage: ((page: T2ConnectAccountPageUrl) => void) | null;
 }) {
   const { upgrade } = useManagedTunnelUsage();
   return (

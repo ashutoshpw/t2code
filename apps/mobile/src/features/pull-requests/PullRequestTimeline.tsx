@@ -1,7 +1,7 @@
 import {
   parsePullRequestAnchor,
   pullRequestAnchorMatchesUrl,
-} from "@t3tools/shared/pullRequestAnchor";
+} from "@t2code/shared/pullRequestAnchor";
 import { PullRequestEntryRow } from "./PullRequestEntryRow";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
@@ -105,7 +105,7 @@ function TimelineComment({
         <PullRequestAvatar actor={comment.author} size={22} />
         <View className="min-w-0 flex-1">
           <Text className="text-sm">
-            <Text className="font-t3-medium">{comment.author?.login ?? "Unknown author"}</Text>
+            <Text className="font-t2-medium">{comment.author?.login ?? "Unknown author"}</Text>
             <Text className="text-foreground-muted">
               {approved ? " approved" : changes ? " requested changes" : " commented"}
             </Text>
@@ -191,7 +191,7 @@ function TimelineComment({
               }
               className="flex-row items-center justify-center gap-1 py-2 active:opacity-70"
             >
-              <Text className="text-xs font-t3-medium text-foreground">
+              <Text className="text-xs font-t2-medium text-foreground">
                 {expanded ? "Show less" : "Show more"}
               </Text>
               <SymbolView
@@ -252,7 +252,7 @@ export function pullRequestTimelineRows(
           <View className="flex-row items-center gap-2">
             <PullRequestAvatar actor={thread.comments[0]?.author ?? null} size={22} />
             <Text className="flex-1 text-sm">
-              <Text className="font-t3-medium">
+              <Text className="font-t2-medium">
                 {thread.comments[0]?.author?.login ?? "Unknown author"}
               </Text>
               <Text className="text-foreground-muted"> started a discussion</Text>

@@ -2,7 +2,7 @@ import {
   parsePullRequestAnchor,
   pullRequestAnchorMatchesUrl,
   resolvePullRequestReviewAnchor,
-} from "@t3tools/shared/pullRequestAnchor";
+} from "@t2code/shared/pullRequestAnchor";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { useAtomRefresh } from "@effect/atom-react";
 import { useFocusEffect, useNavigation, type StaticScreenProps } from "@react-navigation/native";
@@ -249,7 +249,7 @@ function Discussion({ params }: { params: PullRequestParams & { readonly discuss
               >
                 <View className="flex-row items-center gap-2">
                   <PullRequestAvatar actor={comment.author} size={28} />
-                  <Text className="min-w-0 flex-1 text-sm font-t3-medium">
+                  <Text className="min-w-0 flex-1 text-sm font-t2-medium">
                     {comment.author?.login ?? "Unknown author"}
                   </Text>
                   <Text className="text-2xs text-foreground-muted">

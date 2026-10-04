@@ -25,7 +25,7 @@ const environmentFor = (
     baseDir: input.baseDir,
     stateDir: path.join(input.baseDir, "userdata"),
     desktopSettingsPath: path.join(input.baseDir, "userdata", "desktop-settings.json"),
-    serverRoot: "/opt/T3 Code/resources/app.asar",
+    serverRoot: "/opt/T2 Code/resources/app.asar",
     appImagePath: Option.none(),
   } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]);
 
@@ -42,7 +42,7 @@ const commandIn = (
   Effect.gen(function* () {
     const path = yield* Path.Path;
     const fs = yield* FileSystem.FileSystem;
-    const baseDir = input.baseDir ?? path.join(input.home, ".t3");
+    const baseDir = input.baseDir ?? path.join(input.home, ".t2");
     yield* fs.makeDirectory(path.join(baseDir, "userdata"), { recursive: true });
     const make = DesktopCliCommand.make.pipe(
       Effect.provideService(
@@ -67,8 +67,8 @@ const fakePowerShell = (initial: string, inherited: Record<string, string> = {})
       const env = { ...(options.extendEnv ? inherited : {}), ...options.env };
       let exitCode = 0;
       let stdout = "";
-      if (env.T3_SET === "1") {
-        registry.path = env.T3_PATH ?? "";
+      if (env.T2_SET === "1") {
+        registry.path = env.T2_PATH ?? "";
         registry.writes += 1;
       } else if (registry.failReads) {
         exitCode = 1;
@@ -113,9 +113,9 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       expect((yield* command.state).installedPath).toBe(link);
       const installed = yield* command.install;
       expect(installed.installedPath).toBe(link);
-      expect(installed.launcherPath).toBe(path.join(home, ".t3", "bin", "t3"));
+      expect(installed.launcherPath).toBe(path.join(home, ".t2", "bin", "t3"));
       expect(installed.pathSetup).toEqual({ file: "~/.zshrc", added: false });
-      expect(yield* fs.readLink(link)).toBe(path.join(home, ".t3", "bin", "t3"));
+      expect(yield* fs.readLink(link)).toBe(path.join(home, ".t2", "bin", "t3"));
       expect((yield* command.install).installedPath).toBe(link);
 
       // Add to PATH appends one line, once, and keeps a final line with no newline intact.
@@ -134,7 +134,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
 
       expect((yield* command.uninstall).installedPath).toBeNull();
       expect(yield* fs.exists(link)).toBe(false);
-      expect(yield* fs.exists(path.join(home, ".t3", "bin", "t3"))).toBe(true);
+      expect(yield* fs.exists(path.join(home, ".t2", "bin", "t3"))).toBe(true);
       // Removed stays removed: first launch never installs again.
       yield* command.installOnFirstLaunch;
       expect(yield* fs.exists(link)).toBe(false);
@@ -390,7 +390,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
 
       registry.failReads = false;
       const launcherDir = DesktopCliShim.launcherPath(
-        environmentFor(yield* Path.Path, { home, baseDir: `${home}/.t3`, platform: "win32" }),
+        environmentFor(yield* Path.Path, { home, baseDir: `${home}/.t2`, platform: "win32" }),
       ).replace(/[\\/]t3\.cmd$/, "");
       yield* command.install;
       expect(registry.path).toBe(`${userPath};${launcherDir}`);
@@ -421,7 +421,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const home = yield* fs.makeTempDirectoryScoped();
       const launcherDir = path.dirname(
         DesktopCliShim.launcherPath(
-          environmentFor(path, { home, baseDir: path.join(home, ".t3"), platform: "win32" }),
+          environmentFor(path, { home, baseDir: path.join(home, ".t2"), platform: "win32" }),
         ),
       );
       const userPath = `C:\\Tools;${launcherDir}`;

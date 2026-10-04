@@ -126,7 +126,7 @@ export class ManagedProjectFolders extends Context.Service<
       NamedProjectError
     >;
   }
->()("t3/project/ManagedProjectFolders") {}
+>()("@t2code/cli/project/ManagedProjectFolders") {}
 
 const folderWords = (text: string) =>
   text
@@ -195,7 +195,7 @@ function namedProjectReadme(name: string): string {
     "",
     `# ${name}`,
     "",
-    "Created in [T3 Code](https://t3.codes).",
+    "Created in [T2 Code](https://t2.codes).",
     "",
   ].join("\n");
 }

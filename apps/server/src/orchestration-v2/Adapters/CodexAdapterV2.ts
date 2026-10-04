@@ -776,7 +776,7 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
     readonly codexInput: ReadonlyArray<CodexSchema.V2TurnStartParams__UserInput>;
     readonly runtimePolicy: ProviderAdapter.ProviderAdapterV2RuntimePolicy;
     readonly modelSelection: ModelSelection;
-    readonly hasT3Mcp?: boolean;
+    readonly hasT2Mcp?: boolean;
     readonly browserToolsAvailable?: boolean;
     readonly deviceToolsAvailable?: boolean;
     /** ChatGPT token sharing does not accept service tiers. */
@@ -801,15 +801,21 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
       input.omitServiceTier === true
         ? undefined
         : getCodexServiceTierOptionValue(input.modelSelection);
-    // MCP-written app context must be quoted user input, not developer instructions.
+    const developerInstructions =
+      input.hasT2Mcp !== true
+        ? undefined
+        : buildCodexDeveloperInstructions(input.runtimePolicy.interactionMode);
+    // An app's context is text an MCP server wrote, so it goes in as untrusted
+    // context: Codex renders it as quoted user-side input, never as developer
+    // instructions.
     const appContext = Object.fromEntries(
       (input.appContext ?? []).map((entry) => [
         entry.key,
         { kind: "untrusted" as const, value: entry.text },
       ]),
     );
-    const t3Context =
-      input.hasT3Mcp === true
+    const t2Context =
+      input.hasT2Mcp === true
         ? buildCodexAdditionalContext(
             { model: input.modelSelection.model, reasoningEffort: effort ?? undefined },
             {
@@ -819,16 +825,17 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
           )
         : undefined;
     const additionalContext =
-      t3Context === undefined && Object.keys(appContext).length === 0
+      t2Context === undefined && Object.keys(appContext).length === 0
         ? undefined
-        : { ...t3Context, ...appContext };
+        : { ...t2Context, ...appContext };
     return yield* decodeCodexTurnStartParamsWithCollaborationMode({
       threadId: input.nativeThreadId,
       input: input.codexInput,
       ...(additionalContext ? { additionalContext } : {}),
       cwd: input.runtimePolicy.cwd,
       model: input.modelSelection.model,
-      // Catalogues can default summaries to "none"; request them explicitly on every turn.
+      // Model catalogues can default summaries to "none". Request them on every
+      // turn, including resumed threads, for T2's reasoning timeline.
       summary: "detailed",
       // Omitting the reviewer on resume preserves the previous Auto reviewer.
       approvalsReviewer: runtimeModeDefaults.approvalsReviewer,
@@ -1407,7 +1414,7 @@ export interface CodexAppServerClientFactoryShape {
 export class CodexAppServerClientFactory extends Context.Service<
   CodexAppServerClientFactory,
   CodexAppServerClientFactoryShape
->()("t3/orchestration-v2/Adapters/CodexAdapterV2/CodexAppServerClientFactory") {}
+>()("@t2code/cli/orchestration-v2/Adapters/CodexAdapterV2/CodexAppServerClientFactory") {}
 
 /** MCP startup grace in milliseconds; the 1 s default excludes cold npx/uvx servers from the first model request. */
 export const CODEX_THREAD_CONFIG = {
@@ -1419,11 +1426,11 @@ export const CODEX_THREAD_CONFIG = {
 } as const;
 
 // T3 waits can block for an hour; keep Codex's MCP timeout above that.
-const CODEX_T3_MCP_TOOL_TIMEOUT_SEC = 65 * 60;
-// Holds T3 tools Codex must call directly, never from Code Mode. Calls arrive as
-// `t3-code-direct.<tool>`; t3McpToolPresentation.ts must keep resolving that form.
-const CODEX_T3_DIRECT_MCP_SERVER = "t3-code-direct";
-const CODEX_DIRECT_ONLY_T3_TOOL = "t3_thread_wait";
+const CODEX_T2_MCP_TOOL_TIMEOUT_SEC = 65 * 60;
+// Holds T2 tools Codex must call directly, never from Code Mode. Calls arrive as
+// `t2-code-direct.<tool>`; t2McpToolPresentation.ts must keep resolving that form.
+const CODEX_T2_DIRECT_MCP_SERVER = "t2-code-direct";
+const CODEX_DIRECT_ONLY_T2_TOOL = "t2_thread_wait";
 
 function codexThreadRuntimeParams(input: {
   readonly threadId: ThreadId | null;
@@ -1456,13 +1463,13 @@ function codexThreadRuntimeParams(input: {
       ...(t3Server === undefined
         ? {}
         : {
-            // Override only T3's servers so launch-argument MCP servers survive.
-            "mcp_servers.t3-code": { ...t3Server, disabled_tools: [CODEX_DIRECT_ONLY_T3_TOOL] },
+            // Override only T2's servers so launch-argument MCP servers survive.
+            "mcp_servers.t2-code": { ...t3Server, disabled_tools: [CODEX_DIRECT_ONLY_T2_TOOL] },
             // Code Mode runs a blocking wait as a nested call, and the model keeps working
             // around it. A second, direct-only registration makes it a plain tool call.
-            [`mcp_servers.${CODEX_T3_DIRECT_MCP_SERVER}`]: {
+            [`mcp_servers.${CODEX_T2_DIRECT_MCP_SERVER}`]: {
               ...t3Server,
-              enabled_tools: [CODEX_DIRECT_ONLY_T3_TOOL],
+              enabled_tools: [CODEX_DIRECT_ONLY_T2_TOOL],
               omit_tools_from: ["code_mode", "deferred"],
             },
           }),
@@ -7124,7 +7131,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
               codexInput,
               runtimePolicy: turnInput.runtimePolicy,
               modelSelection: turnInput.modelSelection,
-              hasT3Mcp: mcpSession !== undefined,
+              hasT2Mcp: mcpSession !== undefined,
               browserToolsAvailable: mcpSession?.browserToolsAvailable ?? true,
               deviceToolsAvailable: mcpSession?.capabilities?.has("device") ?? false,
               omitServiceTier: adapterOptions.resolveRuntime !== undefined,

@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { managedCapabilityDenial } from "@t2code/contracts";
 
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
-import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
+import { useT2ConnectAuthPrompt } from "../clerk/useT2ConnectAuthPrompt";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { ScopedSwitch } from "./ScopedSwitch";
@@ -78,7 +78,7 @@ function BoringSidebarMultilineRow() {
 /** Signed out of T3 Connect, the row offers to sign in instead of its switch. */
 function GuestLinksRowWithSignIn() {
   const { isSignedIn } = useAuth();
-  const { openAuthPrompt } = useT3ConnectAuthPrompt();
+  const { openAuthPrompt } = useT2ConnectAuthPrompt();
   // `isSignedIn` is undefined until Clerk loads.
   if (isSignedIn !== false) return <GuestLinksRow />;
   return (

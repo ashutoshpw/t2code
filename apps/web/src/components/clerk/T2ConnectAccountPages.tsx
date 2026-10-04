@@ -21,25 +21,24 @@ export const T2_CONNECT_ACCOUNT_PAGES = [
   },
 ] as const;
 
+export type T2ConnectAccountPageUrl = (typeof T2_CONNECT_ACCOUNT_PAGES)[number]["url"];
+
 type PortalTargets = Readonly<Record<string, HTMLDivElement | undefined>>;
 
-/**
- * Clerk mounts custom pages into DOM nodes it owns, so the caller must keep `portals` rendered for
- * as long as the modal can be open.
- */
+/** Keep portals rendered while the modal can open; Clerk owns the custom-page DOM nodes. */
 export function useT2ConnectAccountPage(): {
-  readonly open: (() => void) | null;
+  readonly open: ((page?: T2ConnectAccountPageUrl) => void) | null;
   readonly portals: ReactNode;
 } {
   const clerk = useClerk();
   const { isSignedIn } = useAuth();
   const [targets, setTargets] = useState<PortalTargets>({});
 
-  const open = () => {
+  const open = (page: T2ConnectAccountPageUrl = "t2-connect") => {
     const setTarget = (key: string, element: HTMLDivElement | undefined) =>
       setTargets((current) => ({ ...current, [key]: element }));
     clerk.openUserProfile({
-      __experimental_startPath: "/t2-connect",
+      __experimental_startPath: `/${page}`,
       customPages: T2_CONNECT_ACCOUNT_PAGES.map((page) => ({
         label: page.label,
         url: page.url,

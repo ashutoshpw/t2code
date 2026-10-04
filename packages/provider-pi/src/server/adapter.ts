@@ -70,7 +70,7 @@ import {
 } from "./rpc.ts";
 import {
   buildPiRpcLaunch,
-  materializePiT3McpExtension,
+  materializePiT2McpExtension,
   resolvePiLaunchArgs,
 } from "./mcpInjection.ts";
 import { PI_FILE_CHANGE_TOOLS, PI_T3_SERVICE_TIER_COMMAND } from "./mcpExtensionSource.ts";
@@ -90,7 +90,7 @@ const MAX_EXTENSION_STATUSES = 32;
 const MAX_EXTENSION_STATUS_KEY_LENGTH = 256;
 const MAX_EXTENSION_STATUS_TEXT_LENGTH = 4096;
 const PI_UNSOLICITED_ACTIVITY_ERROR =
-  "Pi started agent work outside an active T3 turn. The session was stopped to prevent invisible tool execution.";
+  "Pi started agent work outside an active T2 turn. The session was stopped to prevent invisible tool execution.";
 const SETTLE_PROBE_MAX_ATTEMPTS = 3;
 const SETTLE_PROBE_RETRY_DELAY = Duration.millis(100);
 
@@ -476,7 +476,7 @@ export const makePiAdapterV2 = Effect.fn("makePiAdapterV2")(function* (
         );
       // Always inject the permission hook even without MCP credentials; otherwise Supervised becomes unrestricted.
       const extensionPath = yield* provideCacheFs(
-        materializePiT3McpExtension(host.paths.providerStatusCacheDir),
+        materializePiT2McpExtension(host.paths.providerStatusCacheDir),
       );
       const resolvedLaunchArgs = resolvePiLaunchArgs(options.settings.launchArgs);
       if (!resolvedLaunchArgs.ok) {
@@ -2800,8 +2800,13 @@ export const makePiAdapterV2 = Effect.fn("makePiAdapterV2")(function* (
                 Effect.ignore,
               );
             }
-            // Resolve attachments before turn installation so failures cannot strand activeTurn.
-            // Inject instructions through before_agent_start; wrapping user text breaks slash-command expansion.
+            // Resolved before the turn is installed: a failure here (an
+            // unreadable attachment) must not leave `activeTurn` set, which
+            // would reject every later turn as already active.
+            // Orchestration instructions reach pi through the T2 MCP
+            // extension's before_agent_start system-prompt hook, never by
+            // wrapping the user text: a wrapped first message would no
+            // longer start with "/" and slash commands would stop expanding.
             const compactCommand = continuation
               ? null
               : parsePiCompactCommand(turnInput.message.text);

@@ -129,8 +129,8 @@ describe("DesktopPreReadyPlatform", () => {
     let desktopName = "t3code.desktop";
     let desktopEntry = previousEntry;
     let iconInstalled = false;
-    const iconSource = "/tmp/.mount_T3/resources/app.asar/apps/desktop/prod-resources/icon.png";
-    const iconPath = "/xdg/icons/com.t3tools.T3Code.desktop.png";
+    const iconSource = "/tmp/.mount_T2/resources/app.asar/apps/desktop/prod-resources/icon.png";
+    const iconPath = "/xdg/icons/t2code.desktop.png";
     const iconBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
     readFileSyncMock.mockImplementation((path: string) => {
       if (path === iconSource) return iconBytes;
@@ -140,7 +140,7 @@ describe("DesktopPreReadyPlatform", () => {
       desktopName = name;
     });
     writeFileSyncMock.mockImplementation((path: string, contents: string | Buffer) => {
-      if (path === "/xdg/applications/com.t3tools.T3Code.desktop") desktopEntry = String(contents);
+      if (path === "/xdg/applications/t2code.desktop") desktopEntry = String(contents);
       if (path === iconPath) iconInstalled = Buffer.compare(Buffer.from(contents), iconBytes) === 0;
     });
 
@@ -163,13 +163,13 @@ describe("DesktopPreReadyPlatform", () => {
           ),
         );
         const identity = yield* Effect.promise(() => portalIdentity);
-        assert.equal(identity.desktopName, "com.t3tools.T3Code.desktop");
+        assert.equal(identity.desktopName, "com.t2tools.T2Code.desktop");
         assert.include(identity.desktopEntry ?? "", "Exec=/Applications/current.AppImage %U");
         assert.include(identity.desktopEntry ?? "", "Name=T2 Code (Beta)");
-        assert.include(identity.desktopEntry ?? "", "MimeType=x-scheme-handler/t3code;");
+        assert.include(identity.desktopEntry ?? "", "MimeType=x-scheme-handler/t2code;");
         assert.include(
           identity.desktopEntry ?? "",
-          "Icon=/xdg/icons/com.t3tools.T3Code.desktop.png",
+          "Icon=/xdg/icons/com.t2tools.T2Code.desktop.png",
         );
         assert.equal(
           copyFileSyncMock.mock.calls.length,

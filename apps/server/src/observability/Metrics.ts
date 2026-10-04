@@ -15,35 +15,35 @@ export const rpcRequestDuration = Metric.timer("t2_rpc_request_duration", {
   description: "RPC request handling duration.",
 });
 
-export const orchestrationCommandsTotal = Metric.counter("t3_orchestration_commands_total", {
+export const orchestrationCommandsTotal = Metric.counter("t2_orchestration_commands_total", {
   description: "Total orchestration commands dispatched, by outcome.",
 });
 
-export const orchestrationCommandDuration = Metric.timer("t3_orchestration_command_duration", {
+export const orchestrationCommandDuration = Metric.timer("t2_orchestration_command_duration", {
   description: "Orchestration command handling duration, excluding thread dispatch lock wait.",
 });
 
 export const orchestrationEffectClaimsTotal = Metric.counter(
-  "t3_orchestration_effect_claims_total",
+  "t2_orchestration_effect_claims_total",
   {
     description: "Total completed orchestration effect outbox claim attempts by result.",
   },
 );
 
-export const orchestrationEffectQueueWait = Metric.timer("t3_orchestration_effect_queue_wait", {
+export const orchestrationEffectQueueWait = Metric.timer("t2_orchestration_effect_queue_wait", {
   description:
     "Time from an orchestration effect's temporal availability until claim, including same-thread blocking.",
 });
 
-export const providerSessionsTotal = Metric.counter("t3_provider_sessions_total", {
+export const providerSessionsTotal = Metric.counter("t2_provider_sessions_total", {
   description: "Total provider session lifecycle operations.",
 });
 
-export const providerTurnsTotal = Metric.counter("t3_provider_turns_total", {
+export const providerTurnsTotal = Metric.counter("t2_provider_turns_total", {
   description: "Total provider turn lifecycle operations.",
 });
 
-export const providerTurnDuration = Metric.timer("t3_provider_turn_duration", {
+export const providerTurnDuration = Metric.timer("t2_provider_turn_duration", {
   description: "Time for the provider adapter to start a turn, not how long the turn runs.",
 });
 
@@ -95,28 +95,28 @@ export const terminalSessionsTotal = Metric.counter("t2_terminal_sessions_total"
   description: "Total terminal sessions started.",
 });
 
-export const webhookDeliveriesTotal = Metric.counter("t3_webhook_deliveries_total", {
+export const webhookDeliveriesTotal = Metric.counter("t2_webhook_deliveries_total", {
   description: "Webhook requests handled, by outcome and source.",
 });
 
-export const webhookDeliveryDuration = Metric.timer("t3_webhook_delivery_duration", {
+export const webhookDeliveryDuration = Metric.timer("t2_webhook_delivery_duration", {
   description: "Time to verify, log, and enqueue one webhook request.",
 });
 
-export const webhookHeldDelay = Metric.timer("t3_webhook_held_delay", {
+export const webhookHeldDelay = Metric.timer("t2_webhook_held_delay", {
   description:
     "Time between the relay receiving a webhook request and the environment handling it.",
 });
 
-export const webhookRunsTotal = Metric.counter("t3_webhook_runs_total", {
+export const webhookRunsTotal = Metric.counter("t2_webhook_runs_total", {
   description: "Runs started from webhook deliveries, by outcome.",
 });
 
-export const secretRequestsTotal = Metric.counter("t3_secret_requests_total", {
+export const secretRequestsTotal = Metric.counter("t2_secret_requests_total", {
   description: "Secrets agents asked users for, by how each request ended.",
 });
 
-export const secretRefsConsumedTotal = Metric.counter("t3_secret_refs_consumed_total", {
+export const secretRefsConsumedTotal = Metric.counter("t2_secret_refs_consumed_total", {
   description: "Secret refs tools tried to use, by result.",
 });
 

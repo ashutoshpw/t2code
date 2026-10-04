@@ -10,7 +10,7 @@ import * as NodePath from "node:path";
 const project = NodePath.join(import.meta.dirname, "../../..");
 const env = {
   ...process.env,
-  T3_TASK_CACHE_TELEMETRY: "off",
+  T2_TASK_CACHE_TELEMETRY: "off",
   VP_REMOTE_CACHE: "read-write",
   VP_REMOTE_CACHE_URL: undefined,
 };

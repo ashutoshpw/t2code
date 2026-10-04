@@ -67,7 +67,7 @@ const auth = {
   policy: "loopback-browser",
   bootstrapMethods: ["one-time-token"],
   sessionMethods: ["browser-session-cookie"],
-  sessionCookieName: "t3_session",
+  sessionCookieName: "t2_session",
 };
 
 const readyProvider = (
@@ -102,13 +102,13 @@ const makeServerConfig = (providers: ReadonlyArray<unknown>): ServerConfig => ({
     environment: descriptor,
     auth,
     cwd: "/workspace/render",
-    keybindingsConfigPath: "/workspace/.t3/keybindings.json",
+    keybindingsConfigPath: "/workspace/.t2/keybindings.json",
     keybindings: [],
     issues: [],
     providers,
     availableEditors: [],
     observability: {
-      logsDirectoryPath: "/workspace/.t3/logs",
+      logsDirectoryPath: "/workspace/.t2/logs",
       localTracingEnabled: false,
       otlpTracesEnabled: false,
       otlpMetricsEnabled: false,
