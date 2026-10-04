@@ -54,7 +54,7 @@ npx @t2code/cli --provider claude exec "Summarize this project"
 ```
 
 `--provider` also accepts `-p` (and `--p`). Supported values are `claude`,
-`codex`, `opencode`, `cursor`, `grok`, and `fx`. For example:
+`codex`, `opencode`, `cursor`, and `grok`. For example:
 
 ```bash
 npx @t2code/cli --p codex exec "Explain the failing test"
@@ -157,7 +157,6 @@ computer.
 | Claude      | Install [Claude Code](https://claude.com/product/claude-code), then run `claude auth login`.                                                              |
 | Cursor      | Install [Cursor CLI](https://cursor.com/cli), then run `agent login`.                                                                                     |
 | Grok Build  | Install [Grok Build CLI](https://x.ai/cli), then run `grok login`.                                                                                        |
-| fx          | Install [fx](https://fx.sh), then run `fx login codex`, `fx login grok`, or `fx login`.                                                                   |
 | OpenCode    | Install [OpenCode](https://opencode.ai), then run `opencode auth login`.                                                                                  |
 | Antigravity | Install and sign in with Google from T2 Code's provider settings.                                                                                         |
 | Pi          | Install [Pi](./providers-pi.md#set-up-pi) with Node.js 22.19 or newer, then run `pi` and `/login`.                                                        |
@@ -189,9 +188,9 @@ base URL. Mark secret values as sensitive; after saving, T2 Code does not displa
 their original values.
 
 For provider-specific setup and accounts, see [Codex](./providers-codex.md),
-[Claude](./providers-claude.md), [fx](./providers-fx.md),
-[OpenCode](./providers-opencode.md), [Antigravity](./providers-antigravity.md),
-[Pi](./providers-pi.md), and [Muse Code](./providers-muse.md).
+[Claude](./providers-claude.md), [OpenCode](./providers-opencode.md),
+[Antigravity](./providers-antigravity.md), [Pi](./providers-pi.md), and
+[Muse Code](./providers-muse.md).
 
 ## Next steps
 
