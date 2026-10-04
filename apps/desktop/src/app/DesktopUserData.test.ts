@@ -6,17 +6,47 @@ import * as Path from "effect/Path";
 
 import { resolveUserDataPath } from "./DesktopUserData.ts";
 
-it.effect.each(["t3code", "T3 Code (Alpha)"])(
+it.effect("identifies a failed source read and preserves its cause", () => {
+  const sourceState = "/profiles/t3code/Local State";
+  const cause = PlatformError.systemError({
+    _tag: "PermissionDenied",
+    module: "FileSystem",
+    method: "readFileString",
+    pathOrDescriptor: sourceState,
+  });
+  return Effect.gen(function* () {
+    const error = yield* resolveUserDataPath({
+      appDataDirectory: "/profiles",
+      isDevelopment: false,
+      platform: "win32",
+    }).pipe(Effect.flip);
+    assert.equal(error.operation, "read");
+    assert.equal(error.resourcePath, sourceState);
+    assert.equal(error.category, "PermissionDenied");
+    assert.strictEqual(error.cause, cause);
+  }).pipe(
+    Effect.provideService(
+      FileSystem.FileSystem,
+      FileSystem.makeNoop({
+        exists: (path) => Effect.succeed(path === sourceState),
+        readFileString: () => Effect.fail(cause),
+      }),
+    ),
+    Effect.provide(NodeServices.layer),
+  );
+});
+
+it.effect.each(["t3code-v2", "t3code"])(
   "preserves Windows credential keys from %s without copying browser databases",
   (sourceName) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-v2-profile-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-v2-profile-" });
       const source = path.join(directory, sourceName);
-      const destination = path.join(directory, "t3code-v2");
+      const destination = path.join(directory, "t2code");
       const state = '{"os_crypt":{"encrypted_key":"test-encrypted-key"}}';
-      yield* fs.makeDirectory(path.join(directory, "T3 Code (Alpha)"), { recursive: true });
+      yield* fs.makeDirectory(path.join(directory, "t3code-v2"), { recursive: true });
       yield* fs.makeDirectory(path.join(source, "IndexedDB"), { recursive: true });
       yield* fs.writeFileString(path.join(source, "Local State"), state);
       yield* fs.writeFileString(path.join(source, "IndexedDB", "LOCK"), "V1 owns this database");
