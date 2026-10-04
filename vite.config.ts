@@ -159,24 +159,24 @@ export default defineConfig({
         "error",
         { paths: [...RESTRICTED_IMPORT_PATHS, RESTRICTED_PULL_REQUEST_GLYPH_IMPORTS] },
       ],
-      "t3code/no-global-process-runtime": "error",
-      "t3code/no-inline-schema-compile": "warn",
-      "t3code/no-low-value-comments": "error",
-      "t3code/no-manual-effect-runtime-in-tests": "error",
-      "t3code/no-native-title-tooltip": "error",
-      "t3code/no-raw-mcp-registration": "error",
-      "t3code/no-test-in-loop": "error",
-      "t3code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }],
-      "t3code/no-unscoped-has": "error",
-      "t3code/namespace-node-imports": "error",
-      "t3code/prefer-catch-tags": "error",
-      "t3code/require-centered-scroll-gutter": "error",
-      "t3code/require-suppression-reason": "error",
+      "t2code/no-global-process-runtime": "error",
+      "t2code/no-inline-schema-compile": "warn",
+      "t2code/no-low-value-comments": "error",
+      "t2code/no-manual-effect-runtime-in-tests": "error",
+      "t2code/no-native-title-tooltip": "error",
+      "t2code/no-raw-mcp-registration": "error",
+      "t2code/no-test-in-loop": "error",
+      "t2code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }],
+      "t2code/no-unscoped-has": "error",
+      "t2code/namespace-node-imports": "error",
+      "t2code/prefer-catch-tags": "error",
+      "t2code/require-centered-scroll-gutter": "error",
+      "t2code/require-suppression-reason": "error",
     },
     overrides: [
       {
         files: ["packages/client-runtime/src/state/**", "apps/{web,mobile,desktop}/src/**"],
-        rules: { "t3code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: false }] },
+        rules: { "t2code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: false }] },
       },
       {
         files: [
@@ -184,7 +184,7 @@ export default defineConfig({
           "packages/client-runtime/src/state/vcsAction.ts",
         ],
         rules: {
-          "t3code/no-rpc-permission-bypass": [
+          "t2code/no-rpc-permission-bypass": [
             "error",
             { allowGuardInstallation: true, allowRawClientAccess: false },
           ],
@@ -197,18 +197,18 @@ export default defineConfig({
           "apps/web/src/components/device/DevicePhoneViewport.tsx",
           "apps/web/src/components/device/DeviceDuoViewport.tsx",
         ],
-        rules: { "t3code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }] },
+        rules: { "t2code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }] },
       },
       {
         files: ["packages/client-runtime/src/connection/outdatedHostUpdate.ts"],
-        rules: { "t3code/no-rpc-permission-bypass": "off" },
+        rules: { "t2code/no-rpc-permission-bypass": "off" },
       },
       {
         files: [
           "packages/client-runtime/src/rpc/**",
           "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
         ],
-        rules: { "t3code/no-rpc-permission-bypass": "off" },
+        rules: { "t2code/no-rpc-permission-bypass": "off" },
       },
       {
         files: ["packages/shared/src/HostProcess.ts"],
@@ -224,7 +224,7 @@ export default defineConfig({
       },
       {
         files: ["apps/server/src/mcp/McpHttpServer.ts"],
-        rules: { "t3code/no-raw-mcp-registration": "off" },
+        rules: { "t2code/no-raw-mcp-registration": "off" },
       },
       {
         files: ["apps/web/src/**"],

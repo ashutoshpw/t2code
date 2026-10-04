@@ -90,7 +90,6 @@ export const makeCli = ({ cloudEnabled = hasCloudPublicConfig } = {}) =>
       traceCommand,
       doctorCommand,
       triageCommand,
-      execCommand,
       cloudEnabled ? connectCommand : connectUnavailableCommand,
     ]),
   );
