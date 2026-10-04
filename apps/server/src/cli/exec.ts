@@ -165,8 +165,10 @@ export const execCommand = Command.make("exec", {
   ),
 }).pipe(
   Command.withDescription("Run one prompt through a harness CLI and print its final response."),
-  Command.withHandler(({ prompt }) =>
-    Effect.gen(function* () {
+  Command.withGlobalFlags([execProviderGlobalFlag]),
+  Command.withHandler(
+    Effect.fn("cli.exec")(function* (flags) {
+      const { prompt } = flags;
       // Command.run provides every active global setting, so this resolves to
       // the parsed --provider value there. Reading it as an optional service
       // keeps the requirement out of the command's context, so every caller
