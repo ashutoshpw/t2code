@@ -253,7 +253,7 @@ export class ThreadSearch extends Context.Service<
       input: OrchestrationSearchThreadsInput & { readonly projectId?: ProjectId | undefined },
     ) => Effect.Effect<{ readonly matches: ReadonlyArray<ThreadSearchHit> }, ThreadSearchError>;
   }
->()("t3/orchestration-v2/ThreadSearch") {}
+>()("@t2code/cli/orchestration-v2/ThreadSearch") {}
 
 /** @public */
 export const make = Effect.gen(function* () {

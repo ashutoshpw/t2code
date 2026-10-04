@@ -61,16 +61,16 @@ import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEve
 import {
   structuralProtocolMethod,
   summarizeNativeProtocolPayload,
-} from "@t3tools/provider-core/server/nativeProtocolLogging";
-import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
-import { t3OrchestrationSystemPrompt } from "@t3tools/provider-core/server/orchestrationInstructions";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
+} from "@t2code/provider-core/server/nativeProtocolLogging";
+import { mergeProviderInstanceEnvironment } from "@t2code/provider-core/server/instanceEnvironment";
+import { t2OrchestrationSystemPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
+import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
-import { turnScopedSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
-import { providerMessageTextWithAttachmentPaths } from "@t3tools/provider-core/server/attachmentPrompt";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
+import { makeProviderFailure } from "@t2code/provider-core/server/failure";
+import { turnScopedSelectionTransition } from "@t2code/provider-core/server/selectionTransition";
+import { providerMessageTextWithAttachmentPaths } from "@t2code/provider-core/server/attachmentPrompt";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 import {
   ProviderAdapterDriverCreateError,
   type ProviderAdapterDriver,
@@ -936,9 +936,9 @@ export const makeOpenCodeAdapterV2 = Effect.fn("makeOpenCodeAdapterV2")(function
         });
 
         const mcpSession = yield* mcpSessions.read(input.threadId);
-        const hasT3Mcp = mcpSession !== undefined && !connection.external;
-        const orchestrationSystemPrompt = t3OrchestrationSystemPrompt(hasT3Mcp);
-        if (hasT3Mcp) {
+        const hasT2Mcp = mcpSession !== undefined && !connection.external;
+        const orchestrationSystemPrompt = t2OrchestrationSystemPrompt(hasT2Mcp);
+        if (hasT2Mcp) {
           yield* OpenCodeRuntime.runOpenCodeSdk("mcp.add", () =>
             client.mcp.add({
               name: "t3-code",

@@ -186,7 +186,7 @@ export class IdAllocatorV2 extends Context.Service<
     readonly allocate: IdAllocatorV2Allocate;
     readonly derive: IdAllocatorV2Derive;
   }
->()("@t3tools/provider-core/server/IdAllocator/IdAllocatorV2") {}
+>()("@t2code/provider-core/server/IdAllocator/IdAllocatorV2") {}
 
 const encodePart = (part: string | number): string => encodeURIComponent(String(part));
 

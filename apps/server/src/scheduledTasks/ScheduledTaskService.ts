@@ -108,7 +108,7 @@ export function relayHookBaseUrl(input: {
 }
 
 export class ScheduledTaskWebhookOrigin extends Context.Reference<Effect.Effect<WebhookOrigin>>(
-  "t3/scheduledTasks/ScheduledTaskWebhookOrigin",
+  "@t2code/cli/scheduledTasks/ScheduledTaskWebhookOrigin",
   {
     defaultValue: () => Effect.succeed({ relayHookBaseUrl: null }),
   },
@@ -261,7 +261,7 @@ export class ScheduledTaskService extends Context.Service<
       request: WebhookTriggerRequest,
     ) => Effect.Effect<WebhookTriggerResult, ScheduledTaskError>;
   }
->()("t3/scheduledTasks/ScheduledTaskService") {}
+>()("@t2code/cli/scheduledTasks/ScheduledTaskService") {}
 
 function taskError(message: string, input?: { taskId?: ScheduledTaskId; cause?: unknown }) {
   return new ScheduledTaskError({

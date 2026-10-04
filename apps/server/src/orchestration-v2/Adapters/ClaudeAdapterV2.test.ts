@@ -458,7 +458,7 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
 });
 
 describe("ClaudeAdapterV2 MCP query overrides", () => {
-  const T3_MCP_SERVERS = {
+  const T2_MCP_SERVERS = {
     "t3-code": {
       type: "http",
       url: "http://127.0.0.1:43123/mcp",
@@ -480,6 +480,55 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
     endpoint: "http://127.0.0.1:43123/mcp",
     authorizationHeader,
     browserToolsAvailable: true,
+  });
+
+  it("leaves an absent allowlist absent when no MCP session exists", () => {
+    const overrides = ClaudeAdapterV2.claudeMcpQueryOverrides({
+      mcpSession: undefined,
+      readOnlySandbox: false,
+    });
+
+    assert.deepEqual(overrides, {});
+  });
+
+  it("preserves an explicit allowlist when no MCP session exists", () => {
+    const overrides = ClaudeAdapterV2.claudeMcpQueryOverrides({
+      mcpSession: undefined,
+      readOnlySandbox: false,
+      allowedTools: ["Read"],
+    });
+
+    assert.deepEqual(overrides, { allowedTools: ["Read"] });
+  });
+
+  it("pre-approves all t3-code tools when attaching an MCP session without an allowlist", () => {
+    const threadId = ThreadId.make("thread-claude-mcp-no-allowlist");
+    const mcpSession = mcpSessionFor(threadId);
+    const overrides = ClaudeAdapterV2.claudeMcpQueryOverrides({
+      mcpSession,
+      readOnlySandbox: false,
+    });
+
+      assert.deepEqual(overrides, {
+        allowedTools: [ClaudeAdapterV2.CLAUDE_T3_MCP_TOOL_WILDCARD],
+        mcpServers: T2_MCP_SERVERS,
+      });
+    });
+  });
+
+  it("extends an explicit allowlist with the t3-code wildcard", () => {
+    const threadId = ThreadId.make("thread-claude-mcp-with-allowlist");
+    const mcpSession = mcpSessionFor(threadId);
+    const overrides = ClaudeAdapterV2.claudeMcpQueryOverrides({
+      mcpSession,
+      readOnlySandbox: false,
+      allowedTools: ["Read", "mcp__t2-code__*"],
+    });
+
+    assert.deepEqual(overrides, {
+      allowedTools: ["Read", "mcp__t2-code__*"],
+      mcpServers: T2_MCP_SERVERS,
+    });
   });
 
   it("pre-approves only read-only t3-code tools in a read-only sandbox", () => {
@@ -537,7 +586,7 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
       ...Object.values(HtmlToolkit.tools),
     ]
       .filter((tool) => Context.get(tool.annotations, Tool.Readonly))
-      .map((tool) => `mcp__t3-code__${tool.name}`)
+      .map((tool) => `mcp__t2-code__${tool.name}`)
       .sort();
 
     assert.deepEqual(

@@ -38,8 +38,12 @@ import {
   timingSafeEqualBase64Url,
 } from "./utils.ts";
 
-// Request-derived origins support loopback, Tailscale and tunnels.
-// Signed client metadata keeps unauthenticated registration stateless.
+/**
+ * Every URL is derived from the request's own origin, so the same server
+ * answers correctly over loopback, Tailscale Serve and a T2 Connect tunnel.
+ * Client registration is stateless: a client id is its signed metadata, so an
+ * unauthenticated caller cannot grow server state.
+ */
 
 const SIGNING_SECRET_NAME = "mcp-oauth-signing-key";
 const AUTHORIZATION_CODE_TTL_MS = 60_000;
@@ -73,7 +77,7 @@ export const protectedResourceMetadata = (
   authorization_servers: [urls.issuer],
   scopes_supported: MCP_OAUTH_SCOPES,
   bearer_methods_supported: ["header"],
-  resource_name: "T3 Code",
+  resource_name: "T2 Code",
 });
 
 export const authorizationServerMetadata = (
@@ -211,7 +215,7 @@ export class McpOAuth extends Context.Service<
       readonly token: AuthMcpTokenRequest;
     }) => Effect.Effect<AuthMcpTokenResult, AuthMcpTokenError>;
   }
->()("t3/auth/McpOAuth") {}
+>()("@t2code/cli/auth/McpOAuth") {}
 
 const redirectWith = (redirectUri: string, params: Record<string, string | undefined>) => {
   const url = new URL(redirectUri);

@@ -97,6 +97,81 @@ describe("consumeCloudReplayGuards", () => {
       expect(consumed).toBe(false);
     }),
   );
+
+  it.effect("preserves replay-store availability failures", () =>
+    Effect.gen(function* () {
+      const failure = storeFailure("PermissionDenied");
+      const error = yield* Effect.flip(
+        consumeCloudReplayGuards({
+          secrets: makeSecretStore(() => Effect.fail(failure)),
+          names: ["cloud-jti", "cloud-nonce"],
+          value: new Uint8Array(),
+        }),
+      );
+
+      expect(error).toBe(failure);
+    }),
+  );
+});
+
+describe("reconcileDesiredCloudLink", () => {
+  it.effect("requires stored CLI authorization without exposing an HTTP endpoint", () =>
+    Effect.gen(function* () {
+      const link = yield* CloudLink.CloudLink;
+      const error = yield* Effect.flip(link.reconcileDesiredLink("http://127.0.0.1:3774"));
+
+      expect(error._tag).toBe("CloudLinkAuthorizationMissingError");
+    }).pipe(
+      Effect.provide(CloudLink.layer),
+      Effect.provideService(HttpServer.HttpServer, idleHttpServer),
+      Effect.provideService(
+        ServerConfigModule.ServerConfig,
+        ServerConfigModule.ServerConfig.of({} as ServerConfigModule.ServerConfig["Service"]),
+      ),
+      Effect.provideService(
+        ServerSecretStore.ServerSecretStore,
+        makeSecretStore(unusedSecretStoreOperation),
+      ),
+      Effect.provideService(
+        ServerEnvironment.ServerEnvironment,
+        ServerEnvironment.ServerEnvironment.of({
+          getEnvironmentId: unusedSecretStoreOperation(),
+          getDescriptor: unusedSecretStoreOperation(),
+          setEnvironmentLabel: () => Effect.void,
+        }),
+      ),
+      Effect.provideService(
+        ManagedEndpointRuntime.CloudManagedEndpointRuntime,
+        ManagedEndpointRuntime.CloudManagedEndpointRuntime.of({
+          applyConfig: unusedSecretStoreOperation,
+          recoveryRequests: Stream.empty,
+          requestRecovery: () => Effect.void,
+          tunnelConnected: Stream.empty,
+          withLinkStateLock: (effect) => effect,
+        } satisfies ManagedEndpointRuntime.CloudManagedEndpointRuntime["Service"]),
+      ),
+      Effect.provideService(
+        EnvironmentAuth.EnvironmentAuth,
+        EnvironmentAuth.EnvironmentAuth.of({} as EnvironmentAuth.EnvironmentAuth["Service"]),
+      ),
+      Effect.provideService(
+        CliTokenManager.CloudCliTokenManager,
+        CliTokenManager.CloudCliTokenManager.of({
+          get: unusedSecretStoreOperation(),
+          getExisting: Effect.succeedNone,
+          hasCredential: unusedSecretStoreOperation(),
+          store: () => unusedSecretStoreOperation(),
+          clear: unusedSecretStoreOperation(),
+        }),
+      ),
+      Effect.provideService(
+        HttpClient.HttpClient,
+        HttpClient.make(() => unusedSecretStoreOperation()),
+      ),
+      Effect.provideService(AgentAwarenessRelay.AgentAwarenessRelay, idleAwarenessRelay),
+      Effect.provide(NodeServices.layer),
+    ),
+  );
 });
 
 describe("releaseManagedTunnelOnShutdown", () => {
@@ -177,6 +252,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
           ServerEnvironment.ServerEnvironment.of({
             getEnvironmentId: Effect.succeed(EnvironmentId.make("env_123")),
             getDescriptor: Effect.die("unused"),
+            setEnvironmentLabel: () => Effect.void,
           }),
         ),
         Effect.provideService(

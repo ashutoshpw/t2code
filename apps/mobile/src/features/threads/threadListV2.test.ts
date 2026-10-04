@@ -56,6 +56,13 @@ function makeThread(
 
 const NOW = "2026-06-02T00:00:00.000Z";
 
+const linkedPullRequest = {
+  projectId: ProjectId.make("project-1"),
+  repository: "pingdotgg/t3code",
+  number: 42,
+  url: "https://github.com/pingdotgg/t3code/pull/42",
+};
+
 describe("resolveThreadListV2SnoozeMenuSelection", () => {
   it("recomputes presets that remain available instead of using old timestamps", () => {
     const displayedPresets = resolveSnoozePresets(new Date(2026, 4, 8, 10));

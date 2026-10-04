@@ -295,7 +295,8 @@ const launchBrowser = Effect.fnUntraced(function* (input: {
       if (url === PAGE_URL && body !== undefined) {
         return fulfillPage(sessionId, paused.requestId, body);
       }
-      // Subframes may show other sites covered by Local Network Access; the main frame stays on T3's page.
+      // A frame inside the page may show another site; Local Network Access
+      // still covers it. The main frame and T2's own origin serve nothing else.
       const otherSiteFrame =
         paused.resourceType === "Document" &&
         paused.frameId !== page.mainFrameId &&
@@ -438,7 +439,8 @@ const launchBrowser = Effect.fnUntraced(function* (input: {
       Ignored,
       sessionId,
     );
-    // Intercept T3's page and all document navigations to keep the main frame on it.
+    // Pauses T2's own origin, to serve the page, and every document, to keep
+    // the main frame on it.
     yield* send(
       "Fetch.enable",
       {

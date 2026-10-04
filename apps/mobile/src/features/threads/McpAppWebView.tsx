@@ -57,9 +57,9 @@ function outerDocument(src: string, allow: string, secret: string) {
 <body><iframe id="app" sandbox="allow-scripts allow-forms" allow="${attribute(allow)}"></iframe>
 <script>(function(){var frame=document.getElementById("app"),secret=${JSON.stringify(secret)},loads=0,live=true;
 var send=function(m){var u=navigator.userActivation;window.ReactNativeWebView.postMessage(JSON.stringify({secret:secret,active:!!(u&&u.isActive)&&document.activeElement===frame,message:m}));};
-frame.addEventListener("load",function(){loads+=1;if(loads>1&&live){live=false;send({t3:"navigated"});}});
+frame.addEventListener("load",function(){loads+=1;if(loads>1&&live){live=false;send({t2:"navigated"});}});
 window.addEventListener("message",function(e){if(live&&e.source===frame.contentWindow)send(e.data);});
-window.__t3McpAppReceive=function(m){live&&frame.contentWindow&&frame.contentWindow.postMessage(m,"*");};
+window.__t2McpAppReceive=function(m){live&&frame.contentWindow&&frame.contentWindow.postMessage(m,"*");};
 frame.src=${JSON.stringify(src).replace(/</g, "\\u003c")};})();</script></body></html>`;
 }
 
@@ -267,7 +267,7 @@ export function ThreadMcpApp(props: {
         platform: "mobile",
         locale: Intl.DateTimeFormat().resolvedOptions().locale,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        userAgent: `t3-code/${Constants.expoConfig?.version ?? "0.0.0"}`,
+        userAgent: `t2-code/${Constants.expoConfig?.version ?? "0.0.0"}`,
         deviceCapabilities: { touch: true, hover: false },
         safeAreaInsets: isFullscreen
           ? { top: 0, right: current.insets.right, bottom: 0, left: current.insets.left }
@@ -282,7 +282,7 @@ export function ThreadMcpApp(props: {
       hostVersion: Constants.expoConfig?.version ?? "0.0.0",
       post: (message) =>
         webView.current?.injectJavaScript(
-          `window.__t3McpAppReceive&&window.__t3McpAppReceive(${JSON.stringify(message)});true;`,
+          `window.__t2McpAppReceive&&window.__t2McpAppReceive(${JSON.stringify(message)});true;`,
         ),
       hostContext,
       callTool: async ({ name, arguments: args }) => {
@@ -317,7 +317,8 @@ export function ThreadMcpApp(props: {
         return result.value;
       },
       openLink: async (url) => {
-        // WebViews cannot prove user activation; confirm links to prevent timer-driven navigation out of T3.
+        // A WebView cannot tell whether the reader just tapped the app, so it
+        // asks, rather than letting an app leave T2 on a timer.
         if (!(await confirm(`Open a link from ${app.server}?`, url, "Open"))) {
           throw new McpAppHostRefusal("Declined by the user.");
         }
@@ -533,7 +534,7 @@ export function ThreadMcpApp(props: {
             }
             if (!Predicate.isObject(envelope) || envelope.secret !== secret) return;
             const message = envelope.message;
-            if (Predicate.isObject(message) && message.t3 === "navigated") {
+            if (Predicate.isObject(message) && message.t2 === "navigated") {
               hostRef.current?.dispose();
               setNavigatedAway(true);
               return;

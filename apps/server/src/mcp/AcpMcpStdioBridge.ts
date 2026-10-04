@@ -166,7 +166,7 @@ function callAcpMcpTool(options: {
   readonly tool: string;
   readonly arguments: Readonly<Record<string, unknown>>;
 }): Effect.Effect<unknown, AcpMcpBridgeError> {
-  return mcpToolSession({ ...options, clientName: "t3-code-acp-cli" }).pipe(
+  return mcpToolSession({ ...options, clientName: "t2-code-acp-cli" }).pipe(
     Effect.flatMap((session) => session.call(options.tool, options.arguments)),
     Effect.scoped,
   );
@@ -229,7 +229,7 @@ export function runAcpMcpStdioBridge(options: AcpMcpStdioBridgeOptions): Effect.
           if (envelope.id !== undefined) {
             yield* respondWithError(
               envelope.id,
-              `T3 Code MCP endpoint responded with HTTP ${response.status}.`,
+              `T2 Code MCP endpoint responded with HTTP ${response.status}.`,
             );
           }
           return yield* discardResponseBody(response);
@@ -243,7 +243,7 @@ export function runAcpMcpStdioBridge(options: AcpMcpStdioBridgeOptions): Effect.
             const error = Cause.squash(cause);
             return respondWithError(
               envelope.id,
-              `T3 Code MCP bridge request failed: ${error instanceof Error ? error.message : String(error)}`,
+              `T2 Code MCP bridge request failed: ${error instanceof Error ? error.message : String(error)}`,
             );
           }),
         ),
@@ -325,10 +325,10 @@ export async function runAcpMcpCliFastPath(
   command: "acp-mcp-bridge" | "acp-mcp-call",
   args: ReadonlyArray<string>,
 ): Promise<void> {
-  const endpoint = process.env.T3_ACP_MCP_ENDPOINT;
-  const authorization = process.env.T3_ACP_MCP_AUTHORIZATION;
+  const endpoint = process.env.T2_ACP_MCP_ENDPOINT;
+  const authorization = process.env.T2_ACP_MCP_AUTHORIZATION;
   if (endpoint === undefined || authorization === undefined) {
-    process.stderr.write(`${command} requires T3_ACP_MCP_ENDPOINT and T3_ACP_MCP_AUTHORIZATION.\n`);
+    process.stderr.write(`${command} requires T2_ACP_MCP_ENDPOINT and T2_ACP_MCP_AUTHORIZATION.\n`);
     process.exitCode = 2;
     return;
   }

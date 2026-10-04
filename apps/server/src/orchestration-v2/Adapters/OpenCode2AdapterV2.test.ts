@@ -1638,7 +1638,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("gives a resumed session T3's rules when it was made with others", () =>
+  it.effect("gives a resumed session T2's rules when it was made with others", () =>
     Effect.gen(function* () {
       const runtime = yield* openCode2ReplayRuntimeWithInstructions([
         ...opening,
@@ -1685,7 +1685,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("breaks the thread and forgets it when the session was deleted outside T3", () =>
+  it.effect("breaks the thread and forgets it when the session was deleted outside T2", () =>
     Effect.gen(function* () {
       const { runtime, thread } = yield* resumed([
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -1709,7 +1709,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("stops the requests a session still waits on when a restarted T3 loads it", () =>
+  it.effect("stops the requests a session still waits on when a restarted T2 loads it", () =>
     Effect.gen(function* () {
       const runtime = yield* openCode2ReplayRuntimeWithInstructions(
         [
@@ -1784,7 +1784,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
       assert.equal(ended?.status, "failed");
       assert.equal(
         ended?.status === "failed" ? ended.failure.message : undefined,
-        "OpenCode is waiting on a request T3 Code couldn't answer.",
+        "OpenCode is waiting on a request T2 Code couldn't answer.",
       );
     }).pipe(Effect.scoped),
   );
@@ -1822,7 +1822,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("declines a form T3 cannot show with the reason, instead of leaving it open", () =>
+  it.effect("declines a form T2 cannot show with the reason, instead of leaving it open", () =>
     Effect.gen(function* () {
       const { runtime, thread } = yield* resumed([
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -2258,10 +2258,10 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("keeps thread-scoped T3 waits as dynamic tools through their lifecycle", () =>
+  it.effect("keeps thread-scoped T2 waits as dynamic tools through their lifecycle", () =>
     Effect.gen(function* () {
       const tool = { sessionID: SESSION, assistantMessageID: "msg_assistant", id: "call-wait" };
-      const name = "t3-code-web_delegate_task";
+      const name = "t2-code-web_delegate_task";
       const input = { task: "Review", mode: "wait" };
       const { runtime, thread } = yield* resumed([
         out("session.prompt", { sessionID: SESSION, text: "<any>" }),
@@ -2368,7 +2368,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         threadId: child,
         providerSessionId: "mcp:opencode2-adapter",
         providerInstanceId: instanceId,
-        endpoint: "http://127.0.0.1:3773/mcp",
+        endpoint: "http://127.0.0.1:3772/mcp",
         authorizationHeader: "Bearer thread-credential",
         browserToolsAvailable: false,
       });
@@ -2392,7 +2392,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           "location[directory]": WORK,
           config: {
             type: "remote",
-            url: "http://127.0.0.1:3773/mcp",
+            url: "http://127.0.0.1:3772/mcp",
             headers: { Authorization: "Bearer thread-credential" },
             oauth: false,
           },
@@ -3180,7 +3180,9 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           status: 500,
           body: { _tag: "UnknownError", message: "disk I/O error" },
         }),
-        // Uncleared stages commit on the next prompt; clearing triggers an empty execution without a T3 turn.
+        // Uncleared, OpenCode would commit the stage on the next prompt. The
+        // clear wakes the session into an empty execution of its own, with no
+        // turn of T2's running: it is no subagent's follow-up.
         out("session.revert.clear", { sessionID: SESSION }),
         reply("session.revert.clear", null),
         event("session.revert.cleared", { sessionID: SESSION }),
@@ -3228,7 +3230,11 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
 
   it.effect("prompts under ids no other session on the server can hold", () =>
     Effect.gen(function* () {
-      // Separate databases can repeat prompt ids on one server; OpenCode rejects cross-session duplicates with 409.
+      // Two T2 databases on one external server repeat thread ids and run
+      // ordinals, so their turns can share an attempt id and their steers a
+      // message id. OpenCode refuses a prompt id another session already
+      // holds with 409 ConflictError; the replay refuses a client id it
+      // already gave another recorded message.
       const OTHER = "ses_f148ca2deffeOtherSession000";
       const steerInto = (session: string, recorded: string): ReadonlyArray<ProviderReplayEntry> => [
         out("session.prompt", {

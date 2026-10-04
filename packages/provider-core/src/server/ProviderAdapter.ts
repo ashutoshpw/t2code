@@ -645,4 +645,4 @@ export class ProviderAdapterV2 extends Context.Service<
       input: ProviderAdapterV2OpenSessionInput,
     ) => Effect.Effect<ProviderAdapterV2SessionRuntime, ProviderAdapterV2Error, Scope.Scope>;
   }
->()("@t3tools/provider-core/server/ProviderAdapter/ProviderAdapterV2") {}
+>()("@t2code/provider-core/server/ProviderAdapter/ProviderAdapterV2") {}

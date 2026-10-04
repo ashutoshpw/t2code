@@ -2,7 +2,7 @@ import type { ScopedThreadRef } from "@t2code/contracts";
 import { isWindowsAbsolutePath, normalizeProjectPathForComparison } from "@t2code/shared/path";
 
 import { useRightPanelStore } from "./rightPanelStore";
-import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
+import { resolvePathLinkTarget } from "@t2code/shared/fileLinks";
 
 interface OpenDiffFilePrimaryActionInput {
   readonly threadRef: ScopedThreadRef | null;

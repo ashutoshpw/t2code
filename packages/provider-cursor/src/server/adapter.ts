@@ -53,12 +53,12 @@ import {
   hasCursorSkillMention,
   rewriteCursorSkillMentions,
 } from "./skills.ts";
-import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
-import { t3OrchestrationPromptForFirstRun } from "@t3tools/provider-core/server/orchestrationInstructions";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
-import { turnScopedSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
+import { mergeProviderInstanceEnvironment } from "@t2code/provider-core/server/instanceEnvironment";
+import { t2OrchestrationPromptForFirstRun } from "@t2code/provider-core/server/orchestrationInstructions";
+import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
+import { makeProviderFailure } from "@t2code/provider-core/server/failure";
+import { turnScopedSelectionTransition } from "@t2code/provider-core/server/selectionTransition";
 import {
   isProviderNativeImageAttachment,
   providerMessageTextWithAttachmentPaths,
@@ -313,7 +313,7 @@ export function makeCursorAgentOptions(input: {
   const mcpServers = cursorMcpServers(input.mcpSession);
   return {
     model: cursorSdkModelSelection(input.modelSelection),
-    name: `T3 Code ${input.threadId}`,
+    name: `T2 Code ${input.threadId}`,
     mode: input.runtimePolicy.interactionMode === "plan" ? "plan" : "agent",
     ...(input.apiKey === undefined ? {} : { apiKey: input.apiKey }),
     local: {
@@ -2205,7 +2205,7 @@ export const makeCursorAdapterV2 = Effect.fn("makeCursorAdapterV2")(function* (
                 .map((skill) => skill.name),
             );
           }
-          const userText = t3OrchestrationPromptForFirstRun({
+          const userText = t2OrchestrationPromptForFirstRun({
             prompt: providerMessageTextWithAttachmentPaths({
               text:
                 cursorSkillNames === undefined
@@ -2215,7 +2215,7 @@ export const makeCursorAdapterV2 = Effect.fn("makeCursorAdapterV2")(function* (
               resolveAttachmentPath: host.resolveAttachmentPath,
             }),
             runOrdinal: turnInput.runOrdinal,
-            hasT3Mcp: mcpServers !== undefined,
+            hasT2Mcp: mcpServers !== undefined,
           });
           const images = yield* Effect.forEach(
             turnInput.message.attachments.filter(isProviderNativeImageAttachment),

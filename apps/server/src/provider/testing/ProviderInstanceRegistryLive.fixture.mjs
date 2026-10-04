@@ -32,11 +32,11 @@ lines.on("line", (line) => {
     return;
   }
   if (message.request?.subtype === "get_usage") {
-    const marker = process.env.T3_CLAUDE_RESET_MARKER;
-    const usageFailsUntil = process.env.T3_CLAUDE_USAGE_FAILS_UNTIL;
+    const marker = process.env.T2_CLAUDE_RESET_MARKER;
+    const usageFailsUntil = process.env.T2_CLAUDE_USAGE_FAILS_UNTIL;
     if (
       (usageFailsUntil && !NodeFS.existsSync(usageFailsUntil)) ||
-      (process.env.T3_CLAUDE_USAGE_FAILS_AFTER_CLAIM && marker && NodeFS.existsSync(marker))
+      (process.env.T2_CLAUDE_USAGE_FAILS_AFTER_CLAIM && marker && NodeFS.existsSync(marker))
     ) {
       process.stdout.write(
         JSON.stringify({

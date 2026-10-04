@@ -564,7 +564,12 @@ export class EnvironmentAuth extends Context.Service<
       },
       ServerAuthInternalError
     >;
-    /** Spends a code covering all granted scopes. Rejects desktop grants and leaves refused proof-bound codes unspent. */
+    /**
+     * Spends a one-time pairing code as approval for an MCP client with the
+     * given access; the code must hold every scope that access grants.
+     * Proof-bound codes (T2 Connect) are refused without being spent, and
+     * desktop bootstrap grants never qualify.
+     */
     readonly consumeMcpApprovalCode: (
       code: string,
       access: AuthMcpClientAccess,
@@ -649,7 +654,10 @@ function parseDpopToken(request: HttpServerRequest.HttpServerRequest): string | 
   return token.length > 0 ? token : null;
 }
 
-function selectRequestCredential(request: HttpServerRequest.HttpServerRequest, cookieName: string) {
+export function selectRequestCredential(
+  request: HttpServerRequest.HttpServerRequest,
+  cookieName: string,
+) {
   const cookieToken = request.cookies[cookieName];
   if (cookieToken !== undefined) {
     return { token: cookieToken, source: "cookie" } as const;

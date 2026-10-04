@@ -247,7 +247,7 @@ const COMPOSER_SCROLL_COLLAPSE_THRESHOLD_PX = 24;
 const COMPOSER_SCROLL_GESTURE_RESET_MS = 120;
 import { toastManager } from "../ui/toast";
 import { PlayIcon, ShieldIcon } from "lucide-react";
-import { proposedPlanTitle } from "@t3tools/shared/proposedPlanText";
+import { proposedPlanTitle } from "@t2code/shared/proposedPlanText";
 import { hasProviderSetup } from "./ProviderStatusBanner";
 import { type AppModelOption, getAppModelOptionsForInstance } from "../../modelSelection";
 import type { UnifiedSettings } from "@t2code/contracts/settings";

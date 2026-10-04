@@ -144,6 +144,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.projectsSearchContents]: "workspace",
   [WS_METHODS.projectsSearchEntries]: "workspace",
   [WS_METHODS.projectsWriteFile]: "workspace",
+  [WS_METHODS.projectsCreateFileUploadUrl]: "workspace",
   [WS_METHODS.projectsEnsureScratch]: "orchestration",
   [WS_METHODS.projectsCreateNew]: "orchestration",
   [WS_METHODS.shellOpenInEditor]: "workspace",
@@ -229,7 +230,7 @@ const RPC_METHODS_WITH_TRACING_DISABLED: ReadonlySet<string> = new Set([
 
 /** Add after RpcScopeAuthorization to wrap authorization and record rejected calls. */
 export class RpcInstrumentation extends RpcMiddleware.Service<RpcInstrumentation>()(
-  "t3/server/RpcInstrumentation",
+  "@t2code/cli/server/RpcInstrumentation",
 ) {}
 
 export const rpcInstrumentationLayer = Layer.succeed(RpcInstrumentation)((effect, { rpc }) => {

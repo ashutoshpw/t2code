@@ -90,7 +90,7 @@ export class GitHubCredentials extends Context.Service<
     ) => Effect.Effect<GitHubCredential, GitHubCredentialUnavailableError>;
     readonly invalidate: (host: string) => Effect.Effect<void>;
   }
->()("@t3tools/source-control-github/server/GitHubCredentials") {}
+>()("@t2code/source-control-github/server/GitHubCredentials") {}
 
 function normalizeHost(host: string): string {
   return host.trim().toLowerCase();
