@@ -877,15 +877,406 @@ function scratchHarness() {
               refName: input.newRefName,
               headSha: "abc",
             },
-          } as never),
-  });
-  const layerScheduledTasks = ScheduledTasks.layer.pipe(
-    Layer.provide(
-      Layer.mergeAll(
-        harness.layer,
-        NodeCrypto.layer,
-        Scheduler.layer,
-        Layer.mock(SecretRequests.SecretRequests)({}),
+          ],
+        },
+      };
+
+      const launched = yield* launches.launch(input);
+      yield* titleRegeneration.execute({
+        threadId: launched.threadId,
+        requestId: CommandId.make("command:launch:image-only:initial-message"),
+        kind: { type: "initial", messageId },
+      });
+
+      assert.equal(harness.generateThreadTitle.mock.calls[0]?.[0]?.message, "");
+      assert.equal(
+        harness.generateThreadTitle.mock.calls[0]?.[0]?.attachments?.[0]?.name,
+        "screenshot.png",
+      );
+    }).pipe(Effect.provide(harness.layer));
+  }),
+);
+
+it.effect("uses the available source control writer for generated worktree branches", () =>
+  Effect.gen(function* () {
+    const writerInstanceId = ProviderInstanceId.make("source-control-writer");
+    const writerModelSelection = {
+      instanceId: writerInstanceId,
+      model: "branch-writer-model",
+    } as const;
+    const harness = makeHarness({
+      serverSettings: {
+        providerInstances: {
+          [writerInstanceId]: {
+            driver: ProviderDriverKind.make("codex"),
+            config: {},
+          },
+        },
+        sourceControlWriterModelSelection: writerModelSelection,
+      },
+      providers: [
+        {
+          instanceId: writerInstanceId,
+          driver: ProviderDriverKind.make("codex"),
+          enabled: true,
+          installed: true,
+          version: null,
+          status: "ready",
+          auth: { status: "authenticated" },
+          checkedAt: "2026-07-28T00:00:00.000Z",
+          availability: "available",
+          models: [],
+          slashCommands: [],
+          skills: [],
+        },
+      ],
+    });
+
+    yield* Effect.gen(function* () {
+      const launches = yield* ThreadLaunch.ThreadLaunchService;
+      yield* launches.launch(
+        launchInput({
+          command: "command:launch:source-control-writer",
+          thread: "thread:launch:source-control-writer",
+          message: "Generate a branch with the configured writer",
+          workspace: { type: "worktree", baseRef: "main" },
+        }),
+      );
+      yield* waitUntil(() => Effect.sync(() => harness.generateBranchName.mock.calls.length === 1));
+      assert.deepEqual(
+        harness.generateBranchName.mock.calls[0]?.[0]?.modelSelection,
+        writerModelSelection,
+      );
+    }).pipe(Effect.provide(harness.layer));
+  }),
+);
+
+it.effect("falls back when the source control writer is unavailable", () =>
+  Effect.gen(function* () {
+    const writerInstanceId = ProviderInstanceId.make("missing-source-control-writer");
+    const harness = makeHarness({
+      serverSettings: {
+        providerInstances: {
+          [writerInstanceId]: {
+            driver: ProviderDriverKind.make("missing-driver"),
+            config: {},
+          },
+        },
+        sourceControlWriterModelSelection: {
+          instanceId: writerInstanceId,
+          model: "missing-branch-writer-model",
+        },
+      },
+      providers: [],
+    });
+
+    yield* Effect.gen(function* () {
+      const launches = yield* ThreadLaunch.ThreadLaunchService;
+      yield* launches.launch(
+        launchInput({
+          command: "command:launch:source-control-writer-fallback",
+          thread: "thread:launch:source-control-writer-fallback",
+          message: "Generate a branch with the available writer",
+          workspace: { type: "worktree", baseRef: "main" },
+        }),
+      );
+      yield* waitUntil(() => Effect.sync(() => harness.generateBranchName.mock.calls.length === 1));
+      assert.deepEqual(
+        harness.generateBranchName.mock.calls[0]?.[0]?.modelSelection,
+        DEFAULT_SERVER_SETTINGS.textGenerationModelSelection,
+      );
+    }).pipe(Effect.provide(harness.layer));
+  }),
+);
+
+it.effect("runs a Scratch thread launched at the root in its own folder", () =>
+  Effect.gen(function* () {
+    const claimed: Array<{ readonly threadId: ThreadId; readonly text: string }> = [];
+    const harness = makeHarness({
+      managedFolders: Layer.mock(ManagedProjectFolders.ManagedProjectFolders)({
+        namedProjectsRoot: "/projects",
+        folderForThread: (input) =>
+          Effect.sync(() => {
+            if (input.projectId !== projectId) return Option.none();
+            claimed.push({ threadId: input.threadId, text: input.text });
+            return Option.some(`/scratch/folder-${claimed.length}`);
+          }),
+      }),
+    });
+    yield* Effect.gen(function* () {
+      const launches = yield* ThreadLaunch.ThreadLaunchService;
+      const threads = yield* ThreadManagement.ThreadManagementService;
+      const input = launchInput({
+        command: "command:launch:scratch",
+        thread: "thread:launch:scratch",
+        message: "Convert these PNGs",
+      });
+      const launched = yield* launches.launch(input);
+      assert.deepEqual(claimed, [{ threadId: launched.threadId, text: "Convert these PNGs" }]);
+      assert.equal(launched.projection.thread.worktreePath, "/scratch/folder-1");
+      yield* waitUntil(() => Effect.sync(() => harness.runSetup.mock.calls.length === 1));
+      assert.equal(harness.runSetup.mock.calls[0]?.[0]?.worktreePath, "/scratch/folder-1");
+      assert.equal(harness.createWorktree.mock.calls.length, 0);
+
+      const retried = yield* launches.launch(input);
+      assert.isTrue(retried.resumed);
+      assert.lengthOf(claimed, 1);
+      assert.equal(
+        (yield* threads.getThreadProjection(launched.threadId)).thread.worktreePath,
+        "/scratch/folder-1",
+      );
+
+      const other = yield* launches.launch({
+        ...launchInput({
+          command: "command:launch:scratch-other",
+          thread: "thread:launch:scratch-other",
+          message: "Elsewhere",
+        }),
+        projectId: otherProjectId,
+      });
+      assert.lengthOf(claimed, 1);
+      assert.isNull(other.projection.thread.worktreePath);
+    }).pipe(Effect.provide(harness.layer));
+  }),
+);
+
+it.effect("starts a thread in the main checkout without running the setup action", () =>
+  Effect.gen(function* () {
+    const harness = makeHarness();
+    yield* Effect.gen(function* () {
+      const launches = yield* ThreadLaunch.ThreadLaunchService;
+      const threads = yield* ThreadManagement.ThreadManagementService;
+      const input = launchInput({
+        command: "command:launch:main-checkout",
+        thread: "thread:launch:main-checkout",
+        message: "Work in the main checkout",
+      });
+      const launched = yield* launches.launch(input);
+      assert.isNull(launched.projection.thread.worktreePath);
+      const events = yield* threads.streamStoredEventsFrom({ threadId: launched.threadId }).pipe(
+        Stream.takeUntil(
+          (stored) =>
+            stored.commandId === CommandId.make(`${input.commandId}:release`) &&
+            stored.event.type === "run.updated",
+        ),
+        Stream.runCollect,
+      );
+      assert.isFalse(
+        events.some(
+          (stored) => stored.commandId === CommandId.make(`${input.commandId}:progress:setup`),
+        ),
+      );
+      assert.equal(harness.runSetup.mock.calls.length, 0);
+    }).pipe(Effect.provide(harness.layer));
+  }),
+);
+
+it.effect("names the worktree itself when the client provides no branch", () =>
+  Effect.gen(function* () {
+    const harness = makeHarness();
+    yield* Effect.gen(function* () {
+      const launches = yield* ThreadLaunch.ThreadLaunchService;
+      const threads = yield* ThreadManagement.ThreadManagementService;
+      const launched = yield* launches.launch(
+        launchInput({
+          command: "command:launch:server-named-branch",
+          thread: "thread:launch:server-named-branch",
+          message: "Build the feature",
+          workspace: { type: "worktree", baseRef: "main" },
+        }),
+      );
+      yield* waitUntil(() => Effect.sync(() => harness.createWorktree.mock.calls.length === 1));
+      assert.match(
+        harness.createWorktree.mock.calls[0]?.[0]?.newRefName ?? "",
+        /^t2code\/[0-9a-f]{8}$/u,
+      );
+      yield* waitUntil(() =>
+        threads
+          .getThreadProjection(launched.threadId)
+          .pipe(Effect.map((projection) => projection.thread.branch === "generated-branch")),
+      );
+    }).pipe(Effect.provide(harness.layer));
+  }),
+);
+
+it.effect.each(
+  [false, true].flatMap((archived) =>
+    [false, true].map((parentMoved) => ({ archived, parentMoved })),
+  ),
+)("renames shared temporary branches with %j", ({ archived, parentMoved }) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const git = yield* GitVcsDriver.GitVcsDriver;
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "launch-rename-" });
+    const repo = `${directory}/repo`;
+    const worktreePath = `${directory}/shared`;
+    const movedPath = `${directory}/moved`;
+    yield* fs.makeDirectory(repo);
+    const command = (cwd: string, args: string[]) =>
+      git.execute({ operation: "launch-test", cwd, args });
+    yield* command(repo, ["init", "-b", "main"]);
+    yield* command(repo, [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.test",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "initial",
+    ]);
+    yield* command(repo, ["worktree", "add", "-b", "t3/abcd1234", worktreePath]);
+    yield* command(repo, ["worktree", "add", "-b", "user/checkout", movedPath]);
+    const branchNameStarted = yield* Deferred.make<Fiber.Fiber<unknown, unknown>>();
+    const allowBranchName = yield* Deferred.make<void>();
+    const harness = makeHarness({
+      createWorktree: (input) =>
+        Effect.succeed({
+          worktree: { path: worktreePath, refName: input.newRefName, headSha: "abc" },
+        } as never),
+      renameBranch: git.renameBranch,
+      generateBranchName: () =>
+        Effect.fiber.pipe(
+          Effect.flatMap((fiber) => Deferred.succeed(branchNameStarted, fiber)),
+          Effect.andThen(Deferred.await(allowBranchName)),
+          Effect.as({ branch: "generated-branch" }),
+        ),
+    });
+    yield* Effect.gen(function* () {
+      const launches = yield* ThreadLaunch.ThreadLaunchService;
+      const threads = yield* ThreadManagement.ThreadManagementService;
+      const launched = yield* launches.launch(
+        launchInput({
+          command: "command:launch:temp-branch",
+          thread: "thread:launch:temp-branch",
+          message: "Build the feature",
+          workspace: { type: "worktree", baseRef: "main", branch: "t2code/abcd1234" },
+        }),
+      );
+      const renameFiber = yield* Deferred.await(branchNameStarted);
+      assert.equal(harness.createWorktree.mock.calls[0]?.[0]?.newRefName, "t2/abcd1234");
+      yield* waitUntil(() =>
+        threads
+          .getThreadProjection(launched.threadId)
+          .pipe(Effect.map((projection) => projection.runs[0]?.status === "starting")),
+      );
+      assert.equal(
+        (yield* threads.getThreadProjection(launched.threadId)).thread.branch,
+        "t2code/abcd1234",
+      );
+      const parent = yield* threads.getThreadProjection(launched.threadId);
+      const run = parent.runs[0]!;
+      assert.isNotNull(run.rootNodeId);
+      yield* threads.dispatch({
+        type: "delegated_task.request",
+        commandId: CommandId.make("command:launch:temp-branch:delegate"),
+        parentThreadId: launched.threadId,
+        parentRunId: run.id,
+        parentNodeId: run.rootNodeId!,
+        task: "Work in the parent's checkout",
+        modelSelection,
+        runtimeMode: "full-access",
+        interactionMode: "default",
+        createdBy: "agent",
+        creationSource: "mcp",
+      });
+      const delegated = yield* threads.getThreadProjection(launched.threadId);
+      const childThreadId = delegated.subagents[0]!.childThreadId!;
+      const child = yield* threads.getThreadProjection(childThreadId);
+      assert.equal(child.thread.branch, "t3/abcd1234");
+      assert.equal(child.thread.worktreePath, worktreePath);
+      assert.equal(child.thread.lineage.parentThreadId, launched.threadId);
+
+      const otherThreadId = ThreadId.make("thread:launch:other-branch");
+      const otherPathThreadId = ThreadId.make("thread:launch:other-worktree");
+      for (const [threadId, branch, otherWorktreePath] of [
+        [otherThreadId, "other-feature", worktreePath],
+        [otherPathThreadId, "t3/abcd1234", "/repo-worktrees/other"],
+      ] as const) {
+        yield* threads.dispatch({
+          type: "thread.create",
+          commandId: CommandId.make(`command:create:${threadId}`),
+          threadId,
+          projectId,
+          title: "Unrelated thread",
+          modelSelection,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          branch,
+          worktreePath: otherWorktreePath,
+          createdBy: "user",
+          creationSource: "web",
+        });
+      }
+      if (archived) {
+        for (const threadId of [childThreadId, otherThreadId, otherPathThreadId]) {
+          yield* threads.dispatch({
+            type: "thread.archive",
+            commandId: CommandId.make(`command:archive:${threadId}`),
+            threadId,
+          });
+        }
+      }
+      const unrelatedBeforeRename = yield* threads.getThreadProjection(otherThreadId);
+      const otherPathBeforeRename = yield* threads.getThreadProjection(otherPathThreadId);
+      if (parentMoved) {
+        yield* threads.dispatch({
+          type: "thread.metadata.update",
+          commandId: CommandId.make("command:launch:parent-moved"),
+          threadId: launched.threadId,
+          branch: "user/checkout",
+          worktreePath: movedPath,
+        });
+      }
+      yield* Deferred.succeed(allowBranchName, undefined);
+      yield* Fiber.await(renameFiber);
+      assert.equal(yield* git.resolveBranchName(worktreePath, "HEAD"), "generated-branch");
+      assert.equal(
+        (yield* threads.getThreadProjection(launched.threadId)).thread.branch,
+        parentMoved ? "user/checkout" : "generated-branch",
+      );
+      assert.equal(
+        (yield* threads.getThreadProjection(launched.threadId)).thread.worktreePath,
+        parentMoved ? movedPath : worktreePath,
+      );
+      assert.equal(
+        (yield* threads.getThreadProjection(childThreadId)).thread.branch,
+        "generated-branch",
+      );
+      assert.deepEqual(
+        (yield* threads.getThreadProjection(otherThreadId)).thread,
+        unrelatedBeforeRename.thread,
+      );
+      assert.deepEqual(
+        (yield* threads.getThreadProjection(otherPathThreadId)).thread,
+        otherPathBeforeRename.thread,
+      );
+      const staleUpdate = yield* threads
+        .dispatch({
+          type: "thread.metadata.update",
+          commandId: CommandId.make("command:launch:stale-branch-update"),
+          threadId: otherThreadId,
+          branch: "generated-branch",
+          expectedBranch: "t3/abcd1234",
+          expectedWorktreePath: worktreePath,
+        })
+        .pipe(Effect.flip);
+      assert.equal(staleUpdate._tag, "OrchestratorDispatchError");
+      assert.deepEqual(
+        (yield* threads.getThreadProjection(otherThreadId)).thread,
+        unrelatedBeforeRename.thread,
+      );
+      assert.deepEqual(harness.renameBranch.mock.calls[0]?.[0], {
+        cwd: worktreePath,
+        oldBranch: "t2/abcd1234",
+        newBranch: "generated-branch",
+      });
+    }).pipe(Effect.provide(harness.layer));
+  }).pipe(
+    Effect.provide(
+      GitVcsDriver.layer.pipe(
+        Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "launch-git-" })),
+        Layer.provideMerge(NodeServices.layer),
       ),
     ),
   );

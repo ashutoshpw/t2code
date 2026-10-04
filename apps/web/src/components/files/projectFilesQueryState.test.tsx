@@ -161,6 +161,145 @@ describe("project query refresh", () => {
     }
   });
 
+  it("keeps t3.json and the file tree loading until the file grant arrives", () => {
+    authorizationMocks.sessionAtom = Atom.make(AsyncResult.initial());
+    const registry = AtomRegistry.make();
+    atomHooks.registry = registry;
+    const config = {
+      defaultThreadEnvMode: "worktree",
+      scripts: [{ name: "Test", command: "vp test" }],
+    };
+    projectMocks.readFile.mockReturnValue(
+      Atom.make(AsyncResult.success(file(JSON.stringify(config)))),
+    );
+    projectMocks.listEntries.mockReturnValue(
+      Atom.make(AsyncResult.success(projectEntries(["t3.json"]))),
+    );
+    projectMocks.optimisticFile.mockReturnValue(Atom.make(null));
+    try {
+      expect(useProjectFileQuery(environmentId, "/repo", "t3.json")).toMatchObject({
+        data: null,
+        error: null,
+        isPending: true,
+      });
+      expect(useProjectEntriesQuery(environmentId, "/repo")).toMatchObject({
+        data: null,
+        error: null,
+        isPending: true,
+      });
+      expect(useT2ProjectFileState(environmentId, "/repo").status).toBe("loading");
+      expect(projectMocks.readFile).not.toHaveBeenCalled();
+      expect(projectMocks.listEntries).not.toHaveBeenCalled();
+
+      authorizationMocks.sessionAtom = Atom.make(
+        AsyncResult.success({ authenticated: true, scopes: [AuthFilesystemReadScope] }),
+      );
+      expect(useT2ProjectFileState(environmentId, "/repo")).toEqual({
+        status: "valid",
+        file: config,
+        scripts: config.scripts,
+      });
+      expect(useProjectEntriesQuery(environmentId, "/repo")).toMatchObject({
+        data: projectEntries(["t3.json"]),
+        error: null,
+        isPending: false,
+      });
+    } finally {
+      registry.dispose();
+      atomHooks.registry = null;
+    }
+  });
+
+  it.each(["connected", "offline"] as const)(
+    "preserves cached t3.json defaults and scripts during a granted refresh while %s",
+    (phase) => {
+      authorizationMocks.phase = phase;
+      authorizationMocks.sessionAtom = Atom.make(
+        AsyncResult.success(
+          { authenticated: true, scopes: [AuthFilesystemReadScope] },
+          { waiting: true },
+        ),
+      );
+      const registry = AtomRegistry.make();
+      atomHooks.registry = registry;
+      const config = {
+        defaultThreadEnvMode: "worktree",
+        scripts: [{ name: "Test", command: "vp test" }],
+      };
+      projectMocks.readFile.mockReturnValue(
+        Atom.make(AsyncResult.success(file(JSON.stringify(config)), { waiting: true })),
+      );
+      projectMocks.optimisticFile.mockReturnValue(Atom.make(null));
+      try {
+        expect(useProjectFileQuery(environmentId, "/repo", "t3.json")).toMatchObject({
+          error: null,
+          isPending: true,
+        });
+        expect(useT2ProjectFileState(environmentId, "/repo")).toEqual({
+          status: "valid",
+          file: config,
+          scripts: config.scripts,
+        });
+      } finally {
+        registry.dispose();
+        atomHooks.registry = null;
+      }
+    },
+  );
+
+  it.each([
+    { phase: "connected", sessionError: "The session request timed out." },
+    { phase: "offline", sessionError: null },
+  ] as const)(
+    "reports unavailable file access for $phase connections",
+    ({ phase, sessionError }) => {
+      authorizationMocks.phase = phase;
+      authorizationMocks.sessionAtom = Atom.make(
+        sessionError === null
+          ? AsyncResult.initial()
+          : AsyncResult.failure(Cause.fail(new Error(sessionError))),
+      );
+      const registry = AtomRegistry.make();
+      atomHooks.registry = registry;
+      projectMocks.optimisticFile.mockReturnValue(Atom.make({ data: file("cached contents") }));
+      try {
+        const unavailable = {
+          data: null,
+          error: sessionError ?? "This environment is not connected.",
+          isPending: false,
+        };
+        expect(useProjectFileQuery(environmentId, "/repo", "src/preview.ts")).toMatchObject(
+          unavailable,
+        );
+        expect(useProjectEntriesQuery(environmentId, "/repo")).toMatchObject(unavailable);
+        expect(projectMocks.readFile).not.toHaveBeenCalled();
+        expect(projectMocks.listEntries).not.toHaveBeenCalled();
+      } finally {
+        registry.dispose();
+        atomHooks.registry = null;
+      }
+    },
+  );
+
+  it("leaves disabled file queries idle while the file grant loads", () => {
+    authorizationMocks.sessionAtom = Atom.make(AsyncResult.initial());
+    const registry = AtomRegistry.make();
+    atomHooks.registry = registry;
+    projectMocks.optimisticFile.mockReturnValue(Atom.make(null));
+    try {
+      expect(useProjectFileQuery(environmentId, "/repo", "t3.json", false)).toMatchObject({
+        data: null,
+        error: null,
+        isPending: false,
+      });
+      expect(useT2ProjectFileState(environmentId, null).status).toBe("missing");
+      expect(projectMocks.readFile).not.toHaveBeenCalled();
+    } finally {
+      registry.dispose();
+      atomHooks.registry = null;
+    }
+  });
+
   it("replaces an in-flight initial read when a workspace mutation arrives", async () => {
     const requests: Array<ReturnType<typeof deferred<ProjectReadFileResult>>> = [];
     const readAtom = Atom.make(

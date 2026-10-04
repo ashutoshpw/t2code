@@ -961,7 +961,7 @@ export const makeOpenCodeAdapterV2 = Effect.fn("makeOpenCodeAdapterV2")(function
         if (hasT2Mcp) {
           yield* OpenCodeRuntime.runOpenCodeSdk("mcp.add", () =>
             client.mcp.add({
-              name: "t3-code",
+              name: "t2-code",
               config: {
                 type: "remote",
                 url: mcpSession.endpoint,

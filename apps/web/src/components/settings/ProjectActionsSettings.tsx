@@ -1,9 +1,5 @@
 import { useScopedSettingsWriteAllowed } from "./useScopedSettings";
-import {
-  AuthSettingsWriteScope,
-  EnvironmentId,
-  type T2ProjectFileScript,
-} from "@t2code/contracts";
+import { AuthSettingsWriteScope, EnvironmentId, type T2ProjectFileScript } from "@t2code/contracts";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
