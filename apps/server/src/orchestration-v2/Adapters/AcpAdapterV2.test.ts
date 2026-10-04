@@ -973,12 +973,12 @@ describe("AcpAdapterV2", () => {
 
       const command = yield* runTurn(0, defaultPolicy, "/compact");
       assert.isTrue(command.prompt.startsWith("/compact"));
-      assert.notInclude(command.prompt, "<t3_code_instructions>");
+      assert.notInclude(command.prompt, "<t2_code_instructions>");
       assert.equal(command.textBlockCount, 1);
       const whitespaceCommand = yield* runTurn(1, defaultPolicy, "  /repro-skill");
       assert.equal(whitespaceCommand.prompt, "  /repro-skill");
       assert.equal(whitespaceCommand.textBlockCount, 1);
-      assert.notInclude(whitespaceCommand.prompt, "<t3_code_instructions>");
+      assert.notInclude(whitespaceCommand.prompt, "<t2_code_instructions>");
       const firstDefault = yield* runTurn(2, defaultPolicy, "First default request.");
       assert.equal(firstDefault.textBlockCount, 2);
       assert.include(firstDefault.prompt, "T2 Code interaction mode: Default");
@@ -1187,7 +1187,7 @@ describe("AcpAdapterV2", () => {
                         title: "Wait for the child",
                         status: "in_progress",
                         rawInput: {
-                          server: "t3-code",
+                          server: "t2-code",
                           tool: "t3_thread_wait",
                           arguments: { threadId: "child" },
                         },
@@ -1806,7 +1806,7 @@ describe("AcpAdapterV2", () => {
           (item) =>
             item.threadId === task?.childThreadId &&
             item.type === "dynamic_tool" &&
-            item.toolName === "t3-code.task_status",
+            item.toolName === "t2-code.task_status",
         ),
       );
       const childMcp = items.find(
@@ -2701,7 +2701,7 @@ describe("AcpAdapterV2", () => {
         mcpServers: [
           {
             type: "stdio",
-            name: "t3-code",
+            name: "t2-code",
             command: process.execPath,
             args: [
               process.argv[1] === undefined ? "t2" : NodePath.resolve(process.argv[1]),
