@@ -238,7 +238,7 @@ export function McpAppFrame(props: {
     };
   }, [props.environmentId, props.threadId, props.itemId, app.tool]);
   // The bridge belongs to the captured document. A frame that navigates keeps
-  // its window, so a second load stops the app rather than letting a page T3
+  // its window, so a second load stops the app rather than letting a page T2
   // never served pose as it.
   const loads = useRef({ generation: 0, count: 0 });
   const onFrameLoad = () => {
@@ -271,7 +271,7 @@ export function McpAppFrame(props: {
         platform: isElectron ? "desktop" : "web",
         locale: navigator.language,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        userAgent: `t3-code/${APP_VERSION}`,
+        userAgent: `t2-code/${APP_VERSION}`,
         deviceCapabilities: {
           touch: window.matchMedia("(pointer: coarse)").matches,
           hover: window.matchMedia("(hover: hover)").matches,
@@ -283,12 +283,12 @@ export function McpAppFrame(props: {
       };
     };
     // Approvals render in the page, beneath the top layer a full-screen app
-    // occupies, so the app returns inline before T3 asks.
+    // occupies, so the app returns inline before T2 asks.
     const ask = async (message: string) => {
       flushSync(() => setDisplayMode("inline"));
       const approved = await requestConfirmDialog(message);
       if (approved === undefined) {
-        throw new McpAppHostRefusal("T3 could not ask for approval here.");
+        throw new McpAppHostRefusal("T2 could not ask for approval here.");
       }
       return approved;
     };

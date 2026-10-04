@@ -30,11 +30,11 @@ export class OpenCode2Server extends Context.Service<
       use: (connection: OpenCode2Connection) => Effect.Effect<A, E, R>,
     ) => Effect.Effect<A, E | OpenCodeRuntime.OpenCodeRuntimeError, R>;
   }
->()("@t3tools/provider-opencode/server/v2/OpenCode2Server") {}
+>()("@t2code/provider-opencode/server/v2/OpenCode2Server") {}
 
 /**
  * OpenCode 2 always requires one and prints a generated one to stdout
- * otherwise, so T3 supplies its own and keeps it in memory.
+ * otherwise, so T2 supplies its own and keeps it in memory.
  */
 const generatePassword = Effect.gen(function* () {
   const crypto = yield* Crypto.Crypto;
@@ -44,7 +44,7 @@ const generatePassword = Effect.gen(function* () {
 
 /**
  * `OPENCODE_PASSWORD` wins over `OPENCODE_SERVER_PASSWORD` in OpenCode 2, so
- * the inherited 1.x variable is dropped to keep the T3 password the only one in
+ * the inherited 1.x variable is dropped to keep the T2 password the only one in
  * play.
  */
 export const serverEnvironment = (

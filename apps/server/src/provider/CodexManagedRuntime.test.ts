@@ -68,7 +68,6 @@ it.effect.each(
               Effect.sync(() => {
                 leases--;
               }),
-
             );
             return executable;
           }),
@@ -90,7 +89,7 @@ it.effect.each(
           CODEX_HOME: "/user/.codex",
           OPENAI_API_KEY: "dummy-global-key",
           OPENAI_BASE_URL: "https://user-proxy.test",
-          T3CODE_CODEX_LAUNCH_ARGS: "--config model_provider=global-proxy",
+          T2CODE_CODEX_LAUNCH_ARGS: "--config model_provider=global-proxy",
           PATH: "/usr/bin",
         };
         const runtime = yield* makeCodexManagedRuntime({
@@ -125,7 +124,7 @@ it.effect.each(
           assert.strictEqual(effective.environment.ACCESS_TOKEN, "dummy-owned-access");
           assert.isUndefined(effective.environment.OPENAI_API_KEY);
           assert.isUndefined(effective.environment.OPENAI_BASE_URL);
-          assert.isUndefined(effective.environment.T3CODE_CODEX_LAUNCH_ARGS);
+          assert.isUndefined(effective.environment.T2CODE_CODEX_LAUNCH_ARGS);
           const args = codexAppServerArgs(effective.config.launchArgs);
           assert.include(
             args,

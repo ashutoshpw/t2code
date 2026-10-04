@@ -220,7 +220,7 @@ describe("rightPanelStore", () => {
   const completedDiff = { kind: "diff", turnId: RunId.make("turn-1") } as const;
   const linkedPullRequest = pullRequestSurface({
     projectId: "project-a",
-    repository: "pingdotgg/t2code",
+    repository: "pingdotgg/t3code",
     number: 42,
   });
 
@@ -558,7 +558,7 @@ describe("rightPanelStore", () => {
   it("upgrades the legacy singleton pull request surface to a reference-keyed tab", () => {
     const id = pullRequestSurfaceId({
       projectId: "project-a",
-      repository: "pingdotgg/t2code",
+      repository: "pingdotgg/t3code",
       number: 4909,
     });
     expect(
@@ -572,7 +572,7 @@ describe("rightPanelStore", () => {
                 id: "pull-request",
                 kind: "pull-request",
                 projectId: "project-a",
-                repository: "pingdotgg/t2code",
+                repository: "pingdotgg/t3code",
                 number: 4909,
               },
             ],
@@ -589,7 +589,7 @@ describe("rightPanelStore", () => {
               id,
               kind: "pull-request",
               projectId: "project-a",
-              repository: "pingdotgg/t2code",
+              repository: "pingdotgg/t3code",
               number: 4909,
             },
           ],
@@ -602,7 +602,7 @@ describe("rightPanelStore", () => {
   it("drops the pull-request list's shared panel so a restart opens the page fresh", () => {
     const id = pullRequestSurfaceId({
       projectId: "project-a",
-      repository: "pingdotgg/t2code",
+      repository: "pingdotgg/t3code",
       number: 4909,
     });
     const panelState = {
@@ -613,7 +613,7 @@ describe("rightPanelStore", () => {
           id,
           kind: "pull-request" as const,
           projectId: "project-a",
-          repository: "pingdotgg/t2code",
+          repository: "pingdotgg/t3code",
           number: 4909,
         },
       ],
@@ -976,11 +976,11 @@ describe("rightPanelStore", () => {
   });
 
   it("tracks one surface per pull request", () => {
-    const first = { projectId: "project-a", repository: "pingdotgg/t2code", number: 4909 };
-    const second = { projectId: "project-a", repository: "pingdotgg/t2code", number: 4910 };
+    const first = { projectId: "project-a", repository: "pingdotgg/t3code", number: 4909 };
+    const second = { projectId: "project-a", repository: "pingdotgg/t3code", number: 4910 };
     useRightPanelStore.getState().openPullRequest(refA, first);
     useRightPanelStore.getState().openPullRequest(refA, second);
-    const url = "https://gitlab.example.com/pingdotgg/t2code/-/merge_requests/4909";
+    const url = "https://gitlab.example.com/pingdotgg/t3code/-/merge_requests/4909";
     useRightPanelStore.getState().openPullRequest(refA, { ...first, url });
     useRightPanelStore.getState().openPullRequest(refA, first);
 
@@ -1064,19 +1064,38 @@ describe("rightPanelStore", () => {
     );
   });
 
+  it("keeps one pull request read from two servers as two tabs", () => {
+    const local = {
+      environmentId: "local",
+      projectId: "project-a",
+      repository: "pingdotgg/t3code",
+      number: 4909,
+    };
+    const remote = { ...local, environmentId: "remote" };
+
+    useRightPanelStore.getState().openPullRequest(refA, local);
+    useRightPanelStore.getState().openPullRequest(refA, remote);
+
+    const state = selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, refA);
+    expect(state.surfaces.map((surface) => surface.id)).toEqual([
+      pullRequestSurfaceId(local),
+      pullRequestSurfaceId(remote),
+    ]);
+  });
+
   it("keeps the page's panel tabs reachable when the set of connected servers changes", () => {
     const panelId = ThreadId.make("pull-requests-panel");
     const stableRef = scopeThreadRef("pull-requests-panel" as EnvironmentId, panelId);
     const fromServerA = {
       environmentId: "server-a",
       projectId: "project-a",
-      repository: "pingdotgg/t2code",
+      repository: "pingdotgg/t3code",
       number: 1,
     };
     const fromServerB = {
       environmentId: "server-b",
       projectId: "project-b",
-      repository: "pingdotgg/t2code",
+      repository: "pingdotgg/t3code",
       number: 2,
     };
 

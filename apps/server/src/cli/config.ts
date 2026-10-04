@@ -341,7 +341,7 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
         isProcessAlive(runtime.value.pid)
       ) {
         return yield* new CliError.UserError({
-          cause: `A T3 Code server is already running for ${baseDir} (pid ${runtime.value.pid}, ${runtime.value.origin}). Connect to that server, stop it before starting another, or use a different --base-dir.`,
+          cause: `A T2 Code server is already running for ${baseDir} (pid ${runtime.value.pid}, ${runtime.value.origin}). Connect to that server, stop it before starting another, or use a different --base-dir.`,
         });
       }
     }

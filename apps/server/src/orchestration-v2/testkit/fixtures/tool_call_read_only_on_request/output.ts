@@ -76,7 +76,7 @@ export function assertToolCallReadOnlyOnRequestGrokOutput(
     };
     return frame.method === "session/request_permission" ? [frame.params?.toolCall?.kind] : [];
   });
-  assert.deepEqual(permissionKinds, ["edit"], "Grok must ask T3 before its own write");
+  assert.deepEqual(permissionKinds, ["edit"], "Grok must ask T2 before its own write");
 
   const approval = projectionFor(result, transcript.scenario).turnItems.find(
     (item) => item.type === "approval_request",

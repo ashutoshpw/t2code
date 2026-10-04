@@ -127,20 +127,20 @@ describe("pullRequestCandidateUrlFromReferenceAutolink", () => {
   it("turns GitHub's shared issue route into a pull request candidate", () => {
     expect(
       pullRequestCandidateUrlFromReferenceAutolink(
-        "https://github.com/pingdotgg/t2code/issues/8600#issuecomment-1",
+        "https://github.com/pingdotgg/t3code/issues/8600#issuecomment-1",
       ),
-    ).toBe("https://github.com/pingdotgg/t2code/pull/8600#issuecomment-1");
+    ).toBe("https://github.com/pingdotgg/t3code/pull/8600#issuecomment-1");
   });
 
   it("does not reinterpret other issue hosts or malformed references", () => {
     expect(
       pullRequestCandidateUrlFromReferenceAutolink(
-        "https://gitlab.com/pingdotgg/t2code/-/issues/8600",
+        "https://gitlab.com/pingdotgg/t3code/-/issues/8600",
       ),
     ).toBeNull();
     expect(
       pullRequestCandidateUrlFromReferenceAutolink(
-        "https://github.com/pingdotgg/t2code/issues/not-a-number",
+        "https://github.com/pingdotgg/t3code/issues/not-a-number",
       ),
     ).toBeNull();
   });
@@ -149,16 +149,16 @@ describe("pullRequestCandidateUrlFromReferenceAutolink", () => {
 describe("matchesLinkedPullRequestUrl", () => {
   const linkedPullRequest = {
     projectId: ProjectId.make("project-1"),
-    repository: "pingdotgg/t2code",
+    repository: "pingdotgg/t3code",
     number: 42,
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/pingdotgg/t3code/pull/42",
   };
 
   it("matches the same pull request without looking up its project", () => {
     expect(
       matchesLinkedPullRequestUrl(
         linkedPullRequest,
-        "https://github.com/PingDotGG/T2Code/pull/42/files",
+        "https://github.com/PingDotGG/T3Code/pull/42/files",
       ),
     ).toBe(true);
   });
@@ -176,6 +176,15 @@ describe("matchesLinkedPullRequestUrl", () => {
     ).toBe(expected);
   });
 
+  it("keeps other providers' existing port normalization", () => {
+    expect(
+      matchesLinkedPullRequestUrl(
+        linkedPullRequest,
+        "https://github.com:8443/pingdotgg/t3code/pull/42",
+      ),
+    ).toBe(true);
+  });
+
   it("keeps Forgejo and GitHub path shapes distinct on a GitHub-named host", () => {
     expect(
       matchesLinkedPullRequestUrl(
@@ -183,6 +192,35 @@ describe("matchesLinkedPullRequestUrl", () => {
         "https://github.internal/team/repo/pull/42",
       ),
     ).toBe(false);
+  });
+
+  it("rejects a different pull request or host", () => {
+    expect(
+      matchesLinkedPullRequestUrl(linkedPullRequest, "https://github.com/pingdotgg/t3code/pull/43"),
+    ).toBe(false);
+    expect(
+      matchesLinkedPullRequestUrl(
+        linkedPullRequest,
+        "https://github.example.com/pingdotgg/t3code/pull/42",
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("shouldOpenPullRequestExternally", () => {
+  it("uses the browser for command-click and control-click", () => {
+    expect(shouldOpenPullRequestExternally({ metaKey: true, ctrlKey: false })).toBe(true);
+    expect(shouldOpenPullRequestExternally({ metaKey: false, ctrlKey: true })).toBe(true);
+  });
+
+  it("uses the browser for middle-click", () => {
+    expect(shouldOpenPullRequestExternally({ metaKey: false, ctrlKey: false, button: 1 })).toBe(
+      true,
+    );
+  });
+
+  it("keeps an unmodified click in the pull request view", () => {
+    expect(shouldOpenPullRequestExternally({ metaKey: false, ctrlKey: false })).toBe(false);
   });
 });
 
@@ -337,7 +375,7 @@ describe("findProjectForChangeRequest", () => {
   it("keeps two hosts apart, so an Enterprise link does not open the public one", () => {
     const projects = [
       project({
-        canonicalKey: "github.com/pingdotgg/t2code",
+        canonicalKey: "github.com/pingdotgg/t3code",
         provider: "github",
         owner: "pingdotgg",
         name: "t2code",
@@ -346,7 +384,7 @@ describe("findProjectForChangeRequest", () => {
     expect(
       findProjectForChangeRequest(projects, {
         host: "github.acme.test",
-        repository: "pingdotgg/t2code",
+        repository: "pingdotgg/t3code",
         number: 1,
       }),
     ).toBeUndefined();
@@ -378,7 +416,7 @@ describe("findProjectForChangeRequest", () => {
   it("claims nothing for a lookalike host, which is what keeps a link a link", () => {
     const projects = [
       project({
-        canonicalKey: "github.com/pingdotgg/t2code",
+        canonicalKey: "github.com/pingdotgg/t3code",
         provider: "github",
         owner: "pingdotgg",
         name: "t2code",
@@ -387,7 +425,7 @@ describe("findProjectForChangeRequest", () => {
     expect(
       findProjectForChangeRequest(projects, {
         host: "github.com-evil.test",
-        repository: "pingdotgg/t2code",
+        repository: "pingdotgg/t3code",
         number: 1,
       }),
     ).toBeUndefined();

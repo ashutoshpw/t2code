@@ -66,10 +66,10 @@ const declaredFailure = (result: McpSchema.CallToolResult) => {
 import { PullRequestsToolkit } from "./pullRequests/tools.ts";
 import { HtmlToolkit } from "./html/tools.ts";
 import {
-  resolveT3McpToolDefinition,
-  resolveT3McpToolPresentation,
-  resolveT3McpToolSummaryAction,
-} from "@t2code/shared/t3McpToolPresentation";
+  resolveT2McpToolDefinition,
+  resolveT2McpToolPresentation,
+  resolveT2McpToolSummaryAction,
+} from "@t2code/shared/t2McpToolPresentation";
 import { htmlRenderFromToolItem } from "@t2code/shared/toolOutput";
 
 const decodeMcpAttachmentInput = Schema.decodeUnknownEffect(McpAttachmentInput);
@@ -109,9 +109,9 @@ const client = McpSchema.McpServerClient.of({
 it.effect("checks capability through the production registration", () =>
   Effect.gen(function* () {
     const server = yield* McpServer.McpServer;
-    expect(server.tools.some(({ tool }) => tool.name === "t3_thread_organize")).toBe(true);
+    expect(server.tools.some(({ tool }) => tool.name === "t2_thread_organize")).toBe(true);
     const result = yield* server
-      .callTool({ name: "t3_thread_organize", arguments: { action: "pin" } })
+      .callTool({ name: "t2_thread_organize", arguments: { action: "pin" } })
       .pipe(
         Effect.provideService(McpInvocationContext.McpInvocationContext, {
           ...scope,
@@ -142,7 +142,7 @@ it.effect("an answered question reports already answered instead of not found", 
     const respond = (id: string) =>
       server
         .callTool({
-          name: "t3_pending_request_respond",
+          name: "t2_pending_request_respond",
           arguments: { requestId: id, answers: { size: "large" } },
         })
         .pipe(
@@ -298,7 +298,7 @@ it.effect("keeps unexpected handler defects private through the production regis
   Effect.gen(function* () {
     const server = yield* McpServer.McpServer;
     const result = yield* server
-      .callTool({ name: "t3_thread_organize", arguments: { action: "pin" } })
+      .callTool({ name: "t2_thread_organize", arguments: { action: "pin" } })
       .pipe(
         Effect.provideService(McpInvocationContext.McpInvocationContext, scope),
         Effect.provideService(McpSchema.McpServerClient, client),
@@ -400,11 +400,11 @@ it.effect("a client caller targets any thread within its ceiling and cannot act 
           Effect.provideService(McpSchema.McpServerClient, client),
         );
 
-    const untargeted = yield* call("t3_thread_organize", { action: "pin" }, clientScope("auto"));
+    const untargeted = yield* call("t2_thread_organize", { action: "pin" }, clientScope("auto"));
     expect(declaredFailure(untargeted)).toMatchObject({ code: "target_required" });
 
     const pinned = yield* call(
-      "t3_thread_organize",
+      "t2_thread_organize",
       { action: "pin", threadId: "other-project-thread" },
       clientScope("auto"),
     );
@@ -412,7 +412,7 @@ it.effect("a client caller targets any thread within its ceiling and cannot act 
     expect(pinned.structuredContent).toMatchObject({ sequence: 7 });
 
     const aboveCeiling = yield* call(
-      "t3_thread_organize",
+      "t2_thread_organize",
       { action: "pin", threadId: "other-project-thread" },
       clientScope("approval-required"),
     );
@@ -421,7 +421,7 @@ it.effect("a client caller targets any thread within its ceiling and cannot act 
     });
 
     const forked = yield* call(
-      "t3_thread_fork",
+      "t2_thread_fork",
       { sourcePoint: { type: "latest_stable" } },
       clientScope("auto"),
     );
@@ -467,20 +467,20 @@ it.effect("a read-only client reads threads and is refused every write before it
           Effect.provideService(McpSchema.McpServerClient, client),
         );
 
-    const configuration = yield* call("t3_thread_configuration", {
+    const configuration = yield* call("t2_thread_configuration", {
       threadId: "other-project-thread",
     });
     expect(configuration.isError).toBe(false);
     expect(configuration.structuredContent).toMatchObject({ runtimeMode: "auto" });
 
-    const pinned = yield* call("t3_thread_organize", {
+    const pinned = yield* call("t2_thread_organize", {
       action: "pin",
       threadId: "other-project-thread",
     });
     expect(declaredFailure(pinned)).toMatchObject({ code: "capability_denied" });
     expect(dispatched).toEqual([]);
 
-    const configure = yield* call("t3_thread_configure", {
+    const configure = yield* call("t2_thread_configure", {
       threadId: "other-project-thread",
       modelSelection: { instanceId: "codex", model: "gpt-5" },
     });
@@ -733,7 +733,7 @@ it.effect("discovers workflow stop targets and requires orchestration capability
     const server = yield* McpServer.McpServer;
     const scope = clientScope("full-access");
     const read = yield* server
-      .callTool({ name: "t3_thread_read", arguments: { threadId, view: "activity" } })
+      .callTool({ name: "t2_thread_read", arguments: { threadId, view: "activity" } })
       .pipe(
         Effect.provideService(McpInvocationContext.McpInvocationContext, scope),
         Effect.provideService(McpSchema.McpServerClient, client),

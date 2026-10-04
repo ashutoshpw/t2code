@@ -583,10 +583,41 @@ export default function FileBrowserPanel({
           Loading files…
         </div>
       )}
+      {fileUploadProgress ? (
+        <div role="status" className="px-3 py-1 text-xs text-muted-foreground">
+          {fileUploadProgress.completedFiles < fileUploadProgress.files
+            ? `Uploading ${fileUploadProgress.files === 1 ? "file" : `${fileUploadProgress.completedFiles + 1} of ${fileUploadProgress.files} files`}… ${Math.round(fileUploadProgress.fraction * 100)}%`
+            : "Finishing upload…"}
+        </div>
+      ) : null}
       {hasNoSearchMatches ? (
         ready && !isPending && !pathSearch.isPending && !error && !pathSearch.error ? (
           <div role="status" className="px-3 py-4 text-xs text-muted-foreground">
             No matching files.
+          </div>
+        ) : null
+      ) : (
+        <FileTree
+          model={model}
+          aria-label={`${projectName} files`}
+          className="min-h-0 flex-1 overflow-hidden"
+          style={pierreTreeStyle(resolvedTheme)}
+        />
+      )}
+      {isFileDragActive ? (
+        <div
+          className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-xl border-2 border-dashed border-primary/60 bg-primary/[0.035]"
+          data-file-browser-drop-overlay="true"
+        >
+          <div
+            role="status"
+            className="flex items-center gap-2 rounded-full border border-primary/25 bg-background/95 px-4 py-2.5 text-sm font-medium text-foreground shadow-lg"
+          >
+            <Upload className="size-4 text-primary" aria-hidden="true" />
+            Drop files to upload
+          </div>
+        </div>
+      ) : null}
           </div>
         ) : null
       ) : (

@@ -49,7 +49,7 @@ const RELAY: ConnectionRoute = {
   target: new RelayConnectionTarget({ environmentId: ENVIRONMENT_ID, label: "Desk" }),
   profile: Option.none(),
 };
-const LAN = direct("lan", "http://192.168.1.10:3773/");
+const LAN = direct("lan", "http://192.168.1.10:3772/");
 const TAILNET = direct("tailnet", "https://desk.tail1234.ts.net/");
 const PUBLIC = direct("public", "https://desk.example.com/");
 
@@ -66,17 +66,17 @@ describe("connection routes", () => {
   it("classifies direct routes by address", () => {
     expect(connectionRouteKind(LAN)).toBe("lan");
     // Tailscale, Cloudflare WARP and Mesh, and other VPNs share 100.64.0.0/10.
-    expect(connectionRouteKind(direct("ip", "http://100.101.102.103:3773/"))).toBe("vpn");
-    expect(connectionRouteLabel(direct("mesh", "http://100.96.0.1:3773/"))).toBe("VPN");
+    expect(connectionRouteKind(direct("ip", "http://100.101.102.103:3772/"))).toBe("vpn");
+    expect(connectionRouteLabel(direct("mesh", "http://100.96.0.1:3772/"))).toBe("VPN");
     expect(connectionRouteKind(TAILNET)).toBe("tailnet");
     expect(connectionRouteKind(PUBLIC)).toBe("public");
-    expect(connectionRouteKind(direct("lo", "http://127.0.0.1:3773/"))).toBe("loopback");
-    expect(connectionRouteKind(direct("ts6", "http://[fd7a:115c:a1e0::1]:3773/"))).toBe("tailnet");
+    expect(connectionRouteKind(direct("lo", "http://127.0.0.1:3772/"))).toBe("loopback");
+    expect(connectionRouteKind(direct("ts6", "http://[fd7a:115c:a1e0::1]:3772/"))).toBe("tailnet");
     expect(connectionRouteLabel(TAILNET)).toBe("Tailscale");
-    expect(connectionRouteLabel(RELAY)).toBe("T3 Connect");
+    expect(connectionRouteLabel(RELAY)).toBe("T2 Connect");
   });
 
-  it("places a new route after faster kinds and ahead of T3 Connect", () => {
+  it("places a new route after faster kinds and ahead of T2 Connect", () => {
     expect(insertRoute([RELAY], LAN)).toEqual([LAN, RELAY]);
     expect(insertRoute([LAN, RELAY], TAILNET)).toEqual([LAN, TAILNET, RELAY]);
     expect(insertRoute([TAILNET], LAN)).toEqual([LAN, TAILNET]);
@@ -84,7 +84,7 @@ describe("connection routes", () => {
   });
 
   it("keeps a user's order when a saved route is replaced", () => {
-    const repaired = direct("lan", "http://192.168.1.11:3773/");
+    const repaired = direct("lan", "http://192.168.1.11:3772/");
     expect(upsertRoute([RELAY, LAN], repaired)).toEqual([RELAY, repaired]);
   });
 });
@@ -99,18 +99,18 @@ describe("learned routes", () => {
     routes?.map((route) => connectionRouteId(route.target)) ?? null;
   const profileOf = (route: ConnectionRoute) => Option.getOrThrow(route.profile);
 
-  it("learns a LAN address over T3 Connect, ahead of it, using the T3 Connect credential", () => {
+  it("learns a LAN address over T2 Connect, ahead of it, using the T2 Connect credential", () => {
     const routes = mergeLearnedRoutes({
       entry: relayOnly,
       activeRoute: RELAY,
-      reported: [{ httpBaseUrl: "http://192.168.1.10:3773/" }],
+      reported: [{ httpBaseUrl: "http://192.168.1.10:3772/" }],
       allowInsecure: true,
     });
-    expect(ids(routes)).toEqual([`learned:${ENVIRONMENT_ID}:http://192.168.1.10:3773`, "relay"]);
+    expect(ids(routes)).toEqual([`learned:${ENVIRONMENT_ID}:http://192.168.1.10:3772`, "relay"]);
     expect(profileOf(routes![0]!)).toMatchObject({
       learned: true,
-      authorization: "t3-connect",
-      wsBaseUrl: "ws://192.168.1.10:3773/",
+      authorization: "t2-connect",
+      wsBaseUrl: "ws://192.168.1.10:3772/",
     });
   });
 
@@ -118,7 +118,7 @@ describe("learned routes", () => {
     const first = mergeLearnedRoutes({
       entry: relayOnly,
       activeRoute: RELAY,
-      reported: [{ httpBaseUrl: "http://192.168.1.10:3773/" }],
+      reported: [{ httpBaseUrl: "http://192.168.1.10:3772/" }],
       allowInsecure: true,
     })!;
     const entry: ConnectionCatalogEntry = {
@@ -130,14 +130,14 @@ describe("learned routes", () => {
     const moved = mergeLearnedRoutes({
       entry,
       activeRoute: RELAY,
-      reported: [{ httpBaseUrl: "http://10.0.0.42:3773/" }],
+      reported: [{ httpBaseUrl: "http://10.0.0.42:3772/" }],
       allowInsecure: true,
     });
-    expect(ids(moved)).toEqual([`learned:${ENVIRONMENT_ID}:http://10.0.0.42:3773`, "relay"]);
+    expect(ids(moved)).toEqual([`learned:${ENVIRONMENT_ID}:http://10.0.0.42:3772`, "relay"]);
   });
 
   it("keeps a learned route where the user moved it while the server reports it", () => {
-    const lan = { httpBaseUrl: "http://192.168.1.10:3773/" };
+    const lan = { httpBaseUrl: "http://192.168.1.10:3772/" };
     const first = mergeLearnedRoutes({
       entry: relayOnly,
       activeRoute: RELAY,
@@ -156,13 +156,13 @@ describe("learned routes", () => {
     const next = mergeLearnedRoutes({
       entry: reordered,
       activeRoute: RELAY,
-      reported: [lan, { httpBaseUrl: "http://100.101.102.103:3773/" }],
+      reported: [lan, { httpBaseUrl: "http://100.101.102.103:3772/" }],
       allowInsecure: true,
     });
     expect(ids(next)).toEqual([
-      `learned:${ENVIRONMENT_ID}:http://100.101.102.103:3773`,
+      `learned:${ENVIRONMENT_ID}:http://100.101.102.103:3772`,
       "relay",
-      `learned:${ENVIRONMENT_ID}:http://192.168.1.10:3773`,
+      `learned:${ENVIRONMENT_ID}:http://192.168.1.10:3772`,
     ]);
   });
 
@@ -206,7 +206,7 @@ describe("learned routes", () => {
       mergeLearnedRoutes({
         entry,
         activeRoute: RELAY,
-        reported: [{ httpBaseUrl: "http://192.168.1.10:3773" }],
+        reported: [{ httpBaseUrl: "http://192.168.1.10:3772" }],
         allowInsecure: true,
       }),
     ).toBeNull();
@@ -302,8 +302,8 @@ describe("learned routes", () => {
         entry: relayOnly,
         activeRoute: RELAY,
         reported: [
-          { httpBaseUrl: "http://192.168.1.10:3773/" },
-          { httpBaseUrl: "http://127.0.0.1:3773/" },
+          { httpBaseUrl: "http://192.168.1.10:3772/" },
+          { httpBaseUrl: "http://127.0.0.1:3772/" },
         ],
         allowInsecure: false,
       }),
@@ -314,7 +314,7 @@ describe("learned routes", () => {
     const overRelay = mergeLearnedRoutes({
       entry: relayOnly,
       activeRoute: RELAY,
-      reported: [{ httpBaseUrl: "http://192.168.1.10:3773/" }],
+      reported: [{ httpBaseUrl: "http://192.168.1.10:3772/" }],
       allowInsecure: true,
     })!;
     expect(routesAfterRemoving(overRelay, "relay")).toEqual([]);
@@ -335,11 +335,11 @@ describe("learned routes", () => {
     expect(ids(routesAfterRemoving(overLan, "relay"))).toHaveLength(2);
   });
 
-  it("counts an environment reached only through T3 Connect as removed with it", () => {
+  it("counts an environment reached only through T2 Connect as removed with it", () => {
     const learned = mergeLearnedRoutes({
       entry: relayOnly,
       activeRoute: RELAY,
-      reported: [{ httpBaseUrl: "http://192.168.1.10:3773/" }],
+      reported: [{ httpBaseUrl: "http://192.168.1.10:3772/" }],
       allowInsecure: true,
     })!;
     expect(removedWithRelay(relayOnly)).toBe(true);
@@ -351,7 +351,7 @@ describe("learned routes", () => {
     const learned = mergeLearnedRoutes({
       entry: relayOnly,
       activeRoute: RELAY,
-      reported: [{ httpBaseUrl: "http://192.168.1.10:3773/" }],
+      reported: [{ httpBaseUrl: "http://192.168.1.10:3772/" }],
       allowInsecure: true,
     })!;
     const withLearned: ConnectionCatalogEntry = {
@@ -363,11 +363,11 @@ describe("learned routes", () => {
     expect(gitHubRoutingConnectionKey(withLearned)).toBe(gitHubRoutingConnectionKey(relayOnly));
   });
 
-  it("keeps the T3 Connect credential when learning over a learned T3 Connect route", () => {
+  it("keeps the T2 Connect credential when learning over a learned T2 Connect route", () => {
     const first = mergeLearnedRoutes({
       entry: relayOnly,
       activeRoute: RELAY,
-      reported: [{ httpBaseUrl: "http://192.168.1.10:3773/" }],
+      reported: [{ httpBaseUrl: "http://192.168.1.10:3772/" }],
       allowInsecure: true,
     })!;
     const learnedLan = first[0]!;
@@ -381,13 +381,13 @@ describe("learned routes", () => {
       entry,
       activeRoute: learnedLan,
       reported: [
-        { httpBaseUrl: "http://192.168.1.10:3773/" },
+        { httpBaseUrl: "http://192.168.1.10:3772/" },
         { httpBaseUrl: "https://desk.tail1234.ts.net/" },
       ],
       allowInsecure: true,
     })!;
     for (const route of next.filter((candidate) => connectionRouteKind(candidate) !== "relay")) {
-      expect(profileOf(route)).toMatchObject({ authorization: "t3-connect" });
+      expect(profileOf(route)).toMatchObject({ authorization: "t2-connect" });
       expect(connectionRouteId(route.target)).not.toContain("@");
     }
   });
@@ -396,7 +396,7 @@ describe("learned routes", () => {
     const first = mergeLearnedRoutes({
       entry: relayOnly,
       activeRoute: RELAY,
-      reported: [{ httpBaseUrl: "http://desk.local:3773/" }],
+      reported: [{ httpBaseUrl: "http://desk.local:3772/" }],
       allowInsecure: true,
     })!;
     const entry: ConnectionCatalogEntry = {
@@ -408,10 +408,10 @@ describe("learned routes", () => {
     const moved = mergeLearnedRoutes({
       entry,
       activeRoute: RELAY,
-      reported: [{ httpBaseUrl: "https://desk.local:3773/" }],
+      reported: [{ httpBaseUrl: "https://desk.local:3772/" }],
       allowInsecure: true,
     });
     expect(moved).not.toBeNull();
-    expect(profileOf(moved![0]!)).toMatchObject({ httpBaseUrl: "https://desk.local:3773/" });
+    expect(profileOf(moved![0]!)).toMatchObject({ httpBaseUrl: "https://desk.local:3772/" });
   });
 });

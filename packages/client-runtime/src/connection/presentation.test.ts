@@ -70,8 +70,8 @@ describe("connection presentation", () => {
         ),
       };
     };
-    const lan = route("lan", "http://192.168.4.53:3773/");
-    const tailnet = route("tailnet", "http://100.115.1.44:3773/");
+    const lan = route("lan", "http://192.168.4.53:3772/");
+    const tailnet = route("tailnet", "http://100.115.1.44:3772/");
     const serve = route("serve", "https://machine.tailnet.ts.net/");
     const entry: ConnectionCatalogEntry = {
       ...ENTRY,
@@ -81,9 +81,9 @@ describe("connection presentation", () => {
     };
 
     expect(environmentMcpUrl({ entry, connectedTarget: tailnet.target })).toBe(
-      "http://100.115.1.44:3773/mcp",
+      "http://100.115.1.44:3772/mcp",
     );
-    expect(environmentMcpUrl({ entry })).toBe("http://192.168.4.53:3773/mcp");
+    expect(environmentMcpUrl({ entry })).toBe("http://192.168.4.53:3772/mcp");
   });
 
   // regression: #16909 Copy MCP URL falls back to an alternate route when the relay route has no address

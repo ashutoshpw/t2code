@@ -577,6 +577,7 @@ const fakeHttpServer = HttpServer.HttpServer.of({
 
 const fakeEnvironment = ServerEnvironment.ServerEnvironment.of({
   getEnvironmentId: Effect.succeed(EnvironmentId.make("environment-provider-session-manager")),
+  setEnvironmentLabel: () => Effect.void,
   getDescriptor: Effect.die("unused"),
 });
 

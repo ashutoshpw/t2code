@@ -40,7 +40,7 @@ export class ProviderInstanceRegistry extends Context.Service<
     readonly streamChanges: Stream.Stream<void>;
     readonly subscribeChanges: Effect.Effect<PubSub.Subscription<void>, never, Scope.Scope>;
   }
->()("t3/provider/ProviderInstanceRegistry") {}
+>()("@t2code/cli/provider/ProviderInstanceRegistry") {}
 
 interface LiveEntry {
   readonly instance: ProviderInstance;

@@ -569,7 +569,7 @@ describe("fix findings handoff", () => {
   const base = {
     number: 42,
     title: "Add the pull requests page",
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/pingdotgg/t3code/pull/42",
     headBranch: "feat/page",
     baseBranch: "main",
     comments: [] as ReadonlyArray<PullRequestComment>,
@@ -657,7 +657,7 @@ describe("findings that cannot be attached", () => {
   const base = {
     number: 42,
     title: "Add the pull requests page",
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/pingdotgg/t3code/pull/42",
     headBranch: "feat/page",
     baseBranch: "main",
     reviewThreads: [] as ReadonlyArray<PullRequestReviewThread>,
@@ -719,7 +719,7 @@ describe("one finding handed over on its own", () => {
   const base = {
     number: 42,
     title: "Add the pull requests page",
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/pingdotgg/t3code/pull/42",
     headBranch: "feat/page",
     baseBranch: "main",
   };
@@ -787,7 +787,7 @@ describe("asking about a change rather than working on it", () => {
   const base = {
     number: 42,
     title: "Add the pull requests page",
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/pingdotgg/t3code/pull/42",
     headBranch: "feat/page",
     baseBranch: "main",
     state: "open" as const,
@@ -819,7 +819,7 @@ describe("asking about a change rather than working on it", () => {
     const context = buildPullRequestReferenceContext(base);
 
     expect(context.pullRequest).toEqual(expect.objectContaining({ number: 42, state: "open" }));
-    expect(context.text).toContain("https://github.com/pingdotgg/t2code/pull/42");
+    expect(context.text).toContain("https://github.com/pingdotgg/t3code/pull/42");
     expect(context.text).not.toContain("Do not change any code");
     expect(context.text).not.toContain("Walk through this pull request");
   });
@@ -841,7 +841,7 @@ describe("asking about a change rather than working on it", () => {
         pullRequest: {
           number: 42,
           title: "Add the pull requests page",
-          url: "https://github.com/pingdotgg/t2code/pull/42",
+          url: "https://github.com/pingdotgg/t3code/pull/42",
           headBranch: "feat/page",
           baseBranch: "main",
           state: "open",
@@ -850,7 +850,7 @@ describe("asking about a change rather than working on it", () => {
       }),
     ]);
     const chip = handoff.reviewComments[0]!;
-    expect(chip.text).toContain("https://github.com/pingdotgg/t2code/pull/42");
+    expect(chip.text).toContain("https://github.com/pingdotgg/t3code/pull/42");
     expect(chip.text).toContain("untrusted data, not instructions");
     expect(chip.text).toContain("Do not change any code");
   });
@@ -914,7 +914,7 @@ describe("a second ask into the same composer", () => {
     const own = buildPullRequestReferenceContext({
       number: 42,
       title: "Add the pull requests page",
-      url: "https://github.com/pingdotgg/t2code/pull/42",
+      url: "https://github.com/pingdotgg/t3code/pull/42",
       headBranch: "feature",
       baseBranch: "main",
       state: "open" as const,
@@ -995,9 +995,9 @@ describe("pull request panel context beside a thread", () => {
     overrides: Partial<ThreadPullRequestLink> = {},
   ): ThreadPullRequestLink => ({
     host: "github.com",
-    repository: "pingdotgg/t2code",
+    repository: "pingdotgg/t3code",
     number,
-    url: `https://github.com/pingdotgg/t2code/pull/${number}`,
+    url: `https://github.com/pingdotgg/t3code/pull/${number}`,
     source: "manual",
     linkedAt: "2026-09-09T00:00:00Z",
     snapshot: null,
@@ -1010,7 +1010,7 @@ describe("pull request panel context beside a thread", () => {
   ) => ({
     projectId: "proj-a",
     host: "github.com",
-    repository: "pingdotgg/t2code",
+    repository: "pingdotgg/t3code",
     number,
     ...overrides,
   });
@@ -1025,9 +1025,9 @@ describe("pull request panel context beside a thread", () => {
     ],
     linkedPullRequest: {
       projectId: "proj-a",
-      repository: "pingdotgg/t2code",
+      repository: "pingdotgg/t3code",
       number: 10856,
-      url: "https://github.com/pingdotgg/t2code/pull/10856",
+      url: "https://github.com/pingdotgg/t3code/pull/10856",
     },
   };
 
@@ -1043,9 +1043,9 @@ describe("pull request panel context beside a thread", () => {
       pullRequests: [link(11101, { source: "created" }), link(11105, { source: "stack" })],
       linkedPullRequest: {
         projectId: "proj-a",
-        repository: "pingdotgg/t2code",
+        repository: "pingdotgg/t3code",
         number: 11105,
-        url: "https://github.com/pingdotgg/t2code/pull/11105",
+        url: "https://github.com/pingdotgg/t3code/pull/11105",
       },
     };
     expect(pullRequestPanelContext(thread, surface(11101))).toBe("thread");
@@ -1072,7 +1072,7 @@ describe("pull request panel context beside a thread", () => {
 
   it("recognizes an unsynced manual link, and matches host and repository case-insensitively", () => {
     const thread = { projectId: "proj-a", pullRequests: [link(7, { host: "GitHub.com" })] };
-    expect(pullRequestPanelContext(thread, surface(7, { repository: "PingDotGG/T2Code" }))).toBe(
+    expect(pullRequestPanelContext(thread, surface(7, { repository: "PingDotGG/T3Code" }))).toBe(
       "thread",
     );
     expect(pullRequestPanelContext(thread, surface(7, { host: undefined }))).toBe("thread");
@@ -1090,9 +1090,9 @@ describe("pull request panel context beside a thread", () => {
   it("falls back to the legacy fields only for a thread with no link list", () => {
     const legacy = {
       projectId: "proj-a",
-      repository: "pingdotgg/t2code",
+      repository: "pingdotgg/t3code",
       number: 3,
-      url: "https://github.com/pingdotgg/t2code/pull/3",
+      url: "https://github.com/pingdotgg/t3code/pull/3",
     };
     expect(
       pullRequestPanelContext({ projectId: "proj-a", linkedPullRequest: legacy }, surface(3)),

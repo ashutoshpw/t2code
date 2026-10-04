@@ -103,7 +103,7 @@ export class CursorAgentSdkRunner extends Context.Service<
     ) => Effect.Effect<CursorAgentSdkSession, CursorAgentSdkRunnerError>;
     readonly assertComplete: Effect.Effect<void, CursorAgentSdkRunnerError>;
   }
->()("@t3tools/provider-cursor/server/CursorAgentSdk/CursorAgentSdkRunner") {}
+>()("@t2code/provider-cursor/server/CursorAgentSdk/CursorAgentSdkRunner") {}
 
 export interface CursorAgentSdkLoggedAgentOptions {
   readonly model?: AgentOptions["model"];
