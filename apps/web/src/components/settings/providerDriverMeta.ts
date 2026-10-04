@@ -3,7 +3,6 @@ import {
   ClaudeSettings,
   CodexSettings,
   CursorSettings,
-  FxSettings,
   GrokSettings,
   OpenCodeSettings,
   PiSettings,

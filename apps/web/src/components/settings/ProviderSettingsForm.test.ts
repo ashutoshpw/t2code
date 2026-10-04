@@ -94,17 +94,6 @@ describe("ProviderSettingsForm helpers", () => {
     ]);
   });
 
-  it("registers fx with its icon, early-access badge, and binary setting", () => {
-    const fx = DRIVER_OPTION_BY_VALUE[ProviderDriverKind.make("fx")];
-    expect(fx).toMatchObject({
-      label: "fx",
-      badgeLabel: "Early Access",
-    });
-    expect(fx).toBeDefined();
-    expect(PROVIDER_ICON_BY_PROVIDER[fx!.value]).toBe(FxIcon);
-    expect(deriveProviderSettingsFields(fx!).map((field) => field.key)).toEqual(["binaryPath"]);
-  });
-
   it("preserves unknown config keys while omitting empty configurable fields", () => {
     const opencode = providerClients.get(ProviderDriverKind.make("opencode"));
     expect(opencode).toBeDefined();
