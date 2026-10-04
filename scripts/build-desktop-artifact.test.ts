@@ -537,7 +537,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         {
           provider: "github",
           owner: "pingdotgg",
-          repo: "t2code",
+          repo: "t3code",
           releaseType: "release",
         },
       ]);
