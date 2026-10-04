@@ -3065,7 +3065,6 @@ it.layer(
               "claudeAgent",
               "codex",
               "cursor",
-              "fx",
               "grok",
               "muse",
               "opencode",

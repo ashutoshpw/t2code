@@ -727,34 +727,6 @@ export const GrokSettings = makeProviderSettingsSchema(
 );
 export type GrokSettings = typeof GrokSettings.Type;
 
-export const FxSettings = makeProviderSettingsSchema(
-  {
-    // Off by default while the fx integration remains early access. Users
-    // opt in from Settings after installing and authenticating fx.
-    enabled: Schema.Boolean.pipe(
-      Schema.withDecodingDefault(Effect.succeed(false)),
-      Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
-    ),
-    binaryPath: makeBinaryPathSetting("fx").pipe(
-      Schema.annotateKey({
-        title: "Binary path",
-        description: "Path to the fx CLI binary.",
-        providerSettingsForm: { placeholder: "fx", clearWhenEmpty: "omit" },
-      }),
-    ),
-    // fx discovers its usable model catalog through ACP. Keep custom model
-    // entries compatible with the other provider settings.
-    customModels: Schema.Array(CustomModelSetting).pipe(
-      Schema.withDecodingDefault(Effect.succeed([])),
-      Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
-    ),
-  },
-  {
-    order: ["binaryPath"],
-  },
-);
-export type FxSettings = typeof FxSettings.Type;
-
 /**
  * Antigravity ACP auth methods. Personal and Enterprise open a Google sign-in
  * in the browser. The API key and Agent Platform methods take credentials from
@@ -1459,12 +1431,6 @@ const CursorSettingsPatch = Schema.Struct({
 });
 
 const GrokSettingsPatch = Schema.Struct({
-  enabled: Schema.optionalKey(Schema.Boolean),
-  binaryPath: Schema.optionalKey(TrimmedString),
-  customModels: Schema.optionalKey(Schema.Array(CustomModelSetting)),
-});
-
-const FxSettingsPatch = Schema.Struct({
   enabled: Schema.optionalKey(Schema.Boolean),
   binaryPath: Schema.optionalKey(TrimmedString),
   customModels: Schema.optionalKey(Schema.Array(CustomModelSetting)),
