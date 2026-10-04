@@ -1421,7 +1421,7 @@ function codexThreadRuntimeParams(input: {
   readonly config: Readonly<Record<string, Schema.Json>>;
 } {
   const { mcpSession } = input;
-  const t3Server =
+  const t2Server =
     mcpSession === undefined
       ? undefined
       : {
@@ -1438,15 +1438,15 @@ function codexThreadRuntimeParams(input: {
       ...(input.threadId === null
         ? {}
         : { [`shell_environment_policy.set.${PortScanner.AGENT_THREAD_ENV}`]: input.threadId }),
-      ...(t3Server === undefined
+      ...(t2Server === undefined
         ? {}
         : {
             // Override only T2's servers so launch-argument MCP servers survive.
-            "mcp_servers.t2-code": { ...t3Server, disabled_tools: [CODEX_DIRECT_ONLY_T2_TOOL] },
+            "mcp_servers.t2-code": { ...t2Server, disabled_tools: [CODEX_DIRECT_ONLY_T2_TOOL] },
             // Code Mode runs a blocking wait as a nested call, and the model keeps working
             // around it. A second, direct-only registration makes it a plain tool call.
             [`mcp_servers.${CODEX_T2_DIRECT_MCP_SERVER}`]: {
-              ...t3Server,
+              ...t2Server,
               enabled_tools: [CODEX_DIRECT_ONLY_T2_TOOL],
               omit_tools_from: ["code_mode", "deferred"],
             },
