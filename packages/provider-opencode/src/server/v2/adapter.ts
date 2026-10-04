@@ -406,15 +406,19 @@ interface PendingRequest {
 
 const rule = (action: string, effect: Rule["effect"]): Rule => ({ action, resource: "*", effect });
 
-/** OpenCode hides tools for names over 64 chars and rejects names over 100; hash long thread IDs. */
+/**
+ * OpenCode skips every tool of a server whose name is over 64 characters (its
+ * tool namespace limit), and its router rejects adding one over 100, so a
+ * thread id that does not fit is replaced by a digest of it.
+ */
 export const t2McpServerName = Effect.fn("t2McpServerName")(function* (threadId: string) {
-  const name = `t3-code-${threadId.replaceAll(/[^a-zA-Z0-9_-]/g, "_")}`;
+  const name = `t2-code-${threadId.replaceAll(/[^a-zA-Z0-9_-]/g, "_")}`;
   if (name.length <= 64) return name;
   const crypto = yield* Digest.Digest;
   const digest = yield* crypto
     .digest(Digest.sha256, new TextEncoder().encode(threadId))
     .pipe(Effect.orDie);
-  return `t3-code-${Hex.encode(digest).slice(0, 16)}`;
+  return `t2-code-${Hex.encode(digest).slice(0, 16)}`;
 });
 
 /**
@@ -426,7 +430,7 @@ const mcpRules = (mcpServerName: string | null): ReadonlyArray<Rule> =>
   mcpServerName === null
     ? []
     : [
-        { action: "t3-code-*", resource: "*", effect: "deny" },
+        { action: "t2-code-*", resource: "*", effect: "deny" },
         { action: `${mcpServerName}_*`, resource: "*", effect: "allow" },
       ];
 
@@ -593,7 +597,7 @@ const claudeUsageLimit = (message: string | undefined) =>
     : undefined;
 
 const INTERRUPT_TIMEOUT = "10 seconds";
-const INSTRUCTIONS_KEY = "t3-code";
+const INSTRUCTIONS_KEY = "t2-code";
 const RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = "2 seconds";
 const RECONCILE_TIMEOUT = "15 seconds";

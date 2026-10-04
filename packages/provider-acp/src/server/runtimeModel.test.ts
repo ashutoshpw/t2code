@@ -1390,7 +1390,7 @@ describe("extractMcpToolCallIdentity", () => {
     }
   });
 
-  it("recovers T3 identity from Hermes editor-renamed MCP tool titles", () => {
+  it("recovers T2 identity from Hermes editor-renamed MCP tool titles", () => {
     const identityFor = (title: string) =>
       extractMcpToolCallIdentity(
         toolCallFromUpdate({
@@ -1404,7 +1404,7 @@ describe("extractMcpToolCallIdentity", () => {
       );
 
     expect(identityFor("mcp__editor_t3_code_f6129534__html_render")).toEqual({
-      server: "t3-code",
+      server: "t2-code",
       tool: "html_render",
     });
     expect(identityFor("mcp__editor_github_1234abcd__html_render")).toEqual({

@@ -1,8 +1,5 @@
-import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
-
 import { it as effectIt } from "@effect/vitest";
 import * as Cause from "effect/Cause";
-import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import { describe, expect, it } from "vite-plus/test";
@@ -23,14 +20,10 @@ const packageVersion = "0.0.41-nightly.20260915.1";
 const tarballUrl =
   "https://registry.npmjs.org/@t2code/t2-linux-x64/-/t2-linux-x64-0.0.41-nightly.20260915.1.tgz";
 
-const tarballIntegrity = (bytes: Uint8Array): Promise<string> =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const crypto = yield* Crypto.Crypto;
-      const digest = yield* crypto.digest("SHA-512", bytes);
-      return `sha512-${Buffer.from(digest).toString("base64")}`;
-    }).pipe(Effect.provide(NodeCrypto.layer)),
-  );
+const tarballIntegrity = async (bytes: Uint8Array): Promise<string> => {
+  const digest = await globalThis.crypto.subtle.digest("SHA-512", Uint8Array.from(bytes));
+  return `sha512-${Buffer.from(digest).toString("base64")}`;
+};
 
 const registryMetadata = (integrity: string) => ({
   name: packageName,
