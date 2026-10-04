@@ -14,12 +14,12 @@ import { detectSourceControlProviderFromRemoteUrl } from "./sourceControl.ts";
 
 export { WORKTREE_BRANCH_PREFIX };
 
-// Canonical form is `<prefix>/<8 hex>`. Older builds generated `t2code/<uuid>`
-// via Crypto.randomUUID() (always RFC 4122 v4), so the matcher also accepts exactly
+// Canonical prefixes use `<prefix>/<8 hex>`. Older T3 builds generated
+// `t3code/<uuid>` via Crypto.randomUUID(), so the legacy prefix also accepts exactly
 // that shape — version nibble `4`, variant nibble `[89ab]` — to keep those threads
-// eligible for branch regeneration without loosening beyond what was ever generated.
+// eligible for branch regeneration without loosening the T2 prefix.
 const TEMP_WORKTREE_HEX_TOKEN = "[0-9a-f]{8}";
-const TEMP_WORKTREE_BRANCH_SUFFIX =
+const LEGACY_TEMP_WORKTREE_BRANCH_SUFFIX =
   "(?:[0-9a-f]{8}|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})";
 const tempWorktreeBranchPatternCache = new Map<string, RegExp>();
 
@@ -47,10 +47,16 @@ function temporaryWorktreeBranchPattern(prefixes: ReadonlyArray<string>): RegExp
   const key = prefixes.join("|");
   const cached = tempWorktreeBranchPatternCache.get(key);
   if (cached) return cached;
-  const prefixAlternation = prefixes.map(escapeRegExpFragment).join("|");
-  const pattern = new RegExp(
-    `^(?:(?:${prefixAlternation})\\/${TEMP_WORKTREE_BRANCH_SUFFIX}|(?:${prefixAlternation})-${TEMP_WORKTREE_HEX_TOKEN})$`,
-  );
+  const patterns = prefixes.map((prefix) => {
+    const escapedPrefix = escapeRegExpFragment(prefix);
+    const slashSuffix = LEGACY_WORKTREE_BRANCH_PREFIXES.some(
+      (legacyPrefix) => legacyPrefix === prefix,
+    )
+      ? LEGACY_TEMP_WORKTREE_BRANCH_SUFFIX
+      : TEMP_WORKTREE_HEX_TOKEN;
+    return `(?:${escapedPrefix}\\/${slashSuffix}|${escapedPrefix}-${TEMP_WORKTREE_HEX_TOKEN})`;
+  });
+  const pattern = new RegExp(`^(?:${patterns.join("|")})$`);
   tempWorktreeBranchPatternCache.set(key, pattern);
   return pattern;
 }

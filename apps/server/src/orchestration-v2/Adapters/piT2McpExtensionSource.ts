@@ -338,7 +338,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
   if (endpoint === undefined || token === undefined) {
     pi.on("session_start", async (_event, ctx) => {
       ctx.ui.notify(
-        "t3-code MCP unavailable: T2_MCP_URL or T2_MCP_BEARER_TOKEN is missing.",
+        "t2-code MCP unavailable: T2_MCP_URL or T2_MCP_BEARER_TOKEN is missing.",
         "warning",
       );
     });
@@ -386,7 +386,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
             return {
               content,
               structuredContent: mcpScriptResult(result),
-              details: { server: "t3-code", tool: name },
+              details: { server: "t2-code", tool: name },
               ...(isMcpToolError(result) ? { isError: true } : {}),
             };
           },
@@ -444,7 +444,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
       await ensureStarted();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      ctx.ui.notify(\`t3-code MCP unavailable: \${message}\`, "warning");
+      ctx.ui.notify(\`t2-code MCP unavailable: \${message}\`, "warning");
     }
   });
 
