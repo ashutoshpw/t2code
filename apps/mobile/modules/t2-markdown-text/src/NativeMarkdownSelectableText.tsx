@@ -373,13 +373,13 @@ export function NativeMarkdownSelectableText(props: {
             nativeID={
               Platform.OS === "ios"
                 ? chip
-                  ? `t3-chip:${JSON.stringify(chip)}`
+                  ? `t2-chip:${JSON.stringify(chip)}`
                   : fileIconUri
-                    ? `t3-file:${fileIconUri}`
+                    ? `t2-file:${fileIconUri}`
                     : run.skillName
-                      ? "t3-skill:sf:cube"
+                      ? "t2-skill:sf:cube"
                       : linkIconUri
-                        ? `t3-link:${linkIconUri}`
+                        ? `t2-link:${linkIconUri}`
                         : undefined
                 : undefined
             }
