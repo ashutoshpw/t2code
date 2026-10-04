@@ -22,7 +22,12 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@effect/atom-react", () => ({
-  useAtomValue: (atom: unknown) => (atom === "vcs-state" ? { isRunning: false } : null),
+  useAtomValue: (atom: unknown) =>
+    atom === "vcs-state"
+      ? { isRunning: false }
+      : atom === "primary-server-settings"
+        ? { worktreeBranchPrefix: "t2code" }
+        : null,
 }));
 vi.mock("~/state/entities", () => ({
   useThreadProjection: (ref: unknown) =>
