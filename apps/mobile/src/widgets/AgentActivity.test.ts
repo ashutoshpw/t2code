@@ -99,7 +99,8 @@ describe("AgentActivity widget layout", () => {
     expect(banner).toContain("Out of date");
     expect(banner).not.toContain("#7dd3fc"); // sky-300: running
     expect(banner).toContain("Done");
-    expect(JSON.stringify(layout.minimal)).not.toContain("2");
+    // The minimal form is the wordmark glyph, never a count of in-flight rows.
+    expect(JSON.stringify(layout.minimal)).toContain("T2Mark");
   });
 
   it("switches to the web sidebar's light palette when the scheme is light", () => {

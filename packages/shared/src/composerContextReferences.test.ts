@@ -255,7 +255,7 @@ describe("provider projection", () => {
 
   it("projects an attached thread as identity plus a read instruction, never its history", () => {
     const projected = projectComposerContextForProvider({
-      text: "Compare with [Old title](t3-context://v1/thread/thread_abc)",
+      text: "Compare with [Old title](t2-context://v1/thread/thread_abc)",
       records: [
         {
           version: 1,
