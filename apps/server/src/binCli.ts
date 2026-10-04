@@ -87,7 +87,6 @@ export const makeCli = ({ cloudEnabled = hasCloudPublicConfig } = {}) =>
       themeCommand,
       traceCommand,
       triageCommand,
-      execCommand,
       cloudEnabled ? connectCommand : connectUnavailableCommand,
     ]),
   );

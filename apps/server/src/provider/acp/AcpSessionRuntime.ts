@@ -49,6 +49,10 @@ import {
   type AcpToolCallState,
 } from "./AcpRuntimeModel.ts";
 
+type SetSessionModePayload = Parameters<
+  EffectAcpClient.AcpClient["Service"]["agent"]["setSessionMode"]
+>[0];
+
 const MAX_SHOWN_TOOL_CALL_IDS = 256;
 
 interface AcpToolCallTrackedState {
@@ -281,7 +285,7 @@ export function wrapCommandForLinuxCgroup(
         '  case "$line" in 0::*) [ -z "$actual" ] || exit 126; actual=${line#0::};; esac',
         "done < /proc/self/cgroup || exit 125",
         '[ "$actual" = "$expected" ] || exit 126',
-        "unset ELECTRON_RUN_AS_NODE T3_ACP_CGROUP_WRAPPER",
+        "unset ELECTRON_RUN_AS_NODE T2_ACP_CGROUP_WRAPPER",
         "trap 'exit 125' 0",
         'exec "$@"',
       ].join("\n"),
@@ -940,7 +944,7 @@ export function terminatePosixOwnedProcessTree(input: {
     discover(table);
     const byPid = new Map(table.map((entry) => [entry.pid, entry]));
     const current = input.controller.identity(process.pid);
-    if (current === undefined) throw fail("Cannot identify the current T3 process group");
+    if (current === undefined) throw fail("Cannot identify the current T2 process group");
     const ledgerByPid = new Map(
       [...ledger.values()].map((process) => [process.pid, process] as const),
     );
@@ -1586,7 +1590,7 @@ export const make = (
         : {
             ...options.spawn.env,
             ELECTRON_RUN_AS_NODE: "1",
-            T3_ACP_CGROUP_WRAPPER: "1",
+            T2_ACP_CGROUP_WRAPPER: "1",
           };
     const child = yield* spawner
       .spawn(
@@ -2811,7 +2815,7 @@ export const make = (
           const requestPayload = {
             sessionId: started.sessionId,
             modeId,
-          } satisfies EffectAcpSchema.SetSessionModeRequest;
+          } satisfies SetSessionModePayload;
           const response = yield* runLoggedRequest(
             "session/set_mode",
             requestPayload,

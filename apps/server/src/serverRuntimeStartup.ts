@@ -577,7 +577,7 @@ const make = (options?: StartupOptions) =>
       // The label subscription and the relay sync both live as long as the
       // server does; upstream's startup no longer carries the sequential
       // reactor scope this used to hang off, so they get a dedicated one.
-      const labelScope = yield* Scope.make("environment-label");
+      const labelScope = yield* Scope.make("sequential");
       yield* Effect.addFinalizer(() => Scope.close(labelScope, Exit.void));
       yield* runEnvironmentLabelUpdates(labelScope);
       // The sync reads relay credentials from the secret store and performs
