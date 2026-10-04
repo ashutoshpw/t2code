@@ -341,7 +341,7 @@ describe("RemoteEnvironmentAuthorization", () => {
     }),
   );
 
-  it.effect("uses the T3 Connect token on a learned direct address without the relay", () =>
+  it.effect("uses the T2 Connect token on a learned direct address without the relay", () =>
     Effect.gen(function* () {
       const cached = new TokenStore.RemoteDpopAccessToken({
         environmentId: ENVIRONMENT_ID,
@@ -362,18 +362,18 @@ describe("RemoteEnvironmentAuthorization", () => {
         return yield* remote.authorizeDpop({
           expectedEnvironmentId: ENVIRONMENT_ID,
           directEndpoint: {
-            httpBaseUrl: "http://192.168.1.10:3773/",
-            wsBaseUrl: "ws://192.168.1.10:3773/",
+            httpBaseUrl: "http://192.168.1.10:3772/",
+            wsBaseUrl: "ws://192.168.1.10:3772/",
           },
         });
       }).pipe(Effect.provide(harness.layer));
 
-      expect(authorized.httpBaseUrl).toBe("http://192.168.1.10:3773/");
-      expect(authorized.socketUrl).toMatch(/^ws:\/\/192\.168\.1\.10:3773\/ws\?/);
+      expect(authorized.httpBaseUrl).toBe("http://192.168.1.10:3772/");
+      expect(authorized.socketUrl).toMatch(/^ws:\/\/192\.168\.1\.10:3772\/ws\?/);
       expect(yield* Ref.get(harness.bootstrapCalls)).toBe(0);
       expect(harness.fetch.calls.map(([url]) => String(url))).toEqual([
-        "http://192.168.1.10:3773/.well-known/t3/environment",
-        "http://192.168.1.10:3773/api/auth/websocket-ticket",
+        "http://192.168.1.10:3772/.well-known/t3/environment",
+        "http://192.168.1.10:3772/api/auth/websocket-ticket",
       ]);
     }),
   );
@@ -393,8 +393,8 @@ describe("RemoteEnvironmentAuthorization", () => {
           .authorizeDpop({
             expectedEnvironmentId: ENVIRONMENT_ID,
             directEndpoint: {
-              httpBaseUrl: "http://192.168.1.10:3773/",
-              wsBaseUrl: "ws://192.168.1.10:3773/",
+              httpBaseUrl: "http://192.168.1.10:3772/",
+              wsBaseUrl: "ws://192.168.1.10:3772/",
             },
           })
           .pipe(Effect.flip);
@@ -402,7 +402,7 @@ describe("RemoteEnvironmentAuthorization", () => {
 
       expect(error).toMatchObject({ _tag: "ConnectionBlockedError", reason: "configuration" });
       expect(harness.fetch.calls.map(([url]) => String(url))).toEqual([
-        "http://192.168.1.10:3773/.well-known/t3/environment",
+        "http://192.168.1.10:3772/.well-known/t3/environment",
       ]);
       expect((yield* Ref.get(harness.tokens)).get(ENVIRONMENT_ID)?.accessToken).toBe(
         "cached-access-token",
@@ -437,8 +437,8 @@ describe("RemoteEnvironmentAuthorization", () => {
         return yield* remote.authorizeDpop({
           expectedEnvironmentId: ENVIRONMENT_ID,
           directEndpoint: {
-            httpBaseUrl: "http://192.168.1.10:3773/",
-            wsBaseUrl: "ws://192.168.1.10:3773/",
+            httpBaseUrl: "http://192.168.1.10:3772/",
+            wsBaseUrl: "ws://192.168.1.10:3772/",
           },
         });
       }).pipe(Effect.provide(harness.layer));
@@ -558,7 +558,7 @@ describe("RemoteEnvironmentAuthorization", () => {
         for (const [, init] of exchanges) {
           expect(Object.fromEntries(tokenFields(init))).toMatchObject({
             subject_token: BOOTSTRAP.credential,
-            client_label: "T3 Code Test",
+            client_label: "T2 Code Test",
             client_device_type: "mobile",
             client_os: "test",
           });

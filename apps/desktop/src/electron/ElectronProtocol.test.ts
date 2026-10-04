@@ -146,7 +146,6 @@ describe("ElectronProtocol", () => {
           yield* protocol.registerDesktopProtocol({
             scheme: "t2code",
             targetOrigin: new URL("http://127.0.0.1:3772/"),
-            backendOrigin: new URL("http://127.0.0.1:3772/"),
             clerkFrontendApiHostname: undefined,
           });
           return yield* Effect.promise(() => handler!(new Request("t2code://other/")));
@@ -174,7 +173,6 @@ describe("ElectronProtocol", () => {
           yield* protocol.registerDesktopProtocol({
             scheme: "t2code-dev",
             targetOrigin: new URL("http://127.0.0.1:5733/"),
-            backendOrigin: new URL("http://127.0.0.1:3772/"),
             clerkFrontendApiHostname: undefined,
           });
           const fiber = yield* Effect.forkChild(
@@ -246,7 +244,6 @@ describe("ElectronProtocol", () => {
         protocol.registerDesktopProtocol({
           scheme: "t2code-dev",
           targetOrigin: new URL("http://127.0.0.1:3772/"),
-          backendOrigin: new URL("http://127.0.0.1:3774/"),
           clerkFrontendApiHostname: undefined,
         }),
       ).pipe(Effect.flip);
@@ -271,7 +268,6 @@ describe("ElectronProtocol", () => {
           protocol.registerDesktopProtocol({
             scheme: "t2code",
             targetOrigin: new URL("http://127.0.0.1:3772/"),
-            backendOrigin: new URL("http://127.0.0.1:3772/"),
             clerkFrontendApiHostname: undefined,
           }),
         ),

@@ -6,9 +6,9 @@ import {
   markdownImageSourceFragment,
   type MarkdownImageSource,
 } from "./markdownImages.ts";
-import { fileBasename } from "@t3tools/shared/path";
-import { splitFilePathPosition } from "@t3tools/shared/fileLinks";
-import { splitMarkdownLinkSearchAndHash } from "@t3tools/shared/markdownLinks";
+import { fileBasename } from "@t2code/shared/path";
+import { splitFilePathPosition } from "@t2code/shared/fileLinks";
+import { splitMarkdownLinkSearchAndHash } from "@t2code/shared/markdownLinks";
 import {
   mediaFileReference,
   mediaReferenceFileName,

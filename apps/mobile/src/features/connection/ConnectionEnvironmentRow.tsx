@@ -22,6 +22,7 @@ import { ThemedSwitch } from "../../components/ui/ThemedSwitch";
 import { cn } from "../../lib/cn";
 import type { ConnectedEnvironmentSummary } from "../../state/remote-runtime-types";
 import { serverEnvironment } from "../../state/server";
+import { environmentSession } from "../../state/session";
 import { ConnectionFormField } from "./ConnectionFormField";
 import { ConnectionStatusDot } from "./ConnectionStatusDot";
 import { environmentStatusText } from "./environmentStatusText";
@@ -65,12 +66,13 @@ export function ConnectionEnvironmentRow(props: {
     enabled &&
     (props.environment.connectionState === "connecting" ||
       props.environment.connectionState === "reconnecting");
-  const sessionState = useEnvironmentSessionState(props.environment.environmentId);
+  const sessionState = useAtomValue(
+    environmentSession.sessionStateValueAtom(props.environment.environmentId),
+  );
   const canRename =
     props.environment.connectionState === "connected" &&
     Boolean(
-      sessionState.data?.authenticated &&
-      sessionState.data.scopes?.includes(AuthOrchestrationOperateScope),
+      sessionState?.authenticated && sessionState.scopes?.includes(AuthOrchestrationOperateScope),
     );
   const handleSave = useCallback(async () => {
     const result = await props.onUpdate(props.environment.environmentId, {

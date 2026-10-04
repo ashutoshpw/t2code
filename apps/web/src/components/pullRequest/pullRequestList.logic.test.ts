@@ -63,9 +63,9 @@ function entry(
     host: "github.com",
     projectId: "project-1",
     projectTitle: "t2code",
-    repository: "pingdotgg/t2code",
+    repository: "pingdotgg/t3code",
     title: "Add the pull requests page",
-    url: `https://github.com/pingdotgg/t2code/pull/${overrides.number}`,
+    url: `https://github.com/pingdotgg/t3code/pull/${overrides.number}`,
     author: { login: "octocat", name: null, avatarUrl: null },
     headBranch: `feat/branch-${overrides.number}`,
     baseBranch: "main",
@@ -98,7 +98,7 @@ describe("visible pull request line-count targets", () => {
     );
 
     expect(pullRequestStatsBatches(entriesByKey, keys)[0]?.input.refs).toEqual([
-      { projectId: "project-1", repository: "pingdotgg/t2code", number: 3 },
+      { projectId: "project-1", repository: "pingdotgg/t3code", number: 3 },
     ]);
   });
 
@@ -128,7 +128,7 @@ describe("visible pull request line-count targets", () => {
     );
     expect([...keys]).toEqual([secondKey]);
     expect(pullRequestStatsBatches(entriesByKey, keys)[0]?.input.refs).toEqual([
-      { projectId: "project-1", repository: "pingdotgg/t2code", number: 2 },
+      { projectId: "project-1", repository: "pingdotgg/t3code", number: 2 },
     ]);
   });
 
@@ -1016,7 +1016,7 @@ describe("the list snapshot across a reload", () => {
     providers: [],
     errors: [{ projectId: "project-1", message: "boom" }],
     truncated: true,
-    nextCursors: { "pingdotgg/t2code": "cursor-1" },
+    nextCursors: { "pingdotgg/t3code": "cursor-1" },
   } as never;
 
   it("hydrates the retained rows so ghosts never replace them", () => {
@@ -1263,11 +1263,11 @@ describe("merging the environments' own listings", () => {
 
   it("keeps each environment's continuation to itself", () => {
     const merged = mergePullRequestLists([
-      [ENV_1, answer({ nextCursors: { "github.com pingdotgg/t2code": "cursor-1" } })],
+      [ENV_1, answer({ nextCursors: { "github.com pingdotgg/t3code": "cursor-1" } })],
       [ENV_2, answer()],
     ]);
     expect(merged?.nextCursors).toEqual({
-      [ENV_1]: { "github.com pingdotgg/t2code": "cursor-1" },
+      [ENV_1]: { "github.com pingdotgg/t3code": "cursor-1" },
     });
   });
 
@@ -1426,6 +1426,58 @@ describe("the server a saved selection names", () => {
   it("uses the fallback outright when nothing was named", () => {
     expect(resolveSelectedEnvironmentId(undefined, known, ENV_1)).toBe(ENV_1);
     expect(resolveSelectedEnvironmentId(undefined, known, null)).toBeNull();
+  });
+});
+
+describe("colon-namespaced labels typed as a search", () => {
+  it("reads an unknown key as the label it almost always is", () => {
+    expect(parsePullRequestQuery("size:XXL").filters.labels).toEqual([["size:XXL"]]);
+    expect(parsePullRequestQuery("vouch:trusted").filters.labels).toEqual([["vouch:trusted"]]);
+    expect(parsePullRequestQuery("size:XXL").text).toBe("");
+  });
+
+  it("reads the key as the namespace of every bare name in its list", () => {
+    expect(parsePullRequestQuery("size:S,XS").filters.labels).toEqual([["size:S", "size:XS"]]);
+  });
+
+  it("leaves a name that already carries its own namespace alone", () => {
+    expect(parsePullRequestQuery("size:S,size:XS").filters.labels).toEqual([["size:S", "size:XS"]]);
+  });
+
+  it("excludes one the same way", () => {
+    expect(parsePullRequestQuery("-size:XXL").filters.excludedLabels).toEqual(["size:XXL"]);
+    expect(parsePullRequestQuery("-size:S,XS").filters.excludedLabels).toEqual([
+      "size:S",
+      "size:XS",
+    ]);
+  });
+
+  it("keeps a quoted token as text, which is the way back to a literal search", () => {
+    const parsed = parsePullRequestQuery('"size:XXL"');
+    expect(parsed.filters.labels).toBeUndefined();
+    expect(parsed.text).toBe('"size:XXL"');
+  });
+
+  it("reads a hyphenated namespace as a label too", () => {
+    expect(parsePullRequestQuery("priority-1:high").filters.labels).toEqual([["priority-1:high"]]);
+    expect(parsePullRequestQuery("priority-1:high").text).toBe("");
+  });
+
+  it("leaves a pasted link alone rather than naming a label after its scheme", () => {
+    const parsed = parsePullRequestQuery("https://github.com/pingdotgg/t3code/pull/1");
+    expect(parsed.filters.labels).toBeUndefined();
+    expect(parsed.text).toBe("https://github.com/pingdotgg/t3code/pull/1");
+  });
+
+  it("mixes with the keys it does know, and with plain words", () => {
+    const parsed = parsePullRequestQuery("area:web draft:true wizard label:bug");
+    expect(parsed.filters).toEqual({ labels: [["area:web"], ["bug"]], draft: "only" });
+    expect(parsed.text).toBe("wizard");
+  });
+
+  it("shares the ceiling with the labels typed as labels", () => {
+    const many = Array.from({ length: 12 }, (_, index) => `area:${index}`).join(" ");
+    expect(parsePullRequestQuery(many).filters.labels).toHaveLength(10);
   });
 });
 

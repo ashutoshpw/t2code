@@ -61,7 +61,7 @@ function status(overrides: Partial<VcsStatusResult> = {}): VcsStatusResult {
     pr: {
       number: 42,
       title: "PR branch",
-      url: "https://github.com/pingdotgg/t2code/pull/42",
+      url: "https://github.com/pingdotgg/t3code/pull/42",
       baseRef: "main",
       headRef: "feature/current",
       state: "open",
@@ -96,10 +96,10 @@ function pullRequestSummary(
   return {
     provider: SourceControlProviderKind.make("github"),
     projectId: ProjectId.make("project-1"),
-    repository: "pingdotgg/t2code",
+    repository: "pingdotgg/t3code",
     number: 42,
     title: "Feature PR",
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/pingdotgg/t3code/pull/42",
     state,
     headBranch: "feature/current",
     baseBranch: "main",
@@ -677,7 +677,7 @@ describe("prStatusIndicator", () => {
 });
 
 describe("resolveThreadPullRequestBadgePresentation", () => {
-  const url = "https://github.com/pingdotgg/t2code/pull/42";
+  const url = "https://github.com/pingdotgg/t3code/pull/42";
 
   it("returns the pending pull-request badge when no snapshot is available", () => {
     expect(

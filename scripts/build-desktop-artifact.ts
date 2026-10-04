@@ -2826,7 +2826,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       category: "Development",
       synopsis: "Desktop GUI for coding agents",
       // Required by the .deb control file.
-      maintainer: "T3 Tools <hello@t2.codes>",
+      maintainer: "T2 Tools <hello@t2.codes>",
       // electron-builder turns these into MimeType=x-scheme-handler/<scheme>;
       // in the .desktop entry (Exec already gets %U), so browsers can hand
       // t2code:// OAuth callbacks to the app.
@@ -3773,7 +3773,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       "T2 Code is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.",
     license: "MIT",
     homepage: "https://t2.codes",
-    author: "T3 Tools",
+    author: "T2 Tools",
     main: "apps/desktop/dist-electron/boot.cjs",
     build: yield* createBuildConfig(
       options.platform,

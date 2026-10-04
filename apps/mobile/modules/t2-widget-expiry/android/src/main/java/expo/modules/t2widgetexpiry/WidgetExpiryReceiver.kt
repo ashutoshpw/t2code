@@ -1,4 +1,4 @@
-package expo.modules.t3widgetexpiry
+package expo.modules.t2widgetexpiry
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -44,9 +44,9 @@ class WidgetExpiryReceiver : BroadcastReceiver() {
   }
 
   companion object {
-    private const val EXTRA_NAME = "expo.modules.t3widgetexpiry.NAME"
-    private const val EXTRA_DEADLINES = "expo.modules.t3widgetexpiry.DEADLINES"
-    private const val PREFERENCES = "expo.modules.t3widgetexpiry.DEADLINES"
+    private const val EXTRA_NAME = "expo.modules.t2widgetexpiry.NAME"
+    private const val EXTRA_DEADLINES = "expo.modules.t2widgetexpiry.DEADLINES"
+    private const val PREFERENCES = "expo.modules.t2widgetexpiry.DEADLINES"
 
     /** Arms one inexact, non-wakeup alarm for the next future deadline and carries the rest. */
     fun schedule(context: Context, name: String, deadlines: LongArray) {
@@ -61,7 +61,7 @@ class WidgetExpiryReceiver : BroadcastReceiver() {
       }
       stored.apply()
       val intent = Intent(context, WidgetExpiryReceiver::class.java)
-        .setAction("expo.modules.t3widgetexpiry.EXPIRE.$name")
+        .setAction("expo.modules.t2widgetexpiry.EXPIRE.$name")
         .putExtra(EXTRA_NAME, name)
         .putExtra(EXTRA_DEADLINES, pending.drop(1).toLongArray())
       val operation = PendingIntent.getBroadcast(

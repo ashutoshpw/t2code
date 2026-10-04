@@ -1,11 +1,7 @@
 import { act, createRef, useContext, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vite-plus/test";
-import {
-  EnvironmentId,
-  ThreadId,
-  type OrchestrationV2SearchThreadResult,
-} from "@t3tools/contracts";
+import { EnvironmentId, ThreadId, type OrchestrationV2SearchThreadResult } from "@t2code/contracts";
 import {
   ThreadFind,
   ThreadFindProvider,

@@ -1,4 +1,4 @@
-import { EnvironmentId, MessageId, ThreadId } from "@t3tools/contracts";
+import { EnvironmentId, MessageId, ThreadId } from "@t2code/contracts";
 import { expect, it } from "vite-plus/test";
 import { serializeAssistantCitation } from "./assistantCitations.ts";
 import { searchableMessageSegments } from "./threadFindText.ts";
@@ -133,9 +133,9 @@ it("indexes skill labels in prose but leaves links and code literal", () => {
         text: "Use $test-t3-app now.\n\n`$test-t3-app`\n\n[$test-t3-app](https://example.com)",
       },
       undefined,
-      [{ name: "test-t3-app", displayName: "T3 App Testing" }],
+      [{ name: "test-t3-app", displayName: "T2 App Testing" }],
     ),
-  ).toEqual(["Use T3 App Testing now.", "$test-t3-app", "$test-t3-app"]);
+  ).toEqual(["Use T2 App Testing now.", "$test-t3-app", "$test-t3-app"]);
 });
 
 it("indexes the citation chip label instead of its link text", () => {
