@@ -1209,7 +1209,7 @@ describe("AcpAdapterV2", () => {
                         title: "Wait for the child",
                         status: "in_progress",
                         rawInput: {
-                          server: "t3-code",
+                          server: "t2-code",
                           tool: "t2_thread_wait",
                           arguments: { threadId: "child" },
                         },
@@ -1828,7 +1828,7 @@ describe("AcpAdapterV2", () => {
           (item) =>
             item.threadId === task?.childThreadId &&
             item.type === "dynamic_tool" &&
-            item.toolName === "t3-code.task_status",
+            item.toolName === "t2-code.task_status",
         ),
       );
       const childMcp = items.find(
@@ -2816,7 +2816,7 @@ describe("AcpAdapterV2", () => {
         mcpServers: [
           {
             type: "stdio",
-            name: "t3-code",
+            name: "t2-code",
             command: process.execPath,
             args: [
               process.argv[1] === undefined ? "t2" : NodePath.resolve(process.argv[1]),
