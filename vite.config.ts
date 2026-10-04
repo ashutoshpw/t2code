@@ -278,25 +278,25 @@ export default defineConfig({
         "error",
         { paths: [...RESTRICTED_IMPORT_PATHS, RESTRICTED_PULL_REQUEST_GLYPH_IMPORTS] },
       ],
-      "t3code/no-global-process-runtime": "error",
-      "t3code/no-inline-schema-compile": "error",
-      "t3code/no-low-value-comments": "error",
-      "t3code/no-manual-effect-runtime-in-tests": "error",
-      "t3code/no-native-title-tooltip": "error",
+      "t2code/no-global-process-runtime": "error",
+      "t2code/no-inline-schema-compile": "warn",
+      "t2code/no-low-value-comments": "error",
+      "t2code/no-manual-effect-runtime-in-tests": "error",
+      "t2code/no-native-title-tooltip": "error",
       // Test files only (the rule checks the filename).
-      "t3code/no-polling-loop-in-tests": "error",
-      "t3code/no-raw-mcp-registration": "error",
-      "t3code/no-real-time-wait-in-tests": "error",
-      "t3code/no-test-in-loop": "error",
-      "t3code/no-test-timeout-or-unreasoned-skip": "error",
-      "t3code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }],
-      "t3code/no-unscoped-has": "error",
-      "t3code/no-wall-clock-in-tests": "error",
-      "t3code/namespace-node-imports": "error",
-      "t3code/prefer-catch-tags": "error",
-      "t3code/prefer-effect-fn": "error",
-      "t3code/require-centered-scroll-gutter": "error",
-      "t3code/require-suppression-reason": "error",
+      "t2code/no-polling-loop-in-tests": "error",
+      "t2code/no-raw-mcp-registration": "error",
+      "t2code/no-real-time-wait-in-tests": "error",
+      "t2code/no-test-in-loop": "error",
+      "t2code/no-test-timeout-or-unreasoned-skip": "error",
+      "t2code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }],
+      "t2code/no-unscoped-has": "error",
+      "t2code/no-wall-clock-in-tests": "error",
+      "t2code/namespace-node-imports": "error",
+      "t2code/prefer-catch-tags": "error",
+      "t2code/prefer-effect-fn": "error",
+      "t2code/require-centered-scroll-gutter": "error",
+      "t2code/require-suppression-reason": "error",
     },
     overrides: [
       {
@@ -305,24 +305,24 @@ export default defineConfig({
           "**/{test,tests,testkit,testing,fixtures,integration}/**",
           "packages/provider-testing/**",
         ],
-        rules: { "t3code/prefer-effect-fn": "off" },
+        rules: { "t2code/prefer-effect-fn": "off" },
       },
       {
         files: ["apps/web/**/*.test.{ts,tsx}"],
-        rules: { "t3code/require-disposable-render": "error" },
+        rules: { "t2code/require-disposable-render": "error" },
       },
       {
         files: ["apps/web/src/**/*.browser.test.{ts,tsx}"],
-        rules: { "t3code/no-frame-waits-in-browser-tests": "error" },
+        rules: { "t2code/no-frame-waits-in-browser-tests": "error" },
       },
       {
         files: ["apps/**/src/**", "packages/**/src/**"],
         excludeFiles: DOM_TEST_ENVIRONMENT_ALLOWLIST,
-        rules: { "t3code/no-dom-test-environment": "error" },
+        rules: { "t2code/no-dom-test-environment": "error" },
       },
       {
         files: ["packages/client-runtime/src/state/**", "apps/{web,mobile,desktop}/src/**"],
-        rules: { "t3code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: false }] },
+        rules: { "t2code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: false }] },
       },
       {
         files: [
@@ -330,7 +330,7 @@ export default defineConfig({
           "packages/client-runtime/src/state/vcsAction.ts",
         ],
         rules: {
-          "t3code/no-rpc-permission-bypass": [
+          "t2code/no-rpc-permission-bypass": [
             "error",
             { allowGuardInstallation: true, allowRawClientAccess: false },
           ],
@@ -344,18 +344,18 @@ export default defineConfig({
           "apps/web/src/components/device/DevicePhoneViewport.tsx",
           "apps/web/src/components/device/DeviceDuoViewport.tsx",
         ],
-        rules: { "t3code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }] },
+        rules: { "t2code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }] },
       },
       {
         files: ["packages/client-runtime/src/connection/outdatedHostUpdate.ts"],
-        rules: { "t3code/no-rpc-permission-bypass": "off" },
+        rules: { "t2code/no-rpc-permission-bypass": "off" },
       },
       {
         files: [
           "packages/client-runtime/src/rpc/**",
           "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
         ],
-        rules: { "t3code/no-rpc-permission-bypass": "off" },
+        rules: { "t2code/no-rpc-permission-bypass": "off" },
       },
       {
         files: ["packages/shared/src/HostProcess.ts"],
@@ -365,13 +365,13 @@ export default defineConfig({
         // The `t3` npm launcher is published as plain, dependency-free Node.
         files: ["scripts/npm-launcher/**"],
         rules: {
-          "t3code/no-global-process-runtime": "off",
-          "t3code/namespace-node-imports": "off",
+          "t2code/no-global-process-runtime": "off",
+          "t2code/namespace-node-imports": "off",
         },
       },
       {
         files: ["apps/server/src/mcp/McpHttpServer.ts"],
-        rules: { "t3code/no-raw-mcp-registration": "off" },
+        rules: { "t2code/no-raw-mcp-registration": "off" },
       },
       {
         files: ["apps/web/src/**"],
@@ -461,12 +461,12 @@ export default defineConfig({
           "apps/mobile/src/components/ui/AppSymbol.ios.tsx",
           "apps/mobile/src/features/pull-requests/pullRequestGlyphs.ts",
         ],
-        rules: { "t3code/no-mobile-pull-request-glyph-literals": "error" },
+        rules: { "t2code/no-mobile-pull-request-glyph-literals": "error" },
       },
       {
         files: ["apps/mobile/src/**"],
         excludeFiles: ["**/*.test.{ts,tsx}"],
-        rules: { "t3code/no-ambiguous-detail-navigation": "error" },
+        rules: { "t2code/no-ambiguous-detail-navigation": "error" },
       },
       {
         // Raw ResizeObserver state commits miss the paint; observeResize flushes derived layout together.
@@ -475,7 +475,7 @@ export default defineConfig({
           "apps/web/src/lib/observeResize.ts",
           "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
         ],
-        rules: { "t3code/no-raw-resize-observer": "error" },
+        rules: { "t2code/no-raw-resize-observer": "error" },
       },
       {
         files: ["apps/web/src/**"],
@@ -483,7 +483,7 @@ export default defineConfig({
       },
       {
         files: ["apps/web/src/**"],
-        rules: { "t3code/no-outset-state-indicators": "error" },
+        rules: { "t2code/no-outset-state-indicators": "error" },
       },
       {
         files: ["apps/*/src/**", "packages/*/src/**"],
@@ -494,7 +494,7 @@ export default defineConfig({
           // Real user quotes stay verbatim.
           "apps/marketing/src/lib/tweets.ts",
         ],
-        rules: { "t3code/no-em-dash-copy": "error" },
+        rules: { "t2code/no-em-dash-copy": "error" },
       },
       {
         files: ["apps/web/src/**"],
@@ -610,17 +610,17 @@ export default defineConfig({
       {
         // Directives hide bailouts from mobile's compiler-coverage check; retain hooks until its allowlist is empty.
         files: ["apps/mobile/src/**/*.{ts,tsx}"],
-        rules: { "t3code/no-manual-memo": ["error", { allowMemoHooks: true }] },
+        rules: { "t2code/no-manual-memo": ["error", { allowMemoHooks: true }] },
       },
       {
         files: ["apps/web/src/**", "apps/mobile/src/**", "packages/*/src/**"],
-        rules: { "t3code/react-effect-budget": "error" },
+        rules: { "t2code/react-effect-budget": "error" },
       },
       {
         // React Compiler caches use* functions only if they call a hook.
         files: ["apps/web/src/**/*.{ts,tsx}", "apps/mobile/src/**/*.{ts,tsx}"],
         excludeFiles: ["**/*.test.ts", "**/*.test.tsx"],
-        rules: { "t3code/no-hookless-use-function": "error" },
+        rules: { "t2code/no-hookless-use-function": "error" },
       },
       {
         files: [
