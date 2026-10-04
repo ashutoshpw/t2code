@@ -1311,7 +1311,7 @@ export const ServerSettings = Schema.Struct({
   ),
   /**
    * Absolute directory new worktrees are created under, e.g. `D:\worktrees`
-   * or `~/worktrees`. Empty uses `<T3 home>/worktrees`.
+   * or `~/worktrees`. Empty uses `<T2 home>/worktrees`.
    */
   worktreesDirectory: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
   /**

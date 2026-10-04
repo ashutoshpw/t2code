@@ -69,7 +69,7 @@ const WEBHOOK_RATE_LIMIT_PER_MINUTE = 60;
 
 /**
  * Where a webhook task's public URL points: `${relayHookBaseUrl}/${taskId}/${token}`.
- * Null when the environment has no managed tunnel on T3 Connect; clients then show the path.
+ * Null when the environment has no managed tunnel on T2 Connect; clients then show the path.
  */
 interface WebhookOrigin {
   readonly relayHookBaseUrl: string | null;
@@ -95,7 +95,7 @@ export function relayHookBaseUrl(input: {
 }
 
 export class ScheduledTaskWebhookOrigin extends Context.Reference<Effect.Effect<WebhookOrigin>>(
-  "t3/scheduledTasks/ScheduledTaskWebhookOrigin",
+  "@t2code/cli/scheduledTasks/ScheduledTaskWebhookOrigin",
   {
     defaultValue: () => Effect.succeed({ relayHookBaseUrl: null }),
   },
@@ -116,7 +116,7 @@ export interface WebhookTriggerRequest extends WebhookRequest {
   readonly hookId: string;
   readonly token: string;
   readonly body: Uint8Array;
-  /** Set by T3 Connect; the same id is never dispatched twice. */
+  /** Set by T2 Connect; the same id is never dispatched twice. */
   readonly relayDeliveryId?: string;
   /** When the relay received a held request; defaults to now. */
   readonly receivedAt?: string;
@@ -254,7 +254,7 @@ export class ScheduledTaskService extends Context.Service<
       request: WebhookTriggerRequest,
     ) => Effect.Effect<WebhookTriggerResult, ScheduledTaskError>;
   }
->()("t3/scheduledTasks/ScheduledTaskService") {}
+>()("@t2code/cli/scheduledTasks/ScheduledTaskService") {}
 
 function taskError(message: string, input?: { taskId?: ScheduledTaskId; cause?: unknown }) {
   return new ScheduledTaskError({

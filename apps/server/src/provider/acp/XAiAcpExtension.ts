@@ -96,7 +96,7 @@ export function xAiPromptCompleteFromSessionUpdate(
 
 /**
  * Grok answers a finished background command in its own turn, tagging every
- * frame with a `task-completed-*` prompt id instead of the one T3 sent.
+ * frame with a `task-completed-*` prompt id instead of the one T2 sent.
  */
 export function isXAiTaskCompletedWakeNotification(
   notification: EffectAcpSchema.SessionNotification,
@@ -1564,7 +1564,7 @@ const rememberCompletedXAiPromptId = (
  * - `x.ai/session/prompt_complete` (open-source fire-and-forget signal)
  * - `_x.ai/session/prompt_complete` (released-build alias)
  *
- * Pending entries are keyed by root sessionId + T3-injected promptId, so
+ * Pending entries are keyed by root sessionId + T2-injected promptId, so
  * foreign/child sessions and `task-completed-*` ids do not settle the root turn.
  */
 export const makeXAiPromptCompletionRuntime = Effect.fn("makeXAiPromptCompletionRuntime")(

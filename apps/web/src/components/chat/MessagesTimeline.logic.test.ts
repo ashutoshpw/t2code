@@ -788,7 +788,7 @@ describe("deriveMessagesTimelineRows", () => {
         id: TurnItemId.make("list"),
         status: "completed",
         title: "Custom provider title",
-        toolName: "T3-code.t3_project_list",
+        toolName: "T2-code.t2_project_list",
         input: {},
         output: { projects: [] },
       },
@@ -798,7 +798,7 @@ describe("deriveMessagesTimelineRows", () => {
         id: TurnItemId.make("clone"),
         status: "completed",
         title: "Custom provider title",
-        toolName: "mcp__t3_code__t3_project_clone",
+        toolName: "mcp__t2_code__t2_project_clone",
         input: {},
         output: { cwd: "/tmp/repo" },
       },
@@ -808,7 +808,7 @@ describe("deriveMessagesTimelineRows", () => {
         id: TurnItemId.make("failed-clone"),
         status: "completed",
         title: "Custom provider title",
-        toolName: "t3_project_clone",
+        toolName: "t2_project_clone",
         input: {},
         output: { isError: true },
       },
@@ -3574,21 +3574,21 @@ describe("computeStableMessagesTimelineRows", () => {
 });
 
 describe("resolveTimelineToolPresentation", () => {
-  it("pretty prints Claude and Cursor T3 MCP tool names", () => {
-    expect(resolveTimelineToolPresentation("mcp__t3-code__t3_thread_read")).toEqual({
-      displayName: "Read a T3 thread",
+  it("pretty prints Claude and Cursor T2 MCP tool names", () => {
+    expect(resolveTimelineToolPresentation("mcp__t2-code__t2_thread_read")).toEqual({
+      displayName: "Read a T2 thread",
       logo: "t2-code",
     });
   });
 
-  it("pretty prints Codex T3 MCP tool names", () => {
+  it("pretty prints Codex T2 MCP tool names", () => {
     expect(resolveTimelineToolPresentation("t2-code.create_threads")).toEqual({
-      displayName: "Create T3 threads",
+      displayName: "Create T2 threads",
       logo: "t2-code",
     });
   });
 
-  it("pretty prints bare T3 MCP toolkit names", () => {
+  it("pretty prints bare T2 MCP toolkit names", () => {
     expect(resolveTimelineToolPresentation("list_scheduled_tasks")).toEqual({
       displayName: "List scheduled tasks",
       logo: "t2-code",

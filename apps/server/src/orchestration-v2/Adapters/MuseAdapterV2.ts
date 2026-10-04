@@ -244,7 +244,7 @@ interface PendingRequest {
   request: OrchestrationV2RuntimeRequest;
   node: OrchestrationV2ExecutionNode;
   item: OrchestrationV2TurnItem;
-  /** What T3 answered, recorded on the request once Muse confirms it. */
+  /** What T2 answered, recorded on the request once Muse confirms it. */
   response?: Pick<OrchestrationV2RuntimeRequest, "decision" | "answers">;
 }
 
@@ -261,7 +261,7 @@ const INFORMATIONAL_NOTIFICATIONS = new Set([
   "session/todoListChanged",
   "turn/retryScheduled",
 ]);
-// Tools whose results already show as their own rows: T3's todo list and question
+// Tools whose results already show as their own rows: T2's todo list and question
 // rows, and the workflow item a `workflow` call launches.
 const TOOLS_WITH_NATIVE_ROWS = new Set(["write_todos", "request_user_input", "workflow"]);
 const responseAnswerSchema = Schema.Union([Schema.String, Schema.Array(Schema.String)]);
@@ -340,7 +340,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
       const observedChildren = new Map<string, ActiveTurn>();
       // Background work that finished since the last turn, reported to the turn Muse starts for it.
       const finishedBackground: Array<BackgroundWorkReport> = [];
-      // A turn Muse started on its own, held until the continuation run T3 opens for it takes it.
+      // A turn Muse started on its own, held until the continuation run T2 opens for it takes it.
       let wake:
         | { readonly nativeId: string; readonly events: Array<[string, unknown]> }
         | undefined;
@@ -1125,7 +1125,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
               (candidate) => candidate.request.nativeRequestRef?.nativeId === id,
             );
             if (entry) {
-              // An approval settled outside T3 still shows Muse's own decision.
+              // An approval settled outside T2 still shows Muse's own decision.
               const native =
                 method === "approval/resolved" && typeof params.decision === "string"
                   ? museApprovalDecision({ decision: params.decision, scope: "once" })
@@ -1435,7 +1435,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
           const config = mcpSession
             ? {
                 mcpServers: {
-                  // Muse defaults to "required", which fails the whole run when T3's
+                  // Muse defaults to "required", which fails the whole run when T2's
                   // tools cannot be reached. The agent should still work without them.
                   "t3-code": {
                     transport: "streamableHttp",
@@ -1450,7 +1450,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
           const result = yield* request(
             requestedId ? "session/resume" : "session/start",
             requestedId
-              ? // T3 already has the transcript; skip Muse's history payload.
+              ? // T2 already has the transcript; skip Muse's history payload.
                 { excludeItems: true, ...(config ? { config } : {}) }
               : {
                   workspaceRoot: cwd,
@@ -1687,7 +1687,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
                 ],
                 displayText: turnInput.message.text || "Image attachment",
                 // A resumed session keeps the root it was created with; pin it to
-                // this thread's current checkout so edits land where T3 tracks them.
+                // this thread's current checkout so edits land where T2 tracks them.
                 workspaceRoots: [cwd],
                 ifBusy: "queue",
                 ...(effort ? { reasoningEffort: effort } : {}),
@@ -1714,7 +1714,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
           }),
         );
       });
-      // Only messages are read back; T3 owns turn and item history.
+      // Only messages are read back; T2 owns turn and item history.
       const snapshot = Effect.fnUntraced(function* (
         current: OrchestrationV2ProviderThread,
       ): Effect.fn.Return<ProviderAdapterV2ThreadSnapshot, ProviderAdapterV2Error> {
@@ -1965,7 +1965,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
                 }),
             ),
           ),
-        // Muse rejects forks at completed-turn boundaries (InvalidCut), so T3 uses
+        // Muse rejects forks at completed-turn boundaries (InvalidCut), so T2 uses
         // portable context handoff for forks and does not rewind Muse conversations.
         rollbackThread: (args) =>
           Effect.fail(
@@ -1973,7 +1973,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
               driver: MUSE_PROVIDER,
               providerThreadId: args.providerThread.id,
               checkpointId: args.target.checkpointId,
-              cause: "Muse Code does not support conversation rollback in T3 Code.",
+              cause: "Muse Code does not support conversation rollback in T2 Code.",
             }),
           ),
         forkThread: (args) =>
@@ -1981,7 +1981,7 @@ export function makeMuseAdapterV2(options: MuseAdapterV2Options): ProviderAdapte
             new ProviderAdapterForkThreadError({
               driver: MUSE_PROVIDER,
               providerThreadId: args.sourceProviderThread.id,
-              cause: "Muse Code does not support native forks in T3 Code.",
+              cause: "Muse Code does not support native forks in T2 Code.",
             }),
           ),
       };

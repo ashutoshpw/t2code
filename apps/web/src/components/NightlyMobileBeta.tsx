@@ -24,7 +24,7 @@ export const IS_NIGHTLY_BUILD =
 
 const IOS_TESTFLIGHT_URL = "https://testflight.apple.com/join/XgaxaRtd";
 const ANDROID_BETA_GROUP_URL = "https://groups.google.com/g/t3-code-v2-beta";
-const ANDROID_PLAY_TESTING_URL = "https://play.google.com/apps/testing/com.t3tools.t3code";
+const ANDROID_PLAY_TESTING_URL = "https://play.google.com/apps/testing/codes.t2.mobile";
 
 const ROW_ID = "nightly-mobile-beta";
 const NOTICE_DISMISSED_STORAGE_KEY = "t3code:nightly-mobile-beta-notice-dismissed:v1";
@@ -61,7 +61,7 @@ export function NightlyMobileBetaNotice() {
     const toastId = toastManager.add({
       title: "Nightly needs the beta mobile app",
       description:
-        "Nightly uses the new orchestrator. The App Store and Google Play versions of T3 Code cannot connect to it.",
+        "Nightly uses the new orchestrator. The App Store and Google Play versions of T2 Code cannot connect to it.",
       timeout: 0,
       onClose: dismissNotice,
       actionProps: {

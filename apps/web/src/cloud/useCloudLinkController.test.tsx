@@ -55,8 +55,8 @@ import { useCloudLinkController, type CloudLinkDesiredState } from "./useCloudLi
 const target = {
   environmentId: EnvironmentId.make("primary"),
   label: "Primary",
-  httpBaseUrl: "http://localhost:3773",
-  wsBaseUrl: "ws://localhost:3773/ws",
+  httpBaseUrl: "http://localhost:3772",
+  wsBaseUrl: "ws://localhost:3772/ws",
 };
 const linkedState: EnvironmentCloudLinkStateResult = {
   linked: true,

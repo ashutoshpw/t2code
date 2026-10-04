@@ -186,7 +186,7 @@ export interface IdAllocatorV2Shape {
 }
 
 export class IdAllocatorV2 extends Context.Service<IdAllocatorV2, IdAllocatorV2Shape>()(
-  "t3/orchestration-v2/IdAllocator/IdAllocatorV2",
+  "@t2code/cli/orchestration-v2/IdAllocator/IdAllocatorV2",
 ) {}
 
 const encodePart = (part: string | number): string => encodeURIComponent(String(part));

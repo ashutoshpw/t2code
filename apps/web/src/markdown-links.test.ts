@@ -6,9 +6,11 @@ import ReactMarkdown from "react-markdown";
 import {
   extractMarkdownLinkHrefs,
   isWindowsDrivePathHref,
+  resolveMarkdownFileLinkTarget,
+} from "@t2code/shared/markdownLinks";
+import {
   resolveInlineCodeFileLinkMeta,
   resolveMarkdownFileLinkMeta,
-  resolveMarkdownFileLinkTarget,
   rewriteMarkdownFileUriHref,
   shouldOpenMarkdownFileLinkInBrowserByDefault,
   shouldOpenMarkdownFileLinkInEditor,

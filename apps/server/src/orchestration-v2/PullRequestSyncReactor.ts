@@ -149,7 +149,7 @@ export class PullRequestSyncReactor extends Context.Service<
      */
     readonly requestSync: (key: ThreadPullRequestKey) => Effect.Effect<void>;
   }
->()("t3/orchestration-v2/PullRequestSyncReactor") {}
+>()("@t2code/cli/orchestration-v2/PullRequestSyncReactor") {}
 
 /** @public Service construction is part of the canonical Effect module API. */
 export const make = Effect.gen(function* () {

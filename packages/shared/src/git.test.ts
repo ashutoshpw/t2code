@@ -97,12 +97,12 @@ describe("parseOriginUrlFromGitConfig", () => {
       '[remote "upstream"]',
       "\turl = https://github.com/other/repo.git",
       '[remote "origin"]',
-      "\turl = git@github.com:pingdotgg/t2code.git",
+      "\turl = git@github.com:pingdotgg/t3code.git",
       "\tfetch = +refs/heads/*:refs/remotes/origin/*",
       '[branch "main"]',
       "\tremote = origin",
     ].join("\n");
-    expect(parseOriginUrlFromGitConfig(config)).toBe("git@github.com:pingdotgg/t2code.git");
+    expect(parseOriginUrlFromGitConfig(config)).toBe("git@github.com:pingdotgg/t3code.git");
   });
 
   it("strips inline comments and quotes from the url value", () => {
@@ -232,22 +232,22 @@ describe("isTemporaryWorktreeBranch", () => {
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef-extra`)).toBe(false);
   });
 
-  it("still recognizes the legacy t2code prefix without configuration", () => {
-    expect(isTemporaryWorktreeBranch("t2code/deadbeef")).toBe(true);
-    expect(isTemporaryWorktreeBranch("t2code/f4ae4e0e-f971-4d48-b4f2-9cf0aa54ab12")).toBe(true);
-    expect(isTemporaryWorktreeBranch("t2code/feature/demo")).toBe(false);
+  it("still recognizes the legacy t3code prefix without configuration", () => {
+    expect(isTemporaryWorktreeBranch("t3code/deadbeef")).toBe(true);
+    expect(isTemporaryWorktreeBranch("t3code/f4ae4e0e-f971-4d48-b4f2-9cf0aa54ab12")).toBe(true);
+    expect(isTemporaryWorktreeBranch("t3code/feature/demo")).toBe(false);
   });
 
   it("recognizes a configured custom prefix alongside the defaults", () => {
     const prefixes = temporaryWorktreeBranchPrefixes("acme");
     expect(isTemporaryWorktreeBranch("acme/deadbeef", prefixes)).toBe(true);
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef`, prefixes)).toBe(true);
-    expect(isTemporaryWorktreeBranch("t2code/deadbeef", prefixes)).toBe(true);
+    expect(isTemporaryWorktreeBranch("t3code/deadbeef", prefixes)).toBe(true);
     expect(isTemporaryWorktreeBranch("acme/feature/demo", prefixes)).toBe(false);
     // A custom prefix equal to a default never duplicates or displaces.
     expect(temporaryWorktreeBranchPrefixes(WORKTREE_BRANCH_PREFIX)).toEqual([
       WORKTREE_BRANCH_PREFIX,
-      "t2code",
+      "t3code",
     ]);
   });
 

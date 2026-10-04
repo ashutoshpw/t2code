@@ -22,7 +22,7 @@ import type {
   ProviderInteractionMode,
   RuntimeMode,
   RuntimeRequestId,
-  ServerConfig as T3ServerConfig,
+  ServerConfig as T2ServerConfig,
   ThreadId,
   UsageLimitsReport,
 } from "@t2code/contracts";

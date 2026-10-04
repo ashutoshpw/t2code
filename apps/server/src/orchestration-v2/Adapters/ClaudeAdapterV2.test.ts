@@ -473,7 +473,7 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
 });
 
 describe("ClaudeAdapterV2 MCP query overrides", () => {
-  const T3_MCP_SERVERS = {
+  const T2_MCP_SERVERS = {
     "t3-code": {
       type: "http",
       url: "http://127.0.0.1:43123/mcp",
@@ -530,7 +530,7 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
 
       assert.deepEqual(overrides, {
         allowedTools: [ClaudeAdapterV2.CLAUDE_T3_MCP_TOOL_WILDCARD],
-        mcpServers: T3_MCP_SERVERS,
+        mcpServers: T2_MCP_SERVERS,
       });
     });
   });
@@ -541,12 +541,12 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
       const overrides = ClaudeAdapterV2.claudeMcpQueryOverrides({
         threadId,
         readOnlySandbox: false,
-        allowedTools: ["Read", "mcp__t3-code__*"],
+        allowedTools: ["Read", "mcp__t2-code__*"],
       });
 
       assert.deepEqual(overrides, {
-        allowedTools: ["Read", "mcp__t3-code__*"],
-        mcpServers: T3_MCP_SERVERS,
+        allowedTools: ["Read", "mcp__t2-code__*"],
+        mcpServers: T2_MCP_SERVERS,
       });
     });
   });
@@ -565,7 +565,7 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
           ...ClaudeAdapterV2.CLAUDE_READ_ONLY_ALLOWED_TOOLS,
           ...ClaudeAdapterV2.CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS,
         ],
-        mcpServers: T3_MCP_SERVERS,
+        mcpServers: T2_MCP_SERVERS,
       });
       assert.isFalse(overrides.allowedTools?.includes(ClaudeAdapterV2.CLAUDE_T3_MCP_TOOL_WILDCARD));
     });
@@ -661,7 +661,7 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
       ...Object.values(HtmlToolkit.tools),
     ]
       .filter((tool) => Context.get(tool.annotations, Tool.Readonly))
-      .map((tool) => `mcp__t3-code__${tool.name}`)
+      .map((tool) => `mcp__t2-code__${tool.name}`)
       .sort();
 
     assert.deepEqual(
@@ -691,7 +691,7 @@ describe("ClaudeAdapterV2 native protocol logging", () => {
         allowedTools: ["Read"],
       });
       assert.deepEqual(overrides, {
-        allowedTools: ["Read", "mcp__t3-code__*"],
+        allowedTools: ["Read", "mcp__t2-code__*"],
         mcpServers: {
           "t3-code": {
             type: "http",
@@ -6313,7 +6313,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         );
         yield* awaitUntil(() => harness.terminalEvents().length === 1, "first turn terminal");
 
-        // A native wake turn launches a new subagent while T3 has no turn.
+        // A native wake turn launches a new subagent while T2 has no turn.
         const idleFrames = [
           makeSubagentTaskStartedFrame({
             taskId: TASK_ID,

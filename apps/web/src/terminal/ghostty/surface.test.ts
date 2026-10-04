@@ -474,13 +474,13 @@ describe("GhosttyTerminalSurface visibility", () => {
       expect(openLink).toHaveBeenCalledOnce();
 
       vi.advanceTimersByTime(501);
-      surface.resetAndWrite("https://t3.codes");
+      surface.resetAndWrite("https://t2.codes");
       harness.flushFrame();
       harness.pointer("pointermove", 5, 0, modifiers);
       expect(surface.canvas.style.cursor).toBe("pointer");
       harness.pointer("pointerdown", 5, 1, modifiers);
       harness.pointer("pointerup", 5, 0, modifiers);
-      expect(openLink).toHaveBeenLastCalledWith("https://t3.codes", expect.any(Event));
+      expect(openLink).toHaveBeenLastCalledWith("https://t2.codes", expect.any(Event));
     },
   );
 

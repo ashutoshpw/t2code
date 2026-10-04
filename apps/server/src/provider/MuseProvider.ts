@@ -23,7 +23,7 @@ const MUSE_PRESENTATION = {
   displayName: "Muse Code",
   showInteractionModeToggle: false,
   reportsContextWindow: true,
-  // Muse has no native "accept edits" or reviewer-backed mode, so T3 offers only
+  // Muse has no native "accept edits" or reviewer-backed mode, so T2 offers only
   // the two it maps directly: promptUnmatched and allowAll.
   supportedRuntimeModes: ["approval-required", "full-access"],
 } as const;
@@ -46,7 +46,7 @@ export const makePendingMuseProvider = Effect.fn("makePendingMuseProvider")(func
       auth: { status: "unknown" },
       message: settings.enabled
         ? "Checking Muse Code CLI availability..."
-        : "Muse Code is disabled in T3 Code settings.",
+        : "Muse Code is disabled in T2 Code settings.",
     },
   });
 });
@@ -92,8 +92,8 @@ export const checkMuseProviderStatus = Effect.fn("checkMuseProviderStatus")(func
       status: "error",
       auth: { status: "unknown" },
       message: missing
-        ? "Muse Code CLI (`muse`) was not found. Install Muse Code and run `muse login` on this T3 server host."
-        : "Failed to execute Muse Code CLI. Check its binary path on this T3 server host.",
+        ? "Muse Code CLI (`muse`) was not found. Install Muse Code and run `muse login` on this T2 server host."
+        : "Failed to execute Muse Code CLI. Check its binary path on this T2 server host.",
     });
   }
   if (Option.isNone(versionResult.success)) {
@@ -129,7 +129,7 @@ export const checkMuseProviderStatus = Effect.fn("checkMuseProviderStatus")(func
       status: "error",
       auth: { status: "unknown" },
       message:
-        "Muse Code SDK could not read the model catalog. Check your Muse installation and run `muse login` on this T3 server host.",
+        "Muse Code SDK could not read the model catalog. Check your Muse installation and run `muse login` on this T2 server host.",
     });
   }
   const models = catalog.success.value;
@@ -145,7 +145,7 @@ export const checkMuseProviderStatus = Effect.fn("checkMuseProviderStatus")(func
         : {
             status: "warning",
             message:
-              "Muse Code returned no models. Run `muse login` on this T3 server host and refresh its status.",
+              "Muse Code returned no models. Run `muse login` on this T2 server host and refresh its status.",
           }),
     },
     models,

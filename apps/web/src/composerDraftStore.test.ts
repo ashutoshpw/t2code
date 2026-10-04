@@ -1215,7 +1215,7 @@ describe("composerDraftStore thread contexts", () => {
     expect(draft?.threadContexts).toEqual([attached]);
     expect(attached.label).toBe("Fix login flow");
     expect(draft?.prompt).toBe(
-      `Compare with [${attached.label}](t3-context://v1/thread/${attached.contextId}) `,
+      `Compare with [${attached.label}](t2-context://v1/thread/${attached.contextId}) `,
     );
 
     const merge = useComposerDraftStore.persist.getOptions().merge!;

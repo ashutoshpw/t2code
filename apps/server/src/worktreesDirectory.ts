@@ -4,7 +4,7 @@ import { expandHomePathWith } from "./pathExpansion.ts";
 
 /**
  * Directory new worktrees are created under: the `worktreesDirectory`
- * setting, or `defaultDir` (`<T3 home>/worktrees`) when it is empty. Null when
+ * setting, or `defaultDir` (`<T2 home>/worktrees`) when it is empty. Null when
  * the setting is not an absolute path on this machine, such as `D:\worktrees`
  * configured for a Windows server and synced to a Linux one, or when it is a
  * filesystem root, which would make every path on that drive look managed.
@@ -26,7 +26,7 @@ export function isFilesystemRoot(directory: string, path: Path.Path): boolean {
   return path.dirname(directory) === directory;
 }
 
-/** Every directory that holds T3-managed worktrees on this machine. */
+/** Every directory that holds T2-managed worktrees on this machine. */
 export function managedWorktreesDirectories(
   settings: {
     readonly worktreesDirectory: string;

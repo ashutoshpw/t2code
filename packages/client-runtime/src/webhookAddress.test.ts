@@ -6,15 +6,15 @@ const path = "/api/hooks/scheduled-task%3Ahook/token";
 const endpoint = (url: string | null) => ({ path, url, hasSecret: false });
 
 describe("webhookAddress", () => {
-  it("uses the T3 Connect URL when the server has one", () => {
-    expect(webhookAddress(endpoint("https://relay.t3.codes/v1/hooks/k/t/x"), null)).toEqual({
-      address: "https://relay.t3.codes/v1/hooks/k/t/x",
+  it("uses the T2 Connect URL when the server has one", () => {
+    expect(webhookAddress(endpoint("https://relay.t2.codes/v1/hooks/k/t/x"), null)).toEqual({
+      address: "https://relay.t2.codes/v1/hooks/k/t/x",
       copyable: true,
       note: null,
     });
   });
 
-  it("builds a direct URL on the environment's address without T3 Connect", () => {
+  it("builds a direct URL on the environment's address without T2 Connect", () => {
     const result = webhookAddress(endpoint(null), "https://mac.tail1234.ts.net/");
     expect(result.address).toBe(`https://mac.tail1234.ts.net${path}`);
     expect(result.copyable).toBe(true);
@@ -22,7 +22,7 @@ describe("webhookAddress", () => {
   });
 
   it("says only this computer can call a loopback address", () => {
-    const result = webhookAddress(endpoint(null), "http://127.0.0.1:3773/");
+    const result = webhookAddress(endpoint(null), "http://127.0.0.1:3772/");
     expect(result.copyable).toBe(true);
     expect(result.note).toContain("Only this computer");
   });

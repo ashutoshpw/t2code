@@ -215,7 +215,7 @@ export function flattenTemporaryWorktreeBranchName(
   prefix: string = WORKTREE_BRANCH_PREFIX,
 ): string {
   const normalized = refName.trim().toLowerCase();
-  const tokenStart = normalized.search(/[-/]) + 1;
+  const tokenStart = normalized.search(/[-\/]/) + 1;
   const token = normalized.slice(tokenStart, tokenStart + 8);
   return `${sanitizeWorktreeBranchPrefix(prefix)}-${token}`;
 }

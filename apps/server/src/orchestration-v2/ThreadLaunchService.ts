@@ -158,7 +158,7 @@ export class ThreadLaunchService extends Context.Service<
       input: ThreadLaunchRetryInput,
     ) => Effect.Effect<Orchestrator.OrchestratorV2DispatchResult, Orchestrator.OrchestratorV2Error>;
   }
->()("t3/orchestration-v2/ThreadLaunchService") {}
+>()("@t2code/cli/orchestration-v2/ThreadLaunchService") {}
 
 const isThreadLaunchError = Schema.is(ThreadLaunchError);
 

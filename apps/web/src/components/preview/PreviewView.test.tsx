@@ -150,7 +150,7 @@ vi.mock("~/previewStateStore", () => ({
 
 vi.mock("~/state/environments", () => ({
   useEnvironment: () => ({ label: "WSL" }),
-  useEnvironmentHttpBaseUrl: () => "http://172.25.85.75:3773",
+  useEnvironmentHttpBaseUrl: () => "http://172.25.85.75:3772",
 }));
 
 vi.mock("~/state/preview", () => ({

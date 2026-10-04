@@ -162,7 +162,7 @@ export class GitHubApi extends Context.Service<
       GitHubApiError
     >;
   }
->()("t3/sourceControl/GitHubApi") {}
+>()("@t2code/cli/sourceControl/GitHubApi") {}
 
 function normalizeHost(host: string): string {
   return host.trim().toLowerCase();

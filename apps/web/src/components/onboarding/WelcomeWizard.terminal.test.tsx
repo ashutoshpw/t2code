@@ -1,8 +1,5 @@
 import { RegistryContext } from "@effect/atom-react";
-import {
-  BearerConnectionTarget,
-  PrimaryConnectionTarget,
-} from "@t2code/client-runtime/connection";
+import { BearerConnectionTarget, PrimaryConnectionTarget } from "@t2code/client-runtime/connection";
 import {
   AuthTerminalOperateScope,
   DEFAULT_SERVER_SETTINGS,
@@ -155,8 +152,8 @@ const primaryEnvironment = {
     target: new PrimaryConnectionTarget({
       environmentId: primaryId,
       label: "This computer",
-      httpBaseUrl: "http://127.0.0.1:3773",
-      wsBaseUrl: "ws://127.0.0.1:3773",
+      httpBaseUrl: "http://127.0.0.1:3772",
+      wsBaseUrl: "ws://127.0.0.1:3772",
     }),
   },
 } as const;

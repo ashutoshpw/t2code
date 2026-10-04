@@ -304,7 +304,7 @@ export class CursorAccountReader extends Context.Service<
       untilMs: number,
     ) => Effect.Effect<CursorAccountUsageReadResult>;
   }
->()("t3/usage/cursorUsageReader/CursorAccountReader") {}
+>()("@t2code/cli/usage/cursorUsageReader/CursorAccountReader") {}
 
 /** Reads Cursor's dashboard API with the saved CLI or Keychain login. */
 export const layer = Layer.succeed(

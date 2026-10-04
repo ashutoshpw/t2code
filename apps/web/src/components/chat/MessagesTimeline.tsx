@@ -4066,7 +4066,7 @@ function toolGroupSummaryIconName(
     case "command":
       return "terminal";
     case "thread-create":
-      return "t3-code";
+      return "t2-code";
     case "browser":
       return "browser";
     case "device":

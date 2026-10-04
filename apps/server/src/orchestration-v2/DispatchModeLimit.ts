@@ -28,7 +28,7 @@ export interface DispatchModeLimitValue extends DispatchModes {
 }
 
 export const DispatchModeLimit = Context.Reference<DispatchModeLimitValue | undefined>(
-  "t3/orchestration-v2/DispatchModeLimit",
+  "@t2code/cli/orchestration-v2/DispatchModeLimit",
   { defaultValue: () => undefined },
 );
 

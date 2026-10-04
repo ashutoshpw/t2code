@@ -23,9 +23,9 @@ export async function publishSubscriptionUsage(snapshot: SubscriptionUsageSnapsh
   }
   widget.updateSnapshot(snapshot);
   // Android has no timeline; an alarm re-renders the stored snapshot at each
-  // deadline so stale readings flip to "Open T3 to refresh" unattended.
+  // deadline so stale readings flip to "Open T2 to refresh" unattended.
   requireOptionalNativeModule<{ schedule: (name: string, deadlines: number[]) => void }>(
-    "T3WidgetExpiry",
+    "T2WidgetExpiry",
   )?.schedule(
     "SubscriptionUsage",
     snapshot.providers.map((provider) => provider.expiresAt).filter((at) => at > 0),

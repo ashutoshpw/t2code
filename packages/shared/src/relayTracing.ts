@@ -39,7 +39,7 @@ class LocalTracer extends Context.Reference("@t2code/shared/relayTracing/LocalTr
 
 /**
  * Exports every span `effect` creates through the product tracer. Use it only
- * around T3 Connect work; wrap local work inside it with
+ * around T2 Connect work; wrap local work inside it with
  * {@link withLocalTracing} so it stays off the product tracer.
  */
 export const withRelayClientTracing = <A, E, R>(

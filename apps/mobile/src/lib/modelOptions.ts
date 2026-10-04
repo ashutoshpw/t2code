@@ -3,7 +3,7 @@ import type {
   ModelCapabilities,
   ModelSelection,
   RuntimeMode,
-  ServerConfig as T3ServerConfig,
+  ServerConfig as T2ServerConfig,
 } from "@t2code/contracts";
 import {
   buildExplicitProviderOptionSelectionsFromDescriptors,

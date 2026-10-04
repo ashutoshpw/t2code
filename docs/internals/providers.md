@@ -15,7 +15,7 @@ The `opencode` driver probes the installed version and runs the 1.x or 2.x runti
 registrations are directory-scoped, while T2's MCP connection is thread-scoped, so threads in one
 directory must not share one T2 MCP entry.
 
-- **1.x** uses one T3-managed chat server per thread, so threads cannot replace each other's
+- **1.x** uses one T2-managed chat server per thread, so threads cannot replace each other's
   connection. Catalog and text-generation work can share the
   [instance-owned helper](../../apps/server/src/provider/OpenCodeServerOwner.ts), which closes
   after an idle period. See the [1.x adapter](../../apps/server/src/orchestration-v2/Adapters/OpenCodeAdapterV2.ts).
@@ -30,7 +30,7 @@ full-access replies use `once` so they cannot widen a supervised thread's permis
 server. On 2.x, a session-wide approval also replies `once` and becomes T2's own rule on that session.
 
 Pi runs the user's own `pi` install in RPC mode and owns native extension, package, and project
-trust discovery. T3 injects only its namespaced MCP bridge, so a Pi session behaves as it does in
+trust discovery. T2 injects only its namespaced MCP bridge, so a Pi session behaves as it does in
 the Pi TUI. Pi session files back native resume, rollback, and same-instance thread forks.
 Forks use Pi's CLI in the destination directory because RPC session switching retains the source
 session's cwd. Provider switches still use portable handoff summaries.
@@ -154,7 +154,7 @@ before redaction and serialization, so logging a large response does not require
 copies. These limits apply to diagnostics; provider event handling is unchanged.
 
 Codex resumes with metadata-only reads when it needs a thread's identity and update time. Its
-initialization capabilities opt out of `turn/diff/updated`: T3 derives diffs from checkpoints.
+initialization capabilities opt out of `turn/diff/updated`: T2 derives diffs from checkpoints.
 The logger filters those notifications before traversal when an older provider still sends them.
 
 Model classification has its own [manifest constraints](./model-manifest.md). Assistant-reference

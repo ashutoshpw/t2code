@@ -70,7 +70,7 @@ export class GitHubQuota extends Context.Service<
       headers: Readonly<Record<string, string | undefined>>,
     ) => Effect.Effect<void>;
   }
->()("t3/sourceControl/githubQuota") {}
+>()("@t2code/cli/sourceControl/githubQuota") {}
 
 const make = Effect.gen(function* () {
   const snapshots = yield* Ref.make<ReadonlyMap<string, QuotaSnapshot>>(new Map());

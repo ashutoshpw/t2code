@@ -297,9 +297,9 @@ export type OrchestrationV2CheckpointCapabilities =
 
 export const OrchestrationV2RuntimePolicyCapabilities = Schema.Struct({
   /**
-   * Where T3 runtime modes are actually enforced. "native" providers receive
+   * Where T2 runtime modes are actually enforced. "native" providers receive
    * the approval and sandbox policy each turn and confine their own execution.
-   * "client-boundary" providers only have policy applied where T3 mediates the
+   * "client-boundary" providers only have policy applied where T2 mediates the
    * work (permission requests and client fs/terminal handlers); provider-owned
    * execution is not confined, so sandbox guarantees are reduced.
    */
@@ -442,7 +442,7 @@ export type OrchestrationV2AppThread = typeof OrchestrationV2AppThread.Type;
 /**
  * A subagent the provider spawned on its own (Claude's Agent tool, Codex or
  * Cursor native subagents). The provider owns its conversation, so it cannot
- * take messages; T3 delegate_task children (`creationSource: "mcp"`) can.
+ * take messages; T2 delegate_task children (`creationSource: "mcp"`) can.
  */
 export function isProviderNativeSubagentThread(
   thread: Pick<OrchestrationV2AppThread, "lineage" | "creationSource">,
@@ -852,7 +852,7 @@ export type OrchestrationV2ProviderGoalStatus = typeof OrchestrationV2ProviderGo
 
 /**
  * A provider-native goal set with `/goal` (Codex and Claude). The provider
- * keeps working until it judges the objective met and owns this state; T3
+ * keeps working until it judges the objective met and owns this state; T2
  * mirrors the latest native report. Usage fields are provider-specific.
  */
 export const OrchestrationV2ProviderGoal = Schema.Struct({

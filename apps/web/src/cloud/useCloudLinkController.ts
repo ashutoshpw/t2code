@@ -96,7 +96,7 @@ export function useCloudLinkController() {
         !readEnvironmentScope(environmentId, AuthRelayWriteScope)
       ) {
         reportUpdateFailure(
-          new Error("This connection needs permission to view and manage T3 Connect settings."),
+          new Error("This connection needs permission to view and manage T2 Connect settings."),
         );
         return false;
       }
@@ -105,7 +105,7 @@ export function useCloudLinkController() {
     const readLinkState = () => {
       const state = readCachedPrimaryCloudLinkState(target);
       if (state === null) {
-        reportUpdateFailure(new Error("Wait until the current T3 Connect settings can be read."));
+        reportUpdateFailure(new Error("Wait until the current T2 Connect settings can be read."));
       }
       return state;
     };

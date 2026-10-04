@@ -68,7 +68,7 @@ export interface IssuedBearerSession {
 }
 
 /**
- * Sessions an MCP client (an agent T3 Code did not launch) obtains through
+ * Sessions an MCP client (an agent T2 Code did not launch) obtains through
  * OAuth. They are accepted only by `/mcp`, where every action is capped by the
  * access the user approved; the HTTP API and WebSocket reject them so an agent
  * token cannot reach the full RPC surface around that cap.
@@ -560,7 +560,7 @@ export class EnvironmentAuth extends Context.Service<
     /**
      * Spends a one-time pairing code as approval for an MCP client with the
      * given access; the code must hold every scope that access grants.
-     * Proof-bound codes (T3 Connect) are refused without being spent, and
+     * Proof-bound codes (T2 Connect) are refused without being spent, and
      * desktop bootstrap grants never qualify.
      */
     readonly consumeMcpApprovalCode: (
@@ -647,7 +647,10 @@ function parseDpopToken(request: HttpServerRequest.HttpServerRequest): string | 
   return token.length > 0 ? token : null;
 }
 
-function selectRequestCredential(request: HttpServerRequest.HttpServerRequest, cookieName: string) {
+export function selectRequestCredential(
+  request: HttpServerRequest.HttpServerRequest,
+  cookieName: string,
+) {
   const cookieToken = request.cookies[cookieName];
   if (cookieToken !== undefined) {
     return { token: cookieToken, source: "cookie" } as const;
@@ -1240,7 +1243,7 @@ export const make = Effect.gen(function* () {
     code,
     access,
   ) =>
-    // No proof key: a code bound to a T3 Connect client's key fails without being spent.
+    // No proof key: a code bound to a T2 Connect client's key fails without being spent.
     resolveBootstrapGrant(code.trim()).pipe(
       Effect.catchTags({
         ServerAuthInvalidCredentialError: () =>

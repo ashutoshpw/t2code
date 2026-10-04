@@ -1,5 +1,5 @@
 /**
- * Source for the T3-owned Pi extension that consumes T3's HTTP MCP server.
+ * Source for the T2-owned Pi extension that consumes T2's HTTP MCP server.
  *
  * Pi core has no MCP client. This file is TypeScript that Pi itself loads via
  * `--extension`. It is written to a cache path at session open so packaged
@@ -8,13 +8,13 @@
  * Do not import t3code modules from the string body. The Pi process resolves
  * `@earendil-works/pi-coding-agent` and `typebox` from the user's pi install.
  */
-import { T3_CODE_ORCHESTRATION_INSTRUCTIONS } from "../../provider/T3OrchestrationInstructions.ts";
+import { T2_CODE_ORCHESTRATION_INSTRUCTIONS } from "../../provider/T2OrchestrationInstructions.ts";
 
 export const PI_T3_MCP_EXTENSION_FILENAME = "pi-t3-mcp-extension.ts";
 
-export const T3_MCP_URL_ENV = "T3_MCP_URL";
-export const T3_MCP_BEARER_ENV = "T3_MCP_BEARER_TOKEN";
-export const T3_PI_RUNTIME_MODE_ENV = "T3_PI_RUNTIME_MODE";
+export const T2_MCP_URL_ENV = "T2_MCP_URL";
+export const T2_MCP_BEARER_ENV = "T2_MCP_BEARER_TOKEN";
+export const T2_PI_RUNTIME_MODE_ENV = "T2_PI_RUNTIME_MODE";
 
 /**
  * Pi tools whose confirmations the bridge raises as file-change approvals.
@@ -26,10 +26,10 @@ export const PI_T3_MCP_EXTENSION_SOURCE = `\
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-const URL_ENV = ${JSON.stringify(T3_MCP_URL_ENV)};
-const TOKEN_ENV = ${JSON.stringify(T3_MCP_BEARER_ENV)};
-const RUNTIME_MODE_ENV = ${JSON.stringify(T3_PI_RUNTIME_MODE_ENV)};
-const ORCHESTRATION_INSTRUCTIONS = ${JSON.stringify(T3_CODE_ORCHESTRATION_INSTRUCTIONS.trim())};
+const URL_ENV = ${JSON.stringify(T2_MCP_URL_ENV)};
+const TOKEN_ENV = ${JSON.stringify(T2_MCP_BEARER_ENV)};
+const RUNTIME_MODE_ENV = ${JSON.stringify(T2_PI_RUNTIME_MODE_ENV)};
+const ORCHESTRATION_INSTRUCTIONS = ${JSON.stringify(T2_CODE_ORCHESTRATION_INSTRUCTIONS.trim())};
 const PROTOCOL = "2025-06-18";
 const READ_ONLY_TOOLS = new Set(["read", "grep", "find", "ls"]);
 const FILE_CHANGE_TOOLS = new Set(${JSON.stringify(PI_FILE_CHANGE_TOOLS)});
@@ -108,8 +108,8 @@ function formatMcpContent(result: unknown): string {
       if (part?.type === "text" && typeof part.text === "string") texts.push(part.text);
     }
   }
-  // Most T3 tools mirror structuredContent in a text block. Repeating it would
-  // leave T3's own output parsing two JSON documents instead of one.
+  // Most T2 tools mirror structuredContent in a text block. Repeating it would
+  // leave T2's own output parsing two JSON documents instead of one.
   if (record.structuredContent !== undefined) {
     const structured = JSON.stringify(record.structuredContent);
     if (!texts.includes(structured)) texts.push(structured);
@@ -231,7 +231,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
     if (changed) return replacement;
   });
 
-  // Pi deliberately leaves permission policy to extensions. T3's injected
+  // Pi deliberately leaves permission policy to extensions. T2's injected
   // bridge uses Pi's public blocking tool hook so the shared runtime modes
   // keep their normal meaning without replacing or shadowing Pi's runtime.
   pi.on("tool_call", async (event, ctx) => {
@@ -245,7 +245,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
       toolInputSummary(event.input),
     );
     if (!approved) {
-      return { block: true, reason: \`\${event.toolName} was declined in T3 Code.\` };
+      return { block: true, reason: \`\${event.toolName} was declined in T2 Code.\` };
     }
   });
 
@@ -254,7 +254,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
   if (endpoint === undefined || token === undefined) {
     pi.on("session_start", async (_event, ctx) => {
       ctx.ui.notify(
-        "t3-code MCP unavailable: T3_MCP_URL or T3_MCP_BEARER_TOKEN is missing.",
+        "t3-code MCP unavailable: T2_MCP_URL or T2_MCP_BEARER_TOKEN is missing.",
         "warning",
       );
     });
@@ -272,7 +272,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
       const tools = await client.listTools(signal);
       for (const tool of tools) {
         const name = tool.name;
-        const registeredName = \`mcp__t3-code__\${name}\`;
+        const registeredName = \`mcp__t2-code__\${name}\`;
         const description = tool.description ?? name;
         pi.registerTool({
           name: registeredName,
@@ -280,7 +280,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
           description,
           promptSnippet: description.split("\\n")[0] ?? name,
           promptGuidelines: [
-            \`Use \${registeredName} from the t3-code MCP server when the user asks for T3 orchestration that this tool covers.\`,
+            \`Use \${registeredName} from the t3-code MCP server when the user asks for T2 orchestration that this tool covers.\`,
           ],
           parameters: jsonSchemaToTypebox(tool.inputSchema),
           async execute(_toolCallId, params, signal) {

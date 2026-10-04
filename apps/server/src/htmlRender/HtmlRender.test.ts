@@ -8,7 +8,7 @@ import {
   HTML_RENDER_MEASURE_WIDTHS,
   htmlRenderTheme,
 } from "@t2code/shared/htmlRender";
-import { T3_CODE_DARK_THEME_COLORS } from "@t2code/shared/themePalettes";
+import { T2_CODE_DARK_THEME_COLORS } from "@t2code/shared/themePalettes";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Base64 from "effect/encoding/Base64";
@@ -27,8 +27,8 @@ import * as HtmlRender from "./HtmlRender.ts";
 import * as PreviewBrowser from "../preview/PreviewBrowser.ts";
 
 // Real-browser tests run only when this names a chrome-headless-shell, for
-// example one T3 installed under <T3 home>/tools/chrome-headless-shell.
-const TEST_BROWSER_ENV = "T3CODE_TEST_HEADLESS_SHELL";
+// example one T2 installed under <T2 home>/tools/chrome-headless-shell.
+const TEST_BROWSER_ENV = "T2CODE_TEST_HEADLESS_SHELL";
 
 const layerHtmlRender = (
   executable?: string,
@@ -274,7 +274,7 @@ describe("HtmlRender", () => {
               { level: "info", text: HTML_RENDER_MEASURE_FONTS.sans },
               {
                 level: "warning",
-                text: htmlRenderTheme(T3_CODE_DARK_THEME_COLORS, "dark").variables["--background"],
+                text: htmlRenderTheme(T2_CODE_DARK_THEME_COLORS, "dark").variables["--background"],
               },
               { level: "error", text: "boom" },
               {

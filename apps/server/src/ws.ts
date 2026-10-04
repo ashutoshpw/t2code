@@ -2176,7 +2176,7 @@ const layerWsRpc = (
           ),
         [WS_METHODS.serverRefreshProviders]: (input) =>
           Effect.gen(function* () {
-            // Only explicit catalog refreshes bypass T3's caches. Workspace
+            // Only explicit catalog refreshes bypass T2's caches. Workspace
             // discovery and background status checks retain their timers.
             if (input.refreshModels) {
               yield* modelManifest.forceRefresh;
@@ -2665,6 +2665,7 @@ const layerWsRpc = (
                 }),
             ),
           ),
+        [WS_METHODS.projectsCreateFileUploadUrl]: (input) => issueProjectFileUploadUrl(input),
         [WS_METHODS.projectsMutate]: (mutation) =>
           startup.enqueueCommand(mutateProject(mutation)).pipe(
             Effect.mapError(

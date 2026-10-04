@@ -16,13 +16,13 @@ export const rpcRequestDuration = Metric.timer("t2_rpc_request_duration", {
 });
 
 export const orchestrationEffectClaimsTotal = Metric.counter(
-  "t3_orchestration_effect_claims_total",
+  "t2_orchestration_effect_claims_total",
   {
     description: "Total completed orchestration effect outbox claim attempts by result.",
   },
 );
 
-export const orchestrationEffectQueueWait = Metric.timer("t3_orchestration_effect_queue_wait", {
+export const orchestrationEffectQueueWait = Metric.timer("t2_orchestration_effect_queue_wait", {
   description:
     "Time from an orchestration effect's temporal availability until claim, including same-thread blocking.",
 });

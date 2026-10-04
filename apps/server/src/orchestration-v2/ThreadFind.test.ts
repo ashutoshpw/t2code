@@ -14,14 +14,14 @@ import {
   ProviderInstanceId,
   ThreadId,
   type OrchestrationV2DomainEvent,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as SqlClient from "effect/sql/SqlClient";
 import * as Stream from "effect/Stream";
 import { vi } from "vite-plus/test";
-import * as ThreadFindText from "@t3tools/shared/threadFindText";
+import * as ThreadFindText from "@t2code/shared/threadFindText";
 
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import * as ProjectionStore from "./ProjectionStore.ts";
@@ -525,8 +525,8 @@ describe("V2 thread find", () => {
       yield* putItems([item("skill", 1, "Use $test-t3-app now")]);
       const input = {
         threadId,
-        query: "T3 App Testing",
-        skills: [{ name: "test-t3-app", displayName: "T3 App Testing" }],
+        query: "T2 App Testing",
+        skills: [{ name: "test-t3-app", displayName: "T2 App Testing" }],
       };
       assert.equal((yield* projection.searchThread(input)).totalMatches, 1);
       assert.equal((yield* projection.searchThread({ ...input, skills: [] })).totalMatches, 0);
@@ -540,7 +540,7 @@ describe("V2 thread find", () => {
         (yield* projection.searchThread({ ...input, query: "$test-t3-app" })).totalMatches,
         1,
       );
-      // The message label "T3 App Testing" plus the plan's literal "$test-t3-app".
+      // The message label "T2 App Testing" plus the plan's literal "$test-t3-app".
       assert.equal((yield* projection.searchThread({ ...input, query: "App" })).totalMatches, 2);
     }).pipe(Effect.provide(layerTest)),
   );

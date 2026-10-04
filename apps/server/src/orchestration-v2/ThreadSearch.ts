@@ -72,7 +72,7 @@ export class ThreadSearch extends Context.Service<
       input: OrchestrationSearchThreadsInput,
     ) => Effect.Effect<OrchestrationSearchThreadsResult, ThreadSearchError>;
   }
->()("t3/orchestration-v2/ThreadSearch") {}
+>()("@t2code/cli/orchestration-v2/ThreadSearch") {}
 
 /** @public Service construction is part of the canonical Effect module API. */
 export const make = Effect.gen(function* () {

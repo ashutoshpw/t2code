@@ -127,7 +127,7 @@ export class ProviderInstanceRegistry extends Context.Service<
      */
     readonly subscribeChanges: Effect.Effect<PubSub.Subscription<void>, never, Scope.Scope>;
   }
->()("t3/provider/ProviderInstanceRegistry") {}
+>()("@t2code/cli/provider/ProviderInstanceRegistry") {}
 
 /**
  * Live registry entry: the materialized `ProviderInstance` + the fresh

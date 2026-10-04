@@ -564,7 +564,7 @@ export class CloudLink extends Context.Service<
       | HttpClientError.HttpClientError
     >;
   }
->()("t3/cloud/CloudLink") {}
+>()("@t2code/cli/cloud/CloudLink") {}
 
 const make = Effect.gen(function* () {
   const secrets = yield* ServerSecretStore.ServerSecretStore;
@@ -839,6 +839,9 @@ const make = Effect.gen(function* () {
         yield* secrets.remove(CLOUD_ENDPOINT_RUNTIME_CONFIG);
       }
       yield* synchronizeCurrentEnvironmentLabelWithRelay().pipe(
+        Effect.provideService(ServerSecretStore.ServerSecretStore, secrets),
+        Effect.provideService(ServerEnvironment.ServerEnvironment, environment),
+        Effect.provideService(HttpClient.HttpClient, httpClient),
         Effect.catch((cause) =>
           Effect.logWarning("failed to synchronize environment label after relay configuration", {
             cause,
@@ -1269,7 +1272,7 @@ const make = Effect.gen(function* () {
       return false;
     }
     // The link belongs to the relay it was installed against, so target the
-  // persisted URL: T2CODE_RELAY_URL may have changed since the link was made.
+    // persisted URL: T2CODE_RELAY_URL may have changed since the link was made.
     const relayUrl = yield* secrets.get(RELAY_URL_SECRET);
     if (Option.isNone(relayUrl)) {
       return false;

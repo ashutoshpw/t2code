@@ -882,7 +882,6 @@ describe("AgentAwarenessRelay", () => {
 describe("startup catch-up", { concurrent: false }, () => {
   const link = (secrets: ServerSecretStore.ServerSecretStore["Service"]) =>
     Effect.all(
-
       [
         secrets.set(RELAY_URL_SECRET, new TextEncoder().encode("https://relay.example.test")),
         secrets.set(RELAY_ISSUER_SECRET, new TextEncoder().encode("https://relay.example.test")),

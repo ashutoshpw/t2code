@@ -242,7 +242,7 @@ export function makeMcpAppHost(options: McpAppHostOptions): McpAppHost {
         respond(id, {
           protocolVersion:
             requested === MCP_APP_PROTOCOL_VERSION ? requested : MCP_APP_PROTOCOL_VERSION,
-          hostInfo: { name: "t3-code", version: options.hostVersion },
+          hostInfo: { name: "t2-code", version: options.hostVersion },
           hostCapabilities: {
             openLinks: {},
             serverTools: {},
@@ -537,7 +537,7 @@ function readDownloads(contents: unknown): ReadonlyArray<McpAppDownload> | undef
 }
 
 /**
- * Maps T3's resolved theme variables to the spec's standardized style names, so
+ * Maps T2's resolved theme variables to the spec's standardized style names, so
  * apps written for any MCP Apps host pick up the thread's colors and fonts.
  */
 export function mcpAppStyleVariables(

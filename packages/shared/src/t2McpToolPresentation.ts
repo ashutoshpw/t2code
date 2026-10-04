@@ -1,11 +1,11 @@
-export type T3McpToolLogo = "t3-code";
+export type T2McpToolLogo = "t2-code";
 
-export interface T3McpToolPresentation {
+export interface T2McpToolPresentation {
   readonly displayName: string;
-  readonly logo: T3McpToolLogo;
+  readonly logo: T2McpToolLogo;
 }
 
-export type T3McpToolSummaryAction =
+export type T2McpToolSummaryAction =
   | "capabilities"
   | "delegate"
   | "task-status"
@@ -63,26 +63,35 @@ export type T3McpToolSummaryAction =
   | "html-preview"
   | "html-render";
 
-export interface T3McpToolDefinition {
+export interface T2McpToolDefinition {
   readonly displayName: string;
   readonly labels: readonly [action: string, running: string, completed: string, detail: string];
-  readonly icon: "t3-code" | "browser" | "device" | "pull-request";
-  readonly summaryAction: T3McpToolSummaryAction;
+  readonly icon: "t2-code" | "browser" | "device" | "pull-request";
+  readonly summaryAction: T2McpToolSummaryAction;
 }
 
 function tool(
-  labels: T3McpToolDefinition["labels"],
-  summaryAction: T3McpToolSummaryAction,
-  icon: T3McpToolDefinition["icon"] = "t3-code",
+  labels: T2McpToolDefinition["labels"],
+  summaryAction: T2McpToolSummaryAction,
+  icon: T2McpToolDefinition["icon"] = "t2-code",
   displayName = `${labels[0]} ${labels[3]}`,
-): T3McpToolDefinition {
+): T2McpToolDefinition {
   return { displayName, labels, icon, summaryAction };
 }
 
-const T3_MCP_SERVER_ALIASES = new Set(["t3-code", "t3_code", "t3code"]);
+const T2_MCP_SERVER_ALIASES = new Set([
+  "t2-code",
+  "t2_code",
+  "t2code",
+  // Legacy upstream spellings still resolve transcripts recorded before
+  // the rename.
+  "t3-code",
+  "t3_code",
+  "t3code",
+]);
 
 // Cards, activity rows, summaries, and provider identity recovery share this inventory.
-const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
+const T2_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
   link_pull_request: tool(
     ["Link", "Linking", "Linked", "a pull request"],
     "link-pr",
@@ -131,22 +140,21 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
     ["Delete", "Deleting", "Requested deletion of", "a scheduled task"],
     "schedule-delete",
   ),
-  request_secret: tool(["Ask for", "Asking for", "Asked for", "a secret"], "secret-request"),
-  create_threads: tool(["Create", "Creating", "Created", "T3 threads"], "thread-create"),
-  t3_thread_start: tool(["Start", "Starting", "Started", "a T3 thread"], "thread-create"),
-  t3_thread_list: tool(["List", "Listing", "Listed", "T3 threads"], "thread-list"),
-  t3_thread_read: tool(["Read", "Reading", "Read", "a T3 thread"], "thread-read"),
-  t3_thread_send: tool(["Send", "Sending", "Sent", "to a T3 thread"], "thread-send"),
-  t3_thread_wait: tool(["Wait", "Waiting", "Waited", "for a T3 thread"], "thread-wait"),
-  t3_thread_interrupt: tool(
-    ["Interrupt", "Interrupting", "Requested an interrupt of", "a T3 thread"],
+  create_threads: tool(["Create", "Creating", "Created", "T2 threads"], "thread-create"),
+  t2_thread_start: tool(["Start", "Starting", "Started", "a T2 thread"], "thread-create"),
+  t2_thread_list: tool(["List", "Listing", "Listed", "T2 threads"], "thread-list"),
+  t2_thread_read: tool(["Read", "Reading", "Read", "a T2 thread"], "thread-read"),
+  t2_thread_send: tool(["Send", "Sending", "Sent", "to a T2 thread"], "thread-send"),
+  t2_thread_wait: tool(["Wait", "Waiting", "Waited", "for a T2 thread"], "thread-wait"),
+  t2_thread_interrupt: tool(
+    ["Interrupt", "Interrupting", "Requested an interrupt of", "a T2 thread"],
     "thread-interrupt",
   ),
-  t3_worktree_handoff: tool(
+  t2_worktree_handoff: tool(
     ["Hand off", "Handing off", "Handed off", "thread to a git worktree"],
     "worktree-handoff",
   ),
-  t3_worktree_status: tool(["Get", "Getting", "Got", "thread worktree status"], "worktree-status"),
+  t2_worktree_status: tool(["Get", "Getting", "Got", "thread worktree status"], "worktree-status"),
   preview_status: tool(["Get", "Getting", "Got", "preview browser status"], "browser", "browser"),
   preview_open: tool(
     ["Open", "Opening", "Opened", "a page in the preview browser"],
@@ -251,144 +259,166 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
     ["Run", "Running", "Requested a run of", "a scheduled task"],
     "schedule-run",
   ),
-  t3_queue_list: tool(["List", "Listing", "Listed", "queued messages"], "queue-list"),
-  t3_queue_read: tool(["Read", "Reading", "Read", "a queued message"], "queue-read"),
-  t3_queue_edit: tool(["Edit", "Editing", "Edited", "a queued message"], "queue-edit"),
-  t3_queue_cancel: tool(
+  t2_queue_list: tool(["List", "Listing", "Listed", "queued messages"], "queue-list"),
+  t2_queue_read: tool(["Read", "Reading", "Read", "a queued message"], "queue-read"),
+  t2_queue_edit: tool(["Edit", "Editing", "Edited", "a queued message"], "queue-edit"),
+  t2_queue_cancel: tool(
     ["Cancel", "Canceling", "Requested cancellation of", "a queued run"],
     "queue-cancel",
   ),
-  t3_queue_reorder: tool(["Reorder", "Reordering", "Reordered", "a queued run"], "queue-reorder"),
-  t3_queue_promote_to_steer: tool(
+  t2_queue_reorder: tool(["Reorder", "Reordering", "Reordered", "a queued run"], "queue-reorder"),
+  t2_queue_promote_to_steer: tool(
     ["Steer with", "Steering with", "Requested steering with", "a queued message"],
     "queue-steer",
   ),
-  t3_pending_request_list: tool(
+  t2_pending_request_list: tool(
     ["List", "Listing", "Listed", "pending questions"],
     "question-list",
   ),
-  t3_pending_request_read: tool(["Read", "Reading", "Read", "pending questions"], "question-read"),
-  t3_pending_request_respond: tool(
+  t2_pending_request_read: tool(["Read", "Reading", "Read", "pending questions"], "question-read"),
+  t2_pending_request_respond: tool(
     ["Answer", "Answering", "Answered", "pending questions"],
     "question-respond",
   ),
-  t3_thread_configuration: tool(
+  request_secret: tool(["Ask for", "Asking for", "Asked for", "a secret"], "secret-request"),
+  t2_thread_configuration: tool(
     ["Read", "Reading", "Read", "thread configuration"],
     "thread-configuration",
   ),
-  t3_thread_configure: tool(["Set", "Setting", "Set", "thread model"], "thread-configure"),
-  t3_thread_fork: tool(["Fork", "Forking", "Requested a fork of", "this thread"], "thread-fork"),
-  t3_thread_merge_back: tool(
+  t2_thread_configure: tool(["Set", "Setting", "Set", "thread model"], "thread-configure"),
+  t2_thread_fork: tool(["Fork", "Forking", "Requested a fork of", "this thread"], "thread-fork"),
+  t2_thread_merge_back: tool(
     ["Merge", "Merging", "Requested a merge of", "thread context"],
     "thread-merge",
   ),
-  t3_thread_search: tool(["Search", "Searching", "Searched", "thread content"], "thread-search"),
-  t3_thread_transfers: tool(["Read", "Reading", "Read", "thread transfers"], "thread-transfers"),
-  t3_thread_organize: tool(["Organize", "Organizing", "Organized", "a thread"], "thread-organize"),
-  t3_thread_update: tool(["Update", "Updating", "Updated", "T3 thread metadata"], "thread-update"),
-  t3_worktree_list: tool(["List", "Listing", "Listed", "workspace branches"], "worktree-list"),
-  t3_preview_list: tool(["List", "Listing", "Listed", "preview tabs"], "browser", "browser"),
-  t3_preview_close: tool(["Close", "Closing", "Closed", "a preview tab"], "browser", "browser"),
-  t3_environment_read: tool(
+  t2_thread_search: tool(["Search", "Searching", "Searched", "thread content"], "thread-search"),
+  t2_thread_transfers: tool(["Read", "Reading", "Read", "thread transfers"], "thread-transfers"),
+  t2_thread_organize: tool(["Organize", "Organizing", "Organized", "a thread"], "thread-organize"),
+  t2_thread_update: tool(["Update", "Updating", "Updated", "T2 thread metadata"], "thread-update"),
+  t2_worktree_list: tool(["List", "Listing", "Listed", "workspace branches"], "worktree-list"),
+  t2_preview_list: tool(["List", "Listing", "Listed", "preview tabs"], "browser", "browser"),
+  t2_preview_close: tool(["Close", "Closing", "Closed", "a preview tab"], "browser", "browser"),
+  t2_environment_read: tool(
     ["Read", "Reading", "Read", "environment preferences"],
     "environment-read",
   ),
-  t3_environment_preferences_update: tool(
+  t2_environment_preferences_update: tool(
     ["Update", "Updating", "Updated", "environment preferences"],
     "environment-update",
   ),
-  t3_thread_launch: tool(["Launch", "Launching", "Launched", "a project thread"], "thread-create"),
-  t3_project_list: tool(["List", "Listing", "Listed", "projects"], "project-list"),
-  t3_project_read: tool(["Read", "Reading", "Read", "a project"], "project-read"),
-  t3_project_create: tool(["Register", "Registering", "Registered", "a project"], "project-create"),
-  t3_project_update: tool(["Update", "Updating", "Updated", "a project"], "project-update"),
-  t3_project_delete: tool(["Delete", "Deleting", "Deleted", "a project"], "project-delete"),
-  t3_project_clone: tool(["Clone", "Cloning", "Cloned", "a repository"], "project-clone"),
-  t3_attachment_prepare_upload: tool(
+  t2_thread_launch: tool(["Launch", "Launching", "Launched", "a project thread"], "thread-create"),
+  t2_project_list: tool(["List", "Listing", "Listed", "projects"], "project-list"),
+  t2_project_read: tool(["Read", "Reading", "Read", "a project"], "project-read"),
+  t2_project_create: tool(["Register", "Registering", "Registered", "a project"], "project-create"),
+  t2_project_update: tool(["Update", "Updating", "Updated", "a project"], "project-update"),
+  t2_project_delete: tool(["Delete", "Deleting", "Deleted", "a project"], "project-delete"),
+  t2_project_clone: tool(["Clone", "Cloning", "Cloned", "a repository"], "project-clone"),
+  t2_attachment_prepare_upload: tool(
     ["Prepare", "Preparing", "Prepared", "an attachment upload"],
     "attachment-prepare",
   ),
-  t3_attachment_discard: tool(
+  t2_attachment_discard: tool(
     ["Discard", "Discarding", "Discarded", "a pending attachment"],
     "attachment-discard",
   ),
-  t3_thread_send_attachments: tool(["Send", "Sending", "Sent", "attachments"], "attachment-send"),
+  t2_thread_send_attachments: tool(["Send", "Sending", "Sent", "attachments"], "attachment-send"),
   html_preview: tool(["Preview", "Previewing", "Previewed", "an HTML page"], "html-preview"),
   html_render: tool(["Render", "Rendering", "Rendered", "an HTML page"], "html-render"),
 };
 
+// Legacy tool spellings only identify older provider transcripts. Keep their
+// display mapping while new sessions use T2 tool names.
+const LEGACY_MCP_TOOL_ALIASES: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.keys(T2_MCP_TOOLS)
+    .filter((name) => name.startsWith("t2_"))
+    .map((name) => [`t3_${name.slice(3)}`, name]),
+);
+const ALL_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
+  ...T2_MCP_TOOLS,
+  ...Object.fromEntries(
+    Object.entries(LEGACY_MCP_TOOL_ALIASES).map(([alias, current]) => [
+      alias,
+      T2_MCP_TOOLS[current]!,
+    ]),
+  ),
+};
+
 /**
- * The T3 orchestration tool inventory, used to gate loose name matching on
+ * The T2 orchestration tool inventory, used to gate loose name matching on
  * both the server (ACP MCP identity recovery) and the client (logo branding).
  */
-export const T3_MCP_TOOL_NAMES: ReadonlySet<string> = new Set(Object.keys(T3_MCP_TOOLS));
+export const T2_MCP_TOOL_NAMES: ReadonlySet<string> = new Set(Object.keys(T2_MCP_TOOLS));
 
-function normalizeT3McpToolLabel(value: string): string {
+function normalizeT2McpToolLabel(value: string): string {
   return value.replace(/\s+(?:complete|completed)\s*$/i, "").trim();
 }
 
 /**
- * ACP agents disagree on how the injected T3 server prefixes its tools:
- * `mcp__t3-code__x` (Claude/Cursor), `t3-code.x` (Codex), plus single
+ * ACP agents disagree on how the injected T2 server prefixes its tools:
+ * `mcp__t2-code__x` (Claude/Cursor), `t2-code.x` (Codex), plus legacy
+ * `t3-code` spellings from stored transcripts, and single
  * underscore, colon, slash, dash, and space separators seen from registry
  * agents. The prefix match is deliberately loose because the display-name
  * inventory is the real gate; unknown tools stay on the generic renderer.
  */
-function resolveT3McpToolName(value: string): string | null {
-  const label = normalizeT3McpToolLabel(value);
+function resolveT2McpToolName(value: string): string | null {
+  const label = normalizeT2McpToolLabel(value);
   const mcpMatch = /^mcp__(?<server>.+?)__(?<tool>.+)$/i.exec(label);
   if (mcpMatch?.groups) {
     const { server, tool } = mcpMatch.groups;
     return server !== undefined &&
       tool !== undefined &&
-      T3_MCP_SERVER_ALIASES.has(server.toLowerCase())
+      T2_MCP_SERVER_ALIASES.has(server.toLowerCase())
       ? tool
       : null;
   }
 
-  const namespaceMatch = /^(?<server>t3-code|t3_code|t3code)(?:[.:/]|\s*·\s*)(?<tool>.+)$/i.exec(
-    label,
-  );
+  const namespaceMatch =
+    /^(?<server>t2-code|t2_code|t2code|t3-code|t3_code|t3code)(?:[.:/]|\s*·\s*)(?<tool>.+)$/i.exec(
+      label,
+    );
   if (namespaceMatch?.groups) {
     return namespaceMatch.groups.tool ?? null;
   }
 
-  const prefixed = /^(?:mcp[-_]{1,2})?t3[-_ ]?code(?:__|[-_.:/ ])(?<tool>.+)$/i.exec(label);
+  const prefixed = /^(?:mcp[-_]{1,2})?(?:t2|t3)[-_ ]?code(?:__|[-_.:/ ])(?<tool>.+)$/i.exec(label);
   const candidate = prefixed?.groups?.tool ?? label;
-  if (Object.hasOwn(T3_MCP_TOOLS, candidate)) return candidate;
-  // OpenCode 2 registers one server per thread, `t3-code-<thread>`, and joins
-  // it to the tool with `_`. Thread ids can hold `_` too, so take the longest
-  // known tool name that ends the label.
-  if (!/^t3-code-/i.test(label)) return null;
+  if (Object.hasOwn(ALL_MCP_TOOLS, candidate)) return candidate;
+
+  // OpenCode 2 registers one server per thread and joins its name to the tool
+  // with `_`. Thread ids can hold `_` too, so take the longest known suffix.
+  if (!/^(?:t2|t3)-code-/i.test(label)) return null;
   let longest: string | null = null;
-  for (const tool of Object.keys(T3_MCP_TOOLS)) {
-    if (label.endsWith(`_${tool}`) && tool.length > (longest?.length ?? 0)) longest = tool;
+  for (const toolName of Object.keys(ALL_MCP_TOOLS)) {
+    if (label.endsWith(`_${toolName}`) && toolName.length > (longest?.length ?? 0)) {
+      longest = toolName;
+    }
   }
   return longest;
 }
 
-/** The bare T3 tool name (`html_render`) for any provider's spelling of it. */
-export function resolveT3McpToolId(toolName: string | null | undefined): string | null {
-  const name = toolName == null ? null : resolveT3McpToolName(toolName);
-  return name !== null && Object.hasOwn(T3_MCP_TOOLS, name) ? name : null;
+/** The bare tool name (`html_render`) for any provider's spelling of it. */
+export function resolveT2McpToolId(toolName: string | null | undefined): string | null {
+  const name = toolName == null ? null : resolveT2McpToolName(toolName);
+  return name !== null && Object.hasOwn(ALL_MCP_TOOLS, name) ? name : null;
 }
 
-export function resolveT3McpToolDefinition(
+export function resolveT2McpToolDefinition(
   toolName: string | null | undefined,
-): T3McpToolDefinition | null {
-  const name = toolName == null ? null : resolveT3McpToolName(toolName);
-  return name !== null && Object.hasOwn(T3_MCP_TOOLS, name) ? T3_MCP_TOOLS[name]! : null;
+): T2McpToolDefinition | null {
+  const name = toolName == null ? null : resolveT2McpToolName(toolName);
+  return name !== null && Object.hasOwn(ALL_MCP_TOOLS, name) ? ALL_MCP_TOOLS[name]! : null;
 }
 
-export function resolveT3McpToolPresentation(
+export function resolveT2McpToolPresentation(
   toolName: string | null | undefined,
-): T3McpToolPresentation | null {
-  const definition = resolveT3McpToolDefinition(toolName);
-  return definition === null ? null : { displayName: definition.displayName, logo: "t3-code" };
+): T2McpToolPresentation | null {
+  const definition = resolveT2McpToolDefinition(toolName);
+  return definition === null ? null : { displayName: definition.displayName, logo: "t2-code" };
 }
 
-export function resolveT3McpToolSummaryAction(
+export function resolveT2McpToolSummaryAction(
   toolName: string | null | undefined,
-): T3McpToolSummaryAction | null {
-  return resolveT3McpToolDefinition(toolName)?.summaryAction ?? null;
+): T2McpToolSummaryAction | null {
+  return resolveT2McpToolDefinition(toolName)?.summaryAction ?? null;
 }

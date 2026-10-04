@@ -503,7 +503,7 @@ export class AcpRegistryCatalog extends Context.Service<
       input: AcpRegistryManagedBinaryUninstallInput,
     ) => Effect.Effect<AcpRegistryManagedBinaryUninstallResult, AcpRegistryError>;
   }
->()("t3/provider/acp/AcpRegistrySupport/AcpRegistryCatalog") {
+>()("@t2code/cli/provider/acp/AcpRegistrySupport/AcpRegistryCatalog") {
   static layer(options: AcpRegistryCatalogOptions) {
     return Layer.effect(AcpRegistryCatalog, makeAcpRegistryCatalog(options));
   }

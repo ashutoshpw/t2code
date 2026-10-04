@@ -7,10 +7,7 @@ import type {
   ScheduledTask,
   ScheduledTaskUpsertInput,
 } from "@t2code/contracts";
-import {
-  MAX_WEBHOOK_DELIVERY_AGE_MINUTES,
-  resolveEnvironmentMachineKind,
-} from "@t2code/contracts";
+import { MAX_WEBHOOK_DELIVERY_AGE_MINUTES, resolveEnvironmentMachineKind } from "@t2code/contracts";
 import type { MenuAction } from "@react-native-menu/menu";
 import { DateTimePicker } from "@expo/ui/community/datetime-picker";
 import {
@@ -1035,7 +1032,7 @@ function WebhookScheduleDetails({
   const httpBaseUrl =
     preparedConnection._tag === "Some" ? preparedConnection.value.httpBaseUrl : null;
   const webhook = task?.schedule.type === "webhook" ? task.webhook : undefined;
-  // Without T3 Connect, the path is resolved on the address this phone uses.
+  // Without T2 Connect, the path is resolved on the address this phone uses.
   const resolved = webhook ? webhookAddress(webhook, httpBaseUrl) : null;
   return (
     <View className="gap-2 border-t border-border-subtle px-4 py-3">

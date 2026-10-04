@@ -54,7 +54,7 @@ describe("AcpClientTerminals", () => {
         spawner,
         defaultCwd: process.cwd(),
         environmentForSession: (sessionId) => ({
-          T3_TEST_ACP_SESSION_TOKEN: sessionId === "session-a" ? "token-a" : "token-b",
+          T2_TEST_ACP_SESSION_TOKEN: sessionId === "session-a" ? "token-a" : "token-b",
         }),
       });
       yield* Effect.addFinalizer(() => terminals.disposeAll);
@@ -66,7 +66,7 @@ describe("AcpClientTerminals", () => {
         const created = yield* terminals.create({
           sessionId,
           command: process.execPath,
-          args: ["-e", "process.stdout.write(process.env.T3_TEST_ACP_SESSION_TOKEN ?? '')"],
+          args: ["-e", "process.stdout.write(process.env.T2_TEST_ACP_SESSION_TOKEN ?? '')"],
         });
         yield* terminals.waitForExit({ sessionId, terminalId: created.terminalId });
         const output = yield* terminals.output({ sessionId, terminalId: created.terminalId });
@@ -81,13 +81,13 @@ describe("AcpClientTerminals", () => {
         spawner: yield* ChildProcessSpawner.ChildProcessSpawner,
         defaultCwd: process.cwd(),
         shellCommands: true,
-        environmentForSession: () => ({ T3_ACP_MCP_NODE: "mailbox-probe" }),
+        environmentForSession: () => ({ T2_ACP_MCP_NODE: "mailbox-probe" }),
       });
       yield* Effect.addFinalizer(() => terminals.disposeAll);
       // Same command-only shape as the failed production commands and live capture.
       const terminal = yield* terminals.create({
         sessionId: "devin",
-        command: 'printf "%s\\n" "$T3_ACP_MCP_NODE" | tr a-z A-Z',
+        command: 'printf "%s\\n" "$T2_ACP_MCP_NODE" | tr a-z A-Z',
       });
       const exit = yield* terminals.waitForExit({ sessionId: "devin", ...terminal });
       const output = yield* terminals.output({ sessionId: "devin", ...terminal });

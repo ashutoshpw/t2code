@@ -53,7 +53,7 @@ const spawnGroup = (args: ReadonlyArray<string>, script = "sleep 600 & wait") =>
     ({ pid }) => killGroup(pid),
   );
 
-/** A T3 server that recorded its OpenCode server and then died without cleanup. */
+/** A T2 server that recorded its OpenCode server and then died without cleanup. */
 const recordFromDeadServer = (stateDir: string, server: { readonly pid: number }) =>
   Effect.gen(function* () {
     const previousServer = yield* spawnGroup([]);
@@ -149,7 +149,7 @@ describe.each(observedPlatforms)("OpenCodeServerLedger observing as %s", (platfo
       const unrelated = yield* spawnGroup(SERVE_ARGS);
       yield* recordFromDeadServer(stateDir, unrelated);
       const entryPath = path.join(stateDir, "opencode-servers", `${unrelated.pid}.json`);
-      // Same pid and start second, but not the server T3 started.
+      // Same pid and start second, but not the server T2 started.
       const entry = yield* fs.readFileString(entryPath);
       yield* fs.writeFileString(entryPath, entry.replace("--port=4096", "--port=4097"));
 
@@ -161,7 +161,7 @@ describe.each(observedPlatforms)("OpenCodeServerLedger observing as %s", (platfo
     }).pipe(provideHost),
   );
 
-  it.live("leaves the servers of a running T3 server alone", () =>
+  it.live("leaves the servers of a running T2 server alone", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;

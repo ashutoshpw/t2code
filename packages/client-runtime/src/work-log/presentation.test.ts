@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { ThreadId, TurnItemId, type OrchestrationV2TurnItem } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
-import { T3_MCP_TOOL_NAMES } from "@t2code/shared/t3McpToolPresentation";
+import { T2_MCP_TOOL_NAMES } from "@t2code/shared/t2McpToolPresentation";
 
 import {
   commandDetailRepeatsCommand,
@@ -270,8 +270,8 @@ describe("summarizeToolGroup", () => {
 });
 
 describe("resolveWorkEntryToolPresentation", () => {
-  it("presents and summarizes every T3 tool using the same structured identity", () => {
-    for (const tool of T3_MCP_TOOL_NAMES) {
+  it("presents and summarizes every T2 tool using the same structured identity", () => {
+    for (const tool of T2_MCP_TOOL_NAMES) {
       const entry: WorkLogPresentationEntry = {
         id: tool,
         createdAt: "2026-09-19T00:00:00.000Z",
@@ -298,23 +298,23 @@ describe("resolveWorkEntryToolPresentation", () => {
   });
 
   it.each([
-    ["t3_project_list", "Listing projects", "Listed projects"],
-    ["t3_project_clone", "Cloning a repository", "Cloned a repository"],
-    ["t3_project_create", "Registering a project", "Registered a project"],
-    ["t3_thread_launch", "Launching a project thread", "Launched a project thread"],
-    ["t3_queue_edit", "Editing a queued message", "Edited a queued message"],
-    ["t3_pending_request_respond", "Answering pending questions", "Answered pending questions"],
-    ["t3_thread_configure", "Setting thread model", "Set thread model"],
-    ["t3_thread_fork", "Forking this thread", "Requested a fork of this thread"],
-    ["t3_thread_send_attachments", "Sending attachments", "Sent attachments"],
+    ["t2_project_list", "Listing projects", "Listed projects"],
+    ["t2_project_clone", "Cloning a repository", "Cloned a repository"],
+    ["t2_project_create", "Registering a project", "Registered a project"],
+    ["t2_thread_launch", "Launching a project thread", "Launched a project thread"],
+    ["t2_queue_edit", "Editing a queued message", "Edited a queued message"],
+    ["t2_pending_request_respond", "Answering pending questions", "Answered pending questions"],
+    ["t2_thread_configure", "Setting thread model", "Set thread model"],
+    ["t2_thread_fork", "Forking this thread", "Requested a fork of this thread"],
+    ["t2_thread_send_attachments", "Sending attachments", "Sent attachments"],
     ["run_scheduled_task_now", "Running a scheduled task", "Requested a run of a scheduled task"],
   ])("labels %s through its lifecycle", (tool, running, completed) => {
-    expect(resolveWorkEntryToolPresentation({ label: `T3-code.${tool}` })?.displayName).toBe(
+    expect(resolveWorkEntryToolPresentation({ label: `T2-code.${tool}` })?.displayName).toBe(
       running,
     );
     expect(
       resolveWorkEntryToolPresentation({
-        label: `T3-code.${tool}`,
+        label: `T2-code.${tool}`,
         toolLifecycleStatus: "completed",
       })?.displayName,
     ).toBe(completed);
@@ -330,19 +330,19 @@ describe("resolveWorkEntryToolPresentation", () => {
       toolLifecycleStatus: "completed",
       toolData: {
         server: "t2-code",
-        tool: "t3_project_clone",
+        tool: "t2_project_clone",
         arguments: { url: "https://github.com/acme/repo" },
         result: { cwd: "/tmp/repo" },
       },
     };
-    const list = { ...entry, toolData: { server: "t2-code", tool: "t3_project_list" } };
+    const list = { ...entry, toolData: { server: "t2-code", tool: "t2_project_list" } };
     expect(summarizeToolGroup([list, entry])).toEqual({
       summary: "Listed projects 1 time and cloned 1 repository",
       hasFailure: false,
     });
     const failed = {
       ...entry,
-      toolData: { toolName: "T3-code.t3_project_clone", rawOutput: { isError: true } },
+      toolData: { toolName: "T2-code.t2_project_clone", rawOutput: { isError: true } },
     };
     expect(summarizeToolGroup([entry, failed])).toEqual({
       summary: "Cloned 1 repository",
@@ -350,14 +350,14 @@ describe("resolveWorkEntryToolPresentation", () => {
     });
   });
 
-  it("does not summarize a foreign structured identity as T3 work", () => {
+  it("does not summarize a foreign structured identity as T2 work", () => {
     const entry: WorkLogPresentationEntry = {
       id: "foreign",
       createdAt: "2026-09-19T00:00:00.000Z",
       tone: "tool",
-      label: "t3_project_clone",
+      label: "t2_project_clone",
       toolLifecycleStatus: "completed",
-      toolData: { server: "another-server", tool: "t3_project_clone" },
+      toolData: { server: "another-server", tool: "t2_project_clone" },
     };
     expect(summarizeToolGroup([entry]).summary).toBe("Used 1 tool");
   });
@@ -367,7 +367,7 @@ describe("resolveWorkEntryToolPresentation", () => {
       id: "clone",
       createdAt: "2026-09-19T00:00:00.000Z",
       tone: "tool",
-      label: "T3-code.t3_project_clone",
+      label: "T2-code.t2_project_clone",
       toolLifecycleStatus: "inProgress",
       itemType: "dynamic_tool",
       toolData: { output: { isError: true } },
@@ -379,7 +379,7 @@ describe("resolveWorkEntryToolPresentation", () => {
     expect(workEntryIndicatesToolSuccess(entry)).toBe(false);
     const childFailure = {
       ...entry,
-      label: "T3-code.task_status",
+      label: "T2-code.task_status",
       toolLifecycleStatus: "completed" as const,
       toolData: { output: { taskId: "child", status: "failed", summary: "command not found" } },
     };
@@ -434,7 +434,7 @@ describe("resolveWorkEntryToolPresentation", () => {
   ] as const)("describes the tool's own %s state", (toolLifecycleStatus, displayName) => {
     expect(
       resolveWorkEntryToolPresentation({
-        label: "T3-code.preview_click",
+        label: "T2-code.preview_click",
         toolLifecycleStatus: toolLifecycleStatus as WorkLogToolLifecycleStatus,
       }),
     ).toEqual({ displayName, icon: "browser" });
@@ -879,7 +879,7 @@ describe("pull request tool presentation", () => {
     const link: WorkLogPresentationEntry = {
       id: "link",
       createdAt: "2026-09-10T00:00:00.000Z",
-      label: "T3-code · link_pull_request",
+      label: "T2-code · link_pull_request",
       tone: "tool",
       itemType: "dynamic_tool",
       toolLifecycleStatus: "completed",
@@ -892,7 +892,7 @@ describe("pull request tool presentation", () => {
     expect(summarizeToolGroup([link, link, list]).summary).toBe(
       "Linked 2 pull requests and checked linked pull requests",
     );
-    expect(summarizeToolGroup([{ ...link, label: "T3-code · unlink_pull_request" }]).summary).toBe(
+    expect(summarizeToolGroup([{ ...link, label: "T2-code · unlink_pull_request" }]).summary).toBe(
       "Unlinked 1 pull request",
     );
     expect(toolGroupSummaryKind([link, link, list])).toBe("pull-request");

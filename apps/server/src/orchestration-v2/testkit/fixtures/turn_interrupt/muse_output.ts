@@ -12,7 +12,7 @@ import {
 } from "../shared.ts";
 
 /**
- * Stop while Muse works on a `sleep 30` request: T3 sends `turn/interrupt`, Muse
+ * Stop while Muse works on a `sleep 30` request: T2 sends `turn/interrupt`, Muse
  * ends the turn as cancelled, and the run, every row and the session settle.
  */
 export function assertMuseTurnInterruptOutput(

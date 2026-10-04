@@ -28,13 +28,13 @@ export function resolveAttachmentReferences(
 }
 
 export const layer = McpToolAccess.toLayer(AttachmentToolkit, {
-  t3_attachment_prepare_upload: McpToolAccess.writes((input) =>
+  t2_attachment_prepare_upload: McpToolAccess.writes((input) =>
     Upload.issueAttachmentUploadUrl(input.upload).pipe(Effect.mapError(unavailable)),
   ),
-  t3_attachment_discard: McpToolAccess.writes((input) =>
+  t2_attachment_discard: McpToolAccess.writes((input) =>
     Upload.deletePendingAttachment(input.attachmentId).pipe(Effect.as({})),
   ),
-  t3_thread_send_attachments: McpToolAccess.writesThreads(
+  t2_thread_send_attachments: McpToolAccess.writesThreads(
     (input) => [input.threadId],
     (input) =>
       Effect.gen(function* () {

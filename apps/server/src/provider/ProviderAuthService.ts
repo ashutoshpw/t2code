@@ -106,7 +106,7 @@ export class ProviderAuthService extends Context.Service<
       input: ProviderAuthTarget & { readonly text: string; readonly hasAttachments: boolean },
     ) => Effect.Effect<boolean, ProviderSetupError>;
   }
->()("t3/provider/ProviderAuthService") {}
+>()("@t2code/cli/provider/ProviderAuthService") {}
 
 export const makeProviderAuthService = Effect.gen(function* () {
   const registry = yield* ProviderInstanceRegistry.ProviderInstanceRegistry;

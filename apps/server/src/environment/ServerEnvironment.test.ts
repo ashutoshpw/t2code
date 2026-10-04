@@ -342,7 +342,7 @@ it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
         yield* serverEnvironment.setEnvironmentLabel("");
         const reset = (yield* serverEnvironment.getDescriptor).label;
         return { reported, custom, reset };
-      }).pipe(Effect.provide(makeServerEnvironmentLayer(baseDir)));
+      }).pipe(Effect.provide(layerServerEnvironment(baseDir)));
 
       expect(labels.custom).toBe("Build server");
       expect(labels.reset).toBe(labels.reported);

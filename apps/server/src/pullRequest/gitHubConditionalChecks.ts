@@ -43,7 +43,7 @@ export type KnownWorkflowRun = typeof WorkflowRunSchema.Type;
 export const KnownWorkflowRuns = Context.Reference<{
   readonly headSha: string;
   readonly runs: ReadonlyArray<KnownWorkflowRun>;
-} | null>("t3/pullRequest/KnownWorkflowRuns", { defaultValue: () => null });
+} | null>("@t2code/cli/pullRequest/KnownWorkflowRuns", { defaultValue: () => null });
 
 type Validator = { etag: string | undefined; next: boolean; body: string };
 

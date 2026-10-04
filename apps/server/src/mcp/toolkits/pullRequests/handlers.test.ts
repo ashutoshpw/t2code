@@ -238,7 +238,7 @@ describe("pull request toolkit handlers", () => {
     Effect.gen(function* () {
       const harness = yield* makeHarness();
       const result = yield* harness.call("watch_pull_request", {
-        url: "https://github.com/t3tools/t3code/pull/9",
+        url: "https://github.com/t2tools/t2code/pull/9",
       });
       // The harness thread never changes, so the result reports what it still holds.
       expect(result).toMatchObject({ number: 9, watching: false, wasWatching: false });
@@ -247,7 +247,7 @@ describe("pull request toolkit handlers", () => {
           type: "thread.pull-request.watch",
           number: 9,
           watching: true,
-          link: { url: "https://github.com/t3tools/t3code/pull/9", source: "agent" },
+          link: { url: "https://github.com/t2tools/t2code/pull/9", source: "agent" },
         },
       ]);
     }),
@@ -275,11 +275,11 @@ describe("pull request toolkit handlers", () => {
         ]),
       });
       const error = yield* harness
-        .call("watch_pull_request", { repository: "t3tools/t3code", number: 1 })
+        .call("watch_pull_request", { repository: "t2tools/t2code", number: 1 })
         .pipe(Effect.flip);
       expect(error).toMatchObject({ _tag: "PullRequestNotOpenError", state: "merged" });
       expect(
-        yield* harness.call("unwatch_pull_request", { repository: "t3tools/t3code", number: 3 }),
+        yield* harness.call("unwatch_pull_request", { repository: "t2tools/t2code", number: 3 }),
       ).toMatchObject({ wasWatching: true });
       expect(yield* Ref.get(harness.commands)).toMatchObject([
         { type: "thread.pull-request.watch", number: 3, watching: false },
@@ -295,7 +295,7 @@ describe("pull request toolkit handlers", () => {
           { ...closed, snapshot: closed.snapshot && { ...closed.snapshot, state: "closed" } },
         ]),
       });
-      yield* harness.call("watch_pull_request", { repository: "t3tools/t3code", number: 1 });
+      yield* harness.call("watch_pull_request", { repository: "ashutoshpw/t2code", number: 1 });
       expect(yield* Ref.get(harness.commands)).toMatchObject([
         { type: "thread.pull-request.watch", number: 1, watching: true },
       ]);
@@ -315,7 +315,7 @@ describe("pull request toolkit handlers", () => {
         },
       });
       const error = yield* harness
-        .call("watch_pull_request", { repository: "t3tools/t3code", number: 1 })
+        .call("watch_pull_request", { repository: "ashutoshpw/t2code", number: 1 })
         .pipe(Effect.flip);
       expect(error).toMatchObject({ _tag: "PullRequestWatchFromSubagentError" });
       expect(yield* Ref.get(harness.commands)).toEqual([]);

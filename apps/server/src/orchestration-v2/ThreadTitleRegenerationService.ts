@@ -36,7 +36,7 @@ export class ThreadTitleRegenerationService extends Context.Service<
       OrchestratorV2Error | ProjectStore.ProjectStoreV2Error | ServerSettingsError
     >;
   }
->()("t3/orchestration-v2/ThreadTitleRegenerationService") {}
+>()("@t2code/cli/orchestration-v2/ThreadTitleRegenerationService") {}
 
 const make = Effect.gen(function* () {
   const threads = yield* ThreadManagementService.ThreadManagementService;

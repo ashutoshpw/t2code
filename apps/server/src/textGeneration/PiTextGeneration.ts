@@ -16,7 +16,7 @@ import { makePiRpcConnection, parsePiModelSlug } from "../orchestration-v2/Adapt
 import {
   buildPiRpcLaunch,
   resolvePiLaunchArgs,
-} from "../orchestration-v2/Adapters/piT3McpInjection.ts";
+} from "../orchestration-v2/Adapters/piT2McpInjection.ts";
 import * as TextGenerationOperations from "./TextGenerationOperations.ts";
 
 const PI_TIMEOUT_MS = 180_000;

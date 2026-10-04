@@ -5,6 +5,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as PlatformError from "effect/PlatformError";
 
 import type * as Electron from "electron";
 
@@ -109,6 +110,8 @@ const withIdentity = <A, E, R>(
   input: {
     readonly calls?: ElectronAppCalls;
     readonly environment?: TestEnvironmentInput;
+    readonly legacyPathExists?: boolean;
+    readonly legacyPathProbeError?: PlatformError.PlatformError;
     readonly packageJson?: string;
     readonly pngIconPath?: Option.Option<string>;
   } = {},
@@ -128,8 +131,13 @@ const withIdentity = <A, E, R>(
             exists: (path) =>
               input.legacyPathProbeError
                 ? Effect.fail(input.legacyPathProbeError)
-                : Effect.succeed(
-                    input.legacyPathExists === true && /T2 Code \((Alpha|Dev)\)/.test(path),
+                : // Upstream's profile names are the migration source, and the
+                  // dev profile only counts for a development run.
+                  Effect.succeed(
+                    input.legacyPathExists === true &&
+                      (path.includes("t3code-v2") ||
+                        (path.includes("t3code-dev") &&
+                          input.environment?.env?.VITE_DEV_SERVER_URL !== undefined)),
                   ),
             readFileString: () =>
               Effect.succeed(input.packageJson ?? '{"t2codeCommitHash":"abcdef1234567890"}'),
@@ -150,8 +158,9 @@ describe("DesktopAppIdentity", () => {
         const identity = yield* DesktopAppIdentity.DesktopAppIdentity;
         const userDataPath = yield* identity.resolveUserDataPath;
 
-        assert.equal(userDataPath, "/Users/alice/Library/Application Support/t3code-v2");
+        assert.equal(userDataPath, "/Users/alice/Library/Application Support/t2code");
       }),
+      { legacyPathExists: true },
     ),
   );
 
@@ -161,7 +170,7 @@ describe("DesktopAppIdentity", () => {
         const identity = yield* DesktopAppIdentity.DesktopAppIdentity;
         assert.equal(
           yield* identity.resolveUserDataPath,
-          "/Users/alice/Library/Application Support/T2 Code (Dev)",
+          "/Users/alice/Library/Application Support/t3code-dev",
         );
       }),
       {
@@ -172,7 +181,7 @@ describe("DesktopAppIdentity", () => {
   );
 
   it.effect("preserves failures while inspecting the legacy userData path", () => {
-    const legacyPath = "/Users/alice/Library/Application Support/T2 Code (Dev)";
+    const legacyPath = "/Users/alice/Library/Application Support/t3code-dev";
     const cause = PlatformError.systemError({
       _tag: "PermissionDenied",
       module: "FileSystem",

@@ -98,8 +98,8 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           yield* encodeUnknownJson({
             version: 1,
             pid,
-            port: 3773,
-            origin: "http://127.0.0.1:3773",
+            port: 3772,
+            origin: "http://127.0.0.1:3772",
             startedAt: "2026-10-01T00:00:00.000Z",
           }),
         );

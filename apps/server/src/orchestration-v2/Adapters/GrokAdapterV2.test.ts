@@ -291,7 +291,7 @@ describe("Grok permission prompts", () => {
   } as unknown as GrokAdapterV2Options).permissionDisposition;
 
   // grok_auto_blocked_command replays Auto end to end. When an explicit policy
-  // launches Grok asking instead, T3's policy still answers its prompts.
+  // launches Grok asking instead, T2's policy still answers its prompts.
   it("leaves Auto prompts to the user unless an explicit policy launched Grok asking", () => {
     assert.equal(
       disposition?.(runtimePolicy({ runtimeMode: "auto" }), permissionRequest("read")),
