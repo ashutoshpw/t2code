@@ -39,9 +39,11 @@ export const resolveUserDataPath = Effect.fn("desktop.userData.resolveUserDataPa
   }) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
+    // Current profiles carry the T2 identity; the legacy names are where an
+    // upstream install left its safeStorage, so that data still migrates.
     const names = input.isDevelopment
-      ? { current: "t3code-dev", legacy: "T3 Code (Dev)" }
-      : { current: "t3code-v2", legacy: "T3 Code (Alpha)" };
+      ? { current: "t2code-dev", legacy: "t3code-dev" }
+      : { current: "t2code", legacy: "t3code-v2" };
     const destinationPath = path.join(input.appDataDirectory, names.current);
     const legacyPath = path.join(input.appDataDirectory, names.legacy);
     const inspect = (resourcePath: string) =>
