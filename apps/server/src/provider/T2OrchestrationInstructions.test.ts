@@ -34,7 +34,7 @@ describe("T2 orchestration provider instructions", () => {
       hasT2Mcp: true,
     });
 
-    assert.include(injected, "<t3_code_orchestration_instructions>");
+    assert.include(injected, "<t2_code_orchestration_instructions>");
     assert.include(injected, `<user_request>\n${prompt}\n</user_request>`);
     assert.equal(
       t2OrchestrationPromptForFirstRun({ prompt, runOrdinal: 2, hasT2Mcp: true }),

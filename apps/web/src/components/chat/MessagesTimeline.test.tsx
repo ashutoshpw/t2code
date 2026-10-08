@@ -2294,7 +2294,7 @@ describe("MessagesTimeline", () => {
     activityTestState.expanded = true;
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const item = {
-      id: "tool-t3-thread-read",
+      id: "tool-t2-thread-read",
       threadId: "thread-source",
       runId: null,
       nodeId: null,

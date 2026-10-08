@@ -874,7 +874,7 @@ describe("AcpAdapterV2", () => {
 
       const command = yield* runTurn(0, defaultPolicy, "/compact");
       assert.isTrue(command.prompt.startsWith("/compact"));
-      assert.notInclude(command.prompt, "<t3_code_instructions>");
+      assert.notInclude(command.prompt, "<t2_code_instructions>");
       const firstDefault = yield* runTurn(1, defaultPolicy, "First default request.");
       assert.include(firstDefault.prompt, "T2 Code interaction mode: Default");
       assert.include(firstDefault.prompt, "T2 Code collaborative browser");

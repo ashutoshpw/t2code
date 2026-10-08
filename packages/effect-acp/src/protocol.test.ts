@@ -626,7 +626,7 @@ it.layer(NodeServices.layer)("effect-acp protocol", (it) => {
         );
       }
 
-      assert.deepEqual(yield* Queue.takeAll(contexts), ["$t3:jsonrpc:number:1", "1"]);
+      assert.deepEqual(yield* Queue.takeAll(contexts), ["$t2:jsonrpc:number:1", "1"]);
     }),
   );
 

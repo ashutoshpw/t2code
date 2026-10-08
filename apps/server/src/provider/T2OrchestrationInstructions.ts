@@ -11,7 +11,7 @@ The \`t2-code\` MCP server provides app-owned orchestration. Treat these concept
 - For every T2 delegated review round, call \`delegate_task\` again. Include the original brief, prior findings, responses, and unresolved objections in each new task prompt. Track each round by its own \`taskId\`. Use a distinct \`clientRequestId\` per round, stable across retries of that round. Do not use \`t2_thread_send\` on \`childThreadId\` to continue a delegated review.
 - \`schedule_task\` creates persistent recurring work in the app scheduler. Pass \`schedule\` as a structured object, never as JSON text: \`{"type":"interval","everyMs":3600000}\` for an interval, or \`{"type":"fixed_time","timeOfDay":"09:00","weekdays":[1,2,3,4,5]}\` for a wall-clock schedule, or \`{"type":"webhook"}\` to run on each request to the returned \`webhookUrl\` (the run sees the request only through \`{{body.path}}\`-style placeholders in the prompt). By default runs return to the current thread, which suits orchestrating: each trigger arrives here and you delegate or dedupe; set \`bindToCurrentThread=false\` only when the user wants a fresh thread for every run. After scheduling a timer, report the returned cadence and next run time; for a webhook, report its \`webhookUrl\`, or say T2 Connect remote access is needed if it is missing.
 - When you need a secret from the user (a token, API key, or webhook signing secret), call \`request_secret\` so they enter it privately, then pass the returned \`secretRef\` to the tool that needs it, e.g. \`signature.secretRef\` on a webhook task for a sender that signs requests such as GitHub. A \`secretRef\` works once. Never ask for a secret in chat, never invent one, and never repeat one.
-- To mention another thread to the user, link it as \`[title](t3-thread://v1/<threadId>)\` with its exact \`threadId\`, not URL-encoded. T2 Code opens the thread in the app and shows its current title.
+- To mention another thread to the user, link it as \`[title](t2-thread://v1/<threadId>)\` with its exact \`threadId\`, not URL-encoded. T2 Code opens the thread in the app and shows its current title.
 
 ### Choose the workspace before starting a new thread
 
@@ -85,7 +85,7 @@ export function t2AcpPromptWithInstructions(input: {
       ? [T2_CODE_BROWSER_TOOL_INSTRUCTIONS.trim(), T2_CODE_ORCHESTRATION_INSTRUCTIONS.trim()]
       : []),
   ];
-  return `<t3_code_instructions>\n${instructions.join("\n\n")}\n</t3_code_instructions>\n\n<user_request>\n${input.prompt}\n</user_request>`;
+  return `<t2_code_instructions>\n${instructions.join("\n\n")}\n</t2_code_instructions>\n\n<user_request>\n${input.prompt}\n</user_request>`;
 }
 
 /**
@@ -94,7 +94,7 @@ export function t2AcpPromptWithInstructions(input: {
  * mistaken for text authored by the user.
  */
 function prependT3OrchestrationInstructions(prompt: string): string {
-  return `<t3_code_orchestration_instructions>${T2_CODE_ORCHESTRATION_INSTRUCTIONS.trim()}</t3_code_orchestration_instructions>\n\n<user_request>\n${prompt}\n</user_request>`;
+  return `<t2_code_orchestration_instructions>${T2_CODE_ORCHESTRATION_INSTRUCTIONS.trim()}</t2_code_orchestration_instructions>\n\n<user_request>\n${prompt}\n</user_request>`;
 }
 
 export function t2OrchestrationPromptForFirstRun(input: {
