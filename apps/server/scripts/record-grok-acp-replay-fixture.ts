@@ -207,7 +207,7 @@ function wireToEntries(wire: ReadonlyArray<WireMessage>): {
   return { entries, droppedFrames };
 }
 
-const T2_INSTRUCTIONS_BODY = /<t3_code_instructions>\n[\s\S]*?\n<\/t3_code_instructions>/u;
+const T2_INSTRUCTIONS_BODY = /<t2_code_instructions>\n[\s\S]*?\n<\/t2_code_instructions>/u;
 
 function normalizeOutboundFrame(frame: Record<string, unknown>, runtimeInstructions: string) {
   const params = isRecord(frame.params) ? frame.params : undefined;
@@ -244,7 +244,7 @@ function normalizeOutboundFrame(frame: Record<string, unknown>, runtimeInstructi
                   ...part,
                   text: part.text.replace(
                     T2_INSTRUCTIONS_BODY,
-                    "<t3_code_instructions>\n<any>\n</t3_code_instructions>",
+                    "<t2_code_instructions>\n<any>\n</t2_code_instructions>",
                   ),
                 }
               : part,
