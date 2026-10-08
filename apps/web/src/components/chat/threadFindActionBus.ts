@@ -1,12 +1,12 @@
-import type { OrchestrationThreadSearchMatch } from "@t3tools/contracts";
+import type { OrchestrationThreadSearchMatch } from "@t2code/contracts";
 import {
   findSearchTokenRanges,
   messagePhrase,
   messageSearchTokens,
-} from "@t3tools/shared/paletteSearch";
+} from "@t2code/shared/paletteSearch";
 import type { ThreadFindStart } from "./threadFind";
 
-const THREAD_FIND_OPEN_EVENT = "t3:thread-find-open";
+const THREAD_FIND_OPEN_EVENT = "t2:thread-find-open";
 
 export function requestThreadFindOpen(): void {
   window.dispatchEvent(new Event(THREAD_FIND_OPEN_EVENT));
