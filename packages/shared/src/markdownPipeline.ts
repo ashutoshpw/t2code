@@ -21,7 +21,7 @@ import {
   isWindowsDrivePathHref,
   normalizeMarkdownLinkDestination,
 } from "./markdownLinks.ts";
-import { THREAD_LINK_PROTOCOL } from "./threadLinks.ts";
+import { LEGACY_THREAD_LINK_PROTOCOL, THREAD_LINK_PROTOCOL } from "./threadLinks.ts";
 
 export { remarkEnableOrderedListNumbers } from "./markdownOrderedListNumbers.ts";
 
@@ -227,6 +227,7 @@ const CHAT_MARKDOWN_SANITIZE_SCHEMA = {
       THREAD_LINK_PROTOCOL,
       // Scheme only: the renderer's URL transform checks the rest of the link shape.
       ...LOCAL_FILE_LINK_SCHEMES,
+      LEGACY_THREAD_LINK_PROTOCOL,
     ],
     src: IMAGE_SRC_PROTOCOLS,
     dataDarkSrc: IMAGE_SRC_PROTOCOLS,
