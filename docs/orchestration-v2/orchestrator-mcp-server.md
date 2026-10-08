@@ -402,17 +402,17 @@ Actor and ingress are separate so agent-authored user-role messages remain
 distinguishable from human-authored messages.
 
 Agents mention another thread by the `link` its result carries,
-`<t3-thread://v2/<environmentId>/<threadId>>`, so they never format an id or
+`<t2-thread://v2/<environmentId>/<threadId>>`, so they never format an id or
 write a title, which goes stale when the user renames the thread. The
 environment that owns the thread builds the link, so forwarded results and tasks
 delegated to a linked environment name that environment. Clients open only that
 environment's thread and show its current title; a link to a thread they do not
-know renders as a label that opens nothing. Older `t3-thread://v1/<threadId>`
+know renders as a label that opens nothing. Older `t2-thread://v1/<threadId>`
 links name no environment: clients resolve them in the message's environment,
 then by a unique match in another enabled environment. An outside OAuth client,
-one that is not a linked environment, cannot render `t3-thread://` links, so it
-gets the link Copy thread copies, `https://app.t3.codes/threads/<environmentId>/<threadId>`
-on the server's `T3CODE_HOSTED_APP_URL`, for threads in this environment. The
+one that is not a linked environment, cannot render `t2-thread://` links, so it
+gets the link Copy thread copies, `https://app.t2.codes/threads/<environmentId>/<threadId>`
+on the server's `T2CODE_HOSTED_APP_URL`, for threads in this environment. The
 hosted app offers the desktop app, the mobile app, or itself.
 
 List and read results report `snoozed` and `snoozedUntil`, and
