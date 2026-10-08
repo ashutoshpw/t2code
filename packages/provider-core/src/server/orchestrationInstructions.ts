@@ -77,11 +77,11 @@ export function t3AcpPromptWithInstructions(input: {
         ]
       : []),
   ];
-  return `<t3_code_instructions>\n${instructions.join("\n\n")}\n</t3_code_instructions>\n\n<user_request>\n${input.prompt}\n</user_request>`;
+  return `<t2_code_instructions>\n${instructions.join("\n\n")}\n</t2_code_instructions>\n\n<user_request>\n${input.prompt}\n</user_request>`;
 }
 
 function prependT3OrchestrationInstructions(prompt: string): string {
-  return `<t3_code_orchestration_instructions>${T2_CODE_ORCHESTRATION_INSTRUCTIONS.trim()}</t3_code_orchestration_instructions>\n\n<user_request>\n${prompt}\n</user_request>`;
+  return `<t2_code_orchestration_instructions>${T2_CODE_ORCHESTRATION_INSTRUCTIONS.trim()}</t2_code_orchestration_instructions>\n\n<user_request>\n${prompt}\n</user_request>`;
 }
 
 export function t3OrchestrationPromptForFirstRun(input: {
