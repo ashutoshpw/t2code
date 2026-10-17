@@ -4,10 +4,10 @@ import {
   type ResolvedKeybindingsConfig,
   type ScopedThreadRef,
   type ThreadId,
-} from "@t3tools/contracts";
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import { projectScriptCwd, projectScriptRuntimeEnv } from "@t3tools/shared/projectScripts";
-import { resolveTerminalSessionLabel } from "@t3tools/shared/terminalLabels";
+} from "@t2code/contracts";
+import { scopeProjectRef } from "@t2code/client-runtime/environment";
+import { projectScriptCwd, projectScriptRuntimeEnv } from "@t2code/shared/projectScripts";
+import { resolveTerminalSessionLabel } from "@t2code/shared/terminalLabels";
 import { memo, useEffect, useState } from "react";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useStableCallback } from "../hooks/useStableCallback";

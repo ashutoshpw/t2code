@@ -293,7 +293,7 @@ const openReaders = async (page: Page, cdp: CDPSession) => {
         ids(frameTree).map(async (frameId) => {
           const world = await session.send("Page.createIsolatedWorld", {
             frameId,
-            worldName: "t3-preview",
+            worldName: "t2-preview",
           });
           return world.executionContextId;
         }),

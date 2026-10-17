@@ -1,6 +1,14 @@
-// Client-supplied worktrees count only under managed folders or when Git lists them for the project.
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+/**
+ * KnownWorkspaces - the folders a client-named cwd may act in: a T2-managed
+ * worktree folder, a registered project, or a thread's worktree. Clients send
+ * the thread's worktree, else the project root. A client also sets a thread's
+ * worktree path, so one counts only under a managed folder or when git lists
+ * it as a worktree of the thread's project.
+ *
+ * @module KnownWorkspaces
+ */
+import * as HostProcess from "@t2code/shared/HostProcess";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -44,7 +52,7 @@ export class KnownWorkspaces extends Context.Service<
     /** Fails unless `cwd` exists and resolves inside a known workspace. */
     readonly assertContains: (cwd: string) => Effect.Effect<void, UnknownWorkspaceError>;
   }
->()("t3/workspace/KnownWorkspaces") {}
+>()("@t2code/cli/workspace/KnownWorkspaces") {}
 
 /** @public */
 export const make = Effect.gen(function* () {

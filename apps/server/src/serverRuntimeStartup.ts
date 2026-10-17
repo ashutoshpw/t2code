@@ -366,9 +366,14 @@ const resolveStartupBrowserTarget = Effect.gen(function* () {
     : yield* serverAuth.issueStartupPairingUrl(baseTarget);
 });
 
-/** Prints the one-time admin pairing URL to stdout only; logger records reach trace files and collectors. */
+/**
+ * Prints the startup pairing URL to stdout, where `t2` users and the dev runner
+ * read it. The URL carries a one-time admin token, so it skips the logger: log
+ * records also land in the trace file and any configured OTLP collector.
+ */
 export const announceStartupPairingUrl = (pairingUrl: string) =>
-  Effect.logInfo("Authentication required. Open T3 Code using the pairing URL.").pipe(
+  Effect.logInfo("Authentication required. Open T2 Code using the pairing URL.").pipe(
+    // Indented to match the annotation line the pretty logger printed before.
     Effect.andThen(Console.log(`  pairingUrl: ${pairingUrl}`)),
   );
 

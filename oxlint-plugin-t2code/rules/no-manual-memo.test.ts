@@ -2,11 +2,11 @@ import { describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const rule = createOxlintRuleHarness("t3code/no-manual-memo", {
+const rule = createOxlintRuleHarness("t2code/no-manual-memo", {
   filename: "fixture.tsx",
 });
 
-describe("t3code/no-manual-memo", () => {
+describe("t2code/no-manual-memo", () => {
   rule.valid("allows plain derived values", `const total = items.length * 2;`);
 
   rule.valid("allows useStableCallback", `const onClick = useStableCallback(() => save());`);
