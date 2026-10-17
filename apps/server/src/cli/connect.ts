@@ -187,7 +187,7 @@ function formatCloudStatus(status: CloudCliStatus, options?: { readonly json?: b
   }
 
   const provisioned = status.revoked
-    ? "removed from T3 Connect"
+    ? "removed from T2 Connect"
     : status.linked
       ? "provisioned"
       : status.desired && status.authenticated
@@ -609,7 +609,7 @@ const linkEnvironmentForConnect = Effect.fn("cloud.cli.link_environment")(functi
   const identity = yield* authorizeCli(options);
   yield* CliState.setCliDesiredCloudLink(true, publishOnly ? "publish_only" : "managed");
   if (yield* CliState.dropRevokedCloudLink) {
-    yield* Console.log("Replacing the link T3 Connect revoked.");
+    yield* Console.log("Replacing the link T2 Connect revoked.");
   }
   if (publishOnly) {
     const secrets = yield* ServerSecretStore.ServerSecretStore;

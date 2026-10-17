@@ -28,10 +28,10 @@ it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
       yield* fs.symlink(exe, ours);
       yield* fs.symlink(otherExe, theirs);
 
-      assert.equal(yield* findOwnedLauncher({ launchedAs: ours, versionsDir }), ours);
-      assert.isUndefined(yield* findOwnedLauncher({ launchedAs: theirs, versionsDir }));
-      assert.isUndefined(yield* findOwnedLauncher({ launchedAs: copy, versionsDir }));
-      assert.isUndefined(yield* findOwnedLauncher({ launchedAs: undefined, versionsDir }));
+      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: ours, versionsDir }), [ours]);
+      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: theirs, versionsDir }), []);
+      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: copy, versionsDir }), []);
+      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: undefined, versionsDir }), []);
     }).pipe(Effect.scoped, Effect.provideService(HostProcess.Platform, "linux")),
   );
 });

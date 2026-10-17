@@ -517,6 +517,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
       ),
     );
 
+<<<<<<< HEAD
     it.effect("issues startup pairing URLs that bootstrap administrative sessions", () =>
       Effect.gen(function* () {
         const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
@@ -541,6 +542,29 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
         expect(verified.subject).toBe("administrative-bootstrap");
       }).pipe(Effect.provide(layerEnvironmentAuth())),
     );
+=======
+  it.effect("accepts cookie sessions on socket upgrades only from the app's own origins", () =>
+    Effect.gen(function* () {
+      const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
+      const sessions = yield* SessionStore.SessionStore;
+      const pairing = yield* serverAuth.issuePairingCredential();
+      const exchanged = yield* serverAuth.createBrowserSession(pairing.credential, requestMetadata);
+      const upgrade = (headers: Record<string, string>) =>
+        serverAuth.authenticateWebSocketUpgrade({
+          url: "/ws",
+          cookies: { [sessions.cookieName]: exchanged.sessionToken },
+          headers: { host: "192.168.1.50:3772", ...headers },
+        } as never);
+
+      yield* upgrade({ origin: "http://192.168.1.50:3772" });
+      yield* upgrade({
+        origin: "https://box.tail1234.ts.net",
+        "x-forwarded-host": "box.tail1234.ts.net",
+      });
+      yield* upgrade({ origin: "t2code://app" });
+      yield* upgrade({ origin: "http://localhost:5733" });
+      yield* upgrade({});
+>>>>>>> 768cd64783 (rebrand(server): finish the T2 sweep and reconcile the rebase seams)
 
     it.effect(
       "lists pairing links and revokes other sessions while keeping the administrative session",
@@ -659,6 +683,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
       ),
     );
 
+<<<<<<< HEAD
     it.effect("accepts cookie sessions on HTTP requests only from the app's own origins", () =>
       Effect.gen(function* () {
         const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
@@ -667,6 +692,77 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
         const exchanged = yield* serverAuth.createBrowserSession(
           pairing.credential,
           requestMetadata,
+=======
+  it.effect("accepts cookie sessions on HTTP requests only from the app's own origins", () =>
+    Effect.gen(function* () {
+      const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
+      const sessions = yield* SessionStore.SessionStore;
+      const pairing = yield* serverAuth.issuePairingCredential();
+      const exchanged = yield* serverAuth.createBrowserSession(pairing.credential, requestMetadata);
+      const post = (headers: Record<string, string>) =>
+        serverAuth.authenticateHttpRequest({
+          cookies: { [sessions.cookieName]: exchanged.sessionToken },
+          headers: { host: "localhost:13773", ...headers },
+        } as never);
+
+      yield* post({ origin: "http://192.168.1.50:5733", "sec-fetch-site": "same-origin" });
+      yield* post({ origin: "http://localhost:13773" });
+
+      const otherPort = yield* Effect.flip(
+        post({ origin: "http://localhost:3000", "sec-fetch-site": "same-site" }),
+      );
+      expect(otherPort._tag).toBe("ServerAuthInvalidCredentialError");
+      const state = yield* serverAuth.getSessionState({
+        cookies: { [sessions.cookieName]: exchanged.sessionToken },
+        headers: { host: "localhost:13773", origin: "http://localhost:3000" },
+      } as never);
+      expect(state.authenticated).toBe(false);
+    }).pipe(Effect.provide(layerEnvironmentAuth({ mode: "web" }))),
+  );
+
+  it.effect("keeps bearer socket upgrades independent of the page origin", () =>
+    Effect.gen(function* () {
+      const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
+      const bearer = yield* serverAuth.issueSession();
+      const verified = yield* serverAuth.authenticateWebSocketUpgrade({
+        url: "/ws",
+        cookies: {},
+        headers: {
+          host: "192.168.1.50:3772",
+          origin: "http://192.168.1.50:8080",
+          authorization: `Bearer ${bearer.token}`,
+        },
+      } as never);
+      expect(verified.sessionId).toBe(bearer.sessionId);
+    }).pipe(Effect.provide(layerEnvironmentAuth({ mode: "web", host: "192.168.1.50" }))),
+  );
+
+  it.effect("binds a DPoP session's RPC socket ticket to its proof key", () =>
+    Effect.gen(function* () {
+      const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
+      const sessions = yield* SessionStore.SessionStore;
+      const key = makeDpopKey();
+      const other = makeDpopKey();
+      const exchanged = yield* serverAuth.exchangeBootstrapCredentialForAccessToken(
+        "desktop-bootstrap-token",
+        ["orchestration:read"],
+        requestMetadata,
+        { proofKeyThumbprint: key.thumbprint },
+      );
+      const session = yield* sessions.verify(exchanged.access_token);
+      const host = "192.168.1.50:3773";
+      const socketUrl = `http://${host}/ws`;
+      const iat = Math.floor((yield* DateTime.now).epochMilliseconds / 1_000);
+      const upgrade = (ticket: string, use: "rpc" | "media", proof?: string) =>
+        serverAuth.authenticateWebSocketUpgrade(
+          {
+            method: "GET",
+            url: `/ws?orchestrationProtocol=2&wsTicket=${ticket}${proof ? `&dpop=${proof}` : ""}`,
+            cookies: {},
+            headers: { host },
+          } as never,
+          use,
+>>>>>>> 768cd64783 (rebrand(server): finish the T2 sweep and reconcile the rebase seams)
         );
         const post = (headers: Record<string, string>) =>
           serverAuth.authenticateHttpRequest({

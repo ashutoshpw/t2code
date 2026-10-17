@@ -140,7 +140,7 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         const home = path.join(root, "home");
         const env = {
           PATH: (yield* HostProcess.Environment).PATH,
-          T3CODE_HOME: home,
+          T2CODE_HOME: home,
           T2CODE_TEST_CALLS: path.join(root, "calls"),
           T2CODE_RELEASE_BASE_URL: release.baseUrl,
         };
@@ -212,7 +212,7 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         const raceHome = path.join(root, "race-home");
         const launch = run(process.execPath, [launcher, "--version"], {
           cwd: root,
-          env: { ...env, T3CODE_HOME: raceHome },
+          env: { ...env, T2CODE_HOME: raceHome },
         });
         const [one, two] = yield* Effect.all([launch, launch], { concurrency: "unbounded" });
         assert.equal(one.exitCode, 0, one.stderr);
@@ -332,7 +332,7 @@ fs.readFileSync = (file, ...rest) => {
         release.corruptChecksum();
         const corrupt = yield* run(process.execPath, [launcher, "--version"], {
           cwd: root,
-          env: { ...env, T3CODE_HOME: path.join(root, "other-home") },
+          env: { ...env, T2CODE_HOME: path.join(root, "other-home") },
         });
         assert.equal(corrupt.exitCode, 1);
         assert.include(corrupt.stderr, "checksum mismatch");
