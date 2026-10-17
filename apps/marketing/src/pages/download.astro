@@ -5,7 +5,7 @@ import iconStable from "../assets/icon.webp";
 import iconNightly from "../assets/icon-nightly.webp";
 import Layout from "../layouts/Layout.astro";
 import { RELEASES_URL } from "../lib/releases";
-import { ANDROID_PLAY_STORE_URL, IOS_APP_STORE_URL } from "../lib/site";
+import { ANDROID_PLAY_STORE_URL } from "../lib/site";
 
 const imageProps = {
   alt: "",
@@ -125,12 +125,6 @@ const imageProps = {
           <h2 class="platform-name">Mobile</h2>
         </div>
         <div class="download-cards">
-          <a class="download-card" href={IOS_APP_STORE_URL} target="_blank" rel="noopener noreferrer">
-            <span class="card-text">
-              <span class="card-arch">iPhone &amp; iPad</span>
-              <span class="card-format">App Store</span>
-            </span>
-          </a>
           <a class="download-card" href={ANDROID_PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">
             <span class="card-text">
               <span class="card-arch">Android</span>
