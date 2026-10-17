@@ -43,7 +43,8 @@ const injectShortReads = Effect.fn("injectShortReads")(function* (target: string
   yield* Effect.addFinalizer(() => Effect.sync(() => open.mockImplementation(native.open)));
 });
 
-const UNKNOWN_WORKSPACE_PREFIX = "t3code-unknown-workspace-";
+// Temp folders count as known workspaces unless named as unknown.
+const UNKNOWN_WORKSPACE_PREFIX = "t2code-unknown-workspace-";
 const layerKnownWorkspacesTest = Layer.mock(KnownWorkspaces.KnownWorkspaces)({
   assertContains: (cwd) =>
     cwd.includes(UNKNOWN_WORKSPACE_PREFIX)
