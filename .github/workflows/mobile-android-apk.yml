@@ -15,12 +15,12 @@ concurrency:
 jobs:
   mirror:
     name: Mirror beta APK
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
     env:
-      PACKAGE_NAME: com.t3tools.t3code
+      PACKAGE_NAME: codes.t2.mobile
     steps:
       - id: credentials
         name: Check for Play credentials
