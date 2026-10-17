@@ -238,14 +238,14 @@ describe("learned routes", () => {
       entry,
       activeRoute: PUBLIC,
       reported: [
-        { kind: "lan", httpBaseUrl: "http://192.168.1.10:3773/" },
-        { kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3773/" },
+        { kind: "lan", httpBaseUrl: "http://192.168.1.10:3772/" },
+        { kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3772/" },
         { kind: "tailnet", httpBaseUrl: "https://desk.tail1234.ts.net/" },
       ],
       allowInsecure: true,
     });
     expect(ids(routes)).toEqual([
-      `learned:${ENVIRONMENT_ID}:http://100.101.102.103:3773@public`,
+      `learned:${ENVIRONMENT_ID}:http://100.101.102.103:3772@public`,
       `learned:${ENVIRONMENT_ID}:https://desk.tail1234.ts.net@public`,
       "public",
       "relay",
@@ -253,7 +253,7 @@ describe("learned routes", () => {
   });
 
   it("drops a stale plain HTTP route borrowing an HTTPS-paired token while another route is active", () => {
-    const lanOrigin = "http://10.0.0.42:3773";
+    const lanOrigin = "http://10.0.0.42:3772";
     const stale = learned(`learned:${ENVIRONMENT_ID}:${lanOrigin}@public`, `${lanOrigin}/`);
     const entry = entryWithRoutes(relayOnly, [stale, PUBLIC, RELAY]);
     expect(sendsTokenInClear([stale, PUBLIC, RELAY], stale)).toBe(true);
@@ -264,13 +264,13 @@ describe("learned routes", () => {
       reported: [{ kind: "lan", httpBaseUrl: `${lanOrigin}/` }],
       allowInsecure: true,
     });
-    // The stale route is gone; the address is learned again with T3 Connect's credential.
+    // The stale route is gone; the address is learned again with T2 Connect's credential.
     expect(ids(routes)).toEqual([`learned:${ENVIRONMENT_ID}:${lanOrigin}`, "public", "relay"]);
-    expect(profileOf(routes![0]!)).toMatchObject({ authorization: "t3-connect" });
+    expect(profileOf(routes![0]!)).toMatchObject({ authorization: "t2-connect" });
   });
 
   it("keeps plain HTTP routes that don't borrow the active HTTPS-paired token", () => {
-    const lanOrigin = "http://10.0.0.42:3773";
+    const lanOrigin = "http://10.0.0.42:3772";
     const overLan = learned(`learned:${ENVIRONMENT_ID}:${lanOrigin}@lan`, `${lanOrigin}/`);
     const routes = mergeLearnedRoutes({
       entry: entryWithRoutes(relayOnly, [overLan, LAN, PUBLIC, RELAY]),
@@ -286,12 +286,12 @@ describe("learned routes", () => {
     const routes = mergeLearnedRoutes({
       entry,
       activeRoute: LAN,
-      reported: [{ kind: "lan", httpBaseUrl: "http://10.0.0.42:3773/" }],
+      reported: [{ kind: "lan", httpBaseUrl: "http://10.0.0.42:3772/" }],
       allowInsecure: true,
     });
     expect(ids(routes)).toEqual([
       "lan",
-      `learned:${ENVIRONMENT_ID}:http://10.0.0.42:3773@lan`,
+      `learned:${ENVIRONMENT_ID}:http://10.0.0.42:3772@lan`,
       "relay",
     ]);
   });

@@ -12,6 +12,7 @@ import * as Cause from "effect/Cause";
 import { ChevronsDownUp, ChevronsUpDown } from "lucide";
 import { useEffect, useRef, useState } from "react";
 
+import { Upload } from "lucide-react";
 import { makeWorkspaceFileDropHandlers } from "~/components/chat/workspaceFileDrop";
 import { Button } from "~/components/ui/button";
 import { InputGroup, InputGroupInput } from "~/components/ui/input-group";

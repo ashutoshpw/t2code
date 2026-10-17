@@ -97,7 +97,7 @@ function makeSession(frame?: ReturnType<typeof makeFrame>) {
       // Snapshots read password fields from their own isolated world in each frame.
       if (method === "Page.createIsolatedWorld") {
         return {
-          executionContextId: (input as { worldName?: string }).worldName === "t3-preview" ? 1 : 7,
+          executionContextId: (input as { worldName?: string }).worldName === "t2-preview" ? 1 : 7,
         };
       }
       if (method === "Runtime.evaluate" && (input as { contextId?: number }).contextId === 1) {
