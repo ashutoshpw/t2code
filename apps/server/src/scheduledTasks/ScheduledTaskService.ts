@@ -306,6 +306,9 @@ function iso(value: DateTime.DateTime): string {
   return DateTime.formatIso(DateTime.toUtc(value));
 }
 
+/** Absorbs client/server clock skew and request latency for a just-picked time. */
+const ONCE_PAST_TOLERANCE_MS = 30_000;
+
 const localNow = DateTime.withCurrentZoneLocal(DateTime.nowInCurrentZone);
 
 function nextRunAt(
