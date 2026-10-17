@@ -805,7 +805,7 @@ export const OrchestratorMcpEnvironmentLinkResult = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("linked"),
     environmentId: EnvironmentId.annotate({
-      description: "Pass it as environmentId to act there; t3_environment_links lists it.",
+      description: "Pass it as environmentId to act there; t2_environment_links lists it.",
     }),
     label: Schema.String,
     access: AuthMcpClientAccess.annotate({ description: "The access the user chose." }),
@@ -827,7 +827,7 @@ export type OrchestratorMcpEnvironmentLinkResult = typeof OrchestratorMcpEnviron
 
 export const OrchestratorMcpEnvironmentUnlinkInput = Schema.Struct({
   environmentId: EnvironmentId.annotate({
-    description: "The linked environment to forget, from t3_environment_links.",
+    description: "The linked environment to forget, from t2_environment_links.",
   }),
 });
 export type OrchestratorMcpEnvironmentUnlinkInput =
