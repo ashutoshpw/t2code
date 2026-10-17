@@ -1,5 +1,5 @@
 import { useAndroidControlSizing } from "../../components/ui/useAndroidControlSizing";
-import { resolveScratchProjectScopeKey } from "@t3tools/client-runtime/state/project-grouping";
+import { resolveScratchProjectScopeKey } from "@t2code/client-runtime/state/project-grouping";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import { computeThreadMoveAvailability } from "./threadOrder";
 import type {

@@ -1,5 +1,5 @@
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
-import type { PullRequestActor } from "@t3tools/contracts";
+import type { PullRequestActor } from "@t2code/contracts";
 import { Image } from "expo-image";
 import { View } from "react-native";
 

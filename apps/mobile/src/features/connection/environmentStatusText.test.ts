@@ -1,7 +1,7 @@
-import { EnvironmentId, ORCHESTRATION_PROTOCOL_VERSION } from "@t3tools/contracts";
+import { EnvironmentId, ORCHESTRATION_PROTOCOL_VERSION } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { orchestrationProtocolCompatibilityError } from "@t3tools/client-runtime/connection";
+import { orchestrationProtocolCompatibilityError } from "@t2code/client-runtime/connection";
 
 import { environmentStatusText } from "./environmentStatusText";
 
@@ -21,7 +21,7 @@ function compatibilityMessage(serverProtocolVersion: number): string {
 describe("environment status text", () => {
   it.each([
     ["a newer server", ORCHESTRATION_PROTOCOL_VERSION + 1, "Update your app"],
-    ["an older server", ORCHESTRATION_PROTOCOL_VERSION - 1, "Update T3 Code on Studio Mac"],
+    ["an older server", ORCHESTRATION_PROTOCOL_VERSION - 1, "Update T2 Code on Studio Mac"],
   ])("tells the user what to update for %s", (_, serverProtocolVersion, guidance) => {
     const text = environmentStatusText({
       phase: "unsupported",

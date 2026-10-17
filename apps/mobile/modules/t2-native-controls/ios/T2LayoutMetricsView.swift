@@ -25,7 +25,7 @@ final class T2LayoutMetricsView: ExpoView {
         self.hasHinge = hasHinge
         self.publishMetrics()
       })
-      registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (view: T3LayoutMetricsView, _: UITraitCollection) in
+      registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (view: T2LayoutMetricsView, _: UITraitCollection) in
         view.publishMetrics()
       }
     }
@@ -63,7 +63,7 @@ final class T2LayoutMetricsView: ExpoView {
   private func publishMetrics() {
     guard let window, bounds.width > 0, bounds.height > 0, let hasHinge else { return }
     if hasHinge {
-      T3WorkspaceOrientationSubscriber.allowHingeOrientations(in: window)
+      T2WorkspaceOrientationSubscriber.allowHingeOrientations(in: window)
     }
     var verticalBarEdge = "none"
     var regions: [[String: Any]] = []

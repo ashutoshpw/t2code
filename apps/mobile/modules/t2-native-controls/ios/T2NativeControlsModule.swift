@@ -242,7 +242,7 @@ public final class T2NativeControlsModule: Module {
   }
 
   private func makeFilePresentation(sourceIdentifier: String, identifier: String,
-                                    promise: Promise) throws -> T3NativeFilePresentation {
+                                    promise: Promise) throws -> T2NativeFilePresentation {
     guard filePresentation == nil, videoPresentation == nil,
       appContext?.utilities?.currentViewController() != nil
     else { throw URLError(.cannotLoadFromNetwork) }

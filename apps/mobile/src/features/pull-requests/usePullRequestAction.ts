@@ -1,11 +1,11 @@
 import * as Dialog from "../../components/ui/Dialog";
 import { useAtomRefresh } from "@effect/atom-react";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import type {
   PullRequestAction,
   PullRequestDetail,
   PullRequestUpdateMethod,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useRef, useState } from "react";
 import { composerPullRequests } from "../../state/pull-requests";
 import { useAtomCommand } from "../../state/use-atom-command";
