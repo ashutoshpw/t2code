@@ -11,7 +11,7 @@ import * as Scheduler from "effect/Scheduler";
 import { vi } from "vite-plus/test";
 
 import * as NodePtyAdapter from "./NodePtyAdapter.ts";
-import * as PtyAdapter from "@t3tools/shared/PtyAdapter";
+import * as PtyAdapter from "@t2code/shared/PtyAdapter";
 
 function makeNativeProcess(pid = 42) {
   const events = new NodeEvents.EventEmitter();

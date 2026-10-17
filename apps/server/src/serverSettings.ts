@@ -397,21 +397,6 @@ function migrateLegacyProviderSettings(
 
   return {
     ...settings,
-    providers: {
-      ...settings.providers,
-      cursor: {
-        ...settings.providers.cursor,
-        enabled: persisted.providers?.cursor?.enabled ?? usedProviders.has("cursor"),
-      },
-      grok: {
-        ...settings.providers.grok,
-        enabled: persisted.providers?.grok?.enabled ?? usedProviders.has("grok"),
-      },
-      opencode: {
-        ...settings.providers.opencode,
-        enabled: persisted.providers?.opencode?.enabled ?? usedProviders.has("opencode"),
-      },
-    },
     providerInstances,
   };
 }
@@ -453,17 +438,6 @@ const ATOMIC_SETTINGS_KEYS: ReadonlySet<string> = new Set([
   "textGenerationModelSelection",
   "pullRequestMergeMethod",
 ]);
-
-// Preserve both enabled states because provider history cannot recover a new opt-in.
-const PERSISTED_SERVER_SETTINGS_DEFAULTS = {
-  ...DEFAULT_SERVER_SETTINGS,
-  providers: {
-    ...DEFAULT_SERVER_SETTINGS.providers,
-    cursor: { ...DEFAULT_SERVER_SETTINGS.providers.cursor, enabled: undefined },
-    grok: { ...DEFAULT_SERVER_SETTINGS.providers.grok, enabled: undefined },
-    opencode: { ...DEFAULT_SERVER_SETTINGS.providers.opencode, enabled: undefined },
-  },
-};
 
 function stripDefaultServerSettings(current: unknown, defaults: unknown): unknown | undefined {
   if (Array.isArray(current) || Array.isArray(defaults)) {

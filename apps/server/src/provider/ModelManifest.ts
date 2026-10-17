@@ -14,13 +14,13 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import { HttpClient, HttpClientResponse } from "effect/http";
 
-import { writeFileStringAtomically } from "@t3tools/shared/atomicWrite";
+import { writeFileStringAtomically } from "@t2code/shared/atomicWrite";
 import { ServerConfig } from "../config.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import { hasValidClaudeManifestAdapters } from "./ClaudeModelManifest.ts";
 import bundledManifestJson from "./model-manifest.json" with { type: "json" };
 import { ProviderCompatibilityPolicy } from "./providerCompatibility.ts";
-import * as ModelCatalog from "@t3tools/provider-core/server/ModelCatalog";
+import * as ModelCatalog from "@t2code/provider-core/server/ModelCatalog";
 
 const MODEL_MANIFEST_URL =
   "https://raw.githubusercontent.com/ashutoshpw/t2code/main/apps/server/src/provider/model-manifest.json";

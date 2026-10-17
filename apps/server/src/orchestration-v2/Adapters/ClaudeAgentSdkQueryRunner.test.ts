@@ -8,7 +8,7 @@ import * as NodePath from "node:path";
 import * as NodeStream from "node:stream";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
-import { ProviderSessionId, ThreadId } from "@t3tools/contracts";
+import { ProviderSessionId, ThreadId } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Deferred from "effect/Deferred";
@@ -19,11 +19,11 @@ import * as Path from "effect/Path";
 import * as TestClock from "effect/testing/TestClock";
 import { vi } from "vite-plus/test";
 
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { AgentScope } from "@t3tools/shared/AgentScope";
-import { ProviderEventLoggers } from "@t3tools/provider-core/server/ProviderEventLoggers";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
-import { signalProcessGroup } from "@t3tools/provider-core/server/processGroup";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { AgentScope } from "@t2code/shared/AgentScope";
+import { ProviderEventLoggers } from "@t2code/provider-core/server/ProviderEventLoggers";
+import { makeProviderFailure } from "@t2code/provider-core/server/failure";
+import { signalProcessGroup } from "@t2code/provider-core/server/processGroup";
 import {
   ClaudeAgentSdkQueryRunner,
   type ClaudeAgentSdkQueryOpenInput,
@@ -128,7 +128,7 @@ const resumedMcpQueryInput = {
     tools: [],
     permissionMode: "default",
     mcpServers: {
-      "t3-code": {
+      "t2-code": {
         type: "http",
         url: "http://localhost:3773/mcp",
         headers: { Authorization: "Bearer test-mcp-credential" },
@@ -151,7 +151,7 @@ it.effect("reopens a stalled MCP registration before delivering the resumed prom
         return new Promise<ClaudeSdk.McpSetServersResult>(() => {});
       });
       const secondRegistration = vi.fn(async () => ({
-        added: ["t3-code"],
+        added: ["t2-code"],
         removed: [],
         errors: {},
       }));
@@ -238,7 +238,7 @@ it.effect.each([true, false])("only retries after confirmed process exit: %s", (
             registrationStarted.resolve();
             return first
               ? new Promise<ClaudeSdk.McpSetServersResult>(() => {})
-              : Promise.resolve({ added: ["t3-code"], removed: [], errors: {} });
+              : Promise.resolve({ added: ["t2-code"], removed: [], errors: {} });
           },
           close: vi.fn(),
           [Symbol.asyncDispose]: disposed,
@@ -439,7 +439,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")("Claude CLI pro
               Layer.succeed(AgentScope, {
                 ...AgentScope.defaultValue(),
                 wrap: ({ command, args }) =>
-                  Effect.succeed({ command, args, unit: "t3code-claude-test.scope" }),
+                  Effect.succeed({ command, args, unit: "t2code-claude-test.scope" }),
                 stop: (unit) => Deferred.succeed(stopped, unit).pipe(Effect.asVoid),
               }),
             ),
@@ -449,7 +449,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")("Claude CLI pro
       yield* Effect.promise(() => leftoverStarted);
       yield* session.close;
       yield* Effect.promise(() => leftoverStopped);
-      assert.strictEqual(yield* Deferred.await(stopped), "t3code-claude-test.scope");
+      assert.strictEqual(yield* Deferred.await(stopped), "t2code-claude-test.scope");
     }),
   );
 

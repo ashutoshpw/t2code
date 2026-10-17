@@ -18,7 +18,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 import { ClaudeOrchestratorReplayHarness } from "../Adapters/ClaudeAdapterV2.testkit.ts";
 import { CodexOrchestratorReplayHarness } from "../Adapters/CodexAdapterV2.testkit.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import { provideDeterministicTestRuntime } from "./DeterministicRuntime.ts";
 import {
   THREAD_FORK_NATIVE_PRIOR_TURN_ALPHA_PROMPT,
@@ -31,7 +31,7 @@ import { runOrchestratorV2ProviderReplayScenario } from "./ProviderReplayHarness
 import {
   decodeProviderReplayNdjson,
   materializeReplayTranscriptWorkspace,
-} from "@t3tools/provider-testing/replayTranscript";
+} from "@t2code/provider-testing/replayTranscript";
 
 const CODEX_MODEL_SELECTION = {
   instanceId: ProviderInstanceId.make("codex"),

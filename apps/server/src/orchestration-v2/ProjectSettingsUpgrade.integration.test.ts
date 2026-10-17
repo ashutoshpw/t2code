@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
 import { assert, it } from "@effect/vitest";
 import { ProjectId } from "@t2code/contracts";
 import * as Effect from "effect/Effect";

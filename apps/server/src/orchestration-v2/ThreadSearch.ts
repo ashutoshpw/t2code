@@ -22,7 +22,7 @@ import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import * as SqlClient from "effect/sql/SqlClient";
 import * as SqlSchema from "effect/sql/SqlSchema";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import {
   messageSearchTokens,
   foldSearchQuery,
@@ -31,8 +31,8 @@ import {
   messageMatcher,
   scoreThreadSearch,
   type ThreadSearchSubject,
-} from "@t3tools/shared/paletteSearch";
-import { threadSearchPullRequests } from "@t3tools/shared/threadPullRequests";
+} from "@t2code/shared/paletteSearch";
+import { threadSearchPullRequests } from "@t2code/shared/threadPullRequests";
 import { indexedMessageCondition } from "./messageSearchIndex.ts";
 import { loadOlderSettledThreadsPage } from "./ShellStream.ts";
 

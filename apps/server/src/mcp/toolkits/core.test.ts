@@ -693,7 +693,7 @@ function scheduledTask(id: string, runtimeMode: "auto" | "full-access"): never {
   } as never;
 }
 
-it.effect.each(["t3_thread_interrupt", "t3_workflow_stop"])(
+it.effect.each(["t2_thread_interrupt", "t2_workflow_stop"])(
   "a caller cannot use %s on a thread that runs above its own modes",
   (toolName) =>
     Effect.gen(function* () {
@@ -703,7 +703,7 @@ it.effect.each(["t3_thread_interrupt", "t3_workflow_stop"])(
           name: toolName,
           arguments: {
             threadId: "full-access-thread",
-            ...(toolName === "t3_workflow_stop" ? { subagentId: "workflow-coordinator" } : {}),
+            ...(toolName === "t2_workflow_stop" ? { subagentId: "workflow-coordinator" } : {}),
           },
         })
         .pipe(
@@ -802,7 +802,7 @@ it.effect("discovers workflow stop targets and requires orchestration capability
     const call = (invocation: McpInvocationContext.McpInvocationScope) =>
       server
         .callTool({
-          name: "t3_workflow_stop",
+          name: "t2_workflow_stop",
           arguments: { threadId, subagentId: result.items[0]?.subagentId },
         })
         .pipe(
@@ -858,7 +858,7 @@ it.effect("only the caller that prepared a pending upload can discard it", () =>
           Effect.provideService(McpSchema.McpServerClient, client),
         );
     const prepared = yield* call(
-      "t3_attachment_prepare_upload",
+      "t2_attachment_prepare_upload",
       { upload: { name: "shot.png", mimeType: "image/png", sizeBytes: 4 } },
       scope,
     );
@@ -869,18 +869,18 @@ it.effect("only the caller that prepared a pending upload can discard it", () =>
       thread: { ...scope.thread!, threadId: ThreadId.make("other-thread") },
     };
 
-    const refused = yield* call("t3_attachment_discard", { attachmentId }, otherThread);
+    const refused = yield* call("t2_attachment_discard", { attachmentId }, otherThread);
     expect(declaredFailure(refused)).toMatchObject({ code: "invalid_request" });
 
     yield* TestClock.adjust(24 * 60 * 60 * 1000 + 5 * 60_000);
     yield* call(
-      "t3_attachment_prepare_upload",
+      "t2_attachment_prepare_upload",
       { upload: { name: "later.png", mimeType: "image/png", sizeBytes: 4 } },
       scope,
     );
 
     const discarded = yield* call(
-      "t3_attachment_discard",
+      "t2_attachment_discard",
       { attachmentId },
       { ...scope, requestNamespace: "mcp-core-session-2" },
     );

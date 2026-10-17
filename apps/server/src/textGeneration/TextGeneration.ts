@@ -6,7 +6,7 @@ import type { ProviderTextGeneration } from "@t2code/provider-core/server/textGe
 import { TextGenerationError } from "@t2code/contracts";
 
 import * as ProviderInstanceRegistry from "../provider/ProviderInstanceRegistry.ts";
-import type { ProviderInstance } from "@t3tools/provider-core/server/driver";
+import type { ProviderInstance } from "@t2code/provider-core/server/driver";
 import * as SourceControlProviderRegistry from "../sourceControl/SourceControlProviderRegistry.ts";
 import * as ThreadTitleLinks from "./ThreadTitleLinks.ts";
 
@@ -21,10 +21,10 @@ export type {
   ReviewGuideGenerationResult,
   ThreadTitleGenerationInput,
   ThreadTitleGenerationResult,
-} from "@t3tools/provider-core/server/textGeneration";
+} from "@t2code/provider-core/server/textGeneration";
 
 export class TextGeneration extends Context.Service<TextGeneration, ProviderTextGeneration>()(
-  "t2/textGeneration/TextGeneration",
+  "@t2code/cli/textGeneration/TextGeneration",
 ) {}
 
 type TextGenerationOp =

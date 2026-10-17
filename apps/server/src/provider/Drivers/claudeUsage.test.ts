@@ -49,7 +49,8 @@ describe("parseClaudeLine", () => {
   });
 
   it("gives every content block of one message the same dedupe key", () => {
-    // Content-block records repeat full parent usage; summing them overcounts.
+    // T2 Code writes one record per content block, each repeating the parent
+    // message's full usage. Summing them would overcount ~2.4x on real data.
     const text = parseClaudeLine(claudeLine({ messageId: "msg_2", contentType: "text" }));
     const toolUse = parseClaudeLine(claudeLine({ messageId: "msg_2", contentType: "tool_use" }));
 

@@ -14,7 +14,7 @@ import {
   collectUint8StreamText,
   decodeUtf8,
   type CollectedUint8StreamText,
-} from "@t3tools/provider-core/server/collectStreamText";
+} from "@t2code/provider-core/server/collectStreamText";
 
 export interface ProcessRunInput {
   readonly command: string;
@@ -147,7 +147,7 @@ const DEFAULT_TIMEOUT = "60 seconds";
 const FORCE_KILL_AFTER = "1 second";
 const DEFAULT_MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
 
-export { isWindowsCommandNotFound } from "@t3tools/provider-core/server/snapshotProbe";
+export { isWindowsCommandNotFound } from "@t2code/provider-core/server/snapshotProbe";
 
 const collectText = Effect.fnUntraced(function* (input: {
   readonly command: string;

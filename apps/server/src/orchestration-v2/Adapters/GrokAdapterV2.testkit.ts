@@ -9,13 +9,13 @@ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as HostProcess from "@t2code/shared/HostProcess";
 import { resolveSelfInvocation } from "@t2code/shared/nodeRuntime";
 
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
-import { GROK_ACP_CANCEL_META, GROK_ACP_INITIALIZE_META } from "@t3tools/provider-grok/testing";
-import { makeXAiPromptCompletionRuntime } from "@t3tools/provider-grok/testing";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
+import { GROK_ACP_CANCEL_META, GROK_ACP_INITIALIZE_META } from "@t2code/provider-grok/testing";
+import { makeXAiPromptCompletionRuntime } from "@t2code/provider-grok/testing";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
+import * as ProviderContinuationRequests from "@t2code/provider-core/server/ProviderContinuationRequests";
 import * as ProviderAdapterRegistry from "../ProviderAdapterRegistry.ts";
-import type { ProviderReplayGate } from "@t3tools/provider-testing/replayGate";
+import type { ProviderReplayGate } from "@t2code/provider-testing/replayGate";
 import type { OrchestratorV2ProviderReplayHarness } from "../testkit/ProviderReplayHarness.ts";
 import {
   type AcpReplayTranscript,
@@ -28,7 +28,7 @@ import {
   GROK_DEFAULT_INSTANCE_ID,
   GROK_PROVIDER,
   makeGrokAdapterV2,
-} from "@t3tools/provider-grok/testing";
+} from "@t2code/provider-grok/testing";
 
 const DEFAULT_GROK_SETTINGS = Schema.decodeSync(GrokSettings)({});
 

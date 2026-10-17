@@ -2,7 +2,7 @@
 import * as NodeFS from "node:fs";
 import * as NodeTty from "node:tty";
 
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 /**
  * Electron's Windows executable is a GUI program, so `t3.cmd` under
@@ -18,7 +18,7 @@ function needsConsoleStdin(input: {
   return (
     input.platform === "win32" &&
     // Set only by the launcher (DesktopCliShim), never for the desktop backend.
-    input.env.T3CODE_DESKTOP_CLI_LAUNCHER === "1" &&
+    input.env.T2CODE_DESKTOP_CLI_LAUNCHER === "1" &&
     !input.stdinOpen &&
     input.stdoutIsConsole
   );
@@ -41,8 +41,9 @@ export function attachConsoleStdin(): number | undefined {
     stdinOpen: isOpen(0),
     stdoutIsConsole: NodeTty.isatty(1),
   });
-  // The launcher marker must not propagate to child shells or t3 processes.
-  delete process.env.T3CODE_DESKTOP_CLI_LAUNCHER;
+  // The marker describes this process's own start; a server started here
+  // must not pass it on to the shells and `t3` runs it spawns.
+  delete process.env.T2CODE_DESKTOP_CLI_LAUNCHER;
   if (!needed) return undefined;
   let fd: number;
   try {
