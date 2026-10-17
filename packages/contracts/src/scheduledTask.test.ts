@@ -57,4 +57,12 @@ describe("webhook filters", () => {
     expect(accepts([{ path: "body.action", op: "equals" }])).toBe(false);
     expect(accepts([{ path: "body.action", op: "matches", value: "^opened$" }])).toBe(false);
   });
+
+  it("accepts a one-time schedule at an ISO instant and rejects anything else", () => {
+    const schedule = { type: "once", at: "2026-07-01T14:00:00.000Z" };
+    expect(decodeSchedule(schedule)).toEqual(schedule);
+    expect(decodeUpsertSchedule(schedule)).toEqual(schedule);
+    expect(() => decodeUpsertSchedule({ type: "once", at: "tomorrow at 2pm" })).toThrow();
+    expect(() => decodeUpsertSchedule({ type: "once" })).toThrow();
+  });
 });

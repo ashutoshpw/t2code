@@ -278,6 +278,9 @@ function iso(value: DateTime.DateTime): string {
   return DateTime.formatIso(DateTime.toUtc(value));
 }
 
+/** Absorbs client/server clock skew and request latency for a just-picked time. */
+const ONCE_PAST_TOLERANCE_MS = 30_000;
+
 const localNow = DateTime.withCurrentZoneLocal(DateTime.nowInCurrentZone);
 
 function nextRunAt(
@@ -881,7 +884,10 @@ export const layer = Layer.effect(
           ...scheduleSource,
           updatedAt: iso(completedAt),
           lastRunAt: startedAtIso,
-          nextRunAt: nextRunAt(scheduleSource, completedAt),
+          // A one-time task is spent by any run, including "run now" before
+          // its time; otherwise it would fire a second time at `at`.
+          nextRunAt:
+            scheduleSource.schedule.type === "once" ? null : nextRunAt(scheduleSource, completedAt),
           lastRunStatus,
           lastRunError,
           runCount: scheduleSource.runCount + 1,
