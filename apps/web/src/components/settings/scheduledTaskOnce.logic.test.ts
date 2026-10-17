@@ -49,6 +49,21 @@ describe("onceTaskStatus", () => {
     ).toMatch(/^Could not send/);
   });
 
+  it("shows a re-armed sent task as pending again", () => {
+    expect(
+      onceTaskStatus(
+        task({ lastRunStatus: "succeeded", lastRunAt: "2026-09-13T08:00:00.000Z", nextRunAt: AT }),
+        NOW,
+      ),
+    ).toMatch(/^Sends /);
+    expect(
+      onceTaskStatus(
+        task({ lastRunStatus: "failed", lastRunAt: "2026-09-13T08:00:00.000Z", nextRunAt: AT }),
+        NOW,
+      ),
+    ).toMatch(/^Sends /);
+  });
+
   it("flags a message that went out well after its time", () => {
     expect(
       onceTaskStatus(
