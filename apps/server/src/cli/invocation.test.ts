@@ -163,7 +163,12 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
         }),
       ).toBe(`sudo env "PATH=$PATH" t2code browser setup --base-dir '/srv/t2 home'`);
       expect(
-        yield* rootCommand({ node: "/opt/t2code/t2code", entry: "/opt/t2code/t2code", executable: true, args }),
+        yield* rootCommand({
+          node: "/opt/t2code/t2code",
+          entry: "/opt/t2code/t2code",
+          executable: true,
+          args,
+        }),
       ).toBe("sudo /opt/t2code/t2code browser setup --base-dir '/srv/t2 home'");
     }).pipe(Effect.scoped),
   );
@@ -221,7 +226,10 @@ it.layer(NodeServices.layer)("host CLI commands", (it) => {
       yield* fs.writeFileString(shim, "@echo off\r\n");
       const hostCommand = (platform: NodeJS.Platform, env: Record<string, string>) =>
         resolveHostCliCommand("doctor", ["--base-dir", "C:\\Users\\Jane Doe\\.t2"]).pipe(
-          Effect.provideService(HostProcess.ExecutablePath, "C:\\Program Files\\T2 Code\\t2code.exe"),
+          Effect.provideService(
+            HostProcess.ExecutablePath,
+            "C:\\Program Files\\T2 Code\\t2code.exe",
+          ),
           Effect.provideService(HostProcess.Arguments, [
             "C:\\Program Files\\T2 Code\\t2code.exe",
             "C:\\Program Files\\T2 Code\\resources\\app.asar\\apps\\server\\dist\\bin.mjs",
@@ -230,9 +238,12 @@ it.layer(NodeServices.layer)("host CLI commands", (it) => {
           Effect.provideService(HostProcess.Platform, platform),
           Effect.provideService(HostProcess.Environment, { PATH: "", ...env }),
         );
+      // The desktop shim is called through `&`, and each argument is quoted
+      // the PowerShell way: no POSIX single quotes anywhere.
       expect((yield* hostCommand("win32", { T2CODE_CLI_PATH: shim })).command).toBe(
         `& "${shim}" doctor "--base-dir" "C:\\Users\\Jane Doe\\.t2"`,
       );
+      // Without a launcher, plain `t2code` with PowerShell-quoted arguments.
       expect((yield* hostCommand("win32", {})).command).toBe(
         't2code doctor "--base-dir" "C:\\Users\\Jane Doe\\.t2"',
       );
@@ -326,15 +337,15 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
       const path = yield* Path.Path;
       const root = yield* fs.makeTempDirectoryScoped();
       const prefix = path.join(root, "bunx-tools");
-      const packageRoot = path.join(prefix, "lib/node_modules/t2");
-      const launcher = path.join(packageRoot, "bin/t2.mjs");
+      const packageRoot = path.join(prefix, "lib/node_modules/@t2code/cli");
+      const launcher = path.join(packageRoot, "bin/t2code.mjs");
       const executable = path.join(root, ".t2/runtime/versions/1.0.0/t2");
       yield* fs.makeDirectory(path.dirname(launcher), { recursive: true });
       yield* fs.makeDirectory(path.dirname(executable), { recursive: true });
       yield* fs.makeDirectory(path.join(prefix, "bin"));
       yield* fs.writeFileString(launcher, "");
       yield* fs.writeFileString(executable, "");
-      yield* fs.symlink(launcher, path.join(prefix, "bin/t2"));
+      yield* fs.symlink(launcher, path.join(prefix, "bin/t2code"));
       const resolve = resolveServerInstallation.pipe(
         Effect.provideService(HostProcess.ExecutablePath, executable),
         Effect.provideService(HostProcess.Arguments, [executable, executable]),
@@ -342,13 +353,15 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
         Effect.provideService(HostProcess.Platform, "linux"),
         Effect.provideService(HostProcess.Environment, { T2CODE_NPM_LAUNCHER_PATH: launcher }),
       );
+      // A launcher for another version is some other `@t2code/cli` the server spawned
+      // (the variable is inherited), not the install this executable runs from.
       for (const [version, expected] of [
         ["0.0.1", null],
         [packageJson.version, { kind: "npm-global", prefix }],
       ] as const) {
         yield* fs.writeFileString(
           path.join(packageRoot, "package.json"),
-          `{"name":"t2","version":"${version}","bin":{"t2":"./bin/t2.mjs"}}`,
+          `{"name":"@t2code/cli","version":"${version}","bin":{"t2code":"./bin/t2code.mjs"}}`,
         );
         expect(yield* resolve).toEqual(expected);
       }

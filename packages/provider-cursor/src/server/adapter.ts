@@ -52,7 +52,7 @@ import {
   hasCursorSkillMention,
   rewriteCursorSkillMentions,
 } from "./skills.ts";
-import { t3OrchestrationPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
+import { t2OrchestrationPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
 import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
 import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import { makeProviderFailure } from "@t2code/provider-core/server/failure";
@@ -2325,7 +2325,7 @@ export const makeCursorAdapterV2 = Effect.fn("makeCursorAdapterV2")(function* (
           if (rawText.trim() === "/compress" && turnInput.message.attachments.length === 0) {
             return { message: "/compress", prompt: undefined };
           }
-          const newText = t3OrchestrationPrompt({
+          const newText = t2OrchestrationPrompt({
             prompt: yield* providerMessageTextWithAttachmentPaths({
               text: yield* resolveCursorSkillText(
                 rawText,

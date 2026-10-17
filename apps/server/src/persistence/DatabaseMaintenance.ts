@@ -22,7 +22,7 @@ export class DatabaseMissingError extends Schema.TaggedError<DatabaseMissingErro
   { path: Schema.String },
 ) {
   override get message() {
-    return "No existing T3 Code database was found in this data directory.";
+    return "No existing T2 Code database was found in this data directory.";
   }
 }
 
@@ -31,7 +31,7 @@ export class DatabaseInUseError extends Schema.TaggedError<DatabaseInUseError>()
   { path: Schema.String, cause: Schema.Defect() },
 ) {
   override get message() {
-    return "Stop the T3 Code server and desktop app, including any version before 0.1.0, before repairing the database.";
+    return "Stop the T2 Code server and desktop app, including any version before 0.1.0, before repairing the database.";
   }
 }
 
@@ -107,7 +107,7 @@ export class DatabaseMaintenance extends Context.Service<
       databasePath: string,
     ) => Effect.Effect<void, DatabaseInUseError | LegacyDatabaseRemoveError>;
   }
->()("t3/persistence/DatabaseMaintenance") {}
+>()("@t2code/cli/persistence/DatabaseMaintenance") {}
 
 const isDomainError = Schema.is(Schema.Union([DatabaseMissingError, DatabaseInUseError]));
 

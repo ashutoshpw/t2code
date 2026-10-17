@@ -9,7 +9,7 @@ import * as Schema from "effect/Schema";
 
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
 
-// The fields of the server's `server-runtime.json` that identify the owner of a T3 home.
+// The fields of the server's `server-runtime.json` that identify the owner of a T2 home.
 const HomeOwnerRuntimeState = Schema.Struct({
   pid: Schema.Int,
   port: Schema.Int,
@@ -32,7 +32,7 @@ const isProcessAlive = (pid: number): boolean => {
 };
 
 /**
- * Whether a server holds the T3 home's ownership lock (an exclusive transaction on
+ * Whether a server holds the T2 home's ownership lock (an exclusive transaction on
  * `server-owner.sqlite`). A read-only read is refused with SQLITE_BUSY only while it is held.
  */
 export const isHomeOwnershipLocked = Effect.fn("DesktopHomeOwner.isHomeOwnershipLocked")(
@@ -58,7 +58,7 @@ export const isHomeOwnershipLocked = Effect.fn("DesktopHomeOwner.isHomeOwnership
   },
 );
 
-/** The live server recorded as owning the desktop's T3 home. Only call once the ownership lock is known held: a live PID alone may be reused. */
+/** The live server recorded as owning the desktop's T2 home. Only call once the ownership lock is known held: a live PID alone may be reused. */
 export const readLiveHomeOwner = Effect.fn("DesktopHomeOwner.readLiveHomeOwner")(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -74,15 +74,15 @@ export const readLiveHomeOwner = Effect.fn("DesktopHomeOwner.readLiveHomeOwner")
 export const homeOwnedMessage = (owner: Option.Option<HomeOwner>): string =>
   Option.match(owner, {
     onNone: () =>
-      "Another T3 Code server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try `t3 update`. If the older launcher cannot update, run `t3 service uninstall` and optionally reinstall with `t3 service install` from a current CLI. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's T3 home to each command. Then reopen T3 Code. You can also set a separate T3CODE_HOME and pair with the running server.",
+      "Another T2 Code server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try `t2 update`. If the older launcher cannot update, run `t2 service uninstall` and optionally reinstall with `t2 service install` from a current CLI. Use `npx t2@latest` if `t2` is missing or outdated, and pass `--base-dir` with the service's T2 home to each command. Then reopen T2 Code. You can also set a separate T2CODE_HOME and pair with the running server.",
     onSome: (owner) => {
       const kind = owner.serviceManaged
-        ? "The T3 Code background service"
-        : "Another T3 Code server (for example `t3 serve`, or one started over SSH)";
+        ? "The T2 Code background service"
+        : "Another T2 Code server (for example `t2 serve`, or one started over SSH)";
       const version = owner.serverVersion ? `, version ${owner.serverVersion}` : "";
       const stop = owner.serviceManaged
-        ? "Stop it with `t3 service uninstall`, passing `--base-dir` with this T3 home"
-        : "If a T3 Code app on another machine started it over SSH, that app restarts it: remove or disconnect that SSH environment there, or quit that app. Then stop the server";
-      return `${kind} is using this T3 home (PID ${owner.pid}, port ${owner.port}${version}). ${stop}, and reopen T3 Code. You can also set a separate T3CODE_HOME and pair with the running server.`;
+        ? "Stop it with `t2 service uninstall`, passing `--base-dir` with this T2 home"
+        : "If a T2 Code app on another machine started it over SSH, that app restarts it: remove or disconnect that SSH environment there, or quit that app. Then stop the server";
+      return `${kind} is using this T2 home (PID ${owner.pid}, port ${owner.port}${version}). ${stop}, and reopen T2 Code. You can also set a separate T2CODE_HOME and pair with the running server.`;
     },
   });
