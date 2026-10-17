@@ -109,7 +109,7 @@ export interface McpInvocationScope {
 }
 
 /**
- * T3 Code renders `t3-thread://` links as thread chips. Other MCP clients cannot open them, so
+ * T3 Code renders `t2-thread://` links as thread chips. Other MCP clients cannot open them, so
  * they get a web URL on the origin they reached instead.
  */
 export const threadLinkFor = (

@@ -807,10 +807,6 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
     `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T2CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
   );
 
-  yield* Effect.logInfo(
-    `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T2CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
-  );
-
   // Before the share block: --dry-run only resolves and prints. Sharing would
   // replace, then tear down, whatever mapping the port already had — a
   // surprising side effect from a command documented as inert.

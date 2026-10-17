@@ -157,10 +157,7 @@ describe("DesktopPreReadyPlatform", () => {
         assert.include(identity.desktopEntry ?? "", "Exec=/Applications/current.AppImage %U");
         assert.include(identity.desktopEntry ?? "", "Name=T2 Code (Beta)");
         assert.include(identity.desktopEntry ?? "", "MimeType=x-scheme-handler/t2code;");
-        assert.include(
-          identity.desktopEntry ?? "",
-          "Icon=/xdg/icons/com.t2tools.T2Code.desktop.png",
-        );
+        assert.include(identity.desktopEntry ?? "", "Icon=/xdg/icons/t2code.desktop.png");
         assert.isTrue(identity.iconInstalled);
       }),
     ).pipe(Effect.ensuring(Effect.sync(() => vi.unstubAllEnvs())));
