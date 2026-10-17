@@ -101,7 +101,7 @@ Open **Permissions** next to **Routes** in web or desktop, or **Your permissions
 in the mobile route details, to see what your current connection can do on that
 environment. For a remote environment, this is in its route details. Permissions
 shown there apply only to the route marked **In use**; other routes are not
-checked. Direct pairing and T3 Connect have separate sessions and may grant
+checked. Direct pairing and T2 Connect have separate sessions and may grant
 different permissions.
 
 ### Balance new threads across machines
@@ -303,12 +303,12 @@ the workspace. These scopes control direct file access from the client.
 To remove an environment from T2 Connect, open your account menu's **T2 Connect**
 page, or **Settings → T2 Connect** on mobile, and choose **Deregister**. This
 revokes its cloud access and frees its host space even when the environment is
-offline or has been wiped. When T3 Connect rejects a host's link, the host
-shows that it was removed from T3 Connect. To link it again, turn on
-**T3 Connect** in **Settings → Connections** on a desktop host, or run
-`t3 connect link` on a command-line host and then restart T3 Code there. A
+offline or has been wiped. When T2 Connect rejects a host's link, the host
+shows that it was removed from T2 Connect. To link it again, turn on
+**T2 Connect** in **Settings → Connections** on a desktop host, or run
+`t2 connect link` on a command-line host and then restart T2 Code there. A
 command-line host that released its tunnel when it last stopped may link itself
-again on its next start; run `t3 connect unlink` on that host to keep it off.
+again on its next start; run `t2code connect unlink` on that host to keep it off.
 Removing an environment from a device's connection settings only forgets it on
 that device; it stays registered to your account.
 
