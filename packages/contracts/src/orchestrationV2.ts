@@ -3552,8 +3552,16 @@ export const OrchestrationV2SubscribeCommandOutputInput = Schema.Struct({
 export type OrchestrationV2SubscribeCommandOutputInput =
   typeof OrchestrationV2SubscribeCommandOutputInput.Type;
 
-/** Unpersisted stream for expanded rows: replace resets the bounded tail, append extends it, and running:false ends it.
- * Feed both through @t2code/shared/terminalOutput appendTerminalOutput to preserve cursor and style escapes. */
+/**
+ * Output of one command row, separate from the thread stream so it is never
+ * persisted as events and only reaches clients that show the row expanded.
+ * `replace` carries the whole bounded tail (first frame, or after the client
+ * fell behind); `append` extends it. Text is terminal output, not display
+ * text: `replace` carries the cleaned tail plus the cursor and style escapes
+ * needed to resume, and `append` carries raw chunks. Clients must feed both
+ * through `appendTerminalOutput` from `@t2code/shared/terminalOutput`.
+ * The stream ends after a frame with `running: false`.
+ */
 export const OrchestrationV2CommandOutputFrame = Schema.Struct({
   kind: Schema.Literals(["replace", "append"]),
   text: Schema.String,

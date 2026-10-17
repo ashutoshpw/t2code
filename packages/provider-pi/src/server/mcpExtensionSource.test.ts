@@ -86,7 +86,7 @@ describe("Pi MCP tool results", () => {
     ] as const;
     const result = { content, structuredContent: { count: 2 }, _meta: { private: true } };
     const bridge = await loadMcpBridge({ modern: true, result });
-    const tool = bridge.tools.find((tool) => tool.name === "mcp__t3-code__preview_snapshot")!;
+    const tool = bridge.tools.find((tool) => tool.name === "mcp__t2-code__preview_snapshot")!;
     const output = await tool.execute("snapshot", {});
     assert.deepEqual(output.content, [
       content[0],
@@ -136,6 +136,29 @@ describe("Pi MCP tool exposure", () => {
     ui: { notify: () => undefined },
   };
 
+  it.each(["session_start", "session_tree", "model_select", "before_agent_start"])(
+    "declares optional T3 tools for OpenAI-compatible gateways at %s",
+    async (hookName) => {
+      const bridge = await loadMcpBridge({ modern: true, toolSearchAvailable: true });
+      const hook = bridge.handlers.get(hookName);
+      assert.isDefined(hook);
+      await hook!(
+        { systemPrompt: "Pi system prompt" },
+        { model: { api: "openai-completions" }, ui: { notify: assert.fail } },
+      );
+      assert.isTrue(
+        bridge.tools
+          .filter((tool) => tool.name.startsWith("mcp__t2-code__"))
+          .every((tool) => bridge.getActiveTools().includes(tool.name)),
+      );
+      const result = await bridge.tools
+        .find((tool) => tool.name === "mcp__t2-code__preview_snapshot")!
+        .execute("gateway-call", {});
+      assert.equal(result.content[0]?.text, "browser snapshot");
+      assert.equal(bridge.tools.filter((tool) => tool.exposure === "hidden").length, 4);
+    },
+  );
+
   it("keeps orchestration direct and optional bridge tools discoverable on modern Pi", async () => {
     const bridge = await loadMcpBridge({ modern: true, toolSearchAvailable: true });
     await bridge.handlers.get("session_start")!({ systemPrompt: "" }, discoveryContext);
@@ -151,10 +174,10 @@ describe("Pi MCP tool exposure", () => {
         .filter((tool) => tool.exposure !== "hidden")
         .map((tool) => [tool.name, tool.exposure]),
       [
-        ["mcp__t3-code__orchestrator_capabilities", "direct"],
-        ["mcp__t3-code__delegate_task", "direct"],
-        ["mcp__t3-code__task_status", "direct"],
-        ["mcp__t3-code__preview_snapshot", "deferred"],
+        ["mcp__t2-code__orchestrator_capabilities", "direct"],
+        ["mcp__t2-code__delegate_task", "direct"],
+        ["mcp__t2-code__task_status", "direct"],
+        ["mcp__t2-code__preview_snapshot", "deferred"],
       ],
     );
     assert.deepEqual(
@@ -167,7 +190,7 @@ describe("Pi MCP tool exposure", () => {
       ],
     );
     const result = await bridge.tools
-      .find((tool) => tool.name === "mcp__t3-code__preview_snapshot")!
+      .find((tool) => tool.name === "mcp__t2-code__preview_snapshot")!
       .execute("call-1", { depth: 2 });
     assert.equal(result.content[0]?.text, "browser snapshot");
     assert.equal(bridge.requests.at(-1)?.method, "tools/call");
@@ -177,27 +200,27 @@ describe("Pi MCP tool exposure", () => {
     const bridge = await loadMcpBridge({
       modern: true,
       toolSearchAvailable: true,
-      allowsTool: (name) => name !== "mcp__t3-code__delegate_task",
+      allowsTool: (name) => name !== "mcp__t2-code__delegate_task",
     });
     const event = { systemPrompt: "" };
     await bridge.handlers.get("session_start")!(event, discoveryContext);
     const gatewayContext = { model: { api: "openai-completions" }, ui: { notify: assert.fail } };
     await bridge.handlers.get("model_select")!(event, gatewayContext);
-    bridge.restoreActiveTools(["read", "mcp__t3-code__task_status"]);
+    bridge.restoreActiveTools(["read", "mcp__t2-code__task_status"]);
     await bridge.handlers.get("session_tree")!(event, gatewayContext);
     assert.deepEqual(bridge.getActiveTools(), [
       "read",
-      "mcp__t3-code__task_status",
+      "mcp__t2-code__task_status",
       "tool_search",
-      "mcp__t3-code__orchestrator_capabilities",
-      "mcp__t3-code__preview_snapshot",
+      "mcp__t2-code__orchestrator_capabilities",
+      "mcp__t2-code__preview_snapshot",
     ]);
     await bridge.handlers.get("model_select")!(event, discoveryContext);
     assert.equal(
-      bridge.tools.find((tool) => tool.name === "mcp__t3-code__preview_snapshot")?.exposure,
+      bridge.tools.find((tool) => tool.name === "mcp__t2-code__preview_snapshot")?.exposure,
       "deferred",
     );
-    assert.include(bridge.getActiveTools(), "mcp__t3-code__preview_snapshot");
+    assert.include(bridge.getActiveTools(), "mcp__t2-code__preview_snapshot");
   });
 
   it.each(["legacy Pi", "disabled tool search"])(
@@ -218,7 +241,7 @@ describe("Pi MCP tool exposure", () => {
           .filter((tool) => tool.exposure !== "hidden")
           .every((tool) => tool.exposure === undefined || tool.exposure === "direct"),
       );
-      const tool = bridge.tools.find((tool) => tool.name === "mcp__t3-code__preview_snapshot");
+      const tool = bridge.tools.find((tool) => tool.name === "mcp__t2-code__preview_snapshot");
       assert.isDefined(tool);
       const controller = new AbortController();
       const result = await tool!.execute("call-1", { depth: 2 }, controller.signal);
@@ -282,7 +305,7 @@ describe("Pi tool discovery permissions", () => {
           },
         },
       };
-      for (const prefix of ["mcp__t3-code__", "mcp__t2_code__"]) {
+      for (const prefix of ["mcp__t2-code__", "mcp__t2_code__"]) {
         assert.isUndefined(
           await hook({ toolName: prefix + "orchestrator_capabilities", input: {} }, ctx),
         );
@@ -298,7 +321,7 @@ describe("Pi tool discovery permissions", () => {
       assert.equal(confirmations.length, 4);
       bridge.setBridgeSourcePath("/user/extensions/replacement.ts");
       assert.equal(
-        (await hook({ toolName: "mcp__t3-code__orchestrator_capabilities", input: {} }, ctx))
+        (await hook({ toolName: "mcp__t2-code__orchestrator_capabilities", input: {} }, ctx))
           ?.block,
         true,
       );
@@ -358,9 +381,9 @@ describe("Pi tool discovery permissions", () => {
       await toolCall!({ toolName: "tool_search", input: { query: "preview_snapshot" } }, ctx),
     );
     assert.equal(confirmations.length, 0);
-    const result = await toolCall!({ toolName: "mcp__t3-code__preview_snapshot", input: {} }, ctx);
+    const result = await toolCall!({ toolName: "mcp__t2-code__preview_snapshot", input: {} }, ctx);
     assert.equal(result?.block, true);
-    assert.deepEqual(confirmations, ["Allow mcp__t3-code__preview_snapshot?"]);
+    assert.deepEqual(confirmations, ["Allow mcp__t2-code__preview_snapshot?"]);
 
     searchPath = "/extensions/custom-search.ts";
     const replaced = await toolCall!({ toolName: "tool_search", input: {} }, ctx);

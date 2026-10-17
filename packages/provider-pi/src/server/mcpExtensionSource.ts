@@ -217,7 +217,7 @@ function createMcpClient(endpoint: string, token: string) {
         {
           protocolVersion: PROTOCOL,
           capabilities: {},
-          clientInfo: { name: "t3-pi-mcp", version: "1.0.0" },
+          clientInfo: { name: "t2-pi-mcp", version: "1.0.0" },
         },
         signal,
       );
@@ -311,7 +311,7 @@ export default async function t2McpExtension(pi: ExtensionAPI) {
     const extensionPath = env(EXTENSION_PATH_ENV);
     if (extensionPath === undefined || !readOnlyMcpTools.has(name) || typeof pi.getAllTools !== "function") return false;
     // A user extension may own the same name. Only our registered HTTP bridge
-    // may inherit the canonical T3 server's read-only annotation.
+    // may inherit the canonical T2 server's read-only annotation.
     return pi.getAllTools().some((tool) => tool.name === name &&
       typeof tool.sourceInfo?.path === "string" &&
       NodePath.resolve(tool.sourceInfo.path) === NodePath.resolve(extensionPath));
@@ -341,7 +341,7 @@ export default async function t2McpExtension(pi: ExtensionAPI) {
   if (endpoint === undefined || token === undefined) {
     pi.on("session_start", async (_event, ctx) => {
       ctx.ui.notify(
-        "t3-code MCP unavailable: T2_MCP_URL or T2_MCP_BEARER_TOKEN is missing.",
+        "t2-code MCP unavailable: T2_MCP_URL or T2_MCP_BEARER_TOKEN is missing.",
         "warning",
       );
     });
@@ -384,12 +384,12 @@ export default async function t2McpExtension(pi: ExtensionAPI) {
             );
             const content = mcpModelContent(result);
             if (isMcpToolError(result) && !content.some((part) => part.type === "text" && part.text.length > 0)) {
-              content.push({ type: "text", text: "MCP tool t3-code/" + name + " returned an error" });
+              content.push({ type: "text", text: "MCP tool t2-code/" + name + " returned an error" });
             }
             return {
               content,
               structuredContent: mcpScriptResult(result),
-              details: { server: "t3-code", tool: name },
+              details: { server: "t2-code", tool: name },
               ...(isMcpToolError(result) ? { isError: true } : {}),
             };
           },
@@ -414,7 +414,7 @@ export default async function t2McpExtension(pi: ExtensionAPI) {
   };
 
   // CLI extensions load before builtins, and Pi keeps the first registration
-  // of a tool name. Register now so the bridge owns the T3 namespace even when
+  // of a tool name. Register now so the bridge owns the T2 namespace even when
   // mcp.json configures it; retry a failed connection at session_start.
   await ensureStarted().catch(() => undefined);
 
@@ -427,12 +427,12 @@ export default async function t2McpExtension(pi: ExtensionAPI) {
     if (exposureChanged) registerTools();
     const active = pi.getActiveTools();
     // Completion gateways can silently drop calls to undeclared tools named
-    // in history or guidance. Eagerly load T3 schemas, including after tree
+    // in history or guidance. Eagerly load T2 schemas, including after tree
     // restores, while retaining deferred exposure for Pi's allowlist rules.
     // Pi still applies --tools/--exclude-tools to this active loadout.
     const required = [
       ...(hasToolSearch ? ["tool_search"] : []),
-      ...(ctx.model?.api === "openai-completions" ? catalog.map((tool) => "mcp__t3-code__" + tool.name) : []),
+      ...(ctx.model?.api === "openai-completions" ? catalog.map((tool) => "mcp__t2-code__" + tool.name) : []),
     ];
     const missing = required.filter((name) => !active.includes(name));
     if (missing.length > 0) pi.setActiveTools([...active, ...missing]);
@@ -447,7 +447,7 @@ export default async function t2McpExtension(pi: ExtensionAPI) {
       await ensureStarted();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      ctx.ui.notify(\`t3-code MCP unavailable: \${message}\`, "warning");
+      ctx.ui.notify(\`t2-code MCP unavailable: \${message}\`, "warning");
     }
   });
 
