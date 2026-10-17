@@ -14,7 +14,12 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@effect/atom-react", () => ({
-  useAtomValue: (atom: unknown) => (atom === "vcs-state" ? { isRunning: false } : null),
+  useAtomValue: (atom: unknown) =>
+    atom === "vcs-state"
+      ? { isRunning: false }
+      : atom === "primary-server-settings"
+        ? { worktreeBranchPrefix: "t2code" }
+        : null,
 }));
 vi.mock("~/state/entities", () => ({
   useThreadProjection: () => null,
@@ -27,7 +32,10 @@ vi.mock("~/state/session", () => ({
     (environmentId === "environment" ? state.scopes : state.primaryScopes).has(scope),
 }));
 vi.mock("~/state/use-atom-command", () => ({ useAtomCommand: (command: unknown) => command }));
-vi.mock("~/state/server", () => ({ serverEnvironment: { configValueAtom: () => null } }));
+vi.mock("~/state/server", () => ({
+  serverEnvironment: { configValueAtom: () => null },
+  primaryServerSettingsAtom: "primary-server-settings",
+}));
 vi.mock("~/state/sourceControl", () => ({ sourceControlEnvironment: { discovery: () => null } }));
 vi.mock("~/state/vcs", () => ({
   vcsEnvironment: { status: () => null },

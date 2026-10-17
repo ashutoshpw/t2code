@@ -223,7 +223,7 @@ const makeWindowsPayloadFixture = Effect.fn("test.makeWindowsPayloadFixture")(fu
   if (input.wslRuntime !== undefined) {
     const stem =
       input.wslRuntime === "legacy"
-        ? `t2-${WINDOWS_PAYLOAD_FIXTURE_VERSION}-linux-x64`
+        ? `t3-${WINDOWS_PAYLOAD_FIXTURE_VERSION}-linux-x64`
         : wslRuntimeArchiveStem(WINDOWS_PAYLOAD_FIXTURE_VERSION, input.targetArch ?? "x64");
     const sourceArchivePath =
       input.wslRuntime === "loose-server-tree"
@@ -1390,7 +1390,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         assert.instanceOf(error, WindowsPackagedPayloadValidationError);
         assert.equal(error.reason, "wsl-runtime-invalid");
       }),
-    ).pipe(Effect.provideService(HostProcessPlatform, "linux")),
+    ).pipe(Effect.provideService(HostProcess.Platform, "linux")),
   );
 
   it.effect("rejects an embedded archive built for a different release version", () =>
