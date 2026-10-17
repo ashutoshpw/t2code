@@ -50,22 +50,22 @@ const run = Effect.fn("test.run")(function* (
 const serveFakeRelease = Effect.fn("test.serveFakeRelease")(function* (
   root: string,
   executable = `#!/bin/sh
-if [ -n "$T3CODE_TEST_CALLS" ]; then echo "$*|$T3CODE_NPM_LAUNCHER_PATH" >> "$T3CODE_TEST_CALLS"; fi
+if [ -n "$T2CODE_TEST_CALLS" ]; then echo "$*|$T2CODE_NPM_LAUNCHER_PATH" >> "$T2CODE_TEST_CALLS"; fi
 if [ "$1" = "--version" ]; then echo "${VERSION}"; exit 0; fi
-echo "stub $* launcher=$T3CODE_NPM_LAUNCHER_PATH"
+echo "stub $* launcher=$T2CODE_NPM_LAUNCHER_PATH"
 exit 7
 `,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const key = `${yield* HostProcess.Platform}-${yield* HostProcess.Architecture}`;
-  const stem = `t3-${VERSION}-${key}`;
+  const stem = `t2-${VERSION}-${key}`;
   const archiveName = `${stem}.tar.gz`;
   yield* fs.makeDirectory(path.join(root, "release", stem, "node_modules/native"), {
     recursive: true,
   });
-  yield* fs.writeFileString(path.join(root, "release", stem, "t3"), executable);
-  yield* fs.chmod(path.join(root, "release", stem, "t3"), 0o755);
+  yield* fs.writeFileString(path.join(root, "release", stem, "t2"), executable);
+  yield* fs.chmod(path.join(root, "release", stem, "t2"), 0o755);
   const tar = yield* run("tar", ["-czf", archiveName, stem], {
     cwd: path.join(root, "release"),
     env: { PATH: (yield* HostProcess.Environment).PATH },
@@ -118,7 +118,7 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-npm-launcher-test-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2code-npm-launcher-test-" });
         const output = yield* buildNpmLauncher({
           version: VERSION,
           outputDir: path.join(root, "out"),
@@ -127,9 +127,10 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         const manifest = yield* decodeManifest(
           yield* fs.readFileString(path.join(output.packageDir, "package.json")),
         );
-        assert.equal(manifest.name, "t3");
+        assert.equal(manifest.name, "@t2code/cli");
         assert.equal(manifest.version, VERSION);
-        assert.deepStrictEqual(manifest.bin, { t3: "./bin/t3.mjs" });
+        assert.deepStrictEqual(manifest.bin, { t2code: "./bin/t2code.mjs" });
+        // Nothing for npm to resolve, so nothing that can lag behind the launcher.
         assert.isUndefined(manifest.dependencies);
         assert.isUndefined(manifest.optionalDependencies);
         assert.isAbove(npmReleaseDatabaseMigration(manifest) ?? 0, 0);
@@ -153,7 +154,7 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
           T2CODE_TEST_CALLS: path.join(root, "calls"),
           T2CODE_RELEASE_BASE_URL: release.baseUrl,
         };
-        const launcher = path.join(packageDir, "bin/t3.mjs");
+        const launcher = path.join(packageDir, "bin/t2code.mjs");
         const first = yield* run(process.execPath, [launcher, "serve", "a b"], {
           cwd: root,
           env,
@@ -161,7 +162,7 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         assert.equal(first.stdout.trim(), `stub serve a b launcher=${launcher}`, first.stderr);
         assert.equal(first.exitCode, 7);
         assert.deepStrictEqual(
-          (yield* fs.readFileString(env.T3CODE_TEST_CALLS)).trim().split("\n"),
+          (yield* fs.readFileString(env.T2CODE_TEST_CALLS)).trim().split("\n"),
           ["--version|", `serve a b|${launcher}`],
         );
         const versionDir = path.join(home, "runtime/versions", VERSION);
@@ -196,7 +197,9 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
           );
         }
 
-        const ipcServer = path.join(home, "runtime/versions", VERSION, "t3");
+        // Services installed before 0.0.41 fork dist/bin.mjs and talk to the
+        // server over IPC; the channel and SIGTERM must reach the executable.
+        const ipcServer = path.join(home, "runtime/versions", VERSION, "t2");
         yield* fs.writeFileString(
           ipcServer,
           `#!${process.execPath}\nprocess.on("SIGTERM", () => process.exit(23));\nprocess.on("message", (m) => process.send({ reply: m }));\nprocess.send({ args: process.argv.slice(2) });\n`,

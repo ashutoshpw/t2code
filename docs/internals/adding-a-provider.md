@@ -46,7 +46,7 @@ capabilities, never the driver kind.
 - **T2 MCP tools.** Inject the thread's MCP server so agents can use T2's tools, and make a turn
   survive when that server is unreachable.
 - **Updates.** Run an update only through the installer that provably owns the binary; otherwise
-  leave it manual. See [`providerMaintenanceRunner.ts`](../../apps/server/src/provider/providerMaintenanceRunner.ts).
+  leave it manual. See [`maintenanceResolver.ts`](../../packages/provider-core/src/server/maintenanceResolver.ts).
 
 ## Tests
 
