@@ -10,8 +10,12 @@ export function resolveThreadSidebarMinimumWidth(brandWidth: number): number {
 export function resolveThreadSidebarMaximumWidth(
   viewportWidth: number,
   minimumWidth = THREAD_SIDEBAR_MIN_WIDTH,
+  reservedLeftWidth = 0,
 ): number {
-  return Math.max(minimumWidth, Math.floor(viewportWidth) - THREAD_MAIN_CONTENT_MIN_WIDTH);
+  return Math.max(
+    minimumWidth,
+    Math.floor(viewportWidth) - reservedLeftWidth - THREAD_MAIN_CONTENT_MIN_WIDTH,
+  );
 }
 
 export function clampThreadSidebarWidth(
@@ -25,10 +29,14 @@ export function clampThreadSidebarWidth(
 export function resolveInitialThreadSidebarWidth(
   storedWidth: number | null,
   viewportWidth: number,
+  reservedLeftWidth = 0,
 ): number {
   const preferredWidth =
     storedWidth === null
       ? THREAD_SIDEBAR_DEFAULT_WIDTH
       : Math.max(THREAD_SIDEBAR_MIN_WIDTH, storedWidth);
-  return Math.min(preferredWidth, resolveThreadSidebarMaximumWidth(viewportWidth));
+  return Math.min(
+    preferredWidth,
+    resolveThreadSidebarMaximumWidth(viewportWidth, THREAD_SIDEBAR_MIN_WIDTH, reservedLeftWidth),
+  );
 }

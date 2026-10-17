@@ -3,6 +3,14 @@
 Use a new thread for a separate task. Choose **New worktree** when its code changes
 need a separate branch and working directory.
 
+## Navigate with the app rail
+
+On web and desktop, a slim rail on the left edge jumps between Threads, Pull
+requests, Usage, and Scheduled tasks, with Settings pinned at the bottom. It
+stays visible while the sidebar is collapsed and hides on phones and narrow
+windows, where the sidebar footer keeps those buttons. Turn the rail off in
+**Settings → General → App rail** to move them back to the sidebar footer.
+
 ## Start a thread
 
 On web and desktop, a new thread keeps the current project and carries your model
