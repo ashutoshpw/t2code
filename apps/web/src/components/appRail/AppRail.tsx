@@ -101,11 +101,11 @@ export const AppRail = memo(function AppRail() {
       className="z-20 hidden w-12 shrink-0 flex-col items-center border-r bg-sidebar surface-grain text-sidebar-foreground md:flex"
       data-slot="app-rail"
     >
-      {/* Above the nav buttons this corner stays sidebar-colored; on desktop it
-          drags the window where the sidebar header would. */}
+      {/* Only macOS desktop sets --app-rail-top-inset, to clear the traffic
+          lights; elsewhere the buttons start at the top. */}
       <div
         className={cn("w-full shrink-0", isElectron && "drag-region")}
-        style={{ height: "var(--workspace-topbar-height)" }}
+        style={{ height: "var(--app-rail-top-inset, 0px)" }}
       />
       <div className="flex min-h-0 flex-1 flex-col items-center gap-1 pt-2">
         {items.map(({ item, label, icon, onClick }) =>
