@@ -22,6 +22,11 @@ describe("resolveThreadSidebarMaximumWidth", () => {
     expect(resolveThreadSidebarMaximumWidth(800, 238)).toBe(238);
     expect(resolveThreadSidebarMaximumWidth(1200, 238)).toBe(560);
   });
+
+  it("reserves the app rail's width before the main content minimum", () => {
+    expect(resolveThreadSidebarMaximumWidth(1200, 238, 48)).toBe(512);
+    expect(resolveThreadSidebarMaximumWidth(800, 238, 48)).toBe(238);
+  });
 });
 
 describe("clampThreadSidebarWidth", () => {
