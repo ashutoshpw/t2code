@@ -14,49 +14,5 @@
   {
     "file": "apps/server/src/orchestration-v2/testkit/fixtures/claude_background_task_wake/claude_transcript.ndjson",
     "line": "{\"type\":\"emit_inbound\",\"label\":\"system\",\"frame\":{\"type\":\"system\",\"subtype\":\"thinking_tokens\",\"estimated_tokens\":40,\"estimated_tokens_delta\":3,\"session_id\":\"7901ee61-9647-498d-b68d-ecdcb93bae84\",\"uuid\":\"8f0b7d72-3773-4e17-b5ee-4112412f570e\"}}"
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260527044716_baseline/migration.sql",
-    "line": "\"environment_label\" text DEFAULT 'T3 Environment' NOT NULL,"
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260527044716_baseline/snapshot.json",
-    "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260601225421_add_mobile_device_label/snapshot.json",
-    "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260603035812_managed_endpoint_allocations/snapshot.json",
-    "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260706061126_migration/snapshot.json",
-    "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260727115225_migration/snapshot.json",
-    "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260727144838_migration/snapshot.json",
-    "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260906042516_android_devices/snapshot.json",
-    "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260918175607_long_thread_ids/snapshot.json",
-    "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/migrations/postgres/20260919015455_managed_endpoint_recovery/snapshot.json",
-    "line": "\"default\": \"'T3 Environment'\","
-  },
-  {
-    "file": "infra/relay/src/persistence/schema.ts",
-    "line": "environmentLabel: text(\"environment_label\").notNull().default(\"T3 Environment\"),"
   }
 ]
