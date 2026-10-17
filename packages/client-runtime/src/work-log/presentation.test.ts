@@ -155,7 +155,7 @@ describe("resolveWorkEntryToolPresentation", () => {
       itemType: "dynamic_tool",
       toolLifecycleStatus: "completed",
       toolData: {
-        server: "t3-code",
+        server: "t2-code",
         tool: "t2_workflow_stop",
         arguments: { threadId: "parent", subagentId: "workflow-1" },
         result: {},
