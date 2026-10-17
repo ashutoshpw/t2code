@@ -66,11 +66,11 @@ it.layer(TestLayer)("T2ProjectFileLoader", (it) => {
       }),
     );
 
-    it.effect("ignores a legacy t3.json when t2.json is absent", () =>
+    it.effect("ignores an unrecognized project file when t2.json is absent", () =>
       Effect.gen(function* () {
         const loader = yield* T2ProjectFileLoader.T2ProjectFileLoader;
         const cwd = yield* makeTempDir;
-        yield* writeProjectFile(cwd, '{ "iconPath": "legacy.svg" }', "t3.json");
+        yield* writeProjectFile(cwd, '{ "iconPath": "legacy.svg" }', "other.json");
 
         const loaded = yield* loader.load(cwd);
 
