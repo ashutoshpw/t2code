@@ -78,6 +78,29 @@ running the send button shows which action it will take. Long-press it to use th
 other action for a single message, or hold `Cmd` while sending from a hardware
 keyboard. The button only offers Steer when the running agent supports it.
 
+## Send later
+
+On web and desktop, click the small chevron next to the send button and choose
+**Send later** to deliver the message at a date and time you pick. The message is
+saved on the server as a one-time scheduled task for this thread, so it sends even
+if you close the app. If the agent is working when the time comes, the message
+queues behind the current turn.
+
+Send later is available in an existing thread for plain text. It is unavailable
+for a new thread that has no messages yet, and for drafts with attachments or
+added context, because a scheduled message keeps only its text. Assign a shortcut
+to `composer.sendLater` in **Settings → Keybindings**, or run **Send message later**
+from the command palette.
+
+The time you pick is an exact moment in your device's time zone, so it does not
+shift if the environment is in another zone. If the environment is off at that
+moment, the message sends when it comes back, even if that is much later.
+
+Find the message in **Scheduled tasks** (open it from the app rail), where you can
+change its time, pause it, delete it to cancel, and see whether it sent or failed.
+Sent messages stay in the list. Mobile shows scheduled messages and can delete
+them, but scheduling one is done from web or desktop.
+
 ## Queue messages offline on mobile
 
 Mobile keeps local copies of draft attachments, so you can preview them and queue
