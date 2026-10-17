@@ -1077,7 +1077,7 @@ function acpMcpFallbackInput(value: string | undefined): Record<string, unknown>
  * tool inventory, so the separator match can stay loose.
  */
 const T2_MCP_TITLE_CALL =
-  /^(?:mcp[-_]{1,2})?t[23][-_ ]?code[-_.:/ ]{1,3}(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*)(?::.*)?$/i;
+  /^(?:mcp[-_]{1,2})?t2[-_ ]?code[-_.:/ ]{1,3}(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*)(?::.*)?$/i;
 
 /**
  * Gemini CLI titles injected MCP calls "<tool> (<server> MCP Server)" and
@@ -1085,10 +1085,10 @@ const T2_MCP_TITLE_CALL =
  * tool-first as "<tool>_t2-code".
  */
 const T2_MCP_TITLE_SUFFIX_CALL =
-  /^(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*?)(?: \(t[23][-_ ]?code MCP Server\)(?::|$)|[-_.]t[23][-_ ]?code$)/i;
+  /^(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*?)(?: \(t2[-_ ]?code MCP Server\)(?::|$)|[-_.]t2[-_ ]?code$)/i;
 
 function isT2McpServerName(server: string): boolean {
-  return /^t[23][-_ ]?code$/i.test(server);
+  return /^t2[-_ ]?code$/i.test(server);
 }
 
 /**
@@ -1141,8 +1141,8 @@ export function extractMcpToolCallIdentity(
   const gooseExtension =
     typeof gooseToolCall?.extensionName === "string" ? gooseToolCall.extensionName.trim() : "";
   const assertsForeignOrigin =
-    (metaServerId.length > 0 && !/^t[23][-_ ]?code$/i.test(metaServerId)) ||
-    (gooseExtension.length > 0 && !/^t[23][-_ ]?code$/i.test(gooseExtension));
+    (metaServerId.length > 0 && !/^t2[-_ ]?code$/i.test(metaServerId)) ||
+    (gooseExtension.length > 0 && !/^t2[-_ ]?code$/i.test(gooseExtension));
   // qwen's serverId marks a real MCP server, but goose reports its built-in
   // extensions (developer__shell, edits) the same way as user MCP servers, so
   // goose stays unclassified and keeps its command and file-change projections.

@@ -1221,7 +1221,7 @@ describe("buildThreadFeed", () => {
   it("uses canonical T2 orchestration summaries in compact work groups", () => {
     const rows = [
       projected(command("2026-06-20T00:00:01.000Z"), 0),
-      ...["mcp__t2-code__t2_thread_send", "t3_code.t2_thread_send", "t2_thread_send"].map(
+      ...["mcp__t2-code__t2_thread_send", "t2-code.t2_thread_send", "t2_thread_send"].map(
         (toolName, index) =>
           projected(
             {
