@@ -7,7 +7,7 @@ import {
   readHostCredentialSettings,
   type SourceControlDefinition,
   type SourceControlHostCredentials,
-} from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/source-control-clients";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { Button, InlineButton } from "../ui/button";

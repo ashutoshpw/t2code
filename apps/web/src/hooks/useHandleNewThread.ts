@@ -219,7 +219,6 @@ export function useNewThreadHandler() {
         const projectFile = consultProjectFile
           ? await readT2ProjectFile(project.environmentId, project.workspaceRoot)
           : null;
-<<<<<<< HEAD
         return resolveNewThreadEnvMode({
           projectSettings: resolveProjectSettings(
             targetServerSettings,

@@ -2,7 +2,7 @@ import {
   AuthPreviewOperateScope,
   type BrowserProfile,
   type BrowserRecordingFrameRate,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useEffect } from "react";
 
 import { useClientSettings, useClientSettingsHydrated } from "~/hooks/useSettings";

@@ -13,7 +13,7 @@ import {
   readHostCredentialSettings,
   type SourceControlDefinition,
   type SourceControlHostCredentials,
-} from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/source-control-clients";
 import { redactedPlaceholder } from "./RedactedSensitiveText";
 
 /** Sentinel select value for "follow the CLI's active login"; logins never contain spaces. */
