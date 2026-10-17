@@ -47,8 +47,8 @@ const make = Effect.gen(function* () {
   const verify: RelayDeliveryProof["Service"]["verify"] = (input) =>
     Effect.gen(function* () {
       const proof = input.headers[RELAY_HOOK_DELIVERY_HEADER];
-      const deliveryId = input.headers["x-t3-relay-delivery-id"];
-      const receivedAt = input.headers["x-t3-relay-received-at"];
+      const deliveryId = input.headers["x-t2-relay-delivery-id"];
+      const receivedAt = input.headers["x-t2-relay-received-at"];
       if (proof === undefined || deliveryId === undefined || receivedAt === undefined) {
         return Option.none();
       }

@@ -819,7 +819,7 @@ const deliveriesCounted = (outcome: string, source: "relay" | "direct") =>
     Effect.map((snapshots) => {
       const found = snapshots.find(
         (snapshot) =>
-          snapshot.id === "t3_webhook_deliveries_total" &&
+          snapshot.id === "t2_webhook_deliveries_total" &&
           snapshot.attributes?.outcome === outcome &&
           snapshot.attributes?.source === source,
       );
