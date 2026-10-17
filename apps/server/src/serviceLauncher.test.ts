@@ -724,7 +724,7 @@ setInterval(() => {}, 1_000);
       );
       assert.include(
         blocker ?? "",
-        // oxlint-disable-next-line t3code/no-global-process-runtime -- mirrors the standalone launcher's own platform check.
+        // oxlint-disable-next-line t2code/no-global-process-runtime -- mirrors the standalone launcher's own platform check.
         process.platform === "darwin" ? "1.0 GB needed, 0.0 GB free" : "GB needed, 0.0 GB free",
       );
       assert.deepEqual(yield* fs.readDirectory(path.join(root, "runtime", "db-backup")), []);

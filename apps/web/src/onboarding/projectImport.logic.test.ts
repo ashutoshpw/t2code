@@ -369,9 +369,9 @@ describe("splitOnboardingProjectPath", () => {
 
   it("keeps a root or bare name whole", () => {
     expect(splitOnboardingProjectPath("/")).toEqual({ name: "/", parent: "" });
-    expect(splitOnboardingProjectPath("/t3code")).toEqual({ name: "t3code", parent: "/" });
-    expect(splitOnboardingProjectPath("t3code")).toEqual({ name: "t3code", parent: "" });
-    expect(splitOnboardingProjectPath("t3code/")).toEqual({ name: "t3code", parent: "" });
+    expect(splitOnboardingProjectPath("/t2code")).toEqual({ name: "t2code", parent: "/" });
+    expect(splitOnboardingProjectPath("t2code")).toEqual({ name: "t2code", parent: "" });
+    expect(splitOnboardingProjectPath("t2code/")).toEqual({ name: "t2code", parent: "" });
   });
 
   it.each(["C:\\", "C:/", "\\\\server\\share", "\\\\server\\share\\", "//server/share/"])(
