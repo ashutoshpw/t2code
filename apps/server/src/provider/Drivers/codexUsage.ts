@@ -1,4 +1,4 @@
-import type { CodexSettings } from "@t3tools/contracts";
+import type { CodexSettings } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
@@ -11,8 +11,8 @@ import {
   type TranscriptUsageFormat,
   type UsageRecord,
   type UsageSpeed,
-} from "@t3tools/provider-core/server/usage";
-import type { UsageTokenTotals } from "@t3tools/contracts";
+} from "@t2code/provider-core/server/usage";
+import type { UsageTokenTotals } from "@t2code/contracts";
 
 import { resolveCodexHomeLayout } from "./CodexHomeLayout.ts";
 

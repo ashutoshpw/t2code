@@ -14,32 +14,32 @@ import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as EffectAcpErrors from "effect-acp/errors";
 
-import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
+import * as ProviderHost from "@t2code/provider-core/server/ProviderHost";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
 import * as ServerSettings from "../../serverSettings.ts";
 import type {
   AcpRegistryAvailableCommands,
   AcpRegistryLiveConfiguration,
-} from "@t3tools/provider-acp-registry/testing";
-import * as AcpRegistrySupport from "@t3tools/provider-acp-registry/server/AcpRegistrySupport";
-import * as AcpRegistryRuntimeCoordinator from "@t3tools/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
-import { ACP_SESSION_MODE_OPTION_ID } from "@t3tools/provider-acp/server/sessionConfig";
-import * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+} from "@t2code/provider-acp-registry/testing";
+import * as AcpRegistrySupport from "@t2code/provider-acp-registry/server/AcpRegistrySupport";
+import * as AcpRegistryRuntimeCoordinator from "@t2code/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
+import { ACP_SESSION_MODE_OPTION_ID } from "@t2code/provider-acp/server/sessionConfig";
+import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import {
   decodeAcpReplayTranscript,
   makeAcpReplayCompletenessAssertion,
   makeAcpReplayRuntime,
 } from "./AcpAdapterV2.testkit.ts";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 import { BUILT_IN_PROVIDER_ADAPTER_DRIVER_KINDS_V2 } from "../builtInProviderAdapterDrivers.ts";
-import { AcpRegistryAdapterV2Driver } from "@t3tools/provider-acp-registry/server";
+import { AcpRegistryAdapterV2Driver } from "@t2code/provider-acp-registry/server";
 import {
   ACP_REGISTRY_PROVIDER,
   makeAcpRegistryAdapterV2,
   acpRegistryPromptFailure,
-} from "@t3tools/provider-acp-registry/testing";
+} from "@t2code/provider-acp-registry/testing";
 
 const registryUrl = "https://registry.test/registry.json";
 const decodeAcpRegistryAdapterSettings = Schema.decodeUnknownEffect(

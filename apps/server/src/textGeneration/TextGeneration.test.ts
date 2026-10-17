@@ -8,12 +8,12 @@ import { describe, expect } from "vite-plus/test";
 import { ProviderInstanceId } from "@t2code/contracts";
 import { createModelSelection } from "@t2code/shared/model";
 
-import type { ProviderInstance } from "@t3tools/provider-core/server/driver";
+import type { ProviderInstance } from "@t2code/provider-core/server/driver";
 import * as ProviderInstanceRegistry from "../provider/ProviderInstanceRegistry.ts";
 import * as TextGeneration from "./TextGeneration.ts";
 import * as SourceControlProviderRegistry from "../sourceControl/SourceControlProviderRegistry.ts";
 import * as Layer from "effect/Layer";
-import { buildThreadTitlePrompt } from "@t3tools/provider-core/server/textGenerationPrompts";
+import { buildThreadTitlePrompt } from "@t2code/provider-core/server/textGenerationPrompts";
 
 const makeStubTextGeneration = (
   overrides: Partial<TextGeneration.TextGeneration["Service"]>,

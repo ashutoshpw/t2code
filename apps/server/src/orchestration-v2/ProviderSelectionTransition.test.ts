@@ -6,8 +6,8 @@ import {
   ProviderInstanceId,
 } from "@t2code/contracts";
 
-import { AcpProviderCapabilitiesV2 } from "@t3tools/provider-acp/server/adapter";
-import { acpSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
+import { AcpProviderCapabilitiesV2 } from "@t2code/provider-acp/server/adapter";
+import { acpSelectionTransition } from "@t2code/provider-core/server/selectionTransition";
 
 const selection = (model: string, effort = "medium"): ModelSelection => ({
   instanceId: ProviderInstanceId.make("acp_test"),

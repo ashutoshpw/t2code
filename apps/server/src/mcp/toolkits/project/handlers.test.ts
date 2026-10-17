@@ -486,7 +486,7 @@ it.effect("a launch into a new worktree creates nothing when its base ref has no
     );
     const launchFrom = (baseRef: string) =>
       toolkit
-        .handle("t3_thread_launch", {
+        .handle("t2_thread_launch", {
           title: "Fix",
           projectId,
           workspaceStrategy: { type: "worktree", baseRef, startFromOrigin: false },

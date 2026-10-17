@@ -21,7 +21,7 @@ import {
   decodeClaudeModelAdapter,
   decodeClaudeProfileAdapter,
 } from "./ClaudeModelManifest.ts";
-import * as ModelCatalog from "@t3tools/provider-core/server/ModelCatalog";
+import * as ModelCatalog from "@t2code/provider-core/server/ModelCatalog";
 import { BUNDLED_MODEL_MANIFEST, resolveProviderCatalog } from "./ModelManifest.ts";
 
 const CLAUDE = ProviderDriverKind.make("claudeAgent");

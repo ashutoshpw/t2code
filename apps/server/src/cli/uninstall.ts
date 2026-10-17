@@ -52,7 +52,7 @@ export const findOwnedLaunchers = Effect.fn("cli.uninstall.find_launchers")(func
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const platform = yield* HostProcess.Platform;
-  if (input.launchedAs === undefined) return undefined;
+  if (input.launchedAs === undefined) return [];
   if (platform === "win32") {
     const shimPath = yield* findWindowsShim(input.launchedAs);
     if (shimPath === undefined) return [];
@@ -136,7 +136,7 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
   const service = yield* BootService.BootService;
   const plan = yield* planUninstall({ baseDir: input.baseDir });
 
-  if (!plan.service && plan.launcher === undefined && plan.runtimeDir === undefined) {
+  if (!plan.service && plan.launcher.length === 0 && plan.runtimeDir === undefined) {
     yield* Console.log(`Nothing to remove: t2 is not installed for ${input.baseDir}.`);
     if (!(yield* HostProcess.IsExecutable)) {
       yield* Console.log(

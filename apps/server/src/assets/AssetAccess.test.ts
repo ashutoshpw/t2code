@@ -37,7 +37,7 @@ import { openMediaFile } from "./MediaFile.ts";
 import { symlinksSupported } from "@t2code/shared/testing/symlinks";
 import * as GitHubCredentials from "@t2code/source-control-github/server/GitHubCredentials";
 import { githubMediaResponse } from "./GitHubMediaFetch.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof NodeFSP>();

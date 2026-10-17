@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { MessageId, NodeId, ProviderDriverKind, ThreadId, TurnItemId } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import { makeAssistantStreamingFilter, splitBufferedAssistantText } from "./assistantStreaming.ts";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import type * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 
 const message = (text: string, streaming = true): ProviderAdapter.ProviderAdapterV2Event => ({
   type: "message.updated",

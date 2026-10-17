@@ -8,11 +8,11 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { type ClaudeSettings, TextGenerationError } from "@t2code/contracts";
 import { resolveSpawnCommand } from "@t2code/shared/shell";
 
-import * as TextGenerationOperations from "@t3tools/provider-core/server/textGenerationOperations";
+import * as TextGenerationOperations from "@t2code/provider-core/server/textGenerationOperations";
 import {
   normalizeCliError,
   toJsonSchemaObject,
-} from "@t3tools/provider-core/server/textGenerationUtils";
+} from "@t2code/provider-core/server/textGenerationUtils";
 import {
   getModelSelectionStringOptionValue,
   getProviderOptionDescriptors,

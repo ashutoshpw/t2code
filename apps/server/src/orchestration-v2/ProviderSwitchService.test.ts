@@ -13,9 +13,9 @@ import * as Layer from "effect/Layer";
 
 import { CodexProviderCapabilitiesV2 } from "./Adapters/CodexAdapterV2.ts";
 import * as ProviderAdapterRegistry from "./ProviderAdapterRegistry.ts";
-import { acpSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
+import { acpSelectionTransition } from "@t2code/provider-core/server/selectionTransition";
 import * as ProviderSwitch from "./ProviderSwitchService.ts";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import type * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 
 const driver = ProviderDriverKind.make("codex");
 const currentInstanceId = ProviderInstanceId.make("codex_primary");

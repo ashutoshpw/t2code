@@ -21,13 +21,13 @@ it.effect("reports the version the running server recorded, not the CLI's", () =
     );
     const state = yield* makePersistedServerRuntimeState({
       config: { host: undefined, devUrl: undefined },
-      port: 3773,
+      port: 3772,
     });
     yield* persistServerRuntimeState({ path: statePath, state });
 
     assert.equal(
       yield* describeServerProcess(statePath),
-      `running (pid ${String(process.pid)}, http://127.0.0.1:3773, version ${packageJson.version})`,
+      `running (pid ${String(process.pid)}, http://127.0.0.1:3772, version ${packageJson.version})`,
     );
   }).pipe(Effect.provide(NodeServices.layer)),
 );
@@ -45,15 +45,15 @@ it.effect("says the server version is unknown when the state file has none", () 
       JSON.stringify({
         version: 1,
         pid: process.pid,
-        port: 3773,
-        origin: "http://127.0.0.1:3773",
+        port: 3772,
+        origin: "http://127.0.0.1:3772",
         startedAt: "2026-09-24T00:08:56.777Z",
       }),
     );
 
     assert.equal(
       yield* describeServerProcess(statePath),
-      `running (pid ${String(process.pid)}, http://127.0.0.1:3773, version not recorded)`,
+      `running (pid ${String(process.pid)}, http://127.0.0.1:3772, version not recorded)`,
     );
   }).pipe(Effect.provide(NodeServices.layer)),
 );

@@ -686,7 +686,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
 
     return Effect.gen(function* () {
       const link = yield* CloudLink.CloudLink;
-      expect(yield* link.registerManagedTunnelRecovery("http://127.0.0.1:3773")).toEqual({
+      expect(yield* link.registerManagedTunnelRecovery("http://127.0.0.1:3772")).toEqual({
         status: "revoked",
       });
       expect((yield* link.linkState()).linkRevoked).toBe(true);
@@ -727,7 +727,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
 
     return Effect.gen(function* () {
       const link = yield* CloudLink.CloudLink;
-      expect(yield* link.registerManagedTunnelRecovery("http://127.0.0.1:3773")).toEqual({
+      expect(yield* link.registerManagedTunnelRecovery("http://127.0.0.1:3772")).toEqual({
         status: "superseded",
       });
       expect(values.has(CLOUD_LINK_REVOKED)).toBe(false);
@@ -1093,7 +1093,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
 
     return Effect.gen(function* () {
       const link = yield* CloudLink.CloudLink;
-      const error = yield* Effect.flip(link.recoverManagedTunnel("http://127.0.0.1:3773"));
+      const error = yield* Effect.flip(link.recoverManagedTunnel("http://127.0.0.1:3772"));
       expect(error).toMatchObject({ _tag: "RelayRequestError", rejection: "unauthorized" });
       expect((yield* link.linkState()).linkRevoked).toBe(true);
       expect(applyConfigCalls).toEqual([]);

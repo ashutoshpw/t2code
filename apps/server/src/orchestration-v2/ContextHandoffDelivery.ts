@@ -10,7 +10,7 @@ import {
   historyCost,
   renderHistory,
   selectHistory,
-} from "@t3tools/provider-core/server/handoffBudget";
+} from "@t2code/provider-core/server/handoffBudget";
 
 /**
  * Persist before/after injection: an ambiguous pending delivery requires a fresh native thread.

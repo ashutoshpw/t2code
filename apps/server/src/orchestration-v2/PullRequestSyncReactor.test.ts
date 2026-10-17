@@ -1,4 +1,4 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
 import * as Stream from "effect/Stream";
 import {
   EventId,
@@ -32,7 +32,7 @@ import * as Queue from "effect/Queue";
 import * as Ref from "effect/Ref";
 import { TestClock } from "effect/testing";
 
-import { PullRequestProviderError } from "@t3tools/source-control-core/server/PullRequestProvider";
+import { PullRequestProviderError } from "@t2code/source-control-core/server/PullRequestProvider";
 import * as GitManager from "../git/GitManager.ts";
 import * as PullRequestService from "../pullRequest/PullRequestService.ts";
 import * as ServerActivation from "../serverActivation.ts";

@@ -653,6 +653,7 @@ function parseDpopToken(request: HttpServerRequest.HttpServerRequest): string | 
 export function selectRequestCredential(
   request: HttpServerRequest.HttpServerRequest,
   cookieName: string,
+  legacyCookieName: string | undefined,
 ) {
   const cookieToken = request.cookies[cookieName];
   if (cookieToken !== undefined) {
@@ -667,6 +668,11 @@ export function selectRequestCredential(
   const dpopToken = parseDpopToken(request);
   if (dpopToken !== null) {
     return { token: dpopToken, source: "dpop" } as const;
+  }
+
+  const legacyToken = legacyCookieName ? request.cookies[legacyCookieName] : undefined;
+  if (legacyToken !== undefined) {
+    return { token: legacyToken, source: "legacy-cookie" } as const;
   }
 
   return undefined;

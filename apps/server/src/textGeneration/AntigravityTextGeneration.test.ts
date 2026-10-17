@@ -20,7 +20,7 @@ import { type AcpError, AcpRequestError } from "effect-acp/errors";
 import type * as AcpSchema from "effect-acp/compat";
 import { expect } from "vite-plus/test";
 
-import type * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
+import type * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
 import { removeAntigravitySessionFiles } from "../provider/acp/AntigravitySessionFiles.ts";
 
 import {

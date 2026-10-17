@@ -16,9 +16,9 @@ import { BUILT_IN_DRIVERS, type BuiltInDriversEnv } from "./builtInDrivers.ts";
 import * as ProviderInstanceRegistry from "./ProviderInstanceRegistry.ts";
 import * as ProviderInstanceRegistryMutator from "./ProviderInstanceRegistryMutator.ts";
 import * as ProviderOrchestrationAdapterInfrastructure from "./ProviderOrchestrationAdapterInfrastructure.ts";
-import * as AcpRegistrySupport from "@t3tools/provider-acp-registry/server/AcpRegistrySupport";
+import * as AcpRegistrySupport from "@t2code/provider-acp-registry/server/AcpRegistrySupport";
 import * as ProviderHostLive from "./ProviderHostLive.ts";
-import type * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
+import type * as ProviderHost from "@t2code/provider-core/server/ProviderHost";
 import type * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
 import type * as ServerConfig from "../config.ts";
 

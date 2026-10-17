@@ -33,12 +33,12 @@ import {
   providerModelsFromSettings,
   spawnAndCollect,
   type ServerProviderDraft,
-} from "@t3tools/provider-core/server/snapshotProbe";
+} from "@t2code/provider-core/server/snapshotProbe";
 import { resolveClaudeSdkExecutablePath } from "./Drivers/ClaudeExecutable.ts";
 import { hasClaudeManagedMcpConfig, makeClaudeEnvironment } from "./Drivers/ClaudeHome.ts";
 import { discoverClaudeSkills } from "./Drivers/ClaudeSkills.ts";
-import type { ProviderWorkspaceSnapshot } from "@t3tools/provider-core/server/driver";
-import { makeUnavailableUsageLimits } from "@t3tools/provider-core/server/usageLimits";
+import type { ProviderWorkspaceSnapshot } from "@t2code/provider-core/server/driver";
+import { makeUnavailableUsageLimits } from "@t2code/provider-core/server/usageLimits";
 import {
   type ClaudeScopedLimitNames,
   claudeUsageResponseToLimits,

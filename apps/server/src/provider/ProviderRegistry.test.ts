@@ -45,11 +45,11 @@ import * as AntigravityInstallation from "./AntigravityInstallation.ts";
 import * as ModelManifest from "./ModelManifest.ts";
 import { applyProviderCompatibility } from "./providerCompatibility.ts";
 import * as ResetCreditCoordinator from "./resetCreditCoordinator.ts";
-import * as ProviderLatestVersions from "@t3tools/provider-core/server/ProviderLatestVersions";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as OpenCodeRuntime from "@t3tools/provider-opencode/server/OpenCodeRuntime";
-import * as OpenCodeServerLedger from "@t3tools/provider-opencode/server/OpenCodeServerLedger";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
+import * as ProviderLatestVersions from "@t2code/provider-core/server/ProviderLatestVersions";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import * as OpenCodeRuntime from "@t2code/provider-opencode/server/OpenCodeRuntime";
+import * as OpenCodeServerLedger from "@t2code/provider-opencode/server/OpenCodeServerLedger";
+import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
 import * as ProviderInstanceRegistryHydration from "./ProviderInstanceRegistryHydration.ts";
 import * as ServerConfig from "../config.ts";
 import * as ServerSettingsModule from "../serverSettings.ts";
@@ -58,14 +58,14 @@ import {
   resolveProviderStatusCachePath,
   writeProviderStatusCache,
 } from "./providerStatusCache.ts";
-import { COMPACT_SLASH_COMMAND } from "@t3tools/provider-core/server/snapshotProbe";
+import { COMPACT_SLASH_COMMAND } from "@t2code/provider-core/server/snapshotProbe";
 import type {
   ProviderInstance,
   ProviderWorkspaceSnapshot,
-} from "@t3tools/provider-core/server/driver";
+} from "@t2code/provider-core/server/driver";
 import * as ProviderInstanceRegistry from "./ProviderInstanceRegistry.ts";
 import * as ProviderRegistry from "./ProviderRegistry.ts";
-import { makeManualOnlyProviderMaintenanceCapabilities } from "@t3tools/provider-core/server/maintenanceResolver";
+import { makeManualOnlyProviderMaintenanceCapabilities } from "@t2code/provider-core/server/maintenanceResolver";
 const decodeServerSettings = Schema.decodeSync(ServerSettings);
 const encodeServerSettings = Schema.encodeSync(ServerSettings);
 const encodedDefaultServerSettings = encodeServerSettings(DEFAULT_SERVER_SETTINGS);

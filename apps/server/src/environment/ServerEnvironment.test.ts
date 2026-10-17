@@ -82,7 +82,7 @@ const makeServerConfig = Effect.fn(function* (baseDir: string) {
 
 const testNodeServices = Layer.merge(
   NodeServices.layer,
-  Layer.succeed(HostProcessEnvironment, {
+  Layer.succeed(HostProcess.Environment, {
     ...process.env,
     [SERVICE_LAUNCHER_CONTEXT_ENV]: undefined,
   }),

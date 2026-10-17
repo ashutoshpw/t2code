@@ -46,7 +46,7 @@ import { openCode2ReplayRuntime } from "./OpenCode2AdapterV2.testkit.ts";
 import {
   makeProviderReplayGate,
   type ProviderReplayGate,
-} from "@t3tools/provider-testing/replayGate";
+} from "@t2code/provider-testing/replayGate";
 
 const SESSION = "ses_f148ca2deffeJcwCnRQtb0YFNX";
 const WORK = "/work/opencode2";

@@ -30,15 +30,15 @@ import * as ServerConfig from "../config.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import { ClaudeDriver, type ClaudeDriverEnv } from "./Drivers/ClaudeDriver.ts";
 import { CodexDriver, type CodexDriverEnv } from "./Drivers/CodexDriver.ts";
-import { CursorDriver, type CursorDriverEnv } from "@t3tools/provider-cursor/server";
-import { GrokDriver, type GrokDriverEnv } from "@t3tools/provider-grok/server";
-import { OpenCodeDriver, type OpenCodeDriverEnv } from "@t3tools/provider-opencode/server";
-import type { OpenCodeSettings } from "@t3tools/provider-opencode/settings";
+import { CursorDriver, type CursorDriverEnv } from "@t2code/provider-cursor/server";
+import { GrokDriver, type GrokDriverEnv } from "@t2code/provider-grok/server";
+import { OpenCodeDriver, type OpenCodeDriverEnv } from "@t2code/provider-opencode/server";
+import type { OpenCodeSettings } from "@t2code/provider-opencode/settings";
 import * as ModelManifest from "./ModelManifest.ts";
-import * as OpenCodeRuntime from "@t3tools/provider-opencode/server/OpenCodeRuntime";
-import * as OpenCodeServerLedger from "@t3tools/provider-opencode/server/OpenCodeServerLedger";
+import * as OpenCodeRuntime from "@t2code/provider-opencode/server/OpenCodeRuntime";
+import * as OpenCodeServerLedger from "@t2code/provider-opencode/server/OpenCodeServerLedger";
 import * as ResetCreditCoordinator from "./resetCreditCoordinator.ts";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
+import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
 import { makeProviderInstanceRegistry } from "./ProviderInstanceRegistry.ts";
 import * as ProviderOrchestrationAdapterInfrastructure from "./ProviderOrchestrationAdapterInfrastructure.ts";
 import * as ProviderHostLive from "./ProviderHostLive.ts";
@@ -415,7 +415,7 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
             enabled: true,
             // Packaged desktop builds start the server in $HOME, where some
             // `claude` wrappers refuse to run.
-            environment: [{ name: "T3_CLAUDE_REQUIRED_CWD", value: stateDir, sensitive: false }],
+            environment: [{ name: "T2_CLAUDE_REQUIRED_CWD", value: stateDir, sensitive: false }],
             config: makeClaudeConfig({
               enabled: true,
               binaryPath: fixtures.claudeBinaryPath,

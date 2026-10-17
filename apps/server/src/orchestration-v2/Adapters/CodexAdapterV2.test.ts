@@ -1,6 +1,6 @@
 import * as NodeOS from "node:os";
 
-import { historyResponseItems } from "@t3tools/provider-core/server/handoffBudget";
+import { historyResponseItems } from "@t2code/provider-core/server/handoffBudget";
 import {
   makeProviderTextDeltaCoalescer,
   type ProviderTextDeltaUpdate,
@@ -55,14 +55,14 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 import packageJson from "../../../package.json" with { type: "json" };
 import * as ServerConfig from "../../config.ts";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import * as EffectWorker from "../EffectWorker.ts";
 import * as Orchestrator from "../Orchestrator.ts";
 import * as ProviderReplayHarness from "../testkit/ProviderReplayHarness.ts";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import type * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
+import type * as ProviderContinuationRequests from "@t2code/provider-core/server/ProviderContinuationRequests";
 import * as CodexAdapterV2 from "./CodexAdapterV2.ts";
 import { makeReplayServerConfig, withCodexReplayChildMetadata } from "./CodexAdapterV2.testkit.ts";
 import * as CodexAdapterV2Testkit from "./CodexAdapterV2.testkit.ts";
@@ -842,7 +842,7 @@ describe("CodexAdapterV2 dynamic tool projection", () => {
         status: "failed",
         arguments: {
           title: "Restrict the breakpoint to Git actions",
-          code: "await sky.type_text({app:'T3 Code (Nightly)',text:'debug(ga.run)'});",
+          code: "await sky.type_text({app:'T2 Code (Nightly)',text:'debug(ga.run)'});",
         },
         result: { content: [{ type: "text", text: "Illegal Unicode escape sequence" }] },
       });

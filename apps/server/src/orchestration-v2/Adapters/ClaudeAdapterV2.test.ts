@@ -72,8 +72,8 @@ import { SpawnExecutableResolution } from "@t2code/shared/shell";
 
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import * as ServerConfig from "../../config.ts";
-import * as McpProviderSession from "@t3tools/provider-core/server/mcpSession";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
+import * as McpProviderSession from "@t2code/provider-core/server/mcpSession";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
 import { PreviewControlsToolkit } from "../../mcp/toolkits/previewControls/tools.ts";
 import { HtmlToolkit } from "../../mcp/toolkits/html/tools.ts";
 import { EnvironmentToolkit } from "../../mcp/toolkits/environment/tools.ts";
@@ -82,12 +82,12 @@ import { WorktreeToolkit } from "../../mcp/toolkits/worktree/tools.ts";
 import { ThreadToolkit } from "../../mcp/toolkits/thread/tools.ts";
 import { OrchestratorToolkit } from "../../mcp/toolkits/orchestrator/tools.ts";
 import { ClaudeExecutableFileCheck } from "../../provider/Drivers/ClaudeExecutable.ts";
-import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import type * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
+import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
+import type * as ProviderContinuationRequests from "@t2code/provider-core/server/ProviderContinuationRequests";
+import { makeProviderFailure } from "@t2code/provider-core/server/failure";
 import * as ClaudeAdapterV2 from "./ClaudeAdapterV2.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import { ClaudeOrchestratorReplayHarness } from "./ClaudeAdapterV2.testkit.ts";
 import { provideDeterministicTestRuntime } from "../testkit/DeterministicRuntime.ts";
 import { runOrchestratorV2Scenario } from "../testkit/OrchestratorScenario.ts";
@@ -579,10 +579,9 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
       readOnlySandbox: false,
     });
 
-      assert.deepEqual(overrides, {
-        allowedTools: [ClaudeAdapterV2.CLAUDE_T2_MCP_TOOL_WILDCARD],
-        mcpServers: T2_MCP_SERVERS,
-      });
+    assert.deepEqual(overrides, {
+      allowedTools: [ClaudeAdapterV2.CLAUDE_T2_MCP_TOOL_WILDCARD],
+      mcpServers: T2_MCP_SERVERS,
     });
   });
 
@@ -613,11 +612,11 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
     assert.deepEqual(overrides, {
       allowedTools: [
         ...ClaudeAdapterV2.CLAUDE_READ_ONLY_ALLOWED_TOOLS,
-        ...ClaudeAdapterV2.CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS,
+        ...ClaudeAdapterV2.CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS,
       ],
-      mcpServers: T3_MCP_SERVERS,
+      mcpServers: T2_MCP_SERVERS,
     });
-    assert.isFalse(overrides.allowedTools?.includes(ClaudeAdapterV2.CLAUDE_T3_MCP_TOOL_WILDCARD));
+    assert.isFalse(overrides.allowedTools?.includes(ClaudeAdapterV2.CLAUDE_T2_MCP_TOOL_WILDCARD));
   });
 
   it("pre-approves only read-only t2-code tools in a read-only sandbox without an allowlist", () => {
@@ -629,7 +628,7 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
     });
 
     assert.deepEqual(overrides.allowedTools, [
-      ...ClaudeAdapterV2.CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS,
+      ...ClaudeAdapterV2.CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS,
     ]);
   });
 
@@ -729,15 +728,15 @@ describe("ClaudeAdapterV2 native protocol logging", () => {
       allowedTools: ["Read"],
     });
     assert.deepEqual(overrides, {
-      allowedTools: ["Read", "mcp__t3-code__*"],
+      allowedTools: ["Read", "mcp__t2-code__*"],
       mcpServers: {
-        "t3-code": {
+        "t2-code": {
           type: "http",
           url: "http://127.0.0.1:43123/mcp",
           headers: {
             Authorization: "Bearer secret-claude-token",
           },
-          timeout: ClaudeAdapterV2.CLAUDE_T3_MCP_TOOL_TIMEOUT_MS,
+          timeout: ClaudeAdapterV2.CLAUDE_T2_MCP_TOOL_TIMEOUT_MS,
         },
       },
     });
@@ -1985,7 +1984,7 @@ function makeFakeClaudeCli(answerSetServers = true) {
 }
 
 describe("ClaudeAdapterV2 MCP credential channel", () => {
-  const t3McpServer = {
+  const t2McpServer = {
     type: "http" as const,
     url: "http://127.0.0.1:43123/mcp",
     headers: { Authorization: "Bearer dummy-mcp-credential" },
@@ -2003,7 +2002,7 @@ describe("ClaudeAdapterV2 MCP credential channel", () => {
             resume: false,
             cwd: null,
             environment: { PATH: "/usr/bin" },
-            mcpServers: { "t3-code": t3McpServer },
+            mcpServers: { "t2-code": t2McpServer },
           }),
           pathToClaudeCodeExecutable: "/opt/claude/cli.js",
           spawnClaudeCodeProcess: cli.spawn,
@@ -2026,7 +2025,7 @@ describe("ClaudeAdapterV2 MCP credential channel", () => {
 
       assert.deepInclude(cli.controlRequests, {
         subtype: "mcp_set_servers",
-        servers: { "t3-code": t3McpServer },
+        servers: { "t2-code": t2McpServer },
       });
       const spawned = JSON.stringify(cli.spawns);
       assert.notInclude(spawned, "--mcp-config");

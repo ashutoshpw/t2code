@@ -617,10 +617,10 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
         serverAuth.authenticateWebSocketUpgrade({
           url: "/ws",
           cookies: { [sessions.cookieName]: exchanged.sessionToken },
-          headers: { host: "192.168.1.50:3773", ...headers },
+          headers: { host: "192.168.1.50:3772", ...headers },
         } as never);
 
-      yield* upgrade({ origin: "http://192.168.1.50:3773" });
+      yield* upgrade({ origin: "http://192.168.1.50:3772" });
       yield* upgrade({
         origin: "https://box.tail1234.ts.net",
         "x-forwarded-host": "box.tail1234.ts.net",
@@ -679,7 +679,7 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
         url: "/ws",
         cookies: {},
         headers: {
-          host: "192.168.1.50:3773",
+          host: "192.168.1.50:3772",
           origin: "http://192.168.1.50:8080",
           authorization: `Bearer ${bearer.token}`,
         },

@@ -17,9 +17,9 @@ import {
   checkGrokProviderStatus,
   grokSlashCommandsFromInitialize,
   parseGrokModelsCliOutput,
-} from "@t3tools/provider-grok/testing";
-import { execScriptSource, writeFakeCli } from "@t3tools/provider-testing/fakeCli";
-import { grokUsageResponseToLimits, readGrokAccount } from "@t3tools/provider-grok/testing";
+} from "@t2code/provider-grok/testing";
+import { execScriptSource, writeFakeCli } from "@t2code/provider-testing/fakeCli";
+import { grokUsageResponseToLimits, readGrokAccount } from "@t2code/provider-grok/testing";
 
 const decodeGrokSettings = Schema.decodeSync(GrokSettings);
 const __dirname = NodePath.dirname(NodeURL.fileURLToPath(import.meta.url));

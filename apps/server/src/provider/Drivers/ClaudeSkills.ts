@@ -7,7 +7,7 @@ import * as HostProcess from "@t2code/shared/HostProcess";
 import { fromLenientJson } from "@t2code/shared/schemaJson";
 import { parse as parseYamlDocument } from "yaml";
 
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
+import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
 
 type ClaudeSkillScope = "user" | "project";
 

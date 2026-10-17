@@ -35,7 +35,7 @@ import { normalizeProjectPathForComparison } from "@t2code/shared/path";
 import * as ServerConfig from "../config.ts";
 import * as ProjectStore from "../orchestration-v2/ProjectStore.ts";
 import { resolveCodexHomeLayout } from "../provider/Drivers/CodexHomeLayout.ts";
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
+import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
 import * as ServerSettings from "../serverSettings.ts";
 import {
   createTranscriptJsonReader,

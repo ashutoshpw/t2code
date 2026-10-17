@@ -15,8 +15,8 @@ import {
   makeClaudeUserMessage,
   type ClaudeAgentSdkQueryOptions,
 } from "../src/orchestration-v2/Adapters/ClaudeAdapterV2.ts";
-import { randomUuidV4 } from "@t3tools/provider-core/server/randomUuid";
-import { makeCheckpointWorkspace } from "@t3tools/provider-testing/replayWorkspace";
+import { randomUuidV4 } from "@t2code/provider-core/server/randomUuid";
+import { makeCheckpointWorkspace } from "@t2code/provider-testing/replayWorkspace";
 
 const SCENARIO = "thread_fork_native_fork_local_rollback";
 const DEFAULT_OUTPUT = new URL(

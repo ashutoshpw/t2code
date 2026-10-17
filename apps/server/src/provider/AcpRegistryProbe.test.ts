@@ -13,7 +13,7 @@ import * as Schema from "effect/Schema";
 import * as TestClock from "effect/testing/TestClock";
 import * as EffectAcpErrors from "effect-acp/errors";
 
-import type * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
+import type * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
 import {
   acpRegistryProbeFailure,
   acpRegistryProbeResult,
@@ -22,8 +22,8 @@ import {
   normalizeAcpRegistryAuthMethods,
   normalizeAcpRegistryCommands,
   probeAcpRegistryConfiguration,
-} from "@t3tools/provider-acp-registry/testing";
-import * as AcpRegistrySupport from "@t3tools/provider-acp-registry/server/AcpRegistrySupport";
+} from "@t2code/provider-acp-registry/testing";
+import * as AcpRegistrySupport from "@t2code/provider-acp-registry/server/AcpRegistrySupport";
 
 const instanceId = ProviderInstanceId.make("acpRegistry_codex");
 const __dirname = NodePath.dirname(NodeURL.fileURLToPath(import.meta.url));

@@ -13,9 +13,9 @@ import * as Stream from "effect/Stream";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as EffectAcpErrors from "effect-acp/errors";
 
-import * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
-import type { ProviderReplayGate } from "@t3tools/provider-testing/replayGate";
-import { ACP_PROTOCOL, type AcpAdapterV2RuntimeInput } from "@t3tools/provider-acp/server/adapter";
+import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
+import type { ProviderReplayGate } from "@t2code/provider-testing/replayGate";
+import { ACP_PROTOCOL, type AcpAdapterV2RuntimeInput } from "@t2code/provider-acp/server/adapter";
 
 export const AcpReplayTranscript = Schema.Struct({
   provider: ProviderDriverKind,

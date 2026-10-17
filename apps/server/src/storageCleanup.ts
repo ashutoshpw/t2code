@@ -46,8 +46,8 @@ import * as TerminalManager from "./terminal/Manager.ts";
 import { isFilesystemRoot, managedWorktreesDirectories } from "./worktreesDirectory.ts";
 import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
 import { withWorkspaceLease } from "./workspace/workspaceLease.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 
 const decodeCleanupThread = Schema.decodeUnknownEffect(
   Schema.fromJsonString(OrchestrationV2AppThreadJson),
@@ -195,7 +195,7 @@ export class StorageCleanup extends Context.Service<
     readonly reports: Stream.Stream<StorageCleanupReport | null>;
     readonly drain: Effect.Effect<void>;
   }
->()("t3/storageCleanup") {}
+>()("@t2code/cli/storageCleanup") {}
 
 const make = Effect.gen(function* () {
   const config = yield* ServerConfig.ServerConfig;

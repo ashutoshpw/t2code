@@ -1,4 +1,4 @@
-import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
+import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
 import { assert, describe, it } from "@effect/vitest";
 
 import * as ServerConfig from "./config.ts";

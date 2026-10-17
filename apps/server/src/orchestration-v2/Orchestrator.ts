@@ -91,7 +91,7 @@ import {
 } from "./CommandPolicy.ts";
 import { CommandReceiptStoreV2 } from "./CommandReceiptStore.ts";
 import { ContextHandoffServiceV2 } from "./ContextHandoffService.ts";
-import { notificationTurnItem } from "@t3tools/provider-core/server/notification";
+import { notificationTurnItem } from "@t2code/provider-core/server/notification";
 import {
   cancelledBeforeStart,
   isRestartContinuationSource,
@@ -104,7 +104,7 @@ import {
 import { EventSinkV2 } from "./EventSink.ts";
 import * as EffectOutbox from "./EffectOutbox.ts";
 import type { OrchestrationEffectRequestV2, PendingOrchestrationEffectV2 } from "./EffectOutbox.ts";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import * as ThreadCommandExecutor from "./ThreadCommandExecutor.ts";
 import { DispatchModeLimit, exceededDispatchModeLimit } from "./DispatchModeLimit.ts";
 import {
@@ -121,8 +121,8 @@ import {
   type ShellSnapshotOptions,
 } from "./ProjectionStore.ts";
 import { ProviderAdapterRegistryV2 } from "./ProviderAdapterRegistry.ts";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
+import * as ProviderContinuationRequests from "@t2code/provider-core/server/ProviderContinuationRequests";
+import { makeProviderFailure } from "@t2code/provider-core/server/failure";
 import * as RunExecutionService from "./RunExecutionService.ts";
 import { ProviderSessionManagerV2 } from "./ProviderSessionManager.ts";
 import { ProviderSwitchServiceV2 } from "./ProviderSwitchService.ts";
@@ -135,14 +135,14 @@ import {
   subagentResultForRun,
   delegatedTaskProgress,
   subagentThreadTitle,
-} from "@t3tools/provider-core/server/subagentProjection";
+} from "@t2code/provider-core/server/subagentProjection";
 import {
   forkableSourceRunStatusError,
   isForkableSourceRunStatus,
   ThreadForkServiceV2,
 } from "./ThreadForkService.ts";
 import { planThreadDeletion } from "./ThreadDeletion.ts";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import type * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 import * as ServerSettings from "../serverSettings.ts";
 
 export class OrchestratorDispatchError extends Schema.TaggedError<OrchestratorDispatchError>()(

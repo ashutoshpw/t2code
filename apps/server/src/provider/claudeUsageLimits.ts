@@ -13,7 +13,7 @@ import {
   clampPercent,
   makeUnavailableUsageLimits,
   makeUsageLimits,
-} from "@t3tools/provider-core/server/usageLimits";
+} from "@t2code/provider-core/server/usageLimits";
 
 const SESSION_MINS = 5 * 60;
 const WEEK_MINS = 7 * 24 * 60;

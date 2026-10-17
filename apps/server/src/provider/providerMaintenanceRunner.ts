@@ -33,10 +33,10 @@ import {
   makeTargetedProviderUpdateAction,
   resolveLatestProviderVersion,
   type ProviderMaintenanceCommandAction,
-} from "@t3tools/provider-core/server/maintenanceResolver";
-import * as ProviderLatestVersions from "@t3tools/provider-core/server/ProviderLatestVersions";
-import type { ProviderMaintenanceCapabilities } from "@t3tools/provider-core/server/maintenanceResolver";
-import { collectUint8StreamText } from "@t3tools/provider-core/server/collectStreamText";
+} from "@t2code/provider-core/server/maintenanceResolver";
+import * as ProviderLatestVersions from "@t2code/provider-core/server/ProviderLatestVersions";
+import type { ProviderMaintenanceCapabilities } from "@t2code/provider-core/server/maintenanceResolver";
+import { collectUint8StreamText } from "@t2code/provider-core/server/collectStreamText";
 const isServerProviderUpdateError = Schema.is(ServerProviderUpdateError);
 
 const UPDATE_TIMEOUT_MS = 5 * 60_000;

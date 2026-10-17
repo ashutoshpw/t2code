@@ -19,9 +19,9 @@ import {
   SYNTHETIC_CLAUDE_THINKING_MODEL,
 } from "../provider/ClaudeModelCatalog.testFixtures.ts";
 import * as TextGeneration from "./TextGeneration.ts";
-import { sanitizeThreadTitle } from "@t3tools/provider-core/server/textGenerationUtils";
+import { sanitizeThreadTitle } from "@t2code/provider-core/server/textGenerationUtils";
 import { makeClaudeTextGeneration } from "./ClaudeTextGeneration.ts";
-import { writeFakeCli } from "@t3tools/provider-testing/fakeCli";
+import { writeFakeCli } from "@t2code/provider-testing/fakeCli";
 const decodeClaudeSettings = Schema.decodeSync(ClaudeSettings);
 
 const layerClaudeTextGenerationTest = ServerConfig.ServerConfig.layerTest(process.cwd(), {

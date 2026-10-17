@@ -138,11 +138,11 @@ describe("resolveBoundEndpoints", () => {
       CloudflareWARP: vpnInterface("100.96.0.1"),
       utun7: vpnInterface("100.85.0.1"),
     };
-    expect(resolveBoundEndpoints({ host: "0.0.0.0", port: 3773, interfaces })).toEqual([
-      { kind: "lan", httpBaseUrl: "http://192.168.1.10:3773/" },
-      { kind: "tailnet", httpBaseUrl: "http://100.70.1.2:3773/" },
-      { kind: "lan", httpBaseUrl: "http://100.96.0.1:3773/" },
-      { kind: "lan", httpBaseUrl: "http://100.85.0.1:3773/" },
+    expect(resolveBoundEndpoints({ host: "0.0.0.0", port: 3772, interfaces })).toEqual([
+      { kind: "lan", httpBaseUrl: "http://192.168.1.10:3772/" },
+      { kind: "tailnet", httpBaseUrl: "http://100.70.1.2:3772/" },
+      { kind: "lan", httpBaseUrl: "http://100.96.0.1:3772/" },
+      { kind: "lan", httpBaseUrl: "http://100.85.0.1:3772/" },
     ]);
   });
 

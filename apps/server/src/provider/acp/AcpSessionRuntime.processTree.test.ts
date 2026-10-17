@@ -11,7 +11,7 @@ import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Scope from "effect/Scope";
 
-import * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
+import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
 
 const threadSpawnHelperSource = NodeURL.fileURLToPath(
   new URL("../../../scripts/acp-thread-spawn-helper.c", import.meta.url),

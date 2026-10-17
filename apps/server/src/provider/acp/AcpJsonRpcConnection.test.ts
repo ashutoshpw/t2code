@@ -17,7 +17,7 @@ import * as TestClock from "effect/testing/TestClock";
 import * as Stream from "effect/Stream";
 import { describe, expect } from "vite-plus/test";
 
-import * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
+import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
 import type * as EffectAcpProtocol from "effect-acp/protocol";
 import * as EffectAcpErrors from "effect-acp/errors";
 
@@ -1777,7 +1777,7 @@ describe("AcpSessionRuntime", () => {
           spawn: {
             command: mockAgentCommand,
             args: mockAgentArgs,
-            env: { T3_ACP_REQUEST_LOG_PATH: requestLogPath },
+            env: { T2_ACP_REQUEST_LOG_PATH: requestLogPath },
           },
           customModels: ["cline-free/custom-model"],
         }),

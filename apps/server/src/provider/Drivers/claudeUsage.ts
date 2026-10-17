@@ -1,19 +1,19 @@
-import type { ClaudeSettings } from "@t3tools/contracts";
+import type { ClaudeSettings } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Path from "effect/Path";
 
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
+import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
 import {
   parseTimestampMs,
   tokenCount,
   type ProviderUsageReader,
   type TranscriptUsageFormat,
   type UsageRecord,
-} from "@t3tools/provider-core/server/usage";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/provider-core/server/usage";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 /**
- * T3 Code writes one record per assistant *content block*, and every one of those records repeats
+ * T2 Code writes one record per assistant *content block*, and every one of those records repeats
  * the same complete `usage` object for the parent message. Summing them overcounts by roughly
  * 2.4x on a real workload, so the caller must drop repeats by `dedupeKey` and keep the first.
  */

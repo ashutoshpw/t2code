@@ -58,13 +58,13 @@ import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import { parseAttachmentFileExtension, resolveAttachmentPathById } from "../attachmentStore.ts";
 import * as ServerConfig from "../config.ts";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
-import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
+import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
 import * as ProjectFaviconResolver from "../project/ProjectFaviconResolver.ts";
 import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
 import * as NativeAppIconResolver from "./NativeAppIconResolver.ts";
 import { extractIcnsPng } from "./icns.ts";
 import { openMediaFile, readMediaFileHeader, type OpenMediaFile } from "./MediaFile.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 export const ASSET_ROUTE_PREFIX = "/api/assets";
 

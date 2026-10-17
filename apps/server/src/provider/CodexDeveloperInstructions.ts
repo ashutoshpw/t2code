@@ -1,6 +1,6 @@
 import type { ProviderInteractionMode } from "@t2code/contracts";
 import type { V2TurnStartParams__AdditionalContextEntry } from "effect-codex-app-server/schema";
-import { buildRuntimeInstructions } from "@t3tools/provider-core/server/runtimeInstructions";
+import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
 
 import {
   T2_CODE_BROWSER_TOOL_INSTRUCTIONS,

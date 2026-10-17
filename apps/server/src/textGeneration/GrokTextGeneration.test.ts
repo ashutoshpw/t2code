@@ -16,8 +16,8 @@ import { GrokSettings } from "@t2code/provider-grok/settings";
 
 import * as ServerConfig from "../config.ts";
 import * as TextGeneration from "./TextGeneration.ts";
-import { makeGrokTextGeneration } from "@t3tools/provider-grok/testing";
-import { execScriptSource, writeFakeCli } from "@t3tools/provider-testing/fakeCli";
+import { makeGrokTextGeneration } from "@t2code/provider-grok/testing";
+import { execScriptSource, writeFakeCli } from "@t2code/provider-testing/fakeCli";
 const decodeGrokSettings = Schema.decodeSync(GrokSettings);
 
 const __dirname = NodePath.dirname(NodeURL.fileURLToPath(import.meta.url));
