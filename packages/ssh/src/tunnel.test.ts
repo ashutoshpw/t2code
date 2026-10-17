@@ -398,7 +398,7 @@ describe("ssh tunnel scripts", () => {
           { mode: 0o755 },
         );
         const runner = NodePath.join(root, "run-t3.sh");
-        NodeFS.writeFileSync(runner, SshTunnel.buildRemoteT3RunnerScript(ARCHIVE));
+        NodeFS.writeFileSync(runner, SshTunnel.buildRemoteT2RunnerScript(ARCHIVE));
         const result = NodeChildProcess.spawnSync("sh", [runner, "--version"], {
           encoding: "utf8",
           env: { HOME: NodePath.join(root, "home"), PATH: `${bin}:${process.env.PATH ?? ""}` },
@@ -492,7 +492,7 @@ describe("ssh tunnel scripts", () => {
             });
           }
           if (args.some((arg, index) => arg === "-s" && args[index + 1] === "--"))
-            return makeSuccessfulProcess('{"remotePort":3773}\n');
+            return makeSuccessfulProcess('{"remotePort":3772}\n');
           if (args.includes("sh")) stops += 1;
           return makeSuccessfulProcess("");
         }),
