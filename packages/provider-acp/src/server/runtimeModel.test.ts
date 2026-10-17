@@ -1158,12 +1158,12 @@ describe("extractMcpToolCallIdentity", () => {
       kind: "execute",
       title: "mcp.t2-code.orchestrator_capabilities",
       status: "in_progress",
-      rawInput: { server: "t3-code", tool: "orchestrator_capabilities", arguments: {} },
+      rawInput: { server: "t2-code", tool: "orchestrator_capabilities", arguments: {} },
       _meta: { is_mcp_tool_call: true },
     });
 
     expect(extractMcpToolCallIdentity(toolCall)).toEqual({
-      server: "t3-code",
+      server: "t2-code",
       tool: "orchestrator_capabilities",
     });
   });
@@ -1240,14 +1240,14 @@ describe("extractMcpToolCallIdentity", () => {
       sessionUpdate: "tool_call",
       toolCallId: "gemini-1",
       kind: "other",
-      title: "delegate_task (t3-code MCP Server)",
+      title: "delegate_task (t2-code MCP Server)",
       status: "in_progress",
     });
     const qwen = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "qwen-1",
       kind: "other",
-      title: 'task_status (t3-code MCP Server): {"taskId":"node:delegated-task:1"}',
+      title: 'task_status (t2-code MCP Server): {"taskId":"node:delegated-task:1"}',
       status: "pending",
       rawInput: { taskId: "node:delegated-task:1" },
     });
@@ -1262,11 +1262,11 @@ describe("extractMcpToolCallIdentity", () => {
   it("recovers T2 identity across the registry agents' naming conventions", () => {
     for (const title of [
       "t2-code___delegate_task",
-      "t3-code-delegate_task",
+      "t2-code-delegate_task",
       'mcp__t2_code__delegate_task: {"mode":"async"}',
       't2-code__delegate_task: {"mode":"async"}',
-      "delegate_task_t3-code",
-      "t3-code/delegate_task",
+      "delegate_task_t2-code",
+      "t2-code/delegate_task",
       "delegate_task",
       'delegate_task: {"mode":"async"}',
       // Kimi retitles with partial JSON and middle-truncates args over 50 characters.
@@ -1309,7 +1309,7 @@ describe("extractMcpToolCallIdentity", () => {
       status: "in_progress",
       _meta: {
         goose: {
-          toolCall: { toolName: "t2-code__task_status", extensionName: "t3-code" },
+          toolCall: { toolName: "t2-code__task_status", extensionName: "t2-code" },
           messageId: "message-1",
         },
       },
@@ -1331,7 +1331,7 @@ describe("extractMcpToolCallIdentity", () => {
       kind: "other",
       title: "unrelated display title",
       status: "pending",
-      _meta: { toolName: "mcp::t3-code::t2_thread_send", serverId: "t3-code", provenance: "mcp" },
+      _meta: { toolName: "mcp::t2-code::t2_thread_send", serverId: "t2-code", provenance: "mcp" },
     });
 
     expect(extractMcpToolCallIdentity(toolCall)).toEqual({
@@ -1394,7 +1394,7 @@ describe("extractMcpToolCallIdentity", () => {
   });
 
   it("does not brand path-like or unknown-tool titles", () => {
-    for (const title of ["t3-code/README.md", "t2-code_not_a_real_tool"]) {
+    for (const title of ["t2-code/README.md", "t2-code_not_a_real_tool"]) {
       const toolCall = toolCallFromUpdate({
         sessionUpdate: "tool_call",
         toolCallId: "path-1",
