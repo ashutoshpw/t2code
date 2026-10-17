@@ -1,6 +1,6 @@
 import { RegistryContext, useAtomMount, useAtomSubscribe, useAtomValue } from "@effect/atom-react";
-import { executeAtomQuery, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId, PullRequestDiffStat, PullRequestListInput } from "@t3tools/contracts";
+import { executeAtomQuery, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import type { EnvironmentId, PullRequestDiffStat, PullRequestListInput } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";

@@ -1,7 +1,7 @@
 import { usePullRequestConnected } from "./usePullRequestConnected";
 import { RegistryContext, useAtomRefresh, useAtomValue } from "@effect/atom-react";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { PullRequestDetail } from "@t3tools/contracts";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import type { PullRequestDetail } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
 import { use, useState } from "react";

@@ -474,7 +474,7 @@ export function getMobileThemeVariables(
       ? appearance === "light"
         ? colors.toolbarControlHover
         : colors.sidebarRowActive
-      : themeId === "t3-chat"
+      : themeId === "t2-chat"
         ? appearance === "light"
           ? colors.toolbarControl
           : colors.surface
@@ -496,9 +496,9 @@ export function getMobileThemeVariables(
     mobileColors,
     appearance,
     groupedCard,
-    themeId === "t3-chat" && appearance === "dark"
+    themeId === "t2-chat" && appearance === "dark"
       ? [colors.messageActionForeground, colors.messageAction]
-      : themeId !== DEFAULT_MOBILE_THEME_ID && themeId !== "t3-chat"
+      : themeId !== DEFAULT_MOBILE_THEME_ID && themeId !== "t2-chat"
         ? [colors.messageAction, colors.messageActionForeground]
         : undefined,
   );

@@ -1,9 +1,9 @@
 import { AsyncResult } from "effect/reactivity";
 import { useAtomRefresh } from "@effect/atom-react";
 import { StackActions, useNavigation, type StaticScreenProps } from "@react-navigation/native";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { PullRequestReviewVerdict } from "@t3tools/contracts";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { settlePromise, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import type { PullRequestReviewVerdict } from "@t2code/contracts";
 import { useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { Platform, Pressable, View } from "react-native";
@@ -189,7 +189,7 @@ export function PullRequestReviewSheet({
       />
       {reviewing && store.draft.comments.length ? (
         <View className="gap-2">
-          <Text className="text-sm font-t3-medium">
+          <Text className="text-sm font-t2-medium">
             {store.draft.comments.length} pending line{" "}
             {store.draft.comments.length === 1 ? "comment" : "comments"}
           </Text>

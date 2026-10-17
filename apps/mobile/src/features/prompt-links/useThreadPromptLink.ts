@@ -1,6 +1,6 @@
 import * as Dialog from "../../components/ui/Dialog";
 import { useNavigation } from "@react-navigation/native";
-import { parseThreadLinkPrompt } from "@t3tools/shared/promptLinks";
+import { parseThreadLinkPrompt } from "@t2code/shared/promptLinks";
 import { useEffect, useRef } from "react";
 
 import { applyLinkedPromptToThreadDraft } from "./prompt-link-actions";

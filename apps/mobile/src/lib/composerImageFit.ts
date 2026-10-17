@@ -1,11 +1,8 @@
 import {
   downscalableImageMimeType,
   fitImageAttachmentSize,
-} from "@t3tools/client-runtime/image-attachment-size";
-import {
-  IMAGE_DIMENSIONS_HEADER_BYTES,
-  readImageDimensions,
-} from "@t3tools/shared/imageDimensions";
+} from "@t2code/client-runtime/image-attachment-size";
+import { IMAGE_DIMENSIONS_HEADER_BYTES, readImageDimensions } from "@t2code/shared/imageDimensions";
 
 const PHOTO_JPEG_QUALITY = 0.85;
 

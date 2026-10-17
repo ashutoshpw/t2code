@@ -1,4 +1,4 @@
-import { parsePullRequestQuery } from "@t3tools/client-runtime/pull-request-query";
+import { parsePullRequestQuery } from "@t2code/client-runtime/pull-request-query";
 import {
   ProjectId,
   resolvePullRequestAuthorFilter,
@@ -8,7 +8,7 @@ import {
   type PullRequestListInput,
   type PullRequestListResult,
   type PullRequestListStatsInput,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { PullRequestListControls } from "../../persistence/mobile-preferences";
 
 export const PR_LIST_PAGE_SIZE = 30;

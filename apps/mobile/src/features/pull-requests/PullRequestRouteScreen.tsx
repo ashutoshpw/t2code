@@ -46,7 +46,7 @@ import { useFocusEffect, useNavigation, type StaticScreenProps } from "@react-na
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RegistryContext, useAtomRefresh, useAtomValue } from "@effect/atom-react";
 import { pullRequestReviewKey } from "./pullRequestReviewDrafts";
-import { type PullRequestDetail, type PullRequestListEntry } from "@t3tools/contracts";
+import { type PullRequestDetail, type PullRequestListEntry } from "@t2code/contracts";
 import { PullRequestOverviewLoading } from "./PullRequestOverviewLoading";
 import { copyPullRequestLink, sharePullRequestLink } from "./pullRequestLink";
 import { pullRequestStatus } from "./pullRequestStatus";
