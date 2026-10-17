@@ -4,6 +4,10 @@
     "line": "it.effect(\"finds and removes a link left by a previous T3 home\", () =>"
   },
   {
+    "file": "apps/desktop/src/app/DesktopLegacyLocalStorage.ts",
+    "line": "const V1_PROFILE_NAMES = [\"T3 Code (Alpha)\", \"t3code\"];"
+  },
+  {
     "file": "apps/mobile/deps/react-native-enriched-markdown-1.2.0-t3.13.tgz",
     "line": ""
   },
