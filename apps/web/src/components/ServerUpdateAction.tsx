@@ -139,7 +139,7 @@ export function useServerUpdate() {
         description:
           selfUpdate === "desktop-managed"
             ? `Desktop app relaunched on ${result.value.targetVersion}.`
-            : `Reconnected on t3@${result.value.targetVersion}.`,
+            : `Reconnected on @t2code/cli@${result.value.targetVersion}.`,
       });
     }
     return { status: "updated" };
@@ -376,22 +376,14 @@ export function OutdatedServerUpdateAction({
   const handleUpdate = async () => {
     if (pendingUpdateEnvironmentIds.has(environmentId)) return;
     pendingUpdateEnvironmentIds.add(environmentId);
-    try {
-      const result = await update({
-        environmentId,
-        input: { targetVersion },
-        ...(fromVersion === undefined ? {} : { fromVersion }),
-      });
-      if (result._tag === "Failure") {
-        if (isAtomCommandInterrupted(result)) return;
-        throw squashAtomCommandFailure(result);
-      }
-      toastManager.add({
-        type: "success",
-        title: `${serverLabel} updated`,
-        description: `Reconnected on t2code@${result.value.targetVersion}.`,
-      });
-    } catch (error) {
+    const result = await update({
+      environmentId,
+      input: { targetVersion },
+      ...(fromVersion === undefined ? {} : { fromVersion }),
+    });
+    pendingUpdateEnvironmentIds.delete(environmentId);
+    if (result._tag === "Failure") {
+      if (isAtomCommandInterrupted(result)) return;
       toastManager.add({
         type: "error",
         title: `${serverLabel} update failed`,
@@ -402,7 +394,7 @@ export function OutdatedServerUpdateAction({
     toastManager.add({
       type: "success",
       title: `${serverLabel} updated`,
-      description: `Reconnected on t3@${result.value.targetVersion}.`,
+      description: `Reconnected on t2code@${result.value.targetVersion}.`,
     });
   };
   if (fromVersion !== undefined && crossesReleaseTrack(fromVersion, targetVersion)) {

@@ -1,9 +1,13 @@
+<<<<<<< HEAD
 import type {
   KeybindingCommand,
   ProjectId,
   ProjectScript,
   EnvironmentId,
 } from "@t2code/contracts";
+=======
+import type { KeybindingCommand, ProjectId, ProjectScript, EnvironmentId } from "@t2code/contracts";
+>>>>>>> 3c65b4f1 (rebrand: repair rebase resolve damage after the upstream rebase)
 import { AuthSettingsWriteScope, EnvironmentAuthorizationError } from "@t2code/contracts";
 import type { UnifiedSettings } from "@t2code/contracts/settings";
 import {

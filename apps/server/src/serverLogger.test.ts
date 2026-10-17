@@ -225,7 +225,7 @@ describe("ServerLoggerLive", () => {
 
   describe("startup pairing URL", () => {
     const pairingToken = "PAIRTOKEN7Q4K9";
-    const pairingUrl = `http://localhost:3773/pair#token=${pairingToken}`;
+    const pairingUrl = `http://localhost:3772/pair#token=${pairingToken}`;
     const announce = announceStartupPairingUrl(pairingUrl).pipe(
       Effect.andThen(logBrowserAutoOpenUnavailable),
     );
