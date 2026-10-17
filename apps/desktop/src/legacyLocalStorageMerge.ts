@@ -10,6 +10,13 @@ const NOT_IMPORTED_KEYS = new Set([
   "t3.backgroundActivity.clientId",
   "t3code:snap-shot-setup-resume:v1",
 ]);
+/**
+ * The previous app version namespaced every key with its own brand. Import
+ * them under the current namespace, or the merged values land where the app
+ * never looks for them.
+ */
+const LEGACY_STORAGE_KEY_NAMESPACE = "t3code:";
+const CURRENT_STORAGE_KEY_NAMESPACE = "t2code:";
 /** Matches MAX_STASH_ENTRIES in apps/web/src/promptStashStore.ts. */
 const MAX_STASH_ENTRIES = 20;
 const DRAFT_RECORD_FIELDS = [
@@ -61,6 +68,11 @@ function mergeComposerDrafts(current: JsonObject, legacy: JsonObject): JsonObjec
 
 const isMergedKey = (key: string) => key === PROMPT_STASH_KEY || key === COMPOSER_DRAFTS_KEY;
 
+const currentStorageKey = (legacyKey: string): string =>
+  legacyKey.startsWith(LEGACY_STORAGE_KEY_NAMESPACE)
+    ? `${CURRENT_STORAGE_KEY_NAMESPACE}${legacyKey.slice(LEGACY_STORAGE_KEY_NAMESPACE.length)}`
+    : legacyKey;
+
 function mergeValue(key: string, current: string, legacy: string): string | null {
   const merge =
     key === PROMPT_STASH_KEY
@@ -88,11 +100,12 @@ export function mergeLegacyLocalStorage(
   for (const key of keys) {
     if (NOT_IMPORTED_KEYS.has(key)) continue;
     const legacy = legacyItems[key]!;
-    const current = storage.getItem(key);
+    const target = currentStorageKey(key);
+    const current = storage.getItem(target);
     const next = current === null ? legacy : mergeValue(key, current, legacy);
     if (next === null || next === current) continue;
     try {
-      storage.setItem(key, next);
+      storage.setItem(target, next);
     } catch {
       complete = false;
     }
