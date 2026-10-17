@@ -30,6 +30,7 @@ import {
   type LegacyProjectSettingsFields,
 } from "@t2code/shared/projectSettings";
 import type { ProviderInstanceEntry } from "../../providerInstances";
+import { onceAtFromInput, onceInputValue } from "./scheduledTaskOnce.logic";
 
 import type { ResolvedSettingsScope } from "./settingsScope";
 
@@ -258,6 +259,10 @@ export function scheduleFromDraft(draft: DraftState): ScheduledTaskUpsertSchedul
         ? { filters: parsedFilters.filters }
         : {}),
     };
+  }
+  if (draft.scheduleMode === "once") {
+    const at = onceAtFromInput(draft.onceAt);
+    return at === null ? null : { type: "once", at };
   }
   if (draft.scheduleMode === "interval") {
     const everyMs = Math.round(Number(draft.intervalMinutes) * 60_000);

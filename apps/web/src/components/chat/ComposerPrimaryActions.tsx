@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   CheckIcon,
+  ChevronDownIcon,
   ChevronLeftIcon,
   Minimize2Icon,
   PlayIcon,
@@ -20,8 +21,10 @@ import { cn, isMacPlatform } from "~/lib/utils";
 import { useShortcutModifierState } from "../../shortcutModifierState";
 import { StageBackdropButtonArt, useSidebarStageBackdropVariant } from "../SidebarStageBackdrop";
 import { Button } from "../ui/button";
+import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { Spinner } from "../ui/spinner";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { composerFloatingLayerProps } from "./composerEventScope";
 import {
   alternateComposerDispatchAction,
   resolveComposerDispatchMode,
@@ -65,6 +68,8 @@ interface ComposerPrimaryActionsProps {
   hideCompactToggle?: boolean;
   keepFullHistory?: boolean;
   onToggleKeepFullHistory?: () => void;
+  onSendLater?: (() => void) | undefined;
+  sendLaterDisabledReason?: string | null | undefined;
 }
 
 const formatPendingPrimaryActionLabel = (input: {
@@ -122,6 +127,8 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   hideCompactToggle = false,
   keepFullHistory = false,
   onToggleKeepFullHistory,
+  onSendLater,
+  sendLaterDisabledReason = null,
 }: ComposerPrimaryActionsProps) {
   const [stopPhase, setStopPhase] = useState<"pending" | "timedOut" | "landed" | null>(null);
   const [stopRunId, setStopRunId] = useState(runId);
@@ -358,11 +365,51 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
       <TooltipPopup>{submitTooltip}</TooltipPopup>
     </Tooltip>
   );
+ const sendLaterMenu =
+    onSendLater && !showResume && !isEditingQueuedMessage ? (
+      <Menu>
+        <MenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="More send options"
+              {...pointerFocusProps}
+              disabled={isSendBusy || isEnvironmentUnavailable}
+            />
+          }
+        >
+          <ChevronDownIcon aria-hidden="true" />
+        </MenuTrigger>
+        <MenuPopup align="end" side="top" {...composerFloatingLayerProps}>
+          <MenuItem
+            disabled={!hasSendableContent || sendLaterDisabledReason !== null || isSendDisabled}
+            onClick={onSendLater}
+          >
+            <span className="flex flex-col">
+              Send later
+              {sendLaterDisabledReason !== null && hasSendableContent ? (
+                <span className="text-muted-foreground text-xs">{sendLaterDisabledReason}</span>
+              ) : null}
+            </span>
+          </MenuItem>
+        </MenuPopup>
+      </Menu>
+    ) : null;
+  const submitWithMenu =
+    sendLaterMenu === null ? (
+      submit
+    ) : (
+      <div className="flex items-center gap-0.5">
+        {submit}
+        {sendLaterMenu}
+      </div>
+    );
   if (compactTokens === null || hideCompactToggle) {
     return withStopButton(
       <>
         {children}
-        {submit}
+        {submitWithMenu}
       </>,
     );
   }
@@ -399,7 +446,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
         </TooltipPopup>
       </Tooltip>
       {children}
-      {submit}
+      {submitWithMenu}
     </div>,
   );
 });
