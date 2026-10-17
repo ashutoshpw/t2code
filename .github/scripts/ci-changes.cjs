@@ -21,7 +21,7 @@ const RUNS_EVERYTHING = [
 // Includes cross-package reads absent from package.json dependencies.
 const EXTRA_OWNERS = [
   // Vite configs and tsconfigs of these apps import scripts/lib directly.
-  [/^scripts\/lib\//, ["@t2code/desktop", "@t2code/mobile", "@t2code/web", "t3"]],
+  [/^scripts\/lib\//, ["@t2code/desktop", "@t2code/mobile", "@t2code/web", "@t2code/cli"]],
   // scripts/build-desktop-artifact.ts reads the GNOME extension manifest.
   [/^apps\/desktop\/gnome-extension\//, ["@t2code/scripts"]],
   [/^native\/browser-secret\//, ["@t2code/desktop"]],
@@ -33,23 +33,25 @@ const RUST = /^native\/(resource-monitor|kde-snap-shot|hyprland-snap-shot)\//;
 // These tests read other packages without declaring dependencies.
 const TEST_ONLY_DEPS = {
   // Evals import the server's source to test its real model-facing text.
-  "@t2code/evals": ["t3"],
+  "@t2code/evals": ["t2"],
   "@t2code/provider-pi": ["@t2code/client-runtime"],
   "@t2code/scripts": [
     "@t2code/desktop",
     "@t2code/mobile",
     "@t2code/web",
-    "t3",
+    "t2",
     "@t2code/provider-cursor",
   ],
 };
-// The server bundles the web build without importing it.
-const BUILD_ONLY_DEPS = { t3: ["@t2code/web"] };
+// Declared dependencies that only feed a build step: the server bundles the
+// built web app (apps/server/vite.config.ts) but never imports it.
+const BUILD_ONLY_DEPS = { t2: ["@t2code/web"] };
 
 const MOBILE_NATIVE =
   /^apps\/mobile\/.*\.(swift|kt|kts)$|^apps\/mobile\/(\.swiftlint\.yml|detekt\.yml|\.editorconfig|Brewfile)$|^scripts\/mobile-native-static-check\.ts$|^package\.json$|^\.github\/workflows\/ci\.yml$|^\.github\/scripts\/ci-changes\.cjs$|^\.github\/actions\/ci-changes\//;
 
-const OWN_TEST_JOB = new Set(["t3", "@t2code/web", "@t2code/monorepo"]);
+// Jobs that test every package except these, which have jobs of their own.
+const OWN_TEST_JOB = new Set(["t2", "@t2code/web", "@t2code/monorepo"]);
 
 function readWorkspace() {
   const patterns = [];
@@ -154,12 +156,12 @@ function decide(files, packages, full) {
     affected: [...affected].sort(),
     outputs: {
       typecheck: affected.size > 0,
-      build: has("@t2code/desktop") || has("t3") || has("@t2code/web"),
+      build: has("@t2code/desktop") || has("t2") || has("@t2code/web"),
       test: tested.length > 0,
       // Empty means every package the Test job covers.
       test_packages: everything ? "" : tested.map((pkg) => pkg.name).join(" "),
       test_web: has("@t2code/web"),
-      test_server: has("t3"),
+      test_server: has("@t2code/cli"),
       rust: everything || rust,
       release_smoke: scriptsChanged,
       mobile_native: files === null || files.some((file) => MOBILE_NATIVE.test(file)),

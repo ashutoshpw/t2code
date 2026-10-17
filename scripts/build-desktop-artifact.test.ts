@@ -756,7 +756,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         { name: "T2 Code", schemes: ["t2code", "t2code-dev"] },
       ]);
       assert.deepStrictEqual((mac.mac as Record<string, unknown>).protocols, [
-        { name: "T3 Code", schemes: ["t3code", "t3code-dev"] },
+        { name: "T2 Code", schemes: ["t2code", "t2code-dev"] },
         { name: "Web site URL", schemes: ["http", "https"], role: "Viewer" },
       ]);
       const macInfo = (mac.mac as { extendInfo: Record<string, unknown> }).extendInfo;
@@ -780,7 +780,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.propertyVal(
         (mac.mac as Record<string, unknown>).extendInfo as Record<string, unknown>,
         "NSLocalNetworkUsageDescription",
-        "T3 Code connects to devices on your local network for remote environments and commands run by terminals and coding agents.",
+        "T2 Code connects to devices on your local network for remote environments and commands run by terminals and coding agents.",
       );
       for (const config of [linux, win]) {
         assert.deepStrictEqual(config.electronLanguages, DESKTOP_ELECTRON_LANGUAGES);
@@ -1952,7 +1952,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     );
     assert.match(
       entitlements,
-      /<key>keychain-access-groups<\/key>\s*<array>\s*<string>ABC1234567\.com\.t3tools\.t3code\.webauthn<\/string>\s*<\/array>/u,
+      /<key>keychain-access-groups<\/key>\s*<array>\s*<string>ABC1234567\.com\.t2tools\.t2code\.webauthn<\/string>\s*<\/array>/u,
     );
     assert.match(
       entitlements,
