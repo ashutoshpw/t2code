@@ -8,7 +8,7 @@ import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 
-import * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
+import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
 
 const identity = (
   pid: number,

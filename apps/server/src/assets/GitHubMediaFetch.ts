@@ -12,7 +12,7 @@ import {
   type HttpClientResponse,
 } from "effect/http";
 
-import * as GitHubCredentials from "@t3tools/source-control-github/server/GitHubCredentials";
+import * as GitHubCredentials from "@t2code/source-control-github/server/GitHubCredentials";
 
 /**
  * Everything a redirect leads to — the presigned object stores GitHub hands assets off to —
