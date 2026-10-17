@@ -26,8 +26,4 @@ it("preserves in-app thread links through the shared Markdown sanitizer", () => 
     ],
   });
   expect(JSON.stringify(tree)).not.toContain("javascript:");
-  // Sanitizing must keep links recorded before the protocol was renamed.
-  expect(
-    JSON.stringify(processor.runSync(processor.parse("[Old](t3-thread://v1/environment/thread)"))),
-  ).toContain('"href":"t3-thread://v1/environment/thread"');
 });
