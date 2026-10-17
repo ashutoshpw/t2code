@@ -80,6 +80,7 @@ import {
   type ScheduleMode,
   type WorkspaceMode,
 } from "./scheduledTasksSettings.logic";
+import { defaultOnceInputValue, onceTaskStatus } from "./scheduledTaskOnce.logic";
 import { Label } from "../ui/label";
 import { Menu, MenuTrigger, MenuPopup, MenuItem, MenuSeparator } from "../ui/menu";
 import { ToggleGroup, Toggle } from "../ui/toggle-group";
@@ -129,6 +130,7 @@ const EMPTY_DRAFT: DraftState = {
   scheduleMode: "fixed",
   intervalMinutes: "15",
   timeOfDay: "09:00",
+  onceAt: "",
   weekdays: new Set([1, 2, 3, 4, 5]),
   projectId: "",
   threadId: "",
@@ -181,6 +183,7 @@ function splitModelKey(value: string): ModelSelection | null {
 
 export function scheduleLabel(schedule: ScheduledTaskSchedule): string {
   if (schedule.type === "webhook") return "On webhook";
+  if (schedule.type === "once") return "One time";
   if (schedule.type === "interval") {
     const minutes = schedule.everyMs / 60_000;
     return Number.isInteger(minutes)
@@ -606,14 +609,20 @@ function ScheduledTaskRow({
       status={
         <div className="flex flex-wrap items-center gap-2">
           <span>
-            {scheduleLabel(task.schedule)} ·{" "}
-            {!task.enabled
-              ? "Paused"
-              : isWebhook
-                ? "Listening"
-                : task.nextRunAt
-                  ? `Next run ${relativeLabel(task.nextRunAt)}`
-                  : "Not scheduled"}
+            {task.schedule.type === "once" ? (
+              onceTaskStatus(task, new Date())
+            ) : (
+              <>
+                {scheduleLabel(task.schedule)} ·{" "}
+                {!task.enabled
+                  ? "Paused"
+                  : isWebhook
+                    ? "Listening"
+                    : task.nextRunAt
+                      ? `Next run ${relativeLabel(task.nextRunAt)}`
+                      : "Not scheduled"}
+              </>
+            )}
           </span>
           {task.lastRunStatus !== "never" ? (
             <Badge variant={statusVariant(task.lastRunStatus)}>{task.lastRunStatus}</Badge>
@@ -1051,6 +1060,10 @@ function ScheduledTaskEditorForm({
     }
     const schedule = scheduleFromDraft(draft);
     if (schedule === null) {
+      if (draft.scheduleMode === "once") {
+        reportFailure("Invalid send time", "Choose a valid date and time.");
+        return;
+      }
       reportFailure(
         "Invalid age limit",
         `Enter whole minutes from 1 to ${MAX_WEBHOOK_DELIVERY_AGE_MINUTES}, or leave it blank.`,
@@ -1128,7 +1141,8 @@ function ScheduledTaskEditorForm({
       <DialogHeader>
         <DialogTitle>{draft.editingId ? "Edit task" : "New task"}</DialogTitle>
         <DialogDescription>
-          Run a prompt automatically — on an interval, at a fixed time, or when a webhook is called.
+          Run a prompt automatically — once, on an interval, at a fixed time, or when a webhook is
+          called.
         </DialogDescription>
       </DialogHeader>
 
@@ -1349,10 +1363,19 @@ function ScheduledTaskEditorForm({
                 value={[draft.scheduleMode]}
                 onValueChange={(values) => {
                   const mode = values[0] as ScheduleMode | undefined;
-                  if (mode === "fixed" || mode === "interval" || mode === "webhook")
+                  if (
+                    mode === "fixed" ||
+                    mode === "interval" ||
+                    mode === "once" ||
+                    mode === "webhook"
+                  )
                     setDraft((current) => ({
                       ...current,
                       scheduleMode: mode,
+                      onceAt:
+                        mode === "once" && current.onceAt === ""
+                          ? defaultOnceInputValue(new Date())
+                          : current.onceAt,
                       prompt:
                         mode === "webhook" && !current.prompt.trim()
                           ? DEFAULT_WEBHOOK_PROMPT
@@ -1362,6 +1385,7 @@ function ScheduledTaskEditorForm({
               >
                 <Toggle value="fixed">At a time</Toggle>
                 <Toggle value="interval">Every interval</Toggle>
+                <Toggle value="once">Once</Toggle>
                 <Toggle value="webhook">On webhook</Toggle>
               </ToggleGroup>
             </div>
@@ -1477,6 +1501,23 @@ function ScheduledTaskEditorForm({
                     </Field>
                   </div>
                 ) : null}
+              </div>
+            ) : draft.scheduleMode === "once" ? (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="scheduled-task-once">Run at</Label>
+                <Input
+                  type="datetime-local"
+                  id="scheduled-task-once"
+                  nativeInput
+                  className="w-52"
+                  value={draft.onceAt}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, onceAt: event.target.value }))
+                  }
+                />
+                <span className="text-xs text-muted-foreground">
+                  Runs once, then stays listed with its result.
+                </span>
               </div>
             ) : draft.scheduleMode === "fixed" ? (
               <div className="flex flex-wrap items-center gap-3">

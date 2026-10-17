@@ -17,6 +17,7 @@ import {
 import { ThreadDetailsSection } from "./ThreadDetailsSection";
 import { cn } from "../../lib/utils";
 import { relativeLabel, scheduleLabel } from "../settings/ScheduledTasksSettings";
+import { onceTaskStatus } from "../settings/scheduledTaskOnce.logic";
 import { useEnvironmentQuery } from "../../state/query";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -167,12 +168,18 @@ export function ThreadAutomationsPanel(props: {
                 {task.title}
               </span>
               <p className="truncate text-2xs text-muted-foreground">
-                {scheduleLabel(task.schedule)}
-                {task.enabled && task.nextRunAt !== null
-                  ? ` · next ${relativeLabel(task.nextRunAt)}`
-                  : task.enabled
-                    ? ""
-                    : " · paused"}
+                {task.schedule.type === "once" ? (
+                  onceTaskStatus(task, new Date())
+                ) : (
+                  <>
+                    {scheduleLabel(task.schedule)}
+                    {task.enabled && task.nextRunAt !== null
+                      ? ` · next ${relativeLabel(task.nextRunAt)}`
+                      : task.enabled
+                        ? ""
+                        : " · paused"}
+                  </>
+                )}
               </p>
             </div>
             <Tooltip>
