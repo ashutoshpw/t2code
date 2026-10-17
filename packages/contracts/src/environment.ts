@@ -13,7 +13,7 @@ import { SourceControlProviderKind } from "./sourceControl.ts";
 export const ORCHESTRATION_PROTOCOL_VERSION = 2;
 export const ORCHESTRATION_PROTOCOL_VERSION_TEXT = "2";
 export const ORCHESTRATION_PROTOCOL_QUERY_PARAM = "orchestrationProtocol";
-export const ORCHESTRATION_PROTOCOL_HEADER = "x-t3-orchestration-protocol";
+export const ORCHESTRATION_PROTOCOL_HEADER = "x-t2-orchestration-protocol";
 
 /** Wire shapes a client understands, comma-separated; a client that omits one gets the older shape. */
 export const CLIENT_CAPABILITIES_QUERY_PARAM = "clientCapabilities";
