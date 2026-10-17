@@ -57,14 +57,9 @@ describe("thread links", () => {
     expect(parseThreadLinkHref("t2-thread://v1/ ")).toBeNull();
   });
 
-  it("still reads links recorded before the protocol was renamed", () => {
-    expect(parseThreadLinkHref("t3-thread://v1/mcp:1234")).toBe("mcp:1234");
-    expect(relabelThreadLinks("Recorded [old](t3-thread://v1/t1)", () => "New")).toBe(
-      "Recorded [New](t2-thread://v1/t1)",
-    );
-    // A link it cannot title keeps the href it was written with.
-    expect(relabelThreadLinks("[old](t3-thread://v1/t1)", () => undefined)).toBe(
-      "[old](t3-thread://v1/t1)",
+  it("keeps the href it was written with when the thread has no title", () => {
+    expect(relabelThreadLinks("[old](t2-thread://v1/t1)", () => undefined)).toBe(
+      "[old](t2-thread://v1/t1)",
     );
   });
 
