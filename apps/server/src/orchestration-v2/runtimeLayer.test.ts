@@ -105,7 +105,7 @@ const layerPlatformTest = Layer.merge(
 );
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-orchestration-v2-runtime-layer-",
+  prefix: "t2-orchestration-v2-runtime-layer-",
 });
 
 const modelSelection = {
@@ -1033,7 +1033,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive", (it) => {
         runtimeMode: "full-access",
         interactionMode: "default",
         branch: null,
-        worktreePath: `/tmp/t3-${name}`,
+        worktreePath: `/tmp/t2-${name}`,
       });
       yield* orchestrator.dispatch({
         type: "message.dispatch",
@@ -1066,7 +1066,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive", (it) => {
               parentCheckpointId: null,
               ordinalWithinScope: 0,
               appRunOrdinal: null,
-              ref: CheckpointRef.make(`refs/t3/${name}`),
+              ref: CheckpointRef.make(`refs/t2/${name}`),
               status: "ready",
               files: [],
               capturedAt: now,
@@ -2877,7 +2877,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         threadId,
         title: "Renamed lifecycle thread",
         branch: "feature/v2",
-        worktreePath: "/tmp/t3-v2-worktree",
+        worktreePath: "/tmp/t2-v2-worktree",
       });
       const staleWorkspaceUpdate = yield* orchestrator
         .dispatch({
@@ -2892,7 +2892,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
       assert.instanceOf(staleWorkspaceUpdate, Orchestrator.OrchestratorDispatchError);
       const projectionAfterStaleWorkspaceUpdate = yield* orchestrator.getThreadProjection(threadId);
       assert.equal(projectionAfterStaleWorkspaceUpdate.thread.branch, "feature/v2");
-      assert.equal(projectionAfterStaleWorkspaceUpdate.thread.worktreePath, "/tmp/t3-v2-worktree");
+      assert.equal(projectionAfterStaleWorkspaceUpdate.thread.worktreePath, "/tmp/t2-v2-worktree");
       const pullRequestSnapshot = yield* orchestrator.getShellSnapshot();
       const pullRequest = {
         projectId,
@@ -2911,7 +2911,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           expected: {
             workspaceRoot: "/workspace/project",
             branch: "feature/v2",
-            worktreePath: "/tmp/t3-v2-worktree",
+            worktreePath: "/tmp/t2-v2-worktree",
             linkedPullRequest: null,
             branchPullRequest: null,
           },
@@ -2929,7 +2929,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         expected: {
           workspaceRoot: "/workspace/project",
           branch: "feature/v2",
-          worktreePath: "/tmp/t3-v2-worktree",
+          worktreePath: "/tmp/t2-v2-worktree",
           linkedPullRequest: null,
           branchPullRequest: null,
         },
@@ -2949,7 +2949,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           expected: {
             workspaceRoot: "/workspace/project",
             branch: "feature/v2",
-            worktreePath: "/tmp/t3-v2-worktree",
+            worktreePath: "/tmp/t2-v2-worktree",
             linkedPullRequest: null,
             branchPullRequest: null,
           },
@@ -3159,7 +3159,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
       const projection = yield* orchestrator.getThreadProjection(threadId);
       assert.equal(projection.thread.title, "Renamed lifecycle thread");
       assert.equal(projection.thread.branch, "feature/v2");
-      assert.equal(projection.thread.worktreePath, "/tmp/t3-v2-worktree");
+      assert.equal(projection.thread.worktreePath, "/tmp/t2-v2-worktree");
       assert.equal(projection.thread.runtimeMode, "approval-required");
       assert.equal(projection.thread.interactionMode, "plan");
       assert.equal(projection.thread.modelSelection.model, "gpt-5.5");

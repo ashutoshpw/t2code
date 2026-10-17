@@ -1,5 +1,5 @@
 import { pullRequestCommentPreview } from "./pullRequestMarkdown.logic";
-import { parsePullRequestAnchor } from "@t3tools/shared/pullRequestAnchor";
+import { parsePullRequestAnchor } from "@t2code/shared/pullRequestAnchor";
 import { holdLinkedNodeInView } from "./holdLinkedNodeInView";
 import { useAtomValue } from "@effect/atom-react";
 import {
@@ -431,7 +431,7 @@ function Section({
 
 const COMMENT_PAGE = 10;
 
-const COMMENT_FILTER_STORAGE_KEY = "t3code:pull-request-comment-filter:v1";
+const COMMENT_FILTER_STORAGE_KEY = "t2code:pull-request-comment-filter:v1";
 const CommentFilterSchema = Schema.Struct({ bots: Schema.Boolean, resolved: Schema.Boolean });
 const DEFAULT_COMMENT_FILTER: typeof CommentFilterSchema.Type = { bots: false, resolved: false };
 
@@ -631,12 +631,12 @@ export function PullRequestSummaryTab({
     onRevealSettled?.(revealUrl);
   });
   const editingDescription = bodyScope?.url === detail.url;
-  // oxlint-disable-next-line t2code/react-effect-budget -- scrolls to a linked section, description or heading once it renders
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- scrolls to a linked section, description or heading once it renders
   useEffect(() => {
     revealSummary();
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- retries once the description markdown renders, including after its editor closes
   }, [revealUrl, description, checksReveals, descriptionReveals, editingDescription]);
-  // oxlint-disable-next-line t2code/react-effect-budget -- the hold observes DOM outside React and must end with the tab
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- the hold observes DOM outside React and must end with the tab
   useEffect(() => () => stopHolding.current?.(), []);
   // Checkbox ticks and the editor share one draft, so each starts from the other's latest body.
   const saveDescription = async (body: string) => {

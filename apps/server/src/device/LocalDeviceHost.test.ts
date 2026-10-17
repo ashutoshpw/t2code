@@ -44,7 +44,7 @@ const agentFixture = Effect.fn("agentFixture")(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-agent-start-" });
+  const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-device-agent-start-" });
   const hub = { running: true, spawnFails: false };
   const stateDir = agentDeviceStateDir(path, path.join(baseDir, "userdata"));
   const daemonHealthy = yield* Ref.make(true);

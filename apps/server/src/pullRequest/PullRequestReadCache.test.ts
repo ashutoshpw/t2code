@@ -26,7 +26,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("PR filesystem ca
   it.effect("clears in-flight reads before a new service can reuse them", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pr-cache-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pr-cache-" });
       yield* TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe("2026-10-01T00:00:00Z")));
       const cache = yield* cacheLayer(directory);
       yield* cache.get("old", Effect.succeed("old"), ["pr"]);
@@ -91,7 +91,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("PR filesystem ca
       assert.deepStrictEqual(yield* fs.readDirectory(directory), []);
     }).pipe(
       Effect.scoped,
-      Effect.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-pr-cache-layer-" })),
+      Effect.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-pr-cache-layer-" })),
     ),
   );
 

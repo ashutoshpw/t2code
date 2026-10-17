@@ -2540,7 +2540,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
           )).split("\n");
           const indexPath = path.resolve(cwd, indexValue.trim());
           const directory = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3code-commit-index-",
+            prefix: "t2code-commit-index-",
           });
           const tempIndexPath = path.join(directory, "index");
           // Staging writes blobs; put them in the temp directory so a draft leaves nothing behind.

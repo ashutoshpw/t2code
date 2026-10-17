@@ -1014,7 +1014,7 @@ describe("ClaudeAdapterV2 Auto-accept edits", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-accept-edits-",
+          prefix: "t2-claude-accept-edits-",
         });
         let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
         const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
@@ -1601,7 +1601,7 @@ const captureSdkExecutablePaths = Effect.fn("captureSdkExecutablePaths")(functio
   ).pipe(
     Effect.provide(
       ServerConfig.layerTest(process.cwd(), {
-        prefix: "t3-claude-binary-path-",
+        prefix: "t2-claude-binary-path-",
       }),
     ),
     Effect.provideService(ClaudeAdapterV2.ClaudeAgentSdkQueryRunner, {
@@ -1785,7 +1785,7 @@ describe("ClaudeAdapterV2 resume compaction", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-resume-",
+          prefix: "t2-claude-resume-",
         });
         let openedOptions: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions | undefined;
         const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
@@ -2127,7 +2127,7 @@ describe("ClaudeAdapterV2 attachments", () => {
           const idAllocator = yield* IdAllocator.IdAllocatorV2;
           const path = yield* Path.Path;
           const claudeHome = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-skills-home-",
+            prefix: "t2-claude-v2-skills-home-",
           });
           yield* fileSystem.makeDirectory(path.join(claudeHome, "skills", "implement"), {
             recursive: true,
@@ -2141,7 +2141,7 @@ describe("ClaudeAdapterV2 attachments", () => {
             options: ultrathink ? CLAUDE_TEST_MODEL_SELECTION.options : [],
           };
           const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-attachments-",
+            prefix: "t2-claude-v2-attachments-",
           });
           const offeredMessages: Array<SDKUserMessage> = [];
           let failOpen = false;
@@ -2682,7 +2682,7 @@ describe("ClaudeAdapterV2 native fork", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-fork-attachments-",
+          prefix: "t2-claude-v2-fork-attachments-",
         });
         const configDir = yield* fileSystem.makeTempDirectoryScoped({
           prefix: "t3-claude-root-change-",
@@ -3060,7 +3060,7 @@ describe("ClaudeAdapterV2 native session identity", () => {
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const path = yield* Path.Path;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-session-identity-",
+          prefix: "t2-claude-v2-session-identity-",
         });
         if (importedNativeThreadId !== undefined) {
           // An unreadable copy in another project must not hide the readable one.
@@ -3454,7 +3454,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const idAllocator = yield* IdAllocator.IdAllocatorV2;
       const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-claude-v2-wake-",
+        prefix: "t2-claude-v2-wake-",
       });
       const sdkMessages = yield* Queue.unbounded<SDKMessage>();
       const processQueues: Array<Queue.Queue<SDKMessage>> = [];
@@ -12202,7 +12202,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-settled-stop-replaced-",
+          prefix: "t2-claude-v2-settled-stop-replaced-",
         });
         const processQueues: Array<Queue.Queue<SDKMessage>> = [];
         const firstCloseRequested = yield* Deferred.make<void>();
@@ -12523,7 +12523,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           const fileSystem = yield* FileSystem.FileSystem;
           const idAllocator = yield* IdAllocator.IdAllocatorV2;
           const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-sibling-replace-",
+            prefix: "t2-claude-v2-sibling-replace-",
           });
           const nativeIds = ["native-thread-roster-a", "native-thread-roster-b"] as const;
           let allocateIndex = 0;
@@ -18750,7 +18750,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-process-reset-",
+          prefix: "t2-claude-v2-process-reset-",
         });
         const processQueues: Array<Queue.Queue<SDKMessage>> = [];
         const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
@@ -18928,7 +18928,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           const fileSystem = yield* FileSystem.FileSystem;
           const idAllocator = yield* IdAllocator.IdAllocatorV2;
           const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-buffer-replace-",
+            prefix: "t2-claude-v2-buffer-replace-",
           });
           const processQueues: Array<Queue.Queue<SDKMessage>> = [];
           const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
@@ -19116,7 +19116,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const idAllocator = yield* IdAllocator.IdAllocatorV2;
         const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-claude-v2-model-change-running-subagent-",
+          prefix: "t2-claude-v2-model-change-running-subagent-",
         });
         const processQueues: Array<Queue.Queue<SDKMessage>> = [];
         const events: Array<ProviderAdapter.ProviderAdapterV2Event> = [];
@@ -19450,7 +19450,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           const fileSystem = yield* FileSystem.FileSystem;
           const idAllocator = yield* IdAllocator.IdAllocatorV2;
           const attachmentsDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: "t3-claude-v2-replace-open-fail-",
+            prefix: "t2-claude-v2-replace-open-fail-",
           });
           let openCount = 0;
           const processQueues: Array<Queue.Queue<SDKMessage>> = [];
@@ -19712,7 +19712,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
   ) =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
-      const configDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-wf-" });
+      const configDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-claude-wf-" });
       const transcriptDir = NodePath.join(configDir, "projects", "workflow");
       yield* fileSystem.makeDirectory(transcriptDir, { recursive: true });
       yield* fileSystem.writeFileString(

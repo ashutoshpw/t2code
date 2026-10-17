@@ -1,5 +1,5 @@
 import { assert, it, describe } from "@effect/vitest";
-import { searchableMessageSegments } from "@t3tools/shared/threadFindText";
+import { searchableMessageSegments } from "@t2code/shared/threadFindText";
 import {
   EventId,
   MessageId,
@@ -34,7 +34,7 @@ import {
 } from "./threadHistoryPaging.ts";
 import { projectTurnItemForWire } from "./WireProjection.ts";
 
-vi.mock("@t3tools/shared/threadFindText", { spy: true });
+vi.mock("@t2code/shared/threadFindText", { spy: true });
 
 const layerTest = Layer.mergeAll(EventStore.layer, ProjectionStore.layer, ProjectStore.layer).pipe(
   Layer.provideMerge(SqlitePersistence.layerMemory),
@@ -375,21 +375,21 @@ describe("V2 thread find", () => {
   it.effect("searches displayed skill labels and invalidates parsed text when labels change", () =>
     Effect.gen(function* () {
       const projection = yield* setup;
-      yield* putItems([item("skill", 1, "Use $test-t3-app now")]);
+      yield* putItems([item("skill", 1, "Use $test-t2-app now")]);
       const input = {
         threadId,
-        query: "T3 App Testing",
-        skills: [{ name: "test-t3-app", displayName: "T3 App Testing" }],
+        query: "T2 App Testing",
+        skills: [{ name: "test-t2-app", displayName: "T2 App Testing" }],
       };
       assert.equal((yield* projection.searchThread(input)).totalMatches, 1);
       assert.equal((yield* projection.searchThread({ ...input, skills: [] })).totalMatches, 0);
       yield* putItems(
-        [item("skill-plan", 2, "# Verify\nUse $test-t3-app now", "proposed_plan")],
+        [item("skill-plan", 2, "# Verify\nUse $test-t2-app now", "proposed_plan")],
         "plan",
       );
       assert.equal((yield* projection.searchThread(input)).totalMatches, 1);
       assert.equal(
-        (yield* projection.searchThread({ ...input, query: "$test-t3-app" })).totalMatches,
+        (yield* projection.searchThread({ ...input, query: "$test-t2-app" })).totalMatches,
         1,
       );
       assert.equal((yield* projection.searchThread({ ...input, query: "App" })).totalMatches, 2);

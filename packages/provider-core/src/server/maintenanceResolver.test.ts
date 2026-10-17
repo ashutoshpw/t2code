@@ -1745,7 +1745,7 @@ it.layer(
     "falls back to the provider's own updater when no installer is proven",
     () =>
       Effect.gen(function* () {
-        const tempDir = yield* makeTempDir("t3-self-update-fallback");
+        const tempDir = yield* makeTempDir("t2-self-update-fallback");
         const customPath = NodePath.join(tempDir, "tools", "package-tool");
         writeExecutable(customPath);
         const selfUpdating = makePackageManagedProviderMaintenanceResolver({
@@ -2156,7 +2156,7 @@ it.layer(
 
   it.effect.skipIf(!symlinksSupported)("updates Yarn global installs with yarn", () =>
     Effect.gen(function* () {
-      const tempDir = yield* makeTempDir("t3-yarn-capabilities");
+      const tempDir = yield* makeTempDir("t2-yarn-capabilities");
       const link = linkIntoPackage(tempDir, "package-tool", [
         ".config",
         "yarn",
@@ -2187,7 +2187,7 @@ it.layer(
     "updates Volta installs only when Volta has the package",
     () =>
       Effect.gen(function* () {
-        const voltaHome = NodePath.join(yield* makeTempDir("t3-volta-capabilities"), ".volta");
+        const voltaHome = NodePath.join(yield* makeTempDir("t2-volta-capabilities"), ".volta");
         const shim = NodePath.join(voltaHome, "bin", "volta-shim");
         writeExecutable(shim);
         const link = NodePath.join(voltaHome, "bin", "package-tool");
@@ -2211,7 +2211,7 @@ it.layer(
 
   it.effect.skipIf(windowsHost)("upgrades with the keg's own brew when brew is not on PATH", () =>
     Effect.gen(function* () {
-      const tempDir = yield* makeTempDir("t3-homebrew-keg-brew");
+      const tempDir = yield* makeTempDir("t2-homebrew-keg-brew");
       const brewPath = NodePath.join(tempDir, "bin", "brew");
       writeExecutable(brewPath);
       const kegBinary = NodePath.join(tempDir, "Cellar", "package-tool", "1.0.0", "bin", "tool");

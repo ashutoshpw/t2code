@@ -122,6 +122,8 @@
             },
           },
         };
+        // Keep the built-in mode list in sync with the runtime so the selected
+        // T2 Chat palette is visible before React has mounted.
         const BUILT_IN_THEME_MODES = Object.fromEntries(
           Object.entries(BUILT_IN_THEME_PALETTES).map(([id, palettes]) => [
             id,

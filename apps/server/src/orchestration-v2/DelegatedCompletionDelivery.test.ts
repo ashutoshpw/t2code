@@ -65,7 +65,7 @@ const layerPlatformTest = Layer.merge(
 );
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-orchestration-v2-delegated-completion-",
+  prefix: "t2-orchestration-v2-delegated-completion-",
 });
 
 const modelSelection = {
@@ -2770,7 +2770,7 @@ it.layer(Layer.merge(layerTest, ProviderContinuationRequests.layer))(
         }),
     );
 
-    // The child's follow-up run sends `t3_thread_send` to its own thread before it ends.
+    // The child's follow-up run sends `t2_thread_send` to its own thread before it ends.
     const startSelfQueuedFollowup = (name: string) =>
       Effect.gen(function* () {
         const orchestrator = yield* Orchestrator.OrchestratorV2;
@@ -3150,7 +3150,7 @@ it.layer(Layer.merge(layerTest, ProviderContinuationRequests.layer))(
             creationSource: outcome === "failed" ? "web" : "mcp",
             commandId: CommandId.make(`command:followup-send-${outcome}`),
             threadId: child.childThreadId,
-            // `t3 thread send` and unscoped MCP sessions carry no sender thread.
+            // `t2 thread send` and unscoped MCP sessions carry no sender thread.
             ...(outcome === "completed" ? {} : { senderThreadId: parentThreadId }),
             messageId,
             text: "Check the same work again.",

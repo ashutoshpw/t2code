@@ -1860,7 +1860,7 @@ describe("streamed feed updates", () => {
   const delegation: OrchestrationV2TurnItem = {
     ...item("delegation", 3, runs[0]),
     type: "dynamic_tool",
-    toolName: "t3-code.delegate_task",
+    toolName: "t2-code.delegate_task",
     input: { task: "Check" },
     output: { taskId: "child" },
   };

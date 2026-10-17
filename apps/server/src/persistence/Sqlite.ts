@@ -18,7 +18,7 @@ export class ServerOwnsDatabaseError extends Schema.TaggedError<ServerOwnsDataba
   { stateDir: Schema.String },
 ) {
   override get message(): string {
-    return `Another T3 Code process, usually a running server, owns ${this.stateDir}, and this CLI would change its database schema. Use the \`t3\` that matches the running server, or stop that server, then retry. The database was not changed.`;
+    return `Another T2 Code process, usually a running server, owns ${this.stateDir}, and this CLI would change its database schema. Use the \`t2\` that matches the running server, or stop that server, then retry. The database was not changed.`;
   }
 }
 
@@ -87,7 +87,7 @@ const makeLayerFromPath = <E, R>(setup: Layer.Layer<never, E, R>) =>
         checkpointWorker: true,
         spanAttributes: {
           "db.name": path.basename(dbPath),
-          "service.name": "t3code-server",
+          "service.name": "t2code-server",
         },
       }),
     );
@@ -113,7 +113,7 @@ const makeLayerConfig = <E, R>(
 
 export const layerConfig = makeLayerConfig(layerFromPath);
 
-/** For CLI commands: pending migrations run only while no server owns the T3 home. */
+/** For CLI commands: pending migrations run only while no server owns the T2 home. */
 export const layerCliConfig = makeLayerConfig(
   makeLayerFromPath(makeLayerSetup(runMigrationsAsOwner())),
 );
