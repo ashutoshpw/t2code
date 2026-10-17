@@ -5,7 +5,6 @@ import Layout from "../layouts/Layout.astro";
 import {
   ANDROID_PLAY_STORE_URL,
   GITHUB_REPOSITORY_URL,
-  IOS_APP_STORE_URL,
   MARKETING_STATS,
 } from "../lib/site";
 import { tweets } from "../lib/tweets";
@@ -78,8 +77,6 @@ const mobileEndorsementRows = [
         </a>
         <p class="hero-mobile-line">
           Also on your phone:
-          <a href={IOS_APP_STORE_URL} target="_blank" rel="noopener noreferrer">iOS</a>
-          <span aria-hidden="true">·</span>
           <a href={ANDROID_PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">Android</a>
         </p>
       </div>

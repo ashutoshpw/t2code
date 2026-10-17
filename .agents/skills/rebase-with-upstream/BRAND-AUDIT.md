@@ -56,7 +56,7 @@ rg -no "(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+" -g '!node_modules' -g '!.t2' -g
 
 - Migration `063_LegacyMcpIdentityRewrite` and its test name the pre-rename MCP server and tool spellings, because stored transcripts carry them.
 - Stored-data spellings the guard never flags: the `LEGACY_THEME_ID_ALIASES` keys and `LEGACY_T3_CHAT_DARK_THEME_ID` in `apps/web/src/themePalette.ts`, `V1_PROFILE_NAMES` in `apps/desktop/src/app/DesktopLegacyLocalStorage.ts`, the previous app-data directories in `apps/desktop/src/app/DesktopUserData.ts`, the imported key namespaces in `apps/desktop/src/legacyLocalStorageMerge.ts`, and the `refs/t3/orchestration-v2/checkpoints` namespace.
-- The marketing App Store link in `apps/marketing/src/lib/site.ts` and `README.md` still carries upstream's listing slug until the fork publishes its own.
+- iOS has no store link: the fork has no App Store listing yet, so `apps/marketing`, `README.md`, and `docs/user/install.md` link Google Play only. Re-add an App Store link with the fork's own listing id when it publishes.
 - The baseline's two fixture entries: a `T3 home` test name in `apps/desktop/src/app/DesktopCliCommand.test.ts`, and a UUID in a recorded Claude transcript whose digits happen to contain `3773`.
 - `apps/mobile/deps/react-native-*-t3.13.tgz` / `-t3.27.tgz` are third-party artifact names that ship as-is.
 - The `T3 Chat` palette (comments, tests, and the palette label) references the t3.chat product, not this fork.
