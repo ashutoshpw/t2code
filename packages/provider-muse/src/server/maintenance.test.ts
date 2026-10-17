@@ -12,8 +12,8 @@ import {
   museMaintenance,
   parseMuseVersion,
 } from "./maintenance.ts";
-import * as ProviderLatestVersions from "@t3tools/provider-core/server/ProviderLatestVersions";
-import { makeManualOnlyProviderMaintenanceCapabilities } from "@t3tools/provider-core/server/maintenanceResolver";
+import * as ProviderLatestVersions from "@t2code/provider-core/server/ProviderLatestVersions";
+import { makeManualOnlyProviderMaintenanceCapabilities } from "@t2code/provider-core/server/maintenanceResolver";
 
 const maintenanceCapabilities = {
   ...makeManualOnlyProviderMaintenanceCapabilities({

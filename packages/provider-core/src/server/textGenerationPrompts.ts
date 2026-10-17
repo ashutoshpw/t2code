@@ -5,7 +5,7 @@ import type { BranchNamingOptions, ChatAttachment } from "@t2code/contracts";
 
 import { limitSection } from "./textGenerationUtils.ts";
 import type { ReviewGuideStackLayer } from "./textGeneration.ts";
-import type { TextGenerationPolicy } from "@t3tools/provider-core/server/textGenerationPolicy";
+import type { TextGenerationPolicy } from "@t2code/provider-core/server/textGenerationPolicy";
 
 const EARLIER_CONTENT_TRUNCATION_MARKER = "[Earlier content truncated]\n\n";
 

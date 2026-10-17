@@ -13,9 +13,9 @@ import * as Schema from "effect/Schema";
 
 import * as HostProcess from "@t2code/shared/HostProcess";
 
-import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
-import { readSourceControlHostSettings } from "@t3tools/source-control-core/shared/definition";
-import type { ServerSettings } from "@t3tools/contracts";
+import * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
+import { readSourceControlHostSettings } from "@t2code/source-control-core/shared/definition";
+import type { ServerSettings } from "@t2code/contracts";
 
 import * as GitHubClient from "../shared/definition.ts";
 

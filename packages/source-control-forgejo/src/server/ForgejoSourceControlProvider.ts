@@ -1,4 +1,4 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Schema from "effect/Schema";
@@ -6,14 +6,14 @@ import * as Result from "effect/Result";
 import { SourceControlProviderError } from "@t2code/contracts";
 import * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
 import * as ForgejoCli from "./ForgejoCli.ts";
-import * as SourceControlProvider from "@t3tools/source-control-core/server/SourceControlProvider";
+import * as SourceControlProvider from "@t2code/source-control-core/server/SourceControlProvider";
 import {
   isMissingExecutable,
   providerAuth,
   probeSourceControlProvider,
   type SourceControlCliDiscoverySpec,
   type SourceControlManagedCliDiscoverySpec,
-} from "@t3tools/source-control-core/server/discovery";
+} from "@t2code/source-control-core/server/discovery";
 import { ForgejoPullRequestSchema, toForgejoChangeRequest } from "./forgejoPullRequests.ts";
 
 const isForgejoCliError = Schema.is(ForgejoCli.ForgejoCliError);

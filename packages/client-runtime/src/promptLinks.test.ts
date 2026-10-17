@@ -2,7 +2,7 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   type RepositoryIdentity,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { findPromptLinkProject, resolvePromptLinkModelSelection } from "./promptLinks.ts";

@@ -46,7 +46,7 @@ export interface SqliteClientConfig {
 
 // SqlClient masks transaction acquisition, so readOnly carries the caller's interruption policy.
 const ReadOnly = Context.Reference<typeof Effect.interruptible | undefined>(
-  "@t3tools/shared/nodeSqliteClient/ReadOnly",
+  "@t2code/shared/nodeSqliteClient/ReadOnly",
   { defaultValue: () => undefined },
 );
 
@@ -108,7 +108,7 @@ const TransactionAcquire = Context.Reference<
       restore: typeof Effect.interruptible | undefined;
     }
   | undefined
->("@t3tools/shared/nodeSqliteClient/TransactionAcquire", { defaultValue: () => undefined });
+>("@t2code/shared/nodeSqliteClient/TransactionAcquire", { defaultValue: () => undefined });
 
 export class UnsupportedNodeSqliteVersionError extends Schema.TaggedError<UnsupportedNodeSqliteVersionError>()(
   "UnsupportedNodeSqliteVersionError",

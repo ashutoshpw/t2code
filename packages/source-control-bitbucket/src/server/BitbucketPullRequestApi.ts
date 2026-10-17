@@ -22,8 +22,8 @@ import type {
 } from "@t2code/contracts";
 
 import * as BitbucketApi from "./BitbucketApi.ts";
-import { parseDiffFileRevisions } from "@t3tools/source-control-core/server/diffFileRevisions";
-import { sortChecks } from "@t3tools/source-control-core/server/pullRequestChecks";
+import { parseDiffFileRevisions } from "@t2code/source-control-core/server/diffFileRevisions";
+import { sortChecks } from "@t2code/source-control-core/server/pullRequestChecks";
 import {
   buildReviewThreads,
   decodeCommentsJson,
@@ -40,7 +40,7 @@ import {
   type BitbucketPullRequest,
   type BitbucketRawComment,
 } from "./bitbucketPullRequestJson.ts";
-import type { ProviderListCursor } from "@t3tools/source-control-core/server/PullRequestProvider";
+import type { ProviderListCursor } from "@t2code/source-control-core/server/PullRequestProvider";
 
 export class BitbucketPullRequestReadError extends Schema.TaggedError<BitbucketPullRequestReadError>()(
   "BitbucketPullRequestReadError",

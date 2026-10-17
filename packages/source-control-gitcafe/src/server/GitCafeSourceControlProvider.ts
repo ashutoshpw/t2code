@@ -1,4 +1,4 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Option from "effect/Option";
@@ -10,17 +10,16 @@ import {
   SourceControlProviderError,
   TrimmedNonEmptyString,
   type ChangeRequest,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   probeSourceControlProvider,
   providerAuth,
   type SourceControlCliDiscoverySpec,
   type SourceControlManagedCliDiscoverySpec,
-} from "@t3tools/source-control-core/server/discovery";
-import { randomUuidV4 } from "@t3tools/provider-core/server/randomUuid";
-import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
-import * as SourceControlProvider from "@t3tools/source-control-core/server/SourceControlProvider";
-import { parsePullRequestUrl } from "../shared/definition.ts";
+} from "@t2code/source-control-core/server/discovery";
+import { randomUuidV4 } from "@t2code/provider-core/server/randomUuid";
+import * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
+import * as SourceControlProvider from "@t2code/source-control-core/server/SourceControlProvider";
 
 import * as GitCafeApi from "./GitCafeApi.ts";
 import * as GitCafeCredentials from "./GitCafeCredentials.ts";

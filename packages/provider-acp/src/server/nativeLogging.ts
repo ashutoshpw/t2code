@@ -6,11 +6,11 @@ import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import type * as EffectAcpProtocol from "effect-acp/protocol";
 
-import type * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
+import type * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
 import {
   structuralProtocolMethod,
   summarizeNativeProtocolPayload,
-} from "@t3tools/provider-core/server/nativeProtocolLogging";
+} from "@t2code/provider-core/server/nativeProtocolLogging";
 import type * as AcpSessionRuntime from "./AcpSessionRuntime.ts";
 
 const transientProtocolUpdates = new Set(["agent_message_chunk", "agent_thought_chunk"]);

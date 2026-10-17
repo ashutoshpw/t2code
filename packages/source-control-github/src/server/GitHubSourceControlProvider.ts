@@ -1,4 +1,4 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
 import * as Data from "effect/Data";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -43,14 +43,14 @@ import {
   resolveGitHubRepository,
   type GitHubRepositoryLocator,
 } from "./gitHubRepositoryResolution.ts";
-import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
+import * as SourceControlRateLimit from "@t2code/source-control-core/server/SourceControlRateLimit";
 import {
   effectiveGitHubAccount,
   findAuthenticatedGitHubAccount,
   parseGitHubAuthStatus,
   type GitHubAuthStatusAccount,
 } from "./gitHubAuthStatus.ts";
-import * as SourceControlProvider from "@t3tools/source-control-core/server/SourceControlProvider";
+import * as SourceControlProvider from "@t2code/source-control-core/server/SourceControlProvider";
 import {
   combinedAuthOutput,
   firstSafeAuthLine,
@@ -59,9 +59,9 @@ import {
   type SourceControlAuthProbeInput,
   type SourceControlCliDiscoverySpec,
   type SourceControlManagedCliDiscoverySpec,
-} from "@t3tools/source-control-core/server/discovery";
-import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
-import { readSourceControlHostSettings } from "@t3tools/source-control-core/shared/definition";
+} from "@t2code/source-control-core/server/discovery";
+import * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
+import { readSourceControlHostSettings } from "@t2code/source-control-core/shared/definition";
 
 import * as GitHubClient from "../shared/definition.ts";
 import {

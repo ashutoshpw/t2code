@@ -15,7 +15,7 @@ import * as EffectAcpErrors from "effect-acp/errors";
 import * as HostProcess from "@t2code/shared/HostProcess";
 import { normalizeModelSlug } from "@t2code/shared/model";
 
-import * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
+import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
 import { makeXAiPromptCompletionRuntime } from "./xaiAcpExtension.ts";
 
 const GROK_API_KEY_ENV = "XAI_API_KEY";

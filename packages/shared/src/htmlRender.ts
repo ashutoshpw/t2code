@@ -244,10 +244,13 @@ export const HTML_RENDER_LAYOUT_GUIDE = [
 const HOST_CONTEXT_CHANGED_METHOD = "ui/notifications/host-context-changed";
 const OPEN_LINK_METHOD = "ui/open-link";
 const SIZE_CHANGED_METHOD = "ui/notifications/size-changed";
-// Custom bridge forwards app shortcuts because focused frames otherwise capture them.
-const SHORTCUTS_METHOD = "t3/notifications/shortcuts";
-const KEY_DOWN_METHOD = "t3/notifications/keydown";
-const OPEN_IMAGE_METHOD = "t3/notifications/open-image";
+// Not part of MCP Apps: a focused frame keeps its keys from the app, so the
+// client tells the page which chords are app shortcuts and the page passes
+// those on.
+const SHORTCUTS_METHOD = "@t2code/cli/notifications/shortcuts";
+const KEY_DOWN_METHOD = "@t2code/cli/notifications/keydown";
+// Not part of MCP Apps: a click on a page image opens it in the app's image viewer.
+const OPEN_IMAGE_METHOD = "@t2code/cli/notifications/open-image";
 
 export function readHtmlRenderContentHeight(data: unknown): number | undefined {
   if (typeof data !== "object" || data === null) return undefined;
@@ -293,6 +296,7 @@ export function readHtmlRenderImageRequest(
   return { src, name: label || "Image" };
 }
 
+/** The key a framed render passed on in a `@t2code/cli/notifications/keydown` notification. */
 export function readHtmlRenderKeyDown(data: unknown):
   | {
       readonly key: string;

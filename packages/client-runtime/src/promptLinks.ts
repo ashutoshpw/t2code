@@ -5,9 +5,9 @@ import {
   type ServerProvider,
   type ThreadLinkedPullRequest,
   type ThreadPullRequestLink,
-} from "@t3tools/contracts";
-import { resolveSelectableModel, type SelectableModelOption } from "@t3tools/shared/model";
-import type { PromptLinkPullRequest, PromptLinkRepository } from "@t3tools/shared/promptLinks";
+} from "@t2code/contracts";
+import { resolveSelectableModel, type SelectableModelOption } from "@t2code/shared/model";
+import type { PromptLinkPullRequest, PromptLinkRepository } from "@t2code/shared/promptLinks";
 import {
   threadPullRequestKeyOf,
   threadPullRequestsOf,

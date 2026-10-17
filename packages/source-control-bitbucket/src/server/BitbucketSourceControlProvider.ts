@@ -1,4 +1,4 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
@@ -6,8 +6,8 @@ import { SourceControlProviderError, type ChangeRequest } from "@t2code/contract
 
 import * as BitbucketApi from "./BitbucketApi.ts";
 import type { NormalizedBitbucketPullRequestRecord } from "./bitbucketPullRequests.ts";
-import * as SourceControlProvider from "@t3tools/source-control-core/server/SourceControlProvider";
-import type { SourceControlApiDiscoverySpec } from "@t3tools/source-control-core/server/discovery";
+import * as SourceControlProvider from "@t2code/source-control-core/server/SourceControlProvider";
+import type { SourceControlApiDiscoverySpec } from "@t2code/source-control-core/server/discovery";
 
 const isRepositoryLocatorError = Schema.is(BitbucketApi.BitbucketRepositoryLocatorError);
 

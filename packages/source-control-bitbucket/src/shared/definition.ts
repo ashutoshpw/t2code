@@ -2,7 +2,7 @@ import {
   makeProviderSettingsSchema,
   SourceControlProviderKind,
   TrimmedString,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import {
@@ -12,7 +12,7 @@ import {
   isChangeRequestOnProjectHost,
   parseChangeRequestPath,
   projectChangeRequestHost,
-} from "@t3tools/source-control-core/shared/definition";
+} from "@t2code/source-control-core/shared/definition";
 import { icon } from "./icon.ts";
 
 const safeShellArgument = /^[A-Za-z0-9._/@+=,-]+$/;

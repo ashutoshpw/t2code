@@ -50,7 +50,7 @@ import {
   type GitLabMergeRequestListItem,
   type GitLabProjectUsers,
 } from "./gitLabMergeRequestJson.ts";
-import type { ProviderListCursor } from "@t3tools/source-control-core/server/PullRequestProvider";
+import type { ProviderListCursor } from "@t2code/source-control-core/server/PullRequestProvider";
 
 export class GitLabMergeRequestReadError extends Schema.TaggedError<GitLabMergeRequestReadError>()(
   "GitLabMergeRequestReadError",
