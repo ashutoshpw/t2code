@@ -1,5 +1,6 @@
 import { MIN_SCHEDULED_TASK_INTERVAL_MS, type ScheduledTaskSchedule } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
+import * as Option from "effect/Option";
 
 const MINUTE_MS = 60_000;
 
@@ -14,6 +15,12 @@ export function nextScheduledRunAt(
   from: DateTime.DateTime,
 ): DateTime.DateTime | null {
   if (schedule.type === "webhook") return null;
+  if (schedule.type === "once") {
+    const at = DateTime.make(schedule.at);
+    return Option.isSome(at) && DateTime.toEpochMillis(at.value) > DateTime.toEpochMillis(from)
+      ? at.value
+      : null;
+  }
   if (schedule.type === "interval") {
     // Persisted rows created before the one-minute floor remain readable, but
     // they must not retain their old high-frequency execution rate.
@@ -51,6 +58,9 @@ export function isSameSchedule(a: ScheduledTaskSchedule, b: ScheduledTaskSchedul
     return b.type === "interval" && a.everyMs === b.everyMs;
   }
   if (a.type === "webhook") return b.type === "webhook";
+  if (a.type === "once") {
+    return b.type === "once" && Date.parse(a.at) === Date.parse(b.at);
+  }
   if (b.type !== "fixed_time") return false;
   // The contract accepts padded and unpadded hours ("9:00" and "09:00"), so
   // compare the parsed time — string equality would treat a format-only edit
@@ -79,6 +89,7 @@ export function isMissedFixedTimeRun(
 
 function describeSchedule(schedule: ScheduledTaskSchedule): string {
   if (schedule.type === "webhook") return "On webhook";
+  if (schedule.type === "once") return `Once at ${schedule.at}`;
   if (schedule.type === "interval") {
     const minutes = schedule.everyMs / MINUTE_MS;
     if (Number.isInteger(minutes)) {

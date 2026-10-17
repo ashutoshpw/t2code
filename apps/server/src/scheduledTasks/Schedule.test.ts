@@ -128,4 +128,31 @@ describe("scheduled task schedule calculation", () => {
       ),
     ).toBe(true);
   });
+
+  it("runs a one-time schedule only while its instant is still ahead", () => {
+    const at = "2026-07-01T16:00:00.000Z";
+    const next = nextScheduledRunAt(
+      { type: "once", at },
+      DateTime.makeUnsafe("2026-07-01T15:59:59Z"),
+    );
+    expect(next ? DateTime.formatIso(DateTime.toUtc(next)) : null).toBe(at);
+    expect(nextScheduledRunAt({ type: "once", at }, DateTime.makeUnsafe(at))).toBeNull();
+    expect(
+      nextScheduledRunAt({ type: "once", at }, DateTime.makeUnsafe("2026-07-02T00:00:00Z")),
+    ).toBeNull();
+  });
+
+  it("never treats an overdue one-time run as missed, and compares it by instant", () => {
+    const schedule = { type: "once", at: "2026-07-01T16:00:00.000Z" } as const;
+    expect(
+      isMissedFixedTimeRun(
+        schedule,
+        DateTime.makeUnsafe(schedule.at),
+        DateTime.makeUnsafe("2026-07-03T00:00:00Z"),
+      ),
+    ).toBe(false);
+    expect(isSameSchedule(schedule, { type: "once", at: "2026-07-01T16:00:00Z" })).toBe(true);
+    expect(isSameSchedule(schedule, { type: "once", at: "2026-07-01T17:00:00.000Z" })).toBe(false);
+    expect(isSameSchedule(schedule, { type: "interval", everyMs: 60_000 })).toBe(false);
+  });
 });
