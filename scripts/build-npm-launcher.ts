@@ -105,6 +105,8 @@ export const buildNpmLauncher = Effect.fn("buildNpmLauncher")(function* (input: 
 
   const packageDir = path.join(input.outputDir, NPM_LAUNCHER_PACKAGE_NAME);
   const tarball = path.join(input.outputDir, `${NPM_LAUNCHER_PACKAGE_NAME}.tgz`);
+  // A scoped name nests both outputs under `@scope/`, which tar will not create.
+  yield* fs.makeDirectory(path.dirname(packageDir), { recursive: true });
   yield* fs.remove(tarball, { force: true });
   const tar = (yield* HostProcess.Platform) === "win32" ? windowsSystemTar() : "tar";
   // npm tarballs root everything under `package/`.
