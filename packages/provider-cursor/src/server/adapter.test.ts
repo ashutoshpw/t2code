@@ -720,7 +720,7 @@ describe("CursorAdapterV2", () => {
         const sent = sentMessages.at(-1)!;
         return {
           orchestration: sent.includes("## T3 Code orchestration"),
-          devices: sent.includes("## T3 Code devices"),
+          devices: sent.includes("## T2 Code devices"),
         };
       });
       const told = (orchestration: boolean, devices: boolean) => ({ orchestration, devices });

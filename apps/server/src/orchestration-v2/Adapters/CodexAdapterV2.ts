@@ -102,7 +102,10 @@ import { resolveAttachmentPath, resolveAttachmentPathById } from "../../attachme
 import { getCodexServiceTierOptionValue } from "../../codexModelOptions.ts";
 import { ServerConfig } from "../../config.ts";
 import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
-import { buildCodexAdditionalContext } from "../../provider/CodexDeveloperInstructions.ts";
+import {
+  buildCodexAdditionalContext,
+  buildCodexDeveloperInstructions,
+} from "../../provider/CodexDeveloperInstructions.ts";
 import {
   describeMcpElicitation,
   toMcpElicitationResponse,

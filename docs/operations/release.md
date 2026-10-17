@@ -657,7 +657,7 @@ Notes:
 - In-app browser passkeys depend on the same profile. The packager adds each entitlement only when
   the profile grants it, because macOS will not launch an app that claims more than its profile
   allows. The build log reports which ones it enabled.
-  - `keychain-access-groups` (`<TEAM_ID>.com.t3tools.t3code.webauthn`) enables Touch ID passkeys.
+  - `keychain-access-groups` (`<TEAM_ID>.com.t2tools.t2code.webauthn`) enables Touch ID passkeys.
     Profiles that grant the team's keychain groups (`<TEAM_ID>.*`) cover it.
   - `com.apple.developer.web-browser.public-key-credential` lets the system passkey sheet (iCloud
     Keychain, password managers, phones, security keys) serve any site. Apple grants it as a

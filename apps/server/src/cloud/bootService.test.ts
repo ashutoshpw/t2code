@@ -269,7 +269,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
                 ...(environmentPath === undefined || environmentPath === ""
                   ? {}
                   : { PATH: environmentPath }),
-                ...(insideService ? { T2_BOOT_SERVICE_UNIT: "t3code.service" } : {}),
+                ...(insideService ? { T2_BOOT_SERVICE_UNIT: "t2code.service" } : {}),
               },
             }),
           ),
@@ -629,7 +629,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(failure).toBe("repair failed");
       expect(control.active).toBe(true);
 
-      control.failCommand = "systemctl --user stop t3code.service";
+      control.failCommand = "systemctl --user stop t2code.service";
       let ran = false;
       const stopFailure = yield* service
         .withStopped(
@@ -650,11 +650,11 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       commands.length = 0;
       yield* service.withStopped(Effect.sync(() => commands.push("repair")));
       expect(commands).toEqual([
-        "systemctl --user is-enabled t3code.service",
-        "systemctl --user is-active t3code.service",
-        "systemctl --user stop t3code.service",
+        "systemctl --user is-enabled t2code.service",
+        "systemctl --user is-active t2code.service",
+        "systemctl --user stop t2code.service",
         "repair",
-        "systemctl --user restart t3code.service",
+        "systemctl --user restart t2code.service",
       ]);
       expect(control.active).toBe(true);
       control.enabled = false;
@@ -664,8 +664,8 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       control.enabled = false;
       commands.length = 0;
       yield* service.withStopped(Effect.sync(() => commands.push("repair")));
-      expect(commands).toContain("systemctl --user stop t3code.service");
-      expect(commands).not.toContain("systemctl --user restart t3code.service");
+      expect(commands).toContain("systemctl --user stop t2code.service");
+      expect(commands).not.toContain("systemctl --user restart t2code.service");
       expect(control.active).toBe(false);
       control.enabled = true;
       control.active = true;
@@ -738,7 +738,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(yield* fs.readFileString(statePath)).toBe(state);
       expect(yield* fs.readFileString(plan.unitPath)).toBe(unit);
       expect(control.active).toBe(true);
-      expect(commands).not.toContain("systemctl --user stop t3code.service");
+      expect(commands).not.toContain("systemctl --user stop t2code.service");
     }),
   );
 
@@ -765,8 +765,8 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         const outcome = yield* inside.restart;
         expect(commands).toEqual([
           "systemctl --user daemon-reload",
-          "systemctl --user enable t3code.service",
-          "systemctl --user restart --no-block t3code.service",
+          "systemctl --user enable t2code.service",
+          "systemctl --user restart --no-block t2code.service",
         ]);
         expect(outcome).toBe("queued");
         expect(yield* fs.readFileString(statePath)).toBe(state);

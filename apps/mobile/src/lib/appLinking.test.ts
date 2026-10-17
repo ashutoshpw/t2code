@@ -35,10 +35,10 @@ describe("shouldHandleAppLink", () => {
 
 describe("cloud-only deep links", () => {
   it.each([
-    "t3code://connect-onboarding",
+    "t2code://connect-onboarding",
     "t3code-dev://connect-onboarding/?source=x",
-    "t3code://settings/waitlist",
-    "t3code://settings/auth",
+    "t2code://settings/waitlist",
+    "t2code://settings/auth",
     "exp://192.168.1.2:8081/--/settings/auth",
   ])("ignores %s without cloud config", (url) => {
     expect(shouldHandleAppLink(url, false)).toBe(false);
@@ -46,11 +46,11 @@ describe("cloud-only deep links", () => {
   });
 
   it.each([
-    "t3code://settings",
-    "t3code://settings/authors",
-    "t3code://pair?next=settings/auth",
-    "t3code://threads/env/thread/files/scripts/connect-onboarding",
-    "t3code://new/draft/files/settings/auth",
+    "t2code://settings",
+    "t2code://settings/authors",
+    "t2code://pair?next=settings/auth",
+    "t2code://threads/env/thread/files/scripts/connect-onboarding",
+    "t2code://new/draft/files/settings/auth",
     "exp://192.168.1.2:8081/--/threads/env/thread/files/settings/waitlist",
   ])("still handles %s without cloud config", (url) => {
     expect(shouldHandleAppLink(url, false)).toBe(true);

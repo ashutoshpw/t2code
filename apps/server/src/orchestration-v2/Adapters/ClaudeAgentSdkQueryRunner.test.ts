@@ -131,7 +131,7 @@ const resumedMcpQueryInput = {
     tools: [],
     permissionMode: "default",
     mcpServers: {
-      "t3-code": {
+      "t2-code": {
         type: "http",
         url: "http://localhost:3773/mcp",
         headers: { Authorization: "Bearer test-mcp-credential" },
@@ -154,7 +154,7 @@ it.effect("reopens a stalled MCP registration before delivering the resumed prom
         return new Promise<ClaudeSdk.McpSetServersResult>(() => {});
       });
       const secondRegistration = vi.fn(async () => ({
-        added: ["t3-code"],
+        added: ["t2-code"],
         removed: [],
         errors: {},
       }));
@@ -241,7 +241,7 @@ it.effect.each([true, false])("only retries after confirmed process exit: %s", (
             registrationStarted.resolve();
             return first
               ? new Promise<ClaudeSdk.McpSetServersResult>(() => {})
-              : Promise.resolve({ added: ["t3-code"], removed: [], errors: {} });
+              : Promise.resolve({ added: ["t2-code"], removed: [], errors: {} });
           },
           close: vi.fn(),
           [Symbol.asyncDispose]: disposed,
@@ -442,7 +442,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")("Claude CLI pro
               Layer.succeed(AgentScope, {
                 ...AgentScope.defaultValue(),
                 wrap: ({ command, args }) =>
-                  Effect.succeed({ command, args, unit: "t3code-claude-test.scope" }),
+                  Effect.succeed({ command, args, unit: "t2code-claude-test.scope" }),
                 stop: (unit) => Deferred.succeed(stopped, unit).pipe(Effect.asVoid),
               }),
             ),
@@ -452,7 +452,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")("Claude CLI pro
       yield* Effect.promise(() => leftoverStarted);
       yield* session.close;
       yield* Effect.promise(() => leftoverStopped);
-      assert.strictEqual(yield* Deferred.await(stopped), "t3code-claude-test.scope");
+      assert.strictEqual(yield* Deferred.await(stopped), "t2code-claude-test.scope");
     }),
   );
 

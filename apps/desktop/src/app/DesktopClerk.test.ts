@@ -241,10 +241,10 @@ describe("DesktopClerk", () => {
     createClerkBridgeMock.mockReturnValue({ cleanup: vi.fn(), isPrimaryInstance: true });
     const listeners = new Map<string, (...args: unknown[]) => void>();
     const received: string[] = [];
-    const first = "t3code://new?prompt=first";
-    const second = "t3code://threads/env-1/thread-1";
-    const later = "t3code://new?prompt=later";
-    const launchPair = "t3code://pair?pairingUrl=https%3A%2F%2Fvps.example.com%2F%23token%3Dabc";
+    const first = "t2code://new?prompt=first";
+    const second = "t2code://threads/env-1/thread-1";
+    const later = "t2code://new?prompt=later";
+    const launchPair = "t2code://pair?pairingUrl=https%3A%2F%2Fvps.example.com%2F%23token%3Dabc";
     const delivered = Promise.withResolvers<void>();
     const electronApp = {
       on: (name: string, listener: (...args: unknown[]) => void) =>
@@ -463,7 +463,7 @@ it.effect("hands web and app links to the renderer and leaves other links alone"
         }),
     } as unknown as ElectronApp.ElectronApp["Service"];
     const received: Array<string> = [];
-    const pairLink = "t3code://pair?pairingUrl=https%3A%2F%2Fvps.example.com%2F%23token%3Dabc";
+    const pairLink = "t2code://pair?pairingUrl=https%3A%2F%2Fvps.example.com%2F%23token%3Dabc";
     yield* Effect.gen(function* () {
       const clerk = yield* DesktopClerk.DesktopClerk;
       yield* clerk.configure;
@@ -474,18 +474,18 @@ it.effect("hands web and app links to the renderer and leaves other links alone"
       };
       assert.strictEqual(open("https://example.com/page"), 1);
       assert.strictEqual(open("http://localhost:3000/"), 1);
-      assert.strictEqual(open("t3code://new?prompt=hi"), 1);
-      assert.strictEqual(open("t3code://threads/env-1/thread-1"), 1);
+      assert.strictEqual(open("t2code://new?prompt=hi"), 1);
+      assert.strictEqual(open("t2code://threads/env-1/thread-1"), 1);
       assert.strictEqual(open(pairLink), 1);
-      assert.strictEqual(open("t3code://pair"), 0);
+      assert.strictEqual(open("t2code://pair"), 0);
       assert.strictEqual(open("mailto:hello@example.com"), 0);
-      assert.strictEqual(open("t3code://somewhere-else"), 0);
+      assert.strictEqual(open("t2code://somewhere-else"), 0);
       yield* Effect.yieldNow;
       assert.deepStrictEqual(received, [
         "https://example.com/page",
         "http://localhost:3000/",
-        "t3code://new?prompt=hi",
-        "t3code://threads/env-1/thread-1",
+        "t2code://new?prompt=hi",
+        "t2code://threads/env-1/thread-1",
         pairLink,
       ]);
     }).pipe(

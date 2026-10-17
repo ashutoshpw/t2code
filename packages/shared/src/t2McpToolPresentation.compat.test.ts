@@ -7,7 +7,7 @@ describe("resolveT2McpToolPresentation", () => {
     for (const tool of T2_MCP_TOOL_NAMES) {
       const presentation = resolveT2McpToolPresentation(tool);
       for (const prefix of [
-        "mcp__t3-code__",
+        "mcp__t2-code__",
         "mcp__t2_code__",
         "mcp__t2code__",
         "T3-code.",
@@ -25,7 +25,7 @@ describe("resolveT2McpToolPresentation", () => {
     }
   });
   it("pretty prints legacy Claude and Cursor MCP tool names", () => {
-    expect(resolveT2McpToolPresentation("mcp__t3-code__t2_thread_read")).toEqual({
+    expect(resolveT2McpToolPresentation("mcp__t2-code__t2_thread_read")).toEqual({
       displayName: "Read a T2 thread",
       logo: "t2-code",
     });
@@ -39,7 +39,7 @@ describe("resolveT2McpToolPresentation", () => {
   });
 
   it("pretty prints thread metadata updates", () => {
-    expect(resolveT2McpToolPresentation("mcp__t3-code__t2_thread_update")).toEqual({
+    expect(resolveT2McpToolPresentation("mcp__t2-code__t2_thread_update")).toEqual({
       displayName: "Update T2 thread metadata",
       logo: "t2-code",
     });
@@ -53,7 +53,7 @@ describe("resolveT2McpToolPresentation", () => {
   });
 
   it("pretty prints legacy worktree MCP tool names", () => {
-    expect(resolveT2McpToolPresentation("mcp__t3-code__t2_worktree_handoff")).toEqual({
+    expect(resolveT2McpToolPresentation("mcp__t2-code__t2_worktree_handoff")).toEqual({
       displayName: "Hand off thread to a git worktree",
       logo: "t2-code",
     });
@@ -68,7 +68,7 @@ describe("resolveT2McpToolPresentation", () => {
       displayName: "Open a page in the preview browser",
       logo: "t2-code",
     });
-    expect(resolveT2McpToolPresentation("mcp__t3-code__preview_status")).toEqual({
+    expect(resolveT2McpToolPresentation("mcp__t2-code__preview_status")).toEqual({
       displayName: "Get preview browser status",
       logo: "t2-code",
     });

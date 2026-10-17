@@ -13,7 +13,7 @@ import packageJson from "../../package.json" with { type: "json" };
 export type CliRunner = "npx" | "pnpm dlx" | "bunx";
 const CLI_COMMAND = "t2code";
 
-/** Detection is best-effort; callers must fail closed to a plain `t2` command. */
+/** Detection is best-effort; callers must fail closed to a plain `t2code` command. */
 function detectCliRunner(entryPath: string): CliRunner | null {
   const path = entryPath.replaceAll("\\", "/");
   if (path.includes("/_npx/")) {
@@ -41,8 +41,14 @@ const InstallManifest = Schema.Struct({
 const decodeInstallManifest = Schema.decodeUnknownEffect(Schema.fromJsonString(InstallManifest));
 
 /**
- * `T2CODE_NPM_LAUNCHER_PATH` is inherited by child shells, so accept it only for this package
- * version to avoid claiming another `t3` invocation is the npm install.
+ * The script this CLI was started through: the `@t2code/cli` npm launcher that
+ * downloaded and ran this executable (it names itself in
+ * `T2CODE_NPM_LAUNCHER_PATH`), or the Node entry script of a build run from
+ * source. A standalone executable has none and reports its own path.
+ *
+ * The variable is inherited by everything the server spawns, so a launcher
+ * counts only when its package is this exact version: a different `@t2code/cli` run
+ * from an agent's shell must not claim to be the npm install.
  */
 export const resolveEntryPath = Effect.gen(function* () {
   const npmLauncher = (yield* HostProcess.Environment).T2CODE_NPM_LAUNCHER_PATH?.trim();
@@ -54,7 +60,7 @@ export const resolveEntryPath = Effect.gen(function* () {
       .pipe(Effect.flatMap(decodeInstallManifest), Effect.option);
     if (
       Option.isSome(manifest) &&
-      manifest.value.name === "t3" &&
+      manifest.value.name === "@t2code/cli" &&
       manifest.value.version === packageJson.version
     ) {
       return npmLauncher;
@@ -69,7 +75,9 @@ export const resolveServerInstallation = Effect.gen(function* () {
   const path = yield* Path.Path;
   const platform = yield* HostProcess.Platform;
   const entry = yield* fs.realPath(yield* resolveEntryPath);
-  const match = /^(.*)\/lib\/node_modules\/t2\/(?:dist\/bin\.mjs|bin\/t2\.mjs)$/.exec(entry);
+  const match = /^(.*)\/lib\/node_modules\/@t2code\/cli\/(?:dist\/bin\.mjs|bin\/t2code\.mjs)$/.exec(
+    entry,
+  );
   if (!match) {
     const runner = detectCliRunner(entry);
     return runner === null
@@ -89,15 +97,15 @@ export const resolveServerInstallation = Effect.gen(function* () {
   const manifest = yield* fs
     .readFileString(path.join(packageRoot, "package.json"))
     .pipe(Effect.flatMap(decodeInstallManifest));
-  if (manifest.name !== "t2" || !manifest.bin) return null;
-  const bin = yield* fs.realPath(path.join(packageRoot, manifest.bin.t2));
-  const globalBin = yield* fs.realPath(path.join(prefix, "bin/t2"));
+  if (manifest.name !== "@t2code/cli" || !manifest.bin) return null;
+  const bin = yield* fs.realPath(path.join(packageRoot, manifest.bin.t2code));
+  const globalBin = yield* fs.realPath(path.join(prefix, "bin/t2code"));
   if (globalBin !== bin || bin !== entry) return null;
   return { kind: "npm-global", prefix } satisfies ServerInstallation;
 }).pipe(Effect.orElseSucceed(() => null));
 
 /**
- * The literal spec the user typed (e.g. `t2@nightly`) is resolved away before
+ * The literal spec the user typed (e.g. `@t2code/cli@nightly`) is resolved away before
  * our process starts, so re-derive it from the running version: nightly builds
  * re-suggest the nightly channel, anything else suggests the bare package.
  */
@@ -137,10 +145,10 @@ const hostShellWord = (platform: NodeJS.Platform, value: string) =>
   platform === "win32" ? powershellWord(value) : shellWord(value);
 
 /**
- * The launcher a person can type to run this install when `t2` is not on
- * PATH: the desktop app's `t2` shim, which the app and the shim itself name in
+ * The launcher a person can type to run this install when `t2code` is not on
+ * PATH: the desktop app's `t2code` shim, which the app and the shim itself name in
  * `T2CODE_CLI_PATH`, or a standalone binary's own path. Script installs (a
- * repo checkout) have no single launcher and keep plain `t2`.
+ * repo checkout) have no single launcher and keep plain `t2code`.
  */
 const resolveInstallLauncher = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -154,8 +162,8 @@ const resolveInstallLauncher = Effect.gen(function* () {
 });
 
 /**
- * `t2 <subcommand> <args>` for a person to run on this host: `t2` when it is
- * on PATH, the package runner this process came from, or else the absolute
+ * `t2code <subcommand> <args>` for a person to run on this host: `t2code` when
+ * it is on PATH, the package runner this process came from, or else the absolute
  * path of the launcher for this install, such as the one the desktop app
  * installs. `args` are quoted for the host's shell: POSIX, or PowerShell on
  * Windows.
@@ -180,7 +188,7 @@ export const resolveHostCliCommand = Effect.fn("invocation.resolveHostCliCommand
 
 /**
  * `sudo` resets PATH on most distributions, which drops a user-installed Node
- * (nvm, fnm, a tarball) and with it `npx` or a global `t2`, so the command
+ * (nvm, fnm, a tarball) and with it `npx` or a global `t2code`, so the command
  * carries PATH through unless Node is on root's PATH too. An absolute launcher
  * needs neither.
  */

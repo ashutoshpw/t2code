@@ -52,7 +52,7 @@ import {
   hasCursorSkillMention,
   rewriteCursorSkillMentions,
 } from "./skills.ts";
-import { t3OrchestrationPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
+import { t2OrchestrationPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
 import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
 import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import { makeProviderFailure } from "@t2code/provider-core/server/failure";
@@ -2291,7 +2291,7 @@ export const makeCursorAdapterV2 = Effect.fn("makeCursorAdapterV2")(function* (
                 .map((skill) => skill.name),
             );
           }
-          const userText = t3OrchestrationPrompt({
+          const userText = t2OrchestrationPrompt({
             prompt: yield* providerMessageTextWithAttachmentPaths({
               text:
                 cursorSkillNames === undefined

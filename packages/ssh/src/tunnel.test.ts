@@ -211,7 +211,7 @@ describe("ssh tunnel scripts", () => {
   });
 
   it("embeds the runner in the launch script byte for byte", () => {
-    const runner = SshTunnel.buildRemoteT3RunnerScript(ARCHIVE);
+    const runner = SshTunnel.buildRemoteT2RunnerScript(ARCHIVE);
     assert.include(runner, 'printf \'%s\\n\' "$$" > "$T2_LOCK/pid.tmp"');
     assert.include(SshTunnel.buildRemoteLaunchScript(ARCHIVE), runner);
   });

@@ -593,21 +593,18 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
       const pairing = yield* serverAuth.issuePairingCredential();
       const exchanged = yield* serverAuth.createBrowserSession(pairing.credential, requestMetadata);
       const upgrade = (headers: Record<string, string>) =>
-        serverAuth.authenticateWebSocketUpgrade(
-          {
-            url: "/ws",
-            cookies: { [sessions.cookieName]: exchanged.sessionToken },
-            headers: { host: "192.168.1.50:3773", ...headers },
-          } as never,
-          "rpc",
-        );
+        serverAuth.authenticateWebSocketUpgrade({
+          url: "/ws",
+          cookies: { [sessions.cookieName]: exchanged.sessionToken },
+          headers: { host: "192.168.1.50:3772", ...headers },
+        } as never);
 
-      yield* upgrade({ origin: "http://192.168.1.50:3773" });
+      yield* upgrade({ origin: "http://192.168.1.50:3772" });
       yield* upgrade({
         origin: "https://box.tail1234.ts.net",
         "x-forwarded-host": "box.tail1234.ts.net",
       });
-      yield* upgrade({ origin: "t3code://app" });
+      yield* upgrade({ origin: "t2code://app" });
       yield* upgrade({ origin: "http://localhost:5733" });
       yield* upgrade({});
 
@@ -657,18 +654,15 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
     Effect.gen(function* () {
       const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
       const bearer = yield* serverAuth.issueSession();
-      const verified = yield* serverAuth.authenticateWebSocketUpgrade(
-        {
-          url: "/ws",
-          cookies: {},
-          headers: {
-            host: "192.168.1.50:3773",
-            origin: "http://192.168.1.50:8080",
-            authorization: `Bearer ${bearer.token}`,
-          },
-        } as never,
-        "rpc",
-      );
+      const verified = yield* serverAuth.authenticateWebSocketUpgrade({
+        url: "/ws",
+        cookies: {},
+        headers: {
+          host: "192.168.1.50:3772",
+          origin: "http://192.168.1.50:8080",
+          authorization: `Bearer ${bearer.token}`,
+        },
+      } as never);
       expect(verified.sessionId).toBe(bearer.sessionId);
     }).pipe(Effect.provide(layerEnvironmentAuth({ mode: "web", host: "192.168.1.50" }))),
   );

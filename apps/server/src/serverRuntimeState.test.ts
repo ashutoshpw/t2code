@@ -74,11 +74,11 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
   const [unitPath, unit] =
     input.platform === "darwin"
       ? [
-          path.join(root, "Library", "LaunchAgents", "com.t3tools.t3code.service.plist"),
+          path.join(root, "Library", "LaunchAgents", "com.t3tools.t2code.service.plist"),
           renderBootServicePlist(plan, { homeDir: root, environmentPath: "" }),
         ]
       : [
-          path.join(root, ".config", "systemd", "user", "t3code.service"),
+          path.join(root, ".config", "systemd", "user", "t2code.service"),
           renderBootServiceUnit(plan),
         ];
   yield* fs.makeDirectory(path.dirname(unitPath), { recursive: true });
@@ -148,7 +148,7 @@ describe("server ownership", () => {
   ).pipe(Layer.provideMerge(NodeServices.layer));
   const makeState = ServerRuntimeState.makePersistedServerRuntimeState({
     config: { host: undefined, devUrl: undefined },
-    port: 3773,
+    port: 3772,
   });
 
   it.effect("lets only one of two racing starts own a state directory", () =>

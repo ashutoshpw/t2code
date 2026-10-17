@@ -274,7 +274,7 @@ const discoverPairTarget = Effect.fn("pair.discoverPairTarget")(function* (
       bases.push(worktreeHome);
       inLinkedWorktree = true;
     } else {
-      const envHome = yield* Config.String("T3CODE_HOME").pipe(Config.option);
+      const envHome = yield* Config.String("T2CODE_HOME").pipe(Config.option);
       bases.push(yield* resolveBaseDir(Option.getOrUndefined(envHome)));
     }
     const envHome = yield* Config.String("T2CODE_HOME").pipe(Config.option);

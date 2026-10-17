@@ -55,7 +55,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("installer chan
               ...process.env,
               T2CODE_VERSION: "",
               T2CODE_CHANNEL: channel,
-              T3CODE_HOME: NodePath.join(root, "home"),
+              T2CODE_HOME: NodePath.join(root, "home"),
               T2CODE_INSTALL_BIN_DIR: NodePath.join(root, "bin"),
               // A wrong version must fail here instead of downloading a real release.
               T2CODE_RELEASE_BASE_URL: origin,

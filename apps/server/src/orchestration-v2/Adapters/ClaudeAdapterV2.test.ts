@@ -549,10 +549,9 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
       readOnlySandbox: false,
     });
 
-      assert.deepEqual(overrides, {
-        allowedTools: [ClaudeAdapterV2.CLAUDE_T2_MCP_TOOL_WILDCARD],
-        mcpServers: T2_MCP_SERVERS,
-      });
+    assert.deepEqual(overrides, {
+      allowedTools: [ClaudeAdapterV2.CLAUDE_T2_MCP_TOOL_WILDCARD],
+      mcpServers: T2_MCP_SERVERS,
     });
   });
 
@@ -599,7 +598,7 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
     });
 
     assert.deepEqual(overrides.allowedTools, [
-      ...ClaudeAdapterV2.CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS,
+      ...ClaudeAdapterV2.CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS,
     ]);
   });
 
@@ -699,9 +698,9 @@ describe("ClaudeAdapterV2 native protocol logging", () => {
       allowedTools: ["Read"],
     });
     assert.deepEqual(overrides, {
-      allowedTools: ["Read", "mcp__t3-code__*"],
+      allowedTools: ["Read", "mcp__t2-code__*"],
       mcpServers: {
-        "t3-code": {
+        "t2-code": {
           type: "http",
           url: "http://127.0.0.1:43123/mcp",
           headers: {
@@ -734,7 +733,7 @@ describe("ClaudeAdapterV2 native protocol logging", () => {
     assert.equal(systemPrompt.preset, "claude_code");
     assert.include(systemPrompt.append ?? "", "Use `delegate_task`");
     assert.include(systemPrompt.append ?? "", "call `t3_background_wait`");
-    assert.notInclude(systemPrompt.append ?? "", "## T3 Code devices");
+    assert.notInclude(systemPrompt.append ?? "", "## T2 Code devices");
     const logged = ClaudeAdapterV2.loggedClaudeQueryOptions(options);
     assert.equal(logged.hasMcpServers, true);
     assert.notInclude(JSON.stringify(logged), "secret-claude-token");
@@ -780,8 +779,8 @@ describe("ClaudeAdapterV2 device instructions", () => {
   });
 
   it("leaves the device block out without device access or without T3 tools", () => {
-    assert.notInclude(append({ mcp: true, deviceToolsAvailable: false }), "## T3 Code devices");
-    assert.notInclude(append({ mcp: false, deviceToolsAvailable: true }), "## T3 Code devices");
+    assert.notInclude(append({ mcp: true, deviceToolsAvailable: false }), "## T2 Code devices");
+    assert.notInclude(append({ mcp: false, deviceToolsAvailable: true }), "## T2 Code devices");
   });
 
   it("gives native subagents the device block only in a session with device access", async () => {
@@ -2526,7 +2525,7 @@ describe("ClaudeAdapterV2 MCP credential channel", () => {
             resume: false,
             cwd: null,
             environment: { PATH: "/usr/bin" },
-            mcpServers: { "t3-code": t2McpServer },
+            mcpServers: { "t2-code": t2McpServer },
           }),
           pathToClaudeCodeExecutable: "/opt/claude/cli.js",
           spawnClaudeCodeProcess: cli.spawn,
@@ -2575,7 +2574,7 @@ describe("ClaudeAdapterV2 MCP credential channel", () => {
 
       assert.deepInclude(cli.controlRequests, {
         subtype: "mcp_set_servers",
-        servers: { "t3-code": t2McpServer },
+        servers: { "t2-code": t2McpServer },
       });
       const spawned = JSON.stringify(cli.spawns);
       assert.notInclude(spawned, "--mcp-config");

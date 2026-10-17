@@ -38,7 +38,7 @@ When browser work was asked, \`preview_*\` is the browser you share with the use
 
 const T3_CODE_DEVICE_TOOLS = ["device_list", "device_open", "device_screenshot", "device_close"];
 
-const deviceToolInstructions = (loadTools: string) => `## T3 Code devices
+const deviceToolInstructions = (loadTools: string) => `## T2 Code devices
 
 When a task needs an iOS Simulator or Android Emulator, on this machine or on an SSH device host such as a remote Mac, use the device tools so the user can watch it in the Device panel.${loadTools}
 1. Call \`device_list\` unless you already have the device's \`hostId\` and \`id\`.
@@ -52,7 +52,7 @@ export const T2_CODE_DEVICE_TOOL_INSTRUCTIONS = deviceToolInstructions("");
 
 /** Claude Code defers MCP tools behind ToolSearch, so Claude's copy says how to load them. */
 export const T2_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH = deviceToolInstructions(
-  ` Load them with ToolSearch \`select:${T3_CODE_DEVICE_TOOLS.map((tool) => `mcp__t3-code__${tool}`).join(",")}\`.`,
+  ` Load them with ToolSearch \`select:${T3_CODE_DEVICE_TOOLS.map((tool) => `mcp__t2-code__${tool}`).join(",")}\`.`,
 );
 
 // ACP only: some ACP agents accept the injected MCP server but never expose
@@ -114,7 +114,7 @@ function prependT2OrchestrationInstructions(prompt: string, instructions: string
 }
 
 /** For providers whose instructions ride on the prompt, so a compacted conversation loses them. */
-export function t3OrchestrationPrompt(input: {
+export function t2OrchestrationPrompt(input: {
   readonly prompt: string;
   readonly hasT2Mcp: boolean;
   readonly hasDeviceTools: boolean;

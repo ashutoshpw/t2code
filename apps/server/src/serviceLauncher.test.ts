@@ -213,7 +213,7 @@ it.layer(NodeServices.layer)("service state persistence", (it) => {
     }),
   );
 
-  it.effect("stays idle instead of exiting when another server owns the T3 home", () =>
+  it.effect("stays idle instead of exiting when another server owns the T2 home", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -235,7 +235,7 @@ it.layer(NodeServices.layer)("service state persistence", (it) => {
       yield* Effect.acquireRelease(
         Effect.sync(() =>
           vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-            if (String(chunk).includes("owns this T3 home")) refused.resolve();
+            if (String(chunk).includes("owns this T2 home")) refused.resolve();
             return true;
           }),
         ),
@@ -316,7 +316,7 @@ if (context.update?.status === "pending") {
       const observationsPath = path.join(root, "environment-observations.jsonl");
       const envPath = path.join(root, SERVICE_ENV_FILE);
       yield* fs.writeFileString(envPath, "T2CODE_TEST_SERVICE_TOKEN=initial\n");
-      vi.stubEnv("T3CODE_HOME", root);
+      vi.stubEnv("T2CODE_HOME", root);
       vi.stubEnv("T2CODE_TEST_SERVICE_TOKEN", "inherited");
       yield* Effect.addFinalizer(() => Effect.sync(() => vi.unstubAllEnvs()));
       yield* fs.makeDirectory(path.dirname(databasePath), { recursive: true });
