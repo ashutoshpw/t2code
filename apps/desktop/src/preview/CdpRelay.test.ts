@@ -22,7 +22,7 @@ const makeRelay = (target: CdpRelayTarget, write: (raw: string) => void) =>
   createCdpRelayConnection(target, write, () => {});
 
 // Each relay reply resolves after a few microtasks; one macrotask lets them all land.
-// oxlint-disable-next-line t3code/no-real-time-wait-in-tests -- a zero-delay macrotask boundary, not a wait for time
+// oxlint-disable-next-line t2code/no-real-time-wait-in-tests -- a zero-delay macrotask boundary, not a wait for time
 const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 describe("CDP relay", () => {

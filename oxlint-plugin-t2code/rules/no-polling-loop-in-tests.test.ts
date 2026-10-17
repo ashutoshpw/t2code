@@ -2,11 +2,11 @@ import { assert, describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const rule = createOxlintRuleHarness("t3code/no-polling-loop-in-tests", {
+const rule = createOxlintRuleHarness("t2code/no-polling-loop-in-tests", {
   filename: "fixture.test.ts",
 });
 
-describe("t3code/no-polling-loop-in-tests", () => {
+describe("t2code/no-polling-loop-in-tests", () => {
   rule.valid(
     "allows a fixed-count flush followed by unrelated error handling",
     `
@@ -219,7 +219,7 @@ describe("t3code/no-polling-loop-in-tests", () => {
   );
 });
 
-const productionRule = createOxlintRuleHarness("t3code/no-polling-loop-in-tests");
+const productionRule = createOxlintRuleHarness("t2code/no-polling-loop-in-tests");
 
 productionRule.valid(
   "ignores non-test files",

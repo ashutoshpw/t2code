@@ -4329,7 +4329,7 @@ function workEntryIconName(workEntry: TimelineWorkEntry): WorkEntryIconName {
       case "background_task":
         return "zap";
       case "system":
-        return "t3-code";
+        return "t2-code";
       default:
         source satisfies never;
         return "zap";

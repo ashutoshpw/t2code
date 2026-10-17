@@ -13,7 +13,7 @@ import * as Result from "effect/Result";
 export { WORKTREE_BRANCH_PREFIX };
 
 // Canonical prefixes use `<prefix>/<8 hex>`. Older T3 builds generated
-// `t3code/<uuid>` via Crypto.randomUUID(), so the legacy prefix also accepts exactly
+// `t2code/<uuid>` via Crypto.randomUUID(), so the legacy prefix also accepts exactly
 // that shape — version nibble `4`, variant nibble `[89ab]` — to keep those threads
 // eligible for branch regeneration without loosening the T2 prefix.
 const TEMP_WORKTREE_HEX_TOKEN = "[0-9a-f]{8}";

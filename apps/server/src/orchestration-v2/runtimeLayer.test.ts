@@ -230,7 +230,7 @@ const watchedPullRequestDetail = (input: {
   number: input.number,
   title: "Watched pull request",
   body: "",
-  url: `https://github.com/pingdotgg/t3code/pull/${input.number}`,
+  url: `https://github.com/pingdotgg/t2code/pull/${input.number}`,
   author: { login: "agent-user", name: null, avatarUrl: null },
   state: "open",
   isDraft: false,
@@ -3213,7 +3213,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           projectId,
           repository: "pingdotgg/t3code",
           number: 1,
-          url: "https://github.com/pingdotgg/t3code/pull/1",
+          url: "https://github.com/pingdotgg/t2code/pull/1",
         },
       });
       for (const [index, number] of [2, 2, 1, 3].entries()) {
@@ -3224,7 +3224,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           host: "GitHub.com",
           repository: "Pingdotgg/T3code",
           number,
-          url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+          url: `https://github.com/pingdotgg/t2code/pull/${number}`,
           source: "manual",
         });
         assert.deepEqual(
@@ -3247,7 +3247,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         host: "github.com",
         repository: "pingdotgg/t3code",
         number: 4,
-        url: "https://github.com/pingdotgg/t3code/pull/4",
+        url: "https://github.com/pingdotgg/t2code/pull/4",
         source: "manual",
       });
       assert.isTrue((yield* maintenance.rebuild).valid);
@@ -3263,7 +3263,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           host: "git.cafe",
           repository: "pingdotgg/t3code",
           number: 21353 + index,
-          url: `https://git.cafe/pingdotgg/t3code/${route}/${21353 + index}`,
+          url: `https://git.cafe/pingdotgg/t2code/${route}/${21353 + index}`,
           source: "manual",
         });
       }
@@ -3272,7 +3272,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         (yield* orchestrator.getThreadShell(threadId))?.pullRequests
           ?.filter((link) => link.host === "git.cafe")
           .map((link) => link.url),
-        [21353, 21354].map((number) => `https://git.cafe/pingdotgg/t3code/pulls/${number}`),
+        [21353, 21354].map((number) => `https://git.cafe/pingdotgg/t2code/pulls/${number}`),
       );
     }),
   );
@@ -3304,7 +3304,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           threadId,
           ...key,
           number,
-          url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+          url: `https://github.com/pingdotgg/t2code/pull/${number}`,
           source: number === 1 ? "manual" : "stack",
         });
       }
@@ -3340,7 +3340,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         threadId,
         ...key,
         number: 2,
-        url: "https://github.com/pingdotgg/t3code/pull/2",
+        url: "https://github.com/pingdotgg/t2code/pull/2",
         source: "stack",
       });
       assert.equal(
@@ -3358,7 +3358,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         threadId,
         ...key,
         number: 2,
-        url: "https://github.com/pingdotgg/t3code/pull/2",
+        url: "https://github.com/pingdotgg/t2code/pull/2",
         source: "manual",
       });
       assert.equal(
@@ -3388,7 +3388,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         worktreePath: null,
       });
       const key = { host: "github.com", repository: "pingdotgg/t3code", number: 7 };
-      const url = "https://github.com/pingdotgg/t3code/pull/7";
+      const url = "https://github.com/pingdotgg/t2code/pull/7";
       const watchOf = Effect.map(
         orchestrator.getThreadShell(threadId),
         (thread) => thread?.pullRequests?.[0]?.watch,
@@ -3488,7 +3488,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           ...key,
           number,
           watching: true,
-          link: { url: `https://github.com/pingdotgg/t3code/pull/${number}`, source: "agent" },
+          link: { url: `https://github.com/pingdotgg/t2code/pull/${number}`, source: "agent" },
         });
       }
       const before = yield* orchestrator.getThreadShell(threadId);
@@ -3590,7 +3590,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         repository: "pingdotgg/t3code",
         number: 7,
         watching: true,
-        link: { url: "https://github.com/pingdotgg/t3code/pull/7", source: "agent" as const },
+        link: { url: "https://github.com/pingdotgg/t2code/pull/7", source: "agent" as const },
       };
       const watched = Effect.map(
         orchestrator.getThreadShell(threadId),
@@ -3663,10 +3663,10 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           commandId: CommandId.make(`pr-watch-unreadable-start-${reason}-${activityFails}`),
           threadId,
           host: "github.com",
-          repository: "pingdotgg/t3code",
+          repository: "pingdotgg/t2code",
           number: 8,
           watching: true,
-          link: { url: "https://github.com/pingdotgg/t3code/pull/8", source: "agent" },
+          link: { url: "https://github.com/pingdotgg/t2code/pull/8", source: "agent" },
         });
         let disconnected = false;
         let passed = false;
@@ -3878,7 +3878,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           repository: "pingdotgg/t3code",
           number: 12,
           watching: on,
-          link: { url: "https://github.com/pingdotgg/t3code/pull/12", source: "agent" },
+          link: { url: "https://github.com/pingdotgg/t2code/pull/12", source: "agent" },
         });
       yield* watch(true, "start");
 
@@ -3977,7 +3977,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           repository: "pingdotgg/t3code",
           number: 12,
           watching: on,
-          link: { url: "https://github.com/pingdotgg/t3code/pull/12", source: "agent" },
+          link: { url: "https://github.com/pingdotgg/t2code/pull/12", source: "agent" },
         });
       yield* watch(true, "start");
 
@@ -4105,7 +4105,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           threadId,
           ...key,
           watching: true,
-          link: { url: "https://github.com/pingdotgg/t3code/pull/13", source: "agent" },
+          link: { url: "https://github.com/pingdotgg/t2code/pull/13", source: "agent" },
         });
       const watchOf = Effect.map(
         orchestrator.getThreadShell(threadId),
@@ -4152,7 +4152,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
                   author: { login: "reviewer", name: null, avatarUrl: null },
                   body: "One more thing.",
                   createdAt: commentAt,
-                  url: "https://github.com/pingdotgg/t3code/pull/13#comment",
+                  url: "https://github.com/pingdotgg/t2code/pull/13#comment",
                   path: null,
                   reviewState: null,
                 },
@@ -4227,7 +4227,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         threadId,
         ...key,
         watching: true,
-        link: { url: "https://github.com/pingdotgg/t3code/pull/14", source: "agent" },
+        link: { url: "https://github.com/pingdotgg/t2code/pull/14", source: "agent" },
       });
 
       // A docs-only push that path filters keep every workflow off.
@@ -4453,7 +4453,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         threadId,
         ...key,
         watching: true,
-        link: { url: "https://github.com/pingdotgg/t3code/pull/14", source: "agent" },
+        link: { url: "https://github.com/pingdotgg/t2code/pull/14", source: "agent" },
       });
 
       const headSha = "6074dd48ff";
@@ -4662,7 +4662,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         worktreePath: null,
       });
       const key = { host: "github.com", repository: "pingdotgg/t3code", number: 14 };
-      const url = "https://github.com/pingdotgg/t3code/pull/14";
+      const url = "https://github.com/pingdotgg/t2code/pull/14";
       const watchOf = Effect.map(
         orchestrator.getThreadShell(threadId),
         (thread) => thread?.pullRequests?.[0]?.watch,
@@ -4745,7 +4745,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         worktreePath: null,
       });
       const key = { host: "github.com", repository: "pingdotgg/t3code", number: 7 };
-      const url = "https://github.com/pingdotgg/t3code/pull/7";
+      const url = "https://github.com/pingdotgg/t2code/pull/7";
       yield* orchestrator.dispatch({
         type: "thread.pull-request.link",
         commandId: CommandId.make(`pr-watch-wake-link-${mode}`),
@@ -9295,7 +9295,7 @@ it.layer(Layer.fresh(layerSharedApplicationDataPlaneTest))("PR link events", (it
         worktreePath: null,
       });
       const key = { host: "github.com", repository: "pingdotgg/t3code" };
-      const repositoryWebUrl = "https://github.com/pingdotgg/t3code/pull/2";
+      const repositoryWebUrl = "https://github.com/pingdotgg/t2code/pull/2";
       for (const number of [1, 2]) {
         yield* orchestrator.dispatch({
           type: "thread.pull-request.link",
@@ -9303,14 +9303,14 @@ it.layer(Layer.fresh(layerSharedApplicationDataPlaneTest))("PR link events", (it
           threadId,
           ...key,
           number,
-          url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+          url: `https://github.com/pingdotgg/t2code/pull/${number}`,
           source: "manual",
           ...(number === 2 ? { repositoryWebUrl } : {}),
         });
       }
       const watchedLink = {
-        url: "https://github.com/pingdotgg/t3code/pull/3",
-        repositoryWebUrl: "https://github.com/pingdotgg/t3code/pull/3",
+        url: "https://github.com/pingdotgg/t2code/pull/3",
+        repositoryWebUrl: "https://github.com/pingdotgg/t2code/pull/3",
         source: "manual" as const,
       };
       yield* orchestrator.dispatch({
@@ -9350,7 +9350,7 @@ it.layer(Layer.fresh(layerSharedApplicationDataPlaneTest))("PR link events", (it
           kind: "native",
           id: "updated",
           number: 2,
-          url: "https://github.com/pingdotgg/t3code/pull/2",
+          url: "https://github.com/pingdotgg/t2code/pull/2",
           base: "main",
           layers: [],
         },
