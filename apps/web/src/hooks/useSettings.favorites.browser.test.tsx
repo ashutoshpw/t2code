@@ -5,10 +5,10 @@ import {
   ProviderInstanceId,
   type ServerSettings,
   type ServerSettingsPatch,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
-import { applyServerSettingsPatch } from "@t3tools/shared/serverSettings";
+import { applyServerSettingsPatch } from "@t2code/shared/serverSettings";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";

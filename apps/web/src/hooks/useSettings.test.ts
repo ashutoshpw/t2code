@@ -22,7 +22,7 @@ import {
   prepareModelPreferencesPatch,
   resolveEnvironmentIdentificationMode,
 } from "./useSettings";
-import { applyServerSettingsPatch } from "@t3tools/shared/serverSettings";
+import { applyServerSettingsPatch } from "@t2code/shared/serverSettings";
 
 beforeEach(() => {
   persistenceMocks.getClientSettings.mockReset().mockResolvedValue(null);

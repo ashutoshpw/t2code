@@ -1,4 +1,4 @@
-import { listLoginShellCandidates, setWindowsPath } from "@t3tools/shared/shell";
+import { listLoginShellCandidates, setWindowsPath } from "@t2code/shared/shell";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";

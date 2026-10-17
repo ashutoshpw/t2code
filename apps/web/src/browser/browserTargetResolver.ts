@@ -6,7 +6,7 @@ import type {
 import { isLoopbackHost, normalizePreviewUrl } from "@t2code/shared/preview";
 import { isLocalLoopbackHost, isPrivateNetworkHost } from "@t2code/shared/hostClassification";
 
-import type { ConnectionTarget } from "@t3tools/client-runtime/connection";
+import type { ConnectionTarget } from "@t2code/client-runtime/connection";
 
 import { isDesktopLocalConnectionTarget } from "~/connection/desktopLocal";
 import { isElectron } from "~/env";

@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 import {
   createLinkedPullRequestSummaryAtomFamily,
   createPullRequestEnvironmentAtoms,

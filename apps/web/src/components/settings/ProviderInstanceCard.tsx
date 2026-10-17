@@ -53,7 +53,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import type {
   ProviderClientDefinition,
   ProviderEnvironmentField,
-} from "@t3tools/provider-core/client";
+} from "@t2code/provider-core/client";
 import { deriveProviderSettingsFields, ProviderSettingsForm } from "./ProviderSettingsForm";
 import { ProviderModelsSection } from "./ProviderModelsSection";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";

@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import { connectionStatusTitle } from "@t3tools/client-runtime/connection";
+import { connectionStatusTitle } from "@t2code/client-runtime/connection";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
 import {

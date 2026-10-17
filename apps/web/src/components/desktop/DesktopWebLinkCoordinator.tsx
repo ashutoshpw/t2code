@@ -1,7 +1,7 @@
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
-import { promptLinkAppPath } from "@t3tools/shared/promptLinks";
+import { scopeProjectRef, scopeThreadRef } from "@t2code/client-runtime/environment";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import type { EnvironmentId, ScopedThreadRef } from "@t2code/contracts";
+import { promptLinkAppPath } from "@t2code/shared/promptLinks";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useRef } from "react";
 

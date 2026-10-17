@@ -1,5 +1,5 @@
 import { SessionPermissions } from "./SessionPermissions";
-import { AUTH_SCOPE_OPTIONS as PAIRING_SCOPE_OPTIONS } from "@t3tools/shared/authScopeOptions";
+import { AUTH_SCOPE_OPTIONS as PAIRING_SCOPE_OPTIONS } from "@t2code/shared/authScopeOptions";
 import {
   CheckIcon,
   ChevronRightIcon,
@@ -27,6 +27,7 @@ import {
   AuthAccessWriteScope,
   AuthEnvironmentMaintainScope,
   AuthDiagnosticsReadScope,
+  AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
   AuthRelayReadScope,
   AuthRelayWriteScope,
@@ -1135,6 +1136,7 @@ const AuthorizedClientsHeaderAction = memo(function AuthorizedClientsHeaderActio
                     onClick={() =>
                       setPairingScopes(
                         [
+                          AuthOrchestrationOperateScope,
                           AuthOrchestrationReadScope,
                           AuthFilesystemReadScope,
                           AuthDiagnosticsReadScope,
@@ -2097,8 +2099,8 @@ function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: b
         />
       ) : linkRevoked ? (
         <SettingsRow
-          title={searchableSetting("t3-connect").title}
-          description="This environment was removed from T3 Connect. Run `t3 connect link` on the host to link it again."
+          title={searchableSetting("t2-connect").title}
+          description="This environment was removed from T2 Connect. Run `t2 connect link` on the host to link it again."
         />
       ) : null}
       <SettingsRow

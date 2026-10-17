@@ -8,7 +8,7 @@ import {
 } from "@t2code/contracts";
 import { resolveSelectableModel } from "@t2code/shared/model";
 import { useAtomValue } from "@effect/atom-react";
-import { formatProviderUpdateRequiredNotice } from "@t3tools/client-runtime/providerUpdateRequiredModels";
+import { formatProviderUpdateRequiredNotice } from "@t2code/client-runtime/providerUpdateRequiredModels";
 import { useNavigate } from "@tanstack/react-router";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import {

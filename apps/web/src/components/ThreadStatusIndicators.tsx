@@ -43,7 +43,7 @@ import { linkedPullRequestDetailAtom, useSharedPullRequestSummary } from "../sta
 import { useThreadRunningTerminalIds } from "../state/terminalSessions";
 import { vcsEnvironment } from "../state/vcs";
 import { useUiStateStore } from "../uiStateStore";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 import {
   pullRequestMatchesSearchQuery,
   resolveThreadLastVisitedAt,

@@ -551,7 +551,7 @@ import {
   supportsServerUpdateThreadContinuation,
 } from "../versionSkew";
 import { useAssetUrls } from "../assets/assetUrls";
-import { ATTACHMENT_ONLY_BOOTSTRAP_PROMPT } from "@t3tools/shared/composerContextReferences";
+import { ATTACHMENT_ONLY_BOOTSTRAP_PROMPT } from "@t2code/shared/composerContextReferences";
 import { recallableComposerPrompt } from "./chat/composerPromptHistory";
 import { observeResize } from "~/lib/observeResize";
 
@@ -7243,7 +7243,7 @@ export default function ChatView(props: ChatViewProps) {
     if (userInputResponsesInFlight.current.has(responseKey)) return;
     const attachmentsByQuestionId = new Map<
       string,
-      import("@t3tools/contracts").UserInputAttachments[string]
+      import("@t2code/contracts").UserInputAttachments[string]
     >();
     const providerAnswers = { ...answers };
     for (const question of pendingInput.questions) {
