@@ -289,7 +289,7 @@ describe("check-rebrand", () => {
       { file: "apps/web/src/example.ts", line: `const x = "T3 Connect";`, num: 1 },
       { file: "apps/web/src/example.ts", line: `const x = "a T3 environment";`, num: 2 },
       { file: "apps/web/src/example.ts", line: `const label = "T3 Chat";`, num: 3 },
-      { file: "apps/web/src/example.ts", line: `const home = "T3CODE_HOME";`, num: 4 },
+      { file: "apps/web/src/example.ts", line: `const home = "T2CODE_HOME";`, num: 4 },
       { file: "apps/web/src/example.ts", line: `const scheme = "t3code";`, num: 5 },
       { file: "apps/web/src/example.ts", line: `const name = "T3 Tools Inc.";`, num: 6 },
     ];
@@ -356,7 +356,7 @@ describe("check-rebrand", () => {
           file: "packages/shared/src/example.ts",
           line: `import { hostProcess } from "@t3tools/shared/hostProcess";`,
         },
-        { file: "apps/web/src/example.ts", line: `appId: "com.t3tools.t3code"` },
+        { file: "apps/web/src/example.ts", line: `appId: "com.t2tools.t2code"` },
         { file: "apps/web/src/example.ts", line: `git@github.com:T3Tools/T3Code.git` },
       ],
       EMPTY_BASELINE,
@@ -398,7 +398,7 @@ describe("check-rebrand", () => {
         },
         {
           file: "apps/web/src/example.ts",
-          line: `const metadata = "https://github.com/t3tools/t3code (com.t3tools.t3code)";`,
+          line: `const metadata = "https://github.com/t3tools/t3code (com.t2tools.t2code)";`,
         },
       ],
       EMPTY_BASELINE,
@@ -484,7 +484,7 @@ describe("check-rebrand", () => {
   it("flags legacy env names outside the compat surfaces", () => {
     const violations = findViolations(
       [
-        { file: "apps/server/src/cli/config.ts", line: 'Config.String("T3CODE_HOME")' },
+        { file: "apps/server/src/cli/config.ts", line: 'Config.String("T2CODE_HOME")' },
         { file: "packages/ssh/src/tunnel.ts", line: "T3_ARCHIVE_VERSION=@@T3_ARCHIVE_VERSION@@" },
         { file: "apps/web/src/example.ts", line: "process.env.T3_RELEASE_BASE_URL" },
       ],
@@ -523,7 +523,7 @@ describe("check-rebrand", () => {
   });
 
   it("honors baseline entries for legacy env fallback lines", () => {
-    const legacyFallbackLine = '["T2CODE_HOME", firstSet("T2CODE_HOME", "T3CODE_HOME")],';
+    const legacyFallbackLine = '["T2CODE_HOME", firstSet("T2CODE_HOME", "T2CODE_HOME")],';
     const entries = [
       { file: "apps/desktop/scripts/electron-launcher.mjs", line: legacyFallbackLine },
     ];

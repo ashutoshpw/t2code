@@ -13,7 +13,7 @@ import packageJson from "../../package.json" with { type: "json" };
 export type CliRunner = "npx" | "pnpm dlx" | "bunx";
 const CLI_COMMAND = "t2code";
 
-/** Detection is best-effort; callers must fail closed to a plain `t2` command. */
+/** Detection is best-effort; callers must fail closed to a plain `t2code` command. */
 function detectCliRunner(entryPath: string): CliRunner | null {
   const path = entryPath.replaceAll("\\", "/");
   if (path.includes("/_npx/")) {
@@ -69,7 +69,9 @@ export const resolveServerInstallation = Effect.gen(function* () {
   const path = yield* Path.Path;
   const platform = yield* HostProcess.Platform;
   const entry = yield* fs.realPath(yield* resolveEntryPath);
-  const match = /^(.*)\/lib\/node_modules\/@t2code\/cli\/(?:dist\/bin\.mjs|bin\/t2code\.mjs)$/.exec(entry);
+  const match = /^(.*)\/lib\/node_modules\/@t2code\/cli\/(?:dist\/bin\.mjs|bin\/t2code\.mjs)$/.exec(
+    entry,
+  );
   if (!match) {
     const runner = detectCliRunner(entry);
     return runner === null
@@ -137,10 +139,10 @@ const hostShellWord = (platform: NodeJS.Platform, value: string) =>
   platform === "win32" ? powershellWord(value) : shellWord(value);
 
 /**
- * The launcher a person can type to run this install when `t2` is not on
- * PATH: the desktop app's `t2` shim, which the app and the shim itself name in
+ * The launcher a person can type to run this install when `t2code` is not on
+ * PATH: the desktop app's `t2code` shim, which the app and the shim itself name in
  * `T2CODE_CLI_PATH`, or a standalone binary's own path. Script installs (a
- * repo checkout) have no single launcher and keep plain `t2`.
+ * repo checkout) have no single launcher and keep plain `t2code`.
  */
 const resolveInstallLauncher = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -186,7 +188,7 @@ export const resolveHostCliCommand = Effect.fn("invocation.resolveHostCliCommand
 
 /**
  * `sudo` resets PATH on most distributions, which drops a user-installed Node
- * (nvm, fnm, a tarball) and with it `npx` or a global `t2`, so the command
+ * (nvm, fnm, a tarball) and with it `npx` or a global `t2code`, so the command
  * carries PATH through unless Node is on root's PATH too. An absolute launcher
  * needs neither.
  */

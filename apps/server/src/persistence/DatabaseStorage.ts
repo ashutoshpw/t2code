@@ -29,7 +29,7 @@ export class DatabaseStorage extends Context.Service<
     /** Current file accounting, re-published after each maintenance pass. Null until first read. */
     readonly status: Stream.Stream<DatabaseStorageStatus | null>;
   }
->()("t3/persistence/DatabaseStorage") {}
+>()("@t2code/cli/persistence/DatabaseStorage") {}
 
 const make = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
