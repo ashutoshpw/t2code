@@ -700,6 +700,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(failure).toBe("repair failed");
       expect(control.active).toBe(true);
 
+      // A failed stop skips the operation but still starts the service again.
       control.failCommand = "systemctl --user stop t2code.service";
       let ran = false;
       const stopFailure = yield* service

@@ -179,7 +179,7 @@ Default Grafana login:
 
 For endpoint settings and startup precedence, see the
 [user telemetry guide](../user/telemetry.md#export-diagnostics-to-your-own-receiver).
-In a worktree, use `vp run dev` instead of `npx t2` to keep state isolated.
+In a worktree, use `vp run dev` instead of `npx @t2code/cli` to keep state isolated.
 
 ```bash
 export T2CODE_OTLP_TRACES_URL=http://localhost:4318/v1/traces

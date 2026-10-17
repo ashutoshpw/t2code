@@ -10,4 +10,4 @@ export const browserApiCorsAllowedHeaders = [
   ORCHESTRATION_PROTOCOL_HEADER,
 ] as const;
 
-export const DESKTOP_RENDERER_ORIGINS = ["t2code://app", "t3code-dev://app"] as const;
+export const DESKTOP_RENDERER_ORIGINS = ["t2code://app", "t2code-dev://app"] as const;

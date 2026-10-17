@@ -162,11 +162,7 @@ function decide(files, packages, full) {
       // Empty means every package the Test job covers.
       test_packages: everything ? "" : tested.map((pkg) => pkg.name).join(" "),
       test_web: has("@t2code/web"),
-<<<<<<< HEAD
-      test_server: has("t2"),
-=======
       test_server: has("@t2code/cli"),
->>>>>>> 0fb3c7d13a (rebrand: finish the sweep in docs, scripts, workflows, and the site)
       rust: everything || rust,
       release_smoke: scriptsChanged,
       mobile_native: files === null || files.some((file) => MOBILE_NATIVE.test(file)),
