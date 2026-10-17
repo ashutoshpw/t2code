@@ -33,6 +33,10 @@ const LATE_AFTER_MS = 5 * 60_000;
 export function onceTaskStatus(task: ScheduledTask, now: Date): string {
   if (task.schedule.type !== "once") return "";
   if (task.lastRunStatus === "running") return "Sending now";
+  // Editing the time of a sent task arms it again; the pending run wins over the old result.
+  if (task.enabled && task.nextRunAt !== null) {
+    return `Sends ${formatSendLaterLabel(task.schedule.at, now)}`;
+  }
   if (task.lastRunStatus === "succeeded" || task.lastRunStatus === "failed") {
     const ranAt = task.lastRunAt ?? task.schedule.at;
     const late = Date.parse(ranAt) - Date.parse(task.schedule.at) > LATE_AFTER_MS;
@@ -41,6 +45,5 @@ export function onceTaskStatus(task: ScheduledTask, now: Date): string {
     return late ? `Sent late, ${label}` : `Sent ${label}`;
   }
   if (!task.enabled) return `Paused, was set for ${formatSendLaterLabel(task.schedule.at, now)}`;
-  if (task.nextRunAt === null) return "Not scheduled";
-  return `Sends ${formatSendLaterLabel(task.schedule.at, now)}`;
+  return "Not scheduled";
 }
