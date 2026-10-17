@@ -168,6 +168,7 @@ function RootRouteBranch() {
     return (
       <>
         <CustomSnoozeDialogHost />
+        <SendLaterDialogHost />
         <GuestShareDialogHost />
         <CommandPalette>
           <AppSidebarLayout>
@@ -209,6 +210,7 @@ function RootRouteBranch() {
         <ReopenClosedViewShortcut />
         <ConfirmDialogHost />
         <CustomSnoozeDialogHost />
+        <SendLaterDialogHost />
         <GuestShareDialogHost />
         <ProjectCloneToastCoordinator />
         <AddProjectToMachineDialogHost />
