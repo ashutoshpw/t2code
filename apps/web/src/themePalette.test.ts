@@ -278,7 +278,7 @@ describe("theme files", () => {
     });
   });
 
-  it("keeps the T3 Chat palette faithful and readable", () => {
+  it("keeps the T2 Chat palette faithful and readable", () => {
     expectThemeColors(T2_CHAT_THEME.colors, {
       canvas: "#fdf7fd",
       chrome: "#fdf7fd",
@@ -868,7 +868,7 @@ describe("stored theme preferences", () => {
     }
   });
 
-  it("resolves the legacy t2-chat-dark preference to dark T3 Chat", () => {
+  it("resolves the legacy t2-chat-dark preference to dark T2 Chat", () => {
     expect(getThemeDefinition("t2-chat-dark")).toBe(T2_CHAT_THEME);
     expect(getThemePreferenceMode("t2-chat-dark")).toBe("dark");
     expect(resolveThemeAppearance("t2-chat-dark", true, false)).toBe("dark");
@@ -876,7 +876,7 @@ describe("stored theme preferences", () => {
     expect(isKnownThemePreference("t2-chat-dark")).toBe(true);
   });
 
-  it("resolves legacy t3-prefixed ids onto the renamed themes", () => {
+  it("resolves legacy t2-prefixed ids onto the renamed themes", () => {
     for (const [legacy, theme] of [
       ["t2-grove", GROVE_THEME],
       ["t2-ocean", OCEAN_THEME],

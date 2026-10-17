@@ -56,7 +56,7 @@ const layerPlatformTest = Layer.merge(
 );
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-orchestration-v2-delegated-completion-",
+  prefix: "t2-orchestration-v2-delegated-completion-",
 });
 
 const modelSelection = {

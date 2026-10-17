@@ -483,7 +483,7 @@ describe("AcpRegistryAdapterV2", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const replayDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-acp-registry-stored-picks-",
+        prefix: "t2-acp-registry-stored-picks-",
       });
       const statusPath = path.join(replayDir, "status.json");
       const transcript = yield* decodeAcpReplayTranscript(

@@ -1132,8 +1132,8 @@ export function extractMcpToolCallIdentity(
   const gooseExtension =
     typeof gooseToolCall?.extensionName === "string" ? gooseToolCall.extensionName.trim() : "";
   const assertsForeignOrigin =
-    (metaServerId.length > 0 && !/^t2[-_ ]?code$/i.test(metaServerId)) ||
-    (gooseExtension.length > 0 && !/^t2[-_ ]?code$/i.test(gooseExtension));
+    (metaServerId.length > 0 && !/^t[23][-_ ]?code$/i.test(metaServerId)) ||
+    (gooseExtension.length > 0 && !/^t[23][-_ ]?code$/i.test(gooseExtension));
   // qwen's serverId marks a real MCP server, but goose reports its built-in
   // extensions (developer__shell, edits) the same way as user MCP servers, so
   // goose stays unclassified and keeps its command and file-change projections.

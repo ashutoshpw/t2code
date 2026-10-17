@@ -385,7 +385,7 @@ it.effect("does not reuse a fresh session ID after MCP registration times out", 
 );
 
 function fakeClaudeCli(script: string): string {
-  const dir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-claude-cli-"));
+  const dir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-claude-cli-"));
   const cli = NodePath.join(dir, "claude");
   NodeFS.writeFileSync(cli, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
   return cli;

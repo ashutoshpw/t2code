@@ -598,7 +598,7 @@ const make = Effect.gen(function* () {
     const nowSeconds = Math.floor(now.epochMilliseconds / 1_000);
     const descriptor = yield* environment.getDescriptor;
     const payload = {
-      iss: `t3-env:${descriptor.environmentId}`,
+      iss: `t2-env:${descriptor.environmentId}`,
       aud: normalizeRelayIssuer(request.relayIssuer),
       sub: descriptor.environmentId,
       jti: yield* crypto.randomUUIDv4(),
@@ -939,7 +939,7 @@ const make = Effect.gen(function* () {
     const now = yield* DateTime.now;
     const issuedAt = Math.floor(now.epochMilliseconds / 1_000);
     const claims = {
-      iss: `t3-env:${input.environmentId}`,
+      iss: `t2-env:${input.environmentId}`,
       aud: normalizeRelayIssuer(
         Option.isSome(configuredIssuer) ? bytesToString(configuredIssuer.value) : input.relayUrl,
       ),
@@ -1458,7 +1458,7 @@ const make = Effect.gen(function* () {
         token: request.proof,
         typ: RELAY_HEALTH_REQUEST_TYP,
         issuer: normalizeRelayIssuer(relayIssuer),
-        audience: `t3-env:${environmentId}`,
+        audience: `t2-env:${environmentId}`,
         nowEpochSeconds: nowSeconds,
       }).pipe(Effect.flatMap(decodeCloudHealthProof), Effect.option);
       if (
@@ -1487,7 +1487,7 @@ const make = Effect.gen(function* () {
       const descriptor = yield* environment.getDescriptor;
       const responseExpiresAt = DateTime.add(now, { minutes: 5 });
       const responsePayload = {
-        iss: `t3-env:${environmentId}`,
+        iss: `t2-env:${environmentId}`,
         aud: normalizeRelayIssuer(relayIssuer),
         sub: environmentId,
         jti: yield* crypto.randomUUIDv4(),
@@ -1562,7 +1562,7 @@ const make = Effect.gen(function* () {
         token: request.proof,
         typ: RELAY_MINT_REQUEST_TYP,
         issuer: normalizeRelayIssuer(relayIssuer),
-        audience: `t3-env:${environmentId}`,
+        audience: `t2-env:${environmentId}`,
         nowEpochSeconds: nowSeconds,
       }).pipe(Effect.flatMap(decodeCloudMintProof), Effect.option);
       if (
@@ -1597,7 +1597,7 @@ const make = Effect.gen(function* () {
         proofKeyThumbprint: proof.clientProofKeyThumbprint,
       });
       const responsePayload = {
-        iss: `t3-env:${environmentId}`,
+        iss: `t2-env:${environmentId}`,
         aud: normalizeRelayIssuer(relayIssuer),
         sub: environmentId,
         jti: yield* crypto.randomUUIDv4(),

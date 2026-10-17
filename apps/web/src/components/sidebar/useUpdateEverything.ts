@@ -87,7 +87,7 @@ export function useUpdateEverything(
       .map((server) => ({
         environmentId: server.environmentId,
         label: server.serverLabel,
-        reason: `t3@${targetVersion} is not on npm yet`,
+        reason: `@t2code/cli@${targetVersion} is not on npm yet`,
       })),
   ];
   // Track-only hosts save a setting and restart nothing, so they are neither listed nor counted.

@@ -54,9 +54,9 @@ export const tweets = [
   {
     handle: "aronprins",
     content:
-      "T2 Code works better than Claude and Codex combined… and T3 actually combines then (and more!) 🤯\n\nHuge shoutout to @theo and @jullerino\n\nAmazing product fellers 🔥🙌",
+      "T2 Code works better than Claude and Codex combined… and T2 actually combines then (and more!) 🤯\n\nHuge shoutout to @theo and @jullerino\n\nAmazing product fellers 🔥🙌",
     excerpt:
-      "T2 Code works better than Claude and Codex combined… and T3 actually combines then (and more!)",
+      "T2 Code works better than Claude and Codex combined… and T2 actually combines then (and more!)",
     link: "https://x.com/aronprins/status/2089761738358915267",
   },
   {
@@ -86,7 +86,7 @@ export const tweets = [
   {
     handle: "pocarles",
     content:
-      "Only using Codex and T3 now.\n\nI thought all AI coding harnesses had roughly the same impact. Using T2 Code taught me how wrong I was. The interface between you and the model changes everything.",
+      "Only using Codex and T2 now.\n\nI thought all AI coding harnesses had roughly the same impact. Using T2 Code taught me how wrong I was. The interface between you and the model changes everything.",
     excerpt:
       "Using T2 Code taught me how wrong I was. The interface between you and the model changes everything.",
     link: "https://x.com/pocarles/status/2054673964274758046",
@@ -94,7 +94,7 @@ export const tweets = [
   {
     handle: "BennettBuhner",
     content:
-      "T2 Code is literally Codex but better; all your favorite models and harnesses, accessible anywhere! The app is great but the website is even greater, so instead of needing to SSH into a machine, T3 IS my SSH!",
+      "T2 Code is literally Codex but better; all your favorite models and harnesses, accessible anywhere! The app is great but the website is even greater, so instead of needing to SSH into a machine, T2 IS my SSH!",
     excerpt:
       "T2 Code is literally Codex but better; all your favorite models and harnesses, accessible anywhere.",
     link: "https://x.com/BennettBuhner/status/2054667115697754387",

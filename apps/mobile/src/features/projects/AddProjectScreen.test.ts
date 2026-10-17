@@ -244,7 +244,7 @@ function cloneAction() {
 describe("clone project permissions", () => {
   beforeEach(async () => {
     state.baseDirectory = await NodeFSP.mkdtemp(
-      NodePath.join(NodeOS.tmpdir(), "t3-clone-permissions-"),
+      NodePath.join(NodeOS.tmpdir(), "t2-clone-permissions-"),
     );
     state.scopes = new Set([AuthSourceControlWriteScope]);
     state.projects = [];

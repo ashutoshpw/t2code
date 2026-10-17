@@ -743,7 +743,7 @@ describe("DesktopBackendConfiguration", () => {
         const standard = {
           OTEL_EXPORTER_OTLP_ENDPOINT: "https://collector.example.com:4318/base?api_key=secret",
           OTEL_EXPORTER_OTLP_LOGS_HEADERS: "authorization=Bearer%20token",
-          T2CODE_OTLP_TRACES_URL: "http://t3.example.com:4318/v1/traces",
+          T2CODE_OTLP_TRACES_URL: "http://t2.example.com:4318/v1/traces",
         };
         const previousWslEnv = process.env.WSLENV;
         const ambientOtel = Object.entries(process.env).filter(
@@ -769,7 +769,7 @@ describe("DesktopBackendConfiguration", () => {
             const wslEnv = (config.env.WSLENV ?? "").split(":");
             assert.include(wslEnv, "OTEL_EXPORTER_OTLP_ENDPOINT");
             assert.include(wslEnv, "OTEL_EXPORTER_OTLP_LOGS_HEADERS");
-            assert.equal(config.env.T2CODE_OTLP_TRACES_URL, "http://t3.example.com:4318/v1/traces");
+            assert.equal(config.env.T2CODE_OTLP_TRACES_URL, "http://t2.example.com:4318/v1/traces");
             assert.include(wslEnv, "T2CODE_OTLP_TRACES_URL");
           }).pipe(
             Effect.provide(

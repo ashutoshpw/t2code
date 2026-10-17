@@ -743,7 +743,7 @@ describe("subagent worktree ownership", () => {
           scenario === "null-branch"
             ? null
             : scenario === "stale-branch"
-              ? "t3/15a6e5ae"
+              ? "t2/15a6e5ae"
               : "feature",
         worktreePath: fixture.worktree,
         lineage: {
@@ -859,7 +859,7 @@ describe("subagent worktree ownership", () => {
               change === "null-branch"
                 ? null
                 : change === "stale-branch"
-                  ? "t3/15a6e5ae"
+                  ? "t2/15a6e5ae"
                   : child.branch,
             settledAt: change === "settled" ? at(-20 * DAY_MS) : child.settledAt,
             updatedAt: change === "settled" || change === "resettled" ? at(0) : child.updatedAt,

@@ -67,6 +67,7 @@ export class LegacyDatabaseRemoveError extends Schema.TaggedError<LegacyDatabase
   }
 }
 
+/** Offline inspection and repair of a T2 state database, for `t2 doctor`. */
 export class DatabaseMaintenance extends Context.Service<
   DatabaseMaintenance,
   {

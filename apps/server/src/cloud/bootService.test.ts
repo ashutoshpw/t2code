@@ -629,6 +629,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(failure).toBe("repair failed");
       expect(control.active).toBe(true);
 
+      // A failed stop skips the operation but still starts the service again.
       control.failCommand = "systemctl --user stop t2code.service";
       let ran = false;
       const stopFailure = yield* service
@@ -671,7 +672,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       control.active = true;
 
       const fs = yield* FileSystem.FileSystem;
-      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t3-doctor-other-" });
+      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t2-doctor-other-" });
       const other = yield* makeService(undefined, "1.2.3", otherHome);
       commands.length = 0;
       expect(yield* other.withStopped(Effect.sync(() => control.active))).toBe(true);

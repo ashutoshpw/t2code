@@ -155,7 +155,7 @@ describe("server ownership", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-race-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-owner-race-" });
       const statePath = path.join(root, "server-runtime.json");
       const attempts = yield* Effect.all(
         [
@@ -174,7 +174,7 @@ describe("server ownership", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-owner-" });
       const statePath = path.join(root, "server-runtime.json");
       const state = yield* makeState;
       yield* Effect.scoped(
@@ -282,7 +282,7 @@ describe("server ownership", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-legacy-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-owner-legacy-" });
       const statePath = path.join(root, "server-runtime.json");
       const state = yield* makeState;
       yield* ServerRuntimeState.persistServerRuntimeState({
@@ -306,7 +306,7 @@ describe("server ownership", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-cleanup-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-owner-cleanup-" });
       const statePath = path.join(root, "server-runtime.json");
       const state = yield* makeState;
       yield* Effect.scoped(

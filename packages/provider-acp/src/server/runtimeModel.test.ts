@@ -1215,7 +1215,7 @@ describe("extractMcpToolCallIdentity", () => {
     expect(
       extractMcpToolCallIdentity(toolCall, {
         embeddedTerminalCommands: [
-          '/usr/bin/node /srv/t3/bin.ts acp-mcp-call delegate_task {"task":"x"}',
+          '/usr/bin/node /srv/t2/bin.ts acp-mcp-call delegate_task {"task":"x"}',
         ],
       }),
     ).toEqual({ server: "t2-code", tool: "delegate_task", input: { task: "x" } });
@@ -1251,7 +1251,7 @@ describe("extractMcpToolCallIdentity", () => {
       sessionUpdate: "tool_call",
       toolCallId: "chatcmpl-tool-b2a6142ee1a510a5",
       kind: "other",
-      title: "t3-code_orchestrator_capabilities",
+      title: "t2-code_orchestrator_capabilities",
       status: "pending",
       locations: [],
       rawInput: {},
@@ -1296,10 +1296,10 @@ describe("extractMcpToolCallIdentity", () => {
 
   it("recovers T2 identity across the registry agents' naming conventions", () => {
     for (const title of [
-      "t3-code___delegate_task",
+      "t2-code___delegate_task",
       "t3-code-delegate_task",
       'mcp__t2_code__delegate_task: {"mode":"async"}',
-      't3-code__delegate_task: {"mode":"async"}',
+      't2-code__delegate_task: {"mode":"async"}',
       "delegate_task_t3-code",
       "t3-code/delegate_task",
       "delegate_task",
@@ -1344,7 +1344,7 @@ describe("extractMcpToolCallIdentity", () => {
       status: "in_progress",
       _meta: {
         goose: {
-          toolCall: { toolName: "t3-code__task_status", extensionName: "t3-code" },
+          toolCall: { toolName: "t2-code__task_status", extensionName: "t3-code" },
           messageId: "message-1",
         },
       },
@@ -1417,7 +1417,7 @@ describe("extractMcpToolCallIdentity", () => {
       sessionUpdate: "tool_call",
       toolCallId: "foreign-1",
       kind: "other",
-      title: "t3-code_delegate_task",
+      title: "t2-code_delegate_task",
       status: "pending",
       _meta: { toolName: "delegate_task", serverId: "other-orchestrator" },
     });
@@ -1429,7 +1429,7 @@ describe("extractMcpToolCallIdentity", () => {
   });
 
   it("does not brand path-like or unknown-tool titles", () => {
-    for (const title of ["t3-code/README.md", "t3-code_not_a_real_tool"]) {
+    for (const title of ["t3-code/README.md", "t2-code_not_a_real_tool"]) {
       const toolCall = toolCallFromUpdate({
         sessionUpdate: "tool_call",
         toolCallId: "path-1",
@@ -1481,12 +1481,12 @@ describe("embeddedTerminalIdsFromSessionUpdate", () => {
           toolCallId: "call_1",
           status: "in_progress",
           content: [
-            { type: "terminal", terminalId: "t3-term-9" },
+            { type: "terminal", terminalId: "t2-term-9" },
             { type: "content", content: { type: "text", text: "noise" } },
           ],
         },
       }),
-    ).toEqual({ toolCallId: "call_1", terminalIds: ["t3-term-9"] });
+    ).toEqual({ toolCallId: "call_1", terminalIds: ["t2-term-9"] });
     expect(
       embeddedTerminalIdsFromSessionUpdate({
         sessionId: "session-1",

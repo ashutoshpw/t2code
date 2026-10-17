@@ -18,7 +18,7 @@ it.layer(NodeServices.layer)("writeFileStringAtomically", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-atomic-write-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-atomic-write-" });
       const destination = path.join(root, "dotfiles", "settings.json");
       const link = path.join(root, "home", "settings.json");
       yield* fs.makeDirectory(path.dirname(destination), { recursive: true });
@@ -37,7 +37,7 @@ it.layer(NodeServices.layer)("writeFileStringAtomically", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-atomic-write-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-atomic-write-" });
       const destination = path.join(root, "dotfiles", "settings.json");
       const link = path.join(root, "home", "settings.json");
       yield* fs.makeDirectory(path.dirname(link), { recursive: true });
@@ -54,7 +54,7 @@ it.layer(NodeServices.layer)("writeFileStringAtomically", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-atomic-write-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-atomic-write-" });
       const first = path.join(root, "first.json");
       const second = path.join(root, "second.json");
       yield* fs.symlink(second, first);
@@ -74,7 +74,7 @@ it.layer(NodeServices.layer)("writeFileStringAtomically", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-atomic-write-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-atomic-write-" });
       const destination = path.join(root, "dotfiles", "config", "settings.json");
       const linkedState = path.join(root, "dotfiles", "state");
       const home = path.join(root, "home");
@@ -90,6 +90,90 @@ it.layer(NodeServices.layer)("writeFileStringAtomically", (it) => {
 
       assert.strictEqual(yield* fs.readLink(link), "../config/settings.json");
       assert.strictEqual(yield* fs.readFileString(destination), "after");
+    }),
+  );
+
+  it.effect("creates a missing file and its directory", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-atomic-write-" });
+      const filePath = path.join(root, "nested", "settings.json");
+
+      yield* writeFileStringAtomically({ filePath, contents: "fresh" });
+
+      assert.strictEqual(yield* fs.readFileString(filePath), "fresh");
+    }),
+  );
+
+  it.effect("waits out a Windows scanner holding the target, then replaces it", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-atomic-write-" });
+      const filePath = path.join(root, "settings.json");
+      yield* fs.writeFileString(filePath, "before");
+      const firstAttempt = yield* Deferred.make<void>();
+      let attempts = 0;
+      const lockedTwice = FileSystem.make({
+        ...fs,
+        rename: (from, to) =>
+          Effect.suspend(() => {
+            attempts += 1;
+            return attempts <= 2
+              ? Deferred.succeed(firstAttempt, undefined).pipe(
+                  Effect.andThen(Effect.fail(renameError("EBUSY", to))),
+                )
+              : fs.rename(from, to);
+          }),
+      });
+
+      const writing = yield* writeFileStringAtomically({ filePath, contents: "after" }).pipe(
+        Effect.provideService(FileSystem.FileSystem, lockedTwice),
+        Effect.provideService(HostProcess.Platform, "win32"),
+        Effect.forkChild,
+      );
+      yield* Deferred.await(firstAttempt);
+      yield* advanceUntilDone(writing);
+
+      assert.strictEqual(attempts, 3);
+      assert.strictEqual(yield* fs.readFileString(filePath), "after");
+      assert.deepStrictEqual(yield* fs.readDirectory(root), ["settings.json"]);
+    }),
+  );
+
+  it.effect("gives up on a Windows lock that does not clear and keeps the old contents", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-atomic-write-" });
+      const filePath = path.join(root, "settings.json");
+      yield* fs.writeFileString(filePath, "before");
+      const firstAttempt = yield* Deferred.make<void>();
+      let attempts = 0;
+      const locked = FileSystem.make({
+        ...fs,
+        rename: (_from, to) =>
+          Effect.suspend(() => {
+            attempts += 1;
+            return Deferred.succeed(firstAttempt, undefined).pipe(
+              Effect.andThen(Effect.fail(renameError("EPERM", to))),
+            );
+          }),
+      });
+
+      const writing = yield* writeFileStringAtomically({ filePath, contents: "after" }).pipe(
+        Effect.provideService(FileSystem.FileSystem, locked),
+        Effect.provideService(HostProcess.Platform, "win32"),
+        Effect.exit,
+        Effect.forkChild,
+      );
+      yield* Deferred.await(firstAttempt);
+
+      assert.isTrue(Exit.isFailure(yield* advanceUntilDone(writing)));
+      assert.isAbove(attempts, 1);
+      assert.strictEqual(yield* fs.readFileString(filePath), "before");
+      assert.deepStrictEqual(yield* fs.readDirectory(root), ["settings.json"]);
     }),
   );
 

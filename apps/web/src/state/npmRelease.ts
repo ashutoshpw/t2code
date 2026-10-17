@@ -16,7 +16,7 @@ export const npmReleaseAtom = Atom.family((spec: string) =>
   Atom.make(
     Effect.gen(function* () {
       const response = yield* HttpClient.get(
-        `https://registry.npmjs.org/t3/${encodeURIComponent(spec)}`,
+        `https://registry.npmjs.org/${encodeURIComponent("@t2code/cli")}/${encodeURIComponent(spec)}`,
       );
       if (response.status === 404) return null;
       const body = yield* HttpClientResponse.filterStatusOk(response).pipe(

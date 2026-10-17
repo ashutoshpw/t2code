@@ -2079,7 +2079,7 @@ it.layer(
 
     it.effect("propagates real Codex probe failures to the aggregator at boot", () =>
       Effect.gen(function* () {
-        const missingBinary = `t3code_codex_missing_`;
+        const missingBinary = `t2code_codex_missing_`;
         const serverSettings = yield* makeMutableServerSettingsService(
           decodeServerSettings(
             deepMerge(encodedDefaultServerSettings, {

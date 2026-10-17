@@ -12,7 +12,7 @@ describe("resolveT2McpToolPresentation", () => {
         "mcp__t2code__",
         "T2-code.",
         "t3_code/",
-        "t3code:",
+        "t2code:",
         "mcp_t2-code_",
         "T2 Code ",
         "t2-code · ",
@@ -83,8 +83,8 @@ describe("resolveT2McpToolPresentation", () => {
       "T2 Code delegate_task",
       "t2-code__delegate_task",
       // Transcripts recorded before the rename keep the upstream spellings.
-      "mcp_t3-code_delegate_task",
-      "t3-code__delegate_task",
+      "mcp_t2-code_delegate_task",
+      "t2-code__delegate_task",
     ]) {
       expect(resolveT2McpToolPresentation(name)?.displayName).toBe("Delegate a child task");
     }

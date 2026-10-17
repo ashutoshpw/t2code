@@ -246,7 +246,7 @@ describe("CodexAdapterV2 runtime policy", () => {
   it.effect("omits default-mode collaboration settings without the T2 MCP server", () =>
     Effect.gen(function* () {
       const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
-        nativeThreadId: "native-default-without-t3-mcp",
+        nativeThreadId: "native-default-without-t2-mcp",
         codexInput: [{ type: "text", text: "implement this task" }],
         runtimePolicy: {
           runtimeMode: "full-access",
@@ -267,7 +267,7 @@ describe("CodexAdapterV2 runtime policy", () => {
   it.effect("adds T2 plan-mode developer instructions when the T2 MCP server is attached", () =>
     Effect.gen(function* () {
       const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
-        nativeThreadId: "native-plan-with-t3-mcp",
+        nativeThreadId: "native-plan-with-t2-mcp",
         codexInput: [{ type: "text", text: "plan this task" }],
         runtimePolicy: {
           runtimeMode: "full-access",
@@ -293,7 +293,7 @@ describe("CodexAdapterV2 runtime policy", () => {
   it.effect("keeps Codex in plan mode without referencing unavailable T2 MCP tools", () =>
     Effect.gen(function* () {
       const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
-        nativeThreadId: "native-plan-without-t3-mcp",
+        nativeThreadId: "native-plan-without-t2-mcp",
         codexInput: [{ type: "text", text: "plan this task" }],
         runtimePolicy: {
           runtimeMode: "full-access",
@@ -527,7 +527,7 @@ describe("CodexAdapterV2 process spawning", () => {
         Effect.provide(
           Layer.mergeAll(
             CodexAdapterV2.layerAppServerClientFactory,
-            ServerConfig.layerTest(process.cwd(), { prefix: "t3-codex-binary-home-" }),
+            ServerConfig.layerTest(process.cwd(), { prefix: "t2-codex-binary-home-" }),
           ),
         ),
         Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
@@ -4194,7 +4194,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
     return Effect.scoped(
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-bg-stop-workspace-" });
+        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t2-bg-stop-workspace-" });
         const localTranscript = yield* decodeReplayTranscriptJson(
           (yield* encodeReplayTranscriptJson(transcript)).replaceAll(
             yield* encodeStringJson("/workspace"),
@@ -4321,7 +4321,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
     Effect.scoped(
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-bg-stale-workspace-" });
+        const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t2-bg-stale-workspace-" });
         const staleTranscript = makeCodexReplayTranscript({
           scenario: "codex-bg-stop-untracked",
           entries: [

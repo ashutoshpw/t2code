@@ -102,7 +102,7 @@ export const definition = defineSourceControl({
     headRepositoryNameWithOwner &&
     repositoryName.test(headRepositoryNameWithOwner) &&
     safeShellArgument.test(headBranch)
-      ? `git clone --single-branch --branch ${headBranch} https://bitbucket.org/${headRepositoryNameWithOwner}.git t3code-pr-${number}`
+      ? `git clone --single-branch --branch ${headBranch} https://bitbucket.org/${headRepositoryNameWithOwner}.git t2code-pr-${number}`
       : null,
   authorProfileUrl: () => null,
   reviewSummaryRequired: () => false,

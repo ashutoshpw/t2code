@@ -1272,7 +1272,7 @@ it.layer(
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const cacheDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-terminal-acp-path-",
+        prefix: "t2-terminal-acp-path-",
       });
       const installBin = path.join(
         cacheDir,
