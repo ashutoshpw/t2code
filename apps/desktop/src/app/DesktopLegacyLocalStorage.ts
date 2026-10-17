@@ -24,7 +24,9 @@ export class DesktopLegacyLocalStorage extends Context.Service<
 >()("@t2code/desktop/app/DesktopLegacyLocalStorage") {}
 
 const MARKER_FILE_NAME = "v1-local-storage-imported";
-const V1_PROFILE_NAMES = ["T2 Code (Alpha)", "t3code"];
+// Names of the profile directories older installs wrote, so their local
+// storage can be imported into the current profile.
+const V1_PROFILE_NAMES = ["T3 Code (Alpha)", "t3code"];
 
 const make = Effect.gen(function* () {
   const environment = yield* DesktopEnvironment.DesktopEnvironment;
