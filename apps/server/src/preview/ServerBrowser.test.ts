@@ -120,9 +120,9 @@ function makeSession(
       if (method === "Page.createIsolatedWorld") {
         return {
           executionContextId:
-            (input as { worldName?: string }).worldName === "t3-preview-viewport"
+            (input as { worldName?: string }).worldName === "t2-preview-viewport"
               ? 9
-              : (input as { worldName?: string }).worldName === "t3-preview"
+              : (input as { worldName?: string }).worldName === "t2-preview"
                 ? 1
                 : 7,
         };

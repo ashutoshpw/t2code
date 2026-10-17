@@ -1116,9 +1116,8 @@ export default function GitActionsControl({
       : `vs ${resolvedChangesTotals.baseRef}`
     : null;
   const primaryServerSettings = useAtomValue(primaryServerSettingsAtom);
-  const temporaryBranchPrefixes = useMemo(
-    () => temporaryWorktreeBranchPrefixes(primaryServerSettings.worktreeBranchPrefix),
-    [primaryServerSettings.worktreeBranchPrefix],
+  const temporaryBranchPrefixes = temporaryWorktreeBranchPrefixes(
+    primaryServerSettings.worktreeBranchPrefix,
   );
 
   const allFiles = gitStatusForActions?.workingTree.files ?? [];
@@ -1163,7 +1162,6 @@ export default function GitActionsControl({
     gitStatusForActions,
     isGitActionRunning,
     isSelectingWorktreeBase,
-    persistThreadBranchSync,
     temporaryBranchPrefixes,
   ]);
 

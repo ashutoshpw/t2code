@@ -12,6 +12,8 @@ import * as Cause from "effect/Cause";
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react";
 import { type Ref, useEffect, useEffectEvent, useRef, useState } from "react";
 
+import { Upload } from "lucide-react";
+import { makeWorkspaceFileDropHandlers } from "~/components/chat/workspaceFileDrop";
 import { Button } from "~/components/ui/button";
 import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
 import { toastManager } from "~/components/ui/toast";
@@ -177,6 +179,55 @@ export default function FileBrowserPanel({
     { environmentId, cwd: hostFolder ? null : cwd, query: query.slice(0, 256) },
     200,
   );
+  const uploadCountersRef = useRef({ lastUploadId: 0 });
+  // Stable identity so the drop handlers can hand this off without the lint
+  // tracing the counter ref reads into render.
+  const startFileUpload = useStableCallback((files: File[]) => {
+    if (files.length === 0) return;
+    const uploadId = ++uploadCountersRef.current.lastUploadId;
+    const failures: Array<{ name: string; reason: string }> = [];
+    void uploadWorkspaceFiles({
+      environmentId,
+      cwd,
+      files,
+      onProgress: (progress) => {
+        // A newer drop supersedes an older batch still draining.
+        if (uploadCountersRef.current.lastUploadId === uploadId) {
+          setFileUploadProgress(progress);
+        }
+      },
+      onFileError: (name, reason) => failures.push({ name, reason }),
+    }).then(({ uploaded }) => {
+      if (uploadCountersRef.current.lastUploadId === uploadId) {
+        setFileUploadProgress(null);
+      }
+      if (uploaded > 0) {
+        refresh();
+        if (query.trim()) pathSearch.refresh();
+        toastManager.add({
+          type: "success",
+          title: uploaded === 1 ? "File uploaded" : `${uploaded} files uploaded`,
+          description: uploaded === 1 ? files[0]?.name : undefined,
+        });
+      }
+      if (failures.length > 0) {
+        toastManager.add({
+          type: "error",
+          title: uploaded > 0 ? "Some files failed to upload" : "Upload failed",
+          description: failures
+            .slice(0, 3)
+            .map((failure) => `${failure.name}: ${failure.reason}`)
+            .join("\n"),
+        });
+      }
+    });
+  });
+  const fileDropHandlers = makeWorkspaceFileDropHandlers({
+    setDragActive: setIsFileDragActive,
+    addFiles: startFileUpload,
+    addFolders: () => {},
+  });
+
   const { entries, entryKinds, treePaths, directoryPaths, expandableDirectoryPaths } =
     buildTreeEntries(directoryEntries, pathSearch.entries, pathSearch.isPending, query);
   const entryKindsRef = useRef(entryKinds);
@@ -205,8 +256,6 @@ export default function FileBrowserPanel({
         : { x: anchorRect.left, y: anchorRect.bottom };
       const fileTarget = { environmentId, filePath: relativePath, workspaceRoot: cwd };
       const fileMenuItems = fileContextMenu.buildItems(fileTarget);
-      // The app menu owns focus; the tree's outside-click handler would dismiss it before click.
-      context.close({ restoreFocus: !pointerIsFresh });
       void settlePromise(async () => {
         const clicked = await api.contextMenu.show(
           [
@@ -261,6 +310,7 @@ export default function FileBrowserPanel({
           }
         }
       }).then((result) => {
+        context.close();
         if (!AsyncResult.isSuccess(result)) throw Cause.squash(result.cause);
       });
     },
@@ -517,6 +567,10 @@ export default function FileBrowserPanel({
         event.preventDefault();
         focusSearch();
       }}
+     onDragEnter={fileDropHandlers.onDragEnter}
+      onDragOver={fileDropHandlers.onDragOver}
+      onDragLeave={fileDropHandlers.onDragLeave}
+      onDrop={fileDropHandlers.onDrop}
     >
       <div
         className="flex h-10 min-h-10 shrink-0 items-center gap-1 border-b border-border/60 bg-background px-2 in-data-[preview-panel-mode=inline]:mb-1 in-data-[preview-panel-mode=inline]:h-9 in-data-[preview-panel-mode=inline]:min-h-9 in-data-[preview-panel-mode=inline]:border-b-transparent"
@@ -621,16 +675,6 @@ export default function FileBrowserPanel({
           </div>
         </div>
       ) : null}
-          </div>
-        ) : null
-      ) : (
-        <FileTree
-          model={model}
-          aria-label={`${projectName} files`}
-          className="min-h-0 flex-1 overflow-hidden"
-          style={pierreTreeStyle(resolvedTheme)}
-        />
-      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { injectHtmlRenderBootstrap } from "@t3tools/shared/htmlRender";
+import { injectHtmlRenderBootstrap } from "@t2code/shared/htmlRender";
 import { HtmlRenderDocument } from "../files/BrowserDocumentFrame";
 import { flushSync } from "react-dom";
 import { AudioPreview } from "../files/AudioPreview";
@@ -1301,7 +1301,7 @@ describe("MessagesTimeline agent messages", () => {
     expect(screen.text()).not.toContain("drops the index");
   });
 
-  it("leaves messages sent by T3 Code as full bubbles", async () => {
+  it("leaves messages sent by T2 Code as full bubbles", async () => {
     setup();
     await using screen = await renderTimeline([
       message(AGENT_MESSAGE, { createdBy: "agent", creationSource: "server" }),
