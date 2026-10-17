@@ -163,7 +163,7 @@ async function main() {
     return;
   }
   const safeName = build.versionName.replace(/[^0-9A-Za-z.]+/g, "-").replace(/^-|-$/g, "");
-  const apkName = `t3code-android-${channel}-${safeName}-${build.versionCode}.apk`;
+  const apkName = `t2code-android-${channel}-${safeName}-${build.versionCode}.apk`;
   const tag = `android-beta-${build.versionCode}`;
   const release = outputDirectory ? undefined : readRelease(tag);
   if (
