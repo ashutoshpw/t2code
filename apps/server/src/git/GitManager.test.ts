@@ -1323,10 +1323,10 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
   );
 
   it.effect(
-    "a branch PR lookup sees an upstream change on request, after a T3 git action, or after the TTL",
+    "a branch PR lookup sees an upstream change on request, after a T2 git action, or after the TTL",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         const remoteDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -1376,9 +1376,9 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       }),
   );
 
-  it.effect("a git read in flight during a T3 git action does not outlive it", () =>
+  it.effect("a git read in flight during a T2 git action does not outlive it", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -1725,7 +1725,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("finds a fork PR for a branch pushed without an upstream", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const forkDir = yield* createBareRemote();
@@ -1837,7 +1837,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("prefers an exact fork ref but does not guess between equal refs", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const firstForkDir = yield* createBareRemote();
@@ -1912,7 +1912,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("does not guess a fork when an ancestry probe fails", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const forkDir = yield* createBareRemote();
@@ -1977,7 +1977,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("finds a fork PR when the remote name contains a slash", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const forkDir = yield* createBareRemote();
@@ -3370,7 +3370,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     { branch: "fix/name", existingBranches: ["fix/name/child"], expected: "fix/name-2" },
   ])("commits on $expected when $branch has ref namespace collisions", (scenario) =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const mainSha = (yield* runGit(repoDir, ["rev-parse", "main"])).stdout.trim();
       for (const branch of scenario.existingBranches) {
@@ -4620,7 +4620,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "creates a PR against the default branch with a legacy %s base setting",
     (kind) =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["branch", "-m", "main", "trunk"]);
         const remoteDir = yield* createBareRemote();
@@ -4670,7 +4670,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("generates PR content from the created worktree's selected remote base", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const upstreamDir = yield* createBareRemote();
@@ -5517,7 +5517,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("prepares a worktree from the head branch when the host has no pull ref", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);

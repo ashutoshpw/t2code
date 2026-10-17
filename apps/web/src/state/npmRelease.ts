@@ -3,11 +3,13 @@ import * as Effect from "effect/Effect";
 import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/http";
 import { AsyncResult, Atom } from "effect/reactivity";
 
+const CLI_PACKAGE_NAME = "@t2code/cli";
+
 export const npmReleasePublishedAtom = Atom.family((version: string) =>
   Atom.make(
     Effect.gen(function* () {
       const response = yield* HttpClient.get(
-        `https://registry.npmjs.org/t3/${encodeURIComponent(version)}`,
+        `https://registry.npmjs.org/${encodeURIComponent(CLI_PACKAGE_NAME)}/${encodeURIComponent(version)}`,
       );
       if (response.status === 404) return false;
       const body = yield* HttpClientResponse.filterStatusOk(response).pipe(

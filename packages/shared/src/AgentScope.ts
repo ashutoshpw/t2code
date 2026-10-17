@@ -83,14 +83,14 @@ export function agentScopeCommand(input: {
 }): AgentScopeCommand {
   const { command, args, scope } = input;
   if (scope === undefined) {
-    return { command: "/bin/sh", args: ["-c", LAUNCH_SCRIPT, "t3-agent", command, ...args] };
+    return { command: "/bin/sh", args: ["-c", LAUNCH_SCRIPT, "t2-agent", command, ...args] };
   }
   return {
     command: "/bin/sh",
     args: [
       "-c",
       SCOPED_LAUNCH_SCRIPT,
-      "t3-agent",
+      "t2-agent",
       scope.runtimeDir,
       scope.systemdRun,
       "--user",

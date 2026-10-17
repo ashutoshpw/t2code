@@ -206,7 +206,7 @@ function ArchivedThreadRow(props: {
       <View className="min-w-0 flex-1 gap-1">
         <View className="flex-row items-center gap-2">
           <Text
-            className="min-w-0 flex-1 text-base font-t3-bold leading-snug text-foreground"
+            className="min-w-0 flex-1 text-base font-t2-bold leading-snug text-foreground"
             numberOfLines={1}
           >
             {props.thread.title}

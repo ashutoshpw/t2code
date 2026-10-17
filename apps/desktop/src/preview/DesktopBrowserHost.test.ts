@@ -75,7 +75,7 @@ describe("DesktopBrowserHost", () => {
           encodeJson({
             type: "cdp",
             ...key,
-            message: encodeJson({ id, method, sessionId: "t3-preview-page" }),
+            message: encodeJson({ id, method, sessionId: "t2-preview-page" }),
           }),
         );
       yield* command(1, "Page.captureScreenshot");

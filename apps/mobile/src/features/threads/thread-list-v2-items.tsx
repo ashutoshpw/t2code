@@ -1052,7 +1052,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
             />
             <Text
               className={cn(
-                "text-xs font-t3-bold",
+                "text-xs font-t2-bold",
                 (status === "working" || status === "waiting") && "tabular-nums",
                 selected ? selectedThreadRowColors.foregroundClassName : statusLabel.className,
               )}

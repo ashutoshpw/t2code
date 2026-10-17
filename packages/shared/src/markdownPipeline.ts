@@ -337,7 +337,7 @@ function keepWindowsPathEscape(this: EscapeCompileContext) {
 }
 
 /**
- * CommonMark reads the `\.` in `C:\me\.t3\shot.png` as an escape. Every backslash in a
+ * CommonMark reads the `\.` in `C:\me\.t2\shot.png` as an escape. Every backslash in a
  * Windows path is a separator, so link, image, and definition destinations that are
  * Windows paths keep the text as written, and so do escapes inside drive paths in prose.
  * Prose paths end at whitespace: past that, nothing tells a path from a sentence, and

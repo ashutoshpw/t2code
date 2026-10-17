@@ -24,7 +24,7 @@ const VersionRange = TrimmedNonEmptyString.pipe(
 );
 const Policy = Schema.Struct({
   driver: TrimmedNonEmptyString,
-  t3CodeRange: VersionRange,
+  t2CodeRange: VersionRange,
   recommendedRange: Schema.optionalKey(VersionRange),
   recommendedVersion: Schema.optionalKey(StableVersion),
   ranges: Schema.Array(
@@ -58,10 +58,10 @@ export function resolveProviderCompatibility(
   policies: ReadonlyArray<ProviderCompatibilityPolicy> | undefined,
   driver: ProviderDriverKind,
   version: string | null,
-  t3CodeVersion = packageJson.version,
+  t2CodeVersion = packageJson.version,
 ): ServerProviderCompatibilityAdvisory | undefined {
   const policy = policies?.find(
-    (entry) => entry.driver === driver && satisfiesSemverRange(t3CodeVersion, entry.t3CodeRange),
+    (entry) => entry.driver === driver && satisfiesSemverRange(t2CodeVersion, entry.t2CodeRange),
   );
   if (!policy) return undefined;
   const unprefixed = version?.replace(/^v/, "");

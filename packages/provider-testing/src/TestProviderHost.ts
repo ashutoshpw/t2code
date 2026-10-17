@@ -32,7 +32,7 @@ export const layer = (
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem
-        .makeTempDirectoryScoped({ prefix: "t3-provider-host-" })
+        .makeTempDirectoryScoped({ prefix: "t2-provider-host-" })
         .pipe(Effect.orDie);
       const stateDir = path.join(baseDir, "userdata");
       const providerStatusCacheDir = path.join(baseDir, "caches");

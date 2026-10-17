@@ -21,7 +21,7 @@ describe("resolveThreadReferenceCopyTarget", () => {
         threadId: "thread-1",
         openPanelPullRequestUrl: null,
         pullRequests: [crossRepositoryPullRequest],
-        linkedPullRequestUrl: "https://github.com/t3/pr/12",
+        linkedPullRequestUrl: "https://github.com/t2/pr/12",
       }),
     ).toBeNull();
   });
@@ -30,18 +30,18 @@ describe("resolveThreadReferenceCopyTarget", () => {
     expect(
       resolveThreadReferenceCopyTarget({
         threadId: "thread-1",
-        openPanelPullRequestUrl: "https://github.com/t3/pr/14",
+        openPanelPullRequestUrl: "https://github.com/t2/pr/14",
         pullRequests: [crossRepositoryPullRequest],
-        linkedPullRequestUrl: "https://github.com/t3/pr/12",
+        linkedPullRequestUrl: "https://github.com/t2/pr/12",
       }),
     ).toMatchObject({
       kind: "pull-request",
-      value: "https://github.com/t3/pr/14",
+      value: "https://github.com/t2/pr/14",
       successTitle: "PR link copied",
     });
   });
 
-  it.each([null, "https://github.com/t3/pr/12"])(
+  it.each([null, "https://github.com/t2/pr/12"])(
     "copies a native cross-repository link before the fallback URL %s",
     (linkedPullRequestUrl) => {
       expect(
@@ -88,8 +88,8 @@ describe("resolveThreadReferenceCopyTarget", () => {
       resolveThreadReferenceCopyTarget({
         threadId: "thread-1",
         pullRequests: [{ ...crossRepositoryPullRequest, source: "stack-dismissed" }],
-        linkedPullRequestUrl: "https://github.com/t3/pr/12",
+        linkedPullRequestUrl: "https://github.com/t2/pr/12",
       }),
-    ).toMatchObject({ kind: "pull-request", value: "https://github.com/t3/pr/12" });
+    ).toMatchObject({ kind: "pull-request", value: "https://github.com/t2/pr/12" });
   });
 });

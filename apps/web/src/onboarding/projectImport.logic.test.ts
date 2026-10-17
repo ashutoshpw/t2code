@@ -274,16 +274,16 @@ describe("projects on multiple computers", () => {
 
 describe("splitOnboardingProjectPath", () => {
   it("keeps sibling checkouts that share a prefix distinguishable by name", () => {
-    const left = splitOnboardingProjectPath("/Users/me/Projects/clients/acme/t3code");
-    const right = splitOnboardingProjectPath("/Users/me/Projects/clients/acme/t3code-worktree");
-    expect(left).toEqual({ name: "t3code", parent: "/Users/me/Projects/clients/acme/" });
-    expect(right).toEqual({ name: "t3code-worktree", parent: "/Users/me/Projects/clients/acme/" });
+    const left = splitOnboardingProjectPath("/Users/me/Projects/clients/acme/t2code");
+    const right = splitOnboardingProjectPath("/Users/me/Projects/clients/acme/t2code-worktree");
+    expect(left).toEqual({ name: "t2code", parent: "/Users/me/Projects/clients/acme/" });
+    expect(right).toEqual({ name: "t2code-worktree", parent: "/Users/me/Projects/clients/acme/" });
     expect(left.name).not.toBe(right.name);
   });
 
   it("splits Windows paths and ignores a trailing separator", () => {
-    expect(splitOnboardingProjectPath("C:\\Users\\me\\t3code\\")).toEqual({
-      name: "t3code",
+    expect(splitOnboardingProjectPath("C:\\Users\\me\\t2code\\")).toEqual({
+      name: "t2code",
       parent: "C:\\Users\\me\\",
     });
   });

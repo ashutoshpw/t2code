@@ -18,7 +18,7 @@
     },
     "scripts": {
       // Knip loads its preprocessor through a CLI option; native verification and
-      // worktree setup (from t3.json) run directly. release-desktop.yml bundles the
+      // worktree setup (from t2.json) run directly. release-desktop.yml bundles the
       // Windows verify script with esbuild through a path knip does not trace, and
       // electron-builder loads the macOS signer by path.
       "entry": [
@@ -31,7 +31,7 @@
         "verify-windows-desktop-artifact.ts",
       ],
       "ignoreDependencies": ["esbuild"],
-      // The `t3` npm package's files: copied into the package, never imported.
+      // The `t2` npm package's files: copied into the package, never imported.
       "ignore": ["npm-launcher/**"],
     },
     "apps/server": {

@@ -24,7 +24,7 @@ export interface Release {
 }
 
 function cacheKey(channel: ReleaseChannel) {
-  return `t3code-${channel}-release`;
+  return `t2code-${channel}-release`;
 }
 
 async function fetchStable(): Promise<Release> {

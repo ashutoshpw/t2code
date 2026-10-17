@@ -20,7 +20,7 @@ import * as ServerConfig from "../config.ts";
 import { attachmentIsPendingUpload, claimPendingAttachments } from "./AttachmentClaims.ts";
 
 const layerTest = Layer.mergeAll(NodeServices.layer).pipe(
-  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-attachment-claims-" })),
+  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t2-attachment-claims-" })),
   Layer.provideMerge(NodeServices.layer),
 );
 

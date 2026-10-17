@@ -2052,7 +2052,7 @@ describe("OrchestratorMcpService provider resolution", () => {
       runCount: 0,
       webhook: {
         path: "/hooks/scheduled-task/secret",
-        url: "https://t3.example/hooks/secret",
+        url: "https://t2.example/hooks/secret",
         hasSecret: false,
       },
       ...overrides,
@@ -2116,7 +2116,7 @@ describe("OrchestratorMcpService provider resolution", () => {
         );
         assert.deepEqual(
           listed.tasks.map((summary) => summary.webhookUrl),
-          [undefined, "https://t3.example/hooks/secret"],
+          [undefined, "https://t2.example/hooks/secret"],
         );
       }),
     );

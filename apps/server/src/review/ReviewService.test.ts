@@ -123,10 +123,10 @@ describe("ReviewService", () => {
   it.effect("allows previous custom worktree locations but never a filesystem root", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-workspace-" });
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-base-" });
-      const previous = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-old-worktrees-" });
-      const outsideRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-outside-" });
+      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-workspace-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-base-" });
+      const previous = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-old-worktrees-" });
+      const outsideRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-outside-" });
 
       const result = yield* Effect.gen(function* () {
         const review = yield* ReviewService.ReviewService;
@@ -158,9 +158,9 @@ describe("ReviewService", () => {
   it.effect("allows registered project roots outside the server cwd", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-workspace-" });
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-base-" });
-      const projectRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-project-" });
+      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-workspace-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-base-" });
+      const projectRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-project-" });
       const projectChild = `${projectRoot}/packages/app`;
       yield* fs.makeDirectory(projectChild, { recursive: true });
       const sibling = `${projectRoot}-sibling`;

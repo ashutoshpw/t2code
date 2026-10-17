@@ -1153,7 +1153,7 @@ describe("buildThreadFeed", () => {
 
   it("pretty prints T2 MCP dynamic tool activities and attaches the product logo", () => {
     const toolItem: OrchestrationV2TurnItem = {
-      ...base("item-t3-tool", "2026-06-20T00:00:04.000Z", 3),
+      ...base("item-t2-tool", "2026-06-20T00:00:04.000Z", 3),
       type: "dynamic_tool",
       toolName: "mcp__t2-code__t2_thread_read",
       input: { threadId: "thread-child" },
@@ -1829,7 +1829,7 @@ describe("streamed feed updates", () => {
   const delegation: OrchestrationV2TurnItem = {
     ...item("delegation", 3, runs[0]),
     type: "dynamic_tool",
-    toolName: "t3-code.delegate_task",
+    toolName: "t2-code.delegate_task",
     input: { task: "Check" },
     output: { taskId: "child" },
   };

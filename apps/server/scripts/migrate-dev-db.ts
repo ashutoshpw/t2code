@@ -5,8 +5,8 @@
  * ~/.t2 database, then run this checkout's migrations against it.
  *
  * `vp run migrate-dev-db` from a worktree:
- *   1. Nukes `<worktree>/.t3/userdata/statev2.sqlite`.
- *   2. Copies a slice of the real db (`~/.t3/userdata/statev2.sqlite`,
+ *   1. Nukes `<worktree>/.t2/userdata/statev2.sqlite`.
+ *   2. Copies a slice of the real db (`~/.t2/userdata/statev2.sqlite`,
  *      attached read-only): the schema, and every row except those of
  *      deleted, archived, and settled threads, which are nearly all of a
  *      long-lived database. It then prunes that to the most recently updated
@@ -609,7 +609,7 @@ export const migrateDevDbCommand = Command.make(
     ),
     source: Flag.String("source").pipe(
       Flag.optional,
-      Flag.withDescription("Source database. Defaults to ~/.t3/userdata/statev2.sqlite."),
+      Flag.withDescription("Source database. Defaults to ~/.t2/userdata/statev2.sqlite."),
     ),
   },
   ({ projects, threadsPerProject, baseDir, source }) =>

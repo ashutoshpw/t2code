@@ -578,7 +578,7 @@ const program = Effect.gen(function* () {
       parameterizedModelPicker = request.capabilities?._meta?.parameterizedModelPicker === true;
       return {
         protocolVersion: 2,
-        info: { name: "t3-acp-mock-agent", version: "0.0.0" },
+        info: { name: "t2-acp-mock-agent", version: "0.0.0" },
         _meta: { modelState: modelState() },
         capabilities: {
           session: {

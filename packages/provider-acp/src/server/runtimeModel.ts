@@ -340,7 +340,7 @@ export function acpContentBlockDisplayText(
       const mimeType = boundedContentMetadata(content.mimeType, 256) || "unknown type";
       return `[ACP audio (${mimeType})]`;
     }
-    case "_t3_unknown":
+    case "_t2_unknown":
       return `[Unsupported ACP content: ${boundedContentMetadata(content.originalType, 128) || "unknown"}]`;
   }
 }
@@ -374,9 +374,9 @@ function sanitizeAcpToolCallContent(
         };
       case "terminal":
         return { type: "terminal", terminalId: entry.terminalId };
-      case "_t3_unknown":
+      case "_t2_unknown":
         return {
-          type: "_t3_unknown",
+          type: "_t2_unknown",
           originalType: boundedContentMetadata(entry.originalType, 128) || "unknown",
           raw: null,
         };
@@ -1141,8 +1141,8 @@ export function extractMcpToolCallIdentity(
   const gooseExtension =
     typeof gooseToolCall?.extensionName === "string" ? gooseToolCall.extensionName.trim() : "";
   const assertsForeignOrigin =
-    (metaServerId.length > 0 && !/^t2[-_ ]?code$/i.test(metaServerId)) ||
-    (gooseExtension.length > 0 && !/^t2[-_ ]?code$/i.test(gooseExtension));
+    (metaServerId.length > 0 && !/^t[23][-_ ]?code$/i.test(metaServerId)) ||
+    (gooseExtension.length > 0 && !/^t[23][-_ ]?code$/i.test(gooseExtension));
   // qwen's serverId marks a real MCP server, but goose reports its built-in
   // extensions (developer__shell, edits) the same way as user MCP servers, so
   // goose stays unclassified and keeps its command and file-change projections.
@@ -1607,7 +1607,7 @@ export function parseSessionUpdateEvent(params: EffectAcpSchema.SessionNotificat
       });
       break;
     }
-    case "_t3_unknown": {
+    case "_t2_unknown": {
       events.push({
         _tag: "UnknownUpdate",
         updateType: boundedContentMetadata(upd.originalSessionUpdate, 128) || "unknown",

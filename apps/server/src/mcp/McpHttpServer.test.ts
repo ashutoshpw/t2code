@@ -458,13 +458,13 @@ it.effect("bounds large ARIA trees without dropping every server locator", () =>
     Effect.gen(function* () {
       const accessibilityTree = Array.from(
         { length: 2_000 },
-        (_, index) => `- button "删除 ${index}" [ref=t3-snapshot-e${index}]`,
+        (_, index) => `- button "删除 ${index}" [ref=t2-snapshot-e${index}]`,
       ).join("\n");
       yield* serveSnapshots("mcp-large-server-refs", { ...snapshotResult, accessibilityTree });
       const result = yield* callSnapshot({ includeImage: false });
       expect(result.isError).toBe(false);
       const metadata = result.structuredContent as { accessibilityTree: string };
-      expect(metadata.accessibilityTree).toContain("[ref=t3-snapshot-e0]");
+      expect(metadata.accessibilityTree).toContain("[ref=t2-snapshot-e0]");
       expect(metadata.accessibilityTree.length).toBeLessThan(accessibilityTree.length);
       const body = result.content[1];
       expect(Buffer.byteLength(body?.type === "text" ? body.text : "", "utf8")).toBeLessThanOrEqual(

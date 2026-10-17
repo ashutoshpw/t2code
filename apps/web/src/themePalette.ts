@@ -313,7 +313,7 @@ function legacyThemeMode(theme: ThemePreference): ThemeAppearance | null {
 /**
  * The standard T2 Code look as a theme palette, for seeding a new theme when
  * no theme is installed. Distinct from {@link getDefaultThemeColors}, which
- * carries the flagship T3 Chat palette used to fill roles omitted by theme
+ * carries the flagship T2 Chat palette used to fill roles omitted by theme
  * files.
  */
 export function getStandardThemeColors(appearance: ThemeAppearance): ThemeColors {

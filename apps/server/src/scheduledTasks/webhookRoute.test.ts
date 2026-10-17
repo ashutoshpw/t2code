@@ -56,7 +56,7 @@ const relayProof = Effect.fn("relayProof")(function* (claims: {
     typ: RELAY_HOOK_DELIVERY_TYP,
     payload: {
       iss: relayIssuer,
-      aud: `t3-env:${environmentId}`,
+      aud: `t2-env:${environmentId}`,
       sub: environmentId,
       jti: `proof:${claims.deliveryId}`,
       iat: now,

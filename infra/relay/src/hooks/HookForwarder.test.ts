@@ -44,7 +44,7 @@ const settings: RelayConfiguration.RelayConfiguration["Service"] = {
   apns: null,
   clerkSecretKey: Redacted.make("clerk-secret-key"),
   clerkPublishableKey: "pk_test_test",
-  clerkJwtAudience: "t3-code-relay",
+  clerkJwtAudience: "t2-code-relay",
   apnsDeliveryJobSigningSecret: Redacted.make("apns-delivery-secret"),
   cloudMintPrivateKey: Redacted.make(mintKeys.privateKey),
   cloudMintPublicKey: mintKeys.publicKey,
@@ -262,7 +262,7 @@ describe("HookForwarder", () => {
         token: sent.headers["x-t3-relay-delivery"]!,
         typ: RELAY_HOOK_DELIVERY_TYP,
         issuer: settings.relayIssuer,
-        audience: `t3-env:${environmentId}`,
+        audience: `t2-env:${environmentId}`,
         nowEpochSeconds: Math.floor((yield* Clock.currentTimeMillis) / 1_000),
       });
       expect(payload).toMatchObject({
