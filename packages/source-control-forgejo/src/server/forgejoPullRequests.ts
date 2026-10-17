@@ -1,4 +1,4 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
+import { SourceControlProviderKind } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
 import type { ChangeRequest } from "@t2code/contracts";

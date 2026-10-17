@@ -1,5 +1,5 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
-import { removeAgentCredits } from "@t3tools/source-control-core/server/mergeMessage";
+import { SourceControlProviderKind } from "@t2code/contracts";
+import { removeAgentCredits } from "@t2code/source-control-core/server/mergeMessage";
 import * as Effect from "effect/Effect";
 import type {
   PullRequestActor,
@@ -9,7 +9,7 @@ import type {
   PullRequestViewerPermissions,
 } from "@t2code/contracts";
 
-import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
+import * as SourceControlRateLimit from "@t2code/source-control-core/server/SourceControlRateLimit";
 import * as GitHubPullRequestApi from "./GitHubPullRequestApi.ts";
 import {
   PullRequestProviderError,
@@ -18,7 +18,7 @@ import {
   type ProviderChangeRequestDetail,
   type PullRequestProviderApi,
   type ProviderRepositoryRef,
-} from "@t3tools/source-control-core/server/PullRequestProvider";
+} from "@t2code/source-control-core/server/PullRequestProvider";
 import type {
   GitHubRepositoryAccess,
   GitHubViewerAccess,

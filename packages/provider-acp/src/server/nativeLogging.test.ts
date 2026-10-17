@@ -7,7 +7,7 @@ import * as Exit from "effect/Exit";
 import * as Schema from "effect/Schema";
 import * as AcpErrors from "effect-acp/errors";
 
-import type * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
+import type * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
 import { makeAcpNativeLoggerFactory } from "./nativeLogging.ts";
 
 const nodeServicesIt = it.layer(NodeServices.layer);

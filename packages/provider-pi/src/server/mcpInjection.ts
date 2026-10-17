@@ -2,10 +2,10 @@ import { tokenizeCliArgs } from "@t2code/shared/cliArgs";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 
-import type { McpProviderSessionConfig } from "@t3tools/provider-core/server/mcpSession";
+import type { McpProviderSessionConfig } from "@t2code/provider-core/server/mcpSession";
 import {
-  PI_T3_MCP_EXTENSION_FILENAME,
-  PI_T3_MCP_EXTENSION_SOURCE,
+  PI_T2_MCP_EXTENSION_FILENAME,
+  PI_T2_MCP_EXTENSION_SOURCE,
   T2_MCP_BEARER_ENV,
   T2_MCP_URL_ENV,
   T2_PI_RUNTIME_MODE_ENV,
@@ -223,19 +223,19 @@ function withoutToolSelectionArgs(args: ReadonlyArray<string>): ReadonlyArray<st
   return filtered;
 }
 
-function piT3McpExtensionDestPath(cacheDir: string): string {
-  return `${cacheDir.replace(/\\/g, "/")}/${PI_T3_MCP_EXTENSION_FILENAME}`;
+function piT2McpExtensionDestPath(cacheDir: string): string {
+  return `${cacheDir.replace(/\\/g, "/")}/${PI_T2_MCP_EXTENSION_FILENAME}`;
 }
 
-export const materializePiT3McpExtension = Effect.fn("materializePiT3McpExtension")(function* (
+export const materializePiT2McpExtension = Effect.fn("materializePiT2McpExtension")(function* (
   cacheDir: string,
 ) {
   const fs = yield* FileSystem.FileSystem;
   yield* fs.makeDirectory(cacheDir, { recursive: true });
-  const dest = piT3McpExtensionDestPath(cacheDir);
+  const dest = piT2McpExtensionDestPath(cacheDir);
   const existing = yield* fs.readFileString(dest).pipe(Effect.orElseSucceed(() => ""));
-  if (existing !== PI_T3_MCP_EXTENSION_SOURCE) {
-    yield* fs.writeFileString(dest, PI_T3_MCP_EXTENSION_SOURCE);
+  if (existing !== PI_T2_MCP_EXTENSION_SOURCE) {
+    yield* fs.writeFileString(dest, PI_T2_MCP_EXTENSION_SOURCE);
   }
   return dest;
 });
@@ -255,8 +255,8 @@ export function buildPiRpcLaunch(input: {
   readonly env: NodeJS.ProcessEnv;
   readonly hasT2Mcp: boolean;
 } {
-  const hasT3Extension = input.disableExtensions !== true && input.extensionPath !== undefined;
-  const hasT2Mcp = hasT3Extension && input.mcpSession !== undefined;
+  const hasT2Extension = input.disableExtensions !== true && input.extensionPath !== undefined;
+  const hasT2Mcp = hasT2Extension && input.mcpSession !== undefined;
   const extensionSafeArgs =
     input.disableExtensions === true
       ? withoutExplicitExtensions(input.launchArgs)
@@ -278,7 +278,7 @@ export function buildPiRpcLaunch(input: {
     ...(input.disableTools === true ? ["--no-tools"] : []),
   ];
   if (
-    hasT3Extension &&
+    hasT2Extension &&
     input.extensionPath !== undefined &&
     !hasExplicitExtension(args, input.extensionPath)
   ) {
@@ -295,10 +295,10 @@ export function buildPiRpcLaunch(input: {
     args,
     env: {
       ...environment,
-      ...(hasT3Extension && input.extensionPath !== undefined
-        ? { [T3_PI_MCP_EXTENSION_PATH_ENV]: input.extensionPath }
+      ...(hasT2Extension && input.extensionPath !== undefined
+        ? { [T2_PI_MCP_EXTENSION_PATH_ENV]: input.extensionPath }
         : {}),
-      ...(hasT3Extension && input.runtimeMode !== undefined
+      ...(hasT2Extension && input.runtimeMode !== undefined
         ? {
             [T2_PI_RUNTIME_MODE_ENV]:
               input.runtimeMode === "auto" ? "approval-required" : input.runtimeMode,

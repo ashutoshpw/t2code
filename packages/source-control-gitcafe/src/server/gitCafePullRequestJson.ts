@@ -1,5 +1,5 @@
-import { quoteGitPatchPath } from "@t3tools/shared/gitPatchPath";
-import { sortChecks } from "@t3tools/source-control-core/server/pullRequestChecks";
+import { quoteGitPatchPath } from "@t2code/shared/gitPatchPath";
+import { sortChecks } from "@t2code/source-control-core/server/pullRequestChecks";
 import * as DateTime from "effect/DateTime";
 import * as Schema from "effect/Schema";
 import {
@@ -15,13 +15,13 @@ import {
   type PullRequestReviewerCandidate,
   type PullRequestReviewThread,
   type PullRequestViewerPermissions,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type {
   ProviderChangeRequest,
   ProviderChangeRequestActivity,
   ProviderChangeRequestStack,
   ProviderDiffSlice,
-} from "@t3tools/source-control-core/server/PullRequestProvider";
+} from "@t2code/source-control-core/server/PullRequestProvider";
 
 const Actor = Schema.Union([
   Schema.Struct({

@@ -13,6 +13,8 @@ import {
   parseOriginUrlFromGitConfig,
   resolveAutoFeatureBranchName,
   sanitizeFeatureBranchName,
+  sanitizeWorktreeBranchPrefix,
+  temporaryWorktreeBranchPrefixes,
   WORKTREE_BRANCH_PREFIX,
 } from "./git.ts";
 
