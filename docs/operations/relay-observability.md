@@ -90,19 +90,19 @@ Questions these answer:
 
 ```apl
 // Webhook outcomes per hour
-['t3-code-relay-traces-prod']
+['t2-code-relay-traces-prod']
 | where name == 'relay.hooks.forward'
 | summarize count() by bin(_time, 1h), outcome = tostring(['attributes.custom']['relay.hook.outcome'])
 
 // Inboxes stuck behind an unreachable environment, by endpoint
-['t3-code-relay-traces-prod']
+['t2-code-relay-traces-prod']
 | where name == 'HookInboxStore.deliverDue'
 | extend c = ['attributes.custom']
 | where tostring(c['relay.inbox.run_result']) == 'unreachable'
 | project trace_id, failures = toint(c['relay.inbox.consecutive_failures']),
     backlog = toint(c['relay.inbox.held_count'])
 | join kind=inner (
-    ['t3-code-relay-traces-prod']
+    ['t2-code-relay-traces-prod']
     | where name == 'relay.inbox.deliver'
     | project trace_id, endpoint = tostring(['attributes.custom']['relay.hook.endpoint_key'])
   ) on trace_id

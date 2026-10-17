@@ -15,12 +15,12 @@ import { APP_VERSION } from "~/branding";
 
 const DEFAULT_EXPORT_INTERVAL_MS = 1_000;
 const CLIENT_TRACING_RESOURCE = {
-  serviceName: "t3code-web",
+  serviceName: "t2code-web",
   attributes: {
-    "service.namespace": "t3code",
+    "service.namespace": "t2code",
     "deployment.environment.name": import.meta.env.DEV ? "development" : "production",
-    "service.runtime": "t3-web",
-    "t3code.client.surface": isElectron ? "desktop" : "web",
+    "service.runtime": "t2-web",
+    "t2code.client.surface": isElectron ? "desktop" : "web",
     "service.version": APP_VERSION,
   },
 } as const;

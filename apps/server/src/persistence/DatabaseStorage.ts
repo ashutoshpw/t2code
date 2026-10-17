@@ -40,12 +40,15 @@ const make = Effect.gen(function* () {
   const path = yield* Path.Path;
   const statusRef = yield* SubscriptionRef.make<DatabaseStorageStatus | null>(null);
 
-  // The notice shows host-shell quoting verbatim; desktop needs its launcher because t3 is absent from PATH.
+  // The notice shows this verbatim; quote for the host's shell. Desktop
+  // installs have no `t2` on PATH, so the command names their launcher.
   const { command: compactCommand } = yield* resolveHostCliCommand("doctor", [
     "--base-dir",
     config.baseDir,
   ]);
-  // doctor --base-dir targets userdata, not implicit dev homes; suppress status to avoid touching the live install.
+  // `t2 doctor --base-dir` repairs <baseDir>/userdata. A dev server without
+  // an explicit home keeps its state in <baseDir>/dev instead, so there the
+  // command would target the live install; publish no status at all.
   const doctorTargetsThisDatabase =
     path.resolve(config.dbPath) ===
     path.resolve(config.baseDir, "userdata", path.basename(config.dbPath));

@@ -109,12 +109,12 @@ export const otlpResource = (
   config: Pick<ServerConfig["Service"], "mode" | "otelEnvironment">,
   hostName: string,
 ) => ({
-  serviceName: "t3code-server",
+  serviceName: "t2code-server",
   serviceVersion: packageJson.version,
   attributes: {
-    "service.namespace": "t3code",
-    "service.runtime": "t3-server",
-    "t3code.server.managed_by": config.mode === "desktop" ? "desktop" : "standalone",
+    "service.namespace": "t2code",
+    "service.runtime": "t2-server",
+    "t2code.server.managed_by": config.mode === "desktop" ? "desktop" : "standalone",
     "host.name": config.otelEnvironment.resourceAttributes["host.name"] || hostName,
   },
 });

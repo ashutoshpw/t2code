@@ -48,7 +48,7 @@ export const cascadeRebaseStack = Effect.fn("cascadeRebaseStack")(function* (inp
   const { token } = yield* api.credential(input.host);
   const first = input.layers[0];
   if (first === undefined) return 0;
-  const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-stack-rebase-" }).pipe(
+  const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-stack-rebase-" }).pipe(
     Effect.mapError(
       (cause) =>
         new GitHubStackRebaseGitError({

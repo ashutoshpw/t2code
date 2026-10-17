@@ -1588,10 +1588,10 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
             "Sent by automation"
           )}
         </p>
-      ) : userMessage.attribution === "t3code" ? (
+      ) : userMessage.attribution === "t2code" ? (
         <p
           className="me-1 text-2xs text-muted-foreground/70"
-          data-user-message-attribution="t3code"
+          data-user-message-attribution="t2code"
         >
           Sent by T2 Code
         </p>

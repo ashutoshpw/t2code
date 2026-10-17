@@ -215,7 +215,7 @@ describe("observability", () => {
             const fs = yield* FileSystem.FileSystem;
             const path = yield* Path.Path;
             const directory = yield* fs.makeTempDirectoryScoped({
-              prefix: "t3-trace-backpressure-",
+              prefix: "t2-trace-backpressure-",
             });
             const tracePath = path.join(directory, "trace.ndjson");
             const started = yield* Deferred.make<void>();

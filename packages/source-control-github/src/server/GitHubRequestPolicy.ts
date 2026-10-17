@@ -16,7 +16,8 @@ import * as GitHubQuota from "./GitHubQuota.ts";
 const DEFAULT_TIMEOUT = Duration.seconds(30);
 /** GitHub's secondary limits penalize concurrent bursts. */
 const CONCURRENCY = 8;
-const REQUEST_HEADERS = { "x-github-api-version": "2022-11-28", "user-agent": "t3code" };
+/** The headers every GitHub request carries besides its token. */
+const REQUEST_HEADERS = { "x-github-api-version": "2022-11-28", "user-agent": "t2code" };
 
 /** Pin requests to this host's credential across account switches. Keep it out of RPCs/cache keys. */
 export const PinnedGitHubCredential = Context.Reference<{

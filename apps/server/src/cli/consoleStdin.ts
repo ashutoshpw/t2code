@@ -5,9 +5,14 @@ import * as NodeTty from "node:tty";
 import * as HostProcess from "@t2code/shared/HostProcess";
 
 /**
- * Electron's Windows executable is a GUI program, so `t3.cmd` under
- * `ELECTRON_RUN_AS_NODE` gets the console for stdout and stderr but no stdin.
- * Piped or redirected input and runs whose output is not a console are left alone.
+ * Whether this process is the desktop app's `t2.cmd` running the CLI in a
+ * terminal with no stdin. The launcher runs the app's executable with
+ * `ELECTRON_RUN_AS_NODE`, and Electron's Windows executable is a GUI program:
+ * on start it points stdout and stderr at the parent's console but leaves
+ * stdin unset, so prompts see no terminal and children such as the agent
+ * `t2 triage` starts inherit nothing to read from. Input the user piped or
+ * redirected is a valid descriptor and is left alone, as is any run whose
+ * output is not a console (the desktop backend, scripts).
  */
 function needsConsoleStdin(input: {
   readonly platform: NodeJS.Platform;
@@ -42,7 +47,7 @@ export function attachConsoleStdin(): number | undefined {
     stdoutIsConsole: NodeTty.isatty(1),
   });
   // The marker describes this process's own start; a server started here
-  // must not pass it on to the shells and `t3` runs it spawns.
+  // must not pass it on to the shells and `t2` runs it spawns.
   delete process.env.T2CODE_DESKTOP_CLI_LAUNCHER;
   if (!needed) return undefined;
   let fd: number;

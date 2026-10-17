@@ -381,7 +381,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t2-mobil
 }
 
 /* Paint find results without changing rendered markdown or copied text. */
-::highlight(t3-thread-find) {
+::highlight(t2-thread-find) {
   color: var(--app-theme-search-match-foreground, oklch(0.216164 0.028283 77.423));
   background-color: var(--app-theme-search-match-background, oklch(0.915 0.11 85));
 
@@ -391,7 +391,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t2-mobil
   }
 }
 
-::highlight(t3-thread-find-active) {
+::highlight(t2-thread-find-active) {
   color: var(--app-theme-search-match-active-foreground, oklch(0.216164 0.028283 77.423));
   background-color: var(
     --app-theme-search-match-active-background,
@@ -1478,7 +1478,7 @@ html[data-theme-id] :is(.chat-markdown, .composer-tiptap) .chat-markdown-codeblo
   color: color-mix(in srgb, var(--code-foreground) 72%, transparent);
 }
 
-/* T3 Chat renders inline code and compact chat artifacts with its translucent
+/* T2 Chat renders inline code and compact chat artifacts with its translucent
    secondary surface flattened over the light chat canvas. The raw muted and
    secondary tokens are substantially darker than those visible pixels. */
 html[data-theme-id="t2-chat"] {
@@ -1527,7 +1527,7 @@ html[data-theme-id] [data-app-sidebar] {
   }
 }
 
-/* T3 Chat's panel divider is deliberately pink, and its resize affordance
+/* T2 Chat's panel divider is deliberately pink, and its resize affordance
    keeps that color while hovered. Do not neutralize this branded edge. */
 html[data-theme-id="t2-chat"] [data-app-sidebar] {
   @variant dark {
@@ -1697,7 +1697,7 @@ body {
   --surface-grain-size: 256px 256px;
 }
 
-/* The live T3 Chat texture is a 128px grayscale tile with a constant 7/255
+/* The live T2 Chat texture is a 128px grayscale tile with a constant 7/255
    alpha. Keep our procedural texture cheap while matching that scale and
    strength for the branded preset. */
 html[data-theme-id="t2-chat"] {

@@ -14,7 +14,7 @@ describe("injectHtmlRenderBootstrap", () => {
     const html =
       "<!doctype html><html><head><style>:root{--background:red}</style></head><body>x</body></html>";
     const injected = injectHtmlRenderBootstrap(html);
-    const themeAt = injected.indexOf('<style id="t3-theme">');
+    const themeAt = injected.indexOf('<style id="t2-theme">');
     expect(themeAt).toBeGreaterThan(injected.indexOf("<head>"));
     expect(themeAt).toBeLessThan(injected.indexOf(":root{--background:red}"));
     expect(injected).toContain('<meta charset="utf-8">');
@@ -35,7 +35,7 @@ describe("injectHtmlRenderBootstrap", () => {
     const fragment = `<${tag}><head><meta name="viewport"></head></${tag}>`;
     const injected = injectHtmlRenderBootstrap(fragment);
     expect(injected.startsWith("<!doctype html><head>")).toBe(true);
-    expect(injected.indexOf('<style id="t3-theme">')).toBeLessThan(injected.indexOf(`<${tag}>`));
+    expect(injected.indexOf('<style id="t2-theme">')).toBeLessThan(injected.indexOf(`<${tag}>`));
     expect(injected).toContain('<meta name="viewport" content="width=device-width');
     expect(injected.endsWith(fragment)).toBe(true);
   });
@@ -46,7 +46,7 @@ describe("injectHtmlRenderBootstrap", () => {
   ])("keeps the bootstrap outside inert template content: %s", (fragment) => {
     const injected = injectHtmlRenderBootstrap(fragment);
     expect(injected.startsWith("<!doctype html><head>")).toBe(true);
-    expect(injected.indexOf('<style id="t3-theme">')).toBeLessThan(injected.indexOf("<template>"));
+    expect(injected.indexOf('<style id="t2-theme">')).toBeLessThan(injected.indexOf("<template>"));
     expect(injected).toContain('<meta name="viewport" content="width=device-width');
     expect(injected.endsWith(fragment)).toBe(true);
   });
@@ -56,7 +56,7 @@ describe("injectHtmlRenderBootstrap", () => {
       '<!-- copy <head> and <meta name="viewport"> here --><html><head>' +
       "<script>const tag = '<meta name=\"viewport\">';</script></head><body>x</body></html>";
     const injected = injectHtmlRenderBootstrap(html);
-    expect(injected.indexOf('<style id="t3-theme">')).toBeGreaterThan(
+    expect(injected.indexOf('<style id="t2-theme">')).toBeGreaterThan(
       injected.indexOf("<html><head>"),
     );
     expect(injected).toContain('<meta name="viewport" content="width=device-width');
@@ -90,7 +90,7 @@ describe("readHtmlRenderLinkRequest", () => {
       }),
     ).toBeUndefined();
     expect(
-      readHtmlRenderLinkRequest({ type: "t3-html-render-link", url: "https://example.com" }),
+      readHtmlRenderLinkRequest({ type: "t2-html-render-link", url: "https://example.com" }),
     ).toBeUndefined();
   });
 });
@@ -99,7 +99,7 @@ describe("readHtmlRenderImageRequest", () => {
   it("accepts http(s) and inline image URLs in an open-image notification", () => {
     const image = (params: unknown) => ({
       jsonrpc: "2.0",
-      method: "t3/notifications/open-image",
+      method: "@t2code/cli/notifications/open-image",
       params,
     });
     expect(
@@ -122,7 +122,7 @@ describe("readHtmlRenderKeyDown", () => {
   it("reads the key of a keydown notification and nothing else", () => {
     const notification = (params: unknown) => ({
       jsonrpc: "2.0",
-      method: "t3/notifications/keydown",
+      method: "@t2code/cli/notifications/keydown",
       params,
     });
     expect(readHtmlRenderKeyDown(notification({ key: "k", code: "KeyK", metaKey: true }))).toEqual({
@@ -175,7 +175,7 @@ describe("htmlRenderTheme", () => {
     expect(theme.variables["--chart-1"]).toBe(T2_CODE_LIGHT_THEME_COLORS.accent);
     expect(theme.variables["--chart-6"]).toBeDefined();
     const fragment = htmlRenderThemeFragment(theme);
-    expect(JSON.parse(decodeURIComponent(fragment.slice("#t3-theme=".length)))).toEqual(theme);
+    expect(JSON.parse(decodeURIComponent(fragment.slice("#t2-theme=".length)))).toEqual(theme);
     expect(fragment).not.toContain("&");
     expect(htmlRenderTheme(T2_CODE_DARK_THEME_COLORS, "dark").variables["--background"]).toBe(
       T2_CODE_DARK_THEME_COLORS.canvas,
@@ -197,7 +197,7 @@ describe("htmlRenderFromToolItem", () => {
 
   it("reads the reference from each provider's result envelope", () => {
     for (const [toolName, output] of [
-      ["mcp__t3-code__html_render", [{ type: "text", text: JSON.stringify(result) }]],
+      ["mcp__t2-code__html_render", [{ type: "text", text: JSON.stringify(result) }]],
       ["t3-code.html_render", { structuredContent: result, content: [] }],
       ["t3-code-thread_1_html_render", JSON.stringify(result)],
       ["html_render", result],

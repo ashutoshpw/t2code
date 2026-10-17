@@ -81,7 +81,7 @@ describe("terminatePosixOwnedProcessTree", () => {
     ).toHaveLength(2);
   });
 
-  it.live("sweeps empty t3-acp sibling leases owned by dead pids only", () =>
+  it.live("sweeps empty t2-acp sibling leases owned by dead pids only", () =>
     Effect.sync(() => {
       const scratchRoot = NodePath.join(process.cwd(), "tmp");
       NodeFS.mkdirSync(scratchRoot, { recursive: true });
@@ -96,10 +96,10 @@ describe("terminatePosixOwnedProcessTree", () => {
       };
       const deadPid = 2_147_483_646;
       const liveForeignPid = 2_147_483_645;
-      const staleEmpty = writeSibling(`t3-acp-${deadPid}-aaaa`, "0");
-      const currentPidSibling = writeSibling(`t3-acp-${process.pid}-bbbb`, "0");
-      const liveForeignSibling = writeSibling(`t3-acp-${liveForeignPid}-cccc`, "0");
-      const stalePopulated = writeSibling(`t3-acp-${deadPid}-dddd`, "1");
+      const staleEmpty = writeSibling(`t2-acp-${deadPid}-aaaa`, "0");
+      const currentPidSibling = writeSibling(`t2-acp-${process.pid}-bbbb`, "0");
+      const liveForeignSibling = writeSibling(`t2-acp-${liveForeignPid}-cccc`, "0");
+      const stalePopulated = writeSibling(`t2-acp-${deadPid}-dddd`, "1");
       const unrelated = writeSibling("other-lease", "0");
       const isProcessAlive = (pid: number) => pid === process.pid || pid === liveForeignPid;
       try {
@@ -116,7 +116,7 @@ describe("terminatePosixOwnedProcessTree", () => {
         expect(NodeFS.existsSync(liveForeignSibling)).toBe(true);
         expect(NodeFS.existsSync(stalePopulated)).toBe(true);
         expect(NodeFS.existsSync(unrelated)).toBe(true);
-        writeSibling(`t3-acp-${deadPid}-eeee`, null);
+        writeSibling(`t2-acp-${deadPid}-eeee`, null);
         AcpSessionRuntime.sweepStaleLinuxCgroupSiblings(parent, {
           isProcessAlive,
           readPopulated: (path) => populatedByPath.get(path),
@@ -125,7 +125,7 @@ describe("terminatePosixOwnedProcessTree", () => {
             NodeFS.rmdirSync(path);
           },
         });
-        expect(NodeFS.existsSync(NodePath.join(parent, `t3-acp-${deadPid}-eeee`))).toBe(true);
+        expect(NodeFS.existsSync(NodePath.join(parent, `t2-acp-${deadPid}-eeee`))).toBe(true);
         expect(NodeFS.existsSync(currentPidSibling)).toBe(true);
       } finally {
         NodeFS.rmSync(parent, { recursive: true, force: true });
@@ -276,7 +276,7 @@ describe("terminatePosixOwnedProcessTree", () => {
 
       const missingTarget = AcpSessionRuntime.wrapCommandForLinuxCgroup(
         lease,
-        "/nonexistent-t3-probe",
+        "/nonexistent-t2-probe",
         [],
       );
       const missingTargetResult = NodeChildProcess.spawnSync(
@@ -410,8 +410,8 @@ describe("terminatePosixOwnedProcessTree", () => {
       const lease: AcpSessionRuntime.AcpLinuxCgroupLease = {
         contains: () => false,
         exists: () => exists,
-        path: "/test/t3-acp-repopulation",
-        relativePath: "/test/t3-acp-repopulation",
+        path: "/test/t2-acp-repopulation",
+        relativePath: "/test/t2-acp-repopulation",
         kill: () => {
           killCalls += 1;
           populated = false;
@@ -451,8 +451,8 @@ describe("terminatePosixOwnedProcessTree", () => {
       const lease: AcpSessionRuntime.AcpLinuxCgroupLease = {
         contains: () => false,
         exists: () => true,
-        path: "/test/t3-acp-busy",
-        relativePath: "/test/t3-acp-busy",
+        path: "/test/t2-acp-busy",
+        relativePath: "/test/t2-acp-busy",
         kill: () => undefined,
         populated: () => false,
         remove: () => {
@@ -461,7 +461,7 @@ describe("terminatePosixOwnedProcessTree", () => {
       };
 
       const error = yield* Effect.flip(AcpSessionRuntime.terminateLinuxCgroupLease(lease));
-      expect(error.detail).toBe("Failed to remove ACP cgroup /test/t3-acp-busy");
+      expect(error.detail).toBe("Failed to remove ACP cgroup /test/t2-acp-busy");
       expect(error.cause).toBe(removeError);
     }),
   );
@@ -482,8 +482,8 @@ describe("terminatePosixOwnedProcessTree", () => {
     const lease: AcpSessionRuntime.AcpLinuxCgroupLease = {
       contains: () => true,
       exists: () => true,
-      path: "/test/t3-acp-root",
-      relativePath: "/test/t3-acp-root",
+      path: "/test/t2-acp-root",
+      relativePath: "/test/t2-acp-root",
       kill: () => undefined,
       populated: () => true,
       remove: () => undefined,

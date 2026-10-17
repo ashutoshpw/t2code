@@ -301,7 +301,7 @@ export default function FileBrowserPanel({
       row.kind === "directory" &&
       row.isExpanded &&
       loadingDirectoriesRef.current.has(item.path.replace(/\/$/, ""))
-        ? { icon: "t3-tree-icon-loading", title: "Loading…" }
+        ? { icon: "t2-tree-icon-loading", title: "Loading…" }
         : null,
     search: false,
     onSearchChange: (value) => setQuery(value ?? ""),

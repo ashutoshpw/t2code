@@ -15,7 +15,7 @@ it.layer(NodeServices.layer)("PR filesystem cache", (it) => {
   it.effect("prunes entry files written before the max age and keeps fresh ones", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pr-cache-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pr-cache-" });
       yield* TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe("2026-10-01T00:00:00Z")));
       const cache = yield* cacheLayer(directory);
       yield* cache.get("old", Effect.succeed("old"), ["pr"]);
@@ -80,7 +80,7 @@ it.layer(NodeServices.layer)("PR filesystem cache", (it) => {
       assert.deepStrictEqual(yield* fs.readDirectory(directory), []);
     }).pipe(
       Effect.scoped,
-      Effect.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-pr-cache-layer-" })),
+      Effect.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-pr-cache-layer-" })),
     ),
   );
 

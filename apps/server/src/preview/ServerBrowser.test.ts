@@ -338,7 +338,7 @@ const dependencies = Layer.mergeAll(
     pointer: () => Effect.void,
   }),
 ).pipe(
-  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t3-server-browser-" })),
+  Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "t2-server-browser-" })),
   Layer.provideMerge(NodeServices.layer),
 );
 const layer = ServerBrowser.layer.pipe(Layer.provideMerge(dependencies));

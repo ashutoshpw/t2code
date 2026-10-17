@@ -201,7 +201,7 @@ it.effect.each(["--bare", "source.git"])(
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const git = yield* GitVcsDriver.GitVcsDriver;
-      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t3-clone-options-" });
+      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t2-clone-options-" });
       yield* git.execute({
         operation: "test.init",
         cwd: parent,
@@ -222,7 +222,7 @@ it.effect.each(["--bare", "source.git"])(
         GitVcsDriver.layer.pipe(
           Layer.provide(
             ServerConfig.layerTest(process.cwd(), {
-              prefix: "t3-clone-options-config-",
+              prefix: "t2-clone-options-config-",
             }),
           ),
           Layer.provideMerge(NodeServices.layer),

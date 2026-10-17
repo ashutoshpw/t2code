@@ -386,14 +386,14 @@ describe("resolveEmbeddedTerminalContent", () => {
         toolCallId: "call-1",
         content: [
           { type: "content" as const, content: { type: "text" as const, text: "before" } },
-          { type: "terminal" as const, terminalId: "t3-term-1" },
-          { type: "terminal" as const, terminalId: "t3-term-unknown" },
+          { type: "terminal" as const, terminalId: "t2-term-1" },
+          { type: "terminal" as const, terminalId: "t2-term-unknown" },
         ],
       },
     };
 
     const resolved = resolveEmbeddedTerminalContent(notification, (sessionId, terminalId) =>
-      sessionId === "session" && terminalId === "t3-term-1"
+      sessionId === "session" && terminalId === "t2-term-1"
         ? { output: "compiled 3 files", truncated: false, exitStatus: undefined }
         : undefined,
     );
@@ -402,7 +402,7 @@ describe("resolveEmbeddedTerminalContent", () => {
       content: [
         { type: "content", content: { type: "text", text: "before" } },
         { type: "content", content: { type: "text", text: "compiled 3 files" } },
-        { type: "content", content: { type: "text", text: "[terminal t3-term-unknown]" } },
+        { type: "content", content: { type: "text", text: "[terminal t2-term-unknown]" } },
       ],
     });
   });

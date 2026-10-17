@@ -1124,7 +1124,7 @@ it.effect.each(
       "-m",
       "initial",
     ]);
-    yield* command(repo, ["worktree", "add", "-b", "t3/abcd1234", worktreePath]);
+    yield* command(repo, ["worktree", "add", "-b", "t2code/abcd1234", worktreePath]);
     yield* command(repo, ["worktree", "add", "-b", "user/checkout", movedPath]);
     const branchNameStarted = yield* Deferred.make<Fiber.Fiber<unknown, unknown>>();
     const allowBranchName = yield* Deferred.make<void>();
@@ -1153,7 +1153,7 @@ it.effect.each(
         }),
       );
       const renameFiber = yield* Deferred.await(branchNameStarted);
-      assert.equal(harness.createWorktree.mock.calls[0]?.[0]?.newRefName, "t2/abcd1234");
+      assert.equal(harness.createWorktree.mock.calls[0]?.[0]?.newRefName, "t2code/abcd1234");
       yield* waitUntil(() =>
         threads
           .getThreadProjection(launched.threadId)
@@ -1182,7 +1182,7 @@ it.effect.each(
       const delegated = yield* threads.getThreadProjection(launched.threadId);
       const childThreadId = delegated.subagents[0]!.childThreadId!;
       const child = yield* threads.getThreadProjection(childThreadId);
-      assert.equal(child.thread.branch, "t3/abcd1234");
+      assert.equal(child.thread.branch, "t2code/abcd1234");
       assert.equal(child.thread.worktreePath, worktreePath);
       assert.equal(child.thread.lineage.parentThreadId, launched.threadId);
 
@@ -1190,7 +1190,7 @@ it.effect.each(
       const otherPathThreadId = ThreadId.make("thread:launch:other-worktree");
       for (const [threadId, branch, otherWorktreePath] of [
         [otherThreadId, "other-feature", worktreePath],
-        [otherPathThreadId, "t3/abcd1234", "/repo-worktrees/other"],
+        [otherPathThreadId, "t2code/abcd1234", "/repo-worktrees/other"],
       ] as const) {
         yield* threads.dispatch({
           type: "thread.create",
@@ -1256,7 +1256,7 @@ it.effect.each(
           commandId: CommandId.make("command:launch:stale-branch-update"),
           threadId: otherThreadId,
           branch: "generated-branch",
-          expectedBranch: "t3/abcd1234",
+          expectedBranch: "t2code/abcd1234",
           expectedWorktreePath: worktreePath,
         })
         .pipe(Effect.flip);
@@ -1267,7 +1267,7 @@ it.effect.each(
       );
       assert.deepEqual(harness.renameBranch.mock.calls[0]?.[0], {
         cwd: worktreePath,
-        oldBranch: "t2/abcd1234",
+        oldBranch: "t2code/abcd1234",
         newBranch: "generated-branch",
       });
     }).pipe(Effect.provide(harness.layer));
@@ -2163,7 +2163,7 @@ it.effect("creates a strong provider-thread mapping for an imported native sessi
 
 it.effect("shared intake preserves durable attachment bytes after a lost launch result", () => {
   const harness = makeHarness();
-  const layerFiles = ServerConfig.layerTest(process.cwd(), { prefix: "t3-message-intake-" }).pipe(
+  const layerFiles = ServerConfig.layerTest(process.cwd(), { prefix: "t2-message-intake-" }).pipe(
     Layer.provideMerge(NodeServices.layer),
   );
   return Effect.gen(function* () {
@@ -2191,7 +2191,7 @@ it.effect("shared intake preserves durable attachment bytes after a lost launch 
       ...launchInput({ command: "intake-launch", thread: "intake-thread" }),
       initialMessage: {
         messageId: MessageId.make("intake-first"),
-        text: "First [file](t3-context://v1/file/intake-file)",
+        text: "First [file](t2-context://v1/file/intake-file)",
         context: {
           version: 1 as const,
           records: [
@@ -2531,10 +2531,10 @@ it.effect.each([0, 1])("releases an async setup before its completion with exit 
 );
 
 it.effect.each([
-  { name: "is missing", baseRef: "t3/renamed", startFromOrigin: false, origin: true },
+  { name: "is missing", baseRef: "t2/renamed", startFromOrigin: false, origin: true },
   {
     name: "has no origin to come from",
-    baseRef: "t3/renamed",
+    baseRef: "t2/renamed",
     startFromOrigin: true,
     origin: false,
   },
@@ -2581,7 +2581,7 @@ it.effect.each([
 
 it.effect("replays an accepted send after the project disables the instance", () => {
   const harness = makeHarness();
-  const layerFiles = ServerConfig.layerTest(process.cwd(), { prefix: "t3-send-retry-" }).pipe(
+  const layerFiles = ServerConfig.layerTest(process.cwd(), { prefix: "t2-send-retry-" }).pipe(
     Layer.provideMerge(NodeServices.layer),
   );
   return Effect.gen(function* () {

@@ -371,7 +371,7 @@ const main = Command.make(
         ).pipe(Effect.asVoid);
         yield* platform === "android" ? prebuildAndroid((yield* roots).mobile, prebuild) : prebuild;
         if (platform === "ios") {
-          const output = yield* fs.makeTempDirectoryScoped({ prefix: "t3-native-client-" });
+          const output = yield* fs.makeTempDirectoryScoped({ prefix: "t2-native-client-" });
           const { mobile } = yield* roots;
           yield* command("pod", ["install"], true, path.join(mobile, "ios"));
           yield* command(

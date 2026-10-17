@@ -60,7 +60,7 @@ export function isProxiableBindHost(host: string): boolean {
   );
 }
 
-export const DEFAULT_T3_HOME = Effect.map(Effect.service(Path.Path), (path) =>
+export const DEFAULT_T2_HOME = Effect.map(Effect.service(Path.Path), (path) =>
   path.join(NodeOS.homedir(), ".t2"),
 );
 
@@ -280,7 +280,7 @@ const resolveBaseDir = Effect.fn("dev-runner.resolveBaseDir")(function* (
     return path.resolve(configured);
   }
 
-  return yield* DEFAULT_T3_HOME;
+  return yield* DEFAULT_T2_HOME;
 });
 
 interface CreateDevRunnerEnvInput {
@@ -789,7 +789,7 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
       serverOffset !== offset || webOffset !== offset
         ? ` selectedOffset(server=${serverOffset},web=${webOffset})`
         : "";
-    const baseDir = env.T2CODE_HOME ?? (yield* DEFAULT_T3_HOME);
+    const baseDir = env.T2CODE_HOME ?? (yield* DEFAULT_T2_HOME);
 
     yield* Effect.logInfo(
       `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T2CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
