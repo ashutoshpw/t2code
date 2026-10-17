@@ -75,6 +75,7 @@ export const DEFAULT_SCHEDULE: ScheduleDraft = {
   runAt: "",
   weekdays: [1, 2, 3, 4, 5],
   intervalMinutes: "15",
+  onceAt: null,
   signature: null,
   maxDeliveryAgeMinutes: "",
   replayKey: "",
@@ -102,6 +103,8 @@ export function scheduleDraftForTask(task: Pick<ScheduledTask, "schedule">): Sch
         mode: "interval",
         intervalMinutes: String(Math.max(1, task.schedule.everyMs / 60_000)),
       };
+    case "once":
+      return { ...DEFAULT_SCHEDULE, mode: "once", onceAt: task.schedule.at };
     case "webhook":
       return {
         ...DEFAULT_SCHEDULE,
