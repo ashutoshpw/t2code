@@ -5,8 +5,8 @@ import {
   executeAtomQuery,
   settlePromise,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId, PullRequestAction } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/runtime";
+import type { EnvironmentId, PullRequestAction } from "@t2code/contracts";
 import { Atom, AsyncResult } from "effect/reactivity";
 import { use, useRef, useState } from "react";
 import { Linking, Platform } from "react-native";

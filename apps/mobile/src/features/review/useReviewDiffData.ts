@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
+import { formatDiffCount } from "@t2code/client-runtime/diff-count";
 
 import { countReviewCommentContexts, parseReviewInlineComments } from "./reviewCommentSelection";
 import { getCachedNativeReviewDiffData } from "./nativeReviewDiffAdapter";

@@ -42,7 +42,7 @@ export type ModelOption = {
 };
 
 type ProviderUpdateRequired = Pick<
-  T3ServerConfig["providers"][number],
+  T2ServerConfig["providers"][number],
   "driver" | "updateRequiredModels"
 >;
 
@@ -66,7 +66,7 @@ function providerDisplayLabel(provider: {
 }
 
 function isProviderEnabledForProject(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   provider:
     | { readonly instanceId: ModelSelection["instanceId"]; readonly enabled: boolean }
     | undefined,
@@ -81,7 +81,7 @@ function isProviderEnabledForProject(
 }
 
 function isProjectDisabledOverride(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   instanceId: ModelSelection["instanceId"],
   projectId: ProjectId | null,
 ): boolean {
@@ -95,7 +95,7 @@ function isProjectDisabledOverride(
 }
 
 function isDisabledForProject(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   provider:
     | { readonly instanceId: ModelSelection["instanceId"]; readonly enabled: boolean }
     | undefined,
@@ -165,7 +165,7 @@ export function isModelSelectionUnavailable(
 }
 
 export function describeUnavailableModelSelection(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   selection: ModelSelection,
   projectId: ProjectId | null,
 ): { readonly title: string; readonly detail: string } {

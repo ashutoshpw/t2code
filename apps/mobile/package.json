@@ -70,7 +70,6 @@
     "@shikijs/themes": "4.2.0",
     "@t2code/client-runtime": "workspace:*",
     "@t2code/contracts": "workspace:*",
-    "@t2code/mobile-markdown-text": "file:./modules/t2-markdown-text",
     "@t2code/mobile-review-diff-native": "file:./modules/t2-review-diff",
     "@t2code/mobile-source-text": "file:./modules/t2-source-text",
     "@t2code/mobile-terminal-native": "file:./modules/t2-terminal",

@@ -1,4 +1,4 @@
-import { parseChangeRequestUrl } from "@t3tools/shared/changeRequestUrl";
+import { parseChangeRequestUrl } from "@t2code/shared/changeRequestUrl";
 
 export function nativePullRequestDestination(
   url: string,

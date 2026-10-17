@@ -6,11 +6,11 @@ import { SheetHeader } from "../../components/ui/SheetHeader";
 import { Toolbar } from "../../components/ui/Toolbar";
 import * as Dialog from "../../components/ui/Dialog";
 import { createV5StackNavigator as createNativeStackNavigator } from "../../native/createV5StackNavigator";
-import { DEFAULT_SERVER_SETTINGS } from "@t3tools/contracts";
+import { DEFAULT_SERVER_SETTINGS } from "@t2code/contracts";
 import {
   modelPreferencesMigrationPatch,
   resolveModelPreferences,
-} from "@t3tools/shared/serverSettings";
+} from "@t2code/shared/serverSettings";
 import type {
   EnvironmentId,
   ModelSelection,
@@ -101,7 +101,7 @@ import {
   pendingModelAfterPress,
   providerSectionIsCollapsed,
 } from "./thread-settings-sheet-state";
-import { formatProviderUpdateRequiredNotice } from "@t3tools/client-runtime/providerUpdateRequiredModels";
+import { formatProviderUpdateRequiredNotice } from "@t2code/client-runtime/providerUpdateRequiredModels";
 
 const PRIMARY_PROVIDER_DRIVERS: ReadonlySet<string> = new Set([
   "claudeAgent",

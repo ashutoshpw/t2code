@@ -1,10 +1,10 @@
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 import type {
   PullRequestAction,
   PullRequestDetail,
   PullRequestMergeMethod,
   SourceControlProviderKind,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { AppSymbolName } from "../../components/ui/AppSymbol";
 import { PullRequestGlyph } from "./pullRequestGlyphs";
 

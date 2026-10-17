@@ -2,17 +2,17 @@ import { AsyncResult } from "effect/reactivity";
 import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import * as Dialog from "../../components/ui/Dialog";
 import { useNavigation, useNavigationState, useRoute } from "@react-navigation/native";
-import { threadPullRequestLinkMode } from "@t3tools/client-runtime/thread-pull-request-compatibility";
+import { threadPullRequestLinkMode } from "@t2code/client-runtime/thread-pull-request-compatibility";
 import {
   AuthOrchestrationOperateScope,
   AuthSourceControlWriteScope,
   ThreadId,
   type PullRequestDetail,
   type PullRequestLinkedThreadsResult,
-} from "@t3tools/contracts";
-import { formatComposerContextReference } from "@t3tools/shared/composerContextReferences";
-import { parseChangeRequestUrl } from "@t3tools/shared/changeRequestUrl";
-import { normalizeThreadPullRequestKey } from "@t3tools/shared/threadPullRequests";
+} from "@t2code/contracts";
+import { formatComposerContextReference } from "@t2code/shared/composerContextReferences";
+import { parseChangeRequestUrl } from "@t2code/shared/changeRequestUrl";
+import { normalizeThreadPullRequestKey } from "@t2code/shared/threadPullRequests";
 import { useRef, useState } from "react";
 import { Platform } from "react-native";
 import { useAndroidWorkspaceSelection } from "../workspace/useAndroidWorkspaceSelection";

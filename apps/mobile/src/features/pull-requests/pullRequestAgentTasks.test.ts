@@ -4,7 +4,7 @@ import {
   pullRequestAgentPrompt,
   pullRequestAgentThread,
 } from "./pullRequestAgentTasks";
-import { IsoDateTime, ProjectId, ThreadId } from "@t3tools/contracts";
+import { IsoDateTime, ProjectId, ThreadId } from "@t2code/contracts";
 
 describe("PR agent tasks", () => {
   it("continues a single linked thread, but keeps an explicit new-thread choice separate", () => {

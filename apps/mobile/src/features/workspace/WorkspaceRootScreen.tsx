@@ -44,7 +44,7 @@ function WorkspaceRootTitle(props: {
     <View style={{ width: props.maxWidth, minHeight: 32, justifyContent: "center" }}>
       <WorkspaceConnectionTitle
         brand={
-          <CompactBrandTitle accessibilityLabel={`T3 Code, ${TAB_TITLES[state.selectedTab]}`} />
+          <CompactBrandTitle accessibilityLabel={`T2 Code, ${TAB_TITLES[state.selectedTab]}`} />
         }
         maxWidth={props.maxWidth}
         onPress={props.onOpenEnvironments}
@@ -125,7 +125,7 @@ function WorkspaceRootContent() {
           />
         ) : (
           <AndroidScreenHeader
-            title="T3 Code"
+            title="T2 Code"
             titleContent={renderHeaderTitle()}
             actions={[
               {

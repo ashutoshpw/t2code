@@ -1,4 +1,4 @@
-import type { ComposerContextRecord } from "@t3tools/contracts";
+import type { ComposerContextRecord } from "@t2code/contracts";
 import {
   composerChipSizeSuffix,
   contextChipIcon,
@@ -8,7 +8,7 @@ import {
   UNAVAILABLE_CONTEXT_CHIP_PRESENTATION,
 } from "./composerChipPresentation";
 import type { SelectableMarkdownSkill } from "../native/SelectableMarkdownText.types";
-import { parseComposerContextHref } from "@t3tools/shared/composerContextReferences";
+import { parseComposerContextHref } from "@t2code/shared/composerContextReferences";
 
 export function enrichedContextLinkPresentation(
   href: string,

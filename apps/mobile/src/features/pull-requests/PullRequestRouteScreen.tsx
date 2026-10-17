@@ -40,7 +40,7 @@ import { isPullRequestTestFile } from "./pullRequestFileFilters";
 import { useFocusEffect, useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import { RegistryContext, useAtomRefresh } from "@effect/atom-react";
 import { pullRequestReviewKey } from "./pullRequestReviewDrafts";
-import { type PullRequestDetail, type PullRequestListEntry } from "@t3tools/contracts";
+import { type PullRequestDetail, type PullRequestListEntry } from "@t2code/contracts";
 import { PullRequestOverviewLoading } from "./PullRequestOverviewLoading";
 import { copyPullRequestLink, sharePullRequestLink } from "./pullRequestLink";
 import { pullRequestStatus } from "./pullRequestStatus";

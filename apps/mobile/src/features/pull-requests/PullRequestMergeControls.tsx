@@ -1,8 +1,8 @@
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import * as Dialog from "../../components/ui/Dialog";
 import { useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react";
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { PullRequestDetail, PullRequestMergeMethod } from "@t3tools/contracts";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import type { PullRequestDetail, PullRequestMergeMethod } from "@t2code/contracts";
 import { AsyncResult } from "effect/reactivity";
 import { useRef, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
