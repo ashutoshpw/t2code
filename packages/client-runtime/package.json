@@ -315,6 +315,10 @@
       "types": "./src/state/threadSubagents.ts",
       "default": "./src/state/threadSubagents.ts"
     },
+    "./state/send-later": {
+      "types": "./src/state/sendLater.ts",
+      "default": "./src/state/sendLater.ts"
+    },
     "./state/thread-settled": {
       "types": "./src/state/threadSettled.ts",
       "default": "./src/state/threadSettled.ts"
