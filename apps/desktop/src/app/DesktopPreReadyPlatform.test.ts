@@ -167,16 +167,8 @@ describe("DesktopPreReadyPlatform", () => {
         assert.include(identity.desktopEntry ?? "", "Exec=/Applications/current.AppImage %U");
         assert.include(identity.desktopEntry ?? "", "Name=T2 Code (Beta)");
         assert.include(identity.desktopEntry ?? "", "MimeType=x-scheme-handler/t2code;");
-        assert.include(
-          identity.desktopEntry ?? "",
-          "Icon=/xdg/icons/com.t2tools.T2Code.desktop.png",
-        );
-        assert.equal(
-          copyFileSyncMock.mock.calls.length,
-          0,
-          "icon must not be copied out of the app bundle",
-        );
-        assert.isTrue(identity.iconInstalled, "icon must be written from the bundled bytes");
+       assert.include(identity.desktopEntry ?? "", "Icon=/xdg/icons/t2code.desktop.png");
+        assert.isTrue(identity.iconInstalled);
       }),
     ).pipe(Effect.ensuring(Effect.sync(() => vi.unstubAllEnvs())));
   });

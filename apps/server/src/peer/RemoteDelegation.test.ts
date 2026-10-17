@@ -894,7 +894,7 @@ it.effect("a task delegated to the box wakes the laptop's parent when it ends th
       expect(yield* Ref.get(thread.launched)).toBe(delegated.remoteChild.threadId);
       // Its link opens the thread there, so the parent can mention it like any other.
       expect(delegated.link).toBe(
-        `[Laptop parent](t3-thread://v2/${box.environmentId}/${delegated.remoteChild.threadId})`,
+        `[Laptop parent](t2-thread://v2/${box.environmentId}/${delegated.remoteChild.threadId})`,
       );
       // ...naming the parent here, so the thread there links back to it.
       expect(yield* Ref.get(thread.delegatedFrom)).toEqual({
@@ -1833,12 +1833,12 @@ it.effect.each([
         yield* Deferred.succeed(thread.finished, undefined);
         yield* taskResult(a, delegated.taskId);
 
-        const sendFollowUp = a.call("t3_thread_send", {
+        const sendFollowUp = a.call("t2_thread_send", {
           environmentId: box.environmentId,
           threadId: delegated.remoteChild.threadId,
           message: "Now run the slow suite too.",
         });
-        const sendQueued = a.call("t3_thread_send", {
+        const sendQueued = a.call("t2_thread_send", {
           environmentId: box.environmentId,
           threadId: delegated.remoteChild.threadId,
           message: "Then the flaky suite.",
@@ -1902,12 +1902,12 @@ it.effect.each([
         yield* Deferred.succeed(thread.finished, undefined);
         yield* taskResult(a, delegated.taskId);
 
-        const followUp = yield* a.call("t3_thread_send", {
+        const followUp = yield* a.call("t2_thread_send", {
           environmentId: box.environmentId,
           threadId: delegated.remoteChild.threadId,
           message: "Now run the slow suite too.",
         });
-        yield* a.call("t3_thread_send", {
+        yield* a.call("t2_thread_send", {
           environmentId: box.environmentId,
           threadId: delegated.remoteChild.threadId,
           message: "Then the flaky suite.",
@@ -1980,7 +1980,7 @@ it.effect("a follow-up sent after the parent's own run ended is still a task", (
         ],
       });
 
-      const sent = yield* a.call("t3_thread_send", {
+      const sent = yield* a.call("t2_thread_send", {
         environmentId: box.environmentId,
         threadId: delegated.remoteChild.threadId,
         message: "Now run the slow suite too.",

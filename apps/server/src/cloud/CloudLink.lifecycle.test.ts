@@ -277,13 +277,16 @@ describe("releaseManagedTunnelOnShutdown", () => {
           ServerEnvironment.ServerEnvironment,
           ServerEnvironment.ServerEnvironment.of({
             getEnvironmentId: Effect.succeed(EnvironmentId.make("env_123")),
+           // Relay configuration synchronizes the environment label, so the
+            // descriptor has to resolve rather than die as an unused call.
             getDescriptor: Effect.succeed({
               environmentId: EnvironmentId.make("env_123"),
-              label: "Test environment",
+              label: "Test Environment",
               platform: { os: "linux", arch: "x64" },
               serverVersion: "0.0.0-test",
               capabilities: { repositoryIdentity: true },
             }),
+           setEnvironmentLabel: () => Effect.void,
           }),
         ),
         Effect.provideService(
