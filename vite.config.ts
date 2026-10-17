@@ -308,11 +308,11 @@ export default defineConfig({
         rules: { "t2code/no-global-process-runtime": "off" },
       },
       {
-        // The `t3` npm launcher is published as plain, dependency-free Node.
+        // The `t2` npm launcher is published as plain, dependency-free Node.
         files: ["scripts/npm-launcher/**"],
         rules: {
-          "t3code/no-global-process-runtime": "off",
-          "t3code/namespace-node-imports": "off",
+          "t2code/no-global-process-runtime": "off",
+          "t2code/namespace-node-imports": "off",
         },
       },
       {
@@ -357,7 +357,7 @@ export default defineConfig({
           "apps/web/src/lib/observeResize.ts",
           "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
         ],
-        rules: { "t3code/no-raw-resize-observer": "error" },
+        rules: { "t2code/no-raw-resize-observer": "error" },
       },
       {
         files: ["apps/web/src/**"],
@@ -365,7 +365,7 @@ export default defineConfig({
       },
       {
         files: ["apps/web/src/**"],
-        rules: { "t3code/no-outset-state-indicators": "error" },
+        rules: { "t2code/no-outset-state-indicators": "error" },
       },
       {
         files: ["apps/*/src/**", "packages/*/src/**"],
