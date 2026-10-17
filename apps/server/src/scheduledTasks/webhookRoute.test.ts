@@ -128,8 +128,8 @@ describe("webhook route", () => {
         Effect.promise(() => handler(post(path, "{}", headers)));
       const receivedAt = "2026-10-04T10:00:00.000Z";
       const relayHeaders = {
-        "x-t3-relay-delivery-id": "relay-1",
-        "x-t3-relay-received-at": receivedAt,
+        "x-t2-relay-delivery-id": "relay-1",
+        "x-t2-relay-received-at": receivedAt,
       };
       const forged = NodeCrypto.generateKeyPairSync("ed25519", {
         privateKeyEncoding: { format: "pem", type: "pkcs8" },
@@ -142,15 +142,15 @@ describe("webhook route", () => {
         hookId: "id",
         privateKey: forged.privateKey,
       });
-      yield* send("/api/hooks/id/tok", { ...relayHeaders, "x-t3-relay-delivery": proof });
+      yield* send("/api/hooks/id/tok", { ...relayHeaders, "x-t2-relay-delivery": proof });
       yield* send("/api/hooks/id/tok", relayHeaders);
-      yield* send("/api/hooks/id/tok", { ...relayHeaders, "x-t3-relay-delivery": forgedProof });
+      yield* send("/api/hooks/id/tok", { ...relayHeaders, "x-t2-relay-delivery": forgedProof });
       yield* send("/api/hooks/id/tok", {
         ...relayHeaders,
-        "x-t3-relay-delivery-id": "relay-2",
-        "x-t3-relay-delivery": proof,
+        "x-t2-relay-delivery-id": "relay-2",
+        "x-t2-relay-delivery": proof,
       });
-      yield* send("/api/hooks/other/tok", { ...relayHeaders, "x-t3-relay-delivery": proof });
+      yield* send("/api/hooks/other/tok", { ...relayHeaders, "x-t2-relay-delivery": proof });
       yield* Effect.promise(() => dispose());
       expect(received.map((request) => request.relayDeliveryId)).toEqual([
         "relay-1",
@@ -176,9 +176,9 @@ describe("webhook route", () => {
       yield* Effect.promise(() =>
         handler(
           post("/api/hooks/id/tok", "{}", {
-            "x-t3-relay-delivery-id": "relay-1",
-            "x-t3-relay-received-at": receivedAt,
-            "x-t3-relay-delivery": proof,
+            "x-t2-relay-delivery-id": "relay-1",
+            "x-t2-relay-received-at": receivedAt,
+            "x-t2-relay-delivery": proof,
           }),
         ),
       );
@@ -206,7 +206,7 @@ describe("webhook route", () => {
       try {
         const response = await handler(post("/api/hooks/id/tok", "{}"));
         expect(response.status).toBe(status);
-        expect(response.headers.get("x-t3-hook-outcome")).toBe(outcome);
+        expect(response.headers.get("x-t2-hook-outcome")).toBe(outcome);
         if (status === 429) expect(await response.json()).toEqual({ error: outcome });
       } finally {
         await dispose();
