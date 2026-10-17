@@ -35,7 +35,7 @@ The orchestration tools share the existing authenticated HTTP MCP endpoint:
 http://127.0.0.1:<server-port>/mcp
 ```
 
-The provider-visible server key is `t3-code`. The endpoint registers both the
+The provider-visible server key is `t2-code`. The endpoint registers both the
 preview toolkit and the orchestration toolkit.
 
 Before `ProviderSessionManager` opens a new V2 provider session, it asks
@@ -79,7 +79,7 @@ Claude receives an HTTP MCP server in its query options:
 ```ts
 {
   mcpServers: {
-    "t3-code": {
+    "t2-code": {
       type: "http",
       url: "http://127.0.0.1:<port>/mcp",
       headers: {
@@ -157,7 +157,7 @@ the injected endpoint and credential and forwards Pi's cancellation signal.
 
 When a provider session credential exists, the adapter writes a T2-owned
 extension into the server cache and spawns
-`pi --mode rpc --extension <cache>/pi-t3-mcp-extension.ts` with:
+`pi --mode rpc --extension <cache>/pi-t2-mcp-extension.ts` with:
 
 ```text
 T2_MCP_URL=http://127.0.0.1:<port>/mcp
