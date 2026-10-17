@@ -54,7 +54,7 @@ export async function loadMcpBridge(
   const tools: RegisteredTool[] = [];
   const requests: Array<{ readonly method: string; readonly params?: unknown }> = [];
   let activeTools = ["read"];
-  let bridgeSourcePath = "/fixture/pi-t3-extension.ts";
+  let bridgeSourcePath = "/fixture/pi-t2-extension.ts";
   const transports: Array<{
     readonly url: string;
     readonly authorization: string;
@@ -90,7 +90,7 @@ export async function loadMcpBridge(
       env: {
         T2_MCP_URL: "http://fixture.invalid/mcp",
         T2_MCP_BEARER_TOKEN: "fixture-token",
-        T2_PI_MCP_EXTENSION_PATH: "/fixture/pi-t3-extension.ts",
+        T2_PI_MCP_EXTENSION_PATH: "/fixture/pi-t2-extension.ts",
         T2_PI_RUNTIME_MODE: options.runtimeMode,
       },
     },

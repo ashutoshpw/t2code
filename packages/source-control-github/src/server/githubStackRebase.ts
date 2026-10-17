@@ -4,7 +4,6 @@ import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 import * as Base64 from "effect/encoding/Base64";
 
-import * as GitHubAppAccess from "./GitHubAppAccess.ts";
 import * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
 
 export interface CascadeLayer {
