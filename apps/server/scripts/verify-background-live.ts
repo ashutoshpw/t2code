@@ -46,7 +46,7 @@ const repeat = Number(values.repeat);
 NodeAssert.ok(Number.isSafeInteger(repeat) && repeat > 0, "repeat must be a positive integer");
 if (values.scenario === "all" || repeat > 1) {
   const reportDirectory = NodeFS.mkdtempSync(
-    NodePath.join(NodeOS.tmpdir(), "t3-background-suite-"),
+    NodePath.join(NodeOS.tmpdir(), "t2-background-suite-"),
   );
   console.log(`Suite report: ${reportDirectory}`);
   const outcomes = [];
@@ -105,7 +105,7 @@ if (values.scenario === "all" || repeat > 1) {
   console.log(JSON.stringify(outcomes, null, 2));
   process.exit(outcomes.some((outcome) => outcome.status === "failed") ? 1 : 0);
 }
-const evidence = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-background-live-"));
+const evidence = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-background-live-"));
 const home = NodePath.join(evidence, "home");
 const project = NodePath.join(evidence, "project");
 NodeFS.mkdirSync(project);
@@ -215,7 +215,7 @@ function startServer() {
       mode: "desktop",
       noBrowser: true,
       port,
-      t3Home: home,
+      t2Home: home,
       host: "127.0.0.1",
       desktopBootstrapToken: bootstrap,
       tailscaleServeEnabled: false,
@@ -252,7 +252,7 @@ try {
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
       subject_token: bootstrap,
-      subject_token_type: "urn:t3:params:oauth:token-type:environment-bootstrap",
+      subject_token_type: "urn:t2:params:oauth:token-type:environment-bootstrap",
       requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
     }),
   });

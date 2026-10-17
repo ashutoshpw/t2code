@@ -135,7 +135,7 @@ describe("resolveWorkEntryToolPresentation", () => {
     ["t2_thread_fork", "Forking this thread", "Requested a fork of this thread"],
     ["t2_thread_send_attachments", "Sending attachments", "Sent attachments"],
     ["run_scheduled_task_now", "Running a scheduled task", "Requested a run of a scheduled task"],
-    ["t3_workflow_stop", "Stopping a workflow", "Requested a stop for a workflow"],
+    ["t2_workflow_stop", "Stopping a workflow", "Requested a stop for a workflow"],
   ])("labels %s through its lifecycle", (tool, running, completed) => {
     expect(resolveWorkEntryToolPresentation({ label: `T2-code.${tool}` })?.displayName).toBe(
       running,
@@ -158,7 +158,7 @@ describe("resolveWorkEntryToolPresentation", () => {
       toolLifecycleStatus: "completed",
       toolData: {
         server: "t3-code",
-        tool: "t3_workflow_stop",
+        tool: "t2_workflow_stop",
         arguments: { threadId: "parent", subagentId: "workflow-1" },
         result: {},
       },
@@ -178,7 +178,7 @@ describe("resolveWorkEntryToolPresentation", () => {
           ...entry,
           toolData: {
             ...entry.toolData,
-            tool: "t3_thread_interrupt",
+            tool: "t2_thread_interrupt",
             arguments: { threadId: "parent" },
           },
         },
@@ -485,7 +485,7 @@ describe("toolGroupAction", () => {
 describe("resolveViewedImageAsset", () => {
   const threadId = ThreadId.make("thread-1");
 
-  it("serves t3 attachment paths in place like any other host path", () => {
+  it("serves t2 attachment paths in place like any other host path", () => {
     const path = "/Users/demo/.t2/dev/attachments/11111111-1111-4111-8111-111111111111.png";
     expect(resolveViewedImageAsset(path, { threadId, workspaceRoot: "/workspace" })).toEqual({
       resource: { _tag: "media-file", threadId, path },

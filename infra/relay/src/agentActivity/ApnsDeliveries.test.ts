@@ -1304,7 +1304,7 @@ describe("signed APNs registration metadata", () => {
       token: "unchanged-token",
       ...(changed === "legacy"
         ? {}
-        : { bundleId: "com.t2tools.t3code.dev", apsEnvironment: "sandbox" as const }),
+        : { bundleId: "com.t2tools.t2code.dev", apsEnvironment: "sandbox" as const }),
       aggregate: kind === "live_activity_update" ? aggregate : null,
       ...(kind === "push_notification"
         ? {
@@ -1334,7 +1334,7 @@ describe("signed APNs registration metadata", () => {
         `${changed === "environment" ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com"}/3/device/unchanged-token`,
       );
       expect(requests[0]?.headers["apns-topic"]).toBe(
-        `${changed === "bundle" ? "com.t2tools.t3code.preview" : "com.t2tools.t3code.dev"}${kind === "live_activity_update" ? ".push-type.liveactivity" : ""}`,
+        `${changed === "bundle" ? "com.t2tools.t2code.preview" : "com.t2tools.t2code.dev"}${kind === "live_activity_update" ? ".push-type.liveactivity" : ""}`,
       );
     }).pipe(
       Effect.provide(
@@ -1347,7 +1347,7 @@ describe("signed APNs registration metadata", () => {
               push_token: "unchanged-token",
               activity_push_token: "unchanged-token",
               bundle_id:
-                changed === "bundle" ? "com.t2tools.t3code.preview" : "com.t2tools.t3code.dev",
+                changed === "bundle" ? "com.t2tools.t2code.preview" : "com.t2tools.t2code.dev",
               aps_environment: changed === "environment" ? "production" : "sandbox",
             },
           ],

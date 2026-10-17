@@ -152,7 +152,7 @@ describe("pi T2 MCP injection", () => {
   it.effect("materializes the MCP bridge with namespaced tool registration", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const cacheDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pi-extensions-" });
+      const cacheDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pi-extensions-" });
       const mcpDest = yield* materializePiT2McpExtension(cacheDir);
       assert.isTrue(mcpDest.endsWith(PI_T2_MCP_EXTENSION_FILENAME));
       const mcpSource = yield* fs.readFileString(mcpDest);

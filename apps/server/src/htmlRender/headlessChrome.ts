@@ -46,9 +46,15 @@ const MAX_CONSOLE_TEXT_CHARS = 500;
 const VIEWPORT_HEIGHT = 800;
 const MAX_CAPTURE_HEIGHT = 4_000;
 const CAPTURE_TIMEOUT = "20 seconds";
-// Chrome blocks file access; images arrive inlined. Browser-only .localhost permits secure contexts and HTTP resources.
-// publicProxy blocks local networks; pinning the main frame and forbidding popups keeps captures on the page.
-const PAGE_ORIGIN = "http://t3-page.localhost";
+// Chrome refuses local files to every web page, frame, worker, and popup, so a
+// page cannot read files the agent's provider withholds; local images reach it
+// already inlined as data URIs. `.localhost` keeps it a secure context that may
+// still load plain-http resources, and the request never leaves the browser.
+// All of the browser's traffic goes through `publicProxy`, which only reaches
+// public addresses, so a page cannot reach this machine's local network. The
+// main frame also stays on the page and the browser opens no popups, so a
+// capture always shows the page itself.
+const PAGE_ORIGIN = "http://t2-page.localhost";
 const PAGE_URL = `${PAGE_ORIGIN}/page.html`;
 const PAGE_NAME = "page.html";
 const MEASURE_CONCURRENCY = 3;
@@ -526,7 +532,7 @@ const launchBrowser = Effect.fnUntraced(function* (input: {
 const scratchDirectory = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   return yield* Effect.acquireRelease(
-    fileSystem.makeTempDirectory({ prefix: "t3-html-preview-" }),
+    fileSystem.makeTempDirectory({ prefix: "t2-html-preview-" }),
     (directory) => fileSystem.remove(directory, { recursive: true }).pipe(Effect.ignore),
   ).pipe(
     Effect.mapError(

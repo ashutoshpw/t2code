@@ -60,9 +60,9 @@ const diagnose = (input: {
     version: input.version ?? LOADER_ERROR,
   });
   return PreviewBrowserHost.diagnoseLaunchFailure({
-    executable: "/home/me/.t3/tools/chrome-headless-shell/linux64/154/chrome-headless-shell",
+    executable: "/home/me/.t2/tools/chrome-headless-shell/linux64/154/chrome-headless-shell",
     output: input.output,
-    setupCommand: "sudo t3 browser setup",
+    setupCommand: "sudo t2 browser setup",
   }).pipe(
     Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
     Effect.provideService(HostProcess.Platform, input.platform),
@@ -72,6 +72,35 @@ const diagnose = (input: {
 };
 
 describe("diagnoseLaunchFailure", () => {
+  it.effect("turns Chrome's sandbox abort into the AppArmor steps", () =>
+    Effect.gen(function* () {
+      const { error, commands } = yield* diagnose({
+        platform: "linux",
+        output: SANDBOX_ABORT,
+        ldd: "",
+      });
+      expect(error?._tag).toBe("PreviewBrowserSandboxError");
+      expect(error?.message).toContain("Run `sudo t2 browser setup` on the host");
+      expect(commands).toEqual([]);
+    }),
+  );
+
+  it.effect("tells a root server to drop root, not to run setup", () =>
+    Effect.gen(function* () {
+      const { error, commands } = yield* diagnose({
+        platform: "linux",
+        output: PreviewBrowserHost.NO_SANDBOX_SIGNATURE,
+        ldd: "",
+        uid: 0,
+      });
+      expect(error?._tag).toBe("PreviewBrowserRootError");
+      expect(error?.message).toContain("`User=`");
+      expect(error?.message).toContain("`T3CODE_SERVER_BROWSER_SANDBOX=0`");
+      expect(error?.message).not.toMatch(/AppArmor|browser setup/);
+      expect(commands).toEqual([]);
+    }),
+  );
+
   it.effect("names every library the loader cannot find", () =>
     Effect.gen(function* () {
       const { error } = yield* diagnose({
@@ -83,7 +112,7 @@ describe("diagnoseLaunchFailure", () => {
         _tag: "PreviewBrowserLibrariesError",
         libraries: ["libglib-2.0.so.0", "libnss3.so", "libX11.so.6"],
       });
-      expect(error?.message).toContain("Run `sudo t3 browser setup` on the host");
+      expect(error?.message).toContain("Run `sudo t2 browser setup` on the host");
     }),
   );
 

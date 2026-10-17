@@ -127,7 +127,7 @@ it.layer(NodeServices.layer)("telemetry identity", (it) => {
 
       assert.deepEqual(identity, { distinctId: null, installId: null });
       assert.isFalse(yield* fileSystem.exists(config.anonymousIdPath));
-    }).pipe(Effect.provide(layerIdentity("t3-telemetry-identify-torn-"))),
+    }).pipe(Effect.provide(layerIdentity("t2-telemetry-identify-torn-"))),
   );
 
   it.effect("does not overwrite the anonymous id path after a non-NotFound read failure", () => {
@@ -152,7 +152,7 @@ it.layer(NodeServices.layer)("telemetry identity", (it) => {
       assert.isUndefined(
         findIdentityLog(logs, "anonymous", "TelemetryAnonymousIdPersistenceError"),
       );
-    }).pipe(Effect.provide(layerIdentity("t3-telemetry-identify-read-", logs)));
+    }).pipe(Effect.provide(layerIdentity("t2-telemetry-identify-read-", logs)));
   });
 
   it.effect("reads the Connect account and each provider account as owners", () =>

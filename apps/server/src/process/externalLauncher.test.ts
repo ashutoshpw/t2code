@@ -301,7 +301,7 @@ for (const cwd of ["/workspace with spaces/", "/workspace with spaces/file.ts:12
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-zed-collision-" });
+        const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-zed-collision-" });
         const executable = path.join(home, "Applications/Zed.app/Contents/MacOS/cli");
         const binDir = path.join(home, "zfs/bin");
         yield* fs.makeDirectory(path.dirname(executable), { recursive: true });
@@ -344,7 +344,7 @@ it.effect.each([
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-editor-versioned-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-editor-versioned-" });
       const executable = path.join(home, installPath);
       yield* fs.makeDirectory(path.dirname(executable), { recursive: true });
       yield* fs.writeFileString(executable, "#!/bin/sh\n");
@@ -383,7 +383,7 @@ it.effect("matches macOS bundles on the name boundary only", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const unrelatedHome = yield* fs.makeTempDirectoryScoped({ prefix: "t3-editor-unrelated-" });
+    const unrelatedHome = yield* fs.makeTempDirectoryScoped({ prefix: "t2-editor-unrelated-" });
     const unrelated = path.join(
       unrelatedHome,
       "Applications/WebStormHelper.app/Contents/MacOS/webstorm",
@@ -404,7 +404,7 @@ it.effect("matches macOS bundles on the name boundary only", () =>
 
     assert.notInclude(yield* editorsFor(unrelatedHome), "webstorm");
 
-    const exactHome = yield* fs.makeTempDirectoryScoped({ prefix: "t3-editor-exact-" });
+    const exactHome = yield* fs.makeTempDirectoryScoped({ prefix: "t2-editor-exact-" });
     const exact = path.join(exactHome, "Applications/WebStorm.app/Contents/MacOS/webstorm");
     yield* fs.makeDirectory(path.dirname(exact), { recursive: true });
     yield* fs.writeFileString(exact, "#!/bin/sh\n");
@@ -418,7 +418,7 @@ it.effect("keeps the macOS VS Code Insiders bundle out of stable VS Code", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-editor-insiders-" });
+    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-editor-insiders-" });
     // The real Insiders bundle ships both `code-insiders` and `code`.
     const bin = path.join(
       home,
@@ -600,7 +600,7 @@ const launchWindowsShimEditor = (cwd: string) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
+    const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-editors-" });
     yield* fileSystem.writeFileString(path.join(binDir, "code.CMD"), "@echo off\r\n");
     let spawned: ChildProcess.StandardCommand | undefined;
     const exit = yield* Effect.gen(function* () {

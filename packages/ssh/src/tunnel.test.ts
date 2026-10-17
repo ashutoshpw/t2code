@@ -178,7 +178,7 @@ describe("ssh tunnel scripts", () => {
     assert.notInclude(script, TEST_NODE_ENGINE_RANGE);
   });
 
-  it("builds the remote t3 runner with a node script override", () => {
+  it("builds the remote t2 runner with a node script override", () => {
     const script = SshTunnel.buildRemoteT2RunnerScript({
       ...NODE_SCRIPT,
       nodeEngineRange: TEST_NODE_ENGINE_RANGE,
@@ -211,12 +211,12 @@ describe("ssh tunnel scripts", () => {
   });
 
   it("embeds the runner in the launch script byte for byte", () => {
-    const runner = SshTunnel.buildRemoteT3RunnerScript(ARCHIVE);
+    const runner = SshTunnel.buildRemoteT2RunnerScript(ARCHIVE);
     assert.include(runner, 'printf \'%s\\n\' "$$" > "$T2_LOCK/pid.tmp"');
     assert.include(SshTunnel.buildRemoteLaunchScript(ARCHIVE), runner);
   });
 
-  it("uses the remote t3 runner for launch and pairing scripts", () => {
+  it("uses the remote t2 runner for launch and pairing scripts", () => {
     const stateKey = "711bc738002d72fd";
     const launch = SshTunnel.buildRemoteLaunchScript(ARCHIVE);
     const devLaunch = SshTunnel.buildRemoteLaunchScript({
@@ -791,7 +791,7 @@ describe("remote port picker", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pick-port-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pick-port-" });
       yield* fs.writeFileString(`${root}/preload.cjs`, MACOS_BIND_PRELOAD);
       yield* fs.writeFileString(`${root}/pick-port.cjs`, SshTunnel.REMOTE_PICK_PORT_SCRIPT);
       const holder = yield* holdWildcardPort;
@@ -868,7 +868,10 @@ describe("archive runner script", () => {
 
   const runRunner = (home: string, runner: string) => runScript(home, [runner, "--version"]);
 
-  const makeMirror = Effect.fn("makeMirror")(function* (root: string) {
+  const makeMirror = Effect.fn("makeMirror")(function* (
+    root: string,
+    options?: { readonly omitArchive?: boolean },
+  ) {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const platform = hostPlatform === "darwin" ? "darwin" : "linux";
     const arch = hostArch === "arm64" ? "arm64" : "x64";
@@ -1023,10 +1026,10 @@ server.listen(Number(flag("--port")), "127.0.0.1", () => {
 
   const prepareLaunch = Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-launch-script-" });
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-launch-script-" });
     const home = `${root}/home`;
-    const stateDir = `${home}/.t3/ssh-launch/test-state`;
-    const fakeServer = `${root}/fake-t3.cjs`;
+    const stateDir = `${home}/.t2/ssh-launch/test-state`;
+    const fakeServer = `${root}/fake-t2.cjs`;
     const launch = `${root}/launch.sh`;
     yield* fs.makeDirectory(stateDir, { recursive: true });
     yield* fs.writeFileString(`${stateDir}/port`, `${yield* freeLoopbackPort}\n`);
@@ -1074,7 +1077,7 @@ server.listen(Number(flag("--port")), "127.0.0.1", () => {
     ) =>
       Effect.gen(function* () {
         const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-        const args = [fakeServer, "serve", "--port", "0", "--base-dir", `${home}/.t3`, ...flags];
+        const args = [fakeServer, "serve", "--port", "0", "--base-dir", `${home}/.t2`, ...flags];
         const server = yield* spawner.spawn(
           options?.unreaped
             ? ChildProcess.make("sh", ["-c", 'node "$@" & exec sleep 600', "sh", ...args])
@@ -1186,7 +1189,7 @@ server.listen(Number(flag("--port")), "127.0.0.1", () => {
         const { stateDir, readManagedPid, runLaunch, launchManaged } = yield* prepareLaunch;
         const { pid: previousPid } = yield* launchManaged;
 
-        yield* fs.writeFileString(`${stateDir}/run-t3.sh`, "# previous runner\n");
+        yield* fs.writeFileString(`${stateDir}/run-t2.sh`, "# previous runner\n");
         assert.equal((yield* runLaunch).serverKind, "managed");
         const replacementPid = yield* readManagedPid;
         assert.notEqual(replacementPid, previousPid);
@@ -1220,7 +1223,7 @@ server.listen(Number(flag("--port")), "127.0.0.1", () => {
         assert.include((yield* runScript(home, ["-c", `ps -o stat= -p ${zombie}`])).stdout, "Z");
         yield* fs.writeFileString(`${stateDir}/pid`, `${zombie}\n`);
         yield* fs.writeFileString(
-          `${home}/.t3/userdata/server-runtime.json`,
+          `${home}/.t2/userdata/server-runtime.json`,
           JSON.stringify({
             version: 1,
             pid: zombie,
@@ -1246,7 +1249,7 @@ server.listen(Number(flag("--port")), "127.0.0.1", () => {
         const { launched, pid } = yield* launchManaged;
 
         yield* fs.remove(`${stateDir}/managed`);
-        yield* fs.writeFileString(`${stateDir}/run-t3.sh`, "# superseded runner\n");
+        yield* fs.writeFileString(`${stateDir}/run-t2.sh`, "# superseded runner\n");
         assert.deepEqual(yield* runLaunch, {
           remotePort: launched.remotePort,
           serverKind: "external",

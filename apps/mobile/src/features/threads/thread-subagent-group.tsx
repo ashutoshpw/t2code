@@ -123,7 +123,7 @@ export function ThreadSubagentGroup(props: {
             ) : null}
           </View>
           <View className="min-w-0 flex-1 gap-0.5">
-            <Text numberOfLines={1} className="font-t3-medium text-sm text-foreground">
+            <Text numberOfLines={1} className="font-t2-medium text-sm text-foreground">
               {label}
             </Text>
             <Text

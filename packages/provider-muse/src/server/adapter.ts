@@ -1090,7 +1090,7 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
       });
       /**
        * A workflow child's approval is runless: the turn that started the workflow
-       * may end long before the child asks, and T3 keeps a runless request on the
+       * may end long before the child asks, and T2 keeps a runless request on the
        * thread until Muse settles it.
        */
       const publishRequest = Effect.fnUntraced(function* (native: PendingRequest["native"]) {

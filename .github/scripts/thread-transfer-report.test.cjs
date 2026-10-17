@@ -65,12 +65,12 @@ test("renders baseline, impact, ceiling, and ceiling changes", () => {
     currentRun: {
       sha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       conclusion: "success",
-      url: "https://github.com/pingdotgg/t2code/actions/runs/2",
+      url: "https://github.com/pingdotgg/t3code/actions/runs/2",
     },
     baselineRun: {
       sha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       matchesBase: true,
-      url: "https://github.com/pingdotgg/t2code/actions/runs/1",
+      url: "https://github.com/pingdotgg/t3code/actions/runs/1",
     },
   });
 
@@ -139,7 +139,7 @@ test("resolves a fallback PR with a redacted head repo and exact main baseline",
           workflow_id: 3,
           head_sha: "head-sha",
           head_branch: "feature-branch",
-          head_repository: { full_name: "pingdotgg/t2code" },
+          head_repository: { full_name: "pingdotgg/t3code" },
           conclusion: "success",
           pull_requests: [],
         },
@@ -174,7 +174,7 @@ test("does not guess when a fallback commit belongs to multiple PRs", async () =
           head: {
             sha: "head-sha",
             ref: "feature-branch",
-            repo: { full_name: "pingdotgg/t2code" },
+            repo: { full_name: "pingdotgg/t3code" },
           },
         }));
       },
@@ -197,7 +197,7 @@ test("does not guess when a fallback commit belongs to multiple PRs", async () =
           workflow_id: 3,
           head_sha: "head-sha",
           head_branch: "feature-branch",
-          head_repository: { full_name: "pingdotgg/t2code" },
+          head_repository: { full_name: "pingdotgg/t3code" },
           conclusion: "success",
           pull_requests: [],
         },
@@ -275,7 +275,7 @@ test("does not report a passing run that skipped the server tests", async () => 
       },
     },
     context: {
-      repo: { owner: "pingdotgg", repo: "t3code" },
+      repo: { owner: "pingdotgg", repo: "t2code" },
       payload: {
         workflow_run: {
           id: 2,

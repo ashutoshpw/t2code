@@ -1180,7 +1180,7 @@ describe("HTML renders in the timeline", () => {
     ...base("render", 2),
     status,
     type: "dynamic_tool",
-    toolName: "mcp__t3-code__html_render",
+    toolName: "mcp__t2-code__html_render",
     input: { title: "Chart", height: 420 },
     ...(output === undefined ? {} : { output }),
   });
@@ -1260,7 +1260,7 @@ describe("HTML renders in the timeline", () => {
       tool: "get_weather",
       resourceUri: "ui://weather/dashboard",
     };
-    const call = renderCall("completed", { t3McpApp: mcpApp, result: { content: [] } });
+    const call = renderCall("completed", { t2McpApp: mcpApp, result: { content: [] } });
     const entries = turn(
       call.type === "dynamic_tool" ? { ...call, toolName: "weather.get_weather" } : call,
     );

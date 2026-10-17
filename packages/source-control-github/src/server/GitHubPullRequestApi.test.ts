@@ -1316,7 +1316,7 @@ layer("GitHubPullRequestApi.layer", (it) => {
         Effect.succeed(
           searchPage([
             searchItem(7, "acme/web", "2026-07-03T00:00:00Z"),
-            searchItem(9, "pingdotgg/t2code", "2026-07-02T00:00:00Z"),
+            searchItem(9, "pingdotgg/t3code", "2026-07-02T00:00:00Z"),
             {},
           ]),
         ),

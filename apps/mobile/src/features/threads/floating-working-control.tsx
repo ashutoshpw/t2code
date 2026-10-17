@@ -234,7 +234,7 @@ export function FloatingWorkingControl(props: {
         >
           {hasStatus || hasPreview ? <View className="absolute left-0 h-4 w-px bg-border" /> : null}
           <SymbolView name="person.2" size={13} tintColorClassName="accent-foreground-muted" />
-          <Text className="font-t3-medium text-xs tabular-nums" numberOfLines={1}>
+          <Text className="font-t2-medium text-xs tabular-nums" numberOfLines={1}>
             {agents.label}
           </Text>
         </Pressable>
@@ -253,7 +253,7 @@ export function FloatingWorkingControl(props: {
             <View className="absolute left-0 h-4 w-px bg-border" />
           ) : null}
           <SymbolView name="list.number" size={13} tintColorClassName="accent-foreground-muted" />
-          <Text className="shrink font-t3-medium text-xs tabular-nums" numberOfLines={1}>
+          <Text className="shrink font-t2-medium text-xs tabular-nums" numberOfLines={1}>
             {props.queuedCount} queued
           </Text>
         </Pressable>
@@ -397,7 +397,7 @@ function FloatingStatusLabel(props: {
         onPress={props.status.onPress}
       >
         <SymbolView name="text.bubble" size={13} tintColorClassName="foreground" />
-        <Text className="shrink font-t3-medium text-xs text-foreground" numberOfLines={1}>
+        <Text className="shrink font-t2-medium text-xs text-foreground" numberOfLines={1}>
           {props.status.label}
         </Text>
       </StatusLabelRow>
@@ -463,7 +463,7 @@ function FloatingStatusLabel(props: {
           tintColorClassName="foreground"
           type="monochrome"
         />
-        <Text className="shrink font-t3-medium text-xs text-foreground" numberOfLines={1}>
+        <Text className="shrink font-t2-medium text-xs text-foreground" numberOfLines={1}>
           {props.status.label}
         </Text>
       </StatusLabelRow>
@@ -478,7 +478,7 @@ function FloatingStatusLabel(props: {
         onLayout={props.onLayout}
       >
         <SymbolView name="target" size={13} tintColorClassName="foreground" type="monochrome" />
-        <Text className="shrink font-t3-medium text-xs text-foreground" numberOfLines={1}>
+        <Text className="shrink font-t2-medium text-xs text-foreground" numberOfLines={1}>
           {props.status.label}
         </Text>
       </StatusLabelRow>

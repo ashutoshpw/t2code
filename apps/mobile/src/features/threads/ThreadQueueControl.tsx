@@ -403,7 +403,7 @@ export function ThreadQueueSheet({ route }: StaticScreenProps<QueueTarget>) {
                         numberOfLines={1}
                       >
                         {context?.guest === undefined ? null : (
-                          <Text className="font-t3-medium text-adaptive-fuchsia-600-300">
+                          <Text className="font-t2-medium text-adaptive-fuchsia-600-300">
                             {`${context.guest.name}  `}
                           </Text>
                         )}
@@ -435,7 +435,7 @@ export function ThreadQueueSheet({ route }: StaticScreenProps<QueueTarget>) {
                           size={13}
                           tintColorClassName="accent-primary-foreground"
                         />
-                        <Text className="font-t3-medium text-sm text-primary-foreground">
+                        <Text className="font-t2-medium text-sm text-primary-foreground">
                           {workflow?.canSendNow ? "Send now" : "Steer"}
                         </Text>
                       </View>
@@ -554,7 +554,7 @@ function QueueRowSwipeable(props: {
           style={{ width: REMOVE_ACTION_WIDTH }}
         >
           <SymbolView name="trash" size={16} tintColorClassName="accent-danger-foreground" />
-          <Text className="pt-1 text-2xs font-t3-medium text-danger-foreground">Remove</Text>
+          <Text className="pt-1 text-2xs font-t2-medium text-danger-foreground">Remove</Text>
         </Pressable>
       )}
     >

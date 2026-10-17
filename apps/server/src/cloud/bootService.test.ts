@@ -610,7 +610,8 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(failure).toBe("repair failed");
       expect(control.active).toBe(true);
 
-      control.failCommand = "systemctl --user stop t3code.service";
+      // A failed stop skips the operation but still starts the service again.
+      control.failCommand = "systemctl --user stop t2code.service";
       let ran = false;
       const stopFailure = yield* service
         .withStopped(
@@ -631,11 +632,11 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       commands.length = 0;
       yield* service.withStopped(Effect.sync(() => commands.push("repair")));
       expect(commands).toEqual([
-        "systemctl --user is-enabled t3code.service",
-        "systemctl --user is-active t3code.service",
-        "systemctl --user stop t3code.service",
+        "systemctl --user is-enabled t2code.service",
+        "systemctl --user is-active t2code.service",
+        "systemctl --user stop t2code.service",
         "repair",
-        "systemctl --user restart t3code.service",
+        "systemctl --user restart t2code.service",
       ]);
       expect(control.active).toBe(true);
       control.enabled = false;
@@ -645,14 +646,14 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       control.enabled = false;
       commands.length = 0;
       yield* service.withStopped(Effect.sync(() => commands.push("repair")));
-      expect(commands).toContain("systemctl --user stop t3code.service");
-      expect(commands).not.toContain("systemctl --user restart t3code.service");
+      expect(commands).toContain("systemctl --user stop t2code.service");
+      expect(commands).not.toContain("systemctl --user restart t2code.service");
       expect(control.active).toBe(false);
       control.enabled = true;
       control.active = true;
 
       const fs = yield* FileSystem.FileSystem;
-      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t3-doctor-other-" });
+      const otherHome = yield* fs.makeTempDirectoryScoped({ prefix: "t2-doctor-other-" });
       const other = yield* makeService(undefined, "1.2.3", otherHome);
       commands.length = 0;
       expect(yield* other.withStopped(Effect.sync(() => control.active))).toBe(true);

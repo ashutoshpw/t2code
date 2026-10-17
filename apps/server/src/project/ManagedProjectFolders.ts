@@ -230,7 +230,9 @@ const make = Effect.gen(function* () {
     }
   });
 
-  // Scratch inside a checkout would inherit its git status and checkpoints; require a data dir outside work trees.
+  // Inside a checkout (a dev worktree's .t2, a dotfiles home) the folder would
+  // inherit the repo's git status and checkpoints, so Scratch is offered only
+  // when the data dir is outside any work tree.
   const [probe, invalidate] = yield* Effect.cachedInvalidateWithTTL(
     gitWorkflow.isRepository(config.baseDir).pipe(
       Effect.catchIf(isGitMissing, () => Effect.succeed(false)),
