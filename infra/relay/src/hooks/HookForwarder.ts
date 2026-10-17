@@ -52,8 +52,8 @@ const DROPPED_REQUEST_HEADERS = new Set([
   "cookie",
   "x-real-ip",
   // Only the relay may set this; a sender could otherwise collide delivery ids.
-  "x-t3-relay-delivery-id",
-  "x-t3-relay-received-at",
+  "x-t2-relay-delivery-id",
+  "x-t2-relay-received-at",
   RELAY_HOOK_DELIVERY_HEADER,
   // The environment trusts trace context only from the relay, which sets its own.
   "traceparent",
