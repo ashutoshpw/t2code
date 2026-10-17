@@ -1,5 +1,5 @@
 import { memo, type MouseEventHandler, type PointerEventHandler, type ReactNode } from "react";
-import { CheckIcon, ChevronLeftIcon, Minimize2Icon, PlayIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, Minimize2Icon, PlayIcon } from "lucide-react";
 import { CornerUpRight, ListPlus } from "lucide";
 import { MorphIcon } from "~/components/MorphIcon";
 import { useEnvironmentIdentificationMode } from "~/hooks/useSettings";
@@ -8,8 +8,10 @@ import { cn, isMacPlatform } from "~/lib/utils";
 import { useShortcutModifierState } from "../../shortcutModifierState";
 import { StageBackdropButtonArt, useSidebarStageBackdropVariant } from "../SidebarStageBackdrop";
 import { Button } from "../ui/button";
+import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { Spinner } from "../ui/spinner";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { composerFloatingLayerProps } from "./composerEventScope";
 import {
   alternateComposerDispatchAction,
   resolveComposerDispatchMode,
@@ -51,6 +53,8 @@ interface ComposerPrimaryActionsProps {
   compactBeforeSendTokens?: number | null;
   keepFullHistory?: boolean;
   onToggleKeepFullHistory?: () => void;
+  onSendLater?: (() => void) | undefined;
+  sendLaterDisabledReason?: string | null | undefined;
 }
 
 const formatPendingPrimaryActionLabel = (input: {
@@ -104,6 +108,8 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   compactBeforeSendTokens = null,
   keepFullHistory = false,
   onToggleKeepFullHistory,
+  onSendLater,
+  sendLaterDisabledReason = null,
 }: ComposerPrimaryActionsProps) {
   const pointerFocusProps = preserveComposerFocusOnPointerDown
     ? { onPointerDown: preventPointerFocus }
@@ -302,11 +308,51 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
       <TooltipPopup>{submitTooltip}</TooltipPopup>
     </Tooltip>
   );
+  const sendLaterMenu =
+    onSendLater && !showResume && !isEditingQueuedMessage ? (
+      <Menu>
+        <MenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="More send options"
+              {...pointerFocusProps}
+              disabled={isSendBusy || isConnecting || isEnvironmentUnavailable}
+            />
+          }
+        >
+          <ChevronDownIcon aria-hidden="true" />
+        </MenuTrigger>
+        <MenuPopup align="end" side="top" {...composerFloatingLayerProps}>
+          <MenuItem
+            disabled={!hasSendableContent || sendLaterDisabledReason !== null || isSendDisabled}
+            onClick={onSendLater}
+          >
+            <span className="flex flex-col">
+              Send later
+              {sendLaterDisabledReason !== null && hasSendableContent ? (
+                <span className="text-muted-foreground text-xs">{sendLaterDisabledReason}</span>
+              ) : null}
+            </span>
+          </MenuItem>
+        </MenuPopup>
+      </Menu>
+    ) : null;
+  const submitWithMenu =
+    sendLaterMenu === null ? (
+      submit
+    ) : (
+      <div className="flex items-center gap-0.5">
+        {submit}
+        {sendLaterMenu}
+      </div>
+    );
   if (compactTokens === null) {
     return (
       <>
         {children}
-        {submit}
+        {submitWithMenu}
       </>
     );
   }
@@ -343,7 +389,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
         </TooltipPopup>
       </Tooltip>
       {children}
-      {submit}
+      {submitWithMenu}
     </div>
   );
 });
