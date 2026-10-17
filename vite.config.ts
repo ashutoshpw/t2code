@@ -362,7 +362,7 @@ export default defineConfig({
         rules: { "t2code/no-global-process-runtime": "off" },
       },
       {
-        // The `t3` npm launcher is published as plain, dependency-free Node.
+        // The `t2` npm launcher is published as plain, dependency-free Node.
         files: ["scripts/npm-launcher/**"],
         rules: {
           "t2code/no-global-process-runtime": "off",
