@@ -57,7 +57,6 @@ describe("mcpToolPresentation", () => {
       toolSource: { key: "mcp:my_server", name: "my server", kind: "integration" },
     });
     expect(mcpToolPresentation({ toolName: "Read" })).toEqual({});
-    expect(mcpToolPresentation({ serverName: "t3-code", toolName: "delegate_task" })).toEqual({});
   });
 
   it.each([

@@ -11,7 +11,7 @@ describe("resolveT2McpToolPresentation", () => {
         "mcp__t2_code__",
         "mcp__t2code__",
         "T2-code.",
-        "t3_code/",
+        "t2_code/",
         "t2code:",
         "mcp_t2-code_",
         "T2 Code ",
@@ -82,12 +82,16 @@ describe("resolveT2McpToolPresentation", () => {
       "t2-code delegate_task",
       "T2 Code delegate_task",
       "t2-code__delegate_task",
-      // Transcripts recorded before the rename keep the upstream spellings.
-      "mcp_t2-code_delegate_task",
-      "t2-code__delegate_task",
     ]) {
       expect(resolveT2McpToolPresentation(name)?.displayName).toBe("Delegate a child task");
     }
+  });
+
+  it("matches OpenCode 2's per-thread server names, whose thread ids hold underscores", () => {
+    expect(
+      resolveT2McpToolPresentation("t2-code-thread_opencode2-adapter_delegate_task")?.displayName,
+    ).toBe("Delegate a child task");
+    expect(resolveT2McpToolPresentation("t2-code-thread_opencode2-adapter_not_a_tool")).toBeNull();
   });
 
   it("keeps unknown MCP tools on the generic renderer path", () => {

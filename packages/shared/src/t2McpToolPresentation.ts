@@ -82,16 +82,7 @@ function tool(
   return { displayName, labels, icon, summaryAction };
 }
 
-const T2_MCP_SERVER_ALIASES = new Set([
-  "t2-code",
-  "t2_code",
-  "t2code",
-  // Legacy upstream spellings still resolve transcripts recorded before
-  // the rename.
-  "t3-code",
-  "t3_code",
-  "t3code",
-]);
+const T2_MCP_SERVER_ALIASES = new Set(["t2-code", "t2_code", "t2code"]);
 
 // Cards, activity rows, summaries, and provider identity recovery share this inventory.
 const T2_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
@@ -343,23 +334,6 @@ const T2_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
   html_render: tool(["Render", "Rendering", "Rendered", "an HTML page"], "html-render"),
 };
 
-// Legacy tool spellings only identify older provider transcripts. Keep their
-// display mapping while new sessions use T2 tool names.
-const LEGACY_MCP_TOOL_ALIASES: Readonly<Record<string, string>> = Object.fromEntries(
-  Object.keys(T2_MCP_TOOLS)
-    .filter((name) => name.startsWith("t2_"))
-    .map((name) => [`t3_${name.slice(3)}`, name]),
-);
-const ALL_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
-  ...T2_MCP_TOOLS,
-  ...Object.fromEntries(
-    Object.entries(LEGACY_MCP_TOOL_ALIASES).map(([alias, current]) => [
-      alias,
-      T2_MCP_TOOLS[current]!,
-    ]),
-  ),
-};
-
 /**
  * The T2 orchestration tool inventory, used to gate loose name matching on
  * both the server (ACP MCP identity recovery) and the client (logo branding).
@@ -372,8 +346,7 @@ function normalizeT2McpToolLabel(value: string): string {
 
 /**
  * ACP agents disagree on how the injected T2 server prefixes its tools:
- * `mcp__t2-code__x` (Claude/Cursor), `t2-code.x` (Codex), plus legacy
- * `t3-code` spellings from stored transcripts, and single
+ * `mcp__t2-code__x` (Claude/Cursor), `t2-code.x` (Codex), plus single
  * underscore, colon, slash, dash, and space separators seen from registry
  * agents. The prefix match is deliberately loose because the display-name
  * inventory is the real gate; unknown tools stay on the generic renderer.
@@ -390,23 +363,22 @@ function resolveT2McpToolName(value: string): string | null {
       : null;
   }
 
-  const namespaceMatch =
-    /^(?<server>t2-code|t2_code|t2code|t3-code|t3_code|t3code)(?:[.:/]|\s*·\s*)(?<tool>.+)$/i.exec(
-      label,
-    );
+  const namespaceMatch = /^(?<server>t2-code|t2_code|t2code)(?:[.:/]|\s*·\s*)(?<tool>.+)$/i.exec(
+    label,
+  );
   if (namespaceMatch?.groups) {
     return namespaceMatch.groups.tool ?? null;
   }
 
-  const prefixed = /^(?:mcp[-_]{1,2})?(?:t2|t3)[-_ ]?code(?:__|[-_.:/ ])(?<tool>.+)$/i.exec(label);
+  const prefixed = /^(?:mcp[-_]{1,2})?t2[-_ ]?code(?:__|[-_.:/ ])(?<tool>.+)$/i.exec(label);
   const candidate = prefixed?.groups?.tool ?? label;
-  if (Object.hasOwn(ALL_MCP_TOOLS, candidate)) return candidate;
+  if (Object.hasOwn(T2_MCP_TOOLS, candidate)) return candidate;
 
   // OpenCode 2 registers one server per thread and joins its name to the tool
   // with `_`. Thread ids can hold `_` too, so take the longest known suffix.
-  if (!/^(?:t2|t3)-code-/i.test(label)) return null;
+  if (!/^t2-code-/i.test(label)) return null;
   let longest: string | null = null;
-  for (const toolName of Object.keys(ALL_MCP_TOOLS)) {
+  for (const toolName of Object.keys(T2_MCP_TOOLS)) {
     if (label.endsWith(`_${toolName}`) && toolName.length > (longest?.length ?? 0)) {
       longest = toolName;
     }
@@ -417,14 +389,14 @@ function resolveT2McpToolName(value: string): string | null {
 /** The bare tool name (`html_render`) for any provider's spelling of it. */
 export function resolveT2McpToolId(toolName: string | null | undefined): string | null {
   const name = toolName == null ? null : resolveT2McpToolName(toolName);
-  return name !== null && Object.hasOwn(ALL_MCP_TOOLS, name) ? name : null;
+  return name !== null && Object.hasOwn(T2_MCP_TOOLS, name) ? name : null;
 }
 
 export function resolveT2McpToolDefinition(
   toolName: string | null | undefined,
 ): T2McpToolDefinition | null {
   const name = toolName == null ? null : resolveT2McpToolName(toolName);
-  return name !== null && Object.hasOwn(ALL_MCP_TOOLS, name) ? ALL_MCP_TOOLS[name]! : null;
+  return name !== null && Object.hasOwn(T2_MCP_TOOLS, name) ? T2_MCP_TOOLS[name]! : null;
 }
 
 export function resolveT2McpToolPresentation(

@@ -189,7 +189,7 @@ describe("work entry labels", () => {
       toolLifecycleStatus,
       structuredPayload: {
         type: "dynamic_tool",
-        toolName: "t3-code.t2_thread_read",
+        toolName: "t2-code.t2_thread_read",
         input: { threadId: " thread-child ", view: "activity" },
       } as never,
     };
@@ -202,9 +202,9 @@ describe("work entry labels", () => {
     const payload = (toolName: string, input: unknown) => ({
       structuredPayload: { type: "dynamic_tool", toolName, input } as never,
     });
-    expect(threadReadTargetId(payload("t3-code.t2_thread_wait", { threadId: "t" }))).toBeNull();
-    expect(threadReadTargetId(payload("t3-code.t2_thread_read", { threadId: "  " }))).toBeNull();
-    expect(threadReadTargetId(payload("t3-code.t2_thread_read", null))).toBeNull();
+    expect(threadReadTargetId(payload("t2-code.t2_thread_wait", { threadId: "t" }))).toBeNull();
+    expect(threadReadTargetId(payload("t2-code.t2_thread_read", { threadId: "  " }))).toBeNull();
+    expect(threadReadTargetId(payload("t2-code.t2_thread_read", null))).toBeNull();
   });
 
   it("uses the active summary state for legacy tools without a lifecycle status", () => {
