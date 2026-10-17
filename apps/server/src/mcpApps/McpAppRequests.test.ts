@@ -164,7 +164,7 @@ describe("McpAppRequests", () => {
         readOnly: true,
         tool: { name: "refresh", annotations: { readOnlyHint: true } },
       });
-    }).pipe(Effect.provide(makeLayer({ item: appItem({ t3McpApp: app }), mcpApps }))),
+    }).pipe(Effect.provide(makeLayer({ item: appItem({ t2McpApp: app }), mcpApps }))),
   );
 
   it.effect("refuses tools hidden from apps or missing from the server", () =>
@@ -178,7 +178,7 @@ describe("McpAppRequests", () => {
         );
       }
       assert.equal(calls.length, before);
-    }).pipe(Effect.provide(makeLayer({ item: appItem({ t3McpApp: app }), mcpApps }))),
+    }).pipe(Effect.provide(makeLayer({ item: appItem({ t2McpApp: app }), mcpApps }))),
   );
 
   it.effect("keeps each app's latest model context, without a live session", () =>
@@ -216,7 +216,7 @@ describe("McpAppRequests", () => {
       );
       yield* requests.updateModelContext(own);
       assert.isFalse(storedContext.has(`${threadId}/${itemId}`));
-    }).pipe(Effect.provide(makeLayer({ item: appItem({ t3McpApp: app }), live: false }))),
+    }).pipe(Effect.provide(makeLayer({ item: appItem({ t2McpApp: app }), live: false }))),
   );
 
   it.effect("stores a fork's model context under the fork, and refuses unrelated threads", () =>
@@ -249,7 +249,7 @@ describe("McpAppRequests", () => {
         content,
       });
       assert.isTrue(storedContext.has(`${deepForkId(70)}/${itemId}`));
-    }).pipe(Effect.provide(makeLayer({ item: appItem({ t3McpApp: app }), live: false }))),
+    }).pipe(Effect.provide(makeLayer({ item: appItem({ t2McpApp: app }), live: false }))),
   );
 
   it.effect("reports why a request cannot run", () =>
@@ -264,11 +264,11 @@ describe("McpAppRequests", () => {
         "not-an-app",
       );
       assert.equal(
-        yield* run(makeLayer({ item: appItem({ t3McpApp: app }), mcpApps, live: false })),
+        yield* run(makeLayer({ item: appItem({ t2McpApp: app }), mcpApps, live: false })),
         "session-stopped",
       );
       assert.equal(
-        yield* run(makeLayer({ item: appItem({ t3McpApp: app }) })),
+        yield* run(makeLayer({ item: appItem({ t2McpApp: app }) })),
         "provider-unsupported",
       );
     }),

@@ -76,15 +76,15 @@ describe("ThreadMetadataMcpUpdateInput", () => {
       decodeUpdate({
         action: "link_pull_request",
         pullRequest: {
-          repository: "engineering/t3code",
+          repository: "engineering/t2code",
           number: 42,
-          url: "https://git.corp.example/engineering/t3code/pulls/42",
+          url: "https://git.corp.example/engineering/t2code/pulls/42",
         },
       }).pullRequest,
       {
-        repository: "engineering/t3code",
+        repository: "engineering/t2code",
         number: 42,
-        url: "https://git.corp.example/engineering/t3code/pulls/42",
+        url: "https://git.corp.example/engineering/t2code/pulls/42",
       },
     );
 

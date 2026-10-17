@@ -1404,7 +1404,7 @@ describe("orchestrator MCP toolkit", () => {
             const threadReadTool = server.tools.find(({ tool }) => tool.name === "t2_thread_read");
             expect(threadReadTool?.tool.annotations?.readOnlyHint).toBe(false);
             expect(threadReadTool?.tool.inputSchema).toMatchObject({ additionalProperties: false });
-            const unknownPagingParamError = yield* invoke("t3_thread_read", {
+            const unknownPagingParamError = yield* invoke("t2_thread_read", {
               threadId: parentThreadId,
               cursor: 90,
             }).pipe(Effect.flip);
@@ -4137,7 +4137,7 @@ describe("orchestrator MCP toolkit", () => {
             latestTerminalSummary: queuedFollowupResult,
           });
           expect(finalStatus.latestTerminalResultContextTransferId).not.toBeNull();
-          const read = yield* invoke("t3_thread_read", {
+          const read = yield* invoke("t2_thread_read", {
             threadId: delegated.childThreadId,
             limit: 100,
           });

@@ -48,13 +48,13 @@ describe("xAiPromptCompleteFromSessionUpdate", () => {
         sessionId: "019f4428-4bf1-7e52-b7c6-c29b506543b1",
         update: {
           sessionUpdate: "turn_completed",
-          prompt_id: "t3-xai-prompt-1",
+          prompt_id: "t2-xai-prompt-1",
           stop_reason: "end_turn",
         },
       }),
     ).toEqual({
       sessionId: "019f4428-4bf1-7e52-b7c6-c29b506543b1",
-      promptId: "t3-xai-prompt-1",
+      promptId: "t2-xai-prompt-1",
       stopReason: "end_turn",
     });
   });
@@ -63,7 +63,7 @@ describe("xAiPromptCompleteFromSessionUpdate", () => {
     expect(
       xAiPromptCompleteFromSessionUpdate({
         sessionId: "root",
-        update: { sessionUpdate: "hook_execution", prompt_id: "t3-xai-prompt-1" },
+        update: { sessionUpdate: "hook_execution", prompt_id: "t2-xai-prompt-1" },
       }),
     ).toBeNull();
     expect(
@@ -1640,7 +1640,7 @@ describe("XAiAcpExtension", () => {
         sessionId: "root-session",
         update: {
           sessionUpdate: "turn_completed",
-          prompt_id: "t3-xai-prompt-1",
+          prompt_id: "t2-xai-prompt-1",
           stop_reason: "end_turn",
         },
       });

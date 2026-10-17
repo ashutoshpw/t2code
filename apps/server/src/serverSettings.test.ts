@@ -58,7 +58,7 @@ const layerServerSettingsWithSecrets = () =>
     Layer.provideMerge(
       Layer.fresh(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "t3code-server-settings-test-",
+          prefix: "t2code-server-settings-test-",
         }),
       ),
     ),
@@ -222,7 +222,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const service = yield* ServerSettingsModule.ServerSettingsService;
-      const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t3-settings-dotfiles-" });
+      const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t2-settings-dotfiles-" });
       const linkedSettingsPath = path.join(dotfiles, "settings.json");
       yield* fs.writeFileString(linkedSettingsPath, `{ "responseStreamingMode": "turn" }`);
       yield* fs.remove(config.settingsPath, { force: true });
@@ -245,7 +245,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const service = yield* ServerSettingsModule.ServerSettingsService;
-        const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t3-settings-dotfiles-" });
+        const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t2-settings-dotfiles-" });
         const linkedSettingsPath = path.join(dotfiles, "settings.json");
         yield* fs.writeFileString(linkedSettingsPath, `{ "responseStreamingMode": "turn" }`);
         yield* fs.remove(config.settingsPath, { force: true });
@@ -271,7 +271,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const service = yield* ServerSettingsModule.ServerSettingsService;
-        const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t3-settings-dotfiles-" });
+        const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t2-settings-dotfiles-" });
         const firstSettingsPath = path.join(dotfiles, "first", "settings.json");
         const secondSettingsPath = path.join(dotfiles, "second", "settings.json");
         yield* fs.makeDirectory(path.dirname(firstSettingsPath), { recursive: true });
@@ -306,7 +306,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const service = yield* ServerSettingsModule.ServerSettingsService;
-        const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t3-settings-dotfiles-" });
+        const dotfiles = yield* fs.makeTempDirectoryScoped({ prefix: "t2-settings-dotfiles-" });
         const linkedSettingsPath = path.join(dotfiles, "not-yet", "settings.json");
         yield* fs.remove(config.settingsPath, { force: true });
         yield* fs.symlink(linkedSettingsPath, config.settingsPath);
@@ -1330,22 +1330,6 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           otlpTracesUrl: "http://localhost:4318/v1/traces",
           otlpMetricsUrl: "http://localhost:4318/v1/metrics",
         },
-        providers: {
-          codex: {
-            binaryPath: "/opt/homebrew/bin/codex",
-          },
-          cursor: {
-            enabled: false,
-          },
-          grok: {
-            enabled: false,
-          },
-          opencode: {
-            enabled: false,
-            serverUrl: "http://127.0.0.1:4096",
-            serverPassword: "secret-password",
-          },
-        },
         backgroundActivity: {
           schemaVersion: 1,
           profile: "custom",
@@ -1825,7 +1809,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
       Layer.provideMerge(
         Layer.fresh(
           ServerConfig.layerTest(process.cwd(), {
-            prefix: "t3code-server-settings-legacy-failure-test-",
+            prefix: "t2code-server-settings-legacy-failure-test-",
           }),
         ),
       ),

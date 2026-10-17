@@ -150,7 +150,7 @@ it.each(["local-exec", "remote-links"] as const)(
     byLabel("Open in Cursor");
     await click(byLabel("Choose editor"));
     await click(menuItems().find((item) => item.textContent?.includes("VS Code"))!);
-    expect(window.localStorage.getItem("t3code:last-editor")).toBe('"vscode"');
+    expect(window.localStorage.getItem("t2code:last-editor")).toBe('"vscode"');
     const openButton = byLabel("Open in VS Code");
     expect(state.run).not.toHaveBeenCalled();
     expect(state.openUrl).not.toHaveBeenCalled();

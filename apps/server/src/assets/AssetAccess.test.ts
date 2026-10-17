@@ -66,7 +66,7 @@ const screenshotItem = {
   ordinal: 1,
   status: "completed" as const,
   title: null,
-  toolName: "mcp__t3-code__device_screenshot",
+  toolName: "mcp__t2-code__device_screenshot",
   input: { deviceId: "phone" },
   output: {
     content: [
@@ -126,7 +126,7 @@ describe("AssetAccess", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-mcp-html-" });
+        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-mcp-html-" });
         const file = path.join(directory, "app.html");
         const limit = MCP_APP_MAX_HTML_BYTES + 128 * 1024;
         yield* fileSystem.writeFile(file, new Uint8Array(limit).fill(120));
@@ -141,7 +141,7 @@ describe("AssetAccess", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-mcp-html-" });
+        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-mcp-html-" });
         const file = path.join(directory, "app.html");
         const limit = MCP_APP_MAX_HTML_BYTES + 128 * 1024;
         for (const size of [limit + 1, limit * 2]) {
@@ -155,7 +155,7 @@ describe("AssetAccess", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-mcp-html-" });
+        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-mcp-html-" });
         const file = path.join(directory, "app.html");
         for (const html of ["", "<body>" + "☃".repeat(100_000) + "</body>"]) {
           const expected = new TextEncoder().encode(html);
@@ -171,7 +171,7 @@ describe("AssetAccess", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-mcp-html-" });
+        const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-mcp-html-" });
         const error = yield* readMcpAppHtml(path.join(directory, "missing.html")).pipe(Effect.flip);
         expect(error._tag).toBe("PlatformError");
         expect(error.reason._tag).toBe("NotFound");
@@ -344,7 +344,7 @@ describe("AssetAccess", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-media-home-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-media-home-" });
       const home = path.join(directory, "var", "home", "alice");
       const filePath = path.join(home, "Downloads", "repro.mp4");
       yield* fs.makeDirectory(path.dirname(filePath), { recursive: true });
@@ -918,7 +918,7 @@ describe("AssetAccess", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-preview-literal-" });
+      const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-preview-literal-" });
       const directory = path.join(root, "assets#archive");
       yield* fileSystem.makeDirectory(directory);
 
@@ -1355,7 +1355,7 @@ describe("AssetAccess", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const root = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-asset-favicon-icns-",
+        prefix: "t2-asset-favicon-icns-",
       });
       const icns = new Uint8Array(8 + 8 + screenshotPng.length);
       icns.set(new TextEncoder().encode("icns"));

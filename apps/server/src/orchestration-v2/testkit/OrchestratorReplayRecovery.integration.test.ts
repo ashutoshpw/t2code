@@ -87,7 +87,7 @@ const readClaudeSubagentResumeTranscript = Effect.fn("readClaudeSubagentResumeTr
  * The same session with the math.ts subagent's first run removed: the root
  * turn settles while the subagent still works, and the server restarts
  * before it reports, so recovery cancels it. The resumed turn then carries
- * the restart note, as T3 sends it.
+ * the restart note, as T2 sends it.
  */
 const readClaudeCancelledSubagentResumeTranscript = Effect.fn(
   "readClaudeCancelledSubagentResumeTranscript",
@@ -179,7 +179,7 @@ const runCursorRecovery = Effect.fn("runCursorRecovery")(function* (input: {
   const path = yield* Path.Path;
   const tempDir = yield* Effect.acquireRelease(
     fs.makeTempDirectory({
-      prefix: "t3-orchestration-v2-cursor-recovery-",
+      prefix: "t2-orchestration-v2-cursor-recovery-",
     }),
     (directory) => fs.remove(directory, { recursive: true, force: true }).pipe(Effect.orDie),
   );
@@ -275,7 +275,7 @@ describe("orchestrator replay recovery", () => {
           const path = yield* Path.Path;
           const tempDir = yield* Effect.acquireRelease(
             fs.makeTempDirectory({
-              prefix: "t3-orchestration-v2-recovery-",
+              prefix: "t2-orchestration-v2-recovery-",
             }),
             (directory) =>
               fs.remove(directory, { recursive: true, force: true }).pipe(Effect.orDie),
@@ -383,7 +383,7 @@ describe("orchestrator replay recovery", () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const tempDir = yield* Effect.acquireRelease(
-          fs.makeTempDirectory({ prefix: "t3-orchestration-v2-claude-recovery-" }),
+          fs.makeTempDirectory({ prefix: "t2-orchestration-v2-claude-recovery-" }),
           (directory) => fs.remove(directory, { recursive: true, force: true }).pipe(Effect.orDie),
         );
         const materialized = yield* materializeFixtureInput({
@@ -495,7 +495,7 @@ describe("orchestrator replay recovery", () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const tempDir = yield* Effect.acquireRelease(
-          fs.makeTempDirectory({ prefix: "t3-orchestration-v2-claude-recovery-" }),
+          fs.makeTempDirectory({ prefix: "t2-orchestration-v2-claude-recovery-" }),
           (directory) => fs.remove(directory, { recursive: true, force: true }).pipe(Effect.orDie),
         );
         const materialized = yield* materializeFixtureInput({

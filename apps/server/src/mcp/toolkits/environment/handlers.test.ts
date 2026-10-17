@@ -54,7 +54,7 @@ it.effect("updates preferences for a thread caller through the /mcp registration
     const server = yield* McpServer.McpServer;
     const result = yield* server
       .callTool({
-        name: "t3_environment_preferences_update",
+        name: "t2_environment_preferences_update",
         arguments: { newWorktreesStartFromOrigin: true },
       })
       .pipe(

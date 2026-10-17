@@ -26,7 +26,7 @@ Run `vp run icons:check:portable` to verify every portable output without changi
 portable export command also regenerates the development copies under `apps/web/public` and the
 static marketing favicons. Native and portable exports intentionally differ in Icon Composer's
 native shadow treatment; use the matching check command for the export path you selected. Keep the
-legacy `t3-black-*` filenames until their consumers are deliberately migrated.
+legacy `t2-black-*` filenames until their consumers are deliberately migrated.
 
 The vector layers are deterministic, but the `/95` concept labels use the host's
 `Arial, Helvetica, sans-serif` fallback. Their bytes can therefore differ between machines with

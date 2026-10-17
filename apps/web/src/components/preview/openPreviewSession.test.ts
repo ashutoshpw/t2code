@@ -154,7 +154,7 @@ describe("openUrlInPreview from a link", () => {
       AsyncResult.success(snapshot),
     );
 
-    await openUrlInPreview({ openPreview, threadRef, url: "https://t3.chat/", profileId: "work" });
+    await openUrlInPreview({ openPreview, threadRef, url: "https://t2.chat/", profileId: "work" });
 
     expect(openPreview.mock.calls[0]?.[0].input.profileId).toBe("work");
   });
@@ -165,7 +165,7 @@ describe("openUrlInPreview from a link", () => {
     await openUrlInPreview({
       openPreview: async () => AsyncResult.success(snapshot),
       threadRef,
-      url: "https://t3.chat/",
+      url: "https://t2.chat/",
       background: true,
     });
 
@@ -186,7 +186,7 @@ describe("openUrlInPreview from a link", () => {
         return AsyncResult.success(snapshot);
       },
       threadRef,
-      url: "https://t3.chat/",
+      url: "https://t2.chat/",
       background: true,
     });
 
@@ -204,7 +204,7 @@ describe("openUrlInPreview from a link", () => {
         return AsyncResult.success(snapshot);
       },
       threadRef,
-      url: "https://t3.chat/",
+      url: "https://t2.chat/",
       background: true,
     });
 
@@ -217,7 +217,7 @@ describe("openUrlInPreview from a link", () => {
     await openUrlInPreview({
       openPreview: async () => AsyncResult.success(snapshot),
       threadRef,
-      url: "https://t3.chat/",
+      url: "https://t2.chat/",
     });
 
     expect(readThreadPreviewState(threadRef).activeTabId).toBe("tab-1");

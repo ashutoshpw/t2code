@@ -123,7 +123,7 @@ describe("NativeTelemetryClient", () => {
       const client = yield* NativeTelemetryClient.make().pipe(
         Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
         Effect.provideService(ResourceMonitorBinary.ResourceMonitorBinary, {
-          resolve: Effect.succeed("/test/t3-resource-monitor"),
+          resolve: Effect.succeed("/test/t2-resource-monitor"),
         }),
       );
 
@@ -149,7 +149,7 @@ describe("NativeTelemetryClient", () => {
     }).pipe(
       Effect.provide(
         Layer.mergeAll(
-          ServerConfig.layerTest(process.cwd(), { prefix: "t3-native-telemetry-test-" }),
+          ServerConfig.layerTest(process.cwd(), { prefix: "t2-native-telemetry-test-" }),
           NodeCrypto.layer,
         ).pipe(Layer.provideMerge(NodeServices.layer)),
       ),

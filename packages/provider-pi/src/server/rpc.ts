@@ -402,7 +402,7 @@ export const makePiRpcConnection = Effect.fnUntraced(function* (options: PiRpcSp
     timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
   ): Effect.Effect<unknown, PiRpcError | PiRpcTimeoutError> =>
     Effect.gen(function* () {
-      const id = `t3-${nextRequestId++}`;
+      const id = `t2-${nextRequestId++}`;
       const deferred = yield* Deferred.make<unknown, PiRpcError>();
       pendingRequests.set(id, { deferred });
       yield* send({ ...record, id }).pipe(

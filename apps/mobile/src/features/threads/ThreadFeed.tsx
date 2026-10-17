@@ -1178,8 +1178,8 @@ function renderFeedEntry(
             <Text className="mb-1 pr-1 font-t2-medium text-2xs text-foreground-muted opacity-60">
               Sent by automation
             </Text>
-          ) : presentation.attribution === "t3code" ? (
-            <Text className="mb-1 pr-1 font-t3-medium text-2xs text-foreground-muted opacity-60">
+          ) : presentation.attribution === "t2code" ? (
+            <Text className="mb-1 pr-1 font-t2-medium text-2xs text-foreground-muted opacity-60">
               Sent by T2 Code
             </Text>
           ) : presentation.attribution === "agent" ? (

@@ -106,7 +106,7 @@ const layerPlatformTest = Layer.merge(
     resolveLink: () => Effect.die("unused title link"),
   }),
 );
-const layerServerConfig = ServerConfig.layerTest(`${ROOT}/work`, { prefix: "t3-opencode2-live-" });
+const layerServerConfig = ServerConfig.layerTest(`${ROOT}/work`, { prefix: "t2-opencode2-live-" });
 const layerVcsDriverRegistry = VcsDriverRegistry.layer.pipe(
   Layer.provide(VcsProcess.layer),
   Layer.provide(layerServerConfig),
@@ -306,7 +306,7 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        yield* fs.writeFileString(path.join(ROOT, "work", "hello.txt"), "hello from t3 live\n");
+        yield* fs.writeFileString(path.join(ROOT, "work", "hello.txt"), "hello from t2 live\n");
         yield* EffectWorker.runDaemonWithOptions({ concurrency: 2 }).pipe(Effect.forkScoped);
 
         // A status check starts a fresh server, which lists no models for its
@@ -691,9 +691,9 @@ describe.runIf(binaryPath !== undefined && ROOT !== "")("OpenCode 2 live orchest
         yield* git("init", "-q");
         yield* git(
           "-c",
-          "user.name=t3",
+          "user.name=t2",
           "-c",
-          "user.email=t3@example.com",
+          "user.email=t2@example.com",
           "commit",
           "-q",
           "--allow-empty",

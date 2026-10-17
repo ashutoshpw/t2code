@@ -146,8 +146,8 @@ it.layer(NodeServices.layer)("CodexHomeLayout", (it) => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const sharedHome = yield* makeTempDir("t3code-codex-shared-");
-          const shadowRoot = yield* makeTempDir("t3code-codex-shadow-root-");
+          const sharedHome = yield* makeTempDir("t2code-codex-shared-");
+          const shadowRoot = yield* makeTempDir("t2code-codex-shadow-root-");
           const shadowHome = path.join(shadowRoot, "shadow");
           const sharedLock = path.join(sharedHome, ".sqlite-maintenance.lock");
           const shadowLock = path.join(shadowHome, ".sqlite-maintenance.lock");

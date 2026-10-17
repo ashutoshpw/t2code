@@ -78,7 +78,7 @@ it.layer(NodeServices.layer)("t2-sqlite-state", (it) => {
   it.effect("enables checkpoint_fullfsync on its direct connection", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-sqlite-state-fsync-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-sqlite-state-fsync-" });
       yield* createFixtureDatabase(baseDir);
 
       const result = yield* runSqliteState({

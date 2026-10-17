@@ -503,14 +503,14 @@ it.effect("returns server ARIA refs to agents in text and structured results", (
   Effect.scoped(
     Effect.gen(function* () {
       const accessibilityTree =
-        '- button "delete" [ref=t3-snapshot-e1]\n- iframe [ref=t3-snapshot-e2]:\n  - textbox "child" [ref=t3-snapshot-f1e1]';
+        '- button "delete" [ref=t2-snapshot-e1]\n- iframe [ref=t2-snapshot-e2]:\n  - textbox "child" [ref=t2-snapshot-f1e1]';
       yield* serveSnapshots("mcp-server-refs", { ...snapshotResult, accessibilityTree });
       const result = yield* callSnapshot({ includeImage: false });
       expect(result.isError).toBe(false);
       expect(result.structuredContent).toMatchObject({ accessibilityTree });
       expect(
         result.content.some(
-          (entry) => entry.type === "text" && entry.text.includes("t3-snapshot-f1e1"),
+          (entry) => entry.type === "text" && entry.text.includes("t2-snapshot-f1e1"),
         ),
       ).toBe(true);
     }),
@@ -522,13 +522,13 @@ it.effect("bounds large ARIA trees without dropping every server locator", () =>
     Effect.gen(function* () {
       const accessibilityTree = Array.from(
         { length: 2_000 },
-        (_, index) => `- button "删除 ${index}" [ref=t3-snapshot-e${index}]`,
+        (_, index) => `- button "删除 ${index}" [ref=t2-snapshot-e${index}]`,
       ).join("\n");
       yield* serveSnapshots("mcp-large-server-refs", { ...snapshotResult, accessibilityTree });
       const result = yield* callSnapshot({ includeImage: false });
       expect(result.isError).toBe(false);
       const metadata = result.structuredContent as { accessibilityTree: string };
-      expect(metadata.accessibilityTree).toContain("[ref=t3-snapshot-e0]");
+      expect(metadata.accessibilityTree).toContain("[ref=t2-snapshot-e0]");
       expect(metadata.accessibilityTree.length).toBeLessThan(accessibilityTree.length);
       const body = result.content[1];
       expect(Buffer.byteLength(body?.type === "text" ? body.text : "", "utf8")).toBeLessThanOrEqual(

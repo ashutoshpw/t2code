@@ -55,7 +55,7 @@ const checkWith = (
       const config = yield* ServerConfig.ServerConfig;
       return ServerConfig.make({ ...config, ...overrides });
     }),
-  ).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-otlp-check-" })));
+  ).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-otlp-check-" })));
   const layer = OtlpEndpointCheck.layer.pipe(
     Layer.provide(httpClientLayer ?? Layer.succeed(HttpClient.HttpClient, httpClient)),
     Layer.provide(configLayer),
@@ -71,10 +71,10 @@ const check = (input: Parameters<OtlpEndpointCheck.OtlpEndpointCheck["Service"][
   });
 
 describe("OtlpEndpointCheck", () => {
-  it.effect("posts an empty export for the signal with the T3 headers", () => {
+  it.effect("posts an empty export for the signal with the T2 headers", () => {
     const { requests, layer } = checkWith(200, {
       otlpMetricsUrl: "http://collector:4318/v1/metrics",
-      otlpMetricsExport: { ...DEFAULT_SIGNAL_EXPORT, headers: { authorization: "Bearer t3" } },
+      otlpMetricsExport: { ...DEFAULT_SIGNAL_EXPORT, headers: { authorization: "Bearer t2" } },
     });
     return Effect.gen(function* () {
       const result = yield* check({ signal: "metrics", url: "http://collector:4318/v1/metrics" });
@@ -82,12 +82,12 @@ describe("OtlpEndpointCheck", () => {
       assert.strictEqual(result._tag, "Accepted");
       assert.lengthOf(requests, 1);
       assert.strictEqual(requests[0]?.url, "http://collector:4318/v1/metrics");
-      assert.strictEqual(requests[0]?.headers.authorization, "Bearer t3");
+      assert.strictEqual(requests[0]?.headers.authorization, "Bearer t2");
       assert.strictEqual(requests[0]?.body, `{"resourceMetrics":[]}`);
     }).pipe(Effect.provide(layer));
   });
 
-  it.effect("keeps T3 credentials paired with each running signal endpoint", () => {
+  it.effect("keeps T2 credentials paired with each running signal endpoint", () => {
     const signalExport = { ...DEFAULT_SIGNAL_EXPORT, headers: { "x-api-key": "secret" } };
     const { requests, layer } = checkWith(200, {
       otlpTracesUrl: "https://collector.example.com/v1/traces",
@@ -118,7 +118,7 @@ describe("OtlpEndpointCheck", () => {
   it.effect("does not send export credentials when the signal has no running endpoint", () => {
     const { requests, layer } = checkWith(200, {
       otlpLogsUrl: undefined,
-      otlpLogsExport: { ...DEFAULT_SIGNAL_EXPORT, headers: { authorization: "Bearer t3" } },
+      otlpLogsExport: { ...DEFAULT_SIGNAL_EXPORT, headers: { authorization: "Bearer t2" } },
       otelEnvironment: OtelEnvironment.none,
     });
     return Effect.gen(function* () {

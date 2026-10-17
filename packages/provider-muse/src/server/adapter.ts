@@ -1051,7 +1051,7 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
       });
       /**
        * A workflow child's approval is runless: the turn that started the workflow
-       * may end long before the child asks, and T3 keeps a runless request on the
+       * may end long before the child asks, and T2 keeps a runless request on the
        * thread until Muse settles it.
        */
       const publishRequest = Effect.fnUntraced(function* (native: PendingRequest["native"]) {
@@ -1191,7 +1191,7 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
         yield* emit({ type: "turn_item.updated", driver: MUSE_PROVIDER, turnItem: item });
         yield* updateSession("waiting");
         // Muse does not give workflow children the session's allowAll mode, so in full
-        // access T3 approves for them. If Muse rejects that, the request waits for the user.
+        // access T2 approves for them. If Muse rejects that, the request waits for the user.
         if (child && input.runtimePolicy.runtimeMode === "full-access")
           yield* decideApproval(entry, "accept").pipe(Effect.ignore, Effect.forkIn(scope));
       });

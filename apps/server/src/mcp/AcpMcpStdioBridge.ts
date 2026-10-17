@@ -105,7 +105,7 @@ export function callAcpMcpTool(
         return payloads;
       });
 
-    const initializeId = "t3-acp-cli-initialize";
+    const initializeId = "t2-acp-cli-initialize";
     const initialized = yield* send({
       jsonrpc: "2.0",
       id: initializeId,
@@ -124,7 +124,7 @@ export function callAcpMcpTool(
     }
     yield* send({ jsonrpc: "2.0", method: "notifications/initialized" });
 
-    const callId = "t3-acp-cli-tool-call";
+    const callId = "t2-acp-cli-tool-call";
     const responses = yield* send({
       jsonrpc: "2.0",
       id: callId,

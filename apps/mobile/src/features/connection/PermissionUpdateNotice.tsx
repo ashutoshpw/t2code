@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useEnvironments } from "../../state/environments";
 import { environmentSession } from "../../state/session";
 
-const storageKey = "t3code.permission-update.v1";
+const storageKey = "t2code.permission-update.v1";
 const dismissedThisLaunch = new Set<string>();
 const shownThisLaunch = new Set<string>();
 

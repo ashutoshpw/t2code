@@ -458,7 +458,7 @@ const capture = async (
   const accessibilityTree = (dotted ? maskTree(tree, dotted) : tree)
     .slice(0, MAX_VISIBLE_TEXT_LENGTH)
     .replace(/\[ref=((?:f\d+)?e\d+)\]/g, (_match, nativeRef: string) => {
-      const ref = `t3-${generation}-${nativeRef}`;
+      const ref = `t2-${generation}-${nativeRef}`;
       state.refs.set(ref, nativeRef);
       return `[ref=${ref}]`;
     });
@@ -852,7 +852,7 @@ export const RECORDING_ENCODER_SCRIPT = `(() => {
       context.restore();
     }
   };
-  window.__t3Recorder = {
+  window.__t2Recorder = {
     async frame(base64, cssWidth) {
       if (tooLarge) return false;
       const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));

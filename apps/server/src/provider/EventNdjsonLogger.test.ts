@@ -839,7 +839,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
     "keeps unrelated work responsive and drains before close while a disk write is held",
     () =>
       Effect.gen(function* () {
-        const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+        const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
         const basePath = NodePath.join(tempDir, "events.log");
         const fs = yield* FileSystem.FileSystem;
         const started = yield* Deferred.make<void>();

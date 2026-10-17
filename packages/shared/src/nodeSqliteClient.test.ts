@@ -49,7 +49,7 @@ const withReaderClient = <A, E>(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-sqlite-reader-" });
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-sqlite-reader-" });
     const filename = path.join(directory, "state.sqlite");
     return yield* Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
@@ -231,7 +231,7 @@ it.effect("leaves a parameter it cannot measure for the statement to handle", ()
 const makeTempDatabase = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-sqlite-transaction-" });
+  const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-sqlite-transaction-" });
   const filename = path.join(directory, "state.sqlite");
   const other = yield* Effect.acquireRelease(
     Effect.sync(() => new NodeSqlite.DatabaseSync(filename)),
@@ -596,7 +596,7 @@ const withFileClient = <A, E>(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-sqlite-reader-off-" });
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-sqlite-reader-off-" });
     const filename = path.join(directory, "state.sqlite");
     return yield* Effect.gen(function* () {
       return yield* setup(yield* SqlClient.SqlClient, filename);
@@ -763,7 +763,7 @@ const withCheckpointClient = <A, E>(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-sqlite-checkpoint-" });
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-sqlite-checkpoint-" });
     const filename = path.join(directory, "state.sqlite");
     return yield* Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;

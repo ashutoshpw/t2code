@@ -1,4 +1,4 @@
-package expo.modules.t3nativecontrols
+package expo.modules.t2nativecontrols
 
 import android.content.Context
 import android.view.ViewGroup

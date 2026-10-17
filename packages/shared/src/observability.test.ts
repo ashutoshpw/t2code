@@ -339,7 +339,7 @@ describe("observability", () => {
             const fs = yield* FileSystem.FileSystem;
             const path = yield* Path.Path;
             const directory = yield* fs.makeTempDirectoryScoped({
-              prefix: "t3-trace-backpressure-",
+              prefix: "t2-trace-backpressure-",
             });
             const tracePath = path.join(directory, "trace.ndjson");
             const started = yield* Deferred.make<void>();
@@ -602,7 +602,7 @@ describe("observability", () => {
       return Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-trace-sink-" });
+        const tempDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-trace-sink-" });
         const tracePath = path.join(tempDir, "shared.trace.ndjson");
         yield* fileSystem.makeDirectory(tracePath);
         const write = vi.spyOn(fileSystem, "writeFile");

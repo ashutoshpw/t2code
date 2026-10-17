@@ -1688,7 +1688,7 @@ function SavedBackendListRow({
       toastManager.add({
         type: "success",
         title: "MCP URL copied",
-        description: `Add it to an agent, e.g. claude mcp add --transport http t3 ${url}`,
+        description: `Add it to an agent, e.g. claude mcp add --transport http t2 ${url}`,
       });
     },
     onError: (error) => {
@@ -2885,11 +2885,11 @@ export function ConnectionsSettings() {
 
   // T2 Connect environments get their own dialog: removing one here leaves its
   // account registration, so it points to where that can be deregistered.
-  const [pendingT3ConnectRemoval, setPendingT3ConnectRemoval] =
+  const [pendingT2ConnectRemoval, setPendingT2ConnectRemoval] =
     useState<EnvironmentPresentation | null>(null);
   const handleRemoveSavedBackend = async (environment: EnvironmentPresentation) => {
     if (environment.relayManaged && hasCloudPublicConfig()) {
-      setPendingT3ConnectRemoval(environment);
+      setPendingT2ConnectRemoval(environment);
       return;
     }
     const confirmed = await requestConfirmDialog(
@@ -4168,12 +4168,12 @@ export function ConnectionsSettings() {
       </SettingsSection>
       {hasCloudPublicConfig() ? (
         <RemoveT2ConnectEnvironmentDialog
-          environmentLabel={pendingT3ConnectRemoval?.label ?? null}
-          onCancel={() => setPendingT3ConnectRemoval(null)}
+          environmentLabel={pendingT2ConnectRemoval?.label ?? null}
+          onCancel={() => setPendingT2ConnectRemoval(null)}
           onConfirm={() => {
-            if (!pendingT3ConnectRemoval) return;
-            setPendingT3ConnectRemoval(null);
-            void removeSavedBackend(pendingT3ConnectRemoval);
+            if (!pendingT2ConnectRemoval) return;
+            setPendingT2ConnectRemoval(null);
+            void removeSavedBackend(pendingT2ConnectRemoval);
           }}
         />
       ) : null}

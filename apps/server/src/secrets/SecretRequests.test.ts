@@ -377,7 +377,7 @@ it.effect("drops values nobody used once they expire, and keeps the rest", () =>
     Effect.provide(
       ServerSecretStore.layer.pipe(
         Layer.provideMerge(
-          ServerConfig.layerTest(process.cwd(), { prefix: "t3-secret-requests-" }),
+          ServerConfig.layerTest(process.cwd(), { prefix: "t2-secret-requests-" }),
         ),
         Layer.provideMerge(NodeServices.layer),
       ),

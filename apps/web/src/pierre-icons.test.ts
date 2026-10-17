@@ -57,7 +57,7 @@ describe("Pierre file icons", () => {
       [
         ...Object.values(T2_PIERRE_ICONS.byFileName),
         ...Object.values(T2_PIERRE_ICONS.byFileExtension),
-      ].filter((name) => name.startsWith("t3-")),
+      ].filter((name) => name.startsWith("t2-")),
     );
     for (const iconName of customIconNames) {
       assert.include(T2_PIERRE_ICONS.spriteSheet, `id="${iconName}"`);

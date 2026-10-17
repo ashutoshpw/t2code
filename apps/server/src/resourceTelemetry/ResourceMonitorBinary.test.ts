@@ -119,7 +119,7 @@ describe("ResourceMonitorBinary", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-resource-monitor-binary-",
+        prefix: "t2-resource-monitor-binary-",
       });
 
       const service = yield* ResourceMonitorBinary.make().pipe(

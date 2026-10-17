@@ -61,7 +61,7 @@ const liveModelSelection = {
 } satisfies ModelSelection;
 
 const layerServerConfig = ServerConfig.layerTest(process.cwd(), {
-  prefix: "t3-acp-registry-v2-live-",
+  prefix: "t2-acp-registry-v2-live-",
 });
 
 const layerVcsDriverRegistry = VcsDriverRegistry.layer.pipe(

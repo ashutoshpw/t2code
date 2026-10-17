@@ -90,10 +90,10 @@ describe("labels and reference links", () => {
   });
 
   it("recognizes a prompt made only of image references", () => {
-    const image = "![a.png](t3-context://v1/image/ctx_1)";
-    const file = "[notes.md](t3-context://v1/file/ctx_3)";
+    const image = "![a.png](t2-context://v1/image/ctx_1)";
+    const file = "[notes.md](t2-context://v1/file/ctx_3)";
     expect(isImageReferencesOnly(image)).toBe(true);
-    expect(isImageReferencesOnly(` ${image}\n![b.png](t3-context://v1/image/ctx_2) `)).toBe(true);
+    expect(isImageReferencesOnly(` ${image}\n![b.png](t2-context://v1/image/ctx_2) `)).toBe(true);
     expect(isImageReferencesOnly(`${image} what is this?`)).toBe(false);
     expect(isImageReferencesOnly(file)).toBe(false);
     expect(isImageReferencesOnly(`${image} ${file}`)).toBe(false);

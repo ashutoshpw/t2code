@@ -1427,7 +1427,7 @@ describe("buildThreadFeed", () => {
 
   it("pretty prints T2 MCP dynamic tool activities and attaches the product logo", () => {
     const toolItem: OrchestrationV2TurnItem = {
-      ...base("item-t3-tool", "2026-06-20T00:00:04.000Z", 3),
+      ...base("item-t2-tool", "2026-06-20T00:00:04.000Z", 3),
       type: "dynamic_tool",
       toolName: "mcp__t2-code__t2_thread_read",
       input: { threadId: "thread-child" },
@@ -2668,7 +2668,7 @@ describe("html renders", () => {
   ): OrchestrationV2TurnItem => ({
     ...base("item-render", "2026-06-20T00:00:02.500Z", 2),
     type: "dynamic_tool",
-    toolName: "mcp__t3-code__html_render",
+    toolName: "mcp__t2-code__html_render",
     input: { title: page.title },
     output: { htmlRender: page },
     ...overrides,
@@ -2742,7 +2742,7 @@ describe("MCP apps", () => {
     type: "dynamic_tool",
     toolName: "weather.get_weather",
     input: { city: "Oslo" },
-    output: { t3McpApp: app, result: { content: [] } },
+    output: { t2McpApp: app, result: { content: [] } },
   });
   const feed = (status: OrchestrationV2TurnItem["status"]) =>
     buildThreadFeed([

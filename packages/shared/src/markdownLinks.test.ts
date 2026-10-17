@@ -319,17 +319,17 @@ describe("resolveMarkdownFileLinkTarget", () => {
   it("normalizes slash-prefixed windows drive paths before resolving", () => {
     expect(
       resolveMarkdownFileLinkTarget(
-        "/D:/Programme/t3code/apps/web/src/components/chat/OpenInPicker.tsx#L69",
+        "/D:/Programme/t2code/apps/web/src/components/chat/OpenInPicker.tsx#L69",
       ),
-    ).toBe("D:/Programme/t3code/apps/web/src/components/chat/OpenInPicker.tsx:69");
+    ).toBe("D:/Programme/t2code/apps/web/src/components/chat/OpenInPicker.tsx:69");
   });
 
   it("resolves angle-bracketed windows drive paths", () => {
     expect(
       resolveMarkdownFileLinkTarget(
-        "</D:/Programme/t3code/apps/web/src/components/ChatMarkdown.tsx:1>",
+        "</D:/Programme/t2code/apps/web/src/components/ChatMarkdown.tsx:1>",
       ),
-    ).toBe("D:/Programme/t3code/apps/web/src/components/ChatMarkdown.tsx:1");
+    ).toBe("D:/Programme/t2code/apps/web/src/components/ChatMarkdown.tsx:1");
   });
 
   it("does not treat app routes as file links, even with a line anchor", () => {

@@ -813,7 +813,7 @@ describe("fix findings handoff", () => {
       reviewThreads: [
         thread("already handled", { isResolved: true }),
         thread("   ", { id: "t2" }),
-        thread("still open", { id: "t3" }),
+        thread("still open", { id: "t2" }),
       ],
       checks: [],
     });
@@ -1145,7 +1145,7 @@ describe("asking about a change rather than working on it", () => {
   });
 
   it("gives the same number in another repository its own chip", () => {
-    const fork = { ...base, url: "https://github.com/someone/t3code/pull/42" };
+    const fork = { ...base, url: "https://github.com/someone/t2code/pull/42" };
     expect(buildPullRequestReferenceContext(fork).id).not.toBe(
       buildPullRequestReferenceContext(base).id,
     );

@@ -55,7 +55,7 @@ describe("breadcrumbPathOf", () => {
     ["src", "src"],
     ["src/", "src"],
     ["src//components", "src/components"],
-    ["/tmp/t3-demo/", "/tmp/t3-demo"],
+    ["/tmp/t2-demo/", "/tmp/t2-demo"],
     ["/", "/"],
     ["C:\\Users\\me\\", "C:\\Users\\me"],
     ["C:\\", "C:\\"],

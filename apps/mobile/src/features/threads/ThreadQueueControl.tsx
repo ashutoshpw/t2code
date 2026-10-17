@@ -402,7 +402,7 @@ export function ThreadQueueSheet({ route }: StaticScreenProps<QueueTarget>) {
                         onPress={() => void act(run.id, "steer")}
                         className="h-8 shrink-0 justify-center rounded-full bg-primary px-3 active:opacity-70 disabled:opacity-40"
                       >
-                        <Text className="font-t3-medium text-xs text-primary-foreground">
+                        <Text className="font-t2-medium text-xs text-primary-foreground">
                           Steer
                         </Text>
                       </Pressable>
@@ -523,7 +523,7 @@ function QueueRowSwipeable(props: {
           style={{ width: REMOVE_ACTION_WIDTH }}
         >
           <SymbolView name="trash" size={16} tintColorClassName="accent-danger-foreground" />
-          <Text className="pt-1 text-2xs font-t3-medium text-danger-foreground">Remove</Text>
+          <Text className="pt-1 text-2xs font-t2-medium text-danger-foreground">Remove</Text>
         </Pressable>
       )}
     >

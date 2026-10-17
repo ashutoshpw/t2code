@@ -43,7 +43,7 @@ describe("MCP app asset responses", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-mcp-theme-" });
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-mcp-theme-" });
         const file = path.join(directory, "app.html");
         const html = injectMcpAppCsp(
           "<html><head><script>vendor()</script></head><body>☃</body></html>",
@@ -91,7 +91,7 @@ describe("MCP app asset responses", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-mcp-theme-size-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-mcp-theme-size-" });
       const file = path.join(directory, "app.html");
       yield* fs.writeFileString(file, "x".repeat(MCP_APP_MAX_HTML_BYTES + 128 * 1024 + 1));
       const response = yield* assetFileResponse({ path: file, renderIntent: "mcp-app" });
@@ -210,7 +210,7 @@ const makeStaticRequest = Effect.fn("HttpTest.makeStaticRequest")(function* (sta
 });
 
 it.layer(
-  ServerConfig.layerTest(process.cwd(), { prefix: "t3-static-http-test-" }).pipe(
+  ServerConfig.layerTest(process.cwd(), { prefix: "t2-static-http-test-" }).pipe(
     Layer.provideMerge(NodeServices.layer),
   ),
 )("static HTTP responses", (it) => {
@@ -218,7 +218,7 @@ it.layer(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-static-cache-" });
+      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-static-cache-" });
       const assetPath = path.join(staticDir, "app.js");
       yield* fs.writeFileString(assetPath, 'export const build = "first";');
       const request = yield* makeStaticRequest(staticDir);
@@ -261,7 +261,7 @@ it.layer(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-static-html-" });
+      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-static-html-" });
       const indexPath = path.join(staticDir, "index.html");
       const modifiedAt = DateTime.toDateUtc(DateTime.makeUnsafe("1985-10-26T08:15:00.000Z"));
       yield* fs.writeFileString(indexPath, "<html>old build</html>");
@@ -300,7 +300,7 @@ it.layer(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-static-close-" });
+      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-static-close-" });
       const filePath = path.join(staticDir, "app.txt");
       const body = "file content\n".repeat(1024);
       yield* fs.writeFileString(filePath, body);

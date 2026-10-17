@@ -250,7 +250,7 @@ const make = Effect.gen(function* () {
         typ: RELAY_HOOK_DELIVERY_TYP,
         payload: {
           iss: normalizeRelayIssuer(settings.relayIssuer),
-          aud: `t3-env:${input.environmentId}`,
+          aud: `t2-env:${input.environmentId}`,
           sub: input.environmentId,
           jti: input.jti,
           iat: now,

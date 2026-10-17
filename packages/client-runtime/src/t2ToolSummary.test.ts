@@ -33,11 +33,11 @@ describe("summarizeT2ToolCalls", () => {
       guides: outcomes.map((outcome, index) => ({ number: index + 1, outcome })),
     });
     expect(
-      summarizeT3ToolCalls("write-pr-guides", [
+      summarizeT2ToolCalls("write-pr-guides", [
         completed({}, guides("started", "running", "failed")),
       ]),
     ).toEqual({ label: "Started 2 review guides, 1 failed", failedCount: 1 });
-    const allFailed = summarizeT3ToolCalls("write-pr-guides", [
+    const allFailed = summarizeT2ToolCalls("write-pr-guides", [
       completed({}, guides("failed", "failed")),
     ]);
     expect(allFailed.label).toBe("Could not start 2 review guides");
@@ -269,14 +269,14 @@ describe("summarizeT2ToolCalls", () => {
     const first = completed({ threadId: "parent", subagentId: "workflow-1" }, {});
     const failed = completed({ threadId: "parent", subagentId: "workflow-3" }, { isError: true });
     expect(
-      summarizeT3ToolCalls("workflow-stop", [
+      summarizeT2ToolCalls("workflow-stop", [
         first,
         first,
         completed({ threadId: "parent", subagentId: "workflow-2" }, {}),
         failed,
       ]),
     ).toEqual({ label: "Requested stops for 2 workflows", failedCount: 1 });
-    expect(summarizeT3ToolCalls("workflow-stop", [failed])).toEqual({
+    expect(summarizeT2ToolCalls("workflow-stop", [failed])).toEqual({
       label: "Tried to stop 1 workflow",
       failedCount: 1,
     });

@@ -108,7 +108,7 @@ const makeSharedWorktree = Effect.gen(function* () {
     "-m",
     "initial",
   ]);
-  yield* command(repo, ["worktree", "add", "-b", "t3/abcd1234", worktreePath]);
+  yield* command(repo, ["worktree", "add", "-b", "t2code/abcd1234", worktreePath]);
   return { repo, worktreePath, command };
 });
 const modelSelection = {
@@ -638,7 +638,7 @@ layer("ProviderEventIngestorV2", (it) => {
             createdAt: now,
             updatedAt: now,
           },
-          retainedNativeTurnIds: ["turn-started-outside-t3", "kept-turn"],
+          retainedNativeTurnIds: ["turn-started-outside-t2", "kept-turn"],
         },
       });
 
@@ -1562,7 +1562,7 @@ layer("ProviderEventIngestorV2", (it) => {
         type: "image",
         file: { base64: readBase64, type: "image/png", originalSize: 30_000 },
       });
-      const screenshot = toolItem("turn-item:screenshot", 2, "mcp__t3-code__device_screenshot", {
+      const screenshot = toolItem("turn-item:screenshot", 2, "mcp__t2-code__device_screenshot", {
         content: [
           {
             type: "image",
@@ -1781,7 +1781,7 @@ layer("ProviderEventIngestorV2", (it) => {
         if (rootEvent.type !== "thread.created") throw new Error("Expected thread fixture");
         const parent = {
           ...rootEvent.payload,
-          branch: "t3/abcd1234",
+          branch: "t2code/abcd1234",
           worktreePath,
         };
         yield* eventSink.write({ events: [{ ...rootEvent, payload: parent }] });
@@ -1906,8 +1906,8 @@ layer("ProviderEventIngestorV2", (it) => {
           scenario === "explicit"
             ? "child-feature"
             : scenario === "legacy"
-              ? "t3-abcd1234"
-              : "t3/abcd1234";
+              ? "t2code-abcd1234"
+              : "t2code/abcd1234";
         if (scenario === "explicit" || scenario === "legacy")
           yield* command(worktreePath, ["branch", "-m", branch]);
         if (scenario === "detached") yield* command(worktreePath, ["checkout", "--detach"]);
@@ -1975,7 +1975,7 @@ layer("ProviderEventIngestorV2", (it) => {
       const { repo, worktreePath: sharedPath, command } = yield* makeSharedWorktree;
       const isolatedPath = `${sharedPath}-isolated`;
       yield* command(sharedPath, ["branch", "-m", "generated-branch"]);
-      yield* command(repo, ["worktree", "add", "-b", "t3/abcd1234", isolatedPath]);
+      yield* command(repo, ["worktree", "add", "-b", "t2code/abcd1234", isolatedPath]);
       const actualPath =
         worktreePath === "/repo/shared" ? sharedPath : worktreePath === null ? null : isolatedPath;
       const now = yield* DateTime.now;
@@ -1992,7 +1992,7 @@ layer("ProviderEventIngestorV2", (it) => {
       const offered: OrchestrationV2AppThread = {
         ...rootEvent.payload,
         id: childThreadId,
-        branch: "t3/abcd1234",
+        branch: "t2code/abcd1234",
         worktreePath: actualPath,
         lineage: {
           parentThreadId: rootEvent.threadId,

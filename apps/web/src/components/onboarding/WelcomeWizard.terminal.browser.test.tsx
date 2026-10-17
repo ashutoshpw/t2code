@@ -187,7 +187,7 @@ const session = (scopes: readonly AuthEnvironmentScope[]): AuthSessionState => (
     policy: "remote-reachable",
     bootstrapMethods: ["one-time-token"],
     sessionMethods: ["bearer-access-token"],
-    sessionCookieName: "t3_session",
+    sessionCookieName: "t2_session",
   },
 });
 function setAccess(environmentId: EnvironmentId, allowed: boolean) {

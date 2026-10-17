@@ -39,7 +39,7 @@ import * as ProviderSessionManager from "./ProviderSessionManager.ts";
 import * as RuntimePolicy from "./RuntimePolicy.ts";
 
 const unrelatedProject = Option.some({
-  workspaceRoot: "/nonexistent/t3-rollback-project",
+  workspaceRoot: "/nonexistent/t2-rollback-project",
 } as never);
 const layerCheckpointRollbackService = CheckpointRollbackService.layer.pipe(
   Layer.provide(
@@ -406,7 +406,7 @@ it.effect.each([
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const workspaceRoot = yield* fileSystem.realPath(
-      yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-rollback-" }),
+      yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-rollback-" }),
     );
     const worktreesDir = path.join(workspaceRoot, "worktrees");
     const worktreePath = unmanaged
@@ -738,7 +738,7 @@ it.effect.skipIf(!symlinksSupported)(
   () =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
-      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-restore-isolation-" });
+      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-restore-isolation-" });
       const path = yield* Path.Path;
       const alias = path.join(cwd, "alias");
       yield* fileSystem.symlink(cwd, alias);

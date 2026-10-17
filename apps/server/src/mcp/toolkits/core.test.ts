@@ -284,14 +284,14 @@ it.effect("returns an HTML render reference that Codex and Claude tool rows both
     });
     expect(reference).toMatchObject({ title: "Revenue", height: 240 });
     expect(
-      htmlRenderFromToolItem({ toolName: "mcp__t3-code__html_render", output: result.content }),
+      htmlRenderFromToolItem({ toolName: "mcp__t2-code__html_render", output: result.content }),
     ).toEqual(reference);
   }).pipe(
     Effect.provide(
       McpHttpServer.layerHtmlToolkit.pipe(
         Layer.provideMerge(McpServer.McpServer.layer),
         Layer.provide(PreviewBrowser.layer),
-        Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-mcp-html-render-" })),
+        Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-mcp-html-render-" })),
         Layer.provide(NodeServices.layer),
         Layer.provide(FetchHttpClient.layer),
         Layer.provide(
@@ -872,7 +872,7 @@ it.effect("only the caller that prepared a pending upload can discard it", () =>
         Layer.provideMerge(McpServer.McpServer.layer),
         Layer.provide(McpToolAccessTestkit.liveThreadsLayer),
         Layer.provide(ServerSecretStore.layer),
-        Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-mcp-attachment-" })),
+        Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-mcp-attachment-" })),
         Layer.provide(NodeServices.layer),
       ),
     ),

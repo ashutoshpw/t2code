@@ -82,7 +82,7 @@ it.layer(NodeServices.layer)("Claude capability probe SDK boundary", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-claude-workspaces-" });
+        const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-claude-workspaces-" });
         const configDir = path.join(tempDir, "claude-home");
         const workspaces = [path.join(tempDir, "one"), path.join(tempDir, "two")];
         for (const cwd of workspaces) {
@@ -175,7 +175,7 @@ it.layer(NodeServices.layer)("Claude capability probe SDK boundary", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-claude-workspace-retry-" });
+      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t2-claude-workspace-retry-" });
       const skillDir = path.join(cwd, ".claude", "skills", "existing-skill");
       yield* fs.makeDirectory(skillDir, { recursive: true });
       yield* fs.writeFileString(
@@ -256,7 +256,7 @@ it.layer(NodeServices.layer)("Claude capability probe SDK boundary", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-claude-probe-sdk-" });
+      const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-claude-probe-sdk-" });
       const executablePath = yield* path.fromFileUrl(
         new URL("./testing/ClaudeCapabilitiesProbe.fixture.mjs", import.meta.url),
       );

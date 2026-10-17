@@ -245,7 +245,7 @@ export const T2_CODE_DARK_THEME_COLORS: ThemeColors = {
 
 export const T2_CHAT_THEME: ThemeDefinition = {
   id: "t2-chat",
-  label: "T3 Chat",
+  label: "T2 Chat",
   appearance: "light",
   colors: {
     canvas: "oklch(0.982446 0.010114 325.653)",
