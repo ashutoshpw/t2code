@@ -200,7 +200,7 @@ function RootRouteView() {
           <FontAppearanceSync />
           <ProviderAuthCallbackCoordinator />
           <CustomSnoozeDialogHost />
-          <GuestShareDialogHost />
+          <SendLaterDialogHost />
           <CommandPalette>
             <AppSidebarLayout>
               <Outlet />
@@ -256,7 +256,7 @@ function RootRouteView() {
           <ReopenClosedViewShortcut />
           <ConfirmDialogHost />
           <CustomSnoozeDialogHost />
-          <GuestShareDialogHost />
+          <SendLaterDialogHost />
           <SlowRpcRequestToastCoordinator />
           <HostFreezeToastCoordinator />
           <PermissionUpdateNotice />

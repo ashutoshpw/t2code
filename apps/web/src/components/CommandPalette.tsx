@@ -68,6 +68,7 @@ import {
   UserPlusIcon,
 } from "lucide-react";
 import { requestThreadFindOpen } from "./chat/threadFindActionBus";
+import { requestSendLaterFromComposer } from "./chat/sendLaterEvents";
 import {
   useDeferredValue,
   useEffect,
@@ -1601,6 +1602,20 @@ function OpenCommandPaletteDialog(props: {
       await navigate({ to: "/scheduled-tasks" });
     },
   });
+
+  if (activeThread) {
+    actionItems.push({
+      kind: "action",
+      value: "action:send-later",
+      searchTerms: ["send later", "schedule", "message", "delay", "timer", "remind"],
+      title: "Send message later",
+      icon: <CalendarClockIcon className={ITEM_ICON_CLASS} />,
+      shortcutCommand: "composer.sendLater",
+      run: async () => {
+        requestSendLaterFromComposer();
+      },
+    });
+  }
 
   actionItems.push({
     kind: "action",

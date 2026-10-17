@@ -53,6 +53,8 @@ interface ComposerPrimaryActionsProps {
   compactBeforeSendTokens?: number | null;
   keepFullHistory?: boolean;
   onToggleKeepFullHistory?: () => void;
+  onSendLater?: (() => void) | undefined;
+  sendLaterDisabledReason?: string | null | undefined;
 }
 
 const formatPendingPrimaryActionLabel = (input: {
@@ -108,6 +110,8 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   compactBeforeSendTokens = null,
   keepFullHistory = false,
   onToggleKeepFullHistory,
+  onSendLater,
+  sendLaterDisabledReason = null,
 }: ComposerPrimaryActionsProps) {
   const pointerFocusProps = preserveComposerFocusOnPointerDown
     ? { onPointerDown: preventPointerFocus }
@@ -359,7 +363,47 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
       <TooltipPopup>{submitTooltip}</TooltipPopup>
     </Tooltip>
   );
-  if (compactTokens === null) return submit;
+  const sendLaterMenu =
+    onSendLater && !showResume && !isEditingQueuedMessage ? (
+      <Menu>
+        <MenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="More send options"
+              {...pointerFocusProps}
+              disabled={isSendBusy || isConnecting || isEnvironmentUnavailable}
+            />
+          }
+        >
+          <ChevronDownIcon aria-hidden="true" />
+        </MenuTrigger>
+        <MenuPopup align="end" side="top" {...composerFloatingLayerProps}>
+          <MenuItem
+            disabled={!hasSendableContent || sendLaterDisabledReason !== null || isSendDisabled}
+            onClick={onSendLater}
+          >
+            <span className="flex flex-col">
+              Send later
+              {sendLaterDisabledReason !== null && hasSendableContent ? (
+                <span className="text-muted-foreground text-xs">{sendLaterDisabledReason}</span>
+              ) : null}
+            </span>
+          </MenuItem>
+        </MenuPopup>
+      </Menu>
+    ) : null;
+  const submitWithMenu =
+    sendLaterMenu === null ? (
+      submit
+    ) : (
+      <div className="flex items-center gap-0.5">
+        {submit}
+        {sendLaterMenu}
+      </div>
+    );
+  if (compactTokens === null) return submitWithMenu;
 
   return (
     <div data-chat-composer-compact-send="true" className="flex items-center gap-2">
@@ -395,7 +439,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           <div>{keepFullHistory ? "Click to compact first" : "Click to keep full history"}</div>
         </TooltipPopup>
       </Tooltip>
-      {submit}
+      {submitWithMenu}
     </div>
   );
 });
