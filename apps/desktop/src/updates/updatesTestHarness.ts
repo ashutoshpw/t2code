@@ -38,34 +38,7 @@ export interface UpdatesHarnessOptions {
   readonly installRecord?: string | undefined;
 }
 
-interface UpdatesHarness {
-  readonly layer: Layer.Layer<
-    | DesktopAppSettings.DesktopAppSettings
-    | DesktopBackendPool.DesktopBackendPool
-    | DesktopEnvironment.DesktopEnvironment
-    | DesktopState.DesktopState
-    | DesktopUpdates.DesktopUpdates
-    | ElectronUpdater.ElectronUpdater
-    | ElectronWindow.ElectronWindow
-    | NodeServices.NodeServices,
-    Config.ConfigError,
-    never
-  >;
-  readonly checkCount: () => number;
-  readonly quitAndInstalls: () => number;
-  readonly installSteps: string[];
-  readonly downloadCount: () => number;
-  readonly feedUrls: () => ReadonlyArray<ElectronUpdater.ElectronUpdaterFeedUrl>;
-  readonly fullChangelog: () => boolean;
-  readonly listenerCount: () => number;
-  readonly sentStates: DesktopUpdateState[];
-  // Written by the harness's update-restart marker file stub, and asserted by
-  // the self-updating .deb tests.
-  readonly updateRestartMarkers: Set<string>;
-  readonly emit: (eventName: string, payload?: unknown) => void;
-}
-
-export function makeHarness(options: UpdatesHarnessOptions = {}): UpdatesHarness {
+export function makeHarness(options: UpdatesHarnessOptions = {}) {
   let checkCount = 0;
   let quitAndInstallCount = 0;
   let downloadCount = 0;

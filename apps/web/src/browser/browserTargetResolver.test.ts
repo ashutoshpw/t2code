@@ -111,13 +111,13 @@ describe("browser target resolver", () => {
         { _tag: "BearerConnectionTarget", connectionId: "local:wsl:Ubuntu" },
         { _tag: "PrimaryConnectionTarget" },
       ]) {
-        readPreparedConnection.mockReturnValue({ httpBaseUrl: "http://172.24.66.27:3773", target });
+        readPreparedConnection.mockReturnValue({ httpBaseUrl: "http://172.24.66.27:3772", target });
         expect(
           resolveDiscoveredServerUrl(EnvironmentId.make("environment-1"), "localhost:3001/"),
         ).toBe("http://localhost:3001/");
       }
       readPreparedConnection.mockReturnValue({
-        httpBaseUrl: "http://192.168.1.25:3773",
+        httpBaseUrl: "http://192.168.1.25:3772",
         target: { _tag: "BearerConnectionTarget", connectionId: "saved:remote" },
       });
       expect(

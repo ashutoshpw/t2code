@@ -15,7 +15,7 @@ import {
 } from "./components/Icons";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 
-export type { ChangeRequestTerminology } from "@t3tools/client-runtime/source-control-clients";
+export type { ChangeRequestTerminology } from "@t2code/client-runtime/source-control-clients";
 
 type SourceControlIcon = ElementType<{ className?: string }>;
 

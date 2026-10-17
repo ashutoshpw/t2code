@@ -167,6 +167,10 @@ export default function FileBrowserPanel({
   } = useDirectoryEntries(environmentId, cwd);
   const [query, setQuery] = useState("");
   const [expandAll, setExpandAll] = useState(false);
+  const [isFileDragActive, setIsFileDragActive] = useState(false);
+  const [fileUploadProgress, setFileUploadProgress] = useState<WorkspaceFileUploadProgress | null>(
+    null,
+  );
   const pathSearch = useProjectPathSearch(
     { environmentId, cwd: hostFolder ? null : cwd, query: query.slice(0, 256) },
     200,
