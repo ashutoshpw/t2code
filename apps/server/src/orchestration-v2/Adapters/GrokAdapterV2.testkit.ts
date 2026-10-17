@@ -51,7 +51,7 @@ function layerGrokProviderAdapterRegistryReplay(
       const replayGate = options.replayGate;
       const replayDir = yield* fileSystem
         .makeTempDirectoryScoped({
-          prefix: `t3-orchestration-v2-grok-replay-${transcript.scenario}-`,
+          prefix: `t2-orchestration-v2-grok-replay-${transcript.scenario}-`,
         })
         .pipe(Effect.orDie);
       const statusPath = path.join(replayDir, "status.json");

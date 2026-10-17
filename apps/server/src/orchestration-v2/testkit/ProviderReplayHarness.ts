@@ -88,7 +88,7 @@ export function makeReplayServerConfig(
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const baseDir = yield* fs.makeTempDirectoryScoped({
-      prefix: `t3-orchestration-v2-replay-${safeScenario}-`,
+      prefix: `t2-orchestration-v2-replay-${safeScenario}-`,
     });
     const stateDir = path.join(baseDir, "userdata");
     const logsDir = path.join(stateDir, "logs");

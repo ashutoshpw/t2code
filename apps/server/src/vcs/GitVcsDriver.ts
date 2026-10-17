@@ -920,7 +920,7 @@ export const makeVcsDriverShape = Effect.fn("makeGitVcsDriverShape")(function* (
       ];
       const { gitCommonDir, indexPath, headExists } = yield* resolveCaptureRepository(input.cwd);
       const indexId = yield* random.uuidV4();
-      const tempIndexPath = path.join(gitCommonDir, `t3-checkpoint-index-${indexId}`);
+      const tempIndexPath = path.join(gitCommonDir, `t2-checkpoint-index-${indexId}`);
       const hostEnv = yield* HostProcess.Environment;
       const commitEnv: NodeJS.ProcessEnv = {
         ...hostEnv,

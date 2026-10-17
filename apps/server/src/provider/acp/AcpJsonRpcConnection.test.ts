@@ -484,7 +484,7 @@ describe("AcpSessionRuntime", () => {
             env: { T2_ACP_MCP_ACP: "1" },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
           mcpServers: [{ type: "stdio", name: "t2-code", command: "/usr/bin/node", args: [] }],
           acpMcpServers: [{ type: "acp", name: "t2-code", serverId: "t2-code" }],
@@ -519,7 +519,7 @@ describe("AcpSessionRuntime", () => {
             args: mockAgentArgs,
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
           mcpServers: [{ type: "stdio", name: "t2-code", command: "/usr/bin/node", args: [] }],
           acpMcpServers: [{ type: "acp", name: "t2-code", serverId: "t2-code" }],
@@ -573,7 +573,7 @@ describe("AcpSessionRuntime", () => {
             env: { T2_ACP_V2_MANAGEMENT: "1" },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           authMethodId: "test",
           requestLogger: (event) =>
             Effect.sync(() => {
@@ -605,7 +605,7 @@ describe("AcpSessionRuntime", () => {
             env: { T2_ACP_AUTH_METHOD_ID: "test" },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           requestLogger: (event) =>
             Effect.sync(() => {
               requestEvents.push(event);
@@ -649,7 +649,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           requestLogger: (event) =>
             Effect.sync(() => {
               requestEvents.push(event);
@@ -687,7 +687,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           onInitialized: (initializeResult) =>
             Effect.sync(() => {
               advertisedAuthMethodName = initializeResult.authMethods?.[0]?.name;
@@ -1156,7 +1156,7 @@ describe("AcpSessionRuntime", () => {
             negotiated: initializeResult.agentInfo?.version ?? "none",
           }),
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           requestLogger: (event) =>
             Effect.sync(() => {
               requestEvents.push(event);
@@ -1187,7 +1187,7 @@ describe("AcpSessionRuntime", () => {
             env: { T2_ACP_SESSION_LIFECYCLE: "1" },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
           requestLogger: (event) =>
             Effect.sync(() => {
               requestEvents.push(event);
@@ -1240,7 +1240,7 @@ describe("AcpSessionRuntime", () => {
           },
           cwd: process.cwd(),
           resumeSessionId: "mock-session-1",
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
         }),
       ),
       Effect.scoped,
@@ -1299,7 +1299,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
         }),
       ),
       Effect.scoped,
@@ -1359,7 +1359,7 @@ describe("AcpSessionRuntime", () => {
         },
         cwd: process.cwd(),
         sessionLoadTimeout: "2 seconds",
-        clientInfo: { name: "t3-test", version: "0.0.0" },
+        clientInfo: { name: "t2-test", version: "0.0.0" },
         requestLogger: (event) =>
           event.method === "session/load" && event.status === "started"
             ? Deferred.succeed(loadStarted, undefined).pipe(Effect.asVoid)
@@ -1458,7 +1458,7 @@ describe("AcpSessionRuntime", () => {
           cwd: process.cwd(),
           sessionLoadReplayIdleGap: "50 millis",
           sessionLoadTimeout: "1 second",
-          clientInfo: { name: "t3-test", version: "0.0.0" },
+          clientInfo: { name: "t2-test", version: "0.0.0" },
         }),
       ),
       Effect.scoped,

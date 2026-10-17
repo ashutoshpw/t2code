@@ -132,7 +132,7 @@ describe("DesktopRendererHistory", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const directory = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-renderer-history-",
+          prefix: "t2-renderer-history-",
         });
         let previewPid = 7_002;
         let previewDestroyed = false;
@@ -349,7 +349,7 @@ describe("DesktopRendererHistory", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const directory = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-renderer-rotation-",
+        prefix: "t2-renderer-rotation-",
       });
       const filePath = `${directory}/renderer-history.ndjson`;
       const maxBytes = 256 * 1_024;
