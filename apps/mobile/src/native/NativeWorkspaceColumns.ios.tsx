@@ -28,7 +28,7 @@ export function useNativeWorkspaceColumnsReady() {
   const [timedOut, setTimedOut] = useState(false);
   const waiting =
     !(Platform.OS === "ios" && Platform.isPad) &&
-    !!nativeControls?.ViewPrototypes?.T3NativeControls_LayoutMetrics &&
+    !!nativeControls?.ViewPrototypes?.T2NativeControls_LayoutMetrics &&
     metrics === null;
 
   useEffect(() => {

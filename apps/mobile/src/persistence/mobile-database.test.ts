@@ -39,8 +39,8 @@ describe("mobile database legacy cache migration", () => {
 });
 
 describe("offline pull request cache", () => {
-  const environmentId = "cached-environment" as import("@t3tools/contracts").EnvironmentId;
-  const otherEnvironment = "other-environment" as import("@t3tools/contracts").EnvironmentId;
+  const environmentId = "cached-environment" as import("@t2code/contracts").EnvironmentId;
+  const otherEnvironment = "other-environment" as import("@t2code/contracts").EnvironmentId;
 
   async function sqliteDatabase() {
     const { DatabaseSync } = await import("node:sqlite");

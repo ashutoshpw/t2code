@@ -1,7 +1,7 @@
 import { useActiveNewTask } from "../../state/active-new-task";
 import { ThreadUndoNotice } from "../home/ThreadUndoNotice";
 import { useAndroidControlSizing } from "../../components/ui/useAndroidControlSizing";
-import { resolveScratchProjectScopeKey } from "@t3tools/client-runtime/state/project-grouping";
+import { resolveScratchProjectScopeKey } from "@t2code/client-runtime/state/project-grouping";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import type {
   EnvironmentProject,

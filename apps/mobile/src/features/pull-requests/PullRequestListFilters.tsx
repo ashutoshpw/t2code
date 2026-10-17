@@ -1,4 +1,4 @@
-import { sortProjectsByGroupOrder } from "@t3tools/client-runtime/state/project-grouping";
+import { sortProjectsByGroupOrder } from "@t2code/client-runtime/state/project-grouping";
 import { useMemo } from "react";
 import { Platform, ScrollView } from "react-native";
 import type { MenuProps } from "../../components/ui/Menu.types";

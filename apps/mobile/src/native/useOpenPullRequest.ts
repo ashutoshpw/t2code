@@ -2,8 +2,8 @@ import { useNavigation, useRoute, StackActions } from "@react-navigation/native"
 import { nativePullRequestDestination } from "../lib/pullRequestNavigation";
 import { useCallback } from "react";
 import { Platform } from "react-native";
-import { useSelectWorkspaceDetail } from "../features/workspace/useSelectWorkspaceDetail";
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { resetAndroidWorkspace } from "../lib/android-workspace-navigation";
+import { EnvironmentId, ThreadId } from "@t2code/contracts";
 import { useProjects, useThreadShell } from "../state/entities";
 import { tryOpenExternalUrl } from "../lib/openExternalUrl";
 import { appAtomRegistry } from "../state/atom-registry";

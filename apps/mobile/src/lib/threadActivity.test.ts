@@ -1355,7 +1355,7 @@ describe("buildThreadFeed", () => {
   it.each([
     [
       "failed",
-      "await sky.type_text({app:'T3 Code (Nightly)',text:'debug(ga.run)'});",
+      "await sky.type_text({app:'T2 Code (Nightly)',text:'debug(ga.run)'});",
       "Restrict the breakpoint to Git actions",
       "computer",
     ],

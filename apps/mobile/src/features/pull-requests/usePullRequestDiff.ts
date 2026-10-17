@@ -1,5 +1,10 @@
 import type { ChangeRequestTerminology } from "@t3tools/client-runtime/source-control-clients";
-import { EnvironmentId, ProjectId, type PullRequestListEntry } from "@t3tools/contracts";
+import {
+  EnvironmentId,
+  ProjectId,
+  type PullRequestDiffResult,
+  type PullRequestListEntry,
+} from "@t2code/contracts";
 import { useAtomRefresh } from "@effect/atom-react";
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 

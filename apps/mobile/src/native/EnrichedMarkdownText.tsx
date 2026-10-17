@@ -1,9 +1,9 @@
-import { decodeComposerContextFragment } from "@t3tools/shared/composerContextClipboard";
+import { decodeComposerContextFragment } from "@t2code/shared/composerContextClipboard";
 import {
   collectComposerContextReferences,
   formatComposerContextHref,
   formatComposerContextReference,
-} from "@t3tools/shared/composerContextReferences";
+} from "@t2code/shared/composerContextReferences";
 import {
   markdownWithHtml,
   markdownWithInlineFileLinks,
