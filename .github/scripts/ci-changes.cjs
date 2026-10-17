@@ -21,8 +21,7 @@ const RUNS_EVERYTHING = [
 // Includes cross-package reads absent from package.json dependencies.
 const EXTRA_OWNERS = [
   // Vite configs and tsconfigs of these apps import scripts/lib directly.
-  [/^scripts\/lib\//, ["@t2code/desktop", "@t2code/mobile", "@t2code/web", "t2"]],
-  // scripts/build-desktop-artifact.ts reads the GNOME extension manifest.
+  [/^scripts\/lib\//, ["@t2code/desktop", "@t2code/mobile", "@t2code/web", "@t2code/cli"]],  // scripts/build-desktop-artifact.ts reads the GNOME extension manifest.
   [/^apps\/desktop\/gnome-extension\//, ["@t2code/scripts"]],
   [/^native\/browser-secret\//, ["@t2code/desktop"]],
   [/^native\/kde-snap-shot\//, ["@t2code/desktop"]],
@@ -45,12 +44,14 @@ const TEST_ONLY_DEPS = {
     "@t2code/provider-cursor",
   ],
 };
-// The server bundles the web build without importing it.
-const BUILD_ONLY_DEPS = { t3: ["@t2code/web"] };
+// Declared dependencies that only feed a build step: the server bundles the
+// built web app (apps/server/vite.config.ts) but never imports it.
+const BUILD_ONLY_DEPS = { t2: ["@t2code/web"] };
 
 const MOBILE_NATIVE =
   /^apps\/mobile\/.*\.(swift|kt|kts)$|^apps\/mobile\/(\.swiftlint\.yml|detekt\.yml|\.editorconfig|Brewfile)$|^scripts\/mobile-native-static-check\.ts$|^package\.json$|^\.github\/workflows\/ci\.yml$|^\.github\/scripts\/ci-changes\.cjs$|^\.github\/actions\/ci-changes\//;
 
+// Jobs that test every package except these, which have jobs of their own.
 const OWN_TEST_JOB = new Set(["t2", "@t2code/web", "@t2code/monorepo"]);
 
 function readWorkspace() {
@@ -161,7 +162,11 @@ function decide(files, packages, full) {
       // Empty means every package the Test job covers.
       test_packages: everything ? "" : tested.map((pkg) => pkg.name).join(" "),
       test_web: has("@t2code/web"),
+<<<<<<< HEAD
       test_server: has("t2"),
+=======
+      test_server: has("@t2code/cli"),
+>>>>>>> 0fb3c7d13a (rebrand: finish the sweep in docs, scripts, workflows, and the site)
       rust: everything || rust,
       release_smoke: scriptsChanged,
       mobile_native: files === null || files.some((file) => MOBILE_NATIVE.test(file)),
