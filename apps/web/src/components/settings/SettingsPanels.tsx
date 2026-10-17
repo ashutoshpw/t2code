@@ -892,6 +892,28 @@ export function GeneralSettingsPanel() {
           }
         />
         <SettingsRow
+          {...searchableSetting("app-rail")}
+          description="Keep a compact navigation rail on the left edge for pull requests, usage, and scheduled tasks."
+          resetAction={
+            settings.appRailEnabled !== DEFAULT_UNIFIED_SETTINGS.appRailEnabled ? (
+              <SettingResetButton
+                label="app rail"
+                onClick={() =>
+                  updateSettings({ appRailEnabled: DEFAULT_UNIFIED_SETTINGS.appRailEnabled })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              checked={settings.appRailEnabled}
+              onCheckedChange={(checked) => updateSettings({ appRailEnabled: Boolean(checked) })}
+              aria-label="App rail"
+            />
+          }
+        />
+
+        <SettingsRow
           {...setting("working-shelf")}
           description={
             <T>
