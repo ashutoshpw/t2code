@@ -257,8 +257,8 @@ export const layer = Layer.effect(
       onStateDirOwned: () =>
         electronDialog
           .showErrorBox(
-            "This T3 home is unavailable",
-            "Another T3 Code server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try `t3 update`. If the older launcher cannot update, run `t3 service uninstall` and optionally reinstall with `t3 service install` from a current CLI. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's T3 home to each command. Then reopen T3 Code. You can also set a separate T2CODE_HOME and pair with the running server.",
+            "This T2 home is unavailable",
+            "Another T2 Code server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try `t2 update`. If the older launcher cannot update, run `t2 service uninstall` and optionally reinstall with `t2 service install` from a current CLI. Use `npx t2@latest` if `t2` is missing or outdated, and pass `--base-dir` with the service's T2 home to each command. Then reopen T2 Code. You can also set a separate T2CODE_HOME and pair with the running server.",
           )
           .pipe(Effect.andThen(electronApp.quit)),
     });

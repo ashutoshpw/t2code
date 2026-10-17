@@ -38,7 +38,7 @@ export function ConnectCliAuthorizeSurface() {
   };
   const openSignInOnLoad = useEffectEvent(openSignIn);
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- opens Clerk sign-in or navigates the window to the authorize URL once Clerk has loaded
+  // oxlint-disable-next-line t2code/react-effect-budget -- opens Clerk sign-in or navigates the window to the authorize URL once Clerk has loaded
   useEffect(() => {
     if (!request || !isLoaded || redirecting.current) {
       return;

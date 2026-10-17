@@ -2,11 +2,11 @@ import { assert, describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const rule = createOxlintRuleHarness("t3code/no-wall-clock-in-tests", {
+const rule = createOxlintRuleHarness("t2code/no-wall-clock-in-tests", {
   filename: "fixture.test.ts",
 });
 
-describe("t3code/no-wall-clock-in-tests", () => {
+describe("t2code/no-wall-clock-in-tests", () => {
   rule.valid(
     "ignores a computed member with a variable key",
     `
@@ -84,7 +84,7 @@ describe("t3code/no-wall-clock-in-tests", () => {
   );
 });
 
-const productionRule = createOxlintRuleHarness("t3code/no-wall-clock-in-tests");
+const productionRule = createOxlintRuleHarness("t2code/no-wall-clock-in-tests");
 
 productionRule.valid(
   "ignores non-test files",

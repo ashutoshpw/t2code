@@ -15,8 +15,8 @@ const devBundleIdSuffix = NodePath.basename(repoRoot)
   .replaceAll(/[^a-z0-9]+/g, "");
 const APP_DISPLAY_NAME = isDevelopment ? "T2 Code (Dev)" : "T2 Code (Beta)";
 const APP_BUNDLE_ID = isDevelopment
-  ? `com.t2tools.t2code.dev.${devBundleIdSuffix || "local"}`
-  : "com.t2tools.t2code";
+  ? `codes.t2.desktop.dev.${devBundleIdSuffix || "local"}`
+  : "codes.t2.desktop";
 const APP_PROTOCOL_SCHEMES = isDevelopment ? ["t2code-dev"] : ["t2code"];
 const LAUNCHER_VERSION = 20;
 const developmentMacIconPngPath = NodePath.join(

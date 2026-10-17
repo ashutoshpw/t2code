@@ -93,12 +93,12 @@ scope and behavioral claims; leave the full correctness, security, and performan
 
 ### Configuration and workflow examples
 
-- Hosting CLI-path configuration in [#11653](https://github.com/pingdotgg/t3code/pull/11653) is eligible
+- Hosting CLI-path configuration in [#11653](https://github.com/pingdotgg/t2code/pull/11653) is eligible
   for deeper review under the maintainer's ruling: it makes an existing capability configurable.
   It need not qualify as an obvious-bug repair or obtain prior feature approval on that basis.
   Still assess one underlying problem, necessary scope and credible verification. Deeper review can
   reject the configuration mechanism or its implementation.
-- Preserving Files as an independent tab in [#14436](https://github.com/pingdotgg/t3code/pull/14436)
+- Preserving Files as an independent tab in [#14436](https://github.com/pingdotgg/t2code/pull/14436)
   changes tab lifetime and navigation. The maintainer classified it as a broader workflow change
   requiring prior product-direction approval, which is absent. Propose closure for missing approval
   in a dry run, or carry out closure in authorized enforcement. Its good evidence does not make it

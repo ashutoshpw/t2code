@@ -141,7 +141,7 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
       replace: true,
     }).catch(() => null);
     if (opened === null) {
-      setState({ status: "failed", message: "T3 Code could not open a new thread." });
+      setState({ status: "failed", message: "T2 Code could not open a new thread." });
       return;
     }
     setState({ status: "opened" });
@@ -208,7 +208,7 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
       setState({
         status: "failed",
         message:
-          "This machine cannot clone from a link. Update T3 Code on it, or clone the repository from the command palette.",
+          "This machine cannot clone from a link. Update T2 Code on it, or clone the repository from the command palette.",
       });
       return;
     }
@@ -337,7 +337,7 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
     }
   });
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- runs each launch decision once: navigates to the thread or opens a draft
+  // oxlint-disable-next-line t2code/react-effect-budget -- runs each launch decision once: navigates to the thread or opens a draft
   useEffect(() => {
     if (launch === null || launchedRef.current === launch) return;
     launchedRef.current = launch;
@@ -407,7 +407,7 @@ function PullRequestLinkCheckout({
     },
   });
   const warnedRef = useRef(false);
-  // oxlint-disable-next-line t3code/react-effect-budget -- shows the hidden-characters warning toast once per linked prompt
+  // oxlint-disable-next-line t2code/react-effect-budget -- shows the hidden-characters warning toast once per linked prompt
   useEffect(() => {
     if (warnedRef.current || link.prompt === null) return;
     warnedRef.current = true;

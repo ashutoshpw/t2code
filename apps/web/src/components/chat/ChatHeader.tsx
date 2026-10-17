@@ -116,7 +116,7 @@ export const ChatHeader = memo(function ChatHeader({
       ? renaming.title
       : null;
   const isRenamingTitle = renamingTitle !== null;
-  // oxlint-disable-next-line t3code/react-effect-budget -- measures the breadcrumb list DOM via ResizeObserver, a frame and font loads to collapse the parent title
+  // oxlint-disable-next-line t2code/react-effect-budget -- measures the breadcrumb list DOM via ResizeObserver, a frame and font loads to collapse the parent title
   useEffect(() => {
     const list = breadcrumbContainerRef.current?.querySelector("ol");
     if (!list || !parentThreadLink) return;

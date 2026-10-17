@@ -2,7 +2,7 @@ import { assert, describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const RULE = "t3code/no-test-timeout-or-unreasoned-skip";
+const RULE = "t2code/no-test-timeout-or-unreasoned-skip";
 const rule = createOxlintRuleHarness(RULE, { filename: "fixture.test.ts" });
 
 const assertTimeoutMessage = (output: string) =>
@@ -33,7 +33,7 @@ describe(RULE, () => {
       // quarantine: #1234 flakes on Windows until the pty fix lands
       it.skip("pending", () => {});
 
-      // https://github.com/pingdotgg/t3code/issues/42
+      // https://github.com/pingdotgg/t2code/issues/42
       describe.only("focused", () => {});
     `,
   );
