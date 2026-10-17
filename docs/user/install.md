@@ -132,8 +132,7 @@ command cannot reach the app, start or update the desktop app and try again.
 
 ## Mobile app
 
-Install T2 Code from the
-[App Store](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or
+Install T2 Code from
 [Google Play](https://play.google.com/store/apps/details?id=codes.t2.mobile).
 The phone connects to a server on another machine. Follow
 [remote access](./remote-access.md) to link it through T2 Connect or a pairing URL.
