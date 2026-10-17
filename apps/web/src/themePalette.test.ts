@@ -868,27 +868,27 @@ describe("stored theme preferences", () => {
     }
   });
 
-  it("resolves the legacy t2-chat-dark preference to dark T2 Chat", () => {
-    expect(getThemeDefinition("t2-chat-dark")).toBe(T2_CHAT_THEME);
-    expect(getThemePreferenceMode("t2-chat-dark")).toBe("dark");
-    expect(resolveThemeAppearance("t2-chat-dark", true, false)).toBe("dark");
-    expect(resolveDesktopTheme("t2-chat-dark", false)).toBe("dark");
-    expect(isKnownThemePreference("t2-chat-dark")).toBe(true);
+  it("resolves the legacy t3-chat-dark preference to dark T2 Chat", () => {
+    expect(getThemeDefinition("t3-chat-dark")).toBe(T2_CHAT_THEME);
+    expect(getThemePreferenceMode("t3-chat-dark")).toBe("dark");
+    expect(resolveThemeAppearance("t3-chat-dark", true, false)).toBe("dark");
+    expect(resolveDesktopTheme("t3-chat-dark", false)).toBe("dark");
+    expect(isKnownThemePreference("t3-chat-dark")).toBe(true);
   });
 
-  it("resolves legacy t2-prefixed ids onto the renamed themes", () => {
+  it("resolves ids stored under the old brand prefix onto the renamed themes", () => {
     for (const [legacy, theme] of [
-      ["t2-grove", GROVE_THEME],
-      ["t2-ocean", OCEAN_THEME],
-      ["t2-ember", EMBER_THEME],
-      ["t2-iris", IRIS_THEME],
+      ["t3-grove", GROVE_THEME],
+      ["t3-ocean", OCEAN_THEME],
+      ["t3-ember", EMBER_THEME],
+      ["t3-iris", IRIS_THEME],
     ] as const) {
       expect(getThemeDefinition(legacy)).toBe(theme);
       expect(isKnownThemePreference(legacy)).toBe(true);
       expect(canonicalThemePreference(legacy)).toBe(theme.id);
     }
-    expect(canonicalThemePreference("t2-chat-dark")).toBe("t2-chat-dark");
-    expect(parseThemeHalves(JSON.stringify({ light: "t2-ocean", dark: "t2-grove" }))).toEqual({
+    expect(canonicalThemePreference("t3-chat-dark")).toBe("t3-chat-dark");
+    expect(parseThemeHalves(JSON.stringify({ light: "t3-ocean", dark: "t3-grove" }))).toEqual({
       light: OCEAN_THEME.id,
       dark: GROVE_THEME.id,
     });

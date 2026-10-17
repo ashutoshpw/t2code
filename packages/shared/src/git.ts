@@ -6,19 +6,13 @@ import type {
   VcsStatusResult,
   VcsStatusStreamEvent,
 } from "@t2code/contracts";
-import { LEGACY_WORKTREE_BRANCH_PREFIXES, WORKTREE_BRANCH_PREFIX } from "@t2code/contracts";
+import { WORKTREE_BRANCH_PREFIX } from "@t2code/contracts";
 import * as Arr from "effect/Array";
 import * as Result from "effect/Result";
 
 export { WORKTREE_BRANCH_PREFIX };
 
-// Canonical prefixes use `<prefix>/<8 hex>`. Older T3 builds generated
-// `t2code/<uuid>` via Crypto.randomUUID(), so the legacy prefix also accepts exactly
-// that shape — version nibble `4`, variant nibble `[89ab]` — to keep those threads
-// eligible for branch regeneration without loosening the T2 prefix.
 const TEMP_WORKTREE_HEX_TOKEN = "[0-9a-f]{8}";
-const LEGACY_TEMP_WORKTREE_BRANCH_SUFFIX =
-  "(?:[0-9a-f]{8}|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})";
 const tempWorktreeBranchPatternCache = new Map<string, RegExp>();
 
 function escapeRegExpFragment(raw: string): string {
@@ -27,13 +21,12 @@ function escapeRegExpFragment(raw: string): string {
 
 /**
  * Recognized temporary-branch prefixes: the configured server prefix (when the
- * caller knows it) ahead of the canonical default and the legacy upstream
- * prefix, which must stay recognized forever so existing threads keep working.
+ * caller knows it) ahead of the canonical default.
  */
 export function temporaryWorktreeBranchPrefixes(
   configuredPrefix?: string | null,
 ): ReadonlyArray<string> {
-  const prefixes = [WORKTREE_BRANCH_PREFIX, ...LEGACY_WORKTREE_BRANCH_PREFIXES];
+  const prefixes = [WORKTREE_BRANCH_PREFIX];
   const configured = sanitizeWorktreeBranchPrefix(configuredPrefix ?? "");
   if (!prefixes.includes(configured)) {
     prefixes.unshift(configured);
@@ -47,12 +40,7 @@ function temporaryWorktreeBranchPattern(prefixes: ReadonlyArray<string>): RegExp
   if (cached) return cached;
   const patterns = prefixes.map((prefix) => {
     const escapedPrefix = escapeRegExpFragment(prefix);
-    const slashSuffix = LEGACY_WORKTREE_BRANCH_PREFIXES.some(
-      (legacyPrefix) => legacyPrefix === prefix,
-    )
-      ? LEGACY_TEMP_WORKTREE_BRANCH_SUFFIX
-      : TEMP_WORKTREE_HEX_TOKEN;
-    return `(?:${escapedPrefix}\\/${slashSuffix}|${escapedPrefix}-${TEMP_WORKTREE_HEX_TOKEN})`;
+    return `(?:${escapedPrefix}\\/${TEMP_WORKTREE_HEX_TOKEN}|${escapedPrefix}-${TEMP_WORKTREE_HEX_TOKEN})`;
   });
   const pattern = new RegExp(`^(?:${patterns.join("|")})$`);
   tempWorktreeBranchPatternCache.set(key, pattern);

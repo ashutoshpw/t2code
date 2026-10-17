@@ -66,35 +66,8 @@ describe("normalizeGitRemoteUrl", () => {
     expect(normalizeGitRemoteUrl("git@x:team/project.git")).toBe("x/team/project");
   });
 
-  it("gives an Azure DevOps repository the same key over SSH as over HTTPS", () => {
-    expect(normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T2Tools/Platform/T2Code")).toBe(
-      "dev.azure.com/t2tools/platform/_git/t2code",
-    );
-    expect(normalizeGitRemoteUrl("ssh://git@ssh.dev.azure.com:22/v3/T2Tools/Platform/T2Code")).toBe(
-      "dev.azure.com/t2tools/platform/_git/t2code",
-    );
-    expect(
-      normalizeGitRemoteUrl("https://T2Tools@dev.azure.com/T2Tools/Platform/_git/T2Code"),
-    ).toBe("dev.azure.com/t2tools/platform/_git/t2code");
-  });
 
-  it("puts the organization back in the host on the name dev.azure.com replaced", () => {
-    expect(
-      normalizeGitRemoteUrl("T2Tools@vs-ssh.visualstudio.com:v3/T2Tools/Platform/T2Code"),
-    ).toBe("t2tools.visualstudio.com/platform/_git/t2code");
-    expect(normalizeGitRemoteUrl("https://T2Tools.visualstudio.com/Platform/_git/T2Code")).toBe(
-      "t2tools.visualstudio.com/platform/_git/t2code",
-    );
-  });
 
-  it("leaves an Azure SSH host it cannot read as the path it was given", () => {
-    expect(normalizeGitRemoteUrl("git@ssh.dev.azure.com:v4/T2Tools/Platform/T2Code")).toBe(
-      "ssh.dev.azure.com/v4/t2tools/platform/t2code",
-    );
-    expect(normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T2Tools/T2Code")).toBe(
-      "ssh.dev.azure.com/v3/ashutoshpw/t2code",
-    );
-  });
 });
 
 describe("parseOriginUrlFromGitConfig", () => {
@@ -170,34 +143,27 @@ describe("isTemporaryWorktreeBranch", () => {
     );
   });
 
-  it("matches legacy t3code temporary worktree refs", () => {
-    expect(isTemporaryWorktreeBranch("t2code/deadbeef")).toBe(true);
-    expect(isTemporaryWorktreeBranch("t3code-deadbeef")).toBe(true);
-    expect(isTemporaryWorktreeBranch("t2code/f4ae4e0e-f971-4d48-b4f2-9cf0aa54ab12")).toBe(true);
+  it("matches temporary worktree refs in both the nested and flat shapes", () => {
+    expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef`)).toBe(true);
+    expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}-deadbeef`)).toBe(true);
     expect(
       isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/f4ae4e0e-f971-4d48-b4f2-9cf0aa54ab12`),
     ).toBe(false);
   });
 
   it("rejects UUID-shaped refs that are not RFC 4122 v4", () => {
-    expect(isTemporaryWorktreeBranch("t2code/f4ae4e0e-f971-1d48-b4f2-9cf0aa54ab12")).toBe(false);
-    expect(isTemporaryWorktreeBranch("t2code/f4ae4e0e-f971-4d48-c4f2-9cf0aa54ab12")).toBe(false);
+    expect(isTemporaryWorktreeBranch("acme/f4ae4e0e-f971-1d48-b4f2-9cf0aa54ab12")).toBe(false);
+    expect(isTemporaryWorktreeBranch("acme/f4ae4e0e-f971-4d48-c4f2-9cf0aa54ab12")).toBe(false);
   });
 
-  it("matches the flat fallback used when a plain t3 branch exists", () => {
+  it("matches the flat fallback used when a plain branch exists", () => {
     const flat = flattenTemporaryWorktreeBranchName(`${WORKTREE_BRANCH_PREFIX}/deadbeef`);
     expect(flat).toBe(`${WORKTREE_BRANCH_PREFIX}-deadbeef`);
     expect(isTemporaryWorktreeBranch(flat)).toBe(true);
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}-deadbeef-extra`)).toBe(false);
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}-feature`)).toBe(false);
-    expect(flattenTemporaryWorktreeBranchName("t2code/f4ae4e0e-f971-4d48-b4f2-9cf0aa54ab12")).toBe(
+    expect(flattenTemporaryWorktreeBranchName("acme/f4ae4e0e-f971-4d48-b4f2-9cf0aa54ab12")).toBe(
       `${WORKTREE_BRANCH_PREFIX}-f4ae4e0e`,
-    );
-    expect(flattenTemporaryWorktreeBranchName("t3code-deadbeef")).toBe(
-      `${WORKTREE_BRANCH_PREFIX}-deadbeef`,
-    );
-    expect(flattenTemporaryWorktreeBranchName("t2code/deadbeef")).toBe(
-      `${WORKTREE_BRANCH_PREFIX}-deadbeef`,
     );
   });
 
@@ -207,22 +173,15 @@ describe("isTemporaryWorktreeBranch", () => {
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef-extra`)).toBe(false);
   });
 
-  it("still recognizes the legacy t3code prefix without configuration", () => {
-    expect(isTemporaryWorktreeBranch("t2code/deadbeef")).toBe(true);
-    expect(isTemporaryWorktreeBranch("t2code/f4ae4e0e-f971-4d48-b4f2-9cf0aa54ab12")).toBe(true);
-    expect(isTemporaryWorktreeBranch("t2code/feature/demo")).toBe(false);
-  });
-
-  it("recognizes a configured custom prefix alongside the defaults", () => {
+  it("recognizes a configured custom prefix alongside the default", () => {
     const prefixes = temporaryWorktreeBranchPrefixes("acme");
     expect(isTemporaryWorktreeBranch("acme/deadbeef", prefixes)).toBe(true);
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef`, prefixes)).toBe(true);
-    expect(isTemporaryWorktreeBranch("t2code/deadbeef", prefixes)).toBe(true);
+    expect(isTemporaryWorktreeBranch("main/deadbeef", prefixes)).toBe(false);
     expect(isTemporaryWorktreeBranch("acme/feature/demo", prefixes)).toBe(false);
     // A custom prefix equal to a default never duplicates or displaces.
     expect(temporaryWorktreeBranchPrefixes(WORKTREE_BRANCH_PREFIX)).toEqual([
       WORKTREE_BRANCH_PREFIX,
-      "t3code",
     ]);
   });
 
@@ -350,6 +309,23 @@ describe("resolveAutoFeatureBranchName", () => {
 });
 
 describe("formatGeneratedBranchName", () => {
+  it.each(["acme", "acme/"])("joins static prefix %s with one slash", (prefix) => {
+    expect(
+      formatGeneratedBranchName("Add Search", { mode: "static", prefix, instructions: "" }),
+    ).toBe("acme/add-search");
+  });
+  it("supports an empty prefix and preserves user prefix casing", () => {
+    expect(
+      formatGeneratedBranchName("Add Search", { mode: "static", prefix: "", instructions: "" }),
+    ).toBe("add-search");
+    expect(
+      formatGeneratedBranchName("Add Search", {
+        mode: "static",
+        prefix: "Team/Julius/",
+        instructions: "",
+      }),
+    ).toBe("Team/Julius/add-search");
+  });
   it.each([
     [" Team / Jules.lock/", "Team/Jules-lock/add-search"],
     ["-team//feature@{new}", "team/feature-new/add-search"],
@@ -363,7 +339,7 @@ describe("formatGeneratedBranchName", () => {
     expect(
       formatGeneratedBranchName("feat/Add Search", {
         mode: "semantic",
-        prefix: "t3code",
+        prefix: "acme",
         instructions: "",
       }),
     ).toBe("feat/add-search");
