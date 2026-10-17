@@ -64,7 +64,10 @@ const MOBILE_NATIVE =
   /^apps\/mobile\/.*\.(swift|kt|kts)$|^apps\/mobile\/(\.swiftlint\.yml|detekt\.yml|\.editorconfig|Brewfile)$|^scripts\/mobile-native-static-check\.ts$|^package\.json$|^\.github\/workflows\/ci\.yml$|^\.github\/scripts\/ci-changes\.cjs$|^\.github\/actions\/ci-changes\//;
 
 // Jobs that test every package except these, which have jobs of their own.
-const OWN_TEST_JOB = new Set(["t2", "@t2code/web", "@t2code/monorepo"]);
+// The server package's suite runs sharded in test_server; listing it here
+// keeps the shared Test job from running it unsharded, which cannot fit the
+// job's timeout.
+const OWN_TEST_JOB = new Set(["t2", "@t2code/cli", "@t2code/web", "@t2code/monorepo"]);
 
 function readWorkspace() {
   const patterns = [];
