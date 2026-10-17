@@ -422,6 +422,15 @@ export function useBoringSidebarEnabled(): boolean {
   );
 }
 
+/**
+ * Read raw so the rail is present before settings hydrate (the default is on).
+ * Gating on hydration would flash the whole layout for most users instead of
+ * only for the few who turned the rail off.
+ */
+export function useAppRailEnabled(): boolean {
+  return useClientSettings((settings) => settings.appRailEnabled);
+}
+
 export async function prepareModelPreferencesPatch(
   settings: ServerSettings,
   patch: ServerSettingsPatch,

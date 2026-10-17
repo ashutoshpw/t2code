@@ -12,11 +12,8 @@ import * as Cause from "effect/Cause";
 import { ChevronsDownUp, ChevronsUpDown } from "lucide";
 import { useEffect, useRef, useState } from "react";
 
-<<<<<<< HEAD
-=======
 import { Upload } from "lucide-react";
 import { makeWorkspaceFileDropHandlers } from "~/components/chat/workspaceFileDrop";
->>>>>>> 3c65b4f1 (rebrand: repair rebase resolve damage after the upstream rebase)
 import { Button } from "~/components/ui/button";
 import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
 import { MorphIcon } from "~/components/MorphIcon";

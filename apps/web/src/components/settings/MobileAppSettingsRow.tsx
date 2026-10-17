@@ -9,11 +9,7 @@ const stores = [
   {
     label: "Android",
     store: "Google Play",
-<<<<<<< HEAD
-    url: "https://play.google.com/store/apps/details?id=com.t2tools.t2code",
-=======
     url: "https://play.google.com/store/apps/details?id=codes.t2.mobile",
->>>>>>> 3c65b4f1 (rebrand: repair rebase resolve damage after the upstream rebase)
     Icon: AndroidIcon,
   },
 ];

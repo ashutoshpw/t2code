@@ -28,11 +28,7 @@ const memberProjectFilesAtom = Atom.family((membersKey: string) => {
       if (result.waiting) continue;
       const data =
         get(optimisticFileAtom(environmentId, workspaceRoot, T2_PROJECT_FILE_NAME))?.data ??
-<<<<<<< HEAD
         AsyncResult.getOrElse(result, () => null);
-=======
-        Option.getOrNull(AsyncResult.value(result));
->>>>>>> 3c65b4f1 (rebrand: repair rebase resolve damage after the upstream rebase)
       files.set(
         physicalProjectKey,
         data === null || data.exists === false || data.truncated
