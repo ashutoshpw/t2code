@@ -55,3 +55,15 @@ export function formatNextScheduledTaskRun(nextRunAt: string, now: number): stri
   });
   return `Next run ${date} at ${time}`;
 }
+
+/** A one-time task stays listed after it runs, so its row reports the outcome. */
+export function formatOnceTaskOutcome(task: {
+  readonly nextRunAt: string | null;
+  readonly lastRunStatus: "never" | "running" | "succeeded" | "failed";
+}): string | null {
+  if (task.nextRunAt !== null) return null;
+  if (task.lastRunStatus === "succeeded") return "Sent";
+  if (task.lastRunStatus === "failed") return "Could not send";
+  if (task.lastRunStatus === "running") return "Sending now";
+  return null;
+}
