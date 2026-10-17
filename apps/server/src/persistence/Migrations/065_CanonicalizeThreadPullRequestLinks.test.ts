@@ -62,11 +62,11 @@ const layer = it.layer(
   ),
 );
 
-layer("064_CanonicalizeThreadPullRequestLinks", (it) => {
+layer("065_CanonicalizeThreadPullRequestLinks", (it) => {
   it.effect("migrates single links once, preserves arrays, and keeps links after a rebuild", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-      yield* runMigrations({ toMigrationInclusive: 63 });
+      yield* runMigrations({ toMigrationInclusive: 64 });
       const fixtures = [
         { ...thread("github"), linkedPullRequest: linked },
         {
