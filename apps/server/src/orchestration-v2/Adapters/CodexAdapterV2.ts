@@ -1406,7 +1406,8 @@ export const CODEX_THREAD_CONFIG = {
   "features.concurrent_reasoning_summaries": true,
 } as const;
 
-// T3 waits can block for an hour; keep Codex's MCP timeout above that.
+// T2 wait tools can block for up to an hour. Keep Codex's MCP timeout above
+// that limit so the server's own wait timeout ends a long call.
 const CODEX_T2_MCP_TOOL_TIMEOUT_SEC = 65 * 60;
 // Holds T2 tools Codex must call directly, never from Code Mode. Calls arrive as
 // `t2-code-direct.<tool>`; t2McpToolPresentation.ts must keep resolving that form.
