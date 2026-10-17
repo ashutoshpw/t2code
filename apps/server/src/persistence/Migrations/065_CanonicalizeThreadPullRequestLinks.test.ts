@@ -1,6 +1,6 @@
 import { assert, it } from "@effect/vitest";
-import { OrchestrationV2AppThreadJson, ThreadId } from "@t3tools/contracts";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import { OrchestrationV2AppThreadJson, ThreadId } from "@t2code/contracts";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Effect from "effect/Effect";
 import * as DateTime from "effect/DateTime";
 import * as Layer from "effect/Layer";
@@ -62,11 +62,11 @@ const layer = it.layer(
   ),
 );
 
-layer("064_CanonicalizeThreadPullRequestLinks", (it) => {
+layer("065_CanonicalizeThreadPullRequestLinks", (it) => {
   it.effect("migrates single links once, preserves arrays, and keeps links after a rebuild", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-      yield* runMigrations({ toMigrationInclusive: 63 });
+      yield* runMigrations({ toMigrationInclusive: 64 });
       const fixtures = [
         { ...thread("github"), linkedPullRequest: linked },
         {
