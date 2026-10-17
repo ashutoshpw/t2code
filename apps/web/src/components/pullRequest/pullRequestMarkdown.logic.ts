@@ -3,7 +3,7 @@ import type { ReferenceAutolink } from "@t3tools/client-runtime/source-control-c
 export {
   splitPullRequestBody,
   type PullRequestBodySegment,
-} from "@t3tools/client-runtime/pull-request-markdown";
+} from "@t2code/client-runtime/pull-request-markdown";
 
 type MarkdownNode = {
   type: string;

@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import { EnvironmentId } from "@t3tools/contracts";
+import { EnvironmentId } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { AsyncResult, Atom } from "effect/reactivity";
@@ -152,7 +152,7 @@ export function postponeUpdateRestart(): void {
   decideRestart?.(false);
 }
 
-const SAVED_RESULT_KEY = "t3code:update-everything-result:v1";
+const SAVED_RESULT_KEY = "t2code:update-everything-result:v1";
 const SAVED_RESULT_MAX_AGE_MS = 10 * 60 * 1000;
 // Covers a background service's 30-minute trial start, like the server update itself.
 const HANDOFF_TIMEOUT_MS = 32 * 60 * 1000;
@@ -327,7 +327,7 @@ export function startDesktopUpdateLaunchNotice(): () => void {
         stackedThreadToast({
           type: "error",
           title: "Update did not apply",
-          description: `T3 Code is still on ${APP_VERSION}. Install ${notAppliedVersion} again from the update button.`,
+          description: `T2 Code is still on ${APP_VERSION}. Install ${notAppliedVersion} again from the update button.`,
         }),
       );
     },

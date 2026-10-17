@@ -120,8 +120,8 @@ import {
   THREAD_DETAILS_PANEL_SPLIT_SEPARATOR_CLASS,
 } from "./chat/threadDetailsPanelStyles";
 import { getSourceControlPresentation, sourceControlIcon } from "~/sourceControlPresentation";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { formatDiffCount } from "@t2code/client-runtime/diff-count";
 import { useOpenLink } from "~/browser/useOpenLink";
 import { useClientSettings } from "~/hooks/useSettings";
 

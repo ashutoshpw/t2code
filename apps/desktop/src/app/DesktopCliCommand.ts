@@ -220,7 +220,7 @@ export const make = Effect.gen(function* () {
     const shadowedBy = yield* foreignFirstOnPath;
     if (Option.isSome(shadowedBy)) {
       return yield* fail(
-        `Another t3 at ${shadowedBy.value} runs first in a new terminal. Remove it, or run the launcher directly at ${launcher}.`,
+        `Another t2code at ${shadowedBy.value} runs first in a new terminal. Remove it, or run the launcher directly at ${launcher}.`,
       );
     }
     const onPath = pathEntries(process.env.PATH, ":");
