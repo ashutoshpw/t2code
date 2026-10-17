@@ -86,6 +86,7 @@ import {
 import { appAtomRegistry } from "../../state/atom-registry";
 import {
   formatNextScheduledTaskRun,
+  formatOnceTaskOutcome,
   formatScheduledTaskInterval,
 } from "./scheduledTaskPresentation";
 
@@ -109,6 +110,15 @@ const DAYS = [
 function describeSchedule(task: ScheduledTask): string {
   if (task.schedule.type === "webhook") return "On webhook";
   if (task.schedule.type === "interval") return formatScheduledTaskInterval(task.schedule.everyMs);
+  if (task.schedule.type === "once") {
+    return `Once, ${new Date(task.schedule.at).toLocaleString([], {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    })}`;
+  }
   const days = task.schedule.weekdays?.length ? repeatLabel(task.schedule.weekdays) : "Every day";
   return `${days} at ${formatTime(task.schedule.timeOfDay)}`;
 }
@@ -956,6 +966,10 @@ function TaskForm({
                 { value: "fixed_time", label: "At a time" },
                 { value: "interval", label: "Interval" },
                 { value: "webhook", label: "On webhook" },
+                // Only an existing one-time task shows this; creating one is a web/desktop flow.
+                ...(draft.schedule.mode === "once"
+                  ? [{ value: "once" as const, label: "One time" }]
+                  : []),
               ]}
               selected={draft.schedule.mode}
               onSelect={(mode) => {
@@ -1048,6 +1062,11 @@ function TaskForm({
                 }}
               />
             </>
+          ) : draft.schedule.mode === "once" ? (
+            <Text className="px-4 pb-3 text-sm text-foreground-muted">
+              This is a one-time task. Change when it runs from the web or desktop app, or delete it
+              to cancel.
+            </Text>
           ) : draft.schedule.mode === "webhook" ? (
             <>
               <WebhookScheduleDetails
@@ -1355,7 +1374,9 @@ function EnvironmentTasks({
                   ? " · Paused"
                   : task.nextRunAt
                     ? ` · ${formatNextScheduledTaskRun(task.nextRunAt, now)}`
-                    : ""}
+                    : task.schedule.type === "once"
+                      ? ` · ${formatOnceTaskOutcome(task) ?? ""}`
+                      : ""}
               </Text>
               {task.lastRunError ? (
                 <Text className="text-sm text-danger-foreground" numberOfLines={2}>
