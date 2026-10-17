@@ -154,7 +154,7 @@ function UsageModelDialogHost({
   readonly onSetPrice: (model: string) => void;
 }) {
   const selectedKey = useAtomValue(selectedUsageModelKeyAtom);
-  // oxlint-disable-next-line t3code/react-effect-budget -- clears the shared selected-model atom on unmount
+  // oxlint-disable-next-line t2code/react-effect-budget -- clears the shared selected-model atom on unmount
   useEffect(() => () => selectUsageModel(null), []);
   const model =
     selectedKey === null
@@ -287,7 +287,7 @@ export function UsagePage() {
     if (periodOption && !showingLimits) selectWindow(periodOption.days);
   });
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- window capture keydown listener for usage metric and period shortcuts
+  // oxlint-disable-next-line t2code/react-effect-budget -- window capture keydown listener for usage metric and period shortcuts
   useEffect(() => {
     globalThis.window.addEventListener("keydown", onUsageKeyDown, true);
     return () => globalThis.window.removeEventListener("keydown", onUsageKeyDown, true);
@@ -334,7 +334,7 @@ export function UsagePage() {
   const autoRefreshLimits = useEffectEvent(() => {
     void refreshLimits(true);
   });
-  // oxlint-disable-next-line t3code/react-effect-budget -- refreshes provider limits from the server when the connected environment set changes
+  // oxlint-disable-next-line t2code/react-effect-budget -- refreshes provider limits from the server when the connected environment set changes
   useEffect(() => {
     if (showingLimits && connectedLimitsEnvironments) autoRefreshLimits();
   }, [showingLimits, connectedLimitsEnvironments]);

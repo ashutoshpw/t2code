@@ -65,7 +65,7 @@ function NativeVideoPreview(props: {
     }
   });
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- presents the native fullscreen video and owns its audio session and file lease until cleanup
+  // oxlint-disable-next-line t2code/react-effect-budget -- presents the native fullscreen video and owns its audio session and file lease until cleanup
   useEffect(() => {
     const controller = new AbortController();
     let token: ReturnType<typeof acquireAudioSession> | null = null;

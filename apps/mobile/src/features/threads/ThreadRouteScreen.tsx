@@ -37,14 +37,8 @@ import {
   projectScriptRuntimeEnv,
   projectScriptTerminalInput,
   resolveProjectScripts,
-<<<<<<< HEAD
 } from "@t2code/shared/projectScripts";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
-=======
-} from "@t2code/shared/projectScripts";
-import { Platform, ScrollView } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
->>>>>>> bf374d3c8d (rebrand: sweep remaining T2 Code copy to T2 Code)
 import { useConnectionsReady } from "../../state/workspace";
 import { useEnvironmentShellReadiness } from "../../state/shell";
 import { restoredNewTaskDraftKey } from "../../state/new-task-draft-key";
