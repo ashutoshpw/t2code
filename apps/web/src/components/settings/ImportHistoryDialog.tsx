@@ -2,7 +2,7 @@
 
 import { CheckIcon } from "lucide-react";
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { AgentSessionProjectCandidate, EnvironmentId } from "@t2code/contracts";
 
 import { readProjects } from "../../state/entities";
@@ -63,10 +63,7 @@ export function ImportHistoryDialog({
   const [importError, setImportError] = useState("");
 
   const sinceIso = sinceIsoForWindow(windowChoice, customDate);
-  const candidates = useMemo(
-    () => filterCandidatesInWindow(scan.data?.candidates ?? [], sinceIso),
-    [scan.data, sinceIso],
-  );
+  const candidates = filterCandidatesInWindow(scan.data?.candidates ?? [], sinceIso);
   const selected = candidates.filter((candidate) => !deselected.has(candidate.path));
 
   const runImport = async () => {
