@@ -196,7 +196,10 @@ export const ScheduledTaskSchedule = Schema.Union([
   ScheduledTaskFixedTimeSchedule,
   ScheduledTaskOnceSchedule,
   ScheduledTaskWebhookSchedule,
-]);
+]).annotate({
+  description:
+    "Structured trigger. Pass an object with type 'interval', 'fixed_time', 'once' or 'webhook'.",
+});
 export type ScheduledTaskSchedule = typeof ScheduledTaskSchedule.Type;
 
 export const ScheduledTaskUpsertSchedule = Schema.Union([
@@ -211,7 +214,10 @@ export const ScheduledTaskUpsertSchedule = Schema.Union([
   ScheduledTaskFixedTimeSchedule,
   ScheduledTaskOnceSchedule,
   ScheduledTaskUpsertWebhookSchedule,
-]);
+]).annotate({
+  description:
+    "Writable trigger. Pass an object with type 'interval', 'fixed_time', 'once' or 'webhook'.",
+});
 export type ScheduledTaskUpsertSchedule = typeof ScheduledTaskUpsertSchedule.Type;
 
 export const ScheduledTaskRunStatus = Schema.Literals(["never", "running", "succeeded", "failed"]);

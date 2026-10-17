@@ -61,10 +61,10 @@ const handlers = {
         );
       }),
   ),
-  t3_background_wait: McpToolAccess.actsAsCaller((input) =>
+  t2_background_wait: McpToolAccess.actsAsCaller((input) =>
     Effect.gen(function* () {
       const { scope, threads } = yield* readCaller();
-      const caller = yield* McpInvocationContext.requireThreadScope(scope, "t3_background_wait");
+      const caller = yield* McpInvocationContext.requireThreadScope(scope, "t2_background_wait");
       return yield* threads
         .awaitBackgroundTasks({
           threadId: caller.thread.threadId,
@@ -194,7 +194,7 @@ const handlers = {
       return yield* service.waitForThread(scope, input);
     }),
   ),
-  t3_environment_links: McpToolAccess.reads(() =>
+  t2_environment_links: McpToolAccess.reads(() =>
     Effect.gen(function* () {
       const scope = yield* McpInvocationContext.McpInvocationContext;
       const forwarding = yield* PeerForwarding.PeerForwarding;
@@ -203,14 +203,14 @@ const handlers = {
   ),
   // A link lets every agent here reach the other environment, so it is an
   // environment setting: full access, and never for linked work.
-  t3_environment_link: McpToolAccess.writesEnvironment((input) =>
+  t2_environment_link: McpToolAccess.writesEnvironment((input) =>
     Effect.gen(function* () {
       const scope = yield* McpInvocationContext.McpInvocationContext;
       const requests = yield* PeerLinkRequests.PeerLinkRequests;
       return yield* requests.request(scope, input);
     }),
   ),
-  t3_environment_unlink: McpToolAccess.writesEnvironment(({ environmentId }) =>
+  t2_environment_unlink: McpToolAccess.writesEnvironment(({ environmentId }) =>
     Effect.gen(function* () {
       const links = yield* PeerLinks.PeerLinks;
       const removed = yield* links
