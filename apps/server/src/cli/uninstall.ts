@@ -50,7 +50,7 @@ export const findOwnedLauncher = Effect.fn("cli.uninstall.find_launcher")(functi
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const platform = yield* HostProcess.Platform;
-  if (input.launchedAs === undefined) return undefined;
+  if (input.launchedAs === undefined) return [];
   if (platform === "win32") {
     const shimPath = yield* findWindowsShim(input.launchedAs);
     if (shimPath === undefined) return undefined;
