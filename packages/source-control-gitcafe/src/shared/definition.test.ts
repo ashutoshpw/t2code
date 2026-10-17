@@ -60,8 +60,8 @@ describe("GitCafe change request URLs", () => {
     for (const url of [
       "https://github.com/team/repo/pull/7",
       "https://forge.example/team/repo/pulls/7",
-      "https://git.cafe/pingdotgg/t3code/issues/23897",
-      "https://git.cafe/pingdotgg/t3code/pull/abc",
+      "https://git.cafe/pingdotgg/t2code/issues/23897",
+      "https://git.cafe/pingdotgg/t2code/pull/abc",
       "https://git.cafe/pingdotgg/t3code",
     ]) {
       expect(parse(url), url).toBeNull();

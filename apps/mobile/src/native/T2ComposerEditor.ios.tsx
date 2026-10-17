@@ -237,7 +237,7 @@ export function ComposerEditor({
     mostRecentEventCount: controlledEventCount,
     isNativeEcho,
   });
-  // oxlint-disable-next-line t3code/react-effect-budget -- prunes native editor event snapshots once a committed payload acknowledges them
+  // oxlint-disable-next-line t2code/react-effect-budget -- prunes native editor event snapshots once a committed payload acknowledges them
   useEffect(() => {
     if (!acknowledgesLatestNativeEvent) return;
     nativeEventSnapshotsRef.current = pruneAcknowledgedComposerNativeEvents(
@@ -246,7 +246,7 @@ export function ComposerEditor({
     );
   }, [acknowledgesLatestNativeEvent, mostRecentEventCount, nativeEventSnapshotsRef]);
   const assumedValue = props.value;
-  // oxlint-disable-next-line t3code/react-effect-budget -- records the committed controlled payload as the native editor's assumed state
+  // oxlint-disable-next-line t2code/react-effect-budget -- records the committed controlled payload as the native editor's assumed state
   useEffect(() => {
     // Newer native events make this payload stale; do not record it as applied.
     if (isNativeEcho || controlledEventCount !== mostRecentEventCountRef.current) return;

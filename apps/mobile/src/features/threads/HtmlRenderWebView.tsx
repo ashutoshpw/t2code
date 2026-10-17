@@ -88,7 +88,7 @@ export function HtmlRenderWebView(props: {
   const crashes = useRef(0);
   const shownTheme = useRef<HtmlRenderTheme | null>(null);
   const source = { uri: props.uri + htmlRenderThemeFragment(initialTheme) };
-  // oxlint-disable-next-line t3code/react-effect-budget -- posts theme changes into the already loaded WebView
+  // oxlint-disable-next-line t2code/react-effect-budget -- posts theme changes into the already loaded WebView
   useEffect(() => {
     if (shownTheme.current === null || shownTheme.current === theme) return;
     shownTheme.current = theme;

@@ -476,7 +476,7 @@ function ThreadRouteContent(
     return mode === "files" && selectedThreadCwd === null ? null : mode;
   })();
   const revealPreview = useEffectEvent(() => showInspector());
-  // oxlint-disable-next-line t3code/react-effect-budget -- opens the workspace navigator's inspector pane when route params bring a preview target
+  // oxlint-disable-next-line t2code/react-effect-budget -- opens the workspace navigator's inspector pane when route params bring a preview target
   useEffect(() => {
     if (previewTarget) revealPreview();
   }, [previewTarget]);

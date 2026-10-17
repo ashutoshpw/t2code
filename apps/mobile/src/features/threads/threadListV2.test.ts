@@ -62,7 +62,7 @@ const linkedPullRequest = {
   projectId: ProjectId.make("project-1"),
   repository: "pingdotgg/t3code",
   number: 42,
-  url: "https://github.com/pingdotgg/t3code/pull/42",
+  url: "https://github.com/pingdotgg/t2code/pull/42",
 };
 
 describe("resolveThreadListV2SnoozeMenuSelection", () => {

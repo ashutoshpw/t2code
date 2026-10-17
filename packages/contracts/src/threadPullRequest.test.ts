@@ -13,7 +13,7 @@ it.effect("decodes a watch saved before passed checks were recorded", () =>
         host: "github.com",
         repository: "pingdotgg/t3code",
         number: 42,
-        url: "https://github.com/pingdotgg/t3code/pull/42",
+        url: "https://github.com/pingdotgg/t2code/pull/42",
         source: "agent",
         linkedAt: "2026-01-01T00:00:00.000Z",
         snapshot: null,

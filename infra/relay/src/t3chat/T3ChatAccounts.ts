@@ -151,14 +151,14 @@ export const make = Effect.gen(function* () {
       return url.toString();
     }),
     getLink: Effect.fn("relay.t3chat.get_link")(function* (input) {
-      const body = yield* post("get-link", "/api/t3code/link", input.userId);
+      const body = yield* post("get-link", "/api/t2code/link", input.userId);
       const decoded = yield* decodeLinkResponse(body).pipe(
         Effect.mapError((cause) => new T3ChatRequestFailed({ operation: "get-link", cause })),
       );
       return decoded.link;
     }),
     unlink: Effect.fn("relay.t3chat.unlink")(function* (input) {
-      yield* post("unlink", "/api/t3code/unlink", input.userId);
+      yield* post("unlink", "/api/t2code/unlink", input.userId);
     }),
   });
 });

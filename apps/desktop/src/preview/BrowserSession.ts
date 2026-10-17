@@ -27,7 +27,9 @@ export type BrowserSessionPartitionNamespace = "profile";
 const ALLOWED_PREVIEW_PERMISSIONS: ReadonlySet<string> = new Set([
   "clipboard-sanitized-write",
   "geolocation",
-  // DesktopWindow confines HTML fullscreen to the guest's webview.
+  // `DesktopWindow` disables HTML fullscreen window resizing for the app window
+  // and every preview guest, so a page that goes fullscreen fills its own
+  // webview instead of taking over the whole T2 window.
   "fullscreen",
   "pointerLock",
   // Loopback requests already succeed in Electron 44; permission-aware sign-in widgets query first.

@@ -54,7 +54,7 @@ export function useMediaActions(source: MediaActionsSource | undefined, onOpenFi
   );
   const controller = useRef<AbortController | null>(null);
   const [sharing, setSharing] = useState(false);
-  // oxlint-disable-next-line t3code/react-effect-budget -- aborts the in-flight media share when the component unmounts
+  // oxlint-disable-next-line t2code/react-effect-budget -- aborts the in-flight media share when the component unmounts
   useEffect(() => () => controller.current?.abort(), []);
 
   const share = () => {

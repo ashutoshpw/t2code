@@ -62,7 +62,7 @@ export function ComposerEditor({
     ? preferencesResult.value.composerEnterBehavior
     : undefined;
   const contextHistory = createComposerDraftContextHistory();
-  // oxlint-disable-next-line t3code/react-effect-budget -- releases the attachment file leases held for native text undo when the history is replaced or unmounts
+  // oxlint-disable-next-line t2code/react-effect-budget -- releases the attachment file leases held for native text undo when the history is replaced or unmounts
   useEffect(() => () => contextHistory.dispose(), [contextHistory]);
   const changeText = (text: string) => {
     const restored = contextHistory.restore(

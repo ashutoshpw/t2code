@@ -62,7 +62,7 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
   });
 
   it("reads a GitLab merge request on any host, nested groups and all", () => {
-    expect(parse("https://gitlab.com/t3tools/platform/t3code/-/merge_requests/42")).toEqual({
+    expect(parse("https://gitlab.com/t3tools/platform/t2code/-/merge_requests/42")).toEqual({
       host: "gitlab.com",
       repository: "t3tools/platform/t3code",
       number: 42,
@@ -80,12 +80,12 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
       repository: "workspace/repo",
       number: 5,
     });
-    expect(parse("https://dev.azure.com/acme/platform/_git/t3code/pullrequest/17")).toEqual({
+    expect(parse("https://dev.azure.com/acme/platform/_git/t2code/pullrequest/17")).toEqual({
       host: "dev.azure.com",
       repository: "acme/platform/_git/t3code",
       number: 17,
     });
-    expect(parse("https://acme.visualstudio.com/platform/_git/t3code/pullrequest/17")).toEqual({
+    expect(parse("https://acme.visualstudio.com/platform/_git/t2code/pullrequest/17")).toEqual({
       host: "acme.visualstudio.com",
       repository: "platform/_git/t3code",
       number: 17,
@@ -126,12 +126,12 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
   });
 
   it("survives trailing segments, a trailing slash and a query string", () => {
-    expect(parse("https://github.com/t3tools/t3code/pull/123/files?w=1")).toEqual({
+    expect(parse("https://github.com/t3tools/t2code/pull/123/files?w=1")).toEqual({
       host: "github.com",
       repository: "t3tools/t3code",
       number: 123,
     });
-    expect(parse("https://github.com/t3tools/t3code/pull/123/")).toEqual({
+    expect(parse("https://github.com/t3tools/t2code/pull/123/")).toEqual({
       host: "github.com",
       repository: "t3tools/t3code",
       number: 123,
@@ -140,14 +140,14 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
 
   it("claims nothing it cannot be sure of", () => {
     for (const link of [
-      "https://github.com/t3tools/t3code/issues/123",
-      "https://git.cafe/pingdotgg/t3code/issues/23897",
-      "https://git.cafe/pingdotgg/t3code/pull/abc",
+      "https://github.com/t3tools/t2code/issues/123",
+      "https://git.cafe/pingdotgg/t2code/issues/23897",
+      "https://git.cafe/pingdotgg/t2code/pull/abc",
       "https://git.cafe/pingdotgg/t3code",
-      "https://github.com/t3tools/t3code/commit/0a1b2c3",
+      "https://github.com/t3tools/t2code/commit/0a1b2c3",
       "https://github.com/t3tools/t3code",
-      "https://github.com/t3tools/t3code/pull/abc",
-      "https://gitlab.com/t3tools/t3code/-/issues/12",
+      "https://github.com/t3tools/t2code/pull/abc",
+      "https://gitlab.com/t3tools/t2code/-/issues/12",
       "https://blog.example.test/2026/updates/archive/pull/3",
       "https://scm.example.test/tfs/Collection/Project/_git/Repo",
       "https://scm.example.test/tfs/Collection/Project/pullrequest/123",
@@ -155,7 +155,7 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
       "https://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/0",
       "https://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/9007199254740992",
       "ftp://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/123",
-      "javascript:alert(1)//github.com/t3tools/t3code/pull/1",
+      "javascript:alert(1)//github.com/t3tools/t2code/pull/1",
       "not a url",
     ]) {
       expect(parse(link), link).toBeNull();
@@ -164,7 +164,7 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
 });
 
 describe("sourceControlClients.isSameChangeRequest", () => {
-  const linked = "https://github.com/pingdotgg/t3code/pull/42";
+  const linked = "https://github.com/pingdotgg/t2code/pull/42";
 
   it("matches the same pull request whatever its case or trailing path", () => {
     expect(
