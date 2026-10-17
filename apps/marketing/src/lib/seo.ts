@@ -1,4 +1,4 @@
-import { ANDROID_PLAY_STORE_URL, GITHUB_REPOSITORY_URL, IOS_APP_STORE_URL } from "./site";
+import { ANDROID_PLAY_STORE_URL, GITHUB_REPOSITORY_URL } from "./site";
 
 export const SITE_ORIGIN = "https://t3.codes";
 export const SITE_NAME = "T3 Code";
@@ -8,7 +8,6 @@ export const SITE_TAGLINE = "The open-source control plane for coding agents";
 // to tie an entity to its real homes, which is the signal a look-alike domain cannot copy.
 export const OFFICIAL_PROFILES = [
   GITHUB_REPOSITORY_URL,
-  IOS_APP_STORE_URL,
   ANDROID_PLAY_STORE_URL,
   "https://discord.gg/jn4EGJjrvv",
 ] as const;

@@ -6,7 +6,6 @@ import "@fontsource-variable/inter";
 import {
   ANDROID_PLAY_STORE_URL,
   GITHUB_REPOSITORY_URL,
-  IOS_APP_STORE_URL,
   MARKETING_STATS,
 } from "../lib/site";
 import { type JsonLd, jsonLdGraph, organizationJsonLd, websiteJsonLd } from "../lib/seo";
@@ -188,7 +187,6 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
             <a href={GITHUB_REPOSITORY_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href="https://discord.gg/jn4EGJjrvv" target="_blank" rel="noopener noreferrer">Discord</a>
             <a href={downloadHref}>{t.download}</a>
-            <a href={IOS_APP_STORE_URL} target="_blank" rel="noopener noreferrer">{t.iosApp}</a>
             <a href={ANDROID_PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">{t.androidApp}</a>
             <a href="/terms-of-service">{t.terms}</a>
             <a href="/privacy-policy">{t.privacy}</a>
