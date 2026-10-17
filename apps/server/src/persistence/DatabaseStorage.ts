@@ -1,4 +1,4 @@
-import type { DatabaseStorageStatus } from "@t3tools/contracts";
+import type { DatabaseStorageStatus } from "@t2code/contracts";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";
@@ -29,7 +29,7 @@ export class DatabaseStorage extends Context.Service<
     /** Current file accounting, re-published after each maintenance pass. Null until first read. */
     readonly status: Stream.Stream<DatabaseStorageStatus | null>;
   }
->()("t3/persistence/DatabaseStorage") {}
+>()("@t2code/cli/persistence/DatabaseStorage") {}
 
 // Deleted events have newer retained replacements; old cursors replay to the same state.
 const make = Effect.gen(function* () {

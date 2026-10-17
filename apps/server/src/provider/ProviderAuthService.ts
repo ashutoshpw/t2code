@@ -19,7 +19,7 @@ import * as Semaphore from "effect/Semaphore";
 import * as ProviderSessionManager from "../orchestration-v2/ProviderSessionManager.ts";
 import * as ProjectionStore from "../orchestration-v2/ProjectionStore.ts";
 import * as ProviderInstanceRegistry from "./ProviderInstanceRegistry.ts";
-import type { ProviderAuthController } from "@t3tools/provider-core/server/auth";
+import type { ProviderAuthController } from "@t2code/provider-core/server/auth";
 
 export type { ProviderAuthController } from "@t2code/provider-core/server/auth";
 

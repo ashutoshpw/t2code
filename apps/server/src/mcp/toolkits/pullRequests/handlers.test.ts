@@ -603,7 +603,7 @@ describe("pull request guide tools", () => {
         const result = yield* harness.call("write_pull_request_guides", {
           pullRequests: [
             { url: "https://github.com/acme/web/pull/7" },
-            { repository: "t3tools/t3code", number: 12 },
+            { repository: "t2tools/t2code", number: 12 },
             { url: "https://github.com/someone/else/pull/1" },
           ],
         });
@@ -611,7 +611,7 @@ describe("pull request guide tools", () => {
           result.guides.map((guide) => [guide.repository, guide.number, guide.outcome]),
         ).toEqual([
           ["acme/web", 7, "started"],
-          ["t3tools/t3code", 12, "started"],
+          ["t2tools/t2code", 12, "started"],
           ["someone/else", 1, "failed"],
         ]);
         expect(result.guides[2]?.detail).toContain("No project in this environment");
@@ -630,8 +630,8 @@ describe("pull request guide tools", () => {
       const result = yield* harness.call("write_pull_request_guides", {
         pullRequests: [
           { url: "https://example.com/not-a-pull-request" },
-          { repository: "t3tools/t3code" },
-          { repository: "t3tools/t3code", number: 5 },
+          { repository: "t2tools/t2code" },
+          { repository: "t2tools/t2code", number: 5 },
         ],
       });
       expect(result.guides.map((guide) => guide.outcome)).toEqual(["failed", "failed", "started"]);
