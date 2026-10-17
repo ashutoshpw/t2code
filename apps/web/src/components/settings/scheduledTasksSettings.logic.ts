@@ -24,6 +24,7 @@ import {
   type LegacyProjectSettingsFields,
 } from "@t2code/shared/projectSettings";
 import type { ProviderInstanceEntry } from "../../providerInstances";
+import { onceAtFromInput, onceInputValue } from "./scheduledTaskOnce.logic";
 
 import type { ResolvedSettingsScope } from "./settingsScope";
 
@@ -52,7 +53,7 @@ export function validateScheduledTasksSearch(raw: Record<string, unknown>) {
   };
 }
 
-export type ScheduleMode = "fixed" | "interval" | "webhook";
+export type ScheduleMode = "fixed" | "interval" | "once" | "webhook";
 export type WorkspaceMode = "root" | "worktree" | "existing_worktree";
 
 export interface DraftState {
@@ -63,6 +64,8 @@ export interface DraftState {
   readonly scheduleMode: ScheduleMode;
   readonly intervalMinutes: string;
   readonly timeOfDay: string;
+  /** `datetime-local` value in the device's time zone; used by one-time tasks. */
+  readonly onceAt: string;
   readonly weekdays: ReadonlySet<number>;
   readonly projectId: string;
   readonly threadId: string;
@@ -182,6 +185,10 @@ export function scheduleFromDraft(draft: DraftState): ScheduledTaskUpsertSchedul
         : {}),
     };
   }
+  if (draft.scheduleMode === "once") {
+    const at = onceAtFromInput(draft.onceAt);
+    return at === null ? null : { type: "once", at };
+  }
   if (draft.scheduleMode === "interval") {
     const everyMs = Math.round(Number(draft.intervalMinutes) * 60_000);
     return { type: "interval", everyMs };
@@ -207,7 +214,14 @@ export function taskToDraft(task: ScheduledTask): DraftState {
     prompt: task.prompt,
     enabled: task.enabled,
     scheduleMode:
-      schedule.type === "interval" ? "interval" : schedule.type === "webhook" ? "webhook" : "fixed",
+      schedule.type === "interval"
+        ? "interval"
+        : schedule.type === "webhook"
+          ? "webhook"
+          : schedule.type === "once"
+            ? "once"
+            : "fixed",
+    onceAt: schedule.type === "once" ? onceInputValue(schedule.at) : "",
     intervalMinutes:
       schedule.type === "interval" ? String(Math.max(1, schedule.everyMs / 60_000)) : "15",
     timeOfDay: schedule.type === "fixed_time" ? schedule.timeOfDay : "09:00",
