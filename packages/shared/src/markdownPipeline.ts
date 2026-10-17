@@ -195,7 +195,6 @@ const CHAT_MARKDOWN_SANITIZE_SCHEMA = {
       "t2-citation",
       "t2-context",
       THREAD_LINK_PROTOCOL,
-      LEGACY_THREAD_LINK_PROTOCOL,
     ],
     src: IMAGE_SRC_PROTOCOLS,
     dataDarkSrc: IMAGE_SRC_PROTOCOLS,
