@@ -382,11 +382,17 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
       ? { "--workspace-controls-left": MACOS_TRAFFIC_LIGHTS_LEFT_INSET }
       : {}
   ) as CSSProperties;
+  const railInsetStyle = (
+    isMacosDesktop && !isWindowFullscreen
+      ? { "--app-rail-top-inset": "var(--workspace-topbar-height)" }
+      : {}
+  ) as CSSProperties;
   const sidebarProviderStyle = {
     "--sidebar-width": `${clampThreadSidebarWidth(sidebarWidth, sidebarMinimumWidth, sidebarMaximumWidth)}px`,
     "--panel-animation-duration": `${panelAnimationDurationMs}ms`,
     "--app-rail-width": `${railReservedWidth}px`,
     ...windowControlsInsetStyle,
+    ...railInsetStyle,
   } as CSSProperties;
 
   useEffect(() => {
