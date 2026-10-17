@@ -7720,7 +7720,7 @@ it.effect("expands only files the change request changes, across every slice of 
     const read: Array<string> = [];
     const service = yield* makeService({
       projects: [
-        project({ id: "p1", title: "t3code", workspaceRoot: "/a", repository: "pingdotgg/t3code" }),
+        project({ id: "p1", title: "t2code", workspaceRoot: "/a", repository: "pingdotgg/t3code" }),
       ],
       providers: [
         fakeProvider(SourceControlProviderKind.make("github"), {
@@ -7797,7 +7797,7 @@ it.effect("checks expanded files against a diff too large to cache without fetch
     const filler = `+${"x".repeat(300 * 1024)}`;
     const service = yield* makeService({
       projects: [
-        project({ id: "p1", title: "t3code", workspaceRoot: "/a", repository: "pingdotgg/t3code" }),
+        project({ id: "p1", title: "t2code", workspaceRoot: "/a", repository: "pingdotgg/t3code" }),
       ],
       providers: [
         fakeProvider(SourceControlProviderKind.make("github"), {

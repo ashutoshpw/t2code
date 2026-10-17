@@ -1,7 +1,7 @@
 import {
   applyPullRequestDraftFilterChange,
   parsePullRequestQuery,
-} from "@t3tools/client-runtime/pull-request-query";
+} from "@t2code/client-runtime/pull-request-query";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { Spinner } from "~/components/ui/spinner";
 import { useShortcutModifierState } from "~/shortcutModifierState";

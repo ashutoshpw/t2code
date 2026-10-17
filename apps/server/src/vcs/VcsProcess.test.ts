@@ -298,7 +298,7 @@ describe("VcsProcess.run", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-vcs-bare-" });
+      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-vcs-bare-" });
       yield* fileSystem.makeDirectory(path.join(cwd, "objects", "info"), { recursive: true });
       yield* fileSystem.makeDirectory(path.join(cwd, "refs", "heads"), { recursive: true });
       yield* fileSystem.writeFileString(path.join(cwd, "HEAD"), "ref: refs/heads/main\n");

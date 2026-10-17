@@ -6,7 +6,7 @@ import {
   MessageId,
   RunId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { LegendListRef } from "@legendapp/list/react";
 import { act, createRef, useState, type ComponentProps, type ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -328,21 +328,21 @@ describe("MessagesTimeline work rows", () => {
           tone: "tool",
           itemType: "file_change",
           toolLifecycleStatus: "completed",
-          changedFiles: ["C:/Users/mike/dev-stuff/t3code/apps/web/src/session-logic.ts"],
+          changedFiles: ["C:/Users/mike/dev-stuff/t2code/apps/web/src/session-logic.ts"],
         }),
       ],
-      { workspaceRoot: "C:/Users/mike/dev-stuff/t3code" },
+      { workspaceRoot: "C:/Users/mike/dev-stuff/t2code" },
     );
     await click(button(/^Received 1 update/));
-    await vi.waitFor(() => expect(text()).toContain("t3code/apps/web/src/session-logic.ts"));
-    expect(text()).not.toContain("C:/Users/mike/dev-stuff/t3code/apps/web/src/session-logic.ts");
+    await vi.waitFor(() => expect(text()).toContain("t2code/apps/web/src/session-logic.ts"));
+    expect(text()).not.toContain("C:/Users/mike/dev-stuff/t2code/apps/web/src/session-logic.ts");
   });
 
-  it("renders T3 MCP dynamic tools with their pretty name", async () => {
+  it("renders T2 MCP dynamic tools with their pretty name", async () => {
     const item = {
-      id: "tool-t3-thread-read",
+      id: "tool-t2-thread-read",
       type: "dynamic_tool",
-      toolName: "mcp__t3-code__t3_thread_read",
+      toolName: "mcp__t2-code__t2_thread_read",
       input: { threadId: "thread-child" },
       output: { messages: [] },
     };
@@ -361,8 +361,8 @@ describe("MessagesTimeline work rows", () => {
       }),
     ]);
     await click(button(/^Received 1 update/));
-    await vi.waitFor(() => expect(text()).toContain("Read a T3 thread"));
-    expect(text()).not.toContain("mcp__t3-code__t3_thread_read");
+    await vi.waitFor(() => expect(text()).toContain("Read a T2 thread"));
+    expect(text()).not.toContain("mcp__t2-code__t2_thread_read");
   });
 
   it("keeps a provider retry collapsed in the work log", async () => {
@@ -484,22 +484,22 @@ describe("MessagesTimeline messages", () => {
 
   it("renders unsafe user HTML as inert source text", async () => {
     const source =
-      '<script>globalThis.__t3Xss = 1</script><img src="x" onerror="globalThis.__t3Xss = 2">';
+      '<script>globalThis.__t2Xss = 1</script><img src="x" onerror="globalThis.__t2Xss = 2">';
     await renderTimeline([message(source)]);
     expect(text()).toContain(source);
     expect(container.querySelector("script, img")).toBeNull();
-    expect((globalThis as { __t3Xss?: number }).__t3Xss).toBeUndefined();
+    expect((globalThis as { __t2Xss?: number }).__t2Xss).toBeUndefined();
   });
 
   it("renders sanitized raw HTML in assistant messages", async () => {
     await renderTimeline([
       message(
         [
-          '<details onclick="globalThis.__t3Xss = 1">',
+          '<details onclick="globalThis.__t2Xss = 1">',
           "<summary>Safe details</summary>",
-          "<script>globalThis.__t3Xss = 2</script>",
-          '<img src="x" onerror="globalThis.__t3Xss = 3">',
-          '<a href="javascript:globalThis.__t3Xss = 4">Unsafe link</a>',
+          "<script>globalThis.__t2Xss = 2</script>",
+          '<img src="x" onerror="globalThis.__t2Xss = 3">',
+          '<a href="javascript:globalThis.__t2Xss = 4">Unsafe link</a>',
           "</details>",
         ].join(""),
         { role: "assistant" },
@@ -512,7 +512,7 @@ describe("MessagesTimeline messages", () => {
     expect(container.querySelector("script, [onclick], [onerror]")).toBeNull();
     expect(container.innerHTML).not.toContain("javascript:");
     await click(button("Safe details"));
-    expect((globalThis as { __t3Xss?: number }).__t3Xss).toBeUndefined();
+    expect((globalThis as { __t2Xss?: number }).__t2Xss).toBeUndefined();
   });
 
   it("collapses long user messages behind a toggle and keeps their copy button", async () => {
@@ -778,7 +778,7 @@ describe("MessagesTimeline attachments", () => {
               kind: "snap-shot",
               capturedAt: CREATED_AT,
               appName: "Terminal",
-              windowTitle: "t3code — Tests",
+              windowTitle: "t2code — Tests",
               appIconDataUrl: "data:image/png;base64,aWNvbg==",
             },
           },
@@ -786,11 +786,11 @@ describe("MessagesTimeline attachments", () => {
       });
     await renderTimeline([snapShot()]);
     expect(text()).toContain("screenshot.png");
-    expect(text()).not.toContain("t3code — Tests");
+    expect(text()).not.toContain("t2code — Tests");
     await act(async () => roots.pop()!.unmount());
     await renderTimeline([snapShot("data:image/png;base64,iVBORw0KGgo=")]);
     expect(text()).toContain("Terminal");
-    expect(text()).toContain("t3code — Tests");
+    expect(text()).toContain("t2code — Tests");
   });
 });
 

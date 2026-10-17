@@ -171,6 +171,7 @@ import {
   connectSshEnvironment as connectSshEnvironmentAtom,
 } from "~/connection/onboarding";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
+import { useEnvironmentSessionState } from "~/state/session";
 import { useEnvironmentQuery } from "~/state/query";
 import {
   desktopNetworkAccessStateAtom,
@@ -2359,14 +2360,10 @@ export function ConnectionsSettings() {
   const canManageRelay = useEnvironmentScope(primaryEnvironmentId, AuthRelayWriteScope);
   const canManageLocalBackend = !isLocalEnvironmentDisabled() && canMaintain;
   const canRenamePrimary = useEnvironmentScope(primaryEnvironmentId, AuthOrchestrationOperateScope);
-  const environmentLabels = useMemo(
-    () =>
-      environments.map((environment) => ({
-        environmentId: environment.environmentId,
-        label: environment.label,
-      })),
-    [environments],
-  );
+  const environmentLabels = environments.map((environment) => ({
+    environmentId: environment.environmentId,
+    label: environment.label,
+  }));
   const authAccessChanges = useEnvironmentQuery(
     canReadAccess && primaryEnvironmentId !== null
       ? authEnvironment.accessChanges({

@@ -12,6 +12,7 @@ import * as Cause from "effect/Cause";
 import { ChevronsDownUp, ChevronsUpDown } from "lucide";
 import { useEffect, useRef, useState } from "react";
 
+import { Upload } from "lucide-react";
 import { makeWorkspaceFileDropHandlers } from "~/components/chat/workspaceFileDrop";
 import { Button } from "~/components/ui/button";
 import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
@@ -170,6 +171,54 @@ export default function FileBrowserPanel({
     { environmentId, cwd: hostFolder ? null : cwd, query: query.slice(0, 256) },
     200,
   );
+  const uploadCountersRef = useRef({ lastUploadId: 0 });
+  // Stable identity so the drop handlers can hand this off without the lint
+  // tracing the counter ref reads into render.
+  const startFileUpload = useStableCallback((files: File[]) => {
+    if (files.length === 0) return;
+    const uploadId = ++uploadCountersRef.current.lastUploadId;
+    const failures: Array<{ name: string; reason: string }> = [];
+    void uploadWorkspaceFiles({
+      environmentId,
+      cwd,
+      files,
+      onProgress: (progress) => {
+        // A newer drop supersedes an older batch still draining.
+        if (uploadCountersRef.current.lastUploadId === uploadId) {
+          setFileUploadProgress(progress);
+        }
+      },
+      onFileError: (name, reason) => failures.push({ name, reason }),
+    }).then(({ uploaded }) => {
+      if (uploadCountersRef.current.lastUploadId === uploadId) {
+        setFileUploadProgress(null);
+      }
+      if (uploaded > 0) {
+        refresh();
+        if (query.trim()) pathSearch.refresh();
+        toastManager.add({
+          type: "success",
+          title: uploaded === 1 ? "File uploaded" : `${uploaded} files uploaded`,
+          description: uploaded === 1 ? files[0]?.name : undefined,
+        });
+      }
+      if (failures.length > 0) {
+        toastManager.add({
+          type: "error",
+          title: uploaded > 0 ? "Some files failed to upload" : "Upload failed",
+          description: failures
+            .slice(0, 3)
+            .map((failure) => `${failure.name}: ${failure.reason}`)
+            .join("\n"),
+        });
+      }
+    });
+  });
+  const fileDropHandlers = makeWorkspaceFileDropHandlers({
+    setDragActive: setIsFileDragActive,
+    addFiles: startFileUpload,
+    addFolders: () => {},
+  });
   const { entries, entryKinds, treePaths, directoryPaths } = buildTreeEntries(
     directoryEntries,
     pathSearch.entries,

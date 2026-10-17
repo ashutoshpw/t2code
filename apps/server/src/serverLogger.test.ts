@@ -1,7 +1,7 @@
 import * as NodePath from "@effect/platform-node/NodePath";
 import { assert, describe, it } from "@effect/vitest";
 import * as NodeOS from "node:os";
-import { ExternalLauncherBrowserSpawnError } from "@t3tools/contracts";
+import { ExternalLauncherBrowserSpawnError } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Effect from "effect/Effect";
@@ -243,7 +243,7 @@ describe("ServerLoggerLive", () => {
 
   describe("startup pairing URL", () => {
     const pairingToken = "PAIRTOKEN7Q4K9";
-    const pairingUrl = `http://localhost:3773/pair#token=${pairingToken}`;
+    const pairingUrl = `http://localhost:3772/pair#token=${pairingToken}`;
     const announce = announceStartupPairingUrl(pairingUrl).pipe(
       Effect.andThen(logBrowserAutoOpenUnavailable),
     );

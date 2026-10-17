@@ -85,11 +85,11 @@ describe("ProjectIconPickerDialog", () => {
     await click("Save icon");
     expect(onSelect).not.toHaveBeenCalled();
 
-    await userEvent.fill(letters, "t3");
+    await userEvent.fill(letters, "t2");
     await click("Save icon");
     expect(onSelect).toHaveBeenCalledExactlyOnceWith({
       kind: "monogram",
-      text: "T3",
+      text: "T2",
       color: deriveProjectIdentity("Test").color,
     });
   });

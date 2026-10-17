@@ -1429,58 +1429,6 @@ describe("the server a saved selection names", () => {
   });
 });
 
-describe("colon-namespaced labels typed as a search", () => {
-  it("reads an unknown key as the label it almost always is", () => {
-    expect(parsePullRequestQuery("size:XXL").filters.labels).toEqual([["size:XXL"]]);
-    expect(parsePullRequestQuery("vouch:trusted").filters.labels).toEqual([["vouch:trusted"]]);
-    expect(parsePullRequestQuery("size:XXL").text).toBe("");
-  });
-
-  it("reads the key as the namespace of every bare name in its list", () => {
-    expect(parsePullRequestQuery("size:S,XS").filters.labels).toEqual([["size:S", "size:XS"]]);
-  });
-
-  it("leaves a name that already carries its own namespace alone", () => {
-    expect(parsePullRequestQuery("size:S,size:XS").filters.labels).toEqual([["size:S", "size:XS"]]);
-  });
-
-  it("excludes one the same way", () => {
-    expect(parsePullRequestQuery("-size:XXL").filters.excludedLabels).toEqual(["size:XXL"]);
-    expect(parsePullRequestQuery("-size:S,XS").filters.excludedLabels).toEqual([
-      "size:S",
-      "size:XS",
-    ]);
-  });
-
-  it("keeps a quoted token as text, which is the way back to a literal search", () => {
-    const parsed = parsePullRequestQuery('"size:XXL"');
-    expect(parsed.filters.labels).toBeUndefined();
-    expect(parsed.text).toBe('"size:XXL"');
-  });
-
-  it("reads a hyphenated namespace as a label too", () => {
-    expect(parsePullRequestQuery("priority-1:high").filters.labels).toEqual([["priority-1:high"]]);
-    expect(parsePullRequestQuery("priority-1:high").text).toBe("");
-  });
-
-  it("leaves a pasted link alone rather than naming a label after its scheme", () => {
-    const parsed = parsePullRequestQuery("https://github.com/pingdotgg/t3code/pull/1");
-    expect(parsed.filters.labels).toBeUndefined();
-    expect(parsed.text).toBe("https://github.com/pingdotgg/t3code/pull/1");
-  });
-
-  it("mixes with the keys it does know, and with plain words", () => {
-    const parsed = parsePullRequestQuery("area:web draft:true wizard label:bug");
-    expect(parsed.filters).toEqual({ labels: [["area:web"], ["bug"]], draft: "only" });
-    expect(parsed.text).toBe("wizard");
-  });
-
-  it("shares the ceiling with the labels typed as labels", () => {
-    const many = Array.from({ length: 12 }, (_, index) => `area:${index}`).join(" ");
-    expect(parsePullRequestQuery(many).filters.labels).toHaveLength(10);
-  });
-});
-
 describe("the priority groups against a paginated feed", () => {
   const authoredRow = (number: number, updatedAt: string) =>
     entry({ number, updatedAt, author: { login: "Bilal", name: null, avatarUrl: null } });

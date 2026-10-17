@@ -227,15 +227,15 @@ describe("ReviewService", () => {
   it.effect("allows the worktree a thread is bound to, and nothing else outside the project", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-workspace-" });
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-base-" });
-      const project = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-project-" });
+      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-workspace-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-base-" });
+      const project = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-project-" });
       // Checkouts outside every managed folder, as `git worktree add ../feature` makes.
-      const bound = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-bound-" });
-      const deleted = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-deleted-" });
-      const unbound = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-unbound-" });
+      const bound = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-bound-" });
+      const deleted = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-deleted-" });
+      const unbound = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-unbound-" });
       // A client can set a thread's path to any folder; git doesn't list this one.
-      const claimed = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-claimed-" });
+      const claimed = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-claimed-" });
       yield* fs.makeDirectory(`${bound}/sub`);
 
       const review = (cwd: string) =>
@@ -254,7 +254,7 @@ describe("ReviewService", () => {
                 { worktreePath: claimed },
                 { worktreePath: deleted, deleted: true },
                 // A relative path would resolve against the server's own cwd.
-                { worktreePath: "t3-review-relative" },
+                { worktreePath: "t2-review-relative" },
                 // A filesystem root would make every folder look bound.
                 { worktreePath: "/" },
               ],
@@ -265,7 +265,7 @@ describe("ReviewService", () => {
       for (const cwd of [bound, `${bound}/sub`]) {
         assert.strictEqual((yield* review(cwd)).cwd, cwd);
       }
-      for (const cwd of [deleted, unbound, claimed, `${process.cwd()}/t3-review-relative`]) {
+      for (const cwd of [deleted, unbound, claimed, `${process.cwd()}/t2-review-relative`]) {
         const error = yield* review(cwd).pipe(Effect.flip);
         assert.strictEqual(error._tag, "VcsRepositoryDetectionError");
       }
@@ -275,12 +275,12 @@ describe("ReviewService", () => {
   it.effect("allows a thread's worktree linked from a managed folder to a checkout elsewhere", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-workspace-" });
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-base-" });
+      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-workspace-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-base-" });
       const managed = yield* fs.realPath(
-        yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-worktrees-" }),
+        yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-worktrees-" }),
       );
-      const checkout = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-checkout-" });
+      const checkout = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-checkout-" });
       yield* fs.symlink(checkout, `${managed}/feature`);
 
       const result = yield* Effect.gen(function* () {
