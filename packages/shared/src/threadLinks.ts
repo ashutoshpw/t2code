@@ -5,10 +5,6 @@ import * as Schema from "effect/Schema";
 import { DEFAULT_HOSTED_APP_URL } from "./connectAuth.ts";
 
 export const THREAD_LINK_PROTOCOL = "t2-thread";
-/** Messages recorded before the rename still carry this spelling; parsing accepts both, writing uses only the current one. */
-export const LEGACY_THREAD_LINK_PROTOCOL = "t3-thread";
-
-const THREAD_LINK_PROTOCOLS = `${THREAD_LINK_PROTOCOL}|${LEGACY_THREAD_LINK_PROTOCOL}`;
 const V1_PREFIX = `${THREAD_LINK_PROTOCOL}://v1/`;
 const V2_PREFIX = `${THREAD_LINK_PROTOCOL}://v2/`;
 const HOSTED_PREFIX = `${DEFAULT_HOSTED_APP_URL}/threads/`;
@@ -20,7 +16,7 @@ const LABEL = String.raw`[^[\]\n]*`;
 // Earlier alternatives claim text so later ones cannot match inside it: an escaped character opens
 // nothing, code is literal, and a link to anywhere else keeps a thread URL in its label or href.
 const THREAD_LINK_OUTSIDE_CODE = new RegExp(
-  String.raw`(?<fence>(\`{3,}|~{3,})[\s\S]*?(?:\2|$))|(?<span>(\`+)[^\n]*?\4)|\[(?<label>[^\]\n]*)\]\((?:<(?<angleHref>(?:${THREAD_LINK_PROTOCOLS}):\/\/v[12]\/[^\s<>]+|${HOSTED_LINK})>|(?<href>(?:${THREAD_LINK_PROTOCOLS}):\/\/v[12]\/[^\s>)]+|${HOSTED_LINK}))\)|<(?<autolink>(?:${THREAD_LINK_PROTOCOLS}):\/\/v[12]\/[^\s<>]+|${HOSTED_LINK})>|(?<bare>${HOSTED_LINK})(?![\w%/?#-])`,
+  String.raw`(?<fence>(\`{3,}|~{3,})[\s\S]*?(?:\2|$))|(?<span>(\`+)[^\n]*?\4)|\[(?<label>[^\]\n]*)\]\((?:<(?<angleHref>${THREAD_LINK_PROTOCOL}:\/\/v[12]\/[^\s<>]+|${HOSTED_LINK})>|(?<href>${THREAD_LINK_PROTOCOL}:\/\/v[12]\/[^\s>)]+|${HOSTED_LINK}))\)|<(?<autolink>${THREAD_LINK_PROTOCOL}:\/\/v[12]\/[^\s<>]+|${HOSTED_LINK})>|(?<bare>${HOSTED_LINK})(?![\w%/?#-])`,
   "g",
 );
 
@@ -66,15 +62,12 @@ function parseHostedThreadLink(href: string): ThreadLink | null {
  */
 export function parseThreadLinkHref(href: string): ThreadLink | null {
   if (href.startsWith(HOSTED_PREFIX)) return parseHostedThreadLink(href);
-  const linkHref = href.startsWith(`${LEGACY_THREAD_LINK_PROTOCOL}://`)
-    ? `${THREAD_LINK_PROTOCOL}${href.slice(LEGACY_THREAD_LINK_PROTOCOL.length)}`
-    : href;
-  if (linkHref.startsWith(V1_PREFIX)) {
-    const threadId = Option.getOrNull(decodeThreadId(linkHref.slice(V1_PREFIX.length)));
+  if (href.startsWith(V1_PREFIX)) {
+    const threadId = Option.getOrNull(decodeThreadId(href.slice(V1_PREFIX.length)));
     return threadId === null ? null : { environmentId: null, threadId };
   }
-  if (!linkHref.startsWith(V2_PREFIX)) return null;
-  const path = linkHref.slice(V2_PREFIX.length);
+  if (!href.startsWith(V2_PREFIX)) return null;
+  const path = href.slice(V2_PREFIX.length);
   const slash = path.indexOf("/");
   if (slash < 0) return null;
   const environmentId = Option.getOrNull(decodeEnvironmentId(path.slice(0, slash)));
@@ -153,10 +146,7 @@ export function formatHostedThreadLink(
 }
 
 export function hasThreadLinks(markdown: string): boolean {
-  return (
-    THREAD_LINK_PROTOCOLS.split("|").some((protocol) => markdown.includes(`${protocol}://v`)) ||
-    markdown.includes(HOSTED_PREFIX)
-  );
+  return markdown.includes(`${THREAD_LINK_PROTOCOL}://v`) || markdown.includes(HOSTED_PREFIX);
 }
 
 /** Every thread the markdown's links can name, so their titles are keyed reads. */

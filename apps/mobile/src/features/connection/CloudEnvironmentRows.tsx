@@ -125,7 +125,7 @@ function CloudEnvironmentRowsContent(
               className="h-9 w-9 items-center justify-center rounded-full bg-subtle active:opacity-70 disabled:opacity-50"
             >
               {controller.relayDiscovery.isRefreshing ? (
-                <ActivityIndicator colorClassName={"accent-icon"} size="small" />
+                <AppActivityIndicator colorClassName={"accent-icon"} size="small" />
               ) : (
                 <SymbolView
                   name="arrow.clockwise"

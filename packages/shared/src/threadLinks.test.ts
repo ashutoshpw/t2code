@@ -61,11 +61,6 @@ describe("thread link destinations", () => {
 describe("thread links", () => {
   it("takes the ids verbatim, percent escapes included", () => {
     expect(parseThreadLinkHref("t2-thread://v1/mcp:1234")).toEqual(v1("mcp:1234"));
-    // Links recorded before the protocol rename still name the same thread.
-    expect(parseThreadLinkHref("t3-thread://v1/mcp:1234")).toEqual(v1("mcp:1234"));
-    expect(parseThreadLinkHref("t3-thread://v2/env-1/thread:a/b%3A1")).toEqual(
-      ref("env-1", "thread:a/b%3A1"),
-    );
     expect(parseThreadLinkHref("t2-thread://v1/thread:delegated-task:mcp%3A1")).toEqual(
       v1("thread:delegated-task:mcp%3A1"),
     );

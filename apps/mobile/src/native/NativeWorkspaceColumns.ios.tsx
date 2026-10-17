@@ -26,7 +26,7 @@ export function useNativeWorkspaceColumnsReady() {
   const metricsDeadline = useNativeLayoutMetricsDeadline();
   const waiting =
     !(Platform.OS === "ios" && Platform.isPad) &&
-    !!nativeControls?.ViewPrototypes?.T3NativeControls_LayoutMetrics &&
+    !!nativeControls?.ViewPrototypes?.T2NativeControls_LayoutMetrics &&
     metrics === null;
   // Without metrics by the deadline, use the compact navigator rather than staying blank.
   const timedOut = useDeadlinePassed(waiting ? metricsDeadline : null);
