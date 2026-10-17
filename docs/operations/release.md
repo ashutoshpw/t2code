@@ -51,7 +51,7 @@ the version.
   - stable releases publish npm dist-tag `latest`
   - nightly releases publish npm dist-tag `nightly`
   - preview releases publish npm dist-tag `preview`, which nothing resolves unless asked for by name
-  - one-time setup: package `t2` needs a trusted publisher registered for this workflow file (see below).
+  - one-time setup: package `@t2code/cli` needs a trusted publisher registered for this workflow file (see below).
 - Builds the hosted web app on Vercel while the desktop jobs run, and makes it live only after a release is published:
   - stable releases are aliased to the `latest` hosted app channel
   - nightly releases are aliased to the `nightly` hosted app channel
@@ -209,7 +209,7 @@ Ship the web and mobile builds that show the offline reason before enabling lega
 user whose host is affected sees what to do. The relay adds the `tunnel_released_at` allocation
 column in its first deploy with this change; the legacy switch stays `off` until you set it.
 
-1. Run `vp run --filter t3code-relay tunnels:census` with a read-only Cloudflare token. It counts
+1. Run `vp run --filter t2code-relay tunnels:census` with a read-only Cloudflare token. It counts
    tunnels in every relay stage. The reaper only sees its own stage's tunnels, so clean up the rest
    by hand.
 2. Set the legacy mode to `dry-run`, deploy, and read `wouldDeleteLegacy`, `legacyOver30Days`,
@@ -313,7 +313,7 @@ not guarantee external approval. TestFlight builds expire after 90 days.
 Both release and TestFlight binaries receive compatible production-channel OTAs,
 separated by their major-version fingerprints. Manual `mode=update` uses the
 selected profile's version. Before releasing `3.0.0` to the App Store, advance
-`build.testflight.env.T3CODE_MOBILE_VERSION` in `apps/mobile/eas.json` to the next
+`build.testflight.env.T2CODE_MOBILE_VERSION` in `apps/mobile/eas.json` to the next
 unreleased major and get its first beta build approved.
 
 ## Android APK mirror
@@ -406,20 +406,20 @@ One-time Vercel dashboard setup:
   - `make_latest` is always `false`
 - Uses the next stable patch version as the nightly base. For example, `0.0.17` produces nightlies on `0.0.18-nightly.*`.
 - Publishes Electron auto-update metadata to the dedicated `nightly` updater channel, so desktop users can opt into that track independently from stable.
-- Publishes the `t2` npm launcher to the `nightly` npm dist-tag using the same nightly version.
+- Publishes the `@t2code/cli` npm launcher to the `nightly` npm dist-tag using the same nightly version.
 - Does not commit version bumps back to `main`.
 
 ## Server self-update release invariant
 
 Connected servers update to the client's exact version, not to an npm dist-tag. Servers that update
 themselves download that version's CLI archive from the GitHub Release; servers run through npm are
-handed a `t2@<version>` command to run. Every released client version must therefore have its
+handed an `@t2code/cli@<version>` command to run. Every released client version must therefore have its
 release archives, and then its npm launcher, available before users can receive that client.
 
 The workflow enforces this ordering:
 
 1. `release` publishes the GitHub Release with the CLI archives and `SHA256SUMS`.
-2. `publish_cli` publishes the `t3@<version>` launcher, which downloads from that release, on every
+2. `publish_cli` publishes the `@t2code/cli@<version>` launcher, which downloads from that release, on every
    channel.
 3. `deploy_web` depends on both before moving the hosted channel to the new client.
    `build_web` builds that client earlier with `vercel deploy --prod --skip-domain`, which
@@ -428,7 +428,7 @@ The workflow enforces this ordering:
    custom domains.
 
 Desktop auto-update reads the GitHub Release directly, so a desktop client can see the new version
-a few minutes before `t3@<version>` is on npm. Only the copied manual command for npm-run servers
+a few minutes before `@t2code/cli@<version>` is on npm. Only the copied manual command for npm-run servers
 depends on npm, and it works once `publish_cli` finishes.
 
 Preserve these dependencies when changing the release graph. Publishing a client first would leave
@@ -516,12 +516,12 @@ blockmaps, with a 60 MB maximum for a representative sidecar-to-sidecar update.
 
 After the GitHub Release is published, the workflow runs `node scripts/build-npm-launcher.ts`, then
 `node apps/server/scripts/cli.ts publish --packages-dir npm-packages`, which runs `npm publish` on
-`t2.tgz`. That is the only package published per release.
+`@t2code/cli.tgz`. That is the only package published per release.
 
 Checklist:
 
-1. Confirm the npm org owns package `t2`.
-2. For `t2`, configure a Trusted Publisher in the npm package settings:
+1. Confirm the npm org owns package `@t2code/cli`.
+2. For `@t2code/cli`, configure a Trusted Publisher in the npm package settings:
    - Provider: GitHub Actions
    - Repository: `ashutoshpw/t2code`
    - Workflow file: `.github/workflows/release.yml`
@@ -531,14 +531,12 @@ Checklist:
    launcher with npm dist-tag `latest`.
 5. Nightly runs publish with npm dist-tag `nightly`; preview runs with `preview`.
 
-If any package has not been created on npm yet, build the package directory from the release's CLI
-archives, bootstrap all generated packages with one local authenticated publish, then add the
-Trusted Publisher under each package's settings for future releases. The package version is
-already embedded in the generated tarballs; do not pass an `--app-version` override.
+If `@t2code/cli` has not been created on npm yet, build the launcher package locally, publish it
+once with an authenticated local publish, then add the Trusted Publisher under its settings for
+future releases. The launcher has no dependencies, so its version is the only input:
 
 ```bash
-node scripts/build-npm-platform-packages.ts \
-  --archives-dir /path/to/cli-archives \
+node scripts/build-npm-launcher.ts \
   --version 0.0.41-preview.20260915.33 \
   --output-dir /path/to/npm-packages
 ```
@@ -647,7 +645,7 @@ Notes:
 - In-app browser passkeys depend on the same profile. The packager adds each entitlement only when
   the profile grants it, because macOS will not launch an app that claims more than its profile
   allows. The build log reports which ones it enabled.
-  - `keychain-access-groups` (`<TEAM_ID>.com.t3tools.t3code.webauthn`) enables Touch ID passkeys.
+  - `keychain-access-groups` (`<TEAM_ID>.codes.t2.desktop.webauthn`) enables Touch ID passkeys.
     Profiles that grant the team's keychain groups (`<TEAM_ID>.*`) cover it.
   - `com.apple.developer.web-browser.public-key-credential` lets the system passkey sheet (iCloud
     Keychain, password managers, phones, security keys) serve any site. Apple grants it as a

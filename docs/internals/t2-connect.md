@@ -140,12 +140,12 @@ release, installs the pinned one in the background, then starts a second
 connector on it for the same tunnel. The old connector stops only after the new
 one registers, so the swap never takes the host off the relay. If the new one
 fails to spawn, the old one keeps serving and the install retries later. A host
-with no relay client installs one first. A `cloudflared` on `PATH` or an explicit `T3CODE_CLOUDFLARED_PATH` is the
+with no relay client installs one first. A `cloudflared` on `PATH` or an explicit `T2CODE_CLOUDFLARED_PATH` is the
 user's choice and is never replaced, since linking asks before downloading.
 
 Once the pinned release registers a connection, managed releases older than the
 pin are deleted except the newest of them. That one, and any newer release, can
-belong to another server sharing the same T3 home, such as a rollback after a
+belong to another server sharing the same T2 home, such as a rollback after a
 failed update, which could not run again without it.
 
 The version comes from running `cloudflared version`, not from the folder name.

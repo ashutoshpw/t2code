@@ -752,163 +752,6 @@ jobs:
         test_web,
         test_server,
         desktop_mac_arm64,
-        desktop_linux_x64,
-        desktop_linux_arm64,
-        desktop_win_x64,
-        desktop_win_arm64,
-      ]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.quality_tests.result == 'success' && needs.quality_server_tests.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' }}
-    runs-on: ubuntu-24.04
-    # npm accepted a publish before its public metadata/CDN finished processing
-    # during the first release. Each package gets a bounded 20-minute gate in
-    # the wrapper, so leave room for all five platforms, the launcher, and the
-    # package build itself.
-    timeout-minutes: 60
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.ref }}
-          sparse-checkout: |
-            /*
-            !/.repos/
-          sparse-checkout-cone-mode: false
-
-      - name: Setup Vite+
-        uses: voidzero-dev/setup-vp@v1
-        with:
-          node-version-file: package.json
-          cache: true
-          run-install: |
-            args:
-              - --filter=@t2code/cli...
-              - --filter=@t2code/scripts...
-
-      - name: Download all CLI archives
-        uses: actions/download-artifact@v8
-        with:
-          pattern: cli-*
-          merge-multiple: true
-          path: release-cli
-
-      - name: Build npm packages from CLI archives
-        run: node scripts/build-npm-platform-packages.ts --archives-dir release-cli --version "${{ needs.preflight.outputs.version }}" --output-dir npm-packages
-
-      # Inspect every package before publishing. npm's --dry-run validates the
-      # local package contents, but does not contact the registry or prove that
-      # OIDC trusted publishing is configured; the real publish is the auth check.
-      - name: Validate npm package contents (dry run)
-        run: |
-          if ! node apps/server/scripts/cli.ts publish --packages-dir npm-packages --tag "${{ needs.preflight.outputs.cli_dist_tag }}" --dry-run --wait-for-visibility --verbose; then
-            echo "::error::npm package dry run failed. Check the generated package contents; this step does not validate npm credentials or OIDC trusted publishing." >&2
-            exit 1
-          fi
-
-      - name: Publish CLI packages
-        run: node apps/server/scripts/cli.ts publish --packages-dir npm-packages --tag "${{ needs.preflight.outputs.cli_dist_tag }}" --provenance --wait-for-visibility --verbose
-
-  # A successful npm publish only proves that the registry accepted the
-  # tarballs. Install the exact version from a clean cache on each native
-  # platform and run the launcher through npx before creating the release.
-  npm_smoke:
-    name: npm smoke (${{ matrix.label }})
-    needs: [preflight, publish_cli]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.publish_cli.result == 'success' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - label: macOS arm64
-            runner: macos-26
-          - label: Linux x64
-            runner: ubuntu-24.04
-          - label: Linux arm64
-            runner: ubuntu-24.04-arm
-          - label: Windows x64
-            runner: windows-2025
-          - label: Windows arm64
-            runner: windows-11-arm
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 10
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.13.1"
-
-      - name: Install and smoke-test published CLI
-        shell: bash
-        env:
-          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
-        run: |
-          set -euo pipefail
-          tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/t2code-npm-smoke.XXXXXX")"
-          trap 'rm -rf "$tmp_dir"' EXIT
-          prefix="$tmp_dir/install"
-          cache="$tmp_dir/npm-cache"
-          mkdir -p "$prefix" "$cache"
-
-          npm install \
-            --prefix "$prefix" \
-            --cache "$cache" \
-            --include=optional \
-            --ignore-scripts \
-            --no-audit \
-            --no-fund \
-            --package-lock=false \
-            "@t2code/cli@$RELEASE_VERSION"
-
-          cd "$prefix"
-          installed_version="$(node -p "require('./node_modules/@t2code/cli/package.json').version")"
-          if [[ "$installed_version" != "$RELEASE_VERSION" ]]; then
-            echo "Installed @t2code/cli@$installed_version, expected @$RELEASE_VERSION." >&2
-            exit 1
-          fi
-
-          node <<'NODE'
-          const fs = require("node:fs");
-          const path = require("node:path");
-          const version = process.env.RELEASE_VERSION;
-          const packageName = `@t2code/t2-${process.platform}-${process.arch}`;
-          const packagePath = path.join(
-            "node_modules",
-            "@t2code",
-            `t2-${process.platform}-${process.arch}`,
-            "package.json",
-          );
-
-          if (typeof version !== "string" || version.length === 0) {
-            console.error("RELEASE_VERSION is missing.");
-            process.exit(1);
-          }
-          if (!fs.existsSync(packagePath)) {
-            console.error(`${packageName}@${version} is missing at ${packagePath}.`);
-            process.exit(1);
-          }
-
-          const metadata = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-          if (metadata.name !== packageName || metadata.version !== version) {
-            console.error(
-              `Installed ${metadata.name ?? packageName}@${metadata.version ?? "unknown"}; expected ${packageName}@${version}.`,
-            );
-            process.exit(1);
-          }
-          console.log(`Verified ${packageName}@${version}.`);
-          NODE
-
-          # --offline and --no-install make a missing optional platform package
-          # fail here instead of letting npx fetch or resolve another version.
-          npm_config_cache="$cache" npx --prefix "$prefix" --offline --no-install t2code --help
-
-  release:
-    name: Publish GitHub Release
-    needs:
-      [
-        preflight,
-        desktop_mac_arm64,
         desktop_mac_x64,
         desktop_linux_x64,
         desktop_linux_arm64,
@@ -958,7 +801,7 @@ jobs:
         continue-on-error: true
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          PACKAGE_NAME: com.t3tools.t3code
+          PACKAGE_NAME: codes.t2.mobile
           APK_OUTPUT_DIR: release-assets
         run: |
           if [ -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
@@ -1103,7 +946,7 @@ jobs:
           fail_on_unmatched_files: true
           token: ${{ github.token }}
 
-  # The `t3` npm package is a launcher that downloads this version's CLI
+  # The `@t2code/cli` npm package is a launcher that downloads this version's CLI
   # archive from the GitHub Release, so it publishes only once that release
   # exists. Preview publishes too, under the `preview` dist-tag, which
   # nothing resolves unless asked for by name.
@@ -1111,7 +954,7 @@ jobs:
     name: Publish CLI to npm
     needs: [preflight, release]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.release.result == 'success' }}
-    runs-on: ubuntu-24.04 # blacksmith-8vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -1133,8 +976,8 @@ jobs:
           cache: true
           run-install: |
             args:
-              - --filter=t3...
-              - --filter=@t3tools/scripts...
+              - --filter=@t2code/cli...
+              - --filter=@t2code/scripts...
 
       - name: Build the npm launcher
         run: node scripts/build-npm-launcher.ts --version "${{ needs.preflight.outputs.version }}" --output-dir npm-packages
@@ -1142,7 +985,7 @@ jobs:
       - name: Publish the npm launcher
         run: |
           if ! node apps/server/scripts/cli.ts publish --packages-dir npm-packages --tag "${{ needs.preflight.outputs.cli_dist_tag }}" --provenance --verbose; then
-            echo "::error::npm publish failed. Make sure package t3 has a trusted publisher registered for .github/workflows/release.yml (see docs/operations/release.md)." >&2
+            echo "::error::npm publish failed. Make sure package @t2code/cli has a trusted publisher registered for .github/workflows/release.yml (see docs/operations/release.md)." >&2
             exit 1
           fi
 
@@ -1270,90 +1113,6 @@ jobs:
           echo "Staged $deployment_url."
           echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
 
-  deploy_web:
-    name: Deploy hosted web app
-    needs: [preflight, build_web, release, publish_cli]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.build_web.result == 'success' && needs.release.result == 'success' && needs.publish_cli.result == 'success' && needs.preflight.outputs.release_channel != 'preview' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    timeout-minutes: 10
-    env:
-      DEPLOYMENT_URL: ${{ needs.build_web.outputs.deployment_url }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      T2CODE_WEB_ROUTER_URL: ${{ vars.T2CODE_WEB_ROUTER_URL }}
-      T2CODE_WEB_LATEST_DOMAIN: ${{ vars.T2CODE_WEB_LATEST_DOMAIN }}
-      T2CODE_WEB_NIGHTLY_DOMAIN: ${{ vars.T2CODE_WEB_NIGHTLY_DOMAIN }}
-      VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.ref }}
-          sparse-checkout: |
-            /*
-            !/.repos/
-          sparse-checkout-cone-mode: false
-
-      - name: Setup Vite+
-        uses: voidzero-dev/setup-vp@v1
-        with:
-          node-version-file: package.json
-          cache: false
-          run-install: false
-
-      - name: Alias channel
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -z "$DEPLOYMENT_URL" ]]; then
-            echo "Build hosted web app did not report a deployment URL." >&2
-            exit 1
-          fi
-
-          router_url="${T2CODE_WEB_ROUTER_URL:-https://app.t2.codes}"
-          latest_domain="${T2CODE_WEB_LATEST_DOMAIN:-latest.app.t2.codes}"
-          nightly_domain="${T2CODE_WEB_NIGHTLY_DOMAIN:-nightly.app.t2.codes}"
-          router_domain="${router_url#http://}"
-          router_domain="${router_domain#https://}"
-          router_domain="${router_domain%%/*}"
-
-          if [[ "${{ needs.preflight.outputs.release_channel }}" == "stable" ]]; then
-            channel_name="latest"
-          else
-            channel_name="nightly"
-          fi
-
-          vercel_scope_args=(--scope "${VERCEL_TEAM_SLUG:-$VERCEL_ORG_ID}")
-
-          echo "Deploying hosted web app for $channel_name channel."
-          deployment_url="$(
-            vp dlx vercel@53.1.1 deploy \
-              --archive=tgz \
-              --prod \
-              --skip-domain \
-              --yes \
-              --token "$VERCEL_TOKEN" \
-              "${vercel_scope_args[@]}" \
-              --build-env "APP_VERSION=${{ needs.preflight.outputs.version }}" \
-              --build-env "T2CODE_CLERK_PUBLISHABLE_KEY=${T2CODE_CLERK_PUBLISHABLE_KEY:-}" \
-              --build-env "T2CODE_CLERK_JWT_TEMPLATE=${T2CODE_CLERK_JWT_TEMPLATE:-}" \
-              --build-env "T2CODE_CLERK_CLI_OAUTH_CLIENT_ID=${T2CODE_CLERK_CLI_OAUTH_CLIENT_ID:-}" \
-              --build-env "T2CODE_RELAY_URL=${T2CODE_RELAY_URL:-}" \
-              --build-env "T2CODE_RELAY_CLIENT_OTLP_TRACES_URL=${T2CODE_RELAY_CLIENT_OTLP_TRACES_URL:-}" \
-              --build-env "T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET=${T2CODE_RELAY_CLIENT_OTLP_TRACES_DATASET:-}" \
-              --build-env "T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN=${T2CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN:-}" \
-              --build-env "VITE_HOSTED_APP_URL=$router_url" \
-              --build-env "VITE_HOSTED_APP_CHANNEL=$channel_name"
-          )"
-
-          echo "Staged $deployment_url."
-          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
-
-  # The web deployment is staged early so the release build does not wait on
-  # Vercel, but it must not take the public domains until the release it links
-  # to exists, so the aliasing happens here.
   deploy_web:
     name: Deploy hosted web app
     needs: [preflight, build_web, release]
