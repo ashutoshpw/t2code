@@ -19,6 +19,13 @@ import {
 } from "./scheduledTaskDraft";
 
 describe("scheduleDraftForTask", () => {
+  it("round-trips a one-time schedule untouched so an edit never moves its send time", () => {
+    const schedule = { type: "once" as const, at: "2026-09-18T09:30:00.000Z" };
+    const draft = scheduleDraftForTask({ schedule });
+    expect(draft.mode).toBe("once");
+    expect(scheduleFromDraft(draft)).toEqual(schedule);
+  });
+
   it("opens legacy sub-minute schedules at the writable minimum", () => {
     const draft = scheduleDraftForTask({ schedule: { type: "interval", everyMs: 30_000 } });
     expect(draft.intervalMinutes).toBe("1");

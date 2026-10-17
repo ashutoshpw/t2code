@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   formatNextScheduledTaskRun,
+  formatOnceTaskOutcome,
   formatScheduledTaskInterval,
 } from "./scheduledTaskPresentation";
 
@@ -73,5 +74,21 @@ describe("formatNextScheduledTaskRun", () => {
 
   it("does not show an invalid date", () => {
     expect(formatNextScheduledTaskRun("invalid", now)).toBe("Next run unavailable");
+  });
+});
+
+describe("formatOnceTaskOutcome", () => {
+  it("reports what happened to a one-time task once it is no longer pending", () => {
+    expect(formatOnceTaskOutcome({ nextRunAt: null, lastRunStatus: "succeeded" })).toBe("Sent");
+    expect(formatOnceTaskOutcome({ nextRunAt: null, lastRunStatus: "failed" })).toBe(
+      "Could not send",
+    );
+    expect(formatOnceTaskOutcome({ nextRunAt: null, lastRunStatus: "never" })).toBeNull();
+  });
+
+  it("leaves a pending task to the next-run label", () => {
+    expect(
+      formatOnceTaskOutcome({ nextRunAt: "2026-09-18T09:00:00.000Z", lastRunStatus: "never" }),
+    ).toBeNull();
   });
 });

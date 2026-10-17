@@ -44,7 +44,9 @@ export function scheduledTaskDefaultModel(
 }
 
 export type ScheduleDraft = {
-  readonly mode: "fixed_time" | "interval" | "webhook";
+  readonly mode: "fixed_time" | "interval" | "once" | "webhook";
+  /** One-time tasks are created on web and desktop; mobile keeps the stored instant as is. */
+  readonly onceAt: string | null;
   readonly timeOfDay: string;
   readonly weekdays: ReadonlyArray<number>;
   readonly intervalMinutes: string;
@@ -57,6 +59,7 @@ export const DEFAULT_SCHEDULE: ScheduleDraft = {
   timeOfDay: "09:00",
   weekdays: [1, 2, 3, 4, 5],
   intervalMinutes: "15",
+  onceAt: null,
   signature: null,
   maxDeliveryAgeMinutes: "",
 };
@@ -77,6 +80,8 @@ export function scheduleDraftForTask(task: Pick<ScheduledTask, "schedule">): Sch
         mode: "interval",
         intervalMinutes: String(Math.max(1, task.schedule.everyMs / 60_000)),
       };
+    case "once":
+      return { ...DEFAULT_SCHEDULE, mode: "once", onceAt: task.schedule.at };
     case "webhook":
       return {
         ...DEFAULT_SCHEDULE,
@@ -107,6 +112,9 @@ export function scheduleFromDraft(draft: ScheduleDraft): ScheduledTaskUpsertSche
             },
       maxDeliveryAgeMinutes,
     };
+  }
+  if (draft.mode === "once") {
+    return draft.onceAt === null ? null : { type: "once", at: draft.onceAt };
   }
   if (draft.mode === "interval") {
     const minutes = Number(draft.intervalMinutes);
