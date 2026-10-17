@@ -284,6 +284,8 @@ export const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryA
   compactBeforeSendTokens: number | null;
   keepFullHistory: boolean;
   onToggleKeepFullHistory: () => void;
+  onSendLater: (() => void) | undefined;
+  sendLaterDisabledReason: string | null;
 }) {
   return (
     <>
@@ -325,6 +327,8 @@ export const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryA
         compactBeforeSendTokens={props.compactBeforeSendTokens}
         keepFullHistory={props.keepFullHistory}
         onToggleKeepFullHistory={props.onToggleKeepFullHistory}
+        onSendLater={props.onSendLater}
+        sendLaterDisabledReason={props.sendLaterDisabledReason}
       />
     </>
   );

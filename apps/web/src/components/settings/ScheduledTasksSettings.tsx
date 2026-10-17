@@ -96,6 +96,7 @@ import {
   type ScheduleMode,
   type WorkspaceMode,
 } from "./scheduledTasksSettings.logic";
+import { defaultOnceInputValue, onceTaskStatus } from "./scheduledTaskOnce.logic";
 import { Label } from "../ui/label";
 import { Menu, MenuTrigger, MenuPopup, MenuItem, MenuSeparator } from "../ui/menu";
 import { ToggleGroup, Toggle } from "../ui/toggle-group";
@@ -779,7 +780,20 @@ function ScheduledTaskRow({
                 Next run <ScheduledRelativeLabel value={task.nextRunAt} />
               </>
             ) : (
-              "Not scheduled"
+              <>
+                {scheduleLabel(task.schedule)} ·{" "}
+                {!task.enabled ? (
+                  "Paused"
+                ) : isWebhook ? (
+                  "Listening"
+                ) : task.nextRunAt ? (
+                  <>
+                    Next run <ScheduledRelativeLabel value={task.nextRunAt} />
+                  </>
+                ) : (
+                  "Not scheduled"
+                )}
+              </>
             )}
           </span>
           {task.lastRunStatus !== "never" ? (

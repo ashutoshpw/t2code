@@ -1123,6 +1123,34 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     terminalContexts: composerTerminalContexts,
     elementContextCount: composerPreviewAnnotations.length + composerReviewComments.length,
   });
+  const sendLater = useSendLater({
+    environmentId,
+    threadId: props.isServerThread && activeThread ? activeThread.id : null,
+    projectId: props.isServerThread && activeThread ? activeThread.projectId : null,
+    prompt,
+    hasNonTextContent:
+      composerImages.length +
+        composerFiles.length +
+        composerTerminalContexts.length +
+        composerPreviewAnnotations.length +
+        composerReviewComments.length +
+        composerThreadContexts.length >
+      0,
+    isEditingQueuedMessage,
+    environmentAvailable:
+      environmentUnavailable === null && !noProviderAvailable && !projectSelectionRequired,
+    modelSelection: selectedModelSelection,
+    runtimeMode,
+    interactionMode,
+    keybindings,
+    onScheduled: () => {
+      promptRef.current = "";
+      useComposerDraftStore.getState().clearComposerContent(composerDraftTarget);
+      setComposerHighlightedItemId(null);
+      setComposerCursor(0);
+      resetComposerTrigger(null);
+    },
+  });
   const composerTriggerKind = composerTrigger?.kind ?? null;
   const compactSlashCommandAvailable =
     composerTrigger?.kind === "slash-command" &&
@@ -3549,6 +3577,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     compactBeforeSendTokens={props.resumeCompactionTokens}
                     keepFullHistory={props.keepFullHistory}
                     onToggleKeepFullHistory={props.onToggleKeepFullHistory}
+                    onSendLater={sendLater.onSendLater}
+                    sendLaterDisabledReason={sendLater.sendLaterDisabledReason}
                     compactDisabled={compactDisabled || noProviderAvailable || isSendBusy}
                     compactDisabledReason={resolvedCompactDisabledReason}
                     {...(compactCommandAvailable
