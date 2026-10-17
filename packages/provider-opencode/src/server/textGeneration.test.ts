@@ -10,11 +10,11 @@ import * as TestClock from "effect/testing/TestClock";
 import * as NetService from "@t2code/shared/Net";
 import { beforeEach, expect } from "vite-plus/test";
 
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
+import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";
 import * as OpenCodeTextGeneration from "./textGeneration.ts";
-import type { ProviderTextGeneration } from "@t3tools/provider-core/server/textGeneration";
+import type { ProviderTextGeneration } from "@t2code/provider-core/server/textGeneration";
 
 const runtimeMock = {
   state: {

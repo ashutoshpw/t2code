@@ -59,21 +59,21 @@ import * as KeyedLock from "@t2code/shared/KeyedLock";
 import { getModelSelectionStringOptionValue, modelSelectionsEqual } from "@t2code/shared/model";
 import { causeErrorTag } from "@t2code/shared/observability";
 
-import { providerMessageTextWithAttachmentPaths } from "@t3tools/provider-core/server/attachmentPrompt";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import { providerMessageTextWithAttachmentPaths } from "@t2code/provider-core/server/attachmentPrompt";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import {
   backgroundWorkNotification,
   type BackgroundWorkReport,
-} from "@t3tools/provider-core/server/notification";
-import * as ProviderContinuationRequests from "@t3tools/provider-core/server/ProviderContinuationRequests";
-import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
+} from "@t2code/provider-core/server/notification";
+import * as ProviderContinuationRequests from "@t2code/provider-core/server/ProviderContinuationRequests";
+import { makeProviderFailure } from "@t2code/provider-core/server/failure";
 import {
   makeSubagentChildThread,
   makeSubagentConversationArtifacts,
   subagentThreadTitle,
-} from "@t3tools/provider-core/server/subagentProjection";
-import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import { turnScopedSelectionTransition } from "@t3tools/provider-core/server/selectionTransition";
+} from "@t2code/provider-core/server/subagentProjection";
+import * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
+import { turnScopedSelectionTransition } from "@t2code/provider-core/server/selectionTransition";
 import { OPENCODE_PROVIDER, openCodePermissionRequestKind } from "../adapter.ts";
 import { openCodeToolTurnItem } from "../toolItems.ts";
 

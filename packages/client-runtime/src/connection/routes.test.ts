@@ -167,15 +167,15 @@ describe("learned routes", () => {
   });
 
   it("labels a learned address Tailscale only while the server reports it as tailnet", () => {
-    const tailscale = { kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3773/" };
-    const mesh = { kind: "lan", httpBaseUrl: "http://100.96.0.1:3773/" };
+    const tailscale = { kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3772/" };
+    const mesh = { kind: "lan", httpBaseUrl: "http://100.96.0.1:3772/" };
     const first = mergeLearnedRoutes({
       entry: relayOnly,
       activeRoute: RELAY,
       reported: [tailscale, mesh],
       allowInsecure: true,
     })!;
-    expect(first.map(connectionRouteLabel)).toEqual(["Tailscale", "VPN", "T3 Connect"]);
+    expect(first.map(connectionRouteLabel)).toEqual(["Tailscale", "VPN", "T2 Connect"]);
 
     const corrected = mergeLearnedRoutes({
       entry: entryWithRoutes(relayOnly, first),
@@ -184,7 +184,7 @@ describe("learned routes", () => {
       allowInsecure: true,
     })!;
     expect(ids(corrected)).toEqual(ids(first));
-    expect(corrected.map(connectionRouteLabel)).toEqual(["VPN", "VPN", "T3 Connect"]);
+    expect(corrected.map(connectionRouteLabel)).toEqual(["VPN", "VPN", "T2 Connect"]);
     expect(
       mergeLearnedRoutes({
         entry: entryWithRoutes(relayOnly, corrected),
@@ -196,18 +196,18 @@ describe("learned routes", () => {
   });
 
   it("labels a paired numeric Tailscale address Tailscale once the server confirms it", () => {
-    const paired = direct("paired", "http://100.101.102.103:3773/");
-    const other = direct("other", "http://100.96.0.1:3773/");
+    const paired = direct("paired", "http://100.101.102.103:3772/");
+    const other = direct("other", "http://100.96.0.1:3772/");
     const entry = entryWithRoutes(relayOnly, [paired, other, RELAY]);
     expect(connectionRouteLabel(paired)).toBe("VPN");
     const confirmed = mergeLearnedRoutes({
       entry,
       activeRoute: paired,
-      reported: [{ kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3773/" }],
+      reported: [{ kind: "tailnet", httpBaseUrl: "http://100.101.102.103:3772/" }],
       allowInsecure: true,
     })!;
     expect(ids(confirmed)).toEqual(["paired", "other", "relay"]);
-    expect(confirmed.map(connectionRouteLabel)).toEqual(["Tailscale", "VPN", "T3 Connect"]);
+    expect(confirmed.map(connectionRouteLabel)).toEqual(["Tailscale", "VPN", "T2 Connect"]);
   });
 
   it("leaves user routes alone and does not learn an address already saved", () => {

@@ -10,7 +10,7 @@ import { TextGenerationError } from "@t2code/contracts";
 import type { GrokSettings } from "../settings.ts";
 import { getModelSelectionStringOptionValue } from "@t2code/shared/model";
 
-import * as TextGenerationOperations from "@t3tools/provider-core/server/textGenerationOperations";
+import * as TextGenerationOperations from "@t2code/provider-core/server/textGenerationOperations";
 import {
   applyGrokAcpModelSelection,
   currentGrokModelIdFromSessionSetup,

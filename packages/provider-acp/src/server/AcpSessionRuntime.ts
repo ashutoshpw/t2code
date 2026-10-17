@@ -30,7 +30,7 @@ import { resolveSpawnCommand } from "@t2code/shared/shell";
 import { AgentScope, AgentScopeThreadId, RAISE_OOM_SCORE_LINE } from "@t2code/shared/AgentScope";
 import * as HostProcess from "@t2code/shared/HostProcess";
 
-import { signalProcessGroup } from "@t3tools/provider-core/server/processGroup";
+import { signalProcessGroup } from "@t2code/provider-core/server/processGroup";
 import { appendAcpStderrTail, sanitizeAcpStderrExcerpt } from "./stderr.ts";
 import {
   collectSessionConfigOptionValues,
@@ -2690,25 +2690,6 @@ export const make = (
             );
           }),
         ),
-      setSessionMode: (modeId) =>
-        Effect.gen(function* () {
-          const modeState = yield* Ref.get(modeStateRef);
-          if (modeState?.currentModeId === modeId) {
-            return {} satisfies EffectAcpSchema.SetSessionModeResponse;
-          }
-          const started = yield* getStartedState;
-          const requestPayload = {
-            sessionId: started.sessionId,
-            modeId,
-          } satisfies SetSessionModePayload;
-          const response = yield* runLoggedRequest(
-            "session/set_mode",
-            requestPayload,
-            acp.agent.setSessionMode(requestPayload),
-          );
-          yield* updateCurrentModeId(modeId);
-          return response;
-        }),
       setConfigOption,
       setModel: (model) =>
         getStartedState.pipe(

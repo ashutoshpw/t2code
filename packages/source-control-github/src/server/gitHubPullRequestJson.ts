@@ -32,10 +32,10 @@ import type {
   PullRequestLabelCandidateList,
   PullRequestState,
   PullRequestThreadComment,
-} from "@t3tools/contracts";
-import { quoteGitPatchPath } from "@t3tools/shared/gitPatchPath";
-import { decodeJsonResult } from "@t3tools/shared/schemaJson";
-import { dedupeChecks } from "@t3tools/source-control-core/server/pullRequestChecks";
+} from "@t2code/contracts";
+import { quoteGitPatchPath } from "@t2code/shared/gitPatchPath";
+import { decodeJsonResult } from "@t2code/shared/schemaJson";
+import { dedupeChecks } from "@t2code/source-control-core/server/pullRequestChecks";
 
 import type * as GitHubSchema from "../../schema/github.graphql.ts";
 import type {

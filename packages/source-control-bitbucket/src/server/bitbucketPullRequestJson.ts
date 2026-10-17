@@ -18,7 +18,7 @@ import type {
 import { TrimmedNonEmptyString } from "@t2code/contracts";
 import { decodeJsonResult } from "@t2code/shared/schemaJson";
 
-import { dedupeChecks } from "@t3tools/source-control-core/server/pullRequestChecks";
+import { dedupeChecks } from "@t2code/source-control-core/server/pullRequestChecks";
 
 /**
  * Bitbucket's enums are decoded as plain strings and normalized here, in the same tolerant

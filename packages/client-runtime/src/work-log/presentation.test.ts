@@ -296,7 +296,7 @@ describe("summarizeToolGroup", () => {
         entry("inspect-app", {
           label: "Inspect app",
           toolSource: {
-            key: "native-app:com.t3tools.t3code",
+            key: "native-app:com.t2tools.t2code",
             name: "Computer Use",
             kind: "computer",
           },

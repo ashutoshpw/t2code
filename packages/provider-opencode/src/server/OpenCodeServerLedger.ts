@@ -9,8 +9,8 @@ import * as Schema from "effect/Schema";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import { writeFileStringAtomically } from "@t3tools/shared/atomicWrite";
-import { signalProcessGroup } from "@t3tools/provider-core/server/processGroup";
+import { writeFileStringAtomically } from "@t2code/shared/atomicWrite";
+import { signalProcessGroup } from "@t2code/provider-core/server/processGroup";
 
 const ProcessIdentity = Schema.Struct({ pid: Schema.Int, startTime: Schema.String });
 type ProcessIdentity = typeof ProcessIdentity.Type;

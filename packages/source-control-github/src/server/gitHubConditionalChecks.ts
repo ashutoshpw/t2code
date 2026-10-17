@@ -11,7 +11,7 @@ import * as GitHubRest from "./GitHubRest.ts";
 import * as GitHubRequestPolicy from "./GitHubRequestPolicy.ts";
 import type { GitHubPullRequestDetail } from "./gitHubPullRequestJson.ts";
 import type { GitHubPullRequestApiError } from "./GitHubPullRequestApi.ts";
-import type { ProviderRepositoryRef } from "@t3tools/source-control-core/server/PullRequestProvider";
+import type { ProviderRepositoryRef } from "@t2code/source-control-core/server/PullRequestProvider";
 
 const HeadSchema = Schema.Struct({
   head: Schema.Struct({

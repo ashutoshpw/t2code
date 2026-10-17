@@ -12,8 +12,8 @@ import {
   clampPercent,
   makeUnavailableUsageLimits,
   makeUsageLimits,
-} from "@t3tools/provider-core/server/usageLimits";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/provider-core/server/usageLimits";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 const GrokCredentials = Schema.Record(
   Schema.String,

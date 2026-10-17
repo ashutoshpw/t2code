@@ -5,8 +5,8 @@ import { ChildProcessSpawner } from "effect/process";
 
 import { VcsProcessExitError } from "@t2code/contracts";
 
-import type * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
-import * as TestSourceControlHost from "@t3tools/source-control-testing/TestSourceControlHost";
+import type * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
+import * as TestSourceControlHost from "@t2code/source-control-testing/TestSourceControlHost";
 import * as GitLabCli from "./GitLabCli.ts";
 
 const mockedRun = vi.fn<SourceControlHost.SourceControlHost["Service"]["process"]["run"]>();

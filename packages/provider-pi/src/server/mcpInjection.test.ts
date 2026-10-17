@@ -5,7 +5,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 
 import {
-  PI_T3_MCP_EXTENSION_FILENAME,
+  PI_T2_MCP_EXTENSION_FILENAME,
   T2_MCP_BEARER_ENV,
   T2_MCP_URL_ENV,
   T2_PI_RUNTIME_MODE_ENV,
@@ -13,14 +13,14 @@ import {
 } from "./mcpExtensionSource.ts";
 import {
   buildPiRpcLaunch,
-  materializePiT3McpExtension,
+  materializePiT2McpExtension,
   resolvePiLaunchArgs,
 } from "./mcpInjection.ts";
 
-const threadId = ThreadId.make("thread-pi-t3-mcp");
+const threadId = ThreadId.make("thread-pi-t2-mcp");
 
 const mcpSession = {
-  environmentId: EnvironmentId.make("environment-pi-t3-mcp"),
+  environmentId: EnvironmentId.make("environment-pi-t2-mcp"),
   threadId,
   providerSessionId: "mcp-session-pi",
   providerInstanceId: ProviderInstanceId.make("pi"),
@@ -40,7 +40,7 @@ describe("pi T2 MCP injection", () => {
       launchArgs: resolvedArgs.args,
       environment: { PATH: "/usr/bin" },
       mcpSession,
-      extensionPath: "/tmp/cache/pi-t3-mcp-extension.ts",
+      extensionPath: "/tmp/cache/pi-t2-mcp-extension.ts",
       runtimeMode: "approval-required",
     });
     assert.deepEqual(launch.args, [
@@ -60,7 +60,7 @@ describe("pi T2 MCP injection", () => {
       "-review",
       "--extension-flag=kept",
       "--extension",
-      "/tmp/cache/pi-t3-mcp-extension.ts",
+      "/tmp/cache/pi-t2-mcp-extension.ts",
     ]);
     assert.notInclude(launch.args, "--no-extensions");
     assert.equal(launch.env[T2_MCP_URL_ENV], "http://127.0.0.1:43123/mcp");
@@ -76,14 +76,14 @@ describe("pi T2 MCP injection", () => {
         [T2_PI_MCP_EXTENSION_PATH_ENV]: "/stale/extension.ts",
       },
       mcpSession: undefined,
-      extensionPath: "/tmp/cache/pi-t3-mcp-extension.ts",
+      extensionPath: "/tmp/cache/pi-t2-mcp-extension.ts",
       runtimeMode: "auto-accept-edits",
     });
     assert.deepEqual(permissionOnly.args, [
       "--mode",
       "rpc",
       "--extension",
-      "/tmp/cache/pi-t3-mcp-extension.ts",
+      "/tmp/cache/pi-t2-mcp-extension.ts",
     ]);
     assert.isFalse(permissionOnly.hasT2Mcp);
     assert.isUndefined(permissionOnly.env[T2_MCP_URL_ENV]);
@@ -100,7 +100,7 @@ describe("pi T2 MCP injection", () => {
       launchArgs: [],
       environment: {},
       mcpSession: undefined,
-      extensionPath: "/tmp/cache/pi-t3-mcp-extension.ts",
+      extensionPath: "/tmp/cache/pi-t2-mcp-extension.ts",
       runtimeMode: "auto",
     });
 
@@ -120,7 +120,7 @@ describe("pi T2 MCP injection", () => {
       ],
       environment: {},
       mcpSession,
-      extensionPath: "/tmp/cache/pi-t3-mcp-extension.ts",
+      extensionPath: "/tmp/cache/pi-t2-mcp-extension.ts",
       ephemeral: true,
       disableExtensions: true,
       disableTools: true,
@@ -159,10 +159,10 @@ describe("pi T2 MCP injection", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const cacheDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pi-extensions-" });
-      const mcpDest = yield* materializePiT3McpExtension(cacheDir);
-      assert.isTrue(mcpDest.endsWith(PI_T3_MCP_EXTENSION_FILENAME));
+      const mcpDest = yield* materializePiT2McpExtension(cacheDir);
+      assert.isTrue(mcpDest.endsWith(PI_T2_MCP_EXTENSION_FILENAME));
       const mcpSource = yield* fs.readFileString(mcpDest);
-      assert.include(mcpSource, "export default async function t3McpExtension");
+      assert.include(mcpSource, "export default async function t2McpExtension");
       assert.include(mcpSource, "before_agent_start");
       assert.include(mcpSource, 'pi.on("tool_call"');
       assert.include(mcpSource, "Allow ${event.toolName}?");
