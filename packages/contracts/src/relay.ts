@@ -885,7 +885,12 @@ export const RelayCloudEnvironmentHealthProofPayload = Schema.Struct({
 export type RelayCloudEnvironmentHealthProofPayload =
   typeof RelayCloudEnvironmentHealthProofPayload.Type;
 
-/** Verify x-t3-relay-delivery with the relay mint key before trusting delivery id, time, or trace context. */
+/**
+ * Sent with every webhook the relay forwards, signed with the relay's mint key
+ * (`x-t2-relay-delivery`). The environment trusts the relay's delivery id,
+ * receive time and trace context only when this verifies, since its webhook
+ * URL can also be called directly.
+ */
 export const RelayHookDeliveryProofPayload = Schema.Struct({
   ...RelaySignedJwtRegisteredClaims,
   environmentId: EnvironmentId,
