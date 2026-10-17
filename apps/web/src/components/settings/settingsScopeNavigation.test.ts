@@ -11,7 +11,8 @@ import { describe, expect, it } from "vite-plus/test";
 import { resolveSettingsScope } from "./settingsScope";
 import { retainSettingsScope, validateSettingsRouteSearch } from "./settingsScopeNavigation";
 
-import { validateScheduledTasksSearch } from "./scheduledTasksSettings.logic";
+import { Route as SettingsScheduledTasksRoute } from "../../routes/settings.scheduled-tasks";
+import { Route as ScheduledTasksRoute } from "../../routes/scheduled-tasks";
 
 const checkoutSearch = {
   project: "repository:t2code",
@@ -48,11 +49,17 @@ function createSettingsRouter(initialEntry = "/settings/general") {
         : {}),
     }),
   });
-  const scheduledTasks = createRoute({
-    getParentRoute: () => settings,
+  // The real top-level routes: the settings path now redirects to them. The
+  // `as never` casts mirror the generated route tree's route wiring.
+  const scheduledTasksRedirect = SettingsScheduledTasksRoute.update({
     path: "scheduled-tasks",
-    validateSearch: validateScheduledTasksSearch,
-  });
+    getParentRoute: () => settings,
+  } as never);
+  const scheduledTasksTopLevel = ScheduledTasksRoute.update({
+    id: "/scheduled-tasks",
+    path: "/scheduled-tasks",
+    getParentRoute: () => root,
+  } as never);
   const legacyProject = createRoute({
     getParentRoute: () => root,
     path: "projects/$projectKey",
@@ -72,9 +79,10 @@ function createSettingsRouter(initialEntry = "/settings/general") {
         integrations,
         sourceControl,
         providers,
-        scheduledTasks,
+        scheduledTasksRedirect,
       ]),
       legacyProject,
+      scheduledTasksTopLevel,
     ]),
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
@@ -106,12 +114,7 @@ describe("settings scope navigation", () => {
     expect(router.state.location.search).toEqual(checkoutSearch);
   });
 
-  it.each([
-    "/settings/projects",
-    "/settings/integrations",
-    "/settings/source-control",
-    "/settings/scheduled-tasks",
-  ] as const)(
+  it.each(["/settings/projects", "/settings/integrations", "/settings/source-control"] as const)(
     "keeps %s when regrouping or selecting a target from the shared settings layout",
     async (to) => {
       const router = createSettingsRouter();
@@ -251,16 +254,30 @@ describe("scheduled task scope navigation", () => {
         taskId: ScheduledTaskId.make("task-1"),
       },
     });
-    expect(router.state.matches.at(-1)?.search).toEqual({
+    expect(router.state.redirect).not.toBeUndefined();
+    await router.navigate(router.state.redirect!.options);
+    expect(router.state.location.pathname).toBe("/scheduled-tasks");
+    expect(router.state.location.search).toEqual({
       machine: "remote-server",
       environmentId: "remote-server",
       taskId: "task-1",
     });
     await router.navigate({
-      from: "/settings",
+      from: "/scheduled-tasks",
       to: router.state.location.pathname,
       search: () => ({ machine: undefined, project: undefined, checkout: undefined }),
     });
     expect(router.state.matches.at(-1)?.search).toEqual({});
+  });
+
+  it("keeps the project and checkout filters when entering scheduled tasks", async () => {
+    const router = createSettingsRouter();
+    await router.navigate({ to: "/settings/projects", search: checkoutSearch });
+    await router.navigate({ to: "/settings/scheduled-tasks" });
+    // The redirect carries the scope the settings route retained.
+    expect(router.state.redirect).not.toBeUndefined();
+    await router.navigate(router.state.redirect!.options);
+    expect(router.state.location.pathname).toBe("/scheduled-tasks");
+    expect(router.state.location.search).toEqual(checkoutSearch);
   });
 });

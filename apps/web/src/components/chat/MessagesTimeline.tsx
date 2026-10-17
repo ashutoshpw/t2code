@@ -1532,7 +1532,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         >
           {userMessage.scheduledTaskId ? (
             <Link
-              to="/settings/scheduled-tasks"
+              to="/scheduled-tasks"
               search={{
                 environmentId: ctx.activeThreadEnvironmentId,
                 taskId: userMessage.scheduledTaskId,
