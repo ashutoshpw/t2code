@@ -404,6 +404,10 @@ function collectPush(): Entry[] {
       .filter(Boolean)) {
       if (isExemptPath(file)) continue;
       if (!PATH_RULES.some((rule) => rule.violates(file, ""))) continue;
+      // A rebase push spans upstream, so the range also lists the T3-named
+      // paths the fork just removed. Only paths that survive at the tip are
+      // tracked names the fork owns.
+      if (git(["ls-tree", "-r", "--name-only", localSha, "--", file]).trim() !== file) continue;
       entries.push({ file, line: "" });
     }
     for (const file of FORBIDDEN_FILE_RULES.keys()) {
