@@ -67,7 +67,7 @@ const OrchestratorMcpSchedule = Schema.Union([
   OrchestratorMcpScheduleFromJsonString,
 ]).annotate({
   description:
-    "Trigger: {type:'interval',everyMs}, {type:'fixed_time',timeOfDay,weekdays?}, or {type:'webhook'}.",
+    "Trigger object: {type:'interval', everyMs}, {type:'fixed_time', timeOfDay, weekdays?}, {type:'once', at} for a single run at an ISO 8601 instant, or {type:'webhook'} to run on each request to a generated URL. Never stringify it unless the provider requires the compatibility form.",
 });
 
 const OrchestratorMcpTargetOptionsFromRecord = Schema.Record(
@@ -802,7 +802,7 @@ export const OrchestratorMcpEnvironmentLinkResult = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("linked"),
     environmentId: EnvironmentId.annotate({
-      description: "Pass it as environmentId to act there; t3_environment_links lists it.",
+      description: "Pass it as environmentId to act there; t2_environment_links lists it.",
     }),
     label: Schema.String,
     access: AuthMcpClientAccess.annotate({ description: "The access the user chose." }),
@@ -824,7 +824,7 @@ export type OrchestratorMcpEnvironmentLinkResult = typeof OrchestratorMcpEnviron
 
 export const OrchestratorMcpEnvironmentUnlinkInput = Schema.Struct({
   environmentId: EnvironmentId.annotate({
-    description: "The linked environment to forget, from t3_environment_links.",
+    description: "The linked environment to forget, from t2_environment_links.",
   }),
 });
 export type OrchestratorMcpEnvironmentUnlinkInput =

@@ -4,7 +4,7 @@ import type { ProviderInteractionMode } from "@t2code/contracts";
 export const T2_CODE_ORCHESTRATION_SECTIONS: ReadonlyArray<string> = [
   `## T2 Code orchestration
 
-Ordinary coding tasks need no T3 tools.
+Ordinary coding tasks need no T2 tools.
 
 - Subagents: use your native tool when the child uses your provider, a model it offers, and no settings beyond yours, and it finishes in this turn (Claude \`Agent\` always with \`run_in_background:false\`; Codex \`spawn_agent\`, then wait). Use \`delegate_task\` for another provider's model, user-asked settings, a separate checkout (\`isolation:"worktree"\`), background work, or \`delegate_task\` by name. A native type running another provider's model counts too. Workflow only when asked.
 - Call \`orchestrator_capabilities\` once per thread, before the first \`delegate_task\`. Again only after an error or a user-named provider change. Settings go in \`target.options\`. Provider or model unavailable: say so. Never switch unasked, or fall back to native tools, Workflow, or CLIs. Never make a child's checkout in the shell or in \`task\`.
@@ -13,8 +13,8 @@ Ordinary coding tasks need no T3 tools.
 - If you are a subagent or child, do the work yourself. Start no subagents unless your task says to.`,
   `- \`t2_thread_launch\` and \`create_threads\` make new top-level threads, only when the user asks for a new thread. "Subagent", "delegate", and "parallel" never mean one. Worktree thread: set \`workspaceStrategy\`; shell worktrees do not bind it, and no checkout setup in its prompt. No \`workspaceStrategy\`: project root, not your worktree.
 - Given a thread id, \`t2_thread_read\` it before you answer about it.
-- Another machine: \`t3_environment_links\` lists linked ones. Pass its \`environmentId\` to a T3 tool to act there. Ids are then that machine's, so pass \`threadId\`.
-- A machine the user names that is not linked ("delegate this to my vps"): call \`t3_environment_link\` with a \`hint\` from their words. Never ask for a pairing code in chat.
+- Another machine: \`t2_environment_links\` lists linked ones. Pass its \`environmentId\` to a T3 tool to act there. Ids are then that machine's, so pass \`threadId\`.
+- A machine the user names that is not linked ("delegate this to my vps"): call \`t2_environment_link\` with a \`hint\` from their words. Never ask for a pairing code in chat.
 - In your reply, mention a thread by its \`link\`, verbatim. Never a plain title or bare id.
 - A secret: call \`request_secret\` yourself. Pass its \`secretRef\` to a T3 tool, or use \`delivery: "file"\` for a shell command. Never ask in chat or invent one. When asked only to schedule, \`schedule_task\` without running its prompt.
 - T3 tools may load late. Try the name once before you call it absent.`,
@@ -57,7 +57,7 @@ export const T2_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH = deviceToolInstr
 
 // ACP only: some ACP agents accept the injected MCP server but never expose
 // its tools, so they need the terminal transport other harnesses never use.
-const T2_CODE_ACP_MCP_FALLBACK_INSTRUCTIONS = `ACP fallback: if the T3 tools are absent and \`T2_ACP_MCP_NODE\` is present, call them through the terminal: \`ELECTRON_RUN_AS_NODE=1 "$T2_ACP_MCP_NODE" \${T2_ACP_MCP_ENTRYPOINT:+"$T2_ACP_MCP_ENTRYPOINT"} acp-mcp-call orchestrator_capabilities '{}'\` (\`T2_ACP_MCP_ENTRYPOINT\` is unset for a standalone executable). Delegate with \`acp-mcp-call delegate_task '{"task":"...","target":{"providerInstanceId":"...","model":"..."},"mode":"async","clientRequestId":"..."}'\`.`;
+const T2_CODE_ACP_MCP_FALLBACK_INSTRUCTIONS = `ACP fallback: if the T2 tools are absent and \`T2_ACP_MCP_NODE\` is present, call them through the terminal: \`ELECTRON_RUN_AS_NODE=1 "$T2_ACP_MCP_NODE" \${T2_ACP_MCP_ENTRYPOINT:+"$T2_ACP_MCP_ENTRYPOINT"} acp-mcp-call orchestrator_capabilities '{}'\` (\`T2_ACP_MCP_ENTRYPOINT\` is unset for a standalone executable). Delegate with \`acp-mcp-call delegate_task '{"task":"...","target":{"providerInstanceId":"...","model":"..."},"mode":"async","clientRequestId":"..."}'\`.`;
 
 const T2_CODE_ACP_DEFAULT_MODE_INSTRUCTIONS = `## T2 Code interaction mode: Default
 

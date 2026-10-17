@@ -365,7 +365,7 @@ it.effect("an agent here works on a linked environment's threads within its own 
       yield* linkTo(a.links, b, "auto");
       yield* Ref.set(linkSession, (yield* b.linkedSessions)[0]!.sessionId);
 
-      const listed = yield* a.call("thread:laptop-full", "t3_environment_links", {});
+      const listed = yield* a.call("thread:laptop-full", "t2_environment_links", {});
       expect(listed.structuredContent).toMatchObject({
         environmentId: laptop.environmentId,
         links: [
@@ -637,7 +637,7 @@ it.effect("refuses what a linked environment cannot take before anything leaves"
       // threads here may not reach them there either.
       const previewOnly = new Set<McpInvocationContext.McpCapability>(["preview"]);
       for (const [name, args] of [
-        ["t3_environment_links", {}],
+        ["t2_environment_links", {}],
         ["t2_project_list", { environmentId: box.environmentId }],
         ["t2_thread_list", { environmentId: box.environmentId, projectId: boxProject }],
         ["t2_thread_read", { environmentId: box.environmentId, threadId: boxThread }],

@@ -273,7 +273,7 @@ describe("provider projection", () => {
     expect(projected).toContain('<context kind="environment" id="env_vps">');
     expect(projected).toContain("label: vps");
     expect(projected).toContain("environmentId: environment-vps");
-    expect(projected).toContain("t3_environment_link with this environmentId");
+    expect(projected).toContain("t2_environment_link with this environmentId");
     expect(projected).not.toMatch(/https?:/);
   });
 

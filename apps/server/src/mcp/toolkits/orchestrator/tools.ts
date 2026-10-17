@@ -137,7 +137,7 @@ const WorkflowStopTool = Tool.make("t2_workflow_stop", {
   .annotate(Tool.Title, "Stop a workflow")
   .annotate(Tool.Destructive, true);
 
-const BackgroundWaitTool = Tool.make("t3_background_wait", {
+const BackgroundWaitTool = Tool.make("t2_background_wait", {
   description:
     "Keep this thread in Working while background work runs. Pass its task ID after starting it. Not for work left running (dev server, watcher). `waiting=false` clears. Does not stop the task. Claude only.",
   parameters: Schema.Struct({
@@ -305,9 +305,9 @@ const ThreadInterruptTool = Tool.make("t2_thread_interrupt", {
   .annotate(Tool.Title, "Interrupt a T3 thread")
   .annotate(Tool.Destructive, true);
 
-const EnvironmentLinksTool = Tool.make("t3_environment_links", {
+const EnvironmentLinksTool = Tool.make("t2_environment_links", {
   description:
-    "List linked environments (the user's other machines) and whether each answers now. Pass one's `environmentId` to a tool to act there; `delegate_task` takes `target.environmentId`. Expired: link it again with `t3_environment_link`.",
+    "List linked environments (the user's other machines) and whether each answers now. Pass one's `environmentId` to a tool to act there; `delegate_task` takes `target.environmentId`. Expired: link it again with `t2_environment_link`.",
   success: OrchestratorMcpEnvironmentLinksResult,
   failure: OrchestratorMcpFailure,
   failureMode: "return",
@@ -319,7 +319,7 @@ const EnvironmentLinksTool = Tool.make("t3_environment_links", {
   .annotate(Tool.Idempotent, true)
   .annotate(McpSchema.EnabledWhen, McpInvocationContext.hiddenWhileLinksOff);
 
-const EnvironmentLinkTool = Tool.make("t3_environment_link", {
+const EnvironmentLinkTool = Tool.make("t2_environment_link", {
   description:
     "Ask the user to link another machine, in a card. For a machine the user names that is not linked. Pass `hint` from their words, `environmentId` when one names it (already linked: returns `linked`), `url` only when the user gave an address. Returns `pending`; the outcome arrives as a message in this thread. Do not wait, poll, or call it again to check. Never ask for a pairing code in chat.",
   parameters: OrchestratorMcpEnvironmentLinkInput,

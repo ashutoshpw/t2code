@@ -45,6 +45,24 @@ const ScheduledTaskFixedTimeSchedule = Schema.Struct({
   ),
 });
 
+const ScheduledTaskOnceSchedule = Schema.Struct({
+  type: Schema.Literal("once").annotate({
+    description: "Select a single run at an absolute time.",
+  }),
+  at: IsoDateTime.check(
+    Schema.makeFilter((value) =>
+      /^\d{4}-\d{2}-\d{2}T/.test(value) && !Number.isNaN(Date.parse(value))
+        ? undefined
+        : "Expected an ISO 8601 timestamp",
+    ),
+  ).annotate({
+    description:
+      "UTC instant to run at, as an ISO 8601 timestamp. The task runs once and then stays as history.",
+  }),
+}).annotate({
+  description: "Run once at an absolute instant, for example to send a message later.",
+});
+
 const ScheduledTaskWebhookSignatureFields = {
   header: TrimmedNonEmptyString.annotate({
     description: "Header with the signature, such as x-hub-signature-256.",
@@ -166,8 +184,12 @@ const ScheduledTaskUpsertWebhookSchedule = Schema.Struct({
 export const ScheduledTaskSchedule = Schema.Union([
   ScheduledTaskIntervalSchedule,
   ScheduledTaskFixedTimeSchedule,
+  ScheduledTaskOnceSchedule,
   ScheduledTaskWebhookSchedule,
-]);
+]).annotate({
+  description:
+    "Structured trigger. Pass an object with type 'interval', 'fixed_time', 'once' or 'webhook'.",
+});
 export type ScheduledTaskSchedule = typeof ScheduledTaskSchedule.Type;
 
 export const ScheduledTaskUpsertSchedule = Schema.Union([
@@ -180,8 +202,12 @@ export const ScheduledTaskUpsertSchedule = Schema.Union([
     }),
   }),
   ScheduledTaskFixedTimeSchedule,
+  ScheduledTaskOnceSchedule,
   ScheduledTaskUpsertWebhookSchedule,
-]);
+]).annotate({
+  description:
+    "Writable trigger. Pass an object with type 'interval', 'fixed_time', 'once' or 'webhook'.",
+});
 export type ScheduledTaskUpsertSchedule = typeof ScheduledTaskUpsertSchedule.Type;
 
 export const ScheduledTaskRunStatus = Schema.Literals(["never", "running", "succeeded", "failed"]);

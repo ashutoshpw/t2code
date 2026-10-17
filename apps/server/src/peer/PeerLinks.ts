@@ -539,7 +539,7 @@ const make = Effect.gen(function* () {
       if (Option.isNone(row)) {
         return yield* new PeerLinkError({
           reason: "unknown_link",
-          message: `This environment is not linked to ${environmentId}. t3_environment_links lists the linked ones.`,
+          message: `This environment is not linked to ${environmentId}. t2_environment_links lists the linked ones.`,
         });
       }
       const link = yield* toLink(row.value);

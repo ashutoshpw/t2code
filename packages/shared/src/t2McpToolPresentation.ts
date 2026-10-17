@@ -158,7 +158,7 @@ const T2_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
     ["Stop", "Stopping", "Requested a stop for", "a workflow"],
     "workflow-stop",
   ),
-  t3_background_wait: tool(
+  t2_background_wait: tool(
     ["Update", "Updating", "Updated", "background waits"],
     "background-wait",
   ),
@@ -324,11 +324,11 @@ const T2_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
     ["Read", "Reading", "Read", "environment preferences"],
     "environment-read",
   ),
-  t3_environment_links: tool(
+  t2_environment_links: tool(
     ["List", "Listing", "Listed", "linked environments"],
     "environment-links",
   ),
-  t3_environment_link: tool(
+  t2_environment_link: tool(
     ["Ask to link", "Asking to link", "Asked to link", "an environment"],
     "environment-link",
   ),
