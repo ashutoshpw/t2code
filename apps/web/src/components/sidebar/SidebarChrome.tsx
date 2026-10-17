@@ -4,7 +4,7 @@ import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 
 import { useAtomValue } from "@effect/atom-react";
-import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
+import { useEnvironmentIdentificationMode, useAppRailEnabled } from "../../hooks/useSettings";
 import { shortcutLabelForCommand } from "../../keybindings";
 import {
   navigateHistory,
@@ -225,6 +225,7 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
   const isOnUtilityPage = useLocation({
     select: (location) => isSidebarUtilityPage(location.pathname),
   });
+  const appRailEnabled = useAppRailEnabled();
   const pullRequestsSupported = usePullRequestsSupported();
   const closeMobileSidebar = () => {
     if (isMobile) {
@@ -255,6 +256,10 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
     void navigateToMainApp();
   };
 
+  // The app rail owns these destinations at md and up; the footer keeps them
+  // below md, where the rail is hidden, and while the rail is turned off.
+  const showUtilityButtons = !appRailEnabled || isMobile;
+
   return (
     <SidebarMenu className="flex-row items-center">
       {isOnUtilityPage ? (
@@ -264,7 +269,7 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
             <span>Back</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
-      ) : (
+      ) : showUtilityButtons ? (
         <>
           <SidebarUtilityItem
             icon={<SettingsIcon />}
