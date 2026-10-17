@@ -36,7 +36,7 @@ import {
 } from "../operations/commands.ts";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
 import { createFileMetadataAtoms } from "./fileMetadata.ts";
-import { resolveWorkspaceFilePath } from "@t3tools/shared/path";
+import { resolveWorkspaceFilePath } from "@t2code/shared/path";
 
 export type {
   CreateProjectInput,

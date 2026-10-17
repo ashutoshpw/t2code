@@ -1,9 +1,9 @@
-import { builtInSourceControlDefinitions } from "@t3tools/source-control-definitions/registry";
+import { builtInSourceControlDefinitions } from "@t2code/source-control-definitions/registry";
 import {
   HostCredentialSettings,
   readSourceControlHostSettings,
-} from "@t3tools/source-control-core/shared/definition";
-import type { ServerSettings } from "@t3tools/contracts";
+} from "@t2code/source-control-core/shared/definition";
+import type { ServerSettings } from "@t2code/contracts";
 
 export {
   isMonochromeSourceControlIcon,
@@ -17,7 +17,7 @@ export {
   type SourceControlDefinition,
   type SourceControlHostCredentials,
   type SourceControlIcon,
-} from "@t3tools/source-control-core/shared/definition";
+} from "@t2code/source-control-core/shared/definition";
 
 export const sourceControlClients = builtInSourceControlDefinitions;
 

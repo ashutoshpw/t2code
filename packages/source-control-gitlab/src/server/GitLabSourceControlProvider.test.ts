@@ -1,7 +1,7 @@
-import { SourceControlProviderKind } from "@t3tools/contracts";
-import { normalizeGitRemoteUrl } from "@t3tools/shared/git";
-import { refineUnknownRemoteProvider } from "@t3tools/source-control-core/server/discovery";
-import { processOutput } from "@t3tools/source-control-testing/TestSourceControlHost";
+import { SourceControlProviderKind } from "@t2code/contracts";
+import { normalizeGitRemoteUrl } from "@t2code/shared/git";
+import { refineUnknownRemoteProvider } from "@t2code/source-control-core/server/discovery";
+import { processOutput } from "@t2code/source-control-testing/TestSourceControlHost";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

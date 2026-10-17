@@ -1,5 +1,5 @@
-import { ProviderDriverKind } from "@t3tools/contracts";
-import { defineProviderClient } from "@t3tools/provider-core/client";
+import { ProviderDriverKind } from "@t2code/contracts";
+import { defineProviderClient } from "@t2code/provider-core/client";
 
 import { AcpRegistrySettings } from "./settings.ts";
 

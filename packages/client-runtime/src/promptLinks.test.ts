@@ -6,7 +6,7 @@ import {
   ThreadId,
   type PullRequestLinkedThreadsResult,
   type RepositoryIdentity,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { AsyncResult } from "effect/reactivity";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -27,16 +27,16 @@ describe("findPromptLinkProjects", () => {
     const projects = [
       {
         id: "fork",
-        repositoryIdentity: identity("github.com/pingdotgg/t3code", "github.com/me/t3code"),
+        repositoryIdentity: identity("github.com/pingdotgg/t3code", "github.com/me/t2code"),
       },
       { id: "none", repositoryIdentity: null },
-      { id: "recent", repositoryIdentity: identity("github.com/PingDotGG/T3Code") },
+      { id: "recent", repositoryIdentity: identity("github.com/PingDotGG/T2Code") },
       { id: "older", repositoryIdentity: identity("github.com/pingdotgg/t3code") },
     ];
     const ids = (owner: string, name: string) =>
       findPromptLinkProjects(projects, { owner, name }).map((project) => project.id);
-    expect(ids("pingdotgg", "t3code")).toEqual(["recent", "older"]);
-    expect(ids("me", "t3code")).toEqual(["fork"]);
+    expect(ids("pingdotgg", "t2code")).toEqual(["recent", "older"]);
+    expect(ids("me", "t2code")).toEqual(["fork"]);
     expect(ids("gitlab", "x")).toEqual([]);
   });
 });

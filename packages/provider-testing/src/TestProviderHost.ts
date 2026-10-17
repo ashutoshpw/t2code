@@ -1,5 +1,5 @@
-import { DEFAULT_SERVER_SETTINGS, type ServerSettings } from "@t3tools/contracts";
-import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
+import { DEFAULT_SERVER_SETTINGS, type ServerSettings } from "@t2code/contracts";
+import * as ProviderHost from "@t2code/provider-core/server/ProviderHost";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -18,7 +18,7 @@ export interface TestProviderHostOptions {
 export class TestProviderHostSettings extends Context.Service<
   TestProviderHostSettings,
   { readonly set: (settings: ServerSettings) => Effect.Effect<void> }
->()("@t3tools/provider-testing/TestProviderHost/TestProviderHostSettings") {}
+>()("@t2code/provider-testing/TestProviderHost/TestProviderHostSettings") {}
 
 export const layer = (
   options: TestProviderHostOptions = {},
@@ -64,7 +64,7 @@ export const layer = (
           return Effect.sync(() => {
             const key = `${namespace}:${bindingId}`;
             return {
-              binding: { owner: "t3" as const, key },
+              binding: { owner: "t2" as const, key },
               get: Effect.sync(() => Option.fromUndefinedOr(credentials.get(key))),
               set: (value: Uint8Array) => Effect.sync(() => void credentials.set(key, value)),
               remove: Effect.sync(() => void credentials.delete(key)),
