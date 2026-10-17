@@ -47,9 +47,18 @@ export function redactQuery(query: string): string {
 // Trim after matching so unclosed placeholders cannot backtrack over whitespace partitions.
 const PLACEHOLDER = /\{\{([^{}]*)\}\}/g;
 
-// Break mentions before provider CLI parsing, including currency signs, embedded @, commands, context links and frame tags.
-// Checked with Claude Code 2.1.296, Codex 0.162.1, Pi 1.2.0 and dsh 0.2.0-rc.2; others may parse more.
-const MENTION = /[\p{Sc}@]|(?<=^|\s)\/(?=[^\s/]+(?:\s|$))|t3-context(?=:)|webhook(?=-data)/giu;
+/**
+ * Syntax an adapter or provider CLI may act on before the model reads the
+ * prompt: `$name` skill mentions (any currency sign, after any character in
+ * Codex and Pi), `@` file, agent and plugin mentions (after punctuation or
+ * letters in some CLIs), a `/name` command word mid-text, and `t2-context:`
+ * links. A word joiner goes after every currency sign and `@`, after a `/`
+ * that starts a single-segment word, and inside the `t2-context` scheme and
+ * any `webhook-data` name, so a value can't forge a frame tag.
+ * Checked against Claude Code 2.1.296, Codex 0.162.1, Pi 1.2.0 and dsh
+ * 0.2.0-rc.2; other agents may parse more.
+ */
+const MENTION = /[\p{Sc}@]|(?<=^|\s)\/(?=[^\s/]+(?:\s|$))|t2-context(?=:)|webhook(?=-data)/giu;
 
 function parseBody(request: WebhookRequest): unknown {
   const contentType = (request.headers["content-type"] ?? "").toLowerCase();

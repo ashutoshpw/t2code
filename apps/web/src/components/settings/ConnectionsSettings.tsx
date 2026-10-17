@@ -90,6 +90,7 @@ import { RemoveT2ConnectEnvironmentDialog } from "../clerk/RemoveT2ConnectEnviro
 import { authEnvironment } from "~/state/auth";
 import { environmentCatalog } from "~/connection/catalog";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
+import { useEnvironmentSessionState } from "~/state/session";
 import { useEnvironmentQuery } from "~/state/query";
 import {
   desktopNetworkAccessStateAtom,
