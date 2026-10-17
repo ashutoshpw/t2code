@@ -29,7 +29,7 @@ failed clear and continues, and turning holding off stops at the first link it
 cannot clear, so those requests wait for the 24-hour expiry. The relay still
 never checks the token;
 delivery goes through the same environment route.
-Every forward carries `x-t3-relay-delivery-id`, so a request that reached the
+Every forward carries `x-t2-relay-delivery-id`, so a request that reached the
 environment before a timeout and is delivered again later runs once
 ([inbox object](../../infra/relay/src/hooks/HookInboxObject.ts)).
 
