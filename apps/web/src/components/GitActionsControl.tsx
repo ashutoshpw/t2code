@@ -1076,7 +1076,7 @@ export default function GitActionsControl({
     activeDraftThread?.envMode === "worktree" &&
     activeDraftThread.worktreePath === null;
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- persists the draft thread branch when the live git status subscription reports a different branch
+  // oxlint-disable-next-line t2code/react-effect-budget -- persists the draft thread branch when the live git status subscription reports a different branch
   useEffect(() => {
     if (isGitActionRunning || isSelectingWorktreeBase || activeServerThread) {
       return;

@@ -103,7 +103,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
 }) {
   const listRef = useRef<HTMLDivElement>(null);
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- scrolls the highlighted menu item's DOM node into view
+  // oxlint-disable-next-line t2code/react-effect-budget -- scrolls the highlighted menu item's DOM node into view
   useLayoutEffect(() => {
     if (!props.activeItemId || !listRef.current) return;
     const el = listRef.current.querySelector<HTMLElement>(

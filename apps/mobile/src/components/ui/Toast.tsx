@@ -55,7 +55,7 @@ function ToastContent(props: ToastProps & { readonly glassReady?: boolean }) {
   const action = props.action ? (
     <Button label={props.action.label} onPress={props.action.onPress} />
   ) : null;
-  // oxlint-disable-next-line t3code/react-effect-budget -- announces the toast message to VoiceOver through AccessibilityInfo
+  // oxlint-disable-next-line t2code/react-effect-budget -- announces the toast message to VoiceOver through AccessibilityInfo
   useEffect(() => {
     if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(props.message);
   }, [props.message]);
@@ -147,7 +147,7 @@ function SwipeableToast(props: ToastProps & { readonly onDismiss: () => void }) 
   const { onDismiss } = props;
   const translation = useSharedValue(0);
   const width = useSharedValue(0);
-  // oxlint-disable-next-line t3code/react-effect-budget -- cancels the Reanimated swipe translation animation on unmount
+  // oxlint-disable-next-line t2code/react-effect-budget -- cancels the Reanimated swipe translation animation on unmount
   useLayoutEffect(
     () => () => {
       cancelAnimation(translation);

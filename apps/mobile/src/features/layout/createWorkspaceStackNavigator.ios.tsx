@@ -287,7 +287,7 @@ function WorkspaceColumns(
     if (transition.pop) props.navigation.dispatch(transition.pop);
   };
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- tells the native split host which column to show while collapsed
+  // oxlint-disable-next-line t2code/react-effect-budget -- tells the native split host which column to show while collapsed
   useEffect(() => {
     if (layout.usesSplitView || collapsedColumn.current.visible === compactColumn) return;
     collapsedColumn.current = { ...collapsedColumn.current, visible: compactColumn };

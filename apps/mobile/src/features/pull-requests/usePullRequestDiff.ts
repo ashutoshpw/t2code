@@ -44,7 +44,7 @@ export function usePullRequestDiffEntry(navigation: {
   ) => () => void;
 }) {
   const [ready, setReady] = useState(false);
-  // oxlint-disable-next-line t3code/react-effect-budget -- subscribes to navigator transition events and frames to defer the diff until the opening transition ends
+  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to navigator transition events and frames to defer the diff until the opening transition ends
   useLayoutEffect(() => {
     if (ready) return;
     let opening = false;

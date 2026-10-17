@@ -92,7 +92,7 @@ const makeDebuggee = (
 };
 
 /** Commands wait behind a focus emulation change; it settles within a macrotask. */
-// oxlint-disable-next-line t3code/no-real-time-wait-in-tests -- a zero-delay macrotask boundary, not a wait for time
+// oxlint-disable-next-line t2code/no-real-time-wait-in-tests -- a zero-delay macrotask boundary, not a wait for time
 const settle = Effect.promise(() => new Promise<void>((resolve) => setImmediate(resolve)));
 
 const takeEvents = (host: DesktopBrowserHost.DesktopBrowserHost["Service"], count: number) =>

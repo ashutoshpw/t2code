@@ -471,7 +471,7 @@ function ThreadRouteContent(
           : chosenInspectorMode;
     return mode === "files" && selectedThreadCwd === null ? null : mode;
   })();
-  // oxlint-disable-next-line t3code/react-effect-budget -- closes the workspace navigator's auxiliary pane when the thread has no cwd for the file inspector
+  // oxlint-disable-next-line t2code/react-effect-budget -- closes the workspace navigator's auxiliary pane when the thread has no cwd for the file inspector
   useEffect(() => {
     if (
       props.inspectorPresentation === undefined &&
@@ -492,7 +492,7 @@ function ThreadRouteContent(
   ]);
 
   const revealPreview = useEffectEvent(() => showAuxiliaryPane("inspector"));
-  // oxlint-disable-next-line t3code/react-effect-budget -- opens the workspace navigator's inspector pane when route params bring a preview target
+  // oxlint-disable-next-line t2code/react-effect-budget -- opens the workspace navigator's inspector pane when route params bring a preview target
   useEffect(() => {
     if (previewTarget) revealPreview();
   }, [previewTarget]);

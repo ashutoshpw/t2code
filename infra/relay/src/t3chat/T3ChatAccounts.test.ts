@@ -117,7 +117,7 @@ describe("T3ChatAccounts", () => {
       expect(link).toEqual({ email: "theo@t3.chat", plan: "premier" });
       expect(t3Chat.requests).toEqual([
         {
-          url: "https://chat.example.test/api/t3code/link",
+          url: "https://chat.example.test/api/t2code/link",
           authorization: `Bearer ${SECRET}`,
           body: { clerkUserId: "user_1" },
         },

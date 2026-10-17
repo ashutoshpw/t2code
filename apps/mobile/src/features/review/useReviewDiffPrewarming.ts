@@ -105,7 +105,7 @@ export function useReviewDiffPrewarming(input: {
 }): void {
   const { sections, selectedSectionId, threadKey } = input;
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- prewarms pending review diff sections in idle callbacks and cancels the idle handle on cleanup
+  // oxlint-disable-next-line t2code/react-effect-budget -- prewarms pending review diff sections in idle callbacks and cancels the idle handle on cleanup
   useEffect(() => {
     if (!threadKey) {
       return;

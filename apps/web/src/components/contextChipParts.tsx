@@ -254,7 +254,7 @@ function SvgFileChip(props: ComponentProps<typeof FileChip>) {
         }
       : null,
   );
-  // oxlint-disable-next-line t3code/react-effect-budget -- creates an object URL for the local SVG file and revokes it on cleanup
+  // oxlint-disable-next-line t2code/react-effect-budget -- creates an object URL for the local SVG file and revokes it on cleanup
   useEffect(() => {
     const file = preview?.file;
     if (!file) return;

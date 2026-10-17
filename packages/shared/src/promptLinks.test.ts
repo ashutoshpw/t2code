@@ -54,9 +54,9 @@ describe("parseNewThreadLink", () => {
 
   it("reads a pull request link, whose prompt is optional", () => {
     for (const pr of [
-      "pingdotgg/t3code/42",
+      "pingdotgg/t2code/42",
       "pingdotgg/t3code%2342",
-      "https://github.com/pingdotgg/t3code/pull/42/files",
+      "https://github.com/pingdotgg/t2code/pull/42/files",
     ]) {
       expect(parseNewThreadLink(`?pr=${pr}`)).toEqual({
         ok: true,

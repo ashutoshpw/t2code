@@ -201,7 +201,7 @@ function ExpandedWorkGroupEntries({
     setRestoringPosition(false);
   };
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- observes the list scroller and its content with ResizeObserver to update scroll fades
+  // oxlint-disable-next-line t2code/react-effect-budget -- observes the list scroller and its content with ResizeObserver to update scroll fades
   useLayoutEffect(() => {
     const element = listRef.current?.getScrollableNode();
     if (!element) return;
@@ -227,7 +227,7 @@ function ExpandedWorkGroupEntries({
     setExpandedContentHeight(height);
   };
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- reads expanded row sizes from LegendList's measured state after layout
+  // oxlint-disable-next-line t2code/react-effect-budget -- reads expanded row sizes from LegendList's measured state after layout
   useLayoutEffect(updateExpandedContentHeight, [entries, updateExpandedContentHeight]);
 
   return (

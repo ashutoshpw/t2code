@@ -107,7 +107,7 @@ const watch = (threadId: ThreadId, number: number) =>
       threadId,
       ...pullRequest(number),
       watching: true,
-      link: { url: `https://github.com/pingdotgg/t3code/pull/${number}`, source: "agent" },
+      link: { url: `https://github.com/pingdotgg/t2code/pull/${number}`, source: "agent" },
     });
   });
 

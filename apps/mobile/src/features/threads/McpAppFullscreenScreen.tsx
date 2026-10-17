@@ -102,7 +102,7 @@ export function McpAppFullscreenScreen({ route }: McpAppFullscreenScreenProps) {
   const awaitingUser =
     conversation?.hasPendingApprovals === true || conversation?.hasPendingUserInput === true;
   // A request for the user is server state with no local handler to react in.
-  // oxlint-disable-next-line t3code/react-effect-budget -- closes the focused screen through the navigator when the server asks the user for input or approval
+  // oxlint-disable-next-line t2code/react-effect-budget -- closes the focused screen through the navigator when the server asks the user for input or approval
   useEffect(() => {
     if (awaitingUser && focused && !exitPending.current) navigation.goBack();
   }, [awaitingUser, focused, navigation]);

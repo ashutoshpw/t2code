@@ -57,7 +57,7 @@ function startOfLocalDay(ms: number) {
 
 export function CustomSnoozeDialogHost() {
   const request = useRequest((state) => state.request);
-  // oxlint-disable-next-line t3code/react-effect-budget -- resolves any pending snooze request promise with null when the dialog host unmounts
+  // oxlint-disable-next-line t2code/react-effect-budget -- resolves any pending snooze request promise with null when the dialog host unmounts
   useEffect(() => () => finish(null), []);
   return request ? <CustomSnoozeDialog /> : null;
 }

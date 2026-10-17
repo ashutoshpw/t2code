@@ -471,7 +471,7 @@ export type T2ConnectTroubleshootingSection = (typeof T2_CONNECT_TROUBLESHOOTING
 
 /** Clients, the CLI, and server logs link here as "More info". */
 export function t2ConnectTroubleshootingUrl(section: T2ConnectTroubleshootingSection): string {
-  return `https://github.com/pingdotgg/t3code/blob/main/docs/user/t3-connect-troubleshooting.md#${section}`;
+  return `https://github.com/pingdotgg/t2code/blob/main/docs/user/t3-connect-troubleshooting.md#${section}`;
 }
 
 const REACHABILITY_SECTION = {

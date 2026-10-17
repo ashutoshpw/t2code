@@ -111,7 +111,7 @@ describe("applyOrchestrationV2ProjectionEvent", () => {
       host: "github.com",
       repository: "pingdotgg/t3code",
       number,
-      url: `https://github.com/pingdotgg/t3code/pull/${number}`,
+      url: `https://github.com/pingdotgg/t2code/pull/${number}`,
       source: "manual",
       linkedAt: DateTime.formatIso(now),
       snapshot: null,

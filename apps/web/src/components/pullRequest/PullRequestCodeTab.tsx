@@ -448,7 +448,7 @@ function PullRequestCodeTab({
     isStale: isFileViewedStale,
   } = filesViewed;
   const appliedRefreshToken = useRef(refreshToken);
-  // oxlint-disable-next-line t3code/react-effect-budget -- a new refresh token clears loaded slices and refetches the first diff page and viewed files
+  // oxlint-disable-next-line t2code/react-effect-budget -- a new refresh token clears loaded slices and refetches the first diff page and viewed files
   useEffect(() => {
     if (appliedRefreshToken.current === refreshToken) return;
     appliedRefreshToken.current = refreshToken;
@@ -460,7 +460,7 @@ function PullRequestCodeTab({
     refreshFilesViewed();
   }, [refreshToken, scopeKey, refreshFirstDiffPage, refreshFilesViewed]);
   const appliedBackgroundRefreshToken = useRef(backgroundRefreshToken);
-  // oxlint-disable-next-line t3code/react-effect-budget -- a background refresh token refetches the first diff page and viewed files while keeping slices
+  // oxlint-disable-next-line t2code/react-effect-budget -- a background refresh token refetches the first diff page and viewed files while keeping slices
   useEffect(() => {
     if (appliedBackgroundRefreshToken.current === backgroundRefreshToken) return;
     appliedBackgroundRefreshToken.current = backgroundRefreshToken;
@@ -1359,7 +1359,7 @@ function PullRequestCodeTab({
     answeredRevealNonce.current = revealRequest.nonce;
     revealFile(revealRequest.path);
   });
-  // oxlint-disable-next-line t3code/react-effect-budget -- scrolls the code view to a requested file once loaded, or pages forward until it arrives
+  // oxlint-disable-next-line t2code/react-effect-budget -- scrolls the code view to a requested file once loaded, or pages forward until it arrives
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- A reveal for a file not loaded yet pages forward, which sets the slice cursor.
     answerReveal();

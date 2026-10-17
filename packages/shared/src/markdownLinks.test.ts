@@ -172,9 +172,9 @@ describe("resolveMarkdownFileLinkTarget", () => {
   it("normalizes slash-prefixed windows drive paths before resolving", () => {
     expect(
       resolveMarkdownFileLinkTarget(
-        "/D:/Programme/t3code/apps/web/src/components/chat/OpenInPicker.tsx#L69",
+        "/D:/Programme/t2code/apps/web/src/components/chat/OpenInPicker.tsx#L69",
       ),
-    ).toBe("D:/Programme/t3code/apps/web/src/components/chat/OpenInPicker.tsx:69");
+    ).toBe("D:/Programme/t2code/apps/web/src/components/chat/OpenInPicker.tsx:69");
   });
 
   it("decodes an encoded drive colon in a file uri before dropping its slash", () => {

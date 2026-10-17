@@ -249,7 +249,7 @@ function ThemeColorPicker({
 }) {
   const [committer] = useState(createFrameCommitter);
   // Unmounting with the popover open (the editor closes mid-drag) never fires onOpenChange.
-  // oxlint-disable-next-line t3code/react-effect-budget -- flushes the frame committer on unmount, since an open popover never fires onOpenChange
+  // oxlint-disable-next-line t2code/react-effect-budget -- flushes the frame committer on unmount, since an open popover never fires onOpenChange
   useEffect(() => committer.flush, [committer]);
   return (
     <Popover

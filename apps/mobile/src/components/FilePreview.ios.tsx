@@ -34,7 +34,7 @@ function NativeFilePreview(props: {
     else Dialog.alert("Could not open preview", "The file could not be loaded. Please try again.");
   });
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- presents the native file preview and dismisses it on cleanup
+  // oxlint-disable-next-line t2code/react-effect-budget -- presents the native file preview and dismisses it on cleanup
   useEffect(() => {
     let canceled = false;
     const presentation =

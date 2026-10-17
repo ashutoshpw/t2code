@@ -316,7 +316,7 @@ describe("check-rebrand", () => {
         { file: ".agents/skills/rebase-with-upstream/SKILL.md", line: "see https://t3.codes" },
         {
           file: "README.md",
-          line: "Releases live at https://github.com/pingdotgg/t3code/releases",
+          line: "Releases live at https://github.com/pingdotgg/t2code/releases",
         },
         { file: "docs/example.md", line: `const domain = "not3.codes";` },
         { file: "README.md", line: "The hosted app is https://app.t2.codes" },
@@ -342,7 +342,7 @@ describe("check-rebrand", () => {
 
   it("flags the upstream CLI scope", () => {
     const violations = findViolations(
-      [{ file: "apps/web/src/example.ts", line: `import cli from "@t3code/cli";` }],
+      [{ file: "apps/web/src/example.ts", line: `import cli from "@t2code/cli";` }],
       EMPTY_BASELINE,
     );
     expect(violations.map((v) => v.rule.id)).toEqual(["t2-cli-scope"]);
@@ -375,7 +375,7 @@ describe("check-rebrand", () => {
         { file: "docs/example.md", line: "git@github.com:ashutoshpw/t3code.git" },
         { file: "apps/mobile/src/example.ts", line: `const bundleId = "com.t2tools.t2code";` },
         { file: "apps/web/src/sidebar.test.ts", line: `repository: "pingdotgg/t2code"` },
-        { file: "README.md", line: "https://github.com/pingdotgg/t3code/releases" },
+        { file: "README.md", line: "https://github.com/pingdotgg/t2code/releases" },
         { file: "README.md", line: "https://github.com/ashutoshpw/t2code/releases" },
         {
           file: "apps/mobile/modules/t2-terminal/android/build.gradle",

@@ -199,7 +199,7 @@ disposeOnFoundationReplace(typeof module === "undefined" ? undefined : module.ho
 function SplashScreenCoordinator() {
   const { isReady } = useAppearancePreferences();
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- hides the native splash screen once appearance preferences have loaded
+  // oxlint-disable-next-line t2code/react-effect-budget -- hides the native splash screen once appearance preferences have loaded
   useEffect(() => {
     if (isReady) void SplashScreen.hide();
   }, [isReady]);

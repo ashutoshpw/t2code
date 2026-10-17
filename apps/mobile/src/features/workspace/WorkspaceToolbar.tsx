@@ -86,7 +86,7 @@ export function WorkspaceToolbar(props: {
     else cancelSearch();
     return true;
   });
-  // oxlint-disable-next-line t3code/react-effect-budget -- focuses the search TextInput after a focus request renders it
+  // oxlint-disable-next-line t2code/react-effect-budget -- focuses the search TextInput after a focus request renders it
   useEffect(() => {
     if (focusRequest > 0) input.current?.focus();
   }, [focusRequest]);

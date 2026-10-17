@@ -53,7 +53,7 @@ const user = (login: string, fields: Record<string, unknown> = {}) => ({
 const row = (fields: Record<string, unknown>) => ({
   number: 1,
   title: "Add the pull requests page",
-  url: "https://github.com/pingdotgg/t3code/pull/1",
+  url: "https://github.com/pingdotgg/t2code/pull/1",
   author: null,
   headRefName: "feat/page",
   baseRefName: "main",
@@ -344,7 +344,7 @@ describe("pull request detail decoding", () => {
           pullRequest: {
             number: 7,
             title: "Detail",
-            url: "https://github.com/pingdotgg/t3code/pull/7",
+            url: "https://github.com/pingdotgg/t2code/pull/7",
             body: "Body",
             state: "OPEN",
             isDraft: false,

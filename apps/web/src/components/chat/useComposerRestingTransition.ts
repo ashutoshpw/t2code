@@ -69,7 +69,7 @@ export function useComposerRestingTransition(
     clearOverlayPin();
   };
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- mirrors the collapsed flag into a ref read by ResizeObserver callbacks and running animations
+  // oxlint-disable-next-line t2code/react-effect-budget -- mirrors the collapsed flag into a ref read by ResizeObserver callbacks and running animations
   useLayoutEffect(() => {
     isCollapsedRef.current = isCollapsed;
   });
@@ -373,7 +373,7 @@ export function useComposerRestingTransition(
     };
   };
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- runs the FLIP animation against committed DOM geometry before paint when the collapsed state changes
+  // oxlint-disable-next-line t2code/react-effect-budget -- runs the FLIP animation against committed DOM geometry before paint when the collapsed state changes
   useLayoutEffect(() => {
     const requestId = transitionLayoutRequestRef.current + 1;
     transitionLayoutRequestRef.current = requestId;
@@ -392,7 +392,7 @@ export function useComposerRestingTransition(
     };
   }, [isCollapsed, transitionToCurrentGeometry]);
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- observes composer and body resize to record geometry and retarget a running animation
+  // oxlint-disable-next-line t2code/react-effect-budget -- observes composer and body resize to record geometry and retarget a running animation
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) return;
@@ -437,7 +437,7 @@ export function useComposerRestingTransition(
     });
   }, [restingControlsRef, transitionToCurrentGeometry]);
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- clears the cleanup timer, cancels Web Animations and strips inline transition styles on unmount
+  // oxlint-disable-next-line t2code/react-effect-budget -- clears the cleanup timer, cancels Web Animations and strips inline transition styles on unmount
   useEffect(() => {
     hasCompletedInitialLayoutRef.current = true;
     return () => {

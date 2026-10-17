@@ -156,7 +156,7 @@ export function ProviderModelsSection({
     : displayModels;
 
   // A model added or moved lands in a later commit, so each commit looks for the pending row.
-  // oxlint-disable-next-line t3code/react-effect-budget -- scrolls the pending model's DOM row into view once a later commit renders it
+  // oxlint-disable-next-line t2code/react-effect-budget -- scrolls the pending model's DOM row into view once a later commit renders it
   useEffect(() => {
     const slug = scrollToSlugRef.current;
     if (slug === null) return;

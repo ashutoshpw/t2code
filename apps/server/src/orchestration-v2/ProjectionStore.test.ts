@@ -6477,7 +6477,7 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         host: "github.com",
         repository: "pingdotgg/t3code",
         number: 7,
-        url: "https://github.com/pingdotgg/t3code/pull/7",
+        url: "https://github.com/pingdotgg/t2code/pull/7",
         source: "agent" as const,
         linkedAt: DateTime.formatIso(at),
         snapshot: null,

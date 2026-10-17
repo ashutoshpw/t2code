@@ -95,7 +95,7 @@ function BrowserPreviewScreen({
     setPictureInPicture(NO_PICTURE_IN_PICTURE);
     setSelectedTabId(tabId);
   }
-  // oxlint-disable-next-line t3code/react-effect-budget -- closes the focused route through the navigator once the thread has no browser tabs left
+  // oxlint-disable-next-line t2code/react-effect-budget -- closes the focused route through the navigator once the thread has no browser tabs left
   useEffect(() => {
     if (focused && loaded && tabs.length === 0) onClose();
   }, [focused, loaded, tabs.length, onClose]);

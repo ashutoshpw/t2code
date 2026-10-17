@@ -40,7 +40,7 @@ export function WorkspaceInspectorPane(props: {
   const reduceMotion = useReducedMotion();
 
   const onClosed = props.onClosed;
-  // oxlint-disable-next-line t3code/react-effect-budget -- animates the Reanimated inspector progress and width shared values when visibility or width changes
+  // oxlint-disable-next-line t2code/react-effect-budget -- animates the Reanimated inspector progress and width shared values when visibility or width changes
   useEffect(() => {
     inspectorProgress.set(
       withTiming(inspectorVisible ? 1 : 0, WORKSPACE_PANE_TIMING, (finished) => {

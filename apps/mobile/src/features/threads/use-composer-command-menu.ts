@@ -278,7 +278,7 @@ export function useComposerCommandMenu({
   );
   // Every draft change rechecks a stale snapshot, including drafts written by
   // another surface (a prompt link) that never move the editor selection.
-  // oxlint-disable-next-line t3code/react-effect-budget -- refreshes the provider workspace snapshot atom whenever the draft text changes from any surface
+  // oxlint-disable-next-line t2code/react-effect-budget -- refreshes the provider workspace snapshot atom whenever the draft text changes from any surface
   useEffect(() => {
     refreshWorkspaceSnapshot();
   }, [

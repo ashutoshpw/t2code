@@ -110,7 +110,7 @@ export function WorkspaceToolbar(props: {
       return () => cancelAnimationFrame(frame);
     }, [restoreSearch]),
   );
-  // oxlint-disable-next-line t3code/react-effect-budget -- schedules a frame to restore the native search bar's text and focus when its tab becomes active
+  // oxlint-disable-next-line t2code/react-effect-budget -- schedules a frame to restore the native search bar's text and focus when its tab becomes active
   useEffect(() => {
     if (!tabActive) return;
     const frame = requestAnimationFrame(restoreSearch);

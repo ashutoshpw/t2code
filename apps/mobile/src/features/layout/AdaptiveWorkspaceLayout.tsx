@@ -721,7 +721,7 @@ function AdaptiveWorkspaceLayoutContent(
   );
   const renderedRailWidth = useSharedValue(navigationRailWidth);
   const leavingWorkspacePage = useRef(false);
-  // oxlint-disable-next-line t3code/react-effect-budget -- animates the Reanimated rail and sidebar width shared values toward the layout's targets
+  // oxlint-disable-next-line t2code/react-effect-budget -- animates the Reanimated rail and sidebar width shared values toward the layout's targets
   useEffect(() => {
     if (nativeWorkspace) return;
     renderedRailWidth.set(withTiming(navigationRailWidth, WORKSPACE_PANE_TIMING));

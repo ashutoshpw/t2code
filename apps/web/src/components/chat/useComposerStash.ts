@@ -694,7 +694,7 @@ export function useComposerStash(input: {
       ).terminalOpen,
     ),
   }));
-  // oxlint-disable-next-line t3code/react-effect-budget -- registers the capture-phase stash shortcut with the command registry while the composer is mounted
+  // oxlint-disable-next-line t2code/react-effect-budget -- registers the capture-phase stash shortcut with the command registry while the composer is mounted
   useEffect(() => {
     if (backgroundThread) return;
     return registerCommands(

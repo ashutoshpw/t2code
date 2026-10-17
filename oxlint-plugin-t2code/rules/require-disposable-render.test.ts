@@ -2,17 +2,17 @@ import { assert, describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const browserTest = createOxlintRuleHarness("t3code/require-disposable-render", {
+const browserTest = createOxlintRuleHarness("t2code/require-disposable-render", {
   filename: "Widget.browser.test.tsx",
 });
-const unitTest = createOxlintRuleHarness("t3code/require-disposable-render", {
+const unitTest = createOxlintRuleHarness("t2code/require-disposable-render", {
   filename: "widget.test.tsx",
 });
 
 const reportsInputInAct = (output: string) =>
   assert.match(output, /Do not wrap real input \(userEvent or a locator's click\/fill\) in act/);
 
-describe("t3code/require-disposable-render", () => {
+describe("t2code/require-disposable-render", () => {
   browserTest.valid(
     "allows the disposable helper",
     [

@@ -230,7 +230,7 @@ export function ThreadMcpApp(props: {
   // The attached WebView owns its host; state lets the tool-call effect pair
   // a host only with an atom from a render after that host existed.
   const [host, setHost] = useState<McpAppHost | null>(null);
-  // oxlint-disable-next-line t3code/react-effect-budget -- resends host context to the MCP app host after commits that change theme, insets, tool or size
+  // oxlint-disable-next-line t2code/react-effect-budget -- resends host context to the MCP app host after commits that change theme, insets, tool or size
   useEffect(() => {
     const previous = latest.current;
     latest.current = live;

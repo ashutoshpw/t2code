@@ -104,7 +104,7 @@ function HostedPromptLinkLanding({
   const onPhone = /android|iphone|ipad/i.test(navigator.userAgent);
   const autoOpenedRef = useRef(false);
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- redirects window.location to the app deep link once when the user chose to always open in the app
+  // oxlint-disable-next-line t2code/react-effect-budget -- redirects window.location to the app deep link once when the user chose to always open in the app
   useEffect(() => {
     if (!openInAppRemembered || !summary.ok || autoOpenedRef.current) return;
     autoOpenedRef.current = true;
@@ -130,7 +130,7 @@ function HostedPromptLinkLanding({
         <Alert className="mt-5" variant="error">
           <AlertTitle>This prompt had hidden characters, it may be malicious</AlertTitle>
           <AlertDescription>
-            T3 Code removed {prompt.hiddenCharacters} hidden character
+            T2 Code removed {prompt.hiddenCharacters} hidden character
             {prompt.hiddenCharacters === 1 ? "" : "s"}. Read the prompt before you send it.
           </AlertDescription>
         </Alert>
@@ -151,7 +151,7 @@ function HostedPromptLinkLanding({
           </Button>
         ) : null}
         <Button variant="ghost" render={<a href={DESKTOP_DOWNLOAD_URL} />}>
-          Get T3 Code
+          Get T2 Code
         </Button>
       </div>
       <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">

@@ -16,7 +16,7 @@ export function usePasteToFocusComposer(
   composerRef: ComposerHandleRef,
 ) {
   const pasteAsTextShortcutUntilRef = useRef(0);
-  // oxlint-disable-next-line t3code/react-effect-budget -- attaches window keydown and paste capture listeners that route stray pastes into the composer
+  // oxlint-disable-next-line t2code/react-effect-budget -- attaches window keydown and paste capture listeners that route stray pastes into the composer
   useEffect(() => {
     const keyHandler = (event: KeyboardEvent) => {
       if (

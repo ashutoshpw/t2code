@@ -27,7 +27,9 @@ export type BrowserSessionPartitionNamespace = "profile";
 const ALLOWED_PREVIEW_PERMISSIONS: ReadonlySet<string> = new Set([
   "clipboard-sanitized-write",
   "geolocation",
-  // DesktopWindow confines HTML fullscreen to the guest's webview.
+  // `DesktopWindow` disables HTML fullscreen window resizing for the app window
+  // and every preview guest, so a page that goes fullscreen fills its own
+  // webview instead of taking over the whole T2 window.
   "fullscreen",
   // Deny local-fonts to untrusted previews: it exposes installed-font fingerprints and file bytes.
   // Deny notifications: pages could impersonate T3 Code; app notifications use the default session.
