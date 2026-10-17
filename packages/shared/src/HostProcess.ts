@@ -64,7 +64,11 @@ export const Arguments = Context.Reference<ReadonlyArray<string>>(
   },
 );
 
-/** Original shell command spelling; argv[0] and execPath instead identify the resolved binary. */
+/**
+ * The command the shell was given, before Node resolved it to the binary:
+ * `t3` for a PATH lookup, `./t3` or the launcher symlink for an explicit
+ * path. `process.argv[0]` and `execPath` are always the resolved binary.
+ */
 export const InvokedAs = Context.Reference<string>("@t2code/shared/HostProcess/InvokedAs", {
   defaultValue: () => process.argv0,
 });
@@ -93,6 +97,7 @@ export const Addresses = Context.Reference<Effect.Effect<ReadonlySet<string>>>(
   },
 );
 
+/** Undefined on platforms without POSIX uids (Windows). */
 export const UserId = Context.Reference<number | undefined>("@t2code/shared/HostProcess/UserId", {
   defaultValue: () => process.getuid?.(),
 });
