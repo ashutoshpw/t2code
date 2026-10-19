@@ -1037,7 +1037,7 @@ describe("buildThreadFeed", () => {
       ({
         ...base("wait", "2026-06-20T00:00:02.000Z", 1),
         type: "dynamic_tool",
-        toolName: "t3-code.t3_thread_wait",
+        toolName: "t2-code.t2_thread_wait",
         input: { threadId: "thread-child", timeoutMs: 50_000 },
         output: { threadId: "thread-child", status: "timeout" },
         ...overrides,
@@ -1046,7 +1046,7 @@ describe("buildThreadFeed", () => {
       ({
         ...base("read", "2026-06-20T00:00:03.000Z", 2),
         type: "dynamic_tool",
-        toolName: "t3-code.t3_thread_read",
+        toolName: "t2-code.t2_thread_read",
         input: { threadId: "thread-child" },
         output: { messages: [] },
         ...overrides,
@@ -1083,7 +1083,7 @@ describe("buildThreadFeed", () => {
           "message",
         ]);
         expect(rows[2]).toMatchObject({
-          activities: [{ canExpand: true, groupStandIn: { label: "Waited for a T3 thread" } }],
+          activities: [{ canExpand: true, groupStandIn: { label: "Waited for a T2 thread" } }],
         });
         expect(rows[2]).not.toMatchObject({ activities: [{ groupedToolDetail: true }] });
         // The group's own disclosure adds nothing while the call is alone.
@@ -1114,7 +1114,7 @@ describe("buildThreadFeed", () => {
         expect(rows.map((entry) => entry.type)).toEqual(["activity-group"]);
         expect(rows[0]).toMatchObject({
           id: "live-activity-row",
-          activities: [{ live: true, groupStandIn: { label: "Waiting for a T3 thread" } }],
+          activities: [{ live: true, groupStandIn: { label: "Waiting for a T2 thread" } }],
         });
       }
 
@@ -1126,7 +1126,7 @@ describe("buildThreadFeed", () => {
         groupId,
         hiddenCount: 2,
         expanded: true,
-        summary: "Reading a T3 thread",
+        summary: "Reading a T2 thread",
       });
       expect(grouped[1]).toMatchObject({
         activities: [

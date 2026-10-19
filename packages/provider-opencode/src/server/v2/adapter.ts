@@ -3110,7 +3110,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
         yield* removeMcp(state.mcp);
         state.mcp = undefined;
       }
-      // Idle Location eviction drops runtime MCP servers without clearing T3's cache.
+      // Idle Location eviction drops runtime MCP servers without clearing T2's cache.
       // Re-adding an unchanged config keeps its existing connection.
       let mcpAvailable = false;
       if (wanted !== undefined) {

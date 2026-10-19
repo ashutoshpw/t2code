@@ -1113,7 +1113,7 @@ describe("releaseManagedTunnelOnShutdown", () => {
 
     return Effect.gen(function* () {
       const link = yield* CloudLink.CloudLink;
-      const error = yield* Effect.flip(link.recoverManagedTunnel("http://127.0.0.1:3773"));
+      const error = yield* Effect.flip(link.recoverManagedTunnel("http://127.0.0.1:3772"));
 
       expect(error).toMatchObject({ _tag: "RelayRequestError", rejection: "unavailable" });
       expect(error.message).toContain("Trace ID: trace-expired");

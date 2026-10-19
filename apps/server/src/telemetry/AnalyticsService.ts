@@ -1,5 +1,5 @@
 /**
- * Events go to the T3 Code ingest endpoint, which keeps a copy and forwards
+ * Events go to the T2 Code ingest endpoint, which keeps a copy and forwards
  * them to PostHog. Each event carries a uuid, so PostHog can tell a retried
  * copy from a new event.
  */
@@ -60,7 +60,7 @@ const REJECTED_BATCH_STATUSES = new Set([400, 401, 413]);
 /**
  * Release channel of this build. Release workflows set it for
  * pingdotgg/t3code builds (see apps/server/vite.config.ts); every other build
- * reports "dev". It is separate from `__T3CODE_BUILD_CHANNEL__`, which names
+ * reports "dev". It is separate from `__T2CODE_BUILD_CHANNEL__`, which names
  * stable "latest" and preview "nightly" for the sign-in page.
  */
 declare const __T2CODE_TELEMETRY_CHANNEL__: "stable" | "nightly" | "preview" | "dev" | undefined;

@@ -3688,7 +3688,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "reuses the open same-repository PR when the only remote is not named origin (remote $remoteUrl, GH_REPO $ghRepo, gh-resolved $ghResolved)",
     ({ remoteUrl, ghRepo, ghResolved }) =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "dev"]);
         const remoteDir = yield* createBareRemote();
@@ -3738,7 +3738,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "creates fork PRs with the owner head when gh's default repository is not the only remote",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "dev"]);
         const forkDir = yield* createBareRemote();
@@ -3789,7 +3789,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "creates the PR with head $head when GH_REPO is $ghRepo, gh-resolved is $ghResolved and the only remote is contributor/demo",
     ({ ghRepo, ghResolved, head }) =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "dev"]);
         const forkDir = yield* createBareRemote();
@@ -3888,7 +3888,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "creates the PR with head $head when the only remote is $remoteUrl, GH_REPO is $ghRepo and gh-resolved is $ghResolved",
     ({ remoteUrl, ghRepo, ghResolved, head }) =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "dev"]);
         const forkDir = yield* createBareRemote();
@@ -3921,7 +3921,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "still treats a fork remote as cross-repository with an upstream remote but no origin",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "dev"]);
         const forkDir = yield* createBareRemote();
@@ -6136,7 +6136,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "reuses an existing PR worktree with $padding preceding matching branches (fork: $isCrossRepository)",
     ({ isCrossRepository, padding }) =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         const remoteDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -6147,7 +6147,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
           yield* runGit(repoDir, ["push", "fork-seed", "main:pr-pagination"]);
         }
         const headBranch = "pr-pagination";
-        const localBranch = isCrossRepository ? "t3code/pr-78/pr-pagination" : headBranch;
+        const localBranch = isCrossRepository ? "t2code/pr-78/pr-pagination" : headBranch;
         yield* runGit(repoDir, ["branch", localBranch]);
         yield* runGit(repoDir, ["push", "origin", `${localBranch}:refs/pull/78/head`]);
         const worktreePath = NodePath.join(repoDir, "existing-pr");
@@ -6347,7 +6347,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
           "@{upstream}",
         ])).stdout.trim(),
       ).toBe("origin/main");
-      expect(result.branch).toBe("t3code/pr-94/main");
+      expect(result.branch).toBe("t2code/pr-94/main");
       expect(result.worktreePath && NodeFS.realpathSync.native(result.worktreePath)).toBe(
         NodeFS.realpathSync.native(mainWorktreePath),
       );
@@ -6515,7 +6515,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
         "worktree",
         "add",
         "-b",
-        "t3code/pr-83/feature/pr-reused-fork",
+        "t2code/pr-83/feature/pr-reused-fork",
         worktreePath,
         "feature/pr-reused-fork",
       ]);
@@ -6552,7 +6552,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       expect(result.worktreePath && NodeFS.realpathSync.native(result.worktreePath)).toBe(
         NodeFS.realpathSync.native(worktreePath),
       );
-      expect(result.branch).toBe("t3code/pr-83/feature/pr-reused-fork");
+      expect(result.branch).toBe("t2code/pr-83/feature/pr-reused-fork");
       expect((yield* runGit(worktreePath, ["branch", "--show-current"])).stdout.trim()).toBe(
         result.branch,
       );

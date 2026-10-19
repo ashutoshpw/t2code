@@ -439,7 +439,7 @@ const unlinkRelayEnvironment = Effect.fn("cloud.cli.unlink_relay_environment")(f
 /**
  * Prints the local disconnect outcome, then whether the relay record was revoked.
  * A missing CLI login or a failed relay DELETE leaves that record registered, so
- * those outcomes warn to deregister it from the T3 Connect account page.
+ * those outcomes warn to deregister it from the T2 Connect account page.
  */
 const reportCloudDisconnectResults = Effect.fn("cloud.cli.report_disconnect_results")(
   function* (input: {

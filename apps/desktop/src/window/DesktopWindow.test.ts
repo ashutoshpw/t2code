@@ -656,7 +656,7 @@ describe("DesktopWindow", () => {
 
       yield* Effect.gen(function* () {
         const desktopWindow = yield* DesktopWindow.DesktopWindow;
-        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3773"));
+        yield* desktopWindow.handleBackendReady(new URL("http://127.0.0.1:3772"));
 
         const zoomChanged = fakeWindow.webContentsListeners.get("zoom-changed");
         if (!zoomChanged) return yield* Effect.die("zoom-changed listener was not registered");

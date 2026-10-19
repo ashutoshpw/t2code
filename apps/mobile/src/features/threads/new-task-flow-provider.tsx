@@ -521,7 +521,6 @@ export function NewTaskFlowProvider(
     selectedProject,
     t2ProjectFile,
   );
-  );
   const canChooseWorkspace = !isScratchDraft;
   const selectedProjectHasThreads =
     selectedProject !== null &&

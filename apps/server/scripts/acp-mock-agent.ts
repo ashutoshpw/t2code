@@ -436,10 +436,10 @@ function modeState(): AcpCompat.SessionModeState {
 // "grok-build" product name.
 const grokAcpModels: ReadonlyArray<AcpCompat.ModelInfo> = [
   {
-    modelId: process.env.T3_ACP_GROK_MODEL ?? "grok-4.6",
+    modelId: process.env.T2_ACP_GROK_MODEL ?? "grok-4.6",
     name: "Grok 4.6",
     _meta: {
-      totalContextTokens: Number(process.env.T3_ACP_GROK_CONTEXT_TOKENS ?? 500_000),
+      totalContextTokens: Number(process.env.T2_ACP_GROK_CONTEXT_TOKENS ?? 500_000),
       contextWindows: [256_000, 500_000],
       supportsReasoningEffort: true,
       reasoningEffort: initialGrokReasoningEffort ?? "high",
@@ -459,7 +459,7 @@ function modelState(): AcpCompat.SessionModelState {
   }
   const modelId = grokAcpModels.some((model) => model.modelId === currentModelId)
     ? currentModelId
-    : (process.env.T3_ACP_GROK_MODEL ?? "grok-4.6");
+    : (process.env.T2_ACP_GROK_MODEL ?? "grok-4.6");
   return {
     currentModelId: modelId,
     availableModels: grokAcpModels,

@@ -1,10 +1,10 @@
-import type { ThreadPullRequestWatch } from "@t3tools/contracts";
+import type { ThreadPullRequestWatch } from "@t2code/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import * as Schema from "effect/Schema";
 import {
   ForgejoComment,
   forgejoComment,
-} from "@t3tools/source-control-forgejo/server/forgejoPullRequestJson";
+} from "@t2code/source-control-forgejo/server/forgejoPullRequestJson";
 
 import { evaluatePullRequestWatch } from "./pullRequestWatch.ts";
 

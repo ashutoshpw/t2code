@@ -1,9 +1,9 @@
 import * as NodeAssert from "node:assert/strict";
 
 import {
-  T3_CODE_ORCHESTRATION_INSTRUCTIONS,
-  T3_CODE_ORCHESTRATION_SECTIONS,
-} from "@t3tools/provider-core/server/orchestrationInstructions";
+  T2_CODE_ORCHESTRATION_INSTRUCTIONS,
+  T2_CODE_ORCHESTRATION_SECTIONS,
+} from "@t2code/provider-core/server/orchestrationInstructions";
 import { describe, it } from "vite-plus/test";
 
 import {
@@ -45,17 +45,17 @@ describe("buildCodexAdditionalContext", () => {
       reasoningEffort: "high",
     });
     const sections = Object.keys(context)
-      .filter((key) => key.startsWith("t3_code_orchestration_"))
+      .filter((key) => key.startsWith("t2_code_orchestration_"))
       .sort()
       .map((key) => context[key]!);
 
     NodeAssert.deepEqual(
       sections,
-      T3_CODE_ORCHESTRATION_SECTIONS.map((value) => ({ kind: "application", value })),
+      T2_CODE_ORCHESTRATION_SECTIONS.map((value) => ({ kind: "application", value })),
     );
     NodeAssert.equal(
       sections.map((entry) => entry.value).join("\n\n"),
-      T3_CODE_ORCHESTRATION_INSTRUCTIONS.trim(),
+      T2_CODE_ORCHESTRATION_INSTRUCTIONS.trim(),
     );
   });
 });

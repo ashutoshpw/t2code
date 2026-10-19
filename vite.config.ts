@@ -347,7 +347,7 @@ export default defineConfig({
           "apps/mobile/src/components/ui/AppSymbol.ios.tsx",
           "apps/mobile/src/features/pull-requests/pullRequestGlyphs.ts",
         ],
-        rules: { "t3code/no-mobile-pull-request-glyph-literals": "error" },
+        rules: { "t2code/no-mobile-pull-request-glyph-literals": "error" },
       },
       {
         // React commits state set in a raw ResizeObserver callback after the paint, so derived
@@ -497,14 +497,14 @@ export default defineConfig({
         // (apps/mobile/src/reactCompilerCoverage.test.ts). Directives would hide bailouts from it;
         // the manual memo hooks go once the allowlist there is empty.
         files: ["apps/mobile/src/**/*.{ts,tsx}"],
-        rules: { "t3code/no-manual-memo": ["error", { allowMemoHooks: true }] },
+        rules: { "t2code/no-manual-memo": ["error", { allowMemoHooks: true }] },
       },
       {
         // The compiler only compiles a use* function that calls a hook; one that calls none is
         // silently left as a plain function, so whatever it returns loses its caching.
         files: ["apps/web/src/**/*.{ts,tsx}", "apps/mobile/src/**/*.{ts,tsx}"],
         excludeFiles: ["**/*.test.ts", "**/*.test.tsx"],
-        rules: { "t3code/no-hookless-use-function": "error" },
+        rules: { "t2code/no-hookless-use-function": "error" },
       },
       {
         files: [

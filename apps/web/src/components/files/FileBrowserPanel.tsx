@@ -623,16 +623,6 @@ export default function FileBrowserPanel({
           </div>
         </div>
       ) : null}
-          </div>
-        ) : null
-      ) : (
-        <FileTree
-          model={model}
-          aria-label={`${projectName} files`}
-          className="min-h-0 flex-1 overflow-hidden"
-          style={pierreTreeStyle(resolvedTheme)}
-        />
-      )}
     </div>
   );
 }

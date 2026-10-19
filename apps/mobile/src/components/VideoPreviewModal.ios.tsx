@@ -1,7 +1,7 @@
 import * as Dialog from "./ui/Dialog";
 import { useIsFocused } from "@react-navigation/native";
 import { requireNativeModule } from "expo";
-import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { settlePromise, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import { AsyncResult } from "effect/reactivity";
 import { useEffect, useEffectEvent, useId, useState } from "react";
 import { Keyboard } from "react-native";

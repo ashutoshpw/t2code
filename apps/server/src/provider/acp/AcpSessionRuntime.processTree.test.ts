@@ -297,7 +297,7 @@ describe("terminatePosixOwnedProcessTree", () => {
       });
       if ((missingTargetBash.error as NodeJS.ErrnoException | undefined)?.code !== "ENOENT") {
         expect(missingTargetBash.status, missingTargetBash.stderr).toBe(125);
-        expect(missingTargetBash.stderr).toContain("/nonexistent-t3-probe");
+        expect(missingTargetBash.stderr).toContain("/nonexistent-t2-probe");
       }
     } finally {
       packagedExecPath.mockRestore();

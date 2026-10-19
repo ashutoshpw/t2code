@@ -1,18 +1,18 @@
 import {
   pullRequestLinkProject,
   resolveLinkPullRequestInput,
-} from "@t3tools/client-runtime/pull-request-link-input";
+} from "@t2code/client-runtime/pull-request-link-input";
 import type {
   EnvironmentProject,
   EnvironmentThreadShell,
-} from "@t3tools/client-runtime/state/shell";
+} from "@t2code/client-runtime/state/shell";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
   type AtomCommandResult,
-} from "@t3tools/client-runtime/state/runtime";
-import { planThreadPullRequestMutation } from "@t3tools/client-runtime/thread-pull-request-compatibility";
-import { AuthOrchestrationOperateScope, type ThreadPullRequestLink } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/runtime";
+import { planThreadPullRequestMutation } from "@t2code/client-runtime/thread-pull-request-compatibility";
+import { AuthOrchestrationOperateScope, type ThreadPullRequestLink } from "@t2code/contracts";
 import * as Clipboard from "expo-clipboard";
 import { useCallback, useMemo } from "react";
 

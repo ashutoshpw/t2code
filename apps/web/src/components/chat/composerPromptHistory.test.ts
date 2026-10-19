@@ -1,4 +1,4 @@
-import { ScheduledTaskId } from "@t3tools/contracts";
+import { ScheduledTaskId } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -101,7 +101,7 @@ describe("buildComposerPromptHistoryEntries", () => {
     ]);
   });
 
-  it("skips messages sent by automations, agents, and T3 Code", () => {
+  it("skips messages sent by automations, agents, and T2 Code", () => {
     const typed = buildComposerPromptHistoryEntries([
       { id: "m1", role: "user", text: "typed" },
       { id: "m2", role: "user", text: "scheduled", scheduledTaskId: ScheduledTaskId.make("task") },

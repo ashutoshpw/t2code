@@ -232,8 +232,8 @@ describe("resource telemetry process model", () => {
       processStarts: 2,
     });
     expect(result.groups.monitor.processCount).toBe(1);
-    expect(result.groups.allT3.currentCpuPercent).toBe(511);
-    expect(result.groups.allT3.currentRssBytes).toBe(6_144);
+    expect(result.groups.allT2.currentCpuPercent).toBe(511);
+    expect(result.groups.allT2.currentRssBytes).toBe(6_144);
   });
 
   it("ignores stale Electron metrics after PID reuse", () => {
