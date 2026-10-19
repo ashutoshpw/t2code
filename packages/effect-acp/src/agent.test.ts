@@ -379,7 +379,7 @@ it.effect.each([0, 2 ** 30, 2 ** 32])(
         },
       });
       assert.deepEqual(yield* Ref.get(contexts), [
-        { requestId: `$t3:jsonrpc:number:${requestId}`, method: "initialize" },
+        { requestId: `$t2:jsonrpc:number:${requestId}`, method: "initialize" },
       ]);
 
       yield* Queue.offer(

@@ -68,7 +68,7 @@ scope when a value reaches plain function calls on both sides of a hook call. A 
 helper forces one, but hides the ordering problem. Fix the order instead: plain uses of a value go
 before the hook, or the helper is inlined. A `use*` helper that calls no hook is compiled as a
 plain function and caches nothing, so a derived-value helper reads its source hook itself instead
-of taking the value as an argument. `t3code/no-hookless-use-function` rejects a `use*` function
+of taking the value as an argument. `t2code/no-hookless-use-function` rejects a `use*` function
 that calls no hook. Lint misses some bailouts, notably `try` with `finally` and
 `throw` inside `try`, so [`reactCompilerCoverage.test.ts`](../../apps/web/src/reactCompilerCoverage.test.ts)
 compiles every file and fails on any skip. Async handlers rarely need `try`: an

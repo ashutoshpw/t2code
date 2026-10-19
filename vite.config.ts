@@ -448,7 +448,7 @@ export default defineConfig({
           "apps/mobile/src/components/ui/AppSymbol.ios.tsx",
           "apps/mobile/src/features/pull-requests/pullRequestGlyphs.ts",
         ],
-        rules: { "t3code/no-mobile-pull-request-glyph-literals": "error" },
+        rules: { "t2code/no-mobile-pull-request-glyph-literals": "error" },
       },
       {
         files: ["apps/mobile/src/**"],
@@ -597,13 +597,13 @@ export default defineConfig({
       {
         // Directives hide bailouts from mobile's compiler-coverage check; retain hooks until its allowlist is empty.
         files: ["apps/mobile/src/**/*.{ts,tsx}"],
-        rules: { "t3code/no-manual-memo": ["error", { allowMemoHooks: true }] },
+        rules: { "t2code/no-manual-memo": ["error", { allowMemoHooks: true }] },
       },
       {
         // React Compiler caches use* functions only if they call a hook.
         files: ["apps/web/src/**/*.{ts,tsx}", "apps/mobile/src/**/*.{ts,tsx}"],
         excludeFiles: ["**/*.test.ts", "**/*.test.tsx"],
-        rules: { "t3code/no-hookless-use-function": "error" },
+        rules: { "t2code/no-hookless-use-function": "error" },
       },
       {
         files: [

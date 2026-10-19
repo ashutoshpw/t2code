@@ -1,8 +1,4 @@
-import {
-  ORCHESTRATION_V2_WS_METHODS,
-  OrchestrationV2Command,
-  WS_METHODS,
-} from "@t3tools/contracts";
+import { ORCHESTRATION_V2_WS_METHODS, ThreadId, WS_METHODS } from "@t2code/contracts";
 import { expect, it } from "@effect/vitest";
 import * as Schema from "effect/Schema";
 

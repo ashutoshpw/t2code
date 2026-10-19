@@ -2302,7 +2302,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("re-registers T3 MCP each turn and drops its instructions when adding fails", () =>
+  it.effect("re-registers T2 MCP each turn and drops its instructions when adding fails", () =>
     Effect.gen(function* () {
       const mcpSessions = yield* McpProviderSessions.McpProviderSessions;
       yield* mcpSessions.set({
@@ -2310,18 +2310,18 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         threadId,
         providerSessionId: "mcp:opencode2-adapter",
         providerInstanceId: instanceId,
-        endpoint: "http://127.0.0.1:3773/mcp",
+        endpoint: "http://127.0.0.1:3772/mcp",
         authorizationHeader: "Bearer thread-credential",
         browserToolsAvailable: false,
       });
       yield* Effect.addFinalizer(() => mcpSessions.clear(threadId));
-      const server = "t3-code-thread_opencode2-adapter";
+      const server = "t2-code-thread_opencode2-adapter";
       const add = out("mcp.add", {
         server,
         "location[directory]": WORK,
         config: {
           type: "remote",
-          url: "http://127.0.0.1:3773/mcp",
+          url: "http://127.0.0.1:3772/mcp",
           headers: { Authorization: "Bearer thread-credential" },
           oauth: false,
         },
@@ -2340,7 +2340,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         reply("mcp.add", { status: 500, body: { message: "MCP unavailable" } }),
         out("session.instructions.entry.put", {
           sessionID: SESSION,
-          key: "t3-code",
+          key: "t2-code",
           value: buildRuntimeInstructions({ harness: "OpenCode", model: bigPickle.model }),
         }),
         reply("session.instructions.entry.put", null),
@@ -3351,7 +3351,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         out("session.form.list", { sessionID: OTHER }),
         replyData("session.form.list", []),
         ...promptInto(SESSION, "msg_recorded_turn_a"),
-        out("session.instructions.entry.put", { sessionID: OTHER, key: "t3-code", value: "<any>" }),
+        out("session.instructions.entry.put", { sessionID: OTHER, key: "t2-code", value: "<any>" }),
         reply("session.instructions.entry.put", null),
         ...promptInto(OTHER, "msg_recorded_turn_b"),
         event("session.execution.succeeded", { sessionID: SESSION }),

@@ -1,4 +1,4 @@
-import { settlePromise } from "@t3tools/client-runtime/state/runtime";
+import { settlePromise } from "@t2code/client-runtime/state/runtime";
 import { AsyncResult } from "effect/reactivity";
 import * as Dialog from "../../components/ui/Dialog";
 import { useFocusEffect, useNavigation, type StaticScreenProps } from "@react-navigation/native";

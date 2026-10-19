@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
-import { resolvePullRequestAuthorFilter, VcsProcessExitError } from "@t3tools/contracts";
+import { resolvePullRequestAuthorFilter, VcsProcessExitError } from "@t2code/contracts";
 import type {
   PullRequestAction,
   PullRequestActor,

@@ -1,4 +1,4 @@
-import { settlePromise } from "@t3tools/client-runtime/state/runtime";
+import { settlePromise } from "@t2code/client-runtime/state/runtime";
 import { useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
 import type { ComponentType } from "react";
