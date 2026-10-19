@@ -1,4 +1,4 @@
-import { formatAssistantCitationHref } from "@t3tools/shared/assistantCitations";
+import { formatAssistantCitationHref } from "@t2code/shared/assistantCitations";
 import { describe, expect, it } from "vite-plus/test";
 
 import {

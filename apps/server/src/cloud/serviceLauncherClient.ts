@@ -34,8 +34,6 @@ export class ServiceLauncherClientError extends Schema.TaggedError<ServiceLaunch
         return "The service launcher supplied invalid startup context.";
       case "version-mismatch":
         return "The service launcher started a different t2code version.";
-      case "ipc-unavailable":
-        return "The service launcher IPC channel is unavailable.";
       case "unmanaged":
         return "This server is not managed by the launcher.";
       case "send":
@@ -115,7 +113,9 @@ const resolveStartup = Effect.fn("cloud.service_launcher_client.resolve_startup"
     const host = yield* ServiceLauncherHostProcess;
     const environment = yield* HostProcess.Environment;
     const currentVersion = options?.currentVersion ?? packageJson.version;
-    // IPC channels are not inherited; without one, launcher context belongs to an ancestor.
+    // The launcher always spawns its child with an IPC channel, and Node does
+    // not pass that channel on. Without one, the context was inherited from an
+    // ancestor (e.g. `t2code serve` run in a T2 terminal), so it describes someone else.
     const rawContext = host.connected ? environment[SERVICE_LAUNCHER_CONTEXT_ENV] : undefined;
     const context = rawContext === undefined ? undefined : decodeServiceLauncherContext(rawContext);
 

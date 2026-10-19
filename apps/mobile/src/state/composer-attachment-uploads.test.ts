@@ -1,4 +1,4 @@
-import { CommandId, EnvironmentId, MessageId, ThreadId } from "@t3tools/contracts";
+import { CommandId, EnvironmentId, MessageId, ThreadId } from "@t2code/contracts";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 
 type UploadOptions = {
@@ -126,8 +126,10 @@ vi.mock("./attachments", () => ({
   attachmentEnvironment: { createUploadUrl: native.mint, remove: native.remove },
 }));
 vi.mock("./assets", () => ({ assetEnvironment: { createUrl: (input: unknown) => input } }));
-vi.mock("@t3tools/client-runtime/state/runtime", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@t3tools/client-runtime/state/runtime")>()),
+vi.mock("@t2code/client-runtime/state/runtime", async (importOriginal) => ({
+  // The worker settles uploads with the real settlePromise and squashAtomCommandFailure;
+  // only the RPC transport is substituted.
+  ...(await importOriginal<typeof import("@t2code/client-runtime/state/runtime")>()),
   createEnvironmentRpcCommand: () => Symbol("rpc-command"),
   executeAtomQuery: async (
     _registry: unknown,

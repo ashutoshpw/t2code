@@ -1,5 +1,6 @@
 import { assert, it } from "@effect/vitest";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
+import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   DEFAULT_SERVER_SETTINGS,
   ProjectId,
@@ -98,7 +99,7 @@ it.effect.each([
           mode: "web",
           cwd: "/bootstrap-project",
           host: "localhost",
-          port: 3773,
+          port: 3772,
           devUrl: undefined,
           noBrowser: true,
           startupPresentation: "browser",
@@ -129,6 +130,7 @@ it.effect.each([
         }),
         Layer.mock(ServerSettings.ServerSettingsService)({
           start: Effect.void,
+          subscribeChanges: Effect.succeed(Stream.empty),
           getSettings: Effect.succeed({
             ...DEFAULT_SERVER_SETTINGS,
             defaultModelSelection:
@@ -143,6 +145,8 @@ it.effect.each([
           }),
         }),
         Layer.mock(ServerEnvironment.ServerEnvironment)({
+          getEnvironmentId: Effect.succeed(EnvironmentId.make("bootstrap-environment")),
+          setEnvironmentLabel: () => Effect.void,
           getDescriptor: Effect.succeed({
             environmentId: EnvironmentId.make("bootstrap-environment"),
             label: "Test environment",
@@ -217,7 +221,7 @@ it.effect.each([
         Layer.mock(EnvironmentAuth.EnvironmentAuth)({}),
         Layer.mock(ExternalLauncher.ExternalLauncher)({}),
         Layer.mock(HttpServer.HttpServer)({
-          address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3773),
+          address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3772),
         }),
       );
       yield* Effect.gen(function* () {
@@ -236,7 +240,12 @@ it.effect.each([
           }
         }
       }).pipe(
-        Effect.provide(ServerRuntimeStartup.layerWithOptions().pipe(Layer.provide(dependencies))),
+        Effect.provide(
+          ServerRuntimeStartup.layerWithOptions().pipe(
+            Layer.provide(dependencies),
+            Layer.provideMerge(NodeServices.layer),
+          ),
+        ),
         Effect.provideService(ServerActivation, Effect.never),
       );
     }),

@@ -5040,7 +5040,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "reuses an existing PR worktree with $padding preceding matching branches (fork: $isCrossRepository)",
     ({ isCrossRepository, padding }) =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         const remoteDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -5051,7 +5051,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
           yield* runGit(repoDir, ["push", "fork-seed", "main:pr-pagination"]);
         }
         const headBranch = "pr-pagination";
-        const localBranch = isCrossRepository ? "t3code/pr-78/pr-pagination" : headBranch;
+        const localBranch = isCrossRepository ? "t2code/pr-78/pr-pagination" : headBranch;
         yield* runGit(repoDir, ["branch", localBranch]);
         yield* runGit(repoDir, ["push", "origin", `${localBranch}:refs/pull/78/head`]);
         const worktreePath = NodePath.join(repoDir, "existing-pr");
@@ -5294,7 +5294,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
           "@{upstream}",
         ])).stdout.trim(),
       ).toBe("origin/main");
-      expect(result.branch).toBe("t3code/pr-94/main");
+      expect(result.branch).toBe("t2code/pr-94/main");
       expect(result.worktreePath && NodeFS.realpathSync.native(result.worktreePath)).toBe(
         NodeFS.realpathSync.native(mainWorktreePath),
       );
@@ -5462,7 +5462,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
         "worktree",
         "add",
         "-b",
-        "t3code/pr-83/feature/pr-reused-fork",
+        "t2code/pr-83/feature/pr-reused-fork",
         worktreePath,
         "feature/pr-reused-fork",
       ]);
@@ -5499,7 +5499,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       expect(result.worktreePath && NodeFS.realpathSync.native(result.worktreePath)).toBe(
         NodeFS.realpathSync.native(worktreePath),
       );
-      expect(result.branch).toBe("t3code/pr-83/feature/pr-reused-fork");
+      expect(result.branch).toBe("t2code/pr-83/feature/pr-reused-fork");
       expect((yield* runGit(worktreePath, ["branch", "--show-current"])).stdout.trim()).toBe(
         result.branch,
       );

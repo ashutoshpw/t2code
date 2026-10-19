@@ -1,13 +1,13 @@
 import { useAtomValue } from "@effect/atom-react";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import {
   resolveWorkflowOpening,
   workflowOpeningHeadline,
   workflowOpeningParentThreadId,
   type RuntimeSubagent,
-} from "@t3tools/client-runtime/state/subagentRuntime";
-import type { EnvironmentId, ScopedThreadRef, ThreadId } from "@t3tools/contracts";
-import type { EnvironmentThread } from "@t3tools/client-runtime/state/shell";
+} from "@t2code/client-runtime/state/subagentRuntime";
+import type { EnvironmentId, ScopedThreadRef, ThreadId } from "@t2code/contracts";
+import type { EnvironmentThread } from "@t2code/client-runtime/state/shell";
 import { Atom } from "effect/reactivity";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
@@ -113,8 +113,8 @@ export function ThreadWorkflowOpening(props: {
       <View className="mb-5 gap-3">
         <View className="flex-row items-start gap-2">
           <View className="min-w-0 flex-1 gap-0.5">
-            <Text className="font-t3-medium text-2xs text-foreground-muted">Workflow started</Text>
-            <Text numberOfLines={1} className="font-t3-medium text-sm text-foreground">
+            <Text className="font-t2-medium text-2xs text-foreground-muted">Workflow started</Text>
+            <Text numberOfLines={1} className="font-t2-medium text-sm text-foreground">
               {headline.title}
             </Text>
             {headline.description ? (
@@ -130,7 +130,7 @@ export function ThreadWorkflowOpening(props: {
         {canListMembers
           ? phases.map((phase) => (
               <View key={phase.index} className="gap-px">
-                <Text className="px-1 pt-1 font-t3-medium text-2xs text-foreground-muted">
+                <Text className="px-1 pt-1 font-t2-medium text-2xs text-foreground-muted">
                   {phase.title} · {phase.settledCount}/{phase.members.length}
                 </Text>
                 {phase.members.map(renderMember)}
@@ -188,7 +188,7 @@ function WorkflowScript(props: { readonly script: string }) {
           onPress={() => setExpanded((value) => !value)}
           className="self-start py-1 active:opacity-70"
         >
-          <Text className="font-t3-medium text-xs text-foreground-muted">
+          <Text className="font-t2-medium text-xs text-foreground-muted">
             {expanded ? "Show less" : "Show full script"}
           </Text>
         </Pressable>

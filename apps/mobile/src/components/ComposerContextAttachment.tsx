@@ -1,5 +1,5 @@
 import { Button } from "./ui/Button";
-import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
+import { settlePromise, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import { AsyncResult } from "effect/reactivity";
 import * as Dialog from "./ui/Dialog";
 import type { ComposerContextRecord, EnvironmentId } from "@t2code/contracts";

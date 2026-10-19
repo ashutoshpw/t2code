@@ -3,7 +3,7 @@
  *
  * @module DelegatedTaskAnalytics
  */
-import type { OrchestrationV2DomainEvent } from "@t3tools/contracts";
+import type { OrchestrationV2DomainEvent } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -28,7 +28,7 @@ const FINAL_STATUSES: ReadonlySet<string> = new Set([
 export class DelegatedTaskAnalytics extends Context.Service<
   DelegatedTaskAnalytics,
   { readonly onSubagent: (event: SubagentEvent) => Effect.Effect<void> }
->()("t3/telemetry/DelegatedTaskAnalytics") {}
+>()("@t2code/cli/telemetry/DelegatedTaskAnalytics") {}
 
 const make = Effect.gen(function* () {
   const orchestrator = yield* Orchestrator.OrchestratorV2;

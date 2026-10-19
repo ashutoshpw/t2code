@@ -13,7 +13,11 @@ export interface ProviderMaintenanceCapabilities {
    */
   readonly lookupLatestVersion?: Effect.Effect<string | null>;
   readonly compareVersions?: (current: string, latest: string) => number;
-  /** Resolved executable path for advisories when no update command is proven. */
+  /**
+   * The executable T2 Code runs, symlinks followed, when no update command is
+   * proven for it. The version advisory names it so the user knows which
+   * install to update.
+   */
   readonly installPath?: string;
 }
 

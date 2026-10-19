@@ -74,7 +74,9 @@ function unsupportedProvider(
   // Binding context does not create a second provider-operation span.
   return SourceControlProvider.SourceControlProvider.of({
     kind,
-    // Unknown hosts have no readable change requests; return none to avoid poll warnings on every refresh.
+    // A remote on a host no provider recognizes (or no remote at all) has no change
+    // requests T2 could know about. Answering with none keeps the status poller from
+    // failing, and warning, on every refresh of such a repository.
     listChangeRequests: (input) =>
       kind === "unknown"
         ? Effect.succeed([])
