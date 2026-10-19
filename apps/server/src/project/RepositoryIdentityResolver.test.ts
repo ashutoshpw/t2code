@@ -178,7 +178,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       expect(identity).not.toBeNull();
       expect(identity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
       expect(normalizeResolvedPath(resolvedIdentityRoot)).toBe(normalizeResolvedPath(resolvedCwd));
-      expect(identity?.displayName).toBe("ashutoshpw/t2code");
+      expect(identity?.displayName).toBe("T2Tools/t2code");
       expect(identity?.provider).toBe("github");
       expect(identity?.owner).toBe("T2Tools");
       expect(identity?.name).toBe("t2code");
@@ -328,14 +328,14 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       yield* git(localOnlyDir, ["remote", "add", "archive", "file:///srv/git/repo.git"]);
       yield* git(mixedDir, ["init"]);
       yield* git(mixedDir, ["remote", "add", "gb-local", "."]);
-      yield* git(mixedDir, ["remote", "add", "mirror", "git@github.com:T3Tools/t3code.git"]);
+      yield* git(mixedDir, ["remote", "add", "mirror", "git@github.com:T2Tools/t2code.git"]);
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       expect(yield* resolver.resolve(localOnlyDir)).toBeNull();
 
       const mixedIdentity = yield* resolver.resolve(mixedDir);
       expect(mixedIdentity?.locator.remoteName).toBe("mirror");
-      expect(mixedIdentity?.canonicalKey).toBe("github.com/t3tools/t3code");
+      expect(mixedIdentity?.canonicalKey).toBe("github.com/t2tools/t2code");
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
 
@@ -371,8 +371,8 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
 
         expect(identity).not.toBeNull();
         expect(identity?.locator.remoteName).toBe("upstream");
-        expect(identity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
-        expect(identity?.displayName).toBe("ashutoshpw/t2code");
+        expect(identity?.canonicalKey).toBe("github.com/t2tools/t2code");
+        expect(identity?.displayName).toBe("T2Tools/t2code");
         expect(yield* resolver.resolve(cwd)).toEqual(identity);
       }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
@@ -416,8 +416,8 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
 
       expect(identity).not.toBeNull();
       expect(identity?.canonicalKey).toBe("gitlab.com/t2tools/platform/t2code");
-      expect(identity?.displayName).toBe("t2tools/platform/t2code");
-      expect(identity?.owner).toBe("t2tools");
+      expect(identity?.displayName).toBe("T2Tools/platform/t2code");
+      expect(identity?.owner).toBe("T2Tools");
       expect(identity?.name).toBe("t2code");
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
@@ -488,8 +488,8 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
 
       const refreshedIdentity = yield* resolver.resolve(cwd);
       expect(refreshedIdentity).not.toBeNull();
-      expect(refreshedIdentity?.canonicalKey).toBe("github.com/ashutoshpw/t2code-next");
-      expect(refreshedIdentity?.displayName).toBe("ashutoshpw/t2code-next");
+      expect(refreshedIdentity?.canonicalKey).toBe("github.com/t2tools/t2code-next");
+      expect(refreshedIdentity?.displayName).toBe("T2Tools/t2code-next");
       expect(refreshedIdentity?.name).toBe("t2code-next");
     }).pipe(
       Effect.provide(

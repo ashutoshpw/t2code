@@ -613,7 +613,7 @@ it.effect("explains a rejected SSH push after creating the repository", () =>
       service.publishRepository({
         cwd: "/workspace",
         provider: SourceControlProviderKind.make("github"),
-        repository: "octocat/t3code",
+        repository: "octocat/t2code",
         visibility: "private",
         protocol: "ssh",
       }),
@@ -622,7 +622,7 @@ it.effect("explains a rejected SSH push after creating the repository", () =>
     assert.strictEqual(error.operation, "publishRepository");
     assert.strictEqual(
       error.detail,
-      'Created octocat/t3code and added it as remote "origin", but the push failed because SSH authentication was rejected. Add an SSH key to your account, or switch the remote to HTTPS with "git remote set-url origin https://github.com/octocat/t3code", then push again.',
+      'Created octocat/t2code and added it as remote "origin", but the push failed because SSH authentication was rejected. Add an SSH key to your account, or switch the remote to HTTPS with "git remote set-url origin https://github.com/octocat/t2code", then push again.',
     );
     assert.instanceOf(error.cause, GitCommandError);
   }).pipe(Effect.provide(layer({ git: failingPush("authentication_failed") }))),
@@ -636,7 +636,7 @@ it.effect("says the repository exists when an unclassified publish push fails", 
       service.publishRepository({
         cwd: "/workspace",
         provider: SourceControlProviderKind.make("github"),
-        repository: "octocat/t3code",
+        repository: "octocat/t2code",
         visibility: "private",
         protocol: "https",
       }),
@@ -644,7 +644,7 @@ it.effect("says the repository exists when an unclassified publish push fails", 
 
     assert.strictEqual(
       error.detail,
-      'Created octocat/t3code and added it as remote "origin", but the push failed. Fix the problem, then push again.',
+      'Created octocat/t2code and added it as remote "origin", but the push failed. Fix the problem, then push again.',
     );
   }).pipe(Effect.provide(layer({ git: failingPush() }))),
 );

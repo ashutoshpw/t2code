@@ -483,6 +483,7 @@ const registerWithRealFileSystem = (run: ThemeIconRun) =>
                 Effect.map((path) =>
                   makeEnvironment(path, {
                     linuxApplicationsDir: path.join(run.root, "applications"),
+                    linuxDesktopEntryName: "com.t2tools.T2Code.desktop",
                   }),
                 ),
               ),
@@ -559,7 +560,7 @@ const themeIconFixture = (source: Uint8Array) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-theme-icons-" });
+    const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-theme-icons-" });
     yield* fileSystem.makeDirectory(path.join(root, "resources", "icons"), { recursive: true });
     yield* fileSystem.writeFile(path.join(root, "resources", "icons", "256x256.png"), source);
     const hicolorDir = path.join(root, "icons", "hicolor");

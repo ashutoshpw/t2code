@@ -65,7 +65,8 @@ const DROPPED_REQUEST_HEADERS = new Set([
   "dpop",
   "content-length",
   "accept-encoding",
-  // The client's HTTPS hop makes the hub reject our loopback Origin over T3 Connect.
+  // Describes the client's HTTPS hop to T2. The hub builds its own origin from it and then
+  // rejects the loopback Origin set below, so every mutation fails over T2 Connect.
   "x-forwarded-proto",
 ]);
 

@@ -520,7 +520,7 @@ describe("ssh tunnel scripts", () => {
         Effect.succeed(
           commandArgs(command).includes("-N")
             ? { ...makeRunningProcess(() => undefined), stderr }
-            : makeSuccessfulProcess('{"remotePort":3773}\n'),
+            : makeSuccessfulProcess('{"remotePort":3772}\n'),
         ),
       );
       const httpClient = HttpClient.make((request) =>
@@ -562,7 +562,7 @@ describe("ssh tunnel scripts", () => {
                 exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(1)),
                 stderr: Stream.make(output.subarray(0, output.length - 1), output.subarray(-1)),
               }
-            : makeSuccessfulProcess('{"remotePort":3773}\n'),
+            : makeSuccessfulProcess('{"remotePort":3772}\n'),
         ),
       );
       const layer = Layer.mergeAll(
@@ -619,7 +619,7 @@ describe("ssh tunnel scripts", () => {
                   ),
                 ),
               }
-            : makeSuccessfulProcess('{"remotePort":3773}\n'),
+            : makeSuccessfulProcess('{"remotePort":3772}\n'),
         ),
       );
       const layer = Layer.mergeAll(

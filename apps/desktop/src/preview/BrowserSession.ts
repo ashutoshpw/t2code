@@ -31,8 +31,11 @@ const ALLOWED_PREVIEW_PERMISSIONS: ReadonlySet<string> = new Set([
   // and every preview guest, so a page that goes fullscreen fills its own
   // webview instead of taking over the whole T2 window.
   "fullscreen",
-  // Deny local-fonts to untrusted previews: it exposes installed-font fingerprints and file bytes.
-  // Deny notifications: pages could impersonate T3 Code; app notifications use the default session.
+  // Deliberately NOT local-fonts: preview sessions run untrusted web content,
+  // and silently granting it would hand every page the user's installed-font
+  // fingerprint (and font file bytes via FontData.blob()).
+  // Deliberately NOT notifications: a page could post OS notifications branded
+  // as T2 Code. T2's own come from the app window on the default session.
 ]);
 
 const NEVER_EXTERNAL_PROTOCOLS: ReadonlySet<string> = new Set([

@@ -5195,7 +5195,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     "reuses an existing PR worktree with $padding preceding matching branches (fork: $isCrossRepository)",
     ({ isCrossRepository, padding }) =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("t3code-git-manager-");
+        const repoDir = yield* makeTempDir("t2code-git-manager-");
         yield* initRepo(repoDir);
         const remoteDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
