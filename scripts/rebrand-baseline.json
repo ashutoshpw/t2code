@@ -18,5 +18,17 @@
   {
     "file": "apps/server/src/orchestration-v2/testkit/fixtures/claude_background_task_wake/claude_transcript.ndjson",
     "line": "{\"type\":\"emit_inbound\",\"label\":\"system\",\"frame\":{\"type\":\"system\",\"subtype\":\"thinking_tokens\",\"estimated_tokens\":40,\"estimated_tokens_delta\":3,\"session_id\":\"7901ee61-9647-498d-b68d-ecdcb93bae84\",\"uuid\":\"8f0b7d72-3773-4e17-b5ee-4112412f570e\"}}"
+  },
+  {
+    "file": "apps/server/src/telemetry/AnalyticsService.ts",
+    "line": "Config.withDefault(\"https://ingest.t3.codes\"),"
+  },
+  {
+    "file": "docs/internals/product-analytics.md",
+    "line": "The server sends batches to the ingest endpoint at `ingest.t3.codes`, which archives"
+  },
+  {
+    "file": "docs/user/telemetry.md",
+    "line": "The T2 Code server sends product usage events to the shared ingest endpoint at `ingest.t3.codes`,"
   }
 ]
