@@ -1,6 +1,6 @@
 # Product usage data
 
-The T2 Code server sends product usage events to T2 Code's own endpoint at `ingest.t2.codes`,
+The T2 Code server sends product usage events to the shared ingest endpoint at `ingest.t3.codes`,
 associated with a hashed account or installation identifier. To count how many installations one person
 uses, the server also sends hashed account identifiers: your T2 Connect account, your OpenAI and
 Claude accounts when you are signed in, and a random identifier for each device that connects. The endpoint keeps a copy of each
@@ -17,7 +17,7 @@ T2 Code also sends relay connection traces to Axiom to diagnose T2 Connect conne
 To disable product events and relay tracing, set `T2CODE_TELEMETRY_ENABLED=false` in the server's
 environment before starting it. Relay tracing also stops when `T2CODE_OTEL_SDK_DISABLED` or
 `OTEL_SDK_DISABLED` turns OpenTelemetry export off. The web app in a browser, including one the
-`t3` CLI opens, does not read these variables.
+`t2` CLI opens, does not read these variables.
 
 An administrator can turn product events and relay tracing off for every user on a machine with
 a [managed policy](./managed-policy.md#other-capabilities).

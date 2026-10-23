@@ -1508,7 +1508,7 @@ it.effect("a failed tool update reports npm's exit code but not its output", () 
       Layer.mergeAll(
         ServerSettings.layerTest({ enableDeviceSupport: true }),
         layerSecretResolver,
-        ServerConfig.layerTest(process.cwd(), { prefix: "t3-device-update-" }),
+        ServerConfig.layerTest(process.cwd(), { prefix: "t2-device-update-" }),
         NodeCrypto.layer,
         NetService.layer,
       ).pipe(Layer.provideMerge(NodeServices.layer)),

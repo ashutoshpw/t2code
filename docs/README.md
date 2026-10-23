@@ -20,7 +20,7 @@
 - [Product usage data](./user/telemetry.md)
 - [Remote access](./user/remote-access.md)
 - [Guest links](./user/guest-links.md)
-- [T2 Connect troubleshooting](./user/t3-connect-troubleshooting.md)
+- [T2 Connect troubleshooting](./user/t2-connect-troubleshooting.md)
 - [Outside agents (MCP)](./user/outside-agents.md)
 - [Running in the background](./user/background-service.md)
 - [Updating T2 Code](./user/updating.md)

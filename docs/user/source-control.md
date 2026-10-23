@@ -98,7 +98,7 @@ export T2CODE_BITBUCKET_API_TOKEN="your-token"```
 
 For a background service, put these `KEY=VALUE` entries in
 [`service.env`](./background-service.md#configure-the-service-environment)
-under T3 home, then run `t3 service restart`. Service installation and updates
+under T2 home, then run `t2 service restart`. Service installation and updates
 preserve that file.
 
 ### Azure DevOps

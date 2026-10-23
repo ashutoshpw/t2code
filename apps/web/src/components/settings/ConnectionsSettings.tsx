@@ -6,9 +6,7 @@ import {
   AuthAccessReadScope,
   AuthAccessWriteScope,
   AuthEnvironmentMaintainScope,
-  AuthDiagnosticsReadScope,
   AuthOrchestrationOperateScope,
-  AuthOrchestrationReadScope,
   AuthRelayReadScope,
   AuthRelayWriteScope,
   type AuthClientSession,
@@ -94,7 +92,6 @@ import { RemoveT2ConnectEnvironmentDialog } from "../clerk/RemoveT2ConnectEnviro
 import { authEnvironment } from "~/state/auth";
 import { environmentCatalog } from "~/connection/catalog";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
-import { useEnvironmentSessionState } from "~/state/session";
 import { useEnvironmentQuery } from "~/state/query";
 import {
   desktopNetworkAccessStateAtom,
@@ -137,6 +134,7 @@ import { ITEM_ROW_CLASSNAME } from "./itemRows";
 import {
   CloudLinkRow,
   CloudRemoteEnvironmentRows,
+  EnvironmentLabelControl,
   SavedBackendListRow,
 } from "./SavedEnvironmentRows";
 import { AddEnvironmentDialog } from "./AddEnvironmentDialog";
@@ -1487,6 +1485,11 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
         </>
       ) : (
         <SettingsSection {...searchableSetting("connections-environment")}>
+          <SettingsRow
+            title="No environment selected"
+            description="Connect an environment to view its settings and access."
+          />
+          <LocalEnvironmentSetting />
           {primaryEnvironment && primaryEnvironmentId ? (
             <SettingsRow
               title="Environment name"
@@ -1542,10 +1545,10 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
           <SavedBackendListRow
             key={environment.environmentId}
             environment={environment}
-            environmentLabels={environmentLabels}
             removingEnvironmentId={removingSavedEnvironmentId}
             onSetEnabled={handleSetSavedBackendEnabled}
             onRemove={handleRemoveSavedBackend}
+            environmentLabels={environmentLabels}
             onAddRoute={(target) => {
               setRouteTarget(target);
               setSavedBackendError(null);

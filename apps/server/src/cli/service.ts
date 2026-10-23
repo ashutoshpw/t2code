@@ -124,9 +124,9 @@ export function formatServiceChange(
   result: Extract<ServiceReconcileResult, { readonly changed: true }>,
 ): string {
   if (result.plan.handedOff === true) {
-    return `Service update to t3@${packageJson.version} queued. This session will disconnect.\nLog: ${result.plan.logPath}`;
+    return `Handed the T2 Code service switch to t2@${packageJson.version} to a separate systemd unit, since this session runs inside the service and disconnects when it restarts.\nResult: ${result.plan.logPath}`;
   }
-  return `Service ${result.previouslyInstalled ? "updated" : "installed"} · t3@${packageJson.version}\nLog: ${result.plan.logPath}`;
+  return `${result.previouslyInstalled ? "Updated" : "Installed"} T2 Code service with t2@${packageJson.version}.\nLogs: ${result.plan.logPath}`;
 }
 
 function formatProtection(
@@ -260,7 +260,7 @@ const serviceRestartCommand = Command.make("restart", projectLocationFlags).pipe
         const status = yield* service.status;
         const outcome = yield* service.restart;
         const onVersion =
-          status.installedVersion === undefined ? "" : ` on t3@${status.installedVersion}`;
+          status.installedVersion === undefined ? "" : ` on t2@${status.installedVersion}`;
         yield* Console.log(
           outcome === "restarted"
             ? `Restarted the T2 Code service${onVersion}.`
@@ -434,7 +434,6 @@ const serviceProtectCommand = Command.make("protect", {
     }),
   ),
 );
-
 
 export const serviceCommand = Command.make("service").pipe(
   Command.withDescription("Manage the T2 Code background service."),

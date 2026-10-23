@@ -75,7 +75,7 @@ concurrency:
 jobs:
   production:
     name: EAS ${{ inputs.profile || 'production' }} ${{ github.event_name == 'push' && 'auto' || inputs.mode }}
-    if: github.repository == 'pingdotgg/t2code'
+    if: github.repository == 'ashutoshpw/t2code'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
