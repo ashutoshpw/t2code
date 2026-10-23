@@ -1,5 +1,5 @@
 import "./intl-polyfills";
-import { resolveLocale } from "@t3tools/client-runtime/locales";
+import { resolveLocale } from "@t2code/client-runtime/locales";
 import { useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
 import { GTProvider, initializeGT } from "gt-react-native";

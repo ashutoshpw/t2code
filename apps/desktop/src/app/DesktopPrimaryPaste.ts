@@ -1,4 +1,4 @@
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -10,7 +10,7 @@ export class DesktopPrimaryPaste extends Context.Service<
   {
     readonly enabled: boolean;
   }
->()("@t3tools/desktop/app/DesktopPrimaryPaste") {}
+>()("@t2code/desktop/app/DesktopPrimaryPaste") {}
 
 // Chrome applies gtk-enable-primary-paste from chrome/, which Electron does not include.
 export const readGtkPrimaryPasteEnabled = Effect.gen(function* () {

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // The app command of e2e.config.ts: starts the dev stack of the checkout it runs in on a fresh
-// T3 home. e2e stops it with a signal, which ends the scope and the processes it started.
+// T2 home. e2e stops it with a signal, which ends the scope and the processes it started.
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as NetService from "@t3tools/shared/Net";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import * as NetService from "@t2code/shared/Net";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -129,7 +129,7 @@ const startApp = Effect.fn("startApp")(function* (input: {
   const env = {
     ...hostEnvironment,
     PATH: `${path.join(input.home, "bin")}:${hostEnvironment.PATH ?? ""}`,
-    T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "0",
+    T2CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "0",
   };
   const devRunner = (mode: string, args: ReadonlyArray<string>) => [
     "scripts/dev-runner.ts",
@@ -148,16 +148,16 @@ const startApp = Effect.fn("startApp")(function* (input: {
     const serverPort = String(yield* net.reserveLoopbackPort());
     const token = yield* (yield* SecureRandom.SecureRandom).uuidV4();
     const ports = ["--port", serverPort, "--dev-url", origin];
-    const webEnv = { ...env, T3CODE_PORT_OFFSET: String(Number(webPort) - BASE_WEB_PORT) };
+    const webEnv = { ...env, T2CODE_PORT_OFFSET: String(Number(webPort) - BASE_WEB_PORT) };
     const server = yield* start({
       cwd: checkout,
       command: node,
       args: devRunner("dev:server", ports),
       env: {
         ...webEnv,
-        T3CODE_DEV_ALLOWED_ORIGINS: origin,
+        T2CODE_DEV_ALLOWED_ORIGINS: origin,
         // Makes the startup pairing link reusable, so every test can sign in with it.
-        T3CODE_DEV_AUTH_TOKEN: `${token}${token}`.replaceAll("-", ""),
+        T2CODE_DEV_AUTH_TOKEN: `${token}${token}`.replaceAll("-", ""),
       },
       onLine: (line) => {
         const url = /pairingUrl:\s*(\S+)/.exec(line)?.[1];
@@ -217,7 +217,7 @@ const startApp = Effect.fn("startApp")(function* (input: {
   const metro = yield* start({
     cwd: path.join(checkout, "apps/mobile"),
     command: "npx",
-    args: ["expo", "start", "--dev-client", "--scheme", "t3code-dev", "--lan", "--port", metroPort],
+    args: ["expo", "start", "--dev-client", "--scheme", "t2code-dev", "--lan", "--port", metroPort],
     env: {
       ...env,
       APP_VARIANT: "development",
@@ -239,7 +239,7 @@ const command = Command.make(
         "web: server and Vite. mobile: server on every interface and Metro.",
       ),
     ),
-    home: Argument.String("t3-home").pipe(Argument.withDescription("T3 home to recreate.")),
+    home: Argument.String("t2-home").pipe(Argument.withDescription("T2 home to recreate.")),
     ports: Argument.String("port").pipe(
       Argument.withDescription(
         "web: <host> <web-port>. mobile: <server-port> <metro-port> <host>.",

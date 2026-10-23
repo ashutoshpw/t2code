@@ -4,7 +4,7 @@ import {
   withEmbeddedScripts,
   type EmbeddedScript,
   type SyntaxToken,
-} from "@t3tools/client-runtime/work-log/embedded-scripts";
+} from "@t2code/client-runtime/work-log/embedded-scripts";
 
 import { resolveDiffThemeName } from "../../lib/diffRendering";
 import { getSyntaxHighlighterPromise } from "../../lib/syntaxHighlighting";

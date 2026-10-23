@@ -3,8 +3,8 @@
 // base and passes on head. See docs/operations/scenarios.md.
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as HostProcess from "@t3tools/shared/HostProcess";
-import { fromJsonStringPretty } from "@t3tools/shared/schemaJson";
+import * as HostProcess from "@t2code/shared/HostProcess";
+import { fromJsonStringPretty } from "@t2code/shared/schemaJson";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -219,7 +219,7 @@ const runSide = Effect.fn("prove.runSide")(function* (
       ["run", scenarioPath, "--output", path.relative(scripts, outDir)],
       {
         cwd: scripts,
-        env: { ...environment, T3_SCENARIO_APP_DIR: appDir, E2E_TELEMETRY_DISABLED: "1" },
+        env: { ...environment, T2_SCENARIO_APP_DIR: appDir, E2E_TELEMETRY_DISABLED: "1" },
         // The report says how the run went; e2e's exit code only repeats it.
         allowExit: [0, 1, 2, 3, 4],
         echo: true,

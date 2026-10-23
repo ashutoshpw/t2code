@@ -1039,7 +1039,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
           yield* fileSystem.makeDirectory(bareGitDir);
           yield* fileSystem.writeFileString(
             path.join(bareGitDir, "config"),
-            '[core] bare = "true" ; bare repository\n[remote "origin"]\nurl = git@github.com:pingdotgg/t2code.git\n',
+            '[core] bare = "true" ; bare repository\n[remote "origin"]\nurl = git@github.com:pingdotgg/t3code.git\n',
           );
           const dev = path.join(bare, "dev");
           const prod = path.join(bare, "prod");
@@ -1077,7 +1077,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
 
           const input = { claudeHomePath, codexHomePath, configBaseDir };
           const result = yield* runScan(input);
-          const git = { remoteKey: "github.com/pingdotgg/t2code", repository: "pingdotgg/t2code" };
+          const git = { remoteKey: "github.com/pingdotgg/t3code", repository: "pingdotgg/t3code" };
           expect(
             result.candidates.map((candidate) => ({ path: candidate.path, git: candidate.git })),
           ).toEqual([
@@ -2873,7 +2873,6 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         expect(outcomes).toEqual([{ _tag: "Skipped" }]);
       }),
     );
-
 
     it.effect("does not import a transcript dated after the current time", () =>
       Effect.gen(function* () {

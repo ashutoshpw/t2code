@@ -1,6 +1,6 @@
 import * as DateTime from "effect/DateTime";
-import { clampPercent } from "@t3tools/provider-core/server/usageLimits";
-import type { ProviderUsageLimitsReport } from "@t3tools/provider-core/server/snapshot";
+import { clampPercent } from "@t2code/provider-core/server/usageLimits";
+import type { ProviderUsageLimitsReport } from "@t2code/provider-core/server/snapshot";
 
 import { LATEST_DATE_MS, type MuseSubscriptionUsage } from "./protocol.ts";
 

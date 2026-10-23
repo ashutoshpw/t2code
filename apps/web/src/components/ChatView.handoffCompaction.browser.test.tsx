@@ -4,8 +4,8 @@ import {
   ProviderInstanceId,
   ProviderThreadId,
   type OrchestrationV2ProviderThread,
-} from "@t3tools/contracts";
-import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
+} from "@t2code/contracts";
+import { DEFAULT_CLIENT_SETTINGS } from "@t2code/contracts/settings";
 import type * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import { expect, it, vi } from "vite-plus/test";

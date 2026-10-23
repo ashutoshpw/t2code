@@ -1,10 +1,11 @@
-import { isProviderSkillUserInvocable } from "@t3tools/client-runtime/providerSkills";
-import type { ServerProviderSkill } from "@t3tools/contracts";
-import { assistantCitationLabel } from "@t3tools/shared/assistantCitations";
-import { formatProviderSkillDisplayName } from "@t3tools/shared/inlineSkills";
-import { fileBasename } from "@t3tools/shared/path";
+import { isProviderSkillUserInvocable } from "@t2code/client-runtime/providerSkills";
+import type { ServerProviderSkill } from "@t2code/contracts";
+import { assistantCitationLabel } from "@t2code/shared/assistantCitations";
+import { formatProviderSkillDisplayName } from "@t2code/shared/inlineSkills";
+import { fileBasename } from "@t2code/shared/path";
 import {
   CircleDashedIcon,
+  FileTextIcon,
   ImageIcon,
   MessageCircleIcon,
   MessagesSquareIcon,
@@ -40,6 +41,8 @@ const CONTEXT_REFERENCE_ICONS: Record<
   "review-comment": () => <MessageCircleIcon />,
   thread: () => <MessagesSquareIcon />,
   environment: () => <MonitorIcon />,
+  page: () => <FileTextIcon />,
+  block: () => <FileTextIcon />,
 };
 
 // Mirrors the editor's chip: only a draft record of the same kind resolves a reference.
@@ -97,7 +100,7 @@ export function CollapsedComposerPromptPreview(props: {
         return entry ? (
           <ContextChipShell
             key={key}
-            kind={entry.kind}
+            kind={entry.kind === "page" || entry.kind === "block" ? "citation" : entry.kind}
             icon={CONTEXT_REFERENCE_ICONS[entry.kind](segment.label, props.theme)}
             label={segment.label}
           />

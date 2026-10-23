@@ -30,10 +30,6 @@ export class CliUninstallError extends Schema.TaggedError<CliUninstallError>()(
   }
 }
 
-/**
- * What `t2code uninstall` would remove for one T2 home. Computed before anything
- * is touched so the user sees the whole plan in one place.
- */
 export interface UninstallPlan {
   readonly service: boolean;
   readonly versionsDir: string;
@@ -50,7 +46,7 @@ export const findOwnedLauncher = Effect.fn("cli.uninstall.find_launcher")(functi
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const platform = yield* HostProcess.Platform;
-  if (input.launchedAs === undefined) return [];
+  if (input.launchedAs === undefined) return undefined;
   if (platform === "win32") {
     const shimPath = yield* findWindowsShim(input.launchedAs);
     if (shimPath === undefined) return undefined;
@@ -212,7 +208,7 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
     yield* Console.log(`Nothing to remove: t2 is not installed for ${input.baseDir}.`);
     if (!(yield* HostProcess.IsExecutable)) {
       yield* Console.log(
-        "  This t2 runs from a Node script, so it was installed by npm or built from source. Remove it the same way (`npm uninstall -g @t2code/cli`, or delete the checkout).",
+        "  This t2 runs from a Node script, so it was installed by npm or built from source. Remove it the same way (`npm uninstall -g t2`, or delete the checkout).",
       );
     }
     return;
@@ -255,13 +251,14 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
       continue;
     }
     yield* fs
-      .remove(launcher, { force: true })
+      .remove(plan.launcher, { force: true })
       .pipe(
         Effect.mapError(
-          () => new CliUninstallError({ reason: `Could not remove the launcher at ${launcher}.` }),
+          () =>
+            new CliUninstallError({ reason: `Could not remove the launcher at ${plan.launcher}.` }),
         ),
       );
-    yield* Console.log(`Removed ${launcher}.`);
+    yield* Console.log(`Removed ${plan.launcher}.`);
   }
   if (plan.runtimeDir !== undefined) {
     // Windows refuses to unlink this running executable; a detached shell removes it after exit.
@@ -288,5 +285,5 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
     }
   }
   yield* Console.log("");
-  yield* Console.log("t2code is uninstalled. Thanks for trying T2 Code.");
+  yield* Console.log("t2 is uninstalled. Thanks for trying T2 Code.");
 });

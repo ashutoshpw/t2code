@@ -48,7 +48,7 @@ it.layer(NodeSqliteClient.layer({ filename: ":memory:" }))(
         `;
         yield* insertMessage("quoted", `${quote} quiet silver lantern`);
         yield* insertMessage("plain", "quiet silver lantern");
-        yield* insertMessage("invalid", "[Assistant quote](t3-citation://v1/not-a-citation)");
+        yield* insertMessage("invalid", "[Assistant quote](t2-citation://v1/not-a-citation)");
         yield* insertMessage("unreadable", 20261001);
         yield* insertMessage(
           "accented",

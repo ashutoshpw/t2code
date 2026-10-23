@@ -192,7 +192,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("telemetry identi
         { source: "openai", ownerId: yield* sha256("user-openai-person") },
         { source: "claude", ownerId: yield* sha256("claude-person") },
       ]);
-    }).pipe(Effect.provide(layerIdentity("t3-telemetry-identify-owners-"))),
+    }).pipe(Effect.provide(layerIdentity("t2-telemetry-identify-owners-"))),
   );
 
   it.effect.each([
@@ -225,7 +225,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("telemetry identi
 
         assert.deepEqual(yield* Identify.getServerOwnersForHome(homeDirectory), []);
         assert.deepEqual(logs, []);
-      }).pipe(Effect.provide(layerIdentity("t3-telemetry-identify-tokenless-", logs)));
+      }).pipe(Effect.provide(layerIdentity("t2-telemetry-identify-tokenless-", logs)));
     },
   );
 

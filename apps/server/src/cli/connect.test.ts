@@ -60,7 +60,7 @@ it.effect("does not install the relay client when the user declines the managed 
 );
 
 it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))(
-  "t3 connect unlink and status",
+  "t2 connect unlink",
   (it) => {
     const runConnect = (
       recordedPid: number,
@@ -91,7 +91,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
         }
 
         const fs = yield* FileSystem.FileSystem;
-        const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-connect-unlink-test-" });
+        const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-connect-unlink-test-" });
         const state = yield* makePersistedServerRuntimeState({
           config: { host: "127.0.0.1", devUrl: undefined },
           port: address.port,
@@ -142,7 +142,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       Effect.gen(function* () {
         const { printed, warnings } = yield* runConnect(deadPid, { portFreed: true });
 
-        assert.include(printed, "T3 Connect is disabled locally.");
+        assert.include(printed, "T2 Connect is disabled locally.");
         assert.notInclude(warnings.join("\n"), "Restart that server");
       }),
     );
@@ -184,7 +184,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
         const { requests, printed, warnings } = yield* runConnect(process.pid);
 
         assert.deepEqual(requests, ["POST /api/connect/unlink"]);
-        assert.include(printed, "T3 Connect is disabled locally.");
+        assert.include(printed, "T2 Connect is disabled locally.");
         assert.notInclude(warnings.join("\n"), "cloudflared process");
       }),
     );

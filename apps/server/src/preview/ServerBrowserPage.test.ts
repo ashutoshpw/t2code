@@ -1,4 +1,4 @@
-import { PreviewAutomationEvaluateInput } from "@t3tools/contracts";
+import { PreviewAutomationEvaluateInput } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import {
   chromium,
@@ -231,7 +231,7 @@ describe("server browser element refs", () => {
     expect(tree.match(/\/url: data:text\/plain,…$/gm)).toHaveLength(8);
     expect(tree).toContain("/url: data:,…");
     expect(tree).toContain("/url: https://example.com/data:report,2026");
-    expect(tree).toMatch(/link "data:text\/plain,label" \[ref=t3-/);
+    expect(tree).toMatch(/link "data:text\/plain,label" \[ref=t2-/);
     expect(tree).not.toMatch(/PAYLOAD|tail|charset|\u2028/);
     expect(tree).toContain('/url: "\\"data:text/plain,relative"');
   });

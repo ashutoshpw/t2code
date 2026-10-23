@@ -1,4 +1,4 @@
-import type { EnvironmentId, RuntimeRequestId, ThreadId } from "@t3tools/contracts";
+import type { EnvironmentId, RuntimeRequestId, ThreadId } from "@t2code/contracts";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";

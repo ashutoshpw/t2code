@@ -1,4 +1,4 @@
-import type { RunId, ScreenReaderAnnouncements } from "@t3tools/contracts";
+import type { RunId, ScreenReaderAnnouncements } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 
 import type { TimelineEntry, WorkLogEntry } from "../../session-logic";
@@ -156,7 +156,7 @@ export interface TurnDetailMemory {
 }
 
 /** The heading every agent message has in the timeline. */
-const MESSAGE_AUTHOR = "T3 Code";
+const MESSAGE_AUTHOR = "T2 Code";
 
 /**
  * Decides which of the turn's messages and steps a screen reader hears next.

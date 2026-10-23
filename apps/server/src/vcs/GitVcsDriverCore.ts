@@ -1908,7 +1908,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
       readonly knownOriginDefaultBranch?: string | null;
     },
   ) {
-    const configuredBaseRef = yield* readConfigValue(cwd, `branch.${refName}.t3-merge-base-ref`);
+    const configuredBaseRef = yield* readConfigValue(cwd, `branch.${refName}.t2-merge-base-ref`);
     if (
       configuredBaseRef?.startsWith("refs/heads/") ||
       configuredBaseRef?.startsWith("refs/remotes/")
@@ -2885,10 +2885,10 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
           key: branchBaseConfigKey(branch),
           value: upstream.branchName,
         });
-        if (!(yield* readConfigValue(cwd, `branch.${branch}.t3-merge-base-ref`))) {
+        if (!(yield* readConfigValue(cwd, `branch.${branch}.t2-merge-base-ref`))) {
           yield* writeConfigValue({
             cwd,
-            key: `branch.${branch}.t3-merge-base-ref`,
+            key: `branch.${branch}.t2-merge-base-ref`,
             value:
               upstream.remoteName === "."
                 ? `refs/heads/${upstream.branchName}`
@@ -4627,7 +4627,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
           // The base key names a branch on the host; this one keeps the remote it came from.
           yield* writeConfigValue({
             cwd: input.cwd,
-            key: `branch.${newRefName}.t3-merge-base-ref`,
+            key: `branch.${newRefName}.t2-merge-base-ref`,
             value: base.baseRef,
           });
         }

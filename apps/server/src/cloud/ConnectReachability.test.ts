@@ -97,10 +97,10 @@ describe("classifyReachability", () => {
   });
 
   it("does not point an unlinked server at a background service it may not have", () => {
-    // Desktop and `t3 serve` run the server without a background service.
+    // Desktop and `t2 serve` run the server without a background service.
     const result = classifyReachability(facts({ managedTunnelConfigured: false }), checkedAt);
     expect(result).toMatchObject({ cause: "not_linked" });
-    expect(result.status === "unreachable" && result.fix).not.toContain("t3 service");
+    expect(result.status === "unreachable" && result.fix).not.toContain("t2 service");
   });
 });
 
@@ -378,10 +378,10 @@ describe("ConnectReachability stale connector recovery", () => {
   );
 });
 
-describe("T3 Connect troubleshooting links", () => {
+describe("T2 Connect troubleshooting links", () => {
   it("each section names a heading in the user guide", () => {
     const guide = NodeFS.readFileSync(
-      new URL("../../../../docs/user/t3-connect-troubleshooting.md", import.meta.url),
+      new URL("../../../../docs/user/t2-connect-troubleshooting.md", import.meta.url),
       "utf8",
     );
     // GitHub's heading anchors: lowercase, drop punctuation, spaces become hyphens.

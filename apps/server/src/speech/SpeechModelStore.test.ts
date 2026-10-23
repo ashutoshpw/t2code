@@ -12,7 +12,7 @@ import * as Path from "effect/Path";
 import * as Stream from "effect/Stream";
 import { HttpClient, HttpClientError, HttpClientRequest, HttpClientResponse } from "effect/http";
 
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 import * as ServerConfig from "../config.ts";
 import * as SpeechModelStore from "./SpeechModelStore.ts";
@@ -190,7 +190,7 @@ it.effect("links a verified model file from another folder and never deletes it"
     expect(yield* h.store.linkedFrom(h.model)).toBe(existing);
     expect(yield* h.store.installedPath(h.model)).toBe(h.stale);
     expect(h.requests).toHaveLength(0);
-    // Pointing at T3 Code's own folder must not turn the link into a link to itself.
+    // Pointing at T2 Code's own folder must not turn the link into a link to itself.
     expect(yield* h.store.link([h.model], h.directory)).toEqual([]);
     expect(yield* h.store.installedPath(h.model)).toBe(h.stale);
 

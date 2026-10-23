@@ -1,7 +1,7 @@
 # Scenarios
 
 A scenario is an [e2e](https://e2e.com/docs) test that shows one behavior in the real app: a real
-server on its own T3 home, real HTTP and WebSocket, and a real browser on the web client or a
+server on its own T2 home, real HTTP and WebSocket, and a real browser on the web client or a
 pooled iPhone simulator running the mobile app. The
 dev replay agent stands in for the model, so a run is free and repeatable. Use one as the proof
 for a bug fix: it fails on the base commit and passes on the fix.
@@ -36,8 +36,8 @@ test(
 );
 ```
 
-`screen`, `browser`, `app`, and `expect` are e2e's own. [`t3.ts`](../../scripts/scenarios/t3.ts)
-adds one fixture for what e2e cannot know about T3 Code:
+`screen`, `browser`, `app`, and `expect` are e2e's own. [`t2.ts`](../../scripts/scenarios/t2.ts)
+adds one fixture for what e2e cannot know about T2 Code:
 
 - `t3.project(title, files)` creates a git repository and adds it as a project.
 - `t3.thread({ project, title, messages })` starts a thread and plays one replayed turn per
@@ -85,7 +85,7 @@ address. It does not use `localhost`, which some machines resolve to `::1` first
 
 `e2e run --help` lists the rest: `--grep`, `--watch`, `--last-failed`, `--changed-since`.
 
-Run one at a time per checkout: a run recreates the checkout's scenario T3 home and its `.e2e`
+Run one at a time per checkout: a run recreates the checkout's scenario T2 home and its `.e2e`
 output. Use a second worktree for a second run.
 
 ## Prove a fix
@@ -113,13 +113,13 @@ that predates it.
 
 ## iOS
 
-An iOS scenario imports from [`t3-mobile.ts`](../../scripts/scenarios/t3-mobile.ts) and passes
+An iOS scenario imports from [`t2-mobile.ts`](../../scripts/scenarios/t2-mobile.ts) and passes
 `IOS` where a web one passes `WEB`:
 
 ```ts
 import { expect } from "e2e";
 
-import { IOS, test } from "./t3-mobile.ts";
+import { IOS, test } from "./t2-mobile.ts";
 
 test(
   "The iOS app lists a seeded thread and opens its history",
@@ -144,7 +144,7 @@ e2e's [device fixture](https://e2e.com/docs/mobile#the-device-fixture) for syste
 The run leases an iPhone 18 Pro from the Simlock pool, so it needs `SIMLOCK_AGENT_DEVICE_URL`
 and `AGENT_DEVICE_DAEMON_AUTH_TOKEN`, as `mobile:e2e` does, and a gateway on Simlock 0.7.0 or
 later. A web-only run leases nothing. The device reaches this machine over the tailnet on ports
-13990 (server) and 8190 (Metro); set `T3_SCENARIO_SERVER_PORT` and `T3_SCENARIO_METRO_PORT` when
+13990 (server) and 8190 (Metro); set `T2_SCENARIO_SERVER_PORT` and `T2_SCENARIO_METRO_PORT` when
 another run on the machine holds them. An iOS run takes two to three minutes, most of it the
 device and the first bundle. `e2e run --target web` or `--target ios` runs one side.
 

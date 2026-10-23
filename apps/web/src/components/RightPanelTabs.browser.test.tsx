@@ -1,6 +1,6 @@
 import "~/index.css";
 
-import { EnvironmentId } from "@t3tools/contracts";
+import { EnvironmentId } from "@t2code/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { InputGroup, InputGroupAddon, InputGroupInput } from "~/components/ui/input-group";

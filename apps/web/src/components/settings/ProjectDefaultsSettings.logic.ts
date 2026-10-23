@@ -1,5 +1,5 @@
-import type { ModelSelection, ProjectId, ServerProvider } from "@t3tools/contracts";
-import type { UnifiedSettings } from "@t3tools/contracts/settings";
+import type { ModelSelection, ProjectId, ServerProvider } from "@t2code/contracts";
+import type { UnifiedSettings } from "@t2code/contracts/settings";
 
 import { resolveEffectiveDefaultModelSelection } from "../../modelSelection";
 import {

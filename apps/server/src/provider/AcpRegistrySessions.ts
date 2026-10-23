@@ -7,10 +7,10 @@ import {
   type ProjectId,
   type ProviderDriverKind,
   type ProviderInstanceId,
-} from "@t3tools/contracts";
-import * as AcpRegistryRuntimeCoordinator from "@t3tools/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import type { ProviderInstance } from "@t3tools/provider-core/server/driver";
+} from "@t2code/contracts";
+import * as AcpRegistryRuntimeCoordinator from "@t2code/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
+import type { ProviderInstance } from "@t2code/provider-core/server/driver";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Effect from "effect/Effect";
@@ -48,14 +48,14 @@ export class AcpRegistrySessions extends Context.Service<
       AcpRegistryOperationError
     >;
     /**
-     * Binds a native ACP session to a T3 thread and copies its history in. Importing a
+     * Binds a native ACP session to a T2 thread and copies its history in. Importing a
      * session whose thread still lacks its history repairs that thread instead.
      */
     readonly importSession: (
       input: AcpRegistryImportSessionInput,
     ) => Effect.Effect<AcpRegistryImportSessionResult, AcpRegistryOperationError>;
   }
->()("t3/provider/AcpRegistrySessions") {}
+>()("@t2code/cli/provider/AcpRegistrySessions") {}
 
 const make = Effect.gen(function* () {
   const projectService = yield* ProjectService.ProjectService;
@@ -206,7 +206,7 @@ const make = Effect.gen(function* () {
       if (racedImport !== null) return { threadId, imported: false } as const;
       return yield* new AcpRegistryOperationError({
         reason: "session_import_failed",
-        message: "Could not create a T3 thread for the ACP session.",
+        message: "Could not create a T2 thread for the ACP session.",
         cause: launched.failure,
       });
     }
