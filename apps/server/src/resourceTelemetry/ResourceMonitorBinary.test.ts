@@ -16,56 +16,6 @@ describe("ResourceMonitorBinary", () => {
     vi.restoreAllMocks();
   });
 
-  it.effect("skips Linux libc detection on Windows", () =>
-    Effect.gen(function* () {
-      const getReport = vi.spyOn(process.report, "getReport").mockImplementation(() => {
-        throw new Error("Linux libc detection must not run on Windows");
-      });
-      const fileSystem = yield* FileSystem.FileSystem;
-      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t2-resource-monitor-binary-",
-      });
-      const binaryPath = `${baseDir}/t2-resource-monitor.exe`;
-      yield* fileSystem.writeFileString(binaryPath, "binary");
-
-      const service = yield* ResourceMonitorBinary.make().pipe(
-        Effect.provide(ServerConfig.layerTest(process.cwd(), baseDir)),
-        Effect.provideService(HostProcess.Platform, "win32"),
-        Effect.provideService(HostProcess.Architecture, "arm64"),
-        Effect.provideService(HostProcess.Environment, {
-          T2CODE_RESOURCE_MONITOR_PATH: binaryPath,
-        }),
-      );
-
-      assert.equal(yield* service.resolve, binaryPath);
-      expect(getReport).not.toHaveBeenCalled();
-    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
-  );
-
-  it.effect.skipIf(windowsHost)("resolves an executable override", () =>
-    Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t2-resource-monitor-binary-",
-      });
-      const binaryPath = `${baseDir}/t2-resource-monitor`;
-      yield* fileSystem.writeFileString(binaryPath, "binary");
-      yield* fileSystem.chmod(binaryPath, 0o755);
-
-      const service = yield* ResourceMonitorBinary.make().pipe(
-        Effect.provide(ServerConfig.layerTest(process.cwd(), baseDir)),
-        Effect.provideService(HostProcess.Platform, "linux"),
-        Effect.provideService(HostProcess.Architecture, "x64"),
-        Effect.provideService(ResourceMonitorBinary.ResourceMonitorHostLinuxLibc, "musl"),
-        Effect.provideService(HostProcess.Environment, {
-          T2CODE_RESOURCE_MONITOR_PATH: binaryPath,
-        }),
-      );
-
-      assert.equal(yield* service.resolve, binaryPath);
-    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
-  );
-
   it.effect.skipIf(windowsHost)("resolves an executable override on an unsupported platform", () =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;

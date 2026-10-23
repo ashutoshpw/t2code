@@ -5,7 +5,7 @@ import {
   useRoute,
   type StaticScreenProps,
 } from "@react-navigation/native";
-import type { PullRequestChangeBreakdown } from "@t3tools/contracts";
+import type { PullRequestChangeBreakdown } from "@t2code/contracts";
 import { useState } from "react";
 import { Platform, View } from "react-native";
 import Animated from "react-native-reanimated";
@@ -107,7 +107,7 @@ function FileRow(props: {
     >
       <PierreEntryIcon kind="file" path={file.path} size={20} />
       <View className="min-w-0 flex-1 gap-0.5">
-        <Text textRole="footnote" className="font-t3-medium" numberOfLines={2}>
+        <Text textRole="footnote" className="font-t2-medium" numberOfLines={2}>
           {file.path.split("/").at(-1)}
         </Text>
         {props.directory ? (

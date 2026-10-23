@@ -10,7 +10,7 @@ import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import { afterEach, vi } from "vite-plus/test";
-import { ClientCapabilities } from "@t3tools/client-runtime/platform";
+import { ClientCapabilities } from "@t2code/client-runtime/platform";
 import {
   ConnectionBlockedError,
   ConnectionTransientError,

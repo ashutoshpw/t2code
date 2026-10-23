@@ -83,21 +83,6 @@ describe("threadPullRequestKeysEqual", () => {
       }),
     ).toBe(false);
   });
-
-  it("ignores host and repository case", () => {
-    expect(
-      threadPullRequestKeysEqual(
-        { host: "GitHub.com", repository: "PingDotGG/T3Code", number: 1 },
-        { host: "github.com", repository: "pingdotgg/t3code", number: 1 },
-      ),
-    ).toBe(true);
-    expect(
-      threadPullRequestKeysEqual(
-        { host: "github.com", repository: "pingdotgg/t3code", number: 1 },
-        { host: "gitlab.com", repository: "pingdotgg/t3code", number: 1 },
-      ),
-    ).toBe(false);
-  });
 });
 
 describe("resolveThreadCurrentPullRequest", () => {

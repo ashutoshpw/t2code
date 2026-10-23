@@ -1,7 +1,7 @@
 import {
   FULL_ACCESS_OVERRIDE_QUESTION,
   fullAccessOverrideExplanation,
-} from "@t3tools/client-runtime/state/thread-requests";
+} from "@t2code/client-runtime/state/thread-requests";
 import { memo } from "react";
 import { type PendingApproval } from "../../session-logic";
 import { InlineButton } from "../ui/button";

@@ -94,14 +94,14 @@ Agents without OAuth support cannot connect.
 
 ## Scripts on the host
 
-On the machine that runs the environment, `t3 thread` uses the same tools
+On the machine that runs the environment, `t2 thread` uses the same tools
 without a sign-in:
 
 ```sh
-id=$(t3 thread start . "Find why the tests are slow")
-t3 thread send "$id" "Now fix it" --wait
-t3 thread show "$id"
-t3 thread list
+id=$(t2 thread start . "Find why the tests are slow")
+t2 thread send "$id" "Now fix it" --wait
+t2 thread show "$id"
+t2 thread list
 ```
 
 `.` means the project that contains the current folder; a project id also

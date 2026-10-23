@@ -88,13 +88,17 @@ const MODE_ARGS = {
 // it, so no Vite dev server runs.
 const BUILT_DEV_ARGS = [
   "run",
-  "--filter=@t3tools/web",
-  "--filter=t3",
+  "--filter=@t2code/web",
+  "--filter=t2",
   "--parallel",
   "dev:built",
 ] as const;
 
 type DevMode = keyof typeof MODE_ARGS;
+
+export function getDevRunnerModeArgs(mode: DevMode): ReadonlyArray<string> {
+  return MODE_ARGS[mode];
+}
 /**
  * `role` matters because only the backend honours `--host`/`T2CODE_HOST`; the
  * web port is always loopback.
@@ -318,6 +322,8 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
 }: CreateDevRunnerEnvInput): Effect.fn.Return<NodeJS.ProcessEnv, never, Path.Path> {
   const serverPort = port ?? BASE_SERVER_PORT + serverOffset;
   const webPort = BASE_WEB_PORT + webOffset;
+  // Precedence (--home-dir > worktree .t2 > ambient T2CODE_HOME) is resolved
+  // by the caller; an unset t2Home here genuinely means "use the default".
   const configuredBaseDir = t2Home?.trim() || undefined;
   const resolvedBaseDir = yield* resolveBaseDir(configuredBaseDir);
   const isDesktopMode = mode === "dev:desktop";
@@ -337,9 +343,9 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
   }
 
   // A dev-runner server is never launcher-managed. When the shell that runs
-  // this script was itself spawned by the machine's managed t2 service (an
+  // this script was itself spawned by the machine's managed T2 Code service (an
   // agent working inside T2 Code), these leak through and the child server
-  // fails startup with "The service launcher started a different t2 version"
+  // fails startup with "The service launcher started a different t2code version"
   // (serviceLauncherClient.ts resolveStartup).
   delete output.T2_SERVICE_LAUNCHER_CONTEXT;
   delete output.T2_BOOT_SERVICE_UNIT;
@@ -364,64 +370,21 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       // single-origin mode.
       output.T2CODE_SINGLE_ORIGIN_DEV = "1";
     } else {
-      delete output.T2CODE_HOME;
-    }
-
-    // A dev-runner server is never launcher-managed. When the shell that runs
-    // this script was itself spawned by the machine's managed T2 Code service (an
-    // agent working inside T2 Code), these leak through and the child server
-    // fails startup with "The service launcher started a different t2code version"
-    // (serviceLauncherClient.ts resolveStartup).
-    delete output.T2_SERVICE_LAUNCHER_CONTEXT;
-    delete output.T2_BOOT_SERVICE_UNIT;
-
-    if (!isDesktopMode) {
-      output.T2CODE_PORT = String(serverPort);
-      // HOST is Vite's own bind address, and the desktop branch below is the
-      // only place we set it. An inherited one (an exported HOST, a container,
-      // a `HOST=0.0.0.0 npm start` habit) would otherwise reach Vite and pin
-      // its HMR socket to that address — see the `explicitHost` gate in
-      // apps/web/vite.config.ts.
-      delete output.HOST;
-      if (mode === "dev" || mode === "dev:web") {
-        // Browser dev is single-origin: everything (including /ws) is proxied
-        // through Vite, so the client must resolve its backend from
-        // window.location.origin rather than a baked-in localhost URL.
-        delete output.VITE_HTTP_URL;
-        delete output.VITE_WS_URL;
-        // Deleting is not enough on its own: vite.config.ts calls loadRepoEnv,
-        // which merges `.env`/`.env.local` *under* this env, so a developer
-        // with either URL in their `.env` would get it back and silently lose
-        // single-origin mode.
-        output.T2CODE_SINGLE_ORIGIN_DEV = "1";
-      } else {
-        output.VITE_HTTP_URL = `http://localhost:${serverPort}`;
-        output.VITE_WS_URL = `ws://localhost:${serverPort}`;
-        delete output.T2CODE_SINGLE_ORIGIN_DEV;
-      }
-    } else {
-      output.T2CODE_PORT = String(serverPort);
-      output.VITE_HTTP_URL = `http://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
-      output.VITE_WS_URL = `ws://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
-      // Desktop pins the renderer to loopback on purpose; an ambient marker
-      // must not make Vite drop those URLs.
+      output.VITE_HTTP_URL = `http://localhost:${serverPort}`;
+      output.VITE_WS_URL = `ws://localhost:${serverPort}`;
       delete output.T2CODE_SINGLE_ORIGIN_DEV;
-      delete output.T2CODE_MODE;
-      delete output.T2CODE_NO_BROWSER;
-      delete output.T2CODE_HOST;
-      delete output.T2CODE_DEV_AUTH_TOKEN;
     }
   } else {
-    output.T3CODE_PORT = String(serverPort);
+    output.T2CODE_PORT = String(serverPort);
     output.VITE_HTTP_URL = `http://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
     output.VITE_WS_URL = `ws://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
     // Desktop pins the renderer to loopback on purpose; an ambient marker
     // must not make Vite drop those URLs.
-    delete output.T3CODE_SINGLE_ORIGIN_DEV;
-    delete output.T3CODE_MODE;
-    delete output.T3CODE_NO_BROWSER;
-    delete output.T3CODE_HOST;
-    delete output.T3CODE_DEV_AUTH_TOKEN;
+    delete output.T2CODE_SINGLE_ORIGIN_DEV;
+    delete output.T2CODE_MODE;
+    delete output.T2CODE_NO_BROWSER;
+    delete output.T2CODE_HOST;
+    delete output.T2CODE_DEV_AUTH_TOKEN;
   }
 
   if (!isDesktopMode && host !== undefined) {
@@ -682,7 +645,7 @@ const prepareFirstStart = Effect.fn("dev-runner.prepareFirstStart")(function* (i
         );
       }
     }
-    const source = path.join(yield* HostProcess.HomeDirectory, ".t3", "userdata", "statev2.sqlite");
+    const source = path.join(yield* HostProcess.HomeDirectory, ".t2", "userdata", "statev2.sqlite");
     // A V1 state.sqlite counts as data too: the server imports it only while
     // statev2.sqlite is missing, so seeding would hide it.
     if (
@@ -692,7 +655,7 @@ const prepareFirstStart = Effect.fn("dev-runner.prepareFirstStart")(function* (i
       (yield* exists(source))
     ) {
       yield* Effect.logInfo(
-        `[dev-runner] seeding ${input.worktreeHome} from ${source} (read-only). --no-seed or T3CODE_DEV_SEED=0 skips this.`,
+        `[dev-runner] seeding ${input.worktreeHome} from ${source} (read-only). --no-seed or T2CODE_DEV_SEED=0 skips this.`,
       );
       yield* runRepoScript(
         "apps/server/scripts/migrate-dev-db.ts",
@@ -760,45 +723,52 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
     worktreePath,
   });
 
-    const hostEnvironment = yield* HostProcess.Environment;
-    // A dev server started inside a worktree defaults to that worktree's own
-    // (gitignored) `.t2` — see @t2code/shared/devHome for why this must
-    // outrank an ambient T2CODE_HOME. `--home-dir` still wins.
-    const worktreeHome = yield* resolveWorktreeT2Home(yield* HostProcess.WorkingDirectory);
-    // Trim before choosing: `--home-dir ""` is not a selection, and treating it
-    // as one would skip the worktree default and land on the shared home —
-    // exactly the outcome this precedence exists to prevent.
-    const resolvedT2Home =
-      (input.t2Home?.trim() || undefined) ??
-      worktreeHome ??
-      (hostEnvironment.T2CODE_HOME?.trim() || undefined) ??
-      (hostEnvironment.T2CODE_HOME?.trim() || undefined);
-    const env = yield* createDevRunnerEnv({
-      mode: input.mode,
-      baseEnv: hostEnvironment,
-      serverOffset,
-      webOffset,
-      t2Home: resolvedT2Home,
-      browser: input.browser,
-      autoBootstrapProjectFromCwd: input.autoBootstrapProjectFromCwd,
-      logWebSocketEvents: input.logWebSocketEvents,
-      host: input.host,
-      port: input.port,
-      devUrl: input.devUrl,
-    });
+  const { serverOffset, webOffset } = yield* resolveModePortOffsets({
+    mode: input.mode,
+    startOffset: offset,
+    hasExplicitServerPort: input.port !== undefined,
+    hasExplicitDevUrl: input.devUrl !== undefined,
+    checkPortAvailability: makeDefaultCheckPortAvailability(input.host),
+  });
 
-    const selectionSuffix =
-      serverOffset !== offset || webOffset !== offset
-        ? ` selectedOffset(server=${serverOffset},web=${webOffset})`
-        : "";
-    const baseDir = env.T2CODE_HOME ?? (yield* DEFAULT_T2_HOME);
+  const hostEnvironment = yield* HostProcess.Environment;
+  // A dev server started inside a worktree defaults to that worktree's own
+  // (gitignored) `.t2` — see @t2code/shared/devHome for why this must
+  // outrank an ambient T2CODE_HOME. `--home-dir` still wins.
+  const worktreeHome = yield* resolveWorktreeT2Home(yield* HostProcess.WorkingDirectory);
+  // Trim before choosing: `--home-dir ""` is not a selection, and treating it
+  // as one would skip the worktree default and land on the shared home —
+  // exactly the outcome this precedence exists to prevent.
+  const resolvedT2Home =
+    (input.t2Home?.trim() || undefined) ??
+    worktreeHome ??
+    (hostEnvironment.T2CODE_HOME?.trim() || undefined);
+  const env = yield* createDevRunnerEnv({
+    mode: input.mode,
+    baseEnv: hostEnvironment,
+    serverOffset,
+    webOffset,
+    t2Home: resolvedT2Home,
+    browser: input.browser,
+    autoBootstrapProjectFromCwd: input.autoBootstrapProjectFromCwd,
+    logWebSocketEvents: input.logWebSocketEvents,
+    host: input.host,
+    port: input.port,
+    devUrl: input.devUrl,
+  });
 
-    yield* Effect.logInfo(
-      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T2CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
-    );
+  const selectionSuffix =
+    serverOffset !== offset || webOffset !== offset
+      ? ` selectedOffset(server=${serverOffset},web=${webOffset})`
+      : "";
+  const baseDir = env.T2CODE_HOME ?? (yield* DEFAULT_T2_HOME);
 
   yield* Effect.logInfo(
-    `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T3CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
+    `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T2CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
+  );
+
+  yield* Effect.logInfo(
+    `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T2CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
   );
 
   // Before the share block: --dry-run only resolves and prints. Sharing would
@@ -830,7 +800,7 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
           ...(input.built
             ? {
                 localTarget: {
-                  port: Number(env.T3CODE_PORT),
+                  port: Number(env.T2CODE_PORT),
                   host: ["::1", "[::1]"].includes(input.host?.trim() ?? "") ? "[::1]" : "127.0.0.1",
                 },
               }
@@ -1004,9 +974,9 @@ const devRunnerCli = Command.make("dev-runner", {
   ),
   seed: Flag.Boolean("seed").pipe(
     Flag.withDescription(
-      "Seed an empty worktree database from ~/.t3 on first start (read-only, via migrate-dev-db). On by default; --no-seed or T3CODE_DEV_SEED=0 skips it.",
+      "Seed an empty worktree database from ~/.t2 on first start (read-only, via migrate-dev-db). On by default; --no-seed or T2CODE_DEV_SEED=0 skips it.",
     ),
-    Flag.withFallbackConfig(optionalBooleanConfig("T3CODE_DEV_SEED")),
+    Flag.withFallbackConfig(optionalBooleanConfig("T2CODE_DEV_SEED")),
   ),
   built: Flag.Boolean("built").pipe(
     Flag.withDescription(

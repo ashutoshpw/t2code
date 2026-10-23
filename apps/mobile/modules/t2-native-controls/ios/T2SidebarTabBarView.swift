@@ -1,7 +1,7 @@
 import ExpoModulesCore
 import UIKit
 
-final class T3SidebarTabBarView: ExpoView, UITabBarDelegate {
+final class T2SidebarTabBarView: ExpoView, UITabBarDelegate {
   let onSelectionChange = EventDispatcher()
   private let tabBar = UITabBar()
   var selectedIndex = 0 { didSet { updateSelection() } }
@@ -12,7 +12,7 @@ final class T3SidebarTabBarView: ExpoView, UITabBarDelegate {
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
-    let iconBundle = Bundle(for: Self.self).url(forResource: "T3NativeControlIcons", withExtension: "bundle").flatMap(Bundle.init(url:))
+    let iconBundle = Bundle(for: Self.self).url(forResource: "T2NativeControlIcons", withExtension: "bundle").flatMap(Bundle.init(url:))
     let pullRequestIcon = UIImage(named: "pull-request", in: iconBundle, compatibleWith: nil)?.withRenderingMode(.alwaysTemplate)
     tabBar.items = [
       UITabBarItem(title: "Threads", image: tabIcon(UIImage(systemName: "text.bubble")), tag: 0),

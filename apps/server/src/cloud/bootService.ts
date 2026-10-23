@@ -33,10 +33,11 @@ import {
 } from "./serviceProtocol.ts";
 
 const BOOT_SERVICE_NAME = "t2code";
+const CLI_PACKAGE_NAME = "@t2code/cli";
 export const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // `.service` suffix keeps the label distinct from the desktop app's bundle id
-// (com.t2tools.t2code), so launchd and TCC records never collide.
-export const BOOT_SERVICE_LAUNCHD_LABEL = "com.t2tools.t2code.service";
+// (codes.t2.desktop), so launchd and TCC records never collide.
+export const BOOT_SERVICE_LAUNCHD_LABEL = "codes.t2.desktop.service";
 export const BOOT_SERVICE_PLIST_FILE = `${BOOT_SERVICE_LAUNCHD_LABEL}.plist`;
 const BOOT_SERVICE_UNIT_ENV = "T2_BOOT_SERVICE_UNIT";
 export const BOOT_SERVICE_LOG_FILE = "boot-service.log";
@@ -452,11 +453,11 @@ export function formatBootServiceProblem(problem: BootServiceProblem): string {
     case "linger-disabled":
       return 'Lingering is disabled. T2 Code will stop when your last login session ends and will not start at boot. Run `sudo loginctl enable-linger "$(id -un)"` on this machine, then retry the service command as your normal user.';
     case "service-disabled":
-      return "The service is not enabled to start automatically. Run `t2code service install` to repair it.";
+      return "The service is not enabled to start automatically. Run `t2 service install` to repair it.";
     case "service-stopped":
-      return "The service is not running. Check the service log and `systemctl --user status t2code.service`, then run `t2code service install`.";
+      return "The service is not running. Check the service log and `systemctl --user status t2code.service`, then run `t2 service install`.";
     case "restart-pending":
-      return "A newer version is installed but the service is still running the previous one. Run `t2code service restart` to switch.";
+      return "A newer version is installed but the service is still running the previous one. Run `t2 service restart` to switch.";
   }
 }
 
@@ -486,7 +487,7 @@ export class BootServiceDowngradeRefusedError extends Schema.TaggedError<BootSer
   },
 ) {
   override get message(): string {
-    return `Refusing to replace ${CLI_PACKAGE_NAME}@${this.installedVersion} with older ${CLI_PACKAGE_NAME}@${this.targetVersion}. Run the command again with --allow-downgrade to continue.`;
+    return `Refusing to replace t2@${this.installedVersion} with older t2@${this.targetVersion}. Run the command again with --allow-downgrade to continue.`;
   }
 }
 
@@ -503,12 +504,6 @@ export interface BootServiceStatus {
   readonly installed: boolean;
   readonly current: boolean;
   readonly installedVersion?: string;
-  /**
-   * The T2 home the installed unit serves. The unit name is fixed per user,
-   * so a caller working against another base dir must not treat this service
-   * as its own; `t2code update --base-dir` learned that by restarting the live
-   * server of the machine it ran on.
-   */
   readonly installedBaseDir?: string;
   readonly problems?: ReadonlyArray<BootServiceProblem>;
   readonly unitPath: string;
@@ -520,11 +515,6 @@ export class BootService extends Context.Service<
   {
     readonly install: (options?: {
       readonly allowDowngrade?: boolean;
-      /**
-       * Write the unit for this version but leave the service on whatever it
-       * is running now. `t2code update` uses this when the user declines the
-       * restart, so a later `t2code service restart` lands on the new version.
-       */
       readonly start?: boolean;
     }) => Effect.Effect<BootServicePlan, BootServiceError>;
     /**
@@ -628,14 +618,12 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
         );
       }),
     ).pipe(Effect.mapError((cause) => new BootServiceInstallError({ cause })));
-  // The executable hosts the launcher as a hidden subcommand of itself, so
-  // the unit runs the pinned runtime directly.
-  const buildPlan = Effect.succeed<BootServicePlan>({
+  const plan: BootServicePlan = {
     program: [runtimePaths.entryPath, "__service-launcher"],
     baseDir: input.baseDir,
     logPath,
     unitPath,
-  });
+  };
 
   const requireManager = Effect.suspend(() =>
     detectedManager === undefined
@@ -782,7 +770,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
             Effect.mapError(
               (cause) =>
                 new PinnedRuntimeInstallError({
-                  step: "verifying the pinned t2code runtime",
+                  step: "verifying the pinned t2 runtime",
                   cause,
                 }),
             ),
@@ -792,7 +780,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
                 ? Effect.void
                 : Effect.fail(
                     new PinnedRuntimeInstallError({
-                      step: "verifying the pinned t2code runtime",
+                      step: "verifying the pinned t2 runtime",
                       exitCode: Number(result.code),
                       stdoutLength: result.stdout.length,
                       stderrLength: result.stderr.length,
@@ -848,9 +836,6 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
       yield* runSteps(manager.stop);
     }
 
-    const renderedPlan = yield* buildPlan.pipe(
-      Effect.mapError((cause) => new BootServiceInstallError({ cause })),
-    );
     yield* Effect.gen(function* () {
       if (installed) {
         const previousStateText = yield* fs.readFileString(statePath).pipe(Effect.option);
@@ -902,7 +887,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
           return yield* new BootServiceUpdatePendingError();
         }
       }
-      yield* writeDurably(unitPath, manager.render(renderedPlan));
+      yield* writeDurably(unitPath, manager.render(plan));
 
       if (start) {
         yield* runSteps(manager.activate);
@@ -916,7 +901,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
         installed && start ? runSteps(manager.restart).pipe(Effect.ignore) : Effect.void,
       ),
     );
-    return renderedPlan;
+    return plan;
   });
 
   const restart: BootService["Service"]["restart"] = Effect.gen(function* () {
@@ -1052,7 +1037,7 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
       problems,
       current:
         problems.length === 0 &&
-        normalizeUnit(unit) === normalizeUnit(detectedManager.render(yield* buildPlan)) &&
+        normalizeUnit(unit) === normalizeUnit(detectedManager.render(plan)) &&
         runtimeEntryExists &&
         Option.isSome(runtimeSentinel) &&
         runtimeSentinel.value.trim() === input.cliVersion &&

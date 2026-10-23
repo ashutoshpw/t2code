@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "@effect/vitest";
-import { withRelayClientTracing } from "@t3tools/shared/relayTracing";
+import { withRelayClientTracing } from "@t2code/shared/relayTracing";
 import * as Effect from "effect/Effect";
 import * as Tracer from "effect/Tracer";
 
@@ -28,8 +28,8 @@ describe("web runtime relay telemetry policy", () => {
     },
   ])("applies $surface before the first relay span", async ({ desktopBridge, exports }) => {
     vi.resetModules();
-    vi.stubEnv("T3CODE_TELEMETRY_ENABLED", "false");
-    vi.stubEnv("T3CODE_OTEL_SDK_DISABLED", "true");
+    vi.stubEnv("T2CODE_TELEMETRY_ENABLED", "false");
+    vi.stubEnv("T2CODE_OTEL_SDK_DISABLED", "true");
     vi.stubEnv("OTEL_SDK_DISABLED", "true");
     vi.stubEnv("VITE_RELAY_OTLP_TRACES_URL", "https://telemetry.example.test/v1/traces");
     vi.stubEnv("VITE_RELAY_OTLP_TRACES_DATASET", "relay-test");

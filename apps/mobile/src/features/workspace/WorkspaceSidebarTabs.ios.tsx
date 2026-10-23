@@ -12,7 +12,7 @@ const NativeSidebarTabBar = requireNativeView<
     appearance: string;
     onSelectionChange: (event: NativeSyntheticEvent<{ index: number }>) => void;
   }
->("T3NativeControls", "SidebarTabBar");
+>("T2NativeControls", "SidebarTabBar");
 
 export function WorkspaceSidebarTabs() {
   const workspace = useWorkspaceTabs()!;

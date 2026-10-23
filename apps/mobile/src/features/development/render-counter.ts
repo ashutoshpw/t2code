@@ -26,7 +26,7 @@ interface HookSlot {
 }
 interface DevToolsHook {
   onCommitFiberRoot?: (id: unknown, root: { current: Fiber }, ...rest: unknown[]) => unknown;
-  __t3RenderCounter?: true;
+  __t2RenderCounter?: true;
 }
 interface RenderCounterState {
   on: boolean;
@@ -108,8 +108,8 @@ function install(state: RenderCounterState) {
     setTimeout(() => install(state), 50);
     return;
   }
-  if (hook.__t3RenderCounter) return;
-  hook.__t3RenderCounter = true;
+  if (hook.__t2RenderCounter) return;
+  hook.__t2RenderCounter = true;
   const original = hook.onCommitFiberRoot.bind(hook);
 
   const visit = (fiber: Fiber | null, parentName: string) => {
@@ -146,25 +146,25 @@ install(state);
 
 Object.assign(globalThis, {
   /** Routes an app link in-process, so drivers need no simctl or adb access. */
-  __t3RenderCounterOpen(url: string) {
+  __t2RenderCounterOpen(url: string) {
     const { Linking } = require("react-native") as typeof import("react-native");
     void Linking.openURL(url);
     return true;
   },
   /** Restarts the JS app on Home; deferred so the inspector call can reply first. */
-  __t3RenderCounterReload() {
+  __t2RenderCounterReload() {
     const { DevSettings } = require("react-native") as typeof import("react-native");
     setTimeout(() => DevSettings.reload(), 100);
     return true;
   },
-  __t3RenderCounterStart() {
+  __t2RenderCounterStart() {
     state.commits = 0;
     state.counts = new Map();
     state.causes = new Map();
     state.on = true;
     return true;
   },
-  __t3RenderCounterStop(): RenderCounterReport {
+  __t2RenderCounterStop(): RenderCounterReport {
     state.on = false;
     const components = sorted(state.counts);
     return {

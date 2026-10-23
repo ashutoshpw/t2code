@@ -1,7 +1,7 @@
 import {
   getPromptControlledTraits,
   getTraitSelectChange,
-} from "@t3tools/client-runtime/model-traits";
+} from "@t2code/client-runtime/model-traits";
 import { SheetHeader } from "../../components/ui/SheetHeader";
 import { Toolbar } from "../../components/ui/Toolbar";
 import * as Dialog from "../../components/ui/Dialog";

@@ -454,7 +454,7 @@ class T2ComposerEditorView(context: Context, appContext: AppContext) : ExpoView(
       if (token.start < 0 || token.end <= token.start || token.end > editable.length) return@forEach
       val expectedSource = editable.substring(token.start, token.end)
       if (expectedSource != token.source) return@forEach
-      T3ChipIcons.load(context, token.iconUri, redrawChipsWithIcon)
+      T2ChipIcons.load(context, token.iconUri, redrawChipsWithIcon)
       editable.setSpan(
         ComposerChipSpan(
           T2ContextChip(
@@ -465,7 +465,7 @@ class T2ComposerEditorView(context: Context, appContext: AppContext) : ExpoView(
               tintsIcon = token.tintsIcon
             ),
             fontSize = editor.textSize,
-            color = T3ContextChip.color(token.accent, editor.currentTextColor),
+            color = T2ContextChip.color(token.accent, editor.currentTextColor),
             maximumWidth = (
               editor.width.takeIf {
                 it > 0

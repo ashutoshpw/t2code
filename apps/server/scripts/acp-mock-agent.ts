@@ -1539,7 +1539,7 @@ const program = Effect.gen(function* () {
           },
         });
         if (exitAfterRunningCommandLaunch) {
-          // The test sends `_test/exit` once T3 has recorded the published processes.
+          // The test sends `_test/exit` once T2 has recorded the published processes.
           yield* Effect.promise(() => runningCommandPublished);
           return yield* Effect.never;
         }

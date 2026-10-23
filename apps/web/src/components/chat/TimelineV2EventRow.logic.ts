@@ -1,4 +1,4 @@
-import { type OrchestrationV2TurnItem } from "@t3tools/contracts";
+import { type OrchestrationV2TurnItem } from "@t2code/contracts";
 import { providerErrorPresentation } from "../../session-logic";
 import {
   CheckIcon,

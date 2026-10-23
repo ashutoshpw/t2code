@@ -1,5 +1,5 @@
 import { useStableCallback } from "../../hooks/useStableCallback";
-import { type EnvironmentId, type MessageId } from "@t3tools/contracts";
+import { type EnvironmentId, type MessageId } from "@t2code/contracts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { selectHandoffImageResources } from "../../session-logic";
 import { type ChatMessage } from "../../types";

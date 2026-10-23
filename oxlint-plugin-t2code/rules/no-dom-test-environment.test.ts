@@ -2,9 +2,9 @@ import { describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const rule = createOxlintRuleHarness("t3code/no-dom-test-environment");
+const rule = createOxlintRuleHarness("t2code/no-dom-test-environment");
 
-describe("t3code/no-dom-test-environment", () => {
+describe("t2code/no-dom-test-environment", () => {
   rule.valid("allows browser tests", 'import { page } from "vite-plus/test/browser";');
   rule.valid("allows similarly named packages", 'import "jsdom-helper";');
   rule.invalid("rejects line pragmas", "// @vitest-environment jsdom\nexport {};");

@@ -13,10 +13,7 @@ import * as EnvironmentAuth from "./EnvironmentAuth.ts";
 import * as ServerSecretStore from "./ServerSecretStore.ts";
 import * as SessionStore from "./SessionStore.ts";
 
-/** Pinned so dev-mode cookie tests can assert the port-scoped name. */
 const TEST_SERVER_PORT = 13_772;
-const isPairingCredentialIssueError = Schema.is(PairingGrantStore.PairingCredentialIssueError);
-const isPersistenceSqlError = Schema.is(PersistenceErrors.PersistenceSqlError);
 
 const layerServerConfig = (overrides?: Partial<ServerConfig.ServerConfig["Service"]>) =>
   Layer.effect(
@@ -569,11 +566,11 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
       const post = (headers: Record<string, string>) =>
         serverAuth.authenticateHttpRequest({
           cookies: { [sessions.cookieName]: exchanged.sessionToken },
-          headers: { host: "localhost:13773", ...headers },
+          headers: { host: "localhost:13772", ...headers },
         } as never);
 
       yield* post({ origin: "http://192.168.1.50:5733", "sec-fetch-site": "same-origin" });
-      yield* post({ origin: "http://localhost:13773" });
+      yield* post({ origin: "http://localhost:13772" });
 
       const otherPort = yield* Effect.flip(
         post({ origin: "http://localhost:3000", "sec-fetch-site": "same-site" }),
@@ -581,7 +578,7 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
       expect(otherPort._tag).toBe("ServerAuthInvalidCredentialError");
       const state = yield* serverAuth.getSessionState({
         cookies: { [sessions.cookieName]: exchanged.sessionToken },
-        headers: { host: "localhost:13773", origin: "http://localhost:3000" },
+        headers: { host: "localhost:13772", origin: "http://localhost:3000" },
       } as never);
       expect(state.authenticated).toBe(false);
     }).pipe(Effect.provide(layerEnvironmentAuth({ mode: "web" }))),

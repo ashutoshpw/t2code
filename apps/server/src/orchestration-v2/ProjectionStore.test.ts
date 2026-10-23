@@ -187,7 +187,7 @@ const addRolledBackRecoveryCandidate = Effect.fn("addRolledBackRecoveryCandidate
 it.effect.each([
   ["memory", ProjectionStore.layerMemory],
   ["SQL", layerTest],
-] as const)("%s shells flag only an active turn blocked solely on T3 thread waits", ([, layer]) =>
+] as const)("%s shells flag only an active turn blocked solely on T2 thread waits", ([, layer]) =>
   Effect.gen(function* () {
     const store = yield* ProjectionStore.ProjectionStoreV2;
     const threadId = yield* addRolledBackRecoveryCandidate("thread-wait");
@@ -246,7 +246,7 @@ it.effect.each([
       id: TurnItemId.make("item:thread-wait:active"),
       runId: run.id,
       type: "dynamic_tool" as const,
-      toolName: "mcp__t3_code__t3_thread_wait",
+      toolName: "mcp__t2_code__t2_thread_wait",
       input: { threadId: "child-thread" },
       status: "running" as const,
     };
@@ -260,7 +260,7 @@ it.effect.each([
     const foreign = {
       ...wait,
       id: TurnItemId.make("item:thread-wait:foreign"),
-      toolName: "weather.t3_thread_wait",
+      toolName: "weather.t2_thread_wait",
     };
     yield* updateItem(foreign);
     yield* assertBlocked(false);
@@ -342,7 +342,7 @@ it.effect.each([
     const delegation = {
       ...wait,
       id: TurnItemId.make("item:thread-wait:delegation"),
-      toolName: "t3-code-thread_opencode2-adapter_delegate_task",
+      toolName: "t2-code-thread_opencode2-adapter_delegate_task",
       input: { task: "Review", mode: "async" },
     };
     yield* updateItem(delegation);

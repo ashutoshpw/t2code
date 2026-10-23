@@ -5,7 +5,7 @@ import {
   type ComposerContextRecord,
   type EnvironmentId,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   type ComposerFileAttachment,
   type ComposerImageAttachment,
@@ -38,7 +38,7 @@ import { pendingDraftWork } from "./pendingDraftWork";
 import { randomUUID } from "~/lib/utils";
 import { readPreparedConnection } from "~/state/session";
 import { resolveAssetUrl } from "~/assets/assetUrls";
-import { toKindScopedComposerContextId } from "@t3tools/shared/composerContextReferences";
+import { toKindScopedComposerContextId } from "@t2code/shared/composerContextReferences";
 import { toastManager } from "../ui/toast";
 import {
   type ComposerDraftContextRecords,

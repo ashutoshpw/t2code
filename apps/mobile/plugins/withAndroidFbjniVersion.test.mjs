@@ -55,7 +55,7 @@ async function prebuildRootGradle(fileName, contents, plugin = withAndroidFbjniV
   projectRoots.push(projectRoot);
   NodeFS.mkdirSync(NodePath.join(projectRoot, "android"));
   NodeFS.writeFileSync(NodePath.join(projectRoot, "android", fileName), contents);
-  await compileModsAsync(plugin({ name: "t3", slug: "t3" }), {
+  await compileModsAsync(plugin({ name: "t2", slug: "t2" }), {
     projectRoot,
     platforms: ["android"],
   });

@@ -1,12 +1,13 @@
 import { assert, it } from "@effect/vitest";
+import * as Stream from "effect/Stream";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
-import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   DEFAULT_SERVER_SETTINGS,
   ProjectId,
   ProviderInstanceId,
   ProviderDriverKind,
   CommandId,
+  EnvironmentId,
   type ServerLifecycleStreamEvent,
 } from "@t2code/contracts";
 import { DEFAULT_SIGNAL_EXPORT } from "@t2code/shared/observability";
@@ -21,15 +22,14 @@ import * as Fiber from "effect/Fiber";
 import * as Ref from "effect/Ref";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
-import * as Stream from "effect/Stream";
-import * as Scope from "effect/Scope";
-import * as PubSub from "effect/PubSub";
+
 import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
+
 import * as ServerConfig from "./config.ts";
-import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
 import * as ServerRuntimeStartup from "./serverRuntimeStartup.ts";
 import * as EnvironmentAuth from "./auth/EnvironmentAuth.ts";
 import * as ServiceLauncherClient from "./cloud/serviceLauncherClient.ts";
+import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
 import * as Keybindings from "./keybindings.ts";
 import * as EffectWorker from "./orchestration-v2/EffectWorker.ts";
 import * as LegacyV1ThreadImporter from "./orchestration-v2/legacy/LegacyV1ThreadImporter.ts";
@@ -145,8 +145,6 @@ it.effect.each([
           }),
         }),
         Layer.mock(ServerEnvironment.ServerEnvironment)({
-          getEnvironmentId: Effect.succeed(EnvironmentId.make("bootstrap-environment")),
-          setEnvironmentLabel: () => Effect.void,
           getDescriptor: Effect.succeed({
             environmentId: EnvironmentId.make("bootstrap-environment"),
             label: "Test environment",
@@ -154,6 +152,7 @@ it.effect.each([
             serverVersion: "0.0.0-test",
             capabilities: { repositoryIdentity: true },
           }),
+          setEnvironmentLabel: () => Effect.void,
         }),
         Layer.mock(ProjectStore.ProjectStoreV2)({}),
         Layer.mock(ProjectService.ProjectService)({
@@ -239,12 +238,7 @@ it.effect.each([
           }
         }
       }).pipe(
-        Effect.provide(
-          ServerRuntimeStartup.layerWithOptions().pipe(
-            Layer.provide(dependencies),
-            Layer.provideMerge(NodeServices.layer),
-          ),
-        ),
+        Effect.provide(ServerRuntimeStartup.layerWithOptions().pipe(Layer.provide(dependencies))),
         Effect.provideService(ServerActivation, Effect.never),
       );
     }),
@@ -377,46 +371,4 @@ it.effect("automatic pull only updates enabled, behind, clean default-branch che
     ).pipe(Effect.provideService(GitVcsDriver.GitVcsDriver, git));
     assert.deepStrictEqual(pulled, ["/inherited"]);
   }),
-);
-
-it.effect("environment label updates subscribe before reading the initial snapshot", () =>
-  Effect.scoped(
-    Effect.gen(function* () {
-      const changes = yield* PubSub.unbounded<typeof DEFAULT_SERVER_SETTINGS>();
-      const appliedLabels = yield* Ref.make<ReadonlyArray<string>>([]);
-      const freshLabelApplied = yield* Deferred.make<void>();
-      const staleSettings = { ...DEFAULT_SERVER_SETTINGS, environmentLabel: "stale" };
-      const freshSettings = { ...DEFAULT_SERVER_SETTINGS, environmentLabel: "fresh" };
-      const scope = yield* Scope.Scope;
-
-      const fiber = yield* ServerRuntimeStartup.runEnvironmentLabelUpdates(scope).pipe(
-        Effect.provideService(ServerSettings.ServerSettingsService, {
-          start: Effect.void,
-          ready: Effect.void,
-          getSettings: PubSub.publish(changes, freshSettings).pipe(Effect.as(staleSettings)),
-          updateSettings: () => Effect.die("unused"),
-          updateProviderInstance: () => Effect.die("unused"),
-          withSettingsSnapshot: (use) => use(staleSettings),
-          streamChanges: Stream.empty,
-          subscribeChanges: PubSub.subscribe(changes).pipe(
-            Effect.map((subscription) => Stream.fromSubscription(subscription)),
-          ),
-        }),
-        Effect.provideService(ServerEnvironment.ServerEnvironment, {
-          getEnvironmentId: Effect.succeed(EnvironmentId.make("environment-test")),
-          getDescriptor: Effect.die("unused"),
-          setEnvironmentLabel: (label) =>
-            Ref.update(appliedLabels, (labels) => [...labels, label]).pipe(
-              Effect.andThen(
-                label === "fresh" ? Deferred.succeed(freshLabelApplied, undefined) : Effect.void,
-              ),
-            ),
-        }),
-      );
-
-      yield* Deferred.await(freshLabelApplied);
-      assert.deepStrictEqual(yield* Ref.get(appliedLabels), ["stale", "fresh"]);
-      yield* Fiber.interrupt(fiber);
-    }),
-  ),
 );

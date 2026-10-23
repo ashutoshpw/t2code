@@ -1,4 +1,4 @@
-import { classifyChangedFile } from "@t3tools/shared/changedFileKind";
+import { classifyChangedFile } from "@t2code/shared/changedFileKind";
 import type { ReviewParsedDiff } from "../review/reviewModel";
 
 /** Test support such as fixtures and snapshots is hidden along with the tests. */

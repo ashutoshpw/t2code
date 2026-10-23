@@ -120,7 +120,7 @@ function ownersOf(file, packages) {
   if (RUNS_EVERYTHING.some((pattern) => pattern.test(file))) return null;
   const extra = EXTRA_OWNERS.flatMap(([pattern, names]) => (pattern.test(file) ? names : []));
   // scripts/build-desktop-artifact.test.ts reads the crates' sources.
-  if (RUST.test(file)) return ["@t3tools/scripts", ...extra];
+  if (RUST.test(file)) return ["@t2code/scripts", ...extra];
 
   const owner = packages
     .filter((pkg) => file.startsWith(`${pkg.dir}/`))

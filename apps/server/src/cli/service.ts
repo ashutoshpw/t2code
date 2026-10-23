@@ -62,9 +62,9 @@ function formatServiceChange(
   result: Extract<ServiceReconcileResult, { readonly changed: true }>,
 ): string {
   if (result.plan.handedOff === true) {
-    return `Handed the T3 Code service switch to t3@${packageJson.version} to a separate systemd unit, since this session runs inside the service and disconnects when it restarts.\nResult: ${result.plan.logPath}`;
+    return `Handed the T2 Code service switch to t2@${packageJson.version} to a separate systemd unit, since this session runs inside the service and disconnects when it restarts.\nResult: ${result.plan.logPath}`;
   }
-  return `${result.previouslyInstalled ? "Updated" : "Installed"} T3 Code service with t3@${packageJson.version}.\nLogs: ${result.plan.logPath}`;
+  return `${result.previouslyInstalled ? "Updated" : "Installed"} T2 Code service with t2@${packageJson.version}.\nLogs: ${result.plan.logPath}`;
 }
 
 function formatServiceStatus(status: BootService.BootServiceStatus, cliVersion: string): string {
@@ -175,7 +175,7 @@ const serviceRestartCommand = Command.make("restart", projectLocationFlags).pipe
         const status = yield* service.status;
         const outcome = yield* service.restart;
         const onVersion =
-          status.installedVersion === undefined ? "" : ` on t3@${status.installedVersion}`;
+          status.installedVersion === undefined ? "" : ` on t2@${status.installedVersion}`;
         yield* Console.log(
           outcome === "restarted"
             ? `Restarted the T2 Code service${onVersion}.`

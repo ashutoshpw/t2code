@@ -2564,7 +2564,7 @@ const stageMacIcons = Effect.fn("build-desktop-artifact.stageMacIcons")(function
   }
 
   const tmpRoot = yield* fs.makeTempDirectoryScoped({
-    prefix: "t3code-icon-build-",
+    prefix: "t2code-icon-build-",
   });
 
   const iconPngPath = path.join(stageResourcesDir, "icon.png");
@@ -3096,10 +3096,10 @@ export const stageWslRuntimeArchive = Effect.fn("stageWslRuntimeArchive")(functi
 });
 
 // WSL runs the same CPU arch as the Windows host.
-const wslRuntimePlatformKey = (arch: DesktopRuntimeArch): CliArchivePlatformKey =>
+const wslRuntimePlatformKey = (arch: typeof BuildArch.Type): CliArchivePlatformKey =>
   arch === "arm64" ? "linux-arm64" : "linux-x64";
 
-export const wslRuntimeArchiveStem = (version: string, arch: DesktopRuntimeArch): string =>
+export const wslRuntimeArchiveStem = (version: string, arch: typeof BuildArch.Type): string =>
   sharedCliArchiveStem(version, wslRuntimePlatformKey(arch));
 
 export const parseWslRuntimeArchiveMembers = (listing: string): ReadonlyArray<string> =>
@@ -3290,7 +3290,7 @@ export const verifyWindowsPrimaryFffNativeLoad = Effect.fn(
   readonly packagedAppDir: string;
   readonly asarPath: string;
   readonly appExecutableName: string;
-  readonly targetArch: DesktopRuntimeArch;
+  readonly targetArch: typeof BuildArch.Type;
   readonly verbose: boolean;
 }) {
   const hostPlatform = yield* HostProcess.Platform;
@@ -3396,7 +3396,7 @@ export const validateWindowsPackagedPayload = Effect.fn(
 )(function* (input: {
   readonly stageDistDir: string;
   readonly appExecutableName: string;
-  readonly targetArch: DesktopRuntimeArch;
+  readonly targetArch: typeof BuildArch.Type;
   // The version the embedded Linux CLI archive must carry; its top-level
   // directory is named t2-<version>-linux-<arch>.
   readonly appVersion: string;

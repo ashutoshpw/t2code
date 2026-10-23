@@ -34,7 +34,7 @@ export const THEME_FOLLOW_SYSTEM_STORAGE_KEY = "t2code:theme-follow-system";
 export const THEME_APPEARANCE_MODE_STORAGE_KEY = "t2code:theme-appearance-mode";
 export const THEME_HALVES_STORAGE_KEY = "t2code:theme-halves:v1";
 
-const LEGACY_T3_CHAT_DARK_THEME_ID = "t3-chat-dark";
+const LEGACY_T2_CHAT_DARK_THEME_ID = "t3-chat-dark";
 
 export const ThemePreference = Schema.String;
 export type ThemePreference = typeof ThemePreference.Type;
@@ -289,7 +289,7 @@ export function subscribeToCustomThemes(listener: () => void): () => void {
 // Theme ids older builds stored under their old brand prefix. They are
 // read, never written, so they keep the spelling that is on disk.
 const LEGACY_THEME_ID_ALIASES: Readonly<Record<string, string>> = {
-  [LEGACY_T3_CHAT_DARK_THEME_ID]: T2_CHAT_THEME_ID,
+  [LEGACY_T2_CHAT_DARK_THEME_ID]: T2_CHAT_THEME_ID,
   "t3-grove": GROVE_THEME_ID,
   "t3-ocean": OCEAN_THEME_ID,
   "t3-ember": EMBER_THEME_ID,
@@ -301,7 +301,7 @@ function normalizeThemeId(themeId: string): string {
 }
 
 export function canonicalThemePreference(theme: string): string {
-  return theme === LEGACY_T3_CHAT_DARK_THEME_ID ? theme : normalizeThemeId(theme);
+  return theme === LEGACY_T2_CHAT_DARK_THEME_ID ? theme : normalizeThemeId(theme);
 }
 
 function themeIdFromPreference(theme: ThemePreference): string {
@@ -309,7 +309,7 @@ function themeIdFromPreference(theme: ThemePreference): string {
 }
 
 function legacyThemeMode(theme: ThemePreference): ThemeAppearance | null {
-  return theme === LEGACY_T3_CHAT_DARK_THEME_ID ? "dark" : null;
+  return theme === LEGACY_T2_CHAT_DARK_THEME_ID ? "dark" : null;
 }
 
 /**

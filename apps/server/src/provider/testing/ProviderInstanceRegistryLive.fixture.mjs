@@ -10,10 +10,10 @@ if (process.argv.includes("--version")) {
   process.stdout.write("claude 2.1.219\n");
   process.exit(0);
 }
-const loginMarker = process.env.T3_CLAUDE_LOGIN_MARKER;
+const loginMarker = process.env.T2_CLAUDE_LOGIN_MARKER;
 const signedOut = loginMarker !== undefined && !NodeFS.existsSync(loginMarker);
-if (process.env.T3_CLAUDE_PROBE_LOG)
-  NodeFS.appendFileSync(process.env.T3_CLAUDE_PROBE_LOG, "probe\n");
+if (process.env.T2_CLAUDE_PROBE_LOG)
+  NodeFS.appendFileSync(process.env.T2_CLAUDE_PROBE_LOG, "probe\n");
 const lines = NodeReadline.createInterface({ input: process.stdin });
 lines.on("line", (line) => {
   const message = JSON.parse(line);

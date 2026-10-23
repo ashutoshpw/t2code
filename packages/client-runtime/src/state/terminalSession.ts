@@ -22,7 +22,7 @@ export {
   type TerminalOutputState,
   type TerminalOutputUpdate,
 } from "./terminalOutput.ts";
-export { DEFAULT_MAX_TERMINAL_BUFFER_BYTES } from "@t3tools/contracts";
+export { DEFAULT_MAX_TERMINAL_BUFFER_BYTES } from "@t2code/contracts";
 
 export interface TerminalSessionState {
   readonly summary: TerminalSummary | null;

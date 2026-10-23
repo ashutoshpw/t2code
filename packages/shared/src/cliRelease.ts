@@ -1,11 +1,19 @@
-const CLI_RELEASE_REPOSITORY = "pingdotgg/t2code";
+/**
+ * Naming shared by the release workflow, the runtime installers, and
+ * install scripts for the per-platform CLI archives attached to GitHub
+ * Releases. Every consumer derives archive file names from a version and
+ * platform key.
+ */
+
+const CLI_RELEASE_REPOSITORY = "ashutoshpw/t2code";
 export const CLI_RELEASES_PAGE_URL = `https://github.com/${CLI_RELEASE_REPOSITORY}/releases`;
 export const CLI_RELEASE_CHECKSUMS_FILE = "SHA256SUMS";
-/** Overrides the download origin for mirrors and air-gapped installs. */
 export const CLI_RELEASE_BASE_URL_ENV = "T2CODE_RELEASE_BASE_URL";
 
 /** Prefix used by self-contained CLI release archives. */
 const CLI_ARCHIVE_PREFIX = "t2";
+
+/** Overrides the download origin for mirrors and air-gapped installs. */
 
 /**
  * Kept in step with the build_linux_cli matrix, build_windows_arm64_cli, and
@@ -46,6 +54,7 @@ export function cliArchiveTarCommand(
   return `${systemRoot}\\System32\\tar.exe`;
 }
 
+/** Prefix used by self-contained CLI release archives. */
 export function cliArchiveStem(version: string, platformKey: CliArchivePlatformKey): string {
   return `${CLI_ARCHIVE_PREFIX}-${version}-${platformKey}`;
 }

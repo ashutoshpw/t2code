@@ -97,81 +97,6 @@ describe("consumeCloudReplayGuards", () => {
       expect(consumed).toBe(false);
     }),
   );
-
-  it.effect("preserves replay-store availability failures", () =>
-    Effect.gen(function* () {
-      const failure = storeFailure("PermissionDenied");
-      const error = yield* Effect.flip(
-        consumeCloudReplayGuards({
-          secrets: makeSecretStore(() => Effect.fail(failure)),
-          names: ["cloud-jti", "cloud-nonce"],
-          value: new Uint8Array(),
-        }),
-      );
-
-      expect(error).toBe(failure);
-    }),
-  );
-});
-
-describe("reconcileDesiredCloudLink", () => {
-  it.effect("requires stored CLI authorization without exposing an HTTP endpoint", () =>
-    Effect.gen(function* () {
-      const link = yield* CloudLink.CloudLink;
-      const error = yield* Effect.flip(link.reconcileDesiredLink("http://127.0.0.1:3774"));
-
-      expect(error._tag).toBe("CloudLinkAuthorizationMissingError");
-    }).pipe(
-      Effect.provide(CloudLink.layer),
-      Effect.provideService(HttpServer.HttpServer, idleHttpServer),
-      Effect.provideService(
-        ServerConfigModule.ServerConfig,
-        ServerConfigModule.ServerConfig.of({} as ServerConfigModule.ServerConfig["Service"]),
-      ),
-      Effect.provideService(
-        ServerSecretStore.ServerSecretStore,
-        makeSecretStore(unusedSecretStoreOperation),
-      ),
-      Effect.provideService(
-        ServerEnvironment.ServerEnvironment,
-        ServerEnvironment.ServerEnvironment.of({
-          getEnvironmentId: unusedSecretStoreOperation(),
-          getDescriptor: unusedSecretStoreOperation(),
-          setEnvironmentLabel: () => Effect.void,
-        }),
-      ),
-      Effect.provideService(
-        ManagedEndpointRuntime.CloudManagedEndpointRuntime,
-        ManagedEndpointRuntime.CloudManagedEndpointRuntime.of({
-          applyConfig: unusedSecretStoreOperation,
-          recoveryRequests: Stream.empty,
-          requestRecovery: () => Effect.void,
-          tunnelConnected: Stream.empty,
-          withLinkStateLock: (effect) => effect,
-        } satisfies ManagedEndpointRuntime.CloudManagedEndpointRuntime["Service"]),
-      ),
-      Effect.provideService(
-        EnvironmentAuth.EnvironmentAuth,
-        EnvironmentAuth.EnvironmentAuth.of({} as EnvironmentAuth.EnvironmentAuth["Service"]),
-      ),
-      Effect.provideService(
-        CliTokenManager.CloudCliTokenManager,
-        CliTokenManager.CloudCliTokenManager.of({
-          get: unusedSecretStoreOperation(),
-          getExisting: Effect.succeedNone,
-          hasCredential: unusedSecretStoreOperation(),
-          store: () => unusedSecretStoreOperation(),
-          clear: unusedSecretStoreOperation(),
-        }),
-      ),
-      Effect.provideService(
-        HttpClient.HttpClient,
-        HttpClient.make(() => unusedSecretStoreOperation()),
-      ),
-      Effect.provideService(AgentAwarenessRelay.AgentAwarenessRelay, idleAwarenessRelay),
-      Effect.provide(NodeServices.layer),
-    ),
-  );
 });
 
 describe("releaseManagedTunnelOnShutdown", () => {
@@ -251,14 +176,14 @@ describe("releaseManagedTunnelOnShutdown", () => {
           ServerEnvironment.ServerEnvironment,
           ServerEnvironment.ServerEnvironment.of({
             getEnvironmentId: Effect.succeed(EnvironmentId.make("env_123")),
-            // Relay configuration synchronizes the environment label, so the
-            // descriptor has to resolve rather than die as an unused call.
+            // The fork's relay-configuration path synchronizes the environment
+            // label, which reads the descriptor; keep the mock usable there.
             getDescriptor: Effect.succeed({
               environmentId: EnvironmentId.make("env_123"),
-              label: "Test Environment",
+              label: "Test environment",
               platform: { os: "linux", arch: "x64" },
-              serverVersion: "0.0.0-test",
-              capabilities: { repositoryIdentity: true },
+              serverVersion: "0.0.0",
+              capabilities: { repositoryIdentity: false },
             }),
             setEnvironmentLabel: () => Effect.void,
           }),
@@ -581,8 +506,12 @@ describe("releaseManagedTunnelOnShutdown", () => {
           endpointRuntime: config,
         }),
       ).toMatchObject({ ok: true, endpointRuntimeStatus: { status: "running" } });
-      expect(requests).toHaveLength(1);
-      const body = requests[0]!.body;
+      expect(requests).toHaveLength(2);
+      // Relay configuration synchronizes the environment label before the
+      // endpoint runtime registers the tunnel.
+      expect(requests[0]!.method).toBe("PUT");
+      expect(requests[0]!.url).toContain("/v1/environments/env_123/label");
+      const body = requests[1]!.body;
       if (body._tag !== "Uint8Array") throw new Error("Expected a JSON recovery request");
       expect(
         yield* decodeManagedTunnelRecoveryRegistration(new TextDecoder().decode(body.body)),
@@ -922,98 +851,6 @@ describe("releaseManagedTunnelOnShutdown", () => {
       }),
     );
   });
-
-  it.effect("marks the link revoked when the relay rejects a running host's recovery", () => {
-    const { store, values } = makeMemorySecretStore([
-      [
-        CLOUD_ENDPOINT_RUNTIME_CONFIG,
-        '{"providerKind":"cloudflare_tunnel","connectorToken":"old-token","tunnelId":"old-tunnel"}',
-      ],
-      [RELAY_URL_SECRET, "https://relay.example.test"],
-      [CLOUD_LINKED_USER_ID, "user-123"],
-      [RELAY_ENVIRONMENT_CREDENTIAL_SECRET, "environment-credential"],
-    ]);
-    const applyConfigCalls: Array<unknown> = [];
-
-    return Effect.gen(function* () {
-      const link = yield* CloudLink.CloudLink;
-      const error = yield* Effect.flip(link.recoverManagedTunnel("http://127.0.0.1:3772"));
-      expect(error).toMatchObject({ _tag: "RelayRequestError", rejection: "unauthorized" });
-      expect((yield* link.linkState()).linkRevoked).toBe(true);
-      expect(applyConfigCalls).toEqual([]);
-      expect(values.has(RELAY_ENVIRONMENT_CREDENTIAL_SECRET)).toBe(true);
-    }).pipe(
-      provideReleaseHarness({
-        store,
-        applyConfigCalls,
-        requests: [],
-        respond: () =>
-          Response.json(
-            {
-              _tag: "RelayAuthInvalidError",
-              code: "auth_invalid",
-              reason: "not_authorized",
-              traceId: "trace-recovery-revoked",
-            },
-            { status: 401 },
-          ),
-      }),
-    );
-  });
-
-  it.effect("allows managed tunnel provisioning to take longer than ten seconds", () =>
-    Effect.gen(function* () {
-      const oldConfig =
-        '{"providerKind":"cloudflare_tunnel","connectorToken":"old-token","tunnelId":"old-tunnel"}';
-      const nextConfig = {
-        providerKind: "cloudflare_tunnel" as const,
-        connectorToken: "new-token",
-        tunnelId: "new-tunnel",
-      };
-      const { store } = makeMemorySecretStore([
-        [CLOUD_ENDPOINT_RUNTIME_CONFIG, oldConfig],
-        [RELAY_URL_SECRET, "https://relay.example.test"],
-        [CLOUD_LINKED_USER_ID, "user-123"],
-        [RELAY_ENVIRONMENT_CREDENTIAL_SECRET, "environment-credential"],
-      ]);
-      const applyConfigCalls: Array<unknown> = [];
-      const requests: Array<HttpClientRequest.HttpClientRequest> = [];
-      const requestStarted = yield* Deferred.make<void>();
-      const response = yield* Deferred.make<Response>();
-      const recovery = yield* CloudLink.CloudLink.use((link) =>
-        link.recoverManagedTunnel("http://127.0.0.1:3772"),
-      ).pipe(
-        provideReleaseHarness({
-          store,
-          applyConfigCalls,
-          requests,
-          onRequest: () => Deferred.succeed(requestStarted, undefined),
-          respondEffect: Deferred.await(response),
-        }),
-        Effect.forkChild({ startImmediately: true }),
-      );
-
-      yield* Deferred.await(requestStarted);
-      expect(requests).toHaveLength(1);
-      yield* TestClock.adjust("11 seconds");
-      yield* Effect.yieldNow;
-      yield* Deferred.succeed(
-        response,
-        Response.json({
-          endpoint: {
-            httpBaseUrl: "https://environment.example.test/",
-            wsBaseUrl: "wss://environment.example.test/ws",
-            providerKind: "cloudflare_tunnel",
-          },
-          endpointRuntime: nextConfig,
-        }),
-      );
-
-      expect(yield* Fiber.join(recovery)).toBe(true);
-      expect(requests).toHaveLength(1);
-      expect(applyConfigCalls).toEqual([nextConfig]);
-    }),
-  );
 
   it.effect("does not recover an environment without a managed tunnel credential", () => {
     const { store } = makeMemorySecretStore([

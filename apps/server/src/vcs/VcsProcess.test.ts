@@ -55,7 +55,7 @@ describe("VcsProcess.run", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t3-index-lock-" });
+      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "t2-index-lock-" });
       const git = (args: readonly string[]) =>
         run({ operation: "test.checkpoint.restore", command: "git", cwd, args });
       yield* git(["init"]);

@@ -1,5 +1,5 @@
 import { assert, it } from "@effect/vitest";
-import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -9,7 +9,7 @@ import * as EventStore from "../../orchestration-v2/EventStore.ts";
 import * as ProjectionMaintenance from "../../orchestration-v2/ProjectionMaintenance.ts";
 import * as ProjectionStore from "../../orchestration-v2/ProjectionStore.ts";
 import { runMigrations } from "../Migrations.ts";
-import Migration0066 from "./066_RepairClientSettlementTimestamps.ts";
+import Migration0066 from "./067_RepairClientSettlementTimestamps.ts";
 
 const layer = it.layer(
   ProjectionMaintenance.layer.pipe(
@@ -32,7 +32,7 @@ layer("066_RepairClientSettlementTimestamps", (it) => {
   it.effect("repairs only sweep stamps, preserves overrides, and survives a V2 rebuild", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-      yield* runMigrations({ toMigrationInclusive: 64 });
+      yield* runMigrations({ toMigrationInclusive: 65 });
       assert.deepEqual(
         yield* sql`SELECT name FROM sqlite_master WHERE name = 'projection_turns'`,
         [],
@@ -314,7 +314,7 @@ layer("066_RepairClientSettlementTimestamps", (it) => {
       `;
       const overridesBefore = yield* overrides;
 
-      yield* runMigrations({ toMigrationInclusive: 66 });
+      yield* runMigrations({ toMigrationInclusive: 67 });
       const legacy = yield* sql`
         SELECT thread_id, settled_override, settled_at FROM projection_threads
         WHERE thread_id LIKE 'sweep-%' ORDER BY thread_id
@@ -359,7 +359,7 @@ layer("066_RepairClientSettlementTimestamps", (it) => {
         sql`SELECT * FROM orchestration_events ORDER BY sequence`,
       ]);
       const repaired = yield* snapshot;
-      assert.deepEqual(yield* runMigrations({ toMigrationInclusive: 66 }), []);
+      assert.deepEqual(yield* runMigrations({ toMigrationInclusive: 67 }), []);
       yield* Migration0066;
       assert.deepEqual(yield* snapshot, repaired);
 

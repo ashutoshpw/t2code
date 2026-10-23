@@ -1465,7 +1465,7 @@ export const make = Effect.fn("AcpSessionRuntime.make")(function* (
       : {
           ...options.spawn.env,
           ELECTRON_RUN_AS_NODE: "1",
-          T3_ACP_CGROUP_WRAPPER: "1",
+          T2_ACP_CGROUP_WRAPPER: "1",
         };
   const child = yield* spawner
     .spawn(
@@ -1905,7 +1905,7 @@ export const make = Effect.fn("AcpSessionRuntime.make")(function* (
       meta !== null &&
       typeof meta === "object" &&
       !Array.isArray(meta) &&
-      (meta as { readonly t3SessionLoadReady?: unknown }).t3SessionLoadReady === "replay_idle";
+      (meta as { readonly t2SessionLoadReady?: unknown }).t2SessionLoadReady === "replay_idle";
     const extractedModelConfigId = extractModelConfigId(sessionSetupResult);
     const nextModelConfigId =
       extractedModelConfigId ?? (syntheticReplayIdle ? current.modelConfigId : undefined);

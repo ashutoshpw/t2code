@@ -99,10 +99,10 @@ class T2WorkspaceNavigationModule : Module() {
       Prop("unselectedColor") { view: T2WorkspaceNavigationView, value: Int ->
         view.unselectedColor = value
       }
-      Prop("actionColor") { view: T3WorkspaceNavigationView, value: Int ->
+      Prop("actionColor") { view: T2WorkspaceNavigationView, value: Int ->
         view.actionColor = value
       }
-      Prop("actionContentColor") { view: T3WorkspaceNavigationView, value: Int ->
+      Prop("actionContentColor") { view: T2WorkspaceNavigationView, value: Int ->
         view.actionContentColor = value
       }
       Events("onTabSelected", "onNewThread", "onOverlayChange")
@@ -261,7 +261,7 @@ class T2WorkspaceNavigationView(
             },
           ) {
             Icon(
-              painterResource(R.drawable.t3_menu),
+              painterResource(R.drawable.t2_menu),
               contentDescription = null,
               tint = Color(unselectedColor),
             )
@@ -304,7 +304,7 @@ class T2WorkspaceNavigationView(
         Modifier.padding(start = (FAB_SIZE - ICON_SIZE) / 2).clipToBounds(),
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        Icon(painterResource(R.drawable.t3_new_thread), contentDescription = null)
+        Icon(painterResource(R.drawable.t2_new_thread), contentDescription = null)
         Text(
           "New thread",
           Modifier.padding(start = 12.dp).alpha(labelAlpha(fraction)).clearAndSetSemantics {},
@@ -366,9 +366,9 @@ class T2WorkspaceNavigationView(
   @Composable
   private fun tabIconPainter(tab: String) = painterResource(
     when (tab) {
-      "threads" -> R.drawable.t3_chats
-      "pullRequests" -> R.drawable.t3_pull_requests
-      else -> R.drawable.t3_settings
+      "threads" -> R.drawable.t2_chats
+      "pullRequests" -> R.drawable.t2_pull_requests
+      else -> R.drawable.t2_settings
     }
   )
 

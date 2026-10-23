@@ -15,7 +15,7 @@ import * as ProviderLatestVersions from "@t2code/provider-core/server/ProviderLa
 import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEventLoggers";
 import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
 import { GrokDriver } from "./driver.ts";
-import { resolveLatestProviderVersion } from "@t3tools/provider-core/server/maintenanceResolver";
+import { resolveLatestProviderVersion } from "@t2code/provider-core/server/maintenanceResolver";
 
 import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
@@ -128,7 +128,7 @@ it.layer(layerTest)("GrokDriver", (it) => {
       return Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        prefix = yield* fs.realPath(yield* fs.makeTempDirectoryScoped({ prefix: "t3-grok-brew-" }));
+        prefix = yield* fs.realPath(yield* fs.makeTempDirectoryScoped({ prefix: "t2-grok-brew-" }));
         const brewPath = path.join(prefix, "bin", "brew");
         const binaryPath = path.join(prefix, ...testCase.binary);
         for (const executable of [brewPath, binaryPath]) {

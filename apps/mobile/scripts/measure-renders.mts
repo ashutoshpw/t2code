@@ -132,7 +132,7 @@ const connectServer = Effect.fn("measure.connectServer")(function* (options: Opt
     HttpClient.filterStatusOk,
   );
   const descriptor = yield* http
-    .get(`${options.server}/.well-known/t3/environment`)
+    .get(`${options.server}/.well-known/t2/environment`)
     .pipe(Effect.flatMap(HttpClientResponse.schemaBodyJson(ExecutionEnvironmentDescriptor)));
   const shell = yield* http
     .get(`${options.server}/api/orchestration/shell`)
@@ -226,7 +226,7 @@ const measureStreamReply = Effect.fn("measure.streamReply")(function* (
   );
   if (Option.isNone(route))
     yield* evaluate(
-      `__t3RenderCounterOpen(${encodeJson(`${options.scheme}://threads/${environmentId}/${threadId}`)})`,
+      `__t2RenderCounterOpen(${encodeJson(`${options.scheme}://threads/${environmentId}/${threadId}`)})`,
     );
   const projectionOf = (item: { kind: string; projection?: OrchestrationV2ThreadProjection }) =>
     item.kind === "snapshot" && item.projection
@@ -240,9 +240,9 @@ const measureStreamReply = Effect.fn("measure.streamReply")(function* (
   );
   if (Option.isNone(streaming))
     return yield* new MeasureError({ message: `Run ${run}: the reply never started streaming.` });
-  yield* evaluate("__t3RenderCounterStart()");
+  yield* evaluate("__t2RenderCounterStart()");
   yield* Effect.sleep(`${options.windowSeconds} seconds`);
-  const report = yield* decodeReport(yield* evaluate("JSON.stringify(__t3RenderCounterStop())"));
+  const report = yield* decodeReport(yield* evaluate("JSON.stringify(__t2RenderCounterStop())"));
   // React commits on every streamed delta, so an empty window means the app is not on the thread.
   // A thread streaming out of view may rightly commit nothing.
   if (report.commits === 0 && Option.isNone(route))
@@ -254,7 +254,7 @@ const measureStreamReply = Effect.fn("measure.streamReply")(function* (
 }, Effect.scoped);
 
 const appLink = (options: Options, route: string) =>
-  `__t3RenderCounterOpen(${encodeJson(`${options.scheme}://${route.replace(/^\//, "")}`)})`;
+  `__t2RenderCounterOpen(${encodeJson(`${options.scheme}://${route.replace(/^\//, "")}`)})`;
 
 /** Reloads onto Home, then opens `route` and lets it settle; `/` stays on Home. */
 const reloadAndOpen = Effect.fn("measure.reloadAndOpen")(function* (
@@ -264,7 +264,7 @@ const reloadAndOpen = Effect.fn("measure.reloadAndOpen")(function* (
   // A link to an already-open screen only refocuses it, so each run starts from a reload.
   yield* Effect.scoped(
     Effect.flatMap(connectInspector(options.metro), (evaluate) =>
-      evaluate("__t3RenderCounterReload()"),
+      evaluate("__t2RenderCounterReload()"),
     ),
   );
   yield* Effect.sleep("15 seconds");
@@ -285,15 +285,15 @@ const measureRouteOpen = Effect.fn("measure.routeOpen")(function* (
 ) {
   yield* Effect.scoped(
     Effect.flatMap(connectInspector(options.metro), (evaluate) =>
-      evaluate("__t3RenderCounterReload()"),
+      evaluate("__t2RenderCounterReload()"),
     ),
   );
   yield* Effect.sleep("15 seconds");
   const evaluate = yield* connectInspector(options.metro);
-  yield* evaluate("__t3RenderCounterStart()");
+  yield* evaluate("__t2RenderCounterStart()");
   yield* evaluate(appLink(options, route));
   yield* Effect.sleep(`${options.windowSeconds} seconds`);
-  const report = yield* decodeReport(yield* evaluate("JSON.stringify(__t3RenderCounterStop())"));
+  const report = yield* decodeReport(yield* evaluate("JSON.stringify(__t2RenderCounterStop())"));
   if (report.commits === 0)
     return yield* new MeasureError({
       message: `Run ${run}: no React commits in the window. Check that ${route} is a valid app path.`,
@@ -349,7 +349,7 @@ const command = Command.make(
       Flag.withDefault(""),
     ),
     token: Flag.String("token").pipe(
-      Flag.withDescription("Bearer token from `t3 auth session issue --token-only`."),
+      Flag.withDescription("Bearer token from `t2 auth session issue --token-only`."),
       Flag.withDefault(""),
     ),
     route: Flag.String("route").pipe(

@@ -7,8 +7,8 @@ import {
   hasRelayRoute,
   presentConnectionDiagnosis,
   type EnvironmentPresentation,
-} from "@t3tools/client-runtime/connection";
-import type { EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/connection";
+import type { EnvironmentId } from "@t2code/contracts";
 import Constants from "expo-constants";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
@@ -69,7 +69,7 @@ export function ConnectionDiagnosisDetails(props: {
         ))}
       </View>
       <View className="gap-0.5">
-        <Text className="text-sm font-t3-bold text-foreground">What to try</Text>
+        <Text className="text-sm font-t2-bold text-foreground">What to try</Text>
         {diagnosis.steps.map((step, index) => (
           <Text key={step} className="text-sm text-foreground-muted">
             {`${index + 1}. ${step}`}

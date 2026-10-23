@@ -6,7 +6,7 @@ import {
   buildAddProjectRemoteSourceReadiness,
   type AddProjectRemoteSource,
   type AddProjectRemoteSourceReadiness,
-} from "@t3tools/client-runtime/operations/projects";
+} from "@t2code/client-runtime/operations/projects";
 import {
   type EnvironmentId,
   type EnvironmentMachineKind,

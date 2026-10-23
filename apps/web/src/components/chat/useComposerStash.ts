@@ -5,7 +5,7 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type PreviewAnnotationPayload,
   type ThreadContextRecord,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   type ComposerFileAttachment,
   type PersistedComposerFileAttachment,
@@ -45,7 +45,7 @@ import {
   verifyStashedAttachmentUpload,
 } from "../../lib/attachmentUploadQueue";
 import { remainingComposerAttachmentSlots } from "./composerThreadImport";
-import { replaceComposerContextReferences } from "@t3tools/shared/composerContextReferences";
+import { replaceComposerContextReferences } from "@t2code/shared/composerContextReferences";
 import { resizeSnapShotSource } from "../../lib/snapShotSource";
 import { resolveShortcutCommand } from "../../keybindings";
 import { toastManager } from "../ui/toast";

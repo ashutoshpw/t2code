@@ -88,7 +88,7 @@ export T2CODE_BITBUCKET_API_TOKEN="your-token"```
 
 For a background service, put these `KEY=VALUE` entries in
 [`service.env`](./background-service.md#configure-the-service-environment)
-under T3 home, then run `t3 service restart`. Service installation and updates
+under T2 home, then run `t2 service restart`. Service installation and updates
 preserve that file.
 
 ### Azure DevOps
@@ -133,7 +133,7 @@ Use **Add Project** in the command palette (`Cmd/Ctrl+K`) to clone a repository.
 provider or paste a Git URL, then choose where to save it. The project opens right away while the
 clone runs in the background: you can write your first prompt, and sending waits until the files
 are in place. A toast tracks progress and lets you cancel; if the clone fails, retry it from the
-toast or from the banner above the composer. When the host refuses the machine's SSH key, T3 Code
+toast or from the banner above the composer. When the host refuses the machine's SSH key, T2 Code
 clones over HTTPS with Git's credentials for that host instead, and the project's remote uses the
 HTTPS URL.
 

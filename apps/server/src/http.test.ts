@@ -215,7 +215,7 @@ it.layer(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-static-no-open-" });
+      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-static-no-open-" });
       const filePath = path.join(staticDir, "app.txt");
       const body = "packaged asset";
       yield* fs.writeFileString(filePath, body);
@@ -266,7 +266,7 @@ it.layer(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-static-replaced-" });
+      const staticDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-static-replaced-" });
       const filePath = path.join(staticDir, "app.txt");
       const before = DateTime.toDateUtc(DateTime.makeUnsafe("1985-10-26T08:15:00.000Z"));
       const after = DateTime.toDateUtc(DateTime.makeUnsafe("2015-10-21T16:29:00.000Z"));

@@ -11,7 +11,7 @@ import {
   DeviceOperationError,
   type DevicePlatform,
   type EasDeviceHostConfig,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Duration from "effect/Duration";
@@ -28,8 +28,8 @@ import * as Schedule from "effect/Schedule";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
-import { writeFileStringAtomically } from "@t3tools/shared/atomicWrite";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import { writeFileStringAtomically } from "@t2code/shared/atomicWrite";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 import * as ServerConfig from "../config.ts";
 import * as DeviceHost from "./DeviceHost.ts";
@@ -428,7 +428,7 @@ export const make = Effect.fn("EasDeviceHost.make")(function* (config: EasDevice
     context: DeviceHost.DeviceOpenContext | undefined,
     startedIn: number,
   ) {
-    const name = `T3 Code · ${config.label} · ${(yield* Random.nextIntBetween(0, 0xffffff)).toString(16).padStart(6, "0")}`;
+    const name = `T2 Code · ${config.label} · ${(yield* Random.nextIntBetween(0, 0xffffff)).toString(16).padStart(6, "0")}`;
     // The credential comes first: without one, the answer is how to sign in,
     // not that the limit is reached.
     const expo = yield* api;
@@ -733,7 +733,7 @@ export const make = Effect.fn("EasDeviceHost.make")(function* (config: EasDevice
     agentEndpoint: (deviceId) =>
       Option.match(sessionFor(deviceId), {
         onNone: () => Effect.fail(unavailable("This EAS Simulator device is no longer running.")),
-        // agent-device selects the simulator by its UDID, not the session id T3 shows.
+        // agent-device selects the simulator by its UDID, not the session id T2 shows.
         onSome: (session) => Effect.succeed({ ...session.agent, agentDeviceId: session.udid }),
       }),
     endsDevices: true,

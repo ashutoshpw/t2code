@@ -37,7 +37,7 @@ export class EventLoopMonitor extends Context.Reference<{
    * first, so a stall that ended just before a client reconnected is included.
    */
   readonly latestNoticeableStall: Effect.Effect<ServerEventLoopStall | undefined>;
-}>("t3/observability/EventLoopMonitor", {
+}>("t2/observability/EventLoopMonitor", {
   defaultValue: () => ({ latestNoticeableStall: Effect.succeed(undefined) }),
 }) {}
 

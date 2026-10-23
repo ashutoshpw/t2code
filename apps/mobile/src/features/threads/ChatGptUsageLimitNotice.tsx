@@ -1,10 +1,10 @@
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
 import {
   CHATGPT_USAGE_LIMIT_CODE,
   CHATGPT_USAGE_URL,
   CHATGPT_WORKSPACE_ADMIN_REQUEST,
   CHATGPT_WORKSPACE_USAGE_LIMIT_CODE,
-} from "@t3tools/shared/usageLimits";
+} from "@t2code/shared/usageLimits";
 import * as Clipboard from "expo-clipboard";
 import { useState } from "react";
 import { Linking, View } from "react-native";
@@ -25,7 +25,7 @@ export function ChatGptUsageLimitNotice({ thread }: { thread: EnvironmentThreadS
     >
       <View className="flex-row items-center gap-2">
         <ProviderIcon provider="codex" size={16} />
-        <Text className="text-sm font-t3-medium text-foreground">ChatGPT usage limit reached</Text>
+        <Text className="text-sm font-t2-medium text-foreground">ChatGPT usage limit reached</Text>
       </View>
       <Text className="text-xs text-foreground-muted">
         {workspaceLimit

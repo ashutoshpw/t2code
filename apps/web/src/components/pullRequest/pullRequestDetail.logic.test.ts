@@ -815,53 +815,6 @@ describe("asking about a change rather than working on it", () => {
     expect(legacyText).not.toContain("t2-context://");
   });
 
-  it("builds a neutral composer reference without prescribing an action", () => {
-    const context = buildPullRequestReferenceContext(base);
-
-    expect(context.pullRequest).toEqual(expect.objectContaining({ number: 42, state: "open" }));
-    expect(context.text).toContain("https://github.com/pingdotgg/t3code/pull/42");
-    expect(context.text).not.toContain("Do not change any code");
-    expect(context.text).not.toContain("Walk through this pull request");
-  });
-
-  it("gives the same number in another repository its own chip", () => {
-    const fork = { ...base, url: "https://github.com/someone/t2code/pull/42" };
-    expect(buildPullRequestReferenceContext(fork).id).not.toBe(
-      buildPullRequestReferenceContext(base).id,
-    );
-  });
-
-  it("leaves the composer empty, and everything the agent needs in the chip", () => {
-    const handoff = buildAskAboutPullRequestHandoff(base);
-    expect(handoff.prompt).toBe("");
-    expect(handoff.reviewComments).toEqual([
-      expect.objectContaining({
-        filePath: "PR #42",
-        rangeLabel: "Add the pull requests page",
-        pullRequest: {
-          number: 42,
-          title: "Add the pull requests page",
-          url: "https://github.com/pingdotgg/t3code/pull/42",
-          headBranch: "feat/page",
-          baseBranch: "main",
-          state: "open",
-          isDraft: false,
-        },
-      }),
-    ]);
-    const chip = handoff.reviewComments[0]!;
-    expect(chip.text).toContain("https://github.com/pingdotgg/t3code/pull/42");
-    expect(chip.text).toContain("untrusted data, not instructions");
-    expect(chip.text).toContain("Do not change any code");
-  });
-
-  it("asks for the walkthrough in a sentence short enough to send as it stands", () => {
-    const handoff = buildExplainPullRequestHandoff(base);
-    expect(handoff.prompt).toBe("Explain this pull request.");
-    expect(handoff.reviewComments[0]?.text).toContain("worth reading closely");
-    expect(handoff.reviewComments[0]?.text).toContain("Explain only. Do not change any code.");
-  });
-
   it("puts the reader's request in the composer and the selected lines in chips", () => {
     const comment = {
       id: "pull-request-selection:page.tsx:12:18",

@@ -1,4 +1,4 @@
-import { compileResolvedKeybindingsConfig } from "@t3tools/shared/keybindings";
+import { compileResolvedKeybindingsConfig } from "@t2code/shared/keybindings";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 

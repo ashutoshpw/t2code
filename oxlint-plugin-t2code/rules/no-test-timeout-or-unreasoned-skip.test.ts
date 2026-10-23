@@ -2,7 +2,7 @@ import { assert, describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const RULE = "t3code/no-test-timeout-or-unreasoned-skip";
+const RULE = "t2code/no-test-timeout-or-unreasoned-skip";
 const rule = createOxlintRuleHarness(RULE, { filename: "fixture.test.ts" });
 
 const assertTimeoutMessage = (output: string) =>

@@ -114,7 +114,7 @@ function suggestedPackageSpec(version: string): string {
   return channel === undefined ? "@t2code/cli" : `@t2code/cli@${channel}`;
 }
 
-function formatCliCommand(input: {
+export function formatCliCommand(input: {
   readonly subcommand: string;
   readonly entryPath: string;
   readonly version: string;
@@ -182,8 +182,8 @@ export const resolveHostCliCommand = Effect.fn("invocation.resolveHostCliCommand
   const withArgs = (prefix: string) =>
     [prefix, ...args.map((arg) => hostShellWord(platform, arg))].join(" ");
   const command = yield* resolveCliCommand(subcommand);
-  if (command !== `t2 ${subcommand}`) return { command: withArgs(command), launcher: false };
-  if (yield* isCommandAvailable("t2")) return { command: withArgs(command), launcher: false };
+  if (command !== `t2code ${subcommand}`) return { command: withArgs(command), launcher: false };
+  if (yield* isCommandAvailable("t2code")) return { command: withArgs(command), launcher: false };
   const launcher = yield* resolveInstallLauncher;
   if (Option.isNone(launcher)) return { command: withArgs(command), launcher: false };
   // PowerShell runs a quoted path only through the call operator.

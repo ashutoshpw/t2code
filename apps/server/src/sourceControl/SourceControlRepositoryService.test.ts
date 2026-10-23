@@ -283,13 +283,13 @@ const cloneInTemporaryDirectory = (
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const parent = yield* fs
-      .makeTempDirectoryScoped({ prefix: "t3-clone-fallback-" })
+      .makeTempDirectoryScoped({ prefix: "t2-clone-fallback-" })
       .pipe(Effect.orDie);
     return yield* Effect.gen(function* () {
       const service = yield* SourceControlRepositoryService.SourceControlRepositoryService;
       return yield* service.cloneRepository({
         ...input,
-        destinationPath: path.join(parent, "t3code"),
+        destinationPath: path.join(parent, "t2code"),
       });
     }).pipe(Effect.provide(layer({ git }).pipe(Layer.orDie)));
   }).pipe(Effect.provide(NodeServices.layer));
@@ -301,8 +301,8 @@ it.effect("retries a clone over HTTPS when the SSH login is refused", () =>
       remoteUrl: CLONE_URLS.sshUrl,
     });
 
-    assert.deepStrictEqual(urls, [CLONE_URLS.sshUrl, "https://github.com/octocat/t3code.git"]);
-    assert.strictEqual(result.remoteUrl, "https://github.com/octocat/t3code.git");
+    assert.deepStrictEqual(urls, [CLONE_URLS.sshUrl, "https://github.com/octocat/t2code.git"]);
+    assert.strictEqual(result.remoteUrl, "https://github.com/octocat/t2code.git");
   }),
 );
 

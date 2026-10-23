@@ -1162,6 +1162,16 @@ export const layer = Layer.effect(
         existingTask !== null &&
         existingTask.enabled === input.enabled &&
         isSameSchedule(existingTask.schedule, schedule);
+      if (
+        schedule.type === "once" &&
+        input.enabled &&
+        !scheduleUnchanged &&
+        Date.parse(schedule.at) < DateTime.toEpochMillis(now) - ONCE_PAST_TOLERANCE_MS
+      ) {
+        return yield* taskError("Pick a time in the future for a one-time task.", {
+          taskId: id,
+        });
+      }
       const task: ScheduledTask = {
         id,
         title: input.title,

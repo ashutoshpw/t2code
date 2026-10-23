@@ -206,7 +206,7 @@ export function FloatingWorkingControl(props: {
           className={`h-11 flex-row items-center gap-1.5 px-3 active:opacity-70 ${action.disabled ? "opacity-50" : ""}`}
         >
           <View className="mr-1 h-4 w-px bg-border" />
-          <Text className="font-t3-medium text-xs text-foreground" numberOfLines={1}>
+          <Text className="font-t2-medium text-xs text-foreground" numberOfLines={1}>
             {action.label}
           </Text>
         </Pressable>
@@ -443,7 +443,7 @@ function FloatingStatusLabel(props: {
           tintColorClassName="foreground"
           type="monochrome"
         />
-        <Text className="shrink font-t3-medium text-xs text-foreground" numberOfLines={1}>
+        <Text className="shrink font-t2-medium text-xs text-foreground" numberOfLines={1}>
           {props.status.label}
         </Text>
       </StatusLabelRow>

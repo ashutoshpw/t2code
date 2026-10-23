@@ -1,6 +1,6 @@
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
+import type { EnvironmentId, ThreadId } from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigate } from "@tanstack/react-router";
 import { MessageSquareIcon } from "lucide-react";

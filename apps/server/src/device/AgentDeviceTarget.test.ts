@@ -23,10 +23,10 @@ describe("host-bound agent commands", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const temp = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-target-" });
+        const temp = yield* fs.makeTempDirectoryScoped({ prefix: "t2-device-target-" });
         const dir = path.join(temp, "quotes '\" $HOME `literal`");
         yield* fs.makeDirectory(dir);
-        const desktopApp = path.join(dir, "T3 Code");
+        const desktopApp = path.join(dir, "T2 Code");
         // Dropping Node mode after checking it forces each hop to set it independently.
         yield* fs.writeFileString(
           desktopApp,

@@ -84,7 +84,7 @@ function EnvironmentPickerRow(props: {
             tintColorClassName="accent-icon-muted"
           />
           <View className="min-w-0 flex-1 gap-1">
-            <Text className="text-base font-t3-medium text-foreground" numberOfLines={1}>
+            <Text className="text-base font-t2-medium text-foreground" numberOfLines={1}>
               {props.title}
             </Text>
             <View className="flex-row items-center gap-1.5">

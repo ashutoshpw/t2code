@@ -1,4 +1,4 @@
-import type { ThreadStructure, ThreadStructureTurnItem } from "@t3tools/client-runtime/state/shell";
+import type { ThreadStructure, ThreadStructureTurnItem } from "@t2code/client-runtime/state/shell";
 import type {
   OrchestrationV2ProviderTurn,
   OrchestrationV2ProviderTurnTokenUsage,

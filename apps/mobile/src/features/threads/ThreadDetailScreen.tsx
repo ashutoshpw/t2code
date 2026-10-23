@@ -20,7 +20,7 @@ import {
   threadWokeAt,
   isThreadWokeUnseen,
   snoozeWakeLabel,
-} from "@t3tools/client-runtime/state/thread-settled";
+} from "@t2code/client-runtime/state/thread-settled";
 import type { WorktreeSetupCardProps } from "./worktree-setup-card";
 import type { ComposerTextPaste } from "../../native/T2ComposerEditor.types";
 import { type EnvironmentConnectionPhase } from "@t2code/client-runtime/connection";

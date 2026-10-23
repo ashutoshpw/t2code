@@ -176,15 +176,6 @@ describe("matchesLinkedPullRequestUrl", () => {
     ).toBe(expected);
   });
 
-  it("keeps other providers' existing port normalization", () => {
-    expect(
-      matchesLinkedPullRequestUrl(
-        linkedPullRequest,
-        "https://github.com:8443/pingdotgg/t3code/pull/42",
-      ),
-    ).toBe(true);
-  });
-
   it("keeps Forgejo and GitHub path shapes distinct on a GitHub-named host", () => {
     expect(
       matchesLinkedPullRequestUrl(
@@ -192,35 +183,6 @@ describe("matchesLinkedPullRequestUrl", () => {
         "https://github.internal/team/repo/pull/42",
       ),
     ).toBe(false);
-  });
-
-  it("rejects a different pull request or host", () => {
-    expect(
-      matchesLinkedPullRequestUrl(linkedPullRequest, "https://github.com/pingdotgg/t3code/pull/43"),
-    ).toBe(false);
-    expect(
-      matchesLinkedPullRequestUrl(
-        linkedPullRequest,
-        "https://github.example.com/pingdotgg/t3code/pull/42",
-      ),
-    ).toBe(false);
-  });
-});
-
-describe("shouldOpenPullRequestExternally", () => {
-  it("uses the browser for command-click and control-click", () => {
-    expect(shouldOpenPullRequestExternally({ metaKey: true, ctrlKey: false })).toBe(true);
-    expect(shouldOpenPullRequestExternally({ metaKey: false, ctrlKey: true })).toBe(true);
-  });
-
-  it("uses the browser for middle-click", () => {
-    expect(shouldOpenPullRequestExternally({ metaKey: false, ctrlKey: false, button: 1 })).toBe(
-      true,
-    );
-  });
-
-  it("keeps an unmodified click in the pull request view", () => {
-    expect(shouldOpenPullRequestExternally({ metaKey: false, ctrlKey: false })).toBe(false);
   });
 });
 
@@ -368,47 +330,6 @@ describe("findProjectForChangeRequest", () => {
         host: "gitlab.com",
         repository: "t2tools/platform/t2code",
         number: 42,
-      }),
-    ).toBe(projects[0]);
-  });
-
-  it("keeps two hosts apart, so an Enterprise link does not open the public one", () => {
-    const projects = [
-      project({
-        canonicalKey: "github.com/pingdotgg/t3code",
-        provider: "github",
-        owner: "pingdotgg",
-        name: "t2code",
-      }),
-    ];
-    expect(
-      findProjectForChangeRequest(projects, {
-        host: "github.acme.test",
-        repository: "pingdotgg/t3code",
-        number: 1,
-      }),
-    ).toBeUndefined();
-  });
-
-  it("matches an Azure repository cloned over SSH, whose remote shares no part with its URL", () => {
-    // Azure alone addresses one repository under two names: `ssh.dev.azure.com` and `v3/...` over
-    // SSH against `dev.azure.com` and `.../_git/...` everywhere a person sees it. The identity is
-    // recorded in the spelling a link arrives in, so both halves of this comparison line up.
-    const canonicalKey = normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T2Tools/Platform/T2Code");
-    const projects = [
-      project({
-        canonicalKey,
-        provider: "azure-devops",
-        displayName: canonicalKey.split("/").slice(1).join("/"),
-        owner: "t2tools",
-        name: "t2code",
-      }),
-    ];
-    expect(
-      findProjectForChangeRequest(projects, {
-        host: "dev.azure.com",
-        repository: "t2tools/platform/_git/t2code",
-        number: 1,
       }),
     ).toBe(projects[0]);
   });

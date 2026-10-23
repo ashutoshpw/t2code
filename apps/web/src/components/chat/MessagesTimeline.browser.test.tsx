@@ -8,7 +8,7 @@ import "~/index.css";
 import { act, render } from "../../../test/render";
 import { MessagesTimeline } from "./MessagesTimeline";
 import { remarkThoughtPreview } from "./TimelineWorkEntryRow.logic";
-import { parseMarkdownWithMath } from "@t3tools/shared/markdownMath";
+import { parseMarkdownWithMath } from "@t2code/shared/markdownMath";
 import { collectThreadFindRanges } from "./threadFindHighlights";
 
 const environmentQuery = vi.hoisted(() => ({
@@ -188,22 +188,22 @@ describe("MessagesTimeline messages", () => {
 
   it("renders unsafe user HTML as inert source text", async () => {
     const source =
-      '<script>globalThis.__t3Xss = 1</script><img src="x" onerror="globalThis.__t3Xss = 2">';
+      '<script>globalThis.__t2Xss = 1</script><img src="x" onerror="globalThis.__t2Xss = 2">';
     await using screen = await renderTimeline([message(source)]);
     expect(screen.text()).toContain(source);
     expect(screen.container.querySelector("script, img")).toBeNull();
-    expect((globalThis as { __t3Xss?: number }).__t3Xss).toBeUndefined();
+    expect((globalThis as { __t2Xss?: number }).__t2Xss).toBeUndefined();
   });
 
   it("renders sanitized raw HTML in assistant messages", async () => {
     await using screen = await renderTimeline([
       message(
         [
-          '<details onclick="globalThis.__t3Xss = 1">',
+          '<details onclick="globalThis.__t2Xss = 1">',
           "<summary>Safe details</summary>",
-          "<script>globalThis.__t3Xss = 2</script>",
-          '<img src="x" onerror="globalThis.__t3Xss = 3">',
-          '<a href="javascript:globalThis.__t3Xss = 4">Unsafe link</a>',
+          "<script>globalThis.__t2Xss = 2</script>",
+          '<img src="x" onerror="globalThis.__t2Xss = 3">',
+          '<a href="javascript:globalThis.__t2Xss = 4">Unsafe link</a>',
           "</details>",
         ].join(""),
         { role: "assistant" },
@@ -216,7 +216,7 @@ describe("MessagesTimeline messages", () => {
     expect(screen.container.querySelector("script, [onclick], [onerror]")).toBeNull();
     expect(screen.container.innerHTML).not.toContain("javascript:");
     await click(screen.button("Safe details"));
-    expect((globalThis as { __t3Xss?: number }).__t3Xss).toBeUndefined();
+    expect((globalThis as { __t2Xss?: number }).__t2Xss).toBeUndefined();
   });
 });
 
@@ -336,7 +336,7 @@ describe("MessagesTimeline agent messages", () => {
     expect(screen.text()).not.toContain("drops the index");
   });
 
-  it("leaves messages sent by T3 Code as full bubbles", async () => {
+  it("leaves messages sent by T2 Code as full bubbles", async () => {
     setup();
     await using screen = await renderTimeline([
       message(AGENT_MESSAGE, { createdBy: "agent", creationSource: "server" }),

@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import type { ResourceTelemetryProcess } from "@t3tools/contracts";
+import type { ResourceTelemetryProcess } from "@t2code/contracts";
 
 import { groupProcesses } from "./ProcessGroupMetrics.ts";
 
@@ -24,7 +24,7 @@ describe("groupProcesses", () => {
   it("sums each direct child of the server with its whole subtree", () => {
     const totals = groupProcesses([
       process(10, 1, "node", "server"),
-      process(11, 10, "t3-resource-mon", "resource-monitor"),
+      process(11, 10, "t2-resource-mon", "resource-monitor"),
       process(20, 10, "claude"),
       process(21, 20, "bash"),
       process(22, 21, "cargo"),

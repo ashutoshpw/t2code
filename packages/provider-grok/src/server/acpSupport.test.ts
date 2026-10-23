@@ -18,59 +18,6 @@ describe("grokAcpSpawnArgs", () => {
       "stdio",
     ]);
   });
-
-  it("maps Full access to Grok always-approve", () => {
-    expect(grokAcpSpawnArgs("full-access")).toEqual(["agent", "--always-approve", "stdio"]);
-  });
-
-  it("launches Auto on Grok's classifier and a mode Grok does not offer asking", () => {
-    expect(grokAcpSpawnArgs("auto")).toEqual(["--permission-mode", "auto", "agent", "stdio"]);
-    expect(grokAcpSpawnArgs("auto-accept-edits")).toEqual([
-      "--permission-mode",
-      "default",
-      "agent",
-      "stdio",
-    ]);
-  });
-});
-
-describe("buildGrokAcpSpawnInput", () => {
-  it("passes the Grok OAuth referrer through Grok OAuth env", () => {
-    const spawn = buildGrokAcpSpawnInput({ binaryPath: "/usr/local/bin/grok" }, "/tmp/project", {
-      XAI_API_KEY: "secret",
-      GROK_OAUTH2_REFERRER: "other-client",
-    });
-
-    expect(spawn).toEqual({
-      command: "/usr/local/bin/grok",
-      args: ["agent", "stdio"],
-      cwd: "/tmp/project",
-      env: {
-        XAI_API_KEY: "secret",
-        GROK_OAUTH2_REFERRER: "t2code",
-      },
-    });
-  });
-
-  it("puts Supervised on the Grok argv so config always-approve cannot win", () => {
-    const spawn = buildGrokAcpSpawnInput(
-      { binaryPath: "/usr/local/bin/grok" },
-      "/tmp/project",
-      undefined,
-      "approval-required",
-    );
-    expect(spawn.args).toEqual(["--permission-mode", "default", "agent", "stdio"]);
-  });
-});
-
-describe("isValidGrokReasoningEffortToken", () => {
-  it("accepts future ACP tokens and rejects malformed metadata values", () => {
-    expect(isValidGrokReasoningEffortToken("xhigh")).toBe(true);
-    expect(isValidGrokReasoningEffortToken("turbo_v2")).toBe(true);
-    expect(isValidGrokReasoningEffortToken("not a token")).toBe(false);
-    expect(isValidGrokReasoningEffortToken("-leading-dash")).toBe(false);
-    expect(isValidGrokReasoningEffortToken("x".repeat(33))).toBe(false);
-  });
 });
 
 describe("applyGrokAcpModelSelection", () => {

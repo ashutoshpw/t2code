@@ -102,7 +102,7 @@ it.effect("lists the fetch and push URLs of a partial clone remote", () =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const cwd = yield* fileSystem.makeTempDirectoryScoped({
-      prefix: "t3-partial-clone-remotes-",
+      prefix: "t2-partial-clone-remotes-",
     });
     const driver = yield* GitVcsDriver.makeVcsDriverShape();
     yield* runGit(cwd, ["init"]);
@@ -112,7 +112,7 @@ it.effect("lists the fetch and push URLs of a partial clone remote", () =>
       "set-url",
       "--push",
       "origin",
-      "git@github.com:octocat/t3code.git",
+      "git@github.com:octocat/t2code.git",
     ]);
     yield* runGit(cwd, ["config", "remote.origin.promisor", "true"]);
     yield* runGit(cwd, ["config", "remote.origin.partialclonefilter", "blob:none"]);
@@ -122,7 +122,7 @@ it.effect("lists the fetch and push URLs of a partial clone remote", () =>
       {
         name: "origin",
         url: "https://github.com/pingdotgg/t3code.git",
-        pushUrl: Option.some("git@github.com:octocat/t3code.git"),
+        pushUrl: Option.some("git@github.com:octocat/t2code.git"),
         isPrimary: true,
       },
     ]);
@@ -217,7 +217,7 @@ it.effect.skipIf(!symlinksSupported)(
         Effect.provideService(VcsProcess.VcsProcess, captureProcess),
       );
       const sandbox = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-checkpoint-symlink-",
+        prefix: "t2-checkpoint-symlink-",
       });
       const repo = path.join(sandbox, "repo");
       const subdir = path.join(repo, "sub", "dir");
@@ -249,7 +249,7 @@ it.effect("checkpoint capture keeps the shared index a split index still uses", 
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const driver = yield* GitVcsDriver.makeVcsDriverShape();
-    const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-checkpoint-split-" });
+    const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-checkpoint-split-" });
     const { git, checkpointRef } = yield* makeCheckpointFixture(driver, cwd);
     yield* git(["config", "core.splitIndex", "true"]);
     yield* git(["config", "splitIndex.sharedIndexExpire", "now"]);
@@ -400,7 +400,7 @@ it.effect.each([
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const driver = yield* GitVcsDriver.makeVcsDriverShape();
-      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t3-checkpoint-ignored-later-" });
+      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t2-checkpoint-ignored-later-" });
       const { git, checkpointRef } = yield* makeCheckpointFixture(driver, parent);
       const cwd = path.join(parent, "sub");
       yield* fs.makeDirectory(cwd);

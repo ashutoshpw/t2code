@@ -29,12 +29,9 @@ export const Username = Context.Reference<string | null>("@t2code/shared/HostPro
   },
 });
 
-export const HomeDirectory = Context.Reference<string>(
-  "@t2code/shared/HostProcess/HomeDirectory",
-  {
-    defaultValue: () => NodeOS.homedir(),
-  },
-);
+export const HomeDirectory = Context.Reference<string>("@t2code/shared/HostProcess/HomeDirectory", {
+  defaultValue: () => NodeOS.homedir(),
+});
 
 export const Environment = Context.Reference<NodeJS.ProcessEnv>(
   "@t2code/shared/HostProcess/Environment",
