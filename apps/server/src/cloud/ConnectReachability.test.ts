@@ -1,7 +1,7 @@
 // @effect-diagnostics nodeBuiltinImport:off - reads the user guide to check its anchors.
 import * as NodeFS from "node:fs";
 
-import { T3_CONNECT_TROUBLESHOOTING_SECTIONS } from "@t3tools/contracts";
+import { T2_CONNECT_TROUBLESHOOTING_SECTIONS } from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
 
 import { classifyReachability, type ReachabilityFacts } from "./ConnectReachability.ts";
@@ -67,10 +67,10 @@ describe("classifyReachability", () => {
   });
 });
 
-describe("T3 Connect troubleshooting links", () => {
+describe("T2 Connect troubleshooting links", () => {
   it("each section names a heading in the user guide", () => {
     const guide = NodeFS.readFileSync(
-      new URL("../../../../docs/user/t3-connect-troubleshooting.md", import.meta.url),
+      new URL("../../../../docs/user/t2-connect-troubleshooting.md", import.meta.url),
       "utf8",
     );
     // GitHub's heading anchors: lowercase, drop punctuation, spaces become hyphens.
@@ -82,7 +82,7 @@ describe("T3 Connect troubleshooting links", () => {
           .replace(/ /g, "-"),
       ),
     );
-    for (const section of T3_CONNECT_TROUBLESHOOTING_SECTIONS) {
+    for (const section of T2_CONNECT_TROUBLESHOOTING_SECTIONS) {
       expect(anchors, section).toContain(section);
     }
   });

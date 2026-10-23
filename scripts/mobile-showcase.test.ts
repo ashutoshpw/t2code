@@ -1,12 +1,33 @@
 // @effect-diagnostics nodeBuiltinImport:off - expectations mirror the host path joins the script under test performs.
+import * as NodePath from "node:path";
 import { assert, it } from "@effect/vitest";
 import { PNG } from "pngjs";
 
+import showcaseConfig, {
+  DEFAULT_SHOWCASE_THEME,
+  resolveShowcaseAndroidAbi,
+  SHOWCASE_THEMES,
+  type ShowcaseConfig,
+  type ShowcaseStoreAssetSpec,
+} from "./mobile-showcase.config.ts";
+import {
+  SHOWCASE_ENVIRONMENTS,
+  SHOWCASE_PROJECTS,
+  SHOWCASE_THREADS,
+} from "./mobile-showcase-environment.ts";
 import {
   encodeAndroidPairingUrls,
   normalizeStorePng,
+  parseShowcaseCliArgs,
   parsePairingCredentialOutput,
+  planShowcaseCaptures,
+  readPngDimensions,
   readPngMetadata,
+  resolveAndroidSdkRoot,
+  selectLanIpv4Address,
+  showcaseCaptureDirectory,
+  validateStoreAsset,
+  validateStoreAssetCount,
 } from "./mobile-showcase.ts";
 
 const appleSpec: ShowcaseStoreAssetSpec = {

@@ -1,4 +1,4 @@
-import { isWebhookDedupeTemplate } from "@t3tools/contracts";
+import { isWebhookDedupeTemplate } from "@t2code/contracts";
 import type {
   ModelSelection,
   ServerConfig,

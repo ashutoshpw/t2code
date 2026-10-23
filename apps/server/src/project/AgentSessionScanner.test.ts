@@ -171,9 +171,9 @@ const makeFileIdentityFixture = Effect.fn("AgentSessionScanner.test.makeFileIden
     const fileSystem = yield* FileSystem.FileSystem;
     const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
     yield* TestClock.setTime(nowMs);
-    const claudeHomePath = yield* makeTempDir("t3code-large-id-claude-");
-    const codexHomePath = yield* makeTempDir("t3code-large-id-codex-");
-    const workspace = yield* makeTempDir("t3code-large-id-workspace-");
+    const claudeHomePath = yield* makeTempDir("t2code-large-id-claude-");
+    const codexHomePath = yield* makeTempDir("t2code-large-id-codex-");
+    const workspace = yield* makeTempDir("t2code-large-id-workspace-");
     const filePath = path.join(
       codexHomePath,
       "sessions",
@@ -885,7 +885,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
           yield* fileSystem.makeDirectory(bareGitDir);
           yield* fileSystem.writeFileString(
             path.join(bareGitDir, "config"),
-            '[core] bare = "true" ; bare repository\n[remote "origin"]\nurl = git@github.com:pingdotgg/t2code.git\n',
+            '[core] bare = "true" ; bare repository\n[remote "origin"]\nurl = git@github.com:pingdotgg/t3code.git\n',
           );
           const dev = path.join(bare, "dev");
           const prod = path.join(bare, "prod");
@@ -923,7 +923,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
 
           const input = { claudeHomePath, codexHomePath, configBaseDir };
           const result = yield* runScan(input);
-          const git = { remoteKey: "github.com/pingdotgg/t2code", repository: "pingdotgg/t2code" };
+          const git = { remoteKey: "github.com/pingdotgg/t3code", repository: "pingdotgg/t3code" };
           expect(
             result.candidates.map((candidate) => ({ path: candidate.path, git: candidate.git })),
           ).toEqual([
@@ -1546,9 +1546,9 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         const path = yield* Path.Path;
         const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
         yield* TestClock.setTime(nowMs);
-        const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
-        const codexHomePath = yield* makeTempDir("t3code-codex-home-");
-        const workspace = yield* makeTempDir("t3code-workspace-");
+        const claudeHomePath = yield* makeTempDir("t2code-claude-home-");
+        const codexHomePath = yield* makeTempDir("t2code-codex-home-");
+        const workspace = yield* makeTempDir("t2code-workspace-");
         const subagentSources = [
           { subagent: { thread_spawn: { parent_thread_id: "session-100", depth: 1 } } },
           { subagent: "review" },

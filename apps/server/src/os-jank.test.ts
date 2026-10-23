@@ -103,12 +103,12 @@ effectIt.effect("hydrates a missing JAVA_HOME from the login shell and keeps an 
         .spyOn(NodeChildProcess, "execFileSync")
         .mockReturnValue(
           [
-            "__T3CODE_ENV_PATH_START__",
+            "__T2CODE_ENV_PATH_START__",
             "/opt/homebrew/bin",
-            "__T3CODE_ENV_PATH_END__",
-            "__T3CODE_ENV_JAVA_HOME_START__",
+            "__T2CODE_ENV_PATH_END__",
+            "__T2CODE_ENV_JAVA_HOME_START__",
             "/opt/homebrew/opt/openjdk@17",
-            "__T3CODE_ENV_JAVA_HOME_END__",
+            "__T2CODE_ENV_JAVA_HOME_END__",
           ].join("\n"),
         ),
     ),

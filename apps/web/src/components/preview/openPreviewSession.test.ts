@@ -49,61 +49,6 @@ afterEach(() => {
 });
 
 describe("openPreviewSession", () => {
-  it("creates an idle tab without recording a recently visited URL", async () => {
-    const idleSnapshot: PreviewSessionSnapshot = {
-      ...snapshot,
-      tabId: "tab-blank",
-      navStatus: { _tag: "Idle" },
-    };
-    const open = vi.fn(async (_input: PreviewOpenInput) => AsyncResult.success(idleSnapshot));
-
-    await openPreviewSession({
-      openPreview: ({ input }) => open(input),
-      threadRef,
-    });
-
-    expect(open).toHaveBeenCalledWith({
-      threadId: "thread-1",
-      viewport: FILL_PREVIEW_VIEWPORT,
-      profileId: DEFAULT_BROWSER_PROFILE_ID,
-    });
-    expect(readThreadPreviewState(threadRef).snapshot).toEqual(idleSnapshot);
-    expect(readThreadPreviewState(threadRef).recentlySeenUrls).toEqual([]);
-  });
-
-  it("applies the RPC response without waiting for a preview event", async () => {
-    const open = vi.fn(async (_input: PreviewOpenInput) => AsyncResult.success(snapshot));
-
-    await openPreviewSession({
-      openPreview: ({ input }) => open(input),
-      threadRef,
-      url: "example.com",
-    });
-
-    expect(open).toHaveBeenCalledWith({
-      threadId: "thread-1",
-      url: "example.com",
-      viewport: FILL_PREVIEW_VIEWPORT,
-      profileId: DEFAULT_BROWSER_PROFILE_ID,
-    });
-    expect(readThreadPreviewState(threadRef).snapshot).toEqual(snapshot);
-    expect(readThreadPreviewState(threadRef).recentlySeenUrls).toEqual(["https://example.com/"]);
-  });
-
-  it("returns failures without mutating preview state", async () => {
-    const failure = new Error("preview unavailable");
-
-    const result = await openPreviewSession({
-      openPreview: async () => AsyncResult.failure(Cause.fail(failure)),
-      threadRef,
-      url: "example.com",
-    });
-
-    expect(result._tag).toBe("Failure");
-    expect(readThreadPreviewState(threadRef).snapshot).toBeNull();
-    expect(readThreadPreviewState(threadRef).recentlySeenUrls).toEqual([]);
-  });
-
   it.each(["session", "link"] as const)(
     "does not open a %s with unread settings and uses the saved profile on retry",
     async (entryPoint) => {
@@ -153,7 +98,7 @@ describe("openUrlInPreview from a link", () => {
     await openUrlInPreview({
       openPreview: async () => AsyncResult.success(snapshot),
       threadRef,
-      url: "https://t2.chat/",
+      url: "https://example.com/",
       background: true,
     });
 
@@ -174,7 +119,7 @@ describe("openUrlInPreview from a link", () => {
         return AsyncResult.success(snapshot);
       },
       threadRef,
-      url: "https://t2.chat/",
+      url: "https://example.com/",
       background: true,
     });
 

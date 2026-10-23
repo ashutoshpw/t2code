@@ -81,7 +81,7 @@ const MODE_ARGS = {
 // it, so no Vite dev server runs.
 const BUILT_DEV_ARGS = [
   "run",
-  "--filter=@t3tools/web",
+  "--filter=@t2code/web",
   "--filter=t3",
   "--parallel",
   "dev:built",
@@ -339,7 +339,7 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
 
   // Each worktree has its own state, so a dev server would count as a new
   // install of the developer's real accounts. Set it explicitly to opt in.
-  output.T3CODE_TELEMETRY_ENABLED = baseEnv.T3CODE_TELEMETRY_ENABLED ?? "false";
+  output.T2CODE_TELEMETRY_ENABLED = baseEnv.T2CODE_TELEMETRY_ENABLED ?? "false";
 
   if (!isDesktopMode) {
     output.T2CODE_PORT = String(serverPort);
@@ -409,16 +409,16 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       delete output.T2CODE_DEV_AUTH_TOKEN;
     }
   } else {
-    output.T3CODE_PORT = String(serverPort);
+    output.T2CODE_PORT = String(serverPort);
     output.VITE_HTTP_URL = `http://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
     output.VITE_WS_URL = `ws://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
     // Desktop pins the renderer to loopback on purpose; an ambient marker
     // must not make Vite drop those URLs.
-    delete output.T3CODE_SINGLE_ORIGIN_DEV;
-    delete output.T3CODE_MODE;
-    delete output.T3CODE_NO_BROWSER;
-    delete output.T3CODE_HOST;
-    delete output.T3CODE_DEV_AUTH_TOKEN;
+    delete output.T2CODE_SINGLE_ORIGIN_DEV;
+    delete output.T2CODE_MODE;
+    delete output.T2CODE_NO_BROWSER;
+    delete output.T2CODE_HOST;
+    delete output.T2CODE_DEV_AUTH_TOKEN;
   }
 
   if (!isDesktopMode && host !== undefined) {
@@ -679,7 +679,7 @@ const prepareFirstStart = Effect.fn("dev-runner.prepareFirstStart")(function* (i
         );
       }
     }
-    const source = path.join(yield* HostProcess.HomeDirectory, ".t3", "userdata", "statev2.sqlite");
+    const source = path.join(yield* HostProcess.HomeDirectory, ".t2", "userdata", "statev2.sqlite");
     // A V1 state.sqlite counts as data too: the server imports it only while
     // statev2.sqlite is missing, so seeding would hide it.
     if (
@@ -695,7 +695,7 @@ const prepareFirstStart = Effect.fn("dev-runner.prepareFirstStart")(function* (i
           );
         } else {
           yield* Effect.logInfo(
-            `[dev-runner] seeding ${input.worktreeHome} from ${source} (read-only). --no-seed or T3CODE_DEV_SEED=0 skips this.`,
+            `[dev-runner] seeding ${input.worktreeHome} from ${source} (read-only). --no-seed or T2CODE_DEV_SEED=0 skips this.`,
           );
           yield* runRepoScript(
             "apps/server/scripts/migrate-dev-db.ts",
@@ -803,7 +803,7 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
     );
 
   yield* Effect.logInfo(
-    `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T3CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
+    `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T2CODE_PORT)} webPort=${String(env.PORT)} baseDir=${baseDir}`,
   );
 
   // Before the share block: --dry-run only resolves and prints. Sharing would
@@ -835,7 +835,7 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
           ...(input.built
             ? {
                 localTarget: {
-                  port: Number(env.T3CODE_PORT),
+                  port: Number(env.T2CODE_PORT),
                   host: ["::1", "[::1]"].includes(input.host?.trim() ?? "") ? "[::1]" : "127.0.0.1",
                 },
               }
@@ -1009,9 +1009,9 @@ const devRunnerCli = Command.make("dev-runner", {
   ),
   seed: Flag.Boolean("seed").pipe(
     Flag.withDescription(
-      "Seed an empty worktree database from ~/.t3 on first start (read-only, via migrate-dev-db) if the source is at most 500 MiB. On by default; --no-seed or T3CODE_DEV_SEED=0 skips it.",
+      "Seed an empty worktree database from ~/.t2 on first start (read-only, via migrate-dev-db) if the source is at most 500 MiB. On by default; --no-seed or T2CODE_DEV_SEED=0 skips it.",
     ),
-    Flag.withFallbackConfig(optionalBooleanConfig("T3CODE_DEV_SEED")),
+    Flag.withFallbackConfig(optionalBooleanConfig("T2CODE_DEV_SEED")),
   ),
   built: Flag.Boolean("built").pipe(
     Flag.withDescription(

@@ -96,8 +96,8 @@ async function pathExists(target: string): Promise<boolean> {
 
 const MANAGED_SERVICE_ENV_NAMES = new Set([
   "PATH",
-  "T3CODE_HOME",
-  "T3_BOOT_SERVICE_UNIT",
+  "T2CODE_HOME",
+  "T2_BOOT_SERVICE_UNIT",
   SERVICE_LAUNCHER_CONTEXT_ENV,
 ]);
 

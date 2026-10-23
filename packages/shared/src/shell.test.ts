@@ -60,11 +60,11 @@ const withWindowsEnvironmentMocks = <A, E, R>(
 
 describe("readEnvironmentFromLoginShell", () => {
   // Opt in with an explicit binary, like the provider live probes; CI need not install Nu.
-  it.runIf(process.env.T3_TEST_NU_PATH !== undefined)(
+  it.runIf(process.env.T2_TEST_NU_PATH !== undefined)(
     "captures Nushell PATH and multiline values without external tools",
     () => {
-      const shell = process.env.T3_TEST_NU_PATH!;
-      const home = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-nu-env-"));
+      const shell = process.env.T2_TEST_NU_PATH!;
+      const home = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-nu-env-"));
       try {
         const toolPath = NodePath.join(home, "nu tools", "bin");
         const extraToolPath = NodePath.join(home, "extra-tools", "bin");
@@ -295,7 +295,7 @@ describe("readEnvironmentFromWindowsShell", () => {
         ) => string
       >(
         () =>
-          "__T3CODE_ENV_PATH_START__\nC:\\Users\\testuser\\AppData\\Roaming\\npm\n__T3CODE_ENV_PATH_END__\n",
+          "__T2CODE_ENV_PATH_START__\nC:\\Users\\testuser\\AppData\\Roaming\\npm\n__T2CODE_ENV_PATH_END__\n",
       );
 
       expect(
@@ -323,7 +323,7 @@ describe("readEnvironmentFromWindowsShell", () => {
         ) => string
       >(
         () =>
-          "__T3CODE_ENV_FNM_DIR_START__\r\nC:\\Users\\testuser\\AppData\\Roaming\\fnm\r\n__T3CODE_ENV_FNM_DIR_END__\r\n",
+          "__T2CODE_ENV_FNM_DIR_START__\r\nC:\\Users\\testuser\\AppData\\Roaming\\fnm\r\n__T2CODE_ENV_FNM_DIR_END__\r\n",
       );
 
       expect(
@@ -344,7 +344,7 @@ describe("readEnvironmentFromWindowsShell", () => {
           args: ReadonlyArray<string>,
           options: { encoding: "utf8"; timeout: number },
         ) => string
-      >(() => "__T3CODE_ENV_PATH_START__\nC:\\Tools\n__T3CODE_ENV_PATH_END__\n");
+      >(() => "__T2CODE_ENV_PATH_START__\nC:\\Tools\n__T2CODE_ENV_PATH_END__\n");
 
       expect(
         yield* readEnvironmentFromWindowsShell(["PATH"], { loadProfile: true }, (...args) =>
@@ -374,7 +374,7 @@ describe("readEnvironmentFromWindowsShell", () => {
         if (file === "pwsh.exe") {
           throw new Error("spawn pwsh.exe ENOENT");
         }
-        return "__T3CODE_ENV_PATH_START__\nC:\\Tools\n__T3CODE_ENV_PATH_END__\n";
+        return "__T2CODE_ENV_PATH_START__\nC:\\Tools\n__T2CODE_ENV_PATH_END__\n";
       });
 
       expect(
@@ -704,7 +704,7 @@ effectIt.layer(NodeServices.layer)("resolveSpawnCommand", (it) => {
         Effect.gen(function* () {
           const fs = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const prefix = yield* fs.makeTempDirectoryScoped({ prefix: "t3-npm-shim-" });
+          const prefix = yield* fs.makeTempDirectoryScoped({ prefix: "t2-npm-shim-" });
           const shim = path.join(prefix, "opencode.cmd");
           const executable = path.join(
             prefix,

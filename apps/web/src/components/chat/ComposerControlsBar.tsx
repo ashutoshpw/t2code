@@ -18,7 +18,7 @@ import {
   type ProviderInteractionMode,
   type RuntimeMode,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { cn } from "~/lib/utils";
 import {
   renderProviderTraitsMenuContent,

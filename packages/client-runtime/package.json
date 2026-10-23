@@ -331,6 +331,10 @@
       "types": "./src/state/threadUndo.ts",
       "default": "./src/state/threadUndo.ts"
     },
+    "./state/send-later": {
+      "types": "./src/state/sendLater.ts",
+      "default": "./src/state/sendLater.ts"
+    },
     "./state/thread-settled": {
       "types": "./src/state/threadSettled.ts",
       "default": "./src/state/threadSettled.ts"

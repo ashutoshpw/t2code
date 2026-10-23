@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  renderComment,
   resolve,
   upsertCommentForCurrentHead,
   validateResult,
@@ -234,7 +235,7 @@ test("skips a missing PR commit but preserves other lookup failures", async () =
         rest: { repos: { listPullRequestsAssociatedWithCommit: () => {} } },
       },
       context: {
-        repo: { owner: "pingdotgg", repo: "t3code" },
+        repo: { owner: "pingdotgg", repo: "t2code" },
         payload: {
           workflow_run: { event: "pull_request", head_sha: "old-head", pull_requests: [] },
         },

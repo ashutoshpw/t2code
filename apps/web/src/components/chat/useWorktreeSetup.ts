@@ -1,4 +1,4 @@
-import type { ThreadStructure } from "@t3tools/client-runtime/state/shell";
+import type { ThreadStructure } from "@t2code/client-runtime/state/shell";
 import type {
   EnvironmentId,
   RunId,

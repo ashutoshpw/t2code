@@ -1,12 +1,12 @@
-import { PrimaryConnectionTarget } from "@t3tools/client-runtime/connection";
-import { createEnvironmentThreadShellAtoms } from "@t3tools/client-runtime/state/threads";
+import { PrimaryConnectionTarget } from "@t2code/client-runtime/connection";
+import { createEnvironmentThreadShellAtoms } from "@t2code/client-runtime/state/threads";
 import {
   applyShellStreamEvent,
   createEnvironmentSnapshotAtom,
   EMPTY_SHELL_STATE,
   type EnvironmentShellState,
   type EnvironmentShellStatus,
-} from "@t3tools/client-runtime/state/shell";
+} from "@t2code/client-runtime/state/shell";
 import {
   v2ShellSnapshot,
   v2ThreadShell,

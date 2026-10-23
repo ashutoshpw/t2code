@@ -811,7 +811,7 @@ describe("AssetAccess", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-media-revision-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-media-revision-" });
       const filePath = path.join(root, "recording.mp4");
       yield* fs.writeFileString(filePath, "original");
       yield* Effect.promise(() => NodeFSP.utimes(filePath, 1_000, 1_000));

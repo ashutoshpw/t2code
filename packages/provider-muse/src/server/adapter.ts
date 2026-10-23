@@ -1218,7 +1218,7 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
                   required: true,
                 })),
               };
-        // Muse does not propagate allowAll to workflow children; T3 answers for them.
+        // Muse does not propagate allowAll to workflow children; T2 answers for them.
         const autoApprove = child && input.runtimePolicy.runtimeMode === "full-access";
         const entry: PendingRequest = {
           native,

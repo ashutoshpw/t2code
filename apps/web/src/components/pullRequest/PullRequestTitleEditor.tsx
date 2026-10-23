@@ -1,5 +1,5 @@
-import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId, PullRequestDetail, PullRequestRef } from "@t3tools/contracts";
+import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
+import type { EnvironmentId, PullRequestDetail, PullRequestRef } from "@t2code/contracts";
 import { useState } from "react";
 import {
   capitalizeTerm,

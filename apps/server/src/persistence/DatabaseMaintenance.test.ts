@@ -38,7 +38,7 @@ it.layer(DatabaseMaintenance.layer.pipe(Layer.provideMerge(NodeServices.layer)))
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const maintenance = yield* DatabaseMaintenance.DatabaseMaintenance;
-        const userdata = yield* fs.makeTempDirectoryScoped({ prefix: "t3-legacy-" });
+        const userdata = yield* fs.makeTempDirectoryScoped({ prefix: "t2-legacy-" });
         const dbPath = path.join(userdata, "statev2.sqlite");
         const legacy = path.join(userdata, "state.sqlite");
         yield* Effect.gen(function* () {

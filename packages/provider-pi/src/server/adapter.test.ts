@@ -2821,7 +2821,7 @@ describe("PiAdapterV2", () => {
       assert.deepEqual(forkedEntries(), []);
       assert.equal(missing._tag, "Failure");
 
-      // An adopted wake precedes its T3 turn, but follows turn 1 and its steer.
+      // An adopted wake precedes its T2 turn, but follows turn 1 and its steer.
       fake.queueEntries(UNCAPTURED_TURN_TREE);
       yield* rollBackToFirst(uncapturedTurns(providerThread.id));
       assert.deepEqual(forkedEntries(), ["u2"]);
@@ -2870,7 +2870,7 @@ describe("PiAdapterV2", () => {
         leafId: "a3",
       };
 
-      // The adopted wake precedes T3's first turn; its steer must be discarded with it.
+      // The adopted wake precedes T2's first turn; its steer must be discarded with it.
       fake.queueEntries(entries);
       yield* rollBackToStart(150);
       assert.deepEqual(forkedEntries(), ["u2"]);
