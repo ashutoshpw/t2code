@@ -1,8 +1,8 @@
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import type { UnifiedSettings } from "@t3tools/contracts";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
+import type { UnifiedSettings } from "@t2code/contracts";
 import { useStableCallback } from "../../hooks/useStableCallback";
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+import { scopeProjectRef } from "@t2code/client-runtime/environment";
+import { resolveProjectSettings } from "@t2code/shared/projectSettings";
 import { useNavigate } from "@tanstack/react-router";
 import { DEFAULT_INTERACTION_MODE } from "../../types";
 import { newDraftId, newThreadId } from "~/lib/utils";

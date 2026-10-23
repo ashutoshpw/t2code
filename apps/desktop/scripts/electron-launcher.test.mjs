@@ -156,21 +156,21 @@ async function startupCleanupPattern(desktopDir) {
 }
 
 it
-  // oxlint-disable-next-line t3code/no-global-process-runtime -- Native pgrep is unavailable on Windows.
+  // oxlint-disable-next-line t2code/no-global-process-runtime -- Native pgrep is unavailable on Windows.
   .skipIf(NodeOS.platform() === "win32")
   .each([
-    "/tmp/t3-feature.one/apps/desktop",
-    "/tmp/t3-feature.one [two](three)+?^${four}|back\\slash*/apps/desktop",
+    "/tmp/t2-feature.one/apps/desktop",
+    "/tmp/t2-feature.one [two](three)+?^${four}|back\\slash*/apps/desktop",
   ])("dev cleanup matches only the literal root argument: %s", async (desktopDir) => {
   const pattern = await startupCleanupPattern(desktopDir);
-  const flag = `--t3code-dev-root=${desktopDir}`;
+  const flag = `--t2code-dev-root=${desktopDir}`;
   const argvCases = [
     [flag],
     [flag, "main.cjs"],
     [flag.replace(".one", "Xone")],
     [`${flag}-two`],
     [`prefix${flag}`],
-    [`--t3code-dev-root=/other${desktopDir}`],
+    [`--t2code-dev-root=/other${desktopDir}`],
   ];
   const children = [];
   try {

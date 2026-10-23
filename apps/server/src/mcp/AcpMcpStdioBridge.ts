@@ -66,8 +66,8 @@ export interface McpToolSession {
 }
 
 /**
- * One initialized MCP session over T3 Code's HTTP endpoint, terminated when
- * the scope closes. Used by the ACP terminal fallback and `t3 thread`.
+ * One initialized MCP session over T2 Code's HTTP endpoint, terminated when
+ * the scope closes. Used by the ACP terminal fallback and `t2 thread`.
  */
 export const mcpToolSession = (
   options: McpToolSessionOptions,
@@ -101,7 +101,7 @@ export const mcpToolSession = (
     if (!response.ok) {
       yield* discardResponseBody(response);
       return yield* Effect.fail(
-        new AcpMcpBridgeError(`T3 Code MCP endpoint responded with HTTP ${response.status}.`),
+        new AcpMcpBridgeError(`T2 Code MCP endpoint responded with HTTP ${response.status}.`),
       );
     }
     const payloads = yield* Stream.runCollect(responsePayloads(response, bridgeError));
@@ -115,13 +115,13 @@ export const mcpToolSession = (
     method: string,
     params: unknown,
   ): Effect.fn.Return<JsonRpcEnvelope, AcpMcpBridgeError> {
-    const id = `t3-cli-${nextId++}`;
+    const id = `t2-cli-${nextId++}`;
     const responses = yield* send({ jsonrpc: "2.0", id, method, params });
     const envelope = asEnvelope(responses.find((entry) => asEnvelope(entry)?.id === id));
     if (envelope === null || envelope.error !== undefined) {
       return yield* Effect.fail(
         new AcpMcpBridgeError(
-          `T3 Code MCP ${method} failed${envelope?.error === undefined ? "." : `: ${JSON.stringify(envelope.error)}`}`,
+          `T2 Code MCP ${method} failed${envelope?.error === undefined ? "." : `: ${JSON.stringify(envelope.error)}`}`,
         ),
       );
     }

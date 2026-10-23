@@ -7,7 +7,7 @@ import type {
   PullRequestMergeMethod,
   PullRequestRef,
   ScopedThreadRef,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import {
   ArrowUpRightIcon,
   BookOpenIcon,

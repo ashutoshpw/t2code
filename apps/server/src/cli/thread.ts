@@ -11,8 +11,8 @@ import {
   type OrchestratorMcpThreadListItem,
   type OrchestratorMcpThreadStatus,
   type OrchestratorMcpThreadTimelineItem,
-} from "@t3tools/contracts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+} from "@t2code/contracts";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -34,7 +34,7 @@ import { projectLocationFlags, resolveCliAuthConfig } from "./config.ts";
 
 /**
  * Short enough that a run which stops to ask the user something is noticed
- * soon, since `t3_thread_wait` only returns on a terminal run.
+ * soon, since `t2_thread_wait` only returns on a terminal run.
  */
 const WAIT_SLICE_MS = 15_000;
 const READ_PAGE_LIMIT = 100;
@@ -46,7 +46,7 @@ export class ThreadServerNotRunningError extends Schema.TaggedError<ThreadServer
 ) {
   override readonly [Runtime.errorReported] = false;
   override get message(): string {
-    return `No running T3 Code server uses ${this.baseDir}. Start T3 Code, then retry.`;
+    return `No running T2 Code server uses ${this.baseDir}. Start T2 Code, then retry.`;
   }
 }
 
@@ -57,7 +57,7 @@ export class ThreadServerUnreachableError extends Schema.TaggedError<ThreadServe
   override readonly [Runtime.errorReported] = false;
   override get message(): string {
     const reason = this.cause instanceof Error ? ` ${this.cause.message}` : "";
-    return `Could not reach the T3 Code server at ${this.origin}.${reason}`;
+    return `Could not reach the T2 Code server at ${this.origin}.${reason}`;
   }
 }
 
@@ -86,7 +86,7 @@ export class ThreadProjectNotFoundError extends Schema.TaggedError<ThreadProject
 ) {
   override readonly [Runtime.errorReported] = false;
   override get message(): string {
-    return `No T3 Code project matches '${this.identifier}'. Pass a project id or a path inside a project.`;
+    return `No T2 Code project matches '${this.identifier}'. Pass a project id or a path inside a project.`;
   }
 }
 
@@ -99,7 +99,7 @@ export class ThreadNeedsInputError extends Schema.TaggedError<ThreadNeedsInputEr
   override readonly [Runtime.errorExitCode] = 2;
 
   override get message(): string {
-    return `Thread ${this.threadId} is waiting for an answer. Open it in T3 Code to respond.`;
+    return `Thread ${this.threadId} is waiting for an answer. Open it in T2 Code to respond.`;
   }
 }
 
@@ -175,7 +175,7 @@ const makeThreadTools = (session: McpToolSession, origin: string) => {
   const unexpected = (tool: string) =>
     new ThreadToolFailedError({
       tool,
-      detail: `The server sent an unexpected ${tool} result. Update the t3 CLI to match the server.`,
+      detail: `The server sent an unexpected ${tool} result. Update the t2 CLI to match the server.`,
     });
   return {
     call: Effect.fn("cli.thread.callTool")(function* <S extends Schema.Decoder<unknown>>(
@@ -217,7 +217,7 @@ const withThreadTools = Effect.fn("cli.thread.withThreadTools")(function* <A, E,
     const environmentAuth = yield* EnvironmentAuth.EnvironmentAuth;
     const issued = yield* Effect.acquireRelease(
       environmentAuth.issueMcpClientSession({
-        label: "t3 thread cli",
+        label: "t2 thread cli",
         // The CLI runs as the machine's owner. New threads still start at
         // the project's default mode, never at this ceiling by default.
         access: "full-access",
@@ -229,7 +229,7 @@ const withThreadTools = Effect.fn("cli.thread.withThreadTools")(function* <A, E,
     const session = yield* mcpToolSession({
       endpoint: new URL("/mcp", origin).href,
       authorization: `Bearer ${issued.token}`,
-      clientName: "t3-thread-cli",
+      clientName: "t2-thread-cli",
     }).pipe(Effect.mapError((cause) => new ThreadServerUnreachableError({ origin, cause })));
     return yield* run(makeThreadTools(session, origin));
   }).pipe(
@@ -261,7 +261,7 @@ const listAllProjects = Effect.fn("cli.thread.listAllProjects")(function* (tools
   let cursor: number | null = 0;
   while (cursor !== null) {
     const page: typeof ProjectListResult.Type = yield* tools.call(
-      "t3_project_list",
+      "t2_project_list",
       { cursor, limit: 100 },
       ProjectListResult,
     );
@@ -316,7 +316,7 @@ const readTimeline = Effect.fn("cli.thread.readTimeline")(function* (
   let page: OrchestratorMcpThreadReadResult;
   do {
     page = yield* tools.call(
-      "t3_thread_read",
+      "t2_thread_read",
       {
         threadId,
         view,
@@ -342,7 +342,7 @@ const readFullText = Effect.fn("cli.thread.readFullText")(function* (
   let nextTextOffset = item.textTruncated ? (item.nextTextOffset ?? null) : null;
   while (nextTextOffset !== null) {
     const page = yield* tools.call(
-      "t3_thread_read",
+      "t2_thread_read",
       { threadId, itemId: item.itemId, textOffset: nextTextOffset, runLimit: 1 },
       OrchestratorMcpThreadReadResult,
     );
@@ -388,7 +388,7 @@ export const waitForRun = Effect.fn("cli.thread.waitForRun")(function* (
   runId: RunId,
 ) {
   const waitSlice = (timeoutMs: number) =>
-    tools.call("t3_thread_wait", { threadId, runId, timeoutMs }, OrchestratorMcpThreadWaitResult);
+    tools.call("t2_thread_wait", { threadId, runId, timeoutMs }, OrchestratorMcpThreadWaitResult);
   const ended = (waited: OrchestratorMcpThreadWaitResult) =>
     ({ type: "ended", runId: waited.runId, status: waited.status }) satisfies WaitOutcome;
   while (true) {
@@ -397,7 +397,7 @@ export const waitForRun = Effect.fn("cli.thread.waitForRun")(function* (
     // A pending request on this run, or on an earlier run this one is queued
     // behind, blocks it until someone answers.
     const { thread } = yield* tools.call(
-      "t3_thread_read",
+      "t2_thread_read",
       { threadId, limit: 1, runLimit: 1 },
       OrchestratorMcpThreadReadResult,
     );
@@ -514,7 +514,7 @@ const threadListCommand = Command.make("list", {
         let cursor: number | null = 0;
         while (cursor !== null) {
           const page: OrchestratorMcpThreadListResult = yield* tools.call(
-            "t3_thread_list",
+            "t2_thread_list",
             { projectId: project.id, includeSubagents: false, limit: 100, cursor },
             OrchestratorMcpThreadListResult,
           );
@@ -579,7 +579,7 @@ const threadStartCommand = Command.make("start", {
         Effect.fn("cli.thread.start")(function* (tools) {
           const project = yield* resolveProject(tools, flags.project);
           const launched = yield* tools.call(
-            "t3_thread_launch",
+            "t2_thread_launch",
             {
               projectId: project.id,
               title,
@@ -629,7 +629,7 @@ const threadSendCommand = Command.make("send", {
         flags,
         Effect.fn("cli.thread.send")(function* (tools) {
           const sent = yield* tools.call(
-            "t3_thread_send",
+            "t2_thread_send",
             { threadId, message, mode: "queue" },
             OrchestratorMcpThreadSendResult,
           );

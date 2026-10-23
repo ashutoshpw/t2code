@@ -60,7 +60,7 @@ import {
   issueHeadlessServeAccessInfo,
 } from "./startupAccess.ts";
 
-export const runEnvironmentLabelUpdates = Effect.fn("runEnvironmentLabelUpdates")(function* (
+const runEnvironmentLabelUpdates = Effect.fn("runEnvironmentLabelUpdates")(function* (
   scope: Scope.Scope,
 ) {
   const settings = yield* ServerSettings.ServerSettingsService;
@@ -606,44 +606,44 @@ const make = Effect.fn("serverRuntimeStartup.make")(function* (options?: Startup
       forkParked,
     );
 
-      // The label subscription and the relay sync both live as long as the
-      // server does; upstream's startup no longer carries the sequential
-      // reactor scope this used to hang off, so they get a dedicated one.
-      const labelScope = yield* Scope.make("sequential");
-      yield* Effect.addFinalizer(() => Scope.close(labelScope, Exit.void));
-      yield* runEnvironmentLabelUpdates(labelScope);
-      // The sync reads relay credentials from the secret store and performs
-      // its own HTTP; both layers are bound here so the startup requirement
-      // stays narrow (matches how the reactor binds the relay publisher).
-      yield* runEnvironmentLabelRelaySync().pipe(
-        Effect.provide(Layer.merge(ServerSecretStore.layer, FetchHttpClient.layer)),
-        Scope.provide(labelScope),
-        Effect.forkScoped,
-      );
+    // The label subscription and the relay sync both live as long as the
+    // server does; upstream's startup no longer carries the sequential
+    // reactor scope this used to hang off, so they get a dedicated one.
+    const labelScope = yield* Scope.make("sequential");
+    yield* Effect.addFinalizer(() => Scope.close(labelScope, Exit.void));
+    yield* runEnvironmentLabelUpdates(labelScope);
+    // The sync reads relay credentials from the secret store and performs
+    // its own HTTP; both layers are bound here so the startup requirement
+    // stays narrow (matches how the reactor binds the relay publisher).
+    yield* runEnvironmentLabelRelaySync().pipe(
+      Effect.provide(Layer.merge(ServerSecretStore.layer, FetchHttpClient.layer)),
+      Scope.provide(labelScope),
+      Effect.forkScoped,
+    );
 
-      const importPendingTranscripts = legacyV1ThreadImporter.importPendingTranscripts.pipe(
-        Effect.tap((summary) =>
-          summary.importedThreadCount === 0
-            ? Effect.void
-            : Effect.logInfo("Hydrated legacy v1 thread transcripts", summary),
-        ),
-      );
-      yield* (
-        legacyMigrationThreadCount > 0
-          ? importPendingTranscripts.pipe(
-              Effect.tap(() =>
-                lifecycleEvents.publish({
-                  version: 1,
-                  type: "legacyThreadMigration",
-                  payload: {
-                    status: "complete",
-                    totalThreadCount: legacyMigrationThreadCount,
-                  },
-                }),
-              ),
-            )
-          : importPendingTranscripts
-      ).pipe(forkParked);
+    const importPendingTranscripts = legacyV1ThreadImporter.importPendingTranscripts.pipe(
+      Effect.tap((summary) =>
+        summary.importedThreadCount === 0
+          ? Effect.void
+          : Effect.logInfo("Hydrated legacy v1 thread transcripts", summary),
+      ),
+    );
+    yield* (
+      legacyMigrationThreadCount > 0
+        ? importPendingTranscripts.pipe(
+            Effect.tap(() =>
+              lifecycleEvents.publish({
+                version: 1,
+                type: "legacyThreadMigration",
+                payload: {
+                  status: "complete",
+                  totalThreadCount: legacyMigrationThreadCount,
+                },
+              }),
+            ),
+          )
+        : importPendingTranscripts
+    ).pipe(forkParked);
 
     yield* forkParked(
       Effect.gen(function* () {

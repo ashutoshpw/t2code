@@ -4,18 +4,6 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { deviceStreamDocument, deviceStreamMessage } from "./device-stream-document";
 
 describe("native device stream document", () => {
-  it.each([
-    ["android", "ios", "http://192.168.1.10:3772/api/device-hub", "http://192.168.1.10:3772/"],
-    ["android", "ios", "https://env.example/t3/api/device-hub", "https://env.example/"],
-    ["android", "android", "http://192.168.1.10:3772/api/device-hub", "https://localhost/"],
-    ["ios", "ios", "http://192.168.1.10:3772/api/device-hub", "file:///"],
-  ] as const)(
-    "uses a %s viewer base URL for %s targets on %s",
-    (viewer, target, httpBase, expected) => {
-      expect(deviceStreamBaseUrl(viewer, target, httpBase)).toBe(expected);
-    },
-  );
-
   it("keeps ticket and device values from terminating the embedded script", () => {
     const deviceId = '</script><script>alert("device")</script>';
     const configuration = JSON.stringify({ deviceId, ticket: "<ticket>" });

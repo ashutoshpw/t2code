@@ -6,7 +6,7 @@ import {
   selectableProviderOptionChoices,
   REASONING_SELECT_DESCRIPTOR_IDS,
   ULTRATHINK_PROMPT_PREFIX,
-} from "@t3tools/client-runtime/model-traits";
+} from "@t2code/client-runtime/model-traits";
 import {
   type ModelSelection,
   type ProviderDriverKind,

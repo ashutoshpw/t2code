@@ -111,7 +111,7 @@ Questions these answer:
 
 ## Alerts
 
-The stack provisions threshold monitors and a `t3-code-relay-health` dashboard from
+The stack provisions threshold monitors and a `t2-code-relay-health` dashboard from
 [`infra/relay/src/monitoring.ts`](../../infra/relay/src/monitoring.ts) when the deployment sets
 `RELAY_ALERT_NOTIFIER_ID`. Paging monitors go to that notifier and need two failing runs in a row.
 Warnings go to `RELAY_WARNING_NOTIFIER_ID` when it is set and are otherwise only visible in Axiom.
@@ -145,7 +145,7 @@ when they are frequent enough to stall provisioning. Compare the call volume on 
 account limit.
 
 **Traffic dropped.** The Worker is down, a deploy broke it, or spans stopped reaching Axiom. Check
-`https://relay.t3.codes/health` first.
+`https://relay.t2.codes/health` first.
 
 **Tunnel cleanup stopped / tunnel deletions failing.** Warnings for the five-minute reaper that deletes
 idle Cloudflare tunnels. "Stopped" counts sweeps that finished, so it also fires when every sweep

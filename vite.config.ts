@@ -7,7 +7,7 @@ const DOM_TEST_ENVIRONMENT_ALLOWLIST: Array<string> = [];
 
 const TEST_EXCLUDE = [
   "**/.repos/**",
-  "**/.t3/**",
+  "**/.t2/**",
   "**/node_modules/**",
   "**/dist/**",
   "**/dist-electron/**",
@@ -270,15 +270,15 @@ export default defineConfig({
           "**/{test,tests,testkit,testing,fixtures,integration}/**",
           "packages/provider-testing/**",
         ],
-        rules: { "t3code/prefer-effect-fn": "off" },
+        rules: { "t2code/prefer-effect-fn": "off" },
       },
       {
         files: ["apps/web/**/*.test.{ts,tsx}"],
-        rules: { "t3code/require-disposable-render": "error" },
+        rules: { "t2code/require-disposable-render": "error" },
       },
       {
         files: ["apps/web/src/**/*.browser.test.{ts,tsx}"],
-        rules: { "t3code/no-frame-waits-in-browser-tests": "error" },
+        rules: { "t2code/no-frame-waits-in-browser-tests": "error" },
       },
       {
         // Burn-down list: these files still have polling loops, so they stay at "warn".
@@ -300,12 +300,12 @@ export default defineConfig({
           "packages/client-runtime/src/state/threads-sync.test.ts",
           "packages/shared/src/atomicWrite.test.ts",
         ],
-        rules: { "t3code/no-polling-loop-in-tests": "warn" },
+        rules: { "t2code/no-polling-loop-in-tests": "warn" },
       },
       {
         files: ["apps/**/src/**", "packages/**/src/**"],
         excludeFiles: DOM_TEST_ENVIRONMENT_ALLOWLIST,
-        rules: { "t3code/no-dom-test-environment": "error" },
+        rules: { "t2code/no-dom-test-environment": "error" },
       },
       {
         files: ["packages/client-runtime/src/state/**", "apps/{web,mobile,desktop}/src/**"],
@@ -481,7 +481,7 @@ export default defineConfig({
           // Real user quotes stay verbatim.
           "apps/marketing/src/lib/tweets.ts",
         ],
-        rules: { "t3code/no-em-dash-copy": "error" },
+        rules: { "t2code/no-em-dash-copy": "error" },
       },
       {
         files: ["apps/web/src/**"],

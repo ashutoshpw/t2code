@@ -1344,7 +1344,8 @@ export function readPullRequestDetailSnapshot(
   }
 }
 
-const PULL_REQUEST_DETAIL_SNAPSHOT_INDEX_KEY = "t3.pullRequests.recentDetails";
+// Snapshot keys in the order they were last written, oldest first.
+const PULL_REQUEST_DETAIL_SNAPSHOT_INDEX_KEY = "t2.pullRequests.recentDetails";
 const PULL_REQUEST_DETAIL_SNAPSHOT_LIMIT = 20;
 
 function readPullRequestDetailSnapshotIndex(storage: SnapshotStorage): string[] {

@@ -5,10 +5,10 @@ import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as HostProcess from "@t2code/shared/HostProcess";
 
-import { findOwnedLaunchers } from "./uninstall.ts";
+import { findOwnedLauncher } from "./uninstall.ts";
 
 it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
-  it.effect("claims only launchers that point into this home's runtime tree", () =>
+  it.effect("claims only a launcher that points into this home's runtime tree", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -28,10 +28,10 @@ it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
       yield* fs.symlink(exe, ours);
       yield* fs.symlink(otherExe, theirs);
 
-      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: ours, versionsDir }), [ours]);
-      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: theirs, versionsDir }), []);
-      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: copy, versionsDir }), []);
-      assert.deepEqual(yield* findOwnedLaunchers({ launchedAs: undefined, versionsDir }), []);
+      assert.equal(yield* findOwnedLauncher({ launchedAs: ours, versionsDir }), ours);
+      assert.isUndefined(yield* findOwnedLauncher({ launchedAs: theirs, versionsDir }));
+      assert.isUndefined(yield* findOwnedLauncher({ launchedAs: copy, versionsDir }));
+      assert.isUndefined(yield* findOwnedLauncher({ launchedAs: undefined, versionsDir }));
     }).pipe(Effect.scoped, Effect.provideService(HostProcess.Platform, "linux")),
   );
 });

@@ -2,13 +2,13 @@ import type {
   OrchestrationV2PendingBackgroundTask,
   OrchestrationV2ProviderGoal,
   ThreadId,
-} from "@t3tools/contracts";
-import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
+} from "@t2code/contracts";
+import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
 import {
   presentPendingBackgroundWork,
   presentProviderGoal,
-} from "@t3tools/client-runtime/state/thread-execution";
-import { childThreadInputsTitle } from "@t3tools/client-runtime/state/threads";
+} from "@t2code/client-runtime/state/thread-execution";
+import { childThreadInputsTitle } from "@t2code/client-runtime/state/threads";
 import { GitBranchIcon, MessageCircleIcon, ShieldQuestionIcon, TargetIcon } from "lucide-react";
 import { Fragment } from "react";
 import { cn } from "~/lib/utils";

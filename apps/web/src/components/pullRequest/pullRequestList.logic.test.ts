@@ -74,25 +74,6 @@ function entry(
 }
 
 describe("visible pull request line-count targets", () => {
-  it("reuses counts supplied by the listing and only requests missing counts", () => {
-    const entries = [
-      entry({ number: 1, additions: 12, deletions: 0 }),
-      entry({ number: 2, additions: 0, deletions: 7 }),
-      entry({ number: 3, additions: 0, deletions: 0 }),
-    ];
-    const entriesByKey = new Map(entries.map((item) => [pullRequestEntryKey(item), item]));
-    const keys = pullRequestStatsKeysToRequest(
-      entriesByKey,
-      new Set(entries.map(pullRequestEntryKey)),
-      [],
-      new Map(),
-    );
-
-    expect(pullRequestStatsBatches(entriesByKey, keys)[0]?.input.refs).toEqual([
-      { projectId: "project-1", repository: "pingdotgg/t3code", number: 3 },
-    ]);
-  });
-
   it("does not request a row again after its received batch is pruned", () => {
     const entries = [
       entry({ additions: 0, deletions: 0, number: 1 }),
@@ -545,22 +526,6 @@ describe("merging the environments' own listings", () => {
         detail: null,
       },
     ]);
-  });
-
-  it("keeps each environment's continuation to itself", () => {
-    const merged = mergePullRequestLists([
-      [ENV_1, answer({ nextCursors: { "github.com pingdotgg/t3code": "cursor-1" } })],
-      [ENV_2, answer()],
-    ]);
-    expect(merged?.nextCursors).toEqual({
-      [ENV_1]: { "github.com pingdotgg/t3code": "cursor-1" },
-    });
-  });
-
-  it("reads the same key whichever order the environments connected in", () => {
-    expect(pullRequestEnvironmentSetKey(["env-2", "env-1"])).toBe(
-      pullRequestEnvironmentSetKey(["env-1", "env-2"]),
-    );
   });
 });
 

@@ -1,12 +1,12 @@
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { applyPullRequestDraftFilterChange } from "@t3tools/client-runtime/pull-request-query";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { applyPullRequestDraftFilterChange } from "@t2code/client-runtime/pull-request-query";
 import { Spinner } from "~/components/ui/spinner";
 import type { PullRequestSpeedActionResult } from "~/components/pullRequest/PullRequestSpeedActions";
 import { usePullRequestCloseBatch } from "~/components/pullRequest/usePullRequestActions";
 import { SidebarPointerSensor } from "~/components/Sidebar.pointer";
 import { resolveSidebarSweepKeys } from "~/components/Sidebar.logic";
-import { sortProjectsByGroupOrder } from "@t3tools/client-runtime/state/project-grouping";
-import { resolveEnvironmentMachineKind } from "@t3tools/contracts";
+import { sortProjectsByGroupOrder } from "@t2code/client-runtime/state/project-grouping";
+import { resolveEnvironmentMachineKind } from "@t2code/contracts";
 import type {
   EnvironmentId,
   ProjectId,
@@ -16,7 +16,7 @@ import type {
   PullRequestListInput,
   PullRequestListResult,
   PullRequestListState,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowDownUpIcon, LayersIcon, Plug2Icon } from "lucide-react";
@@ -1122,7 +1122,7 @@ export function PullRequestsPage() {
       ) : !pullRequestsSupported ? (
         <PullRequestsUnavailableState
           title="Pull requests unavailable"
-          error="Update your T3 Code servers to browse pull requests."
+          error="Update your T2 Code servers to browse pull requests."
         />
       ) : firstLoad ? (
         <PullRequestListGhost rows={7} />
@@ -1438,7 +1438,7 @@ export function PullRequestsPage() {
             maximized={rightPanelMaximized}
             keybindings={keybindings}
             getShortcutContext={getShortcutContext}
-            widthStorageKey="t3code:pull-request-panel-width"
+            widthStorageKey="t2code:pull-request-panel-width"
             defaultWidth={typeof window === "undefined" ? 640 : Math.floor(window.innerWidth / 2)}
             surfaces={renderedRightPanelSurfaces}
             environmentId={panelEnvironmentId}

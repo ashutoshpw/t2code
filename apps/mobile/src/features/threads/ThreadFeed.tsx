@@ -253,7 +253,7 @@ import {
   needsWorkspaceBasenameLookup,
   pickWorkspaceBasenameMatch,
   WORKSPACE_BASENAME_LOOKUP_LIMIT,
-} from "@t3tools/client-runtime/workspace-basename-lookup";
+} from "@t2code/client-runtime/workspace-basename-lookup";
 import {
   useLiveThreadLinkLabels,
   useQuietThreadShell,
@@ -1075,7 +1075,7 @@ function AgentMessageFoldHeader(props: {
       />
       <Text
         numberOfLines={1}
-        className="max-w-[50%] shrink-0 font-t3-medium text-sm text-user-bubble-foreground-muted"
+        className="max-w-[50%] shrink-0 font-t2-medium text-sm text-user-bubble-foreground-muted"
       >
         {label}
       </Text>
@@ -1108,7 +1108,7 @@ function OpenSenderThreadButton(props: {
         })
       }
     >
-      <Text className="font-t3-medium text-xs text-foreground-secondary">Open thread</Text>
+      <Text className="font-t2-medium text-xs text-foreground-secondary">Open thread</Text>
     </Pressable>
   );
 }
@@ -1170,7 +1170,7 @@ function ThreadAutomationMessageRow(props: {
             tintColorClassName="accent-user-bubble-foreground-muted"
             type="monochrome"
           />
-          <Text className="font-t3-medium text-sm text-user-bubble-foreground-muted">
+          <Text className="font-t2-medium text-sm text-user-bubble-foreground-muted">
             Automation
           </Text>
           <Text numberOfLines={1} className="min-w-0 shrink text-sm text-user-bubble-foreground">
@@ -1208,12 +1208,12 @@ function ThreadAutomationMessageRow(props: {
               hitSlop={6}
               onPress={() => openSettings(navigation, "SettingsScheduledTasks")}
             >
-              <Text className="font-t3-medium text-xs text-foreground-secondary">
+              <Text className="font-t2-medium text-xs text-foreground-secondary">
                 Open automation
               </Text>
             </Pressable>
           ) : null}
-          <Text className="font-t3-medium text-xs tabular-nums text-foreground-secondary">
+          <Text className="font-t2-medium text-xs tabular-nums text-foreground-secondary">
             {props.timestampLabel}
           </Text>
           <UserMessageCopyButton
@@ -1318,7 +1318,7 @@ function renderFeedEntry(
           <Text
             key={props.workRowSizing.textSizeKey}
             numberOfLines={1}
-            className="shrink font-t3-medium text-sm tabular-nums text-foreground-muted"
+            className="shrink font-t2-medium text-sm tabular-nums text-foreground-muted"
           >
             {entry.label}
           </Text>
@@ -1850,10 +1850,10 @@ function TurnDiffStat(props: {
       onPress={() => props.onOpenTurnDiff(props.checkpoint)}
       className="min-h-11 shrink-0 flex-row items-center gap-2 px-2 active:bg-subtle"
     >
-      <Text className="font-t3-medium text-xs tabular-nums text-adaptive-emerald-700-300">
+      <Text className="font-t2-medium text-xs tabular-nums text-adaptive-emerald-700-300">
         +{formatDiffCount(additions)}
       </Text>
-      <Text className="font-t3-medium text-xs tabular-nums text-adaptive-rose-700-300">
+      <Text className="font-t2-medium text-xs tabular-nums text-adaptive-rose-700-300">
         −{formatDiffCount(deletions)}
       </Text>
       <SymbolView name="chevron.right" size={12} tintColorClassName="accent-foreground-muted" />

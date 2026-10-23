@@ -9,7 +9,7 @@ import {
   ProviderTurnId,
   RunId,
   ThreadId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 
 import { idleCompactionWindow, type IdleCompactionRecords } from "./IdleCompaction.ts";

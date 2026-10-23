@@ -329,7 +329,7 @@ const CLOUD_CLI_REACHABILITY_TIMEOUT = Duration.seconds(30);
 const CLOUD_CLI_REACHABILITY_WAIT = Duration.seconds(60);
 const CLOUD_CLI_REACHABILITY_RETRY = Duration.seconds(5);
 
-/** Asks the running server to check T3 Connect now. `null` when no server answers. */
+/** Asks the running server to check T2 Connect now. `null` when no server answers. */
 const checkLiveReachability = Effect.fn("cloud.cli.check_live_reachability")(function* () {
   const config = yield* ServerConfig.ServerConfig;
   const runtimeState = yield* readPersistedServerRuntimeState(config.serverRuntimeStatePath);
@@ -360,7 +360,7 @@ function formatAlertBox(text: string): string {
 }
 
 /**
- * Waits for the server that `t3 connect` just started to prove other devices
+ * Waits for the server that `t2 connect` just started to prove other devices
  * can reach it, so a broken tunnel fails setup instead of looking green.
  */
 const waitForReachability = Effect.fn("cloud.cli.wait_for_reachability")(function* () {
@@ -382,7 +382,7 @@ const waitForReachability = Effect.fn("cloud.cli.wait_for_reachability")(functio
   yield* Console.error(
     formatAlertBox(
       last === null
-        ? "✕ Could not check T3 Connect\n  The T3 server on this machine did not answer.\n  Fix: run `t3 service status`, then `t3 connect status`."
+        ? "✕ Could not check T2 Connect\n  The T2 server on this machine did not answer.\n  Fix: run `t2 service status`, then `t2 connect status`."
         : formatReachabilityFailure(last),
     ),
   );
@@ -784,7 +784,7 @@ const reportServiceOnboarding = Effect.fn("cli.connect.report_service_onboarding
 ) {
   if (outcome === "pending") {
     yield* Console.log(
-      "\nBackground service restarting\n\nThe server establishes the T3 Connect link once it is back. Check the log above if it does not come back.",
+      "\nBackground service restarting\n\nThe server establishes the T2 Connect link once it is back. Check the log above if it does not come back.",
     );
     return;
   }
@@ -792,8 +792,8 @@ const reportServiceOnboarding = Effect.fn("cli.connect.report_service_onboarding
     const platform = yield* HostProcess.Platform;
     yield* Console.log(
       platform === "darwin"
-        ? "\n✓ Background service ready\n\nT3 Code is set to run while you are logged in to this Mac. The server establishes the T3 Connect link on startup."
-        : "\n✓ Background service ready\n\nT3 Code is set to keep running after you log out. The server establishes the T3 Connect link on startup.",
+        ? "\n✓ Background service ready\n\nT2 Code is set to run while you are logged in to this Mac. The server establishes the T2 Connect link on startup."
+        : "\n✓ Background service ready\n\nT2 Code is set to keep running after you log out. The server establishes the T2 Connect link on startup.",
     );
     return;
   }

@@ -709,7 +709,7 @@ it.effect.each([
       compatibility: [
         {
           driver: OPENCODE_DRIVER,
-          t3CodeRange: ">=0.0.42",
+          t2CodeRange: ">=0.0.42",
           recommendedVersion: "1.14.20",
           ranges: [{ range: "=1.14.20", status: "supported" }],
         },
@@ -792,7 +792,7 @@ it.effect(
       compatibility: [
         {
           driver: "codex",
-          t3CodeRange: ">=0.0.42",
+          t2CodeRange: ">=0.0.42",
           ranges: [
             { range: "<=2.0.0", status: "supported" },
             { range: ">2.0.0", status: "broken" },

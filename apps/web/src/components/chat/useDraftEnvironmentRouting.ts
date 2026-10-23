@@ -8,8 +8,8 @@ import {
   ProviderInstanceId,
   resolveProjectProviderInstanceEnabled,
   type ThreadContextRecord,
-} from "@t3tools/contracts";
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
+} from "@t2code/contracts";
+import { scopeProjectRef } from "@t2code/client-runtime/environment";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toastManager } from "../ui/toast";
 import {

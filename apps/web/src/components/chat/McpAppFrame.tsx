@@ -48,7 +48,7 @@ const fullscreenSupported =
   typeof HTMLElement !== "undefined" && "popover" in HTMLElement.prototype;
 
 const MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024;
-// Exclude activation left by input elsewhere in T3.
+// Exclude activation left by input elsewhere in T2.
 const PAGE_ACTIVATION_MS = 5_000;
 
 function saveBlob(blob: Blob, name: string) {
@@ -167,7 +167,7 @@ export function McpAppFrame(props: {
   });
 
   // Frame input does not bubble here. An app can refocus itself, so focus
-  // alone cannot exclude activation from input elsewhere in T3.
+  // alone cannot exclude activation from input elsewhere in T2.
   const lastPageInputAt = useRef(Number.NEGATIVE_INFINITY);
   useEffect(() => {
     const note = () => {

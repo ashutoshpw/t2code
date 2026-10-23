@@ -1034,7 +1034,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
             />
             <Text
               className={cn(
-                "text-xs font-t3-bold",
+                "text-xs font-t2-bold",
                 selected ? selectedThreadRowColors.foregroundClassName : "text-warning-foreground",
               )}
             >

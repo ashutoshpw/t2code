@@ -1,13 +1,13 @@
-import { type OrchestrationV2ProviderTurn, type RunAttemptId } from "@t3tools/contracts";
+import { type OrchestrationV2ProviderTurn, type RunAttemptId } from "@t2code/contracts";
 import {
   deriveLatestThreadRun,
   deriveThreadRuntime,
-} from "@t3tools/client-runtime/state/thread-execution";
-import { derivePendingBackgroundWork } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
+} from "@t2code/client-runtime/state/thread-execution";
+import { derivePendingBackgroundWork } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
 import {
   latestUnheldRun,
   usageLimitRunPresentedAsLatest,
-} from "@t3tools/shared/orchestrationV2ThreadError";
+} from "@t2code/shared/orchestrationV2ThreadError";
 import * as Option from "effect/Option";
 import type { SetStateAction } from "react";
 import { applyClaudePromptEffortPrefix, resolvePromptInjectedEffort } from "@t2code/shared/model";
@@ -90,8 +90,8 @@ import {
   reviewCommentContextLabel,
   terminalContextReference,
 } from "../lib/composerContextRecords";
-import { serializeLegacyContextMessage } from "@t3tools/shared/composerContextLegacySend";
-import type { ComposerDispatchMode } from "@t3tools/client-runtime/state/composer-dispatch";
+import { serializeLegacyContextMessage } from "@t2code/shared/composerContextLegacySend";
+import type { ComposerDispatchMode } from "@t2code/client-runtime/state/composer-dispatch";
 import type { DraftThreadEnvMode } from "../composerDraftStore";
 import { collapseExpandedComposerCursor, type ComposerSubmissionIntent } from "../composer-logic";
 import type { ReviewCommentContext } from "../reviewCommentContext";
@@ -801,7 +801,7 @@ export function collectUserMessageBlobPreviewUrls(message: ChatMessage): string[
 
 export { readFileAsDataUrl } from "../lib/imageCompression";
 
-export { resolveSendEnvMode } from "@t3tools/shared/projectSettings";
+export { resolveSendEnvMode } from "@t2code/shared/projectSettings";
 
 export function resolveBackgroundDraftWorkspaceOptions(input: {
   envMode: DraftThreadEnvMode;
@@ -1350,7 +1350,7 @@ export function mergeDirectPreviewAnnotation(input: {
   return { images, previewAnnotations };
 }
 
-export { isThreadWokeUnseen } from "@t3tools/client-runtime/state/thread-settled";
+export { isThreadWokeUnseen } from "@t2code/client-runtime/state/thread-settled";
 
 export function formatOutgoingPrompt(params: {
   provider: ProviderDriverKind;

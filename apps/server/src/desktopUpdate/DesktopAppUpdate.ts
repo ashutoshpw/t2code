@@ -123,7 +123,7 @@ export const make = Effect.fn("desktopUpdate.desktopAppUpdate.make")(function* (
     }
     if (report.outcome === "up-to-date") {
       return yield* failWith(
-        `The T3 Code desktop app on this machine is already up to date on ${report.state.currentVersion}.`,
+        `The T2 Code desktop app on this machine is already up to date on ${report.state.currentVersion}.`,
       );
     }
     return yield* failWith(

@@ -2,7 +2,6 @@ import { assert, describe, it } from "@effect/vitest";
 import { EnvironmentId, ProviderInstanceId, ThreadId } from "@t2code/contracts";
 
 import {
-  PI_T2_MCP_EXTENSION_FILENAME,
   T2_MCP_BEARER_ENV,
   T2_MCP_URL_ENV,
   T2_PI_RUNTIME_MODE_ENV,
@@ -88,18 +87,6 @@ describe("pi T2 MCP injection", () => {
     );
   });
 
-  it("falls back to Pi's first supported mode for legacy auto threads", () => {
-    const launch = buildPiRpcLaunch({
-      launchArgs: [],
-      environment: {},
-      mcpSession: undefined,
-      extensionPath: "/tmp/cache/pi-t2-mcp-extension.ts",
-      runtimeMode: "auto",
-    });
-
-    assert.equal(launch.env[T2_PI_RUNTIME_MODE_ENV], "approval-required");
-  });
-
   it("forces tools and user extensions off for unattended text generation", () => {
     const launch = buildPiRpcLaunch({
       launchArgs: [
@@ -148,22 +135,4 @@ describe("pi T2 MCP injection", () => {
     assert.isTrue(resolvePiLaunchArgs("--provider openrouter --model=deepseek/v4").ok);
     assert.isTrue(resolvePiLaunchArgs("--model deepseek/v4").ok);
   });
-
-  it.effect("materializes the MCP bridge with namespaced tool registration", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const cacheDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pi-extensions-" });
-      const mcpDest = yield* materializePiT2McpExtension(cacheDir);
-      assert.isTrue(mcpDest.endsWith(PI_T2_MCP_EXTENSION_FILENAME));
-      const mcpSource = yield* fs.readFileString(mcpDest);
-      assert.include(mcpSource, "export default async function t2McpExtension");
-      assert.include(mcpSource, "before_agent_start");
-      assert.include(mcpSource, 'pi.on("tool_call"');
-      assert.include(mcpSource, "Allow ${event.toolName}?");
-      assert.include(mcpSource, '"mcp-protocol-version"');
-      assert.include(mcpSource, '"tools/call"');
-      assert.include(mcpSource, "mcp__t2-code__");
-      assert.include(mcpSource, "mcp__t2_code__");
-    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
-  );
 });

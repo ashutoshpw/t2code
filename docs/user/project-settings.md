@@ -161,7 +161,7 @@ resolve in one order: a project override, then the environment setting, then `t2
 built-in default. Leave a setting on **Inherit** to let the next tier decide.
 Browser access changes apply when an agent session next starts.
 
-Repositories coming from a `t3.json` project file — same fields, different name — keep their
+Repositories coming from a `t2.json` project file — same fields, different name — keep their
 scripts, icon, and defaults if you rename the file to `t2.json` (for example with `git mv`).
 
 New worktrees initialize git submodules recursively. If that step is slow because the repository

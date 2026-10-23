@@ -996,7 +996,7 @@ const layerMakeServer = Layer.unwrap(
                   (reconcile) =>
                     retryDesiredLinkReconcile(reconcile, CloudLink.shouldRetryCloudLink, (cause) =>
                       Effect.logWarning(
-                        "T3 Connect relay is still unavailable; retrying the desired link in the background",
+                        "T2 Connect relay is still unavailable; retrying the desired link in the background",
                         { cause },
                       ),
                     ),

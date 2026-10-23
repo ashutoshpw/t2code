@@ -678,227 +678,6 @@ describe("DesktopBackendConfiguration", () => {
     ),
   );
 
-  it.effect("resolvePrimary surfaces persisted backend observability endpoints", () =>
-    withHarness(
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const environment = yield* DesktopEnvironment.DesktopEnvironment;
-        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
-
-        yield* fileSystem.makeDirectory(environment.path.dirname(environment.serverSettingsPath), {
-          recursive: true,
-        });
-        yield* fileSystem.writeFileString(
-          environment.serverSettingsPath,
-          yield* encodePersistedServerObservabilitySettingsDocument({
-            observability: {
-              otlpTracesUrl: " http://127.0.0.1:4318/v1/traces ",
-              otlpMetricsUrl: " http://127.0.0.1:4318/v1/metrics ",
-              otlpLogsUrl: " http://127.0.0.1:4318/v1/logs ",
-            },
-          }),
-        );
-
-        const config = yield* configuration.resolvePrimary;
-        assert.equal(config.bootstrap.otlpTracesUrl, "http://127.0.0.1:4318/v1/traces");
-        assert.equal(config.bootstrap.otlpMetricsUrl, "http://127.0.0.1:4318/v1/metrics");
-        assert.equal(config.bootstrap.otlpLogsUrl, "http://127.0.0.1:4318/v1/logs");
-      }),
-    ),
-  );
-
-  it.effect("resolvePrimary omits backend observability endpoints when settings are missing", () =>
-    withHarness(
-      Effect.gen(function* () {
-        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
-        const config = yield* configuration.resolvePrimary;
-
-        assert.isUndefined(config.bootstrap.otlpTracesUrl);
-        assert.isUndefined(config.bootstrap.otlpMetricsUrl);
-        assert.isUndefined(config.bootstrap.otlpLogsUrl);
-      }),
-    ),
-  );
-
-  it.effect("resolveWsl carries environment-configured observability endpoints", () =>
-    Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t2-desktop-backend-config-test-",
-      });
-
-      yield* Effect.gen(function* () {
-        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
-        const config = yield* configuration.resolveWsl({ port: 5050, distro: null });
-
-        assert.equal(config.bootstrap.otlpTracesUrl, "http://127.0.0.1:4318/v1/traces");
-        assert.equal(config.bootstrap.otlpMetricsUrl, "http://127.0.0.1:4318/v1/metrics");
-        assert.equal(config.bootstrap.otlpLogsUrl, "http://127.0.0.1:4318/v1/logs");
-        assert.notInclude(config.env.WSLENV ?? "", "T2CODE_OTLP_LOGS_URL");
-      }).pipe(
-        Effect.provide(
-          layerBackendConfiguration().pipe(
-            Layer.provideMerge(layerServerExposure),
-            Layer.provideMerge(DesktopAppSettings.layerTest()),
-            Layer.provideMerge(DesktopWslServerTree.layerTest()),
-            Layer.provideMerge(
-              DesktopWslEnvironment.layerTest({
-                isAvailable: true,
-                windowsToWslPath: () => Option.some("/mnt/c/repo/apps/server/src/index.ts"),
-                getDistroIp: () => Option.some("172.27.0.99"),
-              }),
-            ),
-            Layer.provideMerge(
-              layerEnvironment(baseDir, {
-                platform: "win32",
-                otlpTracesUrl: " http://127.0.0.1:4318/v1/traces ",
-                otlpMetricsUrl: " http://127.0.0.1:4318/v1/metrics ",
-                otlpLogsUrl: " http://127.0.0.1:4318/v1/logs ",
-              }),
-            ),
-          ),
-        ),
-      );
-    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
-  );
-
-  it.effect("environment observability endpoints win over the persisted settings file", () =>
-    Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t2-desktop-backend-config-test-",
-      });
-
-      yield* Effect.gen(function* () {
-        const environment = yield* DesktopEnvironment.DesktopEnvironment;
-        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
-
-        yield* fileSystem.makeDirectory(environment.path.dirname(environment.serverSettingsPath), {
-          recursive: true,
-        });
-        yield* fileSystem.writeFileString(
-          environment.serverSettingsPath,
-          yield* encodePersistedServerObservabilitySettingsDocument({
-            observability: {
-              otlpTracesUrl: "http://persisted:4318/v1/traces",
-              otlpMetricsUrl: "http://persisted:4318/v1/metrics",
-              otlpLogsUrl: "http://persisted:4318/v1/logs",
-            },
-          }),
-        );
-
-        const config = yield* configuration.resolvePrimary;
-        assert.equal(config.bootstrap.otlpLogsUrl, "http://env:4318/v1/logs");
-        assert.equal(config.bootstrap.otlpTracesUrl, "http://persisted:4318/v1/traces");
-        assert.equal(config.bootstrap.otlpMetricsUrl, "http://persisted:4318/v1/metrics");
-      }).pipe(
-        Effect.provide(
-          layerBackendConfiguration().pipe(
-            Layer.provideMerge(layerServerExposure),
-            Layer.provideMerge(DesktopAppSettings.layerTest()),
-            Layer.provideMerge(DesktopWslServerTree.layerTest()),
-            Layer.provideMerge(DesktopWslEnvironment.layerTest()),
-            Layer.provideMerge(
-              layerEnvironment(baseDir, { otlpLogsUrl: "http://env:4318/v1/logs" }),
-            ),
-          ),
-        ),
-      );
-    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
-  );
-
-  it.effect("logs structured context when persisted observability settings cannot be read", () =>
-    Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t2-desktop-backend-config-test-",
-      });
-      const settingsPath = path.join(baseDir, "userdata", "settings.json");
-      const cause = PlatformError.systemError({
-        _tag: "PermissionDenied",
-        module: "FileSystem",
-        method: "readFileString",
-        pathOrDescriptor: settingsPath,
-      });
-      const messages: Array<unknown> = [];
-      const logger = Logger.make(({ message }) => {
-        messages.push(message);
-      });
-      const layerFailingFileSystem = Layer.succeed(
-        FileSystem.FileSystem,
-        FileSystem.makeNoop({
-          readFileString: () => Effect.fail(cause),
-        }),
-      );
-
-      const config = yield* Effect.gen(function* () {
-        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
-        return yield* configuration.resolvePrimary;
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            layerBackendConfiguration().pipe(
-              Layer.provideMerge(layerServerExposure),
-              Layer.provideMerge(DesktopAppSettings.layerTest()),
-              Layer.provideMerge(DesktopWslServerTree.layerTest()),
-              Layer.provideMerge(DesktopWslEnvironment.layerTest()),
-              Layer.provideMerge(layerEnvironment(baseDir)),
-              Layer.provideMerge(layerFailingFileSystem),
-            ),
-            Logger.layer([logger], { mergeWithExisting: false }),
-          ),
-        ),
-      );
-
-      assert.isUndefined(config.bootstrap.otlpTracesUrl);
-      assert.isUndefined(config.bootstrap.otlpMetricsUrl);
-      assert.isUndefined(config.bootstrap.otlpLogsUrl);
-
-      const error = messages
-        .flatMap((message) => (Array.isArray(message) ? message : [message]))
-        .find(isDesktopBackendObservabilitySettingsReadError);
-      assert.isDefined(error);
-      assert.equal(error.settingsPath, settingsPath);
-      assert.equal(error.cause, cause);
-      assert.equal(
-        error.message,
-        `Failed to read persisted backend observability settings at ${settingsPath}.`,
-      );
-    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
-  );
-
-  it.effect("resolvePrimary captures backend output in dev so child logs can be persisted", () =>
-    Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t2-desktop-backend-config-test-",
-      });
-
-      yield* Effect.gen(function* () {
-        const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
-        const config = yield* configuration.resolvePrimary;
-        assert.equal(config.captureOutput, true);
-        assert.notInclude(config.args, "--require");
-      }).pipe(
-        Effect.provide(
-          layerBackendConfiguration().pipe(
-            Layer.provideMerge(layerServerExposure),
-            Layer.provideMerge(DesktopAppSettings.layerTest()),
-            Layer.provideMerge(DesktopWslServerTree.layerTest()),
-            Layer.provideMerge(DesktopWslEnvironment.layerTest()),
-            Layer.provideMerge(
-              layerEnvironment(baseDir, {
-                isPackaged: false,
-                devServerUrl: "http://127.0.0.1:5733",
-              }),
-            ),
-          ),
-        ),
-      );
-    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
-  );
-
   it.effect("resolveWsl carries the kill switch into the distro", () =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
@@ -908,12 +687,10 @@ describe("DesktopBackendConfiguration", () => {
 
       const previousWslEnv = process.env.WSLENV;
       const previousDisabled = process.env.OTEL_SDK_DISABLED;
-      const previousT2Disabled = process.env.T2CODE_OTEL_SDK_DISABLED;
       const previousTelemetry = process.env.T2CODE_TELEMETRY_ENABLED;
       try {
         delete process.env.WSLENV;
         process.env.OTEL_SDK_DISABLED = "true";
-        process.env.T2CODE_OTEL_SDK_DISABLED = "true";
         process.env.T2CODE_TELEMETRY_ENABLED = "false";
 
         yield* Effect.gen(function* () {
@@ -921,9 +698,7 @@ describe("DesktopBackendConfiguration", () => {
           const config = yield* configuration.resolveWsl({ port: 5050, distro: null });
 
           assert.equal(config.env.OTEL_SDK_DISABLED, "true");
-          assert.equal(config.env.T2CODE_OTEL_SDK_DISABLED, "true");
           assert.include((config.env.WSLENV ?? "").split(":"), "OTEL_SDK_DISABLED");
-          assert.include((config.env.WSLENV ?? "").split(":"), "T2CODE_OTEL_SDK_DISABLED");
           assert.equal(config.env.T2CODE_TELEMETRY_ENABLED, "false");
           assert.include((config.env.WSLENV ?? "").split(":"), "T2CODE_TELEMETRY_ENABLED");
         }).pipe(
@@ -946,75 +721,9 @@ describe("DesktopBackendConfiguration", () => {
       } finally {
         restoreEnv("WSLENV", previousWslEnv);
         restoreEnv("OTEL_SDK_DISABLED", previousDisabled);
-        restoreEnv("T2CODE_OTEL_SDK_DISABLED", previousT2Disabled);
         restoreEnv("T2CODE_TELEMETRY_ENABLED", previousTelemetry);
       }
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
-  );
-
-  it.effect(
-    "resolveWsl carries the standard OTLP endpoint, headers, and protocol into the distro",
-    () =>
-      Effect.gen(function* () {
-        const fileSystem = yield* FileSystem.FileSystem;
-        const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t2-desktop-backend-config-test-",
-        });
-
-        const standard = {
-          OTEL_EXPORTER_OTLP_ENDPOINT: "https://collector.example.com:4318/base?api_key=secret",
-          OTEL_EXPORTER_OTLP_LOGS_HEADERS: "authorization=Bearer%20token",
-          T2CODE_OTLP_TRACES_URL: "http://t2.example.com:4318/v1/traces",
-        };
-        const previousWslEnv = process.env.WSLENV;
-        const ambientOtel = Object.entries(process.env).filter(
-          ([name]) => name.startsWith("OTEL_") || name.startsWith("T2CODE_OTLP_"),
-        );
-        try {
-          for (const [name] of ambientOtel) delete process.env[name];
-          delete process.env.WSLENV;
-          Object.assign(process.env, standard);
-
-          yield* Effect.gen(function* () {
-            const configuration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
-            const config = yield* configuration.resolveWsl({ port: 5050, distro: null });
-
-            assert.equal(
-              config.env.OTEL_EXPORTER_OTLP_ENDPOINT,
-              "https://collector.example.com:4318/base?api_key=secret",
-            );
-            assert.equal(
-              config.env.OTEL_EXPORTER_OTLP_LOGS_HEADERS,
-              "authorization=Bearer%20token",
-            );
-            const wslEnv = (config.env.WSLENV ?? "").split(":");
-            assert.include(wslEnv, "OTEL_EXPORTER_OTLP_ENDPOINT");
-            assert.include(wslEnv, "OTEL_EXPORTER_OTLP_LOGS_HEADERS");
-            assert.equal(config.env.T2CODE_OTLP_TRACES_URL, "http://t2.example.com:4318/v1/traces");
-            assert.include(wslEnv, "T2CODE_OTLP_TRACES_URL");
-          }).pipe(
-            Effect.provide(
-              layerBackendConfiguration().pipe(
-                Layer.provideMerge(layerServerExposure),
-                Layer.provideMerge(DesktopAppSettings.layerTest()),
-                Layer.provideMerge(DesktopWslServerTree.layerTest()),
-                Layer.provideMerge(
-                  DesktopWslEnvironment.layerTest({
-                    isAvailable: true,
-                    windowsToWslPath: () => Option.some("/mnt/c/repo/apps/server/src/index.ts"),
-                    getDistroIp: () => Option.some("172.27.0.99"),
-                  }),
-                ),
-                Layer.provideMerge(layerEnvironment(baseDir, { platform: "win32" })),
-              ),
-            ),
-          );
-        } finally {
-          for (const name of Object.keys(standard)) delete process.env[name];
-          restoreEnv("WSLENV", previousWslEnv);
-          for (const [name, value] of ambientOtel) restoreEnv(name, value);
-        }
-      }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 
   it.effect("resolveWsl preserves existing WSLENV entries when forwarding backend secrets", () =>
@@ -1029,7 +738,6 @@ describe("DesktopBackendConfiguration", () => {
       const previousAnthropicKey = process.env.ANTHROPIC_API_KEY;
       const previousOtlpHeaders = process.env.T2CODE_OTLP_HEADERS;
       const previousOtlpProtocol = process.env.T2CODE_OTLP_PROTOCOL;
-      // A developer's own OTEL_* variables would be forwarded too.
       const ambientOtel = Object.entries(process.env).filter(([name]) => name.startsWith("OTEL_"));
       try {
         for (const [name] of ambientOtel) delete process.env[name];

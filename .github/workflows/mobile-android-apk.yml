@@ -15,8 +15,8 @@ concurrency:
 jobs:
   mirror:
     name: Mirror beta APK
-    if: github.repository == 'pingdotgg/t2code'
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    if: github.repository == 'ashutoshpw/t2code'
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write

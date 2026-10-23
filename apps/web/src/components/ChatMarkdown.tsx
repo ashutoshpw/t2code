@@ -92,7 +92,7 @@ import { parseComposerContextHref } from "@t2code/shared/composerContextReferenc
 import { parseThreadLinkHref } from "@t2code/shared/threadLinks";
 import { AssistantCitationChip } from "./chat/AssistantCitationChip";
 import { MarkdownThreadLink } from "./chat/MarkdownThreadLink";
-import { mathKind } from "@t3tools/shared/markdownMath";
+import { mathKind } from "@t2code/shared/markdownMath";
 import remarkMath from "remark-math";
 import {
   artifactTemplateFromHastProperties,
@@ -169,9 +169,9 @@ import {
   pickWorkspaceBasenameMatch,
   stripRepeatedWorkspacePrefix,
   WORKSPACE_BASENAME_LOOKUP_LIMIT,
-} from "@t3tools/client-runtime/workspace-basename-lookup";
-import { resolvePullRequestPreviewTarget } from "@t3tools/client-runtime/change-request-links";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/workspace-basename-lookup";
+import { resolvePullRequestPreviewTarget } from "@t2code/client-runtime/change-request-links";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 import { useOpenChangeRequestLink } from "~/lib/openPullRequestLink";
 import { useOpenLink } from "../browser/useOpenLink";
 import { writeTextToClipboard } from "../hooks/useCopyToClipboard";

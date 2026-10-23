@@ -1,13 +1,13 @@
 import { WorkLogButton, WorkLogList, WorkLogRow } from "./WorkLog";
-import type { WorktreeSetupSnapshot } from "@t3tools/contracts";
+import type { WorktreeSetupSnapshot } from "@t2code/contracts";
 import {
   getQuestionAnswerPreview,
   getQuestionTextPreview,
   hasQuestionAnswer,
-} from "@t3tools/client-runtime/work-log/user-input";
-import { type ToolActivityIcon } from "@t3tools/contracts";
-import { liveThoughtLine } from "@t3tools/client-runtime/work-log/presentation";
-import { resolveWorkGroupScrollAnchor } from "@t3tools/client-runtime/work-log/scroll-anchor";
+} from "@t2code/client-runtime/work-log/user-input";
+import { type ToolActivityIcon } from "@t2code/contracts";
+import { liveThoughtLine } from "@t2code/client-runtime/work-log/presentation";
+import { resolveWorkGroupScrollAnchor } from "@t2code/client-runtime/work-log/scroll-anchor";
 import { observeResize } from "~/lib/observeResize";
 import { observeVisibleAnimation } from "../../lib/visibleAnimation";
 import { memo, use, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
@@ -28,7 +28,7 @@ import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { Spinner } from "../ui/spinner";
 import { WorktreeSetupCard } from "./WorktreeSetupCard";
 import { cn } from "~/lib/utils";
-import { type TimestampFormat } from "@t3tools/contracts/settings";
+import { type TimestampFormat } from "@t2code/contracts/settings";
 import {
   TimelineRowCtx,
   TimelineRowActivityCtx,

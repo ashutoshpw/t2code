@@ -45,7 +45,7 @@ function render(
     root.render(
       <BranchNamingSettings
         mode={mode}
-        prefix={saved.prefix ?? "t3"}
+        prefix={saved.prefix ?? "t2"}
         instructions={saved.instructions ?? "Use issue IDs."}
         disabled={disabled}
         onChange={onChange}

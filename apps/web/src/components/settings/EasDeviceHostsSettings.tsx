@@ -6,7 +6,7 @@ import {
   type DeviceEasAccount,
   type EasDeviceHostConfig,
   type EnvironmentId,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { CloudIcon, PlusIcon, XIcon } from "lucide-react";
 
 import { randomUUID } from "../../lib/utils";

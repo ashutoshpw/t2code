@@ -350,6 +350,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const routePanelAnimationsActive = panelAnimationsActive && !panelAnimationsSuppressed;
   const isOnSettings = pathname === "/settings" || pathname.startsWith("/settings/");
   const isMacosDesktop = isElectron && isMacPlatform(navigator.platform);
+  const appRailEnabled = useAppRailEnabled();
   const railReservedWidth = appRailEnabled ? APP_RAIL_WIDTH_PX : 0;
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     readInitialThreadSidebarWidth(railReservedWidth),

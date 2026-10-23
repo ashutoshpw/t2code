@@ -115,7 +115,7 @@ const sendForTenMinutes = (
     );
     const runtimeLayer = AnalyticsService.layer.pipe(
       Layer.provideMerge(
-        ServerConfig.ServerConfig.layerTest(process.cwd(), { prefix: "t3-telemetry-retry-" }),
+        ServerConfig.ServerConfig.layerTest(process.cwd(), { prefix: "t2-telemetry-retry-" }),
       ),
       Layer.provide(
         ConfigProvider.layer(

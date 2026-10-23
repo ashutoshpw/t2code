@@ -110,7 +110,7 @@ it.layer(NodeServices.layer)("writeFileStringAtomically", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-atomic-write-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-atomic-write-" });
       const filePath = path.join(root, "settings.json");
       yield* fs.writeFileString(filePath, "before");
       const firstAttempt = yield* Deferred.make<void>();
@@ -146,7 +146,7 @@ it.layer(NodeServices.layer)("writeFileStringAtomically", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-atomic-write-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-atomic-write-" });
       const filePath = path.join(root, "settings.json");
       yield* fs.writeFileString(filePath, "before");
       const firstAttempt = yield* Deferred.make<void>();
@@ -181,7 +181,7 @@ it.layer(NodeServices.layer)("writeFileStringAtomically", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-atomic-write-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-atomic-write-" });
       const filePath = path.join(root, "settings.json");
       yield* fs.writeFileString(filePath, "before");
       const firstAttempt = yield* Deferred.make<void>();
@@ -220,7 +220,7 @@ const advanceUntilDone = <A, E>(fiber: Fiber.Fiber<A, E>) =>
   Effect.gen(function* () {
     while (fiber.pollUnsafe() === undefined) {
       yield* TestClock.adjust("100 millis");
-      // oxlint-disable-next-line t3code/no-real-time-wait-in-tests -- a macrotask boundary so the real stat I/O can finish; time moves only via TestClock
+      // oxlint-disable-next-line t2code/no-real-time-wait-in-tests -- a macrotask boundary so the real stat I/O can finish; time moves only via TestClock
       yield* Effect.promise(() => new Promise((resolve) => setImmediate(resolve)));
     }
     return yield* Fiber.join(fiber);

@@ -47,7 +47,7 @@ export class RelayDeviceIdentity extends Context.Service<
  */
 export class AnalyticsDevice extends Context.Reference<{
   readonly id: Effect.Effect<Option.Option<string>>;
-}>("@t3tools/client-runtime/platform/capabilities/AnalyticsDevice", {
+}>("@t2code/client-runtime/platform/capabilities/AnalyticsDevice", {
   defaultValue: () => ({ id: Effect.succeedNone }),
 }) {}
 

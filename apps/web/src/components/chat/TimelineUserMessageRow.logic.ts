@@ -1,5 +1,5 @@
 import { type ChatImageAttachment } from "../../types";
-import type { ComposerContextRecord, KnownComposerContextRecord } from "@t3tools/contracts";
+import type { ComposerContextRecord, KnownComposerContextRecord } from "@t2code/contracts";
 import { asKnownContextRecord } from "~/lib/composerContextRecords";
 
 export function resolvePreviewAnnotationImage(input: {

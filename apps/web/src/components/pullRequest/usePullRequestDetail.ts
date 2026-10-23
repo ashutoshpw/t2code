@@ -5,7 +5,7 @@ import {
   type PullRequestDetail,
   type PullRequestListEntry,
   type PullRequestRef,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useEffect, useEffectEvent, useState } from "react";
 
 import { usePullRequestChecksRefresh } from "~/hooks/usePullRequestChecksRefresh";
