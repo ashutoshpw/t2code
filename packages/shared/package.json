@@ -541,7 +541,10 @@
     },
     "./speech": {
       "types": "./src/speech.ts",
-      "import": "./src/speech.ts"
+      "import": "./src/speech.ts",
+    "./t2Wordmark": {
+      "types": "./src/t2Wordmark.ts",
+      "import": "./src/t2Wordmark.ts"
     }
   },
   "scripts": {

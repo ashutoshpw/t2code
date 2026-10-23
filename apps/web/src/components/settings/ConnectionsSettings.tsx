@@ -6,9 +6,7 @@ import {
   AuthAccessReadScope,
   AuthAccessWriteScope,
   AuthEnvironmentMaintainScope,
-  AuthDiagnosticsReadScope,
   AuthOrchestrationOperateScope,
-  AuthOrchestrationReadScope,
   AuthRelayReadScope,
   AuthRelayWriteScope,
   type AuthClientSession,
@@ -138,6 +136,7 @@ import { ITEM_ROW_CLASSNAME } from "./itemRows";
 import {
   CloudLinkRow,
   CloudRemoteEnvironmentRows,
+  EnvironmentLabelControl,
   SavedBackendListRow,
 } from "./SavedEnvironmentRows";
 import { AddEnvironmentDialog } from "./AddEnvironmentDialog";
@@ -1591,6 +1590,7 @@ function ConnectionsSettingsContent({
             title="No environment selected"
             description="Connect an environment to view its settings and access."
           />
+          <LocalEnvironmentSetting />
           {primaryEnvironment && primaryEnvironmentId ? (
             <SettingsRow
               title="Environment name"
@@ -1646,10 +1646,10 @@ function ConnectionsSettingsContent({
           <SavedBackendListRow
             key={environment.environmentId}
             environment={environment}
-            environmentLabels={environmentLabels}
             removingEnvironmentId={removingSavedEnvironmentId}
             onSetEnabled={handleSetSavedBackendEnabled}
             onRemove={handleRemoveSavedBackend}
+            environmentLabels={environmentLabels}
             onAddRoute={(target) => {
               setRouteTarget(target);
               setSavedBackendError(null);

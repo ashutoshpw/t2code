@@ -3,7 +3,7 @@ import { type ToolActivityIcon } from "@t2code/contracts";
 import { toolActivityFaviconUrl } from "@t2code/shared/favicon";
 import { getProjectFaviconCacheKey } from "@t2code/shared/projectFavicon";
 import { use, useState } from "react";
-import { T3Wordmark } from "../T3Wordmark";
+import { T2Wordmark } from "../T2Wordmark";
 import {
   BotIcon,
   BrainIcon,
@@ -51,7 +51,7 @@ export type WorkEntryIconName =
   | "square-pen"
   | "terminal"
   | "pull-request"
-  | "t3-code"
+  | "t2-code"
   | "wrench"
   | "x"
   | "zap";
@@ -244,8 +244,8 @@ function WorkEntryIcon({ name, className }: { name: WorkEntryIconName; className
       return <Code2Icon className={className} aria-hidden />;
     case "device":
       return <SmartphoneIcon className={className} aria-hidden />;
-    case "t3-code":
-      return <T3Wordmark className={className} aria-hidden />;
+    case "t2-code":
+      return <T2Wordmark className={className} aria-hidden />;
     case "check":
       return <CheckIcon className={className} aria-hidden />;
     case "list-todo":
