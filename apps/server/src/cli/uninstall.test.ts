@@ -9,7 +9,7 @@ import * as HostProcess from "@t2code/shared/HostProcess";
 import { findOwnedLauncher, findRecordedLaunchers, spawnWindowsRemoval } from "./uninstall.ts";
 
 it.layer(NodeServices.layer)("t2 uninstall launcher", (it) => {
-  it.effect("claims only launchers that point into this home's runtime tree", () =>
+  it.effect("claims only a launcher that points into this home's runtime tree", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;

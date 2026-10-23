@@ -1,7 +1,11 @@
 import * as Schema from "effect/Schema";
 import { describe, expect, it } from "vite-plus/test";
 
-import { parseT2ProjectFile, T2ProjectFileFromJson } from "./t2ProjectFile.ts";
+import {
+  buildT2ProjectFileJsonSchema,
+  parseT2ProjectFile,
+  T2ProjectFileFromJson,
+} from "./t2ProjectFile.ts";
 
 const decodeJson = Schema.decodeUnknownSync(T2ProjectFileFromJson);
 

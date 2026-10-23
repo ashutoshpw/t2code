@@ -1,13 +1,17 @@
 import { SessionPermissions } from "./SessionPermissions";
 import {
+  CheckIcon,
   ChevronRightIcon,
   ChevronsLeftRightEllipsisIcon,
   EllipsisIcon,
+  PencilIcon,
   RouteIcon,
+  XIcon,
 } from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import {
+  AuthOrchestrationOperateScope,
   AuthRelayWriteScope,
   type EnvironmentId,
   connectReachabilityHelpUrl,
@@ -23,6 +27,20 @@ import {
 } from "@t2code/client-runtime/connection";
 import * as Option from "effect/Option";
 
+import {
+  isAtomCommandInterrupted,
+  squashAtomCommandFailure,
+} from "@t2code/client-runtime/state/runtime";
+import { Spinner } from "../ui/spinner";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogPopup,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { cn } from "../../lib/utils";
 import { SettingsRow } from "./settingsLayout";
@@ -68,6 +86,8 @@ import {
 } from "../ServerUpdateAction";
 import { CloudEnvironmentConnectRows } from "../cloud/CloudEnvironmentConnectList";
 import { useT2ConnectAuthPrompt } from "../clerk/useT2ConnectAuthPrompt";
+import { useEnvironmentSessionState } from "~/state/session";
+import { Input } from "../ui/input";
 
 type SavedBackendListRowProps = {
   environment: EnvironmentPresentation;
@@ -75,6 +95,10 @@ type SavedBackendListRowProps = {
   onSetEnabled: (environmentId: EnvironmentId, enabled: boolean) => void;
   onRemove: (environment: EnvironmentPresentation) => void;
   onAddRoute: (environment: EnvironmentPresentation) => void;
+  environmentLabels: ReadonlyArray<{
+    readonly environmentId: EnvironmentId;
+    readonly label: string;
+  }>;
 };
 
 function savedBackendStatus(environment: EnvironmentPresentation): {
@@ -114,6 +138,7 @@ export function SavedBackendListRow({
   onSetEnabled,
   onRemove,
   onAddRoute,
+  environmentLabels,
 }: SavedBackendListRowProps) {
   const [routesOpen, setRoutesOpen] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
@@ -123,6 +148,13 @@ export function SavedBackendListRow({
   const blocked = unsupported && !hasSavedBearerRoute(environment.entry);
   const enabled = environment.entry.enabled && !unsupported;
   const isConnected = environment.connection.phase === "connected";
+  const sessionState = useEnvironmentSessionState(environmentId);
+  const canRename =
+    isConnected &&
+    Boolean(
+      sessionState.data?.authenticated &&
+      sessionState.data.scopes?.includes(AuthOrchestrationOperateScope),
+    );
   const isRemoving = removingEnvironmentId === environmentId;
   const errorTraceId = environment.connection.traceId;
   const { copyToClipboard: copyTraceIdToClipboard } = useCopyToClipboard<{ traceId: string }>({
@@ -153,7 +185,7 @@ export function SavedBackendListRow({
       toastManager.add({
         type: "success",
         title: "MCP URL copied",
-        description: `Add it to an agent, e.g. claude mcp add --transport http t3 ${url}`,
+        description: `Add it to an agent, e.g. claude mcp add --transport http t2 ${url}`,
       });
     },
     onError: (error) => {
@@ -379,6 +411,12 @@ export function SavedBackendListRow({
           appearance="icon"
         />
       ) : null}
+      <EnvironmentLabelControl
+        environmentId={environmentId}
+        label={environment.label}
+        environmentLabels={environmentLabels}
+        canRename={canRename}
+      />
       <Tooltip>
         <TooltipTrigger
           render={
@@ -439,7 +477,7 @@ function CloudLinkSwitch({
   disabled,
   disabledReason,
   onCheckedChange,
-  ariaLabel = "Enable T3 Connect",
+  ariaLabel = "Enable T2 Connect",
 }: {
   readonly checked: boolean;
   readonly disabled: boolean;
@@ -547,9 +585,11 @@ function ConfiguredCloudLinkRow({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUpdatingPreference, setIsUpdatingPreference] = useState(false);
 
-  const disabledReason = canManageRelay
-    ? null
-    : "Your session does not have permission to manage T3 Connect access.";
+  const disabledReason = !isSignedIn
+    ? "Sign in to T2 Connect to manage this environment."
+    : !canManageRelay
+      ? "Your session does not have permission to manage T2 Connect access."
+      : null;
   const isBusy = isUpdating || isUpdatingPreference;
   const switchDisabled =
     !canManageRelay ||
@@ -602,15 +642,15 @@ function ConfiguredCloudLinkRow({
       toastManager.add({
         type: "success",
         title: enabled
-          ? "T3 Connect linked"
+          ? "T2 Connect linked"
           : publishAgentActivity
-            ? "T3 Connect tunnel disabled"
-            : "T3 Connect unlinked",
+            ? "T2 Connect tunnel disabled"
+            : "T2 Connect unlinked",
         description: enabled
-          ? "This environment is available through T3 Connect."
+          ? "This environment is available through T2 Connect."
           : publishAgentActivity
             ? "The managed tunnel was removed. Agent activity publishing stays on."
-            : "This environment is no longer available through T3 Connect.",
+            : "This environment is no longer available through T2 Connect.",
       });
     }
     setIsUpdating(false);
@@ -644,7 +684,7 @@ function ConfiguredCloudLinkRow({
         type: "success",
         title: enabled ? "Webhooks held while offline" : "Webhooks no longer held",
         description: enabled
-          ? "T3 Connect keeps webhook requests for up to 24 hours while this environment is offline."
+          ? "T2 Connect keeps webhook requests for up to 24 hours while this environment is offline."
           : "Requests to an offline environment now fail. Anything already held is still delivered.",
       });
     }
@@ -655,23 +695,23 @@ function ConfiguredCloudLinkRow({
     <>
       {showSwitch ? (
         <SettingsRow
-          title={searchableSetting("t3-connect").title}
+          title={searchableSetting("t2-connect").title}
           description={
             connectDenial !== undefined && !managedTunnelActive
               ? connectDenial
               : signedOut
-                ? "Sign in to make this environment available to your other devices through T3 Connect."
+                ? "Sign in to make this environment available to your other devices through T2 Connect."
                 : linkRevoked
-                  ? "This environment was removed from T3 Connect. Turn it on to link it again."
+                  ? "This environment was removed from T2 Connect. Turn it on to link it again."
                   : managedTunnelActive
                     ? reachability?.status === "unreachable"
-                      ? "T3 Connect is on, but other devices cannot reach this environment."
+                      ? "T2 Connect is on, but other devices cannot reach this environment."
                       : reachability?.status === "reachable"
-                        ? "This environment is available to your other devices through T3 Connect."
-                        : "T3 Connect is on. Reachability has not been checked yet."
+                        ? "This environment is available to your other devices through T2 Connect."
+                        : "T2 Connect is on. Reachability has not been checked yet."
                     : managedTunnelOutOfSync
-                      ? "T3 Connect is out of sync. This environment is linked only to publish agent activity, so other devices cannot connect. Turn T3 Connect on to repair it."
-                      : "Make this environment available to your other devices through T3 Connect."
+                      ? "T2 Connect is out of sync. This environment is linked only to publish agent activity, so other devices cannot connect. Turn T2 Connect on to repair it."
+                      : "Make this environment available to your other devices through T2 Connect."
           }
           status={operationError ?? cloudLinkState.error ?? reachabilityStatus}
           managed={managedTunnelActive ? undefined : connectDenial}
@@ -694,13 +734,13 @@ function ConfiguredCloudLinkRow({
         </SettingsRow>
       ) : linkRevoked ? (
         <SettingsRow
-          title={searchableSetting("t3-connect").title}
-          description="This environment was removed from T3 Connect. Run `t3 connect link` on the host to link it again."
+          title={searchableSetting("t2-connect").title}
+          description="This environment was removed from T2 Connect. Run `t2 connect link` on the host to link it again."
         />
       ) : isElectron ? (
         <SettingsRow
-          title={searchableSetting("t3-connect").title}
-          description="Run `t3 connect link` on the host, then restart T3 Code there."
+          title={searchableSetting("t2-connect").title}
+          description="Run `t2 connect link` on the host, then restart T2 Code there."
         />
       ) : null}
       {signedOut && showSwitch ? null : (
@@ -709,7 +749,7 @@ function ConfiguredCloudLinkRow({
           description={
             signedOut
               ? "Sign in to send activity to mobile notifications and Live Activities."
-              : "Send activity to mobile notifications and Live Activities without T3 Connect."
+              : "Send activity to mobile notifications and Live Activities without T2 Connect."
           }
           managed={connectDenial}
           control={
@@ -730,7 +770,7 @@ function ConfiguredCloudLinkRow({
       {managedTunnelActive && !signedOut ? (
         <SettingsRow
           title={searchableSetting("hold-webhooks-while-offline").title}
-          description="Keep webhook requests for up to 24 hours while this environment is offline, then deliver them. Off: T3 Connect only forwards requests and stores nothing."
+          description="Keep webhook requests for up to 24 hours while this environment is offline, then deliver them. Off: T2 Connect only forwards requests and stores nothing."
           managed={connectDenial}
           control={
             <CloudLinkSwitch
@@ -760,7 +800,7 @@ export function CloudLinkRow({
   if (!canReadRelay) {
     return (
       <SettingsRow
-        title="T3 Connect"
+        title="T2 Connect"
         description="To edit these settings, pair this connection with both View relay and Manage relay permissions."
       />
     );
@@ -778,7 +818,7 @@ function EmptyRemoteEnvironments({ cloudEnabled = true }: { readonly cloudEnable
         <EmptyTitle>No saved remote environments</EmptyTitle>
         <EmptyDescription>
           {cloudEnabled
-            ? "Click “Add environment” to pair another environment, or connect one from T3 Connect."
+            ? "Click “Add environment” to pair another environment, or connect one from T2 Connect."
             : "Click “Add environment” to pair another environment."}
         </EmptyDescription>
       </EmptyHeader>
@@ -803,3 +843,177 @@ export function CloudRemoteEnvironmentRows({
     <EmptyRemoteEnvironments cloudEnabled={false} />
   ) : null;
 }
+
+/**
+ * Inline rename control for an environment's label: value text plus a pencil
+ * button, or an input form while editing.
+ */
+export function EnvironmentLabelControl({
+  environmentId,
+  label,
+  environmentLabels,
+  canRename,
+  showValue = false,
+  valueClassName = "text-[13px] text-muted-foreground",
+  valueElement: ValueElement = "span",
+}: {
+  readonly environmentId: EnvironmentId;
+  readonly label: string;
+  readonly environmentLabels: ReadonlyArray<{
+    readonly environmentId: EnvironmentId;
+    readonly label: string;
+  }>;
+  readonly canRename: boolean;
+  readonly showValue?: boolean;
+  readonly valueClassName?: string;
+  readonly valueElement?: "span" | "h3";
+}) {
+  const renameEnvironment = useAtomCommand(serverEnvironment.updateEnvironmentLabel, {
+    reportFailure: false,
+  });
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(label);
+  const [saving, setSaving] = useState(false);
+  const [pendingDuplicateLabel, setPendingDuplicateLabel] = useState<string | null>(null);
+  // Renaming is the only path that sets a pending confirmation, so losing the
+  // capability simply hides the dialog; no effect needed to clear it.
+  const activeDuplicateLabel = canRename ? pendingDuplicateLabel : null;
+
+  if (!canRename && !showValue) return null;
+
+  const cancel = () => {
+    setValue(label);
+    setEditing(false);
+  };
+  const save = async (nextLabel: string) => {
+    setSaving(true);
+    const result = await renameEnvironment({ environmentId, input: nextLabel });
+    setSaving(false);
+    if (result._tag === "Success") {
+      setEditing(false);
+      return;
+    }
+    if (!isAtomCommandInterrupted(result)) {
+      const error = squashAtomCommandFailure(result);
+      toastManager.add(
+        stackedThreadToast({
+          type: "error",
+          title: "Could not rename environment",
+          description:
+            error instanceof Error ? error.message : "The environment name was not saved.",
+        }),
+      );
+    }
+  };
+
+  if (!editing || !canRename) {
+    return (
+      <>
+        {showValue ? <ValueElement className={valueClassName}>{label}</ValueElement> : null}
+        {canRename ? (
+          <Button
+            size="icon-micro"
+            variant="ghost-muted"
+            aria-label={`Rename ${label}`}
+            onClick={() => {
+              setValue(label);
+              setEditing(true);
+            }}
+          >
+            <PencilIcon className="size-3" />
+          </Button>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <form
+        className="flex min-w-0 items-center gap-1.5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const nextLabel = value.trim();
+          const duplicate =
+            nextLabel.length > 0 &&
+            environmentLabels.some(
+              (environment) =>
+                environment.environmentId !== environmentId && environment.label === nextLabel,
+            );
+          if (duplicate) {
+            setPendingDuplicateLabel(nextLabel);
+            return;
+          }
+          void save(nextLabel);
+        }}
+      >
+        <Input
+          autoFocus
+          size="compact"
+          className="w-48"
+          aria-label="Environment name"
+          maxLength={40}
+          value={value}
+          disabled={saving}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.stopPropagation();
+            cancel();
+          }}
+        />
+        <Button size="icon-xs" type="submit" disabled={saving} aria-label="Save environment name">
+          {saving ? <Spinner className="size-3" /> : <CheckIcon className="size-3" />}
+        </Button>
+        <Button
+          size="icon-xs"
+          type="button"
+          variant="ghost"
+          disabled={saving}
+          aria-label="Cancel environment rename"
+          onClick={cancel}
+        >
+          <XIcon className="size-3" />
+        </Button>
+      </form>
+      <AlertDialog
+        open={activeDuplicateLabel !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDuplicateLabel(null);
+        }}
+      >
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Use this name twice?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Another environment is already named “{activeDuplicateLabel}”. Both environments will
+              use the same name.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button type="button" variant="outline" />}>
+              Cancel
+            </AlertDialogClose>
+            <Button
+              type="button"
+              onClick={() => {
+                const nextLabel = activeDuplicateLabel;
+                setPendingDuplicateLabel(null);
+                if (nextLabel !== null) void save(nextLabel);
+              }}
+            >
+              Use name
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
+    </>
+  );
+}
+
+/**
+ * One added machine in the Environments list. The switch is the main action;
+ * the update icon appears only when that machine can take an update; the
+ * row menu holds the icon override, trace ID, and removal.
+ */

@@ -3463,26 +3463,56 @@ layer("GitHubPullRequestApi.layer", (it) => {
     }),
   );
 
-  it.effect("keeps thread cursors after a reviewer refusal", () =>
-    Effect.gen(function* () {
-      mockedExecute.mockReturnValueOnce(refusedReviewerResponse());
-      mockedExecute.mockReturnValueOnce(
-        Effect.succeed(output(reviewThreadsPage([thread("T2", "c2")], "last"))),
-      );
-      mockedExecute.mockReturnValueOnce(
-        Effect.succeed(output(reviewThreadsPage([thread("T3", "c3")], null))),
-      );
-      const cli = yield* GitHubPullRequestApi.GitHubPullRequestApi;
-      const read = cli.listReviewThreadComments({
-        ...pullRequestInput,
-        repository: "acme/refused-threads",
-      });
-      const conversation = yield* read;
-      expect(variablesOf("ReviewThreads").map((v) => v["requestedReviewers"])).toEqual([50, 0]);
-      expect(variablesOf("ReviewThreadPages").map((v) => v["after"])).toEqual(["last"]);
-      expect(conversation.comments.map((c) => c.id)).toEqual(["c2", "c3"]);
-      expect(conversation.reviewers).toEqual([]);
-      expect(conversation.truncated).toBe(false);
+  it.effect.each([false, true])(
+    "keeps thread cursors and reviewers after a refusal (later page: %s)",
+    (later) =>
+      Effect.gen(function* () {
+        if (later)
+          mockedExecute.mockReturnValueOnce(
+            Effect.succeed(
+              output(
+                reviewThreadsPage([thread("T1", "c1")], "next", [
+                  {
+                    __typename: "User",
+                    login: "prior",
+                    name: null,
+                    avatarUrl: "https://avatars/prior",
+                  },
+                ]),
+              ),
+            ),
+          );
+        mockedExecute.mockReturnValueOnce(refusedReviewerResponse());
+        mockedExecute.mockReturnValueOnce(
+          Effect.succeed(output(reviewThreadsPage([thread("T2", "c2")], "last"))),
+        );
+        mockedExecute.mockReturnValueOnce(
+          Effect.succeed(output(reviewThreadsPage([thread("T2", "c3")], null))),
+        );
+        const cli = yield* GitHubPullRequestApi.GitHubPullRequestApi;
+        const read = cli.listReviewThreadComments(pullRequestInput);
+        const conversation = yield* read;
+        expect(
+          variablesOf("ReviewThreads").map((v) => [v["after"], v["requestedReviewers"]]),
+        ).toEqual(
+          later
+            ? [
+                [null, 50],
+                ["next", 50],
+                ["next", 0],
+                ["last", 0],
+              ]
+            : [
+                [null, 50],
+                [null, 0],
+                ["last", 0],
+              ],
+        );
+        expect(conversation.comments.map((c) => c.id)).toEqual(
+          later ? ["c1", "c2", "c3"] : ["c2", "c3"],
+        );
+        expect(conversation.reviewers.map((r) => r.login)).toEqual(later ? ["prior"] : []);
+        expect(conversation.truncated).toBe(false);
 
       mockedExecute.mockReturnValueOnce(Effect.succeed(output(reviewThreadsPage([], null))));
       yield* read;

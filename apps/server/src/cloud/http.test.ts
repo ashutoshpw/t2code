@@ -41,8 +41,8 @@ import * as ManagedEndpointRuntime from "./ManagedEndpointRuntime.ts";
 import * as ManagedPolicy from "../policy/ManagedPolicy.ts";
 
 const DESKTOP_BOOTSTRAP_TOKEN = "test-desktop-bootstrap-token";
-const NON_LOOPBACK_ORIGIN = "http://172.24.162.233:3773";
-const LOOPBACK_ORIGIN = "http://127.0.0.1:3773";
+const NON_LOOPBACK_ORIGIN = "http://172.24.162.233:3772";
+const LOOPBACK_ORIGIN = "http://127.0.0.1:3772";
 const proofRequest: RelayLinkProofRequest = {
   challenge: "test-challenge",
   relayIssuer: "https://relay.example.test",
@@ -51,7 +51,7 @@ const proofRequest: RelayLinkProofRequest = {
     httpBaseUrl: "https://environment.example.test",
     wsBaseUrl: "wss://environment.example.test",
   },
-  origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+  origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
 };
 const decodeLinkProofPayload = Schema.decodeUnknownEffect(RelayEnvironmentLinkProofPayload);
 
@@ -68,11 +68,11 @@ const layerConfig = Layer.effect(
       ...config,
       mode: "desktop" as const,
       host: "0.0.0.0",
-      port: 3773,
+      port: 3772,
       desktopBootstrapToken: DESKTOP_BOOTSTRAP_TOKEN,
     };
   }),
-).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-link-proof-test-" })));
+).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t2-link-proof-test-" })));
 
 // Real credential issuance, verification, origin checks and signing; no relay or tunnel is started.
 const layerLinkProofRoutes = HttpApiBuilder.layer(LinkProofTestApi).pipe(
@@ -101,7 +101,7 @@ const layerLinkProofRoutes = HttpApiBuilder.layer(LinkProofTestApi).pipe(
     Layer.mock(CliTokenManager.CloudCliTokenManager)({}),
     Layer.mock(AgentAwarenessRelay.AgentAwarenessRelay)({}),
     Layer.mock(HttpServer.HttpServer)({
-      address: NetAddress.inetAddressFromIpStringUnsafe("0.0.0.0", 3773),
+      address: NetAddress.inetAddressFromIpStringUnsafe("0.0.0.0", 3772),
     }),
     Layer.succeed(
       HttpClient.HttpClient,
@@ -191,7 +191,7 @@ describe("link proof over a non-loopback desktop transport", () => {
           publicKey: unverified.environmentPublicKey,
           token: proof,
           typ: RELAY_LINK_PROOF_TYP,
-          issuer: "t3-env:wsl-environment",
+          issuer: "t2-env:wsl-environment",
           audience: proofRequest.relayIssuer,
         });
         expect(verified).toMatchObject({
@@ -248,7 +248,7 @@ describe("link proof over a non-loopback desktop transport", () => {
   it.effect.each([
     {
       name: "non-loopback tunnel origin",
-      origin: { localHttpHost: "172.24.162.233", localHttpPort: 3773 },
+      origin: { localHttpHost: "172.24.162.233", localHttpPort: 3772 },
       headers: {},
     },
     {
@@ -259,7 +259,7 @@ describe("link proof over a non-loopback desktop transport", () => {
     {
       name: "forwarded host",
       origin: proofRequest.origin,
-      headers: { "x-forwarded-host": "127.0.0.1:3773" },
+      headers: { "x-forwarded-host": "127.0.0.1:3772" },
     },
     {
       name: "forwarded protocol",

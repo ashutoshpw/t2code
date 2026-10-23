@@ -40,7 +40,7 @@ depends=(
 )
 optdepends=('openai-codex: use the system-installed Codex CLI')
 provides=("t2code=$pkgver")
-conflicts=('t3code' 't3code-bin')
+conflicts=('t2code' 't2code-bin')
 options=('!debug' '!strip')
 
 _appimage="T2-Code-${pkgver}-x86_64.AppImage"

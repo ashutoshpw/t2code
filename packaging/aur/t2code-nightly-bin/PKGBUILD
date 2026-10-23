@@ -40,7 +40,7 @@ depends=(
 )
 optdepends=('openai-codex: use the system-installed Codex CLI')
 provides=("t2code-nightly=$pkgver")
-conflicts=('t2code-nightly' 't3code' 't3code-nightly')
+conflicts=('t2code-nightly' 't2code' 't2code-nightly')
 options=('!debug' '!strip')
 
 _upstream_version="${pkgver/_nightly./-nightly.}"
