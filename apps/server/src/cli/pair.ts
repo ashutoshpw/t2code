@@ -83,7 +83,7 @@ export class NoRunningServerError extends Schema.TaggedError<NoRunningServerErro
       ...(this.inLinkedWorktree
         ? ["In a linked worktree, pass --base-dir to pair with a server outside it."]
         : []),
-      "Start one with `npx t2 serve`, or connect this machine with T2 Connect: `npx t2 connect`.",
+      "Start one with `npx @t2code/cli serve`, or connect this machine with T2 Connect: `npx @t2code/cli connect`.",
     ].join("\n");
   }
 }
@@ -277,8 +277,6 @@ const discoverPairTarget = Effect.fn("pair.discoverPairTarget")(function* (
       const envHome = yield* Config.String("T2CODE_HOME").pipe(Config.option);
       bases.push(yield* resolveBaseDir(Option.getOrUndefined(envHome)));
     }
-    const envHome = yield* Config.String("T2CODE_HOME").pipe(Config.option);
-    bases.push(yield* resolveBaseDir(Option.getOrUndefined(envHome)));
   }
 
   const checkedStatePaths: Array<string> = [];

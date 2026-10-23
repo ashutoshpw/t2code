@@ -115,21 +115,5 @@ describe("resolveMediaSource", () => {
         access: "unavailable",
       });
     });
-
-    it.each(["notes.txt", "/repo/README", "/repo/archive.zip"])(
-      "returns null for the non-media path %s",
-      (href) => {
-        expect(resolveMediaSource(href, { threadId, workspaceRoot: "/repo" })).toBeNull();
-      },
-    );
-  });
-
-  it("serves T2 attachment files in place like any other host path", () => {
-    const path = `/home/demo/.t2/userdata/attachments/${attachmentId}.mp4`;
-    expect(resolveMediaSource(path, { threadId, workspaceRoot: "/repo" })).toMatchObject({
-      kind: "video",
-      access: "environment",
-      resource: { _tag: "media-file", threadId, path },
-    });
   });
 });

@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import * as Cause from "effect/Cause";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -252,10 +252,10 @@ describe("DesktopLinuxUrlHandler", () => {
       assert.include(
         recorded.files[0]?.content,
         DesktopLinuxUrlHandler.renderUrlHandlerDesktopEntry({
-          displayName: "T3 Code (Alpha)",
+          displayName: "T2 Code (Alpha)",
           execTarget: process.execPath,
-          scheme: "t3code",
-          iconPath: "/home/alice/.local/share/icons/com.t2tools.T2Code.desktop.png",
+          scheme: "t2code",
+          iconPath: "/home/alice/.local/share/icons/t2code.desktop.png",
         }),
       );
     });
@@ -266,10 +266,10 @@ describe("DesktopLinuxUrlHandler", () => {
 
     return Effect.gen(function* () {
       yield* runRegister(recorded, {
-        environment: { desktopLauncherPath: Option.some("/opt/T3 Code/t3code") },
+        environment: { desktopLauncherPath: Option.some("/opt/T2 Code/t2code") },
       });
 
-      assert.include(recorded.files[0]?.content, 'Exec="/opt/T3 Code/t3code" %U');
+      assert.include(recorded.files[0]?.content, 'Exec="/opt/T2 Code/t2code" %U');
     });
   });
 
@@ -708,6 +708,35 @@ it.layer(NodeServices.layer)("DesktopLinuxUrlHandler theme icons", (it) => {
         missingTool.commands.map(({ command }) => command),
         ["gtk-update-icon-cache", "update-desktop-database", "xdg-mime"],
       );
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("continues to xdg-mime when the icon cache refresh stalls", () =>
+    Effect.gen(function* () {
+      const fixture = yield* themeIconFixture(new Uint8Array([1, 2, 3]));
+      yield* fixture.seedCache;
+      const started = yield* Deferred.make<void>();
+      const iconCacheOptions: Array<Record<string, unknown>> = [];
+      const run: ThemeIconRun = {
+        root: fixture.root,
+        commands: [],
+        iconCacheOptions,
+        iconCacheStalled: true,
+        iconCacheStarted: started,
+      };
+
+      const registration = yield* registerWithRealFileSystem(run).pipe(Effect.forkChild);
+      yield* Deferred.await(started);
+      yield* TestClock.adjust("5 seconds");
+      yield* Fiber.join(registration);
+
+      assert.deepEqual(
+        run.commands.map(({ command }) => command),
+        ["gtk-update-icon-cache", "update-desktop-database", "xdg-mime"],
+      );
+      // Without a forced kill, releasing a helper that ignores SIGTERM after
+      // the timeout would still wait for it to exit.
+      assert.equal(iconCacheOptions[0]?.forceKillAfter, "1 second");
     }).pipe(Effect.scoped),
   );
 });

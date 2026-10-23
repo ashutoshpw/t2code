@@ -311,11 +311,11 @@ describe("threadContextsOutsideEnvironment", () => {
       threadId: ThreadId.make("removed"),
     };
     const records = [local, foreign, removed];
-    const localReference = "[Local](t3-context://v1/thread/thread_local)";
+    const localReference = "[Local](t2-context://v1/thread/thread_local)";
 
     expect(
       threadContextsOutsideEnvironment({
-        text: `${localReference} [Foreign](t3-context://v1/thread/thread_foreign)`,
+        text: `${localReference} [Foreign](t2-context://v1/thread/thread_foreign)`,
         records,
         environmentId: local.environmentId,
         linkedEnvironments: new Map(),

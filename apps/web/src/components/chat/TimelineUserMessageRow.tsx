@@ -470,12 +470,12 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
       className="group flex flex-col items-end gap-1"
       data-user-message-attribution={folded ? "agent" : undefined}
     >
-      {userMessage.attribution === "t3code" ? (
+      {userMessage.attribution === "t2code" ? (
         <p
           className="me-1 text-2xs text-muted-foreground/70"
-          data-user-message-attribution="t3code"
+          data-user-message-attribution="t2code"
         >
-          Sent by T3 Code
+          Sent by T2 Code
         </p>
       ) : null}
       {/* The row's heading already names the guest for screen readers. */}

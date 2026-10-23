@@ -74,7 +74,7 @@ Node.js for `npx`).
 
 There is no `t2` executable for Intel Macs (the desktop app is available). To
 run a server there, build it from source with `vp`, which provides the Node version it needs
-([Install vp](https://github.com/pingdotgg/t2code#install-vp)):
+([Install vp](https://github.com/ashutoshpw/t2code#install-vp)):
 
 ```bash
 git clone https://github.com/ashutoshpw/t2code

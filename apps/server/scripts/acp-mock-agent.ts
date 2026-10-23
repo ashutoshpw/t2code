@@ -1296,6 +1296,60 @@ const program = Effect.gen(function* () {
             rawInput: { command: "git status" },
           },
         });
+        yield* agent.client.sessionUpdate({
+          sessionId: requestedSessionId,
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId,
+            title: "Terminal",
+            kind: "execute",
+            status: "in_progress",
+            rawInput: {
+              command: ["sleep", "120"],
+            },
+            // Grok-like mid-stream Bash re-report: exit_code 0 while still running.
+            rawOutput: { type: "Bash", exit_code: 0 },
+          },
+        });
+        yield* agent.client.sessionUpdate({
+          sessionId: requestedSessionId,
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId: "tool-call-output-1",
+            title: "get_command_or_subagent_output",
+            kind: "other",
+            status: "pending",
+            rawInput: { task_id: "task-running-1" },
+          },
+        });
+        yield* agent.client.sessionUpdate({
+          sessionId: requestedSessionId,
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId: "tool-call-output-1",
+            status: "in_progress",
+            rawOutput: { task_id: "task-running-1", status: "running" },
+          },
+        });
+        if (exitAfterRunningCommandLaunch) {
+          // The test sends `_test/exit` once T2 has recorded the published processes.
+          yield* Effect.promise(() => runningCommandPublished);
+          return yield* Effect.never;
+        }
+        while (!cancelledSessions.has(requestedSessionId)) {
+          yield* Effect.sleep("25 millis");
+        }
+        cancelledSessions.delete(requestedSessionId);
+        return yield* finishPrompt(requestedSessionId, "cancelled");
+      }
+
+      if (emitXAiRateLimitThenHang) {
+        writeJsonRpcNotification("_x.ai/session/prompt_complete", {
+          sessionId: requestedSessionId,
+          promptId: promptIdFromRequestMeta(request) ?? "mock-xai-rate-limit-prompt-1",
+          stopReason: "rate_limit",
+          agentResult: null,
+        });
         return yield* Effect.never;
       }
 

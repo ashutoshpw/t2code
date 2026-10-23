@@ -364,7 +364,7 @@ it.layer(NodeServices.layer)("EventNdjsonLogger", (it) => {
     "drops Claude thinking-token counters while keeping system and terminal usage records",
     () =>
       Effect.gen(function* () {
-        const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-provider-log-"));
+        const tempDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-provider-log-"));
         const basePath = NodePath.join(tempDir, "events.log");
         const threadId = ThreadId.make("claude-thinking-tokens");
         const counter = {

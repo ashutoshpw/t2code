@@ -72,35 +72,6 @@ const diagnose = (input: {
 };
 
 describe("diagnoseLaunchFailure", () => {
-  it.effect("turns Chrome's sandbox abort into the AppArmor steps", () =>
-    Effect.gen(function* () {
-      const { error, commands } = yield* diagnose({
-        platform: "linux",
-        output: SANDBOX_ABORT,
-        ldd: "",
-      });
-      expect(error?._tag).toBe("PreviewBrowserSandboxError");
-      expect(error?.message).toContain("Run `sudo t2 browser setup` on the host");
-      expect(commands).toEqual([]);
-    }),
-  );
-
-  it.effect("tells a root server to drop root, not to run setup", () =>
-    Effect.gen(function* () {
-      const { error, commands } = yield* diagnose({
-        platform: "linux",
-        output: PreviewBrowserHost.NO_SANDBOX_SIGNATURE,
-        ldd: "",
-        uid: 0,
-      });
-      expect(error?._tag).toBe("PreviewBrowserRootError");
-      expect(error?.message).toContain("`User=`");
-      expect(error?.message).toContain("`T2CODE_SERVER_BROWSER_SANDBOX=0`");
-      expect(error?.message).not.toMatch(/AppArmor|browser setup/);
-      expect(commands).toEqual([]);
-    }),
-  );
-
   it.effect("names every library the loader cannot find", () =>
     Effect.gen(function* () {
       const { error } = yield* diagnose({

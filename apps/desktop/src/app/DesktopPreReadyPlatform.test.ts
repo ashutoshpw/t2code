@@ -15,7 +15,6 @@ const {
   writeFileSyncMock,
   copyFileSyncMock,
   execFileSyncMock,
-  readFileSyncMock,
 } = vi.hoisted(() => ({
   appendSwitchMock: vi.fn(),
   getSwitchValueMock: vi.fn(),
@@ -26,7 +25,6 @@ const {
   writeFileSyncMock: vi.fn(),
   copyFileSyncMock: vi.fn(),
   execFileSyncMock: vi.fn(),
-  readFileSyncMock: vi.fn(),
 }));
 
 vi.mock("electron", () => ({
@@ -47,7 +45,7 @@ vi.mock("electron", () => ({
 }));
 
 vi.mock("node:fs", () => ({
-  readFileSync: readFileSyncMock,
+  readFileSync: () => "{}",
   mkdirSync: mkdirSyncMock,
   writeFileSync: writeFileSyncMock,
   copyFileSync: copyFileSyncMock,
@@ -70,7 +68,6 @@ describe("DesktopPreReadyPlatform", () => {
     writeFileSyncMock.mockReset();
     copyFileSyncMock.mockReset();
     execFileSyncMock.mockReset();
-    readFileSyncMock.mockReset().mockReturnValue("{}");
   });
 
   it.effect("persists Linux scaling synchronously across relaunches and settings rewrites", () => {
@@ -99,22 +96,66 @@ describe("DesktopPreReadyPlatform", () => {
     });
 
     return Effect.gen(function* () {
-      for (const explicitScale of ["1.75", "1"]) {
-        commandLine.clear();
-        commandLine.set("force-device-scale-factor", explicitScale);
-        appendSwitchMock.mockClear();
-        assert.equal(yield* launch, explicitScale);
-        assert.isFalse(
-          appendSwitchMock.mock.calls.some(([name]) => name === "force-device-scale-factor"),
-        );
+      const options = yield* DesktopPreReadyPlatform.DesktopPreReadyElectronOptions;
 
-        // The settings service discards fields it does not own when rewriting its document.
-        files.set(settingsPath, JSON.stringify({ linuxPasswordStore: "basic" }));
-        commandLine.clear();
-        assert.equal(yield* launch, explicitScale);
-      }
+      assert.equal(options.linuxPasswordStoreCommandLine, "basic");
+      assert.isFalse(appendSwitchMock.mock.calls.some(([name]) => name === "password-store"));
     }).pipe(
+      Effect.provide(
+        DesktopPreReadyPlatform.layer.pipe(
+          Layer.provide(Layer.succeed(HostProcess.Platform, "linux")),
+        ),
+      ),
+    );
+  });
+
+  it.effect.each([
+    {
+      label: "merges the color-manager fallback into disabled features on Hyprland 0.48.1",
+      switches: { "ozone-platform": "wayland", "disable-features": "Vulkan" },
+      hyprlandVersion: "0.48.1",
+      hyprlandCommit: "29e2e59fdbab8ed2cc23a20e3c6043d5decb5cdc",
+      expected: [["disable-features", "Vulkan,WaylandWpColorManagerV1"]],
+    },
+    {
+      label: "preserves color management on Hyprland 0.51.0",
+      switches: { "ozone-platform": "wayland", "disable-features": "Vulkan" },
+      hyprlandVersion: "0.51.0",
+      hyprlandCommit: "0123456789abcdef0123456789abcdef01234567",
+      expected: [],
+    },
+    {
+      label: "preserves color management when Electron resolved X11",
+      switches: { "ozone-platform": "x11", "disable-features": "Vulkan" },
+      hyprlandVersion: "0.48.1",
+      hyprlandCommit: "29e2e59fdbab8ed2cc23a20e3c6043d5decb5cdc",
+      expected: [],
+    },
+  ])("$label", ({ switches, hyprlandVersion, hyprlandCommit, expected }) => {
+    vi.stubEnv("XDG_CURRENT_DESKTOP", "Hyprland");
+    vi.stubEnv("XDG_SESSION_TYPE", "wayland");
+    const commandLine = new Map<string, string>(Object.entries(switches));
+    hasSwitchMock.mockImplementation((switchName: string) => commandLine.has(switchName));
+    getSwitchValueMock.mockImplementation(
+      (switchName: string) => commandLine.get(switchName) ?? "",
+    );
+    execFileSyncMock.mockReturnValue(
+      JSON.stringify({
+        commit: hyprlandCommit,
+        version: hyprlandVersion,
+        dirty: false,
+        tag: `v${hyprlandVersion}`,
+      }),
+    );
+
+    return DesktopPreReadyPlatform.make.pipe(
       Effect.provideService(HostProcess.Platform, "linux"),
+      Effect.map(() => {
+        const featureSwitches = appendSwitchMock.mock.calls.filter(([name]) =>
+          ["disable-features", "enable-features", "ozone-platform"].includes(name),
+        );
+        assert.deepEqual(featureSwitches, expected);
+      }),
       Effect.ensuring(Effect.sync(() => vi.unstubAllEnvs())),
     );
   });
@@ -153,7 +194,7 @@ describe("DesktopPreReadyPlatform", () => {
           ),
         );
         const identity = yield* Effect.promise(() => portalIdentity);
-        assert.equal(identity.desktopName, "com.t2tools.T2Code.desktop");
+        assert.equal(identity.desktopName, "t2code.desktop");
         assert.include(identity.desktopEntry ?? "", "Exec=/Applications/current.AppImage %U");
         assert.include(identity.desktopEntry ?? "", "Name=T2 Code (Beta)");
         assert.include(identity.desktopEntry ?? "", "MimeType=x-scheme-handler/t2code;");
@@ -167,8 +208,11 @@ describe("DesktopPreReadyPlatform", () => {
     vi.stubEnv("VITE_DEV_SERVER_URL", "");
     vi.stubEnv("XDG_DATA_HOME", "/xdg");
     vi.stubEnv("APPIMAGE", "/Applications/current.AppImage");
-    vi.stubEnv("T2CODE_DESKTOP_LAUNCHER_PATH", " /opt/T3 Code/t3code ");
+    vi.stubEnv("T2CODE_DESKTOP_LAUNCHER_PATH", " /opt/T2 Code/t2code ");
     getSwitchValueMock.mockReturnValue("");
+    mkdirSyncMock.mockImplementation(() => {
+      throw new Error("read-only filesystem");
+    });
 
     return Effect.scoped(
       Effect.gen(function* () {
@@ -178,9 +222,9 @@ describe("DesktopPreReadyPlatform", () => {
           ),
         );
         const entry = writeFileSyncMock.mock.calls.find(
-          ([path]) => path === "/xdg/applications/com.t2tools.T2Code.desktop",
+          ([path]) => path === "/xdg/applications/t2code.desktop",
         )?.[1];
-        assert.include(entry, 'Exec="/opt/T3 Code/t3code" %U');
+        assert.include(entry, 'Exec="/opt/T2 Code/t2code" %U');
       }),
     ).pipe(Effect.ensuring(Effect.sync(() => vi.unstubAllEnvs())));
   });

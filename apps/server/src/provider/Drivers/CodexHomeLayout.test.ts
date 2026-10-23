@@ -71,8 +71,8 @@ it.layer(NodeServices.layer)("CodexHomeLayout", (it) => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const sharedHome = yield* makeTempDir("t3code-codex-shared-");
-          const shadowHome = yield* makeTempDir("t3code-codex-shadow-");
+          const sharedHome = yield* makeTempDir("t2code-codex-shared-");
+          const shadowHome = yield* makeTempDir("t2code-codex-shadow-");
           const sharedMetadata = path.join(sharedHome, ".DS_Store");
           const shadowMetadata = path.join(shadowHome, ".DS_Store");
 

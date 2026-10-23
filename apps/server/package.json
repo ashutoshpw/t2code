@@ -1,10 +1,10 @@
 {
-  "name": "t3",
-  "version": "0.1.5",
+  "name": "@t2code/cli",
+  "version": "0.1.2",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pingdotgg/t3code",
+    "url": "https://github.com/ashutoshpw/t2code",
     "directory": "apps/server"
   },
   "bin": {

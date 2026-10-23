@@ -910,7 +910,7 @@ describe("EnvironmentRegistry", () => {
         const profile = new BearerConnectionProfile({
           ...BEARER_PROFILE,
           learned: true,
-          authorization: "t3-connect",
+          authorization: "t2-connect",
         });
         const harness = yield* makeHarness(
           learned ? [relay, BEARER_TARGET] : [relay],

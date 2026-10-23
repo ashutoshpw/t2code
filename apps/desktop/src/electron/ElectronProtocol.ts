@@ -66,7 +66,7 @@ export class ElectronProtocol extends Context.Service<
   }
 >()("@t2code/desktop/electron/ElectronProtocol") {}
 
-function makeDesktopContentSecurityPolicy(input: DesktopProtocolRegistrationInput): string {
+export function makeDesktopContentSecurityPolicy(input: DesktopProtocolRegistrationInput): string {
   const clerkOrigin = input.clerkFrontendApiHostname
     ? `https://${input.clerkFrontendApiHostname}`
     : undefined;

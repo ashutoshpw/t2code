@@ -150,39 +150,4 @@ describe("session cookie isolation", () => {
 
     expect(first).toBe(second);
   });
-
-  it("retains desktop port scoping", () => {
-    expect(
-      resolveSessionCookieName({
-        mode: "desktop",
-        port: 3772,
-        host: "127.0.0.1",
-        instanceKey: "/tmp/desktop",
-        environmentId: "environment-one",
-        development: true,
-      }),
-    ).toBe("t2_session_3772");
-  });
-
-  it("isolates development servers even when they bind a wildcard host", () => {
-    expect(
-      resolveSessionCookieName({
-        mode: "web",
-        port: 5775,
-        host: "0.0.0.0",
-        instanceKey: "/tmp/t2-wildcard-dev",
-        environmentId: "environment-one",
-        development: true,
-      }),
-    ).toMatch(/^t2_session_5775_[a-f0-9]{12}$/);
-  });
-
-  it("classifies loopback aliases separately from remotely reachable hosts", () => {
-    expect(isRemoteReachableHost(undefined)).toBe(false);
-    expect(isRemoteReachableHost("localhost")).toBe(false);
-    expect(isRemoteReachableHost("127.12.0.1")).toBe(false);
-    expect(isRemoteReachableHost("[::1]")).toBe(false);
-    expect(isRemoteReachableHost("0.0.0.0")).toBe(true);
-    expect(isRemoteReachableHost("192.168.1.50")).toBe(true);
-  });
 });

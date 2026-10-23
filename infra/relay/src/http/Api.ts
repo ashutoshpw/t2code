@@ -101,7 +101,7 @@ const appendRelayCredentialResponseHeaders = HttpEffect.appendPreResponseHandler
     ),
 );
 
-// T3 Code hosts never retry sooner than Retry-After, so during a Cloudflare
+// T2 Code hosts never retry sooner than Retry-After, so during a Cloudflare
 // rate limit they wait out the pause instead of retrying into it.
 const appendCloudflareRetryAfter = (error: unknown) => {
   const retryAfterMillis = ManagedEndpointProvider.cloudflareRetryAfterMillis(error);
@@ -1453,11 +1453,19 @@ export const layerServerApi = HttpApiBuilder.group(
           if (principal.environmentId !== params.environmentId) {
             return yield* new HttpApiError.Unauthorized({});
           }
-          yield* links.updateLabel({
-            environmentId: params.environmentId,
-            environmentPublicKey: principal.environmentPublicKey,
-            label: payload.label,
-          });
+          const links = yield* EnvironmentLinks.EnvironmentLinks;
+          yield* links
+            .updateLabel({
+              environmentId: params.environmentId,
+              environmentPublicKey: principal.environmentPublicKey,
+              label: payload.label,
+            })
+            .pipe(
+              Effect.catchTags({
+                EnvironmentLabelUpdatePersistenceError: () =>
+                  relayInternalErrorResponse("internal_error"),
+              }),
+            );
           return { ok: true as const };
         }, mapRelayCommonApiErrors("not_authorized")),
       );

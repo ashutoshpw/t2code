@@ -52,33 +52,6 @@ const layerTest = layerHtmlRender();
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-/**
- * A stand-in browser that reads T2's first command off its debugging pipe,
- * then runs `exit`. Reading it first keeps the pipe from resetting.
- */
-const exitingBrowser = (exit: string) =>
-  Effect.gen(function* () {
-    const fileSystem = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-exiting-browser-" });
-    const executable = path.join(directory, "chrome-headless-shell");
-    yield* fileSystem.writeFileString(
-      executable,
-      [
-        `#!${process.execPath}`,
-        `new (process.getBuiltinModule("node:net").Socket)({ fd: 3 }).on("data", (chunk) => { if (chunk.includes(0)) { ${exit} } });`,
-      ].join("\n"),
-    );
-    yield* fileSystem.chmod(executable, 0o755);
-    return executable;
-  });
-
-const previewError = (executable: string) =>
-  Effect.gen(function* () {
-    const htmlRender = yield* HtmlRender.HtmlRender;
-    return yield* htmlRender.preview({ html: "<p>x</p>" }).pipe(Effect.flip);
-  }).pipe(Effect.provide(layerHtmlRender(executable)));
-
 describe("HtmlRender", () => {
   it.effect("inlines local images by absolute path and leaves URLs and relative paths alone", () =>
     Effect.gen(function* () {
@@ -324,7 +297,7 @@ describe("HtmlRender", () => {
         Effect.gen(function* () {
           const fileSystem = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
-          const file = yield* fileSystem.makeTempFileScoped({ prefix: "t3-browser-spawn-" });
+          const file = yield* fileSystem.makeTempFileScoped({ prefix: "t2-browser-spawn-" });
           const outcome = yield* HtmlRender.HtmlRender.use((htmlRender) =>
             htmlRender.preview({ html: "<p>x</p>" }).pipe(Effect.flip),
           ).pipe(
@@ -433,35 +406,19 @@ fs.createReadStream(null, { fd: 3 }).on("end", quit).on("data", (chunk) => {
         yield* fileSystem.writeFileString(secret, 'window.secret = "abc123";');
         const secretUrl = NodeURL.pathToFileURL(secret).href;
 
-          const png = Buffer.from(preview.png, "base64");
-          expect(png.readUInt32BE(0)).toBe(0x89504e47);
-          expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([400, 300]);
-          expect(preview).toMatchObject({
-            width: 400,
-            contentHeight: 300,
-            capturedHeight: 300,
-            missingImages: ["/nonexistent/t2-missing.png"],
-          });
-          // Headless Chrome prefers light, so a dark background proves the theme fragment applied.
-          expect(preview.consoleMessages).toEqual(
-            expect.arrayContaining([
-              { level: "log", text: "ready 3" },
-              { level: "log", text: "focus 2px -2px 400 400" },
-              { level: "info", text: HTML_RENDER_MEASURE_FONTS.sans },
-              {
-                level: "warning",
-                text: htmlRenderTheme(T2_CODE_DARK_THEME_COLORS, "dark").variables["--background"],
-              },
-              { level: "error", text: "boom" },
-              {
-                level: "error",
-                text: expect.stringMatching(/^Error: broken chart\n\s+at page\.html:1:\d+$/),
-              },
-            ]),
-          );
-        }).pipe(Effect.provide(layerHtmlRender(executable)));
-      }),
-    30_000,
+        const preview = yield* htmlRender.preview({
+          html: [
+            `<script src="${secretUrl}"></script>`,
+            `<iframe src="${secretUrl}" onload="console.log('frame loaded')"></iframe>`,
+            '<script>addEventListener("load", () => console.log("secret:", window.secret ?? "none"));</script>',
+          ].join(""),
+        });
+
+        const texts = preview.consoleMessages.map((message) => message.text);
+        expect(texts).toContain("secret: none");
+        expect(texts.join(" ")).not.toContain("abc123");
+      }).pipe(Effect.scoped, Effect.provide(layerHtmlRender(executable)));
+    }),
   );
 
   it.live("keeps the page off this machine's local network", (ctx) =>

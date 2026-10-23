@@ -689,7 +689,7 @@ describe("ManagedEndpointProvider", () => {
       const request = {
         userId: "user_ABC",
         environmentId: "env_ABC",
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
         reuseReadyTunnel: true,
       } as const;
       yield* provider.provision(request);

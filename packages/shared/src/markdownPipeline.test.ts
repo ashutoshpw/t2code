@@ -56,12 +56,13 @@ it("keeps backslashes that CommonMark would read as escapes in prose Windows pat
   expect(
     render(String.raw`Saved to C:\Users\me\.t2\_build and (C:\.scratch) and C:/work\.config.`),
   ).toBe(String.raw`Saved to C:\Users\me\.t2\_build and (C:\.scratch) and C:/work\.config.`);
+  // Paths render as written, so one an agent already escaped keeps its doubled backslashes.
   expect(render(String.raw`Escaped C:\\Users\\me`)).toBe(String.raw`Escaped C:\\Users\\me`);
   expect(render(String.raw`See C:\x and \*this\* and Note:\*that\*.`)).toBe(
     String.raw`See C:\x and *this* and Note:*that*.`,
   );
-  expect(render(String.raw`${"`"}C:\me\.t3${"`"} and C:\me\.t2`)).toBe(
-    String.raw`<code>C:\me\.t3</code> and C:\me\.t2`,
+  expect(render(String.raw`${"`"}C:\me\.t2${"`"} and C:\me\.t2`)).toBe(
+    String.raw`<code>C:\me\.t2</code> and C:\me\.t2`,
   );
 });
 

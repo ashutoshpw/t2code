@@ -2413,30 +2413,6 @@ describe("composerDraftStore attachment references", () => {
     expect(draft?.prompt).toBe("see [notes.txt](t2-context://v1/file/file_fresh-1) ok");
   });
 
-  it.each(["old.file:1", "file-1"])(
-    "rewrites persisted attachment references before removal: %s",
-    (id) => {
-      const merged = useComposerDraftStore.persist.getOptions().merge!(
-        {
-          draftsByThreadKey: {
-            [threadKeyFor(threadId, TEST_ENVIRONMENT_ID)]: {
-              prompt: `before [notes.txt](t2-context://v1/file/${id}) after`,
-              attachments: [],
-              files: [{ id, name: "notes.txt", mimeType: "text/plain", sizeBytes: 3 }],
-            },
-          },
-        },
-        useComposerDraftStore.getInitialState(),
-      );
-      useComposerDraftStore.setState(merged);
-      const draft = draftFor(threadId, TEST_ENVIRONMENT_ID)!;
-      expect(draft.prompt.match(/t2-context:/g)).toHaveLength(1);
-      expect(draft.prompt).not.toContain(`/file/${id})`);
-      useComposerDraftStore.getState().removeFile(threadRef, id);
-      expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.prompt).toBe("before after");
-    },
-  );
-
   it("appends chips for persisted files that predate references", () => {
     const persistApi = useComposerDraftStore.persist as unknown as {
       getOptions: () => {

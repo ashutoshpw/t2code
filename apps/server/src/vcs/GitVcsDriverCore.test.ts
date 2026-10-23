@@ -1217,7 +1217,7 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
                   .createWorktree({
                     cwd,
                     refName,
-                    ...(action === "worktree add -b" ? { newRefName: "t3/new-thread" } : {}),
+                    newRefName: "t2/new-thread",
                     path: path.join(cwd, "worktree"),
                   })
                   .pipe(Effect.flip);
@@ -4099,7 +4099,7 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
         const added = yield* driver.ensureRemote({
           cwd,
           preferredName: "origin",
-          url: "https://github.com/another-owner/t3code.git",
+          url: "https://github.com/another-owner/t2code.git",
         });
         assert.equal(added, "origin-1");
       }),

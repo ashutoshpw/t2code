@@ -36,7 +36,7 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
 }) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-owner-boot-service-" });
+  const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-owner-boot-service-" });
   const t2Home = path.join(root, ".t2");
   const serviceHome = input.unitServesOtherHome ? path.join(root, "other") : t2Home;
   for (const home of [t2Home, serviceHome]) {
@@ -52,7 +52,7 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
   }
   if (input.npmRuntime) {
     const versionDir = path.join(serviceHome, "runtime", "versions", activeVersion);
-    const entryPath = path.join(versionDir, "node_modules", "t3", "dist", "bin.mjs");
+    const entryPath = path.join(versionDir, "node_modules", "t2", "dist", "bin.mjs");
     yield* fs.makeDirectory(path.dirname(entryPath), { recursive: true });
     yield* fs.writeFileString(entryPath, "");
   }
@@ -74,7 +74,7 @@ const startBesideBootService = Effect.fn("test.startBesideBootService")(function
   const [unitPath, unit] =
     input.platform === "darwin"
       ? [
-          path.join(root, "Library", "LaunchAgents", "com.t3tools.t2code.service.plist"),
+          path.join(root, "Library", "LaunchAgents", "codes.t2.desktop.service.plist"),
           renderBootServicePlist(plan, { homeDir: root, environmentPath: "" }),
         ]
       : [
@@ -451,7 +451,7 @@ describe("server ownership", () => {
               "launchctl print": { code: 113 },
               "launchctl print-disabled": {
                 code: 0,
-                stdout: '"com.t2tools.t2code.service" => disabled',
+                stdout: '"codes.t2.desktop.service" => disabled',
               },
             },
           },

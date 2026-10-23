@@ -151,10 +151,10 @@ details** to include the error in a bug report.
 at once. Hover it to see which providers it will update. Providers that only
 offer a manual update command are not included.
 
-After a successful provider CLI update, T3 Code refreshes model discovery for
+After a successful provider CLI update, T2 Code refreshes model discovery for
 every enabled instance of that provider using its own configuration. Connected
 clients receive the refreshed catalogs automatically. Provider update checks
-must be enabled to download the latest T3 Code model catalog.
+must be enabled to download the latest T2 Code model catalog.
 
 Provider updates do not restart running chats. An existing session can keep
 using the previous CLI until it ends. If discovery fails, check the provider

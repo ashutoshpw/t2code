@@ -362,7 +362,7 @@ jobs:
         env:
           # The executable bundles the server again, so it needs the same stamp
           # as release.yml's JS bundle.
-          T2CODE_TELEMETRY_CHANNEL: ${{ github.repository == 'pingdotgg/t2code' && inputs.release_channel || 'dev' }}
+          T2CODE_TELEMETRY_CHANNEL: ${{ github.repository == 'pingdotgg/t3code' && inputs.release_channel || 'dev' }}
         run: node apps/server/scripts/cli.ts build-exe --verbose ${{ inputs.platform == 'win' && format('--target win-{0}', inputs.arch) || '' }}
 
       - name: Import macOS signing certificate for the CLI archive
@@ -595,7 +595,7 @@ jobs:
               printf '%s' "$APPLE_API_KEY" > "$key_path"
               export APPLE_API_KEY="$key_path"
 
-              profile_path="$RUNNER_TEMP/t3code.provisionprofile"
+              profile_path="$RUNNER_TEMP/t2code.provisionprofile"
               printf '%s' "$MACOS_PROVISIONING_PROFILE" | base64 -D > "$profile_path"
               security cms -D -i "$profile_path" >/dev/null
               export T2CODE_APPLE_TEAM_ID="$APPLE_TEAM_ID"
@@ -609,7 +609,7 @@ jobs:
           elif [[ "${{ inputs.platform }}" == "win" ]]; then
             # Embed the Linux CLI archive built by the same-arch Linux job as
             # the WSL runtime. Required for a working WSL backend on Windows.
-            args+=(--wsl-runtime "$GITHUB_WORKSPACE"/wsl-runtime/t3-*-linux-${{ inputs.arch }}.tar.gz)
+            args+=(--wsl-runtime "$GITHUB_WORKSPACE"/wsl-runtime/t2-*-linux-${{ inputs.arch }}.tar.gz)
             if has_all \
               "$AZURE_TENANT_ID" \
               "$AZURE_CLIENT_ID" \
@@ -686,7 +686,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p verify
-          unpacked=$(ls -d "${TMPDIR:-/tmp}"/t3code-desktop-${{ inputs.platform }}-stage-*/app/dist/"$UNPACKED_DIR")
+          unpacked=$(ls -d "${TMPDIR:-/tmp}"/t2code-desktop-${{ inputs.platform }}-stage-*/app/dist/"$UNPACKED_DIR")
           tar -C "$(dirname "$unpacked")" -cf verify/unpacked.tar "$(basename "$unpacked")"
           esbuild=scripts/node_modules/.bin/esbuild
           banner="import{createRequire as __cr}from'node:module';const require=__cr(import.meta.url);"
@@ -821,7 +821,7 @@ jobs:
       - name: Smoke-test resource monitor
         shell: bash
         env:
-          MONITOR: verify/${{ env.UNPACKED_DIR }}/resources/resource-monitor/t3-resource-monitor.exe
+          MONITOR: verify/${{ env.UNPACKED_DIR }}/resources/resource-monitor/t2-resource-monitor.exe
           EXPECTED_ARCH: ${{ inputs.arch == 'arm64' && 'aarch64' || 'x86_64' }}
         run: |
           node --input-type=module <<'EOF'
