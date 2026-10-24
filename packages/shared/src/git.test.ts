@@ -65,9 +65,6 @@ describe("normalizeGitRemoteUrl", () => {
     expect(normalizeGitRemoteUrl("C:/repos/project")).toBe("c:/repos/project");
     expect(normalizeGitRemoteUrl("git@x:team/project.git")).toBe("x/team/project");
   });
-
-
-
 });
 
 describe("parseOriginUrlFromGitConfig", () => {

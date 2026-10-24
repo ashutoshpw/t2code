@@ -454,7 +454,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const baseDir = yield* fs.makeTempDirectoryScoped({
-        prefix: "t3-cli-config-otlp-bootstrap-",
+        prefix: "t2-cli-config-otlp-bootstrap-",
       });
       const fd = yield* openBootstrapFd(
         makeDesktopBootstrap({
@@ -489,7 +489,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-cli-config-otlp-settings-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-cli-config-otlp-settings-" });
       const derivedPaths = yield* deriveExplicitServerPaths(baseDir, undefined);
       yield* fs.makeDirectory(path.dirname(derivedPaths.settingsPath), { recursive: true });
       yield* fs.writeFileString(

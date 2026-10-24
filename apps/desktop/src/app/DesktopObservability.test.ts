@@ -619,7 +619,7 @@ describe("DesktopObservability", () => {
     return Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-observability-test-",
+        prefix: "t2-desktop-observability-test-",
       });
       const layerEnvironment = layerEnvironmentFor(baseDir);
       yield* writeObservabilitySettings(layerEnvironment, {

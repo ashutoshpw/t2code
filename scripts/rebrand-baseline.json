@@ -1,9 +1,5 @@
 [
   {
-    "file": "apps/desktop/src/app/DesktopCliCommand.test.ts",
-    "line": "it.effect(\"finds and removes a link left by a previous T3 home\", () =>"
-  },
-  {
     "file": "apps/desktop/src/app/DesktopLegacyLocalStorage.ts",
     "line": "const V1_PROFILE_NAMES = [\"T3 Code (Alpha)\", \"t3code\"];"
   },
@@ -12,7 +8,7 @@
     "line": ""
   },
   {
-    "file": "apps/mobile/deps/react-native-screens-5.0.0-t3.36.tgz",
+    "file": "apps/mobile/deps/react-native-screens-5.0.0-t3.43.tgz",
     "line": ""
   },
   {

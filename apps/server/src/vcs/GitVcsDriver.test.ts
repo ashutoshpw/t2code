@@ -1258,7 +1258,7 @@ it.effect("checkpoint capture meters every git process it starts, including stre
         },
       }),
     );
-    const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-checkpoint-metrics-" });
+    const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-checkpoint-metrics-" });
     const { checkpointRef } = yield* makeCheckpointFixture(driver, cwd);
 
     yield* captureDriver.checkpoints.captureCheckpoint({ cwd, checkpointRef });

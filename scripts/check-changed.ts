@@ -376,7 +376,7 @@ const checkChanged = Effect.fn("checkChanged")(function* (input: {
   // Cached registry metadata limits this to patches stranded by local changes, not registry drift.
   const checkPatches = Effect.scoped(
     Effect.gen(function* () {
-      const temp = yield* fs.makeTempDirectoryScoped({ prefix: "t3-patch-check-" });
+      const temp = yield* fs.makeTempDirectoryScoped({ prefix: "t2-patch-check-" });
       const copy = Effect.fnUntraced(function* (relative: string) {
         const dest = path.join(temp, relative);
         yield* fs.makeDirectory(path.dirname(dest), { recursive: true });

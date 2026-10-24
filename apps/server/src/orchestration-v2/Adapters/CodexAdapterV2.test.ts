@@ -1336,7 +1336,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
     ),
   );
 
-  // regression: #15839 launch-arg MCP servers survive the thread's t3-code server
+  // regression: #15839 launch-arg MCP servers survive the thread's t2-code server
   it.effect("replays historical and dotted MCP config while enforcing other thread config", () =>
     Effect.gen(function* () {
       const recordedServer = {

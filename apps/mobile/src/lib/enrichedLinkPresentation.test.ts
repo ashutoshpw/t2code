@@ -60,7 +60,7 @@ describe("Enriched link presentation", () => {
     for (const href of [
       "https://github.com/example/repo/pull/7",
       "https://example.com",
-      "t3-context://v1/thread/thread_1",
+      "t2-context://v1/thread/thread_1",
     ]) {
       expect(enrichedThreadLinkPresentation(href), href).toBeUndefined();
     }
@@ -95,7 +95,7 @@ describe("Enriched link presentation", () => {
         link: true,
       },
       {
-        href: "t3-context://v1/thread/thr1",
+        href: "t2-context://v1/thread/thr1",
         environmentId: there,
         threadId: "thread_c",
         link: false,

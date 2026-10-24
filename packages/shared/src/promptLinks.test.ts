@@ -93,7 +93,7 @@ describe("link round trips", () => {
   it("builds a link that parses back to the same prompt", () => {
     const link = buildNewThreadLink({
       prompt: "Swear count & rating?",
-      repository: { owner: "pingdotgg", name: "t3code" },
+      repository: { owner: "pingdotgg", name: "t2code" },
       provider: "claudeAgent",
       model: "opus",
     });

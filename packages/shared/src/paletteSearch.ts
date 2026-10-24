@@ -211,7 +211,7 @@ function matchToken(
     // A token that opens with punctuation (".ts") brings its own boundary, as in messages.
     if (field.wordStarts[index] || ownBoundary) {
       // Whole when the match ends where a word ends: "t2c" is a prefix of
-      // "t3code", ".ts" whole in "index.ts" but a prefix in "parser.tsx".
+      // "t2code", ".ts" whole in "index.ts" but a prefix in "parser.tsx".
       const end = index + token.length;
       const whole =
         end >= field.text.length ||
@@ -235,7 +235,7 @@ function matchToken(
     if (joined) return joined;
   }
   if ((best !== null && best.score > MID_WORD) || !typos || token.length < 3) return best;
-  // Numbers skip typos to keep pull requests distinct. Words with digits ("t3code") do not.
+  // Numbers skip typos: #22889 is not #22189. Words with digits ("t2code") do not.
   if (LETTER.test(token)) {
     for (let index = 0; index < field.text.length; index++) {
       if (!field.wordStarts[index]) continue;
@@ -801,8 +801,11 @@ function threadUsageBoost(thread: ThreadSearchSubject, now: number): number {
 
 const REFERENCE_PREFIX_MIN = 8;
 
-// IDs and URLs have many word starts, so field matching would let short queries hit every thread.
-// Require a long prefix, or any long part containing a digit. Both are ASCII; lowercasing suffices.
+// IDs and URLs split into many word starts, so matching them as fields would
+// let a two-letter query hit every thread. Only a long piece of one matches: a
+// prefix, or, when it holds a digit like an ID or pull request number, any
+// part ("t2code#22889", a URL without its scheme). Both are ASCII, so
+// lowercasing is enough.
 function matchReference(
   normalizedQuery: string,
   thread: ThreadSearchSubject,
@@ -884,10 +887,10 @@ export interface SearchMatchHint {
   readonly ranges: ReadonlyArray<SearchRange>;
 }
 
-// Most threads' branches start with the app's own worktree prefix ("t3/", and
-// "t2code/" before it), so "t3 connect" would match nearly every thread.
-// Only before more text, so typing "t3/" does not empty the list for a keystroke.
-const WORKTREE_BRANCH_PREFIX_PATTERN = new RegExp(`^(?:${WORKTREE_BRANCH_PREFIX}|t3code)/(?=\\S)`);
+// Most threads' branches start with the app's own worktree prefix ("t2/", and
+// "t2code/" before it), so "t2 connect" would match nearly every thread.
+// Only before more text, so typing "t2/" does not empty the list for a keystroke.
+const WORKTREE_BRANCH_PREFIX_PATTERN = new RegExp(`^(?:${WORKTREE_BRANCH_PREFIX}|t2code)/(?=\\S)`);
 
 function searchableBranch(branch: string | null | undefined): string | null {
   return branch ? branch.replace(WORKTREE_BRANCH_PREFIX_PATTERN, "") : null;
@@ -965,7 +968,8 @@ export function scoreThreadSearch(
   if (thread.environmentLabel) {
     fields.push({ value: thread.environmentLabel, weight: 0.25, context: true });
   }
-  // Strip pull request prefixes and the worktree prefix so queries match the stored fields.
+  // "#22889", "pr 22889", and a pasted "t2/branch" search without their
+  // prefixes, as the branch field is stored without the app's worktree prefix.
   const fieldQuery = normalizedQuery
     .replace(/^(?:pr|pull request|pull)\s*(?=#?\d)/, "")
     .replace(/^#\s*/, "")
