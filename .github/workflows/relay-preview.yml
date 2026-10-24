@@ -29,7 +29,6 @@ jobs:
     env:
       STAGE: pr-${{ github.event.pull_request.number }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      PLANETSCALE_ORGANIZATION: ${{ vars.PLANETSCALE_ORGANIZATION }}
       AXIOM_ORG_ID: ${{ vars.AXIOM_ORG_ID }}
       RELAY_API_ZONE_NAME: ${{ vars.RELAY_API_ZONE_NAME }}
       RELAY_TUNNEL_ZONE_NAME: ${{ vars.RELAY_TUNNEL_ZONE_NAME }}
@@ -68,15 +67,14 @@ jobs:
           cache: true
           run-install: |
             args:
-              - --filter=t3code-relay...
+              - --filter=t2code-relay...
 
       - name: Deploy preview stage
-        run: vp run --filter t3code-relay deploy --stage "$STAGE" --yes --no-input
+        run: vp run --filter t2code-relay deploy --stage "$STAGE" --yes --no-input
         env:
           T2CODE_RELAY_CLIENT_CONFIG_ENV: ${{ runner.temp }}/relay-client-config.env
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          PLANETSCALE_API_TOKEN_ID: ${{ secrets.PLANETSCALE_API_TOKEN_ID }}
-          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           # Unset by default, so previews keep the T3 Chat link off.

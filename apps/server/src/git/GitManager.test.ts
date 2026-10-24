@@ -3415,7 +3415,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("hands the branch base to the host when a failed first push is retried", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -5333,7 +5333,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
             headRepositoryOwnerLogin: "binbandit",
           },
           repositoryCloneUrls: {
-            "binbandit/t3code": {
+            "binbandit/t2code": {
               url: forkDir,
               sshUrl: forkDir,
             },
@@ -5782,7 +5782,7 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
 
   it.effect("creates a merge request worktree from the host's own head ref", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      const repoDir = yield* makeTempDir("t2code-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
