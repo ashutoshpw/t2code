@@ -174,7 +174,7 @@ const runPatchCheck = files.some(
 // Copy mobile modules too: they are file: dependencies, not workspace packages.
 // Cached registry metadata limits this to patches stranded by local changes, not registry drift.
 const checkPatches = (): boolean => {
-  const temp = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-patch-check-"));
+  const temp = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-patch-check-"));
   try {
     const copy = (relative: string) => {
       const dest = NodePath.join(temp, relative);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { canLinkChangeRequest } from "./usePullRequestLinking";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 
 describe("canLinkChangeRequest (#9435 / #9440)", () => {
   const nonGitProject = { id: "scratch-project" } as never;

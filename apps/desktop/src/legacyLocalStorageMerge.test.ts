@@ -31,7 +31,7 @@ describe("mergeLegacyLocalStorage", () => {
   it("copies V1 keys into an empty profile under the current namespace", () => {
     const storage = memoryStorage();
     mergeLegacyLocalStorage(storage, {
-      "t3code:theme": "dark",
+      "t2code:theme": "dark",
       "t3code:prompt-stash:v2": stash("a"),
       "t3.backgroundActivity.clientId": "v1-client",
     });
@@ -43,7 +43,7 @@ describe("mergeLegacyLocalStorage", () => {
 
   it("keeps V2 values for plain keys", () => {
     const storage = memoryStorage({ "t2code:theme": "light" });
-    mergeLegacyLocalStorage(storage, { "t3code:theme": "dark" });
+    mergeLegacyLocalStorage(storage, { "t2code:theme": "dark" });
     assert.equal(storage.getItem("t2code:theme"), "light");
   });
 
@@ -94,8 +94,8 @@ describe("mergeLegacyLocalStorage", () => {
       setItem(key, value);
     };
     const complete = mergeLegacyLocalStorage(storage, {
-      "t3code:theme": "dark",
-      "t3code:last-editor": "zed",
+      "t2code:theme": "dark",
+      "t2code:last-editor": "zed",
     });
     assert.equal(storage.getItem("t2code:last-editor"), "zed");
     assert.isFalse(complete);

@@ -1,4 +1,4 @@
-import { ProjectId, SourceControlProviderKind } from "@t3tools/contracts";
+import { ProjectId, SourceControlProviderKind } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { sourceControlClients } from "./sourceControlClients.ts";
@@ -14,19 +14,19 @@ const kindOf = (url: string) => sourceControlClients.parseChangeRequestUrl(url)?
 
 describe("sourceControlClients.parseChangeRequestUrl", () => {
   it("reads a GitHub pull request, lower-casing the repository", () => {
-    expect(parse("https://github.com/T3Tools/T3Code/pull/123")).toEqual({
+    expect(parse("https://github.com/T2Tools/T2Code/pull/123")).toEqual({
       host: "github.com",
-      repository: "t3tools/t3code",
+      repository: "t2tools/t2code",
       number: 123,
     });
   });
 
   it("reads a GitCafe pull request at its canonical /pull/ path and the older /pulls/ path", () => {
     for (const path of ["pull", "pulls"]) {
-      const url = `https://git.cafe/PingDotGG/T3Code/${path}/23897`;
+      const url = `https://git.cafe/PingDotGG/T2Code/${path}/23897`;
       expect(parse(url), path).toEqual({
         host: "git.cafe",
-        repository: "pingdotgg/t3code",
+        repository: "pingdotgg/t2code",
         number: 23897,
       });
       expect(kindOf(url), path).toBe("gitcafe");
@@ -62,9 +62,9 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
   });
 
   it("reads a GitLab merge request on any host, nested groups and all", () => {
-    expect(parse("https://gitlab.com/t3tools/platform/t3code/-/merge_requests/42")).toEqual({
+    expect(parse("https://gitlab.com/t2tools/platform/t2code/-/merge_requests/42")).toEqual({
       host: "gitlab.com",
-      repository: "t3tools/platform/t3code",
+      repository: "t2tools/platform/t2code",
       number: 42,
     });
     expect(parse("https://code.acme.test/team/project/-/merge_requests/9")).toEqual({
@@ -80,14 +80,14 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
       repository: "workspace/repo",
       number: 5,
     });
-    expect(parse("https://dev.azure.com/acme/platform/_git/t3code/pullrequest/17")).toEqual({
+    expect(parse("https://dev.azure.com/acme/platform/_git/t2code/pullrequest/17")).toEqual({
       host: "dev.azure.com",
-      repository: "acme/platform/_git/t3code",
+      repository: "acme/platform/_git/t2code",
       number: 17,
     });
-    expect(parse("https://acme.visualstudio.com/platform/_git/t3code/pullrequest/17")).toEqual({
+    expect(parse("https://acme.visualstudio.com/platform/_git/t2code/pullrequest/17")).toEqual({
       host: "acme.visualstudio.com",
-      repository: "platform/_git/t3code",
+      repository: "platform/_git/t2code",
       number: 17,
     });
   });
@@ -126,28 +126,28 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
   });
 
   it("survives trailing segments, a trailing slash and a query string", () => {
-    expect(parse("https://github.com/t3tools/t3code/pull/123/files?w=1")).toEqual({
+    expect(parse("https://github.com/t2tools/t2code/pull/123/files?w=1")).toEqual({
       host: "github.com",
-      repository: "t3tools/t3code",
+      repository: "t2tools/t2code",
       number: 123,
     });
-    expect(parse("https://github.com/t3tools/t3code/pull/123/")).toEqual({
+    expect(parse("https://github.com/t2tools/t2code/pull/123/")).toEqual({
       host: "github.com",
-      repository: "t3tools/t3code",
+      repository: "t2tools/t2code",
       number: 123,
     });
   });
 
   it("claims nothing it cannot be sure of", () => {
     for (const link of [
-      "https://github.com/t3tools/t3code/issues/123",
+      "https://github.com/t2tools/t2code/issues/123",
       "https://git.cafe/pingdotgg/t3code/issues/23897",
       "https://git.cafe/pingdotgg/t3code/pull/abc",
       "https://git.cafe/pingdotgg/t3code",
-      "https://github.com/t3tools/t3code/commit/0a1b2c3",
-      "https://github.com/t3tools/t3code",
-      "https://github.com/t3tools/t3code/pull/abc",
-      "https://gitlab.com/t3tools/t3code/-/issues/12",
+      "https://github.com/t2tools/t2code/commit/0a1b2c3",
+      "https://github.com/t2tools/t2code",
+      "https://github.com/t2tools/t2code/pull/abc",
+      "https://gitlab.com/t2tools/t2code/-/issues/12",
       "https://blog.example.test/2026/updates/archive/pull/3",
       "https://scm.example.test/tfs/Collection/Project/_git/Repo",
       "https://scm.example.test/tfs/Collection/Project/pullrequest/123",
@@ -155,7 +155,7 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
       "https://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/0",
       "https://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/9007199254740992",
       "ftp://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/123",
-      "javascript:alert(1)//github.com/t3tools/t3code/pull/1",
+      "javascript:alert(1)//github.com/t2tools/t2code/pull/1",
       "not a url",
     ]) {
       expect(parse(link), link).toBeNull();
@@ -273,19 +273,19 @@ describe("sourceControlClients.recognizeRemote", () => {
 describe("sourceControlClients repository keys", () => {
   // Persisted as `repositoryIdentity.canonicalKey` and in thread pull request keys.
   it.each([
-    ["git@github.com:T3Tools/T3Code.git", "github.com/t3tools/t3code"],
+    ["git@github.com:T2Tools/T2Code.git", "github.com/t2tools/t2code"],
     ["ssh://git@gitlab.company.com:2222/team/project.git", "gitlab.company.com/team/project"],
     [
-      "git@ssh.dev.azure.com:v3/T3Tools/Platform/T3Code",
-      "dev.azure.com/t3tools/platform/_git/t3code",
+      "git@ssh.dev.azure.com:v3/T2Tools/Platform/T2Code",
+      "dev.azure.com/t2tools/platform/_git/t2code",
     ],
     [
-      "T3Tools@vs-ssh.visualstudio.com:v3/T3Tools/Platform/T3Code",
-      "t3tools.visualstudio.com/platform/_git/t3code",
+      "T2Tools@vs-ssh.visualstudio.com:v3/T2Tools/Platform/T2Code",
+      "t2tools.visualstudio.com/platform/_git/t2code",
     ],
     [
-      "https://T3Tools.visualstudio.com/DefaultCollection/Platform/_git/T3Code",
-      "t3tools.visualstudio.com/defaultcollection/platform/_git/t3code",
+      "https://T2Tools.visualstudio.com/DefaultCollection/Platform/_git/T2Code",
+      "t2tools.visualstudio.com/defaultcollection/platform/_git/t2code",
     ],
     ["git@ssh.dev.azure.com:v3/o/p", "ssh.dev.azure.com/v3/o/p"],
     ["ssh.dev.azure.com/v3/o/p/r", "ssh.dev.azure.com/v3/o/p/r"],

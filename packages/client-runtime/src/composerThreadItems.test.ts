@@ -1,4 +1,4 @@
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { EnvironmentId, ThreadId } from "@t2code/contracts";
 import { expect, it } from "vite-plus/test";
 
 import { matchComposerThreadItems, type ComposerThreadCandidate } from "./composerThreadItems.ts";

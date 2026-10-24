@@ -162,38 +162,40 @@ describe("scoreThreadSearch", () => {
   });
 
   it("finds a branch pasted with the app's worktree prefix", () => {
-    const subject = thread("Cmd+K search", { branch: "t3/cmdk-search-v2" });
-    expect(scoreThreadSearch(foldSearchQuery("t3/cmdk-search-v2"), subject, NOW)).not.toBeNull();
-    expect(scoreThreadSearch(foldSearchQuery("t3/cmdk"), subject, NOW)).not.toBeNull();
+    const subject = thread("Cmd+K search", { branch: "t2code/cmdk-search-v2" });
+    expect(
+      scoreThreadSearch(foldSearchQuery("t2code/cmdk-search-v2"), subject, NOW),
+    ).not.toBeNull();
+    expect(scoreThreadSearch(foldSearchQuery("t2code/cmdk"), subject, NOW)).not.toBeNull();
   });
 
   it("ranks a title holding the words above the app's own branch prefix and project name", () => {
     const busy = { activityAt: NOW, opens: { openedAt: NOW, score: 6, picks: [] } };
     expect(
-      rankTitles("t3 connect", [
+      rankTitles("t2 connect", [
         thread("Diagnose Connect provisioning failures", {
           ...busy,
-          branch: "t3/diagnose-connect",
-          projectTitle: "t3code",
+          branch: "t2code/diagnose-connect",
+          projectTitle: "t2code",
         }),
-        thread("T3 Connect Tunnel Lifecycle Review", { projectTitle: "t3code" }),
+        thread("T2 Connect Tunnel Lifecycle Review", { projectTitle: "t2code" }),
       ])[0],
-    ).toBe("T3 Connect Tunnel Lifecycle Review");
+    ).toBe("T2 Connect Tunnel Lifecycle Review");
     expect(
-      rankTitles("t3code", [
-        thread("Fix sidebar lag", { ...busy, projectTitle: "t3code", branch: "t3code/sidebar" }),
-        thread("T3 Code vs Gemini Token Volume", { projectTitle: "slophouse" }),
+      rankTitles("t2code", [
+        thread("Fix sidebar lag", { ...busy, projectTitle: "t2code", branch: "t2code/sidebar" }),
+        thread("T2 Code vs Gemini Token Volume", { projectTitle: "slophouse" }),
       ])[0],
-    ).toBe("T3 Code vs Gemini Token Volume");
+    ).toBe("T2 Code vs Gemini Token Volume");
   });
 
   it("matches pull request numbers, branches, and projects with every token somewhere", () => {
     const subject = thread("Trim model lists", {
-      branch: "t3/trim-mcp-models",
-      projectTitle: "t3code",
+      branch: "t2code/trim-mcp-models",
+      projectTitle: "t2code",
       pullRequests: [{ number: 22889, title: "Smaller MCP payloads" }],
     });
-    for (const query of ["#22889", "22889", "trim mcp", "payloads t3code", "models trim"]) {
+    for (const query of ["#22889", "22889", "trim mcp", "payloads t2code", "models trim"]) {
       expect(scoreThreadSearch(foldSearchQuery(query), subject, NOW), query).not.toBeNull();
     }
     expect(scoreThreadSearch("trim lakebed", subject, NOW)).toBeNull();
@@ -210,8 +212,8 @@ describe("scoreThreadSearch", () => {
       [],
     );
     // Words with digits still forgive one.
-    expect(rankTitles("t3coed", [thread("t3code perf audit"), thread("Other")])).toEqual([
-      "t3code perf audit",
+    expect(rankTitles("t2coed", [thread("t2code perf audit"), thread("Other")])).toEqual([
+      "t2code perf audit",
     ]);
     expect(rankTitles("oath2", [thread("Fix oauth2 redirect")])).toEqual(["Fix oauth2 redirect"]);
     // A typo beats a mid-word accident: "ilde" is "idle", not the middle of "Builder".
@@ -279,7 +281,7 @@ describe("scoreThreadSearch beyond Latin text and titles", () => {
 
   it("says which field matched when the title does not", () => {
     const subject = thread("Trim model lists", {
-      branch: "t3/cleanup-payloads",
+      branch: "t2code/cleanup-payloads",
       pullRequests: [{ number: 22889, title: "Smaller MCP payloads" }],
     });
     for (const query of ["#22889", "pr 22889", "pr22889", "pull request #22889"]) {
@@ -323,7 +325,7 @@ describe("scoreThreadSearch beyond Latin text and titles", () => {
     // Short words before a mere prefix are a coincidence.
     expect(rankTitles("inth", [thread("Show skill names in thread overview")])).toEqual([]);
     expect(rankTitles("tos", [thread("Move Client State to Server")])).toEqual([]);
-    expect(rankTitles("t3co", [thread("T3 Code vs Gemini")])).toEqual(["T3 Code vs Gemini"]);
+    expect(rankTitles("t2co", [thread("T2 Code vs Gemini")])).toEqual(["T2 Code vs Gemini"]);
     expect(rankTitles('"sidebar lag"', [thread("Fix sidebar lag")])).toEqual(["Fix sidebar lag"]);
     // A pasted query with a separate accent mark matches the composed title.
     expect(rankTitles("cafe\u0301", [thread("Café menu")])).toEqual(["Café menu"]);

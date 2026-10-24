@@ -1,4 +1,3 @@
-import { NativeScrollView } from "../../native/NativeScrollViewMarker";
 import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
 import { StackActions, useNavigation, type StaticScreenProps } from "@react-navigation/native";

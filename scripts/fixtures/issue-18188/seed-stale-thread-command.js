@@ -19,7 +19,7 @@ globalThis.seedStaleThreadCommand = async function ({ environmentId, threadId, i
     throw new Error("Choose an authoritative completed command with a visible row");
   }
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("t3code:connection-runtime", 4);
+    const request = indexedDB.open("t2code:connection-runtime", 4);
     request.addEventListener("error", () => reject(request.error));
     request.addEventListener("success", () => {
       const db = request.result;

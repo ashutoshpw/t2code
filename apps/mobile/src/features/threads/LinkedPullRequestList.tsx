@@ -2,7 +2,7 @@ import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell"
 import {
   capitalizeTerm,
   sourceControlClients,
-} from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/source-control-clients";
 import {
   pullRequestListLines,
   resolveThreadPullRequestChains,

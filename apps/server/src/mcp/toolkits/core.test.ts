@@ -301,7 +301,7 @@ it.effect("records only failed calls of tools that hand off no work", () => {
   return Effect.gen(function* () {
     const server = yield* McpServer.McpServer;
     const organize = (capabilities: McpInvocationContext.McpInvocationScope["capabilities"]) =>
-      server.callTool({ name: "t3_thread_organize", arguments: { action: "pin" } }).pipe(
+      server.callTool({ name: "t2_thread_organize", arguments: { action: "pin" } }).pipe(
         Effect.provideService(McpInvocationContext.McpInvocationContext, {
           ...scope,
           capabilities,
@@ -315,7 +315,7 @@ it.effect("records only failed calls of tools that hand off no work", () => {
     // The successful call ran first, so it would be the first event if it were recorded.
     expect(yield* Deferred.await(recorded)).toMatchObject({
       event: "mcp.tool.invoked",
-      properties: { tool: "t3_thread_organize", outcome: "error" },
+      properties: { tool: "t2_thread_organize", outcome: "error" },
     });
   }).pipe(
     Effect.provide(

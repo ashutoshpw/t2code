@@ -2,7 +2,7 @@ import { faviconUrlForOrigin } from "@t2code/shared/favicon";
 import { GlobeIcon } from "lucide-react";
 import { Children, Fragment, memo, useState, type ReactNode } from "react";
 
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 
 import { cn } from "../../lib/utils";
 import { sourceControlIcon } from "../../sourceControlPresentation";
