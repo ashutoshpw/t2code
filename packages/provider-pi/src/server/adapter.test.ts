@@ -1403,7 +1403,7 @@ describe("PiAdapterV2", () => {
         Effect.provideService(AgentScope, {
           ...AgentScope.defaultValue(),
           wrap: ({ command, args }) =>
-            Effect.succeed({ command, args, unit: "t3code-pi-test.scope" }),
+            Effect.succeed({ command, args, unit: "t2code-pi-test.scope" }),
           stop: (unit) =>
             Effect.sync(() => void stopped.push({ unit, processReleased })).pipe(
               Effect.andThen(Deferred.succeed(scopeStopped, undefined)),
@@ -1412,7 +1412,7 @@ describe("PiAdapterV2", () => {
         }),
       );
       assert.deepStrictEqual(stopped, [
-        { unit: "t3code-pi-test.scope", processReleased: exit === "session" },
+        { unit: "t2code-pi-test.scope", processReleased: exit === "session" },
       ]);
     }).pipe(Effect.provide(layerTest)),
   );

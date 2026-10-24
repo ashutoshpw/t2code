@@ -17,7 +17,7 @@ export function subscribeThreadFindOpen(listener: () => void): () => void {
   return () => window.removeEventListener(THREAD_FIND_OPEN_EVENT, listener);
 }
 
-const THREAD_FIND_QUERY_EVENT = "t3:thread-find-query";
+const THREAD_FIND_QUERY_EVENT = "t2:thread-find-query";
 interface PendingFind {
   readonly query: string;
   /** Where find starts, such as the message a palette result came from. */

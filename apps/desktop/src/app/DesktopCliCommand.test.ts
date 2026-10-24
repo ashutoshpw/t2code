@@ -135,12 +135,12 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("finds and removes a link left by a previous T3 home", () =>
+  it.effect("finds and removes a link left by a previous T2 home", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
-      const before = yield* commandIn({ home, baseDir: path.join(home, ".t3") });
+      const before = yield* commandIn({ home, baseDir: path.join(home, ".t2") });
       const link = (yield* before.install).installedPath;
 
       const after = yield* commandIn({ home, baseDir: path.join(home, ".t2") });

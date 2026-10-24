@@ -9,8 +9,8 @@ import {
 import { Minus, Plus } from "lucide";
 import { useState, type ComponentProps, type MouseEvent as ReactMouseEvent } from "react";
 
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import { findProjectOnChangeRequestHost } from "@t3tools/client-runtime/change-request-links";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { findProjectOnChangeRequestHost } from "~/lib/openPullRequestLink";
 
 import { useProjects } from "~/state/entities";
 import { threadEnvironment } from "~/state/threads";

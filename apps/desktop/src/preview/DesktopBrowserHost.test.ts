@@ -26,7 +26,7 @@ const command = (
     encodeJson({
       type: "cdp",
       ...key,
-      message: encodeJson({ id, method, params: { id }, sessionId: "t3-preview-page" }),
+      message: encodeJson({ id, method, params: { id }, sessionId: "t2-preview-page" }),
     }),
   );
 

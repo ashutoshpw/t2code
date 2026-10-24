@@ -21,7 +21,7 @@ import { findProjectForChangeRequest } from "@t2code/client-runtime/change-reque
 import {
   sourceControlClients,
   type ChangeRequestLink,
-} from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/source-control-clients";
 import { useAtomValue } from "@effect/atom-react";
 import { Atom } from "effect/reactivity";
 import { appAtomRegistry } from "~/rpc/atomRegistry";

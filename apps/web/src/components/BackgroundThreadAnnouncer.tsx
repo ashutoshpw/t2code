@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
-import { scopeThreadRef, scopedThreadKey } from "@t3tools/client-runtime/environment";
-import { effectiveSnoozed } from "@t3tools/client-runtime/state/thread-settled";
+import { scopeThreadRef, scopedThreadKey } from "@t2code/client-runtime/environment";
+import { effectiveSnoozed } from "@t2code/client-runtime/state/thread-settled";
 import { useEffect, useRef } from "react";
 
 import { useComposerDraftStore } from "../composerDraftStore";

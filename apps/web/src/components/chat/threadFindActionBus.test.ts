@@ -1,4 +1,4 @@
-import { MessageId } from "@t3tools/contracts";
+import { MessageId } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { findForMessageMatch } from "./threadFindActionBus";

@@ -713,8 +713,8 @@ export const make = Effect.gen(function* () {
         ),
       ),
   );
-  // Hands the base T3 recorded for a branch to the host, whose own tools may keep it elsewhere.
-  // Best-effort: nothing T3 does reads it back from there.
+  // Hands the base T2 recorded for a branch to the host, whose own tools may keep it elsewhere.
+  // Best-effort: nothing T2 does reads it back from there.
   const shareBranchBase = Effect.fn("GitManager.shareBranchBase")(function* (
     cwd: string,
     branch: string,

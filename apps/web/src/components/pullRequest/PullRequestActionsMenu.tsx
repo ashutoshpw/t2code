@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import type { ChangeRequestTerminology } from "@t3tools/client-runtime/source-control-clients";
+import type { ChangeRequestTerminology } from "@t2code/client-runtime/source-control-clients";
 import type {
   EnvironmentId,
   PullRequestAction,

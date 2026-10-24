@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { PullRequestDiffResult } from "@t2code/contracts";
 import type { ReviewParsedDiff } from "../review/reviewModel";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
-import * as reviewModel from "../review/reviewModel";
-import {
-  combinePullRequestDiffPages,
-  getCachedPullRequestDiffPages,
-  retainPullRequestDiffPage,
-} from "./pullRequestDiffPages";
+import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { combinePullRequestDiffPages, retainPullRequestDiffPage } from "./pullRequestDiffPages";
 
 const GITHUB = sourceControlClients.get("github").changeRequest;
 

@@ -125,7 +125,7 @@ import { usePullRequestEnvironmentFallback } from "./usePullRequestEnvironmentFa
 import {
   capitalizeTerm,
   sourceControlClients,
-} from "@t3tools/client-runtime/source-control-clients";
+} from "@t2code/client-runtime/source-control-clients";
 
 const EMPTY_IDS: readonly string[] = [];
 

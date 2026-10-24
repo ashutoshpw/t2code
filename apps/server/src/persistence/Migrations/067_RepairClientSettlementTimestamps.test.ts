@@ -28,7 +28,7 @@ const manualAt = "2026-10-01T00:00:00.000Z";
 const plusSeconds = (iso: string, seconds: number) =>
   DateTime.makeUnsafe(iso).pipe(DateTime.add({ seconds }), DateTime.formatIso);
 
-layer("066_RepairClientSettlementTimestamps", (it) => {
+layer("067_RepairClientSettlementTimestamps", (it) => {
   it.effect("repairs only sweep stamps, preserves overrides, and survives a V2 rebuild", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;

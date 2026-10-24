@@ -11,8 +11,8 @@ import {
   foldSearchQuery,
   THREAD_OPEN_DEDUPE_MS,
   type ThreadSearchSubject,
-} from "@t3tools/shared/paletteSearch";
-import { threadSearchPullRequests } from "@t3tools/shared/threadPullRequests";
+} from "@t2code/shared/paletteSearch";
+import { threadSearchPullRequests } from "@t2code/shared/threadPullRequests";
 
 import type { EnvironmentThreadShell } from "./models.ts";
 import { getThreadSortTimestamp } from "./threadSort.ts";

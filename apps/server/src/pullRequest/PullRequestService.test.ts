@@ -795,10 +795,10 @@ it.effect("offers each label once across repositories, despite one that cannot b
     const reads: Array<string> = [];
     const service = yield* makeService({
       projects: [
-        project({ id: "p1", title: "t3code", workspaceRoot: "/a", repository: "pingdotgg/t3code" }),
+        project({ id: "p1", title: "t2code", workspaceRoot: "/a", repository: "pingdotgg/t3code" }),
         project({
           id: "p5",
-          title: "t3code worktree",
+          title: "t2code worktree",
           workspaceRoot: "/e",
           repository: "pingdotgg/t3code",
         }),
@@ -856,7 +856,7 @@ it.effect("puts the author a query names exactly ahead of those it only begins",
     const queries: Array<string | undefined> = [];
     const service = yield* makeService({
       projects: [
-        project({ id: "p1", title: "t3code", workspaceRoot: "/a", repository: "pingdotgg/t3code" }),
+        project({ id: "p1", title: "t2code", workspaceRoot: "/a", repository: "pingdotgg/t3code" }),
       ],
       providers: [
         fakePullRequestProvider(SourceControlProviderKind.make("github"), {

@@ -141,7 +141,7 @@ import { ThreadBrowserFloat } from "../browser/ThreadBrowserFloat";
 import { useThreadServerBrowserTabs } from "../../state/preview";
 import type { QueuedThreadMessage } from "../../state/thread-outbox-model";
 import { scopedThreadKey } from "../../lib/scopedEntities";
-import { claimThreadOpen } from "@t3tools/client-runtime/state/thread-search";
+import { claimThreadOpen } from "@t2code/client-runtime/state/thread-search";
 import {
   finishThreadMessageJump,
   pendingThreadMessageJump,

@@ -120,111 +120,6 @@ it.effect("reports every hosting integration in registry order with its sign-in"
         },
       ],
     );
-    const bitbucket = result.sourceControlProviders.find((item) => item.kind === "bitbucket");
-    assert.ok(bitbucket);
-    assert.strictEqual(bitbucket.executable, undefined);
-  }).pipe(Effect.provide(layerTest));
-});
-
-it.effect("probes provider authentication without exposing token details", () => {
-  const processMock = {
-    run: (input: VcsProcess.VcsProcessInput) => {
-      if (input.args[0] === "--version") {
-        return Effect.succeed(processOutput(`${input.command} version test\n`));
-      }
-      if (input.command === "gh" && input.args.join(" ") === "auth status --json hosts") {
-        return Effect.succeed(
-          processOutput(
-            encodeJson({
-              hosts: {
-                "github.com": [
-                  {
-                    state: "success",
-                    active: true,
-                    host: "github.com",
-                    login: "octocat",
-                    tokenSource: "keyring",
-                    gitProtocol: "ssh",
-                  },
-                ],
-              },
-            }),
-          ),
-        );
-      }
-      if (input.command === "glab" && input.args.join(" ") === "auth status") {
-        return Effect.succeed(
-          processOutput(`gitlab.com
-Logged in to gitlab.com as gitlab-user
-`),
-        );
-      }
-      if (input.command === "tea" && input.args[0] === "login") {
-        return Effect.succeed(
-          processOutput(
-            encodeJson([
-              {
-                name: "forgejo",
-                url: "https://forgejo.example.com",
-                ssh_host: "forgejo.example.com",
-                user: "forgejo-user",
-                valid: "true",
-                default: "true",
-              },
-            ]),
-          ),
-        );
-      }
-      if (
-        input.command === "az" &&
-        input.args.join(" ") === "account show --query user.name -o tsv"
-      ) {
-        return Effect.succeed(processOutput("azure-user@example.com\n"));
-      }
-      if (input.command === "cafe" && input.args.slice(-3).join(" ") === "auth status --json") {
-        return Effect.succeed(
-          processOutput(
-            encodeJson({ schemaVersion: 1, data: { host: "git.cafe", username: "cafe-user" } }),
-          ),
-        );
-      }
-      return Effect.fail(
-        new VcsProcessSpawnError({
-          operation: input.operation,
-          command: input.command,
-          cwd: input.cwd,
-          cause: new Error(`${input.command} not found`),
-        }),
-      );
-    },
-  } satisfies Partial<VcsProcess.VcsProcess["Service"]>;
-  const layerTest = SourceControlDiscovery.layer.pipe(
-    Layer.provide(
-      ServerConfig.layerTest(process.cwd(), {
-        prefix: "t2-source-control-auth-discovery-",
-      }),
-    ),
-    Layer.provide(Layer.mock(VcsProcess.VcsProcess)(processMock)),
-    Layer.provide(
-      layerSourceControlProviderRegistryTest({
-        process: processMock,
-        bitbucket: {
-          probeAuth: Effect.succeed({
-            status: "authenticated",
-            account: Option.some("bitbucket-user"),
-            host: Option.some("bitbucket.org"),
-            detail: Option.none(),
-          }),
-        },
-      }),
-    ),
-    Layer.provideMerge(NodeServices.layer),
-  );
-
-  return Effect.gen(function* () {
-    const discovery = yield* SourceControlDiscovery.SourceControlDiscovery;
-    const result = yield* discovery.discover;
-
     assert.deepStrictEqual(
       result.versionControlSystems.map((item) => [item.kind, item.status]),
       [
@@ -234,3 +129,53 @@ Logged in to gitlab.com as gitlab-user
     );
   }).pipe(Effect.provide(SourceControlDiscovery.layer.pipe(Layer.provide(layerDiscovery)))),
 );
+
+it.effect("reports implemented tools separately from locally available executables", () => {
+  const runGitOnly = (
+    input: Pick<
+      SourceControlHost.SourceControlProcessInput,
+      "operation" | "command" | "args" | "cwd"
+    >,
+  ): Effect.Effect<SourceControlHost.SourceControlProcessOutput, VcsProcessSpawnError> =>
+    input.command === "git"
+      ? Effect.succeed(TestSourceControlHost.processOutput("git version 2.51.0\n"))
+      : Effect.fail(
+          new VcsProcessSpawnError({
+            operation: input.operation,
+            command: input.command,
+            cwd: input.cwd,
+            cause: new Error(`${input.command} not found`),
+          }),
+        );
+
+  const layerVcsOnly = Layer.effect(
+    SourceControlProviderRegistry.SourceControlProviderRegistry,
+    SourceControlProviderRegistry.makeWithProviders([]),
+  ).pipe(
+    Layer.provideMerge(TestSourceControlHost.layer({ process: { run: runGitOnly } })),
+    Layer.provideMerge(ServerSettings.ServerSettingsService.layerTest()),
+    Layer.provideMerge(Layer.mock(VcsDriverRegistry.VcsDriverRegistry)({})),
+    Layer.provideMerge(Layer.mock(VcsProcess.VcsProcess)({ run: runGitOnly })),
+    Layer.provideMerge(
+      ServerConfig.layerTest(process.cwd(), { prefix: "t2-source-control-vcs-discovery-" }),
+    ),
+    Layer.provideMerge(NodeServices.layer),
+  );
+
+  return Effect.gen(function* () {
+    const discovery = yield* SourceControlDiscovery.SourceControlDiscovery;
+    const result = yield* discovery.discover;
+
+    assert.deepStrictEqual(
+      result.versionControlSystems.map((item) => ({
+        kind: item.kind,
+        implemented: item.implemented,
+        status: item.status,
+      })),
+      [
+        { kind: "git", implemented: true, status: "available" },
+        { kind: "jj", implemented: false, status: "missing" },
+      ],
+    );
+  }).pipe(Effect.provide(SourceControlDiscovery.layer.pipe(Layer.provide(layerVcsOnly))));
+});

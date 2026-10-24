@@ -1,8 +1,8 @@
-import { makeThreadPullRequests } from "@t3tools/source-control-core/shared/threadPullRequests";
+import { makeThreadPullRequests } from "@t2code/source-control-core/shared/threadPullRequests";
 
 import { sourceControlDefinitions } from "./sourceControlDefinitions.ts";
 
-export { visibleThreadPullRequests } from "@t3tools/shared/threadPullRequests";
+export { visibleThreadPullRequests } from "@t2code/shared/threadPullRequests";
 
 export const {
   normalizeThreadPullRequestKey,

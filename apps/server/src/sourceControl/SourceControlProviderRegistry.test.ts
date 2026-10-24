@@ -223,17 +223,15 @@ it.effect("routes authenticated self-hosted GitLab remotes on non-standard ports
   Effect.gen(function* () {
     const registry = yield* makeRegistry({
       remotes: [{ name: "origin", url: "https://self-hosted.example.test:8443/group/project.git" }],
-      process: {
-        run: () =>
-          Effect.succeed(
-            processOutput(
-              `self-hosted.example.test:8443
+      run: () =>
+        Effect.succeed(
+          TestSourceControlHost.processOutput(
+            `self-hosted.example.test:8443
   ✓ Logged in to self-hosted.example.test:8443 as gitlab-user
   ✓ Token found: ******
 `,
-            ),
           ),
-      },
+        ),
     });
 
     const provider = yield* registry.resolve({ cwd: "/repo" });

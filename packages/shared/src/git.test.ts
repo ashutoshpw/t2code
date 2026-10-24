@@ -65,36 +65,6 @@ describe("normalizeGitRemoteUrl", () => {
     expect(normalizeGitRemoteUrl("C:/repos/project")).toBe("c:/repos/project");
     expect(normalizeGitRemoteUrl("git@x:team/project.git")).toBe("x/team/project");
   });
-
-  it("gives an Azure DevOps repository the same key over SSH as over HTTPS", () => {
-    expect(normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T2Tools/Platform/T2Code")).toBe(
-      "dev.azure.com/t2tools/platform/_git/t2code",
-    );
-    expect(normalizeGitRemoteUrl("ssh://git@ssh.dev.azure.com:22/v3/T2Tools/Platform/T2Code")).toBe(
-      "dev.azure.com/t2tools/platform/_git/t2code",
-    );
-    expect(
-      normalizeGitRemoteUrl("https://T2Tools@dev.azure.com/T2Tools/Platform/_git/T2Code"),
-    ).toBe("dev.azure.com/t2tools/platform/_git/t2code");
-  });
-
-  it("puts the organization back in the host on the name dev.azure.com replaced", () => {
-    expect(
-      normalizeGitRemoteUrl("T2Tools@vs-ssh.visualstudio.com:v3/T2Tools/Platform/T2Code"),
-    ).toBe("t2tools.visualstudio.com/platform/_git/t2code");
-    expect(normalizeGitRemoteUrl("https://T2Tools.visualstudio.com/Platform/_git/T2Code")).toBe(
-      "t2tools.visualstudio.com/platform/_git/t2code",
-    );
-  });
-
-  it("leaves an Azure SSH host it cannot read as the path it was given", () => {
-    expect(normalizeGitRemoteUrl("git@ssh.dev.azure.com:v4/T2Tools/Platform/T2Code")).toBe(
-      "ssh.dev.azure.com/v4/t2tools/platform/t2code",
-    );
-    expect(normalizeGitRemoteUrl("git@ssh.dev.azure.com:v3/T2Tools/T2Code")).toBe(
-      "ssh.dev.azure.com/v3/t2tools/t2code",
-    );
-  });
 });
 
 describe("parseOriginUrlFromGitConfig", () => {

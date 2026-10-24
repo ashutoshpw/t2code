@@ -395,16 +395,16 @@ export default defineConfig({
                     "expo",
                     "expo-*",
                     "lucide-react",
-                    "@t3tools/client-runtime",
-                    "@t3tools/client-runtime/*",
+                    "@t2code/client-runtime",
+                    "@t2code/client-runtime/*",
                     "../client/*",
                     "../server/*",
                     "../../client/*",
                     "../../server/*",
                     "../../../client/*",
                     "../../../server/*",
-                    "@t3tools/source-control-*/client/*",
-                    "@t3tools/source-control-*/server/*",
+                    "@t2code/source-control-*/client/*",
+                    "@t2code/source-control-*/server/*",
                   ],
                   message:
                     "Shared forge definitions load on the server and every client; keep UI and server code out.",
@@ -424,7 +424,7 @@ export default defineConfig({
               patterns: [
                 {
                   group: [
-                    "@t3tools/source-control-*/client/*",
+                    "@t2code/source-control-*/client/*",
                     "../client/*",
                     "../../client/*",
                     "../../../client/*",
