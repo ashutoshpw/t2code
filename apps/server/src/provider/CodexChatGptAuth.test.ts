@@ -1773,7 +1773,7 @@ const provideBroker = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(
     Effect.scoped,
     Effect.provide(
-      ServerConfig.layerTest(process.cwd(), { prefix: "t3-renewal-test-" }).pipe(
+      ServerConfig.layerTest(process.cwd(), { prefix: "t2-renewal-test-" }).pipe(
         Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer)),
       ),
     ),

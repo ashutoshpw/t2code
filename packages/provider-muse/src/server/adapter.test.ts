@@ -816,7 +816,7 @@ describe("MuseAdapterV2", () => {
           Effect.provideService(AgentScope, {
             ...AgentScope.defaultValue(),
             wrap: ({ command, args }) =>
-              Effect.succeed({ command, args, unit: "t3code-muse-test.scope" }),
+              Effect.succeed({ command, args, unit: "t2code-muse-test.scope" }),
             stop: (unit) =>
               Effect.sync(() => {
                 stopped.push({ unit, hostExited });
@@ -834,7 +834,7 @@ describe("MuseAdapterV2", () => {
             yield* TestClock.adjust("1 millis");
             assert.deepStrictEqual(
               [...stopped],
-              [{ unit: "t3code-muse-test.scope", hostExited: false }],
+              [{ unit: "t2code-muse-test.scope", hostExited: false }],
             );
             yield* Fiber.join(releasing);
           }).pipe(Effect.ensuring(Effect.sync(() => pipeClosed.resolve())));
@@ -843,7 +843,7 @@ describe("MuseAdapterV2", () => {
         }
         assert.strictEqual(fake.closeCount(), 1);
         assert.deepStrictEqual(stopped, [
-          { unit: "t3code-muse-test.scope", hostExited: shutdown === "normal" },
+          { unit: "t2code-muse-test.scope", hostExited: shutdown === "normal" },
         ]);
         yield* Effect.promise(() => fake.host.exited);
         assert.isTrue(hostExited);
@@ -894,7 +894,7 @@ describe("MuseAdapterV2", () => {
           );
           yield* fake.exitProcess();
           yield* Deferred.await(stopped);
-          assert.deepStrictEqual(units, ["t3code-muse-exit.scope"]);
+          assert.deepStrictEqual(units, ["t2code-muse-exit.scope"]);
           const terminal = yield* harness.takeEvent("turn.terminal");
           assert.strictEqual(terminal.status, "failed");
           assert.strictEqual(terminal.threadDisposition, "broken");
@@ -925,7 +925,7 @@ describe("MuseAdapterV2", () => {
           Effect.provideService(AgentScope, {
             ...AgentScope.defaultValue(),
             wrap: ({ command, args }) =>
-              Effect.succeed({ command, args, unit: "t3code-muse-exit.scope" }),
+              Effect.succeed({ command, args, unit: "t2code-muse-exit.scope" }),
             stop: (unit) =>
               Effect.gen(function* () {
                 units.push(unit);
@@ -933,7 +933,7 @@ describe("MuseAdapterV2", () => {
               }),
           }),
         );
-        assert.deepStrictEqual(units, ["t3code-muse-exit.scope"]);
+        assert.deepStrictEqual(units, ["t2code-muse-exit.scope"]);
       }).pipe(Effect.provide(testLayer)),
   );
 

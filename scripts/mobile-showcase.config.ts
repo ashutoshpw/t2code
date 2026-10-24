@@ -120,7 +120,7 @@ const config: ShowcaseConfig = {
     ...(["closed", "open"] as const).map((fold): ShowcaseIosDevice => ({
       id: `iphone-duo-${fold}`,
       platform: "ios",
-      simulator: `T3 Showcase iPhone Duo ${fold}`,
+      simulator: `T2 Showcase iPhone Duo ${fold}`,
       simulatorDeviceType: "com.apple.CoreSimulator.SimDeviceType.iPhone-Duo",
       appearance: "dark",
       theme: DEFAULT_SHOWCASE_THEME,
