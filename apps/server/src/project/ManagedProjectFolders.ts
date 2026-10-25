@@ -38,7 +38,7 @@ export class ScratchUnavailableError extends Schema.TaggedError<ScratchUnavailab
     if (this.repositoryRoot === undefined) {
       return "Threads without a project are not available on this environment.";
     }
-    return `Threads without a project are off because the T3 home ${this.baseDir} is inside the Git repository ${this.repositoryRoot}. If that repository was created by mistake, move ${this.repositoryRoot}/.git out of the way; otherwise point T3CODE_HOME (or --base-dir) at a folder outside it. Then restart T3 Code.`;
+    return `Threads without a project are off because the T2 home ${this.baseDir} is inside the Git repository ${this.repositoryRoot}. If that repository was created by mistake, move ${this.repositoryRoot}/.git out of the way; otherwise point T2CODE_HOME (or --base-dir) at a folder outside it. Then restart T2 Code.`;
   }
 }
 
@@ -248,9 +248,7 @@ const make = Effect.gen(function* () {
     }
   });
 
-  // Inside a checkout (a dev worktree's .t2, a dotfiles home) the folder would
-  // inherit the repo's git status and checkpoints, so Scratch is offered only
-  // when the data dir is outside any work tree.
+  // Scratch inside a checkout would inherit its git status and checkpoints; require a data dir outside work trees.
   const [probe, invalidate] = yield* Effect.cachedInvalidateWithTTL(
     gitWorkflow.repositoryRoot(config.baseDir).pipe(
       Effect.catchIf(isGitMissing, () => Effect.succeed(null)),

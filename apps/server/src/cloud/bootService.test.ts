@@ -382,7 +382,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
                 HOME: home,
                 ...(serviceInstallBinDir === undefined || serviceInstallBinDir === null
                   ? {}
-                  : { T3CODE_INSTALL_BIN_DIR: serviceInstallBinDir }),
+                  : { T2CODE_INSTALL_BIN_DIR: serviceInstallBinDir }),
                 ...(xdgConfigHome === undefined ? {} : { XDG_CONFIG_HOME: xdgConfigHome }),
                 USERPROFILE: home,
                 LOCALAPPDATA: path.join(home, "AppData", "Local"),
@@ -662,8 +662,8 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         const unit = yield* fs.readFileString(plan.unitPath);
         expect(unit).toContain(
           platform === "linux"
-            ? 'Environment=T3CODE_INSTALL_BIN_DIR="/custom/T3 & <100%%>/\\"quoted\\"\\\\bin"'
-            : '<key>T3CODE_INSTALL_BIN_DIR</key>\n    <string>/custom/T3 &amp; &lt;100%&gt;/"quoted"\\bin</string>',
+            ? 'Environment=T2CODE_INSTALL_BIN_DIR="/custom/T3 & <100%%>/\\"quoted\\"\\\\bin"'
+            : '<key>T2CODE_INSTALL_BIN_DIR</key>\n    <string>/custom/T3 &amp; &lt;100%&gt;/"quoted"\\bin</string>',
         );
         expect((yield* service.status).current).toBe(true);
 
@@ -761,7 +761,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         activeVersion: "1.2.3",
       });
       expect(plan.program).toEqual([runtime.entryPath, "__service-launcher"]);
-      expect(yield* fs.readFileString(plan.unitPath)).not.toContain("T3CODE_INSTALL_BIN_DIR");
+      expect(yield* fs.readFileString(plan.unitPath)).not.toContain("T2CODE_INSTALL_BIN_DIR");
       expect(yield* fs.readFileString(plan.unitPath)).toContain(
         `ExecStart=${runtime.entryPath} __service-launcher`,
       );
@@ -959,7 +959,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
           protocol: SERVICE_LAUNCHER_PROTOCOL,
           activeVersion: "1.2.5",
         });
-        expect(yield* fs.readFileString(plan.unitPath)).toContain("versions/1.2.5/t3");
+        expect(yield* fs.readFileString(plan.unitPath)).toContain("versions/1.2.5/t2");
         expect((yield* latest.status).current).toBe(true);
         expect(
           yield* fs.exists(path.join(path.dirname(statePath), SERVICE_RESTART_PENDING_FILE)),
@@ -977,7 +977,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         const unit = yield* fs.readFileString(plan.unitPath);
         yield* fs.writeFileString(
           plan.unitPath,
-          unit.replace("versions/1.2.3/t3", "versions/1.2.2/t3"),
+          unit.replace("versions/1.2.3/t2", "versions/1.2.2/t2"),
         );
         yield* fs.writeFileString(
           statePath,
@@ -1105,7 +1105,7 @@ process.disconnect();
           protocol: SERVICE_LAUNCHER_PROTOCOL,
           activeVersion: "1.2.4",
         });
-        expect(yield* fs.readFileString(plan.unitPath)).toContain("versions/1.2.4/t3");
+        expect(yield* fs.readFileString(plan.unitPath)).toContain("versions/1.2.4/t2");
         expect(
           yield* fs.readFileString(
             path.join(path.dirname(statePath), SERVICE_RESTART_PENDING_FILE),
@@ -1174,7 +1174,6 @@ process.disconnect();
       expect(failure).toBe("repair failed");
       expect(control.active).toBe(true);
 
-      // A failed stop skips the operation but still starts the service again.
       control.failCommand = "systemctl --user stop t2code.service";
       let ran = false;
       const stopFailure = yield* service
@@ -1410,8 +1409,7 @@ process.disconnect();
       expect(yield* service.uninstall).toBe(true);
       expect((yield* service.status).installed).toBe(false);
       expect(commands.some((command) => command.startsWith("systemctl "))).toBe(false);
-      // A bootout can block up to the plist's 90s ExitTimeOut; the runner's
-      // 60s default would cancel it and let bootstrap race a loaded job.
+      // launchd can take 90s to bootout; the runner's 60s default could let bootstrap race it.
       expect(timeouts.get("launchctl bootout --wait gui/501/codes.t2.desktop.service")).toEqual(
         Duration.seconds(120),
       );
@@ -1426,7 +1424,7 @@ process.disconnect();
       const task = yield* fs.readFileString(plan.unitPath);
 
       expect(plan.unitPath).toBe(
-        path.join(path.dirname(plan.baseDir), "AppData", "Local", "t3code", "t2code-task.xml"),
+        path.join(path.dirname(plan.baseDir), "AppData", "Local", "t2code", "t2code-task.xml"),
       );
       expect(BootService.bootServiceProgramOf(task)).toBe(runtime.entryPath);
       expect(BootService.bootServiceBaseDirOf(task)).toBe(plan.baseDir);
@@ -1437,8 +1435,8 @@ process.disconnect();
         activeVersion: "1.2.3",
       });
       expect(commands.filter((command) => command.startsWith("schtasks "))).toEqual([
-        `schtasks /Create /XML ${plan.unitPath} /TN t3code-PC-theo /F`,
-        "schtasks /Run /TN t3code-PC-theo",
+        `schtasks /Create /XML ${plan.unitPath} /TN t2code-PC-theo /F`,
+        "schtasks /Run /TN t2code-PC-theo",
       ]);
       // No launcher holds the lock here.
       expect(yield* service.status).toMatchObject({
@@ -1448,7 +1446,7 @@ process.disconnect();
       });
 
       // A task that Task Scheduler refuses to delete stays installed, so a retry finds it.
-      control.failCommand = "schtasks /Delete /TN t3code-PC-theo /F";
+      control.failCommand = "schtasks /Delete /TN t2code-PC-theo /F";
       expect((yield* service.uninstall.pipe(Effect.flip))._tag).toBe("BootServiceCommandError");
       expect((yield* service.status).installed).toBe(true);
       control.failCommand = undefined;
@@ -1456,9 +1454,9 @@ process.disconnect();
       commands.length = 0;
       expect(yield* service.uninstall).toBe(true);
       expect(commands).toEqual([
-        "schtasks /Change /TN t3code-PC-theo /DISABLE",
-        "schtasks /End /TN t3code-PC-theo",
-        "schtasks /Delete /TN t3code-PC-theo /F",
+        "schtasks /Change /TN t2code-PC-theo /DISABLE",
+        "schtasks /End /TN t2code-PC-theo",
+        "schtasks /Delete /TN t2code-PC-theo /F",
       ]);
       expect(control.task).toBeUndefined();
       expect((yield* service.status).installed).toBe(false);
@@ -1498,11 +1496,11 @@ process.disconnect();
       commands.length = 0;
       yield* service.withStopped(Effect.sync(() => commands.push("repair")));
       expect(commands.filter((command) => !command.includes("/Query"))).toEqual([
-        "schtasks /Change /TN t3code-PC-theo /DISABLE",
-        "schtasks /End /TN t3code-PC-theo",
+        "schtasks /Change /TN t2code-PC-theo /DISABLE",
+        "schtasks /End /TN t2code-PC-theo",
         "repair",
-        "schtasks /Change /TN t3code-PC-theo /ENABLE",
-        "schtasks /Run /TN t3code-PC-theo",
+        "schtasks /Change /TN t2code-PC-theo /ENABLE",
+        "schtasks /Run /TN t2code-PC-theo",
       ]);
     }),
   );
@@ -1513,9 +1511,9 @@ process.disconnect();
       const plan = yield* service.install();
       const inside = yield* makeService(undefined, "1.2.4", undefined, true);
       const handoff = [
-        `schtasks /Create /XML ${plan.unitPath} /TN t3code-PC-theo /F`,
-        "schtasks /End /TN t3code-PC-theo",
-        "schtasks /Run /TN t3code-PC-theo",
+        `schtasks /Create /XML ${plan.unitPath} /TN t2code-PC-theo /F`,
+        "schtasks /End /TN t2code-PC-theo",
+        "schtasks /Run /TN t2code-PC-theo",
       ];
       commands.length = 0;
 

@@ -454,8 +454,7 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
           [claudeId]: {
             driver: ProviderDriverKind.make("claudeAgent"),
             enabled: true,
-            // Packaged desktop builds start the server in $HOME, where some
-            // `claude` wrappers refuse to run.
+            // Packaged desktop starts in $HOME, where some claude wrappers refuse to run.
             environment: [{ name: "T2_CLAUDE_REQUIRED_CWD", value: stateDir, sensitive: false }],
             config: makeClaudeConfig({
               enabled: true,
@@ -489,7 +488,7 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
             enabled: true,
             environment: [
               {
-                name: "T3_CLAUDE_SETTINGS_SOURCES",
+                name: "T2_CLAUDE_SETTINGS_SOURCES",
                 // The merged `effective` settings read as exempting Opus 5; the flag tier's
                 // top-level cap still applies to it.
                 value: JSON.stringify([
@@ -536,7 +535,7 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
           [claudeId]: {
             driver: ProviderDriverKind.make("claudeAgent"),
             enabled: true,
-            environment: [{ name: "T3_CLAUDE_SETTINGS_UNSUPPORTED", value: "1", sensitive: false }],
+            environment: [{ name: "T2_CLAUDE_SETTINGS_UNSUPPORTED", value: "1", sensitive: false }],
             config: makeClaudeConfig({
               enabled: true,
               binaryPath: fixtures.claudeBinaryPath,

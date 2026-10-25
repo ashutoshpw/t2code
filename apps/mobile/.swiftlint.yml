@@ -1,6 +1,7 @@
 included:
   - ios/T2Code
   - modules/t2-composer-editor/ios
+  - modules/t2-highlights/ios
   - modules/t2-native-controls/ios
   - modules/t2-terminal/ios
   - modules/t2-review-diff/ios

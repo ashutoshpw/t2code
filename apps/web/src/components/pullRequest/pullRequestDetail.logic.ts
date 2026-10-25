@@ -3,7 +3,7 @@ import {
   pullRequestAnchorMatchesUrl,
   pullRequestLinkCommit,
   resolvePullRequestReviewAnchor,
-} from "@t3tools/shared/pullRequestAnchor";
+} from "@t2code/shared/pullRequestAnchor";
 import { stripInlineContextReferences } from "~/lib/composerContextReferences";
 import type { Nodes as MdastNodes } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
@@ -1533,8 +1533,7 @@ export function readPullRequestDetailSnapshot(
   }
 }
 
-// Snapshot keys in the order they were last written, oldest first.
-const PULL_REQUEST_DETAIL_SNAPSHOT_INDEX_KEY = "t2.pullRequests.recentDetails";
+const PULL_REQUEST_DETAIL_SNAPSHOT_INDEX_KEY = "t3.pullRequests.recentDetails";
 const PULL_REQUEST_DETAIL_SNAPSHOT_LIMIT = 20;
 
 function readPullRequestDetailSnapshotIndex(storage: SnapshotStorage): string[] {

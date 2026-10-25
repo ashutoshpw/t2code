@@ -1,7 +1,6 @@
 import ExpoModulesCore
 import UIKit
 
-/// Keep ordinary phones portrait-only while allowing a hinge-backed scene to rotate.
 public final class T2WorkspaceOrientationSubscriber: ExpoAppDelegateSubscriber {
   private static let hingeWindows = NSHashTable<UIWindow>.weakObjects()
 

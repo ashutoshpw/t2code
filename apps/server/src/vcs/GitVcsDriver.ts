@@ -141,10 +141,7 @@ export interface CreateWorktreeProgress {
 
 export interface CreateWorktreeOptions {
   readonly progress?: CreateWorktreeProgress;
-  /**
-   * Null (or omitted, for callers without settings access) defers to the
-   * checkout's own t2.json.
-   */
+  /** Null or omitted defers to the checkout's t2.json. */
   readonly submodules?: WorktreeSubmodules | null;
   readonly worktreesDirectory?: string;
   /** Clone the checkout from the macOS worktree checkout cache. */

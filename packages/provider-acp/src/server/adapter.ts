@@ -430,10 +430,7 @@ export interface AcpAdapterV2Flavor {
         ) => EffectAcpSchema.RequestPermissionResponse | undefined;
       }
     | undefined;
-  /**
-   * Grok's Auto mode only asks about what its own classifier refused, so those
-   * must reach the user instead of being approved by T2's policy.
-   */
+  /** Grok Auto asks only about classifier refusals; T3 policy must not auto-approve them. */
   readonly permissionDisposition?: (
     policy: ProviderAdapter.ProviderAdapterV2RuntimePolicy,
     request: EffectAcpSchema.RequestPermissionRequest,
@@ -738,9 +735,7 @@ export const AcpProviderCapabilitiesV2 = {
   checkpointing: {
     appCanCheckpointFilesystem: true,
     supportsNestedCheckpointScopes: true,
-    // ACP defines no conversation truncation, so rollback resets the provider
-    // conversation: T2 restores checkpointed state and the next turn starts a
-    // fresh agent session without the rolled-back context.
+    // ACP lacks truncation; rollback restores T3 checkpoints and starts a fresh agent session.
     providerCanRollbackConversation: true,
     providerRollbackReturnsSnapshot: true,
     providerCanReadConversationSnapshot: false,
@@ -1902,9 +1897,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
               agentTerminalsById.get(sessionScopedId(sessionId, terminalId))?.command;
             return command === undefined ? [] : [command];
           });
-        // Client terminals (Devin) run with the T2 server's privileges, so they
-        // are policy-checked against the active turn policy; a command the user
-        // already approved satisfies an "ask" disposition.
+        // Client terminals run with server privileges; apply turn policy and prior user approvals.
         const clientPolicyGrants = makeAcpClientPolicyGrants();
         let latestRuntimePolicy: ProviderAdapter.ProviderAdapterV2RuntimePolicy =
           input.runtimePolicy;
@@ -7965,7 +7958,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
             resolveAttachmentPath: host.resolveAttachmentPath,
             resolveExtractedTextPath: host.resolveExtractedTextPath,
           });
-          const isNativeSlashCommand = turnInput.message.text.trimStart().startsWith("/");
+          const isNativeSlashCommand = userText.trimStart().startsWith("/");
           const text = t2AcpPromptWithInstructions({
             prompt: messageText,
             state: instructionState,
