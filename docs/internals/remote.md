@@ -60,7 +60,7 @@ headless machines. It listens on every IPv4 interface and closes each
 connection unless both addresses of the direct peer are loopback, private, or
 tailnet IPv4. That keeps a VPS's public address closed, including a cloud VM
 whose public address is NATed to a private interface. It is not a firewall:
-T3 Connect and Tailscale Serve reach the server over loopback by design, and a
+T2 Connect and Tailscale Serve reach the server over loopback by design, and a
 proxy that rewrites the source address looks private. One listener per address would
 miss a DHCP change, and the wildcard keeps the reported addresses current.
 

@@ -460,9 +460,6 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           assert.equal(env.VITE_HTTP_URL, undefined);
           assert.equal(env.VITE_WS_URL, undefined);
           assert.equal(env.T2CODE_PORT, "13772");
-          // Deleting the keys is not sufficient — vite.config.ts merges
-          // `.env`/`.env.local` underneath this env and would revive them, so
-          // the intent has to be stated positively.
           assert.equal(env.T2CODE_SINGLE_ORIGIN_DEV, "1");
         }),
     );

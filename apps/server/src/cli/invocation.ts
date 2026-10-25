@@ -98,11 +98,7 @@ export const resolveServerInstallation = Effect.gen(function* () {
   return { kind: "npm-global", prefix } satisfies ServerInstallation;
 }).pipe(Effect.orElseSucceed(() => null));
 
-/**
- * The literal spec the user typed (e.g. `@t2code/cli@nightly`) is resolved away before
- * our process starts, so re-derive it from the running version: nightly builds
- * re-suggest the nightly channel, anything else suggests the bare package.
- */
+/** The original package spec is unavailable at startup; infer its channel from the version. */
 function suggestedPackageSpec(version: string): string {
   const channel = /^[^-+]+-(nightly|preview)\./.exec(version)?.[1];
   return channel === undefined ? "@t2code/cli" : `@t2code/cli@${channel}`;
@@ -138,12 +134,7 @@ const powershellWord = (value: string) =>
 const hostShellWord = (platform: NodeJS.Platform, value: string) =>
   platform === "win32" ? powershellWord(value) : shellWord(value);
 
-/**
- * The launcher a person can type to run this install when `t2code` is not on
- * PATH: the desktop app's `t2code` shim, which the app and the shim itself name in
- * `T2CODE_CLI_PATH`, or a standalone binary's own path. Script installs (a
- * repo checkout) have no single launcher and keep plain `t2code`.
- */
+/** Script installs have no single launcher; desktop shims and standalone binaries do. */
 const resolveInstallLauncher = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const shim = (yield* HostProcess.Environment).T2CODE_CLI_PATH?.trim();
