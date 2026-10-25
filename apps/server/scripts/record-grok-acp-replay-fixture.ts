@@ -101,12 +101,7 @@ function makeWireTee() {
         }),
     };
   };
-  // Grok runs its own wake turns (`task-completed-*`, `notifications-*`,
-  // `subagent-completed-*`) after T2's run can already have settled, and its
-  // session roster can report idle before them. Grok is done when no session
-  // has a queued or running prompt (`x.ai/queue/changed` vs `turn_completed`),
-  // no background task still runs (`background_tasks`), and every spawned
-  // subagent finished (`subagent_spawned` vs `subagent_finished`).
+  // Grok can report idle before its wake turns; wait for prompt queues, tasks and subagents to finish.
   const grokHasPendingWork = () => {
     const queues = new Map<unknown, Record<string, unknown>>();
     const tasks = new Map<unknown, ReadonlyArray<unknown>>();
@@ -187,8 +182,7 @@ function wireToEntries(wire: ReadonlyArray<WireMessage>): {
     const pending = direction === "outgoing" ? agentRequests : t2Requests;
     const method = pending.get(String(message.id));
     if (method === undefined) {
-      // Grok answers its own internal requests (e.g. id "skills-reload") on the
-      // shared stream; T2's protocol drops those, so replay never sees them.
+      // Grok answers internal requests on this stream; T3 drops them before replay.
       droppedFrames += 1;
       continue;
     }

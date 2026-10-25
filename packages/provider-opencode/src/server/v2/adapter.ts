@@ -276,12 +276,7 @@ interface ThreadState {
   readonly providerTurns: Map<string, OrchestrationV2ProviderTurn>;
   active: ActiveTurn | undefined;
   model: ModelRef | undefined;
-  /**
-   * Set when a turn ended here while OpenCode may still be running it: a Stop
-   * that timed out, a prompt whose request failed without a clear answer, or a
-   * request T2 could not answer. Execution events carry only the session id,
-   * so the next execution end belongs to that run; it clears this and ends no turn.
-   */
+  /** Locally ended but possibly live; consume its next execution end without settling a new turn. */
   unsettled: boolean;
   /** A late first start belongs to the failed prompt; only a subsequent start proves a lost end. */
   unsettledStarted: boolean;
@@ -351,11 +346,7 @@ interface PendingRequest {
 
 const rule = (action: string, effect: Rule["effect"]): Rule => ({ action, resource: "*", effect });
 
-/**
- * OpenCode skips every tool of a server whose name is over 64 characters (its
- * tool namespace limit), and its router rejects adding one over 100, so a
- * thread id that does not fit is replaced by a digest of it.
- */
+/** OpenCode hides tools for names over 64 chars and rejects names over 100; hash long thread IDs. */
 export const t2McpServerName = Effect.fn("t2McpServerName")(function* (threadId: string) {
   const name = `t2-code-${threadId.replaceAll(/[^a-zA-Z0-9_-]/g, "_")}`;
   if (name.length <= 64) return name;
@@ -366,11 +357,7 @@ export const t2McpServerName = Effect.fn("t2McpServerName")(function* (threadId:
   return `t2-code-${Hex.encode(digest).slice(0, 16)}`;
 });
 
-/**
- * The rules that keep T2's MCP servers to their own thread, after the mode's:
- * the last matching rule wins, so every thread's T2 server is denied and then
- * this thread's own is allowed again, in every mode.
- */
+// Last match wins: deny all threads' T3 servers, then allow only this thread's.
 const mcpRules = (mcpServerName: string | null): ReadonlyArray<Rule> =>
   mcpServerName === null
     ? []
@@ -565,14 +552,8 @@ const deliver = <E>(answer: Effect.Effect<void, E>) =>
 
 type ModelRef = ReturnType<typeof Model.Ref.make>;
 
-/**
- * OpenCode takes a client id (it must start with `msg_`) and answers a repeat of one in the same
- * session with the item it already has, so a retried request never queues a second message, and a
- * turn knows the message fork and rollback cut at before OpenCode answers. The id is unique across
- * the whole server, which refuses it in any other session (409), so it names the session: another
- * T2 database or environment on the same server repeats thread ids and run ordinals, never session
- * ids.
- */
+// msg_ IDs cannot cross sessions; include session identity because T3 IDs repeat across environments.
+// Pre-acknowledgement IDs also establish fork/rollback boundaries.
 const turnPromptId = (sessionId: string, attemptId: string) =>
   SessionMessage.ID.make(`msg_t2_turn_${sessionId}:${attemptId}`);
 const steerPromptId = (sessionId: string, messageId: string) =>
@@ -1614,8 +1595,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
               },
             }),
       });
-      // A subagent's session is its call's to settle: a turn there is runless,
-      // and T2 has no terminal to wait on.
+      // Subagent turns are runless; their calls own settlement.
       if (state.subagent !== undefined) {
         const call = state.subagent.call;
         if (!call.background && terminal.status !== "completed") {
@@ -1673,11 +1653,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
       }
     });
 
-    /**
-     * Ends the turn a request T2 could not answer would block, and stops the
-     * session: OpenCode waits on an unanswered request forever. The stopped
-     * run's end is its own, not the next turn's.
-     */
+    // OpenCode waits forever on unanswered requests; stop that run and keep its end from settling the next.
     const abandonRequest = Effect.fnUntraced(function* (state: ThreadState, reason: string) {
       yield* Effect.logWarning("Could not answer an OpenCode request; ending its turn.", {
         reason,
@@ -1704,9 +1680,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
       return true;
     });
 
-    /**
-     * T2's own answers are only forgotten: the orchestrator already recorded them.
-     */
+    // The orchestrator already recorded T3-owned answers; only forget them here.
     const settleRequest = Effect.fnUntraced(function* (
       entry: PendingRequest,
       status: "resolved" | "cancelled",
@@ -1756,11 +1730,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
               Effect.ignore({ log: true }),
             );
 
-    /**
-     * Stops what a session still waits on when this runtime first loads it:
-     * T2 shows none of those requests (a restart or a closed session expired
-     * them), and OpenCode would wait on them forever.
-     */
+    // T3 expired pre-load requests and no longer shows them; stop them so OpenCode cannot wait forever.
     const stopLeftoverRequests = Effect.fnUntraced(function* (state: ThreadState) {
       const sessionID = Session.ID.make(state.sessionId);
       const listed = yield* Effect.all([
@@ -1936,8 +1906,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
           { type: "user_input_request", questions: mapped.questions },
         );
       }
-      // Cancelling ends OpenCode's execution as a user stop, so the turn is
-      // failed here with the reason and that stop's end is skipped.
+      // Cancel reports user Stop; record failure here and skip that execution end.
       yield* Effect.logWarning("Declined an OpenCode form T2 Code cannot show.", {
         reason: mapped.unsupported,
       });
@@ -2702,8 +2671,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
     // Subscribed before any session or prompt call, so no event of theirs is missed.
     yield* follow(yield* connection.events).pipe(Effect.forkScoped);
 
-    // A server T2 did not start keeps running after T2 stops, so stop the turns
-    // it would otherwise finish unseen. A spawned server stops with its owner.
+    // External servers outlive T3; stop their turns before losing observation.
     if (connection.external) {
       yield* Effect.addFinalizer(() =>
         Effect.forEach(
@@ -2886,11 +2854,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
       }
     });
 
-    /**
-     * Clears a staged revert and waits out the empty execution `clear` runs,
-     * which is no turn of T2's. 2.0.18 wakes the session after every clear,
-     * with or without a stage (seen live), so that execution always comes.
-     */
+    // OpenCode 2.0.18 executes even unstaged revert clears; wait so that end cannot settle a T3 turn.
     const clearRevert = Effect.fnUntraced(function* (sessionId: string) {
       const settled = yield* Deferred.make<void>();
       clearing.set(sessionId, settled);
@@ -2904,12 +2868,8 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
       stagedReverts.delete(sessionId);
     });
 
-    /**
-     * If either fails or is interrupted the stage is cleared, since OpenCode commits a staged
-     * revert on the next prompt; a clear that fails too is tried again before that prompt. Files
-     * stay where they are: T2 restores its own checkpoint when the user asked for files, and a
-     * rewind without files must not touch them.
-     */
+    // Failed/interrupted rollbacks must clear staged reverts before the next prompt commits them.
+    // Leave files to T3 checkpoints; history-only rewinds must preserve them.
     const rollBackTo = Effect.fnUntraced(function* (
       sessionId: string,
       boundary: SessionMessage.ID,
@@ -3334,8 +3294,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
           Effect.orElseSucceed(() => []),
         );
         if (commands.some((entry) => entry.name === command.name)) {
-          // `session.command` takes no id of T2's and its answer carries none,
-          // so the turn remembers where the history stood before it.
+          // session.command neither accepts nor returns our ID; record the preceding history boundary.
           const newest = yield* client.message.list({ sessionID, order: "desc", limit: 1 });
           yield* markBefore(sessionId, newest.data[0]?.id ?? null);
           if (!sending()) return;
@@ -3618,8 +3577,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
           if (started === undefined) return;
           const { state, sessionId, turn } = started;
           yield* submit(sessionId, turnInput, state, turn).pipe(
-            // Deleted outside T2: the thread is broken, and forgetting it makes
-            // the next turn resume, fail, and recreate it with a handoff.
+            // Forget externally deleted sessions so the next turn recreates them with handoff.
             Effect.catchTags({
               SessionNotFoundError: () =>
                 finishTurn(

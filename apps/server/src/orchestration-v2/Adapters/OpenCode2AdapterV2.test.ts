@@ -3180,9 +3180,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
           status: 500,
           body: { _tag: "UnknownError", message: "disk I/O error" },
         }),
-        // Uncleared, OpenCode would commit the stage on the next prompt. The
-        // clear wakes the session into an empty execution of its own, with no
-        // turn of T2's running: it is no subagent's follow-up.
+        // Uncleared stages commit on the next prompt; clearing triggers an empty execution without a T3 turn.
         out("session.revert.clear", { sessionID: SESSION }),
         reply("session.revert.clear", null),
         event("session.revert.cleared", { sessionID: SESSION }),
@@ -3230,11 +3228,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
 
   it.effect("prompts under ids no other session on the server can hold", () =>
     Effect.gen(function* () {
-      // Two T2 databases on one external server repeat thread ids and run
-      // ordinals, so their turns can share an attempt id and their steers a
-      // message id. OpenCode refuses a prompt id another session already
-      // holds with 409 ConflictError; the replay refuses a client id it
-      // already gave another recorded message.
+      // Separate databases can repeat prompt ids on one server; OpenCode rejects cross-session duplicates with 409.
       const OTHER = "ses_f148ca2deffeOtherSession000";
       const steerInto = (session: string, recorded: string): ReadonlyArray<ProviderReplayEntry> => [
         out("session.prompt", {

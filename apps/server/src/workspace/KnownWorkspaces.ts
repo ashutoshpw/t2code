@@ -1,12 +1,4 @@
-/**
- * KnownWorkspaces - the folders a client-named cwd may act in: a T2-managed
- * worktree folder, a registered project, or a thread's worktree. Clients send
- * the thread's worktree, else the project root. A client also sets a thread's
- * worktree path, so one counts only under a managed folder or when git lists
- * it as a worktree of the thread's project.
- *
- * @module KnownWorkspaces
- */
+// Client-supplied worktrees count only under managed folders or when Git lists them for the project.
 import * as HostProcess from "@t2code/shared/HostProcess";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Context from "effect/Context";

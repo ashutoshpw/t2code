@@ -17,7 +17,6 @@ private final class FilePreviewController: QLPreviewController {
   }
 }
 
-/// Quick Look owns image and document controls, zooming, and source-view transitions.
 final class T2NativeFilePresentation: NSObject, QLPreviewControllerDataSource,
   QLPreviewControllerDelegate, UIAdaptivePresentationControllerDelegate {
   let identifier: String

@@ -7,6 +7,7 @@ import {
   type EnvironmentThreadShell,
 } from "@t2code/client-runtime/state/shell";
 import type { AtomCommandResult } from "@t2code/client-runtime/state/runtime";
+import { threadFamilyRead, type ThreadFamilyRead } from "@t2code/client-runtime/state/threads";
 import { deriveThreadTitleSeed } from "@t2code/client-runtime/operations";
 import {
   AuthOrchestrationOperateScope,

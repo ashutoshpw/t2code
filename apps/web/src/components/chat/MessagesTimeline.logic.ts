@@ -8,6 +8,11 @@ import {
   collectAssistantCitations,
 } from "@t2code/shared/assistantCitations";
 import { shallow } from "zustand/vanilla/shallow";
+import { claudeResumeCompactionAge } from "@t2code/shared/claudeCompaction";
+import {
+  IDLE_COMPACTING_LABELS,
+  IDLE_COMPACTION_TITLES,
+} from "@t2code/client-runtime/user-message";
 import type { HandoffTimelineRun } from "@t2code/client-runtime/handoff";
 import { renderCodexDirectivesForCopy } from "@t2code/shared/codexMarkdownDirectives";
 import {
@@ -583,7 +588,7 @@ type MessagesTimelineRowContent =
       label: string;
       tokenCounts: ReturnType<typeof contextCompactionTokenCounts>;
       active: boolean;
-      /** Replaces "Context compacted" when T3 Code compacted without being asked. */
+      /** Replaces "Context compacted" when T2 Code compacted without being asked. */
       title?: string;
       failed?: true;
       /** The provider's reason, when a failed compaction gave one. */

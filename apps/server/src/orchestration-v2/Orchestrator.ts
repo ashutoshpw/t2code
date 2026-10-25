@@ -10,6 +10,7 @@ import {
   runRanAfter,
   usageLimitBlockedRun,
 } from "@t2code/shared/orchestrationV2ThreadError";
+import { canonicalizeGitCafePullRequestUrl } from "@t2code/source-control-definitions/registry";
 import { threadPullRequestsOf } from "../sourceControl/threadPullRequests.ts";
 import {
   normalizeThreadPullRequestKey,
@@ -63,7 +64,7 @@ import {
   RuntimeMode,
   ThreadLinkedPullRequest,
   ThreadId,
-  type TurnItemId,
+  TurnItemId,
 } from "@t2code/contracts";
 import { modelSelectionsEqual } from "@t2code/shared/model";
 import { recordThreadOpen } from "@t2code/shared/paletteSearch";
@@ -571,7 +572,7 @@ function delegatedTasksStopEffect(command: {
 
 const WORKSPACE_PREPARATION_INPUT = "Preparing workspace";
 const RUNTIME_REQUEST_DELIVERY_FAILED_MESSAGE =
-  "T3 Code could not confirm that your answer reached the agent. If the run stays stuck, stop it and try again.";
+  "T2 Code could not confirm that your answer reached the agent. If the run stays stuck, stop it and try again.";
 
 function withoutPreparationResult(
   item: Extract<OrchestrationV2TurnItem, { readonly type: "command_execution" }>,

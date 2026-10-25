@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { GuestMessageId } from "@t3tools/contracts";
+import { GuestMessageId } from "@t2code/contracts";
 
 import { resolveUserMessagePresentation } from "./userMessage.ts";
 
@@ -19,6 +19,23 @@ describe("resolveUserMessagePresentation", () => {
         scheduledTaskId: undefined,
       });
     }
+  });
+
+  it("shows a guest's own words and name, not the attributed text the agent reads", () => {
+    expect(
+      resolveUserMessagePresentation({
+        role: "user",
+        createdBy: "user",
+        text: "Message from guest Sam, sent by the owner:\n\nWhy?",
+        context: {
+          guest: {
+            guestMessageId: GuestMessageId.make("guest-message:one"),
+            name: "Sam",
+            text: "Why?",
+          },
+        },
+      }),
+    ).toEqual({ text: "Why?", attribution: "guest", scheduledTaskId: undefined, guestName: "Sam" });
   });
 
   it("attributes older server-sent restart continuations to T2 Code, not another agent", () => {

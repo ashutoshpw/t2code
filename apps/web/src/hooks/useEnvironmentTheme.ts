@@ -58,12 +58,7 @@ export function environmentThemeDefinition(theme: EnvironmentTheme): ThemeDefini
   };
 }
 
-/**
- * Published palettes this client can render. Reserved ids are dropped here rather
- * than rendered: a published `t2-iris.json` would show this palette on its
- * card while "Use" resolved the built-in, and a published `dark.json` would
- * capture everyone whose stored preference is the stock `"dark"`.
- */
+/** Filters reserved ids that would select built-ins instead of the published palette. */
 export function publishedThemeDefinitions(
   themes: ReadonlyArray<EnvironmentTheme>,
 ): ReadonlyArray<ThemeDefinition> {

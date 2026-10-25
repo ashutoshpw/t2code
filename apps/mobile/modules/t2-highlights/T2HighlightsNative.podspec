@@ -3,18 +3,18 @@ require 'json'
 package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 
 Pod::Spec.new do |s|
-  s.name = 'T3HighlightsNative'
+  s.name = 'T2HighlightsNative'
   s.version = package['version']
-  s.summary = 'Native @pierre/highlights syntax highlighter for T3 Code mobile.'
+  s.summary = 'Native @pierre/highlights syntax highlighter for T2 Code mobile.'
   s.description = 'Runs the @pierre/highlights lexers, compiled from WebAssembly to C with wasm2c.'
-  s.homepage = 'https://t3tools.com'
+  s.homepage = 'https://t2tools.com'
   s.license = { :type => 'UNLICENSED' }
-  s.author = { 'T3 Tools' => 'hello@t3tools.com' }
+  s.author = 'W3 Dev LLC'
   s.platforms = { :ios => '16.1' }
   s.source = { :path => '.' }
   s.source_files = 'ios/**/*.swift', 'cpp/**/*.{c,h,inc}', 'Vendor/**/*.{c,h,inc}'
   # Swift sees only the wrapper; the generated and runtime headers stay private.
-  s.public_header_files = 'cpp/t3_highlights.h'
+  s.public_header_files = 'cpp/t2_highlights.h'
   # Debug builds compile at -O0 by default, which makes the lexers several times
   # slower. They are generated code, so optimize them in every configuration.
   s.compiler_flags = '-O2'

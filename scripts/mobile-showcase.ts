@@ -34,8 +34,7 @@ const REPO_ROOT = NodePath.resolve(NodePath.dirname(NodeURL.fileURLToPath(import
 const MOBILE_ROOT = NodePath.join(REPO_ROOT, "apps/mobile");
 const ANDROID_PACKAGE = "codes.t2.mobile";
 const APP_SCHEME = "t2code";
-// expo-dev-launcher reads these off the manifest URL and updates the dev menu
-// preferences before the app loads, keeping captures free of dev chrome.
+// Manifest flags update expo-dev-launcher preferences before loading, hiding dev chrome in captures.
 const DEV_CLIENT_LAUNCH_FLAGS = "disableOnboarding=1&disableFab=1&disableAutoLaunch=1";
 const IOS_READY_FILENAME = "T2ShowcaseReadyScene";
 const SERVER_HOST = "0.0.0.0";
@@ -65,8 +64,7 @@ const MOBILE_BUILD_ENV = {
   ANDROID_HOME: ANDROID_SDK_ROOT,
   APP_VARIANT: "production",
   EXPO_NO_GIT_STATUS: "1",
-  // Lets the capture build require full screen on iPad so the app can rotate
-  // itself to landscape (see app.config.ts).
+  // iPad self-rotation needs the capture build's fullscreen mode (app.config.ts).
   T2_SHOWCASE_CAPTURE_BUILD: "1",
   JAVA_HOME:
     NodeProcess.env.JAVA_HOME ??

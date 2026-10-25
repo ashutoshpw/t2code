@@ -273,10 +273,7 @@ export const buildWslRuntimeInstallScript = (
     "runtime_entry_runs() {",
     '  [ -x "$1/t2" ] && "$1/t2" --version >/dev/null',
     "}",
-    // Hashing the entry is what tells a working cache from one whose `t2` was
-    // swapped or half-written after install: the file is still there and may
-    // even still run, and launch then picks an executable that is not what this
-    // install verified.
+    // Hash the entry to detect a swapped or partially written executable, even if it still runs.
     "runtime_server_entry_digest() {",
     `  sha256sum "$1/t2" 2>/dev/null | cut -d ' ' -f 1`,
     "}",

@@ -317,8 +317,7 @@ export function ThreadMcpApp(props: {
         return result.value;
       },
       openLink: async (url) => {
-        // A WebView cannot tell whether the reader just tapped the app, so it
-        // asks, rather than letting an app leave T2 on a timer.
+        // WebViews cannot prove user activation; confirm links to prevent timer-driven navigation out of T3.
         if (!(await confirm(`Open a link from ${app.server}?`, url, "Open"))) {
           throw new McpAppHostRefusal("Declined by the user.");
         }

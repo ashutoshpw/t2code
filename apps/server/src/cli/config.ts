@@ -23,6 +23,7 @@ import * as CliError from "effect/cli/CliError";
 
 import { readBootstrapEnvelope } from "../bootstrap.ts";
 import * as ServerConfig from "../config.ts";
+import { resolveServiceLauncherMode } from "../cloud/serviceLauncherClient.ts";
 import { expandHomePath, resolveBaseDir } from "../os-jank.ts";
 import { isProcessAlive, readPersistedServerRuntimeState } from "../serverRuntimeState.ts";
 
@@ -410,8 +411,8 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
     Option.fromUndefinedOr(bootstrap?.host),
   );
   // A background service exists to be reached from other devices, so it
-  // listens on private networks unless `service.env` sets `T3CODE_HOST`.
-  // Clients then learn its LAN address and prefer it over T3 Connect.
+  // listens on private networks unless `service.env` sets `T2CODE_HOST`.
+  // Clients then learn its LAN address and prefer it over T2 Connect.
   const privateNetworkOnly =
     Option.isNone(explicitHost) &&
     mode === "web" &&

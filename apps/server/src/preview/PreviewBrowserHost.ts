@@ -16,11 +16,8 @@ export const sandboxDisabled = (env: Readonly<Record<string, string | undefined>
 const USERNS_RESTRICTION = "/proc/sys/kernel/apparmor_restrict_unprivileged_userns";
 export const APPARMOR_PROFILE_PATH = "/etc/apparmor.d/t2-chrome-headless-shell";
 
-/**
- * Modelled on the profile Ubuntu ships for Google Chrome; `unconfined` adds
- * nothing beyond `userns`.
- */
-export const APPARMOR_PROFILE = `# Written by \`t2code browser setup\`: lets T2 Code's headless browser use Chrome's sandbox.
+/** Match Ubuntu's Chrome profile; unconfined adds nothing beyond userns. */
+export const APPARMOR_PROFILE = `# Written by \`t3 browser setup\`: lets T2 Code's headless browser use Chrome's sandbox.
 abi <abi/4.0>,
 include <tunables/global>
 

@@ -91,12 +91,7 @@ const readClaudeSubagentResumeTranscript = Effect.fn("readClaudeSubagentResumeTr
     );
   },
 );
-/**
- * The same session with the math.ts subagent's first run removed: the root
- * turn settles while the subagent still works, and the server restarts
- * before it reports, so recovery cancels it. The resumed turn then carries
- * the restart note, as T2 sends it.
- */
+/** Remove the subagent's first run so restart cancels it after root settlement; resume carries the restart note. */
 const readClaudeCancelledSubagentResumeTranscript = Effect.fn(
   "readClaudeCancelledSubagentResumeTranscript",
 )(function* () {

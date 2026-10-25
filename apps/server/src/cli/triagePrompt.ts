@@ -1,10 +1,4 @@
-/**
- * All text `t2code triage` hands to the coding agent. Kept as bare template strings
- * on purpose: to change triage behavior, edit the text.
- *
- * `TRIAGE_PLAYBOOK` must stay byte-identical to `.github/triage/PLAYBOOK.md`
- * (only backticks and backslashes are escaped here).
- */
+/** Keep TRIAGE_PLAYBOOK byte-identical to .github/triage/PLAYBOOK.md after unescaping backticks and backslashes. */
 
 export const TRIAGE_PLAYBOOK = `# T2 Code triage playbook
 

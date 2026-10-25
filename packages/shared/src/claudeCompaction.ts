@@ -21,7 +21,25 @@ export function isClaudeResumeCompactionQuestion(question: string): boolean {
 }
 
 /**
- * Context size below which T2 does not suggest or run a Claude compaction:
+ * The session age from an answered resume question whose answer was to compact, or null. Answers
+ * are keyed by question id, and the id may itself be the question text.
+ */
+export function claudeResumeCompactionAge(questionAnswer: {
+  readonly questionTextById?: Readonly<Record<string, string>> | undefined;
+  readonly answers: Readonly<Record<string, unknown>>;
+}): string | null {
+  for (const [id, answer] of Object.entries(questionAnswer.answers)) {
+    const age = CLAUDE_RESUME_COMPACTION_QUESTION_PATTERN.exec(
+      questionAnswer.questionTextById?.[id] ?? id,
+    )?.[1];
+    const chosen = Array.isArray(answer) ? answer : [answer];
+    if (age !== undefined && chosen.includes(CLAUDE_RESUME_COMPACTION_COMPACT_ANSWER)) return age;
+  }
+  return null;
+}
+
+/**
+ * Context size below which T3 does not suggest or run a Claude compaction:
  * the stale-thread Compact chip and idle compaction. Matches Claude Code's
  * idleCompaction default of 200K.
  */

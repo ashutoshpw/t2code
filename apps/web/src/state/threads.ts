@@ -8,6 +8,7 @@ import {
   EMPTY_ENVIRONMENT_THREAD_STATE,
   type EnvironmentThreadState,
   createThreadEnvironmentAtoms,
+  createThreadFamilyAtoms,
 } from "@t2code/client-runtime/state/threads";
 import type { EnvironmentId, OrchestrationV2ThreadShell, ThreadId } from "@t2code/contracts";
 import * as Option from "effect/Option";

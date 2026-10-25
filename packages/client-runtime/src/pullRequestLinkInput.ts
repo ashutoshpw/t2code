@@ -1,4 +1,5 @@
 import type { RepositoryIdentity } from "@t2code/contracts";
+import { canonicalizeGitCafePullRequestUrl } from "@t2code/source-control-definitions/registry";
 
 import { sourceControlClients, type ChangeRequestTerminology } from "./sourceControlClients.ts";
 

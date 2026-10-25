@@ -6,6 +6,7 @@ import {
   type ThreadId,
   type ThreadPullRequestLink,
 } from "@t2code/contracts";
+import { canonicalizeGitCafePullRequestUrl } from "@t2code/source-control-definitions/registry";
 import * as Cause from "effect/Cause";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";

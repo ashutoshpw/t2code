@@ -16,7 +16,7 @@ describe("T2 orchestration provider instructions", () => {
     assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "call `delegate_task` again");
     assert.include(
       T2_CODE_ORCHESTRATION_INSTRUCTIONS,
-      "Do not use `t2_thread_send` on `childThreadId`",
+      "For a follow-up that needs the same child's conversation, use `t2_thread_send` on its `childThreadId`",
     );
   });
 

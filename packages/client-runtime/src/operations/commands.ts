@@ -26,6 +26,7 @@ import {
   type ThreadId,
   type ThreadEnvMode,
   type UploadChatAttachment,
+  type GuestMessageId,
 } from "@t2code/contracts";
 import { modelSelectionCommandType } from "@t2code/shared/model";
 import { derivePendingBackgroundWork } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
@@ -169,6 +170,7 @@ export interface StartThreadTurnInput extends ThreadCommandInput {
     readonly text: string;
     readonly attachments: ReadonlyArray<ChatAttachment | UploadChatAttachment>;
     readonly context?: import("@t2code/contracts").OrchestrationMessageContext;
+    readonly idleCompaction?: import("@t2code/contracts").OrchestrationV2IdleCompaction;
   };
   readonly modelSelection?: ModelSelection;
   readonly titleSeed?: string;

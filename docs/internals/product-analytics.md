@@ -48,7 +48,7 @@ runs; use `surface` for the connected client.
 ## Interpreting events
 
 Use `client.turn.requested` for active-use reports. There is no connection event,
-because T3 Connect sessions expire hourly and each reconnect would count again.
+because T2 Connect sessions expire hourly and each reconnect would count again.
 A command whose id was already accepted is a retry, so it records nothing again.
 One identity can appear in several client groups during a period; adding those
 groups double-counts users.
@@ -108,4 +108,4 @@ must not reject a connection. PostHog person profiles remain disabled.
 
 Dev-runner servers and the CI archive smoke test turn telemetry off, which also
 stops relay tracing, because each would count as a new install. Set
-`T3CODE_TELEMETRY_ENABLED=true` to test analytics or relay tracing from a dev server.
+`T2CODE_TELEMETRY_ENABLED=true` to test analytics or relay tracing from a dev server.

@@ -3,8 +3,6 @@ import ExpoModulesCore
 import Security
 import UIKit
 
-// Expo Modules 2.0: plain members marked @JS are bound by the macro, while the
-// views and main-queue presenters stay in definition(). Both are merged.
 @ExpoModule("T2NativeControls")
 public final class T2NativeControlsModule: Module {
   private let presentationSources = T2PresentationSources()

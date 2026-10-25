@@ -57,7 +57,7 @@ if (fixture === undefined || variant === undefined) {
 }
 
 const museBinary = process.env.T2_MUSE_BIN ?? "muse";
-// Started as T2 starts it, so Windows needs no T2_MUSE_BIN for Muse's `muse.cmd` launcher.
+// Match T2's launch so Windows needs no T2_MUSE_BIN for `muse.cmd`.
 const museStart = Effect.runSync(museLaunch(museBinary));
 const home = process.env.HOME ?? "";
 

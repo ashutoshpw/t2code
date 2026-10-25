@@ -13,7 +13,7 @@ import type {
 import {
   dedupeSubagentBodies,
   dedupeTurnItemBodies,
-} from "@t3tools/shared/orchestrationV2DedupedBodies";
+} from "@t2code/shared/orchestrationV2DedupedBodies";
 import {
   compactDynamicToolOutput,
   omitToolOutputImageData,

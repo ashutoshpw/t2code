@@ -364,7 +364,6 @@ it.effect("decodes null optional arguments the way it decodes omitted ones", () 
     yield* callTool("t2_thread_read", { ...thread, afterPosition: null, view: null });
     yield* callTool("delegate_task", { task: "Inspect", target: {} });
     yield* callTool("delegate_task", { task: "Inspect", title: null, target: { model: null } });
-    // A null the schema declares keeps its meaning: here it clears the project icon.
     yield* callTool("t2_project_update", { projectId: "project-1", projectIcon: null });
 
     expect(calls).toHaveLength(5);
@@ -421,13 +420,13 @@ it.effect.each(["limit", "runLimit", "maxCharsPerItem"])(
   },
 );
 
-it("routes same-child follow-ups to t3_thread_send and independent reviews to delegate_task", () => {
+it("routes same-child follow-ups to t2_thread_send and independent reviews to delegate_task", () => {
   const description = OrchestratorToolkit.tools.delegate_task.description ?? "";
   expect(description).toContain(
-    "For independent T3 delegated review rounds, call delegate_task again",
+    "For independent T2 delegated review rounds, call delegate_task again",
   );
   expect(description).toContain(
-    "For a follow-up that needs the same child's conversation, use t3_thread_send on its childThreadId.",
+    "For a follow-up that needs the same child's conversation, use t2_thread_send on its childThreadId.",
   );
   expect(description).not.toContain("not the target for starting another");
 });

@@ -23,7 +23,7 @@ import * as NetService from "@t2code/shared/Net";
 import { DEFAULT_SIGNAL_EXPORT } from "@t2code/shared/observability";
 import * as OtelEnvironment from "@t2code/shared/otelEnvironment";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 import packageJson from "../../package.json" with { type: "json" };
 import { ServiceLauncherHostProcess } from "../cloud/serviceLauncherClient.ts";
 import {
@@ -898,7 +898,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         privateNetworkOnly: true,
       });
       // `service.env` reaches the server as its environment.
-      expect(yield* resolveHost({ connected: true, env: { T3CODE_HOST: "127.0.0.1" } })).toEqual({
+      expect(yield* resolveHost({ connected: true, env: { T2CODE_HOST: "127.0.0.1" } })).toEqual({
         host: "127.0.0.1",
         privateNetworkOnly: undefined,
       });

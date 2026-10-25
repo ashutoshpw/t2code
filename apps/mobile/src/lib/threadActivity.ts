@@ -53,7 +53,7 @@ import type {
   ScheduledTaskId,
   TurnItemId,
 } from "@t2code/contracts";
-import { RunId, ThreadId } from "@t2code/contracts";
+import { idleCompactionOf, isCompactionCommandMessage, RunId, ThreadId } from "@t2code/contracts";
 import {
   classifyToolActivity,
   collectToolFilePaths,
@@ -62,6 +62,7 @@ import {
   formatReadToolLabel,
   formatSearchToolLabel,
 } from "@t2code/shared/toolActivity";
+import { claudeResumeCompactionAge } from "@t2code/shared/claudeCompaction";
 import { formatDuration } from "@t2code/shared/orchestrationTiming";
 import { truncate } from "@t2code/shared/String";
 import type { HtmlRenderReference } from "@t2code/shared/htmlRender";
@@ -75,7 +76,7 @@ import * as DateTime from "effect/DateTime";
 import {
   IDLE_COMPACTION_TITLES,
   IDLE_COMPACTING_LABELS,
-} from "@t3tools/client-runtime/user-message";
+} from "@t2code/client-runtime/user-message";
 
 export type PendingApproval = ThreadPendingApproval;
 export type PendingUserInput = ThreadPendingUserInput;
@@ -142,7 +143,7 @@ export interface ThreadFeedMessage {
   readonly creationSource?: OrchestrationV2CreationSource;
   readonly scheduledTaskId?: ScheduledTaskId;
   readonly senderThreadId?: ThreadId;
-  readonly idleCompaction?: import("@t3tools/contracts").OrchestrationV2IdleCompaction;
+  readonly idleCompaction?: import("@t2code/contracts").OrchestrationV2IdleCompaction;
   readonly visibility: OrchestrationV2ProjectedTurnItem["visibility"];
   readonly sourceThreadId: ThreadId;
   readonly createdAt: string;

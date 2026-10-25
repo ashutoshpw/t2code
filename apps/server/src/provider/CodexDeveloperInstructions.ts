@@ -1,4 +1,3 @@
-import type { ProviderInteractionMode } from "@t2code/contracts";
 import type { V2TurnStartParams__AdditionalContextEntry } from "effect-codex-app-server/schema";
 import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
 
@@ -24,12 +23,7 @@ const normalizeAvailability = (
 ): T2CodeToolAvailability =>
   typeof availability === "boolean" ? { browser: availability, device: false } : availability;
 
-/**
- * Describing `preview_*` or `device_*` tools that aren't in the turn's tool list would be worse
- * than saying nothing: the instructions actively steer the model away from Playwright,
- * agent-browser, and raw simctl/adb, so leaving them in would talk it out of the only automation
- * it still has.
- */
+/** Instructions for unavailable tools would steer the model away from its remaining automation. */
 const toolInstructions = (availability: boolean | T2CodeToolAvailability): string => {
   const tools = normalizeAvailability(availability);
   return [

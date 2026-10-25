@@ -20,6 +20,7 @@ import {
 import { randomUuidV4 } from "@t2code/provider-core/server/randomUuid";
 import * as SourceControlHost from "@t2code/source-control-core/server/SourceControlHost";
 import * as SourceControlProvider from "@t2code/source-control-core/server/SourceControlProvider";
+import { parsePullRequestUrl } from "../shared/definition.ts";
 
 import * as GitCafeApi from "./GitCafeApi.ts";
 import * as GitCafeCredentials from "./GitCafeCredentials.ts";

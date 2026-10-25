@@ -7,16 +7,11 @@ import {
   resolveChangeRequestLinkTarget,
   resolvePullRequestPreviewTarget,
 } from "@t2code/client-runtime/change-request-links";
-import {
-  sourceControlClients,
-  type ChangeRequestLink,
-} from "@t2code/client-runtime/source-control-clients";
 
 import { useOpenLink } from "../browser/useOpenLink";
 import { useClientSettings } from "../hooks/useSettings";
 import { stackedThreadToast, toastManager } from "../components/ui/toast";
 import { useRightPanelStore } from "../rightPanelStore";
-import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
 
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { readProjects, useProjects } from "../state/entities";

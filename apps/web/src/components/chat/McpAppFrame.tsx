@@ -233,9 +233,7 @@ export function McpAppFrame(props: {
       cancelled = true;
     };
   }, [props.environmentId, props.threadId, props.itemId, app.tool]);
-  // The bridge belongs to the captured document. A frame that navigates keeps
-  // its window, so a second load stops the app rather than letting a page T2
-  // never served pose as it.
+  // Navigation retains the frame window; reject second loads to prevent impersonation.
   const loads = useRef({ generation: 0, count: 0 });
   const onFrameLoad = () => {
     if (loads.current.generation !== documentGeneration) {
@@ -278,8 +276,7 @@ export function McpAppFrame(props: {
           : { toolInfo: { tool: current.toolDefinition } }),
       };
     };
-    // Approvals render in the page, beneath the top layer a full-screen app
-    // occupies, so the app returns inline before T2 asks.
+    // Return inline so approvals stay visible above the app.
     const ask = async (message: string) => {
       flushSync(() => setDisplayMode("inline"));
       const approved = await requestConfirmDialog(message);

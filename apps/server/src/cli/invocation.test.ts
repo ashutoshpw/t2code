@@ -133,8 +133,7 @@ it.layer(NodeServices.layer)("root CLI commands", (it) => {
 
   it.effect("keeps a user-installed Node reachable when the command runs under sudo", () =>
     Effect.gen(function* () {
-      const npx = "/home/theo/.npm/_npx/abc/node_modules/@t2code/cli/dist/bin.mjs";
-      // sudo's secure_path already has a system Node.
+      const npx = "/home/theo/.npm/_npx/abc/node_modules/t3/dist/bin.mjs";
       expect(yield* rootCommand({ node: "/usr/bin/node", entry: npx })).toBe(
         "sudo npx @t2code/cli browser setup",
       );
@@ -205,12 +204,9 @@ it.layer(NodeServices.layer)("host CLI commands", (it) => {
           Effect.provideService(HostProcess.Platform, platform),
           Effect.provideService(HostProcess.Environment, { PATH: "", ...env }),
         );
-      // The desktop shim is called through `&`, and each argument is quoted
-      // the PowerShell way: no POSIX single quotes anywhere.
       expect((yield* hostCommand("win32", { T2CODE_CLI_PATH: shim })).command).toBe(
         `& "${shim}" doctor "--base-dir" "C:\\Users\\Jane Doe\\.t2"`,
       );
-      // Without a launcher, plain `t2code` with PowerShell-quoted arguments.
       expect((yield* hostCommand("win32", {})).command).toBe(
         't2code doctor "--base-dir" "C:\\Users\\Jane Doe\\.t2"',
       );
@@ -223,10 +219,8 @@ it.layer(NodeServices.layer)("host CLI commands", (it) => {
           Effect.provideService(HostProcess.IsExecutable, false),
         )).command,
       ).toBe('t2code doctor "--base-dir" "C:\\T2\\\u201C\u201CArchive\u201D\u201D"');
-      // POSIX hosts keep single quotes for the same input. The shim prefix is
-      // a host path, so only the arguments are asserted.
       expect((yield* hostCommand("linux", { T2CODE_CLI_PATH: shim })).command).toMatch(
-        / doctor --base-dir 'C:\\Users\\Jane Doe\\\.t2'$/,
+        / doctor --base-dir 'C:\\Users\\Jane Doe\\.t2'$/,
       );
     }).pipe(Effect.scoped),
   );
@@ -322,8 +316,6 @@ it.layer(NodeServices.layer)("manual server installation ownership", (it) => {
         Effect.provideService(HostProcess.Platform, "linux"),
         Effect.provideService(HostProcess.Environment, { T2CODE_NPM_LAUNCHER_PATH: launcher }),
       );
-      // A launcher for another version is some other `@t2code/cli` the server spawned
-      // (the variable is inherited), not the install this executable runs from.
       for (const [version, expected] of [
         ["0.0.1", null],
         [packageJson.version, { kind: "npm-global", prefix }],

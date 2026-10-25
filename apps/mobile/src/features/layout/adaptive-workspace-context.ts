@@ -1,6 +1,9 @@
 import type { WorkspaceTab } from "../workspace/workspace-tabs-state";
 import { createContext, use, type ReactNode } from "react";
-import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/shell";
+import type {
+  WorkspaceDetail,
+  WorkspaceDetailSheet,
+} from "../workspace/workspace-detail-selection";
 import {
   deriveFileInspectorPaneLayout,
   deriveLayout,

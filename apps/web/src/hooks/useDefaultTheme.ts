@@ -50,11 +50,9 @@ function writeAppliedGeneration(storageKey: string, generation: string): void {
 
 /**
  * Applies the environment's theme (`t2code theme set <id>`). Each set switches
- * this client once — live when connected, on the next connect otherwise —
- * and then steps aside: a theme the user picks in Settings afterwards wins
- * until the environment's theme is set again. The environment's own published
- * themes are valid targets, which is why this waits for an id that does not
- * resolve yet — the setting and the palette it names arrive independently.
+ * this client once — live when connected, on the next connect otherwise — then
+ * steps aside: a theme the user picks in Settings afterwards wins. Waits for
+ * an id that does not resolve yet: setting and palette arrive independently.
  */
 export function useDefaultThemeAdoption(): void {
   const environmentId = useAtomValue(primaryEnvironmentIdAtom);

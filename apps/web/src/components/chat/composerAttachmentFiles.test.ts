@@ -1,4 +1,8 @@
-import { EnvironmentId, PROVIDER_SEND_TURN_MAX_FILE_BYTES } from "@t2code/contracts";
+import {
+  EnvironmentId,
+  getProviderAttachmentLimitError,
+  PROVIDER_SEND_TURN_MAX_FILE_BYTES,
+} from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { isFileAttachment, isImageAttachment } from "../../types";

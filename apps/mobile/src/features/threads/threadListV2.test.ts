@@ -1,4 +1,5 @@
 import { threadSearchMatchKey } from "@t2code/client-runtime/state/thread-search";
+import { createInboxReturnTracker } from "@t2code/client-runtime/state/thread-inbox";
 import { presentThreadShell } from "@t2code/client-runtime/state/models";
 import * as DateTime from "effect/DateTime";
 import * as Schema from "effect/Schema";
@@ -24,7 +25,7 @@ import {
   RunId,
   ThreadId,
 } from "@t2code/contracts";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import type { PendingNewTask } from "../../state/use-pending-new-tasks";
 import { makeRawThreadShell, makeThreadShellFixture } from "../../test-fixtures";

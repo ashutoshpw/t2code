@@ -283,8 +283,7 @@ describe.skipIf(posixShellRunner === null)("WSL runtime install script (executed
         `cat > "$work/install.sh" <<'T2CODE_INSTALL_SCRIPT'`,
         fixture.installScript(),
         "T2CODE_INSTALL_SCRIPT",
-        // Both racers run the same file, and neither file path contains the
-        // runtime root, so the script's own /proc scan cannot see them.
+        // Keep runtime roots out of both racers' argv so their /proc scans cannot match themselves.
         'sh "$work/install.sh" > "$work/first.out" 2>&1 &',
         "first=$!",
         'sh "$work/install.sh" > "$work/second.out" 2>&1 &',

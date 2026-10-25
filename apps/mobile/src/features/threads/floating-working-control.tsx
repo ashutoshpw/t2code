@@ -194,11 +194,20 @@ export function FloatingWorkingControl(props: {
           onLayout={(event) => setActionWidth(settleWidth(event.nativeEvent.layout.width))}
           className="h-11 flex-row items-center"
         >
-          <View className="mr-1 h-4 w-px bg-border" />
-          <Text className="font-t2-medium text-xs text-foreground" numberOfLines={1}>
-            {action.label}
-          </Text>
-        </Pressable>
+          <View className="h-4 w-px bg-border" />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={action.accessibilityLabel}
+            accessibilityState={{ disabled: action.disabled }}
+            disabled={action.disabled}
+            onPress={action.onPress}
+            className={`h-11 items-center justify-center px-3 active:opacity-70 ${action.disabled ? "opacity-50" : ""}`}
+          >
+            <Text className="font-t3-medium text-xs text-foreground" numberOfLines={1}>
+              {action.label}
+            </Text>
+          </Pressable>
+        </View>
       ) : null}
       {hasPreview ? (
         <View

@@ -79,7 +79,7 @@ final class T2ScrollEdgeBleedView: ExpoView {
   }
 
   private func verticalBarIsOnTheRight() -> Bool {
-    // The vertical-bar API ships in the iOS 27.1 SDK (UIKit 9127.0.85); see T3LayoutMetricsView.
+    // The vertical-bar API ships in the iOS 27.1 SDK (UIKit 9127.0.85); see T2LayoutMetricsView.
     #if canImport(UIKit, _version: 9127.0.85)
     if #available(iOS 27.1, *) {
       let rtl = effectiveUserInterfaceLayoutDirection == .rightToLeft

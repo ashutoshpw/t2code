@@ -249,17 +249,9 @@ const QuitConfirmationModeSetting = Schema.Union([QuitConfirmationMode, LegacyCo
 export const FontFamilyPreference = Schema.String.check(Schema.isMaxLength(200));
 export type FontFamilyPreference = typeof FontFamilyPreference.Type;
 
-/**
- * The environment's theme, set with `t2code theme set <id>`. Each client applies
- * it once per value — live when connected, on its next connect otherwise — so
- * setting it switches every client, while a theme a user picks in Settings
- * afterwards sticks until the next set. Empty means "no environment theme",
- * which is also how it is cleared.
- */
+/** Clients apply each environment theme set once; later local choices persist until the next set. Empty clears it. */
 export const DefaultThemePreference = Schema.String.check(Schema.isMaxLength(64));
-// Deliberately absent from ServerSettingsPatch: `t2code theme set` checks that an
-// id is syntactically valid and actually resolvable, and a generic RPC patch
-// would let a client write a theme no client can resolve, bypassing both.
+// Excluded from RPC patches so t3 theme set can validate syntax and resolvability.
 export type DefaultThemePreference = typeof DefaultThemePreference.Type;
 
 export const DEFAULT_BROWSER_VIEWPORT: PreviewViewportSetting = FILL_PREVIEW_VIEWPORT;
@@ -1210,39 +1202,27 @@ export const ServerSettings = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_BACKGROUND_ACTIVITY_PROFILE)),
   ),
   defaultTheme: DefaultThemePreference.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
-  /**
-   * When the environment's theme was last set, so clients can tell a re-set of
-   * the same value from one they already applied: `t2 theme set` must act even
-   * when it names the theme it named before.
-   */
+  /** Distinguishes repeated sets of the same theme so clients apply each one. */
   defaultThemeSetAt: Schema.String.check(Schema.isMaxLength(64)).pipe(
     Schema.withDecodingDefault(Effect.succeed("")),
   ),
   environmentIcon: ForwardCompatibleNullable(EnvironmentMachineKind).pipe(
     Schema.withDecodingDefault(Effect.succeed(null)),
   ),
-  /**
-   * Null means inherit: the repository's t2.json, then "local". Null stays off the wire
-   * so older clients, which require a literal here, keep decoding.
-   */
+  /** Null inherits t2.json, then local; omit it on the wire for older clients requiring a literal. */
   defaultThreadEnvMode: OmittedWhenNull(ThreadEnvMode),
   newWorktreesStartFromOrigin: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(true)),
   ),
-  /**
-   * Null defers to the repository's t2.json, then to recursive. A value
-   * picked on a newer server decodes as null here rather than failing the
-   * whole settings snapshot for an older client.
-   */
+  /** Null inherits t2.json, then recursive; unknown values decode to null for older clients. */
   worktreeSubmodules: ForwardCompatibleNullable(WorktreeSubmodules).pipe(
     Schema.withDecodingDefault(Effect.succeed(null)),
   ),
   /**
-   * Namespace for branches T2 Code creates inside thread worktrees. Single git
-   * path segment (no slashes). Decoding is lenient — a hand-edited
-   * settings.json never breaks settings load; every consumer sanitizes via
-   * `sanitizeWorktreeBranchPrefix`. The strict pattern lives on the patch so a
-   * bad value fails the one update instead of the whole settings file.
+   * Namespace for branches T2 Code creates inside thread worktrees; a single
+   * git path segment. Decoding is lenient — a hand-edited settings.json never
+   * breaks load; consumers sanitize via `sanitizeWorktreeBranchPrefix`, whose
+   * strict pattern fails the one update instead of the whole settings file.
    */
   worktreeBranchPrefix: TrimmedString.check(
     Schema.isMaxLength(MAX_WORKTREE_BRANCH_PREFIX_LENGTH),

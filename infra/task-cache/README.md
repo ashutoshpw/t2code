@@ -19,7 +19,7 @@ The stack reads read-only credential digests from `~/.config/t3-task-cache/reade
 
 The production database’s `scopes` and `deployment` records control repository identity, push branch, quotas, and retention. `pull_requests` explicitly enables same-repository PR uploads targeting the configured `branch`; `writes_enabled` disables all artifact uploads, including those from maintainers. Telemetry accepts reports from other PR bases without granting artifact writes. Provisioning a separate cache requires its own repository policy; a new empty database does not grant uploads.
 
-The CI read identity is named `ci-reader`. Its raw token belongs in the GitHub repository secret `T3_TASK_CACHE_READ_TOKEN`; `readers.json` maps that name to the token’s SHA-256 hex digest. To rotate it, replace that digest, deploy, then replace the GitHub secret. Keep the optional private `ci-reader.json` file as `{ "name": "ci-reader", "token": "…" }` for the smoke test to verify read-only restoration; without it, smoke uses the operator’s saved credential. Never commit these files. The read credential cannot upload artifacts or telemetry. Release jobs lack OIDC and their telemetry is not recorded.
+The CI read identity is named `ci-reader`. Its raw token belongs in the GitHub repository secret `T2_TASK_CACHE_READ_TOKEN`; `readers.json` maps that name to the token’s SHA-256 hex digest. To rotate it, replace that digest, deploy, then replace the GitHub secret. Keep the optional private `ci-reader.json` file as `{ "name": "ci-reader", "token": "…" }` for the smoke test to verify read-only restoration; without it, smoke uses the operator’s saved credential. Never commit these files. The read credential cannot upload artifacts or telemetry. Release jobs lack OIDC and their telemetry is not recorded.
 
 ## Add a contributor or machine
 
@@ -45,8 +45,8 @@ Our repository’s CI explicitly installs the Vite+ hook. Same-repository PRs ta
 
 ```sh
 node infra/task-cache/scripts/smoke.ts
-vp run --filter @t3tools/task-cache test
-vp run --filter @t3tools/task-cache typecheck
+vp run --filter @t2code/task-cache test
+vp run --filter @t2code/task-cache typecheck
 ```
 
 The smoke check uploads a unique fixture, restores its output into a cold second directory, changes its input, and confirms recomputation. It also checks that anonymous reads and uploads are rejected. Cacheable commands must run through `vp run`; direct `vp test` or `vp check` invocations do not use this cache.
@@ -68,7 +68,7 @@ Reports spool locally and retry on subsequent commands. The completion hook queu
 
 **Saved time means historical task execution time avoided.** It is useful as a compute proxy, but it is not measured CPU time, money saved, or elapsed developer waiting time. Parallel tasks can overlap, and cache lookup/restore overhead is not subtracted. Failed restores contribute no savings. Older Vite+ versions omit the hit source; their confirmed savings are counted under an explicit unspecified tier. Native summary collection is best-effort: interrupted runs or summaries overwritten before observation can be missing. The experimental Vite+ summary schema is tested here and must be checked when upgrading Vite+.
 
-Host labels use `~/.agents/MACHINE` when present, otherwise the hostname. GitHub-hosted runners use their runner OS/architecture class to avoid a new lifetime series for every ephemeral VM. Set `T3_TASK_CACHE_HOST` to override the label, or `T3_TASK_CACHE_TELEMETRY=off` to opt out while retaining remote caching. Re-run the installer to update an existing machine's hook.
+Host labels use `~/.agents/MACHINE` when present, otherwise the hostname. GitHub-hosted runners use their runner OS/architecture class to avoid a new lifetime series for every ephemeral VM. Set `T2_TASK_CACHE_HOST` to override the label, or `T2_TASK_CACHE_TELEMETRY=off` to opt out while retaining remote caching. Re-run the installer to update an existing machine's hook.
 
 Writer administration requires the complete private registry on the administering machine. Copy that registry securely from its administrator before adding a writer on another machine. `add-writer --new-registry` explicitly initializes a new cache; never use it to recover an existing registry.
 

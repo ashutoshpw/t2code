@@ -48,7 +48,7 @@ import { pullRequestFindingKey, type PullRequestFinding } from "./pullRequestDet
 import {
   canEditPullRequestComment,
   canResolvePullRequestThread,
-} from "@t3tools/client-runtime/pull-request-editing";
+} from "@t2code/client-runtime/pull-request-editing";
 import { orderDiffFiles } from "./pullRequestFileOrder.logic";
 import {
   buildFileDiffRenderKey,

@@ -53,6 +53,7 @@ import * as EffectAcpErrors from "effect-acp/errors";
 import type * as EffectAcpProtocol from "effect-acp/protocol";
 import type * as EffectAcpSchema from "effect-acp/compat";
 
+import { writeFakeCli } from "@t2code/provider-testing/fakeCli";
 import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
 import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
 import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
@@ -434,7 +435,7 @@ describe("AcpAdapterV2", () => {
               mockAgentPath: yield* path.fromFileUrl(
                 new URL("../../../scripts/acp-mock-agent.ts", import.meta.url),
               ),
-              environment: { T3_ACP_IDLE_ERROR: details },
+              environment: { T2_ACP_IDLE_ERROR: details },
             }),
           },
         });
@@ -3243,7 +3244,7 @@ describe("AcpAdapterV2", () => {
           makeMockRuntime({
             childProcessSpawner,
             mockAgentPath,
-            environment: { T3_ACP_IDLE_ERROR: "grok-background" },
+            environment: { T2_ACP_IDLE_ERROR: "grok-background" },
           })(input).pipe(Effect.flatMap(makeXAiPromptCompletionRuntime)),
       });
       const threadId = ThreadId.make("grok-idle-error-background");

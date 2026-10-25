@@ -327,7 +327,7 @@ describe("RemoteEnvironmentAuthorization", () => {
       expect(yield* Ref.get(harness.bootstrapCalls)).toBe(0);
       expect(harness.fetch.calls.map(([url]) => String(url))).toEqual([
         "http://192.168.1.10:3772/.well-known/t2/environment",
-        "http://192.168.1.10:3772/api/auth/websocket-ticket",
+        "http://192.168.1.10:3772/api/auth/websocket-ticket/rpc",
       ]);
     }),
   );

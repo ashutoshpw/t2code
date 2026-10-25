@@ -28,7 +28,10 @@ import {
   effectiveSnoozed,
   threadWokeAt,
 } from "@t2code/client-runtime/state/thread-settled";
-import { createInboxReturnTracker } from "@t2code/client-runtime/state/thread-inbox";
+import {
+  createInboxReturnTracker,
+  isThreadWorking,
+} from "@t2code/client-runtime/state/thread-inbox";
 import { sortSettledThreads } from "@t2code/client-runtime/state/thread-sort";
 import {
   nextShownOrder,
@@ -248,9 +251,7 @@ function sameSidebarProviderEntries(
   return true;
 }
 
-// Threads on non-primary environments (T2 Connect, hosted) resolve their
-// provider entry from their own environment's config: default instance ids
-// are driver slugs, so a flat map would collide across environments.
+// Resolve providers per environment because default instance ids collide across environments.
 const sidebarProviderEntriesAtom = Atom.make((get) => {
   const providersByEnvironment = get(environmentPresentations.providersByEnvironmentAtom);
   const derived = deriveProviderEntriesByEnvironment(

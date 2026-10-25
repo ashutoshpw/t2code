@@ -1,12 +1,8 @@
 // @effect-diagnostics nodeBuiltinImport:off
 /**
- * WorkspaceFileUpload - signed workspace file uploads.
- *
- * Mirrors the chat attachment upload flow: an RPC mints a one-shot signed URL
- * and the client POSTs the bytes over HTTP, so the transfer works identically
- * for local, remote, and tunnel connections and streams to disk instead of
- * riding a WebSocket frame. Unlike attachments, the bytes land at a
- * workspace-relative path inside the project.
+ * WorkspaceFileUpload - signed workspace file uploads. An RPC mints a one-shot
+ * signed URL and the client POSTs bytes over HTTP, streaming to disk for local,
+ * remote, and tunnel connections alike; bytes land inside the project.
  *
  * @module WorkspaceFileUpload
  */

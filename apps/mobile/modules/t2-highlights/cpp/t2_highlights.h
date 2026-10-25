@@ -1,5 +1,5 @@
-#ifndef T3_HIGHLIGHTS_H
-#define T3_HIGHLIGHTS_H
+#ifndef T2_HIGHLIGHTS_H
+#define T2_HIGHLIGHTS_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -17,7 +17,7 @@ extern "C" {
  *
  * Not thread-safe: callers serialize access.
  */
-int64_t t3_highlights_tokenize(const uint8_t* source, size_t length, uint8_t language,
+int64_t t2_highlights_tokenize(const uint8_t* source, size_t length, uint8_t language,
                                const uint32_t** records);
 
 #ifdef __cplusplus

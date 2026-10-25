@@ -115,36 +115,25 @@ function ConfiguredSettingsRouteScreen() {
       : (user?.primaryEmailAddress?.emailAddress ?? "Signed in");
 
   return (
-    <View collapsable={false} className="flex-1">
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        showsVerticalScrollIndicator={false}
-        className="flex-1"
-        contentContainerClassName="gap-4 px-5 pt-4"
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 18) + 18 }}
-      >
-        <OverflowSection />
-        <SettingsSection title="Connections">
-          <SettingsRow
-            icon="person.crop.circle"
-            label="T2 Account"
-            value={accountLabel}
-            disabled={!isLoaded}
-            onPress={() => navigation.navigate("SettingsSheet", { screen: "SettingsAuth" })}
-          />
-          <SettingsRow
-            icon="desktopcomputer"
-            label="Environments"
-            value={`${Object.keys(savedConnectionsById).length}`}
-            valuePosition="trailing"
-            target="SettingsEnvironments"
-          />
-          <SettingsRow icon="bell.badge" label="Notifications" target="SettingsNotifications" />
-        </SettingsSection>
-
-        <SettingsIndexSections />
-      </ScrollView>
-    </View>
+    <SettingsList
+      connections={[
+        {
+          id: "account",
+          icon: "person.crop.circle",
+          label: "T3 Account",
+          value: accountLabel,
+          disabled: !isLoaded,
+          onPress: () => navigation.navigate("SettingsAuth"),
+        },
+        environmentsRow(Object.keys(savedConnectionsById).length),
+        {
+          id: "SettingsNotifications",
+          icon: "bell.badge",
+          label: "Notifications",
+          target: "SettingsNotifications",
+        },
+      ]}
+    />
   );
 }
 
@@ -232,82 +221,61 @@ function useSettingsIndexSections(): SettingsListSection[] {
           members: scopedProjectMembers,
         })
       : (selectedProject?.label ?? "Unavailable project");
-  return (
-    <>
-      <SettingsSection title="Interface">
-        <SettingsRow icon="paintbrush" label="Appearance" target="SettingsAppearance" />
-        {navigationCustomizationAvailable() ? (
-          <SettingsRow
-            icon="line.3.horizontal"
-            label="Navigation tabs"
-            target="SettingsNavigation"
-          />
-        ) : null}
-        {Platform.OS === "ios" ? (
-          <>
-            <SettingsRow icon="keyboard" label="Keyboard" target="SettingsKeyboard" />
-            <SettingsRow icon="mic" label="Microphone" target="SettingsMicrophone" />
-          </>
-        ) : null}
-      </SettingsSection>
-
-      <SettingsSection title="Automations">
-        <SettingsRow icon="clock" label="Scheduled tasks" target="SettingsScheduledTasks" />
-      </SettingsSection>
-
-      <SettingsSection title="Projects & threads">
-        {selectedProjectKey !== null ? (
-          <SettingsRow
-            icon="folder"
-            label="Overview"
-            value={projectLabel}
-            target="SettingsProjectOverview"
-          />
-        ) : null}
-        <SettingsRow icon="folder" label="Organization" target="SettingsOrganization" />
-        <SettingsRow icon="text.bubble" label="Thread behavior" target="SettingsThreads" />
-        <SettingsRow icon="arrow.turn.left.up" label="Follow-ups" target="SettingsFollowUp" />
-        <SettingsRow icon="archivebox" label="Archived Threads" target="SettingsArchive" />
-      </SettingsSection>
-
-      <SettingsSection title="Server settings">
-        <SettingsRow
-          icon="person.crop.circle"
-          label="Provider accounts"
-          target="SettingsProviderAccounts"
-          disabled={noServerTargets}
-        />
-        <SettingsRow
-          icon="text.bubble"
-          label="New threads"
-          target="SettingsEnvironmentNewThreads"
-          disabled={noServerTargets}
-        />
-        <SettingsRow
-          icon="arrow.triangle.branch"
-          label="Source control"
-          target="SettingsEnvironmentSourceControl"
-          disabled={noServerTargets}
-        />
-        <SettingsRow
-          icon="text.alignleft"
-          label="Agent behavior"
-          target="SettingsEnvironmentAgentBehavior"
-          disabled={noServerTargets}
-        />
-        <SettingsRow
-          icon="arrow.clockwise"
-          label="Maintenance"
-          target="SettingsEnvironmentMaintenance"
-          disabled={noServerTargets}
-        />
-      </SettingsSection>
-
-      <SettingsSection title="App">
-        <SettingsRow icon="info.circle" label="About T2 Code" target="SettingsAbout" />
-      </SettingsSection>
-    </>
-  );
+  const page = (
+    target: SettingsPageTarget,
+    icon: SettingsListRow["icon"],
+    label: string,
+    extra?: Pick<SettingsListRow, "disabled" | "value">,
+  ): SettingsListRow => ({ id: target, icon, label, target, ...extra });
+  const serverPage = (target: SettingsPageTarget, icon: SettingsListRow["icon"], label: string) =>
+    page(target, icon, label, { disabled: noServerTargets });
+  return [
+    {
+      title: "Interface",
+      rows: [
+        page("SettingsAppearance", "paintbrush", "Appearance"),
+        ...(navigationCustomizationAvailable()
+          ? [page("SettingsNavigation", "line.3.horizontal", "Navigation tabs")]
+          : []),
+        ...(Platform.OS === "ios"
+          ? [
+              page("SettingsKeyboard", "keyboard", "Keyboard"),
+              page("SettingsMicrophone", "mic", "Microphone"),
+            ]
+          : []),
+      ],
+    },
+    {
+      title: "Automations",
+      rows: [page("SettingsScheduledTasks", "clock", "Scheduled tasks")],
+    },
+    {
+      title: "Projects & threads",
+      rows: [
+        ...(selectedProjectKey !== null
+          ? [page("SettingsProjectOverview", "folder", "Overview", { value: projectLabel })]
+          : []),
+        page("SettingsOrganization", "folder", "Organization"),
+        page("SettingsThreads", "text.bubble", "Thread behavior"),
+        page("SettingsFollowUp", "arrow.turn.left.up", "Follow-ups"),
+        page("SettingsArchive", "archivebox", "Archived Threads"),
+      ],
+    },
+    {
+      title: "Server settings",
+      rows: [
+        serverPage("SettingsProviderAccounts", "person.crop.circle", "Provider accounts"),
+        serverPage("SettingsEnvironmentNewThreads", "text.bubble", "New threads"),
+        serverPage("SettingsEnvironmentSourceControl", "arrow.triangle.branch", "Source control"),
+        serverPage("SettingsEnvironmentAgentBehavior", "text.alignleft", "Agent behavior"),
+        serverPage("SettingsEnvironmentMaintenance", "arrow.clockwise", "Maintenance"),
+      ],
+    },
+    {
+      title: "App",
+      rows: [page("SettingsAbout", "info.circle", "About T2 Code")],
+    },
+  ];
 }
 
 function useOverflowRows(): SettingsListRow[] {

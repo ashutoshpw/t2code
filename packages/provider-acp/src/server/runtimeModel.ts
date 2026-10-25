@@ -1056,18 +1056,10 @@ function acpMcpFallbackInput(value: string | undefined): Record<string, unknown>
   return undefined;
 }
 
-/**
- * T2 always injects its server as "t2-code", and matches are additionally gated on the known T2
- * tool inventory, so the separator match can stay loose.
- */
+// Known T2 inventory gates matches, so server-name separators can stay loose.
 const T2_MCP_TITLE_CALL =
   /^(?:mcp[-_]{1,2})?t2[-_ ]?code[-_.:/ ]{1,3}(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*)(?::.*)?$/i;
 
-/**
- * Gemini CLI titles injected MCP calls "<tool> (<server> MCP Server)" and
- * qwen-code appends ": <args json>" to the same template; Auggie namespaces
- * tool-first as "<tool>_t2-code".
- */
 const T2_MCP_TITLE_SUFFIX_CALL =
   /^(?<tool>[A-Za-z0-9][A-Za-z0-9_.-]*?)(?: \(t2[-_ ]?code MCP Server\)(?::|$)|[-_.]t2[-_ ]?code$)/i;
 
@@ -1082,12 +1074,7 @@ function isT2McpServerName(server: string): boolean {
  */
 const T2_MCP_BARE_TITLE_CALL = /^(?:Running )?(?<tool>[A-Za-z0-9_]+)(?::\s*\{|$)/;
 
-/**
- * ACP has no typed MCP tool-call item, so agents surface MCP calls in agent-specific shapes:
- * codex-acp tags execute calls with `rawInput.server`/`rawInput.tool`, while agents on T2's
- * terminal fallback run the `acp-mcp-call <tool>` CLI through their command or an embedded client
- * terminal.
- */
+/** ACP lacks typed MCP calls; recognize provider metadata and terminal fallback commands. */
 export function extractMcpToolCallIdentity(
   toolCall: AcpToolCallState,
   options?: {
@@ -1125,11 +1112,9 @@ export function extractMcpToolCallIdentity(
   const gooseExtension =
     typeof gooseToolCall?.extensionName === "string" ? gooseToolCall.extensionName.trim() : "";
   const assertsForeignOrigin =
-    (metaServerId.length > 0 && !/^t2[-_ ]?code$/i.test(metaServerId)) ||
-    (gooseExtension.length > 0 && !/^t2[-_ ]?code$/i.test(gooseExtension));
-  // qwen's serverId marks a real MCP server, but goose reports its built-in
-  // extensions (developer__shell, edits) the same way as user MCP servers, so
-  // goose stays unclassified and keeps its command and file-change projections.
+    (metaServerId.length > 0 && !isT2McpServerName(metaServerId)) ||
+    (gooseExtension.length > 0 && !isT2McpServerName(gooseExtension));
+  // goose metadata also tags built-ins; retain their command/file projections instead of classifying as MCP.
   if (assertsForeignOrigin) {
     if (metaServerId.length === 0 || metaToolName.length === 0) return undefined;
     const prefix = [`mcp__${metaServerId}__`, `mcp::${metaServerId}::`].find((prefix) =>

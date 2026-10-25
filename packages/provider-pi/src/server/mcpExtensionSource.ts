@@ -1,7 +1,4 @@
-/**
- * Do not import t2code modules from the string body. The Pi process resolves
- * `@earendil-works/pi-coding-agent` and `typebox` from the user's pi install.
- */
+// No T3 imports inside the string; resolve Pi and typebox from the user's Pi install.
 import { T2_CODE_ORCHESTRATION_INSTRUCTIONS } from "@t2code/provider-core/server/orchestrationInstructions";
 
 export const PI_T2_MCP_EXTENSION_FILENAME = "pi-t2-mcp-extension.ts";

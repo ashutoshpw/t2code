@@ -1,4 +1,5 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
+import { Platform } from "react-native";
 import { resolveThreadReferenceCopyTarget } from "@t2code/client-runtime/thread-reference";
 import {
   createContext,
@@ -14,6 +15,10 @@ import {
 } from "react";
 
 import { tryCopyTextWithHaptic } from "../../lib/copyTextWithHaptic";
+import {
+  firstWorkspaceDetailOpen,
+  workspaceHasColumns,
+} from "../workspace/workspace-selection-store";
 import { T2KeyboardCommands } from "../../native/T2KeyboardCommands";
 import { useThreadShell } from "../../state/entities";
 import type { GitActionProgress } from "../../state/use-vcs-action-state";

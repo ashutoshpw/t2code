@@ -11,7 +11,7 @@ export class Admission extends Context.Service<
       task: Effect.Effect<A, E, R>,
     ) => Effect.Effect<A, E, R>;
   }
->()("@t3tools/task-cache/Admission") {}
+>()("@t2code/task-cache/Admission") {}
 
 const make = Effect.gen(function* () {
   // Bound simultaneous upload buffers; Effect cancels queued waiters and releases permits.

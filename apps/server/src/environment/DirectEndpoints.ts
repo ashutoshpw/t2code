@@ -1,11 +1,8 @@
 /**
  * DirectEndpoints - the LAN and tailnet addresses this server listens on now.
- *
- * Clients connected one way (often T2 Connect) save these as extra routes so
- * they can move to a faster path when one is reachable, and replace a saved
- * LAN address when DHCP or a new Wi-Fi network changes it. Only addresses the
- * server is actually bound to are listed: a loopback-only server lists none,
- * because its loopback address means a different machine to every client.
+ * Clients save these as extra routes to move to a faster reachable path, and
+ * replace a saved LAN address when the network changes. Only bound addresses
+ * count: a loopback-only server lists none.
  */
 import type { ServerDirectEndpoint } from "@t2code/contracts";
 import {
@@ -23,7 +20,7 @@ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as NodeNet from "node:net";
 import * as NodeOS from "node:os";
 
-import { isPrivateNetworkHost, isTailnetHost } from "@t2code/shared/hostClassification";
+import { isTailnetHost } from "@t2code/shared/hostClassification";
 
 import * as ServerConfig from "../config.ts";
 import {
