@@ -5,6 +5,8 @@ import {
   AuthTokenExchangeGrantType,
   type ClientConnectionMethod,
   type AuthEnvironmentScope,
+  type AuthWebSocketTicketResult,
+  type AuthWebSocketTicketUse,
 } from "@t2code/contracts";
 import { encodeOAuthScope } from "@t2code/shared/oauthScope";
 import { hashTelemetryId } from "@t2code/shared/telemetryId";

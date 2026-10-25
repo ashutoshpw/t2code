@@ -923,8 +923,7 @@ export class ServerNpmReleaseError extends Schema.TaggedError<ServerNpmReleaseEr
 }
 
 export const ServerSelfUpdateInput = Schema.Struct({
-  /** Exact npm version of the `@t2code/cli` package to install (never a dist-tag, so
-      the server and the acknowledging client agree on what was requested). */
+  /** Exact npm version, never a dist-tag, so server and client agree on the request. */
   targetVersion: TrimmedNonEmptyString,
   /** Desktop-managed hosts move their app to this update track first. Sent only for a track switch. */
   channel: Schema.optionalKey(DesktopUpdateChannelSchema),

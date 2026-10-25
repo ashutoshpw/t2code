@@ -53,6 +53,8 @@ import {
   useConnectionDiagnosis,
 } from "./ConnectionDiagnosisDetails";
 import { usePreparedConnection } from "~/state/session";
+import { useEnvironmentSessionState } from "~/state/session";
+import { Input } from "../ui/input";
 import { EnvironmentRow, environmentTransportLabel } from "./EnvironmentRow";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
 import { Switch } from "../ui/switch";
@@ -576,11 +578,9 @@ function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: b
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUpdatingPreference, setIsUpdatingPreference] = useState(false);
 
-  const disabledReason = !isSignedIn
-    ? "Sign in to T2 Connect to manage this environment."
-    : !canManageRelay
-      ? "Your session does not have permission to manage T2 Connect access."
-      : null;
+  const disabledReason = canManageRelay
+    ? null
+    : "Your session does not have permission to manage T2 Connect access.";
   const isBusy = isUpdating || isUpdatingPreference;
   const switchDisabled =
     !canManageRelay ||

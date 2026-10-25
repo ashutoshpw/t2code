@@ -1,5 +1,5 @@
-#ifndef T3_HIGHLIGHTS_H
-#define T3_HIGHLIGHTS_H
+#ifndef T2_HIGHLIGHTS_H
+#define T2_HIGHLIGHTS_H
 
 #include <stddef.h>
 #include <stdint.h>

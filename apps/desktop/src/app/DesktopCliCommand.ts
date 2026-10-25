@@ -16,11 +16,9 @@ import * as DesktopCliShim from "./DesktopCliShim.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 
 // Settings → Install `t2code` command, like VS Code's "Install 'code' command".
-// The app's launcher (see DesktopCliShim) lives in the T2 home and is off PATH
-// by default. Installing links it into a folder on the user's PATH, or on
-// Windows adds the launcher's folder to the user's PATH. Removing undoes only
-// what installing did: a link that points at one of the app's launchers, or a
-// PATH entry the app recorded adding.
+// The app's launcher (see DesktopCliShim) lives in the T2 home, off PATH by
+// default. Installing links it onto the user's PATH; removing undoes exactly
+// what installing did: a link to an app launcher, or a PATH entry we recorded.
 
 export class DesktopCliCommandError extends Schema.TaggedError<DesktopCliCommandError>()(
   "DesktopCliCommandError",
@@ -38,14 +36,8 @@ const pathEntries = (value: string | undefined, separator: string) =>
 const sameWindowsPath = (left: string, right: string) =>
   left.replace(/[\\/]+$/, "").toLowerCase() === right.replace(/[\\/]+$/, "").toLowerCase();
 
-/**
- * Reads, or with `T2_SET` set writes, the user's PATH in the registry, keeping
- * `%VAR%` entries unexpanded. Writes keep REG_EXPAND_SZ (Windows' default for
- * PATH; `SetEnvironmentVariable` would store REG_SZ and break every `%VAR%`
- * entry), then broadcast WM_SETTINGCHANGE so Explorer and the terminals it
- * opens see the change. A failed read exits nonzero rather than reading as
- * empty, so a write never replaces the user's PATH wholesale.
- */
+// Preserve REG_EXPAND_SZ and %VAR% expansion; notify Explorer with WM_SETTINGCHANGE.
+// Failed reads must exit nonzero to prevent replacing PATH wholesale.
 const WINDOWS_USER_PATH_SCRIPT = `
 $ErrorActionPreference = 'Stop'
 if ($env:T2_SET -eq '1') {

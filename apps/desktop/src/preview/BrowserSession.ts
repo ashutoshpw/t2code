@@ -12,12 +12,7 @@ import * as SynchronizedRef from "effect/SynchronizedRef";
 import * as ElectronDialog from "../electron/ElectronDialog.ts";
 
 const PREVIEW_PARTITION_PREFIX = "persist:t2code-preview-";
-/**
- * Incognito partitions deliberately omit the `persist:` prefix, which is what
- * makes Chromium keep them in memory and discard them with the process. They
- * still carry the product prefix so `isPartition` can admit them — the
- * `will-attach-webview` gate rejects anything it does not recognise.
- */
+/** Ephemeral partitions omit persist: but retain a product prefix so the webview gate recognizes them. */
 const PREVIEW_EPHEMERAL_PARTITION_PREFIX = "t2code-preview-ephemeral-";
 const PROFILE_PARTITION_MARKER = "profile-";
 
@@ -27,9 +22,7 @@ export type BrowserSessionPartitionNamespace = "profile";
 const ALLOWED_PREVIEW_PERMISSIONS: ReadonlySet<string> = new Set([
   "clipboard-sanitized-write",
   "geolocation",
-  // `DesktopWindow` disables HTML fullscreen window resizing for the app window
-  // and every preview guest, so a page that goes fullscreen fills its own
-  // webview instead of taking over the whole T2 window.
+  // DesktopWindow confines HTML fullscreen to the guest's webview.
   "fullscreen",
   "pointerLock",
   // Loopback requests already succeed in Electron 44; permission-aware sign-in widgets query first.

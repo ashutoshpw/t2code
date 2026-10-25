@@ -18,7 +18,7 @@ const LINE_END = 0xffffffff;
 // thousands of native text runs.
 const MAX_HIGHLIGHTED_LINE_LENGTH = 1_000;
 
-// @pierre/highlights compiled to native code (modules/t3-highlights). Missing
+// @pierre/highlights compiled to native code (modules/t2-highlights). Missing
 // from binaries built before it shipped, where code renders as plain text.
 const nativeHighlights = requireOptionalNativeModule<{
   tokenize(source: string, language: number): ArrayBuffer | null;

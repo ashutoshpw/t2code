@@ -39,11 +39,10 @@ const GUARDED_FILES = new Set([
 // and the vendored upstream checkout.
 const GUARDED_DIRS = [".agents/", ".repos/"];
 
-// These are intentionally narrower than a bare `T3` search. T3 remains in
+// These are intentionally narrower than a bare `T3` search: T3 remains in
 // protocol/runtime compatibility names, while these identifiers and the path
-// below are the retired first-party wordmark implementation.
-// The fingerprint starts at the old second glyph because T2 intentionally
-// retains the shared leading T contour.
+// below are the retired first-party wordmark. The fingerprint starts at the
+// old second glyph because T2 retains the shared leading T contour.
 const LEGACY_WORDMARK_PATH_FINGERPRINT =
   /M86\.7253\s+93\.96\s*C82\.832\s+93\.96\s+78\.9653\s+93\.4533\s+75\.1253\s+92\.44/;
 

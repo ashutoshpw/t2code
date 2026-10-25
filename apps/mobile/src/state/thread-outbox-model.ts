@@ -4,6 +4,7 @@ import {
   fileAttachmentTooLargeMessage,
 } from "@t2code/client-runtime/state/attachments";
 import type { EnvironmentShellStatus } from "@t2code/client-runtime/state/shell";
+import type { ThreadFamilyRead } from "@t2code/client-runtime/state/threads";
 import {
   CommandId,
   EnvironmentId,

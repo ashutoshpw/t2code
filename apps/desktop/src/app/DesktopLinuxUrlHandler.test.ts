@@ -37,6 +37,7 @@ const makeEnvironment = (path: Path.Path, overrides: Record<string, unknown> = {
     linuxDesktopEntryName: "t2code.desktop",
     linuxWmClass: "t2code",
     linuxApplicationsDir: "/home/alice/.local/share/applications",
+    desktopLauncherPath: Option.none(),
     appImagePath: Option.some("/home/alice/Applications/T2-Code.AppImage"),
     path,
     ...overrides,

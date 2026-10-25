@@ -39,11 +39,7 @@ const generatePassword = Effect.gen(function* () {
   return Redacted.make(Base64Url.encode(bytes), { label: "OPENCODE_PASSWORD" });
 });
 
-/**
- * `OPENCODE_PASSWORD` wins over `OPENCODE_SERVER_PASSWORD` in OpenCode 2, so
- * the inherited 1.x variable is dropped to keep the T2 password the only one in
- * play.
- */
+/** OPENCODE_PASSWORD overrides OPENCODE_SERVER_PASSWORD; drop the inherited 1.x variable. */
 export const serverEnvironment = (
   environment: NodeJS.ProcessEnv,
   password: Redacted.Redacted,

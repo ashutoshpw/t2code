@@ -160,8 +160,7 @@ const config: ShowcaseConfig = {
       id: "pixel",
       platform: "android",
       avd: "Pixel_10_Pro",
-      // Apple Silicon uses ARM64 locally; CI overrides this with x86_64 so its
-      // GitHub-hosted Linux runner can use KVM acceleration.
+      // Apple Silicon defaults to ARM64; Blacksmith Linux CI overrides to x86_64 for KVM.
       abi: resolveShowcaseAndroidAbi(process.env.T2_SHOWCASE_ANDROID_ABI),
       appearance: "dark",
       theme: DEFAULT_SHOWCASE_THEME,

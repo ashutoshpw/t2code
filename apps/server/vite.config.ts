@@ -28,10 +28,7 @@ if (!TELEMETRY_CHANNELS.includes(telemetryChannel)) {
   );
 }
 
-// `build:exe` wraps the same bundle in a Node single-executable. tsdown's exe
-// step refuses multi-chunk output and counts the sourcemap as a chunk, and the
-// executable needs a host Node that supports `--build-sea` (25.7+), so this is
-// a separate mode rather than a second entry in the default build.
+// tsdown SEA needs one chunk (sourcemaps count) and Node >=25.7, so package separately.
 const packExecutable = process.env.T2CODE_PACK_EXE === "1";
 const SEA_TARGETS = {
   "darwin-arm64": { platform: "darwin", arch: "arm64" },

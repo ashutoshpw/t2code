@@ -49,14 +49,9 @@ interface CloudEnvironmentRowsProps {
 
 /**
  * "T2 Connect" section: every environment published to the signed-in account,
- * with connect switches, availability status, refresh, and loading/error
- * states. Shared between the Settings environments screen and the T2 Connect
- * onboarding sheet.
- *
- * Already-connected relay environments render even without cloud config or a
- * signed-in account — they are registered on this device and must stay
- * reachable and removable. Only discovery (the available list, refresh, and
- * its errors) requires a signed-in session.
+ * shared between Settings and the T2 Connect onboarding sheet.
+ * Already-connected relay environments render without cloud config or a signed
+ * in account; only discovery (available list, refresh, errors) needs a session.
  */
 export function CloudEnvironmentRows(props: CloudEnvironmentRowsProps) {
   // Showcase lacks ClerkProvider; use fixture auth state to avoid a throwing useAuth call.

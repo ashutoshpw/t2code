@@ -15,11 +15,7 @@ export interface ProviderMaintenanceCapabilities {
   /** Separates installer release channels that share an update command. */
   readonly latestVersionCacheKey?: string;
   readonly compareVersions?: (current: string, latest: string) => number;
-  /**
-   * The executable T2 Code runs, symlinks followed, when no update command is
-   * proven for it. The version advisory names it so the user knows which
-   * install to update.
-   */
+  /** Resolved executable path for advisories when no update command is proven. */
   readonly installPath?: string;
   /** Displayed for manual updates; never executed by T3 Code. */
   readonly manualCommand?: string;

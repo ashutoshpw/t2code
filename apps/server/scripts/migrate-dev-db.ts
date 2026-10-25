@@ -1,31 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Rebuild an isolated dev database from a pruned snapshot of the real
- * ~/.t2 database, then run this checkout's migrations against it.
- *
- * `vp run migrate-dev-db` from a worktree:
- *   1. Nukes `<worktree>/.t2/userdata/statev2.sqlite`.
- *   2. Copies a slice of the real db (`~/.t2/userdata/statev2.sqlite`,
- *      attached read-only): the schema, and every row except those of
- *      deleted, archived, and settled threads, which are nearly all of a
- *      long-lived database. It then prunes that to the most recently updated
- *      projects and, per project, the most recent threads that have fully
- *      stopped, with
- *      their forks and subagents. Working, settled, and archived threads, and
- *      threads with pending recovery, are skipped, and scheduled tasks and
- *      queued effects are dropped, so the dev server never adopts live work.
- *      Auth sessions, pairing links, command receipts, and provider
- *      runtime rows are dropped — pair a fresh browser against dev.
- *   3. Runs migrations on the result. Because the clone carries the real
- *      `effect_sql_migrations` table, this proves a new migration applies
- *      on top of the real applied set, and the slot check below catches
- *      the silent failure where two branches claim the same
- *      `Migrations/NNN_` id (the second one's CREATE TABLE is skipped).
- *
- * The event log (`orchestration_events`) is pruned per stream while
- * `sqlite_sequence` and the projection cursors carry over untouched, so new events keep appending
- * after the old high-water mark and projection cursors never rewind.
+ * Rebuild an isolated dev database from a pruned snapshot of the real ~/.t2
+ * database, then migrate it: recent projects with fully-stopped threads
+ * survive, live work does not. The clone keeps `effect_sql_migrations`, so a
+ * new migration must apply on top; duplicate `Migrations/NNN_` ids fail.
  */
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
