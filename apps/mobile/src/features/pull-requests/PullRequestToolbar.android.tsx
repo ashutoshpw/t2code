@@ -74,12 +74,7 @@ export function PullRequestToolbar(props: {
         onOpenSearch={openSearch}
         searchAccessibilityLabel="Search pull requests"
         titleAccessibilityLabel="T2 Code, Pull requests"
-        onOpenEnvironments={() =>
-          navigation.navigate("SettingsSheet", {
-            screen: "SettingsContent",
-            params: { screen: "SettingsEnvironments" },
-          })
-        }
+        onOpenEnvironments={() => openSettings(navigation, "SettingsEnvironments")}
         filter={
           filters ? (
             <AndroidAnchoredMenu

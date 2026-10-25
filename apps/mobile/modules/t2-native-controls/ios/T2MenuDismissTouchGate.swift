@@ -1,12 +1,9 @@
 import ExpoModulesCore
 import UIKit.UIGestureRecognizerSubclass
 
-/// Keeps the tap that dismisses a native menu from also pressing the React Native view under it.
-///
-/// UIKit passes that tap through the menu's window-level container and only holds it back from
-/// UIResponder touches, so React Native's surface touch handler still delivers a full press
-/// (react-native#58983). Adapted from expo-modules-core's SystemMenuTouchGate (MIT), which Expo
-/// installs only on windows hosting SwiftUI views; this covers MenuView buttons and header menus.
+/// UIKit menu-dismiss taps still reach RN's surface handler (react-native#58983).
+/// Adapted from expo-modules-core's SystemMenuTouchGate (MIT), which only covers SwiftUI windows;
+/// this also covers MenuView buttons and header menus.
 final class T2MenuDismissTouchGate: UIGestureRecognizer, UIGestureRecognizerDelegate {
   static func install(in window: UIWindow) {
     guard !(window.gestureRecognizers ?? []).contains(where: { $0 is T2MenuDismissTouchGate }) else {
@@ -61,7 +58,6 @@ final class T2MenuDismissTouchGate: UIGestureRecognizer, UIGestureRecognizerDele
   }
 }
 
-/// Installs the menu dismiss gate on every window the app shows.
 public final class T2MenuDismissTouchGateSubscriber: ExpoAppDelegateSubscriber {
   public func subscriberDidRegister() {
     NotificationCenter.default.addObserver(

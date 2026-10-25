@@ -564,12 +564,7 @@ export class EnvironmentAuth extends Context.Service<
       },
       ServerAuthInternalError
     >;
-    /**
-     * Spends a one-time pairing code as approval for an MCP client with the
-     * given access; the code must hold every scope that access grants.
-     * Proof-bound codes (T2 Connect) are refused without being spent, and
-     * desktop bootstrap grants never qualify.
-     */
+    /** Spends a code covering all granted scopes. Rejects desktop grants and leaves refused proof-bound codes unspent. */
     readonly consumeMcpApprovalCode: (
       code: string,
       access: AuthMcpClientAccess,

@@ -226,7 +226,7 @@ import {
   primaryServerKeybindingsAtom,
   serverEnvironment,
 } from "../state/server";
-import { threadEnvironment } from "../state/threads";
+import { threadEnvironment, useThreadFamily } from "../state/threads";
 import { resolveProviderSkillsForCwd } from "@t2code/client-runtime/providerSkills";
 import { vcsEnvironment } from "../state/vcs";
 import {

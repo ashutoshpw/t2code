@@ -3,6 +3,11 @@ import * as NodeCrypto from "node:crypto";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { authScopeResponse, AuthStandardClientScopes } from "@t2code/contracts";
+import {
+  computeDpopAccessTokenHash,
+  computeDpopJwkThumbprint,
+  type DpopPublicJwk,
+} from "@t2code/shared/dpop";
 import { expect, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -561,11 +566,14 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
       const pairing = yield* serverAuth.issuePairingCredential();
       const exchanged = yield* serverAuth.createBrowserSession(pairing.credential, requestMetadata);
       const upgrade = (headers: Record<string, string>) =>
-        serverAuth.authenticateWebSocketUpgrade({
-          url: "/ws",
-          cookies: { [sessions.cookieName]: exchanged.sessionToken },
-          headers: { host: "192.168.1.50:3772", ...headers },
-        } as never);
+        serverAuth.authenticateWebSocketUpgrade(
+          {
+            url: "/ws",
+            cookies: { [sessions.cookieName]: exchanged.sessionToken },
+            headers: { host: "192.168.1.50:3772", ...headers },
+          } as never,
+          "rpc",
+        );
 
       yield* upgrade({ origin: "http://192.168.1.50:3772" });
       yield* upgrade({
@@ -622,15 +630,18 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
     Effect.gen(function* () {
       const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
       const bearer = yield* serverAuth.issueSession();
-      const verified = yield* serverAuth.authenticateWebSocketUpgrade({
-        url: "/ws",
-        cookies: {},
-        headers: {
-          host: "192.168.1.50:3772",
-          origin: "http://192.168.1.50:8080",
-          authorization: `Bearer ${bearer.token}`,
-        },
-      } as never);
+      const verified = yield* serverAuth.authenticateWebSocketUpgrade(
+        {
+          url: "/ws",
+          cookies: {},
+          headers: {
+            host: "192.168.1.50:3772",
+            origin: "http://192.168.1.50:8080",
+            authorization: `Bearer ${bearer.token}`,
+          },
+        } as never,
+        "rpc",
+      );
       expect(verified.sessionId).toBe(bearer.sessionId);
     }).pipe(Effect.provide(layerEnvironmentAuth({ mode: "web", host: "192.168.1.50" }))),
   );
@@ -648,7 +659,7 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
         { proofKeyThumbprint: key.thumbprint },
       );
       const session = yield* sessions.verify(exchanged.access_token);
-      const host = "192.168.1.50:3773";
+      const host = "192.168.1.50:3772";
       const socketUrl = `http://${host}/ws`;
       const iat = Math.floor((yield* DateTime.now).epochMilliseconds / 1_000);
       const upgrade = (ticket: string, use: "rpc" | "media", proof?: string) =>
@@ -719,12 +730,12 @@ it.layer(NodeServices.layer)("EnvironmentAuth.layer", (it) => {
         method: "GET",
         url: `/ws?wsTicket=${rpc.ticket}&dpop=${key.sign({
           method: "GET",
-          url: "http://192.168.1.50:3773/ws",
+          url: "http://192.168.1.50:3772/ws",
           token: rpc.ticket,
           iat: Math.floor((yield* DateTime.now).epochMilliseconds / 1_000),
         })}`,
         cookies: {},
-        headers: { host: "192.168.1.50:3773" },
+        headers: { host: "192.168.1.50:3772" },
       } as never;
 
       yield* serverAuth.authenticateWebSocketUpgrade(request, "rpc");

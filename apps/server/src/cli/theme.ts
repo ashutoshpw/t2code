@@ -2,19 +2,10 @@
 // move exact directory entries with rename, which the FileSystem service does
 // not expose atomically.
 /**
- * `t2code theme` - inspect and set the environment's theme. Connected web and
- * desktop clients switch when it is set; mobile keeps its own appearance
- * settings. Each client applies one set once, so a theme the user picks in
- * Settings afterwards sticks until the next `t2code theme set`.
- *
- * Writes `defaultTheme` (and `defaultThemeSetAt`, so a re-set of the same
- * value still acts) into the environment's `settings.json`. A running server
- * watches that file and pushes the change, so this works before the first
- * launch and on a live server alike.
- *
- * The edit is deliberately a minimal one on the parsed JSON object rather than
- * a schema round-trip. Settings files outlive the build that reads them, and a
- * provisioning command must not drop keys this version does not recognise.
+ * `t2code theme` - inspect and set the environment's theme. Writes
+ * `defaultTheme` (and `defaultThemeSetAt`) into settings.json; a running
+ * server watches the file and pushes the change. The edit is a minimal one on
+ * the parsed JSON: settings files outlive this build, so drop no keys.
  */
 import * as NodeFS from "node:fs";
 
@@ -415,9 +406,7 @@ const themeSetCommand = Command.make("set", {
       }
       const paths = yield* resolveThemePaths(flags.baseDir);
 
-      // Path-shaped first, existence second. Deciding on existence alone would
-      // make `t2code theme set ocean` publish ./ocean whenever the cwd happens to
-      // hold a file by that name, instead of selecting the built-in.
+      // A bare theme id must not publish a same-named file that happens to exist in cwd.
       const looksLikePath =
         target.endsWith(".json") ||
         target.includes("/") ||

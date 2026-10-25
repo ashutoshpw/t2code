@@ -2,7 +2,7 @@ import {
   GUEST_MESSAGE_MAX_ATTACHMENT_BYTES,
   GUEST_MESSAGE_MAX_ATTACHMENTS,
   isProviderSendTurnSupportedImageMimeType,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 
 /** A file from a guest's message request, saved by the multipart parser to a temporary path. */
 export interface GuestUpload {

@@ -986,9 +986,7 @@ export const DESKTOP_FILE_EXCLUSIONS = [
   "!**/node_modules/@cursor/sdk-*/**/*",
   "!apps/desktop/prod-resources/cursor-sdk",
   "!apps/desktop/prod-resources/cursor-sdk/**/*",
-  // T2 Code always passes the user's installed Claude executable to the SDK,
-  // so the SDK's optional platform packages (each a ~200MB bundled executable)
-  // are dead weight. The trailing dash keeps the SDK's own JS package.
+  // The installed Claude CLI is supplied explicitly; exclude optional bundled executables, retaining SDK JavaScript.
   "!**/node_modules/@anthropic-ai/claude-agent-sdk-*/**/*",
   "!**/*.map",
   "!**/*.d.cts",
@@ -2295,8 +2293,7 @@ export const stageLinuxCaptureHelper = Effect.fn("stageLinuxCaptureHelper")(func
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const [rustTarget] = resolveResourceMonitorRustTargets("linux", input.arch);
-  // Release CI restores these binaries from a cache keyed on the crate sources and
-  // skips the Rust toolchain on a hit, so the build must be skippable too.
+  // CI skips Rust on helper-cache hits; allow reuse without rebuilding.
   const reuseHelpers = yield* Config.Boolean("T2CODE_DESKTOP_REUSE_LINUX_CAPTURE_HELPERS").pipe(
     Config.withDefault(false),
   );
@@ -3482,8 +3479,7 @@ export const validateWindowsPackagedPayload = Effect.fn(
       );
     }
     const members = parseWslRuntimeArchiveMembers(listing.stdout);
-    // A release archive unpacks to one directory named after its stem; the
-    // desktop app's WSL install script relies on that layout to find `t2`.
+    // The WSL installer finds t3 under the archive's single stem-named directory.
     const stem = wslRuntimeArchiveStem(input.appVersion, input.targetArch);
     const topLevel = new Set(members.map((member) => member.split("/")[0]));
     if (topLevel.size !== 1 || !topLevel.has(stem)) {

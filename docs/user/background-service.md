@@ -44,10 +44,10 @@ under T2 home. Pass `--yes` from a script.
 
 The service listens on your local network and Tailscale addresses, so the
 desktop and mobile apps on the same network connect directly instead of through
-T3 Connect. The hosted web app at app.t3.codes stays on T3 Connect, because
+T2 Connect. The hosted web app at app.t2.codes stays on T2 Connect, because
 browsers block plain HTTP from an HTTPS page. The service does not answer on
 public addresses, and every device still needs to pair or sign in. To keep the service reachable from this machine only, set
-`T3CODE_HOST=127.0.0.1` in `service.env` (below). Any `T3CODE_HOST` value
+`T2CODE_HOST=127.0.0.1` in `service.env` (below). Any `T2CODE_HOST` value
 replaces this default.
 
 ## Configure the service environment

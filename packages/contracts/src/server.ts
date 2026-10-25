@@ -867,8 +867,7 @@ export class ServerProviderUpdateError extends Schema.TaggedError<ServerProvider
 }
 
 export const ServerSelfUpdateInput = Schema.Struct({
-  /** Exact npm version of the `@t2code/cli` package to install (never a dist-tag, so
-      the server and the acknowledging client agree on what was requested). */
+  /** Exact npm version, never a dist-tag, so server and client agree on the request. */
   targetVersion: TrimmedNonEmptyString,
   continueRunningThreads: Schema.optionalKey(Schema.Boolean),
 });

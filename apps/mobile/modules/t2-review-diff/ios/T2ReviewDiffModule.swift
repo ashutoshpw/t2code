@@ -61,6 +61,10 @@ public class T2ReviewDiffModule: Module {
         view.setInitialRowIndex(initialRowIndex)
       }
 
+      Prop("initialFileId") { (view: T2ReviewDiffView, fileId: String) in
+        view.setInitialFileId(fileId)
+      }
+
       Prop("scrollEnabled") { (view: T2ReviewDiffView, enabled: Bool) in
         view.setScrollEnabled(enabled)
       }
@@ -106,8 +110,10 @@ public class T2ReviewDiffModule: Module {
         view.setTokensJson(tokensJson)
       }
 
-      AsyncFunction("setTokensPatchJson") { (view: T2ReviewDiffView, tokensPatchJson: String) in
-        view.setTokensPatchJson(tokensPatchJson)
+      AsyncFunction("setTokensPatchJson") { (view: T2ReviewDiffView, tokensPatchJson: String, promise: Promise) in
+        view.setTokensPatchJson(tokensPatchJson) { accepted in
+          promise.resolve(accepted)
+        }
       }
     }
   }

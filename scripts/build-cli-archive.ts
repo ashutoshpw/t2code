@@ -340,9 +340,8 @@ const signMacArchiveContents = Effect.fn("signMacArchiveContents")(function* (in
     );
     return;
   }
-  // notarytool only accepts archives, and a bare executable cannot be stapled,
-  // so notarize a zip of the binary and rely on the online ticket lookup.
-  const notarizeZip = path.join(path.dirname(input.executablePath), ".notarize-t2.zip");
+  // notarytool requires an archive; bare executables rely on online tickets because they cannot be stapled.
+  const notarizeZip = path.join(path.dirname(input.executablePath), ".notarize-t3.zip");
   yield* runCommand(
     ChildProcess.make("ditto", ["-c", "-k", "--keepParent", input.executablePath, notarizeZip]),
     "ditto (notarization zip)",
@@ -453,9 +452,8 @@ const buildCliArchive = Effect.fn("buildCliArchive")(function* (input: {
   const path = yield* Path.Path;
   const repoRoot = yield* RepoRoot;
   const serverDir = path.join(repoRoot, "apps/server");
-  const executableName = input.platform === "win" ? "t2.exe" : "t2";
-  // tsdown suffixes cross-built executables with their target (t2-darwin-x64);
-  // a host build is plain t2. Prefer the exact target when both exist.
+  const executableName = input.platform === "win" ? "t3.exe" : "t3";
+  // tsdown suffixes cross-built executables; prefer the exact target over the plain host build.
   const targetKey = `${input.platform === "mac" ? "darwin" : input.platform}-${input.arch}`;
   const targetExecutable = path.join(
     serverDir,

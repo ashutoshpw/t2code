@@ -8,23 +8,10 @@ import {
 } from "../../orchestration-v2/messageSearchIndex.ts";
 
 /**
- * Full-text index for thread message search. The trigram tokenizer matches any
- * substring of three or more characters, ignoring case and accents, so
- * identifiers inside code still match, without the full-table scan a
- * `LIKE '%q%'` needs.
- *
- * It holds what the user wrote and what agents answered. User-role messages
- * that agents or the system wrote (pull request updates, task notices) would
- * flood results and read as "You".
- *
- * The index is contentless and keyed by the message rowid: search reads the
- * text back from the message row, so the text is not stored twice. `t2 doctor`
- * rebuilds it after its VACUUM, since SQLite does not promise to keep rowids.
- * Thread search scans the same messages when the index is missing.
- *
- * Triggers keep it in sync with every write to the messages table. Streaming
- * messages are indexed once they finish, with apostrophes folded as search
- * folds them.
+ * Contentless trigram FTS index over thread messages, keyed by the message
+ * rowid (text is read back from the row, never stored twice); trigrams match
+ * any substring of three-plus characters, ignoring case and accents. Triggers
+ * keep it in sync; `t2 doctor` rebuilds it after its VACUUM resets rowids.
  */
 export default Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;

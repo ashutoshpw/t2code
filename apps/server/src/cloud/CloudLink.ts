@@ -1258,8 +1258,7 @@ const make = Effect.gen(function* () {
     if (Option.isNone(token)) {
       return false;
     }
-    // The link belongs to the relay it was installed against, so target the
-    // persisted URL: T2CODE_RELAY_URL may have changed since the link was made.
+    // Use the persisted relay URL; T2CODE_RELAY_URL may have changed since linking.
     const relayUrl = yield* secrets.get(RELAY_URL_SECRET);
     if (Option.isNone(relayUrl)) {
       return false;

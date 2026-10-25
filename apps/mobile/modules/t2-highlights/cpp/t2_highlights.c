@@ -1,4 +1,4 @@
-#include "t3_highlights.h"
+#include "t2_highlights.h"
 
 #include <stdbool.h>
 #include <string.h>
@@ -95,7 +95,7 @@ static uint32_t read_u32(const uint8_t* at) {
   return (uint32_t)at[0] | (uint32_t)at[1] << 8 | (uint32_t)at[2] << 16 | (uint32_t)at[3] << 24;
 }
 
-int64_t t3_highlights_tokenize(const uint8_t* source, size_t length, uint8_t language,
+int64_t t2_highlights_tokenize(const uint8_t* source, size_t length, uint8_t language,
                                const uint32_t** records) {
   *records = NULL;
   if (length > UINT32_MAX - WASM_DEFAULT_PAGE_SIZE * 2) return -1;

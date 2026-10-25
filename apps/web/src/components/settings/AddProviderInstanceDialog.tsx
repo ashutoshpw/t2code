@@ -56,10 +56,7 @@ import { AddManagedCodexAccountDialog } from "./CodexSetupSection";
 import { MultipleAccountsNote } from "./MultipleAccountsNote";
 import { ProviderEnvironmentSection } from "./ProviderInstanceCard";
 
-/**
- * Output is trimmed to 48 chars so the final composed id stays under the 64-char slug cap
- * enforced by `ProviderInstanceId` in `@t2code/contracts`.
- */
+/** Limit the slug to 48 chars so the composed ProviderInstanceId fits its 64-char cap. */
 function slugifyLabel(value: string): string {
   return value
     .trim()

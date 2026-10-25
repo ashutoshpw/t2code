@@ -1,14 +1,14 @@
 #include <jni.h>
 #include <string.h>
 
-#include "t3_highlights.h"
+#include "t2_highlights.h"
 
 // HighlightsNative serializes both calls, so the copy reads the records the
 // tokenize call just produced.
 static const uint32_t* last_records = NULL;
 static int64_t last_count = 0;
 
-JNIEXPORT jint JNICALL Java_expo_modules_t3highlights_HighlightsNative_nativeTokenize(
+JNIEXPORT jint JNICALL Java_expo_modules_t2highlights_HighlightsNative_nativeTokenize(
     JNIEnv* env, jclass clazz, jbyteArray source, jint language) {
   (void)clazz;
   last_records = NULL;
@@ -18,7 +18,7 @@ JNIEXPORT jint JNICALL Java_expo_modules_t3highlights_HighlightsNative_nativeTok
   jsize length = (*env)->GetArrayLength(env, source);
   jbyte* bytes = (*env)->GetByteArrayElements(env, source, NULL);
   if (bytes == NULL) return -1;
-  int64_t count = t3_highlights_tokenize((const uint8_t*)bytes, (size_t)length,
+  int64_t count = t2_highlights_tokenize((const uint8_t*)bytes, (size_t)length,
                                          (uint8_t)language, &last_records);
   (*env)->ReleaseByteArrayElements(env, source, bytes, JNI_ABORT);
 
@@ -30,7 +30,7 @@ JNIEXPORT jint JNICALL Java_expo_modules_t3highlights_HighlightsNative_nativeTok
   return (jint)count;
 }
 
-JNIEXPORT void JNICALL Java_expo_modules_t3highlights_HighlightsNative_nativeCopyRecords(
+JNIEXPORT void JNICALL Java_expo_modules_t2highlights_HighlightsNative_nativeCopyRecords(
     JNIEnv* env, jclass clazz, jobject destination) {
   (void)clazz;
   void* address = (*env)->GetDirectBufferAddress(env, destination);

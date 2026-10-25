@@ -35,14 +35,6 @@ config.resolver = {
     "@t2code/mobile-third-party-licenses": generatedLicenseModuleRoot,
     "@t2code/mobile-device-stream": generatedDeviceStreamRoot,
     "@t2code/mobile-preview-stream": generatedPreviewStreamRoot,
-    shiki: mobileShikiRoot,
-    "@shikijs/core": resolveShikiDependencyRoot("@shikijs/core"),
-    "@shikijs/engine-javascript": resolveShikiDependencyRoot("@shikijs/engine-javascript"),
-    "@shikijs/engine-oniguruma": resolveShikiDependencyRoot("@shikijs/engine-oniguruma"),
-    "@shikijs/langs": resolveShikiDependencyRoot("@shikijs/langs"),
-    "@shikijs/themes": resolveShikiDependencyRoot("@shikijs/themes"),
-    "@shikijs/types": resolveShikiDependencyRoot("@shikijs/types"),
-    "@shikijs/vscode-textmate": resolveShikiDependencyRoot("@shikijs/vscode-textmate"),
   },
 };
 

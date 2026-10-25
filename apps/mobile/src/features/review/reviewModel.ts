@@ -2,6 +2,7 @@ import { parsePatchFiles } from "@pierre/diffs/utils/parsePatchFiles";
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs/types";
 import type { ThreadCheckpointSummary } from "@t2code/client-runtime/state/thread-checkpoints";
 import type { ReviewDiffPreviewSource } from "@t2code/contracts";
+import { quoteGitPatchPath } from "@t2code/shared/gitPatchPath";
 import * as Arr from "effect/Array";
 import { pipe } from "effect/Function";
 import * as Order from "effect/Order";

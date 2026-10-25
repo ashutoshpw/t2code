@@ -235,7 +235,7 @@ function matchToken(
     if (joined) return joined;
   }
   if ((best !== null && best.score > MID_WORD) || !typos || token.length < 3) return best;
-  // Numbers skip typos: #22889 is not #22189. Words with digits ("t2code") do not.
+  // Numbers skip typos to keep pull requests distinct. Words with digits ("t2code") do not.
   if (LETTER.test(token)) {
     for (let index = 0; index < field.text.length; index++) {
       if (!field.wordStarts[index]) continue;
@@ -271,11 +271,8 @@ function matchToken(
 }
 
 /**
- * Whole words typed together: "vscode" is "VS Code", "fixsid" is "Fix
- * sid(ebar)". Every part is a whole word but the last. Short words before a
- * short prefix are a coincidence inside a title ("inth" is not "in th(read)"),
- * but not at its start ("t2co" is "T2 Co(de)"), before three letters
- * ("gomod"), or a whole word ("vscode").
+ * Short words followed by a short prefix are noise inside a title ("inth" in "in thread").
+ * Allow them at its start ("t2co"), before three letters ("gomod"), or a whole word ("vscode").
  */
 function matchJoinedWords(field: SearchField, token: string): TokenMatch | null {
   const firstWord = field.wordStarts.indexOf(1);
@@ -804,11 +801,8 @@ function threadUsageBoost(thread: ThreadSearchSubject, now: number): number {
 
 const REFERENCE_PREFIX_MIN = 8;
 
-// IDs and URLs split into many word starts, so matching them as fields would
-// let a two-letter query hit every thread. Only a long piece of one matches: a
-// prefix, or, when it holds a digit like an ID or pull request number, any
-// part ("t2code#22889", a URL without its scheme). Both are ASCII, so
-// lowercasing is enough.
+// IDs and URLs have many word starts, so field matching would let short queries hit every thread.
+// Require a long prefix, or any long part containing a digit. Both are ASCII; lowercasing suffices.
 function matchReference(
   normalizedQuery: string,
   thread: ThreadSearchSubject,
@@ -971,8 +965,7 @@ export function scoreThreadSearch(
   if (thread.environmentLabel) {
     fields.push({ value: thread.environmentLabel, weight: 0.25, context: true });
   }
-  // "#22889", "pr 22889", and a pasted "t2/branch" search without their
-  // prefixes, as the branch field is stored without the app's worktree prefix.
+  // Strip pull request prefixes and the worktree prefix so queries match the stored fields.
   const fieldQuery = normalizedQuery
     .replace(/^(?:pr|pull request|pull)\s*(?=#?\d)/, "")
     .replace(/^#\s*/, "")

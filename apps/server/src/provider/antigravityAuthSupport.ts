@@ -209,9 +209,7 @@ function antigravityEnvironment(
       : auth.authMethod === "agent-platform" && auth.apiKey
         ? { GOOGLE_API_KEY: auth.apiKey }
         : {};
-  // It unpacks about 1 GB into the system temp directory per launch and a force
-  // kill leaves that behind. Point it at a T2-owned directory so the driver can
-  // reclaim the space.
+  // Each launch unpacks about 1 GB; use T3-owned temp so the driver can reclaim files after force-kill.
   const tempDirectory = runtimeTempDirectory ?? profile.tempDirectory;
   return {
     ...environment,
@@ -232,12 +230,7 @@ function antigravityEnvironment(
   };
 }
 
-/**
- * The agent reads its user-global skills under `GEMINI_HOME`, which T2 points
- * at the private profile. Link the two skill directories back to the user's
- * real `~/.gemini` so global skills load, while MCP servers, hooks, and
- * credentials stay isolated.
- */
+/** Private GEMINI_HOME isolates credentials/hooks/MCP; link global skills from the real ~/.gemini. */
 const linkAntigravityUserSkills = Effect.fn("linkAntigravityUserSkills")(function* (input: {
   readonly profileDirectory: string;
   readonly userHome: string;

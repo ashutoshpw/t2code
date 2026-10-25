@@ -144,11 +144,7 @@ export function mcpAppToolCallableByApp(meta: unknown): boolean {
   return !Array.isArray(visibility) || visibility.includes("app");
 }
 
-/**
- * The Content-Security-Policy for an app document, per the spec's
- * construction: undeclared origins stay blocked, and nothing loads from the
- * host's own origin ('self' would reach T2's API).
- */
+/** Block undeclared origins, including self, which would expose T2's API. */
 export function mcpAppContentSecurityPolicy(csp: McpAppCsp | undefined): string {
   const resources = csp?.resourceDomains?.join(" ") ?? "";
   const list = (domains: ReadonlyArray<string> | undefined, fallback: string) =>

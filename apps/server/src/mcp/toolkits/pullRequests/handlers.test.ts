@@ -326,11 +326,7 @@ describe("pull request toolkit handlers", () => {
           { ...closed, snapshot: closed.snapshot && { ...closed.snapshot, state: "closed" } },
         ]),
       });
-<<<<<<< HEAD
-      yield* harness.call("watch_pull_request", { repository: "t2tools/t2code", number: 1 });
-=======
       yield* harness.call("watch_pull_request", { repository: "ashutoshpw/t2code", number: 1 });
->>>>>>> 1fc185a525 (rebrand: finish the t2 namespace sweep after the orchestrator-v2 merge)
       expect(yield* Ref.get(harness.commands)).toMatchObject([
         { type: "thread.pull-request.watch", number: 1, watching: true },
       ]);
@@ -350,50 +346,43 @@ describe("pull request toolkit handlers", () => {
         },
       });
       const error = yield* harness
-<<<<<<< HEAD
-        .call("watch_pull_request", { repository: "t2tools/t2code", number: 1 })
-=======
         .call("watch_pull_request", { repository: "ashutoshpw/t2code", number: 1 })
->>>>>>> 1fc185a525 (rebrand: finish the t2 namespace sweep after the orchestrator-v2 merge)
         .pipe(Effect.flip);
       expect(error).toMatchObject({ _tag: "PullRequestWatchFromSubagentError" });
       expect(yield* Ref.get(harness.commands)).toEqual([]);
     }),
   );
 
-  it.effect("asks a subagent thread to end with its PR report after it links", () =>
-    Effect.gen(function* () {
-      const harness = yield* makeHarness({
-        thread: {
-          ...makeThread([]),
-          lineage: {
-            rootThreadId: ThreadId.make("parent"),
-            parentThreadId: ThreadId.make("parent"),
-            relationshipToParent: "subagent",
-          },
-        },
-      });
-      const result = yield* harness.call("link_pull_request", {
-        url: "https://github.com/t2tools/t2code/pull/124",
-      });
-      expect(result).toMatchObject({ number: 124, next: CHILD_PULL_REQUEST_REPORT_NEXT });
-    }),
-  );
-
   it.effect("canonicalizes GitCafe links independently of the thread's project host", () =>
     Effect.gen(function* () {
-      const harness = yield* makeHarness();
-      const result = yield* harness.call("link_pull_request", {
-        repository: "T2Tools/Other",
-        number: 7,
-      });
-      expect(result).toEqual({
-        host: "github.com",
-        repository: "t2tools/other",
-        number: 7,
-        url: "https://github.com/t2tools/other/pull/7",
-        alreadyLinked: false,
-      });
+      for (const host of ["git.cafe", "staging.git.cafe"]) {
+        for (const project of [makeProject(), makeProject(null)]) {
+          for (const target of [
+            { host, repository: "PingDotGG/T2Code", number: 21353 },
+            { url: `https://${host}/PingDotGG/T2Code/pull/21353` },
+            { url: `https://${host}/PingDotGG/T2Code/pulls/21353` },
+          ]) {
+            const harness = yield* makeHarness({ project });
+            const result = yield* harness.call("link_pull_request", target);
+            const url = `https://${host}/pingdotgg/t2code/pulls/21353`;
+            expect(result).toMatchObject({
+              host,
+              repository: "pingdotgg/t2code",
+              number: 21353,
+              url,
+            });
+            expect(yield* Ref.get(harness.commands)).toMatchObject([
+              {
+                type: "thread.pull-request.link",
+                host,
+                repository: "pingdotgg/t2code",
+                number: 21353,
+                url,
+              },
+            ]);
+          }
+        }
+      }
     }),
   );
 

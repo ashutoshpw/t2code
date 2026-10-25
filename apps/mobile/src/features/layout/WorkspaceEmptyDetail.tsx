@@ -48,8 +48,12 @@ export function WorkspaceEmptyDetail(props: {
             tintColorClassName="accent-icon-subtle"
             type="hierarchical"
           />
-          <Text className="text-center text-xl font-t2-bold">
-            {pullRequests ? "Select a pull request" : "Select a thread"}
+          <Text className="text-center text-xl font-t3-bold">
+            {settings
+              ? "Select a setting"
+              : pullRequests
+                ? "Select a pull request"
+                : "Select a thread"}
           </Text>
           <Text className="text-center text-base text-foreground-muted">
             {settings

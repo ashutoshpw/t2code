@@ -7,6 +7,7 @@ import {
   type EnvironmentThreadState,
   createOlderSettledThreadAtoms,
   createThreadEnvironmentAtoms,
+  createThreadFamilyAtoms,
 } from "@t2code/client-runtime/state/threads";
 import type { EnvironmentId, ThreadId } from "@t2code/contracts";
 import * as Option from "effect/Option";

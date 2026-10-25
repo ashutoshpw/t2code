@@ -191,15 +191,13 @@ describe("ReviewService", () => {
   it.effect("allows the worktree a thread is bound to, and nothing else outside the project", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-workspace-" });
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-base-" });
-      const project = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-project-" });
-      // Checkouts outside every managed folder, as `git worktree add ../feature` makes.
-      const bound = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-bound-" });
-      const deleted = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-deleted-" });
-      const unbound = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-unbound-" });
-      // A client can set a thread's path to any folder; git doesn't list this one.
-      const claimed = yield* fs.makeTempDirectoryScoped({ prefix: "t2-review-claimed-" });
+      const workspaceRoot = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-workspace-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-base-" });
+      const project = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-project-" });
+      const bound = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-bound-" });
+      const deleted = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-deleted-" });
+      const unbound = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-unbound-" });
+      const claimed = yield* fs.makeTempDirectoryScoped({ prefix: "t3-review-claimed-" });
       yield* fs.makeDirectory(`${bound}/sub`);
 
       const review = (cwd: string) =>
@@ -217,9 +215,7 @@ describe("ReviewService", () => {
                 { worktreePath: bound },
                 { worktreePath: claimed },
                 { worktreePath: deleted, deleted: true },
-                // A relative path would resolve against the server's own cwd.
-                { worktreePath: "t2-review-relative" },
-                // A filesystem root would make every folder look bound.
+                { worktreePath: "t3-review-relative" },
                 { worktreePath: "/" },
               ],
             }),

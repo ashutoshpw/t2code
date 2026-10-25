@@ -8,9 +8,12 @@ import {
   type ServerProviderSkill,
   type RunId,
   ThreadId,
+  type TurnItemId,
 } from "@t2code/contracts";
+import type { AsyncResult, Atom } from "effect/reactivity";
+import type { CommandOutputView } from "@t2code/client-runtime/state/command-output";
 import type { WorkflowOpening } from "@t2code/client-runtime/state/subagentRuntime";
-import { createContext, type MouseEvent } from "react";
+import { createContext, type MouseEvent, type ReactNode } from "react";
 import { type LegendListRef } from "@legendapp/list/react";
 import type { CodexArtifactTemplate } from "@t2code/shared/codexArtifactTemplates";
 import { type ChatFileAttachment } from "../../types";
@@ -18,6 +21,7 @@ import { ExpandedImagePreview } from "./ExpandedImagePreview";
 import { type AssistantCitationTarget } from "./AssistantCitationSource";
 import { type MessagesTimelineRow, type WorkGroupScrollAnchor } from "./MessagesTimeline.logic";
 import { type TimestampFormat } from "@t2code/contracts/settings";
+import type { TurnItemDetailSource } from "../../state/queries";
 import { type HandoffTimelineRun } from "./V2LifecycleRow";
 
 /**

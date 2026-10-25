@@ -1,4 +1,4 @@
-import { resolvePullRequestDetailChecks } from "@t3tools/client-runtime/pull-request-checks";
+import { resolvePullRequestDetailChecks } from "@t2code/client-runtime/pull-request-checks";
 import {
   capitalizeTerm,
   sourceControlClients,

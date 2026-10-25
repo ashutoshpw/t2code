@@ -305,7 +305,7 @@ export function ThreadMcpApp(props: {
           platform: "mobile",
           locale: Intl.DateTimeFormat().resolvedOptions().locale,
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          userAgent: `t3-code/${Constants.expoConfig?.version ?? "0.0.0"}`,
+          userAgent: `t2-code/${Constants.expoConfig?.version ?? "0.0.0"}`,
           deviceCapabilities: { touch: true, hover: false },
           safeAreaInsets: isFullscreen
             ? { top: 0, right: current.insets.right, bottom: 0, left: current.insets.left }
@@ -564,7 +564,7 @@ export function ThreadMcpApp(props: {
             }
             if (!Predicate.isObject(envelope) || envelope.secret !== secret) return;
             const message = envelope.message;
-            if (Predicate.isObject(message) && message.t3 === "navigated") {
+            if (Predicate.isObject(message) && message.t2 === "navigated") {
               host?.dispose();
               setNavigatedAway(true);
               return;

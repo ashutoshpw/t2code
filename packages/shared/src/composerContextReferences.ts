@@ -166,10 +166,7 @@ function formatComposerContextProviderMarker(
   return `[${kindDisplayName(kind)}: ${escapeComposerContextPayloadText(cleanLabel)}; ref=${contextId}]`;
 }
 
-/**
- * A terminal line or PR comment that contains `</t2_context>` or `</context>`
- * must not be able to close the envelope and forge a record.
- */
+// Escape envelope tags so payload text cannot close the envelope and forge records.
 function escapeComposerContextPayloadText(text: string): string {
   return text.replace(
     new RegExp(String.raw`<(?=/?(?:${CONTEXT_ENVELOPE_TAG}|${CONTEXT_ENTRY_TAG})\b)`, "gi"),

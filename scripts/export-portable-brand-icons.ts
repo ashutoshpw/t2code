@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 // @effect-diagnostics nodeBuiltinImport:off globalConsole:off - portable asset CLI uses Node file IO and reports check results directly.
 
-// Cross-platform brand export for environments without Icon Composer.
-//
-// Icon Composer remains the native source for macOS pre-Tahoe styling. This renderer
-// intentionally uses the checked-in SVG layers and the shared T2 path so CI, Linux,
-// and contributors can regenerate the tracked raster family, including a safe-area
-// macOS fallback without Icon Composer's native shadow treatment.
+// Cross-platform brand export for environments without Icon Composer, which
+// remains the native source for macOS pre-Tahoe styling. This renderer uses
+// the checked-in SVG layers and the shared T2 path so CI and Linux can
+// regenerate the tracked raster family, safe-area fallback included.
 
 import * as NodeFSP from "node:fs/promises";
 import * as NodePath from "node:path";

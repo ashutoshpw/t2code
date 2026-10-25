@@ -1,6 +1,4 @@
-// Split chunks are fetched lazily, so a deploy (or desktop server swap) between
-// page load and a later fetch can 404 the old hashed assets. One reload picks
-// up the fresh index.html.
+// Deploys and desktop server swaps can invalidate lazy chunks; one reload fetches the fresh index.
 const CHUNK_RELOAD_GUARD_KEY = "t2code:chunk-load-reloaded";
 
 export function reloadOnceForChunkLoadError(

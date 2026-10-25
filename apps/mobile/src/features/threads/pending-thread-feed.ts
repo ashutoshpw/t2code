@@ -2,7 +2,7 @@ import {
   isCompactionCommandMessage,
   type ThreadGuestMessage,
   type ThreadGuestShare,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { ThreadFeedEntry } from "../../lib/threadActivity";
 import { scopedThreadKey } from "../../lib/scopedEntities";
 import type { QueuedThreadMessage } from "../../state/thread-outbox-model";

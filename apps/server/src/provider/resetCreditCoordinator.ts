@@ -1,8 +1,4 @@
-/**
- * Redeeming a reset credit is an account-level action: instances that share the
- * directory holding a provider's login share the credit, so their redemptions
- * must serialise on that directory, not the instance.
- */
+/** Instances sharing a login directory share credits; serialize redemptions on that directory. */
 import type { ProviderConsumeResetCreditOutcome } from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";

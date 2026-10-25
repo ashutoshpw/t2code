@@ -24,8 +24,7 @@ const MUSE_PRESENTATION = {
   displayName: "Muse Code",
   showInteractionModeToggle: false,
   reportsContextWindow: true,
-  // Muse has no native "accept edits" mode, so T2 offers only the two it maps
-  // directly: :ask-me with promptUnmatched, and :unrestricted with allowAll.
+  // Muse has no accept-edits mode; map only :ask-me and :unrestricted.
   supportedRuntimeModes: ["approval-required", "full-access"],
 } as const;
 

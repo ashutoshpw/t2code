@@ -1,4 +1,4 @@
-package expo.modules.t3highlights
+package expo.modules.t2highlights
 
 import expo.modules.kotlin.jni.ArrayBuffer
 import expo.modules.kotlin.modules.Module
@@ -6,9 +6,9 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class T3HighlightsModule : Module() {
+class T2HighlightsModule : Module() {
   override fun definition() = ModuleDefinition {
-    Name("T3Highlights")
+    Name("T2Highlights")
 
     Function("tokenize") { source: String, language: Int ->
       HighlightsNative.tokenize(source, language)
@@ -18,7 +18,7 @@ class T3HighlightsModule : Module() {
 
 internal object HighlightsNative {
   init {
-    System.loadLibrary("t3highlights")
+    System.loadLibrary("t2highlights")
   }
 
   // The records live in the lexer's memory until its next run.

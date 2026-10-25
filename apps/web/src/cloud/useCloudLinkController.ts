@@ -133,8 +133,7 @@ export function useCloudLinkController() {
 
     // A failed mutation may have partially applied, so refresh server state on every exit.
     if (!wantsLink) {
-      // Unlink works without a relay token — a failed token read must not
-      // leave the user unable to turn T2 Connect off.
+      // Unlink needs no relay token; failed token reads must still allow it.
       const unlinkResult = await unlinkPrimaryEnvironment({
         target,
         clerkToken: tokenResult._tag === "Success" ? (tokenResult.value ?? null) : null,

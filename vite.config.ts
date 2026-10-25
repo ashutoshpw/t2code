@@ -173,8 +173,8 @@ export default defineConfig({
       "apps/mobile/ios/**",
       "apps/mobile/uniwind-types.d.ts",
       // Vendored and generated C.
-      "apps/mobile/modules/t3-highlights/Vendor/**",
-      "apps/mobile/modules/t3-highlights/cpp/generated/**",
+      "apps/mobile/modules/t2-highlights/Vendor/**",
+      "apps/mobile/modules/t2-highlights/cpp/generated/**",
       "*.icon/**",
     ],
     sortPackageJson: {},
@@ -452,7 +452,10 @@ export default defineConfig({
       },
       {
         files: ["apps/mobile/src/**"],
-        rules: { "t2code/no-mobile-uniwind-theme-escape-hatches": "error" },
+        rules: {
+          "t2code/no-mobile-uniwind-theme-escape-hatches": "error",
+          "t2code/require-registered-list-scroll": "error",
+        },
       },
       {
         files: ["apps/mobile/src/**"],
@@ -549,9 +552,7 @@ export default defineConfig({
         },
       },
       {
-        // Every web file must compile under the React Compiler. Its bailout rules are errors here,
-        // and manual memoization is redundant. No upstream rule bans useMemo/useCallback, hence
-        // t2code/no-manual-memo.
+        // React Compiler owns memoization; upstream rules do not ban redundant useMemo/useCallback.
         files: ["apps/web/src/**/*.{ts,tsx}"],
         rules: {
           "react/exhaustive-effect-dependencies": "error",
@@ -580,24 +581,7 @@ export default defineConfig({
         rules: { "shadcn/no-arbitrary-values": "off" },
       },
       {
-        // Third-party marks and the wordmark lockup carry fixed brand geometry and
-        // colors, so the value rules cannot read them as theme choices.
-        files: [
-          "apps/web/src/components/Icons.tsx",
-          "apps/web/src/components/onboarding/WelcomeWizard.tsx",
-        ],
-        rules: { "shadcn/no-arbitrary-values": "off" },
-      },
-      {
-        // The import-history rows use a raw palette step and an off-scale text size
-        // that predate these rules; restyling them is a design change, not a rebrand.
-        files: ["apps/web/src/components/settings/ImportHistoryDialog.tsx"],
-        rules: { "shadcn/no-raw-colors": "off", "shadcn/no-arbitrary-values": "off" },
-      },
-      {
-        // Shared client code must not call APIs missing from Hermes. Our ESNext
-        // TypeScript target accepts them even when they would crash mobile at launch.
-        // Tests run on Node and are exempt.
+        // ESNext types allow APIs absent from Hermes; restrict shared client code, exempting Node tests.
         files: [
           "apps/mobile/src/**",
           "packages/client-runtime/src/**",

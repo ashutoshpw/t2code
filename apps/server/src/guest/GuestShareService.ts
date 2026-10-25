@@ -17,8 +17,8 @@ import {
   type OrchestrationV2GetTurnItemResult,
   ThreadId,
   TurnItemId,
-} from "@t3tools/contracts";
-import { htmlRenderFromToolItem } from "@t3tools/shared/toolOutput";
+} from "@t2code/contracts";
+import { htmlRenderFromToolItem } from "@t2code/shared/toolOutput";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
 import * as DateTime from "effect/DateTime";
@@ -191,7 +191,7 @@ export class GuestShareService extends Context.Service<
       GuestShareAccessError
     >;
   }
->()("t3/guest/GuestShareService") {}
+>()("@t2code/cli/guest/GuestShareService") {}
 
 /** The thread record an event carries, for the share and the view. */
 const threadOf = (event: OrchestrationV2DomainEvent): OrchestrationV2AppThread | null => {
@@ -545,7 +545,7 @@ const make = Effect.gen(function* () {
         }),
       ),
       Stream.takeUntil((event) => event.type === "ended"),
-      // Unlinking T3 Connect closes it quietly, so a tunnel that comes back on the same host
+      // Unlinking T2 Connect closes it quietly, so a tunnel that comes back on the same host
       // keeps the guest in. Turning the beta off closes it the same way. Closing and expiry end
       // it above, with `ended`.
       Stream.interruptWhen(

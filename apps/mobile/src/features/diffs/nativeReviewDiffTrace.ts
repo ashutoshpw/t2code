@@ -17,7 +17,7 @@ export function diffHighlightTraceHash(value: string): number {
 function appendTraceLine(line: string) {
   fileSink ??= import("expo-file-system")
     .then(({ File, Paths }) => {
-      const file = new File(Paths.document, "t3-diff-highlight-trace.jsonl");
+      const file = new File(Paths.document, "t2-diff-highlight-trace.jsonl");
       file.create({ overwrite: true, intermediates: true });
       return file;
     })
@@ -35,7 +35,7 @@ function appendTraceLine(line: string) {
 }
 
 export function diffHighlightTraceId(value: unknown): number {
-  if (process.env.EXPO_PUBLIC_T3_DIFF_TRACE !== "1" || eventCount >= MAX_TRACE_EVENTS) return 0;
+  if (process.env.EXPO_PUBLIC_T2_DIFF_TRACE !== "1" || eventCount >= MAX_TRACE_EVENTS) return 0;
   if ((typeof value === "object" && value !== null) || typeof value === "function") {
     let id = objectIds.get(value);
     if (id === undefined) {
@@ -56,7 +56,7 @@ export function traceDiffHighlight(
   event: string,
   fields: Readonly<Record<string, number | boolean | string | undefined>> = {},
 ) {
-  if (process.env.EXPO_PUBLIC_T3_DIFF_TRACE !== "1" || eventCount >= MAX_TRACE_EVENTS) return;
+  if (process.env.EXPO_PUBLIC_T2_DIFF_TRACE !== "1" || eventCount >= MAX_TRACE_EVENTS) return;
   eventCount += 1;
   const line = JSON.stringify({
     event,

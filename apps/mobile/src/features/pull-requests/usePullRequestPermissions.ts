@@ -1,5 +1,9 @@
 import { useAtomValue } from "@effect/atom-react";
-import type { PullRequestDetail } from "@t2code/contracts";
+import {
+  canEditPullRequestChangeRequest,
+  canEditPullRequestComment,
+} from "@t2code/client-runtime/pull-request-editing";
+import type { PullRequestComment, PullRequestDetail } from "@t2code/contracts";
 import { usePullRequestConnected } from "./usePullRequestConnected";
 import { composerPullRequests } from "../../state/pull-requests";
 import { pullRequestTarget, type PullRequestParams } from "./usePullRequestDiff";

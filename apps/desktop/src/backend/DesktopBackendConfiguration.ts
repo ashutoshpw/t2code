@@ -91,9 +91,7 @@ const WSL_FORWARDED_ENV_NAMES = [
   "OTEL_SDK_DISABLED",
   "T2CODE_OTLP_HEADERS",
   "T2CODE_OTLP_PROTOCOL",
-  // Forwarded without a WSLENV flag, so the values arrive untranslated. The
-  // server prefers an OTEL endpoint over the bootstrap envelope, so the T2 URLs
-  // travel as variables to keep winning inside the distro as they do on Windows.
+  // Untranslated T3 URLs must override bootstrap endpoints inside WSL, as they do on Windows.
   "T2CODE_OTLP_TRACES_URL",
   "T2CODE_OTLP_METRICS_URL",
   "T2CODE_OTLP_LOGS_URL",
@@ -570,9 +568,7 @@ const resolveWslStartConfig = Effect.fn("desktop.backendConfiguration.resolveWsl
     mode: "desktop" as const,
     noBrowser: true,
     port: input.port,
-    // Omit t2Home so the Linux backend uses its own home dir instead of
-    // the Windows-side baseDir (which would be a /mnt/c path and share
-    // the SQLite file with the primary).
+    // Omit t2Home to keep the Linux backend from sharing the primary's Windows SQLite file.
     host: wslBindHost,
     desktopBootstrapToken: input.bootstrapToken,
     desktopBootstrapSecret: input.bootstrapSecret,
@@ -642,11 +638,10 @@ const resolveWslStartConfig = Effect.fn("desktop.backendConfiguration.resolveWsl
     }
   }
 
-  // Build an explicit copy of process.env minus the pinned base dir (both
-  // name spellings; dev-runner exports the Windows-side base dir for the
-  // primary; if it leaks into the WSL backend the Linux side ends up sharing
-  // C:\Users\...\.t2 via /mnt/c, which means both backends read/write the
-  // same database and their env-ids collide).
+  // Build an explicit copy of process.env minus the pinned base dir (both name
+  // spellings; dev-runner exports the Windows-side spelling for the primary).
+  // If it leaks into the WSL backend, both sides share one database via /mnt/c
+  // and their env-ids collide.
   const parentEnvWithoutT2Home: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (key === "T2CODE_HOME") continue;
@@ -665,8 +660,7 @@ const resolveWslStartConfig = Effect.fn("desktop.backendConfiguration.resolveWsl
       ...forwardedEnv,
       ...(wslEnv !== undefined ? { WSLENV: wslEnv } : {}),
     },
-    // env is already a complete process.env minus the T2CODE_HOME base dir; pass it
-    // verbatim instead of letting the spawner re-merge process.env on top.
+    // env already excludes T2CODE_HOME; merging process.env would restore it.
     extendEnv: false,
     bootstrap,
     bootstrapDelivery: "stdin" as const,

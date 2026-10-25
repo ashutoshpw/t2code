@@ -179,7 +179,7 @@ const makeHarness = Effect.fn("test.make_boot_service_harness")(function* (
         control.linger = "yes";
       if (!failed && command === "systemctl --user enable t2code.service") control.enabled = true;
       if (!failed && command === "systemctl --user restart t2code.service") control.active = true;
-      // A stop that fails (a timeout, say) has still stopped the service.
+      // A timed-out stop may still stop the service.
       if (command === "systemctl --user stop t2code.service") control.active = false;
       if (
         control.stateAfterStop !== undefined &&
@@ -396,8 +396,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect((yield* service.status).current).toBe(false);
       expect(yield* service.uninstall).toBe(true);
       expect((yield* service.status).installed).toBe(false);
-      // The stop can block up to systemd's 90s TimeoutStopSec; the runner's
-      // 60s default would cancel it mid-shutdown.
+      // systemd can take 90s to stop, exceeding the runner's 60s default.
       expect(timeouts.get("systemctl --user disable --now t2code.service")).toEqual(
         Duration.seconds(120),
       );
@@ -610,7 +609,6 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(failure).toBe("repair failed");
       expect(control.active).toBe(true);
 
-      // A failed stop skips the operation but still starts the service again.
       control.failCommand = "systemctl --user stop t2code.service";
       let ran = false;
       const stopFailure = yield* service
@@ -839,8 +837,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(yield* service.uninstall).toBe(true);
       expect((yield* service.status).installed).toBe(false);
       expect(commands.some((command) => command.startsWith("systemctl "))).toBe(false);
-      // A bootout can block up to the plist's 90s ExitTimeOut; the runner's
-      // 60s default would cancel it and let bootstrap race a loaded job.
+      // launchd can take 90s to bootout; the runner's 60s default could let bootstrap race it.
       expect(timeouts.get("launchctl bootout --wait gui/501/codes.t2.desktop.service")).toEqual(
         Duration.seconds(120),
       );

@@ -1,6 +1,9 @@
-import { findProjectForChangeRequest } from "@t2code/client-runtime/change-request-links";
+import {
+  resolveChangeRequestLinkTarget,
+  type ChangeRequestLinkCapabilities,
+} from "@t2code/client-runtime/change-request-links";
 import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
-import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
+import { EnvironmentId, ProjectId } from "@t2code/contracts";
 
 /** The PullRequest route for a change request link from a project, or null for the browser. */
 export function nativePullRequestDestination(

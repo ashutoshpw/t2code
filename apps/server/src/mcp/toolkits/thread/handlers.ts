@@ -9,6 +9,7 @@ import {
 } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import { modelSelectionCommandType } from "@t2code/shared/model";
+import { formatThreadLink } from "@t2code/shared/threadLinks";
 
 import * as McpToolAccess from "../../McpToolAccess.ts";
 import {

@@ -53,7 +53,7 @@ import type {
   ScheduledTaskId,
   TurnItemId,
 } from "@t2code/contracts";
-import { RunId, ThreadId } from "@t2code/contracts";
+import { idleCompactionOf, isCompactionCommandMessage, RunId, ThreadId } from "@t2code/contracts";
 import {
   classifyToolActivity,
   collectToolFilePaths,
@@ -62,6 +62,7 @@ import {
   formatReadToolLabel,
   formatSearchToolLabel,
 } from "@t2code/shared/toolActivity";
+import { claudeResumeCompactionAge } from "@t2code/shared/claudeCompaction";
 import { formatDuration } from "@t2code/shared/orchestrationTiming";
 import { truncate } from "@t2code/shared/String";
 import type { HtmlRenderReference } from "@t2code/shared/htmlRender";

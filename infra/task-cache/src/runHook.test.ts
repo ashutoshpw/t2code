@@ -121,8 +121,8 @@ it("uses one machine hook across fresh worktrees without modifying Vite+", async
               ...process.env,
               HOME: root,
               GITHUB_ACTIONS: ci ? "true" : undefined,
-              T3_TASK_CACHE_TELEMETRY: undefined,
-              T3_TASK_CACHE_HOST: undefined,
+              T2_TASK_CACHE_TELEMETRY: undefined,
+              T2_TASK_CACHE_HOST: undefined,
               VITE_CACHE_PATH: undefined,
               ACTIONS_ID_TOKEN_REQUEST_URL: undefined,
               ACTIONS_ID_TOKEN_REQUEST_TOKEN: undefined,
@@ -203,9 +203,9 @@ it("rejects invalid setup credentials before installing anything and never print
           env: {
             ...process.env,
             HOME: home,
-            T3_CACHE_SETUP_URL: `http://127.0.0.1:${address.port}/projects/test`,
-            T3_CACHE_SETUP_NAME: "maria",
-            T3_CACHE_SETUP_TOKEN: token,
+            T2_CACHE_SETUP_URL: `http://127.0.0.1:${address.port}/projects/test`,
+            T2_CACHE_SETUP_NAME: "maria",
+            T2_CACHE_SETUP_TOKEN: token,
           },
           stdio: ["ignore", "pipe", "pipe"],
         },
@@ -309,9 +309,9 @@ it("installs without masking .profile and configures CI through bash", async () 
         "--non-interactive",
       ],
       {
-        T3_CACHE_SETUP_URL: `http://127.0.0.1:${address.port}/projects/test`,
-        T3_CACHE_SETUP_NAME: "maria",
-        T3_CACHE_SETUP_TOKEN: "test-credential-for-isolated-http-server",
+        T2_CACHE_SETUP_URL: `http://127.0.0.1:${address.port}/projects/test`,
+        T2_CACHE_SETUP_NAME: "maria",
+        T2_CACHE_SETUP_TOKEN: "test-credential-for-isolated-http-server",
       },
     );
     expect(await NodeFSP.readdir(home)).not.toContain(".bash_profile");
@@ -320,7 +320,7 @@ it("installs without masking .profile and configures CI through bash", async () 
     );
     const githubEnv = NodePath.join(home, "github-env");
     await run([process.execPath, NodePath.join(import.meta.dirname, "../scripts/install-ci.ts")], {
-      T3_TASK_CACHE_READ_TOKEN: "read-only-fixture-token-01234567890123456789",
+      T2_TASK_CACHE_READ_TOKEN: "read-only-fixture-token-01234567890123456789",
       GITHUB_REPOSITORY: "pingdotgg/t3code",
       GITHUB_ACTIONS: "true",
       GITHUB_ENV: githubEnv,
@@ -430,9 +430,9 @@ it("does not send an old endpoint's token after changing the URL interactively",
             ...process.env,
             HOME: root,
             NODE_OPTIONS: "",
-            T3_CACHE_SETUP_URL: "https://old.example",
-            T3_CACHE_SETUP_NAME: "maria",
-            T3_CACHE_SETUP_TOKEN: "old-endpoint-token-must-not-be-forwarded",
+            T2_CACHE_SETUP_URL: "https://old.example",
+            T2_CACHE_SETUP_NAME: "maria",
+            T2_CACHE_SETUP_TOKEN: "old-endpoint-token-must-not-be-forwarded",
           },
           stdio: ["pipe", "pipe", "pipe"],
         },
@@ -458,7 +458,7 @@ it("does not send an old endpoint's token after changing the URL interactively",
       child.once("close", (code) => resolve({ code, output }));
     });
     expect(result.code).not.toBe(0);
-    expect(result.output).toContain("Use T3_CACHE_SETUP_TOKEN");
+    expect(result.output).toContain("Use T2_CACHE_SETUP_TOKEN");
     expect(requests).toEqual([]);
   } finally {
     await new Promise<void>((resolve, reject) =>
@@ -480,9 +480,9 @@ it("rejects non-loopback HTTP before transmitting a setup credential", async () 
             ...process.env,
             HOME: home,
             NODE_OPTIONS: "",
-            T3_CACHE_SETUP_URL: "http://cache.invalid/projects/test",
-            T3_CACHE_SETUP_NAME: "maria",
-            T3_CACHE_SETUP_TOKEN: "test-credential-that-must-not-be-transmitted",
+            T2_CACHE_SETUP_URL: "http://cache.invalid/projects/test",
+            T2_CACHE_SETUP_NAME: "maria",
+            T2_CACHE_SETUP_TOKEN: "test-credential-that-must-not-be-transmitted",
           },
         },
         (_error, stdout, stderr) => resolve(stdout + stderr),
