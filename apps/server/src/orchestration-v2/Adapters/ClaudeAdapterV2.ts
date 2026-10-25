@@ -1405,7 +1405,7 @@ export function claudeQueryEnvironment(
 }
 
 // Claude Code's auto tool search sends every MCP schema in full while they fit under a share of the
-// context window, which T3's tools do on 1M models. auto:0 already means on and auto:100 off.
+// context window, which T2's tools do on 1M models. auto:0 already means on and auto:100 off.
 export function claudeToolSearchOverride(value: string | undefined): "true" | undefined {
   if (value === undefined) return undefined;
   if (value === "auto") return "true";
@@ -1698,18 +1698,11 @@ export const CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
   "mcp__t2-code__html_render",
 ];
 
-// Claude Code aborts an HTTP MCP call after 60 s ("The operation timed out.")
-// unless the server config sets `timeout`. T2's wait tools (t2_thread_wait,
-// delegate_task mode=wait) legitimately block for up to an hour
-// (MAX_WAIT_TIMEOUT_MS in OrchestratorMcpService), so the budget sits just
-// above that and the server's own wait timeout is what ends a long call.
+// T3 waits can block for an hour; exceed Claude's default 60 s timeout.
 export const CLAUDE_T2_MCP_TOOL_TIMEOUT_MS = 65 * 60 * 1_000;
 
-// The SDK's `allowedTools` only pre-approves tool calls; availability is the separate `tools`
-// option. Attaching the t2-code MCP server therefore always pre-approves its tools (headless
-// modes like `dontAsk` deny anything that is not pre-approved), but read-only sandboxes
-// pre-approve only the annotated read-only orchestrator tools so a read-only session cannot
-// silently spawn threads or scheduled tasks.
+// allowedTools pre-approves calls; tools controls availability. Pre-approve T3 tools for headless modes,
+// limited to annotated read-only tools in read-only sandboxes.
 
 export function claudeMcpQueryOverrides(input: {
   readonly mcpSession: McpProviderSession.McpProviderSessionConfig | undefined;

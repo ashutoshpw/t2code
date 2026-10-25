@@ -75,8 +75,12 @@ class T2ReviewDiffModule : Module() {
       AsyncFunction("setTokensJson") { view: T2ReviewDiffView, tokensJson: String ->
         view.setTokensJson(tokensJson)
       }
-      AsyncFunction("setTokensPatchJson") { view: T2ReviewDiffView, tokensPatchJson: String ->
-        view.setTokensPatchJson(tokensPatchJson)
+      AsyncFunction("setTokensPatchJson") {
+          view: T2ReviewDiffView,
+          tokensPatchJson: String,
+          promise: Promise
+        ->
+        view.setTokensPatchJson(tokensPatchJson) { accepted -> promise.resolve(accepted) }
       }
 
       OnViewDestroys { view: T2ReviewDiffView ->

@@ -126,11 +126,8 @@ export const gitConfigEnv = (
 };
 
 /**
- * Git otherwise opens any folder holding `HEAD`, `objects/` and `refs/` as a
- * bare repository and applies its `config`, including commands such as
- * `core.fsmonitor`. Files saved in a project or checked out from a clone can
- * form one, so git started by T2 (or by a host CLI) only opens a bare
- * repository named with `--git-dir` or `GIT_DIR`. Git before 2.38 ignores it.
+ * A project can contain a fake bare repository whose config runs commands such as `core.fsmonitor`.
+ * Require `--git-dir` or `GIT_DIR` to open bare repositories; Git before 2.38 ignores this setting.
  */
 export const explicitBareRepositoryEnv = (env: NodeJS.ProcessEnv, platform: NodeJS.Platform) =>
   gitConfigEnv(env, "safe.bareRepository", "explicit", platform);

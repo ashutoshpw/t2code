@@ -23,6 +23,7 @@ import * as CliError from "effect/cli/CliError";
 
 import { readBootstrapEnvelope } from "../bootstrap.ts";
 import * as ServerConfig from "../config.ts";
+import { resolveServiceLauncherMode } from "../cloud/serviceLauncherClient.ts";
 import { expandHomePath, resolveBaseDir } from "../os-jank.ts";
 import { isProcessAlive, readPersistedServerRuntimeState } from "../serverRuntimeState.ts";
 

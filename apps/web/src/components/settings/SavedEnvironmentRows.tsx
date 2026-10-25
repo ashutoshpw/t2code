@@ -52,6 +52,8 @@ import {
   useConnectionDiagnosis,
 } from "./ConnectionDiagnosisDetails";
 import { usePreparedConnection } from "~/state/session";
+import { useEnvironmentSessionState } from "~/state/session";
+import { Input } from "../ui/input";
 import { EnvironmentRow, environmentTransportLabel } from "./EnvironmentRow";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
 import { Switch } from "../ui/switch";
@@ -572,11 +574,9 @@ function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: b
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUpdatingPreference, setIsUpdatingPreference] = useState(false);
 
-  const disabledReason = !isSignedIn
-    ? "Sign in to T2 Connect to manage this environment."
-    : !canManageRelay
-      ? "Your session does not have permission to manage T2 Connect access."
-      : null;
+  const disabledReason = canManageRelay
+    ? null
+    : "Your session does not have permission to manage T2 Connect access.";
   const isBusy = isUpdating || isUpdatingPreference;
   const switchDisabled =
     !canManageRelay ||
@@ -692,17 +692,19 @@ function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: b
         <SettingsRow
           title={searchableSetting("t2-connect").title}
           description={
-            linkRevoked
-              ? "This environment was removed from T2 Connect. Turn it on to link it again."
-              : managedTunnelActive
-                ? reachability?.status === "unreachable"
-                  ? "T2 Connect is on, but other devices cannot reach this environment."
-                  : reachability?.status === "reachable"
-                    ? "This environment is available to your other devices through T2 Connect."
-                    : "T2 Connect is on. Reachability has not been checked yet."
-                : managedTunnelOutOfSync
-                  ? "T2 Connect is out of sync. This environment is linked only to publish agent activity, so other devices cannot connect. Turn T2 Connect on to repair it."
-                  : "Make this environment available to your other devices through T2 Connect."
+            signedOut
+              ? "Sign in to make this environment available to your other devices through T2 Connect."
+              : linkRevoked
+                ? "This environment was removed from T2 Connect. Turn it on to link it again."
+                : managedTunnelActive
+                  ? reachability?.status === "unreachable"
+                    ? "T2 Connect is on, but other devices cannot reach this environment."
+                    : reachability?.status === "reachable"
+                      ? "This environment is available to your other devices through T2 Connect."
+                      : "T2 Connect is on. Reachability has not been checked yet."
+                  : managedTunnelOutOfSync
+                    ? "T2 Connect is out of sync. This environment is linked only to publish agent activity, so other devices cannot connect. Turn T2 Connect on to repair it."
+                    : "Make this environment available to your other devices through T2 Connect."
           }
           status={operationError ?? primaryCloudLinkState.error ?? reachabilityStatus}
           control={
@@ -726,26 +728,30 @@ function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: b
           description="This environment was removed from T2 Connect. Run `t2 connect link` on the host to link it again."
         />
       ) : null}
-      <SettingsRow
-        title={searchableSetting("publish-agent-activity").title}
-        description="Send activity to mobile notifications and Live Activities without T2 Connect."
-        control={
-          <CloudLinkSwitch
-            ariaLabel="Publish agent activity to mobile clients"
-            checked={publishAgentActivity}
-            disabled={
-              !canManageRelay ||
-              !isSignedIn ||
-              primaryCloudLinkState.data === null ||
-              primaryCloudLinkState.isPending ||
-              isBusy
-            }
-            disabledReason={disabledReason}
-            onCheckedChange={(enabled) => void updatePublishAgentActivity(enabled)}
-          />
-        }
-      />
-      {managedTunnelActive ? (
+      {signedOut && isElectron ? null : (
+        <SettingsRow
+          title={searchableSetting("publish-agent-activity").title}
+          description={
+            signedOut
+              ? "Sign in to send activity to mobile notifications and Live Activities."
+              : "Send activity to mobile notifications and Live Activities without T2 Connect."
+          }
+          control={
+            signedOut ? (
+              signInButton
+            ) : (
+              <CloudLinkSwitch
+                ariaLabel="Publish agent activity to mobile clients"
+                checked={publishAgentActivity}
+                disabled={switchDisabled}
+                disabledReason={disabledReason}
+                onCheckedChange={(enabled) => void updatePublishAgentActivity(enabled)}
+              />
+            )
+          }
+        />
+      )}
+      {managedTunnelActive && !signedOut ? (
         <SettingsRow
           title={searchableSetting("hold-webhooks-while-offline").title}
           description="Keep webhook requests for up to 24 hours while this environment is offline, then deliver them. Off: T2 Connect only forwards requests and stores nothing."

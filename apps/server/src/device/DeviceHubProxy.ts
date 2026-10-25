@@ -1,9 +1,5 @@
-/**
- * The hub binds loopback and is never reachable directly: serve-sim exposes a shell-exec route
- * and serve-emu's action routes are unauthenticated, so the only way to a device stream is
- * through this route, which requires an environment session with read scope (operate scope for
- * input and tuning).
- */
+// Loopback-only hubs expose shell execution or unauthenticated actions.
+// Proxy with environment read scope for streams and operate scope for input and tuning.
 import { AuthOrchestrationReadScope, AuthOrchestrationOperateScope } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -65,8 +61,7 @@ const DROPPED_REQUEST_HEADERS = new Set([
   "dpop",
   "content-length",
   "accept-encoding",
-  // Describes the client's HTTPS hop to T2. The hub builds its own origin from it and then
-  // rejects the loopback Origin set below, so every mutation fails over T2 Connect.
+  // The client's HTTPS hop makes the hub reject our loopback Origin over T2 Connect.
   "x-forwarded-proto",
 ]);
 

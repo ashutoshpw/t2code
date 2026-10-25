@@ -41,12 +41,8 @@ import {
   timingSafeEqualBase64Url,
 } from "./utils.ts";
 
-/**
- * Every URL is derived from the request's own origin, so the same server
- * answers correctly over loopback, Tailscale Serve and a T2 Connect tunnel.
- * Client registration is stateless: a client id is its signed metadata, so an
- * unauthenticated caller cannot grow server state.
- */
+// Request-derived origins support loopback, Tailscale and tunnels.
+// Signed client metadata keeps unauthenticated registration stateless.
 
 const SIGNING_SECRET_NAME = "mcp-oauth-signing-key";
 const AUTHORIZATION_CODE_TTL_MS = 60_000;

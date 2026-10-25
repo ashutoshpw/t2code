@@ -2418,13 +2418,8 @@ export const makePiAdapterV2 = Effect.fn("makePiAdapterV2")(function* (
                 Effect.ignore,
               );
             }
-            // Resolved before the turn is installed: a failure here (an
-            // unreadable attachment) must not leave `activeTurn` set, which
-            // would reject every later turn as already active.
-            // Orchestration instructions reach pi through the T2 MCP
-            // extension's before_agent_start system-prompt hook, never by
-            // wrapping the user text: a wrapped first message would no
-            // longer start with "/" and slash commands would stop expanding.
+            // Resolve attachments before turn installation so failures cannot strand activeTurn.
+            // Inject instructions through before_agent_start; wrapping user text breaks slash-command expansion.
             const compactCommand = continuation
               ? null
               : parsePiCompactCommand(turnInput.message.text);

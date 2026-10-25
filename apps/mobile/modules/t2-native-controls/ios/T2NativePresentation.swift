@@ -39,7 +39,6 @@ final class T2PresentationSourceView: ExpoView {
   }
 }
 
-/// Sizes the containing React Native modal without replacing UIKit's sheet interaction.
 final class T2ContextSheetSizeView: ExpoView {
   var contentHeight: CGFloat = 0 {
     didSet { updateSheet() }

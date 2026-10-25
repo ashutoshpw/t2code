@@ -12,12 +12,7 @@ import * as SynchronizedRef from "effect/SynchronizedRef";
 import * as ElectronDialog from "../electron/ElectronDialog.ts";
 
 const PREVIEW_PARTITION_PREFIX = "persist:t2code-preview-";
-/**
- * Incognito partitions deliberately omit the `persist:` prefix, which is what
- * makes Chromium keep them in memory and discard them with the process. They
- * still carry the product prefix so `isPartition` can admit them — the
- * `will-attach-webview` gate rejects anything it does not recognise.
- */
+/** Ephemeral partitions omit persist: but retain a product prefix so the webview gate recognizes them. */
 const PREVIEW_EPHEMERAL_PARTITION_PREFIX = "t2code-preview-ephemeral-";
 const PROFILE_PARTITION_MARKER = "profile-";
 
@@ -27,15 +22,10 @@ export type BrowserSessionPartitionNamespace = "profile";
 const ALLOWED_PREVIEW_PERMISSIONS: ReadonlySet<string> = new Set([
   "clipboard-sanitized-write",
   "geolocation",
-  // `DesktopWindow` disables HTML fullscreen window resizing for the app window
-  // and every preview guest, so a page that goes fullscreen fills its own
-  // webview instead of taking over the whole T2 window.
+  // DesktopWindow confines HTML fullscreen to the guest's webview.
   "fullscreen",
-  // Deliberately NOT local-fonts: preview sessions run untrusted web content,
-  // and silently granting it would hand every page the user's installed-font
-  // fingerprint (and font file bytes via FontData.blob()).
-  // Deliberately NOT notifications: a page could post OS notifications branded
-  // as T2 Code. T2's own come from the app window on the default session.
+  // Deny local-fonts to untrusted previews: it exposes installed-font fingerprints and file bytes.
+  // Deny notifications: pages could impersonate T2 Code; app notifications use the default session.
 ]);
 
 const NEVER_EXTERNAL_PROTOCOLS: ReadonlySet<string> = new Set([

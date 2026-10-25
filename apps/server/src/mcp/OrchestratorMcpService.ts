@@ -65,6 +65,7 @@ import {
 } from "@t2code/contracts";
 import { getProviderOptionCurrentValue } from "@t2code/shared/model";
 import { runRanAfter } from "@t2code/shared/orchestrationV2ThreadError";
+import { formatThreadLink } from "@t2code/shared/threadLinks";
 import {
   normalizeThreadPullRequestKey,
   visibleThreadPullRequests,

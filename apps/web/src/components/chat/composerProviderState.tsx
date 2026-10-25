@@ -74,10 +74,7 @@ export function getComposerPromptInjectionState(prompt: string): ComposerPromptI
   return isClaudeUltrathinkPrompt(prompt) ? "ultrathink" : "none";
 }
 
-/**
- * Cursor ACP can report `fastMode: true` as the provider default. T2 only
- * treats Fast as selected when the user chose it (draft/sticky/settings).
- */
+/** Cursor ACP can default Fast to true; T3 requires a user selection. */
 export function withImplicitFastModeDefault(
   caps: ModelCapabilities,
   modelOptions: ReadonlyArray<ProviderOptionSelection> | null | undefined,

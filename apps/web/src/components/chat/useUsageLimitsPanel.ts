@@ -48,8 +48,7 @@ export function useUsageLimitsPanel(input: {
           setPanel(null),
         )
       : null;
-  // T2 owns /usage-limits only where Limits has data for the selected provider;
-  // elsewhere the name stays the provider's own and is sent through untouched.
+  // Intercept /usage-limits only when Limits has selected-provider data.
   const offered =
     providerDriver !== null && hasProviderUsageLimits(providerDriver, providers, sources);
 

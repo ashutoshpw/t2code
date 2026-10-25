@@ -46,15 +46,9 @@ const MAX_CONSOLE_TEXT_CHARS = 500;
 const VIEWPORT_HEIGHT = 800;
 const MAX_CAPTURE_HEIGHT = 4_000;
 const CAPTURE_TIMEOUT = "20 seconds";
-// Chrome refuses local files to every web page, frame, worker, and popup, so a
-// page cannot read files the agent's provider withholds; local images reach it
-// already inlined as data URIs. `.localhost` keeps it a secure context that may
-// still load plain-http resources, and the request never leaves the browser.
-// All of the browser's traffic goes through `publicProxy`, which only reaches
-// public addresses, so a page cannot reach this machine's local network. The
-// main frame also stays on the page and the browser opens no popups, so a
-// capture always shows the page itself.
-const PAGE_ORIGIN = "http://t2-page.localhost";
+// Chrome blocks file access; images arrive inlined. Browser-only .localhost permits secure contexts and HTTP resources.
+// publicProxy blocks local networks; pinning the main frame and forbidding popups keeps captures on the page.
+const PAGE_ORIGIN = "http://t3-page.localhost";
 const PAGE_URL = `${PAGE_ORIGIN}/page.html`;
 const PAGE_NAME = "page.html";
 const MEASURE_CONCURRENCY = 3;
@@ -302,8 +296,7 @@ const launchBrowser = Effect.fnUntraced(function* (input: {
       if (url === PAGE_URL && body !== undefined) {
         return yield* fulfillPage(sessionId, paused.requestId, body);
       }
-      // A frame inside the page may show another site; Local Network Access
-      // still covers it. The main frame and T2's own origin serve nothing else.
+      // Subframes may show other sites covered by Local Network Access; the main frame stays on T2's page.
       const otherSiteFrame =
         paused.resourceType === "Document" &&
         paused.frameId !== page.mainFrameId &&
@@ -458,8 +451,7 @@ const launchBrowser = Effect.fnUntraced(function* (input: {
       Ignored,
       sessionId,
     );
-    // Pauses T2's own origin, to serve the page, and every document, to keep
-    // the main frame on it.
+    // Intercept T2's page and all document navigations to keep the main frame on it.
     yield* send(
       "Fetch.enable",
       {

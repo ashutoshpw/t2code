@@ -245,9 +245,7 @@ const config: ExpoConfig = {
     supportsTablet: true,
     requireFullScreen: process.env.T2_SHOWCASE_CAPTURE_BUILD === "1",
     bundleIdentifier: iosBundleIdentifier,
-    // Pin code signing to the W3 Dev LLC team so non-interactive `expo run:ios`
-    // does not fall back to a personal team (which cannot sign app groups,
-    // Sign in with Apple, or push notification entitlements).
+    // Avoid Personal Team fallback: it cannot sign App Groups, Apple sign-in or push entitlements.
     appleTeamId: "ARK85ZXQ4Z",
     associatedDomains: [
       `applinks:${variant.relyingParty}`,
@@ -268,15 +266,10 @@ const config: ExpoConfig = {
       NSLocalNetworkUsageDescription:
         "Allow T2 Code to connect to T2 Code servers on your local network or tailnet.",
       NSPhotoLibraryAddUsageDescription: "Allow T2 Code to save images to your photo library.",
-      // "Audio, AirPlay, and Picture in Picture": the browser screen's system
-      // picture in picture needs it to start and to stay up outside the app.
+      // System picture in picture needs background audio to start and survive outside the app.
       UIBackgroundModes: ["audio"],
       ITSAppUsesNonExemptEncryption: false,
-      // The App Store screenshot harness rotates the iPad interface from
-      // inside the app (CI denies osascript the Accessibility access that
-      // Simulator menu scripting needs), and iPadOS ignores programmatic
-      // orientation requests for multitasking-capable apps — so the capture
-      // build opts out of multitasking and declares landscape support.
+      // Capture builds disable multitasking because iPadOS otherwise ignores orientation requests.
       ...(process.env.T2_SHOWCASE_CAPTURE_BUILD === "1"
         ? {
             "UISupportedInterfaceOrientations~ipad": [

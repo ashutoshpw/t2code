@@ -1,13 +1,8 @@
 /**
- * `t2code pair` - mint a pairing token for an already-running server and print it
- * as a QR code, without restarting anything.
- *
- * Discovery reads the `server-runtime.json` a live server persists next to its
- * database, then confirms the process is actually answering by fetching its
- * public environment descriptor. Inside a linked git worktree the worktree's
- * own `.t2` is checked first (matching dev-runner precedence); otherwise the
- * shared T2 home. `--tailscale` publishes the server over Tailscale Serve
- * HTTPS and pairs through the tailnet URL instead.
+ * `t2code pair` - mint a pairing token for an already-running server and print
+ * it as a QR code, without restarting anything. Discovery reads the
+ * `server-runtime.json` next to the database (worktree `.t2` first, matching
+ * dev-runner precedence); `--tailscale` pairs through the tailnet URL instead.
  */
 import {
   type AuthEnvironmentScope,
@@ -234,10 +229,7 @@ const probeEnvironmentDescriptor: (
       Effect.timeout(PAIR_PROBE_TIMEOUT),
       Effect.mapError(() => ({ _tag: "unreachable" }) as const),
     );
-    // Bad-gateway family means a proxy (Tailscale Serve) answered for a
-    // backend that is gone — a stale mapping, not a live occupant. Treating
-    // it as unreachable lets `t2code pair --tailscale` repair its own mapping
-    // after the server's port changed.
+    // Gateway errors identify stale proxy mappings that pairing may repair.
     if (response.status === 502 || response.status === 503 || response.status === 504) {
       return { _tag: "unreachable" } as const;
     }
@@ -394,9 +386,7 @@ const resolveTailscalePairingBase = Effect.fn("pair.resolveTailscalePairingBase"
       servePort: input.servePort,
     });
 
-    // Only an unreachable port, or a mapping already fronting this exact
-    // environment, is safe to (re)configure. Any other responder — T2 or not
-    // — must not have its mapping silently replaced.
+    // Only unreachable ports or this environment's mappings are safe to reconfigure.
     const existing = yield* probeEnvironmentDescriptor(baseUrl);
     if (existing._tag === "descriptor") {
       if (existing.descriptor.environmentId !== input.target.descriptor.environmentId) {
@@ -537,7 +527,7 @@ export const pairCommand = Command.make("pair", {
           );
         } else if (target.state.privateNetworkOnly) {
           notes.push(
-            "This URL works only from this machine's local network. From elsewhere, re-run with --tailscale or use T3 Connect.",
+            "This URL works only from this machine's local network. From elsewhere, re-run with --tailscale or use T2 Connect.",
           );
         }
         if (target.variant === "dev" && target.state.devUrl === undefined) {

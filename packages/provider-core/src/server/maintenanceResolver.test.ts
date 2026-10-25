@@ -805,8 +805,7 @@ it.layer(NodeServices.layer)("providerMaintenance", (it) => {
     "prefers npm ownership over the Node keg the package lives under",
     () =>
       Effect.gen(function* () {
-        // `brew install node` keeps npm globals inside the node keg.
-        const tempDir = yield* makeTempDir("t2-homebrew-node-capabilities");
+        const tempDir = yield* makeTempDir("t3-homebrew-node-capabilities");
         const keg = NodePath.join(tempDir, "Cellar", "node", "22.1.0");
         const target = NodePath.join(
           keg,

@@ -373,10 +373,9 @@ function normalizeT2McpToolLabel(value: string): string {
 
 /**
  * ACP agents disagree on how the injected T2 server prefixes its tools:
- * `mcp__t2-code__x` (Claude/Cursor), `t2-code.x` (Codex), plus single
- * underscore, colon, slash, dash, and space separators seen from registry
- * agents. The prefix match is deliberately loose because the display-name
- * inventory is the real gate; unknown tools stay on the generic renderer.
+ * `mcp__t2-code__x` (Claude/Cursor), `t2-code.x` (Codex), plus other registry
+ * separators. The match stays loose because the display-name inventory is the
+ * real gate; unknown tools stay on the generic renderer.
  */
 function resolveT2McpToolName(value: string): string | null {
   const label = normalizeT2McpToolLabel(value);

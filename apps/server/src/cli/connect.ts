@@ -742,10 +742,7 @@ const connectPublishCommand = Command.make("publish", {
           );
           return;
         }
-        // A link may already be desired (e.g. `t2code connect link` before the
-        // server's first start). Never downgrade it: a desired managed link
-        // also covers publishing, so only request a publish-only link when no
-        // link is pending at all.
+        // A desired managed link already covers publishing and must not be downgraded.
         if (yield* CliState.readCliDesiredCloudLink) {
           yield* Console.log(
             "A T2 Connect link is already pending. Start T2 to finish provisioning it; publishing starts once it links.",

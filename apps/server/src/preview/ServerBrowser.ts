@@ -404,11 +404,8 @@ const editingCommand = (key: string, modifiers: number) => {
 };
 
 const CLIPBOARD_TEXT_LIMIT = 1024 * 1024;
-const CLIPBOARD_WORLD = "t2-preview-clipboard";
-// Headless Chromium shares one clipboard between every context, so the copy
-// a viewer's copy or cut key makes is read from this world instead of the
-// clipboard. Page scripts cannot see the world, and only a copy made while a
-// real key is handled counts.
+const CLIPBOARD_WORLD = "t3-preview-clipboard";
+// Chromium shares its clipboard across contexts; capture real copy/cut keys in a page-inaccessible world instead.
 const CLIPBOARD_SCRIPT = `(() => {
   let keying = false;
   let copied = "";

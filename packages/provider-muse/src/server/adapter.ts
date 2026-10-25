@@ -1823,8 +1823,7 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
           const config = mcpSession
             ? {
                 mcpServers: {
-                  // Muse defaults to "required", which fails the whole run when T2's
-                  // tools cannot be reached. The agent should still work without them.
+                  // Muse's required default fails runs if T3 tools are unreachable; make them optional.
                   "t2-code": {
                     transport: "streamableHttp",
                     mode: "optional",
@@ -2071,8 +2070,7 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
                   ...parts,
                 ],
                 displayText: turnInput.message.text || "Image attachment",
-                // A resumed session keeps the root it was created with; pin it to
-                // this thread's current checkout so edits land where T2 tracks them.
+                // Resumed sessions retain old roots; pin edits to the current checkout.
                 workspaceRoots: [workspaceRoot],
                 ifBusy: "queue",
                 ...(effort ? { reasoningEffort: effort } : {}),
@@ -2354,8 +2352,7 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
                 }),
             ),
           ),
-        // Muse rejects forks at completed-turn boundaries (InvalidCut), so T2 uses
-        // portable context handoff for forks and does not rewind Muse conversations.
+        // Muse rejects completed-turn forks with InvalidCut; use portable handoff without rewinding.
         rollbackThread: (args) =>
           Effect.fail(
             new ProviderAdapter.ProviderAdapterRollbackThreadError({

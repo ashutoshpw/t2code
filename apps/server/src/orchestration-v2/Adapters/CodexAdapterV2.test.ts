@@ -144,7 +144,41 @@ describe("CodexAdapterV2 assistant message streaming", () => {
 });
 
 describe("CodexAdapterV2 runtime policy", () => {
-  it.effect("derives concrete Codex turn policies from every T2 runtime mode", () =>
+  it.effect.each([undefined, false, true])(
+    "selects native collaboration modes without prompt overrides with hasT2Mcp=%s",
+    (hasT2Mcp) =>
+      Effect.gen(function* () {
+        for (const interactionMode of ["plan", "default"] as const) {
+          for (const reasoningEffort of [undefined, "high"] as const) {
+            const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
+              nativeThreadId: "native-mode-switch",
+              codexInput: [{ type: "text", text: "test" }],
+              runtimePolicy: { runtimeMode: "full-access", interactionMode, cwd: null },
+              modelSelection: {
+                instanceId: ProviderInstanceId.make("codex"),
+                model: "gpt-5.4",
+                ...(reasoningEffort === undefined
+                  ? {}
+                  : { options: [{ id: "reasoningEffort", value: reasoningEffort }] }),
+              },
+              ...(hasT2Mcp === undefined ? {} : { hasT2Mcp }),
+            });
+
+            assert.deepEqual(params.collaborationMode, {
+              mode: interactionMode,
+              settings: {
+                model: "gpt-5.4",
+                ...(reasoningEffort === undefined ? {} : { reasoning_effort: reasoningEffort }),
+              },
+            });
+            assert.equal(params.effort, reasoningEffort);
+            assert.equal(params.additionalContext !== undefined, hasT2Mcp === true);
+          }
+        }
+      }),
+  );
+
+  it.effect("derives concrete Codex turn policies from every T3 runtime mode", () =>
     Effect.gen(function* () {
       const build = (
         runtimeMode: "approval-required" | "auto-accept-edits" | "auto" | "full-access",

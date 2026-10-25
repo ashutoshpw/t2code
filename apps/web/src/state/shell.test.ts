@@ -1,6 +1,6 @@
 import { BearerConnectionTarget, PrimaryConnectionTarget } from "@t2code/client-runtime/connection";
 import type { EnvironmentCatalogState } from "@t2code/client-runtime/state/connections";
-import type { EnvironmentShellState } from "@t2code/client-runtime/state/shell";
+import { EMPTY_SHELL_STATE, type EnvironmentShellState } from "@t2code/client-runtime/state/shell";
 import { EnvironmentId } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { Atom, AtomRegistry } from "effect/reactivity";

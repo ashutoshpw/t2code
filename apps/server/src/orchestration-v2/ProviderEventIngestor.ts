@@ -467,12 +467,7 @@ export const layer: Layer.Layer<
       },
     );
 
-    /**
-     * Retire the runs that fell off its active branch with the same run,
-     * root-node, and checkpoint updates CheckpointRollbackService writes for a
-     * T2 revert. The run reporting the rewind performed it and stays, so it
-     * keeps lastRunOrdinal.
-     */
+    /** Retire rewound runs like CheckpointRollbackService; retain the reporting run and its lastRunOrdinal. */
     const rollBackRewoundRuns = Effect.fn("ProviderEventIngestor.rollBackRewoundRuns")(function* (
       input: ProviderEventIngestInput,
       rewind: {

@@ -73,10 +73,7 @@ export function xAiPromptCompleteFromSessionUpdate(
   };
 }
 
-/**
- * Grok answers a finished background command in its own turn, tagging every
- * frame with a `task-completed-*` prompt id instead of the one T2 sent.
- */
+/** Background command wakes use their own task-completed-* prompt IDs. */
 export function isXAiTaskCompletedWakeNotification(
   notification: EffectAcpSchema.SessionNotification,
 ): boolean {
@@ -941,10 +938,7 @@ export interface XAiExitPlanModeResponse {
   readonly feedback?: string;
 }
 
-/**
- * Client captured the plan for T2's proposed-plan card. Abandon the native
- * Grok plan-approval gate so the turn unblocks; the user implements via T2 UI.
- */
+/** Abandon the native approval gate after T2 captures the plan; implementation uses T2 UI. */
 export function makeXAiExitPlanModeCapturedResponse(feedback?: string): XAiExitPlanModeResponse {
   return {
     outcome: "abandoned",

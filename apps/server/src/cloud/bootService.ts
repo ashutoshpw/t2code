@@ -107,10 +107,7 @@ export function renderBootServiceUnit(plan: BootServicePlan): string {
     // Let the launcher mark an explicit stop before it signals the server.
     // systemd still SIGKILLs the whole cgroup if graceful shutdown times out.
     "KillMode=mixed",
-    // Agents and terminals run in their own scopes in app-t2code-agents.slice
-    // (see process/agentScope.ts). Short helper commands still share this
-    // cgroup, and with the systemd default of OOMPolicy=stop, the kernel
-    // killing one of them stops the whole unit.
+    // Helpers share this cgroup; default OOMPolicy=stop would stop the unit if one is OOM-killed.
     "OOMPolicy=continue",
     "Restart=always",
     "RestartSec=5",

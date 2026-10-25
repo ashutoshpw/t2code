@@ -47,7 +47,6 @@ const run = Effect.fn("test.run")(function* (
   return { stdout, stderr, exitCode };
 }, Effect.scoped);
 
-/** A release archive for this host with a stub `t2` that echoes its args and launcher. */
 const serveFakeRelease = Effect.fn("test.serveFakeRelease")(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -119,7 +118,6 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         assert.equal(manifest.name, "@t2code/cli");
         assert.equal(manifest.version, VERSION);
         assert.deepStrictEqual(manifest.bin, { t2code: "./bin/t2code.mjs" });
-        // Nothing for npm to resolve, so nothing that can lag behind the launcher.
         assert.isUndefined(manifest.dependencies);
         assert.isUndefined(manifest.optionalDependencies);
         assert.isAbove(npmReleaseDatabaseMigration(manifest) ?? 0, 0);
@@ -147,7 +145,6 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         });
         assert.equal(first.stdout.trim(), `stub serve a b launcher=${launcher}`, first.stderr);
         assert.equal(first.exitCode, 7);
-        // The same layout the install scripts and `t2code update` use.
         const versionDir = path.join(home, "runtime/versions", VERSION);
         assert.equal(
           (yield* fs.readFileString(path.join(versionDir, ".install-complete"))).trim(),
@@ -164,8 +161,6 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         assert.equal(second.exitCode, 7);
         assert.equal(release.requests.length, requestsAfterFirst);
 
-        // Services installed before 0.0.41 fork dist/bin.mjs and talk to the
-        // server over IPC; the channel and SIGTERM must reach the executable.
         const ipcServer = path.join(home, "runtime/versions", VERSION, "t2");
         yield* fs.writeFileString(
           ipcServer,

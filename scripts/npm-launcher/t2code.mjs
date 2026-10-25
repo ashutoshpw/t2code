@@ -1,10 +1,8 @@
 #!/usr/bin/env node
-// The `@t2code/cli` npm package. Downloads this version's CLI archive from the GitHub
-// Release into <T2 home>/runtime/versions/<version> (the folder the install
-// scripts and `t2code update` use), verifies it against the release's SHA256SUMS,
-// then runs it. `dist/bin.mjs` re-enters here for background services
-// installed before 0.0.41, which start the npm package with Node and talk to
-// it over an IPC channel.
+// The `@t2code/cli` npm package. Downloads this version's CLI archive from the
+// GitHub Release into <T2 home>/runtime/versions/<version>, verifies it against
+// the release's SHA256SUMS, then runs it. `dist/bin.mjs` re-enters here for
+// pre-0.0.41 background services, which start the package with Node over IPC.
 import { spawn, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -112,10 +110,9 @@ const isComplete = (dir) => {
 
 /**
  * Moves a finished staging folder to `dir`. Rename never replaces an existing
- * folder, so a complete install another launcher (or `t2code update`) published
- * first is kept, never deleted from under a running process. Only a folder
- * without the completion marker, left by an interrupted older installer, is
- * cleared before trying again.
+ * folder, so a complete install published first is kept, never deleted under a
+ * running process. Only a folder without the completion marker, left by an
+ * interrupted older installer, is cleared before trying again.
  */
 function publish(staging, dir) {
   try {

@@ -1,4 +1,7 @@
-import { backgroundWorkHoldsCompletion } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
+import {
+  backgroundWorkHoldsCompletion,
+  turnItemUpdateCanEndBackgroundWork,
+} from "@t2code/shared/orchestrationV2PendingBackgroundWork";
 import { resolveProjectSettings } from "@t2code/shared/projectSettings";
 import { visibleThreadPullRequests } from "@t2code/shared/threadPullRequests";
 import {

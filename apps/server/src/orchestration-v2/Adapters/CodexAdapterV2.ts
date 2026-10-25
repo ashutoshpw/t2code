@@ -102,10 +102,7 @@ import { resolveAttachmentPath, resolveAttachmentPathById } from "../../attachme
 import { getCodexServiceTierOptionValue } from "../../codexModelOptions.ts";
 import { ServerConfig } from "../../config.ts";
 import { expandHomePath } from "@t2code/provider-core/server/pathExpansion";
-import {
-  buildCodexAdditionalContext,
-  buildCodexDeveloperInstructions,
-} from "../../provider/CodexDeveloperInstructions.ts";
+import { buildCodexAdditionalContext } from "../../provider/CodexDeveloperInstructions.ts";
 import {
   describeMcpElicitation,
   toMcpElicitationResponse,
@@ -755,13 +752,7 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
       input.omitServiceTier === true
         ? undefined
         : getCodexServiceTierOptionValue(input.modelSelection);
-    const developerInstructions =
-      input.hasT2Mcp !== true
-        ? undefined
-        : buildCodexDeveloperInstructions(input.runtimePolicy.interactionMode);
-    // An app's context is text an MCP server wrote, so it goes in as untrusted
-    // context: Codex renders it as quoted user-side input, never as developer
-    // instructions.
+    // MCP-written app context must be quoted user input, not developer instructions.
     const appContext = Object.fromEntries(
       (input.appContext ?? []).map((entry) => [
         entry.key,
@@ -788,8 +779,7 @@ export const buildCodexTurnStartParams = Effect.fn("CodexAdapterV2.buildCodexTur
       ...(additionalContext ? { additionalContext } : {}),
       cwd: input.runtimePolicy.cwd,
       model: input.modelSelection.model,
-      // Model catalogues can default summaries to "none". Request them on every
-      // turn, including resumed threads, for T2's reasoning timeline.
+      // Catalogues can default summaries to "none"; request them explicitly on every turn.
       summary: "detailed",
       // Omitting the reviewer on resume preserves the previous Auto reviewer.
       approvalsReviewer: runtimeModeDefaults.approvalsReviewer,

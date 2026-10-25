@@ -72,10 +72,7 @@ const CODEX_CATALOG_REFRESH_TIMEOUT_MS = 3_000;
 const CODEX_CONFIG_PROBE_TIMEOUT_MS = 3_000;
 const CODEX_CATALOG_REFRESH_POLL = "100 millis" as const;
 const CODEX_CLIENT_NAME = "T2 Code";
-// Codex's probe does a full handshake plus account, models, and skills requests, which can
-// legitimately run past the shared 10s AUTH_PROBE_TIMEOUT_MS on a loaded or slow machine
-// (most often reported on Windows). Give Codex its own longer budget instead of raising the
-// timeout for every provider.
+// Handshake plus account/models/skills requests can exceed the shared 10s probe budget.
 const CODEX_AUTH_PROBE_TIMEOUT_MS = 20_000;
 const CODEX_DISCOVERY_MARGIN_MS = 250;
 

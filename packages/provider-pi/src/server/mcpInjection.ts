@@ -281,8 +281,7 @@ export function buildPiRpcLaunch(input: {
     args.push("--extension", input.extensionPath);
   }
   const environment = { ...input.environment };
-  // These values belong to the current T2 session. Never let a Pi child reuse
-  // credentials inherited from the server or a parent provider process.
+  // MCP credentials belong to this T3 session; discard inherited server/parent credentials.
   delete environment[T2_MCP_URL_ENV];
   delete environment[T2_MCP_BEARER_ENV];
   delete environment[T2_PI_MCP_EXTENSION_PATH_ENV];
