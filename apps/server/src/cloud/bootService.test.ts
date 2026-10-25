@@ -699,7 +699,6 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(failure).toBe("repair failed");
       expect(control.active).toBe(true);
 
-      // A failed stop skips the operation but still starts the service again.
       control.failCommand = "systemctl --user stop t2code.service";
       let ran = false;
       const stopFailure = yield* service
@@ -935,8 +934,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
       expect(yield* service.uninstall).toBe(true);
       expect((yield* service.status).installed).toBe(false);
       expect(commands.some((command) => command.startsWith("systemctl "))).toBe(false);
-      // A bootout can block up to the plist's 90s ExitTimeOut; the runner's
-      // 60s default would cancel it and let bootstrap race a loaded job.
+      // launchd can take 90s to bootout; the runner's 60s default could let bootstrap race it.
       expect(timeouts.get("launchctl bootout --wait gui/501/codes.t2.desktop.service")).toEqual(
         Duration.seconds(120),
       );

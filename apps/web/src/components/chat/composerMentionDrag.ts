@@ -4,10 +4,6 @@ import { Option, Schema } from "effect";
 
 export const COMPOSER_MENTION_DRAG_TYPE = "application/x-t2code-composer-mention";
 
-/**
- * Drag payload type carrying a pull request, as JSON `PullRequestContextMetadata`. Set on drags
- * that start on a pull request row; the composer drops it as the same chip the `#` picker adds.
- */
 export const COMPOSER_PULL_REQUEST_DRAG_TYPE = "application/x-t2code-pull-request";
 
 const PullRequestDragPayload = Schema.fromJsonString(PullRequestContextMetadata);

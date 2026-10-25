@@ -209,9 +209,7 @@ function antigravityEnvironment(
       : auth.authMethod === "agent-platform" && auth.apiKey
         ? { GOOGLE_API_KEY: auth.apiKey }
         : {};
-  // It unpacks about 1 GB into the system temp directory per launch and a force
-  // kill leaves that behind. Point it at a T2-owned directory so the driver can
-  // reclaim the space.
+  // Each launch unpacks about 1 GB; use T3-owned temp so the driver can reclaim files after force-kill.
   const tempDirectory = runtimeTempDirectory ?? profile.tempDirectory;
   return {
     ...environment,

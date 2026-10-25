@@ -31,7 +31,7 @@ if (!TELEMETRY_CHANNELS.includes(telemetryChannel)) {
 }
 
 // tsdown SEA needs one chunk (sourcemaps count) and Node >=25.7, so package separately.
-// "bundle" emits the embedded CLI. "1" builds dist-exe/t3 from the bootstrap.
+// "bundle" emits the embedded CLI. "1" builds dist-exe/t2 here.
 // TEMPORARY one-time Node fix. Remove when fixed: https://github.com/nodejs/node/issues/67048
 // "bootstrap" stops at bin.mjs for scripts/cli.ts to inject (linux-arm64).
 const packMode = process.env.T2CODE_PACK_EXE;

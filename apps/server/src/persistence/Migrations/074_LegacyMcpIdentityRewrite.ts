@@ -3,15 +3,10 @@ import * as Effect from "effect/Effect";
 import * as SqlClient from "effect/sql/SqlClient";
 
 /**
- * Transcripts recorded before the T3 to T2 rename keep the server and tool
- * names the runtime no longer resolves, so their cards fall back to the
- * generic renderer. Rewrite the stored spellings rather than teaching the
- * runtime to accept both, which would keep the old names in code forever.
- *
- * Only identity-shaped strings are rewritten. Payload prose, paths and file
- * contents that merely mention the old name are left alone, because the same
- * spelling appears in projects, repositories and conversations that have
- * nothing to do with this rename.
+ * Transcripts recorded before the T3 to T2 rename keep server and tool names
+ * the runtime no longer resolves; rewrite the stored spellings instead of
+ * teaching the runtime both. Only identity-shaped strings are rewritten:
+ * payload prose and file contents that merely mention the old name stay.
  */
 const LEGACY_TOOL_PREFIX = "t3_";
 const CURRENT_TOOL_PREFIX = "t2_";

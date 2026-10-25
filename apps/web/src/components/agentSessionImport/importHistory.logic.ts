@@ -79,11 +79,10 @@ export interface AgentHistoryImportSummary {
 }
 
 /**
- * Import history for each selected candidate: create the project when no
- * project sits at the candidate root, then request a bounded history import.
- * Project creation attempts and completed imports are recorded in the shared
- * state so a retry after an interrupted batch skips finished paths instead of
- * tripping the duplicate-root invariant.
+ * Import history for each selected candidate: create the project when none
+ * sits at the candidate root, then request a bounded history import. Attempts
+ * and completed imports are recorded in the shared state so a retry after an
+ * interrupted batch skips finished paths instead of tripping duplicate-root.
  */
 export async function runAgentHistoryImport(
   deps: AgentHistoryImportDeps,

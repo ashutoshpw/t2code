@@ -1398,9 +1398,9 @@ describe("extractMcpToolCallIdentity", () => {
         kind: "other",
         title: `@t3-code/${tool}`,
         status: "pending",
-        rawInput: { tool_id: `t3-code::${tool}`, arguments: { threadId: "thread-1" } },
+        rawInput: { tool_id: `t2-code::${tool}`, arguments: { threadId: "thread-1" } },
       });
-      expect(extractMcpToolCallIdentity(toolCall), tool).toEqual({ server: "t3-code", tool });
+      expect(extractMcpToolCallIdentity(toolCall), tool).toEqual({ server: "t2-code", tool });
     }
   });
 
@@ -1415,9 +1415,8 @@ describe("extractMcpToolCallIdentity", () => {
     expect(extractMcpToolCallIdentity(toolCall)).toBeUndefined();
   });
 
-  it("recovers T2 identity from goose _meta despite LLM-rewritten titles", () => {
-    // goose enriches titles asynchronously, so only _meta.goose.toolCall is
-    // stable; shape from crates/goose/src/acp/server/tool_calls/conversion.rs.
+  it("recovers T3 identity from goose _meta despite LLM-rewritten titles", () => {
+    // goose titles change asynchronously; only _meta.goose.toolCall is stable.
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "goose-1",
@@ -1437,10 +1436,8 @@ describe("extractMcpToolCallIdentity", () => {
     });
   });
 
-  it("recovers T2 identity from qwen serverId meta regardless of prefix format", () => {
-    // qwen-code 0.21.12 emits _meta.serverId + _meta.toolName; serverId is an
-    // explicit origin assertion, so a known tool suffix suffices even if the
-    // prefix format changes.
+  it("recovers T3 identity from qwen serverId meta regardless of prefix format", () => {
+    // qwen-code 0.21.12 serverId asserts MCP origin even when tool prefixes change.
     const toolCall = toolCallFromUpdate({
       sessionUpdate: "tool_call",
       toolCallId: "qwen-meta-1",

@@ -25,12 +25,7 @@ export type CliShimTarget =
   | { readonly kind: "direct"; readonly executable: string; readonly entry: string }
   | { readonly kind: "windows"; readonly executable: string; readonly entry: string };
 
-/**
- * Electron runs the server as plain Node with `ELECTRON_RUN_AS_NODE`, which
- * reads the entry from inside the asar archive. The launcher's own path and the
- * app's T2 home are written in, so the command the server shows is absolute and
- * `sudo`, which clears the environment, still runs against this install's home.
- */
+/** Embed this install's home and executable path so `sudo`, which clears the environment, uses the same install. */
 export const renderCliShim = (input: {
   readonly target: CliShimTarget;
   readonly shimPath: string;
