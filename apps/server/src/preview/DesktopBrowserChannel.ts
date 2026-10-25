@@ -1,13 +1,15 @@
-// @effect-diagnostics nodeBuiltinImport:off - Bridges Playwright's WebSocket transport to the desktop's fds.
-/** Playwright needs a CDP WebSocket; the secret loopback endpoint relays desktop debugger frames over bootstrap fds. */
+// @effect-diagnostics nodeBuiltinImport:off - Bridges Playwright's WebSocket transport to browser hosts.
+/** Playwright needs a CDP WebSocket, so the secret loopback endpoint relays debugger frames to whichever host is attached. */
 import * as NodeStream from "@effect/platform-node/NodeStream";
 import * as NodeSocketServer from "@effect/platform-node/NodeSocketServer";
 import {
   DesktopBrowserCommand,
   DesktopBrowserEvent,
   type DesktopBrowserCommand as DesktopBrowserCommandType,
+  type DesktopBrowserEvent as DesktopBrowserEventType,
 } from "@t2code/contracts";
 import * as Context from "effect/Context";
+import * as Deferred from "effect/Deferred";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -28,16 +30,53 @@ import { writeAllToFileDescriptor } from "../resourceTelemetry/DesktopTelemetryR
 const decodeEvent = Schema.decodeUnknownEffect(DesktopBrowserEvent);
 const encodeCommand = Schema.encodeEffect(Schema.fromJsonString(DesktopBrowserCommand));
 
+/** One NDJSON browser-host protocol, whatever carries it: bootstrap fds or a WebSocket. */
+export interface DesktopBrowserTransport {
+  readonly events: Stream.Stream<DesktopBrowserEventType, unknown>;
+  readonly send: (command: DesktopBrowserCommandType) => Effect.Effect<void>;
+  /** Signals the host that its connection is being shut down. Safe to run more than once. */
+  readonly close: Effect.Effect<void>;
+}
+
 export interface DesktopTabKey {
   readonly threadId: string;
   readonly tabId: string;
 }
 
+export interface DesktopBrowserHostSession {
+  /** Completes when the attached host went away, whether it closed or was replaced. */
+  readonly closed: Effect.Effect<void>;
+}
+
 const keyOf = ({ threadId, tabId }: DesktopTabKey) => `${threadId}\u0000${tabId}`;
+
+/** Decodes host NDJSON frames; invalid lines are dropped so one bad frame cannot end a session. */
+export const decodeEvents = (
+  bytes: Stream.Stream<Uint8Array, unknown>,
+): Stream.Stream<DesktopBrowserEventType, unknown> =>
+  bytes.pipe(
+    Stream.pipeThroughChannel(Ndjson.decode({ ignoreEmptyLines: true })),
+    Stream.mapEffect((value) => decodeEvent(value).pipe(Effect.option)),
+    Stream.flatMap((decoded) =>
+      Option.isSome(decoded) ? Stream.make(decoded.value) : Stream.empty,
+    ),
+  );
+
+export const encodeCommandLine = (command: DesktopBrowserCommandType) => encodeCommand(command);
+
+export class DesktopBrowserHostUnavailableError extends Schema.TaggedError<DesktopBrowserHostUnavailableError>()(
+  "DesktopBrowserHostUnavailableError",
+  { reason: Schema.Literal("bundled-host") },
+) {
+  override get message(): string {
+    return "This server runs inside its own desktop app, so another computer cannot host its browser.";
+  }
+}
 
 export class DesktopBrowserChannel extends Context.Service<
   DesktopBrowserChannel,
   {
+    /** True while a desktop app, local or remote, holds the browser-host connection. */
     readonly available: boolean;
     /** Subscribe before checking so concurrent attaches cannot be missed. */
     readonly awaitAttached: (key: DesktopTabKey, timeout: Duration.Input) => Effect.Effect<boolean>;
@@ -49,6 +88,13 @@ export class DesktopBrowserChannel extends Context.Service<
       key: DesktopTabKey,
       pointer: { readonly phase: "move" | "click"; readonly x: number; readonly y: number },
     ) => Effect.Effect<void>;
+    /**
+     * Attaches a remote browser host for the scope's lifetime. A new host replaces the old
+     * one, whose tabs detach; servers bundled with a desktop app refuse remote hosts.
+     */
+    readonly attachHost: (
+      transport: DesktopBrowserTransport,
+    ) => Effect.Effect<DesktopBrowserHostSession, DesktopBrowserHostUnavailableError, Scope.Scope>;
   }
 >()("@t2code/cli/preview/DesktopBrowserChannel") {}
 
@@ -57,69 +103,134 @@ const make = Effect.gen(function* () {
   const inputFd = config.desktopBrowserFd;
   const controlFd = config.desktopBrowserControlFd;
   const changes = yield* PubSub.unbounded<{ key: DesktopTabKey; attached: boolean }>();
-  const attachedTabs = new Set<string>();
+  const attachedTabs = new Map<string, DesktopTabKey>();
   const inbound = new Map<string, Queue.Queue<string>>();
-  const writeLock = yield* Semaphore.make(1);
+  let active: { readonly transport: DesktopBrowserTransport; readonly generation: number } | null =
+    null;
+  let generation = 0;
 
-  if (inputFd === undefined || controlFd === undefined) {
-    return DesktopBrowserChannel.of({
-      available: false,
-      awaitAttached: () => Effect.succeed(false),
-      detached: Stream.empty,
-      attached: Stream.empty,
-      isAttached: () => Effect.succeed(false),
-      endpoint: () => Effect.die("No desktop app is attached to this server."),
-      pointer: () => Effect.void,
-    });
-  }
+  const send = (message: DesktopBrowserCommandType) =>
+    active === null ? Effect.void : active.transport.send(message);
 
-  const command = (message: DesktopBrowserCommandType) =>
-    writeLock.withPermits(1)(
-      encodeCommand(message).pipe(
-        Effect.flatMap((line) => writeAllToFileDescriptor(controlFd, Buffer.from(`${line}\n`))),
-        Effect.catchCause((cause) =>
-          Effect.logWarning("desktop browser command failed", { cause }),
-        ),
-      ),
+  const detachAll = Effect.gen(function* () {
+    const tabs = [...attachedTabs];
+    attachedTabs.clear();
+    yield* Effect.forEach(
+      tabs,
+      ([id, key]) =>
+        Effect.gen(function* () {
+          const queue = inbound.get(id);
+          yield* queue ? Queue.shutdown(queue) : Effect.void;
+          yield* PubSub.publish(changes, { key, attached: false });
+        }),
+      { discard: true },
     );
+  });
 
-  // Use cancellable socket reads; filesystem pipe reads keep Node alive after scope shutdown.
-  const readable = yield* Effect.acquireRelease(
-    Effect.sync(() => new NodeNet.Socket({ fd: inputFd, readable: true, writable: false })),
-    (stream) => Effect.sync(() => stream.destroy()),
-  );
-  yield* NodeStream.fromReadable<Uint8Array, Error>({
-    evaluate: () => readable,
-    closeOnDone: true,
-    onError: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
-  }).pipe(
-    Stream.pipeThroughChannel(Ndjson.decode({ ignoreEmptyLines: true })),
-    Stream.mapEffect((value) => decodeEvent(value).pipe(Effect.option)),
-    Stream.runForEach((decoded) => {
-      if (Option.isNone(decoded)) return Effect.void;
-      const event = decoded.value;
-      const key = { threadId: event.threadId, tabId: event.tabId };
-      const id = keyOf(key);
-      switch (event.type) {
-        case "cdp": {
-          const queue = inbound.get(id);
-          return queue ? Queue.offer(queue, event.message).pipe(Effect.asVoid) : Effect.void;
-        }
-        case "attached":
-          attachedTabs.add(id);
-          return PubSub.publish(changes, { key, attached: true });
-        case "detached": {
-          attachedTabs.delete(id);
-          const queue = inbound.get(id);
-          return (queue ? Queue.shutdown(queue) : Effect.void).pipe(
-            Effect.andThen(PubSub.publish(changes, { key, attached: false })),
-          );
-        }
+  const handleEvent = (source: number) => (event: DesktopBrowserEventType) => {
+    // Events from a replaced transport must not touch the new host's tabs.
+    if (active?.generation !== source) return Effect.void;
+    const key = { threadId: event.threadId, tabId: event.tabId };
+    const id = keyOf(key);
+    switch (event.type) {
+      case "cdp": {
+        const queue = inbound.get(id);
+        return queue ? Queue.offer(queue, event.message).pipe(Effect.asVoid) : Effect.void;
       }
-    }),
-    Effect.catchCause((cause) => Effect.logWarning("desktop browser channel stopped", { cause })),
-    Effect.forkScoped,
-  );
+      case "attached":
+        attachedTabs.set(id, key);
+        return PubSub.publish(changes, { key, attached: true });
+      case "detached": {
+        attachedTabs.delete(id);
+        const queue = inbound.get(id);
+        return (queue ? Queue.shutdown(queue) : Effect.void).pipe(
+          Effect.andThen(PubSub.publish(changes, { key, attached: false })),
+        );
+      }
+    }
+  };
+
+  const releaseIfActive = (source: number) =>
+    Effect.suspend(() => {
+      if (active?.generation !== source) return Effect.void;
+      active = null;
+      return detachAll;
+    });
+
+  const register = Effect.fn("DesktopBrowserChannel.register")(function* (
+    transport: DesktopBrowserTransport,
+  ) {
+    const previous = active;
+    if (previous !== null) {
+      yield* detachAll;
+      active = null;
+      yield* previous.transport.close.pipe(Effect.ignore);
+    }
+    const source = ++generation;
+    const closed = yield* Deferred.make<void>();
+    active = { transport, generation: source };
+    yield* transport.events.pipe(
+      Stream.runForEach(handleEvent(source)),
+      Effect.catchCause((cause) => Effect.logWarning("desktop browser host stopped", { cause })),
+      // A dead transport cannot relay frames; detach its tabs instead of leaving them hanging.
+      Effect.ensuring(releaseIfActive(source)),
+      Effect.ensuring(Deferred.succeed(closed, undefined)),
+      Effect.forkScoped,
+    );
+    yield* Effect.addFinalizer(() =>
+      Effect.andThen(releaseIfActive(source), Deferred.succeed(closed, undefined)),
+    );
+    return { closed: Deferred.await(closed) } satisfies DesktopBrowserHostSession;
+  });
+
+  const makeFdTransport = Effect.fn("DesktopBrowserChannel.makeFdTransport")(function* (
+    input: number,
+    control: number,
+  ) {
+    const writeLock = yield* Semaphore.make(1);
+    // Use cancellable socket reads; filesystem pipe reads keep Node alive after scope shutdown.
+    const readable = yield* Effect.acquireRelease(
+      Effect.sync(() => new NodeNet.Socket({ fd: input, readable: true, writable: false })),
+      (stream) => Effect.sync(() => stream.destroy()),
+    );
+    const transport: DesktopBrowserTransport = {
+      events: decodeEvents(
+        NodeStream.fromReadable<Uint8Array, Error>({
+          evaluate: () => readable,
+          closeOnDone: true,
+          onError: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+        }),
+      ),
+      send: (message) =>
+        writeLock.withPermits(1)(
+          encodeCommand(message).pipe(
+            Effect.flatMap((line) => writeAllToFileDescriptor(control, Buffer.from(`${line}\n`))),
+            Effect.catchCause((cause) =>
+              Effect.logWarning("desktop browser command failed", { cause }),
+            ),
+          ),
+        ),
+      close: Effect.sync(() => readable.destroy()),
+    };
+    return transport;
+  });
+
+  const fds =
+    inputFd !== undefined && controlFd !== undefined
+      ? { input: inputFd, control: controlFd }
+      : null;
+  const bundledTransport =
+    fds === null
+      ? null
+      : yield* makeFdTransport(fds.input, fds.control).pipe(
+          // The server degrades to server-rendered tabs rather than failing to boot.
+          Effect.catchCause((cause) =>
+            Effect.logError("the desktop browser fds are unusable", { cause }).pipe(
+              Effect.as(null),
+            ),
+          ),
+        );
+  if (bundledTransport !== null) yield* register(bundledTransport);
 
   const endpoint = Effect.fn("DesktopBrowserChannel.endpoint")(function* (key: DesktopTabKey) {
     const id = keyOf(key);
@@ -140,7 +251,7 @@ const make = Effect.gen(function* () {
       Effect.gen(function* () {
         if (inbound.get(id) === queue) inbound.delete(id);
         yield* Queue.shutdown(queue);
-        yield* command({ type: "release", ...key });
+        yield* send({ type: "release", ...key });
       }),
     );
     // The relay serves one Playwright connection; a second would see the first's sessions.
@@ -162,7 +273,7 @@ const make = Effect.gen(function* () {
               Effect.forEach(
                 frames,
                 (frame) =>
-                  command({
+                  send({
                     type: "cdp",
                     ...key,
                     message: typeof frame === "string" ? frame : decoder.decode(frame),
@@ -181,7 +292,9 @@ const make = Effect.gen(function* () {
   });
 
   return DesktopBrowserChannel.of({
-    available: true,
+    get available() {
+      return active !== null;
+    },
     awaitAttached: (key, timeout) =>
       Effect.scoped(
         Effect.gen(function* () {
@@ -206,7 +319,13 @@ const make = Effect.gen(function* () {
     ),
     isAttached: (key) => Effect.sync(() => attachedTabs.has(keyOf(key))),
     endpoint,
-    pointer: (key, pointer) => command({ type: "pointer", ...key, ...pointer }),
+    pointer: (key, pointer) => send({ type: "pointer", ...key, ...pointer }),
+    attachHost: Effect.fn("DesktopBrowserChannel.attachHost")(function* (transport) {
+      if (fds !== null) {
+        return yield* new DesktopBrowserHostUnavailableError({ reason: "bundled-host" });
+      }
+      return yield* register(transport);
+    }),
   });
 });
 

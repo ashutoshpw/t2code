@@ -103,7 +103,11 @@ export interface PreviewTabState {
   audible: boolean;
   controller: "human" | "agent" | "none";
   favicon?: DesktopPreviewFavicon;
-  serverTab?: { readonly threadId: string; readonly tabId: string };
+  serverTab?: {
+    readonly threadId: string;
+    readonly tabId: string;
+    readonly transportId?: string | undefined;
+  };
   updatedAt: string;
 }
 
@@ -3206,6 +3210,7 @@ const makeNativeOperations = Effect.fn("PreviewManager.makeOperations")(function
   let pointerSequence = 0;
   const emitAgentPointer = Effect.fn("PreviewManager.emitAgentPointer")(function* (pointer: {
     readonly key: { readonly threadId: string; readonly tabId: string };
+    readonly transport: string;
     readonly phase: "move" | "click";
     readonly x: number;
     readonly y: number;
@@ -3213,7 +3218,8 @@ const makeNativeOperations = Effect.fn("PreviewManager.makeOperations")(function
     const tab = [...(yield* SynchronizedRef.get(tabsRef)).values()].find(
       (candidate) =>
         candidate.serverTab?.threadId === pointer.key.threadId &&
-        candidate.serverTab.tabId === pointer.key.tabId,
+        candidate.serverTab.tabId === pointer.key.tabId &&
+        (candidate.serverTab.transportId ?? "fd") === pointer.transport,
     );
     if (!tab) return;
     const event: DesktopPreviewPointerEvent = {

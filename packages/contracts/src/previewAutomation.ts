@@ -132,6 +132,8 @@ export const PreviewAutomationStatus = Schema.Struct({
         ownedByCaller: Schema.optional(Schema.Boolean),
         visible: Schema.optional(Schema.Boolean),
         profileId: Schema.optional(BrowserProfileId),
+        /** Which machine's browser pane draws this tab: the desktop app, or the server's browser. */
+        renderedOn: Schema.optional(Schema.Literals(["desktop", "server"])),
       }),
     ),
   ),

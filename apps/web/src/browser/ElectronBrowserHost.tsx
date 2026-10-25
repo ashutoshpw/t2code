@@ -2,12 +2,14 @@ import { parseScopedThreadKey } from "@t2code/client-runtime/environment";
 import {
   AuthPreviewOperateScope,
   type DesktopPreviewOpenLinkEvent,
+  type EnvironmentId,
   FILL_PREVIEW_VIEWPORT,
 } from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { type ComponentProps, useEffect, useEffectEvent, useState } from "react";
 
 import { primaryEnvironmentIdAtom } from "~/state/primaryEnvironment";
+import { useEnvironmentIds } from "~/state/environments";
 
 import { isElectron } from "~/env";
 import { useClientSettingsHydrated } from "~/hooks/useSettings";
@@ -22,12 +24,23 @@ import { useBrowserDefaults } from "./browserDefaults";
 import { useBrowserPointerStore } from "./browserPointerStore";
 import { HostedBrowserWebview } from "./HostedBrowserWebview";
 import { openUrlInPreview } from "./openFileInPreview";
+import { usePreviewBrowserHost, usePreviewHostConnected, usePreviewHostStore } from "./previewHost";
 import { rendersServerTabNatively } from "./previewRuntime";
 import { previewRuntimeTabId } from "./previewRuntimeTabId";
+
+function HostedEnvironmentPreviewSessions({ environmentId }: { environmentId: EnvironmentId }) {
+  const connected = usePreviewHostConnected(environmentId);
+  useDesktopHostedPreviewSessions(connected ? environmentId : null);
+  return null;
+}
 
 export function ElectronBrowserHost() {
   const previewByThreadKey = useActivePreviewSessions();
   const primaryEnvironmentId = useAtomValue(primaryEnvironmentIdAtom);
+  const environmentIds = useEnvironmentIds();
+  // Re-render when any hosted environment connects or drops.
+  usePreviewHostStore((state) => state.statusByEnvironmentId);
+  usePreviewBrowserHost(environmentIds);
   useDesktopHostedPreviewSessions(primaryEnvironmentId);
   const activeSessions = Object.entries(previewByThreadKey).flatMap(([threadKey, previewState]) => {
     const threadRef = parseScopedThreadKey(threadKey);
@@ -116,6 +129,11 @@ export function ElectronBrowserHost() {
   if (!isElectron) return null;
   return (
     <div className="contents" data-electron-browser-host>
+      {environmentIds
+        .filter((environmentId) => environmentId !== primaryEnvironmentId)
+        .map((environmentId) => (
+          <HostedEnvironmentPreviewSessions key={environmentId} environmentId={environmentId} />
+        ))}
       {sessions.map(({ threadRef, snapshot, runtimeTabId, pictureInPicture, zoomFactor }) => {
         const url = snapshot.navStatus._tag === "Idle" ? null : snapshot.navStatus.url;
         return (

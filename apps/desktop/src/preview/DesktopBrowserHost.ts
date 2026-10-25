@@ -27,6 +27,8 @@ const AGENT_DOWNLOAD_WINDOW_MS = 5_000;
 export interface DesktopBrowserTabKey {
   readonly threadId: string;
   readonly tabId: string;
+  /** Which server this tab belongs to; bundled tabs omit it. */
+  readonly transportId?: string | undefined;
 }
 
 export interface DesktopBrowserTabDebugger {
@@ -36,8 +38,13 @@ export interface DesktopBrowserTabDebugger {
 
 const keyOf = ({ threadId, tabId }: DesktopBrowserTabKey) => `${threadId}\u0000${tabId}`;
 
+/** Tabs of the bundled server cross the bootstrap fds; every remote server gets its own id. */
+const FD_TRANSPORT = "fd";
+const transportOf = (key: DesktopBrowserTabKey) => key.transportId ?? FD_TRANSPORT;
+
 interface AttachedTab {
   readonly key: DesktopBrowserTabKey;
+  readonly transport: string;
   readonly debuggee: DesktopBrowserTabDebugger;
   relay: CdpRelayConnection | null;
   screenshotTurn: object | null;
@@ -54,17 +61,25 @@ interface AttachedTab {
   readonly onNewDocument: () => void;
 }
 
+interface OutboxedEvent {
+  readonly transport: string;
+  readonly event: DesktopBrowserEventType;
+}
+
 export class DesktopBrowserHost extends Context.Service<
   DesktopBrowserHost,
   {
+    /** Bundled-server frames; `eventsFor` carries every transport. */
     readonly events: Stream.Stream<Uint8Array>;
-    readonly handleCommandLine: (line: string) => Effect.Effect<void>;
+    readonly eventsFor: (transport: string) => Stream.Stream<Uint8Array>;
+    readonly handleCommandLine: (line: string, transport?: string) => Effect.Effect<void>;
     readonly attach: (key: DesktopBrowserTabKey, debuggee: DesktopBrowserTabDebugger) => void;
     readonly detach: (key: DesktopBrowserTabKey) => void;
     readonly humanStartedDownload: (source: Electron.WebContents) => boolean;
     readonly placeDownload: (source: Electron.WebContents, item: Electron.DownloadItem) => boolean;
     readonly pointers: Stream.Stream<{
       readonly key: DesktopBrowserTabKey;
+      readonly transport: string;
       readonly phase: "move" | "click";
       readonly x: number;
       readonly y: number;
@@ -73,16 +88,18 @@ export class DesktopBrowserHost extends Context.Service<
 >()("@t2code/desktop/preview/DesktopBrowserHost") {}
 
 export const make = Effect.gen(function* () {
-  const outbox = yield* PubSub.unbounded<DesktopBrowserEventType>();
+  const outbox = yield* PubSub.unbounded<OutboxedEvent>();
   const pointers = yield* PubSub.sliding<{
     readonly key: DesktopBrowserTabKey;
+    readonly transport: string;
     readonly phase: "move" | "click";
     readonly x: number;
     readonly y: number;
   }>(16);
   const runFork = Effect.runForkWith(yield* Effect.context<never>());
   const tabs = new Map<string, AttachedTab>();
-  const emit = (event: DesktopBrowserEventType) => runFork(PubSub.publish(outbox, event));
+  const emit = (tab: AttachedTab, event: DesktopBrowserEventType) =>
+    runFork(PubSub.publish(outbox, { transport: tab.transport, event }));
 
   const nextScreenshot = (tab: AttachedTab) => {
     tab.screenshotTurn = null;
@@ -144,8 +161,8 @@ export const make = Effect.gen(function* () {
         },
       },
       (message) => {
-        if (tab.relay === relay && tabs.get(keyOf(tab.key)) === tab) {
-          emit({ type: "cdp", ...tab.key, message });
+        if (tab.relay === relay && tabs.get(tabIdOf(tab)) === tab) {
+          emit(tab, { type: "cdp", ...tab.key, message });
         }
       },
     );
@@ -164,23 +181,27 @@ export const make = Effect.gen(function* () {
     return true;
   };
 
+  const tabIdOf = (tab: AttachedTab) => `${tab.transport}\u0000${keyOf(tab.key)}`;
+
   const detach = (key: DesktopBrowserTabKey) => {
-    const id = keyOf(key);
+    const id = `${transportOf(key)}\u0000${keyOf(key)}`;
     const tab = tabs.get(id);
     if (!tab) return;
     tabs.delete(id);
     tab.relay = null;
     tab.debuggee.debugger.off("message", tab.onMessage);
     tab.debuggee.webContents.off("did-navigate", tab.onNewDocument);
-    emit({ type: "detached", ...key });
+    emit(tab, { type: "detached", threadId: tab.key.threadId, tabId: tab.key.tabId });
   };
 
   const attach = (key: DesktopBrowserTabKey, debuggee: DesktopBrowserTabDebugger) => {
-    const id = keyOf(key);
+    const transport = transportOf(key);
+    const id = `${transport}\u0000${keyOf(key)}`;
     if (tabs.get(id)?.debuggee.webContents === debuggee.webContents) return;
     detach(key);
     const tab: AttachedTab = {
       key,
+      transport,
       debuggee,
       relay: null,
       screenshotTurn: null,
@@ -204,18 +225,18 @@ export const make = Effect.gen(function* () {
     tabs.set(id, tab);
     debuggee.debugger.on("message", tab.onMessage);
     debuggee.webContents.on("did-navigate", tab.onNewDocument);
-    emit({ type: "attached", ...key });
+    emit(tab, { type: "attached", threadId: key.threadId, tabId: key.tabId });
   };
 
-  const handleCommandLine = (line: string) =>
+  const handleCommandLine = (line: string, transport = FD_TRANSPORT) =>
     Effect.sync(() => {
       const command = decodeCommand(line);
       if (Option.isNone(command)) return;
-      const tab = tabs.get(keyOf(command.value));
+      const tab = tabs.get(`${transport}\u0000${keyOf(command.value)}`);
       if (!tab) return;
       if (command.value.type === "pointer") {
         const { threadId, tabId, phase, x, y } = command.value;
-        runFork(PubSub.publish(pointers, { key: { threadId, tabId }, phase, x, y }));
+        runFork(PubSub.publish(pointers, { key: { threadId, tabId }, transport, phase, x, y }));
         return;
       }
       if (command.value.type === "release") {
@@ -231,27 +252,42 @@ export const make = Effect.gen(function* () {
     return tab !== undefined && performance.now() - tab.agentInputAt > AGENT_DOWNLOAD_WINDOW_MS;
   };
 
-  const announceAll = Effect.suspend(() =>
-    Effect.forEach(
-      [...tabs.values()],
-      (tab) => {
-        tab.relay = null;
-        return PubSub.publish(outbox, { type: "attached", ...tab.key });
-      },
-      { discard: true },
-    ),
-  );
+  const announce = (transport: string) =>
+    Effect.suspend(() =>
+      Effect.forEach(
+        [...tabs.values()].filter((tab) => tab.transport === transport),
+        (tab) => {
+          tab.relay = null;
+          return PubSub.publish(outbox, {
+            transport,
+            event: {
+              type: "attached",
+              threadId: tab.key.threadId,
+              tabId: tab.key.tabId,
+            },
+          });
+        },
+        { discard: true },
+      ),
+    );
+
+  const eventsFor = (transport: string) =>
+    Stream.unwrap(
+      Effect.gen(function* () {
+        const subscription = yield* PubSub.subscribe(outbox);
+        // Subscribes before announcing, so no attach falls between the two.
+        yield* announce(transport);
+        return Stream.fromSubscription(subscription).pipe(
+          Stream.filter((outboxed) => outboxed.transport === transport),
+          Stream.map((outboxed) => lineEncoder.encode(`${encodeEvent(outboxed.event)}\n`)),
+        );
+      }),
+    );
 
   return DesktopBrowserHost.of({
     pointers: Stream.fromPubSub(pointers),
-    // Subscribes before announcing, so no attach falls between the two.
-    events: Stream.unwrap(
-      Effect.gen(function* () {
-        const subscription = yield* PubSub.subscribe(outbox);
-        yield* announceAll;
-        return Stream.fromSubscription(subscription);
-      }),
-    ).pipe(Stream.map((event) => lineEncoder.encode(`${encodeEvent(event)}\n`))),
+    events: eventsFor(FD_TRANSPORT),
+    eventsFor,
     handleCommandLine,
     attach,
     detach,

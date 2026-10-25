@@ -94,6 +94,41 @@ const watchReplies = (host: DesktopBrowserHost.DesktopBrowserHost["Service"]) =>
   });
 
 describe("DesktopBrowserHost", () => {
+  it.effect("keeps remote transports apart from the bundled one", () =>
+    Effect.gen(function* () {
+      const host = yield* DesktopBrowserHost.make;
+      const bundled = makeDebuggee();
+      const remote = makeDebuggee();
+      host.attach(key, bundled.tab);
+      host.attach({ ...key, transportId: "env-1" }, remote.tab);
+
+      const firstEventFor = (transport: string) =>
+        host.eventsFor(transport).pipe(
+          Stream.take(1),
+          Stream.runCollect,
+          Effect.map((lines) => decodeEvent(new TextDecoder().decode(lines[0]!))),
+        );
+      expect(yield* firstEventFor("fd")).toEqual({ type: "attached", ...key });
+      expect(yield* firstEventFor("env-1")).toEqual({ type: "attached", ...key });
+
+      yield* host.handleCommandLine(
+        encodeJson({
+          type: "cdp",
+          ...key,
+          message: encodeJson({
+            id: 7,
+            method: "DOM.enable",
+            params: { id: 7 },
+            sessionId: "t2-preview-page",
+          }),
+        }),
+        "env-1",
+      );
+      expect(bundled.sent).toEqual([]);
+      expect(remote.sent).toEqual([7]);
+    }),
+  );
+
   it.effect("announces tabs already attached to a backend that starts later", () =>
     Effect.gen(function* () {
       const host = yield* DesktopBrowserHost.make;

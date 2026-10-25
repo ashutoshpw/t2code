@@ -929,14 +929,25 @@ export const DesktopPreviewCreateTabInputSchema = Schema.Struct({
   zoomFactor: Schema.optional(Schema.Number.check(Schema.isGreaterThan(0))),
   colorScheme: Schema.optional(DesktopPreviewColorSchemeSchema),
   serverTab: Schema.optional(
-    Schema.Struct({ threadId: TrimmedNonEmptyString, tabId: TrimmedNonEmptyString }),
+    Schema.Struct({
+      threadId: TrimmedNonEmptyString,
+      tabId: TrimmedNonEmptyString,
+      /** Server that drives the tab; bundled tabs omit it. */
+      transportId: Schema.optional(TrimmedNonEmptyString),
+    }),
   ),
 });
 
 export interface DesktopPreviewTabDefaults {
   readonly zoomFactor?: number | undefined;
   readonly colorScheme?: DesktopPreviewColorScheme | undefined;
-  readonly serverTab?: { readonly threadId: string; readonly tabId: string } | undefined;
+  readonly serverTab?:
+    | {
+        readonly threadId: string;
+        readonly tabId: string;
+        readonly transportId?: string | undefined;
+      }
+    | undefined;
 }
 
 export const DesktopPreviewRegisterWebviewInputSchema = Schema.Struct({
@@ -1124,9 +1135,33 @@ export interface DesktopBridge {
 /** Renderer callback invoked by Electron with a fresh user gesture before display-media capture. */
 export const DESKTOP_PREVIEW_RECORDING_CAPTURE_TRIGGER = "__t2DesktopPreviewRecordingCapture";
 
+export const DesktopPreviewHostStateSchema = Schema.Struct({
+  environmentId: EnvironmentId,
+  status: Schema.Literals(["connecting", "connected", "closed"]),
+  /** Set once a connection closed; `replaced` and `refused` are final. */
+  reason: Schema.optional(Schema.Literals(["disconnected", "replaced", "refused", "unauthorized"])),
+});
+export type DesktopPreviewHostState = Schema.Schema.Type<typeof DesktopPreviewHostStateSchema>;
+
+export const DesktopPreviewHostStartInputSchema = Schema.Struct({
+  environmentId: EnvironmentId,
+  url: Schema.String,
+});
+
+export const DesktopPreviewHostStopInputSchema = Schema.Struct({
+  environmentId: EnvironmentId,
+});
+
 export interface DesktopPreviewBridge {
   setForwardedShortcuts?: (shortcuts: ReadonlyArray<PreviewForwardedShortcut>) => Promise<void>;
   createTab: (tabId: string, defaults?: DesktopPreviewTabDefaults) => Promise<void>;
+  /** Announces this app's browser pane to a remote server; omitted by older shells. */
+  startBrowserHost?: (input: {
+    readonly environmentId: EnvironmentId;
+    readonly url: string;
+  }) => Promise<void>;
+  stopBrowserHost?: (environmentId: EnvironmentId) => Promise<void>;
+  onBrowserHostState?: (listener: (state: DesktopPreviewHostState) => void) => () => void;
   closeTab: (tabId: string) => Promise<void>;
   registerWebview: (tabId: string, webContentsId: number) => Promise<void>;
   navigate: (tabId: string, url: string) => Promise<void>;
