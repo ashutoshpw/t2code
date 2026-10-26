@@ -295,7 +295,7 @@ it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
   );
 
   it.effect(
-    "rejects an oversized original envelope, continues on the same protocol, and preserves unrelated Struct projection",
+    "enforces the declared-field protocol ceiling, continues on the same protocol, and preserves unrelated Struct projection",
     () =>
       fixture(
         Effect.gen(function* () {
@@ -308,11 +308,22 @@ it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
             mutationId: "oversized",
             title: "",
           };
-          const response = yield* request(WS_METHODS.spacesCreate, {
-            ...input,
-            excess: "x".repeat(1_048_576),
+          const title = "x".repeat(1_048_576 - frameBytes({ operation: "createSpace", input }));
+          const exact = { ...input, title };
+          assert.equal(frameBytes({ operation: "createSpace", input: exact }), 1_048_576);
+          assert.deepEqual(typedFailure(yield* request(WS_METHODS.spacesCreate, exact)), {
+            _tag: "SpaceLimitExceededError",
+            limit: "maxMutationBytes",
+            actual: 1_048_576,
+            maximum: 262_144,
           });
+          const oversized = { ...exact, title: title + "x" };
+          assert.equal(frameBytes({ operation: "createSpace", input: oversized }), 1_048_577);
+          const response = yield* request(WS_METHODS.spacesCreate, oversized);
           expectDefect(response);
+          if (response._tag === "Exit" && response.exit._tag === "Failure") {
+            assert.equal(response.exit.cause[0]?._tag, "Die");
+          }
           assert.deepEqual(
             yield* service.lookupMutationReceipt({ request: { operation: "createSpace", input } }),
             { status: "absent" },
