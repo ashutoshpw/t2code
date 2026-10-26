@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "expo start",
     "dev:client": "APP_VARIANT=development expo start --dev-client --scheme t2code-dev --lan",
+    "dev:spaces": "EXPO_PUBLIC_T2_SPACES_FEASIBILITY=1 APP_VARIANT=development expo start --dev-client --scheme t2code-dev --lan",
     "dev:client:reset": "APP_VARIANT=development expo start --dev-client --scheme t2code-dev --clear --lan",
     "dev:client:preview-env": "eas env:exec preview 'EXPO_NO_DOTENV=1 APP_VARIANT=development expo start --dev-client --scheme t2code-dev --lan --port 0'",
     "dev:client:preview": "eas env:exec preview 'EXPO_NO_DOTENV=1 APP_VARIANT=preview expo start --dev-client --scheme t2code-preview --lan'",
