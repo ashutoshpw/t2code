@@ -95,37 +95,106 @@ function controller(
   );
 }
 
-describe("Spaces document controller lifecycle", () => {
-  it("uses the current window when a reconnect overlaps initial draft hydration", async () => {
-    const started = deferred<void>();
-    const loaded = deferred<SpaceDocumentDraft | null>();
-    let revision = 1;
-    const document = controller(
-      key,
+function hydratingDocuments() {
+  const started = deferred<void>();
+  const loaded = deferred<SpaceDocumentDraft | null>();
+  let revision = 1;
+  const revisions: number[] = [];
+  const documents = new SpaceDocumentControllers((target) =>
+    controller(
+      target,
       {
         getPage: async () => ({ ...metadata(), page: { ...metadata().page, revision } }),
-        readBlocks: async (input) => ({
-          revision: input.revision,
-          blocks: [block(`revision-${input.revision}`)],
-          nextCursor: null,
-        }),
+        readBlocks: async (input) => {
+          revisions.push(input.revision);
+          return {
+            revision: input.revision,
+            blocks: [block(`revision-${input.revision}`)],
+            nextCursor: null,
+          };
+        },
       },
       () => {
         started.resolve();
         return loaded.promise;
       },
-    );
-    const initial = document.open();
+    ),
+  );
+  return {
+    documents,
+    started,
+    loaded,
+    revisions,
+    setRevision: (value: number) => {
+      revision = value;
+    },
+  };
+}
+
+describe("Spaces document controller lifecycle", () => {
+  it("reacquires the current revision after the last view closes during initial hydration", async () => {
+    const { documents, started, loaded, revisions, setRevision } = hydratingDocuments();
+    const initial = documents.open(key);
     await started.promise;
-    document.invalidate();
-    revision = 2;
-    const reconnected = document.open();
+    initial.release();
+    setRevision(2);
+    const reconnected = documents.open(key);
     loaded.resolve(null);
-    await Promise.all([initial, reconnected]);
-    expect(document.session.getSnapshot()).toMatchObject({
+    await initial.ready;
+    const current = await reconnected.ready;
+    expect(revisions).toEqual([1, 2]);
+    expect(current.session.getSnapshot()).toMatchObject({
       baseRevision: 2,
       blocks: [block("revision-2")],
     });
+    initial.release();
+    const panel = documents.open(key);
+    expect(await panel.ready).toBe(current);
+    reconnected.release();
+    panel.release();
+  });
+  it("reclaims resident capacity when first opens are interrupted before hydration completes", async () => {
+    const loaded = deferred<SpaceDocumentDraft | null>();
+    const documents = new SpaceDocumentControllers((target) =>
+      controller(target, {}, () => loaded.promise),
+    );
+    const interrupted = [];
+    for (let i = 0; i < 9; i++) {
+      const opened = documents.open({ ...key, pageId: SpacePageId.make(`interrupted-${i}`) });
+      opened.release();
+      interrupted.push(opened.ready);
+    }
+    loaded.resolve(null);
+    await expect(Promise.all(interrupted)).resolves.toHaveLength(9);
+  });
+  it("keeps shared hydration for a remaining owner and retains its later dirty draft", async () => {
+    const { documents, started, loaded, revisions, setRevision } = hydratingDocuments();
+    const route = documents.open(key);
+    const panel = documents.open(key);
+    await started.promise;
+    route.release();
+    setRevision(2);
+    const remounted = documents.open(key);
+    loaded.resolve(null);
+    const current = await panel.ready;
+    expect(await remounted.ready).toBe(current);
+    await route.ready;
+    expect(revisions).toEqual([1]);
+    expect(current.session.getSnapshot().baseRevision).toBe(1);
+    await current.refresh();
+    expect(current.session.getSnapshot().baseRevision).toBe(2);
+    current.session.apply([{ kind: "replace", block: block("retained local draft") }]);
+    await current.session.persistDraft();
+    panel.release();
+    remounted.release();
+    const reopened = documents.open(key);
+    expect(await reopened.ready).toBe(current);
+    expect(revisions).toEqual([1, 2]);
+    expect(current.session.getSnapshot()).toMatchObject({
+      dirty: true,
+      blocks: [block("retained local draft")],
+    });
+    reopened.release();
   });
   it("deduplicates route/panel hydration, isolates environments and releases only clean unused documents", async () => {
     const loaded = deferred<SpaceReadBlocksResult>();

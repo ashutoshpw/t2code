@@ -5,17 +5,7 @@ import type { SpacePageTarget } from "@t2code/contracts/spaces";
 import { Button } from "../components/ui/button";
 import { spacesEnvironment } from "../state/spaces";
 import { spaceDocuments } from "./sessionRuntime";
-import type { SpaceDocumentController, SpaceDocumentControllers } from "./documentController";
-
-async function openDocument(documents: SpaceDocumentControllers, key: SpacePageTarget) {
-  try {
-    const controller = documents.acquire(key);
-    await controller.open().catch(() => {});
-    return { controller };
-  } catch (error) {
-    return { error };
-  }
-}
+import type { SpaceDocumentController } from "./documentController";
 
 export function SpaceDocumentSurface({ target }: { target: SpacePageTarget }) {
   const registry = useContext(RegistryContext);
@@ -28,15 +18,23 @@ export function SpaceDocumentSurface({ target }: { target: SpacePageTarget }) {
     const key = { environmentId, pageId };
     const documents = spaceDocuments(registry);
     let active = true;
-    let current: SpaceDocumentController | null = null;
-    void openDocument(documents, key).then((result) => {
-      if (result.controller) current = result.controller;
-      if (active) setOpened(result);
-      else if (current) documents.release(key, current);
-    });
+    let release: (() => void) | undefined;
+    const ready = (async () => {
+      const document = documents.open(key);
+      release = document.release;
+      return await document.ready;
+    })();
+    void ready.then(
+      (controller) => {
+        if (active) setOpened({ controller });
+      },
+      (error: unknown) => {
+        if (active) setOpened({ error });
+      },
+    );
     return () => {
       active = false;
-      if (current) documents.release(key, current);
+      release?.();
     };
   }, [environmentId, pageId, registry]);
   if (!opened) return <p role="status">Loading document…</p>;

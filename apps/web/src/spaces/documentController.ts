@@ -56,6 +56,14 @@ export class SpaceDocumentController {
       this.#listeners.delete(listener);
     };
   };
+  canRelease() {
+    const state = this.session.getSnapshot();
+    return (
+      this.#listeners.size === 0 &&
+      (this.session.canRelease() ||
+        (!state.hydrated && state.persistenceError === null && this.#snapshot.error === null))
+    );
+  }
   #update(patch: Partial<DocumentSnapshot>) {
     this.#snapshot = { ...this.#snapshot, ...patch };
     for (const listener of this.#listeners) listener();
@@ -168,6 +176,21 @@ export class SpaceDocumentController {
 export class SpaceDocumentControllers {
   readonly #documents = new Map<string, { controller: SpaceDocumentController; readers: number }>();
   constructor(readonly create: (key: SpacePageTarget) => SpaceDocumentController) {}
+  open(key: SpacePageTarget) {
+    const controller = this.acquire(key);
+    let released = false;
+    return {
+      ready: controller
+        .open()
+        .catch(() => {})
+        .then(() => controller),
+      release: () => {
+        if (released) return;
+        released = true;
+        this.release(key, controller);
+      },
+    };
+  }
   acquire(key: SpacePageTarget) {
     const id = JSON.stringify([key.environmentId, key.pageId]);
     const existing = this.#documents.get(id);
@@ -179,7 +202,7 @@ export class SpaceDocumentControllers {
       if (
         item.readers === 0 &&
         !item.controller.getSnapshot().loading &&
-        item.controller.session.canRelease()
+        item.controller.canRelease()
       )
         this.#documents.delete(unusedId);
     }
@@ -196,6 +219,6 @@ export class SpaceDocumentControllers {
     item.readers = Math.max(0, item.readers - 1);
     if (item.readers > 0) return;
     controller.invalidate();
-    if (controller.session.canRelease()) this.#documents.delete(id);
+    if (controller.canRelease()) this.#documents.delete(id);
   }
 }
