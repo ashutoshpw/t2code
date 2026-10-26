@@ -60,6 +60,47 @@ const setup = Effect.gen(function* () {
 });
 
 describe("command permissions", () => {
+  it.effect(
+    "uses destination operate grants for Spaces writes and revokes availability with the grant",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const registry = yield* setup;
+          registry.set(
+            sessions(env),
+            AsyncResult.success({
+              ...grant(false),
+              scopes: [AuthOrchestrationReadScope],
+              permissions: [AuthOrchestrationReadScope],
+            }),
+          );
+          registry.set(sessions(other), AsyncResult.success(grant(true)));
+          for (const tag of [
+            WS_METHODS.spacesCreate,
+            WS_METHODS.spacesRename,
+            WS_METHODS.spacesSetDefault,
+            WS_METHODS.spacesPagesCreate,
+            WS_METHODS.spacesPagesUpdate,
+            WS_METHODS.spacesBlocksApply,
+          ]) {
+            const permission = createCommandPermissions(runtime, tag);
+            expect(registry.get(permission.permissionAtom(env))).toBe(false);
+            expect((yield* permission.authorize(registry, env).pipe(Effect.flip))._tag).toBe(
+              "EnvironmentAuthorizationError",
+            );
+            expect(registry.get(permission.permissionAtom(other))).toBe(true);
+            yield* permission.authorize(registry, other);
+          }
+          registry.set(sessions(other), AsyncResult.success(grant(false)));
+          expect(
+            registry.get(
+              createCommandPermissions(runtime, WS_METHODS.spacesBlocksApply).permissionAtom(other),
+            ),
+          ).toBe(false);
+        }),
+      ),
+  );
+
   it.effect("requires the destination preview grant to close a browser tab", () =>
     Effect.scoped(
       Effect.gen(function* () {

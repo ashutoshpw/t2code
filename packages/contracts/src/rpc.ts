@@ -23,6 +23,7 @@ import {
   ChatGptHandoffInput,
   ChatGptHandoffState,
 } from "./providerSetup.ts";
+import * as Spaces from "./spaces.ts";
 import * as Schema from "effect/Schema";
 import * as Rpc from "effect/rpc/Rpc";
 import * as RpcGroup from "effect/rpc/RpcGroup";
@@ -385,6 +386,18 @@ import { VcsError } from "./vcs.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
 export const WS_METHODS = {
+  spacesList: "spaces.list",
+  spacesCreate: "spaces.create",
+  spacesRename: "spaces.rename",
+  spacesSetDefault: "spaces.setDefault",
+  spacesPagesList: "spaces.pages.list",
+  spacesPagesGet: "spaces.pages.get",
+  spacesPagesCreate: "spaces.pages.create",
+  spacesPagesUpdate: "spaces.pages.update",
+  spacesBlocksRead: "spaces.blocks.read",
+  spacesBlocksApply: "spaces.blocks.apply",
+  spacesReceiptsGet: "spaces.receipts.get",
+
   projectsList: "projects.list",
   projectsAdd: "projects.add",
   projectsRemove: "projects.remove",
@@ -590,6 +603,72 @@ export const WS_METHODS = {
   subscribeBackgroundPolicy: "subscribeBackgroundPolicy",
   subscribeResourceTelemetry: "subscribeResourceTelemetry",
 } as const;
+
+export const WsSpacesListRpc = Rpc.make(WS_METHODS.spacesList, {
+  payload: Spaces.SpaceListInput,
+  success: Spaces.SpaceListResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesCreateRpc = Rpc.make(WS_METHODS.spacesCreate, {
+  payload: Spaces.SpaceCreateInput,
+  success: Spaces.SpaceCreateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesRenameRpc = Rpc.make(WS_METHODS.spacesRename, {
+  payload: Spaces.SpaceRenameInput,
+  success: Spaces.SpaceRenameResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesSetDefaultRpc = Rpc.make(WS_METHODS.spacesSetDefault, {
+  payload: Spaces.SpaceSetDefaultInput,
+  success: Spaces.SpaceSetDefaultResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesPagesListRpc = Rpc.make(WS_METHODS.spacesPagesList, {
+  payload: Spaces.SpacePageListInput,
+  success: Spaces.SpacePageListResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesPagesGetRpc = Rpc.make(WS_METHODS.spacesPagesGet, {
+  payload: Spaces.SpacePageGetInput,
+  success: Spaces.SpacePageGetResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesPagesCreateRpc = Rpc.make(WS_METHODS.spacesPagesCreate, {
+  payload: Spaces.SpacePageCreateInput,
+  success: Spaces.SpacePageCreateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesPagesUpdateRpc = Rpc.make(WS_METHODS.spacesPagesUpdate, {
+  payload: Spaces.SpacePageUpdateInput,
+  success: Spaces.SpacePageUpdateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesBlocksReadRpc = Rpc.make(WS_METHODS.spacesBlocksRead, {
+  payload: Spaces.SpaceReadBlocksInput,
+  success: Spaces.SpaceReadBlocksResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesBlocksApplyRpc = Rpc.make(WS_METHODS.spacesBlocksApply, {
+  payload: Spaces.SpaceApplyBlockBatchInput,
+  success: Spaces.SpaceApplyBlockBatchResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesReceiptsGetRpc = Rpc.make(WS_METHODS.spacesReceiptsGet, {
+  payload: Spaces.SpaceReceiptLookupInput,
+  success: Spaces.SpaceReceiptLookupResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
 
 const WsServerUpsertKeybindingRpc = Rpc.make(WS_METHODS.serverUpsertKeybinding, {
   payload: ServerUpsertKeybindingInput,
@@ -1925,6 +2004,18 @@ export class RpcScopeAuthorization extends RpcMiddleware.Service<RpcScopeAuthori
 ) {}
 
 export const WsRpcGroup = RpcGroup.make(
+  WsSpacesListRpc,
+  WsSpacesCreateRpc,
+  WsSpacesRenameRpc,
+  WsSpacesSetDefaultRpc,
+  WsSpacesPagesListRpc,
+  WsSpacesPagesGetRpc,
+  WsSpacesPagesCreateRpc,
+  WsSpacesPagesUpdateRpc,
+  WsSpacesBlocksReadRpc,
+  WsSpacesBlocksApplyRpc,
+  WsSpacesReceiptsGetRpc,
+
   WsGuestShareCreateRpc,
   WsServerProbeRpc,
   WsServerGetConfigRpc,

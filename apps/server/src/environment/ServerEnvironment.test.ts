@@ -21,14 +21,28 @@ import {
   RELAY_URL_SECRET,
 } from "../cloud/config.ts";
 import * as ServerConfig from "../config.ts";
+import * as SpacesService from "../spaces/SpacesService.ts";
+import * as Settings from "../serverSettings.ts";
 import * as ServerEnvironment from "./ServerEnvironment.ts";
 
 const isServerEnvironmentIdPersistenceError = Schema.is(
   ServerEnvironment.ServerEnvironmentIdPersistenceError,
 );
 
+const layerSpaces = Layer.unwrap(
+  Effect.gen(function* () {
+    const config = yield* ServerConfig.ServerConfig;
+    return SpacesService.layerFromPath(config.spacesDbPath);
+  }),
+).pipe(Layer.provide(ServerEnvironment.layerIdentity));
+const layerSettings = Settings.layerTest();
+const layerWithSpaces = ServerEnvironment.layer.pipe(
+  Layer.provideMerge(layerSpaces),
+  Layer.provideMerge(layerSettings),
+);
+
 const layerServerEnvironment = (baseDir: string) =>
-  ServerEnvironment.layer.pipe(
+  layerWithSpaces.pipe(
     Layer.provide(ServerSecretStore.layer),
     Layer.provide(ServerConfig.layerTest(process.cwd(), baseDir)),
   );
@@ -111,7 +125,7 @@ it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
           return yield* environment.getDescriptor;
         }).pipe(
           Effect.provide(
-            ServerEnvironment.layer.pipe(
+            layerWithSpaces.pipe(
               Layer.provide(layerEmptySecretStore),
               Layer.provide(ServerConfig.layer({ ...config, mode })),
             ),
@@ -250,7 +264,7 @@ it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
         prefix: "t2-server-environment-publish-test-",
       });
       const layerTest = Layer.mergeAll(
-        ServerEnvironment.layer.pipe(Layer.provide(ServerSecretStore.layer)),
+        layerWithSpaces.pipe(Layer.provide(ServerSecretStore.layer)),
         ServerSecretStore.layer,
       ).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), baseDir)));
 
@@ -297,7 +311,7 @@ it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
           return yield* serverEnvironment.getDescriptor;
         }).pipe(
           Effect.provide(
-            ServerEnvironment.layer.pipe(
+            layerWithSpaces.pipe(
               Layer.provide(ServerSecretStore.layer),
               Layer.provide(ServerConfig.layer({ ...serverConfig, ...overrides })),
             ),
@@ -383,7 +397,7 @@ it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
           return yield* serverEnvironment.getDescriptor;
         }).pipe(
           Effect.provide(
-            ServerEnvironment.layer.pipe(
+            layerWithSpaces.pipe(
               Layer.provide(layerEmptySecretStore),
               Layer.provide(Layer.merge(ServerConfig.layer(serverConfig), layerFailingFileSystem)),
             ),
@@ -404,5 +418,46 @@ it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
         expect(writeAttempts).toEqual(operation === "write" ? [tempPath] : []);
       }
     }),
+  );
+  it.effect.each(["ready", "blocked"] as const)(
+    "publishes current Spaces readiness and fails closed for %s storage",
+    (kind) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "spaces-descriptor-" });
+        const config = yield* makeServerConfig(baseDir);
+        yield* fs.makeDirectory(config.stateDir, { recursive: true });
+        if (kind === "blocked") yield* fs.makeDirectory(config.spacesDbPath);
+        yield* Effect.gen(function* () {
+          const environment = yield* ServerEnvironment.ServerEnvironment;
+          const settings = yield* Settings.ServerSettingsService;
+          const spaces = yield* SpacesService.SpacesService;
+          const id = yield* environment.getEnvironmentId;
+          expect((yield* environment.getDescriptor).capabilities.spaces).toBeUndefined();
+          if (kind === "ready") expect(yield* fs.exists(config.spacesDbPath)).toBe(false);
+          yield* settings.updateSettings({ spacesEnabled: true });
+          const enabled = yield* environment.getDescriptor;
+          if (kind === "ready") {
+            expect(enabled.capabilities.spaces).toEqual(yield* spaces.getCapability(id));
+            expect((yield* spaces.listSpaces({ environmentId: id })).items).toHaveLength(1);
+          } else expect(enabled.capabilities.spaces).toBeUndefined();
+          expect(enabled.environmentId).toBe(id);
+          yield* settings.updateSettings({ spacesEnabled: false });
+          expect(Object.hasOwn((yield* environment.getDescriptor).capabilities, "spaces")).toBe(
+            false,
+          );
+          yield* settings.updateSettings({ spacesEnabled: true });
+          expect((yield* environment.getDescriptor).capabilities.spaces?.version).toBe(
+            kind === "ready" ? 1 : undefined,
+          );
+        }).pipe(
+          Effect.provide(
+            layerWithSpaces.pipe(
+              Layer.provide(layerEmptySecretStore),
+              Layer.provide(ServerConfig.layer(config)),
+            ),
+          ),
+        );
+      }),
   );
 });

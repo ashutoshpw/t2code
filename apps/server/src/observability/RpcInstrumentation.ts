@@ -11,6 +11,17 @@ type WsRpcMethod = RpcGroup.Rpcs<typeof WsRpcGroup>["_tag"];
 
 // Trace queries and dashboards depend on these labels, including deviations from method prefixes.
 const RPC_AGGREGATES = {
+  [WS_METHODS.spacesList]: "spaces",
+  [WS_METHODS.spacesCreate]: "spaces",
+  [WS_METHODS.spacesRename]: "spaces",
+  [WS_METHODS.spacesSetDefault]: "spaces",
+  [WS_METHODS.spacesPagesList]: "spaces",
+  [WS_METHODS.spacesPagesGet]: "spaces",
+  [WS_METHODS.spacesPagesCreate]: "spaces",
+  [WS_METHODS.spacesPagesUpdate]: "spaces",
+  [WS_METHODS.spacesBlocksRead]: "spaces",
+  [WS_METHODS.spacesBlocksApply]: "spaces",
+  [WS_METHODS.spacesReceiptsGet]: "spaces",
   [ORCHESTRATION_V2_WS_METHODS.dispatchCommand]: "orchestrationV2",
   [ORCHESTRATION_V2_WS_METHODS.getWorkflowScript]: "orchestration",
   [ORCHESTRATION_V2_WS_METHODS.stopWorkflow]: "orchestration",
