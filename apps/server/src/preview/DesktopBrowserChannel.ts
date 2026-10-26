@@ -303,8 +303,8 @@ const make = Effect.gen(function* () {
     get available() {
       return active !== null;
     },
-    awaitAttached: (key, timeout) =>
-      Effect.scoped(
+    awaitAttached: Effect.fn("DesktopBrowserChannel.awaitAttached")(function* (key, timeout) {
+      return yield* Effect.scoped(
         Effect.gen(function* () {
           const subscription = yield* PubSub.subscribe(changes);
           if (attachedTabs.has(keyOf(key))) return true;
@@ -316,7 +316,8 @@ const make = Effect.gen(function* () {
             Effect.map((result) => Option.getOrElse(result, () => false)),
           );
         }),
-      ),
+      );
+    }),
     detached: Stream.fromPubSub(changes).pipe(
       Stream.filter((change) => !change.attached),
       Stream.map((change) => change.key),
@@ -325,10 +326,14 @@ const make = Effect.gen(function* () {
       Stream.filter((change) => change.attached),
       Stream.map((change) => change.key),
     ),
-    isAttached: (key) => Effect.sync(() => attachedTabs.has(keyOf(key))),
+    isAttached: Effect.fn("DesktopBrowserChannel.isAttached")((key) =>
+      Effect.sync(() => attachedTabs.has(keyOf(key))),
+    ),
     isShown: (key) => shownTabs.get(keyOf(key)) ?? true,
     endpoint,
-    pointer: (key, pointer) => send({ type: "pointer", ...key, ...pointer }),
+    pointer: Effect.fn("DesktopBrowserChannel.pointer")((key, pointer) =>
+      send({ type: "pointer", ...key, ...pointer }),
+    ),
     turn: Effect.fn("DesktopBrowserChannel.turn")(function (threadId, active) {
       return send({ type: "turn", threadId, active });
     }),

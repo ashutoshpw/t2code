@@ -66,12 +66,12 @@ test("renders baseline, impact, ceiling, and ceiling changes", () => {
     currentRun: {
       sha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       conclusion: "success",
-      url: "https://github.com/pingdotgg/t3code/actions/runs/2",
+      url: "https://github.com/pingdotgg/t2code/actions/runs/2",
     },
     baselineRun: {
       sha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       matchesBase: true,
-      url: "https://github.com/pingdotgg/t3code/actions/runs/1",
+      url: "https://github.com/pingdotgg/t2code/actions/runs/1",
     },
   });
 

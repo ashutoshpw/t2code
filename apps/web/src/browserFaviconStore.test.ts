@@ -93,7 +93,7 @@ describe("browser favicon store", () => {
     ).toHaveLength(2);
 
     metadata.projectId = "project-1";
-    metadata.httpBaseUrl = "http://192.168.64.2:3773";
+    metadata.httpBaseUrl = "http://192.168.64.2:3772";
     expect(recordFaviconForThread(threadRef, favicon("http://localhost:5173/", 3))).toBe(true);
     expect(Object.keys(useBrowserFaviconStore.getState().byKey).toSorted()).toEqual([
       "env-1:project-1 http://localhost:3000",
@@ -128,7 +128,7 @@ describe("browser favicon store", () => {
   it("shows a newer pending capture over the stored favicon for the same origin", () => {
     const NEWER = "data:image/png;base64,BBBB";
     metadata.projectId = "project-1";
-    metadata.httpBaseUrl = "http://192.168.64.2:3773";
+    metadata.httpBaseUrl = "http://192.168.64.2:3772";
     expect(recordFaviconForThread(threadRef, favicon("http://192.168.64.2:5173/", 1))).toBe(true);
 
     metadata.httpBaseUrl = null;

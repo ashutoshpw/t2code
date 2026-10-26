@@ -94,8 +94,6 @@ import {
 } from "./composerMentionDrag";
 import { serializeComposerImages } from "./composerImagePersistence";
 import {
-  composerFloatingLayerProps,
-  useComposerMenuProps,
   isInsideCollapsedComposerControls,
   isInsideRestingComposerControlScope,
   markOpenToEffort,
@@ -114,7 +112,6 @@ import {
 import { ComposerStashBadge } from "./ComposerStashBadge";
 import { ComposerStashMenu } from "./ComposerStashMenu";
 import { useComposerTriggerState } from "./useComposerTriggerState";
-import { useComposerMenuState } from "./useComposerMenuState";
 import { useComposerMenuItems } from "./useComposerMenuItems";
 import { useComposerMultilinePrompt } from "./useComposerMultilinePrompt";
 import {
