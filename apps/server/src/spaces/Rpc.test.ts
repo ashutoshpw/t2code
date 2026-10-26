@@ -22,6 +22,8 @@ import * as RpcMessage from "effect/rpc/RpcMessage";
 import * as RpcSerialization from "effect/rpc/RpcSerialization";
 import * as RpcServer from "effect/rpc/RpcServer";
 
+import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import * as ServerConfig from "../config.ts";
 import * as RpcAuthorization from "../auth/RpcAuthorization.ts";
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as Settings from "../serverSettings.ts";
@@ -40,6 +42,8 @@ const decodeWindow = Schema.decodeUnknownSync(C.SpaceReadBlocksResult);
 const decodeLookup = Schema.decodeUnknownSync(C.SpaceReceiptLookupResult);
 const decodeInspected = Schema.decodeUnknownSync(C.SpaceInspectStructureResult);
 const decodeChild = Schema.decodeUnknownSync(C.SpaceCreateChildPageResult);
+const decodeAssetCreated = Schema.decodeUnknownSync(C.SpaceAssetUploadCreateResult);
+const decodeAssetStatus = Schema.decodeUnknownSync(C.SpaceAssetUploadStatus);
 const decodeMoved = Schema.decodeUnknownSync(C.SpaceMovePageResult);
 const decodeMovedBlocks = Schema.decodeUnknownSync(C.SpaceMoveBlocksResult);
 const decodeReference = Schema.decodeUnknownSync(C.SpaceReferenceResolveResult);
@@ -102,7 +106,7 @@ const encodedServer = Effect.fn("SpacesRpcTest.encodedServer")(function* (
       };
     }),
   );
-  const handlers = yield* SpacesRpc.handlers;
+  const handlers = yield* SpacesRpc.handlers("rpc-client");
   const handlerContext = yield* SpacesRpc.group.toHandlers(handlers);
   const controlPayloads: unknown[] = [];
   yield* RpcServer.make(group, WS_RPC_SERVER_OPTIONS).pipe(
@@ -137,20 +141,31 @@ const encodedServer = Effect.fn("SpacesRpcTest.encodedServer")(function* (
 });
 
 const fixture = Effect.fn("SpacesRpcTest.fixture")(function* <A, E>(
-  use: Effect.Effect<A, E, SpacesService.SpacesService | import("effect/Scope").Scope>,
+  use: Effect.Effect<
+    A,
+    E,
+    SpacesService.SpacesService | ServerSecretStore.ServerSecretStore | import("effect/Scope").Scope
+  >,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const directory = yield* fs.makeTempDirectoryScoped({ prefix: "spaces-rpc-" });
   return yield* use.pipe(
     Effect.provide(
-      SpacesService.layerFromPath(path.join(directory, "spaces.sqlite")).pipe(
-        Layer.provide(
-          Layer.succeed(ServerEnvironment.ServerEnvironmentIdentity, {
-            getEnvironmentId: Effect.succeed(environmentId),
-          }),
+      Layer.mergeAll(
+        ServerSecretStore.layer.pipe(
+          Layer.provide(
+            ServerConfig.ServerConfig.layerTest(process.cwd(), { prefix: "spaces-rpc-secret-" }),
+          ),
         ),
-        Layer.provide(Settings.layerTest({ spacesEnabled: true })),
+        SpacesService.layerFromPath(path.join(directory, "spaces.sqlite")).pipe(
+          Layer.provide(
+            Layer.succeed(ServerEnvironment.ServerEnvironmentIdentity, {
+              getEnvironmentId: Effect.succeed(environmentId),
+            }),
+          ),
+          Layer.provide(Settings.layerTest({ spacesEnabled: true })),
+        ),
       ),
     ),
   );
@@ -824,3 +839,79 @@ it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
       ),
   );
 });
+
+it.effect(
+  "authorizes asset reservations before writes and rejects caller identity in the original wire envelope",
+  () =>
+    fixture(
+      Effect.gen(function* () {
+        const read = yield* encodedServer([AuthOrchestrationReadScope]);
+        const input = {
+          environmentId,
+          requestId: "denied-reservation",
+          expectedBytes: 51,
+          mediaKind: "pdf",
+          mimeType: "application/pdf",
+          name: "report.pdf",
+        };
+        const denied = yield* read.request(WS_METHODS.spacesAssetsUploadCreate, input);
+        assert.include(JSON.stringify(denied), "EnvironmentAuthorizationError");
+        const owner = yield* encodedServer();
+        expectDefect(
+          yield* owner.request(WS_METHODS.spacesAssetsUploadCreate, {
+            ...input,
+            callerId: "forged",
+          }),
+        );
+
+        const first = decodeAssetCreated(
+          savedValue(
+            yield* owner.request(WS_METHODS.spacesAssetsUploadCreate, {
+              ...input,
+              requestId: "first",
+            }),
+          ),
+        );
+        const second = decodeAssetCreated(
+          savedValue(
+            yield* owner.request(WS_METHODS.spacesAssetsUploadCreate, {
+              ...input,
+              requestId: "second",
+            }),
+          ),
+        );
+        assert.notEqual(first.uploadId, second.uploadId);
+        assert.deepEqual(
+          decodeAssetCreated(
+            savedValue(
+              yield* owner.request(WS_METHODS.spacesAssetsUploadCreate, {
+                ...input,
+                requestId: "first",
+              }),
+            ),
+          ),
+          first,
+        );
+        const status = decodeAssetStatus(
+          savedValue(
+            yield* read.request(WS_METHODS.spacesAssetsUploadGet, {
+              environmentId,
+              uploadId: first.uploadId,
+            }),
+          ),
+        );
+        assert.equal(status.state, "reserved");
+        const notReady = yield* owner.request(WS_METHODS.spacesAssetsUploadFinalize, {
+          environmentId,
+          uploadId: first.uploadId,
+        });
+        assert.include(JSON.stringify(notReady), "SpaceAssetError");
+        assert.include(JSON.stringify(notReady), "not_ready");
+        const forbidden = yield* read.request(WS_METHODS.spacesAssetsUploadFinalize, {
+          environmentId,
+          uploadId: first.uploadId,
+        });
+        assert.include(JSON.stringify(forbidden), "EnvironmentAuthorizationError");
+      }),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);

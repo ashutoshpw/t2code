@@ -19,3 +19,18 @@ export const mediaTypes = {
 } as const satisfies Record<string, MediaKind>;
 
 export type MediaType = keyof typeof mediaTypes;
+
+export const assetLimits = Object.freeze({
+  maxImageBytes: fileLimits.image,
+  maxPdfBytes: fileLimits.pdf,
+  maxVideoBytes: fileLimits.video,
+  maxImagePixels: fileLimits.imagePixels,
+  maxHeaderBytes: fileLimits.headerBytes,
+  maxEnvironmentBytes: 2 * 1024 ** 3,
+  maxPendingPerCaller: 2,
+  maxPendingUploads: 16,
+  maxActiveUploads: 4,
+  uploadTtlMs: 10 * 60_000,
+  recoveryBatchRows: 100,
+  recoveryBatchBytes: 256 * 1024 ** 2,
+});

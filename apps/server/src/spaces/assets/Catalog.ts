@@ -6,7 +6,7 @@ import * as Schema from "effect/Schema";
 
 import * as SpacesSql from "../SpacesSql.ts";
 import { canonical } from "../CorePolicy.ts";
-import { fileLimits, mediaTypes, type MediaKind, type MediaType } from "./Policy.ts";
+import { fileLimits, assetLimits, mediaTypes, type MediaKind, type MediaType } from "./Policy.ts";
 import {
   publicationInfo,
   missingPublicationInfo,
@@ -17,14 +17,15 @@ import {
 } from "./Upload.ts";
 
 const limits = Object.freeze({
-  environmentBytes: 2 * 1024 ** 3,
-  callerPending: 2,
-  environmentPending: 16,
-  environmentActive: 4,
-  reservationMs: 10 * 60_000,
-  batchRows: 100,
-  recoveryBytes: 256 * 1024 ** 2,
+  environmentBytes: assetLimits.maxEnvironmentBytes,
+  callerPending: assetLimits.maxPendingPerCaller,
+  environmentPending: assetLimits.maxPendingUploads,
+  environmentActive: assetLimits.maxActiveUploads,
+  reservationMs: assetLimits.uploadTtlMs,
+  batchRows: assetLimits.recoveryBatchRows,
+  recoveryBytes: assetLimits.recoveryBatchBytes,
 });
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const digestPattern = /^[0-9a-f]{64}$/;
 

@@ -609,7 +609,78 @@ export const SpaceSearchLimits = Schema.Struct({
 export type SpaceSearchLimits = typeof SpaceSearchLimits.Type;
 
 // These describe advertised service policy; replay decoding must not freeze today's maxima.
+export const SpaceAssetLimits = Schema.Struct({
+  maxImageBytes: PositiveInt,
+  maxPdfBytes: PositiveInt,
+  maxVideoBytes: PositiveInt,
+  maxImagePixels: PositiveInt,
+  maxHeaderBytes: PositiveInt,
+  maxEnvironmentBytes: PositiveInt,
+  maxPendingPerCaller: PositiveInt,
+  maxPendingUploads: PositiveInt,
+  maxActiveUploads: PositiveInt,
+  uploadTtlMs: PositiveInt,
+  recoveryBatchRows: PositiveInt,
+  recoveryBatchBytes: PositiveInt,
+});
+export type SpaceAssetLimits = typeof SpaceAssetLimits.Type;
+export const SpaceAssetUploadId = StableId.pipe(Schema.brand("SpaceAssetUploadId"));
+export type SpaceAssetUploadId = typeof SpaceAssetUploadId.Type;
+export const SpaceAssetMimeType = Schema.Literals([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+  "video/mp4",
+  "video/webm",
+]);
+export const SpaceAssetUploadCreateInput = Schema.Struct({
+  environmentId: EnvironmentId,
+  requestId: StableId,
+  expectedBytes: PositiveInt,
+  mimeType: SpaceAssetMimeType,
+  mediaKind: Schema.Literals(["image", "pdf", "video"]),
+  name: Schema.String,
+});
+export type SpaceAssetUploadCreateInput = typeof SpaceAssetUploadCreateInput.Type;
+export const SpaceAssetUploadInput = Schema.Struct({
+  environmentId: EnvironmentId,
+  uploadId: SpaceAssetUploadId,
+});
+export type SpaceAssetUploadInput = typeof SpaceAssetUploadInput.Type;
+export const SpaceAssetGetInput = Schema.Struct({
+  environmentId: EnvironmentId,
+  assetId: SpaceAssetId,
+});
+export type SpaceAssetGetInput = typeof SpaceAssetGetInput.Type;
+export const SpaceAssetMetadata = Schema.Struct({
+  assetId: SpaceAssetId,
+  digest: Schema.String,
+  byteSize: PositiveInt,
+  mimeType: SpaceAssetMimeType,
+  name: Schema.String,
+  imageDimensions: Schema.optionalKey(Schema.Struct({ width: PositiveInt, height: PositiveInt })),
+});
+export type SpaceAssetMetadata = typeof SpaceAssetMetadata.Type;
+export const SpaceAssetUploadCreateResult = Schema.Struct({
+  uploadId: SpaceAssetUploadId,
+  assetId: SpaceAssetId,
+  expiresAt: NonNegativeInt,
+  relativeUrl: Schema.String,
+});
+export type SpaceAssetUploadCreateResult = typeof SpaceAssetUploadCreateResult.Type;
+export const SpaceAssetUploadStatus = Schema.Struct({
+  uploadId: SpaceAssetUploadId,
+  assetId: SpaceAssetId,
+  expiresAt: NonNegativeInt,
+  state: Schema.Literals(["reserved", "receiving", "verified", "ready", "expired"]),
+  recoveryPending: Schema.Boolean,
+});
+export type SpaceAssetUploadStatus = typeof SpaceAssetUploadStatus.Type;
+
 export const SpaceLimits = Schema.Struct({
+  assets: Schema.optionalKey(SpaceAssetLimits),
   history: Schema.optionalKey(SpaceHistoryLimits),
   search: Schema.optionalKey(SpaceSearchLimits),
   maxReferenceHops: Schema.optionalKey(PositiveInt),
@@ -638,6 +709,7 @@ export type SpaceLimits = typeof SpaceLimits.Type;
 export const SpaceCapability = Schema.Struct({
   version: PositiveInt,
   limits: SpaceLimits,
+  assetRecoveryPending: Schema.optionalKey(Schema.Boolean),
   // Flags describe implemented methods, independently of permissions and index readiness.
   features: Schema.optionalKey(
     Schema.Struct({
@@ -710,7 +782,9 @@ export class SpaceLimitExceededError extends Schema.TaggedError<SpaceLimitExceed
   "SpaceLimitExceededError",
   {
     limit: Schema.Literals([
-      ...Struct.keys(SpaceLimits.fields).filter((key) => key !== "history" && key !== "search"),
+      ...Struct.keys(SpaceLimits.fields).filter(
+        (key) => key !== "history" && key !== "search" && key !== "assets",
+      ),
       ...Struct.keys(SpaceSearchLimits.fields).map((key) => `search.${key}` as const),
       "history.maxDeltaBytes",
       "history.maxPageBytes",
@@ -756,7 +830,46 @@ export class SpaceSearchUnavailableError extends Schema.TaggedError<SpaceSearchU
     return "Spaces search is unavailable.";
   }
 }
+export class SpaceAssetError extends Schema.TaggedError<SpaceAssetError>()("SpaceAssetError", {
+  reason: Schema.Literals([
+    "invalid_input",
+    "invalid_reservation",
+    "intent_mismatch",
+    "not_found",
+    "caller_mismatch",
+    "expired",
+    "already_claimed",
+    "stale_attempt",
+    "quota",
+    "pending_limit",
+    "active_limit",
+    "blob_unavailable",
+    "staging_exists",
+    "size_mismatch",
+    "unsupported_content",
+    "media_mismatch",
+    "image_dimensions",
+    "image_pixels",
+    "source_failed",
+    "staging_changed",
+    "destination_conflict",
+    "publication_failed",
+    "io_failed",
+    "invalid_state",
+    "missing_file",
+    "corrupt_file",
+    "staging_present",
+    "not_ready",
+    "invalid_token",
+    "invalid_content_length",
+  ]),
+}) {
+  override get message(): string {
+    return "The Spaces asset request could not be completed.";
+  }
+}
 export const SpaceServiceError = Schema.Union([
+  SpaceAssetError,
   SpaceSearchUnavailableError,
   SpacesDisabledError,
   SpacesUnavailableError,

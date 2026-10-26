@@ -19,6 +19,9 @@ import Migration0001 from "./Migrations/001_Spaces.ts";
 import Migration0002 from "./Migrations/002_Core.ts";
 import Migration0003 from "./Migrations/003_RevisionPreimages.ts";
 import Migration0004 from "./Migrations/004_PageOwners.ts";
+import Migration0005 from "./Migrations/005_ReferenceIdentity.ts";
+import Migration0006 from "./Migrations/006_Recovery.ts";
+import Migration0007 from "./Migrations/007_Search.ts";
 
 import * as ChatSqlite from "../persistence/Sqlite.ts";
 import { runMigrations } from "./Migrations.ts";
@@ -66,6 +69,7 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
       { migration_id: 5, name: "ReferenceIdentity" },
       { migration_id: 6, name: "Recovery" },
       { migration_id: 7, name: "Search" },
+      { migration_id: 8, name: "Assets" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -115,6 +119,85 @@ it.effect("rolls back a failed schema migration together with its ledger entry",
 );
 
 it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
+  it.effect(
+    "upgrades accepted007 storage to assets without rewriting existing data without changing nested content",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "spaces-assets-upgrade-" });
+        const dbPath = path.join(directory, "spaces.sqlite");
+        const readExisting = Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          return {
+            spaces: yield* sql`SELECT * FROM spaces ORDER BY space_id`,
+            ids: yield* sql`SELECT * FROM spaces_ids ORDER BY id`,
+            pages: yield* sql`SELECT * FROM spaces_pages ORDER BY page_id`,
+            blocks: yield* sql`SELECT * FROM spaces_blocks ORDER BY block_id`,
+            owners: yield* sql`SELECT * FROM spaces_page_owners ORDER BY child_page_id`,
+          };
+        });
+        const before = yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          yield* sql`PRAGMA application_id=1397768515`;
+          yield* Migrator.make({})({
+            loader: Migrator.fromRecord({
+              "1_Spaces": Migration0001.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+              "2_Core": Migration0002.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+              "3_RevisionPreimages": Migration0003.pipe(
+                Effect.provideService(SpacesSql.SpacesSql, sql),
+              ),
+              "4_PageOwners": Migration0004.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+              "5_ReferenceIdentity": Migration0005.pipe(
+                Effect.provideService(SpacesSql.SpacesSql, sql),
+              ),
+              "6_Recovery": Migration0006.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+              "7_Search": Migration0007.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+            }),
+          });
+          yield* sql`INSERT INTO spaces_ids(id,kind) VALUES ('parent','page'),('child','page'),('owner','block')`;
+          yield* sql`INSERT INTO spaces_pages(page_id,space_id,title,root_order,created_at,updated_at)
+          VALUES ('parent','default','Parent','00000000000000000000000000000001','1970-01-01T00:00:00.000Z','1970-01-01T00:00:00.000Z'),
+          ('child','default','Child',NULL,'1970-01-01T00:00:00.000Z','1970-01-01T00:00:00.000Z')`;
+          const payload = canonical({
+            id: "owner",
+            type: "child_page",
+            version: 1,
+            parentId: null,
+            order: "00000000000000000000000000000001",
+            content: { pageId: "child" },
+          });
+          yield* sql`INSERT INTO spaces_blocks(block_id,page_id,parent_id,rank,payload,logical_bytes)
+          VALUES ('owner','parent',NULL,'00000000000000000000000000000001',${payload},${Buffer.byteLength(payload, "utf8")})`;
+          yield* sql`INSERT INTO spaces_page_owners(child_page_id,owner_block_id) VALUES ('child','owner')`;
+          yield* sql`UPDATE spaces_pages SET block_count=1,block_bytes=${Buffer.byteLength(payload, "utf8")} WHERE page_id='parent'`;
+          return yield* readExisting;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })), Effect.scoped);
+        for (const _acquisition of [1, 2])
+          yield* Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            assert.deepEqual(
+              yield* readExisting.pipe(Effect.provideService(SqlClient.SqlClient, sql)),
+              before,
+            );
+            assert.deepEqual(yield* sql`SELECT * FROM spaces_asset_usage`, [
+              {
+                singleton: 1,
+                reserved_bytes: 0,
+                physical_bytes: 0,
+                pending_count: 0,
+                active_count: 0,
+              },
+            ]);
+            assert.deepEqual(
+              yield* sql`SELECT migration_id,name FROM effect_sql_migrations WHERE migration_id=8`,
+              [{ migration_id: 8, name: "Assets" }],
+            );
+            assert.deepEqual(yield* sql`PRAGMA foreign_key_check`, []);
+          }).pipe(Effect.provide(Sqlite.layerFromPath(dbPath)), Effect.scoped);
+      }),
+  );
+
   it.effect(
     "upgrades legacy tombstones without a bulk rewrite and bounds identity cleanup and long-chain compression",
     () =>
@@ -609,7 +692,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            7,
+            8,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -723,7 +806,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (8, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (9, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;

@@ -13,7 +13,6 @@ import * as Result from "effect/Result";
 import * as SpacesSql from "../SpacesSql.ts";
 import * as Sqlite from "../Sqlite.ts";
 import * as Catalog from "./Catalog.ts";
-import Migration from "./Migration.ts";
 import * as Upload from "./Upload.ts";
 
 const bytes = new TextEncoder().encode("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n");
@@ -41,11 +40,7 @@ const scenario = Effect.fn("AssetCatalogTest.scenario")(function* <A, E, R>(
   use: (directories: Effect.Success<ReturnType<typeof paths>>) => Effect.Effect<A, E, R>,
 ) {
   const directories = yield* paths();
-  return yield* Effect.gen(function* () {
-    const sql = yield* SpacesSql.SpacesSql;
-    yield* sql.withTransaction(Migration);
-    return yield* use(directories);
-  }).pipe(Effect.provide(Sqlite.layerFromPath(directories.dbPath)));
+  return yield* use(directories).pipe(Effect.provide(Sqlite.layerFromPath(directories.dbPath)));
 });
 const upload = Effect.fn("AssetCatalogTest.upload")(function* (
   directories: Effect.Success<ReturnType<typeof paths>>,
@@ -89,7 +84,7 @@ const snapshot = Effect.fn("AssetCatalogTest.snapshot")(function* () {
 // These tests own real transaction accounting and persisted upload states, not HTTP authorization or framing.
 describe("Spaces asset catalog", () => {
   it.effect(
-    "runs the exact unregistered DDL on accepted Spaces SQLite without changing its ledger or reference tables",
+    "runs the exact registered assets DDL on Spaces SQLite without changing its ledger or reference tables",
     () =>
       scenario(() =>
         Effect.gen(function* () {
@@ -100,6 +95,8 @@ describe("Spaces asset catalog", () => {
             { migration_id: 1, name: "Spaces" },
             { migration_id: 2, name: "Core" },
             { migration_id: 3, name: "RevisionPreimages" },
+            { migration_id: 4, name: "PageOwners" },
+            { migration_id: 5, name: "Assets" },
           ]);
           expect(yield* sql`SELECT 1 FROM spaces WHERE is_default = 1`).toHaveLength(1);
           expect(yield* Catalog.usage()).toEqual({
@@ -598,7 +595,6 @@ describe("Spaces asset catalog", () => {
         yield* Effect.addFinalizer((exit) => Scope.close(heldScope, exit));
         const original = yield* Effect.gen(function* () {
           const sql = yield* SpacesSql.SpacesSql;
-          yield* sql.withTransaction(Migration);
           if (phase === "ready-dedup") yield* upload(directories, input("earlier"));
           const row = yield* sql.withTransaction(Catalog.reserve(input("reopen"), 0));
           const claim = yield* sql.withTransaction(Catalog.claim(row.caller_id, row.upload_id, 0));
