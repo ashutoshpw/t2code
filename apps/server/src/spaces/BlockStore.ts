@@ -24,6 +24,12 @@ const decodeKnownMark = Schema.decodeUnknownSync(C.SpaceKnownMark);
 const containers = new Set(["bulleted_item", "numbered_item", "todo_item"]);
 const unsupported = new Set(["image", "pdf", "video", "child_page"]);
 
+function ownValue(value: unknown, key: PropertyKey) {
+  return value !== null && typeof value === "object" && Object.hasOwn(value, key)
+    ? Reflect.get(value, key)
+    : undefined;
+}
+
 function editable(block: C.SpaceBlock) {
   if (unsupported.has(block.type) || !knownBlock(block)) return false;
   const content = block.content as Schema.Json;
@@ -121,7 +127,7 @@ export const apply = Effect.fnUntraced(function* (
                       ? ["type", "version", "target"]
                       : ["type", "version"];
                 const decodedMark = decodeKnownMark(mark);
-                return Object.fromEntries(keys.map((key) => [key, Reflect.get(decodedMark, key)]));
+                return Object.fromEntries(keys.map((key) => [key, ownValue(decodedMark, key)]));
               }),
             })),
           });
@@ -131,17 +137,15 @@ export const apply = Effect.fnUntraced(function* (
             return old.every((v, i) =>
               preserve(
                 v,
-                Array.isArray(known) ? known[i] : undefined,
-                Array.isArray(next) ? next[i] : undefined,
+                Array.isArray(known) ? ownValue(known, i) : undefined,
+                Array.isArray(next) ? ownValue(next, i) : undefined,
               ),
             );
           if (old !== null && typeof old === "object") {
             return Object.keys(old).every((key) => {
-              const v = Reflect.get(old, key);
-              const k =
-                known !== null && typeof known === "object" ? Reflect.get(known, key) : undefined;
-              const n =
-                next !== null && typeof next === "object" ? Reflect.get(next, key) : undefined;
+              const v = ownValue(old, key);
+              const k = ownValue(known, key);
+              const n = ownValue(next, key);
               return k === undefined
                 ? n !== undefined && canonical(v) === canonical(n)
                 : preserve(v, k, n);
@@ -180,7 +184,7 @@ export const apply = Effect.fnUntraced(function* (
       chain.add(node.parentId);
       touch(node.parentId);
       const parent = yield* get(node.parentId);
-      if (!parent || !containers.has(parent.type) || parent.version !== 1)
+      if (!parent || !containers.has(parent.type) || !knownBlock(parent))
         return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
       node = parent;
       checkLimit("maxDepth", ++depth);

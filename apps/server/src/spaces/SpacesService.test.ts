@@ -1220,9 +1220,9 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
       ),
   );
 
-  it.effect(
-    "opens pre-existing future block payloads losslessly and refuses editing or deleting them",
-    () =>
+  it.effect.each(["future-widget", "opaque-list"] as const)(
+    "opens pre-existing %s payloads losslessly and refuses unsupported changes",
+    (kind) =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
@@ -1241,9 +1241,12 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
         }).pipe(Effect.provide(production));
         const future = {
           ...block("future"),
-          type: "future-widget",
-          version: 3,
-          content: { nested: ["界", { opaque: true }] },
+          type: kind === "opaque-list" ? "bulleted_item" : "future-widget",
+          version: kind === "opaque-list" ? 1 : 3,
+          content:
+            kind === "opaque-list"
+              ? { future: "opaque-layout" }
+              : { nested: ["界", { opaque: true }] },
           envelope: { preserved: 1 },
         };
         // Fixture represents an existing document written by a newer version, which core intentionally cannot create.
@@ -1271,6 +1274,51 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             baseRevision: 2,
             title: "Future kept",
           });
+          if (kind === "opaque-list") {
+            const childInput = {
+              ...common,
+              mutationId: "opaque-parent",
+              baseRevision: 3,
+              generation: 0,
+              mutations: [{ kind: "insert", block: block("new-child", 1, future.id) }],
+            };
+            const error = yield* Effect.flip(service.applyBlockBatch(childInput));
+            assert.equal(error._tag, "SpaceValidationError");
+            if (error._tag === "SpaceValidationError") assert.equal(error.reason, "invalid_parent");
+            assert.deepEqual(
+              yield* service.lookupMutationReceipt({
+                request: { operation: "applyBlockBatch", input: childInput },
+              }),
+              { status: "absent" },
+            );
+            const unsupportedParent = {
+              ...block("new-parent"),
+              type: "bulleted_item",
+              content: { future: "opaque-layout" },
+            };
+            const sameBatch = {
+              ...childInput,
+              mutationId: "new-opaque-parent",
+              mutations: [
+                { kind: "insert", block: block("new-child", 1, unsupportedParent.id) },
+                { kind: "insert", block: unsupportedParent },
+              ],
+            };
+            const sameBatchError = yield* Effect.flip(service.applyBlockBatch(sameBatch));
+            assert.equal(sameBatchError._tag, "SpaceValidationError");
+            if (sameBatchError._tag === "SpaceValidationError")
+              assert.equal(sameBatchError.reason, "unsupported_block");
+            assert.deepEqual(
+              yield* service.lookupMutationReceipt({
+                request: { operation: "applyBlockBatch", input: sameBatch },
+              }),
+              { status: "absent" },
+            );
+            assert.deepEqual(
+              (yield* service.readBlocks({ ...env, pageId: original.id, revision: 3 })).blocks,
+              [future],
+            );
+          }
           for (const mutation of [
             { kind: "replace", block: block("future") },
             { kind: "delete", blockId: future.id },
@@ -1301,5 +1349,76 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           );
         }).pipe(Effect.provide(production));
       }),
+  );
+  it.effect.each(["envelope", "content", "run", "mark"] as const)(
+    "preserves own opaque inherited-name fields at the %s boundary",
+    (level) =>
+      fixture(() =>
+        Effect.gen(function* () {
+          const { service, request, page } = yield* boot();
+          const extensions: Record<string, Schema.Json> = {
+            toString: "future-data",
+            constructor: { nested: ["界", false, 7] },
+            valueOf: 0,
+            hasOwnProperty: false,
+          };
+          const withExtras = (opaque: Record<string, Schema.Json>, text = "old"): C.SpaceBlock => ({
+            ...block("inherited"),
+            ...(level === "envelope" ? opaque : {}),
+            content: {
+              ...(level === "content" ? opaque : {}),
+              runs: [
+                {
+                  ...(level === "run" ? opaque : {}),
+                  text,
+                  marks: [{ ...(level === "mark" ? opaque : {}), type: "bold", version: 1 }],
+                },
+              ],
+            },
+          });
+          const original = withExtras(extensions);
+          yield* service.applyBlockBatch(
+            request("own-initial", 0, [{ kind: "insert", block: original }]),
+          );
+          assert.deepEqual(
+            (yield* service.readBlocks({ ...env, pageId: page.id, revision: 1 })).blocks,
+            [original],
+          );
+          const edited = withExtras(extensions, "known-field-edit");
+          yield* service.applyBlockBatch(
+            request("own-valid", 1, [{ kind: "replace", block: edited }]),
+          );
+          const badVariants = [
+            Object.fromEntries(Object.entries(extensions).filter(([key]) => key !== "toString")),
+            { ...extensions, toString: { nested: "changed primitive" } },
+            Object.fromEntries(Object.entries(extensions).filter(([key]) => key !== "constructor")),
+            { ...extensions, constructor: { nested: ["changed"] } },
+            Object.fromEntries(Object.entries(extensions).filter(([key]) => key !== "valueOf")),
+            Object.fromEntries(
+              Object.entries(extensions).filter(([key]) => key !== "hasOwnProperty"),
+            ),
+          ];
+          for (const [index, opaque] of badVariants.entries()) {
+            const input = request(`own-refused-${index}`, 2, [
+              { kind: "replace", block: withExtras(opaque, "discarded") },
+            ]);
+            const error = yield* Effect.flip(service.applyBlockBatch(input));
+            assert.equal(error._tag, "SpaceValidationError");
+            if (error._tag === "SpaceValidationError")
+              assert.equal(error.reason, "unsupported_block");
+            assert.deepEqual(
+              yield* service.lookupMutationReceipt({
+                request: { operation: "applyBlockBatch", input },
+              }),
+              { status: "absent" },
+            );
+          }
+          assert.equal((yield* service.getPage({ ...env, pageId: page.id })).page.revision, 2);
+          assert.deepEqual(
+            (yield* service.readBlocks({ ...env, pageId: page.id, revision: 2 })).blocks,
+            [edited],
+          );
+        }),
+      ),
   );
 });
