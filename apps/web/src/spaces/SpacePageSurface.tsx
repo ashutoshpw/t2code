@@ -1,14 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ScopedThreadRef } from "@t2code/contracts";
-import { Link, Navigate } from "@tanstack/react-router";
-import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
+import { Link, useRouter } from "@tanstack/react-router";
+import {
+  validateSpacePageSearch,
+  type SpacePageNavigationTarget,
+} from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { useEnvironment } from "../state/environments";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
 import { Button } from "../components/ui/button";
 import { useMainAppThreadRef, useNavigateToMainApp } from "../components/sidebar/mainAppLocation";
-import { useRightPanelStore } from "../rightPanelStore";
+import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 
 export default function SpacePageSurface({
@@ -23,26 +26,79 @@ export default function SpacePageSurface({
   const availability = useSpacesAvailability(target.environmentId);
   const environment = useEnvironment(target.environmentId);
   const version = environment?.serverConfig?.environment.capabilities.spaces?.version;
-  const query = useEnvironmentQuery(
-    canBrowseSpaces(availability) && (version === 1 || version === 2)
+  const available = canBrowseSpaces(availability);
+  const ownerKey = JSON.stringify([
+    available,
+    version,
+    target.environmentId,
+    target.pageId,
+    target.spaceId,
+    target.blockId,
+    threadRef?.environmentId,
+    threadRef?.threadId,
+    fullPage,
+  ]);
+  const createQuery = () =>
+    available && (version === 1 || version === 2)
       ? spacesEnvironment.location({
           environmentId: target.environmentId,
           input: { environmentId: target.environmentId, pageId: target.pageId, version },
         })
-      : null,
-  );
+      : null;
+  const [locationOwner, setLocationOwner] = useState(() => ({
+    key: ownerKey,
+    query: createQuery(),
+  }));
+  let owner = locationOwner;
+  if (owner.key !== ownerKey) {
+    owner = { key: ownerKey, query: createQuery() };
+    setLocationOwner(owner);
+  }
+  const query = useEnvironmentQuery(owner.query);
+  const router = useRouter();
   const mainAppThreadRef = useMainAppThreadRef();
   const navigateToMainApp = useNavigateToMainApp();
-  const currentSpaceId = query.isSuccess && !query.isPending ? query.data?.page.spaceId : undefined;
-  // oxlint-disable-next-line t2code/react-effect-budget -- synchronize the authorized current location with the persisted panel hint.
+  // oxlint-disable-next-line t2code/react-effect-budget -- apply current location to the persisted panel hint and canonical route.
   useEffect(() => {
-    if (threadRef && currentSpaceId)
-      useRightPanelStore.getState().updateSpacePageLocation(threadRef, {
-        environmentId: target.environmentId,
-        pageId: target.pageId,
-        spaceId: currentSpaceId,
+    const current = query.isSuccess && !query.isPending ? query.data?.current() : null;
+    if (!current) return;
+    if (threadRef) {
+      const panel = selectThreadRightPanelState(
+        useRightPanelStore.getState().byThreadKey,
+        threadRef,
+      ).surfaces.find(
+        (surface) =>
+          surface.kind === "space-page" &&
+          surface.target.environmentId === target.environmentId &&
+          surface.target.pageId === target.pageId,
+      );
+      if (panel?.kind === "space-page" && panel.target === target)
+        useRightPanelStore.getState().updateSpacePageLocation(threadRef, {
+          environmentId: target.environmentId,
+          pageId: target.pageId,
+          spaceId: current.page.spaceId,
+        });
+    }
+    const params = router.state.matches.at(-1)?.params ?? {};
+    const search = validateSpacePageSearch(router.state.location.search);
+    if (
+      fullPage &&
+      "environmentId" in params &&
+      params.environmentId === target.environmentId &&
+      "spaceId" in params &&
+      params.spaceId === target.spaceId &&
+      "pageId" in params &&
+      params.pageId === target.pageId &&
+      search.block === target.blockId &&
+      current.page.spaceId !== target.spaceId
+    )
+      void router.navigate({
+        to: "/spaces/$environmentId/$spaceId/$pageId",
+        params: { ...target, spaceId: current.page.spaceId },
+        search: target.blockId ? { block: target.blockId } : {},
+        replace: true,
       });
-  }, [threadRef, currentSpaceId, target.environmentId, target.pageId]);
+  }, [query.data, query.isSuccess, query.isPending, target, threadRef, fullPage, router]);
   if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
   if (query.error)
     return (
@@ -53,23 +109,15 @@ export default function SpacePageSurface({
         </Button>
       </div>
     );
-  if (!query.data || query.isPending)
+  const current = query.isSuccess && !query.isPending ? query.data?.current() : null;
+  if (!current)
     return (
       <p role="status" className="p-4 text-sm text-muted-foreground">
         Loading page…
       </p>
     );
-  const { page, space, ancestors } = query.data;
+  const { page, space, ancestors } = current;
   const resolvedTarget = { ...target, spaceId: page.spaceId };
-  if (fullPage && page.spaceId !== target.spaceId)
-    return (
-      <Navigate
-        to="/spaces/$environmentId/$spaceId/$pageId"
-        params={resolvedTarget}
-        search={target.blockId ? { block: target.blockId } : {}}
-        replace
-      />
-    );
   return (
     <section className="min-w-0 p-4" aria-label="Space page">
       <Link
@@ -117,7 +165,11 @@ export default function SpacePageSurface({
           <Button
             variant="outline"
             onClick={() => {
-              useRightPanelStore.getState().openSpacePage(mainAppThreadRef, resolvedTarget);
+              const current = query.isPending ? null : query.data?.current();
+              if (!current) return;
+              useRightPanelStore
+                .getState()
+                .openSpacePage(mainAppThreadRef, { ...target, spaceId: current.page.spaceId });
               void navigateToMainApp();
             }}
           >
