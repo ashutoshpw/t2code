@@ -47,7 +47,8 @@ import ThreadSidebar from "./Sidebar";
 import { AppRail } from "./appRail/AppRail";
 import { APP_RAIL_WIDTH_PX } from "./appRail/appRail.logic";
 import { SidebarBrandWidthProbe } from "./sidebar/SidebarChrome";
-import { isAppModalPage } from "./sidebar/mainAppLocation";
+import { SpacesSidebar } from "../spaces/SpacesSidebar";
+import { isSpacesPage, isAppModalPage } from "./sidebar/mainAppLocation";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
 import { useSidebarStageBackdropVariant } from "./SidebarStageBackdrop";
 import {
@@ -390,6 +391,7 @@ function ProjectProjectionRetention() {
 }
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
+  const spacesPage = useLocation({ select: (location) => isSpacesPage(location.pathname) });
   const legacySidebarEnabled = useLegacySidebarEnabled();
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
@@ -463,7 +465,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           collapsible="offcanvas"
           data-app-sidebar=""
           role="navigation"
-          aria-label="Threads"
+          aria-label={spacesPage ? "Spaces" : "Threads"}
           resizable={{
             maxWidth: sidebarMaximumWidth,
             minWidth: sidebarMinimumWidth,
@@ -475,7 +477,9 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           }}
           style={windowControlsInsetStyle}
         >
-          {legacySidebarEnabled ? (
+          {spacesPage ? (
+            <SpacesSidebar />
+          ) : legacySidebarEnabled ? (
             <LegacyThreadSidebar routeReveal={sidebarRouteReveal} />
           ) : (
             <ThreadSidebar routeReveal={sidebarRouteReveal} />

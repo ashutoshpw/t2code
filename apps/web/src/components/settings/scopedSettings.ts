@@ -35,7 +35,10 @@ interface ScopedSettingsEnvironment {
   readonly serverConfig: {
     readonly settings: ServerSettings;
     readonly environment?: {
-      readonly capabilities: { readonly projectSettingsOverrides?: boolean | undefined };
+      readonly capabilities: {
+        readonly projectSettingsOverrides?: boolean | undefined;
+        readonly spacesSettings?: true | undefined;
+      };
     };
   } | null;
 }
@@ -237,6 +240,19 @@ export function planScopedSettingsPatch(
   ) as ServerSettingsPatch;
   const serverKeys = Object.keys(serverPatch);
   const { connectedEnvironments } = selectScopedSettingsEnvironments(scope, environments, null);
+  if (
+    serverPatch.spacesEnabled !== undefined &&
+    connectedEnvironments.some(
+      (environment) => environment.serverConfig?.environment?.capabilities.spacesSettings !== true,
+    )
+  ) {
+    return {
+      clientPatch,
+      hasClientWrite: false,
+      serverWrites: [],
+      unavailableReason: "Update every selected environment to change Spaces settings.",
+    };
+  }
   const isProjectScope = scope.kind === "project" || scope.kind === "checkout";
   const unscopableKeys = isProjectScope
     ? serverKeys.filter((key) => !isProjectScopedSettingKey(key))

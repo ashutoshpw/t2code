@@ -1,3 +1,5 @@
+import { BookOpenIcon } from "lucide-react";
+import { useSpacesEnvironments } from "../state/spaces";
 import { threadPullRequestLinkMode } from "@t2code/client-runtime/thread-pull-request-compatibility";
 import { visibleThreadPullRequests } from "@t2code/shared/threadPullRequests";
 
@@ -416,6 +418,7 @@ function OpenCommandPaletteDialog(props: {
     reportFailure: false,
   });
   const { environments } = useEnvironments();
+  const spacesSupported = useSpacesEnvironments().length > 0;
   const desktopLocalBootstraps = useDesktopLocalBootstraps();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const availableSettingsSearchItems = useAvailableSettingsSearchItems();
@@ -1483,6 +1486,18 @@ function OpenCommandPaletteDialog(props: {
     });
   }
 
+  if (spacesSupported)
+    actionItems.push({
+      kind: "action",
+      value: "action:spaces",
+      title: "Open Spaces",
+      searchTerms: ["spaces", "pages", "documents", "library"],
+      icon: <BookOpenIcon className={ITEM_ICON_CLASS} />,
+      shortcutCommand: "spaces.open",
+      run: async () => {
+        await navigate({ to: "/spaces" });
+      },
+    });
   actionItems.push({
     kind: "action",
     value: "action:usage",

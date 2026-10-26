@@ -13,6 +13,11 @@ import { getThemeSnapshot, setAppearanceMode } from "../hooks/useTheme";
 import { selectActiveRightPanel, useRightPanelStore } from "../rightPanelStore";
 import { type CommandHandler, type CommandScopeOptions, registerCommands } from "./dispatcher";
 import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
+import { AuthOrchestrationReadScope } from "@t2code/contracts";
+import { canBrowseSpaces, spacesAvailability } from "@t2code/client-runtime/state/spaces";
+import { appAtomRegistry } from "../rpc/atomRegistry";
+import { environmentPresentations } from "../state/presentation";
+import { readEnvironmentScope } from "../state/session";
 import { resolveThreadRouteTarget } from "../threadRoutes";
 
 function consume(event: KeyboardEvent): void {
@@ -86,6 +91,24 @@ export function installCommandPaletteCommands(
         consume(event);
         const { theme, themeHalves, resolvedTheme } = getThemeSnapshot();
         toggleThemeEditorForTheme({ theme, themeHalves, initialAppearance: resolvedTheme });
+      },
+      "spaces.open": (event) => {
+        if (
+          ![...appAtomRegistry.get(environmentPresentations.presentationsAtom)].some(
+            ([environmentId, environment]) =>
+              canBrowseSpaces(
+                spacesAvailability({
+                  connected: environment.connection.phase === "connected",
+                  capability: environment.serverConfig?.environment.capabilities.spaces,
+                  canRead: readEnvironmentScope(environmentId, AuthOrchestrationReadScope),
+                  canOperate: false,
+                }),
+              ),
+          )
+        ) return false;
+        consume(event);
+        dispatchCommandPalette({ _tag: "SetOpen", open: false });
+        void router.navigate({ to: "/spaces" });
       },
       "usage.open": (event) => {
         consume(event);

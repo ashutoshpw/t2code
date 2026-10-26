@@ -433,10 +433,13 @@ it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
           const settings = yield* Settings.ServerSettingsService;
           const spaces = yield* SpacesService.SpacesService;
           const id = yield* environment.getEnvironmentId;
-          expect((yield* environment.getDescriptor).capabilities.spaces).toBeUndefined();
+          const disabled = yield* environment.getDescriptor;
+          expect(disabled.capabilities.spaces).toBeUndefined();
+          expect(disabled.capabilities.spacesSettings).toBe(true);
           if (kind === "ready") expect(yield* fs.exists(config.spacesDbPath)).toBe(false);
           yield* settings.updateSettings({ spacesEnabled: true });
           const enabled = yield* environment.getDescriptor;
+          expect(enabled.capabilities.spacesSettings).toBe(true);
           if (kind === "ready") {
             expect(enabled.capabilities.spaces).toEqual(yield* spaces.getCapability(id));
             expect((yield* spaces.listSpaces({ environmentId: id })).items).toHaveLength(1);

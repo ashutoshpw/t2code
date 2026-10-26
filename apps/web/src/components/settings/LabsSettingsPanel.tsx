@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useT2ConnectAuthPrompt } from "../clerk/useT2ConnectAuthPrompt";
 import { Button } from "../ui/button";
+import { useSettingsScope } from "./SettingsScopeContext";
 import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
@@ -15,6 +16,7 @@ export function LabsSettingsPanel() {
   return (
     <SettingsPageContainer>
       <SettingsSection id="beta" title="Beta">
+        <SpacesRow />
         {/* Clerk is only mounted when this build has T2 Connect. */}
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
       </SettingsSection>
@@ -66,6 +68,38 @@ function GuestLinksRow() {
           checked={settings.guestSharingEnabled}
           onCheckedChange={(checked) => updateSettings({ guestSharingEnabled: Boolean(checked) })}
           aria-label="Guest links"
+        />
+      }
+    />
+  );
+}
+
+function SpacesRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  const { connectedEnvironments } = useSettingsScope();
+  const supported =
+    connectedEnvironments.length > 0 &&
+    connectedEnvironments.every(
+      (environment) => environment.serverConfig?.environment.capabilities.spacesSettings === true,
+    );
+  return (
+    <SettingsRow
+      serverScoped
+      {...searchableSetting("spaces")}
+      settingKeys={["spacesEnabled"]}
+      description={
+        supported
+          ? "Browse pages in this environment. Turning Spaces off keeps its data."
+          : "Update every selected environment to enable Spaces."
+      }
+      control={
+        <ScopedSwitch
+          settingKeys={["spacesEnabled"]}
+          checked={settings.spacesEnabled}
+          disabled={!supported}
+          aria-label="Spaces"
+          onCheckedChange={(checked) => updateSettings({ spacesEnabled: Boolean(checked) })}
         />
       }
     />

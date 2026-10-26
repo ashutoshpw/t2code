@@ -1,4 +1,5 @@
 import {
+  BookOpenIcon,
   CalendarClockIcon,
   ChartNoAxesColumnIcon,
   MessagesSquareIcon,
@@ -7,6 +8,7 @@ import {
 import { memo, type ReactNode } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
+import { useSpacesEnvironments } from "../../state/spaces";
 import { isElectron } from "../../env";
 import { useNavigateToMainApp } from "../sidebar/mainAppLocation";
 import { usePullRequestsSupported } from "../../state/environments";
@@ -60,6 +62,7 @@ export const AppRail = memo(function AppRail() {
   const navigateToMainApp = useNavigateToMainApp();
   const pathname = useLocation({ select: (location) => location.pathname });
   const activeItem = resolveAppRailActiveItem(pathname);
+  const spacesSupported = useSpacesEnvironments().length > 0;
   const pullRequestsSupported = usePullRequestsSupported();
 
   const items: ReadonlyArray<{
@@ -80,6 +83,12 @@ export const AppRail = memo(function AppRail() {
       icon: <PullRequestGlyph.pullRequest />,
       onClick: () =>
         void navigate({ to: "/pull-requests", search: readPullRequestListPreferences() }),
+    },
+    {
+      item: "spaces",
+      label: "Spaces",
+      icon: <BookOpenIcon />,
+      onClick: () => void navigate({ to: "/spaces" }),
     },
     {
       item: "usage",
@@ -109,7 +118,8 @@ export const AppRail = memo(function AppRail() {
       />
       <div className="flex min-h-0 flex-1 flex-col items-center gap-1 pt-2">
         {items.map(({ item, label, icon, onClick }) =>
-          item === "pull-requests" && !pullRequestsSupported ? null : (
+          (item === "pull-requests" && !pullRequestsSupported) ||
+          (item === "spaces" && !spacesSupported) ? null : (
             <AppRailButton
               key={item}
               active={activeItem === item}

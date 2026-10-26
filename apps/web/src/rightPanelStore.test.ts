@@ -1,5 +1,7 @@
 import { scopeThreadRef } from "@t2code/client-runtime/environment";
-import { type EnvironmentId, RunId, ThreadId } from "@t2code/contracts";
+import { EnvironmentId, RunId, ThreadId } from "@t2code/contracts";
+import { SpaceId, SpacePageId, SpaceBlockId } from "@t2code/contracts/spaces";
+import { spacePageSurfaceId } from "@t2code/client-runtime/spaces";
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 
 import { useClosedViewStore } from "./closedViewStore";
@@ -1220,5 +1222,102 @@ describe("rightPanelStore", () => {
     store.reconcileBrowserSurfaces(refA, ["tab-a", "tab-b"]);
     expect(surfaceIds()).toEqual(["browser:tab-a", "terminal:term-1", "diff", "browser:tab-b"]);
     expect(store.getUserActionRevision(refA)).toBe(revision);
+  });
+});
+
+describe("Spaces panel lifecycle", () => {
+  it("keeps destination identity through hint updates, reload, close and reopen", async () => {
+    const first = {
+      environmentId: EnvironmentId.make("a:b"),
+      spaceId: SpaceId.make("space"),
+      pageId: SpacePageId.make("c"),
+    };
+    const other = {
+      ...first,
+      environmentId: EnvironmentId.make("a"),
+      pageId: SpacePageId.make("b:c"),
+    };
+    const moved = {
+      ...first,
+      spaceId: SpaceId.make("new-space"),
+      blockId: SpaceBlockId.make("block"),
+    };
+    const store = useRightPanelStore.getState();
+    store.openSpacePage(refA, first);
+    store.openSpacePage(refA, other);
+    store.openSpacePage(refA, moved);
+    store.openSpacePage(refB, first);
+    expect(
+      selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, refA).surfaces,
+    ).toHaveLength(2);
+    await reloadRightPanelStore();
+    expect(selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, refA)).toEqual({
+      id: spacePageSurfaceId(first),
+      kind: "space-page",
+      target: moved,
+    });
+    expect(
+      selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, refB),
+    ).toMatchObject({ target: first });
+    store.closeSurface(refA, spacePageSurfaceId(first));
+    const closed = useClosedViewStore.getState().entries[0]!;
+    expect(
+      await reopenClosedView(closed, {
+        workspaceAvailable: false,
+        openPreview: () => {
+          throw new Error("A Space page must not open a browser");
+        },
+      }),
+    ).toBe(true);
+    expect(
+      selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, refA),
+    ).toMatchObject({ target: moved });
+    store.openSpacePage(refA, first);
+    expect(selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, refA)).toEqual({
+      id: spacePageSurfaceId(first),
+      kind: "space-page",
+      target: first,
+    });
+    expect(
+      selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, refA).surfaces,
+    ).toHaveLength(2);
+  });
+
+  it("migrates only navigation targets and drops malformed Spaces surfaces", () => {
+    const target = {
+      environmentId: "environment",
+      spaceId: "space",
+      pageId: "page",
+      blockId: "block",
+      blocks: ["private draft"],
+      draft: "private draft",
+    };
+    const result = migratePersistedRightPanelState({
+      byThreadKey: {
+        "environment:thread": {
+          isOpen: true,
+          activeSurfaceId: "old",
+          surfaces: [
+            { kind: "space-page", id: "old", target, draft: "private draft" },
+            { kind: "space-page", id: "broken", target: { ...target, pageId: "" } },
+          ],
+        },
+      },
+    });
+    expect(result.byThreadKey["environment:thread"]?.surfaces).toEqual([
+      {
+        kind: "space-page",
+        id: 'space-page:["environment","page"]',
+        target: {
+          environmentId: "environment",
+          spaceId: "space",
+          pageId: "page",
+          blockId: "block",
+        },
+      },
+    ]);
+    expect(result.byThreadKey["environment:thread"]?.activeSurfaceId).toBe(
+      'space-page:["environment","page"]',
+    );
   });
 });
