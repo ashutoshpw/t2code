@@ -49,15 +49,24 @@ export const resolve = Effect.fn("SpacesReferences.resolve")(function* (
       continue;
     }
     if (target.kind === "page") {
-      const page = yield* PageStore.read(C.SpacePageId.make(current)).pipe(
+      const page = yield* PageStore.load(C.SpacePageId.make(current)).pipe(
         Effect.catchTags({ SpaceNotFoundError: () => Effect.void }),
       );
+      if (page?.trash_batch_id !== null && page !== undefined)
+        return { status: "trashed", pageId: page.page_id };
       return page
         ? { status: "resolved", page: PageStore.summary(page) }
         : { status: "unavailable" };
     }
     if (row.page_id === null) return { status: "unavailable" };
-    const page = PageStore.summary(yield* PageStore.read(row.page_id));
+    const ownerPage = yield* PageStore.load(row.page_id);
+    if (ownerPage.trash_batch_id !== null) return { status: "trashed", pageId: ownerPage.page_id };
+    const sql = yield* SpacesSql.SpacesSql;
+    const [child] = yield* sql<{
+      readonly page_id: C.SpacePageId;
+    }>`SELECT p.page_id FROM spaces_page_owners o JOIN spaces_pages p ON p.page_id=o.child_page_id WHERE o.owner_block_id=${current} AND p.trash_batch_id IS NOT NULL`;
+    if (child) return { status: "trashed", pageId: child.page_id };
+    const page = PageStore.summary(ownerPage);
     const blockId = C.SpaceBlockId.make(current);
     return current === requested
       ? { status: "resolved", page, blockId }
@@ -129,8 +138,8 @@ export const maintain = Effect.fn("SpacesReferences.maintain")(function* () {
     const next = bytes + row.logical_bytes + byteLength({ ...row });
     if (next > limits.maxMutationBytes) break;
     bytes = next;
-    const pins =
-      yield* sql`SELECT 1 FROM spaces_block_asset_refs WHERE block_id=${row.block_id} LIMIT 1`;
+    const pins = yield* sql`SELECT 1 FROM spaces_block_asset_refs WHERE block_id=${row.block_id}
+        UNION ALL SELECT 1 FROM spaces_page_owners WHERE owner_block_id=${row.block_id} LIMIT 1`;
     if (pins.length) continue;
     yield* release([row.block_id]);
     yield* sql`UPDATE spaces_pages SET block_count=block_count-1,block_bytes=block_bytes-${row.logical_bytes} WHERE page_id=${row.page_id}`;

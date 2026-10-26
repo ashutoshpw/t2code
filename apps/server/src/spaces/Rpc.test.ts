@@ -43,6 +43,9 @@ const decodeChild = Schema.decodeUnknownSync(C.SpaceCreateChildPageResult);
 const decodeMoved = Schema.decodeUnknownSync(C.SpaceMovePageResult);
 const decodeMovedBlocks = Schema.decodeUnknownSync(C.SpaceMoveBlocksResult);
 const decodeReference = Schema.decodeUnknownSync(C.SpaceReferenceResolveResult);
+const decodeRecovery = Schema.decodeUnknownSync(C.SpacePageRecoveryResult);
+const decodePurged = Schema.decodeUnknownSync(C.SpacePagePurgeResult);
+const decodeTrash = Schema.decodeUnknownSync(C.SpaceTrashListResult);
 const control = RpcGroup.make(WsServerRefreshProvidersRpc).middleware(RpcScopeAuthorization);
 const group = SpacesRpc.group.merge(control);
 const frameBytes = (response: unknown) => Buffer.byteLength(JSON.stringify(response), "utf8");
@@ -317,44 +320,190 @@ it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
             ),
             { _tag: "SpaceMutationIdMismatchError", mutationId: move.mutationId },
           );
+          const trashPlan = decodeInspected(
+            savedValue(
+              yield* request(WS_METHODS.spacesStructureInspect, {
+                ...env,
+                target: { kind: "page", pageId: child.page.id },
+                recovery: "trash",
+              }),
+            ),
+          );
+          const trash = {
+            ...common,
+            mutationId: "wire-trash",
+            pageId: child.page.id,
+            guards: trashPlan.guards,
+          };
+          expectDefect(
+            yield* request(WS_METHODS.spacesPagesTrash, {
+              ...trash,
+              guards: { ...trash.guards, force: true },
+            }),
+          );
+          const trashed = decodeRecovery(
+            savedValue(yield* request(WS_METHODS.spacesPagesTrash, trash)),
+          );
+          assert.equal(trashed.status, "saved");
+          expectDefect(
+            yield* request(WS_METHODS.spacesTrashList, { ...env, spaceId: "unimplemented-filter" }),
+          );
+          assert.deepEqual(
+            decodeTrash(savedValue(yield* request(WS_METHODS.spacesTrashList, env))).items.map(
+              (row) => row.pageId,
+            ),
+            [child.page.id],
+          );
+          assert.deepEqual(
+            decodeReference(
+              savedValue(
+                yield* request(WS_METHODS.spacesReferencesResolve, {
+                  ...env,
+                  target: { kind: "page", pageId: child.page.id },
+                }),
+              ),
+            ),
+            { status: "trashed", pageId: child.page.id },
+          );
+          const restorePlan = decodeInspected(
+            savedValue(
+              yield* request(WS_METHODS.spacesStructureInspect, {
+                ...env,
+                target: { kind: "page", pageId: child.page.id },
+                recovery: "restore",
+              }),
+            ),
+          );
+          const restore = {
+            ...common,
+            mutationId: "wire-restore",
+            pageId: child.page.id,
+            guards: restorePlan.guards,
+          };
+          const restored = decodeRecovery(
+            savedValue(yield* request(WS_METHODS.spacesPagesRestore, restore)),
+          );
+          assert.equal(restored.status, "saved");
+          const again = decodeInspected(
+            savedValue(
+              yield* request(WS_METHODS.spacesStructureInspect, {
+                ...env,
+                target: { kind: "page", pageId: child.page.id },
+                recovery: "trash",
+              }),
+            ),
+          );
+          savedValue(
+            yield* request(WS_METHODS.spacesPagesTrash, {
+              ...trash,
+              mutationId: "wire-trash-again",
+              guards: again.guards,
+            }),
+          );
+          const purgePlan = decodeInspected(
+            savedValue(
+              yield* request(WS_METHODS.spacesStructureInspect, {
+                ...env,
+                target: { kind: "page", pageId: child.page.id },
+                recovery: "permanentlyDelete",
+              }),
+            ),
+          );
+          assert.deepEqual(purgePlan.recovery, {
+            operation: "permanentlyDelete",
+            pageIds: [child.page.id],
+          });
+          const purge = {
+            ...common,
+            mutationId: "wire-purge",
+            pageId: child.page.id,
+            guards: purgePlan.guards,
+          };
+          const purged = decodePurged(
+            savedValue(yield* request(WS_METHODS.spacesPagesPermanentlyDelete, purge)),
+          );
+          assert.equal(purged.status, "saved");
+          assert.deepEqual(
+            decodePurged(
+              savedValue(yield* request(WS_METHODS.spacesPagesPermanentlyDelete, purge)),
+            ),
+            purged,
+          );
+          assert.deepEqual(
+            decodeLookup(
+              savedValue(
+                yield* request(WS_METHODS.spacesReceiptsGet, {
+                  request: { operation: "permanentlyDeletePage", input: purge },
+                }),
+              ),
+            ),
+            { status: "found", receipt: { operation: "permanentlyDeletePage", result: purged } },
+          );
+          assert.deepEqual(
+            decodeRecovery(savedValue(yield* request(WS_METHODS.spacesPagesRestore, restore))),
+            restored,
+          );
+          assert.deepEqual(
+            decodeReference(
+              savedValue(
+                yield* request(WS_METHODS.spacesReferencesResolve, {
+                  ...env,
+                  target: { kind: "page", pageId: child.page.id },
+                }),
+              ),
+            ),
+            { status: "deleted" },
+          );
         }),
       ),
   );
-  it.effect.each(["createChildPage", "movePage", "moveBlocks"] as const)(
-    "bounds the original %s envelope at exact1MiB and plus one",
-    (operation) =>
-      fixture(
-        Effect.gen(function* () {
-          const { request } = yield* encodedServer();
-          const library = decodeLibrary(savedValue(yield* request(WS_METHODS.spacesList, env)));
-          const common = {
-            ...env,
-            receiptEpoch: library.mutationAdmission.epoch,
-            mutationId: "structural-ceiling",
-            guards: { pages: [], roots: [] },
-          };
-          const input =
-            operation === "createChildPage"
+  it.effect.each([
+    "createChildPage",
+    "movePage",
+    "moveBlocks",
+    "trashPage",
+    "restorePage",
+    "permanentlyDeletePage",
+  ] as const)("bounds the original %s envelope at exact1MiB and plus one", (operation) =>
+    fixture(
+      Effect.gen(function* () {
+        const { request } = yield* encodedServer();
+        const library = decodeLibrary(savedValue(yield* request(WS_METHODS.spacesList, env)));
+        const common = {
+          ...env,
+          receiptEpoch: library.mutationAdmission.epoch,
+          mutationId: "structural-ceiling",
+          guards: { pages: [], roots: [] },
+        };
+        const recovery =
+          operation === "trashPage" ||
+          operation === "restorePage" ||
+          operation === "permanentlyDeletePage";
+        const input = recovery
+          ? { ...common, pageId: "" }
+          : operation === "createChildPage"
+            ? {
+                ...common,
+                title: "",
+                placement: { pageId: "page", parentId: null, beforeBlockId: null },
+              }
+            : operation === "movePage"
               ? {
                   ...common,
-                  title: "",
-                  placement: { pageId: "page", parentId: null, beforeBlockId: null },
+                  pageId: "page",
+                  destination: { kind: "root", spaceId: "", beforePageId: null },
                 }
-              : operation === "movePage"
-                ? {
-                    ...common,
-                    pageId: "page",
-                    destination: { kind: "root", spaceId: "", beforePageId: null },
-                  }
-                : {
-                    ...common,
-                    sourcePageId: "page",
-                    blockIds: ["block"],
-                    destination: { pageId: "", parentId: null, beforeBlockId: null },
-                  };
-          const padding = 1048576 - Buffer.byteLength(canonical({ operation, input }), "utf8");
-          const padded = (extra: number) =>
-            operation === "createChildPage"
+              : {
+                  ...common,
+                  sourcePageId: "page",
+                  blockIds: ["block"],
+                  destination: { pageId: "", parentId: null, beforeBlockId: null },
+                };
+        const padding = 1048576 - Buffer.byteLength(canonical({ operation, input }), "utf8");
+        const padded = (extra: number) =>
+          recovery
+            ? { ...input, pageId: "x".repeat(padding + extra) }
+            : operation === "createChildPage"
               ? { ...input, title: "x".repeat(padding + extra) }
               : operation === "movePage"
                 ? {
@@ -373,21 +522,27 @@ it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
                       beforeBlockId: null,
                     },
                   };
-          const tag =
-            operation === "createChildPage"
-              ? WS_METHODS.spacesPagesCreateChild
-              : operation === "movePage"
-                ? WS_METHODS.spacesPagesMove
-                : WS_METHODS.spacesBlocksMove;
-          assert.deepEqual(typedFailure(yield* request(tag, padded(0))), {
-            _tag: "SpaceLimitExceededError",
-            limit: "maxMutationBytes",
-            actual: 1048576,
-            maximum: 262144,
-          });
-          expectDefect(yield* request(tag, padded(1)));
-        }),
-      ),
+        const tag =
+          operation === "trashPage"
+            ? WS_METHODS.spacesPagesTrash
+            : operation === "restorePage"
+              ? WS_METHODS.spacesPagesRestore
+              : operation === "permanentlyDeletePage"
+                ? WS_METHODS.spacesPagesPermanentlyDelete
+                : operation === "createChildPage"
+                  ? WS_METHODS.spacesPagesCreateChild
+                  : operation === "movePage"
+                    ? WS_METHODS.spacesPagesMove
+                    : WS_METHODS.spacesBlocksMove;
+        assert.deepEqual(typedFailure(yield* request(tag, padded(0))), {
+          _tag: "SpaceLimitExceededError",
+          limit: "maxMutationBytes",
+          actual: 1048576,
+          maximum: 262144,
+        });
+        expectDefect(yield* request(tag, padded(1)));
+      }),
+    ),
   );
 
   it.effect.each(["mutation", "lookup-wrapper", "lookup-input"] as const)(

@@ -21,6 +21,7 @@ import * as Receipts from "./Receipts.ts";
 import * as RevisionStore from "./RevisionStore.ts";
 import * as PageStore from "./PageStore.ts";
 import * as PageStructure from "./PageStructure.ts";
+import * as PageRecovery from "./PageRecovery.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as Sqlite from "./Sqlite.ts";
@@ -73,6 +74,18 @@ export class SpacesService extends Context.Service<
     readonly resolveReference: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReferenceResolveResult, C.SpaceServiceError>;
+    readonly trashPage: (
+      input: unknown,
+    ) => Effect.Effect<C.SpacePageRecoveryResult, C.SpaceServiceError>;
+    readonly restorePage: (
+      input: unknown,
+    ) => Effect.Effect<C.SpacePageRecoveryResult, C.SpaceServiceError>;
+    readonly permanentlyDeletePage: (
+      input: unknown,
+    ) => Effect.Effect<C.SpacePagePurgeResult, C.SpaceServiceError>;
+    readonly listTrash: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceTrashListResult, C.SpaceServiceError>;
     readonly lookupMutationReceipt: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReceiptLookupResult, C.SpaceServiceError>;
@@ -99,16 +112,11 @@ const spaceSummary = (row: SpaceRow): C.SpaceSummary => ({
   updatedAt: row.updated_at,
 });
 const pageSummary = PageStore.summary;
-const pagePreimage = (row: PageRow): RevisionStore.PagePreimage => ({
-  pageId: row.page_id,
-  spaceId: row.space_id,
-  title: row.title,
-  revision: row.revision,
-  rootOrder: row.root_order,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
+const pagePreimage = PageStore.preimage;
 const strict = { onExcessProperty: "error" } as const;
+const decodeTrashList = Schema.decodeUnknownEffect(C.SpaceTrashListInput, strict);
+const decodeRecoveryResult = Schema.decodeUnknownSync(C.SpacePageRecoveryResult, strict);
+const decodePurgeResult = Schema.decodeUnknownSync(C.SpacePagePurgeResult, strict);
 const decodeList = Schema.decodeUnknownEffect(C.SpaceListInput, strict);
 const decodePages = Schema.decodeUnknownEffect(C.SpacePageListInput, strict);
 const decodeGet = Schema.decodeUnknownEffect(C.SpacePageGetInput, strict);
@@ -355,6 +363,8 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         const space = yield* getSpace(input.spaceId);
         const limit = input.limit ?? limits.maxListRows;
         checkLimit("maxListRows", limit);
+        if (input.parentPageId !== undefined)
+          PageStore.assertActive(yield* getPageRow(input.parentPageId));
         if (
           input.parentPageId !== undefined &&
           (yield* getPageRow(input.parentPageId)).space_id !== input.spaceId
@@ -383,7 +393,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
                 PageRow & { readonly list_order: string; readonly list_id: string }
               >`SELECT p.*, p.root_order AS list_order, p.page_id AS list_id, o.owner_block_id, b.page_id AS parent_page_id, b.deleted AS owner_deleted, parent.space_id AS parent_space_id, json_extract(b.payload,'$.type') AS owner_type
               FROM spaces_pages p LEFT JOIN spaces_page_owners o ON o.child_page_id = p.page_id
-              LEFT JOIN spaces_blocks b ON b.block_id = o.owner_block_id LEFT JOIN spaces_pages parent ON parent.page_id = b.page_id WHERE p.space_id = ${input.spaceId} AND p.root_order IS NOT NULL
+              LEFT JOIN spaces_blocks b ON b.block_id = o.owner_block_id LEFT JOIN spaces_pages parent ON parent.page_id = b.page_id WHERE p.space_id = ${input.spaceId} AND p.root_order IS NOT NULL AND p.trash_batch_id IS NULL
               ${after}
               ORDER BY p.root_order,p.page_id LIMIT ${limit + 1}`
             : yield* sql<
@@ -394,7 +404,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
               JOIN spaces_page_owners o ON o.owner_block_id = b.block_id JOIN spaces_pages p ON p.page_id = o.child_page_id
               JOIN spaces_pages parent ON parent.page_id = b.page_id
               WHERE b.page_id = ${input.parentPageId} AND b.deleted = 0 AND json_extract(b.payload,'$.type') = 'child_page'
-              AND p.space_id = ${input.spaceId}
+              AND p.space_id = ${input.spaceId} AND p.trash_batch_id IS NULL
               ${after}
               ORDER BY b.rank,b.block_id LIMIT ${limit + 1}`;
         const admission = yield* Receipts.issue(meta);
@@ -403,7 +413,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           const last = rows[take - 1];
           const result: C.SpacePageListResult = {
             space: spaceSummary(space),
-            items: rows.slice(0, take).map(pageSummary),
+            items: rows.slice(0, take).map((row) => pageSummary(row)),
             catalogRevision: meta.catalog_revision,
             nextCursor:
               take < rows.length && last
@@ -414,6 +424,86 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
                     meta.catalog_revision,
                     last.list_order,
                     last.list_id,
+                  )
+                : null,
+            mutationAdmission: admission,
+          };
+          const size = byteLength(result);
+          if (size <= limits.maxListResponseBytes) return result;
+          if (take <= 1) checkLimit("maxListResponseBytes", size);
+          take--;
+        }
+      }),
+    );
+  });
+  const listTrash = Effect.fn("SpacesService.listTrash")(function* (raw: unknown) {
+    const environmentId = yield* admit();
+    const input = yield* validateRaw(raw).pipe(
+      Effect.flatMap(decodeTrashList),
+      Effect.mapError((error) =>
+        isServiceError(error) ? error : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+    yield* checkEnvironment(environmentId, input.environmentId);
+    return yield* run(environmentId, (meta) =>
+      Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        const limit = input.limit ?? limits.maxListRows;
+        checkLimit("maxListRows", limit);
+        const cursor = cursorFrom(
+          input.cursor,
+          environmentId,
+          "listTrash",
+          "",
+          meta.catalog_revision,
+        );
+        const time = cursor === undefined ? 0 : Number(cursor.key);
+        if (!Number.isSafeInteger(time) || time < 0)
+          return yield* new C.SpaceValidationError({ reason: "invalid_cursor" });
+        const after =
+          cursor === undefined
+            ? sql``
+            : sql`AND (p.trashed_at_ms,p.page_id)>(${time},${cursor.id})`;
+        const rows = yield* sql<
+          Pick<
+            PageRow,
+            | "page_id"
+            | "space_id"
+            | "title"
+            | "revision"
+            | "trash_batch_id"
+            | "trash_root_id"
+            | "trashed_at_ms"
+          > & { readonly is_trash_root: number }
+        >`
+        SELECT p.*, CASE WHEN o.owner_block_id IS NULL OR b.block_id IS NULL OR b.deleted!=0 OR parent.trash_batch_id IS NULL OR parent.trash_batch_id!=p.trash_batch_id THEN 1 ELSE 0 END AS is_trash_root
+        FROM (SELECT p.* FROM spaces_pages p WHERE p.trash_batch_id IS NOT NULL ${after} ORDER BY p.trashed_at_ms,p.page_id LIMIT ${limit + 1}) p
+        LEFT JOIN spaces_page_owners o ON o.child_page_id=p.page_id LEFT JOIN spaces_blocks b ON b.block_id=o.owner_block_id LEFT JOIN spaces_pages parent ON parent.page_id=b.page_id ORDER BY p.trashed_at_ms,p.page_id`;
+        const admission = yield* Receipts.issue(meta);
+        let take = Math.min(limit, rows.length);
+        while (true) {
+          const last = rows[take - 1];
+          const result: C.SpaceTrashListResult = {
+            catalogRevision: meta.catalog_revision,
+            items: rows
+              .slice(0, take)
+              .filter((row) => row.is_trash_root === 1)
+              .map((row) => ({
+                pageId: row.page_id,
+                spaceId: row.space_id,
+                title: row.title,
+                revision: row.revision,
+                trash: PageStore.trashStatus(row),
+              })),
+            nextCursor:
+              take < rows.length && last
+                ? cursorFor(
+                    environmentId,
+                    "listTrash",
+                    "",
+                    meta.catalog_revision,
+                    String(last.trashed_at_ms),
+                    last.page_id,
                   )
                 : null,
             mutationAdmission: admission,
@@ -439,6 +529,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       Effect.gen(function* () {
         checkIds(input);
         const page = yield* getPageRow(input.pageId);
+        PageStore.assertActive(page);
         const space = yield* getSpace(page.space_id);
         const result = {
           page: pageSummary(page),
@@ -464,6 +555,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         const sql = yield* SpacesSql.SpacesSql;
         checkIds(input);
         const page = yield* getPageRow(input.pageId);
+        PageStore.assertActive(page);
         if (page.revision !== input.revision)
           return yield* new C.SpaceCursorStaleError({ revision: page.revision });
         const limit = input.limit ?? limits.maxBlockWindowBlocks;
@@ -557,10 +649,16 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         checkIds(input);
         checkLimit("maxMutationBytes", byteLength(input));
         const plan = yield* PageStructure.plan(input, byteLength(input));
+        if (input.recovery === "permanentlyDelete") yield* PageRecovery.prepare(plan);
         const result: C.SpaceInspectStructureResult = {
+          ...(input.recovery
+            ? { recovery: { operation: input.recovery, pageIds: [...plan.recoveryPages] } }
+            : {}),
           catalogRevision: meta.catalog_revision,
           guards: plan.guards,
-          pages: [...plan.pages.values()].map(pageSummary),
+          pages: [...plan.pages.values()].map((row) =>
+            PageStore.summary(row, input.recovery !== undefined),
+          ),
           blockIds: [...plan.blocks.keys()].map((id) => C.SpaceBlockId.make(id)),
         };
         checkLimit("maxBlockWindowResponseBytes", byteLength(result));
@@ -601,7 +699,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           catalogRevision: meta.catalog_revision,
           defaultSpaceId: def.space_id,
           spaces: spaces.map(spaceSummary),
-          pages: pages.map(pageSummary),
+          pages: pages.map((row) => pageSummary(row)),
         },
       };
     });
@@ -609,35 +707,51 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       yield* sql`UPDATE spaces_core SET catalog_revision = catalog_revision + 1 WHERE singleton = 1`;
     });
     switch (request.operation) {
+      case "trashPage":
+      case "restorePage":
+      case "permanentlyDeletePage":
       case "createChildPage":
       case "moveBlocks":
       case "movePage": {
         const structural =
-          request.operation === "moveBlocks"
+          request.operation === "trashPage" ||
+          request.operation === "restorePage" ||
+          request.operation === "permanentlyDeletePage"
             ? {
                 environmentId: request.input.environmentId,
-                target: {
-                  kind: "blocks" as const,
-                  pageId: request.input.sourcePageId,
-                  blockIds: request.input.blockIds,
-                },
-                destination: { kind: "child" as const, placement: request.input.destination },
+                target: { kind: "page" as const, pageId: request.input.pageId },
+                recovery:
+                  request.operation === "trashPage"
+                    ? ("trash" as const)
+                    : request.operation === "restorePage"
+                      ? ("restore" as const)
+                      : ("permanentlyDelete" as const),
               }
-            : request.operation === "createChildPage"
+            : request.operation === "moveBlocks"
               ? {
                   environmentId: request.input.environmentId,
                   target: {
                     kind: "blocks" as const,
-                    pageId: request.input.placement.pageId,
-                    blockIds: [],
+                    pageId: request.input.sourcePageId,
+                    blockIds: request.input.blockIds,
                   },
-                  destination: { kind: "child" as const, placement: request.input.placement },
+                  destination: { kind: "child" as const, placement: request.input.destination },
                 }
-              : {
-                  environmentId: request.input.environmentId,
-                  target: { kind: "page" as const, pageId: request.input.pageId },
-                  destination: request.input.destination,
-                };
+              : request.operation === "createChildPage"
+                ? {
+                    environmentId: request.input.environmentId,
+                    target: {
+                      kind: "blocks" as const,
+                      pageId: request.input.placement.pageId,
+                      blockIds: [],
+                    },
+                    destination: { kind: "child" as const, placement: request.input.placement },
+                  }
+                : {
+                    environmentId: request.input.environmentId,
+                    target: { kind: "page" as const, pageId: request.input.pageId },
+                    destination: request.input.destination,
+                  };
         const plan = yield* PageStructure.plan(structural, byteLength(request));
         if (!PageStructure.guardsMatch(plan, request.input.guards)) {
           const def = yield* defaultSpace();
@@ -654,12 +768,15 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
             },
           });
         }
-        const result = yield* PageStructure.apply(
-          plan,
-          request.input.mutationId,
-          meta.observed_time_ms,
-          request.operation === "createChildPage" ? request.input.title : undefined,
-        );
+        const result =
+          request.operation === "permanentlyDeletePage"
+            ? yield* PageRecovery.purge(plan, request.input.mutationId, meta.observed_time_ms)
+            : yield* PageStructure.apply(
+                plan,
+                request.input.mutationId,
+                meta.observed_time_ms,
+                request.operation === "createChildPage" ? request.input.title : undefined,
+              );
         return decodeReceipt({
           operation: request.operation,
           result: { status: "saved", ...ack, ...result },
@@ -760,6 +877,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       case "updatePage": {
         const input = request.input;
         const page = yield* getPageRow(input.pageId);
+        PageStore.assertActive(page);
         if (page.revision !== input.baseRevision)
           return decodeReceipt({
             operation: request.operation,
@@ -787,6 +905,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       case "applyBlockBatch": {
         const input = request.input;
         const page = yield* getPageRow(input.pageId);
+        PageStore.assertActive(page);
         if (page.revision !== input.baseRevision)
           return decodeReceipt({
             operation: request.operation,
@@ -893,6 +1012,17 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
   const moveBlocks = Effect.fn("SpacesService.moveBlocks")(function* (input: unknown) {
     return decodeMoveBlocksResult((yield* mutate("moveBlocks", input)).result);
   });
+  const trashPage = Effect.fn("SpacesService.trashPage")(function* (input: unknown) {
+    return decodeRecoveryResult((yield* mutate("trashPage", input)).result);
+  });
+  const restorePage = Effect.fn("SpacesService.restorePage")(function* (input: unknown) {
+    return decodeRecoveryResult((yield* mutate("restorePage", input)).result);
+  });
+  const permanentlyDeletePage = Effect.fn("SpacesService.permanentlyDeletePage")(function* (
+    input: unknown,
+  ) {
+    return decodePurgeResult((yield* mutate("permanentlyDeletePage", input)).result);
+  });
   const lookupMutationReceipt = Effect.fn("SpacesService.lookupMutationReceipt")(function* (
     raw: unknown,
   ): Effect.fn.Return<C.SpaceReceiptLookupResult, C.SpaceServiceError> {
@@ -956,6 +1086,10 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
     inspectStructure,
     moveBlocks,
     resolveReference,
+    trashPage,
+    restorePage,
+    permanentlyDeletePage,
+    listTrash,
   });
 });
 

@@ -17,6 +17,10 @@ import {
   WsSpacesStructureInspectRpc,
   WsSpacesBlocksMoveRpc,
   WsSpacesReferencesResolveRpc,
+  WsSpacesPagesTrashRpc,
+  WsSpacesPagesRestoreRpc,
+  WsSpacesPagesPermanentlyDeleteRpc,
+  WsSpacesTrashListRpc,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
@@ -94,6 +98,19 @@ export const group = RpcGroup.make(
     strictPayload(C.SpaceMoveBlocksInput, (input) => ({ operation: "moveBlocks", input })),
   ),
   WsSpacesReferencesResolveRpc.setPayload(strictPayload(C.SpaceReferenceResolveInput)),
+  WsSpacesPagesTrashRpc.setPayload(
+    strictPayload(C.SpacePageRecoveryInput, (input) => ({ operation: "trashPage", input })),
+  ),
+  WsSpacesPagesRestoreRpc.setPayload(
+    strictPayload(C.SpacePageRecoveryInput, (input) => ({ operation: "restorePage", input })),
+  ),
+  WsSpacesPagesPermanentlyDeleteRpc.setPayload(
+    strictPayload(C.SpacePageRecoveryInput, (input) => ({
+      operation: "permanentlyDeletePage",
+      input,
+    })),
+  ),
+  WsSpacesTrashListRpc.setPayload(strictPayload(C.SpaceTrashListInput)),
 ).middleware(RpcScopeAuthorization);
 
 export const handlers = Effect.gen(function* () {
@@ -115,5 +132,9 @@ export const handlers = Effect.gen(function* () {
     [WS_METHODS.spacesStructureInspect]: (input) => service.inspectStructure(input),
     [WS_METHODS.spacesBlocksMove]: (input) => service.moveBlocks(input),
     [WS_METHODS.spacesReferencesResolve]: (input) => service.resolveReference(input),
+    [WS_METHODS.spacesPagesTrash]: (input) => service.trashPage(input),
+    [WS_METHODS.spacesPagesRestore]: (input) => service.restorePage(input),
+    [WS_METHODS.spacesPagesPermanentlyDelete]: (input) => service.permanentlyDeletePage(input),
+    [WS_METHODS.spacesTrashList]: (input) => service.listTrash(input),
   });
 });

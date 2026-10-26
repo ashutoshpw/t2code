@@ -402,6 +402,10 @@ export const WS_METHODS = {
   spacesStructureInspect: "spaces.structure.inspect",
   spacesBlocksMove: "spaces.blocks.move",
   spacesReferencesResolve: "spaces.references.resolve",
+  spacesPagesTrash: "spaces.pages.trash",
+  spacesPagesRestore: "spaces.pages.restore",
+  spacesPagesPermanentlyDelete: "spaces.pages.permanentlyDelete",
+  spacesTrashList: "spaces.trash.list",
 
   projectsList: "projects.list",
   projectsAdd: "projects.add",
@@ -693,6 +697,27 @@ export const WsSpacesBlocksMoveRpc = Rpc.make(WS_METHODS.spacesBlocksMove, {
 export const WsSpacesReferencesResolveRpc = Rpc.make(WS_METHODS.spacesReferencesResolve, {
   payload: Spaces.SpaceReferenceResolveInput,
   success: Spaces.SpaceReferenceResolveResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesPagesTrashRpc = Rpc.make(WS_METHODS.spacesPagesTrash, {
+  payload: Spaces.SpacePageRecoveryInput,
+  success: Spaces.SpacePageRecoveryResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesPagesRestoreRpc = Rpc.make(WS_METHODS.spacesPagesRestore, {
+  payload: Spaces.SpacePageRecoveryInput,
+  success: Spaces.SpacePageRecoveryResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesPagesPermanentlyDeleteRpc = Rpc.make(WS_METHODS.spacesPagesPermanentlyDelete, {
+  payload: Spaces.SpacePageRecoveryInput,
+  success: Spaces.SpacePagePurgeResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesTrashListRpc = Rpc.make(WS_METHODS.spacesTrashList, {
+  payload: Spaces.SpaceTrashListInput,
+  success: Spaces.SpaceTrashListResult,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
 
@@ -2052,6 +2077,10 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesStructureInspectRpc,
   WsSpacesBlocksMoveRpc,
   WsSpacesReferencesResolveRpc,
+  WsSpacesPagesTrashRpc,
+  WsSpacesPagesRestoreRpc,
+  WsSpacesPagesPermanentlyDeleteRpc,
+  WsSpacesTrashListRpc,
 
   WsGuestShareCreateRpc,
   WsServerProbeRpc,

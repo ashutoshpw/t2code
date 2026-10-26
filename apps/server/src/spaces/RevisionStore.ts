@@ -4,6 +4,7 @@ import * as Effect from "effect/Effect";
 import type { BlockRow } from "./BlockStore.ts";
 import { canonical, historyLimits as limits, limits as coreLimits } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
+import * as PageStore from "./PageStore.ts";
 
 export interface PagePreimage {
   readonly pageId: string;
@@ -93,6 +94,7 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
     readonly mutationId: string;
     readonly pageBefore: PagePreimage | null;
     readonly ownerBefore?: OwnerPreimage | null;
+    readonly trashBefore?: PageStore.TrashPreimage | null;
     readonly blocksBefore: readonly { readonly id: string; readonly row: BlockRow | null }[];
   },
   now: number,
@@ -123,11 +125,20 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
       ? { childPageId: owner.child_page_id, ownerBlockId: owner.owner_block_id }
       : null;
   }
+  let trashBefore = input.trashBefore;
+  if (trashBefore === undefined) {
+    const [row] = yield* sql<
+      Pick<PageStore.PageRow, "trash_batch_id" | "trash_root_id" | "trashed_at_ms" | "trash_origin">
+    >`SELECT trash_batch_id,trash_root_id,trashed_at_ms,trash_origin FROM spaces_pages WHERE page_id=${input.pageId}`;
+    if (!row) return yield* new C.SpacesUnavailableError({ stage: "storage" });
+    trashBefore = PageStore.trashSnapshot(row);
+  }
   const payload = canonical(
     {
-      version: 2,
+      version: 3,
       pageBefore: input.pageBefore,
       ownerBefore,
+      trashBefore,
       blocksBefore: input.blocksBefore,
     },
     limits.maxDeltaBytes,

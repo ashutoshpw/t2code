@@ -234,6 +234,34 @@ describe("Spaces core protocol", () => {
       result,
     });
     expect(() => decodeReceipt({ operation: "createPage", result })).toThrow();
+    const trashSummary = {
+      ...nested,
+      trash: { batchId: "batch", originalRootPageId: page.id, trashedAt: page.createdAt },
+    };
+    expect(encodeSummary(decodeSummary(trashSummary))).toEqual(trashSummary);
+    for (const operation of ["trashPage", "restorePage", "permanentlyDeletePage"]) {
+      const request = { operation, input: { ...writeContext, pageId: page.id, guards } };
+      expect(encodeRequest(decodeRequest(request))).toEqual(request);
+      const result =
+        operation === "permanentlyDeletePage"
+          ? {
+              status: "saved",
+              ...acknowledgement,
+              pageId: page.id,
+              deletedPageIds: [page.id],
+              changed: guards,
+            }
+          : {
+              status: "saved",
+              ...acknowledgement,
+              page: operation === "trashPage" ? trashSummary : page,
+              changed: guards,
+            };
+      expect(decodeReceipt({ operation, result })).toEqual({ operation, result });
+      expect(() =>
+        decodeRequest({ ...request, input: { ...request.input, force: true } }),
+      ).toThrow();
+    }
   });
 
   it("decodes legacy capabilities and receipts while advertising optional independent history limits", () => {

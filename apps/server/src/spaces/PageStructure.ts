@@ -34,6 +34,11 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
   initialBytes: number,
 ) {
   const sql = yield* SpacesSql.SpacesSql;
+  const recovery = input.recovery;
+  if (recovery && (input.target.kind !== "page" || input.destination !== undefined))
+    return yield* invalid();
+  const recoveryPages = new Set<C.SpacePageId>();
+  let recoveryBatch: string | null = null;
   const nodes = new Set<string>();
   let bytes = initialBytes;
   const produced = (value: unknown) => {
@@ -65,11 +70,19 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     idLimit(id);
     const cached = pages.get(id);
     if (cached) return cached;
-    const row = yield* PageStore.read(id);
+    const row = yield* recovery ? PageStore.load(id) : PageStore.read(id);
+    if (recovery && row.trash_batch_id === null) PageStore.summary(row);
     touch(`page:${id}`, { ...row });
     pages.set(id, row);
     if (row.owner_block_id !== null) {
-      yield* block(row.owner_block_id);
+      if (recovery) {
+        const [owner] =
+          yield* sql<BlockStore.BlockRow>`SELECT * FROM spaces_blocks WHERE block_id=${row.owner_block_id}`;
+        if (owner) {
+          touch(`block:${owner.block_id}`, { ...owner });
+          blocks.set(owner.block_id, owner);
+        }
+      } else yield* block(row.owner_block_id);
       touch(`owner:${id}`, { child_page_id: id, owner_block_id: row.owner_block_id });
     }
     return row;
@@ -110,7 +123,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     }
   });
   const subtree = Effect.fnUntraced(function* (id: C.SpacePageId) {
-    const queue = [{ id, depth: 1 }];
+    const queue = [{ id, depth: 1, eligible: true }];
     const members = new Set<C.SpacePageId>();
     let depth = 1;
     for (let i = 0; i < queue.length; i++) {
@@ -119,7 +132,17 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
       members.add(next.id);
       checkLimit("maxDepth", next.depth);
       depth = Math.max(depth, next.depth);
-      yield* page(next.id);
+      const row = yield* page(next.id);
+      if (recovery === "permanentlyDelete" && row.trash_batch_id === null)
+        return yield* invalid("invalid_recovery_state");
+      const selected =
+        next.eligible &&
+        (recovery === "trash"
+          ? row.trash_batch_id === null
+          : recovery === "restore"
+            ? recoveryBatch !== null && row.trash_batch_id === recoveryBatch
+            : !!recovery);
+      if (selected) recoveryPages.add(next.id);
       const children = yield* sql<{
         readonly block_id: string;
         readonly child_page_id: C.SpacePageId | null;
@@ -130,20 +153,37 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
       for (const child of children) {
         if (child.child_page_id === null)
           return yield* new C.SpacesUnavailableError({ stage: "storage" });
-        queue.push({ id: child.child_page_id, depth: next.depth + 1 });
+        queue.push({
+          id: child.child_page_id,
+          depth: next.depth + 1,
+          eligible: !recovery || recovery === "permanentlyDelete" || selected,
+        });
       }
     }
     return { members, depth };
   });
   const source = input.target.kind === "page" ? yield* page(input.target.pageId) : undefined;
+  recoveryBatch = source?.trash_batch_id ?? null;
   const movingPages = source
     ? yield* subtree(source.page_id)
     : { members: new Set<C.SpacePageId>(), depth: 0 };
   yield* ancestry(input.target.pageId);
   if (source?.root_order !== null && source !== undefined) yield* root(source.space_id);
   if (source?.owner_block_id) {
-    const owner = yield* block(source.owner_block_id);
-    yield* listAncestry(owner.page_id, owner.parent_id);
+    const owner = blocks.get(source.owner_block_id);
+    if (owner && !owner.deleted && BlockStore.storedBlockFromRow(owner).type === "child_page")
+      yield* listAncestry(owner.page_id, owner.parent_id);
+  }
+  if (recovery && source) {
+    yield* root(source.space_id);
+    if (recovery === "permanentlyDelete") {
+      if (source.trash_batch_id === null) return yield* invalid("invalid_recovery_state");
+      if (
+        source.parent_page_id !== null &&
+        (yield* page(source.parent_page_id)).trash_batch_id === source.trash_batch_id
+      )
+        return yield* invalid("invalid_recovery_state");
+    }
   }
   const selectedBlocks = new Set<string>();
   const selectedRoots = input.target.kind === "blocks" ? [...input.target.blockIds] : [];
@@ -181,7 +221,44 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     }
   }
   if (movingBlocks) yield* root((yield* page(input.target.pageId)).space_id);
-  const destination = input.destination;
+  let recoveryDestination = input.destination;
+  if (recovery === "restore" && source?.trash_batch_id !== null && source !== undefined) {
+    const owner = source.owner_block_id === null ? undefined : blocks.get(source.owner_block_id);
+    const parent = source.parent_page_id === null ? undefined : yield* page(source.parent_page_id);
+    const rootValid = source.root_order !== null && source.owner_block_id === null;
+    const childValid =
+      source.root_order === null &&
+      owner &&
+      !owner.deleted &&
+      BlockStore.storedBlockFromRow(owner).type === "child_page" &&
+      parent &&
+      parent.space_id === source.space_id;
+    if (!rootValid && (!childValid || parent?.trash_batch_id !== null)) {
+      const origin = PageStore.origin(source);
+      yield* root(origin.spaceId).pipe(
+        Effect.catchTags({
+          SpaceNotFoundError: () => Effect.fail(new C.SpacesUnavailableError({ stage: "storage" })),
+        }),
+      );
+      recoveryDestination = { kind: "root", spaceId: origin.spaceId, beforePageId: null };
+    }
+  }
+  const destination = recoveryDestination;
+  if (!recovery) {
+    if (source?.trash_batch_id !== null && source !== undefined) {
+      if (
+        !(
+          source.root_order === null &&
+          destination?.kind === "root" &&
+          destination.spaceId === source.space_id
+        )
+      )
+        PageStore.assertActive(source);
+    }
+    if (input.target.kind === "blocks") PageStore.assertActive(yield* page(input.target.pageId));
+    if (destination?.kind === "child")
+      PageStore.assertActive(yield* page(destination.placement.pageId));
+  }
   const creating =
     input.target.kind === "blocks" &&
     input.target.blockIds.length === 0 &&
@@ -393,10 +470,13 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     rank,
     unchanged,
     produced,
+    touch,
+    recovery,
+    recoveryPages,
   };
 });
 
-type Plan = Effect.Success<ReturnType<typeof plan>>;
+export type Plan = Effect.Success<ReturnType<typeof plan>>;
 
 export function guardsMatch(plan: Plan, supplied: C.SpaceStructureGuards) {
   checkLimit("maxMutationNodes", supplied.pages.length + supplied.roots.length);
@@ -418,20 +498,6 @@ export function guardsMatch(plan: Plan, supplied: C.SpaceStructureGuards) {
   );
 }
 
-const preimage = (row: PageStore.PageRow): RevisionStore.PagePreimage => ({
-  pageId: row.page_id,
-  spaceId: row.space_id,
-  title: row.title,
-  revision: row.revision,
-  rootOrder: row.root_order,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
-const ownerBefore = (row: PageStore.PageRow) =>
-  row.owner_block_id === null
-    ? null
-    : { childPageId: row.page_id, ownerBlockId: row.owner_block_id };
-
 export const apply = Effect.fn("SpacesStructure.apply")(function* (
   plan: Plan,
   mutationId: string,
@@ -440,7 +506,10 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const destination = plan.destination;
-  if (!destination || plan.rank === null) return yield* invalid();
+  if ((!destination || plan.rank === null) && !plan.recovery) return yield* invalid();
+  if (plan.recovery === "permanentlyDelete") return yield* invalid();
+  if (plan.recovery && plan.recoveryPages.size === 0)
+    return { page: PageStore.summary(plan.source!, true), changed: { pages: [], roots: [] } };
   if (plan.unchanged && plan.movingBlocks)
     return { blockIds: plan.selectedRoots, changed: { pages: [], roots: [] } };
   if (plan.unchanged && plan.source)
@@ -505,12 +574,14 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
     ? plan.sourcePageId
     : (plan.source?.page_id ?? C.SpacePageId.make(NodeCrypto.randomUUID()));
   const spaceId =
-    destination.kind === "root"
+    destination?.kind === "root"
       ? destination.spaceId
-      : plan.pages.get(destination.placement.pageId)!.space_id;
+      : destination?.kind === "child"
+        ? plan.pages.get(destination.placement.pageId)!.space_id
+        : plan.source!.space_id;
   let ownerBlockId: C.SpaceBlockId | null = null;
   if (plan.movingBlocks) {
-    if (destination.kind !== "child") return yield* invalid();
+    if (destination?.kind !== "child") return yield* invalid();
     for (const id of plan.selectedBlocks) {
       const old = plan.blocks.get(id)!;
       const selectedIndex = plan.selectedRoots.indexOf(C.SpaceBlockId.make(id));
@@ -528,25 +599,25 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
       const owned = [...plan.pages.values()].find((page) => page.owner_block_id === id);
       if (owned) mark(owned.page_id);
     }
-  } else if (destination.kind === "child") {
+  } else if (destination?.kind === "child") {
     const existingOwner = plan.source?.owner_block_id ?? null;
     ownerBlockId = existingOwner ?? C.SpaceBlockId.make(NodeCrypto.randomUUID());
     const old = existingOwner === null ? null : plan.blocks.get(existingOwner)!;
     const payload = canonical({
       id: ownerBlockId,
       parentId: destination.placement.parentId,
-      order: plan.rank,
+      order: plan.rank!,
       type: "child_page",
       version: 1,
       content: {},
     });
     const row = old
-      ? relocate(old, destination.placement.pageId, destination.placement.parentId, plan.rank)
+      ? relocate(old, destination.placement.pageId, destination.placement.parentId, plan.rank!)
       : {
           block_id: ownerBlockId,
           page_id: destination.placement.pageId,
           parent_id: destination.placement.parentId,
-          rank: plan.rank,
+          rank: plan.rank!,
           payload,
           logical_bytes: Buffer.byteLength(payload, "utf8"),
           deleted: 0,
@@ -554,19 +625,26 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
         };
     if (!old) yield* sql`INSERT INTO spaces_ids(id,kind) VALUES (${ownerBlockId},'block')`;
     writeBlock(row, old);
-  } else if (plan.source?.owner_block_id) {
-    const old = plan.blocks.get(plan.source.owner_block_id)!;
-    const payload = canonical({ id: old.block_id, pageId: old.page_id, mergedInto: null });
-    writeBlock(
-      {
-        ...old,
-        payload,
-        logical_bytes: Buffer.byteLength(payload, "utf8"),
-        deleted: 1,
-        merged_into: null,
-      },
-      old,
-    );
+  } else if (destination?.kind === "root" && plan.source?.owner_block_id) {
+    const old = plan.blocks.get(plan.source.owner_block_id);
+    if (old && !old.deleted && BlockStore.storedBlockFromRow(old).type !== "child_page")
+      return yield* invalid("invalid_recovery_state");
+    if (!old)
+      yield* sql`UPDATE spaces_ids SET deleted=1 WHERE id=${plan.source.owner_block_id} AND kind='block'`;
+    if (old) {
+      const mergedInto = old.deleted ? old.merged_into : null;
+      const payload = canonical({ id: old.block_id, pageId: old.page_id, mergedInto });
+      writeBlock(
+        {
+          ...old,
+          payload,
+          logical_bytes: Buffer.byteLength(payload, "utf8"),
+          deleted: 1,
+          merged_into: mergedInto,
+        },
+        old,
+      );
+    }
   }
   if (!plan.source && !plan.movingBlocks) {
     if (title === undefined) return yield* invalid();
@@ -595,7 +673,7 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
       VALUES (${row.block_id},${row.page_id},${row.parent_id},${row.rank},${row.payload},${row.logical_bytes},${row.deleted},${row.merged_into})
       ON CONFLICT(block_id) DO UPDATE SET page_id=excluded.page_id,parent_id=excluded.parent_id,rank=excluded.rank,payload=excluded.payload,logical_bytes=excluded.logical_bytes,deleted=excluded.deleted,merged_into=excluded.merged_into`;
   }
-  if (!plan.movingBlocks) {
+  if (!plan.movingBlocks && destination) {
     if (ownerBlockId !== null)
       yield* sql`INSERT INTO spaces_page_owners(child_page_id,owner_block_id) VALUES (${pageId},${ownerBlockId}) ON CONFLICT(child_page_id) DO UPDATE SET owner_block_id = excluded.owner_block_id`;
     else yield* sql`DELETE FROM spaces_page_owners WHERE child_page_id = ${pageId}`;
@@ -617,23 +695,50 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
     }
   }
   for (const id of plan.movingPages) if (plan.pages.get(id)!.space_id !== spaceId) mark(id);
-  if (plan.source) mark(pageId);
+  if (plan.source && !plan.recovery) mark(pageId);
+  for (const id of plan.recoveryPages) mark(id);
   const rootChanges = new Set<C.SpaceId>();
   if (plan.source?.root_order !== null && plan.source !== undefined)
     rootChanges.add(plan.source.space_id);
-  if (destination.kind === "root") rootChanges.add(spaceId);
+  if (destination?.kind === "root") rootChanges.add(spaceId);
+  const trashBatch = plan.recovery === "trash" ? NodeCrypto.randomUUID() : null;
+  if (
+    trashBatch !== null &&
+    (yield* sql`SELECT 1 FROM spaces_pages WHERE trash_batch_id=${trashBatch} LIMIT 1`).length
+  )
+    return yield* invalid("duplicate_id");
   for (const [id] of changed) {
     const old = plan.pages.get(id)!;
     const counter = counters.get(id)!;
     checkLimit("maxPageBlocks", counter.count);
     checkLimit("maxPageBytes", counter.bytes);
     const rootRank =
-      !plan.movingBlocks && id === pageId
+      !plan.movingBlocks && id === pageId && destination
         ? destination.kind === "root"
           ? plan.rank
           : null
         : (plan.ranks.find((row) => row.kind === "page" && row.id === id)?.rank ?? old.root_order);
     const memberSpace = plan.movingPages.has(id) ? spaceId : old.space_id;
+    let trash = PageStore.trashSnapshot(old);
+    if (plan.recoveryPages.has(id)) {
+      const owner = old.owner_block_id === null ? undefined : plan.blocks.get(old.owner_block_id);
+      trash =
+        plan.recovery === "restore"
+          ? null
+          : {
+              batchId: trashBatch!,
+              rootPageId: pageId,
+              trashedAtMs: now,
+              origin: canonical({
+                spaceId: old.space_id,
+                rootOrder: old.root_order,
+                ownerBlockId: old.owner_block_id,
+                ownerPageId: old.parent_page_id,
+                parentId: owner?.parent_id ?? null,
+                rank: owner?.rank ?? null,
+              }),
+            };
+    }
     plan.produced({
       pageId: id,
       spaceId: memberSpace,
@@ -641,8 +746,9 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
       revision: old.revision + 1,
       blockCount: counter.count,
       blockBytes: counter.bytes,
+      trash,
     });
-    yield* sql`UPDATE spaces_pages SET space_id=${memberSpace},root_order=${rootRank},revision=revision+1,block_count=${counter.count},block_bytes=${counter.bytes},updated_at=${timestamp} WHERE page_id=${id}`;
+    yield* sql`UPDATE spaces_pages SET space_id=${memberSpace},root_order=${rootRank},revision=revision+1,block_count=${counter.count},block_bytes=${counter.bytes},updated_at=${timestamp},trash_batch_id=${trash?.batchId ?? null},trash_root_id=${trash?.rootPageId ?? null},trashed_at_ms=${trash?.trashedAtMs ?? null},trash_origin=${trash?.origin ?? null} WHERE page_id=${id}`;
   }
   const historyBudget = RevisionStore.createCaptureBudget();
   if (!plan.source && !plan.movingBlocks)
@@ -658,8 +764,9 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
         pageId: id,
         toRevision: old.revision + 1,
         mutationId,
-        pageBefore: preimage(old),
-        ownerBefore: ownerBefore(old),
+        pageBefore: PageStore.preimage(old),
+        ownerBefore: PageStore.ownerPreimage(old),
+        trashBefore: PageStore.trashSnapshot(old),
         blocksBefore: [...rows].map(([id, row]) => ({ id, row })),
       },
       now,
@@ -686,6 +793,8 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
       rootOrderRevision: plan.roots.get(id)!.rootOrderRevision + 1,
     })),
   };
+  if (plan.recovery)
+    return { page: PageStore.summary(yield* PageStore.read(pageId)), changed: changedGuards };
   return plan.movingBlocks
     ? { blockIds: plan.selectedRoots, changed: changedGuards }
     : {

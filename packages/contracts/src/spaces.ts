@@ -151,6 +151,12 @@ export const SpacePageLocation = Schema.Union([
   }),
 ]);
 export type SpacePageLocation = typeof SpacePageLocation.Type;
+export const SpacePageTrashStatus = Schema.Struct({
+  batchId: StableId,
+  originalRootPageId: SpacePageId,
+  trashedAt: IsoDateTime,
+});
+export type SpacePageTrashStatus = typeof SpacePageTrashStatus.Type;
 export const SpacePageSummary = Schema.Struct({
   id: SpacePageId,
   spaceId: SpaceId,
@@ -158,6 +164,7 @@ export const SpacePageSummary = Schema.Struct({
   revision: NonNegativeInt,
   rootOrder: Schema.NullOr(StableId),
   location: Schema.optionalKey(SpacePageLocation),
+  trash: Schema.optionalKey(SpacePageTrashStatus),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -357,7 +364,10 @@ export const SpaceMovePageInput = Schema.Struct({
   guards: SpaceStructureGuards,
 });
 export type SpaceMovePageInput = typeof SpaceMovePageInput.Type;
+export const SpaceRecoveryOperation = Schema.Literals(["trash", "restore", "permanentlyDelete"]);
+export type SpaceRecoveryOperation = typeof SpaceRecoveryOperation.Type;
 export const SpaceInspectStructureInput = Schema.Struct({
+  recovery: Schema.optionalKey(SpaceRecoveryOperation),
   environmentId: EnvironmentId,
   target: Schema.Union([
     Schema.Struct({ kind: Schema.Literal("page"), pageId: SpacePageId }),
@@ -371,6 +381,9 @@ export const SpaceInspectStructureInput = Schema.Struct({
 });
 export type SpaceInspectStructureInput = typeof SpaceInspectStructureInput.Type;
 export const SpaceInspectStructureResult = Schema.Struct({
+  recovery: Schema.optionalKey(
+    Schema.Struct({ operation: SpaceRecoveryOperation, pageIds: Schema.Array(SpacePageId) }),
+  ),
   catalogRevision: NonNegativeInt,
   guards: SpaceStructureGuards,
   pages: Schema.Array(SpacePageSummary),
@@ -456,7 +469,58 @@ export const SpaceReferenceResolveResult = Schema.Union([
 ]);
 export type SpaceReferenceResolveResult = typeof SpaceReferenceResolveResult.Type;
 
+export const SpacePageRecoveryInput = Schema.Struct({
+  ...mutationInput,
+  pageId: SpacePageId,
+  guards: SpaceStructureGuards,
+});
+export type SpacePageRecoveryInput = typeof SpacePageRecoveryInput.Type;
+export const SpacePageRecoveryResult = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("saved"),
+    ...mutationAck,
+    page: SpacePageSummary,
+    changed: SpaceStructureGuards,
+  }),
+  SpaceStructureConflict,
+]);
+export type SpacePageRecoveryResult = typeof SpacePageRecoveryResult.Type;
+export const SpacePagePurgeResult = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("saved"),
+    ...mutationAck,
+    pageId: SpacePageId,
+    deletedPageIds: Schema.Array(SpacePageId),
+    changed: SpaceStructureGuards,
+  }),
+  SpaceStructureConflict,
+]);
+export type SpacePagePurgeResult = typeof SpacePagePurgeResult.Type;
+export const SpaceTrashListInput = SpaceListInput;
+export type SpaceTrashListInput = typeof SpaceTrashListInput.Type;
+export const SpaceTrashEntry = Schema.Struct({
+  pageId: SpacePageId,
+  spaceId: SpaceId,
+  title: Schema.String,
+  revision: NonNegativeInt,
+  trash: SpacePageTrashStatus,
+});
+export type SpaceTrashEntry = typeof SpaceTrashEntry.Type;
+export const SpaceTrashListResult = Schema.Struct({
+  catalogRevision: NonNegativeInt,
+  items: Schema.Array(SpaceTrashEntry),
+  nextCursor: Schema.NullOr(SpaceCursor),
+  mutationAdmission: SpaceMutationAdmission,
+});
+export type SpaceTrashListResult = typeof SpaceTrashListResult.Type;
+
 export const SpaceMutationRequest = Schema.Union([
+  Schema.Struct({ operation: Schema.Literal("trashPage"), input: SpacePageRecoveryInput }),
+  Schema.Struct({ operation: Schema.Literal("restorePage"), input: SpacePageRecoveryInput }),
+  Schema.Struct({
+    operation: Schema.Literal("permanentlyDeletePage"),
+    input: SpacePageRecoveryInput,
+  }),
   Schema.Struct({ operation: Schema.Literal("moveBlocks"), input: SpaceMoveBlocksInput }),
   Schema.Struct({ operation: Schema.Literal("createChildPage"), input: SpaceCreateChildPageInput }),
   Schema.Struct({ operation: Schema.Literal("movePage"), input: SpaceMovePageInput }),
@@ -469,6 +533,12 @@ export const SpaceMutationRequest = Schema.Union([
 ]);
 export type SpaceMutationRequest = typeof SpaceMutationRequest.Type;
 export const SpaceMutationReceipt = Schema.Union([
+  Schema.Struct({ operation: Schema.Literal("trashPage"), result: SpacePageRecoveryResult }),
+  Schema.Struct({ operation: Schema.Literal("restorePage"), result: SpacePageRecoveryResult }),
+  Schema.Struct({
+    operation: Schema.Literal("permanentlyDeletePage"),
+    result: SpacePagePurgeResult,
+  }),
   Schema.Struct({ operation: Schema.Literal("moveBlocks"), result: SpaceMoveBlocksResult }),
   Schema.Struct({
     operation: Schema.Literal("createChildPage"),
@@ -578,6 +648,8 @@ export class SpaceValidationError extends Schema.TaggedError<SpaceValidationErro
       "cycle",
       "unsupported_block",
       "invalid_merge",
+      "trashed",
+      "invalid_recovery_state",
       "invalid_input",
     ]),
   },
