@@ -4,11 +4,14 @@ import { Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import {
   Plugin,
   PluginKey,
+  TextSelection,
+  NodeSelection,
   type EditorState,
   type Command,
   type Transaction,
 } from "@tiptap/pm/state";
 import { canSplit } from "@tiptap/pm/transform";
+import { toggleMark } from "@tiptap/pm/commands";
 import { Schema } from "effect";
 import {
   copySpaceBlocks,
@@ -43,6 +46,9 @@ export interface SpaceEditorOptions {
     readonly before: string | null;
     readonly after: string | null;
   }) => string;
+  readonly canEdit?: () => boolean;
+  readonly canChangeStructure?: () => boolean;
+  readonly canUndo?: () => boolean;
 }
 export interface SpaceEditorBatch {
   readonly baseRevision: number;
@@ -86,8 +92,9 @@ export class SpaceEditorAdapter {
   readonly #options: SpaceEditorOptions;
   readonly #key = new PluginKey<AdapterState>("spaces-window");
   readonly #operation = new PluginKey<Operation>("spaces-operation");
-  readonly #members: ReadonlySet<SpaceBlockId>;
-  readonly #complete: ReadonlySet<SpaceBlockId | null>;
+  #members: ReadonlySet<SpaceBlockId>;
+  #complete: ReadonlySet<SpaceBlockId | null>;
+  #window: SpaceEditorWindow;
   readonly document: ProseMirrorNode;
 
   constructor(options: SpaceEditorOptions) {
@@ -101,6 +108,7 @@ export class SpaceEditorAdapter {
         throw new Error("Editor limits must be positive integers");
     }
     this.#options = options;
+    this.#window = options.window;
     this.#members = new Set(options.window.blocks.map((block) => block.id));
     this.#complete = new Set(options.window.completeParents);
     this.document = spaceWindowDocument(options.window, options.maxBlocks, options.maxDepth);
@@ -111,7 +119,7 @@ export class SpaceEditorAdapter {
     doc.check();
     const blocks = spaceDocumentBlocks(doc);
     spaceWindowDocument(
-      { ...this.#options.window, blocks },
+      { ...this.#window, blocks },
       this.#options.maxBlocks,
       this.#options.maxDepth,
     );
@@ -146,7 +154,7 @@ export class SpaceEditorAdapter {
         });
     }
     return {
-      baseRevision: this.#options.window.revision,
+      baseRevision: this.#window.revision,
       memberIds: [...this.#members],
       mutations,
     };
@@ -156,7 +164,7 @@ export class SpaceEditorAdapter {
     return new Plugin<AdapterState>({
       key: this.#key,
       state: {
-        init: () => ({ batch: this.#batch(this.document, this.document), joins: [] }),
+        init: (_config, state) => ({ batch: this.#batch(state.doc, state.doc), joins: [] }),
         apply: (tr, value) => {
           if (!tr.docChanged) return value;
           const operation = tr.getMeta(this.#operation) as Operation | undefined;
@@ -174,6 +182,7 @@ export class SpaceEditorAdapter {
       },
       filterTransaction: (tr) => {
         if (!tr.docChanged) return true;
+        if (this.#options.canEdit?.() === false) return false;
         try {
           const operation = tr.getMeta(this.#operation) as Operation | undefined;
           const batch = this.#batch(tr.before, tr.doc, operation);
@@ -210,6 +219,8 @@ export class SpaceEditorAdapter {
           }
           for (const entry of before.filter((item) => item.node.type.name === "spaceAtom")) {
             const next = after.find((item) => item.block.id === entry.block.id);
+            if (!next && entry.block.type === "divider" && canEditSpaceEditorBlock(entry.block))
+              continue;
             if (
               !next &&
               !this.#members.has(entry.block.id) &&
@@ -324,6 +335,10 @@ export class SpaceEditorAdapter {
     const join = this.joinBackward();
     const undo = this.undoLocal();
     const redo = this.redoLocal();
+    const bold = this.mark("bold"),
+      italic = this.mark("italic"),
+      strike = this.mark("strike"),
+      code = this.mark("code");
     return [
       ...spaceSchemaExtensions,
       Extension.create({
@@ -332,14 +347,46 @@ export class SpaceEditorAdapter {
         addKeyboardShortcuts() {
           const run = (command: Command) => command(this.editor.state, this.editor.view.dispatch);
           return {
-            Enter: () => run(split),
-            Backspace: () =>
-              this.editor.state.selection.empty &&
-              this.editor.state.selection.$from.parentOffset === 0
-                ? run(join)
-                : false,
-            "Mod-z": () => run(undo),
-            "Mod-Shift-z": () => run(redo),
+            Enter: () => {
+              if (this.editor.state.selection.$from.parent.type.name === "code")
+                this.editor.view.dispatch(this.editor.state.tr.insertText("\n"));
+              else run(split);
+              return true;
+            },
+            Backspace: () => {
+              if (
+                this.editor.state.selection.empty &&
+                this.editor.state.selection.$from.parentOffset === 0
+              ) {
+                run(join);
+                return true;
+              }
+              return false;
+            },
+            "Mod-b": () => {
+              run(bold);
+              return true;
+            },
+            "Mod-i": () => {
+              run(italic);
+              return true;
+            },
+            "Mod-Shift-x": () => {
+              run(strike);
+              return true;
+            },
+            "Mod-`": () => {
+              run(code);
+              return true;
+            },
+            "Mod-z": () => {
+              run(undo);
+              return true;
+            },
+            "Mod-Shift-z": () => {
+              run(redo);
+              return true;
+            },
           };
         },
       }),
@@ -350,7 +397,119 @@ export class SpaceEditorAdapter {
     return this.#key.getState(state)!.batch;
   }
 
+  replaceWindow(window: SpaceEditorWindow) {
+    this.#window = window;
+    this.#members = new Set(window.blocks.map((block) => block.id));
+    this.#complete = new Set(window.completeParents);
+  }
+
+  changes(before: ProseMirrorNode, transactions: readonly Transaction[]): readonly SpaceMutation[] {
+    const last = transactions.at(-1);
+    if (!last || before.eq(last.doc)) return [];
+    const joins = new Map<SpaceBlockId, SpaceBlockId>();
+    for (const transaction of transactions) {
+      const operation = transaction.getMeta(this.#operation) as Operation | undefined;
+      if (operation?.merged) joins.set(operation.merged.from, operation.merged.into);
+    }
+    return this.#batch(before, last.doc).mutations.map((mutation) => {
+      const into = mutation.kind === "delete" ? joins.get(mutation.blockId) : undefined;
+      return mutation.kind === "delete" && into ? { ...mutation, mergedInto: into } : mutation;
+    });
+  }
+
+  append(type: "paragraph" | "code" | "divider" = "paragraph"): Command {
+    return (state, dispatch) => {
+      if (
+        this.#options.canChangeStructure?.() === false ||
+        entries(state.doc).length >= this.#options.maxBlocks ||
+        !this.#isComplete(null, state.doc)
+      )
+        return false;
+      const previous = spaceDocumentBlocks(state.doc).findLast((block) => block.parentId === null);
+      let order: string;
+      try {
+        order = this.#rank(null, previous, undefined);
+      } catch {
+        return false;
+      }
+      if (!dispatch) return true;
+      const block: SpaceBlock = {
+        id: this.#options.allocateId(),
+        parentId: null,
+        order,
+        type,
+        version: 1,
+        content:
+          type === "paragraph" ? { runs: [] } : type === "code" ? { text: "", language: "" } : {},
+      };
+      const at = state.doc.content.size;
+      const tr = state.tr.insert(at, spaceBlockNode(block, [], false, state.schema));
+      tr.setSelection(
+        type === "divider"
+          ? NodeSelection.create(tr.doc, at)
+          : TextSelection.create(tr.doc, at + 1),
+      );
+      return this.#dispatch(tr, dispatch);
+    };
+  }
+
+  mark(type: "bold" | "italic" | "strike" | "code"): Command {
+    return (state, dispatch) =>
+      this.#options.canEdit?.() !== false &&
+      toggleMark(state.schema.marks[`space_${type}`]!, { value: { type, version: 1 } })(
+        state,
+        dispatch,
+      );
+  }
+
+  toggleTodo(id: SpaceBlockId): Command {
+    return (state, dispatch) => {
+      const entry = entries(state.doc).find((item) => item.block.id === id);
+      const block = spaceDocumentBlocks(state.doc).find((item) => item.id === id);
+      if (
+        !entry ||
+        entry.node.type.name === "spaceAtom" ||
+        !block ||
+        !isKnownSpaceBlock(block) ||
+        block.type !== "todo_item"
+      )
+        return false;
+      return this.#dispatch(
+        state.tr.setNodeMarkup(entry.pos, undefined, {
+          block: { ...block, content: { ...block.content, checked: !block.content.checked } },
+        }),
+        dispatch,
+      );
+    };
+  }
+
+  remove(id: SpaceBlockId): Command {
+    return (state, dispatch) => {
+      if (this.#options.canChangeStructure?.() === false) return false;
+      const entry = entries(state.doc).find((item) => item.block.id === id);
+      if (
+        !entry ||
+        (entry.node.type.name === "spaceAtom" && entry.block.type !== "divider") ||
+        !this.#isComplete(entry.block.parentId, state.doc) ||
+        !this.#subtreeComplete(entry.node, state.doc)
+      )
+        return false;
+      const subtree = entries(state.schema.nodes.doc!.create(null, [entry.node]));
+      if (
+        subtree.some(
+          (item) =>
+            !canEditSpaceEditorBlock(item.block) ||
+            ["child_page", "image", "pdf", "video"].includes(item.block.type),
+        )
+      )
+        return false;
+      if (!dispatch) return this.#options.canEdit?.() !== false;
+      return this.#dispatch(state.tr.delete(entry.pos, entry.pos + entry.node.nodeSize), dispatch);
+    };
+  }
+
   #dispatch(tr: Transaction, dispatch?: (tr: Transaction) => void, operation: Operation = {}) {
+    if (this.#options.canEdit?.() === false) return false;
     tr.setMeta(this.#operation, operation);
     try {
       this.#validate(tr.doc);
@@ -365,7 +524,7 @@ export class SpaceEditorAdapter {
   #isComplete(parent: SpaceBlockId | null, doc: ProseMirrorNode) {
     if (this.#complete.has(parent)) return true;
     if (parent === null || !entries(doc).some((entry) => entry.block.id === parent)) return false;
-    const original = this.#options.window.blocks.find((block) => block.id === parent);
+    const original = this.#window.blocks.find((block) => block.id === parent);
     return !original || !isSpaceListItem(original);
   }
   #subtreeComplete(node: ProseMirrorNode, doc: ProseMirrorNode): boolean {
@@ -390,6 +549,7 @@ export class SpaceEditorAdapter {
 
   split(): Command {
     return (state, dispatch) => {
+      if (this.#options.canChangeStructure?.() === false) return false;
       const { $from, $to, empty } = state.selection;
       if (!empty || !$from.sameParent($to)) return false;
       const depth = $from.parent.type.name === "spaceBody" ? $from.depth - 1 : $from.depth;
@@ -401,6 +561,7 @@ export class SpaceEditorAdapter {
       );
       if (
         !block ||
+        blocks.length >= this.#options.maxBlocks ||
         !richBlockTypes.includes(node.type.name as (typeof richBlockTypes)[number]) ||
         !this.#isComplete(block.parentId, state.doc) ||
         !this.#subtreeComplete(node, state.doc)
@@ -409,10 +570,15 @@ export class SpaceEditorAdapter {
       const pos = $from.before(depth);
       const siblings = blocks.filter((item) => item.parentId === block.parentId);
       const sibling = siblings[siblings.findIndex((item) => item.id === block.id) + 1];
-      const next = {
-        id: this.#options.allocateId(),
-        order: this.#rank(block.parentId, block, sibling),
-      };
+      const id = dispatch ? this.#options.allocateId() : null;
+      let order: string;
+      try {
+        order = this.#rank(block.parentId, block, sibling);
+      } catch {
+        return false;
+      }
+      if (!dispatch) return true;
+      const next = { id: id!, order };
       if (entries(state.doc).some((entry) => entry.block.id === next.id)) return false;
       const [first, second] = splitSpaceTextBlock(block, $from.parentOffset, next);
       const splitDepth = $from.parent.type.name === "spaceBody" ? 2 : 1;
@@ -427,6 +593,7 @@ export class SpaceEditorAdapter {
 
   joinBackward(): Command {
     return (state, dispatch) => {
+      if (this.#options.canChangeStructure?.() === false) return false;
       const { $from, empty } = state.selection;
       if (!empty || $from.parentOffset !== 0 || !$from.parent.attrs.block) return false;
       const secondNode = $from.parent;
@@ -473,6 +640,7 @@ export class SpaceEditorAdapter {
       | "todo_item",
   ): Command {
     return (state, dispatch) => {
+      if (this.#options.canChangeStructure?.() === false) return false;
       const entry = entries(state.doc).find((item) => item.block.id === id);
       const block = spaceDocumentBlocks(state.doc).find((item) => item.id === id);
       const targetIsList = ["bulleted_item", "numbered_item", "todo_item"].includes(type);
@@ -488,6 +656,18 @@ export class SpaceEditorAdapter {
           (entry.node.childCount > 1 || !this.#isComplete(id, state.doc)))
       )
         return false;
+      const knownKeys = new Set([
+        "runs",
+        ...(block.type === "heading"
+          ? ["level"]
+          : block.type === "todo_item"
+            ? ["checked"]
+            : block.type === "callout"
+              ? ["icon"]
+              : []),
+      ]);
+      if (Object.keys(block.content).some((key) => !knownKeys.has(key))) return false;
+      if (!dispatch) return this.#options.canEdit?.() !== false;
       const content = {
         runs: block.content.runs,
         ...(type === "heading"
@@ -598,6 +778,7 @@ export class SpaceEditorAdapter {
   pasteBlocks(blocks: readonly SpaceBlock[], source: SpacePageTarget): Command {
     return (state, dispatch) => {
       if (
+        this.#options.canChangeStructure?.() === false ||
         source.environmentId !== this.#options.target.environmentId ||
         source.pageId !== this.#options.target.pageId ||
         !blocks.length ||
@@ -626,7 +807,7 @@ export class SpaceEditorAdapter {
           return next;
         });
         const doc = spaceWindowDocument(
-          { revision: this.#options.window.revision, blocks: ranked, completeParents: [] },
+          { revision: this.#window.revision, blocks: ranked, completeParents: [] },
           this.#options.maxBlocks,
           this.#options.maxDepth,
           state.schema,
@@ -643,6 +824,7 @@ export class SpaceEditorAdapter {
 
   undoLocal(): Command {
     return (state, dispatch) =>
+      this.#options.canUndo?.() !== false &&
       undo(
         state,
         dispatch
@@ -654,6 +836,7 @@ export class SpaceEditorAdapter {
   }
   redoLocal(): Command {
     return (state, dispatch) =>
+      this.#options.canUndo?.() !== false &&
       redo(
         state,
         dispatch

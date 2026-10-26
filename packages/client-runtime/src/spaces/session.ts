@@ -78,6 +78,7 @@ export interface SpaceSessionSnapshot {
   readonly pending: SpaceSaveRequest | null;
   readonly conflictRevision: number | null;
   readonly recoveryReason: "legacy-epoch-missing" | null;
+  readonly acknowledgedGeneration: number | null;
   readonly persistenceError: unknown;
 }
 
@@ -125,6 +126,7 @@ export class SpaceDocumentSession {
     pending: null,
     conflictRevision: null,
     recoveryReason: null,
+    acknowledgedGeneration: null,
     persistenceError: null,
   });
   #mutations: readonly SpaceMutation[] = [];
@@ -274,7 +276,7 @@ export class SpaceDocumentSession {
     if (!this.#snapshot.hydrated) throw new Error("Hydrate the document before editing");
   }
 
-  apply(mutations: readonly SpaceMutation[]): void {
+  apply(mutations: readonly SpaceMutation[], order?: readonly SpaceBlockId[]): void {
     this.#assertHydrated();
     if (mutations.length === 0) return;
     const owned = own(mutations);
@@ -284,7 +286,12 @@ export class SpaceDocumentSession {
       const id = mutation.kind === "delete" ? mutation.blockId : mutation.block.id;
       const index = blocks.findIndex((block) => block.id === id);
       if (mutation.kind === "insert") {
-        if (reserved.has(id)) throw new Error("Insert requires a fresh block ID");
+        const unsent = this.#mutations.slice(this.#snapshot.pending?.mutations.length ?? 0);
+        const previous = unsent.findLast(
+          (item) => (item.kind === "delete" ? item.blockId : item.block.id) === id,
+        );
+        if (index >= 0 || (reserved.has(id) && previous?.kind !== "delete"))
+          throw new Error("Insert requires a fresh block ID");
         if (!canEditSpaceBlock(mutation.block))
           throw new Error("Cannot insert opaque content as a copy");
         if (
@@ -328,21 +335,59 @@ export class SpaceDocumentSession {
     )
       throw new Error("Explicitly move or delete loaded children with their parent");
     validateWindow(blocks, this.#options.maxLoadedBlocks);
-    const nextMutations = [...this.#mutations];
     const sentCount = this.#snapshot.pending?.mutations.length ?? 0;
-    for (const mutation of owned) {
-      const last = nextMutations.at(-1);
-      if (
-        mutation.kind === "replace" &&
-        nextMutations.length > sentCount &&
-        last &&
-        last.kind !== "delete" &&
-        last.block.id === mutation.block.id
-      ) {
-        nextMutations[nextMutations.length - 1] = { ...last, block: mutation.block };
-      } else {
-        nextMutations.push(mutation);
+    const prefix = this.#mutations.slice(0, sentCount);
+    const members = new Set(this.#snapshot.memberIds);
+    for (const mutation of prefix) {
+      if (mutation.kind === "insert") members.add(mutation.block.id);
+      if (mutation.kind === "delete") members.delete(mutation.blockId);
+    }
+    const intents = new Map<
+      SpaceBlockId,
+      { block: SpaceBlock | null; inserted?: SpaceBlock; mergedInto?: SpaceBlockId }
+    >();
+    for (const mutation of [...this.#mutations.slice(sentCount), ...owned]) {
+      const id = mutation.kind === "delete" ? mutation.blockId : mutation.block.id;
+      const previous = intents.get(id);
+      if (mutation.kind === "delete")
+        intents.set(id, {
+          block: null,
+          ...(previous?.inserted ? { inserted: previous.inserted } : {}),
+          ...(mutation.mergedInto ? { mergedInto: mutation.mergedInto } : {}),
+        });
+      else
+        intents.set(id, {
+          block: mutation.block,
+          ...(!members.has(id) ? { inserted: mutation.block } : {}),
+        });
+    }
+    const nextMutations = [...prefix];
+    for (const [id, intent] of intents) {
+      if (intent.block)
+        nextMutations.push({ kind: members.has(id) ? "replace" : "insert", block: intent.block });
+      else {
+        let into = intent.mergedInto;
+        const visited = new Set([id]);
+        while (into && intents.get(into)?.block === null) {
+          if (visited.has(into)) throw new Error("Local merge cycle");
+          visited.add(into);
+          into = intents.get(into)?.mergedInto;
+        }
+        // Unsent identities may already be referenced by the draft or clipboard history.
+        if (!members.has(id) && !intent.inserted) continue;
+        if (!members.has(id)) nextMutations.push({ kind: "insert", block: intent.inserted! });
+        nextMutations.push({ kind: "delete", blockId: id, ...(into ? { mergedInto: into } : {}) });
       }
+    }
+    if (order) {
+      const byId = new Map(blocks.map((block) => [block.id, block]));
+      if (
+        order.length !== blocks.length ||
+        new Set(order).size !== blocks.length ||
+        order.some((id) => !byId.has(id))
+      )
+        throw new Error("Editor order must contain exactly the loaded blocks");
+      blocks = order.map((id) => byId.get(id)!);
     }
     if (nextMutations.length > this.#options.maxMutations)
       throw new Error("Mutation window exceeds limit");
@@ -363,8 +408,13 @@ export class SpaceDocumentSession {
     this.#update({
       blocks: Object.freeze(blocks),
       generation: this.#snapshot.generation + 1,
-      dirty: true,
-      status: this.#snapshot.status === "saved" ? "draft" : this.#snapshot.status,
+      dirty: nextMutations.length > 0,
+      status:
+        this.#snapshot.status === "saved" || this.#snapshot.status === "draft"
+          ? nextMutations.length
+            ? "draft"
+            : "saved"
+          : this.#snapshot.status,
     });
     void this.#persist();
   }
@@ -464,6 +514,7 @@ export class SpaceDocumentSession {
       }
       this.#update({
         baseRevision: result.revision,
+        acknowledgedGeneration: request.generation,
         memberIds: own([...members]),
         pending: null,
         dirty: this.#mutations.length > 0,

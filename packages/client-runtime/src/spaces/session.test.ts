@@ -63,6 +63,29 @@ function harness(
 const noReceipt: SpaceSessionAdapter["lookupReceipt"] = async () => ({ status: "unknown" });
 
 describe("SpaceDocumentSession", () => {
+  it("restores locally deleted identities and sends each unsent live insertion once", async () => {
+    const requests: SpaceSaveRequest[] = [];
+    const { session } = harness({
+      save: async (request) => {
+        requests.push(request);
+        return { status: "saved", revision: 2 };
+      },
+      lookupReceipt: noReceipt,
+    });
+    await session.hydrate({ revision: 1, blocks: [paragraph("first"), paragraph("second", "b")] });
+    session.apply([
+      { kind: "delete", blockId: SpaceBlockId.make("b"), mergedInto: SpaceBlockId.make("a") },
+    ]);
+    session.apply([{ kind: "insert", block: paragraph("second", "b") }]);
+    session.apply([{ kind: "insert", block: paragraph("new", "c") }]);
+    session.apply([{ kind: "delete", blockId: SpaceBlockId.make("c") }]);
+    session.apply([{ kind: "insert", block: paragraph("redone", "c") }]);
+    await session.save();
+    expect(requests[0]?.mutations).toEqual([
+      { kind: "replace", block: paragraph("second", "b") },
+      { kind: "insert", block: paragraph("redone", "c") },
+    ]);
+  });
   it("preserves a legacy epochless pending draft without lookup, resend or discard", async () => {
     let calls = 0;
     const pending = {
@@ -226,10 +249,7 @@ describe("SpaceDocumentSession", () => {
       session.replaceWindow({ revision: 1, blocks: [paragraph("elsewhere", "z")] }),
     ).toThrow("draft");
     await session.save();
-    expect(requests[0]?.mutations).toEqual([
-      { kind: "replace", block: paragraph("edited") },
-      { kind: "delete", blockId: "a" },
-    ]);
+    expect(requests[0]?.mutations).toEqual([{ kind: "delete", blockId: "a" }]);
     expect(session.getSnapshot().memberIds).toEqual([]);
     session.replaceWindow({ revision: 2, blocks: [paragraph("elsewhere", "z")] });
     expect(session.getSnapshot().blocks).toEqual([paragraph("elsewhere", "z")]);

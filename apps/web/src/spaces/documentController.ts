@@ -1,5 +1,6 @@
 import {
   SpaceDocumentSession,
+  isSpaceListItem,
   type SpaceSessionOptions,
   type SpaceSessionSnapshot,
 } from "@t2code/client-runtime/spaces";
@@ -10,6 +11,7 @@ import type {
   SpaceReadBlocksInput,
   SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
+import type { SpaceEditorWindow } from "./document";
 
 export interface SpaceDocumentPorts {
   readonly getPage: () => Promise<SpacePageGetResult>;
@@ -22,6 +24,7 @@ interface DocumentSnapshot {
   readonly nextCursor: SpaceCursor | null;
   readonly loading: boolean;
   readonly error: unknown;
+  readonly completeWindow: boolean;
 }
 
 export class SpaceDocumentController {
@@ -41,6 +44,7 @@ export class SpaceDocumentController {
       nextCursor: null,
       loading: false,
       error: null,
+      completeWindow: false,
     };
   }
   getSnapshot = (): DocumentSnapshot => {
@@ -48,6 +52,17 @@ export class SpaceDocumentController {
     if (this.#snapshot.session !== session) this.#snapshot = { ...this.#snapshot, session };
     return this.#snapshot;
   };
+  editorWindow(): SpaceEditorWindow {
+    const { session, metadata, completeWindow } = this.getSnapshot();
+    const complete = completeWindow && session.baseRevision === metadata?.page.revision;
+    return {
+      revision: session.baseRevision ?? 0,
+      blocks: session.blocks,
+      completeParents: complete
+        ? [null, ...session.blocks.filter(isSpaceListItem).map((block) => block.id)]
+        : [],
+    };
+  }
   subscribe = (listener: () => void) => {
     this.#listeners.add(listener);
     const unsubscribe = this.session.subscribe(listener);
@@ -132,8 +147,15 @@ export class SpaceDocumentController {
       const state = this.session.getSnapshot();
       if (!state.dirty && !state.pending && state.persistenceError === null)
         this.session.replaceWindow(blocks);
+      const loaded = this.session.getSnapshot();
       this.#update({
         metadata,
+        completeWindow:
+          cursor === undefined &&
+          blocks.nextCursor === null &&
+          loaded.baseRevision === blocks.revision &&
+          loaded.memberIds.length === blocks.blocks.length &&
+          loaded.memberIds.every((id) => blocks.blocks.some((block) => block.id === id)),
         nextCursor: state.dirty || state.pending ? null : blocks.nextCursor,
       });
     } catch (error) {
@@ -163,7 +185,12 @@ export class SpaceDocumentController {
       const { metadata, blocks } = await this.#read();
       if (request !== this.#request) return;
       await this.session.discardDraft(blocks);
-      if (request === this.#request) this.#update({ metadata, nextCursor: blocks.nextCursor });
+      if (request === this.#request)
+        this.#update({
+          metadata,
+          nextCursor: blocks.nextCursor,
+          completeWindow: blocks.nextCursor === null,
+        });
     } catch (error) {
       if (request === this.#request) this.#update({ error });
       throw error;

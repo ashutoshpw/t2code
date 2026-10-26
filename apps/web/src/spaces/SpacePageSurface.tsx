@@ -155,7 +155,6 @@ export default function SpacePageSurface({
       <p className="mt-2 text-sm text-muted-foreground">
         Revision {page.revision} · Updated {page.updatedAt}
       </p>
-      <p className="mt-3 text-sm text-muted-foreground">This page is read-only.</p>
       <SpaceDocumentSurface
         key={JSON.stringify([target.environmentId, target.pageId])}
         target={target}

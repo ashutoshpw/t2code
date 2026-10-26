@@ -183,6 +183,7 @@ describe("Spaces document controller lifecycle", () => {
     expect(current.session.getSnapshot().baseRevision).toBe(1);
     await current.refresh();
     expect(current.session.getSnapshot().baseRevision).toBe(2);
+    expect(current.editorWindow().completeParents).toContain(null);
     current.session.apply([{ kind: "replace", block: block("retained local draft") }]);
     await current.session.persistDraft();
     panel.release();

@@ -1,9 +1,12 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { useContext, useEffect, useState, useSyncExternalStore } from "react";
-import { isKnownSpaceBlock, spaceBlockRuns, spacePlainText } from "@t2code/client-runtime/spaces";
+import { SpaceBlockId } from "@t2code/contracts/spaces";
 import type { SpacePageTarget } from "@t2code/contracts/spaces";
 import { Button } from "../components/ui/button";
 import { spacesEnvironment } from "../state/spaces";
+import { randomUUID } from "../lib/utils";
+import { SpaceEditorBridge } from "./editorBridge";
+import { SpaceEditor } from "./SpaceEditor";
 import { spaceDocuments } from "./sessionRuntime";
 import type { SpaceDocumentController } from "./documentController";
 
@@ -53,6 +56,9 @@ function message(error: unknown) {
 
 function DocumentContent({ controller }: { controller: SpaceDocumentController }) {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const [bridge] = useState(
+    () => new SpaceEditorBridge(controller, () => SpaceBlockId.make(randomUUID())),
+  );
   const { session, loading, error } = snapshot;
   const permission = useAtomValue(
     spacesEnvironment.apply.permissionAtom(controller.session.key.environmentId),
@@ -72,7 +78,7 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
         {!session.hydrated
           ? "Loading document…"
           : session.status === "saved"
-            ? "Saved · Read-only document"
+            ? "Saved"
             : session.status === "uncertain"
               ? "Save outcome unresolved"
               : session.status === "conflict"
@@ -92,28 +98,18 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
         <p role="alert">Draft storage failed: {message(session.persistenceError)}</p>
       ) : null}
       {session.hydrated ? (
-        <div aria-label="Document blocks" className="space-y-3">
-          {session.blocks.length === 0 ? (
-            <p>This window has no blocks.</p>
-          ) : (
-            session.blocks.map((block) => {
-              const runs = spaceBlockRuns(block);
-              return (
-                <div key={block.id} className="whitespace-pre-wrap break-words">
-                  {runs ? (
-                    spacePlainText(runs)
-                  ) : isKnownSpaceBlock(block) && block.type === "code" ? (
-                    <pre>{block.content.text}</pre>
-                  ) : isKnownSpaceBlock(block) && block.type === "divider" ? (
-                    <hr />
-                  ) : (
-                    <span>{block.type} block · Preview unavailable</span>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+        <SpaceEditor
+          adapter={bridge.adapter}
+          bridge={bridge}
+          editable={
+            permission &&
+            !loading &&
+            !error &&
+            session.persistenceError === null &&
+            session.status !== "conflict" &&
+            session.status !== "uncertain"
+          }
+        />
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
