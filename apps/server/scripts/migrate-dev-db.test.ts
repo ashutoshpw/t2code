@@ -113,6 +113,151 @@ const layer = SpacesDatabaseTools.layer.pipe(Layer.provideMerge(NodeServices.lay
 
 it.layer(layer)("migrate-dev-db", (it) => {
   it.effect.each([
+    { name: "main and destination chat SHM", member: "", target: "statev2.sqlite-shm" },
+    { name: "main and destination Spaces main", member: "", target: "spaces.sqlite" },
+    { name: "WAL and destination chat SHM", member: "-wal", target: "statev2.sqlite-shm" },
+    {
+      name: "orphan WAL and destination chat SHM",
+      member: "-wal",
+      target: "statev2.sqlite-shm",
+      missingMain: true,
+    },
+    {
+      name: "resolved source sibling and destination chat SHM",
+      member: "",
+      target: "statev2.sqlite-shm",
+      sourceAlias: true,
+    },
+  ])("refuses source Spaces aliases: $name", ({ member, target, sourceAlias, missingMain }) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const sourceDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-source-spaces-" });
+      const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-source-spaces-dest-" });
+      const sourceChat = yield* createFixtureSource(sourceDir);
+      const chat = yield* createFixtureSource(destDir);
+      yield* withDatabase(
+        chat,
+        Effect.flatMap(SqlClient.SqlClient, (sql) => sql`PRAGMA journal_mode = WAL`),
+      );
+      const sourceState = path.dirname(sourceChat);
+      const sourceSpaces = path.join(sourceState, "spaces.sqlite");
+      yield* Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        yield* sql`UPDATE spaces SET title = 'PRIVATE SOURCE SPACES', revision = 7 WHERE is_default = 1`;
+      }).pipe(Effect.provide(SpacesSqlite.layerFromPath(sourceSpaces)));
+      if (member === "-wal") {
+        const writer = NodeChildProcess.spawnSync(
+          process.execPath,
+          [
+            "--input-type=module",
+            "-e",
+            `
+            import { DatabaseSync } from 'node:sqlite';
+            const db = new DatabaseSync(process.argv[1]);
+            db.exec("PRAGMA wal_autocheckpoint = 0; UPDATE spaces SET revision = 8 WHERE is_default = 1");
+            process.exit(0);
+          `,
+            sourceSpaces,
+          ],
+          { encoding: "utf8" },
+        );
+        assert.equal(writer.status, 0, writer.stderr);
+      }
+      if (missingMain) yield* fs.remove(sourceSpaces);
+      const destinationState = path.dirname(chat);
+      yield* fs.link(`${sourceSpaces}${member}`, path.join(destinationState, target));
+      let source = sourceChat;
+      let aliasDir: string | undefined;
+      if (sourceAlias) {
+        aliasDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-source-chat-alias-" });
+        source = path.join(aliasDir, "statev2.sqlite");
+        yield* fs.symlink(sourceChat, source);
+      }
+      const sourceFiles = (yield* fs.readDirectory(sourceState)).sort();
+      const destinationFiles = (yield* fs.readDirectory(destinationState)).sort();
+      const beforeSource = yield* Effect.forEach(sourceFiles, (name) =>
+        fs.readFile(path.join(sourceState, name)).pipe(Effect.map((bytes) => ({ name, bytes }))),
+      );
+      const beforeDestination = yield* Effect.forEach(destinationFiles, (name) =>
+        fs
+          .readFile(path.join(destinationState, name))
+          .pipe(Effect.map((bytes) => ({ name, bytes }))),
+      );
+
+      const result = yield* runMigrateDevDb(
+        { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
+        { sharedHome: sourceDir },
+      ).pipe(Effect.result);
+      for (const { name, bytes } of beforeSource) {
+        assert.equal(
+          Buffer.compare(yield* fs.readFile(path.join(sourceState, name)), bytes),
+          0,
+          `Source file changed: ${name}`,
+        );
+      }
+      assert.isTrue(Result.isFailure(result), "Migration accepted a source Spaces alias");
+      if (Result.isFailure(result))
+        assert.equal(result.failure._tag, "MigrateDevDbSourceIsDestinationError");
+      for (const { name, bytes } of beforeDestination) {
+        assert.equal(
+          Buffer.compare(yield* fs.readFile(path.join(destinationState, name)), bytes),
+          0,
+        );
+      }
+      assert.deepEqual((yield* fs.readDirectory(sourceState)).sort(), sourceFiles);
+      assert.deepEqual((yield* fs.readDirectory(destinationState)).sort(), destinationFiles);
+      if (aliasDir !== undefined) {
+        assert.deepEqual(yield* fs.readDirectory(aliasDir), ["statev2.sqlite"]);
+        assert.equal(yield* fs.readLink(source), sourceChat);
+      }
+      if (missingMain) {
+        assert.isFalse(yield* fs.exists(sourceSpaces));
+        return;
+      }
+      const verification = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-source-verify-" });
+      for (const name of sourceFiles.filter((name) => name.startsWith("spaces.sqlite"))) {
+        yield* fs.copyFile(path.join(sourceState, name), path.join(verification, name));
+      }
+      yield* Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        assert.deepEqual(yield* sql`SELECT title, revision FROM spaces WHERE is_default = 1`, [
+          { title: "PRIVATE SOURCE SPACES", revision: member === "-wal" ? 8 : 7 },
+        ]);
+      }).pipe(
+        Effect.provide(
+          NodeSqliteClient.layer({
+            filename: path.join(verification, "spaces.sqlite"),
+            readonly: true,
+          }),
+        ),
+      );
+    }),
+  );
+
+  it.effect("allows missing source Spaces without creating its database or sidecars", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const sourceDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-no-source-spaces-" });
+      const destDir = yield* fs.makeTempDirectoryScoped({
+        prefix: "migrate-no-source-spaces-dest-",
+      });
+      const source = yield* createFixtureSource(sourceDir);
+      const before = yield* fs.readFile(source);
+      const sourceFiles = (yield* fs.readDirectory(path.dirname(source))).sort();
+      assert.deepEqual(sourceFiles, ["statev2.sqlite"]);
+      yield* runMigrateDevDb(
+        { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
+        { sharedHome: sourceDir },
+      );
+      assert.equal(Buffer.compare(yield* fs.readFile(source), before), 0);
+      assert.deepEqual((yield* fs.readDirectory(path.dirname(source))).sort(), sourceFiles);
+      assert.isTrue(yield* fs.exists(path.join(destDir, "userdata", "spaces.sqlite")));
+    }),
+  );
+
+  it.effect.each([
     { name: "chat SHM and Spaces main", target: "statev2.sqlite-shm", owner: "spaces" },
     { name: "chat SHM and source main", target: "statev2.sqlite-shm", owner: "source" },
     {

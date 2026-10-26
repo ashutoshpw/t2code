@@ -545,7 +545,11 @@ const resolveDatabaseFamily = Effect.fn("migrateDevDb.resolveDatabaseFamily")(fu
   return { databasePath: canonicalPath, files: files.flat() };
 });
 
-type DatabaseFileRole = { readonly family: string; readonly member: string };
+type DatabaseFileRole = {
+  readonly family: string;
+  readonly member: string;
+  readonly access: "read-only" | "metadata-only" | "read-write";
+};
 
 export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   input: RunMigrateDevDbInput,
@@ -592,14 +596,36 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   if (canonicalStateDir === canonicalSharedStateDir) {
     return yield* new MigrateDevDbSharedHomeError();
   }
-  const [sourceFamily, chatFamily, snapshotFamily, spacesFamily] = yield* Effect.all([
-    resolveDatabaseFamily(sourcePath),
-    resolveDatabaseFamily(databasePath),
-    resolveDatabaseFamily(snapshotPath),
-    resolveDatabaseFamily(spacesDatabasePath),
+  const [canonicalSourcePath, canonicalSpacesDatabasePath] = yield* Effect.all([
+    resolveCanonicalPath(sourcePath),
+    resolveCanonicalPath(spacesDatabasePath),
   ]);
-  const destinations = [chatFamily, snapshotFamily, spacesFamily];
-  for (const family of destinations) {
+  const sourceSpacesPaths = [
+    ...new Set(
+      [sourcePath, canonicalSourcePath].map((source) =>
+        path.join(path.dirname(source), "spaces.sqlite"),
+      ),
+    ),
+  ];
+  const families = yield* Effect.forEach(
+    [
+      { name: "chat", access: "read-write", databasePath },
+      { name: "snapshot", access: "read-write", databasePath: snapshotPath },
+      { name: "spaces", access: "read-write", databasePath: spacesDatabasePath },
+      { name: "source-chat", access: "read-only", databasePath: sourcePath },
+      ...sourceSpacesPaths.map((databasePath) => ({
+        name: "source-spaces",
+        access: "metadata-only" as const,
+        databasePath,
+      })),
+    ] as const,
+    ({ name, access, databasePath }) =>
+      resolveDatabaseFamily(databasePath).pipe(
+        Effect.map((family) => ({ ...family, name, access })),
+      ),
+  );
+  for (const family of families) {
+    if (family.access !== "read-write") continue;
     for (const file of family.files) {
       const relative = path.relative(canonicalBaseDir, file.path);
       if (
@@ -616,12 +642,7 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   }
   const occupiedPaths = new Map<string, DatabaseFileRole>();
   const occupiedFiles = new Map<string, DatabaseFileRole>();
-  for (const [name, family] of [
-    ["source", sourceFamily],
-    ["chat", chatFamily],
-    ["snapshot", snapshotFamily],
-    ["spaces", spacesFamily],
-  ] as const) {
+  for (const family of families) {
     for (const file of family.files) {
       for (const { key, occupied } of [
         { key: file.path, occupied: occupiedPaths },
@@ -629,18 +650,16 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
       ]) {
         if (key === null) continue;
         const previous = occupied.get(key);
-        if (previous && (previous.family !== name || previous.member !== file.member)) {
-          if (previous.family !== name && (previous.family === "source" || name === "source")) {
+        if (previous && (previous.family !== family.name || previous.member !== file.member)) {
+          if ((previous.access === "read-write") !== (family.access === "read-write")) {
             return yield* new MigrateDevDbSourceIsDestinationError({ sourcePath });
           }
           return yield* new MigrateDevDbDatabaseOverlapError({ path: file.path });
         }
-        occupied.set(key, { family: name, member: file.member });
+        occupied.set(key, { family: family.name, member: file.member, access: family.access });
       }
     }
   }
-  const canonicalSpacesDatabasePath = spacesFamily.databasePath;
-
   const wrapPhase =
     (phase: MigrateDevDbPhaseError["phase"], phaseDatabasePath: string) =>
     <A, E, R>(effect: Effect.Effect<A, E, R>) =>
