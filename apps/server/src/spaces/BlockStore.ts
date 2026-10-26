@@ -1,0 +1,224 @@
+import * as C from "@t2code/contracts/spaces";
+import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
+
+import { byteLength, checkLimit, canonical, limits } from "./CorePolicy.ts";
+import * as SpacesSql from "./SpacesSql.ts";
+
+export interface BlockRow {
+  readonly block_id: string;
+  readonly page_id: string;
+  readonly parent_id: string | null;
+  readonly rank: string;
+  readonly payload: string;
+  readonly logical_bytes: number;
+  readonly deleted: number;
+  readonly merged_into: string | null;
+}
+
+const decodeBlock = Schema.decodeUnknownSync(C.SpaceBlock, { onExcessProperty: "error" });
+const knownBlock = Schema.is(C.SpaceKnownBlock);
+const decodeKnown = Schema.decodeUnknownSync(C.SpaceKnownBlock);
+const knownMark = Schema.is(C.SpaceKnownMark);
+const decodeKnownMark = Schema.decodeUnknownSync(C.SpaceKnownMark);
+const containers = new Set(["bulleted_item", "numbered_item", "todo_item"]);
+const unsupported = new Set(["image", "pdf", "video", "child_page"]);
+
+function editable(block: C.SpaceBlock) {
+  if (unsupported.has(block.type) || !knownBlock(block)) return false;
+  const content = block.content as Schema.Json;
+  if (
+    content !== null &&
+    typeof content === "object" &&
+    !Array.isArray(content) &&
+    "runs" in content &&
+    Array.isArray(content.runs)
+  ) {
+    for (const run of content.runs) {
+      if (
+        run === null ||
+        typeof run !== "object" ||
+        Array.isArray(run) ||
+        !Array.isArray(run.marks) ||
+        !run.marks.every(knownMark)
+      )
+        return false;
+    }
+  }
+  return true;
+}
+
+export const blockFromRow = (row: BlockRow) => decodeBlock(JSON.parse(row.payload));
+
+// All traversal and validation share the enclosing service span and its transaction.
+export const apply = Effect.fnUntraced(function* (
+  pageId: C.SpacePageId,
+  mutations: readonly C.SpaceBlockMutation[],
+  count: number,
+  bytes: number,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  const original = new Map<string, BlockRow | undefined>();
+  const final = new Map<string, C.SpaceBlock | null>();
+  const merges = new Map<string, string | null>();
+  const affected = new Set<string>();
+  const get = Effect.fnUntraced(function* (id: string) {
+    if (!original.has(id)) {
+      const [row] = yield* sql<BlockRow>`SELECT * FROM spaces_blocks WHERE block_id = ${id}`;
+      original.set(id, row);
+    }
+    const row = original.get(id);
+    return final.has(id)
+      ? final.get(id)!
+      : row && !row.deleted && row.page_id === pageId
+        ? blockFromRow(row)
+        : null;
+  });
+  const touch = (id: string) => {
+    affected.add(id);
+    checkLimit("maxMutationNodes", affected.size);
+  };
+  for (const mutation of mutations) {
+    const id = mutation.kind === "delete" ? mutation.blockId : mutation.block.id;
+    touch(id);
+    checkLimit("maxIdBytes", byteLength(id));
+    if (mutation.kind === "delete" && mutation.mergedInto !== undefined)
+      checkLimit("maxIdBytes", byteLength(mutation.mergedInto));
+    const previous = yield* get(id);
+    if (mutation.kind === "insert") {
+      const exists = yield* sql`SELECT 1 FROM spaces_ids WHERE id = ${id}`;
+      if (exists.length || final.has(id))
+        return yield* new C.SpaceValidationError({ reason: "duplicate_id" });
+    } else if (!previous) return yield* new C.SpaceNotFoundError({ entity: "block", id });
+    if (previous && !editable(previous))
+      return yield* new C.SpaceValidationError({ reason: "unsupported_block" });
+    if (mutation.kind === "delete") {
+      final.set(id, null);
+      merges.set(id, mutation.mergedInto ?? null);
+    } else {
+      const block = mutation.block;
+      if (!editable(block))
+        return yield* new C.SpaceValidationError({ reason: "unsupported_block" });
+      checkLimit("maxIdBytes", byteLength(block.id));
+      if (block.parentId !== null) checkLimit("maxIdBytes", byteLength(block.parentId));
+      checkLimit("maxOrderBytes", byteLength(block.order));
+      if (!/^[0-9a-f]{32}$/.test(block.order))
+        return yield* new C.SpaceValidationError({ reason: "invalid_order" });
+      checkLimit("maxBlockBytes", byteLength(block));
+      // Unknown envelope/content fields must survive replacement, including on known block types.
+      if (previous) {
+        const decoded = decodeKnown(previous);
+        const projected = { ...decoded, content: { ...decoded.content } };
+        if ("runs" in decoded.content) {
+          Object.assign(projected.content, {
+            runs: decoded.content.runs.map((run) => ({
+              text: run.text,
+              marks: run.marks.map((mark) => {
+                const keys =
+                  mark.type === "link"
+                    ? ["type", "version", "href"]
+                    : mark.type === "page_mention" || mark.type === "block_mention"
+                      ? ["type", "version", "target"]
+                      : ["type", "version"];
+                const decodedMark = decodeKnownMark(mark);
+                return Object.fromEntries(keys.map((key) => [key, Reflect.get(decodedMark, key)]));
+              }),
+            })),
+          });
+        }
+        const preserve = (old: unknown, known: unknown, next: unknown): boolean => {
+          if (Array.isArray(old))
+            return old.every((v, i) =>
+              preserve(
+                v,
+                Array.isArray(known) ? known[i] : undefined,
+                Array.isArray(next) ? next[i] : undefined,
+              ),
+            );
+          if (old !== null && typeof old === "object") {
+            return Object.keys(old).every((key) => {
+              const v = Reflect.get(old, key);
+              const k =
+                known !== null && typeof known === "object" ? Reflect.get(known, key) : undefined;
+              const n =
+                next !== null && typeof next === "object" ? Reflect.get(next, key) : undefined;
+              return k === undefined
+                ? n !== undefined && canonical(v) === canonical(n)
+                : preserve(v, k, n);
+            });
+          }
+          return true;
+        };
+        if (!preserve(previous, projected, block))
+          return yield* new C.SpaceValidationError({ reason: "unsupported_block" });
+      }
+      final.set(id, block);
+    }
+  }
+  // Include original descendants: reparenting/deleting a container cannot hide unloaded children.
+  const queue = [...affected];
+  for (let i = 0; i < queue.length; i++) {
+    const children = yield* sql<BlockRow>`SELECT * FROM spaces_blocks
+      WHERE page_id = ${pageId} AND deleted = 0 AND parent_id = ${queue[i]!}
+      ORDER BY rank, block_id LIMIT ${limits.maxMutationNodes + 1}`;
+    for (const child of children) {
+      original.set(child.block_id, child);
+      if (!affected.has(child.block_id)) {
+        touch(child.block_id);
+        queue.push(child.block_id);
+      }
+    }
+  }
+  for (const id of affected) {
+    const block = yield* get(id);
+    if (!block) continue;
+    const chain = new Set([id]);
+    let node = block;
+    let depth = 1;
+    while (node.parentId !== null) {
+      if (chain.has(node.parentId)) return yield* new C.SpaceValidationError({ reason: "cycle" });
+      chain.add(node.parentId);
+      touch(node.parentId);
+      const parent = yield* get(node.parentId);
+      if (!parent || !containers.has(parent.type) || parent.version !== 1)
+        return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
+      node = parent;
+      checkLimit("maxDepth", ++depth);
+    }
+  }
+  for (const [id, target] of merges) {
+    if (target === null) continue;
+    touch(target);
+    const survivor = yield* get(target);
+    if (target === id || !survivor || !editable(survivor))
+      return yield* new C.SpaceValidationError({ reason: "invalid_merge" });
+  }
+  const changes: Array<{
+    id: string;
+    block: C.SpaceBlock | null;
+    old: BlockRow | undefined;
+    payload: string;
+    size: number;
+  }> = [];
+  for (const [id, block] of final) {
+    const old = original.get(id);
+    const payload = block
+      ? canonical(block)
+      : canonical({ id, pageId, mergedInto: merges.get(id) ?? null });
+    if (old?.payload === payload) continue;
+    const size = Buffer.byteLength(payload, "utf8");
+    count += old ? 0 : 1;
+    bytes += size - (old?.logical_bytes ?? 0);
+    changes.push({ id, block, old, payload, size });
+  }
+  checkLimit("maxPageBlocks", count);
+  checkLimit("maxPageBytes", bytes);
+  for (const { id, block, old, payload, size } of changes) {
+    if (!old) yield* sql`INSERT INTO spaces_ids (id, kind) VALUES (${id}, 'block')`;
+    yield* sql`INSERT INTO spaces_blocks (block_id, page_id, parent_id, rank, payload, logical_bytes, deleted, merged_into)
+      VALUES (${id}, ${pageId}, ${block?.parentId ?? null}, ${block?.order ?? old?.rank ?? ""}, ${payload}, ${size}, ${block ? 0 : 1}, ${merges.get(id) ?? null})
+      ON CONFLICT (block_id) DO UPDATE SET parent_id = excluded.parent_id, rank = excluded.rank,
+      payload = excluded.payload, logical_bytes = excluded.logical_bytes, deleted = excluded.deleted, merged_into = excluded.merged_into`;
+  }
+  return { changed: changes.length > 0, count, bytes };
+});
