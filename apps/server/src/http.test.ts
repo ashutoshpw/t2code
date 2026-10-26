@@ -561,7 +561,7 @@ describe("immutable asset byte ranges", () => {
       expect((yield* Effect.promise(() => control.arrayBuffer())).byteLength).toBeLessThan(
         body.length,
       );
-      for (const [name, mimeType, immutable] of fixtures) {
+      for (const [name, , immutable] of fixtures) {
         if (name === "text") continue;
         for (const method of ["GET", "HEAD"] as const) {
           const full = yield* request(name, undefined, method);
@@ -574,25 +574,19 @@ describe("immutable asset byte ranges", () => {
           expect(yield* Effect.promise(() => full.text())).toBe(method === "HEAD" ? "" : body);
         }
         const partial = yield* request(name, { range: "bytes=0-2047" });
-        const supportsRanges =
-          /^(?:audio|video)\//.test(mimeType) || (immutable && mimeType === "application/pdf");
-        expect(partial.status).toBe(supportsRanges ? 206 : 200);
+        expect(partial.status).toBe(206);
         expect(partial.headers.get("content-encoding")).toBeNull();
-        expect(partial.headers.get("content-range")).toBe(
-          supportsRanges ? "bytes 0-2047/4096" : null,
-        );
-        expect(partial.headers.get("content-length")).toBe(supportsRanges ? "2048" : "4096");
-        expect(yield* Effect.promise(() => partial.text())).toBe(
-          supportsRanges ? body.slice(0, 2048) : body,
-        );
+        expect(partial.headers.get("content-range")).toBe("bytes 0-2047/4096");
+        expect(partial.headers.get("content-length")).toBe("2048");
+        expect(yield* Effect.promise(() => partial.text())).toBe(body.slice(0, 2048));
         const conditional = yield* request(name, {
           range: "bytes=0-2047",
           "if-range": partial.headers.get("etag")!,
         });
-        expect(conditional.status).toBe(immutable && supportsRanges ? 206 : 200);
+        expect(conditional.status).toBe(immutable ? 206 : 200);
         expect(conditional.headers.get("content-encoding")).toBeNull();
         expect(yield* Effect.promise(() => conditional.text())).toBe(
-          immutable && supportsRanges ? body.slice(0, 2048) : body,
+          immutable ? body.slice(0, 2048) : body,
         );
       }
     }).pipe(Effect.provide(layerFileResponse)),

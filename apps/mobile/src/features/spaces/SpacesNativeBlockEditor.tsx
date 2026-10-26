@@ -55,6 +55,7 @@ export function SpacesNativeBlockEditor({
   const [error, setError] = useState<string | null>(null);
   const [publicationError, setPublicationError] = useState<string | null>(null);
 
+  // oxlint-disable-next-line t2code/react-effect-budget -- Focus the native view after its ref attaches on mount.
   useEffect(() => {
     void editor.current?.focus().catch(() => setError("Could not focus the native editor"));
   }, []);
@@ -68,11 +69,13 @@ export function SpacesNativeBlockEditor({
       onCompositionChange(observed.composing);
       const next = receiveSpacesNativeSnapshot(latest.current, observed);
       if (next === latest.current) return;
-      if (change && !next.composing) {
-        onChange(applySpacesNativeSnapshot(baseBlock, next));
-        onPublicationBlockedChange(false);
-        setPublicationError(null);
-        if (next.revision > latest.current.revision) setError(null);
+      if (change) {
+        if (!next.composing) {
+          onChange(applySpacesNativeSnapshot(baseBlock, next));
+          onPublicationBlockedChange(false);
+          setPublicationError(null);
+          if (next.revision > latest.current.revision) setError(null);
+        }
       }
       latest.current = next;
       setSnapshot(next);
