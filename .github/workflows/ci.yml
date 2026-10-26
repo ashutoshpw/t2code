@@ -239,8 +239,9 @@ jobs:
     name: Test
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.test != 'false' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    # Cold runs without the shared task cache need ~12 minutes; main's warm runs finish in six.
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
