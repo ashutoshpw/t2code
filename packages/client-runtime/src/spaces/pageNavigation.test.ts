@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vite-plus/test";
-import { EnvironmentId } from "@t2code/contracts";
+import { describe, expect, it } from "@effect/vitest";
+import { WS_METHODS, EnvironmentId } from "@t2code/contracts";
 import {
   SpaceReceiptEpoch,
   SpaceBlockId,
@@ -12,6 +12,25 @@ import {
   type SpacePageSummary,
 } from "@t2code/contracts/spaces";
 import * as Cause from "effect/Cause";
+import * as Deferred from "effect/Deferred";
+import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
+import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
+import * as Queue from "effect/Queue";
+import * as Stream from "effect/Stream";
+import * as SubscriptionRef from "effect/SubscriptionRef";
+import {
+  AVAILABLE_CONNECTION_STATE,
+  PrimaryConnectionTarget,
+  type PreparedConnection,
+  type SupervisorConnectionState,
+} from "../connection/model.ts";
+import { EnvironmentRegistry } from "../connection/registry.ts";
+import { EnvironmentSupervisor } from "../connection/supervisor.ts";
+import type { WsRpcProtocolClient } from "../rpc/protocol.ts";
+import type { RpcSession } from "../rpc/session.ts";
+import { createSpacesEnvironmentAtoms } from "../state/spaces.ts";
 import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
 import { createSpacePageNavigationFactory } from "./pageNavigation.ts";
 
@@ -98,6 +117,80 @@ function setup(version: 1 | 2 = 2) {
     registry.getNodes().get(atom)?.listeners.size ?? 0;
   return { registry, navigation, factory, target, source, respond, listeners, requests };
 }
+
+const setupRuntime = Effect.fn("SpacePageNavigationTest.setupRuntime")(function* () {
+  const requests = yield* Queue.unbounded<{
+    input: SpacePageListInput;
+    reply: Deferred.Deferred<SpacePageListResult>;
+    canceled: Deferred.Deferred<void>;
+  }>();
+  let executions = 0;
+  const client = {
+    [WS_METHODS.spacesPagesList]: (input: SpacePageListInput) =>
+      Effect.gen(function* () {
+        executions++;
+        const reply = yield* Deferred.make<SpacePageListResult>();
+        const canceled = yield* Deferred.make<void>();
+        yield* Queue.offer(requests, { input, reply, canceled });
+        return yield* Deferred.await(reply).pipe(
+          Effect.onInterrupt(() => Deferred.succeed(canceled, undefined)),
+        );
+      }),
+  } as unknown as WsRpcProtocolClient;
+  const makeSession = (): RpcSession => ({
+    client,
+    initialConfig: Effect.never,
+    subscribeServerConfig: () => Stream.never,
+    ready: Effect.void,
+    probe: Effect.void,
+    closed: Effect.never,
+  });
+  const sessions = yield* SubscriptionRef.make(Option.some(makeSession()));
+  const state = yield* SubscriptionRef.make<SupervisorConnectionState>({
+    ...AVAILABLE_CONNECTION_STATE,
+    phase: "connected",
+  });
+  const supervisor = EnvironmentSupervisor.of({
+    target: new PrimaryConnectionTarget({
+      environmentId,
+      label: "Destination",
+      httpBaseUrl: "https://destination.example.test",
+      wsBaseUrl: "wss://destination.example.test",
+    }),
+    state,
+    session: sessions,
+    prepared: yield* SubscriptionRef.make(Option.none<PreparedConnection>()),
+    connect: Effect.void,
+    disconnect: Effect.void,
+    retryNow: Effect.void,
+  });
+  const run: EnvironmentRegistry["Service"]["run"] = (_id, effect) =>
+    Effect.provideService(effect, EnvironmentSupervisor, supervisor);
+  const followStream: EnvironmentRegistry["Service"]["followStream"] = (_id, stream) =>
+    Stream.provideService(stream, EnvironmentSupervisor, supervisor);
+  const environment = EnvironmentRegistry.of({
+    run,
+    followStream,
+    stateChanges: () => SubscriptionRef.changes(state),
+  } as unknown as EnvironmentRegistry["Service"]);
+  const registry = AtomRegistry.make();
+  yield* Effect.addFinalizer(() => Effect.sync(() => registry.dispose()));
+  const queries = createSpacesEnvironmentAtoms(
+    Atom.runtime(Layer.succeed(EnvironmentRegistry, environment)),
+  );
+  const root = queries.pages({ environmentId, input: { environmentId, spaceId, limit: 20 } });
+  const factory = createSpacePageNavigationFactory({ registry, pages: queries.pages });
+  return {
+    registry,
+    root,
+    requests,
+    sessions,
+    makeSession,
+    executions: () => executions,
+    navigation: (version: 1 | 2) => factory({ environmentId, spaceId, version, maxRows: 20 }),
+    listeners: () => registry.getNodes().get(root)?.listeners.size ?? 0,
+  };
+});
 
 describe("SpacePageNavigation", () => {
   it("shares view leases, loads direct children only on expansion, and releases replaced/collapsed windows", () => {
@@ -221,27 +314,104 @@ describe("SpacePageNavigation", () => {
     }
   });
 
-  it("waits for fresh v2 data when the query cache still contains v1 summaries", () => {
-    const h = setup(1);
-    const stopLegacy = h.navigation.subscribe(() => {});
-    let stopCurrent = () => {};
-    try {
-      const { location: _location, ...legacy } = page("legacy");
-      const oldWindow = window([legacy]);
-      h.respond(null, oldWindow);
-      h.registry.set(h.source(), AsyncResult.success(oldWindow, { waiting: true }));
-      const current = h.factory({ ...h.target, version: 2 });
-      stopCurrent = current.subscribe(() => {});
-      expect(current.getSnapshot().windows[0]?.error).toBeNull();
-      expect(current.getSnapshot().windows[0]?.pending).toBe(true);
-      h.respond(null, window([page("legacy")], 2));
-      expect(current.getSnapshot().windows[0]?.data?.items[0]?.location?.kind).toBe("root");
-    } finally {
-      stopLegacy();
-      stopCurrent();
-      h.registry.dispose();
-    }
-  });
+  it.effect(
+    "revalidates settled legacy cache before v2 admission and cancels an unmounted reconnect",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const h = yield* setupRuntime();
+          const v1 = h.navigation(1);
+          const v2 = h.navigation(2);
+          const legacyReady = yield* Deferred.make<void>();
+          const currentReady = yield* Deferred.make<void>();
+          const stopLegacy = v1.subscribe(() => {
+            if (v1.getSnapshot().windows[0]?.data && !v1.getSnapshot().windows[0]?.pending)
+              Deferred.doneUnsafe(legacyReady, Exit.void);
+          });
+          let stopCurrent = () => {};
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              stopLegacy();
+              stopCurrent();
+            }),
+          );
+          const first = yield* Queue.take(h.requests);
+          const { location: _location, ...legacy } = page("legacy");
+          yield* Deferred.succeed(first.reply, window([legacy]));
+          yield* Deferred.await(legacyReady);
+          yield* Effect.sync(() => {
+            stopLegacy();
+            stopCurrent = v2.subscribe(() => {
+              if (v2.getSnapshot().windows[0]?.data && !v2.getSnapshot().windows[0]?.pending)
+                Deferred.doneUnsafe(currentReady, Exit.void);
+            });
+          });
+          expect(v2.getSnapshot().windows[0]?.error).toBeNull();
+          const fresh = yield* Queue.take(h.requests);
+          expect(h.executions()).toBe(2);
+          expect(v2.getSnapshot().windows[0]?.pending).toBe(true);
+          yield* Deferred.succeed(fresh.reply, window([page("current")], 2));
+          yield* Deferred.await(currentReady);
+          expect(v2.getSnapshot().windows[0]?.data?.items[0]).toMatchObject({
+            id: "current",
+            location: { kind: "root" },
+          });
+          yield* SubscriptionRef.set(h.sessions, Option.some(h.makeSession()));
+          const reconnect = yield* Queue.take(h.requests);
+          expect(h.executions()).toBe(3);
+          stopCurrent();
+          yield* Deferred.await(reconnect.canceled);
+          expect(h.listeners()).toBe(0);
+          expect(v2.getSnapshot().windows).toEqual([]);
+          yield* Deferred.succeed(reconnect.reply, window([page("late")], 3));
+          expect(v2.getSnapshot().windows).toEqual([]);
+        }),
+      ),
+  );
+
+  it.effect(
+    "reports missing location from the fresh v2 response without forcing another refresh",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const h = yield* setupRuntime();
+          const v1 = h.navigation(1);
+          const v2 = h.navigation(2);
+          const legacyReady = yield* Deferred.make<void>();
+          const rejected = yield* Deferred.make<void>();
+          const stopLegacy = v1.subscribe(() => {
+            if (v1.getSnapshot().windows[0]?.data && !v1.getSnapshot().windows[0]?.pending)
+              Deferred.doneUnsafe(legacyReady, Exit.void);
+          });
+          let stopCurrent = () => {};
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              stopLegacy();
+              stopCurrent();
+            }),
+          );
+          const first = yield* Queue.take(h.requests);
+          const { location: _location, ...legacy } = page("legacy");
+          yield* Deferred.succeed(first.reply, window([legacy]));
+          yield* Deferred.await(legacyReady);
+          yield* Effect.sync(() => {
+            stopLegacy();
+            stopCurrent = v2.subscribe(() => {
+              if (v2.getSnapshot().windows[0]?.error) Deferred.doneUnsafe(rejected, Exit.void);
+            });
+          });
+          expect(v2.getSnapshot().windows[0]?.error).toBeNull();
+          const fresh = yield* Queue.take(h.requests);
+          yield* Deferred.succeed(fresh.reply, window([legacy], 2));
+          yield* Deferred.await(rejected);
+          expect(v2.getSnapshot().windows[0]?.error).toContain("Page locations changed");
+          expect(v2.getSnapshot().windows[0]?.pending).toBe(false);
+          expect(v2.getSnapshot().windows[0]?.data).toBeNull();
+          expect(h.listeners()).toBe(0);
+          expect(h.executions()).toBe(2);
+        }),
+      ),
+  );
 
   it("keeps v1 flat and does not request child selectors", () => {
     const h = setup(1);

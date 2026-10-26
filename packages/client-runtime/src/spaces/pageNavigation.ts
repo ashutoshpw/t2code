@@ -65,7 +65,8 @@ export class SpacePageNavigation {
   getSnapshot = () => this.#snapshot;
   subscribe = (listener: () => void) => {
     this.#listeners.add(listener);
-    if (this.#listeners.size === 1) this.#load(null, [], undefined);
+    // SWR can return settled cached data before its deferred mount refresh runs.
+    if (this.#listeners.size === 1) this.#load(null, [], undefined, true);
     return () => {
       this.#listeners.delete(listener);
       if (this.#listeners.size === 0) {
