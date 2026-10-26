@@ -1,3 +1,6 @@
+// @effect-diagnostics nodeBuiltinImport:off -- subprocess fixture leaves committed WAL uncheckpointed.
+import * as NodeChildProcess from "node:child_process";
+
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
@@ -89,56 +92,62 @@ it.effect("rolls back a failed schema migration together with its ledger entry",
 );
 
 it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
-  it.effect("preserves spaces and the renamed default across a full close and reopen", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "spaces-restart-" });
-      const dbPath = path.join(directory, "nested", "spaces.sqlite");
-      const persistence = Sqlite.layerFromPath(dbPath);
-      const originalId = yield* Effect.gen(function* () {
-        const sql = yield* SpacesSql.SpacesSql;
-        const [space] = yield* sql<{ readonly space_id: string }>`
+  it.effect.each(["missing", "empty"] as const)(
+    "preserves spaces and the renamed default across a full close and reopen from a %s file",
+    (initial) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "spaces-restart-" });
+        const dbPath = path.join(directory, "nested", "spaces.sqlite");
+        if (initial === "empty") {
+          yield* fs.makeDirectory(path.dirname(dbPath));
+          yield* fs.writeFileString(dbPath, "");
+        }
+        const persistence = Sqlite.layerFromPath(dbPath);
+        const originalId = yield* Effect.gen(function* () {
+          const sql = yield* SpacesSql.SpacesSql;
+          const [space] = yield* sql<{ readonly space_id: string }>`
           SELECT space_id FROM spaces WHERE is_default = 1
         `;
-        assert.isDefined(space);
-        yield* sql`UPDATE spaces SET title = 'Renamed', revision = 1 WHERE is_default = 1`;
-        yield* sql`
+          assert.isDefined(space);
+          yield* sql`UPDATE spaces SET title = 'Renamed', revision = 1 WHERE is_default = 1`;
+          yield* sql`
           INSERT INTO spaces (space_id, title, is_default, created_at, updated_at)
           VALUES ('second', 'Second', 0, '2026-10-26T00:00:00.000Z', '2026-10-26T00:00:00.000Z')
         `;
-        assert.equal((yield* sql`PRAGMA journal_mode`)[0]?.journal_mode, "wal");
-        assert.equal((yield* sql`PRAGMA auto_vacuum`)[0]?.auto_vacuum, 2);
-        assert.equal((yield* sql`PRAGMA foreign_keys`)[0]?.foreign_keys, 1);
-        return space?.space_id;
-      }).pipe(Effect.provide(persistence));
+          assert.equal((yield* sql`PRAGMA journal_mode`)[0]?.journal_mode, "wal");
+          assert.equal((yield* sql`PRAGMA auto_vacuum`)[0]?.auto_vacuum, 2);
+          assert.equal((yield* sql`PRAGMA foreign_keys`)[0]?.foreign_keys, 1);
+          return space?.space_id;
+        }).pipe(Effect.provide(persistence));
 
-      yield* Effect.gen(function* () {
-        const sql = yield* SpacesSql.SpacesSql;
-        assert.deepEqual(
-          yield* sql`SELECT space_id, title, revision FROM spaces WHERE is_default = 1`,
-          [{ space_id: originalId, title: "Renamed", revision: 1 }],
-        );
-        assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
-        assert.equal(
-          (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-          1,
-        );
-        assert.equal(
-          (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
-          "SqlError",
-        );
-        assert.equal(
-          (yield* Effect.flip(sql`UPDATE spaces SET is_default = 1 WHERE space_id = 'second'`))
-            ._tag,
-          "SqlError",
-        );
-        assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
-      }).pipe(Effect.provide(persistence));
-    }),
+        yield* Effect.gen(function* () {
+          const sql = yield* SpacesSql.SpacesSql;
+          assert.deepEqual(
+            yield* sql`SELECT space_id, title, revision FROM spaces WHERE is_default = 1`,
+            [{ space_id: originalId, title: "Renamed", revision: 1 }],
+          );
+          assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
+          assert.equal(
+            (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
+            1,
+          );
+          assert.equal(
+            (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
+            "SqlError",
+          );
+          assert.equal(
+            (yield* Effect.flip(sql`UPDATE spaces SET is_default = 1 WHERE space_id = 'second'`))
+              ._tag,
+            "SqlError",
+          );
+          assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
+        }).pipe(Effect.provide(persistence));
+      }),
   );
 
-  it.effect("refuses a chat database without changing its bytes or ledger", () =>
+  it.effect("refuses a chat database with outstanding WAL without checkpointing it", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -149,16 +158,51 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
         yield* sql`CREATE TABLE keep_chat (value TEXT)`;
         yield* sql`INSERT INTO keep_chat VALUES ('retained')`;
       }).pipe(Effect.provide(ChatSqlite.layerFromPath(dbPath)));
+      const writer = NodeChildProcess.spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          `
+            import { DatabaseSync } from 'node:sqlite';
+            const db = new DatabaseSync(process.argv[1]);
+            db.exec("PRAGMA wal_autocheckpoint = 0; INSERT INTO keep_chat VALUES ('outstanding WAL')");
+            process.exit(0);
+          `,
+          dbPath,
+        ],
+        { encoding: "utf8" },
+      );
+      assert.equal(writer.status, 0, writer.stderr);
       const before = yield* fs.readFile(dbPath);
+      const walPath = `${dbPath}-wal`;
+      const shmPath = `${dbPath}-shm`;
+      const beforeWal = yield* fs.readFile(walPath);
+      assert.isAbove(beforeWal.length, 32);
+      assert.isTrue(yield* fs.exists(shmPath));
       const failure = yield* SpacesSql.SpacesSql.pipe(
         Effect.provide(Sqlite.layerFromPath(dbPath)),
         Effect.flip,
       );
       assert.equal(failure._tag, "SpacesDatabaseMismatchError");
-      assert.deepEqual(yield* fs.readFile(dbPath), before);
+      assert.equal(
+        Buffer.compare(yield* fs.readFile(dbPath), before),
+        0,
+        "Foreign main DB changed",
+      );
+      assert.isTrue(yield* fs.exists(walPath), "Foreign WAL was removed");
+      assert.equal(
+        Buffer.compare(yield* fs.readFile(walPath), beforeWal),
+        0,
+        "Foreign WAL changed",
+      );
+      assert.isTrue(yield* fs.exists(shmPath), "Foreign shared memory was removed");
       yield* Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient;
-        assert.deepEqual(yield* sql`SELECT value FROM keep_chat`, [{ value: "retained" }]);
+        assert.deepEqual(yield* sql`SELECT value FROM keep_chat ORDER BY rowid`, [
+          { value: "retained" },
+          { value: "outstanding WAL" },
+        ]);
         assert.equal(
           (yield* sql`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
           "OrchestrationEvents",

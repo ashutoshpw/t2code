@@ -37,6 +37,17 @@ export const layerFromPath = Effect.fn("SpacesSqlite.layerFromPath")(function* (
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   yield* fs.makeDirectory(path.dirname(dbPath), { recursive: true });
+  yield* fs.writeFile(dbPath, new Uint8Array(), { flag: "wx" }).pipe(
+    Effect.catchIf(
+      (error) => error.reason._tag === "AlreadyExists",
+      () => Effect.void,
+    ),
+  );
+  // Closing even an unused writer can checkpoint foreign WAL; validate without a writer first.
+  yield* Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* assertSpacesDatabase().pipe(Effect.provideService(SpacesSql.SpacesSql, sql));
+  }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
   return layerSetup.pipe(
     Layer.provide(
       NodeSqliteClient.layer({
