@@ -1,65 +1,78 @@
-# Spaces architecture proposal
+# Spaces architecture
 
-This is a source-grounded proposal. Choices in [decisions.md](decisions.md) remain conditional until resolved before implementation freezes the affected contract.
+Source links are pinned to [`33e8a315`](https://github.com/ashutoshpw/t2code/tree/33e8a31575256563da79cdac9a2f41b9a913dac0).
 
-## Environment and canonical content
+## Storage
 
-- Each server environment owns one default space and may own additional spaces. The Spaces root resolves to its default space.
-- Store `spaces.sqlite` in the configured userdata directory beside `statev2.sqlite`, with its own migration ledger and lifecycle. Store canonical rich block content and metadata in this database; asset bytes live at `<configured userdata>/spaces/assets/<opaque-key>`.
-- Keep chat and thread data in their current database. Do not assume transactions or foreign keys span the chat and Spaces databases.
-- Page and block IDs are stable within an environment. Markdown import/export is optional and lossy; it is not canonical storage.
+- Each environment owns one undeletable default space and any number of additional spaces. The Spaces root resolves to the default space.
+- `spaces.sqlite` sits beside `statev2.sqlite`. Derive its path, plus `spaces/assets` and `spaces/staging`, in `deriveServerPaths` and `ensureServerDirectories` ([`apps/server/src/config.ts`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/server/src/config.ts)).
+- The current migrator is hard-wired to the chat manifest and its V2 guards ([`apps/server/src/persistence/Migrations.ts`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/server/src/persistence/Migrations.ts)). Generalize it to accept a manifest, or add a Spaces copy, keeping its own `effect_sql_migrations` ledger in `spaces.sqlite`.
+- `SqlClient` is a single context tag. Give Spaces its own tag (e.g. `SpacesSql`) so Spaces code can never use the chat connection by accident. Reuse the WAL, busy-timeout, and vacuum settings from [`apps/server/src/persistence/Sqlite.ts`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/server/src/persistence/Sqlite.ts).
+- No transaction or foreign key spans the chat DB and the Spaces DB. A chat reference to a deleted page resolves to an explicit "unavailable" outcome.
+- Update the dev and maintenance tooling for the second DB:
+  - `migrate-dev-db` and dev seeding ([`apps/server/scripts/migrate-dev-db.ts`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/server/scripts/migrate-dev-db.ts)) create `spaces.sqlite` empty, or copy it in read-only.
+  - `doctor`, `DatabaseStorage`, and storage reporting include `spaces.sqlite`.
+  - Update the `test-t2-app` SQLite fixture notes.
 
-## Proposed ownership and revision model
+## Ownership and revisions
 
-The relational baseline is conditional on the collaboration decision. It may use environment-scoped records equivalent to spaces, pages, blocks, revisions, and asset metadata; block content and inline properties use a versioned schema.
+The tables are spaces, pages, blocks, page revisions, assets, asset references, and idempotency records.
 
-- Each page belongs to one space. Top-level pages have explicit space-root ordering. A nested page is owned by exactly one authoritative `child_page` block; do not add a competing page-parent tree or duplicate ownership in inline JSON.
-- Each ordinary block belongs to one page and has either explicit page-root order or a parent block. Only schema-declared containers may own child blocks; candidate containers are list items, to-do items, quotes, and callouts. Treat other core types as leaves unless the approved type map says otherwise. A `child_page` block owns a page, not ordinary block children. Keep root order and each container's child order authoritative and separately addressable.
-- Block ordering uses stable ranks with bounded rebalancing. Page and block nesting is acyclic and subject to a defined depth limit.
-- A mutation checks every affected page revision and each affected space/root-order revision in one Spaces transaction. Validate cycles and destination authorization in that same transaction. Reject an over-limit subtree move wholly and leave it unchanged; do not split it into silent partial batches.
-- Keep reads paginated and revision-consistent. Index only changed blocks; do not send full pages for navigation or search.
-- Keep one default space present. A deletion/replacement flow must not leave the environment without it; decide the exact user flow before implementation.
-- Page trash is reversible and applies to the nested subtree. Restore creates a new revision and follows the checked-ownership rules in [identity-recovery.md](identity-recovery.md).
+- A page belongs to one space. Top-level pages have an explicit space-root order. A nested page is owned by exactly one `child_page` block. There is no second parent pointer and no ownership stored in JSON.
+- A block belongs to one page and has either a page-root rank or a list-item parent ([blocks-editing.md](blocks-editing.md)). Ranks are stable, with bounded rebalancing. Nesting is acyclic and depth-limited.
+- A mutation batch checks the expected revision of every affected page and space-root order, and checks for cycles and authorization, all in one Spaces transaction. A batch over the limit is rejected whole.
+- Reads are paginated and consistent per revision. The search index is updated only for changed blocks. Navigation never needs full page bodies.
 
-## Service and capability boundary
+## Service, RPC, and scopes
 
-Implement one server-side `SpacesService`. Typed RPC, HTTP asset, and MCP adapters validate and map requests but share service authorization, revision, and feature-disabled behavior. Put cross-wire schemas in `packages/contracts`; use the existing guarded-command path for client mutations.
+- `SpacesService` is an Effect service and is not event-sourced; it does not touch `EventSink`. Typed RPC handlers in `ws.ts`, the asset resolver, and MCP handlers each decode the request, call one service method, and map errors.
+- Operations:
+  - spaces: list, create, rename, set default;
+  - pages: create, read, move, trash, restore;
+  - blocks: paginated reads and revision-checked batches;
+  - search;
+  - assets: mint upload, finalize, metadata, mint read URL.
+- Wiring a new method involves:
+  - `WS_METHODS` and `Rpc.make` in `packages/contracts/src/rpc.ts`;
+  - every method, reads included, in `RPC_REQUIRED_SCOPES` ([`apps/server/src/auth/RpcAuthorization.ts`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/server/src/auth/RpcAuthorization.ts));
+  - write methods in `CLIENT_GUARDED_RPC_SCOPES`, used through `createEnvironmentRpcCommand` and its `permissionAtom`;
+  - an extension to the permission behavior tests.
+- Scopes: v1 reuses `orchestration:read` and `orchestration:operate` (decision 2 in [decisions.md](decisions.md)).
+- Idempotency: the orchestration command receipts are tied to the chat event-sink transaction and keyed by thread or project, so they cannot be reused. Spaces keeps its own `idempotency` table in `spaces.sqlite`, written in the mutation's transaction; see [identity-recovery.md](identity-recovery.md).
 
-Expose only the needed service operations: list/create/default selection for spaces; page create/read/move/trash/restore; paginated block reads and revision-checked batches; search; asset metadata/upload/finalize/read; and capability/settings. Keep bodies and result counts bounded.
+## Setting and capability
 
-Check authorization on every request against the current destination environment and space. A signed asset URL is not a substitute for current authorization on each new HTTP request.
+- Server setting `spacesEnabled`: `Boolean` with a decoding default of `false`, following `guestSharingEnabled` ([`packages/contracts/src/settings.ts`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/packages/contracts/src/settings.ts)). It is patched under `settings:write` and shown as a server-scoped row in Settings. Every Spaces RPC, asset resolve, and MCP tool checks it.
+- Capability: add `spaces: optionalKey({ version, limits })` to `ExecutionEnvironmentCapabilities` ([`packages/contracts/src/environment.ts`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/packages/contracts/src/environment.ts)). Older servers omit it, and the feature stays hidden in clients. The key is present only while the feature is enabled, so clients need to read just one thing.
 
-The first storage layer adds an authoritative, disabled-by-default server setting and a versioned capability response before any asset or MCP endpoint exists. Later settings UI controls the server setting. Disabling access retains pages, revisions, assets, and historical reference metadata; it does not authorize deletion or unsupported writes by older clients.
+## Routes and shell (web/desktop)
 
-## Routes, shell, and feature wiring
+- Routes:
+  - `/spaces` redirects to the default space of the selected environment.
+  - `/spaces/$environmentId/$spaceId` is a space's page list.
+  - `/spaces/$environmentId/$spaceId/$pageId?block=<blockId>` is a page.
+- The block target goes in a search param, not the URL hash. Electron uses hash history ([`apps/web/src/main.tsx`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/src/main.tsx)), and Settings already uses router hashes.
+- Deep links use IDs, so they survive renames and moves. Authorize and resolve the current location before rendering.
+- AppRail has no registry, and adding a module touches these places: the `AppRail.tsx` array, the `appRail.logic.ts` union and active-item logic, `isSidebarUtilityPage` in `mainAppLocation.ts`, the sidebar branch in `AppSidebarLayout`, the `SidebarChrome` fallback buttons (shown when the rail is hidden or on narrow screens), and command-palette navigation.
+- Add `/spaces*` to `isSidebarUtilityPage` so the Threads button still returns to the last chat.
+- Beside-chat panel: add a lazily loaded `space-page` surface to the `RightPanelSurface` union. Update `RIGHT_PANEL_KINDS`, persisted-state migration (which drops unknown kinds), `RightPanelSurfaceContent`, and `RightPanelTabs`.
+  - The panel stores only `{environmentId, spaceId, pageId, blockId?}` per thread. Drafts belong to the document session, not the panel.
+- Library lists use `@legendapp/list` (the existing virtualizer) with paginated summary RPCs.
+- Desktop CSP already allows `http(s):` images, media, and frames. No CSP change is expected for media from the server origin.
 
-Proposed web route: `/environments/{environmentId}/spaces/{spaceId}/pages/{pageId}#block={blockId}`. Confirm route parsing and environment scoping during implementation. IDs keep deep links stable across rename and move; resolve and authorize before returning current location.
+## Chat references
 
-The current AppRail has inline entries; `mainAppLocation` tracks the last non-utility route; `AppSidebarLayout` composes sidebar and thread state; and the typed right-panel surface is thread-scoped. Add Spaces through those seams, preserve the last chat URL, and keep thread panels tied to their thread. Document identity and drafts belong to a document session; a thread panel may store presentation selection only.
+- Add `page` and `block` kinds to the composer context records ([`packages/contracts/src/composerContext.ts`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/packages/contracts/src/composerContext.ts), modeled on `ThreadContextRecord`). Each record holds environment, space, page, and block IDs, plus the title and revision at send time. They serialize as `t2-context://v1/<kind>/<contextId>` links ([`docs/internals/composer-context-references.md`](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/docs/internals/composer-context-references.md)), and context IDs are opaque.
+- Implementation also needs:
+  - entries in `contextPresentationRegistry`;
+  - chips;
+  - a composer trigger and menu item on web and mobile;
+  - stale-record pruning;
+  - cross-environment validation in `composerSend.logic.ts`.
+- On send, store a bounded snapshot with source IDs, revisions, and a content hash. By default `@page` includes the page's own blocks and `@block` includes its subtree. Child pages are included only by opt-in, and each one's revision is recorded.
 
-Use a typed first-party feature descriptor with stable IDs for navigation, sidebar, panel, settings, commands, and mount/dispose only where repeated wiring warrants it. Use platform adapters; do not add a dynamic marketplace or dependency host. Library routes and deep links must handle hidden rails and disabled capability clearly.
+## MCP
 
-## Editor and client surfaces
-
-The web client already has Tiptap primitives and a chat-specific adapter. Reuse suitable primitives, not the composer schema or Markdown persistence. Spaces needs a dedicated adapter translating structural editor transactions into stable-ID, revision-checked mutations.
-
-Before schema freeze, verify that the chosen schema can be preserved on every target surface. Unknown blocks must remain preserved or explicitly read-only; a partial or paginated editor must never delete unloaded content. Mobile has separate React Native navigation and media preview infrastructure; do not assume the web editor is available there or silently make mobile read-only.
-
-## Chat and MCP boundary
-
-Represent page and block mentions with structured environment, page, block, and optional space hints plus an explicit revision policy. Resolve current title, location, deletion state, and authorization by stable IDs; a stale title or former grant does not imply current access. Default `@page` to that page's own blocks, not nested pages. Bound `@block` to its subtree. Include child-page content only by explicit opt-in and track each included source revision.
-
-Persist the bounded prompt context needed for the sent message with source IDs, revisions, and a content hash; do not copy the full Spaces corpus into chat storage. Historical full-page navigation and revision retention remain separate decisions. MCP calls use the same service, limits, authorization, and disabled behavior.
-
-## Media boundary
-
-Stream image, PDF, and video bytes over authenticated HTTP, not WebSocket RPC or base64 JSON. Preserve originals and allow download fallback; byte-range video must work through remote and tunnel connections. Treat PDF preview as platform-dependent until verified. Do not assume preview parity or add OCR, transcription, or transcoding by default. Upload sizes, quotas, retention, and recovery details are in [identity-recovery.md](identity-recovery.md) and [decisions.md](decisions.md).
-
-## T2 Code source anchors
-
-Links are pinned to T2 Code commit [`33e8a315`](https://github.com/ashutoshpw/t2code/tree/33e8a31575256563da79cdac9a2f41b9a913dac0):
-
-- [AppRail](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/src/components/appRail/AppRail.tsx), [mainAppLocation](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/src/components/sidebar/mainAppLocation.ts), and [AppSidebarLayout](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/src/components/AppSidebarLayout.tsx) show current shell seams.
-- [rightPanelStore](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/src/rightPanelStore.ts) and [RightPanelSurfaceContent](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/src/components/chat/RightPanelSurfaceContent.tsx) define the typed thread-panel state and renderer.
-- [Chat route](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/src/routes/_chat.$environmentId.$threadId.tsx), [Tiptap composer adapter](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/src/components/ComposerPromptEditorTiptap.tsx), [composer schema adapter](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/src/composer-rich-text-doc.ts), and [web dependencies](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/web/package.json) support the editor boundary.
-- [Client RPC permissions](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/packages/contracts/src/clientRpcPermissions.ts), [mobile navigation](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/mobile/src/Stack.tsx), [mobile file preview](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/mobile/src/components/FilePreview.tsx), and [mobile video preview](https://github.com/ashutoshpw/t2code/blob/33e8a31575256563da79cdac9a2f41b9a913dac0/apps/mobile/src/components/MediaVideoPlayer.tsx) show current client seams.
+- Add a `SpacesToolkit` under `apps/server/src/mcp/toolkits/` (`tools.ts` + `handlers.ts`), registered with `toolkitRegistration` in `McpHttpServer.ts`. Mark tools with `Readonly` and `Destructive` annotations, and add `spaces` to `McpCapability`.
+- Tools call `SpacesService`. They share its limits and revision checks and the disabled behavior, and read-only clients are refused through `McpToolAccess`.
+- Results are JSON. Media is returned as an asset ID or signed URL, never as inline bytes.

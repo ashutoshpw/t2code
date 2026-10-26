@@ -1,35 +1,84 @@
 # Feasibility and validation
 
-This work is for after express implementation approval. The current task makes no prototype, schema, product code, build, install, server, browser, or test changes.
+None of this work starts before express implementation approval. Authoring this plan involved no prototype, product code, build, server, or test runs.
 
-## First-layer editor and native feasibility gate
+## Layer 1 feasibility gate
 
-Before freezing the canonical schema, build a bounded adapter prototype around a dedicated Spaces schema. Check stable IDs and structural transactions across split, join, wrap, copy, explicit move, paste, IME composition, selection, and undo. Verify save acknowledgements, dirty drafts, concurrent MCP edits, and two views of the same page. The prototype is a feasibility layer, not approval to expand product scope.
+**Web adapter.** Prototype the dedicated Tiptap schema for the v1 block set and check that it keeps stable IDs through:
 
-At the same gate, compare the schema with native mobile capabilities and decide how unknown/future blocks survive on every surface. Preserve unknown content or show it read-only; never drop it. A paginated editor must not treat unloaded blocks as deletions. If the prototype or native compatibility fails, revise the contract before storage schema work.
+- split, join, wrap, copy, explicit move, and paste;
+- IME composition, selection, and undo.
 
-## Resource budget worksheet
+Also verify save acknowledgements, dirty drafts, a concurrent MCP edit, and two views of the same page. A paginated editor must not treat unloaded blocks as deleted.
 
-Set numeric targets during the approved feasibility layer; do not invent them in the plan. Record deterministic limits for:
+**Mobile editor.** Build a spike on iOS and Android of one native text input per focused block, editing paragraph, heading, and list items:
 
-- library list rows and serialized bytes;
-- per-page block windows and response bytes;
-- mutation nodes and encoded bytes;
-- client cache bytes;
-- upload concurrency, transfer sizes, and resumable-upload threshold;
-- media decoder memory, decoded image pixels, and active previews;
-- recovery, reindex, cleanup, backup, and restore batch sizes.
+- bold, italic, and inline code must round-trip, and links must be preserved;
+- the keyboard must behave across block boundaries;
+- a virtualized list must stay smooth on a long page.
 
-Measure timings against named representative device profiles and local, remote, and tunnel profiles, then record the actual results. Avoid unbounded library reads, full-space rescans, eager rendering of every asset, whole-file memory buffers, and background OCR or transcoding without an approved budget.
+If mark preservation fails, evaluate the WebView+Tiptap fallback. Record which choice was made and why.
 
-## Validation plan after implementation approval
+**Media.** Choose one PDF preview path per platform. Confirm that range seeking works through the existing asset route, both on the local path and on the tunnel path.
 
-- Test boundaries deterministically at configured row, byte, node, cache, concurrency, decoder, and maintenance limits. Exercise one-over-limit rejection without partial mutations.
-- Verify paginated library loading, empty/error/retry states, virtualization, and cache keys containing environment, space, query, and revision. Discard stale responses after environment/space/query changes.
-- Cover ownership, root ordering, nested-page authority, uniqueness, cycles, atomic moves, revision guards, identity rules, idempotent replay, conflict draft preservation, and checked restore behavior.
-- Cover upload interruption, unknown finalize outcome, MIME mismatch, authorization changes, range requests, URL renewal, expiry, remote/tunnel access, cleanup races, backups, and staged restore validation.
-- Check disabled-by-default capability behavior at every merged layer, older-client handling, settings UI, and retained data.
-- Integrate web, desktop, and mobile across the approved core block set and media matrix. Include native navigation/edit behavior, unknown blocks, thread-panel presentation, deep links, hidden rails, and return to the last chat location.
-- Verify chat snapshots, revision metadata, child-page opt-in/revision vectors, handoff recovery if full historical navigation is approved, and MCP parity with service authorization and bounds.
+If any part fails, revise the contract before the schema work in layer 2.
 
-The release matrix and all numeric limits remain pending product decisions. No check in this list is performed during this documentation review.
+## Resource budgets (set during layer 1)
+
+Record numeric limits for each of these:
+
+- library rows and payload bytes;
+- per-page block window and response bytes;
+- mutation nodes and bytes;
+- nesting depth;
+- client cache bytes and draft size;
+- upload caps per media type and the environment quota;
+- upload concurrency;
+- decoded image pixels and active previews;
+- revision retention, and the idempotency-record window;
+- cleanup grace period and batch sizes.
+
+Measure against named device profiles and local, remote, and tunnel connections, and record the results. Avoid unbounded library reads, full-space rescans, eager rendering of every asset, whole-file buffers, and background processing that has no budget.
+
+## Verification after approval
+
+- **Limits.** Test each recorded limit at the boundary, and one over it, with no partial mutations.
+- **Data model.** Cover:
+  - ownership, root ordering, and nested-page authority;
+  - cycles and atomic moves;
+  - revision guards, the identity rules, and idempotent replay;
+  - conflicts that keep the draft;
+  - trash and restore when the parent is missing;
+  - that the default space cannot be deleted.
+- **Persistence.** Check the Spaces migrator and its ledger in isolation. The Spaces DB tag must never resolve to the chat DB. Check dev seeding and `doctor` with `spaces.sqlite` present.
+- **Media.** Cover:
+  - interrupted uploads and an unknown finalize outcome;
+  - a MIME mismatch;
+  - URL expiry and re-minting;
+  - serving after disable or delete;
+  - strong-ETag `HEAD`/`206`/`416`/`If-Range` for video and PDF;
+  - compression bypass;
+  - remote and tunnel ranges;
+  - cleanup races with new references.
+- **Toggle and compatibility.** At each merged layer, the setting is off by default, the capability is absent while the feature is off, and older clients and servers behave correctly.
+- **Web and desktop.** Cover:
+  - paginated, virtualized library loading;
+  - empty, error, and retry states;
+  - cache keys that include environment, space, query, and revision;
+  - deep links with `?block=`;
+  - the hidden rail and its fallback entries;
+  - return to the last chat;
+  - the beside-chat panel's persistence migration.
+- **Mobile.** Cover:
+  - core-set editing;
+  - marks outside the mobile set kept intact, with those blocks read-only;
+  - unknown blocks;
+  - drafts across app restarts;
+  - receipt-checked retry;
+  - native media previews.
+- **Chat and MCP.** Cover:
+  - `@page`/`@block` records;
+  - snapshot bounds and revision metadata;
+  - child-page opt-in;
+  - rendering while Spaces is disabled;
+  - MCP parity with the service's authorization, limits, and conflicts.

@@ -1,29 +1,36 @@
-# Pending product decisions
+# Decisions
 
-The recommendations below are proposals for review, not approved product behavior. Resolve each decision before freezing the schema or user-facing promise it affects.
+## Settled
 
-| # | Pending decision | Recommendation for review |
-| --- | --- | --- |
-| 1 | Optimistic revision conflicts or real-time collaborative editing? | Start with optimistic revisions and retained drafts if that meets the use case. If real-time editing is required, choose one authoritative collaborative representation and treat relational search/display data only as projections. |
-| 2 | Which core blocks ship, and are data tables, formulas, or comments in scope? | Review paragraphs, headings, inline formatting, lists, to-do items, quotes, code, dividers, callouts/bookmarks, images, PDFs, videos, and child-page blocks as a candidate core set. Confirm the exact set before schema freeze. |
-| 3 | Online-first editing or offline synchronization? | Consider online-first writes with durable local drafts and explicit reconnect/conflict handling. Do not promise full offline synchronization without a separate merge and storage contract. |
-| 4 | Does access follow environment authorization, or do spaces need private/per-space ACLs? | Consider using the environment's existing access model initially, without another ACL system. Decide explicitly before implementation if users need private spaces or differently authorized collaborators. |
-| 5 | Does a sent reference store an immutable bounded prompt snapshot or resolve live, must users later navigate the full historical source, and how do old references render when Spaces is disabled? | Consider a bounded send-time snapshot with source IDs, revisions, and a content hash for reproducibility. Decide separately whether full historical page navigation requires durable source-revision retention and a cross-database lease handoff. Keep old references explicit and available as metadata; decide their disabled-state presentation without erasing them. |
-| 6 | Which previews/processors ship, and what are practical upload, quota, and retention budgets? | Consider preserving originals with image/PDF preview and range-capable video playback where supported, plus download fallback. Keep OCR, extraction, transcription, and transcoding out unless explicitly selected and budgeted. Set numeric limits during feasibility. |
-| 7 | What is the native mobile editing contract: full parity or a smaller core set? | Decide the native editing set alongside the core block set. Preserve unknown blocks or render them read-only; do not default the whole mobile feature to read-only. |
+| Topic | Decision |
+| --- | --- |
+| Concurrency | Optimistic revisions; there is no real-time co-editing. Each write states the revisions it expects, and a stale write fails with a conflict while the client keeps the user's draft. MCP edits use the same rule. |
+| v1 block set | Text, list, code, divider, media, and child-page blocks, defined in [blocks-editing.md](blocks-editing.md). Tables, toggles, columns, databases, comments, and embeds are deferred. |
+| Mobile editing | Mobile edits a smaller core set and renders every v1 block type, as set out in [blocks-editing.md](blocks-editing.md). Mobile is not read-only as a whole. A block mobile cannot edit is read-only there, and its content is never stripped. |
+| Chat references | Each send stores a bounded snapshot of the referenced content, with source IDs, revisions, and a content hash. The link opens the current page, not the historical version. |
+| Default space | Created automatically per environment. It can be renamed but not deleted, so the environment always has one. |
+| Storage | `spaces.sqlite` sits beside `statev2.sqlite` in the configured userdata directory. Asset bytes go under `<userdata>/spaces/assets/`. |
+| Feature toggle | A server setting, off by default and shown in Settings. Turning it off keeps all data. |
+| Delivery | Seven stacked PRs to `ashutoshpw/t2code`, built in sibling worktrees; see [delivery.md](delivery.md). |
+| Markdown | Import/export is optional and lossy. Markdown is not the stored format. |
 
-## Settled scope
+## Out of v1
 
-- One default space per environment plus additional spaces.
-- Stable, independently addressable block-based pages, including nested pages.
-- Separate `spaces.sqlite` beside configured `userdata/statev2.sqlite`; asset bytes on the filesystem.
-- Image, PDF, and video assets inside pages.
-- A Spaces library/module integrated with web, desktop, and mobile; page presentation beside chat where supported.
-- Page/block chat references and access through T2 Code MCP.
-- Enable/disable access while retaining content.
-- Optional, potentially lossy Markdown import/export; Markdown is not canonical storage.
-- Future implementation as dependent stacked PRs in sibling worktrees.
+These are deferred to keep v1 small. The schema must not rule them out.
 
-## Numeric limits
+- Real-time co-editing and offline synchronization.
+- Viewing or restoring the full historical source behind an old chat reference, and the cross-database retention this would need.
+- Spaces backup/restore. The `doctor` command and storage reporting still need to account for `spaces.sqlite` and its assets.
+- Resumable uploads. v1 uses single-request staged uploads, capped in size.
+- OCR, PDF text extraction, transcription, and transcoding.
+- Private spaces and per-space ACLs.
 
-Spaces upload limits, quotas, revision retention, cleanup grace periods, resumable-upload thresholds, and backup budgets remain unset. Existing chat limits of 10 MB for images and 50 MB for files are not adopted Spaces limits and do not set a video maximum.
+## Open (decide before the affected layer)
+
+| # | Question | Recommendation | Needed by |
+| --- | --- | --- | --- |
+| 1 | Mobile disconnected behavior | Online-first. Drafts survive app restarts and reconnects, and an uncertain save is checked against its receipt before retrying. No offline sync promise. | Layer 7 |
+| 2 | RPC scopes | Reuse `orchestration:read` for reads and `orchestration:operate` for writes in v1. A client that can operate already runs agents with filesystem access, so a separate scope adds little security. Add `spaces:*` scopes only if a real use for keeping them separate appears. | Layer 2 |
+| 3 | Page history UI | v1 keeps revisions for conflict handling and local undo, and has trash/restore. Leave the browse-and-restore UI for revisions out of v1; the restore rules in [identity-recovery.md](identity-recovery.md) still apply if it is added later. | Layer 5 |
+| 4 | How old references render when Spaces is off | Show the chip using the stored snapshot title, marked unavailable. Keep the snapshot text that was sent. | Layer 6 |
+| 5 | Numeric budgets | Set them during feasibility (see [validation.md](validation.md)). Chat limits are 10 MiB per image (80 MiB total) and 50 MiB per file; these do not carry over to Spaces, and video needs its own cap. | Layer 1 |
