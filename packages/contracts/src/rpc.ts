@@ -397,6 +397,9 @@ export const WS_METHODS = {
   spacesBlocksRead: "spaces.blocks.read",
   spacesBlocksApply: "spaces.blocks.apply",
   spacesReceiptsGet: "spaces.receipts.get",
+  spacesPagesCreateChild: "spaces.pages.createChild",
+  spacesPagesMove: "spaces.pages.move",
+  spacesStructureInspect: "spaces.structure.inspect",
 
   projectsList: "projects.list",
   projectsAdd: "projects.add",
@@ -661,6 +664,22 @@ export const WsSpacesBlocksReadRpc = Rpc.make(WS_METHODS.spacesBlocksRead, {
 export const WsSpacesBlocksApplyRpc = Rpc.make(WS_METHODS.spacesBlocksApply, {
   payload: Spaces.SpaceApplyBlockBatchInput,
   success: Spaces.SpaceApplyBlockBatchResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesPagesCreateChildRpc = Rpc.make(WS_METHODS.spacesPagesCreateChild, {
+  payload: Spaces.SpaceCreateChildPageInput,
+  success: Spaces.SpaceCreateChildPageResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesPagesMoveRpc = Rpc.make(WS_METHODS.spacesPagesMove, {
+  payload: Spaces.SpaceMovePageInput,
+  success: Spaces.SpaceMovePageResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesStructureInspectRpc = Rpc.make(WS_METHODS.spacesStructureInspect, {
+  payload: Spaces.SpaceInspectStructureInput,
+  success: Spaces.SpaceInspectStructureResult,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
 
@@ -2015,6 +2034,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesBlocksReadRpc,
   WsSpacesBlocksApplyRpc,
   WsSpacesReceiptsGetRpc,
+  WsSpacesPagesCreateChildRpc,
+  WsSpacesPagesMoveRpc,
+  WsSpacesStructureInspectRpc,
 
   WsGuestShareCreateRpc,
   WsServerProbeRpc,

@@ -82,6 +82,8 @@ describe("command permissions", () => {
             WS_METHODS.spacesPagesCreate,
             WS_METHODS.spacesPagesUpdate,
             WS_METHODS.spacesBlocksApply,
+            WS_METHODS.spacesPagesCreateChild,
+            WS_METHODS.spacesPagesMove,
           ]) {
             const permission = createCommandPermissions(runtime, tag);
             expect(registry.get(permission.permissionAtom(env))).toBe(false);

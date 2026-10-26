@@ -19,6 +19,8 @@ import * as BlockStore from "./BlockStore.ts";
 import { byteLength, canonical, checkLimit, limits } from "./CorePolicy.ts";
 import * as Receipts from "./Receipts.ts";
 import * as RevisionStore from "./RevisionStore.ts";
+import * as PageStore from "./PageStore.ts";
+import * as PageStructure from "./PageStructure.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as Sqlite from "./Sqlite.ts";
 
@@ -55,6 +57,15 @@ export class SpacesService extends Context.Service<
     readonly applyBlockBatch: (
       input: unknown,
     ) => Effect.Effect<C.SpaceApplyBlockBatchResult, C.SpaceServiceError>;
+    readonly createChildPage: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceCreateChildPageResult, C.SpaceServiceError>;
+    readonly movePage: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceMovePageResult, C.SpaceServiceError>;
+    readonly inspectStructure: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceInspectStructureResult, C.SpaceServiceError>;
     readonly lookupMutationReceipt: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReceiptLookupResult, C.SpaceServiceError>;
@@ -70,17 +81,7 @@ interface SpaceRow {
   readonly created_at: string;
   readonly updated_at: string;
 }
-interface PageRow {
-  readonly page_id: C.SpacePageId;
-  readonly space_id: C.SpaceId;
-  readonly title: string;
-  readonly revision: number;
-  readonly root_order: string;
-  readonly block_count: number;
-  readonly block_bytes: number;
-  readonly created_at: string;
-  readonly updated_at: string;
-}
+type PageRow = PageStore.PageRow;
 const spaceSummary = (row: SpaceRow): C.SpaceSummary => ({
   id: row.space_id,
   title: row.title,
@@ -90,15 +91,7 @@ const spaceSummary = (row: SpaceRow): C.SpaceSummary => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
-const pageSummary = (row: PageRow): C.SpacePageSummary => ({
-  id: row.page_id,
-  spaceId: row.space_id,
-  title: row.title,
-  revision: row.revision,
-  rootOrder: row.root_order,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
+const pageSummary = PageStore.summary;
 const pagePreimage = (row: PageRow): RevisionStore.PagePreimage => ({
   pageId: row.page_id,
   spaceId: row.space_id,
@@ -112,6 +105,7 @@ const strict = { onExcessProperty: "error" } as const;
 const decodeList = Schema.decodeUnknownEffect(C.SpaceListInput, strict);
 const decodePages = Schema.decodeUnknownEffect(C.SpacePageListInput, strict);
 const decodeGet = Schema.decodeUnknownEffect(C.SpacePageGetInput, strict);
+const decodeInspect = Schema.decodeUnknownEffect(C.SpaceInspectStructureInput, strict);
 const decodeBlocks = Schema.decodeUnknownEffect(C.SpaceReadBlocksInput, strict);
 const decodeRequest = Schema.decodeUnknownEffect(C.SpaceMutationRequest, strict);
 const decodeLookup = Schema.decodeUnknownEffect(C.SpaceReceiptLookupInput, strict);
@@ -122,6 +116,8 @@ const decodeDefaultResult = Schema.decodeUnknownSync(C.SpaceSetDefaultResult, st
 const decodePageCreateResult = Schema.decodeUnknownSync(C.SpacePageCreateResult, strict);
 const decodePageUpdateResult = Schema.decodeUnknownSync(C.SpacePageUpdateResult, strict);
 const decodeApplyResult = Schema.decodeUnknownSync(C.SpaceApplyBlockBatchResult, strict);
+const decodeCreateChildResult = Schema.decodeUnknownSync(C.SpaceCreateChildPageResult, strict);
+const decodeMovePageResult = Schema.decodeUnknownSync(C.SpaceMovePageResult, strict);
 const isServiceError = Schema.is(C.SpaceServiceError);
 const Cursor = Schema.Struct({
   environmentId: EnvironmentId,
@@ -269,12 +265,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
     if (!row) return yield* new C.SpaceNotFoundError({ entity: "space", id });
     return row;
   });
-  const getPageRow = Effect.fn("SpacesService.page")(function* (id: C.SpacePageId) {
-    const sql = yield* SpacesSql.SpacesSql;
-    const [row] = yield* sql<PageRow>`SELECT * FROM spaces_pages WHERE page_id = ${id}`;
-    if (!row) return yield* new C.SpaceNotFoundError({ entity: "page", id });
-    return row;
-  });
+  const getPageRow = PageStore.read;
   const defaultSpace = Effect.fn("SpacesService.default")(function* () {
     const sql = yield* SpacesSql.SpacesSql;
     const [row] = yield* sql<SpaceRow>`SELECT * FROM spaces WHERE is_default = 1`;
@@ -354,16 +345,48 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         const space = yield* getSpace(input.spaceId);
         const limit = input.limit ?? limits.maxListRows;
         checkLimit("maxListRows", limit);
+        if (
+          input.parentPageId !== undefined &&
+          (yield* getPageRow(input.parentPageId)).space_id !== input.spaceId
+        )
+          return yield* new C.SpaceNotFoundError({ entity: "page", id: input.parentPageId });
+        const filter = canonical({
+          spaceId: input.spaceId,
+          parentPageId: input.parentPageId ?? null,
+        });
         const cursor = cursorFrom(
           input.cursor,
           environmentId,
           "listPages",
-          input.spaceId,
+          filter,
           meta.catalog_revision,
         );
-        const rows = cursor
-          ? yield* sql<PageRow>`SELECT * FROM spaces_pages WHERE space_id = ${input.spaceId} AND (root_order, page_id) > (${cursor.key}, ${cursor.id}) ORDER BY root_order, page_id LIMIT ${limit + 1}`
-          : yield* sql<PageRow>`SELECT * FROM spaces_pages WHERE space_id = ${input.spaceId} ORDER BY root_order, page_id LIMIT ${limit + 1}`;
+        const after =
+          cursor === undefined
+            ? sql``
+            : input.parentPageId === undefined
+              ? sql`AND (p.root_order,p.page_id) > (${cursor.key},${cursor.id})`
+              : sql`AND (b.rank,b.block_id) > (${cursor.key},${cursor.id})`;
+        const rows =
+          input.parentPageId === undefined
+            ? yield* sql<
+                PageRow & { readonly list_order: string; readonly list_id: string }
+              >`SELECT p.*, p.root_order AS list_order, p.page_id AS list_id, o.owner_block_id, b.page_id AS parent_page_id, b.deleted AS owner_deleted, parent.space_id AS parent_space_id, json_extract(b.payload,'$.type') AS owner_type
+              FROM spaces_pages p LEFT JOIN spaces_page_owners o ON o.child_page_id = p.page_id
+              LEFT JOIN spaces_blocks b ON b.block_id = o.owner_block_id LEFT JOIN spaces_pages parent ON parent.page_id = b.page_id WHERE p.space_id = ${input.spaceId} AND p.root_order IS NOT NULL
+              ${after}
+              ORDER BY p.root_order,p.page_id LIMIT ${limit + 1}`
+            : yield* sql<
+                PageRow & { readonly list_order: string; readonly list_id: string }
+              >`SELECT p.*, b.rank AS list_order, b.block_id AS list_id, o.owner_block_id,
+              b.page_id AS parent_page_id, b.deleted AS owner_deleted, parent.space_id AS parent_space_id,
+              json_extract(b.payload,'$.type') AS owner_type FROM spaces_blocks b
+              JOIN spaces_page_owners o ON o.owner_block_id = b.block_id JOIN spaces_pages p ON p.page_id = o.child_page_id
+              JOIN spaces_pages parent ON parent.page_id = b.page_id
+              WHERE b.page_id = ${input.parentPageId} AND b.deleted = 0 AND json_extract(b.payload,'$.type') = 'child_page'
+              AND p.space_id = ${input.spaceId}
+              ${after}
+              ORDER BY b.rank,b.block_id LIMIT ${limit + 1}`;
         const admission = yield* Receipts.issue(meta);
         let take = Math.min(limit, rows.length);
         while (true) {
@@ -377,10 +400,10 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
                 ? cursorFor(
                     environmentId,
                     "listPages",
-                    input.spaceId,
+                    filter,
                     meta.catalog_revision,
-                    last.root_order,
-                    last.page_id,
+                    last.list_order,
+                    last.list_id,
                   )
                 : null,
             mutationAdmission: admission,
@@ -482,7 +505,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           if (seen.has(row.block_id)) return yield* new C.SpaceValidationError({ reason: "cycle" });
           seen.add(row.block_id);
           const next = yield* successor(row);
-          const candidate = [...blocks, BlockStore.blockFromRow(row)];
+          const candidate = [...blocks, yield* BlockStore.blockFromRow(row)];
           const continuation = next
             ? cursorFor(
                 environmentId,
@@ -507,6 +530,31 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           row = next;
         }
         return { revision: page.revision, blocks, nextCursor };
+      }),
+    );
+  });
+  const inspectStructure = Effect.fn("SpacesService.inspectStructure")(function* (raw: unknown) {
+    const environmentId = yield* admit();
+    const input = yield* validateRaw(raw).pipe(
+      Effect.flatMap(decodeInspect),
+      Effect.mapError((error) =>
+        isServiceError(error) ? error : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+    yield* checkEnvironment(environmentId, input.environmentId);
+    return yield* run(environmentId, (meta) =>
+      Effect.gen(function* () {
+        checkIds(input);
+        checkLimit("maxMutationBytes", byteLength(input));
+        const plan = yield* PageStructure.plan(input, byteLength(input));
+        const result: C.SpaceInspectStructureResult = {
+          catalogRevision: meta.catalog_revision,
+          guards: plan.guards,
+          pages: [...plan.pages.values()].map(pageSummary),
+          blockIds: [...plan.blocks.keys()].map((id) => C.SpaceBlockId.make(id)),
+        };
+        checkLimit("maxBlockWindowResponseBytes", byteLength(result));
+        return result;
       }),
     );
   });
@@ -538,6 +586,51 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       yield* sql`UPDATE spaces_core SET catalog_revision = catalog_revision + 1 WHERE singleton = 1`;
     });
     switch (request.operation) {
+      case "createChildPage":
+      case "movePage": {
+        const structural =
+          request.operation === "createChildPage"
+            ? {
+                environmentId: request.input.environmentId,
+                target: {
+                  kind: "blocks" as const,
+                  pageId: request.input.placement.pageId,
+                  blockIds: [],
+                },
+                destination: { kind: "child" as const, placement: request.input.placement },
+              }
+            : {
+                environmentId: request.input.environmentId,
+                target: { kind: "page" as const, pageId: request.input.pageId },
+                destination: request.input.destination,
+              };
+        const plan = yield* PageStructure.plan(structural, byteLength(request));
+        if (!PageStructure.guardsMatch(plan, request.input.guards)) {
+          const def = yield* defaultSpace();
+          return decodeReceipt({
+            operation: request.operation,
+            result: {
+              status: "conflict",
+              ...ack,
+              current: {
+                catalogRevision: meta.catalog_revision,
+                defaultSpaceId: def.space_id,
+                ...plan.guards,
+              },
+            },
+          });
+        }
+        const result = yield* PageStructure.apply(
+          plan,
+          request.input.mutationId,
+          meta.observed_time_ms,
+          request.operation === "createChildPage" ? request.input.title : undefined,
+        );
+        return decodeReceipt({
+          operation: request.operation,
+          result: { status: "saved", ...ack, ...result },
+        });
+      }
       case "createSpace": {
         const input = request.input;
         const id = C.SpaceId.make(NodeCrypto.randomUUID());
@@ -600,7 +693,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           return decodeReceipt({ operation: request.operation, result: yield* conflict([space]) });
         const [last] = yield* sql<{
           readonly root_order: string;
-        }>`SELECT root_order FROM spaces_pages WHERE space_id = ${input.spaceId} ORDER BY root_order DESC, page_id DESC LIMIT 1`;
+        }>`SELECT root_order FROM spaces_pages WHERE space_id = ${input.spaceId} AND root_order IS NOT NULL ORDER BY root_order DESC, page_id DESC LIMIT 1`;
         const rank = last ? BigInt(`0x${last.root_order}`) + 1n : 1n;
         if (rank >= 1n << 128n)
           return yield* new C.SpaceValidationError({ reason: "invalid_order" });
@@ -755,6 +848,12 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
   const applyBlockBatch = Effect.fn("SpacesService.applyBlockBatch")(function* (input: unknown) {
     return decodeApplyResult((yield* mutate("applyBlockBatch", input)).result);
   });
+  const createChildPage = Effect.fn("SpacesService.createChildPage")(function* (input: unknown) {
+    return decodeCreateChildResult((yield* mutate("createChildPage", input)).result);
+  });
+  const movePage = Effect.fn("SpacesService.movePage")(function* (input: unknown) {
+    return decodeMovePageResult((yield* mutate("movePage", input)).result);
+  });
   const lookupMutationReceipt = Effect.fn("SpacesService.lookupMutationReceipt")(function* (
     raw: unknown,
   ): Effect.fn.Return<C.SpaceReceiptLookupResult, C.SpaceServiceError> {
@@ -791,7 +890,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       return yield* run(environmentId, (meta) =>
         Effect.gen(function* () {
           yield* Receipts.issue(meta);
-          return { version: 1, limits };
+          return { version: 2, limits };
         }),
       );
     },
@@ -813,6 +912,9 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
     updatePage,
     applyBlockBatch,
     lookupMutationReceipt,
+    createChildPage,
+    movePage,
+    inspectStructure,
   });
 });
 

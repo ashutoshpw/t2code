@@ -44,6 +44,7 @@ export const RPC_REQUIRED_SCOPES = {
   [WS_METHODS.spacesPagesGet]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesBlocksRead]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesReceiptsGet]: AuthOrchestrationReadScope,
+  [WS_METHODS.spacesStructureInspect]: AuthOrchestrationReadScope,
 
   [ORCHESTRATION_V2_WS_METHODS.dispatchCommand]: AuthOrchestrationOperateScope,
   [ORCHESTRATION_V2_WS_METHODS.getWorkflowScript]: AuthOrchestrationReadScope,

@@ -448,7 +448,7 @@ it.layer(testNodeServices)("ServerEnvironmentLive", (it) => {
           );
           yield* settings.updateSettings({ spacesEnabled: true });
           expect((yield* environment.getDescriptor).capabilities.spaces?.version).toBe(
-            kind === "ready" ? 1 : undefined,
+            kind === "ready" ? 2 : undefined,
           );
         }).pipe(
           Effect.provide(

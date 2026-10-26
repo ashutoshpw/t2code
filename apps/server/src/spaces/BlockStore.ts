@@ -54,7 +54,29 @@ function editable(block: C.SpaceBlock) {
   return true;
 }
 
-export const blockFromRow = (row: BlockRow) => decodeBlock(JSON.parse(row.payload));
+export const storedBlockFromRow = (row: BlockRow) => decodeBlock(JSON.parse(row.payload));
+export const isListContainer = (block: C.SpaceBlock) =>
+  containers.has(block.type) && knownBlock(block);
+
+// Materialization stays inside the bounded read-window span.
+export const blockFromRow = Effect.fnUntraced(function* (row: BlockRow) {
+  const block = storedBlockFromRow(row);
+  if (block.type !== "child_page") return block;
+  const sql = yield* SpacesSql.SpacesSql;
+  const [owner] = yield* sql<{
+    readonly child_page_id: string;
+    readonly space_id: string;
+    readonly parent_space_id: string;
+  }>`
+    SELECT o.child_page_id, p.space_id, parent.space_id AS parent_space_id FROM spaces_page_owners o
+    JOIN spaces_pages p ON p.page_id = o.child_page_id JOIN spaces_pages parent ON parent.page_id = ${row.page_id}
+    WHERE o.owner_block_id = ${row.block_id} AND p.root_order IS NULL`;
+  if (!owner || owner.space_id !== owner.parent_space_id)
+    return yield* new C.SpacesUnavailableError({ stage: "storage" });
+  if (block.content === null || typeof block.content !== "object" || Array.isArray(block.content))
+    return block;
+  return decodeBlock({ ...block, content: { ...block.content, pageId: owner.child_page_id } });
+});
 
 // All traversal and validation share the enclosing service span and its transaction.
 export const apply = Effect.fnUntraced(function* (
@@ -77,7 +99,7 @@ export const apply = Effect.fnUntraced(function* (
     return final.has(id)
       ? final.get(id)!
       : row && !row.deleted && row.page_id === pageId
-        ? blockFromRow(row)
+        ? storedBlockFromRow(row)
         : null;
   });
   const touch = (id: string) => {

@@ -10,9 +10,14 @@ export interface PagePreimage {
   readonly spaceId: string;
   readonly title: string;
   readonly revision: number;
-  readonly rootOrder: string;
+  readonly rootOrder: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface OwnerPreimage {
+  readonly childPageId: string;
+  readonly ownerBlockId: string;
 }
 
 interface RevisionRow {
@@ -23,8 +28,12 @@ interface RevisionRow {
   readonly asset_count: number;
 }
 
-const budget = () => ({ rows: 0, bytes: 0 });
-function reserve(used: ReturnType<typeof budget>, row: RevisionRow) {
+export const createCaptureBudget = () => ({
+  rows: 0,
+  bytes: 0,
+  protectedRevisions: new Set<string>(),
+});
+function reserve(used: ReturnType<typeof createCaptureBudget>, row: RevisionRow) {
   if (
     used.rows + 1 + row.asset_count > limits.cleanupBatchRows ||
     used.bytes + row.logical_bytes > limits.cleanupBatchBytes
@@ -52,7 +61,7 @@ export const prune = Effect.fn("SpacesRevisions.prune")(function* (now: number) 
     yield* sql<RevisionRow>`SELECT page_id, to_revision, expires_at_ms, logical_bytes, asset_count
     FROM spaces_revisions WHERE expires_at_ms <= ${now}
     ORDER BY expires_at_ms, page_id, to_revision LIMIT ${limits.cleanupBatchRows}`;
-  const used = budget();
+  const used = createCaptureBudget();
   const selected: RevisionRow[] = [];
   for (const row of expired) {
     if (!reserve(used, row)) break;
@@ -83,9 +92,11 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
     readonly toRevision: number;
     readonly mutationId: string;
     readonly pageBefore: PagePreimage | null;
+    readonly ownerBefore?: OwnerPreimage | null;
     readonly blocksBefore: readonly { readonly id: string; readonly row: BlockRow | null }[];
   },
   now: number,
+  used = createCaptureBudget(),
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const beforeIds = input.blocksBefore
@@ -104,11 +115,19 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
     assetIds.length > coreLimits.maxMutationNodes
   )
     return yield* new C.SpacesUnavailableError({ stage: "capacity" });
+  let ownerBefore = input.ownerBefore;
+  if (ownerBefore === undefined) {
+    const [owner] = yield* sql<{ readonly child_page_id: string; readonly owner_block_id: string }>`
+      SELECT child_page_id, owner_block_id FROM spaces_page_owners WHERE child_page_id = ${input.pageId}`;
+    ownerBefore = owner
+      ? { childPageId: owner.child_page_id, ownerBlockId: owner.owner_block_id }
+      : null;
+  }
   const payload = canonical(
     {
-      version: 1,
+      version: 2,
       pageBefore: input.pageBefore,
-      ownerBefore: null,
+      ownerBefore,
       blocksBefore: input.blocksBefore,
     },
     limits.maxDeltaBytes,
@@ -139,7 +158,6 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
   if (!page) return yield* new C.SpacesUnavailableError({ stage: "storage" });
   let count = page.retained_revision_count + 1;
   let pageBytes = page.retained_revision_bytes + bytes;
-  const used = budget();
   const pageRows =
     yield* sql<RevisionRow>`SELECT page_id, to_revision, expires_at_ms, logical_bytes, asset_count
     FROM spaces_revisions WHERE page_id = ${input.pageId} ORDER BY to_revision LIMIT ${limits.cleanupBatchRows}`;
@@ -170,6 +188,7 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
     const evicted: RevisionRow[] = [];
     for (const row of oldest) {
       if (environmentBytes <= limits.maxEnvironmentBytes) break;
+      if (used.protectedRevisions.has(canonical([row.page_id, row.to_revision]))) continue;
       if (!reserve(used, row)) capacity(pageBytes, environmentBytes);
       evicted.push(row);
       environmentBytes -= row.logical_bytes;
@@ -185,4 +204,5 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
   yield* sql`UPDATE spaces_pages SET retained_revision_count = retained_revision_count + 1,
     retained_revision_bytes = retained_revision_bytes + ${bytes} WHERE page_id = ${input.pageId}`;
   yield* sql`UPDATE spaces_core SET revision_bytes = revision_bytes + ${bytes} WHERE singleton = 1`;
+  used.protectedRevisions.add(canonical([input.pageId, input.toRevision]));
 });

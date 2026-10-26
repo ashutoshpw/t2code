@@ -38,6 +38,9 @@ const decodeLibrary = Schema.decodeUnknownSync(C.SpaceListResult);
 const decodePage = Schema.decodeUnknownSync(C.SpacePageCreateResult);
 const decodeWindow = Schema.decodeUnknownSync(C.SpaceReadBlocksResult);
 const decodeLookup = Schema.decodeUnknownSync(C.SpaceReceiptLookupResult);
+const decodeInspected = Schema.decodeUnknownSync(C.SpaceInspectStructureResult);
+const decodeChild = Schema.decodeUnknownSync(C.SpaceCreateChildPageResult);
+const decodeMoved = Schema.decodeUnknownSync(C.SpaceMovePageResult);
 const control = RpcGroup.make(WsServerRefreshProvidersRpc).middleware(RpcScopeAuthorization);
 const group = SpacesRpc.group.merge(control);
 const frameBytes = (response: unknown) => Buffer.byteLength(JSON.stringify(response), "utf8");
@@ -148,6 +151,156 @@ const fixture = Effect.fn("SpacesRpcTest.fixture")(function* <A, E>(
 });
 
 it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
+  it.effect(
+    "round-trips structural guards and receipt tags through original strict encoded mutation envelopes",
+    () =>
+      fixture(
+        Effect.gen(function* () {
+          const { request } = yield* encodedServer();
+          const library = decodeLibrary(savedValue(yield* request(WS_METHODS.spacesList, env)));
+          const common = { ...env, receiptEpoch: library.mutationAdmission.epoch };
+          const root = decodePage(
+            savedValue(
+              yield* request(WS_METHODS.spacesPagesCreate, {
+                ...common,
+                mutationId: "wire-root",
+                title: "Root",
+                spaceId: library.defaultSpaceId,
+                baseRootOrderRevision: 0,
+              }),
+            ),
+          );
+          if (root.status !== "saved") return yield* Effect.die("Expected page");
+          const placement = { pageId: root.page.id, parentId: null, beforeBlockId: null };
+          const inspected = decodeInspected(
+            savedValue(
+              yield* request(WS_METHODS.spacesStructureInspect, {
+                ...env,
+                target: { kind: "blocks", pageId: root.page.id, blockIds: [] },
+                destination: { kind: "child", placement },
+              }),
+            ),
+          );
+          const input = {
+            ...common,
+            mutationId: "wire-child",
+            title: "Child",
+            placement,
+            guards: inspected.guards,
+          };
+          expectDefect(
+            yield* request(WS_METHODS.spacesPagesCreateChild, {
+              ...input,
+              placement: { ...placement, pageIdHint: "forged" },
+            }),
+          );
+          const child = decodeChild(
+            savedValue(yield* request(WS_METHODS.spacesPagesCreateChild, input)),
+          );
+          if (child.status !== "saved") return yield* Effect.die("Expected child");
+          assert.isNull(child.page.rootOrder);
+          assert.equal(child.page.location?.kind, "child");
+          const target = {
+            ...env,
+            target: { kind: "page", pageId: child.page.id },
+            destination: { kind: "root", spaceId: library.defaultSpaceId, beforePageId: null },
+          };
+          const plan = decodeInspected(
+            savedValue(yield* request(WS_METHODS.spacesStructureInspect, target)),
+          );
+          const move = {
+            ...common,
+            mutationId: "wire-move",
+            pageId: child.page.id,
+            destination: target.destination,
+            guards: plan.guards,
+          };
+          const moved = decodeMoved(savedValue(yield* request(WS_METHODS.spacesPagesMove, move)));
+          if (moved.status !== "saved") return yield* Effect.die("Expected root");
+          assert.equal(moved.page.location?.kind, "root");
+          assert.isNull(moved.ownerBlockId);
+          assert.deepEqual(
+            decodeLookup(
+              savedValue(
+                yield* request(WS_METHODS.spacesReceiptsGet, {
+                  request: { operation: "movePage", input: move },
+                }),
+              ),
+            ),
+            { status: "found", receipt: { operation: "movePage", result: moved } },
+          );
+          assert.deepEqual(
+            decodeMoved(savedValue(yield* request(WS_METHODS.spacesPagesMove, move))),
+            moved,
+          );
+          assert.deepEqual(
+            typedFailure(
+              yield* request(WS_METHODS.spacesPagesMove, { ...move, pageId: root.page.id }),
+            ),
+            { _tag: "SpaceMutationIdMismatchError", mutationId: move.mutationId },
+          );
+        }),
+      ),
+  );
+  it.effect.each(["createChildPage", "movePage"] as const)(
+    "bounds the original %s envelope at exact1MiB and plus one",
+    (operation) =>
+      fixture(
+        Effect.gen(function* () {
+          const { request } = yield* encodedServer();
+          const library = decodeLibrary(savedValue(yield* request(WS_METHODS.spacesList, env)));
+          const common = {
+            ...env,
+            receiptEpoch: library.mutationAdmission.epoch,
+            mutationId: "structural-ceiling",
+            guards: { pages: [], roots: [] },
+          };
+          const input =
+            operation === "createChildPage"
+              ? {
+                  ...common,
+                  title: "",
+                  placement: { pageId: "page", parentId: null, beforeBlockId: null },
+                }
+              : {
+                  ...common,
+                  pageId: "page",
+                  destination: { kind: "root", spaceId: "", beforePageId: null },
+                };
+          const padding = 1_048_576 - Buffer.byteLength(canonical({ operation, input }), "utf8");
+          const exact =
+            operation === "createChildPage"
+              ? { ...input, title: "x".repeat(padding) }
+              : {
+                  ...input,
+                  destination: { kind: "root", spaceId: "x".repeat(padding), beforePageId: null },
+                };
+          const tag =
+            operation === "createChildPage"
+              ? WS_METHODS.spacesPagesCreateChild
+              : WS_METHODS.spacesPagesMove;
+          assert.deepEqual(typedFailure(yield* request(tag, exact)), {
+            _tag: "SpaceLimitExceededError",
+            limit: "maxMutationBytes",
+            actual: 1_048_576,
+            maximum: 262_144,
+          });
+          const over =
+            operation === "createChildPage"
+              ? { ...exact, title: "x".repeat(padding + 1) }
+              : {
+                  ...exact,
+                  destination: {
+                    kind: "root",
+                    spaceId: "x".repeat(padding + 1),
+                    beforePageId: null,
+                  },
+                };
+          expectDefect(yield* request(tag, over));
+        }),
+      ),
+  );
+
   it.effect.each(["mutation", "lookup-wrapper", "lookup-input"] as const)(
     "rejects excess %s intent before persistence and keeps the next clean request usable",
     (kind) =>

@@ -12,6 +12,9 @@ import {
   WsSpacesBlocksReadRpc,
   WsSpacesBlocksApplyRpc,
   WsSpacesReceiptsGetRpc,
+  WsSpacesPagesCreateChildRpc,
+  WsSpacesPagesMoveRpc,
+  WsSpacesStructureInspectRpc,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
@@ -75,6 +78,16 @@ export const group = RpcGroup.make(
     })),
   ),
   WsSpacesReceiptsGetRpc.setPayload(strictPayload(C.SpaceReceiptLookupInput)),
+  WsSpacesPagesCreateChildRpc.setPayload(
+    strictPayload(C.SpaceCreateChildPageInput, (input) => ({
+      operation: "createChildPage",
+      input,
+    })),
+  ),
+  WsSpacesPagesMoveRpc.setPayload(
+    strictPayload(C.SpaceMovePageInput, (input) => ({ operation: "movePage", input })),
+  ),
+  WsSpacesStructureInspectRpc.setPayload(strictPayload(C.SpaceInspectStructureInput)),
 ).middleware(RpcScopeAuthorization);
 
 export const handlers = Effect.gen(function* () {
@@ -91,5 +104,8 @@ export const handlers = Effect.gen(function* () {
     [WS_METHODS.spacesBlocksRead]: (input) => service.readBlocks(input),
     [WS_METHODS.spacesBlocksApply]: (input) => service.applyBlockBatch(input),
     [WS_METHODS.spacesReceiptsGet]: (input) => service.lookupMutationReceipt(input),
+    [WS_METHODS.spacesPagesCreateChild]: (input) => service.createChildPage(input),
+    [WS_METHODS.spacesPagesMove]: (input) => service.movePage(input),
+    [WS_METHODS.spacesStructureInspect]: (input) => service.inspectStructure(input),
   });
 });

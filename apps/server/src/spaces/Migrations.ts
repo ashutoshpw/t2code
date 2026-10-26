@@ -6,6 +6,7 @@ import * as SqlClient from "effect/sql/SqlClient";
 import Migration0001 from "./Migrations/001_Spaces.ts";
 import Migration0002 from "./Migrations/002_Core.ts";
 import Migration0003 from "./Migrations/003_RevisionPreimages.ts";
+import Migration0004 from "./Migrations/004_PageOwners.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 
 const APPLICATION_ID = 0x53504143;
@@ -13,6 +14,7 @@ const migrationEntries = [
   [1, "Spaces", Migration0001],
   [2, "Core", Migration0002],
   [3, "RevisionPreimages", Migration0003],
+  [4, "PageOwners", Migration0004],
 ] as const;
 
 export class SpacesDatabaseMismatchError extends Schema.TaggedError<SpacesDatabaseMismatchError>()(

@@ -17,6 +17,8 @@ import {
   SpaceReceiptLookupResult,
   SpaceServiceError,
   SpaceSetDefaultInput,
+  SpacePageSummary,
+  SpacePageListInput,
 } from "./spaces.ts";
 
 const decode = Schema.decodeUnknownSync(SpaceBlock);
@@ -99,6 +101,9 @@ const encodeRequest = Schema.encodeSync(SpaceMutationRequest);
 const encodeLookup = Schema.encodeSync(SpaceReceiptLookupInput);
 const encodeWindow = Schema.encodeSync(SpaceReadBlocksResult);
 const encodeError = Schema.encodeSync(SpaceServiceError);
+const decodeSummary = Schema.decodeUnknownSync(SpacePageSummary, strict);
+const encodeSummary = Schema.encodeSync(SpacePageSummary);
+const decodePageList = Schema.decodeUnknownSync(SpacePageListInput, strict);
 const acknowledgement = { mutationId: "mutation-1", receiptEpoch: "epoch-1" };
 const writeContext = { environmentId: "environment-1", ...acknowledgement };
 const space = {
@@ -134,6 +139,83 @@ const batch = {
 
 // Public decoding owns wire shape; service tests own execution, fingerprint and replay ordering.
 describe("Spaces core protocol", () => {
+  it("keeps legacy page receipts exact while decoding v2 locations, selectors, and distinct structure receipts", () => {
+    expect(encodeSummary(decodeSummary(page))).toEqual(page);
+    const nested = {
+      ...page,
+      rootOrder: null,
+      location: { kind: "child", spaceId: space.id, parentPageId: "parent", ownerBlockId: "owner" },
+    };
+    expect(encodeSummary(decodeSummary(nested))).toEqual(nested);
+    expect(
+      decodePageList({
+        environmentId: writeContext.environmentId,
+        spaceId: space.id,
+        parentPageId: "parent",
+      }).parentPageId,
+    ).toBe("parent");
+    const placement = { pageId: "parent", parentId: null, beforeBlockId: null };
+    const guards = {
+      pages: [
+        { pageId: "parent", revision: 2 },
+        { pageId: page.id, revision: 4 },
+      ],
+      roots: [{ spaceId: space.id, rootOrderRevision: 1 }],
+    };
+    const create = {
+      operation: "createChildPage",
+      input: { ...writeContext, title: "Child", placement, guards },
+    };
+    const move = {
+      operation: "movePage",
+      input: {
+        ...writeContext,
+        pageId: page.id,
+        destination: { kind: "child", placement },
+        guards,
+      },
+    };
+    expect(encodeRequest(decodeRequest(create))).toEqual(create);
+    expect(encodeRequest(decodeRequest(move))).toEqual(move);
+    expect(() =>
+      decodeRequest({
+        ...create,
+        input: { ...create.input, placement: { ...placement, ownerBlockId: "forged" } },
+      }),
+    ).toThrow();
+    expect(() =>
+      decodeRequest({
+        ...move,
+        input: {
+          ...move.input,
+          destination: { kind: "root", spaceId: space.id, beforePageId: null, order: "clipboard" },
+        },
+      }),
+    ).toThrow();
+    const conflict = {
+      status: "conflict",
+      ...acknowledgement,
+      current: { catalogRevision: 5, defaultSpaceId: space.id, ...guards },
+    };
+    expect(decodeReceipt({ operation: "movePage", result: conflict })).toEqual({
+      operation: "movePage",
+      result: conflict,
+    });
+    expect(() => decodeReceipt({ operation: "updatePage", result: conflict })).toThrow();
+    const result = {
+      status: "saved",
+      ...acknowledgement,
+      page: nested,
+      ownerBlockId: "owner",
+      changed: guards,
+    };
+    expect(decodeReceipt({ operation: "createChildPage", result })).toEqual({
+      operation: "createChildPage",
+      result,
+    });
+    expect(() => decodeReceipt({ operation: "createPage", result })).toThrow();
+  });
+
   it("decodes legacy capabilities and receipts while advertising optional independent history limits", () => {
     const old = {
       version: 1,

@@ -20,6 +20,8 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.spacesPagesCreate]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesPagesUpdate]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesBlocksApply]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesPagesCreateChild]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesPagesMove]: AuthOrchestrationOperateScope,
 
   [WS_METHODS.previewClose]: AuthPreviewOperateScope,
   [WS_METHODS.serverRunStorageCleanup]: AuthSettingsWriteScope,

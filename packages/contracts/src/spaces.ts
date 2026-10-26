@@ -141,12 +141,23 @@ export const SpaceSummary = Schema.Struct({
   updatedAt: IsoDateTime,
 });
 export type SpaceSummary = typeof SpaceSummary.Type;
+export const SpacePageLocation = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("root"), spaceId: SpaceId, order: StableId }),
+  Schema.Struct({
+    kind: Schema.Literal("child"),
+    spaceId: SpaceId,
+    ownerBlockId: SpaceBlockId,
+    parentPageId: SpacePageId,
+  }),
+]);
+export type SpacePageLocation = typeof SpacePageLocation.Type;
 export const SpacePageSummary = Schema.Struct({
   id: SpacePageId,
   spaceId: SpaceId,
   title: Schema.String,
   revision: NonNegativeInt,
-  rootOrder: StableId,
+  rootOrder: Schema.NullOr(StableId),
+  location: Schema.optionalKey(SpacePageLocation),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -191,7 +202,11 @@ export const SpaceListResult = Schema.Struct({
   mutationAdmission: SpaceMutationAdmission,
 });
 export type SpaceListResult = typeof SpaceListResult.Type;
-export const SpacePageListInput = Schema.Struct({ ...SpaceListInput.fields, spaceId: SpaceId });
+export const SpacePageListInput = Schema.Struct({
+  ...SpaceListInput.fields,
+  spaceId: SpaceId,
+  parentPageId: Schema.optionalKey(SpacePageId),
+});
 export type SpacePageListInput = typeof SpacePageListInput.Type;
 export const SpacePageListResult = Schema.Struct({
   space: SpaceSummary,
@@ -298,7 +313,107 @@ export const SpaceApplyBlockBatchResult = Schema.Union([
 ]);
 export type SpaceApplyBlockBatchResult = typeof SpaceApplyBlockBatchResult.Type;
 
+export const SpacePageRevisionGuard = Schema.Struct({
+  pageId: SpacePageId,
+  revision: NonNegativeInt,
+});
+export type SpacePageRevisionGuard = typeof SpacePageRevisionGuard.Type;
+export const SpaceRootRevisionGuard = Schema.Struct({
+  spaceId: SpaceId,
+  rootOrderRevision: NonNegativeInt,
+});
+export type SpaceRootRevisionGuard = typeof SpaceRootRevisionGuard.Type;
+export const SpaceStructureGuards = Schema.Struct({
+  pages: Schema.Array(SpacePageRevisionGuard),
+  roots: Schema.Array(SpaceRootRevisionGuard),
+});
+export type SpaceStructureGuards = typeof SpaceStructureGuards.Type;
+export const SpaceBlockPlacement = Schema.Struct({
+  pageId: SpacePageId,
+  parentId: Schema.NullOr(SpaceBlockId),
+  beforeBlockId: Schema.NullOr(SpaceBlockId),
+});
+export type SpaceBlockPlacement = typeof SpaceBlockPlacement.Type;
+export const SpacePageDestination = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("root"),
+    spaceId: SpaceId,
+    beforePageId: Schema.NullOr(SpacePageId),
+  }),
+  Schema.Struct({ kind: Schema.Literal("child"), placement: SpaceBlockPlacement }),
+]);
+export type SpacePageDestination = typeof SpacePageDestination.Type;
+export const SpaceCreateChildPageInput = Schema.Struct({
+  ...mutationInput,
+  title: Schema.String,
+  placement: SpaceBlockPlacement,
+  guards: SpaceStructureGuards,
+});
+export type SpaceCreateChildPageInput = typeof SpaceCreateChildPageInput.Type;
+export const SpaceMovePageInput = Schema.Struct({
+  ...mutationInput,
+  pageId: SpacePageId,
+  destination: SpacePageDestination,
+  guards: SpaceStructureGuards,
+});
+export type SpaceMovePageInput = typeof SpaceMovePageInput.Type;
+export const SpaceInspectStructureInput = Schema.Struct({
+  environmentId: EnvironmentId,
+  target: Schema.Union([
+    Schema.Struct({ kind: Schema.Literal("page"), pageId: SpacePageId }),
+    Schema.Struct({
+      kind: Schema.Literal("blocks"),
+      pageId: SpacePageId,
+      blockIds: Schema.Array(SpaceBlockId),
+    }),
+  ]),
+  destination: Schema.optionalKey(SpacePageDestination),
+});
+export type SpaceInspectStructureInput = typeof SpaceInspectStructureInput.Type;
+export const SpaceInspectStructureResult = Schema.Struct({
+  catalogRevision: NonNegativeInt,
+  guards: SpaceStructureGuards,
+  pages: Schema.Array(SpacePageSummary),
+  blockIds: Schema.Array(SpaceBlockId),
+});
+export type SpaceInspectStructureResult = typeof SpaceInspectStructureResult.Type;
+export const SpaceStructureConflict = Schema.Struct({
+  status: Schema.Literal("conflict"),
+  ...mutationAck,
+  current: Schema.Struct({
+    catalogRevision: NonNegativeInt,
+    defaultSpaceId: SpaceId,
+    pages: Schema.Array(SpacePageRevisionGuard).check(Schema.isMaxLength(100)),
+    roots: Schema.Array(SpaceRootRevisionGuard).check(Schema.isMaxLength(100)),
+  }),
+});
+export type SpaceStructureConflict = typeof SpaceStructureConflict.Type;
+export const SpaceCreateChildPageResult = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("saved"),
+    ...mutationAck,
+    page: SpacePageSummary,
+    ownerBlockId: SpaceBlockId,
+    changed: SpaceStructureGuards,
+  }),
+  SpaceStructureConflict,
+]);
+export type SpaceCreateChildPageResult = typeof SpaceCreateChildPageResult.Type;
+export const SpaceMovePageResult = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("saved"),
+    ...mutationAck,
+    page: SpacePageSummary,
+    ownerBlockId: Schema.NullOr(SpaceBlockId),
+    changed: SpaceStructureGuards,
+  }),
+  SpaceStructureConflict,
+]);
+export type SpaceMovePageResult = typeof SpaceMovePageResult.Type;
+
 export const SpaceMutationRequest = Schema.Union([
+  Schema.Struct({ operation: Schema.Literal("createChildPage"), input: SpaceCreateChildPageInput }),
+  Schema.Struct({ operation: Schema.Literal("movePage"), input: SpaceMovePageInput }),
   Schema.Struct({ operation: Schema.Literal("createSpace"), input: SpaceCreateInput }),
   Schema.Struct({ operation: Schema.Literal("renameSpace"), input: SpaceRenameInput }),
   Schema.Struct({ operation: Schema.Literal("setDefaultSpace"), input: SpaceSetDefaultInput }),
@@ -308,6 +423,11 @@ export const SpaceMutationRequest = Schema.Union([
 ]);
 export type SpaceMutationRequest = typeof SpaceMutationRequest.Type;
 export const SpaceMutationReceipt = Schema.Union([
+  Schema.Struct({
+    operation: Schema.Literal("createChildPage"),
+    result: SpaceCreateChildPageResult,
+  }),
+  Schema.Struct({ operation: Schema.Literal("movePage"), result: SpaceMovePageResult }),
   Schema.Struct({ operation: Schema.Literal("createSpace"), result: SpaceCreateResult }),
   Schema.Struct({ operation: Schema.Literal("renameSpace"), result: SpaceRenameResult }),
   Schema.Struct({ operation: Schema.Literal("setDefaultSpace"), result: SpaceSetDefaultResult }),
