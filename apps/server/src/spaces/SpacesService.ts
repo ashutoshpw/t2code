@@ -18,6 +18,7 @@ import * as ServerSettings from "../serverSettings.ts";
 import * as BlockStore from "./BlockStore.ts";
 import { byteLength, canonical, checkLimit, limits } from "./CorePolicy.ts";
 import * as Receipts from "./Receipts.ts";
+import * as RevisionStore from "./RevisionStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as Sqlite from "./Sqlite.ts";
 
@@ -91,6 +92,15 @@ const spaceSummary = (row: SpaceRow): C.SpaceSummary => ({
 });
 const pageSummary = (row: PageRow): C.SpacePageSummary => ({
   id: row.page_id,
+  spaceId: row.space_id,
+  title: row.title,
+  revision: row.revision,
+  rootOrder: row.root_order,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+const pagePreimage = (row: PageRow): RevisionStore.PagePreimage => ({
+  pageId: row.page_id,
   spaceId: row.space_id,
   title: row.title,
   revision: row.revision,
@@ -217,21 +227,27 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
     environmentId: EnvironmentId,
     use: (
       meta: Receipts.Metadata,
+      replay?: C.SpaceMutationReceipt,
     ) => Effect.Effect<A, C.SpaceServiceError | SqlError.SqlError, SpacesSql.SpacesSql>,
-    maintainReceipts = true,
+    maintenance: true | C.SpaceMutationRequest = true,
   ) {
     const sql = yield* acquire;
     return yield* mutex.withPermits(1)(
       Effect.gen(function* () {
         // Commit the observed clock even when the subsequent request is refused or rolled back.
         const meta = yield* sql.withTransaction(Receipts.observe(environmentId));
-        if (maintainReceipts) yield* sql.withTransaction(Receipts.cleanup(meta));
+        const replay =
+          maintenance === true ? undefined : yield* sql.withTransaction(Receipts.find(maintenance));
+        if (!replay) {
+          if (maintenance === true) yield* sql.withTransaction(Receipts.cleanup(meta));
+          yield* sql.withTransaction(RevisionStore.prune(meta.observed_time_ms));
+        }
         return yield* sql.withTransaction(
           Effect.gen(function* () {
             const [current] =
               yield* sql<Receipts.Metadata>`SELECT * FROM spaces_core WHERE singleton = 1`;
             if (!current) return yield* new C.SpacesUnavailableError({ stage: "storage" });
-            return yield* use(current);
+            return yield* use(current, replay);
           }),
         );
       }).pipe(
@@ -592,6 +608,16 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         yield* sql`INSERT INTO spaces_ids (id, kind) VALUES (${id}, 'page')`;
         yield* sql`INSERT INTO spaces_pages (page_id, space_id, title, root_order, created_at, updated_at)
           VALUES (${id}, ${input.spaceId}, ${input.title}, ${rank.toString(16).padStart(32, "0")}, ${now}, ${now})`;
+        yield* RevisionStore.capture(
+          {
+            pageId: id,
+            toRevision: 0,
+            mutationId: input.mutationId,
+            pageBefore: null,
+            blocksBefore: [],
+          },
+          meta.observed_time_ms,
+        );
         yield* sql`UPDATE spaces SET root_order_revision = root_order_revision + 1, updated_at = ${now} WHERE space_id = ${input.spaceId}`;
         yield* changed();
         return decodeReceipt({
@@ -614,6 +640,16 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           });
         if (page.title !== input.title) {
           yield* sql`UPDATE spaces_pages SET title = ${input.title}, revision = revision + 1, updated_at = ${now} WHERE page_id = ${input.pageId}`;
+          yield* RevisionStore.capture(
+            {
+              pageId: input.pageId,
+              toRevision: page.revision + 1,
+              mutationId: input.mutationId,
+              pageBefore: pagePreimage(page),
+              blocksBefore: [],
+            },
+            meta.observed_time_ms,
+          );
           yield* changed();
         }
         return decodeReceipt({
@@ -641,6 +677,16 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         );
         if (result.changed) {
           yield* sql`UPDATE spaces_pages SET revision = revision + 1, block_count = ${result.count}, block_bytes = ${result.bytes}, updated_at = ${now} WHERE page_id = ${input.pageId}`;
+          yield* RevisionStore.capture(
+            {
+              pageId: input.pageId,
+              toRevision: page.revision + 1,
+              mutationId: input.mutationId,
+              pageBefore: pagePreimage(page),
+              blocksBefore: result.blocksBefore,
+            },
+            meta.observed_time_ms,
+          );
           yield* changed();
         }
         return decodeReceipt({
@@ -669,9 +715,9 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
     yield* checkEnvironment(environmentId, request.input.environmentId);
     return yield* run(
       environmentId,
-      (meta) =>
+      (meta, replay) =>
         Effect.gen(function* () {
-          const found = yield* Receipts.find(request);
+          const found = replay ?? (yield* Receipts.find(request));
           if (found) return found;
           checkLimit("maxMutationBytes", byteLength(request));
           checkIds(request.input);
@@ -688,7 +734,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           yield* Receipts.store(request, receipt, meta, epoch.retain_until);
           return receipt;
         }),
-      false,
+      request,
     );
   });
   const createSpace = Effect.fn("SpacesService.createSpace")(function* (input: unknown) {
@@ -722,9 +768,9 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
     yield* checkEnvironment(environmentId, input.request.input.environmentId);
     return yield* run(
       environmentId,
-      (meta) =>
+      (meta, replay) =>
         Effect.gen(function* () {
-          const receipt = yield* Receipts.find(input.request);
+          const receipt = replay ?? (yield* Receipts.find(input.request));
           if (receipt) return { status: "found" as const, receipt };
           checkIds(input.request.input);
           const epoch = yield* Receipts.active(meta);
@@ -735,7 +781,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
                 : ("unknown" as const),
           };
         }),
-      false,
+      input.request,
     );
   });
   const getCapability = Effect.fn("SpacesService.getCapability")(

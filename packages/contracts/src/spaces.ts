@@ -328,8 +328,20 @@ export const SpaceReceiptLookupResult = Schema.Union([
 ]);
 export type SpaceReceiptLookupResult = typeof SpaceReceiptLookupResult.Type;
 
+export const SpaceHistoryLimits = Schema.Struct({
+  maxRevisionsPerPage: PositiveInt,
+  retentionMs: PositiveInt,
+  maxDeltaBytes: PositiveInt,
+  maxPageBytes: PositiveInt,
+  maxEnvironmentBytes: PositiveInt,
+  cleanupBatchRows: PositiveInt,
+  cleanupBatchBytes: PositiveInt,
+});
+export type SpaceHistoryLimits = typeof SpaceHistoryLimits.Type;
+
 // These describe advertised service policy; replay decoding must not freeze today's maxima.
 export const SpaceLimits = Schema.Struct({
+  history: Schema.optionalKey(SpaceHistoryLimits),
   maxListRows: PositiveInt,
   maxListResponseBytes: PositiveInt,
   maxBlockWindowBlocks: PositiveInt,
@@ -409,7 +421,12 @@ export class SpaceValidationError extends Schema.TaggedError<SpaceValidationErro
 export class SpaceLimitExceededError extends Schema.TaggedError<SpaceLimitExceededError>()(
   "SpaceLimitExceededError",
   {
-    limit: Schema.Literals(Struct.keys(SpaceLimits.fields)),
+    limit: Schema.Literals([
+      ...Struct.keys(SpaceLimits.fields).filter((key) => key !== "history"),
+      "history.maxDeltaBytes",
+      "history.maxPageBytes",
+      "history.maxEnvironmentBytes",
+    ]),
     actual: NonNegativeInt,
     maximum: PositiveInt,
   },

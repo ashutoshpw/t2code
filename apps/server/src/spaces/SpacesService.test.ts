@@ -4,6 +4,8 @@ import { EnvironmentId } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Context from "effect/Context";
+import * as Clock from "effect/Clock";
+import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -60,7 +62,7 @@ const fixture = Effect.fn("SpacesServiceTest.fixture")(function* <A, E>(
       ),
     ),
   );
-});
+}, Effect.provide(TestClock.layer()));
 const boot = Effect.fn("SpacesServiceTest.boot")(function* () {
   const service = yield* SpacesService.SpacesService;
   const library = yield* service.listSpaces(env);
@@ -90,7 +92,582 @@ const boot = Effect.fn("SpacesServiceTest.boot")(function* () {
   return { service, library, common, page: page.page, request };
 });
 
+interface StoredRevision {
+  readonly page_id: string;
+  readonly to_revision: number;
+  readonly mutation_id: string;
+  readonly created_at_ms: number;
+  readonly expires_at_ms: number;
+  readonly payload: string;
+  readonly logical_bytes: number;
+  readonly asset_count: number;
+}
+const historyState = (dbPath: string) =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const revisions =
+      yield* sql<StoredRevision>`SELECT * FROM spaces_revisions ORDER BY page_id, to_revision`;
+    const pages = yield* sql<{
+      readonly page_id: string;
+      readonly retained_revision_count: number;
+      readonly retained_revision_bytes: number;
+    }>`SELECT page_id, retained_revision_count, retained_revision_bytes FROM spaces_pages ORDER BY page_id`;
+    const [core] = yield* sql<{
+      readonly revision_bytes: number;
+    }>`SELECT revision_bytes FROM spaces_core`;
+    for (const row of revisions) {
+      const pins = yield* sql<{
+        readonly asset_id: string;
+      }>`SELECT asset_id FROM spaces_revision_asset_refs WHERE page_id = ${row.page_id} AND to_revision = ${row.to_revision} ORDER BY asset_id`;
+      assert.equal(row.asset_count, pins.length);
+      assert.equal(
+        row.logical_bytes,
+        bytes({
+          pageId: row.page_id,
+          toRevision: row.to_revision,
+          mutationId: row.mutation_id,
+          createdAtMs: row.created_at_ms,
+          expiresAtMs: row.expires_at_ms,
+          payload: row.payload,
+          assetIds: pins.map((pin) => pin.asset_id),
+        }),
+      );
+    }
+    for (const page of pages) {
+      const retained = revisions.filter((row) => row.page_id === page.page_id);
+      assert.equal(page.retained_revision_count, retained.length);
+      assert.equal(
+        page.retained_revision_bytes,
+        retained.reduce((sum, row) => sum + row.logical_bytes, 0),
+      );
+    }
+    assert.equal(
+      core?.revision_bytes,
+      revisions.reduce((sum, row) => sum + row.logical_bytes, 0),
+    );
+    return { revisions, pages, bytes: core!.revision_bytes };
+  }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+
+const prepareHistoryDelta = Effect.fn("SpacesServiceTest.prepareHistoryDelta")(function* (
+  service: SpacesService.SpacesService["Service"],
+  common: { readonly environmentId: EnvironmentId; readonly receiptEpoch: C.SpaceReceiptEpoch },
+  pageId: C.SpacePageId,
+  prefix: string,
+  targetBytes: number,
+  blockCount = 99,
+) {
+  const current = (yield* service.getPage({ ...env, pageId })).page;
+  const now = yield* Clock.currentTimeMillis;
+  const before = {
+    pageId,
+    spaceId: current.spaceId,
+    title: current.title,
+    revision: current.revision + Math.ceil(blockCount / 7),
+    rootOrder: current.rootOrder,
+    createdAt: current.createdAt,
+    updatedAt: DateTime.formatIso(DateTime.makeUnsafe(now)),
+  };
+  const mutationId = `${prefix}-delta`;
+  const newId = C.SpaceBlockId.make(`${prefix}-new`);
+  const unit = blockCount === 99 ? '界\\"\n' : "\\";
+  const values = (repeat: number, extra: number) =>
+    Array.from({ length: blockCount }, (_, i) => ({
+      ...block(`${prefix}-${i}`, i + 1),
+      type: "code",
+      content: {
+        language: "",
+        text: unit.repeat(repeat) + (i === blockCount - 1 ? "x".repeat(extra) : ""),
+      },
+    }));
+  const measure = (values: readonly C.SpaceBlock[]) => {
+    const payload = JSON.stringify({
+      version: 1,
+      pageBefore: before,
+      ownerBefore: null,
+      blocksBefore: [
+        ...values.map((value) => ({
+          id: value.id,
+          row: {
+            block_id: value.id,
+            page_id: pageId,
+            parent_id: null,
+            rank: value.order,
+            payload: JSON.stringify(value),
+            logical_bytes: bytes(value),
+            deleted: 0,
+            merged_into: null,
+          },
+        })),
+        { id: newId, row: null },
+      ],
+    });
+    return bytes({
+      pageId,
+      toRevision: before.revision + 1,
+      mutationId,
+      createdAtMs: now,
+      expiresAtMs: now + 604_800_000,
+      payload,
+      assetIds: [],
+    });
+  };
+  let low = 0,
+    high = Math.floor(32_768 / (bytes(unit) - 2));
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (measure(values(mid, 0)) <= targetBytes) low = mid;
+    else high = mid - 1;
+  }
+  const prepared = values(low, targetBytes - measure(values(low, 0)));
+  assert.equal(measure(prepared), targetBytes);
+  assert.isTrue(prepared.every((value) => bytes(value) <= 32_768));
+  let revision = current.revision;
+  for (let start = 0; start < prepared.length; start += 7) {
+    yield* service.applyBlockBatch({
+      ...common,
+      mutationId: `${prefix}-fill-${start}`,
+      pageId,
+      baseRevision: revision++,
+      generation: 0,
+      mutations: prepared
+        .slice(start, start + 7)
+        .map((value) => ({ kind: "insert", block: value })),
+    });
+  }
+  return {
+    ...common,
+    mutationId,
+    pageId,
+    baseRevision: revision,
+    generation: 1,
+    mutations: [
+      ...prepared.map((value) => ({ kind: "delete" as const, blockId: value.id })),
+      { kind: "insert" as const, block: block(newId, 100) },
+    ],
+  };
+});
+
 it.layer(NodeServices.layer)("Spaces core service", (it) => {
+  it.effect(
+    "retains exact changed-row reverse deltas once, preserving original opaque payload bytes",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page, request } = yield* boot();
+          const parent = {
+            ...block("parent"),
+            type: "bulleted_item",
+            content: { runs: [{ text: "original", marks: [] }], future: { text: "界" } },
+          };
+          const child = block("child", 1, parent.id);
+          const sibling = block("sibling", 2);
+          const insert = request(
+            "insert-history",
+            0,
+            [parent, child, sibling].map((value) => ({ kind: "insert", block: value })),
+          );
+          const inserted = yield* service.applyBlockBatch(insert);
+          const originals = yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            return yield* sql`SELECT * FROM spaces_blocks ORDER BY block_id`;
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+          const edited = {
+            ...parent,
+            content: { ...parent.content, runs: [{ text: "changed", marks: [] }] },
+          };
+          yield* service.applyBlockBatch(
+            request("replace-history", 1, [{ kind: "replace", block: edited }]),
+          );
+          yield* service.applyBlockBatch(
+            request("delete-history", 2, [{ kind: "delete", blockId: child.id }]),
+          );
+          yield* service.updatePage({
+            ...common,
+            mutationId: "title-history",
+            pageId: page.id,
+            baseRevision: 3,
+            title: "Renamed",
+          });
+          const before = yield* historyState(dbPath);
+          assert.deepEqual(
+            before.revisions.map((row) => row.to_revision),
+            [0, 1, 2, 3, 4],
+          );
+          assert.deepEqual(JSON.parse(before.revisions[0]!.payload), {
+            version: 1,
+            pageBefore: null,
+            ownerBefore: null,
+            blocksBefore: [],
+          });
+          assert.deepEqual(
+            JSON.parse(before.revisions[1]!.payload).blocksBefore,
+            [parent, child, sibling].map((value) => ({ id: value.id, row: null })),
+          );
+          const replaced = JSON.parse(before.revisions[2]!.payload);
+          assert.deepEqual(replaced.blocksBefore, [
+            { id: parent.id, row: originals.find((row) => row.block_id === parent.id) },
+          ]);
+          assert.deepEqual(replaced.pageBefore, {
+            pageId: page.id,
+            spaceId: page.spaceId,
+            title: "Page",
+            revision: 1,
+            rootOrder: page.rootOrder,
+            createdAt: page.createdAt,
+            updatedAt: page.updatedAt,
+          });
+          assert.isNull(replaced.ownerBefore);
+          assert.deepEqual(JSON.parse(before.revisions[3]!.payload).blocksBefore, [
+            { id: child.id, row: originals.find((row) => row.block_id === child.id) },
+          ]);
+          assert.deepEqual(JSON.parse(before.revisions[4]!.payload).blocksBefore, []);
+          assert.equal(JSON.parse(before.revisions[4]!.payload).pageBefore.title, "Page");
+          assert.deepEqual(yield* service.applyBlockBatch(insert), inserted);
+          assert.equal(
+            (yield* service.applyBlockBatch(request("stale-history", 0, []))).status,
+            "conflict",
+          );
+          yield* service.applyBlockBatch(
+            request("no-op-history", 4, [{ kind: "replace", block: edited }]),
+          );
+          yield* service.updatePage({
+            ...common,
+            mutationId: "title-no-op",
+            pageId: page.id,
+            baseRevision: 4,
+            title: "Renamed",
+          });
+          assert.deepEqual(yield* historyState(dbPath), before);
+        }),
+      ),
+  );
+
+  it.effect(
+    "retains the newest twenty revisions while metadata changes never snapshot unchanged bodies",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page } = yield* boot();
+          for (let i = 1; i <= 20; i++)
+            yield* service.updatePage({
+              ...common,
+              mutationId: `title-${i}`,
+              pageId: page.id,
+              baseRevision: i - 1,
+              title: `Title ${i}`,
+            });
+          const state = yield* historyState(dbPath);
+          assert.equal(state.revisions.length, 20);
+          assert.deepEqual(
+            state.revisions.map((row) => row.to_revision),
+            Array.from({ length: 20 }, (_, i) => i + 1),
+          );
+          assert.equal(JSON.parse(state.revisions[0]!.payload).pageBefore.title, "Page");
+          assert.isTrue(
+            state.revisions.every((row) => JSON.parse(row.payload).blocksBefore.length === 0),
+          );
+          assert.deepEqual((yield* service.getCapability(environmentId))?.limits.history, {
+            maxRevisionsPerPage: 20,
+            retentionMs: 604_800_000,
+            maxDeltaBytes: 4_194_304,
+            maxPageBytes: 8_388_608,
+            maxEnvironmentBytes: 67_108_864,
+            cleanupBatchRows: 100,
+            cleanupBatchBytes: 4_194_304,
+          });
+        }),
+      ),
+  );
+
+  it.effect.each([0, 1])(
+    "enforces the independent history delta ceiling at exact UTF8 bytes plus %s",
+    (excess) =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page } = yield* boot();
+          const input = yield* prepareHistoryDelta(
+            service,
+            common,
+            page.id,
+            "boundary",
+            4_194_304 + excess,
+          );
+          assert.isBelow(bytes({ operation: "applyBlockBatch", input }), 262_144);
+          const inspect = Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            return {
+              core: yield* sql`SELECT * FROM spaces_core`,
+              pages: yield* sql`SELECT * FROM spaces_pages`,
+              blocks: yield* sql`SELECT * FROM spaces_blocks ORDER BY block_id`,
+              ids: yield* sql`SELECT * FROM spaces_ids ORDER BY id`,
+              receipts: yield* sql`SELECT * FROM spaces_receipts ORDER BY mutation_id`,
+              revisions: yield* sql`SELECT * FROM spaces_revisions ORDER BY page_id, to_revision`,
+            };
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+          const before = yield* inspect;
+          if (excess) {
+            const error = yield* Effect.flip(service.applyBlockBatch(input));
+            assert.equal(error._tag, "SpaceLimitExceededError");
+            if (error._tag === "SpaceLimitExceededError") {
+              assert.equal(error.limit, "history.maxDeltaBytes");
+              assert.equal(error.actual, 4_194_305);
+              assert.equal(error.maximum, 4_194_304);
+            }
+            assert.deepEqual(yield* inspect, before);
+            assert.deepEqual(
+              yield* service.lookupMutationReceipt({
+                request: { operation: "applyBlockBatch", input },
+              }),
+              { status: "absent" },
+            );
+          } else {
+            const saved = yield* service.applyBlockBatch(input);
+            const state = yield* historyState(dbPath);
+            const record = state.revisions.find((row) => row.mutation_id === input.mutationId)!;
+            assert.equal(record.logical_bytes, 4_194_304);
+            assert.equal(JSON.parse(record.payload).blocksBefore.length, 100);
+            yield* TestClock.adjust("8 days");
+            assert.deepEqual(yield* service.applyBlockBatch(input), saved);
+            assert.equal((yield* historyState(dbPath)).bytes, state.bytes);
+            yield* service.getPage({ ...env, pageId: page.id });
+            const first = yield* historyState(dbPath);
+            assert.equal(first.revisions.length, 1);
+            assert.equal(first.bytes, 4_194_304);
+            yield* TestClock.setTime(0);
+            yield* service.getPage({ ...env, pageId: page.id });
+            assert.equal((yield* historyState(dbPath)).revisions.length, 0);
+          }
+        }),
+      ),
+  );
+
+  it.effect(
+    "commits at most one hundred expired history rows after refusal, without maintaining ahead of replay",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, library, page } = yield* boot();
+          let last = page;
+          let known: C.SpacePageUpdateInput | undefined;
+          let saved: C.SpacePageUpdateResult | undefined;
+          for (let p = 0; p < 6; p++) {
+            if (p) {
+              const created = yield* service.createPage({
+                ...common,
+                mutationId: `prune-page-${p}`,
+                spaceId: library.defaultSpaceId,
+                baseRootOrderRevision: p,
+                title: "Page",
+              });
+              if (created.status !== "saved") return yield* Effect.die("Expected page");
+              last = created.page;
+            }
+            for (let r = 1; r < 20; r++) {
+              known = {
+                ...common,
+                mutationId: C.SpaceMutationId.make(`prune-${p}-${r}`),
+                pageId: last.id,
+                baseRevision: r - 1,
+                title: `Title ${r}`,
+              };
+              saved = yield* service.updatePage(known);
+            }
+          }
+          if (known === undefined || saved === undefined)
+            return yield* Effect.die("Expected saved history");
+          assert.equal((yield* historyState(dbPath)).revisions.length, 120);
+          yield* TestClock.adjust("8 days");
+          assert.deepEqual(yield* service.updatePage(known!), saved);
+          assert.equal((yield* historyState(dbPath)).revisions.length, 120);
+          assert.deepEqual(
+            yield* service.lookupMutationReceipt({
+              request: { operation: "updatePage", input: known! },
+            }),
+            { status: "found", receipt: { operation: "updatePage", result: saved } },
+          );
+          assert.equal((yield* historyState(dbPath)).revisions.length, 120);
+          const error = yield* Effect.flip(
+            service.updatePage({
+              ...known,
+              mutationId: "refused-maintenance",
+              title: "x".repeat(513),
+            }),
+          );
+          assert.equal(error._tag, "SpaceLimitExceededError");
+          assert.equal((yield* historyState(dbPath)).revisions.length, 20);
+          yield* TestClock.setTime(0);
+          yield* service.getPage({ ...env, pageId: last.id });
+          assert.equal((yield* historyState(dbPath)).revisions.length, 0);
+        }),
+      ),
+  );
+
+  it.effect("evicts complete oldest history records at page and environment byte capacity", () =>
+    fixture((dbPath) =>
+      Effect.gen(function* () {
+        const { service, common, library, page } = yield* boot();
+        const large: string[] = [];
+        let last = page;
+        for (let p = 0; p < 9; p++) {
+          if (p) {
+            yield* TestClock.adjust(1);
+            const created = yield* service.createPage({
+              ...common,
+              mutationId: `capacity-page-${p}`,
+              spaceId: library.defaultSpaceId,
+              baseRootOrderRevision: p,
+              title: "Page",
+            });
+            if (created.status !== "saved") return yield* Effect.die("Expected page");
+            last = created.page;
+          }
+          for (let r = 0; r < 2; r++) {
+            const input = yield* prepareHistoryDelta(
+              service,
+              common,
+              last.id,
+              `cap-${p}-${r}`,
+              3_900_000,
+              40,
+            );
+            yield* service.applyBlockBatch(input);
+            large.push(input.mutationId);
+          }
+        }
+        const environment = yield* historyState(dbPath);
+        assert.isAtMost(environment.bytes, 67_108_864);
+        assert.isAbove(environment.bytes, 63_000_000);
+        assert.isFalse(environment.revisions.some((row) => row.mutation_id === large[0]));
+        assert.isTrue(
+          large.slice(1).every((id) => environment.revisions.some((row) => row.mutation_id === id)),
+        );
+        const input = yield* prepareHistoryDelta(
+          service,
+          common,
+          last.id,
+          "page-overflow",
+          3_900_000,
+          40,
+        );
+        const pending = yield* historyState(dbPath);
+        assert.isTrue(pending.revisions.some((row) => row.mutation_id === "cap-8-0-delta"));
+        assert.isAbove(
+          pending.pages.find((row) => row.page_id === last.id)!.retained_revision_bytes + 3_900_000,
+          8_388_608,
+        );
+        yield* service.applyBlockBatch(input);
+        const after = yield* historyState(dbPath);
+        assert.isAtMost(
+          after.pages.find((row) => row.page_id === last.id)!.retained_revision_bytes,
+          8_388_608,
+        );
+        assert.isFalse(after.revisions.some((row) => row.mutation_id === "cap-8-0-delta"));
+        assert.isTrue(after.revisions.some((row) => row.mutation_id === "cap-8-1-delta"));
+        assert.isTrue(after.revisions.some((row) => row.mutation_id === input.mutationId));
+      }),
+    ),
+  );
+
+  it.effect(
+    "rolls back indivisible capacity eviction and makes bounded age-cleanup progress after refusal",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page } = yield* boot();
+          for (let i = 0; i < 3; i++) {
+            const input = yield* prepareHistoryDelta(
+              service,
+              common,
+              page.id,
+              `indivisible-${i}`,
+              2_400_000,
+              20,
+            );
+            yield* service.applyBlockBatch(input);
+          }
+          const input = yield* prepareHistoryDelta(
+            service,
+            common,
+            page.id,
+            "refused-delta",
+            4_194_304,
+            40,
+          );
+          const snapshot = Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            return {
+              core: yield* sql`SELECT * FROM spaces_core`,
+              pages: yield* sql`SELECT * FROM spaces_pages`,
+              blocks: yield* sql`SELECT * FROM spaces_blocks ORDER BY block_id`,
+              ids: yield* sql`SELECT * FROM spaces_ids ORDER BY id`,
+              receipts: yield* sql`SELECT * FROM spaces_receipts ORDER BY mutation_id`,
+              revisions: yield* sql`SELECT * FROM spaces_revisions ORDER BY page_id, to_revision`,
+            };
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+          const before = yield* snapshot;
+          const error = yield* Effect.flip(service.applyBlockBatch(input));
+          assert.equal(error._tag, "SpaceLimitExceededError");
+          if (error._tag === "SpaceLimitExceededError")
+            assert.equal(error.limit, "history.maxPageBytes");
+          assert.deepEqual(yield* snapshot, before);
+          yield* TestClock.adjust("8 days");
+          let state = yield* historyState(dbPath);
+          for (let pass = 0; pass < 3; pass++) {
+            yield* service.getPage({ ...env, pageId: page.id });
+            const next = yield* historyState(dbPath);
+            assert.isBelow(next.bytes, state.bytes);
+            assert.isAtMost(state.bytes - next.bytes, 4_194_304);
+            assert.isAtMost(state.revisions.length - next.revisions.length, 100);
+            state = next;
+          }
+          assert.equal(state.bytes, 0);
+          const library = yield* service.listSpaces(env);
+          const fresh = {
+            ...input,
+            mutationId: "after",
+            receiptEpoch: library.mutationAdmission.epoch,
+          };
+          assert.equal((yield* service.applyBlockBatch(fresh)).status, "saved");
+          assert.isAtMost((yield* historyState(dbPath)).bytes, 4_194_304);
+        }),
+      ),
+  );
+
+  it.effect("reopens retained history and replays its saved receipt without another capture", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "spaces-history-reopen-" });
+      const dbPath = path.join(directory, "spaces.sqlite");
+      const live = () =>
+        SpacesService.layerFromPath(dbPath).pipe(
+          Layer.provide(identity),
+          Layer.provide(Settings.layerTest({ spacesEnabled: true })),
+        );
+      const first = yield* Effect.gen(function* () {
+        const { service, common, page } = yield* boot();
+        const input = {
+          ...common,
+          mutationId: "durable-history",
+          pageId: page.id,
+          baseRevision: 0,
+          title: "Durable title",
+        };
+        const saved = yield* service.updatePage(input);
+        return { input, saved, history: yield* historyState(dbPath) };
+      }).pipe(Effect.provide(live()));
+      yield* Effect.gen(function* () {
+        const service = yield* SpacesService.SpacesService;
+        assert.equal(
+          (yield* service.getPage({ ...env, pageId: first.input.pageId })).page.title,
+          "Durable title",
+        );
+        assert.deepEqual(yield* service.updatePage(first.input), first.saved);
+        assert.deepEqual(yield* historyState(dbPath), first.history);
+      }).pipe(Effect.provide(live()));
+    }),
+  );
+
   it.effect(
     "never opens disabled storage, gates every operation, and retains data over disable/re-enable",
     () =>

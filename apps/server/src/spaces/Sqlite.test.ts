@@ -2,6 +2,8 @@
 import * as NodeChildProcess from "node:child_process";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import { EnvironmentId } from "@t2code/contracts";
+import * as C from "@t2code/contracts/spaces";
 import { assert, it } from "@effect/vitest";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Effect from "effect/Effect";
@@ -9,12 +11,21 @@ import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
 import * as SqlClient from "effect/sql/SqlClient";
+import * as Migrator from "effect/sql/Migrator";
+
+import Migration0001 from "./Migrations/001_Spaces.ts";
+import Migration0002 from "./Migrations/002_Core.ts";
 
 import * as ChatSqlite from "../persistence/Sqlite.ts";
 import { runMigrations } from "./Migrations.ts";
+import * as Receipts from "./Receipts.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as Sqlite from "./Sqlite.ts";
+
+const decodeCoreRequest = Schema.decodeEffect(C.SpaceMutationRequest);
+const decodeCoreReceipt = Schema.decodeUnknownEffect(C.SpaceMutationReceipt);
 
 it.effect("keeps Spaces and chat connections, transactions, and migration ledgers separate", () =>
   Effect.gen(function* () {
@@ -44,6 +55,7 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
     assert.deepEqual(yield* spaces`SELECT migration_id, name FROM effect_sql_migrations`, [
       { migration_id: 1, name: "Spaces" },
       { migration_id: 2, name: "Core" },
+      { migration_id: 3, name: "RevisionPreimages" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -93,6 +105,134 @@ it.effect("rolls back a failed schema migration together with its ledger entry",
 );
 
 it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
+  it.effect(
+    "upgrades core content and receipts without inventing past history, and restarts with reference FKs intact",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "spaces-core-upgrade-" });
+        const dbPath = path.join(directory, "spaces.sqlite");
+        const before = yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          yield* sql`PRAGMA application_id = 1397768515`;
+          yield* Migrator.make({})({
+            loader: Migrator.fromRecord({
+              "1_Spaces": Migration0001.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+              "2_Core": Migration0002.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+            }),
+          }).pipe(Effect.provideService(SpacesSql.SpacesSql, sql));
+          yield* sql`UPDATE spaces SET title = 'Core default', revision = 4 WHERE is_default = 1`;
+          yield* sql`INSERT INTO spaces_ids VALUES ('core-page', 'page'), ('core-block', 'block')`;
+          const payload = JSON.stringify({
+            id: "core-block",
+            parentId: null,
+            order: "00000000000000000000000000000001",
+            type: "future-table",
+            version: 9,
+            content: { text: "界" },
+          });
+          const blockBytes = Buffer.byteLength(payload, "utf8");
+          yield* sql`INSERT INTO spaces_pages (page_id, space_id, title, revision, root_order, block_count, block_bytes, created_at, updated_at)
+            VALUES ('core-page', 'default', 'Core title', 7, '00000000000000000000000000000001', 1, ${blockBytes}, '2026-10-26T00:00:00.000Z', '2026-10-26T00:00:00.000Z')`;
+          yield* sql`INSERT INTO spaces_blocks (block_id, page_id, rank, payload, logical_bytes)
+            VALUES ('core-block', 'core-page', '00000000000000000000000000000001', ${payload}, ${blockBytes})`;
+          yield* sql`INSERT INTO spaces_epochs VALUES ('core-epoch', 99999, 999999)`;
+          const environmentId = EnvironmentId.make("core-environment");
+          const request = yield* decodeCoreRequest({
+            operation: "renameSpace",
+            input: {
+              environmentId,
+              mutationId: "core-mutation",
+              receiptEpoch: "core-epoch",
+              spaceId: "default",
+              baseRevision: 3,
+              title: "Core default",
+            },
+          });
+          const [space] = yield* sql`SELECT * FROM spaces WHERE is_default = 1`;
+          const receipt = yield* decodeCoreReceipt({
+            operation: "renameSpace",
+            result: {
+              status: "saved",
+              mutationId: "core-mutation",
+              receiptEpoch: "core-epoch",
+              space: {
+                id: "default",
+                title: "Core default",
+                isDefault: true,
+                revision: 4,
+                rootOrderRevision: 0,
+                createdAt: space!.created_at,
+                updatedAt: space!.updated_at,
+              },
+            },
+          });
+          yield* Receipts.store(
+            request,
+            receipt,
+            {
+              environment_id: environmentId,
+              observed_time_ms: 123,
+              catalog_revision: 4,
+              active_epoch: "core-epoch",
+              receipt_rows: 0,
+              receipt_bytes: 0,
+            },
+            999999,
+          ).pipe(Effect.provideService(SpacesSql.SpacesSql, sql));
+          yield* sql`UPDATE spaces_core SET environment_id = ${environmentId}, observed_time_ms = 123, catalog_revision = 4, active_epoch = 'core-epoch'`;
+          return {
+            core: yield* sql`SELECT * FROM spaces_core`,
+            spaces: yield* sql`SELECT * FROM spaces`,
+            pages: yield* sql`SELECT * FROM spaces_pages`,
+            blocks: yield* sql`SELECT * FROM spaces_blocks`,
+            receipts: yield* sql`SELECT * FROM spaces_receipts`,
+            ids: yield* sql`SELECT * FROM spaces_ids ORDER BY id`,
+          };
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
+        for (let open = 0; open < 2; open++)
+          yield* Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            assert.deepEqual(
+              yield* sql`SELECT * FROM spaces_core`,
+              before.core.map((row) => ({ ...row, revision_bytes: 0 })),
+            );
+            assert.deepEqual(yield* sql`SELECT * FROM spaces`, before.spaces);
+            const pages = yield* sql`SELECT * FROM spaces_pages`;
+            assert.deepEqual(
+              pages,
+              before.pages.map((page) => ({
+                ...page,
+                retained_revision_count: 0,
+                retained_revision_bytes: 0,
+              })),
+            );
+            assert.deepEqual(yield* sql`SELECT * FROM spaces_blocks`, before.blocks);
+            assert.deepEqual(yield* sql`SELECT * FROM spaces_receipts`, before.receipts);
+            assert.deepEqual(yield* sql`SELECT * FROM spaces_ids ORDER BY id`, before.ids);
+            assert.deepEqual(yield* sql`SELECT * FROM spaces_revisions`, []);
+            assert.equal(
+              (yield* sql`SELECT revision_bytes FROM spaces_core`)[0]?.revision_bytes,
+              0,
+            );
+            assert.deepEqual(yield* sql`PRAGMA foreign_key_check`, []);
+            assert.equal(
+              (yield* Effect.flip(
+                sql`INSERT INTO spaces_block_asset_refs VALUES ('missing-block', 'asset')`,
+              ))._tag,
+              "SqlError",
+            );
+            assert.equal(
+              (yield* Effect.flip(
+                sql`INSERT INTO spaces_revision_asset_refs VALUES ('core-page', 7, 'asset')`,
+              ))._tag,
+              "SqlError",
+            );
+          }).pipe(Effect.provide(Sqlite.layerFromPath(dbPath)));
+      }),
+  );
+
   it.effect.each(["missing", "empty"] as const)(
     "preserves spaces and the renamed default across a full close and reopen from a %s file",
     (initial) =>
@@ -132,7 +272,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            2,
+            3,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -246,7 +386,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (3, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (4, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;

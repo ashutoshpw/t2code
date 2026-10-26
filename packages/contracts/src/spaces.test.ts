@@ -134,6 +134,69 @@ const batch = {
 
 // Public decoding owns wire shape; service tests own execution, fingerprint and replay ordering.
 describe("Spaces core protocol", () => {
+  it("decodes legacy capabilities and receipts while advertising optional independent history limits", () => {
+    const old = {
+      version: 1,
+      limits: {
+        maxListRows: 1,
+        maxListResponseBytes: 1,
+        maxBlockWindowBlocks: 1,
+        maxBlockWindowResponseBytes: 1,
+        maxMutationNodes: 1,
+        maxMutationBytes: 1,
+        maxBlockBytes: 1,
+        maxDepth: 1,
+        maxPageBlocks: 1,
+        maxPageBytes: 1,
+        maxIdBytes: 1,
+        maxTitleBytes: 1,
+        maxOrderBytes: 1,
+        maxCursorBytes: 1,
+        maxReceiptBytes: 1,
+        maxReceiptRows: 1,
+        maxReceiptStorageBytes: 1,
+        maxEpochRows: 1,
+        receiptRetentionMs: 1,
+        cleanupBatchRows: 1,
+      },
+    };
+    expect(decodeCapability(old)).toEqual(old);
+    const history = {
+      maxRevisionsPerPage: 20,
+      retentionMs: 604_800_000,
+      maxDeltaBytes: 8_388_608,
+      maxPageBytes: 16_777_216,
+      maxEnvironmentBytes: 67_108_864,
+      cleanupBatchRows: 100,
+      cleanupBatchBytes: 8_388_608,
+    };
+    const next = { ...old, limits: { ...old.limits, history } };
+    expect(decodeCapability(next)).toEqual(next);
+    expect(() =>
+      decodeCapability({
+        ...old,
+        limits: { ...old.limits, history: { ...history, maxDeltaBytes: 0 } },
+      }),
+    ).toThrow();
+    const receipt = {
+      operation: "updatePage",
+      result: { status: "saved", ...acknowledgement, page },
+    };
+    expect(decodeReceipt(receipt)).toEqual(receipt);
+    for (const limit of [
+      "history.maxDeltaBytes",
+      "history.maxPageBytes",
+      "history.maxEnvironmentBytes",
+    ]) {
+      const raw = { _tag: "SpaceLimitExceededError", limit, actual: 2, maximum: 1 };
+      expect(encodeError(decodeError(raw))).toEqual(raw);
+    }
+    for (const limit of ["history", "history.retentionMs"])
+      expect(() =>
+        decodeError({ _tag: "SpaceLimitExceededError", limit, actual: 2, maximum: 1 }),
+      ).toThrow();
+  });
+
   it("preserves opaque envelopes through strict request, lookup and block-window codecs", () => {
     const block = {
       id: "opaque",

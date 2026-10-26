@@ -627,6 +627,7 @@ it.layer(layer)("migrate-dev-db", (it) => {
             [
               { migration_id: 1, name: "Spaces" },
               { migration_id: 2, name: "Core" },
+              { migration_id: 3, name: "RevisionPreimages" },
             ],
           );
         }),

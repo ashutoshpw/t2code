@@ -2,9 +2,23 @@ import {
   SpaceLimitExceededError,
   SpaceValidationError,
   type SpaceLimits,
+  type SpaceHistoryLimits,
 } from "@t2code/contracts/spaces";
 
+export const historyLimits: SpaceHistoryLimits = Object.freeze({
+  maxRevisionsPerPage: 20,
+  retentionMs: 604_800_000,
+  maxDeltaBytes: 4_194_304,
+  maxPageBytes: 8_388_608,
+  maxEnvironmentBytes: 67_108_864,
+  cleanupBatchRows: 100,
+  cleanupBatchBytes: 4_194_304,
+});
+
+type ScalarLimit = Exclude<keyof SpaceLimits, "history">;
+
 export const limits: SpaceLimits = Object.freeze({
+  history: historyLimits,
   maxListRows: 50,
   maxListResponseBytes: 65_536,
   maxBlockWindowBlocks: 100,
@@ -27,12 +41,19 @@ export const limits: SpaceLimits = Object.freeze({
   cleanupBatchRows: 100,
 });
 
-export function checkLimit(limit: keyof SpaceLimits, actual: number, maximum = limits[limit]) {
+export function checkLimit(limit: ScalarLimit, actual: number, maximum = limits[limit]) {
   if (actual > maximum) throw new SpaceLimitExceededError({ limit, actual, maximum });
 }
 
 // Iterative canonicalization bounds raw input before recursive schema decoding, including opaque JSON.
-export function canonical(value: unknown, ceiling = 1_048_576): string {
+export function canonical(
+  value: unknown,
+  ceiling = 1_048_576,
+  limit: ScalarLimit | "history.maxDeltaBytes" = "maxMutationBytes",
+): string {
+  const check = (actual: number) => {
+    if (actual > ceiling) throw new SpaceLimitExceededError({ limit, actual, maximum: ceiling });
+  };
   const pending: Array<{ value: unknown; depth: number } | string> = [{ value, depth: 0 }];
   const parts: string[] = [];
   let bytes = 0;
@@ -40,7 +61,7 @@ export function canonical(value: unknown, ceiling = 1_048_576): string {
     const item = pending.pop()!;
     if (typeof item === "string") {
       bytes += Buffer.byteLength(item, "utf8");
-      checkLimit("maxMutationBytes", bytes, ceiling);
+      check(bytes);
       parts.push(item);
       continue;
     }
@@ -54,7 +75,7 @@ export function canonical(value: unknown, ceiling = 1_048_576): string {
     ) {
       pending.push(JSON.stringify(next));
     } else if (Array.isArray(next)) {
-      checkLimit("maxMutationBytes", Math.max(2, next.length * 2 + 1), ceiling);
+      check(Math.max(2, next.length * 2 + 1));
       pending.push("]");
       for (let i = next.length - 1; i >= 0; i--) {
         pending.push({ value: next[i], depth: depth + 1 });
@@ -63,7 +84,7 @@ export function canonical(value: unknown, ceiling = 1_048_576): string {
       pending.push("[");
     } else if (typeof next === "object" && Object.getPrototypeOf(next) === Object.prototype) {
       const keys = Object.keys(next).sort();
-      checkLimit("maxMutationBytes", Math.max(2, keys.length * 5 + 1), ceiling);
+      check(Math.max(2, keys.length * 5 + 1));
       pending.push("}");
       for (let i = keys.length - 1; i >= 0; i--) {
         const key = keys[i]!;

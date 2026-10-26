@@ -224,5 +224,10 @@ export const apply = Effect.fnUntraced(function* (
       ON CONFLICT (block_id) DO UPDATE SET parent_id = excluded.parent_id, rank = excluded.rank,
       payload = excluded.payload, logical_bytes = excluded.logical_bytes, deleted = excluded.deleted, merged_into = excluded.merged_into`;
   }
-  return { changed: changes.length > 0, count, bytes };
+  return {
+    changed: changes.length > 0,
+    count,
+    bytes,
+    blocksBefore: changes.map(({ id, old }) => ({ id, row: old ? { ...old } : null })),
+  };
 });
