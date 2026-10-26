@@ -68,6 +68,15 @@ export class MigrateDevDbSourceIsDestinationError extends Schema.TaggedError<Mig
   }
 }
 
+export class MigrateDevDbDestinationOutsideSandboxError extends Schema.TaggedError<MigrateDevDbDestinationOutsideSandboxError>()(
+  "MigrateDevDbDestinationOutsideSandboxError",
+  { destinationPath: Schema.String },
+) {
+  override get message() {
+    return "Refusing to access a database destination outside the isolated sandbox.";
+  }
+}
+
 export class MigrateDevDbServerRunningError extends Schema.TaggedError<MigrateDevDbServerRunningError>()(
   "MigrateDevDbServerRunningError",
   {
@@ -436,6 +445,43 @@ const verifyMigrationSlots = Effect.fn("verifyMigrationSlots")(function* () {
   }
 });
 
+const resolveCanonicalPath = Effect.fn("migrateDevDb.resolveCanonicalPath")(function* (
+  filePath: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  let current = path.resolve(filePath);
+  const suffix: string[] = [];
+  for (;;) {
+    const canonical = yield* fs.realPath(current).pipe(
+      Effect.asSome,
+      Effect.catchIf(
+        (error) => error.reason._tag === "NotFound",
+        () => Effect.succeedNone,
+      ),
+    );
+    if (Option.isSome(canonical)) return path.join(canonical.value, ...suffix);
+    const link = yield* fs.readLink(current).pipe(
+      Effect.asSome,
+      Effect.catchIf(
+        (error) => error.reason._tag === "NotFound",
+        () => Effect.succeedNone,
+      ),
+    );
+    if (Option.isSome(link)) {
+      // Preserve .. until realpath resolves any symlinked ancestors.
+      current = path.isAbsolute(link.value)
+        ? link.value
+        : `${path.dirname(current)}${path.sep}${link.value}`;
+      continue;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return path.join(yield* fs.realPath(current), ...suffix);
+    suffix.unshift(path.basename(current));
+    current = parent;
+  }
+});
+
 export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   input: RunMigrateDevDbInput,
   options: RunMigrateDevDbOptions = {},
@@ -468,29 +514,46 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
     return yield* new MigrateDevDbSourceMissingError({ sourcePath });
   }
   const [canonicalBaseDir, canonicalSharedHome] = yield* Effect.all([
-    fs.realPath(baseDir).pipe(Effect.orElseSucceed(() => baseDir)),
-    fs.realPath(sharedHome).pipe(Effect.orElseSucceed(() => sharedHome)),
+    resolveCanonicalPath(baseDir),
+    resolveCanonicalPath(sharedHome),
   ]);
   if (canonicalBaseDir === canonicalSharedHome) {
     return yield* new MigrateDevDbSharedHomeError();
   }
   const [canonicalStateDir, canonicalSharedStateDir] = yield* Effect.all([
-    fs.realPath(stateDir).pipe(Effect.orElseSucceed(() => path.join(canonicalBaseDir, "userdata"))),
-    fs
-      .realPath(path.join(sharedHome, "userdata"))
-      .pipe(Effect.orElseSucceed(() => path.join(canonicalSharedHome, "userdata"))),
+    resolveCanonicalPath(stateDir),
+    resolveCanonicalPath(path.join(sharedHome, "userdata")),
   ]);
   if (canonicalStateDir === canonicalSharedStateDir) {
     return yield* new MigrateDevDbSharedHomeError();
   }
   // Reject source aliases before replacing chat or initializing the isolated Spaces database.
-  const canonicalSourcePath = yield* fs
-    .realPath(sourcePath)
-    .pipe(Effect.orElseSucceed(() => sourcePath));
-  for (const destination of [databasePath, snapshotPath, spacesDatabasePath]) {
-    const canonicalDestination = yield* fs
-      .realPath(destination)
-      .pipe(Effect.orElseSucceed(() => destination));
+  const canonicalSourcePath = yield* resolveCanonicalPath(sourcePath);
+  const [canonicalDatabasePath, canonicalSnapshotPath, canonicalSpacesDatabasePath] =
+    yield* Effect.all([
+      resolveCanonicalPath(databasePath),
+      resolveCanonicalPath(snapshotPath),
+      resolveCanonicalPath(spacesDatabasePath),
+    ]);
+  const destinations = [
+    canonicalDatabasePath,
+    canonicalSnapshotPath,
+    canonicalSpacesDatabasePath,
+    yield* resolveCanonicalPath(`${canonicalSpacesDatabasePath}-wal`),
+    yield* resolveCanonicalPath(`${canonicalSpacesDatabasePath}-shm`),
+  ];
+  for (const canonicalDestination of destinations) {
+    const relative = path.relative(canonicalBaseDir, canonicalDestination);
+    if (
+      relative === "" ||
+      relative === ".." ||
+      relative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relative)
+    ) {
+      return yield* new MigrateDevDbDestinationOutsideSandboxError({
+        destinationPath: canonicalDestination,
+      });
+    }
     if (canonicalSourcePath === canonicalDestination) {
       return yield* new MigrateDevDbSourceIsDestinationError({ sourcePath });
     }
@@ -507,13 +570,13 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
 
   const spaces = yield* SpacesDatabaseTools.SpacesDatabaseTools;
   const existingSpaces = yield* spaces
-    .inspect(spacesDatabasePath)
+    .inspect(canonicalSpacesDatabasePath)
     .pipe(wrapPhase("spaces", spacesDatabasePath));
   yield* fs.makeDirectory(stateDir, { recursive: true });
   yield* ensureNotInUse(databasePath);
   if (existingSpaces === null) {
     yield* spaces
-      .initializeIfMissing(spacesDatabasePath)
+      .initializeIfMissing(canonicalSpacesDatabasePath)
       .pipe(wrapPhase("spaces", spacesDatabasePath));
   }
   yield* removeDatabaseFiles(snapshotPath);

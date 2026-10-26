@@ -29,6 +29,15 @@ export class SpacesDatabaseInitializeError extends Schema.TaggedError<SpacesData
   }
 }
 
+export class SpacesDatabaseOrphanSidecarsError extends Schema.TaggedError<SpacesDatabaseOrphanSidecarsError>()(
+  "SpacesDatabaseOrphanSidecarsError",
+  { path: Schema.String },
+) {
+  override get message() {
+    return "Refusing to initialize Spaces while orphaned SQLite sidecars remain.";
+  }
+}
+
 export class SpacesDatabaseTools extends Context.Service<
   SpacesDatabaseTools,
   {
@@ -43,7 +52,10 @@ export class SpacesDatabaseTools extends Context.Service<
     >;
     readonly initializeIfMissing: (
       databasePath: string,
-    ) => Effect.Effect<void, SpacesDatabaseInspectError | SpacesDatabaseInitializeError>;
+    ) => Effect.Effect<
+      void,
+      SpacesDatabaseInspectError | SpacesDatabaseInitializeError | SpacesDatabaseOrphanSidecarsError
+    >;
   }
 >()("@t2code/cli/spaces/SpacesDatabaseTools") {}
 
@@ -89,10 +101,38 @@ const make = Effect.gen(function* () {
         Effect.mapError((cause) => new SpacesDatabaseInspectError({ path: databasePath, cause })),
       ),
   );
+  const hasEntry = Effect.fn("SpacesDatabaseTools.hasEntry")(
+    function* (file: string) {
+      if (yield* fs.exists(file)) return true;
+      return yield* fs.readLink(file).pipe(
+        Effect.as(true),
+        Effect.catchIf(
+          (error) => error.reason._tag === "NotFound",
+          () => Effect.succeed(false),
+        ),
+      );
+    },
+    (effect, file) =>
+      effect.pipe(
+        Effect.mapError((cause) => new SpacesDatabaseInitializeError({ path: file, cause })),
+      ),
+  );
+  const initializationTargetReady = Effect.fn("SpacesDatabaseTools.initializationTargetReady")(
+    function* (databasePath: string) {
+      if ((yield* inspect(databasePath)) !== null) return true;
+      for (const suffix of ["-wal", "-shm"]) {
+        if (yield* hasEntry(`${databasePath}${suffix}`)) {
+          if ((yield* inspect(databasePath)) !== null) return true;
+          return yield* new SpacesDatabaseOrphanSidecarsError({ path: databasePath });
+        }
+      }
+      return false;
+    },
+  );
   const initializeIfMissing = Effect.fn("SpacesDatabaseTools.initializeIfMissing")(function* (
     databasePath: string,
   ) {
-    if ((yield* inspect(databasePath)) !== null) return;
+    if (yield* initializationTargetReady(databasePath)) return;
     yield* Effect.gen(function* () {
       const directory = path.dirname(databasePath);
       yield* fs.makeDirectory(directory, { recursive: true });
@@ -107,16 +147,17 @@ const make = Effect.gen(function* () {
         Effect.provideService(Path.Path, path),
       );
       yield* fs.chmod(temporaryPath, 0o600);
+      if (yield* initializationTargetReady(databasePath)) return;
       // Publish a closed, checkpointed database without replacing a concurrent creator's file.
       yield* fs.link(temporaryPath, databasePath).pipe(
         Effect.catchIf(
           (error) => error.reason._tag === "AlreadyExists",
           (cause) =>
-            inspect(databasePath).pipe(
-              Effect.flatMap((status) =>
-                status === null
-                  ? Effect.fail(new SpacesDatabaseInitializeError({ path: databasePath, cause }))
-                  : Effect.void,
+            initializationTargetReady(databasePath).pipe(
+              Effect.flatMap((ready) =>
+                ready
+                  ? Effect.void
+                  : Effect.fail(new SpacesDatabaseInitializeError({ path: databasePath, cause })),
               ),
             ),
         ),
@@ -125,7 +166,8 @@ const make = Effect.gen(function* () {
       Effect.scoped,
       Effect.mapError((cause) =>
         cause._tag === "SpacesDatabaseInspectError" ||
-        cause._tag === "SpacesDatabaseInitializeError"
+        cause._tag === "SpacesDatabaseInitializeError" ||
+        cause._tag === "SpacesDatabaseOrphanSidecarsError"
           ? cause
           : new SpacesDatabaseInitializeError({ path: databasePath, cause }),
       ),

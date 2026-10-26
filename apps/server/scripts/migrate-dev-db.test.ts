@@ -4,6 +4,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
+import * as Result from "effect/Result";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import { runMigrations } from "../src/persistence/Migrations.ts";
@@ -107,6 +108,56 @@ const createFixtureSource = Effect.fn("createMigrateDevDbFixtureSource")(functio
 const layer = SpacesDatabaseTools.layer.pipe(Layer.provideMerge(NodeServices.layer));
 
 it.layer(layer)("migrate-dev-db", (it) => {
+  it.effect.each(["database", "parent", "missing-parent"] as const)(
+    "refuses escaping Spaces %s symlinks before inspection",
+    (alias) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-spaces-alias-" });
+        const sourceDir = path.join(root, "sandbox-outside");
+        const destDir = path.join(root, "sandbox");
+        yield* fs.makeDirectory(sourceDir);
+        yield* fs.makeDirectory(destDir);
+        const sourceChat = yield* createFixtureSource(sourceDir);
+        const sourceSpaces = path.join(sourceDir, "userdata", "spaces.sqlite");
+        yield* SpacesSql.SpacesSql.pipe(Effect.provide(SpacesSqlite.layerFromPath(sourceSpaces)));
+        const source =
+          alias === "database"
+            ? sourceChat
+            : yield* createFixtureSource(path.join(root, "chat-source"));
+        const destinationState = path.join(destDir, "userdata");
+        if (alias === "database") {
+          yield* fs.makeDirectory(destinationState);
+          yield* fs.symlink(sourceSpaces, path.join(destinationState, "spaces.sqlite"));
+        } else {
+          yield* fs.symlink(
+            alias === "parent"
+              ? path.dirname(sourceSpaces)
+              : path.join(path.dirname(sourceSpaces), "missing-userdata"),
+            destinationState,
+          );
+        }
+        const sourceFiles = (yield* fs.readDirectory(path.dirname(sourceSpaces))).sort();
+        assert.isFalse(yield* fs.exists(`${sourceSpaces}-wal`));
+        assert.isFalse(yield* fs.exists(`${sourceSpaces}-shm`));
+        const beforeSpaces = yield* fs.readFile(sourceSpaces);
+        const beforeChat = yield* fs.readFile(sourceChat);
+        const result = yield* runMigrateDevDb(
+          { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
+          { sharedHome: path.join(root, "protected-home") },
+        ).pipe(Effect.result);
+        assert.isTrue(
+          Result.isFailure(result),
+          "Migration accepted a destination outside its sandbox",
+        );
+        if (Result.isFailure(result))
+          assert.equal(result.failure._tag, "MigrateDevDbDestinationOutsideSandboxError");
+        assert.equal(Buffer.compare(yield* fs.readFile(sourceSpaces), beforeSpaces), 0);
+        assert.equal(Buffer.compare(yield* fs.readFile(sourceChat), beforeChat), 0);
+        assert.deepEqual((yield* fs.readDirectory(path.dirname(sourceSpaces))).sort(), sourceFiles);
+      }),
+  );
   it.effect("initializes Spaces empty and preserves sandbox changes across chat refreshes", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
