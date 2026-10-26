@@ -9,6 +9,7 @@ import * as Exit from "effect/Exit";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
+import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 
 import { openMediaFile, streamMediaFile } from "../../assets/MediaFile.ts";
@@ -178,17 +179,25 @@ interface StagedFile {
 const releaseOwned = Effect.fn("SpacesAssets.releaseStaged")(function* (
   partPath: string,
   file: { readonly handle: NodeFSP.FileHandle; readonly info: NodeFS.BigIntStats },
+  ownership: { retired: boolean; readonly mutex: Semaphore.Semaphore },
 ) {
-  yield* io(async () => {
-    await file.handle.close();
-    const current = await NodeFSP.lstat(partPath, { bigint: true }).catch((error: unknown) => {
-      if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
-      throw error;
-    });
-    if (current?.isFile() && current.dev === file.info.dev && current.ino === file.info.ino)
-      await NodeFSP.unlink(partPath);
-  });
-});
+  yield* ownership.mutex.withPermit(
+    Effect.gen(function* () {
+      if (ownership.retired) return;
+      yield* io(async () => {
+        await file.handle.close();
+        const current = await NodeFSP.lstat(partPath, { bigint: true }).catch((error: unknown) => {
+          if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+          throw error;
+        });
+        if (current?.isFile() && current.dev === file.info.dev && current.ino === file.info.ino)
+          await NodeFSP.unlink(partPath);
+      });
+      // The inode can be reused immediately after unlink; every later cleanup must stay retired.
+      ownership.retired = true;
+    }),
+  );
+}, Effect.uninterruptible);
 
 export const stageUpload = Effect.fn("SpacesAssets.stageUpload")(function* <E, R>(
   input: {
@@ -219,6 +228,7 @@ export const stageUpload = Effect.fn("SpacesAssets.stageUpload")(function* <E, R
     .realPath(input.stagingDir)
     .pipe(Effect.mapError(() => failure("io_failed")));
   const partPath = path.join(directory, `${input.uploadId}.part`);
+  const ownership = { retired: false, mutex: yield* Semaphore.make(1) };
   const owned = yield* Effect.acquireRelease(
     Effect.tryPromise({
       try: async () => {
@@ -239,11 +249,11 @@ export const stageUpload = Effect.fn("SpacesAssets.stageUpload")(function* <E, R
         ),
     }),
     (file) =>
-      releaseOwned(partPath, file).pipe(
+      releaseOwned(partPath, file, ownership).pipe(
         Effect.catch(() => Effect.logWarning("Failed to release a staged Spaces asset.")),
       ),
   );
-  const release = releaseOwned(partPath, owned);
+  const release = releaseOwned(partPath, owned, ownership);
   return yield* Effect.gen(function* () {
     const hash = NodeCrypto.createHash("sha256");
     const header = new Uint8Array(Math.min(fileLimits.headerBytes, input.expectedBytes));

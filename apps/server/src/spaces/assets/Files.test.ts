@@ -6,10 +6,12 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Stream from "effect/Stream";
+import * as Scope from "effect/Scope";
 
 import { publishVerified, stageUpload } from "./Files.ts";
 import { fileLimits, type MediaKind, type MediaType } from "./Policy.ts";
@@ -328,7 +330,102 @@ describe("Spaces asset files", () => {
       yield* fs.writeFileString(staged.partPath, "replacement");
       yield* staged.release;
       expect(yield* fs.readFileString(staged.partPath)).toBe("replacement");
+      yield* fs.remove(staged.partPath);
+      yield* fs.rename(`${staged.partPath}.old`, staged.partPath);
+      yield* staged.release;
+      expect(new Uint8Array(yield* fs.readFile(staged.partPath))).toEqual(pdf);
     }).pipe(Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect.each([
+    ["retry", "explicit"],
+    ["retry", "scope"],
+    ["same-inode link", "explicit"],
+    ["same-inode link", "scope"],
+  ] as const)("retires old cleanup before %s reuse and later %s release", ([reuse, cleanup]) =>
+    Effect.gen(function* () {
+      const { fs, stagingDir, assetsDir } = yield* fixture();
+      const scope = yield* Scope.make();
+      yield* Effect.addFinalizer((exit) => Scope.close(scope, exit));
+      const input = reservation(stagingDir);
+      const first = yield* stageUpload(input, Stream.make(pdf)).pipe(
+        Effect.provideService(Scope.Scope, scope),
+      );
+      const published =
+        reuse === "same-inode link" ? yield* publishVerified(first, assetsDir) : undefined;
+      yield* first.release;
+      const second = yield* stageUpload(input, Stream.make(pdf));
+      if (published) {
+        yield* second.release;
+        // A real hard link deterministically reuses the retired inode at a new directory entry.
+        yield* fs.link(published.path, second.partPath);
+        const info = yield* Effect.promise(() => NodeFSP.lstat(second.partPath, { bigint: true }));
+        expect(info.ino).toBe(first.identity.ino);
+      }
+      if (cleanup === "explicit") yield* first.release;
+      else yield* Scope.close(scope, Exit.void);
+      expect(
+        yield* fs.exists(second.partPath),
+        `first inode=${first.identity.ino}; retry inode=${second.identity.ino}; reuse=${reuse}`,
+      ).toBe(true);
+      expect(new Uint8Array(yield* fs.readFile(second.partPath))).toEqual(pdf);
+    }).pipe(Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("retries failed cleanup and serializes explicit release with scope finalization", () =>
+    Effect.gen(function* () {
+      const { fs, stagingDir, assetsDir } = yield* fixture();
+      const scope = yield* Scope.make();
+      yield* Effect.addFinalizer((exit) => Scope.close(scope, exit));
+      const staged = yield* stageUpload(reservation(stagingDir), Stream.make(pdf)).pipe(
+        Effect.provideService(Scope.Scope, scope),
+      );
+      const published = yield* publishVerified(staged, assetsDir);
+      const heldDirectory = `${stagingDir}-held`;
+      yield* fs.rename(stagingDir, heldDirectory);
+      yield* fs.writeFileString(stagingDir, "blocks path inspection");
+      expect(yield* staged.release.pipe(Effect.flip)).toMatchObject({ reason: "io_failed" });
+      yield* fs.remove(stagingDir);
+      yield* fs.rename(heldDirectory, stagingDir);
+      expect(yield* fs.exists(staged.partPath)).toBe(true);
+      yield* Effect.all([staged.release, Scope.close(scope, Exit.void), staged.release], {
+        concurrency: "unbounded",
+      });
+      expect(yield* fs.exists(staged.partPath)).toBe(false);
+      yield* fs.link(published.path, staged.partPath);
+      yield* staged.release;
+      expect(new Uint8Array(yield* fs.readFile(staged.partPath))).toEqual(pdf);
+    }).pipe(Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect(
+    "retires failure cleanup before its stale scope finalizer can remove a reused inode",
+    () =>
+      Effect.gen(function* () {
+        const { fs, path, stagingDir } = yield* fixture();
+        const scope = yield* Scope.make();
+        yield* Effect.addFinalizer((exit) => Scope.close(scope, exit));
+        const input = reservation(stagingDir);
+        const partPath = path.join(stagingDir, `${input.uploadId}.part`);
+        const heldPath = `${partPath}.held`;
+        const body = Stream.make(pdf.subarray(0, 8)).pipe(
+          Stream.concat(
+            Stream.fromEffect(
+              fs.link(partPath, heldPath).pipe(Effect.andThen(Effect.fail("disconnected"))),
+            ),
+          ),
+        );
+        expect(
+          yield* stageUpload(input, body).pipe(
+            Effect.provideService(Scope.Scope, scope),
+            Effect.flip,
+          ),
+        ).toMatchObject({ reason: "source_failed" });
+        expect(yield* fs.exists(partPath)).toBe(false);
+        yield* fs.rename(heldPath, partPath);
+        yield* Scope.close(scope, Exit.void);
+        expect(new Uint8Array(yield* fs.readFile(partPath))).toEqual(pdf.subarray(0, 8));
+      }).pipe(Effect.provide(NodeServices.layer)),
   );
 
   it.effect(
