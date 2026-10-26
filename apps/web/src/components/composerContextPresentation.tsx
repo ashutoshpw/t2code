@@ -361,8 +361,19 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
   ComposerContextRenderContext,
   ReactElement
 >({
-  requiredKinds: ["image", "file", "terminal", "review-comment", "preview-annotation", "thread"],
+  requiredKinds: [
+    "image",
+    "file",
+    "terminal",
+    "review-comment",
+    "preview-annotation",
+    "thread",
+    "page",
+    "block",
+  ],
   handlers: [
+    { kind: "page", render: (_entry, context) => <UnresolvedContextChip label={context.label} /> },
+    { kind: "block", render: (_entry, context) => <UnresolvedContextChip label={context.label} /> },
     {
       kind: "terminal",
       canRender: (entry) => entry.kind === "terminal",

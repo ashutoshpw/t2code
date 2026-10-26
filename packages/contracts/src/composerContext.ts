@@ -10,6 +10,7 @@ import {
   ThreadId,
   TrimmedNonEmptyString,
 } from "./baseSchemas.ts";
+import { SpaceId, SpacePageId, SpaceBlockId } from "./spaces.ts";
 import { GUEST_MESSAGE_MAX_LENGTH, GUEST_NAME_MAX_LENGTH } from "./guestShare.ts";
 
 /** Image and file records reference `ChatAttachment` ids, never bytes. */
@@ -24,6 +25,8 @@ export const COMPOSER_CONTEXT_KINDS = [
   "mention",
   "skill",
   "thread",
+  "page",
+  "block",
 ] as const;
 export type KnownComposerContextKind = (typeof COMPOSER_CONTEXT_KINDS)[number];
 
@@ -211,6 +214,123 @@ export const ThreadContextRecord = Schema.Struct({
 });
 export type ThreadContextRecord = typeof ThreadContextRecord.Type;
 
+// Provisional wire ceilings; capture traversal budgets belong to SpacesService.
+const SPACE_CONTEXT_LIMITS = {
+  maxRecords: 8,
+  maxSourcePages: 8,
+  maxBlockIds: 100,
+  maxTextChars: 16_000,
+  maxTextBytes: 32_768,
+  maxRecordBytes: 65_536,
+  maxEnvelopeBytes: 524_288,
+  maxEnvelopeTextBytes: 262_144,
+} as const;
+
+const utf8 = new TextEncoder();
+const utf8Length = (text: string) => utf8.encode(text).byteLength;
+const spaceIdBounds = Schema.makeFilter((id: string) => utf8Length(id) <= 128);
+const spaceContextBase = {
+  ...recordBase,
+  environmentId: EnvironmentId.check(spaceIdBounds),
+  spaceId: SpaceId.check(spaceIdBounds),
+  pageId: SpacePageId.check(spaceIdBounds),
+  title: ContextLabel,
+};
+
+const SpaceContextSource = Schema.Struct({
+  environmentId: EnvironmentId.check(spaceIdBounds),
+  spaceId: SpaceId.check(spaceIdBounds),
+  pageId: SpacePageId.check(spaceIdBounds),
+  revision: NonNegativeInt,
+  blockIds: Schema.Array(SpaceBlockId.check(spaceIdBounds)).check(
+    Schema.isMaxLength(SPACE_CONTEXT_LIMITS.maxBlockIds),
+  ),
+});
+
+export const SpaceContextSnapshot = Schema.Struct({
+  version: Schema.Literal(1),
+  includeChildPages: Schema.Boolean,
+  truncated: Schema.Boolean,
+  text: BoundedString(SPACE_CONTEXT_LIMITS.maxTextChars).check(
+    Schema.makeFilter((text) => utf8Length(text) <= SPACE_CONTEXT_LIMITS.maxTextBytes),
+  ),
+  contentHash: Schema.String.check(Schema.isPattern(/^sha256:[a-f0-9]{64}$/)),
+  sources: Schema.Array(SpaceContextSource).check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(SPACE_CONTEXT_LIMITS.maxSourcePages),
+  ),
+}).check(
+  Schema.makeFilter((snapshot) => {
+    const pages = new Set(snapshot.sources.map((source) => source.pageId));
+    const blocks = snapshot.sources.flatMap((source) => source.blockIds);
+    return (
+      (snapshot.includeChildPages || snapshot.sources.length === 1) &&
+      pages.size === snapshot.sources.length &&
+      blocks.length <= SPACE_CONTEXT_LIMITS.maxBlockIds &&
+      new Set(blocks).size === blocks.length
+    );
+  }),
+);
+export type SpaceContextSnapshot = typeof SpaceContextSnapshot.Type;
+
+const validSpaceContext = Schema.makeFilter(
+  (record: {
+    environmentId: EnvironmentId;
+    spaceId: SpaceId;
+    pageId: SpacePageId;
+    snapshot: SpaceContextSnapshot;
+  }) => {
+    const first = record.snapshot.sources[0]!;
+    return (
+      first.pageId === record.pageId &&
+      first.spaceId === record.spaceId &&
+      record.snapshot.sources.every((source) => source.environmentId === record.environmentId) &&
+      utf8Length(JSON.stringify(record)) <= SPACE_CONTEXT_LIMITS.maxRecordBytes
+    );
+  },
+);
+
+export const PageContextRecord = Schema.Struct({
+  ...spaceContextBase,
+  kind: Schema.Literal("page"),
+  snapshot: SpaceContextSnapshot,
+}).check(validSpaceContext);
+export type PageContextRecord = typeof PageContextRecord.Type;
+
+export const BlockContextRecord = Schema.Struct({
+  ...spaceContextBase,
+  kind: Schema.Literal("block"),
+  blockId: SpaceBlockId.check(spaceIdBounds),
+  resolvedBlockId: SpaceBlockId.check(spaceIdBounds),
+  snapshot: SpaceContextSnapshot,
+}).check(
+  validSpaceContext,
+  Schema.makeFilter((record) =>
+    record.snapshot.sources[0]!.blockIds.includes(record.resolvedBlockId),
+  ),
+);
+export type BlockContextRecord = typeof BlockContextRecord.Type;
+
+const spaceEnvelopeWithinLimits = (records: readonly unknown[]) => {
+  const spaces = records.filter(
+    (record) =>
+      typeof record === "object" &&
+      record !== null &&
+      "kind" in record &&
+      (record.kind === "page" || record.kind === "block"),
+  );
+  if (spaces.length > SPACE_CONTEXT_LIMITS.maxRecords) return false;
+  try {
+    return (
+      spaces.every(
+        (record) => utf8Length(JSON.stringify(record)) <= SPACE_CONTEXT_LIMITS.maxRecordBytes,
+      ) && utf8Length(JSON.stringify(spaces)) <= SPACE_CONTEXT_LIMITS.maxEnvelopeBytes
+    );
+  } catch {
+    return false;
+  }
+};
+
 const isJson = Schema.is(Schema.Json);
 
 /** Excludes known discriminators so malformed known records fail their own schema. */
@@ -241,6 +361,8 @@ export const KnownComposerContextRecord = Schema.Union([
   MentionContextRecord,
   SkillContextRecord,
   ThreadContextRecord,
+  PageContextRecord,
+  BlockContextRecord,
 ]);
 export type KnownComposerContextRecord = typeof KnownComposerContextRecord.Type;
 
@@ -273,6 +395,7 @@ export const OrchestrationMessageContext = Schema.Struct({
   records: Schema.Array(Schema.Unknown)
     .check(
       Schema.isMaxLength(COMPOSER_CONTEXT_MAX_RECORDS),
+      Schema.makeFilter(spaceEnvelopeWithinLimits),
       Schema.makeFilter((records) => {
         try {
           return JSON.stringify(records).length <= COMPOSER_CONTEXT_MAX_SERIALIZED_CHARS;
@@ -283,6 +406,17 @@ export const OrchestrationMessageContext = Schema.Struct({
     )
     .pipe(Schema.decodeTo(ForwardCompatibleArray(ComposerContextRecord)))
     .check(
+      Schema.makeFilter(
+        (records) =>
+          records.reduce(
+            (bytes, record) =>
+              bytes +
+              ((record.kind === "page" || record.kind === "block") && "snapshot" in record
+                ? utf8Length(record.snapshot.text)
+                : 0),
+            0,
+          ) <= SPACE_CONTEXT_LIMITS.maxEnvelopeTextBytes,
+      ),
       Schema.makeFilter(
         (records) => new Set(records.map((record) => record.contextId)).size === records.length,
       ),

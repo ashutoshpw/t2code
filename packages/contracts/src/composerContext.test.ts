@@ -13,6 +13,45 @@ const decodeContext = Schema.decodeUnknownSync(OrchestrationMessageContext);
 
 const base = { version: 1, contextId: "ctx_1" } as const;
 
+const spacePage = {
+  ...base,
+  kind: "page",
+  label: "Design",
+  environmentId: "env-1",
+  spaceId: "space-1",
+  pageId: "page-1",
+  title: "Design",
+  snapshot: {
+    version: 1,
+    includeChildPages: false,
+    truncated: false,
+    text: "Captured design",
+    contentHash: `sha256:${"a".repeat(64)}`,
+    sources: [
+      {
+        environmentId: "env-1",
+        spaceId: "space-1",
+        pageId: "page-1",
+        revision: 7,
+        blockIds: ["block-1"],
+      },
+    ],
+  },
+} as const;
+const spaceBlock = {
+  ...spacePage,
+  kind: "block",
+  blockId: "old-block",
+  resolvedBlockId: "block-1",
+};
+
+const spaceRecordWithBytes = (size: number, contextId = "ctx_1") => {
+  const record = { ...spacePage, contextId, snapshot: { ...spacePage.snapshot, text: "" } };
+  const remaining = size - new TextEncoder().encode(JSON.stringify(record)).byteLength;
+  record.snapshot.text = "\0".repeat(Math.floor(remaining / 6)) + "x".repeat(remaining % 6);
+  return record;
+};
+
 const knownRecords: Record<(typeof COMPOSER_CONTEXT_KINDS)[number], Record<string, unknown>> = {
   image: {
     ...base,
@@ -104,6 +143,8 @@ const knownRecords: Record<(typeof COMPOSER_CONTEXT_KINDS)[number], Record<strin
   },
   mention: { ...base, kind: "mention", label: "@src/index.ts", path: "src/index.ts" },
   skill: { ...base, kind: "skill", label: "$pinchtab", name: "pinchtab" },
+  page: spacePage,
+  block: spaceBlock,
   thread: {
     ...base,
     kind: "thread",
@@ -225,5 +266,137 @@ describe("OrchestrationMessageContext", () => {
         records: [knownRecords.skill, { ...knownRecords.terminal, contextId: " ctx_1 " }],
       }),
     ).toThrow();
+  });
+});
+
+describe("Spaces completed context records", () => {
+  it("round-trips completed snapshots and refuses draft selectors as completed records", () => {
+    for (const record of [spacePage, spaceBlock]) {
+      expect(Option.getOrThrow(decodeRecord(record))).toEqual(record);
+      const { snapshot: _snapshot, ...selector } = record;
+      expect(Option.isNone(decodeRecord(selector))).toBe(true);
+      expect(Option.isNone(decodeRecord({ ...selector, payload: { forged: true } }))).toBe(true);
+    }
+    const context = decodeContext({
+      version: 1,
+      records: [
+        spacePage,
+        {
+          ...spaceBlock,
+          contextId: "ctx_2",
+        },
+        { ...base, contextId: "future", kind: "future-spaces", label: "Future", payload: { v: 2 } },
+      ],
+    });
+    expect(context.records.map((record) => record.kind)).toEqual([
+      "page",
+      "block",
+      "future-spaces",
+    ]);
+  });
+
+  it("enforces both UTF-16 and UTF-8 text bounds without constraining existing contexts", () => {
+    for (const text of ["x".repeat(16_000), "界".repeat(10_922) + "xx"]) {
+      expect(
+        Option.isSome(decodeRecord({ ...spacePage, snapshot: { ...spacePage.snapshot, text } })),
+      ).toBe(true);
+    }
+    for (const text of ["x".repeat(16_001), "界".repeat(10_923), "😀".repeat(8_001)]) {
+      expect(
+        Option.isNone(decodeRecord({ ...spacePage, snapshot: { ...spacePage.snapshot, text } })),
+      ).toBe(true);
+    }
+    expect(
+      Option.isSome(decodeRecord({ ...knownRecords.terminal, text: "界".repeat(64_000) })),
+    ).toBe(true);
+  });
+
+  it("bounds serialized records in UTF-8 including JSON escapes and metadata", () => {
+    const exact = spaceRecordWithBytes(65_536);
+    expect(new TextEncoder().encode(JSON.stringify(exact)).byteLength).toBe(65_536);
+    expect(Option.isSome(decodeRecord(exact))).toBe(true);
+    expect(Option.isNone(decodeRecord(spaceRecordWithBytes(65_537)))).toBe(true);
+    expect(Option.isNone(decodeRecord({ ...exact, label: "Desig界" }))).toBe(true);
+  });
+
+  it("bounds source pages and total block identities while checking source provenance", () => {
+    const sources = Array.from({ length: 8 }, (_, index) => ({
+      ...spacePage.snapshot.sources[0],
+      pageId: `page-${index + 1}`,
+      blockIds: [],
+    }));
+    const snapshot = { ...spacePage.snapshot, includeChildPages: true, sources };
+    expect(Option.isSome(decodeRecord({ ...spacePage, snapshot }))).toBe(true);
+    for (const invalid of [
+      { ...snapshot, sources: [...sources, { ...sources[0], pageId: "page-9" }] },
+      { ...snapshot, includeChildPages: false },
+      { ...snapshot, sources: [sources[0], sources[0]] },
+      { ...snapshot, sources: [{ ...sources[0], environmentId: "another-env" }] },
+      { ...snapshot, sources: [{ ...sources[0], pageId: "stale-hint" }] },
+      { ...snapshot, sources: [{ ...sources[0], revision: -1 }] },
+      { ...snapshot, contentHash: "not-a-sha256" },
+    ])
+      expect(Option.isNone(decodeRecord({ ...spacePage, snapshot: invalid }))).toBe(true);
+    const blockIds = Array.from({ length: 100 }, (_, index) => `b-${index}`);
+    const full = { ...snapshot, sources: [{ ...sources[0], blockIds }] };
+    expect(Option.isSome(decodeRecord({ ...spacePage, snapshot: full }))).toBe(true);
+    expect(
+      Option.isNone(
+        decodeRecord({
+          ...spacePage,
+          snapshot: {
+            ...full,
+            sources: [{ ...sources[0], blockIds: [...blockIds, "b-100"] }],
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(Option.isNone(decodeRecord({ ...spaceBlock, resolvedBlockId: "absent" }))).toBe(true);
+  });
+
+  it("rejects aggregate Spaces envelope overflow before compatibility filtering", () => {
+    const records = Array.from({ length: 8 }, (_, index) =>
+      spaceRecordWithBytes(index === 7 ? 65_527 : 65_536, `space_${index}`),
+    );
+    expect(new TextEncoder().encode(JSON.stringify(records)).byteLength).toBe(524_288);
+    expect(decodeContext({ version: 1, records }).records).toHaveLength(8);
+    const over = [...records.slice(0, 7), spaceRecordWithBytes(65_528, "space_7")];
+    expect(() => decodeContext({ version: 1, records: over })).toThrow();
+    expect(() =>
+      decodeContext({
+        version: 1,
+        records: [...records.slice(0, 7), { ...records[7], label: "Desig界" }],
+      }),
+    ).toThrow();
+    expect(() =>
+      decodeContext({
+        version: 1,
+        records: Array.from({ length: 9 }, (_, index) => ({
+          ...spacePage,
+          contextId: `p_${index}`,
+        })),
+      }),
+    ).toThrow();
+    expect(() =>
+      decodeContext({
+        version: 1,
+        records: [
+          {
+            ...spacePage,
+            snapshot: undefined,
+            payload: "界".repeat(30_000),
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(
+      decodeContext({
+        version: 1,
+        records: [
+          ...records,
+          { ...knownRecords.terminal, contextId: "terminal", text: "界".repeat(64_000) },
+        ],
+      }).records,
+    ).toHaveLength(9);
   });
 });

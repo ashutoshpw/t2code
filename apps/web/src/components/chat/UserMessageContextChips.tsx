@@ -300,6 +300,26 @@ const userMessageContextPresentationRegistry = createContextPresentationRegistry
   requiredKinds: COMPOSER_CONTEXT_KINDS,
   handlers: [
     {
+      kind: "page",
+      render: (record, context) => (
+        <UnresolvedChip
+          label={record.label || ("title" in record ? record.title : context.reference.label)}
+          copyMarkdown={context.copyMarkdown}
+          tooltip="Current Spaces content is unavailable. The sent snapshot is preserved."
+        />
+      ),
+    },
+    {
+      kind: "block",
+      render: (record, context) => (
+        <UnresolvedChip
+          label={record.label || ("title" in record ? record.title : context.reference.label)}
+          copyMarkdown={context.copyMarkdown}
+          tooltip="Current Spaces content is unavailable. The sent snapshot is preserved."
+        />
+      ),
+    },
+    {
       kind: "mention",
       canRender: (record) => record.kind === "mention",
       render: (record, context) =>
