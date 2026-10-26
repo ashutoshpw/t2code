@@ -2129,10 +2129,25 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
         };
         const saved = yield* service.updatePage(input);
         const child = yield* childPage(service, common, page.id, "durable-child");
-        const opaque = { ...block("durable-moving"), futureEnvelope: { preserved: ["界", 1] } };
+        const seed = { ...block("durable-moving"), futureEnvelope: { preserved: ["界", 1] } };
         yield* service.applyBlockBatch(
-          request("durable-block", 2, [{ kind: "insert", block: opaque }]),
+          request("durable-block", 2, [{ kind: "insert", block: seed }]),
         );
+        const opaque = {
+          ...seed,
+          type: "future-widget",
+          version: 7,
+          content: ["界", { future: [false, null] }],
+        };
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          const [old] =
+            yield* sql`SELECT logical_bytes FROM spaces_blocks WHERE block_id=${opaque.id}`;
+          const payload = JSON.stringify(opaque);
+          const logical = Buffer.byteLength(payload, "utf8");
+          yield* sql`UPDATE spaces_blocks SET payload=${payload},logical_bytes=${logical} WHERE block_id=${opaque.id}`;
+          yield* sql`UPDATE spaces_pages SET block_bytes=block_bytes+${logical - Number(old!.logical_bytes)} WHERE page_id=${page.id}`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
         const move = yield* blockMoveIntent(
           service,
           common,
@@ -2142,6 +2157,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           "durable-move",
         );
         const moved = yield* service.moveBlocks(move);
+        assert.equal(moved.status, "saved");
         return { input, saved, child, opaque, move, moved, history: yield* historyState(dbPath) };
       }).pipe(Effect.provide(live()));
       yield* Effect.gen(function* () {
@@ -2177,6 +2193,10 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           pageId: first.child.page.id,
           revision: (yield* service.getPage({ ...env, pageId: first.child.page.id })).page.revision,
         });
+        assert.equal(body.blocks[0]!.id, first.opaque.id);
+        assert.equal(body.blocks[0]!.type, first.opaque.type);
+        assert.equal(body.blocks[0]!.version, first.opaque.version);
+        assert.deepEqual(body.blocks[0]!.content, first.opaque.content);
         assert.deepEqual(body.blocks[0]!.futureEnvelope, first.opaque.futureEnvelope);
         assert.deepEqual(yield* historyState(dbPath), first.history);
       }).pipe(Effect.provide(live()));
