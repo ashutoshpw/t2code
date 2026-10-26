@@ -216,9 +216,11 @@ For Antigravity's Google callback on a remote host, see
 
 Browser tabs belong to the environment, so you and your agents see the same
 tabs from any device. The desktop app shows its own environment's tabs
-directly. Every other device, and the desktop app for other environments,
-streams them from the host. Agents keep using them while no device is
-connected, and `localhost` addresses reach servers on the host.
+directly, and it lends its browser pane to every remote environment it is
+connected to, so those tabs render in the app instead of in a headless browser
+on the host. Every other device, and a desktop app that is not hosting the
+environment, streams them from the host. Agents keep using them while no
+device is connected, and `localhost` addresses reach servers on the host.
 
 The first tab downloads a headless Chrome, about 120 MB, into the T2 home. It
 is the same browser [HTML renders](html-renders.md) use, so a host downloads it

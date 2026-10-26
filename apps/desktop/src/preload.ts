@@ -3,6 +3,8 @@ import type {
   DesktopPreviewOpenLinkEvent,
   DesktopPreviewPointerEvent,
   DesktopPreviewRecordingInputEvent,
+  DesktopPreviewHostState,
+  DesktopPreviewRecordingFrame,
   DesktopPreviewTabState,
   DesktopSnapShotEvent,
 } from "@t2code/contracts";
@@ -329,6 +331,18 @@ contextBridge.exposeInMainWorld("desktopBridge", {
         serverTab: defaults?.serverTab,
         colorScheme: defaults?.colorScheme,
       }),
+    startBrowserHost: (input) => ipcRenderer.invoke(IpcChannels.PREVIEW_HOST_START_CHANNEL, input),
+    stopBrowserHost: (environmentId) =>
+      ipcRenderer.invoke(IpcChannels.PREVIEW_HOST_STOP_CHANNEL, { environmentId }),
+    onBrowserHostState: (listener) => {
+      const wrappedListener = (_event: Electron.IpcRendererEvent, state: unknown) => {
+        if (typeof state !== "object" || state === null) return;
+        listener(state as DesktopPreviewHostState);
+      };
+      ipcRenderer.on(IpcChannels.PREVIEW_HOST_STATE_CHANNEL, wrappedListener);
+      return () =>
+        ipcRenderer.removeListener(IpcChannels.PREVIEW_HOST_STATE_CHANNEL, wrappedListener);
+    },
     closeTab: (tabId) => ipcRenderer.invoke(IpcChannels.PREVIEW_CLOSE_TAB_CHANNEL, { tabId }),
     registerWebview: (tabId, webContentsId) =>
       ipcRenderer.invoke(IpcChannels.PREVIEW_REGISTER_WEBVIEW_CHANNEL, { tabId, webContentsId }),
