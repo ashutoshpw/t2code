@@ -311,16 +311,23 @@ function formatEnvelopeEntry(
   return `${open}>\n${escapeComposerContextPayloadText(body)}\n</${CONTEXT_ENTRY_TAG}>`;
 }
 
+function contextRecordsById<T extends { readonly contextId: ComposerContextId }>(
+  records: ReadonlyArray<T>,
+): Map<ComposerContextId, T | undefined> {
+  const selected = new Map<ComposerContextId, T | undefined>();
+  for (const record of records) {
+    selected.set(record.contextId, selected.has(record.contextId) ? undefined : record);
+  }
+  return selected;
+}
+
 export function projectComposerContextForProvider(input: {
   text: string;
   records: ReadonlyArray<ComposerContextRecord>;
 }): string {
   const occurrences = collectComposerContextReferences(input.text);
   if (occurrences.length === 0) return input.text;
-  const recordsById = new Map<ComposerContextId, ComposerContextRecord | undefined>();
-  for (const record of input.records) {
-    recordsById.set(record.contextId, recordsById.has(record.contextId) ? undefined : record);
-  }
+  const recordsById = contextRecordsById(input.records);
   const body = replaceComposerContextReferences(input.text, (occurrence) =>
     formatComposerContextProviderMarker(
       recordsById.get(occurrence.contextId)?.kind ?? occurrence.kind,
@@ -400,17 +407,15 @@ export function spaceContextsOutsideEnvironment<
     readonly environmentId?: EnvironmentId;
   },
 >(input: { text: string; records: ReadonlyArray<T>; environmentId: EnvironmentId }): T[] {
-  const references = collectComposerContextReferences(input.text);
-  const pages = new Set(
-    references.filter((ref) => ref.kind === "page").map((ref) => ref.contextId),
+  const referenced = new Set(
+    collectComposerContextReferences(input.text).map((reference) => reference.contextId),
   );
-  const blocks = new Set(
-    references.filter((ref) => ref.kind === "block").map((ref) => ref.contextId),
-  );
+  const selected = contextRecordsById(input.records);
   return input.records.filter(
     (record) =>
-      ((record.kind === "page" && pages.has(record.contextId)) ||
-        (record.kind === "block" && blocks.has(record.contextId))) &&
+      selected.get(record.contextId) === record &&
+      referenced.has(record.contextId) &&
+      (record.kind === "page" || record.kind === "block") &&
       record.environmentId !== undefined &&
       record.environmentId !== input.environmentId,
   );

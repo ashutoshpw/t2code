@@ -468,11 +468,56 @@ describe("Spaces provider context", () => {
     expect(
       contextReferences.spaceContextsOutsideEnvironment({ ...input, records: [capturedPage] }),
     ).toEqual([]);
+    const wrongKindText = "[wrong kind](t2-context://v1/terminal/page_ctx)";
+    expect(
+      projectComposerContextForProvider({ text: wrongKindText, records: [foreign] }),
+    ).toContain('<context kind="page" id="page_ctx">');
     expect(
       contextReferences.spaceContextsOutsideEnvironment({
         ...input,
-        text: "[wrong kind](t2-context://v1/terminal/page_ctx)",
+        text: wrongKindText,
+        records: [foreign],
       }),
-    ).toEqual([]);
+    ).toEqual([foreign]);
+  });
+
+  it("does not select duplicate identities that provider projection marks unavailable", () => {
+    const foreign = { ...capturedPage, environmentId: EnvironmentId.make("env-2") };
+    const otherKind: ComposerContextRecord = {
+      version: 1,
+      kind: "skill",
+      contextId: foreign.contextId,
+      label: "Skill",
+      name: "skill",
+    };
+    const text = "[Page](t2-context://v1/page/page_ctx)";
+    expect(projectComposerContextForProvider({ text, records: [foreign] })).toContain(
+      '<context kind="page" id="page_ctx">',
+    );
+    expect(
+      contextReferences.spaceContextsOutsideEnvironment({
+        text,
+        records: [foreign],
+        environmentId: capturedPage.environmentId,
+      }),
+    ).toEqual([foreign]);
+    for (const records of [
+      [foreign, capturedPage],
+      [capturedPage, foreign],
+      [foreign, otherKind],
+      [otherKind, foreign],
+      [foreign, foreign, foreign],
+    ]) {
+      const projected = projectComposerContextForProvider({ text, records });
+      expect(projected).toContain('<context kind="page" id="page_ctx" unavailable="true"/>');
+      expect(projected).not.toContain("Captured Spaces text");
+      expect(
+        contextReferences.spaceContextsOutsideEnvironment({
+          text,
+          records,
+          environmentId: capturedPage.environmentId,
+        }),
+      ).toEqual([]);
+    }
   });
 });

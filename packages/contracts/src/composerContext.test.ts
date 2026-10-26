@@ -399,4 +399,51 @@ describe("Spaces completed context records", () => {
       }).records,
     ).toHaveLength(9);
   });
+
+  it("counts malformed raw Spaces snapshot text before compatibility filtering", () => {
+    for (const kind of ["page", "block"]) {
+      const records = Array.from({ length: 8 }, (_, index) => ({
+        ...spacePage,
+        kind,
+        contextId: `raw_${index}`,
+        snapshot: { ...spacePage.snapshot, text: "x".repeat(32_768) },
+      }));
+      const sibling = {
+        ...knownRecords.terminal,
+        contextId: "terminal",
+        text: "界".repeat(64_000),
+      };
+      expect(decodeContext({ version: 1, records: [...records, sibling] }).records).toEqual([
+        sibling,
+      ]);
+      expect(() =>
+        decodeContext({
+          version: 1,
+          records: [
+            ...records.slice(0, 7),
+            { ...records[7], snapshot: { ...spacePage.snapshot, text: "x".repeat(32_769) } },
+            sibling,
+          ],
+        }),
+      ).toThrow();
+      expect(() =>
+        decodeContext({
+          version: 1,
+          records: records.map((record) => ({
+            ...record,
+            snapshot: { ...record.snapshot, text: "x".repeat(40_000) },
+          })),
+        }),
+      ).toThrow();
+      expect(() =>
+        decodeContext({
+          version: 1,
+          records: records.map((record) => ({
+            ...record,
+            snapshot: { ...record.snapshot, text: "界".repeat(10_923) },
+          })),
+        }),
+      ).toThrow();
+    }
+  });
 });

@@ -313,7 +313,7 @@ export type BlockContextRecord = typeof BlockContextRecord.Type;
 
 const spaceEnvelopeWithinLimits = (records: readonly unknown[]) => {
   const spaces = records.filter(
-    (record) =>
+    (record): record is { readonly kind: "page" | "block" } =>
       typeof record === "object" &&
       record !== null &&
       "kind" in record &&
@@ -321,11 +321,24 @@ const spaceEnvelopeWithinLimits = (records: readonly unknown[]) => {
   );
   if (spaces.length > SPACE_CONTEXT_LIMITS.maxRecords) return false;
   try {
-    return (
-      spaces.every(
-        (record) => utf8Length(JSON.stringify(record)) <= SPACE_CONTEXT_LIMITS.maxRecordBytes,
-      ) && utf8Length(JSON.stringify(spaces)) <= SPACE_CONTEXT_LIMITS.maxEnvelopeBytes
-    );
+    let textBytes = 0;
+    for (const record of spaces) {
+      const snapshot = "snapshot" in record ? record.snapshot : null;
+      if (
+        typeof snapshot === "object" &&
+        snapshot !== null &&
+        "text" in snapshot &&
+        typeof snapshot.text === "string"
+      ) {
+        textBytes += utf8Length(snapshot.text);
+      }
+      if (
+        textBytes > SPACE_CONTEXT_LIMITS.maxEnvelopeTextBytes ||
+        utf8Length(JSON.stringify(record)) > SPACE_CONTEXT_LIMITS.maxRecordBytes
+      )
+        return false;
+    }
+    return utf8Length(JSON.stringify(spaces)) <= SPACE_CONTEXT_LIMITS.maxEnvelopeBytes;
   } catch {
     return false;
   }
