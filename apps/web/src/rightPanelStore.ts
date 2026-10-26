@@ -143,6 +143,10 @@ interface RightPanelStoreState {
   ) => void;
   openAttachment: (ref: ScopedThreadRef, attachment: ChatFileAttachment) => void;
   openSpacePage: (ref: ScopedThreadRef, target: SpacePageNavigationTarget) => void;
+  updateSpacePageLocation: (
+    ref: ScopedThreadRef,
+    target: Omit<SpacePageNavigationTarget, "blockId">,
+  ) => void;
   openPullRequest: (
     ref: ScopedThreadRef,
     target: {
@@ -709,6 +713,23 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
               ? current.surfaces.filter((entry) => entry.id !== "browser:new")
               : current.surfaces;
             return upsertSurface({ ...current, surfaces: withoutPlaceholder }, surface);
+          }),
+        ),
+      updateSpacePageLocation: (ref, target) =>
+        set((state) =>
+          automaticUpdate(state, scopedThreadKey(ref), (current) => {
+            const id = spacePageSurfaceId(target);
+            const surface = current.surfaces.find((entry) => entry.id === id);
+            if (surface?.kind !== "space-page" || surface.target.spaceId === target.spaceId)
+              return current;
+            return {
+              ...current,
+              surfaces: current.surfaces.map((entry) =>
+                entry.id === id
+                  ? { ...surface, target: { ...surface.target, spaceId: target.spaceId } }
+                  : entry,
+              ),
+            };
           }),
         ),
       openSpacePage: (ref, target) =>

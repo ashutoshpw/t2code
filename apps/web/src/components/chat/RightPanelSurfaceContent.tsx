@@ -84,7 +84,7 @@ export function RightPanelSurfaceContent(props: {
     case "space-page":
       return (
         <Suspense fallback={null}>
-          <SpacePageSurface target={surface.target} />
+          <SpacePageSurface target={surface.target} threadRef={threadRef} />
         </Suspense>
       );
     case "preview":

@@ -8,11 +8,17 @@ import {
   createSpacesEnvironmentAtoms,
   spacesAvailability,
 } from "@t2code/client-runtime/state/spaces";
+import { createSpacePageNavigationFactory } from "@t2code/client-runtime/spaces";
+import { appAtomRegistry } from "../rpc/atomRegistry";
 import { connectionAtomRuntime } from "../connection/runtime";
 import { useEnvironment, useEnvironments } from "./environments";
 import { useEnvironmentScope, useEnvironmentsWithScope } from "./session";
 
 export const spacesEnvironment = createSpacesEnvironmentAtoms(connectionAtomRuntime);
+export const spacePageNavigation = createSpacePageNavigationFactory({
+  registry: appAtomRegistry,
+  pages: spacesEnvironment.pages,
+});
 
 export function useSpacesAvailability(environmentId: EnvironmentId | null) {
   const environment = useEnvironment(environmentId);

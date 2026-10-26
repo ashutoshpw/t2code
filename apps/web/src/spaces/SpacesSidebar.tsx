@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { EnvironmentId } from "@t2code/contracts";
-import type { SpaceCursor } from "@t2code/contracts/spaces";
+import { SpaceId, type SpaceCursor } from "@t2code/contracts/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesEnvironments } from "../state/spaces";
 import { usePrimaryEnvironmentId } from "../state/environments";
 import { SidebarContent, SidebarHeader, useSidebar } from "../components/ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "../components/sidebar/SidebarChrome";
 import { Button } from "../components/ui/button";
+import { SpacePageTree } from "./SpacePageTree";
 import { isElectron } from "../env";
 
 export function SpacesSidebar() {
@@ -44,6 +45,13 @@ export function SpacesSidebar() {
           ) : (
             <p className="text-sm text-muted-foreground">No available environments.</p>
           )}
+          {environment && params.spaceId ? (
+            <SpacePageTree
+              key={JSON.stringify([environment.environmentId, params.spaceId])}
+              environmentId={environment.environmentId}
+              spaceId={SpaceId.make(params.spaceId)}
+            />
+          ) : null}
         </div>
       </SidebarContent>
       <SidebarChromeFooter />

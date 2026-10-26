@@ -1247,6 +1247,19 @@ describe("Spaces panel lifecycle", () => {
     store.openSpacePage(refA, other);
     store.openSpacePage(refA, moved);
     store.openSpacePage(refB, first);
+    store.openFile(refB, "other.ts");
+    const revision = store.getUserActionRevision(refB);
+    store.updateSpacePageLocation(refB, { ...first, spaceId: SpaceId.make("current-space") });
+    expect(
+      selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, refB)?.kind,
+    ).toBe("file");
+    expect(store.getUserActionRevision(refB)).toBe(revision);
+    expect(
+      selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, refB).surfaces.find(
+        (surface) => surface.kind === "space-page",
+      ),
+    ).toMatchObject({ target: { ...first, spaceId: "current-space" } });
+    store.closeSurface(refB, "file:other.ts");
     expect(
       selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, refA).surfaces,
     ).toHaveLength(2);
@@ -1258,7 +1271,7 @@ describe("Spaces panel lifecycle", () => {
     });
     expect(
       selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, refB),
-    ).toMatchObject({ target: first });
+    ).toMatchObject({ target: { ...first, spaceId: "current-space" } });
     store.closeSurface(refA, spacePageSurfaceId(first));
     const closed = useClosedViewStore.getState().entries[0]!;
     expect(
