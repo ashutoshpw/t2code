@@ -1994,7 +1994,7 @@ it.effect("creates a strong provider-thread mapping for an imported native sessi
 
 it.effect("shared intake preserves durable attachment bytes after a lost launch result", () => {
   const harness = makeHarness();
-  const layerFiles = ServerConfig.layerTest(process.cwd(), { prefix: "t3-message-intake-" }).pipe(
+  const layerFiles = ServerConfig.layerTest(process.cwd(), { prefix: "t2-message-intake-" }).pipe(
     Layer.provideMerge(DocumentText.layer.pipe(Layer.provideMerge(NodeServices.layer))),
   );
   return Effect.gen(function* () {
@@ -2022,7 +2022,7 @@ it.effect("shared intake preserves durable attachment bytes after a lost launch 
       ...launchInput({ command: "intake-launch", thread: "intake-thread" }),
       initialMessage: {
         messageId: MessageId.make("intake-first"),
-        text: "First [file](t3-context://v1/file/intake-file)",
+        text: "First [file](t2-context://v1/file/intake-file)",
         context: {
           version: 1 as const,
           records: [
@@ -2469,10 +2469,10 @@ it.effect("leaves uncertain Git detection failures to workspace preparation", ()
 );
 
 it.effect.each([
-  { name: "is missing", baseRef: "t3/renamed", startFromOrigin: false, origin: true },
+  { name: "is missing", baseRef: "t2/renamed", startFromOrigin: false, origin: true },
   {
     name: "has no origin to come from",
-    baseRef: "t3/renamed",
+    baseRef: "t2/renamed",
     startFromOrigin: true,
     origin: false,
   },
@@ -2553,7 +2553,7 @@ it.effect.each([
 
 it.effect("replays an accepted send after the project disables the instance", () => {
   const harness = makeHarness();
-  const layerFiles = ServerConfig.layerTest(process.cwd(), { prefix: "t3-send-retry-" }).pipe(
+  const layerFiles = ServerConfig.layerTest(process.cwd(), { prefix: "t2-send-retry-" }).pipe(
     Layer.provideMerge(DocumentText.layer.pipe(Layer.provideMerge(NodeServices.layer))),
   );
   return Effect.gen(function* () {

@@ -82,12 +82,17 @@ const MODE_ARGS = {
 const BUILT_DEV_ARGS = [
   "run",
   "--filter=@t2code/web",
-  "--filter=t3",
+  "--filter=@t2code/cli",
   "--parallel",
   "dev:built",
 ] as const;
 
 type DevMode = keyof typeof MODE_ARGS;
+
+export function getDevRunnerModeArgs(mode: DevMode): ReadonlyArray<string> {
+  return MODE_ARGS[mode];
+}
+
 /**
  * `role` matters because only the backend honours `--host`/`T2CODE_HOST`; the
  * web port is always loopback.
@@ -335,10 +340,9 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
     delete output.T2CODE_HOME;
   }
 
-  // A dev-runner server is never launcher-managed. When the shell that runs
-  // this script was itself spawned by the machine's managed t2 service (an
-  // agent working inside T2 Code), these leak through and the child server
-  // fails startup with "The service launcher started a different t2 version"
+  // A dev-runner server is never launcher-managed. Launcher variables leaking
+  // through from a managed-t2 shell make the child server fail its version
+  // check with "The service launcher started a different t2 version"
   // (serviceLauncherClient.ts resolveStartup).
   delete output.T2_SERVICE_LAUNCHER_CONTEXT;
   delete output.T2_BOOT_SERVICE_UNIT;
@@ -349,11 +353,9 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
 
   if (!isDesktopMode) {
     output.T2CODE_PORT = String(serverPort);
-    // HOST is Vite's own bind address, and the desktop branch below is the
-    // only place we set it. An inherited one (an exported HOST, a container,
-    // a `HOST=0.0.0.0 npm start` habit) would otherwise reach Vite and pin
-    // its HMR socket to that address — see the `explicitHost` gate in
-    // apps/web/vite.config.ts.
+    // HOST is Vite's own bind address; only desktop mode should set it. An
+    // inherited one (an exported HOST, a container) would reach Vite and pin
+    // its HMR socket — see the `explicitHost` gate in apps/web/vite.config.ts.
     delete output.HOST;
     if (mode === "dev" || mode === "dev:web") {
       // Browser dev is single-origin: everything (including /ws) is proxied
@@ -367,52 +369,9 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
       // single-origin mode.
       output.T2CODE_SINGLE_ORIGIN_DEV = "1";
     } else {
-      delete output.T2CODE_HOME;
-    }
-
-    // A dev-runner server is never launcher-managed. When the shell that runs
-    // this script was itself spawned by the machine's managed T2 Code service (an
-    // agent working inside T2 Code), these leak through and the child server
-    // fails startup with "The service launcher started a different t2code version"
-    // (serviceLauncherClient.ts resolveStartup).
-    delete output.T2_SERVICE_LAUNCHER_CONTEXT;
-    delete output.T2_BOOT_SERVICE_UNIT;
-
-    if (!isDesktopMode) {
-      output.T2CODE_PORT = String(serverPort);
-      // HOST is Vite's own bind address, and the desktop branch below is the
-      // only place we set it. An inherited one (an exported HOST, a container,
-      // a `HOST=0.0.0.0 npm start` habit) would otherwise reach Vite and pin
-      // its HMR socket to that address — see the `explicitHost` gate in
-      // apps/web/vite.config.ts.
-      delete output.HOST;
-      if (mode === "dev" || mode === "dev:web") {
-        // Browser dev is single-origin: everything (including /ws) is proxied
-        // through Vite, so the client must resolve its backend from
-        // window.location.origin rather than a baked-in localhost URL.
-        delete output.VITE_HTTP_URL;
-        delete output.VITE_WS_URL;
-        // Deleting is not enough on its own: vite.config.ts calls loadRepoEnv,
-        // which merges `.env`/`.env.local` *under* this env, so a developer
-        // with either URL in their `.env` would get it back and silently lose
-        // single-origin mode.
-        output.T2CODE_SINGLE_ORIGIN_DEV = "1";
-      } else {
-        output.VITE_HTTP_URL = `http://localhost:${serverPort}`;
-        output.VITE_WS_URL = `ws://localhost:${serverPort}`;
-        delete output.T2CODE_SINGLE_ORIGIN_DEV;
-      }
-    } else {
-      output.T2CODE_PORT = String(serverPort);
-      output.VITE_HTTP_URL = `http://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
-      output.VITE_WS_URL = `ws://${DESKTOP_DEV_LOOPBACK_HOST}:${serverPort}`;
-      // Desktop pins the renderer to loopback on purpose; an ambient marker
-      // must not make Vite drop those URLs.
+      output.VITE_HTTP_URL = `http://localhost:${serverPort}`;
+      output.VITE_WS_URL = `ws://localhost:${serverPort}`;
       delete output.T2CODE_SINGLE_ORIGIN_DEV;
-      delete output.T2CODE_MODE;
-      delete output.T2CODE_NO_BROWSER;
-      delete output.T2CODE_HOST;
-      delete output.T2CODE_DEV_AUTH_TOKEN;
     }
   } else {
     output.T2CODE_PORT = String(serverPort);

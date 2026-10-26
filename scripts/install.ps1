@@ -7,7 +7,7 @@
 #   T2CODE_CHANNEL           release train to follow: stable, nightly, or preview
 #                            (default: stable; preview is a maintainers' test train)
 #   T2CODE_VERSION           exact version to install (overrides T2CODE_CHANNEL)
-#   T2CODE_HOME              T3 home directory (default: ~\.t2)
+#   T2CODE_HOME              T2 home directory (default: ~\.t2)
 #   T2CODE_INSTALL_BIN_DIR   where t2.exe is linked (default: ~\.local\bin)
 #   T2CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
@@ -239,22 +239,22 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
 
 Step "Setting up the t3 command..."
 New-Item -ItemType Directory -Force -Path $binDir | Out-Null
-$shim = Join-Path $binDir "t3.cmd"
-# Replace only a shim that runs a version in this home; never the desktop app's or another t3.
+$shim = Join-Path $binDir "t2.cmd"
+# Replace only a shim that runs a version in this home; never the desktop app's or another t2.
 if (Test-Path -LiteralPath $shim) {
   $existingTarget = ""
   # The shim is UTF-8 without a BOM; Windows PowerShell 5.1 reads files as ANSI by default.
-  # Only a shim exactly as written here counts; a user's wrapper that also runs t3.exe does not.
+  # Only a shim exactly as written here counts; a user's wrapper that also runs t2.exe does not.
   $existing = [System.IO.File]::ReadAllText($shim, [System.Text.Encoding]::UTF8)
   if ($existing -match '^@echo off\r?\n"([^"]+)" %\*\s*$') { $existingTarget = $Matches[1] }
   # Full paths, so a target like versions\..\other cannot pass as ours.
   $ownedPrefix = [System.IO.Path]::GetFullPath($versionsDir).TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
   if ($existingTarget) { $existingTarget = [System.IO.Path]::GetFullPath($existingTarget) }
-  # Exactly <version>\t3.exe, never another program inside a version.
+  # Exactly <version>\t2.exe, never another program inside a version.
   $owned = $existingTarget.StartsWith($ownedPrefix, [System.StringComparison]::OrdinalIgnoreCase) -and
-    ($existingTarget.Substring($ownedPrefix.Length) -match '^[^\\/]+\\t3\.exe$')
+    ($existingTarget.Substring($ownedPrefix.Length) -match '^[^\\/]+\\t2\.exe$')
   if (-not $owned) {
-    Fail "another t3 is already at $shim. Remove it and run this again, or run $(Join-Path $targetDir 't3.exe') directly."
+    Fail "another t2 is already at $shim. Remove it and run this again, or run $(Join-Path $targetDir 't2.exe') directly."
   }
 }
 # UTF-8 without a BOM: cmd.exe reads the shim as-is, and ASCII would corrupt
@@ -274,16 +274,16 @@ if ($binDir.Contains(";")) {
 } else {
   # Either side may end in a separator. Trim only here: a drive root keeps its `\` for Join-Path.
   $added = ($env:PATH -split ";" | ForEach-Object { $_.TrimEnd('\', '/') }) -notcontains $binDir.TrimEnd('\', '/')
-  # `irm | iex` runs in the user's own session, so t3 works in this window right away.
-  # Last, so it never shadows another t3.
+  # `irm | iex` runs in the user's own session, so t2 works in this window right away.
+  # Last, so it never shadows another t2.
   if ($added) { $env:Path = "$env:Path;$binDir" }
-  # A t3 earlier on PATH runs instead, so name this one in full.
-  $first = Get-Command t3 -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+  # A t2 earlier on PATH runs instead, so name this one in full.
+  $first = Get-Command t2 -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($first -and [System.IO.Path]::GetFullPath($first.Source) -ne [System.IO.Path]::GetFullPath($shimPath)) {
-    Write-Host "  Another t3 at $($first.Source) runs first, so run ${bold}& '$($shim.Replace("'", "''"))'$reset to use this one.`n"
+    Write-Host "  Another t2 at $($first.Source) runs first, so run ${bold}& '$($shim.Replace("'", "''"))'$reset to use this one.`n"
   } elseif ($added) {
-    Write-Host "  Run ${bold}t3$reset to get started. For new windows, add $binDir to your PATH.`n"
+    Write-Host "  Run ${bold}t2$reset to get started. For new windows, add $binDir to your PATH.`n"
   } else {
-    Write-Host "  Run ${bold}t3$reset to use T3 Code here, or ${bold}t3 up$reset to use it from your other devices.`n"
+    Write-Host "  Run ${bold}t2$reset to use T2 Code here, or ${bold}t2 up$reset to use it from your other devices.`n"
   }
 }

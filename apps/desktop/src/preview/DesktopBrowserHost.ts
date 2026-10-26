@@ -240,7 +240,7 @@ export const make = Effect.gen(function* () {
         // The agent pauses to think between steps; its tab stays focused until the turn ends.
         if (tab.agentUsed && agentTurns.has(tab.key.threadId)) return;
         tab.agentUsed = false;
-        if (tabs.get(keyOf(tab.key)) === tab) setFocusEmulation(tab, false);
+        if (tabs.get(tabIdOf(tab)) === tab) setFocusEmulation(tab, false);
       }),
     );
   };
@@ -252,7 +252,7 @@ export const make = Effect.gen(function* () {
    */
   const syncPainting = (tab: AttachedTab) => {
     const active =
-      tabs.get(keyOf(tab.key)) === tab &&
+      tabs.get(tabIdOf(tab)) === tab &&
       (tab.screencasts.size > 0 ||
         tab.capturing.size > 0 ||
         tab.waitingScreenshots.some((waiting) => waiting.live()));

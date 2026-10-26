@@ -113,7 +113,7 @@ const withHarness = <A, E, R>(
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-      prefix: "t3-desktop-backend-config-test-",
+      prefix: "t2-desktop-backend-config-test-",
     });
 
     return yield* effect.pipe(
@@ -160,7 +160,7 @@ const withPackagedWslHarness = <A, E, R>(
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-      prefix: "t3-desktop-backend-config-test-",
+      prefix: "t2-desktop-backend-config-test-",
     });
     const archivePath = path.join(baseDir, "wsl-runtime.tar.gz");
     const hashPath = `${archivePath}.sha256`;
@@ -278,7 +278,7 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
       const resourcesPath = path.join(baseDir, "resources");
 
@@ -324,7 +324,7 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
       const entryPath = path.join(baseDir, "apps/server/dist/bin.mjs");
       yield* fileSystem.makeDirectory(path.dirname(entryPath), { recursive: true });
@@ -439,7 +439,7 @@ describe("DesktopBackendConfiguration", () => {
             "--exec",
             "env",
             `PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${resolvedPath}`,
-            `${linuxAppRoot}/t3`,
+            `${linuxAppRoot}/t2`,
             "--bootstrap-fd",
             "0",
           ]);
@@ -482,9 +482,9 @@ describe("DesktopBackendConfiguration", () => {
 
           assert.deepEqual(observedRuntimeIds, [`sha256-${firstHash}`, `sha256-${secondHash}`]);
           assert.equal(first.wslRuntimeId, observedRuntimeIds[0]);
-          assert.include(first.args, `/runtime/sha256-${firstHash}/t3`);
+          assert.include(first.args, `/runtime/sha256-${firstHash}/t2`);
           assert.equal(second.wslRuntimeId, observedRuntimeIds[1]);
-          assert.include(second.args, `/runtime/sha256-${secondHash}/t3`);
+          assert.include(second.args, `/runtime/sha256-${secondHash}/t2`);
           assert.isUndefined(invalidIdentity.wslRuntimeId);
           assert.include(invalidIdentity.args, "/usr/bin/node");
           assert.include(invalidIdentity.args, `${mountedAppRoot}/apps/server/dist/bin.mjs`);
@@ -538,7 +538,7 @@ describe("DesktopBackendConfiguration", () => {
             }),
           probeRuntime: (_distro, root) => {
             observedProbeRoots.push(root);
-            return { ok: false, reason: `${root}/t3 --version failed (exit 127)` };
+            return { ok: false, reason: `${root}/t2 --version failed (exit 127)` };
           },
           ensureNodePty: (_distro, root) => {
             observedNodePtyRoots.push(root);
@@ -555,7 +555,7 @@ describe("DesktopBackendConfiguration", () => {
           assert.deepEqual(observedNodePtyRoots, [mountedAppRoot]);
           assert.include(config.args, "/usr/bin/node");
           assert.include(config.args, `${mountedAppRoot}/apps/server/dist/bin.mjs`);
-          assert.notInclude(config.args, `${stagedAppRoot}/t3`);
+          assert.notInclude(config.args, `${stagedAppRoot}/t2`);
           assert.equal(config.entryPath, mountedEntryPath);
           assert.isUndefined(config.wslRuntimeId);
           assert.isTrue(Option.isNone(config.preflightFailure));
@@ -576,7 +576,7 @@ describe("DesktopBackendConfiguration", () => {
             Effect.sync(() => {
               invalidatedRuntimeIds.push(runtimeId);
             }),
-          probeRuntime: () => ({ ok: false, reason: "t3 --version failed (exit 1)" }),
+          probeRuntime: () => ({ ok: false, reason: "t2 --version failed (exit 1)" }),
           ensureNodePty: () => ({
             ok: false,
             reason: "WSL backend preflight timed out while probing for Node.js.",
@@ -605,14 +605,14 @@ describe("DesktopBackendConfiguration", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "t2-desktop-backend-config-test-",
         });
         const entryPath = path.join(baseDir, "apps/server/dist/bin.mjs");
         yield* fileSystem.makeDirectory(path.dirname(entryPath), { recursive: true });
         yield* fileSystem.writeFileString(entryPath, "");
 
         const nodePath = "/home/test user's/.nvm/versions/node/v22.0.0/bin/node";
-        const linuxAppRoot = "/tmp/t3 code's launch";
+        const linuxAppRoot = "/tmp/t2 code's launch";
         const linuxEntryPath = `${linuxAppRoot}/apps/server/dist/bin.mjs`;
         const resolvedPath = "/home/test user/bin:/opt/test's tools/bin:/usr/bin:/bin";
         const devServerUrl = "http://127.0.0.1:5733/dev%20assets/?label=hello%20world";
@@ -687,7 +687,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -731,7 +731,7 @@ describe("DesktopBackendConfiguration", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "t2-desktop-backend-config-test-",
         });
 
         const standard = {
@@ -794,7 +794,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -848,7 +848,7 @@ describe("DesktopBackendConfiguration", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "t2-desktop-backend-config-test-",
         });
 
         yield* Effect.gen(function* () {
@@ -885,7 +885,7 @@ describe("DesktopBackendConfiguration", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "t3-desktop-backend-config-test-",
+          prefix: "t2-desktop-backend-config-test-",
         });
 
         yield* Effect.gen(function* () {
@@ -926,7 +926,7 @@ describe("DesktopBackendConfiguration", () => {
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
 
       yield* Effect.gen(function* () {
@@ -960,12 +960,12 @@ describe("DesktopBackendConfiguration", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-desktop-backend-config-test-",
+        prefix: "t2-desktop-backend-config-test-",
       });
       const resourcesPath = path.join(baseDir, "resources");
       const dirname = `${resourcesPath}/app.asar/apps/desktop/dist-electron`;
-      const embeddedMonitorPath = `${resourcesPath}/app.asar/apps/desktop/prod-resources/resource-monitor/t3-resource-monitor`;
-      const monitorPath = path.join(resourcesPath, "resource-monitor/t3-resource-monitor");
+      const embeddedMonitorPath = `${resourcesPath}/app.asar/apps/desktop/prod-resources/resource-monitor/t2-resource-monitor`;
+      const monitorPath = path.join(resourcesPath, "resource-monitor/t2-resource-monitor");
       yield* fileSystem.makeDirectory(
         `${resourcesPath}/app.asar/apps/desktop/prod-resources/resource-monitor`,
         { recursive: true },
@@ -1021,7 +1021,7 @@ describe("DesktopBackendConfiguration", () => {
             ),
           ),
         ),
-        Layer.provideMerge(layerEnvironment("/tmp/t3-wsl-isavailable", { platform: "win32" })),
+        Layer.provideMerge(layerEnvironment("/tmp/t2-wsl-isavailable", { platform: "win32" })),
         Layer.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
       ),
     );

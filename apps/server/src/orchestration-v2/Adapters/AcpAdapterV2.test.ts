@@ -1848,14 +1848,14 @@ describe("AcpAdapterV2", () => {
     { modeIds: "plain", environment: {}, planModeId: "architect", buildModeId: "ask" },
     {
       modeIds: "Copilot URL",
-      environment: { T3_ACP_COPILOT_MODES: "1" },
+      environment: { T2_ACP_COPILOT_MODES: "1" },
       planModeId: "https://agentclientprotocol.com/protocol/session-modes#plan",
       buildModeId: "https://agentclientprotocol.com/protocol/session-modes#agent",
     },
     {
-      // Without a `mode` category, T3 derives no mode state and only the config option switches.
+      // Without a `mode` category, T2 derives no mode state and only the config option switches.
       modeIds: "Copilot URL collaboration_mode",
-      environment: { T3_ACP_COPILOT_MODES: "1", T3_ACP_MODE_OPTION_CATEGORY: "collaboration_mode" },
+      environment: { T2_ACP_COPILOT_MODES: "1", T2_ACP_MODE_OPTION_CATEGORY: "collaboration_mode" },
       planModeId: "https://agentclientprotocol.com/protocol/session-modes#plan",
       buildModeId: "https://agentclientprotocol.com/protocol/session-modes#agent",
     },
@@ -1997,7 +1997,7 @@ describe("AcpAdapterV2", () => {
         assert.deepEqual(
           restoredBuild.modeSets,
           [buildModeId],
-          "Build should restore the native mode that T3 temporarily replaced for Plan",
+          "Build should restore the native mode that T2 temporarily replaced for Plan",
         );
       }).pipe(Effect.provide(layerTest), Effect.scoped),
   );
@@ -2136,7 +2136,7 @@ describe("AcpAdapterV2", () => {
     }).pipe(Effect.provide(layerTest), Effect.scoped),
   );
 
-  // regression: #21499 turns blocked only on T3 thread waits must show as waiting
+  // regression: #21499 turns blocked only on T2 thread waits must show as waiting
   it.effect.each(["agent_message_chunk"] as const)(
     "keeps named ACP %s open while deriving thread wait execution state",
     (sessionUpdate) =>
@@ -3625,7 +3625,7 @@ describe("AcpAdapterV2", () => {
           makeRuntime: makeMockRuntime({
             childProcessSpawner,
             mockAgentPath,
-            environment: { T3_ACP_EMIT_TERMINAL_OUTPUT_BYTES: String(1024 * 1024) },
+            environment: { T2_ACP_EMIT_TERMINAL_OUTPUT_BYTES: String(1024 * 1024) },
           }),
         },
         selfInvocation: yield* resolveSelfInvocation(),
@@ -4741,7 +4741,7 @@ describe("AcpAdapterV2", () => {
       const makeRuntime = makeMockRuntime({
         childProcessSpawner,
         mockAgentPath,
-        environment: { T3_ACP_EMIT_TRACKED_TOOL_CALL_KIND_THEN_HANG: kind },
+        environment: { T2_ACP_EMIT_TRACKED_TOOL_CALL_KIND_THEN_HANG: kind },
         wrapRuntime: (runtime) => ({
           ...runtime,
           handleRequestPermission: (handler) =>
@@ -5621,7 +5621,7 @@ describe("AcpAdapterV2", () => {
       );
       const blocks = rawProtocolPromptTextBlocks(Option.getOrThrow(prompt));
       if (native) {
-        // Same shape as a typed native command: one bare text block, no T3 instructions.
+        // Same shape as a typed native command: one bare text block, no T2 instructions.
         assert.deepEqual(blocks, [{ type: "text", text: sent }]);
       } else {
         assert.isTrue(blocks.some((block) => block.text.includes(sent)));
@@ -9606,7 +9606,7 @@ describe("AcpAdapterV2", () => {
               ),
             environment: (runtimeOrdinal) => {
               runtimeOrdinalSeen = runtimeOrdinal;
-              return runtimeOrdinal === 1 ? { T3_ACP_HANG_PROMPT_FOREVER: "1" } : {};
+              return runtimeOrdinal === 1 ? { T2_ACP_HANG_PROMPT_FOREVER: "1" } : {};
             },
             protocolEvents,
           }),

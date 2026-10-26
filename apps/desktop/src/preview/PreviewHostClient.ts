@@ -181,13 +181,14 @@ const make = Effect.fn("PreviewHostClient.make")(function* (open: PreviewHostSoc
       connect(environmentId, url);
       yield* Queue.offer(states, { environmentId, status: "connecting" });
     }),
-    stop: (environmentId) =>
+    stop: Effect.fn("PreviewHostClient.stop")((environmentId) =>
       Effect.sync(() => {
         const session = sessions.get(environmentId);
         if (session === undefined) return;
         sessions.delete(environmentId);
         disconnect(session);
       }),
+    ),
     states: Stream.fromQueue(states),
   });
 });

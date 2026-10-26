@@ -30,7 +30,6 @@ import { desktopUpdateChannelOf } from "@t2code/shared/cliRelease";
 import { createModelSelection } from "@t2code/shared/model";
 import { resolvePastedPath } from "@t2code/shared/path";
 import { sanitizeWorktreeBranchPrefix } from "@t2code/shared/git";
-import * as Duration from "effect/Duration";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 import { APP_VERSION, HOSTED_APP_CHANNEL, HOSTED_APP_CHANNEL_LABEL } from "../../branding";

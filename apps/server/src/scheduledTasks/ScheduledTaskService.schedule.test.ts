@@ -9,7 +9,6 @@ import {
   ScheduledTaskUpsertInput,
 } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
-import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Ref from "effect/Ref";

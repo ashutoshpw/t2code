@@ -144,6 +144,7 @@ export function useSendLater(input: {
     }
     void schedule();
   });
+  // oxlint-disable-next-line t2code/react-effect-budget -- Register with the shared send-later store, which lives outside React and invokes this callback from the palette and the composer.
   useEffect(() => subscribeToSendLater(() => startFromEntryPoint()), [startFromEntryPoint]);
   const handleShortcut = useStableCallback((event: KeyboardEvent) => {
     if (resolveShortcutCommand(event, input.keybindings) !== "composer.sendLater") return;
@@ -151,6 +152,7 @@ export function useSendLater(input: {
     event.stopPropagation();
     startFromEntryPoint();
   });
+  // oxlint-disable-next-line t2code/react-effect-budget -- The global keybinding listener is window state that must follow the active composer.
   useEffect(() => {
     window.addEventListener("keydown", handleShortcut, true);
     return () => window.removeEventListener("keydown", handleShortcut, true);

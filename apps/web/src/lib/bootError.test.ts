@@ -70,14 +70,14 @@ const environment: BootErrorEnvironment = {
 describe("buildErrorReport", () => {
   it("drops hosts and tokens from URLs in the error", () => {
     const error = new TypeError(
-      "Failed to fetch dynamically imported module: http://studio.tail1234.ts.net:3773/assets/a.js?pair=SECRET#token=SECRET",
+      "Failed to fetch dynamically imported module: http://studio.tail1234.ts.net:3772/assets/a.js?pair=SECRET#token=SECRET",
       {
         cause: new Error(
-          "ws://studio.tail1234.ts.net:3773/ws?token=SECRET closed, main-a.js?sig=SECRET",
+          "ws://studio.tail1234.ts.net:3772/ws?token=SECRET closed, main-a.js?sig=SECRET",
         ),
       },
     );
-    error.stack = `TypeError: ${error.message}\n    at http://studio.tail1234.ts.net:3773/src/main.tsx?t=1:10:5`;
+    error.stack = `TypeError: ${error.message}\n    at http://studio.tail1234.ts.net:3772/src/main.tsx?t=1:10:5`;
     const report = buildErrorReport(error, environment);
     expect(report).not.toContain("SECRET");
     expect(report).not.toContain("tail1234");

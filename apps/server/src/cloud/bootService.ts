@@ -54,7 +54,6 @@ export {
 } from "./serviceProtocol.ts";
 
 const BOOT_SERVICE_NAME = "t2code";
-const CLI_PACKAGE_NAME = "@t2code/cli";
 export const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // `.service` suffix keeps the label distinct from the desktop app's bundle id
 // (codes.t2.desktop), so launchd and TCC records never collide.
