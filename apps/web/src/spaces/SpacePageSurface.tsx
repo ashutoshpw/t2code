@@ -15,15 +15,27 @@ import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelSt
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
 
-export default function SpacePageSurface({
-  target,
-  fullPage = false,
-  threadRef,
-}: {
+interface SpacePageSurfaceProps {
   target: SpacePageNavigationTarget;
   fullPage?: boolean;
   threadRef?: ScopedThreadRef;
-}) {
+}
+
+export default function SpacePageSurface(props: SpacePageSurfaceProps) {
+  const availability = useSpacesAvailability(props.target.environmentId);
+  if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
+  return (
+    <section className="min-w-0 p-4" aria-label="Space page">
+      <SpacePageMetadata {...props} />
+      <SpaceDocumentSurface
+        key={JSON.stringify([props.target.environmentId, props.target.pageId])}
+        target={props.target}
+      />
+    </section>
+  );
+}
+
+function SpacePageMetadata({ target, fullPage = false, threadRef }: SpacePageSurfaceProps) {
   const availability = useSpacesAvailability(target.environmentId);
   const environment = useEnvironment(target.environmentId);
   const version = environment?.serverConfig?.environment.capabilities.spaces?.version;
@@ -120,7 +132,7 @@ export default function SpacePageSurface({
   const { page, space, ancestors } = current;
   const resolvedTarget = { ...target, spaceId: page.spaceId };
   return (
-    <section className="min-w-0 p-4" aria-label="Space page">
+    <>
       <Link
         to="/spaces/$environmentId/$spaceId"
         params={{ environmentId: target.environmentId, spaceId: space.id }}
@@ -155,10 +167,6 @@ export default function SpacePageSurface({
       <p className="mt-2 text-sm text-muted-foreground">
         Revision {page.revision} · Updated {page.updatedAt}
       </p>
-      <SpaceDocumentSurface
-        key={JSON.stringify([target.environmentId, target.pageId])}
-        target={target}
-      />
       {target.blockId ? (
         <p className="mt-2 break-words text-sm text-muted-foreground">
           Linked block: {target.blockId}
@@ -191,6 +199,6 @@ export default function SpacePageSurface({
           </Link>
         ) : null}
       </div>
-    </section>
+    </>
   );
 }
