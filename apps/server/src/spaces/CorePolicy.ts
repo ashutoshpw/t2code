@@ -15,10 +15,11 @@ export const historyLimits: SpaceHistoryLimits = Object.freeze({
   cleanupBatchBytes: 4_194_304,
 });
 
-type ScalarLimit = Exclude<keyof SpaceLimits, "history">;
+type ScalarLimit = Exclude<keyof SpaceLimits, "history" | "maxReferenceHops">;
 
 export const limits: SpaceLimits = Object.freeze({
   history: historyLimits,
+  maxReferenceHops: 32,
   maxListRows: 50,
   maxListResponseBytes: 65_536,
   maxBlockWindowBlocks: 100,

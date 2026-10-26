@@ -15,6 +15,8 @@ import {
   WsSpacesPagesCreateChildRpc,
   WsSpacesPagesMoveRpc,
   WsSpacesStructureInspectRpc,
+  WsSpacesBlocksMoveRpc,
+  WsSpacesReferencesResolveRpc,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
@@ -88,6 +90,10 @@ export const group = RpcGroup.make(
     strictPayload(C.SpaceMovePageInput, (input) => ({ operation: "movePage", input })),
   ),
   WsSpacesStructureInspectRpc.setPayload(strictPayload(C.SpaceInspectStructureInput)),
+  WsSpacesBlocksMoveRpc.setPayload(
+    strictPayload(C.SpaceMoveBlocksInput, (input) => ({ operation: "moveBlocks", input })),
+  ),
+  WsSpacesReferencesResolveRpc.setPayload(strictPayload(C.SpaceReferenceResolveInput)),
 ).middleware(RpcScopeAuthorization);
 
 export const handlers = Effect.gen(function* () {
@@ -107,5 +113,7 @@ export const handlers = Effect.gen(function* () {
     [WS_METHODS.spacesPagesCreateChild]: (input) => service.createChildPage(input),
     [WS_METHODS.spacesPagesMove]: (input) => service.movePage(input),
     [WS_METHODS.spacesStructureInspect]: (input) => service.inspectStructure(input),
+    [WS_METHODS.spacesBlocksMove]: (input) => service.moveBlocks(input),
+    [WS_METHODS.spacesReferencesResolve]: (input) => service.resolveReference(input),
   });
 });

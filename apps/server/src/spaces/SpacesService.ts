@@ -21,6 +21,7 @@ import * as Receipts from "./Receipts.ts";
 import * as RevisionStore from "./RevisionStore.ts";
 import * as PageStore from "./PageStore.ts";
 import * as PageStructure from "./PageStructure.ts";
+import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as Sqlite from "./Sqlite.ts";
 
@@ -66,6 +67,12 @@ export class SpacesService extends Context.Service<
     readonly inspectStructure: (
       input: unknown,
     ) => Effect.Effect<C.SpaceInspectStructureResult, C.SpaceServiceError>;
+    readonly moveBlocks: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceMoveBlocksResult, C.SpaceServiceError>;
+    readonly resolveReference: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceReferenceResolveResult, C.SpaceServiceError>;
     readonly lookupMutationReceipt: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReceiptLookupResult, C.SpaceServiceError>;
@@ -105,6 +112,8 @@ const strict = { onExcessProperty: "error" } as const;
 const decodeList = Schema.decodeUnknownEffect(C.SpaceListInput, strict);
 const decodePages = Schema.decodeUnknownEffect(C.SpacePageListInput, strict);
 const decodeGet = Schema.decodeUnknownEffect(C.SpacePageGetInput, strict);
+const decodeReference = Schema.decodeUnknownEffect(C.SpaceReferenceResolveInput, strict);
+const decodeMoveBlocksResult = Schema.decodeUnknownSync(C.SpaceMoveBlocksResult, strict);
 const decodeInspect = Schema.decodeUnknownEffect(C.SpaceInspectStructureInput, strict);
 const decodeBlocks = Schema.decodeUnknownEffect(C.SpaceReadBlocksInput, strict);
 const decodeRequest = Schema.decodeUnknownEffect(C.SpaceMutationRequest, strict);
@@ -237,6 +246,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         if (!replay) {
           if (maintenance === true) yield* sql.withTransaction(Receipts.cleanup(meta));
           yield* sql.withTransaction(RevisionStore.prune(meta.observed_time_ms));
+          yield* sql.withTransaction(ReferenceStore.maintain());
         }
         return yield* sql.withTransaction(
           Effect.gen(function* () {
@@ -558,6 +568,19 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       }),
     );
   });
+  const resolveReference = Effect.fn("SpacesService.resolveReference")(function* (raw: unknown) {
+    const environmentId = yield* admit();
+    const input = yield* validateRaw(raw).pipe(
+      Effect.flatMap(decodeReference),
+      Effect.mapError((error) =>
+        isServiceError(error) ? error : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+    yield* checkEnvironment(environmentId, input.environmentId);
+    checkIds(input);
+    checkLimit("maxMutationBytes", byteLength(input));
+    return yield* run(environmentId, () => ReferenceStore.resolve(input.target));
+  });
   const execute = Effect.fn("SpacesService.execute")(function* (
     request: C.SpaceMutationRequest,
     meta: Receipts.Metadata,
@@ -587,23 +610,34 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
     });
     switch (request.operation) {
       case "createChildPage":
+      case "moveBlocks":
       case "movePage": {
         const structural =
-          request.operation === "createChildPage"
+          request.operation === "moveBlocks"
             ? {
                 environmentId: request.input.environmentId,
                 target: {
                   kind: "blocks" as const,
-                  pageId: request.input.placement.pageId,
-                  blockIds: [],
+                  pageId: request.input.sourcePageId,
+                  blockIds: request.input.blockIds,
                 },
-                destination: { kind: "child" as const, placement: request.input.placement },
+                destination: { kind: "child" as const, placement: request.input.destination },
               }
-            : {
-                environmentId: request.input.environmentId,
-                target: { kind: "page" as const, pageId: request.input.pageId },
-                destination: request.input.destination,
-              };
+            : request.operation === "createChildPage"
+              ? {
+                  environmentId: request.input.environmentId,
+                  target: {
+                    kind: "blocks" as const,
+                    pageId: request.input.placement.pageId,
+                    blockIds: [],
+                  },
+                  destination: { kind: "child" as const, placement: request.input.placement },
+                }
+              : {
+                  environmentId: request.input.environmentId,
+                  target: { kind: "page" as const, pageId: request.input.pageId },
+                  destination: request.input.destination,
+                };
         const plan = yield* PageStructure.plan(structural, byteLength(request));
         if (!PageStructure.guardsMatch(plan, request.input.guards)) {
           const def = yield* defaultSpace();
@@ -767,6 +801,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           input.mutations,
           page.block_count,
           page.block_bytes,
+          byteLength(request),
         );
         if (result.changed) {
           yield* sql`UPDATE spaces_pages SET revision = revision + 1, block_count = ${result.count}, block_bytes = ${result.bytes}, updated_at = ${now} WHERE page_id = ${input.pageId}`;
@@ -780,6 +815,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
             },
             meta.observed_time_ms,
           );
+          yield* ReferenceStore.release(result.retiredIds);
           yield* changed();
         }
         return decodeReceipt({
@@ -854,6 +890,9 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
   const movePage = Effect.fn("SpacesService.movePage")(function* (input: unknown) {
     return decodeMovePageResult((yield* mutate("movePage", input)).result);
   });
+  const moveBlocks = Effect.fn("SpacesService.moveBlocks")(function* (input: unknown) {
+    return decodeMoveBlocksResult((yield* mutate("moveBlocks", input)).result);
+  });
   const lookupMutationReceipt = Effect.fn("SpacesService.lookupMutationReceipt")(function* (
     raw: unknown,
   ): Effect.fn.Return<C.SpaceReceiptLookupResult, C.SpaceServiceError> {
@@ -915,6 +954,8 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
     createChildPage,
     movePage,
     inspectStructure,
+    moveBlocks,
+    resolveReference,
   });
 });
 

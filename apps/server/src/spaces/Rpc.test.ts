@@ -41,6 +41,8 @@ const decodeLookup = Schema.decodeUnknownSync(C.SpaceReceiptLookupResult);
 const decodeInspected = Schema.decodeUnknownSync(C.SpaceInspectStructureResult);
 const decodeChild = Schema.decodeUnknownSync(C.SpaceCreateChildPageResult);
 const decodeMoved = Schema.decodeUnknownSync(C.SpaceMovePageResult);
+const decodeMovedBlocks = Schema.decodeUnknownSync(C.SpaceMoveBlocksResult);
+const decodeReference = Schema.decodeUnknownSync(C.SpaceReferenceResolveResult);
 const control = RpcGroup.make(WsServerRefreshProvidersRpc).middleware(RpcScopeAuthorization);
 const group = SpacesRpc.group.merge(control);
 const frameBytes = (response: unknown) => Buffer.byteLength(JSON.stringify(response), "utf8");
@@ -200,6 +202,82 @@ it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
           if (child.status !== "saved") return yield* Effect.die("Expected child");
           assert.isNull(child.page.rootOrder);
           assert.equal(child.page.location?.kind, "child");
+          const second = decodePage(
+            savedValue(
+              yield* request(WS_METHODS.spacesPagesCreate, {
+                ...common,
+                mutationId: "wire-second",
+                spaceId: library.defaultSpaceId,
+                baseRootOrderRevision: 1,
+                title: "Second",
+              }),
+            ),
+          );
+          if (second.status !== "saved") return yield* Effect.die("Expected second page");
+          const blockDestination = { pageId: second.page.id, parentId: null, beforeBlockId: null };
+          const blockPlan = decodeInspected(
+            savedValue(
+              yield* request(WS_METHODS.spacesStructureInspect, {
+                ...env,
+                target: { kind: "blocks", pageId: root.page.id, blockIds: [child.ownerBlockId] },
+                destination: { kind: "child", placement: blockDestination },
+              }),
+            ),
+          );
+          const blockMove = {
+            ...common,
+            mutationId: "wire-block-move",
+            sourcePageId: root.page.id,
+            blockIds: [child.ownerBlockId],
+            destination: blockDestination,
+            guards: blockPlan.guards,
+          };
+          expectDefect(
+            yield* request(WS_METHODS.spacesBlocksMove, {
+              ...blockMove,
+              destination: { ...blockDestination, pageIdHint: "forged" },
+            }),
+          );
+          const movedBlocks = decodeMovedBlocks(
+            savedValue(yield* request(WS_METHODS.spacesBlocksMove, blockMove)),
+          );
+          assert.equal(movedBlocks.status, "saved");
+          assert.deepEqual(
+            decodeMovedBlocks(savedValue(yield* request(WS_METHODS.spacesBlocksMove, blockMove))),
+            movedBlocks,
+          );
+          assert.deepEqual(
+            decodeLookup(
+              savedValue(
+                yield* request(WS_METHODS.spacesReceiptsGet, {
+                  request: { operation: "moveBlocks", input: blockMove },
+                }),
+              ),
+            ),
+            { status: "found", receipt: { operation: "moveBlocks", result: movedBlocks } },
+          );
+          assert.deepEqual(
+            typedFailure(
+              yield* request(WS_METHODS.spacesBlocksMove, { ...blockMove, blockIds: ["changed"] }),
+            ),
+            { _tag: "SpaceMutationIdMismatchError", mutationId: blockMove.mutationId },
+          );
+          const referenceInput = {
+            ...env,
+            target: { kind: "block", blockId: child.ownerBlockId },
+            pageIdHint: root.page.id,
+          };
+          expectDefect(
+            yield* request(WS_METHODS.spacesReferencesResolve, {
+              ...referenceInput,
+              target: { ...referenceInput.target, pageId: "forged" },
+            }),
+          );
+          const reference = decodeReference(
+            savedValue(yield* request(WS_METHODS.spacesReferencesResolve, referenceInput)),
+          );
+          assert.equal(reference.status, "resolved");
+          if (reference.status === "resolved") assert.equal(reference.page.id, second.page.id);
           const target = {
             ...env,
             target: { kind: "page", pageId: child.page.id },
@@ -242,7 +320,7 @@ it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
         }),
       ),
   );
-  it.effect.each(["createChildPage", "movePage"] as const)(
+  it.effect.each(["createChildPage", "movePage", "moveBlocks"] as const)(
     "bounds the original %s envelope at exact1MiB and plus one",
     (operation) =>
       fixture(
@@ -262,41 +340,52 @@ it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
                   title: "",
                   placement: { pageId: "page", parentId: null, beforeBlockId: null },
                 }
-              : {
-                  ...common,
-                  pageId: "page",
-                  destination: { kind: "root", spaceId: "", beforePageId: null },
-                };
-          const padding = 1_048_576 - Buffer.byteLength(canonical({ operation, input }), "utf8");
-          const exact =
+              : operation === "movePage"
+                ? {
+                    ...common,
+                    pageId: "page",
+                    destination: { kind: "root", spaceId: "", beforePageId: null },
+                  }
+                : {
+                    ...common,
+                    sourcePageId: "page",
+                    blockIds: ["block"],
+                    destination: { pageId: "", parentId: null, beforeBlockId: null },
+                  };
+          const padding = 1048576 - Buffer.byteLength(canonical({ operation, input }), "utf8");
+          const padded = (extra: number) =>
             operation === "createChildPage"
-              ? { ...input, title: "x".repeat(padding) }
-              : {
-                  ...input,
-                  destination: { kind: "root", spaceId: "x".repeat(padding), beforePageId: null },
-                };
+              ? { ...input, title: "x".repeat(padding + extra) }
+              : operation === "movePage"
+                ? {
+                    ...input,
+                    destination: {
+                      kind: "root",
+                      spaceId: "x".repeat(padding + extra),
+                      beforePageId: null,
+                    },
+                  }
+                : {
+                    ...input,
+                    destination: {
+                      pageId: "x".repeat(padding + extra),
+                      parentId: null,
+                      beforeBlockId: null,
+                    },
+                  };
           const tag =
             operation === "createChildPage"
               ? WS_METHODS.spacesPagesCreateChild
-              : WS_METHODS.spacesPagesMove;
-          assert.deepEqual(typedFailure(yield* request(tag, exact)), {
+              : operation === "movePage"
+                ? WS_METHODS.spacesPagesMove
+                : WS_METHODS.spacesBlocksMove;
+          assert.deepEqual(typedFailure(yield* request(tag, padded(0))), {
             _tag: "SpaceLimitExceededError",
             limit: "maxMutationBytes",
-            actual: 1_048_576,
-            maximum: 262_144,
+            actual: 1048576,
+            maximum: 262144,
           });
-          const over =
-            operation === "createChildPage"
-              ? { ...exact, title: "x".repeat(padding + 1) }
-              : {
-                  ...exact,
-                  destination: {
-                    kind: "root",
-                    spaceId: "x".repeat(padding + 1),
-                    beforePageId: null,
-                  },
-                };
-          expectDefect(yield* request(tag, over));
+          expectDefect(yield* request(tag, padded(1)));
         }),
       ),
   );

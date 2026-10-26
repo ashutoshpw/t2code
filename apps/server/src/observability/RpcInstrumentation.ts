@@ -25,6 +25,8 @@ const RPC_AGGREGATES = {
   [WS_METHODS.spacesPagesCreateChild]: "spaces",
   [WS_METHODS.spacesPagesMove]: "spaces",
   [WS_METHODS.spacesStructureInspect]: "spaces",
+  [WS_METHODS.spacesBlocksMove]: "spaces",
+  [WS_METHODS.spacesReferencesResolve]: "spaces",
   [ORCHESTRATION_V2_WS_METHODS.dispatchCommand]: "orchestrationV2",
   [ORCHESTRATION_V2_WS_METHODS.getWorkflowScript]: "orchestration",
   [ORCHESTRATION_V2_WS_METHODS.stopWorkflow]: "orchestration",

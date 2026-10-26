@@ -629,6 +629,7 @@ it.layer(layer)("migrate-dev-db", (it) => {
               { migration_id: 2, name: "Core" },
               { migration_id: 3, name: "RevisionPreimages" },
               { migration_id: 4, name: "PageOwners" },
+              { migration_id: 5, name: "ReferenceIdentity" },
             ],
           );
         }),

@@ -582,6 +582,8 @@ const ServerWsRpcGroup = WsRpcGroup.omit(
   WS_METHODS.spacesPagesCreateChild,
   WS_METHODS.spacesPagesMove,
   WS_METHODS.spacesStructureInspect,
+  WS_METHODS.spacesBlocksMove,
+  WS_METHODS.spacesReferencesResolve,
 )
   .merge(SpacesRpc.group)
   .middleware(RpcInstrumentation);

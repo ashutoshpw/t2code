@@ -4,6 +4,7 @@ import * as Schema from "effect/Schema";
 
 import { byteLength, checkLimit, canonical, limits } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
+import * as ReferenceStore from "./ReferenceStore.ts";
 
 export interface BlockRow {
   readonly block_id: string;
@@ -84,6 +85,7 @@ export const apply = Effect.fnUntraced(function* (
   mutations: readonly C.SpaceBlockMutation[],
   count: number,
   bytes: number,
+  requestBytes: number,
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const original = new Map<string, BlockRow | undefined>();
@@ -212,12 +214,18 @@ export const apply = Effect.fnUntraced(function* (
       checkLimit("maxDepth", ++depth);
     }
   }
+  let workBytes = requestBytes;
+  const reserve = (value: unknown) => {
+    workBytes += byteLength(value);
+    checkLimit("maxMutationBytes", workBytes);
+  };
   for (const [id, target] of merges) {
     if (target === null) continue;
     touch(target);
     const survivor = yield* get(target);
     if (target === id || !survivor || !editable(survivor))
       return yield* new C.SpaceValidationError({ reason: "invalid_merge" });
+    yield* ReferenceStore.flatten(id, target, touch, reserve);
   }
   const changes: Array<{
     id: string;
@@ -233,8 +241,8 @@ export const apply = Effect.fnUntraced(function* (
       : canonical({ id, pageId, mergedInto: merges.get(id) ?? null });
     if (old?.payload === payload) continue;
     const size = Buffer.byteLength(payload, "utf8");
-    count += old ? 0 : 1;
-    bytes += size - (old?.logical_bytes ?? 0);
+    count += (block ? 1 : 0) - (old && !old.deleted ? 1 : 0);
+    bytes += (block ? size : 0) - (old && !old.deleted ? old.logical_bytes : 0);
     changes.push({ id, block, old, payload, size });
   }
   checkLimit("maxPageBlocks", count);
@@ -250,6 +258,7 @@ export const apply = Effect.fnUntraced(function* (
     changed: changes.length > 0,
     count,
     bytes,
+    retiredIds: changes.filter((change) => change.block === null).map((change) => change.id),
     blocksBefore: changes.map(({ id, old }) => ({ id, row: old ? { ...old } : null })),
   };
 });

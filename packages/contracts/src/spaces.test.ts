@@ -177,6 +177,26 @@ describe("Spaces core protocol", () => {
     };
     expect(encodeRequest(decodeRequest(create))).toEqual(create);
     expect(encodeRequest(decodeRequest(move))).toEqual(move);
+    const moveBlocks = {
+      operation: "moveBlocks",
+      input: {
+        ...writeContext,
+        sourcePageId: page.id,
+        blockIds: ["block"],
+        destination: placement,
+        guards,
+      },
+    };
+    expect(encodeRequest(decodeRequest(moveBlocks))).toEqual(moveBlocks);
+    const movedBlocks = {
+      operation: "moveBlocks",
+      result: { status: "saved", ...acknowledgement, blockIds: ["block"], changed: guards },
+    };
+    expect(decodeReceipt(movedBlocks)).toEqual(movedBlocks);
+    expect(() =>
+      decodeRequest({ ...moveBlocks, input: { ...moveBlocks.input, blockIds: [] } }),
+    ).toThrow();
+    expect(() => decodeReceipt({ ...movedBlocks, operation: "applyBlockBatch" })).toThrow();
     expect(() =>
       decodeRequest({
         ...create,
@@ -252,7 +272,7 @@ describe("Spaces core protocol", () => {
       cleanupBatchRows: 100,
       cleanupBatchBytes: 8_388_608,
     };
-    const next = { ...old, limits: { ...old.limits, history } };
+    const next = { ...old, limits: { ...old.limits, history, maxReferenceHops: 64 } };
     expect(decodeCapability(next)).toEqual(next);
     expect(() =>
       decodeCapability({

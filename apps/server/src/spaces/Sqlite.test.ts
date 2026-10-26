@@ -18,6 +18,7 @@ import * as Migrator from "effect/sql/Migrator";
 import Migration0001 from "./Migrations/001_Spaces.ts";
 import Migration0002 from "./Migrations/002_Core.ts";
 import Migration0003 from "./Migrations/003_RevisionPreimages.ts";
+import Migration0004 from "./Migrations/004_PageOwners.ts";
 
 import * as ChatSqlite from "../persistence/Sqlite.ts";
 import { runMigrations } from "./Migrations.ts";
@@ -62,6 +63,7 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
       { migration_id: 2, name: "Core" },
       { migration_id: 3, name: "RevisionPreimages" },
       { migration_id: 4, name: "PageOwners" },
+      { migration_id: 5, name: "ReferenceIdentity" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -111,6 +113,131 @@ it.effect("rolls back a failed schema migration together with its ledger entry",
 );
 
 it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
+  it.effect(
+    "upgrades legacy tombstones without a bulk rewrite and bounds identity cleanup and long-chain compression",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "spaces-identity-upgrade-" });
+        const dbPath = path.join(directory, "spaces.sqlite");
+        const environmentId = EnvironmentId.make("legacy-identities");
+        const liveBlock = {
+          id: "legacy-survivor",
+          parentId: null,
+          order: "00000000000000000000000000000001",
+          type: "paragraph",
+          version: 1,
+          content: { runs: [] },
+        };
+        const livePayload = JSON.stringify(liveBlock);
+        const ids = Array.from({ length: 96 }, (_, i) => `legacy-${String(i).padStart(3, "0")}`);
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          yield* sql`PRAGMA application_id=1397768515`;
+          yield* Migrator.make({})({
+            loader: Migrator.fromRecord({
+              "1_Spaces": Migration0001.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+              "2_Core": Migration0002.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+              "3_RevisionPreimages": Migration0003.pipe(
+                Effect.provideService(SpacesSql.SpacesSql, sql),
+              ),
+              "4_PageOwners": Migration0004.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+            }),
+          });
+          yield* sql`INSERT INTO spaces_ids(id,kind) VALUES ('legacy-page','page'),(${liveBlock.id},'block')`;
+          yield* sql`INSERT INTO spaces_pages(page_id,space_id,title,root_order,created_at,updated_at) VALUES ('legacy-page','default','Legacy','00000000000000000000000000000001','1970-01-01T00:00:00.000Z','1970-01-01T00:00:00.000Z')`;
+          let bytes = Buffer.byteLength(livePayload, "utf8");
+          yield* sql`INSERT INTO spaces_blocks(block_id,page_id,parent_id,rank,payload,logical_bytes) VALUES (${liveBlock.id},'legacy-page',NULL,${liveBlock.order},${livePayload},${bytes})`;
+          for (const [i, id] of ids.entries()) {
+            const target = ids[i + 1] ?? liveBlock.id;
+            const payload = JSON.stringify({ id, pageId: "legacy-page", mergedInto: target });
+            const logical = Buffer.byteLength(payload, "utf8");
+            yield* sql`INSERT INTO spaces_ids(id,kind) VALUES (${id},'block')`;
+            yield* sql`INSERT INTO spaces_blocks(block_id,page_id,parent_id,rank,payload,logical_bytes,deleted,merged_into) VALUES (${id},'legacy-page',NULL,${liveBlock.order},${payload},${logical},1,${target})`;
+            bytes += logical;
+          }
+          yield* sql`UPDATE spaces_pages SET block_count=97,block_bytes=${bytes} WHERE page_id='legacy-page'`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
+        yield* Effect.gen(function* () {
+          const sql = yield* SpacesSql.SpacesSql;
+          assert.equal((yield* sql`SELECT COUNT(*) AS n FROM spaces_ids WHERE deleted=1`)[0]?.n, 0);
+          assert.equal(
+            (yield* sql`SELECT COUNT(*) AS n FROM spaces_blocks WHERE deleted=1`)[0]?.n,
+            96,
+          );
+        }).pipe(Effect.provide(Sqlite.layerFromPath(dbPath)));
+        yield* Effect.gen(function* () {
+          const service = yield* SpacesService.SpacesService;
+          const reference = {
+            environmentId,
+            target: { kind: "block", blockId: C.SpaceBlockId.make(ids[0]!) },
+          };
+          assert.deepEqual(yield* service.resolveReference(reference), { status: "unavailable" });
+          let remaining = 46;
+          yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            assert.equal(
+              (yield* sql`SELECT COUNT(*) AS n FROM spaces_blocks WHERE deleted=1`)[0]?.n,
+              remaining,
+            );
+            assert.equal((yield* sql`SELECT block_count FROM spaces_pages`)[0]?.block_count, 47);
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+          for (let pass = 0; pass < 16; pass++) {
+            yield* service.getPage({ environmentId, pageId: "legacy-page" });
+            const count = yield* Effect.gen(function* () {
+              const sql = yield* SqlClient.SqlClient;
+              const count = Number(
+                (yield* sql`SELECT COUNT(*) AS n FROM spaces_blocks WHERE deleted=1`)[0]?.n,
+              );
+              assert.isAtMost(remaining - count, 50);
+              assert.isAtLeast(remaining - count, 0);
+              return count;
+            }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+            remaining = count;
+          }
+          const resolved = yield* service.resolveReference(reference);
+          assert.equal(resolved.status, "merged");
+          if (resolved.status === "merged") {
+            assert.equal(resolved.blockId, liveBlock.id);
+            assert.equal(resolved.page.id, "legacy-page");
+          }
+          yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            assert.equal((yield* sql`SELECT COUNT(*) AS n FROM spaces_ids`)[0]?.n, 99);
+            assert.equal(
+              (yield* sql`SELECT COUNT(*) AS n FROM spaces_ids WHERE deleted=1`)[0]?.n,
+              96,
+            );
+            assert.equal((yield* sql`SELECT COUNT(*) AS n FROM spaces_blocks`)[0]?.n, 1);
+            assert.deepEqual(
+              yield* sql`SELECT block_count,block_bytes,revision FROM spaces_pages`,
+              [
+                {
+                  block_count: 1,
+                  block_bytes: Buffer.byteLength(livePayload, "utf8"),
+                  revision: 0,
+                },
+              ],
+            );
+            assert.deepEqual(yield* sql`SELECT * FROM spaces_revisions`, []);
+            assert.deepEqual(yield* sql`PRAGMA foreign_key_check`, []);
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+        }).pipe(
+          Effect.provide(
+            SpacesService.layerFromPath(dbPath).pipe(
+              Layer.provide(
+                Layer.succeed(ServerEnvironment.ServerEnvironmentIdentity, {
+                  getEnvironmentId: Effect.succeed(environmentId),
+                }),
+              ),
+              Layer.provide(Settings.layerTest({ spacesEnabled: true })),
+            ),
+          ),
+        );
+      }),
+  );
+
   it.effect(
     "upgrades v1 preimages and exactly replays a legacy page receipt without inventing its location",
     () =>
@@ -208,17 +335,38 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           yield* sql`INSERT INTO spaces_revisions VALUES ('legacy-page',0,'legacy-create',0,604800000,${payload},${logical},0)`;
           yield* sql`UPDATE spaces_pages SET retained_revision_count=1,retained_revision_bytes=${logical}`;
           yield* sql`UPDATE spaces_core SET environment_id=${environmentId},catalog_revision=1,active_epoch='legacy-epoch',revision_bytes=${logical}`;
+          const retiredPayload = JSON.stringify({
+            id: "legacy-retired",
+            pageId: "legacy-page",
+            mergedInto: null,
+          });
+          const retiredBytes = Buffer.byteLength(retiredPayload, "utf8");
+          yield* sql`INSERT INTO spaces_ids(id,kind) VALUES ('legacy-retired','block')`;
+          yield* sql`INSERT INTO spaces_blocks(block_id,page_id,parent_id,rank,payload,logical_bytes,deleted) VALUES ('legacy-retired','legacy-page',NULL,'00000000000000000000000000000001',${retiredPayload},${retiredBytes},1)`;
+          yield* sql`UPDATE spaces_pages SET block_count=1,block_bytes=${retiredBytes} WHERE page_id='legacy-page'`;
           return { request, receipt, payload, logical };
         }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
         yield* Effect.gen(function* () {
           const service = yield* SpacesService.SpacesService;
-          assert.equal((yield* service.getCapability(environmentId))?.version, 2);
           if (old.receipt.operation !== "createPage")
             return yield* Effect.die("Expected legacy receipt");
           const replay = yield* service.createPage(old.request.input);
           assert.deepEqual(replay, old.receipt.result);
           if (replay.status !== "saved") return yield* Effect.die("Expected saved receipt");
           assert.isFalse(Object.hasOwn(replay.page, "location"));
+          yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            assert.equal(
+              (yield* sql`SELECT deleted FROM spaces_blocks WHERE block_id='legacy-retired'`)[0]
+                ?.deleted,
+              1,
+            );
+            assert.equal(
+              (yield* sql`SELECT deleted FROM spaces_ids WHERE id='legacy-retired'`)[0]?.deleted,
+              0,
+            );
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+          assert.equal((yield* service.getCapability(environmentId))?.version, 2);
           const current = yield* service.getPage({ environmentId, pageId: "legacy-page" });
           assert.deepEqual(current.page.location, {
             kind: "root",
@@ -347,7 +495,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             const sql = yield* SpacesSql.SpacesSql;
             assert.deepEqual(
               yield* sql`SELECT * FROM spaces_core`,
-              before.core.map((row) => ({ ...row, revision_bytes: 0 })),
+              before.core.map((row) => ({ ...row, revision_bytes: 0, reference_cursor: null })),
             );
             assert.deepEqual(yield* sql`SELECT * FROM spaces`, before.spaces);
             const pages = yield* sql`SELECT * FROM spaces_pages`;
@@ -361,7 +509,10 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             );
             assert.deepEqual(yield* sql`SELECT * FROM spaces_blocks`, before.blocks);
             assert.deepEqual(yield* sql`SELECT * FROM spaces_receipts`, before.receipts);
-            assert.deepEqual(yield* sql`SELECT * FROM spaces_ids ORDER BY id`, before.ids);
+            assert.deepEqual(
+              yield* sql`SELECT * FROM spaces_ids ORDER BY id`,
+              before.ids.map((row) => ({ ...row, deleted: 0, merged_into: null })),
+            );
             assert.deepEqual(yield* sql`SELECT * FROM spaces_revisions`, []);
             assert.equal(
               (yield* sql`SELECT revision_bytes FROM spaces_core`)[0]?.revision_bytes,
@@ -423,7 +574,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            4,
+            5,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -537,7 +688,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (5, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (6, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;

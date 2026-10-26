@@ -327,7 +327,692 @@ const moveIntent = Effect.fn("SpacesServiceTest.moveIntent")(function* (
   };
 });
 
+const blockMoveIntent = Effect.fn("SpacesServiceTest.blockMoveIntent")(function* (
+  service: SpacesService.SpacesService["Service"],
+  common: { readonly environmentId: EnvironmentId; readonly receiptEpoch: C.SpaceReceiptEpoch },
+  sourcePageId: C.SpacePageId,
+  blockIds: readonly C.SpaceBlockId[],
+  destination: C.SpaceBlockPlacement,
+  mutationId: string,
+): Effect.fn.Return<C.SpaceMoveBlocksInput, C.SpaceServiceError> {
+  const inspected = yield* service.inspectStructure({
+    ...env,
+    target: { kind: "blocks", pageId: sourcePageId, blockIds },
+    destination: { kind: "child", placement: destination },
+  });
+  return {
+    ...common,
+    sourcePageId,
+    blockIds,
+    destination,
+    mutationId: C.SpaceMutationId.make(mutationId),
+    guards: inspected.guards,
+  };
+});
+
 it.layer(NodeServices.layer)("Spaces core service", (it) => {
+  it.effect(
+    "rebalances a real exhausted sibling gap for multiple selected roots in requested order",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page, library, request } = yield* boot();
+          const destination = yield* rootPage(
+            service,
+            common,
+            library.defaultSpaceId,
+            "multi-rank-dest",
+          );
+          const roots = [block("multi-a"), block("multi-b", 2)];
+          yield* service.applyBlockBatch(
+            request(
+              "multi-roots",
+              0,
+              roots.map((value) => ({ kind: "insert", block: value })),
+            ),
+          );
+          const peers = [0, 1].map((i) => ({
+            ...block(`multi-peer-${i}`, i),
+            futureEnvelope: { untouched: ["界", i] },
+          }));
+          yield* service.applyBlockBatch({
+            ...common,
+            mutationId: "multi-peers",
+            pageId: destination.id,
+            baseRevision: 0,
+            generation: 0,
+            mutations: peers.map((value) => ({ kind: "insert", block: value })),
+          });
+          const input = yield* blockMoveIntent(
+            service,
+            common,
+            page.id,
+            [roots[1]!.id, roots[0]!.id],
+            { pageId: destination.id, parentId: null, beforeBlockId: peers[1]!.id },
+            "multi-gap",
+          );
+          const moved = yield* service.moveBlocks(input);
+          if (moved.status !== "saved") return yield* Effect.die("Expected multi move");
+          assert.deepEqual(
+            moved.changed.pages.map((row) => row.revision),
+            [2, 2],
+          );
+          const body = (yield* service.readBlocks({ ...env, pageId: destination.id, revision: 2 }))
+            .blocks;
+          assert.deepEqual(
+            body.map((value) => value.id),
+            [peers[0]!.id, roots[1]!.id, roots[0]!.id, peers[1]!.id],
+          );
+          assert.equal(new Set(body.map((value) => value.order)).size, 4);
+          assert.isTrue(body.every((value) => /^[0-9a-f]{32}$/.test(value.order)));
+          assert.deepEqual(body[0]!.futureEnvelope, peers[0]!.futureEnvelope);
+          assert.deepEqual(body[3]!.futureEnvelope, peers[1]!.futureEnvelope);
+          const history = yield* historyState(dbPath);
+          const delta = JSON.parse(
+            history.revisions.find(
+              (row) => row.page_id === destination.id && row.mutation_id === "multi-gap",
+            )!.payload,
+          );
+          assert.equal(delta.blocksBefore.length, 4);
+        }),
+      ),
+  );
+
+  it.effect(
+    "bounds moved list depth and exact UTF8 work bytes before changing any ownership or body",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page, library, request } = yield* boot();
+          const destination = yield* rootPage(
+            service,
+            common,
+            library.defaultSpaceId,
+            "depth-destination",
+          );
+          const list = { ...block("depth-moving"), type: "bulleted_item" };
+          const leaf = block("depth-moving-leaf", 1, list.id);
+          yield* service.applyBlockBatch(
+            request(
+              "depth-source",
+              0,
+              [list, leaf].map((value) => ({ kind: "insert", block: value })),
+            ),
+          );
+          const ancestors = Array.from({ length: 15 }, (_, i) => ({
+            ...block(
+              `dest-ancestor-${i}`,
+              1,
+              i === 0 ? null : C.SpaceBlockId.make(`dest-ancestor-${i - 1}`),
+            ),
+            type: "bulleted_item",
+          }));
+          yield* service.applyBlockBatch({
+            ...common,
+            mutationId: "depth-dest-seed",
+            pageId: destination.id,
+            baseRevision: 0,
+            generation: 0,
+            mutations: ancestors.map((value) => ({ kind: "insert", block: value })),
+          });
+          const placement = {
+            pageId: destination.id,
+            parentId: ancestors[14]!.id,
+            beforeBlockId: null,
+          };
+          const before = yield* structureState(dbPath);
+          const over = {
+            ...common,
+            mutationId: "depth-over",
+            sourcePageId: page.id,
+            blockIds: [list.id],
+            destination: placement,
+            guards: { pages: [], roots: [] },
+          };
+          const error = yield* Effect.flip(service.moveBlocks(over));
+          assert.equal(error._tag, "SpaceLimitExceededError");
+          if (error._tag === "SpaceLimitExceededError") {
+            assert.equal(error.limit, "maxDepth");
+            assert.equal(error.actual, 17);
+          }
+          assert.deepEqual(yield* structureState(dbPath), before);
+          const atLimit = yield* blockMoveIntent(
+            service,
+            common,
+            page.id,
+            [list.id],
+            { ...placement, parentId: ancestors[13]!.id },
+            "depth-at-limit",
+          );
+          assert.equal((yield* service.moveBlocks(atLimit)).status, "saved");
+          const wide = Array.from({ length: 5 }, (_, i) => {
+            const value = {
+              ...block(`wide-moving-${i}`, i + 1),
+              type: "code",
+              content: { language: "", text: "" },
+            };
+            return {
+              ...value,
+              content: { language: "", text: "界".repeat(Math.floor((32768 - bytes(value)) / 3)) },
+            };
+          });
+          yield* service.applyBlockBatch(
+            request(
+              "wide-seed",
+              2,
+              wide.map((value) => ({ kind: "insert", block: value })),
+            ),
+          );
+          const inspection = yield* service.inspectStructure({
+            ...env,
+            target: { kind: "blocks", pageId: page.id, blockIds: wide.map((value) => value.id) },
+            destination: {
+              kind: "child",
+              placement: { pageId: destination.id, parentId: null, beforeBlockId: null },
+            },
+          });
+          const state = yield* structureState(dbPath);
+          const refused = yield* Effect.flip(
+            service.moveBlocks({
+              ...common,
+              mutationId: "wide-write",
+              sourcePageId: page.id,
+              blockIds: wide.map((value) => value.id),
+              destination: { pageId: destination.id, parentId: null, beforeBlockId: null },
+              guards: inspection.guards,
+            }),
+          );
+          assert.equal(refused._tag, "SpaceLimitExceededError");
+          if (refused._tag === "SpaceLimitExceededError")
+            assert.equal(refused.limit, "maxMutationBytes");
+          assert.deepEqual(yield* structureState(dbPath), state);
+        }),
+      ),
+  );
+
+  it.effect(
+    "moves disjoint block roots and their owned pages across spaces while preserving opaque data and pins",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page, request } = yield* boot();
+          const createdSpace = yield* service.createSpace({
+            ...common,
+            mutationId: "blocks-space",
+            title: "Elsewhere",
+          });
+          if (createdSpace.status !== "saved") return yield* Effect.die("Expected space");
+          const destination = yield* rootPage(
+            service,
+            common,
+            createdSpace.space.id,
+            "blocks-dest",
+          );
+          const container = { ...block("move-list"), type: "bulleted_item" };
+          const leaf = { ...block("move-leaf", 1, container.id), extra: { keep: ["界", 7] } };
+          const tail = block("move-tail", 2);
+          yield* service.applyBlockBatch(
+            request(
+              "move-seed",
+              0,
+              [container, leaf, tail].map((value) => ({ kind: "insert", block: value })),
+            ),
+          );
+          const owned = yield* childPage(
+            service,
+            common,
+            page.id,
+            "blocks-owned",
+            null,
+            container.id,
+          );
+          const grandchild = yield* childPage(service, common, owned.page.id, "blocks-grandchild");
+          yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            const [old] =
+              yield* sql`SELECT logical_bytes FROM spaces_blocks WHERE block_id=${leaf.id}`;
+            const payload = JSON.stringify({
+              ...leaf,
+              type: "image",
+              content: { assetId: "legacy-asset", caption: [{ text: "旧图", marks: [] }] },
+              futureEnvelope: { preserve: true },
+            });
+            yield* sql`UPDATE spaces_blocks SET payload=${payload},logical_bytes=${Buffer.byteLength(payload, "utf8")} WHERE block_id=${leaf.id}`;
+            yield* sql`UPDATE spaces_pages SET block_bytes=block_bytes+${Buffer.byteLength(payload, "utf8") - Number(old!.logical_bytes)} WHERE page_id=${page.id}`;
+            yield* sql`INSERT INTO spaces_block_asset_refs VALUES (${leaf.id},'legacy-asset')`;
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
+          const original = yield* structureState(dbPath);
+          const placement = { pageId: destination.id, parentId: null, beforeBlockId: null };
+          const input = yield* blockMoveIntent(
+            service,
+            common,
+            page.id,
+            [container.id, tail.id],
+            placement,
+            "blocks-cross-space",
+          );
+          assert.isTrue(input.guards.pages.some((guard) => guard.pageId === grandchild.page.id));
+          assert.equal(input.guards.roots.length, 2);
+          const moved = yield* service.moveBlocks(input);
+          if (moved.status !== "saved") return yield* Effect.die("Expected moved blocks");
+          assert.deepEqual(moved.blockIds, [container.id, tail.id]);
+          assert.equal(moved.changed.pages.length, 4);
+          assert.deepEqual(moved.changed.roots, []);
+          assert.deepEqual(yield* service.moveBlocks(input), moved);
+          assert.equal(
+            (yield* service.getPage({ ...env, pageId: grandchild.page.id })).page.spaceId,
+            createdSpace.space.id,
+          );
+          const ownedNow = (yield* service.getPage({ ...env, pageId: owned.page.id })).page;
+          assert.deepEqual(ownedNow.location, {
+            kind: "child",
+            spaceId: createdSpace.space.id,
+            ownerBlockId: owned.ownerBlockId,
+            parentPageId: destination.id,
+          });
+          const current = yield* structureState(dbPath);
+          assert.deepEqual(current.ids, original.ids);
+          assert.deepEqual(current.owners, original.owners);
+          assert.deepEqual(current.blockPins, original.blockPins);
+          const oldLeaf = original.blocks.find((row) => row.block_id === leaf.id)!;
+          assert.equal(
+            current.blocks.find((row) => row.block_id === leaf.id)!.payload,
+            oldLeaf.payload,
+          );
+          assert.equal(
+            current.blocks.find((row) => row.block_id === leaf.id)!.page_id,
+            destination.id,
+          );
+          assert.deepEqual(
+            current.pages.filter((row) => row.page_id === page.id).map((row) => row.block_count),
+            [0],
+          );
+          const delta = current.history.filter((row) => row.mutation_id === input.mutationId);
+          assert.equal(delta.length, 4);
+          for (const id of [page.id, destination.id]) {
+            const revision = delta.find((row) => row.page_id === id)!;
+            assert.isTrue(
+              current.revisionPins.some(
+                (pin) =>
+                  pin.page_id === id &&
+                  pin.to_revision === revision.to_revision &&
+                  pin.asset_id === "legacy-asset",
+              ),
+            );
+            const preimage = JSON.parse(String(revision.payload));
+            assert.deepEqual(
+              preimage.blocksBefore.find((row: { id: string }) => row.id === leaf.id).row.payload,
+              oldLeaf.payload,
+            );
+          }
+          const unchanged = yield* historyState(dbPath);
+          const noop = yield* service.moveBlocks(
+            yield* blockMoveIntent(
+              service,
+              common,
+              destination.id,
+              [container.id, tail.id],
+              placement,
+              "blocks-noop",
+            ),
+          );
+          if (noop.status !== "saved") return yield* Effect.die("Expected no-op");
+          assert.deepEqual(noop.changed, { pages: [], roots: [] });
+          assert.deepEqual(yield* historyState(dbPath), unchanged);
+          const reordered = yield* service.moveBlocks(
+            yield* blockMoveIntent(
+              service,
+              common,
+              destination.id,
+              [tail.id],
+              { ...placement, beforeBlockId: container.id },
+              "blocks-reorder",
+            ),
+          );
+          assert.equal(reordered.status, "saved");
+          const window = yield* service.readBlocks({
+            ...env,
+            pageId: destination.id,
+            revision: (yield* service.getPage({ ...env, pageId: destination.id })).page.revision,
+          });
+          assert.deepEqual(
+            window.blocks.map((value) => value.id),
+            [tail.id, container.id, leaf.id, owned.ownerBlockId],
+          );
+          const resolved = yield* service.resolveReference({
+            ...env,
+            target: { kind: "block", blockId: leaf.id },
+            pageIdHint: page.id,
+            spaceIdHint: C.SpaceId.make("stale-space"),
+          });
+          assert.equal(resolved.status, "resolved");
+          if (resolved.status === "resolved") assert.equal(resolved.page.id, destination.id);
+        }),
+      ),
+  );
+
+  it.effect(
+    "rejects overlapping selections, cycles, stale or missing block-move guards and complete closure overflow atomically",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page, library, request } = yield* boot();
+          const destination = yield* rootPage(
+            service,
+            common,
+            library.defaultSpaceId,
+            "guard-block-dest",
+          );
+          const parent = { ...block("guard-list"), type: "bulleted_item" };
+          const child = block("guard-leaf", 1, parent.id);
+          yield* service.applyBlockBatch(
+            request(
+              "guard-list-seed",
+              0,
+              [parent, child].map((value) => ({ kind: "insert", block: value })),
+            ),
+          );
+          const owned = yield* childPage(
+            service,
+            common,
+            page.id,
+            "guard-block-owned",
+            null,
+            parent.id,
+          );
+          const destinationPlacement = {
+            pageId: destination.id,
+            parentId: null,
+            beforeBlockId: null,
+          };
+          const input = yield* blockMoveIntent(
+            service,
+            common,
+            page.id,
+            [parent.id],
+            destinationPlacement,
+            "block-stale",
+          );
+          yield* service.updatePage({
+            ...common,
+            mutationId: "block-dest-edit",
+            pageId: destination.id,
+            baseRevision: 0,
+            title: "Edited",
+          });
+          const history = yield* historyState(dbPath);
+          assert.equal((yield* service.moveBlocks(input)).status, "conflict");
+          const fresh = yield* blockMoveIntent(
+            service,
+            common,
+            page.id,
+            [parent.id],
+            destinationPlacement,
+            "block-missing",
+          );
+          assert.equal(
+            (yield* service.moveBlocks({
+              ...fresh,
+              guards: {
+                ...fresh.guards,
+                pages: fresh.guards.pages.filter((guard) => guard.pageId !== owned.page.id),
+              },
+            })).status,
+            "conflict",
+          );
+          assert.deepEqual(yield* historyState(dbPath), history);
+          for (const value of [
+            {
+              ...fresh,
+              mutationId: "block-duplicates",
+              guards: { ...fresh.guards, pages: [...fresh.guards.pages, fresh.guards.pages[0]!] },
+            },
+            { ...fresh, mutationId: "block-overlap", blockIds: [parent.id, child.id] },
+            { ...fresh, mutationId: "block-repeat", blockIds: [parent.id, parent.id] },
+            {
+              ...fresh,
+              mutationId: "block-list-cycle",
+              destination: { pageId: page.id, parentId: parent.id, beforeBlockId: null },
+            },
+            {
+              ...fresh,
+              mutationId: "block-page-cycle",
+              destination: { pageId: owned.page.id, parentId: null, beforeBlockId: null },
+            },
+          ]) {
+            const before = yield* structureState(dbPath);
+            assert.equal(
+              (yield* Effect.flip(service.moveBlocks(value)))._tag,
+              "SpaceValidationError",
+            );
+            assert.deepEqual(yield* structureState(dbPath), before);
+          }
+          const packed = { ...block("packed-root", 3), type: "bulleted_item" };
+          const packedChildren = Array.from({ length: 96 }, (_, i) =>
+            block(`packed-child-${i}`, i + 1, packed.id),
+          );
+          yield* service.applyBlockBatch(
+            request(
+              "packed-seed",
+              2,
+              [packed, ...packedChildren].map((value) => ({ kind: "insert", block: value })),
+            ),
+          );
+          const atLimit = yield* blockMoveIntent(
+            service,
+            common,
+            page.id,
+            [packed.id],
+            destinationPlacement,
+            "packed-100",
+          );
+          assert.equal((yield* service.moveBlocks(atLimit)).status, "saved");
+          const emptyDestination = yield* rootPage(
+            service,
+            common,
+            library.defaultSpaceId,
+            "packed-empty",
+          );
+          const back = yield* blockMoveIntent(
+            service,
+            common,
+            destination.id,
+            [packed.id],
+            { pageId: emptyDestination.id, parentId: null, beforeBlockId: null },
+            "packed-101",
+          );
+          yield* service.applyBlockBatch({
+            ...common,
+            mutationId: "packed-extra",
+            pageId: destination.id,
+            baseRevision: (yield* service.getPage({ ...env, pageId: destination.id })).page
+              .revision,
+            generation: 0,
+            mutations: [{ kind: "insert", block: block("packed-extra-leaf", 97, packed.id) }],
+          });
+          const before = yield* structureState(dbPath);
+          const error = yield* Effect.flip(service.moveBlocks(back));
+          assert.equal(error._tag, "SpaceLimitExceededError");
+          if (error._tag === "SpaceLimitExceededError") {
+            assert.equal(error.limit, "maxMutationNodes");
+            assert.equal(error.actual, 101);
+          }
+          assert.deepEqual(yield* structureState(dbPath), before);
+        }),
+      ),
+  );
+
+  it.effect(
+    "resolves stable merged identities after moves, further joins and final deletion without resurrecting bodies",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page, library, request } = yield* boot();
+          const destination = yield* rootPage(
+            service,
+            common,
+            library.defaultSpaceId,
+            "reference-dest",
+          );
+          const [a, b, c] = [block("ref-a"), block("ref-b", 2), block("ref-c", 3)] as const;
+          yield* service.applyBlockBatch(
+            request(
+              "refs-seed",
+              0,
+              [a, b, c].map((value) => ({ kind: "insert", block: value })),
+            ),
+          );
+          yield* service.applyBlockBatch(
+            request("refs-join", 1, [{ kind: "delete", blockId: a.id, mergedInto: b.id }]),
+          );
+          const input = yield* blockMoveIntent(
+            service,
+            common,
+            page.id,
+            [b.id, c.id],
+            { pageId: destination.id, parentId: null, beforeBlockId: null },
+            "refs-move",
+          );
+          assert.equal((yield* service.moveBlocks(input)).status, "saved");
+          const resolve = () =>
+            service.resolveReference({
+              ...env,
+              target: { kind: "block", blockId: a.id },
+              pageIdHint: page.id,
+            });
+          const first = yield* resolve();
+          assert.equal(first.status, "merged");
+          if (first.status === "merged") {
+            assert.equal(first.blockId, b.id);
+            assert.equal(first.requestedBlockId, a.id);
+            assert.equal(first.page.id, destination.id);
+          }
+          yield* service.applyBlockBatch({
+            ...common,
+            mutationId: "refs-second-join",
+            pageId: destination.id,
+            baseRevision: 1,
+            generation: 0,
+            mutations: [{ kind: "delete", blockId: b.id, mergedInto: c.id }],
+          });
+          const second = yield* resolve();
+          assert.equal(second.status, "merged");
+          if (second.status === "merged") assert.equal(second.blockId, c.id);
+          yield* service.moveBlocks(
+            yield* blockMoveIntent(
+              service,
+              common,
+              destination.id,
+              [c.id],
+              { pageId: page.id, parentId: null, beforeBlockId: null },
+              "refs-return",
+            ),
+          );
+          const moved = yield* resolve();
+          if (moved.status !== "merged") return yield* Effect.die("Expected merged target");
+          assert.equal(moved.page.id, page.id);
+          yield* service.applyBlockBatch(
+            request("refs-final-delete", 4, [{ kind: "delete", blockId: c.id }]),
+          );
+          assert.deepEqual(yield* resolve(), { status: "deleted" });
+          yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            assert.deepEqual(
+              yield* sql`SELECT * FROM spaces_blocks WHERE block_id IN ('ref-a','ref-b','ref-c')`,
+              [],
+            );
+            const ids =
+              yield* sql`SELECT id,deleted,merged_into FROM spaces_ids WHERE id IN ('ref-a','ref-b','ref-c') ORDER BY id`;
+            assert.deepEqual(ids, [
+              { id: a.id, deleted: 1, merged_into: c.id },
+              { id: b.id, deleted: 1, merged_into: c.id },
+              { id: c.id, deleted: 1, merged_into: null },
+            ]);
+            assert.deepEqual(yield* sql`PRAGMA foreign_key_check`, []);
+            assert.equal(
+              (yield* sql`SELECT block_count,block_bytes FROM spaces_pages WHERE page_id=${page.id}`)[0]
+                ?.block_count,
+              0,
+            );
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+          assert.equal(
+            (yield* Effect.flip(
+              service.applyBlockBatch(request("refs-reuse", 5, [{ kind: "insert", block: a }])),
+            ))._tag,
+            "SpaceValidationError",
+          );
+          assert.deepEqual(
+            yield* service.resolveReference({
+              ...env,
+              target: { kind: "block", blockId: C.SpaceBlockId.make("never-known") },
+            }),
+            { status: "unavailable" },
+          );
+          const pageReference = yield* service.resolveReference({
+            ...env,
+            target: { kind: "page", pageId: destination.id },
+            pageIdHint: page.id,
+          });
+          assert.equal(pageReference.status, "resolved");
+          if (pageReference.status === "resolved")
+            assert.equal(pageReference.page.id, destination.id);
+        }),
+      ),
+  );
+
+  it.effect("refuses a join whose reverse redirect closure exceeds the shared node budget", () =>
+    fixture((dbPath) =>
+      Effect.gen(function* () {
+        const { service, request } = yield* boot();
+        const values = Array.from({ length: 99 }, (_, i) => block(`pred-${i}`, i + 1));
+        const survivor = block("pred-survivor", 100),
+          target = block("pred-target", 101);
+        yield* service.applyBlockBatch(
+          request(
+            "pred-seed",
+            0,
+            [...values, survivor].map((value) => ({ kind: "insert", block: value })),
+          ),
+        );
+        yield* service.applyBlockBatch(
+          request("pred-target-seed", 1, [{ kind: "insert", block: target }]),
+        );
+        yield* service.applyBlockBatch(
+          request(
+            "pred-joins",
+            2,
+            values.map((value) => ({ kind: "delete", blockId: value.id, mergedInto: survivor.id })),
+          ),
+        );
+        const before = yield* structureState(dbPath);
+        const error = yield* Effect.flip(
+          service.applyBlockBatch(
+            request("pred-over", 3, [
+              { kind: "delete", blockId: survivor.id, mergedInto: target.id },
+            ]),
+          ),
+        );
+        assert.equal(error._tag, "SpaceLimitExceededError");
+        if (error._tag === "SpaceLimitExceededError") {
+          assert.equal(error.limit, "maxMutationNodes");
+          assert.equal(error.actual, 101);
+        }
+        const after = yield* structureState(dbPath);
+        for (const key of [
+          "pages",
+          "blocks",
+          "ids",
+          "history",
+          "receipts",
+          "blockPins",
+          "revisionPins",
+        ] as const)
+          assert.deepEqual(after[key], before[key]);
+        assert.equal(after.core[0]!.catalog_revision, before.core[0]!.catalog_revision);
+      }),
+    ),
+  );
+
   it.effect(
     "creates normalized child pages, materializes authoritative targets, and lists roots or direct children",
     () =>
@@ -525,7 +1210,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
               [],
             );
             assert.equal(
-              (yield* sql`SELECT deleted FROM spaces_blocks WHERE block_id = ${first.ownerBlockId}`)[0]
+              (yield* sql`SELECT deleted FROM spaces_ids WHERE id = ${first.ownerBlockId}`)[0]
                 ?.deleted,
               1,
             );
@@ -1434,7 +2119,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           Layer.provide(Settings.layerTest({ spacesEnabled: true })),
         );
       const first = yield* Effect.gen(function* () {
-        const { service, common, page } = yield* boot();
+        const { service, common, page, request } = yield* boot();
         const input = {
           ...common,
           mutationId: "durable-history",
@@ -1444,7 +2129,20 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
         };
         const saved = yield* service.updatePage(input);
         const child = yield* childPage(service, common, page.id, "durable-child");
-        return { input, saved, child, history: yield* historyState(dbPath) };
+        const opaque = { ...block("durable-moving"), futureEnvelope: { preserved: ["界", 1] } };
+        yield* service.applyBlockBatch(
+          request("durable-block", 2, [{ kind: "insert", block: opaque }]),
+        );
+        const move = yield* blockMoveIntent(
+          service,
+          common,
+          page.id,
+          [opaque.id],
+          { pageId: child.page.id, parentId: null, beforeBlockId: null },
+          "durable-move",
+        );
+        const moved = yield* service.moveBlocks(move);
+        return { input, saved, child, opaque, move, moved, history: yield* historyState(dbPath) };
       }).pipe(Effect.provide(live()));
       yield* Effect.gen(function* () {
         const service = yield* SpacesService.SpacesService;
@@ -1466,6 +2164,20 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           (yield* service.getPage({ ...env, pageId: first.child.page.id })).page.location,
           first.child.page.location,
         );
+        assert.deepEqual(yield* service.moveBlocks(first.move), first.moved);
+        const resolved = yield* service.resolveReference({
+          ...env,
+          target: { kind: "block", blockId: first.opaque.id },
+          pageIdHint: first.input.pageId,
+        });
+        assert.equal(resolved.status, "resolved");
+        if (resolved.status === "resolved") assert.equal(resolved.page.id, first.child.page.id);
+        const body = yield* service.readBlocks({
+          ...env,
+          pageId: first.child.page.id,
+          revision: (yield* service.getPage({ ...env, pageId: first.child.page.id })).page.revision,
+        });
+        assert.deepEqual(body.blocks[0]!.futureEnvelope, first.opaque.futureEnvelope);
         assert.deepEqual(yield* historyState(dbPath), first.history);
       }).pipe(Effect.provide(live()));
     }),
@@ -1498,6 +2210,8 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
               service.createChildPage,
               service.movePage,
               service.inspectStructure,
+              service.moveBlocks,
+              service.resolveReference,
             ];
             for (const operation of operations) {
               assert.equal(
@@ -1778,7 +2492,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
   );
 
   it.effect(
-    "validates the final graph, preserves unloaded children, and retains stable merge tombstones",
+    "validates the final graph, preserves unloaded children, and retains durable minimal merge identities",
     () =>
       fixture((dbPath) =>
         Effect.gen(function* () {
@@ -1894,14 +2608,11 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             const sql = yield* SqlClient.SqlClient;
             const [tombstone] = yield* sql<{
               readonly merged_into: string;
-              readonly payload: string;
-            }>`SELECT merged_into, payload FROM spaces_blocks WHERE block_id = 'child'`;
+              readonly deleted: number;
+            }>`SELECT merged_into, deleted FROM spaces_ids WHERE id = 'child'`;
             assert.equal(tombstone?.merged_into, other.id);
-            assert.deepEqual(parseJson(tombstone!.payload), {
-              id: child.id,
-              pageId: page.id,
-              mergedInto: other.id,
-            });
+            assert.equal(tombstone?.deleted, 1);
+            assert.deepEqual(yield* sql`SELECT 1 FROM spaces_blocks WHERE block_id='child'`, []);
             const [counters] = yield* sql<{
               readonly block_count: number;
               readonly block_bytes: number;
@@ -1909,7 +2620,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             const rows = yield* sql<{
               readonly payload: string;
             }>`SELECT payload FROM spaces_blocks WHERE page_id = ${page.id}`;
-            assert.equal(counters?.block_count, 3);
+            assert.equal(counters?.block_count, 1);
             assert.equal(
               counters?.block_bytes,
               rows.reduce((sum, row) => sum + Buffer.byteLength(row.payload, "utf8"), 0),
@@ -2520,76 +3231,94 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
       ),
   );
 
-  it.effect(
-    "enforces final page bytes atomically, including retained tombstones, without transient-order rejection",
-    () =>
-      fixture(() =>
-        Effect.gen(function* () {
-          const { service, request, page } = yield* boot();
-          const values = Array.from({ length: 1024 }, (_, i) => {
-            const base = {
-              ...block(`capacity-${i}`, i + 1),
-              type: "code",
-              content: { language: "", text: "" },
-            };
-            return { ...base, content: { language: "", text: "x".repeat(32_768 - bytes(base)) } };
-          });
-          let revision = 0;
-          for (let offset = 0; offset < values.length; offset += 7) {
-            yield* service.applyBlockBatch(
-              request(
-                `fill-${offset}`,
-                revision++,
-                values.slice(offset, offset + 7).map((value) => ({ kind: "insert", block: value })),
-              ),
-            );
-          }
-          const over = request("page-byte-over", revision, [
-            { kind: "insert", block: block("extra") },
-          ]);
-          const error = yield* Effect.flip(service.applyBlockBatch(over));
-          assert.equal(error._tag, "SpaceLimitExceededError");
-          if (error._tag === "SpaceLimitExceededError") assert.equal(error.limit, "maxPageBytes");
-          assert.equal(
-            (yield* service.getPage({ ...env, pageId: page.id })).page.revision,
-            revision,
-          );
-          assert.deepEqual(
-            yield* service.lookupMutationReceipt({
-              request: { operation: "applyBlockBatch", input: over },
-            }),
-            { status: "absent" },
-          );
-          const old = values[0]!;
-          const tombstoneBytes = bytes({ id: old.id, pageId: page.id, mergedInto: null });
-          const base = { ...block("extra"), type: "code", content: { language: "", text: "" } };
-          const replacement = {
-            ...base,
-            content: { language: "", text: "x".repeat(32_768 - tombstoneBytes - bytes(base)) },
+  it.effect("enforces final live page bytes atomically without transient-order rejection", () =>
+    fixture((dbPath) =>
+      Effect.gen(function* () {
+        const { service, request, page, common, library } = yield* boot();
+        const values = Array.from({ length: 1024 }, (_, i) => {
+          const base = {
+            ...block(`capacity-${i}`, i + 1),
+            type: "code",
+            content: { language: "", text: "" },
           };
+          return { ...base, content: { language: "", text: "x".repeat(32_768 - bytes(base)) } };
+        });
+        let revision = 0;
+        for (let offset = 0; offset < values.length; offset += 7) {
           yield* service.applyBlockBatch(
-            request("final-state", revision, [
-              { kind: "insert", block: replacement },
-              { kind: "delete", blockId: old.id },
-            ]),
+            request(
+              `fill-${offset}`,
+              revision++,
+              values.slice(offset, offset + 7).map((value) => ({ kind: "insert", block: value })),
+            ),
           );
-          const first = yield* service.readBlocks({
-            ...env,
-            pageId: page.id,
-            revision: revision + 1,
-            limit: 1,
-          });
-          assert.deepEqual(first.blocks, [replacement]);
-        }),
-      ),
+        }
+        const over = request("page-byte-over", revision, [
+          { kind: "insert", block: block("extra") },
+        ]);
+        const error = yield* Effect.flip(service.applyBlockBatch(over));
+        assert.equal(error._tag, "SpaceLimitExceededError");
+        if (error._tag === "SpaceLimitExceededError") assert.equal(error.limit, "maxPageBytes");
+        assert.equal((yield* service.getPage({ ...env, pageId: page.id })).page.revision, revision);
+        assert.deepEqual(
+          yield* service.lookupMutationReceipt({
+            request: { operation: "applyBlockBatch", input: over },
+          }),
+          { status: "absent" },
+        );
+        const old = values[0]!;
+        const base = { ...block("extra"), type: "code", content: { language: "", text: "" } };
+        const replacement = {
+          ...base,
+          content: { language: "", text: "x".repeat(32_768 - bytes(base)) },
+        };
+        yield* service.applyBlockBatch(
+          request("final-state", revision, [
+            { kind: "insert", block: replacement },
+            { kind: "delete", blockId: old.id },
+          ]),
+        );
+        const first = yield* service.readBlocks({
+          ...env,
+          pageId: page.id,
+          revision: revision + 1,
+          limit: 1,
+        });
+        assert.deepEqual(first.blocks, [replacement]);
+        const source = yield* rootPage(service, common, library.defaultSpaceId, "byte-source");
+        const moved = block("byte-moved");
+        yield* service.applyBlockBatch({
+          ...common,
+          mutationId: "byte-source-seed",
+          pageId: source.id,
+          baseRevision: 0,
+          generation: 0,
+          mutations: [{ kind: "insert", block: moved }],
+        });
+        const intent = yield* blockMoveIntent(
+          service,
+          common,
+          source.id,
+          [moved.id],
+          { pageId: page.id, parentId: null, beforeBlockId: null },
+          "byte-move-over",
+        );
+        const before = yield* structureState(dbPath);
+        const moveError = yield* Effect.flip(service.moveBlocks(intent));
+        assert.equal(moveError._tag, "SpaceLimitExceededError");
+        if (moveError._tag === "SpaceLimitExceededError")
+          assert.equal(moveError.limit, "maxPageBytes");
+        assert.deepEqual(yield* structureState(dbPath), before);
+      }),
+    ),
   );
 
   it.effect(
-    "charges stable tombstones against the page block cap and rolls back an over-cap insert",
+    "releases deleted body charges while keeping IDs reserved and refusing final live count overflow",
     () =>
-      fixture(() =>
+      fixture((dbPath) =>
         Effect.gen(function* () {
-          const { service, request, page } = yield* boot();
+          const { service, request, page, common, library } = yield* boot();
           for (let offset = 0; offset < 10_000; offset += 100) {
             yield* service.applyBlockBatch(
               request(
@@ -2605,7 +3334,10 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           yield* service.applyBlockBatch(
             request("delete", 100, [{ kind: "delete", blockId: C.SpaceBlockId.make("count-0") }]),
           );
-          const over = request("page-count-over", 101, [
+          yield* service.applyBlockBatch(
+            request("freed-slot", 101, [{ kind: "insert", block: block("freed-slot") }]),
+          );
+          const over = request("page-count-over", 102, [
             { kind: "insert", block: block("one-too-many") },
           ]);
           const error = yield* Effect.flip(service.applyBlockBatch(over));
@@ -2614,13 +3346,39 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             assert.equal(error.limit, "maxPageBlocks");
             assert.equal(error.actual, 10_001);
           }
-          assert.equal((yield* service.getPage({ ...env, pageId: page.id })).page.revision, 101);
+          assert.equal((yield* service.getPage({ ...env, pageId: page.id })).page.revision, 102);
           assert.deepEqual(
             yield* service.lookupMutationReceipt({
               request: { operation: "applyBlockBatch", input: over },
             }),
             { status: "absent" },
           );
+          const source = yield* rootPage(service, common, library.defaultSpaceId, "count-source");
+          const moved = block("count-moved");
+          yield* service.applyBlockBatch({
+            ...common,
+            mutationId: "count-source-seed",
+            pageId: source.id,
+            baseRevision: 0,
+            generation: 0,
+            mutations: [{ kind: "insert", block: moved }],
+          });
+          const intent = yield* blockMoveIntent(
+            service,
+            common,
+            source.id,
+            [moved.id],
+            { pageId: page.id, parentId: null, beforeBlockId: null },
+            "count-move-over",
+          );
+          const before = yield* structureState(dbPath);
+          const moveError = yield* Effect.flip(service.moveBlocks(intent));
+          assert.equal(moveError._tag, "SpaceLimitExceededError");
+          if (moveError._tag === "SpaceLimitExceededError") {
+            assert.equal(moveError.limit, "maxPageBlocks");
+            assert.equal(moveError.actual, 10001);
+          }
+          assert.deepEqual(yield* structureState(dbPath), before);
         }),
       ),
   );

@@ -394,6 +394,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesBlocksRead,
       WS_METHODS.spacesReceiptsGet,
       WS_METHODS.spacesStructureInspect,
+      WS_METHODS.spacesReferencesResolve,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
       Effect.provide(
@@ -407,6 +408,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
             "spaces.blocks.apply": deniedHandler,
             "spaces.pages.createChild": deniedHandler,
             "spaces.pages.move": deniedHandler,
+            "spaces.blocks.move": deniedHandler,
           }),
           RpcAuthorization.layer([AuthOrchestrationReadScope]),
         ),
@@ -446,6 +448,13 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
         ...common,
         pageId,
         destination: { kind: "root", spaceId, beforePageId: null },
+        guards: { pages: [], roots: [] },
+      }),
+      client[WS_METHODS.spacesBlocksMove]({
+        ...common,
+        sourcePageId: pageId,
+        blockIds: [C.SpaceBlockId.make("block")],
+        destination: { pageId, parentId: null, beforeBlockId: null },
         guards: { pages: [], roots: [] },
       }),
       client[WS_METHODS.spacesBlocksApply]({
@@ -489,6 +498,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
       WS_METHODS.spacesBlocksApply,
       WS_METHODS.spacesPagesCreateChild,
       WS_METHODS.spacesPagesMove,
+      WS_METHODS.spacesBlocksMove,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
       Effect.provide(
@@ -500,6 +510,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
             "spaces.blocks.read": deniedHandler,
             "spaces.receipts.get": deniedHandler,
             "spaces.structure.inspect": deniedHandler,
+            "spaces.references.resolve": deniedHandler,
           }),
           RpcAuthorization.layer([AuthOrchestrationOperateScope]),
         ),
@@ -511,6 +522,10 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
       client[WS_METHODS.spacesList]({ environmentId }),
       client[WS_METHODS.spacesPagesList]({ environmentId, spaceId: C.SpaceId.make("space") }),
       client[WS_METHODS.spacesPagesGet]({ environmentId, pageId }),
+      client[WS_METHODS.spacesReferencesResolve]({
+        environmentId,
+        target: { kind: "page", pageId },
+      }),
       client[WS_METHODS.spacesStructureInspect]({
         environmentId,
         target: { kind: "page", pageId },

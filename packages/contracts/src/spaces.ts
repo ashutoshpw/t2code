@@ -411,7 +411,53 @@ export const SpaceMovePageResult = Schema.Union([
 ]);
 export type SpaceMovePageResult = typeof SpaceMovePageResult.Type;
 
+export const SpaceMoveBlocksInput = Schema.Struct({
+  ...mutationInput,
+  sourcePageId: SpacePageId,
+  blockIds: Schema.Array(SpaceBlockId).check(Schema.isMinLength(1)),
+  destination: SpaceBlockPlacement,
+  guards: SpaceStructureGuards,
+});
+export type SpaceMoveBlocksInput = typeof SpaceMoveBlocksInput.Type;
+export const SpaceMoveBlocksResult = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("saved"),
+    ...mutationAck,
+    blockIds: Schema.Array(SpaceBlockId),
+    changed: SpaceStructureGuards,
+  }),
+  SpaceStructureConflict,
+]);
+export type SpaceMoveBlocksResult = typeof SpaceMoveBlocksResult.Type;
+export const SpaceReferenceResolveInput = Schema.Struct({
+  environmentId: EnvironmentId,
+  target: Schema.Union([
+    Schema.Struct({ kind: Schema.Literal("page"), pageId: SpacePageId }),
+    Schema.Struct({ kind: Schema.Literal("block"), blockId: SpaceBlockId }),
+  ]),
+  pageIdHint: Schema.optionalKey(SpacePageId),
+  spaceIdHint: Schema.optionalKey(SpaceId),
+});
+export type SpaceReferenceResolveInput = typeof SpaceReferenceResolveInput.Type;
+export const SpaceReferenceResolveResult = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("resolved"),
+    page: SpacePageSummary,
+    blockId: Schema.optionalKey(SpaceBlockId),
+  }),
+  Schema.Struct({
+    status: Schema.Literal("merged"),
+    page: SpacePageSummary,
+    blockId: SpaceBlockId,
+    requestedBlockId: SpaceBlockId,
+  }),
+  Schema.Struct({ status: Schema.Literal("trashed"), pageId: SpacePageId }),
+  Schema.Struct({ status: Schema.Literals(["deleted", "unavailable"]) }),
+]);
+export type SpaceReferenceResolveResult = typeof SpaceReferenceResolveResult.Type;
+
 export const SpaceMutationRequest = Schema.Union([
+  Schema.Struct({ operation: Schema.Literal("moveBlocks"), input: SpaceMoveBlocksInput }),
   Schema.Struct({ operation: Schema.Literal("createChildPage"), input: SpaceCreateChildPageInput }),
   Schema.Struct({ operation: Schema.Literal("movePage"), input: SpaceMovePageInput }),
   Schema.Struct({ operation: Schema.Literal("createSpace"), input: SpaceCreateInput }),
@@ -423,6 +469,7 @@ export const SpaceMutationRequest = Schema.Union([
 ]);
 export type SpaceMutationRequest = typeof SpaceMutationRequest.Type;
 export const SpaceMutationReceipt = Schema.Union([
+  Schema.Struct({ operation: Schema.Literal("moveBlocks"), result: SpaceMoveBlocksResult }),
   Schema.Struct({
     operation: Schema.Literal("createChildPage"),
     result: SpaceCreateChildPageResult,
@@ -462,6 +509,7 @@ export type SpaceHistoryLimits = typeof SpaceHistoryLimits.Type;
 // These describe advertised service policy; replay decoding must not freeze today's maxima.
 export const SpaceLimits = Schema.Struct({
   history: Schema.optionalKey(SpaceHistoryLimits),
+  maxReferenceHops: Schema.optionalKey(PositiveInt),
   maxListRows: PositiveInt,
   maxListResponseBytes: PositiveInt,
   maxBlockWindowBlocks: PositiveInt,
