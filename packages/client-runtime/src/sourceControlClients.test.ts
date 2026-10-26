@@ -141,8 +141,8 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
   it("claims nothing it cannot be sure of", () => {
     for (const link of [
       "https://github.com/t2tools/t2code/issues/123",
-      "https://git.cafe/pingdotgg/t3code/issues/23897",
-      "https://git.cafe/pingdotgg/t3code/pull/abc",
+      "https://git.cafe/pingdotgg/t2code/issues/23897",
+      "https://git.cafe/pingdotgg/t2code/pull/abc",
       "https://git.cafe/pingdotgg/t3code",
       "https://github.com/t2tools/t2code/commit/0a1b2c3",
       "https://github.com/t2tools/t2code",
@@ -170,7 +170,7 @@ describe("sourceControlClients.isSameChangeRequest", () => {
     expect(
       sourceControlClients.isSameChangeRequest(
         linked,
-        "https://github.com/PingDotGG/T3Code/pull/42/files",
+        "https://github.com/PingDotGG/T2Code/pull/42/files",
       ),
     ).toBe(true);
   });

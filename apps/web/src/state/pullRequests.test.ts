@@ -218,7 +218,7 @@ describe("pull request list answers across a reload", () => {
       host: "github.com",
       projectId: ProjectId.make("project-1"),
       projectTitle: "t2code",
-      repository: "pingdotgg/t2code",
+      repository: "pingdotgg/t3code",
       number,
       title: `Pull request ${number}`,
       url: `https://github.com/pingdotgg/t2code/pull/${number}`,
@@ -251,7 +251,7 @@ describe("pull request list answers across a reload", () => {
       ],
       errors: [{ projectId: ProjectId.make("project-1"), projectTitle: "t2code", message: "boom" }],
       truncated: true,
-      nextCursors: { "pingdotgg/t2code": "cursor-1" },
+      nextCursors: { "pingdotgg/t3code": "cursor-1" },
     }) as PullRequestListResult;
   const local = EnvironmentId.make("env-local");
   const remote = EnvironmentId.make("env-remote");
@@ -308,7 +308,7 @@ describe("pull request list answers across a reload", () => {
     rememberPullRequestListAnswer(storage, { environmentId: local, input }, answer(rows));
     const searched = { ...input, query: "fix" };
     rememberPullRequestListAnswer(storage, { environmentId: local, input: searched }, answer(rows));
-    const continued = { ...input, cursors: { "pingdotgg/t2code": "cursor-1" } };
+    const continued = { ...input, cursors: { "pingdotgg/t3code": "cursor-1" } };
     rememberPullRequestListAnswer(
       storage,
       { environmentId: local, input: continued },

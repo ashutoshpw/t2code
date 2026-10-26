@@ -157,7 +157,7 @@ import {
   recoverEditedCreationAfterDelivery,
   removeAcknowledgedExistingThreadMessage,
   restoreRejectedQueuedMessage,
-} from "./threadOutboxDelivery";
+} from "./use-thread-outbox-drain";
 
 function queuedMessage(input: {
   readonly messageId: string;
