@@ -795,7 +795,13 @@ export class SpaceEditorAdapter {
           )
         )
           return false;
-        if (blocks.some((block) => !canEditSpaceEditorBlock(block))) return false;
+        if (
+          blocks.some(
+            (block) =>
+              !canEditSpaceEditorBlock(block) || ["image", "pdf", "video"].includes(block.type),
+          )
+        )
+          return false;
         const copied = copySpaceBlocks(blocks, source, this.#options.allocateId);
         if (copied.some((block) => entries(state.doc).some((entry) => entry.block.id === block.id)))
           return false;

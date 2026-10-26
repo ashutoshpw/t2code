@@ -247,6 +247,57 @@ describe("Production Spaces command bridge", () => {
     expect(view.state).toBe(before);
     await view.controller.session.persistDraft();
   });
+  describe.each(["image", "pdf", "video"] as const)("%s structured clipboard", (type) => {
+    it.each([false, true])(
+      "refuses the whole media payload without changing the draft or prior history (nested: %s)",
+      async (nested) => {
+        const list = {
+          ...paragraph("list", "", "c0000000000000000000000000000000"),
+          type: "bulleted_item",
+          content: { runs: [{ text: "parent", marks: [] }] },
+        };
+        const childList = { ...list, id: SpaceBlockId.make("child-list"), parentId: list.id };
+        const media = {
+          ...paragraph("media", "", "c0000000000000000000000000000000"),
+          parentId: nested ? childList.id : null,
+          type,
+          content: { assetId: "existing-asset", caption: [{ text: "keep", marks: [] }] },
+        };
+        const blocks = [
+          paragraph("a", "original"),
+          paragraph("copy", "clipboard text", "80000000000000000000000000000000"),
+          ...(nested ? [list, childList] : []),
+          media,
+        ];
+        const view = await model(blocks);
+        view.dispatch(
+          view.state.tr.setSelection(
+            TextSelection.create(view.state.doc, position(view.state, "a", 1)),
+          ),
+        );
+        view.dispatch(view.state.tr.insertText("!"));
+        await view.controller.session.persistDraft();
+        const clipboard = view.bridge.adapter.copyBlocks(view.state, [
+          SpaceBlockId.make("copy"),
+          nested ? list.id : media.id,
+        ]);
+        expect(clipboard.some((block) => block.type === type)).toBe(true);
+        const beforeEditor = view.state;
+        const beforeSession = view.controller.session.getSnapshot();
+        expect(beforeSession.dirty).toBe(true);
+        expect(view.run(view.bridge.adapter.pasteBlocks(clipboard, key))).toBe(false);
+        expect(view.state).toBe(beforeEditor);
+        expect(view.controller.session.getSnapshot()).toBe(beforeSession);
+        view.synchronize();
+        expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+        expect(spaceDocumentBlocks(view.state.doc)).toEqual(blocks);
+        expect(view.controller.session.getSnapshot().blocks).toEqual(blocks);
+        expect(view.run(view.bridge.adapter.redoLocal())).toBe(true);
+        expect(view.controller.session.getSnapshot().blocks).toEqual(beforeSession.blocks);
+        await view.controller.session.persistDraft();
+      },
+    );
+  });
   it("edits known list/code content and refuses to delete opaque descendants", async () => {
     const todo = {
       ...paragraph("a", ""),
