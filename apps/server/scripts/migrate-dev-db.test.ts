@@ -320,9 +320,13 @@ it.layer(layer)("migrate-dev-db", (it) => {
           assert.deepEqual(yield* sql`SELECT title, revision FROM spaces`, [
             { title: "Sandbox work", revision: 1 },
           ]);
-          assert.deepEqual(yield* sql`SELECT name FROM effect_sql_migrations`, [
-            { name: "Spaces" },
-          ]);
+          assert.deepEqual(
+            yield* sql`SELECT migration_id, name FROM effect_sql_migrations ORDER BY migration_id`,
+            [
+              { migration_id: 1, name: "Spaces" },
+              { migration_id: 2, name: "Core" },
+            ],
+          );
         }),
       );
     }),

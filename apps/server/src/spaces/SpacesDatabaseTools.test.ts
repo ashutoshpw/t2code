@@ -97,7 +97,13 @@ it.effect("completes competing initializations with one valid default space", ()
       assert.deepEqual(yield* sql`SELECT title, is_default, revision FROM spaces`, [
         { title: "My space", is_default: 1, revision: 0 },
       ]);
-      assert.equal((yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count, 1);
+      assert.deepEqual(
+        yield* sql`SELECT migration_id, name FROM effect_sql_migrations ORDER BY migration_id`,
+        [
+          { migration_id: 1, name: "Spaces" },
+          { migration_id: 2, name: "Core" },
+        ],
+      );
     }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
   }).pipe(Effect.provide(SpacesDatabaseTools.layer.pipe(Layer.provideMerge(NodeServices.layer)))),
 );
