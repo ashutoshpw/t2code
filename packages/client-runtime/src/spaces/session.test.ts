@@ -1,5 +1,10 @@
 import { EnvironmentId } from "@t2code/contracts";
-import { SpaceBlockId, SpacePageId, type SpaceBlock } from "@t2code/contracts/spaces";
+import {
+  SpaceBlockId,
+  SpacePageId,
+  SpaceReceiptEpoch,
+  type SpaceBlock,
+} from "@t2code/contracts/spaces";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -27,11 +32,22 @@ function paragraph(text: string, id = "a"): SpaceBlock {
     content: { runs: [{ text, marks: [] }] },
   };
 }
-function harness(adapter: SpaceSessionAdapter, load: SpaceDraftStore["load"] = async () => null) {
+function harness(
+  adapter: Omit<SpaceSessionAdapter, "getMutationAdmission"> &
+    Partial<Pick<SpaceSessionAdapter, "getMutationAdmission">>,
+  load: SpaceDraftStore["load"] = async () => null,
+) {
   const writes: (SpaceDocumentDraft | null)[] = [];
   let nextId = 0;
   const options: SpaceSessionOptions = {
-    adapter,
+    adapter: {
+      getMutationAdmission: async () => ({
+        epoch: SpaceReceiptEpoch.make("default-epoch"),
+        acceptsUntil: "2026-10-27T00:00:00.000Z",
+        retainUntil: "2026-11-03T00:00:00.000Z",
+      }),
+      ...adapter,
+    },
     drafts: {
       load,
       write: async (_key, draft) => {
@@ -47,6 +63,77 @@ function harness(adapter: SpaceSessionAdapter, load: SpaceDraftStore["load"] = a
 const noReceipt: SpaceSessionAdapter["lookupReceipt"] = async () => ({ status: "unknown" });
 
 describe("SpaceDocumentSession", () => {
+  it("preserves a legacy epochless pending draft without lookup, resend or discard", async () => {
+    let calls = 0;
+    const pending = {
+      key,
+      mutationId: "legacy",
+      baseRevision: 1,
+      generation: 1,
+      mutations: [{ kind: "replace" as const, block: paragraph("keep") }],
+    };
+    const draft: SpaceDocumentDraft = {
+      version: 1,
+      key,
+      baseRevision: 1,
+      generation: 1,
+      memberIds: [SpaceBlockId.make("a")],
+      blocks: [paragraph("keep")],
+      mutations: pending.mutations,
+      pending,
+    };
+    const { session } = harness(
+      {
+        save: async () => {
+          calls++;
+          return { status: "saved", revision: 2 };
+        },
+        lookupReceipt: async () => {
+          calls++;
+          return { status: "absent" };
+        },
+      },
+      async () => draft,
+    );
+    await session.hydrate({ revision: 1, blocks: [paragraph("server")] });
+    await session.save();
+    expect(calls).toBe(0);
+    expect(session.getSnapshot()).toMatchObject({
+      pending,
+      dirty: true,
+      status: "uncertain",
+      recoveryReason: "legacy-epoch-missing",
+    });
+    await expect(session.discardDraft({ revision: 1, blocks: [] })).rejects.toThrow("receipt");
+  });
+
+  it("captures real admission once and preserves its epoch during uncertain retry", async () => {
+    let admissionReads = 0;
+    const requests: SpaceSaveRequest[] = [];
+    const { session, writes } = harness({
+      getMutationAdmission: async () => ({
+        epoch: SpaceReceiptEpoch.make(`epoch-${++admissionReads}`),
+        acceptsUntil: "2026-10-27T00:00:00.000Z",
+        retainUntil: "2026-11-03T00:00:00.000Z",
+      }),
+      save: async (request) => {
+        expect(writes.at(-1)?.pending).toEqual(request);
+        requests.push(request);
+        if (requests.length === 1) throw new Error("lost response");
+        return { status: "saved", revision: 2 };
+      },
+      lookupReceipt: async () => ({ status: "absent" }),
+    });
+    await session.hydrate({ revision: 1, blocks: [paragraph("server")] });
+    session.apply([{ kind: "replace", block: paragraph("sent") }]);
+    await expect(session.save()).rejects.toThrow("lost response");
+    session.apply([{ kind: "replace", block: paragraph("later") }]);
+    await session.save();
+    expect(requests[0]).toMatchObject({ receiptEpoch: "epoch-1" });
+    expect(requests[1]).toEqual(requests[0]);
+    expect(admissionReads).toBe(1);
+    expect(session.getSnapshot()).toMatchObject({ dirty: true, blocks: [paragraph("later")] });
+  });
   it("hydrates before writes and shares one environment/page session across subscribed views", async () => {
     const loaded = Promise.withResolvers<SpaceDocumentDraft | null>();
     const { options } = harness(

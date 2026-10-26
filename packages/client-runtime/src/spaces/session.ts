@@ -3,9 +3,12 @@ import type {
   SpaceBlockId,
   SpaceBlockWindow,
   SpacePageTarget,
+  SpaceReceiptEpoch,
+  SpaceMutationAdmission,
 } from "@t2code/contracts/spaces";
 
 import { canEditSpaceBlock, isKnownSpaceBlock, isSpaceListItem } from "./values.ts";
+import { decodeSpaceDocumentDraft, spaceDraftMaxBytes, spaceJsonBytes } from "./draft.ts";
 
 export type SpaceMutation =
   | { readonly kind: "insert"; readonly block: SpaceBlock }
@@ -15,6 +18,8 @@ export type SpaceMutation =
 export interface SpaceSaveRequest {
   readonly key: SpacePageTarget;
   readonly mutationId: string;
+  // Missing only on legacy pending drafts, whose original intent cannot be reconstructed.
+  readonly receiptEpoch?: SpaceReceiptEpoch;
   readonly baseRevision: number;
   readonly generation: number;
   readonly mutations: readonly SpaceMutation[];
@@ -30,6 +35,8 @@ export type SpaceReceiptResult =
   | { readonly status: "unknown" };
 
 export interface SpaceSessionAdapter {
+  readonly getMutationAdmission: () => Promise<SpaceMutationAdmission>;
+  readonly validateNewRequest?: (request: SpaceSaveRequest) => void;
   readonly save: (request: SpaceSaveRequest) => Promise<SpaceSaveResult>;
   // "absent" must be authoritative; timeouts and expired receipt windows are "unknown".
   readonly lookupReceipt: (request: SpaceSaveRequest) => Promise<SpaceReceiptResult>;
@@ -70,6 +77,7 @@ export interface SpaceSessionSnapshot {
   readonly status: "loading" | "saved" | "draft" | "saving" | "uncertain" | "conflict";
   readonly pending: SpaceSaveRequest | null;
   readonly conflictRevision: number | null;
+  readonly recoveryReason: "legacy-epoch-missing" | null;
   readonly persistenceError: unknown;
 }
 
@@ -81,10 +89,6 @@ function own<T>(value: T): T {
     ) as T;
   }
   return value;
-}
-
-function sameKey(a: SpacePageTarget, b: SpacePageTarget) {
-  return a.environmentId === b.environmentId && a.pageId === b.pageId;
 }
 
 function validateWindow(blocks: readonly SpaceBlock[], max: number) {
@@ -120,6 +124,7 @@ export class SpaceDocumentSession {
     status: "loading",
     pending: null,
     conflictRevision: null,
+    recoveryReason: null,
     persistenceError: null,
   });
   #mutations: readonly SpaceMutation[] = [];
@@ -178,22 +183,11 @@ export class SpaceDocumentSession {
     validateWindow(initial.blocks, this.#options.maxLoadedBlocks);
     this.#hydration = this.#options.drafts
       .load(this.key)
-      .then((draft) => {
-        if (draft !== null && (!sameKey(draft.key, this.key) || draft.version !== 1))
-          throw new Error("Draft belongs to another document or version");
+      .then((stored) => {
+        const draft =
+          stored === null ? null : decodeSpaceDocumentDraft(stored, this.key, this.#options);
         if (draft) {
           validateWindow(draft.blocks, this.#options.maxLoadedBlocks);
-          if (
-            draft.memberIds.length > this.#options.maxLoadedBlocks ||
-            draft.mutations.length > this.#options.maxMutations
-          )
-            throw new Error("Draft exceeds session limits");
-          if (
-            draft.pending &&
-            (!sameKey(draft.pending.key, this.key) ||
-              draft.pending.baseRevision !== draft.baseRevision)
-          )
-            throw new Error("Invalid pending draft save");
           this.#mutations = own(draft.mutations);
           this.#update(
             own({
@@ -204,6 +198,8 @@ export class SpaceDocumentSession {
               memberIds: draft.memberIds,
               dirty: draft.mutations.length > 0,
               pending: draft.pending,
+              recoveryReason:
+                draft.pending && !draft.pending.receiptEpoch ? "legacy-epoch-missing" : null,
               status: draft.pending
                 ? "uncertain"
                 : draft.baseRevision !== initial.revision
@@ -350,6 +346,19 @@ export class SpaceDocumentSession {
     }
     if (nextMutations.length > this.#options.maxMutations)
       throw new Error("Mutation window exceeds limit");
+    spaceJsonBytes(
+      {
+        version: 1,
+        key: this.key,
+        baseRevision: this.#snapshot.baseRevision,
+        generation: this.#snapshot.generation + 1,
+        memberIds: this.#snapshot.memberIds,
+        blocks,
+        mutations: nextMutations,
+        pending: this.#snapshot.pending,
+      },
+      spaceDraftMaxBytes,
+    );
     this.#mutations = Object.freeze(nextMutations);
     this.#update({
       blocks: Object.freeze(blocks),
@@ -362,7 +371,12 @@ export class SpaceDocumentSession {
 
   replaceWindow(window: SpaceBlockWindow): void {
     this.#assertHydrated();
-    if (this.#snapshot.dirty || this.#snapshot.pending || this.#saving)
+    if (
+      this.#snapshot.dirty ||
+      this.#snapshot.pending ||
+      this.#saving ||
+      this.#snapshot.persistenceError !== null
+    )
       throw new Error("Resolve the draft before replacing its loaded window");
     validateWindow(window.blocks, this.#options.maxLoadedBlocks);
     this.#update({
@@ -392,6 +406,7 @@ export class SpaceDocumentSession {
     const createdRequest = request === null;
     if (request) {
       this.#update({ status: "uncertain" });
+      if (!request.receiptEpoch) return;
       const receipt = await this.#options.adapter.lookupReceipt(request);
       if (receipt.status === "unknown") return;
       if (receipt.status !== "absent") {
@@ -399,15 +414,22 @@ export class SpaceDocumentSession {
         return;
       }
     } else {
+      const admission = await this.#options.adapter.getMutationAdmission();
+      if (!admission.epoch) throw new Error("Missing Spaces mutation admission");
+      if (this.getSnapshot().status === "conflict")
+        throw new Error("Resolve the conflict before saving");
+      if (!this.#snapshot.dirty) return;
       const mutationId = this.#options.createMutationId();
       if (!mutationId) throw new Error("Mutation ID must not be empty");
       request = own({
         key: this.key,
         mutationId,
+        receiptEpoch: admission.epoch,
         baseRevision: this.#snapshot.baseRevision!,
         generation: this.#snapshot.generation,
         mutations: this.#mutations,
       });
+      this.#options.adapter.validateNewRequest?.(request);
       this.#update({ pending: request });
     }
     try {

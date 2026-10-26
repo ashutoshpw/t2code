@@ -1,5 +1,5 @@
 import type { SpaceCapability } from "@t2code/contracts/spaces";
-import { WS_METHODS } from "@t2code/contracts";
+import { WS_METHODS, type EnvironmentId } from "@t2code/contracts";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
 import { Atom } from "effect/reactivity";
 import * as Effect from "effect/Effect";
@@ -7,11 +7,11 @@ import * as Option from "effect/Option";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
 import { readSpacePageLocation } from "../spaces/pageLocation.ts";
-import type { EnvironmentId } from "@t2code/contracts";
 import type { SpacePageId } from "@t2code/contracts/spaces";
 import { request } from "../rpc/client.ts";
 import {
   createEnvironmentQueryAtomFamily,
+  createEnvironmentRpcCommand,
   createEnvironmentRpcQueryAtomFamily,
 } from "./runtime.ts";
 
@@ -44,6 +44,9 @@ export function canBrowseSpaces(availability: SpacesAvailability) {
 export function createSpacesEnvironmentAtoms<R, E>(
   runtime: Atom.AtomRuntime<EnvironmentRegistry | R, E>,
 ) {
+  const changed = Atom.family((_environmentId: EnvironmentId) => Atom.make(0));
+  const refreshTrigger = ({ environmentId }: { environmentId: EnvironmentId }) =>
+    changed(environmentId);
   return {
     // Each caller owns this query; sharing its SWR cache could authorize an obsolete location.
     location: (target: {
@@ -85,19 +88,39 @@ export function createSpacesEnvironmentAtoms<R, E>(
           );
         }),
       })(target),
+    changed,
+    blocks: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:blocks",
+      tag: WS_METHODS.spacesBlocksRead,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    receipt: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:receipt",
+      tag: WS_METHODS.spacesReceiptsGet,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    apply: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:apply",
+      tag: WS_METHODS.spacesBlocksApply,
+    }),
     list: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger,
       label: "environment-data:spaces:list",
       tag: WS_METHODS.spacesList,
       idleTtlMs: 0,
       staleTimeMs: 0,
     }),
     pages: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger,
       label: "environment-data:spaces:pages",
       tag: WS_METHODS.spacesPagesList,
       idleTtlMs: 0,
       staleTimeMs: 0,
     }),
     page: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger,
       label: "environment-data:spaces:page",
       tag: WS_METHODS.spacesPagesGet,
       idleTtlMs: 0,

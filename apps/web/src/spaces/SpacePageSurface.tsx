@@ -13,6 +13,7 @@ import { Button } from "../components/ui/button";
 import { useMainAppThreadRef, useNavigateToMainApp } from "../components/sidebar/mainAppLocation";
 import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
 import { SpacesUnavailable } from "./SpacesUnavailable";
+import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
 
 export default function SpacePageSurface({
   target,
@@ -155,6 +156,10 @@ export default function SpacePageSurface({
         Revision {page.revision} · Updated {page.updatedAt}
       </p>
       <p className="mt-3 text-sm text-muted-foreground">This page is read-only.</p>
+      <SpaceDocumentSurface
+        key={JSON.stringify([target.environmentId, target.pageId])}
+        target={target}
+      />
       {target.blockId ? (
         <p className="mt-2 break-words text-sm text-muted-foreground">
           Linked block: {target.blockId}
