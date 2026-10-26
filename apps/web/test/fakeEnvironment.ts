@@ -25,15 +25,15 @@ import {
   type OrchestrationV2ThreadShell,
   type OrchestrationV2ThreadStreamItem,
   type OrchestrationV2TurnItem,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type {
   ConnectionAttemptError,
   ConnectionCatalogEntry,
   EnvironmentConnectionLease,
   RouteCheck,
-} from "@t3tools/client-runtime/connection";
-import type { WsRpcProtocolClient } from "@t3tools/client-runtime/rpc";
-import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t3tools/shared/keybindings";
+} from "@t2code/client-runtime/connection";
+import type { WsRpcProtocolClient } from "@t2code/client-runtime/rpc";
+import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t2code/shared/keybindings";
 import { APP_VERSION } from "~/branding";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -62,7 +62,7 @@ const auth = {
   policy: "loopback-browser",
   bootstrapMethods: ["one-time-token"],
   sessionMethods: ["browser-session-cookie"],
-  sessionCookieName: "t3_session",
+  sessionCookieName: "t2_session",
 };
 
 const serverConfig: ServerConfig = {
@@ -70,7 +70,7 @@ const serverConfig: ServerConfig = {
     environment: descriptor,
     auth,
     cwd: "/workspace/render",
-    keybindingsConfigPath: "/workspace/.t3/keybindings.json",
+    keybindingsConfigPath: "/workspace/.t2/keybindings.json",
     keybindings: [],
     issues: [],
     providers: [
@@ -88,7 +88,7 @@ const serverConfig: ServerConfig = {
     ],
     availableEditors: [],
     observability: {
-      logsDirectoryPath: "/workspace/.t3/logs",
+      logsDirectoryPath: "/workspace/.t2/logs",
       localTracingEnabled: false,
       otlpTracesEnabled: false,
       otlpMetricsEnabled: false,

@@ -64,13 +64,6 @@ const declaredFailure = (result: McpSchema.CallToolResult) => {
   const text = result.content[0];
   return result.isError === true && text?.type === "text" ? JSON.parse(text.text) : undefined;
 };
-import { PullRequestsToolkit } from "./pullRequests/tools.ts";
-import { HtmlToolkit } from "./html/tools.ts";
-import {
-  resolveT2McpToolDefinition,
-  resolveT2McpToolPresentation,
-  resolveT2McpToolSummaryAction,
-} from "@t2code/shared/t2McpToolPresentation";
 import { htmlRenderFromToolItem } from "@t2code/shared/toolOutput";
 
 const decodeMcpAttachmentInput = Schema.decodeUnknownEffect(McpAttachmentInput);

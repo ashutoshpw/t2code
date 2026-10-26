@@ -110,11 +110,11 @@ describe("CDP relay", () => {
         id: 1,
         method: "Emulation.setFocusEmulationEnabled",
         params: { enabled: true },
-        sessionId: "t3-preview-page",
+        sessionId: "t2-preview-page",
       }),
     );
     await settle();
-    expect(written).toEqual([{ id: 1, result: {}, sessionId: "t3-preview-page" }]);
+    expect(written).toEqual([{ id: 1, result: {}, sessionId: "t2-preview-page" }]);
     expect(send).not.toHaveBeenCalled();
   });
 

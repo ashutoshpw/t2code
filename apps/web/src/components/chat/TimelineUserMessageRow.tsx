@@ -1,5 +1,5 @@
 import { InlineAudioPreview } from "../files/InlineAudioPreview";
-import { filePreviewKind } from "@t3tools/shared/filePreview";
+import { filePreviewKind } from "@t2code/shared/filePreview";
 import { findRevealRef } from "./markdownFindContext";
 import { type MessageId, type ServerProviderSkill, ThreadId } from "@t2code/contracts";
 import { resolveUserMessagePresentation } from "@t2code/client-runtime/user-message";

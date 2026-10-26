@@ -9,7 +9,7 @@ import {
 import { markdownImageSources } from "./markdownImageSources";
 import { markdownFileEmbedLabel, resolveMarkdownMediaPreview } from "./markdownMedia";
 import { resolveMarkdownLinkPresentation } from "./markdownLinks";
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { EnvironmentId, ThreadId } from "@t2code/contracts";
 import { parseMarkdown } from "react-native-enriched-markdown/src/web/parseMarkdown";
 
 describe("HTML in native Markdown", () => {

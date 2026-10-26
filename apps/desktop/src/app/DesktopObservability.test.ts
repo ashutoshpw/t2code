@@ -643,7 +643,7 @@ describe("DesktopObservability", () => {
     );
   });
 
-  it.effect("describes the Node runtime and the desktop mode under semantic or t3code keys", () => {
+  it.effect("describes the Node runtime and the desktop mode under semantic or t2code keys", () => {
     const requests: Array<ExportedRequest> = [];
     return Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
@@ -667,7 +667,7 @@ describe("DesktopObservability", () => {
         body,
         `"key":"process.runtime.version","value":{"stringValue":"${process.versions.node}"}`,
       );
-      assert.include(body, '"key":"t3code.desktop.mode","value":{"stringValue":"development"}');
+      assert.include(body, '"key":"t2code.desktop.mode","value":{"stringValue":"development"}');
       assert.notInclude(body, "service.mode");
     }).pipe(
       Effect.scoped,

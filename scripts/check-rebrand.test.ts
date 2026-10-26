@@ -219,7 +219,7 @@ describe("check-rebrand", () => {
     const violations = findViolations(
       [
         { file: "t3.json", line: "{" },
-        { file: "t3.json", line: '  \"scripts\": []' },
+        { file: "t3.json", line: '  "scripts": []' },
       ],
       EMPTY_BASELINE,
     );

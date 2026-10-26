@@ -27,11 +27,11 @@ describe("findPromptLinkProjects", () => {
     const projects = [
       {
         id: "fork",
-        repositoryIdentity: identity("github.com/pingdotgg/t3code", "github.com/me/t2code"),
+        repositoryIdentity: identity("github.com/pingdotgg/t2code", "github.com/me/t2code"),
       },
       { id: "none", repositoryIdentity: null },
       { id: "recent", repositoryIdentity: identity("github.com/PingDotGG/T2Code") },
-      { id: "older", repositoryIdentity: identity("github.com/pingdotgg/t3code") },
+      { id: "older", repositoryIdentity: identity("github.com/pingdotgg/t2code") },
     ];
     const ids = (owner: string, name: string) =>
       findPromptLinkProjects(projects, { owner, name }).map((project) => project.id);

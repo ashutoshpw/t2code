@@ -11,8 +11,8 @@ import {
 import type { ComposerFileAttachment, ComposerImageAttachment } from "../../composerDraftStore";
 import { isHeicImageFile } from "../../lib/imageCompression";
 import { isVideoAttachment, videoMimeType } from "../../types";
-import { isSvgAttachment } from "@t3tools/shared/image";
-import { isWorkspaceImagePreviewPath } from "@t3tools/shared/mediaPreview";
+import { isSvgAttachment } from "@t2code/shared/image";
+import { isWorkspaceImagePreviewPath } from "@t2code/shared/mediaPreview";
 
 type ComposerAttachmentFileKind = "image" | "file" | "unsupported-image";
 

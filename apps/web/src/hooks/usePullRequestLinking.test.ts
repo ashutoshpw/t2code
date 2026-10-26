@@ -6,7 +6,7 @@ import { sourceControlClients } from "@t2code/client-runtime/source-control-clie
 describe("canLinkChangeRequest (#9435 / #9440)", () => {
   const nonGitProject = { id: "scratch-project" } as never;
   const link = sourceControlClients.parseChangeRequestUrl(
-    "https://github.com/pingdotgg/t3code/pull/15111",
+    "https://github.com/pingdotgg/t2code/pull/15111",
   )!.link;
 
   it("links a pasted pull request URL when the server tracks links on the thread, even with no matching project", () => {

@@ -31,7 +31,7 @@ import type { SidebarThreadSummary, Thread } from "../types";
 import { normalizeSearchText } from "../lib/utils";
 import { isLatestRunSettled } from "../session-logic";
 import { observeIntersection } from "../lib/observeIntersection";
-import { deadlineAfter, deadlineStore } from "@t3tools/client-runtime/clock";
+import { deadlineAfter, deadlineStore } from "@t2code/client-runtime/clock";
 import { useDeadlinePassed } from "../hooks/useDeadline";
 
 export function shouldNavigateAfterThreadPark(input: {

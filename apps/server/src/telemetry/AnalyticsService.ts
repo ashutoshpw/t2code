@@ -1,5 +1,5 @@
 /**
- * Events go to the T2 Code ingest endpoint, which keeps a copy and forwards
+ * Events go to the T3 ingest endpoint, which keeps a copy and forwards
  * them to PostHog. Each event carries a uuid, so PostHog can tell a retried
  * copy from a new event.
  */
@@ -23,7 +23,6 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
 
 import packageJson from "../../package.json" with { type: "json" };
-import { envBooleanConfig, envStringConfig } from "@t2code/shared/legacyEnvConfig";
 import * as ServerConfig from "../config.ts";
 import { getTelemetryIdentity, type TelemetryOwner } from "./Identify.ts";
 
@@ -66,13 +65,13 @@ function retryDelayMs(failures: number, random: number): number {
 }
 
 const TelemetryEnvConfig = Config.all({
-  posthogKey: envStringConfig("T2CODE_POSTHOG_KEY").pipe(
+  posthogKey: Config.String("T2CODE_POSTHOG_KEY").pipe(
     Config.withDefault("phc_XOWci4oZP4VvLiEyrFqkFjP4CZn55mjYYBMREK5Wd6m"),
   ),
-  posthogHost: envStringConfig("T2CODE_POSTHOG_HOST").pipe(
-    Config.withDefault("https://ingest.t2.codes"),
+  posthogHost: Config.String("T2CODE_POSTHOG_HOST").pipe(
+    Config.withDefault("https://ingest.t3.codes"),
   ),
-  enabled: envBooleanConfig("T2CODE_TELEMETRY_ENABLED").pipe(Config.withDefault(true)),
+  enabled: Config.Boolean("T2CODE_TELEMETRY_ENABLED").pipe(Config.withDefault(true)),
   flushBatchSize: Config.Number("T2CODE_TELEMETRY_FLUSH_BATCH_SIZE").pipe(Config.withDefault(20)),
   maxBufferedEvents: Config.Number("T2CODE_TELEMETRY_MAX_BUFFERED_EVENTS").pipe(
     Config.withDefault(1_000),
@@ -206,7 +205,7 @@ export const make = Effect.gen(function* () {
           platform: hostPlatform,
           wsl: Option.getOrUndefined(telemetryConfig.wslDistroName),
           arch: hostArchitecture,
-          t3CodeVersion: packageJson.version,
+          t2CodeVersion: packageJson.version,
           telemetryChannel: ServerConfig.telemetryChannel,
           clientType,
           serverOs: serverOsFromNodePlatform(hostPlatform),

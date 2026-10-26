@@ -6,7 +6,7 @@ import UIKit
 /// draws the header's scroll-edge effect inside the scroll view, so the blur reaches the bar while
 /// the content stays in the safe area. Everything happens in UIKit layout, so folds move the blur
 /// and the content together.
-final class T3ScrollEdgeBleedView: ExpoView {
+final class T2ScrollEdgeBleedView: ExpoView {
   // Fabric recycles scroll views, so everything changed here is put back before this view leaves
   // the window, which unmounting does before any recycling.
   private var scrollView: UIScrollView?
@@ -24,7 +24,7 @@ final class T3ScrollEdgeBleedView: ExpoView {
     super.init(appContext: appContext)
     #if canImport(UIKit, _version: 9127.0.85)
     if #available(iOS 27.1, *) {
-      registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (view: T3ScrollEdgeBleedView, _: UITraitCollection) in
+      registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (view: T2ScrollEdgeBleedView, _: UITraitCollection) in
         view.setNeedsLayout()
       }
     }
@@ -92,7 +92,7 @@ final class T3ScrollEdgeBleedView: ExpoView {
   private enum Side { case left, right }
 
   private func verticalBarSide() -> Side? {
-    // The vertical-bar API ships in the iOS 27.1 SDK (UIKit 9127.0.85); see T3LayoutMetricsView.
+    // The vertical-bar API ships in the iOS 27.1 SDK (UIKit 9127.0.85); see T2LayoutMetricsView.
     #if canImport(UIKit, _version: 9127.0.85)
     if #available(iOS 27.1, *) {
       let rtl = effectiveUserInterfaceLayoutDirection == .rightToLeft

@@ -369,7 +369,7 @@ describe("V2 environment commands", () => {
       const link = {
         host: "github.com",
         repository: "pingdotgg/t3code",
-        url: "https://github.com/pingdotgg/t3code/pull/7",
+        url: "https://github.com/pingdotgg/t2code/pull/7",
         source: "agent" as const,
         linkedAt: "2026-10-05T00:00:00.000Z",
         snapshot: null,

@@ -4,11 +4,6 @@ import * as Schema from "effect/Schema";
 import { type CommandId, ProjectId } from "./baseSchemas.ts";
 import { ProviderDriverKind, ProviderInstanceId } from "./providerInstance.ts";
 import {
-  DEFAULT_MODEL_BY_PROVIDER,
-  DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER,
-  PROVIDER_DISPLAY_NAMES,
-} from "./model.ts";
-import {
   ClientSettingsSchema,
   ClientSettingsPatch,
   ClaudeSettings,

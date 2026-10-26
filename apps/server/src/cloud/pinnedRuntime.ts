@@ -25,8 +25,6 @@ import * as HostProcess from "@t2code/shared/HostProcess";
 import * as ProcessRunner from "../processRunner.ts";
 import { isExactServiceVersion, parseServiceState, SERVICE_STATE_FILE } from "./serviceProtocol.ts";
 
-const CLI_PACKAGE_NAME = "@t2code/cli";
-
 /**
  * A pinned runtime is an exact t2 release archive unpacked into
  * <baseDir>/runtime/versions/<version>: the self-contained executable, the web

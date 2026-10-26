@@ -1,9 +1,9 @@
-import type { DesktopBridge, DesktopUpdateState } from "@t3tools/contracts";
+import type { DesktopBridge, DesktopUpdateState } from "@t2code/contracts";
 
 const FALLBACK_TRIAGE_COMMAND = "npx t3 triage";
-const DOWNLOAD_URL = "https://t3.codes/download";
+const DOWNLOAD_URL = "https://t2.codes/download";
 const ISSUE_URL = "https://github.com/pingdotgg/t3code/issues/new";
-const LAST_FAILURE_KEY = "t3code:boot-failed-at";
+const LAST_FAILURE_KEY = "t2code:boot-failed-at";
 const REPEAT_FAILURE_MS = 5 * 60_000;
 const MAX_CAUSES = 3;
 const MAX_ERROR_CHARS = 6_000;

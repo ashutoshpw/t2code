@@ -10,20 +10,17 @@ import {
 describe("T2 orchestration provider instructions", () => {
   it("distinguishes delegated subagents from ordinary top-level threads", () => {
     assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "Use `delegate_task`");
-    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "ordinary top-level T2 conversations");
-    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "Never use them merely");
-    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "cross-provider");
-    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "call `delegate_task` again");
     assert.include(
       T2_CODE_ORCHESTRATION_INSTRUCTIONS,
-      "For a follow-up that needs the same child's conversation, use `t2_thread_send` on its `childThreadId`",
+      "make new top-level threads, only when the user asks for a new thread",
     );
-  });
-
-  it("documents structured schedules instead of JSON strings", () => {
-    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "structured object, never as JSON text");
-    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, '"everyMs":3600000');
-    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "bindToCurrentThread=false");
+    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "never mean one");
+    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "another provider's model");
+    assert.include(
+      T2_CODE_ORCHESTRATION_INSTRUCTIONS,
+      "Every new delegate review or re-check is a new `delegate_task`",
+    );
+    assert.include(T2_CODE_ORCHESTRATION_INSTRUCTIONS, "never a `t2_thread_send`");
   });
 
   it("injects prompt fallback only for an MCP-enabled first run", () => {
@@ -58,7 +55,7 @@ describe("T2 orchestration provider instructions", () => {
     });
 
     assert.include(injected, "T2 Code interaction mode: Default");
-    assert.include(injected, "T2 Code collaborative browser");
+    assert.include(injected, "T2 Code browser");
     assert.include(injected, "T2 Code orchestration");
     assert.include(injected, "<user_request>\nInspect the repository.\n</user_request>");
   });
@@ -84,7 +81,7 @@ describe("T2 orchestration provider instructions", () => {
       state: { interactionMode: "default", hasT2Mcp: false },
     });
     assert.include(withoutMcp, "T2 Code interaction mode: Default");
-    assert.notInclude(withoutMcp, "T2 Code collaborative browser");
+    assert.notInclude(withoutMcp, "T2 Code browser");
     assert.notInclude(withoutMcp, "T2 Code orchestration");
   });
 });

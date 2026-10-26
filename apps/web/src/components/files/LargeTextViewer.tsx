@@ -1,6 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, useState, type RefObject } from "react";
-import { parseDelimitedPreview } from "@t3tools/shared/delimitedPreview";
-import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
+import { parseDelimitedPreview } from "@t2code/shared/delimitedPreview";
+import { formatAttachmentSize } from "@t2code/client-runtime/state/attachments";
 import { useClientSettings } from "~/hooks/useSettings";
 import { FileSurfaceFailure, FileSurfaceLoading, FileSurfaceNotice } from "./fileSurfaceChrome";
 import { PREVIEW_PAGE_ROWS, type TextPreviewResult } from "./largeTextProtocol";
@@ -47,7 +47,7 @@ export default function LargeTextViewer(props: {
   } | null>(null);
   const pending = useRef(new Set<number>());
   const wordWrap = useClientSettings((settings) => settings.wordWrap);
-  // oxlint-disable-next-line t3code/react-effect-budget -- Own the prefix fetch and indexing worker, cancelling requests and pending copies when the source changes or unmounts.
+  // oxlint-disable-next-line t2code/react-effect-budget -- Own the prefix fetch and indexing worker, cancelling requests and pending copies when the source changes or unmounts.
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- A replacement source must discard the previous worker's error and pages.
     setError(null);

@@ -1,5 +1,5 @@
 import ChatMarkdown from "./ChatMarkdown";
-import { isSvgAttachment } from "@t3tools/shared/image";
+import { isSvgAttachment } from "@t2code/shared/image";
 import { ReadOnlySourcePreview } from "./files/AttachmentFilePreview";
 import type { PreviewAnnotationPayload, ThreadContextRecord } from "@t2code/contracts";
 import { formatAttachmentSize } from "@t2code/client-runtime/state/attachments";

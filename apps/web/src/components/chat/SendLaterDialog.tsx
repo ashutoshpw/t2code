@@ -42,6 +42,7 @@ function finish(at: string | null) {
 
 export function SendLaterDialogHost() {
   const request = useRequest((state) => state.request);
+  // oxlint-disable-next-line t2code/react-effect-budget -- Unmounting the host dismisses the pending send-later request; the request queue lives outside React.
   useEffect(() => () => finish(null), []);
   return request ? <SendLaterDialog /> : null;
 }
@@ -53,7 +54,10 @@ function SendLaterDialog() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [time, setTime] = useState(localSnoozeTime(initial));
   const [error, setError] = useState<string | null>(null);
+  // oxlint-disable-next-line react/purity -- Resolves the pending send against the clock at render so the shown target and validation follow the user's edits.
   const resolution = resolveSendLater({ date: localSnoozeDate(date), time }, new Date());
+  // oxlint-disable-next-line react/purity -- Anchors the disabled range at the dialog's lifetime; it is a short-lived modal that reseeds on every mount.
+  const disabledBefore = new Date(new Date().setHours(0, 0, 0, 0));
   return (
     <Dialog
       open
@@ -109,7 +113,7 @@ function SendLaterDialog() {
                       selected={date}
                       defaultMonth={date}
                       {...(weekStartsOn === undefined ? {} : { weekStartsOn })}
-                      disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                      disabled={{ before: disabledBefore }}
                       onSelect={(selected) => {
                         setDate(selected);
                         setCalendarOpen(false);
@@ -141,6 +145,7 @@ function SendLaterDialog() {
               </p>
             ) : resolution.ok ? (
               <p className="text-muted-foreground text-sm" role="status">
+                {/* oxlint-disable-next-line react/purity -- The relative label is sampled at render so user edits in the open dialog re-anchor it to now. */}
                 Sends {formatSendLaterLabel(resolution.at, new Date())}
               </p>
             ) : null}

@@ -188,7 +188,7 @@ import {
 } from "./thread-outbox";
 import type { QueuedThreadMessage } from "./thread-outbox-model";
 import * as drafts from "./use-composer-drafts";
-import { prepareQueuedMessageAttachments } from "./threadOutboxDelivery";
+import { prepareQueuedMessageAttachments } from "./use-thread-outbox-drain";
 
 const environmentId = EnvironmentId.make("environment-1");
 const draftKey = "environment-1:thread-1";

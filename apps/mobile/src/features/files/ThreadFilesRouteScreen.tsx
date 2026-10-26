@@ -18,7 +18,7 @@ import {
 import { mediaFileReference } from "@t2code/client-runtime/media-reference";
 
 import { ScreenContent } from "../../components/ui/ScreenContent";
-import { filePreviewDelimiter, parseDelimitedPreview } from "@t3tools/shared/delimitedPreview";
+import { filePreviewDelimiter, parseDelimitedPreview } from "@t2code/shared/delimitedPreview";
 import { DelimitedFilePreview } from "./DelimitedFilePreview";
 import { AudioFilePreview } from "./AudioFilePreview";
 import { EmptyState } from "../../components/ui/EmptyState";

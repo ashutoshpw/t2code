@@ -20,7 +20,6 @@ import { beginAcpMockPrompt } from "./acpMockCancellationState.ts";
 const requestLogPath = process.env.T2_ACP_REQUEST_LOG_PATH;
 const exitLogPath = process.env.T2_ACP_EXIT_LOG_PATH;
 const antigravityProfile = process.env.T2_ACP_ANTIGRAVITY === "1";
-const noAuthProfile = process.env.T2_ACP_NO_AUTH === "1";
 const emitToolCalls = process.env.T2_ACP_EMIT_TOOL_CALLS === "1";
 const autoFinishCancel = process.env.T2_ACP_AUTO_FINISH_CANCEL === "1";
 const emitInterleavedAssistantToolCalls =
@@ -1346,7 +1345,7 @@ const program = Effect.gen(function* () {
                 sources: [
                   { type: "url", url: "https://t2.codes" },
                   { type: "url", url: "https://t2.codes" },
-                  { type: "url", url: "https://github.com/pingdotgg/t2code" },
+                  { type: "url", url: "https://github.com/pingdotgg/t3code" },
                 ],
               },
               id: "grok-web-search",

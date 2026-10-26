@@ -414,14 +414,14 @@ describe("scoreThreadSearch with heavy use and loose input", () => {
       pullRequests: [
         {
           number: 22889,
-          references: ["pingdotgg/t3code#22889", "https://github.com/pingdotgg/t3code/pull/22889"],
+          references: ["pingdotgg/t3code#22889", "https://github.com/pingdotgg/t2code/pull/22889"],
         },
       ],
     });
     for (const query of [
       "t3code#22889",
-      "github.com/pingdotgg/t3code/pull/22889",
-      "https://github.com/pingdotgg/t3code/pull/22889/files",
+      "github.com/pingdotgg/t2code/pull/22889",
+      "https://github.com/pingdotgg/t2code/pull/22889/files",
       "5fe6f59c",
       "beebox",
     ]) {
@@ -429,7 +429,7 @@ describe("scoreThreadSearch with heavy use and loose input", () => {
     }
     expect(scoreThreadSearch("github.com", subject, NOW)).toBeNull();
     // A number is never cut short.
-    for (const query of ["github.com/pingdotgg/t3code/pull/2288", "t3code#2288"]) {
+    for (const query of ["github.com/pingdotgg/t2code/pull/2288", "t3code#2288"]) {
       expect(scoreThreadSearch(foldSearchQuery(query), subject, NOW), query).toBeNull();
     }
   });

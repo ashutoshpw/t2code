@@ -1,7 +1,7 @@
 import {
   omitLocalVisibleTurnItems,
   restoreLocalVisibleTurnItems,
-} from "@t3tools/shared/orchestrationV2BoundedSnapshot";
+} from "@t2code/shared/orchestrationV2BoundedSnapshot";
 import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";

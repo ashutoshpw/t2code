@@ -1,4 +1,4 @@
-import type { TerminalOutputState } from "@t3tools/client-runtime/state/terminal";
+import type { TerminalOutputState } from "@t2code/client-runtime/state/terminal";
 import {
   memo,
   useCallback,

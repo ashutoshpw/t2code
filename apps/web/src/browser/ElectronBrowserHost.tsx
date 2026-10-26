@@ -7,7 +7,7 @@ import {
   FILL_PREVIEW_VIEWPORT,
 } from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
-import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
+import { runAtomCommand } from "@t2code/client-runtime/state/runtime";
 import { type ComponentProps, useState } from "react";
 
 import { primaryEnvironmentIdAtom } from "~/state/primaryEnvironment";

@@ -44,7 +44,7 @@ import type {
   ProviderInteractionMode,
   RuntimeRequestId,
   ScopedThreadRef,
-  ServerConfig as T3ServerConfig,
+  ServerConfig as T2ServerConfig,
   UsageLimitsReport,
 } from "@t2code/contracts";
 import {

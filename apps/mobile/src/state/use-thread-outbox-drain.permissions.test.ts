@@ -160,7 +160,7 @@ vi.mock("./use-composer-drafts", async () => {
 import { appAtomRegistry } from "./atom-registry";
 import { environmentSession } from "./session";
 import { dispatchingQueuedMessageIdAtom, editingQueuedMessageIdsAtom } from "./use-thread-outbox";
-import { createThreadOutboxDelivery } from "./threadOutboxDelivery";
+import { createThreadOutboxDelivery } from "./use-thread-outbox-drain";
 
 const message = (overrides: Partial<QueuedThreadMessage> = {}): QueuedThreadMessage => ({
   environmentId: EnvironmentId.make("secondary"),

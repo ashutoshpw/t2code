@@ -1,5 +1,5 @@
-import type { PreparedConnection } from "@t3tools/client-runtime/connection";
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type { PreparedConnection } from "@t2code/client-runtime/connection";
+import { EnvironmentId, ThreadId } from "@t2code/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { render } from "../../../test/render";
@@ -30,8 +30,8 @@ vi.mock(import("~/state/assets"), async (original) => {
 });
 vi.mock(import("~/state/session"), async (original) => {
   const { Option } = await import("effect");
-  const { PrimaryConnectionTarget } = await import("@t3tools/client-runtime/connection");
-  const { EnvironmentId } = await import("@t3tools/contracts");
+  const { PrimaryConnectionTarget } = await import("@t2code/client-runtime/connection");
+  const { EnvironmentId } = await import("@t2code/contracts");
   const target = new PrimaryConnectionTarget({
     environmentId: EnvironmentId.make("environment-1"),
     label: "Local",

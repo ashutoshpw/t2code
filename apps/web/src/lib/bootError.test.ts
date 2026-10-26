@@ -1,4 +1,4 @@
-import type { DesktopBridge, DesktopCliCommandState, DesktopUpdateState } from "@t3tools/contracts";
+import type { DesktopBridge, DesktopCliCommandState, DesktopUpdateState } from "@t2code/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import {
@@ -20,25 +20,25 @@ const notOnPath = (launcherPath: string | null): DesktopCliCommandState => ({
 
 describe("resolveTriageCommand", () => {
   it("prefers t3 on PATH, then the desktop launcher", async () => {
-    const onPath = { ...notOnPath("/home/me/.t3/bin/t3"), onPath: true };
+    const onPath = { ...notOnPath("/home/me/.t2/bin/t3"), onPath: true };
     await expect(resolveTriageCommand(desktopWith(async () => onPath))).resolves.toBe("t3 triage");
     await expect(
-      resolveTriageCommand(desktopWith(async () => notOnPath("/home/me/.t3/bin/t3"))),
-    ).resolves.toBe("/home/me/.t3/bin/t3 triage");
+      resolveTriageCommand(desktopWith(async () => notOnPath("/home/me/.t2/bin/t3"))),
+    ).resolves.toBe("/home/me/.t2/bin/t3 triage");
   });
 
   it("quotes launcher paths for the shell that runs them", async () => {
     await expect(
-      resolveTriageCommand(desktopWith(async () => notOnPath("/Users/O'Neil/.t3/bin/t3"))),
-    ).resolves.toBe(`'/Users/O'"'"'Neil/.t3/bin/t3' triage`);
+      resolveTriageCommand(desktopWith(async () => notOnPath("/Users/O'Neil/.t2/bin/t3"))),
+    ).resolves.toBe(`'/Users/O'"'"'Neil/.t2/bin/t3' triage`);
     await expect(
-      resolveTriageCommand(desktopWith(async () => notOnPath("C:\\Users\\Me\\.t3\\bin\\t3.cmd"))),
-    ).resolves.toBe("C:\\Users\\Me\\.t3\\bin\\t3.cmd triage");
+      resolveTriageCommand(desktopWith(async () => notOnPath("C:\\Users\\Me\\.t2\\bin\\t2.cmd"))),
+    ).resolves.toBe("C:\\Users\\Me\\.t2\\bin\\t2.cmd triage");
     await expect(
       resolveTriageCommand(
-        desktopWith(async () => notOnPath("C:\\Users\\Jo O'Neil\\.t3\\bin\\t3.cmd")),
+        desktopWith(async () => notOnPath("C:\\Users\\Jo O'Neil\\.t2\\bin\\t2.cmd")),
       ),
-    ).resolves.toBe("& 'C:\\Users\\Jo O''Neil\\.t3\\bin\\t3.cmd' triage");
+    ).resolves.toBe("& 'C:\\Users\\Jo O''Neil\\.t2\\bin\\t2.cmd' triage");
   });
 
   it("falls back to npx without a usable desktop launcher", async () => {
@@ -70,14 +70,14 @@ const environment: BootErrorEnvironment = {
 describe("buildErrorReport", () => {
   it("drops hosts and tokens from URLs in the error", () => {
     const error = new TypeError(
-      "Failed to fetch dynamically imported module: http://studio.tail1234.ts.net:3773/assets/a.js?pair=SECRET#token=SECRET",
+      "Failed to fetch dynamically imported module: http://studio.tail1234.ts.net:3772/assets/a.js?pair=SECRET#token=SECRET",
       {
         cause: new Error(
-          "ws://studio.tail1234.ts.net:3773/ws?token=SECRET closed, main-a.js?sig=SECRET",
+          "ws://studio.tail1234.ts.net:3772/ws?token=SECRET closed, main-a.js?sig=SECRET",
         ),
       },
     );
-    error.stack = `TypeError: ${error.message}\n    at http://studio.tail1234.ts.net:3773/src/main.tsx?t=1:10:5`;
+    error.stack = `TypeError: ${error.message}\n    at http://studio.tail1234.ts.net:3772/src/main.tsx?t=1:10:5`;
     const report = buildErrorReport(error, environment);
     expect(report).not.toContain("SECRET");
     expect(report).not.toContain("tail1234");

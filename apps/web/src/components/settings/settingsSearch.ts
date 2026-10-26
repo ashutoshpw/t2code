@@ -420,7 +420,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Guest links",
     to: "/settings/labs",
     scope: "environment",
-    searchTerms: ["beta share guest invite link teammate watch t3 connect tunnel"],
+    searchTerms: ["beta share guest invite link teammate watch t2 connect tunnel"],
+  },
+  {
+    id: "app-rail",
+    title: "App rail",
+    to: "/settings/general",
+    searchTerms: ["sidebar rail navigation pull requests usage settings dock"],
   },
   {
     id: "auto-settle-inactive-threads",

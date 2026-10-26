@@ -6,7 +6,7 @@ import {
 } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
-import { isSvgAttachment } from "@t3tools/shared/image";
+import { isSvgAttachment } from "@t2code/shared/image";
 
 import {
   parseThreadSegmentFromAttachmentId,

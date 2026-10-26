@@ -35,7 +35,7 @@ function ConfiguredSettingsAuthRouteScreen() {
   if (isSignedIn && !hasBeenSignedIn) setHasBeenSignedIn(true);
 
   // Clerk reports sign-out only through its auth store (the native profile view
-  // and the T3 Connect page can both sign out), so this follows that store.
+  // and the T2 Connect page can both sign out), so this follows that store.
   useEffect(() => {
     if (hasBeenSignedIn && isLoaded && isSignedIn === false) {
       navigation.goBack();

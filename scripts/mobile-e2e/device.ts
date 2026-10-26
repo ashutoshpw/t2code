@@ -7,7 +7,7 @@ import * as NodeProcess from "node:process";
 import type { Snapshot } from "./checks.ts";
 import type { Pose } from "./poses.ts";
 
-export const BUNDLE_ID = "com.t3tools.t3code.dev";
+export const BUNDLE_ID = "codes.t2.mobile.dev";
 
 export interface RunResult {
   readonly code: number;
@@ -165,7 +165,7 @@ export class Device {
       [
         "open",
         BUNDLE_ID,
-        `t3code-dev://expo-development-client/?url=${url}&disableOnboarding=1&disableFab=1&disableAutoLaunch=1`,
+        `t2code-dev://expo-development-client/?url=${url}&disableOnboarding=1&disableFab=1&disableAutoLaunch=1`,
         // A real keyboard, so the layout under it is what people see.
         ...(this.pose.platform === "android" ? ["--no-test-ime"] : []),
       ],

@@ -130,7 +130,7 @@ const resumedMcpQueryInput = {
     mcpServers: {
       "t2-code": {
         type: "http",
-        url: "http://localhost:3773/mcp",
+        url: "http://localhost:3772/mcp",
         headers: { Authorization: "Bearer test-mcp-credential" },
       },
     },

@@ -30,6 +30,7 @@ import {
   OrchestratorMcpThreadWaitResult,
   ThreadMetadataMcpUpdateInput,
   ThreadMetadataMcpUpdateResult,
+  TrimmedNonEmptyString,
 } from "@t2code/contracts";
 import { Tool, Toolkit } from "effect/ai";
 import * as Schema from "effect/Schema";
@@ -103,9 +104,9 @@ const TaskCancelTool = Tool.make("task_cancel", {
   .annotate(Tool.Title, "Cancel delegated task")
   .annotate(Tool.Destructive, true);
 
-const WorkflowStopTool = Tool.make("t3_workflow_stop", {
+const WorkflowStopTool = Tool.make("t2_workflow_stop", {
   description:
-    "Stop a running Claude workflow in a thread. `subagentId`: coordinator from `t3_thread_read` 'activity'. Stops only the workflow, not the thread.",
+    "Stop a running Claude workflow in a thread. `subagentId`: coordinator from `t2_thread_read` 'activity'. Stops only the workflow, not the thread.",
   parameters: OrchestrationV2StopWorkflowInput,
   success: Schema.Struct({}),
   failure: OrchestratorMcpFailure,
@@ -187,18 +188,18 @@ const RequestSecretTool = Tool.make("request_secret", {
 
 const CreateThreadsTool = Tool.make("create_threads", {
   description:
-    "Create new top-level threads in this checkout. Not delegation. One thread or its own worktree: `t3_thread_launch`. Project, branch, and worktree inherit.",
+    "Create new top-level threads in this checkout. Not delegation. One thread or its own worktree: `t2_thread_launch`. Project, branch, and worktree inherit.",
   parameters: OrchestratorMcpCreateThreadsInput,
   success: OrchestratorMcpCreateThreadsResult,
   failure: OrchestratorMcpFailure,
   failureMode: "return",
   dependencies,
 })
-  .annotate(Tool.Title, "Create T3 threads")
+  .annotate(Tool.Title, "Create T2 threads")
   .annotate(Tool.Destructive, true)
   .annotate(Tool.OpenWorld, true);
 
-const ThreadListTool = Tool.make("t3_thread_list", {
+const ThreadListTool = Tool.make("t2_thread_list", {
   description:
     "List threads in a project, newest first. Omit `projectId` for yours. Filter by status, title, settled, or snoozed. Page with the cursor.",
   parameters: OrchestratorMcpThreadListInput,
@@ -207,12 +208,12 @@ const ThreadListTool = Tool.make("t3_thread_list", {
   failureMode: "return",
   dependencies,
 })
-  .annotate(Tool.Title, "List T3 threads")
+  .annotate(Tool.Title, "List T2 threads")
   .annotate(Tool.Readonly, true)
   .annotate(Tool.Destructive, false)
   .annotate(Tool.Idempotent, true);
 
-const ThreadReadTool = Tool.make("t3_thread_read", {
+const ThreadReadTool = Tool.make("t2_thread_read", {
   description:
     "Read any thread by id. `messages` (default): user and assistant messages and plans. `activity`: all timeline items. Keep reads small: low `limit` and `maxCharsPerItem`. Page with `afterPosition=nextPosition`. Cut-off text: `itemId` with `textOffset=nextTextOffset`. Reading a child's final result marks it delivered. In your reply, name it as its `link` verbatim.",
   parameters: OrchestratorMcpThreadReadInput,
@@ -221,13 +222,13 @@ const ThreadReadTool = Tool.make("t3_thread_read", {
   failureMode: "return",
   dependencies,
 })
-  .annotate(Tool.Title, "Read a T3 thread")
+  .annotate(Tool.Title, "Read a T2 thread")
   .annotate(Tool.Strict, true)
   .annotate(Tool.Readonly, false)
   .annotate(Tool.Destructive, false)
   .annotate(Tool.Idempotent, true);
 
-const ThreadUpdateTool = Tool.make("t3_thread_update", {
+const ThreadUpdateTool = Tool.make("t2_thread_update", {
   description:
     "Rename a thread (`action:'rename'` with `title`) or regenerate its title. Omit `threadId` for this thread. Workspace and branch cannot change here.",
   parameters: ThreadMetadataMcpUpdateInput,
@@ -236,11 +237,11 @@ const ThreadUpdateTool = Tool.make("t3_thread_update", {
   failureMode: "return",
   dependencies: threadMetadataDependencies,
 })
-  .annotate(Tool.Title, "Update T3 thread metadata")
+  .annotate(Tool.Title, "Update T2 thread metadata")
   .annotate(Tool.Destructive, true)
   .annotate(Tool.Idempotent, false);
 
-const ThreadSendTool = Tool.make("t3_thread_send", {
+const ThreadSendTool = Tool.make("t2_thread_send", {
   description:
     "Send a message to any thread. The target cannot run with broader modes than yours. `mode:'auto'` starts an idle thread, steers a running turn, or queues. `queue`: new turn. `steer`: mid-turn update. `restart`: interrupt and restart. A send to a finished child thread starts a fresh task and returns its `taskId`. In your reply, name it as its `link` verbatim.",
   parameters: OrchestratorMcpThreadSendInput,
@@ -249,11 +250,11 @@ const ThreadSendTool = Tool.make("t3_thread_send", {
   failureMode: "return",
   dependencies,
 })
-  .annotate(Tool.Title, "Send to a T3 thread")
+  .annotate(Tool.Title, "Send to a T2 thread")
   .annotate(Tool.Destructive, true)
   .annotate(Tool.OpenWorld, true);
 
-const ThreadWaitTool = Tool.make("t3_thread_wait", {
+const ThreadWaitTool = Tool.make("t2_thread_wait", {
   description:
     "Wait for a thread's run to finish. No `runId`: latest. Idle: at once. On timeout, with `next` end your turn; without, call again.",
   parameters: OrchestratorMcpThreadWaitInput,
@@ -262,12 +263,12 @@ const ThreadWaitTool = Tool.make("t3_thread_wait", {
   failureMode: "return",
   dependencies,
 })
-  .annotate(Tool.Title, "Wait for a T3 thread")
+  .annotate(Tool.Title, "Wait for a T2 thread")
   .annotate(Tool.Readonly, true)
   .annotate(Tool.Destructive, false)
   .annotate(Tool.Idempotent, true);
 
-const ThreadInterruptTool = Tool.make("t3_thread_interrupt", {
+const ThreadInterruptTool = Tool.make("t2_thread_interrupt", {
   description:
     "Interrupt a top-level thread's running turn. No `runId`: newest running turn. No effect when idle. For a delegate, use `task_cancel`.",
   parameters: OrchestratorMcpThreadInterruptInput,
@@ -276,7 +277,7 @@ const ThreadInterruptTool = Tool.make("t3_thread_interrupt", {
   failureMode: "return",
   dependencies,
 })
-  .annotate(Tool.Title, "Interrupt a T3 thread")
+  .annotate(Tool.Title, "Interrupt a T2 thread")
   .annotate(Tool.Destructive, true);
 
 export const OrchestratorToolkit = Toolkit.make(

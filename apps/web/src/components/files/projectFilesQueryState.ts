@@ -4,7 +4,7 @@ import {
   type ProjectListEntriesResult,
   ProjectReadFileError,
   type ProjectReadFileResult,
-  T3_PROJECT_FILE_NAME,
+  T2_PROJECT_FILE_NAME,
 } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Option from "effect/Option";

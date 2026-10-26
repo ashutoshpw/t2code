@@ -8,7 +8,7 @@ const keys = JSON.stringify({
   julius: "210eb3d2c67a7207923e1999751300a87a2dd22839b258b80c3d805a6fe64984",
 });
 const request = (credentials: string) =>
-  new Request("https://cache.example/projects/t3code/store", {
+  new Request("https://cache.example/projects/t2code/store", {
     headers: { authorization: `Basic ${btoa(credentials)}` },
   });
 
