@@ -6,6 +6,7 @@ import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Result from "effect/Result";
 import * as SqlClient from "effect/sql/SqlClient";
@@ -111,6 +112,162 @@ const createFixtureSource = Effect.fn("createMigrateDevDbFixtureSource")(functio
 const layer = SpacesDatabaseTools.layer.pipe(Layer.provideMerge(NodeServices.layer));
 
 it.layer(layer)("migrate-dev-db", (it) => {
+  it.effect.each([
+    { name: "chat SHM and Spaces main", target: "statev2.sqlite-shm", owner: "spaces" },
+    { name: "chat SHM and source main", target: "statev2.sqlite-shm", owner: "source" },
+    {
+      name: "snapshot journal and Spaces main",
+      target: "statev2.sqlite.migrate-dev-db-tmp-journal",
+      owner: "spaces",
+    },
+    { name: "Spaces SHM and its own main", target: "spaces.sqlite-shm", owner: "spaces" },
+  ])("refuses hardlinked database roles: $name", ({ target, owner }) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const sourceDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-hardlink-source-" });
+      const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-hardlink-dest-" });
+      const source = yield* createFixtureSource(sourceDir);
+      const chat = yield* createFixtureSource(destDir);
+      yield* withDatabase(
+        chat,
+        Effect.flatMap(SqlClient.SqlClient, (sql) => sql`PRAGMA journal_mode = WAL`),
+      );
+      const stateDir = path.dirname(chat);
+      const spacesPath = path.join(stateDir, "spaces.sqlite");
+      yield* Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        yield* sql`UPDATE spaces SET title = 'KEEP SPACES DATA', revision = 7 WHERE is_default = 1`;
+      }).pipe(Effect.provide(SpacesSqlite.layerFromPath(spacesPath)));
+      const backing = owner === "source" ? source : spacesPath;
+      const linkedPath = path.join(stateDir, target);
+      yield* fs.link(backing, linkedPath);
+      const backingInfo = yield* fs.stat(backing);
+      const linkedInfo = yield* fs.stat(linkedPath);
+      assert.isTrue(Option.isSome(backingInfo.ino));
+      assert.equal(backingInfo.dev, linkedInfo.dev);
+      assert.deepEqual(backingInfo.ino, linkedInfo.ino);
+      const beforeSource = yield* fs.readFile(source);
+      const beforeSpaces = yield* fs.readFile(spacesPath);
+      const beforeChat = yield* fs.readFile(chat);
+      const sourceFiles = (yield* fs.readDirectory(path.dirname(source))).sort();
+      const destinationFiles = (yield* fs.readDirectory(stateDir)).sort();
+
+      const result = yield* runMigrateDevDb(
+        { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
+        { sharedHome: sourceDir },
+      ).pipe(Effect.result);
+      const actualSource = yield* fs.readFile(source);
+      const actualSpaces = yield* fs.readFile(spacesPath);
+      assert.equal(
+        Buffer.compare(actualSource, beforeSource),
+        0,
+        "Hardlinked source bytes changed",
+      );
+      assert.equal(
+        Buffer.compare(actualSpaces, beforeSpaces),
+        0,
+        "Hardlinked Spaces bytes changed",
+      );
+      assert.isTrue(Result.isFailure(result), "Migration accepted hardlinked database roles");
+      if (Result.isFailure(result))
+        assert.equal(
+          result.failure._tag,
+          owner === "source"
+            ? "MigrateDevDbSourceIsDestinationError"
+            : "MigrateDevDbDatabaseOverlapError",
+        );
+      assert.equal(Buffer.compare(yield* fs.readFile(chat), beforeChat), 0);
+      assert.deepEqual((yield* fs.readDirectory(path.dirname(source))).sort(), sourceFiles);
+      assert.deepEqual((yield* fs.readDirectory(stateDir)).sort(), destinationFiles);
+      const verification = yield* fs.makeTempDirectoryScoped({
+        prefix: "migrate-hardlink-verify-",
+      });
+      const verifiedSpaces = path.join(verification, "spaces.sqlite");
+      const verifiedSource = path.join(verification, "source.sqlite");
+      yield* fs.writeFile(verifiedSpaces, actualSpaces);
+      yield* fs.writeFile(verifiedSource, actualSource);
+      yield* Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        assert.deepEqual(yield* sql`SELECT title, revision FROM spaces WHERE is_default = 1`, [
+          { title: "KEEP SPACES DATA", revision: 7 },
+        ]);
+      }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: verifiedSpaces, readonly: true })));
+      yield* Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        assert.equal(
+          (yield* sql`SELECT title FROM projection_projects WHERE project_id = 'project-kept'`)[0]
+            ?.title,
+          "Kept",
+        );
+      }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: verifiedSource, readonly: true })));
+    }),
+  );
+
+  it.effect.each(["missing", "zero"] as const)(
+    "refuses an existing file with %s filesystem identity without accessing SQLite",
+    (identity) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const sourceDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-identity-source-" });
+        const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-identity-dest-" });
+        const source = yield* createFixtureSource(sourceDir);
+        const canonicalSource = yield* fs.realPath(source);
+        const before = yield* fs.readFile(source);
+        const result = yield* runMigrateDevDb(
+          { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
+          { sharedHome: sourceDir },
+        ).pipe(
+          Effect.provideService(FileSystem.FileSystem, {
+            ...fs,
+            stat: (file) =>
+              fs
+                .stat(file)
+                .pipe(
+                  Effect.map((info) =>
+                    file === source || file === canonicalSource
+                      ? { ...info, ino: identity === "missing" ? Option.none() : Option.some(0n) }
+                      : info,
+                  ),
+                ),
+          }),
+          Effect.result,
+        );
+        assert.isTrue(
+          Result.isFailure(result),
+          "Migration accepted unavailable filesystem identity",
+        );
+        if (Result.isFailure(result))
+          assert.equal(result.failure._tag, "MigrateDevDbFileIdentityUnavailableError");
+        assert.equal(Buffer.compare(yield* fs.readFile(source), before), 0);
+        assert.deepEqual(yield* fs.readDirectory(destDir), []);
+      }),
+  );
+
+  it.effect("allows the configured and resolved names of one contained Spaces main", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const sourceDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-own-role-source-" });
+      const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-own-role-dest-" });
+      const source = yield* createFixtureSource(sourceDir);
+      const stateDir = path.join(destDir, "userdata");
+      const backing = path.join(stateDir, "spaces-store.sqlite");
+      yield* Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        yield* sql`UPDATE spaces SET title = 'KEEP SPACES DATA' WHERE is_default = 1`;
+      }).pipe(Effect.provide(SpacesSqlite.layerFromPath(backing)));
+      yield* fs.symlink(backing, path.join(stateDir, "spaces.sqlite"));
+      const before = yield* fs.readFile(backing);
+      const result = yield* runMigrateDevDb(
+        { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
+        { sharedHome: sourceDir },
+      );
+      assert.equal(result.databasePath, path.join(stateDir, "statev2.sqlite"));
+      assert.equal(Buffer.compare(yield* fs.readFile(backing), before), 0);
+    }),
+  );
+
   it.effect.each([
     {
       name: "Spaces main to snapshot",

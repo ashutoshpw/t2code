@@ -86,6 +86,15 @@ export class MigrateDevDbDatabaseOverlapError extends Schema.TaggedError<Migrate
   }
 }
 
+export class MigrateDevDbFileIdentityUnavailableError extends Schema.TaggedError<MigrateDevDbFileIdentityUnavailableError>()(
+  "MigrateDevDbFileIdentityUnavailableError",
+  { path: Schema.String },
+) {
+  override get message() {
+    return "Cannot safely migrate because the filesystem does not report a usable file identity.";
+  }
+}
+
 export class MigrateDevDbServerRunningError extends Schema.TaggedError<MigrateDevDbServerRunningError>()(
   "MigrateDevDbServerRunningError",
   {
@@ -495,24 +504,48 @@ const resolveCanonicalPath = Effect.fn("migrateDevDb.resolveCanonicalPath")(func
   }
 });
 
+const readFileIdentity = Effect.fn("migrateDevDb.readFileIdentity")(function* (file: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const info = yield* fs.stat(file).pipe(
+    Effect.asSome,
+    Effect.catchIf(
+      (error) => error.reason._tag === "NotFound",
+      () => Effect.succeedNone,
+    ),
+  );
+  if (Option.isNone(info)) return null;
+  if (Option.isNone(info.value.ino) || info.value.ino.value <= 0n) {
+    return yield* new MigrateDevDbFileIdentityUnavailableError({ path: file });
+  }
+  return `${info.value.dev}:${info.value.ino.value}`;
+});
+
 const resolveDatabaseFamily = Effect.fn("migrateDevDb.resolveDatabaseFamily")(function* (
   databasePath: string,
 ) {
   const path = yield* Path.Path;
   const canonicalPath = yield* resolveCanonicalPath(databasePath);
   const members = [...new Set([databasePath, canonicalPath])].flatMap((root) =>
-    DATABASE_ACCESS_SUFFIXES.map((suffix) => `${root}${suffix}`),
+    DATABASE_ACCESS_SUFFIXES.map((member) => ({ file: `${root}${member}`, member })),
   );
-  const files = yield* Effect.forEach(members, (file) =>
+  const files = yield* Effect.forEach(members, ({ file, member }) =>
     Effect.all([
       resolveCanonicalPath(file),
       resolveCanonicalPath(path.dirname(file)).pipe(
         Effect.map((directory) => path.join(directory, path.basename(file))),
       ),
-    ]),
+    ]).pipe(
+      Effect.flatMap((paths) =>
+        Effect.forEach([...new Set(paths)], (file) =>
+          readFileIdentity(file).pipe(Effect.map((identity) => ({ path: file, member, identity }))),
+        ),
+      ),
+    ),
   );
-  return { databasePath: canonicalPath, files: new Set(files.flat()) };
+  return { databasePath: canonicalPath, files: files.flat() };
 });
+
+type DatabaseFileRole = { readonly family: string; readonly member: string };
 
 export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   input: RunMigrateDevDbInput,
@@ -568,27 +601,42 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   const destinations = [chatFamily, snapshotFamily, spacesFamily];
   for (const family of destinations) {
     for (const file of family.files) {
-      const relative = path.relative(canonicalBaseDir, file);
+      const relative = path.relative(canonicalBaseDir, file.path);
       if (
         relative === "" ||
         relative === ".." ||
         relative.startsWith(`..${path.sep}`) ||
         path.isAbsolute(relative)
       ) {
-        return yield* new MigrateDevDbDestinationOutsideSandboxError({ destinationPath: file });
-      }
-      if (sourceFamily.files.has(file)) {
-        return yield* new MigrateDevDbSourceIsDestinationError({ sourcePath });
+        return yield* new MigrateDevDbDestinationOutsideSandboxError({
+          destinationPath: file.path,
+        });
       }
     }
   }
-  const occupied = new Set<string>();
-  for (const family of destinations) {
+  const occupiedPaths = new Map<string, DatabaseFileRole>();
+  const occupiedFiles = new Map<string, DatabaseFileRole>();
+  for (const [name, family] of [
+    ["source", sourceFamily],
+    ["chat", chatFamily],
+    ["snapshot", snapshotFamily],
+    ["spaces", spacesFamily],
+  ] as const) {
     for (const file of family.files) {
-      if (occupied.has(file)) {
-        return yield* new MigrateDevDbDatabaseOverlapError({ path: file });
+      for (const { key, occupied } of [
+        { key: file.path, occupied: occupiedPaths },
+        { key: file.identity, occupied: occupiedFiles },
+      ]) {
+        if (key === null) continue;
+        const previous = occupied.get(key);
+        if (previous && (previous.family !== name || previous.member !== file.member)) {
+          if (previous.family !== name && (previous.family === "source" || name === "source")) {
+            return yield* new MigrateDevDbSourceIsDestinationError({ sourcePath });
+          }
+          return yield* new MigrateDevDbDatabaseOverlapError({ path: file.path });
+        }
+        occupied.set(key, { family: name, member: file.member });
       }
-      occupied.add(file);
     }
   }
   const canonicalSpacesDatabasePath = spacesFamily.databasePath;
