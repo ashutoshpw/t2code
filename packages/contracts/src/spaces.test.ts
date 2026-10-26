@@ -1,7 +1,23 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import { SpaceBlock } from "./spaces.ts";
+import {
+  SpaceApplyBlockBatchInput,
+  SpaceBlock,
+  SpaceCapability,
+  SpaceCreateInput,
+  SpaceListInput,
+  SpaceListResult,
+  SpaceMutationReceipt,
+  SpaceMutationRequest,
+  SpacePageCreateInput,
+  SpaceReadBlocksInput,
+  SpaceReadBlocksResult,
+  SpaceReceiptLookupInput,
+  SpaceReceiptLookupResult,
+  SpaceServiceError,
+  SpaceSetDefaultInput,
+} from "./spaces.ts";
 
 const decode = Schema.decodeUnknownSync(SpaceBlock);
 const encode = Schema.encodeSync(SpaceBlock);
@@ -61,5 +77,253 @@ describe("Spaces value preservation", () => {
         content: { fn: () => 1 },
       }),
     ).toThrow();
+  });
+});
+
+const strict = { onExcessProperty: "error" } as const;
+const decodeRequest = Schema.decodeUnknownSync(SpaceMutationRequest, strict);
+const decodeLookup = Schema.decodeUnknownSync(SpaceReceiptLookupInput, strict);
+const decodeWindow = Schema.decodeUnknownSync(SpaceReadBlocksResult, strict);
+const decodeCreate = Schema.decodeUnknownSync(SpaceCreateInput, strict);
+const decodeBatch = Schema.decodeUnknownSync(SpaceApplyBlockBatchInput, strict);
+const decodeReadBlocks = Schema.decodeUnknownSync(SpaceReadBlocksInput, strict);
+const decodePageCreate = Schema.decodeUnknownSync(SpacePageCreateInput, strict);
+const decodeSetDefault = Schema.decodeUnknownSync(SpaceSetDefaultInput, strict);
+const decodeReceipt = Schema.decodeUnknownSync(SpaceMutationReceipt, strict);
+const decodeLookupResult = Schema.decodeUnknownSync(SpaceReceiptLookupResult, strict);
+const decodeList = Schema.decodeUnknownSync(SpaceListInput, strict);
+const decodeListResult = Schema.decodeUnknownSync(SpaceListResult, strict);
+const decodeError = Schema.decodeUnknownSync(SpaceServiceError, strict);
+const decodeCapability = Schema.decodeUnknownSync(SpaceCapability, strict);
+const encodeRequest = Schema.encodeSync(SpaceMutationRequest);
+const encodeLookup = Schema.encodeSync(SpaceReceiptLookupInput);
+const encodeWindow = Schema.encodeSync(SpaceReadBlocksResult);
+const encodeError = Schema.encodeSync(SpaceServiceError);
+const acknowledgement = { mutationId: "mutation-1", receiptEpoch: "epoch-1" };
+const writeContext = { environmentId: "environment-1", ...acknowledgement };
+const space = {
+  id: "space-1",
+  title: "",
+  isDefault: true,
+  revision: 0,
+  rootOrderRevision: 0,
+  createdAt: "2026-10-26T00:00:00.000Z",
+  updatedAt: "2026-10-26T00:00:00.000Z",
+};
+const page = {
+  id: "page-1",
+  spaceId: space.id,
+  title: "Page",
+  revision: 4,
+  rootOrder: "a",
+  createdAt: space.createdAt,
+  updatedAt: space.updatedAt,
+};
+const conflict = {
+  status: "conflict",
+  ...acknowledgement,
+  current: { catalogRevision: 9, defaultSpaceId: space.id, spaces: [space], pages: [page] },
+};
+const batch = {
+  ...writeContext,
+  pageId: page.id,
+  baseRevision: 4,
+  generation: 2,
+  mutations: [],
+};
+
+// Public decoding owns wire shape; service tests own execution, fingerprint and replay ordering.
+describe("Spaces core protocol", () => {
+  it("preserves opaque envelopes through strict request, lookup and block-window codecs", () => {
+    const block = {
+      id: "opaque",
+      parentId: null,
+      order: "a",
+      type: "future-table",
+      version: 7,
+      content: { cells: [{ text: "keep", marks: [{ type: "future", metadata: [1, null] }] }] },
+      futureEnvelope: { enabled: true },
+    };
+    const request = {
+      operation: "applyBlockBatch",
+      input: { ...batch, mutations: [{ kind: "replace", block }] },
+    };
+    const lookup = { request };
+    expect(encodeRequest(decodeRequest(request))).toEqual(request);
+    expect(encodeLookup(decodeLookup(lookup))).toEqual(lookup);
+    const window = { revision: 4, blocks: [block], nextCursor: null };
+    expect(encodeWindow(decodeWindow(window))).toEqual(window);
+  });
+
+  it("rejects unknown request fields at the strict decoding boundary", () => {
+    const request = { operation: "applyBlockBatch", input: batch };
+    expect(decodeRequest(request)).toEqual(request);
+    for (const raw of [
+      { ...request, placement: "root" },
+      { ...request, input: { ...batch, parentPageId: "other-page" } },
+      {
+        ...request,
+        input: { ...batch, mutations: [{ kind: "delete", blockId: "b", cascade: true }] },
+      },
+    ]) {
+      expect(() => decodeRequest(raw)).toThrow();
+    }
+    expect(() => decodeCreate({ ...writeContext, title: "", parentPageId: "p" })).toThrow();
+    expect(() => decodeLookup({ request, mutationId: "other" })).toThrow();
+  });
+
+  it("requires the original receipt epoch and preserves mutation intent exactly", () => {
+    const raw = { ...writeContext, title: "  café\n  " };
+    expect(decodeCreate(raw)).toEqual(raw);
+    expect(decodeCreate({ ...raw, title: "" }).title).toBe("");
+    const { receiptEpoch: _epoch, ...epochless } = raw;
+    expect(() => decodeCreate(epochless)).toThrow();
+    const { receiptEpoch: _batchEpoch, ...epochlessBatch } = batch;
+    expect(() => decodeBatch(epochlessBatch)).toThrow();
+    for (const field of ["receiptEpoch", "mutationId"]) {
+      expect(() => decodeCreate({ ...raw, [field]: "" })).toThrow();
+    }
+    expect(decodeBatch(batch).generation).toBe(2);
+  });
+
+  it.each([-1, 0.5, Number.MAX_SAFE_INTEGER + 1, Number.POSITIVE_INFINITY, Number.NaN])(
+    "rejects malformed revision and generation values (%s)",
+    (revision) => {
+      expect(() => decodeBatch({ ...batch, baseRevision: revision })).toThrow();
+      expect(() => decodeBatch({ ...batch, generation: revision })).toThrow();
+      expect(() =>
+        decodeReadBlocks({
+          environmentId: writeContext.environmentId,
+          pageId: page.id,
+          revision,
+        }),
+      ).toThrow();
+      expect(() =>
+        decodePageCreate({
+          ...writeContext,
+          spaceId: space.id,
+          baseRootOrderRevision: revision,
+          title: "",
+        }),
+      ).toThrow();
+      expect(() =>
+        decodeSetDefault({
+          ...writeContext,
+          spaceId: space.id,
+          defaultSpaceId: space.id,
+          baseRevision: 0,
+          baseDefaultRevision: revision,
+        }),
+      ).toThrow();
+    },
+  );
+
+  it("binds receipt operation tags to saved and conflict result shapes", () => {
+    const saved = {
+      operation: "createSpace",
+      result: { status: "saved", ...acknowledgement, space },
+    };
+    expect(decodeReceipt(saved)).toEqual(saved);
+    expect(() => decodeReceipt({ ...saved, operation: "updatePage" })).toThrow();
+    expect(() => decodeReceipt({ ...saved, operation: "setDefaultSpace" })).toThrow();
+    const pageCreated = {
+      operation: "createPage",
+      result: { status: "saved", ...acknowledgement, space, page },
+    };
+    expect(decodeReceipt(pageCreated)).toEqual(pageCreated);
+    expect(() => decodeReceipt({ ...pageCreated, operation: "updatePage" })).toThrow();
+    expect(() => decodeReceipt({ operation: "createSpace", result: conflict })).toThrow();
+    expect(() => decodeReceipt({ operation: "deletePage", result: conflict })).toThrow();
+    const blockConflict = {
+      operation: "applyBlockBatch",
+      result: { ...conflict, generation: 2, revision: 4 },
+    };
+    expect(decodeReceipt(blockConflict)).toEqual(blockConflict);
+    expect(() => decodeReceipt({ operation: "applyBlockBatch", result: conflict })).toThrow();
+    expect(() => decodeReceipt({ ...blockConflict, operation: "updatePage" })).toThrow();
+    const found = { status: "found", receipt: blockConflict };
+    expect(decodeLookupResult(found)).toEqual(found);
+    expect(() => decodeLookupResult({ status: "found" })).toThrow();
+  });
+
+  it("keeps conflicts bounded to summaries without allowing page bodies", () => {
+    const receipt = { operation: "updatePage", result: conflict };
+    expect(decodeReceipt(receipt)).toEqual(receipt);
+    for (const current of [
+      { ...conflict.current, spaces: [space, space, space] },
+      { ...conflict.current, pages: [page, page] },
+      { ...conflict.current, pages: [{ ...page, blocks: [] }] },
+    ]) {
+      expect(() => decodeReceipt({ ...receipt, result: { ...conflict, current } })).toThrow();
+    }
+  });
+
+  it("requires admission for an empty bootstrap list without defaulting read limits", () => {
+    const input = { environmentId: writeContext.environmentId };
+    expect(decodeList(input)).toEqual(input);
+    expect(() => decodeList({ ...input, limit: 0 })).toThrow();
+    const result = {
+      items: [],
+      defaultSpaceId: space.id,
+      catalogRevision: 0,
+      nextCursor: null,
+      mutationAdmission: {
+        epoch: "epoch-1",
+        acceptsUntil: "2026-10-27T00:00:00.000Z",
+        retainUntil: "2026-11-03T00:00:00.000Z",
+      },
+    };
+    expect(decodeListResult(result)).toEqual(result);
+    const { mutationAdmission: _admission, ...withoutAdmission } = result;
+    expect(() => decodeListResult(withoutAdmission)).toThrow();
+  });
+
+  it("does not apply provisional service maxima to retained-request decoding", () => {
+    const request = {
+      operation: "applyBlockBatch",
+      input: {
+        ...batch,
+        receiptEpoch: "retired-epoch",
+        mutations: Array.from({ length: 101 }, (_, index) => ({
+          kind: "insert",
+          block: {
+            id: `block-${index}`,
+            parentId: null,
+            order: `${index}`,
+            type: "paragraph",
+            version: 1,
+            content: { runs: [{ text: "x".repeat(513), marks: [] }] },
+          },
+        })),
+      },
+    };
+    expect(decodeRequest(request)).toEqual(request);
+    const create = { operation: "createSpace", input: { ...writeContext, title: "x".repeat(513) } };
+    expect(decodeRequest(create)).toEqual(create);
+    const receipt = {
+      operation: "createSpace",
+      result: {
+        status: "saved",
+        ...acknowledgement,
+        space: { ...space, title: create.input.title },
+      },
+    };
+    expect(decodeReceipt(receipt)).toEqual(receipt);
+  });
+
+  it("decodes safe typed failures without accepting arbitrary limits or public messages", () => {
+    const raw = {
+      _tag: "SpaceLimitExceededError",
+      limit: "maxMutationBytes",
+      actual: 300_000,
+      maximum: 262_144,
+    };
+    const error = decodeError(raw);
+    expect(encodeError(error)).toEqual(raw);
+    expect(error.message).toBe("The Spaces request exceeds maxMutationBytes.");
+    expect(() => decodeError({ ...raw, limit: "maxAssets" })).toThrow();
+    expect(() => decodeError({ ...raw, actual: -1 })).toThrow();
+    expect(() => decodeError({ ...raw, message: "private request body" })).toThrow();
+    expect(() => decodeCapability(true)).toThrow();
   });
 });
