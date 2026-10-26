@@ -66,7 +66,7 @@ export const readSpacePageLocation = Effect.fn("Spaces.readPageLocation")(functi
     result = yield* read(expectedId);
     ancestors.unshift(result.page);
   }
-  if (input.version === 2) {
+  if (input.version === 2 && ancestors.length > 0) {
     for (const page of [current.page, ...ancestors]) {
       const verified = yield* read(page.id);
       bytes += new TextEncoder().encode(encodePage(verified)).byteLength;

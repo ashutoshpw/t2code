@@ -64,6 +64,16 @@ describe("readSpacePageLocation", () => {
         expect(result.page.spaceId).toBe("current-space");
         expect(result.ancestors.map((page) => page.id)).toEqual(["root", "parent"]);
         expect(reads).toEqual(["child", "parent", "root", "child", "root", "parent"]);
+        reads.length = 0;
+        const root = yield* readSpacePageLocation(
+          { pageId: rows[2]!.page.id, version: 2 },
+          (id) => {
+            reads.push(id);
+            return Effect.succeed(rows[2]!);
+          },
+        );
+        expect(root.ancestors).toEqual([]);
+        expect(reads).toEqual(["root"]);
       }),
   );
 
