@@ -19,6 +19,7 @@ import { openMediaFile } from "../assets/MediaFile.ts";
 import * as Catalog from "./assets/Catalog.ts";
 import * as Upload from "./assets/Upload.ts";
 import * as Tokens from "./assets/Tokens.ts";
+import * as AssetReferences from "./assets/References.ts";
 
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as ServerSettings from "../serverSettings.ts";
@@ -1442,6 +1443,7 @@ const make = Effect.fn("SpacesService.make")(function* (
             },
             meta.observed_time_ms,
           );
+          yield* AssetReferences.publish(result.assetRefsAfter);
           yield* ReferenceStore.release(result.retiredIds);
           yield* changed();
         }

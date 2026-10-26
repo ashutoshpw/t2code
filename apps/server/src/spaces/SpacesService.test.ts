@@ -4737,7 +4737,6 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           }
           for (const unsupported of [
             { ...block("unsupported"), type: "child_page", content: { pageId: "elsewhere" } },
-            { ...block("unsupported"), type: "image", content: { assetId: "asset" } },
             { ...block("unsupported"), version: 2 },
             { ...block("unsupported"), type: "future" },
           ])

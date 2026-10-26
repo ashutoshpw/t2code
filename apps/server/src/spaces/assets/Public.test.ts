@@ -3,6 +3,7 @@ import * as NodeHttpPlatform from "@effect/platform-node/NodeHttpPlatform";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import { describe, expect, it } from "@effect/vitest";
 import { EnvironmentId } from "@t2code/contracts";
+import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as Context from "effect/Context";
 import * as Clock from "effect/Clock";
@@ -317,6 +318,55 @@ describe("Spaces public asset wiring", () => {
               { environmentId, uploadId: minted.uploadId },
               "owner",
             ),
+          ).toEqual(saved);
+          const library = yield* service.listSpaces({ environmentId });
+          const receiptEpoch = library.mutationAdmission.epoch;
+          const page = yield* service.createPage({
+            environmentId,
+            receiptEpoch,
+            mutationId: `page-${kind}`,
+            spaceId: library.defaultSpaceId,
+            baseRootOrderRevision: 0,
+            title: "Media",
+          });
+          if (page.status !== "saved") return yield* Effect.die("Expected page");
+          const block = {
+            id: C.SpaceBlockId.make(`block-${kind}`),
+            parentId: null,
+            order: "1".padStart(32, "0"),
+            type: kind,
+            version: 1,
+            content: { assetId: saved.assetId, caption: [{ text: "before", marks: [] }] },
+          };
+          for (const [revision, caption] of ["before", "after"].entries()) {
+            expect(
+              (yield* service.applyBlockBatch({
+                environmentId,
+                receiptEpoch,
+                mutationId: `caption-${kind}-${revision}`,
+                pageId: page.page.id,
+                baseRevision: revision,
+                generation: revision,
+                mutations: [
+                  {
+                    kind: revision === 0 ? "insert" : "replace",
+                    block: {
+                      ...block,
+                      content: { ...block.content, caption: [{ text: caption, marks: [] }] },
+                    },
+                  },
+                ],
+              })).status,
+            ).toBe("saved");
+          }
+          expect(
+            (yield* service.readBlocks({ environmentId, pageId: page.page.id, revision: 2 }))
+              .blocks,
+          ).toEqual([
+            { ...block, content: { ...block.content, caption: [{ text: "after", marks: [] }] } },
+          ]);
+          expect(
+            yield* service.getAssetMetadata({ environmentId, assetId: saved.assetId }),
           ).toEqual(saved);
           const signed = yield* issueAssetUrl({
             resource: { _tag: "spaces-asset", environmentId, assetId: saved.assetId },
