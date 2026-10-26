@@ -5,6 +5,7 @@ import type { BlockRow } from "./BlockStore.ts";
 import { canonical, historyLimits as limits, limits as coreLimits } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as PageStore from "./PageStore.ts";
+import * as Reconciliation from "./assets/Reconciliation.ts";
 
 export interface PagePreimage {
   readonly pageId: string;
@@ -49,6 +50,7 @@ const remove = Effect.fn("SpacesRevisions.remove")(function* (rows: readonly Rev
   const sql = yield* SpacesSql.SpacesSql;
   for (const row of rows) {
     yield* sql`DELETE FROM spaces_revisions WHERE page_id = ${row.page_id} AND to_revision = ${row.to_revision}`;
+    yield* Reconciliation.issue("history", canonical([row.page_id, row.to_revision]), null);
     yield* sql`UPDATE spaces_pages SET retained_revision_count = retained_revision_count - 1,
       retained_revision_bytes = retained_revision_bytes - ${row.logical_bytes} WHERE page_id = ${row.page_id}`;
   }
@@ -216,4 +218,5 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
     retained_revision_bytes = retained_revision_bytes + ${bytes} WHERE page_id = ${input.pageId}`;
   yield* sql`UPDATE spaces_core SET revision_bytes = revision_bytes + ${bytes} WHERE singleton = 1`;
   used.protectedRevisions.add(canonical([input.pageId, input.toRevision]));
+  yield* Reconciliation.noteRevision(input.pageId, input.toRevision, payload);
 });

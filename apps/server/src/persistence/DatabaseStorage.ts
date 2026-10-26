@@ -11,6 +11,8 @@ import * as Schedule from "effect/Schedule";
 import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import * as SqlClient from "effect/sql/SqlClient";
+import * as Option from "effect/Option";
+import * as SpacesService from "../spaces/SpacesService.ts";
 
 import { resolveHostCliCommand } from "../cli/invocation.ts";
 import * as ServerConfig from "../config.ts";
@@ -38,6 +40,7 @@ const make = Effect.gen(function* () {
   const config = yield* ServerConfig.ServerConfig;
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
+  const spaces = yield* Effect.serviceOption(SpacesService.SpacesService);
   const statusRef = yield* SubscriptionRef.make<DatabaseStorageStatus | null>(null);
 
   // The notice shows host-shell quoting verbatim; desktop needs its launcher because t3 is absent from PATH.
@@ -56,11 +59,15 @@ const make = Effect.gen(function* () {
     const size = yield* sql<{ readonly page_size: number }>`PRAGMA page_size`;
     const mode = yield* sql<{ readonly auto_vacuum: number }>`PRAGMA auto_vacuum`;
     const pageSize = size[0]?.page_size ?? 0;
+    const spacesStatus = Option.isSome(spaces)
+      ? yield* spaces.value.maintainAssets.pipe(Effect.orElseSucceed(() => null))
+      : undefined;
     const next: DatabaseStorageStatus = {
       databaseBytes: (pages[0]?.page_count ?? 0) * pageSize,
       reclaimableBytes: (free[0]?.freelist_count ?? 0) * pageSize,
       incrementalVacuumEnabled: mode[0]?.auto_vacuum === 2,
       compactCommand,
+      ...(spacesStatus === undefined ? {} : { spaces: spacesStatus }),
     };
     // Every set reaches each open Storage page; most passes change nothing.
     if (!Equal.equals(yield* SubscriptionRef.get(statusRef), next)) {

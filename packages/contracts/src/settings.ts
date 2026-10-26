@@ -1,3 +1,4 @@
+import { SpacesAssetReconciliationStatus } from "./spaces.ts";
 import { EasDeviceHostConfigs, SshDeviceHostConfigs } from "./device.ts";
 import {
   AuthOrchestrationOperateScope,
@@ -1054,6 +1055,18 @@ const NULLABLE_PROJECT_SETTINGS_OVERRIDES: ReadonlySet<ProjectScopedServerSettin
 /** Reclaimable bytes from which the offline `t2 doctor` repair is worth suggesting. */
 export const DATABASE_COMPACTION_RECOMMENDED_BYTES = 1024 ** 3;
 
+export const SpacesStorageStatus = Schema.Struct({
+  databaseBytes: Schema.Number,
+  walBytes: Schema.Number,
+  sharedMemoryBytes: Schema.Number,
+  registeredAssetBytes: Schema.Number,
+  reservedBytes: Schema.Number,
+  observedAssetFileBytes: Schema.Number,
+  observedStagingFileBytes: Schema.Number,
+  observedAt: Schema.Number,
+  reconciliation: SpacesAssetReconciliationStatus,
+});
+export type SpacesStorageStatus = typeof SpacesStorageStatus.Type;
 export const DatabaseStorageStatus = Schema.Struct({
   databaseBytes: Schema.Number,
   /** Free pages inside the file that an offline VACUUM (or incremental auto_vacuum) returns to disk. */
@@ -1062,6 +1075,7 @@ export const DatabaseStorageStatus = Schema.Struct({
   incrementalVacuumEnabled: Schema.Boolean,
   /** Run on the host while offline. */
   compactCommand: Schema.String,
+  spaces: Schema.optionalKey(Schema.NullOr(SpacesStorageStatus)),
 });
 export type DatabaseStorageStatus = typeof DatabaseStorageStatus.Type;
 

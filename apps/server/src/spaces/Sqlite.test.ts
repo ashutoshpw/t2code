@@ -22,6 +22,7 @@ import Migration0004 from "./Migrations/004_PageOwners.ts";
 import Migration0005 from "./Migrations/005_ReferenceIdentity.ts";
 import Migration0006 from "./Migrations/006_Recovery.ts";
 import Migration0007 from "./Migrations/007_Search.ts";
+import Migration0008 from "./Migrations/008_Assets.ts";
 
 import * as ChatSqlite from "../persistence/Sqlite.ts";
 import { runMigrations } from "./Migrations.ts";
@@ -70,6 +71,7 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
       { migration_id: 6, name: "Recovery" },
       { migration_id: 7, name: "Search" },
       { migration_id: 8, name: "Assets" },
+      { migration_id: 9, name: "AssetReconciliation" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -119,9 +121,9 @@ it.effect("rolls back a failed schema migration together with its ledger entry",
 );
 
 it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
-  it.effect(
-    "upgrades accepted007 storage to assets without rewriting existing data without changing nested content",
-    () =>
+  it.effect.each([7, 8])(
+    "upgrades accepted storage checkpoint%s to asset reconciliation without changing nested content",
+    (checkpoint) =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
@@ -153,6 +155,11 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
               ),
               "6_Recovery": Migration0006.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
               "7_Search": Migration0007.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+              ...(checkpoint === 8
+                ? {
+                    "8_Assets": Migration0008.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+                  }
+                : {}),
             }),
           });
           yield* sql`INSERT INTO spaces_ids(id,kind) VALUES ('parent','page'),('child','page'),('owner','block')`;
@@ -692,7 +699,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            8,
+            9,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -806,7 +813,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (9, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (10, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;

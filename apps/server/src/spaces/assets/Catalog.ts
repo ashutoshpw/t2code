@@ -223,6 +223,7 @@ export const claim = Effect.fn("SpacesAssetCatalog.claim")(function* (
   if (current.active_count >= limits.environmentActive) return yield* error("active_limit");
   const attemptId = NodeCrypto.randomUUID();
   yield* sql`UPDATE spaces_asset_uploads SET state = 'receiving',attempt_id = ${attemptId} WHERE upload_id = ${uploadId}`;
+  yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 0,staging_generation = staging_generation + 1 WHERE singleton = 1`;
   yield* sql`UPDATE spaces_asset_usage SET active_count = active_count + 1 WHERE singleton = 1`;
   yield* sql`UPDATE spaces_asset_callers SET active_count = active_count + 1 WHERE caller_id = ${callerId}`;
   return { ...row, state: "receiving" as const, attempt_id: attemptId } satisfies Claim;
@@ -330,6 +331,8 @@ export const finish = Effect.fn("SpacesAssetCatalog.finish")(function* (
   yield* sql`INSERT INTO spaces_assets(asset_id,digest,name,state,created_at_ms,width,height)
     VALUES (${row.asset_id},${row.digest},${row.name},'ready',${now},${row.width},${row.height})`;
   yield* sql`UPDATE spaces_asset_blobs SET state = 'ready',physical_charged = 1 WHERE digest = ${row.digest}`;
+  yield* sql`DELETE FROM spaces_asset_reconciliation_issues WHERE kind = 'blob' AND entity = ${row.digest}`;
+  yield* sql`UPDATE spaces_asset_reconciliation SET assets_done = 0,assets_generation = assets_generation + 1 WHERE singleton = 1`;
   if (!blob.physical_charged)
     yield* sql`UPDATE spaces_asset_usage SET physical_bytes = physical_bytes + ${row.expected_bytes} WHERE singleton = 1`;
   yield* releaseCounts(row, !published.separateStaging);
@@ -371,7 +374,8 @@ export const readyAsset = Effect.fn("SpacesAssetCatalog.readyAsset")(function* (
     readonly height: number | null;
   }>`SELECT a.asset_id,a.digest,a.name,b.byte_size,b.mime_type,a.width,a.height
     FROM spaces_assets a JOIN spaces_asset_blobs b ON b.digest = a.digest
-    WHERE a.asset_id = ${assetId} AND a.state = 'ready' AND b.state = 'ready'`;
+    WHERE a.asset_id = ${assetId} AND a.state = 'ready' AND b.state = 'ready'
+    AND NOT EXISTS (SELECT 1 FROM spaces_asset_reconciliation_issues i WHERE i.kind = 'blob' AND i.entity = b.digest)`;
   if (!row) return yield* error("not_found");
   return row;
 });
@@ -458,6 +462,7 @@ export const releaseStaging = Effect.fn("SpacesAssetCatalog.releaseStaging")(fun
   if (absent.uploadId !== row.upload_id || absent.attemptId !== row.attempt_id)
     return yield* error("intent_mismatch");
   if (row.state !== "ready") return yield* error("stale_attempt");
+  yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 0,staging_generation = staging_generation + 1 WHERE singleton = 1`;
   if (!row.cleanup_pending) return;
   yield* releaseCounts(row, true);
   yield* sql`UPDATE spaces_asset_uploads SET cleanup_pending = 0 WHERE upload_id = ${row.upload_id}`;

@@ -7,6 +7,12 @@ import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import * as TestClock from "effect/testing/TestClock";
 import * as SqlClient from "effect/sql/SqlClient";
+import * as Stream from "effect/Stream";
+import * as Option from "effect/Option";
+import { EnvironmentId } from "@t2code/contracts";
+import * as SpacesService from "../spaces/SpacesService.ts";
+import * as Settings from "../serverSettings.ts";
+import * as Identity from "../environment/ServerEnvironment.ts";
 
 import * as ServerConfig from "../config.ts";
 import * as EventStore from "../orchestration-v2/EventStore.ts";
@@ -35,6 +41,53 @@ const storageLayer = <E>(
   );
 
 const testConfig = ServerConfig.layerTest(process.cwd(), { prefix: "database-storage-" });
+
+it.effect("publishes bounded Spaces accounting through the existing storage status worker", () =>
+  Effect.gen(function* () {
+    const storage = yield* DatabaseStorage.DatabaseStorage;
+    const config = yield* ServerConfig.ServerConfig;
+    const fs = yield* FileSystem.FileSystem;
+    const result = yield* Stream.runHead(
+      storage.status.pipe(Stream.filter((status) => status !== null)),
+    );
+    const status = Option.getOrThrow(result)!;
+    assert.isNotNull(status.spaces);
+    assert.isDefined(status.spaces);
+    assert.equal(status.spaces?.databaseBytes, Number((yield* fs.stat(config.spacesDbPath)).size));
+    assert.deepEqual(status.spaces?.reconciliation, {
+      currentPending: false,
+      historyPending: true,
+      catalogPending: true,
+      inventoryPending: true,
+      unresolved: false,
+      gcEnabled: false,
+    });
+  }).pipe(
+    Effect.provide(
+      DatabaseStorage.layer.pipe(
+        Layer.provide(
+          Layer.unwrap(
+            Effect.map(ServerConfig.ServerConfig, (config) =>
+              SpacesService.layerFromPath(config.spacesDbPath),
+            ),
+          ).pipe(
+            Layer.provide(Settings.layerTest({ spacesEnabled: true })),
+            Layer.provide(
+              Layer.succeed(Identity.ServerEnvironmentIdentity, {
+                getEnvironmentId: Effect.succeed(EnvironmentId.make("storage-report")),
+              }),
+            ),
+          ),
+        ),
+        Layer.provide(ProjectionMaintenance.layer),
+        Layer.provide(Layer.merge(EventStore.layer, ProjectionStore.layer)),
+        Layer.provideMerge(Sqlite.layerMemory),
+        Layer.provideMerge(testConfig),
+        Layer.provideMerge(NodeServices.layer),
+      ),
+    ),
+  ),
+);
 
 it.effect("a new database returns freed pages online without losing data", () =>
   Effect.gen(function* () {

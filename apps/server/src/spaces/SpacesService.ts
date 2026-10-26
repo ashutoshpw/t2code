@@ -1,7 +1,7 @@
 // @effect-diagnostics nodeBuiltinImport:off -- stable IDs are allocated by the platform cryptographic generator.
 import * as NodeCrypto from "node:crypto";
 
-import { EnvironmentId } from "@t2code/contracts";
+import { EnvironmentId, type SpacesStorageStatus } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -20,6 +20,8 @@ import * as Catalog from "./assets/Catalog.ts";
 import * as Upload from "./assets/Upload.ts";
 import * as Tokens from "./assets/Tokens.ts";
 import * as AssetReferences from "./assets/References.ts";
+import * as Reconciliation from "./assets/Reconciliation.ts";
+import * as Inventory from "./assets/Inventory.ts";
 
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as ServerSettings from "../serverSettings.ts";
@@ -45,6 +47,7 @@ import * as Sqlite from "./Sqlite.ts";
 export class SpacesService extends Context.Service<
   SpacesService,
   {
+    readonly maintainAssets: Effect.Effect<SpacesStorageStatus | null, C.SpaceServiceError>;
     readonly createAssetUpload: (
       input: unknown,
       callerId: string,
@@ -314,6 +317,8 @@ const make = Effect.fn("SpacesService.make")(function* (
     stagingDir: path.join(path.dirname(dbPath), "spaces", "staging"),
   };
   const activeUploads = new Set<string>();
+  const inventory = yield* Inventory.make(assetDirectories);
+  const maintenanceMutex = yield* Semaphore.make(1);
   const recover = Effect.fn("SpacesService.recoverAsset")(function* (
     row: Catalog.UploadRow,
     now: number,
@@ -354,10 +359,12 @@ const make = Effect.fn("SpacesService.make")(function* (
           yield* sql.withTransaction(
             SearchStore.checkModule().pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
           );
+          yield* sql`UPDATE spaces_asset_reconciliation SET assets_done = 0,staging_done = 0 WHERE singleton = 1`;
           const environmentId = yield* identity.getEnvironmentId;
           const meta = yield* sql
             .withTransaction(Receipts.observe(environmentId))
             .pipe(Effect.provideService(SpacesSql.SpacesSql, sql));
+          yield* sql`UPDATE spaces_asset_reconciliation SET cycle_started_ms = ${meta.observed_time_ms} WHERE singleton = 1 AND cycle_started_ms = 0`;
           const rows = yield* Catalog.recoveryBatch().pipe(
             Effect.provideService(SpacesSql.SpacesSql, sql),
           );
@@ -1444,6 +1451,8 @@ const make = Effect.fn("SpacesService.make")(function* (
             meta.observed_time_ms,
           );
           yield* AssetReferences.publish(result.assetRefsAfter);
+          for (const changedBlock of result.blocksAfter)
+            yield* Reconciliation.noteBlock(changedBlock.id, changedBlock.payload);
           yield* ReferenceStore.release(result.retiredIds);
           yield* changed();
         }
@@ -1575,6 +1584,7 @@ const make = Effect.fn("SpacesService.make")(function* (
             version: 2,
             limits,
             assetRecoveryPending,
+            assetReconciliation: yield* Reconciliation.status(),
             features: {
               blockMoves: true,
               referenceResolution: true,
@@ -1590,7 +1600,144 @@ const make = Effect.fn("SpacesService.make")(function* (
       SpacesUnavailableError: () => Effect.succeed(null),
     }),
   );
+  const maintainAssets = maintenanceMutex.withPermits(1)(
+    Effect.gen(function* () {
+      const snapshot = yield* settings.getSettings.pipe(
+        Effect.mapError(() => new C.SpacesUnavailableError({ stage: "settings" })),
+      );
+      if (!snapshot.spacesEnabled) return null;
+      const environmentId = yield* identity.getEnvironmentId;
+      const progress = yield* run(environmentId, (meta) =>
+        Effect.gen(function* () {
+          const sql = yield* SpacesSql.SpacesSql;
+          const current = yield* Reconciliation.state();
+          if (
+            current.blocks_done &&
+            current.history_done &&
+            current.blobs_done &&
+            current.assets_done &&
+            current.staging_done &&
+            meta.observed_time_ms - current.cycle_started_ms >= 86_400_000
+          )
+            yield* sql`UPDATE spaces_asset_reconciliation SET block_cursor = '',blocks_done = 0,history_page = '',history_revision = -1,history_done = 0,
+            blob_cursor = '',blobs_done = 0,assets_done = 0,staging_done = 0,cycle_started_ms = ${meta.observed_time_ms} WHERE singleton = 1`;
+          return yield* Reconciliation.state();
+        }),
+      );
+      if (!progress.blocks_done || !progress.history_done) {
+        yield* run(environmentId, () => Reconciliation.referencesPass());
+      } else if (!progress.blobs_done) {
+        const [blob] = yield* run(environmentId, () =>
+          Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            return yield* sql<{
+              readonly digest: string;
+              readonly byte_size: number;
+              readonly generation: number;
+              readonly state: string;
+              readonly mime_type: string;
+              readonly media_kind: string;
+            }>`
+          SELECT digest,byte_size,generation,state,mime_type,media_kind FROM spaces_asset_blobs WHERE digest > ${progress.blob_cursor} ORDER BY digest LIMIT 1`;
+          }),
+        );
+        const valid = blob ? yield* inventory.verify(blob) : true;
+        yield* run(environmentId, () =>
+          Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            if (!blob)
+              yield* sql`UPDATE spaces_asset_reconciliation SET blobs_done = 1 WHERE singleton = 1`;
+            else {
+              const [current] = yield* sql<{
+                readonly generation: number;
+                readonly state: string;
+              }>`SELECT generation,state FROM spaces_asset_blobs WHERE digest = ${blob.digest}`;
+              if (current?.generation === blob.generation && current.state === blob.state)
+                yield* Reconciliation.issue(
+                  "blob",
+                  blob.digest,
+                  blob.state === "ready" && valid ? null : "unavailable_file",
+                );
+              yield* sql`UPDATE spaces_asset_reconciliation SET blob_cursor = ${blob.digest} WHERE singleton = 1`;
+            }
+          }),
+        );
+      } else {
+        const now = yield* run(environmentId, (meta) => Effect.succeed(meta.observed_time_ms));
+        for (const kind of ["assets", "staging"] as const) {
+          if ((kind === "assets" ? progress.assets_done : progress.staging_done) === 1) continue;
+          const found = yield* inventory
+            .discover(
+              kind,
+              now,
+              kind === "assets" ? progress.assets_generation : progress.staging_generation,
+            )
+            .pipe(Effect.mapError(() => new C.SpacesUnavailableError({ stage: "storage" })));
+          yield* run(environmentId, () =>
+            Effect.gen(function* () {
+              const sql = yield* SpacesSql.SpacesSql;
+              for (const entry of found.entries) yield* inventory.record(entry);
+              if (found.done) {
+                if (kind === "assets")
+                  yield* sql`UPDATE spaces_asset_reconciliation SET assets_done = 1 WHERE singleton = 1 AND assets_generation = ${found.generation}`;
+                else
+                  yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 1 WHERE singleton = 1 AND staging_generation = ${found.generation}`;
+              }
+            }),
+          );
+          yield* inventory.acknowledge(kind);
+        }
+        const entries = yield* run(environmentId, () =>
+          Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            return yield* sql<{
+              readonly kind: string;
+              readonly name: string;
+            }>`SELECT kind,name FROM spaces_asset_file_observations
+          WHERE (kind,name) > (${progress.file_kind},${progress.file_cursor}) ORDER BY kind,name LIMIT 8`;
+          }),
+        );
+        const observations = yield* inventory
+          .refresh(entries, now)
+          .pipe(Effect.mapError(() => new C.SpacesUnavailableError({ stage: "storage" })));
+        yield* run(environmentId, () =>
+          Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            for (const entry of observations) yield* inventory.record(entry);
+            const last = entries.at(-1);
+            yield* sql`UPDATE spaces_asset_reconciliation SET file_kind = ${last?.kind ?? ""},file_cursor = ${last?.name ?? ""} WHERE singleton = 1`;
+          }),
+        );
+      }
+      const accounting = yield* run(environmentId, () =>
+        Effect.gen(function* () {
+          const usage = yield* Catalog.usage().pipe(assetErrors);
+          const current = yield* Reconciliation.state();
+          return {
+            registeredAssetBytes: usage.physical_bytes,
+            reservedBytes: usage.reserved_bytes,
+            observedAssetFileBytes: current.assets_bytes,
+            observedStagingFileBytes: current.staging_bytes,
+            observedAt: current.observed_at_ms,
+            reconciliation: yield* Reconciliation.status(),
+          };
+        }),
+      );
+      const bytes = (file: string) =>
+        fs.stat(file).pipe(
+          Effect.map((info) => Number(info.size)),
+          Effect.mapError(() => new C.SpacesUnavailableError({ stage: "storage" })),
+        );
+      return {
+        ...accounting,
+        databaseBytes: yield* bytes(dbPath),
+        walBytes: yield* bytes(`${dbPath}-wal`).pipe(Effect.orElseSucceed(() => 0)),
+        sharedMemoryBytes: yield* bytes(`${dbPath}-shm`).pipe(Effect.orElseSucceed(() => 0)),
+      };
+    }),
+  );
   return SpacesService.of({
+    maintainAssets,
     createAssetUpload,
     getAssetUpload,
     finalizeAssetUpload,

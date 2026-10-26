@@ -287,5 +287,6 @@ export const apply = Effect.fnUntraced(function* (
     retiredIds: changes.filter((change) => change.block === null).map((change) => change.id),
     blocksBefore: changes.map(({ id, old }) => ({ id, row: old ? { ...old } : null })),
     assetRefsAfter,
+    blocksAfter: changes.map(({ id, block, payload }) => ({ id, payload: block ? payload : null })),
   };
 });

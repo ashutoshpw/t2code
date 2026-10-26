@@ -706,10 +706,19 @@ export const SpaceLimits = Schema.Struct({
   cleanupBatchRows: PositiveInt,
 });
 export type SpaceLimits = typeof SpaceLimits.Type;
+export const SpacesAssetReconciliationStatus = Schema.Struct({
+  currentPending: Schema.Boolean,
+  historyPending: Schema.Boolean,
+  catalogPending: Schema.Boolean,
+  inventoryPending: Schema.Boolean,
+  unresolved: Schema.Boolean,
+  gcEnabled: Schema.Literal(false),
+});
 export const SpaceCapability = Schema.Struct({
   version: PositiveInt,
   limits: SpaceLimits,
   assetRecoveryPending: Schema.optionalKey(Schema.Boolean),
+  assetReconciliation: Schema.optionalKey(SpacesAssetReconciliationStatus),
   // Flags describe implemented methods, independently of permissions and index readiness.
   features: Schema.optionalKey(
     Schema.Struct({
