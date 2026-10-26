@@ -8,8 +8,13 @@ const root = path.resolve(__dirname, "../..");
 const INERT = [
   /^docs\//,
   /^\.(agents|cursor|vscode|devcontainer|macroscope|repos)\//,
-  /^[^/]+\.md$/,
+  // Markdown never feeds a build, nested READMEs included, except the triage
+  // playbook a server test pins. Repository metadata cannot either;
+  // repo-owned PR assets are rejected by lint.
+  /^(?!\.github\/triage\/PLAYBOOK\.md$).*\.md$/,
   /^LICENSE$/,
+  /^\.gitignore$/,
+  /^\.github\/(ISSUE_TEMPLATE|pr-assets)\//,
 ];
 
 // Shared test setup and vendored mobile dependencies affect every package.
