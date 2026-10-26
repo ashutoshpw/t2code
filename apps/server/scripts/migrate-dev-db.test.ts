@@ -1,3 +1,6 @@
+// @effect-diagnostics nodeBuiltinImport:off -- subprocess fixture retains committed Spaces WAL.
+import * as NodeChildProcess from "node:child_process";
+
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
@@ -108,6 +111,130 @@ const createFixtureSource = Effect.fn("createMigrateDevDbFixtureSource")(functio
 const layer = SpacesDatabaseTools.layer.pipe(Layer.provideMerge(NodeServices.layer));
 
 it.layer(layer)("migrate-dev-db", (it) => {
+  it.effect.each([
+    {
+      name: "Spaces main to snapshot",
+      target: "statev2.sqlite.migrate-dev-db-tmp",
+      reverse: false,
+    },
+    {
+      name: "Spaces main to snapshot WAL",
+      target: "statev2.sqlite.migrate-dev-db-tmp-wal",
+      reverse: false,
+    },
+    { name: "Spaces main to chat SHM", target: "statev2.sqlite-shm", reverse: false },
+    {
+      name: "Spaces main to snapshot journal",
+      target: "statev2.sqlite.migrate-dev-db-tmp-journal",
+      reverse: false,
+    },
+    {
+      name: "snapshot SHM to Spaces main",
+      target: "statev2.sqlite.migrate-dev-db-tmp-shm",
+      reverse: true,
+    },
+  ])("refuses overlapping database families: $name", ({ target, reverse }) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const sourceDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-overlap-source-" });
+      const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-overlap-dest-" });
+      const source = yield* createFixtureSource(sourceDir);
+      const stateDir = path.join(destDir, "userdata");
+      const spacesPath = path.join(stateDir, "spaces.sqlite");
+      const targetPath = path.join(stateDir, target);
+      const backingPath = reverse ? spacesPath : targetPath;
+      yield* Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        yield* sql`UPDATE spaces SET title = 'EXISTING SANDBOX DATA', revision = 7 WHERE is_default = 1`;
+      }).pipe(Effect.provide(SpacesSqlite.layerFromPath(backingPath)));
+      yield* fs.symlink(backingPath, reverse ? targetPath : spacesPath);
+      const before = yield* fs.readFile(backingPath);
+      const beforeSource = yield* fs.readFile(source);
+      const sourceFiles = (yield* fs.readDirectory(path.dirname(source))).sort();
+      const destinationFiles = (yield* fs.readDirectory(stateDir)).sort();
+
+      const result = yield* runMigrateDevDb(
+        { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
+        { sharedHome: sourceDir },
+      ).pipe(Effect.result);
+      assert.isTrue(yield* fs.exists(backingPath), "Existing Spaces backing file was deleted");
+      assert.equal(
+        Buffer.compare(yield* fs.readFile(backingPath), before),
+        0,
+        "Existing Spaces bytes changed",
+      );
+      assert.isTrue(Result.isFailure(result), "Migration accepted overlapping database families");
+      if (Result.isFailure(result))
+        assert.equal(result.failure._tag, "MigrateDevDbDatabaseOverlapError");
+      assert.equal(Buffer.compare(yield* fs.readFile(source), beforeSource), 0);
+      assert.deepEqual((yield* fs.readDirectory(path.dirname(source))).sort(), sourceFiles);
+      assert.deepEqual((yield* fs.readDirectory(stateDir)).sort(), destinationFiles);
+      yield* Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        assert.deepEqual(yield* sql`SELECT title, revision FROM spaces WHERE is_default = 1`, [
+          { title: "EXISTING SANDBOX DATA", revision: 7 },
+        ]);
+      }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: backingPath, readonly: true })));
+    }),
+  );
+
+  it.effect("refuses a snapshot main alias to committed Spaces WAL before inspection", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const sourceDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-wal-alias-source-" });
+      const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-wal-alias-dest-" });
+      const source = yield* createFixtureSource(sourceDir);
+      const stateDir = path.join(destDir, "userdata");
+      const spacesPath = path.join(stateDir, "spaces.sqlite");
+      yield* SpacesSql.SpacesSql.pipe(Effect.provide(SpacesSqlite.layerFromPath(spacesPath)));
+      const writer = NodeChildProcess.spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          `
+        import { DatabaseSync } from 'node:sqlite';
+        const db = new DatabaseSync(process.argv[1]);
+        db.exec("PRAGMA wal_autocheckpoint = 0; UPDATE spaces SET title = 'EXISTING SANDBOX DATA', revision = 7 WHERE is_default = 1");
+        process.exit(0);
+      `,
+          spacesPath,
+        ],
+        { encoding: "utf8" },
+      );
+      assert.equal(writer.status, 0, writer.stderr);
+      const walPath = `${spacesPath}-wal`;
+      const shmPath = `${spacesPath}-shm`;
+      yield* fs.symlink(walPath, path.join(stateDir, "statev2.sqlite.migrate-dev-db-tmp"));
+      const before = yield* fs.readFile(spacesPath);
+      const wal = yield* fs.readFile(walPath);
+      const shm = yield* fs.readFile(shmPath);
+      assert.isAbove(wal.length, 32);
+      const beforeSource = yield* fs.readFile(source);
+      const sourceFiles = (yield* fs.readDirectory(path.dirname(source))).sort();
+      const result = yield* runMigrateDevDb(
+        { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
+        { sharedHome: sourceDir },
+      ).pipe(Effect.result);
+      assert.isTrue(Result.isFailure(result), "Migration accepted a Spaces WAL overlap");
+      if (Result.isFailure(result))
+        assert.equal(result.failure._tag, "MigrateDevDbDatabaseOverlapError");
+      assert.equal(Buffer.compare(yield* fs.readFile(spacesPath), before), 0);
+      assert.equal(Buffer.compare(yield* fs.readFile(walPath), wal), 0);
+      assert.equal(Buffer.compare(yield* fs.readFile(shmPath), shm), 0);
+      assert.equal(Buffer.compare(yield* fs.readFile(source), beforeSource), 0);
+      assert.deepEqual((yield* fs.readDirectory(path.dirname(source))).sort(), sourceFiles);
+      yield* Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        assert.deepEqual(yield* sql`SELECT title, revision FROM spaces WHERE is_default = 1`, [
+          { title: "EXISTING SANDBOX DATA", revision: 7 },
+        ]);
+      }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: spacesPath, readonly: true })));
+    }),
+  );
+
   it.effect.each(["database", "parent", "missing-parent"] as const)(
     "refuses escaping Spaces %s symlinks before inspection",
     (alias) =>

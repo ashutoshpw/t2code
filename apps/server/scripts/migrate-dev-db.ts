@@ -77,6 +77,15 @@ export class MigrateDevDbDestinationOutsideSandboxError extends Schema.TaggedErr
   }
 }
 
+export class MigrateDevDbDatabaseOverlapError extends Schema.TaggedError<MigrateDevDbDatabaseOverlapError>()(
+  "MigrateDevDbDatabaseOverlapError",
+  { path: Schema.String },
+) {
+  override get message() {
+    return "Refusing to migrate overlapping database file families.";
+  }
+}
+
 export class MigrateDevDbServerRunningError extends Schema.TaggedError<MigrateDevDbServerRunningError>()(
   "MigrateDevDbServerRunningError",
   {
@@ -149,9 +158,13 @@ interface KeptProject {
   readonly threads: number;
 }
 
+const DATABASE_FILE_SUFFIXES = ["", "-wal", "-shm"] as const;
+// Fresh chat snapshots use rollback journals before WAL mode is restored.
+const DATABASE_ACCESS_SUFFIXES = [...DATABASE_FILE_SUFFIXES, "-journal"];
+
 const removeDatabaseFiles = Effect.fn("removeDatabaseFiles")(function* (databasePath: string) {
   const fs = yield* FileSystem.FileSystem;
-  for (const suffix of ["", "-wal", "-shm"]) {
+  for (const suffix of DATABASE_FILE_SUFFIXES) {
     yield* fs.remove(`${databasePath}${suffix}`).pipe(Effect.orElseSucceed(() => undefined));
   }
 });
@@ -482,6 +495,25 @@ const resolveCanonicalPath = Effect.fn("migrateDevDb.resolveCanonicalPath")(func
   }
 });
 
+const resolveDatabaseFamily = Effect.fn("migrateDevDb.resolveDatabaseFamily")(function* (
+  databasePath: string,
+) {
+  const path = yield* Path.Path;
+  const canonicalPath = yield* resolveCanonicalPath(databasePath);
+  const members = [...new Set([databasePath, canonicalPath])].flatMap((root) =>
+    DATABASE_ACCESS_SUFFIXES.map((suffix) => `${root}${suffix}`),
+  );
+  const files = yield* Effect.forEach(members, (file) =>
+    Effect.all([
+      resolveCanonicalPath(file),
+      resolveCanonicalPath(path.dirname(file)).pipe(
+        Effect.map((directory) => path.join(directory, path.basename(file))),
+      ),
+    ]),
+  );
+  return { databasePath: canonicalPath, files: new Set(files.flat()) };
+});
+
 export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   input: RunMigrateDevDbInput,
   options: RunMigrateDevDbOptions = {},
@@ -527,37 +559,39 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   if (canonicalStateDir === canonicalSharedStateDir) {
     return yield* new MigrateDevDbSharedHomeError();
   }
-  // Reject source aliases before replacing chat or initializing the isolated Spaces database.
-  const canonicalSourcePath = yield* resolveCanonicalPath(sourcePath);
-  const [canonicalDatabasePath, canonicalSnapshotPath, canonicalSpacesDatabasePath] =
-    yield* Effect.all([
-      resolveCanonicalPath(databasePath),
-      resolveCanonicalPath(snapshotPath),
-      resolveCanonicalPath(spacesDatabasePath),
-    ]);
-  const destinations = [
-    canonicalDatabasePath,
-    canonicalSnapshotPath,
-    canonicalSpacesDatabasePath,
-    yield* resolveCanonicalPath(`${canonicalSpacesDatabasePath}-wal`),
-    yield* resolveCanonicalPath(`${canonicalSpacesDatabasePath}-shm`),
-  ];
-  for (const canonicalDestination of destinations) {
-    const relative = path.relative(canonicalBaseDir, canonicalDestination);
-    if (
-      relative === "" ||
-      relative === ".." ||
-      relative.startsWith(`..${path.sep}`) ||
-      path.isAbsolute(relative)
-    ) {
-      return yield* new MigrateDevDbDestinationOutsideSandboxError({
-        destinationPath: canonicalDestination,
-      });
-    }
-    if (canonicalSourcePath === canonicalDestination) {
-      return yield* new MigrateDevDbSourceIsDestinationError({ sourcePath });
+  const [sourceFamily, chatFamily, snapshotFamily, spacesFamily] = yield* Effect.all([
+    resolveDatabaseFamily(sourcePath),
+    resolveDatabaseFamily(databasePath),
+    resolveDatabaseFamily(snapshotPath),
+    resolveDatabaseFamily(spacesDatabasePath),
+  ]);
+  const destinations = [chatFamily, snapshotFamily, spacesFamily];
+  for (const family of destinations) {
+    for (const file of family.files) {
+      const relative = path.relative(canonicalBaseDir, file);
+      if (
+        relative === "" ||
+        relative === ".." ||
+        relative.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relative)
+      ) {
+        return yield* new MigrateDevDbDestinationOutsideSandboxError({ destinationPath: file });
+      }
+      if (sourceFamily.files.has(file)) {
+        return yield* new MigrateDevDbSourceIsDestinationError({ sourcePath });
+      }
     }
   }
+  const occupied = new Set<string>();
+  for (const family of destinations) {
+    for (const file of family.files) {
+      if (occupied.has(file)) {
+        return yield* new MigrateDevDbDatabaseOverlapError({ path: file });
+      }
+      occupied.add(file);
+    }
+  }
+  const canonicalSpacesDatabasePath = spacesFamily.databasePath;
 
   const wrapPhase =
     (phase: MigrateDevDbPhaseError["phase"], phaseDatabasePath: string) =>
