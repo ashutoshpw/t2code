@@ -134,6 +134,140 @@ const usage = Effect.fn("SpacesAssetsPublicTest.usage")(function* (
 });
 
 describe("Spaces public asset wiring", () => {
+  it.effect.each([".", "..", "normal.pdf", "dir/file.pdf", "%2e%2e", "odd\\file.pdf"])(
+    "admits a routable name or refuses %s before binding the upload intent",
+    (name) =>
+      fixture(({ request, config }) =>
+        Effect.gen(function* () {
+          const service = yield* Service.SpacesService;
+          const input = { ...common("name"), name };
+          if (name === "." || name === "..") {
+            expect(
+              yield* service.createAssetUpload(input, "owner").pipe(Effect.flip),
+            ).toMatchObject({ reason: "invalid_input" });
+            expect((yield* usage(config)).pending_count).toBe(0);
+            input.name = "report.pdf";
+          }
+          const minted = yield* service.createAssetUpload(input, "owner");
+          expect(yield* service.createAssetUpload(input, "owner")).toEqual(minted);
+          expect(
+            (yield* request(minted.relativeUrl, {
+              method: "POST",
+              headers: { "content-length": String(pdf.length) },
+              body: new Uint8Array(pdf),
+            })).status,
+          ).toBe(204);
+          const saved = yield* service.finalizeAssetUpload(
+            { environmentId, uploadId: minted.uploadId },
+            "owner",
+          );
+          expect(saved.name).toBe(input.name);
+          expect(
+            (yield* service.getAssetMetadata({ environmentId, assetId: saved.assetId })).name,
+          ).toBe(input.name);
+          const signed = yield* issueAssetUrl({
+            resource: { _tag: "spaces-asset", environmentId, assetId: saved.assetId },
+          });
+          const url = new URL(signed.relativeUrl, "http://assets.test");
+          expect(url.pathname.endsWith(`/${encodeURIComponent(input.name)}`)).toBe(true);
+          const response = yield* request(signed.relativeUrl);
+          expect(response.status).toBe(200);
+          expect(new Uint8Array(yield* Effect.promise(() => response.arrayBuffer()))).toEqual(pdf);
+          const doubleEncoded = signed.relativeUrl.replace(
+            /\/[^/]+$/,
+            `/${encodeURIComponent(encodeURIComponent(input.name))}`,
+          );
+          if (doubleEncoded !== signed.relativeUrl)
+            expect((yield* request(doubleEncoded)).status).toBe(404);
+        }),
+      ),
+  );
+
+  it.effect("reports abandoned work beyond large live uploads and retires live ownership", () =>
+    fixture(({ config }) =>
+      Effect.gen(function* () {
+        const service = yield* Service.SpacesService;
+        const fs = yield* FileSystem.FileSystem;
+        const minted = yield* Effect.forEach(["one", "two", "three"], (caller) =>
+          service
+            .createAssetUpload(
+              {
+                ...common(caller),
+                expectedBytes: 50 * 1024 ** 2,
+                mediaKind: "video",
+                mimeType: "video/mp4",
+                name: "movie.mp4",
+              },
+              caller,
+            )
+            .pipe(Effect.map((upload) => ({ ...upload, caller }))),
+        );
+        minted.sort((a, b) => a.uploadId.localeCompare(b.uploadId));
+        const receivers = yield* Effect.forEach(minted.slice(0, 2), (upload) =>
+          Effect.gen(function* () {
+            const requested = yield* Deferred.make<void>();
+            const body = Stream.make(video).pipe(
+              Stream.concat(
+                Stream.fromEffect(
+                  Deferred.succeed(requested, undefined).pipe(Effect.andThen(Effect.never)),
+                ),
+              ),
+            );
+            const receiver = yield* service
+              .receiveAssetUpload(
+                upload.relativeUrl.slice(upload.relativeUrl.lastIndexOf("/") + 1),
+                String(50 * 1024 ** 2),
+                body,
+              )
+              .pipe(Effect.forkScoped);
+            yield* Deferred.await(requested);
+            return receiver;
+          }),
+        );
+        expect((yield* service.getCapability(environmentId))?.assetRecoveryPending).toBe(false);
+        yield* fs.writeFileString(config.spacesAssetsDir, "blocks atomic publication");
+        const first = new Uint8Array(64 * 1024);
+        first.set(video);
+        const rest = new Uint8Array(64 * 1024);
+        const abandoned = minted[2]!;
+        expect(
+          yield* service
+            .receiveAssetUpload(
+              abandoned.relativeUrl.slice(abandoned.relativeUrl.lastIndexOf("/") + 1),
+              String(50 * 1024 ** 2),
+              Stream.make(first).pipe(
+                Stream.concat(Stream.fromIterable(Array.from({ length: 799 }, () => rest))),
+              ),
+            )
+            .pipe(Effect.flip),
+        ).toMatchObject({ reason: "publication_failed" });
+        expect(
+          yield* service.getAssetUpload(
+            { environmentId, uploadId: abandoned.uploadId },
+            abandoned.caller,
+          ),
+        ).toMatchObject({ state: "verified", recoveryPending: true });
+        expect((yield* service.getCapability(environmentId))?.assetRecoveryPending).toBe(true);
+        yield* Effect.forEach(receivers, (receiver) => Fiber.interrupt(receiver));
+        for (const upload of minted.slice(0, 2))
+          expect(
+            yield* service.getAssetUpload(
+              { environmentId, uploadId: upload.uploadId },
+              upload.caller,
+            ),
+          ).toMatchObject({ state: "reserved", recoveryPending: false });
+        yield* fs.remove(config.spacesAssetsDir);
+        expect(
+          yield* service
+            .finalizeAssetUpload({ environmentId, uploadId: abandoned.uploadId }, abandoned.caller)
+            .pipe(Effect.flip),
+        ).toMatchObject({ reason: "not_ready" });
+        expect((yield* service.getCapability(environmentId))?.assetRecoveryPending).toBe(false);
+        expect((yield* usage(config)).active_count).toBe(0);
+      }),
+    ),
+  );
+
   it.effect.each(["pdf", "video", "image"] as const)(
     "serves a bearer %s through upload/finalize and the existing signed route",
     (kind) =>

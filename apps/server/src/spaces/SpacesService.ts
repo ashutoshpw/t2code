@@ -1567,11 +1567,12 @@ const make = Effect.fn("SpacesService.make")(function* (
       return yield* run(environmentId, (meta) =>
         Effect.gen(function* () {
           yield* Receipts.issue(meta);
-          const pending = yield* Catalog.recoveryBatch().pipe(assetErrors);
+          const assetRecoveryPending =
+            yield* Catalog.hasRecoveryPending(activeUploads).pipe(assetErrors);
           return {
             version: 2,
             limits,
-            assetRecoveryPending: pending.some((row) => !activeUploads.has(row.upload_id)),
+            assetRecoveryPending,
             features: {
               blockMoves: true,
               referenceResolution: true,

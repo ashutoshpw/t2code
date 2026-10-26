@@ -164,6 +164,8 @@ export const reserve = Effect.fn("SpacesAssetCatalog.reserve")(function* (
     !bounded(input.callerId, 128) ||
     !bounded(input.requestId, 128) ||
     !bounded(input.name, 255) ||
+    input.name === "." ||
+    input.name === ".." ||
     !Object.hasOwn(mediaTypes, input.mimeType) ||
     mediaTypes[input.mimeType] !== input.mediaKind ||
     !Number.isSafeInteger(input.expectedBytes) ||
@@ -397,6 +399,19 @@ export const recoveryBatch = Effect.fn("SpacesAssetCatalog.recoveryBatch")(funct
     selected.push(row);
   }
   return selected;
+});
+
+export const hasRecoveryPending = Effect.fn("SpacesAssetCatalog.hasRecoveryPending")(function* (
+  activeUploads: ReadonlySet<string>,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  // Recovery rows retain pending slots; force their partial index instead of scanning historical ready rows.
+  const rows = yield* sql<{
+    readonly upload_id: string;
+  }>`SELECT upload_id FROM spaces_asset_uploads INDEXED BY spaces_asset_recovery
+    WHERE state IN ('receiving','verified') OR (state = 'ready' AND cleanup_pending = 1)
+    ORDER BY upload_id LIMIT ${limits.environmentPending + 1}`;
+  return rows.some((row) => !activeUploads.has(row.upload_id));
 });
 
 export const resetMissing = Effect.fn("SpacesAssetCatalog.resetMissing")(function* (
