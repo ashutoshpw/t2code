@@ -2,6 +2,13 @@ import * as Schema from "effect/Schema";
 
 import { TrimmedNonEmptyString } from "./baseSchemas.ts";
 
+/**
+ * Close codes for the preview-host WebSocket. The desktop client stops on `replaced` and
+ * tears its host UI down on `refused`, so both sides must agree on the numbers.
+ */
+export const DESKTOP_BROWSER_HOST_REPLACED_CLOSE_CODE = 4409;
+export const DESKTOP_BROWSER_HOST_REFUSED_CLOSE_CODE = 4410;
+
 const TabKey = {
   threadId: TrimmedNonEmptyString,
   tabId: TrimmedNonEmptyString,

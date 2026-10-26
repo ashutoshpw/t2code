@@ -21,6 +21,7 @@ import {
 import { BrowserDeviceToolbar } from "./BrowserDeviceToolbar";
 import { BrowserViewportResizeHandles } from "./BrowserViewportResizeHandles";
 import { acquireDesktopTab, type AcquiredDesktopTab, withDesktopTab } from "./desktopTabLifetime";
+import { serverTabTransportId } from "./previewRuntime";
 import { resolveHostedBrowserWebviewWrapperStyle } from "./hostedBrowserWebviewStyle";
 import { usePreviewWebviewConfig } from "./previewWebviewConfigState";
 import { useBrowserLayoutZoomFactor } from "./useBrowserLayoutZoomFactor";
@@ -111,14 +112,20 @@ export function HostedBrowserWebview(props: {
     crashRecoveryRef.current = INITIAL_WEBVIEW_CRASH_RECOVERY_STATE;
     const lease = acquireDesktopTab(
       runtimeTabId,
-      serverDriven ? { threadId: threadRef.threadId, tabId } : undefined,
+      serverDriven
+        ? {
+            threadId: threadRef.threadId,
+            tabId,
+            transportId: serverTabTransportId(threadRef.environmentId),
+          }
+        : undefined,
     );
     tabLeaseRef.current = lease;
     return () => {
       if (tabLeaseRef.current === lease) tabLeaseRef.current = null;
       lease.release();
     };
-  }, [clientSettingsHydrated, runtimeTabId, serverDriven, tabId, threadRef.threadId]);
+  }, [clientSettingsHydrated, runtimeTabId, serverDriven, tabId, threadRef]);
 
   // oxlint-disable-next-line t2code/react-effect-budget -- applies the server color scheme to the desktop preview tab through the desktop bridge
   useEffect(() => {
