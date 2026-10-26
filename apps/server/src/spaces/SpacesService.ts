@@ -673,17 +673,17 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         Effect.gen(function* () {
           const found = yield* Receipts.find(request);
           if (found) return found;
-          const epoch = yield* Receipts.active(meta);
-          if (!epoch || epoch.epoch !== request.input.receiptEpoch)
-            return yield* new C.SpaceMutationAdmissionError({
-              receiptEpoch: request.input.receiptEpoch,
-            });
           checkLimit("maxMutationBytes", byteLength(request));
           checkIds(request.input);
           if ("title" in request.input)
             checkLimit("maxTitleBytes", byteLength(request.input.title));
           if (request.operation === "applyBlockBatch")
             checkLimit("maxMutationNodes", request.input.mutations.length);
+          const epoch = yield* Receipts.active(meta);
+          if (!epoch || epoch.epoch !== request.input.receiptEpoch)
+            return yield* new C.SpaceMutationAdmissionError({
+              receiptEpoch: request.input.receiptEpoch,
+            });
           const receipt = yield* execute(request, meta);
           yield* Receipts.store(request, receipt, meta, epoch.retain_until);
           return receipt;
@@ -726,6 +726,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         Effect.gen(function* () {
           const receipt = yield* Receipts.find(input.request);
           if (receipt) return { status: "found" as const, receipt };
+          checkIds(input.request.input);
           const epoch = yield* Receipts.active(meta);
           return {
             status:

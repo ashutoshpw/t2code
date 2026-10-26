@@ -33,6 +33,7 @@ const block = (id: string, n = 1, parentId: C.SpaceBlockId | null = null): C.Spa
   version: 1,
   content: { runs: [{ text: id, marks: [] }] },
 });
+const encodeServiceErrorJson = Schema.encodeEffect(Schema.fromJsonString(C.SpaceServiceError));
 const encodeBlockJson = Schema.encodeEffect(Schema.fromJsonString(C.SpaceBlock));
 const parseJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json));
 const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value), "utf8");
@@ -1418,6 +1419,60 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             (yield* service.readBlocks({ ...env, pageId: page.id, revision: 2 })).blocks,
             [edited],
           );
+        }),
+      ),
+  );
+  it.effect.each([
+    { method: "mutation", size: 500_000 },
+    { method: "mutation", size: 256 },
+    { method: "lookup", size: 500_000 },
+    { method: "lookup", size: 256 },
+  ] as const)(
+    "bounds missing receipt epoch errors for $method with $size characters",
+    ({ method, size }) =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page } = yield* boot();
+          const input = {
+            ...common,
+            mutationId: "huge-epoch",
+            receiptEpoch: "x".repeat(size),
+            title: "",
+          };
+          const request = { operation: "createSpace" as const, input };
+          assert.isBelow(bytes(request), 1_048_576);
+          const inspect = Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            return {
+              meta: yield* sql`SELECT catalog_revision, receipt_rows, receipt_bytes FROM spaces_core`,
+              spaces: yield* sql`SELECT space_id, title, revision FROM spaces ORDER BY space_id`,
+              page: yield* sql`SELECT revision, block_count, block_bytes FROM spaces_pages WHERE page_id = ${page.id}`,
+              attempted:
+                yield* sql`SELECT mutation_id FROM spaces_receipts WHERE mutation_id = ${input.mutationId}`,
+            };
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+          const before = yield* inspect;
+          const outcome: Effect.Effect<unknown, C.SpaceServiceError> =
+            method === "mutation"
+              ? service.createSpace(input)
+              : service.lookupMutationReceipt({ request });
+          const failure = yield* outcome.pipe(
+            Effect.match({ onFailure: (error) => error, onSuccess: () => null }),
+          );
+          assert.isNotNull(failure);
+          if (failure === null) return;
+          assert.equal(failure._tag, "SpaceLimitExceededError");
+          if (failure._tag === "SpaceLimitExceededError") {
+            const requestLimit = method === "mutation" && size === 500_000;
+            assert.equal(failure.limit, requestLimit ? "maxMutationBytes" : "maxIdBytes");
+            assert.equal(failure.actual, requestLimit ? bytes(request) : bytes(input.receiptEpoch));
+            assert.equal(failure.maximum, requestLimit ? 262_144 : 128);
+          }
+          const serialized = yield* encodeServiceErrorJson(failure);
+          assert.isBelow(Buffer.byteLength(serialized, "utf8"), 256);
+          assert.notInclude(serialized, input.receiptEpoch);
+          assert.deepEqual(yield* inspect, before);
+          assert.deepEqual(before.attempted, []);
         }),
       ),
   );
