@@ -9,7 +9,7 @@ import {
   t2OrchestrationSystemPrompt,
 } from "./orchestrationInstructions.ts";
 
-describe("T3 device instructions", () => {
+describe("T2 device instructions", () => {
   it("route device work through device_open and give Claude the line that loads the tools", () => {
     for (const intent of ["`device_list`", "`device_open`", "`agent-device`", "ssh", "`hostId`"]) {
       assert.include(T2_CODE_DEVICE_TOOL_INSTRUCTIONS, intent);

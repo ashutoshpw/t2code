@@ -329,7 +329,7 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
   const setup = Effect.fn(function* (versions: ReadonlyArray<string>) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pinned-prune-" });
+    const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-pinned-prune-" });
     const versionsDir = path.join(baseDir, "runtime", "versions");
     const now = Duration.toMillis(Duration.days(1));
     yield* TestClock.setTime(now);
@@ -339,7 +339,7 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
     ) {
       const directory = path.join(versionsDir, version);
       yield* fs.makeDirectory(directory, { recursive: true });
-      yield* fs.writeFileString(path.join(directory, "t3"), "");
+      yield* fs.writeFileString(path.join(directory, "t2"), "");
       if (completed === "never") return;
       const sentinel = path.join(directory, ".install-complete");
       yield* fs.writeFileString(sentinel, `${version}\n`);
@@ -397,11 +397,11 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
       const removed = yield* prunePinnedRuntimes({
         baseDir,
         keep: ["2.0.0"],
-        references: [`ExecStart=${path.join(versionsDir, "1.3.5", "t3")} __service-launcher`],
+        references: [`ExecStart=${path.join(versionsDir, "1.3.5", "t2")} __service-launcher`],
       }).pipe(
         Effect.provideService(
           ProcessRunner.ProcessRunner,
-          lsofRunner(`p42\nftxt\nn${path.join(versionsDir, "1.3.0", "t3")}\n`),
+          lsofRunner(`p42\nftxt\nn${path.join(versionsDir, "1.3.0", "t2")}\n`),
         ),
         Effect.provideService(HostProcess.Platform, "darwin"),
         Effect.provideService(HostProcess.Environment, { T2CODE_INSTALL_BIN_DIR: binDir }),
@@ -414,7 +414,7 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
       // The launcher found on PATH is remembered for a service that cannot see it.
       assert.equal(
         yield* fs.readFileString(path.join(baseDir, "runtime", "launchers")),
-        `${path.join(customBinDir, "t3")}\n${path.join(binDir, "t3")}\n`,
+        `${path.join(customBinDir, "t2")}\n${path.join(binDir, "t2")}\n`,
       );
       assert.deepEqual((yield* fs.readDirectory(versionsDir)).toSorted(), [
         ".staging-abc",
@@ -491,13 +491,13 @@ it.layer(NodeServices.layer)("prunePinnedRuntimes", (it) => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const { baseDir, versionsDir } = yield* setup(["1.0.0", "1.1.0"]);
-        const entry = path.join(versionsDir, "1.0.0", "t3");
+        const entry = path.join(versionsDir, "1.0.0", "t2");
         // Multicall coreutils (Ubuntu's uutils) refuse to run renamed, so copy Node instead.
         yield* fs.copyFile(process.execPath, entry);
         yield* fs.chmod(entry, 0o755);
-        const link = path.join(baseDir, "t3");
+        const link = path.join(baseDir, "t2");
         yield* fs.symlink(entry, link);
-        // Its argv names only the link, as with `t3 serve` run from PATH. Removing the link after
+        // Its argv names only the link, as with `t2 serve` run from PATH. Removing the link after
         // spawning leaves the process's executable as the only reference.
         const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
         yield* spawner.spawn(ChildProcess.make(link, ["-e", "setTimeout(() => {}, 30_000)"]));

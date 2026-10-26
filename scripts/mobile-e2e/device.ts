@@ -172,7 +172,7 @@ export class Device {
       [
         "open",
         BUNDLE_ID,
-        `t3code-dev://expo-development-client/?url=${url}&disableOnboarding=1&disableFab=1&disableAutoLaunch=1`,
+        `t2code-dev://expo-development-client/?url=${url}&disableOnboarding=1&disableFab=1&disableAutoLaunch=1`,
         // A real keyboard, so the layout under it is what people see.
         ...(this.pose.platform === "android" ? ["--no-test-ime"] : []),
       ],

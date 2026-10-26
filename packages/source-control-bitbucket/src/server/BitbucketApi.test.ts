@@ -37,7 +37,7 @@ const bitbucketPullRequest = {
   source: {
     branch: { name: "feature/source-control" },
     repository: {
-      full_name: "octocat/t2code",
+      full_name: "octocat/t3code",
       workspace: { slug: "octocat" },
     },
   },
@@ -173,7 +173,7 @@ it.effect("parses pull request responses from the Bitbucket REST API", () => {
       state: "open",
       updatedAt: Option.some(DateTime.makeUnsafe("2026-01-02T00:00:00.000Z")),
       isCrossRepository: true,
-      headRepositoryNameWithOwner: "octocat/t2code",
+      headRepositoryNameWithOwner: "octocat/t3code",
       headRepositoryOwnerLogin: "octocat",
     });
     assert.strictEqual(
@@ -267,7 +267,7 @@ it.effect.each([false, true])(
 
     return Effect.gen(function* () {
       const bitbucket = yield* BitbucketApi.BitbucketApi;
-      for (const repository of ["t2code", "", " \t "]) {
+      for (const repository of ["t3code", "", " \t "]) {
         const error = yield* bitbucket
           .getRepositoryCloneUrls({
             cwd: "/repo",
@@ -565,15 +565,15 @@ it.effect("keeps Bitbucket response bodies out of checkout diagnostics", () => {
 it.effect("checks out fork pull requests through an ensured fork remote", () => {
   const { git, layer } = makeLayer({
     response: (request) => {
-      if (request.url.endsWith("/repositories/octocat/t2code")) {
+      if (request.url.endsWith("/repositories/octocat/t3code")) {
         return Response.json({
           ...repositoryJson,
-          full_name: "octocat/t2code",
+          full_name: "octocat/t3code",
           links: {
-            html: { href: "https://bitbucket.org/octocat/t2code" },
+            html: { href: "https://bitbucket.org/octocat/t3code" },
             clone: [
-              { name: "https", href: "https://bitbucket.org/octocat/t2code.git" },
-              { name: "ssh", href: "git@bitbucket.org:octocat/t2code.git" },
+              { name: "https", href: "https://bitbucket.org/octocat/t3code.git" },
+              { name: "ssh", href: "git@bitbucket.org:octocat/t3code.git" },
             ],
           },
         });
@@ -583,7 +583,7 @@ it.effect("checks out fork pull requests through an ensured fork remote", () => 
         source: {
           branch: { name: "main" },
           repository: {
-            full_name: "octocat/t2code",
+            full_name: "octocat/t3code",
             workspace: { slug: "octocat" },
           },
         },
@@ -602,7 +602,7 @@ it.effect("checks out fork pull requests through an ensured fork remote", () => 
     assert.deepStrictEqual(git.ensureRemote.mock.calls[0]?.[0], {
       cwd: "/repo",
       preferredName: "octocat",
-      url: "git@bitbucket.org:octocat/t2code.git",
+      url: "git@bitbucket.org:octocat/t3code.git",
     });
     assert.deepStrictEqual(git.fetchRemoteBranch.mock.calls[0]?.[0], {
       cwd: "/repo",

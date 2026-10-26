@@ -56,7 +56,7 @@ const make = Effect.gen(function* () {
   const limit = Effect.fn("NativeClients.limit")(function* (writing: boolean) {
     const allowed = yield* r2(() =>
       (writing ? bindings.storeLimit : bindings.readLimit).limit({
-        key: writing ? "t3code:native-store" : "t3code:native-read",
+        key: writing ? "t2code:native-store" : "t2code:native-read",
       }),
     );
     if (!allowed.success)

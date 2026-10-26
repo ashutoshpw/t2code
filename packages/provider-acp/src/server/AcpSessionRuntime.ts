@@ -52,10 +52,6 @@ import {
   type AcpToolCallState,
 } from "./runtimeModel.ts";
 
-type SetSessionModePayload = Parameters<
-  EffectAcpClient.AcpClient["Service"]["agent"]["setSessionMode"]
->[0];
-
 const MAX_SHOWN_TOOL_CALL_IDS = 256;
 
 interface AcpToolCallTrackedState {

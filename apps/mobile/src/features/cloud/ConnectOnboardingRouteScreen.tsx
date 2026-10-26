@@ -19,7 +19,7 @@ import { useConnectionController } from "../connection/useConnectionController";
 import { optOutOfConnectOnboarding } from "./connectOnboardingOptOut";
 import { hasCloudPublicConfig } from "./publicConfig";
 
-// Only reachable with cloud config: onboarding is requested after a T3 Connect
+// Only reachable with cloud config: onboarding is requested after a T2 Connect
 // sign-in, and appLinking drops the deep link otherwise.
 export function ConnectOnboardingRouteScreen() {
   return hasCloudPublicConfig() ? <ConfiguredConnectOnboardingRouteScreen /> : null;

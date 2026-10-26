@@ -1179,7 +1179,7 @@ const program = Effect.gen(function* () {
                 sources: [
                   { type: "url", url: "https://t2.codes" },
                   { type: "url", url: "https://t2.codes" },
-                  { type: "url", url: "https://github.com/pingdotgg/t2code" },
+                  { type: "url", url: "https://github.com/pingdotgg/t3code" },
                 ],
               },
               id: "grok-web-search",

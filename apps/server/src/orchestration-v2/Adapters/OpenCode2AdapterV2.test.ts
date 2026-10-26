@@ -676,7 +676,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
         [
           out("session.instructions.entry.put", {
             sessionID: SESSION,
-            key: "t3-code",
+            key: "t2-code",
             value: "<any>",
           }),
           reply("session.instructions.entry.put", null),

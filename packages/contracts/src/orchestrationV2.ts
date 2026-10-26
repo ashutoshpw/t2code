@@ -3553,14 +3553,10 @@ export type OrchestrationV2SubscribeCommandOutputInput =
   typeof OrchestrationV2SubscribeCommandOutputInput.Type;
 
 /**
- * Output of one command row, separate from the thread stream so it is never
- * persisted as events and only reaches clients that show the row expanded.
- * `replace` carries the whole bounded tail (first frame, or after the client
- * fell behind); `append` extends it. Text is terminal output, not display
- * text: `replace` carries the cleaned tail plus the cursor and style escapes
- * needed to resume, and `append` carries raw chunks. Clients must feed both
- * through `appendTerminalOutput` from `@t2code/shared/terminalOutput`.
- * The stream ends after a frame with `running: false`.
+ * One command row's output tail, never persisted as events and delivered only to
+ * clients showing the row expanded. Feed frames through `appendTerminalOutput` from
+ * `@t2code/shared/terminalOutput`: `replace` is the bounded cleaned tail with resume
+ * escapes, `append` is raw chunks; the stream ends after a frame with `running: false`.
  */
 export const OrchestrationV2CommandOutputFrame = Schema.Struct({
   kind: Schema.Literals(["replace", "append"]),

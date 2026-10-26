@@ -100,7 +100,7 @@ export class PullRequestThreadRequiredError extends Schema.TaggedError<PullReque
   {},
 ) {
   override get message(): string {
-    return "Pass threadId: this MCP client is not running inside a T3 thread.";
+    return "Pass threadId: this MCP client is not running inside a T2 thread.";
   }
 }
 
@@ -271,7 +271,8 @@ export const ListThreadPullRequestsResult = Schema.Struct({
 export type ListThreadPullRequestsResult = typeof ListThreadPullRequestsResult.Type;
 
 const LinkPullRequestTool = Tool.make("link_pull_request", {
-  description: "Link a PR to this thread. T2 Code shows its status and settles the thread on merge.",
+  description:
+    "Link a PR to this thread. T2 Code shows its status and settles the thread on merge.",
   parameters: PullRequestTargetInput,
   success: LinkPullRequestResult,
   failure: PullRequestToolError,

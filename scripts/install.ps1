@@ -7,7 +7,7 @@
 #   T2CODE_CHANNEL           release train to follow: stable, nightly, or preview
 #                            (default: stable; preview is a maintainers' test train)
 #   T2CODE_VERSION           exact version to install (overrides T2CODE_CHANNEL)
-#   T2CODE_HOME              T3 home directory (default: ~\.t2)
+#   T2CODE_HOME              T2 home directory (default: ~\.t2)
 #   T2CODE_INSTALL_BIN_DIR   where t2.exe is linked (default: ~\.local\bin)
 #   T2CODE_RELEASE_BASE_URL  mirror for releases/download (default: GitHub)
 #
@@ -219,7 +219,7 @@ if ((Test-Path $marker) -and ((Get-Content $marker -Raw).Trim() -eq $version)) {
 
 Step "Setting up the t3 command..."
 New-Item -ItemType Directory -Force -Path $binDir | Out-Null
-$shim = Join-Path $binDir "t3.cmd"
+$shim = Join-Path $binDir "t2.cmd"
 # UTF-8 without a BOM: cmd.exe reads the shim as-is, and ASCII would corrupt
 # non-ASCII characters in the user's home path.
 [System.IO.File]::WriteAllText($shim, "@echo off`r`n`"$(Join-Path $targetDir 't2.exe')`" %*", (New-Object System.Text.UTF8Encoding $false))

@@ -1,6 +1,6 @@
 import { installPermissionUpdateNotice } from "./features/connection/permissionUpdateNotice";
 import { installComposerAttachmentUploads } from "./state/composer-attachment-uploads";
-import { installThreadOutboxDelivery } from "./state/threadOutboxDelivery";
+import { installThreadOutboxDelivery } from "./state/use-thread-outbox-drain";
 import * as Linking from "expo-linking";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";

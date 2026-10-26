@@ -1834,13 +1834,6 @@ function normalizePersistedDraftsByThreadId(
         contextIds.set(`${kind}/${contextId}`, contextId);
       }
     }
-    const migratedPrompt = promptCandidate.replace(
-      /!?\[([^\]\r\n]*)\]\(t2-context:\/\/v1\/([a-z-]+)\/([^/()\r\n]+)\)/g,
-      (source, label: string, kind: string, id: string) => {
-        const contextId = contextIds.get(`${kind}/${id}`);
-        return contextId ? formatInlineContextReference({ kind, contextId, label }) : source;
-      },
-    );
     const prompt = ensureInlineContextReferences(
       migrateLegacyTerminalContextPlaceholders(promptCandidate, terminalContexts),
       terminalContexts.map((context) => terminalContextReference({ ...context, text: "" })),

@@ -703,6 +703,8 @@ function ScheduledTaskRow({
   const [busy, setBusy] = useState(false);
   const [deliveriesOpen, setDeliveriesOpen] = useState(false);
   const isWebhook = task.schedule.type === "webhook";
+  // oxlint-disable-next-line react/purity -- The status samples now at render; the list re-renders on every schedule refresh, which is when the label should move.
+  const onceStatus = task.schedule.type === "once" ? onceTaskStatus(task, new Date()) : null;
   const toggle = useAtomCommand(serverEnvironment.setScheduledTaskEnabled, {
     label: "scheduled task enabled",
   });
@@ -740,7 +742,7 @@ function ScheduledTaskRow({
         <div className="flex flex-wrap items-center gap-2">
           <span>
             {task.schedule.type === "once" ? (
-              onceTaskStatus(task, new Date())
+              onceStatus
             ) : (
               <>
                 {scheduleLabel(task.schedule)} ·{" "}

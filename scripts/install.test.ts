@@ -17,7 +17,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("installer chan
     ["stable", "1.2.3"],
     ["preview", "1.2.4-preview.20261019.50"],
   ])("finds the newest %s release behind a full page of nightlies", async (channel, version) => {
-    const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t3-install-index-"));
+    const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "t2-install-index-"));
     const target = NodePath.join(root, "home/runtime/versions", version);
     const server = NodeHttp.createServer((request, response) => {
       const url = new URL(request.url ?? "/", "http://fixture");
@@ -37,6 +37,8 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("installer chan
     try {
       // An existing completed install isolates release resolution from archive downloads.
       await NodeFSP.mkdir(target, { recursive: true });
+      // The installer links this version's launcher, so a completed install carries it.
+      await NodeFSP.writeFile(NodePath.join(target, "t2"), "#!/bin/sh\n", { mode: 0o755 });
       await NodeFSP.writeFile(NodePath.join(target, ".install-complete"), `${version}\n`);
       await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
       const address = server.address();
@@ -70,7 +72,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() !== "linux")("installer chan
         },
       );
       expect(code, output).toBe(0);
-      expect(output).toContain(`Installed T3 Code ${version}`);
+      expect(output).toContain(`Installed T2 Code ${version}`);
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));

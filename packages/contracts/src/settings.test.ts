@@ -8,12 +8,6 @@ import {
   ProviderInstanceId,
 } from "./providerInstance.ts";
 import {
-  DEFAULT_MODEL_BY_PROVIDER,
-  DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER,
-  FX_DEFAULT_MODEL,
-  PROVIDER_DISPLAY_NAMES,
-} from "./model.ts";
-import {
   ClientSettingsSchema,
   ClientSettingsPatch,
   ClaudeSettings,

@@ -1566,7 +1566,7 @@ describe("PiAdapterV2", () => {
         arg === "--extension" ? [spawn.args[index + 1]] : [],
       );
       assert.isFalse(spawn.args.includes("--no-extensions"));
-      assert.isTrue(extensions.some((path) => path?.endsWith("pi-t3-mcp-extension.ts")));
+      assert.isTrue(extensions.some((path) => path?.endsWith("pi-t2-mcp-extension.ts")));
       assert.equal(spawn.env.T2_MCP_URL, "http://127.0.0.1:43123/mcp");
       assert.equal(spawn.env.T2_MCP_BEARER_TOKEN, "secret-pi-token");
       assert.equal(spawn.env.T2_PI_RUNTIME_MODE, "full-access");

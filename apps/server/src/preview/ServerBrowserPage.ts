@@ -477,7 +477,7 @@ const shrinkPng = async (cdp: CDPSession, png: string, scale: number) => {
   const { frameTree } = await cdp.send("Page.getFrameTree");
   const { executionContextId } = await cdp.send("Page.createIsolatedWorld", {
     frameId: frameTree.frame.id,
-    worldName: "t3-preview-screenshot",
+    worldName: "t2-preview-screenshot",
   });
   const { result, exceptionDetails } = await cdp.send("Runtime.callFunctionOn", {
     functionDeclaration: SHRINK_PNG,
