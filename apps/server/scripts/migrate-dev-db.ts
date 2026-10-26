@@ -23,6 +23,7 @@ import * as SqlClient from "effect/sql/SqlClient";
 import { Command, Flag } from "effect/cli";
 
 import * as ProjectionStore from "../src/orchestration-v2/ProjectionStore.ts";
+import * as SpacesDatabaseTools from "../src/spaces/SpacesDatabaseTools.ts";
 import { rebuildMessageSearch } from "../src/orchestration-v2/messageSearchIndex.ts";
 import { migrationManifest, runMigrations } from "../src/persistence/Migrations.ts";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
@@ -112,7 +113,7 @@ export class MigrateDevDbSlotCollisionError extends Schema.TaggedError<MigrateDe
 export class MigrateDevDbPhaseError extends Schema.TaggedError<MigrateDevDbPhaseError>()(
   "MigrateDevDbPhaseError",
   {
-    phase: Schema.Literals(["snapshot", "prune", "compact", "migrate", "verify"]),
+    phase: Schema.Literals(["snapshot", "prune", "compact", "migrate", "verify", "spaces"]),
     databasePath: Schema.String,
     cause: Schema.Defect(),
   },
@@ -461,6 +462,7 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   const stateDir = path.join(baseDir, "userdata");
   const databasePath = path.join(stateDir, "statev2.sqlite");
   const snapshotPath = `${databasePath}.migrate-dev-db-tmp`;
+  const spacesDatabasePath = path.join(stateDir, "spaces.sqlite");
 
   if (!(yield* fs.exists(sourcePath))) {
     return yield* new MigrateDevDbSourceMissingError({ sourcePath });
@@ -472,11 +474,20 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   if (canonicalBaseDir === canonicalSharedHome) {
     return yield* new MigrateDevDbSharedHomeError();
   }
-  // Both destination and snapshot are deleted below; reject sources resolving to either.
+  const [canonicalStateDir, canonicalSharedStateDir] = yield* Effect.all([
+    fs.realPath(stateDir).pipe(Effect.orElseSucceed(() => path.join(canonicalBaseDir, "userdata"))),
+    fs
+      .realPath(path.join(sharedHome, "userdata"))
+      .pipe(Effect.orElseSucceed(() => path.join(canonicalSharedHome, "userdata"))),
+  ]);
+  if (canonicalStateDir === canonicalSharedStateDir) {
+    return yield* new MigrateDevDbSharedHomeError();
+  }
+  // Reject source aliases before replacing chat or initializing the isolated Spaces database.
   const canonicalSourcePath = yield* fs
     .realPath(sourcePath)
     .pipe(Effect.orElseSucceed(() => sourcePath));
-  for (const destination of [databasePath, snapshotPath]) {
+  for (const destination of [databasePath, snapshotPath, spacesDatabasePath]) {
     const canonicalDestination = yield* fs
       .realPath(destination)
       .pipe(Effect.orElseSucceed(() => destination));
@@ -484,9 +495,6 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
       return yield* new MigrateDevDbSourceIsDestinationError({ sourcePath });
     }
   }
-
-  yield* fs.makeDirectory(stateDir, { recursive: true });
-  yield* ensureNotInUse(databasePath);
 
   const wrapPhase =
     (phase: MigrateDevDbPhaseError["phase"], phaseDatabasePath: string) =>
@@ -497,6 +505,17 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
         ),
       );
 
+  const spaces = yield* SpacesDatabaseTools.SpacesDatabaseTools;
+  const existingSpaces = yield* spaces
+    .inspect(spacesDatabasePath)
+    .pipe(wrapPhase("spaces", spacesDatabasePath));
+  yield* fs.makeDirectory(stateDir, { recursive: true });
+  yield* ensureNotInUse(databasePath);
+  if (existingSpaces === null) {
+    yield* spaces
+      .initializeIfMissing(spacesDatabasePath)
+      .pipe(wrapPhase("spaces", spacesDatabasePath));
+  }
   yield* removeDatabaseFiles(snapshotPath);
   const { executedMigrations, pruned } = yield* Effect.gen(function* () {
     yield* Console.log(`Copying visible threads from ${sourcePath} (read-only)...`);
@@ -630,7 +649,7 @@ export const migrateDevDbCommand = Command.make(
 
 if (import.meta.main) {
   Command.run(migrateDevDbCommand, { version: "0.0.0" }).pipe(
-    Effect.provide(NodeServices.layer),
+    Effect.provide(SpacesDatabaseTools.layer.pipe(Layer.provideMerge(NodeServices.layer))),
     NodeRuntime.runMain,
   );
 }

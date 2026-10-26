@@ -2,10 +2,14 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
+import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import { runMigrations } from "../src/persistence/Migrations.ts";
+import * as SpacesDatabaseTools from "../src/spaces/SpacesDatabaseTools.ts";
+import * as SpacesSql from "../src/spaces/SpacesSql.ts";
+import * as SpacesSqlite from "../src/spaces/Sqlite.ts";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import { runMigrateDevDb } from "./migrate-dev-db.ts";
 
@@ -100,7 +104,87 @@ const createFixtureSource = Effect.fn("createMigrateDevDbFixtureSource")(functio
   return databasePath;
 });
 
-it.layer(NodeServices.layer)("migrate-dev-db", (it) => {
+const layer = SpacesDatabaseTools.layer.pipe(Layer.provideMerge(NodeServices.layer));
+
+it.layer(layer)("migrate-dev-db", (it) => {
+  it.effect("initializes Spaces empty and preserves sandbox changes across chat refreshes", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const sourceDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-spaces-source-" });
+      const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-spaces-dest-" });
+      const source = yield* createFixtureSource(sourceDir);
+      const sourceSpaces = path.join(sourceDir, "userdata", "spaces.sqlite");
+      yield* fs.writeFileString(sourceSpaces, "Source Spaces must never be opened");
+      const sourceAssets = path.join(sourceDir, "userdata", "spaces", "assets");
+      yield* fs.makeDirectory(sourceAssets, { recursive: true });
+      yield* fs.writeFileString(path.join(sourceAssets, "original"), "source asset");
+      const input = { baseDir: destDir, source, projects: 5, threadsPerProject: 2 };
+      yield* runMigrateDevDb(input, { sharedHome: sourceDir });
+      const destination = path.join(destDir, "userdata", "spaces.sqlite");
+      assert.isTrue(yield* fs.exists(destination));
+      yield* Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        assert.deepEqual(yield* sql`SELECT title, is_default FROM spaces`, [
+          { title: "My space", is_default: 1 },
+        ]);
+        yield* sql`UPDATE spaces SET title = 'Sandbox work', revision = 1 WHERE is_default = 1`;
+      }).pipe(Effect.provide(SpacesSqlite.layerFromPath(destination)));
+      const before = yield* fs.readFile(destination);
+      yield* runMigrateDevDb(input, { sharedHome: sourceDir });
+      assert.equal(Buffer.compare(yield* fs.readFile(destination), before), 0);
+      assert.equal(yield* fs.readFileString(sourceSpaces), "Source Spaces must never be opened");
+      assert.isFalse(yield* fs.exists(path.join(destDir, "userdata", "spaces")));
+      yield* withDatabase(
+        destination,
+        Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          assert.deepEqual(yield* sql`SELECT title, revision FROM spaces`, [
+            { title: "Sandbox work", revision: 1 },
+          ]);
+          assert.deepEqual(yield* sql`SELECT name FROM effect_sql_migrations`, [
+            { name: "Spaces" },
+          ]);
+        }),
+      );
+    }),
+  );
+
+  it.effect("refuses a foreign Spaces destination before replacing the sandbox chat database", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const sourceDir = yield* fs.makeTempDirectoryScoped({
+        prefix: "migrate-spaces-foreign-src-",
+      });
+      const destDir = yield* fs.makeTempDirectoryScoped({
+        prefix: "migrate-spaces-foreign-dest-",
+      });
+      const source = yield* createFixtureSource(sourceDir);
+      const chat = yield* createFixtureSource(destDir);
+      const destination = path.join(destDir, "userdata", "spaces.sqlite");
+      yield* withDatabase(
+        destination,
+        Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          yield* sql`CREATE TABLE keep_foreign (value TEXT)`;
+          yield* sql`INSERT INTO keep_foreign VALUES ('untouched')`;
+        }),
+      );
+      const beforeChat = yield* fs.readFile(chat);
+      const beforeSpaces = yield* fs.readFile(destination);
+      const error = yield* runMigrateDevDb(
+        { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
+        { sharedHome: sourceDir },
+      ).pipe(Effect.flip);
+      assert.equal(error._tag, "MigrateDevDbPhaseError");
+      if (error._tag === "MigrateDevDbPhaseError") assert.equal(error.phase, "spaces");
+      assert.equal(Buffer.compare(yield* fs.readFile(chat), beforeChat), 0);
+      assert.equal(Buffer.compare(yield* fs.readFile(destination), beforeSpaces), 0);
+      assert.isFalse(yield* fs.exists(`${chat}.migrate-dev-db-tmp`));
+    }),
+  );
+
   it.effect("keeps stopped and settled thread families and clears pending work", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -199,7 +283,9 @@ it.layer(NodeServices.layer)("migrate-dev-db", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const sourceDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-dev-db-family-" });
-      const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-dev-db-family-dest-" });
+      const destDir = yield* fs.makeTempDirectoryScoped({
+        prefix: "migrate-dev-db-family-dest-",
+      });
       const source = yield* createFixtureSource(sourceDir);
 
       // stopped-thread and its fork are 2 threads; settled-thread is 1.
@@ -263,25 +349,54 @@ it.layer(NodeServices.layer)("migrate-dev-db", (it) => {
       if (error._tag === "MigrateDevDbServerRunningError") {
         assert.equal(error.pid, process.pid);
       }
+      assert.isFalse(yield* fs.exists(path.join(stateDir, "spaces.sqlite")));
     }),
   );
 
-  it.effect("refuses a source that resolves to a destination path", () =>
+  it.effect.each(["statev2.sqlite.migrate-dev-db-tmp", "spaces.sqlite"])(
+    "refuses a source that resolves to destination %s",
+    (name) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const sharedDir = yield* fs.makeTempDirectoryScoped({
+          prefix: "migrate-dev-db-overlap-",
+        });
+        const destDir = yield* fs.makeTempDirectoryScoped({
+          prefix: "migrate-dev-db-overlap-dest-",
+        });
+        const leftoverSnapshot = path.join(destDir, "userdata", name);
+        yield* fs.makeDirectory(path.dirname(leftoverSnapshot), { recursive: true });
+        yield* fs.writeFileString(leftoverSnapshot, "not a real db");
+
+        const error = yield* runMigrateDevDb(
+          { baseDir: destDir, source: leftoverSnapshot, projects: 5, threadsPerProject: 10 },
+          { sharedHome: sharedDir },
+        ).pipe(Effect.flip);
+        assert.equal(error._tag, "MigrateDevDbSourceIsDestinationError");
+        assert.equal(yield* fs.exists(leftoverSnapshot), true);
+      }),
+  );
+
+  it.effect("refuses userdata linked into the protected shared home", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const sharedDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-dev-db-overlap-" });
-      const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-dev-db-overlap-dest-" });
-      const leftoverSnapshot = path.join(destDir, "userdata", "statev2.sqlite.migrate-dev-db-tmp");
-      yield* fs.makeDirectory(path.dirname(leftoverSnapshot), { recursive: true });
-      yield* fs.writeFileString(leftoverSnapshot, "not a real db");
-
+      const sourceDir = yield* fs.makeTempDirectoryScoped({
+        prefix: "migrate-spaces-alias-src-",
+      });
+      const sharedDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-spaces-shared-" });
+      const destDir = yield* fs.makeTempDirectoryScoped({ prefix: "migrate-spaces-alias-dest-" });
+      const source = yield* createFixtureSource(sourceDir);
+      const protectedState = path.join(sharedDir, "userdata");
+      yield* fs.makeDirectory(protectedState);
+      yield* fs.symlink(protectedState, path.join(destDir, "userdata"));
       const error = yield* runMigrateDevDb(
-        { baseDir: destDir, source: leftoverSnapshot, projects: 5, threadsPerProject: 10 },
+        { baseDir: destDir, source, projects: 5, threadsPerProject: 2 },
         { sharedHome: sharedDir },
       ).pipe(Effect.flip);
-      assert.equal(error._tag, "MigrateDevDbSourceIsDestinationError");
-      assert.equal(yield* fs.exists(leftoverSnapshot), true);
+      assert.equal(error._tag, "MigrateDevDbSharedHomeError");
+      assert.deepEqual(yield* fs.readDirectory(protectedState), []);
     }),
   );
 

@@ -2,10 +2,12 @@ import { DATABASE_COMPACTION_RECOMMENDED_BYTES } from "@t2code/contracts";
 import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Path from "effect/Path";
 import { Command, Flag, GlobalFlag, Prompt } from "effect/cli";
 
 import * as BootService from "../cloud/bootService.ts";
 import * as DatabaseMaintenance from "../persistence/DatabaseMaintenance.ts";
+import * as SpacesDatabaseTools from "../spaces/SpacesDatabaseTools.ts";
 import { projectLocationFlags, resolveCliAuthConfig } from "./config.ts";
 import * as CliService from "./service.ts";
 
@@ -21,17 +23,31 @@ export const runDoctor = Effect.fn("runDoctor")(function* (
   options: { readonly fix: boolean; readonly dryRun: boolean; readonly interactive?: boolean },
 ) {
   const maintenance = yield* DatabaseMaintenance.DatabaseMaintenance;
-  const status = yield* maintenance.inspect(databasePath);
-  yield* Console.log(
-    `Database: ${formatBytes(status.databaseBytes)}, ${formatBytes(status.reclaimableBytes)} reclaimable.`,
+  const spaces = yield* SpacesDatabaseTools.SpacesDatabaseTools;
+  const path = yield* Path.Path;
+  const status = yield* maintenance
+    .inspect(databasePath)
+    .pipe(Effect.catchTags({ DatabaseMissingError: () => Effect.succeed(null) }));
+  const spacesStatus = yield* spaces.inspect(
+    path.join(path.dirname(databasePath), "spaces.sqlite"),
   );
-  if (status.legacyDatabaseBytes !== null) {
+  yield* Console.log(
+    status === null
+      ? "Database: not found."
+      : `Database: ${formatBytes(status.databaseBytes)}, ${formatBytes(status.reclaimableBytes)} reclaimable.`,
+  );
+  yield* Console.log(
+    spacesStatus === null
+      ? "Spaces database: not found."
+      : `Spaces database: ${formatBytes(spacesStatus.databaseBytes)}, WAL ${formatBytes(spacesStatus.walBytes)}, shared memory ${formatBytes(spacesStatus.sharedMemoryBytes)}, ${formatBytes(spacesStatus.reclaimableBytes)} reclaimable.`,
+  );
+  if (status !== null && status.legacyDatabaseBytes !== null) {
     yield* Console.log(
       `Database from before 0.1.0: ${formatBytes(status.legacyDatabaseBytes)}, kept for rolling back.`,
     );
   }
   const repairs = [
-    ...(status.incrementalVacuumEnabled && status.reclaimableBytes === 0
+    ...(status === null || (status.incrementalVacuumEnabled && status.reclaimableBytes === 0)
       ? []
       : [
           {
@@ -47,7 +63,7 @@ export const runDoctor = Effect.fn("runDoctor")(function* (
               status.reclaimableBytes >= DATABASE_COMPACTION_RECOMMENDED_BYTES,
           },
         ]),
-    ...(status.legacyDatabaseBytes === null
+    ...(status === null || status.legacyDatabaseBytes === null
       ? []
       : [
           {
@@ -140,7 +156,13 @@ export const doctorCommand = Command.make("doctor", {
       const logLevel = yield* GlobalFlag.LogLevel;
       const config = yield* resolveCliAuthConfig(flags, logLevel);
       yield* runDoctor(config.dbPath, { fix: flags.fix, dryRun: flags.dryRun }).pipe(
-        Effect.provide(Layer.merge(DatabaseMaintenance.layer, CliService.layer(config))),
+        Effect.provide(
+          Layer.mergeAll(
+            DatabaseMaintenance.layer,
+            SpacesDatabaseTools.layer,
+            CliService.layer(config),
+          ),
+        ),
       );
     }),
   ),
