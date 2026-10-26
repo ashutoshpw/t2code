@@ -19,6 +19,8 @@ import {
   DesktopPreviewClearDataInputSchema,
   DesktopPreviewImportCookiesInputSchema,
   DesktopPreviewCreateTabInputSchema,
+  DesktopPreviewHostStartInputSchema,
+  DesktopPreviewHostStopInputSchema,
   DesktopPreviewTabInputSchema,
   DesktopPreviewWebviewConfigSchema,
   PreviewAnnotationSubmissionResultSchema,
@@ -29,12 +31,14 @@ import {
   MAX_KEYBINDINGS_COUNT,
 } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
+import * as Stream from "effect/Stream";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
 import * as NodeURL from "node:url";
 
 import * as ElectronWindow from "../../electron/ElectronWindow.ts";
 import * as BrowserImport from "../../preview/BrowserImport/BrowserImport.ts";
+import * as PreviewHostClient from "../../preview/PreviewHostClient.ts";
 import * as PreviewManager from "../../preview/Manager.ts";
 import { normalizeCaptureFailure } from "../../preview/captureErrors.ts";
 import * as DesktopClientSettings from "../../settings/DesktopClientSettings.ts";
@@ -58,6 +62,13 @@ export const installPreviewEventForwarding = Effect.fn(
   );
   yield* manager.subscribeOpenLinks((event) =>
     electronWindow.sendAll(IpcChannels.PREVIEW_OPEN_LINK_CHANNEL, event),
+  );
+  const hostClient = yield* PreviewHostClient.PreviewHostClient;
+  yield* hostClient.states.pipe(
+    Stream.runForEach((state) =>
+      Effect.sync(() => electronWindow.sendAll(IpcChannels.PREVIEW_HOST_STATE_CHANNEL, state)),
+    ),
+    Effect.forkScoped,
   );
 });
 
@@ -83,6 +94,26 @@ const createTab = DesktopIpc.makeIpcMethod({
   }) {
     const manager = yield* PreviewManager.PreviewManager;
     yield* manager.createTab(tabId, { zoomFactor, colorScheme, serverTab });
+  }),
+});
+
+const startBrowserHost = DesktopIpc.makeIpcMethod({
+  channel: IpcChannels.PREVIEW_HOST_START_CHANNEL,
+  payload: DesktopPreviewHostStartInputSchema,
+  result: Schema.Void,
+  handler: Effect.fn("desktop.ipc.preview.startBrowserHost")(function* (input) {
+    const hostClient = yield* PreviewHostClient.PreviewHostClient;
+    yield* hostClient.start(input);
+  }),
+});
+
+const stopBrowserHost = DesktopIpc.makeIpcMethod({
+  channel: IpcChannels.PREVIEW_HOST_STOP_CHANNEL,
+  payload: DesktopPreviewHostStopInputSchema,
+  result: Schema.Void,
+  handler: Effect.fn("desktop.ipc.preview.stopBrowserHost")(function* ({ environmentId }) {
+    const hostClient = yield* PreviewHostClient.PreviewHostClient;
+    yield* hostClient.stop(environmentId);
   }),
 });
 
@@ -442,6 +473,8 @@ export const methods = [
   setForwardedShortcuts,
   updateAnnotationVoice,
   createTab,
+  startBrowserHost,
+  stopBrowserHost,
   closeTab,
   registerWebview,
   navigate,
