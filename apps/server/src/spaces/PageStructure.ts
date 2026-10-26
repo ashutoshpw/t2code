@@ -202,7 +202,8 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     const parent = yield* page(destination.placement.pageId);
     if (movingPages.members.has(parent.page_id)) return yield* invalid("cycle");
     const depth = yield* ancestry(parent.page_id);
-    checkLimit("maxDepth", depth + Math.max(1, movingPages.depth));
+    const addedPageDepth = movingBlocks ? movingPages.depth : Math.max(1, movingPages.depth);
+    checkLimit("maxDepth", depth + addedPageDepth);
     if (
       destination.placement.parentId !== null &&
       selectedBlocks.has(destination.placement.parentId)

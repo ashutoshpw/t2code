@@ -1454,8 +1454,143 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
       Effect.gen(function* () {
         const { service, common, page } = yield* boot();
         let deepest = page.id;
-        for (let depth = 2; depth <= 16; depth++)
+        let penultimate = page.id;
+        for (let depth = 2; depth <= 16; depth++) {
+          penultimate = deepest;
           deepest = (yield* childPage(service, common, deepest, `depth-${depth}`)).page.id;
+        }
+        const ordinary = block("depth16-ordinary");
+        yield* service.applyBlockBatch({
+          ...common,
+          mutationId: "depth16-seed",
+          pageId: deepest,
+          baseRevision: 0,
+          generation: 0,
+          mutations: [{ kind: "insert", block: ordinary }],
+        });
+        const target = { kind: "blocks" as const, pageId: deepest, blockIds: [ordinary.id] };
+        const placement = { pageId: deepest, parentId: null, beforeBlockId: null };
+        const sourcePlan = yield* service.inspectStructure({ ...env, target });
+        const noopInput = {
+          ...common,
+          mutationId: "depth16-noop",
+          sourcePageId: deepest,
+          blockIds: [ordinary.id],
+          destination: placement,
+          guards: sourcePlan.guards,
+        };
+        const original = yield* structureState(dbPath);
+        const inspectionError = yield* service
+          .inspectStructure({ ...env, target, destination: { kind: "child", placement } })
+          .pipe(Effect.match({ onFailure: (error) => error, onSuccess: () => null }));
+        const noop = yield* service.moveBlocks(noopInput).pipe(
+          Effect.match({
+            onFailure: (error) => ({ kind: "error" as const, error }),
+            onSuccess: (result) => ({ kind: "result" as const, result }),
+          }),
+        );
+        assert.deepEqual(
+          [inspectionError, noop.kind === "error" ? noop.error : null],
+          [null, null],
+        );
+        if (noop.kind !== "result" || noop.result.status !== "saved")
+          return yield* Effect.die("Expected saved depth16 no-op");
+        assert.deepEqual(noop.result.changed, { pages: [], roots: [] });
+        const unchanged = yield* structureState(dbPath);
+        for (const key of [
+          "spaces",
+          "pages",
+          "blocks",
+          "owners",
+          "ids",
+          "history",
+          "blockPins",
+          "revisionPins",
+        ] as const)
+          assert.deepEqual(unchanged[key], original[key]);
+        assert.equal(unchanged.core[0]!.catalog_revision, original.core[0]!.catalog_revision);
+        assert.equal(unchanged.receipts.length, original.receipts.length + 1);
+        assert.equal(unchanged.core[0]!.receipt_rows, Number(original.core[0]!.receipt_rows) + 1);
+        assert.deepEqual(
+          yield* service.lookupMutationReceipt({
+            request: { operation: "moveBlocks", input: noopInput },
+          }),
+          { status: "found", receipt: { operation: "moveBlocks", result: noop.result } },
+        );
+        assert.deepEqual(yield* service.moveBlocks(noopInput), noop.result);
+        assert.deepEqual(yield* structureState(dbPath), unchanged);
+
+        const out = yield* service.moveBlocks(
+          yield* blockMoveIntent(
+            service,
+            common,
+            deepest,
+            [ordinary.id],
+            { pageId: penultimate, parentId: null, beforeBlockId: null },
+            "depth16-out",
+          ),
+        );
+        assert.equal(out.status, "saved");
+        const back = yield* service.moveBlocks(
+          yield* blockMoveIntent(
+            service,
+            common,
+            penultimate,
+            [ordinary.id],
+            placement,
+            "depth16-back",
+          ),
+        );
+        if (back.status !== "saved") return yield* Effect.die("Expected move into depth16 page");
+        assert.equal(back.changed.pages.length, 2);
+        const body = yield* service.readBlocks({
+          ...env,
+          pageId: deepest,
+          revision: (yield* service.getPage({ ...env, pageId: deepest })).page.revision,
+        });
+        assert.equal(body.blocks[0]!.id, ordinary.id);
+        assert.deepEqual(body.blocks[0]!.content, ordinary.content);
+
+        const owned = yield* childPage(service, common, penultimate, "depth16-owned");
+        const ownedBefore = yield* structureState(dbPath);
+        const overflows = [
+          service
+            .inspectStructure({
+              ...env,
+              target: { kind: "blocks", pageId: penultimate, blockIds: [owned.ownerBlockId] },
+              destination: { kind: "child", placement },
+            })
+            .pipe(Effect.asVoid),
+          service
+            .moveBlocks({
+              ...common,
+              mutationId: "owned-depth17",
+              sourcePageId: penultimate,
+              blockIds: [owned.ownerBlockId],
+              destination: placement,
+              guards: { pages: [], roots: [] },
+            })
+            .pipe(Effect.asVoid),
+          service
+            .movePage({
+              ...common,
+              mutationId: "page-move-depth17",
+              pageId: owned.page.id,
+              destination: { kind: "child", placement },
+              guards: { pages: [], roots: [] },
+            })
+            .pipe(Effect.asVoid),
+        ];
+        for (const attempt of overflows) {
+          const failure = yield* Effect.flip(attempt);
+          assert.equal(failure._tag, "SpaceLimitExceededError");
+          if (failure._tag === "SpaceLimitExceededError") {
+            assert.equal(failure.limit, "maxDepth");
+            assert.equal(failure.actual, 17);
+          }
+          assert.deepEqual(yield* structureState(dbPath), ownedBefore);
+        }
+
         const snapshot = Effect.gen(function* () {
           const sql = yield* SqlClient.SqlClient;
           return yield* sql`SELECT id FROM spaces_ids ORDER BY id`;
