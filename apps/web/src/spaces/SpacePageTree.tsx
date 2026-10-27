@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { Link } from "@tanstack/react-router";
 import type { EnvironmentId } from "@t2code/contracts";
@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button";
 import { useSidebar } from "../components/ui/sidebar";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { spacePageTreeRows, type SpacePageTreeRow } from "./SpacePageTree.logic";
+import { SpacePageFocusOwner } from "./SpacePageTree.focus";
 
 export function SpacePageTree({
   environmentId,
@@ -61,38 +62,55 @@ function PageTree({
   const { isMobile, setOpenMobile } = useSidebar();
   const rows = spacePageTreeRows(snapshot.windows);
   const listRef = useRef<LegendListRef | null>(null);
-  const focusRequest = useRef(0);
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
-  const focusRow = async (index: number, last = false) => {
-    const list = listRef.current;
+  const [focusOwner] = useState(
+    () => new SpacePageFocusOwner({ epoch: navigation.getSnapshot, pending: setPendingKey }),
+  );
+  const [attachList] = useState(() => (list: LegendListRef | null) => {
+    listRef.current = list;
+    focusOwner.attach(
+      list
+        ? {
+            rows: () => list.getState().data,
+            scrollToItem: (item) => list.scrollToItem({ item, animated: false }),
+            cancelScroll: () => {
+              // A new imperative request supersedes LegendList's deferred scroll work.
+              void list.scrollToOffset({ offset: list.getState().scroll, animated: false });
+            },
+            containsFocus: () => list.getScrollableNode().contains(document.activeElement),
+            focus: (key, last) => {
+              const index = list
+                .getState()
+                .data.findIndex((row: SpacePageTreeRow) => row.key === key);
+              if (index < 0) return;
+              const element = list.getState().elementAtIndex(index);
+              if (!(element instanceof HTMLElement)) return;
+              const target = element.matches("[data-space-row]")
+                ? element
+                : element.querySelector<HTMLElement>("[data-space-row]");
+              const actions = target?.querySelectorAll<HTMLElement>(
+                "[data-space-action]:not(:disabled)",
+              );
+              const action = actions?.[last ? actions.length - 1 : 0];
+              (action ?? target)?.focus({ preventScroll: true });
+            },
+          }
+        : null,
+    );
+  });
+  // oxlint-disable-next-line t2code/react-effect-budget -- synchronize focus scroll ownership with the virtualizer's committed data and cancel obsolete requests.
+  useLayoutEffect(() => {
+    void focusOwner.revalidate(snapshot, rows);
+    return focusOwner.invalidate;
+  }, [focusOwner, rows, snapshot]);
+  const focusRow = (index: number, last = false) => {
     const row = rows[index];
-    if (!list || !row) return;
-    const request = ++focusRequest.current;
-    setPendingKey(row.key);
-    await list.scrollIndexIntoView({ index, animated: false });
-    if (
-      request !== focusRequest.current ||
-      listRef.current !== list ||
-      !list.getScrollableNode().contains(document.activeElement)
-    )
-      return;
-    setPendingKey(null);
-    const currentIndex = list.getState().indexByKey(row.key);
-    if (currentIndex === undefined) return;
-    const element = list.getState().elementAtIndex(currentIndex);
-    if (!(element instanceof HTMLElement)) return;
-    const target = element.matches("[data-space-row]")
-      ? element
-      : element?.querySelector<HTMLElement>("[data-space-row]");
-    const actions = target?.querySelectorAll<HTMLElement>("[data-space-action]:not(:disabled)");
-    const action = actions?.[last ? actions.length - 1 : 0];
-    (action ?? target)?.focus({ preventScroll: true });
+    if (row) void focusOwner.request(row.key, last);
   };
   const focusList = () => {
-    focusRequest.current++;
+    focusOwner.cancel();
     setFocusedKey(null);
-    setPendingKey(null);
     listRef.current?.getScrollableNode().focus({ preventScroll: true });
   };
   const first = (parentPageId: SpacePageId | null) => {
@@ -155,7 +173,7 @@ function PageTree({
         </p>
       ) : null}
       <LegendList<SpacePageTreeRow>
-        ref={listRef}
+        ref={attachList}
         data={rows}
         keyExtractor={(row) => row.key}
         getItemType={(row) => row.kind}
@@ -171,7 +189,7 @@ function PageTree({
         onKeyDown={onKeyDown}
         onBlurCapture={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) {
-            focusRequest.current++;
+            focusOwner.cancel();
             setFocusedKey(null);
             setPendingKey(null);
           }
@@ -193,7 +211,7 @@ function PageTree({
             className="min-w-0 py-1"
             style={{ paddingInlineStart: `min(${row.depth * 12}px, 25%)` }}
             onFocusCapture={() => {
-              focusRequest.current++;
+              focusOwner.cancel();
               setFocusedKey(row.key);
               setPendingKey(null);
             }}
