@@ -6549,7 +6549,7 @@ const imageWorkflowFixture = Effect.fn("SpaceImageWorkflowTest.fixture")(functio
       },
     });
   let images = make();
-  const createController = () =>
+  const createController = (windowLimit = 100) =>
     new SpaceDocumentController(
       h.key,
       {
@@ -6585,7 +6585,7 @@ const imageWorkflowFixture = Effect.fn("SpaceImageWorkflowTest.fixture")(functio
         getPage: () => h.ports.getPage(h.key),
         mediaBlocked: () => images.isBlocked(h.key),
         readBlocks: (input) => h.run(service.readBlocks(input)),
-        windowLimit: () => 100,
+        windowLimit: () => windowLimit,
       },
     );
   return {
@@ -7212,6 +7212,174 @@ it.effect(
             await hidden.release(record.id);
             await owner.move(h.key.pageId, pages.spaceId, null);
             assert.equal(pages.requests.length, 1);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["save-prior-text", "discard-conflict"] as const)(
+  "releases a cancelled image after %s advances the authoritative page revision",
+  (mode) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              view.edit("prior-text");
+              const record = await h.images.add(h.key, h.file(), "cancelled.png");
+              await h.images.upload(record.id);
+              const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+              await h.images.insert(record.id, port);
+              const bound = h.images.getSnapshot().records[0]!;
+              if (mode === "save-prior-text") {
+                assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+                assert.isFalse(
+                  controller.session.getSnapshot().blocks.some((b) => imageAssetId(b)),
+                );
+                await controller.save();
+              } else {
+                const page = await h.ports.getPage(h.key);
+                const external = await h.ports.applyBlockBatch({
+                  ...h.key,
+                  mutationId: C.SpaceMutationId.make("cancel-external"),
+                  receiptEpoch: page.mutationAdmission.epoch,
+                  baseRevision: page.page.revision,
+                  generation: 1,
+                  mutations: [{ kind: "insert", block: savedParagraph("external", "remote") }],
+                });
+                assert.equal(external.status, "saved");
+                await controller.save();
+                assert.equal(controller.session.getSnapshot().status, "conflict");
+                await expect(h.images.release(record.id, port)).rejects.toThrow();
+                assert.equal((await h.originals.load()).length, 1);
+                await controller.discard();
+              }
+              const state = controller.session.getSnapshot();
+              assert.isFalse(state.dirty);
+              assert.isNull(state.pending);
+              assert.isNull(state.persistenceError);
+              assert.isTrue(controller.getSnapshot().completeWindow);
+              assert.isAbove(state.baseRevision!, bound.placement!.revision);
+              assert.isFalse(state.blocks.some((b) => imageAssetId(b)));
+              h.reload();
+              if (mode === "save-prior-text") {
+                const partial = h.createController(1);
+                await partial.open();
+                const partialView = savedView(partial);
+                try {
+                  assert.isFalse(partial.getSnapshot().completeWindow);
+                  assert.isFalse(partial.session.getSnapshot().dirty);
+                  await expect(
+                    h.images.release(
+                      record.id,
+                      partialView.bridge.imageInsertion(
+                        () => partialView.state,
+                        partialView.dispatch,
+                      ),
+                    ),
+                  ).rejects.toThrow();
+                  assert.equal((await h.originals.load()).length, 1);
+                } finally {
+                  partialView.stop();
+                }
+              }
+              const restored = h.createController();
+              await restored.open();
+              const restoredView = savedView(restored);
+              try {
+                let current = false;
+                const restoredPort = restoredView.bridge.imageInsertion(
+                  () => restoredView.state,
+                  restoredView.dispatch,
+                  () => current,
+                );
+                await expect(h.images.release(record.id, restoredPort)).rejects.toThrow();
+                assert.equal((await h.originals.load()).length, 1);
+                current = true;
+                restoredView.edit("unsaved-newer-");
+                assert.isTrue(restored.session.getSnapshot().dirty);
+                await expect(h.images.release(record.id, restoredPort)).rejects.toThrow();
+                assert.equal((await h.originals.load()).length, 1);
+                await restored.discard();
+                await h.images.release(record.id, restoredPort);
+                assert.equal((await h.originals.load()).length, 0);
+                await h.images.checkPages(environmentId, [h.key.pageId]);
+                assert.equal((await h.images.add(h.key, h.file(), "next.png")).slot, record.slot);
+              } finally {
+                restoredView.stop();
+              }
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each([false, true])(
+  "retains an original and exact uncertain receipt across release and reload (image cancelled: %s)",
+  (cancelled) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              view.edit("remaining-text");
+              const record = await h.images.add(h.key, h.file(), "uncertain.png");
+              await h.images.upload(record.id);
+              const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+              await h.images.insert(record.id, port);
+              if (cancelled)
+                assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              h.control.loseDocument = true;
+              await expect(controller.save()).rejects.toThrow("Lost image document");
+              const pending = controller.session.getSnapshot().pending!;
+              assert.isNotNull(pending);
+              const original = (await h.originals.load())[0]!;
+              await expect(h.images.release(record.id, port)).rejects.toThrow(
+                "pending document receipt",
+              );
+              assert.strictEqual(controller.session.getSnapshot().pending, pending);
+              assert.deepEqual((await h.originals.load())[0], original);
+              h.reload();
+              const restored = h.createController();
+              await restored.open();
+              const restoredView = savedView(restored);
+              try {
+                const restoredPort = restoredView.bridge.imageInsertion(
+                  () => restoredView.state,
+                  restoredView.dispatch,
+                );
+                await expect(h.images.release(record.id, restoredPort)).rejects.toThrow(
+                  "pending document receipt",
+                );
+                assert.deepEqual(restored.session.getSnapshot().pending, pending);
+                assert.deepEqual((await h.originals.load())[0], original);
+                assert.equal(h.documentRequests.length, 1);
+                await restored.save();
+                assert.isNull(restored.session.getSnapshot().pending);
+                await h.images.release(record.id, restoredPort);
+                assert.equal((await h.originals.load()).length, 0);
+                assert.equal(h.documentRequests.length, 1);
+              } finally {
+                restoredView.stop();
+              }
+            } finally {
+              view.stop();
+            }
           });
         }),
       ),

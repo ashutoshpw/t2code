@@ -622,16 +622,25 @@ export class SpaceImageUploads {
           p = r.placement!;
         if (s.pending || s.persistenceError)
           throw new Error("Resolve the exact pending document receipt first");
-        const unsentRemoved =
-          s.baseRevision === p.revision &&
+        const absent =
           !s.memberIds.includes(p.block.id) &&
-          !s.blocks.some((b) => imageAssetId(b) === r.handle!.assetId);
+          !s.blocks.some((b) => b.id === p.block.id || imageAssetId(b) === r.handle!.assetId);
+        const unsentRemoved = s.baseRevision === p.revision && absent;
+        // A clean complete window is authoritative absence after a save or discarded conflict.
+        const cancelled =
+          absent &&
+          !s.dirty &&
+          s.status === "saved" &&
+          s.baseRevision !== null &&
+          s.baseRevision > p.revision &&
+          target.current() &&
+          target.complete();
         const acknowledged =
           !s.dirty &&
           s.memberIds.includes(p.block.id) &&
           ((s.acknowledgedGeneration ?? -1) >= r.generation! ||
             (await this.#ports.saved(r.key, p.block.id, r.handle!.assetId)));
-        if (!unsentRemoved && !acknowledged)
+        if (!unsentRemoved && !cancelled && !acknowledged)
           throw new Error(
             "Save or resolve newer image drafts before releasing the retained original",
           );
