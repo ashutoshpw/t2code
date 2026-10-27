@@ -1188,7 +1188,16 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       return yield* run(environmentId, (meta) =>
         Effect.gen(function* () {
           yield* Receipts.issue(meta);
-          return { version: 2, limits };
+          return {
+            version: 2,
+            limits,
+            features: {
+              blockMoves: true,
+              referenceResolution: true,
+              recovery: true,
+              search: true,
+            },
+          } satisfies C.SpaceCapability;
         }),
       );
     },

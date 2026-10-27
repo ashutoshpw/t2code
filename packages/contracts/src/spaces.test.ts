@@ -97,6 +97,12 @@ const decodeList = Schema.decodeUnknownSync(SpaceListInput, strict);
 const decodeListResult = Schema.decodeUnknownSync(SpaceListResult, strict);
 const decodeError = Schema.decodeUnknownSync(SpaceServiceError, strict);
 const decodeCapability = Schema.decodeUnknownSync(SpaceCapability, strict);
+const decodeLegacyCapability = Schema.decodeUnknownSync(
+  Schema.Struct({
+    version: SpaceCapability.fields.version,
+    limits: SpaceCapability.fields.limits,
+  }),
+);
 const encodeRequest = Schema.encodeSync(SpaceMutationRequest);
 const encodeLookup = Schema.encodeSync(SpaceReceiptLookupInput);
 const encodeWindow = Schema.encodeSync(SpaceReadBlocksResult);
@@ -264,7 +270,7 @@ describe("Spaces core protocol", () => {
     }
   });
 
-  it("decodes legacy capabilities and receipts while advertising optional independent history limits", () => {
+  it("decodes legacy capabilities and receipts with optional policies and method flags", () => {
     const old = {
       version: 1,
       limits: {
@@ -313,6 +319,28 @@ describe("Spaces core protocol", () => {
     };
     const next = { ...old, limits: { ...old.limits, history, search, maxReferenceHops: 64 } };
     expect(decodeCapability(next)).toEqual(next);
+    const nestedOnly = { ...next, version: 2 };
+    expect(decodeCapability(nestedOnly).features).toBeUndefined();
+    const advertised = {
+      ...nestedOnly,
+      features: {
+        blockMoves: true,
+        referenceResolution: true,
+        recovery: true,
+        search: true,
+        contextCapture: true,
+        assets: true,
+      },
+    };
+    expect(decodeCapability(advertised)).toEqual(advertised);
+    expect(decodeLegacyCapability(advertised)).toEqual(nestedOnly);
+    expect(decodeCapability({ ...nestedOnly, features: { search: true } }).features).toEqual({
+      search: true,
+    });
+    expect(decodeCapability({ ...nestedOnly, features: {} }).features).toEqual({});
+    for (const search of [false, "true", 1, null])
+      expect(() => decodeCapability({ ...nestedOnly, features: { search } })).toThrow();
+    expect(() => decodeCapability({ ...nestedOnly, features: null })).toThrow();
     expect(() =>
       decodeCapability({
         ...old,

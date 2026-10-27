@@ -635,7 +635,21 @@ export const SpaceLimits = Schema.Struct({
   cleanupBatchRows: PositiveInt,
 });
 export type SpaceLimits = typeof SpaceLimits.Type;
-export const SpaceCapability = Schema.Struct({ version: PositiveInt, limits: SpaceLimits });
+export const SpaceCapability = Schema.Struct({
+  version: PositiveInt,
+  limits: SpaceLimits,
+  // Flags describe implemented methods, independently of permissions and index readiness.
+  features: Schema.optionalKey(
+    Schema.Struct({
+      blockMoves: Schema.optionalKey(Schema.Literal(true)),
+      referenceResolution: Schema.optionalKey(Schema.Literal(true)),
+      recovery: Schema.optionalKey(Schema.Literal(true)),
+      search: Schema.optionalKey(Schema.Literal(true)),
+      contextCapture: Schema.optionalKey(Schema.Literal(true)),
+      assets: Schema.optionalKey(Schema.Literal(true)),
+    }),
+  ),
+});
 export type SpaceCapability = typeof SpaceCapability.Type;
 
 export class SpacesDisabledError extends Schema.TaggedError<SpacesDisabledError>()(

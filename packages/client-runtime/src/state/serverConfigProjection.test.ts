@@ -67,7 +67,7 @@ const encodeSettingsEvent = Schema.encodeUnknownSync(settingsEventCodec);
 
 it("projects authoritative Spaces enable/remove, preserves legacy events, and replaces reconnect capability state", () => {
   const spaces = {
-    version: 1,
+    version: 2,
     limits: {
       maxListRows: 50,
       maxListResponseBytes: 65536,
@@ -91,6 +91,17 @@ it("projects authoritative Spaces enable/remove, preserves legacy events, and re
       cleanupBatchRows: 100,
     },
   };
+  const advertised = {
+    ...spaces,
+    features: {
+      blockMoves: true,
+      referenceResolution: true,
+      recovery: true,
+      search: true,
+      contextCapture: true,
+      assets: true,
+    },
+  };
   const config = {
     settings: DEFAULT_SERVER_SETTINGS,
     environment: { capabilities: { repositoryIdentity: true } },
@@ -105,10 +116,27 @@ it("projects authoritative Spaces enable/remove, preserves legacy events, and re
         payload: { settings: DEFAULT_SERVER_SETTINGS, ...payload },
       }),
     );
+  state = applyServerConfigProjection(state, event({ spaces: advertised }));
+  expect(Option.getOrThrow(state).config.environment.capabilities.spaces).toEqual(advertised);
+  state = applyServerConfigProjection(state, event({}));
+  expect(Option.getOrThrow(state).config.environment.capabilities.spaces).toEqual(advertised);
   state = applyServerConfigProjection(state, event({ spaces }));
   expect(Option.getOrThrow(state).config.environment.capabilities.spaces).toEqual(spaces);
-  state = applyServerConfigProjection(state, event({}));
+  expect(Option.getOrThrow(state).config.environment.capabilities.spaces?.features).toBeUndefined();
+  state = applyServerConfigProjection(state, event({ spaces: advertised }));
+  state = applyServerConfigProjection(state, {
+    ...snapshot,
+    config: {
+      ...config,
+      environment: {
+        ...config.environment,
+        capabilities: { ...config.environment.capabilities, spaces },
+      },
+    },
+  });
   expect(Option.getOrThrow(state).config.environment.capabilities.spaces).toEqual(spaces);
+  expect(Option.getOrThrow(state).config.environment.capabilities.spaces?.features).toBeUndefined();
+  state = applyServerConfigProjection(state, event({ spaces: advertised }));
   state = applyServerConfigProjection(state, event({ spaces: null }));
   expect(Object.hasOwn(Option.getOrThrow(state).config.environment.capabilities, "spaces")).toBe(
     false,

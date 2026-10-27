@@ -522,6 +522,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           assert.equal(error._tag, "SpaceSearchUnavailableError");
           if (error._tag === "SpaceSearchUnavailableError")
             assert.equal(error.reason, "unsupported");
+          assert.isTrue((yield* service.getCapability(environmentId))?.features?.search);
         }),
       ),
   );
@@ -832,6 +833,14 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
       fixture((dbPath) =>
         Effect.gen(function* () {
           const { service, request, common, page, library } = yield* boot();
+          const capability = yield* service.getCapability(environmentId);
+          assert.equal(capability?.version, 2);
+          assert.deepEqual(capability?.features, {
+            blockMoves: true,
+            referenceResolution: true,
+            recovery: true,
+            search: true,
+          });
           const value = {
             ...block("search-moving"),
             type: "code",
@@ -840,7 +849,10 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           yield* service.applyBlockBatch(
             request("search-moving-seed", 0, [{ kind: "insert", block: value }]),
           );
-          yield* Effect.flip(service.search({ ...env, query: "oldsearchword" }));
+          const building = yield* Effect.flip(service.search({ ...env, query: "oldsearchword" }));
+          assert.equal(building._tag, "SpaceSearchUnavailableError");
+          if (building._tag === "SpaceSearchUnavailableError")
+            assert.equal(building.reason, "building");
           yield* service.search({ ...env, query: "oldsearchword" });
           const docs = Effect.gen(function* () {
             const sql = yield* SqlClient.SqlClient;
