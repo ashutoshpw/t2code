@@ -12,42 +12,51 @@ import type { SpaceDocumentController } from "./documentController";
 
 export function SpaceDocumentSurface({ target }: { target: SpacePageTarget }) {
   const registry = useContext(RegistryContext);
-  const [opened, setOpened] = useState<
-    { controller: SpaceDocumentController } | { error: unknown } | null
-  >(null);
+  const [attempt, setAttempt] = useState(0);
+  const [opened, setOpened] = useState<{
+    registry: typeof registry;
+    stamp: string;
+    result: { controller: SpaceDocumentController } | { error: unknown };
+  } | null>(null);
   const { environmentId, pageId } = target;
+  const stamp = JSON.stringify([environmentId, pageId, attempt]);
   // oxlint-disable-next-line t2code/react-effect-budget -- Acquire and release the external document session shared by route and panel mounts.
   useEffect(() => {
     const key = { environmentId, pageId };
     const documents = spaceDocuments(registry);
     let active = true;
-    let release: (() => void) | undefined;
-    const ready = (async () => {
-      const document = documents.open(key);
-      release = document.release;
-      return await document.ready;
-    })();
-    void ready.then(
+    const document = documents.open(key);
+    void document.ready.then(
       (controller) => {
-        if (active) setOpened({ controller });
+        if (active) setOpened({ registry, stamp, result: { controller } });
       },
       (error: unknown) => {
-        if (active) setOpened({ error });
+        if (active) setOpened({ registry, stamp, result: { error } });
       },
     );
     return () => {
       active = false;
-      release?.();
+      document.release();
     };
-  }, [environmentId, pageId, registry]);
-  if (!opened) return <p role="status">Loading document…</p>;
-  if ("error" in opened) return <p role="alert">{message(opened.error)}</p>;
+  }, [environmentId, pageId, registry, stamp]);
+  if (!opened || opened.registry !== registry || opened.stamp !== stamp)
+    return <p role="status">Loading document…</p>;
+  const result = opened.result;
+  if ("error" in result)
+    return (
+      <div>
+        <p role="alert">{message(result.error)}</p>
+        <Button variant="outline" onClick={() => setAttempt((value) => value + 1)}>
+          Retry opening document
+        </Button>
+      </div>
+    );
   if (
-    opened.controller.session.key.environmentId !== environmentId ||
-    opened.controller.session.key.pageId !== pageId
+    result.controller.session.key.environmentId !== environmentId ||
+    result.controller.session.key.pageId !== pageId
   )
     return <p role="status">Loading document…</p>;
-  return <DocumentContent controller={opened.controller} />;
+  return <DocumentContent controller={result.controller} />;
 }
 
 function message(error: unknown) {

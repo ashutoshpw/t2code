@@ -1,3 +1,4 @@
+import * as NodeSqlite from "node:sqlite";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it, assert, expect } from "@effect/vitest";
 import {
@@ -63,13 +64,16 @@ import { spaceDocumentBlocks } from "../src/spaces/document.ts";
 
 const environmentId = EnvironmentId.make("editor-service");
 const fixture = Effect.fn("SpaceEditorServiceTest.fixture")(function* <A, E>(
-  use: (service: SpacesService.SpacesService["Service"]) => Effect.Effect<A, E, Scope.Scope>,
+  use: (
+    service: SpacesService.SpacesService["Service"],
+    databasePath: string,
+  ) => Effect.Effect<A, E, Scope.Scope>,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const directory = yield* fs.makeTempDirectoryScoped({ prefix: "spaces-editor-" });
   return yield* SpacesService.SpacesService.pipe(
-    Effect.flatMap(use),
+    Effect.flatMap((service) => use(service, path.join(directory, "spaces.sqlite"))),
     Effect.provide(
       SpacesService.layerFromPath(path.join(directory, "spaces.sqlite")).pipe(
         Layer.provide(
@@ -1378,6 +1382,7 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
     lose: null as "before" | "after" | null,
     after: null as (() => Promise<void>) | null,
   };
+  const documentReads = { failNext: false, attempted: [] as C.SpacePageId[] };
   const draftRecords = new Map<string, SpaceDocumentDraft>();
   const drafts = {
     load: async (key: C.SpacePageTarget) => {
@@ -1404,7 +1409,14 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
           {
             getPage: () => h.ports.getPage(key),
             windowLimit: () => 100,
-            readBlocks: (input) => h.run(service.readBlocks(input)),
+            readBlocks: (input) => {
+              documentReads.attempted.push(input.pageId);
+              if (documentReads.failNext) {
+                documentReads.failNext = false;
+                return Promise.reject(new Error("Controlled first refresh failure"));
+              }
+              return h.run(service.readBlocks(input));
+            },
           },
         ),
     );
@@ -1476,6 +1488,7 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
     documents,
     drafts,
     draftRecords,
+    documentReads,
     requests,
     lookups,
     disk,
@@ -1607,7 +1620,7 @@ it.effect(
               "reserved",
             );
             await expect(doc.save()).rejects.toThrow("reserved");
-            assert.throws(() => h.documents.open(h.key), "reserved");
+            assert.throws(() => h.documents.acquire(h.key), "reserved");
             first.release();
             h.disk.release.resolve();
             await expect(moving).rejects.toThrow("abort");
@@ -2007,6 +2020,122 @@ it.effect(
               a.stop();
               b.stop();
               route.release();
+              panel.release();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refreshes every changed resident after real root rebalance when the first refresh fails before reservation release",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          // Seed adjacent valid ranks so the actual service must rebalance multiple roots.
+          const sql = new NodeSqlite.DatabaseSync(databasePath);
+          try {
+            for (const [index, value] of [16, 32, 33, 64].entries())
+              sql
+                .prepare("UPDATE spaces_pages SET root_order = ? WHERE page_id = ?")
+                .run(value.toString(16).padStart(32, "0"), h.pages[index]!);
+          } finally {
+            sql.close();
+          }
+          yield* Effect.promise(async () => {
+            const views = h.pages.map((pageId) => h.documents.open({ environmentId, pageId }));
+            const documents = await Promise.all(views.map((view) => view.ready));
+            const bridges = documents.map((doc) => savedView(doc));
+            try {
+              const owner = h.make();
+              await owner.browse(h.spaceId, h.pages[0]!);
+              h.documentReads.attempted.length = 0;
+              h.documentReads.failNext = true;
+              await expect(owner.move(h.pages[0]!, h.spaceId, h.pages[2]!)).rejects.toThrow();
+              const receipt = await h.ports.lookupMutationReceipt({
+                request: { operation: "movePage", input: h.requests[0]! },
+              });
+              if (
+                receipt.status !== "found" ||
+                receipt.receipt.operation !== "movePage" ||
+                receipt.receipt.result.status !== "saved"
+              )
+                throw new Error("Expected actual rebalance receipt");
+              const changed = receipt.receipt.result.changed.pages;
+              assert.isAtLeast(changed.length, 2);
+              assert.deepEqual(
+                h.documentReads.attempted,
+                changed.map((row) => row.pageId),
+              );
+              const failedId = changed[0]!.pageId;
+              for (const row of changed) {
+                const index = h.pages.indexOf(row.pageId),
+                  doc = documents[index]!;
+                assert.isFalse(doc.structureBlocked());
+                if (row.pageId === failedId) {
+                  assert.isNotNull(doc.getSnapshot().error);
+                  assert.isFalse(bridges[index]!.bridge.canEdit());
+                } else {
+                  assert.isNull(doc.getSnapshot().error);
+                  assert.equal(doc.session.getSnapshot().baseRevision, row.revision);
+                  assert.isTrue(bridges[index]!.bridge.canEdit());
+                }
+              }
+              assert.isNull(owner.getSnapshot().journal.pending);
+              assert.equal(owner.getSnapshot().journal.history?.direction, "undo");
+              assert.equal(h.requests.length, 1);
+              const failed = documents[h.pages.indexOf(failedId)]!;
+              await failed.refresh();
+              assert.isNull(failed.getSnapshot().error);
+              assert.equal(failed.session.getSnapshot().baseRevision, changed[0]!.revision);
+            } finally {
+              bridges.forEach((view) => view.stop());
+              views.forEach((view) => view.release());
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "reacquires an affected page after exact uncertain-placement recovery without remounting its failed owner",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            h.network.lose = "after";
+            await expect(owner.move(h.pages[0]!, h.spaceId, null)).rejects.toThrow(
+              "Lost committed response",
+            );
+            const pending = owner.getSnapshot().journal.pending!;
+            const target = { environmentId, pageId: h.pages[1]! };
+            const blocked = h.documents.open(target);
+            await expect(blocked.ready).rejects.toThrow("reserved");
+            await owner.recover();
+            assert.deepEqual(h.lookups[0], { request: pending.request });
+            assert.isNull(owner.getSnapshot().journal.pending);
+            assert.equal(h.requests.length, 1);
+            const retried = h.documents.open(target),
+              doc = await retried.ready;
+            blocked.release();
+            const panel = h.documents.open(target);
+            try {
+              assert.equal(await panel.ready, doc);
+              assert.isNull(doc.getSnapshot().error);
+              assert.equal(
+                doc.session.getSnapshot().baseRevision,
+                (await h.ports.getPage(target)).page.revision,
+              );
+            } finally {
+              retried.release();
               panel.release();
             }
           });

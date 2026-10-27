@@ -60,8 +60,13 @@ export class SpaceDocumentController {
       throw new Error("Page placement is reserved; finish its receipt recovery first");
   }
   async refreshStructure() {
-    this.#assertClean();
-    await this.#load(undefined, true);
+    try {
+      this.#assertClean();
+      await this.#load(undefined, true);
+    } catch (error) {
+      if (this.#snapshot.error !== error) this.#update({ error, nextCursor: null });
+      throw error;
+    }
   }
 
   constructor(key: SpacePageTarget, options: SpaceSessionOptions, ports: SpaceDocumentPorts) {
@@ -285,25 +290,38 @@ export class SpaceDocumentControllers {
     environmentId: SpacePageTarget["environmentId"],
     pages: readonly SpacePageTarget["pageId"][],
   ) {
+    const errors: unknown[] = [];
     for (const pageId of new Set(pages)) {
       const item = this.#documents.get(JSON.stringify([environmentId, pageId]));
-      if (item) await item.controller.refreshStructure();
+      if (!item) continue;
+      try {
+        await item.controller.refreshStructure();
+      } catch (error) {
+        errors.push(error);
+      }
     }
+    if (errors.length)
+      throw new AggregateError(
+        errors,
+        "Some affected Spaces documents could not refresh; reload them before editing",
+      );
   }
   readonly #documents = new Map<string, { controller: SpaceDocumentController; readers: number }>();
   constructor(readonly create: (key: SpacePageTarget) => SpaceDocumentController) {}
   open(key: SpacePageTarget) {
-    const controller = this.acquire(key);
+    let controller: SpaceDocumentController | undefined;
     let released = false;
+    const ready = (async () => {
+      controller = this.acquire(key);
+      await controller.open().catch(() => {});
+      return controller;
+    })();
     return {
-      ready: controller
-        .open()
-        .catch(() => {})
-        .then(() => controller),
+      ready,
       release: () => {
         if (released) return;
         released = true;
-        this.release(key, controller);
+        if (controller) this.release(key, controller);
       },
     };
   }

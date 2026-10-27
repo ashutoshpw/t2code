@@ -310,7 +310,7 @@ it("reserves hydration and both shared edit/save owners without leaking capacity
     "reserved",
   );
   await expect(doc.save()).rejects.toThrow("reserved");
-  expect(() => h.documents.open(key)).toThrow("reserved");
+  expect(() => h.documents.acquire(key)).toThrow("reserved");
   release();
   const nextReservation = h.documents.reserve(key.environmentId, [key.pageId]);
   release();
@@ -325,4 +325,63 @@ it("reserves hydration and both shared edit/save owners without leaking capacity
     await owner.ready;
     owner.release();
   }
+});
+
+it("retains a failed open lease and reacquires after reservation release without a late failed-owner cleanup releasing the new view", async () => {
+  const documents = new SpaceDocumentControllers((target) => controller(target));
+  const release = documents.reserve(key.environmentId, [key.pageId]);
+  const blocked = documents.open(key);
+  await expect(blocked.ready).rejects.toThrow("reserved");
+  release();
+  const retried = documents.open(key);
+  const doc = await retried.ready;
+  blocked.release();
+  const panel = documents.open(key);
+  expect(await panel.ready).toBe(doc);
+  retried.release();
+  doc.session.apply([{ kind: "replace", block: block("new owner draft") }]);
+  await doc.session.persistDraft();
+  panel.release();
+  const reopened = documents.open(key);
+  expect(await reopened.ready).toBe(doc);
+  expect(doc.session.getSnapshot().blocks).toEqual([block("new owner draft")]);
+  reopened.release();
+});
+
+it("retains dirty content and visibly gates a refused structural refresh while refreshing later clean residents", async () => {
+  let revision = 1;
+  const documents = new SpaceDocumentControllers((target) =>
+    controller(target, {
+      getPage: async () => ({
+        ...metadata(),
+        page: { ...metadata().page, id: target.pageId, revision },
+      }),
+      readBlocks: async () => ({ revision, blocks: [block("server")], nextCursor: null }),
+    }),
+  );
+  const other = { ...key, pageId: SpacePageId.make("other-clean") };
+  const a = documents.open(key),
+    b = documents.open(other);
+  const dirty = await a.ready,
+    clean = await b.ready;
+  dirty.session.apply([{ kind: "replace", block: block("retained dirty") }]);
+  await dirty.session.persistDraft();
+  const unlock = documents.reserve(key.environmentId, [key.pageId, other.pageId], true);
+  revision = 2;
+  try {
+    await expect(
+      documents.refreshStructure(key.environmentId, [key.pageId, other.pageId]),
+    ).rejects.toThrow();
+  } finally {
+    unlock();
+  }
+  expect(clean.session.getSnapshot().baseRevision).toBe(2);
+  expect(clean.getSnapshot().error).toBeNull();
+  expect(dirty.getSnapshot().error).toBeInstanceOf(Error);
+  expect(dirty.session.getSnapshot()).toMatchObject({
+    dirty: true,
+    blocks: [block("retained dirty")],
+  });
+  a.release();
+  b.release();
 });
