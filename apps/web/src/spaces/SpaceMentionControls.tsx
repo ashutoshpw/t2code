@@ -106,19 +106,23 @@ export function SpaceMentionControls({
   const choose = async (index: number) => {
     if (!owner || !ready || !selection) return;
     setState({ owner, busy: true, window: ready });
-    try {
-      if (await owner.choose(ready, index, selection)) {
-        setSelection(null);
-        onInserted();
-      } else
-        setError(
-          "Source or editor selection changed, or the label exceeds its limit. Explicitly reselect the editor position and search again.",
-        );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Mention was not inserted");
-    } finally {
-      setState({ owner, busy: false, window: ready });
-    }
+    await owner
+      .choose(ready, index, selection)
+      .then((inserted) => {
+        if (inserted) {
+          setSelection(null);
+          onInserted();
+        } else
+          setError(
+            "Source or editor selection changed, or the label exceeds its limit. Explicitly reselect the editor position and search again.",
+          );
+      })
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : "Mention was not inserted");
+      })
+      .finally(() => {
+        setState({ owner, busy: false, window: ready });
+      });
   };
   return (
     <>

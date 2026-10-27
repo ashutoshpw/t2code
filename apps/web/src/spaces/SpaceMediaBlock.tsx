@@ -213,25 +213,28 @@ export function SpaceMediaBlock({
     if (pending.current || !allowed || !current()) return;
     pending.current = true;
     const request = lifetime.current;
-    try {
-      const result = await images.readMetadata(environmentId, assetId);
-      if (request !== lifetime.current || !current() || !result.current()) return;
-      if (
-        spaceMediaKind(result.metadata.mimeType) !== block.type ||
-        (block.type === "image" &&
-          (!result.metadata.imageDimensions || result.metadata.byteSize > 10 * 1024 * 1024)) ||
-        (block.type === "pdf" && result.metadata.byteSize > 25 * 1024 * 1024) ||
-        (block.type === "video" && result.metadata.byteSize > 50 * 1024 * 1024)
-      )
-        throw new Error("This media exceeds its supported preview policy");
-      setSource(result);
-      setError(null);
-    } catch (e) {
-      if (request === lifetime.current && current())
-        setError(e instanceof Error ? e.message : "Media unavailable");
-    } finally {
-      pending.current = false;
-    }
+    await images
+      .readMetadata(environmentId, assetId)
+      .then((result) => {
+        if (request !== lifetime.current || !current() || !result.current()) return;
+        if (
+          spaceMediaKind(result.metadata.mimeType) !== block.type ||
+          (block.type === "image" &&
+            (!result.metadata.imageDimensions || result.metadata.byteSize > 10 * 1024 * 1024)) ||
+          (block.type === "pdf" && result.metadata.byteSize > 25 * 1024 * 1024) ||
+          (block.type === "video" && result.metadata.byteSize > 50 * 1024 * 1024)
+        )
+          throw new Error("This media exceeds its supported preview policy");
+        setSource(result);
+        setError(null);
+      })
+      .catch((e: unknown) => {
+        if (request === lifetime.current && current())
+          setError(e instanceof Error ? e.message : "Media unavailable");
+      })
+      .finally(() => {
+        pending.current = false;
+      });
   };
   return (
     <section aria-label={`${block.type} block`} className="space-y-2">

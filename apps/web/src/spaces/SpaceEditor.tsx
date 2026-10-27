@@ -31,6 +31,62 @@ import {
 import type { SpaceMentionController } from "./mentions";
 import "./editor.css";
 
+function createSpaceSessionDispatch(
+  adapter: SpaceEditorAdapter,
+  bridge: SpaceEditorBridge | undefined,
+  onBatch: ((batch: SpaceEditorBatch) => void) | undefined,
+) {
+  return Extension.create({
+    name: "spaceSessionDispatch",
+    dispatchTransaction({ transaction }) {
+      const editor = this.editor;
+      if (editor.isDestroyed) return;
+      const before = editor.state;
+      const result = bridge
+        ? bridge.apply(before, transaction)
+        : before.applyTransaction(transaction);
+      if (result.state === before) {
+        if (transaction.docChanged) editor.view.updateState(before);
+        return;
+      }
+      editor.emit("beforeTransaction", { editor, transaction, nextState: result.state });
+      editor.view.updateState(result.state);
+      editor.emit("transaction", {
+        editor,
+        transaction,
+        appendedTransactions: result.transactions.slice(1),
+      });
+      if (!before.selection.eq(result.state.selection))
+        editor.emit("selectionUpdate", { editor, transaction });
+      const focus = result.transactions.findLast((tr) => tr.getMeta("focus") || tr.getMeta("blur"));
+      if (focus?.getMeta("focus")) {
+        editor.isFocused = true;
+        editor.emit("focus", {
+          editor,
+          event: focus.getMeta("focus").event,
+          transaction: focus,
+        });
+      }
+      if (focus?.getMeta("blur")) {
+        editor.isFocused = false;
+        editor.emit("blur", {
+          editor,
+          event: focus.getMeta("blur").event,
+          transaction: focus,
+        });
+      }
+      if (!before.doc.eq(result.state.doc)) {
+        onBatch?.(adapter.batch(result.state));
+        editor.emit("update", {
+          editor,
+          transaction,
+          appendedTransactions: result.transactions.slice(1),
+        });
+      }
+    },
+  });
+}
+
 export function SpaceEditor({
   adapter,
   bridge,
@@ -82,57 +138,7 @@ export function SpaceEditor({
                   ? extension.extend({ addMarkView: () => ReactMarkViewRenderer(SpaceMentionView) })
                   : extension,
           ),
-        Extension.create({
-          name: "spaceSessionDispatch",
-          dispatchTransaction({ transaction }) {
-            const editor = this.editor;
-            if (editor.isDestroyed) return;
-            const before = editor.state;
-            const result = bridge
-              ? bridge.apply(before, transaction)
-              : before.applyTransaction(transaction);
-            if (result.state === before) {
-              if (transaction.docChanged) editor.view.updateState(before);
-              return;
-            }
-            editor.emit("beforeTransaction", { editor, transaction, nextState: result.state });
-            editor.view.updateState(result.state);
-            editor.emit("transaction", {
-              editor,
-              transaction,
-              appendedTransactions: result.transactions.slice(1),
-            });
-            if (!before.selection.eq(result.state.selection))
-              editor.emit("selectionUpdate", { editor, transaction });
-            const focus = result.transactions.findLast(
-              (tr) => tr.getMeta("focus") || tr.getMeta("blur"),
-            );
-            if (focus?.getMeta("focus")) {
-              editor.isFocused = true;
-              editor.emit("focus", {
-                editor,
-                event: focus.getMeta("focus").event,
-                transaction: focus,
-              });
-            }
-            if (focus?.getMeta("blur")) {
-              editor.isFocused = false;
-              editor.emit("blur", {
-                editor,
-                event: focus.getMeta("blur").event,
-                transaction: focus,
-              });
-            }
-            if (!before.doc.eq(result.state.doc)) {
-              onBatch?.(adapter.batch(result.state));
-              editor.emit("update", {
-                editor,
-                transaction,
-                appendedTransactions: result.transactions.slice(1),
-              });
-            }
-          },
-        }),
+        createSpaceSessionDispatch(adapter, bridge, onBatch),
       ],
       content: adapter.document.toJSON(),
       immediatelyRender: false,
