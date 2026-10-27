@@ -1477,17 +1477,12 @@ export function useComposerSend(input: ComposerSendInput) {
         );
         clearBackgroundDraftSubmissionByRef(scopeThreadRef(environmentId, threadIdForSend));
       }
-      if (
-        !composerDraftHasUserContent(
-          useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
-        )
-      ) {
-        setOptimisticUserMessages((existing) => {
-          const next = existing.filter((message) => message.id !== messageIdForSend);
-          return next.length === existing.length ? existing : next;
-        });
-        // The restored draft clones its images, so the sent copies are no longer used.
-        optimisticBlobPreviews.release(optimisticMessage);
+      setOptimisticUserMessages((existing) => {
+        const next = existing.filter((message) => message.id !== messageIdForSend);
+        return next.length === existing.length ? existing : next;
+      });
+      optimisticBlobPreviews.release(optimisticMessage);
+      const restoreFailedSnapshot = () => {
         const retryComposerImages = restoreComposerDraft(composerDraftTarget, sendSnapshot);
         if (currentRouteThreadKeyRef.current === routeThreadKey) {
           promptRef.current = messageTextForSend;
@@ -1500,6 +1495,52 @@ export function useComposerSend(input: ComposerSendInput) {
             detectTrigger: true,
           });
         }
+      };
+      if (
+        !composerDraftHasUserContent(
+          useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
+        )
+      ) {
+        restoreFailedSnapshot();
+      } else {
+        const recoveryToastId = toastManager.add(
+          stackedThreadToast({
+            type: "error",
+            title: "Message was not sent",
+            description:
+              "Your newer draft is unchanged. Restore the failed prompt when the original composer is empty.",
+            timeout: 0,
+            actionProps: {
+              children: "Restore prompt",
+              onClick: () => {
+                if (
+                  sendInFlightRef.current ||
+                  composerDraftHasUserContent(
+                    useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
+                  )
+                ) {
+                  toastManager.update(recoveryToastId, {
+                    description:
+                      "Send or clear the current prompt in the original thread before restoring.",
+                  });
+                  return;
+                }
+                restoreFailedSnapshot();
+                void navigate(
+                  draftId
+                    ? { to: "/draft/$draftId", params: { draftId } }
+                    : {
+                        to: "/$environmentId/$threadId",
+                        params: buildThreadRouteParams(
+                          scopeThreadRef(environmentId, threadIdForSend),
+                        ),
+                      },
+                );
+                toastManager.close(recoveryToastId);
+              },
+            },
+          }),
+        );
       }
       if (!isAtomCommandInterrupted(failure)) {
         const error = squashAtomCommandFailure(failure);

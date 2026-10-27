@@ -9,6 +9,7 @@ import {
   RuntimeRequestId,
   TurnItemId,
   type ModelSelection,
+  type ComposerContextDraft,
   type OrchestrationV2ThreadProjection,
   type ServerConfig,
 } from "@t2code/contracts";
@@ -29,11 +30,13 @@ const state = vi.hoisted(() => ({
     text: "Keep my draft",
     attachments: [] as DraftComposerImageAttachment[],
     modelSelection: undefined as ModelSelection | undefined,
+    contextDraft: undefined as ComposerContextDraft | undefined,
   },
   serverConfig: null as ServerConfig | null,
   projection: null as OrchestrationV2ThreadProjection | null,
   pendingRequests: { approvals: [], userInputs: [] } as PendingThreadRequests,
   enqueue: vi.fn(async () => undefined),
+  capture: vi.fn(),
   clearDraft: vi.fn(),
   approve: vi.fn(),
   answer: vi.fn(),
@@ -126,6 +129,7 @@ vi.mock("./use-thread-outbox", async () => {
   const { Atom } = await import("effect/reactivity");
   return { dispatchingQueuedMessageIdAtom: Atom.make(null), useThreadOutboxMessages: () => ({}) };
 });
+vi.mock("./spaces", () => ({ prepareMobileComposerContext: state.capture }));
 vi.mock("./thread-outbox", () => ({ enqueueThreadOutboxMessage: state.enqueue }));
 vi.mock("./composer-attachment-uploads", async () => {
   const { Atom } = await import("effect/reactivity");
@@ -181,7 +185,12 @@ import { useSelectedThreadRequests } from "./use-selected-thread-requests";
 beforeEach(() => {
   state.grantedEnvironments = new Set(["primary"]);
   state.connectionState = "connected";
-  state.draft = { text: "Keep my draft", attachments: [], modelSelection: undefined };
+  state.draft = {
+    text: "Keep my draft",
+    attachments: [],
+    modelSelection: undefined,
+    contextDraft: undefined,
+  };
   state.projection = null;
   state.serverConfig = {
     providers: [{ instanceId: "codex", driver: "codex", enabled: true }],
@@ -443,4 +452,75 @@ it("keeps newer native typing when an earlier send is still being prepared or pe
   expect(await pending).toBe("message");
   expect(state.clearDraft).not.toHaveBeenCalled();
   expect(state.draft.text).toBe("Newer typing");
+});
+
+function selectorDraft(): ComposerContextDraft {
+  return {
+    selectors: [
+      {
+        version: 1,
+        selection: "current",
+        kind: "page",
+        contextId: "page" as never,
+        label: "Page",
+        environmentId: "secondary" as never,
+        pageId: "source" as never,
+        includeChildPages: false,
+      },
+    ],
+    records: [],
+  };
+}
+
+it("refuses selector-only context as approval feedback without capture, send, or draft clearing", async () => {
+  state.grantedEnvironments.add("secondary");
+  state.draft = {
+    ...state.draft,
+    text: "Use [Page](t2-context://v1/page/page)",
+    contextDraft: selectorDraft(),
+  };
+  const composer = useThreadComposerState();
+  const requests = useSelectedThreadRequests();
+  const approval = { ...state.pendingRequests.approvals[0]!, supportsFeedback: true };
+  const flags: boolean[] = [];
+  await composer.onSendMessage(undefined, async (text, hasAddedContext) => {
+    flags.push(hasAddedContext);
+    if (hasAddedContext) return false;
+    return (await sendApprovalFeedback(approval, text, requests.onRespondToApproval))
+      ? "responded"
+      : false;
+  });
+  expect(flags).toEqual([true]);
+  expect(state.approve).not.toHaveBeenCalled();
+  expect(state.capture).not.toHaveBeenCalled();
+  expect(state.enqueue).not.toHaveBeenCalled();
+  expect(state.clearDraft).not.toHaveBeenCalled();
+  expect(state.draft.contextDraft).toEqual(selectorDraft());
+});
+
+it("retains selectors added while an approval-feedback response is deferred", async () => {
+  state.grantedEnvironments.add("secondary");
+  const entered = Promise.withResolvers<undefined>();
+  const reply = Promise.withResolvers<ReturnType<typeof AsyncResult.success<undefined>>>();
+  state.approve.mockImplementationOnce(() => {
+    entered.resolve(undefined);
+    return reply.promise;
+  });
+  const composer = useThreadComposerState();
+  const requests = useSelectedThreadRequests();
+  const approval = { ...state.pendingRequests.approvals[0]!, supportsFeedback: true };
+  const pending = composer.onSendMessage(undefined, async (text) =>
+    (await sendApprovalFeedback(approval, text, requests.onRespondToApproval))
+      ? "responded"
+      : false,
+  );
+  await entered.promise;
+  state.draft = { ...state.draft, contextDraft: selectorDraft() };
+  reply.resolve(AsyncResult.success(undefined));
+  await pending;
+  expect(state.approve).toHaveBeenCalledOnce();
+  expect(state.capture).not.toHaveBeenCalled();
+  expect(state.enqueue).not.toHaveBeenCalled();
+  expect(state.clearDraft).not.toHaveBeenCalled();
+  expect(state.draft.contextDraft).toEqual(selectorDraft());
 });

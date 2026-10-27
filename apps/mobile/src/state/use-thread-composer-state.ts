@@ -656,7 +656,7 @@ export function useThreadComposerState() {
     if (beforeDispatch !== undefined) {
       const response = await beforeDispatch(
         text,
-        attachments.length > 0 || draft.context !== undefined,
+        attachments.length > 0 || draft.context !== undefined || draft.contextDraft !== undefined,
       );
       if (!response) return null;
       // A context paste still landing, or any draft or settings change while approvals were
@@ -666,6 +666,7 @@ export function useThreadComposerState() {
       if (
         current.text !== draft.text ||
         JSON.stringify(current.context) !== JSON.stringify(draft.context) ||
+        JSON.stringify(current.contextDraft) !== JSON.stringify(draft.contextDraft) ||
         JSON.stringify(current.modelSelection) !== JSON.stringify(draft.modelSelection) ||
         current.runtimeMode !== draft.runtimeMode ||
         current.interactionMode !== draft.interactionMode ||
