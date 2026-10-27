@@ -282,7 +282,9 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
                   onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
                 >
                   {pending.rejection
-                    ? "Reinspect rejected deletion"
+                    ? pending.request.operation === "permanentlyDeletePage"
+                      ? "Reinspect rejected deletion"
+                      : "Inspect rejected operation"
                     : pending.conflict
                       ? "Reinspect conflicted operation"
                       : "Recover exact receipt"}

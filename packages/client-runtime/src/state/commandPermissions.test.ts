@@ -1,5 +1,6 @@
 import { createSpacesEnvironmentAtoms } from "./spaces.ts";
 import {
+  SpaceId,
   SpaceBlockId,
   SpacePageId,
   SpaceMutationId,
@@ -416,6 +417,11 @@ it.effect("rejects protected unary and streamed RPCs outside a guarded command",
 
 it.effect.each([
   "moveBlocks",
+  "createSpace",
+  "renameSpace",
+  "setDefaultSpace",
+  "createPage",
+  "updatePage",
   "trashPage",
   "restorePage",
   "createChild",
@@ -435,6 +441,11 @@ it.effect.each([
         const transport = {
           client: {
             [WS_METHODS.spacesBlocksMove]: reachedTransport,
+            [WS_METHODS.spacesCreate]: reachedTransport,
+            [WS_METHODS.spacesRename]: reachedTransport,
+            [WS_METHODS.spacesSetDefault]: reachedTransport,
+            [WS_METHODS.spacesPagesCreate]: reachedTransport,
+            [WS_METHODS.spacesPagesUpdate]: reachedTransport,
             [WS_METHODS.spacesPagesCreateChild]: reachedTransport,
             [WS_METHODS.spacesPagesTrash]: reachedTransport,
             [WS_METHODS.spacesPagesRestore]: reachedTransport,
@@ -469,6 +480,48 @@ it.effect.each([
         registry.set(sessions(env), AsyncResult.success(grant(true)));
         const run = () =>
           Effect.promise(async () => {
+            const metadata = {
+              environmentId: env,
+              mutationId: input.mutationId,
+              receiptEpoch: input.receiptEpoch,
+            };
+            const spaceId = SpaceId.make("selected");
+            if (operation === "createSpace")
+              return spaces.createSpace.run(registry, {
+                environmentId: env,
+                input: { ...metadata, title: "New" },
+              });
+            if (operation === "renameSpace")
+              return spaces.renameSpace.run(registry, {
+                environmentId: env,
+                input: { ...metadata, spaceId, baseRevision: 0, title: "Rename" },
+              });
+            if (operation === "setDefaultSpace")
+              return spaces.setDefaultSpace.run(registry, {
+                environmentId: env,
+                input: {
+                  ...metadata,
+                  spaceId,
+                  baseRevision: 0,
+                  defaultSpaceId: SpaceId.make("default"),
+                  baseDefaultRevision: 0,
+                },
+              });
+            if (operation === "createPage")
+              return spaces.createPage.run(registry, {
+                environmentId: env,
+                input: { ...metadata, spaceId, baseRootOrderRevision: 0, title: "Root" },
+              });
+            if (operation === "updatePage")
+              return spaces.updatePage.run(registry, {
+                environmentId: env,
+                input: {
+                  ...metadata,
+                  pageId: input.sourcePageId,
+                  baseRevision: 0,
+                  title: "Rename",
+                },
+              });
             if (operation === "moveBlocks")
               return spaces.moveBlocks.run(registry, { environmentId: env, input });
             if (operation === "createChild")
@@ -504,10 +557,18 @@ it.effect.each([
         const old = { version: 2, limits: {} } as SpaceCapability;
         registry.set(capability, { ...old, version: 1 });
         yield* run();
-        expect(calls).toBe(0);
+        const library = [
+          "createSpace",
+          "renameSpace",
+          "setDefaultSpace",
+          "createPage",
+          "updatePage",
+        ].includes(operation);
+        expect(calls).toBe(library ? 1 : 0);
+        calls = 0;
         registry.set(capability, old);
         yield* run();
-        expect(calls).toBe(operation === "createChild" ? 1 : 0);
+        expect(calls).toBe(operation === "createChild" || library ? 1 : 0);
         calls = 0;
         registry.set(capability, {
           ...old,
@@ -520,6 +581,10 @@ it.effect.each([
         const reached = yield* run();
         expect(reached._tag).toBe("Failure");
         expect(calls).toBe(1);
+        registry.set(capability, undefined);
+        yield* run();
+        expect(calls).toBe(1);
+        registry.set(capability, { ...old, features: { blockMoves: true, recovery: true } });
         registry.set(sessions(env), AsyncResult.success(grant(false)));
         yield* run();
         expect(calls).toBe(1);

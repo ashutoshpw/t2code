@@ -29,9 +29,35 @@ const recoveryHistory = Schema.Struct({
   observed: C.SpaceStructureGuards,
   direction: Schema.Literals(["undo", "redo"]),
 });
+const libraryRequestSchema = Schema.Union([
+  Schema.Struct({ operation: Schema.Literal("createSpace"), input: C.SpaceCreateInput }),
+  Schema.Struct({ operation: Schema.Literal("renameSpace"), input: C.SpaceRenameInput }),
+  Schema.Struct({ operation: Schema.Literal("setDefaultSpace"), input: C.SpaceSetDefaultInput }),
+  Schema.Struct({ operation: Schema.Literal("createPage"), input: C.SpacePageCreateInput }),
+  Schema.Struct({ operation: Schema.Literal("updatePage"), input: C.SpacePageUpdateInput }),
+]);
+export type SpaceLibraryRequest = typeof libraryRequestSchema.Type;
+export type SpaceLibraryReceipt = Extract<
+  C.SpaceMutationReceipt,
+  { operation: SpaceLibraryRequest["operation"] }
+>;
+const isLibraryRequest = (r: { operation: string }): r is SpaceLibraryRequest =>
+  ["createSpace", "renameSpace", "setDefaultSpace", "createPage", "updatePage"].includes(
+    r.operation,
+  );
+const isLibraryReceipt = (r: C.SpaceMutationReceipt): r is SpaceLibraryReceipt =>
+  isLibraryRequest(r);
+const libraryProof = Schema.Struct({
+  version: Schema.Literals([1, 2]),
+  space: Schema.optionalKey(C.SpaceSummary),
+  previousDefault: Schema.optionalKey(C.SpaceSummary),
+  page: Schema.optionalKey(C.SpacePageSummary),
+  knownIds: Schema.optionalKey(Schema.Array(Schema.String)),
+});
 const pendingSchema = Schema.Struct({
   ...context,
   request: Schema.Union([
+    libraryRequestSchema,
     Schema.Struct({ operation: Schema.Literal("movePage"), input: C.SpaceMovePageInput }),
     Schema.Struct({ operation: Schema.Literal("moveBlocks"), input: C.SpaceMoveBlocksInput }),
     Schema.Struct({
@@ -45,6 +71,7 @@ const pendingSchema = Schema.Struct({
       input: C.SpacePageRecoveryInput,
     }),
   ]),
+  library: Schema.optionalKey(libraryProof),
   recoveryPageIds: Schema.optionalKey(Schema.Array(C.SpacePageId)),
   recoveryBefore: Schema.optionalKey(Schema.Array(C.SpacePageSummary)),
   recoveryScope: Schema.optionalKey(Schema.Literals(["created child", "page recovery"])),
@@ -53,7 +80,9 @@ const pendingSchema = Schema.Struct({
   observed: C.SpaceStructureGuards,
   direction: Schema.Literals(["move", "undo", "redo"]),
   conflict: Schema.Boolean,
-  rejection: Schema.optionalKey(Schema.Literals(["invalid_input", "invalid_recovery_state"])),
+  rejection: Schema.optionalKey(
+    Schema.Literals(["invalid_input", "invalid_recovery_state", "invalid_order"]),
+  ),
 });
 const journalSchema = Schema.Struct({
   version: Schema.Literal(1),
@@ -190,93 +219,102 @@ export function decodeSpaceStructureJournal(
   };
   const p = journal.pending;
   if (p) {
-    const request = p.request,
-      input = request.input;
-    if (
-      input.environmentId !== environmentId ||
-      input.mutationId.length > 128 ||
-      !covered(p.observed, input.guards)
-    )
-      throw new Error("Invalid retained placement");
-    guards(input.guards);
-    guards(p.observed);
-    if (p.rejection && (request.operation !== "permanentlyDeletePage" || !p.conflict))
-      throw new Error("Invalid retained permanent-deletion rejection");
-    if (
-      (request.operation !== "createChildPage" && p.knownBlockIds !== undefined) ||
-      (!recoveryRequest(request.operation) &&
-        (p.recoveryPageIds !== undefined ||
-          p.recoveryBefore !== undefined ||
-          p.recoveryScope !== undefined))
-    )
-      throw new Error("Retained operation metadata does not match its request");
-    if (request.operation === "moveBlocks") {
-      const i = request.input;
-      roots(i.blockIds);
-      if (
-        (p.inverse !== null &&
-          (p.inverse.kind !== "child" || p.inverse.placement.pageId !== i.sourcePageId)) ||
-        !i.guards.pages.some((g) => g.pageId === i.sourcePageId) ||
-        !i.guards.pages.some((g) => g.pageId === i.destination.pageId)
-      )
-        throw new Error("Invalid retained block ownership or inverse");
-    } else if (request.operation === "createChildPage") {
-      if (
-        p.inverse ||
-        p.direction !== "move" ||
-        !p.targetSpaceId ||
-        !p.knownBlockIds ||
-        p.observed.pages.length >= 8 ||
-        !sameIds(
-          input.guards.pages.map((g) => g.pageId),
-          p.observed.pages.map((g) => g.pageId),
-        ) ||
-        !p.observed.roots.every(
-          (g) =>
-            input.guards.roots.some((k) => k.spaceId === g.spaceId) ||
-            g.spaceId === p.targetSpaceId,
-        ) ||
-        !input.guards.pages.some((g) => g.pageId === request.input.placement.pageId) ||
-        p.knownBlockIds.length > 100 ||
-        new Set(p.knownBlockIds).size !== p.knownBlockIds.length
-      )
-        throw new Error("Invalid retained child creation");
-    } else if (
-      request.operation === "trashPage" ||
-      request.operation === "restorePage" ||
-      request.operation === "permanentlyDeletePage"
-    ) {
-      if (
-        p.inverse ||
-        (request.operation === "permanentlyDeletePage" && p.direction !== "move") ||
-        !p.recoveryPageIds ||
-        p.recoveryPageIds.length < 1 ||
-        p.recoveryPageIds.length > 8 ||
-        !p.recoveryPageIds.includes(request.input.pageId) ||
-        new Set(p.recoveryPageIds).size !== p.recoveryPageIds.length ||
-        !p.recoveryPageIds.every((id) => input.guards.pages.some((g) => g.pageId === id))
-      )
-        throw new Error("Invalid retained recovery closure");
-      if (p.recoveryBefore) recoveryPages(p.recoveryBefore, input.guards);
-      if (p.direction !== "move" && (!p.recoveryBefore || !p.recoveryScope))
-        throw new Error("Missing retained compensation context");
+    const request = p.request;
+    if (isLibraryRequest(request)) {
+      validateLibraryPending(p, request, environmentId);
     } else {
-      const i = request.input;
+      if (p.library) throw new Error("Unexpected library metadata");
       if (
-        !p.observed.pages.some((row) => row.pageId === i.pageId) ||
-        (i.destination.kind === "child" && (!p.targetSpaceId || !p.sourceLocation))
+        request.input.environmentId !== environmentId ||
+        request.input.mutationId.length > 128 ||
+        !covered(p.observed, request.input.guards)
       )
-        throw new Error("Invalid retained page placement");
-      if (!p.inverse) throw new Error("A page move must retain its original placement");
-      destination(i.destination, i.pageId, i.guards);
-      destination(p.inverse, i.pageId, p.observed);
-      source(p.sourceLocation, p.inverse);
+        throw new Error("Invalid retained placement");
+      guards(request.input.guards);
+      guards(p.observed);
       if (
-        p.targetSpaceId &&
-        i.destination.kind === "root" &&
-        p.targetSpaceId !== i.destination.spaceId
+        p.rejection &&
+        (request.operation !== "permanentlyDeletePage" ||
+          !p.conflict ||
+          p.rejection === "invalid_order")
       )
-        throw new Error("Invalid retained destination space");
+        throw new Error("Invalid retained permanent-deletion rejection");
+      if (
+        (request.operation !== "createChildPage" && p.knownBlockIds !== undefined) ||
+        (!recoveryRequest(request.operation) &&
+          (p.recoveryPageIds !== undefined ||
+            p.recoveryBefore !== undefined ||
+            p.recoveryScope !== undefined))
+      )
+        throw new Error("Retained operation metadata does not match its request");
+      if (request.operation === "moveBlocks") {
+        const i = request.input;
+        roots(i.blockIds);
+        if (
+          (p.inverse !== null &&
+            (p.inverse.kind !== "child" || p.inverse.placement.pageId !== i.sourcePageId)) ||
+          !i.guards.pages.some((g) => g.pageId === i.sourcePageId) ||
+          !i.guards.pages.some((g) => g.pageId === i.destination.pageId)
+        )
+          throw new Error("Invalid retained block ownership or inverse");
+      } else if (request.operation === "createChildPage") {
+        if (
+          p.inverse ||
+          p.direction !== "move" ||
+          !p.targetSpaceId ||
+          !p.knownBlockIds ||
+          p.observed.pages.length >= 8 ||
+          !sameIds(
+            request.input.guards.pages.map((g) => g.pageId),
+            p.observed.pages.map((g) => g.pageId),
+          ) ||
+          !p.observed.roots.every(
+            (g) =>
+              request.input.guards.roots.some((k) => k.spaceId === g.spaceId) ||
+              g.spaceId === p.targetSpaceId,
+          ) ||
+          !request.input.guards.pages.some((g) => g.pageId === request.input.placement.pageId) ||
+          p.knownBlockIds.length > 100 ||
+          new Set(p.knownBlockIds).size !== p.knownBlockIds.length
+        )
+          throw new Error("Invalid retained child creation");
+      } else if (
+        request.operation === "trashPage" ||
+        request.operation === "restorePage" ||
+        request.operation === "permanentlyDeletePage"
+      ) {
+        if (
+          p.inverse ||
+          (request.operation === "permanentlyDeletePage" && p.direction !== "move") ||
+          !p.recoveryPageIds ||
+          p.recoveryPageIds.length < 1 ||
+          p.recoveryPageIds.length > 8 ||
+          !p.recoveryPageIds.includes(request.input.pageId) ||
+          new Set(p.recoveryPageIds).size !== p.recoveryPageIds.length ||
+          !p.recoveryPageIds.every((id) => request.input.guards.pages.some((g) => g.pageId === id))
+        )
+          throw new Error("Invalid retained recovery closure");
+        if (p.recoveryBefore) recoveryPages(p.recoveryBefore, request.input.guards);
+        if (p.direction !== "move" && (!p.recoveryBefore || !p.recoveryScope))
+          throw new Error("Missing retained compensation context");
+      } else {
+        const i = request.input;
+        if (
+          !p.observed.pages.some((row) => row.pageId === i.pageId) ||
+          (i.destination.kind === "child" && (!p.targetSpaceId || !p.sourceLocation))
+        )
+          throw new Error("Invalid retained page placement");
+        if (!p.inverse) throw new Error("A page move must retain its original placement");
+        destination(i.destination, i.pageId, i.guards);
+        destination(p.inverse, i.pageId, p.observed);
+        source(p.sourceLocation, p.inverse);
+        if (
+          p.targetSpaceId &&
+          i.destination.kind === "root" &&
+          p.targetSpaceId !== i.destination.spaceId
+        )
+          throw new Error("Invalid retained destination space");
+      }
     }
     spaceJsonBytes(request, 1024 * 1024);
   }
@@ -352,6 +390,73 @@ export function decodeSpaceStructureJournal(
   }
   return journal;
 }
+function validateLibraryPending(p: Pending, r: SpaceLibraryRequest, environmentId: EnvironmentId) {
+  const proof = p.library,
+    i = r.input;
+  if (
+    !proof ||
+    i.environmentId !== environmentId ||
+    i.mutationId.length > 128 ||
+    p.inverse ||
+    p.direction !== "move" ||
+    p.sourceLocation ||
+    p.targetSpaceId ||
+    (p.rejection &&
+      (p.rejection !== "invalid_order" || r.operation !== "createPage" || !p.conflict)) ||
+    p.recoveryPageIds ||
+    p.recoveryBefore ||
+    p.recoveryScope ||
+    p.knownBlockIds ||
+    (proof.knownIds &&
+      (proof.knownIds.length > 50 || new Set(proof.knownIds).size !== proof.knownIds.length))
+  )
+    throw new Error("Invalid retained library intent");
+  spaceJsonBytes(proof, 256 * 1024);
+  let expected: C.SpaceStructureGuards = { pages: [], roots: [] };
+  if (r.operation === "createSpace") {
+    if (proof.space || proof.page || proof.previousDefault)
+      throw new Error("Invalid create-space proof");
+  } else if (r.operation === "updatePage") {
+    const page = proof.page;
+    if (
+      !page ||
+      page.id !== r.input.pageId ||
+      page.revision !== r.input.baseRevision ||
+      page.trash ||
+      proof.space ||
+      proof.previousDefault
+    )
+      throw new Error("Invalid rename-page proof");
+    expected = { pages: [{ pageId: page.id, revision: page.revision }], roots: [] };
+  } else {
+    const space = proof.space;
+    if (!space || space.id !== r.input.spaceId || proof.page)
+      throw new Error("Invalid library space proof");
+    if (r.operation === "createPage") {
+      if (space.rootOrderRevision !== r.input.baseRootOrderRevision || proof.previousDefault)
+        throw new Error("Invalid root creation proof");
+      expected = {
+        pages: [],
+        roots: [{ spaceId: space.id, rootOrderRevision: space.rootOrderRevision }],
+      };
+    } else {
+      if (space.revision !== r.input.baseRevision)
+        throw new Error("Invalid library metadata revision");
+      if (r.operation === "setDefaultSpace") {
+        const previous = proof.previousDefault;
+        if (
+          !previous?.isDefault ||
+          previous.id !== r.input.defaultSpaceId ||
+          previous.revision !== r.input.baseDefaultRevision ||
+          space.isDefault !== (space.id === previous.id)
+        )
+          throw new Error("Invalid retained default guard");
+      } else if (proof.previousDefault) throw new Error("Unexpected default metadata");
+    }
+  }
+  if (JSON.stringify(expected) !== JSON.stringify(p.observed))
+    throw new Error("Invalid library affected-page boundary");
+}
 export interface SpaceStructureStore {
   load(environmentId: EnvironmentId): Promise<SpaceStructureJournal | null>;
   write(environmentId: EnvironmentId, journal: SpaceStructureJournal): Promise<void>;
@@ -398,6 +503,8 @@ export interface SpaceRootReorderPorts {
   readonly receipt: (input: C.SpaceReceiptLookupInput) => Promise<C.SpaceReceiptLookupResult>;
   readonly newId: () => string;
   readonly assertAccess: (write: boolean) => void;
+  readonly libraryAccess: (write: boolean) => void;
+  readonly library: (request: SpaceLibraryRequest) => Promise<SpaceLibraryReceipt>;
   readonly maxMutationBytes: () => number;
   readonly maxRows: () => number;
   readonly reserve: (pages: readonly C.SpacePageId[], restoring: boolean) => () => void;
@@ -430,6 +537,11 @@ export interface SpaceRecoveryPreview {
   readonly placement: string;
 }
 interface Snapshot {
+  readonly libraryResult: {
+    operation: SpaceLibraryRequest["operation"];
+    space?: C.SpaceSummary;
+    page?: C.SpacePageSummary;
+  } | null;
   readonly trash: C.SpaceTrashListResult | null;
   readonly recoveryPreview: SpaceRecoveryPreview | null;
   readonly blockSelection: SpaceBlockMoveProof | null;
@@ -460,13 +572,14 @@ export class SpaceRootReorder {
   #work: Promise<void> | null = null;
   #release: (() => void) | null = null;
   #unsent = false;
-  #accepted: MoveReceipt | null = null;
+  #accepted: MoveReceipt | SpaceLibraryReceipt | null = null;
   #read = 0;
   #edge: Position | null = null;
   constructor(environmentId: EnvironmentId, ports: SpaceRootReorderPorts) {
     this.environmentId = environmentId;
     this.#ports = ports;
     this.#snapshot = {
+      libraryResult: null,
       trash: null,
       recoveryPreview: null,
       blockSelection: null,
@@ -1210,14 +1323,170 @@ export class SpaceRootReorder {
       throw new Error("Current page ownership is unavailable");
     return result;
   }
-  #exclusive(use: () => Promise<void>, write = true): Promise<void> {
+  #libraryVersion(): 1 | 2 {
+    this.#ports.libraryAccess(true);
+    const version = this.#ports.capability()?.version;
+    if (version !== 1 && version !== 2) throw new Error("Unsupported Spaces library version");
+    return version;
+  }
+  #title(title: string) {
+    const maximum = this.#ports.capability()?.limits.maxTitleBytes;
+    if (!maximum || new TextEncoder().encode(title).byteLength > maximum)
+      throw new Error("Title exceeds this environment's byte limit");
+  }
+  #libraryIntent(
+    observed: C.SpaceStructureGuards,
+    make: () => Promise<{ request: SpaceLibraryRequest; library: typeof libraryProof.Type }>,
+  ) {
+    return this.#exclusive(
+      () =>
+        this.#stage(
+          observed,
+          async () => ({
+            ...(await make()),
+            observed,
+            inverse: null,
+            direction: "move",
+            conflict: false,
+          }),
+          true,
+        ),
+      true,
+      true,
+    );
+  }
+  createSpace(title: string): Promise<void> {
+    return this.#libraryIntent({ pages: [], roots: [] }, async () => {
+      const version = this.#libraryVersion();
+      this.#title(title);
+      const admission = await this.#ports.spaces({ environmentId: this.environmentId, limit: 1 });
+      return {
+        library: {
+          version,
+          knownIds: [...new Set([admission.defaultSpaceId, ...admission.items.map((s) => s.id)])],
+        },
+        request: {
+          operation: "createSpace",
+          input: {
+            environmentId: this.environmentId,
+            mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+            receiptEpoch: admission.mutationAdmission.epoch,
+            title,
+          },
+        },
+      };
+    });
+  }
+  renameSpace(space: C.SpaceSummary, title: string): Promise<void> {
+    const selected = copy(space);
+    return this.#libraryIntent({ pages: [], roots: [] }, async () => {
+      const version = this.#libraryVersion();
+      this.#title(title);
+      const admission = await this.#ports.spaces({ environmentId: this.environmentId, limit: 1 });
+      return {
+        library: { version, space: selected },
+        request: {
+          operation: "renameSpace",
+          input: {
+            environmentId: this.environmentId,
+            mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+            receiptEpoch: admission.mutationAdmission.epoch,
+            spaceId: selected.id,
+            baseRevision: selected.revision,
+            title,
+          },
+        },
+      };
+    });
+  }
+  setDefaultSpace(space: C.SpaceSummary, previousDefault: C.SpaceSummary): Promise<void> {
+    const selected = copy(space),
+      previous = copy(previousDefault);
+    return this.#libraryIntent({ pages: [], roots: [] }, async () => {
+      const version = this.#libraryVersion();
+      const admission = await this.#ports.spaces({ environmentId: this.environmentId, limit: 1 });
+      return {
+        library: { version, space: selected, previousDefault: previous },
+        request: {
+          operation: "setDefaultSpace",
+          input: {
+            environmentId: this.environmentId,
+            mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+            receiptEpoch: admission.mutationAdmission.epoch,
+            spaceId: selected.id,
+            baseRevision: selected.revision,
+            defaultSpaceId: previous.id,
+            baseDefaultRevision: previous.revision,
+          },
+        },
+      };
+    });
+  }
+  createRootPage(space: C.SpaceSummary, title: string): Promise<void> {
+    const selected = copy(space);
+    return this.#libraryIntent(
+      {
+        pages: [],
+        roots: [{ spaceId: selected.id, rootOrderRevision: selected.rootOrderRevision }],
+      },
+      async () => {
+        const version = this.#libraryVersion();
+        this.#title(title);
+        const admission = await this.#ports.list({
+          environmentId: this.environmentId,
+          spaceId: selected.id,
+          limit: 1,
+        });
+        return {
+          library: { version, space: selected, knownIds: admission.items.map((p) => p.id) },
+          request: {
+            operation: "createPage",
+            input: {
+              environmentId: this.environmentId,
+              mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+              receiptEpoch: admission.mutationAdmission.epoch,
+              spaceId: selected.id,
+              baseRootOrderRevision: selected.rootOrderRevision,
+              title,
+            },
+          },
+        };
+      },
+    );
+  }
+  renamePage(page: C.SpacePageSummary, title: string): Promise<void> {
+    const selected = copy(page);
+    return this.#libraryIntent(
+      { pages: [{ pageId: selected.id, revision: selected.revision }], roots: [] },
+      async () => {
+        const version = this.#libraryVersion();
+        this.#title(title);
+        const admission = await this.#ports.getPage(selected.id);
+        return {
+          library: { version, page: selected },
+          request: {
+            operation: "updatePage",
+            input: {
+              environmentId: this.environmentId,
+              mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+              receiptEpoch: admission.mutationAdmission.epoch,
+              pageId: selected.id,
+              baseRevision: selected.revision,
+              title,
+            },
+          },
+        };
+      },
+    );
+  }
+  #exclusive(use: () => Promise<void>, write = true, library = false): Promise<void> {
     if (this.#work) return Promise.reject(new Error("Another placement operation is in progress"));
     const work = (async () => {
       await this.hydrate();
-      this.#ports.assertAccess(write);
+      (library ? this.#ports.libraryAccess : this.#ports.assertAccess)(write);
       if (this.#snapshot.busy) throw new Error("Wait for the current root window");
       if (this.#snapshot.journal.pending) throw new Error("Resolve the retained placement first");
-      this.#update({ busy: true, error: null, notice: null });
+      this.#update({ busy: true, error: null, notice: null, libraryResult: null });
       await use();
     })()
       .catch((error: unknown) => {
@@ -1310,7 +1579,7 @@ export class SpaceRootReorder {
   ) {
     return this.#stage(observed, async () => make(await this.#ports.getPage(pageId)));
   }
-  async #stage(observed: C.SpaceStructureGuards, make: () => Promise<Pending>) {
+  async #stage(observed: C.SpaceStructureGuards, make: () => Promise<Pending>, library = false) {
     this.#release = this.#ports.reserve(
       observed.pages.map((p) => p.pageId),
       false,
@@ -1318,8 +1587,12 @@ export class SpaceRootReorder {
     try {
       await this.#ports.checkDrafts(observed.pages.map((p) => p.pageId));
       const pending = await make();
-      this.#ports.assertAccess(true);
-      spaceJsonBytes(pending.request, Math.min(1024 * 1024, this.#ports.maxMutationBytes()));
+      (library ? this.#ports.libraryAccess : this.#ports.assertAccess)(true);
+      const maximum = library
+        ? this.#ports.capability()?.limits.maxMutationBytes
+        : this.#ports.maxMutationBytes();
+      if (!maximum) throw new Error("Spaces mutation limits unavailable");
+      spaceJsonBytes(pending.request, Math.min(1024 * 1024, maximum));
       const journal = decodeSpaceStructureJournal(
         { ...this.#snapshot.journal, pending },
         this.environmentId,
@@ -1342,10 +1615,28 @@ export class SpaceRootReorder {
   }
   async #send() {
     const pending = this.#snapshot.journal.pending!;
-    this.#ports.assertAccess(true);
-    this.#unsent = false;
     const request = pending.request;
-    if (request.operation === "moveBlocks") {
+    (isLibraryRequest(request) ? this.#ports.libraryAccess : this.#ports.assertAccess)(true);
+    this.#unsent = false;
+    if (isLibraryRequest(request)) {
+      let receipt: SpaceLibraryReceipt;
+      try {
+        receipt = await this.#ports.library(copy(request));
+      } catch (error) {
+        if (
+          request.operation !== "createPage" ||
+          !isValidationError(error) ||
+          error.reason !== "invalid_order"
+        )
+          throw error;
+        await this.#rejectIntent(
+          "invalid_order",
+          "The server refused root creation because its rank space is exhausted. No peers were renumbered. The exact rejected intent is retained; inspect explicitly before another operation.",
+        );
+        return;
+      }
+      await this.#ack(receipt);
+    } else if (request.operation === "moveBlocks") {
       this.#assertBlocks(true);
       await this.#ack({
         operation: "moveBlocks",
@@ -1367,20 +1658,10 @@ export class SpaceRootReorder {
           (error.reason !== "invalid_input" && error.reason !== "invalid_recovery_state")
         )
           throw error;
-        const journal = decodeSpaceStructureJournal(
-          {
-            ...this.#snapshot.journal,
-            pending: { ...pending, conflict: true, rejection: error.reason },
-          },
-          this.environmentId,
+        await this.#rejectIntent(
+          error.reason,
+          "The server rejected permanent deletion before committing because the inspected selection or trash state is no longer valid. The exact attempted intent is retained; inspect explicitly to start a new intent.",
         );
-        await this.#ports.store.write(this.environmentId, journal);
-        this.#update({
-          journal,
-          notice:
-            "The server rejected permanent deletion before committing because the inspected selection or trash state is no longer valid. The exact attempted intent is retained; inspect explicitly to start a new intent.",
-        });
-        this.#unlock();
         return;
       }
       await this.#ack({ operation: "permanentlyDeletePage", result });
@@ -1396,11 +1677,23 @@ export class SpaceRootReorder {
         result: await this.#ports.move(copy(request.input)),
       });
   }
+  async #rejectIntent(rejection: NonNullable<Pending["rejection"]>, notice: string) {
+    const pending = this.#snapshot.journal.pending!;
+    const journal = decodeSpaceStructureJournal(
+      { ...this.#snapshot.journal, pending: { ...pending, conflict: true, rejection } },
+      this.environmentId,
+    );
+    await this.#ports.store.write(this.environmentId, journal);
+    this.#update({ journal, notice });
+    this.#unlock();
+  }
   recover(): Promise<void> {
     if (this.#work) return Promise.reject(new Error("Another placement operation is in progress"));
     const work = (async () => {
       await this.hydrate();
-      this.#ports.assertAccess(false);
+      (this.#snapshot.journal.pending && isLibraryRequest(this.#snapshot.journal.pending.request)
+        ? this.#ports.libraryAccess
+        : this.#ports.assertAccess)(false);
       if (this.#snapshot.busy) throw new Error("Wait for the current root window");
       const p = this.#snapshot.journal.pending;
       if (!p || p.conflict) throw new Error("No uncertain placement to recover");
@@ -1419,7 +1712,7 @@ export class SpaceRootReorder {
       if (receipt.status === "unknown") {
         this.#update({
           notice:
-            "Receipt expired or unknown. The exact placement is retained; it cannot be reissued.",
+            "Receipt expired or unknown. The exact operation is retained; it cannot be reissued.",
         });
         return;
       }
@@ -1431,7 +1724,8 @@ export class SpaceRootReorder {
             receipt.receipt.operation !== "createChildPage" &&
             receipt.receipt.operation !== "trashPage" &&
             receipt.receipt.operation !== "restorePage" &&
-            receipt.receipt.operation !== "permanentlyDeletePage")
+            receipt.receipt.operation !== "permanentlyDeletePage" &&
+            !isLibraryReceipt(receipt.receipt))
         )
           throw new Error("Mismatched structural receipt operation");
         await this.#ack(receipt.receipt);
@@ -1502,7 +1796,152 @@ export class SpaceRootReorder {
       direction: p.direction === "undo" ? "redo" : "undo",
     };
   }
-  async #ack(receipt: MoveReceipt) {
+  async #ack(receipt: MoveReceipt | SpaceLibraryReceipt) {
+    if (isLibraryReceipt(receipt)) return this.#ackLibrary(receipt);
+    return this.#ackStructure(receipt);
+  }
+  async #ackLibrary(receipt: SpaceLibraryReceipt) {
+    const p = this.#snapshot.journal.pending!,
+      request = p.request,
+      result = receipt.result;
+    if (
+      !isLibraryRequest(request) ||
+      request.operation !== receipt.operation ||
+      result.mutationId !== request.input.mutationId ||
+      result.receiptEpoch !== request.input.receiptEpoch
+    )
+      throw new Error("Mismatched library receipt identity");
+    if (result.status === "conflict") {
+      this.#accepted = receipt;
+      const journal = decodeSpaceStructureJournal(
+        { ...this.#snapshot.journal, pending: { ...p, conflict: true } },
+        this.environmentId,
+      );
+      await this.#ports.store.write(this.environmentId, journal);
+      this.#update({
+        journal,
+        notice:
+          "Metadata conflicted. The exact attempted intent is retained. Inspect explicitly before choosing a new intent.",
+      });
+      this.#accepted = null;
+      this.#unlock();
+      return;
+    }
+    const proof = p.library!;
+    let space: C.SpaceSummary | undefined, page: C.SpacePageSummary | undefined;
+    const unchangedSpace = (
+      actual: C.SpaceSummary,
+      before: C.SpaceSummary,
+      revision: number,
+      title: string,
+      isDefault: boolean,
+    ) =>
+      actual.id === before.id &&
+      actual.revision === revision &&
+      actual.title === title &&
+      actual.isDefault === isDefault &&
+      actual.createdAt === before.createdAt &&
+      actual.rootOrderRevision >= before.rootOrderRevision;
+    if (receipt.operation === "createSpace" && request.operation === "createSpace") {
+      space = receipt.result.space;
+      if (
+        space.title !== request.input.title ||
+        space.revision !== 0 ||
+        space.rootOrderRevision !== 0 ||
+        space.isDefault ||
+        proof.knownIds?.includes(space.id)
+      )
+        throw new Error("Invalid created-space receipt");
+    } else if (
+      receipt.operation === "renameSpace" &&
+      request.operation === "renameSpace" &&
+      receipt.result.status === "saved"
+    ) {
+      space = receipt.result.space;
+      const before = proof.space!;
+      if (
+        !unchangedSpace(
+          space,
+          before,
+          before.revision + Number(before.title !== request.input.title),
+          request.input.title,
+          before.isDefault,
+        )
+      )
+        throw new Error("Invalid renamed-space receipt");
+    } else if (
+      receipt.operation === "setDefaultSpace" &&
+      request.operation === "setDefaultSpace" &&
+      receipt.result.status === "saved"
+    ) {
+      space = receipt.result.space;
+      const before = proof.space!,
+        previous = proof.previousDefault!,
+        delta = Number(before.id !== previous.id);
+      if (
+        !unchangedSpace(space, before, before.revision + delta, before.title, true) ||
+        !unchangedSpace(
+          receipt.result.previousDefaultSpace,
+          previous,
+          previous.revision + delta,
+          previous.title,
+          !delta,
+        )
+      )
+        throw new Error("Invalid default-space receipt");
+    } else if (
+      receipt.operation === "createPage" &&
+      request.operation === "createPage" &&
+      receipt.result.status === "saved"
+    ) {
+      page = receipt.result.page;
+      space = receipt.result.space;
+      if (
+        space.id !== request.input.spaceId ||
+        space.rootOrderRevision !== request.input.baseRootOrderRevision + 1 ||
+        page.spaceId !== space.id ||
+        page.title !== request.input.title ||
+        page.revision !== 0 ||
+        page.trash ||
+        !page.rootOrder ||
+        !/^[0-9a-f]{32}$/.test(page.rootOrder) ||
+        proof.knownIds?.includes(page.id) ||
+        (proof.version === 2 &&
+          (page.location?.kind !== "root" ||
+            page.location.spaceId !== space.id ||
+            page.location.order !== page.rootOrder))
+      )
+        throw new Error("Invalid created-page receipt");
+    } else if (
+      receipt.operation === "updatePage" &&
+      request.operation === "updatePage" &&
+      receipt.result.status === "saved"
+    ) {
+      page = receipt.result.page;
+      const before = proof.page!;
+      if (
+        page.id !== before.id ||
+        page.spaceId !== before.spaceId ||
+        page.title !== request.input.title ||
+        page.trash ||
+        page.createdAt !== before.createdAt ||
+        page.revision !== before.revision + Number(before.title !== request.input.title)
+      )
+        throw new Error("Invalid renamed-page receipt");
+    } else throw new Error("Mismatched library receipt operation");
+    this.#accepted = receipt;
+    await this.#finish(
+      null,
+      "Accepted metadata change. Metadata Undo is unavailable. Earlier placement/recovery Undo is no longer offered; content history retains its original revision guards.",
+      request.operation === "updatePage" ? [request.input.pageId] : [],
+      {
+        operation: request.operation,
+        ...(space ? { space: copy(space) } : {}),
+        ...(page ? { page: copy(page) } : {}),
+      },
+    );
+  }
+  async #ackStructure(receipt: MoveReceipt) {
     const p = this.#snapshot.journal.pending!,
       result = receipt.result;
     if (
@@ -1729,6 +2168,19 @@ export class SpaceRootReorder {
       notice =
         "Permanently deleted the inspected pages. This is irreversible; Undo is unavailable.";
     }
+    await this.#finish(history, notice, [
+      ...new Set([
+        ...result.changed.pages.map((p) => p.pageId),
+        ...(deleted?.deletedPageIds ?? []),
+      ]),
+    ]);
+  }
+  async #finish(
+    history: SpaceStructureJournal["history"],
+    notice: string,
+    refresh: readonly C.SpacePageId[],
+    libraryResult: Snapshot["libraryResult"] = null,
+  ) {
     const journal = decodeSpaceStructureJournal(
       { version: 1, environmentId: this.environmentId, pending: null, history },
       this.environmentId,
@@ -1736,6 +2188,7 @@ export class SpaceRootReorder {
     await this.#ports.store.write(this.environmentId, journal);
     this.#update({
       journal,
+      libraryResult,
       trash: null,
       recoveryPreview: null,
       window: null,
@@ -1747,12 +2200,7 @@ export class SpaceRootReorder {
     this.#accepted = null;
     this.#ports.changed();
     try {
-      await this.#ports.refresh([
-        ...new Set([
-          ...result.changed.pages.map((p) => p.pageId),
-          ...(deleted?.deletedPageIds ?? []),
-        ]),
-      ]);
+      await this.#ports.refresh(refresh);
     } finally {
       this.#unlock();
     }
@@ -1763,7 +2211,9 @@ export class SpaceRootReorder {
         new Error("Only a definite conflict can be cleared for explicit reinspection"),
       );
     const work = (async () => {
-      this.#ports.assertAccess(true);
+      (isLibraryRequest(this.#snapshot.journal.pending!.request)
+        ? this.#ports.libraryAccess
+        : this.#ports.assertAccess)(true);
       this.#update({ busy: true, error: null });
       const journal = { ...this.#snapshot.journal, pending: null, history: null };
       await this.#ports.store.write(this.environmentId, journal);

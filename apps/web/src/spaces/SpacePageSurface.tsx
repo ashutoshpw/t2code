@@ -15,6 +15,7 @@ import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelSt
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
 
+const SpaceLibraryControls = lazy(() => import("./SpaceLibraryControls"));
 const SpaceRecoveryControls = lazy(() => import("./SpaceRecoveryControls"));
 const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
 
@@ -172,6 +173,18 @@ function SpacePageMetadata({ target, fullPage = false, threadRef }: SpacePageSur
           Refresh location
         </Button>
       </div>
+      <Suspense fallback={<p role="status">Loading page controls…</p>}>
+        <SpaceLibraryControls
+          key={JSON.stringify([target.environmentId, target.pageId])}
+          environmentId={target.environmentId}
+          spaceId={page.spaceId}
+          page={page}
+          current={() => {
+            const live = query.isPending ? null : query.data?.current();
+            return live?.page.id === target.pageId && live.page.spaceId === resolvedTarget.spaceId;
+          }}
+        />
+      </Suspense>
       {version === 2 ? (
         <Suspense fallback={<p role="status">Loading page placement…</p>}>
           <SpaceStructureControls

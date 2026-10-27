@@ -715,3 +715,71 @@ it("validates retained recovery compensation context and pending direction witho
     expect(JSON.stringify(invalid)).toBe(before);
   }
 });
+
+it("rejects restored library intents whose retained target or affected-draft proof differs from the exact wire request", () => {
+  const pageId = SpacePageId.make("rename-target"),
+    spaceId = SpaceId.make("library-space");
+  const page = {
+    id: pageId,
+    spaceId,
+    title: "Before",
+    revision: 3,
+    rootOrder: "40000000000000000000000000000000",
+    createdAt: "2026-10-27T00:00:00.000Z",
+    updatedAt: "2026-10-27T00:00:00.000Z",
+  };
+  const pending = {
+    request: {
+      operation: "updatePage",
+      input: {
+        environmentId: key.environmentId,
+        pageId,
+        baseRevision: 3,
+        title: "After",
+        mutationId: SpaceMutationId.make("fixed-library"),
+        receiptEpoch: SpaceReceiptEpoch.make("fixed-library-epoch"),
+      },
+    },
+    library: { version: 2, page },
+    inverse: null,
+    direction: "move",
+    conflict: false,
+    observed: { pages: [{ pageId, revision: 3 }], roots: [] },
+  };
+  const journal = { version: 1, environmentId: key.environmentId, pending, history: null };
+  for (const invalid of [
+    { ...pending, library: undefined },
+    { ...pending, library: { ...pending.library, page: { ...page, id: "other" } } },
+    { ...pending, library: { ...pending.library, page: { ...page, revision: 4 } } },
+    {
+      ...pending,
+      library: {
+        ...pending.library,
+        page: {
+          ...page,
+          trash: { batchId: "trash", originalRootPageId: pageId, trashedAt: page.updatedAt },
+        },
+      },
+    },
+    { ...pending, observed: { pages: [], roots: [] } },
+    {
+      ...pending,
+      library: { ...pending.library, knownIds: Array.from({ length: 51 }, (_, i) => `known-${i}`) },
+    },
+    { ...pending, direction: "undo" },
+    { ...pending, recoveryPageIds: [] },
+    {
+      ...pending,
+      request: { ...pending.request, input: { ...pending.request.input, unexpected: "retain" } },
+    },
+    {
+      ...pending,
+      request: { ...pending.request, input: { ...pending.request.input, environmentId: "other" } },
+    },
+  ]) {
+    const value = { ...journal, pending: invalid },
+      before = JSON.stringify(value);
+    expect(() => decodeSpaceStructureJournal(value, key.environmentId)).toThrow();
+    expect(JSON.stringify(value)).toBe(before);
+  }
+});

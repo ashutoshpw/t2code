@@ -72,6 +72,71 @@ export function createSpacesEnvironmentAtoms<R, E>(
       idleTtlMs: 0,
       staleTimeMs: 0,
     }),
+    createSpace: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:createSpace",
+      tag: WS_METHODS.spacesCreate,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesCreate, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    renameSpace: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:renameSpace",
+      tag: WS_METHODS.spacesRename,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesRename, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    setDefaultSpace: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:setDefaultSpace",
+      tag: WS_METHODS.spacesSetDefault,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesSetDefault, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    createPage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:createPage",
+      tag: WS_METHODS.spacesPagesCreate,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesPagesCreate, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    updatePage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:updatePage",
+      tag: WS_METHODS.spacesPagesUpdate,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesPagesUpdate, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
     moveBlocks: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:move-blocks",
       tag: WS_METHODS.spacesBlocksMove,

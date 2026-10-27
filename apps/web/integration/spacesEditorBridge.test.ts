@@ -1369,6 +1369,7 @@ const decodeChildResult = Schema.decodeUnknownSync(C.SpaceCreateChildPageResult)
 const decodePurgeResult = Schema.decodeUnknownSync(C.SpacePagePurgeResult);
 const decodeRecoveryResult = Schema.decodeUnknownSync(C.SpacePageRecoveryResult);
 const decodeTrashList = Schema.decodeUnknownSync(C.SpaceTrashListResult);
+const decodeLibraryReceipt = Schema.decodeUnknownSync(C.SpaceMutationReceipt);
 const decodeRootReceipt = Schema.decodeUnknownSync(C.SpaceReceiptLookupResult);
 
 const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(function* (
@@ -1399,6 +1400,7 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
     refreshed = 0,
     maxBytes = h.capability.limits.maxMutationBytes,
     blockFeature = true;
+  const libraryRequests: C.SpaceMutationRequest[] = [];
   const childRequests: C.SpaceCreateChildPageInput[] = [];
   const recoveryRequests: C.SpaceMutationRequest[] = [];
   const blockRequests: C.SpaceMoveBlocksInput[] = [];
@@ -1527,6 +1529,40 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
         if (lose === "after") throw new Error("Lost committed response");
         return decodeBlockMoveResult(result);
       },
+      libraryAccess: (write: boolean) => {
+        if (write && !writable) throw new Error("Operate revoked");
+      },
+      library: async (request: import("@t2code/client-runtime/spaces").SpaceLibraryRequest) => {
+        const wire = decodeRootRequest(JSON.parse(JSON.stringify(request)));
+        libraryRequests.push(wire);
+        const tags = {
+          createSpace: WS_METHODS.spacesCreate,
+          renameSpace: WS_METHODS.spacesRename,
+          setDefaultSpace: WS_METHODS.spacesSetDefault,
+          createPage: WS_METHODS.spacesPagesCreate,
+          updatePage: WS_METHODS.spacesPagesUpdate,
+        };
+        const lose = network.lose;
+        network.lose = null;
+        if (lose === "before") throw new Error("Lost before server received request");
+        const result = await h.run(rpc(tags[request.operation], wire.input));
+        if (network.after) {
+          const after = network.after;
+          network.after = null;
+          await after();
+        }
+        if (lose === "after") throw new Error("Lost committed response");
+        const receipt = decodeLibraryReceipt({ operation: request.operation, result });
+        if (
+          receipt.operation !== "createSpace" &&
+          receipt.operation !== "renameSpace" &&
+          receipt.operation !== "setDefaultSpace" &&
+          receipt.operation !== "createPage" &&
+          receipt.operation !== "updatePage"
+        )
+          throw new Error("Wrong library receipt");
+        return receipt;
+      },
       createChild: async (input: C.SpaceCreateChildPageInput) => {
         childRequests.push(input);
         const request = decodeRootRequest(
@@ -1602,6 +1638,7 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
     stored: () => stored,
     blockRequests,
     childRequests,
+    libraryRequests,
     recoveryRequests,
     setBlockFeature: (value: boolean) => {
       blockFeature = value;
@@ -3836,6 +3873,8 @@ it.effect(
             await owner.confirmRecovery(preview);
             const pending = owner.getSnapshot().journal.pending!;
             assert.isTrue(pending.conflict);
+            if (pending.request.operation !== "trashPage")
+              throw new Error("Wrong retained recovery operation");
             assert.deepEqual(pending.request.input.guards, preview.inspection.guards);
             assert.equal(h.recoveryRequests.length, 1);
             assert.equal((await h.ports.getPage(h.key)).page.trash, undefined);
@@ -4290,10 +4329,10 @@ it.effect(
             await owner.confirmRecovery(preview, true);
             assert.isTrue(owner.getSnapshot().journal.pending?.conflict);
             assert.equal(owner.getSnapshot().journal.pending!.rejection, undefined);
-            assert.deepEqual(
-              owner.getSnapshot().journal.pending!.request.input.guards,
-              preview.inspection.guards,
-            );
+            const retainedPurge = owner.getSnapshot().journal.pending!.request;
+            if (retainedPurge.operation !== "permanentlyDeletePage")
+              throw new Error("Wrong retained recovery operation");
+            assert.deepEqual(retainedPurge.input.guards, preview.inspection.guards);
             await owner.reinspect();
             await owner.previewRecovery(h.pages[0]!, "permanentlyDelete");
             await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!, true);
@@ -4459,10 +4498,10 @@ it.effect(
             );
             await owner.compensate("undo");
             assert.isTrue(owner.getSnapshot().journal.pending?.conflict);
-            assert.deepEqual(
-              owner.getSnapshot().journal.pending!.request.input.guards,
-              history.guards,
-            );
+            const retainedRestore = owner.getSnapshot().journal.pending!.request;
+            if (retainedRestore.operation !== "restorePage")
+              throw new Error("Wrong retained recovery operation");
+            assert.deepEqual(retainedRestore.input.guards, history.guards);
             assert.deepEqual(owner.getSnapshot().journal.history, history);
             assert.equal(owner.getSnapshot().journal.pending!.direction, "undo");
             assert.equal((await h.ports.getPage(h.key)).page.title, "Do not overwrite");
@@ -4615,10 +4654,10 @@ it.effect(
               owner.getSnapshot().journal.pending!.recoveryPageIds,
               preview.inspection.recovery!.pageIds,
             );
-            assert.deepEqual(
-              owner.getSnapshot().journal.pending!.request.input.guards,
-              preview.inspection.guards,
-            );
+            const retainedRejectedPurge = owner.getSnapshot().journal.pending!.request;
+            if (retainedRejectedPurge.operation !== "permanentlyDeletePage")
+              throw new Error("Wrong retained recovery operation");
+            assert.deepEqual(retainedRejectedPurge.input.guards, preview.inspection.guards);
             assert.deepEqual(
               await h.run(
                 service.resolveReference({
@@ -4892,6 +4931,373 @@ it.effect(
             assert.deepEqual(h.lookups.at(-1)!.request, pending.request);
             assert.equal(h.recoveryRequests.length, 2);
             assert.deepEqual(h.structureBodyReads, []);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "creates the first root page in an empty actual default space and recovers its lost reply without allocating twice",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.createSpace("New library");
+            const created = owner.getSnapshot().libraryResult!.space!;
+            const previous = (await h.ports.getPage(h.key)).space;
+            await owner.setDefaultSpace(created, previous);
+            const empty = await h.run(service.listPages({ environmentId, spaceId: created.id }));
+            assert.equal(empty.items.length, 0);
+            assert.isTrue(empty.space.isDefault);
+            h.network.lose = "after";
+            await expect(owner.createRootPage(empty.space, "First page")).rejects.toThrow(
+              "Lost committed response",
+            );
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.equal(pending.request.operation, "createPage");
+            const restored = h.reload();
+            h.setWritable(false);
+            await restored.recover();
+            assert.equal(restored.getSnapshot().journal.pending, null);
+            assert.deepEqual(h.lookups.at(-1)!.request, pending.request);
+            assert.equal(h.libraryRequests.filter((r) => r.operation === "createPage").length, 1);
+            const pages = await h.run(service.listPages({ environmentId, spaceId: created.id }));
+            assert.equal(pages.items.length, 1);
+            assert.equal(pages.items[0]!.title, "First page");
+            assert.equal(restored.getSnapshot().libraryResult!.page!.id, pages.items[0]!.id);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retains a page-rename conflict against the chosen revision instead of refreshing its guard",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const selected = await h.ports.getPage(h.key);
+            await h.run(
+              service.updatePage({
+                ...h.key,
+                mutationId: "peer-title-before-rename",
+                receiptEpoch: selected.mutationAdmission.epoch,
+                baseRevision: selected.page.revision,
+                title: "Peer title",
+              }),
+            );
+            const owner = h.make();
+            await owner.renamePage(selected.page, "My attempted title");
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.isTrue(pending.conflict);
+            assert.equal(pending.request.operation, "updatePage");
+            assert.equal(
+              (pending.request.input as C.SpacePageUpdateInput).baseRevision,
+              selected.page.revision,
+            );
+            assert.equal((await h.ports.getPage(h.key)).page.title, "Peer title");
+            assert.equal(h.libraryRequests.length, 1);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["createSpace", "renameSpace", "setDefaultSpace", "updatePage"] as const)(
+  "recovers the original %s receipt after reload with operate withdrawn",
+  (operation) =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            const selected = await h.ports.getPage(h.key);
+            let candidate = selected.space;
+            if (operation === "setDefaultSpace") {
+              await owner.createSpace("Candidate");
+              candidate = owner.getSnapshot().libraryResult!.space!;
+            }
+            const before = h.libraryRequests.length;
+            h.network.lose = "after";
+            const work =
+              operation === "createSpace"
+                ? owner.createSpace("Lost new space")
+                : operation === "renameSpace"
+                  ? owner.renameSpace(candidate, "Lost rename")
+                  : operation === "setDefaultSpace"
+                    ? owner.setDefaultSpace(candidate, selected.space)
+                    : owner.renamePage(selected.page, "Lost page title");
+            await expect(work).rejects.toThrow("Lost committed response");
+            const original = h.stored()!.pending!;
+            h.setWritable(false);
+            const restored = h.reload();
+            await restored.recover();
+            assert.equal(h.libraryRequests.length, before + 1);
+            assert.deepEqual(h.lookups.at(-1), { request: original.request });
+            assert.isNull(restored.getSnapshot().journal.pending);
+            assert.equal(restored.getSnapshot().libraryResult!.operation, operation);
+            if (operation === "createSpace") {
+              const spaces = await h.run(service.listSpaces({ environmentId }));
+              assert.equal(spaces.items.filter((s) => s.title === "Lost new space").length, 1);
+            } else if (operation === "renameSpace") {
+              assert.equal(
+                (await h.run(service.listPages({ environmentId, spaceId: candidate.id }))).space
+                  .revision,
+                candidate.revision + 1,
+              );
+            } else if (operation === "setDefaultSpace") {
+              const spaces = await h.run(service.listSpaces({ environmentId }));
+              assert.equal(spaces.defaultSpaceId, candidate.id);
+              assert.isFalse(spaces.items.find((s) => s.id === selected.space.id)!.isDefault);
+            } else {
+              assert.equal(
+                (await h.ports.getPage(h.key)).page.revision,
+                selected.page.revision + 1,
+              );
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "interlocks two rename consumers before strict-codec persistence and retries the identical unsent intent after storage failure",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const first = h.documents.open(h.key),
+              second = h.documents.open(h.key);
+            const doc = await first.ready;
+            assert.equal(await second.ready, doc);
+            const selected = await h.ports.getPage(h.key);
+            const owner = h.make();
+            h.disk.hold = true;
+            h.disk.fail = true;
+            const renaming = owner.renamePage(selected.page, "Durable title");
+            await h.disk.started.promise;
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.equal(h.libraryRequests.length, 0);
+            assert.throws(
+              () =>
+                doc.session.apply([
+                  { kind: "insert", block: savedParagraph("blocked-rename", "keep") },
+                ]),
+              "reserved",
+            );
+            await expect(doc.save()).rejects.toThrow("reserved");
+            assert.throws(() => h.documents.acquire(h.key), "reserved");
+            await expect(owner.createSpace("Overlapping action")).rejects.toThrow("in progress");
+            h.disk.release.resolve();
+            await expect(renaming).rejects.toThrow("abort");
+            assert.equal(h.libraryRequests.length, 0);
+            assert.deepEqual(owner.getSnapshot().journal.pending, pending);
+            h.disk.hold = false;
+            h.disk.fail = false;
+            await owner.recover();
+            assert.deepEqual(h.libraryRequests, [pending.request]);
+            assert.equal(h.lookups.length, 0);
+            assert.isFalse(doc.structureBlocked());
+            assert.equal(doc.session.getSnapshot().baseRevision, selected.page.revision + 1);
+            assert.equal(h.counts().refreshed, 1);
+            first.release();
+            second.release();
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("refuses a hidden page draft on rename while library-only metadata preserves it", () =>
+  Effect.scoped(
+    fixture((service) =>
+      Effect.gen(function* () {
+        const h = yield* rootReorderFixture(service);
+        yield* Effect.promise(async () => {
+          const opened = h.documents.open(h.key),
+            doc = await opened.ready;
+          doc.session.apply([
+            { kind: "insert", block: savedParagraph("library-hidden-draft", "Do not replace") },
+          ]);
+          await doc.session.persistDraft();
+          opened.release();
+          const draft = h.draftRecords.get(h.key.pageId)!;
+          const selected = await h.ports.getPage(h.key);
+          const owner = h.reload();
+          await expect(owner.renamePage(selected.page, "Blocked title")).rejects.toThrow(
+            "retained draft",
+          );
+          assert.equal(h.libraryRequests.length, 0);
+          assert.isNull(owner.getSnapshot().journal.pending);
+          await owner.renameSpace(selected.space, "Metadata only");
+          assert.deepEqual(h.draftRecords.get(h.key.pageId), draft);
+          assert.equal((await h.ports.getPage(h.key)).page.revision, selected.page.revision);
+        });
+      }),
+    ),
+  ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retains a root creation conflict rather than advancing the selected root-order revision",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const selected = await h.ports.getPage(h.key);
+            await h.run(
+              service.createPage({
+                environmentId,
+                spaceId: h.spaceId,
+                title: "Peer root",
+                baseRootOrderRevision: selected.space.rootOrderRevision,
+                mutationId: "peer-root-before-create",
+                receiptEpoch: selected.mutationAdmission.epoch,
+              }),
+            );
+            const owner = h.make();
+            await owner.createRootPage(selected.space, "Attempted root");
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.isTrue(pending.conflict);
+            assert.equal(pending.request.operation, "createPage");
+            if (pending.request.operation !== "createPage") throw new Error("Wrong request");
+            assert.equal(
+              pending.request.input.baseRootOrderRevision,
+              selected.space.rootOrderRevision,
+            );
+            assert.equal((await h.order()).length, 5);
+            await expect(owner.createSpace("Blocked by conflict")).rejects.toThrow("Resolve");
+            await owner.reinspect();
+            assert.isNull(owner.getSnapshot().journal.pending);
+            const current = await h.ports.getPage(h.key);
+            await owner.createRootPage(current.space, "Explicit new root");
+            assert.equal((await h.order()).length, 6);
+            assert.notEqual(
+              h.libraryRequests[0]!.input.mutationId,
+              h.libraryRequests[1]!.input.mutationId,
+            );
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "keeps an unsent library intent when operate is withdrawn during durable persistence",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            h.disk.hold = true;
+            const work = owner.createSpace("Wait for permission");
+            await h.disk.started.promise;
+            const original = owner.getSnapshot().journal.pending!;
+            h.setWritable(false);
+            h.disk.release.resolve();
+            await expect(work).rejects.toThrow("revoked");
+            assert.equal(h.libraryRequests.length, 0);
+            assert.deepEqual(h.stored()!.pending, original);
+            h.disk.hold = false;
+            h.setWritable(true);
+            await owner.recover();
+            assert.deepEqual(h.libraryRequests, [original.request]);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["renameSpace", "setDefaultSpace"] as const)(
+  "preserves the selected space metadata guards through a %s race",
+  (operation) =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            const previous = (await h.ports.getPage(h.key)).space;
+            await owner.createSpace("Candidate");
+            const candidate = owner.getSnapshot().libraryResult!.space!;
+            const changed = operation === "renameSpace" ? candidate : previous;
+            const admission = await h.run(service.listSpaces({ environmentId, limit: 1 }));
+            await h.run(
+              service.renameSpace({
+                environmentId,
+                spaceId: changed.id,
+                baseRevision: changed.revision,
+                title: "Peer name",
+                mutationId: `peer-library-${operation}`,
+                receiptEpoch: admission.mutationAdmission.epoch,
+              }),
+            );
+            if (operation === "renameSpace") await owner.renameSpace(candidate, "Attempted name");
+            else await owner.setDefaultSpace(candidate, previous);
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.isTrue(pending.conflict);
+            const request = pending.request;
+            if (request.operation !== "renameSpace" && request.operation !== "setDefaultSpace")
+              throw new Error("Wrong metadata operation");
+            assert.equal(request.input.baseRevision, candidate.revision);
+            if (request.operation === "setDefaultSpace") {
+              assert.equal(request.input.baseDefaultRevision, previous.revision);
+              assert.equal(request.input.defaultSpaceId, previous.id);
+            }
+            const catalog = await h.run(service.listSpaces({ environmentId }));
+            assert.equal(catalog.defaultSpaceId, previous.id);
+            assert.equal(catalog.items.find((s) => s.id === changed.id)!.title, "Peer name");
+            assert.equal(h.libraryRequests.length, 2);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retains a definite server root-rank refusal for explicit inspection without fabricating a receipt or renumbering peers",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          const sql = new NodeSqlite.DatabaseSync(databasePath);
+          try {
+            sql
+              .prepare("UPDATE spaces_pages SET root_order=? WHERE page_id=?")
+              .run("ffffffffffffffffffffffffffffffff", h.pages.at(-1)!);
+          } finally {
+            sql.close();
+          }
+          yield* Effect.promise(async () => {
+            const owner = h.make(),
+              selected = await h.ports.getPage(h.key);
+            await owner.createRootPage(selected.space, "No rank available");
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.isTrue(pending.conflict);
+            assert.equal(pending.rejection, "invalid_order");
+            assert.equal(h.libraryRequests.length, 1);
+            assert.deepEqual(await h.order(), h.pages);
+            const lookup = await h.run(service.lookupMutationReceipt({ request: pending.request }));
+            assert.equal(lookup.status, "absent");
+            await expect(owner.recover()).rejects.toThrow("No uncertain");
+            await owner.reinspect();
+            assert.isNull(owner.getSnapshot().journal.pending);
           });
         }),
       ),

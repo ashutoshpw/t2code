@@ -6,7 +6,11 @@ import {
 import { canBrowseSpaces, spacesAvailability } from "@t2code/client-runtime/state/spaces";
 import { executeAtomQuery, type AtomCommandResult } from "@t2code/client-runtime/state/runtime";
 import { AuthOrchestrationOperateScope, AuthOrchestrationReadScope } from "@t2code/contracts";
-import type { SpaceDraftStore } from "@t2code/client-runtime/spaces";
+import type {
+  SpaceLibraryReceipt,
+  SpaceLibraryRequest,
+  SpaceDraftStore,
+} from "@t2code/client-runtime/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpacePageTarget } from "@t2code/contracts/spaces";
 import * as Cause from "effect/Cause";
@@ -156,7 +160,7 @@ export function spaceRootReorder(
     throw new Error(
       "Eight placement journals are resident in this app session; resolve pending changes and reload to open another environment",
     );
-  function access(write: boolean) {
+  function access(write: boolean, library = false) {
     const environment = registry.get(environmentPresentations.presentationAtom(environmentId));
     const session = registry.get(environmentSession.sessionStateAtom(environmentId));
     const capability = environment?.serverConfig?.environment.capabilities.spaces;
@@ -167,17 +171,22 @@ export function spaceRootReorder(
       canOperate: sessionHasScope(session, AuthOrchestrationOperateScope),
     });
     if (
-      capability?.version !== 2 ||
+      !capability ||
+      (library
+        ? capability?.version !== 1 && capability?.version !== 2
+        : capability?.version !== 2) ||
       !canBrowseSpaces(availability) ||
       (write && availability !== "writable")
     )
       throw new Error(
-        "Root placement requires a connected v2 environment and destination permission",
+        library
+          ? "Library changes require a connected known Spaces version and destination permission"
+          : "Root placement requires a connected v2 environment and destination permission",
       );
     return capability.limits;
   }
   function connection() {
-    access(false);
+    access(false, true);
     const state = Option.getOrNull(
       AsyncResult.value(registry.get(environmentCatalog.stateAtom(environmentId))),
     );
@@ -196,7 +205,76 @@ export function spaceRootReorder(
   const reorder = new SpaceRootReorder(environmentId, {
     store: createSpaceStructureStore(),
     newId: randomUUID,
-    assertAccess: access,
+    assertAccess: (write) => access(write),
+    libraryAccess: (write) => access(write, true),
+    library: async (request: SpaceLibraryRequest) => {
+      access(true, true);
+      const previous = connection();
+      const send = async (): Promise<SpaceLibraryReceipt> => {
+        switch (request.operation) {
+          case "createSpace":
+            return {
+              operation: request.operation,
+              result: unwrap(
+                await spacesEnvironment.createSpace.run(registry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              ),
+            };
+          case "renameSpace":
+            return {
+              operation: request.operation,
+              result: unwrap(
+                await spacesEnvironment.renameSpace.run(registry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              ),
+            };
+          case "setDefaultSpace":
+            return {
+              operation: request.operation,
+              result: unwrap(
+                await spacesEnvironment.setDefaultSpace.run(registry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              ),
+            };
+          case "createPage":
+            return {
+              operation: request.operation,
+              result: unwrap(
+                await spacesEnvironment.createPage.run(registry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              ),
+            };
+          case "updatePage":
+            return {
+              operation: request.operation,
+              result: unwrap(
+                await spacesEnvironment.updatePage.run(registry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              ),
+            };
+        }
+      };
+      const check = () => {
+        if (connection() !== previous)
+          throw new Error("Spaces connection changed; recover the exact library receipt");
+      };
+      const result = await send().catch((error: unknown) => {
+        check();
+        throw error;
+      });
+      check();
+      return result;
+    },
     maxRows: () => access(false).maxListRows,
     maxMutationBytes: () => access(true).maxMutationBytes,
     getPage: (pageId) =>
