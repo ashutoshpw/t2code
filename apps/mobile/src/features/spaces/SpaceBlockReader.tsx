@@ -8,6 +8,7 @@ import { View } from "react-native";
 
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
+import type { MobileSpaceReference } from "./references";
 import { tryOpenExternalUrl } from "../../lib/openExternalUrl";
 
 const decodeMark = Schema.decodeUnknownOption(SpaceKnownMark, { onExcessProperty: "error" });
@@ -16,7 +17,7 @@ function RichText(props: {
   runs: SpaceRichText;
   heading?: 1 | 2 | 3;
   target: SpacePageNavigationTarget;
-  onOpen: (target: SpacePageNavigationTarget) => void;
+  onOpen: (target: MobileSpaceReference) => void;
 }) {
   const runs: { run: SpaceRichText[number]; start: number }[] = [];
   let offset = 0;
@@ -63,11 +64,11 @@ function RichText(props: {
               mention && (mention.type === "page_mention" || mention.type === "block_mention")
                 ? () =>
                     props.onOpen({
-                      ...props.target,
-                      ...mention.target,
-                      ...(mention.type === "block_mention"
-                        ? { blockId: mention.target.blockId }
-                        : { blockId: undefined }),
+                      environmentId: mention.target.environmentId,
+                      target:
+                        mention.type === "block_mention"
+                          ? { kind: "block", blockId: mention.target.blockId }
+                          : { kind: "page", pageId: mention.target.pageId },
                     })
                 : link?.type === "link"
                   ? () => void tryOpenExternalUrl(link.href, "markdown-link")
@@ -87,7 +88,7 @@ export function SpaceBlockReader(props: {
   target: SpacePageNavigationTarget;
   depth: number;
   selected: boolean;
-  onOpen: (target: SpacePageNavigationTarget) => void;
+  onOpen: (target: MobileSpaceReference) => void;
 }) {
   const { block } = props;
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
@@ -125,7 +126,10 @@ export function SpaceBlockReader(props: {
           variant="pill"
           label="Open child page"
           onPress={() =>
-            props.onOpen({ ...props.target, pageId: block.content.pageId, blockId: undefined })
+            props.onOpen({
+              environmentId: props.target.environmentId,
+              target: { kind: "page", pageId: block.content.pageId },
+            })
           }
         />
       ) : "runs" in block.content ? (

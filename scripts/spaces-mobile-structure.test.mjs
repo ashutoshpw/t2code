@@ -20,6 +20,10 @@ import {
   MobileSpaceDocuments,
   acquireHydratedSpacesPageReader,
 } from "../apps/mobile/src/features/spaces/documents.ts";
+import {
+  createMobileSpaceReferenceController,
+  MobileSpaceReferenceNavigation,
+} from "../apps/mobile/src/features/spaces/references.ts";
 import { SpacesPageReader } from "../apps/mobile/src/features/spaces/reader.ts";
 import { diskDatabase } from "../apps/mobile/src/persistence/mobile-database.test-support.ts";
 import * as SpacesService from "../apps/server/src/spaces/SpacesService.ts";
@@ -143,6 +147,141 @@ const withFixture = Effect.fn("MobileStructureTest.fixture")(function* (use) {
     yield* use({ fixture, environmentId, service, run, db, capability });
   }).pipe(Effect.provide(layer));
 }, Effect.scoped);
+
+it.effect(
+  "resolves actual moved/merged/deleted search references while retaining a dirty mounted native reader and latest selected identity",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const source = await root(context, runtime, space, "Source title snapshot");
+        const destination = await root(context, runtime, space, "Current destination title");
+        const a = {
+          ...paragraph("native-ref-merged"),
+          order: "20000000000000000000000000000000",
+          content: { runs: [{ text: "nativeuniquereference", marks: [] }] },
+        };
+        const b = {
+          ...paragraph("native-ref-survivor"),
+          order: "40000000000000000000000000000000",
+          content: { runs: [{ text: "nativeuniquereference", marks: [] }] },
+        };
+        const kept = {
+          ...paragraph("native-ref-dirty"),
+          order: "60000000000000000000000000000000",
+        };
+        await seedBlocks(context, source, [a, b, kept]);
+        const session = {};
+        const references = await createMobileSpaceReferenceController({
+          environmentId: context.environmentId,
+          captureSession: async () => () => (runtime.control.connected ? session : null),
+          access: () => ({
+            sourceVersion: 0,
+            canRead: runtime.control.connected,
+            capability: context.capability,
+          }),
+          search: (input) => context.run(context.service.search(input)),
+          resolve: (input) => context.run(context.service.resolveReference(input)),
+        });
+        expect((await references.search("nativeuniquereference")).status).toBe("building");
+        const window = await references.search("nativeuniquereference");
+        expect(window.status).toBe("ready");
+        const target = window.target(window.result.items.findIndex((hit) => hit.blockId === a.id));
+        expect(target).toEqual({ kind: "block", blockId: a.id });
+        const proof = await selectMobileSpacesBlockMove(
+          runtime.owner,
+          (await pageMetadata(context, source.id)).page,
+          await pageWindow(context, source.id),
+          [a.id, b.id],
+        );
+        await runtime.owner.loadBody(destination.id);
+        await runtime.owner.moveSelectedBlocks(proof, {
+          pageId: destination.id,
+          parentId: null,
+          beforeBlockId: null,
+        });
+        const metadata = await pageMetadata(context, destination.id);
+        const joined = await context.run(
+          context.service.applyBlockBatch({
+            environmentId: context.environmentId,
+            pageId: destination.id,
+            baseRevision: metadata.page.revision,
+            receiptEpoch: metadata.mutationAdmission.epoch,
+            mutationId: "native-ref-merge",
+            generation: 1,
+            mutations: [{ kind: "delete", blockId: a.id, mergedInto: b.id }],
+          }),
+        );
+        expect(joined.status).toBe("saved");
+        const lease = runtime.documents.acquire({
+          environmentId: context.environmentId,
+          spaceId: space.id,
+          pageId: source.id,
+        });
+        const stop = lease.reader.subscribe(() => {});
+        await lease.reader.first();
+        const opened = [];
+        const navigator = new MobileSpaceReferenceNavigation({
+          current: () =>
+            lease.reader.editing.getSnapshot().focus === null &&
+            lease.reader.getSnapshot().location?.current() != null,
+          open: (next) => opened.push(next),
+        });
+        navigator.select({ environmentId: context.environmentId, target }, () => true);
+        const focus = lease.reader.editing.focus(Symbol(), kept.id);
+        focus.publication.receive(
+          {
+            ...focus.publication.getSnapshot().observed,
+            revision: 1,
+            runs: [
+              { text: "Retained unpublished native text", bold: false, italic: true, code: false },
+            ],
+          },
+          true,
+        );
+        await navigator.open(references, context.environmentId);
+        expect(opened).toEqual([]);
+        expect(lease.reader.editing.getSnapshot().focus).toBe(focus);
+        await lease.reader.editing.finish(focus.owner, focus.token);
+        const draft = await context.db.store.load({
+          environmentId: context.environmentId,
+          pageId: source.id,
+        });
+        const before = lease.reader.getSnapshot().session;
+        expect(before.dirty).toBe(true);
+        expect(draft.mutations).toHaveLength(1);
+        await navigator.open(references, context.environmentId);
+        expect(opened).toEqual([
+          {
+            environmentId: context.environmentId,
+            spaceId: space.id,
+            pageId: destination.id,
+            blockId: b.id,
+          },
+        ]);
+        expect(navigator.getSnapshot().title).toBe("Current destination title");
+        expect(window.result.items.find((hit) => hit.blockId === a.id).page.title).toBe(
+          "Source title snapshot",
+        );
+        expect(lease.reader.getSnapshot().session).toBe(before);
+        expect(
+          await context.db.store.load({ environmentId: context.environmentId, pageId: source.id }),
+        ).toEqual(draft);
+        await recoverPage(runtime, destination.id, "trash");
+        await navigator.open(references, context.environmentId);
+        expect(navigator.getSnapshot().error).toContain("unavailable");
+        expect(opened).toHaveLength(1);
+        await recoverPage(runtime, destination.id, "permanentlyDelete", true);
+        expect(await references.resolve(target)).toBeNull();
+        expect(lease.reader.getSnapshot().session.dirty).toBe(true);
+        navigator.dispose();
+        references.dispose();
+        stop();
+        lease.release();
+      }),
+    ),
+);
 
 it.effect(
   "publishes selection-scoped native formatting and saves/reopens replacement-only Undo/Redo while retaining a failed compensation and newer suffix after ACK",

@@ -26,6 +26,7 @@ import {
 import type { SpaceCapability } from "@t2code/contracts/spaces";
 import {
   SpaceDocumentSession,
+  type SpaceReferenceController,
   createSpaceServiceSessionAdapter,
   type SpacePageNavigationTarget,
   type SpaceRootReorder,
@@ -33,7 +34,7 @@ import {
 import * as Cause from "effect/Cause";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { connectionAtomRuntime } from "../connection/runtime";
 import { environmentCatalog } from "../connection/catalog";
@@ -51,6 +52,7 @@ import {
   createMobileSpaceStructureStore,
 } from "../features/spaces/draftStore";
 import { createMobileSpaceStructure } from "../features/spaces/structure";
+import { createMobileSpaceReferenceController } from "../features/spaces/references";
 import { SpacesPageReader, type SpacesReadAccess } from "../features/spaces/reader";
 
 const capabilityAtom = Atom.family((environmentId: EnvironmentId) =>
@@ -452,6 +454,89 @@ export async function acquireSpacesPageReader(
     documents,
     hydrate: () => getMobileSpaceStructure(resolved.environmentId).hydrate(),
   });
+}
+
+export async function createSpacesReferenceController(environmentId: EnvironmentId) {
+  return createMobileSpaceReferenceController({
+    environmentId,
+    captureSession: async () => {
+      const result = await runAtomCommand(
+        appAtomRegistry,
+        spacesEnvironment.captureSession,
+        { environmentId, input: undefined },
+        { reportFailure: false },
+      );
+      if (result._tag === "Failure") throw Cause.squash(result.cause);
+      return result.value;
+    },
+    access: () => {
+      const access = liveAccess(environmentId);
+      return {
+        sourceVersion: appAtomRegistry.get(spacesEnvironment.changed(environmentId)),
+        canRead: canBrowseSpaces(access.availability) && access.current(),
+        capability: access.capability,
+      };
+    },
+    search: async (input) => {
+      const result = await runAtomCommand(
+        appAtomRegistry,
+        spacesEnvironment.search,
+        { environmentId, input },
+        { reportFailure: false },
+      );
+      if (result._tag === "Failure") throw Cause.squash(result.cause);
+      return result.value;
+    },
+    resolve: async (input) => {
+      const result = await runAtomCommand(
+        appAtomRegistry,
+        spacesEnvironment.resolve,
+        { environmentId, input },
+        { reportFailure: false },
+      );
+      if (result._tag === "Failure") throw Cause.squash(result.cause);
+      return result.value;
+    },
+  });
+}
+
+export function useSpacesReferenceController(environmentId: EnvironmentId, attempt = 0) {
+  const access = useSpacesReadAccess(environmentId);
+  const sourceVersion = useAtomValue(spacesEnvironment.changed(environmentId));
+  const stamp = useMemo(
+    () => ({ environmentId, access, sourceVersion, attempt }),
+    [environmentId, access, sourceVersion, attempt],
+  );
+  const [state, setState] = useState<{
+    stamp: typeof stamp;
+    owner: SpaceReferenceController;
+  } | null>(null);
+  // oxlint-disable-next-line t2code/react-effect-budget -- Own source queries by connection, grant and actual Spaces change generations; never remount the durable document.
+  useEffect(() => {
+    if (!access.current() || !canBrowseSpaces(access.availability)) return;
+    let active = true;
+    let owner: SpaceReferenceController | undefined;
+    void createSpacesReferenceController(environmentId).then(
+      (created) => {
+        if (
+          !active ||
+          !access.current() ||
+          appAtomRegistry.get(spacesEnvironment.changed(environmentId)) !== sourceVersion
+        ) {
+          created.dispose();
+          return;
+        }
+        owner = created;
+        setState({ stamp, owner });
+      },
+      () => {},
+    );
+    return () => {
+      active = false;
+      owner?.dispose();
+    };
+  }, [stamp, environmentId, access, sourceVersion]);
+  return state?.stamp === stamp ? state.owner : null;
 }
 
 export async function prepareMobileComposerContext(input: {

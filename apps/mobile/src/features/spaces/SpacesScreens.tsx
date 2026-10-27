@@ -26,6 +26,8 @@ import { SpaceBlockReader } from "./SpaceBlockReader";
 import { SpacesLibraryActions } from "./SpacesLibraryActions";
 import { nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
 import { SpacesNativeBlockEditor, spacesNativeEditorAvailable } from "./SpacesNativeBlockEditor";
+import { SpacesSearch, SpacesReferenceOpen } from "./SpacesReferences";
+import { MobileSpaceReferenceNavigation } from "./references";
 import * as Dialog from "../../components/ui/Dialog";
 
 type LibraryParams =
@@ -135,6 +137,7 @@ function SpacesLibrary({
   const selected = spaceId ?? (bounded ? data.defaultSpaceId : undefined);
   return (
     <View className="flex-1">
+      <SpacesSearch environmentId={environmentId} />
       <SpacesLibraryActions key={environmentId} environmentId={environmentId} spaceId={selected} />
       <View className="flex-row gap-2 px-4 py-2">
         <ControlPill
@@ -412,6 +415,22 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
   const editing = reader.editing;
   const editorState = useSyncExternalStore(editing.subscribe, editing.getSnapshot);
   const [owner] = useState(() => Symbol("Spaces page editor"));
+  const [references] = useState(
+    () =>
+      new MobileSpaceReferenceNavigation({
+        current: () =>
+          navigation.isFocused() &&
+          reader.editing.getSnapshot().focus === null &&
+          reader.getSnapshot().location?.current() != null,
+        open: (next) =>
+          navigation.push("SpacesPage", {
+            environmentId: next.environmentId,
+            spaceId: next.spaceId,
+            pageId: next.pageId,
+            ...(next.blockId ? { block: next.blockId } : {}),
+          }),
+      }),
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const list = useRef<FlatList<SpaceBlock>>(null);
   const focus = editorState.focus?.owner === owner ? editorState.focus : null;
@@ -473,6 +492,11 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
         initialNumToRender={12}
         windowSize={5}
         scrollEnabled={editorState.focus === null}
+        onScrollToIndexFailed={() =>
+          setActionError(
+            "The linked row is not measured yet. Scroll this loaded window manually or retry Reveal loaded block.",
+          )
+        }
         removeClippedSubviews={false}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
@@ -674,6 +698,36 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
             ) : snapshot.error ? (
               <Notice>{snapshot.error}</Notice>
             ) : null}
+            <SpacesReferenceOpen model={references} environmentId={target.environmentId} />
+            {target.blockId && blocks.some((block) => block.id === currentTarget.blockId) ? (
+              <ControlPill
+                variant="pill"
+                label="Reveal loaded block"
+                disabled={editorState.focus !== null || !readable}
+                onPress={() => {
+                  const state = reader.getSnapshot();
+                  if (
+                    !access.current() ||
+                    reader.editing.getSnapshot().focus ||
+                    !state.location?.current()
+                  )
+                    return;
+                  const index = state.session.blocks.findIndex(
+                    (block) => block.id === currentTarget.blockId,
+                  );
+                  const handle = list.current;
+                  if (index >= 0 && handle) {
+                    try {
+                      handle.scrollToIndex({ index, animated: false });
+                    } catch {
+                      setActionError(
+                        "Could not reveal the linked row. Scroll this loaded window manually.",
+                      );
+                    }
+                  }
+                }}
+              />
+            ) : null}
             {target.blockId &&
             location &&
             !blocks.some((block) => block.id === currentTarget.blockId) ? (
@@ -733,13 +787,12 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
               depth={blockDepth(item, blocks)}
               selected={item.id === currentTarget.blockId}
               onOpen={(next) => {
-                if (access.current() && !editorState.focus)
-                  navigation.push("SpacesPage", {
-                    environmentId: next.environmentId,
-                    spaceId: next.spaceId,
-                    pageId: next.pageId,
-                    ...(next.blockId ? { block: next.blockId } : {}),
-                  });
+                const source = reader.getSnapshot().location;
+                if (access.current() && source && !reader.editing.getSnapshot().focus)
+                  references.select(
+                    next,
+                    () => reader.getSnapshot().location === source && source.current() !== null,
+                  );
               }}
             />
             <View className="flex-row gap-2 px-4 pb-3">
