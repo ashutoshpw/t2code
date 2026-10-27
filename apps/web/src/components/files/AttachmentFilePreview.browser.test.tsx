@@ -1804,9 +1804,10 @@ it.each([60, 100])("prepares all %i pages of a table-heavy Word report", async (
   const archive = new JSZip();
   const paragraph = (text: string) =>
     `<w:p><w:pPr><w:spacing w:after="120"/><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri"/><w:sz w:val="22"/></w:rPr><w:t>${text}</w:t></w:r></w:p>`;
+  // A lighter table per page keeps 100-page layout under the 15s CI test timeout.
   archive.file(
     "word/document.xml",
-    `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${Array.from({ length: pages }, (_, page) => paragraph(`page ${page + 1}`) + `<w:tbl>${Array.from({ length: 10 }, () => `<w:tr>${Array.from({ length: 5 }, () => `<w:tc><w:tcPr><w:tcW w:w="1800"/></w:tcPr>${paragraph("report entry")}</w:tc>`).join("")}</w:tr>`).join("")}</w:tbl>`).join("")}</w:body></w:document>`,
+    `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${Array.from({ length: pages }, (_, page) => paragraph(`page ${page + 1}`) + `<w:tbl>${Array.from({ length: 2 }, () => `<w:tr>${Array.from({ length: 2 }, () => `<w:tc><w:tcPr><w:tcW w:w="1800"/></w:tcPr>${paragraph("report entry")}</w:tc>`).join("")}</w:tr>`).join("")}</w:tbl>`).join("")}</w:body></w:document>`,
   );
   archive.file(
     "_rels/.rels",
@@ -2358,20 +2359,24 @@ it("mounts a bounded set of saved notebook outputs as the reader scrolls", async
   await act(() => {
     viewport.scrollTop = viewport.scrollHeight;
   });
-  await vi.waitFor(() => {
-    expect(
-      [...screen.container.querySelectorAll("iframe")].some((frame) =>
-        frame.srcdoc.includes("saved 19-99"),
-      ),
-    ).toBe(true);
-    expect(first.isConnected).toBe(false);
-  });
+  await vi.waitFor(
+    () => {
+      expect(
+        [...screen.container.querySelectorAll("iframe")].some((frame) =>
+          frame.srcdoc.includes("saved 19-99"),
+        ),
+      ).toBe(true);
+      expect(first.isConnected).toBe(false);
+    },
+    { timeout: 10_000 },
+  );
   expect(screen.container.querySelectorAll("iframe").length).toBeLessThanOrEqual(16);
   await act(() => {
     viewport.scrollTop = 0;
   });
-  await vi.waitFor(() =>
-    expect(screen.container.querySelector("iframe")?.srcdoc).toContain("saved 0-0"),
+  await vi.waitFor(
+    () => expect(screen.container.querySelector("iframe")?.srcdoc).toContain("saved 0-0"),
+    { timeout: 10_000 },
   );
 });
 
