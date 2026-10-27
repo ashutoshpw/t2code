@@ -107,6 +107,307 @@ const withFixture = Effect.fn("MobileStructureTest.fixture")(function* (use) {
 }, Effect.scoped);
 
 it.effect(
+  "moves a bounded subtree into a cross-space child placement, refuses hidden drafts/cycles/stale guards, and renests with fresh markers",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const source = await root(context, runtime, space, "Moving subtree");
+        const descendant = await child(context, runtime, source, "Descendant");
+        const cycle = {
+          kind: "child",
+          placement: { pageId: descendant.id, parentId: null, beforeBlockId: null },
+        };
+        await prepareMove(context, runtime, source.id, cycle);
+        const requestsBeforeCycle = runtime.control.requests.length;
+        await expect(runtime.owner.moveTo(source.id, cycle)).rejects.toMatchObject({
+          reason: "cycle",
+        });
+        expect(runtime.control.requests).toHaveLength(requestsBeforeCycle);
+        expect((await pageMetadata(context, source.id)).page.location.kind).toBe("root");
+        await runtime.owner.createSpace("Other space");
+        const other = runtime.owner.getSnapshot().libraryResult.space;
+        const destination = await root(context, runtime, other, "Destination");
+        const text = paragraph("nested-anchor");
+        await seedBlock(context, destination, text);
+        const placement = {
+          kind: "child",
+          placement: { pageId: destination.id, parentId: null, beforeBlockId: text.id },
+        };
+        const key = { environmentId: context.environmentId, pageId: destination.id };
+        const window = await pageWindow(context, destination.id);
+        const hidden = new SpaceDocumentSession(key, {
+          drafts: context.db.store,
+          maxLoadedBlocks: 100,
+          maxMutations: 100,
+          createMutationId: () => NodeCrypto.randomUUID(),
+          adapter: createSpaceServiceSessionAdapter(key, {
+            limits: () => context.capability.limits,
+            getPage: (input) => context.run(context.service.getPage(input)),
+            applyBlockBatch: (input) => context.run(context.service.applyBlockBatch(input)),
+            lookupMutationReceipt: (input) =>
+              context.run(context.service.lookupMutationReceipt(input)),
+          }),
+        });
+        await hidden.hydrate(window);
+        hidden.apply([
+          {
+            kind: "replace",
+            block: {
+              ...text,
+              content: { runs: [{ text: "Unresolved hidden destination", marks: [] }] },
+            },
+          },
+        ]);
+        await hidden.persistDraft();
+        await prepareMove(context, runtime, source.id, placement);
+        const beforeDirty = runtime.control.requests.length;
+        await expect(runtime.owner.moveTo(source.id, placement)).rejects.toThrow("retained draft");
+        expect(runtime.control.draftReads).toContain(destination.id);
+        expect(runtime.control.requests).toHaveLength(beforeDirty);
+        expect((await context.db.store.load(key)).mutations).toHaveLength(1);
+        await hidden.discardDraft(window);
+        await prepareMove(context, runtime, source.id, placement);
+        await expect(
+          runtime.owner.moveTo(source.id, {
+            ...placement,
+            placement: {
+              ...placement.placement,
+              beforeBlockId: SpaceBlockId.make("unavailable-anchor"),
+            },
+          }),
+        ).rejects.toThrow("known list placement");
+        await runtime.owner.moveTo(source.id, placement);
+        const nested = (await pageMetadata(context, source.id)).page;
+        expect(nested.id).toBe(source.id);
+        expect(nested.location).toMatchObject({ kind: "child", parentPageId: destination.id });
+        expect(nested.spaceId).toBe(other.id);
+        expect((await pageMetadata(context, descendant.id)).page.spaceId).toBe(other.id);
+        const firstMarker = nested.location.ownerBlockId;
+        expect(runtime.owner.getSnapshot().journal.history.guards.pages.length).toBeLessThanOrEqual(
+          8,
+        );
+        await runtime.owner.compensate("undo");
+        expect((await pageMetadata(context, source.id)).page.location.kind).toBe("root");
+        expect(
+          await context.run(
+            context.service.resolveReference({
+              environmentId: context.environmentId,
+              target: { kind: "block", blockId: firstMarker },
+            }),
+          ),
+        ).toEqual({ status: "deleted" });
+        await runtime.owner.compensate("redo");
+        const redone = (await pageMetadata(context, source.id)).page;
+        expect(redone.location.ownerBlockId).not.toBe(firstMarker);
+        const sameSpaceParent = await root(context, runtime, other, "Same-space parent");
+        const list = { ...paragraph("destination-list"), type: "bulleted_item" };
+        await seedBlock(context, sameSpaceParent, list);
+        const sameSpacePlacement = {
+          kind: "child",
+          placement: { pageId: sameSpaceParent.id, parentId: list.id, beforeBlockId: null },
+        };
+        await prepareMove(context, runtime, source.id, sameSpacePlacement);
+        await runtime.owner.moveTo(source.id, sameSpacePlacement);
+        const renested = (await pageMetadata(context, source.id)).page;
+        expect(renested.id).toBe(source.id);
+        expect(renested.location.parentPageId).toBe(sameSpaceParent.id);
+        expect(renested.location.ownerBlockId).toBe(redone.location.ownerBlockId);
+        expect(
+          (await pageWindow(context, sameSpaceParent.id)).blocks.find(
+            (block) => block.id === renested.location.ownerBlockId,
+          ).parentId,
+        ).toBe(list.id);
+        const staleSource = await root(context, runtime, space, "Stale source");
+        await prepareMove(context, runtime, staleSource.id, placement);
+        runtime.control.afterStore = async (journal) => {
+          if (journal.pending?.request.operation !== "movePage") return;
+          runtime.control.afterStore = null;
+          await seedBlock(context, destination, paragraph("remote-destination-change"));
+        };
+        await runtime.owner.moveTo(staleSource.id, placement);
+        expect(runtime.owner.getSnapshot().journal.pending.conflict).toBe(true);
+        const frozen = await context.db.structure.load(context.environmentId);
+        expect(
+          frozen.pending.request.input.guards.pages.find((row) => row.pageId === destination.id)
+            .revision,
+        ).toBeLessThan((await pageMetadata(context, destination.id)).page.revision);
+        expect((await pageMetadata(context, staleSource.id)).page).toEqual(staleSource);
+        const sends = runtime.control.requests.length;
+        await expect(runtime.owner.recover()).rejects.toThrow("No uncertain placement");
+        expect(runtime.control.requests).toHaveLength(sends);
+        expect((await context.db.structure.load(context.environmentId)).pending).toEqual(
+          frozen.pending,
+        );
+      }),
+    ),
+);
+
+it.effect(
+  "browses empty continuing Trash windows and restores by current ownership while preserving independent batches and proven visibility inverse",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const parent = await root(context, runtime, space, "Trash parent");
+        const nested = await child(context, runtime, parent, "Trash child");
+        const grandchild = await child(context, runtime, nested, "Independent child");
+        await runtime.owner.previewRecovery(parent.id, "trash");
+        const preview = runtime.owner.getSnapshot().recoveryPreview;
+        runtime.control.writable = false;
+        const beforeDenied = runtime.control.requests.length;
+        await expect(runtime.owner.confirmRecovery(preview)).rejects.toThrow("permission");
+        expect(runtime.control.requests).toHaveLength(beforeDenied);
+        runtime.control.writable = true;
+        await runtime.owner.confirmRecovery(preview);
+        runtime.control.maxRows = 1;
+        await runtime.owner.browseTrash();
+        let emptyContinuation = false;
+        const found = [];
+        for (let index = 0; index < 3; index++) {
+          const listed = runtime.owner.getSnapshot().trash;
+          found.push(...listed.items.map((item) => item.pageId));
+          emptyContinuation ||= listed.items.length === 0 && listed.nextCursor !== null;
+          if (listed.nextCursor === null) break;
+          await runtime.owner.browseTrash(true);
+        }
+        expect(found).toEqual([parent.id]);
+        expect(emptyContinuation).toBe(true);
+        expect(runtime.owner.getSnapshot().trash.nextCursor).toBeNull();
+        await recoverPage(runtime, parent.id, "restore");
+        await recoverPage(runtime, grandchild.id, "trash");
+        const independent = (await trashedPage(context, grandchild.id)).trash;
+        const batchPreview = await recoverPage(runtime, parent.id, "trash");
+        expect(new Set(batchPreview.inspection.recovery.pageIds)).toEqual(
+          new Set([parent.id, nested.id]),
+        );
+        const batch = (await trashedPage(context, nested.id)).trash;
+        expect(batch.batchId).not.toBe(independent.batchId);
+        const currentPlacement = {
+          kind: "root",
+          spaceId: space.id,
+          beforePageId: null,
+        };
+        const inspection = await context.run(
+          context.service.inspectStructure({
+            environmentId: context.environmentId,
+            target: { kind: "page", pageId: nested.id },
+            destination: currentPlacement,
+          }),
+        );
+        const admission = await context.run(
+          context.service.listSpaces({ environmentId: context.environmentId, limit: 1 }),
+        );
+        const movedResult = await context.run(
+          context.service.movePage({
+            environmentId: context.environmentId,
+            pageId: nested.id,
+            destination: currentPlacement,
+            guards: inspection.guards,
+            mutationId: NodeCrypto.randomUUID(),
+            receiptEpoch: admission.mutationAdmission.epoch,
+          }),
+        );
+        expect(movedResult.status).toBe("saved");
+        const moved = movedResult.page;
+        const restoreParent = await recoverPage(runtime, parent.id, "restore");
+        expect(restoreParent.inspection.recovery.pageIds).toEqual([parent.id]);
+        expect((await trashedPage(context, nested.id)).trash).toEqual(batch);
+        await runtime.owner.previewRecovery(nested.id, "restore");
+        const current = runtime.owner.getSnapshot().recoveryPreview;
+        expect(current.placement).toContain("current root placement");
+        expect(current.inspection.recovery.pageIds).toEqual([nested.id]);
+        await runtime.owner.confirmRecovery(current);
+        expect((await pageMetadata(context, nested.id)).page.location).toEqual(moved.location);
+        expect((await trashedPage(context, grandchild.id)).trash).toEqual(independent);
+        expect(runtime.owner.getSnapshot().journal.history.operation).toBe("trashPage");
+        await runtime.owner.compensate("undo");
+        expect((await trashedPage(context, nested.id)).trash.batchId).not.toBe(batch.batchId);
+        await runtime.owner.compensate("redo");
+        expect((await pageMetadata(context, nested.id)).page.trash).toBeUndefined();
+        await recoverPage(runtime, grandchild.id, "restore");
+        expect((await pageMetadata(context, grandchild.id)).page.location.parentPageId).toBe(
+          nested.id,
+        );
+      }),
+    ),
+);
+
+it.effect(
+  "recovers exact Trash and Restore receipts across SQLite reopen after final journal commit failure and lost reply without resending or releasing an unaffected editor",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const initial = client(context);
+        const space = await defaultSpace(context);
+        const page = await root(context, initial, space, "Recover visibility");
+        const unaffected = await root(context, initial, space, "Unaffected editor");
+        const text = paragraph("unaffected-focus");
+        await seedBlock(context, unaffected, text);
+        const lease = initial.documents.acquire({
+          environmentId: context.environmentId,
+          spaceId: space.id,
+          pageId: unaffected.id,
+        });
+        await lease.reader.first();
+        const focus = lease.reader.editing.focus(Symbol("unaffected input"), text.id);
+        initial.control.afterSend = async (request, result) => {
+          if (request.operation === "trashPage" && result.status === "saved")
+            context.fixture.control.beforeCommit = async () => {
+              throw new Error("Final journal COMMIT refused");
+            };
+        };
+        await expect(recoverPage(initial, page.id, "trash")).rejects.toBeDefined();
+        const pendingTrash = await context.db.structure.load(context.environmentId);
+        expect(pendingTrash.pending.request.operation).toBe("trashPage");
+        expect((await trashedPage(context, page.id)).trash).toBeDefined();
+        expect(lease.reader.editing.getSnapshot().focus).toBe(focus);
+        expect(() =>
+          initial.documents.acquire({
+            environmentId: context.environmentId,
+            spaceId: space.id,
+            pageId: page.id,
+          }),
+        ).toThrow("reserved");
+        context.fixture.control.beforeCommit = null;
+        lease.release();
+        await context.run(context.db.close);
+        const reopened = await context.run(context.fixture.open());
+        const restarted = client(context, reopened);
+        await restarted.owner.recover();
+        expect(restarted.control.receipts).toEqual(["found"]);
+        expect(restarted.control.requests).toEqual([]);
+        expect((await reopened.structure.load(context.environmentId)).pending).toBeNull();
+        restarted.control.afterSend = async (request, result) => {
+          if (request.operation === "restorePage" && result.status === "saved")
+            throw new Error("Lost Restore reply");
+        };
+        await expect(recoverPage(restarted, page.id, "restore")).rejects.toThrow(
+          "Lost Restore reply",
+        );
+        const pendingRestore = await reopened.structure.load(context.environmentId);
+        expect(pendingRestore.pending.request.operation).toBe("restorePage");
+        await context.run(reopened.close);
+        const again = await context.run(context.fixture.open());
+        const recovered = client(context, again);
+        await recovered.owner.hydrate();
+        expect(recovered.owner.getSnapshot().journal.pending).toEqual(pendingRestore.pending);
+        await recovered.owner.recover();
+        expect(recovered.control.receipts).toEqual(["found"]);
+        expect(recovered.control.requests).toEqual([]);
+        expect(recovered.control.ids).toBe(0);
+        expect((await again.structure.load(context.environmentId)).pending).toBeNull();
+        expect((await pageMetadata(context, page.id)).page.trash).toBeUndefined();
+        expect(pendingTrash.pending.request.input.receiptEpoch).toBe(
+          pendingRestore.pending.request.input.receiptEpoch,
+        );
+      }),
+    ),
+);
+
+it.effect(
   "retries the mounted page after real journal receipt recovery and preserves its healthy editing lease",
   () =>
     withFixture((context) =>
@@ -220,6 +521,7 @@ function client(context, db = context.db) {
     refreshed: [],
     changed: 0,
     draftReads: [],
+    maxRows: capability.limits.maxListRows,
   };
   const access = (write) => {
     if (!control.connected || (write && !control.writable))
@@ -318,7 +620,7 @@ function client(context, db = context.db) {
     assertAccess: access,
     libraryAccess: access,
     capability: () => capability,
-    maxRows: () => capability.limits.maxListRows,
+    maxRows: () => control.maxRows,
     maxMutationBytes: () => capability.limits.maxMutationBytes,
     getPage: (pageId) => read(service.getPage({ environmentId, pageId })),
     spaces: (input) => read(service.listSpaces(input)),
@@ -363,7 +665,14 @@ async function defaultSpace(context) {
   ).space;
 }
 async function root(context, runtime, space, title) {
-  await runtime.owner.createRootPage(space, title);
+  const admission = await context.run(
+    context.service.listPages({
+      environmentId: context.environmentId,
+      spaceId: space.id,
+      limit: 1,
+    }),
+  );
+  await runtime.owner.createRootPage(admission.space, title);
   return runtime.owner.getSnapshot().libraryResult.page;
 }
 function paragraph(id) {
@@ -375,6 +684,52 @@ function paragraph(id) {
     order: "80000000000000000000000000000000",
     content: { runs: [{ text: "Saved content", marks: [] }] },
   };
+}
+async function pageMetadata(context, pageId) {
+  return context.run(context.service.getPage({ environmentId: context.environmentId, pageId }));
+}
+async function trashedPage(context, pageId) {
+  const inspection = await context.run(
+    context.service.inspectStructure({
+      environmentId: context.environmentId,
+      target: { kind: "page", pageId },
+      recovery: "restore",
+    }),
+  );
+  return inspection.pages.find((page) => page.id === pageId);
+}
+async function pageWindow(context, pageId) {
+  const metadata = await pageMetadata(context, pageId);
+  return context.run(
+    context.service.readBlocks({
+      environmentId: context.environmentId,
+      pageId,
+      revision: metadata.page.revision,
+    }),
+  );
+}
+async function child(context, runtime, parent, title) {
+  await runtime.owner.loadBody(parent.id);
+  await runtime.owner.createChild(title, {
+    pageId: parent.id,
+    parentId: null,
+    beforeBlockId: null,
+  });
+  return (await pageMetadata(context, runtime.owner.getSnapshot().journal.history.pageId)).page;
+}
+async function prepareMove(context, runtime, pageId, destination) {
+  const metadata = await pageMetadata(context, pageId);
+  await runtime.owner.loadSource(pageId);
+  if (metadata.page.location.kind === "root")
+    await runtime.owner.browse(metadata.page.spaceId, pageId);
+  if (destination.kind === "root") await runtime.owner.browse(destination.spaceId, pageId);
+  else await runtime.owner.loadBody(destination.placement.pageId);
+}
+async function recoverPage(runtime, pageId, operation) {
+  await runtime.owner.previewRecovery(pageId, operation);
+  const preview = runtime.owner.getSnapshot().recoveryPreview;
+  await runtime.owner.confirmRecovery(preview);
+  return preview;
 }
 async function seedBlock(context, page, block) {
   const metadata = await context.run(

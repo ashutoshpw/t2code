@@ -2,9 +2,16 @@ import { useAtomValue } from "@effect/atom-react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
-import type { SpaceRootReorder } from "@t2code/client-runtime/spaces";
+import { isSpaceListItem, type SpaceRootReorder } from "@t2code/client-runtime/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
-import type { SpaceId, SpacePageSummary, SpaceSummary } from "@t2code/contracts/spaces";
+import type {
+  SpaceBlockId,
+  SpaceId,
+  SpacePageDestination,
+  SpacePageId,
+  SpacePageSummary,
+  SpaceSummary,
+} from "@t2code/contracts/spaces";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { FlatList, Modal, TextInput, View } from "react-native";
 import { AppText as Text } from "../../components/ui/AppText";
@@ -17,6 +24,7 @@ import {
   useSpacesReadAccess,
 } from "../../state/spaces";
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
+import { SpacesRecoveryControls } from "./SpacesRecoveryControls";
 
 type Intent =
   | { kind: "createSpace" }
@@ -66,6 +74,8 @@ function Actions({
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [destinationSpace, setDestinationSpace] = useState<SpaceId | null>(null);
+  const [destinationPage, setDestinationPage] = useState<SpacePageId | null>(null);
+  const [container, setContainer] = useState<SpaceBlockId | null>(null);
   const [movePhase, setMovePhase] = useState<"source" | "destination">("source");
   const createSpace = useAtomValue(spacesEnvironment.createSpace.permissionAtom(environmentId));
   const renameSpace = useAtomValue(spacesEnvironment.renameSpace.permissionAtom(environmentId));
@@ -105,6 +115,8 @@ function Actions({
     setError(null);
     setMovePhase("source");
     setDestinationSpace(null);
+    setDestinationPage(null);
+    setContainer(null);
   }
   const permitted =
     intent?.kind === "createSpace"
@@ -164,10 +176,14 @@ function Actions({
     snapshot.body?.pageId === intent.page.id &&
     snapshot.body.nextCursor === null;
   const sourceReady = intent?.kind === "move" && snapshot.position?.pageId === intent.page.id;
-  const destination =
-    snapshot.window?.space.id === destinationSpace && snapshot.parentPageId === null
-      ? snapshot.window
+  const destination = snapshot.window?.space.id === destinationSpace ? snapshot.window : null;
+  const body =
+    snapshot.body?.pageId === destinationPage && snapshot.body.spaceId === destinationSpace
+      ? snapshot.body
       : null;
+  const containerAvailable =
+    container === null ||
+    !!body?.blocks.some((block) => block.id === container && isSpaceListItem(block));
   const message =
     error ??
     (snapshot.error instanceof Error
@@ -175,19 +191,17 @@ function Actions({
       : snapshot.error
         ? "Structural recovery failed; existing data is retained"
         : null);
-  function confirmMove(beforePageId: SpacePageSummary["id"] | null, label: string) {
-    if (intent?.kind !== "move" || !destinationSpace || disabled || !movePage || !allowedContext())
-      return;
+  function confirmMove(placement: SpacePageDestination, label: string) {
+    if (intent?.kind !== "move" || disabled || !movePage || !allowedContext()) return;
     const sourceId = intent.page.id;
-    const targetSpace = destinationSpace;
     Dialog.confirm({
-      title: "Move page to this root placement?",
-      message: label,
+      title: "Move page to this placement?",
+      message: `${label}. Page IDs stay stable. Undo restores logical placement, not historical ranks or retired markers.`,
       confirmText: "Move page",
       onConfirm: () => {
         if (allowedContext())
           run(
-            owner.move(sourceId, targetSpace, beforePageId).then(() => {
+            owner.moveTo(sourceId, placement).then(() => {
               if (!owner.getSnapshot().journal.pending) setIntent(null);
             }),
           );
@@ -240,6 +254,13 @@ function Actions({
           onPress={() => run(owner.hydrate())}
         />
       ) : null}
+      <SpacesRecoveryControls
+        environmentId={environmentId}
+        owner={owner}
+        page={page}
+        current={current}
+        blocked={blocked}
+      />
       {!statusOnly ? (
         <>
           <View className="flex-row flex-wrap gap-2">
@@ -259,7 +280,7 @@ function Actions({
                 />
                 <ControlPill
                   variant="pill"
-                  label="Move page to root"
+                  label="Move page"
                   disabled={disabled || !structural || !movePage || !!page.trash}
                   onPress={() => choose({ kind: "move", page })}
                 />
@@ -307,13 +328,13 @@ function Actions({
           <View className="flex-row flex-wrap gap-2">
             <ControlPill
               variant="pill"
-              label="Undo placement"
+              label="Undo last action"
               disabled={disabled || !structural || !inverseAllowed || history?.direction !== "undo"}
               onPress={() => run(owner.compensate("undo"))}
             />
             <ControlPill
               variant="pill"
-              label="Redo placement"
+              label="Redo last action"
               disabled={disabled || !structural || !inverseAllowed || history?.direction !== "redo"}
               onPress={() => run(owner.compensate("redo"))}
             />
@@ -358,7 +379,7 @@ function Actions({
         <View className="flex-1 justify-center bg-black/40">
           <View className="m-4 max-h-[85%] gap-3 rounded-xl bg-background p-4">
             <Text accessibilityRole="header" className="text-lg font-bold text-foreground">
-              {intent?.kind === "move" ? "Move page to root" : "Space library change"}
+              {intent?.kind === "move" ? "Move page" : "Space library change"}
             </Text>
             {message ? (
               <Text accessibilityRole="alert" className="text-destructive">
@@ -394,6 +415,7 @@ function Actions({
                       disabled={
                         disabled ||
                         snapshot.window?.space.id !== intent.page.spaceId ||
+                        snapshot.parentPageId !== null ||
                         !snapshot.window.nextCursor
                       }
                       onPress={() => run(owner.browse(intent.page.spaceId, intent.page.id, true))}
@@ -415,89 +437,266 @@ function Actions({
                   </>
                 ) : (
                   <>
-                    <View className="flex-row gap-2">
-                      <ControlPill
-                        variant="pill"
-                        label="First spaces"
-                        disabled={disabled}
-                        onPress={() => run(owner.browseSpaces())}
-                      />
-                      <ControlPill
-                        variant="pill"
-                        label="Next spaces"
-                        disabled={disabled || !snapshot.spaces?.nextCursor}
-                        onPress={() => run(owner.browseSpaces(true))}
-                      />
-                    </View>
-                    <FlatList
-                      renderScrollComponent={NativeScrollView}
-                      data={snapshot.spaces?.items ?? []}
-                      keyExtractor={(item) => item.id}
-                      style={{ maxHeight: 120 }}
-                      renderItem={({ item }) => (
-                        <ControlPill
-                          variant="pill"
-                          label={item.title || "Untitled space"}
-                          disabled={disabled}
-                          onPress={() => {
-                            setDestinationSpace(item.id);
-                            run(owner.browse(item.id, intent.page.id));
-                          }}
-                        />
-                      )}
-                    />
-                    {destination ? (
+                    {!destinationPage ? (
                       <>
                         <View className="flex-row gap-2">
                           <ControlPill
                             variant="pill"
-                            label="First destination roots"
+                            label="First spaces"
                             disabled={disabled}
-                            onPress={() => run(owner.browse(destination.space.id, intent.page.id))}
+                            onPress={() => run(owner.browseSpaces())}
                           />
                           <ControlPill
                             variant="pill"
-                            label="Next destination roots"
-                            disabled={disabled || !destination.nextCursor}
-                            onPress={() =>
-                              run(owner.browse(destination.space.id, intent.page.id, true))
-                            }
+                            label="Next spaces"
+                            disabled={disabled || !snapshot.spaces?.nextCursor}
+                            onPress={() => run(owner.browseSpaces(true))}
                           />
                         </View>
                         <FlatList
                           renderScrollComponent={NativeScrollView}
-                          data={destination.items.filter((item) => item.id !== intent.page.id)}
+                          data={snapshot.spaces?.items ?? []}
                           keyExtractor={(item) => item.id}
-                          style={{ maxHeight: 160 }}
-                          ListEmptyComponent={
-                            <Text className="text-foreground-muted">
-                              {destination.nextCursor
-                                ? "No roots in this window; continue explicitly."
-                                : "No other roots in this window."}
-                            </Text>
-                          }
+                          style={{ maxHeight: 120 }}
                           renderItem={({ item }) => (
                             <ControlPill
                               variant="pill"
-                              label={`Before ${item.title || "untitled page"}`}
+                              label={item.title || "Untitled space"}
                               disabled={disabled}
-                              onPress={() =>
-                                confirmMove(
-                                  item.id,
-                                  `Before ${item.title || "untitled page"} in ${destination.space.title}`,
-                                )
-                              }
+                              onPress={() => {
+                                setDestinationSpace(item.id);
+                                setDestinationPage(null);
+                                setContainer(null);
+                                run(owner.browse(item.id, intent.page.id));
+                              }}
                             />
                           )}
                         />
-                        <ControlPill
-                          variant="pill"
-                          label="At end of this space"
-                          disabled={disabled || destination.nextCursor !== null}
-                          onPress={() =>
-                            confirmMove(null, `At the end of ${destination.space.title}`)
-                          }
-                        />
+                      </>
+                    ) : null}
+                    {destination ? (
+                      <>
+                        {!destinationPage ? (
+                          <>
+                            <View className="flex-row gap-2">
+                              <ControlPill
+                                variant="pill"
+                                label="First destination pages"
+                                disabled={disabled}
+                                onPress={() =>
+                                  run(
+                                    owner.browse(
+                                      destination.space.id,
+                                      intent.page.id,
+                                      false,
+                                      snapshot.parentPageId,
+                                    ),
+                                  )
+                                }
+                              />
+                              <ControlPill
+                                variant="pill"
+                                label="Next destination pages"
+                                disabled={disabled || !destination.nextCursor}
+                                onPress={() =>
+                                  run(
+                                    owner.browse(
+                                      destination.space.id,
+                                      intent.page.id,
+                                      true,
+                                      snapshot.parentPageId,
+                                    ),
+                                  )
+                                }
+                              />
+                              <ControlPill
+                                variant="pill"
+                                label="Destination roots"
+                                disabled={disabled}
+                                onPress={() =>
+                                  run(owner.browse(destination.space.id, intent.page.id))
+                                }
+                              />
+                            </View>
+                            <FlatList
+                              renderScrollComponent={NativeScrollView}
+                              data={destination.items.filter((item) => item.id !== intent.page.id)}
+                              keyExtractor={(item) => item.id}
+                              style={{ maxHeight: 160 }}
+                              ListEmptyComponent={
+                                <Text className="text-foreground-muted">
+                                  {destination.nextCursor
+                                    ? "No pages in this window; continue explicitly."
+                                    : "No other pages in this window."}
+                                </Text>
+                              }
+                              renderItem={({ item }) => (
+                                <View className="gap-1 py-2">
+                                  <Text className="text-foreground">
+                                    {item.title || "Untitled page"}
+                                  </Text>
+                                  {snapshot.parentPageId === null ? (
+                                    <ControlPill
+                                      variant="pill"
+                                      label={`Before ${item.title || "untitled page"}`}
+                                      disabled={disabled}
+                                      onPress={() =>
+                                        confirmMove(
+                                          {
+                                            kind: "root",
+                                            spaceId: destination.space.id,
+                                            beforePageId: item.id,
+                                          },
+                                          `Before ${item.title || "untitled page"} in ${destination.space.title}`,
+                                        )
+                                      }
+                                    />
+                                  ) : null}
+                                  <ControlPill
+                                    variant="pill"
+                                    label="Browse child pages"
+                                    disabled={disabled}
+                                    onPress={() =>
+                                      run(
+                                        owner.browse(
+                                          destination.space.id,
+                                          intent.page.id,
+                                          false,
+                                          item.id,
+                                        ),
+                                      )
+                                    }
+                                  />
+                                  <ControlPill
+                                    variant="pill"
+                                    label="Choose placement inside"
+                                    disabled={disabled}
+                                    onPress={() => {
+                                      setDestinationPage(item.id);
+                                      setContainer(null);
+                                      run(owner.loadBody(item.id));
+                                    }}
+                                  />
+                                </View>
+                              )}
+                            />
+                            {snapshot.parentPageId === null ? (
+                              <ControlPill
+                                variant="pill"
+                                label="At end of this space"
+                                disabled={disabled || destination.nextCursor !== null}
+                                onPress={() =>
+                                  confirmMove(
+                                    {
+                                      kind: "root",
+                                      spaceId: destination.space.id,
+                                      beforePageId: null,
+                                    },
+                                    `At the end of ${destination.space.title}`,
+                                  )
+                                }
+                              />
+                            ) : null}
+                          </>
+                        ) : (
+                          <ControlPill
+                            variant="pill"
+                            label="Back to destination pages"
+                            disabled={disabled}
+                            onPress={() => setDestinationPage(null)}
+                          />
+                        )}
+                        {destinationPage && !body ? (
+                          <ControlPill
+                            variant="pill"
+                            label="Retry destination body"
+                            disabled={disabled}
+                            onPress={() => run(owner.loadBody(destinationPage))}
+                          />
+                        ) : null}
+                        {body ? (
+                          <View className="gap-2">
+                            <Text className="text-foreground">Destination page {body.pageId}</Text>
+                            {body.nextCursor !== null ? (
+                              <Text className="text-destructive">
+                                This destination body is partial. Child placement is unavailable.
+                              </Text>
+                            ) : (
+                              <>
+                                <ControlPill
+                                  variant="pill"
+                                  label="Page body root"
+                                  disabled={disabled}
+                                  onPress={() => setContainer(null)}
+                                />
+                                <FlatList
+                                  renderScrollComponent={NativeScrollView}
+                                  data={body.blocks.filter(isSpaceListItem)}
+                                  keyExtractor={(block) => block.id}
+                                  style={{ maxHeight: 100 }}
+                                  renderItem={({ item: block }) => (
+                                    <ControlPill
+                                      variant="pill"
+                                      label={`List ${block.id}${container === block.id ? " (selected)" : ""}`}
+                                      disabled={disabled}
+                                      onPress={() => setContainer(block.id)}
+                                    />
+                                  )}
+                                />
+                                {!containerAvailable ? (
+                                  <Text className="text-destructive">
+                                    The selected list container is unavailable. Choose a current
+                                    placement again.
+                                  </Text>
+                                ) : null}
+                                <FlatList
+                                  renderScrollComponent={NativeScrollView}
+                                  data={body.blocks.filter((block) => block.parentId === container)}
+                                  keyExtractor={(block) => block.id}
+                                  style={{ maxHeight: 120 }}
+                                  renderItem={({ item: block }) => (
+                                    <ControlPill
+                                      variant="pill"
+                                      label={`Before ${block.type} (${block.id})`}
+                                      disabled={disabled || !containerAvailable}
+                                      onPress={() =>
+                                        confirmMove(
+                                          {
+                                            kind: "child",
+                                            placement: {
+                                              pageId: body.pageId,
+                                              parentId: container,
+                                              beforeBlockId: block.id,
+                                            },
+                                          },
+                                          `Inside ${body.pageId}, before ${block.id}`,
+                                        )
+                                      }
+                                    />
+                                  )}
+                                />
+                                <ControlPill
+                                  variant="pill"
+                                  label={container ? "At list end" : "At page body end"}
+                                  disabled={disabled || !containerAvailable}
+                                  onPress={() =>
+                                    confirmMove(
+                                      {
+                                        kind: "child",
+                                        placement: {
+                                          pageId: body.pageId,
+                                          parentId: container,
+                                          beforeBlockId: null,
+                                        },
+                                      },
+                                      `At the end of ${container ?? body.pageId}`,
+                                    )
+                                  }
+                                />
+                              </>
+                            )}
+                          </View>
+                        ) : null}
                       </>
                     ) : (
                       <Text className="text-foreground-muted">
