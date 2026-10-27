@@ -36,6 +36,7 @@ interface LocatedPage extends SpacePageGetResult {
 }
 
 interface ReaderSnapshot {
+  readonly structureBlocked: boolean;
   readonly loading: boolean;
   readonly error: string | null;
   readonly location: LocatedPage | null;
@@ -52,6 +53,7 @@ export class SpacesPageReader {
   #access: SpacesReadAccess | null = null;
   #stopSession: (() => void) | null = null;
   #serverWindow: SpaceReadBlocksResult | null = null;
+  #reserved = false;
   #snapshot: ReaderSnapshot;
   readonly editing: MobileSpaceEditing;
 
@@ -62,9 +64,11 @@ export class SpacesPageReader {
       access: SpacesReadAccess;
       locate: (signal: AbortSignal) => Promise<LocatedPage>;
       blocks: (input: SpaceReadBlocksInput, signal: AbortSignal) => Promise<SpaceReadBlocksResult>;
+      beforeRead?: () => Promise<void>;
     },
   ) {
     this.#snapshot = {
+      structureBlocked: false,
       loading: false,
       error: null,
       location: null,
@@ -75,11 +79,59 @@ export class SpacesPageReader {
       session: ports.session,
       access: () => this.ports.access,
       readWindow: () => this.readCurrentWindow(),
+      assertMutable: () => this.assertContentReady(),
     });
   }
 
   get session() {
     return this.ports.session;
+  }
+
+  assertContentReady() {
+    if (this.#reserved)
+      throw new Error("This page is reserved; recover its structural operation first");
+    if (this.#snapshot.loading || this.#snapshot.error !== null)
+      throw new Error("Refresh this page successfully before editing");
+  }
+
+  reserveStructure(restoring: boolean) {
+    if (this.#reserved) throw new Error("This page already has a structural reservation");
+    if (
+      !restoring &&
+      (this.#snapshot.loading ||
+        this.#snapshot.error !== null ||
+        this.editing.getSnapshot().focus ||
+        this.editing.getSnapshot().busy ||
+        this.session.structureAvailability())
+    )
+      throw new Error(
+        "Finish loading or resolve the affected page draft before changing structure",
+      );
+    this.#reserved = true;
+    this.#publish({ ...this.#snapshot, structureBlocked: true });
+    return () => {
+      this.#reserved = false;
+      this.#publish({ ...this.#snapshot, structureBlocked: false });
+    };
+  }
+
+  async refreshStructure() {
+    try {
+      if (
+        this.editing.getSnapshot().focus ||
+        this.editing.getSnapshot().busy ||
+        this.session.structureAvailability()
+      )
+        throw new Error("Resolve the affected page draft before refreshing structure");
+      await this.#load(undefined, true);
+    } catch (error) {
+      this.#publish({
+        ...this.#snapshot,
+        loading: false,
+        error: error instanceof Error ? error.message : "Could not refresh this page",
+      });
+      throw error;
+    }
   }
 
   getSnapshot = () => this.#snapshot;
@@ -99,6 +151,7 @@ export class SpacesPageReader {
     const state = this.session.getSnapshot();
     return (
       this.#listeners.size === 0 &&
+      !this.#reserved &&
       this.editing.getSnapshot().focus === null &&
       this.editing.getSnapshot().busy === null &&
       !this.#opening &&
@@ -138,6 +191,7 @@ export class SpacesPageReader {
     this.#opening = null;
     this.#serverWindow = null;
     this.#publish({
+      structureBlocked: this.#reserved,
       loading: false,
       error: null,
       location: null,
@@ -203,7 +257,7 @@ export class SpacesPageReader {
     return opening;
   }
 
-  async #load(cursor?: SpaceCursor): Promise<void> {
+  async #load(cursor?: SpaceCursor, structure = false): Promise<void> {
     const request = ++this.#request;
     this.#abort?.abort();
     const abort = new AbortController();
@@ -213,6 +267,7 @@ export class SpacesPageReader {
     const current = () => request === this.#request && access.current();
     this.#serverWindow = null;
     this.#publish({
+      structureBlocked: this.#reserved,
       loading: true,
       error: null,
       location: null,
@@ -220,8 +275,14 @@ export class SpacesPageReader {
       session: this.session.getSnapshot(),
     });
     try {
+      if (this.ports.beforeRead) await this.ports.beforeRead();
+      if (!structure && this.#reserved)
+        throw new Error("Recover the reserved structural operation first");
       const { location, window } = await this.#readWindow(access, abort.signal, cursor);
-      if (!current()) return;
+      if (!current()) {
+        if (structure) throw new Error("The page changed while refreshing structure");
+        return;
+      }
       if (!this.session.getSnapshot().hydrated) {
         const hydration = this.session.hydrate(window);
         this.#hydration = hydration;
@@ -231,7 +292,10 @@ export class SpacesPageReader {
           if (this.#hydration === hydration) this.#hydration = null;
         }
       }
-      if (!current() || !location.current()) return;
+      if (!current() || !location.current()) {
+        if (structure) throw new Error("The page location changed while refreshing structure");
+        return;
+      }
       const state = this.session.getSnapshot();
       if (
         !this.editing.getSnapshot().focus &&
@@ -244,8 +308,15 @@ export class SpacesPageReader {
       this.#snapshot = { ...this.#snapshot, loading: false, error: null, location };
       this.#publishSession();
     } catch (error) {
-      if (!current()) return;
+      if (!current()) {
+        if (structure)
+          throw new Error("The page connection changed while refreshing structure", {
+            cause: error,
+          });
+        return;
+      }
       this.#publish({
+        structureBlocked: this.#reserved,
         loading: false,
         error:
           cursor &&
@@ -261,6 +332,7 @@ export class SpacesPageReader {
         window: null,
         session: this.session.getSnapshot(),
       });
+      if (structure) throw error;
     }
   }
 }

@@ -1,4 +1,4 @@
-import type { EnvironmentId } from "@t2code/contracts";
+import { EnvironmentId } from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -9,11 +9,16 @@ import {
   decodeSpaceDocumentDraft,
   spaceDraftMaxBytes,
   type SpaceDocumentDraft,
+  decodeSpaceStructureJournal,
+  spaceStructureMaxBytes,
+  type SpaceStructureJournal,
 } from "@t2code/client-runtime/spaces";
 import { SpacePageTarget } from "@t2code/contracts/spaces";
 
 const DATABASE_NAME = "t2code-client.db";
-const DATABASE_SCHEMA_VERSION = 2;
+const DATABASE_SCHEMA_VERSION = 3;
+const SPACE_STRUCTURE_MAX_ROWS = 8;
+const decodeEnvironmentId = Schema.decodeUnknownSync(EnvironmentId);
 const SPACE_DRAFT_TOTAL_BYTES = 16 * 1024 * 1024;
 const SPACE_DRAFT_MAX_ROWS = 128;
 const decodeDraftKey = Schema.decodeUnknownSync(SpacePageTarget, { onExcessProperty: "error" });
@@ -71,6 +76,8 @@ const MobileDatabaseOperation = Schema.Literals([
   "save-preferences",
   "load-space-draft",
   "write-space-draft",
+  "load-space-structure",
+  "write-space-structure",
 ]);
 
 export class MobileDatabaseError extends Schema.TaggedError<MobileDatabaseError>()(
@@ -94,6 +101,41 @@ function draftKey(key: SpacePageTarget) {
   if (Object.values(checked).some((value) => new TextEncoder().encode(value).byteLength > 256))
     throw new Error("Spaces draft identity exceeds the storage limit");
   return checked;
+}
+
+function structureKey(environmentId: EnvironmentId) {
+  const key = decodeEnvironmentId(environmentId);
+  if (new TextEncoder().encode(key).byteLength > 256)
+    throw new Error("Spaces journal identity exceeds the storage limit");
+  return key;
+}
+
+async function readSpaceStructure(database: SQLiteDatabase, environmentId: EnvironmentId) {
+  const row = await database.getFirstAsync<{
+    readonly schemaVersion: number;
+    readonly payloadBytes: number;
+    readonly actualBytes: number;
+    readonly payload: string | null;
+  }>(
+    `SELECT schema_version AS schemaVersion, payload_bytes AS payloadBytes,
+       LENGTH(CAST(payload AS BLOB)) AS actualBytes,
+       CASE WHEN LENGTH(CAST(payload AS BLOB)) <= ? THEN payload END AS payload
+     FROM spaces_structure_journals WHERE environment_id = ?`,
+    spaceStructureMaxBytes,
+    environmentId,
+  );
+  if (row === null) return null;
+  if (
+    row.schemaVersion !== 1 ||
+    row.actualBytes !== row.payloadBytes ||
+    row.actualBytes > spaceStructureMaxBytes ||
+    typeof row.payload !== "string"
+  )
+    throw new Error("Invalid Spaces journal; stored data has been retained");
+  return {
+    journal: decodeSpaceStructureJournal(JSON.parse(row.payload), environmentId),
+    bytes: row.actualBytes,
+  };
 }
 
 async function readSpaceDraft(database: SQLiteDatabase, key: SpacePageTarget) {
@@ -239,6 +281,13 @@ async function migrateLegacyFileCaches(database: SQLiteDatabase): Promise<boolea
 export class MobileDatabase extends Context.Service<
   MobileDatabase,
   {
+    readonly loadSpaceStructureJournal: (
+      environmentId: EnvironmentId,
+    ) => Effect.Effect<SpaceStructureJournal | null, MobileDatabaseError>;
+    readonly writeSpaceStructureJournal: (
+      environmentId: EnvironmentId,
+      journal: SpaceStructureJournal,
+    ) => Effect.Effect<void, MobileDatabaseError>;
     readonly loadSpacePageDraft: (
       key: SpacePageTarget,
     ) => Effect.Effect<SpaceDocumentDraft | null, MobileDatabaseError>;
@@ -340,6 +389,15 @@ const makeAvailable = Effect.gen(function* () {
                 PRIMARY KEY (environment_id, page_id),
                 CHECK (LENGTH(CAST(payload AS BLOB)) = payload_bytes)
               ) WITHOUT ROWID;
+
+              CREATE TABLE IF NOT EXISTS spaces_structure_journals (
+                environment_id TEXT PRIMARY KEY NOT NULL,
+                schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+                payload TEXT NOT NULL,
+                payload_bytes INTEGER NOT NULL CHECK (payload_bytes BETWEEN 1 AND 2097152),
+                updated_at INTEGER NOT NULL,
+                CHECK (LENGTH(CAST(payload AS BLOB)) = payload_bytes)
+              ) WITHOUT ROWID;
             `);
       });
       if ((schema?.user_version ?? 0) < DATABASE_SCHEMA_VERSION) {
@@ -352,6 +410,55 @@ const makeAvailable = Effect.gen(function* () {
   });
 
   return MobileDatabase.of({
+    loadSpaceStructureJournal: Effect.fn("MobileDatabase.loadSpaceStructureJournal")(
+      (environmentId) =>
+        Effect.tryPromise({
+          try: async () =>
+            (await readSpaceStructure(database, structureKey(environmentId)))?.journal ?? null,
+          catch: databaseError("load-space-structure"),
+        }),
+    ),
+    writeSpaceStructureJournal: Effect.fn("MobileDatabase.writeSpaceStructureJournal")(
+      (environmentId, journal) =>
+        Effect.tryPromise({
+          try: async () => {
+            const key = structureKey(environmentId);
+            const payload = JSON.stringify(decodeSpaceStructureJournal(journal, key));
+            const bytes = new TextEncoder().encode(payload).byteLength;
+            await database.withExclusiveTransactionAsync(async (transaction) => {
+              const previous = await readSpaceStructure(transaction, key);
+              const usage = await transaction.getFirstAsync<{
+                readonly rows: number;
+                readonly bytes: number;
+              }>(
+                `SELECT COUNT(*) AS rows, COALESCE(SUM(actual_bytes), 0) AS bytes FROM
+               (SELECT LENGTH(CAST(payload AS BLOB)) AS actual_bytes FROM spaces_structure_journals LIMIT ?)`,
+                SPACE_STRUCTURE_MAX_ROWS + 1,
+              );
+              if (
+                usage === null ||
+                usage.rows + (previous === null ? 1 : 0) > SPACE_STRUCTURE_MAX_ROWS ||
+                usage.bytes - (previous?.bytes ?? 0) + bytes >
+                  SPACE_STRUCTURE_MAX_ROWS * spaceStructureMaxBytes
+              )
+                throw new Error(
+                  "Local Spaces journals are full; existing journals have been retained",
+                );
+              await transaction.runAsync(
+                `INSERT INTO spaces_structure_journals (environment_id, schema_version, payload, payload_bytes, updated_at)
+               VALUES (?, 1, ?, ?, ?)
+               ON CONFLICT (environment_id) DO UPDATE SET payload = excluded.payload,
+                 payload_bytes = excluded.payload_bytes, updated_at = excluded.updated_at`,
+                key,
+                payload,
+                bytes,
+                Date.now(),
+              );
+            });
+          },
+          catch: databaseError("write-space-structure"),
+        }),
+    ),
     loadSpacePageDraft: Effect.fn("MobileDatabase.loadSpacePageDraft")((key) =>
       Effect.tryPromise({
         try: async () => (await readSpaceDraft(database, draftKey(key)))?.draft ?? null,
@@ -571,6 +678,8 @@ const makeAvailable = Effect.gen(function* () {
 function makeUnavailable(error: MobileDatabaseError): MobileDatabase["Service"] {
   const fail = Effect.fail(error);
   return MobileDatabase.of({
+    loadSpaceStructureJournal: () => fail,
+    writeSpaceStructureJournal: () => fail,
     loadSpacePageDraft: () => fail,
     writeSpacePageDraft: () => fail,
     loadCache: () => fail,

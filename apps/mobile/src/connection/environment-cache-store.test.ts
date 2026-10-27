@@ -218,6 +218,8 @@ function makeDatabase() {
   const schemaVersions = new Map<string, number>();
   const removed: Array<string> = [];
   const database = MobileDatabase.MobileDatabase.of({
+    loadSpaceStructureJournal: () => Effect.die("Cache tests must not access structural journals"),
+    writeSpaceStructureJournal: () => Effect.die("Cache tests must not change structural journals"),
     loadSpacePageDraft: () => Effect.die("Cache tests must not access durable page drafts"),
     writeSpacePageDraft: () => Effect.die("Cache tests must not change durable page drafts"),
     loadCache: (environmentId, kind, cacheKey) =>

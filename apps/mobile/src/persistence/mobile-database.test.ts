@@ -3,8 +3,17 @@ import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as NodeSqlite from "node:sqlite";
 import { EnvironmentId } from "@t2code/contracts";
-import { SpaceBlockId, SpacePageId, SpaceReceiptEpoch } from "@t2code/contracts/spaces";
-import { spaceDraftMaxBytes, type SpaceDocumentDraft } from "@t2code/client-runtime/spaces";
+import {
+  SpaceBlockId,
+  SpacePageId,
+  SpaceReceiptEpoch,
+  SpaceMutationId,
+} from "@t2code/contracts/spaces";
+import {
+  spaceDraftMaxBytes,
+  type SpaceDocumentDraft,
+  type SpaceStructureJournal,
+} from "@t2code/client-runtime/spaces";
 
 import { diskDatabase, openDatabaseAsync } from "./mobile-database.test-support";
 
@@ -160,7 +169,7 @@ describe("durable mobile Spaces page drafts", () => {
             );
           });
           const inspect = new NodeSqlite.DatabaseSync(fixture.file);
-          expect(inspect.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: 2 });
+          expect(inspect.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: 3 });
           inspect.close();
         }),
       ),
@@ -312,6 +321,145 @@ describe("durable mobile Spaces page drafts", () => {
           await expect(store.write(draftPage, pageDraft())).rejects.toBeDefined();
           const retained = { ...draftPage, pageId: SpacePageId.make("small-0") };
           expect(await store.load(retained)).toEqual(pageDraft(retained));
+        });
+      }),
+    ),
+  );
+});
+
+function structureJournal(
+  environmentId = draftPage.environmentId,
+  title = "Retained library title",
+): SpaceStructureJournal {
+  return {
+    version: 1,
+    environmentId,
+    history: null,
+    pending: {
+      request: {
+        operation: "createSpace",
+        input: {
+          environmentId,
+          mutationId: SpaceMutationId.make("exact-structure-intent"),
+          receiptEpoch: SpaceReceiptEpoch.make("original-structure-epoch"),
+          title,
+        },
+      },
+      library: { version: 2, knownIds: [] },
+      inverse: null,
+      observed: { pages: [], roots: [] },
+      direction: "move",
+      conflict: false,
+    },
+  };
+}
+
+describe("durable mobile structural journals", () => {
+  it.effect(
+    "upgrades v2, retains exact intent across cache clearing and reopen, and rolls back a failed replacement",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fixture = yield* diskDatabase();
+          const seed = new NodeSqlite.DatabaseSync(fixture.file);
+          seed.exec("PRAGMA user_version = 2");
+          seed.close();
+          const first = yield* fixture.open();
+          const original = structureJournal();
+          yield* Effect.promise(async () => {
+            expect(await first.structure.load(draftPage.environmentId)).toBeNull();
+            await first.store.write(draftPage, pageDraft());
+            await first.structure.write(draftPage.environmentId, original);
+          });
+          yield* first.database.saveCache(
+            draftPage.environmentId,
+            "thread",
+            "cached",
+            1,
+            "clear me",
+          );
+          yield* first.database.clearCacheKind(draftPage.environmentId, "thread");
+          yield* first.database.clearEnvironmentCache(draftPage.environmentId);
+          yield* first.database.clearAllCaches;
+          yield* first.close;
+          const reopened = yield* fixture.open();
+          yield* Effect.promise(async () => {
+            expect(await reopened.structure.load(draftPage.environmentId)).toEqual(original);
+            expect(await reopened.store.load(draftPage)).toEqual(pageDraft());
+            fixture.control.beforeCommit = async () => {
+              throw new Error("Journal commit refused");
+            };
+            await expect(
+              reopened.structure.write(
+                draftPage.environmentId,
+                structureJournal(draftPage.environmentId, "Must roll back"),
+              ),
+            ).rejects.toBeDefined();
+            fixture.control.beforeCommit = null;
+            expect(await reopened.structure.load(draftPage.environmentId)).toEqual(original);
+          });
+          const inspect = new NodeSqlite.DatabaseSync(fixture.file);
+          expect(inspect.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: 3 });
+          inspect.close();
+        }),
+      ),
+  );
+
+  it.effect.each(["json", "future", "identity", "oversize"] as const)(
+    "retains a %s-corrupt structural row and refuses implicit replacement",
+    (invalid) =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fixture = yield* diskDatabase();
+          const { structure } = yield* fixture.open();
+          const journal = structureJournal();
+          const payload =
+            invalid === "json"
+              ? "{broken"
+              : invalid === "oversize"
+                ? JSON.stringify(
+                    structureJournal(draftPage.environmentId, "x".repeat(2 * 1024 * 1024)),
+                  )
+                : JSON.stringify(
+                    invalid === "future"
+                      ? { ...journal, version: 2 }
+                      : { ...journal, environmentId: "wrong" },
+                  );
+          const seed = new NodeSqlite.DatabaseSync(fixture.file);
+          seed.exec("PRAGMA ignore_check_constraints = ON");
+          seed
+            .prepare("INSERT INTO spaces_structure_journals VALUES (?, 1, ?, ?, 0)")
+            .run(draftPage.environmentId, payload, Buffer.byteLength(payload));
+          seed.close();
+          yield* Effect.promise(async () => {
+            await expect(structure.load(draftPage.environmentId)).rejects.toBeDefined();
+            await expect(structure.write(draftPage.environmentId, journal)).rejects.toBeDefined();
+          });
+          const inspect = new NodeSqlite.DatabaseSync(fixture.file);
+          expect(inspect.prepare("SELECT payload FROM spaces_structure_journals").get()).toEqual({
+            payload,
+          });
+          inspect.close();
+        }),
+      ),
+  );
+
+  it.effect("bounds environment journal admission without evicting a pending operation", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fixture = yield* diskDatabase();
+        const { structure } = yield* fixture.open();
+        yield* Effect.promise(async () => {
+          for (let index = 0; index < 8; index++) {
+            const environmentId = EnvironmentId.make(`journal-environment-${index}`);
+            await structure.write(environmentId, structureJournal(environmentId));
+          }
+          await expect(
+            structure.write(draftPage.environmentId, structureJournal()),
+          ).rejects.toBeDefined();
+          const firstId = EnvironmentId.make("journal-environment-0");
+          expect(await structure.load(firstId)).toEqual(structureJournal(firstId));
+          expect(await structure.load(draftPage.environmentId)).toBeNull();
         });
       }),
     ),

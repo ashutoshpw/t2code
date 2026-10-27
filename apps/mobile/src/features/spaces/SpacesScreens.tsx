@@ -23,6 +23,7 @@ import { type SpacesReadAccess, spacesAvailabilityMessage } from "./reader";
 import { readSpacesPageTarget, readSpacesLibraryTarget } from "./navigation";
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
 import { SpaceBlockReader } from "./SpaceBlockReader";
+import { SpacesLibraryActions } from "./SpacesLibraryActions";
 import { nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
 import { SpacesNativeBlockEditor, spacesNativeEditorAvailable } from "./SpacesNativeBlockEditor";
 import * as Dialog from "../../components/ui/Dialog";
@@ -134,6 +135,7 @@ function SpacesLibrary({
   const selected = spaceId ?? (bounded ? data.defaultSpaceId : undefined);
   return (
     <View className="flex-1">
+      <SpacesLibraryActions key={environmentId} environmentId={environmentId} spaceId={selected} />
       <View className="flex-row gap-2 px-4 py-2">
         <ControlPill
           variant="pill"
@@ -305,6 +307,13 @@ export function SpacesPageRouteScreen({
   return (
     <SettingsScreen title="Space page">
       {target ? (
+        <SpacesLibraryActions
+          key={target.environmentId}
+          environmentId={target.environmentId}
+          statusOnly
+        />
+      ) : null}
+      {target ? (
         <PageReader
           key={JSON.stringify([target.environmentId, target.pageId, target.blockId])}
           target={target}
@@ -399,6 +408,9 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
   const editable =
     writable &&
     snapshot.session.hydrated &&
+    !snapshot.structureBlocked &&
+    !snapshot.loading &&
+    snapshot.error === null &&
     editorState.busy !== "persist" &&
     snapshot.session.status !== "conflict" &&
     snapshot.session.persistenceError === null;
@@ -460,6 +472,28 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
               </Text>
             ) : null}
             <Notice>{spacesAvailabilityMessage[access.availability]}</Notice>
+            {snapshot.structureBlocked ? (
+              <Notice>
+                This page is reserved by a structural operation. Recover its exact receipt before
+                editing.
+              </Notice>
+            ) : null}
+            {location ? (
+              <SpacesLibraryActions
+                environmentId={target.environmentId}
+                page={location.page}
+                current={() => !!location.current()}
+                blocked={
+                  snapshot.loading ||
+                  snapshot.error !== null ||
+                  snapshot.structureBlocked ||
+                  editorState.focus !== null ||
+                  editorState.busy !== null ||
+                  snapshot.session.dirty ||
+                  snapshot.session.pending !== null
+                }
+              />
+            ) : null}
             <Notice>
               {snapshot.session.persistenceError !== null
                 ? "The local draft could not be loaded or stored. Existing data is retained; try refreshing."
@@ -493,6 +527,9 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
                 disabled={
                   !writable ||
                   !snapshot.session.hydrated ||
+                  snapshot.structureBlocked ||
+                  snapshot.loading ||
+                  snapshot.error !== null ||
                   editorState.busy !== null ||
                   editorState.focus !== null ||
                   snapshot.session.status === "conflict" ||
@@ -509,6 +546,9 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
                 disabled={
                   !writable ||
                   !snapshot.session.hydrated ||
+                  snapshot.structureBlocked ||
+                  snapshot.loading ||
+                  snapshot.error !== null ||
                   editorState.busy !== null ||
                   editorState.focus !== null ||
                   !!snapshot.session.pending ||

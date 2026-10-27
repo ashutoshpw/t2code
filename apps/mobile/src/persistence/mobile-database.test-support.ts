@@ -8,7 +8,10 @@ import * as Exit from "effect/Exit";
 import * as Scope from "effect/Scope";
 import { vi } from "vite-plus/test";
 
-import { createMobileSpaceDraftStore } from "../features/spaces/draftStore";
+import {
+  createMobileSpaceDraftStore,
+  createMobileSpaceStructureStore,
+} from "../features/spaces/draftStore";
 import { MobileDatabase, make } from "./mobile-database";
 
 const native = vi.hoisted(() => ({ openDatabaseAsync: vi.fn() }));
@@ -72,6 +75,7 @@ export const diskDatabase = Effect.fn("MobileDatabaseTest.diskDatabase")(functio
     return {
       database,
       store: createMobileSpaceDraftStore(async () => context),
+      structure: createMobileSpaceStructureStore(async () => context),
       close: Scope.close(scope, Exit.void),
     };
   });

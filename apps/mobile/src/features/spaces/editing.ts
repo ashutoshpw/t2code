@@ -33,6 +33,7 @@ export class MobileSpaceEditing {
       readonly session: SpaceDocumentSession;
       readonly access: () => SpacesReadAccess;
       readonly readWindow: () => Promise<SpaceBlockWindow>;
+      readonly assertMutable?: () => void;
     },
   ) {}
 
@@ -51,6 +52,7 @@ export class MobileSpaceEditing {
       throw new Error("Reconnect with current Spaces read and operate permission to edit");
     if (!this.ports.session.getSnapshot().hydrated)
       throw new Error("Wait for the local draft to finish loading");
+    this.ports.assertMutable?.();
     return access;
   }
   #editable() {

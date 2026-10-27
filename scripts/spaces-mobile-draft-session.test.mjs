@@ -1,5 +1,3 @@
-import * as NodePath from "node:path";
-import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
 import { EnvironmentId } from "../packages/contracts/src/index.ts";
 import { SpaceBlockId } from "../packages/contracts/src/spaces.ts";
@@ -7,34 +5,13 @@ import {
   SpaceDocumentSession,
   createSpaceServiceSessionAdapter,
 } from "../packages/client-runtime/src/spaces/index.ts";
-import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
-import * as Exit from "effect/Exit";
-import * as Layer from "effect/Layer";
-import * as Queue from "effect/Queue";
 
 import { MobileSpaceEditing } from "../apps/mobile/src/features/spaces/editing.ts";
 import { diskDatabase } from "../apps/mobile/src/persistence/mobile-database.test-support.ts";
-import * as ServerEnvironment from "../apps/server/src/environment/ServerEnvironment.ts";
-import * as ServerSettings from "../apps/server/src/serverSettings.ts";
 import * as SpacesService from "../apps/server/src/spaces/SpacesService.ts";
 
-const promiseRunner = Effect.fn("MobileDraftSessionTest.promiseRunner")(function* () {
-  const requests = yield* Queue.unbounded();
-  yield* Effect.forkScoped(
-    Effect.forever(Queue.take(requests).pipe(Effect.flatMap(Effect.forkScoped))),
-  );
-  return (effect) =>
-    new Promise((resolve, reject) => {
-      const request = Effect.exit(effect).pipe(
-        Effect.map((exit) => {
-          if (Exit.isSuccess(exit)) resolve(exit.value);
-          else reject(Cause.squash(exit.cause));
-        }),
-      );
-      if (!Queue.offerUnsafe(requests, request)) reject(new Error("Test service scope closed"));
-    });
-});
+import { mobileSpacesServiceLayer, promiseRunner } from "./spaces-mobile.test-support.mjs";
 
 it.effect(
   "publishes rich native edits to mobile SQLite and recovers the actual receipt without losing later input",
@@ -43,19 +20,7 @@ it.effect(
       Effect.gen(function* () {
         const fixture = yield* diskDatabase();
         const environmentId = EnvironmentId.make("mobile-environment");
-        const layer = SpacesService.layerFromPath(
-          NodePath.join(NodePath.dirname(fixture.file), "spaces.sqlite"),
-        ).pipe(
-          Layer.provide(
-            Layer.mergeAll(
-              NodeServices.layer,
-              Layer.succeed(ServerEnvironment.ServerEnvironmentIdentity, {
-                getEnvironmentId: Effect.succeed(environmentId),
-              }),
-              ServerSettings.layerTest({ spacesEnabled: true }),
-            ),
-          ),
-        );
+        const layer = mobileSpacesServiceLayer(fixture.file, environmentId);
         yield* Effect.gen(function* () {
           const service = yield* SpacesService.SpacesService;
           const run = yield* promiseRunner();

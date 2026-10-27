@@ -12,7 +12,6 @@ import {
 } from "@t2code/client-runtime/state/spaces";
 import {
   createEnvironmentRpcQueryAtomFamily,
-  createEnvironmentRpcCommand,
   executeAtomQuery,
   runAtomCommand,
 } from "@t2code/client-runtime/state/runtime";
@@ -29,10 +28,11 @@ import {
   SpaceDocumentSession,
   createSpaceServiceSessionAdapter,
   type SpacePageNavigationTarget,
+  type SpaceRootReorder,
 } from "@t2code/client-runtime/spaces";
 import * as Cause from "effect/Cause";
 import * as Option from "effect/Option";
-import { AsyncResult } from "effect/reactivity";
+import { AsyncResult, Atom } from "effect/reactivity";
 import { useMemo } from "react";
 
 import { connectionAtomRuntime } from "../connection/runtime";
@@ -43,16 +43,23 @@ import { environmentSession } from "./session";
 import * as Runtime from "../lib/runtime";
 import { uuidv4 } from "../lib/uuid";
 import { MobileSpaceDocuments } from "../features/spaces/documents";
-import { createMobileSpaceDraftStore } from "../features/spaces/draftStore";
+import {
+  createMobileSpaceDraftStore,
+  createMobileSpaceStructureStore,
+} from "../features/spaces/draftStore";
+import { createMobileSpaceStructure } from "../features/spaces/structure";
 import { SpacesPageReader, type SpacesReadAccess } from "../features/spaces/reader";
 
-export const spacesEnvironment = createSpacesEnvironmentAtoms(connectionAtomRuntime);
-const blocks = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
-  label: "mobile:spaces:blocks",
-  tag: WS_METHODS.spacesBlocksRead,
-  staleTimeMs: 0,
-  idleTtlMs: 0,
+const capabilityAtom = Atom.family((environmentId: EnvironmentId) =>
+  Atom.map(
+    environmentPresentations.presentationAtom(environmentId),
+    (value) => value?.serverConfig?.environment.capabilities.spaces,
+  ),
+);
+export const spacesEnvironment = createSpacesEnvironmentAtoms(connectionAtomRuntime, {
+  capabilityAtom,
 });
+const blocks = spacesEnvironment.blocks;
 const reference = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
   label: "mobile:spaces:reference",
   tag: WS_METHODS.spacesReferencesResolve,
@@ -126,28 +133,20 @@ function liveAccess(environmentId: EnvironmentId) {
   });
 }
 
-function requireAccess(environmentId: EnvironmentId, write = false) {
+function requireAccess(environmentId: EnvironmentId, write = false, library = false) {
   const access = liveAccess(environmentId);
   if (
     !canBrowseSpaces(access.availability) ||
     !access.current() ||
     !access.capability ||
-    (write && (access.availability !== "writable" || access.capability.version !== 2))
+    (write && (access.availability !== "writable" || (!library && access.capability.version !== 2)))
   )
     throw new Error("Spaces is unavailable for this connection or permission.");
   return { ...access, capability: access.capability };
 }
 
-const receipts = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
-  label: "mobile:spaces:receipt",
-  tag: WS_METHODS.spacesReceiptsGet,
-  staleTimeMs: 0,
-  idleTtlMs: 0,
-});
-const apply = createEnvironmentRpcCommand(connectionAtomRuntime, {
-  label: "mobile:spaces:apply",
-  tag: WS_METHODS.spacesBlocksApply,
-});
+const receipts = spacesEnvironment.receipt;
+const apply = spacesEnvironment.apply;
 const drafts = createMobileSpaceDraftStore(() => Runtime.runtime.context());
 
 async function query<A, E>(
@@ -169,6 +168,7 @@ export function createSpacesPageReader(
 ) {
   if (target.blockId) throw new Error("Resolve a block link before creating its page session.");
   const key = { environmentId: target.environmentId, pageId: target.pageId };
+  let reader: SpacesPageReader | undefined;
   const adapter = createSpaceServiceSessionAdapter(key, {
     limits: () => requireAccess(key.environmentId, true).capability.limits,
     getPage: async (input) => {
@@ -202,12 +202,16 @@ export function createSpacesPageReader(
     createMutationId: uuidv4,
     assertMutable: () => {
       requireAccess(key.environmentId, true);
+      getMobileSpaceStructure(key.environmentId).assertReady();
+      documents.assertUnreserved(key);
+      reader?.assertContentReady();
     },
     maxLoadedBlocks: 100,
     maxMutations: 100,
   });
-  return new SpacesPageReader(target, {
+  reader = new SpacesPageReader(target, {
     session,
+    beforeRead: () => getMobileSpaceStructure(key.environmentId).hydrate(),
     get access() {
       return access ?? liveAccess(key.environmentId);
     },
@@ -224,9 +228,173 @@ export function createSpacesPageReader(
       ),
     blocks: (input, signal) => query(blocks({ environmentId: key.environmentId, input }), signal),
   });
+  return reader;
 }
 
 const documents = new MobileSpaceDocuments((target) => createSpacesPageReader(target));
+const structures = new Map<EnvironmentId, SpaceRootReorder>();
+
+export function getMobileSpaceStructure(environmentId: EnvironmentId) {
+  const existing = structures.get(environmentId);
+  if (existing) return existing;
+  if (structures.size >= 8)
+    throw new Error("Mobile Spaces supports eight environment journals on this device");
+  const access = (write: boolean, library = false) => {
+    const owner = requireAccess(environmentId, write, library);
+    if (!library && owner.capability.version !== 2)
+      throw new Error("Page structure requires a current Spaces environment");
+    return owner;
+  };
+  const read = async <A, E>(atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>) => {
+    const owner = access(false, true);
+    try {
+      const result = await query(atom);
+      if (!owner.current())
+        throw new Error("The connection changed; ignore the old structural result");
+      return result;
+    } catch (error) {
+      if (!owner.current())
+        throw new Error("The connection changed; retain the structural operation", {
+          cause: error,
+        });
+      throw error;
+    }
+  };
+  const mutate = async <A, E>(
+    work: () => Promise<
+      | { readonly _tag: "Success"; readonly value: A }
+      | { readonly _tag: "Failure"; readonly cause: Cause.Cause<E> }
+    >,
+    library = false,
+  ) => {
+    const owner = access(true, library);
+    const result = await work();
+    if (!owner.current())
+      throw new Error("The connection changed; recover the exact structural receipt");
+    if (result._tag === "Failure") throw Cause.squash(result.cause);
+    return result.value;
+  };
+  const coordinator = createMobileSpaceStructure(environmentId, {
+    store: createMobileSpaceStructureStore(() => Runtime.runtime.context()),
+    drafts,
+    documents,
+    newId: uuidv4,
+    capability: () => liveAccess(environmentId).capability,
+    assertAccess: (write) => {
+      access(write);
+    },
+    libraryAccess: (write) => {
+      access(write, true);
+    },
+    maxRows: () => access(false, true).capability.limits.maxListRows,
+    maxMutationBytes: () => access(true).capability.limits.maxMutationBytes,
+    spaces: (input) => read(spacesEnvironment.list({ environmentId, input })),
+    list: (input) => read(spacesEnvironment.pages({ environmentId, input })),
+    getPage: (pageId) =>
+      read(spacesEnvironment.page({ environmentId, input: { environmentId, pageId } })),
+    blocks: (input) =>
+      read(
+        blocks({
+          environmentId,
+          input: {
+            ...input,
+            limit: Math.min(
+              input.limit ?? 100,
+              access(false).capability.limits.maxBlockWindowBlocks,
+            ),
+          },
+        }),
+      ),
+    inspect: (input) => read(spacesEnvironment.inspect({ environmentId, input })),
+    receipt: (input) => read(receipts({ environmentId, input })),
+    library: async (request) => {
+      switch (request.operation) {
+        case "createSpace":
+          return {
+            operation: request.operation,
+            result: await mutate(
+              () =>
+                spacesEnvironment.createSpace.run(appAtomRegistry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              true,
+            ),
+          };
+        case "renameSpace":
+          return {
+            operation: request.operation,
+            result: await mutate(
+              () =>
+                spacesEnvironment.renameSpace.run(appAtomRegistry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              true,
+            ),
+          };
+        case "setDefaultSpace":
+          return {
+            operation: request.operation,
+            result: await mutate(
+              () =>
+                spacesEnvironment.setDefaultSpace.run(appAtomRegistry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              true,
+            ),
+          };
+        case "createPage":
+          return {
+            operation: request.operation,
+            result: await mutate(
+              () =>
+                spacesEnvironment.createPage.run(appAtomRegistry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              true,
+            ),
+          };
+        case "updatePage":
+          return {
+            operation: request.operation,
+            result: await mutate(
+              () =>
+                spacesEnvironment.updatePage.run(appAtomRegistry, {
+                  environmentId,
+                  input: request.input,
+                }),
+              true,
+            ),
+          };
+      }
+    },
+    createChild: (input) =>
+      mutate(() => spacesEnvironment.createChild.run(appAtomRegistry, { environmentId, input })),
+    move: (input) =>
+      mutate(() => spacesEnvironment.movePage.run(appAtomRegistry, { environmentId, input })),
+    recovery: (operation, input) =>
+      mutate(() =>
+        (operation === "trashPage"
+          ? spacesEnvironment.trashPage
+          : spacesEnvironment.restorePage
+        ).run(appAtomRegistry, { environmentId, input }),
+      ),
+    trashList: (input) => read(spacesEnvironment.trash({ environmentId, input })),
+    purge: async () => {
+      throw new Error("Permanent page deletion is not available in this mobile slice");
+    },
+    moveBlocks: async () => {
+      throw new Error("Block moves are not available in this mobile slice");
+    },
+    changed: () =>
+      appAtomRegistry.update(spacesEnvironment.changed(environmentId), (value) => value + 1),
+  });
+  structures.set(environmentId, coordinator);
+  return coordinator;
+}
 
 export async function acquireSpacesPageReader(
   target: SpacePageNavigationTarget,
@@ -262,6 +430,9 @@ export async function acquireSpacesPageReader(
   }
   if (signal.aborted || !access.current())
     throw new Error("The source connection changed. Open the link again.");
+  await getMobileSpaceStructure(resolved.environmentId).hydrate();
+  if (signal.aborted || !access.current())
+    throw new Error("The source connection changed before draft hydration");
   const lease = documents.acquire({
     environmentId: resolved.environmentId,
     spaceId: resolved.spaceId,
