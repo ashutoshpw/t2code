@@ -52,13 +52,16 @@ const fixture = Effect.fn("SpacesReconciliationTest.fixture")(function* <A, E, R
   );
 }, Effect.provide(NodeServices.layer));
 
-const upload = Effect.fn("SpacesReconciliationTest.upload")(function* (requestId: string) {
+const upload = Effect.fn("SpacesReconciliationTest.upload")(function* (
+  requestId: string,
+  data = pdf,
+) {
   const service = yield* Service.SpacesService;
   const reservation = yield* service.createAssetUpload(
     {
       ...env,
       requestId,
-      expectedBytes: pdf.length,
+      expectedBytes: data.length,
       mediaKind: "pdf",
       mimeType: "application/pdf",
       name: "paper.pdf",
@@ -67,8 +70,8 @@ const upload = Effect.fn("SpacesReconciliationTest.upload")(function* (requestId
   );
   yield* service.receiveAssetUpload(
     reservation.relativeUrl.slice(reservation.relativeUrl.lastIndexOf("/") + 1),
-    String(pdf.length),
-    Stream.make(pdf),
+    String(data.length),
+    Stream.make(data),
   );
   return yield* service.finalizeAssetUpload({ ...env, uploadId: reservation.uploadId }, "owner");
 });
@@ -917,5 +920,212 @@ it.effect(
           );
         }).pipe(Effect.provide(live()), Effect.scoped);
       }),
+    ),
+);
+
+it.effect.each(["conflicting_pin", "asset_unavailable"] as const)(
+  "retains a reconciled %s finding through a shape-preserving media move",
+  (reason) =>
+    fixture(({ config, live }) =>
+      Effect.gen(function* () {
+        const { service, pageId, request } = yield* boot();
+        const a = yield* upload("move-issue-a");
+        const b = yield* upload(
+          "move-issue-b",
+          new TextEncoder().encode("%PDF-1.7\n% distinct original\n%%EOF\n"),
+        );
+        expect(a.digest).not.toBe(b.digest);
+        yield* service.applyBlockBatch(
+          request("move-issue-seed", 0, [{ kind: "insert", block: media("a", a.assetId) }]),
+        );
+        const library = yield* service.listSpaces(env);
+        const common = { ...env, receiptEpoch: library.mutationAdmission.epoch };
+        const destinationPage = yield* service.createPage({
+          ...common,
+          mutationId: "move-issue-page",
+          title: "Destination",
+          spaceId: library.defaultSpaceId,
+          baseRootOrderRevision: (yield* service.listPages({
+            ...env,
+            spaceId: library.defaultSpaceId,
+          })).space.rootOrderRevision,
+        });
+        if (destinationPage.status !== "saved") return yield* Effect.die("Expected destination");
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          if (reason === "conflicting_pin")
+            yield* sql`UPDATE spaces_block_asset_refs SET asset_id=${b.assetId} WHERE block_id='a'`;
+          else
+            yield* sql`UPDATE spaces_assets SET state='deleted',deleted_at_ms=0 WHERE asset_id=${a.assetId}`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath })));
+        for (const _pass of Array.from({ length: 16 }, (_, i) => i)) yield* service.maintainAssets;
+        const before = yield* progress(config);
+        expect(before.issues).toEqual([{ kind: "block", entity: "a", reason }]);
+        expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+          currentPending: false,
+          historyPending: false,
+          unresolved: true,
+          gcEnabled: false,
+        });
+        const destination = {
+          pageId: destinationPage.page.id,
+          parentId: null,
+          beforeBlockId: null,
+        };
+        const blockIds = [C.SpaceBlockId.make("a")];
+        const plan = yield* service.inspectStructure({
+          ...env,
+          target: { kind: "blocks", pageId, blockIds },
+          destination: { kind: "child", placement: destination },
+        });
+        const intent = {
+          ...common,
+          mutationId: "move-issue-move",
+          sourcePageId: pageId,
+          blockIds,
+          destination,
+          guards: plan.guards,
+        };
+        const moved = yield* service.moveBlocks(intent);
+        expect(moved.status).toBe("saved");
+        expect((yield* progress(config)).issues).toEqual(before.issues);
+        expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+          unresolved: true,
+          gcEnabled: false,
+        });
+        const state = yield* inspect(config);
+        expect(state.current).toEqual([
+          { block_id: "a", asset_id: reason === "conflicting_pin" ? b.assetId : a.assetId },
+        ]);
+        if (reason === "conflicting_pin")
+          expect(state.history.some((pin) => pin.asset_id === a.assetId)).toBe(false);
+        expect(yield* service.moveBlocks(intent)).toEqual(moved);
+        expect((yield* progress(config)).issues).toEqual(before.issues);
+      }).pipe(Effect.provide(live())),
+    ),
+);
+
+it.effect(
+  "refuses a 101-row partial legacy pin repair and prunes the retained 100-row unit before later history",
+  () =>
+    fixture(({ config, live }) =>
+      Effect.gen(function* () {
+        const { service, pageId, request } = yield* boot();
+        const assets: C.SpaceAssetMetadata[] = [];
+        for (let i = 0; i < 99; i++) assets.push(yield* upload(`cleanup-unit-${i}`));
+        const blocks = assets.map((asset, i) =>
+          media(i.toString(16).padStart(3, "0"), asset.assetId),
+        );
+        expect(
+          (yield* service.applyBlockBatch(
+            request(
+              "cleanup-unit-insert",
+              0,
+              blocks.map((block) => ({ kind: "insert", block })),
+            ),
+          )).status,
+        ).toBe("saved");
+        expect(
+          (yield* service.applyBlockBatch(
+            request(
+              "cleanup-unit-delete",
+              1,
+              blocks.map((block) => ({ kind: "delete", blockId: block.id })),
+            ),
+          )).status,
+        ).toBe("saved");
+        const common = {
+          ...env,
+          receiptEpoch: (yield* service.listSpaces(env)).mutationAdmission.epoch,
+        };
+        expect(
+          (yield* service.updatePage({
+            ...common,
+            mutationId: "cleanup-unit-later",
+            pageId,
+            baseRevision: 2,
+            title: "Later history",
+          })).status,
+        ).toBe("saved");
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          const [row] = yield* sql<{
+            readonly mutation_id: string;
+            readonly created_at_ms: number;
+            readonly expires_at_ms: number;
+            readonly payload: string;
+            readonly logical_bytes: number;
+          }>`SELECT * FROM spaces_revisions WHERE page_id=${pageId} AND to_revision=2`;
+          const old = JSON.parse(row!.payload);
+          const unknown = JSON.stringify({ ...text("legacy-unknown"), type: "future", version: 2 });
+          const payload = JSON.stringify({
+            ...old,
+            blocksBefore: [
+              ...old.blocksBefore,
+              {
+                id: "legacy-unknown",
+                row: {
+                  block_id: "legacy-unknown",
+                  page_id: pageId,
+                  parent_id: null,
+                  rank: "f".repeat(32),
+                  payload: unknown,
+                  logical_bytes: Buffer.byteLength(unknown),
+                  deleted: 0,
+                  merged_into: null,
+                },
+              },
+            ],
+          });
+          const ids = assets.map((asset) => asset.assetId).sort();
+          const retained = ids.slice(0, 98);
+          const size = Buffer.byteLength(
+            JSON.stringify({
+              pageId,
+              toRevision: 2,
+              mutationId: row!.mutation_id,
+              createdAtMs: row!.created_at_ms,
+              expiresAtMs: row!.expires_at_ms,
+              payload,
+              assetIds: retained,
+            }),
+          );
+          const delta = size - row!.logical_bytes;
+          yield* sql`DELETE FROM spaces_revision_asset_refs WHERE page_id=${pageId} AND to_revision=2 AND asset_id=${ids[98]!}`;
+          yield* sql`UPDATE spaces_revisions SET payload=${payload},asset_count=98,logical_bytes=${size} WHERE page_id=${pageId} AND to_revision=2`;
+          yield* sql`UPDATE spaces_pages SET retained_revision_bytes=retained_revision_bytes+${delta} WHERE page_id=${pageId}`;
+          yield* sql`UPDATE spaces_core SET revision_bytes=revision_bytes+${delta}`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath })));
+        const before = yield* inspect(config);
+        expect(before.history).toHaveLength(98);
+        for (const _pass of [0, 1, 2, 3, 4, 5]) yield* service.maintainAssets;
+        expect((yield* inspect(config)).history).toHaveLength(98);
+        expect(yield* inspect(config)).toEqual(before);
+        expect((yield* progress(config)).issues).toEqual([
+          { kind: "history", entity: JSON.stringify([pageId, 2]), reason: "capacity" },
+        ]);
+        expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+          historyPending: false,
+          unresolved: true,
+          gcEnabled: false,
+        });
+        yield* TestClock.adjust("8 days");
+        yield* service.getPage({ ...env, pageId });
+        expect((yield* inspect(config)).revisions.map((row) => row.to_revision)).toEqual([2, 3]);
+        yield* service.getPage({ ...env, pageId });
+        const afterBoundary = yield* inspect(config);
+        expect(afterBoundary.revisions.map((row) => row.to_revision)).toEqual([3]);
+        expect(afterBoundary.history).toEqual([]);
+        expect((yield* progress(config)).issues).toEqual([]);
+        yield* service.getPage({ ...env, pageId });
+        const pruned = yield* inspect(config);
+        expect(pruned.revisions).toEqual([]);
+        expect(pruned.core[0]?.revision_bytes).toBe(0);
+        expect(pruned.pages[0]?.retained_revision_count).toBe(0);
+        expect(pruned.pages[0]?.retained_revision_bytes).toBe(0);
+        expect(yield* service.getAssetMetadata({ ...env, assetId: assets[0]!.assetId })).toEqual(
+          assets[0],
+        );
+      }).pipe(Effect.provide(live())),
     ),
 );

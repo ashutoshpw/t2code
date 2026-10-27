@@ -112,11 +112,9 @@ export const noteBlock = Effect.fn("SpacesReconciliation.noteBlock")(function* (
   id: string,
   payload: string | null,
 ) {
-  yield* issue(
-    "block",
-    id,
-    payload !== null && references(payload).unresolved ? "unknown_payload" : null,
-  );
+  if (payload === null) yield* issue("block", id, null);
+  // Shape-only write hooks cannot clear pin or readiness findings; reconciliation proves those.
+  else if (references(payload).unresolved) yield* issue("block", id, "unknown_payload");
 });
 const Row = Schema.Struct({
   block_id: Schema.String,
@@ -310,7 +308,7 @@ export const referencesPass = Effect.fn("SpacesReconciliation.referencesPass")(f
   if (oldIds.length !== row.asset_count || measure(oldIds) !== row.logical_bytes)
     reason = "invalid_accounting";
   else if (
-    ids.length >= historyLimits.cleanupBatchRows ||
+    ids.length + 1 + (ref.unresolved ? 1 : 0) > historyLimits.cleanupBatchRows ||
     measure(ids) > historyLimits.maxDeltaBytes
   )
     reason = "capacity";
