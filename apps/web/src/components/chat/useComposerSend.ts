@@ -257,6 +257,11 @@ interface ComposerSendInput {
   }) => Promise<AtomCommandResult<void, unknown>>;
 }
 
+function assertSendDraftCurrent(current: boolean) {
+  if (!current)
+    throw new Error("The draft changed before sending. Send again to include your latest draft.");
+}
+
 /**
  * Everything the composer's send button can start: a turn on this thread or a new one,
  * a multiple-model start, a queued or steering message, a plan follow-up or implementation
@@ -1198,10 +1203,8 @@ export function useComposerSend(input: ComposerSendInput) {
     }
     try {
       preparedContext.assertCurrent();
-      if (sendSnapshot.contextDraft && (!draftStillCurrent() || promptRef.current !== promptAtSend))
-        throw new Error(
-          "The draft changed before sending. Send again to include your latest draft.",
-        );
+      if (sendSnapshot.contextDraft)
+        assertSendDraftCurrent(draftStillCurrent() && promptRef.current === promptAtSend);
     } catch (error) {
       sendInFlightRef.current = false;
       setThreadError(

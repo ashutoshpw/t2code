@@ -73,7 +73,25 @@ interface MultipleModelSendInput {
   readonly setThreadError: ReturnType<typeof makeThreadErrorSetter>;
 }
 
+function useMultipleModelSendPorts(routeThreadKey: string) {
+  const navigate = useNavigate();
+  const startThreadTurn = useOrchestrationCommand(threadEnvironment.startTurn, {
+    reportFailure: false,
+  });
+  const { sendInFlight: sendInFlightRef } = draftSendState(routeThreadKey);
+
+  return { navigate, startThreadTurn, sendInFlightRef };
+}
+
 export function useMultipleModelSend(input: MultipleModelSendInput) {
+  const ports = useMultipleModelSendPorts(input.routeThreadKey);
+  return createMultipleModelSend(input, ports);
+}
+
+function createMultipleModelSend(
+  input: MultipleModelSendInput,
+  ports: ReturnType<typeof useMultipleModelSendPorts>,
+) {
   const {
     environmentId,
     routeThreadKey,
@@ -88,11 +106,7 @@ export function useMultipleModelSend(input: MultipleModelSendInput) {
     resetLocalDispatch,
     setThreadError,
   } = input;
-  const navigate = useNavigate();
-  const startThreadTurn = useOrchestrationCommand(threadEnvironment.startTurn, {
-    reportFailure: false,
-  });
-  const { sendInFlight: sendInFlightRef } = draftSendState(routeThreadKey);
+  const { navigate, startThreadTurn, sendInFlightRef } = ports;
 
   return async (send: {
     readonly threadId: ThreadId;
