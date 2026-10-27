@@ -16,6 +16,7 @@ This fork tracks `pingdotgg/t3code` (upstream) and publishes as **T2 Code** on `
    gh run list --repo ashutoshpw/t2code --branch main --commit "$(git rev-parse origin/main)"
    ```
    - Any run still `queued` or `in_progress`: wait for it to finish before continuing.
+   - Queued forever is a red flag, not a reason to wait. If the hosted jobs finish while the `Changes` job (or a whole run) stays queued for hours, the tree is carrying upstream's Blacksmith runner labels; fix the labels (see Rebase → runners) instead of waiting.
    - Any run concluding `failure` or `cancelled`: abort. Report the failing checks and stop — do not rebase until `origin/main` is green or the user explicitly says go.
    - No runs for that SHA at all: suspicious rather than green; confirm with the user first.
 4. Review divergence: `git rev-list --left-right --count origin/main...upstream/main`.
@@ -32,7 +33,8 @@ This fork tracks `pingdotgg/t3code` (upstream) and publishes as **T2 Code** on `
    - If upstream refactored code the rebrand renamed (extracted variables, moved strings), re-apply the rebrand _inside upstream's new shape_. Example: upstream hoisted an `installArgs` array for an npm fallback path; keep the hoist, keep the `@t2code/cli` package name.
    - Env vars belong to the T2 namespace (`T2CODE_*`/`T2_*`). Upstream's new env reads and writes must be renamed inside upstream's new shape, and upstream's new tests that assert env names flip with them. External inputs keep working through the legacy-name seam (`@t2code/shared/legacyEnv`, its config helpers in `@t2code/shared/legacyEnvConfig`, and baseline-grandfathered fallback lines) — do not re-widen that seam during a rebase; new upstream variables get T2 names only.
    - Watch for upstream swapping npm packages (`t3` vs `@t2code/cli`) and URLs (keep upstream repo URLs like `github.com/pingdotgg/t3code` — those are intentional).
-   - Ask the user before adopting any new GitHub Actions entry or edit to an existing one in the fork.
+   - The fork runs CI on GitHub-hosted runners only. Upstream's workflows target `blacksmith-*` labels this repo has no runners for, so adopting them strands every run in `queued` while only the hosted jobs finish. Keep upstream's newest job structure and steps, then map the labels back: `blacksmith-{2,4,8}vcpu-ubuntu-*` → `ubuntu-24.04`, `blacksmith-*vcpu-macos-*` → `macos-26`. New upstream workflows that already use GitHub-hosted labels are fine to take.
+   - Ask the user before adopting any other new GitHub Actions entry or edit to an existing one in the fork.
 3. Fold conflict fixes into the fork commit they belong to (`git commit --fixup=<sha>` + `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash upstream/main`) so history stays at the fork's usual 7-ish commits.
 
 ## Rebrand audit (the part that actually catches failures)
