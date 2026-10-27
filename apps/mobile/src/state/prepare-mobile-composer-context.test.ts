@@ -39,7 +39,7 @@ vi.mock("@t2code/client-runtime/state/runtime", () => ({
     return { _tag: "Failure" };
   },
 }));
-import { prepareMobileComposerContext } from "./spaces";
+import { prepareMobileComposerContext } from "./prepare-mobile-composer-context";
 it.each(["missing-flag", "wrong-version", "no-inline", "denied"])(
   "retains selectors and makes no capture RPC for %s",
   async (reason) => {

@@ -144,7 +144,7 @@ vi.mock("../lib/composerImages", async (importOriginal) => ({
 }));
 
 vi.mock("../lib/uuid", () => ({ uuidv4: () => "uuid", randomHex: () => "0000" }));
-vi.mock("./spaces", () => ({
+vi.mock("./prepare-mobile-composer-context", () => ({
   prepareMobileComposerContext: async (input: { text: string; context?: unknown }) => ({
     text: input.text,
     context: input.context,

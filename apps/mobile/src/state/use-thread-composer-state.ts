@@ -1,4 +1,4 @@
-import { prepareMobileComposerContext } from "./spaces";
+import { prepareMobileComposerContext } from "./prepare-mobile-composer-context";
 import { useComposerAttachmentActions } from "./use-composer-attachment-actions";
 import * as Dialog from "../components/ui/Dialog";
 import { AuthOrchestrationOperateScope } from "@t2code/contracts";

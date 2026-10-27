@@ -10,8 +10,8 @@ import {
 } from "@t2code/client-runtime/spaces";
 import { SpacesNativePublication } from "./nativeSpacesPublication";
 import { canRestoreMobileSpaceBlock, nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
-import type { SpacesReadAccess } from "./reader";
-import { allocateMobileSpaceRootOrder } from "./imageInsertion";
+import type { SpacesReadAccess } from "./readAccess";
+import { allocateMobileSpaceRootOrder } from "./blockOrder";
 
 export type MobileCoreBlockKind =
   | "paragraph"

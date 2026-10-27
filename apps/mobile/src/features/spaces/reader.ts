@@ -1,7 +1,6 @@
 import {
   SpaceValidationError,
   SpaceNotFoundError,
-  type SpaceCapability,
   type SpaceCursor,
   type SpacePageGetResult,
   type SpaceReadBlocksInput,
@@ -20,11 +19,8 @@ import { MobileSpaceEditing } from "./editing";
 const isSpaceValidationError = Schema.is(SpaceValidationError);
 const isSpaceNotFoundError = Schema.is(SpaceNotFoundError);
 
-export interface SpacesReadAccess {
-  readonly availability: SpacesAvailability;
-  readonly capability: SpaceCapability | undefined;
-  readonly current: () => boolean;
-}
+import type { SpacesReadAccess } from "./readAccess";
+export type { SpacesReadAccess } from "./readAccess";
 
 export const spacesAvailabilityMessage: Record<SpacesAvailability, string> = {
   disconnected: "Connect this environment to browse Spaces.",
