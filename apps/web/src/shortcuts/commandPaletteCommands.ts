@@ -105,7 +105,8 @@ export function installCommandPaletteCommands(
                 }),
               ),
           )
-        ) return false;
+        )
+          return false;
         consume(event);
         dispatchCommandPalette({ _tag: "SetOpen", open: false });
         void router.navigate({ to: "/spaces" });

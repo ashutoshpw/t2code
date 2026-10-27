@@ -257,6 +257,10 @@ it.effect(
           space: { ...a.space, id: destination },
         };
         const firstOwner = h.location();
+        const firstRemoved = yield* Deferred.make<void>();
+        h.registry.onNodeRemoved = (node) => {
+          if (node.atom === firstOwner) Deferred.doneUnsafe(firstRemoved, Effect.void);
+        };
         const stopFirst = h.registry.mount(firstOwner);
         yield* Effect.addFinalizer(() => Effect.sync(stopFirst));
         const first = yield* Queue.take(h.requests);
@@ -281,6 +285,7 @@ it.effect(
           suspendOnWaiting: true,
         });
         expect(settledB.current()?.page.spaceId).toBe(destination);
+        yield* Deferred.await(firstRemoved);
         yield* SubscriptionRef.set(h.sessions, Option.some(h.makeSession()));
         expect(settledB.current()).toBeNull();
         const reconnect = yield* Queue.take(h.requests);

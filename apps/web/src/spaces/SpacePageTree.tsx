@@ -75,7 +75,7 @@ function PageTree({
             rows: () => list.getState().data,
             scrollToItem: (item) => list.scrollToItem({ item, animated: false }),
             cancelScroll: () => {
-              // A new imperative request supersedes LegendList's deferred scroll work.
+              // The pinned LegendList patch retires active targets before assigning a replacement resolver.
               void list.scrollToOffset({ offset: list.getState().scroll, animated: false });
             },
             containsFocus: () => list.getScrollableNode().contains(document.activeElement),
