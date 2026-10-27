@@ -22,6 +22,7 @@ vi.mock("../rpc/atomRegistry", () => ({
       ]),
   },
 }));
+vi.mock("../state/projects", () => ({ environmentProjects: {} }));
 vi.mock("../state/server", () => ({ environmentServerConfigsAtom: {} }));
 vi.mock("../state/session", () => ({ readEnvironmentScope: () => state.read }));
 vi.mock("../state/spaces", () => ({

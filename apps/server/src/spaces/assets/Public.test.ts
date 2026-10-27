@@ -352,7 +352,7 @@ describe("Spaces public asset wiring", () => {
           const service = yield* Service.SpacesService;
           const capability = yield* service.getCapability(environmentId);
           expect(capability?.features?.assets).toBe(true);
-          expect(capability?.features?.contextCapture).toBeUndefined();
+          expect(capability?.features?.contextCapture).toBe(true);
           const data =
             kind === "pdf"
               ? pdf
@@ -437,6 +437,22 @@ describe("Spaces public asset wiring", () => {
               })).status,
             ).toBe("saved");
           }
+          const captured = yield* service.captureContextSnapshot({
+            environmentId,
+            contextId: `media-${kind}`,
+            target: { kind: "block", blockId: block.id },
+          });
+          if (captured.status !== "captured") return yield* Effect.die("Expected media capture");
+          expect(captured.record.snapshot.text).toBe(`[${kind} ${saved.assetId}] after`);
+          expect(captured.record.snapshot.sources).toEqual([
+            {
+              environmentId,
+              spaceId: page.page.spaceId,
+              pageId: page.page.id,
+              revision: 2,
+              blockIds: [block.id],
+            },
+          ]);
           expect(
             (yield* service.readBlocks({ environmentId, pageId: page.page.id, revision: 2 }))
               .blocks,

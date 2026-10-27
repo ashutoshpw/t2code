@@ -11,7 +11,10 @@ import type { SpacePageNavigationTarget } from "./navigation.ts";
 type Capability =
   | (Pick<SpaceCapability, "version" | "features"> & Partial<Pick<SpaceCapability, "limits">>)
   | undefined;
-function supportsSpaceMethod(capability: Capability, method: "search" | "referenceResolution" | "contextCapture") {
+function supportsSpaceMethod(
+  capability: Capability,
+  method: "search" | "referenceResolution" | "contextCapture",
+) {
   return capability?.version === 2 && capability.features?.[method] === true;
 }
 export function supportsSpaceContextCapture(capability: Capability, inlineContext: boolean) {
@@ -123,7 +126,10 @@ export class SpaceReferenceController {
   }
   canCapture() {
     const access = this.options.access();
-    return this.current() && supportsSpaceContextCapture(access.capability, access.inlineContext === true);
+    return (
+      this.current() &&
+      supportsSpaceContextCapture(access.capability, access.inlineContext === true)
+    );
   }
   canResolve() {
     return (
@@ -190,7 +196,9 @@ export class SpaceReferenceController {
         select: (index, contextId) => {
           const hit = result.items[index];
           if (!current() || !this.canCapture() || !hit) return null;
-          const label = Array.from(hit.page.title || "Untitled page").slice(0, 100).join("");
+          const label = Array.from(hit.page.title || "Untitled page")
+            .slice(0, 100)
+            .join("");
           const common = {
             version: 1 as const,
             selection: "current" as const,

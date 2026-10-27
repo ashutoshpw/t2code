@@ -42,7 +42,7 @@ function setup() {
   };
   const controller = new SpaceReferenceController({
     environmentId,
-    access: () => ({ session, canRead, capability, inlineContext: true }),
+    access: () => ({ session, sourceVersion: 0, canRead, capability, inlineContext: true }),
     search: async (input) => {
       calls.push(input);
       return reply;
@@ -166,6 +166,7 @@ it("discards deferred search and source replies after connection replacement", a
   const controller = new SpaceReferenceController({
     environmentId,
     access: () => ({
+      sourceVersion: 0,
       session,
       canRead: true,
       capability: {
@@ -196,6 +197,7 @@ it("reports building and unsupported failures explicitly without automatic retri
     const controller = new SpaceReferenceController({
       environmentId,
       access: () => ({
+        sourceVersion: 0,
         session,
         canRead: true,
         capability: { version: 2, features: { search: true, contextCapture: true } },
@@ -259,9 +261,10 @@ it("only sends selected referenced IDs through the accepted send boundary", asyn
 it("revokes deferred source locations on replacement and does not navigate trashed or deleted sources", async () => {
   let session: object = {};
   let deliver!: (value: import("@t2code/contracts/spaces").SpaceReferenceResolveResult) => void;
-  const controller = new SpaceReferenceController({
+  const options: ConstructorParameters<typeof SpaceReferenceController>[0] = {
     environmentId,
     access: () => ({
+      sourceVersion: 0,
       session,
       canRead: true,
       capability: { version: 2, features: { referenceResolution: true } },
@@ -272,12 +275,14 @@ it("revokes deferred source locations on replacement and does not navigate trash
       new Promise((resolve) => {
         deliver = resolve;
       }),
-  });
+  };
+  let controller = new SpaceReferenceController(options);
   const target = { kind: "page" as const, pageId: page.id };
   const pending = controller.resolve(target);
   session = {};
   deliver({ status: "resolved", page });
   expect(await pending).toBeNull();
+  controller = new SpaceReferenceController(options);
   for (const status of ["trashed", "deleted", "unavailable"] as const) {
     const request = controller.resolve(target);
     deliver(status === "trashed" ? { status, pageId: page.id } : { status });
@@ -316,6 +321,7 @@ it("serializes search and skips obsolete queued queries without filling result w
   const controller = new SpaceReferenceController({
     environmentId,
     access: () => ({
+      sourceVersion: 0,
       session,
       canRead: true,
       capability: { version: 2, features: { search: true, contextCapture: true } },
@@ -341,3 +347,36 @@ it("serializes search and skips obsolete queued queries without filling result w
   expect(calls).toEqual(["first", "third"]);
   expect(results.map((result) => result.status)).toEqual(["unavailable", "unavailable", "ready"]);
 });
+
+it.each([false, true])(
+  "keeps library search usable without capture support (inline context %s)",
+  async (inlineContext) => {
+    const session = {};
+    const requests: unknown[] = [];
+    const controller = new SpaceReferenceController({
+      environmentId,
+      access: () => ({
+        session,
+        sourceVersion: 0,
+        canRead: true,
+        inlineContext,
+        capability: { version: 2, features: { search: true } },
+      }),
+      search: async (input) => {
+        requests.push(input);
+        return {
+          catalogRevision: 1,
+          items: [{ page, snippet: "Library result" }],
+          nextCursor: null,
+        };
+      },
+      resolve: async () => ({ status: "unavailable" }),
+    });
+    const window = await controller.search("library");
+    if (window.status !== "ready") throw Error(window.status);
+    expect(requests).toEqual([{ environmentId, query: "library", limit: 20 }]);
+    expect(window.target(0)).toEqual({ kind: "page", pageId: page.id });
+    expect(window.select(0, ComposerContextId.make("unsupported"))).toBeNull();
+    expect(controller.canCapture()).toBe(false);
+  },
+);

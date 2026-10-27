@@ -72,6 +72,7 @@ it("offers Page and Block selectors alongside files and refuses obsolete choices
       session,
       canRead: true,
       inlineContext: true,
+      sourceVersion: 0,
       capability: { version: 2, features: { search: true, contextCapture: true } },
     }),
     search: async () => ({

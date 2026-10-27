@@ -16,5 +16,3 @@ export * from "./imagePreview.ts";
 
 export * from "./heavyMedia.ts";
 export * from "./sendContext.ts";
-
-export * from "./references.ts";

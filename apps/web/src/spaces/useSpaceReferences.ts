@@ -63,7 +63,9 @@ export function useSpaceReferenceController(environmentId: EnvironmentId, attemp
             registry.get(environmentSession.sessionStateAtom(environmentId)),
             AuthOrchestrationReadScope,
           ),
-          inlineContext: registry.get(environmentPresentations.presentationAtom(environmentId))?.serverConfig?.environment.capabilities.inlineMessageContext === true,
+          inlineContext:
+            registry.get(environmentPresentations.presentationAtom(environmentId))?.serverConfig
+              ?.environment.capabilities.inlineMessageContext === true,
           capability: registry.get(environmentPresentations.presentationAtom(environmentId))
             ?.serverConfig?.environment.capabilities.spaces,
         }),
@@ -126,8 +128,11 @@ export function useSpaceContextSearch(environmentId: EnvironmentId, query: strin
     };
   }, [controller, query, canCapture]);
   const window: SpaceSearchWindow | null =
-    controller && !canCapture ? { status: "unsupported" } :
-    controller && state?.controller === controller && state.query === query ? state.window : null;
+    controller && !canCapture
+      ? { status: "unsupported" }
+      : controller && state?.controller === controller && state.query === query
+        ? state.window
+        : null;
   const retry = async () => {
     if (!controller || !canCapture || query === null) return;
     setLoading(true);
@@ -146,5 +151,10 @@ export function useSpaceContextSearch(environmentId: EnvironmentId, query: strin
     setState({ controller, query, window: nextWindow });
     setLoading(false);
   };
-  return { window, next, retry, loading: query !== null && !!controller && (loading || !window) };
+  return {
+    window,
+    next,
+    retry,
+    loading: query !== null && !!controller && canCapture && (loading || !window),
+  };
 }

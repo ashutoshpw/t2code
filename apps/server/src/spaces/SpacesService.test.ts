@@ -1,4 +1,3 @@
-import * as NodeSqlite from "node:sqlite";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import { EnvironmentId, PageContextRecord, BlockContextRecord } from "@t2code/contracts";

@@ -148,7 +148,10 @@ const fixture = Effect.fn("SpacesRpcTest.fixture")(function* <A, E>(
   use: Effect.Effect<
     A,
     E,
-    SpacesService.SpacesService | ServerSecretStore.ServerSecretStore | Settings.ServerSettingsService | import("effect/Scope").Scope
+    | SpacesService.SpacesService
+    | ServerSecretStore.ServerSecretStore
+    | Settings.ServerSettingsService
+    | import("effect/Scope").Scope
   >,
 ) {
   const fs = yield* FileSystem.FileSystem;
