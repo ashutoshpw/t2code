@@ -6,6 +6,7 @@ import {
   type Command,
   type Transaction,
 } from "@tiptap/pm/state";
+import { undoDepth, redoDepth } from "@tiptap/pm/history";
 import { EnvironmentId } from "@t2code/contracts";
 import {
   SpaceBlockId,
@@ -512,7 +513,8 @@ it("refuses unsafe links, readonly attributes and unknown payloads without chang
   };
   const rest = {
     ...paragraph("rest", "", "80000000000000000000000000000000"),
-    content: { runs: [{ text: "retained", marks: [], future: [1, 2] }] },
+    type: "heading",
+    content: { level: 2, runs: [{ text: "retained", marks: [], future: [1, 2] }] },
   };
   const view = await model([
     {
@@ -543,6 +545,18 @@ it("refuses unsafe links, readonly attributes and unknown payloads without chang
   );
   expect(view.run(view.bridge.adapter.setHeadingLevel(3))).toBe(false);
   expect(view.run(view.bridge.adapter.setLink("https://example.test"))).toBe(false);
+  view.dispatch(
+    view.state.tr.setSelection(
+      NodeSelection.create(
+        view.state.doc,
+        view.state.doc.child(0).nodeSize + view.state.doc.child(1).nodeSize,
+      ),
+    ),
+  );
+  const restState = view.state;
+  expect(view.run(view.bridge.adapter.setHeadingLevel(3))).toBe(false);
+  expect(view.state).toBe(restState);
+  expect(view.controller.session.getSnapshot()).toBe(before);
   expect(view.controller.session.getSnapshot().blocks).toEqual(before.blocks);
 });
 
@@ -614,4 +628,140 @@ it("changes only a partial list body's link while preserving its opaque loaded d
   expect(view.controller.session.getSnapshot().blocks).toEqual([list, child]);
   expect(view.run(view.bridge.adapter.redoLocal())).toBe(true);
   expect(view.controller.session.getSnapshot().blocks[1]).toEqual(child);
+});
+
+it.each(
+  [
+    {
+      boundary: "end",
+      runs: [
+        { text: "a\ud83d", linked: true },
+        { text: "\ude00b", linked: false },
+      ],
+      caret: 0,
+    },
+    {
+      boundary: "start",
+      runs: [
+        { text: "a\ud83d", linked: false },
+        { text: "\ude00b", linked: true },
+      ],
+      caret: 3,
+    },
+    {
+      boundary: "both endpoints",
+      runs: [
+        { text: "a\ud83d", linked: false },
+        { text: "\ude00b\ud83d", linked: true },
+        { text: "\ude00c", linked: false },
+      ],
+      caret: 3,
+    },
+  ].flatMap((test) => (["set", "remove"] as const).map((action) => ({ ...test, action }))),
+)(
+  "refuses $action when caret expansion splits a surrogate at $boundary without changing content or history",
+  async ({ runs, caret, action }) => {
+    const link = { type: "link", version: 1, href: "https://old.test" };
+    const blocks = [
+      {
+        ...paragraph("linked", ""),
+        content: { runs: runs.map((run) => ({ text: run.text, marks: run.linked ? [link] : [] })) },
+      },
+      {
+        ...paragraph("history", "kept", "80000000000000000000000000000000"),
+        type: "heading",
+        content: { level: 1, runs: [{ text: "kept", marks: [] }] },
+      },
+    ];
+    const view = await model(blocks);
+    const select = (id: string, offset = 0) =>
+      view.dispatch(
+        view.state.tr.setSelection(
+          TextSelection.create(view.state.doc, position(view.state, id, offset)),
+        ),
+      );
+    const refuse = () => {
+      const state = view.state,
+        session = view.controller.session.getSnapshot();
+      const history = [undoDepth(state), redoDepth(state)];
+      const command =
+        action === "set"
+          ? view.bridge.adapter.setLink("https://new.test")
+          : view.bridge.adapter.removeLink();
+      expect(view.run(command)).toBe(false);
+      expect(view.state).toBe(state);
+      expect(view.controller.session.getSnapshot()).toBe(session);
+      expect(spaceDocumentBlocks(view.state.doc)).toEqual(session.blocks);
+      expect([undoDepth(view.state), redoDepth(view.state)]).toEqual(history);
+    };
+    select("linked", caret);
+    expect(view.controller.session.getSnapshot().dirty).toBe(false);
+    refuse();
+    select("history");
+    expect(view.run(view.bridge.adapter.setHeadingLevel(2))).toBe(true);
+    expect(view.run(view.bridge.adapter.setHeadingLevel(3))).toBe(true);
+    expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+    expect([undoDepth(view.state), redoDepth(view.state)]).toEqual([1, 1]);
+    select("linked", caret);
+    refuse();
+    expect(view.run(view.bridge.adapter.redoLocal())).toBe(true);
+    expect(view.controller.session.getSnapshot().blocks[1]!.content).toEqual({
+      level: 3,
+      runs: [{ text: "kept", marks: [] }],
+    });
+    expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+    expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+    expect(view.controller.session.getSnapshot().blocks).toEqual(blocks);
+  },
+);
+
+it("edits and removes a safe expanded link across a split surrogate and combined mark runs", async () => {
+  const link = { type: "link", version: 1, href: "https://old.test" },
+    bold = { type: "bold", version: 1 };
+  const mention = {
+    type: "block_mention",
+    version: 1,
+    target: { ...key, blockId: SpaceBlockId.make("mentioned") },
+  };
+  const runs = [
+    { text: "a\ud83d", marks: [link, bold] },
+    { text: "\ude00b", marks: [link, mention] },
+  ];
+  const block = { ...paragraph("a", ""), content: { runs } };
+  const view = await model([block]);
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 3)));
+  const state = view.state,
+    session = view.controller.session.getSnapshot();
+  expect(view.run(view.bridge.adapter.setLink("https://new.test"))).toBe(false);
+  expect(view.run(view.bridge.adapter.removeLink())).toBe(false);
+  expect(view.state).toBe(state);
+  expect(view.controller.session.getSnapshot()).toBe(session);
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
+  expect(view.run(view.bridge.adapter.setLink("https://new.test"))).toBe(true);
+  expect(view.controller.session.getSnapshot().blocks).toEqual([
+    {
+      ...block,
+      content: {
+        runs: [
+          { text: "a\ud83d", marks: [{ ...link, href: "https://new.test" }, bold] },
+          { text: "\ude00b", marks: [{ ...link, href: "https://new.test" }, mention] },
+        ],
+      },
+    },
+  ]);
+  expect(view.run(view.bridge.adapter.removeLink())).toBe(true);
+  expect(view.controller.session.getSnapshot().blocks).toEqual([
+    {
+      ...block,
+      content: {
+        runs: [
+          { text: "a\ud83d", marks: [bold] },
+          { text: "\ude00b", marks: [mention] },
+        ],
+      },
+    },
+  ]);
+  expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+  expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+  expect(view.controller.session.getSnapshot().blocks).toEqual([block]);
 });

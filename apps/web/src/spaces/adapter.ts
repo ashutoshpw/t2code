@@ -546,16 +546,12 @@ export class SpaceEditorAdapter {
     let from = selection.$from.parentOffset,
       to = selection.$to.parentOffset;
     const text = runs.map((run) => run.text).join("");
-    if (
-      [from, to].some(
-        (n) =>
-          n > 0 &&
-          n < text.length &&
-          /[\uD800-\uDBFF]/.test(text[n - 1]!) &&
-          /[\uDC00-\uDFFF]/.test(text[n]!),
-      )
-    )
-      return null;
+    const splitsPair = (n: number) =>
+      n > 0 &&
+      n < text.length &&
+      /[\uD800-\uDBFF]/.test(text[n - 1]!) &&
+      /[\uDC00-\uDFFF]/.test(text[n]!);
+    if ([from, to].some(splitsPair)) return null;
     if (selection.empty) {
       const index = segments.findIndex((segment) => segment.from <= from && from < segment.to);
       const at = index < 0 && from === text.length ? segments.length - 1 : index;
@@ -568,6 +564,7 @@ export class SpaceEditorAdapter {
       from = segments[left]!.from;
       to = segments[right]!.to;
     }
+    if ([from, to].some(splitsPair)) return null;
     const selected = segments.filter((segment) => segment.from < to && segment.to > from);
     const href = selected[0]?.href;
     const start = selection.$from.start();
