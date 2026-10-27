@@ -8,6 +8,7 @@ import { SpaceSourceOpen } from "./SpaceSourceOpen";
 import { Button } from "../components/ui/button";
 import { spacesEnvironment } from "../state/spaces";
 import { randomUUID } from "../lib/utils";
+import { SpaceMentionController } from "./mentions";
 import { SpaceEditorBridge } from "./editorBridge";
 import { spaceImages } from "./imageRuntime";
 import { SpaceMediaBlock } from "./SpaceMediaBlock";
@@ -101,6 +102,9 @@ function DocumentContent({
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const [sourceAttempt, setSourceAttempt] = useState(0);
   const sources = useSpaceReferenceController(controller.session.key.environmentId, sourceAttempt);
+  const mentions = sources
+    ? new SpaceMentionController(sources, controller.session.key.environmentId)
+    : null;
   const registry = useContext(RegistryContext);
   const environment = useEnvironment(controller.session.key.environmentId);
   const capability = environment?.serverConfig?.environment.capabilities.spaces;
@@ -209,6 +213,8 @@ function DocumentContent({
       ) : null}
       {session.hydrated ? (
         <SpaceEditor
+          mentions={mentions}
+          onOpenSource={onOpenSource}
           mediaEditable={mediaSupported}
           adapter={bridge.adapter}
           bridge={bridge}

@@ -25,6 +25,7 @@ import {
 } from "@t2code/client-runtime/spaces";
 import {
   SpaceBlock,
+  SpaceKnownMark,
   type SpaceAssetId,
   type SpaceBlockId,
   type SpacePageTarget,
@@ -38,6 +39,8 @@ import {
   spaceDocumentBlocks,
   spaceWindowDocument,
   spaceEditorRuns,
+  spaceMentionSpans,
+  spaceMentionRangeSafe,
   type SpaceEditorWindow,
 } from "./document";
 import { richBlockTypes, spaceSchemaExtensions } from "./schema";
@@ -78,6 +81,7 @@ interface AdapterState {
   readonly batch: SpaceEditorBatch;
   readonly joins: readonly NonNullable<Operation["merged"]>[];
 }
+const decodeMentionMark = Schema.decodeOption(SpaceKnownMark, { onExcessProperty: "error" });
 const localHistoryDepth = 100;
 const clipboardType = "application/x-t2-spaces-blocks+json";
 const decodeClipboard = Schema.decodeUnknownSync(
@@ -236,10 +240,18 @@ export class SpaceEditorAdapter {
             const doc = tr.docs[i]!;
             let safe = true;
             step.getMap().forEach((from, to) => {
-              if (!captionBoundary(doc, from) || !captionBoundary(doc, to)) safe = false;
+              if (
+                !captionBoundary(doc, from) ||
+                !captionBoundary(doc, to) ||
+                !spaceMentionRangeSafe(doc, from, to)
+              )
+                safe = false;
             });
             if (step instanceof AddMarkStep || step instanceof RemoveMarkStep)
-              safe &&= captionBoundary(doc, step.from) && captionBoundary(doc, step.to);
+              safe &&=
+                captionBoundary(doc, step.from) &&
+                captionBoundary(doc, step.to) &&
+                spaceMentionRangeSafe(doc, step.from, step.to);
             if (!safe) return false;
           }
           const operation = tr.getMeta(this.#operation) as Operation | undefined;
@@ -404,6 +416,7 @@ export class SpaceEditorAdapter {
   }
 
   extensions(): Extensions {
+    const thisAdapter = this;
     const plugins = this.plugins();
     const split = this.split();
     const join = this.joinBackward();
@@ -427,7 +440,11 @@ export class SpaceEditorAdapter {
               else run(split);
               return true;
             },
+            ArrowLeft: () => run(thisAdapter.mentionBoundary(-1)),
+            ArrowRight: () => run(thisAdapter.mentionBoundary(1)),
+            Delete: () => run(thisAdapter.mentionBoundary(1, true)),
             Backspace: () => {
+              if (run(thisAdapter.mentionBoundary(-1, true))) return true;
               if (
                 this.editor.state.selection.empty &&
                 this.editor.state.selection.$from.parentOffset === 0
@@ -582,6 +599,7 @@ export class SpaceEditorAdapter {
       captionBoundary(state.doc, state.selection.from) &&
       captionBoundary(state.doc, state.selection.to) &&
       this.#mediaSelectionAllowed(state) &&
+      spaceMentionRangeSafe(state.doc, state.selection.from, state.selection.to) &&
       toggleMark(state.schema.marks[`space_${type}`]!, { value: { type, version: 1 } })(
         state,
         dispatch,
@@ -595,6 +613,73 @@ export class SpaceEditorAdapter {
         allowed = false;
     });
     return allowed;
+  }
+  mentionRange(state: EditorState) {
+    const entry = this.#selectedEntry(state),
+      selection = state.selection;
+    if (
+      !entry ||
+      !(selection instanceof TextSelection) ||
+      !spaceEditorRuns(entry.block) ||
+      !selection.$from.sameParent(selection.$to) ||
+      !spaceMentionRangeSafe(state.doc, selection.from, selection.to)
+    )
+      return null;
+    const text = selection.$from.parent.textContent;
+    for (const offset of [selection.$from.parentOffset, selection.$to.parentOffset])
+      if (
+        offset > 0 &&
+        offset < text.length &&
+        /[\uD800-\uDBFF]/.test(text[offset - 1]!) &&
+        /[\uDC00-\uDFFF]/.test(text[offset]!)
+      )
+        return null;
+    return { blockId: entry.block.id, from: selection.from, to: selection.to };
+  }
+  insertMention(mark: import("./mentions").SpaceMentionMark, label: string): Command {
+    return (state, dispatch) => {
+      const range = this.mentionRange(state);
+      const decoded = decodeMentionMark(mark);
+      if (
+        !range ||
+        decoded._tag !== "Some" ||
+        !["page_mention", "block_mention"].includes(mark.type) ||
+        mark.target.environmentId !== this.target.environmentId ||
+        !label ||
+        label.length > 512 ||
+        new TextEncoder().encode(label).byteLength > 2048
+      )
+        return false;
+      const marks = (state.storedMarks ?? state.selection.$from.marks()).filter(
+        (m) => !["space_page_mention", "space_block_mention"].includes(m.type.name),
+      );
+      const node = state.schema.text(label, [
+        ...marks,
+        state.schema.marks[`space_${mark.type}`]!.create({ value: mark }),
+      ]);
+      const tr = closeHistory(state.tr).replaceWith(range.from, range.to, node);
+      tr.setSelection(TextSelection.create(tr.doc, range.from + label.length));
+      return this.#dispatch(tr, dispatch);
+    };
+  }
+  mentionBoundary(direction: -1 | 1, remove = false): Command {
+    return (state, dispatch) => {
+      if (!state.selection.empty) return false;
+      const at = state.selection.from;
+      const span = spaceMentionSpans(state.doc).find((s) =>
+        direction < 0 ? s.from < at && at <= s.to : s.from <= at && at < s.to,
+      );
+      if (!span || (remove && this.#options.canEdit?.() === false)) return false;
+      if (!dispatch) return true;
+      if (remove)
+        return this.#dispatch(closeHistory(state.tr).delete(span.from, span.to), dispatch);
+      dispatch(
+        state.tr
+          .setSelection(TextSelection.create(state.doc, direction < 0 ? span.from : span.to))
+          .setMeta("addToHistory", false),
+      );
+      return true;
+    };
   }
   #selectedEntry(state: EditorState) {
     if (this.#options.canEdit?.() === false) return null;
@@ -700,6 +785,7 @@ export class SpaceEditorAdapter {
     const selected = segments.filter((segment) => segment.from < to && segment.to > from);
     const href = selected[0]?.href;
     const start = selection.$from.start();
+    if (!spaceMentionRangeSafe(state.doc, start + from, start + to)) return null;
     return {
       from: start + from,
       to: start + to,
@@ -976,6 +1062,7 @@ export class SpaceEditorAdapter {
   split(): Command {
     return (state, dispatch) => {
       if (this.#options.canChangeStructure?.() === false) return false;
+      if (!spaceMentionRangeSafe(state.doc, state.selection.from, state.selection.to)) return false;
       const { $from, $to, empty } = state.selection;
       if (!empty || !$from.sameParent($to)) return false;
       const depth = $from.parent.type.name === "spaceBody" ? $from.depth - 1 : $from.depth;
@@ -1020,6 +1107,7 @@ export class SpaceEditorAdapter {
   joinBackward(): Command {
     return (state, dispatch) => {
       if (this.#options.canChangeStructure?.() === false) return false;
+      if (!spaceMentionRangeSafe(state.doc, state.selection.from, state.selection.to)) return false;
       const { $from, empty } = state.selection;
       if (!empty || $from.parentOffset !== 0 || !$from.parent.attrs.block) return false;
       const secondNode = $from.parent;

@@ -113,6 +113,9 @@ export class SpaceReferenceController {
       (access.capability?.version === 1 || access.capability?.version === 2)
     );
   }
+  canSearch() {
+    return this.current() && supportsSpaceMethod(this.options.access().capability, "search");
+  }
   canResolve() {
     return (
       this.current() && supportsSpaceMethod(this.options.access().capability, "referenceResolution")

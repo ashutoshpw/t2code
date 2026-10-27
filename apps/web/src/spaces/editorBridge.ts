@@ -68,6 +68,7 @@ export class SpaceEditorBridge {
   readonly adapter: SpaceEditorAdapter;
   readonly controller: SpaceDocumentController;
   #writable = false;
+  #selectionGeneration = 0;
   #mediaWritable = false;
   #applying = false;
   #acknowledged: number | null;
@@ -189,6 +190,43 @@ export class SpaceEditorBridge {
     const result = this.revealBlock(state, target, () => source?.current() === true && current());
     if (result.status === "loaded") this.#navigationReveal.pending = false;
     return result;
+  }
+  mentionInsertion(
+    state: () => EditorState,
+    dispatch: (transaction: Transaction) => void,
+    current: () => boolean = () => true,
+  ): import("./mentions").SpaceMentionSelection {
+    const original = state(),
+      range = this.adapter.mentionRange(original),
+      snapshot = this.controller.session.getSnapshot(),
+      generation = this.#selectionGeneration;
+    if (!range || !current() || !this.canEdit())
+      throw new Error("Select a supported rich-text or caption range before choosing a mention");
+    const valid = () =>
+      current() &&
+      this.canEdit() &&
+      this.#selectionGeneration === generation &&
+      state().doc === original.doc &&
+      state().selection.eq(original.selection) &&
+      sameSpaceValue(state().storedMarks, original.storedMarks) &&
+      this.controller.session.getSnapshot().baseRevision === snapshot.baseRevision &&
+      this.controller.session.getSnapshot().generation === snapshot.generation &&
+      sameSpaceValue(
+        spaceDocumentBlocks(state().doc),
+        this.controller.session.getSnapshot().blocks,
+      ) &&
+      this.adapter.mentionRange(state())?.blockId === range.blockId;
+    return {
+      current: valid,
+      insert: (mark, label) => {
+        if (!valid()) return false;
+        return (
+          this.adapter.insertMention(mark, label)(state(), dispatch) &&
+          state().doc !== original.doc &&
+          this.controller.session.getSnapshot().generation > snapshot.generation
+        );
+      },
+    };
   }
   imageInsertion(
     state: () => EditorState,
@@ -436,6 +474,7 @@ export class SpaceEditorBridge {
           this.#applying = false;
         }
       }
+      if (!state.selection.eq(result.state.selection)) this.#selectionGeneration++;
       if (
         this.#navigationReveal &&
         (transaction.docChanged || !state.selection.eq(result.state.selection))

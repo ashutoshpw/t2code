@@ -79,6 +79,7 @@ import {
   SpaceDocumentController,
   SpaceDocumentControllers,
 } from "../src/spaces/documentController.ts";
+import { SpaceMentionController } from "../src/spaces/mentions.ts";
 import { SpaceEditorBridge } from "../src/spaces/editorBridge.ts";
 import { spaceDocumentBlocks } from "../src/spaces/document.ts";
 
@@ -1250,7 +1251,7 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
                 ),
               );
               command(bridge.adapter.remove(deletedTarget.id));
-              select("command-1", 1);
+              select("command-1", 5);
               dispatch(state.tr.insertText("!"));
               const saving = controller.save();
               if (late) {
@@ -1288,7 +1289,7 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
                 assert.isTrue(controller.session.getSnapshot().dirty);
                 assert.include(state.doc.textContent, "late");
               }
-              select("command-1", 1);
+              select("command-1", 5);
               dispatch(state.tr.insertText("next"));
               command(bridge.adapter.undoLocal());
               command(bridge.adapter.redoLocal());
@@ -5650,7 +5651,28 @@ it.effect(
             const opened = h.documents.open({ environmentId, pageId: h.pages[1]! }),
               doc = await opened.ready,
               view = savedView(doc);
+            const referenceOpen = h.documents.open({ environmentId, pageId: h.pages[3]! }),
+              referenceDoc = await referenceOpen.ready,
+              referenceView = savedView(referenceDoc);
+            const reference: import("../src/spaces/mentions.ts").SpaceMentionMark = {
+              type: "block_mention",
+              version: 1,
+              target: { ...h.key, blockId: blocks[1]!.id },
+            };
+            const mentions = new SpaceMentionController(h.sources, environmentId);
             try {
+              assert.isTrue(
+                referenceView.bridge.adapter.append()(referenceView.state, referenceView.dispatch),
+              );
+              assert.isTrue(
+                referenceView.bridge
+                  .mentionInsertion(() => referenceView.state, referenceView.dispatch)
+                  .insert(reference, "Original fallback"),
+              );
+              await referenceDoc.save();
+              const canonical = referenceDoc.session.getSnapshot();
+              assert.equal((await mentions.activate(reference))?.pageId, h.pages[1]!);
+              assert.strictEqual(referenceDoc.session.getSnapshot(), canonical);
               let pos = -1;
               view.state.doc.descendants((node, p) => {
                 if (node.attrs.block?.id === blocks[1]!.id) pos = p + 1;
@@ -5666,6 +5688,8 @@ it.effect(
                 pageId: h.pages[1]!,
                 blockId: blocks[0]!.id,
               });
+              assert.equal((await mentions.activate(reference))?.blockId, blocks[0]!.id);
+              assert.strictEqual(referenceDoc.session.getSnapshot(), canonical);
               const now = await h.ports.getPage({ environmentId, pageId: h.pages[1]! });
               await owner.renamePage(now.page, "Current renamed destination");
               const renamed = await h.sources.resolve(target);
@@ -5676,6 +5700,18 @@ it.effect(
                 pageId: h.pages[1]!,
                 blockId: blocks[0]!.id,
               });
+              assert.equal((await mentions.activate(reference))?.blockId, blocks[0]!.id);
+              assert.deepEqual(mentions.presentation(reference), {
+                status: "resolved",
+                title: "Current renamed destination",
+              });
+              assert.strictEqual(referenceDoc.session.getSnapshot(), canonical);
+              assert.isTrue(view.bridge.adapter.remove(blocks[0]!.id)(view.state, view.dispatch));
+              await doc.save();
+              assert.isNull(await mentions.activate(reference));
+              assert.deepEqual(mentions.presentation(reference), { status: "unavailable" });
+              assert.strictEqual(referenceDoc.session.getSnapshot(), canonical);
+              assert.equal(referenceView.state.doc.textContent, "Original fallback");
               assert.isNull(moved?.current());
               h.control.access = { ...h.control.access, canRead: false };
               assert.isNull(renamed?.current());
@@ -5683,6 +5719,8 @@ it.effect(
               assert.isNull(await h.sources.resolve(target));
               assert.equal(h.resolves.length, reads);
             } finally {
+              referenceView.stop();
+              referenceOpen.release();
               view.stop();
               opened.release();
             }
@@ -8289,6 +8327,279 @@ it.effect(
             } finally {
               h.control.release.resolve();
               view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "inserts canonical page and block mentions through the guarded chooser, preserves formatting and saves/reopens exact targets",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* sourceFixture(service);
+          yield* Effect.promise(async () => {
+            const opened = h.documents.open(h.key),
+              controller = await opened.ready;
+            controller.session.apply([
+              {
+                kind: "insert",
+                block: {
+                  ...savedParagraph("mention-edit", "before 😀 after"),
+                  content: {
+                    runs: [
+                      {
+                        text: "before 😀 after",
+                        marks: [
+                          { type: "bold", version: 1 },
+                          { type: "italic", version: 1 },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            ]);
+            await controller.save();
+            const view = savedView(controller);
+            try {
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 7)));
+              const selection = view.bridge.mentionInsertion(() => view.state, view.dispatch);
+              view.dispatch(view.state.tr.setMeta("blur", { event: {} }));
+              assert.isTrue(selection.current());
+              const mentions = new SpaceMentionController(h.sources, environmentId, () => true);
+              await mentions.search("Second");
+              const window = await mentions.search("Second");
+              if (window.status !== "ready") throw Error(window.status);
+              assert.isTrue(await mentions.choose(window, 0, selection));
+              const inserted = controller.session.getSnapshot().blocks[0]!;
+              assert.include(JSON.stringify(inserted.content), '"type":"page_mention"');
+              assert.include(JSON.stringify(inserted.content), '"type":"bold"');
+              assert.include(JSON.stringify(inserted.content), '"type":"italic"');
+              assert.include(view.state.doc.textContent, "Second 😀 after");
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.equal(view.state.doc.textContent, "before 😀 after");
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              await controller.save();
+              assert.isTrue(await view.bridge.compensate("undo"));
+              assert.equal(view.state.doc.textContent, "before 😀 after");
+              assert.isTrue(await view.bridge.compensate("redo"));
+              assert.deepEqual(controller.session.getSnapshot().blocks, [inserted]);
+              const stored = await h.run(
+                service.readBlocks({
+                  ...h.key,
+                  revision: controller.session.getSnapshot().baseRevision!,
+                }),
+              );
+              assert.deepEqual(stored.blocks, [inserted]);
+              const original = view.state.doc;
+              view.dispatch(view.state.tr.insertText("bad", 3));
+              assert.strictEqual(view.state.doc, original);
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 3)));
+              assert.isFalse(view.bridge.adapter.split()(view.state, view.dispatch));
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 7)));
+              assert.isTrue(view.bridge.adapter.mark("strike")(view.state, view.dispatch));
+              const withMention = controller.session.getSnapshot().blocks;
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
+              assert.isTrue(view.bridge.adapter.mentionBoundary(1)(view.state, view.dispatch));
+              assert.equal(view.state.selection.from, 7);
+              assert.isTrue(
+                view.bridge.adapter.mentionBoundary(-1, true)(view.state, view.dispatch),
+              );
+              assert.notInclude(view.state.doc.textContent, "Second");
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.deepEqual(controller.session.getSnapshot().blocks, withMention);
+              view.dispatch(
+                view.state.tr.setSelection(
+                  TextSelection.create(view.state.doc, view.state.doc.content.size - 1),
+                ),
+              );
+              const blockSelection = view.bridge.mentionInsertion(() => view.state, view.dispatch);
+              const blockWindow = await mentions.search("after");
+              if (blockWindow.status !== "ready") throw Error(blockWindow.status);
+              const blockIndex = blockWindow.result.items.findIndex(
+                (hit) => hit.blockId === C.SpaceBlockId.make("mention-edit"),
+              );
+              assert.isAtLeast(blockIndex, 0);
+              assert.isTrue(await mentions.choose(blockWindow, blockIndex, blockSelection));
+              assert.include(
+                JSON.stringify(controller.session.getSnapshot().blocks),
+                '"type":"block_mention"',
+              );
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.notInclude(
+                JSON.stringify(controller.session.getSnapshot().blocks),
+                '"type":"block_mention"',
+              );
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              await controller.save();
+              const expected = controller.session.getSnapshot().blocks;
+              controller.invalidate();
+              await controller.open();
+              assert.deepEqual(controller.session.getSnapshot().blocks, expected);
+            } finally {
+              view.stop();
+              opened.release();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each([
+  "selection",
+  "away-back",
+  "text",
+  "write",
+  "read",
+  "flag",
+  "connection",
+  "route",
+] as const)("refuses mention insertion when %s changes during real source resolution", (mode) =>
+  Effect.scoped(
+    fixture((service) =>
+      Effect.gen(function* () {
+        const h = yield* sourceFixture(service);
+        yield* Effect.promise(async () => {
+          const opened = h.documents.open(h.key),
+            controller = await opened.ready;
+          controller.session.apply([
+            { kind: "insert", block: savedParagraph("mention-stale", "retain 😀 text") },
+          ]);
+          await controller.save();
+          const view = savedView(controller),
+            peer = savedView(controller);
+          const gate = { ...signal(), reply: signal() };
+          let current = true;
+          try {
+            view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
+            const selection = view.bridge.mentionInsertion(
+              () => view.state,
+              view.dispatch,
+              () => current,
+            );
+            const mentions = new SpaceMentionController(h.sources, environmentId);
+            await mentions.search("Second");
+            const window = await mentions.search("Second");
+            if (window.status !== "ready") throw Error(window.status);
+            h.control.resolveGate = gate;
+            const choosing = mentions.choose(window, 0, selection);
+            try {
+              await gate.promise;
+              if (mode === "selection" || mode === "away-back") {
+                view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2)));
+                if (mode === "away-back")
+                  view.dispatch(
+                    view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)),
+                  );
+              } else if (mode === "text") {
+                peer.dispatch(peer.state.tr.insertText("other view", 1));
+              } else if (mode === "write") view.bridge.setWritable(false);
+              else if (mode === "read") h.control.access = { ...h.control.access, canRead: false };
+              else if (mode === "flag")
+                h.control.access = {
+                  ...h.control.access,
+                  capability: {
+                    version: 2,
+                    limits: h.capability.limits,
+                    features: { search: true },
+                  },
+                };
+              else if (mode === "connection")
+                h.control.access = { ...h.control.access, session: {} };
+              else current = false;
+            } finally {
+              gate.reply.resolve();
+            }
+            const before = controller.session.getSnapshot(),
+              doc = view.state.doc;
+            assert.isFalse(await choosing);
+            assert.strictEqual(controller.session.getSnapshot(), before);
+            assert.strictEqual(view.state.doc, doc);
+            assert.notInclude(JSON.stringify(before.blocks), '"page_mention"');
+          } finally {
+            gate.reply.resolve();
+            view.stop();
+            peer.stop();
+            opened.release();
+          }
+        });
+      }),
+    ),
+  ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "authors atomic rich caption mentions through the shared media/session path without changing asset identity",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller),
+              peer = savedView(controller);
+            try {
+              const original = await h.images.add(h.key, h.file(), "caption-mention.png");
+              const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+              await h.images.upload(original.id);
+              await h.images.insert(original.id, port);
+              await controller.save();
+              await h.images.release(original.id, port);
+              const before = controller.session.getSnapshot().blocks[0]!,
+                assetId = mediaAssetId(before);
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
+              view.edit("😀 tail");
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2)));
+              assert.throws(
+                () => view.bridge.mentionInsertion(() => view.state, view.dispatch),
+                "Select a supported",
+              );
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 3)));
+              const selection = view.bridge.mentionInsertion(() => view.state, view.dispatch);
+              assert.isTrue(
+                selection.insert(
+                  { type: "page_mention", version: 1, target: h.key },
+                  "Fallback 😀",
+                ),
+              );
+              assert.equal(mediaAssetId(controller.session.getSnapshot().blocks[0]!), assetId);
+              assert.deepEqual(
+                spaceDocumentBlocks(peer.state.doc),
+                controller.session.getSnapshot().blocks,
+              );
+              const doc = view.state.doc,
+                snapshot = controller.session.getSnapshot();
+              view.dispatch(view.state.tr.insertText("bad", 2));
+              assert.strictEqual(view.state.doc, doc);
+              assert.strictEqual(controller.session.getSnapshot(), snapshot);
+              view.dispatch(
+                view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 10)),
+              );
+              assert.isFalse(view.bridge.adapter.mark("italic")(view.state, view.dispatch));
+              view.dispatch(
+                view.state.tr.setSelection(
+                  TextSelection.create(view.state.doc, 1, 1 + "Fallback 😀".length),
+                ),
+              );
+              assert.isTrue(view.bridge.adapter.mark("bold")(view.state, view.dispatch));
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              await controller.save();
+              const expected = controller.session.getSnapshot().blocks;
+              assert.isTrue(await view.bridge.compensate("undo"));
+              assert.deepEqual(controller.session.getSnapshot().blocks, [before]);
+              assert.isTrue(await view.bridge.compensate("redo"));
+              assert.deepEqual(controller.session.getSnapshot().blocks, expected);
+            } finally {
+              view.stop();
+              peer.stop();
             }
           });
         }),

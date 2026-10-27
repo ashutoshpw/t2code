@@ -1,5 +1,11 @@
-import { EditorContent, useEditor, useEditorState, ReactNodeViewRenderer } from "@tiptap/react";
-import { Extension, Node as TiptapNode } from "@tiptap/core";
+import {
+  EditorContent,
+  useEditor,
+  useEditorState,
+  ReactNodeViewRenderer,
+  ReactMarkViewRenderer,
+} from "@tiptap/react";
+import { Extension, Node as TiptapNode, Mark as TiptapMark } from "@tiptap/core";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { NodeSelection, type Command } from "@tiptap/pm/state";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
@@ -17,6 +23,12 @@ import { canEditSpaceEditorBlock, spaceDocumentBlocks } from "./document";
 import { SpaceImageControls } from "./SpaceImageControls";
 import type { SpaceImageUploads } from "@t2code/client-runtime/spaces";
 import type { SpaceEditorBridge } from "./editorBridge";
+import {
+  SpaceMentionContext,
+  SpaceMentionControls,
+  SpaceMentionView,
+} from "./SpaceMentionControls";
+import type { SpaceMentionController } from "./mentions";
 import "./editor.css";
 
 export function SpaceEditor({
@@ -31,7 +43,13 @@ export function SpaceEditor({
   sourceOwner,
   images,
   renderChild,
+  mentions,
+  onOpenSource,
 }: {
+  readonly mentions?: SpaceMentionController | null;
+  readonly onOpenSource?: (
+    target: import("@t2code/client-runtime/spaces").SpacePageNavigationTarget,
+  ) => void;
   readonly images?: SpaceImageUploads;
   readonly targetBlockId?: SpaceBlockId | undefined;
   readonly current?: (() => boolean) | undefined;
@@ -59,7 +77,10 @@ export function SpaceEditor({
               ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(SpaceAtomView) })
               : extension.name === "spaceMedia" && extension instanceof TiptapNode
                 ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(SpaceMediaView) })
-                : extension,
+                : ["space_page_mention", "space_block_mention"].includes(extension.name) &&
+                    extension instanceof TiptapMark
+                  ? extension.extend({ addMarkView: () => ReactMarkViewRenderer(SpaceMentionView) })
+                  : extension,
           ),
         Extension.create({
           name: "spaceSessionDispatch",
@@ -226,6 +247,22 @@ export function SpaceEditor({
           replacementTarget={
             known && ["image", "pdf", "video"].includes(known.type) ? known.id : null
           }
+        />
+      ) : null}
+      {bridge && mentions ? (
+        <SpaceMentionControls
+          owner={mentions}
+          available={writable && !!adapter.mentionRange(state)}
+          capture={() =>
+            bridge.mentionInsertion(
+              () => editor.state,
+              editor.view.dispatch,
+              () => !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
+            )
+          }
+          onInserted={() => {
+            if (!editor.isDestroyed) editor.view.focus();
+          }}
         />
       ) : null}
       <div className="flex flex-wrap gap-2">
@@ -440,12 +477,24 @@ export function SpaceEditor({
         </Button>
       ) : null}
       <SpaceAtomContext.Provider value={renderChild}>
-        <SpaceMediaWritableContext.Provider value={mediaEditable && writable}>
-          <EditorContent
-            editor={editor}
-            className="min-h-24 whitespace-pre-wrap break-words [&_.tiptap]:outline-none"
-          />
-        </SpaceMediaWritableContext.Provider>
+        <SpaceMentionContext.Provider
+          value={
+            mentions && onOpenSource
+              ? {
+                  owner: mentions,
+                  current: () => sourceOwner?.current() === true && current?.() === true,
+                  onOpen: onOpenSource,
+                }
+              : null
+          }
+        >
+          <SpaceMediaWritableContext.Provider value={mediaEditable && writable}>
+            <EditorContent
+              editor={editor}
+              className="min-h-24 whitespace-pre-wrap break-words [&_.tiptap]:outline-none"
+            />
+          </SpaceMediaWritableContext.Provider>
+        </SpaceMentionContext.Provider>
       </SpaceAtomContext.Provider>
     </section>
   );
