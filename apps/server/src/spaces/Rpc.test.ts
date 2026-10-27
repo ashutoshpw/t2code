@@ -299,6 +299,23 @@ it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
           );
           assert.equal(found.items[0]?.page.title, "wiresearchneedle");
           assert.isDefined(found.items[0]?.page.location);
+          const hit = found.items[0]!;
+          const snapshot = decodeCapture(
+            savedValue(
+              yield* request(WS_METHODS.spacesContextCapture, {
+                ...env,
+                contextId: "wire-selected",
+                target: { kind: "page", pageId: hit.page.id },
+                includeChildPages: false,
+              }),
+            ),
+          );
+          assert.equal(snapshot.status, "captured");
+          if (snapshot.status === "captured") {
+            assert.equal(snapshot.record.pageId, hit.page.id);
+            assert.equal(snapshot.record.snapshot.sources[0]?.revision, hit.page.revision);
+          }
+
           expectDefect(
             yield* request(WS_METHODS.spacesSearch, {
               ...env,

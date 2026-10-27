@@ -1,4 +1,4 @@
-import type { EnvironmentId } from "@t2code/contracts";
+import type { ComposerContextId, SpaceContextSelector, EnvironmentId } from "@t2code/contracts";
 import type {
   SpaceCapability,
   SpaceReferenceResolveInput,
@@ -11,12 +11,16 @@ import type { SpacePageNavigationTarget } from "./navigation.ts";
 type Capability =
   | (Pick<SpaceCapability, "version" | "features"> & Partial<Pick<SpaceCapability, "limits">>)
   | undefined;
-function supportsSpaceMethod(capability: Capability, method: "search" | "referenceResolution") {
+function supportsSpaceMethod(capability: Capability, method: "search" | "referenceResolution" | "contextCapture") {
   return capability?.version === 2 && capability.features?.[method] === true;
+}
+export function supportsSpaceContextCapture(capability: Capability, inlineContext: boolean) {
+  return inlineContext && supportsSpaceMethod(capability, "contextCapture");
 }
 export interface SpaceReferenceAccess {
   readonly session: object | null;
   readonly sourceVersion: number;
+  readonly inlineContext?: boolean;
   readonly canRead: boolean;
   readonly capability: Capability;
 }
@@ -35,6 +39,7 @@ export type SpaceSearchWindow =
       readonly query: string;
       readonly result: SpaceSearchResult;
       readonly current: () => boolean;
+      readonly select: (index: number, contextId: ComposerContextId) => SpaceContextSelector | null;
       readonly target: (index: number) => SpaceReferenceResolveInput["target"] | null;
       readonly next: () => Promise<SpaceSearchWindow>;
     };
@@ -116,6 +121,10 @@ export class SpaceReferenceController {
   canSearch() {
     return this.current() && supportsSpaceMethod(this.options.access().capability, "search");
   }
+  canCapture() {
+    const access = this.options.access();
+    return this.current() && supportsSpaceContextCapture(access.capability, access.inlineContext === true);
+  }
   canResolve() {
     return (
       this.current() && supportsSpaceMethod(this.options.access().capability, "referenceResolution")
@@ -178,6 +187,22 @@ export class SpaceReferenceController {
         query,
         result,
         current,
+        select: (index, contextId) => {
+          const hit = result.items[index];
+          if (!current() || !this.canCapture() || !hit) return null;
+          const label = Array.from(hit.page.title || "Untitled page").slice(0, 100).join("");
+          const common = {
+            version: 1 as const,
+            selection: "current" as const,
+            environmentId: this.options.environmentId,
+            contextId,
+            label,
+            includeChildPages: false,
+          };
+          return hit.blockId
+            ? { ...common, kind: "block", blockId: hit.blockId }
+            : { ...common, kind: "page", pageId: hit.page.id };
+        },
         target: (index) => {
           const hit = result.items[index];
           return current() && hit

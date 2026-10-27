@@ -1,3 +1,4 @@
+import { SpaceContextChip } from "../SpaceContextChip";
 import { documentIconColorForFileName } from "~/pierre-icons";
 import { isSvgAttachment } from "@t2code/shared/image";
 import { useRenderedAppearance } from "../../hooks/useTheme";
@@ -301,23 +302,21 @@ const userMessageContextPresentationRegistry = createContextPresentationRegistry
   handlers: [
     {
       kind: "page",
-      render: (record, context) => (
-        <UnresolvedChip
-          label={record.label || ("title" in record ? record.title : context.reference.label)}
-          copyMarkdown={context.copyMarkdown}
-          tooltip="Current Spaces content is unavailable. The sent snapshot is preserved."
-        />
-      ),
+      render: (record, context) =>
+        record.kind === "page" ? (
+          <SpaceContextChip record={record} copyMarkdown={context.copyMarkdown} />
+        ) : (
+          <UnavailableUserMessageContextChip {...context} />
+        ),
     },
     {
       kind: "block",
-      render: (record, context) => (
-        <UnresolvedChip
-          label={record.label || ("title" in record ? record.title : context.reference.label)}
-          copyMarkdown={context.copyMarkdown}
-          tooltip="Current Spaces content is unavailable. The sent snapshot is preserved."
-        />
-      ),
+      render: (record, context) =>
+        record.kind === "block" ? (
+          <SpaceContextChip record={record} copyMarkdown={context.copyMarkdown} />
+        ) : (
+          <UnavailableUserMessageContextChip {...context} />
+        ),
     },
     {
       kind: "mention",

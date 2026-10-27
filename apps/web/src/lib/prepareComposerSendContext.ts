@@ -1,5 +1,8 @@
 import { useComposerDraftStore, type ComposerThreadTarget } from "../composerDraftStore";
-import { prepareSpaceContextSend } from "@t2code/client-runtime/spaces";
+import {
+  prepareSpaceContextSend,
+  supportsSpaceContextCapture,
+} from "@t2code/client-runtime/spaces";
 import { runAtomCommand } from "@t2code/client-runtime/state/runtime";
 import {
   AuthOrchestrationReadScope,
@@ -43,9 +46,10 @@ export async function prepareComposerSendContext(input: {
     return {
       session: currentSession(),
       canRead: readEnvironmentScope(input.environmentId, AuthOrchestrationReadScope),
-      supportsCapture:
-        config?.environment.capabilities.spaces?.version === 2 &&
-        config.environment.capabilities.inlineMessageContext === true,
+      supportsCapture: supportsSpaceContextCapture(
+        config?.environment.capabilities.spaces,
+        config?.environment.capabilities.inlineMessageContext === true,
+      ),
     };
   };
   const context = await prepareSpaceContextSend({

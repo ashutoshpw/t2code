@@ -1,11 +1,11 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { AsyncResult } from "effect/reactivity";
 import * as Option from "effect/Option";
 import { environmentCatalog } from "../connection/catalog";
 import * as Cause from "effect/Cause";
 import { AuthOrchestrationReadScope, type EnvironmentId } from "@t2code/contracts";
-import { SpaceReferenceController } from "@t2code/client-runtime/spaces";
+import { SpaceReferenceController, type SpaceSearchWindow } from "@t2code/client-runtime/spaces";
 import { runAtomCommand } from "@t2code/client-runtime/state/runtime";
 import { spacesEnvironment } from "../state/spaces";
 import { environmentPresentations } from "../state/presentation";
@@ -28,6 +28,7 @@ export function useSpaceReferenceController(environmentId: EnvironmentId, attemp
     connection?.generation,
     connection?.attempt,
     canRead,
+    environment?.serverConfig?.environment.capabilities.inlineMessageContext,
     environment?.serverConfig?.environment.capabilities.spaces,
   ]);
   const [owner, setOwner] = useState<{
@@ -62,6 +63,7 @@ export function useSpaceReferenceController(environmentId: EnvironmentId, attemp
             registry.get(environmentSession.sessionStateAtom(environmentId)),
             AuthOrchestrationReadScope,
           ),
+          inlineContext: registry.get(environmentPresentations.presentationAtom(environmentId))?.serverConfig?.environment.capabilities.inlineMessageContext === true,
           capability: registry.get(environmentPresentations.presentationAtom(environmentId))
             ?.serverConfig?.environment.capabilities.spaces,
         }),
@@ -94,4 +96,55 @@ export function useSpaceReferenceController(environmentId: EnvironmentId, attemp
     };
   }, [key, registry, environmentId, canRead, sourceVersion, environment?.connection.phase]);
   return owner?.key === key && owner.registry === registry ? owner.controller : null;
+}
+
+export function useSpaceContextSearch(environmentId: EnvironmentId, query: string | null) {
+  const controller = useSpaceReferenceController(environmentId);
+  const canCapture = controller?.canCapture() === true;
+  const [state, setState] = useState<{
+    controller: SpaceReferenceController;
+    query: string;
+    window: SpaceSearchWindow;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const requestGeneration = useRef(0);
+  // oxlint-disable-next-line t2code/react-effect-budget -- synchronize the active composer query with the bounded storage search controller.
+  useEffect(() => {
+    let active = true;
+    const generation = ++requestGeneration.current;
+    if (!controller || !canCapture || query === null) return;
+    void controller.search(query).then((window) => {
+      if (active && requestGeneration.current === generation) {
+        setState({ controller, query, window });
+        setLoading(false);
+      }
+    });
+    return () => {
+      active = false;
+      requestGeneration.current++;
+      controller.invalidate();
+    };
+  }, [controller, query, canCapture]);
+  const window: SpaceSearchWindow | null =
+    controller && !canCapture ? { status: "unsupported" } :
+    controller && state?.controller === controller && state.query === query ? state.window : null;
+  const retry = async () => {
+    if (!controller || !canCapture || query === null) return;
+    setLoading(true);
+    const generation = ++requestGeneration.current;
+    const result = await controller.search(query);
+    if (generation !== requestGeneration.current) return;
+    setState({ controller, query, window: result });
+    setLoading(false);
+  };
+  const next = async () => {
+    if (!controller || query === null || window?.status !== "ready" || !window.current()) return;
+    setLoading(true);
+    const generation = ++requestGeneration.current;
+    const nextWindow = await window.next();
+    if (generation !== requestGeneration.current) return;
+    setState({ controller, query, window: nextWindow });
+    setLoading(false);
+  };
+  return { window, next, retry, loading: query !== null && !!controller && (loading || !window) };
 }

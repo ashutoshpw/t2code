@@ -1,5 +1,8 @@
 import { createSpacesEnvironmentAtoms } from "@t2code/client-runtime/state/spaces";
-import { prepareSpaceContextSend } from "@t2code/client-runtime/spaces";
+import {
+  prepareSpaceContextSend,
+  supportsSpaceContextCapture,
+} from "@t2code/client-runtime/spaces";
 import { runAtomCommand } from "@t2code/client-runtime/state/runtime";
 import {
   AuthOrchestrationReadScope,
@@ -65,11 +68,12 @@ export async function prepareMobileComposerContext(input: {
     access: () => ({
       session: currentSession(),
       canRead: readEnvironmentScope(input.environmentId, AuthOrchestrationReadScope),
-      supportsCapture:
+      supportsCapture: supportsSpaceContextCapture(
         appAtomRegistry.get(environmentServerConfigsAtom).get(input.environmentId)?.environment
-          .capabilities.spaces?.version === 2 &&
+          .capabilities.spaces,
         appAtomRegistry.get(environmentServerConfigsAtom).get(input.environmentId)?.environment
           .capabilities.inlineMessageContext === true,
+      ),
     }),
     capture: async (captureInput) => {
       const result = await runAtomCommand(

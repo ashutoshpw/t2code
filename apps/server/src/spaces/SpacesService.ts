@@ -1716,6 +1716,7 @@ const make = Effect.fn("SpacesService.make")(function* (
               recovery: true,
               search: true,
               assets: true,
+              contextCapture: true,
             },
           } satisfies C.SpaceCapability;
         }),

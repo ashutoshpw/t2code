@@ -1,3 +1,4 @@
+import { ComposerContextId } from "@t2code/contracts";
 import type { ComposerContextDraft } from "@t2code/contracts";
 import { useComposerTypingGuard } from "./useComposerTypingGuard";
 import { insertAttachmentReferencesForDraft } from "./composerAttachmentReferences";
@@ -770,6 +771,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     },
   };
   const composerContextRecords = composerContextRecordsFromDraft({
+    contextDraft: attachmentDraft.contextDraft,
     terminalContexts: composerTerminalContexts,
     reviewComments: composerReviewComments,
     previewAnnotations: composerPreviewAnnotations,
@@ -1198,12 +1200,17 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     composerDraft.persistedAttachments.length === 0 &&
     composerTerminalContexts.length === 0 &&
     composerPreviewAnnotations.length === 0 &&
-    composerReviewComments.length === 0;
+    composerReviewComments.length === 0 &&
+    composerThreadContexts.length === 0 &&
+    !(
+      attachmentDraft.contextDraft?.selectors.length || attachmentDraft.contextDraft?.records.length
+    );
   const {
     items: composerMenuItems,
     isLoading: isComposerMenuLoading,
     emptyState: composerMenuEmptyState,
   } = useComposerMenuItems({
+    spacesContextEnabled: !isLiteralPendingAnswer,
     composerTrigger,
     environmentId,
     gitCwd,
@@ -1934,6 +1941,40 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     });
     const { snapshot, trigger } = resolveActiveComposerTrigger();
     if (!trigger) return;
+    if (item.type === "space-notice") return;
+    if (item.type === "space-action") {
+      if (trigger.kind === "path" && trigger.query === item.query) item.perform();
+      return;
+    }
+    if (item.type === "space-context") {
+      if (isLiteralPendingAnswer || trigger.kind !== "path" || trigger.query !== item.query) return;
+      const selector = item.select(ComposerContextId.make(randomUUID()));
+      if (!selector || selector.environmentId !== environmentId) return;
+      const currentDraft = useComposerDraftStore
+        .getState()
+        .getComposerDraft(attachmentDraftTarget)?.contextDraft;
+      if ((currentDraft?.selectors.length ?? 0) >= 200) return;
+      const replacement = `${formatInlineContextReference({ kind: selector.kind, contextId: selector.contextId, label: selector.label })} `;
+      const end = extendReplacementRangeForTrailingSpace(
+        snapshot.value,
+        trigger.rangeEnd,
+        replacement,
+      );
+      const applied = applyPromptReplacement(trigger.rangeStart, end, replacement, {
+        expectedText: snapshot.value.slice(trigger.rangeStart, end),
+      });
+      if (applied) {
+        const latest = useComposerDraftStore
+          .getState()
+          .getComposerDraft(attachmentDraftTarget)?.contextDraft;
+        useComposerDraftStore.getState().setContextDraft(attachmentDraftTarget, {
+          selectors: [...(latest?.selectors ?? []), selector],
+          records: latest?.records ?? [],
+        });
+        setComposerHighlightedItemId(null);
+      }
+      return;
+    }
     if (item.type === "path") {
       if (!isPathSuggestionCurrent(item.searchTarget, trigger, environmentId, gitCwd)) return;
       const replacement = `${serializeComposerFileLink(item.path)} `;
