@@ -170,12 +170,13 @@ function SpacePageMetadata({ target, fullPage = false, threadRef }: SpacePageSur
           <SpaceStructureControls
             key={JSON.stringify([target.environmentId, target.pageId])}
             target={resolvedTarget}
+            location={page.location}
             current={() => {
               const live = query.isPending ? null : query.data?.current();
               return (
                 live?.page.id === target.pageId &&
                 live.page.spaceId === resolvedTarget.spaceId &&
-                live.page.location?.kind === "root"
+                (live.page.location?.kind === "root" || live.page.location?.kind === "child")
               );
             }}
           />

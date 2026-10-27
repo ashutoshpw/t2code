@@ -24,6 +24,7 @@ import {
   createSpaceServiceSessionAdapter,
   type SpaceDocumentDraft,
   type SpaceServicePorts,
+  readSpacePageLocation,
   SpaceRootReorder,
   decodeSpaceStructureJournal,
   checkSpaceStructureDrafts,
@@ -1338,6 +1339,8 @@ const encodedRootRpc = Effect.fn("SpaceEditorServiceTest.encodedRootRpc")(functi
   });
 });
 
+const decodeMoveSpaces = Schema.decodeUnknownSync(C.SpaceListResult);
+const decodeMoveBody = Schema.decodeUnknownSync(C.SpaceReadBlocksResult);
 const decodeRootList = Schema.decodeUnknownSync(C.SpacePageListResult);
 const decodeRootInspect = Schema.decodeUnknownSync(C.SpaceInspectStructureResult);
 const decodeRootRequest = Schema.decodeUnknownSync(C.SpaceMutationRequest, {
@@ -1436,6 +1439,8 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
           stored = value;
         },
       },
+      spaces: async (input) => decodeMoveSpaces(await h.run(rpc(WS_METHODS.spacesList, input))),
+      blocks: async (input) => decodeMoveBody(await h.run(rpc(WS_METHODS.spacesBlocksRead, input))),
       list: async (input) => decodeRootList(await h.run(rpc(WS_METHODS.spacesPagesList, input))),
       inspect: async (input) =>
         decodeRootInspect(await h.run(rpc(WS_METHODS.spacesStructureInspect, input))),
@@ -2138,6 +2143,577 @@ it.effect(
               retried.release();
               panel.release();
             }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+const nestedMoveFixture = Effect.fn("SpaceEditorServiceTest.nestedMoves")(function* (
+  service: SpacesService.SpacesService["Service"],
+) {
+  const h = yield* rootReorderFixture(service);
+  let serial = 0;
+  const child = Effect.fn("SpaceEditorServiceTest.child")(function* (
+    parent: C.SpacePageId,
+    parentId: C.SpaceBlockId | null = null,
+  ) {
+    const placement = { pageId: parent, parentId, beforeBlockId: null };
+    const inspected = yield* service.inspectStructure({
+      environmentId,
+      target: { kind: "blocks", pageId: parent, blockIds: [] },
+      destination: { kind: "child", placement },
+    });
+    const admission = yield* service.getPage({ environmentId, pageId: parent });
+    const created = yield* service.createChildPage({
+      environmentId,
+      mutationId: C.SpaceMutationId.make(`nested-move-child-${++serial}`),
+      receiptEpoch: admission.mutationAdmission.epoch,
+      title: `Child ${serial}`,
+      placement,
+      guards: inspected.guards,
+    });
+    if (created.status !== "saved") throw new Error("Unexpected fixture child conflict");
+    return created;
+  });
+  const a = yield* child(h.pages[0]!);
+  const descendant = yield* child(a.page.id);
+  const b = yield* child(h.pages[1]!);
+  const library = yield* service.listSpaces({ environmentId });
+  const space = yield* service.createSpace({
+    environmentId,
+    mutationId: "move-other-space",
+    receiptEpoch: library.mutationAdmission.epoch,
+    title: "Destination",
+  });
+  const root = yield* service.createPage({
+    environmentId,
+    mutationId: "move-other-root",
+    receiptEpoch: library.mutationAdmission.epoch,
+    spaceId: space.space.id,
+    baseRootOrderRevision: 0,
+    title: "Other root",
+  });
+  if (root.status !== "saved") throw new Error("Unexpected fixture root conflict");
+  return { ...h, a, b, descendant, other: space.space.id, otherRoot: root.page.id, child };
+});
+
+it.effect(
+  "moves a real opaque page subtree across root spaces and compensates exact placement without changing page or block IDs",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          const opaque = {
+            id: C.SpaceBlockId.make("opaque-descendant"),
+            parentId: null,
+            order: "40000000000000000000000000000000",
+            type: "future_widget",
+            version: 7,
+            content: { vendor: [1, { value: "unchanged" }] },
+            future: { marks: [{ type: "future_mark", version: 2 }] },
+          };
+          const payload = JSON.stringify(opaque),
+            bytes = Buffer.byteLength(payload);
+          const sql = new NodeSqlite.DatabaseSync(databasePath);
+          try {
+            sql.prepare("INSERT INTO spaces_ids(id,kind) VALUES (?,'block')").run(opaque.id);
+            sql
+              .prepare(
+                "INSERT INTO spaces_blocks(block_id,page_id,parent_id,rank,payload,logical_bytes,deleted) VALUES (?,?,NULL,?,?,?,0)",
+              )
+              .run(opaque.id, h.descendant.page.id, opaque.order, payload, bytes);
+            sql
+              .prepare(
+                "UPDATE spaces_pages SET block_count=block_count+1,block_bytes=block_bytes+? WHERE page_id=?",
+              )
+              .run(bytes, h.descendant.page.id);
+          } finally {
+            sql.close();
+          }
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            await owner.browse(h.other, h.pages[0]!);
+            await owner.move(h.pages[0]!, h.other, h.otherRoot);
+            for (const pageId of [h.pages[0]!, h.a.page.id, h.descendant.page.id])
+              assert.equal(
+                (await h.ports.getPage({ environmentId, pageId })).page.spaceId,
+                h.other,
+              );
+            assert.equal(owner.getSnapshot().journal.history?.direction, "undo");
+            await owner.compensate("undo");
+            assert.deepEqual(await h.order(), h.pages);
+            assert.equal(
+              (await h.ports.getPage({ environmentId, pageId: h.descendant.page.id })).page.spaceId,
+              h.spaceId,
+            );
+            await owner.compensate("redo");
+            const descendant = await h.ports.getPage({
+              environmentId,
+              pageId: h.descendant.page.id,
+            });
+            assert.equal(descendant.page.spaceId, h.other);
+            assert.deepEqual(
+              (
+                await h.run(
+                  service.readBlocks({
+                    environmentId,
+                    pageId: descendant.page.id,
+                    revision: descendant.page.revision,
+                  }),
+                )
+              ).blocks,
+              [opaque],
+            );
+            assert.equal(new Set(h.requests.map((r) => r.mutationId)).size, 3);
+            assert.equal(h.requests[0]!.guards.roots.length, 2);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "moves child ownership between pages and known lists with the same marker and guarded inverse order",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          const parent = yield* service.getPage({ environmentId, pageId: h.otherRoot });
+          const list = { ...savedParagraph("placement-list", "List"), type: "bulleted_item" };
+          yield* service.applyBlockBatch({
+            environmentId,
+            pageId: parent.page.id,
+            mutationId: "seed-placement-list",
+            receiptEpoch: parent.mutationAdmission.epoch,
+            baseRevision: parent.page.revision,
+            generation: 1,
+            mutations: [{ kind: "insert", block: list }],
+          });
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.loadSource(h.a.page.id);
+            await owner.loadBody(parent.page.id);
+            await owner.moveTo(h.a.page.id, {
+              kind: "child",
+              placement: { pageId: parent.page.id, parentId: list.id, beforeBlockId: null },
+            });
+            const moved = (await h.ports.getPage({ environmentId, pageId: h.a.page.id })).page;
+            assert.deepEqual(moved.location, {
+              kind: "child",
+              spaceId: h.other,
+              parentPageId: parent.page.id,
+              ownerBlockId: h.a.ownerBlockId,
+            });
+            const body = await h.run(
+              service.readBlocks({
+                environmentId,
+                pageId: parent.page.id,
+                revision: (await h.ports.getPage({ environmentId, pageId: parent.page.id })).page
+                  .revision,
+              }),
+            );
+            assert.equal(body.blocks.find((b) => b.id === h.a.ownerBlockId)?.parentId, list.id);
+            await owner.compensate("undo");
+            assert.deepEqual(
+              (await h.ports.getPage({ environmentId, pageId: h.a.page.id })).page.location,
+              h.a.page.location,
+            );
+            await owner.compensate("redo");
+            assert.equal(
+              (await h.ports.getPage({ environmentId, pageId: h.a.page.id })).page.location?.kind,
+              "child",
+            );
+            assert.isTrue(h.requests.every((r) => r.destination.kind === "child"));
+            assert.isTrue(h.requests.every((r) => r.guards.roots.length === 0));
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "promotes and renests a child with guarded logical undo and a fresh marker rather than resurrecting its retired ID",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            let owner = h.make();
+            await owner.loadSource(h.a.page.id);
+            await owner.browse(h.other, h.a.page.id);
+            h.network.lose = "after";
+            await expect(owner.move(h.a.page.id, h.other, null)).rejects.toThrow(
+              "Lost committed response",
+            );
+            const retained = owner.getSnapshot().journal.pending!;
+            owner = h.reload();
+            await owner.recover();
+            assert.deepEqual(h.lookups[0], { request: retained.request });
+            assert.equal(
+              (await h.ports.getPage({ environmentId, pageId: h.a.page.id })).page.location?.kind,
+              "root",
+            );
+            assert.include(owner.getSnapshot().notice!, "not retired owner-marker");
+            await owner.compensate("undo");
+            const restored = (await h.ports.getPage({ environmentId, pageId: h.a.page.id })).page
+              .location;
+            assert.equal(restored?.kind, "child");
+            if (restored?.kind !== "child") throw new Error("Expected child ownership");
+            assert.notEqual(restored.ownerBlockId, h.a.ownerBlockId);
+            assert.equal(restored.parentPageId, h.pages[0]);
+            assert.equal(restored.spaceId, h.spaceId);
+            const retired = await h.run(
+              service
+                .applyBlockBatch({
+                  environmentId,
+                  pageId: h.pages[0]!,
+                  mutationId: "retired-owner-resurrection",
+                  receiptEpoch: (await h.ports.getPage(h.key)).mutationAdmission.epoch,
+                  baseRevision: (await h.ports.getPage(h.key)).page.revision,
+                  generation: 1,
+                  mutations: [
+                    {
+                      kind: "insert",
+                      block: savedParagraph(h.a.ownerBlockId, "illegal resurrection"),
+                    },
+                  ],
+                })
+                .pipe(Effect.flip),
+            );
+            assert.equal(retired._tag, "SpaceValidationError");
+            await owner.compensate("redo");
+            assert.equal(
+              (await h.ports.getPage({ environmentId, pageId: h.a.page.id })).page.location?.kind,
+              "root",
+            );
+            assert.equal(h.requests.length, 3);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "nests a root across spaces, preserves stable document ownership, and compensates parent order with exact pending identity",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const route = h.documents.open(h.key),
+              panel = h.documents.open(h.key);
+            const doc = await route.ready;
+            assert.equal(await panel.ready, doc);
+            try {
+              const owner = h.make();
+              await owner.browse(h.spaceId, h.pages[0]!);
+              await owner.loadBody(h.otherRoot);
+              h.disk.fail = true;
+              const destination = {
+                kind: "child" as const,
+                placement: { pageId: h.otherRoot, parentId: null, beforeBlockId: null },
+              };
+              await expect(owner.moveTo(h.pages[0]!, destination)).rejects.toThrow("abort");
+              const pending = owner.getSnapshot().journal.pending!;
+              assert.deepEqual(pending.request.input.destination, destination);
+              assert.equal(h.requests.length, 0);
+              assert.isTrue(doc.structureBlocked());
+              h.disk.fail = false;
+              h.network.lose = "after";
+              await expect(owner.recover()).rejects.toThrow("Lost committed response");
+              await owner.recover();
+              assert.deepEqual(h.requests[0], pending.request.input);
+              assert.deepEqual(h.lookups[0], { request: pending.request });
+              assert.equal(h.requests.length, 1);
+              assert.isFalse(doc.structureBlocked());
+              assert.equal(doc.session.key.pageId, h.pages[0]);
+              assert.equal(doc.getSnapshot().metadata?.page.spaceId, h.other);
+              assert.equal(doc.getSnapshot().metadata?.page.location?.kind, "child");
+              const live = await h.run(
+                readSpacePageLocation({ pageId: h.pages[0]!, version: 2 }, (pageId) =>
+                  service.getPage({ environmentId, pageId }),
+                ),
+              );
+              assert.deepEqual(
+                live.ancestors.map((p) => p.id),
+                [h.otherRoot],
+              );
+              assert.equal(live.page.spaceId, h.other);
+              const peer = h.documents.open(h.key);
+              assert.equal(await peer.ready, doc);
+              peer.release();
+              await owner.compensate("undo");
+              assert.deepEqual(await h.order(), h.pages);
+              await owner.compensate("redo");
+              const location = (await h.ports.getPage(h.key)).page.location;
+              assert.equal(location?.kind, "child");
+              const first = pending.sourceLocation;
+              assert.equal(first?.kind, "root");
+              assert.equal(h.requests.length, 3);
+            } finally {
+              route.release();
+              panel.release();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "blocks a hidden child-parent draft and retains a stale child-neighbor inverse conflict without moving or renewing it",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const parentKey = { environmentId, pageId: h.pages[1]! };
+            const view = h.documents.open(parentKey),
+              parent = await view.ready;
+            parent.session.apply([
+              { kind: "insert", block: savedParagraph("hidden-parent-draft", "unsaved") },
+            ]);
+            await parent.session.persistDraft();
+            view.release();
+            const owner = h.reload();
+            await owner.loadSource(h.a.page.id);
+            await owner.loadBody(parentKey.pageId);
+            const destination = {
+              kind: "child" as const,
+              placement: {
+                pageId: parentKey.pageId,
+                parentId: null,
+                beforeBlockId: h.b.ownerBlockId,
+              },
+            };
+            await expect(owner.moveTo(h.a.page.id, destination)).rejects.toThrow("retained draft");
+            assert.equal(h.requests.length, 0);
+            await parent.discard();
+            await owner.moveTo(h.a.page.id, destination);
+            const expected = owner.getSnapshot().journal.history!.guards;
+            const oldParent = await h.ports.getPage(h.key);
+            await h.run(
+              service.updatePage({
+                environmentId,
+                pageId: oldParent.page.id,
+                mutationId: "stale-child-inverse-parent",
+                receiptEpoch: oldParent.mutationAdmission.epoch,
+                baseRevision: oldParent.page.revision,
+                title: "Changed original parent",
+              }),
+            );
+            await owner.compensate("undo");
+            assert.isTrue(owner.getSnapshot().journal.pending?.conflict);
+            assert.deepEqual(h.requests[1]!.guards, expected);
+            const current = (await h.ports.getPage({ environmentId, pageId: h.a.page.id })).page
+              .location;
+            assert.equal(current?.kind === "child" ? current.parentPageId : null, parentKey.pageId);
+            assert.equal(owner.getSnapshot().journal.history?.direction, "undo");
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses partial source and destination bodies instead of inferring complete parent lists",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          const metadata = yield* service.getPage(h.key);
+          yield* service.applyBlockBatch({
+            ...h.key,
+            mutationId: "partial-parent-body",
+            receiptEpoch: metadata.mutationAdmission.epoch,
+            baseRevision: metadata.page.revision,
+            generation: 1,
+            mutations: Array.from({ length: 100 }, (_, i) => ({
+              kind: "insert" as const,
+              block: savedParagraph(
+                `partial-${i}`,
+                "row",
+                (BigInt(i + 1) * ((1n << 128n) / 200n)).toString(16).padStart(32, "0"),
+              ),
+            })),
+          });
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await expect(owner.loadSource(h.a.page.id)).rejects.toThrow(
+              "source parent body is partial",
+            );
+            assert.isNull(owner.getSnapshot().position);
+            await owner.loadSource(h.b.page.id);
+            await owner.loadBody(h.pages[0]!);
+            assert.isNotNull(owner.getSnapshot().body?.nextCursor);
+            await expect(
+              owner.moveTo(h.b.page.id, {
+                kind: "child",
+                placement: { pageId: h.pages[0]!, parentId: null, beforeBlockId: null },
+              }),
+            ).rejects.toThrow("complete bounded destination body");
+            assert.equal(h.requests.length, 0);
+            assert.isNull(owner.getSnapshot().journal.pending);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses cycles and excessive depth through real inspection before journaling a page move",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            await owner.loadBody(h.descendant.page.id);
+            await expect(
+              owner.moveTo(h.pages[0]!, {
+                kind: "child",
+                placement: { pageId: h.descendant.page.id, parentId: null, beforeBlockId: null },
+              }),
+            ).rejects.toThrow("cycle");
+            assert.equal(h.requests.length, 0);
+            assert.isNull(owner.getSnapshot().journal.pending);
+          });
+          let parent = h.descendant.page.id;
+          for (let i = 3; i < 16; i++) parent = (yield* h.child(parent)).page.id;
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[2]!);
+            await owner.loadBody(parent);
+            await expect(
+              owner.moveTo(h.pages[2]!, {
+                kind: "child",
+                placement: { pageId: parent, parentId: null, beforeBlockId: null },
+              }),
+            ).rejects.toThrow("maxDepth");
+            assert.equal(h.requests.length, 0);
+            assert.isNull(owner.getSnapshot().journal.pending);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses a retired child inverse anchor explicitly without renewing guards or creating an unreplayable compensating intent",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          const parent = yield* service.getPage(h.key);
+          const anchor = savedParagraph(
+            "retained-inverse-anchor",
+            "After child",
+            "fffffffffffffffffffffffffffffffe",
+          );
+          yield* service.applyBlockBatch({
+            ...h.key,
+            mutationId: "add-inverse-anchor",
+            receiptEpoch: parent.mutationAdmission.epoch,
+            baseRevision: parent.page.revision,
+            generation: 1,
+            mutations: [{ kind: "insert", block: anchor }],
+          });
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.loadSource(h.a.page.id);
+            await owner.loadBody(h.pages[1]!);
+            await owner.moveTo(h.a.page.id, {
+              kind: "child",
+              placement: { pageId: h.pages[1]!, parentId: null, beforeBlockId: null },
+            });
+            const retained = owner.getSnapshot().journal.history;
+            const current = await h.ports.getPage(h.key);
+            await h.run(
+              service.applyBlockBatch({
+                ...h.key,
+                mutationId: "retire-inverse-anchor",
+                receiptEpoch: current.mutationAdmission.epoch,
+                baseRevision: current.page.revision,
+                generation: 2,
+                mutations: [{ kind: "delete", blockId: anchor.id }],
+              }),
+            );
+            await expect(owner.compensate("undo")).rejects.toThrow(
+              "inverse placement is unavailable",
+            );
+            assert.deepEqual(owner.getSnapshot().journal.history, retained);
+            assert.isNull(owner.getSnapshot().journal.pending);
+            assert.equal(h.requests.length, 1);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses non-container and stale child destination proofs before capturing a mutation identity",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          const target = { environmentId, pageId: h.pages[1]! };
+          const parent = yield* service.getPage(target);
+          const leaf = savedParagraph("not-a-list-parent", "Leaf");
+          yield* service.applyBlockBatch({
+            ...target,
+            mutationId: "seed-leaf-destination",
+            receiptEpoch: parent.mutationAdmission.epoch,
+            baseRevision: parent.page.revision,
+            generation: 1,
+            mutations: [{ kind: "insert", block: leaf }],
+          });
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.loadSource(h.a.page.id);
+            await owner.loadBody(target.pageId);
+            await expect(
+              owner.moveTo(h.a.page.id, {
+                kind: "child",
+                placement: { pageId: target.pageId, parentId: leaf.id, beforeBlockId: null },
+              }),
+            ).rejects.toThrow("known list placement");
+            const latest = await h.ports.getPage(target);
+            await h.run(
+              service.applyBlockBatch({
+                ...target,
+                mutationId: "change-destination-after-window",
+                receiptEpoch: latest.mutationAdmission.epoch,
+                baseRevision: latest.page.revision,
+                generation: 2,
+                mutations: [
+                  { kind: "replace", block: savedParagraph(leaf.id, "Changed after read") },
+                ],
+              }),
+            );
+            await expect(
+              owner.moveTo(h.a.page.id, {
+                kind: "child",
+                placement: {
+                  pageId: target.pageId,
+                  parentId: null,
+                  beforeBlockId: h.b.ownerBlockId,
+                },
+              }),
+            ).rejects.toThrow("placement changed");
+            assert.equal(h.requests.length, 0);
+            assert.isNull(owner.getSnapshot().journal.pending);
           });
         }),
       ),

@@ -438,3 +438,75 @@ it("admits exactly eight draft checks and four MiB cumulative decoded records, r
   ).rejects.toThrow("read budget");
   expect(records.size).toBe(3);
 });
+
+it("decodes exact nested placement receipts with zero root guards and refuses missing child context or excess roots", () => {
+  const parent = SpacePageId.make("owner-parent"),
+    other = SpacePageId.make("destination-parent"),
+    spaceId = SpaceId.make("space");
+  const guards = {
+    pages: [
+      { pageId: key.pageId, revision: 1 },
+      { pageId: parent, revision: 4 },
+      { pageId: other, revision: 8 },
+    ],
+    roots: [],
+  };
+  const value: SpaceStructureJournal = {
+    version: 1,
+    environmentId: key.environmentId,
+    history: null,
+    pending: {
+      request: {
+        operation: "movePage",
+        input: {
+          ...key,
+          mutationId: SpaceMutationId.make("nested-intent"),
+          receiptEpoch: SpaceReceiptEpoch.make("original-epoch"),
+          guards,
+          destination: {
+            kind: "child",
+            placement: { pageId: other, parentId: null, beforeBlockId: null },
+          },
+        },
+      },
+      inverse: {
+        kind: "child",
+        placement: { pageId: parent, parentId: null, beforeBlockId: null },
+      },
+      sourceLocation: {
+        kind: "child",
+        spaceId,
+        parentPageId: parent,
+        ownerBlockId: SpaceBlockId.make("existing-owner"),
+      },
+      targetSpaceId: spaceId,
+      observed: guards,
+      direction: "move",
+      conflict: false,
+    },
+  };
+  expect(decodeSpaceStructureJournal(value, key.environmentId)).toEqual(value);
+  const before = JSON.stringify(value);
+  expect(() =>
+    decodeSpaceStructureJournal(
+      { ...value, pending: { ...value.pending, targetSpaceId: undefined } },
+      key.environmentId,
+    ),
+  ).toThrow();
+  expect(() =>
+    decodeSpaceStructureJournal(
+      {
+        ...value,
+        pending: {
+          ...value.pending,
+          observed: {
+            ...guards,
+            roots: [1, 2, 3].map((i) => ({ spaceId: `root-${i}`, rootOrderRevision: 0 })),
+          },
+        },
+      },
+      key.environmentId,
+    ),
+  ).toThrow();
+  expect(JSON.stringify(value)).toBe(before);
+});

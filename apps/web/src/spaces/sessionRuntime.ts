@@ -201,6 +201,17 @@ export function spaceRootReorder(
     maxMutationBytes: () => access(true).maxMutationBytes,
     getPage: (pageId) =>
       read(spacesEnvironment.page({ environmentId, input: { environmentId, pageId } })),
+    spaces: (input) => read(spacesEnvironment.list({ environmentId, input })),
+    blocks: (input) =>
+      read(
+        spacesEnvironment.blocks({
+          environmentId,
+          input: {
+            ...input,
+            limit: Math.min(input.limit ?? 100, access(false).maxBlockWindowBlocks),
+          },
+        }),
+      ),
     list: (input) => read(spacesEnvironment.pages({ environmentId, input })),
     inspect: (input) => read(spacesEnvironment.inspect({ environmentId, input })),
     receipt: (input) => read(spacesEnvironment.receipt({ environmentId, input })),
