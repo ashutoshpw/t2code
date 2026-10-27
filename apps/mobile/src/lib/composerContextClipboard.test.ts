@@ -315,3 +315,93 @@ describe("mobile context clipboard imports", () => {
     ).toEqual(result!.context.records.map((record) => record.contextId));
   });
 });
+
+it("hydrates selector links and completed records with fresh identities while preserving child options", async () => {
+  const selectors = [
+    {
+      version: 1 as const,
+      selection: "current" as const,
+      kind: "page" as const,
+      contextId: ComposerContextId.make("page-selection"),
+      label: "Design",
+      environmentId: EnvironmentId.make("source"),
+      pageId: "page-id",
+      includeChildPages: false,
+    },
+    {
+      version: 1 as const,
+      selection: "current" as const,
+      kind: "block" as const,
+      contextId: ComposerContextId.make("block-selection"),
+      label: "Decision",
+      environmentId: EnvironmentId.make("source"),
+      blockId: "block-id",
+      includeChildPages: true,
+    },
+  ];
+  const input = {
+    text: [...selectors, terminal].map(formatComposerContextReference).join(" "),
+    fragment: JSON.stringify({
+      version: 1,
+      source: { environmentId: "source" },
+      records: [terminal],
+      selectors,
+    }),
+    html: "",
+  };
+  const result = await importComposerContextClipboard(input, 0, new AbortController().signal);
+  expect(result?.context.records).toEqual([{ ...terminal, contextId: "import-1" }]);
+  expect(result).toMatchObject({
+    contextDraft: {
+      records: [],
+      selectors: selectors.map((selector, index) => ({
+        ...selector,
+        contextId: `import-${index + 2}`,
+      })),
+    },
+  });
+  expect(collectComposerContextReferences(result!.text).map((ref) => ref.contextId)).toEqual([
+    "import-2",
+    "import-3",
+    "import-1",
+  ]);
+  expect(mocks.download).not.toHaveBeenCalled();
+});
+
+it.each(["duplicate", "ambiguous", "missing", "malformed"])(
+  "refuses %s selector bindings before copying attachments",
+  async (failure) => {
+    const selector = {
+      version: 1,
+      selection: "current",
+      kind: "page",
+      contextId: "page-selection",
+      label: "Design",
+      environmentId: "source",
+      pageId: "page-id",
+      includeChildPages: false,
+    };
+    const input = {
+      text: `${formatComposerContextReference({ kind: "page", contextId: ComposerContextId.make("page-selection"), label: "Design" })} ${clipboard.text}`,
+      fragment: JSON.stringify({
+        version: 1,
+        source: { environmentId: "source" },
+        records:
+          failure === "ambiguous"
+            ? [image, terminal, { ...selector, selection: undefined }]
+            : [image, terminal],
+        selectors:
+          failure === "duplicate"
+            ? [selector, selector]
+            : failure === "missing"
+              ? []
+              : [{ ...selector, ...(failure === "malformed" ? { includeChildPages: "yes" } : {}) }],
+      }),
+      html: "",
+    };
+    await expect(
+      importComposerContextClipboard(input, 0, new AbortController().signal),
+    ).rejects.toThrow(/context|selector|reference/i);
+    expect(mocks.download).not.toHaveBeenCalled();
+  },
+);

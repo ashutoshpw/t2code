@@ -14,9 +14,13 @@ export async function createMobileSpaceReferenceController(options: {
   resolve: ConstructorParameters<typeof SpaceReferenceController>[0]["resolve"];
 }) {
   const session = await options.captureSession();
+  const inlineContext = options.access().inlineContext;
   return new SpaceReferenceController({
     ...options,
-    access: () => ({ ...options.access(), session: session() }),
+    access: () => {
+      const access = options.access();
+      return { ...access, session: access.inlineContext === inlineContext ? session() : null };
+    },
   });
 }
 

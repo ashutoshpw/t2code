@@ -31,10 +31,18 @@ internal object T2ComposerClipboard {
       }
     )
     payload.put("records", JSONArray(selected))
+    val selectors = payload.optJSONArray("selectors")
+    val selectedSelectors = if (selectors == null) {
+      emptyList()
+    } else {
+      (0 until selectors.length()).map { selectors.getJSONObject(it) }
+        .filter { text.contains("/${it.optString("contextId")})") }
+    }
+    if (selectors != null) payload.put("selectors", JSONArray(selectedSelectors))
     val encoded = java.net.URLEncoder.encode(payload.toString(), "UTF-8").replace("+", "%20")
     val escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     clipboard.setPrimaryClip(
-      if (selected.isEmpty()) {
+      if (selected.isEmpty() && selectedSelectors.isEmpty()) {
         ClipData.newPlainText(
           "T2 Code",
           text

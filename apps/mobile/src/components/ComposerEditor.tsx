@@ -19,6 +19,8 @@ import {
   insertComposerDraftText,
   rememberComposerDraftSelection,
   setComposerDraftContext,
+  setComposerDraftContextDraft,
+  setComposerDraftSpaceIncludeChildPages,
   setComposerContextImporting,
   useComposerDraft,
 } from "../state/use-composer-drafts";
@@ -28,6 +30,7 @@ import { appAtomRegistry } from "../state/atom-registry";
 import { mobilePreferencesAtom } from "../state/preferences";
 import { useOpenLinkedThread } from "../features/threads/useOpenLinkedThread";
 import { ComposerContextSheet } from "./ComposerContextSheet";
+import { composerContextEntry } from "../lib/composerSpaceContext";
 import { AppText as Text } from "./ui/AppText";
 import {
   composerDocumentAttachment,
@@ -60,7 +63,13 @@ export function ComposerEditor({
   const preferredEnterBehavior = AsyncResult.isSuccess(preferencesResult)
     ? preferencesResult.value.composerEnterBehavior
     : undefined;
-  const contextHistory = createComposerDraftContextHistory();
+  const [historyOwner, setHistoryOwner] = useState(() => ({
+    draftKey,
+    history: createComposerDraftContextHistory(),
+  }));
+  if (historyOwner.draftKey !== draftKey)
+    setHistoryOwner({ draftKey, history: createComposerDraftContextHistory() });
+  const contextHistory = historyOwner.history;
   useEffect(() => () => contextHistory.dispose(), [contextHistory]);
   const changeText = (text: string) => {
     const restored = contextHistory.restore(
@@ -70,6 +79,7 @@ export function ComposerEditor({
     props.onChangeText(text);
     if (draftKey) {
       setComposerDraftContext(draftKey, restored.context);
+      setComposerDraftContextDraft(draftKey, restored.contextDraft);
       appendComposerDraftAttachments(draftKey, restored.attachments, { allowOverflow: true });
     }
   };
@@ -89,6 +99,7 @@ export function ComposerEditor({
     )
       return;
     const insertion = { text: clipboard.value, ...clipboard.selection };
+    const expectedDraft = getComposerDraftSnapshot(draftKey);
     const operation = startComposerDraftOperation(draftKey);
     const { signal } = operation;
     setComposerContextImporting(draftKey, true);
@@ -98,7 +109,9 @@ export function ComposerEditor({
         clipboard,
         retained.attachments.length,
         signal,
-        retained.context?.records.length ?? 0,
+        (retained.context?.records.length ?? 0) +
+          (retained.contextDraft?.records.length ?? 0) +
+          (retained.contextDraft?.selectors.length ?? 0),
         environmentId,
       );
       if (signal.aborted) return;
@@ -106,7 +119,14 @@ export function ComposerEditor({
         insertComposerDraftText(draftKey, clipboard.text, insertion);
         return;
       }
-      if (!insertComposerDraftContext(draftKey, result, insertion)) {
+      if (
+        !insertComposerDraftContext(
+          draftKey,
+          result,
+          insertion,
+          result.contextDraft ? { expectedDraft, current: () => !signal.aborted } : undefined,
+        )
+      ) {
         Dialog.alert(
           "Could not paste context",
           "Remove some attachments or context items from the draft, then paste again.",
@@ -139,21 +159,26 @@ export function ComposerEditor({
     }
   };
   const clipboardFragment =
-    environmentId && draft.context
+    environmentId && (draft.context || draft.contextDraft)
       ? encodeComposerContextFragment({
           version: 1,
           source: { environmentId },
-          records: draft.context.records.map((record) => {
-            if (!("attachmentId" in record)) return record;
-            const attachment = draft.attachments.find((entry) => entry.id === record.attachmentId);
-            return {
-              ...record,
-              attachmentId:
-                attachment?.uploadEnvironmentId === environmentId
-                  ? (attachment.uploadedAttachmentId ?? record.attachmentId)
-                  : record.attachmentId,
-            };
-          }),
+          selectors: draft.contextDraft?.selectors,
+          records: [...(draft.context?.records ?? []), ...(draft.contextDraft?.records ?? [])].map(
+            (record) => {
+              if (!("attachmentId" in record)) return record;
+              const attachment = draft.attachments.find(
+                (entry) => entry.id === record.attachmentId,
+              );
+              return {
+                ...record,
+                attachmentId:
+                  attachment?.uploadEnvironmentId === environmentId
+                    ? (attachment.uploadedAttachmentId ?? record.attachmentId)
+                    : record.attachmentId,
+              };
+            },
+          ),
         })
       : "";
   const openLinkedThread = useOpenLinkedThread();
@@ -164,9 +189,16 @@ export function ComposerEditor({
   const selectedSkill = selectedSkillName
     ? props.skills?.find((skill) => skill.name === selectedSkillName)
     : undefined;
-  const record = draft.context?.records.find(
-    (entry) => entry.contextId === selectedReference?.contextId,
-  );
+  const entry = selectedReference
+    ? composerContextEntry(
+        selectedReference.kind,
+        selectedReference.contextId,
+        draft.context,
+        draft.contextDraft,
+      )
+    : undefined;
+  const selector = entry && "selection" in entry ? entry : undefined;
+  const record = entry && !("selection" in entry) ? entry : undefined;
   return (
     <>
       {/* Reset revision history with the recreated iOS view without aborting context imports. */}
@@ -180,6 +212,7 @@ export function ComposerEditor({
         clipboardFragment={clipboardFragment ?? undefined}
         onPasteContext={(clipboard) => void pasteContext(clipboard)}
         context={draft.context}
+        contextDraft={draft.contextDraft}
         onContextPress={(selection) => {
           if (chipsInert) {
             onInertChipPress?.();
@@ -213,7 +246,35 @@ export function ComposerEditor({
       {selected && (selectedReference || selectedSkill) ? (
         <ComposerContextSheet
           label={
-            selectedReference?.label ?? selectedSkill?.displayName ?? selectedSkill?.name ?? "Skill"
+            entry?.label ||
+            (record && "title" in record ? record.title : selectedReference?.label) ||
+            selectedSkill?.displayName ||
+            selectedSkill?.name ||
+            "Context"
+          }
+          selector={selector}
+          sourceCurrent={() => {
+            if (!draftKey) return !hidden;
+            const current = getComposerDraftSnapshot(draftKey);
+            return (
+              !hidden &&
+              current.text.slice(selected.start, selected.end) === selected.source &&
+              (selectedReference
+                ? composerContextEntry(
+                    selectedReference.kind,
+                    selectedReference.contextId,
+                    current.context,
+                    current.contextDraft,
+                  ) === entry
+                : false)
+            );
+          }}
+          onIncludeChildPages={
+            selector && draftKey && !hidden && !props.readOnly && props.editable !== false
+              ? (include) => {
+                  setComposerDraftSpaceIncludeChildPages(draftKey, selector, include);
+                }
+              : undefined
           }
           record={
             record ??

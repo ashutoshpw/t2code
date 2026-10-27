@@ -17,7 +17,13 @@ enum T2ComposerClipboard {
       let screenshots = Set(selected.compactMap { $0["screenshotContextId"] as? String })
       selected.append(contentsOf: records.filter { screenshots.contains($0["contextId"] as? String ?? "") && !text.contains("/\($0["contextId"] as? String ?? ""))") })
       payload["records"] = selected
-      if !selected.isEmpty, let encoded = try? JSONSerialization.data(withJSONObject: payload), let raw = String(data: encoded, encoding: .utf8) {
+      let selectors = payload["selectors"] as? [[String: Any]] ?? []
+      let selectedSelectors = selectors.filter { selector in
+        guard let id = selector["contextId"] as? String else { return false }
+        return text.contains("/\(id))")
+      }
+      if payload["selectors"] != nil { payload["selectors"] = selectedSelectors }
+      if !selected.isEmpty || !selectedSelectors.isEmpty, let encoded = try? JSONSerialization.data(withJSONObject: payload), let raw = String(data: encoded, encoding: .utf8) {
         let attribute = raw.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
         let escaped = text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
         items[fragmentType] = encoded

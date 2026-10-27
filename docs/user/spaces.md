@@ -53,10 +53,16 @@ chip's details say when its stored snapshot was shortened. Select a smaller page
 subtree when the omitted content matters. Media contributes its caption and type,
 not file bytes. Snapshots do not keep deleted source pages or media available.
 
-The Spaces context picker is available on web and desktop. A native mobile picker
-is not available yet. See [prompt recovery](./composer.md#prompt-stash) for local
-storage, attachment and retry limits, and [outside agents](./outside-agents.md#spaces)
-for MCP access.
+On mobile, type `@`, choose **Page…** or **Block…**, then type your search words.
+Use **Next results** to continue bounded windows, including empty ones. Child pages
+start off; change **Include child pages** before selecting, or tap a retained draft
+chip to change its scope. Tap a draft or sent chip for snapshot details and **Open
+current source**. Unloaded blocks still require manual First/Next page browsing.
+Selection requires a current connection with read access, inline context and Spaces
+capture support. Unsupported or ambiguous pasted references are refused before insertion.
+
+See [prompt recovery](./composer.md#prompt-stash) for web/desktop local storage,
+attachment and retry limits, and [outside agents](./outside-agents.md#spaces) for MCP access.
 
 ## On mobile
 
@@ -70,7 +76,7 @@ On an environment that supports block moves, choose **Move blocks / subtrees** f
 
 Use **Move page to Trash** on an open page, or **Trash and restore** to browse recovery windows. Inspect the selected pages and their current placement before confirming a restore. Independently trashed batches stay separate. Visibility Undo is available only when its current batch and ownership can be proven. To permanently delete a trashed subtree, choose **Inspect permanent deletion…**, review its named pages, type **DELETE**, then confirm the irreversible action. Permanent deletion includes independent batches within the inspected subtree and has no Undo. If an operation’s outcome is uncertain, use **Recover exact operation** before making another library change. If that operation prevented a page from opening, choose **Retry opening page** after recovery finishes. Clearing connection caches keeps this recovery state.
 
-With a current app and environment and permission to operate, choose **Edit text** on a supported paragraph, heading, quote, or list item. Select text and use **Bold**, **Italic**, or **Inline code**; a mixed selection applies that mark to the whole selection. At a caret, the mark applies to subsequent typing. Existing links are preserved. **Undo input** and **Redo input** affect only the focused native input. **Done editing** retains the draft locally and lets you scroll or choose another block; **Save** sends it. To-dos also have **Toggle to-do**. Code, callouts, unsupported marks, and future/rest content stay read-only with **Copy original block** available. Link authoring, heading-level changes, block insertion/deletion, other formatting, PDF/video uploads and chat selection remain unavailable on mobile.
+With a current app and environment and permission to operate, choose **Edit text** on a supported paragraph, heading, quote, or list item. Select text and use **Bold**, **Italic**, or **Inline code**; a mixed selection applies that mark to the whole selection. At a caret, the mark applies to subsequent typing. Existing links are preserved. **Undo input** and **Redo input** affect only the focused native input. **Done editing** retains the draft locally and lets you scroll or choose another block; **Save** sends it. To-dos also have **Toggle to-do**. Code, callouts, unsupported marks, and future/rest content stay read-only with **Copy original block** available. Link authoring, heading-level changes, block insertion/deletion, other formatting, PDF/video uploads remain unavailable on mobile.
 
 After saving, **Undo saved content** or **Redo saved content** can compensate the last supported text, mark, or to-do replacement when its current content and revision still match. Finish the active input and save or resolve other drafts first. These controls are separate from native input history and structural placement/visibility Undo. A failed local write keeps the attempted compensation; retry local storage and use **Save** or **Retry exact save** to resolve it. An unknown receipt stays uncertain and retains its draft.
 

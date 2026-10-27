@@ -1,4 +1,8 @@
-import type { OrchestrationMessageContext, ServerProviderSkill } from "@t2code/contracts";
+import type {
+  ComposerContextDraft,
+  OrchestrationMessageContext,
+  ServerProviderSkill,
+} from "@t2code/contracts";
 import type { Ref } from "react";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 
@@ -28,6 +32,7 @@ export interface ComposerEditorProps {
   readonly ref?: Ref<ComposerEditorHandle>;
   readonly value: string;
   readonly context?: OrchestrationMessageContext;
+  readonly contextDraft?: ComposerContextDraft;
   readonly clipboardFragment?: string;
   readonly onPasteContext?: (
     clipboard: ComposerTextPaste & {

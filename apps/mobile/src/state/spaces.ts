@@ -480,6 +480,9 @@ export async function createSpacesReferenceController(environmentId: Environment
         sourceVersion: appAtomRegistry.get(spacesEnvironment.changed(environmentId)),
         canRead: canBrowseSpaces(access.availability) && access.current(),
         capability: access.capability,
+        inlineContext:
+          appAtomRegistry.get(environmentPresentations.presentationAtom(environmentId))
+            ?.serverConfig?.environment.capabilities.inlineMessageContext === true,
       };
     },
     search: async (input) => {
@@ -507,10 +510,13 @@ export async function createSpacesReferenceController(environmentId: Environment
 
 export function useSpacesReferenceController(environmentId: EnvironmentId, attempt = 0) {
   const access = useSpacesReadAccess(environmentId);
+  const presentation = useAtomValue(environmentPresentations.presentationAtom(environmentId));
+  const inlineContext =
+    presentation?.serverConfig?.environment.capabilities.inlineMessageContext === true;
   const sourceVersion = useAtomValue(spacesEnvironment.changed(environmentId));
   const stamp = useMemo(
-    () => ({ environmentId, access, sourceVersion, attempt }),
-    [environmentId, access, sourceVersion, attempt],
+    () => ({ environmentId, access, sourceVersion, inlineContext, attempt }),
+    [environmentId, access, sourceVersion, inlineContext, attempt],
   );
   const [state, setState] = useState<{
     stamp: typeof stamp;

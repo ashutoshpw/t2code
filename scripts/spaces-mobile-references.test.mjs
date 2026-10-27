@@ -8,6 +8,7 @@ import * as Cause from "effect/Cause";
 import { Atom, AtomRegistry, AsyncResult } from "effect/reactivity";
 import {
   EnvironmentId,
+  ComposerContextId,
   AuthOrchestrationReadScope,
   WS_METHODS,
 } from "../packages/contracts/src/index.ts";
@@ -20,6 +21,16 @@ import {
   AVAILABLE_CONNECTION_STATE,
   PrimaryConnectionTarget,
 } from "../packages/client-runtime/src/connection/model.ts";
+import { SpaceBlockId } from "../packages/contracts/src/spaces.ts";
+import {
+  SpaceDocumentSession,
+  createSpaceServiceSessionAdapter,
+  prepareSpaceContextSend,
+} from "../packages/client-runtime/src/spaces/index.ts";
+import { formatComposerContextReference } from "../packages/shared/src/composerContextReferences.ts";
+import { MobileSpaceDocuments } from "../apps/mobile/src/features/spaces/documents.ts";
+import { SpacesPageReader } from "../apps/mobile/src/features/spaces/reader.ts";
+import { MobileSpaceReferenceNavigation } from "../apps/mobile/src/features/spaces/references.ts";
 import { createMobileSpaceReferenceController } from "../apps/mobile/src/features/spaces/references.ts";
 import { diskDatabase } from "../apps/mobile/src/persistence/mobile-database.test-support.ts";
 import { mobileSpacesServiceLayer, promiseRunner } from "./spaces-mobile.test-support.mjs";
@@ -53,6 +64,14 @@ const fixture = Effect.fn("MobileReferencesTest.fixture")(function* (use) {
             try: () => {
               calls.push(input);
               return run(service.search(input));
+            },
+            catch: (error) => error,
+          }),
+        [WS_METHODS.spacesContextCapture]: (input) =>
+          Effect.tryPromise({
+            try: () => {
+              calls.push(input);
+              return run(service.captureContextSnapshot(input));
             },
             catch: (error) => error,
           }),
@@ -110,11 +129,13 @@ const fixture = Effect.fn("MobileReferencesTest.fixture")(function* (use) {
       if (result._tag === "Failure") throw Cause.squash(result.cause);
       return result.value;
     };
+    const inline = { value: false };
     const owner = () =>
       createMobileSpaceReferenceController({
         environmentId,
         captureSession: () => command(atoms.captureSession, undefined),
         access: () => ({
+          inlineContext: inline.value,
           sourceVersion: registry.get(atoms.changed(environmentId)),
           canRead: registry.get(grant).value.permissions.includes(AuthOrchestrationReadScope),
           capability: registry.get(cap),
@@ -157,6 +178,7 @@ const fixture = Effect.fn("MobileReferencesTest.fixture")(function* (use) {
       state,
       rpc,
       owner,
+      inline,
       command,
       root,
     });
@@ -237,6 +259,161 @@ it.effect(
         connected.dispose();
         replacement.dispose();
         resolver.dispose();
+      }),
+    ),
+);
+
+it.effect(
+  "selects native Page/Block context through real capture and opens current identity without replacing a mounted dirty SQLite session",
+  () =>
+    fixture((c) =>
+      Effect.promise(async () => {
+        const page = await c.root("nativepickerneedle");
+        const key = { environmentId: c.environmentId, pageId: page.id };
+        const admission = await c.run(c.service.getPage(key));
+        const block = {
+          id: SpaceBlockId.make("picker-block"),
+          type: "paragraph",
+          version: 1,
+          parentId: null,
+          order: "40000000000000000000000000000000",
+          content: { runs: [{ text: "nativepickerneedle saved source", marks: [] }] },
+        };
+        const seeded = await c.run(
+          c.service.applyBlockBatch({
+            ...key,
+            receiptEpoch: admission.mutationAdmission.epoch,
+            mutationId: "seed-picker-block",
+            baseRevision: page.revision,
+            generation: 1,
+            mutations: [{ kind: "insert", block }],
+          }),
+        );
+        expect(seeded.status).toBe("saved");
+        c.inline.value = true;
+        const owner = await c.owner();
+        expect(owner.canCapture()).toBe(true);
+        expect((await owner.search("nativepickerneedle")).status).toBe("building");
+        const window = await owner.search("nativepickerneedle");
+        expect(window.status).toBe("ready");
+        const pageIndex = window.result.items.findIndex((item) => !item.blockId);
+        const blockIndex = window.result.items.findIndex((item) => item.blockId === block.id);
+        expect(pageIndex).toBeGreaterThanOrEqual(0);
+        expect(blockIndex).toBeGreaterThanOrEqual(0);
+        const pageSelector = window.select(pageIndex, ComposerContextId.make("pick-page"));
+        const blockSelector = window.select(blockIndex, ComposerContextId.make("pick-block"), true);
+        expect(pageSelector.includeChildPages).toBe(false);
+        expect(blockSelector).toMatchObject({
+          kind: "block",
+          blockId: block.id,
+          includeChildPages: true,
+        });
+        const session = new SpaceDocumentSession(key, {
+          drafts: c.db.store,
+          createMutationId: () => "reader-mutation",
+          maxLoadedBlocks: 100,
+          maxMutations: 100,
+          adapter: createSpaceServiceSessionAdapter(key, {
+            getPage: (input) => c.run(c.service.getPage(input)),
+            limits: () => c.capability.limits,
+            applyBlockBatch: (input) => c.run(c.service.applyBlockBatch(input)),
+            lookupMutationReceipt: (input) => c.run(c.service.lookupMutationReceipt(input)),
+          }),
+        });
+        const access = { availability: "writable", capability: c.capability, current: () => true };
+        const documents = new MobileSpaceDocuments(
+          (target) =>
+            new SpacesPageReader(target, {
+              session,
+              access,
+              locate: async () => {
+                const result = await c.run(c.service.getPage(key));
+                return { ...result, ancestors: [], current: () => result };
+              },
+              blocks: (input) => c.run(c.service.readBlocks(input)),
+            }),
+        );
+        const target = { ...key, spaceId: page.spaceId };
+        const mounted = documents.acquire(target);
+        await mounted.reader.first();
+        const dirty = {
+          ...block,
+          content: { runs: [{ text: "private unsent reader suffix", marks: [] }] },
+        };
+        session.apply([{ kind: "replace", block: dirty }]);
+        await session.persistDraft();
+        let captures = 0;
+        const prepared = await prepareSpaceContextSend({
+          environmentId: c.environmentId,
+          text: [pageSelector, blockSelector].map(formatComposerContextReference).join(" "),
+          selectors: [pageSelector, blockSelector],
+          access: () => ({
+            session: owner.current() ? c.rpc : null,
+            canRead: owner.current(),
+            supportsCapture: owner.canCapture(),
+          }),
+          isCurrentDraft: () => true,
+          capture: (input) => {
+            captures++;
+            return c.command(c.atoms.capture, input);
+          },
+        });
+        expect(captures).toBe(2);
+        expect(prepared.records.map((entry) => entry.snapshot.includeChildPages)).toEqual([
+          false,
+          true,
+        ]);
+        expect(prepared.records[1].snapshot.text).toContain("saved source");
+        expect(prepared.records[1].snapshot.text).not.toContain("private unsent");
+        const opened = [];
+        const navigation = new MobileSpaceReferenceNavigation({
+          current: () => true,
+          open: (destination) => opened.push(documents.acquire(destination)),
+        });
+        navigation.select(
+          {
+            environmentId: c.environmentId,
+            target: { kind: "block", blockId: blockSelector.blockId },
+          },
+          () => true,
+        );
+        await navigation.open(owner, c.environmentId);
+        expect(opened).toHaveLength(1);
+        expect(opened[0].reader).toBe(mounted.reader);
+        expect(session.getSnapshot().blocks).toContainEqual(dirty);
+        expect((await c.db.store.load(key)).blocks).toContainEqual(dirty);
+        opened[0].release();
+        mounted.release();
+        navigation.dispose();
+        c.inline.value = false;
+        expect(window.select(pageIndex, ComposerContextId.make("denied"))).toBeNull();
+        expect(owner.current()).toBe(false);
+        const library = await c.owner();
+        expect(library.canSearch()).toBe(true);
+        expect(library.canCapture()).toBe(false);
+        const before = captures;
+        await expect(
+          prepareSpaceContextSend({
+            environmentId: c.environmentId,
+            text: formatComposerContextReference(pageSelector),
+            selectors: [pageSelector],
+            isCurrentDraft: () => true,
+            access: () => ({
+              session: c.rpc,
+              canRead: true,
+              supportsCapture: library.canCapture(),
+            }),
+            capture: (input) => {
+              captures++;
+              return c.command(c.atoms.capture, input);
+            },
+          }),
+        ).rejects.toThrow("unavailable");
+        expect(captures).toBe(before);
+        const reopened = await c.run(c.disk.open());
+        expect((await reopened.store.load(key)).blocks).toContainEqual(dirty);
+        owner.dispose();
+        library.dispose();
       }),
     ),
 );
