@@ -10,15 +10,10 @@ import {
   spacesAvailability,
   canBrowseSpaces,
 } from "@t2code/client-runtime/state/spaces";
-import {
-  createEnvironmentRpcQueryAtomFamily,
-  executeAtomQuery,
-  runAtomCommand,
-} from "@t2code/client-runtime/state/runtime";
+import { executeAtomQuery, runAtomCommand } from "@t2code/client-runtime/state/runtime";
 import {
   AuthOrchestrationReadScope,
   AuthOrchestrationOperateScope,
-  WS_METHODS,
   sessionGrantsScope,
   type EnvironmentId,
   type AuthSessionState,
@@ -40,7 +35,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createMobileSpaceUploads, type MobileSpaceUploads } from "../features/spaces/uploads";
 import { createMobileSpaceMediaStore } from "../features/spaces/originalStore";
 import { createExpoSpaceOriginalFileIO } from "../features/spaces/expoOriginalFiles";
-import { createSpacesMediaReads } from "../rpc/spacesMedia";
+import { createSpacesMediaReads, createSpacesReferenceRead } from "../rpc/spacesMedia";
 import { MobileSpaceImageBudget, MobileSpaceImageViewer } from "../features/spaces/media";
 import { connectionAtomRuntime } from "../connection/runtime";
 import { environmentCatalog } from "../connection/catalog";
@@ -71,12 +66,15 @@ export const spacesEnvironment = createSpacesEnvironmentAtoms(connectionAtomRunt
   capabilityAtom,
 });
 const blocks = spacesEnvironment.blocks;
-const reference = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
-  label: "mobile:spaces:reference",
-  tag: WS_METHODS.spacesReferencesResolve,
-  staleTimeMs: 0,
-  idleTtlMs: 0,
-});
+const reference = createSpacesReferenceRead(
+  connectionAtomRuntime,
+  appAtomRegistry,
+  (environmentId) => {
+    const access = requireAccess(environmentId);
+    if (access.capability.version !== 2 || access.capability.features?.referenceResolution !== true)
+      throw new Error("Current reference resolution is unavailable");
+  },
+);
 
 interface AccessState {
   readonly session: AuthSessionState | null;
@@ -251,11 +249,8 @@ export function createSpacesPageReader(
       const owner = requireAccess(key.environmentId);
       if (owner.capability.version !== 2 || owner.capability.features?.referenceResolution !== true)
         return false;
-      const result = await query(
-        reference({
-          environmentId: key.environmentId,
-          input: { environmentId: key.environmentId, target: { kind: "page", pageId: key.pageId } },
-        }),
+      const result = await reference(
+        { environmentId: key.environmentId, target: { kind: "page", pageId: key.pageId } },
         signal,
       );
       if (!owner.current())
@@ -445,14 +440,8 @@ export async function acquireSpacesPageReader(
     access.capability?.version === 2 &&
     access.capability.features?.referenceResolution === true
   ) {
-    const result = await query(
-      reference({
-        environmentId: target.environmentId,
-        input: {
-          environmentId: target.environmentId,
-          target: { kind: "block", blockId: target.blockId },
-        },
-      }),
+    const result = await reference(
+      { environmentId: target.environmentId, target: { kind: "block", blockId: target.blockId } },
       signal,
     );
     if (new TextEncoder().encode(JSON.stringify(result)).byteLength > 16384)

@@ -25,6 +25,10 @@ vi.mock("./atom-registry", () => ({
 vi.mock("./server", () => ({ environmentServerConfigsAtom: {} }));
 vi.mock("./session", () => ({ readEnvironmentScope: () => state.read }));
 vi.mock("../connection/runtime", () => ({ connectionAtomRuntime: {} }));
+vi.mock("../connection/catalog", () => ({ environmentCatalog: {} }));
+vi.mock("./presentation", () => ({ environmentPresentations: {} }));
+vi.mock("../lib/runtime", () => ({ runtime: {} }));
+vi.mock("../lib/uuid", () => ({ uuidv4: () => "unused-native-view-id" }));
 vi.mock("@t2code/client-runtime/state/spaces", () => ({
   createSpacesEnvironmentAtoms: () => ({ captureSession: "session", capture: "capture" }),
 }));

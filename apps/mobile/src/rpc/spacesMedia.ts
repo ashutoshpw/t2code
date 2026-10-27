@@ -1,5 +1,5 @@
 import { WS_METHODS, type EnvironmentId } from "@t2code/contracts";
-import type { SpaceAssetId } from "@t2code/contracts/spaces";
+import type { SpaceAssetId, SpaceReferenceResolveInput } from "@t2code/contracts/spaces";
 import type { EnvironmentRegistry } from "@t2code/client-runtime/connection";
 import { executeScopedEnvironmentRpc } from "@t2code/client-runtime/state/runtime";
 import * as Cause from "effect/Cause";
@@ -47,5 +47,28 @@ export function createSpacesMediaReads<R, E>(
       if (result._tag === "Failure") throw Cause.squash(result.cause);
       return result.value;
     },
+  };
+}
+
+export function createSpacesReferenceRead<R, E>(
+  runtime: Atom.AtomRuntime<EnvironmentRegistry.EnvironmentRegistry | R, E>,
+  registry: AtomRegistry.AtomRegistry,
+  assertRead: (environmentId: EnvironmentId) => void,
+) {
+  return async (input: SpaceReferenceResolveInput, signal: AbortSignal) => {
+    const result = await executeScopedEnvironmentRpc(
+      runtime,
+      registry,
+      WS_METHODS.spacesReferencesResolve,
+      { environmentId: input.environmentId, input },
+      {
+        signal,
+        assertCurrent: () => assertRead(input.environmentId),
+        reportFailure: false,
+        reportDefect: false,
+      },
+    );
+    if (result._tag === "Failure") throw Cause.squash(result.cause);
+    return result.value;
   };
 }

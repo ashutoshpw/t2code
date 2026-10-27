@@ -4,6 +4,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
+import { HttpClient, HttpClientResponse } from "effect/http";
 import { Atom, AtomRegistry } from "effect/reactivity";
 import { EnvironmentId, WS_METHODS } from "../packages/contracts/src/index.ts";
 import { EnvironmentRegistry } from "../packages/client-runtime/src/connection/registry.ts";
@@ -16,7 +17,10 @@ import {
   MobileSpaceImageBudget,
   MobileSpaceImageViewer,
 } from "../apps/mobile/src/features/spaces/media.ts";
-import { createSpacesMediaReads } from "../apps/mobile/src/rpc/spacesMedia.ts";
+import {
+  createSpacesMediaReads,
+  createSpacesReferenceRead,
+} from "../apps/mobile/src/rpc/spacesMedia.ts";
 
 it.effect(
   "cancels the actual media signer and holds the global viewer permit until RPC cancellation cleanup ends across distinct assets",
@@ -49,6 +53,7 @@ it.effect(
               name: "original.png",
               imageDimensions: { width: 1, height: 1 },
             }),
+          [WS_METHODS.spacesReferencesResolve]: () => Effect.succeed({ status: "deleted" }),
           [WS_METHODS.assetsCreateUrl]: () =>
             Effect.suspend(() => {
               const gate = {
@@ -85,12 +90,44 @@ it.effect(
         state,
         session,
       };
-      const runtime = Atom.runtime(
-        Layer.succeed(EnvironmentRegistry, {
-          run: (_id, effect) => Effect.provideService(effect, EnvironmentSupervisor, supervisor),
-          followStream: (_id, stream) =>
-            Stream.provideService(stream, EnvironmentSupervisor, supervisor),
+      supervisor.prepared = yield* SubscriptionRef.make(
+        Option.some({
+          environmentId,
+          label: supervisor.target.label,
+          target: supervisor.target,
+          httpBaseUrl: "https://selected.example",
+          socketUrl: "wss://selected.example/ws",
+          httpAuthorization: null,
         }),
+      );
+      const runtime = Atom.runtime(
+        Layer.mergeAll(
+          Layer.succeed(EnvironmentRegistry, {
+            run: (_id, effect) => Effect.provideService(effect, EnvironmentSupervisor, supervisor),
+            followStream: (_id, stream) =>
+              Stream.provideService(stream, EnvironmentSupervisor, supervisor),
+          }),
+          Layer.succeed(
+            HttpClient.HttpClient,
+            HttpClient.make((request) =>
+              Effect.succeed(
+                HttpClientResponse.fromWeb(
+                  request,
+                  Response.json({
+                    authenticated: true,
+                    auth: {
+                      policy: "remote-reachable",
+                      bootstrapMethods: [],
+                      sessionMethods: [],
+                      sessionCookieName: "fixture-session",
+                    },
+                    scopes: ["orchestration:read"],
+                  }),
+                ),
+              ),
+            ),
+          ),
+        ),
       );
       const registry = AtomRegistry.make();
       const budget = new MobileSpaceImageBudget();
@@ -150,6 +187,13 @@ it.effect(
           }
           expect(maximum).toBe(1);
           expect(calls).toBe(3);
+          const reference = createSpacesReferenceRead(runtime, registry, assertRead);
+          await expect(
+            reference(
+              { environmentId, target: { kind: "page", pageId: "deleted-source" } },
+              new AbortController().signal,
+            ),
+          ).resolves.toEqual({ status: "deleted" });
           allowed = false;
           const reads = createSpacesMediaReads(runtime, registry, environmentId, assertRead);
           await expect(
