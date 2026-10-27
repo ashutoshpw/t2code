@@ -132,7 +132,7 @@ function requireAccess(environmentId: EnvironmentId, write = false) {
     !canBrowseSpaces(access.availability) ||
     !access.current() ||
     !access.capability ||
-    (write && access.availability !== "writable")
+    (write && (access.availability !== "writable" || access.capability.version !== 2))
   )
     throw new Error("Spaces is unavailable for this connection or permission.");
   return { ...access, capability: access.capability };

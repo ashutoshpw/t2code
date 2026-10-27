@@ -1,10 +1,10 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
+import { useNavigation, usePreventRemove, type StaticScreenProps } from "@react-navigation/native";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { SpacePageNavigation, type SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
 import { EnvironmentId } from "@t2code/contracts";
 import type { SpaceCursor, SpaceId, SpacePageId, SpaceBlock } from "@t2code/contracts/spaces";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { FlatList, View } from "react-native";
 
 import { AppText as Text } from "../../components/ui/AppText";
@@ -23,6 +23,9 @@ import { type SpacesReadAccess, spacesAvailabilityMessage } from "./reader";
 import { readSpacesPageTarget, readSpacesLibraryTarget } from "./navigation";
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
 import { SpaceBlockReader } from "./SpaceBlockReader";
+import { nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
+import { SpacesNativeBlockEditor, spacesNativeEditorAvailable } from "./SpacesNativeBlockEditor";
+import * as Dialog from "../../components/ui/Dialog";
 
 type LibraryParams =
   | { readonly environmentId?: EnvironmentId; readonly spaceId?: SpaceId }
@@ -329,6 +332,7 @@ type PageLease = Awaited<ReturnType<typeof acquireSpacesPageReader>>;
 
 function PageReader({ target }: { target: SpacePageNavigationTarget }) {
   const access = useSpacesReadAccess(target.environmentId);
+  const ownedLease = useRef<PageLease | null>(null);
   const stamp = useMemo(() => ({ target, access }), [target, access]);
   const [view, setView] = useState<{
     stamp: typeof stamp;
@@ -337,8 +341,8 @@ function PageReader({ target }: { target: SpacePageNavigationTarget }) {
   } | null>(null);
   // oxlint-disable-next-line t2code/react-effect-budget -- Acquire the shared remote document owner and release only this view's lease on navigation or connection changes.
   useEffect(() => {
+    if (ownedLease.current) return;
     const abort = new AbortController();
-    let owned: PageLease | null = null;
     if (canBrowseSpaces(access.availability)) {
       void acquireSpacesPageReader(target, access, abort.signal).then(
         (lease) => {
@@ -346,7 +350,7 @@ function PageReader({ target }: { target: SpacePageNavigationTarget }) {
             lease.release();
             return;
           }
-          owned = lease;
+          ownedLease.current = lease;
           setView({ stamp, lease, error: null });
         },
         (cause: unknown) => {
@@ -361,32 +365,57 @@ function PageReader({ target }: { target: SpacePageNavigationTarget }) {
     }
     return () => {
       abort.abort();
-      owned?.release();
     };
   }, [target, access, stamp]);
+  const lease = view?.lease;
+  // oxlint-disable-next-line t2code/react-effect-budget -- Retain a mounted document through access changes; only route removal releases its lease.
+  useEffect(
+    () => () => {
+      ownedLease.current?.release();
+      ownedLease.current = null;
+    },
+    [],
+  );
+  if (lease) return <DocumentReader lease={lease} access={access} />;
   if (!canBrowseSpaces(access.availability))
-    return (
-      <>
-        <AccessNotice access={access} environmentId={target.environmentId} />
-        {view?.lease?.reader.session.getSnapshot().dirty ||
-        view?.lease?.reader.session.getSnapshot().pending ? (
-          <Notice>
-            Your local draft remains on this device. Reconnect with read access to open it.
-          </Notice>
-        ) : null}
-      </>
-    );
+    return <AccessNotice access={access} environmentId={target.environmentId} />;
   if (view?.stamp !== stamp) return <Notice>Opening page and local draft…</Notice>;
-  if (!view.lease) return <Notice>{view.error ?? "Could not open this page."}</Notice>;
-  return <DocumentReader lease={view.lease} access={access} />;
+  return <Notice>{view.error ?? "Could not open this page."}</Notice>;
 }
 
 function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesReadAccess }) {
   const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
   const { reader, target } = lease;
   const snapshot = useSyncExternalStore(reader.subscribe, reader.getSnapshot);
+  const editing = reader.editing;
+  const editorState = useSyncExternalStore(editing.subscribe, editing.getSnapshot);
+  const [owner] = useState(() => Symbol("Spaces page editor"));
+  const [actionError, setActionError] = useState<string | null>(null);
+  const list = useRef<FlatList<SpaceBlock>>(null);
+  const focus = editorState.focus?.owner === owner ? editorState.focus : null;
+  const readable = canBrowseSpaces(access.availability) && access.current();
+  const writable =
+    readable && access.availability === "writable" && access.capability?.version === 2;
+  const editable =
+    writable &&
+    snapshot.session.hydrated &&
+    editorState.busy !== "persist" &&
+    snapshot.session.status !== "conflict" &&
+    snapshot.session.persistenceError === null;
+  const nativeState = editorState.focus?.publication.getSnapshot();
+  usePreventRemove(focus !== null, () => {
+    Dialog.alert(
+      "Finish this block first",
+      "Use Done editing to retain the complete native input before leaving. If a change was rejected, recover it or restore access first.",
+    );
+  });
+  // oxlint-disable-next-line t2code/react-effect-budget -- Refresh remote metadata on a connection change without replacing the mounted native input or its retained session.
+  useEffect(() => {
+    if (canBrowseSpaces(access.availability) && access.current()) void reader.first();
+    else reader.invalidate();
+  }, [reader, access]);
   const location = access.current() ? snapshot.location : null;
-  const blocks = location ? (snapshot.window?.blocks ?? []) : [];
+  const blocks = snapshot.session.hydrated ? snapshot.session.blocks : [];
   const currentTarget = location
     ? {
         ...target,
@@ -396,117 +425,291 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
       }
     : target;
   return (
-    <FlatList
-      renderScrollComponent={NativeScrollView}
-      data={blocks}
-      keyExtractor={(block) => block.id}
-      initialNumToRender={12}
-      windowSize={5}
-      ListHeaderComponent={
-        <View className="gap-2 p-4">
-          <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
-            {location?.page.title || "Space page"}
-          </Text>
-          {location ? (
-            <Text className="text-sm text-foreground-muted">
-              {[location.space.title, ...location.ancestors.map((page) => page.title)].join(" / ")}{" "}
-              · Revision {location.page.revision}
+    <View className="flex-1">
+      {!readable ? <AccessNotice access={access} environmentId={target.environmentId} /> : null}
+      {!readable && (snapshot.session.dirty || focus) ? (
+        <Notice>
+          Your local draft and active input are retained. Restore read access to continue.
+        </Notice>
+      ) : null}
+      <FlatList
+        ref={list}
+        style={!readable ? { opacity: 0, height: 0 } : undefined}
+        pointerEvents={readable ? "auto" : "none"}
+        accessibilityElementsHidden={!readable}
+        importantForAccessibility={readable ? "auto" : "no-hide-descendants"}
+        renderScrollComponent={NativeScrollView}
+        data={blocks}
+        keyExtractor={(block) => block.id}
+        initialNumToRender={12}
+        windowSize={5}
+        scrollEnabled={editorState.focus === null}
+        removeClippedSubviews={false}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          <View className="gap-2 p-4">
+            <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
+              {location?.page.title || "Space page"}
             </Text>
-          ) : null}
-          <Notice>{spacesAvailabilityMessage[access.availability]}</Notice>
-          <Notice>
-            {snapshot.session.persistenceError !== null
-              ? "The local draft could not be loaded or stored. Existing data is retained; try refreshing."
-              : !snapshot.session.hydrated
-                ? "Loading the local draft before showing page content…"
-                : snapshot.session.status === "uncertain"
-                  ? "The previous save outcome is uncertain. Its exact request and your local draft are retained."
-                  : snapshot.session.status === "conflict"
-                    ? "This page changed elsewhere. Your local draft is retained read-only."
-                    : snapshot.session.status === "draft"
-                      ? "Local draft restored. It remains read-only on mobile."
-                      : snapshot.session.status === "saving"
-                        ? "A save is pending; newer local content remains retained."
-                        : "Saved page · read-only on mobile."}
-          </Notice>
-          {snapshot.session.recoveryReason ? (
+            {location ? (
+              <Text className="text-sm text-foreground-muted">
+                {[location.space.title, ...location.ancestors.map((page) => page.title)].join(
+                  " / ",
+                )}{" "}
+                · Revision {location.page.revision}
+              </Text>
+            ) : null}
+            <Notice>{spacesAvailabilityMessage[access.availability]}</Notice>
             <Notice>
-              This older draft cannot be retried automatically. It remains on this device.
+              {snapshot.session.persistenceError !== null
+                ? "The local draft could not be loaded or stored. Existing data is retained; try refreshing."
+                : !snapshot.session.hydrated
+                  ? "Loading the local draft before showing page content…"
+                  : snapshot.session.status === "uncertain"
+                    ? "The previous save outcome is uncertain. Its exact request and your local draft are retained."
+                    : snapshot.session.status === "conflict"
+                      ? "This page changed elsewhere. Your local draft is retained read-only."
+                      : snapshot.session.status === "draft"
+                        ? "Local draft retained on this device. Use Save when ready."
+                        : snapshot.session.status === "saving"
+                          ? "A save is pending; newer local content remains retained."
+                          : "Saved page."}
             </Notice>
-          ) : null}
-          {location &&
-          snapshot.session.hydrated &&
-          snapshot.session.baseRevision !== location.page.revision ? (
-            <Notice>
-              The saved page has a different revision from this local draft. Refreshing will not
-              replace your draft.
-            </Notice>
-          ) : null}
-          {snapshot.loading ? (
-            <Notice>Loading page…</Notice>
-          ) : snapshot.error ? (
-            <Notice>{snapshot.error}</Notice>
-          ) : null}
-          {target.blockId &&
-          location &&
-          !blocks.some((block) => block.id === currentTarget.blockId) ? (
-            <Notice>
-              The linked block is not in this window. Use First or Next to browse bounded windows;
-              it may have moved or become unavailable.
-            </Notice>
-          ) : null}
-          <View className="flex-row flex-wrap gap-2">
-            <ControlPill
-              variant="pill"
-              label="Library"
-              onPress={() =>
-                navigation.push("SpacesLibrary", {
-                  environmentId: target.environmentId,
-                  spaceId: currentTarget.spaceId,
-                })
-              }
-            />
-            <ControlPill
-              variant="pill"
-              label="First / refresh"
-              disabled={snapshot.loading}
-              onPress={() => void reader.first()}
-            />
-            <ControlPill
-              variant="pill"
-              label="Next blocks"
-              disabled={snapshot.loading || !snapshot.window?.nextCursor}
-              onPress={() => void reader.next()}
-            />
+            {access.capability?.version === 1 ? (
+              <Notice>This environment’s older Spaces version is read-only on mobile.</Notice>
+            ) : null}
+            {!spacesNativeEditorAvailable ? (
+              <Notice>
+                Update this device’s app to edit Spaces text. Existing blocks remain readable.
+              </Notice>
+            ) : null}
+            {editorState.error || actionError ? (
+              <Notice>{editorState.error ?? actionError!}</Notice>
+            ) : null}
+            <View className="flex-row flex-wrap gap-2">
+              <ControlPill
+                variant="pill"
+                label={snapshot.session.pending ? "Retry exact save" : "Save"}
+                disabled={
+                  !writable ||
+                  !snapshot.session.hydrated ||
+                  editorState.busy !== null ||
+                  editorState.focus !== null ||
+                  snapshot.session.status === "conflict" ||
+                  !!snapshot.session.recoveryReason ||
+                  !!nativeState?.blocked ||
+                  !!nativeState?.observed.composing ||
+                  (!snapshot.session.dirty && !snapshot.session.pending)
+                }
+                onPress={() => void editing.save()}
+              />
+              <ControlPill
+                variant="pill"
+                label="Discard local draft"
+                disabled={
+                  !writable ||
+                  !snapshot.session.hydrated ||
+                  editorState.busy !== null ||
+                  editorState.focus !== null ||
+                  !!snapshot.session.pending ||
+                  (!snapshot.session.dirty && snapshot.session.status !== "conflict")
+                }
+                onPress={() =>
+                  Dialog.confirm({
+                    title: "Discard this local draft?",
+                    message:
+                      "Replace this loaded draft with the current saved first window. Unloaded blocks are untouched. A pending save must be resolved first.",
+                    confirmText: "Discard local draft",
+                    destructive: true,
+                    onConfirm: () => void editing.discard(),
+                  })
+                }
+              />
+              {snapshot.session.persistenceError !== null && snapshot.session.hydrated ? (
+                <ControlPill
+                  variant="pill"
+                  label="Retry local storage"
+                  disabled={editorState.busy !== null}
+                  onPress={() => void editing.retryPersistence()}
+                />
+              ) : null}
+            </View>
+            {focus ? (
+              <View className="gap-2">
+                <Text className="text-base font-bold text-foreground">
+                  Editing {focus.publication.block.type}
+                </Text>
+                <SpacesNativeBlockEditor
+                  key={focus.token}
+                  publication={focus.publication}
+                  editable={editable}
+                  onDone={() => editing.finish(owner, focus.token)}
+                />
+                <ControlPill
+                  variant="pill"
+                  label="Discard unpublished input"
+                  disabled={
+                    !writable || editorState.busy !== null || snapshot.session.pending !== null
+                  }
+                  onPress={() =>
+                    Dialog.confirm({
+                      title: "Discard unpublished input?",
+                      message:
+                        "Keep the page draft already retained on this device. Text held only by this native input will be lost. Pending saves must be resolved first.",
+                      confirmText: "Discard unpublished input",
+                      destructive: true,
+                      onConfirm: () => void editing.discardInput(owner, focus.token),
+                    })
+                  }
+                />
+                <Notice>
+                  Finish this input before scrolling or editing another block. Done editing retains
+                  the local draft; Save sends it.
+                </Notice>
+              </View>
+            ) : editorState.focus ? (
+              <Notice>This page is being edited in another open view.</Notice>
+            ) : null}
+            {snapshot.session.recoveryReason ? (
+              <Notice>
+                This older draft cannot be retried automatically. It remains on this device.
+              </Notice>
+            ) : null}
+            {location &&
+            snapshot.session.hydrated &&
+            snapshot.session.baseRevision !== location.page.revision ? (
+              <Notice>
+                The saved page has a different revision from this local draft. Refreshing will not
+                replace your draft.
+              </Notice>
+            ) : null}
+            {snapshot.loading ? (
+              <Notice>Loading page…</Notice>
+            ) : snapshot.error ? (
+              <Notice>{snapshot.error}</Notice>
+            ) : null}
+            {target.blockId &&
+            location &&
+            !blocks.some((block) => block.id === currentTarget.blockId) ? (
+              <Notice>
+                The linked block is not in this window. Use First or Next to browse bounded windows;
+                it may have moved or become unavailable.
+              </Notice>
+            ) : null}
+            <View className="flex-row flex-wrap gap-2">
+              <ControlPill
+                variant="pill"
+                label="Library"
+                disabled={editorState.focus !== null}
+                onPress={() =>
+                  navigation.push("SpacesLibrary", {
+                    environmentId: target.environmentId,
+                    spaceId: currentTarget.spaceId,
+                  })
+                }
+              />
+              <ControlPill
+                variant="pill"
+                label="First / refresh"
+                disabled={
+                  snapshot.loading || editorState.focus !== null || editorState.busy !== null
+                }
+                onPress={() => void reader.first()}
+              />
+              <ControlPill
+                variant="pill"
+                label="Next blocks"
+                disabled={
+                  snapshot.loading ||
+                  editorState.focus !== null ||
+                  editorState.busy !== null ||
+                  !snapshot.window?.nextCursor
+                }
+                onPress={() => void reader.next()}
+              />
+            </View>
           </View>
-        </View>
-      }
-      ListEmptyComponent={
-        !snapshot.loading && location ? (
-          <Notice>
-            {snapshot.window?.nextCursor
-              ? "No blocks in this window. Continue to the next window."
-              : "No blocks in this window."}
-          </Notice>
-        ) : undefined
-      }
-      renderItem={({ item }) => (
-        <SpaceBlockReader
-          block={item}
-          target={currentTarget}
-          depth={blockDepth(item, blocks)}
-          selected={item.id === currentTarget.blockId}
-          onOpen={(next) => {
-            if (access.current())
-              navigation.push("SpacesPage", {
-                environmentId: next.environmentId,
-                spaceId: next.spaceId,
-                pageId: next.pageId,
-                ...(next.blockId ? { block: next.blockId } : {}),
-              });
-          }}
-        />
-      )}
-    />
+        }
+        ListEmptyComponent={
+          !snapshot.loading && location ? (
+            <Notice>
+              {snapshot.window?.nextCursor
+                ? "No blocks in this window. Continue to the next window."
+                : "No blocks in this window."}
+            </Notice>
+          ) : undefined
+        }
+        renderItem={({ item }) => (
+          <View>
+            <SpaceBlockReader
+              block={item}
+              target={currentTarget}
+              depth={blockDepth(item, blocks)}
+              selected={item.id === currentTarget.blockId}
+              onOpen={(next) => {
+                if (access.current() && !editorState.focus)
+                  navigation.push("SpacesPage", {
+                    environmentId: next.environmentId,
+                    spaceId: next.spaceId,
+                    pageId: next.pageId,
+                    ...(next.blockId ? { block: next.blockId } : {}),
+                  });
+              }}
+            />
+            <View className="flex-row gap-2 px-4 pb-3">
+              {nativeDocumentForSpaceBlock(item) ? (
+                <>
+                  <ControlPill
+                    variant="pill"
+                    label="Edit text"
+                    disabled={
+                      !editable ||
+                      !spacesNativeEditorAvailable ||
+                      editorState.focus !== null ||
+                      editorState.busy === "discard"
+                    }
+                    onPress={() => {
+                      try {
+                        editing.focus(owner, item.id);
+                        setActionError(null);
+                      } catch (cause) {
+                        setActionError(
+                          cause instanceof Error ? cause.message : "Could not edit this block",
+                        );
+                        return;
+                      }
+                      list.current?.scrollToOffset({ offset: 0, animated: false });
+                    }}
+                  />
+                  {item.type === "todo_item" ? (
+                    <ControlPill
+                      variant="pill"
+                      label="Toggle to-do"
+                      disabled={
+                        !editable || editorState.focus !== null || editorState.busy === "discard"
+                      }
+                      onPress={() => {
+                        try {
+                          editing.toggleTodo(item.id);
+                          setActionError(null);
+                        } catch (cause) {
+                          setActionError(
+                            cause instanceof Error ? cause.message : "Could not toggle this to-do",
+                          );
+                        }
+                      }}
+                    />
+                  ) : null}
+                </>
+              ) : (
+                <Text className="text-sm text-foreground-muted">
+                  Edit on desktop · original content retained
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+      />
+    </View>
   );
 }

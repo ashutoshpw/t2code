@@ -22,7 +22,7 @@ function validateNativeRuns(snapshot: SpacesNativeSnapshot) {
     snapshot.runs.length > SPACES_NATIVE_MAX_RUNS ||
     snapshot.runs.reduce((length, run) => length + run.text.length, 0) > SPACES_NATIVE_MAX_UTF16
   ) {
-    throw new Error("Native block exceeds the spike budget");
+    throw new Error("Block exceeds the mobile text or styling budget");
   }
   if (snapshot.runs.some((run) => run.link !== undefined && !isSafeSpaceLink(run.link))) {
     throw new Error("Unsupported native link");
