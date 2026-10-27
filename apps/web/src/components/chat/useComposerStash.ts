@@ -259,7 +259,7 @@ export function useComposerStash(input: {
         const origin = menuEntry.recovery;
         toastManager.add({
           type: "error",
-          title: "Recovery prompt remains in the stash",
+          title: "Could not restore the recovery prompt",
           description: error instanceof Error ? error.message : "Could not restore this prompt.",
           actionProps: {
             children: "Open original composer",

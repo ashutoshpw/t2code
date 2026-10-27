@@ -23,7 +23,9 @@ const state = vi.hoisted(() => ({
     ReadonlyArray<{ id: RunId; status: string }> | null
   > | null,
   command: vi.fn(async () => AsyncResult.success(undefined)),
-  query: vi.fn(async () => AsyncResult.success({ relativeUrl: "/original-image" })),
+  query: vi.fn<() => Promise<AsyncResult.AsyncResult<{ relativeUrl: string }, unknown>>>(async () =>
+    AsyncResult.success({ relativeUrl: "/original-image" }),
+  ),
   rpc: vi.fn(),
   upload: vi.fn(),
   notifications: [] as Array<{
@@ -776,28 +778,45 @@ it.each(["failed", "captured"] as const)(
   },
 );
 
-it("retains queued attachment handles when read access changes before the original image reply", async () => {
-  const f = await setup([
-    { id: "queued-image", type: "image", name: "a.png", mimeType: "image/png", sizeBytes: 4 },
-  ]);
-  const queryStarted = deferred<undefined>();
-  const reply = deferred<ReturnType<typeof state.query> extends Promise<infer A> ? A : never>();
-  state.query.mockImplementation(() => {
-    queryStarted.resolve(undefined);
-    return reply.promise;
-  });
-  const fetchImage = vi.fn();
-  vi.stubGlobal("fetch", fetchImage);
-  f.leave();
-  await queryStarted.promise;
-  state.operate = false;
-  reply.resolve(AsyncResult.success({ relativeUrl: "/image" }));
-  await f.done.promise;
-  expect(f.read().isEditing).toBe(true);
-  expect(f.read().editingAttachments?.[0]?.attachment.id).toBe("queued-image");
-  expect(f.usePromptStashStore.getState().entries).toEqual([]);
-  expect(fetchImage).not.toHaveBeenCalled();
-});
+it.each(["read-denied", "short-body", "failed-response", "unavailable-image"] as const)(
+  "retains queued attachment handles without claiming a saved copy when original-image admission fails: %s",
+  async (failure) => {
+    const f = await setup([
+      { id: "queued-image", type: "image", name: "a.png", mimeType: "image/png", sizeBytes: 4 },
+    ]);
+    const queryStarted = deferred<undefined>();
+    const reply = deferred<Awaited<ReturnType<typeof state.query>>>();
+    state.query.mockImplementation(() => {
+      queryStarted.resolve(undefined);
+      return reply.promise;
+    });
+    const fetchImage = vi.fn(async () =>
+      failure === "failed-response"
+        ? new Response(null, { status: 503 })
+        : new Response(new Uint8Array([65])),
+    );
+    vi.stubGlobal("fetch", fetchImage);
+    f.leave();
+    await queryStarted.promise;
+    if (failure === "read-denied") state.operate = false;
+    reply.resolve(
+      failure === "unavailable-image"
+        ? AsyncResult.failure(Cause.die(new Error("Image unavailable")))
+        : AsyncResult.success({ relativeUrl: "/image" }),
+    );
+    await f.done.promise;
+    expect(f.read().isEditing).toBe(true);
+    expect(f.read().editingAttachments?.[0]?.attachment.id).toBe("queued-image");
+    expect(f.store.getComposerDraft(f.editTarget)?.prompt).toBe(f.prompt);
+    expect(f.usePromptStashStore.getState().entries).toEqual([]);
+    expect(state.notifications.at(-1)?.description).not.toMatch(
+      /\b(?:remains?|stays?)\b.*\bstash\b/i,
+    );
+    if (failure === "read-denied" || failure === "unavailable-image")
+      expect(fetchImage).not.toHaveBeenCalled();
+    else expect(fetchImage).toHaveBeenCalledOnce();
+  },
+);
 
 it("allows an explicit confirmed discard of a blocked edit without changing its queue or separate composer", async () => {
   const f = await setup();

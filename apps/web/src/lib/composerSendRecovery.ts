@@ -55,9 +55,7 @@ async function queuedRecoveryImages(input: {
     const estimated =
       `data:${descriptor.mimeType};base64,`.length + 4 * Math.ceil(descriptor.sizeBytes / 3);
     if (chars + estimated > MAX_STASH_ENTRY_ATTACHMENT_CHARS)
-      throw new Error(
-        "The queued images exceed recovery capacity. The original recovery stays in the stash.",
-      );
+      throw new Error("The queued images exceed recovery capacity.");
     assertAccess();
     const connection = readPreparedConnection(environmentId)!;
     const result = await executeAtomQuery(
@@ -76,13 +74,12 @@ async function queuedRecoveryImages(input: {
       { reportFailure: false, refresh: true },
     );
     assertAccess();
-    if (result._tag !== "Success")
-      throw new Error("A queued image is unavailable. The recovery copy remains in the stash.");
+    if (result._tag !== "Success") throw new Error("A queued image is unavailable.");
     const url = resolveAssetUrl(connection.httpBaseUrl, result.value.relativeUrl);
     if (!url) throw new Error("The environment returned an invalid queued image URL.");
     const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
     if (!response.ok || !response.body)
-      throw new Error("Could not read the original queued image. Recovery remains in the stash.");
+      throw new Error("Could not read the original queued image.");
     const reader = response.body.getReader();
     const chunks: Uint8Array<ArrayBuffer>[] = [];
     let received = 0;
@@ -100,8 +97,7 @@ async function queuedRecoveryImages(input: {
       await reader.cancel();
       reader.releaseLock();
     }
-    if (received !== descriptor.sizeBytes)
-      throw new Error("The queued image is incomplete. Recovery remains in the stash.");
+    if (received !== descriptor.sizeBytes) throw new Error("The queued image is incomplete.");
     const file = new File(chunks, descriptor.name, { type: descriptor.mimeType });
     const dataUrl = await readFileAsDataUrl(file);
     assertAccess();
@@ -396,9 +392,7 @@ export async function restoreComposerSendRecovery(input: {
       usePromptStashStore.getState().entries.find((candidate) => candidate.id === entry.id) !==
         entry
     )
-      throw new Error(
-        "The composer or recovery changed while reading queued attachments. The copy remains saved.",
-      );
+      throw new Error("The composer or recovery changed while reading queued attachments.");
   };
   assertQueuedAccess();
   const remoteImages = await queuedRecoveryImages({
