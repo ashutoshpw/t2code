@@ -239,7 +239,7 @@ export function useComposerStash(input: {
         toastManager.add({
           type: restored.expiredFiles.length ? "warning" : "info",
           title: "Recovery prompt copied to the composer",
-          description: `The recovery copy stays in the stash until you delete it.${restored.fanoutRetry ? (restored.fanoutRetry.uncertain ? " You explicitly selected an uncertain model; a new send may duplicate it." : " Only definite failures and unsent models were selected.") : ""}${restored.expiredFiles.length ? ` Attach expired files again: ${restored.expiredFiles.join(", ")}.` : ""}`,
+          description: `The recovery copy stays in the stash until you delete it.${menuEntry.recovery.queuedEdit ? (menuEntry.recovery.queuedEdit.saveOutcome === "uncertain" ? " The earlier queued-edit request may have committed; check the thread before a new send." : " The old run left the queue. This is a separate draft for a new send.") : ""}${restored.fanoutRetry ? (restored.fanoutRetry.uncertain ? " You explicitly selected an uncertain model; a new send may duplicate it." : " Only definite failures and unsent models were selected.") : ""}${restored.expiredFiles.length ? ` Attach expired files again: ${restored.expiredFiles.join(", ")}.` : ""}`,
         });
       } catch (error) {
         const origin = menuEntry.recovery;

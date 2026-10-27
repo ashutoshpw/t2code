@@ -8,6 +8,9 @@ import { appAtomRegistry } from "../rpc/atomRegistry";
 import * as Schema from "effect/Schema";
 import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  AuthFilesystemReadScope,
+  ChatImageAttachment,
+  ChatFileAttachment,
   type EnvironmentId,
   type ThreadId,
 } from "@t2code/contracts";
@@ -25,9 +28,97 @@ import {
   MAX_STASH_ENTRY_ATTACHMENT_CHARS,
   MAX_STASH_ENTRIES,
   usePromptStashStore,
+  type PromptStashEntry,
 } from "../promptStashStore";
 import { readAttachmentUpload, verifyStashedAttachmentUpload } from "./attachmentUploadQueue";
 import { readFileAsDataUrl } from "./imageCompression";
+import { readEnvironmentScope, readPreparedConnection } from "../state/session";
+import { assetEnvironment } from "../state/assets";
+import { executeAtomQuery } from "@t2code/client-runtime/state/runtime";
+import { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
+const isImageAttachment = Schema.is(ChatImageAttachment);
+const isFileAttachment = Schema.is(ChatFileAttachment);
+
+async function queuedRecoveryImages(input: {
+  environmentId: EnvironmentId;
+  descriptors: ReadonlyArray<ChatImageAttachment>;
+  existingImages: ReadonlyArray<PersistedComposerImageAttachment>;
+  assertAccess: () => void;
+}) {
+  const { environmentId, assertAccess } = input;
+  const descriptors = input.descriptors.filter(
+    (image) => !input.existingImages.some((saved) => saved.id === image.id),
+  );
+  let chars = input.existingImages.reduce((total, image) => total + image.dataUrl.length, 0);
+  const images: PersistedComposerImageAttachment[] = [];
+  for (const descriptor of descriptors) {
+    const estimated =
+      `data:${descriptor.mimeType};base64,`.length + 4 * Math.ceil(descriptor.sizeBytes / 3);
+    if (chars + estimated > MAX_STASH_ENTRY_ATTACHMENT_CHARS)
+      throw new Error(
+        "The queued images exceed recovery capacity. The original recovery stays in the stash.",
+      );
+    assertAccess();
+    const connection = readPreparedConnection(environmentId)!;
+    const result = await executeAtomQuery(
+      appAtomRegistry,
+      assetEnvironment.createUrl({
+        environmentId,
+        input: {
+          resource: {
+            _tag: "attachment",
+            attachmentId: descriptor.id,
+            fileName: descriptor.name,
+            mimeType: descriptor.mimeType,
+          },
+        },
+      }),
+      { reportFailure: false, refresh: true },
+    );
+    assertAccess();
+    if (result._tag !== "Success")
+      throw new Error("A queued image is unavailable. The recovery copy remains in the stash.");
+    const url = resolveAssetUrl(connection.httpBaseUrl, result.value.relativeUrl);
+    if (!url) throw new Error("The environment returned an invalid queued image URL.");
+    const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+    if (!response.ok || !response.body)
+      throw new Error("Could not read the original queued image. Recovery remains in the stash.");
+    const reader = response.body.getReader();
+    const chunks: Uint8Array<ArrayBuffer>[] = [];
+    let received = 0;
+    try {
+      while (true) {
+        const next = await reader.read();
+        assertAccess();
+        if (next.done) break;
+        received += next.value.byteLength;
+        if (received > descriptor.sizeBytes)
+          throw new Error("The queued image exceeds its declared byte limit.");
+        chunks.push(new Uint8Array(next.value));
+      }
+    } finally {
+      await reader.cancel();
+      reader.releaseLock();
+    }
+    if (received !== descriptor.sizeBytes)
+      throw new Error("The queued image is incomplete. Recovery remains in the stash.");
+    const file = new File(chunks, descriptor.name, { type: descriptor.mimeType });
+    const dataUrl = await readFileAsDataUrl(file);
+    assertAccess();
+    chars += dataUrl.length;
+    if (chars > MAX_STASH_ENTRY_ATTACHMENT_CHARS)
+      throw new Error("The queued images exceed recovery capacity.");
+    images.push({
+      id: descriptor.id,
+      name: descriptor.name,
+      mimeType: descriptor.mimeType,
+      sizeBytes: descriptor.sizeBytes,
+      dataUrl,
+      ...(descriptor.source ? { source: descriptor.source } : {}),
+    });
+  }
+  return images;
+}
 
 const decodeFanoutRecovery = Schema.decodeSync(FanoutRecovery);
 
@@ -104,6 +195,7 @@ export async function reserveComposerSendRecovery(input: {
   contents: RecoveryContents;
   assertCurrent: () => void;
   fanout?: FanoutRecovery;
+  queuedEdit?: NonNullable<PromptStashEntry["recovery"]>["queuedEdit"];
 }) {
   if (input.fanout) decodeFanoutRecovery(input.fanout);
   const { images, files, prompt, contextDraft, ...context } = input.contents;
@@ -131,6 +223,30 @@ export async function reserveComposerSendRecovery(input: {
       dataUrl,
       ...(image.source ? { source: image.source } : {}),
     });
+  }
+  if (input.queuedEdit) {
+    const descriptors = input.queuedEdit.attachments.filter(isImageAttachment);
+    const connection = readPreparedConnection(input.environmentId);
+    const assertAccess = () => {
+      input.assertCurrent();
+      if (
+        descriptors.length &&
+        (!connection ||
+          readPreparedConnection(input.environmentId) !== connection ||
+          !readEnvironmentScope(input.environmentId, AuthFilesystemReadScope))
+      )
+        throw new Error(
+          "Reconnect with attachment read permission before saving queued image recovery. The edit stays open.",
+        );
+    };
+    attachments.push(
+      ...(await queuedRecoveryImages({
+        environmentId: input.environmentId,
+        descriptors,
+        existingImages: attachments,
+        assertAccess,
+      })),
+    );
   }
   const persistedFiles = files.map((file) => {
     const upload = readAttachmentUpload(file.id);
@@ -166,6 +282,7 @@ export async function reserveComposerSendRecovery(input: {
       targetKey: composerTargetKey(input.target),
       context: structuredClone({ ...context, ...(contextDraft ? { contextDraft } : {}) }),
       ...(input.fanout ? { fanout: structuredClone(input.fanout) } : {}),
+      ...(input.queuedEdit ? { queuedEdit: structuredClone(input.queuedEdit) } : {}),
     },
   });
   if (!result.durable)
@@ -237,26 +354,68 @@ export async function restoreComposerSendRecovery(input: {
       uncertain: attempts.some((attempt) => attempt.outcome === "uncertain"),
     };
   }
-  const savedFiles = entry.files ?? [];
-  const imageIds = new Set(entry.attachments.map((image) => image.id));
+  const queued = entry.recovery.queuedEdit?.attachments ?? [];
+  if (queued.some((attachment) => !isImageAttachment(attachment) && !isFileAttachment(attachment)))
+    throw new Error(
+      "This queued recovery contains an unsupported attachment. Its original handle remains saved; no attachment was dropped.",
+    );
+  const remoteFiles = queued
+    .filter(isFileAttachment)
+    .map((file) => ({ ...file, attachmentId: file.id, environmentId: input.environmentId }));
+  const savedFiles = [...(entry.files ?? []), ...remoteFiles];
+  const queuedImages = queued
+    .filter(isImageAttachment)
+    .filter((image) => !entry.attachments.some((saved) => saved.id === image.id));
+  const imageIds = new Set([...entry.attachments, ...queuedImages].map((image) => image.id));
   const fileIds = new Set(savedFiles.map((file) => file.id));
   if (
-    entry.attachments.length + savedFiles.length > PROVIDER_SEND_TURN_MAX_ATTACHMENTS ||
-    imageIds.size !== entry.attachments.length ||
+    entry.attachments.length + queuedImages.length + savedFiles.length >
+      PROVIDER_SEND_TURN_MAX_ATTACHMENTS ||
+    imageIds.size !== entry.attachments.length + queuedImages.length ||
     fileIds.size !== savedFiles.length ||
     !composerTargetKey(input.target)
   )
     throw new Error(
       "Could not restore all saved attachments. The recovery prompt remains in the stash.",
     );
+  const needsQueuedAccess = remoteFiles.length > 0 || queuedImages.length > 0;
+  const queuedSession = needsQueuedAccess ? readPreparedConnection(input.environmentId) : null;
+  const assertQueuedAccess = () => {
+    if (!needsQueuedAccess) return;
+    if (
+      needsQueuedAccess &&
+      (!queuedSession ||
+        readPreparedConnection(input.environmentId) !== queuedSession ||
+        !readEnvironmentScope(input.environmentId, AuthFilesystemReadScope))
+    )
+      throw new Error(
+        "Reconnect with attachment read access in the original environment before restoring queued attachments.",
+      );
+    if (
+      !canRestore() ||
+      usePromptStashStore.getState().entries.find((candidate) => candidate.id === entry.id) !==
+        entry
+    )
+      throw new Error(
+        "The composer or recovery changed while reading queued attachments. The copy remains saved.",
+      );
+  };
+  assertQueuedAccess();
+  const remoteImages = await queuedRecoveryImages({
+    environmentId: input.environmentId,
+    descriptors: queuedImages,
+    existingImages: entry.attachments,
+    assertAccess: assertQueuedAccess,
+  });
   const verifications = await Promise.all(
-    (entry.files ?? []).map((file) =>
+    savedFiles.map((file) =>
       verifyStashedAttachmentUpload({
         environmentId: input.environmentId,
         attachmentId: file.attachmentId,
       }),
     ),
   );
+  assertQueuedAccess();
   if (
     !canRestore() ||
     (fanout &&
@@ -268,8 +427,8 @@ export async function restoreComposerSendRecovery(input: {
     throw new Error(
       "The draft or recovery changed while restoring. Try again when the original composer is empty.",
     );
-  const images = hydrateImagesFromPersisted(entry.attachments);
-  if (images.length !== entry.attachments.length)
+  const images = hydrateImagesFromPersisted([...entry.attachments, ...remoteImages]);
+  if (images.length !== entry.attachments.length + remoteImages.length)
     throw new Error("Could not read saved images. The recovery prompt remains in the stash.");
   const store = useComposerDraftStore.getState();
   const context = entry.recovery.context;
@@ -277,7 +436,7 @@ export async function restoreComposerSendRecovery(input: {
   const expiredFiles: string[] = [];
   const acceptedFiles = store.addFiles(
     input.target,
-    (entry.files ?? []).map((file, index) => {
+    savedFiles.map((file, index) => {
       const expired = verifications[index]?.status === "missing";
       if (expired) expiredFiles.push(file.name);
       return {

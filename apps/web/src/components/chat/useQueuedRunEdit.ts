@@ -2,7 +2,12 @@ import {
   composerDraftSendGuard,
   prepareComposerSendContext,
 } from "../../lib/prepareComposerSendContext";
-import type { ComposerContextDraft } from "@t2code/contracts";
+import { AuthOrchestrationOperateScope, type ComposerContextDraft } from "@t2code/contracts";
+import { useNavigate } from "@tanstack/react-router";
+import { readEnvironmentScope } from "../../state/session";
+import { usePromptStashStore, MAX_STASH_ENTRIES } from "../../promptStashStore";
+import { randomUUID } from "../../lib/utils";
+import { readLocalApi } from "../../localApi";
 import { useAtomValue } from "@effect/atom-react";
 import { makeQueuedRunEditStore, makeQueuedRunsAtom } from "@t2code/client-runtime/queued-run-edit";
 import type { ThreadStructure } from "@t2code/client-runtime/state/shell";
@@ -43,11 +48,7 @@ import type { TerminalContextDraft } from "../../lib/terminalContext";
 import type { ReviewCommentContext } from "../../reviewCommentContext";
 import { appAtomRegistry } from "../../rpc/atomRegistry";
 import { environmentServerConfigsAtom } from "../../state/server";
-import {
-  environmentThreadDetails,
-  environmentThreadShells,
-  threadEnvironment,
-} from "../../state/threads";
+import { environmentThreadDetails, threadEnvironment } from "../../state/threads";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import type { ChatComposerHandle } from "./ChatComposer";
@@ -56,6 +57,9 @@ import { prepareQueuedEditAttachments, recoverQueuedMessageEdit } from "./queued
 import type { EditQueuedRunRequest } from "./QueuedRunsControl";
 
 interface EditingQueuedRun {
+  readonly id: string;
+  readonly originalAttachments: ReadonlyArray<ChatAttachment>;
+  readonly saveOutcome: "not-sent" | "uncertain" | "accepted";
   readonly threadId: ThreadId;
   readonly runId: RunId;
   readonly messageId: MessageId;
@@ -69,6 +73,80 @@ const queuedRunEdits = makeQueuedRunEditStore<EditingQueuedRun>({
   registry: appAtomRegistry,
   label: "web-queued-run-edits",
 });
+
+if (typeof window !== "undefined")
+  window.addEventListener("beforeunload", (event) => {
+    if (
+      Object.keys(appAtomRegistry.get(queuedRunEdits.exitedAtom)).length ||
+      Object.keys(appAtomRegistry.get(queuedRunEdits.savingAtom)).length
+    ) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  });
+
+async function recoverExitedQueuedRun(input: {
+  key: string;
+  environmentId: EnvironmentId;
+  routeThreadRef: ScopedThreadRef;
+  threadTarget: ComposerThreadTarget;
+  open: () => void;
+}) {
+  const claim = queuedRunEdits.startRecovery(input.key);
+  if (!claim) return;
+  const edit = claim.edit;
+  const target = queuedEditDraftTarget(input.routeThreadRef, edit.runId);
+  const unchanged = composerDraftSendGuard(target);
+  let entryId: string | null = null;
+  try {
+    const recovery = await recoverQueuedMessageEdit({
+      editTarget: target,
+      threadTarget: input.threadTarget,
+      environmentId: input.environmentId,
+      threadId: edit.threadId,
+      runId: edit.runId,
+      messageId: edit.messageId,
+      originalText: edit.originalText,
+      originalAttachments: edit.originalAttachments,
+      existingAttachments: edit.existingAttachments,
+      context: edit.context,
+      saveOutcome: edit.saveOutcome,
+      isCurrent: claim.isCurrent,
+    });
+    entryId = recovery?.entryId ?? null;
+    recovery?.assertCurrent();
+    if (!claim.isCurrent() || !unchanged())
+      throw new Error(
+        "The edit changed while recovery was saving. The current edit stays open; retry recovery.",
+      );
+    useComposerDraftStore.getState().clearComposerContent(target);
+    claim.finish(true);
+    if (entryId) usePromptStashStore.getState().settleSendRecovery(entryId, false);
+    if (entryId)
+      toastManager.add(
+        stackedThreadToast({
+          type: "info",
+          title: "Queued edit recovery saved",
+          timeout: 0,
+          description: `The run left the queue. Your exact edit is in the prompt stash in its original thread. Restore it into an empty composer as a new send.${edit.saveOutcome === "uncertain" ? " The earlier edit request may have committed; check the thread before sending again." : edit.saveOutcome === "accepted" ? " The earlier edit request was accepted; this copy contains later unsaved changes." : " No new queued edit was sent."}`,
+          actionProps: { children: "Open original thread", onClick: input.open },
+        }),
+      );
+  } catch (error) {
+    if (entryId) usePromptStashStore.getState().settleSendRecovery(entryId, false);
+    claim.finish(false);
+    toastManager.add(
+      stackedThreadToast({
+        type: "warning",
+        title: "Queued edit kept open for recovery",
+        timeout: 0,
+        description: `${error instanceof Error ? error.message : "Recovery could not be saved."} Keep this tab open until recovery succeeds; local bytes and original attachment handles remain owned by the edit.`,
+        actionProps: { children: "Retry recovery", onClick: () => recoverExitedQueuedRun(input) },
+        data: { secondaryActionProps: { children: "Open edit", onClick: input.open } },
+      }),
+    );
+  }
+}
 
 export interface QueuedRunEditContent {
   readonly prompt: string;
@@ -91,6 +169,8 @@ async function submitQueuedRunEdit(input: {
   readonly editing: EditingQueuedRun;
   readonly content: QueuedRunEditContent;
   readonly editQueuedRun: ReturnType<typeof useEditQueuedRunCommand>;
+  readonly isCurrentQueued: () => boolean;
+  readonly markSaveOutcome: (outcome: "uncertain" | "accepted") => void;
 }): Promise<string | null> {
   const { environmentId, draftTarget, editing, content } = input;
   const editText = content.prompt.trim();
@@ -161,6 +241,13 @@ async function submitQueuedRunEdit(input: {
       isCurrentDraft: draftStillCurrent,
     });
     prepared.assertCurrent();
+    if (!draftStillCurrent() || !input.isCurrentQueued())
+      throw new Error(
+        "The queued edit changed or left the queue. The unsaved edit is retained for recovery.",
+      );
+    if (!readEnvironmentScope(environmentId, AuthOrchestrationOperateScope))
+      throw new Error("This connection cannot change queued messages.");
+    input.markSaveOutcome("uncertain");
     const result = await input.editQueuedRun({
       environmentId,
       input: {
@@ -174,7 +261,10 @@ async function submitQueuedRunEdit(input: {
         },
       },
     });
-    return result._tag === "Failure" ? "Could not save the edited queued message." : null;
+    if (result._tag === "Success") input.markSaveOutcome("accepted");
+    return result._tag === "Failure"
+      ? "Could not save the edited queued message. Check the thread; its outcome may be uncertain."
+      : null;
   } catch (error) {
     return error instanceof Error ? error.message : "Could not save the edited queued message.";
   }
@@ -203,11 +293,13 @@ export function useQueuedRunEdit(input: {
     promptRef,
     composerRef,
   } = input;
+  const navigate = useNavigate();
   const editQueuedRunCommand = useEditQueuedRunCommand();
   const editKey = scopedThreadKey(routeThreadRef);
   const storedEdit = useAtomValue(queuedRunEdits.atom)[editKey] ?? null;
   const editing = activeThreadId === null ? null : storedEdit;
   const isSaving = useAtomValue(queuedRunEdits.savingAtom)[editKey] === true;
+  const hasLeftQueue = useAtomValue(queuedRunEdits.exitedAtom)[editKey] === true;
   const draftTarget =
     editing === null ? threadDraftTarget : queuedEditDraftTarget(routeThreadRef, editing.runId);
 
@@ -234,8 +326,34 @@ export function useQueuedRunEdit(input: {
       .getState()
       .clearComposerContent(queuedEditDraftTarget(routeThreadRef, runId));
 
+  const recoveryInput = {
+    key: editKey,
+    environmentId,
+    routeThreadRef,
+    threadTarget: threadDraftTarget,
+    open: () => {
+      void navigate({
+        to: "/$environmentId/$threadId",
+        params: { environmentId, threadId: routeThreadRef.threadId },
+      });
+    },
+  };
   const beginEdit = useStableCallback((request: EditQueuedRunRequest) => {
     if (activeThreadId === null) return;
+    if (
+      appAtomRegistry.get(queuedRunEdits.exitedAtom)[editKey] ||
+      (queuedRunEdits.get(editKey) !== null && !queuedRunEdits.isQueued(editKey)) ||
+      (!queuedRunEdits.get(editKey) &&
+        Object.keys(appAtomRegistry.get(queuedRunEdits.atom)).length >= MAX_STASH_ENTRIES)
+    ) {
+      toastManager.add({
+        type: "warning",
+        title: "Keep the retained queued edit",
+        description:
+          "Finish recovery of the existing edit before opening another. At most 20 queued edits can stay open.",
+      });
+      return;
+    }
     if (editing !== null && editing.runId !== request.runId) clearEditDraft(editing.runId);
     const target = queuedEditDraftTarget(routeThreadRef, request.runId);
     const store = useComposerDraftStore.getState();
@@ -254,6 +372,9 @@ export function useQueuedRunEdit(input: {
     queuedRunEdits.begin(
       editKey,
       {
+        id: randomUUID(),
+        originalAttachments: request.attachments,
+        saveOutcome: "not-sent",
         threadId: activeThreadId,
         runId: request.runId,
         messageId: request.messageId,
@@ -263,6 +384,7 @@ export function useQueuedRunEdit(input: {
           ?.context,
       },
       {
+        retainOnExit: true,
         runs: makeQueuedRunsAtom({
           threadId: activeThreadId,
           snapshot: threadEnvironment.snapshotAtom(environmentId),
@@ -272,45 +394,29 @@ export function useQueuedRunEdit(input: {
               get(environmentThreadDetails.quietThreadAtom(threadRef))?.projection.runs ?? null,
           ),
         }),
-        // The run started or was cancelled from another client. A changed
-        // edit moves into the thread's own draft when that draft is empty;
-        // otherwise it is dropped. Edits outlive navigation, so the toast is
-        // unscoped and names the thread: the user may be anywhere by now.
-        onRunLeftQueue: (_, edit) => {
-          const recovery = recoverQueuedMessageEdit({
-            editTarget: queuedEditDraftTarget(routeThreadRef, edit.runId),
-            threadTarget: threadDraftTarget,
-            originalText: edit.originalText,
-            originalContextDraft: {
-              selectors: [],
-              records: (edit.context?.records ?? []).filter(
-                (record) => record.kind === "page" || record.kind === "block",
-              ),
-            },
-          });
-          if (recovery === "clean") return;
-          const title = appAtomRegistry.get(
-            environmentThreadShells.threadShellAtom(threadRef),
-          )?.title;
-          const where = title === undefined ? "" : ` in “${title}”`;
-          toastManager.add(
-            stackedThreadToast({
-              type: recovery === "kept" ? "info" : "warning",
-              title: "Queued message is no longer queued",
-              description:
-                recovery === "kept"
-                  ? `Your unsaved edit${where} was kept in the composer.`
-                  : `Your unsaved edit${where} was discarded.`,
-            }),
-          );
+        onRunLeftQueue: () => {
+          void recoverExitedQueuedRun(recoveryInput);
         },
       },
     );
     focusComposerSoon();
   });
-  const cancelEdit = useStableCallback(() => {
-    if (editing === null) return;
-    clearEditDraft(editing.runId);
+  const cancelEdit = useStableCallback(async () => {
+    const current = queuedRunEdits.get(editKey);
+    if (!current || appAtomRegistry.get(queuedRunEdits.savingAtom)[editKey]) return;
+    if (
+      appAtomRegistry.get(queuedRunEdits.exitedAtom)[editKey] &&
+      !(await readLocalApi()?.dialogs.confirm(
+        "Discard this unsaved queued edit and its local attachment bytes? Recovery has not finished.",
+      ))
+    )
+      return;
+    if (
+      queuedRunEdits.get(editKey) !== current ||
+      appAtomRegistry.get(queuedRunEdits.savingAtom)[editKey]
+    )
+      return;
+    clearEditDraft(current.runId);
     queuedRunEdits.end(editKey);
     focusComposerSoon();
   });
@@ -327,6 +433,10 @@ export function useQueuedRunEdit(input: {
     content: QueuedRunEditContent,
     setThreadError: (threadId: ThreadId, error: string | null) => void,
   ) => {
+    if (appAtomRegistry.get(queuedRunEdits.exitedAtom)[editKey]) {
+      await recoverExitedQueuedRun(recoveryInput);
+      return;
+    }
     if (editing === null || isSaving) return;
     const newAttachments = [...content.images, ...content.files];
     if (
@@ -356,9 +466,21 @@ export function useQueuedRunEdit(input: {
       editing,
       content,
       editQueuedRun: editQueuedRunCommand,
+      isCurrentQueued: () =>
+        queuedRunEdits.get(editKey)?.id === editing.id &&
+        queuedRunEdits.isQueued(editKey) &&
+        JSON.stringify(queuedRunEdits.get(editKey)?.existingAttachments) ===
+          JSON.stringify(editing.existingAttachments),
+      markSaveOutcome: (outcome) =>
+        queuedRunEdits.update(editKey, (current) =>
+          current.id === editing.id ? { ...current, saveOutcome: outcome } : current,
+        ),
     });
     setThreadError(editing.threadId, error);
-    const unchanged = draftStillCurrent();
+    const unchanged =
+      draftStillCurrent() &&
+      JSON.stringify(queuedRunEdits.get(editKey)?.existingAttachments) ===
+        JSON.stringify(editing.existingAttachments);
     const current = finishSave(error === null && unchanged);
     if (error !== null) return;
     // The edit was cancelled or begun again while this save ran; its drafts are the newer edit's.
@@ -374,6 +496,8 @@ export function useQueuedRunEdit(input: {
     editingRunId: editing?.runId ?? null,
     isEditing: editing !== null,
     isSaving,
+    hasLeftQueue,
+    recoverEdit: () => recoverExitedQueuedRun(recoveryInput),
     draftTarget,
     editingAttachments,
     beginEdit,

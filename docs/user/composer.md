@@ -227,9 +227,20 @@ with the composer intact if a durable recovery copy cannot be saved, including
 when images exceed the recovery size limit. Recovery keeps original image bytes and
 currently supports roughly 2 MB of combined original images. Free stash space or
 reduce attachments and try again. Clearing browser site data removes these local copies. Expired file
-uploads still need **Attach again**. A queued edit can still be discarded with a
-warning if its run leaves the queue while another draft occupies the composer;
-that separate queue-exit behavior is unchanged.
+uploads still need **Attach again**.
+
+If a run starts or leaves the queue while you are editing its message, the unsaved
+edit is saved separately in the prompt stash. Your normal composer stays intact.
+Restore the copy in the original thread into an empty composer, then send it as a
+new message; it does not update the run that already left the queue. If an earlier
+save reply was lost, check the thread before sending the copy again.
+
+Recovery waits for local file uploads and saves original image bytes, subject to
+the same image limit and storage quota above. If it cannot finish, the edit stays
+open with **Retry recovery**. Keep that tab open and free stash space, reconnect,
+or reduce attachments before retrying. Navigation inside the app keeps the edit;
+a browser warning before reload or close is best effort. Closing the tab or a
+browser crash before recovery succeeds can still lose unsaved local bytes.
 
 ## Voice input on iPhone
 

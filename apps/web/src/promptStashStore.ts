@@ -1,6 +1,9 @@
 import { FanoutRecovery, type FanoutOutcome } from "./lib/composerFanout";
 import {
   ComposerContextRecord,
+  ChatAttachment,
+  RunId,
+  MessageId,
   EnvironmentId,
   ThreadId,
   ForwardCompatibleArray,
@@ -43,6 +46,14 @@ const StashEntrySchema = Schema.Struct({
       targetKey: Schema.String,
       context: PersistedComposerContext,
       fanout: Schema.optionalKey(FanoutRecovery),
+      queuedEdit: Schema.optionalKey(
+        Schema.Struct({
+          runId: RunId,
+          messageId: MessageId,
+          attachments: Schema.Array(ChatAttachment).check(Schema.isMaxLength(100)),
+          saveOutcome: Schema.Literals(["not-sent", "uncertain", "accepted"]),
+        }),
+      ),
     }),
   ),
 });

@@ -298,7 +298,11 @@ import {
   isThreadErrorBannerDismissedForSession,
   shouldShowThreadErrorBanner,
 } from "./chat/ThreadErrorBanner";
-import { QueuedRunsControl, type QueuedRunsControlHandle } from "./chat/QueuedRunsControl";
+import {
+  QueuedEditRecoveryBanner,
+  QueuedRunsControl,
+  type QueuedRunsControlHandle,
+} from "./chat/QueuedRunsControl";
 import { useThreadLinkedPullRequest } from "./pullRequest/useThreadLinkedPullRequest";
 import { useProactivePanels } from "../hooks/useProactivePanels";
 import { useIncrementalTimelineEntries } from "../hooks/useIncrementalTimelineEntries";
@@ -2886,6 +2890,17 @@ export default function ChatView(props: ChatViewProps) {
           onEditQueuedRun={queuedRunEdit.beginEdit}
           onCancelEdit={queuedRunEdit.cancelEdit}
         />
+        {queuedRunEdit.hasLeftQueue ? (
+          <QueuedEditRecoveryBanner
+            busy={queuedRunEdit.isSaving}
+            onRecover={() => {
+              void queuedRunEdit.recoverEdit();
+            }}
+            onDiscard={() => {
+              void queuedRunEdit.cancelEdit();
+            }}
+          />
+        ) : null}
       </>
     ) : null;
   const resendAfterWorkLocally = () => {

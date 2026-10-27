@@ -570,6 +570,12 @@ function hasAttachmentOwner(input: {
       entry.recovery?.environmentId === undefined ||
       entry.recovery.environmentId === input.environmentId
     ) {
+      const queuedAttachments = entry.recovery?.queuedEdit?.attachments ?? [];
+      if (
+        queuedAttachments.length > PROVIDER_SEND_TURN_MAX_ATTACHMENTS ||
+        queuedAttachments.some((attachment) => attachment.id === input.attachmentId)
+      )
+        return true;
       if (ownsRecords(entry.records) || ownsRecords(entry.recovery?.context.contextDraft?.records))
         return true;
     }
