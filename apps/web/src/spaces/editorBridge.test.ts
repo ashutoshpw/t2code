@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
-import { EditorState, TextSelection, type Command, type Transaction } from "@tiptap/pm/state";
+import {
+  EditorState,
+  NodeSelection,
+  TextSelection,
+  type Command,
+  type Transaction,
+} from "@tiptap/pm/state";
 import { EnvironmentId } from "@t2code/contracts";
 import {
   SpaceBlockId,
@@ -388,4 +394,224 @@ describe("Production Spaces command bridge", () => {
     expect(view.state).toBe(before);
     expect(view.controller.session.getSnapshot().generation).toBe(0);
   });
+});
+
+describe("Current-selection Spaces formatting", () => {
+  it("changes only canonical heading, callout and language attributes and preserves complete rich runs through local undo", async () => {
+    const runs = [
+      { text: "", marks: [] },
+      {
+        text: "kept",
+        marks: [
+          { type: "bold", version: 1 },
+          { type: "page_mention", version: 1, target: key },
+        ],
+      },
+    ];
+    const blocks = [
+      { ...paragraph("h", ""), type: "heading", content: { level: 1, runs } },
+      {
+        ...paragraph("c", "", "80000000000000000000000000000000"),
+        type: "callout",
+        content: { icon: "💡", runs },
+      },
+      {
+        ...paragraph("code", "", "c0000000000000000000000000000000"),
+        type: "code",
+        content: { text: "const x = 1;", language: "future-language" },
+      },
+    ];
+    const view = await model(blocks, true);
+    view.dispatch(
+      view.state.tr.setSelection(TextSelection.create(view.state.doc, position(view.state, "h"))),
+    );
+    expect(view.run(view.bridge.adapter.setHeadingLevel(2))).toBe(true);
+    expect(view.run(view.bridge.adapter.setHeadingLevel(3))).toBe(true);
+    expect(view.controller.session.getSnapshot().blocks[0]).toEqual({
+      ...blocks[0],
+      content: { level: 3, runs },
+    });
+    expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+    expect(view.controller.session.getSnapshot().blocks[0]).toEqual({
+      ...blocks[0],
+      content: { level: 2, runs },
+    });
+    expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+    expect(view.controller.session.getSnapshot().blocks).toEqual(blocks);
+    expect(view.run(view.bridge.adapter.redoLocal())).toBe(true);
+    expect(view.run(view.bridge.adapter.redoLocal())).toBe(true);
+    view.dispatch(
+      view.state.tr.setSelection(TextSelection.create(view.state.doc, position(view.state, "c"))),
+    );
+    expect(view.run(view.bridge.adapter.setCalloutIcon("📌"))).toBe(true);
+    view.dispatch(
+      view.state.tr.setSelection(
+        TextSelection.create(view.state.doc, position(view.state, "code")),
+      ),
+    );
+    expect(view.run(view.bridge.adapter.setCodeLanguage("typescript"))).toBe(true);
+    expect(view.controller.session.getSnapshot().blocks).toEqual([
+      { ...blocks[0], content: { level: 3, runs } },
+      { ...blocks[1], content: { icon: "📌", runs } },
+      { ...blocks[2], content: { text: "const x = 1;", language: "typescript" } },
+    ]);
+    expect(view.controller.session.getSnapshot().dirty).toBe(true);
+  });
+
+  it("creates, edits and removes one link without flattening combined marks, mention targets or empty runs", async () => {
+    const bold = { type: "bold", version: 1 },
+      mention = { type: "page_mention", version: 1, target: key };
+    const runs = [
+      { text: "", marks: [] },
+      { text: "ab", marks: [bold, mention] },
+      { text: "cd", marks: [mention] },
+      { text: "tail", marks: [] },
+    ];
+    const view = await model([{ ...paragraph("a", ""), content: { runs } }]);
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 5)));
+    expect(view.run(view.bridge.adapter.setLink("https://example.test/one"))).toBe(true);
+    const link = { type: "link", version: 1, href: "https://example.test/one" };
+    expect(view.controller.session.getSnapshot().blocks[0]!.content).toEqual({
+      runs: [
+        runs[0],
+        { text: "ab", marks: [bold, mention, link] },
+        { text: "cd", marks: [mention, link] },
+        runs[3],
+      ],
+    });
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 3)));
+    expect(view.bridge.adapter.linkSelection(view.state)).toMatchObject({
+      from: 1,
+      to: 5,
+      href: link.href,
+      hasLink: true,
+    });
+    expect(view.run(view.bridge.adapter.setLink("mailto:hello@example.test"))).toBe(true);
+    expect(view.run(view.bridge.adapter.removeLink())).toBe(true);
+    expect(view.controller.session.getSnapshot().blocks[0]!.content).toEqual({ runs });
+    expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+    expect(view.controller.session.getSnapshot().blocks[0]!.content).toEqual({
+      runs: [
+        runs[0],
+        { text: "ab", marks: [bold, mention, { ...link, href: "mailto:hello@example.test" }] },
+        { text: "cd", marks: [mention, { ...link, href: "mailto:hello@example.test" }] },
+        runs[3],
+      ],
+    });
+  });
+});
+
+it("refuses unsafe links, readonly attributes and unknown payloads without changing either shared state", async () => {
+  const unknown = {
+    ...paragraph("unknown", ""),
+    type: "heading",
+    content: {
+      level: 2,
+      runs: [{ text: "opaque", marks: [{ type: "future", version: 3, exact: { kept: true } }] }],
+    },
+  };
+  const rest = {
+    ...paragraph("rest", "", "80000000000000000000000000000000"),
+    content: { runs: [{ text: "retained", marks: [], future: [1, 2] }] },
+  };
+  const view = await model([
+    {
+      ...paragraph("h", "text"),
+      type: "heading",
+      content: { level: 1, runs: [{ text: "text", marks: [] }] },
+    },
+    unknown,
+    rest,
+  ]);
+  const before = view.controller.session.getSnapshot(),
+    doc = view.state.doc;
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 3)));
+  for (const href of ["javascript:alert(1)", "data:text/html,evil", "/relative", ""]) {
+    expect(view.run(view.bridge.adapter.setLink(href))).toBe(false);
+  }
+  expect(view.run(view.bridge.adapter.setHeadingLevel(4 as 1))).toBe(false);
+  view.bridge.setWritable(false);
+  expect(view.run(view.bridge.adapter.setHeadingLevel(2))).toBe(false);
+  expect(view.run(view.bridge.adapter.setLink("https://example.test"))).toBe(false);
+  view.bridge.setWritable(true);
+  expect(view.state.doc.eq(doc)).toBe(true);
+  expect(view.controller.session.getSnapshot()).toBe(before);
+  view.dispatch(
+    view.state.tr.setSelection(
+      NodeSelection.create(view.state.doc, view.state.doc.child(0).nodeSize),
+    ),
+  );
+  expect(view.run(view.bridge.adapter.setHeadingLevel(3))).toBe(false);
+  expect(view.run(view.bridge.adapter.setLink("https://example.test"))).toBe(false);
+  expect(view.controller.session.getSnapshot().blocks).toEqual(before.blocks);
+});
+
+it("limits link changes to one rich body and refuses empty insertion, code and surrogate-interior targets", async () => {
+  const a = paragraph("a", "a😀bc"),
+    b = paragraph("b", "other", "80000000000000000000000000000000");
+  const code = {
+    ...paragraph("code", "", "c0000000000000000000000000000000"),
+    type: "code",
+    content: { text: "source", language: "ts" },
+  };
+  const view = await model([a, b, code]);
+  view.dispatch(
+    view.state.tr.setSelection(TextSelection.create(view.state.doc, position(view.state, "code"))),
+  );
+  expect(view.run(view.bridge.adapter.setLink("https://example.test"))).toBe(false);
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
+  expect(view.run(view.bridge.adapter.setLink("https://example.test"))).toBe(false);
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 3, 5)));
+  expect(view.run(view.bridge.adapter.setLink("https://example.test"))).toBe(false);
+  view.dispatch(
+    view.state.tr.setSelection(
+      TextSelection.create(view.state.doc, 1, position(view.state, "b", 2)),
+    ),
+  );
+  expect(view.run(view.bridge.adapter.setLink("https://example.test"))).toBe(false);
+  expect(view.controller.session.getSnapshot().blocks).toEqual([a, b, code]);
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 4, 6)));
+  expect(view.run(view.bridge.adapter.setLink("http://example.test/path"))).toBe(true);
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 6)));
+  expect(view.bridge.adapter.linkSelection(view.state)).toMatchObject({
+    href: null,
+    hasLink: true,
+  });
+  expect(view.run(view.bridge.adapter.removeLink())).toBe(true);
+  expect(view.state.doc.textContent).toBe("a😀bcothersource");
+  expect(view.controller.session.getSnapshot().blocks[1]).toEqual(b);
+});
+
+it("changes only a partial list body's link while preserving its opaque loaded descendant", async () => {
+  const list = { ...paragraph("list", "list text"), type: "bulleted_item" };
+  const child = {
+    ...paragraph("opaque", "", "80000000000000000000000000000000"),
+    parentId: list.id,
+    type: "future_widget",
+    version: 9,
+    content: { exact: ["retained", { value: true }] },
+    future: { kept: 1 },
+  };
+  const view = await model([list, child], true);
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2, 6)));
+  expect(view.run(view.bridge.adapter.setLink("https://example.test/list"))).toBe(true);
+  expect(view.controller.session.getSnapshot().blocks).toEqual([
+    {
+      ...list,
+      content: {
+        runs: [
+          {
+            text: "list",
+            marks: [{ type: "link", version: 1, href: "https://example.test/list" }],
+          },
+          { text: " text", marks: [] },
+        ],
+      },
+    },
+    child,
+  ]);
+  expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+  expect(view.controller.session.getSnapshot().blocks).toEqual([list, child]);
+  expect(view.run(view.bridge.adapter.redoLocal())).toBe(true);
+  expect(view.controller.session.getSnapshot().blocks[1]).toEqual(child);
 });

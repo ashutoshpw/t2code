@@ -5303,3 +5303,191 @@ it.effect(
       ),
     ).pipe(Effect.provide(NodeServices.layer)),
 );
+
+it.effect(
+  "saves current block attributes and rich links as incremental replacements with shared views and exact saved compensation",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const mention = {
+            type: "page_mention",
+            version: 1,
+            target: { environmentId, pageId: C.SpacePageId.make("mentioned-page") },
+          };
+          const runs = [
+            { text: "", marks: [] },
+            { text: "head", marks: [{ type: "bold", version: 1 }, mention] },
+          ];
+          const blocks = [
+            {
+              ...savedParagraph("format-heading", ""),
+              type: "heading",
+              content: { level: 1, runs },
+            },
+            {
+              ...savedParagraph("format-callout", "body", "80000000000000000000000000000000"),
+              type: "callout",
+              content: { icon: "💡", runs: [{ text: "body", marks: [] }] },
+            },
+            {
+              ...savedParagraph("format-code", "", "c0000000000000000000000000000000"),
+              type: "code",
+              content: { text: "source", language: "original-language" },
+            },
+          ];
+          const h = yield* savedUndoFixture(service, blocks);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller),
+              peer = savedView(controller);
+            const at = (state: EditorState, id: string, offset = 0) => {
+              let found = -1;
+              state.doc.descendants((node, pos) => {
+                if (node.attrs.block?.id === id) found = pos + 1 + offset;
+              });
+              return found;
+            };
+            const select = (id: string, end?: number) =>
+              view.dispatch(
+                view.state.tr.setSelection(
+                  TextSelection.create(
+                    view.state.doc,
+                    at(view.state, id),
+                    end === undefined ? undefined : at(view.state, id, end),
+                  ),
+                ),
+              );
+            const run = (command: Command) => assert.isTrue(command(view.state, view.dispatch));
+            try {
+              peer.dispatch(
+                peer.state.tr.setSelection(
+                  TextSelection.create(peer.state.doc, at(peer.state, "format-callout", 2)),
+                ),
+              );
+              select("format-heading");
+              run(view.bridge.adapter.setHeadingLevel(3));
+              const heading = { ...blocks[0]!, content: { level: 3, runs } };
+              select("format-callout");
+              run(view.bridge.adapter.setCalloutIcon("📌"));
+              const callout = {
+                ...blocks[1]!,
+                content: { icon: "📌", runs: [{ text: "body", marks: [] }] },
+              };
+              select("format-code");
+              run(view.bridge.adapter.setCodeLanguage("typescript"));
+              const code = { ...blocks[2]!, content: { text: "source", language: "typescript" } };
+              select("format-heading", 4);
+              run(view.bridge.adapter.setLink("https://example.test/kept"));
+              const linked = {
+                ...heading,
+                content: {
+                  level: 3,
+                  runs: [
+                    runs[0]!,
+                    {
+                      text: "head",
+                      marks: [
+                        { type: "bold", version: 1 },
+                        mention,
+                        { type: "link", version: 1, href: "https://example.test/kept" },
+                      ],
+                    },
+                  ],
+                },
+              };
+              const expected = [linked, callout, code];
+              assert.deepEqual(spaceDocumentBlocks(peer.state.doc), expected);
+              assert.equal(peer.state.selection.head, at(peer.state, "format-callout", 2));
+              await controller.save();
+              assert.deepEqual(h.requests[0]!.mutations, [
+                { kind: "replace", block: linked },
+                { kind: "replace", block: callout },
+                { kind: "replace", block: code },
+              ]);
+              assert.deepEqual(
+                (await h.run(service.readBlocks({ ...h.key, revision: 2 }))).blocks,
+                expected,
+              );
+              assert.isTrue(await view.bridge.compensate("undo"));
+              assert.deepEqual(
+                (await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks,
+                blocks,
+              );
+              assert.deepEqual(spaceDocumentBlocks(peer.state.doc), blocks);
+              assert.isTrue(await view.bridge.compensate("redo"));
+              assert.deepEqual(
+                (await h.run(service.readBlocks({ ...h.key, revision: 4 }))).blocks,
+                expected,
+              );
+              select("format-heading");
+              run(view.bridge.adapter.setHeadingLevel(2));
+              await controller.save();
+              assert.equal(h.requests.length, 4);
+              assert.deepEqual(h.requests[3]!.mutations, [
+                { kind: "replace", block: { ...linked, content: { ...linked.content, level: 2 } } },
+              ]);
+              assert.notEqual(h.requests[3]!.mutationId, h.requests[0]!.mutationId);
+            } finally {
+              view.stop();
+              peer.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "keeps a newer heading attribute edit after the exact earlier formatting prefix is acknowledged",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const block = {
+            ...savedParagraph("format-late", "title"),
+            type: "heading",
+            content: { level: 1, runs: [{ text: "title", marks: [] }] },
+          };
+          const h = yield* savedUndoFixture(service, [block]);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              assert.isTrue(view.bridge.adapter.setHeadingLevel(2)(view.state, view.dispatch));
+              h.transport.hold = true;
+              const saving = controller.save();
+              await h.transport.committed.promise;
+              const original = controller.session.getSnapshot().pending!;
+              assert.isTrue(view.bridge.adapter.setHeadingLevel(3)(view.state, view.dispatch));
+              assert.deepEqual(controller.session.getSnapshot().pending, original);
+              h.transport.reply.resolve();
+              await saving;
+              assert.isTrue(controller.session.getSnapshot().dirty);
+              assert.deepEqual(controller.session.getSnapshot().blocks, [
+                { ...block, content: { ...block.content, level: 3 } },
+              ]);
+              await controller.save();
+              assert.equal(h.requests.length, 2);
+              assert.deepEqual(h.requests[0]!.mutations, [
+                { kind: "replace", block: { ...block, content: { ...block.content, level: 2 } } },
+              ]);
+              assert.deepEqual(h.requests[1]!.mutations, [
+                { kind: "replace", block: { ...block, content: { ...block.content, level: 3 } } },
+              ]);
+              assert.equal(h.requests[1]!.baseRevision, 2);
+              assert.deepEqual(
+                (await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks,
+                controller.session.getSnapshot().blocks,
+              );
+            } finally {
+              h.transport.reply.resolve();
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);

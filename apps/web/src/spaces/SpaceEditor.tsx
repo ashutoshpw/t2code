@@ -2,10 +2,12 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { Extension } from "@tiptap/core";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { NodeSelection, type Command } from "@tiptap/pm/state";
+import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
 import type { SpaceBlockId } from "@t2code/contracts/spaces";
+import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { SpaceEditorAdapter, type SpaceEditorBatch } from "./adapter";
-import { spaceDocumentBlocks } from "./document";
+import { canEditSpaceEditorBlock, spaceDocumentBlocks } from "./document";
 import type { SpaceEditorBridge } from "./editorBridge";
 import "./editor.css";
 
@@ -140,6 +142,9 @@ export function SpaceEditor({
     }
   }
   const selected = spaceDocumentBlocks(state.doc).find((block) => block.id === selectedId);
+  const known =
+    selected && isKnownSpaceBlock(selected) && canEditSpaceEditorBlock(selected) ? selected : null;
+  const link = adapter.linkSelection(state);
   const writable = editable && (bridge?.canEdit() ?? true);
   const structure = writable && (bridge?.canStructure() ?? true);
   const can = (command: Command) => writable && command(state);
@@ -260,6 +265,60 @@ export function SpaceEditor({
           </Button>
         ) : null}
       </div>
+      {known?.type === "heading" ? (
+        <div className="flex flex-wrap gap-2" aria-label="Heading level">
+          {([1, 2, 3] as const).map((level) => (
+            <Button
+              key={level}
+              variant="outline"
+              aria-pressed={known.content.level === level}
+              disabled={!can(adapter.setHeadingLevel(level))}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => run(adapter.setHeadingLevel(level))}
+            >
+              Heading {level}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+      {known?.type === "callout" ? (
+        <FormatValue
+          key={JSON.stringify([known.id, known.content.icon])}
+          label="Callout icon"
+          initial={known.content.icon}
+          writable={writable}
+          command={(value) => adapter.setCalloutIcon(value)}
+          can={can}
+          run={run}
+        />
+      ) : null}
+      {known?.type === "code" ? (
+        <FormatValue
+          key={JSON.stringify([known.id, known.content.language])}
+          label="Code language label"
+          initial={known.content.language}
+          writable={writable}
+          command={(value) => adapter.setCodeLanguage(value)}
+          can={can}
+          run={run}
+        />
+      ) : null}
+      {link ? (
+        <LinkValue
+          key={JSON.stringify([selectedId, link.from, link.to, link.href])}
+          href={link.href ?? ""}
+          hasLink={link.hasLink}
+          adapter={adapter}
+          writable={writable}
+          can={can}
+          run={run}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Select text to add a link, or place the caret inside an existing link to edit or remove
+          it.
+        </p>
+      )}
       {historyNotice ? <p role="status">{historyNotice}</p> : null}
       {bridge ? (
         <p>Local undo covers edits made in this view. Saved undo/redo has separate controls.</p>
@@ -292,4 +351,106 @@ function noSubscribe() {
 }
 function noNotice() {
   return null;
+}
+
+function FormatValue({
+  label,
+  initial,
+  writable,
+  command,
+  can,
+  run,
+}: {
+  label: string;
+  initial: string;
+  writable: boolean;
+  command: (value: string) => Command;
+  can: (command: Command) => boolean;
+  run: (command: Command) => void;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <form
+      className="flex flex-wrap items-end gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        run(command(value));
+      }}
+    >
+      <label>
+        {label}
+        <Input
+          value={value}
+          disabled={!writable}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      </label>
+      <Button
+        type="submit"
+        variant="outline"
+        disabled={!can(command(value))}
+        onMouseDown={(event) => event.preventDefault()}
+      >
+        Apply {label.toLowerCase()}
+      </Button>
+    </form>
+  );
+}
+function LinkValue({
+  href,
+  hasLink,
+  adapter,
+  writable,
+  can,
+  run,
+}: {
+  href: string;
+  hasLink: boolean;
+  adapter: SpaceEditorAdapter;
+  writable: boolean;
+  can: (command: Command) => boolean;
+  run: (command: Command) => void;
+}) {
+  const [value, setValue] = useState(href);
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        run(adapter.setLink(value));
+      }}
+    >
+      <label>
+        Link URL
+        <Input
+          value={value}
+          disabled={!writable}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      </label>
+      <p className="text-sm text-muted-foreground">
+        HTTP, HTTPS or mailto links. Applies to the selected text, or the whole existing link at the
+        caret.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="submit"
+          variant="outline"
+          disabled={!can(adapter.setLink(value))}
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          {hasLink ? "Apply link" : "Add link"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!can(adapter.removeLink())}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => run(adapter.removeLink())}
+        >
+          Remove link
+        </Button>
+      </div>
+    </form>
+  );
 }

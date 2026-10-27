@@ -17,11 +17,17 @@ import {
   copySpaceBlocks,
   isKnownSpaceBlock,
   isSpaceListItem,
+  isSafeSpaceLink,
   joinSpaceTextBlocks,
   splitSpaceTextBlock,
   type SpaceMutation,
 } from "@t2code/client-runtime/spaces";
-import { SpaceBlock, type SpaceBlockId, type SpacePageTarget } from "@t2code/contracts/spaces";
+import {
+  SpaceBlock,
+  type SpaceBlockId,
+  type SpacePageTarget,
+  type SpaceRichText,
+} from "@t2code/contracts/spaces";
 
 import {
   canEditSpaceEditorBlock,
@@ -460,6 +466,169 @@ export class SpaceEditorAdapter {
         state,
         dispatch,
       );
+  }
+
+  #selectedEntry(state: EditorState) {
+    if (this.#options.canEdit?.() === false) return null;
+    let id: SpaceBlockId | undefined;
+    if (state.selection instanceof NodeSelection) id = state.selection.node.attrs.block?.id;
+    else {
+      if (!state.selection.$from.sameParent(state.selection.$to)) return null;
+      for (let depth = state.selection.$from.depth; depth > 0; depth--) {
+        id = state.selection.$from.node(depth).attrs.block?.id;
+        if (id) break;
+      }
+    }
+    const entry = entries(state.doc).find((item) => item.block.id === id);
+    const block = spaceDocumentBlocks(state.doc).find((item) => item.id === id);
+    return entry && block && entry.node.type.name !== "spaceAtom" && canEditSpaceEditorBlock(block)
+      ? { ...entry, block }
+      : null;
+  }
+  #attribute(
+    type: "heading" | "callout" | "code",
+    key: "level" | "icon" | "language",
+    value: string | number,
+  ): Command {
+    return (state, dispatch) => {
+      const entry = this.#selectedEntry(state);
+      if (
+        !entry ||
+        !isKnownSpaceBlock(entry.block) ||
+        entry.block.type !== type ||
+        Reflect.get(entry.block.content, key) === value
+      )
+        return false;
+      return this.#dispatch(
+        state.tr.setNodeMarkup(entry.pos, undefined, {
+          block: { ...entry.block, content: { ...entry.block.content, [key]: value } },
+        }),
+        dispatch,
+      );
+    };
+  }
+  setHeadingLevel(level: 1 | 2 | 3): Command {
+    return (state, dispatch) =>
+      [1, 2, 3].includes(level) && this.#attribute("heading", "level", level)(state, dispatch);
+  }
+  setCalloutIcon(icon: string): Command {
+    return this.#attribute("callout", "icon", icon);
+  }
+  setCodeLanguage(language: string): Command {
+    return this.#attribute("code", "language", language);
+  }
+
+  linkSelection(state: EditorState) {
+    const entry = this.#selectedEntry(state),
+      selection = state.selection;
+    if (
+      !entry ||
+      !(selection instanceof TextSelection) ||
+      !isKnownSpaceBlock(entry.block) ||
+      !("runs" in entry.block.content)
+    )
+      return null;
+    const runs = entry.block.content.runs;
+    let offset = 0;
+    const segments = runs.flatMap((run) => {
+      const from = offset;
+      offset += run.text.length;
+      return run.text
+        ? [
+            {
+              from,
+              to: offset,
+              href: run.marks.find((mark) => mark.type === "link")?.href as string | undefined,
+            },
+          ]
+        : [];
+    });
+    let from = selection.$from.parentOffset,
+      to = selection.$to.parentOffset;
+    const text = runs.map((run) => run.text).join("");
+    if (
+      [from, to].some(
+        (n) =>
+          n > 0 &&
+          n < text.length &&
+          /[\uD800-\uDBFF]/.test(text[n - 1]!) &&
+          /[\uDC00-\uDFFF]/.test(text[n]!),
+      )
+    )
+      return null;
+    if (selection.empty) {
+      const index = segments.findIndex((segment) => segment.from <= from && from < segment.to);
+      const at = index < 0 && from === text.length ? segments.length - 1 : index;
+      const selected = segments[at];
+      if (!selected?.href) return null;
+      let left = at,
+        right = at;
+      while (left > 0 && segments[left - 1]!.href === selected.href) left--;
+      while (right + 1 < segments.length && segments[right + 1]!.href === selected.href) right++;
+      from = segments[left]!.from;
+      to = segments[right]!.to;
+    }
+    const selected = segments.filter((segment) => segment.from < to && segment.to > from);
+    const href = selected[0]?.href;
+    const start = selection.$from.start();
+    return {
+      from: start + from,
+      to: start + to,
+      href: href && selected.every((segment) => segment.href === href) ? href : null,
+      hasLink: selected.some((segment) => !!segment.href),
+    };
+  }
+  setLink(href: string): Command {
+    return (state, dispatch) => isSafeSpaceLink(href) && this.#link(href)(state, dispatch);
+  }
+  removeLink(): Command {
+    return this.#link(null);
+  }
+  #link(href: string | null): Command {
+    return (state, dispatch) => {
+      const range = this.linkSelection(state),
+        entry = this.#selectedEntry(state);
+      if (
+        !range ||
+        !entry ||
+        !isKnownSpaceBlock(entry.block) ||
+        !("runs" in entry.block.content) ||
+        (!href && !range.hasLink) ||
+        (href !== null && range.href === href)
+      )
+        return false;
+      const start = state.selection.$from.start(),
+        from = range.from - start,
+        to = range.to - start;
+      let offset = 0;
+      const runs: SpaceRichText = entry.block.content.runs.flatMap((run) => {
+        const a = Math.max(0, from - offset),
+          b = Math.min(run.text.length, to - offset);
+        offset += run.text.length;
+        if (a >= b) return [run];
+        const marks = run.marks.flatMap((mark) =>
+          mark.type === "link" ? (href ? [{ ...mark, href }] : []) : [mark],
+        );
+        if (href && !run.marks.some((mark) => mark.type === "link"))
+          marks.push({ type: "link", version: 1, href });
+        return [
+          ...(a > 0 ? [{ ...run, text: run.text.slice(0, a) }] : []),
+          { ...run, text: run.text.slice(a, b), marks },
+          ...(b < run.text.length ? [{ ...run, text: run.text.slice(b) }] : []),
+        ];
+      });
+      const tr = state.tr.removeMark(range.from, range.to, state.schema.marks.space_link!);
+      if (href)
+        tr.addMark(
+          range.from,
+          range.to,
+          state.schema.marks.space_link!.create({ value: { type: "link", version: 1, href } }),
+        );
+      tr.setNodeMarkup(entry.pos, undefined, {
+        block: { ...entry.block, content: { ...entry.block.content, runs } },
+      });
+      return this.#dispatch(tr, dispatch);
+    };
   }
 
   toggleTodo(id: SpaceBlockId): Command {
