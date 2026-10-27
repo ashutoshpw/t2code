@@ -5,6 +5,7 @@ import {
   receiveSpacesNativeSnapshot,
 } from "./nativeSpacesAdapter";
 import {
+  decodeSpacesNativeEnvelope,
   decodeSpacesNativeSnapshot,
   type SpacesNativeMark,
   type SpacesNativeSnapshot,
@@ -21,6 +22,8 @@ export class SpacesNativePublication {
   readonly #listeners = new Set<() => void>();
   readonly initialDocument;
   #publishedRuns: string;
+  #receivedRevision = 0;
+  #receivedRuns: string;
   #snapshot: PublicationSnapshot;
 
   constructor(
@@ -43,6 +46,7 @@ export class SpacesNativePublication {
     };
     this.#snapshot = { admitted: initial, observed: initial, blocked: false, error: null };
     this.#publishedRuns = JSON.stringify(document.runs);
+    this.#receivedRuns = this.#publishedRuns;
   }
 
   getSnapshot = () => this.#snapshot;
@@ -99,14 +103,15 @@ export class SpacesNativePublication {
 
   receive(value: unknown, change: boolean) {
     try {
-      const observed = decodeSpacesNativeSnapshot(value);
-      const previous = this.#snapshot.observed;
-      if (observed.revision < previous.revision) return;
-      if (
-        observed.revision === previous.revision &&
-        JSON.stringify(observed.runs) !== JSON.stringify(previous.runs)
-      )
+      const envelope = decodeSpacesNativeEnvelope(value);
+      if (envelope.revision < this.#receivedRevision) return;
+      const runs = JSON.stringify(envelope.runs);
+      if (envelope.revision === this.#receivedRevision && runs !== this.#receivedRuns)
         throw new Error("Native content changed without a new revision");
+      // Rejected final ranges must still prevent older commits and conflicting same-revision echoes.
+      this.#receivedRevision = envelope.revision;
+      this.#receivedRuns = runs;
+      const observed = decodeSpacesNativeSnapshot(envelope);
       this.#update({ observed });
       const admitted = receiveSpacesNativeSnapshot(this.#snapshot.admitted, observed);
       if (change && !admitted.composing) {

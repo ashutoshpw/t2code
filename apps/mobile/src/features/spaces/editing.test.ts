@@ -95,6 +95,99 @@ function event(text: string, revision: number, composing = false) {
 }
 
 describe("production native page editing boundary", () => {
+  it("retains a newer rejected native revision through older commits and recovers only consistent content without leaking across owners", async () => {
+    const test = setup();
+    await test.session.hydrate({ revision: 40, blocks: [block] });
+    const owner = Symbol();
+    const focus = test.editing.focus(owner, block.id);
+    const publication = focus.publication;
+    publication.receive(event("😀y", 1, true), true);
+    const before = publication.getSnapshot();
+    const rejected = { ...event("😀z", 2), selection: { start: 1, end: 2 } };
+    publication.receive(rejected, true);
+    expect(publication.getSnapshot()).toMatchObject({
+      blocked: true,
+      error: expect.stringContaining("UTF-16"),
+      observed: before.observed,
+      admitted: before.admitted,
+    });
+    publication.receive(event("😀y", 1), true);
+    expect(publication.getSnapshot().blocked).toBe(true);
+    expect(publication.getSnapshot().observed).toBe(before.observed);
+    expect(test.session.getSnapshot()).toMatchObject({ generation: 0, blocks: [block] });
+    expect(() => publication.formatCommand("bold", publication.getSnapshot().observed)).toThrow();
+
+    publication.receive(event("different content at rejected revision", 2), true);
+    expect(publication.getSnapshot().error).toContain("without a new revision");
+    expect(test.session.getSnapshot().generation).toBe(0);
+    const corrected = { ...rejected, selection: { start: 2, end: 3 } };
+    publication.receive(corrected, false);
+    expect(publication.getSnapshot().blocked).toBe(true);
+    expect(test.session.getSnapshot().generation).toBe(0);
+    publication.receive(corrected, true);
+    expect(publication.getSnapshot().blocked).toBe(false);
+    expect(test.session.getSnapshot().generation).toBe(1);
+    expect(test.session.getSnapshot().blocks[0]?.content).toMatchObject({
+      runs: [{ text: "😀z" }],
+    });
+    publication.receive(corrected, true);
+    expect(test.session.getSnapshot().generation).toBe(1);
+    publication.receive({ ...event("😀bad", 3), selection: { start: 1, end: 2 } }, true);
+    publication.receive(corrected, true);
+    expect(publication.getSnapshot().blocked).toBe(true);
+    expect(test.session.getSnapshot().generation).toBe(1);
+    publication.receive(event("Recovered newer revision", 4), true);
+    expect(publication.getSnapshot().blocked).toBe(false);
+    await test.editing.finish(owner, focus.token);
+
+    const next = test.editing.focus(Symbol(), block.id);
+    expect(next.publication.getSnapshot().observed.revision).toBe(0);
+    publication.receive(event("Released owner with very high revision", 100), true);
+    expect(publication.getSnapshot().blocked).toBe(true);
+    next.publication.receive(event("New owner starts at revision one", 1), true);
+    expect(next.publication.getSnapshot().blocked).toBe(false);
+    expect(test.session.getSnapshot().blocks[0]?.content).toMatchObject({
+      runs: [{ text: "New owner starts at revision one" }],
+    });
+    await test.editing.finish(next.owner, next.token);
+  });
+
+  it("does not trust revisions from malformed native envelopes when recovering publication", async () => {
+    for (const patch of [
+      { revision: -1 },
+      { revision: 1.5 },
+      { revision: Number.NaN },
+      { revision: Number.POSITIVE_INFINITY },
+      { revision: Number.MAX_SAFE_INTEGER + 1 },
+      { revision: "100" },
+      { revision: 100, version: 2 },
+      { revision: 100, runs: [{ text: "Missing styles" }] },
+      { revision: 100, selection: { start: -1, end: 0 } },
+      { revision: 100, composing: "false" },
+      { revision: 100, typing: null },
+      { revision: 100, unexpected: true },
+    ]) {
+      const test = setup();
+      await test.session.hydrate({ revision: 40, blocks: [block] });
+      const focus = test.editing.focus(Symbol(), block.id);
+      const publication = focus.publication;
+      const initial = publication.getSnapshot();
+      publication.receive({ ...event("Must not be admitted", 100), ...patch }, true);
+      expect(publication.getSnapshot()).toMatchObject({
+        blocked: true,
+        observed: initial.observed,
+        admitted: initial.admitted,
+      });
+      expect(test.session.getSnapshot().generation).toBe(0);
+      publication.receive(event("Valid lower native revision", 1), true);
+      expect(publication.getSnapshot().blocked).toBe(false);
+      expect(test.session.getSnapshot().blocks[0]?.content).toMatchObject({
+        runs: [{ text: "Valid lower native revision" }],
+      });
+      await test.editing.finish(focus.owner, focus.token);
+    }
+  });
+
   it("targets only the current native selection and refuses stale, composing, unsupported or rejected formatting while retaining local history recovery", async () => {
     const test = setup();
     await test.session.hydrate({ revision: 40, blocks: [block] });
