@@ -464,15 +464,13 @@ const layerUntracedRequests = Layer.succeed(HttpMiddleware.TracerDisabledWhen)((
 
 export const withUntracedRequests = Layer.provide(layerUntracedRequests);
 
-const layerAssetRequestPrivacy = HttpRouter.middleware(
-  (effect) =>
-    Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
-      isAssetBearerPath(request.url)
-        ? effect.pipe(HttpMiddleware.withLoggerDisabled, Effect.withTracerEnabled(false))
-        : effect,
-    ),
-  { global: true },
-);
+// Server middleware must mark the request before CORS or other router middleware can short-circuit.
+export const assetRequestPrivacy = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
+    isAssetBearerPath(request.url)
+      ? effect.pipe(HttpMiddleware.withLoggerDisabled, Effect.withTracerEnabled(false))
+      : effect,
+  );
 
 export const layerAssetRoute = HttpRouter.add(
   "GET",
@@ -530,7 +528,7 @@ export const layerAssetRoute = HttpRouter.add(
       Effect.orElseSucceed(() => HttpServerResponse.text("Internal Server Error", { status: 500 })),
     );
   }),
-).pipe(Layer.merge(layerAssetRequestPrivacy));
+);
 
 export const layerSpacesUploadRoute = HttpRouter.add(
   "POST",

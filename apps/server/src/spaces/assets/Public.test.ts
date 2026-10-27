@@ -137,7 +137,6 @@ const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(function* <A, E, R>(
     Layer.mergeAll(
       ServerHttp.layerSpacesUploadRoute,
       ServerHttp.layerAssetRoute,
-      ServerHttp.layerHttpCompression,
       HttpRouter.add("GET", "/api/assets-info", HttpServerResponse.text("public control")),
       HttpRouter.add(
         "GET",
@@ -153,8 +152,13 @@ const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(function* <A, E, R>(
           ),
         ),
       ),
-    ).pipe(ServerHttp.withUntracedRequests, Layer.provideMerge(Layer.succeedContext(context))),
-    { disableLogger: !logRequests },
+    ).pipe(
+      Layer.provide(ServerHttp.layerBrowserApiCors),
+      Layer.provide(ServerHttp.layerHttpCompression),
+      ServerHttp.withUntracedRequests,
+      Layer.provideMerge(Layer.succeedContext(context)),
+    ),
+    { disableLogger: !logRequests, middleware: ServerHttp.assetRequestPrivacy },
   );
   yield* Effect.addFinalizer(() => Effect.promise(dispose));
   const request = (relative: string, init?: RequestInit) =>
@@ -206,6 +210,29 @@ describe("Spaces public asset wiring", () => {
                 "trace-fixture",
               );
               secrets.push(grant.relativeUrl.split("/").at(-1)!);
+              for (const path of [
+                grant.relativeUrl,
+                grant.relativeUrl.replace(
+                  "/api/spaces/assets/upload",
+                  "/api/spaces//assets/upload",
+                ),
+              ]) {
+                const preflight = yield* request(`${path}?query=${secrets[0]}`, {
+                  method: "OPTIONS",
+                  headers: {
+                    origin: "https://app.t2.codes",
+                    "access-control-request-method": "POST",
+                    "access-control-request-headers": "content-type",
+                  },
+                });
+                expect(preflight.status).toBe(204);
+                expect(preflight.headers.get("access-control-allow-origin")).toBe("*");
+                expect(preflight.headers.get("access-control-allow-methods")).toContain("POST");
+                expect(preflight.headers.get("access-control-allow-headers")).toContain(
+                  "content-type",
+                );
+                expect(preflight.headers.get("access-control-max-age")).toBe("600");
+              }
               expect(
                 (yield* request(grant.relativeUrl, {
                   method: "POST",
@@ -218,6 +245,19 @@ describe("Spaces public asset wiring", () => {
               });
               secrets.push(signed.relativeUrl.split("/")[3]!);
               const target = `${signed.relativeUrl}?query=${secrets[0]}`;
+              for (const path of [target, target.replace("/api/assets", "/api//assets")]) {
+                const preflight = yield* request(path, {
+                  method: "OPTIONS",
+                  headers: {
+                    origin: "https://app.t2.codes",
+                    "access-control-request-method": "GET",
+                    "access-control-request-headers": "range",
+                  },
+                });
+                expect(preflight.status).toBe(204);
+                expect(preflight.headers.get("access-control-allow-origin")).toBe("*");
+                expect(preflight.headers.get("access-control-allow-methods")).toContain("GET");
+              }
               const full = yield* request(target);
               expect(full.status).toBe(200);
               expect(new Uint8Array(yield* Effect.promise(() => full.arrayBuffer()))).toEqual(pdf);
@@ -285,6 +325,16 @@ describe("Spaces public asset wiring", () => {
               const control = yield* request("/api/assets-info?query=public");
               expect(control.status).toBe(200);
               expect(yield* Effect.promise(() => control.text())).toBe("public control");
+              const controlPreflight = yield* request("/api/assets-info/preflight?query=public", {
+                method: "OPTIONS",
+                headers: {
+                  origin: "https://app.t2.codes",
+                  "access-control-request-method": "GET",
+                  "access-control-request-headers": "range",
+                },
+              });
+              expect(controlPreflight.status).toBe(204);
+              expect(controlPreflight.headers.get("access-control-allow-origin")).toBe("*");
             }).pipe(
               Effect.provide(
                 ServerLogger.layer.pipe(
@@ -314,6 +364,7 @@ describe("Spaces public asset wiring", () => {
             const httpRecords = records.filter(isControlHttpTrace);
             for (const [path, status] of [
               ["/api/assets-info", 200],
+              ["/api/assets-info/preflight", 204],
               ["/api//assets-info", 200],
               ["/api/assets%2Finfo", 404],
               ["/api/spaces//assets/upload-info", 404],
