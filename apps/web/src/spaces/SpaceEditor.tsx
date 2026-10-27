@@ -9,6 +9,8 @@ import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { SpaceEditorAdapter, type SpaceEditorBatch } from "./adapter";
 import { canEditSpaceEditorBlock, spaceDocumentBlocks } from "./document";
+import { SpaceImageControls } from "./SpaceImageControls";
+import type { SpaceImageUploads } from "@t2code/client-runtime/spaces";
 import type { SpaceEditorBridge } from "./editorBridge";
 import "./editor.css";
 
@@ -21,8 +23,10 @@ export function SpaceEditor({
   targetBlockId,
   current,
   sourceOwner,
+  images,
   renderChild,
 }: {
+  readonly images?: SpaceImageUploads;
   readonly targetBlockId?: SpaceBlockId | undefined;
   readonly current?: (() => boolean) | undefined;
   readonly sourceOwner?: { current(): boolean } | null | undefined;
@@ -201,6 +205,17 @@ export function SpaceEditor({
   const can = (command: Command) => writable && command(state);
   return (
     <section aria-label="Page contents" className="space-y-3" data-space-editor="">
+      {images && bridge ? (
+        <SpaceImageControls
+          owner={images}
+          insertion={bridge.imageInsertion(
+            () => editor.state,
+            editor.view.dispatch,
+            () => !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
+          )}
+          current={() => sourceOwner?.current() === true && current?.() === true}
+        />
+      ) : null}
       <div className="flex flex-wrap gap-2">
         {bridge ? (
           <Button

@@ -11,9 +11,9 @@ function createDatabase() {
         return;
       }
       let failed = false;
-      const request = indexedDB.open(databaseName, 2);
+      const request = indexedDB.open(databaseName, 3);
       request.addEventListener("upgradeneeded", () => {
-        for (const name of ["pages", "structure"])
+        for (const name of ["pages", "structure", "media"])
           if (!request.result.objectStoreNames.contains(name))
             request.result.createObjectStore(name);
       });
@@ -54,9 +54,9 @@ function createDatabase() {
     return opening;
   }
   async function transaction<A>(
-    storeName: "pages" | "structure",
+    storeName: "pages" | "structure" | "media",
     mode: IDBTransactionMode,
-    use: (store: IDBObjectStore) => IDBRequest<A>,
+    use: (store: IDBObjectStore, transaction: IDBTransaction) => IDBRequest<A>,
   ): Promise<A> {
     const database = await open();
     return new Promise<A>((resolve, reject) => {
@@ -70,7 +70,7 @@ function createDatabase() {
           reject(tx.error ?? new Error("Spaces draft transaction failed")),
         );
         tx.addEventListener("complete", () => resolve(value));
-        const request = use(tx.objectStore(storeName));
+        const request = use(tx.objectStore(storeName), tx);
         request.addEventListener("success", () => {
           value = request.result;
         });

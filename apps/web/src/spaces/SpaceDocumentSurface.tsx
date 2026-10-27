@@ -9,6 +9,8 @@ import { Button } from "../components/ui/button";
 import { spacesEnvironment } from "../state/spaces";
 import { randomUUID } from "../lib/utils";
 import { SpaceEditorBridge } from "./editorBridge";
+import { spaceImages } from "./imageRuntime";
+import { SpaceMediaBlock } from "./SpaceMediaBlock";
 import { SpaceEditor } from "./SpaceEditor";
 import type { SpaceBlockMoveProof } from "@t2code/client-runtime/spaces";
 import { useEnvironment } from "../state/environments";
@@ -112,7 +114,16 @@ function DocumentContent({
   );
   const canReadSource = () => !!sources?.current() && current();
   const renderChild = (block: SpaceBlock) => {
-    if (!isKnownSpaceBlock(block) || block.type !== "child_page") return null;
+    if (!isKnownSpaceBlock(block)) return null;
+    if (["image", "pdf", "video"].includes(block.type))
+      return (
+        <SpaceMediaBlock
+          environmentId={controller.session.key.environmentId}
+          block={block}
+          current={canReadSource}
+        />
+      );
+    if (block.type !== "child_page") return null;
     return (
       <SpaceSourceOpen
         owner={sources}
@@ -173,6 +184,12 @@ function DocumentContent({
         </p>
       ) : null}
       {error ? <p role="alert">{message(error)}</p> : null}
+      {snapshot.imageAdmissionError ? (
+        <p role="alert">
+          {message(snapshot.imageAdmissionError)} You can edit the unsent draft; no pending request
+          was changed.
+        </p>
+      ) : null}
       {session.persistenceError ? (
         <p role="alert">Draft storage failed: {message(session.persistenceError)}</p>
       ) : null}
@@ -193,6 +210,7 @@ function DocumentContent({
           bridge={bridge}
           targetBlockId={targetBlockId}
           sourceOwner={sources}
+          images={spaceImages(registry)}
           current={canReadSource}
           renderChild={renderChild}
           onMoveBlocks={

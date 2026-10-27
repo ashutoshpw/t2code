@@ -1,5 +1,6 @@
 import {
   SpaceDocumentSession,
+  SpaceIntentAdmissionError,
   isSpaceListItem,
   type SpaceSessionOptions,
   type SpaceSessionSnapshot,
@@ -19,6 +20,7 @@ export interface SpaceDocumentPorts {
   readonly getPage: () => Promise<SpacePageGetResult>;
   readonly readBlocks: (input: SpaceReadBlocksInput) => Promise<SpaceReadBlocksResult>;
   readonly windowLimit: () => number;
+  readonly mediaBlocked?: () => boolean;
 }
 interface DocumentSnapshot {
   readonly session: SpaceSessionSnapshot;
@@ -26,6 +28,7 @@ interface DocumentSnapshot {
   readonly nextCursor: SpaceCursor | null;
   readonly loading: boolean;
   readonly error: unknown;
+  readonly imageAdmissionError: unknown;
   readonly completeWindow: boolean;
 }
 
@@ -53,7 +56,7 @@ export class SpaceDocumentController {
     };
   }
   structureBlocked() {
-    return this.#reserved;
+    return this.#reserved || this.#ports.mediaBlocked?.() === true;
   }
   #assertUnreserved() {
     if (this.#reserved)
@@ -85,6 +88,7 @@ export class SpaceDocumentController {
       nextCursor: null,
       loading: false,
       error: null,
+      imageAdmissionError: null,
       completeWindow: false,
     };
   }
@@ -99,6 +103,7 @@ export class SpaceDocumentController {
     return {
       revision: session.baseRevision ?? 0,
       blocks: session.blocks,
+      committedIds: session.memberIds,
       completeParents: complete
         ? [null, ...session.blocks.filter(isSpaceListItem).map((block) => block.id)]
         : [],
@@ -129,7 +134,12 @@ export class SpaceDocumentController {
     this.#opening = null;
     this.#update({ nextCursor: null, loading: false });
   }
+  refreshAccess() {
+    this.#update({});
+  }
   #assertClean() {
+    if (this.#ports.mediaBlocked?.())
+      throw new Error("Finish the retained image insertion before changing windows");
     const state = this.session.getSnapshot();
     if (
       state.dirty ||
@@ -213,13 +223,15 @@ export class SpaceDocumentController {
   }
   async save() {
     this.#assertUnreserved();
-    this.#update({ error: null, nextCursor: null });
+    this.#update({ error: null, imageAdmissionError: null, nextCursor: null });
     try {
       await this.session.save();
       const state = this.session.getSnapshot();
       if (!state.dirty && !state.pending && state.persistenceError === null) await this.#load();
     } catch (error) {
-      this.#update({ error });
+      if (error instanceof SpaceIntentAdmissionError && !this.session.getSnapshot().pending)
+        this.#update({ imageAdmissionError: error });
+      else this.#update({ error });
       throw error;
     }
   }
@@ -305,6 +317,9 @@ export class SpaceDocumentControllers {
         errors,
         "Some affected Spaces documents could not refresh; reload them before editing",
       );
+  }
+  refreshAccess() {
+    for (const { controller } of this.#documents.values()) controller.refreshAccess();
   }
   readonly #documents = new Map<string, { controller: SpaceDocumentController; readers: number }>();
   constructor(readonly create: (key: SpacePageTarget) => SpaceDocumentController) {}

@@ -11,7 +11,9 @@ export function SpaceAtomView({ node }: NodeViewProps) {
   const block = node.attrs.block as SpaceBlock;
   return (
     <NodeViewWrapper contentEditable={false} data-space-block={block.id}>
-      {isKnownSpaceBlock(block) && block.type === "child_page" && renderChild ? (
+      {isKnownSpaceBlock(block) &&
+      ["child_page", "image", "pdf", "video"].includes(block.type) &&
+      renderChild ? (
         renderChild(block)
       ) : isKnownSpaceBlock(block) && block.type === "divider" ? (
         <hr />

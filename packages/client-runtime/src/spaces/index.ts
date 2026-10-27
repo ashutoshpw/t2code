@@ -10,3 +10,6 @@ export * from "./pageLocation.ts";
 export * from "./structure.ts";
 
 export * from "./references.ts";
+
+export * from "./imageUpload.ts";
+export * from "./imagePreview.ts";

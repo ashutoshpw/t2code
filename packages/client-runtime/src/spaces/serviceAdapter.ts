@@ -21,6 +21,7 @@ export interface SpaceServicePorts {
     input: SpaceReceiptLookupInput,
   ) => Promise<SpaceReceiptLookupResult>;
   readonly limits: () => SpaceLimits;
+  readonly validateNewRequest?: (request: SpaceSaveRequest) => void | Promise<void>;
 }
 
 export function createSpaceServiceSessionAdapter(
@@ -65,6 +66,7 @@ export function createSpaceServiceSessionAdapter(
       spaceJsonBytes({ operation: "applyBlockBatch", input: value }, limits.maxMutationBytes);
       if (value.mutations.length > limits.maxMutationNodes)
         throw new Error("Spaces mutation exceeds node limit");
+      return ports.validateNewRequest?.(request);
     },
     save: async (request) => result(request, await ports.applyBlockBatch(input(request))),
     lookupReceipt: async (request) => {

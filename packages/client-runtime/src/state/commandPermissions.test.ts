@@ -1,6 +1,7 @@
 import { createSpacesEnvironmentAtoms } from "./spaces.ts";
 import {
   SpaceId,
+  SpaceAssetUploadId,
   SpaceBlockId,
   SpacePageId,
   SpaceMutationId,
@@ -598,12 +599,13 @@ it.effect.each([
     ),
 );
 
-it.effect.each(["search", "resolve"] as const)(
-  "uses the latest read grant and exact %s capability at the real command boundary",
+it.effect.each(["search", "resolve", "createImageUpload", "finalizeImageUpload"] as const)(
+  "uses the latest destination grant and exact %s capability at the real command boundary",
   (operation) =>
     Effect.scoped(
       Effect.gen(function* () {
         const registry = yield* setup;
+        const image = operation === "createImageUpload" || operation === "finalizeImageUpload";
         let calls = 0;
         const reached = () =>
           Effect.sync(() => {
@@ -614,6 +616,8 @@ it.effect.each(["search", "resolve"] as const)(
           client: {
             [WS_METHODS.spacesSearch]: reached,
             [WS_METHODS.spacesReferencesResolve]: reached,
+            [WS_METHODS.spacesAssetsUploadCreate]: reached,
+            [WS_METHODS.spacesAssetsUploadFinalize]: reached,
           },
         } as unknown as RpcSession;
         const supervisor = {
@@ -630,18 +634,35 @@ it.effect.each(["search", "resolve"] as const)(
           spaces = createSpacesEnvironmentAtoms(runtime, { capabilityAtom: () => capability });
         const run = () =>
           Effect.promise(async () =>
-            operation === "search"
-              ? spaces.search.run(registry, {
-                  environmentId: env,
-                  input: { environmentId: env, query: "word" },
-                })
-              : spaces.resolve.run(registry, {
+            operation === "createImageUpload"
+              ? spaces.createImageUpload.run(registry, {
                   environmentId: env,
                   input: {
                     environmentId: env,
-                    target: { kind: "page", pageId: SpacePageId.make("page") },
+                    requestId: "image",
+                    expectedBytes: 68,
+                    mimeType: "image/png",
+                    mediaKind: "image",
+                    name: "image.png",
                   },
-                }),
+                })
+              : operation === "finalizeImageUpload"
+                ? spaces.finalizeImageUpload.run(registry, {
+                    environmentId: env,
+                    input: { environmentId: env, uploadId: SpaceAssetUploadId.make("upload") },
+                  })
+                : operation === "search"
+                  ? spaces.search.run(registry, {
+                      environmentId: env,
+                      input: { environmentId: env, query: "word" },
+                    })
+                  : spaces.resolve.run(registry, {
+                      environmentId: env,
+                      input: {
+                        environmentId: env,
+                        target: { kind: "page", pageId: SpacePageId.make("page") },
+                      },
+                    }),
           );
         registry.set(
           sessions(env),
@@ -651,6 +672,7 @@ it.effect.each(["search", "resolve"] as const)(
             permissions: [AuthOrchestrationReadScope],
           }),
         );
+        if (image) registry.set(sessions(env), AsyncResult.success(grant(true)));
         yield* run();
         registry.set(capability, { version: 1, limits: {} } as SpaceCapability);
         yield* run();
@@ -659,8 +681,8 @@ it.effect.each(["search", "resolve"] as const)(
         expect(calls).toBe(0);
         registry.set(capability, {
           version: 2,
-          features: { search: true, referenceResolution: true },
-          limits: {},
+          features: { search: true, referenceResolution: true, assets: true },
+          limits: { assets: {} },
         } as SpaceCapability);
         yield* run();
         expect(calls).toBe(1);
@@ -669,17 +691,28 @@ it.effect.each(["search", "resolve"] as const)(
         expect(calls).toBe(1);
         registry.set(capability, {
           version: 3,
-          features: { search: true, referenceResolution: true },
-          limits: {},
+          features: { search: true, referenceResolution: true, assets: true },
+          limits: { assets: {} },
         } as SpaceCapability);
         yield* run();
         expect(calls).toBe(1);
         registry.set(capability, {
           version: 2,
-          features: { search: true, referenceResolution: true },
-          limits: {},
+          features: { search: true, referenceResolution: true, assets: true },
+          limits: { assets: {} },
         } as SpaceCapability);
-        registry.set(sessions(env), AsyncResult.success(grant(true)));
+        registry.set(
+          sessions(env),
+          AsyncResult.success(
+            image
+              ? {
+                  ...grant(false),
+                  scopes: [AuthOrchestrationReadScope],
+                  permissions: [AuthOrchestrationReadScope],
+                }
+              : grant(true),
+          ),
+        );
         yield* run();
         expect(calls).toBe(1);
       }),

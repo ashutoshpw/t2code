@@ -24,6 +24,7 @@ import {
 } from "@t2code/client-runtime/spaces";
 import {
   SpaceBlock,
+  type SpaceAssetId,
   type SpaceBlockId,
   type SpacePageTarget,
   type SpaceRichText,
@@ -99,6 +100,7 @@ export class SpaceEditorAdapter {
   readonly #key = new PluginKey<AdapterState>("spaces-window");
   readonly #operation = new PluginKey<Operation>("spaces-operation");
   #members: ReadonlySet<SpaceBlockId>;
+  #committed: ReadonlySet<SpaceBlockId>;
   #complete: ReadonlySet<SpaceBlockId | null>;
   #window: SpaceEditorWindow;
   readonly document: ProseMirrorNode;
@@ -116,6 +118,9 @@ export class SpaceEditorAdapter {
     this.#options = options;
     this.#window = options.window;
     this.#members = new Set(options.window.blocks.map((block) => block.id));
+    this.#committed = new Set(
+      options.window.committedIds ?? options.window.blocks.map((block) => block.id),
+    );
     this.#complete = new Set(options.window.completeParents);
     this.document = spaceWindowDocument(options.window, options.maxBlocks, options.maxDepth);
     this.#validate(this.document);
@@ -229,7 +234,7 @@ export class SpaceEditorAdapter {
               continue;
             if (
               !next &&
-              !this.#members.has(entry.block.id) &&
+              !this.#committed.has(entry.block.id) &&
               isKnownSpaceBlock(entry.block) &&
               entry.block.type !== "child_page"
             )
@@ -406,6 +411,7 @@ export class SpaceEditorAdapter {
   replaceWindow(window: SpaceEditorWindow) {
     this.#window = window;
     this.#members = new Set(window.blocks.map((block) => block.id));
+    this.#committed = new Set(window.committedIds ?? window.blocks.map((block) => block.id));
     this.#complete = new Set(window.completeParents);
   }
 
@@ -421,6 +427,49 @@ export class SpaceEditorAdapter {
       const into = mutation.kind === "delete" ? joins.get(mutation.blockId) : undefined;
       return mutation.kind === "delete" && into ? { ...mutation, mergedInto: into } : mutation;
     });
+  }
+
+  planImage(state: EditorState, assetId: SpaceAssetId): SpaceBlock {
+    if (
+      this.#options.canChangeStructure?.() === false ||
+      !this.#isComplete(null, state.doc) ||
+      entries(state.doc).length >= this.#options.maxBlocks
+    )
+      throw new Error("Image insertion requires a current complete root window with capacity");
+    const previous = spaceDocumentBlocks(state.doc).findLast((block) => block.parentId === null);
+    return {
+      id: this.#options.allocateId(),
+      parentId: null,
+      order: this.#rank(null, previous, undefined),
+      type: "image",
+      version: 1,
+      content: { assetId },
+    };
+  }
+  insertImage(block: SpaceBlock): Command {
+    return (state, dispatch) => {
+      if (
+        this.#options.canChangeStructure?.() === false ||
+        !isKnownSpaceBlock(block) ||
+        block.type !== "image" ||
+        block.parentId !== null ||
+        !this.#isComplete(null, state.doc) ||
+        entries(state.doc).length >= this.#options.maxBlocks ||
+        entries(state.doc).some((e) => e.block.id === block.id)
+      )
+        return false;
+      const previous = spaceDocumentBlocks(state.doc).findLast((b) => b.parentId === null);
+      try {
+        if (block.order !== this.#rank(null, previous, undefined)) return false;
+      } catch {
+        return false;
+      }
+      if (!dispatch) return this.#options.canEdit?.() !== false;
+      const at = state.doc.content.size;
+      const tr = closeHistory(state.tr).insert(at, spaceBlockNode(block, [], false, state.schema));
+      tr.setSelection(NodeSelection.create(tr.doc, at));
+      return this.#dispatch(tr, dispatch);
+    };
   }
 
   append(type: "paragraph" | "code" | "divider" = "paragraph"): Command {
@@ -655,7 +704,13 @@ export class SpaceEditorAdapter {
       const entry = entries(state.doc).find((item) => item.block.id === id);
       if (
         !entry ||
-        (entry.node.type.name === "spaceAtom" && entry.block.type !== "divider") ||
+        (entry.node.type.name === "spaceAtom" &&
+          entry.block.type !== "divider" &&
+          !(
+            entry.block.type === "image" &&
+            isKnownSpaceBlock(entry.block) &&
+            !this.#committed.has(id)
+          )) ||
         !this.#isComplete(entry.block.parentId, state.doc) ||
         !this.#subtreeComplete(entry.node, state.doc)
       )
@@ -665,7 +720,8 @@ export class SpaceEditorAdapter {
         subtree.some(
           (item) =>
             !canEditSpaceEditorBlock(item.block) ||
-            ["child_page", "image", "pdf", "video"].includes(item.block.type),
+            (["child_page", "image", "pdf", "video"].includes(item.block.type) &&
+              !(item.block.type === "image" && !this.#committed.has(item.block.id))),
         )
       )
         return false;

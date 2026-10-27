@@ -1,5 +1,6 @@
 import {
   SpaceRootReorder,
+  imageAssetId,
   checkSpaceStructureDrafts,
   createSpaceServiceSessionAdapter,
 } from "@t2code/client-runtime/spaces";
@@ -23,6 +24,7 @@ import { spacesEnvironment } from "../state/spaces";
 import { randomUUID } from "../lib/utils";
 import { createSpaceStructureStore } from "./structureDraftStore";
 import { createSpaceDraftStore } from "./draftStore";
+import { spaceImages } from "./imageRuntime";
 import { SpaceDocumentController, SpaceDocumentControllers } from "./documentController";
 
 function unwrap<A, E>(result: AtomCommandResult<A, E>): A {
@@ -87,6 +89,10 @@ export function spaceDocuments(registry: AtomRegistry.AtomRegistry): SpaceDocume
     const adapter = createSpaceServiceSessionAdapter(key, {
       getPage,
       limits: () => access(true),
+      validateNewRequest: (request) =>
+        request.mutations.some((m) => m.kind !== "delete" && imageAssetId(m.block))
+          ? spaceImages(registry).validateNewRequest(request)
+          : undefined,
       applyBlockBatch: async (input) => {
         access(true);
         const result = unwrap(
@@ -114,14 +120,21 @@ export function spaceDocuments(registry: AtomRegistry.AtomRegistry): SpaceDocume
       key,
       {
         adapter,
-        assertMutable: () => spaceRootReorder(registry, key.environmentId).assertReady(),
+        assertMutable: () => {
+          spaceRootReorder(registry, key.environmentId).assertReady();
+          spaceImages(registry).assertMutable(key);
+        },
         drafts,
         createMutationId: randomUUID,
         maxLoadedBlocks: 100,
         maxMutations: 100,
       },
       {
-        beforeRead: () => spaceRootReorder(registry, key.environmentId).hydrate(),
+        beforeRead: async () => {
+          await spaceRootReorder(registry, key.environmentId).hydrate();
+          await spaceImages(registry).hydrate();
+        },
+        mediaBlocked: () => spaceImages(registry).isBlocked(key),
         getPage,
         windowLimit: () => access().maxBlockWindowBlocks,
         readBlocks: async (input) => {
@@ -347,9 +360,23 @@ export function spaceRootReorder(
         throw new Error("Spaces connection changed; recover the exact placement receipt");
       return result;
     },
-    reserve: (pages, restoring) => documents.reserve(environmentId, pages, restoring),
-    checkDrafts: (pages) =>
-      checkSpaceStructureDrafts(draftStores.get(registry)!, environmentId, pages),
+    reserve: (pages, restoring) => {
+      const releaseImages = spaceImages(registry).reserve(environmentId, pages);
+      try {
+        const release = documents.reserve(environmentId, pages, restoring);
+        return () => {
+          release();
+          releaseImages();
+        };
+      } catch (error) {
+        releaseImages();
+        throw error;
+      }
+    },
+    checkDrafts: async (pages) => {
+      await spaceImages(registry).checkPages(environmentId, pages);
+      await checkSpaceStructureDrafts(draftStores.get(registry)!, environmentId, pages);
+    },
     refresh: (pages) => documents.refreshStructure(environmentId, pages),
     changed: () => registry.update(spacesEnvironment.changed(environmentId), (value) => value + 1),
   });

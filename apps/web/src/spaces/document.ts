@@ -16,6 +16,7 @@ import type {
 import { spaceSchema } from "./schema";
 
 export interface SpaceEditorWindow extends SpaceBlockWindow {
+  readonly committedIds?: readonly SpaceBlockId[];
   // Membership alone cannot prove adjacency or that a container has no unloaded children.
   readonly completeParents: readonly (SpaceBlockId | null)[];
 }

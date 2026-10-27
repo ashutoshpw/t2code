@@ -23,6 +23,8 @@ export type SpaceMutation =
   | { readonly kind: "replace"; readonly block: SpaceBlock }
   | { readonly kind: "delete"; readonly blockId: SpaceBlockId; readonly mergedInto?: SpaceBlockId };
 
+export class SpaceIntentAdmissionError extends Error {}
+
 export interface SpaceSaveRequest {
   readonly key: SpacePageTarget;
   readonly mutationId: string;
@@ -44,7 +46,7 @@ export type SpaceReceiptResult =
 
 export interface SpaceSessionAdapter {
   readonly getMutationAdmission: () => Promise<SpaceMutationAdmission>;
-  readonly validateNewRequest?: (request: SpaceSaveRequest) => void;
+  readonly validateNewRequest?: (request: SpaceSaveRequest) => void | Promise<void>;
   readonly save: (request: SpaceSaveRequest) => Promise<SpaceSaveResult>;
   // "absent" must be authoritative; timeouts and expired receipt windows are "unknown".
   readonly lookupReceipt: (request: SpaceSaveRequest) => Promise<SpaceReceiptResult>;
@@ -456,6 +458,15 @@ export class SpaceDocumentSession {
         }
         // Unsent identities may already be referenced by the draft or clipboard history.
         if (!members.has(id) && !intent.inserted) continue;
+        // A cancelled unsent image must not require its unpinned asset to survive GC.
+        if (
+          !members.has(id) &&
+          !into &&
+          intent.inserted &&
+          isKnownSpaceBlock(intent.inserted) &&
+          intent.inserted.type === "image"
+        )
+          continue;
         if (!members.has(id)) nextMutations.push({ kind: "insert", block: intent.inserted! });
         nextMutations.push({ kind: "delete", blockId: id, ...(into ? { mergedInto: into } : {}) });
       }
@@ -557,6 +568,7 @@ export class SpaceDocumentSession {
       }
     } else if (!request) {
       const admission = await this.#options.adapter.getMutationAdmission();
+      this.#options.assertMutable?.();
       if (!admission.epoch) throw new Error("Missing Spaces mutation admission");
       if (this.getSnapshot().status === "conflict")
         throw new Error("Resolve the conflict before saving");
@@ -571,7 +583,19 @@ export class SpaceDocumentSession {
         generation: this.#snapshot.generation,
         mutations: this.#mutations,
       });
-      this.#options.adapter.validateNewRequest?.(request);
+      const validation = this.#options.adapter.validateNewRequest?.(request);
+      if (validation) {
+        await validation;
+        if (
+          this.#snapshot.generation !== request.generation ||
+          this.#snapshot.baseRevision !== request.baseRevision ||
+          this.#snapshot.pending
+        )
+          throw new SpaceIntentAdmissionError(
+            "Draft changed during image admission; retry the new intent explicitly",
+          );
+        this.#options.assertMutable?.();
+      }
       this.#update({ pending: request });
     }
     try {

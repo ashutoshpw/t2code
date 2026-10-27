@@ -1,7 +1,12 @@
-import { SpacesUnavailableError, type SpaceCapability } from "@t2code/contracts/spaces";
+import {
+  SpacesUnavailableError,
+  type SpaceCapability,
+  type SpaceAssetUploadInput,
+  type SpaceAssetGetInput,
+} from "@t2code/contracts/spaces";
 import { WS_METHODS, type EnvironmentId } from "@t2code/contracts";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
-import { Atom } from "effect/reactivity";
+import { Atom, AtomRegistry } from "effect/reactivity";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as SubscriptionRef from "effect/SubscriptionRef";
@@ -55,6 +60,52 @@ export function createSpacesEnvironmentAtoms<R, E>(
     changed(environmentId);
   return {
     changed,
+    createImageUpload: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.image-upload-create",
+      tag: WS_METHODS.spacesAssetsUploadCreate,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.assets === true && c.limits.assets
+            ? requestGuarded(WS_METHODS.spacesAssetsUploadCreate, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    finalizeImageUpload: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.image-upload-finalize",
+      tag: WS_METHODS.spacesAssetsUploadFinalize,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.assets === true && c.limits.assets
+            ? requestGuarded(WS_METHODS.spacesAssetsUploadFinalize, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    imageUpload: createEnvironmentQueryAtomFamily(runtime, {
+      label: "spaces.image-upload-status",
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+      execute: Effect.fn("Spaces.imageUpload")(function* (input: SpaceAssetUploadInput) {
+        const registry = yield* AtomRegistry.AtomRegistry;
+        const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+        if (c?.version !== 2 || c.features?.assets !== true || !c.limits.assets)
+          return yield* new SpacesUnavailableError({ stage: "settings" });
+        return yield* requestGuarded(WS_METHODS.spacesAssetsUploadGet, input);
+      }),
+    }),
+    imageMetadata: createEnvironmentQueryAtomFamily(runtime, {
+      label: "spaces.image-metadata",
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+      execute: Effect.fn("Spaces.imageMetadata")(function* (input: SpaceAssetGetInput) {
+        const registry = yield* AtomRegistry.AtomRegistry;
+        const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+        if (c?.version !== 2 || c.features?.assets !== true || !c.limits.assets)
+          return yield* new SpacesUnavailableError({ stage: "settings" });
+        return yield* requestGuarded(WS_METHODS.spacesAssetsGet, input);
+      }),
+    }),
     captureSession: createEnvironmentCommand(runtime, {
       label: "spaces.captureSession",
       execute: Effect.fn("Spaces.captureSession")(function* (_input: undefined) {

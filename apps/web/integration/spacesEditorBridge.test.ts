@@ -22,6 +22,11 @@ import { executeAtomQuery } from "@t2code/client-runtime/state/runtime";
 import * as C from "@t2code/contracts/spaces";
 import {
   SpaceReferenceController,
+  SpaceImageUploads,
+  decodeSpaceImageRecord,
+  imageAssetId,
+  type SpaceImageRecord,
+  type SpaceImageStore,
   type SpaceReferenceAccess,
   createSpaceServiceSessionAdapter,
   type SpaceDocumentDraft,
@@ -57,7 +62,10 @@ import { WS_RPC_SERVER_OPTIONS } from "../../server/src/ws.ts";
 import * as RpcMessage from "effect/rpc/RpcMessage";
 import * as RpcSerialization from "effect/rpc/RpcSerialization";
 import * as RpcServer from "effect/rpc/RpcServer";
+import { HttpRouter } from "effect/http";
+import * as ServerHttp from "../../server/src/http.ts";
 import * as TestClock from "effect/testing/TestClock";
+import * as Clock from "effect/Clock";
 import * as SpacesService from "../../server/src/spaces/SpacesService.ts";
 import {
   EditorState,
@@ -78,7 +86,15 @@ const fixture = Effect.fn("SpaceEditorServiceTest.fixture")(function* <A, E>(
   use: (
     service: SpacesService.SpacesService["Service"],
     databasePath: string,
-  ) => Effect.Effect<A, E, Scope.Scope | ServerSecrets.ServerSecretStore>,
+  ) => Effect.Effect<
+    A,
+    E,
+    | Scope.Scope
+    | ServerSecrets.ServerSecretStore
+    | SpacesService.SpacesService
+    | FileSystem.FileSystem
+    | Path.Path
+  >,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -1300,6 +1316,7 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
 const decodeStructureServiceError = Schema.decodeUnknownOption(C.SpaceServiceError);
 const encodedRootRpc = Effect.fn("SpaceEditorServiceTest.encodedRootRpc")(function* (
   service: SpacesService.SpacesService["Service"],
+  callerId = "editor-integration",
 ) {
   const responses = yield* Queue.unbounded<string | Uint8Array>();
   const receive = yield* Deferred.make<Parameters<RpcServer.Protocol["Service"]["run"]>[0]>();
@@ -1321,7 +1338,7 @@ const encodedRootRpc = Effect.fn("SpaceEditorServiceTest.encodedRootRpc")(functi
       };
     }),
   );
-  const handlers = yield* SpacesRpc.handlers("editor-integration").pipe(
+  const handlers = yield* SpacesRpc.handlers(callerId).pipe(
     Effect.provideService(SpacesService.SpacesService, service),
   );
   const context = yield* SpacesRpc.group.toHandlers(handlers);
@@ -1466,7 +1483,7 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
         ),
     );
   let documents = makeDocuments();
-  const make = (changed = () => {}) =>
+  const make = (changed = () => {}, media?: SpaceImageUploads) =>
     new SpaceRootReorder(environmentId, {
       store: {
         load: async () => stored,
@@ -1623,8 +1640,23 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
         return decodeRecoveryResult(result);
       },
       newId: () => `placement-${++ids}`,
-      reserve: (pages, restoring) => documents.reserve(environmentId, pages, restoring),
-      checkDrafts: (pages) => checkSpaceStructureDrafts(drafts, environmentId, pages),
+      reserve: (pages, restoring) => {
+        const releaseMedia = media?.reserve(environmentId, pages);
+        try {
+          const release = documents.reserve(environmentId, pages, restoring);
+          return () => {
+            release();
+            releaseMedia?.();
+          };
+        } catch (error) {
+          releaseMedia?.();
+          throw error;
+        }
+      },
+      checkDrafts: async (pages) => {
+        await media?.checkPages(environmentId, pages);
+        await checkSpaceStructureDrafts(drafts, environmentId, pages);
+      },
       refresh: async (pages) => {
         refreshed++;
         await documents.refreshStructure(environmentId, pages);
@@ -6296,6 +6328,891 @@ it.effect(
           if (retried._tag !== "Success") throw Error("Session retry failed");
           assert.isNotNull(retried.value());
           assert.isNull(missing.value());
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+const decodeImageBatch = Schema.decodeUnknownSync(C.SpaceApplyBlockBatchResult);
+const decodeImageMetadata = Schema.decodeUnknownSync(C.SpaceAssetMetadata);
+const decodeImageGrant = Schema.decodeUnknownSync(C.SpaceAssetUploadCreateResult);
+const decodeImageStatus = Schema.decodeUnknownSync(C.SpaceAssetUploadStatus);
+const imageBytes = new Uint8Array([
+  137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 4, 0, 0,
+  0, 181, 28, 12, 2, 0, 0, 0, 11, 73, 68, 65, 84, 120, 218, 99, 252, 255, 31, 0, 3, 3, 2, 0, 239,
+  191, 151, 219, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
+]);
+const imageWorkflowFixture = Effect.fn("SpaceImageWorkflowTest.fixture")(function* (
+  service: SpacesService.SpacesService["Service"],
+  databasePath: string,
+) {
+  const h = yield* boot(service);
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const directory = yield* fs.makeTempDirectoryScoped({ prefix: "editor-image-originals-" });
+  const rpcA = yield* encodedRootRpc(service, "image-caller-a"),
+    rpcB = yield* encodedRootRpc(service, "image-caller-b");
+  const context = yield* Effect.context<
+    | SpacesService.SpacesService
+    | import("../../server/src/auth/ServerSecretStore.ts").ServerSecretStore
+  >();
+  const clock = yield* Clock.Clock;
+  const http = HttpRouter.toWebHandler(
+    ServerHttp.layerSpacesUploadRoute.pipe(
+      Layer.provideMerge(
+        Layer.mergeAll(Layer.succeedContext(context), Layer.succeed(Clock.Clock, clock)),
+      ),
+    ),
+    { disableLogger: true },
+  );
+  yield* Effect.addFinalizer(() => Effect.promise(http.dispose));
+  const control = {
+    session: {},
+    caller: "a",
+    read: true,
+    operate: true,
+    loseMint: false,
+    losePost: false,
+    loseFinalize: false,
+    failPhase: "",
+    failDraft: false,
+    holdDocument: false,
+    holdMetadata: false,
+    metadataEntered: signal(),
+    metadataReply: signal(),
+    loseDocument: false,
+    committed: signal(),
+    documentReply: signal(),
+    holdPhase: "",
+    entered: signal(),
+    release: signal(),
+  };
+  let mintCalls = 0,
+    posts = 0,
+    ids = 0;
+  const documentRequests: C.SpaceApplyBlockBatchInput[] = [];
+  const location = (slot: number) => path.join(directory, `original-${slot}`);
+  async function load(): Promise<readonly SpaceImageRecord[]> {
+    const records: SpaceImageRecord[] = [];
+    for (const slot of [0, 1]) {
+      if (!(await h.run(fs.exists(location(slot))))) continue;
+      const bytes = await h.run(fs.readFile(location(slot)));
+      const length = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0);
+      const metadata = JSON.parse(new TextDecoder().decode(bytes.subarray(4, 4 + length))) as Omit<
+        SpaceImageRecord,
+        "original"
+      >;
+      records.push(
+        decodeSpaceImageRecord({
+          ...metadata,
+          original: new Blob([bytes.slice(4 + length)], { type: metadata.intent.mimeType }),
+        }),
+      );
+    }
+    return records;
+  }
+  const originals: SpaceImageStore = {
+    load,
+    put: async (input, expected) => {
+      const record = decodeSpaceImageRecord(input),
+        all = await load();
+      const previous = all.find((r) => r.slot === record.slot);
+      if (
+        expected === null ? previous : previous?.id !== record.id || previous.sequence !== expected
+      )
+        throw new Error("Changed original");
+      if (control.holdPhase === record.phase) {
+        control.holdPhase = "";
+        control.entered.resolve();
+        await control.release.promise;
+      }
+      if (control.failPhase === record.phase) {
+        control.failPhase = "";
+        throw new Error("Original persistence failed");
+      }
+      const { original, ...metadata } = record;
+      const json = new TextEncoder().encode(JSON.stringify(metadata)),
+        blob = new Uint8Array(await original.arrayBuffer());
+      const bytes = new Uint8Array(4 + json.length + blob.length);
+      new DataView(bytes.buffer).setUint32(0, json.length);
+      bytes.set(json, 4);
+      bytes.set(blob, 4 + json.length);
+      await h.run(fs.writeFile(`${location(record.slot)}.tmp`, bytes));
+      await h.run(fs.rename(`${location(record.slot)}.tmp`, location(record.slot)));
+    },
+    remove: async (record) => {
+      if (control.holdPhase === "release") {
+        control.holdPhase = "";
+        control.entered.resolve();
+        await control.release.promise;
+      }
+      const previous = (await load()).find((r) => r.slot === record.slot);
+      if (previous?.id !== record.id || previous.sequence !== record.sequence)
+        throw new Error("Changed original");
+      await h.run(fs.remove(location(record.slot)));
+    },
+  };
+  const draftPath = path.join(directory, "page-draft.json");
+  const drafts = {
+    load: async (key: C.SpacePageTarget) =>
+      (await h.run(fs.exists(draftPath)))
+        ? decodeSpaceDocumentDraft(JSON.parse(await h.run(fs.readFileString(draftPath))), key)
+        : null,
+    write: async (key: C.SpacePageTarget, value: SpaceDocumentDraft | null) => {
+      const decoded = value === null ? null : decodeSpaceDocumentDraft(value, key);
+      if (control.failDraft && decoded?.blocks.some((b) => imageAssetId(b)))
+        throw new Error("Page draft persistence failed");
+      if (decoded === null) {
+        if (await h.run(fs.exists(draftPath))) await h.run(fs.remove(draftPath));
+      } else {
+        await h.run(fs.writeFileString(`${draftPath}.tmp`, JSON.stringify(decoded)));
+        await h.run(fs.rename(`${draftPath}.tmp`, draftPath));
+      }
+    },
+  };
+  const rpc = (tag: string, input: unknown) =>
+    h.run((control.caller === "a" ? rpcA : rpcB)(tag, input));
+  const metadata = async (input: C.SpaceAssetGetInput) => {
+    const result = decodeImageMetadata(await rpc(WS_METHODS.spacesAssetsGet, input));
+    if (control.holdMetadata) {
+      control.holdMetadata = false;
+      control.metadataEntered.resolve();
+      await control.metadataReply.promise;
+    }
+    return result;
+  };
+  const make = () =>
+    new SpaceImageUploads({
+      store: originals,
+      draft: drafts.load,
+      newId: () => `image-original-${++ids}`,
+      changed: () => {},
+      access: (_environmentId, write) => {
+        if (!control.read || (write && !control.operate))
+          throw new Error("Image permission withdrawn");
+        return { session: control.session, limits: h.capability.limits.assets! };
+      },
+      metadata,
+      mint: async (input) => {
+        mintCalls++;
+        const value = decodeImageGrant(await rpc(WS_METHODS.spacesAssetsUploadCreate, input));
+        if (control.loseMint) {
+          control.loseMint = false;
+          throw new Error("Lost mint reply");
+        }
+        return value;
+      },
+      status: async (input) =>
+        decodeImageStatus(await rpc(WS_METHODS.spacesAssetsUploadGet, input)),
+      finalize: async (input) => {
+        const result = decodeImageMetadata(await rpc(WS_METHODS.spacesAssetsUploadFinalize, input));
+        if (control.loseFinalize) {
+          control.loseFinalize = false;
+          throw new Error("Lost finalize reply");
+        }
+        return result;
+      },
+      post: (_environmentId, relativeUrl, original) => {
+        posts++;
+        const abort = new AbortController();
+        return {
+          abort: () => abort.abort(),
+          done: h.run(
+            Effect.promise(async () => {
+              const response = await http.handler(
+                new Request(`http://images.test${relativeUrl}`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Length": String(original.size),
+                    "Content-Type": original.type,
+                  },
+                  body: original,
+                  signal: abort.signal,
+                }),
+              );
+              if (response.status !== 204)
+                throw new Error(`Image HTTP rejected: ${response.status} ${await response.text()}`);
+              if (control.losePost) {
+                control.losePost = false;
+                throw new Error("Lost byte POST reply");
+              }
+            }),
+          ),
+        };
+      },
+      saved: async (key, blockId, assetId) => {
+        const page = await h.ports.getPage(key);
+        const window = await h.run(
+          service.readBlocks({ ...key, revision: page.page.revision, limit: 100 }),
+        );
+        return window.blocks.some((b) => b.id === blockId && imageAssetId(b) === assetId);
+      },
+    });
+  let images = make();
+  const createController = () =>
+    new SpaceDocumentController(
+      h.key,
+      {
+        adapter: createSpaceServiceSessionAdapter(h.key, {
+          ...h.ports,
+          applyBlockBatch: async (input) => {
+            documentRequests.push(input);
+            const result = decodeImageBatch(await rpc(WS_METHODS.spacesBlocksApply, input));
+            if (control.holdDocument) {
+              control.holdDocument = false;
+              control.committed.resolve();
+              await control.documentReply.promise;
+            }
+            if (control.loseDocument) {
+              control.loseDocument = false;
+              throw new Error("Lost image document acknowledgement");
+            }
+            return result;
+          },
+          validateNewRequest: (request) =>
+            request.mutations.some((m) => m.kind !== "delete" && imageAssetId(m.block))
+              ? images.validateNewRequest(request)
+              : undefined,
+        }),
+        assertMutable: () => images.assertMutable(h.key),
+        drafts,
+        createMutationId: () => `image-document-${++ids}`,
+        maxLoadedBlocks: 100,
+        maxMutations: 100,
+      },
+      {
+        beforeRead: () => images.hydrate(),
+        getPage: () => h.ports.getPage(h.key),
+        mediaBlocked: () => images.isBlocked(h.key),
+        readBlocks: (input) => h.run(service.readBlocks(input)),
+        windowLimit: () => 100,
+      },
+    );
+  return {
+    ...h,
+    originals,
+    drafts,
+    control,
+    metadata,
+    createController,
+    databasePath,
+    get images() {
+      return images;
+    },
+    reload: () => {
+      images = make();
+      return images;
+    },
+    counts: () => ({ mintCalls, posts }),
+    documentRequests,
+    file: () => new Blob([imageBytes], { type: "image/png" }),
+  };
+});
+
+it.effect(
+  "streams an actual image, binds one durable insertion across two PM views, saves pins and retains newer drafts before releasing its original",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller),
+              peer = savedView(controller);
+            try {
+              const record = await h.images.add(h.key, h.file(), "image.png");
+              assert.equal(h.counts().mintCalls, 0);
+              await h.images.upload(record.id);
+              const ready = h.images.getSnapshot().records[0]!;
+              assert.equal(ready.phase, "ready");
+              assert.deepEqual(ready.ready?.imageDimensions, { width: 1, height: 1 });
+              const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+              await h.images.insert(record.id, port);
+              const binding = h.images.getSnapshot().records[0]!;
+              assert.equal(binding.phase, "drafted");
+              assert.deepEqual(
+                spaceDocumentBlocks(peer.state.doc),
+                controller.session.getSnapshot().blocks,
+              );
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.equal(controller.session.getSnapshot().blocks.length, 0);
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              assert.equal(
+                controller.session.getSnapshot().blocks[0]!.id,
+                binding.placement!.block.id,
+              );
+              await controller.save();
+              assert.equal(h.documentRequests.length, 1);
+              assert.deepEqual(h.documentRequests[0]!.mutations, [
+                { kind: "insert", block: binding.placement!.block },
+              ]);
+              assert.deepEqual(binding.placement!.block.content, {
+                assetId: ready.handle!.assetId,
+              });
+              assert.isFalse(
+                peer.bridge.adapter.remove(binding.placement!.block.id)(peer.state, peer.dispatch),
+              );
+              assert.isFalse(controller.session.getSnapshot().dirty);
+              const sql = new NodeSqlite.DatabaseSync(databasePath, { readOnly: true });
+              try {
+                assert.deepEqual(
+                  sql
+                    .prepare("SELECT asset_id FROM spaces_block_asset_refs WHERE block_id=?")
+                    .all(binding.placement!.block.id)
+                    .map((r) => r.asset_id),
+                  [ready.handle!.assetId],
+                );
+              } finally {
+                sql.close();
+              }
+              await expect(h.images.insert(record.id, port)).rejects.toThrow("already bound");
+              h.control.holdPhase = "release";
+              const releasing = h.images.release(record.id, port);
+              await h.control.entered.promise;
+              try {
+                assert.isFalse(peer.bridge.adapter.append()(peer.state, peer.dispatch));
+                await expect(controller.save()).rejects.toThrow("retained image");
+              } finally {
+                h.control.release.resolve();
+              }
+              await releasing;
+              assert.isTrue(peer.bridge.adapter.append()(peer.state));
+              assert.equal((await h.originals.load()).length, 0);
+              assert.deepEqual(h.counts(), { mintCalls: 1, posts: 1 });
+            } finally {
+              view.stop();
+              peer.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["original", "minting", "upload"] as const)(
+  "persists image %s before the next network boundary and retains exact replay identity after a failed write",
+  (phase) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            h.control.failPhase = phase;
+            if (phase === "original") {
+              await expect(h.images.add(h.key, h.file(), "image.png")).rejects.toThrow(
+                "persistence failed",
+              );
+              assert.equal((await h.originals.load()).length, 0);
+              assert.deepEqual(h.counts(), { mintCalls: 0, posts: 0 });
+            } else {
+              const record = await h.images.add(h.key, h.file(), "image.png");
+              await expect(h.images.upload(record.id)).rejects.toThrow("persistence failed");
+              assert.equal(h.counts().posts, 0);
+              assert.equal(h.counts().mintCalls, phase === "minting" ? 0 : 1);
+              const retained = (await h.originals.load())[0]!;
+              assert.equal(retained.id, record.id);
+              assert.deepEqual(new Uint8Array(await retained.original.arrayBuffer()), imageBytes);
+              await h.images.upload(record.id);
+              const ready = h.images.getSnapshot().records[0]!;
+              assert.equal(ready.phase, "ready");
+              assert.equal(ready.intent.requestId, record.id);
+              const sql = new NodeSqlite.DatabaseSync(databasePath, { readOnly: true });
+              try {
+                assert.equal(
+                  sql
+                    .prepare(
+                      "SELECT COUNT(*) AS count FROM spaces_asset_uploads WHERE request_id=?",
+                    )
+                    .get(record.id)!.count,
+                  1,
+                );
+              } finally {
+                sql.close();
+              }
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "recovers lost POST replies with the same ready handle and refuses a lost mint after caller replacement/reload",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const first = await h.images.add(h.key, h.file(), "image.png");
+            h.control.losePost = true;
+            await expect(h.images.upload(first.id)).rejects.toThrow("Lost byte POST");
+            const handle = (await h.originals.load())[0]!.handle;
+            h.control.session = {};
+            h.control.caller = "b";
+            await h.images.upload(first.id);
+            assert.deepEqual(h.images.getSnapshot().records[0]!.handle, handle);
+            assert.equal(h.counts().posts, 1);
+            const second = await h.images.add(h.key, h.file(), "again.png");
+            h.control.loseMint = true;
+            await expect(h.images.upload(second.id)).rejects.toThrow("Lost mint");
+            const calls = h.counts().mintCalls;
+            h.control.session = {};
+            h.control.caller = "a";
+            h.reload();
+            await expect(h.images.upload(second.id)).rejects.toThrow("Mint outcome unresolved");
+            assert.equal(h.counts().mintCalls, calls);
+            assert.equal((await h.originals.load()).length, 2);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["page-draft", "binding"] as const)(
+  "recovers the %s insertion crash interval from actual encoded draft/original files without duplicate image IDs",
+  (failure) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            let controller = h.createController();
+            await controller.open();
+            let view = savedView(controller);
+            try {
+              const original = await h.images.add(h.key, h.file(), "image.png");
+              await h.images.upload(original.id);
+              if (failure === "page-draft") h.control.failDraft = true;
+              else h.control.failPhase = "drafted";
+              await expect(
+                h.images.insert(
+                  original.id,
+                  view.bridge.imageInsertion(() => view.state, view.dispatch),
+                ),
+              ).rejects.toThrow();
+              const pending = (await h.originals.load())[0]!;
+              assert.equal(pending.phase, "preparing");
+              await expect(controller.save()).rejects.toThrow("retained image");
+              view.stop();
+              h.control.failDraft = false;
+              h.reload();
+              controller = h.createController();
+              await controller.open();
+              view = savedView(controller);
+              await h.images.insert(
+                original.id,
+                view.bridge.imageInsertion(() => view.state, view.dispatch),
+              );
+              assert.equal(controller.session.getSnapshot().blocks.length, 1);
+              assert.equal(
+                controller.session.getSnapshot().blocks[0]!.id,
+                pending.placement!.block.id,
+              );
+              await controller.save();
+              const now = await h.ports.getPage(h.key);
+              const blocks = (
+                await h.run(service.readBlocks({ ...h.key, revision: now.page.revision }))
+              ).blocks;
+              assert.equal(blocks.length, 1);
+              assert.equal(blocks[0]!.id, pending.placement!.block.id);
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each([false, true])(
+  "refuses a GC-retired ready asset before a NEW page intent without silently replacing its original (already drafted: %s)",
+  (alreadyDrafted) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          const record = yield* Effect.promise(async () => {
+            const value = await h.images.add(h.key, h.file(), "image.png");
+            await h.images.upload(value.id);
+            return h.images.getSnapshot().records[0]!;
+          });
+          let opened: {
+            controller: SpaceDocumentController;
+            view: ReturnType<typeof savedView>;
+          } | null = null;
+          if (alreadyDrafted)
+            opened = yield* Effect.promise(async () => {
+              const controller = h.createController();
+              await controller.open();
+              const view = savedView(controller);
+              await h.images.insert(
+                record.id,
+                view.bridge.imageInsertion(() => view.state, view.dispatch),
+              );
+              return { controller, view };
+            });
+          for (const _step of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) yield* service.maintainAssets;
+          const observed = new NodeSqlite.DatabaseSync(databasePath, { readOnly: true });
+          try {
+            assert.equal(
+              observed
+                .prepare("SELECT unreferenced_at_ms FROM spaces_asset_blobs WHERE digest=?")
+                .get(record.ready!.digest)!.unreferenced_at_ms,
+              0,
+            );
+          } finally {
+            observed.close();
+          }
+          yield* TestClock.adjust("24 hours");
+          yield* service.maintainAssets;
+          yield* Effect.promise(async () => {
+            await expect(
+              h.metadata({ environmentId, assetId: record.handle!.assetId }),
+            ).rejects.toThrow();
+            const controller = opened?.controller ?? h.createController();
+            if (!opened) await controller.open();
+            const view = opened?.view ?? savedView(controller);
+            try {
+              if (opened) {
+                const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+                await expect(controller.save()).rejects.toThrow(
+                  "Image is unavailable for a new save",
+                );
+                assert.isNull(controller.session.getSnapshot().pending);
+                assert.isNull(controller.getSnapshot().error);
+                assert.isNotNull(controller.getSnapshot().imageAdmissionError);
+                assert.equal(h.documentRequests.length, 0);
+                const bound = h.images.getSnapshot().records[0]!;
+                const replacement = await h.images.newAttempt(record.id, port);
+                assert.isTrue(
+                  view.bridge.adapter.remove(bound.placement!.block.id)(view.state, view.dispatch),
+                );
+                await h.images.release(record.id, port);
+                await h.images.upload(replacement.id);
+                assert.notEqual(
+                  h.images.getSnapshot().records[0]!.handle!.assetId,
+                  record.handle!.assetId,
+                );
+                await h.images.insert(replacement.id, port);
+                await controller.save();
+                assert.equal(h.documentRequests.length, 1);
+                await h.images.release(replacement.id, port);
+                assert.equal((await h.originals.load()).length, 0);
+                return;
+              }
+              await expect(
+                h.images.insert(
+                  record.id,
+                  view.bridge.imageInsertion(() => view.state, view.dispatch),
+                ),
+              ).rejects.toThrow();
+              assert.equal(controller.session.getSnapshot().blocks.length, 0);
+              assert.isNull(controller.session.getSnapshot().pending);
+              assert.equal(
+                h.images.getSnapshot().records[0]!.handle!.assetId,
+                record.handle!.assetId,
+              );
+              assert.equal(h.counts().mintCalls, 1);
+              assert.equal((await h.originals.load()).length, 1);
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "keeps an uncertain image request exact through lookup and a newer local suffix, then releases only after the newer save",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller),
+              peer = savedView(controller);
+            try {
+              assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              view.edit("before");
+              const original = await h.images.add(h.key, h.file(), "image.png");
+              await h.images.upload(original.id);
+              const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+              await h.images.insert(original.id, port);
+              h.control.holdDocument = true;
+              h.control.loseDocument = true;
+              const saving = controller.save();
+              const rejected = expect(saving).rejects.toThrow("Lost image document");
+              await h.control.committed.promise;
+              const pending = controller.session.getSnapshot().pending!;
+              const beforeUndo = view.state.doc;
+              assert.isFalse(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.isTrue(view.state.doc.eq(beforeUndo));
+              let position = -1;
+              view.state.doc.descendants((node, pos) => {
+                if (node.isTextblock && node.attrs.block?.type === "paragraph") position = pos + 1;
+              });
+              view.dispatch(
+                view.state.tr.setSelection(TextSelection.create(view.state.doc, position)),
+              );
+              view.edit("newer-");
+              assert.strictEqual(controller.session.getSnapshot().pending, pending);
+              h.control.documentReply.resolve();
+              await rejected;
+              await expect(h.images.newAttempt(original.id, port)).rejects.toThrow(
+                "Resolve the original",
+              );
+              await controller.save();
+              assert.equal(h.documentRequests.length, 1);
+              assert.isTrue(controller.session.getSnapshot().dirty);
+              await expect(h.images.release(original.id, port)).rejects.toThrow(
+                "newer image drafts",
+              );
+              await controller.save();
+              assert.equal(h.documentRequests.length, 2);
+              assert.equal(h.documentRequests[0]!.mutationId, pending.mutationId);
+              assert.equal(h.documentRequests[0]!.receiptEpoch, pending.receiptEpoch);
+              assert.isTrue(
+                h.documentRequests[1]!.mutations.every(
+                  (m) => m.kind === "replace" && m.block.type === "paragraph",
+                ),
+              );
+              const image = controller.session.getSnapshot().blocks.find((b) => imageAssetId(b))!;
+              assert.isFalse(peer.bridge.adapter.remove(image.id)(peer.state, peer.dispatch));
+              await h.images.release(original.id, port);
+              assert.equal((await h.originals.load()).length, 0);
+            } finally {
+              h.control.documentReply.resolve();
+              view.stop();
+              peer.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retains a closed-view preparing intent and only reselects a proven unused placement explicitly",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            let current = true;
+            const port = view.bridge.imageInsertion(
+              () => view.state,
+              view.dispatch,
+              () => current,
+            );
+            try {
+              const record = await h.images.add(h.key, h.file(), "image.png");
+              await h.images.upload(record.id);
+              h.control.holdPhase = "preparing";
+              const inserting = h.images.insert(record.id, port);
+              await h.control.entered.promise;
+              await expect(controller.save()).rejects.toThrow("retained image insertion");
+              assert.isFalse(view.bridge.adapter.append()(view.state, view.dispatch));
+              assert.equal(h.documentRequests.length, 0);
+              current = false;
+              h.control.release.resolve();
+              await expect(inserting).rejects.toThrow("no longer current");
+              assert.equal(controller.session.getSnapshot().blocks.length, 0);
+              await expect(h.images.reselectPlacement(record.id, port)).rejects.toThrow(
+                "No current",
+              );
+              current = true;
+              const previous = h.images.getSnapshot().records[0]!.placement!.block.id;
+              await h.images.reselectPlacement(record.id, port);
+              await h.images.insert(record.id, port);
+              assert.notEqual(controller.session.getSnapshot().blocks[0]!.id, previous);
+              assert.equal(h.counts().posts, 1);
+            } finally {
+              h.control.release.resolve();
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "guards hidden retained originals, one active operation, local limits and destination permission without writing the backend",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const record = await h.images.add(h.key, h.file(), "image.png");
+            const hidden = h.reload();
+            const release = hidden.reserve(environmentId, [h.key.pageId]);
+            try {
+              await expect(hidden.checkPages(environmentId, [h.key.pageId])).rejects.toThrow(
+                "retained image originals",
+              );
+              await expect(hidden.add(h.key, h.file(), "another.png")).rejects.toThrow(
+                "placement is reserved",
+              );
+            } finally {
+              release();
+            }
+            await hidden.add(h.key, h.file(), "second.png");
+            await expect(hidden.add(h.key, h.file(), "third.png")).rejects.toThrow(
+              "Two image originals",
+            );
+            h.control.operate = false;
+            await expect(hidden.upload(record.id)).rejects.toThrow("permission withdrawn");
+            h.control.operate = true;
+            h.control.holdPhase = "minting";
+            const upload = hidden.upload(record.id);
+            await h.control.entered.promise;
+            await expect(hidden.upload(record.id)).rejects.toThrow("already active");
+            assert.throws(
+              () => hidden.reserve(environmentId, [h.key.pageId]),
+              "active image operation",
+            );
+            h.control.release.resolve();
+            await upload;
+            assert.deepEqual(h.counts(), { mintCalls: 1, posts: 1 });
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["edit", "permission", "connection"] as const)(
+  "refuses stale asynchronous image admission without trapping the unsent draft (%s)",
+  (change) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              const record = await h.images.add(h.key, h.file(), "image.png");
+              await h.images.upload(record.id);
+              await h.images.insert(
+                record.id,
+                view.bridge.imageInsertion(() => view.state, view.dispatch),
+              );
+              h.control.holdMetadata = true;
+              const saving = controller.save();
+              const rejected = expect(saving).rejects.toThrow();
+              await h.control.metadataEntered.promise;
+              if (change === "edit") {
+                view.dispatch(view.state.tr.insertText("newer", 1));
+              } else if (change === "permission") h.control.operate = false;
+              else h.control.session = {};
+              h.control.metadataReply.resolve();
+              await rejected;
+              assert.equal(h.documentRequests.length, 0);
+              assert.isNull(controller.session.getSnapshot().pending);
+              assert.isNull(controller.getSnapshot().error);
+              assert.isNotNull(controller.getSnapshot().imageAdmissionError);
+              h.control.operate = true;
+              await controller.save();
+              assert.equal(h.documentRequests.length, 1);
+              assert.equal(controller.session.getSnapshot().dirty, false);
+              if (change === "edit")
+                assert.include(JSON.stringify(controller.session.getSnapshot().blocks), "newer");
+            } finally {
+              h.control.metadataReply.resolve();
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "recovers a lost finalize reply after reload, then retains the exact image draft and original on a real revision conflict",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const record = await h.images.add(h.key, h.file(), "image.png");
+            h.control.loseFinalize = true;
+            await expect(h.images.upload(record.id)).rejects.toThrow("Lost finalize");
+            const handle = (await h.originals.load())[0]!.handle;
+            h.reload();
+            await h.images.upload(record.id);
+            assert.deepEqual(h.images.getSnapshot().records[0]!.handle, handle);
+            assert.deepEqual(h.counts(), { mintCalls: 1, posts: 1 });
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+            try {
+              await h.images.insert(record.id, port);
+              const attempted = controller.session.getSnapshot().blocks;
+              const page = await h.ports.getPage(h.key);
+              const external = await h.ports.applyBlockBatch({
+                ...h.key,
+                mutationId: C.SpaceMutationId.make("external-image-conflict"),
+                receiptEpoch: page.mutationAdmission.epoch,
+                baseRevision: page.page.revision,
+                generation: 1,
+                mutations: [{ kind: "insert", block: savedParagraph("external", "remote") }],
+              });
+              assert.equal(external.status, "saved");
+              await controller.save();
+              assert.equal(controller.session.getSnapshot().status, "conflict");
+              assert.deepEqual(controller.session.getSnapshot().blocks, attempted);
+              assert.equal(controller.session.getSnapshot().baseRevision, page.page.revision);
+              assert.deepEqual((await h.originals.load())[0]!.handle, handle);
+              await expect(h.images.release(record.id, port)).rejects.toThrow();
+              assert.equal(h.documentRequests.length, 1);
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses a real page move with a hidden durable image original before acquiring a write identity",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const pages = yield* rootReorderFixture(service);
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const record = await h.images.add(h.key, h.file(), "image.png");
+            const hidden = h.reload();
+            const owner = pages.make(() => {}, hidden);
+            await owner.browse(pages.spaceId, h.key.pageId);
+            await expect(owner.move(h.key.pageId, pages.spaceId, null)).rejects.toThrow(
+              "retained image originals",
+            );
+            assert.equal(pages.requests.length, 0);
+            assert.equal(pages.counts().admissions, 0);
+            assert.deepEqual(await pages.order(), pages.pages);
+            await hidden.release(record.id);
+            await owner.move(h.key.pageId, pages.spaceId, null);
+            assert.equal(pages.requests.length, 1);
+          });
         }),
       ),
     ).pipe(Effect.provide(NodeServices.layer)),

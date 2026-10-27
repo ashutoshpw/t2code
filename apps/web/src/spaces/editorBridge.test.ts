@@ -9,6 +9,7 @@ import {
 import { undoDepth, redoDepth } from "@tiptap/pm/history";
 import { EnvironmentId } from "@t2code/contracts";
 import {
+  SpaceAssetId,
   SpaceBlockId,
   SpacePageId,
   SpaceId,
@@ -899,4 +900,18 @@ it("opens only known current child-marker identities and preserves opaque marker
   expect(view.bridge.childPageTarget(future.id)).toBeNull();
   expect(view.bridge.childPageTarget(SpaceBlockId.make("missing"))).toBeNull();
   expect(view.controller.session.getSnapshot()).toBe(before);
+});
+
+it("undoes an unsent image after shared-window synchronization while retaining the previous text edit", async () => {
+  const original = paragraph("image-text", "before");
+  const view = await model([original]);
+  view.dispatch(view.state.tr.insertText("local-", 1));
+  const text = view.controller.session.getSnapshot().blocks;
+  const insertion = view.bridge.imageInsertion(() => view.state, view.dispatch);
+  const placement = insertion.plan(SpaceAssetId.make("ready-image-provenance"));
+  insertion.apply(placement);
+  view.synchronize();
+  expect(view.controller.session.getSnapshot().memberIds).not.toContain(placement.block.id);
+  expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+  expect(view.controller.session.getSnapshot().blocks).toEqual(text);
 });

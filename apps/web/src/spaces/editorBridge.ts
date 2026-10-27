@@ -11,6 +11,7 @@ import {
   isKnownSpaceBlock,
   spaceJsonBytes,
   type SpaceCompensation,
+  type SpaceImageInsertion,
 } from "@t2code/client-runtime/spaces";
 import { SpaceEditorAdapter } from "./adapter";
 import { sameSpaceValue, spaceDocumentBlocks, spaceWindowDocument } from "./document";
@@ -176,6 +177,47 @@ export class SpaceEditorBridge {
     const result = this.revealBlock(state, target, () => source?.current() === true && current());
     if (result.status === "loaded") this.#navigationReveal.pending = false;
     return result;
+  }
+  imageInsertion(
+    state: () => EditorState,
+    dispatch: (transaction: Transaction) => void,
+    current: () => boolean = () => true,
+  ): SpaceImageInsertion {
+    return {
+      key: this.controller.session.key,
+      current,
+      state: () => this.controller.session.getSnapshot(),
+      complete: () => this.controller.editorWindow().completeParents.includes(null),
+      plan: (assetId) => {
+        if (!current() || !this.canStructure())
+          throw new Error("Resolve the current document before inserting an image");
+        const snapshot = this.controller.session.getSnapshot();
+        return {
+          block: this.adapter.planImage(state(), assetId),
+          revision: snapshot.baseRevision!,
+          generation: snapshot.generation,
+          windowIds: snapshot.blocks.map((b) => b.id),
+        };
+      },
+      persist: () => this.controller.session.persistDraft(),
+      apply: (placement) => {
+        const snapshot = this.controller.session.getSnapshot();
+        if (
+          !current() ||
+          snapshot.baseRevision !== placement.revision ||
+          snapshot.generation !== placement.generation ||
+          !sameSpaceValue(
+            snapshot.blocks.map((b) => b.id),
+            placement.windowIds,
+          ) ||
+          !this.adapter.insertImage(placement.block)(state(), dispatch) ||
+          !this.controller.session
+            .getSnapshot()
+            .blocks.some((b) => sameSpaceValue(b, placement.block))
+        )
+          throw new Error("Image placement is no longer valid; original is retained");
+      },
+    };
   }
   blockMoveSelection(state: EditorState) {
     const snapshot = this.controller.getSnapshot();
