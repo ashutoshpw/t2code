@@ -10,6 +10,7 @@ import { readSpacePageLocation } from "../spaces/pageLocation.ts";
 import type { SpacePageId } from "@t2code/contracts/spaces";
 import { request, requestGuarded } from "../rpc/client.ts";
 import {
+  createEnvironmentCommand,
   createEnvironmentQueryAtomFamily,
   createEnvironmentRpcCommand,
   createEnvironmentRpcQueryAtomFamily,
@@ -54,6 +55,46 @@ export function createSpacesEnvironmentAtoms<R, E>(
     changed(environmentId);
   return {
     changed,
+    captureSession: createEnvironmentCommand(runtime, {
+      label: "spaces.captureSession",
+      execute: Effect.fn("Spaces.captureSession")(function* (_input: undefined) {
+        const supervisor = yield* EnvironmentSupervisor;
+        const session = Option.getOrNull(SubscriptionRef.getUnsafe(supervisor.session));
+        const initial = SubscriptionRef.getUnsafe(supervisor.state);
+        return () => {
+          const now = SubscriptionRef.getUnsafe(supervisor.state);
+          return now.phase === "connected" &&
+            now.generation === initial.generation &&
+            now.attempt === initial.attempt &&
+            Option.getOrNull(SubscriptionRef.getUnsafe(supervisor.session)) === session
+            ? session
+            : null;
+        };
+      }),
+    }),
+    search: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.search",
+      tag: WS_METHODS.spacesSearch,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.search === true
+            ? requestGuarded(WS_METHODS.spacesSearch, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    resolve: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.resolve",
+      tag: WS_METHODS.spacesReferencesResolve,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.referenceResolution === true
+            ? requestGuarded(WS_METHODS.spacesReferencesResolve, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+
     blocks: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:spaces:blocks",
       tag: WS_METHODS.spacesBlocksRead,

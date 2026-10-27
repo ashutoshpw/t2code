@@ -109,15 +109,21 @@ describe("command permissions", () => {
             expect(registry.get(permission.permissionAtom(other))).toBe(true);
             yield* permission.authorize(registry, other);
           }
-          const search = createCommandPermissions(runtime, WS_METHODS.spacesSearch);
-          expect(registry.get(search.permissionAtom(env))).toBe(true);
-          yield* search.authorize(registry, env);
-          expect(registry.get(search.permissionAtom(other))).toBe(false);
-          expect((yield* search.authorize(registry, other).pipe(Effect.flip))._tag).toBe(
-            "EnvironmentAuthorizationError",
-          );
+          for (const tag of [WS_METHODS.spacesSearch, WS_METHODS.spacesReferencesResolve]) {
+            const search = createCommandPermissions(runtime, tag);
+            expect(registry.get(search.permissionAtom(env))).toBe(true);
+            yield* search.authorize(registry, env);
+            expect(registry.get(search.permissionAtom(other))).toBe(false);
+            expect((yield* search.authorize(registry, other).pipe(Effect.flip))._tag).toBe(
+              "EnvironmentAuthorizationError",
+            );
+          }
           registry.set(sessions(env), AsyncResult.success(grant(false)));
-          expect(registry.get(search.permissionAtom(env))).toBe(false);
+          for (const tag of [WS_METHODS.spacesSearch, WS_METHODS.spacesReferencesResolve]) {
+            expect(registry.get(createCommandPermissions(runtime, tag).permissionAtom(env))).toBe(
+              false,
+            );
+          }
           registry.set(sessions(other), AsyncResult.success(grant(false)));
           expect(
             registry.get(
@@ -586,6 +592,94 @@ it.effect.each([
         expect(calls).toBe(1);
         registry.set(capability, { ...old, features: { blockMoves: true, recovery: true } });
         registry.set(sessions(env), AsyncResult.success(grant(false)));
+        yield* run();
+        expect(calls).toBe(1);
+      }),
+    ),
+);
+
+it.effect.each(["search", "resolve"] as const)(
+  "uses the latest read grant and exact %s capability at the real command boundary",
+  (operation) =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const registry = yield* setup;
+        let calls = 0;
+        const reached = () =>
+          Effect.sync(() => {
+            calls++;
+            throw Error("Transport reached");
+          });
+        const transport = {
+          client: {
+            [WS_METHODS.spacesSearch]: reached,
+            [WS_METHODS.spacesReferencesResolve]: reached,
+          },
+        } as unknown as RpcSession;
+        const supervisor = {
+          target: { environmentId: env, label: "destination" },
+          session: yield* SubscriptionRef.make(Option.some(transport)),
+        } as unknown as EnvironmentSupervisor["Service"];
+        const runtime = Atom.runtime(
+          Layer.succeed(EnvironmentRegistry, {
+            run: (_id: EnvironmentId, effect: Effect.Effect<unknown>) =>
+              Effect.provideService(effect, EnvironmentSupervisor, supervisor),
+          } as unknown as EnvironmentRegistry["Service"]),
+        );
+        const capability = Atom.make<SpaceCapability | undefined>(undefined),
+          spaces = createSpacesEnvironmentAtoms(runtime, { capabilityAtom: () => capability });
+        const run = () =>
+          Effect.promise(async () =>
+            operation === "search"
+              ? spaces.search.run(registry, {
+                  environmentId: env,
+                  input: { environmentId: env, query: "word" },
+                })
+              : spaces.resolve.run(registry, {
+                  environmentId: env,
+                  input: {
+                    environmentId: env,
+                    target: { kind: "page", pageId: SpacePageId.make("page") },
+                  },
+                }),
+          );
+        registry.set(
+          sessions(env),
+          AsyncResult.success({
+            ...grant(false),
+            scopes: [AuthOrchestrationReadScope],
+            permissions: [AuthOrchestrationReadScope],
+          }),
+        );
+        yield* run();
+        registry.set(capability, { version: 1, limits: {} } as SpaceCapability);
+        yield* run();
+        registry.set(capability, { version: 2, limits: {} } as SpaceCapability);
+        yield* run();
+        expect(calls).toBe(0);
+        registry.set(capability, {
+          version: 2,
+          features: { search: true, referenceResolution: true },
+          limits: {},
+        } as SpaceCapability);
+        yield* run();
+        expect(calls).toBe(1);
+        registry.set(capability, undefined);
+        yield* run();
+        expect(calls).toBe(1);
+        registry.set(capability, {
+          version: 3,
+          features: { search: true, referenceResolution: true },
+          limits: {},
+        } as SpaceCapability);
+        yield* run();
+        expect(calls).toBe(1);
+        registry.set(capability, {
+          version: 2,
+          features: { search: true, referenceResolution: true },
+          limits: {},
+        } as SpaceCapability);
+        registry.set(sessions(env), AsyncResult.success(grant(true)));
         yield* run();
         expect(calls).toBe(1);
       }),

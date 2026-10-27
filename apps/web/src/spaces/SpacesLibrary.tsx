@@ -3,6 +3,7 @@ import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceId } from "@t2code/contracts/spaces";
 import { SpacePageTree } from "./SpacePageTree";
 
+const SpaceSearch = lazy(() => import("./SpaceSearch"));
 const SpaceRecoveryControls = lazy(() => import("./SpaceRecoveryControls"));
 
 export function SpacesLibrary({
@@ -19,6 +20,13 @@ export function SpacesLibrary({
     >
       <Suspense fallback={<p role="status">Loading recovery…</p>}>
         <SpaceRecoveryControls key={environmentId} environmentId={environmentId} />
+      </Suspense>
+      <Suspense fallback={<p role="status">Loading search…</p>}>
+        <SpaceSearch
+          key={JSON.stringify([environmentId, spaceId])}
+          environmentId={environmentId}
+          spaceId={spaceId}
+        />
       </Suspense>
       <SpacePageTree environmentId={environmentId} spaceId={spaceId} />
     </section>

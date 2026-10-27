@@ -6,8 +6,12 @@ import {
   type Transaction,
 } from "@tiptap/pm/state";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import type { SpaceBlockId } from "@t2code/contracts/spaces";
-import { spaceJsonBytes, type SpaceCompensation } from "@t2code/client-runtime/spaces";
+import type { SpaceBlockId, SpacePageTarget } from "@t2code/contracts/spaces";
+import {
+  isKnownSpaceBlock,
+  spaceJsonBytes,
+  type SpaceCompensation,
+} from "@t2code/client-runtime/spaces";
 import { SpaceEditorAdapter } from "./adapter";
 import { sameSpaceValue, spaceDocumentBlocks, spaceWindowDocument } from "./document";
 import type { SpaceDocumentController } from "./documentController";
@@ -100,6 +104,51 @@ export class SpaceEditorBridge {
   }
   canStructure() {
     return this.canEdit() && this.controller.session.getSnapshot().pending === null;
+  }
+  childPageTarget(id: SpaceBlockId) {
+    const snapshot = this.controller.getSnapshot();
+    const block = snapshot.session.blocks.find((block) => block.id === id);
+    return !snapshot.loading &&
+      !snapshot.error &&
+      snapshot.session.hydrated &&
+      block &&
+      isKnownSpaceBlock(block) &&
+      block.type === "child_page"
+      ? block.content.pageId
+      : null;
+  }
+  revealBlock(
+    state: EditorState,
+    target: SpacePageTarget & { blockId: SpaceBlockId },
+    current: () => boolean,
+  ): {
+    status: "loaded" | "not-loaded" | "unavailable";
+    transaction?: Transaction;
+  } {
+    const snapshot = this.controller.getSnapshot(),
+      key = this.controller.session.key;
+    if (
+      !current() ||
+      key.environmentId !== target.environmentId ||
+      key.pageId !== target.pageId ||
+      snapshot.loading ||
+      snapshot.error ||
+      !snapshot.session.hydrated ||
+      !sameSpaceValue(spaceDocumentBlocks(state.doc), snapshot.session.blocks)
+    )
+      return { status: "unavailable" };
+    let position: number | undefined;
+    state.doc.descendants((node, pos) => {
+      if (node.attrs.block?.id === target.blockId) position = pos;
+    });
+    if (position === undefined) return { status: "not-loaded" };
+    return {
+      status: "loaded",
+      transaction: state.tr
+        .setSelection(NodeSelection.create(state.doc, position))
+        .setMeta("addToHistory", false)
+        .scrollIntoView(),
+    };
   }
   blockMoveSelection(state: EditorState) {
     const snapshot = this.controller.getSnapshot();

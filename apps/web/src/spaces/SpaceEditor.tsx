@@ -1,9 +1,10 @@
-import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { Extension } from "@tiptap/core";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { EditorContent, useEditor, useEditorState, ReactNodeViewRenderer } from "@tiptap/react";
+import { Extension, Node as TiptapNode } from "@tiptap/core";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { NodeSelection, type Command } from "@tiptap/pm/state";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
-import type { SpaceBlockId } from "@t2code/contracts/spaces";
+import { SpaceAtomContext, SpaceAtomView } from "./SpaceAtomView";
+import type { SpaceBlock, SpaceBlockId } from "@t2code/contracts/spaces";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { SpaceEditorAdapter, type SpaceEditorBatch } from "./adapter";
@@ -17,13 +18,26 @@ export function SpaceEditor({
   editable = true,
   onBatch,
   onMoveBlocks,
+  targetBlockId,
+  current,
+  revealOwner,
+  renderChild,
 }: {
+  readonly targetBlockId?: SpaceBlockId | undefined;
+  readonly current?: (() => boolean) | undefined;
+  readonly revealOwner?: object | null | undefined;
+  readonly renderChild?: ((block: SpaceBlock) => ReactNode) | undefined;
   readonly onMoveBlocks?: ((state: import("@tiptap/pm/state").EditorState) => void) | undefined;
   readonly adapter: SpaceEditorAdapter;
   readonly bridge?: SpaceEditorBridge;
   readonly editable?: boolean;
   readonly onBatch?: (batch: SpaceEditorBatch) => void;
 }) {
+  const revealed = useRef<{
+    editor: object;
+    blockId: SpaceBlockId;
+    owner: object | null | undefined;
+  } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const historyNotice = useSyncExternalStore(
     bridge?.subscribe ?? noSubscribe,
@@ -32,7 +46,13 @@ export function SpaceEditor({
   const editor = useEditor(
     {
       extensions: [
-        ...adapter.extensions(),
+        ...adapter
+          .extensions()
+          .map((extension) =>
+            extension.name === "spaceAtom" && extension instanceof TiptapNode
+              ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(SpaceAtomView) })
+              : extension,
+          ),
         Extension.create({
           name: "spaceSessionDispatch",
           dispatchTransaction({ transaction }) {
@@ -116,6 +136,51 @@ export function SpaceEditor({
     selector: ({ editor }) => editor?.state ?? null,
     equalityFn: Object.is,
   });
+  const revealTarget = (focus = false) => {
+    if (!editor || !bridge || !targetBlockId || editor.isDestroyed) return;
+    const result = bridge.revealBlock(
+      editor.state,
+      { ...adapter.target, blockId: targetBlockId },
+      () => current?.() === true,
+    );
+    if (result.status === "loaded") {
+      revealed.current = { editor, blockId: targetBlockId, owner: revealOwner };
+      if (result.transaction && current?.()) editor.view.dispatch(result.transaction);
+      if (focus && current?.()) editor.view.focus();
+    }
+  };
+  const document = state?.doc;
+  const reveal =
+    bridge && state && targetBlockId
+      ? bridge.revealBlock(
+          state,
+          { ...adapter.target, blockId: targetBlockId },
+          () => current?.() === true,
+        ).status
+      : null;
+  // oxlint-disable-next-line t2code/react-effect-budget -- Reveal a current URL/panel block target once in the already loaded PM view without replacing its draft.
+  useEffect(() => {
+    if (!editor || !bridge || !targetBlockId) {
+      revealed.current = null;
+      return;
+    }
+    if (!document || editor.state.doc !== document || !current?.()) return;
+    if (
+      revealed.current?.editor === editor &&
+      revealed.current.blockId === targetBlockId &&
+      revealed.current.owner === revealOwner
+    )
+      return;
+    const result = bridge.revealBlock(
+      editor.state,
+      { ...adapter.target, blockId: targetBlockId },
+      () => current?.() === true,
+    );
+    if (result.status === "loaded") {
+      revealed.current = { editor, blockId: targetBlockId, owner: revealOwner };
+      if (result.transaction && current?.()) editor.view.dispatch(result.transaction);
+    }
+  }, [adapter, bridge, current, document, editor, revealOwner, targetBlockId]);
   const run = (command: Command) => {
     if (!editor || !editable) return;
     try {
@@ -319,6 +384,20 @@ export function SpaceEditor({
           it.
         </p>
       )}
+      {targetBlockId ? (
+        <div className="space-y-2">
+          <p role="status">
+            {reveal === "loaded"
+              ? "Linked block is loaded. Its content and draft were retained."
+              : reveal === "not-loaded"
+                ? "Linked block is not in this draft/window. No target-window locator is available. Save or resolve the draft before using First/Next windows; this view does not scan the page."
+                : "Linked block reveal is waiting for a current readable document."}
+          </p>
+          <Button variant="outline" disabled={!current?.()} onClick={() => revealTarget(true)}>
+            Reveal loaded target
+          </Button>
+        </div>
+      ) : null}
       {historyNotice ? <p role="status">{historyNotice}</p> : null}
       {bridge ? (
         <p>Local undo covers edits made in this view. Saved undo/redo has separate controls.</p>
@@ -339,10 +418,12 @@ export function SpaceEditor({
           Delete block
         </Button>
       ) : null}
-      <EditorContent
-        editor={editor}
-        className="min-h-24 whitespace-pre-wrap break-words [&_.tiptap]:outline-none"
-      />
+      <SpaceAtomContext.Provider value={renderChild}>
+        <EditorContent
+          editor={editor}
+          className="min-h-24 whitespace-pre-wrap break-words [&_.tiptap]:outline-none"
+        />
+      </SpaceAtomContext.Provider>
     </section>
   );
 }

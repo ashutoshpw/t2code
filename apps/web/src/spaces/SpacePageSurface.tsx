@@ -27,6 +27,43 @@ interface SpacePageSurfaceProps {
 
 export default function SpacePageSurface(props: SpacePageSurfaceProps) {
   const availability = useSpacesAvailability(props.target.environmentId);
+  const router = useRouter();
+  const current = () => {
+    if (!canBrowseSpaces(availability)) return false;
+    if (props.threadRef) {
+      const panel = selectThreadRightPanelState(
+        useRightPanelStore.getState().byThreadKey,
+        props.threadRef,
+      ).surfaces.find(
+        (surface) =>
+          surface.kind === "space-page" &&
+          surface.target.environmentId === props.target.environmentId &&
+          surface.target.pageId === props.target.pageId,
+      );
+      return panel?.kind === "space-page" && panel.target === props.target;
+    }
+    const params = router.state.matches.at(-1)?.params ?? {};
+    return (
+      !!props.fullPage &&
+      "environmentId" in params &&
+      params.environmentId === props.target.environmentId &&
+      "pageId" in params &&
+      params.pageId === props.target.pageId &&
+      "spaceId" in params &&
+      params.spaceId === props.target.spaceId &&
+      validateSpacePageSearch(router.state.location.search).block === props.target.blockId
+    );
+  };
+  const openSource = (target: SpacePageNavigationTarget) => {
+    if (!current() || target.environmentId !== props.target.environmentId) return;
+    if (props.threadRef) useRightPanelStore.getState().openSpacePage(props.threadRef, target);
+    else
+      void router.navigate({
+        to: "/spaces/$environmentId/$spaceId/$pageId",
+        params: target,
+        search: target.blockId ? { block: target.blockId } : {},
+      });
+  };
   if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
   return (
     <section className="min-w-0 p-4" aria-label="Space page">
@@ -40,6 +77,8 @@ export default function SpacePageSurface(props: SpacePageSurfaceProps) {
       <SpaceDocumentSurface
         key={JSON.stringify([props.target.environmentId, props.target.pageId])}
         target={props.target}
+        current={current}
+        onOpenSource={openSource}
       />
     </section>
   );

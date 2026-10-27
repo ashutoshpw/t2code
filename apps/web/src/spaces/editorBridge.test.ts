@@ -765,3 +765,60 @@ it("edits and removes a safe expanded link across a split surrogate and combined
   expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
   expect(view.controller.session.getSnapshot().blocks).toEqual([block]);
 });
+
+it("reveals a loaded block without replacing a shared dirty draft or its local history and reports unloaded targets explicitly", async () => {
+  const a = paragraph("a", "kept"),
+    b = paragraph("b", "target", "80000000000000000000000000000000");
+  const view = await model([a, b], true);
+  view.dispatch(view.state.tr.insertText("dirty-", 1));
+  const snapshot = view.controller.session.getSnapshot(),
+    history = [undoDepth(view.state), redoDepth(view.state)];
+  const target = { ...key, blockId: b.id };
+  const reveal = view.bridge.revealBlock(view.state, target, () => true);
+  expect(reveal.status).toBe("loaded");
+  if (reveal.transaction) view.dispatch(reveal.transaction);
+  expect(view.state.selection).toBeInstanceOf(NodeSelection);
+  expect((view.state.selection as NodeSelection).node.attrs.block.id).toBe(b.id);
+  expect(view.controller.session.getSnapshot()).toBe(snapshot);
+  expect([undoDepth(view.state), redoDepth(view.state)]).toEqual(history);
+  const before = view.state;
+  expect(
+    view.bridge.revealBlock(
+      view.state,
+      { ...key, blockId: SpaceBlockId.make("unloaded") },
+      () => true,
+    ).status,
+  ).toBe("not-loaded");
+  expect(view.bridge.revealBlock(view.state, target, () => false).status).toBe("unavailable");
+  expect(
+    view.bridge.revealBlock(
+      view.state,
+      { ...target, pageId: SpacePageId.make("stale-page") },
+      () => true,
+    ).status,
+  ).toBe("unavailable");
+  expect(view.state).toBe(before);
+  expect(view.controller.session.getSnapshot()).toBe(snapshot);
+  expect(view.run(view.bridge.adapter.undoLocal())).toBe(true);
+  expect(view.controller.session.getSnapshot().blocks).toEqual([a, b]);
+});
+
+it("opens only known current child-marker identities and preserves opaque marker payloads", async () => {
+  const known = {
+    ...paragraph("child", ""),
+    type: "child_page",
+    content: { pageId: "known-child" },
+  };
+  const future = {
+    ...paragraph("future-child", "", "80000000000000000000000000000000"),
+    type: "child_page",
+    content: { pageId: "opaque-child", future: { kept: true } },
+  };
+  const view = await model([known, future]);
+  const before = view.controller.session.getSnapshot();
+  view.bridge.setWritable(false);
+  expect(view.bridge.childPageTarget(known.id)).toBe("known-child");
+  expect(view.bridge.childPageTarget(future.id)).toBeNull();
+  expect(view.bridge.childPageTarget(SpaceBlockId.make("missing"))).toBeNull();
+  expect(view.controller.session.getSnapshot()).toBe(before);
+});

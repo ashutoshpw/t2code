@@ -1,7 +1,10 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { lazy, Suspense, useContext, useEffect, useState, useSyncExternalStore } from "react";
-import { SpaceBlockId } from "@t2code/contracts/spaces";
-import type { SpacePageTarget } from "@t2code/contracts/spaces";
+import { SpaceBlockId, type SpaceBlock } from "@t2code/contracts/spaces";
+import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
+import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
+import { useSpaceReferenceController } from "./useSpaceReferences";
+import { SpaceSourceOpen } from "./SpaceSourceOpen";
 import { Button } from "../components/ui/button";
 import { spacesEnvironment } from "../state/spaces";
 import { randomUUID } from "../lib/utils";
@@ -14,7 +17,15 @@ import type { SpaceDocumentController } from "./documentController";
 
 const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
 
-export function SpaceDocumentSurface({ target }: { target: SpacePageTarget }) {
+export function SpaceDocumentSurface({
+  target,
+  current,
+  onOpenSource,
+}: {
+  target: SpacePageNavigationTarget;
+  current: () => boolean;
+  onOpenSource: (target: SpacePageNavigationTarget) => void;
+}) {
   const registry = useContext(RegistryContext);
   const [attempt, setAttempt] = useState(0);
   const [opened, setOpened] = useState<{
@@ -60,15 +71,34 @@ export function SpaceDocumentSurface({ target }: { target: SpacePageTarget }) {
     result.controller.session.key.pageId !== pageId
   )
     return <p role="status">Loading document…</p>;
-  return <DocumentContent controller={result.controller} />;
+  return (
+    <DocumentContent
+      controller={result.controller}
+      targetBlockId={target.blockId}
+      current={current}
+      onOpenSource={onOpenSource}
+    />
+  );
 }
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "Could not load or save this document.";
 }
 
-function DocumentContent({ controller }: { controller: SpaceDocumentController }) {
+function DocumentContent({
+  controller,
+  targetBlockId,
+  current,
+  onOpenSource,
+}: {
+  controller: SpaceDocumentController;
+  targetBlockId?: SpaceBlockId | undefined;
+  current: () => boolean;
+  onOpenSource: (target: SpacePageNavigationTarget) => void;
+}) {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const [sourceAttempt, setSourceAttempt] = useState(0);
+  const sources = useSpaceReferenceController(controller.session.key.environmentId, sourceAttempt);
   const registry = useContext(RegistryContext);
   const environment = useEnvironment(controller.session.key.environmentId);
   const capability = environment?.serverConfig?.environment.capabilities.spaces;
@@ -80,6 +110,23 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
   const [bridge] = useState(
     () => new SpaceEditorBridge(controller, () => SpaceBlockId.make(randomUUID())),
   );
+  const canReadSource = () => !!sources?.current() && current();
+  const renderChild = (block: SpaceBlock) => {
+    if (!isKnownSpaceBlock(block) || block.type !== "child_page") return null;
+    return (
+      <SpaceSourceOpen
+        owner={sources}
+        target={{ kind: "page", pageId: block.content.pageId }}
+        current={() =>
+          !!sources?.current() &&
+          current() &&
+          bridge.childPageTarget(block.id) === block.content.pageId
+        }
+        onOpen={onOpenSource}
+        label="child page"
+      />
+    );
+  };
   const { session, loading, error } = snapshot;
   const permission = useAtomValue(
     spacesEnvironment.apply.permissionAtom(controller.session.key.environmentId),
@@ -96,6 +143,11 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
   };
   return (
     <div className="mt-4 space-y-3">
+      {!sources?.current() ? (
+        <Button variant="outline" onClick={() => setSourceAttempt((value) => value + 1)}>
+          Retry source connection
+        </Button>
+      ) : null}
       <p role="status">
         {!session.hydrated
           ? "Loading document…"
@@ -139,6 +191,10 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
         <SpaceEditor
           adapter={bridge.adapter}
           bridge={bridge}
+          targetBlockId={targetBlockId}
+          revealOwner={sources}
+          current={canReadSource}
+          renderChild={renderChild}
           onMoveBlocks={
             capability?.version === 2 && capability.features?.blockMoves === true && blockPermission
               ? async (state) => {
@@ -169,6 +225,15 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
             session.status !== "conflict" &&
             session.status !== "uncertain"
           }
+        />
+      ) : null}
+      {targetBlockId ? (
+        <SpaceSourceOpen
+          owner={sources}
+          target={{ kind: "block", blockId: targetBlockId }}
+          current={() => !!sources?.current() && current()}
+          onOpen={onOpenSource}
+          label="current linked source"
         />
       ) : null}
       {capability?.version === 2 && capability.features?.blockMoves !== true ? (
