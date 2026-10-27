@@ -3,6 +3,7 @@ import {
   AuthStandardClientScopes,
   type AuthCreatePairingCredentialInput,
   EnvironmentHttpApi,
+  EnvironmentId,
 } from "@t2code/contracts";
 import { expect, it } from "@effect/vitest";
 import * as Context from "effect/Context";
@@ -22,6 +23,7 @@ import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as Sqlite from "../persistence/Sqlite.ts";
 import * as EnvironmentAuth from "./EnvironmentAuth.ts";
 import * as McpOAuth from "./McpOAuth.ts";
+import * as McpHttpServer from "../mcp/McpHttpServer.ts";
 import * as McpOAuthHttp from "./mcpOAuthHttp.ts";
 import * as ServerSecretStore from "./ServerSecretStore.ts";
 import * as AuthHttp from "./http.ts";
@@ -291,6 +293,27 @@ it.live("signs in with a pairing code and issues a token only /mcp accepts", () 
         ),
       );
       expect(client).toMatchObject({ label: "Claude Code", access: "auto" });
+      const invocation = yield* McpHttpServer.McpClientAuthenticator.pipe(
+        Effect.flatMap((authenticator) =>
+          authenticator.authenticate(
+            HttpServerRequest.fromWeb(
+              at("/mcp", { headers: { authorization: `Bearer ${token.access_token}` } }),
+            ),
+          ),
+        ),
+        Effect.provide(
+          McpOAuth.layerMcpClientAuthenticator.pipe(
+            Layer.provide(Layer.succeed(EnvironmentAuth.EnvironmentAuth, auth)),
+            Layer.provide(
+              Layer.mock(ServerEnvironment.ServerEnvironment)({
+                getEnvironmentId: Effect.succeed(EnvironmentId.make("oauth-environment")),
+              }),
+            ),
+          ),
+        ),
+      );
+      expect(invocation?.capabilities.has("spaces")).toBe(true);
+      expect(invocation?.client).toMatchObject({ label: "Claude Code", access: "auto" });
 
       const session = yield* handler(
         at("/api/auth/session", { headers: { authorization: `Bearer ${token.access_token}` } }),

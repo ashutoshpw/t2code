@@ -31,38 +31,10 @@ import {
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
-import * as Schema from "effect/Schema";
-import * as SchemaGetter from "effect/SchemaGetter";
-import * as SchemaIssue from "effect/SchemaIssue";
 import * as RpcGroup from "effect/rpc/RpcGroup";
 
 import * as SpacesService from "./SpacesService.ts";
-import { canonical } from "./CorePolicy.ts";
-
-const invalidPayload = () =>
-  new SchemaIssue.InvalidValue({ message: "Invalid Spaces RPC payload." });
-
-// Unknown sees original intent before Struct can strip fields; errors never retain the offending payload.
-const strictPayload = <S extends Schema.Top>(
-  schema: S,
-  envelope: (raw: unknown) => unknown = (raw) => raw,
-) => {
-  const decode = Schema.decodeUnknownEffect(schema, { onExcessProperty: "error" });
-  return Schema.Unknown.pipe(
-    Schema.decodeTo(Schema.toType(schema), {
-      decode: SchemaGetter.transformEffect((raw: unknown) =>
-        Effect.try({
-          try: () => {
-            canonical(envelope(raw));
-            return raw;
-          },
-          catch: invalidPayload,
-        }).pipe(Effect.flatMap(decode), Effect.mapError(invalidPayload)),
-      ),
-      encode: SchemaGetter.transform((value) => value),
-    }),
-  );
-};
+import { strictSpacePayload as strictPayload } from "./InputCodec.ts";
 
 export const group = RpcGroup.make(
   WsSpacesAssetsUploadCreateRpc.setPayload(strictPayload(C.SpaceAssetUploadCreateInput)),
