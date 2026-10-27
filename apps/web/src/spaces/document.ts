@@ -4,6 +4,7 @@ import {
   isKnownSpaceBlock,
   isSpaceListItem,
   spaceBlockRuns,
+  mediaAssetId,
 } from "@t2code/client-runtime/spaces";
 import type {
   SpaceBlock,
@@ -43,8 +44,16 @@ export function sameSpaceValue(a: unknown, b: unknown): boolean {
   return false;
 }
 
+export function spaceEditorRuns(block: SpaceBlock): SpaceRichText | null {
+  if (
+    isKnownSpaceBlock(block) &&
+    (block.type === "image" || block.type === "pdf" || block.type === "video")
+  )
+    return block.content.caption ?? [];
+  return spaceBlockRuns(block);
+}
 export function canEditSpaceEditorBlock(block: SpaceBlock) {
-  const runs = spaceBlockRuns(block);
+  const runs = spaceEditorRuns(block);
   return (
     canEditSpaceBlock(block) &&
     (!runs ||
@@ -73,6 +82,8 @@ export function spaceBlockNode(
 ): ProseMirrorNode {
   const attrs = { block };
   const runs = spaceBlockRuns(block);
+  if (!readOnly && canEditSpaceEditorBlock(block) && mediaAssetId(block))
+    return schema.nodes.spaceMedia!.create(attrs, richTextNodes(spaceEditorRuns(block)!, schema));
   if (!readOnly && canEditSpaceEditorBlock(block) && runs) {
     const inline = richTextNodes(runs, schema);
     return schema.nodes[block.type]!.create(
@@ -169,9 +180,12 @@ export function spaceDocumentBlocks(doc: ProseMirrorNode): readonly SpaceBlock[]
         const originalNode = spaceBlockNode(original, [], false, node.type.schema);
         const originalBody = isSpaceListItem(original) ? originalNode.firstChild! : originalNode;
         if (!body.content.eq(originalBody.content)) {
-          if (!isKnownSpaceBlock(original) || !("runs" in original.content))
-            throw new Error("Read-only content");
-          block = { ...block, content: { ...original.content, runs: nodeRuns(body) } };
+          if (!isKnownSpaceBlock(original)) throw new Error("Read-only content");
+          if (mediaAssetId(original))
+            block = { ...block, content: { ...original.content, caption: nodeRuns(body) } };
+          else if ("runs" in original.content)
+            block = { ...block, content: { ...original.content, runs: nodeRuns(body) } };
+          else throw new Error("Read-only content");
         }
       }
     }

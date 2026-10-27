@@ -3,7 +3,12 @@ import { Extension, Node as TiptapNode } from "@tiptap/core";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { NodeSelection, type Command } from "@tiptap/pm/state";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
-import { SpaceAtomContext, SpaceAtomView } from "./SpaceAtomView";
+import {
+  SpaceAtomContext,
+  SpaceAtomView,
+  SpaceMediaView,
+  SpaceMediaWritableContext,
+} from "./SpaceAtomView";
 import type { SpaceBlock, SpaceBlockId } from "@t2code/contracts/spaces";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
@@ -18,6 +23,7 @@ export function SpaceEditor({
   adapter,
   bridge,
   editable = true,
+  mediaEditable = false,
   onBatch,
   onMoveBlocks,
   targetBlockId,
@@ -30,11 +36,12 @@ export function SpaceEditor({
   readonly targetBlockId?: SpaceBlockId | undefined;
   readonly current?: (() => boolean) | undefined;
   readonly sourceOwner?: { current(): boolean } | null | undefined;
-  readonly renderChild?: ((block: SpaceBlock) => ReactNode) | undefined;
+  readonly renderChild?: ((block: SpaceBlock, captionInEditor?: boolean) => ReactNode) | undefined;
   readonly onMoveBlocks?: ((state: import("@tiptap/pm/state").EditorState) => void) | undefined;
   readonly adapter: SpaceEditorAdapter;
   readonly bridge?: SpaceEditorBridge;
   readonly editable?: boolean;
+  readonly mediaEditable?: boolean;
   readonly onBatch?: (batch: SpaceEditorBatch) => void;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
@@ -50,7 +57,9 @@ export function SpaceEditor({
           .map((extension) =>
             extension.name === "spaceAtom" && extension instanceof TiptapNode
               ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(SpaceAtomView) })
-              : extension,
+              : extension.name === "spaceMedia" && extension instanceof TiptapNode
+                ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(SpaceMediaView) })
+                : extension,
           ),
         Extension.create({
           name: "spaceSessionDispatch",
@@ -114,7 +123,7 @@ export function SpaceEditor({
   // oxlint-disable-next-line t2code/react-effect-budget -- Synchronize the mounted editor view with the shared document and destination edit permission.
   useEffect(() => {
     if (!editor) return;
-    bridge?.setWritable(editable);
+    bridge?.setWritable(editable, mediaEditable);
     const synchronize = () => {
       if (editor.isDestroyed) return;
       if (bridge) {
@@ -129,7 +138,7 @@ export function SpaceEditor({
     };
     synchronize();
     return bridge?.controller.subscribe(synchronize);
-  }, [editor, bridge, editable]);
+  }, [editor, bridge, editable, mediaEditable]);
   const state = useEditorState({
     editor,
     selector: ({ editor }) => editor?.state ?? null,
@@ -214,6 +223,9 @@ export function SpaceEditor({
             () => !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
           )}
           current={() => sourceOwner?.current() === true && current?.() === true}
+          replacementTarget={
+            known && ["image", "pdf", "video"].includes(known.type) ? known.id : null
+          }
         />
       ) : null}
       <div className="flex flex-wrap gap-2">
@@ -410,7 +422,15 @@ export function SpaceEditor({
           splitting and joining are unavailable.
         </p>
       ) : null}
-      {selectedId ? (
+      {selectedId && known && ["image", "pdf", "video"].includes(known.type) ? (
+        <Button
+          variant="outline"
+          disabled={!mediaEditable || !structure || !can(adapter.removeMedia(selectedId))}
+          onClick={() => run(adapter.removeMedia(selectedId))}
+        >
+          Remove media block
+        </Button>
+      ) : selectedId ? (
         <Button
           variant="outline"
           disabled={!structure || !can(adapter.remove(selectedId))}
@@ -420,10 +440,12 @@ export function SpaceEditor({
         </Button>
       ) : null}
       <SpaceAtomContext.Provider value={renderChild}>
-        <EditorContent
-          editor={editor}
-          className="min-h-24 whitespace-pre-wrap break-words [&_.tiptap]:outline-none"
-        />
+        <SpaceMediaWritableContext.Provider value={mediaEditable && writable}>
+          <EditorContent
+            editor={editor}
+            className="min-h-24 whitespace-pre-wrap break-words [&_.tiptap]:outline-none"
+          />
+        </SpaceMediaWritableContext.Provider>
       </SpaceAtomContext.Provider>
     </section>
   );

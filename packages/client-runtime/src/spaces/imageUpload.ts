@@ -2,7 +2,7 @@ import { EnvironmentId } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Schema from "effect/Schema";
 import { spaceJsonBytes } from "./draft.ts";
-import { isKnownSpaceBlock } from "./values.ts";
+import { canEditSpaceBlock, isKnownSpaceBlock } from "./values.ts";
 import type { SpaceDocumentDraft, SpaceSaveRequest, SpaceSessionSnapshot } from "./session.ts";
 import { SpaceIntentAdmissionError } from "./session.ts";
 
@@ -17,8 +17,14 @@ const placementSchema = Schema.Struct({
   generation: Schema.Number,
   windowIds: Schema.Array(C.SpaceBlockId),
 });
+const replacementSchema = Schema.Struct({
+  before: C.SpaceBlock,
+  revision: Schema.Number,
+  generation: Schema.Number,
+});
+export type SpaceMediaReplacement = typeof replacementSchema.Type;
 const recordSchema = Schema.Struct({
-  version: Schema.Literals([1, 2]),
+  version: Schema.Literals([1, 2, 3]),
   slot: Schema.Literals([0, 1]),
   sequence: Schema.Number,
   id: Schema.String,
@@ -30,6 +36,7 @@ const recordSchema = Schema.Struct({
   ready: Schema.optionalKey(C.SpaceAssetMetadata),
   placement: Schema.optionalKey(placementSchema),
   generation: Schema.optionalKey(Schema.Number),
+  replacement: Schema.optionalKey(replacementSchema),
 });
 export type SpaceImagePlacement = typeof placementSchema.Type;
 export type SpaceImageRecord = Omit<typeof recordSchema.Type, "original"> & {
@@ -72,7 +79,8 @@ export function decodeSpaceImageRecord(input: unknown): SpaceImageRecord {
     value.original.size !== value.intent.expectedBytes ||
     value.original.type !== value.intent.mimeType ||
     spaceMediaKind(value.intent.mimeType) !== value.intent.mediaKind ||
-    (value.version === 1) !== (value.intent.mediaKind === "image") ||
+    (value.version !== 3 && (value.version === 1) !== (value.intent.mediaKind === "image")) ||
+    (value.version === 3) !== !!value.replacement ||
     value.intent.environmentId !== value.key.environmentId ||
     value.intent.requestId !== value.id ||
     !Number.isSafeInteger(value.sequence) ||
@@ -81,6 +89,17 @@ export function decodeSpaceImageRecord(input: unknown): SpaceImageRecord {
     value.id.length > 256
   )
     throw new Error("Invalid retained image original or intent; data is retained");
+  const replacement = value.replacement;
+  if (
+    replacement &&
+    (!mediaAssetId(replacement.before) ||
+      !canEditSpaceBlock(replacement.before) ||
+      !Number.isSafeInteger(replacement.revision) ||
+      replacement.revision < 0 ||
+      !Number.isSafeInteger(replacement.generation) ||
+      replacement.generation < 0)
+  )
+    throw new Error("Invalid retained replacement target; data is retained");
   const expected =
     value.phase === "original" || value.phase === "minting"
       ? [false, false, false, false]
@@ -115,10 +134,17 @@ export function decodeSpaceImageRecord(input: unknown): SpaceImageRecord {
     (!value.placement ||
       mediaAssetId(value.placement.block) !== value.handle?.assetId ||
       value.placement.block.type !== value.intent.mediaKind ||
-      value.placement.block.parentId !== null ||
+      (!replacement && value.placement.block.parentId !== null) ||
+      (replacement &&
+        (!same(
+          value.placement.block,
+          replacementBlock(replacement, value.handle!.assetId, value.intent.mediaKind),
+        ) ||
+          value.placement.revision !== replacement.revision ||
+          value.placement.generation !== replacement.generation)) ||
       !/^[0-9a-f]{32}$/.test(value.placement.block.order) ||
-      value.placement.windowIds.length > 99 ||
-      value.placement.windowIds.includes(value.placement.block.id) ||
+      value.placement.windowIds.length > (replacement ? 100 : 99) ||
+      value.placement.windowIds.includes(value.placement.block.id) !== !!replacement ||
       new Set(value.placement.windowIds).size !== value.placement.windowIds.length ||
       !Number.isSafeInteger(value.placement.revision) ||
       value.placement.revision < 0 ||
@@ -161,6 +187,14 @@ export interface SpaceImageStore {
   readonly put: (record: SpaceImageRecord, expected: number | null) => Promise<void>;
   readonly remove: (record: SpaceImageRecord) => Promise<void>;
 }
+function replacementBlock(
+  target: SpaceMediaReplacement,
+  assetId: C.SpaceAssetId,
+  kind: "image" | "pdf" | "video",
+): C.SpaceBlock {
+  if (!isKnownSpaceBlock(target.before)) throw new Error("Unsupported replacement target");
+  return { ...target.before, type: kind, content: { ...target.before.content, assetId } };
+}
 export interface SpaceImageInsertion {
   readonly current: () => boolean;
   readonly key: C.SpacePageTarget;
@@ -168,6 +202,16 @@ export interface SpaceImageInsertion {
   readonly complete: () => boolean;
   readonly plan: (assetId: C.SpaceAssetId, kind?: "image" | "pdf" | "video") => SpaceImagePlacement;
   readonly apply: (placement: SpaceImagePlacement) => void;
+  readonly captureReplacement?: (blockId: C.SpaceBlockId) => SpaceMediaReplacement;
+  readonly planReplacement?: (
+    replacement: SpaceMediaReplacement,
+    assetId: C.SpaceAssetId,
+    kind: "image" | "pdf" | "video",
+  ) => SpaceImagePlacement;
+  readonly applyReplacement?: (
+    placement: SpaceImagePlacement,
+    replacement: SpaceMediaReplacement,
+  ) => void;
   readonly persist: () => Promise<void>;
 }
 export interface SpaceImagePorts {
@@ -318,6 +362,29 @@ export class SpaceImageUploads {
     this.#abort?.();
   }
   add(key: C.SpacePageTarget, original: Blob, name: string) {
+    return this.#add(key, original, name);
+  }
+  addReplacement(
+    target: SpaceImageInsertion,
+    blockId: C.SpaceBlockId,
+    original: Blob,
+    name: string,
+  ) {
+    try {
+      if (!target.current() || !target.captureReplacement)
+        throw new Error("Replacement target is unavailable");
+      const replacement = target.captureReplacement(blockId);
+      return this.#add(target.key, original, name, { target, replacement });
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+  #add(
+    key: C.SpacePageTarget,
+    original: Blob,
+    name: string,
+    replacing?: { target: SpaceImageInsertion; replacement: SpaceMediaReplacement },
+  ) {
     return this.#run(async () => {
       await this.hydrate();
       await this.#ports.connect?.(key.environmentId);
@@ -341,10 +408,22 @@ export class SpaceImageUploads {
       const slot = [0, 1].find((s) => !this.#snapshot.records.some((r) => r.slot === s));
       if (slot === undefined)
         throw new Error("Two image originals are retained; resolve one before adding another");
+      if (replacing) {
+        await replacing.target.persist();
+        if (
+          !replacing.target.current() ||
+          !same(
+            replacing.target.captureReplacement?.(replacing.replacement.before.id),
+            replacing.replacement,
+          )
+        )
+          throw new Error("Replacement target changed before original admission");
+      }
       const id = this.#ports.newId();
       return this.#write(
         decodeSpaceImageRecord({
-          version: kind === "image" ? 1 : 2,
+          version: replacing ? 3 : kind === "image" ? 1 : 2,
+          ...(replacing ? { replacement: replacing.replacement } : {}),
           slot,
           sequence: 1,
           id,
@@ -560,7 +639,10 @@ export class SpaceImageUploads {
           }),
         );
         this.#sameSession(r, session, true);
-        const placement = target.plan(r.handle!.assetId, r.intent.mediaKind);
+        const placement = r.replacement
+          ? target.planReplacement?.(r.replacement, r.handle!.assetId, r.intent.mediaKind)
+          : target.plan(r.handle!.assetId, r.intent.mediaKind);
+        if (!placement) throw new Error("Replacement target is unavailable; original retained");
         this.#binding = { id, key: r.key };
         this.#ports.changed();
         await target.persist();
@@ -574,14 +656,15 @@ export class SpaceImageUploads {
       const p = r.placement!,
         state = target.state();
       const existing = state.blocks.find((b) => b.id === p.block.id);
-      if (existing && !same(existing, p.block))
+      if (existing && !same(existing, p.block) && !same(existing, r.replacement?.before))
         throw new Error("Image block identity changed; retained binding unresolved");
-      if (!existing) {
+      if (!existing || !same(existing, p.block)) {
         if (
           !target.complete() ||
           state.baseRevision !== p.revision ||
           state.generation !== p.generation ||
           state.pending ||
+          (r.replacement && !same(existing, r.replacement.before)) ||
           !same(
             state.blocks.map((b) => b.id),
             p.windowIds,
@@ -593,7 +676,10 @@ export class SpaceImageUploads {
         this.#sameSession(r, session, true);
         this.#permit = id;
         try {
-          target.apply(p);
+          if (r.replacement) {
+            if (!target.applyReplacement) throw new Error("Replacement target is unavailable");
+            target.applyReplacement(p, r.replacement);
+          } else target.apply(p);
         } finally {
           this.#permit = null;
           this.#ports.changed();
@@ -621,14 +707,24 @@ export class SpaceImageUploads {
       await target.persist();
       const state = target.state(),
         draft = await this.#ports.draft(r.key);
+      const replacementUnused =
+        r.replacement &&
+        !state.blocks.some((b) => mediaAssetId(b) === r.handle!.assetId) &&
+        !draft?.blocks.some((b) => mediaAssetId(b) === r.handle!.assetId) &&
+        state.baseRevision !== null &&
+        state.baseRevision >= p.revision;
+      const insertionUnused =
+        !r.replacement &&
+        state.baseRevision === p.revision &&
+        !state.memberIds.includes(p.block.id) &&
+        !state.blocks.some((b) => b.id === p.block.id) &&
+        !draft?.blocks.some((b) => b.id === p.block.id);
       if (
         !target.complete() ||
         state.pending ||
-        state.baseRevision !== p.revision ||
-        state.memberIds.includes(p.block.id) ||
-        state.blocks.some((b) => b.id === p.block.id) ||
         draft?.pending ||
-        draft?.blocks.some((b) => b.id === p.block.id)
+        state.persistenceError ||
+        (!replacementUnused && !insertionUnused)
       )
         throw new Error(
           "The original placement may have been applied; finish its exact binding instead",
@@ -646,7 +742,14 @@ export class SpaceImageUploads {
       target.state().pending
     )
       throw new Error("Resolve the original outcome before starting a new image intent");
-    return this.add(record.key, record.original, record.intent.name);
+    return record.replacement
+      ? this.addReplacement(
+          target,
+          record.replacement.before.id,
+          record.original,
+          record.intent.name,
+        )
+      : this.add(record.key, record.original, record.intent.name);
   }
   release(id: string, target?: SpaceImageInsertion) {
     return this.#run(async () => {
@@ -666,13 +769,17 @@ export class SpaceImageUploads {
           p = r.placement!;
         if (s.pending || s.persistenceError)
           throw new Error("Resolve the exact pending document receipt first");
+        const assetAbsent = !s.blocks.some((b) => mediaAssetId(b) === r.handle!.assetId);
         const absent =
           !s.memberIds.includes(p.block.id) &&
-          !s.blocks.some((b) => b.id === p.block.id || mediaAssetId(b) === r.handle!.assetId);
-        const unsentRemoved = s.baseRevision === p.revision && absent;
+          !s.blocks.some((b) => b.id === p.block.id) &&
+          assetAbsent;
+        const restored =
+          r.replacement && assetAbsent && s.blocks.some((b) => same(b, r.replacement!.before));
+        const unsentRemoved = s.baseRevision === p.revision && (absent || restored);
         // A clean complete window is authoritative absence after a save or discarded conflict.
         const cancelled =
-          absent &&
+          (absent || (r.replacement && assetAbsent)) &&
           !s.dirty &&
           s.status === "saved" &&
           s.baseRevision !== null &&

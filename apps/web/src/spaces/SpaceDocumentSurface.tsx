@@ -104,6 +104,8 @@ function DocumentContent({
   const registry = useContext(RegistryContext);
   const environment = useEnvironment(controller.session.key.environmentId);
   const capability = environment?.serverConfig?.environment.capabilities.spaces;
+  const mediaSupported =
+    capability?.version === 2 && capability.features?.assets === true && !!capability.limits.assets;
   const blockPermission = useAtomValue(
     spacesEnvironment.moveBlocks.permissionAtom(controller.session.key.environmentId),
   );
@@ -113,13 +115,14 @@ function DocumentContent({
     () => new SpaceEditorBridge(controller, () => SpaceBlockId.make(randomUUID())),
   );
   const canReadSource = () => !!sources?.current() && current();
-  const renderChild = (block: SpaceBlock) => {
+  const renderChild = (block: SpaceBlock, captionInEditor = false) => {
     if (!isKnownSpaceBlock(block)) return null;
     if (["image", "pdf", "video"].includes(block.type))
       return (
         <SpaceMediaBlock
           environmentId={controller.session.key.environmentId}
           block={block}
+          showCaption={!captionInEditor}
           current={canReadSource}
         />
       );
@@ -206,6 +209,7 @@ function DocumentContent({
       ) : null}
       {session.hydrated ? (
         <SpaceEditor
+          mediaEditable={mediaSupported}
           adapter={bridge.adapter}
           bridge={bridge}
           targetBlockId={targetBlockId}
@@ -281,11 +285,14 @@ function DocumentContent({
               controller.structureBlocked() ||
               loading ||
               !!error ||
+              (!mediaSupported && bridge.compensationUsesMedia(direction)) ||
               controller.session.compensationAvailability(direction) !== null
             }
             title={
-              controller.session.compensationAvailability(direction) ??
-              "Submit a new revision-checked saved change"
+              !mediaSupported && bridge.compensationUsesMedia(direction)
+                ? "This saved change requires asset support"
+                : (controller.session.compensationAvailability(direction) ??
+                  "Submit a new revision-checked saved change")
             }
             onClick={() => run(bridge.compensate(direction))}
           >

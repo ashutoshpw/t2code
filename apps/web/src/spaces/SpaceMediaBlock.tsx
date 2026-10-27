@@ -164,9 +164,11 @@ export function SpaceMediaBlock({
   environmentId,
   block,
   current,
+  showCaption = true,
 }: {
   environmentId: EnvironmentId;
   block: SpaceBlock;
+  showCaption?: boolean;
   current: () => boolean;
 }) {
   const registry = useContext(RegistryContext),
@@ -233,7 +235,7 @@ export function SpaceMediaBlock({
   };
   return (
     <section aria-label={`${block.type} block`} className="space-y-2">
-      <p>{block.type.toUpperCase()} · read-only media</p>
+      <p>{block.type.toUpperCase()} · media</p>
       <Button
         variant="outline"
         disabled={!allowed}
@@ -261,7 +263,7 @@ export function SpaceMediaBlock({
           current={() => current() && active.current()}
         />
       ) : null}
-      {"caption" in known.content && known.content.caption ? (
+      {showCaption && "caption" in known.content && known.content.caption ? (
         canEditSpaceBlock(known) ? (
           <Caption runs={known.content.caption} />
         ) : (

@@ -7724,3 +7724,574 @@ it.effect.each(["pdf", "video"] as const)(
       ),
     ).pipe(Effect.provide(NodeServices.layer)),
 );
+
+it.effect.each(["image", "pdf", "video"] as const)(
+  "edits rich %s captions in the shared PM/session and explicitly removes media with local history",
+  (kind) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const original = await h.images.add(h.key, h.file(kind), `caption.${kind}`);
+            await h.images.upload(original.id);
+            const assetId = h.images.getSnapshot().records[0]!.handle!.assetId;
+            const page = await h.ports.getPage(h.key);
+            const block: C.SpaceBlock = {
+              id: C.SpaceBlockId.make("caption-media"),
+              parentId: null,
+              order: "8".padEnd(32, "0"),
+              type: kind,
+              version: 1,
+              content: {
+                assetId,
+                caption: [
+                  {
+                    text: "A😀B",
+                    marks: [
+                      { type: "bold", version: 1 },
+                      { type: "italic", version: 1 },
+                    ],
+                  },
+                  { text: " page", marks: [{ type: "page_mention", version: 1, target: h.key }] },
+                ],
+              },
+            };
+            const seed = await h.ports.applyBlockBatch({
+              ...h.key,
+              mutationId: C.SpaceMutationId.make("seed-caption"),
+              receiptEpoch: page.mutationAdmission.epoch,
+              baseRevision: page.page.revision,
+              generation: 1,
+              mutations: [{ kind: "insert", block }],
+            });
+            assert.equal(seed.status, "saved");
+            await h.images.release(original.id);
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller),
+              peer = savedView(controller);
+            try {
+              assert.isTrue(view.state.doc.firstChild!.isTextblock);
+              const before = controller.session.getSnapshot();
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 2)));
+              view.bridge.setWritable(true, false);
+              assert.isFalse(view.bridge.adapter.mark("bold")(view.state, view.dispatch));
+              view.dispatch(view.state.tr.insertText("permission denied", 1));
+              assert.strictEqual(controller.session.getSnapshot(), before);
+              view.bridge.setWritable(true);
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2, 3)));
+              assert.isFalse(
+                view.bridge.adapter.setLink("https://example.test")(view.state, view.dispatch),
+              );
+              assert.strictEqual(controller.session.getSnapshot(), before);
+              const captionDoc = view.state.doc;
+              view.dispatch(view.state.tr.insertText("broken", 3));
+              assert.strictEqual(view.state.doc, captionDoc);
+              assert.strictEqual(controller.session.getSnapshot(), before);
+              assert.isFalse(view.bridge.adapter.mark("strike")(view.state, view.dispatch));
+              assert.strictEqual(controller.session.getSnapshot(), before);
+              assert.isFalse(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
+              view.edit("caption-");
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 9)));
+              assert.isTrue(
+                view.bridge.adapter.setLink("https://example.test")(view.state, view.dispatch),
+              );
+              assert.include(
+                JSON.stringify(controller.session.getSnapshot().blocks[0]!.content),
+                "https://example.test",
+              );
+              assert.isTrue(view.bridge.adapter.removeLink()(view.state, view.dispatch));
+              const changed = controller.session.getSnapshot().blocks[0]!;
+              assert.equal(mediaAssetId(changed), assetId);
+              assert.include(JSON.stringify(changed.content), "page_mention");
+              assert.include(JSON.stringify(changed.content), "italic");
+              assert.deepEqual(
+                spaceDocumentBlocks(peer.state.doc),
+                controller.session.getSnapshot().blocks,
+              );
+              await controller.save();
+              const savedCaption = controller.session.getSnapshot();
+              view.bridge.setWritable(true, false);
+              assert.isFalse(await view.bridge.compensate("undo"));
+              assert.strictEqual(controller.session.getSnapshot(), savedCaption);
+              view.bridge.setWritable(true);
+              assert.isTrue(await view.bridge.compensate("undo"));
+              assert.deepEqual(controller.session.getSnapshot().blocks, [block]);
+              assert.isTrue(await view.bridge.compensate("redo"));
+              assert.include(view.state.doc.textContent, "caption-");
+              assert.isTrue(view.bridge.adapter.removeMedia(block.id)(view.state, view.dispatch));
+              assert.equal(controller.session.getSnapshot().blocks.length, 0);
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.equal(controller.session.getSnapshot().blocks[0]!.id, block.id);
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              await controller.save();
+              assert.isFalse(await view.bridge.compensate("undo"));
+              const sql = new NodeSqlite.DatabaseSync(databasePath, { readOnly: true });
+              try {
+                assert.equal(
+                  sql
+                    .prepare("SELECT COUNT(*) AS n FROM spaces_block_asset_refs WHERE block_id=?")
+                    .get(block.id)!.n,
+                  0,
+                );
+                assert.isAtLeast(
+                  Number(
+                    sql
+                      .prepare(
+                        "SELECT COUNT(*) AS n FROM spaces_revision_asset_refs WHERE asset_id=?",
+                      )
+                      .get(assetId)!.n,
+                  ),
+                  1,
+                );
+              } finally {
+                sql.close();
+              }
+            } finally {
+              view.stop();
+              peer.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["image", "pdf", "video"] as const)(
+  "replaces a committed %s through the durable original authority, preserves identity/caption and server history pins",
+  (kind) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller),
+              peer = savedView(controller);
+            const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+            try {
+              const a = await h.images.add(h.key, h.file(kind), `a.${kind}`);
+              await h.images.upload(a.id);
+              await h.images.insert(a.id, port);
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
+              view.edit("original caption");
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              assert.include(
+                JSON.stringify(controller.session.getSnapshot().blocks[0]!.content),
+                "original caption",
+              );
+              view.dispatch(view.state.tr.delete(1, 1 + "original caption".length));
+              assert.equal(view.state.doc.textContent, "");
+              assert.equal(controller.session.getSnapshot().blocks.length, 1);
+              view.edit("original caption");
+              await controller.save();
+              const before = controller.session.getSnapshot().blocks[0]!;
+              const assetA = mediaAssetId(before)!;
+              await h.images.release(a.id, port);
+              const b = await h.images.addReplacement(port, before.id, h.file(kind), `b.${kind}`);
+              assert.deepEqual(b.replacement!.before, before);
+              await h.images.upload(b.id);
+              await h.images.insert(b.id, port);
+              const after = controller.session.getSnapshot().blocks[0]!;
+              assert.equal(after.id, before.id);
+              assert.notEqual(mediaAssetId(after), assetA);
+              assert.deepEqual(spaceDocumentBlocks(peer.state.doc), [after]);
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.deepEqual(controller.session.getSnapshot().blocks, [before]);
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              assert.deepEqual(controller.session.getSnapshot().blocks, [after]);
+              await controller.save();
+              const sql = new NodeSqlite.DatabaseSync(databasePath, { readOnly: true });
+              try {
+                assert.equal(
+                  sql
+                    .prepare("SELECT asset_id FROM spaces_block_asset_refs WHERE block_id=?")
+                    .get(before.id)!.asset_id,
+                  mediaAssetId(after),
+                );
+                assert.isAtLeast(
+                  Number(
+                    sql
+                      .prepare(
+                        "SELECT COUNT(*) AS n FROM spaces_revision_asset_refs WHERE asset_id=?",
+                      )
+                      .get(assetA)!.n,
+                  ),
+                  1,
+                );
+              } finally {
+                sql.close();
+              }
+              assert.isTrue(await view.bridge.compensate("undo"));
+              assert.deepEqual(controller.session.getSnapshot().blocks, [before]);
+              assert.isTrue(await view.bridge.compensate("redo"));
+              assert.deepEqual(controller.session.getSnapshot().blocks, [after]);
+              await h.images.release(b.id, port);
+            } finally {
+              view.stop();
+              peer.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["late-caption", "lost-reply-reload"] as const)(
+  "retains exact replacement intent and newer captions across %s",
+  (mode) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+            try {
+              const a = await h.images.add(h.key, h.file(), "before.png");
+              await h.images.upload(a.id);
+              await h.images.insert(a.id, port);
+              await controller.save();
+              const before = controller.session.getSnapshot().blocks[0]!;
+              await h.images.release(a.id, port);
+              const b = await h.images.addReplacement(port, before.id, h.file("pdf"), "after.pdf");
+              await h.images.upload(b.id);
+              await h.images.insert(b.id, port);
+              const replacement = controller.session.getSnapshot().blocks[0]!;
+              if (mode === "late-caption") {
+                h.control.holdDocument = true;
+                const saving = controller.save();
+                try {
+                  await h.control.committed.promise;
+                  view.dispatch(
+                    view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)),
+                  );
+                  view.edit("later caption");
+                  const pending = controller.session.getSnapshot().pending;
+                  await expect(h.images.release(b.id, port)).rejects.toThrow(
+                    "pending document receipt",
+                  );
+                  assert.deepEqual(controller.session.getSnapshot().pending, pending);
+                } finally {
+                  h.control.documentReply.resolve();
+                }
+                await saving;
+                const suffix = controller.session.getSnapshot();
+                assert.isTrue(suffix.dirty);
+                assert.isNull(suffix.pending);
+                assert.equal(mediaAssetId(suffix.blocks[0]!), mediaAssetId(replacement));
+                assert.include(JSON.stringify(suffix.blocks[0]!.content), "later caption");
+                await controller.save();
+                assert.equal(h.documentRequests.length, 3);
+                assert.equal(h.documentRequests[2]!.mutations.length, 1);
+                assert.equal(h.documentRequests[2]!.mutations[0]!.kind, "replace");
+              } else {
+                h.control.loseDocument = true;
+                await expect(controller.save()).rejects.toThrow(
+                  "Lost image document acknowledgement",
+                );
+                const pending = controller.session.getSnapshot().pending!;
+                assert.isNotNull(pending);
+                await expect(h.images.release(b.id, port)).rejects.toThrow(
+                  "pending document receipt",
+                );
+                await expect(h.images.newAttempt(b.id, port)).rejects.toThrow(
+                  "Resolve the original",
+                );
+                await h.images.hydrate();
+                await h.reload().hydrate();
+                const restored = h.createController();
+                await restored.open();
+                const restoredView = savedView(restored);
+                try {
+                  assert.deepEqual(restored.session.getSnapshot().pending, pending);
+                  await restored.save();
+                  assert.isNull(restored.session.getSnapshot().pending);
+                  assert.deepEqual(restored.session.getSnapshot().blocks, [replacement]);
+                  assert.equal(h.documentRequests.length, 2);
+                  assert.deepEqual(h.documentRequests[1]!.mutations, pending.mutations);
+                  assert.equal(h.documentRequests[1]!.mutationId, pending.mutationId);
+                  assert.equal(h.documentRequests[1]!.receiptEpoch, pending.receiptEpoch);
+                  await h.images.release(
+                    b.id,
+                    restoredView.bridge.imageInsertion(
+                      () => restoredView.state,
+                      restoredView.dispatch,
+                    ),
+                  );
+                } finally {
+                  restoredView.stop();
+                }
+              }
+            } finally {
+              h.control.documentReply.resolve();
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["undo-save", "conflict-discard"] as const)(
+  "releases a cancelled replacement after revision advances via %s without changing the original media",
+  (mode) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+            try {
+              const a = await h.images.add(h.key, h.file("video"), "before.mp4");
+              await h.images.upload(a.id);
+              await h.images.insert(a.id, port);
+              await controller.save();
+              const before = controller.session.getSnapshot().blocks[0]!;
+              await h.images.release(a.id, port);
+              assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              view.edit("text");
+              await controller.save();
+              const b = await h.images.addReplacement(port, before.id, h.file(), "after.png");
+              await h.images.upload(b.id);
+              await h.images.insert(b.id, port);
+              if (mode === "undo-save") {
+                assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+                assert.equal(
+                  mediaAssetId(controller.session.getSnapshot().blocks[0]!),
+                  mediaAssetId(before),
+                );
+                view.dispatch(
+                  view.state.tr.setSelection(
+                    TextSelection.create(view.state.doc, view.state.doc.content.size - 1),
+                  ),
+                );
+                view.edit(" remains");
+                await controller.save();
+              } else {
+                const remote = await h.ports.getPage(h.key);
+                const text = controller.session.getSnapshot().blocks[1]!;
+                const result = await h.ports.applyBlockBatch({
+                  ...h.key,
+                  mutationId: C.SpaceMutationId.make("replacement-conflict"),
+                  receiptEpoch: remote.mutationAdmission.epoch,
+                  baseRevision: remote.page.revision,
+                  generation: 1,
+                  mutations: [
+                    {
+                      kind: "replace",
+                      block: { ...text, content: { runs: [{ text: "remote", marks: [] }] } },
+                    },
+                  ],
+                });
+                assert.equal(result.status, "saved");
+                await controller.save();
+                assert.equal(controller.session.getSnapshot().status, "conflict");
+                await expect(h.images.release(b.id, port)).rejects.toThrow("Save or resolve");
+                await controller.discard();
+              }
+              assert.isFalse(controller.session.getSnapshot().dirty);
+              assert.deepEqual(controller.session.getSnapshot().blocks[0], before);
+              await h.images.release(b.id, port);
+              assert.equal((await h.originals.load()).length, 0);
+              assert.deepEqual(
+                (
+                  await h.run(
+                    service.readBlocks({
+                      ...h.key,
+                      revision: (await h.ports.getPage(h.key)).page.revision,
+                      limit: 100,
+                    }),
+                  )
+                ).blocks[0],
+                before,
+              );
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "fails replacement admission before network writes, retains changed targets, and reconciles a durable preparing replacement once after reload",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller),
+              peer = savedView(controller);
+            const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+            try {
+              const a = await h.images.add(h.key, h.file(), "before.png");
+              await h.images.upload(a.id);
+              await h.images.insert(a.id, port);
+              await controller.save();
+              const before = controller.session.getSnapshot().blocks[0]!;
+              await h.images.release(a.id, port);
+              h.control.failPhase = "original";
+              await expect(
+                h.images.addReplacement(port, before.id, h.file(), "failed.png"),
+              ).rejects.toThrow("persistence failed");
+              assert.deepEqual(h.counts(), { mintCalls: 1, posts: 1 });
+              assert.equal((await h.originals.load()).length, 0);
+              const b = await h.images.addReplacement(port, before.id, h.file(), "after.png");
+              await h.images.upload(b.id);
+              h.control.holdMetadata = true;
+              const applying = h.images.insert(b.id, port);
+              try {
+                await h.control.metadataEntered.promise;
+                peer.dispatch(peer.state.tr.setSelection(TextSelection.create(peer.state.doc, 1)));
+                peer.edit("target changed");
+              } finally {
+                h.control.metadataReply.resolve();
+              }
+              await expect(applying).rejects.toThrow("Replacement target changed");
+              assert.equal(h.images.getSnapshot().records[0]!.phase, "ready");
+              assert.equal(
+                mediaAssetId(controller.session.getSnapshot().blocks[0]!),
+                mediaAssetId(before),
+              );
+              await h.images.release(b.id, port);
+              const c = await h.images.addReplacement(
+                port,
+                before.id,
+                h.file("video"),
+                "after.mp4",
+              );
+              await h.images.upload(c.id);
+              h.control.failPhase = "drafted";
+              await expect(h.images.insert(c.id, port)).rejects.toThrow("persistence failed");
+              const desired = controller.session.getSnapshot().blocks[0]!;
+              assert.equal(desired.type, "video");
+              assert.include(JSON.stringify(desired.content), "target changed");
+              assert.equal(h.images.getSnapshot().records[0]!.phase, "preparing");
+              await expect(controller.save()).rejects.toThrow();
+              await expect(h.images.release(c.id, port)).rejects.toThrow("unresolved");
+              await h.reload().hydrate();
+              const restored = h.createController();
+              await restored.open();
+              const restoredView = savedView(restored);
+              try {
+                const restoredPort = restoredView.bridge.imageInsertion(
+                  () => restoredView.state,
+                  restoredView.dispatch,
+                );
+                await h.images.insert(c.id, restoredPort);
+                assert.deepEqual(restored.session.getSnapshot().blocks, [desired]);
+                await restored.save();
+                await h.images.release(c.id, restoredPort);
+                assert.equal(h.documentRequests.length, 2);
+                assert.equal(h.documentRequests[1]!.mutations.length, 1);
+                assert.equal(h.documentRequests[1]!.mutations[0]!.kind, "replace");
+              } finally {
+                restoredView.stop();
+              }
+            } finally {
+              h.control.metadataReply.resolve();
+              view.stop();
+              peer.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "cancels an unapplied preparing replacement after navigation and an authoritative revision change without releasing uncertain bindings",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+            try {
+              const a = await h.images.add(h.key, h.file(), "before.png");
+              await h.images.upload(a.id);
+              await h.images.insert(a.id, port);
+              await controller.save();
+              const before = controller.session.getSnapshot().blocks[0]!;
+              await h.images.release(a.id, port);
+              const b = await h.images.addReplacement(port, before.id, h.file("pdf"), "after.pdf");
+              await h.images.upload(b.id);
+              let current = true;
+              const departing = view.bridge.imageInsertion(
+                () => view.state,
+                view.dispatch,
+                () => current,
+              );
+              h.control.holdPhase = "preparing";
+              const applying = h.images.insert(b.id, departing);
+              try {
+                await h.control.entered.promise;
+                current = false;
+              } finally {
+                h.control.release.resolve();
+              }
+              await expect(applying).rejects.toThrow("no longer current");
+              assert.deepEqual(controller.session.getSnapshot().blocks, [before]);
+              await expect(h.images.release(b.id, port)).rejects.toThrow("unresolved");
+              const page = await h.ports.getPage(h.key);
+              const remote = {
+                ...before,
+                content: {
+                  assetId: mediaAssetId(before)!,
+                  caption: [{ text: "remote caption", marks: [] }],
+                },
+              };
+              const result = await h.ports.applyBlockBatch({
+                ...h.key,
+                mutationId: C.SpaceMutationId.make("replacement-navigation-remote"),
+                receiptEpoch: page.mutationAdmission.epoch,
+                baseRevision: page.page.revision,
+                generation: 1,
+                mutations: [{ kind: "replace", block: remote }],
+              });
+              assert.equal(result.status, "saved");
+              await h.reload().hydrate();
+              const restored = h.createController();
+              await restored.open();
+              const restoredView = savedView(restored);
+              try {
+                const restoredPort = restoredView.bridge.imageInsertion(
+                  () => restoredView.state,
+                  restoredView.dispatch,
+                );
+                assert.deepEqual(restored.session.getSnapshot().blocks, [remote]);
+                await h.images.reselectPlacement(b.id, restoredPort);
+                await h.images.release(b.id, restoredPort);
+                assert.deepEqual(restored.session.getSnapshot().blocks, [remote]);
+                assert.equal((await h.originals.load()).length, 0);
+                assert.equal(h.documentRequests.length, 1);
+              } finally {
+                restoredView.stop();
+              }
+            } finally {
+              h.control.release.resolve();
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);

@@ -9,12 +9,18 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { SpaceBlockId, SpacePageTarget } from "@t2code/contracts/spaces";
 import {
   isKnownSpaceBlock,
+  mediaAssetId,
   spaceJsonBytes,
   type SpaceCompensation,
   type SpaceImageInsertion,
 } from "@t2code/client-runtime/spaces";
 import { SpaceEditorAdapter } from "./adapter";
-import { sameSpaceValue, spaceDocumentBlocks, spaceWindowDocument } from "./document";
+import {
+  canEditSpaceEditorBlock,
+  sameSpaceValue,
+  spaceDocumentBlocks,
+  spaceWindowDocument,
+} from "./document";
 import type { SpaceDocumentController } from "./documentController";
 
 function allocateSpaceEditorOrder(gap: { before: string | null; after: string | null }): string {
@@ -62,6 +68,7 @@ export class SpaceEditorBridge {
   readonly adapter: SpaceEditorAdapter;
   readonly controller: SpaceDocumentController;
   #writable = false;
+  #mediaWritable = false;
   #applying = false;
   #acknowledged: number | null;
   #notice: string | null = null;
@@ -84,14 +91,19 @@ export class SpaceEditorBridge {
       allocateId,
       allocateOrder: allocateSpaceEditorOrder,
       canEdit: () => this.canEdit(),
+      canEditMedia: () => this.canEditMedia(),
       canChangeStructure: () => this.canStructure(),
       canUndo: () =>
         this.canStructure() &&
         this.#acknowledged === this.controller.session.getSnapshot().acknowledgedGeneration,
     });
   }
-  setWritable(writable: boolean) {
+  setWritable(writable: boolean, mediaWritable = writable) {
     this.#writable = writable;
+    this.#mediaWritable = mediaWritable;
+  }
+  canEditMedia() {
+    return this.#mediaWritable && this.canEdit();
   }
   canEdit() {
     const { session, loading, error } = this.controller.getSnapshot();
@@ -199,6 +211,75 @@ export class SpaceEditorBridge {
           windowIds: snapshot.blocks.map((b) => b.id),
         };
       },
+      captureReplacement: (blockId) => {
+        const snapshot = this.controller.session.getSnapshot();
+        const before = snapshot.blocks.find((b) => b.id === blockId);
+        if (
+          !current() ||
+          !this.canEditMedia() ||
+          !this.canStructure() ||
+          !before ||
+          !this.adapter.mediaTarget(state(), blockId) ||
+          !mediaAssetId(before) ||
+          !canEditSpaceEditorBlock(before) ||
+          !snapshot.memberIds.includes(blockId) ||
+          snapshot.baseRevision === null ||
+          !this.controller.editorWindow().completeParents.includes(null) ||
+          !sameSpaceValue(spaceDocumentBlocks(state().doc), snapshot.blocks)
+        )
+          throw new Error(
+            "Replacement requires a current committed known media target and complete window",
+          );
+        return { before, revision: snapshot.baseRevision, generation: snapshot.generation };
+      },
+      planReplacement: (replacement, assetId, kind) => {
+        const snapshot = this.controller.session.getSnapshot();
+        if (
+          !current() ||
+          !this.canEditMedia() ||
+          !this.canStructure() ||
+          snapshot.baseRevision !== replacement.revision ||
+          snapshot.generation !== replacement.generation ||
+          !snapshot.blocks.some((b) => sameSpaceValue(b, replacement.before)) ||
+          !isKnownSpaceBlock(replacement.before) ||
+          !snapshot.memberIds.includes(replacement.before.id) ||
+          !this.controller.editorWindow().completeParents.includes(null) ||
+          !sameSpaceValue(spaceDocumentBlocks(state().doc), snapshot.blocks)
+        )
+          throw new Error(
+            "Replacement target changed; original retained. Cancel or start a new explicit replacement",
+          );
+        return {
+          block: {
+            ...replacement.before,
+            type: kind,
+            content: { ...replacement.before.content, assetId },
+          },
+          revision: snapshot.baseRevision,
+          generation: snapshot.generation,
+          windowIds: snapshot.blocks.map((b) => b.id),
+        };
+      },
+      applyReplacement: (placement, replacement) => {
+        const snapshot = this.controller.session.getSnapshot();
+        if (
+          !current() ||
+          !this.canEditMedia() ||
+          snapshot.baseRevision !== placement.revision ||
+          snapshot.generation !== placement.generation ||
+          snapshot.pending ||
+          !sameSpaceValue(
+            snapshot.blocks.map((b) => b.id),
+            placement.windowIds,
+          ) ||
+          !snapshot.blocks.some((b) => sameSpaceValue(b, replacement.before)) ||
+          !this.adapter.replaceMedia(replacement.before, placement.block)(state(), dispatch) ||
+          !this.controller.session
+            .getSnapshot()
+            .blocks.some((b) => sameSpaceValue(b, placement.block))
+        )
+          throw new Error("Replacement target is no longer valid; original retained");
+      },
       persist: () => this.controller.session.persistDraft(),
       apply: (placement) => {
         const snapshot = this.controller.session.getSnapshot();
@@ -265,10 +346,26 @@ export class SpaceEditorBridge {
     if (!blockIds.length) throw new Error("Select at least one loaded block");
     return { revision: snapshot.session.baseRevision!, blockIds };
   }
+  compensationUsesMedia(direction: SpaceCompensation) {
+    const change = this.controller.session.getSnapshot().history[direction];
+    return (
+      !!change &&
+      change.before.some(
+        (before) =>
+          mediaAssetId(before) &&
+          !sameSpaceValue(
+            before,
+            change.after.find((after) => after.id === before.id),
+          ),
+      )
+    );
+  }
   async compensate(direction: SpaceCompensation): Promise<boolean> {
     const reason = !this.canEdit()
       ? "Saved undo/redo requires edit permission and a resolved writable document."
-      : this.controller.session.compensationAvailability(direction);
+      : this.compensationUsesMedia(direction) && !this.canEditMedia()
+        ? "Saved media undo/redo requires current asset support and edit permission."
+        : this.controller.session.compensationAvailability(direction);
     if (reason) {
       this.#message(reason);
       return false;
@@ -300,6 +397,7 @@ export class SpaceEditorBridge {
     this.#acknowledged = snapshot.acknowledgedGeneration;
     const changed = !sameSpaceValue(spaceDocumentBlocks(state.doc), snapshot.blocks);
     if (!changed && !acknowledged) return state;
+    this.adapter.clearMediaHistory();
     const doc = changed ? spaceWindowDocument(window, 100, 16, state.schema) : state.doc;
     const selection = changed ? preserveSelection(state, doc) : state.selection;
     this.#message(

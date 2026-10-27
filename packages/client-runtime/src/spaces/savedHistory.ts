@@ -63,9 +63,10 @@ function replaceable(before: readonly SpaceBlock[], after: readonly SpaceBlock[]
         (same(old, block) ||
           (old.parentId === block.parentId &&
             old.order === block.order &&
-            ![old.type, block.type].some((type) =>
-              ["child_page", "image", "pdf", "video"].includes(type),
-            ) &&
+            old.type !== "child_page" &&
+            block.type !== "child_page" &&
+            ([old.type, block.type].every((t) => ["image", "pdf", "video"].includes(t)) ||
+              ![old.type, block.type].some((t) => ["image", "pdf", "video"].includes(t))) &&
             canEditSpaceBlock(old) &&
             canEditSpaceBlock(block)))
       );

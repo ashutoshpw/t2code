@@ -69,6 +69,19 @@ export const spaceSchemaExtensions: Extensions = [
     ],
   }),
   Node.create({
+    name: "spaceMedia",
+    group: "spaceBlock",
+    content: "inline*",
+    defining: true,
+    isolating: true,
+    addAttributes: blockAttributes,
+    renderHTML: ({ node }) => [
+      "figure",
+      { "data-space-block": (node.attrs.block as SpaceBlock).id },
+      ["figcaption", {}, 0],
+    ],
+  }),
+  Node.create({
     name: "spaceAtom",
     group: "spaceBlock",
     atom: true,

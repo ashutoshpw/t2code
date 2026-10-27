@@ -10,10 +10,12 @@ export function SpaceImageControls({
   owner,
   insertion,
   current,
+  replacementTarget,
 }: {
   owner: SpaceImageUploads;
   insertion: SpaceImageInsertion;
   current: () => boolean;
+  replacementTarget: import("@t2code/contracts/spaces").SpaceBlockId | null;
 }) {
   const state = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
   const [file, setFile] = useState<File | null>(null);
@@ -69,6 +71,31 @@ export function SpaceImageControls({
       >
         Keep original locally
       </Button>
+      <Button
+        variant="outline"
+        disabled={
+          !file ||
+          !replacementTarget ||
+          !writable ||
+          state.busy ||
+          !state.hydrated ||
+          !!insertion.state().pending
+        }
+        onClick={() => {
+          if (!file || !replacementTarget || !current()) return;
+          run(
+            owner
+              .addReplacement(insertion, replacementTarget, file, file.name)
+              .then(() => setFile(null)),
+          );
+        }}
+      >
+        Keep original to replace selected media
+      </Button>
+      <p>
+        Choose a saved known media block to replace it. Its ID, placement and rich caption remain;
+        changed targets require a new explicit attempt.
+      </p>
       {file ? <p>{file.name} is selected but not yet stored.</p> : null}
       {state.busy ? <p role="status">Finishing one media operation…</p> : null}
       {state.busy ? (
@@ -81,6 +108,7 @@ export function SpaceImageControls({
         <div key={record.id} className="space-y-2">
           <p>
             {record.intent.name} ·{" "}
+            {record.replacement ? `Replacement for ${record.replacement.before.id}` : "New media"} ·{" "}
             {
               {
                 original: "Stored locally",
@@ -116,7 +144,9 @@ export function SpaceImageControls({
               >
                 {record.phase === "preparing"
                   ? "Finish retained insertion"
-                  : "Insert media at page end"}
+                  : record.replacement
+                    ? "Apply retained replacement"
+                    : "Insert media at page end"}
               </Button>
             ) : null}
             <Button

@@ -10,11 +10,12 @@ import {
   type Command,
   type Transaction,
 } from "@tiptap/pm/state";
-import { canSplit } from "@tiptap/pm/transform";
+import { canSplit, AddMarkStep, RemoveMarkStep } from "@tiptap/pm/transform";
 import { toggleMark } from "@tiptap/pm/commands";
 import { Schema } from "effect";
 import {
   copySpaceBlocks,
+  mediaAssetId,
   isKnownSpaceBlock,
   isSpaceListItem,
   isSafeSpaceLink,
@@ -36,6 +37,7 @@ import {
   spaceBlockNode,
   spaceDocumentBlocks,
   spaceWindowDocument,
+  spaceEditorRuns,
   type SpaceEditorWindow,
 } from "./document";
 import { richBlockTypes, spaceSchemaExtensions } from "./schema";
@@ -56,13 +58,20 @@ export interface SpaceEditorOptions {
   readonly canEdit?: () => boolean;
   readonly canChangeStructure?: () => boolean;
   readonly canUndo?: () => boolean;
+  readonly canEditMedia?: () => boolean;
 }
 export interface SpaceEditorBatch {
   readonly baseRevision: number;
   readonly memberIds: readonly SpaceBlockId[];
   readonly mutations: readonly SpaceMutation[];
 }
+interface MediaChange {
+  readonly before: SpaceBlock | null;
+  readonly after: SpaceBlock | null;
+}
 interface Operation {
+  readonly media?: MediaChange;
+  readonly history?: boolean;
   readonly merged?: { readonly from: SpaceBlockId; readonly into: SpaceBlockId };
 }
 interface AdapterState {
@@ -95,6 +104,25 @@ function entries(doc: ProseMirrorNode) {
   return result;
 }
 
+function mediaIdentity(block: SpaceBlock | null) {
+  return block && isKnownSpaceBlock(block)
+    ? { ...block, content: { ...block.content, caption: [] } }
+    : block;
+}
+
+function captionBoundary(doc: ProseMirrorNode, position: number) {
+  const point = doc.resolve(position);
+  if (point.parent.type.name !== "spaceMedia") return true;
+  const text = point.parent.textContent,
+    offset = point.parentOffset;
+  return !(
+    offset > 0 &&
+    offset < text.length &&
+    /[\uD800-\uDBFF]/.test(text[offset - 1]!) &&
+    /[\uDC00-\uDFFF]/.test(text[offset]!)
+  );
+}
+
 export class SpaceEditorAdapter {
   readonly #options: SpaceEditorOptions;
   readonly #key = new PluginKey<AdapterState>("spaces-window");
@@ -103,6 +131,7 @@ export class SpaceEditorAdapter {
   #committed: ReadonlySet<SpaceBlockId>;
   #complete: ReadonlySet<SpaceBlockId | null>;
   #window: SpaceEditorWindow;
+  #mediaHistory: readonly MediaChange[] = [];
   readonly document: ProseMirrorNode;
 
   constructor(options: SpaceEditorOptions) {
@@ -180,6 +209,14 @@ export class SpaceEditorAdapter {
           if (!tr.docChanged) return value;
           const operation = tr.getMeta(this.#operation) as Operation | undefined;
           const merged = operation?.merged;
+          if (operation?.media)
+            this.#mediaHistory = [
+              ...this.#mediaHistory,
+              {
+                before: mediaIdentity(operation.media.before),
+                after: mediaIdentity(operation.media.after),
+              },
+            ].slice(-localHistoryDepth * 2);
           return {
             batch: this.#batch(tr.before, tr.doc, operation),
             // History replays steps without join metadata; retain bounded targets for redo.
@@ -195,6 +232,16 @@ export class SpaceEditorAdapter {
         if (!tr.docChanged) return true;
         if (this.#options.canEdit?.() === false) return false;
         try {
+          for (const [i, step] of tr.steps.entries()) {
+            const doc = tr.docs[i]!;
+            let safe = true;
+            step.getMap().forEach((from, to) => {
+              if (!captionBoundary(doc, from) || !captionBoundary(doc, to)) safe = false;
+            });
+            if (step instanceof AddMarkStep || step instanceof RemoveMarkStep)
+              safe &&= captionBoundary(doc, step.from) && captionBoundary(doc, step.to);
+            if (!safe) return false;
+          }
           const operation = tr.getMeta(this.#operation) as Operation | undefined;
           const batch = this.#batch(tr.before, tr.doc, operation);
           const before = entries(tr.before);
@@ -228,7 +275,23 @@ export class SpaceEditorAdapter {
             )
               return false;
           }
-          for (const entry of before.filter((item) => item.node.type.name === "spaceAtom")) {
+          const oldBlocks = new Map(spaceDocumentBlocks(tr.before).map((b) => [b.id, b]));
+          const newBlocks = new Map(spaceDocumentBlocks(tr.doc).map((b) => [b.id, b]));
+          for (const id of new Set([...oldBlocks.keys(), ...newBlocks.keys()])) {
+            const old = oldBlocks.get(id) ?? null,
+              next = newBlocks.get(id) ?? null;
+            if ((old && mediaAssetId(old)) || (next && mediaAssetId(next))) {
+              if (
+                !sameSpaceValue(old, next) &&
+                ((old && before.find((e) => e.block.id === id)?.node.type.name === "spaceAtom") ||
+                  !this.#mediaAllowed(old, next, operation))
+              )
+                return false;
+            }
+          }
+          for (const entry of before.filter(
+            (item) => item.node.type.name === "spaceAtom" && !mediaAssetId(item.block),
+          )) {
             const next = after.find((item) => item.block.id === entry.block.id);
             if (!next && entry.block.type === "divider" && canEditSpaceEditorBlock(entry.block))
               continue;
@@ -409,6 +472,7 @@ export class SpaceEditorAdapter {
   }
 
   replaceWindow(window: SpaceEditorWindow) {
+    if (window.revision !== this.#window.revision) this.clearMediaHistory();
     this.#window = window;
     this.#members = new Set(window.blocks.map((block) => block.id));
     this.#committed = new Set(window.committedIds ?? window.blocks.map((block) => block.id));
@@ -472,7 +536,7 @@ export class SpaceEditorAdapter {
       const at = state.doc.content.size;
       const tr = closeHistory(state.tr).insert(at, spaceBlockNode(block, [], false, state.schema));
       tr.setSelection(NodeSelection.create(tr.doc, at));
-      return this.#dispatch(tr, dispatch);
+      return this.#dispatch(tr, dispatch, { media: { before: null, after: block } });
     };
   }
 
@@ -515,12 +579,23 @@ export class SpaceEditorAdapter {
   mark(type: "bold" | "italic" | "strike" | "code"): Command {
     return (state, dispatch) =>
       this.#options.canEdit?.() !== false &&
+      captionBoundary(state.doc, state.selection.from) &&
+      captionBoundary(state.doc, state.selection.to) &&
+      this.#mediaSelectionAllowed(state) &&
       toggleMark(state.schema.marks[`space_${type}`]!, { value: { type, version: 1 } })(
         state,
         dispatch,
       );
   }
 
+  #mediaSelectionAllowed(state: EditorState) {
+    let allowed = true;
+    state.doc.nodesBetween(state.selection.from, state.selection.to, (node) => {
+      if (node.type.name === "spaceMedia" && this.#options.canEditMedia?.() !== true)
+        allowed = false;
+    });
+    return allowed;
+  }
   #selectedEntry(state: EditorState) {
     if (this.#options.canEdit?.() === false) return null;
     let id: SpaceBlockId | undefined;
@@ -534,7 +609,11 @@ export class SpaceEditorAdapter {
     }
     const entry = entries(state.doc).find((item) => item.block.id === id);
     const block = spaceDocumentBlocks(state.doc).find((item) => item.id === id);
-    return entry && block && entry.node.type.name !== "spaceAtom" && canEditSpaceEditorBlock(block)
+    return entry &&
+      block &&
+      entry.node.type.name !== "spaceAtom" &&
+      (!mediaAssetId(block) || this.#options.canEditMedia?.() === true) &&
+      canEditSpaceEditorBlock(block)
       ? { ...entry, block }
       : null;
   }
@@ -578,10 +657,10 @@ export class SpaceEditorAdapter {
       !entry ||
       !(selection instanceof TextSelection) ||
       !isKnownSpaceBlock(entry.block) ||
-      !("runs" in entry.block.content)
+      spaceEditorRuns(entry.block) === null
     )
       return null;
-    const runs = entry.block.content.runs;
+    const runs = spaceEditorRuns(entry.block)!;
     let offset = 0;
     const segments = runs.flatMap((run) => {
       const from = offset;
@@ -642,7 +721,7 @@ export class SpaceEditorAdapter {
         !range ||
         !entry ||
         !isKnownSpaceBlock(entry.block) ||
-        !("runs" in entry.block.content) ||
+        spaceEditorRuns(entry.block) === null ||
         (!href && !range.hasLink) ||
         (href !== null && range.href === href)
       )
@@ -651,7 +730,7 @@ export class SpaceEditorAdapter {
         from = range.from - start,
         to = range.to - start;
       let offset = 0;
-      const runs: SpaceRichText = entry.block.content.runs.flatMap((run) => {
+      const runs: SpaceRichText = spaceEditorRuns(entry.block)!.flatMap((run) => {
         const a = Math.max(0, from - offset),
           b = Math.min(run.text.length, to - offset);
         offset += run.text.length;
@@ -675,7 +754,13 @@ export class SpaceEditorAdapter {
           state.schema.marks.space_link!.create({ value: { type: "link", version: 1, href } }),
         );
       tr.setNodeMarkup(entry.pos, undefined, {
-        block: { ...entry.block, content: { ...entry.block.content, runs } },
+        block: {
+          ...entry.block,
+          content: {
+            ...entry.block.content,
+            [mediaAssetId(entry.block) ? "caption" : "runs"]: runs,
+          },
+        },
       });
       return this.#dispatch(tr, dispatch);
     };
@@ -702,12 +787,124 @@ export class SpaceEditorAdapter {
     };
   }
 
+  #mediaAllowed(before: SpaceBlock | null, after: SpaceBlock | null, operation?: Operation) {
+    const supported = (b: SpaceBlock | null) =>
+      !b || (!!mediaAssetId(b) && canEditSpaceEditorBlock(b));
+    if (!supported(before) || !supported(after)) return false;
+    if (after) {
+      const text = spaceEditorRuns(after)!
+        .map((run) => run.text)
+        .join("");
+      for (let i = 0; i < text.length; i++) {
+        const code = text.charCodeAt(i);
+        if (code >= 0xd800 && code <= 0xdbff) {
+          const next = text.charCodeAt(++i);
+          if (!(next >= 0xdc00 && next <= 0xdfff)) return false;
+        } else if (code >= 0xdc00 && code <= 0xdfff) return false;
+      }
+    }
+    if (before && !after && !this.#committed.has(before.id)) return true;
+    if (this.#options.canEditMedia?.() !== true && !(operation?.media?.before === null))
+      return false;
+    if (before && after && sameSpaceValue(mediaIdentity(before), mediaIdentity(after))) return true;
+    const matches = (change: MediaChange) =>
+      sameSpaceValue(change.before, before) && sameSpaceValue(change.after, after);
+    const historyMatches = (change: MediaChange) =>
+      sameSpaceValue(mediaIdentity(change.before), mediaIdentity(before)) &&
+      sameSpaceValue(mediaIdentity(change.after), mediaIdentity(after));
+    return (
+      (!!operation?.media && matches(operation.media)) ||
+      (!!operation?.history &&
+        this.#mediaHistory.some(
+          (change) =>
+            historyMatches(change) ||
+            historyMatches({ before: change.after, after: change.before }),
+        ))
+    );
+  }
+  clearMediaHistory() {
+    this.#mediaHistory = [];
+  }
+  mediaTarget(state: EditorState, id: SpaceBlockId) {
+    const entry = entries(state.doc).find((e) => e.block.id === id);
+    const block = spaceDocumentBlocks(state.doc).find((b) => b.id === id);
+    return entry?.node.type.name === "spaceMedia" &&
+      block &&
+      mediaAssetId(block) &&
+      canEditSpaceEditorBlock(block)
+      ? block
+      : null;
+  }
+  replaceMedia(before: SpaceBlock, after: SpaceBlock): Command {
+    return (state, dispatch) => {
+      const entry = entries(state.doc).find((e) => e.block.id === before.id);
+      const actual = this.mediaTarget(state, before.id);
+      if (
+        this.#options.canChangeStructure?.() === false ||
+        this.#options.canEditMedia?.() !== true ||
+        !entry ||
+        !sameSpaceValue(actual, before) ||
+        !mediaAssetId(before) ||
+        !mediaAssetId(after) ||
+        !canEditSpaceEditorBlock(before) ||
+        !canEditSpaceEditorBlock(after) ||
+        !isKnownSpaceBlock(before) ||
+        !isKnownSpaceBlock(after) ||
+        !sameSpaceValue(
+          {
+            ...before,
+            type: after.type,
+            content: {
+              ...before.content,
+              assetId: "assetId" in after.content ? after.content.assetId : null,
+            },
+          },
+          after,
+        )
+      )
+        return false;
+      return this.#dispatch(
+        closeHistory(state.tr).replaceWith(
+          entry.pos,
+          entry.pos + entry.node.nodeSize,
+          spaceBlockNode(after, [], false, state.schema),
+        ),
+        dispatch,
+        { media: { before, after } },
+      );
+    };
+  }
+  removeMedia(id: SpaceBlockId): Command {
+    return (state, dispatch) => {
+      const entry = entries(state.doc).find((e) => e.block.id === id);
+      const all = spaceDocumentBlocks(state.doc),
+        before = this.mediaTarget(state, id);
+      if (
+        !entry ||
+        !before ||
+        !mediaAssetId(before) ||
+        !canEditSpaceEditorBlock(before) ||
+        this.#options.canEditMedia?.() !== true ||
+        this.#options.canChangeStructure?.() === false ||
+        !this.#complete.has(null) ||
+        all.some((b) => b.parentId === id)
+      )
+        return false;
+      return this.#dispatch(
+        closeHistory(state.tr).delete(entry.pos, entry.pos + entry.node.nodeSize),
+        dispatch,
+        { media: { before, after: null } },
+      );
+    };
+  }
+
   remove(id: SpaceBlockId): Command {
     return (state, dispatch) => {
       if (this.#options.canChangeStructure?.() === false) return false;
       const entry = entries(state.doc).find((item) => item.block.id === id);
       if (
         !entry ||
+        (mediaAssetId(entry.block) !== null && this.#committed.has(id)) ||
         (entry.node.type.name === "spaceAtom" &&
           entry.block.type !== "divider" &&
           !(
@@ -936,6 +1133,7 @@ export class SpaceEditorAdapter {
       if (
         !entry ||
         !canEditSpaceEditorBlock(entry.block) ||
+        mediaAssetId(entry.block) !== null ||
         (entry.node.type.name === "spaceAtom" &&
           (isSpaceListItem(entry.block) ||
             spaceBlockNode(entry.block).type.name !== "spaceAtom")) ||
@@ -1064,7 +1262,7 @@ export class SpaceEditorAdapter {
         state,
         dispatch
           ? (tr) => {
-              this.#dispatch(tr, dispatch);
+              this.#dispatch(tr, dispatch, { history: true });
             }
           : undefined,
       );
@@ -1084,7 +1282,7 @@ export class SpaceEditorAdapter {
                   (join) =>
                     previousIds.has(join.from) && !nextIds.has(join.from) && nextIds.has(join.into),
                 );
-              this.#dispatch(tr, dispatch, merged ? { merged } : {});
+              this.#dispatch(tr, dispatch, { ...(merged ? { merged } : {}), history: true });
             }
           : undefined,
       );

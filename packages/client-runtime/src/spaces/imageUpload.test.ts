@@ -149,3 +149,75 @@ it("refuses an over-budget retained record set without modifying either exact or
   expect(first.intent.requestId).toBe("video-0");
   expect(second.original).toBe(blob);
 });
+
+it("retains v3 replacement targets alongside legacy originals and rejects inconsistent stable-ID bindings without modifying the original", async () => {
+  const image = original();
+  const before = {
+    id: "media",
+    parentId: null,
+    order: "8".padEnd(32, "0"),
+    type: "pdf",
+    version: 1,
+    content: {
+      assetId: "old-asset",
+      caption: [{ text: "rich", marks: [{ type: "bold", version: 1 }] }],
+    },
+  };
+  const value = {
+    ...image,
+    version: 3,
+    slot: 1,
+    id: "replacement",
+    intent: { ...image.intent, requestId: "replacement" },
+    replacement: { before, revision: 12, generation: 5 },
+  };
+  expect(decodeSpaceMediaRecords([image, value])[1]!.replacement!.before).toEqual(before);
+  const ready = {
+    ...value,
+    phase: "preparing",
+    handle: { uploadId: "upload", assetId: "new-asset", expiresAt: 100 },
+    ready: {
+      assetId: "new-asset",
+      digest: "a".repeat(64),
+      byteSize: 3,
+      mimeType: "image/png",
+      name: "image.png",
+      imageDimensions: { width: 1, height: 1 },
+    },
+    placement: {
+      block: { ...before, type: "image", content: { ...before.content, assetId: "new-asset" } },
+      revision: 12,
+      generation: 5,
+      windowIds: ["media"],
+    },
+  };
+  expect(decodeSpaceImageRecord(ready).placement!.block.id).toBe("media");
+  for (const bad of [
+    { ...value, version: 2 },
+    { ...value, replacement: undefined },
+    { ...value, replacement: { ...value.replacement, generation: -1 } },
+    {
+      ...value,
+      replacement: {
+        ...value.replacement,
+        before: { ...before, content: { ...before.content, unknown: true } },
+      },
+    },
+    { ...ready, placement: { ...ready.placement, revision: 13 } },
+    { ...ready, placement: { ...ready.placement, windowIds: [] } },
+    {
+      ...ready,
+      placement: { ...ready.placement, block: { ...ready.placement.block, id: "renewed" } },
+    },
+    {
+      ...ready,
+      placement: {
+        ...ready.placement,
+        block: { ...ready.placement.block, content: { assetId: "new-asset" } },
+      },
+    },
+  ])
+    expect(() => decodeSpaceImageRecord(bad)).toThrow();
+  expect(await value.original.bytes()).toEqual(new Uint8Array([1, 2, 3]));
+  expect(value.intent.requestId).toBe("replacement");
+});
