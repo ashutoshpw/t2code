@@ -1,8 +1,8 @@
 import {
   ConnectionBlockedError,
   ConnectionTransientError,
-} from "@t3tools/client-runtime/connection";
-import { EnvironmentRpcUnavailableError } from "@t3tools/client-runtime/rpc";
+} from "@t2code/client-runtime/connection";
+import { EnvironmentRpcUnavailableError } from "@t2code/client-runtime/rpc";
 import * as Cause from "effect/Cause";
 import * as Schema from "effect/Schema";
 import type { RefObject } from "react";

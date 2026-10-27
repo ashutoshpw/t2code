@@ -4,9 +4,9 @@ import {
   type ProviderOptionDescriptor,
   ProviderDriverKind,
   type RuntimeMode,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import type { FxSettings } from "../settings.ts";
-import { getModelSelectionStringOptionValue } from "@t3tools/shared/model";
+import { getModelSelectionStringOptionValue } from "@t2code/shared/model";
 import type * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -14,16 +14,16 @@ import type * as Scope from "effect/Scope";
 import type * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as EffectAcpErrors from "effect-acp/errors";
 
-import * as AcpSessionRuntime from "@t3tools/provider-acp/server/AcpSessionRuntime";
-import { collectSessionConfigOptionValues } from "@t3tools/provider-acp/server/runtimeModel";
+import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
+import { collectSessionConfigOptionValues } from "@t2code/provider-acp/server/runtimeModel";
 import {
   acpPermissionDisposition,
   type AcpPermissionDisposition,
-} from "@t3tools/provider-acp/server/clientPolicy";
-import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+} from "@t2code/provider-acp/server/clientPolicy";
+import type * as ProviderAdapter from "@t2code/provider-core/server/ProviderAdapter";
 
 export const FX_DRIVER_KIND = ProviderDriverKind.make("fx");
-/** T3's slug for "Default": the model `fx status` reports, never an fx model id. */
+/** T2's slug for "Default": the model `fx status` reports, never an fx model id. */
 export const FX_DEFAULT_MODEL_SLUG = "default";
 const FX_MODEL_CONFIG_ID = "model";
 const FX_MODE_CONFIG_ID = "mode";

@@ -517,7 +517,7 @@ function normalizeV1SessionUpdate(
       update: Option.isSome(notice)
         ? notice.value
         : {
-            sessionUpdate: "_t3_unknown",
+            sessionUpdate: "_t2_unknown",
             originalSessionUpdate: "notice",
             raw: notification.update,
           },

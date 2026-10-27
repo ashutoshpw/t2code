@@ -1588,7 +1588,7 @@ export function parseSessionUpdateEvent(params: EffectAcpSchema.SessionNotificat
       });
       break;
     }
-    case "_t3_unknown": {
+    case "_t2_unknown": {
       events.push({
         _tag: "UnknownUpdate",
         updateType: boundedContentMetadata(upd.originalSessionUpdate, 128) || "unknown",

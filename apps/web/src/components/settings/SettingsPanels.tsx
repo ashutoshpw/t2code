@@ -21,7 +21,6 @@ import {
   SidebarProjectSortOrder,
 } from "@t2code/contracts/settings";
 import { createModelSelection } from "@t2code/shared/model";
-import { sanitizeWorktreeBranchPrefix } from "@t2code/shared/git";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 import { APP_VERSION, HOSTED_APP_CHANNEL, HOSTED_APP_CHANNEL_LABEL } from "../../branding";
@@ -506,9 +505,6 @@ export function useSettingsRestore(onRestored?: () => void) {
     DEFAULT_UNIFIED_SETTINGS.newWorktreesStartFromOrigin
       ? ["New worktrees start from remote"]
       : []),
-    ...(settings.worktreeBranchPrefix !== DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix
-      ? ["Worktree branch prefix"]
-      : []),
     ...(settings.addProjectBaseDirectory !== DEFAULT_UNIFIED_SETTINGS.addProjectBaseDirectory
       ? ["Add project base directory"]
       : []),
@@ -625,7 +621,6 @@ export function useSettingsRestore(onRestored?: () => void) {
       providerHealthRefreshInterval: DEFAULT_UNIFIED_SETTINGS.providerHealthRefreshInterval,
       defaultThreadEnvMode: DEFAULT_UNIFIED_SETTINGS.defaultThreadEnvMode,
       newWorktreesStartFromOrigin: DEFAULT_UNIFIED_SETTINGS.newWorktreesStartFromOrigin,
-      worktreeBranchPrefix: DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix,
       addProjectBaseDirectory: DEFAULT_UNIFIED_SETTINGS.addProjectBaseDirectory,
       confirmThreadArchive: DEFAULT_UNIFIED_SETTINGS.confirmThreadArchive,
       confirmThreadDelete: DEFAULT_UNIFIED_SETTINGS.confirmThreadDelete,
@@ -854,46 +849,6 @@ export function GeneralSettingsPanel() {
           }
         />
         <SettingsRow
-          serverScoped
-          {...searchableSetting("auto-resume-limited-threads")}
-          description="Resume usage-limit stops at the reported reset time. Each thread can cancel its scheduled continuation."
-          settingKeys={["autoResumeLimitedThreads"]}
-          control={
-            <ScopedSwitch
-              settingKeys={["autoResumeLimitedThreads"]}
-              checked={settings.autoResumeLimitedThreads}
-              onCheckedChange={(checked) =>
-                updateSettings({ autoResumeLimitedThreads: Boolean(checked) })
-              }
-              aria-label="Resume after usage limits"
-            />
-          }
-        />
-        
-                updateSettings({ autoResumeLimitedThreads: Boolean(checked) })
-              }
-              aria-label="Resume after usage limits"
-            />
-          }
-        />
-        <SettingsRow
-          serverScoped
-          {...searchableSetting("snooze-limited-threads")}
-          description="Snooze usage-limit stops until reset. Pair with resume to continue on wake."
-          settingKeys={["snoozeLimitedThreads"]}
-          control={
-            <ScopedSwitch
-              settingKeys={["snoozeLimitedThreads"]}
-              checked={settings.snoozeLimitedThreads}
-              onCheckedChange={(checked) =>
-                updateSettings({ snoozeLimitedThreads: Boolean(checked) })
-              }
-              aria-label="Snooze until limits reset"
-            />
-          }
-        />
-
-        <SettingsRow
           {...searchableSetting("app-rail")}
           description="Keep a compact navigation rail on the left edge for pull requests, usage, and scheduled tasks."
           resetAction={
@@ -919,113 +874,6 @@ export function GeneralSettingsPanel() {
           {...searchableSetting("working-shelf")}
           description="Fold working and monitoring threads into a Working section. They return to the top of the inbox when they need you."
           resetAction={
-            settings.sidebarWorkingShelfEnabled !==
-            DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled ? (
-              <SettingResetButton
-                label="working section"
-                onClick={() =>
-                  updateSettings({
-                    sidebarWorkingShelfEnabled: DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled,
-                  })
-                }
-              />
-            ) : null
-          }
-          control={
-            <Switch
-              checked={settings.sidebarWorkingShelfEnabled}
-              onCheckedChange={(checked) =>
-                updateSettings({ sidebarWorkingShelfEnabled: Boolean(checked) })
-              }
-              aria-label="Working section (beta)"
-            />
-          }
-        />
-
-        <SettingsRow
-          serverScoped
-          settingKeys={["idleCompaction", "compactIdleThreads"]}
-          mixed={idleCompaction.mixed}
-          {...searchableSetting("compact-idle-threads")}
-          description="When to compact an idle Claude thread over 200,000 tokens: after you return, just before its prompt cache expires, or never. Each Claude provider can override this.
-                updateSettings({ autoResumeLimitedThreads: Boolean(checked) })
-              }
-              aria-label="Resume after usage limits"
-            />
-          }
-        />
-        <SettingsRow
-          serverScoped
-          {...searchableSetting("snooze-limited-threads")}
-          description="Snooze usage-limit stops until reset. Pair with resume to continue on wake."
-          settingKeys={["snoozeLimitedThreads"]}
-          control={
-            <ScopedSwitch
-              settingKeys={["snoozeLimitedThreads"]}
-              checked={settings.snoozeLimitedThreads}
-              onCheckedChange={(checked) =>
-                updateSettings({ snoozeLimitedThreads: Boolean(checked) })
-              }
-              aria-label="Snooze until limits reset"
-            />
-          }
-        />
-
-        <SettingsRow
-          {...searchableSetting("app-rail")}
-          description="Keep a compact navigation rail on the left edge for pull requests, usage, and scheduled tasks."
-          resetAction={
-            settings.appRailEnabled !== DEFAULT_UNIFIED_SETTINGS.appRailEnabled ? (
-              <SettingResetButton
-                label="app rail"
-                onClick={() =>
-                  updateSettings({ appRailEnabled: DEFAULT_UNIFIED_SETTINGS.appRailEnabled })
-                }
-              />
-            ) : null
-          }
-          control={
-            <Switch
-              checked={settings.appRailEnabled}
-              onCheckedChange={(checked) => updateSettings({ appRailEnabled: Boolean(checked) })}
-              aria-label="App rail"
-            />
-          }
-        />
-
-        <SettingsRow
-          {...searchableSetting("working-shelf")}
-          description="Fold working and monitoring threads into a Working section. They return to the top of the inbox when they need you."
-          resetAction={
-            settings.sidebarWorkingShelfEnabled !==
-            DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled ? (
-              <SettingResetButton
-                label="working section"
-                onClick={() =>
-                  updateSettings({
-                    sidebarWorkingShelfEnabled: DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled,
-                  })
-                }
-              />
-            ) : null
-          }
-          control={
-            <Switch
-              checked={settings.sidebarWorkingShelfEnabled}
-              onCheckedChange={(checked) =>
-                updateSettings({ sidebarWorkingShelfEnabled: Boolean(checked) })
-              }
-              aria-label="Working section (beta)"
-            />
-          }
-        />
-
-        <SettingsRow
-          serverScoped
-          settingKeys={["idleCompaction", "compactIdleThreads"]}
-          mixed={idleCompaction.mixed}
-          {...searchableSetting("compact-idle-threads")}
-          description="When to compact an idle Claude thread over 200,000 tokens: after you return, just before its prompt cache expires, or never. Each Claude provider can override this."          resetAction={
             settings.sidebarWorkingShelfEnabled !==
             DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled ? (
               <SettingResetButton
@@ -1732,36 +1580,6 @@ export function ThreadsSettingsPanel() {
       <SettingsSection id="new-projects" title="New projects">
         <SettingsRow
           serverScoped
-          {...searchableSetting("worktree-branch-prefix")}
-          description="Namespace for the branches T2 Code creates inside thread worktrees. Lowercase letters, digits, and dashes only."
-          resetAction={
-            settings.worktreeBranchPrefix !== DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix ? (
-              <SettingResetButton
-                label="worktree branch prefix"
-                onClick={() =>
-                  updateSettings({
-                    worktreeBranchPrefix: DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix,
-                  })
-                }
-              />
-            ) : null
-          }
-          control={
-            <DraftInput
-              size="sm"
-              className="w-full sm:w-72"
-              value={settings.worktreeBranchPrefix}
-              onCommit={(next) =>
-                updateSettings({ worktreeBranchPrefix: sanitizeWorktreeBranchPrefix(next) })
-              }
-              placeholder={DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix}
-              spellCheck={false}
-              aria-label="Worktree branch prefix"
-            />
-          }
-        />
-        <SettingsRow
-          serverScoped
           settingKeys={["addProjectBaseDirectory"]}
           {...searchableSetting("add-project-starts-in")}
           description='Leave empty to use "~/" when the Add Project browser opens.'
@@ -2227,7 +2045,7 @@ export function AboutSettingsPanel() {
       <SettingsSection id="legal" title="Legal">
         <SettingsRow
           {...searchableSetting("privacy-policy")}
-          description="How we handle your data, including the anonymous usage data T3 Code collects."
+          description="How we handle your data, including the anonymous usage data T2 Code collects."
           control={
             <Button
               render={<a href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer noopener" />}

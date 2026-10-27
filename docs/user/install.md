@@ -105,7 +105,7 @@ update fails. Download the new `.deb` and install it the same way.
 
 The desktop app includes the `t2code` command-line tool. To run it from any
 terminal, open **Settings → About** and choose **Install** next to
-**t2code command**. On macOS and Linux it adds a `t2code` link to a folder on your
+**t2 command**. On macOS and Linux it adds a `t2code` link to a folder on your
 `PATH`; on Windows it adds the app's command folder to your `PATH`. Open a new
 terminal afterwards. **Remove** takes it off again. If you already have `t2code`
 from npm, it stays as it is.

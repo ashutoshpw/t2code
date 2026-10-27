@@ -467,7 +467,7 @@ function toolGroupActionLabel(action: ToolGroupAction, count: number): string {
   }
 }
 
-function t3ToolSummaryCall(entry: WorkLogPresentationEntry): T3ToolSummaryCall {
+function t2ToolSummaryCall(entry: WorkLogPresentationEntry): T2ToolSummaryCall {
   return {
     input: workEntryToolInput(entry),
     output: workEntryToolOutput(entry),
@@ -547,11 +547,11 @@ export function summarizeToolGroup(entries: ReadonlyArray<WorkLogPresentationEnt
   >();
   const sources = new Map<string, ToolActivitySource>();
   for (const entry of entries) {
-    const t3Action = resolveT2McpSummaryAction(
+    const t2Action = resolveT2McpSummaryAction(
       workEntryToolName(entry),
-      t3ToolSummaryCall(entry).input,
+      t2ToolSummaryCall(entry).input,
     );
-    if (entry.toolSource && t3Action === null) {
+    if (entry.toolSource && t2Action === null) {
       sources.set(entry.toolSource.key, entry.toolSource);
       continue;
     }

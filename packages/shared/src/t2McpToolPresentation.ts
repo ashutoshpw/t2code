@@ -269,15 +269,15 @@ const T2_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
     ["Run", "Running", "Requested a run of", "a scheduled task"],
     "schedule-run",
   ),
-  t3_queue: tool(["Manage", "Managing", "Managed", "queued messages"], "queue-edit"),
-  t3_pending_request: tool(
+  t2_queue: tool(["Manage", "Managing", "Managed", "queued messages"], "queue-edit"),
+  t2_pending_request: tool(
     ["Handle", "Handling", "Handled", "pending questions"],
     "question-respond",
   ),
-  t3_queue_list: tool(["List", "Listing", "Listed", "queued messages"], "queue-list"),
-  t3_queue_read: tool(["Read", "Reading", "Read", "a queued message"], "queue-read"),
-  t3_queue_edit: tool(["Edit", "Editing", "Edited", "a queued message"], "queue-edit"),
-  t3_queue_cancel: tool(
+  t2_queue_list: tool(["List", "Listing", "Listed", "queued messages"], "queue-list"),
+  t2_queue_read: tool(["Read", "Reading", "Read", "a queued message"], "queue-read"),
+  t2_queue_edit: tool(["Edit", "Editing", "Edited", "a queued message"], "queue-edit"),
+  t2_queue_cancel: tool(
     ["Cancel", "Canceling", "Requested cancellation of", "a queued run"],
     "queue-cancel",
   ),
@@ -300,10 +300,10 @@ const T2_MCP_TOOLS: Readonly<Record<string, T2McpToolDefinition>> = {
     ["Read", "Reading", "Read", "thread configuration"],
     "thread-configuration",
   ),
-  t3_thread_configure: tool(["Use", "Using", "Used", "thread model settings"], "thread-configure"),
-  t3_thread_transfer: tool(["Use", "Using", "Used", "thread transfers"], "thread-fork"),
-  t3_thread_fork: tool(["Fork", "Forking", "Requested a fork of", "this thread"], "thread-fork"),
-  t3_thread_merge_back: tool(
+  t2_thread_configure: tool(["Use", "Using", "Used", "thread model settings"], "thread-configure"),
+  t2_thread_transfer: tool(["Use", "Using", "Used", "thread transfers"], "thread-fork"),
+  t2_thread_fork: tool(["Fork", "Forking", "Requested a fork of", "this thread"], "thread-fork"),
+  t2_thread_merge_back: tool(
     ["Merge", "Merging", "Requested a merge of", "thread context"],
     "thread-merge",
   ),
@@ -407,10 +407,10 @@ const asSummaryInput = (input: unknown): SummaryInput | undefined =>
 /** Action tools present each call as the single-purpose tool its action replaced. */
 const ACTION_TOOLS: Readonly<Record<string, (action: string) => string | undefined>> = {
   preview_act: (action) => `preview_${action}`,
-  t3_queue: (action) => `t3_queue_${action}`,
-  t3_pending_request: (action) => `t3_pending_request_${action}`,
-  t3_thread_transfer: (action) =>
-    ({ fork: "t3_thread_fork", merge_back: "t3_thread_merge_back", status: "t3_thread_transfers" })[
+  t2_queue: (action) => `t2_queue_${action}`,
+  t2_pending_request: (action) => `t2_pending_request_${action}`,
+  t2_thread_transfer: (action) =>
+    ({ fork: "t2_thread_fork", merge_back: "t2_thread_merge_back", status: "t2_thread_transfers" })[
       action
     ],
 };
@@ -433,13 +433,13 @@ export function resolveT2McpToolDefinition(
 const ACTION_SUMMARIES: Readonly<
   Record<string, (input: SummaryInput) => T2McpToolSummaryAction | undefined>
 > = {
-  t3_thread_configure: ({ modelSelection }) =>
+  t2_thread_configure: ({ modelSelection }) =>
     modelSelection === undefined ? "thread-configuration" : "thread-configure",
   schedule_task: ({ scheduledTaskId }) =>
     scheduledTaskId === undefined ? "schedule-create" : "schedule-update",
 };
 
-export function resolveT3McpSummaryAction(
+export function resolveT2McpSummaryAction(
   toolName: string | null | undefined,
   input: unknown,
 ): T2McpToolSummaryAction | null {

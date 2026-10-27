@@ -40,7 +40,7 @@ import {
 } from "./settings-scoped-server";
 import { PullRequestGlyph } from "../pull-requests/pullRequestGlyphs";
 import { AutoSettleSettingsRows } from "./ThreadSettingsSections";
-import { supportsSharedSettingsSync } from "@t3tools/client-runtime/state/shared-settings";
+import { supportsSharedSettingsSync } from "@t2code/client-runtime/state/shared-settings";
 
 type SettingsPage = "threads" | "source-control" | "worktrees" | "maintenance";
 

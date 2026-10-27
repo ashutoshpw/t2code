@@ -644,8 +644,8 @@ function itemToolPresentation(item: OrchestrationV2TurnItem): T2McpToolPresentat
     return null;
   }
   return (
-    resolveT3McpToolPresentation(item.toolName, item.input) ??
-    resolveT3McpToolPresentation(item.title, item.input)
+    resolveT2McpToolPresentation(item.toolName, item.input) ??
+    resolveT2McpToolPresentation(item.title, item.input)
   );
 }
 

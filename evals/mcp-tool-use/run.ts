@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // @effect-diagnostics nodeBuiltinImport:off
 /**
- * Replays small fake threads on a Claude or Codex model to check T3's MCP tool use. A trimmed
+ * Replays small fake threads on a Claude or Codex model to check T2's MCP tool use. A trimmed
  * harness capture supplies the prompt and native tools; a cheap model plays the shell. See
  * README.md for how to run it and add cases.
  */
@@ -11,7 +11,7 @@ import * as NodeVM from "node:vm";
 import * as NodeZlib from "node:zlib";
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { OrchestratorMcpTaskRole, ProviderInstanceId } from "@t3tools/contracts";
+import { OrchestratorMcpTaskRole, ProviderInstanceId } from "@t2code/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -29,8 +29,8 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { taskPrompt } from "../../apps/server/src/mcp/OrchestratorMcpService.ts";
 import * as McpInvocationContext from "../../apps/server/src/mcp/McpInvocationContext.ts";
 import { advertisedJsonSchema } from "../../apps/server/src/mcp/advertisedJsonSchema.ts";
-import { ORCHESTRATOR_MCP_RUNNING_TASK_NEXT } from "@t3tools/contracts";
-import { formatThreadLink } from "@t3tools/shared/threadLinks";
+import { ORCHESTRATOR_MCP_RUNNING_TASK_NEXT } from "@t2code/contracts";
+import { formatThreadLink } from "@t2code/shared/threadLinks";
 import { buildCodexAdditionalContext } from "../../apps/server/src/provider/CodexDeveloperInstructions.ts";
 import { AttachmentToolkit } from "../../apps/server/src/mcp/toolkits/attachment/tools.ts";
 import { DeviceToolkit } from "../../apps/server/src/mcp/toolkits/device/tools.ts";
@@ -70,7 +70,7 @@ const PRICES = {
   "claude-opus-5-5": { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.2 },
 };
 type PricedModel = keyof typeof PRICES;
-const T3_PREFIX = "mcp__t3-code__";
+const T2_PREFIX = "mcp__t3-code__";
 const RUNTIME_MARKER = "<runtime_info>";
 const TOOL_LOADED = "Tool loaded.";
 const DEFERRED_LIST =
@@ -260,7 +260,7 @@ const toolResult = (id: string, content: unknown): Block => ({
 });
 const texts = (content: typeof Content.Type) =>
   typeof content === "string" ? [content] : content.flatMap((block) => block.text ?? []);
-const isT3Name = (name: string) => name.startsWith(T3_PREFIX) || name.startsWith("mcp__t3_code__");
+const isT3Name = (name: string) => name.startsWith(T2_PREFIX) || name.startsWith("mcp__t3_code__");
 const hasTool = (tools: ReadonlyArray<ApiTool>, name: string) =>
   tools.some((tool) => tool.name === name);
 
@@ -277,7 +277,7 @@ const CODEX_NAMES: Readonly<Record<string, string>> = {
 export const normalizeToolName = (name: string) => {
   const bare = name.slice(name.lastIndexOf(".") + 1);
   return isT3Name(bare)
-    ? bare.slice(T3_PREFIX.length)
+    ? bare.slice(T2_PREFIX.length)
     : (CODEX_NAMES[bare] ?? bare.slice(bare.lastIndexOf("_") + 1));
 };
 export const normalizeToolInput = (name: string, input: unknown) =>
@@ -302,8 +302,8 @@ const t3SourceTools: ReadonlyArray<Tool.Any> = [
   DeviceToolkit,
   HtmlToolkit,
 ].flatMap((toolkit): ReadonlyArray<Tool.Any> => Object.values(toolkit.tools));
-const t3Tools: ReadonlyArray<ApiTool> = t3SourceTools.map((tool) => ({
-  name: `${T3_PREFIX}${tool.name}`,
+const t2Tools: ReadonlyArray<ApiTool> = t3SourceTools.map((tool) => ({
+  name: `${T2_PREFIX}${tool.name}`,
   description: Tool.getDescription(tool) ?? "",
   input_schema: advertisedJsonSchema(tool),
 }));
@@ -315,10 +315,10 @@ const hiddenFromSubagents = new Set(
         Context.getOrUndefined(tool.annotations, McpSchema.EnabledWhen) ===
         McpInvocationContext.hiddenFromSubagents,
     )
-    .map((tool) => `${T3_PREFIX}${tool.name}`),
+    .map((tool) => `${T2_PREFIX}${tool.name}`),
 );
 const visibleT3Tools = (subagent: boolean) =>
-  subagent ? t3Tools.filter((tool) => !hiddenFromSubagents.has(tool.name)) : t3Tools;
+  subagent ? t2Tools.filter((tool) => !hiddenFromSubagents.has(tool.name)) : t2Tools;
 
 /** Text T3 appends to Claude Code's system prompt. Delegated children get the same text. */
 export const t3SystemAppend = (model: Model) => {
@@ -342,12 +342,12 @@ export const t3SystemAppend = (model: Model) => {
  */
 const t3ContextReport = (model: Model) => {
   const size = (chars: number) => `${chars} chars (~${Math.round(chars / 4)} tokens)`;
-  const descriptions = t3Tools.reduce((sum, tool) => sum + valueText(tool.description).length, 0);
-  const schemas = JSON.stringify(t3Tools).length;
+  const descriptions = t2Tools.reduce((sum, tool) => sum + valueText(tool.description).length, 0);
+  const schemas = JSON.stringify(t2Tools).length;
   return [
     `- T3 context: system text ${size((isCodex(model) ? JSON.stringify(buildCodexAdditionalContext({ model }, { browser: true, device: true })) : t3SystemAppend(model)).length)}`,
     `tool descriptions ${size(descriptions)}`,
-    `full tool schemas ${size(schemas)} across ${t3Tools.length} tools.`,
+    `full tool schemas ${size(schemas)} across ${t2Tools.length} tools.`,
   ].join(", ");
 };
 
@@ -408,7 +408,7 @@ export const buildBase = (
   const anonymize = (value: string) =>
     home === undefined ? value : value.replaceAll(home, home.replace(/[^/]+$/, "user"));
   const system = systemTexts.map((value) => {
-    // T3's append is the tail of its block: runtime info, PR linking, then orchestration.
+    // T2's append is the tail of its block: runtime info, PR linking, then orchestration.
     const at = value.indexOf(RUNTIME_MARKER);
     return anonymize(at === -1 ? value : value.slice(0, at) + append)
       .replace(DEFERRED_LIST, (_, header: string) => `${header}${names}\n`)
@@ -763,7 +763,7 @@ const DEFAULT_THREAD = {
 const HTML_RENDERED =
   "Shown to the reader above your reply. Don't mention or describe the page; reply with only what it doesn't already say.";
 
-/** Pull request identity from a `url` or `repository` plus `number` input, like T3's results. */
+/** Pull request identity from a `url` or `repository` plus `number` input, like T2's results. */
 const pullRequest = (repo: string, input: Readonly<Record<string, unknown>>) => {
   const url = typeof input.url === "string" ? input.url : "";
   const repository =
@@ -1659,12 +1659,12 @@ const main = Effect.gen(function* () {
       "max-steps": string,
       effort: string,
       "shell-model": { ...string, default: "claude-haiku-5-5" },
-      // T3's text must work for every user, so the captured CLAUDE.md is dropped by default.
+      // T2's text must work for every user, so the captured CLAUDE.md is dropped by default.
       "user-instructions": { ...string, default: "drop" },
       "dry-run": { type: "boolean", default: false },
       "stop-on-regression": { type: "boolean", default: false },
       "regression-budget": string,
-      // Prints the size of T3's text and tool schemas, then exits. Needs no template or key.
+      // Prints the size of T2's text and tool schemas, then exits. Needs no template or key.
       context: { type: "boolean", default: false },
     },
   });

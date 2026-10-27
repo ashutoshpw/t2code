@@ -353,6 +353,25 @@ describe("pull request toolkit handlers", () => {
     }),
   );
 
+  it.effect("asks a subagent thread to end with its PR report after it links", () =>
+    Effect.gen(function* () {
+      const harness = yield* makeHarness({
+        thread: {
+          ...makeThread([]),
+          lineage: {
+            rootThreadId: ThreadId.make("parent"),
+            parentThreadId: ThreadId.make("parent"),
+            relationshipToParent: "subagent",
+          },
+        },
+      });
+      const result = yield* harness.call("link_pull_request", {
+        url: "https://github.com/ashutoshpw/t2code/pull/124",
+      });
+      expect(result).toMatchObject({ number: 124, next: CHILD_PULL_REQUEST_REPORT_NEXT });
+    }),
+  );
+
   it.effect("canonicalizes GitCafe links independently of the thread's project host", () =>
     Effect.gen(function* () {
       for (const host of ["git.cafe", "staging.git.cafe"]) {

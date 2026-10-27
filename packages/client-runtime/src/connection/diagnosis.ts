@@ -147,8 +147,8 @@ function steps(host: string, located: Located, failure: ConnectionAttemptError |
       return [`Turn on automatic date and time on this device and on ${host}, then retry.`];
     case "not_linked":
       return [
-        "Check that this device is signed in to the same T3 Connect account as the host.",
-        `On ${host}, open Settings > Sharing & access and turn T3 Connect on.`,
+        "Check that this device is signed in to the same T2 Connect account as the host.",
+        `On ${host}, open Settings > Sharing & access and turn T2 Connect on.`,
       ];
     case "tunnel_pending":
       return ["Wait a minute. T2 Code retries on its own.", checkHost];
@@ -158,7 +158,7 @@ function steps(host: string, located: Located, failure: ConnectionAttemptError |
         "If it keeps failing, copy the diagnostics and report it.",
       ];
     case "tunnel_not_enabled":
-      return [`On ${host}, open Settings > Sharing & access and turn T3 Connect on.`];
+      return [`On ${host}, open Settings > Sharing & access and turn T2 Connect on.`];
     case "released":
     case "tunnel_down":
       return [

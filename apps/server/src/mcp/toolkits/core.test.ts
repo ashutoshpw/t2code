@@ -136,7 +136,7 @@ it.effect("an answered question reports already answered instead of not found", 
     const respond = (id: string) =>
       server
         .callTool({
-          name: "t3_pending_request",
+          name: "t2_pending_request",
           arguments: { action: "respond", requestId: id, answers: { size: "large" } },
         })
         .pipe(
@@ -470,7 +470,7 @@ it.effect("a client caller targets any thread within its ceiling and cannot act 
     });
 
     const forked = yield* call(
-      "t3_thread_transfer",
+      "t2_thread_transfer",
       { action: "fork", sourcePoint: { type: "latest_stable" } },
       clientScope("auto"),
     );
@@ -516,7 +516,7 @@ it.effect("a read-only client reads threads and is refused every write before it
           Effect.provideService(McpSchema.McpServerClient, client),
         );
 
-    const configuration = yield* call("t3_thread_configure", {
+    const configuration = yield* call("t2_thread_configure", {
       threadId: "other-project-thread",
     });
     expect(configuration.isError).toBe(false);

@@ -2077,7 +2077,7 @@ describe("AcpAdapterV2", () => {
             childProcessSpawner,
             mockAgentPath,
             protocolEvents,
-            environment: { T3_ACP_EMIT_NOTICE: "1" },
+            environment: { T2_ACP_EMIT_NOTICE: "1" },
           }),
         },
         selfInvocation,

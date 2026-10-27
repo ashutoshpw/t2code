@@ -366,7 +366,7 @@ export type SessionUpdate =
       readonly _meta?: Meta;
     }
   | {
-      readonly sessionUpdate: "_t3_unknown";
+      readonly sessionUpdate: "_t2_unknown";
       readonly originalSessionUpdate: string;
       readonly raw: unknown;
     };

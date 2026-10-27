@@ -10,15 +10,15 @@ import {
   RunId,
   type RuntimeMode,
   ThreadId,
-} from "@t3tools/contracts";
-import { ACP_PROTOCOL } from "@t3tools/provider-acp/server/adapter";
-import { FxSettings } from "@t3tools/provider-fx/settings";
-import { FX_DRIVER_KIND, makeFxAdapterV2 } from "@t3tools/provider-fx/testing";
-import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
-import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
-import { ProviderAdapterV2RuntimePolicy } from "@t3tools/provider-core/server/ProviderAdapter";
-import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
-import { resolveSelfInvocation } from "@t3tools/shared/nodeRuntime";
+} from "@t2code/contracts";
+import { ACP_PROTOCOL } from "@t2code/provider-acp/server/adapter";
+import { FxSettings } from "@t2code/provider-fx/settings";
+import { FX_DRIVER_KIND, makeFxAdapterV2 } from "@t2code/provider-fx/testing";
+import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
+import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
+import { ProviderAdapterV2RuntimePolicy } from "@t2code/provider-core/server/ProviderAdapter";
+import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
+import { resolveSelfInvocation } from "@t2code/shared/nodeRuntime";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -296,7 +296,7 @@ describe("FxAdapterV2", () => {
         ...initialize,
         outbound("session/load"),
         answer("session/load", fxSession({ model: NAMED_MODEL, modes: FX_0_0_13_MODES })),
-        // Config id `model`, never fx's `provider`, and never T3's "default".
+        // Config id `model`, never fx's `provider`, and never T2's "default".
         ...setConfig(
           "model",
           FX_DEFAULT_MODEL,

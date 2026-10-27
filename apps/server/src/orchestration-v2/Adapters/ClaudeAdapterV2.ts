@@ -1592,7 +1592,7 @@ export const CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
   "mcp__t2-code__t2_project_list",
   "mcp__t2-code__t2_project_read",
   "mcp__t2-code__t2_thread_search",
-  "mcp__t2-code__t3_preview_list",
+  "mcp__t2-code__t2_preview_list",
   "mcp__t2-code__t2_environment_read",
   "mcp__t2-code__html_preview",
   "mcp__t2-code__html_render",
