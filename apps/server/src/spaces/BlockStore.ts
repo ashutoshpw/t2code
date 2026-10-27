@@ -8,6 +8,7 @@ import * as SpacesSql from "./SpacesSql.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SearchStore from "./SearchStore.ts";
 import * as AssetReferences from "./assets/References.ts";
+import * as Reconciliation from "./assets/Reconciliation.ts";
 
 export interface BlockRow {
   readonly block_id: string;
@@ -255,6 +256,7 @@ export const apply = Effect.fnUntraced(function* (
       ? canonical(block)
       : canonical({ id, pageId, mergedInto: merges.get(id) ?? null });
     if (old?.payload === payload) continue;
+    if (block) yield* Reconciliation.admitBlock(payload);
     const previous = old && !old.deleted ? storedBlockFromRow(old) : null;
     const wasMedia = previous !== null && media.has(previous.type);
     if (wasMedia) yield* AssetReferences.requireCurrent(decodeKnown(previous));

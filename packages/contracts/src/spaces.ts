@@ -712,7 +712,8 @@ export const SpacesAssetReconciliationStatus = Schema.Struct({
   catalogPending: Schema.Boolean,
   inventoryPending: Schema.Boolean,
   unresolved: Schema.Boolean,
-  gcEnabled: Schema.Literal(false),
+  gcEnabled: Schema.Boolean,
+  gcPending: Schema.optionalKey(Schema.Boolean),
 });
 export const SpaceCapability = Schema.Struct({
   version: PositiveInt,

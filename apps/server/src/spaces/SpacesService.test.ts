@@ -266,9 +266,10 @@ const structureState = (dbPath: string) =>
       ids: yield* sql`SELECT * FROM spaces_ids ORDER BY id`,
       receipts: yield* sql`SELECT * FROM spaces_receipts ORDER BY mutation_id`,
       history: yield* sql`SELECT * FROM spaces_revisions ORDER BY page_id,to_revision`,
-      blockPins: yield* sql`SELECT * FROM spaces_block_asset_refs ORDER BY block_id`,
+      blockPins:
+        yield* sql`SELECT block_id,asset_id FROM spaces_block_asset_refs ORDER BY block_id`,
       revisionPins:
-        yield* sql`SELECT * FROM spaces_revision_asset_refs ORDER BY page_id,to_revision,asset_id`,
+        yield* sql`SELECT page_id,to_revision,asset_id FROM spaces_revision_asset_refs ORDER BY page_id,to_revision,asset_id`,
     };
   }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
 
@@ -1266,7 +1267,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
         );
         yield* Effect.gen(function* () {
           const sql = yield* SqlClient.SqlClient;
-          yield* sql`INSERT INTO spaces_block_asset_refs VALUES (${child.ownerBlockId},'retained-owner-hook')`;
+          yield* sql`INSERT INTO spaces_block_asset_refs(block_id,asset_id) VALUES (${child.ownerBlockId},'retained-owner-hook')`;
         }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
         const read = yield* service.inspectStructure({
           ...env,
@@ -1343,7 +1344,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
               const logical = Buffer.byteLength(payload, "utf8");
               yield* sql`UPDATE spaces_blocks SET payload=${payload},logical_bytes=${logical} WHERE block_id=${value.id}`;
               yield* sql`UPDATE spaces_pages SET block_bytes=block_bytes+${logical - Number(old!.logical_bytes)} WHERE page_id=${owner.id}`;
-              yield* sql`INSERT INTO spaces_block_asset_refs VALUES (${value.id},'shared-recovery-asset')`;
+              yield* sql`INSERT INTO spaces_block_asset_refs(block_id,asset_id) VALUES (${value.id},'shared-recovery-asset')`;
             }
           }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
           yield* service.moveBlocks(
@@ -1808,7 +1809,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             const logical = Buffer.byteLength(payload, "utf8");
             yield* sql`UPDATE spaces_blocks SET payload=${payload},logical_bytes=${logical} WHERE block_id=${media.id}`;
             yield* sql`UPDATE spaces_pages SET block_bytes=block_bytes+${logical - Number(old!.logical_bytes)} WHERE page_id=${page.id}`;
-            yield* sql`INSERT INTO spaces_block_asset_refs VALUES (${media.id},'recovery-asset')`;
+            yield* sql`INSERT INTO spaces_block_asset_refs(block_id,asset_id) VALUES (${media.id},'recovery-asset')`;
           }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
           yield* service.moveBlocks(
             yield* blockMoveIntent(
@@ -2396,7 +2397,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             });
             yield* sql`UPDATE spaces_blocks SET payload=${payload},logical_bytes=${Buffer.byteLength(payload, "utf8")} WHERE block_id=${leaf.id}`;
             yield* sql`UPDATE spaces_pages SET block_bytes=block_bytes+${Buffer.byteLength(payload, "utf8") - Number(old!.logical_bytes)} WHERE page_id=${page.id}`;
-            yield* sql`INSERT INTO spaces_block_asset_refs VALUES (${leaf.id},'legacy-asset')`;
+            yield* sql`INSERT INTO spaces_block_asset_refs(block_id,asset_id) VALUES (${leaf.id},'legacy-asset')`;
           }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
           const original = yield* structureState(dbPath);
           const placement = { pageId: destination.id, parentId: null, beforeBlockId: null };

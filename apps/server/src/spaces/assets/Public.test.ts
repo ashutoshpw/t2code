@@ -33,6 +33,7 @@ import * as SpacesSql from "../SpacesSql.ts";
 import * as Sqlite from "../Sqlite.ts";
 import * as Catalog from "./Catalog.ts";
 import * as Upload from "./Upload.ts";
+import * as GC from "./GC.ts";
 
 const environmentId = EnvironmentId.make("public-assets");
 const pdf = new TextEncoder().encode("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n");
@@ -151,6 +152,37 @@ describe("Spaces public asset wiring", () => {
           { environmentId, uploadId: minted.uploadId },
           "owner",
         );
+        const library = yield* service.listSpaces({ environmentId });
+        const created = yield* service.createPage({
+          environmentId,
+          receiptEpoch: library.mutationAdmission.epoch,
+          mutationId: "audit-page",
+          spaceId: library.defaultSpaceId,
+          baseRootOrderRevision: 0,
+          title: "Healthy audit",
+        });
+        if (created.status !== "saved") return yield* Effect.die("Expected audit page");
+        yield* service.applyBlockBatch({
+          environmentId,
+          receiptEpoch: library.mutationAdmission.epoch,
+          mutationId: "audit-pin",
+          pageId: created.page.id,
+          baseRevision: 0,
+          generation: 0,
+          mutations: [
+            {
+              kind: "insert",
+              block: {
+                id: C.SpaceBlockId.make("audit"),
+                parentId: null,
+                order: "1".padStart(32, "0"),
+                type: "pdf",
+                version: 1,
+                content: { assetId: asset.assetId },
+              },
+            },
+          ],
+        });
         for (const cycle of [0, 1]) {
           if (cycle) yield* TestClock.adjust("25 hours");
           const signed = yield* issueAssetUrl({
@@ -161,7 +193,7 @@ describe("Spaces public asset wiring", () => {
           expect(new Uint8Array(yield* Effect.promise(() => beforeAudit.arrayBuffer()))).toEqual(
             pdf,
           );
-          for (const _step of [0, 1, 2, 3, 4]) yield* service.maintainAssets;
+          for (const _step of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) yield* service.maintainAssets;
           expect(
             yield* service.getAssetMetadata({ environmentId, assetId: asset.assetId }),
           ).toEqual(asset);
@@ -171,7 +203,7 @@ describe("Spaces public asset wiring", () => {
           expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
             catalogPending: false,
             unresolved: false,
-            gcEnabled: false,
+            gcEnabled: true,
           });
         }
       }),
@@ -653,10 +685,18 @@ describe("Spaces public asset wiring", () => {
                 0,
               ),
             );
+            const owner = "10000000-0000-4000-8000-000000000000";
+            yield* sql.withTransaction(GC.initializeOwner(owner));
             const claim = yield* sql.withTransaction(
-              Catalog.claim(row.caller_id, row.upload_id, 0),
+              Catalog.claim(row.caller_id, row.upload_id, 0, owner),
             );
-            const staged = yield* Upload.stage(claim, config.spacesStagingDir, Stream.make(pdf));
+            const staged = yield* Upload.stage(
+              claim,
+              config.spacesStagingDir,
+              Stream.make(pdf),
+              (identity) => sql.withTransaction(Catalog.recordCreated(claim, identity)),
+            );
+            yield* sql.withTransaction(GC.retireOwner(owner));
             const verified = yield* sql.withTransaction(Catalog.recordVerified(claim, staged, 0));
             yield* Upload.publish(verified, staged, config.spacesAssetsDir);
             yield* staged.release;
@@ -679,3 +719,54 @@ describe("Spaces public asset wiring", () => {
       ),
   );
 });
+
+it.effect(
+  "keeps old signed handles revoked after collection and digest reuse while new bearer reads retain HEAD and ranges",
+  () =>
+    fixture(({ request }) =>
+      Effect.gen(function* () {
+        const service = yield* Service.SpacesService;
+        const receive = Effect.fn("SpacesAssetsPublicTest.collectibleUpload")(function* (
+          id: string,
+        ) {
+          const intent = yield* service.createAssetUpload(common(id), "owner");
+          expect(
+            (yield* request(intent.relativeUrl, {
+              method: "POST",
+              headers: { "content-length": String(pdf.length) },
+              body: new Uint8Array(pdf),
+            })).status,
+          ).toBe(204);
+          return yield* service.finalizeAssetUpload(
+            { environmentId, uploadId: intent.uploadId },
+            "owner",
+          );
+        });
+        const first = yield* receive("old-generation");
+        for (const _step of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) yield* service.maintainAssets;
+        yield* TestClock.adjust("24 hours");
+        const old = yield* issueAssetUrl({
+          resource: { _tag: "spaces-asset", environmentId, assetId: first.assetId },
+        });
+        expect((yield* request(old.relativeUrl)).status).toBe(200);
+        yield* service.maintainAssets;
+        expect((yield* request(old.relativeUrl)).status).toBe(404);
+        const next = yield* receive("new-generation");
+        expect(next.digest).toBe(first.digest);
+        const signed = yield* issueAssetUrl({
+          resource: { _tag: "spaces-asset", environmentId, assetId: next.assetId },
+        });
+        expect((yield* request(old.relativeUrl)).status).toBe(404);
+        const head = yield* request(signed.relativeUrl, { method: "HEAD" });
+        expect(head.status).toBe(200);
+        expect(head.headers.get("content-length")).toBe(String(pdf.length));
+        expect(yield* Effect.promise(() => head.text())).toBe("");
+        const range = yield* request(signed.relativeUrl, { headers: { range: "bytes=0-4" } });
+        expect(range.status).toBe(206);
+        expect(range.headers.get("content-range")).toBe(`bytes 0-4/${pdf.length}`);
+        expect(new Uint8Array(yield* Effect.promise(() => range.arrayBuffer()))).toEqual(
+          pdf.subarray(0, 5),
+        );
+      }),
+    ),
+);

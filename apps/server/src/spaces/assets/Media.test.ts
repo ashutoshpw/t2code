@@ -135,11 +135,11 @@ const inspect = Effect.fn("SpacesMediaTest.inspect")(function* (
       current: yield* sql<{
         readonly block_id: string;
         readonly asset_id: string;
-      }>`SELECT * FROM spaces_block_asset_refs ORDER BY block_id`,
+      }>`SELECT block_id,asset_id FROM spaces_block_asset_refs ORDER BY block_id`,
       history: yield* sql<{
         readonly to_revision: number;
         readonly asset_id: string;
-      }>`SELECT * FROM spaces_revision_asset_refs ORDER BY page_id,to_revision,asset_id`,
+      }>`SELECT page_id,to_revision,asset_id FROM spaces_revision_asset_refs ORDER BY page_id,to_revision,asset_id`,
       usage: yield* sql`SELECT * FROM spaces_asset_usage`,
     };
   }).pipe(
@@ -740,7 +740,7 @@ it.effect(
           expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
             historyPending: false,
             unresolved: false,
-            gcEnabled: false,
+            gcEnabled: true,
           });
           yield* service.trashPage(
             yield* recoveryInput(first.childId, "trash", "lifecycle-retrash"),
@@ -766,7 +766,7 @@ it.effect(
           expect(pruned.core[0]?.revision_bytes).toBe(0);
           expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
             unresolved: false,
-            gcEnabled: false,
+            gcEnabled: true,
           });
           expect(new Uint8Array(yield* fs.readFile(resolved.path))).toEqual(pdf);
         }).pipe(Effect.provide(live()), Effect.scoped);

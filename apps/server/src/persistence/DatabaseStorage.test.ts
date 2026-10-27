@@ -63,6 +63,7 @@ it.effect("publishes bounded Spaces accounting through the existing storage stat
       inventoryPending: true,
       unresolved: false,
       gcEnabled: false,
+      gcPending: true,
     });
   }).pipe(
     Effect.provide(

@@ -5,6 +5,8 @@ import * as Schema from "effect/Schema";
 
 import { canonical, historyLimits, limits } from "../CorePolicy.ts";
 import * as SpacesSql from "../SpacesSql.ts";
+import * as GC from "./GC.ts";
+import * as Catalog from "./Catalog.ts";
 
 export interface State {
   readonly format_version: number;
@@ -35,9 +37,9 @@ export const state = Effect.fn("SpacesReconciliation.state")(function* () {
 export const initialize = Effect.fn("SpacesReconciliation.initialize")(function* () {
   const sql = yield* SpacesSql.SpacesSql;
   const current = yield* state();
-  if (current.format_version > 3) return yield* new C.SpacesUnavailableError({ stage: "storage" });
-  if (current.format_version < 3)
-    yield* sql`UPDATE spaces_asset_reconciliation SET format_version = 3,
+  if (current.format_version > 4) return yield* new C.SpacesUnavailableError({ stage: "storage" });
+  if (current.format_version < 4)
+    yield* sql`UPDATE spaces_asset_reconciliation SET format_version = 4,
       block_cursor = '',blocks_done = 0,history_page = '',history_revision = -1,history_done = 0 WHERE singleton = 1`;
 });
 export const issue = Effect.fn("SpacesReconciliation.issue")(function* (
@@ -108,6 +110,12 @@ function references(payload: string) {
     return { assetId: null, unresolved: true };
   }
 }
+export const admitBlock = Effect.fn("SpacesReconciliation.admitBlock")(function* (payload: string) {
+  if (!references(payload).unresolved) return;
+  const sql = yield* SpacesSql.SpacesSql;
+  if ((yield* sql`SELECT 1 FROM spaces_asset_blobs WHERE state='deleting' LIMIT 1`).length)
+    return yield* new C.SpaceAssetError({ reason: "blob_unavailable" });
+});
 export const noteBlock = Effect.fn("SpacesReconciliation.noteBlock")(function* (
   id: string,
   payload: string | null,
@@ -215,13 +223,22 @@ export const status = Effect.fn("SpacesReconciliation.status")(function* () {
   const current = yield* state();
   const unresolved =
     (yield* sql`SELECT 1 FROM spaces_asset_reconciliation_issues LIMIT 1`).length > 0;
+  const available =
+    (yield* sql`SELECT 1 FROM sqlite_schema WHERE name='spaces_asset_collection'`).length > 0;
+  const collection = available
+    ? yield* GC.readiness()
+    : { ready: 0, unresolved: 0, projection_pending: 0 };
+  const [meta] = yield* sql<{
+    readonly observed_time_ms: number;
+  }>`SELECT observed_time_ms FROM spaces_core WHERE singleton=1`;
   return {
     currentPending: !current.blocks_done,
     historyPending: !current.history_done,
-    catalogPending: !current.blobs_done,
+    catalogPending: !current.blobs_done || Boolean(collection.projection_pending),
     inventoryPending: !current.assets_done || !current.staging_done,
-    unresolved,
-    gcEnabled: false as const,
+    unresolved: unresolved || Boolean(collection.unresolved),
+    gcEnabled: Boolean(collection.ready),
+    gcPending: available ? yield* GC.pending(meta?.observed_time_ms ?? 0) : false,
   };
 });
 export const referencesPass = Effect.fn("SpacesReconciliation.referencesPass")(function* () {
@@ -246,10 +263,10 @@ export const referencesPass = Effect.fn("SpacesReconciliation.referencesPass")(f
           if (existing && existing.asset_id !== ref.assetId) reason = "conflicting_pin";
           else if (!existing)
             yield* sql`INSERT INTO spaces_block_asset_refs(block_id,asset_id) VALUES (${row.block_id},${ref.assetId})`;
-          const available =
-            yield* sql`SELECT 1 FROM spaces_assets a JOIN spaces_asset_blobs b ON b.digest = a.digest
-            WHERE a.asset_id = ${ref.assetId} AND a.state = 'ready' AND b.state = 'ready'`;
-          if (!available.length) reason = "asset_unavailable";
+          const available = yield* Catalog.readyAsset(ref.assetId).pipe(
+            Effect.catchTags({ AssetCatalogError: () => Effect.succeed(null) }),
+          );
+          if (!available) reason = "asset_unavailable";
         }
         yield* issue("block", row.block_id, reason);
       } else

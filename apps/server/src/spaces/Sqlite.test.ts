@@ -23,6 +23,7 @@ import Migration0005 from "./Migrations/005_ReferenceIdentity.ts";
 import Migration0006 from "./Migrations/006_Recovery.ts";
 import Migration0007 from "./Migrations/007_Search.ts";
 import Migration0008 from "./Migrations/008_Assets.ts";
+import Migration0009 from "./Migrations/009_AssetReconciliation.ts";
 
 import * as ChatSqlite from "../persistence/Sqlite.ts";
 import { runMigrations } from "./Migrations.ts";
@@ -33,6 +34,7 @@ import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import { canonical } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as Sqlite from "./Sqlite.ts";
+import * as Tools from "./SpacesDatabaseTools.ts";
 
 const decodeCoreRequest = Schema.decodeEffect(C.SpaceMutationRequest);
 const decodeCoreReceipt = Schema.decodeUnknownEffect(C.SpaceMutationReceipt);
@@ -72,6 +74,7 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
       { migration_id: 7, name: "Search" },
       { migration_id: 8, name: "Assets" },
       { migration_id: 9, name: "AssetReconciliation" },
+      { migration_id: 10, name: "AssetCollection" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -121,7 +124,7 @@ it.effect("rolls back a failed schema migration together with its ledger entry",
 );
 
 it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
-  it.effect.each([7, 8])(
+  it.effect.each([7, 8, 9])(
     "upgrades accepted storage checkpoint%s to asset reconciliation without changing nested content",
     (checkpoint) =>
       Effect.gen(function* () {
@@ -155,7 +158,14 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
               ),
               "6_Recovery": Migration0006.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
               "7_Search": Migration0007.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
-              ...(checkpoint === 8
+              ...(checkpoint === 9
+                ? {
+                    "9_AssetReconciliation": Migration0009.pipe(
+                      Effect.provideService(SpacesSql.SpacesSql, sql),
+                    ),
+                  }
+                : {}),
+              ...(checkpoint >= 8
                 ? {
                     "8_Assets": Migration0008.pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
                   }
@@ -180,6 +190,14 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           yield* sql`UPDATE spaces_pages SET block_count=1,block_bytes=${Buffer.byteLength(payload, "utf8")} WHERE page_id='parent'`;
           return yield* readExisting;
         }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })), Effect.scoped);
+        if (checkpoint === 9) {
+          const original = yield* fs.readFile(dbPath);
+          const tools = yield* Tools.SpacesDatabaseTools.pipe(Effect.provide(Tools.layer));
+          const report = yield* tools.inspect(dbPath);
+          assert.isFalse(report?.assetAccounting?.reconciliation.gcEnabled);
+          assert.isFalse(report?.assetAccounting?.reconciliation.gcPending);
+          assert.equal(Buffer.compare(original, yield* fs.readFile(dbPath)), 0);
+        }
         for (const _acquisition of [1, 2])
           yield* Effect.gen(function* () {
             const sql = yield* SpacesSql.SpacesSql;
@@ -617,13 +635,13 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             assert.deepEqual(yield* sql`PRAGMA foreign_key_check`, []);
             assert.equal(
               (yield* Effect.flip(
-                sql`INSERT INTO spaces_block_asset_refs VALUES ('missing-block', 'asset')`,
+                sql`INSERT INTO spaces_block_asset_refs(block_id,asset_id) VALUES ('missing-block', 'asset')`,
               ))._tag,
               "SqlError",
             );
             assert.equal(
               (yield* Effect.flip(
-                sql`INSERT INTO spaces_revision_asset_refs VALUES ('core-page', 7, 'asset')`,
+                sql`INSERT INTO spaces_revision_asset_refs(page_id,to_revision,asset_id) VALUES ('core-page', 7, 'asset')`,
               ))._tag,
               "SqlError",
             );
@@ -699,7 +717,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            9,
+            10,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -813,7 +831,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (10, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (11, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;

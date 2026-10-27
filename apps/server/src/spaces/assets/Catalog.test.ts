@@ -14,7 +14,17 @@ import * as SpacesSql from "../SpacesSql.ts";
 import * as Sqlite from "../Sqlite.ts";
 import * as Catalog from "./Catalog.ts";
 import * as Upload from "./Upload.ts";
+import * as GC from "./GC.ts";
 
+const claimUpload = Effect.fn("AssetCatalogTest.claim")(function* (
+  callerId: string,
+  uploadId: string,
+  now: number,
+) {
+  const owner = "20000000-0000-4000-8000-000000000000";
+  yield* GC.initializeOwner(owner);
+  return yield* Catalog.claim(callerId, uploadId, now, owner);
+});
 const bytes = new TextEncoder().encode("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n");
 const input = (requestId: string, callerId = "client-a") => ({
   callerId,
@@ -49,9 +59,7 @@ const upload = Effect.fn("AssetCatalogTest.upload")(function* (
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const reserved = yield* sql.withTransaction(Catalog.reserve(reservation, 0));
-  const claim = yield* sql.withTransaction(
-    Catalog.claim(reserved.caller_id, reserved.upload_id, 0),
-  );
+  const claim = yield* sql.withTransaction(claimUpload(reserved.caller_id, reserved.upload_id, 0));
   const staged = yield* Upload.stage(claim, directories.stagingDir, body);
   const verified = yield* sql.withTransaction(Catalog.recordVerified(claim, staged, 0));
   const proof = yield* Upload.publish(verified, staged, directories.assetsDir);
@@ -101,6 +109,7 @@ describe("Spaces asset catalog", () => {
             { migration_id: 7, name: "Search" },
             { migration_id: 8, name: "Assets" },
             { migration_id: 9, name: "AssetReconciliation" },
+            { migration_id: 10, name: "AssetCollection" },
           ]);
           expect(yield* sql`SELECT 1 FROM spaces WHERE is_default = 1`).toHaveLength(1);
           expect(yield* Catalog.usage()).toEqual({
@@ -110,8 +119,10 @@ describe("Spaces asset catalog", () => {
             active_count: 0,
           });
           expect(yield* sql`PRAGMA foreign_key_check`).toEqual([]);
-          expect(yield* sql`SELECT * FROM spaces_block_asset_refs`).toEqual([]);
-          expect(yield* sql`SELECT * FROM spaces_revision_asset_refs`).toEqual([]);
+          expect(yield* sql`SELECT block_id,asset_id FROM spaces_block_asset_refs`).toEqual([]);
+          expect(
+            yield* sql`SELECT page_id,to_revision,asset_id FROM spaces_revision_asset_refs`,
+          ).toEqual([]);
         }),
       ).pipe(Effect.provide(NodeServices.layer)),
   );
@@ -211,7 +222,7 @@ describe("Spaces asset catalog", () => {
             [0, 1],
             () =>
               sql
-                .withTransaction(Catalog.claim(first.caller_id, first.upload_id, 0))
+                .withTransaction(claimUpload(first.caller_id, first.upload_id, 0))
                 .pipe(Effect.result),
             { concurrency: "unbounded" },
           );
@@ -220,12 +231,12 @@ describe("Spaces asset catalog", () => {
             { failure: { reason: "already_claimed" } },
           ]);
           for (const row of reservations.slice(2, 5))
-            yield* sql.withTransaction(Catalog.claim(row.caller_id, row.upload_id, 0));
+            yield* sql.withTransaction(claimUpload(row.caller_id, row.upload_id, 0));
           const active = yield* snapshot();
           const refused = reservations[5]!;
           expect(
             yield* sql
-              .withTransaction(Catalog.claim(refused.caller_id, refused.upload_id, 0))
+              .withTransaction(claimUpload(refused.caller_id, refused.upload_id, 0))
               .pipe(Effect.flip),
           ).toMatchObject({ reason: "active_limit" });
           expect(yield* snapshot()).toEqual(active);
@@ -241,7 +252,7 @@ describe("Spaces asset catalog", () => {
         Effect.gen(function* () {
           const sql = yield* SpacesSql.SpacesSql;
           const row = yield* sql.withTransaction(Catalog.reserve(input("ordered"), 0));
-          const claim = yield* sql.withTransaction(Catalog.claim(row.caller_id, row.upload_id, 0));
+          const claim = yield* sql.withTransaction(claimUpload(row.caller_id, row.upload_id, 0));
           const requested = yield* Deferred.make<void>();
           const remainder = yield* Deferred.make<Uint8Array>();
           const body = Stream.make(bytes.subarray(0, 8)).pipe(
@@ -292,7 +303,7 @@ describe("Spaces asset catalog", () => {
           expect(yield* Catalog.usage()).toEqual({
             reserved_bytes: bytes.length,
             physical_bytes: bytes.length,
-            pending_count: 1,
+            pending_count: 2,
             active_count: 0,
           });
         }),
@@ -307,7 +318,7 @@ describe("Spaces asset catalog", () => {
           const sql = yield* SpacesSql.SpacesSql;
           const reserved = yield* sql.withTransaction(Catalog.reserve(input("retry"), 0));
           const first = yield* sql.withTransaction(
-            Catalog.claim(reserved.caller_id, reserved.upload_id, 0),
+            claimUpload(reserved.caller_id, reserved.upload_id, 0),
           );
           expect(
             yield* Upload.stage(
@@ -325,7 +336,7 @@ describe("Spaces asset catalog", () => {
             active_count: 0,
           });
           const second = yield* sql.withTransaction(
-            Catalog.claim(reserved.caller_id, reserved.upload_id, 2),
+            claimUpload(reserved.caller_id, reserved.upload_id, 2),
           );
           expect(second.attempt_id).not.toBe(first.attempt_id);
           const before = yield* snapshot();
@@ -354,7 +365,7 @@ describe("Spaces asset catalog", () => {
           });
           expect(
             yield* sql
-              .withTransaction(Catalog.claim(reserved.caller_id, reserved.upload_id, 600_000))
+              .withTransaction(claimUpload(reserved.caller_id, reserved.upload_id, 600_000))
               .pipe(Effect.flip),
           ).toMatchObject({ reason: "expired" });
         }),
@@ -406,7 +417,7 @@ describe("Spaces asset catalog", () => {
         const sql = yield* SpacesSql.SpacesSql;
         yield* upload(directories, input("original"));
         const row = yield* sql.withTransaction(Catalog.reserve(input("separate"), 0));
-        const claim = yield* sql.withTransaction(Catalog.claim(row.caller_id, row.upload_id, 0));
+        const claim = yield* sql.withTransaction(claimUpload(row.caller_id, row.upload_id, 0));
         const staged = yield* Upload.stage(claim, directories.stagingDir, Stream.make(bytes));
         const verified = yield* sql.withTransaction(Catalog.recordVerified(claim, staged, 0));
         const proof = yield* Upload.publish(verified, staged, directories.assetsDir);
@@ -453,7 +464,7 @@ describe("Spaces asset catalog", () => {
                   Catalog.reserve(input("concurrent", caller), 0),
                 );
                 const claim = yield* sql.withTransaction(
-                  Catalog.claim(row.caller_id, row.upload_id, 0),
+                  claimUpload(row.caller_id, row.upload_id, 0),
                 );
                 const file = yield* Upload.stage(claim, directories.stagingDir, Stream.make(bytes));
                 const verified = yield* sql.withTransaction(Catalog.recordVerified(claim, file, 0));
@@ -474,7 +485,7 @@ describe("Spaces asset catalog", () => {
           expect(yield* Catalog.usage()).toEqual({
             reserved_bytes: bytes.length,
             physical_bytes: bytes.length,
-            pending_count: 1,
+            pending_count: 2,
             active_count: 0,
           });
           for (const { file, verified } of staged) {
@@ -503,7 +514,7 @@ describe("Spaces asset catalog", () => {
         Effect.gen(function* () {
           const sql = yield* SpacesSql.SpacesSql;
           const row = yield* sql.withTransaction(Catalog.reserve(input("abandoned"), 0));
-          const claim = yield* sql.withTransaction(Catalog.claim(row.caller_id, row.upload_id, 0));
+          const claim = yield* sql.withTransaction(claimUpload(row.caller_id, row.upload_id, 0));
           yield* directories.fs.makeDirectory(directories.stagingDir, { recursive: true });
           const part = directories.path.join(directories.stagingDir, `${claim.attempt_id}.part`);
           yield* directories.fs.writeFile(part, bytes.subarray(0, 8));
@@ -531,9 +542,7 @@ describe("Spaces asset catalog", () => {
                 600_000,
               ),
             );
-            yield* sql.withTransaction(
-              Catalog.claim(pending.caller_id, pending.upload_id, 600_000),
-            );
+            yield* sql.withTransaction(claimUpload(pending.caller_id, pending.upload_id, 600_000));
           }
           const first = yield* Catalog.recoveryBatch();
           expect(first).toHaveLength(2);
@@ -601,7 +610,7 @@ describe("Spaces asset catalog", () => {
           const sql = yield* SpacesSql.SpacesSql;
           if (phase === "ready-dedup") yield* upload(directories, input("earlier"));
           const row = yield* sql.withTransaction(Catalog.reserve(input("reopen"), 0));
-          const claim = yield* sql.withTransaction(Catalog.claim(row.caller_id, row.upload_id, 0));
+          const claim = yield* sql.withTransaction(claimUpload(row.caller_id, row.upload_id, 0));
           const staged = yield* Upload.stage(
             claim,
             directories.stagingDir,
@@ -630,9 +639,13 @@ describe("Spaces asset catalog", () => {
             expect((yield* Catalog.recoveryBatch()).map((item) => item.upload_id)).toContain(
               claim.upload_id,
             );
-            const absent = yield* Upload.discardAbandonedStaging(claim, directories, proof);
-            yield* sql.withTransaction(Catalog.releaseStaging(claim, absent));
           }
+          const ready = {
+            ...(yield* Catalog.getUpload(claim.caller_id, claim.upload_id)),
+            attempt_id: claim.attempt_id,
+          };
+          const absent = yield* Upload.discardAbandonedStaging(ready, directories, proof);
+          yield* sql.withTransaction(Catalog.releaseStaging(ready, absent));
           expect(yield* sql.withTransaction(Catalog.finish(claim, proof, 900_001))).toEqual(result);
           expect(yield* Catalog.usage()).toEqual({
             reserved_bytes: 0,
@@ -651,7 +664,7 @@ describe("Spaces asset catalog", () => {
       Effect.gen(function* () {
         const sql = yield* SpacesSql.SpacesSql;
         const row = yield* sql.withTransaction(Catalog.reserve(input("missing"), 0));
-        const claim = yield* sql.withTransaction(Catalog.claim(row.caller_id, row.upload_id, 0));
+        const claim = yield* sql.withTransaction(claimUpload(row.caller_id, row.upload_id, 0));
         const staged = yield* Upload.stage(claim, directories.stagingDir, Stream.make(bytes));
         const verified = yield* sql.withTransaction(Catalog.recordVerified(claim, staged, 0));
         yield* staged.release;
@@ -680,7 +693,7 @@ describe("Spaces asset catalog", () => {
         Effect.gen(function* () {
           const sql = yield* SpacesSql.SpacesSql;
           const row = yield* sql.withTransaction(Catalog.reserve(input("generation"), 0));
-          const claim = yield* sql.withTransaction(Catalog.claim(row.caller_id, row.upload_id, 0));
+          const claim = yield* sql.withTransaction(claimUpload(row.caller_id, row.upload_id, 0));
           const staged = yield* Upload.stage(claim, directories.stagingDir, Stream.make(bytes));
           const verified = yield* sql.withTransaction(Catalog.recordVerified(claim, staged, 0));
           const proof = yield* Upload.publish(verified, staged, directories.assetsDir);
@@ -705,9 +718,7 @@ describe("Spaces asset catalog", () => {
           const other = yield* sql.withTransaction(
             Catalog.reserve(input("other", "other-client"), 0),
           );
-          const next = yield* sql.withTransaction(
-            Catalog.claim(other.caller_id, other.upload_id, 0),
-          );
+          const next = yield* sql.withTransaction(claimUpload(other.caller_id, other.upload_id, 0));
           const nextStage = yield* Upload.stage(next, directories.stagingDir, Stream.make(bytes));
           expect(
             yield* sql

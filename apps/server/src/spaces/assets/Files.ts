@@ -199,7 +199,12 @@ const releaseOwned = Effect.fn("SpacesAssets.releaseStaged")(function* (
   );
 }, Effect.uninterruptible);
 
-export const stageUpload = Effect.fn("SpacesAssets.stageUpload")(function* <E, R>(
+export const stageUpload = Effect.fn("SpacesAssets.stageUpload")(function* <
+  E,
+  R,
+  E2 = never,
+  R2 = never,
+>(
   input: {
     readonly uploadId: string;
     readonly stagingDir: string;
@@ -208,6 +213,11 @@ export const stageUpload = Effect.fn("SpacesAssets.stageUpload")(function* <E, R
     readonly mimeType: MediaType;
   },
   body: Stream.Stream<Uint8Array, E, R>,
+  onCreated?: (identity: {
+    readonly dev: string;
+    readonly ino: string;
+    readonly birthtimeNs: string;
+  }) => Effect.Effect<void, E2, R2>,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -254,6 +264,12 @@ export const stageUpload = Effect.fn("SpacesAssets.stageUpload")(function* <E, R
       ),
   );
   const release = releaseOwned(partPath, owned, ownership);
+  if (onCreated)
+    yield* onCreated({
+      dev: owned.info.dev.toString(),
+      ino: owned.info.ino.toString(),
+      birthtimeNs: owned.info.birthtimeNs.toString(),
+    });
   return yield* Effect.gen(function* () {
     const hash = NodeCrypto.createHash("sha256");
     const header = new Uint8Array(Math.min(fileLimits.headerBytes, input.expectedBytes));

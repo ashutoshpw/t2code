@@ -139,11 +139,11 @@ const inspect = Effect.fn("SpacesReconciliationTest.inspect")(function* (
       current: yield* sql<{
         readonly block_id: string;
         readonly asset_id: string;
-      }>`SELECT * FROM spaces_block_asset_refs ORDER BY block_id`,
+      }>`SELECT block_id,asset_id FROM spaces_block_asset_refs ORDER BY block_id`,
       history: yield* sql<{
         readonly to_revision: number;
         readonly asset_id: string;
-      }>`SELECT * FROM spaces_revision_asset_refs ORDER BY page_id,to_revision,asset_id`,
+      }>`SELECT page_id,to_revision,asset_id FROM spaces_revision_asset_refs ORDER BY page_id,to_revision,asset_id`,
       usage: yield* sql`SELECT * FROM spaces_asset_usage`,
     };
   }).pipe(
@@ -299,7 +299,7 @@ it.effect.each([
           expect(settled?.reconciliation).toMatchObject({
             inventoryPending: false,
             unresolved: false,
-            gcEnabled: false,
+            gcEnabled: true,
           });
           expect((yield* inspect(config)).usage[0]?.active_count).toBe(0);
         }).pipe(
@@ -695,7 +695,8 @@ it.effect("keeps maintenance disabled and noncreating until Spaces is enabled", 
         catalogPending: false,
         inventoryPending: false,
         unresolved: false,
-        gcEnabled: false,
+        gcEnabled: true,
+        gcPending: true,
       });
     }).pipe(Effect.provide(live())),
   ),
@@ -894,7 +895,7 @@ it.effect(
             gcEnabled: false,
           });
           expect((yield* progress(config)).state).toMatchObject({
-            format_version: 3,
+            format_version: 4,
             block_cursor: "",
             history_revision: -1,
           });

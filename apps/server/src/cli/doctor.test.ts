@@ -90,7 +90,7 @@ it.effect("doctor reports Spaces without creating chat or missing Spaces databas
     assert.include(messages, "Database: not found.");
     assert.isTrue(messages.some((line) => /^Spaces database: [1-9].*WAL.*reclaimable/.test(line)));
     assert.isTrue(
-      messages.some((line) => /^Spaces media: .*inventory pending.*collection disabled/.test(line)),
+      messages.some((line) => /^Spaces media: .*inventory pending.*collection blocked/.test(line)),
     );
     assert.equal(Buffer.compare(yield* fs.readFile(spacesPath), before), 0);
     assert.isFalse(yield* fs.exists(chatPath));

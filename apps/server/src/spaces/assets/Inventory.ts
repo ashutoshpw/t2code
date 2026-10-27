@@ -95,7 +95,7 @@ export const make = Effect.fn("SpacesInventory.make")(function* (directories: {
           (yield* sql`SELECT 1 FROM spaces_asset_blobs WHERE digest = ${entry.name} AND state <> 'deleted'`)
             .length > 0
         : attempt.test(entry.name) &&
-          (yield* sql`SELECT 1 FROM spaces_asset_uploads WHERE attempt_id = ${entry.name.slice(0, -5)} AND state IN ('receiving','verified','ready')`)
+          (yield* sql`SELECT 1 FROM spaces_asset_uploads WHERE attempt_id = ${entry.name.slice(0, -5)} AND staging_identity=${entry.identity} AND attempt_owner IS NOT NULL AND state IN ('receiving','verified','ready')`)
             .length > 0;
     const reason =
       entry.identity === "missing"

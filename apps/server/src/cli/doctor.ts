@@ -46,7 +46,7 @@ export const runDoctor = Effect.fn("runDoctor")(function* (
     yield* Console.log(
       assets === null
         ? "Spaces media accounting: unavailable."
-        : `Spaces media: ${formatBytes(assets.registeredAssetBytes)} registered unique bytes, ${formatBytes(assets.reservedBytes)} reserved; observed files ${formatBytes(assets.observedAssetFileBytes)} assets, ${formatBytes(assets.observedStagingFileBytes)} staging (${assets.reconciliation.inventoryPending ? "inventory pending" : "completed observation"}); collection disabled.`,
+        : `Spaces media: ${formatBytes(assets.registeredAssetBytes)} registered unique bytes, ${formatBytes(assets.reservedBytes)} reserved; observed files ${formatBytes(assets.observedAssetFileBytes)} assets, ${formatBytes(assets.observedStagingFileBytes)} staging (${assets.reconciliation.inventoryPending ? "inventory pending" : "completed observation"}); collection ${assets.reconciliation.gcEnabled ? "enabled" : "blocked"}${assets.reconciliation.gcPending ? " (work pending)" : ""}.`,
     );
   }
   if (status !== null && status.legacyDatabaseBytes !== null) {

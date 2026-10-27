@@ -99,13 +99,18 @@ const checkedPath = Effect.fn("SpacesAssets.checkedPath")(function* (
   return path.join(normalized, name);
 });
 
-export const stage = Effect.fn("SpacesAssets.stageClaim")(function* <E, R>(
+export const stage = Effect.fn("SpacesAssets.stageClaim")(function* <E, R, E2 = never, R2 = never>(
   claim: Claim,
   stagingDir: string,
   body: Stream.Stream<Uint8Array, E, R>,
+  onCreated?: (identity: {
+    readonly dev: string;
+    readonly ino: string;
+    readonly birthtimeNs: string;
+  }) => Effect.Effect<void, E2, R2>,
 ) {
   if (claim.state !== "receiving") return yield* error("invalid_state");
-  return yield* Files.stageUpload<E, R>(
+  return yield* Files.stageUpload<E, R, E2, R2>(
     {
       uploadId: claim.attempt_id,
       stagingDir,
@@ -114,6 +119,7 @@ export const stage = Effect.fn("SpacesAssets.stageClaim")(function* <E, R>(
       mimeType: claim.mime_type,
     },
     body,
+    onCreated,
   );
 });
 export const publish = Effect.fn("SpacesAssets.publishClaim")(function* (
@@ -322,12 +328,18 @@ export const discardAbandonedStaging = Effect.fn("SpacesAssets.discardAbandonedS
         : Effect.fail(error("io_failed")),
     ),
   );
-  if (file === null) return yield* error("corrupt_file");
+  if (file === null || (file && file.info.size > BigInt(claim.expected_bytes)))
+    return yield* error("corrupt_file");
   if (file)
     yield* Effect.tryPromise({
       try: async () => {
         const current = await NodeFSP.lstat(part, { bigint: true });
-        if (current.dev !== file.info.dev || current.ino !== file.info.ino)
+        if (
+          current.dev !== file.info.dev ||
+          current.ino !== file.info.ino ||
+          (claim.staging_identity &&
+            claim.staging_identity !== `${current.dev}:${current.ino}:${current.birthtimeNs}`)
+        )
           throw new Error("Staging changed");
         await NodeFSP.unlink(part);
       },

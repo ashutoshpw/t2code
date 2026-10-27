@@ -77,6 +77,10 @@ export interface UploadRow {
   readonly cleanup_pending: number;
   readonly width: number | null;
   readonly height: number | null;
+  readonly attempt_owner?: string | null;
+  readonly staging_identity?: string | null;
+  readonly staging_reserved?: number;
+  readonly attempt_quiescent_at_ms?: number | null;
 }
 export interface Claim extends UploadRow {
   readonly attempt_id: string;
@@ -95,6 +99,9 @@ interface Blob {
   readonly state: "publishing" | "ready" | "deleting" | "deleted";
   readonly generation: number;
   readonly physical_charged: number;
+  readonly deletion_attempt: string | null;
+  readonly deletion_owner: string | null;
+  readonly collected_generation: number | null;
 }
 
 export const usage = Effect.fn("SpacesAssetCatalog.usage")(function* () {
@@ -125,12 +132,13 @@ const claimed = Effect.fn("SpacesAssetCatalog.claimed")(function* (claim: Claim)
 const releaseCounts = Effect.fn("SpacesAssetCatalog.releaseCounts")(function* (
   row: UploadRow,
   pending: boolean,
+  reserved = pending,
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const active = row.state === "receiving" || row.state === "verified" ? 1 : 0;
   yield* sql`UPDATE spaces_asset_usage SET active_count = active_count - ${active},
     pending_count = pending_count - ${pending ? 1 : 0},
-    reserved_bytes = reserved_bytes - ${pending ? row.expected_bytes : 0} WHERE singleton = 1`;
+    reserved_bytes = reserved_bytes - ${reserved ? row.expected_bytes : 0} WHERE singleton = 1`;
   yield* sql`UPDATE spaces_asset_callers SET active_count = active_count - ${active},
     pending_count = pending_count - ${pending ? 1 : 0} WHERE caller_id = ${row.caller_id}`;
   yield* sql`DELETE FROM spaces_asset_callers WHERE caller_id = ${row.caller_id} AND pending_count = 0 AND active_count = 0`;
@@ -213,20 +221,46 @@ export const claim = Effect.fn("SpacesAssetCatalog.claim")(function* (
   callerId: string,
   uploadId: string,
   now: number,
+  owner: string,
 ) {
   if (!validNow(now)) return yield* error("invalid_input");
   const sql = yield* SpacesSql.SpacesSql;
+  if (
+    !uuid.test(owner) ||
+    !(yield* sql`SELECT 1 FROM spaces_asset_collection WHERE singleton=1 AND owner_token=${owner} AND owner_retired=0`)
+      .length
+  )
+    return yield* error("blob_unavailable");
   const row = yield* getUpload(callerId, uploadId);
   if (row.state === "expired" || row.expires_at_ms <= now) return yield* error("expired");
   if (row.state !== "reserved") return yield* error("already_claimed");
   const current = yield* usage();
   if (current.active_count >= limits.environmentActive) return yield* error("active_limit");
   const attemptId = NodeCrypto.randomUUID();
-  yield* sql`UPDATE spaces_asset_uploads SET state = 'receiving',attempt_id = ${attemptId} WHERE upload_id = ${uploadId}`;
+  yield* sql`UPDATE spaces_asset_uploads SET state = 'receiving',attempt_id = ${attemptId},attempt_owner=${owner},staging_identity=NULL,attempt_quiescent_at_ms=NULL WHERE upload_id = ${uploadId}`;
   yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 0,staging_generation = staging_generation + 1 WHERE singleton = 1`;
   yield* sql`UPDATE spaces_asset_usage SET active_count = active_count + 1 WHERE singleton = 1`;
   yield* sql`UPDATE spaces_asset_callers SET active_count = active_count + 1 WHERE caller_id = ${callerId}`;
-  return { ...row, state: "receiving" as const, attempt_id: attemptId } satisfies Claim;
+  return {
+    ...row,
+    state: "receiving" as const,
+    attempt_id: attemptId,
+    attempt_owner: owner,
+    staging_identity: null,
+  } satisfies Claim;
+});
+export const recordCreated = Effect.fn("SpacesAssetCatalog.recordCreated")(function* (
+  claim: Claim,
+  identity: { readonly dev: string; readonly ino: string; readonly birthtimeNs: string },
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  const row = yield* claimed(claim);
+  if (row.state !== "receiving" || !row.attempt_owner || row.attempt_owner !== claim.attempt_owner)
+    return yield* error("stale_attempt");
+  if (![identity.dev, identity.ino, identity.birthtimeNs].every((value) => /^[0-9]+$/.test(value)))
+    return yield* error("invalid_input");
+  yield* sql`UPDATE spaces_asset_uploads SET staging_identity=${`${identity.dev}:${identity.ino}:${identity.birthtimeNs}`} WHERE upload_id=${row.upload_id}`;
+  yield* sql`UPDATE spaces_asset_reconciliation SET staging_done=0,staging_generation=staging_generation+1 WHERE singleton=1`;
 });
 export const recordVerified = Effect.fn("SpacesAssetCatalog.recordVerified")(function* (
   claim: Claim,
@@ -275,24 +309,32 @@ export const recordVerified = Effect.fn("SpacesAssetCatalog.recordVerified")(fun
   if (
     blob &&
     (blob.state === "deleting" ||
-      blob.state === "deleted" ||
+      (blob.state === "deleted" &&
+        (blob.physical_charged !== 0 ||
+          blob.deletion_attempt !== null ||
+          blob.deletion_owner !== null ||
+          blob.collected_generation !== blob.generation)) ||
       blob.byte_size !== staged.byteSize ||
       blob.mime_type !== staged.mimeType ||
       blob.media_kind !== staged.mediaKind)
   )
     return yield* error("blob_unavailable");
+  if (blob?.state === "deleted")
+    yield* sql`UPDATE spaces_asset_blobs SET state='publishing',generation=generation+1,unreferenced_at_ms=NULL,grace_epoch=-1,collected_generation=NULL
+      WHERE digest=${staged.digest} AND state='deleted' AND physical_charged=0 AND deletion_attempt IS NULL`;
   if (!blob)
     yield* sql`INSERT INTO spaces_asset_blobs(digest,byte_size,mime_type,media_kind,state,created_at_ms)
     VALUES (${staged.digest},${staged.byteSize},${staged.mimeType},${staged.mediaKind},'publishing',${now})`;
+  const generation = blob ? blob.generation + (blob.state === "deleted" ? 1 : 0) : 0;
   yield* sql`UPDATE spaces_asset_uploads SET state = 'verified',digest = ${staged.digest},
-    blob_generation = ${blob?.generation ?? 0},width = ${width},height = ${height} WHERE upload_id = ${row.upload_id}`;
+    blob_generation = ${generation},width = ${width},height = ${height} WHERE upload_id = ${row.upload_id}`;
   // A sweep opened after claim can predate actual private-file creation.
   yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 0,staging_generation = staging_generation + 1 WHERE singleton = 1`;
   return {
     ...row,
     state: "verified" as const,
     digest: staged.digest,
-    blob_generation: blob?.generation ?? 0,
+    blob_generation: generation,
     width,
     height,
   } as Claim;
@@ -330,15 +372,15 @@ export const finish = Effect.fn("SpacesAssetCatalog.finish")(function* (
     (blob.state !== "publishing" && blob.state !== "ready")
   )
     return yield* error("blob_unavailable");
-  yield* sql`INSERT INTO spaces_assets(asset_id,digest,name,state,created_at_ms,width,height)
-    VALUES (${row.asset_id},${row.digest},${row.name},'ready',${now},${row.width},${row.height})`;
+  yield* sql`INSERT INTO spaces_assets(asset_id,digest,name,state,created_at_ms,width,height,blob_generation)
+    VALUES (${row.asset_id},${row.digest},${row.name},'ready',${now},${row.width},${row.height},${row.blob_generation})`;
   yield* sql`UPDATE spaces_asset_blobs SET state = 'ready',physical_charged = 1 WHERE digest = ${row.digest}`;
   yield* sql`DELETE FROM spaces_asset_reconciliation_issues WHERE kind = 'blob' AND entity = ${row.digest}`;
   yield* sql`UPDATE spaces_asset_reconciliation SET assets_done = 0,assets_generation = assets_generation + 1 WHERE singleton = 1`;
   if (!blob.physical_charged)
     yield* sql`UPDATE spaces_asset_usage SET physical_bytes = physical_bytes + ${row.expected_bytes} WHERE singleton = 1`;
-  yield* releaseCounts(row, !published.separateStaging);
-  yield* sql`UPDATE spaces_asset_uploads SET state = 'ready',cleanup_pending = ${published.separateStaging ? 1 : 0} WHERE upload_id = ${row.upload_id}`;
+  yield* releaseCounts(row, false, !published.separateStaging);
+  yield* sql`UPDATE spaces_asset_uploads SET state = 'ready',cleanup_pending = 1,staging_reserved=${published.separateStaging ? 1 : 0} WHERE upload_id = ${row.upload_id}`;
   return {
     assetId: row.asset_id,
     digest: row.digest!,
@@ -361,7 +403,7 @@ export const abort = Effect.fn("SpacesAssetCatalog.abort")(function* (
   if (row.state !== "receiving") return yield* error("stale_attempt");
   const expired = row.expires_at_ms <= now;
   yield* releaseCounts(row, expired);
-  yield* sql`UPDATE spaces_asset_uploads SET state = ${expired ? "expired" : "reserved"},attempt_id = NULL WHERE upload_id = ${row.upload_id}`;
+  yield* sql`UPDATE spaces_asset_uploads SET state = ${expired ? "expired" : "reserved"},attempt_id = NULL,staging_identity=NULL,attempt_owner=NULL WHERE upload_id = ${row.upload_id}`;
 });
 export const readyAsset = Effect.fn("SpacesAssetCatalog.readyAsset")(function* (assetId: string) {
   if (!uuid.test(assetId)) return yield* error("invalid_input");
@@ -377,6 +419,7 @@ export const readyAsset = Effect.fn("SpacesAssetCatalog.readyAsset")(function* (
   }>`SELECT a.asset_id,a.digest,a.name,b.byte_size,b.mime_type,a.width,a.height
     FROM spaces_assets a JOIN spaces_asset_blobs b ON b.digest = a.digest
     WHERE a.asset_id = ${assetId} AND a.state = 'ready' AND b.state = 'ready'
+    AND COALESCE(a.blob_generation,(SELECT u.blob_generation FROM spaces_asset_uploads u WHERE u.asset_id=a.asset_id AND u.digest=a.digest AND u.state='ready'))=b.generation
     AND NOT EXISTS (SELECT 1 FROM spaces_asset_reconciliation_issues i WHERE i.kind = 'blob' AND i.entity = b.digest)`;
   if (!row) return yield* error("not_found");
   return row;
@@ -448,7 +491,7 @@ export const resetMissing = Effect.fn("SpacesAssetCatalog.resetMissing")(functio
   const expired = row.expires_at_ms <= now;
   yield* releaseCounts(row, expired);
   yield* sql`UPDATE spaces_asset_uploads SET state = ${expired ? "expired" : "reserved"},attempt_id = NULL,
-    digest = NULL,blob_generation = NULL,width = NULL,height = NULL WHERE upload_id = ${row.upload_id}`;
+    digest = NULL,blob_generation = NULL,width = NULL,height = NULL,attempt_owner=NULL,staging_identity=NULL WHERE upload_id = ${row.upload_id}`;
   yield* sql`DELETE FROM spaces_asset_blobs WHERE digest = ${row.digest} AND state = 'publishing' AND physical_charged = 0
     AND NOT EXISTS(SELECT 1 FROM spaces_asset_uploads WHERE digest = ${row.digest})
     AND NOT EXISTS(SELECT 1 FROM spaces_assets WHERE digest = ${row.digest})`;
@@ -466,6 +509,13 @@ export const releaseStaging = Effect.fn("SpacesAssetCatalog.releaseStaging")(fun
   if (row.state !== "ready") return yield* error("stale_attempt");
   yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 0,staging_generation = staging_generation + 1 WHERE singleton = 1`;
   if (!row.cleanup_pending) return;
-  yield* releaseCounts(row, true);
-  yield* sql`UPDATE spaces_asset_uploads SET cleanup_pending = 0 WHERE upload_id = ${row.upload_id}`;
+  yield* releaseCounts(row, true, row.staging_reserved !== 0);
+  yield* sql`UPDATE spaces_asset_uploads SET cleanup_pending = 0,staging_identity=NULL,staging_reserved=0 WHERE upload_id = ${row.upload_id}`;
+  const name = `${row.attempt_id}.part`;
+  const [observation] = yield* sql<{
+    readonly bytes: number;
+  }>`SELECT bytes FROM spaces_asset_file_observations WHERE kind='staging' AND name=${name}`;
+  yield* sql`DELETE FROM spaces_asset_file_observations WHERE kind='staging' AND name=${name}`;
+  yield* sql`UPDATE spaces_asset_reconciliation SET staging_bytes=staging_bytes-${observation?.bytes ?? 0} WHERE singleton=1`;
+  yield* sql`DELETE FROM spaces_asset_reconciliation_issues WHERE kind='file' AND entity=${canonical(["staging", name])}`;
 });
