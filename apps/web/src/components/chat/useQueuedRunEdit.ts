@@ -9,14 +9,11 @@ import { usePromptStashStore, MAX_STASH_ENTRIES } from "../../promptStashStore";
 import { randomUUID } from "../../lib/utils";
 import { readLocalApi } from "../../localApi";
 import { useAtomValue } from "@effect/atom-react";
-import { makeQueuedRunEditStore, makeQueuedRunsAtom } from "@t2code/client-runtime/queued-run-edit";
+import { makeQueuedRunsAtom } from "@t2code/client-runtime/queued-run-edit";
 import type { ThreadStructure } from "@t2code/client-runtime/state/shell";
 import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
-  type ChatAttachment,
   type EnvironmentId,
-  type MessageId,
-  type OrchestrationMessageContext,
   type PreviewAnnotationPayload,
   type RunId,
   type ScopedThreadRef,
@@ -55,24 +52,7 @@ import type { ChatComposerHandle } from "./ChatComposer";
 import { fileAttachmentCapabilityBlockReason } from "./composerAttachmentFiles";
 import { prepareQueuedEditAttachments, recoverQueuedMessageEdit } from "./queuedMessageEdit";
 import type { EditQueuedRunRequest } from "./QueuedRunsControl";
-
-interface EditingQueuedRun {
-  readonly id: string;
-  readonly originalAttachments: ReadonlyArray<ChatAttachment>;
-  readonly saveOutcome: "not-sent" | "uncertain" | "accepted";
-  readonly threadId: ThreadId;
-  readonly runId: RunId;
-  readonly messageId: MessageId;
-  readonly originalText: string;
-  readonly existingAttachments: ReadonlyArray<ChatAttachment>;
-  readonly context?: OrchestrationMessageContext | undefined;
-}
-
-// Keyed by the route thread, so an edit survives navigating away and back.
-const queuedRunEdits = makeQueuedRunEditStore<EditingQueuedRun>({
-  registry: appAtomRegistry,
-  label: "web-queued-run-edits",
-});
+import { queuedRunEdits, queuedEditDraftKey, type EditingQueuedRun } from "./queuedRunEditState";
 
 if (typeof window !== "undefined")
   window.addEventListener("beforeunload", (event) => {
@@ -134,13 +114,17 @@ async function recoverExitedQueuedRun(input: {
       );
   } catch (error) {
     if (entryId) usePromptStashStore.getState().settleSendRecovery(entryId, false);
+    const currentDraft = useComposerDraftStore.getState().getComposerDraft(target);
+    const retained = claim.isCurrent() && currentDraft !== null;
     claim.finish(false);
     toastManager.add(
       stackedThreadToast({
         type: "warning",
-        title: "Queued edit kept open for recovery",
+        title: retained
+          ? "Queued edit kept open for recovery"
+          : "Queued edit recovery did not finish",
         timeout: 0,
-        description: `${error instanceof Error ? error.message : "Recovery could not be saved."} Keep this tab open until recovery succeeds; local bytes and original attachment handles remain owned by the edit.`,
+        description: `${error instanceof Error ? error.message : "Recovery could not be saved."} ${retained ? "Keep this tab open and review the current edit's attachments before retrying recovery." : "The original edit changed or was removed. Review the current composer and any saved recovery copy before closing this tab."}`,
         actionProps: { children: "Retry recovery", onClick: () => recoverExitedQueuedRun(input) },
         data: { secondaryActionProps: { children: "Open edit", onClick: input.open } },
       }),
@@ -160,7 +144,7 @@ export interface QueuedRunEditContent {
 }
 
 function queuedEditDraftTarget(routeThreadRef: ScopedThreadRef, runId: RunId) {
-  return DraftId.make(`queued-edit:${scopedThreadKey(routeThreadRef)}:${runId}`);
+  return DraftId.make(queuedEditDraftKey(scopedThreadKey(routeThreadRef), runId));
 }
 
 async function submitQueuedRunEdit(input: {

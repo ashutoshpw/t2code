@@ -1,4 +1,5 @@
 import { readLocalApi } from "../../localApi";
+import { isQueuedEditDraftOwned } from "./queuedRunEditState";
 import { restoreComposerSendRecovery } from "../../lib/composerSendRecovery";
 import { useNavigate } from "@tanstack/react-router";
 import { scopeThreadRef } from "@t2code/client-runtime/environment";
@@ -162,10 +163,22 @@ export function useComposerStash(input: {
     setStashPulseKey((key) => key + 1);
   };
 
+  const refuseOwnedEditMutation = () => {
+    if (!isQueuedEditDraftOwned(composerDraftTarget)) return false;
+    toastManager.add({
+      type: "info",
+      title: "Finish the queued edit first",
+      description:
+        "Save the queued message or use Save recovery before stashing or restoring into this edit. You can still delete other stash entries to free space.",
+    });
+    return true;
+  };
+
   const restoreStashEntry = async (
     menuEntry: PromptStashEntry,
     options?: { fanoutAttemptIds?: ReadonlyArray<string>; allowUncertain?: boolean },
   ) => {
+    if (refuseOwnedEditMutation()) return;
     if (menuEntry.recovery) {
       if (menuEntry.recovery.fanout && !options) {
         for (const attempt of menuEntry.recovery.fanout.attempts) {
@@ -230,6 +243,7 @@ export function useComposerStash(input: {
           target: composerDraftTarget,
           isCurrent: () =>
             !isRevertingCheckpoint() &&
+            !isQueuedEditDraftOwned(composerDraftTarget) &&
             isComposerDraftTargetOpen(composerTargetKey(composerDraftTarget)),
         });
         promptRef.current = restored.prompt;
@@ -296,6 +310,7 @@ export function useComposerStash(input: {
     // prompt with this invocation's captured target. Nothing was taken yet,
     // so abort and leave the entry restorable where the user now is.
     if (
+      refuseOwnedEditMutation() ||
       isRevertingCheckpoint() ||
       !isComposerDraftTargetOpen(composerTargetKey(composerDraftTarget))
     ) {
@@ -564,6 +579,7 @@ export function useComposerStash(input: {
   const deleteStashEntryStable = useStableCallback(deleteStashEntry);
 
   const stashCurrentPrompt = async () => {
+    if (refuseOwnedEditMutation()) return;
     // Stashing clears the draft. A pasted attachment still downloading would then land in the
     // emptied composer instead of travelling with the entry it belongs to.
     if (pendingDraftWork.has(attachmentTargetKey)) {

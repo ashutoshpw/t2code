@@ -27,6 +27,7 @@ import {
   type ComposerThreadTarget,
 } from "../composerDraftStore";
 import { appAtomRegistry } from "../rpc/atomRegistry";
+import { queuedRunEdits } from "../components/chat/queuedRunEditState";
 import { environmentCatalog } from "../connection/catalog";
 import { assetEnvironment } from "../state/assets";
 import { attachmentEnvironment } from "../state/attachments";
@@ -552,6 +553,16 @@ function hasAttachmentOwner(input: {
       job.environmentId === input.environmentId &&
       (job.persistedAttachmentId === input.attachmentId || job.attachmentId === input.attachmentId)
     )
+      return true;
+  }
+  const queuedEdits = appAtomRegistry.get(queuedRunEdits.atom);
+  if (Object.keys(queuedEdits).length > MAX_STASH_ENTRIES) return true;
+  for (const [key, edit] of Object.entries(queuedEdits)) {
+    if (++inspected > MAX_ATTACHMENT_OWNERS_TO_INSPECT) return true;
+    if (edit.existingAttachments.length > PROVIDER_SEND_TURN_MAX_ATTACHMENTS) return true;
+    const environmentId = parseScopedThreadKey(key)?.environmentId;
+    if (environmentId !== undefined && environmentId !== input.environmentId) continue;
+    if (edit.existingAttachments.some((attachment) => attachment.id === input.attachmentId))
       return true;
   }
   const entries = usePromptStashStore.getState().entries;

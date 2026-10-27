@@ -36,7 +36,47 @@ const state = vi.hoisted(() => ({
   connection: { httpBaseUrl: "https://queue.test/" } as { httpBaseUrl: string } | null,
   operate: true,
   allowDiscard: false,
+  stashHandlers: [] as Array<(event: KeyboardEvent) => void>,
 }));
+vi.mock("zustand", async () => {
+  const actual = await vi.importActual<typeof import("zustand")>("zustand");
+  const wrap = <T>(initializer: import("zustand").StateCreator<T>) => {
+    const store = actual.create(initializer);
+    return Object.assign((selector: (state: T) => unknown) => selector(store.getState()), store);
+  };
+  return {
+    ...actual,
+    create: <T>(initializer?: import("zustand").StateCreator<T>) =>
+      initializer ? wrap(initializer) : wrap<T>,
+  };
+});
+vi.mock("react", async () => {
+  const actual = await vi.importActual<typeof import("react")>("react");
+  const hooks = {
+    useRef: <A>(current: A) => ({ current }),
+    useState: <A>(initial: A | (() => A)) => [
+      typeof initial === "function" ? (initial as () => A)() : initial,
+      () => {},
+    ],
+    useEffect: (run: () => unknown) => {
+      run();
+    },
+    useLayoutEffect: () => {},
+    use: () => false,
+    useCallback: <A>(fn: A) => fn,
+    useMemo: <A>(fn: () => A) => fn(),
+    useSyncExternalStore: (_subscribe: unknown, get: () => unknown) => get(),
+    useDebugValue: () => {},
+  };
+  return { ...actual, ...hooks, default: { ...actual, ...hooks } };
+});
+vi.mock("../../shortcuts/dispatcher", () => ({
+  registerCommands: (commands: Record<string, (event: KeyboardEvent) => void>) => {
+    state.stashHandlers.push(commands["composer.stash"]!);
+    return () => {};
+  },
+}));
+vi.mock("../../commandPaletteBus", () => ({ isCommandPaletteOpen: () => false }));
 vi.mock("@effect/atom-react", async () => ({
   ...(await vi.importActual<typeof import("@effect/atom-react")>("@effect/atom-react")),
   useAtomValue: (atom: Atom.Atom<unknown>) => state.registry!.get(atom),
@@ -67,7 +107,8 @@ vi.mock("../ui/toast", () => ({
       state.notifications.push(notice);
       if (
         notice.title === "Queued edit recovery saved" ||
-        notice.title === "Queued edit kept open for recovery"
+        notice.title === "Queued edit kept open for recovery" ||
+        notice.title === "Queued edit recovery did not finish"
       )
         state.notified?.();
       return "notice";
@@ -118,6 +159,7 @@ async function setup(
 ) {
   vi.resetModules();
   state.notifications.length = 0;
+  state.stashHandlers.length = 0;
   state.notified = undefined;
   state.command.mockReset();
   state.command.mockImplementation(async () => AsyncResult.success(undefined));
@@ -143,7 +185,7 @@ async function setup(
     afterWrite: undefined as ((key: string) => void) | undefined,
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => {
-      if (storage.reject) throw new Error("Quota");
+      if (storage.reject && key === "t2code:prompt-stash:v2") throw new Error("Quota");
       values.set(key, value);
       storage.afterWrite?.(key);
     },
@@ -770,4 +812,257 @@ it("allows an explicit confirmed discard of a blocked edit without changing its 
   expect(f.read().isEditing).toBe(false);
   expect(f.store.getComposerDraft(f.routeThreadRef)?.prompt).toBe("Separate composer");
   expect(state.command).not.toHaveBeenCalled();
+});
+
+async function bindStash(f: Awaited<ReturnType<typeof setup>>, target = f.editTarget) {
+  const stash = await import("./useComposerStash");
+  const promptRef = { current: f.store.getComposerDraft(target)?.prompt ?? "" };
+  const hook = stash.useComposerStash({
+    environmentId: f.environmentId,
+    composerDraftTarget: target,
+    promptRef,
+    readAttachmentDraft: () => ({
+      images: f.store.getComposerDraft(target)?.images ?? [],
+      files: f.store.getComposerDraft(target)?.files ?? [],
+    }),
+    readTerminalContexts: () => f.store.getComposerDraft(target)?.terminalContexts ?? [],
+    routeThreadRef: f.routeThreadRef,
+    projectSelectionRequired: false,
+    pendingUserInputs: [],
+    activePendingProgress: null,
+    prompt: promptRef.current,
+    composerMenuOpen: false,
+    isComposerCollapsedMobile: false,
+    composerPreviewAnnotations: [],
+    composerReviewComments: [],
+    composerThreadContexts: [],
+    attachmentTargetKey: f.composerTargetKey(target),
+    isComposerDraftTargetOpen: () => true,
+    composerEditorRef: { current: null },
+    isRevertingCheckpoint: () => false,
+    pendingThreadImportsRef: { current: new Map() },
+    setComposerCursor: () => {},
+    setComposerTrigger: () => {},
+    importContextRecords: () => new Map(),
+    expandMobileComposer: () => {},
+  });
+  const handler = state.stashHandlers.at(-1)!;
+  expect(handler).toBeTypeOf("function");
+  return {
+    hook,
+    promptRef,
+    stash: () =>
+      handler({ preventDefault: () => {}, stopPropagation: () => {} } as unknown as KeyboardEvent),
+  };
+}
+
+function holdOriginalImage(f: Awaited<ReturnType<typeof setup>>, succeeds: boolean) {
+  const file = new File(["original local image bytes"], "original.png", { type: "image/png" });
+  f.store.addImages(f.editTarget, [
+    {
+      id: "live-image",
+      type: "image",
+      name: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      file,
+      previewUrl: "blob:live",
+    },
+  ]);
+  const reading = deferred<void>();
+  const release = deferred<void>();
+  let reads = 0;
+  vi.stubGlobal(
+    "FileReader",
+    class extends EventTarget {
+      result: string | null = null;
+      readAsDataURL(blob: Blob) {
+        if (++reads === 1) {
+          reading.resolve();
+          void release.promise.then(async () => {
+            if (succeeds) {
+              this.result = `data:${blob.type};base64,${btoa(await blob.text())}`;
+              this.dispatchEvent(new Event("load"));
+            } else this.dispatchEvent(new Event("error"));
+          });
+        } else this.dispatchEvent(new Event("error"));
+      }
+    },
+  );
+  return { file, reading, release, reads: () => reads };
+}
+
+it.each([true, false])(
+  "refuses the registered stash shortcut while recovery owns bytes, with recovery success %s",
+  async (succeeds) => {
+    const f = await setup();
+    const image = holdOriginalImage(f, succeeds);
+    const binding = await bindStash(f);
+    f.leave();
+    await image.reading.promise;
+    expect(f.read().isSaving).toBe(true);
+    binding.stash();
+    const retained = f.store.getComposerDraft(f.editTarget)?.images[0]?.file === image.file;
+    image.release.resolve();
+    await f.done.promise;
+    expect(retained).toBe(true);
+    expect(image.reads()).toBe(1);
+    if (succeeds) {
+      const entry = f.usePromptStashStore.getState().entries[0]!;
+      expect(entry.recovery?.queuedEdit).toBeDefined();
+      expect(entry.attachments[0]?.dataUrl).toBe(
+        `data:image/png;base64,${btoa("original local image bytes")}`,
+      );
+      expect(entry.unreadableImageNames).toBeUndefined();
+      f.store.setPrompt(f.editTarget, "Later unowned draft");
+      binding.promptRef.current = "Later unowned draft";
+      binding.stash();
+      expect(f.usePromptStashStore.getState().entries[0]?.prompt).toBe("Later unowned draft");
+      expect(f.store.getComposerDraft(f.editTarget)?.prompt ?? "").toBe("");
+    } else {
+      expect(f.store.getComposerDraft(f.editTarget)?.images[0]?.file).toBe(image.file);
+      expect(f.usePromptStashStore.getState().entries).toEqual([]);
+      expect(f.read().isEditing).toBe(true);
+    }
+  },
+);
+
+it("refuses manual restore into the owned edit without taking its stash copy", async () => {
+  const f = await setup();
+  const image = holdOriginalImage(f, false);
+  const entry = {
+    id: "other-copy",
+    createdAt: "2026-10-27",
+    prompt: "Other stashed text",
+    attachments: [],
+    droppedImageNames: [],
+  };
+  f.usePromptStashStore.getState().stashEntry(entry);
+  const binding = await bindStash(f);
+  f.leave();
+  await image.reading.promise;
+  await binding.hook.restoreStashEntryStable(entry);
+  const source = f.store.getComposerDraft(f.editTarget);
+  const copy = f.usePromptStashStore.getState().entries.find((value) => value.id === entry.id);
+  image.release.resolve();
+  await f.done.promise;
+  expect(source?.prompt).toBe(f.prompt);
+  expect(source?.images[0]?.file).toBe(image.file);
+  expect(copy).toBeDefined();
+});
+
+it("permits deleting a stash copy to free capacity but protects handles owned only by the live queued edit", async () => {
+  const f = await setup([
+    {
+      id: "queue-upload",
+      type: "file",
+      name: "original.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 4,
+    },
+  ]);
+  const image = holdOriginalImage(f, false);
+  const entry = {
+    id: "other-file-copy",
+    createdAt: "2026-10-27",
+    prompt: "Other copy",
+    attachments: [],
+    files: [
+      {
+        id: "other-file",
+        name: "original.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 4,
+        attachmentId: "queue-upload",
+        environmentId: f.environmentId,
+      },
+    ],
+    droppedImageNames: [],
+  };
+  f.usePromptStashStore.getState().stashEntry(entry);
+  const binding = await bindStash(f);
+  f.leave();
+  await image.reading.promise;
+  binding.hook.deleteStashEntryStable(entry);
+  const deletions = state.rpc.mock.calls
+    .filter(([, command]) => command === "remove")
+    .map(([, , target]) => target);
+  image.release.resolve();
+  await f.done.promise;
+  expect(f.usePromptStashStore.getState().entries).toEqual([]);
+  expect(deletions).toEqual([]);
+  expect(f.store.getComposerDraft(f.editTarget)?.images[0]?.file).toBe(image.file);
+});
+
+it("rechecks live queued ownership after manual restore verification before taking the entry", async () => {
+  const f = await setup();
+  await f.read().cancelEdit();
+  const entry = {
+    id: "waiting-restore",
+    createdAt: "2026-10-27",
+    prompt: "Stashed file",
+    attachments: [],
+    files: [
+      {
+        id: "restored-file",
+        name: "a.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 4,
+        attachmentId: "restore-upload",
+        environmentId: f.environmentId,
+      },
+    ],
+    droppedImageNames: [],
+  };
+  f.usePromptStashStore.getState().stashEntry(entry);
+  const binding = await bindStash(f);
+  const verifying = deferred<void>();
+  const reply = deferred<Awaited<ReturnType<typeof state.query>>>();
+  state.query.mockImplementation(() => {
+    verifying.resolve();
+    return reply.promise;
+  });
+  const pending = binding.hook.restoreStashEntryStable(entry);
+  await verifying.promise;
+  f.read().beginEdit({
+    runId: f.runId,
+    messageId: MessageId.make("new-claim"),
+    text: "New owned edit",
+    attachments: [],
+  });
+  reply.resolve(AsyncResult.success({ relativeUrl: "/verified" }));
+  await pending;
+  expect(f.store.getComposerDraft(f.editTarget)?.prompt).toBe("New owned edit");
+  expect(f.store.getComposerDraft(f.editTarget)?.files).toEqual([]);
+  expect(f.usePromptStashStore.getState().entries.some((value) => value.id === entry.id)).toBe(
+    true,
+  );
+});
+
+it("allows an unrelated normal composer to stash while queued recovery retains its source", async () => {
+  const f = await setup();
+  const image = holdOriginalImage(f, false);
+  const normal = await bindStash(f, f.routeThreadRef);
+  f.leave();
+  await image.reading.promise;
+  normal.stash();
+  expect(f.store.getComposerDraft(f.editTarget)?.images[0]?.file).toBe(image.file);
+  expect(f.usePromptStashStore.getState().entries[0]?.prompt).toBe("Separate composer");
+  image.release.resolve();
+  await f.done.promise;
+  expect(f.store.getComposerDraft(f.editTarget)?.images[0]?.file).toBe(image.file);
+});
+
+it("does not claim original byte ownership when another action removes the current source", async () => {
+  const f = await setup();
+  const image = holdOriginalImage(f, false);
+  f.leave();
+  await image.reading.promise;
+  f.store.clearComposerContent(f.editTarget);
+  image.release.resolve();
+  await f.done.promise;
+  const notice = state.notifications.at(-1)!;
+  expect(notice.title).toBe("Queued edit recovery did not finish");
+  expect(notice.description).toContain("changed or was removed");
+  expect(notice.description).not.toContain("remain owned by the edit");
 });

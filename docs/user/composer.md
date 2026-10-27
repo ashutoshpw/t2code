@@ -232,7 +232,7 @@ uploads still need **Attach again**.
 If a run starts or leaves the queue while you are editing its message, the unsaved
 edit is saved separately in the prompt stash. Your normal composer stays intact.
 Restore the copy in the original thread into an empty composer, then send it as a
-new message; it does not update the run that already left the queue. If an earlier
+new message; it does not update the run that already left the queue. While a queued edit stays open, save it or its recovery copy before using stash or restore. You can still delete other stash entries to free space. If an earlier
 save reply was lost, check the thread before sending the copy again.
 
 Recovery waits for local file uploads and saves original image bytes, subject to
