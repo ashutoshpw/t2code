@@ -52,8 +52,8 @@ const isControlHttpTrace = Schema.is(
   Schema.Struct({
     type: Schema.Literal("effect-span"),
     attributes: Schema.Struct({
-      "url.path": Schema.Literal("/api/assets-info"),
-      "http.response.status_code": Schema.Literal(200),
+      "url.path": Schema.String,
+      "http.response.status_code": Schema.Number,
     }),
   }),
 );
@@ -240,6 +240,48 @@ describe("Spaces public asset wiring", () => {
                 [`/api/assets?query=${secrets[0]}`, 404],
               ] as const)
                 expect((yield* request(path)).status).toBe(status);
+              for (const [prefix, status] of [
+                ["/api//assets", 404],
+                ["//api///assets", 404],
+                ["/API/ASSETS", 200],
+                ["/%61pi/ass%65ts", 404],
+              ] as const) {
+                const alias = target.replace("/api/assets", prefix);
+                for (const method of ["GET", "HEAD", "POST"] as const) {
+                  const response = yield* request(alias, { method });
+                  expect(response.status).toBe(method === "POST" ? 404 : status);
+                  yield* Effect.promise(() => response.arrayBuffer());
+                }
+                const ranged = yield* request(alias, { headers: { range: "bytes=0-4" } });
+                expect(ranged.status).toBe(status === 200 ? 206 : status);
+                yield* Effect.promise(() => ranged.arrayBuffer());
+              }
+              for (const prefix of [
+                "/api/spaces//assets/upload",
+                "//api///spaces/assets//upload",
+                "/%61pi/spaces/ass%65ts/upload",
+              ]) {
+                const alias = `${grant.relativeUrl.replace("/api/spaces/assets/upload", prefix)}?query=${secrets[0]}`;
+                expect(
+                  (yield* request(alias, {
+                    method: "POST",
+                    headers: { "content-length": String(pdf.length) },
+                    body: new Uint8Array(pdf),
+                  })).status,
+                ).toBe(404);
+              }
+              expect(
+                (yield* request(`/API/SPACES/ASSETS/UPLOAD/${secrets[1]}?query=${secrets[0]}`, {
+                  method: "POST",
+                })).status,
+              ).toBe(404);
+              expect((yield* request(`/api/assets;query=${secrets[0]}`)).status).toBe(404);
+              for (const path of ["/api/assets%2Finfo", "/api/spaces//assets/upload-info"]) {
+                expect((yield* request(`${path}?query=public`)).status).toBe(404);
+              }
+              const aliasControl = yield* request("/api//assets-info?query=public");
+              expect(aliasControl.status).toBe(200);
+              expect(yield* Effect.promise(() => aliasControl.text())).toBe("public control");
               const control = yield* request("/api/assets-info?query=public");
               expect(control.status).toBe(200);
               expect(yield* Effect.promise(() => control.text())).toBe("public control");
@@ -269,8 +311,22 @@ describe("Spaces public asset wiring", () => {
               .split("\n")
               .filter(Boolean)
               .map((line): unknown => JSON.parse(line));
-            expect(records.some(isControlHttpTrace)).toBe(true);
-            expect(logs.includes("/api/assets-info")).toBe(true);
+            const httpRecords = records.filter(isControlHttpTrace);
+            for (const [path, status] of [
+              ["/api/assets-info", 200],
+              ["/api//assets-info", 200],
+              ["/api/assets%2Finfo", 404],
+              ["/api/spaces//assets/upload-info", 404],
+            ] as const) {
+              expect(
+                httpRecords.some(
+                  (record) =>
+                    record.attributes["url.path"] === path &&
+                    record.attributes["http.response.status_code"] === status,
+                ),
+              ).toBe(true);
+              expect(logs.includes(path)).toBe(true);
+            }
           }),
         true,
         true,

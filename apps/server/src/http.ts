@@ -433,9 +433,20 @@ export const layerOtlpTracesProxyRoute = HttpRouter.add(
 const UNTRACED_REQUEST_PATHS: ReadonlySet<string> = new Set([OTLP_TRACES_PROXY_PATH]);
 
 const isAssetBearerPath = (url: string) => {
-  const path = url.split("?", 1)[0]!;
-  return [ASSET_ROUTE_PREFIX, SPACES_UPLOAD_ROUTE_PREFIX].some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  const segments = url
+    .replace(/^https?:\/\/.*?\//, "/")
+    .split(/[?#;]/, 1)[0]!
+    .replace(/\/{2,}/g, "/")
+    .split("/", 5);
+  // Decode only static prefix segments; decodeURI preserves the router's encoded-separator boundaries.
+  return [ASSET_ROUTE_PREFIX, SPACES_UPLOAD_ROUTE_PREFIX].some((prefix) =>
+    prefix.split("/").every((part, index) => {
+      try {
+        return decodeURI(segments[index] ?? "").toLowerCase() === part;
+      } catch {
+        return false;
+      }
+    }),
   );
 };
 
