@@ -30,6 +30,7 @@ export class SpaceHeavyMediaSource {
     if (this.current() && Number.isSafeInteger(page) && page >= 0 && page < 2000) this.#page = page;
   };
   #binding = 0;
+  #loadedBinding = 0;
   #request = 0;
   constructor(current: () => boolean) {
     this.#current = current;
@@ -65,6 +66,7 @@ export class SpaceHeavyMediaSource {
       !this.current() ||
       attempt !== this.#snapshot.attempt ||
       video !== this.#video ||
+      this.#loadedBinding !== this.#binding ||
       video.error ||
       !Number.isFinite(video.currentTime)
     )
@@ -72,11 +74,25 @@ export class SpaceHeavyMediaSource {
     this.#last = { time: Math.max(0, video.currentTime), paused: video.paused };
   }
   #capture() {
-    if (this.#resume) return;
-    if (this.#video && !this.#video.error && Number.isFinite(this.#video.currentTime))
-      this.#resume = { time: Math.max(0, this.#video.currentTime), paused: this.#video.paused };
-    else this.#resume = this.#last;
+    if (this.#video && this.#loadedBinding === this.#binding) {
+      if (!this.#video.error && Number.isFinite(this.#video.currentTime))
+        this.#resume = { time: Math.max(0, this.#video.currentTime), paused: this.#video.paused };
+      else this.#resume = this.#last ?? this.#resume;
+    } else this.#resume ??= this.#last;
   }
+  adoptUrl(url: string) {
+    if (this.current() && this.#snapshot.url === null) this.#update({ url });
+  }
+  bindVideo = (video: VideoSurface) => {
+    const { url, attempt } = this.#snapshot;
+    if (!url) {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+      return;
+    }
+    return this.attach(video, attempt, url);
+  };
   attach(video: VideoSurface, attempt: number, url: string) {
     if (!this.current() || attempt !== this.#snapshot.attempt) {
       video.pause();
@@ -112,6 +128,7 @@ export class SpaceHeavyMediaSource {
       this.#video !== video
     )
       return;
+    this.#loadedBinding = this.#binding;
     const resume = this.#resume;
     if (!resume) {
       this.remember(video, attempt);

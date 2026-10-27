@@ -139,15 +139,16 @@ it("keeps the bounded PDF page anchor across URL retry and subscription reacquis
   resumed();
 });
 
-it("owns the video before metadata and releases only its exact element, including strict ref reacquisition", () => {
+it("owns the video before metadata and releases only its exact element, including strict ref reacquisition", async () => {
   const owner = new SpaceHeavyMediaSource(() => true);
   const stop = owner.subscribe(() => {});
   const first = video("first");
-  const release = owner.attach(first.element, owner.getSnapshot().attempt, "first")!;
+  await owner.retry(async () => "first");
+  const release = owner.bindVideo(first.element)!;
   release();
   expect(first.calls).toEqual(["pause", "remove:src", "load"]);
   expect(first.element.src).toBe("");
-  const releaseAgain = owner.attach(first.element, owner.getSnapshot().attempt, "first")!;
+  const releaseAgain = owner.bindVideo(first.element)!;
   expect(first.element.src).toBe("first");
   release();
   expect(first.element.src).toBe("first");
@@ -158,4 +159,78 @@ it("owns the video before metadata and releases only its exact element, includin
   expect(second.calls).toEqual([]);
   stop();
   expect(second.calls).toEqual(["pause", "remove:src", "load"]);
+});
+
+it.each([false, true])(
+  "uses current healthy playback after a failed remint, including later media failure (%s)",
+  async (failed) => {
+    const owner = new SpaceHeavyMediaSource(() => true);
+    const stop = owner.subscribe(() => {});
+    const old = video("old", 37, false);
+    owner.attach(old.element, owner.getSnapshot().attempt, "old");
+    owner.loaded(old.element, owner.getSnapshot().attempt, "old");
+    await expect(
+      owner.retry(async () => {
+        throw new Error("offline");
+      }),
+    ).rejects.toThrow("offline");
+    await old.element.play();
+    old.element.currentTime = 61;
+    owner.remember(old.element, owner.getSnapshot().attempt);
+    if (failed) {
+      old.element.error = new Error("Expired source");
+      old.element.currentTime = 0;
+    }
+    await owner.retry(async () => "fresh");
+    const next = video("fresh");
+    owner.attach(next.element, owner.getSnapshot().attempt, "fresh");
+    owner.loaded(next.element, owner.getSnapshot().attempt, "fresh");
+    expect(next.element.currentTime).toBe(61);
+    expect(next.element.paused).toBe(false);
+    stop();
+  },
+);
+
+it("adopts only a current authorized initial URL and preserves it through ref cleanup, ignoring background replacements", () => {
+  let current = true;
+  const owner = new SpaceHeavyMediaSource(() => current);
+  owner.adoptUrl("before-mount");
+  expect(owner.getSnapshot().url).toBeNull();
+  const unowned = video("unowned-dom-source");
+  owner.bindVideo(unowned.element);
+  expect(unowned.element.src).toBe("");
+  const stop = owner.subscribe(() => {});
+  current = false;
+  owner.adoptUrl("withdrawn");
+  expect(owner.getSnapshot().url).toBeNull();
+  current = true;
+  owner.adoptUrl("authorized");
+  const element = video("arbitrary-dom-value");
+  const release = owner.bindVideo(element.element)!;
+  expect(element.element.src).toBe("authorized");
+  owner.adoptUrl("background-remint");
+  expect(owner.getSnapshot().url).toBe("authorized");
+  release();
+  expect(element.element.src).toBe("");
+  owner.bindVideo(element.element);
+  expect(element.element.src).toBe("authorized");
+  stop();
+});
+
+it("retains the pending playback position when a replacement ref tears down before metadata", async () => {
+  const owner = new SpaceHeavyMediaSource(() => true);
+  const stop = owner.subscribe(() => {});
+  owner.adoptUrl("old");
+  const first = video("old", 37, false);
+  owner.bindVideo(first.element);
+  owner.loaded(first.element, owner.getSnapshot().attempt, "old");
+  await owner.retry(async () => "fresh");
+  const next = video("fresh");
+  const release = owner.bindVideo(next.element)!;
+  release();
+  owner.bindVideo(next.element);
+  owner.loaded(next.element, owner.getSnapshot().attempt, "fresh");
+  expect(next.element.currentTime).toBe(37);
+  expect(next.element.paused).toBe(false);
+  stop();
 });

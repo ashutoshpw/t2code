@@ -1,5 +1,5 @@
 import { RegistryContext } from "@effect/atom-react";
-import { lazy, Suspense, useContext, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useEffect, useContext, useState, useSyncExternalStore } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceAssetMetadata } from "@t2code/contracts/spaces";
 import { SpaceHeavyMediaSource } from "@t2code/client-runtime/spaces";
@@ -32,10 +32,13 @@ export function SpaceHeavyMediaView({
   const enabled = lease.active && owner.current();
   const url = useLongLivedAssetUrl(enabled ? environmentId : null, resource);
   const refresh = useAssetUrlRefresh(enabled ? environmentId : null, enabled ? resource : null);
-  const src = source.url ?? (url._tag === "Success" ? url.url : null);
+  const availableUrl = url._tag === "Success" ? url.url : null;
+  // oxlint-disable-next-line t2code/react-effect-budget -- Adopt the authorized signed source before mounting its decoder; ref cleanup may clear the DOM src.
+  useEffect(() => {
+    if (source.active && source.url === null && availableUrl) owner.adoptUrl(availableUrl);
+  }, [owner, source.active, source.url, availableUrl]);
+  const src = source.url;
   const retry = () => owner.retry(refresh);
-  const bindVideo = (video: HTMLVideoElement) =>
-    owner.attach(video, owner.getSnapshot().attempt, video.src);
   return (
     <div className="space-y-2">
       {!lease.active ? (
@@ -82,12 +85,12 @@ export function SpaceHeavyMediaView({
             }}
             onLoadedMetadata={(event) => {
               if (event.target instanceof HTMLVideoElement && src)
-                owner.loaded(event.target, source.attempt, event.target.src);
+                owner.loaded(event.target, source.attempt, src);
             }}
           >
             <MediaVideoPlayer
               key={source.attempt}
-              bindVideo={bindVideo}
+              bindVideo={owner.bindVideo}
               src={src}
               label={metadata.name}
               revision={metadata.digest}
