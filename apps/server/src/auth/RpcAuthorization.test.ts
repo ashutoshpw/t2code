@@ -396,6 +396,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesStructureInspect,
       WS_METHODS.spacesReferencesResolve,
       WS_METHODS.spacesTrashList,
+      WS_METHODS.spacesSearch,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
       Effect.provide(
@@ -530,6 +531,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
             "spaces.structure.inspect": deniedHandler,
             "spaces.references.resolve": deniedHandler,
             "spaces.trash.list": deniedHandler,
+            "spaces.search": deniedHandler,
           }),
           RpcAuthorization.layer([AuthOrchestrationOperateScope]),
         ),
@@ -540,6 +542,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
     for (const call of [
       client[WS_METHODS.spacesList]({ environmentId }),
       client[WS_METHODS.spacesTrashList]({ environmentId }),
+      client[WS_METHODS.spacesSearch]({ environmentId, query: "needle" }),
       client[WS_METHODS.spacesPagesList]({ environmentId, spaceId: C.SpaceId.make("space") }),
       client[WS_METHODS.spacesPagesGet]({ environmentId, pageId }),
       client[WS_METHODS.spacesReferencesResolve]({

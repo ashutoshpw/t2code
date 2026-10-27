@@ -11,6 +11,7 @@ import * as PageStore from "./PageStore.ts";
 import * as RevisionStore from "./RevisionStore.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
+import * as SearchStore from "./SearchStore.ts";
 
 interface Peer {
   readonly id: string;
@@ -664,7 +665,13 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
     yield* sql`INSERT INTO spaces_ids(id,kind) VALUES (${pageId},'page')`;
     yield* sql`INSERT INTO spaces_pages(page_id,space_id,title,root_order,created_at,updated_at) VALUES (${pageId},${spaceId},${title},NULL,${timestamp},${timestamp})`;
   }
+  if (!plan.source && !plan.movingBlocks) yield* SearchStore.writeTitle(pageId, title!);
   for (const row of writes.values()) {
+    yield* SearchStore.writeBlock(
+      row.page_id,
+      row.block_id,
+      row.deleted ? null : BlockStore.storedBlockFromRow(row),
+    );
     if (plan.blocks.has(row.block_id)) {
       yield* sql`UPDATE spaces_blocks SET page_id=${row.page_id},parent_id=${row.parent_id},rank=${row.rank},payload=${row.payload},logical_bytes=${row.logical_bytes},deleted=${row.deleted},merged_into=${row.merged_into} WHERE block_id=${row.block_id}`;
       continue;

@@ -5,6 +5,7 @@ import * as Schema from "effect/Schema";
 import { byteLength, checkLimit, canonical, limits } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
+import * as SearchStore from "./SearchStore.ts";
 
 export interface BlockRow {
   readonly block_id: string;
@@ -248,6 +249,7 @@ export const apply = Effect.fnUntraced(function* (
   checkLimit("maxPageBlocks", count);
   checkLimit("maxPageBytes", bytes);
   for (const { id, block, old, payload, size } of changes) {
+    yield* SearchStore.writeBlock(pageId, id, block);
     if (!old) yield* sql`INSERT INTO spaces_ids (id, kind) VALUES (${id}, 'block')`;
     yield* sql`INSERT INTO spaces_blocks (block_id, page_id, parent_id, rank, payload, logical_bytes, deleted, merged_into)
       VALUES (${id}, ${pageId}, ${block?.parentId ?? null}, ${block?.order ?? old?.rank ?? ""}, ${payload}, ${size}, ${block ? 0 : 1}, ${merges.get(id) ?? null})

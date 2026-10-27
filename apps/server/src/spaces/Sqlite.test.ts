@@ -65,6 +65,7 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
       { migration_id: 4, name: "PageOwners" },
       { migration_id: 5, name: "ReferenceIdentity" },
       { migration_id: 6, name: "Recovery" },
+      { migration_id: 7, name: "Search" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -537,6 +538,35 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
               "SqlError",
             );
           }).pipe(Effect.provide(Sqlite.layerFromPath(dbPath)));
+        yield* Effect.gen(function* () {
+          const service = yield* SpacesService.SpacesService;
+          const environmentId = EnvironmentId.make("core-environment");
+          const pending = yield* Effect.flip(service.search({ environmentId, query: "Core" }));
+          assert.equal(pending._tag, "SpaceSearchUnavailableError");
+          const found = yield* service.search({ environmentId, query: "Core" });
+          assert.deepEqual(
+            found.items.map((row) => row.page.id),
+            [C.SpacePageId.make("core-page")],
+          );
+          assert.deepEqual((yield* service.search({ environmentId, query: "界" })).items, []);
+          yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            assert.deepEqual(yield* sql`SELECT * FROM spaces_blocks`, before.blocks);
+            assert.deepEqual(yield* sql`SELECT * FROM spaces_receipts`, before.receipts);
+            assert.deepEqual(yield* sql`SELECT * FROM spaces_revisions`, []);
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+        }).pipe(
+          Effect.provide(
+            SpacesService.layerFromPath(dbPath).pipe(
+              Layer.provide(
+                Layer.succeed(ServerEnvironment.ServerEnvironmentIdentity, {
+                  getEnvironmentId: Effect.succeed(EnvironmentId.make("core-environment")),
+                }),
+              ),
+              Layer.provide(Settings.layerTest({ spacesEnabled: true })),
+            ),
+          ),
+        );
       }),
   );
 
@@ -579,7 +609,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            6,
+            7,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -693,7 +723,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (7, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (8, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;

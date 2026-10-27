@@ -97,6 +97,15 @@ describe("command permissions", () => {
             expect(registry.get(permission.permissionAtom(other))).toBe(true);
             yield* permission.authorize(registry, other);
           }
+          const search = createCommandPermissions(runtime, WS_METHODS.spacesSearch);
+          expect(registry.get(search.permissionAtom(env))).toBe(true);
+          yield* search.authorize(registry, env);
+          expect(registry.get(search.permissionAtom(other))).toBe(false);
+          expect((yield* search.authorize(registry, other).pipe(Effect.flip))._tag).toBe(
+            "EnvironmentAuthorizationError",
+          );
+          registry.set(sessions(env), AsyncResult.success(grant(false)));
+          expect(registry.get(search.permissionAtom(env))).toBe(false);
           registry.set(sessions(other), AsyncResult.success(grant(false)));
           expect(
             registry.get(

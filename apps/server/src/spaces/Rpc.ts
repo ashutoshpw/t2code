@@ -21,6 +21,7 @@ import {
   WsSpacesPagesRestoreRpc,
   WsSpacesPagesPermanentlyDeleteRpc,
   WsSpacesTrashListRpc,
+  WsSpacesSearchRpc,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
@@ -110,6 +111,7 @@ export const group = RpcGroup.make(
       input,
     })),
   ),
+  WsSpacesSearchRpc.setPayload(strictPayload(C.SpaceSearchInput)),
   WsSpacesTrashListRpc.setPayload(strictPayload(C.SpaceTrashListInput)),
 ).middleware(RpcScopeAuthorization);
 
@@ -135,6 +137,7 @@ export const handlers = Effect.gen(function* () {
     [WS_METHODS.spacesPagesTrash]: (input) => service.trashPage(input),
     [WS_METHODS.spacesPagesRestore]: (input) => service.restorePage(input),
     [WS_METHODS.spacesPagesPermanentlyDelete]: (input) => service.permanentlyDeletePage(input),
+    [WS_METHODS.spacesSearch]: (input) => service.search(input),
     [WS_METHODS.spacesTrashList]: (input) => service.listTrash(input),
   });
 });

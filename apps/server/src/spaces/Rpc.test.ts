@@ -45,6 +45,7 @@ const decodeMovedBlocks = Schema.decodeUnknownSync(C.SpaceMoveBlocksResult);
 const decodeReference = Schema.decodeUnknownSync(C.SpaceReferenceResolveResult);
 const decodeRecovery = Schema.decodeUnknownSync(C.SpacePageRecoveryResult);
 const decodePurged = Schema.decodeUnknownSync(C.SpacePagePurgeResult);
+const decodeSearch = Schema.decodeUnknownSync(C.SpaceSearchResult);
 const decodeTrash = Schema.decodeUnknownSync(C.SpaceTrashListResult);
 const control = RpcGroup.make(WsServerRefreshProvidersRpc).middleware(RpcScopeAuthorization);
 const group = SpacesRpc.group.merge(control);
@@ -156,6 +157,53 @@ const fixture = Effect.fn("SpacesRpcTest.fixture")(function* <A, E>(
 });
 
 it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
+  it.effect(
+    "serves typed search with read scope and bounds the original search payload before decode",
+    () =>
+      fixture(
+        Effect.gen(function* () {
+          const service = yield* SpacesService.SpacesService;
+          const library = yield* service.listSpaces(env);
+          yield* service.createPage({
+            ...env,
+            receiptEpoch: library.mutationAdmission.epoch,
+            mutationId: "wire-search-page",
+            spaceId: library.defaultSpaceId,
+            baseRootOrderRevision: 0,
+            title: "wiresearchneedle",
+          });
+          const { request } = yield* encodedServer([AuthOrchestrationReadScope]);
+          const pending = typedFailure(
+            yield* request(WS_METHODS.spacesSearch, { ...env, query: "wiresearchneedle" }),
+          );
+          assert.deepEqual(pending, { _tag: "SpaceSearchUnavailableError", reason: "building" });
+          const found = decodeSearch(
+            savedValue(
+              yield* request(WS_METHODS.spacesSearch, { ...env, query: "wiresearchneedle" }),
+            ),
+          );
+          assert.equal(found.items[0]?.page.title, "wiresearchneedle");
+          assert.isDefined(found.items[0]?.page.location);
+          expectDefect(
+            yield* request(WS_METHODS.spacesSearch, {
+              ...env,
+              query: "wiresearchneedle",
+              grammar: "raw",
+            }),
+          );
+          const base = { ...env, query: "" };
+          const exact = { ...env, query: "x".repeat(1_048_576 - frameBytes(base)) };
+          assert.equal(frameBytes(exact), 1_048_576);
+          const large = typedFailure(yield* request(WS_METHODS.spacesSearch, exact));
+          assert.equal(Reflect.get(large as object, "_tag"), "SpaceLimitExceededError");
+          assert.equal(Reflect.get(large as object, "limit"), "search.maxQueryBytes");
+          expectDefect(
+            yield* request(WS_METHODS.spacesSearch, { ...exact, query: exact.query + "x" }),
+          );
+        }),
+      ),
+  );
+
   it.effect(
     "round-trips structural guards and receipt tags through original strict encoded mutation envelopes",
     () =>

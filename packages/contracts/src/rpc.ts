@@ -406,6 +406,7 @@ export const WS_METHODS = {
   spacesPagesRestore: "spaces.pages.restore",
   spacesPagesPermanentlyDelete: "spaces.pages.permanentlyDelete",
   spacesTrashList: "spaces.trash.list",
+  spacesSearch: "spaces.search",
 
   projectsList: "projects.list",
   projectsAdd: "projects.add",
@@ -715,6 +716,12 @@ export const WsSpacesPagesPermanentlyDeleteRpc = Rpc.make(WS_METHODS.spacesPages
   success: Spaces.SpacePagePurgeResult,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
+export const WsSpacesSearchRpc = Rpc.make(WS_METHODS.spacesSearch, {
+  payload: Spaces.SpaceSearchInput,
+  success: Spaces.SpaceSearchResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
 export const WsSpacesTrashListRpc = Rpc.make(WS_METHODS.spacesTrashList, {
   payload: Spaces.SpaceTrashListInput,
   success: Spaces.SpaceTrashListResult,
@@ -2081,6 +2088,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesPagesRestoreRpc,
   WsSpacesPagesPermanentlyDeleteRpc,
   WsSpacesTrashListRpc,
+  WsSpacesSearchRpc,
 
   WsGuestShareCreateRpc,
   WsServerProbeRpc,

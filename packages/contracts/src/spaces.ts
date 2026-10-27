@@ -223,6 +223,25 @@ export const SpacePageListResult = Schema.Struct({
   mutationAdmission: SpaceMutationAdmission,
 });
 export type SpacePageListResult = typeof SpacePageListResult.Type;
+export const SpaceSearchInput = Schema.Struct({
+  ...SpaceListInput.fields,
+  spaceId: Schema.optionalKey(SpaceId),
+  query: Schema.String,
+});
+export type SpaceSearchInput = typeof SpaceSearchInput.Type;
+export const SpaceSearchResult = Schema.Struct({
+  catalogRevision: NonNegativeInt,
+  items: Schema.Array(
+    Schema.Struct({
+      page: SpacePageSummary,
+      blockId: Schema.optionalKey(SpaceBlockId),
+      snippet: Schema.String,
+    }),
+  ),
+  nextCursor: Schema.NullOr(SpaceCursor),
+});
+export type SpaceSearchResult = typeof SpaceSearchResult.Type;
+
 export const SpacePageGetInput = Schema.Struct({
   environmentId: EnvironmentId,
   pageId: SpacePageId,
@@ -576,9 +595,23 @@ export const SpaceHistoryLimits = Schema.Struct({
 });
 export type SpaceHistoryLimits = typeof SpaceHistoryLimits.Type;
 
+export const SpaceSearchLimits = Schema.Struct({
+  maxQueryBytes: PositiveInt,
+  maxTerms: PositiveInt,
+  maxRows: PositiveInt,
+  maxResponseBytes: PositiveInt,
+  maxCandidates: PositiveInt,
+  maxCandidateBytes: PositiveInt,
+  maxSnippetBytes: PositiveInt,
+  backfillRows: PositiveInt,
+  backfillBytes: PositiveInt,
+});
+export type SpaceSearchLimits = typeof SpaceSearchLimits.Type;
+
 // These describe advertised service policy; replay decoding must not freeze today's maxima.
 export const SpaceLimits = Schema.Struct({
   history: Schema.optionalKey(SpaceHistoryLimits),
+  search: Schema.optionalKey(SpaceSearchLimits),
   maxReferenceHops: Schema.optionalKey(PositiveInt),
   maxListRows: PositiveInt,
   maxListResponseBytes: PositiveInt,
@@ -651,6 +684,7 @@ export class SpaceValidationError extends Schema.TaggedError<SpaceValidationErro
       "trashed",
       "invalid_recovery_state",
       "invalid_input",
+      "invalid_search_query",
     ]),
   },
 ) {
@@ -662,7 +696,8 @@ export class SpaceLimitExceededError extends Schema.TaggedError<SpaceLimitExceed
   "SpaceLimitExceededError",
   {
     limit: Schema.Literals([
-      ...Struct.keys(SpaceLimits.fields).filter((key) => key !== "history"),
+      ...Struct.keys(SpaceLimits.fields).filter((key) => key !== "history" && key !== "search"),
+      ...Struct.keys(SpaceSearchLimits.fields).map((key) => `search.${key}` as const),
       "history.maxDeltaBytes",
       "history.maxPageBytes",
       "history.maxEnvironmentBytes",
@@ -699,7 +734,16 @@ export class SpaceCursorStaleError extends Schema.TaggedError<SpaceCursorStaleEr
     return "The Spaces cursor is stale.";
   }
 }
+export class SpaceSearchUnavailableError extends Schema.TaggedError<SpaceSearchUnavailableError>()(
+  "SpaceSearchUnavailableError",
+  { reason: Schema.Literals(["building", "unsupported", "storage"]) },
+) {
+  override get message(): string {
+    return "Spaces search is unavailable.";
+  }
+}
 export const SpaceServiceError = Schema.Union([
+  SpaceSearchUnavailableError,
   SpacesDisabledError,
   SpacesUnavailableError,
   SpaceEnvironmentMismatchError,

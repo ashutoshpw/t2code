@@ -300,7 +300,18 @@ describe("Spaces core protocol", () => {
       cleanupBatchRows: 100,
       cleanupBatchBytes: 8_388_608,
     };
-    const next = { ...old, limits: { ...old.limits, history, maxReferenceHops: 64 } };
+    const search = {
+      maxQueryBytes: 512,
+      maxTerms: 9,
+      maxRows: 100,
+      maxResponseBytes: 131072,
+      maxCandidates: 1000,
+      maxCandidateBytes: 2097152,
+      maxSnippetBytes: 1024,
+      backfillRows: 200,
+      backfillBytes: 524288,
+    };
+    const next = { ...old, limits: { ...old.limits, history, search, maxReferenceHops: 64 } };
     expect(decodeCapability(next)).toEqual(next);
     expect(() =>
       decodeCapability({
@@ -321,7 +332,13 @@ describe("Spaces core protocol", () => {
       const raw = { _tag: "SpaceLimitExceededError", limit, actual: 2, maximum: 1 };
       expect(encodeError(decodeError(raw))).toEqual(raw);
     }
-    for (const limit of ["history", "history.retentionMs"])
+    expect(() =>
+      decodeCapability({
+        ...next,
+        limits: { ...next.limits, search: { ...search, maxCandidates: 0 } },
+      }),
+    ).toThrow();
+    for (const limit of ["history", "history.retentionMs", "search", "search.grammar"])
       expect(() =>
         decodeError({ _tag: "SpaceLimitExceededError", limit, actual: 2, maximum: 1 }),
       ).toThrow();

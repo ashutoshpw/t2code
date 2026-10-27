@@ -26,7 +26,25 @@ export interface PageRow {
   readonly owner_type: string | null;
 }
 
-export function summary(row: PageRow, allowOrphanedTrash = false): C.SpacePageSummary {
+export type SummaryRow = Pick<
+  PageRow,
+  | "page_id"
+  | "space_id"
+  | "title"
+  | "revision"
+  | "root_order"
+  | "created_at"
+  | "updated_at"
+  | "trash_batch_id"
+  | "trash_root_id"
+  | "trashed_at_ms"
+  | "owner_block_id"
+  | "parent_page_id"
+  | "owner_deleted"
+  | "parent_space_id"
+  | "owner_type"
+>;
+export function summary(row: SummaryRow, allowOrphanedTrash = false): C.SpacePageSummary {
   let location: C.SpacePageLocation | undefined;
   if (row.root_order !== null && row.owner_block_id === null) {
     location = { kind: "root", spaceId: row.space_id, order: row.root_order };

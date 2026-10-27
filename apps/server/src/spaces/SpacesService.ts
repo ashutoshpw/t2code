@@ -16,7 +16,14 @@ import * as Semaphore from "effect/Semaphore";
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as BlockStore from "./BlockStore.ts";
-import { byteLength, canonical, checkLimit, limits } from "./CorePolicy.ts";
+import {
+  byteLength,
+  canonical,
+  checkLimit,
+  limits,
+  searchLimits,
+  checkSearchLimit,
+} from "./CorePolicy.ts";
 import * as Receipts from "./Receipts.ts";
 import * as RevisionStore from "./RevisionStore.ts";
 import * as PageStore from "./PageStore.ts";
@@ -24,6 +31,7 @@ import * as PageStructure from "./PageStructure.ts";
 import * as PageRecovery from "./PageRecovery.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
+import * as SearchStore from "./SearchStore.ts";
 import * as Sqlite from "./Sqlite.ts";
 
 export class SpacesService extends Context.Service<
@@ -33,6 +41,7 @@ export class SpacesService extends Context.Service<
       environmentId: EnvironmentId,
     ) => Effect.Effect<C.SpaceCapability | null, C.SpaceServiceError>;
     // Inputs remain raw until the service's strict, size-bounded decoding boundary.
+    readonly search: (input: unknown) => Effect.Effect<C.SpaceSearchResult, C.SpaceServiceError>;
     readonly listSpaces: (input: unknown) => Effect.Effect<C.SpaceListResult, C.SpaceServiceError>;
     readonly listPages: (
       input: unknown,
@@ -118,6 +127,7 @@ const spaceSummary = (row: SpaceRow): C.SpaceSummary => ({
 const pageSummary = PageStore.summary;
 const pagePreimage = PageStore.preimage;
 const strict = { onExcessProperty: "error" } as const;
+const decodeSearch = Schema.decodeUnknownEffect(C.SpaceSearchInput, strict);
 const decodeTrashList = Schema.decodeUnknownEffect(C.SpaceTrashListInput, strict);
 const decodeRecoveryResult = Schema.decodeUnknownSync(C.SpacePageRecoveryResult, strict);
 const decodePurgeResult = Schema.decodeUnknownSync(C.SpacePagePurgeResult, strict);
@@ -140,6 +150,7 @@ const decodeApplyResult = Schema.decodeUnknownSync(C.SpaceApplyBlockBatchResult,
 const decodeCreateChildResult = Schema.decodeUnknownSync(C.SpaceCreateChildPageResult, strict);
 const decodeMovePageResult = Schema.decodeUnknownSync(C.SpaceMovePageResult, strict);
 const isServiceError = Schema.is(C.SpaceServiceError);
+const isSearchUnavailable = Schema.is(C.SpaceSearchUnavailableError);
 const Cursor = Schema.Struct({
   environmentId: EnvironmentId,
   operation: Schema.String,
@@ -214,6 +225,11 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
     Layer.buildWithScope(Sqlite.layerFromPath(dbPath), scope).pipe(
       Effect.provide(platform),
       Effect.map((context) => Context.get(context, SpacesSql.SpacesSql)),
+      Effect.tap((sql) =>
+        sql.withTransaction(
+          SearchStore.checkModule().pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+        ),
+      ),
       Effect.mapError(() => new C.SpacesUnavailableError({ stage: "initializing" })),
     ),
   );
@@ -444,6 +460,108 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         }
       }),
     );
+  });
+  const search = Effect.fn("SpacesService.search")(function* (raw: unknown) {
+    const environmentId = yield* admit();
+    const input = yield* validateRaw(raw).pipe(
+      Effect.flatMap(decodeSearch),
+      Effect.mapError((error) =>
+        isServiceError(error) ? error : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+    yield* checkEnvironment(environmentId, input.environmentId);
+    const result = yield* run(environmentId, (meta) =>
+      Effect.gen(function* () {
+        checkIds(input);
+        const query = SearchStore.literalQuery(input.query);
+        const limit = input.limit ?? searchLimits.maxRows;
+        checkSearchLimit("maxRows", limit);
+        const filter = NodeCrypto.createHash("sha256")
+          .update(canonical({ query: input.query, spaceId: input.spaceId ?? null }))
+          .digest("hex");
+        const cursor = cursorFrom(
+          input.cursor,
+          environmentId,
+          "search",
+          filter,
+          meta.catalog_revision,
+        );
+        const after = cursor === undefined ? 0 : Number(cursor.id);
+        if (
+          !Number.isSafeInteger(after) ||
+          after < 0 ||
+          (cursor && (String(after) !== cursor.id || cursor.key !== "doc"))
+        )
+          return yield* new C.SpaceValidationError({ reason: "invalid_cursor" });
+        const status = yield* SearchStore.advance();
+        if (status !== "ready") return new C.SpaceSearchUnavailableError({ reason: status });
+        const rows = yield* SearchStore.candidates(query, after);
+        const items: C.SpaceSearchResult["items"][number][] = [];
+        let bytes = byteLength(rows.map((row) => ({ ...row })));
+        checkSearchLimit("maxCandidateBytes", bytes);
+        let consumed = 0;
+        let last = after;
+        for (const row of rows.slice(0, searchLimits.maxCandidates)) {
+          const size = 8 + row.text_json_bytes;
+          if (bytes + size > searchLimits.maxCandidateBytes) {
+            if (consumed === 0) checkSearchLimit("maxCandidateBytes", bytes + size);
+            break;
+          }
+          const visible =
+            row.page_id !== null &&
+            row.trash_batch_id === null &&
+            (input.spaceId === undefined || row.space_id === input.spaceId);
+          const item = visible
+            ? {
+                page: PageStore.summary(row),
+                ...(row.block_id === null ? {} : { blockId: row.block_id }),
+                snippet: yield* SearchStore.snippet(query, row.doc_id),
+              }
+            : undefined;
+          if (item) {
+            const proposed: C.SpaceSearchResult = {
+              catalogRevision: meta.catalog_revision,
+              items: [...items, item],
+              nextCursor: cursorFor(
+                environmentId,
+                "search",
+                filter,
+                meta.catalog_revision,
+                "doc",
+                String(row.doc_id),
+              ),
+            };
+            const responseBytes = byteLength(proposed);
+            if (responseBytes > searchLimits.maxResponseBytes) {
+              if (consumed === 0) checkSearchLimit("maxResponseBytes", responseBytes);
+              break;
+            }
+            items.push(item);
+          }
+          bytes += size;
+          consumed++;
+          last = row.doc_id;
+          if (items.length === limit) break;
+        }
+        return {
+          catalogRevision: meta.catalog_revision,
+          items,
+          nextCursor:
+            consumed < rows.length || rows.length === searchLimits.maxCandidates
+              ? cursorFor(
+                  environmentId,
+                  "search",
+                  filter,
+                  meta.catalog_revision,
+                  "doc",
+                  String(last),
+                )
+              : null,
+        } satisfies C.SpaceSearchResult;
+      }),
+    );
+    if (isSearchUnavailable(result)) return yield* result;
+    return result;
   });
   const listTrash = Effect.fn("SpacesService.listTrash")(function* (raw: unknown) {
     const environmentId = yield* admit();
@@ -861,6 +979,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
         yield* sql`INSERT INTO spaces_ids (id, kind) VALUES (${id}, 'page')`;
         yield* sql`INSERT INTO spaces_pages (page_id, space_id, title, root_order, created_at, updated_at)
           VALUES (${id}, ${input.spaceId}, ${input.title}, ${rank.toString(16).padStart(32, "0")}, ${now}, ${now})`;
+        yield* SearchStore.writeTitle(id, input.title);
         yield* RevisionStore.capture(
           {
             pageId: id,
@@ -893,6 +1012,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
             result: yield* conflict([yield* getSpace(page.space_id)], [page]),
           });
         if (page.title !== input.title) {
+          yield* SearchStore.writeTitle(input.pageId, input.title);
           yield* sql`UPDATE spaces_pages SET title = ${input.title}, revision = revision + 1, updated_at = ${now} WHERE page_id = ${input.pageId}`;
           yield* RevisionStore.capture(
             {
@@ -1079,6 +1199,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
   );
   return SpacesService.of({
     getCapability,
+    search,
     listSpaces,
     listPages,
     getPage,

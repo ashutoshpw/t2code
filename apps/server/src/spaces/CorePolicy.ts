@@ -3,6 +3,7 @@ import {
   SpaceValidationError,
   type SpaceLimits,
   type SpaceHistoryLimits,
+  type SpaceSearchLimits,
 } from "@t2code/contracts/spaces";
 
 export const historyLimits: SpaceHistoryLimits = Object.freeze({
@@ -15,10 +16,27 @@ export const historyLimits: SpaceHistoryLimits = Object.freeze({
   cleanupBatchBytes: 4_194_304,
 });
 
-type ScalarLimit = Exclude<keyof SpaceLimits, "history" | "maxReferenceHops">;
+export const searchLimits: SpaceSearchLimits = Object.freeze({
+  maxQueryBytes: 256,
+  maxTerms: 8,
+  maxRows: 50,
+  maxResponseBytes: 65_536,
+  maxCandidates: 500,
+  maxCandidateBytes: 1_048_576,
+  maxSnippetBytes: 512,
+  backfillRows: 100,
+  backfillBytes: 262_144,
+});
+export function checkSearchLimit(limit: keyof SpaceSearchLimits, actual: number) {
+  const maximum = searchLimits[limit];
+  if (actual > maximum)
+    throw new SpaceLimitExceededError({ limit: `search.${limit}`, actual, maximum });
+}
+type ScalarLimit = Exclude<keyof SpaceLimits, "history" | "search" | "maxReferenceHops">;
 
 export const limits: SpaceLimits = Object.freeze({
   history: historyLimits,
+  search: searchLimits,
   maxReferenceHops: 32,
   maxListRows: 50,
   maxListResponseBytes: 65_536,

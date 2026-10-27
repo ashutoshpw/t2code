@@ -31,6 +31,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.spacesPagesRestore]: "spaces",
   [WS_METHODS.spacesPagesPermanentlyDelete]: "spaces",
   [WS_METHODS.spacesTrashList]: "spaces",
+  [WS_METHODS.spacesSearch]: "spaces",
   [ORCHESTRATION_V2_WS_METHODS.dispatchCommand]: "orchestrationV2",
   [ORCHESTRATION_V2_WS_METHODS.getWorkflowScript]: "orchestration",
   [ORCHESTRATION_V2_WS_METHODS.stopWorkflow]: "orchestration",
