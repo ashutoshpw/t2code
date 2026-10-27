@@ -1,4 +1,12 @@
 import {
+  FanoutRecovery,
+  draftFanoutSelectionsAtom,
+  fanoutSelectionKey,
+  type FanoutRetry,
+} from "./composerFanout";
+import { appAtomRegistry } from "../rpc/atomRegistry";
+import * as Schema from "effect/Schema";
+import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type EnvironmentId,
   type ThreadId,
@@ -13,9 +21,15 @@ import {
   type DraftId,
   type PersistedComposerImageAttachment,
 } from "../composerDraftStore";
-import { MAX_STASH_ENTRY_ATTACHMENT_CHARS, usePromptStashStore } from "../promptStashStore";
+import {
+  MAX_STASH_ENTRY_ATTACHMENT_CHARS,
+  MAX_STASH_ENTRIES,
+  usePromptStashStore,
+} from "../promptStashStore";
 import { readAttachmentUpload, verifyStashedAttachmentUpload } from "./attachmentUploadQueue";
 import { readFileAsDataUrl } from "./imageCompression";
+
+const decodeFanoutRecovery = Schema.decodeSync(FanoutRecovery);
 
 type RecoveryState = Pick<
   ComposerThreadDraftState,
@@ -30,6 +44,47 @@ type RecoveryState = Pick<
 >;
 type RecoveryContents = { [Key in keyof RecoveryState]: Readonly<RecoveryState[Key]> };
 
+export function assertFanoutRecoveryAdmission(input: {
+  environmentId: EnvironmentId;
+  target: ComposerThreadTarget;
+  prompt: string;
+  retry: FanoutRetry | undefined;
+  ownEntryId?: string;
+}) {
+  const entries = usePromptStashStore.getState().entries;
+  if (entries.length > MAX_STASH_ENTRIES)
+    throw new Error("Review the prompt stash before sending; recovery ownership is unavailable.");
+  for (const entry of entries) {
+    const fanout = entry.recovery?.fanout;
+    if (
+      entry.id === input.ownEntryId ||
+      !fanout ||
+      entry.recovery?.environmentId !== input.environmentId ||
+      entry.recovery.targetKey !== composerTargetKey(input.target) ||
+      entry.prompt !== input.prompt
+    )
+      continue;
+    if (!input.retry)
+      throw new Error(
+        "Use fanout recovery to review earlier model outcomes before sending this prompt again, or start a fresh draft.",
+      );
+    if (entry.id !== input.retry.entryId) continue;
+    const keys = new Set(input.retry.selections.map(fanoutSelectionKey));
+    const chosen = fanout.attempts.filter((attempt) =>
+      keys.has(fanoutSelectionKey(attempt.selection)),
+    );
+    if (
+      chosen.length !== keys.size ||
+      chosen.some(
+        (attempt) =>
+          attempt.outcome === "accepted" ||
+          (attempt.outcome === "uncertain" && !input.retry!.uncertain),
+      )
+    )
+      throw new Error("Review fanout recovery before retrying accepted or uncertain models.");
+  }
+}
+
 export async function reserveComposerSendRecovery(input: {
   id: string;
   environmentId: EnvironmentId;
@@ -38,7 +93,9 @@ export async function reserveComposerSendRecovery(input: {
   target: ComposerThreadTarget;
   contents: RecoveryContents;
   assertCurrent: () => void;
+  fanout?: FanoutRecovery;
 }) {
+  if (input.fanout) decodeFanoutRecovery(input.fanout);
   const { images, files, prompt, contextDraft, ...context } = input.contents;
   const attachments: PersistedComposerImageAttachment[] = [];
   let attachmentChars = 0;
@@ -98,6 +155,7 @@ export async function reserveComposerSendRecovery(input: {
       ...(input.draftId ? { draftId: input.draftId } : {}),
       targetKey: composerTargetKey(input.target),
       context: structuredClone({ ...context, ...(contextDraft ? { contextDraft } : {}) }),
+      ...(input.fanout ? { fanout: structuredClone(input.fanout) } : {}),
     },
   });
   if (!result.durable)
@@ -112,6 +170,8 @@ export async function restoreComposerSendRecovery(input: {
   environmentId: EnvironmentId;
   target: ComposerThreadTarget;
   isCurrent: () => boolean;
+  fanoutAttemptIds?: ReadonlyArray<string>;
+  allowUncertain?: boolean;
 }) {
   const stash = usePromptStashStore.getState();
   const entry = stash.entries.find((candidate) => candidate.id === input.entryId);
@@ -128,6 +188,45 @@ export async function restoreComposerSendRecovery(input: {
     !composerDraftHasUserContent(useComposerDraftStore.getState().getComposerDraft(input.target));
   if (!canRestore())
     throw new Error("Send or clear the current prompt in the original thread before restoring.");
+  const fanout = entry.recovery.fanout;
+  const originalDraft = useComposerDraftStore.getState().getComposerDraft(input.target);
+  const originalSession = entry.recovery.draftId
+    ? useComposerDraftStore.getState().getDraftSession(entry.recovery.draftId as DraftId)
+    : null;
+  let retry: FanoutRetry | undefined;
+  if (fanout) {
+    if (!entry.recovery.draftId || !originalSession)
+      throw new Error("Open the original draft before restoring fanout models.");
+    const attempts = fanout.attempts.filter((attempt) =>
+      input.fanoutAttemptIds
+        ? input.fanoutAttemptIds.includes(attempt.id)
+        : attempt.outcome === "failed" || attempt.outcome === "not-sent",
+    );
+    if (
+      !attempts.length ||
+      (input.fanoutAttemptIds &&
+        (new Set(input.fanoutAttemptIds).size !== input.fanoutAttemptIds.length ||
+          input.fanoutAttemptIds.length !== attempts.length)) ||
+      attempts.some(
+        (attempt) =>
+          attempt.outcome === "accepted" ||
+          (attempt.outcome === "uncertain" && !input.allowUncertain),
+      )
+    )
+      throw new Error(
+        "No definite failed models selected. Check uncertain threads before explicitly allowing a retry.",
+      );
+    retry = {
+      routeKey: fanout.routeKey,
+      projectId: fanout.projectId,
+      branch: fanout.branch,
+      runtimeMode: fanout.runtimeMode,
+      startFromOrigin: fanout.startFromOrigin,
+      entryId: entry.id,
+      selections: attempts.map((attempt) => attempt.selection),
+      uncertain: attempts.some((attempt) => attempt.outcome === "uncertain"),
+    };
+  }
   const savedFiles = entry.files ?? [];
   const imageIds = new Set(entry.attachments.map((image) => image.id));
   const fileIds = new Set(savedFiles.map((file) => file.id));
@@ -150,6 +249,10 @@ export async function restoreComposerSendRecovery(input: {
   );
   if (
     !canRestore() ||
+    (fanout &&
+      (useComposerDraftStore.getState().getComposerDraft(input.target) !== originalDraft ||
+        useComposerDraftStore.getState().getDraftSession(entry.recovery.draftId as DraftId) !==
+          originalSession)) ||
     usePromptStashStore.getState().entries.find((candidate) => candidate.id === entry.id) !== entry
   )
     throw new Error(
@@ -201,6 +304,11 @@ export async function restoreComposerSendRecovery(input: {
   store.setPreviewAnnotations(input.target, [...(context.previewAnnotations ?? [])]);
   store.setThreadContexts(input.target, [...(context.threadContexts ?? [])]);
   store.setPrompt(input.target, entry.prompt);
+  store.setFanoutRetry(input.target, retry);
+  if (retry) {
+    store.setModelSelection(input.target, retry.selections[0]!);
+    appAtomRegistry.set(draftFanoutSelectionsAtom(retry.routeKey), retry.selections);
+  }
   // Keep the durable copy until explicit deletion; composer persistence is debounced.
   return {
     prompt: entry.prompt,
@@ -208,5 +316,6 @@ export async function restoreComposerSendRecovery(input: {
     files: store.getComposerDraft(input.target)?.files ?? [],
     terminalContexts: store.getComposerDraft(input.target)?.terminalContexts ?? [],
     expiredFiles,
+    fanoutRetry: retry,
   };
 }

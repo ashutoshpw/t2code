@@ -1,6 +1,12 @@
 import { expect, it, vi } from "vite-plus/test";
-import { EnvironmentId, ThreadId } from "@t2code/contracts";
-import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import {
+  EnvironmentId,
+  ThreadId,
+  ProjectId,
+  MessageId,
+  ProviderInstanceId,
+} from "@t2code/contracts";
+import { scopeThreadRef, scopeProjectRef } from "@t2code/client-runtime/environment";
 
 const transport = vi.hoisted(() => {
   const values = new Map<string, string>();
@@ -13,7 +19,16 @@ const transport = vi.hoisted(() => {
       values.delete(key);
     },
   });
-  return { remove: vi.fn(), navigate: vi.fn() };
+  return {
+    remove: vi.fn(),
+    navigate: vi.fn(),
+    confirm: vi.fn(),
+    toasts: [] as Array<{
+      title?: string;
+      data?: { secondaryActionProps?: { children: string; onClick: () => Promise<void> } };
+      actionProps?: { children: string; onClick: () => void };
+    }>,
+  };
 });
 vi.mock("react", async () => ({
   ...(await vi.importActual<typeof import("react")>("react")),
@@ -27,7 +42,16 @@ vi.mock("react", async () => ({
   use: () => false,
 }));
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => transport.navigate }));
-vi.mock("../ui/toast", () => ({ toastManager: { add: vi.fn() } }));
+vi.mock("../ui/toast", () => ({
+  toastManager: {
+    add: (value: (typeof transport.toasts)[number]) => {
+      transport.toasts.push(value);
+    },
+  },
+}));
+vi.mock("../../localApi", () => ({
+  readLocalApi: () => ({ dialogs: { confirm: transport.confirm } }),
+}));
 vi.mock("../../state/session", async () => ({
   ...(await vi.importActual<typeof import("../../state/session")>("../../state/session")),
   readEnvironmentScope: () => true,
@@ -181,4 +205,86 @@ it("deleting recovery copies preserves uploads held by any composer or remaining
   expect(transport.remove.mock.calls).toEqual([
     [{ environmentId, input: { attachmentId: "pending-report-pdf" } }],
   ]);
+});
+
+it("requires confirmation before restoring an uncertain fanout model through the production stash action", async () => {
+  vi.resetModules();
+  const owners = await loadOwners();
+  owners.useComposerDraftStore.setState({ draftsByThreadKey: {}, draftThreadsByThreadKey: {} });
+  owners.usePromptStashStore.setState({ entries: [], activeRecoveryIds: [] });
+  transport.toasts.length = 0;
+  transport.remove.mockClear();
+  const environmentId = EnvironmentId.make("uncertain-fanout");
+  const threadId = ThreadId.make("origin");
+  const projectId = ProjectId.make("project");
+  const draftId = owners.DraftId.make("uncertain-draft");
+  const store = owners.useComposerDraftStore.getState();
+  store.setProjectDraftThreadId(scopeProjectRef(environmentId, projectId), draftId, {
+    threadId,
+    branch: "main",
+  });
+  const selection = {
+    instanceId: ProviderInstanceId.make("codex"),
+    model: "gpt-5.4",
+    options: [{ id: "effort", value: "high" }],
+  };
+  store.setPrompt(draftId, "Original uncertain prompt");
+  await owners.reserveComposerSendRecovery({
+    id: "uncertain-copy",
+    environmentId,
+    threadId,
+    draftId,
+    target: draftId,
+    contents: store.getComposerDraft(draftId)!,
+    assertCurrent: () => {},
+    fanout: {
+      version: 1,
+      routeKey: "draft:uncertain-draft",
+      projectId,
+      branch: "main",
+      runtimeMode: "full-access",
+      startFromOrigin: false,
+      attempts: [
+        {
+          id: "attempt",
+          selection,
+          threadId: ThreadId.make("possible-thread"),
+          messageId: MessageId.make("possible-message"),
+          outcome: "uncertain",
+        },
+      ],
+    },
+  });
+  owners.usePromptStashStore.getState().settleSendRecovery("uncertain-copy", false);
+  store.clearComposerContent(draftId);
+  const entry = owners.usePromptStashStore.getState().entries[0]!;
+  const hook = owners.useComposerStash({
+    environmentId,
+    composerDraftTarget: draftId,
+    promptRef: { current: "" },
+    routeThreadRef: scopeThreadRef(environmentId, threadId),
+    prompt: "",
+    composerMenuOpen: false,
+    isRevertingCheckpoint: () => false,
+    isComposerDraftTargetOpen: () => true,
+    setComposerCursor: vi.fn(),
+    setComposerTrigger: vi.fn(),
+  } as unknown as Parameters<typeof owners.useComposerStash>[0]);
+  await hook.restoreStashEntryStable(entry);
+  expect(store.getComposerDraft(draftId)?.prompt ?? "").toBe("");
+  const retry = transport.toasts.find(
+    (toast) => toast.data?.secondaryActionProps?.children === "Restore this model anyway",
+  )!.data!.secondaryActionProps!;
+  transport.confirm.mockResolvedValueOnce(false);
+  await retry.onClick();
+  expect(store.getComposerDraft(draftId)?.prompt ?? "").toBe("");
+  transport.confirm.mockResolvedValueOnce(true);
+  await retry.onClick();
+  expect(store.getComposerDraft(draftId)?.prompt).toBe("Original uncertain prompt");
+  expect(store.getComposerDraft(draftId)?.fanoutRetry).toMatchObject({
+    selections: [selection],
+    uncertain: true,
+  });
+  expect(owners.usePromptStashStore.getState().entries).toHaveLength(1);
+  expect(transport.remove).not.toHaveBeenCalled();
 });

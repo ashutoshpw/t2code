@@ -1,3 +1,4 @@
+import { readLocalApi } from "../../localApi";
 import { restoreComposerSendRecovery } from "../../lib/composerSendRecovery";
 import { useNavigate } from "@tanstack/react-router";
 import { scopeThreadRef } from "@t2code/client-runtime/environment";
@@ -161,11 +162,70 @@ export function useComposerStash(input: {
     setStashPulseKey((key) => key + 1);
   };
 
-  const restoreStashEntry = async (menuEntry: PromptStashEntry) => {
+  const restoreStashEntry = async (
+    menuEntry: PromptStashEntry,
+    options?: { fanoutAttemptIds?: ReadonlyArray<string>; allowUncertain?: boolean },
+  ) => {
     if (menuEntry.recovery) {
+      if (menuEntry.recovery.fanout && !options) {
+        for (const attempt of menuEntry.recovery.fanout.attempts) {
+          const uncertain = attempt.outcome === "uncertain";
+          toastManager.add({
+            type: uncertain || attempt.outcome === "failed" ? "warning" : "info",
+            title: `${attempt.selection.model.slice(0, 160)}: ${attempt.outcome}`,
+            description: `Saved model options: ${JSON.stringify(attempt.selection.options ?? []).slice(0, 1000)}.${uncertain ? " The environment may have accepted this send. Check its thread before retrying." : " Accepted models are excluded from recovery sends."}`,
+            ...(uncertain
+              ? {
+                  timeout: 0,
+                  data: {
+                    secondaryActionProps: {
+                      children: "Restore this model anyway",
+                      onClick: async () => {
+                        const confirmed = await readLocalApi()?.dialogs.confirm(
+                          "This model's earlier request may already be running. Check its thread first. Restore it for a new send that could create a duplicate thread?",
+                        );
+                        if (confirmed)
+                          await restoreStashEntry(menuEntry, {
+                            fanoutAttemptIds: [attempt.id],
+                            allowUncertain: true,
+                          });
+                      },
+                    },
+                  },
+                }
+              : attempt.outcome === "failed" || attempt.outcome === "not-sent"
+                ? {
+                    data: {
+                      secondaryActionProps: {
+                        children: "Restore only this model",
+                        onClick: () =>
+                          restoreStashEntry(menuEntry, { fanoutAttemptIds: [attempt.id] }),
+                      },
+                    },
+                  }
+                : {}),
+            ...(uncertain || attempt.outcome === "accepted"
+              ? {
+                  actionProps: {
+                    children: "Open thread",
+                    onClick: () => {
+                      void navigate({
+                        to: "/$environmentId/$threadId",
+                        params: buildThreadRouteParams(
+                          scopeThreadRef(menuEntry.recovery!.environmentId, attempt.threadId),
+                        ),
+                      });
+                    },
+                  },
+                }
+              : {}),
+          });
+        }
+      }
       try {
         const restored = await restoreComposerSendRecovery({
           entryId: menuEntry.id,
+          ...options,
           environmentId,
           target: composerDraftTarget,
           isCurrent: () =>
@@ -179,7 +239,7 @@ export function useComposerStash(input: {
         toastManager.add({
           type: restored.expiredFiles.length ? "warning" : "info",
           title: "Recovery prompt copied to the composer",
-          description: `The recovery copy stays in the stash until you delete it.${restored.expiredFiles.length ? ` Attach expired files again: ${restored.expiredFiles.join(", ")}.` : ""}`,
+          description: `The recovery copy stays in the stash until you delete it.${restored.fanoutRetry ? (restored.fanoutRetry.uncertain ? " You explicitly selected an uncertain model; a new send may duplicate it." : " Only definite failures and unsent models were selected.") : ""}${restored.expiredFiles.length ? ` Attach expired files again: ${restored.expiredFiles.join(", ")}.` : ""}`,
         });
       } catch (error) {
         const origin = menuEntry.recovery;
@@ -511,6 +571,15 @@ export function useComposerStash(input: {
         type: "info",
         title: "Still bringing attached context into this message.",
         description: "Stash again once its chip resolves.",
+      });
+      return;
+    }
+    if (useComposerDraftStore.getState().getComposerDraft(composerDraftTarget)?.fanoutRetry) {
+      toastManager.add({
+        type: "info",
+        title: "Keep the recovered fanout in this composer",
+        description:
+          "Its original recovery is in the stash. Send this retry, or open a fresh draft to choose different models; manual stashing cannot discard its exact retry choices.",
       });
       return;
     }

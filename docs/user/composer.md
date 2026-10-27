@@ -196,8 +196,8 @@ Stashes containing uploaded files must be restored in their original environment
 Those files are retained for 24 hours. After an upload expires, restore the prompt
 and use **Attach again** or remove the missing file before sending.
 
-Normal sends and proposed-plan follow-ups first save a recovery copy in the prompt
-stash before clearing the composer. If sending fails, your newer typing stays in
+Normal sends, proposed-plan follow-ups and multi-model sends first save a recovery
+copy in the prompt stash before clearing the composer. If sending fails, your newer typing stays in
 place and the original prompt remains available after a reload. Open the stash in
 the original thread or draft and restore into an empty composer. Restoration copies
 the prompt; delete the recovery entry when you no longer need it. If the connection
@@ -205,13 +205,28 @@ closed during a send, check the thread before sending the recovery copy again. A
 restored Spaces reference captures current content on the next send; an old snapshot is not reused
 as current source.
 
+Multi-model recovery records which sends the environment accepted, which definitely
+failed or were never sent, and which have an uncertain outcome. Default restoration
+selects only failed and unsent models. For an uncertain model, use **Open thread** to
+check what happened; **Restore this model anyway** asks you to confirm a retry that
+could create a duplicate thread. Accepted models are never selected by recovery.
+Nothing retries automatically. A new retry captures current referenced content.
+
+Saved model choices, options and workspace must still match before a recovered
+fanout can send. If they cannot be restored exactly, sending stops with the draft
+intact. Use **Restore only this model** for a particular failed model, or open a fresh
+draft to choose different models. Manual stashing of a recovered fanout is refused
+rather than dropping its exact retry choices. Multi-model sends support at most 16
+models; very large model options can also exceed the recovery limit.
+
 Recovery shares the stash's 20-entry limit and browser storage quota. Sending stops
 with the composer intact if a durable recovery copy cannot be saved, including
-when images exceed the recovery size limit. Free stash space or reduce attachments
-and try again. Clearing browser site data removes these local copies. Expired file
-uploads still need **Attach again**. Multiple-model background sends and queued edits
-that leave the queue keep their existing recovery behavior; this durable recovery
-applies to normal sends and proposed-plan follow-ups on web and desktop.
+when images exceed the recovery size limit. Recovery keeps original image bytes and
+currently supports roughly 2 MB of combined original images. Free stash space or
+reduce attachments and try again. Clearing browser site data removes these local copies. Expired file
+uploads still need **Attach again**. A queued edit can still be discarded with a
+warning if its run leaves the queue while another draft occupies the composer;
+that separate queue-exit behavior is unchanged.
 
 ## Voice input on iPhone
 

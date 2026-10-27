@@ -184,6 +184,29 @@ export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
                   </button>
                 </ComposerBanner.Content>
                 <ComposerBanner.Actions>
+                  {entry.recovery?.fanout ? (
+                    <span className="shrink-0 text-muted-foreground">
+                      {
+                        entry.recovery.fanout.attempts.filter(
+                          (attempt) => attempt.outcome === "accepted",
+                        ).length
+                      }{" "}
+                      accepted ·{" "}
+                      {
+                        entry.recovery.fanout.attempts.filter(
+                          (attempt) => attempt.outcome === "uncertain",
+                        ).length
+                      }{" "}
+                      uncertain ·{" "}
+                      {
+                        entry.recovery.fanout.attempts.filter(
+                          (attempt) =>
+                            attempt.outcome === "failed" || attempt.outcome === "not-sent",
+                        ).length
+                      }{" "}
+                      retryable
+                    </span>
+                  ) : null}
                   {entry.pendingImageCount ? (
                     <span className="shrink-0 text-muted-foreground">
                       saving {entry.pendingImageCount} image

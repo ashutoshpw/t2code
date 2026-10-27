@@ -102,6 +102,7 @@ export function composerDraftSendGuard(target: ComposerThreadTarget) {
       draft?.previewAnnotations,
       draft?.threadContexts,
       draft?.contextDraft,
+      draft?.fanoutRetry,
       draft?.modelSelectionByProvider,
       draft?.activeProvider,
       draft?.runtimeMode,

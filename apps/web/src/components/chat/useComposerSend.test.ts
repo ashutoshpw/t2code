@@ -1,3 +1,5 @@
+import { serializeSpaceContextSnapshotForHash } from "@t2code/shared/composerContextReferences";
+import { Atom } from "effect/reactivity";
 import { expect, it, vi } from "vite-plus/test";
 import type { ChatMessage } from "../../types";
 import type { ComposerThreadDraftState } from "../../composerDraftStore";
@@ -7,10 +9,18 @@ import {
   ComposerContextId,
   EnvironmentId,
   ProviderDriverKind,
+  ProviderInstanceId,
+  type ServerConfig,
+  type SpaceContextCaptureInput,
+  type OrchestrationMessageContext,
   ThreadId,
 } from "@t2code/contracts";
 import { SpacePageId, SpaceId } from "@t2code/contracts/spaces";
-import { scopeThreadRef, scopedThreadKey } from "@t2code/client-runtime/environment";
+import {
+  scopeThreadRef,
+  scopedThreadKey,
+  scopeProjectRef,
+} from "@t2code/client-runtime/environment";
 
 const state = vi.hoisted(() => {
   const values = new Map<string, string>();
@@ -33,6 +43,8 @@ const state = vi.hoisted(() => {
     connected: true,
     canOperate: true,
     realPreparer: false,
+    realFanout: false,
+    session: {},
     planMode: false,
     dispatch: vi.fn(async () => ({ _tag: "Success" as const, value: undefined })),
     navigate: vi.fn(),
@@ -58,7 +70,14 @@ vi.mock("../../hooks/useSettings", () => ({
 vi.mock("../../state/use-orchestration-command", () => ({
   useOrchestrationCommand: () => state.dispatch,
 }));
-vi.mock("./useMultipleModelSend", () => ({ useMultipleModelSend: () => vi.fn() }));
+vi.mock("./useMultipleModelSend", async () => {
+  const actual =
+    await vi.importActual<typeof import("./useMultipleModelSend")>("./useMultipleModelSend");
+  return {
+    useMultipleModelSend: (...args: Parameters<typeof actual.useMultipleModelSend>) =>
+      state.realFanout ? actual.useMultipleModelSend(...args) : vi.fn(),
+  };
+});
 vi.mock("../ui/toast", () => ({
   stackedThreadToast: <A>(value: A) => value,
   toastManager: {
@@ -72,13 +91,14 @@ vi.mock("../ui/toast", () => ({
 }));
 vi.mock("../../state/session", async () => ({
   ...(await vi.importActual<typeof import("../../state/session")>("../../state/session")),
+  readPreparedConnection: () => (state.connected ? state.session : null),
   readEnvironmentScope: (_environmentId: unknown, scope: string) =>
     scope !== AuthOrchestrationOperateScope || state.canOperate,
 }));
 vi.mock("../../state/server", async () => {
   const actual = await vi.importActual<typeof import("../../state/server")>("../../state/server");
   const { Atom } = await import("effect/reactivity");
-  return { ...actual, environmentServerConfigsAtom: Atom.make(new Map()) };
+  return { ...actual, environmentServerConfigsAtom: Atom.make(new Map()).pipe(Atom.keepAlive) };
 });
 vi.mock("../../state/presentation", async () => {
   const actual = await vi.importActual<typeof import("../../state/presentation")>(
@@ -117,11 +137,17 @@ vi.mock("../../lib/prepareComposerSendContext", async () => {
   };
 });
 
-import { useComposerDraftStore } from "../../composerDraftStore";
+import { DraftId, useComposerDraftStore } from "../../composerDraftStore";
+import { deriveProviderInstanceEntries } from "../../providerInstances";
+import { appAtomRegistry } from "../../rpc/atomRegistry";
+import { environmentServerConfigsAtom } from "../../state/server";
+import { environmentPresentations } from "../../state/presentation";
+import type { EnvironmentPresentation } from "@t2code/client-runtime/connection";
+import { prepareSpaceContextSend } from "@t2code/client-runtime/spaces";
 import { PROMPT_STASH_STORAGE_KEY, usePromptStashStore } from "../../promptStashStore";
 import { makeThreadFixture } from "../../test-fixtures";
 import { useComposerSend } from "./useComposerSend";
-import { draftSendState } from "./chatViewSend";
+import { draftSendState, draftFanoutSelectionsAtom } from "./chatViewSend";
 
 function deferred<A>() {
   let resolve!: (value: A) => void;
@@ -138,7 +164,9 @@ async function verifyFailedSnapshotRecovery(
   succeeds = false,
   editWhileSavingImage = false,
   permissionLoss?: "image" | "persist" | "handoff",
+  fanout = false,
 ) {
+  state.realFanout = fanout;
   state.canOperate = true;
   state.realPreparer = permissionLoss !== undefined;
   state.storage.afterWrite = undefined;
@@ -152,11 +180,49 @@ async function verifyFailedSnapshotRecovery(
   state.toasts.length = 0;
   const environmentId = EnvironmentId.make("failed-send-env");
   const thread = makeThreadFixture({ environmentId, id: ThreadId.make("failed-send-thread") });
-  const target = scopeThreadRef(environmentId, thread.id);
-  const route = scopedThreadKey(target);
+  const draftId = fanout ? DraftId.make("capture-once-fanout") : null;
+  const target = draftId ?? scopeThreadRef(environmentId, thread.id);
+  const route = draftId
+    ? `draft:${draftId}`
+    : scopedThreadKey(scopeThreadRef(environmentId, thread.id));
   draftSendState(route).sendInFlight.current = false;
   const store = useComposerDraftStore.getState();
   store.clearComposerContent(target);
+  if (draftId)
+    store.setProjectDraftThreadId(scopeProjectRef(environmentId, thread.projectId), draftId, {
+      threadId: thread.id,
+      branch: "main",
+    });
+  const selections = [
+    { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.4" },
+    { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.5" },
+  ];
+  if (fanout) {
+    const config = {
+      environment: {
+        capabilities: {
+          requiredWorktreeBootstrap: true,
+          inlineMessageContext: true,
+          attachmentUploads: false,
+        },
+      },
+    } as unknown as ServerConfig;
+    appAtomRegistry.set(
+      environmentPresentations.presentationsAtom as Atom.Writable<
+        ReadonlyMap<EnvironmentId, EnvironmentPresentation>,
+        ReadonlyMap<EnvironmentId, EnvironmentPresentation>
+      >,
+      new Map([[environmentId, { serverConfig: config } as unknown as EnvironmentPresentation]]),
+    );
+    appAtomRegistry.set(
+      environmentServerConfigsAtom as Atom.Writable<
+        ReadonlyMap<EnvironmentId, ServerConfig>,
+        ReadonlyMap<EnvironmentId, ServerConfig>
+      >,
+      new Map([[environmentId, config]]),
+    );
+    appAtomRegistry.set(draftFanoutSelectionsAtom(route), selections);
+  }
   const originalPrompt = permissionLoss
     ? "Keep this original prompt"
     : "  Use [Page](t2-context://v1/page/p) and [Copied](t2-context://v1/page/copied)  ";
@@ -270,6 +336,52 @@ async function verifyFailedSnapshotRecovery(
       if (!state.connected) throw new Error("Spaces access changed before sending.");
     },
   });
+  const capture = vi.fn(async (request: SpaceContextCaptureInput) => {
+    const pageId = request.target.kind === "page" ? request.target.pageId : copied.pageId;
+    const record = {
+      ...copied,
+      contextId: request.contextId,
+      pageId,
+      snapshot: {
+        ...copied.snapshot,
+        text: `captured:${request.contextId}`,
+        sources: [{ ...copied.snapshot.sources[0]!, pageId }],
+      },
+    };
+    record.snapshot.contentHash = `sha256:${Array.from(
+      new Uint8Array(
+        await globalThis.crypto.subtle.digest(
+          "SHA-256",
+          new TextEncoder().encode(serializeSpaceContextSnapshotForHash(record)),
+        ),
+      ),
+    )
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("")}`;
+    return { status: "captured" as const, record };
+  });
+  if (fanout)
+    state.prepare.mockImplementation(
+      async (
+        input: Parameters<typeof prepareSpaceContextSend>[0] & {
+          contextDraft: NonNullable<ComposerThreadDraftState["contextDraft"]>;
+        },
+      ) => ({
+        context: await prepareSpaceContextSend({
+          ...input,
+          context: {
+            version: 1,
+            records: [...(input.context?.records ?? []), ...input.contextDraft.records],
+          },
+          selectors: input.contextDraft.selectors,
+          access: () => ({ session: state.session, canRead: true, supportsCapture: true }),
+          capture,
+        }),
+        assertCurrent: () => {
+          if (!state.connected) throw new Error("Connection changed");
+        },
+      }),
+    );
   const settings = deferred<{ _tag: "Success"; value: undefined }>();
   const settingsEntered = deferred<undefined>();
   const promptRef = { current: originalPrompt };
@@ -280,7 +392,9 @@ async function verifyFailedSnapshotRecovery(
     getSendContext: () => ({
       ...store.getComposerDraft(target)!,
       providerAvailable: true,
-      multipleModelSelections: null,
+      multipleModelSelections: fanout
+        ? appAtomRegistry.get(draftFanoutSelectionsAtom(route))
+        : null,
       selectedProvider: ProviderDriverKind.make("codex"),
       selectedModel: "gpt-5.4",
       selectedProviderModels: [],
@@ -300,27 +414,43 @@ async function verifyFailedSnapshotRecovery(
     environmentId,
     routeThreadKey: route,
     currentRouteThreadKeyRef,
-    draftId: null,
+    draftId,
     draftThread: null,
     activeThread: thread,
     activeThreadKey: route,
-    activeThreadBranch: null,
+    activeThreadBranch: fanout ? "main" : null,
     activeProject: { id: thread.projectId, environmentId, workspaceRoot: "/isolated-project" },
     activeProjectDefaultModelSelection: null,
     activeProposedPlan: state.planMode
       ? { id: "proposed-plan", planMarkdown: "A proposed implementation" }
       : null,
     activeMessageCount: 1,
-    isServerThread: true,
-    isLocalDraftThread: false,
-    isGitRepo: false,
+    isServerThread: !fanout,
+    isLocalDraftThread: fanout,
+    isGitRepo: fanout,
     phase: "ready",
     runtimeMode: "full-access",
     sendEnvMode: "local",
     startFromOrigin: false,
     localCheckoutBranchMismatch: null,
     logicalProjectEnvironments: [],
-    providerInstanceEntries: [],
+    providerInstanceEntries: fanout
+      ? deriveProviderInstanceEntries([
+          {
+            driver: ProviderDriverKind.make("codex"),
+            instanceId: ProviderInstanceId.make("codex"),
+            enabled: true,
+            installed: true,
+            status: "ready",
+            auth: { status: "authenticated" },
+            version: null,
+            checkedAt: "2026-10-27T00:00:00Z",
+            models: [],
+            slashCommands: [],
+            skills: [],
+          },
+        ])
+      : [],
     composerRef: { current: handle },
     composerDraftTarget: target,
     promptRef,
@@ -403,6 +533,27 @@ async function verifyFailedSnapshotRecovery(
       }
     };
   const pending = useComposerSend(input).onSend();
+  if (fanout) {
+    await pending;
+    expect(state.prepare).toHaveBeenCalledTimes(1);
+    expect(capture.mock.calls.map(([request]) => request.contextId)).toEqual(["p", "copied"]);
+    expect(state.dispatch).toHaveBeenCalledTimes(2);
+    const sent = (state.dispatch.mock.calls as ReadonlyArray<ReadonlyArray<unknown>>).map(
+      (args) =>
+        (args[0] as { input: { message: { context: OrchestrationMessageContext } } }).input.message
+          .context,
+    );
+    expect(sent[0]?.records).toMatchObject([
+      { snapshot: { text: "captured:p" } },
+      { snapshot: { text: "captured:copied" } },
+    ]);
+    expect(sent[1]).toEqual(sent[0]);
+    expect(optimistic).toEqual([]);
+    expect(usePromptStashStore.getState().entries).toEqual([]);
+    expect(store.getComposerDraft(target)?.prompt ?? "").toBe("");
+    state.realFanout = false;
+    return;
+  }
   if (permissionLoss) {
     if (permissionLoss === "image") {
       await imageReadStarted.promise;
@@ -587,3 +738,7 @@ it.each([
     await verifyFailedSnapshotRecovery(path, false, "ok", false, false, phase);
   },
 );
+
+it("captures referenced contexts once for the actual multi-model fanout hook and shares immutable send records", async () => {
+  await verifyFailedSnapshotRecovery("normal send", false, "ok", false, false, undefined, true);
+});

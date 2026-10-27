@@ -1,5 +1,7 @@
+import { assertFanoutRetry, validateFanoutSelections } from "../../lib/composerFanout";
 import {
   reserveComposerSendRecovery,
+  assertFanoutRecoveryAdmission,
   restoreComposerSendRecovery,
 } from "../../lib/composerSendRecovery";
 import { usePromptStashStore } from "../../promptStashStore";
@@ -358,6 +360,7 @@ export function useComposerSend(input: ComposerSendInput) {
     startFromOrigin,
     resetLocalDispatch,
     setThreadError,
+    beginLocalDispatch,
   });
   const submitPlanFollowUp = usePlanFollowUpSend({
     environmentId,
@@ -622,7 +625,38 @@ export function useComposerSend(input: ComposerSendInput) {
       notifyDirectAnnotationAttached();
       return;
     }
+    try {
+      assertFanoutRecoveryAdmission({
+        environmentId,
+        target: composerDraftTarget,
+        prompt: promptRef.current,
+        retry: useComposerDraftStore.getState().getComposerDraft(composerDraftTarget)?.fanoutRetry,
+      });
+    } catch (error) {
+      setThreadError(
+        activeThread.id,
+        error instanceof Error ? error.message : "Review fanout recovery before sending.",
+      );
+      return;
+    }
     const multipleModelSelections = sendCtx.multipleModelSelections;
+    try {
+      assertFanoutRetry({
+        retry: useComposerDraftStore.getState().getComposerDraft(composerDraftTarget)?.fanoutRetry,
+        selections: multipleModelSelections,
+        projectId: activeProject?.id,
+        branch: activeThreadBranch,
+        runtimeMode,
+        startFromOrigin,
+      });
+      if (multipleModelSelections !== null) validateFanoutSelections(multipleModelSelections);
+    } catch (error) {
+      setThreadError(
+        activeThread.id,
+        error instanceof Error ? error.message : "Could not restore fanout model choices.",
+      );
+      return;
+    }
     const approvalFeedbackTarget = pendingApprovalsRef.current.find(
       (approval) =>
         approval.supportsFeedback && approval.requestId === sendCtx.shownPendingApprovalIds[0],
@@ -1176,6 +1210,40 @@ export function useComposerSend(input: ComposerSendInput) {
       );
       return;
     }
+    if (multipleModelSelections !== null) {
+      const turnAttachmentsPromise = prepareTurnAttachments({
+        environmentId,
+        attachments: composerAttachmentsSnapshot,
+        usesAttachmentUploads: turnUsesAttachmentUploads,
+      });
+      await sendToMultipleModels({
+        threadId: threadIdForSend,
+        project: activeProject,
+        branch: activeThreadBranch!,
+        selections: multipleModelSelections,
+        targets: multipleTargets,
+        sendSnapshot,
+        recoveryContents: {
+          prompt: promptForSend,
+          images: composerImages,
+          files: composerFiles,
+          terminalContexts: composerTerminalContexts,
+          reviewComments: composerReviewComments,
+          previewAnnotations: composerPreviewAnnotations,
+          threadContexts: composerThreadContexts,
+          contextDraft: composerContextDraft,
+        },
+        createdAt: messageCreatedAt,
+        attachmentsPromise: turnAttachmentsPromise,
+        usesAttachmentUploads: turnUsesAttachmentUploads,
+        readFileBlockReason: () => readLiveAttachmentCapabilities().fileBlockReason,
+        buildOutgoingMessageContext,
+        assertContextCurrent: preparedContext.assertCurrent,
+        isCurrentDraft: draftStillCurrent,
+        isCurrentSend: () => composerSendGenerationRef.current === sendGeneration,
+      });
+      return;
+    }
     const recovery =
       multipleModelSelections === null && approvalFeedbackTarget === undefined
         ? await reserveRecovery(
@@ -1357,25 +1425,6 @@ export function useComposerSend(input: ComposerSendInput) {
       attachments: composerAttachmentsSnapshot,
       usesAttachmentUploads: turnUsesAttachmentUploads,
     });
-    if (multipleModelSelections !== null) {
-      await sendToMultipleModels({
-        threadId: threadIdForSend,
-        project: activeProject,
-        branch: activeThreadBranch!,
-        selections: multipleModelSelections,
-        targets: multipleTargets,
-        sendSnapshot,
-        createdAt: messageCreatedAt,
-        attachmentsPromise: turnAttachmentsPromise,
-        usesAttachmentUploads: turnUsesAttachmentUploads,
-        readFileBlockReason: () => readLiveAttachmentCapabilities().fileBlockReason,
-        buildOutgoingMessageContext,
-        assertContextCurrent: preparedContext.assertCurrent,
-        isCurrentDraft: draftStillCurrent,
-        isCurrentSend: () => composerSendGenerationRef.current === sendGeneration,
-      });
-      return;
-    }
     const optimisticAttachments = optimisticMessageAttachments(composerAttachmentsSnapshot);
     if (!shouldQueueBehindActiveRun) {
       anchorNewTurn(

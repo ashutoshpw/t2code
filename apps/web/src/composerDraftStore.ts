@@ -1,3 +1,4 @@
+import { FanoutRetry } from "./lib/composerFanout";
 import { composerFileAttachmentMimeType } from "./components/chat/composerAttachmentFiles";
 import { elementContextToPreviewAnnotation } from "./lib/elementContext";
 import {
@@ -95,6 +96,8 @@ import { UnifiedSettings } from "@t2code/contracts/settings";
 
 const isElementContextDetails = Schema.is(ElementContextDetails);
 import { ReviewCommentContextSchema, type ReviewCommentContext } from "./reviewCommentContext";
+const isFanoutRetry = Schema.is(FanoutRetry);
+const validateFanoutRetry = Schema.decodeSync(FanoutRetry);
 const isRuntimeMode = Schema.is(RuntimeMode);
 const isProviderDriverKind = Schema.is(ProviderDriverKind);
 const isReviewCommentContext = Schema.is(ReviewCommentContextSchema);
@@ -244,6 +247,7 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   attachments: Schema.Array(PersistedComposerImageAttachment),
   files: Schema.optionalKey(Schema.Array(PersistedComposerDraftFileAttachment)),
   ...PersistedComposerContext.fields,
+  fanoutRetry: Schema.optionalKey(FanoutRetry),
   modelSelectionByProvider: Schema.optionalKey(Schema.Record(ProviderInstanceId, ModelSelection)),
   activeProvider: Schema.optionalKey(Schema.NullOr(ProviderInstanceId)),
   modelSelectionExplicit: Schema.optionalKey(Schema.Boolean),
@@ -368,6 +372,7 @@ export interface ComposerThreadDraftState {
   reviewComments: ReviewCommentContext[];
   threadContexts: ThreadContextRecord[];
   contextDraft?: ComposerContextDraft | undefined;
+  fanoutRetry?: FanoutRetry | undefined;
   modelSelectionByProvider: Partial<Record<ProviderInstanceId, ModelSelection>>;
   activeProvider: ProviderInstanceId | null;
   modelSelectionExplicit?: boolean;
@@ -436,6 +441,7 @@ interface ComposerDraftStoreState {
     Record<ProviderInstanceId, Partial<Record<string, ReadonlyArray<ProviderOptionSelection>>>>
   >;
   stickyActiveProvider: ProviderInstanceId | null;
+  setFanoutRetry: (target: ComposerThreadTarget, retry: FanoutRetry | undefined) => void;
   getComposerDraft: (target: ComposerThreadTarget) => ComposerThreadDraftState | null;
   getDraftThreadByLogicalProjectKey: (logicalProjectKey: string) => ProjectDraftSession | null;
   getDraftSessionByLogicalProjectKey: (logicalProjectKey: string) => ProjectDraftSession | null;
@@ -1764,6 +1770,9 @@ function normalizePersistedDraftsByThreadId(
       continue;
     }
     const draftCandidate = draftValue as PersistedComposerThreadDraftState;
+    const fanoutRetry = isFanoutRetry(draftCandidate.fanoutRetry)
+      ? draftCandidate.fanoutRetry
+      : undefined;
     const promptCandidate = typeof draftCandidate.prompt === "string" ? draftCandidate.prompt : "";
     const attachments = Array.isArray(draftCandidate.attachments)
       ? draftCandidate.attachments.flatMap((entry) => {
@@ -1919,6 +1928,9 @@ function normalizePersistedDraftsByThreadId(
     nextDraftsByThreadKey[normalizedThreadKey] = {
       prompt,
       attachments,
+      ...(fanoutRetry
+        ? { fanoutRetry: structuredClone(fanoutRetry) as DeepMutable<FanoutRetry> }
+        : {}),
       ...(files.length > 0 ? { files } : {}),
       ...(terminalContexts.length > 0 ? { terminalContexts } : {}),
       ...(previewAnnotations.length > 0 ? { previewAnnotations } : {}),
@@ -2084,6 +2096,9 @@ export function partializeComposerDraftStoreState(
         ? {
             reviewComments: draft.reviewComments.map((comment) => ({ ...comment })),
           }
+        : {}),
+      ...(draft.fanoutRetry
+        ? { fanoutRetry: structuredClone(draft.fanoutRetry) as DeepMutable<FanoutRetry> }
         : {}),
       ...(draft.contextDraft
         ? { contextDraft: structuredClone(draft.contextDraft) as DeepMutable<ComposerContextDraft> }
@@ -2365,6 +2380,9 @@ function toHydratedThreadDraft(
       persistedDraft.previewAnnotations?.map((annotation) => ({ ...annotation })) ?? [],
     reviewComments: persistedDraft.reviewComments?.map((comment) => ({ ...comment })) ?? [],
     threadContexts: persistedDraft.threadContexts?.map((record) => ({ ...record })) ?? [],
+    ...(persistedDraft.fanoutRetry
+      ? { fanoutRetry: structuredClone(persistedDraft.fanoutRetry) }
+      : {}),
     ...(persistedDraft.contextDraft
       ? { contextDraft: structuredClone(persistedDraft.contextDraft) }
       : {}),
@@ -3851,6 +3869,20 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
             };
           });
         },
+        setFanoutRetry: (target, retry) => {
+          const key = resolveComposerDraftKey(get(), target);
+          if (!key) return;
+          if (retry) validateFanoutRetry(retry);
+          set((state) => ({
+            draftsByThreadKey: {
+              ...state.draftsByThreadKey,
+              [key]: {
+                ...(state.draftsByThreadKey[key] ?? createEmptyThreadDraft()),
+                fanoutRetry: retry ? structuredClone(retry) : undefined,
+              },
+            },
+          }));
+        },
         setContextDraft: (threadRef, contextDraft) => {
           const threadKey = resolveComposerDraftKey(get(), threadRef);
           if (!threadKey) return;
@@ -3987,6 +4019,7 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
               reviewComments: [],
               threadContexts: [],
               contextDraft: undefined,
+              fanoutRetry: undefined,
             };
             const nextDraftsByThreadKey = { ...state.draftsByThreadKey };
             if (shouldRemoveDraft(nextDraft)) {
@@ -4131,6 +4164,7 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
             const nextSource: ComposerThreadDraftState = {
               ...source,
               contextDraft: undefined,
+              fanoutRetry: undefined,
               prompt: ensureInlineContextReferences(
                 "",
                 source.terminalContexts.map(terminalContextReference),

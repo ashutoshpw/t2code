@@ -1,3 +1,4 @@
+import { FanoutRecovery, type FanoutOutcome } from "./lib/composerFanout";
 import {
   ComposerContextRecord,
   EnvironmentId,
@@ -41,6 +42,7 @@ const StashEntrySchema = Schema.Struct({
       draftId: Schema.optionalKey(Schema.String),
       targetKey: Schema.String,
       context: PersistedComposerContext,
+      fanout: Schema.optionalKey(FanoutRecovery),
     }),
   ),
 });
@@ -144,6 +146,11 @@ interface PromptStashStoreState {
   activeRecoveryIds: ReadonlyArray<string>;
   reserveSendRecovery: (entry: PromptStashEntry) => { written: boolean; durable: boolean };
   settleSendRecovery: (entryId: string, sent: boolean) => { durable: boolean };
+  recordFanoutOutcome: (
+    entryId: string,
+    attemptId: string,
+    outcome: FanoutOutcome,
+  ) => { durable: boolean; updated: boolean };
   stashEntry: (entry: PromptStashEntry) => {
     evicted: PromptStashEntry | null;
     /** False when the write failed outright (e.g. quota); nothing was kept. */
@@ -182,6 +189,43 @@ export const usePromptStashStore = create<PromptStashStoreState>()((set, get) =>
     if (result.durable)
       set({ entries: nextEntries, activeRecoveryIds: [...get().activeRecoveryIds, entry.id] });
     return result;
+  },
+  recordFanoutOutcome: (entryId, attemptId, outcome) => {
+    const entries = get().entries;
+    const index = entries.findIndex((entry) => entry.id === entryId);
+    const entry = entries[index];
+    const recovery = entry?.recovery;
+    const fanout = recovery?.fanout;
+    const attempt = fanout?.attempts.find((value) => value.id === attemptId);
+    if (
+      !entry ||
+      !recovery ||
+      !fanout ||
+      !attempt ||
+      !get().activeRecoveryIds.includes(entryId) ||
+      !(
+        (attempt.outcome === "not-sent" && outcome === "uncertain") ||
+        (attempt.outcome === "uncertain" && outcome !== "uncertain")
+      )
+    )
+      return { updated: false, durable: false };
+    const nextEntries = [...entries];
+    nextEntries[index] = {
+      ...entry,
+      recovery: {
+        ...recovery,
+        fanout: {
+          ...fanout,
+          attempts: fanout.attempts.map((value) =>
+            value.id === attemptId ? { ...value, outcome } : value,
+          ),
+        },
+      },
+    };
+    const result = persistEntries(nextEntries);
+    // Dispatch requires the durable uncertainty marker; acknowledgements can still be shown live.
+    if (result.durable || outcome !== "uncertain") set({ entries: nextEntries });
+    return { updated: true, durable: result.durable };
   },
   settleSendRecovery: (entryId, sent) => {
     set({ activeRecoveryIds: get().activeRecoveryIds.filter((id) => id !== entryId) });
