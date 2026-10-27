@@ -76,7 +76,11 @@ function PageTree({
         </p>
       ) : window.data.items.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          {window.parentPageId === null ? "No pages in this space." : "No child pages."}
+          {window.data.nextCursor !== null
+            ? "No pages in this window."
+            : window.parentPageId === null
+              ? "No pages in this space."
+              : "No child pages."}
         </p>
       ) : (
         <ul className="space-y-2">
