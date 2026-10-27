@@ -26,6 +26,7 @@ import {
 import type { SpaceCapability } from "@t2code/contracts/spaces";
 import {
   SpaceDocumentSession,
+  mediaAssetId,
   type SpaceReferenceController,
   createSpaceServiceSessionAdapter,
   type SpacePageNavigationTarget,
@@ -36,6 +37,9 @@ import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { useEffect, useMemo, useState } from "react";
 
+import { createMobileSpaceUploads, type MobileSpaceUploads } from "../features/spaces/uploads";
+import { createMobileSpaceMediaStore } from "../features/spaces/originalStore";
+import { createExpoSpaceOriginalFileIO } from "../features/spaces/expoOriginalFiles";
 import { createSpacesMediaReads } from "../rpc/spacesMedia";
 import { MobileSpaceImageBudget, MobileSpaceImageViewer } from "../features/spaces/media";
 import { connectionAtomRuntime } from "../connection/runtime";
@@ -178,6 +182,10 @@ export function createSpacesPageReader(
   let reader: SpacesPageReader | undefined;
   const adapter = createSpaceServiceSessionAdapter(key, {
     limits: () => requireAccess(key.environmentId, true).capability.limits,
+    validateNewRequest: (request) =>
+      request.mutations.some((m) => m.kind !== "delete" && mediaAssetId(m.block))
+        ? getMobileSpaceUploads().owner.validateNewRequest(request)
+        : undefined,
     getPage: async (input) => {
       const owner = requireAccess(key.environmentId);
       const result = await query(
@@ -210,6 +218,7 @@ export function createSpacesPageReader(
     assertMutable: () => {
       requireAccess(key.environmentId, true);
       getMobileSpaceStructure(key.environmentId).assertReady();
+      getMobileSpaceUploads().owner.assertMutable(key);
       documents.assertUnreserved(key);
       reader?.assertContentReady();
     },
@@ -218,7 +227,11 @@ export function createSpacesPageReader(
   });
   reader = new SpacesPageReader(target, {
     session,
-    beforeRead: () => getMobileSpaceStructure(key.environmentId).hydrate(),
+    beforeRead: async () => {
+      await getMobileSpaceStructure(key.environmentId).hydrate();
+      await getMobileSpaceUploads().owner.hydrate();
+    },
+    mediaBlocked: () => getMobileSpaceUploads().owner.isBlocked(key),
     get access() {
       return access ?? liveAccess(key.environmentId);
     },
@@ -302,6 +315,7 @@ export function getMobileSpaceStructure(environmentId: EnvironmentId) {
     store: createMobileSpaceStructureStore(() => Runtime.runtime.context()),
     drafts,
     documents,
+    media: getMobileSpaceUploads().owner,
     newId: uuidv4,
     capability: () => liveAccess(environmentId).capability,
     assertAccess: (write) => {
@@ -539,6 +553,106 @@ export function useSpacesReferenceController(environmentId: EnvironmentId, attem
     };
   }, [stamp, environmentId, access, sourceVersion]);
   return state?.stamp === stamp ? state.owner : null;
+}
+
+let uploads: MobileSpaceUploads | undefined;
+export function getMobileSpaceUploads(): MobileSpaceUploads {
+  if (uploads) return uploads;
+  const sessions = new Map<EnvironmentId, () => object | null>();
+  const connect = async (environmentId: EnvironmentId) => {
+    if (sessions.get(environmentId)?.()) return;
+    const result = await runAtomCommand(
+      appAtomRegistry,
+      spacesEnvironment.captureSession,
+      { environmentId, input: undefined },
+      { reportFailure: false },
+    );
+    if (result._tag === "Failure") throw Cause.squash(result.cause);
+    sessions.set(environmentId, result.value);
+  };
+  const access = (environmentId: EnvironmentId, write: boolean) => {
+    const current = requireAccess(environmentId, write);
+    const session = sessions.get(environmentId)?.();
+    if (
+      !session ||
+      current.capability.version !== 2 ||
+      current.capability.features?.assets !== true ||
+      !current.capability.limits.assets
+    )
+      throw new Error("Image uploads need current assets support and read/operate permission");
+    return { session, limits: current.capability.limits.assets };
+  };
+  const command = async <A, E>(
+    result: Promise<
+      | { readonly _tag: "Success"; readonly value: A }
+      | { readonly _tag: "Failure"; readonly cause: Cause.Cause<E> }
+    >,
+  ) => {
+    const value = await result;
+    if (value._tag === "Failure") throw Cause.squash(value.cause);
+    return value.value;
+  };
+  uploads = createMobileSpaceUploads({
+    store: createMobileSpaceMediaStore(() => Runtime.runtime.context()),
+    io: createExpoSpaceOriginalFileIO(),
+    newId: uuidv4,
+    connect,
+    access,
+    origin: (environmentId) => {
+      const value = appAtomRegistry.get(
+        environmentSession.preparedConnectionValueAtom(environmentId),
+      );
+      if (Option.isNone(value)) throw new Error("Image upload environment disconnected");
+      return value.value.httpBaseUrl;
+    },
+    mint: (input) => {
+      access(input.environmentId, true);
+      return command(
+        spacesEnvironment.createImageUpload.run(appAtomRegistry, {
+          environmentId: input.environmentId,
+          input,
+        }),
+      );
+    },
+    finalize: (input) => {
+      access(input.environmentId, true);
+      return command(
+        spacesEnvironment.finalizeImageUpload.run(appAtomRegistry, {
+          environmentId: input.environmentId,
+          input,
+        }),
+      );
+    },
+    status: (input) => {
+      access(input.environmentId, false);
+      return query(spacesEnvironment.imageUpload({ environmentId: input.environmentId, input }));
+    },
+    metadata: (input) => {
+      access(input.environmentId, false);
+      return query(spacesEnvironment.imageMetadata({ environmentId: input.environmentId, input }));
+    },
+    draft: (key) => drafts.load(key),
+    saved: async (key, blockId, assetId) => {
+      await connect(key.environmentId);
+      const initial = access(key.environmentId, false).session;
+      const page = await query(
+        spacesEnvironment.page({ environmentId: key.environmentId, input: key }),
+      );
+      const window = await query(
+        spacesEnvironment.blocks({
+          environmentId: key.environmentId,
+          input: { ...key, revision: page.page.revision, limit: 100 },
+        }),
+      );
+      return (
+        access(key.environmentId, false).session === initial &&
+        window.revision === page.page.revision &&
+        window.blocks.some((block) => block.id === blockId && mediaAssetId(block) === assetId)
+      );
+    },
+    changed: () => documents.refreshAccess(),
+  });
+  return uploads;
 }
 
 const imageViewBudget = new MobileSpaceImageBudget();

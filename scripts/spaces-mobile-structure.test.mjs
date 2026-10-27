@@ -34,6 +34,7 @@ const pageView = vi.hoisted(() => ({ access: null, acquire: null }));
 vi.mock("../apps/mobile/src/state/spaces.ts", () => ({
   acquireSpacesPageReader: (...args) => pageView.acquire(...args),
   createSpacesImageViewer: () => null,
+  getMobileSpaceUploads: () => ({}),
   useSpacesReadAccess: () => pageView.access,
   spacesEnvironment: {},
 }));
@@ -71,6 +72,9 @@ vi.mock("../apps/mobile/src/features/spaces/SpacesLibraryActions.tsx", () => ({
 }));
 vi.mock("../apps/mobile/src/features/spaces/SpacesHeavyMediaViewer.tsx", () => ({
   SpacesHeavyMediaViewer: () => null,
+}));
+vi.mock("../apps/mobile/src/features/spaces/SpacesImageUploadControls.tsx", () => ({
+  SpacesImageUploadControls: () => null,
 }));
 vi.mock("../apps/mobile/src/features/spaces/SpacesImageViewer.tsx", () => ({
   SpacesImageViewer: () => null,

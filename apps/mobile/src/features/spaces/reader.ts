@@ -61,6 +61,7 @@ export class SpacesPageReader {
   #stopSession: (() => void) | null = null;
   #serverWindow: SpaceReadBlocksResult | null = null;
   #reserved = false;
+  #firstWindow = false;
   #snapshot: ReaderSnapshot;
   readonly editing: MobileSpaceEditing;
 
@@ -72,6 +73,7 @@ export class SpacesPageReader {
       locate: (signal: AbortSignal) => Promise<LocatedPage>;
       blocks: (input: SpaceReadBlocksInput, signal: AbortSignal) => Promise<SpaceReadBlocksResult>;
       beforeRead?: () => Promise<void>;
+      mediaBlocked?: () => boolean;
       confirmDeleted?: (signal: AbortSignal) => Promise<boolean>;
     },
   ) {
@@ -96,7 +98,29 @@ export class SpacesPageReader {
     return this.ports.session;
   }
 
+  refreshAccess() {
+    this.#publishSession();
+  }
+
+  completeImageWindow() {
+    const state = this.session.getSnapshot();
+    return (
+      this.#firstWindow &&
+      this.#serverWindow?.nextCursor === null &&
+      state.hydrated &&
+      !this.#snapshot.loading &&
+      this.#snapshot.error === null &&
+      this.#snapshot.unavailable === null &&
+      this.#snapshot.location?.current() != null &&
+      state.baseRevision === this.#serverWindow.revision &&
+      JSON.stringify(state.memberIds) ===
+        JSON.stringify(this.#serverWindow.blocks.map((block) => block.id))
+    );
+  }
+
   assertContentReady() {
+    if (this.ports.mediaBlocked?.())
+      throw new Error("Finish the retained image insertion before editing or changing windows");
     if (this.#snapshot.unavailable === "deleted")
       throw new Error("This page was permanently deleted; retained content is read-only");
     if (this.#snapshot.unavailable === "trashed")
@@ -179,6 +203,7 @@ export class SpacesPageReader {
     return (
       this.#listeners.size === 0 &&
       !this.#reserved &&
+      !this.ports.mediaBlocked?.() &&
       this.editing.getSnapshot().focus === null &&
       this.editing.getSnapshot().busy === null &&
       !this.#opening &&
@@ -209,7 +234,10 @@ export class SpacesPageReader {
     });
   }
   #publish(snapshot: ReaderSnapshot) {
-    this.#snapshot = snapshot;
+    this.#snapshot = {
+      ...snapshot,
+      structureBlocked: this.#reserved || this.ports.mediaBlocked?.() === true,
+    };
     for (const listener of this.#listeners) listener();
   }
   invalidate() {
@@ -217,6 +245,7 @@ export class SpacesPageReader {
     this.#abort?.abort();
     this.#opening = null;
     this.#serverWindow = null;
+    this.#firstWindow = false;
     this.#publish({
       unavailable: this.#snapshot.unavailable,
       structureBlocked: this.#reserved,
@@ -227,12 +256,21 @@ export class SpacesPageReader {
       session: this.session.getSnapshot(),
     });
   }
-  first = () => this.#start();
+  first = () => {
+    if (
+      this.ports.mediaBlocked?.() &&
+      this.#snapshot.location?.current() &&
+      this.#access?.current()
+    )
+      return Promise.resolve();
+    return this.#start();
+  };
   next = () => {
     if (this.#snapshot.loading || !this.#snapshot.window?.nextCursor) return Promise.resolve();
     const state = this.session.getSnapshot();
     if (
       this.editing.getSnapshot().focus ||
+      this.ports.mediaBlocked?.() ||
       state.dirty ||
       state.pending ||
       state.persistenceError !== null
@@ -305,7 +343,7 @@ export class SpacesPageReader {
     });
     try {
       if (this.ports.beforeRead) await this.ports.beforeRead();
-      if (!structure && this.#reserved)
+      if (!structure && (this.#reserved || (cursor && this.ports.mediaBlocked?.())))
         throw new Error("Recover the reserved structural operation first");
       const { location, window } = await this.#readWindow(access, abort.signal, cursor);
       if (!current()) {
@@ -328,12 +366,14 @@ export class SpacesPageReader {
       const state = this.session.getSnapshot();
       if (
         !this.editing.getSnapshot().focus &&
+        !this.ports.mediaBlocked?.() &&
         !state.dirty &&
         !state.pending &&
         state.persistenceError === null
       )
         this.session.replaceWindow(window);
       this.#serverWindow = window;
+      this.#firstWindow = cursor === undefined;
       this.#snapshot = {
         ...this.#snapshot,
         unavailable: null,

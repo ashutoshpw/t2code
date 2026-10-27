@@ -169,7 +169,7 @@ describe("durable mobile Spaces page drafts", () => {
             );
           });
           const inspect = new NodeSqlite.DatabaseSync(fixture.file);
-          expect(inspect.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: 3 });
+          expect(inspect.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: 4 });
           inspect.close();
         }),
       ),
@@ -399,7 +399,7 @@ describe("durable mobile structural journals", () => {
             expect(await reopened.structure.load(draftPage.environmentId)).toEqual(original);
           });
           const inspect = new NodeSqlite.DatabaseSync(fixture.file);
-          expect(inspect.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: 3 });
+          expect(inspect.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: 4 });
           inspect.close();
         }),
       ),

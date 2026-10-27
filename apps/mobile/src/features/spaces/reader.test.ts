@@ -130,6 +130,7 @@ describe("mobile Spaces page reader", () => {
     test.responses.push({ revision: 7, blocks: [], nextCursor: SpaceCursor.make("next") });
     await test.reader.first();
     expect(test.reader.getSnapshot().window?.nextCursor).toBe("next");
+    expect(test.reader.completeImageWindow()).toBe(false);
     expect(test.inputs).toHaveLength(1);
     const opaque = {
       id: SpaceBlockId.make("future"),
@@ -153,6 +154,10 @@ describe("mobile Spaces page reader", () => {
     expect(test.reader.getSnapshot().window?.blocks).toEqual([opaque]);
     await test.reader.next();
     expect(test.inputs).toHaveLength(2);
+    expect(test.reader.completeImageWindow()).toBe(false);
+    test.responses.push({ revision: 7, blocks: [], nextCursor: null });
+    await test.reader.first();
+    expect(test.reader.completeImageWindow()).toBe(true);
   });
 
   it.each([

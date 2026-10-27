@@ -17,6 +17,7 @@ import { useEnvironmentQuery } from "../../state/query";
 import {
   acquireSpacesPageReader,
   createSpacesImageViewer,
+  getMobileSpaceUploads,
   spacesEnvironment,
   useSpacesReadAccess,
 } from "../../state/spaces";
@@ -24,6 +25,7 @@ import { type SpacesReadAccess, spacesAvailabilityMessage } from "./reader";
 import { readSpacesPageTarget, readSpacesLibraryTarget } from "./navigation";
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
 import { SpacesHeavyMediaViewer } from "./SpacesHeavyMediaViewer";
+import { SpacesImageUploadControls } from "./SpacesImageUploadControls";
 import { SpacesImageViewer } from "./SpacesImageViewer";
 import { SpaceBlockReader } from "./SpaceBlockReader";
 import { SpacesLibraryActions } from "./SpacesLibraryActions";
@@ -483,6 +485,19 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
   return (
     <View className="flex-1">
       <SpacesImageViewer model={media} access={access} />
+      {access.capability?.version === 2 && access.capability.features?.assets === true ? (
+        <SpacesImageUploadControls
+          runtime={getMobileSpaceUploads()}
+          reader={reader}
+          writable={writable}
+          current={() =>
+            navigation.isFocused() &&
+            access.current() &&
+            reader.getSnapshot().location?.current() != null &&
+            reader.editing.getSnapshot().focus === null
+          }
+        />
+      ) : null}
       <SpacesHeavyMediaViewer model={heavy.pdf} access={access} />
       <SpacesHeavyMediaViewer model={heavy.video} access={access} />
       {!readable ? <AccessNotice access={access} environmentId={target.environmentId} /> : null}

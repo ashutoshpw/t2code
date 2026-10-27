@@ -29,6 +29,10 @@ export class MobileSpaceDocuments {
   readonly #reservations = new Set<string>();
   constructor(readonly create: (target: SpacePageNavigationTarget) => SpacesPageReader) {}
 
+  refreshAccess() {
+    for (const entry of this.#entries.values()) entry.reader.refreshAccess();
+  }
+
   assertUnreserved(target: { environmentId: EnvironmentId; pageId: SpacePageId }) {
     if (this.#reservations.has(JSON.stringify([target.environmentId, target.pageId])))
       throw new Error("This page is reserved; recover its exact structural operation first");

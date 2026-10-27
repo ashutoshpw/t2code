@@ -39,12 +39,33 @@ export function createMobileSpaceStructure(
     readonly store: SpaceStructureStore;
     readonly drafts: SpaceDraftStore;
     readonly documents: MobileSpaceDocuments;
+    readonly media?: Pick<
+      import("@t2code/client-runtime/spaces").SpaceImageUploads<
+        import("./originals").NativeSpaceOriginal
+      >,
+      "reserve" | "checkPages"
+    >;
   },
 ) {
   return new SpaceRootReorder(environmentId, {
     ...ports,
-    reserve: (pages, restoring) => ports.documents.reserve(environmentId, pages, restoring),
-    checkDrafts: (pages) => checkSpaceStructureDrafts(ports.drafts, environmentId, pages),
+    reserve: (pages, restoring) => {
+      const releaseMedia = ports.media?.reserve(environmentId, pages);
+      try {
+        const release = ports.documents.reserve(environmentId, pages, restoring);
+        return () => {
+          release();
+          releaseMedia?.();
+        };
+      } catch (error) {
+        releaseMedia?.();
+        throw error;
+      }
+    },
+    checkDrafts: async (pages) => {
+      await ports.media?.checkPages(environmentId, pages);
+      await checkSpaceStructureDrafts(ports.drafts, environmentId, pages);
+    },
     refresh: (pages) => ports.documents.refreshStructure(environmentId, pages),
   });
 }
