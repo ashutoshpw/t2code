@@ -1,5 +1,9 @@
 import { type EnvironmentId } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
+import * as Crypto from "effect/Crypto";
+import * as Hex from "effect/encoding/Hex";
+import * as Schema from "effect/Schema";
+import { issueAssetUrl } from "../../../assets/AssetAccess.ts";
 import * as Effect from "effect/Effect";
 import * as SpacesService from "../../../spaces/SpacesService.ts";
 import * as Invocation from "../../McpInvocationContext.ts";
@@ -7,9 +11,12 @@ import * as McpToolAccess from "../../McpToolAccess.ts";
 import { SpacesToolkit } from "./tools.ts";
 
 // Registration and SpacesService already own tracing for this transport adapter.
-const invoke = Effect.fnUntraced(function* <A>(
+const invoke = Effect.fnUntraced(function* <A, R>(
   input: { readonly environmentId: EnvironmentId } | C.SpaceReceiptLookupInput,
-  run: (service: SpacesService.SpacesService["Service"]) => Effect.Effect<A, C.SpaceServiceError>,
+  run: (
+    service: SpacesService.SpacesService["Service"],
+    scope: Invocation.McpInvocationScope,
+  ) => Effect.Effect<A, C.SpaceServiceError, R>,
 ) {
   const scope = yield* Invocation.requireMcpCapability("spaces");
   const environmentId =
@@ -17,9 +24,67 @@ const invoke = Effect.fnUntraced(function* <A>(
   if (environmentId !== scope.environmentId)
     return yield* new C.SpaceEnvironmentMismatchError({ environmentId: scope.environmentId });
   const service = yield* SpacesService.SpacesService;
-  return yield* run(service);
+  return yield* run(service, scope);
 });
+const invokeAsset = Effect.fnUntraced(function* <A, R>(
+  input: { readonly environmentId: EnvironmentId },
+  run: (
+    service: SpacesService.SpacesService["Service"],
+    scope: Invocation.McpInvocationScope,
+  ) => Effect.Effect<A, C.SpaceServiceError, R>,
+) {
+  return yield* invoke(input, (service, scope) =>
+    Effect.gen(function* () {
+      const capability = yield* service.getCapability(input.environmentId);
+      if (capability?.version !== 2 || capability.features?.assets !== true)
+        return yield* new C.SpacesUnavailableError({ stage: "initializing" });
+      return yield* run(service, scope);
+    }),
+  );
+});
+const assetCaller = Effect.fnUntraced(function* (scope: Invocation.McpInvocationScope) {
+  const crypto = yield* Crypto.Crypto;
+  const digest = yield* crypto
+    .digest("SHA-256", new TextEncoder().encode(scope.requestNamespace))
+    .pipe(Effect.mapError(() => new C.SpaceAssetError({ reason: "io_failed" })));
+  return `mcp:${Hex.encode(digest)}`;
+});
+const isServiceError = Schema.is(C.SpaceServiceError);
 export const layer = McpToolAccess.toLayer(SpacesToolkit, {
+  t2_spaces_assets_upload_create: McpToolAccess.writesWithCapability((input) =>
+    invokeAsset(input, (service, scope) =>
+      assetCaller(scope).pipe(Effect.flatMap((caller) => service.createAssetUpload(input, caller))),
+    ),
+  ),
+  t2_spaces_assets_upload_get: McpToolAccess.reads((input) =>
+    invokeAsset(input, (service, scope) =>
+      assetCaller(scope).pipe(Effect.flatMap((caller) => service.getAssetUpload(input, caller))),
+    ),
+  ),
+  t2_spaces_assets_upload_finalize: McpToolAccess.writesWithCapability((input) =>
+    invokeAsset(input, (service, scope) =>
+      assetCaller(scope).pipe(
+        Effect.flatMap((caller) => service.finalizeAssetUpload(input, caller)),
+      ),
+    ),
+  ),
+  t2_spaces_assets_get: McpToolAccess.reads((input) =>
+    invokeAsset(input, (service) => service.getAssetMetadata(input)),
+  ),
+  t2_spaces_assets_read_url: McpToolAccess.reads((input) =>
+    invokeAsset(input, () =>
+      issueAssetUrl({ resource: { _tag: "spaces-asset", ...input } }).pipe(
+        Effect.map(({ relativeUrl, expiresAt }) => ({
+          assetId: input.assetId,
+          relativeUrl,
+          expiresAt,
+        })),
+        Effect.mapError((error) =>
+          isServiceError(error) ? error : new C.SpaceAssetError({ reason: "io_failed" }),
+        ),
+      ),
+    ),
+  ),
   t2_spaces_list: McpToolAccess.reads((input) =>
     invoke(input, (service) => service.listSpaces(input)),
   ),

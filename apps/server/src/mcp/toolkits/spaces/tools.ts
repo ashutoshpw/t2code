@@ -6,6 +6,14 @@ import {
   EnvironmentId,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
+import * as Crypto from "effect/Crypto";
+import * as FileSystem from "effect/FileSystem";
+import * as Path from "effect/Path";
+import * as Secrets from "../../../auth/ServerSecretStore.ts";
+import * as Config from "../../../config.ts";
+import * as WorkspacePaths from "../../../workspace/WorkspacePaths.ts";
+import * as Favicon from "../../../project/ProjectFaviconResolver.ts";
+import * as Orchestrator from "../../../orchestration-v2/Orchestrator.ts";
 import * as Schema from "effect/Schema";
 import { Tool, Toolkit } from "effect/ai";
 import * as SpacesService from "../../../spaces/SpacesService.ts";
@@ -23,6 +31,14 @@ const dependencies = [
   Invocation.McpInvocationContext,
   SpacesService.SpacesService,
   ThreadManagement.ThreadManagementService,
+  Secrets.ServerSecretStore,
+  Crypto.Crypto,
+  FileSystem.FileSystem,
+  Path.Path,
+  Config.ServerConfig,
+  WorkspacePaths.WorkspacePaths,
+  Favicon.ProjectFaviconResolver,
+  Orchestrator.OrchestratorV2,
 ];
 const structuredResult = Schema.makeFilter(
   (value: unknown) => typeof value === "object" && value !== null && !Array.isArray(value),
@@ -35,6 +51,7 @@ const tool = <const N extends string, P extends Schema.Top, A extends Schema.Top
   description: string,
   operation?: string,
   destructive = false,
+  writes = operation !== undefined,
 ) =>
   Tool.make(name, {
     parameters: strictSpacePayload(
@@ -48,10 +65,53 @@ const tool = <const N extends string, P extends Schema.Top, A extends Schema.Top
     description: `${description} Input envelope <=1048576 JSON UTF-8 bytes; server policy applies.`,
     dependencies,
   })
-    .annotate(Tool.Readonly, operation === undefined)
+    .annotate(Tool.Readonly, !writes)
     .annotate(Tool.Destructive, destructive);
 
 export const SpacesToolkit = Toolkit.make(
+  tool(
+    "t2_spaces_assets_upload_create",
+    C.SpaceAssetUploadCreateInput,
+    C.SpaceAssetUploadCreateResult,
+    "Reserve a staged upload using a stable requestId for this credential. POST exact bytes with Content-Length equal to expectedBytes to relativeUrl on this MCP server's HTTP origin; it is a bearer grant until expiresAt (epoch milliseconds). Then inspect status/finalize; no block is attached automatically.",
+    undefined,
+    false,
+    true,
+  ),
+  tool(
+    "t2_spaces_assets_upload_get",
+    C.SpaceAssetUploadInput,
+    C.SpaceAssetUploadStatus,
+    "Inspect this credential's staged upload state/recoveryPending; no upload grant is returned. Expiry is epoch milliseconds.",
+  ),
+  tool(
+    "t2_spaces_assets_upload_finalize",
+    C.SpaceAssetUploadInput,
+    C.SpaceAssetMetadata,
+    "Finalize this credential's uploaded bytes, or recover its existing outcome. Returns ready metadata; does not attach a block. Retry the same uploadId; do not create a new reservation to guess a lost outcome.",
+    undefined,
+    false,
+    true,
+  ),
+  tool(
+    "t2_spaces_assets_get",
+    C.SpaceAssetGetInput,
+    C.SpaceAssetMetadata,
+    "Read ready asset metadata by stable assetId; no filesystem path or inline bytes.",
+  ),
+  tool(
+    "t2_spaces_assets_read_url",
+    Schema.Struct({
+      ...C.SpaceAssetGetInput.fields,
+      disposition: Schema.optionalKey(Schema.Literals(["inline", "attachment"])),
+    }),
+    Schema.Struct({
+      assetId: C.SpaceAssetId,
+      relativeUrl: Schema.String,
+      expiresAt: C.SpaceAssetUploadCreateResult.fields.expiresAt,
+    }),
+    "Mint a bearer read URL for a ready asset; resolve relativeUrl against this MCP server's HTTP origin. GET/HEAD and byte ranges use the existing signed route. Expiry is epoch milliseconds; disabled or unavailable assets can fail earlier. Do not log or share bearer URLs.",
+  ),
   tool(
     "t2_spaces_list",
     C.SpaceListInput,
