@@ -49,6 +49,8 @@ import * as Path from "effect/Path";
 import type * as Scope from "effect/Scope";
 import * as ServerEnvironment from "../../server/src/environment/ServerEnvironment.ts";
 import * as Settings from "../../server/src/serverSettings.ts";
+import * as ServerConfig from "../../server/src/config.ts";
+import * as ServerSecrets from "../../server/src/auth/ServerSecretStore.ts";
 import * as SpacesRpc from "../../server/src/spaces/Rpc.ts";
 import * as RpcAuthorization from "../../server/src/auth/RpcAuthorization.ts";
 import { WS_RPC_SERVER_OPTIONS } from "../../server/src/ws.ts";
@@ -76,7 +78,7 @@ const fixture = Effect.fn("SpaceEditorServiceTest.fixture")(function* <A, E>(
   use: (
     service: SpacesService.SpacesService["Service"],
     databasePath: string,
-  ) => Effect.Effect<A, E, Scope.Scope>,
+  ) => Effect.Effect<A, E, Scope.Scope | ServerSecrets.ServerSecretStore>,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -84,13 +86,20 @@ const fixture = Effect.fn("SpaceEditorServiceTest.fixture")(function* <A, E>(
   return yield* SpacesService.SpacesService.pipe(
     Effect.flatMap((service) => use(service, path.join(directory, "spaces.sqlite"))),
     Effect.provide(
-      SpacesService.layerFromPath(path.join(directory, "spaces.sqlite")).pipe(
-        Layer.provide(
-          Layer.succeed(ServerEnvironment.ServerEnvironmentIdentity, {
-            getEnvironmentId: Effect.succeed(environmentId),
-          }),
+      Layer.mergeAll(
+        SpacesService.layerFromPath(path.join(directory, "spaces.sqlite")).pipe(
+          Layer.provide(
+            Layer.succeed(ServerEnvironment.ServerEnvironmentIdentity, {
+              getEnvironmentId: Effect.succeed(environmentId),
+            }),
+          ),
+          Layer.provide(Settings.layerTest({ spacesEnabled: true })),
         ),
-        Layer.provide(Settings.layerTest({ spacesEnabled: true })),
+        ServerSecrets.layer.pipe(
+          Layer.provide(
+            ServerConfig.ServerConfig.layerTest(process.cwd(), { prefix: "editor-rpc-" }),
+          ),
+        ),
       ),
     ),
   );
@@ -1312,7 +1321,7 @@ const encodedRootRpc = Effect.fn("SpaceEditorServiceTest.encodedRootRpc")(functi
       };
     }),
   );
-  const handlers = yield* SpacesRpc.handlers.pipe(
+  const handlers = yield* SpacesRpc.handlers("editor-integration").pipe(
     Effect.provideService(SpacesService.SpacesService, service),
   );
   const context = yield* SpacesRpc.group.toHandlers(handlers);
