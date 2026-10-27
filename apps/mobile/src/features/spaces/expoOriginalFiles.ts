@@ -1,5 +1,6 @@
 import { beginForegroundHandoff } from "../../lib/foreground-handoff";
 import type { SpaceOriginalFileIO } from "./originalFiles";
+import type { NativeSpaceMediaKind } from "./originals";
 
 export function createExpoSpaceOriginalFileIO(): SpaceOriginalFileIO {
   const fileSystem = () => import("expo-file-system");
@@ -7,7 +8,8 @@ export function createExpoSpaceOriginalFileIO(): SpaceOriginalFileIO {
     uri: (slot, partial) => `spaces-original:${slot}:${partial ? "part" : "original"}`,
     reader: async (uri) => {
       const { File, FileMode } = await fileSystem();
-      const handle = new File(uri).open(FileMode.ReadOnly);
+      const file = uri.startsWith("spaces-original:") ? await resolve(uri) : new File(uri);
+      const handle = file.open(FileMode.ReadOnly);
       return { read: (bytes) => handle.readBytes(bytes), close: () => handle.close() };
     },
     writer: async (uri) => {
@@ -65,7 +67,7 @@ async function resolve(uri: string) {
   return new File(Paths.document, "t2-spaces-originals-v1", slot, name);
 }
 
-export async function pickNativeSpaceImageFile() {
+export async function pickNativeSpaceMediaFile(kind: NativeSpaceMediaKind) {
   const { getDocumentAsync } = await import("expo-document-picker");
   const endHandoff = beginForegroundHandoff();
   try {
@@ -73,10 +75,15 @@ export async function pickNativeSpaceImageFile() {
       multiple: false,
       copyToCacheDirectory: false,
       base64: false,
-      type: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+      type:
+        kind === "image"
+          ? ["image/png", "image/jpeg", "image/gif", "image/webp"]
+          : kind === "pdf"
+            ? ["application/pdf"]
+            : ["video/mp4", "video/webm"],
     });
     if (result.canceled) return null;
-    if (result.assets.length !== 1) throw new Error("Choose one image original");
+    if (result.assets.length !== 1) throw new Error("Choose one original file");
     return result.assets[0]!;
   } finally {
     endHandoff();

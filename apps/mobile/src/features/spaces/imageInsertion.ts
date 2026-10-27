@@ -1,5 +1,5 @@
 import { SpaceBlockId } from "@t2code/contracts/spaces";
-import { imageAssetId, type SpaceImageInsertion } from "@t2code/client-runtime/spaces";
+import { mediaAssetId, type SpaceImageInsertion } from "@t2code/client-runtime/spaces";
 import type { SpacesPageReader } from "./reader";
 
 function allocateOrder(before: string | null) {
@@ -27,7 +27,7 @@ export function mobileSpaceImageInsertion(
       state().persistenceError ||
       state().status === "conflict"
     )
-      throw new Error("Image insertion needs the current complete first window and finished input");
+      throw new Error("Media insertion needs the current complete first window and finished input");
   };
   return {
     key: reader.session.key,
@@ -43,20 +43,20 @@ export function mobileSpaceImageInsertion(
       assertReady();
       const snapshot = state();
       if (
-        kind !== "image" ||
+        !["image", "pdf", "video"].includes(kind) ||
         snapshot.dirty ||
         snapshot.history.action ||
         snapshot.blocks.length >= 99 ||
         snapshot.baseRevision === null
       )
-        throw new Error("Save other edits and use a complete page with room for one image");
+        throw new Error("Save other edits and use a complete page with room for one media block");
       const last = snapshot.blocks.findLast((block) => block.parentId === null);
       return {
         block: {
           id: SpaceBlockId.make(newId()),
           parentId: null,
           order: allocateOrder(last?.order ?? null),
-          type: "image",
+          type: kind,
           version: 1,
           content: { assetId },
         },
@@ -76,10 +76,10 @@ export function mobileSpaceImageInsertion(
         JSON.stringify(snapshot.blocks.map((b) => b.id)) !== JSON.stringify(placement.windowIds) ||
         snapshot.blocks.some((b) => b.id === placement.block.id) ||
         placement.block.parentId !== null ||
-        imageAssetId(placement.block) === null ||
+        mediaAssetId(placement.block) === null ||
         placement.block.order !== allocateOrder(last?.order ?? null)
       )
-        throw new Error("The frozen image placement changed; original retained");
+        throw new Error("The frozen media placement changed; original retained");
       reader.session.apply([{ kind: "insert", block: placement.block }]);
     },
   };

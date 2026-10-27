@@ -1,5 +1,5 @@
 import * as Schema from "effect/Schema";
-import { SpaceAssetMimeType } from "@t2code/contracts/spaces";
+import { SpaceAssetMimeType, type SpaceAssetUploadCreateInput } from "@t2code/contracts/spaces";
 import {
   decodeSpaceMediaRecords,
   spaceMediaKind,
@@ -18,11 +18,15 @@ const originalSchema = Schema.Struct({
 });
 export type NativeSpaceOriginal = typeof originalSchema.Type;
 export type NativeSpaceImageRecord = SpaceImageRecord<NativeSpaceOriginal>;
+export type NativeSpaceMediaKind = SpaceAssetUploadCreateInput["mediaKind"];
+export function nativeSpaceMediaMaxBytes(kind: NativeSpaceMediaKind) {
+  return kind === "image" ? spaceImageMaxBytes : (kind === "pdf" ? 25 : 50) * 1024 * 1024;
+}
 const decode = Schema.decodeUnknownSync(originalSchema, { onExcessProperty: "error" });
 export const nativeSpaceOriginalCodec = (input: unknown): NativeSpaceOriginal => {
   const value = decode(input);
   const kind = spaceMediaKind(value.type);
-  const maxBytes = kind === "image" ? spaceImageMaxBytes : (kind === "pdf" ? 25 : 50) * 1024 * 1024;
+  const maxBytes = kind === null ? 0 : nativeSpaceMediaMaxBytes(kind);
   if (
     !/^[0-9a-f]{32}$/.test(value.token) ||
     !/^[0-9a-f]{64}$/.test(value.sha256) ||

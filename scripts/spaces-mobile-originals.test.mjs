@@ -36,6 +36,38 @@ const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=",
   "base64",
 );
+const mediaFiles = {
+  image: { kind: "image", mime: "image/png", extension: "png", bytes: png },
+  pdf: {
+    kind: "pdf",
+    mime: "application/pdf",
+    extension: "pdf",
+    bytes: Buffer.from("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n"),
+  },
+  mp4: {
+    kind: "video",
+    mime: "video/mp4",
+    extension: "mp4",
+    bytes: Buffer.from([
+      0,
+      0,
+      0,
+      24,
+      ...Buffer.from("ftypisom"),
+      0,
+      0,
+      2,
+      0,
+      ...Buffer.from("isommp42"),
+    ]),
+  },
+  webm: {
+    kind: "video",
+    mime: "video/webm",
+    extension: "webm",
+    bytes: Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x87, 0x42, 0x82, 0x84, ...Buffer.from("webm")]),
+  },
+};
 const env = EnvironmentId.make("native-originals");
 const key = { environmentId: env, pageId: SpacePageId.make("local-page") };
 const limits = {
@@ -257,9 +289,15 @@ it.effect(
     ),
 );
 
-it.effect.each(["reply", "commit"])(
-  "uploads actual retained disk bytes, recovers a lost finalize %s and page receipt across reopen, and retains newer content",
-  (mode) =>
+it.effect.each([
+  { mode: "reply", ...mediaFiles.image },
+  { mode: "commit", ...mediaFiles.image },
+  { mode: "reply", ...mediaFiles.pdf },
+  { mode: "commit", ...mediaFiles.mp4 },
+  { mode: "reply", ...mediaFiles.webm },
+])(
+  "uploads actual retained disk bytes, recovers a lost finalize $mode $kind $mime and page receipt across reopen, and retains newer content",
+  ({ mode, kind, mime, extension, bytes }) =>
     Effect.scoped(
       Effect.gen(function* () {
         const fixture = yield* diskDatabase();
@@ -298,8 +336,8 @@ it.effect.each(["reply", "commit"])(
           const pageKey = { environmentId: env, pageId: page.page.id };
           const cap = yield* service.getCapability(env);
           const open = yield* fixture.open();
-          const source = NodePath.join(NodePath.dirname(fixture.file), "picked.png");
-          NodeFS.writeFileSync(source, png);
+          const source = NodePath.join(NodePath.dirname(fixture.file), `picked.${extension}`);
+          NodeFS.writeFileSync(source, bytes);
           let posts = 0,
             finalizes = 0,
             applies = 0,
@@ -314,10 +352,10 @@ it.effect.each(["reply", "commit"])(
           const io = fileIO(NodePath.dirname(fixture.file), async (uri, url, headers, signal) => {
             expect(signal.aborted).toBe(false);
             expect(headers).toEqual({
-              "Content-Type": "image/png",
-              "Content-Length": String(png.length),
+              "Content-Type": mime,
+              "Content-Length": String(bytes.length),
             });
-            expect(NodeFS.readFileSync(uri)).toEqual(png);
+            expect(NodeFS.readFileSync(uri)).toEqual(bytes);
             posts++;
             await run(
               service.receiveAssetUpload(
@@ -362,7 +400,7 @@ it.effect.each(["reply", "commit"])(
           };
           const native = runtime(open, io, remote);
           yield* Effect.promise(() =>
-            native.value.retain(pageKey, source, "original.png", () => active),
+            native.value.retain(pageKey, source, `original.${extension}`, () => active, kind),
           );
           const id = native.value.owner.getSnapshot().records[0].id;
           if (mode === "commit")
@@ -467,18 +505,25 @@ it.effect.each(["reply", "commit"])(
           yield* Effect.promise(() => restarted.value.owner.insert(id, insertion));
           const retained = restarted.value.owner.getSnapshot().records[0];
           expect(retained.phase).toBe("drafted");
+          expect(retained.version).toBe(kind === "image" ? 1 : 2);
+          expect(retained.intent.mediaKind).toBe(kind);
+          expect(retained.placement.block).toMatchObject({
+            type: kind,
+            content: { assetId: retained.ready.assetId },
+          });
+          if (kind !== "image") expect(retained.ready.imageDimensions).toBeUndefined();
           yield* Effect.promise(async () => {
             await reader.editing.save();
             expect(reader.editing.getSnapshot().error).toContain("lost page reply");
             await expect(restarted.value.owner.release(id, insertion)).rejects.toThrow("pending");
           });
-          const imageBlock = reader.session.getSnapshot().blocks[0];
+          const mediaBlock = reader.session.getSnapshot().blocks[0];
           reader.session.apply([
             {
               kind: "replace",
               block: {
-                ...imageBlock,
-                content: { ...imageBlock.content, caption: [{ text: "later caption", marks: [] }] },
+                ...mediaBlock,
+                content: { ...mediaBlock.content, caption: [{ text: "later caption", marks: [] }] },
               },
             },
           ]);
@@ -503,7 +548,7 @@ it.effect.each(["reply", "commit"])(
           expect(NodeFS.existsSync(io.uri(0, false))).toBe(false);
           loseMint = true;
           yield* Effect.promise(() =>
-            restarted.value.retain(pageKey, source, "uncertain.png", () => true),
+            restarted.value.retain(pageKey, source, `uncertain.${extension}`, () => true, kind),
           );
           yield* Effect.promise(async () => {
             await expect(restarted.value.owner.upload("d".repeat(32))).rejects.toThrow(
@@ -531,6 +576,116 @@ it.effect.each(["reply", "commit"])(
             ),
           ),
         );
+      }).pipe(Effect.provide(NodeServices.layer)),
+    ),
+);
+
+it.effect(
+  "admits non-image originals at their exact type/75MiB bounds and refuses wrong signatures, kinds and advertised caps before intent publication",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fixture = yield* diskDatabase();
+        const open = yield* fixture.open();
+        const directory = NodePath.dirname(fixture.file);
+        const selected = NodePath.join(directory, "selected.original");
+        const io = fileIO(directory);
+        const native = runtime(open, io);
+        const sparse = (header, size) => {
+          const fd = NodeFS.openSync(selected, "w");
+          try {
+            NodeFS.writeSync(fd, header);
+            NodeFS.ftruncateSync(fd, size);
+          } finally {
+            NodeFS.closeSync(fd);
+          }
+        };
+        yield* Effect.promise(async () => {
+          for (const media of [mediaFiles.pdf, mediaFiles.mp4, mediaFiles.webm]) {
+            NodeFS.writeFileSync(selected, media.bytes);
+            await expect(
+              native.value.retain(key, selected, "wrong-category", () => true, "image"),
+            ).rejects.toThrow();
+            expect(await native.store.load()).toEqual([]);
+          }
+          for (const [kind, header] of [
+            ["pdf", Buffer.from("%PDF-X.7\n")],
+            [
+              "video",
+              Buffer.from([
+                0,
+                0,
+                0,
+                24,
+                ...Buffer.from("ftypqt  "),
+                0,
+                0,
+                0,
+                0,
+                ...Buffer.from("qt  qt  "),
+              ]),
+            ],
+            [
+              "video",
+              Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x87, 0x42, 0x82, 0x84, ...Buffer.from("fake")]),
+            ],
+          ]) {
+            NodeFS.writeFileSync(selected, header);
+            await expect(
+              native.value.retain(key, selected, "spoofed", () => true, kind),
+            ).rejects.toThrow();
+            expect(await native.store.load()).toEqual([]);
+          }
+          const capped = runtime(open, io, {
+            access: () => ({ session: {}, limits: { ...limits, maxPdfBytes: 16 } }),
+          });
+          NodeFS.writeFileSync(selected, mediaFiles.pdf.bytes);
+          await expect(
+            capped.value.retain(key, selected, "advertised.pdf", () => true, "pdf"),
+          ).rejects.toThrow("byte limit");
+          expect(await native.store.load()).toEqual([]);
+          for (const [kind, header, max] of [
+            ["pdf", mediaFiles.pdf.bytes, 25],
+            ["video", mediaFiles.mp4.bytes, 50],
+          ]) {
+            sparse(header, max * 1024 * 1024 + 1);
+            await expect(
+              native.value.retain(key, selected, "oversize", () => true, kind),
+            ).rejects.toThrow("byte limit");
+            expect(await native.store.load()).toEqual([]);
+          }
+          sparse(mediaFiles.pdf.bytes, 25 * 1024 * 1024);
+          await native.value.retain(
+            key,
+            selected,
+            "extension-is-not-authority.mp4",
+            () => true,
+            "pdf",
+          );
+          sparse(mediaFiles.mp4.bytes, 50 * 1024 * 1024);
+          await native.value.retain(key, selected, "exact.mp4", () => true, "video");
+          const records = await native.store.load();
+          expect(records.map((r) => [r.original.type, r.original.size, r.version])).toEqual([
+            ["application/pdf", 25 * 1024 * 1024, 2],
+            ["video/mp4", 50 * 1024 * 1024, 2],
+          ]);
+          NodeFS.writeFileSync(selected, png);
+          await expect(
+            native.value.retain(key, selected, "third.png", () => true),
+          ).rejects.toThrow();
+          const files = new MobileSpaceOriginalFiles(io, native.store.load, () => "f".repeat(32));
+          await expect(files.verify({ ...records[0].original, type: "video/mp4" })).rejects.toThrow(
+            "signature",
+          );
+          await files.verify(records[0].original);
+          expect(await native.store.load()).toEqual(records);
+          await open.store.write(key, null);
+          await native.value.owner.release(records[0].id);
+          await native.value.owner.release(records[1].id);
+          expect(await native.store.load()).toEqual([]);
+          expect(NodeFS.existsSync(io.uri(0, false))).toBe(false);
+          expect(NodeFS.existsSync(io.uri(1, false))).toBe(false);
+        });
       }).pipe(Effect.provide(NodeServices.layer)),
     ),
 );

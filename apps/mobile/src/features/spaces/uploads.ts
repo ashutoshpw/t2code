@@ -5,7 +5,12 @@ import {
 } from "@t2code/client-runtime/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceAssetMetadata, SpacePageTarget } from "@t2code/contracts/spaces";
-import { nativeSpaceOriginalCodec, type NativeSpaceOriginal } from "./originals";
+import {
+  nativeSpaceMediaMaxBytes,
+  nativeSpaceOriginalCodec,
+  type NativeSpaceOriginal,
+  type NativeSpaceMediaKind,
+} from "./originals";
 import {
   MobileSpaceOriginalFiles,
   withNativeSpaceOriginals,
@@ -64,18 +69,34 @@ export function createMobileSpaceUploads(
   });
   return {
     owner,
-    retain: async (key: SpacePageTarget, uri: string, name: string, current: () => boolean) => {
+    retain: async (
+      key: SpacePageTarget,
+      uri: string,
+      name: string,
+      current: () => boolean,
+      kind: NativeSpaceMediaKind = "image",
+    ) => {
       await owner.hydrate();
       await ports.connect?.(key.environmentId);
       const access = ports.access(key.environmentId, true);
       if (!current() || !name.trim() || new TextEncoder().encode(name).byteLength > 256)
-        throw new Error("Image import destination or name is unavailable");
+        throw new Error("Media import destination or name is unavailable");
+      const advertised =
+        kind === "image"
+          ? access.limits.maxImageBytes
+          : kind === "pdf"
+            ? access.limits.maxPdfBytes
+            : access.limits.maxVideoBytes;
       return files.retain(
         uri,
-        Math.min(10 * 1024 * 1024, access.limits.maxImageBytes),
+        {
+          kind,
+          maxBytes: Math.min(nativeSpaceMediaMaxBytes(kind), advertised),
+          maxHeaderBytes: Math.min(65536, access.limits.maxHeaderBytes),
+        },
         async (original) => {
           if (!current() || ports.access(key.environmentId, true).session !== access.session)
-            throw new Error("The image destination changed during import");
+            throw new Error("The media destination changed during import");
           await owner.add(key, original, name);
         },
       );

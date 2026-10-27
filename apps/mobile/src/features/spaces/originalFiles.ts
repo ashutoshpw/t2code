@@ -1,5 +1,11 @@
-import type { SpaceImageStore } from "@t2code/client-runtime/spaces";
-import { nativeSpaceOriginalCodec, type NativeSpaceOriginal } from "./originals";
+import { spaceMediaKind, type SpaceImageStore } from "@t2code/client-runtime/spaces";
+import {
+  nativeSpaceMediaMaxBytes,
+  nativeSpaceOriginalCodec,
+  type NativeSpaceOriginal,
+  type NativeSpaceMediaKind,
+} from "./originals";
+import { nativeSpaceOriginalMime } from "./originalSignature";
 
 export interface SpaceOriginalFileIO {
   readonly uri: (slot: 0 | 1, partial: boolean) => string;
@@ -18,15 +24,6 @@ export interface SpaceOriginalFileIO {
     headers: Record<string, string>,
     signal: AbortSignal,
   ) => Promise<void>;
-}
-function imageType(bytes: Uint8Array) {
-  if ([137, 80, 78, 71, 13, 10, 26, 10].every((value, index) => bytes[index] === value))
-    return "image/png";
-  if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return "image/jpeg";
-  const text = String.fromCharCode(...bytes);
-  if (text.startsWith("GIF87a") || text.startsWith("GIF89a")) return "image/gif";
-  if (text.startsWith("RIFF") && text.slice(8, 12) === "WEBP") return "image/webp";
-  throw new Error("Choose an unchanged PNG, JPEG, GIF or WebP original");
 }
 export class MobileSpaceOriginalFiles {
   readonly #leases = new Map<0 | 1, { token: string; count: number }>();
@@ -58,6 +55,25 @@ export class MobileSpaceOriginalFiles {
       const actual = await this.io.inspect(this.io.uri(original.fileSlot, false), original.size);
       if (actual.size !== original.size || actual.sha256 !== original.sha256)
         throw new Error("Spaces original is missing or changed; its exact intent is retained");
+      const reader = await this.io.reader(this.io.uri(original.fileSlot, false));
+      try {
+        const header = new Uint8Array(Math.min(65536, original.size));
+        let size = 0;
+        while (size < header.byteLength) {
+          const chunk = await reader.read(header.byteLength - size);
+          if (!chunk.byteLength) break;
+          if (chunk.byteLength > header.byteLength - size)
+            throw new Error("Original header read exceeded its byte bound");
+          header.set(chunk, size);
+          size += chunk.byteLength;
+        }
+        if (nativeSpaceOriginalMime(header.subarray(0, size)) !== original.type)
+          throw new Error(
+            "Retained original signature does not match its MIME type; intent retained",
+          );
+      } finally {
+        reader.close();
+      }
     } finally {
       release();
     }
@@ -77,22 +93,28 @@ export class MobileSpaceOriginalFiles {
   }
   async retain(
     uri: string,
-    maxBytes: number,
+    policy: { kind: NativeSpaceMediaKind; maxBytes: number; maxHeaderBytes: number },
     publish: (original: NativeSpaceOriginal) => Promise<unknown>,
   ) {
     if (this.#importing) throw new Error("Finish the current Spaces file import first");
-    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 10 * 1024 * 1024)
-      throw new Error("Image import policy is unavailable");
+    if (
+      !Number.isSafeInteger(policy.maxBytes) ||
+      policy.maxBytes < 1 ||
+      policy.maxBytes > nativeSpaceMediaMaxBytes(policy.kind) ||
+      !Number.isSafeInteger(policy.maxHeaderBytes) ||
+      policy.maxHeaderBytes < 1 ||
+      policy.maxHeaderBytes > 65536
+    )
+      throw new Error("Media import policy is unavailable");
     this.#importing = true;
     let slot: 0 | 1 | undefined;
     let release: (() => void) | undefined;
     try {
       const records = await this.inventory();
-      if (
-        records.length >= 2 ||
-        records.reduce((n, r) => n + r.original.size, 0) + maxBytes > 75 * 1024 * 1024
-      )
-        throw new Error("Resolve a retained original before importing another image");
+      const remaining = 75 * 1024 * 1024 - records.reduce((n, r) => n + r.original.size, 0);
+      if (records.length >= 2 || remaining < 1)
+        throw new Error("Resolve a retained original before importing another file");
+      const maxBytes = Math.min(policy.maxBytes, remaining);
       slot = ([0, 1] as const).find(
         (value) =>
           !records.some((r) => r.original.fileSlot === value) &&
@@ -113,24 +135,22 @@ export class MobileSpaceOriginalFiles {
       });
       const reader = await this.io.reader(uri);
       let size = 0;
-      let header = new Uint8Array();
+      const header = new Uint8Array(policy.maxHeaderBytes);
+      let headerSize = 0;
       try {
         const writer = await this.io.writer(this.io.uri(slot, true));
         try {
           for (;;) {
-            const chunk = await reader.read(Math.min(65536, maxBytes - size + 1));
+            const requested = Math.min(65536, maxBytes - size + 1);
+            const chunk = await reader.read(requested);
             if (!chunk.byteLength) break;
+            if (chunk.byteLength > requested)
+              throw new Error("Original read exceeded its byte bound");
             size += chunk.byteLength;
-            if (size > maxBytes) throw new Error("Image original exceeds the current byte limit");
-            if (header.byteLength < 32) {
-              const prefix = new Uint8Array(Math.min(32, header.byteLength + chunk.byteLength));
-              prefix.set(header);
-              prefix.set(
-                chunk.subarray(0, prefix.byteLength - header.byteLength),
-                header.byteLength,
-              );
-              header = prefix;
-            }
+            if (size > maxBytes) throw new Error("Media original exceeds the current byte limit");
+            const prefix = chunk.subarray(0, header.byteLength - headerSize);
+            header.set(prefix, headerSize);
+            headerSize += prefix.byteLength;
             await writer.write(chunk);
           }
         } finally {
@@ -139,10 +159,13 @@ export class MobileSpaceOriginalFiles {
       } finally {
         reader.close();
       }
-      if (!size) throw new Error("The selected image original is empty");
-      const type = imageType(header);
+      if (!size) throw new Error("The selected original is empty");
+      const type = nativeSpaceOriginalMime(header.subarray(0, headerSize));
+      if (spaceMediaKind(type) !== policy.kind)
+        throw new Error("Selected media kind does not match its file signature");
       const actual = await this.io.inspect(this.io.uri(slot, true), maxBytes);
-      if (actual.size !== size) throw new Error("Image copy size changed; no intent was published");
+      if (actual.size !== size)
+        throw new Error("Original copy size changed; no intent was published");
       const original = nativeSpaceOriginalCodec({
         version: 1,
         kind: "spaces-file",

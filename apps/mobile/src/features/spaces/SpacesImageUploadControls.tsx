@@ -3,7 +3,8 @@ import { View } from "react-native";
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
 import * as Dialog from "../../components/ui/Dialog";
-import { pickNativeSpaceImageFile } from "./expoOriginalFiles";
+import { pickNativeSpaceMediaFile } from "./expoOriginalFiles";
+import type { NativeSpaceMediaKind } from "./originals";
 import { uuidv4 } from "../../lib/uuid";
 import { mobileSpaceImageInsertion } from "./imageInsertion";
 import type { SpacesPageReader } from "./reader";
@@ -33,30 +34,42 @@ export function SpacesImageUploadControls(props: {
     void operation()
       .catch((cause) =>
         setError(
-          cause instanceof Error ? cause.message : "Image operation failed; original retained",
+          cause instanceof Error ? cause.message : "Media operation failed; original retained",
         ),
       )
       .finally(() => setBusy(false));
   };
-  const choose = async () => {
+  const choose = async (kind: NativeSpaceMediaKind) => {
     if (!props.writable || !props.current() || props.reader.editing.getSnapshot().focus)
       throw new Error("Finish native input and restore destination access first");
-    const file = await pickNativeSpaceImageFile();
+    const file = await pickNativeSpaceMediaFile(kind);
     if (!file) return;
-    await props.runtime.retain(target.key, file.uri, file.name.trim() || "image", props.current);
+    await props.runtime.retain(target.key, file.uri, file.name.trim() || kind, props.current, kind);
   };
   return (
     <View className="gap-2 px-4 py-2">
-      <Text className="font-bold text-foreground">Image originals</Text>
+      <Text className="font-bold text-foreground">Media originals</Text>
       <Text className="text-sm text-foreground-muted">
-        Two retained slots across Spaces. Choose a PNG, JPEG, GIF or WebP file up to 10 MiB; upload
-        it, then insert at the end of a complete page.
+        Two retained slots, 75 MiB total across Spaces. Image files up to 10 MiB, PDFs up to 25 MiB,
+        MP4/WebM videos up to 50 MiB. Upload, then insert at the end of a complete page.
       </Text>
       <ControlPill
         variant="pill"
         label="Choose image file"
         disabled={blocked || !props.writable || !props.current()}
-        onPress={() => run(choose)}
+        onPress={() => run(() => choose("image"))}
+      />
+      <ControlPill
+        variant="pill"
+        label="Choose PDF file"
+        disabled={blocked || !props.writable || !props.current()}
+        onPress={() => run(() => choose("pdf"))}
+      />
+      <ControlPill
+        variant="pill"
+        label="Choose video file"
+        disabled={blocked || !props.writable || !props.current()}
+        onPress={() => run(() => choose("video"))}
       />
       {records.map((record) => (
         <View key={record.id} className="gap-2">
@@ -84,7 +97,9 @@ export function SpacesImageUploadControls(props: {
               <ControlPill
                 variant="pill"
                 label={
-                  record.phase === "ready" ? "Insert image at page end" : "Finish exact insertion"
+                  record.phase === "ready"
+                    ? `Insert ${record.intent.mediaKind} at page end`
+                    : "Finish exact insertion"
                 }
                 disabled={blocked || !props.writable || !props.current()}
                 onPress={() => run(() => owner.insert(record.id, target))}
