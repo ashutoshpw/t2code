@@ -164,12 +164,16 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
               loading ||
               session.status === "saving" ||
               !!session.recoveryReason ||
-              (session.pending ? false : !permission) ||
+              (!session.pending || session.status === "draft" ? !permission : false) ||
               session.status === "conflict"
             }
             onClick={() => run(controller.save())}
           >
-            {session.pending ? "Check save receipt" : "Save draft"}
+            {session.pending
+              ? session.status === "draft"
+                ? "Retry unsent save"
+                : "Check save receipt"
+              : "Save draft"}
           </Button>
         ) : null}
         {session.dirty && !session.pending ? (

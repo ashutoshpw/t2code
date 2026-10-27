@@ -19,6 +19,7 @@ import {
   type SpaceDocumentDraft,
   type SpaceServicePorts,
   copySpaceBlocks,
+  decodeSpaceDocumentDraft,
 } from "@t2code/client-runtime/spaces";
 import * as Effect from "effect/Effect";
 import * as Cause from "effect/Cause";
@@ -239,6 +240,7 @@ const savedUndoFixture = Effect.fn("SpaceEditorServiceTest.savedUndo")(function*
     committed: signal(),
     reply: signal(),
   };
+  const persistence = { hold: false, fail: false, started: signal(), release: signal() };
   const createController = () =>
     new SpaceDocumentController(
       h.key,
@@ -278,8 +280,15 @@ const savedUndoFixture = Effect.fn("SpaceEditorServiceTest.savedUndo")(function*
         }),
         drafts: {
           load: async () => stored,
-          write: async (_key, value) => {
-            stored = value;
+          write: async (key, value) => {
+            const decoded = value === null ? null : decodeSpaceDocumentDraft(value, key);
+            if (persistence.hold && decoded?.pending) {
+              persistence.hold = false;
+              persistence.started.resolve();
+              await persistence.release.promise;
+            }
+            if (persistence.fail) throw new Error("draft storage blocked");
+            stored = decoded;
           },
         },
         createMutationId: () => `saved-history-${++ids}`,
@@ -296,6 +305,7 @@ const savedUndoFixture = Effect.fn("SpaceEditorServiceTest.savedUndo")(function*
     ...h,
     createController,
     transport,
+    persistence,
     requests,
     lookups,
     admissions: () => admissions,
@@ -330,6 +340,79 @@ function savedView(controller: SpaceDocumentController) {
 }
 
 it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => {
+  it.effect.each([false, true])(
+    "retries only the saved compensation prefix after unsent persistence failure and retains newer edits (reload: %s)",
+    (reload) =>
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* savedUndoFixture(service);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              view.edit("saved-");
+              await controller.save();
+              h.persistence.hold = true;
+              const undoing = view.bridge.compensate("undo");
+              const rejected = expect(undoing).rejects.toThrow("draft storage blocked");
+              await h.persistence.started.promise;
+              h.persistence.fail = true;
+              const prefix = controller.session.getSnapshot().pending!;
+              assert.isNotNull(prefix);
+              view.edit("newer-");
+              view.edit("again-");
+              assert.include(view.state.doc.textContent, "newer-");
+              const newer = controller.session.getSnapshot().blocks;
+              assert.equal(h.requests.length, 1);
+              h.persistence.release.resolve();
+              await rejected;
+              assert.equal(h.requests.length, 1);
+              assert.equal(controller.session.getSnapshot().status, "draft");
+              assert.isNotNull(controller.session.getSnapshot().persistenceError);
+              h.persistence.fail = false;
+              await controller.session.persistDraft();
+              const retrying = reload ? h.createController() : controller;
+              if (reload) await retrying.open();
+              const admissions = h.admissions();
+              await retrying.save();
+              assert.equal(h.admissions(), admissions);
+              assert.equal(h.requests.length, 2);
+              assert.deepEqual(h.requests[1], {
+                environmentId,
+                pageId: h.key.pageId,
+                mutationId: C.SpaceMutationId.make(prefix.mutationId),
+                receiptEpoch: prefix.receiptEpoch!,
+                baseRevision: prefix.baseRevision,
+                generation: prefix.generation,
+                mutations: prefix.mutations,
+              });
+              assert.equal(h.lookups.length, reload ? 1 : 0);
+              if (reload) assert.deepEqual(h.lookups[0]?.request.input, h.requests[1]);
+              assert.isNull(retrying.session.getSnapshot().pending);
+              assert.isTrue(retrying.session.getSnapshot().dirty);
+              assert.deepEqual(retrying.session.getSnapshot().blocks, newer);
+              assert.equal(retrying.session.getSnapshot().baseRevision, 3);
+              assert.deepEqual(
+                (await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks,
+                [savedParagraph("a", "original")],
+              );
+              await retrying.save();
+              assert.equal(h.requests.length, 3);
+              assert.equal(h.requests[2]!.baseRevision, 3);
+              assert.notEqual(h.requests[2]!.mutationId, prefix.mutationId);
+              assert.deepEqual(
+                (await h.run(service.readBlocks({ ...h.key, revision: 4 }))).blocks,
+                newer,
+              );
+            } finally {
+              h.persistence.release.resolve();
+              view.stop();
+            }
+          });
+        }),
+      ),
+  );
   it.effect.each(["delete", "join", "insert"] as const)(
     "refuses saved %s compensation rather than resurrecting retired identities",
     (operation) =>

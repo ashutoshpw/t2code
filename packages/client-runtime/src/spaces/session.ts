@@ -526,7 +526,10 @@ export class SpaceDocumentSession {
     if (!this.#snapshot.dirty && !this.#snapshot.pending) return;
     let request = this.#snapshot.pending;
     const createdRequest = request === null;
-    if (request) {
+    // Only an in-process persistence failure can leave compensation known unsent; reloads are uncertain.
+    const unsentCompensation =
+      request && this.#snapshot.history.action && this.#snapshot.status === "draft";
+    if (request && !unsentCompensation) {
       this.#update({ status: "uncertain" });
       if (!request.receiptEpoch) return;
       const receipt = await this.#options.adapter.lookupReceipt(request);
@@ -535,7 +538,7 @@ export class SpaceDocumentSession {
         await this.#acknowledge(request, receipt);
         return;
       }
-    } else {
+    } else if (!request) {
       const admission = await this.#options.adapter.getMutationAdmission();
       if (!admission.epoch) throw new Error("Missing Spaces mutation admission");
       if (this.getSnapshot().status === "conflict")
@@ -558,7 +561,7 @@ export class SpaceDocumentSession {
       await this.persistDraft();
     } catch (error) {
       if (createdRequest) {
-        this.#update({ pending: null, status: "draft" });
+        this.#update({ pending: this.#snapshot.history.action ? request : null, status: "draft" });
         await this.#persist();
       }
       throw error;
