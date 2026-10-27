@@ -372,6 +372,82 @@ const recoveryIntent = Effect.fn("SpacesServiceTest.recoveryIntent")(function* (
 });
 
 it.layer(NodeServices.layer)("Spaces core service", (it) => {
+  it.effect(
+    "bounds child owner candidates before trash filtering and advances tied-rank cursors through empty pages",
+    () =>
+      fixture((dbPath) =>
+        Effect.gen(function* () {
+          const { service, common, page, library } = yield* boot();
+          const other = yield* rootPage(
+            service,
+            common,
+            library.defaultSpaceId,
+            "paging-other-parent",
+          );
+          const children: Effect.Success<ReturnType<typeof childPage>>[] = [];
+          for (let i = 0; i < 5; i++)
+            children.push(yield* childPage(service, common, page.id, `paging-child-${i}`));
+          const ordered = children.toSorted((a, b) =>
+            a.ownerBlockId < b.ownerBlockId ? -1 : a.ownerBlockId > b.ownerBlockId ? 1 : 0,
+          );
+          const rank = "00000000000000000000000000000001";
+          yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            yield* sql`UPDATE spaces_blocks SET rank=${rank},payload=json_set(payload,'$.order',${rank}) WHERE page_id=${page.id} AND deleted=0 AND json_extract(payload,'$.type')='child_page'`;
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
+          for (const child of ordered.slice(0, 3))
+            yield* service.trashPage(
+              yield* recoveryIntent(
+                service,
+                common,
+                child.page.id,
+                "trash",
+                `paging-trash-${child.page.id}`,
+              ),
+            );
+          const input = {
+            ...env,
+            spaceId: library.defaultSpaceId,
+            parentPageId: page.id,
+            limit: 1,
+          };
+          const first = yield* service.listPages(input);
+          assert.deepEqual(first.items, []);
+          assert.isNotNull(first.nextCursor);
+          const wrongParent = yield* Effect.flip(
+            service.listPages({ ...input, parentPageId: other.id, cursor: first.nextCursor! }),
+          );
+          assert.equal(wrongParent._tag, "SpaceValidationError");
+          if (wrongParent._tag === "SpaceValidationError")
+            assert.equal(wrongParent.reason, "invalid_cursor");
+          const cursors = new Set([first.nextCursor]);
+          const visible: C.SpacePageId[] = [];
+          let cursor: C.SpaceCursor | null = first.nextCursor;
+          for (let i = 1; i < ordered.length; i++) {
+            const next: C.SpacePageListResult = yield* service.listPages({
+              ...input,
+              cursor: cursor!,
+            });
+            assert.deepEqual(
+              next.items.map((row) => row.id),
+              i < 3 ? [] : [ordered[i]!.page.id],
+            );
+            visible.push(...next.items.map((row) => row.id));
+            if (i < ordered.length - 1) {
+              assert.isNotNull(next.nextCursor);
+              assert.isFalse(cursors.has(next.nextCursor));
+              cursors.add(next.nextCursor);
+            } else assert.isNull(next.nextCursor);
+            cursor = next.nextCursor;
+          }
+          assert.deepEqual(
+            visible,
+            ordered.slice(3).map((row) => row.page.id),
+          );
+        }),
+      ),
+  );
+
   it.effect("counts surviving owner-marker pins before admitting the whole purge", () =>
     fixture((dbPath) =>
       Effect.gen(function* () {

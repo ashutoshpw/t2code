@@ -102,6 +102,10 @@ interface SpaceRow {
   readonly updated_at: string;
 }
 type PageRow = PageStore.PageRow;
+type PageListCandidate = { readonly [K in keyof PageRow]: PageRow[K] | null } & {
+  readonly list_order: string;
+  readonly list_id: string;
+};
 const spaceSummary = (row: SpaceRow): C.SpaceSummary => ({
   id: row.space_id,
   title: row.title,
@@ -389,31 +393,36 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
               : sql`AND (b.rank,b.block_id) > (${cursor.key},${cursor.id})`;
         const rows =
           input.parentPageId === undefined
-            ? yield* sql<
-                PageRow & { readonly list_order: string; readonly list_id: string }
-              >`SELECT p.*, p.root_order AS list_order, p.page_id AS list_id, o.owner_block_id, b.page_id AS parent_page_id, b.deleted AS owner_deleted, parent.space_id AS parent_space_id, json_extract(b.payload,'$.type') AS owner_type
+            ? yield* sql<PageListCandidate>`SELECT p.*, p.root_order AS list_order, p.page_id AS list_id, o.owner_block_id, b.page_id AS parent_page_id, b.deleted AS owner_deleted, parent.space_id AS parent_space_id, json_extract(b.payload,'$.type') AS owner_type
               FROM spaces_pages p LEFT JOIN spaces_page_owners o ON o.child_page_id = p.page_id
               LEFT JOIN spaces_blocks b ON b.block_id = o.owner_block_id LEFT JOIN spaces_pages parent ON parent.page_id = b.page_id WHERE p.space_id = ${input.spaceId} AND p.root_order IS NOT NULL AND p.trash_batch_id IS NULL
               ${after}
               ORDER BY p.root_order,p.page_id LIMIT ${limit + 1}`
-            : yield* sql<
-                PageRow & { readonly list_order: string; readonly list_id: string }
-              >`SELECT p.*, b.rank AS list_order, b.block_id AS list_id, o.owner_block_id,
-              b.page_id AS parent_page_id, b.deleted AS owner_deleted, parent.space_id AS parent_space_id,
-              json_extract(b.payload,'$.type') AS owner_type FROM spaces_blocks b
-              JOIN spaces_page_owners o ON o.owner_block_id = b.block_id JOIN spaces_pages p ON p.page_id = o.child_page_id
-              JOIN spaces_pages parent ON parent.page_id = b.page_id
-              WHERE b.page_id = ${input.parentPageId} AND b.deleted = 0 AND json_extract(b.payload,'$.type') = 'child_page'
-              AND p.space_id = ${input.spaceId} AND p.trash_batch_id IS NULL
-              ${after}
-              ORDER BY b.rank,b.block_id LIMIT ${limit + 1}`;
+            : yield* sql<PageListCandidate>`SELECT p.*, b.rank AS list_order, b.block_id AS list_id, o.owner_block_id,
+              b.page_id AS parent_page_id, 0 AS owner_deleted, parent.space_id AS parent_space_id,
+              'child_page' AS owner_type
+              FROM (SELECT b.block_id,b.page_id,b.rank FROM spaces_blocks b
+                WHERE b.page_id=${input.parentPageId} AND b.deleted=0 AND json_extract(b.payload,'$.type')='child_page'
+                ${after} ORDER BY b.rank,b.block_id LIMIT ${limit + 1}) b
+              LEFT JOIN spaces_page_owners o ON o.owner_block_id=b.block_id
+              LEFT JOIN spaces_pages p ON p.page_id=o.child_page_id
+              LEFT JOIN spaces_pages parent ON parent.page_id=b.page_id
+              ORDER BY b.rank,b.block_id`;
         const admission = yield* Receipts.issue(meta);
         let take = Math.min(limit, rows.length);
         while (true) {
           const last = rows[take - 1];
           const result: C.SpacePageListResult = {
             space: spaceSummary(space),
-            items: rows.slice(0, take).map((row) => pageSummary(row)),
+            items: rows
+              .slice(0, take)
+              .filter(
+                (row): row is PageRow & PageListCandidate =>
+                  row.page_id !== null &&
+                  row.space_id === input.spaceId &&
+                  row.trash_batch_id === null,
+              )
+              .map((row) => pageSummary(row)),
             catalogRevision: meta.catalog_revision,
             nextCursor:
               take < rows.length && last
