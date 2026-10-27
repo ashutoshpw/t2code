@@ -542,7 +542,11 @@ export function useSpacesReferenceController(environmentId: EnvironmentId, attem
 }
 
 const imageViewBudget = new MobileSpaceImageBudget();
-export function createSpacesImageViewer(environmentId: EnvironmentId) {
+const heavyViewBudget = new MobileSpaceImageBudget("PDF or video");
+export function createSpacesImageViewer(
+  environmentId: EnvironmentId,
+  kind: "image" | "pdf" | "video" = "image",
+) {
   const reads = createSpacesMediaReads(
     connectionAtomRuntime,
     appAtomRegistry,
@@ -557,48 +561,51 @@ export function createSpacesImageViewer(environmentId: EnvironmentId) {
         throw new Error("Images require current assets support and destination read permission.");
     },
   );
-  return new MobileSpaceImageViewer({
-    budget: imageViewBudget,
-    now: Date.now,
-    access: () => {
-      const access = liveAccess(environmentId);
-      const connection = appAtomRegistry.get(
-        environmentSession.preparedConnectionValueAtom(environmentId),
-      );
-      const httpBaseUrl = Option.isSome(connection) ? connection.value.httpBaseUrl : "";
-      return {
-        capability: access.capability,
-        httpBaseUrl,
-        current: () => {
-          const current = appAtomRegistry.get(
-            environmentSession.preparedConnectionValueAtom(environmentId),
-          );
-          return (
-            access.current() &&
-            canBrowseSpaces(access.availability) &&
-            Option.isSome(current) &&
-            current.value.httpBaseUrl === httpBaseUrl
-          );
-        },
-      };
+  return new MobileSpaceImageViewer(
+    {
+      budget: kind === "image" ? imageViewBudget : heavyViewBudget,
+      now: Date.now,
+      access: () => {
+        const access = liveAccess(environmentId);
+        const connection = appAtomRegistry.get(
+          environmentSession.preparedConnectionValueAtom(environmentId),
+        );
+        const httpBaseUrl = Option.isSome(connection) ? connection.value.httpBaseUrl : "";
+        return {
+          capability: access.capability,
+          httpBaseUrl,
+          current: () => {
+            const current = appAtomRegistry.get(
+              environmentSession.preparedConnectionValueAtom(environmentId),
+            );
+            return (
+              access.current() &&
+              canBrowseSpaces(access.availability) &&
+              Option.isSome(current) &&
+              current.value.httpBaseUrl === httpBaseUrl
+            );
+          },
+        };
+      },
+      ...reads,
+      share: async (input) => {
+        const { downloadAttachmentForPreview } = await import("../lib/attachmentDownload");
+        if (!input.current() || input.signal.aborted) return;
+        const file = await downloadAttachmentForPreview({
+          url: input.url,
+          attachment: input.metadata,
+          signal: input.signal,
+        });
+        if (!file) return;
+        try {
+          if (input.current() && !input.signal.aborted) await file.share(input.signal);
+        } finally {
+          file.dispose();
+        }
+      },
     },
-    ...reads,
-    share: async (input) => {
-      const { downloadAttachmentForPreview } = await import("../lib/attachmentDownload");
-      if (!input.current() || input.signal.aborted) return;
-      const file = await downloadAttachmentForPreview({
-        url: input.url,
-        attachment: input.metadata,
-        signal: input.signal,
-      });
-      if (!file) return;
-      try {
-        if (input.current() && !input.signal.aborted) await file.share(input.signal);
-      } finally {
-        file.dispose();
-      }
-    },
-  });
+    kind,
+  );
 }
 
 export async function prepareMobileComposerContext(input: {

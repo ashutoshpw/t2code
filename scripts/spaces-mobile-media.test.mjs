@@ -21,9 +21,9 @@ import {
   MobileSpaceImageViewer,
 } from "../apps/mobile/src/features/spaces/media.ts";
 
-it.effect(
-  "opens a real streamed/finalized image using actual metadata and signed reads, expires then remints, and reauthorizes original download intent",
-  () =>
+it.effect.each(["image", "pdf", "video"])(
+  "opens real streamed/finalized %s using actual metadata and signed reads, expires then remints, and reauthorizes original download intent",
+  (kind) =>
     Effect.gen(function* () {
       const environmentId = EnvironmentId.make("native-image");
       const configContext = yield* Layer.buildWithScope(
@@ -55,21 +55,45 @@ it.effect(
             "base64",
           ),
         );
+        const original =
+          kind === "image"
+            ? png
+            : kind === "pdf"
+              ? new TextEncoder().encode("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n")
+              : new Uint8Array([
+                  0,
+                  0,
+                  0,
+                  24,
+                  ...new TextEncoder().encode("ftypisom"),
+                  0,
+                  0,
+                  0,
+                  0,
+                  ...new TextEncoder().encode("isommp42"),
+                  0,
+                  0,
+                  0,
+                  8,
+                  ...new TextEncoder().encode("mdat"),
+                ]);
+        const mimeType =
+          kind === "image" ? "image/png" : kind === "pdf" ? "application/pdf" : "video/mp4";
         const reservation = yield* service.createAssetUpload(
           {
             environmentId,
             requestId: "original-image",
-            expectedBytes: png.length,
-            mediaKind: "image",
-            mimeType: "image/png",
-            name: "original.png",
+            expectedBytes: original.length,
+            mediaKind: kind,
+            mimeType,
+            name: `original.${kind === "image" ? "png" : kind === "pdf" ? "pdf" : "mp4"}`,
           },
           "test-owner",
         );
         yield* service.receiveAssetUpload(
           reservation.relativeUrl.split("/").at(-1),
-          String(png.length),
-          Stream.make(png),
+          String(original.length),
+          Stream.make(original),
         );
         const asset = yield* service.finalizeAssetUpload(
           { environmentId, uploadId: reservation.uploadId },
@@ -83,37 +107,40 @@ it.effect(
           return resolveAsset(path[3], path.slice(4).join("/"));
         };
         const shares = [];
-        const viewer = new MobileSpaceImageViewer({
-          budget: new MobileSpaceImageBudget(),
-          now: () => now,
-          access: () => ({
-            capability,
-            httpBaseUrl: "https://selected.example/",
-            current: () => allowed,
-          }),
-          metadata: (id) => run(service.getAssetMetadata({ environmentId, assetId: id })),
-          mint: (id, disposition) =>
-            run(
-              issueAssetUrl({
-                resource: { _tag: "spaces-asset", environmentId, assetId: id, disposition },
-              }),
-            ),
-          share: async (input) => {
-            if (input.current()) {
-              const resolved = await run(resolve(input.url));
-              shares.push({
-                download: resolved.download,
-                bytes: new Uint8Array(await run(fs.readFile(resolved.path))),
-              });
-            }
+        const viewer = new MobileSpaceImageViewer(
+          {
+            budget: new MobileSpaceImageBudget(),
+            now: () => now,
+            access: () => ({
+              capability,
+              httpBaseUrl: "https://selected.example/",
+              current: () => allowed,
+            }),
+            metadata: (id) => run(service.getAssetMetadata({ environmentId, assetId: id })),
+            mint: (id, disposition) =>
+              run(
+                issueAssetUrl({
+                  resource: { _tag: "spaces-asset", environmentId, assetId: id, disposition },
+                }),
+              ),
+            share: async (input) => {
+              if (input.current()) {
+                const resolved = await run(resolve(input.url));
+                shares.push({
+                  download: resolved.download,
+                  bytes: new Uint8Array(await run(fs.readFile(resolved.path))),
+                });
+              }
+            },
           },
-        });
+          kind,
+        );
         const block = {
           id: "native-image-block",
           parentId: null,
           order: "a",
           version: 1,
-          type: "image",
+          type: kind,
           content: { assetId: asset.assetId },
         };
         yield* Effect.promise(() => viewer.open(block, () => true));
@@ -121,7 +148,7 @@ it.effect(
         expect(first).not.toBeNull();
         const resolved = yield* resolve(first);
         expect(resolved.immutableDigest).toBe(asset.digest);
-        expect(new Uint8Array(yield* fs.readFile(resolved.path))).toEqual(png);
+        expect(new Uint8Array(yield* fs.readFile(resolved.path))).toEqual(original);
         yield* TestClock.adjust("2 hours");
         now = yield* Clock.currentTimeMillis;
         expect(viewer.url()).toBeNull();
@@ -129,7 +156,7 @@ it.effect(
         yield* Effect.promise(() => viewer.refresh());
         expect(viewer.url()).not.toBe(first);
         yield* Effect.promise(() => viewer.share());
-        expect(shares).toEqual([{ download: true, bytes: png }]);
+        expect(shares).toEqual([{ download: true, bytes: original }]);
         allowed = false;
         yield* Effect.promise(() => viewer.refresh());
         expect(viewer.url()).toBeNull();

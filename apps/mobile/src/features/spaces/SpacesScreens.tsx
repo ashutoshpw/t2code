@@ -23,6 +23,7 @@ import {
 import { type SpacesReadAccess, spacesAvailabilityMessage } from "./reader";
 import { readSpacesPageTarget, readSpacesLibraryTarget } from "./navigation";
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
+import { SpacesHeavyMediaViewer } from "./SpacesHeavyMediaViewer";
 import { SpacesImageViewer } from "./SpacesImageViewer";
 import { SpaceBlockReader } from "./SpaceBlockReader";
 import { SpacesLibraryActions } from "./SpacesLibraryActions";
@@ -418,6 +419,10 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
   const editorState = useSyncExternalStore(editing.subscribe, editing.getSnapshot);
   const [owner] = useState(() => Symbol("Spaces page editor"));
   const [media] = useState(() => createSpacesImageViewer(target.environmentId));
+  const [heavy] = useState(() => ({
+    pdf: createSpacesImageViewer(target.environmentId, "pdf"),
+    video: createSpacesImageViewer(target.environmentId, "video"),
+  }));
   const [references] = useState(
     () =>
       new MobileSpaceReferenceNavigation({
@@ -478,6 +483,8 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
   return (
     <View className="flex-1">
       <SpacesImageViewer model={media} access={access} />
+      <SpacesHeavyMediaViewer model={heavy.pdf} access={access} />
+      <SpacesHeavyMediaViewer model={heavy.video} access={access} />
       {!readable ? <AccessNotice access={access} environmentId={target.environmentId} /> : null}
       {!readable && (snapshot.session.dirty || focus) ? (
         <Notice>
@@ -790,7 +797,9 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
               onImage={(block) => {
                 const source = reader.getSnapshot().location;
                 if (source)
-                  void media.open(
+                  void (
+                    block.type === "pdf" ? heavy.pdf : block.type === "video" ? heavy.video : media
+                  ).open(
                     block,
                     () =>
                       navigation.isFocused() &&

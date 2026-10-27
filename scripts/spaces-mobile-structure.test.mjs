@@ -69,6 +69,9 @@ vi.mock("../apps/mobile/src/native/NativeScrollViewMarker.tsx", () => ({
 vi.mock("../apps/mobile/src/features/spaces/SpacesLibraryActions.tsx", () => ({
   SpacesLibraryActions: () => null,
 }));
+vi.mock("../apps/mobile/src/features/spaces/SpacesHeavyMediaViewer.tsx", () => ({
+  SpacesHeavyMediaViewer: () => null,
+}));
 vi.mock("../apps/mobile/src/features/spaces/SpacesImageViewer.tsx", () => ({
   SpacesImageViewer: () => null,
 }));

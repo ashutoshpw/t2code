@@ -166,8 +166,12 @@ export function SpaceBlockReader(props: {
           <Text selectable className="text-foreground">
             {block.type} · {block.content.assetId}
           </Text>
-          {block.type === "image" ? (
-            <ControlPill variant="pill" label="Open image" onPress={() => props.onImage(block)} />
+          {block.type === "image" || block.type === "pdf" || block.type === "video" ? (
+            <ControlPill
+              variant="pill"
+              label={`Open ${block.type}`}
+              onPress={() => props.onImage(block)}
+            />
           ) : (
             <Text className="text-sm text-foreground-muted">
               PDF and video viewing is not yet available in mobile Spaces.

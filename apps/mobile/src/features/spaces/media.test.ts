@@ -25,13 +25,20 @@ const metadata: SpaceAssetMetadata = {
   name: "original.png",
   imageDimensions: { width: 100, height: 100 },
 };
-function setup(budget = new MobileSpaceImageBudget()) {
+function setup(budget = new MobileSpaceImageBudget(), kind: "image" | "pdf" | "video" = "image") {
   let now = 0,
     allowed = true;
   let capability = {
     version: 2,
     features: { assets: true },
-    limits: { assets: { maxImageBytes: 10 * 1024 * 1024, maxImagePixels: 24_000_000 } },
+    limits: {
+      assets: {
+        maxImageBytes: 10 * 1024 * 1024,
+        maxImagePixels: 24_000_000,
+        maxPdfBytes: 25 * 1024 * 1024,
+        maxVideoBytes: 50 * 1024 * 1024,
+      },
+    },
   } as SpaceCapability;
   let read = async (_signal: AbortSignal) => metadata;
   let signed = () => ({
@@ -43,26 +50,29 @@ function setup(budget = new MobileSpaceImageBudget()) {
     mints = 0;
   const shares: string[] = [],
     dispositions: string[] = [];
-  const viewer = new MobileSpaceImageViewer({
-    budget,
-    now: () => now,
-    access: () => ({
-      capability,
-      httpBaseUrl: "https://selected.example/environment/",
-      current: () => allowed,
-    }),
-    metadata: (_id, signal) => {
-      reads++;
-      return read(signal);
+  const viewer = new MobileSpaceImageViewer(
+    {
+      budget,
+      now: () => now,
+      access: () => ({
+        capability,
+        httpBaseUrl: "https://selected.example/environment/",
+        current: () => allowed,
+      }),
+      metadata: (_id, signal) => {
+        reads++;
+        return read(signal);
+      },
+      mint: async (_id, disposition) => {
+        dispositions.push(disposition);
+        return signed();
+      },
+      share: async (input) => {
+        if (input.current() && !input.signal.aborted) shares.push(input.url);
+      },
     },
-    mint: async (_id, disposition) => {
-      dispositions.push(disposition);
-      return signed();
-    },
-    share: async (input) => {
-      if (input.current() && !input.signal.aborted) shares.push(input.url);
-    },
-  });
+    kind,
+  );
   return {
     viewer,
     shares,
@@ -216,3 +226,36 @@ it("does not sign or publish after the source/input owner or connection invalida
     h.viewer.close();
   }
 });
+
+it.each(["pdf", "video"] as const)(
+  "admits %s only within its exact type/byte policy and retains heavy admission through decoder cleanup",
+  async (kind) => {
+    const budget = new MobileSpaceImageBudget("PDF or video");
+    const h = setup(budget, kind);
+    const body = { ...image, type: kind, content: { assetId } };
+    const mimeType = kind === "pdf" ? "application/pdf" : "video/mp4";
+    h.read(async () => ({ ...metadata, mimeType, imageDimensions: undefined }));
+    await h.viewer.open(body, () => true);
+    expect(h.viewer.url()).not.toBeNull();
+    const release = h.viewer.hold();
+    h.viewer.close();
+    const other = setup(budget, kind);
+    other.read(async () => ({ ...metadata, mimeType }));
+    await other.viewer.open(body, () => true);
+    expect(other.reads).toBe(0);
+    release();
+    await other.viewer.open(body, () => true);
+    expect(other.viewer.url()).not.toBeNull();
+    other.viewer.close();
+    const oversized = setup(budget, kind);
+    oversized.read(async () => ({
+      ...metadata,
+      mimeType,
+      byteSize: (kind === "pdf" ? 25 : 50) * 1024 * 1024 + 1,
+    }));
+    await oversized.viewer.open(body, () => true);
+    expect(oversized.mints).toBe(0);
+    expect(oversized.viewer.url()).toBeNull();
+    oversized.viewer.close();
+  },
+);
