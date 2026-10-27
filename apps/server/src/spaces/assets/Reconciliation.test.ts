@@ -173,6 +173,138 @@ const progress = Effect.fn("SpacesReconciliationTest.progress")(function* (
   );
 });
 
+it.effect.each([
+  "complete",
+  "source_failure",
+  "cancel_before_creation",
+  "cancel_after_creation",
+] as const)(
+  "keeps staging inventory pending across claimed-but-uncreated files and %s",
+  (outcome) =>
+    fixture(({ config, live }) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const directoryEntered = yield* Deferred.make<void>();
+        const releaseDirectory = yield* Deferred.make<void>();
+        const streaming = yield* Deferred.make<void>();
+        const finishBody = yield* Deferred.make<void, string>();
+        let holdDirectory = false;
+        const gatedFs = {
+          ...fs,
+          makeDirectory: (target: string, options?: Parameters<typeof fs.makeDirectory>[1]) =>
+            target === config.spacesStagingDir && holdDirectory
+              ? Deferred.succeed(directoryEntered, undefined).pipe(
+                  Effect.andThen(Deferred.await(releaseDirectory)),
+                  Effect.andThen(fs.makeDirectory(target, options)),
+                )
+              : fs.makeDirectory(target, options),
+        };
+        yield* Effect.gen(function* () {
+          const { service, pageId } = yield* boot();
+          for (const _step of [0, 1, 2, 3]) yield* service.maintainAssets;
+          const reservation = yield* service.createAssetUpload(
+            {
+              ...env,
+              requestId: "held",
+              expectedBytes: pdf.length,
+              mimeType: "application/pdf",
+              mediaKind: "pdf",
+              name: "held.pdf",
+            },
+            "owner",
+          );
+          holdDirectory = true;
+          const body = Stream.make(pdf.subarray(0, 8)).pipe(
+            Stream.concat(
+              Stream.fromEffect(
+                Deferred.succeed(streaming, undefined).pipe(
+                  Effect.andThen(Deferred.await(finishBody)),
+                  Effect.as(pdf.subarray(8)),
+                ),
+              ),
+            ),
+          );
+          const receiver = yield* service
+            .receiveAssetUpload(
+              reservation.relativeUrl.slice(reservation.relativeUrl.lastIndexOf("/") + 1),
+              String(pdf.length),
+              body,
+            )
+            .pipe(Effect.forkScoped);
+          yield* Deferred.await(directoryEntered);
+          const beforeCreation = yield* service.maintainAssets;
+          expect(beforeCreation?.reservedBytes).toBe(pdf.length);
+          expect(
+            yield* service.getAssetUpload({ ...env, uploadId: reservation.uploadId }, "owner"),
+          ).toMatchObject({ state: "receiving", recoveryPending: false });
+          expect(
+            yield* service
+              .finalizeAssetUpload({ ...env, uploadId: reservation.uploadId }, "owner")
+              .pipe(Effect.flip),
+          ).toMatchObject({ reason: "already_claimed" });
+          const page = yield* service.getPage({ ...env, pageId });
+          expect(
+            (yield* service.updatePage({
+              ...env,
+              receiptEpoch: page.mutationAdmission.epoch,
+              mutationId: "independent-writer",
+              pageId,
+              baseRevision: page.page.revision,
+              title: "Writer during held creation",
+            })).status,
+          ).toBe("saved");
+          if (outcome === "cancel_before_creation") {
+            expect(beforeCreation?.reconciliation.inventoryPending).toBe(true);
+            yield* Fiber.interrupt(receiver);
+            expect(yield* fs.exists(config.spacesStagingDir)).toBe(false);
+          } else {
+            yield* Deferred.succeed(releaseDirectory, undefined);
+            yield* Deferred.await(streaming);
+            const files = yield* fs.readDirectory(config.spacesStagingDir);
+            expect(files).toHaveLength(1);
+            expect(
+              Number((yield* fs.stat(path.join(config.spacesStagingDir, files[0]!))).size),
+            ).toBe(8);
+            const duringStreaming = yield* service.maintainAssets;
+            expect(duringStreaming?.observedStagingFileBytes).toBe(8);
+            expect(beforeCreation?.reconciliation.inventoryPending).toBe(true);
+            expect(duringStreaming?.reconciliation.inventoryPending).toBe(true);
+            expect((yield* service.getCapability(environmentId))?.assetRecoveryPending).toBe(false);
+            if (outcome === "cancel_after_creation") yield* Fiber.interrupt(receiver);
+            else if (outcome === "source_failure") {
+              yield* Deferred.fail(finishBody, "source failed");
+              expect(yield* Fiber.join(receiver).pipe(Effect.flip)).toMatchObject({
+                reason: "source_failed",
+              });
+            } else {
+              yield* Deferred.succeed(finishBody, undefined);
+              yield* Fiber.join(receiver);
+            }
+            expect(yield* fs.readDirectory(config.spacesStagingDir)).toEqual([]);
+          }
+          expect(
+            yield* service.getAssetUpload({ ...env, uploadId: reservation.uploadId }, "owner"),
+          ).toMatchObject({
+            state: outcome === "complete" ? "ready" : "reserved",
+            recoveryPending: false,
+          });
+          for (const _step of [0, 1]) yield* service.maintainAssets;
+          const settled = yield* service.maintainAssets;
+          expect(settled?.observedStagingFileBytes).toBe(0);
+          expect(settled?.reconciliation).toMatchObject({
+            inventoryPending: false,
+            unresolved: false,
+            gcEnabled: false,
+          });
+          expect((yield* inspect(config)).usage[0]?.active_count).toBe(0);
+        }).pipe(
+          Effect.provide(live().pipe(Layer.provide(Layer.succeed(FileSystem.FileSystem, gatedFs)))),
+        );
+      }),
+    ),
+);
+
 it.effect(
   "persists bounded current-reference progress and retains concurrent writes behind its cursor",
   () =>
@@ -624,4 +756,79 @@ it.effect(
         });
       }).pipe(Effect.provide(live())),
     ),
+);
+
+it.effect("invalidates an open staging sweep after actual staging becomes verified", () =>
+  fixture(({ config, live }) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const creationEntered = yield* Deferred.make<void>();
+      const releaseCreation = yield* Deferred.make<void>();
+      const publicationEntered = yield* Deferred.make<void>();
+      const releasePublication = yield* Deferred.make<void>();
+      const gatedFs = {
+        ...fs,
+        makeDirectory: (target: string, options?: Parameters<typeof fs.makeDirectory>[1]) => {
+          const operation = fs.makeDirectory(target, options);
+          return target === config.spacesStagingDir
+            ? Deferred.succeed(creationEntered, undefined).pipe(
+                Effect.andThen(Deferred.await(releaseCreation)),
+                Effect.andThen(operation),
+              )
+            : target === config.spacesAssetsDir
+              ? Deferred.succeed(publicationEntered, undefined).pipe(
+                  Effect.andThen(Deferred.await(releasePublication)),
+                  Effect.andThen(operation),
+                )
+              : operation;
+        },
+      };
+      yield* fs.makeDirectory(config.spacesStagingDir, { recursive: true });
+      for (let i = 0; i < 24; i++)
+        yield* fs.writeFileString(path.join(config.spacesStagingDir, `old-${i}.part`), "x");
+      yield* Effect.gen(function* () {
+        const { service } = yield* boot();
+        for (const _step of [0, 1, 2, 3]) yield* service.maintainAssets;
+        const reservation = yield* service.createAssetUpload(
+          {
+            ...env,
+            requestId: "verified-during-sweep",
+            expectedBytes: pdf.length,
+            mimeType: "application/pdf",
+            mediaKind: "pdf",
+            name: "verified.pdf",
+          },
+          "owner",
+        );
+        const receiver = yield* service
+          .receiveAssetUpload(
+            reservation.relativeUrl.slice(reservation.relativeUrl.lastIndexOf("/") + 1),
+            String(pdf.length),
+            Stream.make(pdf),
+          )
+          .pipe(Effect.forkScoped);
+        yield* Deferred.await(creationEntered);
+        yield* service.maintainAssets;
+        yield* Deferred.succeed(releaseCreation, undefined);
+        yield* Deferred.await(publicationEntered);
+        expect(
+          yield* service.getAssetUpload({ ...env, uploadId: reservation.uploadId }, "owner"),
+        ).toMatchObject({ state: "verified", recoveryPending: false });
+        yield* service.maintainAssets;
+        expect((yield* service.maintainAssets)?.reconciliation.inventoryPending).toBe(true);
+        yield* Deferred.succeed(releasePublication, undefined);
+        const asset = yield* Fiber.join(receiver);
+        expect(yield* service.getAssetMetadata({ ...env, assetId: asset.assetId })).toEqual(asset);
+        for (const _step of [0, 1, 2]) yield* service.maintainAssets;
+        expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+          inventoryPending: false,
+          unresolved: true,
+          gcEnabled: false,
+        });
+      }).pipe(
+        Effect.provide(live().pipe(Layer.provide(Layer.succeed(FileSystem.FileSystem, gatedFs)))),
+      );
+    }),
+  ),
 );

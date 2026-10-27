@@ -286,6 +286,8 @@ export const recordVerified = Effect.fn("SpacesAssetCatalog.recordVerified")(fun
     VALUES (${staged.digest},${staged.byteSize},${staged.mimeType},${staged.mediaKind},'publishing',${now})`;
   yield* sql`UPDATE spaces_asset_uploads SET state = 'verified',digest = ${staged.digest},
     blob_generation = ${blob?.generation ?? 0},width = ${width},height = ${height} WHERE upload_id = ${row.upload_id}`;
+  // A sweep opened after claim can predate actual private-file creation.
+  yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 0,staging_generation = staging_generation + 1 WHERE singleton = 1`;
   return {
     ...row,
     state: "verified" as const,

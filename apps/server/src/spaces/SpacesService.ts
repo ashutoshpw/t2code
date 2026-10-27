@@ -1681,7 +1681,8 @@ const make = Effect.fn("SpacesService.make")(function* (
                 if (kind === "assets")
                   yield* sql`UPDATE spaces_asset_reconciliation SET assets_done = 1 WHERE singleton = 1 AND assets_generation = ${found.generation}`;
                 else
-                  yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 1 WHERE singleton = 1 AND staging_generation = ${found.generation}`;
+                  yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 1 WHERE singleton = 1 AND staging_generation = ${found.generation}
+                    AND NOT EXISTS (SELECT 1 FROM spaces_asset_uploads WHERE state = 'receiving')`;
               }
             }),
           );

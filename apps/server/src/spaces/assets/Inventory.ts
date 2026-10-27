@@ -4,11 +4,10 @@ import type * as NodeFS from "node:fs";
 import * as NodeCrypto from "node:crypto";
 import * as Effect from "effect/Effect";
 import * as Path from "effect/Path";
-import * as Stream from "effect/Stream";
 import * as C from "@t2code/contracts/spaces";
 import { canonical } from "../CorePolicy.ts";
 
-import { openMediaFile, streamMediaFile } from "../../assets/MediaFile.ts";
+import { openMediaFile } from "../../assets/MediaFile.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 import * as Reconciliation from "./Reconciliation.ts";
 import { fileLimits, mediaTypes, type MediaType } from "./Policy.ts";
@@ -190,16 +189,18 @@ export const make = Effect.fn("SpacesInventory.make")(function* (directories: {
       Effect.gen(function* () {
         const file = yield* openMediaFile(filename("assets", blob.digest));
         if (!file || file.info.size !== BigInt(blob.byte_size)) return false;
-        const stream = streamMediaFile(file, 0n, BigInt(blob.byte_size));
-        if (!stream) return false;
         const hash = NodeCrypto.createHash("sha256");
+        const buffer = new Uint8Array(Math.min(64 * 1024, blob.byte_size));
         let bytes = 0;
-        yield* Stream.runForEach(stream, (chunk) =>
-          Effect.sync(() => {
-            bytes += chunk.length;
-            hash.update(chunk);
-          }),
-        );
+        // The enclosing scope owns the descriptor through the final integrity checks.
+        while (bytes < blob.byte_size) {
+          const chunk = yield* io(() =>
+            file.handle.read(buffer, 0, Math.min(buffer.length, blob.byte_size - bytes), bytes),
+          );
+          if (chunk.bytesRead === 0) return false;
+          hash.update(buffer.subarray(0, chunk.bytesRead));
+          bytes += chunk.bytesRead;
+        }
         const after = yield* io(() => file.handle.stat({ bigint: true }));
         const current = yield* openMediaFile(filename("assets", blob.digest), {
           device: file.info.dev.toString(),

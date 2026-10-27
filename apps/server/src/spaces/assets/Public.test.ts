@@ -135,6 +135,49 @@ const usage = Effect.fn("SpacesAssetsPublicTest.usage")(function* (
 });
 
 describe("Spaces public asset wiring", () => {
+  it.effect("keeps healthy uploads readable through repeated complete sanity audits", () =>
+    fixture(({ request }) =>
+      Effect.gen(function* () {
+        const service = yield* Service.SpacesService;
+        const minted = yield* service.createAssetUpload(common("healthy-audit"), "owner");
+        expect(
+          (yield* request(minted.relativeUrl, {
+            method: "POST",
+            headers: { "content-length": String(pdf.length) },
+            body: new Uint8Array(pdf),
+          })).status,
+        ).toBe(204);
+        const asset = yield* service.finalizeAssetUpload(
+          { environmentId, uploadId: minted.uploadId },
+          "owner",
+        );
+        for (const cycle of [0, 1]) {
+          if (cycle) yield* TestClock.adjust("25 hours");
+          const signed = yield* issueAssetUrl({
+            resource: { _tag: "spaces-asset", environmentId, assetId: asset.assetId },
+          });
+          const beforeAudit = yield* request(signed.relativeUrl);
+          expect(beforeAudit.status).toBe(200);
+          expect(new Uint8Array(yield* Effect.promise(() => beforeAudit.arrayBuffer()))).toEqual(
+            pdf,
+          );
+          for (const _step of [0, 1, 2, 3, 4]) yield* service.maintainAssets;
+          expect(
+            yield* service.getAssetMetadata({ environmentId, assetId: asset.assetId }),
+          ).toEqual(asset);
+          const response = yield* request(signed.relativeUrl);
+          expect(response.status).toBe(200);
+          expect(new Uint8Array(yield* Effect.promise(() => response.arrayBuffer()))).toEqual(pdf);
+          expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+            catalogPending: false,
+            unresolved: false,
+            gcEnabled: false,
+          });
+        }
+      }),
+    ),
+  );
+
   it.effect.each([".", "..", "normal.pdf", "dir/file.pdf", "%2e%2e", "odd\\file.pdf"])(
     "admits a routable name or refuses %s before binding the upload intent",
     (name) =>
