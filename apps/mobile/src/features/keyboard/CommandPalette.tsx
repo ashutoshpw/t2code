@@ -1,3 +1,4 @@
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { uuidv4 } from "../../lib/uuid";
 import { useNavigation } from "@react-navigation/native";
 import {
@@ -79,6 +80,7 @@ const ACTION_ICONS: Record<string, AppSymbolName> = {
   newThread: "square.and.pencil",
   addProject: "folder.badge.plus",
   settings: "gearshape",
+  spaces: "doc.text",
   appearance: "paintbrush",
   environments: "desktopcomputer",
   usage: "chart.bar.xaxis",
@@ -209,7 +211,7 @@ export function CommandPalette(props: {
   readonly onClose: () => void;
   readonly onCommand: (command: HardwareKeyboardCommand) => void;
 }) {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
   const selectTab = useSelectWorkspaceTab();
   const { themeVariables } = useAppearancePreferences();
   const selectDetail = useSelectWorkspaceDetail();
@@ -267,6 +269,13 @@ export function CommandPalette(props: {
   );
   const items = useMemo(() => {
     const actions: CommandPaletteItem[] = [
+      {
+        key: "spaces",
+        kind: "action",
+        title: "Open Spaces",
+        searchTerms: ["pages", "library", "documents"],
+        run: () => navigation.push("SpacesLibrary"),
+      },
       {
         key: "newTask",
         kind: "action",

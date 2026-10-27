@@ -1,0 +1,432 @@
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
+import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
+import { SpacePageNavigation, type SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
+import { EnvironmentId } from "@t2code/contracts";
+import type { SpaceCursor, SpaceId, SpacePageId, SpaceBlock } from "@t2code/contracts/spaces";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { FlatList, View } from "react-native";
+
+import { AppText as Text } from "../../components/ui/AppText";
+import { ListRow } from "../../components/ui/ListRow";
+import { ControlPill } from "../../components/ui/ControlPill";
+import { SettingsScreen } from "../settings/components/SettingsScreen";
+import { appAtomRegistry } from "../../state/atom-registry";
+import { useEnvironments } from "../../state/environments";
+import { useEnvironmentQuery } from "../../state/query";
+import { createSpacesPageReader, spacesEnvironment, useSpacesReadAccess } from "../../state/spaces";
+import { type SpacesReadAccess, spacesAvailabilityMessage } from "./reader";
+import { readSpacesPageTarget, readSpacesLibraryTarget } from "./navigation";
+import { NativeScrollView } from "../../native/NativeScrollViewMarker";
+import { SpaceBlockReader } from "./SpaceBlockReader";
+
+type LibraryParams =
+  | { readonly environmentId?: EnvironmentId; readonly spaceId?: SpaceId }
+  | undefined;
+
+function Notice({ children }: { children: string }) {
+  return (
+    <Text accessibilityLiveRegion="polite" className="px-4 py-3 text-base text-foreground-muted">
+      {children}
+    </Text>
+  );
+}
+
+export function SpacesLibraryRouteScreen({ route }: StaticScreenProps<LibraryParams>) {
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  const { environments, isReady } = useEnvironments();
+  const params = readSpacesLibraryTarget(route.params);
+  const environmentId = params?.environmentId;
+  return (
+    <SettingsScreen title="Spaces">
+      {params === null ? (
+        <Notice>This Spaces link is invalid.</Notice>
+      ) : environmentId ? (
+        <SpacesLibrary
+          key={JSON.stringify(route.params)}
+          environmentId={environmentId}
+          spaceId={params.spaceId}
+        />
+      ) : (
+        <FlatList
+          renderScrollComponent={NativeScrollView}
+          data={environments}
+          keyExtractor={(item) => item.environmentId}
+          ListHeaderComponent={<Notice>Choose an environment to browse its Spaces.</Notice>}
+          ListEmptyComponent={
+            <Notice>
+              {isReady ? "Add an environment in Settings to use Spaces." : "Loading environments…"}
+            </Notice>
+          }
+          renderItem={({ item }) => (
+            <ListRow
+              icon="server.rack"
+              label={item.label}
+              description={item.connection.phase === "connected" ? "Browse Spaces" : "Disconnected"}
+              onPress={() =>
+                navigation.push("SpacesLibrary", { environmentId: item.environmentId })
+              }
+            />
+          )}
+        />
+      )}
+    </SettingsScreen>
+  );
+}
+
+function AccessNotice({
+  access,
+  environmentId,
+}: {
+  access: SpacesReadAccess;
+  environmentId: EnvironmentId;
+}) {
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  return (
+    <View className="gap-3 p-4">
+      <Notice>{spacesAvailabilityMessage[access.availability]}</Notice>
+      <ControlPill
+        variant="pill"
+        label="Environment settings"
+        onPress={() => navigation.navigate("SettingsEnvironmentDetail", { environmentId })}
+      />
+    </View>
+  );
+}
+
+function SpacesLibrary({
+  environmentId,
+  spaceId,
+}: {
+  environmentId: EnvironmentId;
+  spaceId?: SpaceId;
+}) {
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  const access = useSpacesReadAccess(environmentId);
+  const [cursor, setCursor] = useState<SpaceCursor>();
+  const query = useEnvironmentQuery(
+    canBrowseSpaces(access.availability)
+      ? spacesEnvironment.list({
+          environmentId,
+          input: {
+            environmentId,
+            limit: Math.min(20, access.capability?.limits.maxListRows ?? 20),
+            ...(cursor ? { cursor } : {}),
+          },
+        })
+      : null,
+  );
+  if (!canBrowseSpaces(access.availability))
+    return <AccessNotice access={access} environmentId={environmentId} />;
+  const data = !query.isPending && access.current() ? query.data : null;
+  const bounded =
+    data &&
+    data.items.length <= Math.min(20, access.capability?.limits.maxListRows ?? 20) &&
+    new TextEncoder().encode(JSON.stringify(data)).byteLength <=
+      Math.min(2 * 1024 * 1024, access.capability?.limits.maxListResponseBytes ?? 0);
+  const selected = spaceId ?? (bounded ? data.defaultSpaceId : undefined);
+  return (
+    <View className="flex-1">
+      <View className="flex-row gap-2 px-4 py-2">
+        <ControlPill
+          variant="pill"
+          label="Environments"
+          onPress={() => navigation.push("SpacesLibrary")}
+        />
+        <ControlPill
+          variant="pill"
+          label="First spaces"
+          onPress={() => {
+            if (cursor) setCursor(undefined);
+            else query.refresh();
+          }}
+        />
+        <ControlPill
+          variant="pill"
+          label="Next spaces"
+          disabled={!bounded || data.nextCursor === null}
+          onPress={() => {
+            if (bounded && data.nextCursor) setCursor(data.nextCursor);
+          }}
+        />
+      </View>
+      {query.error ? (
+        <Notice>{query.error}</Notice>
+      ) : !data ? (
+        <Notice>Loading spaces…</Notice>
+      ) : !bounded ? (
+        <Notice>This spaces window exceeds the read limit.</Notice>
+      ) : (
+        <FlatList
+          style={{ maxHeight: 180 }}
+          data={data.items}
+          keyExtractor={(item) => item.id}
+          ListEmptyComponent={
+            <Notice>
+              {data.nextCursor
+                ? "No spaces in this window. Continue to the next window."
+                : "No spaces in this environment."}
+            </Notice>
+          }
+          renderItem={({ item }) => (
+            <ListRow
+              icon="folder"
+              label={item.title || "Untitled space"}
+              description={item.isDefault ? "Default space" : undefined}
+              onPress={() => navigation.push("SpacesLibrary", { environmentId, spaceId: item.id })}
+            />
+          )}
+        />
+      )}
+      {selected && bounded ? (
+        <PageLibrary
+          key={selected}
+          environmentId={environmentId}
+          spaceId={selected}
+          access={access}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+function PageLibrary({
+  environmentId,
+  spaceId,
+  access,
+}: {
+  environmentId: EnvironmentId;
+  spaceId: SpaceId;
+  access: SpacesReadAccess;
+}) {
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  const pages = useMemo(
+    () =>
+      new SpacePageNavigation({
+        registry: appAtomRegistry,
+        pages: spacesEnvironment.pages,
+        environmentId,
+        spaceId,
+        version: access.capability?.version === 1 ? 1 : 2,
+        maxRows: access.capability?.limits.maxListRows ?? 20,
+      }),
+    [environmentId, spaceId, access],
+  );
+  const snapshot = useSyncExternalStore(pages.subscribe, pages.getSnapshot);
+  const rows = snapshot.windows.flatMap((window) => [
+    { key: `window:${window.parentPageId}`, window, page: null },
+    ...(window.data?.items ?? []).map((page) => ({ key: `page:${page.id}`, window, page })),
+  ]);
+  return (
+    <FlatList
+      renderScrollComponent={NativeScrollView}
+      data={access.current() ? rows : []}
+      keyExtractor={(item) => item.key}
+      ListHeaderComponent={
+        <>
+          <Notice>{spacesAvailabilityMessage[access.availability]}</Notice>
+          {snapshot.error ? <Notice>{snapshot.error}</Notice> : null}
+        </>
+      }
+      renderItem={({ item }) =>
+        item.page ? (
+          <View style={{ marginLeft: item.window.path.length * 12 }}>
+            <ListRow
+              icon="doc.text"
+              label={item.page.title || "Untitled page"}
+              onPress={() =>
+                navigation.push("SpacesPage", { environmentId, spaceId, pageId: item.page!.id })
+              }
+            />
+            {access.capability?.version === 2 ? (
+              <View className="items-start px-4">
+                <ControlPill
+                  variant="pill"
+                  label="Child pages"
+                  onPress={() => pages.expand(item.window.parentPageId, item.page!.id)}
+                />
+              </View>
+            ) : null}
+          </View>
+        ) : (
+          <View className="gap-2 p-4">
+            <Text className="text-base font-bold text-foreground">
+              {item.window.data?.space.title ?? "Pages"}
+              {item.window.parentPageId ? " · child pages" : ""}
+            </Text>
+            {item.window.pending ? (
+              <Notice>Loading pages…</Notice>
+            ) : item.window.error ? (
+              <Notice>{item.window.error}</Notice>
+            ) : item.window.data?.items.length === 0 ? (
+              <Notice>
+                {item.window.data.nextCursor
+                  ? "No pages in this window. Continue to the next window."
+                  : "No pages here yet. Create pages on desktop."}
+              </Notice>
+            ) : null}
+            <View className="flex-row gap-2">
+              <ControlPill
+                variant="pill"
+                label="First pages"
+                disabled={item.window.pending}
+                onPress={() => pages.first(item.window.parentPageId)}
+              />
+              <ControlPill
+                variant="pill"
+                label="Next pages"
+                disabled={item.window.pending || !item.window.data?.nextCursor}
+                onPress={() => pages.next(item.window.parentPageId)}
+              />
+            </View>
+          </View>
+        )
+      }
+    />
+  );
+}
+
+export function SpacesPageRouteScreen({
+  route,
+}: StaticScreenProps<{
+  readonly environmentId: EnvironmentId;
+  readonly spaceId: SpaceId;
+  readonly pageId: SpacePageId;
+  readonly block?: string;
+}>) {
+  const target = readSpacesPageTarget(route.params);
+  return (
+    <SettingsScreen title="Space page">
+      {target ? (
+        <PageReader
+          key={JSON.stringify([target.environmentId, target.pageId, target.blockId])}
+          target={target}
+        />
+      ) : (
+        <Notice>This Spaces link is invalid.</Notice>
+      )}
+    </SettingsScreen>
+  );
+}
+
+function blockDepth(block: SpaceBlock, blocks: readonly SpaceBlock[]) {
+  const seen = new Set([block.id]);
+  let parentId = block.parentId;
+  let depth = 0;
+  while (parentId !== null && depth < 16 && !seen.has(parentId)) {
+    seen.add(parentId);
+    depth++;
+    parentId = blocks.find((parent) => parent.id === parentId)?.parentId ?? null;
+  }
+  return depth;
+}
+
+function PageReader({ target }: { target: SpacePageNavigationTarget }) {
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  const access = useSpacesReadAccess(target.environmentId);
+  const reader = useMemo(() => createSpacesPageReader(target, access), [target, access]);
+  const snapshot = useSyncExternalStore(reader.subscribe, reader.getSnapshot);
+  // oxlint-disable-next-line t2code/react-effect-budget -- Own the remote page read and invalidate outstanding results when this view or connection leaves.
+  useEffect(() => {
+    void reader.first();
+    return () => reader.invalidate();
+  }, [reader]);
+  if (!canBrowseSpaces(access.availability))
+    return <AccessNotice access={access} environmentId={target.environmentId} />;
+  const location = access.current() ? snapshot.location : null;
+  const blocks = location ? (snapshot.window?.blocks ?? []) : [];
+  const currentTarget = location
+    ? {
+        ...target,
+        spaceId: location.page.spaceId,
+        pageId: location.page.id,
+        blockId: location.resolvedBlockId ?? target.blockId,
+      }
+    : target;
+  return (
+    <FlatList
+      renderScrollComponent={NativeScrollView}
+      data={blocks}
+      keyExtractor={(block) => block.id}
+      initialNumToRender={12}
+      windowSize={5}
+      ListHeaderComponent={
+        <View className="gap-2 p-4">
+          <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
+            {location?.page.title || "Space page"}
+          </Text>
+          {location ? (
+            <Text className="text-sm text-foreground-muted">
+              {[location.space.title, ...location.ancestors.map((page) => page.title)].join(" / ")}{" "}
+              · Revision {location.page.revision}
+            </Text>
+          ) : null}
+          <Notice>{spacesAvailabilityMessage[access.availability]}</Notice>
+          {snapshot.loading ? (
+            <Notice>Loading page…</Notice>
+          ) : snapshot.error ? (
+            <Notice>{snapshot.error}</Notice>
+          ) : null}
+          {target.blockId &&
+          location &&
+          !blocks.some((block) => block.id === currentTarget.blockId) ? (
+            <Notice>
+              The linked block is not in this window. Use First or Next to browse bounded windows;
+              it may have moved or become unavailable.
+            </Notice>
+          ) : null}
+          <View className="flex-row flex-wrap gap-2">
+            <ControlPill
+              variant="pill"
+              label="Library"
+              onPress={() =>
+                navigation.push("SpacesLibrary", {
+                  environmentId: target.environmentId,
+                  spaceId: currentTarget.spaceId,
+                })
+              }
+            />
+            <ControlPill
+              variant="pill"
+              label="First / refresh"
+              disabled={snapshot.loading}
+              onPress={() => void reader.first()}
+            />
+            <ControlPill
+              variant="pill"
+              label="Next blocks"
+              disabled={snapshot.loading || !snapshot.window?.nextCursor}
+              onPress={() => void reader.next()}
+            />
+          </View>
+        </View>
+      }
+      ListEmptyComponent={
+        !snapshot.loading && location ? (
+          <Notice>
+            {snapshot.window?.nextCursor
+              ? "No blocks in this window. Continue to the next window."
+              : "No blocks in this window."}
+          </Notice>
+        ) : undefined
+      }
+      renderItem={({ item }) => (
+        <SpaceBlockReader
+          block={item}
+          target={currentTarget}
+          depth={blockDepth(item, blocks)}
+          selected={item.id === currentTarget.blockId}
+          onOpen={(next) => {
+            if (access.current())
+              navigation.push("SpacesPage", {
+                environmentId: next.environmentId,
+                spaceId: next.spaceId,
+                pageId: next.pageId,
+                ...(next.blockId ? { block: next.blockId } : {}),
+              });
+          }}
+        />
+      )}
+    />
+  );
+}
