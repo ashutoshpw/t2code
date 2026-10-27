@@ -24,8 +24,12 @@ export function LabsSettingsPanel() {
       <SettingsSection id="beta" title="Beta">
         <BoringSidebarRow />
         <BoringSidebarMultilineRow />
+<<<<<<< HEAD
         <ToolCallVisibilityRow />
         {/* Clerk is only mounted when this build has T3 Connect. */}
+=======
+        {/* Clerk is only mounted when this build has T2 Connect. */}
+>>>>>>> cfeb9e40 (fix(rebrand): repair the round-7 rebase seams and finish the t2 namespace)
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
         <LinkedEnvironmentsRow />
         <SimlockHostsRow />
@@ -76,6 +80,7 @@ function BoringSidebarMultilineRow() {
   );
 }
 
+<<<<<<< HEAD
 const TOOL_CALL_VISIBILITY_LABELS: Record<ToolCallVisibility, string> = {
   showAll: "Show all",
   hideSuccessful: "Hide successful",
@@ -117,6 +122,9 @@ function ToolCallVisibilityRow() {
 }
 
 /** Signed out of T3 Connect, the row offers to sign in instead of its switch. */
+=======
+/** Signed out of T2 Connect, the row offers to sign in instead of its switch. */
+>>>>>>> cfeb9e40 (fix(rebrand): repair the round-7 rebase seams and finish the t2 namespace)
 function GuestLinksRowWithSignIn() {
   const { isSignedIn } = useAuth();
   const { openAuthPrompt } = useT2ConnectAuthPrompt();
@@ -125,7 +133,11 @@ function GuestLinksRowWithSignIn() {
   return (
     <SettingsRow
       {...searchableSetting("guest-links")}
+<<<<<<< HEAD
       description="Share a thread with a guest who watches it live in a browser and sends messages you approve. Sign in to T3 Connect to use guest links."
+=======
+      description="Share a thread with a guest who watches it live in their browser and sends messages you approve. Sign in to T2 Connect to use guest links."
+>>>>>>> cfeb9e40 (fix(rebrand): repair the round-7 rebase seams and finish the t2 namespace)
       control={
         <Button size="sm" variant="outline" onClick={openAuthPrompt}>
           Sign in
@@ -156,8 +168,13 @@ function GuestLinksRow() {
       managed={settings.guestSharingEnabled ? undefined : connectDenial}
       description={
         <>
+<<<<<<< HEAD
           Share a thread with a guest who watches it live in a browser and sends messages you
           approve. Needs T3 Connect: sign in and link this machine in{" "}
+=======
+          Share a thread with a guest who watches it live in their browser and sends messages you
+          approve. Needs T2 Connect: sign in and link this machine in{" "}
+>>>>>>> cfeb9e40 (fix(rebrand): repair the round-7 rebase seams and finish the t2 namespace)
           <Link to="/settings/access" className="underline underline-offset-2">
             Sharing & access
           </Link>
