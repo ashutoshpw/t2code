@@ -87,6 +87,8 @@ export const layer = McpToolAccess.toLayer(SpacesToolkit, {
     invoke(input, (service) => service.lookupMutationReceipt(input)),
   ),
   t2_spaces_capability: McpToolAccess.reads((input) =>
-    invoke(input, (service) => service.getCapability(input.environmentId)),
+    invoke(input, (service) =>
+      service.getCapability(input.environmentId).pipe(Effect.map((capability) => ({ capability }))),
+    ),
   ),
 });

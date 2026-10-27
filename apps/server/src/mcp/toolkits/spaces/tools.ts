@@ -24,6 +24,10 @@ const dependencies = [
   SpacesService.SpacesService,
   ThreadManagement.ThreadManagementService,
 ];
+const structuredResult = Schema.makeFilter(
+  (value: unknown) => typeof value === "object" && value !== null && !Array.isArray(value),
+  { expected: "an MCP structured result object", toJsonSchema: () => [{ type: "object" }, true] },
+);
 const tool = <const N extends string, P extends Schema.Top, A extends Schema.Top>(
   name: N,
   parameters: P,
@@ -38,7 +42,7 @@ const tool = <const N extends string, P extends Schema.Top, A extends Schema.Top
       operation ? (input) => ({ operation, input }) : undefined,
       true,
     ),
-    success,
+    success: success.check(structuredResult),
     failure,
     failureMode: "return",
     description: `${description} Input envelope <=1048576 JSON UTF-8 bytes; server policy applies.`,
@@ -227,7 +231,7 @@ export const SpacesToolkit = Toolkit.make(
   tool(
     "t2_spaces_capability",
     Schema.Struct({ environmentId: EnvironmentId }),
-    Schema.NullOr(C.SpaceCapability),
-    "Read installed Spaces capabilities; null while disabled or unavailable.",
+    Schema.Struct({ capability: Schema.NullOr(C.SpaceCapability) }),
+    "Read installed Spaces capabilities; capability is null while disabled or unavailable.",
   ),
 );

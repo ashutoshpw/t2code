@@ -1,3 +1,10 @@
+import {
+  ListToolsResultSchema,
+  CallToolResultSchema,
+  ToolSchema,
+  type Tool as SdkTool,
+} from "@modelcontextprotocol/sdk/types.js";
+import { AjvJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/ajv";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeSqlite from "node:sqlite";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
@@ -117,6 +124,14 @@ const fixture = Effect.fn("SpacesMcpTest.fixture")(function* <A, E>(
     ),
   );
 });
+function outputValidator(schema: NonNullable<SdkTool["outputSchema"]>) {
+  const { properties, required, ...rest } = schema;
+  return new AjvJsonSchemaValidator().getValidator({
+    ...rest,
+    ...(properties === undefined ? {} : { properties }),
+    ...(required === undefined ? {} : { required }),
+  });
+}
 const call = Effect.fn("SpacesMcpTest.call")(function* (
   name: string,
   args: unknown,
@@ -124,14 +139,301 @@ const call = Effect.fn("SpacesMcpTest.call")(function* (
 ) {
   const server = yield* McpServer.McpServer;
   // JSON round trips exercise the registered advertised parameter codec and actual result encoding.
-  return yield* server
+  const result = yield* server
     .callTool({ name, arguments: JSON.parse(JSON.stringify(args)) })
     .pipe(
       Effect.provideService(Invocation.McpInvocationContext, invocation),
       Effect.provideService(McpSchema.McpServerClient, client),
     );
+  const wire = CallToolResultSchema.parse(JSON.parse(JSON.stringify(result)));
+  if (!wire.isError) {
+    const descriptor = server.tools.find((entry) => entry.tool.name === name)?.tool;
+    const tool = ToolSchema.parse(JSON.parse(JSON.stringify(descriptor)));
+    assert.isDefined(tool.outputSchema);
+    const checked = outputValidator(tool.outputSchema!)(wire.structuredContent);
+    assert.isTrue(checked.valid, checked.errorMessage);
+  }
+  return result;
 });
 it.layer(Layer.merge(NodeServices.layer, NodeCrypto.layer))("registered Spaces MCP", (it) => {
+  it.effect("SDK accepts every registered descriptor and preserves union validation", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const server = yield* McpServer.McpServer;
+        const list = ListToolsResultSchema.parse(
+          JSON.parse(JSON.stringify({ tools: server.tools.map((entry) => entry.tool) })),
+        );
+        for (const tool of list.tools) {
+          assert.isDefined(tool.outputSchema);
+          outputValidator(tool.outputSchema!);
+        }
+        for (const name of [
+          "t2_spaces_pages_create",
+          "t2_spaces_references_resolve",
+          "t2_spaces_context_capture",
+        ]) {
+          const schema = list.tools.find((tool) => tool.name === name)?.outputSchema;
+          assert.isDefined(schema);
+          const validate = outputValidator(schema!);
+          for (const invalid of [null, [], {}, { status: "bogus" }, { status: "saved" }])
+            assert.isFalse(validate(invalid).valid);
+        }
+      }),
+    ),
+  );
+  it.effect("SDK accepts capability object envelopes across disabled and enabled states", () =>
+    fixture(
+      () =>
+        Effect.gen(function* () {
+          assert.deepEqual(value(yield* call("t2_spaces_capability", env)), { capability: null });
+          const settings = yield* Settings.ServerSettingsService;
+          yield* settings.updateSettings({ spacesEnabled: true });
+          const current = value(yield* call("t2_spaces_capability", env));
+          assert.equal(current.capability.version, 2);
+          assert.equal(current.capability.features.contextCapture, true);
+          yield* settings.updateSettings({ spacesEnabled: false });
+          assert.deepEqual(value(yield* call("t2_spaces_capability", env)), { capability: null });
+        }),
+      false,
+    ),
+  );
+  it.effect("SDK validates encoded outputs from every registered Spaces operation", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const server = yield* McpServer.McpServer;
+        const called = new Set<string>();
+        const send = Effect.fnUntraced(function* (name: string, args: unknown) {
+          const result = yield* call(name, args);
+          called.add(name);
+          return result;
+        });
+        const library = value(yield* send("t2_spaces_list", env));
+        const admission = { ...env, receiptEpoch: library.mutationAdmission.epoch };
+        assert.equal(value(yield* send("t2_spaces_capability", env)).capability.version, 2);
+        const createdSpace = value(
+          yield* send("t2_spaces_create", { ...admission, mutationId: "sdk-space", title: "SDK" }),
+        );
+        const renamed = value(
+          yield* send("t2_spaces_rename", {
+            ...admission,
+            mutationId: "sdk-rename",
+            spaceId: createdSpace.space.id,
+            baseRevision: createdSpace.space.revision,
+            title: "SDK space",
+          }),
+        );
+        value(
+          yield* send("t2_spaces_set_default", {
+            ...admission,
+            mutationId: "sdk-default",
+            spaceId: renamed.space.id,
+            baseRevision: renamed.space.revision,
+            defaultSpaceId: library.defaultSpaceId,
+            baseDefaultRevision: library.items.find(
+              (item: { id: string }) => item.id === library.defaultSpaceId,
+            ).revision,
+          }),
+        );
+        const createInput = {
+          ...admission,
+          mutationId: "sdk-page",
+          spaceId: renamed.space.id,
+          baseRootOrderRevision: 0,
+          title: "SDK page",
+        };
+        const page = value(yield* send("t2_spaces_pages_create", createInput)).page;
+        value(yield* send("t2_spaces_pages_list", { ...env, spaceId: page.spaceId }));
+        value(yield* send("t2_spaces_pages_get", { ...env, pageId: page.id }));
+        const updated = value(
+          yield* send("t2_spaces_pages_update", {
+            ...admission,
+            mutationId: "sdk-title",
+            pageId: page.id,
+            baseRevision: page.revision,
+            title: "SDK updated",
+          }),
+        );
+        const applied = value(
+          yield* send("t2_spaces_blocks_apply", {
+            ...admission,
+            mutationId: "sdk-block",
+            pageId: page.id,
+            baseRevision: updated.page.revision,
+            generation: 0,
+            mutations: [
+              {
+                kind: "insert",
+                block: {
+                  id: "sdk-block",
+                  type: "paragraph",
+                  version: 1,
+                  parentId: null,
+                  order: "00000000000000000000000000000001",
+                  content: { runs: [{ text: "needle", marks: [] }] },
+                },
+              },
+            ],
+          }),
+        );
+        value(
+          yield* send("t2_spaces_blocks_read", {
+            ...env,
+            pageId: page.id,
+            revision: applied.revision,
+          }),
+        );
+        const placement = { pageId: page.id, parentId: null, beforeBlockId: null };
+        const inspect = value(
+          yield* send("t2_spaces_structure_inspect", {
+            ...env,
+            target: { kind: "blocks", pageId: page.id, blockIds: [] },
+            destination: { kind: "child", placement },
+          }),
+        );
+        const child = value(
+          yield* send("t2_spaces_pages_create_child", {
+            ...admission,
+            mutationId: "sdk-child",
+            title: "SDK child",
+            placement,
+            guards: inspect.guards,
+          }),
+        );
+        const destination = { kind: "root", spaceId: page.spaceId, beforePageId: null };
+        const moving = value(
+          yield* send("t2_spaces_structure_inspect", {
+            ...env,
+            target: { kind: "page", pageId: child.page.id },
+            destination,
+          }),
+        );
+        value(
+          yield* send("t2_spaces_pages_move", {
+            ...admission,
+            mutationId: "sdk-move-page",
+            pageId: child.page.id,
+            destination,
+            guards: moving.guards,
+          }),
+        );
+        const blockPlacement = { pageId: child.page.id, parentId: null, beforeBlockId: null };
+        const movingBlock = value(
+          yield* send("t2_spaces_structure_inspect", {
+            ...env,
+            target: { kind: "blocks", pageId: page.id, blockIds: ["sdk-block"] },
+            destination: { kind: "child", placement: blockPlacement },
+          }),
+        );
+        value(
+          yield* send("t2_spaces_blocks_move", {
+            ...admission,
+            mutationId: "sdk-move-block",
+            sourcePageId: page.id,
+            blockIds: ["sdk-block"],
+            destination: blockPlacement,
+            guards: movingBlock.guards,
+          }),
+        );
+        const resolved = value(
+          yield* send("t2_spaces_references_resolve", {
+            ...env,
+            target: { kind: "block", blockId: "sdk-block" },
+          }),
+        );
+        assert.equal(resolved.page.id, child.page.id);
+        const captured = value(
+          yield* send("t2_spaces_context_capture", {
+            ...env,
+            contextId: "sdk-context",
+            target: { kind: "block", blockId: "sdk-block" },
+          }),
+        );
+        assert.equal(captured.record.snapshot.text, "needle");
+        let searched = yield* send("t2_spaces_search", { ...env, query: "needle" });
+        if (searched.isError) {
+          assert.equal(failure(searched).reason, "building");
+          searched = yield* send("t2_spaces_search", { ...env, query: "needle" });
+        }
+        assert.isNotEmpty(value(searched).items);
+        const recover = Effect.fnUntraced(function* (
+          operation: C.SpaceRecoveryOperation,
+          name: string,
+          mutationId: string,
+        ) {
+          const inspected = value(
+            yield* send("t2_spaces_structure_inspect", {
+              ...env,
+              target: { kind: "page", pageId: child.page.id },
+              recovery: operation,
+            }),
+          );
+          return value(
+            yield* send(name, {
+              ...admission,
+              mutationId,
+              pageId: child.page.id,
+              guards: inspected.guards,
+            }),
+          );
+        });
+        yield* recover("trash", "t2_spaces_pages_trash", "sdk-trash");
+        assert.isNotEmpty(value(yield* send("t2_spaces_trash_list", env)).items);
+        assert.equal(
+          value(
+            yield* send("t2_spaces_references_resolve", {
+              ...env,
+              target: { kind: "block", blockId: "sdk-block" },
+            }),
+          ).status,
+          "trashed",
+        );
+        assert.equal(
+          value(
+            yield* send("t2_spaces_context_capture", {
+              ...env,
+              contextId: "sdk-unavailable",
+              target: { kind: "block", blockId: "sdk-block" },
+            }),
+          ).status,
+          "unavailable",
+        );
+        yield* recover("restore", "t2_spaces_pages_restore", "sdk-restore");
+        yield* recover("trash", "t2_spaces_pages_trash", "sdk-trash-again");
+        yield* recover("permanentlyDelete", "t2_spaces_pages_permanently_delete", "sdk-purge");
+        assert.equal(
+          value(
+            yield* send("t2_spaces_references_resolve", {
+              ...env,
+              target: { kind: "page", pageId: child.page.id },
+            }),
+          ).status,
+          "deleted",
+        );
+        assert.equal(
+          value(
+            yield* send("t2_spaces_context_capture", {
+              ...env,
+              contextId: "sdk-deleted",
+              target: { kind: "block", blockId: "sdk-block" },
+            }),
+          ).status,
+          "deleted",
+        );
+        assert.equal(
+          value(
+            yield* send("t2_spaces_receipts_get", {
+              request: { operation: "createPage", input: createInput },
+            }),
+          ).receipt.result.page.id,
+          page.id,
+        );
+        assert.sameMembers(
+          [...called],
+          server.tools.map((entry) => entry.tool.name),
+        );
+      }),
+    ),
+  );
   it.effect(
     "lets a read-only client read the singleton but refuses writes without a database commit",
     () =>
