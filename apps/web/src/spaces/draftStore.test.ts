@@ -107,7 +107,7 @@ describe("Spaces draft decoding and unavailable storage", () => {
         ...history,
         undo: {
           ...history.undo,
-          before: [{ ...before, type: "image", content: { assetId: "a" } }],
+          before: [{ ...before, type: "image", version: 2, content: { assetId: "a" } }],
           after: [{ ...after, type: "image", content: { assetId: "b" } }],
         },
       },
