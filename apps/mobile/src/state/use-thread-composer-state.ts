@@ -77,7 +77,6 @@ import {
   composerContextImportsAtom,
   getComposerDraftSnapshot,
   sameComposerDraftState,
-  mergeComposerDraftContent,
   removeComposerDraftAttachment,
   scheduleUnusedComposerAttachmentCleanup,
   setComposerDraftText,
@@ -519,9 +518,12 @@ export function useThreadComposerState() {
       );
       return;
     }
-    if (!sameComposerDraftState(
-      getComposerDraftSnapshot(queuedEditDraftKey(threadKey, edit.runId)), draft,
-    )) {
+    if (
+      !sameComposerDraftState(
+        getComposerDraftSnapshot(queuedEditDraftKey(threadKey, edit.runId)),
+        draft,
+      )
+    ) {
       finishSave(false);
       return;
     }

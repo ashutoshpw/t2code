@@ -72,6 +72,9 @@ function setup() {
     deny: () => {
       canRead = false;
     },
+    searchOnly: () => {
+      capability = { version: 2, features: { search: true } as typeof capability.features };
+    },
     old: () => {
       capability = { version: 2, features: {} as typeof capability.features };
     },
@@ -89,6 +92,14 @@ it("requires an explicit capture flag on compatible inline-context servers", asy
     supportsSpaceContextCapture({ version: 2, features: { contextCapture: true } }, true),
   ).toBe(true);
   const h = setup();
+  h.searchOnly();
+  expect(h.controller.canSearch()).toBe(true);
+  expect(h.controller.canCapture()).toBe(false);
+  const window = await h.controller.search("word");
+  if (window.status !== "ready") throw Error(window.status);
+  expect(window.target(0)).toEqual({ kind: "page", pageId: page.id });
+  expect(window.select(0, ComposerContextId.make("denied-capture"), true)).toBeNull();
+  h.calls.length = 0;
   h.old();
   expect((await h.controller.search("word")).status).toBe("unsupported");
   expect(h.calls).toEqual([]);

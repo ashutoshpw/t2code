@@ -116,7 +116,7 @@ result that always includes the thread id.
 
 ## Spaces
 
-Enable **Spaces** in **Settings → Beta** on the destination environment. A connected
+Enable **Spaces** in **Settings → Labs** on the destination environment. A connected
 agent with Spaces access can search, read pages and blocks, resolve their current
 locations and capture bounded context. Read-only clients can inspect content and
 ready media; they cannot create or change documents, reserve uploads or finalize

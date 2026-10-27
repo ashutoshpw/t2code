@@ -1,3 +1,4 @@
+import { ComposerBanner } from "./ComposerBanner";
 import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { deriveThreadQueueWorkflowState } from "@t2code/client-runtime/state/thread-workflows";
 import { assistantCitationsToPlainText } from "@t2code/shared/assistantCitations";

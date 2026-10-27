@@ -262,6 +262,14 @@ describe("Spaces public asset wiring", () => {
               expect(full.status).toBe(200);
               expect(new Uint8Array(yield* Effect.promise(() => full.arrayBuffer()))).toEqual(pdf);
               expect(full.headers.get("cache-control")).toContain("private");
+              const exposed = full.headers.get("access-control-expose-headers")?.split(",");
+              expect(exposed).toEqual([
+                "accept-ranges",
+                "content-range",
+                "content-length",
+                "content-encoding",
+                "etag",
+              ]);
               const head = yield* request(target, { method: "HEAD" });
               expect(head.status).toBe(200);
               expect(yield* Effect.promise(() => head.text())).toBe("");

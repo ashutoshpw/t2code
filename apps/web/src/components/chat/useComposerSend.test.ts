@@ -154,6 +154,7 @@ import { environmentPresentations } from "../../state/presentation";
 import type { EnvironmentPresentation } from "@t2code/client-runtime/connection";
 import { prepareSpaceContextSend } from "@t2code/client-runtime/spaces";
 import { PROMPT_STASH_STORAGE_KEY, usePromptStashStore } from "../../promptStashStore";
+import { createOptimisticBlobPreviews } from "./optimisticUserMessages";
 import { makeThreadFixture } from "../../test-fixtures";
 import { useComposerSend } from "./useComposerSend";
 import { draftSendState, draftFanoutSelectionsAtom } from "./chatViewSend";
@@ -429,6 +430,7 @@ async function verifyFailedSnapshotRecovery(
     resetCursorState: noop,
   } as unknown as ChatComposerHandle;
   let settingsCalls = 0;
+  const previews = createOptimisticBlobPreviews();
   const input = {
     environmentId,
     routeThreadKey: route,
@@ -510,6 +512,10 @@ async function verifyFailedSnapshotRecovery(
     setSetupQueueSendThreadKey: noop,
     setOptimisticUserMessages: (update: (previous: ChatMessage[]) => ChatMessage[]) => {
       optimistic = update(optimistic);
+    },
+    optimisticBlobPreviews: {
+      track: (message: ChatMessage) => previews.track(thread.id, message),
+      release: (message: ChatMessage) => previews.release(thread.id, message),
     },
     setFeedbackSubmissionsByThreadKey: noop,
     setThreadError: noop,

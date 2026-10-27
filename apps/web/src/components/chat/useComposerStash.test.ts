@@ -38,6 +38,7 @@ vi.mock("react", async () => ({
     () => {},
   ],
   useLayoutEffect: () => {},
+  useInsertionEffect: () => {},
   useEffect: () => {},
   use: () => false,
 }));
