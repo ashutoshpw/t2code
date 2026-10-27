@@ -423,6 +423,7 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
     snapshot.session.hydrated &&
     !snapshot.structureBlocked &&
     !snapshot.loading &&
+    snapshot.unavailable === null &&
     snapshot.error === null &&
     editorState.busy !== "persist" &&
     snapshot.session.status !== "conflict" &&
@@ -510,17 +511,19 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
             <Notice>
               {snapshot.session.persistenceError !== null
                 ? "The local draft could not be loaded or stored. Existing data is retained; try refreshing."
-                : !snapshot.session.hydrated
-                  ? "Loading the local draft before showing page content…"
-                  : snapshot.session.status === "uncertain"
-                    ? "The previous save outcome is uncertain. Its exact request and your local draft are retained."
-                    : snapshot.session.status === "conflict"
-                      ? "This page changed elsewhere. Your local draft is retained read-only."
-                      : snapshot.session.status === "draft"
-                        ? "Local draft retained on this device. Use Save when ready."
-                        : snapshot.session.status === "saving"
-                          ? "A save is pending; newer local content remains retained."
-                          : "Saved page."}
+                : snapshot.unavailable === "trashed"
+                  ? "This page is in Trash. Last loaded content and local drafts are retained read-only. Use Trash and restore above to recover it."
+                  : !snapshot.session.hydrated
+                    ? "Loading the local draft before showing page content…"
+                    : snapshot.session.status === "uncertain"
+                      ? "The previous save outcome is uncertain. Its exact request and your local draft are retained."
+                      : snapshot.session.status === "conflict"
+                        ? "This page changed elsewhere. Your local draft is retained read-only."
+                        : snapshot.session.status === "draft"
+                          ? "Local draft retained on this device. Use Save when ready."
+                          : snapshot.session.status === "saving"
+                            ? "A save is pending; newer local content remains retained."
+                            : "Saved page."}
             </Notice>
             {access.capability?.version === 1 ? (
               <Notice>This environment’s older Spaces version is read-only on mobile.</Notice>
@@ -542,6 +545,7 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
                   !snapshot.session.hydrated ||
                   snapshot.structureBlocked ||
                   snapshot.loading ||
+                  snapshot.unavailable !== null ||
                   snapshot.error !== null ||
                   editorState.busy !== null ||
                   editorState.focus !== null ||
@@ -561,6 +565,7 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
                   !snapshot.session.hydrated ||
                   snapshot.structureBlocked ||
                   snapshot.loading ||
+                  snapshot.unavailable !== null ||
                   snapshot.error !== null ||
                   editorState.busy !== null ||
                   editorState.focus !== null ||

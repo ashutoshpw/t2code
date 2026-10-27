@@ -92,6 +92,38 @@ function pageScreen(target) {
   };
 }
 
+function acquiringPageScreen(context, runtime, page) {
+  const attempts = [];
+  const leases = [];
+  let releases = 0;
+  pageView.access = runtime.access();
+  pageView.acquire = (target, access, signal) => {
+    const attempt = acquireHydratedSpacesPageReader(target, access, signal, {
+      documents: runtime.documents,
+      hydrate: () => runtime.owner.hydrate(),
+    });
+    attempts.push(attempt);
+    return attempt.then((lease) => {
+      leases.push(lease);
+      return {
+        ...lease,
+        release: () => {
+          releases++;
+          lease.release();
+        },
+      };
+    });
+  };
+  return {
+    ...pageScreen({ environmentId: context.environmentId, spaceId: page.spaceId, pageId: page.id }),
+    attempts,
+    leases,
+    get releases() {
+      return releases;
+    },
+  };
+}
+
 const withFixture = Effect.fn("MobileStructureTest.fixture")(function* (use) {
   const fixture = yield* diskDatabase();
   const environmentId = EnvironmentId.make("structure-environment");
@@ -105,6 +137,200 @@ const withFixture = Effect.fn("MobileStructureTest.fixture")(function* (use) {
     yield* use({ fixture, environmentId, service, run, db, capability });
   }).pipe(Effect.provide(layer));
 }, Effect.scoped);
+
+it.effect(
+  "restores and visibility-undoes an authoritatively trashed mounted reader while genuine refresh failures and dirty drafts stay gated",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const page = await root(context, runtime, space, "Mounted Trash recovery");
+        const block = paragraph("mounted-trash-text");
+        await seedBlock(context, page, block);
+        using screen = acquiringPageScreen(context, runtime, page);
+        screen.render();
+        await act(async () => {
+          await screen.attempts[0];
+        });
+        const reader = screen.leases[0].reader;
+        await act(async () => {
+          await reader.first();
+        });
+        const session = reader.session;
+        let trashFailure = null;
+        await act(async () => {
+          try {
+            await recoverPage(runtime, page.id, "trash");
+          } catch (error) {
+            trashFailure = error;
+            expect(error.message).toContain("Some affected pages could not refresh");
+          }
+        });
+        const afterTrash = reader.getSnapshot();
+        expect((await trashedPage(context, page.id)).trash).toBeDefined();
+        expect((await context.db.structure.load(context.environmentId)).pending).toBeNull();
+        await act(async () => {
+          await recoverPage(runtime, page.id, "restore");
+        });
+        expect(trashFailure).toBeNull();
+        expect(afterTrash.unavailable).toBe("trashed");
+        expect(afterTrash.error).toBeNull();
+        expect(reader.getSnapshot().unavailable).toBeNull();
+        expect(reader.getSnapshot().location.page.id).toBe(page.id);
+        await act(async () => {
+          await runtime.owner.compensate("undo");
+        });
+        expect(reader.getSnapshot().unavailable).toBe("trashed");
+        expect(() => reader.editing.focus(Symbol(), block.id)).toThrow("Trash");
+        await act(async () => {
+          await runtime.owner.compensate("redo");
+        });
+        expect(reader.getSnapshot().unavailable).toBeNull();
+        expect((await pageMetadata(context, page.id)).page.trash).toBeUndefined();
+        expect(reader.session).toBe(session);
+        expect(screen.attempts).toHaveLength(1);
+        expect(screen.releases).toBe(0);
+        runtime.control.failReads.add(page.id);
+        await act(async () => {
+          await expect(reader.refreshStructure()).rejects.toThrow("could not be delivered");
+        });
+        runtime.control.failReads.delete(page.id);
+        const beforeFailure = runtime.control.requests.length;
+        await runtime.owner.previewRecovery(page.id, "trash");
+        await expect(
+          runtime.owner.confirmRecovery(runtime.owner.getSnapshot().recoveryPreview),
+        ).rejects.toThrow("affected page draft");
+        expect(reader.getSnapshot().error).toContain("could not be delivered");
+        expect(runtime.control.requests).toHaveLength(beforeFailure);
+        expect((await context.db.structure.load(context.environmentId)).pending).toBeNull();
+        await act(async () => {
+          await reader.first();
+        });
+        await act(async () => {
+          session.apply([
+            {
+              kind: "replace",
+              block: {
+                ...block,
+                content: { runs: [{ text: "Retained dirty resident", marks: [] }] },
+              },
+            },
+          ]);
+          await session.persistDraft();
+        });
+        await runtime.owner.previewRecovery(page.id, "trash");
+        await expect(
+          runtime.owner.confirmRecovery(runtime.owner.getSnapshot().recoveryPreview),
+        ).rejects.toThrow("affected page draft");
+        expect(runtime.control.requests).toHaveLength(beforeFailure);
+        expect(
+          (await context.db.store.load({ environmentId: context.environmentId, pageId: page.id }))
+            .mutations,
+        ).toHaveLength(1);
+        expect(session.getSnapshot().dirty).toBe(true);
+        expect(screen.releases).toBe(0);
+      }),
+    ),
+);
+
+it.effect(
+  "restores a pristine cold Trash reader but retains an unknown pending SQLite draft before hydration or admission",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const initial = client(context);
+        const space = await defaultSpace(context);
+        const clean = await root(context, initial, space, "Cold clean Trash page");
+        const pendingPage = await root(context, initial, space, "Cold pending Trash page");
+        const block = paragraph("cold-pending-text");
+        await seedBlock(context, pendingPage, block);
+        const old = initial.documents.acquire({
+          environmentId: context.environmentId,
+          spaceId: space.id,
+          pageId: pendingPage.id,
+        });
+        await old.reader.first();
+        old.reader.session.apply([
+          {
+            kind: "replace",
+            block: {
+              ...block,
+              content: { runs: [{ text: "Unknown save must remain", marks: [] }] },
+            },
+          },
+        ]);
+        initial.control.afterContentSend = async () => {
+          throw new Error("Lost actual content ACK");
+        };
+        await expect(old.reader.session.save()).rejects.toThrow("Lost actual content ACK");
+        const key = { environmentId: context.environmentId, pageId: pendingPage.id };
+        const retained = await context.db.store.load(key);
+        expect(retained.pending).not.toBeNull();
+        for (const page of [clean, pendingPage]) {
+          const inspection = await context.run(
+            context.service.inspectStructure({
+              environmentId: context.environmentId,
+              target: { kind: "page", pageId: page.id },
+              recovery: "trash",
+            }),
+          );
+          const admission = await context.run(
+            context.service.listSpaces({ environmentId: context.environmentId, limit: 1 }),
+          );
+          const result = await context.run(
+            context.service.trashPage({
+              environmentId: context.environmentId,
+              pageId: page.id,
+              guards: inspection.guards,
+              receiptEpoch: admission.mutationAdmission.epoch,
+              mutationId: NodeCrypto.randomUUID(),
+            }),
+          );
+          expect(result.status).toBe("saved");
+        }
+        old.release();
+        await context.run(context.db.close);
+        const reopened = await context.run(context.fixture.open());
+        const restarted = client(context, reopened);
+        const blocked = await acquireHydratedSpacesPageReader(
+          { environmentId: context.environmentId, spaceId: space.id, pageId: pendingPage.id },
+          restarted.access(),
+          new AbortController().signal,
+          { documents: restarted.documents, hydrate: () => restarted.owner.hydrate() },
+        );
+        const cold = await acquireHydratedSpacesPageReader(
+          { environmentId: context.environmentId, spaceId: space.id, pageId: clean.id },
+          restarted.access(),
+          new AbortController().signal,
+          { documents: restarted.documents, hydrate: () => restarted.owner.hydrate() },
+        );
+        try {
+          await blocked.reader.first();
+          expect(blocked.reader.getSnapshot().unavailable).toBe("trashed");
+          expect(blocked.reader.session.getSnapshot().hydrated).toBe(false);
+          await restarted.owner.previewRecovery(pendingPage.id, "restore");
+          await expect(
+            restarted.owner.confirmRecovery(restarted.owner.getSnapshot().recoveryPreview),
+          ).rejects.toThrow("retained draft");
+          expect(restarted.control.requests).toEqual([]);
+          expect(restarted.control.ids).toBe(0);
+          expect(await reopened.store.load(key)).toEqual(retained);
+          expect(restarted.owner.getSnapshot().journal.pending).toBeNull();
+          await cold.reader.first();
+          expect(cold.reader.session.getSnapshot().hydrated).toBe(false);
+          await recoverPage(restarted, clean.id, "restore");
+          expect(cold.reader.getSnapshot().unavailable).toBeNull();
+          expect(cold.reader.getSnapshot().location.page.id).toBe(clean.id);
+          expect(cold.reader.session.getSnapshot().hydrated).toBe(true);
+          expect(await reopened.store.load(key)).toEqual(retained);
+        } finally {
+          blocked.release();
+          cold.release();
+        }
+      }),
+    ),
+);
 
 it.effect(
   "moves a bounded subtree into a cross-space child placement, refuses hidden drafts/cycles/stale guards, and renests with fresh markers",
@@ -433,32 +659,8 @@ it.effect(
         const reopened = yield* context.fixture.open();
         const restarted = client(context, reopened);
         yield* Effect.promise(async () => {
-          const attempts = [];
-          const leases = [];
-          let releases = 0;
-          pageView.access = restarted.access();
-          pageView.acquire = (target, access, signal) => {
-            const attempt = acquireHydratedSpacesPageReader(target, access, signal, {
-              documents: restarted.documents,
-              hydrate: () => restarted.owner.hydrate(),
-            });
-            attempts.push(attempt);
-            return attempt.then((lease) => {
-              leases.push(lease);
-              return {
-                ...lease,
-                release: () => {
-                  releases++;
-                  lease.release();
-                },
-              };
-            });
-          };
-          using screen = pageScreen({
-            environmentId: context.environmentId,
-            spaceId: space.id,
-            pageId: page.id,
-          });
+          using screen = acquiringPageScreen(context, restarted, page);
+          const { attempts, leases } = screen;
           screen.render();
           await act(async () => {
             await expect(attempts[0]).rejects.toThrow("reserved");
@@ -498,7 +700,7 @@ it.effect(
             await reader.first();
           });
           expect(attempts).toHaveLength(2);
-          expect(releases).toBe(0);
+          expect(screen.releases).toBe(0);
           expect(reader.editing.getSnapshot().focus).toBe(focus);
         });
       }),
@@ -517,6 +719,7 @@ function client(context, db = context.db) {
     receipts: [],
     afterStore: null,
     afterSend: null,
+    afterContentSend: null,
     failReads: new Set(),
     refreshed: [],
     changed: 0,
@@ -574,7 +777,11 @@ function client(context, db = context.db) {
       adapter: createSpaceServiceSessionAdapter(key, {
         limits: () => capability.limits,
         getPage: (input) => read(service.getPage(input)),
-        applyBlockBatch: (input) => run(service.applyBlockBatch(input)),
+        applyBlockBatch: async (input) => {
+          const result = await run(service.applyBlockBatch(input));
+          await control.afterContentSend?.(input, result);
+          return result;
+        },
         lookupMutationReceipt: (input) => read(service.lookupMutationReceipt(input)),
       }),
     });

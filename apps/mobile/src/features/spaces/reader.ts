@@ -1,10 +1,12 @@
-import type {
-  SpaceCapability,
-  SpaceCursor,
-  SpacePageGetResult,
-  SpaceReadBlocksInput,
-  SpaceReadBlocksResult,
+import {
+  SpaceValidationError,
+  type SpaceCapability,
+  type SpaceCursor,
+  type SpacePageGetResult,
+  type SpaceReadBlocksInput,
+  type SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
+import * as Schema from "effect/Schema";
 import type {
   SpaceDocumentSession,
   SpaceSessionSnapshot,
@@ -13,6 +15,8 @@ import type {
 import { canBrowseSpaces, type SpacesAvailability } from "@t2code/client-runtime/state/spaces";
 
 import { MobileSpaceEditing } from "./editing";
+
+const isSpaceValidationError = Schema.is(SpaceValidationError);
 
 export interface SpacesReadAccess {
   readonly availability: SpacesAvailability;
@@ -36,6 +40,7 @@ interface LocatedPage extends SpacePageGetResult {
 }
 
 interface ReaderSnapshot {
+  readonly unavailable: "trashed" | null;
   readonly structureBlocked: boolean;
   readonly loading: boolean;
   readonly error: string | null;
@@ -68,6 +73,7 @@ export class SpacesPageReader {
     },
   ) {
     this.#snapshot = {
+      unavailable: null,
       structureBlocked: false,
       loading: false,
       error: null,
@@ -88,10 +94,26 @@ export class SpacesPageReader {
   }
 
   assertContentReady() {
+    if (this.#snapshot.unavailable === "trashed")
+      throw new Error("This page is in Trash. Restore it before editing");
     if (this.#reserved)
       throw new Error("This page is reserved; recover its structural operation first");
     if (this.#snapshot.loading || this.#snapshot.error !== null)
       throw new Error("Refresh this page successfully before editing");
+  }
+
+  #structureAvailability() {
+    const state = this.session.getSnapshot();
+    // A pristine unread Trash view still gets the coordinator's durable draft check before any send.
+    const unreadTrash =
+      this.#snapshot.unavailable === "trashed" &&
+      !state.hydrated &&
+      state.status === "loading" &&
+      !state.dirty &&
+      !state.pending &&
+      state.persistenceError === null &&
+      this.#hydration === null;
+    return unreadTrash ? null : this.session.structureAvailability();
   }
 
   reserveStructure(restoring: boolean) {
@@ -102,7 +124,7 @@ export class SpacesPageReader {
         this.#snapshot.error !== null ||
         this.editing.getSnapshot().focus ||
         this.editing.getSnapshot().busy ||
-        this.session.structureAvailability())
+        this.#structureAvailability())
     )
       throw new Error(
         "Finish loading or resolve the affected page draft before changing structure",
@@ -120,7 +142,7 @@ export class SpacesPageReader {
       if (
         this.editing.getSnapshot().focus ||
         this.editing.getSnapshot().busy ||
-        this.session.structureAvailability()
+        this.#structureAvailability()
       )
         throw new Error("Resolve the affected page draft before refreshing structure");
       await this.#load(undefined, true);
@@ -191,6 +213,7 @@ export class SpacesPageReader {
     this.#opening = null;
     this.#serverWindow = null;
     this.#publish({
+      unavailable: this.#snapshot.unavailable,
       structureBlocked: this.#reserved,
       loading: false,
       error: null,
@@ -267,6 +290,7 @@ export class SpacesPageReader {
     const current = () => request === this.#request && access.current();
     this.#serverWindow = null;
     this.#publish({
+      unavailable: this.#snapshot.unavailable,
       structureBlocked: this.#reserved,
       loading: true,
       error: null,
@@ -305,7 +329,13 @@ export class SpacesPageReader {
       )
         this.session.replaceWindow(window);
       this.#serverWindow = window;
-      this.#snapshot = { ...this.#snapshot, loading: false, error: null, location };
+      this.#snapshot = {
+        ...this.#snapshot,
+        unavailable: null,
+        loading: false,
+        error: null,
+        location,
+      };
       this.#publishSession();
     } catch (error) {
       if (!current()) {
@@ -315,7 +345,20 @@ export class SpacesPageReader {
           });
         return;
       }
+      if (isSpaceValidationError(error) && error.reason === "trashed") {
+        this.#publish({
+          ...this.#snapshot,
+          unavailable: "trashed",
+          loading: false,
+          error: null,
+          location: null,
+          window: null,
+          session: this.session.getSnapshot(),
+        });
+        return;
+      }
       this.#publish({
+        unavailable: this.#snapshot.unavailable,
         structureBlocked: this.#reserved,
         loading: false,
         error:
