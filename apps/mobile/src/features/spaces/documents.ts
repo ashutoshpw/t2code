@@ -1,7 +1,27 @@
 import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
-import type { SpacesPageReader } from "./reader";
+import type { SpacesPageReader, SpacesReadAccess } from "./reader";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpacePageId } from "@t2code/contracts/spaces";
+
+export async function acquireHydratedSpacesPageReader(
+  target: SpacePageNavigationTarget,
+  access: SpacesReadAccess,
+  signal: AbortSignal,
+  ports: { readonly documents: MobileSpaceDocuments; readonly hydrate: () => Promise<void> },
+) {
+  if (signal.aborted || !access.current())
+    throw new Error("The source connection changed. Open the link again.");
+  await ports.hydrate();
+  if (signal.aborted || !access.current())
+    throw new Error("The source connection changed before draft hydration");
+  const lease = ports.documents.acquire({
+    environmentId: target.environmentId,
+    spaceId: target.spaceId,
+    pageId: target.pageId,
+  });
+  void lease.reader.first();
+  return { ...lease, target };
+}
 
 // Dirty or unresolved owners survive view release; only clean unused owners may be evicted.
 export class MobileSpaceDocuments {

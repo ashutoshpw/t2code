@@ -342,7 +342,8 @@ type PageLease = Awaited<ReturnType<typeof acquireSpacesPageReader>>;
 function PageReader({ target }: { target: SpacePageNavigationTarget }) {
   const access = useSpacesReadAccess(target.environmentId);
   const ownedLease = useRef<PageLease | null>(null);
-  const stamp = useMemo(() => ({ target, access }), [target, access]);
+  const [attempt, setAttempt] = useState(0);
+  const stamp = useMemo(() => ({ target, access, attempt }), [target, access, attempt]);
   const [view, setView] = useState<{
     stamp: typeof stamp;
     lease: PageLease | null;
@@ -389,7 +390,19 @@ function PageReader({ target }: { target: SpacePageNavigationTarget }) {
   if (!canBrowseSpaces(access.availability))
     return <AccessNotice access={access} environmentId={target.environmentId} />;
   if (view?.stamp !== stamp) return <Notice>Opening page and local draft…</Notice>;
-  return <Notice>{view.error ?? "Could not open this page."}</Notice>;
+  return (
+    <View className="gap-2">
+      <Notice>{view.error ?? "Could not open this page."}</Notice>
+      <ControlPill
+        variant="pill"
+        label="Retry opening page"
+        disabled={!access.current()}
+        onPress={() => {
+          if (!ownedLease.current && access.current()) setAttempt((value) => value + 1);
+        }}
+      />
+    </View>
+  );
 }
 
 function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesReadAccess }) {

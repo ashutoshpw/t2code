@@ -1,5 +1,7 @@
 import { expect, it } from "@effect/vitest";
+import { vi } from "vite-plus/test";
 import * as NodeCrypto from "node:crypto";
+import * as NodeModule from "node:module";
 import * as Effect from "effect/Effect";
 import { EnvironmentId } from "../packages/contracts/src/index.ts";
 import { SpaceBlockId } from "../packages/contracts/src/spaces.ts";
@@ -8,11 +10,87 @@ import {
   createSpaceServiceSessionAdapter,
 } from "../packages/client-runtime/src/spaces/index.ts";
 import { createMobileSpaceStructure } from "../apps/mobile/src/features/spaces/structure.ts";
-import { MobileSpaceDocuments } from "../apps/mobile/src/features/spaces/documents.ts";
+import {
+  MobileSpaceDocuments,
+  acquireHydratedSpacesPageReader,
+} from "../apps/mobile/src/features/spaces/documents.ts";
 import { SpacesPageReader } from "../apps/mobile/src/features/spaces/reader.ts";
 import { diskDatabase } from "../apps/mobile/src/persistence/mobile-database.test-support.ts";
 import * as SpacesService from "../apps/server/src/spaces/SpacesService.ts";
 import { mobileSpacesServiceLayer, promiseRunner } from "./spaces-mobile.test-support.mjs";
+import { SpacesPageRouteScreen } from "../apps/mobile/src/features/spaces/SpacesScreens.tsx";
+
+const pageView = vi.hoisted(() => ({ access: null, acquire: null }));
+vi.mock("../apps/mobile/src/state/spaces.ts", () => ({
+  acquireSpacesPageReader: (...args) => pageView.acquire(...args),
+  useSpacesReadAccess: () => pageView.access,
+  spacesEnvironment: {},
+}));
+vi.mock("../apps/mobile/src/state/atom-registry.ts", () => ({ appAtomRegistry: {} }));
+vi.mock("../apps/mobile/src/state/environments.ts", () => ({ useEnvironments: () => ({}) }));
+vi.mock("../apps/mobile/src/state/query.ts", () => ({ useEnvironmentQuery: () => ({}) }));
+vi.mock("../apps/mobile/node_modules/react-native", () => ({
+  View: ({ children }) => children,
+  FlatList: () => null,
+}));
+vi.mock("../apps/mobile/node_modules/@react-navigation/native", () => ({
+  useNavigation: () => ({}),
+  usePreventRemove: () => {},
+}));
+vi.mock("../apps/mobile/src/components/ui/AppText.tsx", () => ({
+  AppText: ({ children }) => children,
+}));
+vi.mock("../apps/mobile/src/components/ui/ControlPill.tsx", async () => {
+  const { createElement } = await import("../apps/mobile/node_modules/react/index.js");
+  return {
+    ControlPill: ({ label, onPress, disabled }) =>
+      createElement("button", { onClick: onPress, disabled }, label),
+  };
+});
+vi.mock("../apps/mobile/src/components/ui/ListRow.tsx", () => ({ ListRow: () => null }));
+vi.mock("../apps/mobile/src/components/ui/Dialog.tsx", () => ({}));
+vi.mock("../apps/mobile/src/features/settings/components/SettingsScreen.tsx", () => ({
+  SettingsScreen: ({ children }) => children,
+}));
+vi.mock("../apps/mobile/src/native/NativeScrollViewMarker.tsx", () => ({
+  NativeScrollView: () => null,
+}));
+vi.mock("../apps/mobile/src/features/spaces/SpacesLibraryActions.tsx", () => ({
+  SpacesLibraryActions: () => null,
+}));
+vi.mock("../apps/mobile/src/features/spaces/SpaceBlockReader.tsx", () => ({
+  SpaceBlockReader: () => null,
+}));
+vi.mock("../apps/mobile/src/features/spaces/SpacesNativeBlockEditor.tsx", () => ({
+  SpacesNativeBlockEditor: () => null,
+  spacesNativeEditorAvailable: () => false,
+}));
+
+const requireFromMobile = NodeModule.createRequire(
+  new URL("../apps/mobile/package.json", import.meta.url),
+);
+const { act, createElement } = requireFromMobile("react");
+const { createRoot } = requireFromMobile("react-dom/client");
+const { JSDOM } = requireFromMobile("jsdom");
+
+function pageScreen(target) {
+  const dom = new JSDOM("<!doctype html><html><body></body></html>");
+  vi.stubGlobal("window", dom.window);
+  vi.stubGlobal("document", dom.window.document);
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  return {
+    container,
+    render: () =>
+      act(() => root.render(createElement(SpacesPageRouteScreen, { route: { params: target } }))),
+    [Symbol.dispose]() {
+      act(() => root.unmount());
+      dom.window.close();
+      vi.unstubAllGlobals();
+    },
+  };
+}
 
 const withFixture = Effect.fn("MobileStructureTest.fixture")(function* (use) {
   const fixture = yield* diskDatabase();
@@ -27,6 +105,104 @@ const withFixture = Effect.fn("MobileStructureTest.fixture")(function* (use) {
     yield* use({ fixture, environmentId, service, run, db, capability });
   }).pipe(Effect.provide(layer));
 }, Effect.scoped);
+
+it.effect(
+  "retries the mounted page after real journal receipt recovery and preserves its healthy editing lease",
+  () =>
+    withFixture((context) =>
+      Effect.gen(function* () {
+        const initial = client(context);
+        const space = yield* Effect.promise(() => defaultSpace(context));
+        const page = yield* Effect.promise(() => root(context, initial, space, "Before rename"));
+        const block = paragraph("retry-page-text");
+        yield* Effect.promise(() => seedBlock(context, page, block));
+        const metadata = yield* context.service.getPage({
+          environmentId: context.environmentId,
+          pageId: page.id,
+        });
+        initial.control.afterSend = async () => {
+          throw new Error("Lost rename ACK");
+        };
+        yield* Effect.promise(() =>
+          expect(initial.owner.renamePage(metadata.page, "Recovered rename")).rejects.toThrow(
+            "Lost rename ACK",
+          ),
+        );
+        yield* context.db.close;
+        const reopened = yield* context.fixture.open();
+        const restarted = client(context, reopened);
+        yield* Effect.promise(async () => {
+          const attempts = [];
+          const leases = [];
+          let releases = 0;
+          pageView.access = restarted.access();
+          pageView.acquire = (target, access, signal) => {
+            const attempt = acquireHydratedSpacesPageReader(target, access, signal, {
+              documents: restarted.documents,
+              hydrate: () => restarted.owner.hydrate(),
+            });
+            attempts.push(attempt);
+            return attempt.then((lease) => {
+              leases.push(lease);
+              return {
+                ...lease,
+                release: () => {
+                  releases++;
+                  lease.release();
+                },
+              };
+            });
+          };
+          using screen = pageScreen({
+            environmentId: context.environmentId,
+            spaceId: space.id,
+            pageId: page.id,
+          });
+          screen.render();
+          await act(async () => {
+            await expect(attempts[0]).rejects.toThrow("reserved");
+          });
+          expect(screen.container.textContent).toContain("reserved");
+          expect(restarted.owner.getSnapshot().journal.pending.request.operation).toBe(
+            "updatePage",
+          );
+          await act(async () => {
+            await restarted.owner.recover();
+          });
+          expect(restarted.control.receipts).toEqual(["found"]);
+          expect(restarted.control.requests).toEqual([]);
+          expect((await reopened.structure.load(context.environmentId)).pending).toBeNull();
+          const retry = [...screen.container.querySelectorAll("button")].find(
+            (button) => button.textContent === "Retry opening page",
+          );
+          expect(retry).toBeDefined();
+          act(() => retry.click());
+          await act(async () => {
+            await attempts[1];
+          });
+          expect(attempts).toHaveLength(2);
+          expect(leases).toHaveLength(1);
+          const reader = leases[0].reader;
+          await act(async () => {
+            await reader.first();
+          });
+          expect(reader.getSnapshot().location.page.title).toBe("Recovered rename");
+          let focus;
+          act(() => {
+            focus = reader.editing.focus(Symbol("retained input"), block.id);
+          });
+          pageView.access = restarted.access();
+          screen.render();
+          await act(async () => {
+            await reader.first();
+          });
+          expect(attempts).toHaveLength(2);
+          expect(releases).toBe(0);
+          expect(reader.editing.getSnapshot().focus).toBe(focus);
+        });
+      }),
+    ),
+);
 
 function client(context, db = context.db) {
   const { environmentId, service, run, capability } = context;
@@ -169,7 +345,7 @@ function client(context, db = context.db) {
       control.changed++;
     },
   });
-  return { owner, documents, control };
+  return { owner, documents, control, access: accessSnapshot };
 }
 
 async function defaultSpace(context) {

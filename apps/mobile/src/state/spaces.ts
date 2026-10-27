@@ -42,7 +42,10 @@ import { environmentPresentations } from "./presentation";
 import { environmentSession } from "./session";
 import * as Runtime from "../lib/runtime";
 import { uuidv4 } from "../lib/uuid";
-import { MobileSpaceDocuments } from "../features/spaces/documents";
+import {
+  MobileSpaceDocuments,
+  acquireHydratedSpacesPageReader,
+} from "../features/spaces/documents";
 import {
   createMobileSpaceDraftStore,
   createMobileSpaceStructureStore,
@@ -428,18 +431,10 @@ export async function acquireSpacesPageReader(
       ...(result.blockId ? { blockId: result.blockId } : {}),
     };
   }
-  if (signal.aborted || !access.current())
-    throw new Error("The source connection changed. Open the link again.");
-  await getMobileSpaceStructure(resolved.environmentId).hydrate();
-  if (signal.aborted || !access.current())
-    throw new Error("The source connection changed before draft hydration");
-  const lease = documents.acquire({
-    environmentId: resolved.environmentId,
-    spaceId: resolved.spaceId,
-    pageId: resolved.pageId,
+  return acquireHydratedSpacesPageReader(resolved, access, signal, {
+    documents,
+    hydrate: () => getMobileSpaceStructure(resolved.environmentId).hydrate(),
   });
-  void lease.reader.first();
-  return { ...lease, target: resolved };
 }
 
 export async function prepareMobileComposerContext(input: {
