@@ -4,7 +4,7 @@ import type { SpaceRecoveryPreview, SpaceRootReorder } from "@t2code/client-runt
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpacePageId, SpacePageSummary } from "@t2code/contracts/spaces";
 import { useState, useSyncExternalStore } from "react";
-import { FlatList, Modal, View } from "react-native";
+import { FlatList, Modal, TextInput, View } from "react-native";
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
 import * as Dialog from "../../components/ui/Dialog";
@@ -29,9 +29,13 @@ export function SpacesRecoveryControls({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<SpaceRecoveryPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState("");
   const trashPermission = useAtomValue(spacesEnvironment.trashPage.permissionAtom(environmentId));
   const restorePermission = useAtomValue(
     spacesEnvironment.restorePage.permissionAtom(environmentId),
+  );
+  const purgePermission = useAtomValue(
+    spacesEnvironment.permanentlyDeletePage.permissionAtom(environmentId),
   );
   const supported =
     access.capability?.version === 2 && access.capability.features?.recovery === true;
@@ -50,9 +54,13 @@ export function SpacesRecoveryControls({
       ),
     );
   };
-  async function inspect(pageId: SpacePageId, operation: "trash" | "restore") {
+  async function inspect(
+    pageId: SpacePageId,
+    operation: "trash" | "restore" | "permanentlyDelete",
+  ) {
     if (!readable || (operation === "trash" && (!pageCurrent() || blocked))) return;
     setSelected(null);
+    setConfirmation("");
     await owner.previewRecovery(pageId, operation);
     if (access.current() && (operation !== "trash" || pageCurrent()))
       setSelected(owner.getSnapshot().recoveryPreview);
@@ -60,22 +68,35 @@ export function SpacesRecoveryControls({
   function confirm() {
     if (
       !preview ||
-      (preview.operation !== "trash" && preview.operation !== "restore") ||
       unavailable ||
       !writable ||
       (preview.operation === "trash"
         ? !trashPermission || blocked || !pageCurrent()
-        : !restorePermission)
+        : preview.operation === "permanentlyDelete"
+          ? !purgePermission || confirmation !== "DELETE"
+          : !restorePermission)
     )
       return;
     const intent = preview;
+    const permanent = intent.operation === "permanentlyDelete";
+    const name =
+      intent.inspection.pages.find((entry) => entry.id === intent.pageId)?.title || "Untitled page";
     Dialog.confirm({
-      title: intent.operation === "trash" ? "Move these pages to Trash?" : "Restore these pages?",
-      message: `${intent.inspection.recovery!.pageIds.length} selected page(s). ${intent.placement} Independently trashed batches stay separate.`,
-      confirmText: intent.operation === "trash" ? "Move to Trash" : "Restore",
+      title: permanent
+        ? `Permanently delete “${name}”?`
+        : intent.operation === "trash"
+          ? "Move these pages to Trash?"
+          : "Restore these pages?",
+      message: `${intent.pageId}: ${intent.inspection.recovery!.pageIds.length} selected page(s). ${intent.placement}${permanent ? " This cannot be undone." : " Independently trashed batches stay separate."}`,
+      confirmText: permanent
+        ? "Permanently delete"
+        : intent.operation === "trash"
+          ? "Move to Trash"
+          : "Restore",
+      destructive: permanent,
       onConfirm: () => {
         if (access.current() && (intent.operation !== "trash" || pageCurrent()))
-          run(owner.confirmRecovery(intent));
+          run(owner.confirmRecovery(intent, permanent));
       },
     });
   }
@@ -89,6 +110,7 @@ export function SpacesRecoveryControls({
           disabled={!readable || unavailable}
           onPress={() => {
             setSelected(null);
+            setConfirmation("");
             setOpen(true);
             run(owner.browseTrash());
           }}
@@ -185,6 +207,12 @@ export function SpacesRecoveryControls({
                       disabled={!readable || unavailable}
                       onPress={() => run(inspect(item.pageId, "restore"))}
                     />
+                    <ControlPill
+                      variant="pill"
+                      label="Inspect permanent deletion…"
+                      disabled={!readable || unavailable || !writable || !purgePermission}
+                      onPress={() => run(inspect(item.pageId, "permanentlyDelete"))}
+                    />
                   </View>
                 )}
               />
@@ -200,7 +228,9 @@ export function SpacesRecoveryControls({
                   renderItem={({ item: id }) => (
                     <View className="gap-1 py-1">
                       <Text className="text-foreground">
-                        {preview.inspection.pages.find((entry) => entry.id === id)?.title || id}
+                        {preview.inspection.pages.find((entry) => entry.id === id)?.title ||
+                          "Untitled page"}{" "}
+                        · {id}
                       </Text>
                       {preview.operation === "restore" && id !== preview.pageId ? (
                         <ControlPill
@@ -213,15 +243,42 @@ export function SpacesRecoveryControls({
                     </View>
                   )}
                 />
+                {preview.operation === "permanentlyDelete" ? (
+                  <>
+                    <Text className="text-destructive">
+                      Permanently delete these {preview.inspection.recovery!.pageIds.length}{" "}
+                      inspected pages, including independent batches in the current subtree. No
+                      Undo. Type DELETE to continue.
+                    </Text>
+                    <TextInput
+                      accessibilityLabel="Type DELETE to confirm permanent deletion"
+                      value={confirmation}
+                      onChangeText={setConfirmation}
+                      autoCorrect={false}
+                      autoCapitalize="characters"
+                      maxLength={6}
+                      editable={writable && !unavailable && purgePermission}
+                      className="rounded-lg border border-border p-3 text-foreground"
+                    />
+                  </>
+                ) : null}
                 <ControlPill
                   variant="pill"
-                  label={preview.operation === "trash" ? "Confirm Trash…" : "Confirm restore…"}
+                  label={
+                    preview.operation === "permanentlyDelete"
+                      ? "Confirm permanent deletion…"
+                      : preview.operation === "trash"
+                        ? "Confirm Trash…"
+                        : "Confirm restore…"
+                  }
                   disabled={
                     unavailable ||
                     !writable ||
                     (preview.operation === "trash"
                       ? !trashPermission || blocked || !pageCurrent()
-                      : !restorePermission)
+                      : preview.operation === "permanentlyDelete"
+                        ? !purgePermission || confirmation !== "DELETE"
+                        : !restorePermission)
                   }
                   onPress={confirm}
                 />
@@ -250,6 +307,7 @@ export function SpacesRecoveryControls({
               onPress={() => {
                 setOpen(false);
                 setSelected(null);
+                setConfirmation("");
               }}
             />
           </View>

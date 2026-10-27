@@ -7,6 +7,31 @@ import {
   type SpaceStructureStore,
 } from "@t2code/client-runtime/spaces";
 import type { MobileSpaceDocuments } from "./documents";
+import type {
+  SpaceBlockId,
+  SpacePageSummary,
+  SpaceReadBlocksResult,
+} from "@t2code/contracts/spaces";
+
+export async function selectMobileSpacesBlockMove(
+  owner: SpaceRootReorder,
+  page: SpacePageSummary,
+  window: SpaceReadBlocksResult,
+  selected: readonly SpaceBlockId[],
+) {
+  if (
+    window.nextCursor !== null ||
+    window.revision !== page.revision ||
+    selected.some((id) => !window.blocks.some((block) => block.id === id))
+  )
+    throw new Error("Block moves require the current complete loaded window");
+  const proof = await owner.selectBlocks(page.id, window.revision, selected);
+  if (!proof.inverse)
+    throw new Error(
+      "Mixed or noncontiguous origins are unavailable on mobile; select contiguous subtree roots in one container",
+    );
+  return proof;
+}
 
 export function createMobileSpaceStructure(
   environmentId: EnvironmentId,

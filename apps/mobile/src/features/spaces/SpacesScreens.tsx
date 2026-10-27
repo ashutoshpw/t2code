@@ -496,6 +496,7 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
               <SpacesLibraryActions
                 environmentId={target.environmentId}
                 page={location.page}
+                window={snapshot.window ?? undefined}
                 current={() => !!location.current()}
                 blocked={
                   snapshot.loading ||
@@ -511,19 +512,21 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
             <Notice>
               {snapshot.session.persistenceError !== null
                 ? "The local draft could not be loaded or stored. Existing data is retained; try refreshing."
-                : snapshot.unavailable === "trashed"
-                  ? "This page is in Trash. Last loaded content and local drafts are retained read-only. Use Trash and restore above to recover it."
-                  : !snapshot.session.hydrated
-                    ? "Loading the local draft before showing page content…"
-                    : snapshot.session.status === "uncertain"
-                      ? "The previous save outcome is uncertain. Its exact request and your local draft are retained."
-                      : snapshot.session.status === "conflict"
-                        ? "This page changed elsewhere. Your local draft is retained read-only."
-                        : snapshot.session.status === "draft"
-                          ? "Local draft retained on this device. Use Save when ready."
-                          : snapshot.session.status === "saving"
-                            ? "A save is pending; newer local content remains retained."
-                            : "Saved page."}
+                : snapshot.unavailable === "deleted"
+                  ? "This page was permanently deleted. Retained local content is read-only. This cannot be undone."
+                  : snapshot.unavailable === "trashed"
+                    ? "This page is in Trash. Last loaded content and local drafts are retained read-only. Use Trash and restore above to recover it."
+                    : !snapshot.session.hydrated
+                      ? "Loading the local draft before showing page content…"
+                      : snapshot.session.status === "uncertain"
+                        ? "The previous save outcome is uncertain. Its exact request and your local draft are retained."
+                        : snapshot.session.status === "conflict"
+                          ? "This page changed elsewhere. Your local draft is retained read-only."
+                          : snapshot.session.status === "draft"
+                            ? "Local draft retained on this device. Use Save when ready."
+                            : snapshot.session.status === "saving"
+                              ? "A save is pending; newer local content remains retained."
+                              : "Saved page."}
             </Notice>
             {access.capability?.version === 1 ? (
               <Notice>This environment’s older Spaces version is read-only on mobile.</Notice>

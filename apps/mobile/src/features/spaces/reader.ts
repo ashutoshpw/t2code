@@ -1,5 +1,6 @@
 import {
   SpaceValidationError,
+  SpaceNotFoundError,
   type SpaceCapability,
   type SpaceCursor,
   type SpacePageGetResult,
@@ -17,6 +18,7 @@ import { canBrowseSpaces, type SpacesAvailability } from "@t2code/client-runtime
 import { MobileSpaceEditing } from "./editing";
 
 const isSpaceValidationError = Schema.is(SpaceValidationError);
+const isSpaceNotFoundError = Schema.is(SpaceNotFoundError);
 
 export interface SpacesReadAccess {
   readonly availability: SpacesAvailability;
@@ -40,7 +42,7 @@ interface LocatedPage extends SpacePageGetResult {
 }
 
 interface ReaderSnapshot {
-  readonly unavailable: "trashed" | null;
+  readonly unavailable: "trashed" | "deleted" | null;
   readonly structureBlocked: boolean;
   readonly loading: boolean;
   readonly error: string | null;
@@ -70,6 +72,7 @@ export class SpacesPageReader {
       locate: (signal: AbortSignal) => Promise<LocatedPage>;
       blocks: (input: SpaceReadBlocksInput, signal: AbortSignal) => Promise<SpaceReadBlocksResult>;
       beforeRead?: () => Promise<void>;
+      confirmDeleted?: (signal: AbortSignal) => Promise<boolean>;
     },
   ) {
     this.#snapshot = {
@@ -94,6 +97,8 @@ export class SpacesPageReader {
   }
 
   assertContentReady() {
+    if (this.#snapshot.unavailable === "deleted")
+      throw new Error("This page was permanently deleted; retained content is read-only");
     if (this.#snapshot.unavailable === "trashed")
       throw new Error("This page is in Trash. Restore it before editing");
     if (this.#reserved)
@@ -345,10 +350,32 @@ export class SpacesPageReader {
           });
         return;
       }
-      if (isSpaceValidationError(error) && error.reason === "trashed") {
+      let failure = error;
+      let unavailable: "trashed" | "deleted" | null =
+        isSpaceValidationError(error) && error.reason === "trashed" ? "trashed" : null;
+      if (
+        isSpaceNotFoundError(error) &&
+        error.entity === "page" &&
+        error.id === this.target.pageId &&
+        this.ports.confirmDeleted
+      ) {
+        try {
+          if (await this.ports.confirmDeleted(abort.signal)) unavailable = "deleted";
+        } catch (cause) {
+          failure = cause;
+        }
+        if (!current()) {
+          if (structure)
+            throw new Error("The page connection changed while confirming deletion", {
+              cause: error,
+            });
+          return;
+        }
+      }
+      if (unavailable !== null) {
         this.#publish({
           ...this.#snapshot,
-          unavailable: "trashed",
+          unavailable,
           loading: false,
           error: null,
           location: null,
@@ -363,19 +390,19 @@ export class SpacesPageReader {
         loading: false,
         error:
           cursor &&
-          typeof error === "object" &&
-          error !== null &&
-          "_tag" in error &&
-          error._tag === "SpaceCursorStaleError"
+          typeof failure === "object" &&
+          failure !== null &&
+          "_tag" in failure &&
+          failure._tag === "SpaceCursorStaleError"
             ? "The page changed. Open the first window to continue."
-            : error instanceof Error
-              ? error.message
+            : failure instanceof Error
+              ? failure.message
               : "Could not load this page.",
         location: null,
         window: null,
         session: this.session.getSnapshot(),
       });
-      if (structure) throw error;
+      if (structure) throw failure;
     }
   }
 }

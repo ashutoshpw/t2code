@@ -230,6 +230,23 @@ export function createSpacesPageReader(
         signal,
       ),
     blocks: (input, signal) => query(blocks({ environmentId: key.environmentId, input }), signal),
+    confirmDeleted: async (signal) => {
+      const owner = requireAccess(key.environmentId);
+      if (owner.capability.version !== 2 || owner.capability.features?.referenceResolution !== true)
+        return false;
+      const result = await query(
+        reference({
+          environmentId: key.environmentId,
+          input: { environmentId: key.environmentId, target: { kind: "page", pageId: key.pageId } },
+        }),
+        signal,
+      );
+      if (!owner.current())
+        throw new Error("The connection changed while confirming page deletion");
+      if (new TextEncoder().encode(JSON.stringify(result)).byteLength > 16384)
+        throw new Error("The deletion result exceeds its read limit");
+      return result.status === "deleted";
+    },
   });
   return reader;
 }
@@ -386,12 +403,12 @@ export function getMobileSpaceStructure(environmentId: EnvironmentId) {
         ).run(appAtomRegistry, { environmentId, input }),
       ),
     trashList: (input) => read(spacesEnvironment.trash({ environmentId, input })),
-    purge: async () => {
-      throw new Error("Permanent page deletion is not available in this mobile slice");
-    },
-    moveBlocks: async () => {
-      throw new Error("Block moves are not available in this mobile slice");
-    },
+    purge: (input) =>
+      mutate(() =>
+        spacesEnvironment.permanentlyDeletePage.run(appAtomRegistry, { environmentId, input }),
+      ),
+    moveBlocks: (input) =>
+      mutate(() => spacesEnvironment.moveBlocks.run(appAtomRegistry, { environmentId, input })),
     changed: () =>
       appAtomRegistry.update(spacesEnvironment.changed(environmentId), (value) => value + 1),
   });

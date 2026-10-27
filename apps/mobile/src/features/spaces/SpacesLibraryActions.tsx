@@ -2,7 +2,11 @@ import { useAtomValue } from "@effect/atom-react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
-import { isSpaceListItem, type SpaceRootReorder } from "@t2code/client-runtime/spaces";
+import {
+  isSpaceListItem,
+  type SpaceRootReorder,
+  type SpaceBlockMoveProof,
+} from "@t2code/client-runtime/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
 import type {
   SpaceBlockId,
@@ -11,6 +15,7 @@ import type {
   SpacePageId,
   SpacePageSummary,
   SpaceSummary,
+  SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { FlatList, Modal, TextInput, View } from "react-native";
@@ -25,15 +30,17 @@ import {
 } from "../../state/spaces";
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
 import { SpacesRecoveryControls } from "./SpacesRecoveryControls";
+import { selectMobileSpacesBlockMove } from "./structure";
 
 type Intent =
   | { kind: "createSpace" }
   | { kind: "createPage" | "renameSpace"; space: SpaceSummary }
-  | { kind: "renamePage" | "child" | "move"; page: SpacePageSummary };
+  | { kind: "renamePage" | "child" | "move" | "blocks"; page: SpacePageSummary };
 interface Props {
   readonly environmentId: EnvironmentId;
   readonly spaceId?: SpaceId;
   readonly page?: SpacePageSummary;
+  readonly window?: SpaceReadBlocksResult;
   readonly current?: () => boolean;
   readonly blocked?: boolean;
   readonly statusOnly?: boolean;
@@ -62,6 +69,7 @@ function Actions({
   environmentId,
   spaceId,
   page,
+  window: sourceWindow,
   current,
   blocked = false,
   statusOnly = false,
@@ -76,13 +84,16 @@ function Actions({
   const [destinationSpace, setDestinationSpace] = useState<SpaceId | null>(null);
   const [destinationPage, setDestinationPage] = useState<SpacePageId | null>(null);
   const [container, setContainer] = useState<SpaceBlockId | null>(null);
-  const [movePhase, setMovePhase] = useState<"source" | "destination">("source");
+  const [movePhase, setMovePhase] = useState<"selection" | "source" | "destination">("source");
+  const [selectedBlocks, setSelectedBlocks] = useState<readonly SpaceBlockId[]>([]);
+  const [blockProof, setBlockProof] = useState<SpaceBlockMoveProof | null>(null);
   const createSpace = useAtomValue(spacesEnvironment.createSpace.permissionAtom(environmentId));
   const renameSpace = useAtomValue(spacesEnvironment.renameSpace.permissionAtom(environmentId));
   const createPage = useAtomValue(spacesEnvironment.createPage.permissionAtom(environmentId));
   const renamePage = useAtomValue(spacesEnvironment.updatePage.permissionAtom(environmentId));
   const createChild = useAtomValue(spacesEnvironment.createChild.permissionAtom(environmentId));
   const movePage = useAtomValue(spacesEnvironment.movePage.permissionAtom(environmentId));
+  const moveBlocks = useAtomValue(spacesEnvironment.moveBlocks.permissionAtom(environmentId));
   const trashPage = useAtomValue(spacesEnvironment.trashPage.permissionAtom(environmentId));
   const restorePage = useAtomValue(spacesEnvironment.restorePage.permissionAtom(environmentId));
   const readable = canBrowseSpaces(access.availability) && access.current();
@@ -113,7 +124,9 @@ function Actions({
     setTitle(initial);
     setIntent(value);
     setError(null);
-    setMovePhase("source");
+    setMovePhase(value.kind === "blocks" ? "selection" : "source");
+    setSelectedBlocks([]);
+    setBlockProof(null);
     setDestinationSpace(null);
     setDestinationPage(null);
     setContainer(null);
@@ -129,7 +142,9 @@ function Actions({
             ? renamePage
             : intent?.kind === "child"
               ? createChild
-              : movePage;
+              : intent?.kind === "blocks"
+                ? moveBlocks
+                : movePage;
   function submit() {
     if (!intent || disabled || !permitted || !allowedContext()) return;
     let work: Promise<void>;
@@ -154,6 +169,7 @@ function Actions({
         });
         break;
       case "move":
+      case "blocks":
         return;
     }
     run(
@@ -165,9 +181,10 @@ function Actions({
   const history = snapshot.journal.history;
   const inverseAllowed =
     history &&
-    history.operation !== "moveBlocks" &&
     ("destination" in history
-      ? movePage
+      ? history.operation === "moveBlocks"
+        ? moveBlocks && access.capability?.features?.blockMoves === true
+        : movePage
       : access.capability?.features?.recovery === true &&
         (history.operation === "trashPage" ? trashPage : restorePage));
   const result = snapshot.libraryResult;
@@ -176,6 +193,10 @@ function Actions({
     snapshot.body?.pageId === intent.page.id &&
     snapshot.body.nextCursor === null;
   const sourceReady = intent?.kind === "move" && snapshot.position?.pageId === intent.page.id;
+  const movingBlocks = intent?.kind === "blocks";
+  const moving = intent?.kind === "move" || movingBlocks;
+  const sourceComplete =
+    !!sourceWindow && sourceWindow.nextCursor === null && sourceWindow.revision === page?.revision;
   const destination = snapshot.window?.space.id === destinationSpace ? snapshot.window : null;
   const body =
     snapshot.body?.pageId === destinationPage && snapshot.body.spaceId === destinationSpace
@@ -192,16 +213,33 @@ function Actions({
         ? "Structural recovery failed; existing data is retained"
         : null);
   function confirmMove(placement: SpacePageDestination, label: string) {
-    if (intent?.kind !== "move" || disabled || !movePage || !allowedContext()) return;
+    if (
+      !moving ||
+      !intent ||
+      disabled ||
+      !(movingBlocks ? moveBlocks : movePage) ||
+      !allowedContext()
+    )
+      return;
+    if (
+      movingBlocks &&
+      (placement.kind !== "child" || !blockProof || snapshot.blockSelection !== blockProof)
+    ) {
+      setError("The block selection changed. Close this form and select current roots again.");
+      return;
+    }
     const sourceId = intent.page.id;
     Dialog.confirm({
-      title: "Move page to this placement?",
-      message: `${label}. Page IDs stay stable. Undo restores logical placement, not historical ranks or retired markers.`,
-      confirmText: "Move page",
+      title: movingBlocks ? "Move these block subtrees?" : "Move page to this placement?",
+      message: `${label}. IDs and original content are preserved. Undo restores logical placement, not historical ranks or retired markers.`,
+      confirmText: movingBlocks ? "Move blocks" : "Move page",
       onConfirm: () => {
         if (allowedContext())
           run(
-            owner.moveTo(sourceId, placement).then(() => {
+            (movingBlocks && placement.kind === "child" && blockProof
+              ? owner.moveSelectedBlocks(blockProof, placement.placement)
+              : owner.moveTo(sourceId, placement)
+            ).then(() => {
               if (!owner.getSnapshot().journal.pending) setIntent(null);
             }),
           );
@@ -284,6 +322,24 @@ function Actions({
                   disabled={disabled || !structural || !movePage || !!page.trash}
                   onPress={() => choose({ kind: "move", page })}
                 />
+                <ControlPill
+                  variant="pill"
+                  label="Move blocks / subtrees"
+                  disabled={
+                    disabled ||
+                    !structural ||
+                    !moveBlocks ||
+                    access.capability?.features?.blockMoves !== true ||
+                    !sourceComplete ||
+                    !!page.trash
+                  }
+                  onPress={() => choose({ kind: "blocks", page })}
+                />
+                {!sourceComplete ? (
+                  <Text className="text-foreground-muted">
+                    Block moves require the current complete loaded window.
+                  </Text>
+                ) : null}
               </>
             ) : (
               <>
@@ -379,7 +435,11 @@ function Actions({
         <View className="flex-1 justify-center bg-black/40">
           <View className="m-4 max-h-[85%] gap-3 rounded-xl bg-background p-4">
             <Text accessibilityRole="header" className="text-lg font-bold text-foreground">
-              {intent?.kind === "move" ? "Move page" : "Space library change"}
+              {movingBlocks
+                ? "Move block subtrees"
+                : intent?.kind === "move"
+                  ? "Move page"
+                  : "Space library change"}
             </Text>
             {message ? (
               <Text accessibilityRole="alert" className="text-destructive">
@@ -390,9 +450,64 @@ function Actions({
               <Text className="text-foreground-muted">
                 Close this form and recover the exact retained operation.
               </Text>
-            ) : intent?.kind === "move" ? (
+            ) : moving && intent ? (
               <>
-                {movePhase === "source" ? (
+                {movePhase === "selection" && movingBlocks ? (
+                  <>
+                    <Text className="text-foreground">
+                      Select contiguous subtree roots in one container. Descendants move with their
+                      root. Original opaque content is preserved.
+                    </Text>
+                    <FlatList
+                      renderScrollComponent={NativeScrollView}
+                      data={sourceWindow?.blocks ?? []}
+                      keyExtractor={(block) => block.id}
+                      style={{ maxHeight: 240 }}
+                      renderItem={({ item: block }) => (
+                        <ControlPill
+                          variant="pill"
+                          label={`${selectedBlocks.includes(block.id) ? "Selected: " : ""}${block.type} (${block.id})`}
+                          disabled={disabled || !sourceComplete}
+                          onPress={() =>
+                            setSelectedBlocks((old) => {
+                              const ids = old.includes(block.id)
+                                ? old.filter((id) => id !== block.id)
+                                : [...old, block.id];
+                              return (sourceWindow?.blocks ?? [])
+                                .filter((item) => ids.includes(item.id))
+                                .map((item) => item.id);
+                            })
+                          }
+                        />
+                      )}
+                    />
+                    <ControlPill
+                      variant="pill"
+                      label="Prove selection and choose destination"
+                      disabled={
+                        disabled || !moveBlocks || !sourceComplete || selectedBlocks.length === 0
+                      }
+                      onPress={() => {
+                        if (!sourceWindow || !page || !allowedContext()) return;
+                        run(
+                          (async () => {
+                            const proof = await selectMobileSpacesBlockMove(
+                              owner,
+                              page,
+                              sourceWindow,
+                              selectedBlocks,
+                            );
+                            if (!allowedContext())
+                              throw new Error("The source changed; select again");
+                            setBlockProof(proof);
+                            setMovePhase("destination");
+                            await owner.browseSpaces();
+                          })(),
+                        );
+                      }}
+                    />
+                  </>
+                ) : movePhase === "source" ? (
                   <>
                     <Text className="text-foreground">
                       Prove the page’s current position and successor before choosing a destination.
@@ -520,7 +635,9 @@ function Actions({
                             </View>
                             <FlatList
                               renderScrollComponent={NativeScrollView}
-                              data={destination.items.filter((item) => item.id !== intent.page.id)}
+                              data={destination.items.filter(
+                                (item) => movingBlocks || item.id !== intent.page.id,
+                              )}
                               keyExtractor={(item) => item.id}
                               style={{ maxHeight: 160 }}
                               ListEmptyComponent={
@@ -535,7 +652,7 @@ function Actions({
                                   <Text className="text-foreground">
                                     {item.title || "Untitled page"}
                                   </Text>
-                                  {snapshot.parentPageId === null ? (
+                                  {!movingBlocks && snapshot.parentPageId === null ? (
                                     <ControlPill
                                       variant="pill"
                                       label={`Before ${item.title || "untitled page"}`}
@@ -580,7 +697,7 @@ function Actions({
                                 </View>
                               )}
                             />
-                            {snapshot.parentPageId === null ? (
+                            {!movingBlocks && snapshot.parentPageId === null ? (
                               <ControlPill
                                 variant="pill"
                                 label="At end of this space"
