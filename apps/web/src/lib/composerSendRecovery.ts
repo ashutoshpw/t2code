@@ -54,34 +54,44 @@ export function assertFanoutRecoveryAdmission(input: {
   const entries = usePromptStashStore.getState().entries;
   if (entries.length > MAX_STASH_ENTRIES)
     throw new Error("Review the prompt stash before sending; recovery ownership is unavailable.");
-  for (const entry of entries) {
-    const fanout = entry.recovery?.fanout;
-    if (
-      entry.id === input.ownEntryId ||
-      !fanout ||
-      entry.recovery?.environmentId !== input.environmentId ||
-      entry.recovery.targetKey !== composerTargetKey(input.target) ||
-      entry.prompt !== input.prompt
-    )
-      continue;
+  const targetKey = composerTargetKey(input.target);
+  const matchesOrigin = (entry: (typeof entries)[number]) =>
+    entry.recovery?.fanout &&
+    entry.recovery.environmentId === input.environmentId &&
+    entry.recovery.targetKey === targetKey &&
+    entry.prompt === input.prompt;
+  const retryIndex = input.retry
+    ? entries.findIndex((entry) => entry.id === input.retry!.entryId && matchesOrigin(entry))
+    : -1;
+  if (input.retry && retryIndex < 0)
+    throw new Error("The fanout recovery entry changed. Review the stash before retrying.");
+  const keys = new Set(input.retry?.selections.map(fanoutSelectionKey));
+  for (const [index, entry] of entries.entries()) {
+    if (entry.id === input.ownEntryId || !matchesOrigin(entry)) continue;
     if (!input.retry)
       throw new Error(
         "Use fanout recovery to review earlier model outcomes before sending this prompt again, or start a fresh draft.",
       );
-    if (entry.id !== input.retry.entryId) continue;
-    const keys = new Set(input.retry.selections.map(fanoutSelectionKey));
-    const chosen = fanout.attempts.filter((attempt) =>
+    const chosen = entry.recovery!.fanout!.attempts.filter((attempt) =>
       keys.has(fanoutSelectionKey(attempt.selection)),
     );
-    if (
-      chosen.length !== keys.size ||
-      chosen.some(
-        (attempt) =>
-          attempt.outcome === "accepted" ||
-          (attempt.outcome === "uncertain" && !input.retry!.uncertain),
+    if (index === retryIndex) {
+      if (
+        chosen.length !== keys.size ||
+        chosen.some(
+          (attempt) =>
+            attempt.outcome === "accepted" ||
+            (attempt.outcome === "uncertain" && !input.retry!.uncertain),
+        )
       )
+        throw new Error("Review fanout recovery before retrying accepted or uncertain models.");
+    } else if (
+      index < retryIndex &&
+      chosen.some((attempt) => attempt.outcome === "accepted" || attempt.outcome === "uncertain")
     )
-      throw new Error("Review fanout recovery before retrying accepted or uncertain models.");
+      throw new Error(
+        "A newer fanout attempt was accepted or remains uncertain. Review that recovery entry and check its thread before retrying.",
+      );
   }
 }
 

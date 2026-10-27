@@ -211,6 +211,9 @@ selects only failed and unsent models. For an uncertain model, use **Open thread
 check what happened; **Restore this model anyway** asks you to confirm a retry that
 could create a duplicate thread. Accepted models are never selected by recovery.
 Nothing retries automatically. A new retry captures current referenced content.
+Retry outcomes stay in the stash even when accepted, so an older restored prompt
+cannot resend them after a reload. Review newer recovery entries before retrying
+an older copy; delete copies only when you no longer need that protection.
 
 Saved model choices, options and workspace must still match before a recovered
 fanout can send. If they cannot be restored exactly, sending stops with the draft

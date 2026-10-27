@@ -12,6 +12,7 @@ import {
 import { deriveThreadTitleSeed } from "@t2code/client-runtime/operations";
 import { squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
+import { scopeProjectRef } from "@t2code/client-runtime/environment";
 import { useNavigate } from "@tanstack/react-router";
 import { newMessageId, newThreadId, randomUUID } from "~/lib/utils";
 import {
@@ -35,6 +36,8 @@ import {
 import { usePromptStashStore } from "../../promptStashStore";
 import { appAtomRegistry } from "../../rpc/atomRegistry";
 import { environmentServerConfigsAtom } from "../../state/server";
+import { environmentProjects } from "../../state/projects";
+import { composerDraftSendGuard } from "../../lib/prepareComposerSendContext";
 import { readEnvironmentScope, readPreparedConnection } from "../../state/session";
 import { threadEnvironment } from "../../state/threads";
 import { useOrchestrationCommand } from "../../state/use-orchestration-command";
@@ -112,6 +115,13 @@ export function useMultipleModelSend(input: MultipleModelSendInput) {
   }) => {
     const entryId = `fanout:${randomUUID()}`;
     const session = readPreparedConnection(environmentId);
+    const workspaceStillCurrent = composerDraftSendGuard(composerDraftTarget);
+    const initialDraftSession = draftId
+      ? useComposerDraftStore.getState().getDraftSession(draftId)
+      : null;
+    const retryAtSend = useComposerDraftStore
+      .getState()
+      .getComposerDraft(composerDraftTarget)?.fanoutRetry;
     let reserved = false;
     let cleared = false;
     let released = false;
@@ -124,6 +134,27 @@ export function useMultipleModelSend(input: MultipleModelSendInput) {
       if (!session || readPreparedConnection(environmentId) !== session)
         throw new Error("The connection changed before fanout dispatch.");
       send.assertContextCurrent();
+      const liveSession = draftId
+        ? useComposerDraftStore.getState().getDraftSession(draftId)
+        : null;
+      const liveProject = appAtomRegistry.get(
+        environmentProjects.projectAtom(scopeProjectRef(environmentId, send.project.id)),
+      );
+      if (
+        !liveSession ||
+        !liveProject ||
+        liveSession !== initialDraftSession ||
+        liveSession.threadId !== send.threadId ||
+        liveSession.environmentId !== environmentId ||
+        liveSession.projectId !== send.project.id ||
+        liveSession.branch !== send.branch ||
+        liveSession.startFromOrigin !== startFromOrigin ||
+        liveProject.workspaceRoot !== send.project.workspaceRoot ||
+        (beforeClear && !workspaceStillCurrent())
+      )
+        throw new Error(
+          "The draft workspace changed before sending. Review the current workspace and send again.",
+        );
       if (beforeClear)
         assertFanoutRecoveryAdmission({
           environmentId,
@@ -133,16 +164,17 @@ export function useMultipleModelSend(input: MultipleModelSendInput) {
             ?.fanoutRetry,
           ownEntryId: entryId,
         });
-      if (beforeClear)
+      if (beforeClear) {
+        const store = useComposerDraftStore.getState();
         assertFanoutRetry({
-          retry: useComposerDraftStore.getState().getComposerDraft(composerDraftTarget)
-            ?.fanoutRetry,
+          retry: store.getComposerDraft(composerDraftTarget)?.fanoutRetry,
           selections: send.selections,
-          projectId: send.project.id,
-          branch: send.branch,
-          runtimeMode,
-          startFromOrigin,
+          projectId: liveSession?.projectId,
+          branch: liveSession?.branch ?? null,
+          runtimeMode: store.getComposerDraft(composerDraftTarget)?.runtimeMode ?? runtimeMode,
+          startFromOrigin: liveSession?.startFromOrigin ?? false,
         });
+      }
       const fileBlock = send.readFileBlockReason();
       if (fileBlock) throw new Error(fileBlock);
       if (
@@ -325,11 +357,13 @@ export function useMultipleModelSend(input: MultipleModelSendInput) {
       const accepted = attempts.filter((attempt) => attempt.outcome === "accepted").length;
       const allAccepted =
         attempts.length === fanout.attempts.length && accepted === attempts.length;
-      const cleanup = usePromptStashStore.getState().settleSendRecovery(entryId, allAccepted);
+      const cleanup = usePromptStashStore
+        .getState()
+        .settleSendRecovery(entryId, allAccepted && !retryAtSend);
       reserved = false;
       if (allAccepted && send.usesAttachmentUploads)
         releaseDraftAttachments(send.sendSnapshot.attachments);
-      if (!allAccepted || !cleanup.durable)
+      if (!allAccepted || !cleanup.durable || (retryAtSend && outcomeWriteFailed))
         toastManager.add(
           stackedThreadToast({
             type: "error",

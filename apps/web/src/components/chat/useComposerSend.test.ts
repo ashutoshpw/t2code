@@ -95,6 +95,13 @@ vi.mock("../../state/session", async () => ({
   readEnvironmentScope: (_environmentId: unknown, scope: string) =>
     scope !== AuthOrchestrationOperateScope || state.canOperate,
 }));
+vi.mock("../../state/projects", async () => {
+  const { Atom } = await import("effect/reactivity");
+  const project = Atom.make<import("@t2code/client-runtime/state/shell").EnvironmentProject | null>(
+    null,
+  ).pipe(Atom.keepAlive);
+  return { environmentProjects: { projectAtom: () => project } };
+});
 vi.mock("../../state/server", async () => {
   const actual = await vi.importActual<typeof import("../../state/server")>("../../state/server");
   const { Atom } = await import("effect/reactivity");
@@ -141,6 +148,8 @@ import { DraftId, useComposerDraftStore } from "../../composerDraftStore";
 import { deriveProviderInstanceEntries } from "../../providerInstances";
 import { appAtomRegistry } from "../../rpc/atomRegistry";
 import { environmentServerConfigsAtom } from "../../state/server";
+import { environmentProjects } from "../../state/projects";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
 import { environmentPresentations } from "../../state/presentation";
 import type { EnvironmentPresentation } from "@t2code/client-runtime/connection";
 import { prepareSpaceContextSend } from "@t2code/client-runtime/spaces";
@@ -198,6 +207,16 @@ async function verifyFailedSnapshotRecovery(
     { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.5" },
   ];
   if (fanout) {
+    appAtomRegistry.set(
+      environmentProjects.projectAtom(
+        scopeProjectRef(environmentId, thread.projectId),
+      ) as Atom.Writable<EnvironmentProject | null, EnvironmentProject | null>,
+      {
+        id: thread.projectId,
+        environmentId,
+        workspaceRoot: "/isolated-project",
+      } as EnvironmentProject,
+    );
     const config = {
       environment: {
         capabilities: {

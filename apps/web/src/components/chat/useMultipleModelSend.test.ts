@@ -11,7 +11,7 @@ import {
 import { SpacePageId } from "@t2code/contracts/spaces";
 import { scopeProjectRef } from "@t2code/client-runtime/environment";
 import * as Cause from "effect/Cause";
-import { AsyncResult } from "effect/reactivity";
+import { AsyncResult, Atom } from "effect/reactivity";
 
 const state = vi.hoisted(() => {
   const values = new Map<string, string>();
@@ -78,20 +78,18 @@ vi.mock("../ui/toast", () => ({
     update: vi.fn(),
   },
 }));
-vi.mock("../../composerDraftStore", async () => {
-  const actual = await vi.importActual<typeof import("../../composerDraftStore")>(
-    "../../composerDraftStore",
-  );
-  const store = actual.useComposerDraftStore;
-  return {
-    ...actual,
-    useComposerDraftStore: Object.assign(
-      (select: (value: ReturnType<typeof store.getState>) => unknown) => select(store.getState()),
-      store,
-    ),
-  };
+vi.mock("../../state/projects", async () => {
+  const { Atom } = await import("effect/reactivity");
+  const project = Atom.make<import("@t2code/client-runtime/state/shell").EnvironmentProject | null>(
+    null,
+  ).pipe(Atom.keepAlive);
+  return { environmentProjects: { projectAtom: () => project } };
 });
 
+import { environmentProjects } from "../../state/projects";
+import type { EnvironmentProject } from "@t2code/client-runtime/state/shell";
+import { composerDraftSendGuard } from "../../lib/prepareComposerSendContext";
+import { prepareTurnAttachments } from "./chatViewSend";
 import { DraftId, useComposerDraftStore } from "../../composerDraftStore";
 import { PROMPT_STASH_STORAGE_KEY, usePromptStashStore } from "../../promptStashStore";
 import { appAtomRegistry } from "../../rpc/atomRegistry";
@@ -120,6 +118,17 @@ const refused = () =>
   );
 const unknown = () => AsyncResult.failure(Cause.die(new Error("Connection closed before reply")));
 
+function setLiveProject(
+  project: Pick<EnvironmentProject, "id" | "environmentId" | "workspaceRoot">,
+) {
+  appAtomRegistry.set(
+    environmentProjects.projectAtom(
+      scopeProjectRef(project.environmentId, project.id),
+    ) as Atom.Writable<EnvironmentProject | null, EnvironmentProject | null>,
+    project as EnvironmentProject,
+  );
+}
+
 function setup(count = 3) {
   state.storage.reject = false;
   state.storage.rejectAccepted = false;
@@ -136,6 +145,7 @@ function setup(count = 3) {
   const threadId = ThreadId.make("fanout-origin");
   const draftId = DraftId.make("fanout-draft");
   const routeKey = `draft:fanout-draft-${state.next++}`;
+  setLiveProject({ id: projectId, environmentId, workspaceRoot: "/isolated" });
   const store = useComposerDraftStore.getState();
   store.setProjectDraftThreadId(scopeProjectRef(environmentId, projectId), draftId, {
     threadId,
@@ -201,9 +211,11 @@ function setup(count = 3) {
     setThreadError,
     beginLocalDispatch: vi.fn(),
   });
-  const invoke = () => {
+  const invoke = (
+    overrides: Partial<Parameters<ReturnType<typeof useMultipleModelSend>>[0]> = {},
+  ) => {
     const current = store.getComposerDraft(draftId)!;
-    const signature = JSON.stringify(current);
+    const unchanged = composerDraftSendGuard(draftId);
     return run({
       threadId,
       project: { id: projectId, environmentId, workspaceRoot: "/isolated" },
@@ -225,8 +237,9 @@ function setup(count = 3) {
       readFileBlockReason: () => null,
       buildOutgoingMessageContext: () => undefined,
       assertContextCurrent: () => {},
-      isCurrentDraft: () => JSON.stringify(store.getComposerDraft(draftId)) === signature,
+      isCurrentDraft: unchanged,
       isCurrentSend: () => true,
+      ...overrides,
     });
   };
   return {
@@ -419,7 +432,12 @@ it("restores only definite failures, and a deliberate new retry never repeats an
   await f.invoke();
   expect(state.dispatch).toHaveBeenCalledTimes(4);
   expect(state.dispatch.mock.calls[3]?.[0].input.modelSelection).toEqual(retrySelection);
-  expect(usePromptStashStore.getState().entries.map((saved) => saved.id)).toEqual([entry.id]);
+  const entries = usePromptStashStore.getState().entries;
+  expect(entries.map((saved) => saved.id)).toContain(entry.id);
+  expect(entries[0]?.recovery?.fanout?.attempts).toMatchObject([
+    { selection: retrySelection, outcome: "accepted" },
+  ]);
+  expect(entries.find((saved) => saved.id === entry.id)).toBe(entry);
 });
 
 it("keeps unknown outcomes across reload and requires explicit selection to restore an uncertain model", async () => {
@@ -528,7 +546,9 @@ it("rehydrates a failed-only restoration and persists the exact retry selection 
     await vi.advanceTimersByTimeAsync(300);
     vi.resetModules();
     const drafts = await import("../../composerDraftStore");
+    expect(drafts.useComposerDraftStore).not.toBe(useComposerDraftStore);
     const stash = await import("../../promptStashStore");
+    expect(stash.usePromptStashStore).not.toBe(usePromptStashStore);
     const recovery = await import("../../lib/composerSendRecovery");
     const registry = await import("../../rpc/atomRegistry");
     const fanout = await import("../../lib/composerFanout");
@@ -548,6 +568,7 @@ it("rehydrates a failed-only restoration and persists the exact retry selection 
     await vi.advanceTimersByTimeAsync(300);
     vi.resetModules();
     const rehydrated = await import("../../composerDraftStore");
+    expect(rehydrated.useComposerDraftStore).not.toBe(drafts.useComposerDraftStore);
     expect(
       rehydrated.useComposerDraftStore.getState().getComposerDraft(f.draftId)?.fanoutRetry
         ?.selections,
@@ -629,3 +650,240 @@ it("requires recovery review before replaying the original prompt after an inter
   expect(f.store.getComposerDraft(f.draftId)).toBe(before);
   expect(f.setThreadError.mock.calls.at(-1)?.[1]).toContain("fanout recovery");
 });
+
+it.each(["uncertain", "accepted"] as const)(
+  "refuses an older retry marker after a newer overlapping retry is %s, using freshly hydrated stores",
+  async (outcome) => {
+    vi.useFakeTimers();
+    try {
+      const f = setup(2);
+      const first = f.invoke();
+      await f.entered.promise;
+      f.replies[0]!.resolve(accepted());
+      f.replies[1]!.resolve(refused());
+      await first;
+      const original = usePromptStashStore.getState().entries[0]!;
+      await restoreComposerSendRecovery({
+        entryId: original.id,
+        environmentId: f.environmentId,
+        target: f.draftId,
+        isCurrent: () => true,
+      });
+      await vi.advanceTimersByTimeAsync(300);
+      const restored = f.store.getComposerDraft(f.draftId)!;
+      const selection = f.selections[1]!;
+      f.selections.splice(0, f.selections.length, selection);
+      state.dispatch.mockImplementation(async () =>
+        outcome === "accepted" ? accepted() : unknown(),
+      );
+      await f.invoke();
+      expect(state.dispatch).toHaveBeenCalledTimes(3);
+      expect(f.store.getComposerDraft(f.draftId)?.prompt ?? "").toBe("");
+      // Simulate a crash before the debounced clear reaches persisted composer state.
+      vi.clearAllTimers();
+      vi.resetModules();
+      const drafts = await import("../../composerDraftStore");
+      const stash = await import("../../promptStashStore");
+      const hook = await import("./useMultipleModelSend");
+      const freshGuard = await import("../../lib/prepareComposerSendContext");
+      expect(drafts.useComposerDraftStore).not.toBe(useComposerDraftStore);
+      expect(stash.usePromptStashStore).not.toBe(usePromptStashStore);
+      const originalRehydrated = stash.usePromptStashStore
+        .getState()
+        .entries.find((entry) => entry.id === original.id)!;
+      const current = drafts.useComposerDraftStore.getState().getComposerDraft(f.draftId)!;
+      expect(current.prompt).toBe(f.prompt);
+      expect(current.fanoutRetry).toEqual(restored.fanoutRetry);
+      const registry = await import("../../rpc/atomRegistry");
+      const projects = await import("../../state/projects");
+      registry.appAtomRegistry.set(
+        projects.environmentProjects.projectAtom(
+          scopeProjectRef(f.environmentId, f.projectId),
+        ) as Atom.Writable<EnvironmentProject | null, EnvironmentProject | null>,
+        {
+          id: f.projectId,
+          environmentId: f.environmentId,
+          workspaceRoot: "/isolated",
+        } as EnvironmentProject,
+      );
+      const setThreadError = vi.fn();
+      const run = hook.useMultipleModelSend({
+        environmentId: f.environmentId,
+        routeThreadKey: f.routeKey,
+        currentRouteThreadKeyRef: { current: f.routeKey },
+        draftId: f.draftId,
+        composerDraftTarget: f.draftId,
+        composerRef: { current: { resetCursorState: vi.fn() } as unknown as ChatComposerHandle },
+        promptRef: { current: current.prompt },
+        runtimeMode: "full-access",
+        startFromOrigin: false,
+        beginLocalDispatch: vi.fn(),
+        resetLocalDispatch: vi.fn(),
+        setThreadError,
+      });
+      state.dispatch.mockImplementation(async () => accepted());
+      const invokeRehydrated = () => {
+        const current = drafts.useComposerDraftStore.getState().getComposerDraft(f.draftId)!;
+        return run({
+          threadId: f.threadId,
+          project: { id: f.projectId, environmentId: f.environmentId, workspaceRoot: "/isolated" },
+          branch: "main",
+          selections: current.fanoutRetry!.selections,
+          targets: current.fanoutRetry!.selections.map((selection) => ({
+            selection,
+            text: current.prompt.trim(),
+            interactionMode: "default",
+          })),
+          sendSnapshot: snapshotComposerSend({
+            ...current,
+            sendableTerminalContexts: current.terminalContexts,
+          }),
+          recoveryContents: current,
+          createdAt: "2026-10-27T00:00:00Z",
+          attachmentsPromise: Promise.resolve([]),
+          usesAttachmentUploads: false,
+          readFileBlockReason: () => null,
+          buildOutgoingMessageContext: () => undefined,
+          assertContextCurrent: () => {},
+          isCurrentDraft: freshGuard.composerDraftSendGuard(f.draftId),
+          isCurrentSend: () => true,
+        });
+      };
+      await invokeRehydrated();
+      expect(state.dispatch).toHaveBeenCalledTimes(3);
+      expect(drafts.useComposerDraftStore.getState().getComposerDraft(f.draftId)).toBe(current);
+      expect(setThreadError.mock.calls.at(-1)?.[1]).toContain("newer");
+      const entries = stash.usePromptStashStore.getState().entries;
+      expect(entries.find((entry) => entry.id === original.id)).toBe(originalRehydrated);
+      expect(entries[0]?.recovery?.fanout?.attempts[0]?.outcome).toBe(outcome);
+      if (outcome === "uncertain") {
+        drafts.useComposerDraftStore.getState().clearComposerContent(f.draftId);
+        const recovery = await import("../../lib/composerSendRecovery");
+        await recovery.restoreComposerSendRecovery({
+          entryId: entries[0]!.id,
+          environmentId: f.environmentId,
+          target: f.draftId,
+          isCurrent: () => true,
+          fanoutAttemptIds: [entries[0]!.recovery!.fanout!.attempts[0]!.id],
+          allowUncertain: true,
+        });
+        await invokeRehydrated();
+        expect(state.dispatch).toHaveBeenCalledTimes(4);
+        expect(state.dispatch.mock.calls[3]?.[0].input.modelSelection).toEqual(selection);
+      }
+    } finally {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
+  },
+);
+
+it.each([
+  "branch",
+  "worktreePath",
+  "runtimeMode",
+  "startFromOrigin",
+  "envMode",
+  "projectRef",
+  "root",
+  "after-reservation",
+] as const)(
+  "retains a restored fanout draft when live %s changes during image preparation or reservation",
+  async (change) => {
+    const f = setup(1);
+    state.dispatch.mockImplementation(async () => refused());
+    await f.invoke();
+    const entry = usePromptStashStore.getState().entries[0]!;
+    await restoreComposerSendRecovery({
+      entryId: entry.id,
+      environmentId: f.environmentId,
+      target: f.draftId,
+      isCurrent: () => true,
+    });
+    const reading = deferred<undefined>();
+    const allowed = deferred<undefined>();
+    const previous = globalThis.FileReader;
+    vi.stubGlobal(
+      "FileReader",
+      class extends EventTarget {
+        result: string | null = null;
+        readAsDataURL(blob: Blob) {
+          reading.resolve(undefined);
+          void allowed.promise.then(async () => {
+            this.result = `data:${blob.type};base64,${btoa(String.fromCharCode(...new Uint8Array(await blob.arrayBuffer())))}`;
+            this.dispatchEvent(new Event("load"));
+          });
+        }
+      },
+    );
+    try {
+      const file = new File(["original bytes"], "original.png", { type: "image/png" });
+      f.store.addImages(f.draftId, [
+        {
+          type: "image",
+          id: "workspace-image",
+          name: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
+          file,
+          previewUrl: "blob:original",
+        },
+      ]);
+      const original = f.store.getComposerDraft(f.draftId)!;
+      const changeWorkspace = () => {
+        if (change === "root")
+          setLiveProject({
+            id: f.projectId,
+            environmentId: f.environmentId,
+            workspaceRoot: "/changed",
+          });
+        else
+          f.store.setDraftThreadContext(
+            f.draftId,
+            change === "branch" || change === "after-reservation"
+              ? { branch: "new-branch" }
+              : change === "worktreePath"
+                ? { worktreePath: "/new-worktree" }
+                : change === "runtimeMode"
+                  ? { runtimeMode: "approval-required" }
+                  : change === "startFromOrigin"
+                    ? { startFromOrigin: true }
+                    : change === "envMode"
+                      ? { envMode: "worktree" }
+                      : {
+                          projectRef: scopeProjectRef(
+                            f.environmentId,
+                            ProjectId.make("new-project"),
+                          ),
+                        },
+          );
+      };
+      if (change === "after-reservation")
+        state.storage.afterWrite = () => {
+          state.storage.afterWrite = undefined;
+          changeWorkspace();
+        };
+      state.dispatch.mockImplementation(async () => accepted());
+      const pending = f.invoke({
+        attachmentsPromise: prepareTurnAttachments({
+          environmentId: f.environmentId,
+          attachments: original.images,
+          usesAttachmentUploads: false,
+        }),
+      });
+      await reading.promise;
+      if (change !== "after-reservation") changeWorkspace();
+      const liveSession = f.store.getDraftSession(f.draftId);
+      allowed.resolve(undefined);
+      await pending;
+      expect(state.dispatch).toHaveBeenCalledTimes(1);
+      expect(f.store.getComposerDraft(f.draftId)).toBe(original);
+      if (change !== "after-reservation")
+        expect(f.store.getDraftSession(f.draftId)).toEqual(liveSession);
+      expect(usePromptStashStore.getState().entries).toEqual([entry]);
+    } finally {
+      vi.stubGlobal("FileReader", previous);
+      state.storage.afterWrite = undefined;
+    }
+  },
+);

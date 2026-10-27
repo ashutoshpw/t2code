@@ -12,6 +12,8 @@ import {
 } from "@t2code/contracts";
 import { collectComposerContextReferences } from "@t2code/shared/composerContextReferences";
 import { appAtomRegistry } from "../rpc/atomRegistry";
+import { scopeProjectRef } from "@t2code/client-runtime/environment";
+import { environmentProjects } from "../state/projects";
 import { spacesEnvironment } from "../state/spaces";
 import { readEnvironmentScope } from "../state/session";
 import { environmentServerConfigsAtom } from "../state/server";
@@ -92,8 +94,19 @@ export async function prepareComposerSendContext(input: {
 
 export function composerDraftSendGuard(target: ComposerThreadTarget) {
   const signature = () => {
-    const draft = useComposerDraftStore.getState().getComposerDraft(target);
+    const store = useComposerDraftStore.getState();
+    const draft = store.getComposerDraft(target);
+    const session = typeof target === "string" ? store.getDraftSession(target) : null;
+    const project = session
+      ? appAtomRegistry.get(
+          environmentProjects.projectAtom(
+            scopeProjectRef(session.environmentId, session.projectId),
+          ),
+        )
+      : null;
     return JSON.stringify([
+      session,
+      project?.workspaceRoot,
       draft?.prompt,
       draft?.images.map((image) => image.id),
       draft?.files.map((file) => file.id),
