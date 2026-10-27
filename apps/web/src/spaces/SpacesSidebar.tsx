@@ -5,7 +5,7 @@ import { SpaceId, type SpaceCursor } from "@t2code/contracts/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesEnvironments } from "../state/spaces";
 import { usePrimaryEnvironmentId } from "../state/environments";
-import { SidebarContent, SidebarHeader, useSidebar } from "../components/ui/sidebar";
+import { SidebarHeader, useSidebar } from "../components/ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "../components/sidebar/SidebarChrome";
 import { Button } from "../components/ui/button";
 import { SpacePageTree } from "./SpacePageTree";
@@ -23,8 +23,8 @@ export function SpacesSidebar() {
       <SidebarHeader>
         <SidebarChromeHeader isElectron={isElectron} />
       </SidebarHeader>
-      <SidebarContent>
-        <div className="space-y-3 p-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="max-h-1/2 min-h-0 shrink-0 space-y-3 overflow-y-auto p-3">
           <h2 className="text-sm font-semibold">Spaces</h2>
           {environments.map((entry) => (
             <div key={entry.environmentId}>
@@ -45,6 +45,8 @@ export function SpacesSidebar() {
           ) : (
             <p className="text-sm text-muted-foreground">No available environments.</p>
           )}
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">
           {environment && params.spaceId ? (
             <SpacePageTree
               key={JSON.stringify([environment.environmentId, params.spaceId])}
@@ -53,7 +55,7 @@ export function SpacesSidebar() {
             />
           ) : null}
         </div>
-      </SidebarContent>
+      </div>
       <SidebarChromeFooter />
     </>
   );

@@ -10,7 +10,10 @@ export function SpacesLibrary({
   spaceId: SpaceId;
 }) {
   return (
-    <section className="p-4" aria-label="Space library">
+    <section
+      className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-4"
+      aria-label="Space library"
+    >
       <SpacePageTree environmentId={environmentId} spaceId={spaceId} />
     </section>
   );
