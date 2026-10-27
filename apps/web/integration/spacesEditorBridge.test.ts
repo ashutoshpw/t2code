@@ -1356,6 +1356,9 @@ const decodeRootRequest = Schema.decodeUnknownSync(C.SpaceMutationRequest, {
 const decodeRootResult = Schema.decodeUnknownSync(C.SpaceMovePageResult, {
   onExcessProperty: "error",
 });
+const decodeChildResult = Schema.decodeUnknownSync(C.SpaceCreateChildPageResult);
+const decodeRecoveryResult = Schema.decodeUnknownSync(C.SpacePageRecoveryResult);
+const decodeTrashList = Schema.decodeUnknownSync(C.SpaceTrashListResult);
 const decodeRootReceipt = Schema.decodeUnknownSync(C.SpaceReceiptLookupResult);
 
 const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(function* (
@@ -1386,6 +1389,8 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
     refreshed = 0,
     maxBytes = h.capability.limits.maxMutationBytes,
     blockFeature = true;
+  const childRequests: C.SpaceCreateChildPageInput[] = [];
+  const recoveryRequests: C.SpaceMutationRequest[] = [];
   const blockRequests: C.SpaceMoveBlocksInput[] = [];
   const requests: C.SpaceMovePageInput[] = [],
     lookups: C.SpaceReceiptLookupInput[] = [];
@@ -1393,8 +1398,12 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
   const network = {
     lose: null as "before" | "after" | null,
     after: null as (() => Promise<void>) | null,
+    rewriteChildReply: null as
+      | ((reply: C.SpaceCreateChildPageResult) => C.SpaceCreateChildPageResult)
+      | null,
   };
   const documentReads = { failNext: false, attempted: [] as C.SpacePageId[] };
+  const structureBodyReads: C.SpacePageId[] = [];
   const draftRecords = new Map<string, SpaceDocumentDraft>();
   const drafts = {
     load: async (key: C.SpacePageTarget) => {
@@ -1449,7 +1458,10 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
         },
       },
       spaces: async (input) => decodeMoveSpaces(await h.run(rpc(WS_METHODS.spacesList, input))),
-      blocks: async (input) => decodeMoveBody(await h.run(rpc(WS_METHODS.spacesBlocksRead, input))),
+      blocks: async (input) => {
+        structureBodyReads.push(input.pageId);
+        return decodeMoveBody(await h.run(rpc(WS_METHODS.spacesBlocksRead, input)));
+      },
       list: async (input) => decodeRootList(await h.run(rpc(WS_METHODS.spacesPagesList, input))),
       inspect: async (input) =>
         decodeRootInspect(await h.run(rpc(WS_METHODS.spacesStructureInspect, input))),
@@ -1504,6 +1516,36 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
         if (lose === "after") throw new Error("Lost committed response");
         return decodeBlockMoveResult(result);
       },
+      createChild: async (input: C.SpaceCreateChildPageInput) => {
+        childRequests.push(input);
+        const request = decodeRootRequest(
+          JSON.parse(JSON.stringify({ operation: "createChildPage", input })),
+        );
+        const lose = network.lose;
+        network.lose = null;
+        if (lose === "before") throw new Error("Lost before server received request");
+        const result = await h.run(rpc(WS_METHODS.spacesPagesCreateChild, request.input));
+        if (lose === "after") throw new Error("Lost committed response");
+        const decoded = decodeChildResult(result);
+        return network.rewriteChildReply ? network.rewriteChildReply(decoded) : decoded;
+      },
+      trashList: async (input: C.SpaceTrashListInput) =>
+        decodeTrashList(await h.run(rpc(WS_METHODS.spacesTrashList, input))),
+      recovery: async (operation: "trashPage" | "restorePage", input: C.SpacePageRecoveryInput) => {
+        const request = decodeRootRequest(JSON.parse(JSON.stringify({ operation, input })));
+        recoveryRequests.push(request);
+        const lose = network.lose;
+        network.lose = null;
+        if (lose === "before") throw new Error("Lost before server received request");
+        const result = await h.run(
+          rpc(
+            operation === "trashPage" ? WS_METHODS.spacesPagesTrash : WS_METHODS.spacesPagesRestore,
+            request.input,
+          ),
+        );
+        if (lose === "after") throw new Error("Lost committed response");
+        return decodeRecoveryResult(result);
+      },
       newId: () => `placement-${++ids}`,
       reserve: (pages, restoring) => documents.reserve(environmentId, pages, restoring),
       checkDrafts: (pages) => checkSpaceStructureDrafts(drafts, environmentId, pages),
@@ -1522,6 +1564,7 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
     drafts,
     draftRecords,
     documentReads,
+    structureBodyReads,
     requests,
     lookups,
     disk,
@@ -1529,6 +1572,8 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
     counts: () => ({ admissions, refreshed }),
     stored: () => stored,
     blockRequests,
+    childRequests,
+    recoveryRequests,
     setBlockFeature: (value: boolean) => {
       blockFeature = value;
     },
@@ -2453,6 +2498,8 @@ it.effect(
               };
               await expect(owner.moveTo(h.pages[0]!, destination)).rejects.toThrow("abort");
               const pending = owner.getSnapshot().journal.pending!;
+              assert.equal(pending.request.operation, "movePage");
+              if (pending.request.operation !== "movePage") throw new Error("Expected page move");
               assert.deepEqual(pending.request.input.destination, destination);
               assert.equal(h.requests.length, 0);
               assert.isTrue(doc.structureBlocked());
@@ -3535,6 +3582,602 @@ it.effect(
             assert.include(owner.getSnapshot().notice!, "Undo is unavailable");
             await expect(owner.compensate("undo")).rejects.toThrow("No guarded placement");
             assert.equal(h.blockRequests.length, 1);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("creates a child once across a lost reply and reload through the durable journal", () =>
+  Effect.scoped(
+    fixture((service) =>
+      Effect.gen(function* () {
+        const h = yield* rootReorderFixture(service);
+        const owner = h.make();
+        yield* Effect.promise(async () => {
+          await owner.loadBody(h.pages[0]!);
+          h.network.lose = "after";
+          await expect(
+            owner.createChild("New child", {
+              pageId: h.pages[0]!,
+              parentId: null,
+              beforeBlockId: null,
+            }),
+          ).rejects.toThrow(/Lost committed/);
+          const pending = owner.getSnapshot().journal.pending!;
+          assert.equal(pending.request.operation, "createChildPage");
+          const recovered = h.reload();
+          h.setWritable(false);
+          await recovered.recover();
+          assert.equal(recovered.getSnapshot().journal.pending, null);
+          assert.equal(h.childRequests.length, 1);
+          assert.deepEqual(h.lookups[0]!.request, pending.request);
+          const children = await h.run(
+            service.listPages({ environmentId, spaceId: h.spaceId, parentPageId: h.pages[0]! }),
+          );
+          assert.equal(children.items.length, 1);
+          const child = children.items[0]!;
+          assert.equal(child.title, "New child");
+          assert.equal(child.location?.kind, "child");
+          const body = await h.run(
+            service.readBlocks({
+              environmentId,
+              pageId: h.pages[0]!,
+              revision: (await h.run(service.getPage({ environmentId, pageId: h.pages[0]! }))).page
+                .revision,
+            }),
+          );
+          assert.equal(body.blocks.filter((b) => b.type === "child_page").length, 1);
+          assert.match(recovered.getSnapshot().notice!, /Undo.*unavailable/);
+        });
+      }),
+    ),
+  ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "previews and recovers the exact trash/restore closure without reading trashed bodies",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          const owner = h.make();
+          yield* Effect.promise(async () => {
+            await owner.loadBody(h.pages[0]!);
+            await owner.createChild("Nested", {
+              pageId: h.pages[0]!,
+              parentId: null,
+              beforeBlockId: null,
+            });
+            const child = (
+              await h.run(
+                service.listPages({ environmentId, spaceId: h.spaceId, parentPageId: h.pages[0]! }),
+              )
+            ).items[0]!;
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            assert.deepEqual(
+              new Set(owner.getSnapshot().recoveryPreview!.inspection.recovery!.pageIds),
+              new Set([h.pages[0], child.id]),
+            );
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.browseTrash();
+            assert.deepEqual(
+              owner.getSnapshot().trash!.items.map((p) => p.pageId),
+              [h.pages[0]],
+            );
+            await owner.previewRecovery(h.pages[0]!, "restore");
+            h.network.lose = "after";
+            await expect(
+              owner.confirmRecovery(owner.getSnapshot().recoveryPreview!),
+            ).rejects.toThrow(/Lost committed/);
+            const pending = owner.getSnapshot().journal.pending!;
+            const recovered = h.reload();
+            h.setWritable(false);
+            h.setBlockFeature(false);
+            await recovered.recover();
+            assert.equal(recovered.getSnapshot().journal.pending, null);
+            assert.deepEqual(h.lookups.at(-1)!.request, pending.request);
+            assert.equal(h.recoveryRequests.length, 2);
+            assert.equal(
+              (await h.run(service.getPage({ environmentId, pageId: child.id }))).page.trash,
+              undefined,
+            );
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("persists child intent before send and preserves exact identity on an unsent retry", () =>
+  Effect.scoped(
+    fixture((service) =>
+      Effect.gen(function* () {
+        const h = yield* blockMoveFixture(service);
+        yield* Effect.promise(async () => {
+          const route = h.documents.open(h.key),
+            panel = h.documents.open(h.key);
+          const doc = await route.ready;
+          assert.equal(await panel.ready, doc);
+          const owner = h.make();
+          try {
+            await owner.loadBody(h.key.pageId);
+            await expect(
+              owner.createChild("x".repeat(h.capability.limits.maxTitleBytes), {
+                pageId: h.key.pageId,
+                parentId: null,
+                beforeBlockId: null,
+              }),
+            ).rejects.toThrow();
+            assert.equal(h.childRequests.length, 0);
+            assert.equal(owner.getSnapshot().journal.pending, null);
+            h.disk.fail = true;
+            await expect(
+              owner.createChild("In list", {
+                pageId: h.key.pageId,
+                parentId: h.blocks[0]!.id,
+                beforeBlockId: h.blocks[1]!.id,
+              }),
+            ).rejects.toThrow("abort");
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.equal(h.childRequests.length, 0);
+            assert.isTrue(doc.structureBlocked());
+            assert.throws(
+              () =>
+                doc.session.apply([
+                  { kind: "insert", block: savedParagraph("blocked-create", "not applied") },
+                ]),
+              "reserved",
+            );
+            assert.throws(() =>
+              decodeSpaceStructureJournal(
+                {
+                  ...owner.getSnapshot().journal,
+                  pending: { ...pending, knownBlockIds: undefined },
+                },
+                environmentId,
+              ),
+            );
+            h.disk.fail = false;
+            await owner.recover();
+            assert.deepEqual(h.childRequests[0], pending.request.input);
+            assert.isFalse(doc.structureBlocked());
+            assert.equal(
+              doc.session.getSnapshot().baseRevision,
+              (await h.ports.getPage(h.key)).page.revision,
+            );
+            const body = await h.read(h.key.pageId);
+            const marker = body.blocks.find((b) => b.type === "child_page")!;
+            assert.equal(marker.parentId, h.blocks[0]!.id);
+            const siblings = body.blocks.filter((b) => b.parentId === h.blocks[0]!.id);
+            assert.equal(siblings[0]!.id, marker.id);
+            assert.equal(siblings[1]!.id, h.blocks[1]!.id);
+            assert.deepEqual(
+              body.blocks.filter((b) => b.type !== "child_page"),
+              h.blocks,
+            );
+          } finally {
+            route.release();
+            panel.release();
+          }
+        });
+      }),
+    ),
+  ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retains a frozen recovery conflict and refuses hidden drafts, read-only writes and missing recovery support",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            const preview = owner.getSnapshot().recoveryPreview!;
+            const hidden = h.documents.open({ environmentId, pageId: h.a.page.id });
+            const doc = await hidden.ready;
+            doc.session.apply([
+              { kind: "insert", block: savedParagraph("hidden-before-trash", "retained") },
+            ]);
+            await doc.session.persistDraft();
+            hidden.release();
+            await expect(owner.confirmRecovery(preview)).rejects.toThrow(/Resolve|draft/);
+            assert.equal(h.recoveryRequests.length, 0);
+            await doc.discard();
+            h.setWritable(false);
+            await expect(owner.confirmRecovery(preview)).rejects.toThrow("Operate revoked");
+            h.setWritable(true);
+            h.setBlockFeature(false);
+            await expect(owner.confirmRecovery(preview)).rejects.toThrow("unsupported");
+            h.setBlockFeature(true);
+            const current = await h.ports.getPage({ environmentId, pageId: h.descendant.page.id });
+            await h.run(
+              service.updatePage({
+                environmentId,
+                pageId: current.page.id,
+                mutationId: "concurrent-recovery-title",
+                receiptEpoch: current.mutationAdmission.epoch,
+                baseRevision: current.page.revision,
+                title: "Concurrent title",
+              }),
+            );
+            await owner.confirmRecovery(preview);
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.isTrue(pending.conflict);
+            assert.deepEqual(pending.request.input.guards, preview.inspection.guards);
+            assert.equal(h.recoveryRequests.length, 1);
+            assert.equal((await h.ports.getPage(h.key)).page.trash, undefined);
+            await expect(owner.recover()).rejects.toThrow("No uncertain");
+            await owner.reinspect();
+            assert.equal(owner.getSnapshot().journal.pending, null);
+            await expect(owner.confirmRecovery(preview)).rejects.toThrow("Inspect");
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "keeps trash receipts exact through storage failure, reload and read-only recovery, gating both resident consumers",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            const route = h.documents.open(h.key),
+              panel = h.documents.open(h.key);
+            const doc = await route.ready;
+            assert.equal(await panel.ready, doc);
+            await owner.previewRecovery(h.key.pageId, "trash");
+            h.disk.fail = true;
+            await expect(
+              owner.confirmRecovery(owner.getSnapshot().recoveryPreview!),
+            ).rejects.toThrow("abort");
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.equal(h.recoveryRequests.length, 0);
+            assert.isTrue(doc.structureBlocked());
+            h.disk.fail = false;
+            h.network.lose = "after";
+            await expect(owner.recover()).rejects.toThrow("Lost committed response");
+            h.setWritable(false);
+            // The definite receipt is persisted before every resident refresh is attempted.
+            await expect(owner.recover()).rejects.toThrow("could not refresh");
+            assert.equal(owner.getSnapshot().journal.pending, null);
+            assert.deepEqual(h.lookups.at(-1)!.request, pending.request);
+            assert.equal(h.recoveryRequests.length, 1);
+            assert.isNotNull(doc.getSnapshot().error);
+            assert.isFalse(doc.structureBlocked());
+            h.setWritable(true);
+            await owner.previewRecovery(h.key.pageId, "restore");
+            await expect(
+              owner.confirmRecovery(owner.getSnapshot().recoveryPreview!),
+            ).rejects.toThrow("Resolve");
+            route.release();
+            panel.release();
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            assert.equal((await h.ports.getPage(h.key)).page.trash, undefined);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "previews fallback restore while retaining independent batches and current moved-out ownership",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.descendant.page.id, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            assert.deepEqual(
+              new Set(owner.getSnapshot().recoveryPreview!.inspection.recovery!.pageIds),
+              new Set([h.pages[0], h.a.page.id]),
+            );
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            const placement = { kind: "root" as const, spaceId: h.spaceId, beforePageId: null };
+            const inspected = await h.run(
+              service.inspectStructure({
+                environmentId,
+                target: { kind: "page", pageId: h.a.page.id },
+                destination: placement,
+              }),
+            );
+            const admission = await h.run(service.listSpaces({ environmentId, limit: 1 }));
+            await h.run(
+              service.movePage({
+                environmentId,
+                pageId: h.a.page.id,
+                destination: placement,
+                guards: inspected.guards,
+                mutationId: "detach-hidden-child",
+                receiptEpoch: admission.mutationAdmission.epoch,
+              }),
+            );
+            await owner.previewRecovery(h.pages[0]!, "restore");
+            assert.deepEqual(owner.getSnapshot().recoveryPreview!.inspection.recovery!.pageIds, [
+              h.pages[0]!,
+            ]);
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.browseTrash();
+            const moved = owner.getSnapshot().trash!.items.find((p) => p.pageId === h.a.page.id)!;
+            assert.equal(moved.trash.originalRootPageId, h.pages[0]);
+            await owner.previewRecovery(h.a.page.id, "restore");
+            assert.deepEqual(owner.getSnapshot().recoveryPreview!.inspection.recovery!.pageIds, [
+              h.a.page.id,
+            ]);
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            assert.equal(
+              (await h.ports.getPage({ environmentId, pageId: h.a.page.id })).page.location?.kind,
+              "root",
+            );
+            await owner.previewRecovery(h.pages[1]!, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.previewRecovery(h.b.page.id, "restore");
+            assert.match(
+              owner.getSnapshot().recoveryPreview!.placement,
+              /original surviving space root/,
+            );
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            const restored = await h.ports.getPage({ environmentId, pageId: h.b.page.id });
+            assert.equal(restored.page.location?.kind, "root");
+            assert.equal(restored.page.id, h.b.page.id);
+            const ref = await h.run(
+              service.resolveReference({
+                environmentId,
+                target: { kind: "block", blockId: h.b.ownerBlockId },
+              }),
+            );
+            assert.equal(ref.status, "deleted");
+            await owner.browseTrash();
+            assert.isTrue(
+              owner.getSnapshot().trash!.items.some((p) => p.pageId === h.descendant.page.id),
+            );
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "keeps empty continuing trash windows pageable and never reads their content bodies",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            h.setRows(1);
+            await owner.browseTrash();
+            const windows = [owner.getSnapshot().trash!];
+            await owner.browseTrash(true);
+            windows.push(owner.getSnapshot().trash!);
+            await owner.browseTrash(true);
+            windows.push(owner.getSnapshot().trash!);
+            assert.isTrue(windows.some((w) => w.items.length === 0 && w.nextCursor !== null));
+            assert.equal(windows[2]!.nextCursor, null);
+            assert.deepEqual(
+              windows.flatMap((w) => w.items.map((p) => p.pageId)),
+              [h.pages[0]],
+            );
+            assert.deepEqual(h.documentReads.attempted, []);
+            assert.deepEqual(h.structureBodyReads, []);
+            await expect(owner.browseTrash(true)).rejects.toThrow("No next");
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses a partial creation parent and over-eight-page recovery closure before journaling or sending",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          for (const _ of [1, 2, 3, 4, 5]) yield* h.child(h.pages[0]!);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            assert.equal(owner.getSnapshot().recoveryPreview!.inspection.guards.pages.length, 8);
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.previewRecovery(h.pages[0]!, "restore");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await h.run(h.child(h.pages[0]!));
+            await expect(owner.previewRecovery(h.pages[0]!, "trash")).rejects.toThrow("eight-page");
+            assert.equal(h.recoveryRequests.length, 2);
+            assert.equal(owner.getSnapshot().journal.pending, null);
+            const current = await h.ports.getPage({ environmentId, pageId: h.pages[2]! });
+            await h.run(
+              service.applyBlockBatch({
+                environmentId,
+                pageId: current.page.id,
+                baseRevision: current.page.revision,
+                generation: 1,
+                mutationId: "creation-window-100",
+                receiptEpoch: current.mutationAdmission.epoch,
+                mutations: Array.from({ length: 100 }, (_, i) => ({
+                  kind: "insert" as const,
+                  block: savedParagraph(
+                    `creation-${i}`,
+                    "text",
+                    BigInt(i + 1)
+                      .toString(16)
+                      .padStart(32, "0"),
+                  ),
+                })),
+              }),
+            );
+            const more = await h.ports.getPage({ environmentId, pageId: h.pages[2]! });
+            await h.run(
+              service.applyBlockBatch({
+                environmentId,
+                pageId: more.page.id,
+                baseRevision: more.page.revision,
+                generation: 2,
+                mutationId: "creation-window-101",
+                receiptEpoch: more.mutationAdmission.epoch,
+                mutations: [
+                  {
+                    kind: "insert",
+                    block: savedParagraph(
+                      "creation-100",
+                      "text",
+                      "80000000000000000000000000000000",
+                    ),
+                  },
+                ],
+              }),
+            );
+            await owner.loadBody(more.page.id);
+            assert.isNotNull(owner.getSnapshot().body!.nextCursor);
+            await expect(
+              owner.createChild("Refused", {
+                pageId: more.page.id,
+                parentId: null,
+                beforeBlockId: null,
+              }),
+            ).rejects.toThrow("complete parent");
+            assert.equal(h.childRequests.length, 0);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["id", "epoch", "new-page-revision", "existing-owner", "missing-parent"] as const)(
+  "retains a real committed child intent when its wire acknowledgement has corrupt %s, then recovers the original receipt",
+  (kind) =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* blockMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.loadBody(h.key.pageId);
+            h.network.rewriteChildReply = (reply) => {
+              if (reply.status !== "saved") throw new Error("Expected a real child commit");
+              switch (kind) {
+                case "id":
+                  return { ...reply, mutationId: C.SpaceMutationId.make("wrong-id") };
+                case "epoch":
+                  return { ...reply, receiptEpoch: C.SpaceReceiptEpoch.make("wrong-epoch") };
+                case "new-page-revision":
+                  return { ...reply, page: { ...reply.page, revision: 1 } };
+                case "existing-owner":
+                  return {
+                    ...reply,
+                    ownerBlockId: h.blocks[0]!.id,
+                    page: {
+                      ...reply.page,
+                      location: {
+                        kind: "child",
+                        spaceId: h.spaceId,
+                        parentPageId: h.key.pageId,
+                        ownerBlockId: h.blocks[0]!.id,
+                      },
+                    },
+                  };
+                case "missing-parent":
+                  return {
+                    ...reply,
+                    changed: {
+                      ...reply.changed,
+                      pages: reply.changed.pages.filter((p) => p.pageId !== h.key.pageId),
+                    },
+                  };
+              }
+            };
+            await expect(
+              owner.createChild("Verified child", {
+                pageId: h.key.pageId,
+                parentId: null,
+                beforeBlockId: null,
+              }),
+            ).rejects.toThrow(/Mismatched/);
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.isNotNull(pending);
+            assert.throws(() => h.documents.acquire(h.key), "reserved");
+            await owner.recover();
+            assert.equal(owner.getSnapshot().journal.pending, null);
+            assert.deepEqual(h.lookups[0]!.request, pending.request);
+            assert.equal(h.childRequests.length, 1);
+            const children = await h.run(
+              service.listPages({ environmentId, spaceId: h.spaceId, parentPageId: h.key.pageId }),
+            );
+            assert.equal(children.items.length, 1);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retains the exact attempted child creation on a real parent-revision conflict without generating another child",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.loadBody(h.key.pageId);
+            h.disk.hold = true;
+            const creating = owner.createChild("Conflicted child", {
+              pageId: h.key.pageId,
+              parentId: null,
+              beforeBlockId: null,
+            });
+            await h.disk.started.promise;
+            const pending = owner.getSnapshot().journal.pending!;
+            const current = await h.ports.getPage(h.key);
+            await h.run(
+              service.updatePage({
+                ...h.key,
+                mutationId: "child-race",
+                receiptEpoch: current.mutationAdmission.epoch,
+                baseRevision: current.page.revision,
+                title: "Peer title",
+              }),
+            );
+            h.disk.release.resolve();
+            await creating;
+            assert.isTrue(owner.getSnapshot().journal.pending?.conflict);
+            assert.deepEqual(owner.getSnapshot().journal.pending!.request, pending.request);
+            assert.equal(h.childRequests.length, 1);
+            assert.equal(
+              (
+                await h.run(
+                  service.listPages({
+                    environmentId,
+                    spaceId: h.spaceId,
+                    parentPageId: h.key.pageId,
+                  }),
+                )
+              ).items.length,
+              0,
+            );
+            await owner.reinspect();
+            await owner.loadBody(h.key.pageId);
+            await owner.createChild("Explicit new intent", {
+              pageId: h.key.pageId,
+              parentId: null,
+              beforeBlockId: null,
+            });
+            assert.notEqual(h.childRequests[1]!.mutationId, h.childRequests[0]!.mutationId);
           });
         }),
       ),

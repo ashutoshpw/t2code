@@ -85,6 +85,45 @@ export function createSpacesEnvironmentAtoms<R, E>(
             : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
         }),
     }),
+    createChild: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:create-child",
+      tag: WS_METHODS.spacesPagesCreateChild,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2
+            ? requestGuarded(WS_METHODS.spacesPagesCreateChild, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    trashPage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:trash-page",
+      tag: WS_METHODS.spacesPagesTrash,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.recovery === true
+            ? requestGuarded(WS_METHODS.spacesPagesTrash, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    restorePage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:restore-page",
+      tag: WS_METHODS.spacesPagesRestore,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.recovery === true
+            ? requestGuarded(WS_METHODS.spacesPagesRestore, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    trash: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:trash",
+      tag: WS_METHODS.spacesTrashList,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
     movePage: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:move-page",
       tag: WS_METHODS.spacesPagesMove,

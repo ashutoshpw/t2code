@@ -218,6 +218,27 @@ export function spaceRootReorder(
     capability: () =>
       registry.get(environmentPresentations.presentationAtom(environmentId))?.serverConfig
         ?.environment.capabilities.spaces,
+    trashList: (input) => read(spacesEnvironment.trash({ environmentId, input })),
+    createChild: async (input) => {
+      access(true);
+      const previous = connection();
+      const result = unwrap(
+        await spacesEnvironment.createChild.run(registry, { environmentId, input }),
+      );
+      if (connection() !== previous)
+        throw new Error("Spaces connection changed; recover the exact child-creation receipt");
+      return result;
+    },
+    recovery: async (operation, input) => {
+      access(true);
+      const previous = connection();
+      const command =
+        operation === "trashPage" ? spacesEnvironment.trashPage : spacesEnvironment.restorePage;
+      const result = unwrap(await command.run(registry, { environmentId, input }));
+      if (connection() !== previous)
+        throw new Error("Spaces connection changed; recover the exact recovery receipt");
+      return result;
+    },
     moveBlocks: async (input) => {
       access(true);
       const previous = connection();

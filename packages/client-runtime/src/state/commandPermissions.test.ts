@@ -414,20 +414,24 @@ it.effect("rejects protected unary and streamed RPCs outside a guarded command",
   }),
 );
 
-it.effect(
-  "checks the latest explicit block-move feature after destination authorization before reaching the transport",
-  () =>
+it.effect.each(["moveBlocks", "trashPage", "restorePage", "createChild"] as const)(
+  "checks the latest %s capability after destination authorization before reaching the transport",
+  (operation) =>
     Effect.scoped(
       Effect.gen(function* () {
         const registry = yield* setup;
         let calls = 0;
+        const reachedTransport = () =>
+          Effect.sync(() => {
+            calls++;
+            throw new Error("Transport reached");
+          });
         const transport = {
           client: {
-            [WS_METHODS.spacesBlocksMove]: () =>
-              Effect.sync(() => {
-                calls++;
-                throw new Error("Transport reached");
-              }),
+            [WS_METHODS.spacesBlocksMove]: reachedTransport,
+            [WS_METHODS.spacesPagesCreateChild]: reachedTransport,
+            [WS_METHODS.spacesPagesTrash]: reachedTransport,
+            [WS_METHODS.spacesPagesRestore]: reachedTransport,
           },
         } as unknown as RpcSession;
         const supervisor = {
@@ -457,7 +461,32 @@ it.effect(
         };
         registry.set(sessions(env), AsyncResult.success(grant(true)));
         const run = () =>
-          Effect.promise(() => spaces.moveBlocks.run(registry, { environmentId: env, input }));
+          Effect.promise(async () => {
+            if (operation === "moveBlocks")
+              return spaces.moveBlocks.run(registry, { environmentId: env, input });
+            if (operation === "createChild")
+              return spaces.createChild.run(registry, {
+                environmentId: env,
+                input: {
+                  environmentId: env,
+                  mutationId: input.mutationId,
+                  receiptEpoch: input.receiptEpoch,
+                  guards: input.guards,
+                  title: "Child",
+                  placement: input.destination,
+                },
+              });
+            return spaces[operation].run(registry, {
+              environmentId: env,
+              input: {
+                environmentId: env,
+                mutationId: input.mutationId,
+                receiptEpoch: input.receiptEpoch,
+                guards: input.guards,
+                pageId: input.sourcePageId,
+              },
+            });
+          });
         const missing = yield* run();
         expect(missing._tag).toBe("Failure");
         if (missing._tag === "Failure")
@@ -466,13 +495,21 @@ it.effect(
             stage: "settings",
           });
         const old = { version: 2, limits: {} } as SpaceCapability;
+        registry.set(capability, { ...old, version: 1 });
+        yield* run();
+        expect(calls).toBe(0);
         registry.set(capability, old);
         yield* run();
-        expect(calls).toBe(0);
-        registry.set(capability, { ...old, version: 3, features: { blockMoves: true } });
+        expect(calls).toBe(operation === "createChild" ? 1 : 0);
+        calls = 0;
+        registry.set(capability, {
+          ...old,
+          version: 3,
+          features: { blockMoves: true, recovery: true },
+        });
         yield* run();
         expect(calls).toBe(0);
-        registry.set(capability, { ...old, features: { blockMoves: true } });
+        registry.set(capability, { ...old, features: { blockMoves: true, recovery: true } });
         const reached = yield* run();
         expect(reached._tag).toBe("Failure");
         expect(calls).toBe(1);

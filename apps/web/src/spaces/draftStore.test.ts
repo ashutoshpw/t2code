@@ -598,3 +598,58 @@ it("retains the exact block-move operation and selected-root order and rejects m
   ).toThrow();
   expect(JSON.stringify(exact)).toBe(before);
 });
+
+it("retains exact child/recovery journal identities and rejects inconsistent operation metadata without changing source", () => {
+  const pageId = SpacePageId.make("parent");
+  const guards = { pages: [{ pageId, revision: 3 }], roots: [] };
+  const input = {
+    environmentId: key.environmentId,
+    mutationId: SpaceMutationId.make("new-operation"),
+    receiptEpoch: SpaceReceiptEpoch.make("captured"),
+    guards,
+  };
+  const common = { inverse: null, observed: guards, direction: "move", conflict: false };
+  const records = [
+    {
+      ...common,
+      targetSpaceId: SpaceId.make("space"),
+      knownBlockIds: [],
+      request: {
+        operation: "createChildPage",
+        input: {
+          ...input,
+          title: "Child",
+          placement: { pageId, parentId: null, beforeBlockId: null },
+        },
+      },
+    },
+    ...["trashPage", "restorePage"].map((operation) => ({
+      ...common,
+      recoveryPageIds: [pageId],
+      request: { operation, input: { ...input, pageId } },
+    })),
+  ];
+  for (const pending of records) {
+    const journal = { version: 1, environmentId: key.environmentId, pending, history: null };
+    expect(decodeSpaceStructureJournal(journal, key.environmentId)).toEqual(journal);
+    const invalid =
+      pending.request.operation === "createChildPage"
+        ? [
+            { ...pending, knownBlockIds: undefined },
+            { ...pending, recoveryPageIds: [pageId] },
+            { ...pending, inverse: { kind: "root", spaceId: "space", beforePageId: null } },
+          ]
+        : [
+            { ...pending, recoveryPageIds: [] },
+            { ...pending, recoveryPageIds: [pageId, pageId] },
+            { ...pending, recoveryPageIds: ["unguarded"] },
+            { ...pending, knownBlockIds: [] },
+          ];
+    for (const value of invalid) {
+      const retained = { ...journal, pending: value };
+      const before = JSON.stringify(retained);
+      expect(() => decodeSpaceStructureJournal(retained, key.environmentId)).toThrow();
+      expect(JSON.stringify(retained)).toBe(before);
+    }
+  }
+});

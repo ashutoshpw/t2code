@@ -24,7 +24,15 @@ const pendingSchema = Schema.Struct({
   request: Schema.Union([
     Schema.Struct({ operation: Schema.Literal("movePage"), input: C.SpaceMovePageInput }),
     Schema.Struct({ operation: Schema.Literal("moveBlocks"), input: C.SpaceMoveBlocksInput }),
+    Schema.Struct({
+      operation: Schema.Literal("createChildPage"),
+      input: C.SpaceCreateChildPageInput,
+    }),
+    Schema.Struct({ operation: Schema.Literal("trashPage"), input: C.SpacePageRecoveryInput }),
+    Schema.Struct({ operation: Schema.Literal("restorePage"), input: C.SpacePageRecoveryInput }),
   ]),
+  recoveryPageIds: Schema.optionalKey(Schema.Array(C.SpacePageId)),
+  knownBlockIds: Schema.optionalKey(Schema.Array(C.SpaceBlockId)),
   inverse: Schema.NullOr(C.SpacePageDestination),
   observed: C.SpaceStructureGuards,
   direction: Schema.Literals(["move", "undo", "redo"]),
@@ -43,7 +51,9 @@ type Pending = typeof pendingSchema.Type;
 type Destination = C.SpacePageDestination;
 type MoveReceipt =
   | { operation: "movePage"; result: C.SpaceMovePageResult }
-  | { operation: "moveBlocks"; result: C.SpaceMoveBlocksResult };
+  | { operation: "moveBlocks"; result: C.SpaceMoveBlocksResult }
+  | { operation: "createChildPage"; result: C.SpaceCreateChildPageResult }
+  | { operation: "trashPage" | "restorePage"; result: C.SpacePageRecoveryResult };
 const sameLocation = (a: C.SpacePageLocation, b: C.SpacePageLocation) =>
   a.kind === b.kind &&
   a.spaceId === b.spaceId &&
@@ -132,6 +142,13 @@ export function decodeSpaceStructureJournal(
       throw new Error("Invalid retained placement");
     guards(input.guards);
     guards(p.observed);
+    if (
+      (request.operation !== "createChildPage" && p.knownBlockIds !== undefined) ||
+      (request.operation !== "trashPage" &&
+        request.operation !== "restorePage" &&
+        p.recoveryPageIds !== undefined)
+    )
+      throw new Error("Retained operation metadata does not match its request");
     if (request.operation === "moveBlocks") {
       const i = request.input;
       roots(i.blockIds);
@@ -142,6 +159,32 @@ export function decodeSpaceStructureJournal(
         !i.guards.pages.some((g) => g.pageId === i.destination.pageId)
       )
         throw new Error("Invalid retained block ownership or inverse");
+    } else if (request.operation === "createChildPage") {
+      if (
+        p.inverse ||
+        p.direction !== "move" ||
+        !p.targetSpaceId ||
+        !p.knownBlockIds ||
+        p.observed.pages.length >= 8 ||
+        !covered(input.guards, p.observed) ||
+        !input.guards.pages.some((g) => g.pageId === request.input.placement.pageId) ||
+        p.knownBlockIds.length > 100 ||
+        new Set(p.knownBlockIds).size !== p.knownBlockIds.length
+      )
+        throw new Error("Invalid retained child creation");
+    } else if (request.operation === "trashPage" || request.operation === "restorePage") {
+      if (
+        p.inverse ||
+        p.direction !== "move" ||
+        !covered(input.guards, p.observed) ||
+        !p.recoveryPageIds ||
+        p.recoveryPageIds.length < 1 ||
+        p.recoveryPageIds.length > 8 ||
+        !p.recoveryPageIds.includes(request.input.pageId) ||
+        new Set(p.recoveryPageIds).size !== p.recoveryPageIds.length ||
+        !p.recoveryPageIds.every((id) => input.guards.pages.some((g) => g.pageId === id))
+      )
+        throw new Error("Invalid retained recovery closure");
     } else {
       const i = request.input;
       if (
@@ -229,7 +272,15 @@ export interface SpaceRootReorderPorts {
   readonly list: (input: C.SpacePageListInput) => Promise<C.SpacePageListResult>;
   readonly inspect: (input: C.SpaceInspectStructureInput) => Promise<C.SpaceInspectStructureResult>;
   readonly getPage: (pageId: C.SpacePageId) => Promise<C.SpacePageGetResult>;
-  readonly capability: () => Pick<C.SpaceCapability, "version" | "features"> | undefined;
+  readonly capability: () => Pick<C.SpaceCapability, "version" | "features" | "limits"> | undefined;
+  readonly createChild: (
+    input: C.SpaceCreateChildPageInput,
+  ) => Promise<C.SpaceCreateChildPageResult>;
+  readonly recovery: (
+    operation: "trashPage" | "restorePage",
+    input: C.SpacePageRecoveryInput,
+  ) => Promise<C.SpacePageRecoveryResult>;
+  readonly trashList: (input: C.SpaceTrashListInput) => Promise<C.SpaceTrashListResult>;
   readonly moveBlocks: (input: C.SpaceMoveBlocksInput) => Promise<C.SpaceMoveBlocksResult>;
   readonly move: (input: C.SpaceMovePageInput) => Promise<C.SpaceMovePageResult>;
   readonly receipt: (input: C.SpaceReceiptLookupInput) => Promise<C.SpaceReceiptLookupResult>;
@@ -260,7 +311,15 @@ export interface SpaceBlockMoveProof {
   readonly indent: C.SpaceBlockPlacement | null;
   readonly outdent: C.SpaceBlockPlacement | null;
 }
+export interface SpaceRecoveryPreview {
+  readonly pageId: C.SpacePageId;
+  readonly operation: "trash" | "restore";
+  readonly inspection: C.SpaceInspectStructureResult;
+  readonly placement: string;
+}
 interface Snapshot {
+  readonly trash: C.SpaceTrashListResult | null;
+  readonly recoveryPreview: SpaceRecoveryPreview | null;
   readonly blockSelection: SpaceBlockMoveProof | null;
   readonly hydrated: boolean;
   readonly busy: boolean;
@@ -296,6 +355,8 @@ export class SpaceRootReorder {
     this.environmentId = environmentId;
     this.#ports = ports;
     this.#snapshot = {
+      trash: null,
+      recoveryPreview: null,
       blockSelection: null,
       hydrated: false,
       busy: false,
@@ -529,6 +590,146 @@ export class SpaceRootReorder {
     return this.#exclusive(async () => {
       this.#update({ body: null });
       this.#update({ body: copy(await this.#body(pageId)) });
+    });
+  }
+  #assertRecovery(write: boolean) {
+    this.#ports.assertAccess(write);
+    const c = this.#ports.capability();
+    if (c?.version !== 2 || c.features?.recovery !== true)
+      throw new Error("Page recovery is unsupported by this environment");
+  }
+  browseTrash(next = false) {
+    return this.#exclusive(async () => {
+      this.#assertRecovery(false);
+      const cursor = next ? this.#snapshot.trash?.nextCursor : null;
+      if (next && !cursor) throw new Error("No next trash window");
+      const trash = await this.#ports.trashList({
+        environmentId: this.environmentId,
+        limit: Math.min(50, this.#ports.maxRows()),
+        ...(cursor ? { cursor } : {}),
+      });
+      this.#update({ trash: copy(trash), recoveryPreview: null });
+    }, false);
+  }
+  previewRecovery(pageId: C.SpacePageId, operation: "trash" | "restore") {
+    return this.#exclusive(async () => {
+      this.#assertRecovery(false);
+      this.#update({ recoveryPreview: null });
+      const inspection = await this.#ports.inspect({
+        environmentId: this.environmentId,
+        target: { kind: "page", pageId },
+        recovery: operation,
+      });
+      guards(inspection.guards);
+      const selected = inspection.recovery?.pageIds;
+      const page = inspection.pages.find((p) => p.id === pageId);
+      if (
+        !page ||
+        inspection.recovery?.operation !== operation ||
+        !selected?.includes(pageId) ||
+        selected.length > 8 ||
+        new Set(selected).size !== selected.length ||
+        !selected.every((id) => inspection.guards.pages.some((g) => g.pageId === id))
+      )
+        throw new Error("No complete bounded recovery selection is available");
+      const location = page.location;
+      const parent =
+        location?.kind === "child"
+          ? inspection.pages.find((p) => p.id === location.parentPageId)
+          : null;
+      const placement =
+        operation === "trash"
+          ? "Hide the selected current subtree. Independently trashed batches stay separate."
+          : location?.kind === "root"
+            ? `Restore at its current root placement in space ${location.spaceId}.`
+            : location?.kind === "child" && parent && !parent.trash
+              ? `Restore under current parent ${parent.id}; preserve its existing owner marker.`
+              : "Restore at the original surviving space root because the current owner is unavailable or still in trash. No retired marker is revived.";
+      this.#update({ recoveryPreview: freeze(copy({ pageId, operation, inspection, placement })) });
+    }, false);
+  }
+  confirmRecovery(preview: SpaceRecoveryPreview) {
+    return this.#exclusive(async () => {
+      this.#assertRecovery(true);
+      if (this.#snapshot.recoveryPreview !== preview)
+        throw new Error("Inspect the current recovery selection first");
+      const observed = preview.inspection.guards;
+      await this.#stage(observed, async () => {
+        const admission = await this.#ports.spaces({ environmentId: this.environmentId, limit: 1 });
+        this.#assertRecovery(true);
+        return {
+          request: {
+            operation: preview.operation === "trash" ? "trashPage" : "restorePage",
+            input: {
+              environmentId: this.environmentId,
+              pageId: preview.pageId,
+              guards: observed,
+              mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+              receiptEpoch: admission.mutationAdmission.epoch,
+            },
+          },
+          recoveryPageIds: preview.inspection.recovery!.pageIds,
+          inverse: null,
+          observed,
+          direction: "move",
+          conflict: false,
+        };
+      });
+    });
+  }
+  createChild(title: string, placement: C.SpaceBlockPlacement) {
+    return this.#exclusive(async () => {
+      const capability = this.#ports.capability();
+      if (capability?.version !== 2)
+        throw new Error("Child creation requires a known v2 environment");
+      spaceJsonBytes(title, capability.limits.maxTitleBytes);
+      const body = this.#snapshot.body;
+      if (
+        !body ||
+        body.pageId !== placement.pageId ||
+        body.nextCursor !== null ||
+        (placement.parentId !== null &&
+          !body.blocks.some((b) => b.id === placement.parentId && isSpaceListItem(b))) ||
+        (placement.beforeBlockId !== null &&
+          !body.blocks.some(
+            (b) => b.id === placement.beforeBlockId && b.parentId === placement.parentId,
+          ))
+      )
+        throw new Error("Load a complete parent body and known list placement first");
+      const inspection = await this.#ports.inspect({
+        environmentId: this.environmentId,
+        target: { kind: "blocks", pageId: placement.pageId, blockIds: [] },
+        destination: { kind: "child", placement },
+      });
+      guards(inspection.guards);
+      if (
+        inspection.guards.pages.length >= 8 ||
+        inspection.guards.pages.find((p) => p.pageId === body.pageId)?.revision !== body.revision
+      )
+        throw new Error("The complete parent changed or creation exceeds eight affected pages");
+      await this.#prepareIntent(placement.pageId, inspection.guards, (admission) => {
+        if (admission.page.revision !== body.revision)
+          throw new Error("The parent changed; reload placement");
+        return {
+          request: {
+            operation: "createChildPage",
+            input: {
+              environmentId: this.environmentId,
+              title,
+              placement,
+              guards: inspection.guards,
+              mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+              receiptEpoch: admission.mutationAdmission.epoch,
+            },
+          },
+          targetSpaceId: body.spaceId,
+          knownBlockIds: [...new Set([...body.blocks.map((b) => b.id), ...inspection.blockIds])],
+          inverse: null,
+          observed: inspection.guards,
+          direction: "move",
+          conflict: false,
+        };
+      });
     });
   }
   move(pageId: C.SpacePageId, spaceId: C.SpaceId, beforePageId: C.SpacePageId | null) {
@@ -822,11 +1023,11 @@ export class SpaceRootReorder {
       throw new Error("Current page ownership is unavailable");
     return result;
   }
-  #exclusive(use: () => Promise<void>): Promise<void> {
+  #exclusive(use: () => Promise<void>, write = true): Promise<void> {
     if (this.#work) return Promise.reject(new Error("Another placement operation is in progress"));
     const work = (async () => {
       await this.hydrate();
-      this.#ports.assertAccess(true);
+      this.#ports.assertAccess(write);
       if (this.#snapshot.busy) throw new Error("Wait for the current root window");
       if (this.#snapshot.journal.pending) throw new Error("Resolve the retained placement first");
       this.#update({ busy: true, error: null, notice: null });
@@ -920,15 +1121,17 @@ export class SpaceRootReorder {
     observed: C.SpaceStructureGuards,
     make: (admission: C.SpacePageGetResult) => Pending,
   ) {
+    return this.#stage(observed, async () => make(await this.#ports.getPage(pageId)));
+  }
+  async #stage(observed: C.SpaceStructureGuards, make: () => Promise<Pending>) {
     this.#release = this.#ports.reserve(
       observed.pages.map((p) => p.pageId),
       false,
     );
     try {
       await this.#ports.checkDrafts(observed.pages.map((p) => p.pageId));
-      const admission = await this.#ports.getPage(pageId);
+      const pending = await make();
       this.#ports.assertAccess(true);
-      const pending = make(admission);
       spaceJsonBytes(pending.request, Math.min(1024 * 1024, this.#ports.maxMutationBytes()));
       const journal = decodeSpaceStructureJournal(
         { ...this.#snapshot.journal, pending },
@@ -960,6 +1163,17 @@ export class SpaceRootReorder {
       await this.#ack({
         operation: "moveBlocks",
         result: await this.#ports.moveBlocks(copy(request.input)),
+      });
+    } else if (request.operation === "createChildPage") {
+      await this.#ack({
+        operation: "createChildPage",
+        result: await this.#ports.createChild(copy(request.input)),
+      });
+    } else if (request.operation === "trashPage" || request.operation === "restorePage") {
+      this.#assertRecovery(true);
+      await this.#ack({
+        operation: request.operation,
+        result: await this.#ports.recovery(request.operation, copy(request.input)),
       });
     } else
       await this.#ack({
@@ -997,7 +1211,11 @@ export class SpaceRootReorder {
       if (receipt.status === "found") {
         if (
           receipt.receipt.operation !== p.request.operation ||
-          (receipt.receipt.operation !== "movePage" && receipt.receipt.operation !== "moveBlocks")
+          (receipt.receipt.operation !== "movePage" &&
+            receipt.receipt.operation !== "moveBlocks" &&
+            receipt.receipt.operation !== "createChildPage" &&
+            receipt.receipt.operation !== "trashPage" &&
+            receipt.receipt.operation !== "restorePage")
         )
           throw new Error("Mismatched structural receipt operation");
         await this.#ack(receipt.receipt);
@@ -1080,8 +1298,53 @@ export class SpaceRootReorder {
       )
         throw new Error("Mismatched structural receipt page or owner");
     }
+    const created =
+      receipt.operation === "createChildPage" && receipt.result.status === "saved"
+        ? receipt.result
+        : null;
+    if (created && p.request.operation === "createChildPage") {
+      const input = p.request.input,
+        location = created.page.location;
+      if (
+        created.page.revision !== 0 ||
+        created.page.trash ||
+        created.page.title !== input.title ||
+        created.page.spaceId !== p.targetSpaceId ||
+        !location ||
+        location.kind !== "child" ||
+        location.parentPageId !== input.placement.pageId ||
+        location.ownerBlockId !== created.ownerBlockId ||
+        (created.ownerBlockId as string) === created.page.id ||
+        p.knownBlockIds?.some(
+          (id) => id === created.ownerBlockId || (id as string) === created.page.id,
+        ) ||
+        p.observed.pages.some(
+          (g) => g.pageId === created.page.id || (created.ownerBlockId as string) === g.pageId,
+        ) ||
+        !result.changed.pages.some((g) => g.pageId === created.page.id && g.revision === 0) ||
+        !result.changed.pages.some((g) => g.pageId === input.placement.pageId)
+      )
+        throw new Error("Mismatched server-generated child acknowledgement");
+    }
+    if (
+      (receipt.operation === "trashPage" || receipt.operation === "restorePage") &&
+      receipt.result.status === "saved" &&
+      (p.request.operation === "trashPage" || p.request.operation === "restorePage")
+    ) {
+      if (
+        receipt.result.page.id !== p.request.input.pageId ||
+        (receipt.operation === "trashPage"
+          ? !receipt.result.page.trash
+          : !!receipt.result.page.trash) ||
+        !p.recoveryPageIds?.every((id) => result.changed.pages.some((g) => g.pageId === id))
+      )
+        throw new Error("Mismatched recovery acknowledgement");
+    }
     for (const row of result.changed.pages)
-      if (!p.observed.pages.some((k) => k.pageId === row.pageId && row.revision === k.revision + 1))
+      if (
+        !(created && row.pageId === created.page.id && row.revision === 0) &&
+        !p.observed.pages.some((k) => k.pageId === row.pageId && row.revision === k.revision + 1)
+      )
         throw new Error("Unobserved structural page acknowledgement");
     for (const row of result.changed.roots)
       if (
@@ -1092,9 +1355,7 @@ export class SpaceRootReorder {
         throw new Error("Unobserved structural root acknowledgement");
     const observed = merge(p.observed, result.changed);
     const savedPage =
-      receipt.operation === "movePage" && receipt.result.status === "saved"
-        ? receipt.result.page
-        : null;
+      "page" in receipt.result && receipt.result.status === "saved" ? receipt.result.page : null;
     if (
       new Set(result.changed.pages.map((p) => p.pageId)).size !== result.changed.pages.length ||
       new Set(result.changed.roots.map((p) => p.spaceId)).size !== result.changed.roots.length ||
@@ -1167,6 +1428,17 @@ export class SpaceRootReorder {
       if (p.direction === "move") history = this.#snapshot.journal.history;
       notice = "The selection was already in that position.";
     }
+    if (
+      p.request.operation === "createChildPage" ||
+      p.request.operation === "trashPage" ||
+      p.request.operation === "restorePage"
+    ) {
+      history = null;
+      notice =
+        p.request.operation === "createChildPage"
+          ? `Child created: ${savedPage?.id}. Undo is unavailable; inspect its current subtree to move it to trash.`
+          : "Recovery accepted. Undo is unavailable; inspect the current page or Trash to start another recovery intent.";
+    }
     const journal = decodeSpaceStructureJournal(
       { version: 1, environmentId: this.environmentId, pending: null, history },
       this.environmentId,
@@ -1174,6 +1446,8 @@ export class SpaceRootReorder {
     await this.#ports.store.write(this.environmentId, journal);
     this.#update({
       journal,
+      trash: null,
+      recoveryPreview: null,
       window: null,
       body: null,
       position: null,
@@ -1202,7 +1476,8 @@ export class SpaceRootReorder {
         journal,
         window: null,
         position: null,
-        notice: "Load position and choose a new placement.",
+        recoveryPreview: null,
+        notice: "Inspect a new operation and confirm its current guards.",
       });
     })()
       .catch((error: unknown) => {

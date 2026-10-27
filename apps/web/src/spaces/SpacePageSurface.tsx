@@ -15,6 +15,7 @@ import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelSt
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
 
+const SpaceRecoveryControls = lazy(() => import("./SpaceRecoveryControls"));
 const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
 
 interface SpacePageSurfaceProps {
@@ -28,6 +29,12 @@ export default function SpacePageSurface(props: SpacePageSurfaceProps) {
   if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
   return (
     <section className="min-w-0 p-4" aria-label="Space page">
+      <Suspense fallback={<p role="status">Loading recovery…</p>}>
+        <SpaceRecoveryControls
+          key={props.target.environmentId}
+          environmentId={props.target.environmentId}
+        />
+      </Suspense>
       <SpacePageMetadata {...props} />
       <SpaceDocumentSurface
         key={JSON.stringify([props.target.environmentId, props.target.pageId])}

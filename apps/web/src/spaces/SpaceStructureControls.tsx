@@ -12,6 +12,8 @@ import type {
   SpacePageLocation,
   SpacePageDestination,
 } from "@t2code/contracts/spaces";
+import SpaceRecoveryControls from "./SpaceRecoveryControls";
+import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
@@ -55,9 +57,14 @@ function StructureControls({
 }: Props & { owner: SpaceRootReorder }) {
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
   const [open, setOpen] = useState(!!blocks);
+  const [creating, setCreating] = useState(false);
+  const [title, setTitle] = useState("");
   const [container, setContainer] = useState<SpaceBlockId | null>(null);
   const availability = useSpacesAvailability(target.environmentId);
   const permission = useAtomValue(spacesEnvironment.movePage.permissionAtom(target.environmentId));
+  const createPermission = useAtomValue(
+    spacesEnvironment.createChild.permissionAtom(target.environmentId),
+  );
   const blockPermission = useAtomValue(
     spacesEnvironment.moveBlocks.permissionAtom(target.environmentId),
   );
@@ -66,7 +73,11 @@ function StructureControls({
   const blockAvailable =
     capability?.version === 2 && capability.features?.blockMoves === true && blockPermission;
   const writable =
-    (!blocks || blockAvailable) && permission && availability === "writable" && current();
+    (!blocks || blockAvailable) &&
+    (!creating || createPermission) &&
+    permission &&
+    availability === "writable" &&
+    current();
   // oxlint-disable-next-line t2code/react-effect-budget -- Load the shared durable structural journal independently of this metadata view.
   useEffect(() => {
     run(owner.hydrate());
@@ -77,13 +88,17 @@ function StructureControls({
   const pendingDestination =
     pendingRequest?.operation === "movePage"
       ? pendingRequest.input.destination
-      : pendingRequest
+      : pendingRequest?.operation === "moveBlocks"
         ? { kind: "child" as const, placement: pendingRequest.input.destination }
-        : null;
+        : pendingRequest?.operation === "createChildPage"
+          ? { kind: "child" as const, placement: pendingRequest.input.placement }
+          : null;
   const pendingPageId =
     pendingRequest?.operation === "movePage"
       ? pendingRequest.input.pageId
-      : pendingRequest?.input.sourcePageId;
+      : pendingRequest?.operation === "moveBlocks"
+        ? pendingRequest.input.sourcePageId
+        : target.pageId;
   const name = (pageId: typeof target.pageId) =>
     window?.items.find((page) => page.id === pageId)?.title || pageId;
   const retained = journal.history;
@@ -97,14 +112,16 @@ function StructureControls({
       : null;
   const selectionReady = blocks
     ? snapshot.blockSelection === blocks
-    : position?.pageId === target.pageId;
+    : creating || position?.pageId === target.pageId;
   const blocked = !hydrated || busy || !!pending;
   const load = (next = false) => {
     if (current() && window) run(owner.browse(window.space.id, target.pageId, next, parentPageId));
   };
   const place = (destination: SpacePageDestination) => {
     if (!current()) return;
-    if (blocks) {
+    if (creating && destination.kind === "child")
+      run(owner.createChild(title, destination.placement));
+    else if (blocks) {
       if (destination.kind === "child")
         run(owner.moveSelectedBlocks(blocks, destination.placement));
     } else run(owner.moveTo(target.pageId, destination));
@@ -137,9 +154,36 @@ function StructureControls({
     <div className="mt-3 space-y-2">
       <div className="flex flex-wrap gap-2">
         {!blocks ? (
-          <Button variant="outline" disabled={!writable || blocked} onClick={() => setOpen(true)}>
-            Move page
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              disabled={!writable || blocked}
+              onClick={() => {
+                setCreating(false);
+                setOpen(true);
+              }}
+            >
+              Move page
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!writable || blocked || !createPermission}
+              onClick={() => {
+                if (!current()) return;
+                setCreating(true);
+                setContainer(null);
+                setOpen(true);
+                run(owner.loadBody(target.pageId));
+              }}
+            >
+              Create child page
+            </Button>
+            <SpaceRecoveryControls
+              environmentId={target.environmentId}
+              pageId={target.pageId}
+              current={current}
+            />
+          </>
         ) : null}
         {history ? (
           <Button
@@ -160,7 +204,7 @@ function StructureControls({
             disabled={busy || !hydrated}
             onClick={() => run(owner.recover())}
           >
-            Recover page placement
+            Recover structural receipt
           </Button>
         ) : null}
         {pending?.conflict ? (
@@ -180,7 +224,7 @@ function StructureControls({
       </div>
       {pending ? (
         <p role="status">
-          Page placement is retained.{" "}
+          Structural operation is retained.{" "}
           {pending.conflict
             ? "It conflicted; reinspection starts a new intent."
             : "Resolve its receipt before editing affected pages."}
@@ -188,7 +232,10 @@ function StructureControls({
       ) : null}
       {pending && pendingDestination ? (
         <p>
-          Attempted {pending.direction}: {name(pendingPageId!)}{" "}
+          Attempted {pending.request.operation}:{" "}
+          {pending.request.operation === "createChildPage"
+            ? `new child “${pending.request.input.title}”`
+            : name(pendingPageId!)}{" "}
           {pendingDestination.kind === "root"
             ? `to space ${pendingDestination.spaceId}, ${pendingDestination.beforePageId ? `before ${name(pendingDestination.beforePageId)}` : "at the end"}`
             : `inside page ${pendingDestination.placement.pageId}, ${pendingDestination.placement.beforeBlockId ? `before block ${pendingDestination.placement.beforeBlockId}` : "at the list end"}`}
@@ -211,18 +258,42 @@ function StructureControls({
         }}
       >
         <DialogPopup>
-          <DialogTitle>{blocks ? "Move selected block subtrees" : "Move page"}</DialogTitle>
+          <DialogTitle>
+            {creating ? "Create child page" : blocks ? "Move selected block subtrees" : "Move page"}
+          </DialogTitle>
           <DialogDescription>
-            {blocks
-              ? "Move complete selected subtrees through the guarded service. IDs and opaque/media payloads are preserved. One inverse is retained only for a proven original contiguous placement. Save or resolve affected drafts first."
-              : "Save or resolve affected drafts first. Page IDs stay stable. Moving a child to root retires its owner marker; nesting creates a fresh marker when needed. Undo restores placement, not retired marker links. One guarded undo/redo is retained."}
+            {creating
+              ? "Choose an explicit position in a complete page body or known list. The server allocates the child page and owner marker IDs. Creation Undo is unavailable; use inspected trash and restore."
+              : blocks
+                ? "Move complete selected subtrees through the guarded service. IDs and opaque/media payloads are preserved. One inverse is retained only for a proven original contiguous placement. Save or resolve affected drafts first."
+                : "Save or resolve affected drafts first. Page IDs stay stable. Moving a child to root retires its owner marker; nesting creates a fresh marker when needed. Undo restores placement, not retired marker links. One guarded undo/redo is retained."}
           </DialogDescription>
           <div className="mt-4 space-y-3">
-            {!blocks ? (
+            {snapshot.error ? (
+              <p role="alert">
+                {snapshot.error instanceof Error
+                  ? snapshot.error.message
+                  : "The operation failed; retained data has been kept."}
+              </p>
+            ) : null}
+            {snapshot.notice ? <p role="status">{snapshot.notice}</p> : null}
+            {pending ? (
+              <p role="status">
+                The exact {pending.request.operation} intent is retained. Close this chooser to
+                recover its receipt or inspect a definite conflict.
+              </p>
+            ) : null}
+            {creating ? (
+              <label>
+                Child page title
+                <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+              </label>
+            ) : null}
+            {!blocks && !creating ? (
               <Button variant="outline" disabled={blocked || !writable} onClick={loadSource}>
                 Load original position
               </Button>
-            ) : (
+            ) : blocks ? (
               <>
                 <p>
                   {selectionReady
@@ -248,8 +319,8 @@ function StructureControls({
                   Outdent selection
                 </Button>
               </>
-            )}
-            {!blocks ? (
+            ) : null}
+            {!blocks && !creating ? (
               <p role="status">
                 {position?.pageId === target.pageId
                   ? "Original placement and successor are known."
@@ -322,7 +393,7 @@ function StructureControls({
                     <li key={page.id}>
                       <p>{page.title || "Untitled page"}</p>
                       <div className="flex flex-wrap gap-2">
-                        {!blocks && parentPageId === null ? (
+                        {!blocks && !creating && parentPageId === null ? (
                           <Button
                             variant="outline"
                             disabled={
@@ -350,7 +421,7 @@ function StructureControls({
                         </Button>
                         <Button
                           variant="outline"
-                          disabled={blocked || (!blocks && page.id === target.pageId)}
+                          disabled={blocked || (!blocks && !creating && page.id === target.pageId)}
                           onClick={() => {
                             setContainer(null);
                             if (current()) run(owner.loadBody(page.id));
@@ -362,7 +433,7 @@ function StructureControls({
                     </li>
                   ))}
                 </ul>
-                {!blocks && parentPageId === null && window.nextCursor === null ? (
+                {!blocks && !creating && parentPageId === null && window.nextCursor === null ? (
                   <Button
                     variant="outline"
                     disabled={!writable || blocked || !selectionReady}
@@ -409,7 +480,8 @@ function StructureControls({
                               disabled={!writable || blocked || !selectionReady}
                               onClick={() => placement(block.id)}
                             >
-                              Place before {block.type} ({block.id})
+                              {creating ? "Create before" : "Place before"} {block.type} ({block.id}
+                              )
                             </Button>
                           </li>
                         ))}
@@ -419,7 +491,7 @@ function StructureControls({
                       disabled={!writable || blocked || !selectionReady}
                       onClick={() => placement(null)}
                     >
-                      Place at list end
+                      {creating ? "Create at list end" : "Place at list end"}
                     </Button>
                   </>
                 )}
