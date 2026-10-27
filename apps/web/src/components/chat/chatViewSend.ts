@@ -262,6 +262,7 @@ export function restoreComposerDraft(
 ): ComposerImageAttachment[] {
   const store = useComposerDraftStore.getState();
   const images = snapshot.images.map(cloneComposerImageForRetry);
+  store.setContextDraft(draftTarget, snapshot.contextDraft);
   store.setPrompt(draftTarget, snapshot.messageText);
   store.addImages(draftTarget, images);
   store.addFiles(draftTarget, snapshot.files);

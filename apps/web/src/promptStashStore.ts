@@ -1,4 +1,8 @@
-import { ComposerContextRecord, ForwardCompatibleArray } from "@t2code/contracts";
+import {
+  ComposerContextRecord,
+  ForwardCompatibleArray,
+  SpaceContextSelector,
+} from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import { create } from "zustand";
 
@@ -25,6 +29,7 @@ const StashEntrySchema = Schema.Struct({
   droppedImageNames: Schema.Array(Schema.String),
   unreadableImageNames: Schema.optionalKey(Schema.Array(Schema.String)),
   pendingImageCount: Schema.optionalKey(Schema.Number),
+  selectors: Schema.optionalKey(Schema.Array(SpaceContextSelector).check(Schema.isMaxLength(200))),
   records: Schema.optionalKey(ForwardCompatibleArray(ComposerContextRecord)),
 });
 export type PromptStashEntry = typeof StashEntrySchema.Type;

@@ -1,3 +1,8 @@
+import {
+  composerDraftSendGuard,
+  prepareComposerSendContext,
+} from "../../lib/prepareComposerSendContext";
+import type { ComposerContextDraft } from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { makeQueuedRunEditStore, makeQueuedRunsAtom } from "@t2code/client-runtime/queued-run-edit";
 import type { ThreadStructure } from "@t2code/client-runtime/state/shell";
@@ -73,6 +78,7 @@ export interface QueuedRunEditContent {
   readonly reviewComments: ReadonlyArray<ReviewCommentContext>;
   readonly previewAnnotations: ReadonlyArray<PreviewAnnotationPayload>;
   readonly threadContexts: ReadonlyArray<ThreadContextRecord>;
+  readonly contextDraft?: ComposerContextDraft | undefined;
 }
 
 function queuedEditDraftTarget(routeThreadRef: ScopedThreadRef, runId: RunId) {
@@ -88,6 +94,7 @@ async function submitQueuedRunEdit(input: {
 }): Promise<string | null> {
   const { environmentId, draftTarget, editing, content } = input;
   const editText = content.prompt.trim();
+  const draftStillCurrent = composerDraftSendGuard(draftTarget);
   const newAttachments = [...content.images, ...content.files];
   const uploadFiles = async (files: ReadonlyArray<ComposerFileAttachment>) => {
     const validateFiles = () => {
@@ -135,6 +142,25 @@ async function submitQueuedRunEdit(input: {
           attachmentId: uploads[editing.existingAttachments.length + index]?.id ?? attachment.id,
         })),
       })?.records ?? [];
+    const prepared = await prepareComposerSendContext({
+      environmentId,
+      text: editText,
+      contextDraft: content.contextDraft,
+      context: {
+        version: 1,
+        ...(editing.context?.guest ? { guest: editing.context.guest } : {}),
+        records: [
+          ...new Map(
+            [
+              ...keptRecords.filter((record) => record.kind !== "page" && record.kind !== "block"),
+              ...newRecords,
+            ].map((record) => [record.contextId, record] as const),
+          ).values(),
+        ],
+      },
+      isCurrentDraft: draftStillCurrent,
+    });
+    prepared.assertCurrent();
     const result = await input.editQueuedRun({
       environmentId,
       input: {
@@ -144,16 +170,7 @@ async function submitQueuedRunEdit(input: {
         edit: {
           messageId: editing.messageId,
           attachments: uploads,
-          context: {
-            version: 1,
-            records: [
-              ...new Map(
-                [...keptRecords, ...newRecords].map(
-                  (record) => [record.contextId, record] as const,
-                ),
-              ).values(),
-            ],
-          },
+          ...(prepared.context ? { context: prepared.context } : {}),
         },
       },
     });
@@ -224,6 +241,15 @@ export function useQueuedRunEdit(input: {
     const store = useComposerDraftStore.getState();
     store.clearComposerContent(target);
     store.setPrompt(target, request.text);
+    const previousContext = serverProjection?.messages.find(
+      (message) => message.id === request.messageId,
+    )?.context;
+    store.setContextDraft(target, {
+      selectors: [],
+      records: (previousContext?.records ?? []).filter(
+        (record) => record.kind === "page" || record.kind === "block",
+      ),
+    });
     const threadRef = { environmentId, threadId: activeThreadId };
     queuedRunEdits.begin(
       editKey,
@@ -255,6 +281,12 @@ export function useQueuedRunEdit(input: {
             editTarget: queuedEditDraftTarget(routeThreadRef, edit.runId),
             threadTarget: threadDraftTarget,
             originalText: edit.originalText,
+            originalContextDraft: {
+              selectors: [],
+              records: (edit.context?.records ?? []).filter(
+                (record) => record.kind === "page" || record.kind === "block",
+              ),
+            },
           });
           if (recovery === "clean") return;
           const title = appAtomRegistry.get(
@@ -317,6 +349,7 @@ export function useQueuedRunEdit(input: {
     // The save's result decides the edit's fate, even if the run starts meanwhile.
     const finishSave = queuedRunEdits.startSave(editKey);
     if (finishSave === null) return;
+    const draftStillCurrent = composerDraftSendGuard(draftTarget);
     const error = await submitQueuedRunEdit({
       environmentId,
       draftTarget,
@@ -325,11 +358,12 @@ export function useQueuedRunEdit(input: {
       editQueuedRun: editQueuedRunCommand,
     });
     setThreadError(editing.threadId, error);
-    const current = finishSave(error === null);
+    const unchanged = draftStillCurrent();
+    const current = finishSave(error === null && unchanged);
     if (error !== null) return;
-    releaseDraftAttachments(newAttachments);
     // The edit was cancelled or begun again while this save ran; its drafts are the newer edit's.
-    if (!current) return;
+    if (!current || !unchanged) return;
+    releaseDraftAttachments(newAttachments);
     promptRef.current = "";
     clearEditDraft(editing.runId);
     composerRef.current?.resetCursorState();

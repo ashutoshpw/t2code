@@ -1,3 +1,4 @@
+import type { ComposerContextDraft } from "@t2code/contracts";
 import { type OrchestrationV2ProviderTurn, type RunAttemptId } from "@t2code/contracts";
 import {
   deriveLatestThreadRun,
@@ -1366,6 +1367,7 @@ export function makeModelDisabledReason(
 
 /** What the composer held when the user pressed send, after a direct annotation merged in. */
 export interface ComposerSendContents {
+  readonly contextDraft?: ComposerContextDraft | undefined;
   readonly prompt: string;
   readonly images: ReadonlyArray<ComposerImageAttachment>;
   readonly files: ReadonlyArray<ComposerFileAttachment>;
@@ -1393,6 +1395,7 @@ export function snapshotComposerSend(contents: ComposerSendContents) {
     previewAnnotations: [...contents.previewAnnotations],
     reviewComments: [...contents.reviewComments],
     threadContexts: [...contents.threadContexts],
+    contextDraft: contents.contextDraft ? structuredClone(contents.contextDraft) : undefined,
     messageText: contents.terminalContexts
       .filter((context) => !terminalContexts.includes(context))
       .reduce(

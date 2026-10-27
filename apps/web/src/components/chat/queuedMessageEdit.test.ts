@@ -97,3 +97,57 @@ describe("queued message file edits", () => {
     expect(store.getComposerDraft(editTarget)).toBeNull();
   });
 });
+
+it("keeps Spaces selectors with the prompt when a queued edit returns to the regular composer", () => {
+  const store = useComposerDraftStore.getState();
+  store.clearComposerContent(threadTarget);
+  store.clearComposerContent(editTarget);
+  const selector = {
+    version: 1 as const,
+    selection: "current" as const,
+    kind: "page" as const,
+    contextId: "p" as never,
+    label: "Page",
+    environmentId,
+    pageId: "page" as never,
+    includeChildPages: false,
+  };
+  const prompt = "Changed [Page](t2-context://v1/page/p)";
+  store.setPrompt(editTarget, prompt);
+  store.setContextDraft(editTarget, { selectors: [selector], records: [] });
+  expect(recoverQueuedMessageEdit({ editTarget, threadTarget, originalText: "Original" })).toBe(
+    "kept",
+  );
+  expect(store.getComposerDraft(threadTarget)?.contextDraft?.selectors).toEqual([selector]);
+  expect(store.getComposerDraft(threadTarget)?.prompt).toBe(prompt);
+  expect(store.getComposerDraft(editTarget)?.contextDraft).toBeUndefined();
+  store.clearComposerContent(threadTarget);
+});
+
+it("recovers a selector option change even when the queued edit text is unchanged", () => {
+  const store = useComposerDraftStore.getState();
+  store.clearComposerContent(threadTarget);
+  store.clearComposerContent(editTarget);
+  const prompt = "[Page](t2-context://v1/page/p)";
+  store.setPrompt(editTarget, prompt);
+  store.setContextDraft(editTarget, {
+    selectors: [
+      {
+        version: 1,
+        selection: "current",
+        kind: "page",
+        contextId: "p" as never,
+        label: "Page",
+        environmentId,
+        pageId: "page" as never,
+        includeChildPages: true,
+      },
+    ],
+    records: [],
+  });
+  expect(recoverQueuedMessageEdit({ editTarget, threadTarget, originalText: prompt })).toBe("kept");
+  expect(store.getComposerDraft(threadTarget)?.contextDraft?.selectors[0]?.includeChildPages).toBe(
+    true,
+  );
+  store.clearComposerContent(threadTarget);
+});

@@ -1,5 +1,5 @@
 import { resolveQueuedEditExit } from "@t2code/client-runtime/queued-run-edit";
-import type { ChatAttachment } from "@t2code/contracts";
+import type { ChatAttachment, ComposerContextDraft } from "@t2code/contracts";
 import {
   composerDraftHasUserContent,
   useComposerDraftStore,
@@ -12,13 +12,23 @@ export function recoverQueuedMessageEdit(input: {
   readonly editTarget: ComposerThreadTarget;
   readonly threadTarget: ComposerThreadTarget;
   readonly originalText: string;
+  readonly originalContextDraft?: ComposerContextDraft | undefined;
 }): "kept" | "discarded" | "clean" {
   const store = useComposerDraftStore.getState();
   const draft = store.getComposerDraft(input.editTarget);
+  const contextChanged =
+    JSON.stringify([draft?.contextDraft?.selectors ?? [], draft?.contextDraft?.records ?? []]) !==
+    JSON.stringify([
+      input.originalContextDraft?.selectors ?? [],
+      input.originalContextDraft?.records ?? [],
+    ]);
   const recovery = resolveQueuedEditExit({
     editChanged:
       draft !== null &&
-      (draft.prompt !== input.originalText || draft.images.length > 0 || draft.files.length > 0),
+      (draft.prompt !== input.originalText ||
+        draft.images.length > 0 ||
+        draft.files.length > 0 ||
+        contextChanged),
     threadDraftEmpty: !composerDraftHasUserContent(store.getComposerDraft(input.threadTarget)),
   });
   if (recovery === "kept") {

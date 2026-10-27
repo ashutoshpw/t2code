@@ -1,3 +1,4 @@
+import type { SpaceContextSelector } from "@t2code/contracts";
 import type { ChatComposerProps } from "./ChatComposer";
 import {
   type ComposerContextRecord,
@@ -94,6 +95,7 @@ export function useComposerStash(input: {
     records: ReadonlyArray<ComposerContextRecord>,
     sourceEnvironmentId: EnvironmentId | null,
     threadDraftTarget?: ChatComposerProps["composerDraftTarget"],
+    selectors?: ReadonlyArray<SpaceContextSelector>,
   ) => ReadonlyMap<string, string>;
   readonly expandMobileComposer: () => void;
 }) {
@@ -203,9 +205,10 @@ export function useComposerStash(input: {
       });
     }
 
-    const rewrittenContextIds = entry.records
-      ? importContextRecords(entry.records, null, composerDraftTarget)
-      : new Map<string, string>();
+    const rewrittenContextIds =
+      entry.records || entry.selectors
+        ? importContextRecords(entry.records ?? [], null, composerDraftTarget, entry.selectors)
+        : new Map<string, string>();
     const restoredPrompt = replaceComposerContextReferences(entry.prompt, (reference) => {
       const contextId = rewrittenContextIds.get(reference.contextId);
       return contextId
@@ -458,7 +461,12 @@ export function useComposerStash(input: {
     const attachmentDraft = readAttachmentDraft();
     const images = [...attachmentDraft.images];
     const files = [...attachmentDraft.files];
+    const storedContextDraft = useComposerDraftStore
+      .getState()
+      .getComposerDraft(composerDraftTarget)?.contextDraft;
+    const stashedSelectors = storedContextDraft?.selectors;
     const stashedRecords: ComposerContextRecord[] = [
+      ...(storedContextDraft?.records ?? []),
       ...composerThreadContexts,
       ...readTerminalContexts().map(terminalContextRecord),
       ...composerReviewComments.map(reviewCommentContextRecord),
@@ -533,6 +541,7 @@ export function useComposerStash(input: {
         droppedImageNames: [],
         unreadableImageNames: [],
         pendingImageCount: images.length,
+        ...(stashedSelectors?.length ? { selectors: stashedSelectors } : {}),
         ...(stashedRecords.length > 0 ? { records: stashedRecords } : {}),
       });
 
@@ -563,6 +572,7 @@ export function useComposerStash(input: {
       clearComposerDraftPromptAndImages(stashTarget);
       clearComposerDraftTerminalContexts(stashTarget);
       setComposerDraftThreadContexts(stashTarget, []);
+      useComposerDraftStore.getState().setContextDraft(stashTarget, undefined);
       for (const comment of composerReviewComments) {
         removeComposerDraftReviewComment(stashTarget, comment.id);
       }

@@ -141,6 +141,7 @@ vi.mock("./use-composer-drafts", async () => {
     composerDraftsAtom: Atom.make({}),
     composerContextImportsAtom: Atom.make({}),
     getComposerDraftSnapshot: () => state.draft,
+    sameComposerDraftState: (left: unknown, right: unknown) => left === right,
     clearComposerDraftContent: state.clearDraft,
     clearComposerDraft: state.clearDraft,
     setComposerDraftText: (_key: string, text: string) => {
@@ -269,6 +270,7 @@ describe("mobile task permissions", () => {
         threadId: "thread",
         text: "Keep my draft",
       }),
+      expect.anything(),
     );
   });
 
@@ -424,7 +426,21 @@ describe("mobile handoff preview and submission", () => {
         modelSelection: selection,
         text: "Keep my draft",
       }),
+      expect.anything(),
     );
     expect(state.clearDraft).toHaveBeenCalledTimes(1);
   });
+});
+
+it("keeps newer native typing when an earlier send is still being prepared or persisted", async () => {
+  state.grantedEnvironments.add("secondary");
+  const reply = Promise.withResolvers<undefined>();
+  state.enqueue.mockImplementationOnce(() => reply.promise);
+  const composer = useThreadComposerState();
+  const pending = composer.onSendMessage();
+  state.draft = { ...state.draft, text: "Newer typing" };
+  reply.resolve(undefined);
+  expect(await pending).toBe("message");
+  expect(state.clearDraft).not.toHaveBeenCalled();
+  expect(state.draft.text).toBe("Newer typing");
 });

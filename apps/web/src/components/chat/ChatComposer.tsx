@@ -1,3 +1,4 @@
+import type { ComposerContextDraft } from "@t2code/contracts";
 import { useComposerTypingGuard } from "./useComposerTypingGuard";
 import { insertAttachmentReferencesForDraft } from "./composerAttachmentReferences";
 import { DESKTOP_PASTE_AS_TEXT_EVENT } from "../../lib/desktopPasteAsText";
@@ -336,6 +337,7 @@ export interface ChatComposerHandle {
     previewAnnotations: PreviewAnnotationPayload[];
     reviewComments: ReviewCommentContext[];
     threadContexts: ThreadContextRecord[];
+    contextDraft?: ComposerContextDraft | undefined;
     selectedPromptEffort: string | null;
     selectedModelOptionsForDispatch: unknown;
     selectedModelSelection: ModelSelection;
@@ -1167,7 +1169,9 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         composerTerminalContexts.length +
         composerPreviewAnnotations.length +
         composerReviewComments.length +
-        composerThreadContexts.length >
+        composerThreadContexts.length +
+        (attachmentDraft.contextDraft?.selectors.length ?? 0) +
+        (attachmentDraft.contextDraft?.records.length ?? 0) >
       0,
     isEditingQueuedMessage,
     environmentAvailable:
@@ -1375,7 +1379,13 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         wanted.add(toKindScopedComposerContextId("image", annotation.id));
       }
     }
+    const selectors = (attachmentDraft.contextDraft?.selectors ?? []).filter((record) =>
+      wanted.has(record.contextId),
+    );
     const records: ComposerContextRecord[] = [
+      ...(attachmentDraft.contextDraft?.records ?? []).filter((record) =>
+        wanted.has(record.contextId),
+      ),
       ...composerTerminalContexts
         .filter((c) => wanted.has(terminalContextReference(c).contextId))
         .map(terminalContextRecord),
@@ -1407,11 +1417,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
           return [record];
         }),
     ];
-    if (records.length === 0) return null;
+    if (records.length === 0 && selectors.length === 0) return null;
     const fragment = encodeComposerContextFragment({
       version: 1,
       source: { environmentId, ...(activeThread ? { threadId: activeThread.id } : {}) },
       records,
+      selectors,
     });
     if (fragment) rememberCopiedComposerAttachments(environmentId, copiedFiles);
     return fragment;
@@ -3195,6 +3206,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         previewAnnotations: composerPreviewAnnotations,
         reviewComments: composerReviewComments,
         threadContexts: composerThreadContexts,
+        contextDraft: attachmentDraft.contextDraft,
         selectedPromptEffort,
         selectedModelOptionsForDispatch,
         selectedModelSelection,

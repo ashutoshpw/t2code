@@ -2429,3 +2429,69 @@ describe("composerDraftStore attachment references", () => {
     );
   });
 });
+
+it("hydrates Spaces selectors and copied snapshots without promoting snapshots to selectors", () => {
+  const selector = {
+    version: 1,
+    selection: "current",
+    kind: "page",
+    contextId: "p",
+    label: "Page",
+    environmentId: TEST_ENVIRONMENT_ID,
+    pageId: "page",
+    includeChildPages: false,
+  };
+  const copied = {
+    version: 1,
+    kind: "page",
+    contextId: "copied",
+    label: "Copied",
+    environmentId: TEST_ENVIRONMENT_ID,
+    spaceId: "s",
+    pageId: "page",
+    title: "Old title",
+    snapshot: {
+      version: 1,
+      includeChildPages: false,
+      truncated: false,
+      text: "Old snapshot",
+      contentHash: `sha256:${"a".repeat(64)}`,
+      sources: [
+        {
+          environmentId: TEST_ENVIRONMENT_ID,
+          spaceId: "s",
+          pageId: "page",
+          revision: 1,
+          blockIds: [],
+        },
+      ],
+    },
+  };
+  const contextDraft = {
+    selectors: [selector],
+    records: [
+      copied,
+      { version: 1, kind: "future", contextId: "future", label: "Future", payload: { keep: true } },
+    ],
+  };
+  const key = threadKeyFor(ThreadId.make("spaces-recovery"), TEST_ENVIRONMENT_ID);
+  const merged = useComposerDraftStore.persist.getOptions().merge!(
+    {
+      draftsByThreadKey: {
+        [key]: {
+          prompt: "[Page](t2-context://v1/page/p) [Copied](t2-context://v1/page/copied)",
+          attachments: [],
+          contextDraft,
+        },
+      },
+    },
+    useComposerDraftStore.getInitialState(),
+  );
+  expect(merged.draftsByThreadKey[key]?.contextDraft).toEqual(contextDraft);
+  const persisted = partializeComposerDraftStoreState(merged);
+  const restored = useComposerDraftStore.persist.getOptions().merge!(
+    persisted,
+    useComposerDraftStore.getInitialState(),
+  );
+  expect(restored.draftsByThreadKey[key]?.contextDraft).toEqual(contextDraft);
+});

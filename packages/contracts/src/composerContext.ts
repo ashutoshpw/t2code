@@ -237,6 +237,27 @@ const spaceContextBase = {
   title: ContextLabel,
 };
 
+const spaceSelectorBase = {
+  ...recordBase,
+  selection: Schema.Literal("current"),
+  environmentId: EnvironmentId.check(spaceIdBounds),
+  includeChildPages: Schema.Boolean,
+} as const;
+
+export const SpaceContextSelector = Schema.Union([
+  Schema.Struct({
+    ...spaceSelectorBase,
+    kind: Schema.Literal("page"),
+    pageId: SpacePageId.check(spaceIdBounds),
+  }),
+  Schema.Struct({
+    ...spaceSelectorBase,
+    kind: Schema.Literal("block"),
+    blockId: SpaceBlockId.check(spaceIdBounds),
+  }),
+]);
+export type SpaceContextSelector = typeof SpaceContextSelector.Type;
+
 const SpaceContextSource = Schema.Struct({
   environmentId: EnvironmentId.check(spaceIdBounds),
   spaceId: SpaceId.check(spaceIdBounds),
@@ -455,3 +476,12 @@ export const OrchestrationMessageContext = Schema.Struct({
     ),
 });
 export type OrchestrationMessageContext = typeof OrchestrationMessageContext.Type;
+
+// Selectors never enter message records; copied snapshots retain their completed representation.
+export const ComposerContextDraft = Schema.Struct({
+  selectors: Schema.Array(SpaceContextSelector).check(
+    Schema.isMaxLength(COMPOSER_CONTEXT_MAX_RECORDS),
+  ),
+  records: OrchestrationMessageContext.fields.records,
+});
+export type ComposerContextDraft = typeof ComposerContextDraft.Type;

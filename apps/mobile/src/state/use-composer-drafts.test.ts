@@ -2642,3 +2642,42 @@ describe("mobile composer drafts", () => {
     expect(composerAttachmentCleanupMocks.remove).not.toHaveBeenCalled();
   });
 });
+
+it("recovers native Spaces selectors independently from completed copied snapshots", () => {
+  const selector = {
+    version: 1,
+    selection: "current",
+    kind: "block",
+    contextId: "selector",
+    label: "Block",
+    environmentId: "env",
+    blockId: "b",
+    includeChildPages: false,
+  };
+  const record = {
+    version: 1,
+    kind: "page",
+    contextId: "copied",
+    label: "Page",
+    environmentId: "env",
+    spaceId: "s",
+    pageId: "p",
+    title: "Copied title",
+    snapshot: {
+      version: 1,
+      includeChildPages: false,
+      truncated: false,
+      text: "Copied text",
+      contentHash: `sha256:${"a".repeat(64)}`,
+      sources: [{ environmentId: "env", spaceId: "s", pageId: "p", revision: 1, blockIds: [] }],
+    },
+  };
+  const draft = {
+    text: "[Block](t2-context://v1/block/selector) [Page](t2-context://v1/page/copied)",
+    attachments: [],
+    contextDraft: { selectors: [selector], records: [record] },
+  };
+  const recovered = decodePersistedComposerState({ schemaVersion: 1, drafts: { thread: draft } })
+    .drafts.thread;
+  expect(recovered).toEqual(draft);
+});

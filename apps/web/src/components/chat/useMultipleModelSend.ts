@@ -96,6 +96,8 @@ export function useMultipleModelSend(input: MultipleModelSendInput) {
     usesAttachmentUploads,
     readFileBlockReason,
     buildOutgoingMessageContext,
+    assertContextCurrent,
+    isCurrentDraft,
     isCurrentSend,
   }: {
     readonly threadId: ThreadId;
@@ -112,6 +114,8 @@ export function useMultipleModelSend(input: MultipleModelSendInput) {
       attachmentIds: ReadonlyArray<string>,
     ) => ReturnType<typeof buildMessageContext>;
     /** False once a newer send from this composer started. */
+    readonly assertContextCurrent: () => void;
+    readonly isCurrentDraft: () => boolean;
     readonly isCurrentSend: () => boolean;
   }) => {
     const { attachments: attachmentsSnapshot, messageText } = sendSnapshot;
@@ -124,6 +128,11 @@ export function useMultipleModelSend(input: MultipleModelSendInput) {
     // fails every selection; the draft restore below still runs.
     const sendResult = await settlePromise(async () => {
       const attachments = await attachmentsPromise;
+      assertContextCurrent();
+      if (!isCurrentDraft())
+        throw new Error(
+          "The draft changed before sending. Send again to include your latest draft.",
+        );
       const fileBlockReason = readFileBlockReason();
       if (fileBlockReason !== null) throw new Error(fileBlockReason);
       const context = buildOutgoingMessageContext(
@@ -159,6 +168,7 @@ export function useMultipleModelSend(input: MultipleModelSendInput) {
             model: target.selection.model,
             uncertainSubmissions: uncertainSubmissionsRef.current,
             start: (targetThreadId) => {
+              assertContextCurrent();
               const supportsInlineMessageContext =
                 appAtomRegistry.get(environmentServerConfigsAtom).get(environmentId)?.environment
                   .capabilities.inlineMessageContext === true;

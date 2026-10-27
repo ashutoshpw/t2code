@@ -1,3 +1,4 @@
+import { prepareMobileComposerContext } from "./spaces";
 import { useComposerAttachmentActions } from "./use-composer-attachment-actions";
 import * as Dialog from "../components/ui/Dialog";
 import { AuthOrchestrationOperateScope } from "@t2code/contracts";
@@ -75,6 +76,7 @@ import {
   clearComposerDraftContent,
   composerContextImportsAtom,
   getComposerDraftSnapshot,
+  sameComposerDraftState,
   mergeComposerDraftContent,
   removeComposerDraftAttachment,
   scheduleUnusedComposerAttachmentCleanup,
@@ -214,6 +216,7 @@ export function useThreadComposerState() {
   });
   const [isSavingQueuedEdit, setIsSavingQueuedEdit] = useState(false);
   const savingQueuedEditRef = useRef(false);
+  const preparingSendRef = useRef(false);
   const pastedTextFileNamesRef = useRef<{ threadKey: string | null; names: Set<string> }>({
     threadKey: null,
     names: new Set(),
@@ -468,6 +471,30 @@ export function useThreadComposerState() {
       draftAttachments: draft.attachments,
       uploaded: prepared.value.attachments,
     });
+    const captured = await settlePromise(() =>
+      prepareMobileComposerContext({
+        environmentId: thread.environmentId,
+        text,
+        context: payload.context,
+        contextDraft: draft.contextDraft,
+        isCurrentDraft: () =>
+          sameComposerDraftState(
+            getComposerDraftSnapshot(queuedEditDraftKey(threadKey, edit.runId)),
+            draft,
+          ),
+      }),
+    );
+    if (AsyncResult.isFailure(captured)) {
+      savingQueuedEditRef.current = false;
+      setIsSavingQueuedEdit(false);
+      finishSave(false);
+      const error = squashAtomCommandFailure(captured);
+      Dialog.alert(
+        "Could not save the queued message",
+        error instanceof Error ? error.message : "Your edit is still in the composer.",
+      );
+      return;
+    }
     const result = await editQueuedRun({
       environmentId: thread.environmentId,
       input: {
@@ -477,7 +504,7 @@ export function useThreadComposerState() {
         edit: {
           messageId: edit.messageId,
           attachments: payload.attachments,
-          ...(payload.context ? { context: payload.context } : {}),
+          ...(captured.value ? { context: captured.value } : {}),
         },
       },
     });
@@ -490,6 +517,12 @@ export function useThreadComposerState() {
         "Could not save the queued message",
         "It may have already started. Your edit is still in the composer.",
       );
+      return;
+    }
+    if (!sameComposerDraftState(
+      getComposerDraftSnapshot(queuedEditDraftKey(threadKey, edit.runId)), draft,
+    )) {
+      finishSave(false);
       return;
     }
     // False when the edit was cancelled or begun again meanwhile; its draft is the newer edit's.
@@ -508,6 +541,7 @@ export function useThreadComposerState() {
       hasAttachmentsOrContext: boolean,
     ) => Promise<boolean | "responded">,
   ) => {
+    if (preparingSendRef.current) return null;
     if (
       selectedThreadShell &&
       selectedEnvironmentRuntime?.connectionState === "connected" &&
@@ -668,40 +702,43 @@ export function useThreadComposerState() {
     const metadata = makeQueuedMessageMetadata();
     const messageId = MessageId.make(metadata.messageId);
     clearThreadComposerError(threadKey);
-    const enqueuePromise = enqueueThreadOutboxMessage({
-      environmentId: selectedThreadShell.environmentId,
-      threadId: selectedThreadShell.id,
-      messageId,
-      commandId: CommandId.make(metadata.commandId),
-      text,
-      attachments,
-      context: draft.context,
-      modelSelection,
-      runtimeMode: draft.runtimeMode ?? thread.runtimeMode,
-      interactionMode: resolveProviderInteractionMode(
-        provider,
-        draft.interactionMode ?? thread.interactionMode,
-      ),
-      ...(followUpDispatchMode === null ? {} : { dispatchMode: followUpDispatchMode }),
-      createdAt: metadata.createdAt,
-    });
-    clearComposerDraftContent(threadKey, { deferAttachmentCleanup: true });
-    enqueuePromise.then(
-      () => scheduleUnusedComposerAttachmentCleanup(attachments),
-      (error: unknown) => {
-        // Restore with uncapped append; capped merge could drop attachments added during the failed write.
-        void mergeComposerDraftContent(threadKey, {
+    preparingSendRef.current = true;
+    try {
+      await enqueueThreadOutboxMessage(
+        {
+          environmentId: selectedThreadShell.environmentId,
+          threadId: selectedThreadShell.id,
+          messageId,
+          commandId: CommandId.make(metadata.commandId),
           text,
+          attachments,
           context: draft.context,
-          attachments: [],
-        });
-        appendComposerDraftAttachments(threadKey, attachments, { allowOverflow: true });
-        setThreadComposerError(
-          threadKey,
-          error instanceof Error ? error.message : "Failed to save the queued message.",
-        );
-      },
-    );
+          modelSelection,
+          runtimeMode: draft.runtimeMode ?? thread.runtimeMode,
+          interactionMode: resolveProviderInteractionMode(
+            provider,
+            draft.interactionMode ?? thread.interactionMode,
+          ),
+          ...(followUpDispatchMode === null ? {} : { dispatchMode: followUpDispatchMode }),
+          createdAt: metadata.createdAt,
+        },
+        {
+          contextDraft: draft.contextDraft,
+          isCurrentDraft: () => sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft),
+        },
+      );
+    } catch (error) {
+      setThreadComposerError(
+        threadKey,
+        error instanceof Error ? error.message : "Failed to save the queued message.",
+      );
+      return null;
+    } finally {
+      preparingSendRef.current = false;
+    }
+    if (sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft))
+      clearComposerDraftContent(threadKey, { deferAttachmentCleanup: true });
+    scheduleUnusedComposerAttachmentCleanup(attachments);
     return messageId;
   };
 
