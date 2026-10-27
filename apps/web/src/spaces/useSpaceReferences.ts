@@ -19,9 +19,11 @@ export function useSpaceReferenceController(environmentId: EnvironmentId, attemp
     AsyncResult.value(useAtomValue(environmentCatalog.stateAtom(environmentId))),
   );
   const canRead = useEnvironmentScope(environmentId, AuthOrchestrationReadScope);
+  const sourceVersion = useAtomValue(spacesEnvironment.changed(environmentId));
   const key = JSON.stringify([
     environmentId,
     attempt,
+    sourceVersion,
     connection?.phase,
     connection?.generation,
     connection?.attempt,
@@ -44,12 +46,18 @@ export function useSpaceReferenceController(environmentId: EnvironmentId, attemp
       { environmentId, input: undefined },
       { reportFailure: false },
     ).then((result) => {
-      if (!active || result._tag !== "Success") return;
+      if (
+        !active ||
+        result._tag !== "Success" ||
+        registry.get(spacesEnvironment.changed(environmentId)) !== sourceVersion
+      )
+        return;
       const session = result.value;
       controller = new SpaceReferenceController({
         environmentId,
         access: () => ({
           session: active ? session() : null,
+          sourceVersion: registry.get(spacesEnvironment.changed(environmentId)),
           canRead: sessionHasScope(
             registry.get(environmentSession.sessionStateAtom(environmentId)),
             AuthOrchestrationReadScope,
@@ -82,8 +90,8 @@ export function useSpaceReferenceController(environmentId: EnvironmentId, attemp
     });
     return () => {
       active = false;
-      controller?.invalidate();
+      controller?.dispose();
     };
-  }, [key, registry, environmentId, canRead, environment?.connection.phase]);
+  }, [key, registry, environmentId, canRead, sourceVersion, environment?.connection.phase]);
   return owner?.key === key && owner.registry === registry ? owner.controller : null;
 }

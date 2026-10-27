@@ -16,6 +16,7 @@ function supportsSpaceMethod(capability: Capability, method: "search" | "referen
 }
 export interface SpaceReferenceAccess {
   readonly session: object | null;
+  readonly sourceVersion: number;
   readonly canRead: boolean;
   readonly capability: Capability;
 }
@@ -39,11 +40,54 @@ export type SpaceSearchWindow =
     };
 const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
 
+class LatestSourceRead<A> {
+  private active:
+    | {
+        read: () => Promise<A | null>;
+        resolve: (value: A | null) => void;
+        reject: (error: unknown) => void;
+      }
+    | undefined;
+  private pending: LatestSourceRead<A>["active"];
+
+  cancel() {
+    this.active?.resolve(null);
+    this.pending?.resolve(null);
+    this.pending = undefined;
+  }
+
+  submit(read: () => Promise<A | null>): Promise<A | null> {
+    this.cancel();
+    return new Promise((resolve, reject) => {
+      const job = { read, resolve, reject };
+      if (this.active) this.pending = job;
+      else this.run(job);
+    });
+  }
+
+  private run(job: NonNullable<LatestSourceRead<A>["active"]>) {
+    this.active = job;
+    void (async () => {
+      try {
+        job.resolve(await job.read());
+      } catch (error) {
+        job.reject(error);
+      } finally {
+        this.active = undefined;
+        const next = this.pending;
+        this.pending = undefined;
+        if (next) this.run(next);
+      }
+    })();
+  }
+}
+
 export class SpaceReferenceController {
   private generation = 0;
   private resolutionGeneration = 0;
-  private pending: Promise<unknown> = Promise.resolve();
-  private resolving: Promise<unknown> = Promise.resolve();
+  private readonly searches = new LatestSourceRead<SpaceSearchResult>();
+  private readonly resolutions = new LatestSourceRead<SpaceReferenceResolveResult>();
+  private disposed = false;
   private readonly options: {
     environmentId: EnvironmentId;
     access: () => SpaceReferenceAccess;
@@ -51,13 +95,18 @@ export class SpaceReferenceController {
     resolve: (input: SpaceReferenceResolveInput) => Promise<SpaceReferenceResolveResult>;
   };
   private readonly session: object | null;
+  private readonly sourceVersion: number;
   constructor(options: SpaceReferenceController["options"]) {
     this.options = options;
-    this.session = options.access().session;
+    const access = options.access();
+    this.session = access.session;
+    this.sourceVersion = access.sourceVersion;
   }
   current() {
     const access = this.options.access();
     return (
+      !this.disposed &&
+      access.sourceVersion === this.sourceVersion &&
       access.session !== null &&
       access.session === this.session &&
       access.canRead &&
@@ -77,9 +126,16 @@ export class SpaceReferenceController {
   invalidate() {
     this.generation++;
     this.resolutionGeneration++;
+    this.searches.cancel();
+    this.resolutions.cancel();
+  }
+  dispose() {
+    this.disposed = true;
+    this.invalidate();
   }
   async search(query: string): Promise<SpaceSearchWindow> {
     const generation = ++this.generation;
+    this.searches.cancel();
     if (query.length > 254) return { status: "invalid-query" };
     if (!query.trim()) return { status: "idle" };
     const limits = this.options.access().capability?.limits?.search;
@@ -101,19 +157,17 @@ export class SpaceReferenceController {
     const maximum = Math.min(32768, limits?.maxResponseBytes ?? 32768);
     const current = () => generation === this.generation && owner();
     if (!current()) return { status: "unsupported" };
-    // Serialize requests and skip obsolete queued queries instead of accumulating transport work.
-    const request = this.pending.then(async () => {
-      if (!current()) return null;
-      return this.options.search({
-        environmentId: this.options.environmentId,
-        query,
-        limit: rows,
-        ...(cursor ? { cursor } : {}),
-      });
-    });
-    this.pending = request.catch(() => undefined);
     try {
-      const result = await request;
+      const result = await this.searches.submit(async () =>
+        current()
+          ? this.options.search({
+              environmentId: this.options.environmentId,
+              query,
+              limit: rows,
+              ...(cursor ? { cursor } : {}),
+            })
+          : null,
+      );
       if (!current() || !result || result.items.length > rows || bytes(result) > maximum)
         return { status: "unavailable" };
       return {
@@ -155,16 +209,15 @@ export class SpaceReferenceController {
   async resolve(target: SpaceReferenceResolveInput["target"]) {
     const owner = this.owner("referenceResolution");
     const generation = ++this.resolutionGeneration;
+    this.resolutions.cancel();
     const currentOwner = () => owner() && generation === this.resolutionGeneration;
     if (!currentOwner()) return null;
     try {
-      const request = this.resolving.then(() =>
+      const result = await this.resolutions.submit(async () =>
         currentOwner()
           ? this.options.resolve({ environmentId: this.options.environmentId, target })
           : null,
       );
-      this.resolving = request.catch(() => undefined);
-      const result = await request;
       if (
         !currentOwner() ||
         !result ||

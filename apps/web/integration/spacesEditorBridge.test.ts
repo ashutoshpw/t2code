@@ -1457,7 +1457,7 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
         ),
     );
   let documents = makeDocuments();
-  const make = () =>
+  const make = (changed = () => {}) =>
     new SpaceRootReorder(environmentId, {
       store: {
         load: async () => stored,
@@ -1620,7 +1620,7 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
         refreshed++;
         await documents.refreshStructure(environmentId, pages);
       },
-      changed: () => {},
+      changed,
     });
   return {
     ...h,
@@ -5501,7 +5501,16 @@ const sourceFixture = Effect.fn("SpaceEditorServiceTest.sources")(function* (
 ) {
   const h = yield* rootReorderFixture(service);
   const rpc = yield* encodedRootRpc(service);
-  const access: SpaceReferenceAccess = { session: {}, canRead: true, capability: h.capability };
+  const q = yield* queryRuntime(h.ports, (input) => h.run(service.readBlocks(input)));
+  const changeAtom = q.queries.changed(environmentId);
+  const unmount = q.registry.mount(changeAtom);
+  yield* Effect.addFinalizer(() => Effect.sync(unmount));
+  const access: SpaceReferenceAccess = {
+    session: {},
+    sourceVersion: 0,
+    canRead: true,
+    capability: h.capability,
+  };
   const control = {
     access,
     searchGate: null as (ReturnType<typeof signal> & { reply: ReturnType<typeof signal> }) | null,
@@ -5512,7 +5521,7 @@ const sourceFixture = Effect.fn("SpaceEditorServiceTest.sources")(function* (
   const make = () =>
     new SpaceReferenceController({
       environmentId,
-      access: () => control.access,
+      access: () => ({ ...control.access, sourceVersion: q.registry.get(changeAtom) }),
       search: async (input) => {
         searches.push(input);
         const gate = control.searchGate;
@@ -5538,7 +5547,15 @@ const sourceFixture = Effect.fn("SpaceEditorServiceTest.sources")(function* (
         return result;
       },
     });
-  return { ...h, control, searches, resolves, sources: make(), makeSources: make };
+  return {
+    ...h,
+    control,
+    searches,
+    resolves,
+    sources: make(),
+    makeSources: make,
+    changed: () => q.registry.update(changeAtom, (value) => value + 1),
+  };
 });
 
 it.effect(
@@ -5688,6 +5705,199 @@ it.effect(
             const reads = h.resolves.length;
             assert.isNull(await fresh.resolve(sourceTarget));
             assert.equal(h.resolves.length, reads);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["search", "resolve"] as const)(
+  "settles superseded %s reads before held transport replies with one active and one latest pending request",
+  (method) =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* sourceFixture(service);
+          const deferredSignal = Effect.gen(function* () {
+            const done = yield* Deferred.make<void>();
+            const observed = signal();
+            yield* Deferred.await(done).pipe(
+              Effect.tap(() => Effect.sync(observed.resolve)),
+              Effect.forkScoped,
+            );
+            return {
+              promise: observed.promise,
+              resolve: () => {
+                Deferred.doneUnsafe(done, Effect.void);
+              },
+            };
+          });
+          const firstGate = { ...(yield* deferredSignal), reply: yield* deferredSignal };
+          const latestGate =
+            method === "resolve"
+              ? { ...(yield* deferredSignal), reply: yield* deferredSignal }
+              : null;
+          yield* Effect.promise(async () => {
+            assert.equal((await h.sources.search("Second")).status, "building");
+            {
+              const owner = h.makeSources();
+              const gate = firstGate;
+              const calls = () => (method === "search" ? h.searches.length : h.resolves.length);
+              const start = calls();
+              const request = () =>
+                method === "search"
+                  ? owner.search("Second").then((result) => result.status)
+                  : owner.resolve({ kind: "page", pageId: h.pages[1]! });
+              if (method === "search") h.control.searchGate = gate;
+              else h.control.resolveGate = gate;
+              const active = request();
+              await gate.promise;
+              let settled = 0;
+              const replaced = Array.from({ length: 10000 }, () =>
+                request().then((result) => {
+                  settled++;
+                  assert.equal(result, method === "search" ? "unavailable" : null);
+                }),
+              );
+              try {
+                // An independent authoritative read completes while the original reply remains held.
+                await h.ports.getPage(h.key);
+                assert.equal(
+                  settled,
+                  9999,
+                  `${method}: superseded callers settle before transport`,
+                );
+                assert.equal(calls(), start + 1);
+                owner.invalidate();
+                await Promise.all(replaced);
+                assert.equal(settled, 10000);
+                let canceled = false;
+                const pending = request().then((result) => {
+                  canceled = true;
+                  assert.equal(result, method === "search" ? "unavailable" : null);
+                });
+                owner.dispose();
+                await pending;
+                assert.isTrue(canceled);
+                assert.isFalse(owner.current());
+                const after = await request();
+                assert.equal(after, method === "search" ? "unsupported" : null);
+                assert.equal(calls(), start + 1);
+              } finally {
+                owner.invalidate();
+                gate.reply.resolve();
+                await active;
+                await Promise.all(replaced);
+              }
+              await h.ports.getPage(h.key);
+              assert.equal(calls(), start + 1, `${method}: no late revival or queued transport`);
+            }
+            if (!latestGate) return;
+            const owner = h.makeSources();
+            const gate = latestGate;
+            h.control.resolveGate = gate;
+            const active = owner.resolve({ kind: "page", pageId: h.pages[1]! });
+            await gate.promise;
+            const obsolete = owner.resolve({ kind: "page", pageId: h.pages[2]! });
+            const latest = owner.resolve({ kind: "page", pageId: h.pages[3]! });
+            await h.ports.getPage(h.key);
+            assert.isNull(await obsolete);
+            gate.reply.resolve();
+            assert.isNull(await active);
+            assert.equal((await latest)?.current()?.pageId, h.pages[3]!);
+            assert.deepEqual(
+              h.resolves.slice(-2).map((input) => input.target),
+              [
+                { kind: "page", pageId: h.pages[1]! },
+                { kind: "page", pageId: h.pages[3]! },
+              ],
+            );
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retires source ownership on actual local catalog changes without replacing a shared dirty document",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* sourceFixture(service);
+          yield* Effect.promise(async () => {
+            h.control.access = {
+              ...h.control.access,
+              capability: {
+                ...h.capability,
+                limits: {
+                  ...h.capability.limits,
+                  search: {
+                    ...h.capability.limits.search!,
+                    maxRows: 1,
+                  },
+                },
+              },
+            };
+            for (const [index, pageId] of h.pages.entries()) {
+              const page = await h.ports.getPage({ environmentId, pageId });
+              await h.make().renamePage(page.page, `Source ${index}`);
+            }
+            assert.equal((await h.sources.search("Source")).status, "building");
+            const window = await h.sources.search("Source");
+            if (window.status !== "ready") throw Error(window.status);
+            assert.isNotNull(window.result.nextCursor);
+            const beforeCatalog = window.result.catalogRevision;
+            const target = { kind: "page" as const, pageId: h.pages[1]! };
+            const resolved = await h.sources.resolve(target);
+            assert.isNotNull(resolved?.current());
+            const acquired = h.documents.open(h.key);
+            const doc = await acquired.ready;
+            const view = savedView(doc);
+            try {
+              assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              view.dispatch(view.state.tr.insertText("unsaved local content"));
+              const draft = doc.session.getSnapshot();
+              const searchGate = { ...signal(), reply: signal() };
+              const resolveGate = { ...signal(), reply: signal() };
+              const inFlight = h.makeSources();
+              h.control.searchGate = searchGate;
+              h.control.resolveGate = resolveGate;
+              const oldSearch = inFlight.search("Source"),
+                oldResolve = inFlight.resolve(target);
+              await Promise.all([searchGate.promise, resolveGate.promise]);
+              try {
+                const page = await h.ports.getPage({ environmentId, pageId: h.pages[1]! });
+                await h.make(h.changed).renamePage(page.page, "Source renamed current");
+                assert.isFalse(window.current());
+                assert.isNull(window.target(0));
+                assert.isNull(resolved?.current());
+                const calls = h.searches.length;
+                assert.equal((await window.next()).status, "unavailable");
+                assert.equal(h.searches.length, calls);
+              } finally {
+                searchGate.reply.resolve();
+                resolveGate.reply.resolve();
+              }
+              assert.equal((await oldSearch).status, "unavailable");
+              assert.isNull(await oldResolve);
+              const fresh = h.makeSources();
+              const current = await fresh.search("Renamed");
+              if (current.status !== "ready") throw Error(current.status);
+              assert.equal(current.result.items[0]!.page.title, "Source renamed current");
+              assert.isAbove(current.result.catalogRevision, beforeCatalog);
+              const peer = h.documents.open(h.key);
+              try {
+                assert.strictEqual(await peer.ready, doc);
+                assert.strictEqual(doc.session.getSnapshot(), draft);
+                assert.isTrue(draft.dirty);
+              } finally {
+                peer.release();
+              }
+            } finally {
+              view.stop();
+              acquired.release();
+            }
           });
         }),
       ),
