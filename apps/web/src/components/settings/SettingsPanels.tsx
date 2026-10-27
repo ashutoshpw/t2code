@@ -567,9 +567,6 @@ export function useSettingsRestore(onRestored?: () => void) {
     DEFAULT_UNIFIED_SETTINGS.newWorktreesStartFromOrigin
       ? ["New worktrees start from remote"]
       : []),
-    ...(settings.worktreeBranchPrefix !== DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix
-      ? ["Worktree branch prefix"]
-      : []),
     ...(settings.addProjectBaseDirectory !== DEFAULT_UNIFIED_SETTINGS.addProjectBaseDirectory
       ? ["Add project base directory"]
       : []),
@@ -690,7 +687,6 @@ export function useSettingsRestore(onRestored?: () => void) {
       providerHealthRefreshInterval: DEFAULT_UNIFIED_SETTINGS.providerHealthRefreshInterval,
       defaultThreadEnvMode: DEFAULT_UNIFIED_SETTINGS.defaultThreadEnvMode,
       newWorktreesStartFromOrigin: DEFAULT_UNIFIED_SETTINGS.newWorktreesStartFromOrigin,
-      worktreeBranchPrefix: DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix,
       addProjectBaseDirectory: DEFAULT_UNIFIED_SETTINGS.addProjectBaseDirectory,
       ghqCloneLayout: DEFAULT_UNIFIED_SETTINGS.ghqCloneLayout,
       confirmThreadArchive: DEFAULT_UNIFIED_SETTINGS.confirmThreadArchive,
@@ -939,7 +935,7 @@ export function GeneralSettingsPanel() {
               onCheckedChange={(checked) =>
                 updateSettings({ sidebarWorkingShelfEnabled: Boolean(checked) })
               }
-              aria-label={gt("Working section")}
+              aria-label="Working section"
             />
           }
         />
@@ -1761,36 +1757,6 @@ export function ThreadsSettingsPanel() {
       <SettingsSection id="new-projects" title="New projects">
         <SettingsRow
           serverScoped
-          {...searchableSetting("worktree-branch-prefix")}
-          description="Namespace for the branches T2 Code creates inside thread worktrees. Lowercase letters, digits, and dashes only."
-          resetAction={
-            settings.worktreeBranchPrefix !== DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix ? (
-              <SettingResetButton
-                label="worktree branch prefix"
-                onClick={() =>
-                  updateSettings({
-                    worktreeBranchPrefix: DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix,
-                  })
-                }
-              />
-            ) : null
-          }
-          control={
-            <DraftInput
-              size="sm"
-              className="w-full sm:w-72"
-              value={settings.worktreeBranchPrefix}
-              onCommit={(next) =>
-                updateSettings({ worktreeBranchPrefix: sanitizeWorktreeBranchPrefix(next) })
-              }
-              placeholder={DEFAULT_UNIFIED_SETTINGS.worktreeBranchPrefix}
-              spellCheck={false}
-              aria-label="Worktree branch prefix"
-            />
-          }
-        />
-        <SettingsRow
-          serverScoped
           settingKeys={["addProjectBaseDirectory"]}
           {...searchableSetting("add-project-starts-in")}
           description='Leave empty to use "~/" when the Add Project browser opens.'
@@ -2317,7 +2283,7 @@ export function AboutSettingsPanel() {
           {...searchableSetting("privacy-policy")}
           description={
             telemetryOff === undefined
-              ? "How we handle your data, including the anonymous usage data T3 Code collects."
+              ? "How we handle your data, including the anonymous usage data T2 Code collects."
               : `How we handle your data. ${telemetryOff}`
           }
           control={

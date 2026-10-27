@@ -580,7 +580,7 @@ const template = {
     {
       role: "system",
       content:
-        "Main prompt.\n - Primary working directory: /home/alice/app\n\n<runtime_info>old</runtime_info>\n\n## T3 Code orchestration\nold text",
+        "Main prompt.\n - Primary working directory: /home/alice/app\n\n<runtime_info>old</runtime_info>\n\n## T2 Code orchestration\nold text",
     },
     {
       role: "system",
@@ -626,7 +626,7 @@ const browserCase = (id: string) =>
     .map((line) => decodeDeviceCase(line))
     .find((c) => c.id === id)!;
 
-it("rebuilds the template from this checkout and sends a child T3's task prompt", () => {
+it("rebuilds the template from this checkout and sends a child T2's task prompt", () => {
   const base = buildBase(template, { model: "claude-sonnet-5-5", keepUserInstructions: false });
   const system = base.system.map((block) => String(block.text));
   assert.deepEqual(system.slice(0, 2), [
