@@ -23,7 +23,6 @@ const copilotModesProfile = process.env.T2_ACP_COPILOT_MODES === "1";
 const copilotModeId = (name: string) =>
   `https://agentclientprotocol.com/protocol/session-modes#${name}`;
 const modeOptionCategory = process.env.T2_ACP_MODE_OPTION_CATEGORY ?? "mode";
-const noAuthProfile = process.env.T2_ACP_NO_AUTH === "1";
 const emitToolCalls = process.env.T2_ACP_EMIT_TOOL_CALLS === "1";
 const emitInterleavedAssistantToolCalls =
   process.env.T2_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS === "1";
@@ -60,24 +59,7 @@ const failPromptOrdinal = Number(process.env.T2_ACP_FAIL_PROMPT_ORDINAL);
 const compactionPromptOrdinals = new Set(
   (process.env.T2_ACP_COMPACTION_PROMPT_ORDINALS ?? "").split(",").map(Number),
 );
-const initialGrokReasoningEffort =
-  process.env.T2_ACP_INITIAL_GROK_REASONING_EFFORT?.trim() || undefined;
-const omitSessionListHandler = process.env.T2_ACP_OMIT_SESSION_LIST_HANDLER === "1";
-const commandAdvertisementDelayMs = Number(
-  process.env.T2_ACP_COMMAND_ADVERTISEMENT_DELAY_MS ?? "-1",
-);
-  allowOnce: process.env.T2_ACP_ALLOW_ONCE_OPTION_ID ?? "allow-once",
-  allowAlways: process.env.T2_ACP_ALLOW_ALWAYS_OPTION_ID ?? "allow-always",
-  rejectOnce: process.env.T2_ACP_REJECT_ONCE_OPTION_ID ?? "reject-once",
-const omitAllowAlways = process.env.T2_ACP_OMIT_ALLOW_ALWAYS === "1";
-const permissionRequestCount = Math.max(
-  1,
-  Number(process.env.T2_ACP_PERMISSION_REQUEST_COUNT ?? "1") || 1,
-);
-const failSetConfigOption = process.env.T2_ACP_FAIL_SET_CONFIG_OPTION === "1";
 const failSetModeConfigOption = process.env.T2_ACP_FAIL_SET_MODE_CONFIG_OPTION === "1";
-const exitOnSetConfigOption = process.env.T2_ACP_EXIT_ON_SET_CONFIG_OPTION === "1";
-const omitModelConfigOption = process.env.T2_ACP_OMIT_MODEL_CONFIG_OPTION === "1";
 const emitEmptyDefaultAgentOption = process.env.T2_ACP_EMIT_EMPTY_DEFAULT_AGENT_OPTION === "1";
 const promptResponseText = process.env.T2_ACP_PROMPT_RESPONSE_TEXT;
 const promptDelayMs = Number(process.env.T2_ACP_PROMPT_DELAY_MS ?? "0");
@@ -389,10 +371,10 @@ function modeState(): AcpCompat.SessionModeState {
 // Grok ACP advertises versioned model ids, never the CLI product name.
 const grokAcpModels: ReadonlyArray<AcpCompat.ModelInfo> = [
   {
-    modelId: process.env.T2_ACP_GROK_MODEL ?? "grok-4.6",
+    modelId: "grok-4.6",
     name: "Grok 4.6",
     _meta: {
-      totalContextTokens: Number(process.env.T2_ACP_GROK_CONTEXT_TOKENS ?? 500_000),
+      totalContextTokens: 500_000,
       contextWindows: [256_000, 500_000],
       supportsReasoningEffort: true,
       reasoningEffort: "high",
@@ -412,7 +394,7 @@ function modelState(): AcpCompat.SessionModelState {
   }
   const modelId = grokAcpModels.some((model) => model.modelId === currentModelId)
     ? currentModelId
-    : (process.env.T2_ACP_GROK_MODEL ?? "grok-4.6");
+    : "grok-4.6";
   return {
     currentModelId: modelId,
     availableModels: grokAcpModels,
@@ -813,9 +795,6 @@ const program = Effect.gen(function* () {
       cancelledSessions.add(cancelledSessionId);
       if (completeFirstPromptOnCancel) {
         yield* Deferred.succeed(nativeCancelRequested, undefined);
-        if (autoFinishCancel) {
-          yield* Deferred.succeed(nativeCancelRelease, undefined);
-        }
         yield* agent.client.sessionUpdate({
           sessionId: cancelledSessionId,
           update: {
@@ -949,12 +928,6 @@ const program = Effect.gen(function* () {
           Effect.forkDetach,
         );
         return {};
-      }
-      if (
-        process.env.T2_ACP_CRASH_PROMPT === "1" &&
-        request.prompt.some((part) => part.type === "text" && part.text === "crash now")
-      ) {
-        return yield* Effect.sync(() => process.exit(23));
       }
 
       if (clientFsProbePath !== undefined && clientFsProbeLogPath !== undefined) {
@@ -1252,8 +1225,8 @@ const program = Effect.gen(function* () {
                 type: "search",
                 query: "t3 code",
                 sources: [
-                  { type: "url", url: "https://t2.codes" },
-                  { type: "url", url: "https://t2.codes" },
+                  { type: "url", url: "https://t3.codes" },
+                  { type: "url", url: "https://t3.codes" },
                   { type: "url", url: "https://github.com/pingdotgg/t3code" },
                 ],
               },
@@ -1264,15 +1237,15 @@ const program = Effect.gen(function* () {
           {
             sessionUpdate: "tool_call_update",
             toolCallId: "grok-web-fetch",
-            title: "Fetch: https://t2.codes",
+            title: "Fetch: https://t3.codes",
             kind: "fetch",
             status: "completed",
-            rawInput: { variant: "WebFetch", url: "https://t2.codes" },
+            rawInput: { variant: "WebFetch", url: "https://t3.codes" },
             rawOutput: {
               type: "WebFetch",
-              Content: { url: "https://t2.codes", content: "T2 Code page" },
+              Content: { url: "https://t3.codes", content: "T3 Code page" },
             },
-            content: [{ type: "content", content: { type: "text", text: "T2 Code page" } }],
+            content: [{ type: "content", content: { type: "text", text: "T3 Code page" } }],
           },
           {
             sessionUpdate: "tool_call_update",
@@ -1370,60 +1343,6 @@ const program = Effect.gen(function* () {
             status: "pending",
             rawInput: { command: "git status" },
           },
-        });
-        yield* agent.client.sessionUpdate({
-          sessionId: requestedSessionId,
-          update: {
-            sessionUpdate: "tool_call_update",
-            toolCallId,
-            title: "Terminal",
-            kind: "execute",
-            status: "in_progress",
-            rawInput: {
-              command: ["sleep", "120"],
-            },
-            // Grok-like mid-stream Bash re-report: exit_code 0 while still running.
-            rawOutput: { type: "Bash", exit_code: 0 },
-          },
-        });
-        yield* agent.client.sessionUpdate({
-          sessionId: requestedSessionId,
-          update: {
-            sessionUpdate: "tool_call_update",
-            toolCallId: "tool-call-output-1",
-            title: "get_command_or_subagent_output",
-            kind: "other",
-            status: "pending",
-            rawInput: { task_id: "task-running-1" },
-          },
-        });
-        yield* agent.client.sessionUpdate({
-          sessionId: requestedSessionId,
-          update: {
-            sessionUpdate: "tool_call_update",
-            toolCallId: "tool-call-output-1",
-            status: "in_progress",
-            rawOutput: { task_id: "task-running-1", status: "running" },
-          },
-        });
-        if (exitAfterRunningCommandLaunch) {
-          // The test sends `_test/exit` once T2 has recorded the published processes.
-          yield* Effect.promise(() => runningCommandPublished);
-          return yield* Effect.never;
-        }
-        while (!cancelledSessions.has(requestedSessionId)) {
-          yield* Effect.sleep("25 millis");
-        }
-        cancelledSessions.delete(requestedSessionId);
-        return yield* finishPrompt(requestedSessionId, "cancelled");
-      }
-
-      if (emitXAiRateLimitThenHang) {
-        writeJsonRpcNotification("_x.ai/session/prompt_complete", {
-          sessionId: requestedSessionId,
-          promptId: promptIdFromRequestMeta(request) ?? "mock-xai-rate-limit-prompt-1",
-          stopReason: "rate_limit",
-          agentResult: null,
         });
         return yield* Effect.never;
       }
@@ -1675,35 +1594,21 @@ const program = Effect.gen(function* () {
         ];
 
         let cancelled = cancelledSessions.delete(requestedSessionId);
-        for (let index = 0; index < permissionRequestCount; index++) {
-          const command =
-            index > 0
-              ? (process.env.T2_ACP_SECOND_PERMISSION_COMMAND ?? "cat server/package.json")
-              : "cat server/package.json";
-          const permission = yield* agent.client.requestPermission({
-            sessionId: requestedSessionId,
-            title: process.env.T2_ACP_PERMISSION_TITLE ?? `\`${command}\``,
-            subject: {
-              type: "tool_call",
-              toolCall: {
-                toolCallId: index === 0 ? toolCallId : `${toolCallId}-${index + 1}`,
-                title: process.env.T2_ACP_PERMISSION_TITLE ?? `\`${command}\``,
-                kind: "execute",
-                status: "pending",
-                rawInput: {
-                  variant: "Bash",
-                  command,
-                  description: index === 0 ? "Read package metadata" : "Read it again",
-                },
-                content: [
-                  {
-                    type: "content",
-                    content: {
-                      type: "text",
-                      text: `Not in allowlist: ${command}`,
-                    },
-                  },
-                ],
+        const command = "cat server/package.json";
+        const permission = yield* agent.client.requestPermission({
+          sessionId: requestedSessionId,
+          title: `\`${command}\``,
+          subject: {
+            type: "tool_call",
+            toolCall: {
+              toolCallId,
+              title: `\`${command}\``,
+              kind: "execute",
+              status: "pending",
+              rawInput: {
+                variant: "Bash",
+                command,
+                description: "Read package metadata",
               },
               content: [
                 {
@@ -1733,7 +1638,7 @@ const program = Effect.gen(function* () {
             status: "completed",
             rawOutput: {
               exitCode: 0,
-              stdout: '{ "name": "t2" }',
+              stdout: '{ "name": "t3" }',
               stderr: "",
             },
           },
@@ -1855,217 +1760,6 @@ const program = Effect.gen(function* () {
             });
           });
         }).pipe(Effect.forkDetach);
-        return yield* finishPrompt(requestedSessionId, "end_turn");
-      }
-
-      if (emitPostSettleMonitorFlow) {
-        const monitorToolCallId = "tool-call-monitor-1";
-
-        yield* agent.client.sessionUpdate({
-          sessionId: requestedSessionId,
-          update: {
-            sessionUpdate: "tool_call_update",
-            toolCallId: monitorToolCallId,
-            title: "Monitor: mock background task",
-            kind: "execute",
-            status: "pending",
-            rawInput: {},
-          },
-        });
-
-        yield* agent.client.sessionUpdate({
-          sessionId: requestedSessionId,
-          update: {
-            sessionUpdate: "tool_call_update",
-            toolCallId: monitorToolCallId,
-            status: "in_progress",
-          },
-        });
-
-        yield* Effect.gen(function* () {
-          yield* Effect.sleep("150 millis");
-          yield* Effect.sync(() => {
-            writeJsonRpcNotification("session/update", {
-              sessionId: requestedSessionId,
-              update: {
-                sessionUpdate: "user_message_chunk",
-                messageId: "mock-user-message",
-                content: {
-                  type: "text",
-                  text: 'Monitor "task-monitor-1" ended: [monitor ended: exit 0]',
-                },
-              },
-            });
-            writeJsonRpcNotification("session/update", {
-              sessionId: requestedSessionId,
-              update: {
-                sessionUpdate: "tool_call_update",
-                toolCallId: "tool-call-fetch-1",
-                title: "get_command_or_subagent_output",
-                kind: "other",
-                status: "pending",
-                rawInput: { task_id: "task-monitor-1" },
-              },
-            });
-            writeJsonRpcNotification("session/update", {
-              sessionId: requestedSessionId,
-              update: {
-                sessionUpdate: "tool_call_update",
-                toolCallId: "tool-call-fetch-1",
-                status: "completed",
-                rawOutput: { output: "MONITOR_LISTING_TOKEN" },
-              },
-            });
-          });
-          if (injectedReportTriggerPath === undefined) return;
-          while (!(yield* Effect.sync(() => NodeFS.existsSync(injectedReportTriggerPath)))) {
-            yield* Effect.sleep("20 millis");
-          }
-          yield* Effect.sync(() => {
-            writeJsonRpcNotification("session/update", {
-              sessionId: requestedSessionId,
-              update: {
-                sessionUpdate: "agent_message_chunk",
-                messageId: "mock-agent-message",
-                content: { type: "text", text: "Monitor finished. MONITOR_REPORT_TOKEN" },
-              },
-            });
-          });
-        }).pipe(Effect.forkDetach);
-
-        return yield* finishPrompt(requestedSessionId, "end_turn");
-      }
-
-      if (emitAskQuestion) {
-        yield* agent.client.extRequest("cursor/ask_question", {
-          toolCallId: "ask-question-tool-call-1",
-          title: "Question",
-          questions: [
-            {
-              id: "scope",
-              prompt: "Which scope?",
-              options: [
-                { id: "workspace", label: "Workspace" },
-                { id: "session", label: "Session" },
-              ],
-            },
-          ],
-        });
-
-        return yield* finishPrompt(requestedSessionId, "end_turn");
-      }
-
-      if (emitXAiAskUserQuestion || emitXAiAskUserQuestionThenHang) {
-        const result = yield* agent.client.extRequest("_x.ai/ask_user_question", {
-          method: "x.ai/ask_user_question",
-          params: {
-            sessionId: requestedSessionId,
-            toolCallId: "ask-user-question-tool-call-1",
-            questions: [
-              {
-                question: "Which scope should Grok use?",
-                multiSelect: null,
-                options: [
-                  { label: "Workspace", description: "Use the current workspace" },
-                  { label: "Session", description: "Only use this session" },
-                ],
-              },
-            ],
-            mode: "default",
-          },
-        });
-        if (typeof result !== "object" || result === null || !("outcome" in result)) {
-          throw new Error("Expected _x.ai/ask_user_question response outcome.");
-        }
-        if (result.outcome === "cancelled") {
-          return yield* finishPrompt(requestedSessionId, "end_turn");
-        }
-        if (
-          result.outcome !== "accepted" ||
-          !("answers" in result) ||
-          typeof result.answers !== "object" ||
-          result.answers === null
-        ) {
-          throw new Error("Expected accepted _x.ai/ask_user_question response answers.");
-        }
-
-        if (emitXAiAskUserQuestionThenHang) {
-          return yield* Effect.never;
-        }
-
-        return yield* finishPrompt(requestedSessionId, "end_turn");
-      }
-
-      if (emitXAiPlanMdWrite) {
-        // isGrokPlanMarkdownPath requires Grok's session layout.
-        const planRoot = process.env.T2_ACP_PLAN_ROOT ?? "/tmp/mock-home/.grok";
-        const planPath = `${planRoot}/sessions/${requestedSessionId}/plan.md`;
-        const planBody = "# Mock plan\n\n- Write the feature\n- Add a test\n- Ship it\n";
-        yield* agent.client.sessionUpdate({
-          sessionId: requestedSessionId,
-          update: {
-            sessionUpdate: "tool_call_update",
-            toolCallId: "enter-plan-mode-1",
-            title: "enter_plan_mode",
-            kind: "other",
-            status: "completed",
-            rawInput: { variant: "EnterPlanMode" },
-          },
-        });
-        yield* agent.client.sessionUpdate({
-          sessionId: requestedSessionId,
-          update: {
-            sessionUpdate: "tool_call_update",
-            toolCallId: "plan-md-write-1",
-            title: "write",
-            kind: "edit",
-            status: "pending",
-            rawInput: { file_path: planPath, content: planBody },
-          },
-        });
-        yield* agent.client.sessionUpdate({
-          sessionId: requestedSessionId,
-          update: {
-            sessionUpdate: "tool_call_update",
-            toolCallId: "plan-md-write-1",
-            kind: "edit",
-            status: "completed",
-            title: `Write \`${planPath}\``,
-            rawInput: { file_path: planPath, content: planBody },
-            content: [
-              {
-                type: "diff",
-                path: planPath,
-                oldText: "",
-                newText: planBody,
-              },
-            ],
-          },
-        });
-        return yield* finishPrompt(requestedSessionId, "end_turn");
-      }
-
-      if (emitXAiExitPlanMode) {
-        const result = yield* agent.client.extRequest("_x.ai/exit_plan_mode", {
-          method: "x.ai/exit_plan_mode",
-          params: {
-            sessionId: requestedSessionId,
-            toolCallId: "exit-plan-mode-tool-call-1",
-            planContent: "# Exit plan\n\n- Step one\n- Step two\n",
-          },
-        });
-        if (typeof result !== "object" || result === null || !("outcome" in result)) {
-          throw new Error("Expected _x.ai/exit_plan_mode response outcome.");
-        }
-        if (
-          result.outcome !== "abandoned" &&
-          result.outcome !== "approved" &&
-          result.outcome !== "request_changes"
-        ) {
-          throw new Error(
-            `Expected exit_plan_mode outcome abandoned|approved|request_changes, got ${String(result.outcome)}`,
-          );
-        }
         return yield* finishPrompt(requestedSessionId, "end_turn");
       }
 
