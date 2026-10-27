@@ -1,7 +1,8 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { useContext, useEffect, useState, useSyncExternalStore } from "react";
-import type { SpacePageId } from "@t2code/contracts/spaces";
+import type { SpacePageId, SpaceRecoveryOperation } from "@t2code/contracts/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
+import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
@@ -45,11 +46,15 @@ function RecoveryOwner(props: Props) {
 function Recovery({ environmentId, owner, pageId, current }: Props & { owner: SpaceRootReorder }) {
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
   const [open, setOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
   const [selected, setSelected] = useState<SpaceRecoveryPreview | null>(null);
   const availability = useSpacesAvailability(environmentId);
   const capability = useEnvironment(environmentId)?.serverConfig?.environment.capabilities.spaces;
   const supported = capability?.version === 2 && capability.features?.recovery === true;
   const trashPermission = useAtomValue(spacesEnvironment.trashPage.permissionAtom(environmentId));
+  const purgePermission = useAtomValue(
+    spacesEnvironment.permanentlyDeletePage.permissionAtom(environmentId),
+  );
   const restorePermission = useAtomValue(
     spacesEnvironment.restorePage.permissionAtom(environmentId),
   );
@@ -59,9 +64,10 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
   }, [owner]);
   const { busy, hydrated, journal, trash } = snapshot;
   const preview = selected === snapshot.recoveryPreview ? selected : null;
-  const inspect = async (id: SpacePageId, operation: "trash" | "restore") => {
+  const inspect = async (id: SpacePageId, operation: SpaceRecoveryOperation) => {
     if (operation === "trash" && current && !current()) return;
     setSelected(null);
+    setConfirmation("");
     await owner.previewRecovery(id, operation);
     if (operation !== "trash" || !current || current())
       setSelected(owner.getSnapshot().recoveryPreview);
@@ -72,8 +78,12 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
     availability === "writable" &&
     ((preview?.operation ?? (pageId ? "trash" : "restore")) === "trash"
       ? trashPermission
-      : restorePermission);
+      : preview?.operation === "permanentlyDelete"
+        ? purgePermission
+        : restorePermission);
   const blocked = !hydrated || busy || !!pending;
+  const retained = journal.history;
+  const history = retained && "pageIds" in retained ? retained : null;
   return (
     <div className="mt-3">
       <Button
@@ -102,10 +112,33 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
           <DialogTitle>Trash and recovery</DialogTitle>
           <DialogDescription>
             Inspect the current selected batch before confirming. Save or resolve affected drafts
-            first. Close unavailable page views before restoring them. Permanent deletion and
-            recovery Undo are unavailable.
+            first. Close unavailable page views before recovery. One guarded visibility inverse may
+            be retained for the last bounded action. It does not undo content or placement.
+            Permanent deletion is irreversible and has no Undo.
           </DialogDescription>
           <div className="mt-4 space-y-3">
+            {history ? (
+              <div className="space-y-2">
+                <p>
+                  Last bounded {history.scope} action · {history.pageIds.length} page(s) ·{" "}
+                  {history.pageId}. Visibility only; existing content and placement histories are
+                  separate. Trashing creates a new batch.
+                </p>
+                <Button
+                  variant="outline"
+                  disabled={
+                    blocked ||
+                    !supported ||
+                    availability !== "writable" ||
+                    (history.operation === "trashPage" ? !trashPermission : !restorePermission)
+                  }
+                  onClick={() => run(owner.compensate(history.direction))}
+                >
+                  {history.direction === "undo" ? "Undo" : "Redo"} last {history.scope} visibility (
+                  {history.operation === "trashPage" ? "move to trash" : "restore"})
+                </Button>
+              </div>
+            ) : null}
             {!supported ? (
               <p role="status">
                 This environment does not advertise Trash support. Retained receipt recovery remains
@@ -155,6 +188,13 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
                       >
                         Inspect restore
                       </Button>
+                      <Button
+                        variant="outline"
+                        disabled={blocked || !supported}
+                        onClick={() => run(inspect(page.pageId, "permanentlyDelete"))}
+                      >
+                        Inspect permanent deletion…
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -163,7 +203,12 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
             {preview ? (
               <div className="space-y-2">
                 <p>
-                  {preview.operation === "trash" ? "Move to trash" : "Restore"}: {preview.pageId}
+                  {preview.operation === "trash"
+                    ? "Move to trash"
+                    : preview.operation === "restore"
+                      ? "Restore"
+                      : "Permanently delete"}
+                  : {preview.pageId}
                 </p>
                 <p>{preview.placement}</p>
                 <p>Current selected pages ({preview.inspection.recovery!.pageIds.length}):</p>
@@ -184,19 +229,40 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
                     </li>
                   ))}
                 </ul>
+                {preview.operation === "permanentlyDelete" ? (
+                  <label>
+                    This permanently deletes the named {preview.inspection.recovery!.pageIds.length}{" "}
+                    page(s), including their inspected descendants. This cannot be undone. Type
+                    DELETE to confirm
+                    <Input
+                      value={confirmation}
+                      onChange={(event) => setConfirmation(event.target.value)}
+                    />
+                  </label>
+                ) : null}
                 <Button
                   variant="outline"
                   disabled={
                     blocked ||
+                    (preview.operation === "permanentlyDelete" && confirmation !== "DELETE") ||
                     !writable ||
                     (preview.operation === "trash" && !!current && !current())
                   }
                   onClick={() => {
                     if (preview.operation !== "trash" || !current || current())
-                      run(owner.confirmRecovery(preview));
+                      run(
+                        owner.confirmRecovery(
+                          preview,
+                          preview.operation === "permanentlyDelete" && confirmation === "DELETE",
+                        ),
+                      );
                   }}
                 >
-                  {preview.operation === "trash" ? "Confirm move to trash" : "Confirm restore"}
+                  {preview.operation === "trash"
+                    ? "Confirm move to trash"
+                    : preview.operation === "restore"
+                      ? "Confirm restore"
+                      : `Permanently delete ${preview.inspection.recovery!.pageIds.length} page(s) (irreversible)`}
                 </Button>
               </div>
             ) : null}
@@ -204,16 +270,22 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
               <div className="space-y-2">
                 <p role="status">
                   Retained {pending.request.operation}.{" "}
-                  {pending.conflict
-                    ? "Conflicted; reinspection starts a new intent."
-                    : "Resolve the exact receipt before editing affected pages."}
+                  {pending.rejection
+                    ? "Rejected before commit by the server; reinspection starts a new intent."
+                    : pending.conflict
+                      ? "Conflicted; reinspection starts a new intent."
+                      : "Resolve the exact receipt before editing affected pages."}
                 </p>
                 <Button
                   variant="outline"
                   disabled={busy || !hydrated || (pending.conflict && availability !== "writable")}
                   onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
                 >
-                  {pending.conflict ? "Reinspect conflicted operation" : "Recover exact receipt"}
+                  {pending.rejection
+                    ? "Reinspect rejected deletion"
+                    : pending.conflict
+                      ? "Reinspect conflicted operation"
+                      : "Recover exact receipt"}
                 </Button>
               </div>
             ) : null}

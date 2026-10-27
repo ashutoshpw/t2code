@@ -19,6 +19,16 @@ const placement = Schema.Struct({
   guards: C.SpaceStructureGuards,
   observed: C.SpaceStructureGuards,
 });
+const recoveryHistory = Schema.Struct({
+  operation: Schema.Literals(["trashPage", "restorePage"]),
+  scope: Schema.Literals(["created child", "page recovery"]),
+  pageId: C.SpacePageId,
+  pageIds: Schema.Array(C.SpacePageId),
+  pages: Schema.Array(C.SpacePageSummary),
+  guards: C.SpaceStructureGuards,
+  observed: C.SpaceStructureGuards,
+  direction: Schema.Literals(["undo", "redo"]),
+});
 const pendingSchema = Schema.Struct({
   ...context,
   request: Schema.Union([
@@ -30,20 +40,30 @@ const pendingSchema = Schema.Struct({
     }),
     Schema.Struct({ operation: Schema.Literal("trashPage"), input: C.SpacePageRecoveryInput }),
     Schema.Struct({ operation: Schema.Literal("restorePage"), input: C.SpacePageRecoveryInput }),
+    Schema.Struct({
+      operation: Schema.Literal("permanentlyDeletePage"),
+      input: C.SpacePageRecoveryInput,
+    }),
   ]),
   recoveryPageIds: Schema.optionalKey(Schema.Array(C.SpacePageId)),
+  recoveryBefore: Schema.optionalKey(Schema.Array(C.SpacePageSummary)),
+  recoveryScope: Schema.optionalKey(Schema.Literals(["created child", "page recovery"])),
   knownBlockIds: Schema.optionalKey(Schema.Array(C.SpaceBlockId)),
   inverse: Schema.NullOr(C.SpacePageDestination),
   observed: C.SpaceStructureGuards,
   direction: Schema.Literals(["move", "undo", "redo"]),
   conflict: Schema.Boolean,
+  rejection: Schema.optionalKey(Schema.Literals(["invalid_input", "invalid_recovery_state"])),
 });
 const journalSchema = Schema.Struct({
   version: Schema.Literal(1),
   environmentId: EnvironmentId,
   pending: Schema.NullOr(pendingSchema),
   history: Schema.NullOr(
-    Schema.Struct({ ...placement.fields, direction: Schema.Literals(["undo", "redo"]) }),
+    Schema.Union([
+      Schema.Struct({ ...placement.fields, direction: Schema.Literals(["undo", "redo"]) }),
+      recoveryHistory,
+    ]),
   ),
 });
 export type SpaceStructureJournal = typeof journalSchema.Type;
@@ -53,14 +73,52 @@ type MoveReceipt =
   | { operation: "movePage"; result: C.SpaceMovePageResult }
   | { operation: "moveBlocks"; result: C.SpaceMoveBlocksResult }
   | { operation: "createChildPage"; result: C.SpaceCreateChildPageResult }
-  | { operation: "trashPage" | "restorePage"; result: C.SpacePageRecoveryResult };
+  | { operation: "trashPage" | "restorePage"; result: C.SpacePageRecoveryResult }
+  | { operation: "permanentlyDeletePage"; result: C.SpacePagePurgeResult };
 const sameLocation = (a: C.SpacePageLocation, b: C.SpacePageLocation) =>
   a.kind === b.kind &&
   a.spaceId === b.spaceId &&
   (a.kind === "root" ||
     (b.kind === "child" && a.ownerBlockId === b.ownerBlockId && a.parentPageId === b.parentPageId));
+const recoveryRequest = (operation: Pending["request"]["operation"]) =>
+  operation === "trashPage" || operation === "restorePage" || operation === "permanentlyDeletePage";
+const sameIds = <A extends string>(a: readonly A[], b: readonly A[]) =>
+  a.length === b.length && new Set(a).size === a.length && a.every((id) => b.includes(id));
+function sameRecoveryContext(a: readonly C.SpacePageSummary[], b: readonly C.SpacePageSummary[]) {
+  return (
+    sameIds(
+      a.map((p) => p.id),
+      b.map((p) => p.id),
+    ) &&
+    a.every((p) => {
+      const other = b.find((row) => row.id === p.id)!;
+      return (
+        (p.location
+          ? !!other.location && sameLocation(p.location, other.location)
+          : !other.location) &&
+        (p.trash
+          ? !!other.trash &&
+            p.trash.batchId === other.trash.batchId &&
+            p.trash.originalRootPageId === other.trash.originalRootPageId &&
+            p.trash.trashedAt === other.trash.trashedAt
+          : !other.trash)
+      );
+    })
+  );
+}
+function recoveryPages(pages: readonly C.SpacePageSummary[], expected: C.SpaceStructureGuards) {
+  if (
+    !sameIds(
+      pages.map((p) => p.id),
+      expected.pages.map((p) => p.pageId),
+    ) ||
+    !pages.every((p) => expected.pages.some((g) => g.pageId === p.id && g.revision === p.revision))
+  )
+    throw new Error("Invalid retained recovery page context");
+}
 export const spaceStructureMaxBytes = 2 * 1024 * 1024;
 const decode = Schema.decodeUnknownSync(journalSchema, { onExcessProperty: "error" });
+const isValidationError = Schema.is(C.SpaceValidationError);
 const copy = <A>(value: A): A => JSON.parse(JSON.stringify(value)) as A;
 function freeze<A>(value: A): A {
   if (typeof value === "object" && value !== null) {
@@ -142,11 +200,14 @@ export function decodeSpaceStructureJournal(
       throw new Error("Invalid retained placement");
     guards(input.guards);
     guards(p.observed);
+    if (p.rejection && (request.operation !== "permanentlyDeletePage" || !p.conflict))
+      throw new Error("Invalid retained permanent-deletion rejection");
     if (
       (request.operation !== "createChildPage" && p.knownBlockIds !== undefined) ||
-      (request.operation !== "trashPage" &&
-        request.operation !== "restorePage" &&
-        p.recoveryPageIds !== undefined)
+      (!recoveryRequest(request.operation) &&
+        (p.recoveryPageIds !== undefined ||
+          p.recoveryBefore !== undefined ||
+          p.recoveryScope !== undefined))
     )
       throw new Error("Retained operation metadata does not match its request");
     if (request.operation === "moveBlocks") {
@@ -166,17 +227,28 @@ export function decodeSpaceStructureJournal(
         !p.targetSpaceId ||
         !p.knownBlockIds ||
         p.observed.pages.length >= 8 ||
-        !covered(input.guards, p.observed) ||
+        !sameIds(
+          input.guards.pages.map((g) => g.pageId),
+          p.observed.pages.map((g) => g.pageId),
+        ) ||
+        !p.observed.roots.every(
+          (g) =>
+            input.guards.roots.some((k) => k.spaceId === g.spaceId) ||
+            g.spaceId === p.targetSpaceId,
+        ) ||
         !input.guards.pages.some((g) => g.pageId === request.input.placement.pageId) ||
         p.knownBlockIds.length > 100 ||
         new Set(p.knownBlockIds).size !== p.knownBlockIds.length
       )
         throw new Error("Invalid retained child creation");
-    } else if (request.operation === "trashPage" || request.operation === "restorePage") {
+    } else if (
+      request.operation === "trashPage" ||
+      request.operation === "restorePage" ||
+      request.operation === "permanentlyDeletePage"
+    ) {
       if (
         p.inverse ||
-        p.direction !== "move" ||
-        !covered(input.guards, p.observed) ||
+        (request.operation === "permanentlyDeletePage" && p.direction !== "move") ||
         !p.recoveryPageIds ||
         p.recoveryPageIds.length < 1 ||
         p.recoveryPageIds.length > 8 ||
@@ -185,6 +257,9 @@ export function decodeSpaceStructureJournal(
         !p.recoveryPageIds.every((id) => input.guards.pages.some((g) => g.pageId === id))
       )
         throw new Error("Invalid retained recovery closure");
+      if (p.recoveryBefore) recoveryPages(p.recoveryBefore, input.guards);
+      if (p.direction !== "move" && (!p.recoveryBefore || !p.recoveryScope))
+        throw new Error("Missing retained compensation context");
     } else {
       const i = request.input;
       if (
@@ -211,7 +286,25 @@ export function decodeSpaceStructureJournal(
     guards(h.observed);
     if (!h.guards.pages.some((p) => p.pageId === h.pageId) || !covered(h.observed, h.guards))
       throw new Error("Invalid retained placement history");
-    if (h.operation === "moveBlocks") {
+    if (h.operation === "trashPage" || h.operation === "restorePage") {
+      recoveryPages(h.pages, h.guards);
+      if (
+        h.pageIds.length < 1 ||
+        h.pageIds.length > 8 ||
+        !h.pageIds.includes(h.pageId) ||
+        new Set(h.pageIds).size !== h.pageIds.length ||
+        !h.pageIds.every((id) => h.guards.pages.some((g) => g.pageId === id)) ||
+        (h.scope === "created child" && h.pageIds.length !== 1)
+      )
+        throw new Error("Invalid retained recovery history selection");
+      const selected = h.pages.filter((p) => h.pageIds.includes(p.id));
+      if (
+        h.operation === "trashPage"
+          ? selected.some((p) => p.trash)
+          : selected.some((p) => !p.trash || p.trash.batchId !== selected[0]?.trash?.batchId)
+      )
+        throw new Error("Invalid retained recovery history batch");
+    } else if (h.operation === "moveBlocks") {
       if (
         !h.blockIds ||
         h.destination.kind !== "child" ||
@@ -224,7 +317,7 @@ export function decodeSpaceStructureJournal(
       )
         throw new Error("Invalid retained block history");
       roots(h.blockIds);
-    } else {
+    } else if ("destination" in h) {
       if (h.destination.kind === "child" && (!h.targetSpaceId || !h.sourceLocation))
         throw new Error("Invalid retained placement history");
       destination(h.destination, h.pageId, h.guards);
@@ -238,6 +331,24 @@ export function decodeSpaceStructureJournal(
         throw new Error("Invalid retained inverse space");
     }
     spaceJsonBytes(h, 256 * 1024);
+  }
+  if (
+    p &&
+    p.direction !== "move" &&
+    (p.request.operation === "trashPage" || p.request.operation === "restorePage")
+  ) {
+    if (
+      !h ||
+      h.operation !== p.request.operation ||
+      h.pageId !== p.request.input.pageId ||
+      h.direction !== p.direction ||
+      h.scope !== p.recoveryScope ||
+      !sameIds(h.pageIds, p.recoveryPageIds ?? []) ||
+      !sameRecoveryContext(h.pages, p.recoveryBefore ?? []) ||
+      !covered(h.guards, p.request.input.guards) ||
+      !covered(p.request.input.guards, h.guards)
+    )
+      throw new Error("Recovery compensation does not match retained history");
   }
   return journal;
 }
@@ -280,6 +391,7 @@ export interface SpaceRootReorderPorts {
     operation: "trashPage" | "restorePage",
     input: C.SpacePageRecoveryInput,
   ) => Promise<C.SpacePageRecoveryResult>;
+  readonly purge: (input: C.SpacePageRecoveryInput) => Promise<C.SpacePagePurgeResult>;
   readonly trashList: (input: C.SpaceTrashListInput) => Promise<C.SpaceTrashListResult>;
   readonly moveBlocks: (input: C.SpaceMoveBlocksInput) => Promise<C.SpaceMoveBlocksResult>;
   readonly move: (input: C.SpaceMovePageInput) => Promise<C.SpaceMovePageResult>;
@@ -313,7 +425,7 @@ export interface SpaceBlockMoveProof {
 }
 export interface SpaceRecoveryPreview {
   readonly pageId: C.SpacePageId;
-  readonly operation: "trash" | "restore";
+  readonly operation: C.SpaceRecoveryOperation;
   readonly inspection: C.SpaceInspectStructureResult;
   readonly placement: string;
 }
@@ -611,7 +723,7 @@ export class SpaceRootReorder {
       this.#update({ trash: copy(trash), recoveryPreview: null });
     }, false);
   }
-  previewRecovery(pageId: C.SpacePageId, operation: "trash" | "restore") {
+  previewRecovery(pageId: C.SpacePageId, operation: C.SpaceRecoveryOperation) {
     return this.#exclusive(async () => {
       this.#assertRecovery(false);
       this.#update({ recoveryPreview: null });
@@ -638,28 +750,37 @@ export class SpaceRootReorder {
           ? inspection.pages.find((p) => p.id === location.parentPageId)
           : null;
       const placement =
-        operation === "trash"
-          ? "Hide the selected current subtree. Independently trashed batches stay separate."
-          : location?.kind === "root"
-            ? `Restore at its current root placement in space ${location.spaceId}.`
-            : location?.kind === "child" && parent && !parent.trash
-              ? `Restore under current parent ${parent.id}; preserve its existing owner marker.`
-              : "Restore at the original surviving space root because the current owner is unavailable or still in trash. No retired marker is revived.";
+        operation === "permanentlyDelete"
+          ? "Permanently delete the entire inspected current trashed subtree, including independent batches within it. This is irreversible; there is no Undo."
+          : operation === "trash"
+            ? "Hide the selected current subtree. Independently trashed batches stay separate."
+            : location?.kind === "root"
+              ? `Restore at its current root placement in space ${location.spaceId}.`
+              : location?.kind === "child" && parent && !parent.trash
+                ? `Restore under current parent ${parent.id}; preserve its existing owner marker.`
+                : "Restore at the original surviving space root because the current owner is unavailable or still in trash. No retired marker is revived.";
       this.#update({ recoveryPreview: freeze(copy({ pageId, operation, inspection, placement })) });
     }, false);
   }
-  confirmRecovery(preview: SpaceRecoveryPreview) {
+  confirmRecovery(preview: SpaceRecoveryPreview, confirmPermanentDeletion = false) {
     return this.#exclusive(async () => {
       this.#assertRecovery(true);
       if (this.#snapshot.recoveryPreview !== preview)
         throw new Error("Inspect the current recovery selection first");
+      if (preview.operation === "permanentlyDelete" && !confirmPermanentDeletion)
+        throw new Error("Permanent deletion requires explicit irreversible confirmation");
       const observed = preview.inspection.guards;
       await this.#stage(observed, async () => {
         const admission = await this.#ports.spaces({ environmentId: this.environmentId, limit: 1 });
         this.#assertRecovery(true);
         return {
           request: {
-            operation: preview.operation === "trash" ? "trashPage" : "restorePage",
+            operation:
+              preview.operation === "trash"
+                ? "trashPage"
+                : preview.operation === "restore"
+                  ? "restorePage"
+                  : "permanentlyDeletePage",
             input: {
               environmentId: this.environmentId,
               pageId: preview.pageId,
@@ -669,6 +790,8 @@ export class SpaceRootReorder {
             },
           },
           recoveryPageIds: preview.inspection.recovery!.pageIds,
+          recoveryBefore: preview.inspection.pages,
+          recoveryScope: "page recovery",
           inverse: null,
           observed,
           direction: "move",
@@ -725,7 +848,18 @@ export class SpaceRootReorder {
           targetSpaceId: body.spaceId,
           knownBlockIds: [...new Set([...body.blocks.map((b) => b.id), ...inspection.blockIds])],
           inverse: null,
-          observed: inspection.guards,
+          observed: {
+            ...inspection.guards,
+            roots: inspection.guards.roots.some((r) => r.spaceId === admission.space.id)
+              ? inspection.guards.roots
+              : [
+                  ...inspection.guards.roots,
+                  {
+                    spaceId: admission.space.id,
+                    rootOrderRevision: admission.space.rootOrderRevision,
+                  },
+                ],
+          },
           direction: "move",
           conflict: false,
         };
@@ -965,6 +1099,59 @@ export class SpaceRootReorder {
       const h = this.#snapshot.journal.history;
       if (!h || h.direction !== direction)
         throw new Error("No guarded placement is retained for this direction");
+      if (!("destination" in h)) {
+        this.#assertRecovery(true);
+        let inspected: C.SpaceInspectStructureResult;
+        try {
+          inspected = await this.#ports.inspect({
+            environmentId: this.environmentId,
+            target: { kind: "page", pageId: h.pageId },
+            recovery: h.operation === "trashPage" ? "trash" : "restore",
+          });
+        } catch {
+          throw new Error(
+            "The retained recovery inverse is unavailable; inspect a new action explicitly",
+          );
+        }
+        if (
+          !sameIds(inspected.recovery?.pageIds ?? [], h.pageIds) ||
+          !sameRecoveryContext(inspected.pages, h.pages) ||
+          !sameIds(
+            inspected.guards.roots.map((r) => r.spaceId),
+            h.guards.roots.map((r) => r.spaceId),
+          )
+        )
+          throw new Error(
+            "The retained recovery closure, ownership or batch changed; inverse is unavailable",
+          );
+        await this.#stage(h.observed, async () => {
+          const admission = await this.#ports.spaces({
+            environmentId: this.environmentId,
+            limit: 1,
+          });
+          this.#assertRecovery(true);
+          return {
+            request: {
+              operation: h.operation,
+              input: {
+                environmentId: this.environmentId,
+                pageId: h.pageId,
+                guards: h.guards,
+                mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+                receiptEpoch: admission.mutationAdmission.epoch,
+              },
+            },
+            recoveryPageIds: h.pageIds,
+            recoveryBefore: h.pages,
+            recoveryScope: h.scope,
+            observed: h.observed,
+            inverse: null,
+            direction,
+            conflict: false,
+          };
+        });
+        return;
+      }
       let current: C.SpaceInspectStructureResult;
       try {
         current =
@@ -1169,6 +1356,34 @@ export class SpaceRootReorder {
         operation: "createChildPage",
         result: await this.#ports.createChild(copy(request.input)),
       });
+    } else if (request.operation === "permanentlyDeletePage") {
+      this.#assertRecovery(true);
+      let result: C.SpacePagePurgeResult;
+      try {
+        result = await this.#ports.purge(copy(request.input));
+      } catch (error) {
+        if (
+          !isValidationError(error) ||
+          (error.reason !== "invalid_input" && error.reason !== "invalid_recovery_state")
+        )
+          throw error;
+        const journal = decodeSpaceStructureJournal(
+          {
+            ...this.#snapshot.journal,
+            pending: { ...pending, conflict: true, rejection: error.reason },
+          },
+          this.environmentId,
+        );
+        await this.#ports.store.write(this.environmentId, journal);
+        this.#update({
+          journal,
+          notice:
+            "The server rejected permanent deletion before committing because the inspected selection or trash state is no longer valid. The exact attempted intent is retained; inspect explicitly to start a new intent.",
+        });
+        this.#unlock();
+        return;
+      }
+      await this.#ack({ operation: "permanentlyDeletePage", result });
     } else if (request.operation === "trashPage" || request.operation === "restorePage") {
       this.#assertRecovery(true);
       await this.#ack({
@@ -1215,7 +1430,8 @@ export class SpaceRootReorder {
             receipt.receipt.operation !== "moveBlocks" &&
             receipt.receipt.operation !== "createChildPage" &&
             receipt.receipt.operation !== "trashPage" &&
-            receipt.receipt.operation !== "restorePage")
+            receipt.receipt.operation !== "restorePage" &&
+            receipt.receipt.operation !== "permanentlyDeletePage")
         )
           throw new Error("Mismatched structural receipt operation");
         await this.#ack(receipt.receipt);
@@ -1231,6 +1447,60 @@ export class SpaceRootReorder {
       });
     this.#work = work;
     return work;
+  }
+  async #recoveryHistory(
+    p: Pending,
+    receipt: MoveReceipt,
+    observed: C.SpaceStructureGuards,
+  ): Promise<typeof recoveryHistory.Type> {
+    const created =
+      receipt.operation === "createChildPage" && receipt.result.status === "saved"
+        ? receipt.result.page
+        : null;
+    if (!created && p.request.operation !== "trashPage" && p.request.operation !== "restorePage")
+      throw new Error("No recovery inverse");
+    const pageId = created ? created.id : (p.request.input as C.SpacePageRecoveryInput).pageId;
+    const operation =
+      p.request.operation === "trashPage" ? ("restorePage" as const) : ("trashPage" as const);
+    const inspected = await this.#ports.inspect({
+      environmentId: this.environmentId,
+      target: { kind: "page", pageId },
+      recovery: operation === "trashPage" ? "trash" : "restore",
+    });
+    guards(inspected.guards);
+    const pageIds = created ? [created.id] : (p.recoveryPageIds ?? []);
+    if (
+      !sameIds(inspected.recovery?.pageIds ?? [], pageIds) ||
+      !covered(observed, inspected.guards)
+    )
+      throw new Error(
+        "Recovery accepted. Undo is unavailable because the complete inverse guards or current closure are not proven.",
+      );
+    const before = created
+      ? [created]
+      : p.recoveryBefore?.filter((page) => pageIds.includes(page.id));
+    if (
+      !before ||
+      !before.every((page) => {
+        const now = inspected.pages.find((row) => row.id === page.id);
+        return (
+          !!now && !!page.location && !!now.location && sameLocation(page.location, now.location)
+        );
+      })
+    )
+      throw new Error(
+        "Recovery accepted. Undo is unavailable because restore changed placement or original ownership is unproven.",
+      );
+    return {
+      operation,
+      scope: created ? "created child" : (p.recoveryScope ?? "page recovery"),
+      pageId,
+      pageIds,
+      pages: inspected.pages,
+      guards: inspected.guards,
+      observed,
+      direction: p.direction === "undo" ? "redo" : "undo",
+    };
   }
   async #ack(receipt: MoveReceipt) {
     const p = this.#snapshot.journal.pending!,
@@ -1340,6 +1610,18 @@ export class SpaceRootReorder {
       )
         throw new Error("Mismatched recovery acknowledgement");
     }
+    const deleted =
+      receipt.operation === "permanentlyDeletePage" && receipt.result.status === "saved"
+        ? receipt.result
+        : null;
+    if (
+      deleted &&
+      (p.request.operation !== "permanentlyDeletePage" ||
+        deleted.pageId !== p.request.input.pageId ||
+        !sameIds(deleted.deletedPageIds, p.recoveryPageIds ?? []) ||
+        deleted.changed.pages.some((g) => deleted.deletedPageIds.includes(g.pageId)))
+    )
+      throw new Error("Mismatched permanent deletion acknowledgement");
     for (const row of result.changed.pages)
       if (
         !(created && row.pageId === created.page.id && row.revision === 0) &&
@@ -1434,10 +1716,18 @@ export class SpaceRootReorder {
       p.request.operation === "restorePage"
     ) {
       history = null;
+      try {
+        this.#assertRecovery(false);
+        history = await this.#recoveryHistory(p, receipt, observed);
+        notice = `Accepted. One guarded recovery ${history.direction} is retained for the last bounded ${history.scope} action; it changes visibility only, not content or placement. Trashing allocates a new batch.`;
+      } catch (error) {
+        notice = `Accepted. Undo is unavailable. ${error instanceof Error ? error.message : "The inverse context could not be proven."}`;
+      }
+    }
+    if (deleted) {
+      history = null;
       notice =
-        p.request.operation === "createChildPage"
-          ? `Child created: ${savedPage?.id}. Undo is unavailable; inspect its current subtree to move it to trash.`
-          : "Recovery accepted. Undo is unavailable; inspect the current page or Trash to start another recovery intent.";
+        "Permanently deleted the inspected pages. This is irreversible; Undo is unavailable.";
     }
     const journal = decodeSpaceStructureJournal(
       { version: 1, environmentId: this.environmentId, pending: null, history },
@@ -1457,7 +1747,12 @@ export class SpaceRootReorder {
     this.#accepted = null;
     this.#ports.changed();
     try {
-      await this.#ports.refresh(result.changed.pages.map((p) => p.pageId));
+      await this.#ports.refresh([
+        ...new Set([
+          ...result.changed.pages.map((p) => p.pageId),
+          ...(deleted?.deletedPageIds ?? []),
+        ]),
+      ]);
     } finally {
       this.#unlock();
     }

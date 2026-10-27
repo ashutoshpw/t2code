@@ -118,6 +118,17 @@ export function createSpacesEnvironmentAtoms<R, E>(
             : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
         }),
     }),
+    permanentlyDeletePage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:permanently-delete-page",
+      tag: WS_METHODS.spacesPagesPermanentlyDelete,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.recovery === true
+            ? requestGuarded(WS_METHODS.spacesPagesPermanentlyDelete, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
     trash: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:spaces:trash",
       tag: WS_METHODS.spacesTrashList,

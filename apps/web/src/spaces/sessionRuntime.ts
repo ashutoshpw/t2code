@@ -229,6 +229,16 @@ export function spaceRootReorder(
         throw new Error("Spaces connection changed; recover the exact child-creation receipt");
       return result;
     },
+    purge: async (input) => {
+      access(true);
+      const previous = connection();
+      const result = unwrap(
+        await spacesEnvironment.permanentlyDeletePage.run(registry, { environmentId, input }),
+      );
+      if (connection() !== previous)
+        throw new Error("Spaces connection changed; recover the exact permanent-deletion receipt");
+      return result;
+    },
     recovery: async (operation, input) => {
       access(true);
       const previous = connection();

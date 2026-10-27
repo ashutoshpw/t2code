@@ -653,3 +653,65 @@ it("retains exact child/recovery journal identities and rejects inconsistent ope
     }
   }
 });
+
+it("validates retained recovery compensation context and pending direction without altering invalid data", () => {
+  const pageId = SpacePageId.make("recovery-root");
+  const spaceId = SpaceId.make("space");
+  const order = "40000000000000000000000000000000";
+  const page = {
+    id: pageId,
+    spaceId,
+    title: "Retained",
+    revision: 3,
+    rootOrder: order,
+    location: { kind: "root", spaceId, order },
+    createdAt: "2026-10-27T00:00:00.000Z",
+    updatedAt: "2026-10-27T00:00:00.000Z",
+    trash: { batchId: "batch", originalRootPageId: pageId, trashedAt: "2026-10-27T00:00:00.000Z" },
+  };
+  const guards = { pages: [{ pageId, revision: 3 }], roots: [{ spaceId, rootOrderRevision: 2 }] };
+  const history = {
+    operation: "restorePage",
+    scope: "page recovery",
+    pageId,
+    pageIds: [pageId],
+    pages: [page],
+    guards,
+    observed: guards,
+    direction: "undo",
+  };
+  const pending = {
+    request: {
+      operation: "restorePage",
+      input: {
+        environmentId: key.environmentId,
+        pageId,
+        mutationId: SpaceMutationId.make("undo-recovery"),
+        receiptEpoch: SpaceReceiptEpoch.make("fixed"),
+        guards,
+      },
+    },
+    recoveryPageIds: [pageId],
+    recoveryBefore: [page],
+    recoveryScope: "page recovery",
+    inverse: null,
+    observed: guards,
+    direction: "undo",
+    conflict: false,
+  };
+  const journal = { version: 1, environmentId: key.environmentId, pending, history };
+  expect(decodeSpaceStructureJournal(journal, key.environmentId)).toEqual(journal);
+  for (const invalid of [
+    { ...journal, history: { ...history, pageIds: [pageId, pageId] } },
+    { ...journal, history: { ...history, pages: [{ ...page, revision: 4 }] } },
+    { ...journal, history: { ...history, operation: "trashPage" } },
+    { ...journal, pending: { ...pending, recoveryBefore: [] } },
+    { ...journal, pending: { ...pending, direction: "redo" } },
+    { ...journal, pending: { ...pending, recoveryScope: "created child" } },
+    { ...journal, pending: { ...pending, rejection: "invalid_input", conflict: true } },
+  ]) {
+    const before = JSON.stringify(invalid);
+    expect(() => decodeSpaceStructureJournal(invalid, key.environmentId)).toThrow();
+    expect(JSON.stringify(invalid)).toBe(before);
+  }
+});

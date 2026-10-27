@@ -104,6 +104,7 @@ function StructureControls({
   const retained = journal.history;
   const history =
     retained &&
+    "destination" in retained &&
     (retained.pageId === target.pageId ||
       (retained.operation === "moveBlocks" &&
         retained.destination.kind === "child" &&
@@ -225,9 +226,11 @@ function StructureControls({
       {pending ? (
         <p role="status">
           Structural operation is retained.{" "}
-          {pending.conflict
-            ? "It conflicted; reinspection starts a new intent."
-            : "Resolve its receipt before editing affected pages."}
+          {pending.rejection
+            ? "The server rejected it before commit; reinspection starts a new intent."
+            : pending.conflict
+              ? "It conflicted; reinspection starts a new intent."
+              : "Resolve its receipt before editing affected pages."}
         </p>
       ) : null}
       {pending && pendingDestination ? (
@@ -263,7 +266,7 @@ function StructureControls({
           </DialogTitle>
           <DialogDescription>
             {creating
-              ? "Choose an explicit position in a complete page body or known list. The server allocates the child page and owner marker IDs. Creation Undo is unavailable; use inspected trash and restore."
+              ? "Choose an explicit position in a complete page body or known list. The server allocates the child page and owner marker IDs. One guarded visibility Undo may be retained only when the created child and inverse closure are proven."
               : blocks
                 ? "Move complete selected subtrees through the guarded service. IDs and opaque/media payloads are preserved. One inverse is retained only for a proven original contiguous placement. Save or resolve affected drafts first."
                 : "Save or resolve affected drafts first. Page IDs stay stable. Moving a child to root retires its owner marker; nesting creates a fresh marker when needed. Undo restores placement, not retired marker links. One guarded undo/redo is retained."}

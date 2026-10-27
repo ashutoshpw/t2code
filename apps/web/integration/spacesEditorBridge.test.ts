@@ -1286,6 +1286,7 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
   );
 });
 
+const decodeStructureServiceError = Schema.decodeUnknownOption(C.SpaceServiceError);
 const encodedRootRpc = Effect.fn("SpaceEditorServiceTest.encodedRootRpc")(function* (
   service: SpacesService.SpacesService["Service"],
 ) {
@@ -1339,8 +1340,16 @@ const encodedRootRpc = Effect.fn("SpaceEditorServiceTest.encodedRootRpc")(functi
     for (const message of parser.decode(frame))
       yield* write(0, message as RpcMessage.FromClientEncoded);
     const response = parser.decode(yield* Queue.take(responses))[0] as RpcMessage.FromServerEncoded;
-    if (response._tag !== "Exit" || response.exit._tag !== "Success")
+    if (response._tag !== "Exit" || response.exit._tag !== "Success") {
+      if (response._tag === "Exit" && response.exit._tag === "Failure")
+        for (const cause of response.exit.cause) {
+          if (cause._tag === "Fail") {
+            const decoded = decodeStructureServiceError(cause.error);
+            if (Option.isSome(decoded)) throw decoded.value;
+          }
+        }
       throw new Error(JSON.stringify(response));
+    }
     return response.exit.value;
   });
 });
@@ -1357,6 +1366,7 @@ const decodeRootResult = Schema.decodeUnknownSync(C.SpaceMovePageResult, {
   onExcessProperty: "error",
 });
 const decodeChildResult = Schema.decodeUnknownSync(C.SpaceCreateChildPageResult);
+const decodePurgeResult = Schema.decodeUnknownSync(C.SpacePagePurgeResult);
 const decodeRecoveryResult = Schema.decodeUnknownSync(C.SpacePageRecoveryResult);
 const decodeTrashList = Schema.decodeUnknownSync(C.SpaceTrashListResult);
 const decodeRootReceipt = Schema.decodeUnknownSync(C.SpaceReceiptLookupResult);
@@ -1398,6 +1408,7 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
   const network = {
     lose: null as "before" | "after" | null,
     after: null as (() => Promise<void>) | null,
+    rewritePurgeReply: null as ((reply: C.SpacePagePurgeResult) => C.SpacePagePurgeResult) | null,
     rewriteChildReply: null as
       | ((reply: C.SpaceCreateChildPageResult) => C.SpaceCreateChildPageResult)
       | null,
@@ -1525,12 +1536,30 @@ const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(funct
         network.lose = null;
         if (lose === "before") throw new Error("Lost before server received request");
         const result = await h.run(rpc(WS_METHODS.spacesPagesCreateChild, request.input));
+        if (network.after) {
+          const after = network.after;
+          network.after = null;
+          await after();
+        }
         if (lose === "after") throw new Error("Lost committed response");
         const decoded = decodeChildResult(result);
         return network.rewriteChildReply ? network.rewriteChildReply(decoded) : decoded;
       },
       trashList: async (input: C.SpaceTrashListInput) =>
         decodeTrashList(await h.run(rpc(WS_METHODS.spacesTrashList, input))),
+      purge: async (input: C.SpacePageRecoveryInput) => {
+        const request = decodeRootRequest(
+          JSON.parse(JSON.stringify({ operation: "permanentlyDeletePage", input })),
+        );
+        recoveryRequests.push(request);
+        const lose = network.lose;
+        network.lose = null;
+        if (lose === "before") throw new Error("Lost before server received request");
+        const result = await h.run(rpc(WS_METHODS.spacesPagesPermanentlyDelete, request.input));
+        if (lose === "after") throw new Error("Lost committed response");
+        const decoded = decodePurgeResult(result);
+        return network.rewritePurgeReply ? network.rewritePurgeReply(decoded) : decoded;
+      },
       recovery: async (operation: "trashPage" | "restorePage", input: C.SpacePageRecoveryInput) => {
         const request = decodeRootRequest(JSON.parse(JSON.stringify({ operation, input })));
         recoveryRequests.push(request);
@@ -2663,7 +2692,7 @@ it.effect(
                 kind: "child",
                 placement: { pageId: h.descendant.page.id, parentId: null, beforeBlockId: null },
               }),
-            ).rejects.toThrow("cycle");
+            ).rejects.toMatchObject({ _tag: "SpaceValidationError", reason: "cycle" });
             assert.equal(h.requests.length, 0);
             assert.isNull(owner.getSnapshot().journal.pending);
           });
@@ -3628,7 +3657,7 @@ it.effect("creates a child once across a lost reply and reload through the durab
             }),
           );
           assert.equal(body.blocks.filter((b) => b.type === "child_page").length, 1);
-          assert.match(recovered.getSnapshot().notice!, /Undo.*unavailable/);
+          assert.include(recovered.getSnapshot().notice!, "guarded recovery");
         });
       }),
     ),
@@ -4178,6 +4207,691 @@ it.effect(
               beforeBlockId: null,
             });
             assert.notEqual(h.childRequests[1]!.mutationId, h.childRequests[0]!.mutationId);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "compensates an acknowledged child creation with guarded trash and restore redo preserving its allocated marker",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.loadBody(h.key.pageId);
+            await owner.createChild("Undo created child", {
+              pageId: h.key.pageId,
+              parentId: null,
+              beforeBlockId: null,
+            });
+            const child = (
+              await h.run(
+                service.listPages({
+                  environmentId,
+                  spaceId: h.spaceId,
+                  parentPageId: h.key.pageId,
+                }),
+              )
+            ).items[0]!;
+            await owner.compensate("undo");
+            assert.deepEqual(
+              await h.run(
+                service.resolveReference({
+                  environmentId,
+                  target: { kind: "page", pageId: child.id },
+                }),
+              ),
+              { status: "trashed", pageId: child.id },
+            );
+            await owner.compensate("redo");
+            const restored = (await h.ports.getPage({ environmentId, pageId: child.id })).page;
+            assert.deepEqual(restored.location, child.location);
+            assert.equal(h.childRequests.length, 1);
+            assert.deepEqual(
+              h.recoveryRequests.map((r) => r.operation),
+              ["trashPage", "restorePage"],
+            );
+            assert.equal(new Set(h.recoveryRequests.map((r) => r.input.mutationId)).size, 2);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "requires explicit bounded purge confirmation and retires the inspected current trash root",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.previewRecovery(h.pages[0]!, "permanentlyDelete");
+            const preview = owner.getSnapshot().recoveryPreview!;
+            await expect(owner.confirmRecovery(preview)).rejects.toThrow("confirmation");
+            const root = await h.ports.getPage({ environmentId, pageId: h.pages[2]! });
+            await h.run(
+              service.createPage({
+                environmentId,
+                spaceId: h.spaceId,
+                title: "Concurrent root",
+                mutationId: "purge-root-race",
+                receiptEpoch: root.mutationAdmission.epoch,
+                baseRootOrderRevision: root.space.rootOrderRevision,
+              }),
+            );
+            await owner.confirmRecovery(preview, true);
+            assert.isTrue(owner.getSnapshot().journal.pending?.conflict);
+            assert.equal(owner.getSnapshot().journal.pending!.rejection, undefined);
+            assert.deepEqual(
+              owner.getSnapshot().journal.pending!.request.input.guards,
+              preview.inspection.guards,
+            );
+            await owner.reinspect();
+            await owner.previewRecovery(h.pages[0]!, "permanentlyDelete");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!, true);
+            assert.deepEqual(
+              await h.run(
+                service.resolveReference({
+                  environmentId,
+                  target: { kind: "page", pageId: h.pages[0]! },
+                }),
+              ),
+              { status: "deleted" },
+            );
+            assert.deepEqual(
+              await h.run(
+                service.resolveReference({
+                  environmentId,
+                  target: { kind: "page", pageId: h.descendant.page.id },
+                }),
+              ),
+              { status: "deleted" },
+            );
+            assert.equal(owner.getSnapshot().journal.history, null);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "undoes and redoes only the selected recovery batch while independently trashed descendants remain hidden",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.descendant.page.id, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            const independent = owner
+              .getSnapshot()
+              .recoveryPreview!.inspection.pages.find((p) => p.id === h.descendant.page.id)!.trash!;
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.compensate("undo");
+            assert.equal((await h.ports.getPage(h.key)).page.trash, undefined);
+            const hidden = await h.run(
+              service.inspectStructure({
+                environmentId,
+                target: { kind: "page", pageId: h.descendant.page.id },
+                recovery: "restore",
+              }),
+            );
+            assert.deepEqual(
+              hidden.pages.find((p) => p.id === h.descendant.page.id)!.trash,
+              independent,
+            );
+            await owner.compensate("redo");
+            const root = await h.run(
+              service.inspectStructure({
+                environmentId,
+                target: { kind: "page", pageId: h.pages[0]! },
+                recovery: "restore",
+              }),
+            );
+            assert.deepEqual(new Set(root.recovery!.pageIds), new Set([h.pages[0]!, h.a.page.id]));
+            assert.deepEqual(
+              root.pages.find((p) => p.id === h.descendant.page.id)!.trash,
+              independent,
+            );
+            await owner.compensate("undo");
+            assert.deepEqual(
+              (await h.ports.getPage({ environmentId, pageId: h.a.page.id })).page.location,
+              h.a.page.location,
+            );
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses moved-out recovery closure and fallback-restore inverse without resurrecting owner markers",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            const history = owner.getSnapshot().journal.history;
+            const destination = { kind: "root" as const, spaceId: h.spaceId, beforePageId: null };
+            const inspect = await h.run(
+              service.inspectStructure({
+                environmentId,
+                target: { kind: "page", pageId: h.a.page.id },
+                destination,
+              }),
+            );
+            const admission = await h.run(service.listSpaces({ environmentId, limit: 1 }));
+            await h.run(
+              service.movePage({
+                environmentId,
+                pageId: h.a.page.id,
+                mutationId: "move-out-before-undo",
+                receiptEpoch: admission.mutationAdmission.epoch,
+                destination,
+                guards: inspect.guards,
+              }),
+            );
+            await expect(owner.compensate("undo")).rejects.toThrow(/closure|unavailable/);
+            assert.deepEqual(owner.getSnapshot().journal.history, history);
+            assert.equal(owner.getSnapshot().journal.pending, null);
+            assert.equal(h.recoveryRequests.length, 1);
+            await owner.previewRecovery(h.pages[1]!, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.previewRecovery(h.b.page.id, "restore");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            assert.equal(
+              (await h.ports.getPage({ environmentId, pageId: h.b.page.id })).page.location?.kind,
+              "root",
+            );
+            assert.equal(owner.getSnapshot().journal.history, null);
+            assert.include(owner.getSnapshot().notice!, "changed placement");
+            assert.deepEqual(
+              await h.run(
+                service.resolveReference({
+                  environmentId,
+                  target: { kind: "block", blockId: h.b.ownerBlockId },
+                }),
+              ),
+              { status: "deleted" },
+            );
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "keeps a conflicting recovery undo draft with frozen guards instead of renewing them",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.a.page.id, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            const history = owner.getSnapshot().journal.history!;
+            const parent = await h.ports.getPage(h.key);
+            await h.run(
+              service.updatePage({
+                ...h.key,
+                mutationId: "parent-after-trash",
+                receiptEpoch: parent.mutationAdmission.epoch,
+                baseRevision: parent.page.revision,
+                title: "Do not overwrite",
+              }),
+            );
+            await owner.compensate("undo");
+            assert.isTrue(owner.getSnapshot().journal.pending?.conflict);
+            assert.deepEqual(
+              owner.getSnapshot().journal.pending!.request.input.guards,
+              history.guards,
+            );
+            assert.deepEqual(owner.getSnapshot().journal.history, history);
+            assert.equal(owner.getSnapshot().journal.pending!.direction, "undo");
+            assert.equal((await h.ports.getPage(h.key)).page.title, "Do not overwrite");
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses create undo history if the allocated child changes before its acknowledgement is processed",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.loadBody(h.key.pageId);
+            h.network.after = async () => {
+              const child = (
+                await h.run(
+                  service.listPages({
+                    environmentId,
+                    spaceId: h.spaceId,
+                    parentPageId: h.key.pageId,
+                  }),
+                )
+              ).items[0]!;
+              const admission = await h.ports.getPage({ environmentId, pageId: child.id });
+              await h.run(
+                service.applyBlockBatch({
+                  environmentId,
+                  pageId: child.id,
+                  mutationId: "newer-created-child",
+                  receiptEpoch: admission.mutationAdmission.epoch,
+                  baseRevision: child.revision,
+                  generation: 1,
+                  mutations: [
+                    {
+                      kind: "insert",
+                      block: savedParagraph("newer-child-body", "Keep newer child"),
+                    },
+                  ],
+                }),
+              );
+            };
+            await owner.createChild("Already changed", {
+              pageId: h.key.pageId,
+              parentId: null,
+              beforeBlockId: null,
+            });
+            assert.equal(owner.getSnapshot().journal.history, null);
+            assert.include(owner.getSnapshot().notice!, "inverse guards");
+            await expect(owner.compensate("undo")).rejects.toThrow("No guarded");
+            assert.equal(h.recoveryRequests.length, 0);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "recovers a lost purge reply after reload with the original request and no restoration or Undo",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.previewRecovery(h.pages[0]!, "permanentlyDelete");
+            h.network.lose = "after";
+            await expect(
+              owner.confirmRecovery(owner.getSnapshot().recoveryPreview!, true),
+            ).rejects.toThrow("Lost committed response");
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.equal(pending.request.operation, "permanentlyDeletePage");
+            const recovered = h.reload();
+            h.setWritable(false);
+            h.setBlockFeature(false);
+            await recovered.recover();
+            assert.equal(recovered.getSnapshot().journal.pending, null);
+            assert.equal(recovered.getSnapshot().journal.history, null);
+            assert.deepEqual(h.lookups.at(-1)!.request, pending.request);
+            assert.equal(h.recoveryRequests.length, 2);
+            for (const id of [h.pages[0]!, h.a.page.id, h.descendant.page.id])
+              assert.deepEqual(
+                await h.run(
+                  service.resolveReference({ environmentId, target: { kind: "page", pageId: id } }),
+                ),
+                { status: "deleted" },
+              );
+            assert.deepEqual(
+              await h.run(
+                service.resolveReference({
+                  environmentId,
+                  target: { kind: "block", blockId: h.a.ownerBlockId },
+                }),
+              ),
+              { status: "deleted" },
+            );
+            await expect(recovered.compensate("undo")).rejects.toThrow();
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "never deletes a changed purge selection and refuses non-root trash before creating an intent",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            let owner = h.make();
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await expect(owner.previewRecovery(h.a.page.id, "permanentlyDelete")).rejects.toThrow();
+            assert.equal(owner.getSnapshot().journal.pending, null);
+            await owner.previewRecovery(h.pages[0]!, "permanentlyDelete");
+            const preview = owner.getSnapshot().recoveryPreview!;
+            const destination = { kind: "root" as const, spaceId: h.spaceId, beforePageId: null };
+            const inspected = await h.run(
+              service.inspectStructure({
+                environmentId,
+                target: { kind: "page", pageId: h.a.page.id },
+                destination,
+              }),
+            );
+            const admission = await h.run(service.listSpaces({ environmentId, limit: 1 }));
+            await h.run(
+              service.movePage({
+                environmentId,
+                pageId: h.a.page.id,
+                mutationId: "move-after-purge-preview",
+                receiptEpoch: admission.mutationAdmission.epoch,
+                destination,
+                guards: inspected.guards,
+              }),
+            );
+            await owner.confirmRecovery(preview, true);
+            assert.isTrue(owner.getSnapshot().journal.pending?.conflict);
+            assert.equal(owner.getSnapshot().journal.pending!.rejection, "invalid_input");
+            assert.deepEqual(
+              owner.getSnapshot().journal.pending!.recoveryPageIds,
+              preview.inspection.recovery!.pageIds,
+            );
+            assert.deepEqual(
+              owner.getSnapshot().journal.pending!.request.input.guards,
+              preview.inspection.guards,
+            );
+            assert.deepEqual(
+              await h.run(
+                service.resolveReference({
+                  environmentId,
+                  target: { kind: "page", pageId: h.pages[0]! },
+                }),
+              ),
+              { status: "trashed", pageId: h.pages[0]! },
+            );
+            const rejected = owner.getSnapshot().journal.pending!;
+            owner = h.reload();
+            await owner.hydrate();
+            assert.deepEqual(owner.getSnapshot().journal.pending, rejected);
+            await owner.reinspect();
+            await expect(owner.confirmRecovery(preview, true)).rejects.toThrow("Inspect");
+            await owner.previewRecovery(h.pages[0]!, "permanentlyDelete");
+            assert.deepEqual(owner.getSnapshot().recoveryPreview!.inspection.recovery!.pageIds, [
+              h.pages[0]!,
+            ]);
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!, true);
+            assert.deepEqual(
+              await h.run(
+                service.resolveReference({
+                  environmentId,
+                  target: { kind: "page", pageId: h.a.page.id },
+                }),
+              ),
+              { status: "trashed", pageId: h.a.page.id },
+            );
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "persists purge before sending, interlocks two actual editors and gates the purged resident even when changed.pages is empty",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const route = h.documents.open(h.key),
+              panel = h.documents.open(h.key);
+            const doc = await route.ready;
+            assert.equal(await panel.ready, doc);
+            const view = savedView(doc);
+            const inspected = await h.run(
+              service.inspectStructure({
+                environmentId,
+                target: { kind: "page", pageId: h.key.pageId },
+                recovery: "trash",
+              }),
+            );
+            const admission = await h.run(service.listSpaces({ environmentId, limit: 1 }));
+            await h.run(
+              service.trashPage({
+                ...h.key,
+                mutationId: "external-trash-before-purge",
+                receiptEpoch: admission.mutationAdmission.epoch,
+                guards: inspected.guards,
+              }),
+            );
+            const owner = h.make();
+            try {
+              await owner.previewRecovery(h.key.pageId, "permanentlyDelete");
+              h.disk.fail = true;
+              await expect(
+                owner.confirmRecovery(owner.getSnapshot().recoveryPreview!, true),
+              ).rejects.toThrow("abort");
+              const pending = owner.getSnapshot().journal.pending!;
+              assert.equal(h.recoveryRequests.length, 0);
+              assert.isTrue(doc.structureBlocked());
+              assert.isFalse(view.bridge.adapter.append()(view.state, view.dispatch));
+              h.disk.fail = false;
+              h.network.lose = "after";
+              await expect(owner.recover()).rejects.toThrow("Lost committed response");
+              h.setWritable(false);
+              await expect(owner.recover()).rejects.toThrow("could not refresh");
+              assert.equal(owner.getSnapshot().journal.pending, null);
+              assert.deepEqual(h.lookups.at(-1)!.request, pending.request);
+              assert.equal(h.recoveryRequests.length, 1);
+              assert.isFalse(doc.structureBlocked());
+              assert.isNotNull(doc.getSnapshot().error);
+              assert.isFalse(view.bridge.adapter.append()(view.state, view.dispatch));
+              assert.isFalse(doc.session.getSnapshot().dirty);
+            } finally {
+              view.stop();
+              route.release();
+              panel.release();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses hidden durable drafts and live permission or feature withdrawal before permanent deletion",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const held = h.documents.open({ environmentId, pageId: h.a.page.id });
+            const doc = await held.ready;
+            doc.session.apply([
+              { kind: "insert", block: savedParagraph("keep-hidden-purge-draft", "unsaved") },
+            ]);
+            await doc.session.persistDraft();
+            held.release();
+            const inspected = await h.run(
+              service.inspectStructure({
+                environmentId,
+                target: { kind: "page", pageId: h.pages[0]! },
+                recovery: "trash",
+              }),
+            );
+            const admission = await h.run(service.listSpaces({ environmentId, limit: 1 }));
+            await h.run(
+              service.trashPage({
+                environmentId,
+                pageId: h.pages[0]!,
+                mutationId: "external-hidden-trash",
+                receiptEpoch: admission.mutationAdmission.epoch,
+                guards: inspected.guards,
+              }),
+            );
+            const owner = h.reload();
+            await owner.previewRecovery(h.pages[0]!, "permanentlyDelete");
+            const preview = owner.getSnapshot().recoveryPreview!;
+            h.setWritable(false);
+            await expect(owner.confirmRecovery(preview, true)).rejects.toThrow("Operate revoked");
+            h.setWritable(true);
+            h.setBlockFeature(false);
+            await expect(owner.confirmRecovery(preview, true)).rejects.toThrow("unsupported");
+            h.setBlockFeature(true);
+            await expect(owner.confirmRecovery(preview, true)).rejects.toThrow("retained draft");
+            assert.equal(h.recoveryRequests.length, 0);
+            assert.equal(owner.getSnapshot().journal.pending, null);
+            assert.isTrue(h.draftRecords.has(h.a.page.id));
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each([5, 6])(
+  "purges the complete eight-page boundary and refuses a ninth page without chunking (%s extra children)",
+  (extra) =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          for (const _ of Array.from({ length: extra })) yield* h.child(h.pages[0]!);
+          const inspection = yield* service.inspectStructure({
+            environmentId,
+            target: { kind: "page", pageId: h.pages[0]! },
+            recovery: "trash",
+          });
+          const admission = yield* service.listSpaces({ environmentId, limit: 1 });
+          yield* service.trashPage({
+            environmentId,
+            pageId: h.pages[0]!,
+            mutationId: "external-large-trash",
+            receiptEpoch: admission.mutationAdmission.epoch,
+            guards: inspection.guards,
+          });
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            if (extra === 6) {
+              await expect(owner.previewRecovery(h.pages[0]!, "permanentlyDelete")).rejects.toThrow(
+                "eight-page",
+              );
+              assert.equal(owner.getSnapshot().journal.pending, null);
+              assert.equal(h.recoveryRequests.length, 0);
+            } else {
+              await owner.previewRecovery(h.pages[0]!, "permanentlyDelete");
+              assert.equal(
+                owner.getSnapshot().recoveryPreview!.inspection.recovery!.pageIds.length,
+                8,
+              );
+              await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!, true);
+              assert.equal(h.recoveryRequests.length, 1);
+              assert.equal(owner.getSnapshot().journal.history, null);
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "preserves the recovery compensation prefix through codec write failure and exact lost-reply reload",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.loadBody(h.key.pageId);
+            await owner.createChild("Recover undo", {
+              pageId: h.key.pageId,
+              parentId: null,
+              beforeBlockId: null,
+            });
+            const created = (
+              await h.run(
+                service.listPages({
+                  environmentId,
+                  spaceId: h.spaceId,
+                  parentPageId: h.key.pageId,
+                }),
+              )
+            ).items[0]!;
+            h.disk.fail = true;
+            await expect(owner.compensate("undo")).rejects.toThrow("abort");
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.equal(h.recoveryRequests.length, 0);
+            assert.equal(pending.direction, "undo");
+            h.disk.fail = false;
+            h.network.lose = "after";
+            await expect(owner.recover()).rejects.toThrow("Lost committed response");
+            const recovered = h.reload();
+            h.setWritable(false);
+            await recovered.recover();
+            assert.equal(h.recoveryRequests.length, 1);
+            assert.deepEqual(h.lookups.at(-1)!.request, pending.request);
+            assert.equal(recovered.getSnapshot().journal.history?.direction, "redo");
+            h.setWritable(true);
+            await recovered.compensate("redo");
+            assert.deepEqual(
+              (await h.ports.getPage({ environmentId, pageId: created.id })).page.location,
+              created.location,
+            );
+            assert.equal(h.recoveryRequests.length, 2);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retains a purge intent on a truncated deleted-ID acknowledgement and recovers only the authoritative receipt",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* nestedMoveFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.previewRecovery(h.pages[0]!, "trash");
+            await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
+            await owner.previewRecovery(h.pages[0]!, "permanentlyDelete");
+            h.network.rewritePurgeReply = (result) =>
+              result.status === "saved"
+                ? { ...result, deletedPageIds: result.deletedPageIds.slice(0, 1) }
+                : result;
+            await expect(
+              owner.confirmRecovery(owner.getSnapshot().recoveryPreview!, true),
+            ).rejects.toThrow("Mismatched permanent");
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.equal(pending.conflict, false);
+            assert.throws(() => h.documents.acquire(h.key), "reserved");
+            await owner.recover();
+            assert.equal(owner.getSnapshot().journal.pending, null);
+            assert.equal(owner.getSnapshot().journal.history, null);
+            assert.deepEqual(h.lookups.at(-1)!.request, pending.request);
+            assert.equal(h.recoveryRequests.length, 2);
+            assert.deepEqual(h.structureBodyReads, []);
           });
         }),
       ),

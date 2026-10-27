@@ -414,7 +414,13 @@ it.effect("rejects protected unary and streamed RPCs outside a guarded command",
   }),
 );
 
-it.effect.each(["moveBlocks", "trashPage", "restorePage", "createChild"] as const)(
+it.effect.each([
+  "moveBlocks",
+  "trashPage",
+  "restorePage",
+  "createChild",
+  "permanentlyDeletePage",
+] as const)(
   "checks the latest %s capability after destination authorization before reaching the transport",
   (operation) =>
     Effect.scoped(
@@ -432,6 +438,7 @@ it.effect.each(["moveBlocks", "trashPage", "restorePage", "createChild"] as cons
             [WS_METHODS.spacesPagesCreateChild]: reachedTransport,
             [WS_METHODS.spacesPagesTrash]: reachedTransport,
             [WS_METHODS.spacesPagesRestore]: reachedTransport,
+            [WS_METHODS.spacesPagesPermanentlyDelete]: reachedTransport,
           },
         } as unknown as RpcSession;
         const supervisor = {
