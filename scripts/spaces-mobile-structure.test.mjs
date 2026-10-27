@@ -33,6 +33,7 @@ import { SpacesPageRouteScreen } from "../apps/mobile/src/features/spaces/Spaces
 const pageView = vi.hoisted(() => ({ access: null, acquire: null }));
 vi.mock("../apps/mobile/src/state/spaces.ts", () => ({
   acquireSpacesPageReader: (...args) => pageView.acquire(...args),
+  createSpacesImageViewer: () => null,
   useSpacesReadAccess: () => pageView.access,
   spacesEnvironment: {},
 }));
@@ -67,6 +68,9 @@ vi.mock("../apps/mobile/src/native/NativeScrollViewMarker.tsx", () => ({
 }));
 vi.mock("../apps/mobile/src/features/spaces/SpacesLibraryActions.tsx", () => ({
   SpacesLibraryActions: () => null,
+}));
+vi.mock("../apps/mobile/src/features/spaces/SpacesImageViewer.tsx", () => ({
+  SpacesImageViewer: () => null,
 }));
 vi.mock("../apps/mobile/src/features/spaces/SpaceBlockReader.tsx", () => ({
   SpaceBlockReader: () => null,

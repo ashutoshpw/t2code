@@ -16,12 +16,14 @@ import { useEnvironments } from "../../state/environments";
 import { useEnvironmentQuery } from "../../state/query";
 import {
   acquireSpacesPageReader,
+  createSpacesImageViewer,
   spacesEnvironment,
   useSpacesReadAccess,
 } from "../../state/spaces";
 import { type SpacesReadAccess, spacesAvailabilityMessage } from "./reader";
 import { readSpacesPageTarget, readSpacesLibraryTarget } from "./navigation";
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
+import { SpacesImageViewer } from "./SpacesImageViewer";
 import { SpaceBlockReader } from "./SpaceBlockReader";
 import { SpacesLibraryActions } from "./SpacesLibraryActions";
 import { nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
@@ -415,6 +417,7 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
   const editing = reader.editing;
   const editorState = useSyncExternalStore(editing.subscribe, editing.getSnapshot);
   const [owner] = useState(() => Symbol("Spaces page editor"));
+  const [media] = useState(() => createSpacesImageViewer(target.environmentId));
   const [references] = useState(
     () =>
       new MobileSpaceReferenceNavigation({
@@ -474,6 +477,7 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
     : target;
   return (
     <View className="flex-1">
+      <SpacesImageViewer model={media} access={access} />
       {!readable ? <AccessNotice access={access} environmentId={target.environmentId} /> : null}
       {!readable && (snapshot.session.dirty || focus) ? (
         <Notice>
@@ -783,6 +787,18 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
           <View>
             <SpaceBlockReader
               block={item}
+              onImage={(block) => {
+                const source = reader.getSnapshot().location;
+                if (source)
+                  void media.open(
+                    block,
+                    () =>
+                      navigation.isFocused() &&
+                      !reader.editing.getSnapshot().focus &&
+                      reader.getSnapshot().location === source &&
+                      source.current() !== null,
+                  );
+              }}
               target={currentTarget}
               depth={blockDepth(item, blocks)}
               selected={item.id === currentTarget.blockId}

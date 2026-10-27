@@ -36,6 +36,8 @@ import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { useEffect, useMemo, useState } from "react";
 
+import { assetEnvironment } from "./assets";
+import { MobileSpaceImageBudget, MobileSpaceImageViewer } from "../features/spaces/media";
 import { connectionAtomRuntime } from "../connection/runtime";
 import { environmentCatalog } from "../connection/catalog";
 import { appAtomRegistry } from "./atom-registry";
@@ -537,6 +539,68 @@ export function useSpacesReferenceController(environmentId: EnvironmentId, attem
     };
   }, [stamp, environmentId, access, sourceVersion]);
   return state?.stamp === stamp ? state.owner : null;
+}
+
+const imageViewBudget = new MobileSpaceImageBudget();
+const imageMetadata = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
+  label: "mobile:spaces:imageMetadata",
+  tag: WS_METHODS.spacesAssetsGet,
+  idleTtlMs: 0,
+  staleTimeMs: 0,
+});
+
+export function createSpacesImageViewer(environmentId: EnvironmentId) {
+  return new MobileSpaceImageViewer({
+    budget: imageViewBudget,
+    now: Date.now,
+    access: () => {
+      const access = liveAccess(environmentId);
+      const connection = appAtomRegistry.get(
+        environmentSession.preparedConnectionValueAtom(environmentId),
+      );
+      const httpBaseUrl = Option.isSome(connection) ? connection.value.httpBaseUrl : "";
+      return {
+        capability: access.capability,
+        httpBaseUrl,
+        current: () => {
+          const current = appAtomRegistry.get(
+            environmentSession.preparedConnectionValueAtom(environmentId),
+          );
+          return (
+            access.current() &&
+            canBrowseSpaces(access.availability) &&
+            Option.isSome(current) &&
+            current.value.httpBaseUrl === httpBaseUrl
+          );
+        },
+      };
+    },
+    metadata: (assetId, signal) =>
+      query(imageMetadata({ environmentId, input: { environmentId, assetId } }), signal),
+    mint: (assetId, disposition, signal) =>
+      query(
+        assetEnvironment.createUrl({
+          environmentId,
+          input: { resource: { _tag: "spaces-asset", environmentId, assetId, disposition } },
+        }),
+        signal,
+      ),
+    share: async (input) => {
+      const { downloadAttachmentForPreview } = await import("../lib/attachmentDownload");
+      if (!input.current() || input.signal.aborted) return;
+      const file = await downloadAttachmentForPreview({
+        url: input.url,
+        attachment: input.metadata,
+        signal: input.signal,
+      });
+      if (!file) return;
+      try {
+        if (input.current() && !input.signal.aborted) await file.share(input.signal);
+      } finally {
+        file.dispose();
+      }
+    },
+  });
 }
 
 export async function prepareMobileComposerContext(input: {

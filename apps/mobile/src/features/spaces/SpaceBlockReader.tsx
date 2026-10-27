@@ -88,6 +88,7 @@ export function SpaceBlockReader(props: {
   target: SpacePageNavigationTarget;
   depth: number;
   selected: boolean;
+  onImage: (block: SpaceBlock) => void;
   onOpen: (target: MobileSpaceReference) => void;
 }) {
   const { block } = props;
@@ -165,9 +166,13 @@ export function SpaceBlockReader(props: {
           <Text selectable className="text-foreground">
             {block.type} · {block.content.assetId}
           </Text>
-          <Text className="text-sm text-foreground-muted">
-            Media previews and downloads are not yet available in the mobile Spaces reader.
-          </Text>
+          {block.type === "image" ? (
+            <ControlPill variant="pill" label="Open image" onPress={() => props.onImage(block)} />
+          ) : (
+            <Text className="text-sm text-foreground-muted">
+              PDF and video viewing is not yet available in mobile Spaces.
+            </Text>
+          )}
           {block.content.caption ? (
             <RichText runs={block.content.caption} target={props.target} onOpen={props.onOpen} />
           ) : null}
