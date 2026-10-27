@@ -272,7 +272,7 @@ infra/relay/migrations/**/snapshot.json
 **/*.ndjson
 
 # Ghostty build output vendored from upstream.
-apps/mobile/modules/t3-terminal/Vendor/**
+apps/mobile/modules/t2-terminal/Vendor/**
 native/libghostty-vt/include/**
 
 # @pierre/highlights compiled to C by wasm2c, plus the wasm2c runtime and simde
