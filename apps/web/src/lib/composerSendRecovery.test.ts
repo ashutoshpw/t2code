@@ -1,6 +1,11 @@
 import * as NodeBuffer from "node:buffer";
 import { afterEach, expect, it, vi } from "vite-plus/test";
-import { ComposerContextId, EnvironmentId, ThreadId } from "@t2code/contracts";
+import {
+  ComposerContextId,
+  EnvironmentId,
+  ThreadId,
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+} from "@t2code/contracts";
 import { SpacePageId } from "@t2code/contracts/spaces";
 import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { prepareSpaceContextSend } from "@t2code/client-runtime/spaces";
@@ -242,4 +247,101 @@ it("does not replace newer typing while verifying saved file references", async 
       isCurrent: () => true,
     }),
   ).rejects.toThrow("original thread");
+});
+
+it("restores distinct original image and file identities with identical metadata after reload", async () => {
+  const state = await setup();
+  const store = state.useComposerDraftStore.getState();
+  store.setPrompt(state.target, "  Keep both originals  ");
+  const images = ["AAAA", "BBBB"].map((bytes, index) => {
+    const file = new File([bytes], "same.png", { type: "image/png" });
+    return {
+      type: "image" as const,
+      id: `image-${index}`,
+      name: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      file,
+      previewUrl: `blob:${index}`,
+    };
+  });
+  const files = ["first-upload", "second-upload"].map((attachmentId, index) => ({
+    type: "file" as const,
+    id: `file-${index}`,
+    name: "same.pdf",
+    mimeType: "application/pdf",
+    sizeBytes: 4,
+    file: null,
+    uploadedAttachmentId: attachmentId,
+    uploadEnvironmentId: state.environmentId,
+  }));
+  store.addImages(state.target, images, { allowDuplicates: true });
+  store.addFiles(state.target, files, { allowDuplicates: true });
+  await state.reserveComposerSendRecovery({
+    id: "send:duplicates",
+    environmentId: state.environmentId,
+    threadId: state.threadId,
+    draftId: null,
+    target: state.target,
+    contents: store.getComposerDraft(state.target)!,
+    assertCurrent: () => {},
+  });
+  store.clearComposerContent(state.target);
+  vi.resetModules();
+  const drafts = await import("../composerDraftStore");
+  const stash = await import("../promptStashStore");
+  const recovery = await import("./composerSendRecovery");
+  uploads.verify.mockResolvedValue({ status: "ready" });
+  await recovery.restoreComposerSendRecovery({
+    entryId: "send:duplicates",
+    environmentId: state.environmentId,
+    target: state.target,
+    isCurrent: () => true,
+  });
+  const restored = drafts.useComposerDraftStore.getState().getComposerDraft(state.target)!;
+  expect(restored.prompt).toBe("  Keep both originals  ");
+  expect(restored.images.map((image) => image.id)).toEqual(["image-0", "image-1"]);
+  expect(await Promise.all(restored.images.map((image) => image.file.text()))).toEqual([
+    "AAAA",
+    "BBBB",
+  ]);
+  expect(restored.files.map((file) => [file.id, file.uploadedAttachmentId])).toEqual([
+    ["file-0", "first-upload"],
+    ["file-1", "second-upload"],
+  ]);
+  expect(stash.usePromptStashStore.getState().entries).toHaveLength(1);
+});
+
+it("refuses an over-capacity recovery before partially restoring its attachments", async () => {
+  const state = await setup();
+  state.usePromptStashStore.getState().reserveSendRecovery({
+    id: "send:over-capacity",
+    createdAt: "2026-10-27T00:00:00Z",
+    prompt: "All attachments or none",
+    attachments: Array.from({ length: PROVIDER_SEND_TURN_MAX_ATTACHMENTS + 1 }, (_, index) => ({
+      id: `image-${index}`,
+      name: `${index}.png`,
+      mimeType: "image/png",
+      sizeBytes: 1,
+      dataUrl: "data:image/png;base64,QQ==",
+    })),
+    droppedImageNames: [],
+    recovery: {
+      environmentId: state.environmentId,
+      threadId: state.threadId,
+      targetKey: state.composerTargetKey(state.target),
+      context: {},
+    },
+  });
+  state.usePromptStashStore.getState().settleSendRecovery("send:over-capacity", false);
+  await expect(
+    state.restoreComposerSendRecovery({
+      entryId: "send:over-capacity",
+      environmentId: state.environmentId,
+      target: state.target,
+      isCurrent: () => true,
+    }),
+  ).rejects.toThrow("attachments");
+  expect(state.useComposerDraftStore.getState().getComposerDraft(state.target)).toBeNull();
+  expect(state.usePromptStashStore.getState().entries).toHaveLength(1);
 });

@@ -1,4 +1,8 @@
-import type { EnvironmentId, ThreadId } from "@t2code/contracts";
+import {
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  type EnvironmentId,
+  type ThreadId,
+} from "@t2code/contracts";
 import {
   composerDraftHasUserContent,
   composerTargetKey,
@@ -124,6 +128,18 @@ export async function restoreComposerSendRecovery(input: {
     !composerDraftHasUserContent(useComposerDraftStore.getState().getComposerDraft(input.target));
   if (!canRestore())
     throw new Error("Send or clear the current prompt in the original thread before restoring.");
+  const savedFiles = entry.files ?? [];
+  const imageIds = new Set(entry.attachments.map((image) => image.id));
+  const fileIds = new Set(savedFiles.map((file) => file.id));
+  if (
+    entry.attachments.length + savedFiles.length > PROVIDER_SEND_TURN_MAX_ATTACHMENTS ||
+    imageIds.size !== entry.attachments.length ||
+    fileIds.size !== savedFiles.length ||
+    !composerTargetKey(input.target)
+  )
+    throw new Error(
+      "Could not restore all saved attachments. The recovery prompt remains in the stash.",
+    );
   const verifications = await Promise.all(
     (entry.files ?? []).map((file) =>
       verifyStashedAttachmentUpload({
@@ -144,10 +160,9 @@ export async function restoreComposerSendRecovery(input: {
     throw new Error("Could not read saved images. The recovery prompt remains in the stash.");
   const store = useComposerDraftStore.getState();
   const context = entry.recovery.context;
-  store.setContextDraft(input.target, context.contextDraft);
-  store.addImages(input.target, images);
+  const acceptedImages = store.addImages(input.target, images, { allowDuplicates: true });
   const expiredFiles: string[] = [];
-  store.addFiles(
+  const acceptedFiles = store.addFiles(
     input.target,
     (entry.files ?? []).map((file, index) => {
       const expired = verifications[index]?.status === "missing";
@@ -165,7 +180,16 @@ export async function restoreComposerSendRecovery(input: {
           : {}),
       };
     }),
+    { allowDuplicates: true },
   );
+  if (acceptedImages.length !== images.length || acceptedFiles.length !== savedFiles.length) {
+    for (const id of acceptedImages) store.removeImage(input.target, id);
+    for (const id of acceptedFiles) store.removeFile(input.target, id);
+    throw new Error(
+      "Could not restore all saved attachments. The recovery prompt remains in the stash.",
+    );
+  }
+  store.setContextDraft(input.target, context.contextDraft);
   store.setTerminalContexts(
     input.target,
     (context.terminalContexts ?? []).map((terminal) => ({

@@ -1,5 +1,8 @@
 import {
   AuthOrchestrationOperateScope,
+  COMPOSER_CONTEXT_MAX_RECORDS,
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  type ComposerContextRecord,
   PROVIDER_SEND_TURN_SUPPORTED_IMAGE_MIME_TYPES,
   type ChatAttachment,
   type EnvironmentId,
@@ -29,6 +32,7 @@ import { assetEnvironment } from "../state/assets";
 import { attachmentEnvironment } from "../state/attachments";
 import { readEnvironmentScope, readPreparedConnection } from "../state/session";
 import { uploadBytes } from "./uploadBytes";
+import { MAX_STASH_ENTRIES, usePromptStashStore } from "../promptStashStore";
 import type { AttachmentUploadState, ReadyAttachmentUpload } from "./attachmentUploadState";
 
 const MAX_UPLOADS_PER_ENVIRONMENT = 3;
@@ -121,7 +125,11 @@ function stampDraftFileUpload(job: UploadJob, attachmentId: string): void {
 }
 
 function deletePendingUpload(environmentId: EnvironmentId, attachmentId: string): void {
-  if (!readEnvironmentScope(environmentId, AuthOrchestrationOperateScope)) return;
+  if (
+    !readEnvironmentScope(environmentId, AuthOrchestrationOperateScope) ||
+    hasAttachmentOwner({ environmentId, attachmentId })
+  )
+    return;
   deletePendingAttachmentUpload({
     registry: appAtomRegistry,
     remove: attachmentEnvironment.remove,
@@ -483,11 +491,98 @@ export function releaseAttachmentUpload(imageId: string): void {
   clearUploadState(imageId);
 }
 
+const MAX_ATTACHMENT_OWNERS_TO_INSPECT = 256;
+
+function hasAttachmentOwner(input: {
+  id?: string;
+  environmentId: EnvironmentId;
+  attachmentId: string;
+}): boolean {
+  const store = useComposerDraftStore.getState();
+  if (!useComposerDraftStore.persist.hasHydrated()) return true;
+  const ownsRecords = (records: ReadonlyArray<ComposerContextRecord> = []) =>
+    records.length > COMPOSER_CONTEXT_MAX_RECORDS ||
+    records.some(
+      (record) =>
+        (record.kind === "file" || record.kind === "image") &&
+        "attachmentId" in record &&
+        record.attachmentId === input.attachmentId,
+    );
+  const ownsUpload = (upload: AttachmentUploadState | undefined) =>
+    (upload?.status === "ready" &&
+      upload.environmentId === input.environmentId &&
+      upload.attachmentId === input.attachmentId) ||
+    (upload !== undefined &&
+      "previous" in upload &&
+      upload.previous?.environmentId === input.environmentId &&
+      upload.previous.attachmentId === input.attachmentId);
+  let inspected = 0;
+  for (const key in store.draftsByThreadKey) {
+    // Uncertain or over-budget ownership defers cleanup to normal upload expiry.
+    if (++inspected > MAX_ATTACHMENT_OWNERS_TO_INSPECT) return true;
+    const draft = store.draftsByThreadKey[key]!;
+    const ownerEnvironment =
+      store.draftThreadsByThreadKey[key]?.environmentId ?? parseScopedThreadKey(key)?.environmentId;
+    if (draft.files.length + draft.images.length > PROVIDER_SEND_TURN_MAX_ATTACHMENTS) return true;
+    for (const file of draft.files) {
+      if (ownsUpload(readAttachmentUpload(file.id))) return true;
+      if (
+        file.uploadedAttachmentId === input.attachmentId &&
+        (file.uploadEnvironmentId === undefined || file.uploadEnvironmentId === input.environmentId)
+      )
+        return true;
+      const environmentId = file.uploadEnvironmentId ?? ownerEnvironment;
+      if (
+        file.id === input.id &&
+        (environmentId === undefined || environmentId === input.environmentId)
+      )
+        return true;
+    }
+    if (ownerEnvironment === undefined || ownerEnvironment === input.environmentId) {
+      for (const image of draft.images) {
+        if (image.id === input.id || ownsUpload(readAttachmentUpload(image.id))) return true;
+      }
+      if (ownsRecords(draft.contextDraft?.records)) return true;
+    }
+  }
+  for (const [id, job] of jobsByImageId) {
+    if (++inspected > MAX_ATTACHMENT_OWNERS_TO_INSPECT) return true;
+    if (
+      id !== input.id &&
+      job.environmentId === input.environmentId &&
+      (job.persistedAttachmentId === input.attachmentId || job.attachmentId === input.attachmentId)
+    )
+      return true;
+  }
+  const entries = usePromptStashStore.getState().entries;
+  if (entries.length > MAX_STASH_ENTRIES) return true;
+  for (const entry of entries) {
+    if ((entry.files?.length ?? 0) > PROVIDER_SEND_TURN_MAX_ATTACHMENTS) return true;
+    if (
+      entry.files?.some(
+        (file) =>
+          file.attachmentId === input.attachmentId &&
+          (file.environmentId === undefined || file.environmentId === input.environmentId),
+      )
+    )
+      return true;
+    if (
+      entry.recovery?.environmentId === undefined ||
+      entry.recovery.environmentId === input.environmentId
+    ) {
+      if (ownsRecords(entry.records) || ownsRecords(entry.recovery?.context.contextDraft?.records))
+        return true;
+    }
+  }
+  return false;
+}
+
 export function releasePersistedAttachmentUpload(input: {
   readonly id: string;
   readonly environmentId: EnvironmentId;
   readonly attachmentId: string;
-}): void {
+}): boolean {
+  if (hasAttachmentOwner(input)) return false;
   const upload = readAttachmentUpload(input.id);
   if (
     upload?.status === "ready" &&
@@ -495,7 +590,7 @@ export function releasePersistedAttachmentUpload(input: {
     upload.attachmentId === input.attachmentId
   ) {
     releaseAttachmentUpload(input.id);
-    return;
+    return true;
   }
   const job = jobsByImageId.get(input.id);
   if (
@@ -505,6 +600,7 @@ export function releasePersistedAttachmentUpload(input: {
     releaseAttachmentUpload(input.id);
   }
   deletePendingUpload(input.environmentId, input.attachmentId);
+  return true;
 }
 
 export function retryAttachmentUpload(input: {
@@ -574,11 +670,14 @@ export function releaseDraftAttachment(
     attachment.uploadedAttachmentId !== undefined &&
     attachment.uploadEnvironmentId !== undefined
   ) {
-    releasePersistedAttachmentUpload({
-      id: attachment.id,
-      environmentId: attachment.uploadEnvironmentId,
-      attachmentId: attachment.uploadedAttachmentId,
-    });
+    if (
+      !releasePersistedAttachmentUpload({
+        id: attachment.id,
+        environmentId: attachment.uploadEnvironmentId,
+        attachmentId: attachment.uploadedAttachmentId,
+      })
+    )
+      return;
     if (jobsByImageId.has(attachment.id) || readAttachmentUpload(attachment.id)) {
       releaseAttachmentUpload(attachment.id);
     }

@@ -407,21 +407,16 @@ export function useComposerSend(input: ComposerSendInput) {
   ) => {
     const id = `send:${newMessageId()}`;
     let reserved = false;
-    try {
-      await reserveComposerSendRecovery({
-        id,
-        environmentId,
-        threadId: activeThread!.id,
-        draftId,
-        target: composerDraftTarget,
-        contents,
-        assertCurrent,
-      });
-      reserved = true;
+    const assertSendCurrent = () => {
+      if (!readEnvironmentScope(environmentId, AuthOrchestrationOperateScope))
+        throw new Error("This connection cannot change threads. Your draft is unchanged.");
       assertCurrent();
-      return id;
-    } catch (error) {
-      if (reserved) usePromptStashStore.getState().settleSendRecovery(id, true);
+    };
+    const refuse = (error: unknown) => {
+      if (reserved) {
+        usePromptStashStore.getState().settleSendRecovery(id, true);
+        reserved = false;
+      }
       setDockedDraftHeroThreadKey((current) => (current === activeThreadKey ? null : current));
       sendInFlightRef.current = false;
       const description =
@@ -433,8 +428,35 @@ export function useComposerSend(input: ComposerSendInput) {
         stackedThreadToast({ type: "error", title: "Message was not sent", description }),
       );
       return null;
+    };
+    try {
+      await reserveComposerSendRecovery({
+        id,
+        environmentId,
+        threadId: activeThread!.id,
+        draftId,
+        target: composerDraftTarget,
+        contents,
+        assertCurrent: assertSendCurrent,
+      });
+      reserved = true;
+      return {
+        id,
+        admit: () => {
+          try {
+            assertSendCurrent();
+            return true;
+          } catch (error) {
+            refuse(error);
+            return false;
+          }
+        },
+      };
+    } catch (error) {
+      return refuse(error);
     }
   };
+
   const recoverFailedSend = async (threadIdForSend: ThreadId, entryId: string) => {
     usePromptStashStore.getState().settleSendRecovery(entryId, false);
     const restore = async (recoveringSend = false) => {
@@ -817,7 +839,7 @@ export function useComposerSend(input: ComposerSendInput) {
         );
         return;
       }
-      const recoveryId = await reserveRecovery(
+      const recovery = await reserveRecovery(
         {
           prompt: promptForSend,
           images: composerImages,
@@ -840,7 +862,8 @@ export function useComposerSend(input: ComposerSendInput) {
             );
         },
       );
-      if (recoveryId === null) return;
+      if (!recovery?.admit()) return;
+      const recoveryId = recovery.id;
       promptRef.current = "";
       clearComposerDraftContent(composerDraftTarget);
       composerRef.current?.resetCursorState();
@@ -1153,7 +1176,7 @@ export function useComposerSend(input: ComposerSendInput) {
       );
       return;
     }
-    const recoveryId =
+    const recovery =
       multipleModelSelections === null && approvalFeedbackTarget === undefined
         ? await reserveRecovery(
             {
@@ -1182,9 +1205,10 @@ export function useComposerSend(input: ComposerSendInput) {
     if (
       multipleModelSelections === null &&
       approvalFeedbackTarget === undefined &&
-      recoveryId === null
+      !recovery?.admit()
     )
       return;
+    const recoveryId = recovery?.id ?? null;
     // A message sent while approvals are pending redirects the agent. They are declined only
     // here, after everything above has accepted the send, so local commands and rejected
     // drafts leave them alone. After navigating away during an upload, the shown approvals
@@ -1310,6 +1334,7 @@ export function useComposerSend(input: ComposerSendInput) {
         return;
       }
     }
+    if (recovery && !recovery.admit()) return;
     if (sendQueuesBehindSetup) {
       setSetupQueueSendThreadKey(activeThreadKey);
     } else {

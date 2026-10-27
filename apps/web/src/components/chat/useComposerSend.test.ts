@@ -2,7 +2,13 @@ import { expect, it, vi } from "vite-plus/test";
 import type { ChatMessage } from "../../types";
 import type { ComposerThreadDraftState } from "../../composerDraftStore";
 import type { ChatComposerHandle } from "./ChatComposer";
-import { ComposerContextId, EnvironmentId, ProviderDriverKind, ThreadId } from "@t2code/contracts";
+import {
+  AuthOrchestrationOperateScope,
+  ComposerContextId,
+  EnvironmentId,
+  ProviderDriverKind,
+  ThreadId,
+} from "@t2code/contracts";
 import { SpacePageId, SpaceId } from "@t2code/contracts/spaces";
 import { scopeThreadRef, scopedThreadKey } from "@t2code/client-runtime/environment";
 
@@ -13,16 +19,20 @@ const state = vi.hoisted(() => {
     setItem: (key: string, value: string) => {
       if (storage.reject) throw new Error("Storage quota exceeded");
       values.set(key, value);
+      storage.afterWrite?.(key);
     },
     removeItem: (key: string) => {
       values.delete(key);
     },
     reject: false,
+    afterWrite: undefined as ((key: string) => void) | undefined,
   };
   vi.stubGlobal("localStorage", storage);
   return {
     storage,
     connected: true,
+    canOperate: true,
+    realPreparer: false,
     planMode: false,
     dispatch: vi.fn(async () => ({ _tag: "Success" as const, value: undefined })),
     navigate: vi.fn(),
@@ -62,7 +72,8 @@ vi.mock("../ui/toast", () => ({
 }));
 vi.mock("../../state/session", async () => ({
   ...(await vi.importActual<typeof import("../../state/session")>("../../state/session")),
-  readEnvironmentScope: () => true,
+  readEnvironmentScope: (_environmentId: unknown, scope: string) =>
+    scope !== AuthOrchestrationOperateScope || state.canOperate,
 }));
 vi.mock("../../state/server", async () => {
   const actual = await vi.importActual<typeof import("../../state/server")>("../../state/server");
@@ -95,12 +106,16 @@ vi.mock("../../composerDraftStore", async () => {
     ),
   };
 });
-vi.mock("../../lib/prepareComposerSendContext", async () => ({
-  ...(await vi.importActual<typeof import("../../lib/prepareComposerSendContext")>(
+vi.mock("../../lib/prepareComposerSendContext", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/prepareComposerSendContext")>(
     "../../lib/prepareComposerSendContext",
-  )),
-  prepareComposerSendContext: state.prepare,
-}));
+  );
+  return {
+    ...actual,
+    prepareComposerSendContext: (...args: Parameters<typeof actual.prepareComposerSendContext>) =>
+      state.realPreparer ? actual.prepareComposerSendContext(...args) : state.prepare(...args),
+  };
+});
 
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { PROMPT_STASH_STORAGE_KEY, usePromptStashStore } from "../../promptStashStore";
@@ -122,7 +137,11 @@ async function verifyFailedSnapshotRecovery(
   admission: "ok" | "full" | "quota" = "ok",
   succeeds = false,
   editWhileSavingImage = false,
+  permissionLoss?: "image" | "persist" | "handoff",
 ) {
+  state.canOperate = true;
+  state.realPreparer = permissionLoss !== undefined;
+  state.storage.afterWrite = undefined;
   state.storage.reject = false;
   usePromptStashStore.setState({ entries: [], activeRecoveryIds: [] });
   state.storage.removeItem(PROMPT_STASH_STORAGE_KEY);
@@ -138,8 +157,9 @@ async function verifyFailedSnapshotRecovery(
   draftSendState(route).sendInFlight.current = false;
   const store = useComposerDraftStore.getState();
   store.clearComposerContent(target);
-  const originalPrompt =
-    "  Use [Page](t2-context://v1/page/p) and [Copied](t2-context://v1/page/copied)  ";
+  const originalPrompt = permissionLoss
+    ? "Keep this original prompt"
+    : "  Use [Page](t2-context://v1/page/p) and [Copied](t2-context://v1/page/copied)  ";
   const copied = {
     version: 1 as const,
     kind: "page" as const,
@@ -182,10 +202,11 @@ async function verifyFailedSnapshotRecovery(
     ],
     records: [copied],
   });
+  if (permissionLoss) store.setContextDraft(target, undefined);
   const imageReadStarted = deferred<undefined>();
   const imageReadAllowed = deferred<undefined>();
   const previousFileReader = globalThis.FileReader;
-  if (editWhileSavingImage) {
+  if (editWhileSavingImage || permissionLoss === "image") {
     const image = new File(["image bytes"], "image.png", { type: "image/png" });
     store.addImages(target, [
       {
@@ -274,6 +295,7 @@ async function verifyFailedSnapshotRecovery(
     validateProviderInput: () => true,
     resetCursorState: noop,
   } as unknown as ChatComposerHandle;
+  let settingsCalls = 0;
   const input = {
     environmentId,
     routeThreadKey: route,
@@ -348,6 +370,7 @@ async function verifyFailedSnapshotRecovery(
     handleInteractionModeChange: noop,
     handleNewThreadInActiveProject: noop,
     persistThreadSettingsForNextTurn: () => {
+      settingsCalls += 1;
       settingsEntered.resolve(undefined);
       return settings.promise;
     },
@@ -365,7 +388,47 @@ async function verifyFailedSnapshotRecovery(
   }
   state.storage.reject = admission === "quota";
   if (admission !== "ok") settings.resolve({ _tag: "Success", value: undefined });
+  if (permissionLoss) settings.resolve({ _tag: "Success", value: undefined });
+  if (permissionLoss === "persist" || permissionLoss === "handoff")
+    state.storage.afterWrite = (key) => {
+      if (key === PROMPT_STASH_STORAGE_KEY) {
+        state.storage.afterWrite = undefined;
+        queueMicrotask(() => {
+          if (permissionLoss === "handoff")
+            queueMicrotask(() => {
+              state.canOperate = false;
+            });
+          else state.canOperate = false;
+        });
+      }
+    };
   const pending = useComposerSend(input).onSend();
+  if (permissionLoss) {
+    if (permissionLoss === "image") {
+      await imageReadStarted.promise;
+      state.canOperate = false;
+      imageReadAllowed.resolve(undefined);
+    }
+    let clears = 0;
+    const stop = useComposerDraftStore.subscribe(() => {
+      if (!(store.getComposerDraft(target)?.prompt ?? "")) clears += 1;
+    });
+    try {
+      await pending;
+    } finally {
+      stop();
+    }
+    expect(clears).toBe(0);
+    expect(settingsCalls).toBe(0);
+    expect(state.dispatch).not.toHaveBeenCalled();
+    expect(store.getComposerDraft(target)).toEqual(original);
+    expect(optimistic).toEqual([]);
+    expect(usePromptStashStore.getState().entries).toEqual([]);
+    vi.stubGlobal("FileReader", previousFileReader);
+    state.realPreparer = false;
+    state.canOperate = true;
+    return;
+  }
   if (editWhileSavingImage) {
     await imageReadStarted.promise;
     store.setPrompt(target, "Typed while saving recovery");
@@ -511,3 +574,16 @@ it.each(["normal send", "plan follow-up"] as const)(
 it("retains newer typing and the original image when the draft changes during recovery encoding", async () => {
   await verifyFailedSnapshotRecovery("normal send", false, "ok", false, true);
 });
+
+it.each([
+  ["normal send", "image"],
+  ["normal send", "persist"],
+  ["plan follow-up", "persist"],
+  ["normal send", "handoff"],
+  ["plan follow-up", "handoff"],
+] as const)(
+  "rechecks operate permission for %s after recovery %s using the real context preparer",
+  async (path, phase) => {
+    await verifyFailedSnapshotRecovery(path, false, "ok", false, false, phase);
+  },
+);
