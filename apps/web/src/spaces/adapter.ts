@@ -1,5 +1,5 @@
 import { Extension, type Extensions } from "@tiptap/core";
-import { closeHistory, history, redo, undo } from "@tiptap/pm/history";
+import { closeHistory, history, isHistoryTransaction, redo, undo } from "@tiptap/pm/history";
 import { Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import {
   Plugin,
@@ -236,6 +236,8 @@ export class SpaceEditorAdapter {
         if (!tr.docChanged) return true;
         if (this.#options.canEdit?.() === false) return false;
         try {
+          const operation = tr.getMeta(this.#operation) as Operation | undefined;
+          const localHistory = operation?.history === true && isHistoryTransaction(tr);
           for (const [i, step] of tr.steps.entries()) {
             const doc = tr.docs[i]!;
             let safe = true;
@@ -243,7 +245,7 @@ export class SpaceEditorAdapter {
               if (
                 !captionBoundary(doc, from) ||
                 !captionBoundary(doc, to) ||
-                !spaceMentionRangeSafe(doc, from, to)
+                (!localHistory && !spaceMentionRangeSafe(doc, from, to))
               )
                 safe = false;
             });
@@ -251,10 +253,9 @@ export class SpaceEditorAdapter {
               safe &&=
                 captionBoundary(doc, step.from) &&
                 captionBoundary(doc, step.to) &&
-                spaceMentionRangeSafe(doc, step.from, step.to);
+                (localHistory || spaceMentionRangeSafe(doc, step.from, step.to));
             if (!safe) return false;
           }
-          const operation = tr.getMeta(this.#operation) as Operation | undefined;
           const batch = this.#batch(tr.before, tr.doc, operation);
           const before = entries(tr.before);
           const after = entries(tr.doc);

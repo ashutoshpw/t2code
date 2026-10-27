@@ -8606,3 +8606,88 @@ it.effect(
       ),
     ).pipe(Effect.provide(NodeServices.layer)),
 );
+
+it.effect.each(["page_mention", "block_mention"] as const)(
+  "undoes adjacent equal-target %s insertion through earlier unrelated history while refusing authored partial-span edits",
+  (type) =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* savedUndoFixture(service, [
+            savedParagraph("adjacent-mention-history", "prefix First"),
+          ]);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            const mark: import("../src/spaces/mentions.ts").SpaceMentionMark =
+              type === "page_mention"
+                ? { type, version: 1, target: h.key }
+                : {
+                    type,
+                    version: 1,
+                    target: { ...h.key, blockId: C.SpaceBlockId.make("adjacent-mention-history") },
+                  };
+            try {
+              view.dispatch(
+                view.state.tr.setSelection(TextSelection.create(view.state.doc, 8, 13)),
+              );
+              assert.isTrue(
+                view.bridge.mentionInsertion(() => view.state, view.dispatch).insert(mark, "First"),
+              );
+              await controller.save();
+              const baseline = controller.session.getSnapshot().blocks;
+              view.dispatch(view.state.tr.insertText("old-", 1));
+              const earlier = controller.session.getSnapshot().blocks;
+              view.dispatch(
+                view.state.tr.setSelection(
+                  TextSelection.create(view.state.doc, view.state.doc.content.size - 1),
+                ),
+              );
+              assert.isTrue(
+                view.bridge
+                  .mentionInsertion(() => view.state, view.dispatch)
+                  .insert(mark, "Second"),
+              );
+              assert.equal(view.state.doc.textContent, "old-prefix FirstSecond");
+              const inserted = controller.session.getSnapshot(),
+                doc = view.state.doc,
+                end = doc.content.size - 1;
+              view.dispatch(view.state.tr.delete(end - "Second".length, end));
+              assert.strictEqual(view.state.doc, doc);
+              assert.strictEqual(controller.session.getSnapshot(), inserted);
+              view.bridge.setWritable(false);
+              assert.isFalse(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.strictEqual(controller.session.getSnapshot(), inserted);
+              view.bridge.setWritable(true);
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.equal(view.state.doc.textContent, "old-prefix First");
+              assert.deepEqual(controller.session.getSnapshot().blocks, earlier);
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.equal(view.state.doc.textContent, "prefix First");
+              assert.deepEqual(controller.session.getSnapshot().blocks, baseline);
+              assert.isFalse(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              assert.deepEqual(controller.session.getSnapshot().blocks, earlier);
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              assert.deepEqual(controller.session.getSnapshot().blocks, inserted.blocks);
+              await controller.save();
+              assert.deepEqual(
+                (
+                  await h.run(
+                    service.readBlocks({
+                      ...h.key,
+                      revision: controller.session.getSnapshot().baseRevision!,
+                    }),
+                  )
+                ).blocks,
+                inserted.blocks,
+              );
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
