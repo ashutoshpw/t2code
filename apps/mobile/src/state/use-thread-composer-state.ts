@@ -618,6 +618,10 @@ export function useThreadComposerState() {
         ? parseCodexFeedbackCommand(text)
         : null;
     if (feedbackCommand) {
+      if (draft.context !== undefined || draft.contextDraft !== undefined) {
+        Dialog.alert("Feedback", "Send feedback without attachments or added context.");
+        return null;
+      }
       if (!readEnvironmentScope(selectedThreadShell.environmentId, AuthOrchestrationOperateScope))
         return null;
       if (thread.activeProviderThreadId === null) {

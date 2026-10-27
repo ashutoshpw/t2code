@@ -8,6 +8,7 @@ import { scopeThreadRef, scopedThreadKey } from "@t2code/client-runtime/environm
 
 const state = vi.hoisted(() => ({
   connected: true,
+  planMode: false,
   dispatch: vi.fn(async () => ({ _tag: "Success" as const, value: undefined })),
   navigate: vi.fn(),
   toasts: [] as Array<{
@@ -25,13 +26,12 @@ vi.mock("@tanstack/react-router", () => ({ useNavigate: () => state.navigate }))
 vi.mock("../../hooks/useHandleNewThread", () => ({ useNewThreadHandler: () => vi.fn() }));
 vi.mock("../../hooks/useSettings", () => ({
   useClientSettingsHydrated: () => true,
-  useEnvironmentSettings: () => false,
+  useEnvironmentSettings: () => state.planMode,
 }));
 vi.mock("../../state/use-orchestration-command", () => ({
   useOrchestrationCommand: () => state.dispatch,
 }));
 vi.mock("./useMultipleModelSend", () => ({ useMultipleModelSend: () => vi.fn() }));
-vi.mock("./useProposedPlanSend", () => ({ usePlanFollowUpSend: () => vi.fn() }));
 vi.mock("../ui/toast", () => ({
   stackedThreadToast: <A>(value: A) => value,
   toastManager: {
@@ -97,7 +97,11 @@ function deferred<A>() {
   return { promise, resolve };
 }
 
-it("removes a refused send's optimistic row and recovers its original snapshot without overwriting newer typing", async () => {
+async function verifyFailedSnapshotRecovery(
+  path: "normal send" | "plan follow-up",
+  restoreFromOtherRoute: boolean,
+) {
+  state.planMode = path === "plan follow-up";
   state.connected = true;
   state.dispatch.mockClear();
   state.toasts.length = 0;
@@ -107,7 +111,34 @@ it("removes a refused send's optimistic row and recovers its original snapshot w
   const route = scopedThreadKey(target);
   const store = useComposerDraftStore.getState();
   store.clearComposerContent(target);
-  const originalPrompt = "Use [Page](t2-context://v1/page/p)";
+  const originalPrompt =
+    "Use [Page](t2-context://v1/page/p) and [Copied](t2-context://v1/page/copied)";
+  const copied = {
+    version: 1 as const,
+    kind: "page" as const,
+    contextId: ComposerContextId.make("copied"),
+    label: "Copied",
+    title: "Copied",
+    environmentId,
+    spaceId: SpaceId.make("space"),
+    pageId: SpacePageId.make("copied-page"),
+    snapshot: {
+      version: 1 as const,
+      includeChildPages: false,
+      truncated: false,
+      text: "Original copied snapshot",
+      contentHash: `sha256:${"a".repeat(64)}`,
+      sources: [
+        {
+          environmentId,
+          spaceId: SpaceId.make("space"),
+          pageId: SpacePageId.make("copied-page"),
+          revision: 1,
+          blockIds: [],
+        },
+      ],
+    },
+  };
   store.setPrompt(target, originalPrompt);
   store.setContextDraft(target, {
     selectors: [
@@ -122,7 +153,7 @@ it("removes a refused send's optimistic row and recovers its original snapshot w
         includeChildPages: false,
       },
     ],
-    records: [],
+    records: [copied],
   });
   const original = structuredClone(store.getComposerDraft(target)!);
   state.prepare.mockResolvedValue({
@@ -164,6 +195,7 @@ it("removes a refused send's optimistic row and recovers its original snapshot w
   const settings = deferred<{ _tag: "Success"; value: undefined }>();
   const settingsEntered = deferred<undefined>();
   const promptRef = { current: originalPrompt };
+  const currentRouteThreadKeyRef = { current: route as string | null };
   let optimistic: ChatMessage[] = [];
   const noop = vi.fn();
   const handle = {
@@ -188,7 +220,7 @@ it("removes a refused send's optimistic row and recovers its original snapshot w
   const input = {
     environmentId,
     routeThreadKey: route,
-    currentRouteThreadKeyRef: { current: route },
+    currentRouteThreadKeyRef,
     draftId: null,
     draftThread: null,
     activeThread: thread,
@@ -196,7 +228,9 @@ it("removes a refused send's optimistic row and recovers its original snapshot w
     activeThreadBranch: null,
     activeProject: { id: thread.projectId, environmentId, workspaceRoot: "/isolated-project" },
     activeProjectDefaultModelSelection: null,
-    activeProposedPlan: null,
+    activeProposedPlan: state.planMode
+      ? { id: "proposed-plan", planMarkdown: "A proposed implementation" }
+      : null,
     activeMessageCount: 1,
     isServerThread: true,
     isLocalDraftThread: false,
@@ -227,7 +261,7 @@ it("removes a refused send's optimistic row and recovers its original snapshot w
     panelAnimationDurationMs: 0,
     keepFullHistory: true,
     resumeCompactionTokens: null,
-    showPlanFollowUpPrompt: false,
+    showPlanFollowUpPrompt: state.planMode,
     usageLimitsKey: null,
     usageLimitsOffered: false,
     openUsageLimits: noop,
@@ -282,10 +316,24 @@ it("removes a refused send's optimistic row and recovers its original snapshot w
   recovery!.actionProps!.onClick();
   expect(store.getComposerDraft(target)?.prompt).toBe("Newer typing");
   store.clearComposerContent(target);
+  if (restoreFromOtherRoute) {
+    currentRouteThreadKeyRef.current = "other-route";
+    promptRef.current = "Other thread typing";
+  }
   recovery!.actionProps!.onClick();
   const restored: ComposerThreadDraftState | null = store.getComposerDraft(target);
   expect(restored?.prompt).toBe(originalPrompt);
   expect(restored?.contextDraft).toEqual(original.contextDraft);
-  expect(promptRef.current).toBe(originalPrompt);
+  expect(promptRef.current).toBe(restoreFromOtherRoute ? "Other thread typing" : originalPrompt);
   store.clearComposerContent(target);
-});
+}
+
+it.each([
+  ["normal send", false],
+  ["normal send", true],
+  ["plan follow-up", false],
+  ["plan follow-up", true],
+] as const)(
+  "recovers a refused %s without overwriting typing (other route: %s)",
+  verifyFailedSnapshotRecovery,
+);

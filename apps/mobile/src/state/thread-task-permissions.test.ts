@@ -37,6 +37,7 @@ const state = vi.hoisted(() => ({
   pendingRequests: { approvals: [], userInputs: [] } as PendingThreadRequests,
   enqueue: vi.fn(async () => undefined),
   capture: vi.fn(),
+  alert: vi.fn(),
   clearDraft: vi.fn(),
   approve: vi.fn(),
   answer: vi.fn(),
@@ -56,6 +57,7 @@ const state = vi.hoisted(() => ({
     modelSelection: { instanceId: "codex", model: "gpt-5.4" },
     runtimeMode: "full-access",
     interactionMode: "default",
+    activeProviderThreadId: "provider-thread",
     runtime: null,
     latestRun: null,
   },
@@ -83,6 +85,7 @@ vi.mock("./preferences", async () => {
   const { Atom, AsyncResult } = await import("effect/reactivity");
   return { mobilePreferencesAtom: Atom.make(AsyncResult.success({})) };
 });
+vi.mock("../components/ui/Dialog", () => ({ alert: state.alert }));
 vi.mock("react-native", () => ({ Alert: { alert: vi.fn() } }));
 vi.mock("@effect/atom-react", async () => {
   const { appAtomRegistry } = await import("./atom-registry");
@@ -524,3 +527,60 @@ it("retains selectors added while an approval-feedback response is deferred", as
   expect(state.clearDraft).not.toHaveBeenCalled();
   expect(state.draft.contextDraft).toEqual(selectorDraft());
 });
+
+it.each(["selectors", "records"] as const)(
+  "refuses /feedback with added %s while retaining the draft",
+  async (kind) => {
+    state.grantedEnvironments.add("secondary");
+    const selected = selectorDraft();
+    const contextDraft: ComposerContextDraft =
+      kind === "selectors"
+        ? selected
+        : {
+            selectors: [],
+            records: [
+              {
+                version: 1,
+                kind: "page",
+                contextId: "page" as never,
+                label: "Page",
+                title: "Page",
+                environmentId: "secondary" as never,
+                spaceId: "space" as never,
+                pageId: "source" as never,
+                snapshot: {
+                  version: 1,
+                  includeChildPages: false,
+                  truncated: false,
+                  text: "Copied snapshot",
+                  contentHash: `sha256:${"a".repeat(64)}`,
+                  sources: [
+                    {
+                      environmentId: "secondary" as never,
+                      spaceId: "space" as never,
+                      pageId: "source" as never,
+                      revision: 1,
+                      blockIds: [],
+                    },
+                  ],
+                },
+              },
+            ],
+          };
+    state.draft = {
+      ...state.draft,
+      text: "/feedback Inspect [Page](t2-context://v1/page/page)",
+      contextDraft,
+    };
+    const draft = structuredClone(state.draft);
+    const approvalGuard = vi.fn(async () => "responded" as const);
+    expect(await useThreadComposerState().onSendMessage(undefined, approvalGuard)).toBeNull();
+    expect(state.feedback).not.toHaveBeenCalled();
+    expect(state.clearDraft).not.toHaveBeenCalled();
+    expect(state.capture).not.toHaveBeenCalled();
+    expect(state.enqueue).not.toHaveBeenCalled();
+    expect(approvalGuard).not.toHaveBeenCalled();
+    expect(state.alert).toHaveBeenCalledOnce();
+    expect(state.draft).toEqual(draft);
+  },
+);

@@ -394,6 +394,55 @@ export function useComposerSend(input: ComposerSendInput) {
     respondingRequestIdsRef.current = respondingRequestIds;
   }, [pendingApprovals, respondingRequestIds]);
 
+  const recoverFailedSend = (threadIdForSend: ThreadId, restore: () => void) => {
+    if (
+      !composerDraftHasUserContent(
+        useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
+      )
+    ) {
+      restore();
+    } else {
+      const recoveryToastId = toastManager.add(
+        stackedThreadToast({
+          type: "error",
+          title: "Message was not sent",
+          description:
+            "Your newer draft is unchanged. Restore the failed prompt when the original composer is empty.",
+          timeout: 0,
+          actionProps: {
+            children: "Restore prompt",
+            onClick: () => {
+              if (
+                sendInFlightRef.current ||
+                composerDraftHasUserContent(
+                  useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
+                )
+              ) {
+                toastManager.update(recoveryToastId, {
+                  description:
+                    "Send or clear the current prompt in the original thread before restoring.",
+                });
+                return;
+              }
+              restore();
+              void navigate(
+                draftId
+                  ? { to: "/draft/$draftId", params: { draftId } }
+                  : {
+                      to: "/$environmentId/$threadId",
+                      params: buildThreadRouteParams(
+                        scopeThreadRef(environmentId, threadIdForSend),
+                      ),
+                    },
+              );
+              toastManager.close(recoveryToastId);
+            },
+          },
+        }),
+      );
+    }
+  };
+
   const onSend = async (
     e?: { preventDefault: () => void },
     dispatchMode: ComposerDispatchMode = "auto",
@@ -680,6 +729,9 @@ export function useComposerSend(input: ComposerSendInput) {
         return;
       }
       const followUpPromptSnapshot = promptRef.current;
+      const followUpContextDraft = composerContextDraft
+        ? structuredClone(composerContextDraft)
+        : undefined;
       const followUpTerminalContexts = [...sendableComposerTerminalContexts];
       const followUpReviewComments = [...composerReviewComments];
       const followUpPreviewAnnotations = [...composerPreviewAnnotations];
@@ -721,33 +773,37 @@ export function useComposerSend(input: ComposerSendInput) {
         interactionMode: followUp.interactionMode,
       });
       sendInFlightRef.current = false;
-      if (
-        !followUpSent &&
-        !composerDraftHasUserContent(
-          useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
-        )
-      ) {
-        useComposerDraftStore.getState().setContextDraft(composerDraftTarget, composerContextDraft);
-        promptRef.current = followUpPromptSnapshot;
-        composerTerminalContextsRef.current = [...followUpTerminalContexts];
-        restorePlanFollowUpComposer({
-          snapshot: {
-            prompt: followUpPromptSnapshot,
-            terminalContexts: followUpTerminalContexts,
-            reviewComments: followUpReviewComments,
-            previewAnnotations: followUpPreviewAnnotations,
-            threadContexts: followUpThreadContexts,
-          },
-          writePrompt: (prompt) => setComposerDraftPrompt(composerDraftTarget, prompt),
-          writeTerminalContexts: (contexts) =>
-            setComposerDraftTerminalContexts(composerDraftTarget, [...contexts]),
-          writeReviewComments: (comments) =>
-            setComposerDraftReviewComments(composerDraftTarget, [...comments]),
-          writePreviewAnnotations: (annotations) =>
-            setComposerDraftPreviewAnnotations(composerDraftTarget, [...annotations]),
-          writeThreadContexts: (records) =>
-            setComposerDraftThreadContexts(composerDraftTarget, [...records]),
-          resetCursor: (options) => composerRef.current?.resetCursorState(options),
+      if (!followUpSent) {
+        recoverFailedSend(activeThread.id, () => {
+          useComposerDraftStore
+            .getState()
+            .setContextDraft(composerDraftTarget, followUpContextDraft);
+          const showingOriginalComposer = currentRouteThreadKeyRef.current === routeThreadKey;
+          if (showingOriginalComposer) {
+            promptRef.current = followUpPromptSnapshot;
+            composerTerminalContextsRef.current = [...followUpTerminalContexts];
+          }
+          restorePlanFollowUpComposer({
+            snapshot: {
+              prompt: followUpPromptSnapshot,
+              terminalContexts: followUpTerminalContexts,
+              reviewComments: followUpReviewComments,
+              previewAnnotations: followUpPreviewAnnotations,
+              threadContexts: followUpThreadContexts,
+            },
+            writePrompt: (prompt) => setComposerDraftPrompt(composerDraftTarget, prompt),
+            writeTerminalContexts: (contexts) =>
+              setComposerDraftTerminalContexts(composerDraftTarget, [...contexts]),
+            writeReviewComments: (comments) =>
+              setComposerDraftReviewComments(composerDraftTarget, [...comments]),
+            writePreviewAnnotations: (annotations) =>
+              setComposerDraftPreviewAnnotations(composerDraftTarget, [...annotations]),
+            writeThreadContexts: (records) =>
+              setComposerDraftThreadContexts(composerDraftTarget, [...records]),
+            resetCursor: (options) => {
+              if (showingOriginalComposer) composerRef.current?.resetCursorState(options);
+            },
+          });
         });
       } else if (
         followUpSent &&
@@ -1496,52 +1552,7 @@ export function useComposerSend(input: ComposerSendInput) {
           });
         }
       };
-      if (
-        !composerDraftHasUserContent(
-          useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
-        )
-      ) {
-        restoreFailedSnapshot();
-      } else {
-        const recoveryToastId = toastManager.add(
-          stackedThreadToast({
-            type: "error",
-            title: "Message was not sent",
-            description:
-              "Your newer draft is unchanged. Restore the failed prompt when the original composer is empty.",
-            timeout: 0,
-            actionProps: {
-              children: "Restore prompt",
-              onClick: () => {
-                if (
-                  sendInFlightRef.current ||
-                  composerDraftHasUserContent(
-                    useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
-                  )
-                ) {
-                  toastManager.update(recoveryToastId, {
-                    description:
-                      "Send or clear the current prompt in the original thread before restoring.",
-                  });
-                  return;
-                }
-                restoreFailedSnapshot();
-                void navigate(
-                  draftId
-                    ? { to: "/draft/$draftId", params: { draftId } }
-                    : {
-                        to: "/$environmentId/$threadId",
-                        params: buildThreadRouteParams(
-                          scopeThreadRef(environmentId, threadIdForSend),
-                        ),
-                      },
-                );
-                toastManager.close(recoveryToastId);
-              },
-            },
-          }),
-        );
-      }
+      recoverFailedSend(threadIdForSend, restoreFailedSnapshot);
       if (!isAtomCommandInterrupted(failure)) {
         const error = squashAtomCommandFailure(failure);
         setThreadError(
