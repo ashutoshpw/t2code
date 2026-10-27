@@ -425,10 +425,13 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
     !snapshot.loading &&
     snapshot.unavailable === null &&
     snapshot.error === null &&
+    (!snapshot.session.history.action || snapshot.session.pending !== null) &&
     editorState.busy !== "persist" &&
     snapshot.session.status !== "conflict" &&
     snapshot.session.persistenceError === null;
   const nativeState = editorState.focus?.publication.getSnapshot();
+  const savedUndoReason = editing.compensationAvailability("undo");
+  const savedRedoReason = editing.compensationAvailability("redo");
   usePreventRemove(focus !== null, () => {
     Dialog.alert(
       "Finish this block first",
@@ -594,7 +597,28 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
                   onPress={() => void editing.retryPersistence()}
                 />
               ) : null}
+              <ControlPill
+                variant="pill"
+                label="Undo saved content"
+                disabled={savedUndoReason !== null}
+                onPress={() => void editing.compensate("undo")}
+              />
+              <ControlPill
+                variant="pill"
+                label="Redo saved content"
+                disabled={savedRedoReason !== null}
+                onPress={() => void editing.compensate("redo")}
+              />
             </View>
+            <Notice>
+              {snapshot.session.history.action
+                ? `Retained saved ${snapshot.session.history.action}. Use Save or Retry exact save to resolve it; the attempted change is kept.`
+                : savedUndoReason === null
+                  ? "Undo is available for the last saved content change."
+                  : savedRedoReason === null
+                    ? "Redo is available for the last saved content change."
+                    : savedUndoReason}
+            </Notice>
             {focus ? (
               <View className="gap-2">
                 <Text className="text-base font-bold text-foreground">
@@ -604,6 +628,7 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
                   key={focus.token}
                   publication={focus.publication}
                   editable={editable}
+                  assertCurrent={() => editing.assertFocused(owner, focus.token)}
                   onDone={() => editing.finish(owner, focus.token)}
                 />
                 <ControlPill

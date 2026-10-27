@@ -2,10 +2,12 @@ import type { SpaceBlockId, SpaceBlockWindow } from "@t2code/contracts/spaces";
 import {
   isKnownSpaceBlock,
   spaceJsonBytes,
+  savedCompensation,
+  type SpaceCompensation,
   type SpaceDocumentSession,
 } from "@t2code/client-runtime/spaces";
 import { SpacesNativePublication } from "./nativeSpacesPublication";
-import { nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
+import { canRestoreMobileSpaceBlock, nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
 import type { SpacesReadAccess } from "./reader";
 
 interface FocusedBlock {
@@ -61,6 +63,7 @@ export class MobileSpaceEditing {
     if (
       state.status === "conflict" ||
       state.persistenceError !== null ||
+      (state.history.action && !state.pending) ||
       this.#snapshot.busy === "persist" ||
       this.#snapshot.busy === "discard"
     )
@@ -83,7 +86,7 @@ export class MobileSpaceEditing {
         const access = this.#editable();
         if (this.#snapshot.focus !== focus || session.getSnapshot().generation !== focus.generation)
           throw new Error("The page changed outside this native input; your input is retained");
-        spaceJsonBytes(replacement, access.capability!.limits.maxBlockBytes);
+        this.#replacementBudget(replacement, access);
         session.apply([{ kind: "replace", block: replacement }]);
         focus.generation = session.getSnapshot().generation;
       }),
@@ -92,6 +95,74 @@ export class MobileSpaceEditing {
     this.#update({ focus, error: null });
     return focus;
   }
+
+  assertFocused(owner: symbol, token: number) {
+    this.#editable();
+    const focus = this.#snapshot.focus;
+    if (
+      !focus ||
+      focus.owner !== owner ||
+      focus.token !== token ||
+      focus.generation !== this.ports.session.getSnapshot().generation
+    )
+      throw new Error("This native input no longer owns the block");
+  }
+
+  #replacementBudget(
+    block: import("@t2code/contracts/spaces").SpaceBlock,
+    access: SpacesReadAccess,
+  ) {
+    spaceJsonBytes(block, access.capability!.limits.maxBlockBytes);
+    spaceJsonBytes(
+      { mutations: [{ kind: "replace", block }] },
+      access.capability!.limits.maxMutationBytes,
+    );
+  }
+
+  #savedReason(direction: SpaceCompensation): string | null {
+    const access = this.#mutable();
+    if (this.#snapshot.focus)
+      return "Finish the active native input before saved content Undo/Redo";
+    const session = this.ports.session;
+    const reason = session.compensationAvailability(direction);
+    if (reason) return reason;
+    const state = session.getSnapshot();
+    const plan = savedCompensation(state.history, direction, state.blocks, state.baseRevision);
+    for (const mutation of plan.mutations) {
+      const current =
+        mutation.kind === "replace"
+          ? state.blocks.find((block) => block.id === mutation.block.id)
+          : null;
+      if (
+        mutation.kind !== "replace" ||
+        !current ||
+        !canRestoreMobileSpaceBlock(current, mutation.block)
+      )
+        return "This saved change includes content or attributes that are read-only on mobile";
+      this.#replacementBudget(mutation.block, access);
+    }
+    spaceJsonBytes({ mutations: plan.mutations }, access.capability!.limits.maxMutationBytes);
+    return null;
+  }
+
+  compensationAvailability(direction: SpaceCompensation): string | null {
+    if (this.#snapshot.busy) return "Wait for the current page operation";
+    try {
+      return this.#savedReason(direction);
+    } catch (cause) {
+      return cause instanceof Error ? cause.message : "Saved content Undo/Redo is unavailable";
+    }
+  }
+
+  compensate = (direction: SpaceCompensation) =>
+    this.#run("save", async () => {
+      const reason = this.#savedReason(direction);
+      if (reason) throw new Error(reason);
+      this.ports.session.prepareCompensation(direction);
+      await this.ports.session.persistDraft();
+      this.#mutable();
+      await this.ports.session.save();
+    });
 
   async finish(owner: symbol, token: number) {
     const focus = this.#snapshot.focus;
@@ -130,7 +201,7 @@ export class MobileSpaceEditing {
       ...block,
       content: { ...block.content, checked: !block.content.checked },
     };
-    spaceJsonBytes(replacement, access.capability!.limits.maxBlockBytes);
+    this.#replacementBudget(replacement, access);
     this.ports.session.apply([{ kind: "replace", block: replacement }]);
   }
 

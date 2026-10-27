@@ -9,6 +9,7 @@ import {
 import { SpaceDocumentSession, type SpaceDraftStore } from "@t2code/client-runtime/spaces";
 import { MobileSpaceEditing } from "./editing";
 import type { SpacesReadAccess } from "./reader";
+import type { SpacesNativeMark } from "./nativeSpacesProtocol";
 
 const key = {
   environmentId: EnvironmentId.make("edit-environment"),
@@ -94,6 +95,47 @@ function event(text: string, revision: number, composing = false) {
 }
 
 describe("production native page editing boundary", () => {
+  it("targets only the current native selection and refuses stale, composing, unsupported or rejected formatting while retaining local history recovery", async () => {
+    const test = setup();
+    await test.session.hydrate({ revision: 40, blocks: [block] });
+    const owner = Symbol();
+    const focus = test.editing.focus(owner, block.id);
+    const publication = focus.publication;
+    const initial = publication.getSnapshot().observed;
+    publication.receive({ ...initial, selection: { start: 8, end: 10 } }, false);
+    const selected = publication.getSnapshot().observed;
+    expect(JSON.parse(publication.formatCommand("italic", selected))).toEqual({
+      revision: 0,
+      selection: { start: 8, end: 10 },
+      mark: "italic",
+      enabled: true,
+    });
+    expect(test.session.getSnapshot().generation).toBe(0);
+    expect(() => publication.formatCommand("italic", initial)).toThrow("selection changed");
+    expect(() => publication.formatCommand("strike" as SpacesNativeMark, selected)).toThrow(
+      "read-only",
+    );
+    publication.receive({ ...selected, revision: 1, composing: true }, true);
+    const composing = publication.getSnapshot().observed;
+    expect(() => publication.formatCommand("bold", composing)).toThrow("composition");
+    expect(() => publication.historyRevision(composing)).toThrow("composition");
+    publication.receive(initial, true);
+    expect(publication.getSnapshot().observed).toBe(composing);
+    publication.receive({ ...selected, revision: 2 }, true);
+    publication.receive({ ...selected, revision: 3, selection: { start: 9, end: 10 } }, true);
+    expect(publication.getSnapshot().blocked).toBe(true);
+    expect(() => publication.formatCommand("bold", publication.getSnapshot().observed)).toThrow(
+      "rejected",
+    );
+    expect(publication.historyRevision(publication.getSnapshot().observed)).toBe(2);
+    publication.receive({ ...selected, revision: 2 }, false);
+    expect(publication.getSnapshot().blocked).toBe(true);
+    publication.receive({ ...selected, revision: 4 }, true);
+    expect(publication.getSnapshot().blocked).toBe(false);
+    test.editing.assertFocused(owner, focus.token);
+    await test.editing.finish(owner, focus.token);
+    expect(() => test.editing.assertFocused(owner, focus.token)).toThrow("no longer owns");
+  });
   it("retains a rejected native edit through selection and waits for persistence before releasing its owner", async () => {
     const writing = Promise.withResolvers<void>();
     const commit = Promise.withResolvers<void>();

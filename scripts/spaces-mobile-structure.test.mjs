@@ -5,6 +5,7 @@ import * as NodeModule from "node:module";
 import * as NodePath from "node:path";
 import * as NodeSqlite from "node:sqlite";
 import * as Effect from "effect/Effect";
+import * as TestClock from "effect/testing/TestClock";
 import { EnvironmentId } from "../packages/contracts/src/index.ts";
 import { SpaceBlockId } from "../packages/contracts/src/spaces.ts";
 import {
@@ -142,6 +143,400 @@ const withFixture = Effect.fn("MobileStructureTest.fixture")(function* (use) {
     yield* use({ fixture, environmentId, service, run, db, capability });
   }).pipe(Effect.provide(layer));
 }, Effect.scoped);
+
+it.effect(
+  "publishes selection-scoped native formatting and saves/reopens replacement-only Undo/Redo while retaining a failed compensation and newer suffix after ACK",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const page = await root(context, runtime, space, "Formatted saved history");
+        const original = {
+          ...paragraph("saved-rich-heading"),
+          type: "heading",
+          content: {
+            level: 2,
+            runs: [
+              {
+                text: "ab",
+                marks: [
+                  { type: "bold", version: 1 },
+                  { type: "link", version: 1, href: "https://t2.codes/one" },
+                ],
+              },
+              {
+                text: "😀",
+                marks: [
+                  { type: "italic", version: 1 },
+                  { type: "link", version: 1, href: "https://t2.codes/one" },
+                ],
+              },
+              {
+                text: "cd",
+                marks: [
+                  { type: "code", version: 1 },
+                  { type: "link", version: 1, href: "https://t2.codes/two" },
+                ],
+              },
+            ],
+          },
+        };
+        const readonly = {
+          ...paragraph("unchanged-saved-code"),
+          type: "code",
+          order: "90000000000000000000000000000000",
+          content: { language: "ts", text: "untouched" },
+        };
+        const todo = {
+          ...paragraph("saved-todo-check"),
+          type: "todo_item",
+          order: "a0000000000000000000000000000000",
+          content: { checked: false, runs: [{ text: "Saved task", marks: [] }] },
+        };
+        await seedBlocks(context, page, [original, readonly, todo]);
+        const lease = runtime.documents.acquire({
+          environmentId: context.environmentId,
+          spaceId: space.id,
+          pageId: page.id,
+        });
+        await lease.reader.first();
+        const editing = lease.reader.editing;
+        const focus = editing.focus(Symbol(), original.id);
+        const publication = focus.publication;
+        const initial = publication.getSnapshot().observed;
+        publication.receive({ ...initial, selection: { start: 0, end: 6 } }, false);
+        const selected = publication.getSnapshot().observed;
+        expect(publication.markState("bold")).toBe("mixed");
+        expect(JSON.parse(publication.formatCommand("bold", selected))).toEqual({
+          revision: 0,
+          selection: { start: 0, end: 6 },
+          mark: "bold",
+          enabled: true,
+        });
+        expect(lease.reader.session.getSnapshot().generation).toBe(0);
+        const nativeRuns = [
+          { text: "ab", bold: true, italic: false, code: false, link: "https://t2.codes/one" },
+          { text: "😀", bold: true, italic: true, code: false, link: "https://t2.codes/one" },
+          { text: "cd", bold: true, italic: false, code: true, link: "https://t2.codes/two" },
+        ];
+        publication.receive({ ...selected, revision: 1, runs: nativeRuns }, true);
+        expect(publication.markState("bold")).toBe(true);
+        const formatted = lease.reader.session
+          .getSnapshot()
+          .blocks.find((block) => block.id === original.id);
+        expect(formatted.content.runs[1].marks).toEqual([
+          { type: "bold", version: 1 },
+          { type: "italic", version: 1 },
+          { type: "link", version: 1, href: "https://t2.codes/one" },
+        ]);
+        expect(formatted.content.runs[2].marks).toEqual([
+          { type: "bold", version: 1 },
+          { type: "code", version: 1 },
+          { type: "link", version: 1, href: "https://t2.codes/two" },
+        ]);
+        publication.receive(initial, true);
+        expect(
+          lease.reader.session.getSnapshot().blocks.find((block) => block.id === original.id),
+        ).toEqual(formatted);
+        await editing.finish(focus.owner, focus.token);
+        await editing.save();
+        expect(editing.getSnapshot().error).toBeNull();
+        expect((await pageWindow(context, page.id)).blocks).toEqual([formatted, readonly, todo]);
+        lease.release();
+        await context.run(context.db.close);
+        const reopened = await context.run(context.fixture.open());
+        const restarted = client(context, reopened);
+        await restarted.owner.hydrate();
+        const opened = restarted.documents.acquire({
+          environmentId: context.environmentId,
+          spaceId: space.id,
+          pageId: page.id,
+        });
+        try {
+          await opened.reader.first();
+          const controller = opened.reader.editing;
+          const session = opened.reader.session;
+          expect(controller.compensationAvailability("undo")).toBeNull();
+          await controller.compensate("undo");
+          expect(controller.getSnapshot().error).toBeNull();
+          expect((await pageWindow(context, page.id)).blocks).toEqual([original, readonly, todo]);
+          await controller.compensate("redo");
+          expect((await pageWindow(context, page.id)).blocks).toEqual([formatted, readonly, todo]);
+          const sendsBeforeFailure = restarted.control.contentRequests.length;
+          restarted.control.beforeDraftWrite = async (_key, draft) => {
+            if (draft?.pending && draft.history?.action === "undo") {
+              restarted.control.beforeDraftWrite = null;
+              context.fixture.control.beforeCommit = async () => {
+                throw new Error("Saved compensation COMMIT refused");
+              };
+            }
+          };
+          await controller.compensate("undo");
+          expect(controller.getSnapshot().error).not.toBeNull();
+          expect(restarted.control.contentRequests).toHaveLength(sendsBeforeFailure);
+          const frozen = structuredClone(session.getSnapshot().pending);
+          expect(frozen).not.toBeNull();
+          expect(session.getSnapshot().history.action).toBe("undo");
+          context.fixture.control.beforeCommit = null;
+          await controller.retryPersistence();
+          expect(
+            (await reopened.store.load({ environmentId: context.environmentId, pageId: page.id }))
+              .pending,
+          ).toEqual(frozen);
+          const committed = Promise.withResolvers();
+          const reply = Promise.withResolvers();
+          restarted.control.afterContentSend = async () => {
+            committed.resolve();
+            await reply.promise;
+          };
+          const saving = controller.save();
+          await committed.promise;
+          const later = controller.focus(Symbol(), original.id);
+          const laterState = later.publication.getSnapshot().observed;
+          later.publication.receive(
+            {
+              ...laterState,
+              revision: 1,
+              runs: [
+                {
+                  text: "New suffix😀",
+                  bold: true,
+                  italic: true,
+                  code: true,
+                  link: "https://t2.codes/later",
+                },
+              ],
+              selection: { start: 0, end: 0 },
+            },
+            true,
+          );
+          const generation = session.getSnapshot().generation;
+          reply.resolve();
+          await saving;
+          expect(controller.getSnapshot().error).toBeNull();
+          expect(restarted.control.contentRequests.at(-1)).toMatchObject({
+            mutationId: frozen.mutationId,
+            receiptEpoch: frozen.receiptEpoch,
+            baseRevision: frozen.baseRevision,
+            generation: frozen.generation,
+            mutations: frozen.mutations,
+          });
+          expect(generation).toBeGreaterThan(frozen.generation);
+          expect(session.getSnapshot()).toMatchObject({ generation, dirty: true, pending: null });
+          expect(
+            session.getSnapshot().blocks.find((block) => block.id === original.id).content.runs[0]
+              .text,
+          ).toBe("New suffix😀");
+          const stored = await reopened.store.load({
+            environmentId: context.environmentId,
+            pageId: page.id,
+          });
+          expect(stored.mutations).toHaveLength(1);
+          expect(stored.generation).toBe(generation);
+          later.publication.receive(laterState, true);
+          expect(session.getSnapshot().generation).toBe(generation);
+          await controller.finish(later.owner, later.token);
+          restarted.control.afterContentSend = null;
+          await controller.save();
+          expect(
+            (await pageWindow(context, page.id)).blocks.find((block) => block.id === original.id)
+              .content.runs[0].text,
+          ).toBe("New suffix😀");
+          expect(
+            (await pageWindow(context, page.id)).blocks.find((block) => block.id === readonly.id),
+          ).toEqual(readonly);
+          controller.toggleTodo(todo.id);
+          await controller.save();
+          expect(
+            (await pageWindow(context, page.id)).blocks.find((block) => block.id === todo.id)
+              .content.checked,
+          ).toBe(true);
+          await controller.compensate("undo");
+          expect(
+            (await pageWindow(context, page.id)).blocks.find((block) => block.id === todo.id),
+          ).toEqual(todo);
+          await controller.compensate("redo");
+          expect(
+            (await pageWindow(context, page.id)).blocks.find((block) => block.id === todo.id)
+              .content.checked,
+          ).toBe(true);
+        } finally {
+          opened.release();
+        }
+      }),
+    ),
+);
+
+it.effect(
+  "reloads a lost saved Undo receipt as exact uncertain content and refuses admission renewal after real receipt expiry",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const page = await root(context, runtime, space, "Expired saved history receipt");
+        const original = paragraph("expired-content");
+        await seedBlocks(context, page, [original]);
+        const lease = runtime.documents.acquire({
+          environmentId: context.environmentId,
+          spaceId: space.id,
+          pageId: page.id,
+        });
+        await lease.reader.first();
+        const editing = lease.reader.editing;
+        const focus = editing.focus(Symbol(), original.id);
+        const state = focus.publication.getSnapshot().observed;
+        focus.publication.receive(
+          {
+            ...state,
+            revision: 1,
+            runs: [{ text: "Saved italic", bold: false, italic: true, code: false }],
+            selection: { start: 0, end: 0 },
+          },
+          true,
+        );
+        await editing.finish(focus.owner, focus.token);
+        await editing.save();
+        runtime.control.afterContentSend = async () => {
+          throw new Error("Lost real saved Undo reply");
+        };
+        await editing.compensate("undo");
+        expect(editing.getSnapshot().error).toContain("Lost real saved Undo reply");
+        const key = { environmentId: context.environmentId, pageId: page.id };
+        const pending = await context.db.store.load(key);
+        expect(pending.pending).not.toBeNull();
+        expect(pending.history.action).toBe("undo");
+        lease.release();
+        await context.run(context.db.close);
+        await context.run(TestClock.adjust("10 days"));
+        await context.run(
+          context.service.listSpaces({ environmentId: context.environmentId, limit: 1 }),
+        );
+        const reopened = await context.run(context.fixture.open());
+        const restarted = client(context, reopened);
+        await restarted.owner.hydrate();
+        const current = restarted.documents.acquire({
+          environmentId: context.environmentId,
+          spaceId: space.id,
+          pageId: page.id,
+        });
+        try {
+          await current.reader.first();
+          expect(current.reader.session.getSnapshot().status).toBe("uncertain");
+          expect(current.reader.editing.compensationAvailability("undo")).not.toBeNull();
+          await current.reader.editing.save();
+          expect(restarted.control.contentReceipts).toEqual(["unknown"]);
+          expect(restarted.control.contentAdmissions).toBe(0);
+          expect(restarted.control.contentRequests).toEqual([]);
+          expect(restarted.control.ids).toBe(0);
+          expect((await reopened.store.load(key)).pending).toEqual(pending.pending);
+          expect(current.reader.session.getSnapshot()).toMatchObject({
+            status: "uncertain",
+            pending: pending.pending,
+          });
+          expect((await pageWindow(context, page.id)).blocks).toEqual([original]);
+        } finally {
+          current.release();
+        }
+      }),
+    ).pipe(Effect.provide(TestClock.layer())),
+);
+
+it.effect(
+  "refuses saved content compensation for readonly blocks, unsupported marks and heading attributes while retaining opaque rows without conversion",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const page = await root(context, runtime, space, "Readonly saved history");
+        const heading = {
+          ...paragraph("history-heading"),
+          type: "heading",
+          order: "20000000000000000000000000000000",
+          content: {
+            level: 2,
+            runs: [{ text: "Heading", marks: [] }],
+          },
+        };
+        const code = {
+          ...paragraph("history-code"),
+          type: "code",
+          order: "40000000000000000000000000000000",
+          content: { language: "ts", text: "Original code" },
+        };
+        const strike = {
+          ...paragraph("history-strike"),
+          order: "60000000000000000000000000000000",
+          content: { runs: [{ text: "Strike", marks: [{ type: "strike", version: 1 }] }] },
+        };
+        const opaque = {
+          ...paragraph("history-opaque"),
+          order: "80000000000000000000000000000000",
+          content: { futureLayout: { keep: true }, runs: [{ text: "Opaque original", marks: [] }] },
+        };
+        await seedBlocks(context, page, [heading, code, strike, opaque]);
+        const lease = runtime.documents.acquire({
+          environmentId: context.environmentId,
+          spaceId: space.id,
+          pageId: page.id,
+        });
+        try {
+          await lease.reader.first();
+          expect(() => lease.reader.editing.focus(Symbol(), opaque.id)).toThrow("read-only");
+          expect(() =>
+            lease.reader.session.apply([
+              {
+                kind: "replace",
+                block: { ...opaque, content: { runs: [{ text: "Do not strip", marks: [] }] } },
+              },
+            ]),
+          ).toThrow("Opaque blocks are read-only");
+          for (const change of [
+            {
+              id: code.id,
+              update: (current) => ({
+                ...current,
+                content: { ...current.content, text: "Changed code" },
+              }),
+            },
+            {
+              id: heading.id,
+              update: (current) => ({ ...current, content: { ...current.content, level: 3 } }),
+            },
+            {
+              id: strike.id,
+              update: (current) => ({
+                ...current,
+                content: {
+                  runs: [{ text: "Changed strike", marks: [{ type: "strike", version: 1 }] }],
+                },
+              }),
+            },
+          ]) {
+            const current = lease.reader.session
+              .getSnapshot()
+              .blocks.find((block) => block.id === change.id);
+            lease.reader.session.apply([{ kind: "replace", block: change.update(current) }]);
+            await lease.reader.session.save();
+            const sends = runtime.control.contentRequests.length;
+            expect(lease.reader.editing.compensationAvailability("undo")).toContain("read-only");
+            await lease.reader.editing.compensate("undo");
+            expect(lease.reader.editing.getSnapshot().error).toContain("read-only");
+            expect(runtime.control.contentRequests).toHaveLength(sends);
+            expect(lease.reader.session.getSnapshot().history.action).toBeNull();
+            expect(lease.reader.session.getSnapshot().pending).toBeNull();
+            expect(
+              (await pageWindow(context, page.id)).blocks.find((block) => block.id === opaque.id),
+            ).toEqual(opaque);
+          }
+        } finally {
+          lease.release();
+        }
+      }),
+    ),
+);
 
 it.effect(
   "moves requested block roots separately from their opaque/owned-page closure and recovers the real receipt across reopen before guarded inverse",
@@ -1171,6 +1566,10 @@ function client(context, db = context.db) {
     afterStore: null,
     afterSend: null,
     afterContentSend: null,
+    beforeDraftWrite: null,
+    contentRequests: [],
+    contentAdmissions: 0,
+    contentReceipts: [],
     failReads: new Set(),
     refreshed: [],
     changed: 0,
@@ -1217,7 +1616,13 @@ function client(context, db = context.db) {
     const key = { environmentId, pageId: target.pageId };
     let reader;
     const session = new SpaceDocumentSession(key, {
-      drafts: db.store,
+      drafts: {
+        load: db.store.load,
+        write: async (draftKey, draft) => {
+          await control.beforeDraftWrite?.(draftKey, draft);
+          await db.store.write(draftKey, draft);
+        },
+      },
       maxLoadedBlocks: 100,
       maxMutations: 100,
       createMutationId: () => `${clientId}-content-${++control.ids}`,
@@ -1229,13 +1634,29 @@ function client(context, db = context.db) {
       },
       adapter: createSpaceServiceSessionAdapter(key, {
         limits: () => capability.limits,
-        getPage: (input) => read(service.getPage(input)),
+        getPage: (input) => {
+          control.contentAdmissions++;
+          return read(service.getPage(input));
+        },
         applyBlockBatch: async (input) => {
+          const stored = await db.store.load(key);
+          expect(stored.pending).toMatchObject({
+            mutationId: input.mutationId,
+            receiptEpoch: input.receiptEpoch,
+            baseRevision: input.baseRevision,
+            generation: input.generation,
+            mutations: input.mutations,
+          });
+          control.contentRequests.push(structuredClone(input));
           const result = await run(service.applyBlockBatch(input));
           await control.afterContentSend?.(input, result);
           return result;
         },
-        lookupMutationReceipt: (input) => read(service.lookupMutationReceipt(input)),
+        lookupMutationReceipt: async (input) => {
+          const result = await read(service.lookupMutationReceipt(input));
+          control.contentReceipts.push(result.status);
+          return result;
+        },
       }),
     });
     reader = new SpacesPageReader(target, {

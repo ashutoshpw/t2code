@@ -3,7 +3,10 @@ import {
   isKnownSpaceBlock,
   isSafeSpaceLink,
   spaceBlockRuns,
+  spaceJsonBytes,
+  spaceDraftMaxBytes,
 } from "@t2code/client-runtime/spaces";
+import { stableStringify } from "@t2code/shared/relaySigning";
 import type { SpaceBlock, SpaceMark, SpaceRichText } from "@t2code/contracts/spaces";
 
 import {
@@ -18,6 +21,7 @@ export const SPACES_NATIVE_MAX_UTF16 = 16_384;
 export const SPACES_NATIVE_MAX_RUNS = 1_024;
 
 function validateNativeRuns(snapshot: SpacesNativeSnapshot) {
+  spaceJsonBytes(snapshot, spaceDraftMaxBytes);
   if (
     snapshot.runs.length > SPACES_NATIVE_MAX_RUNS ||
     snapshot.runs.reduce((length, run) => length + run.text.length, 0) > SPACES_NATIVE_MAX_UTF16
@@ -65,7 +69,7 @@ function mergeRuns(runs: readonly SpacesNativeRun[]): readonly SpacesNativeRun[]
 export function nativeDocumentForSpaceBlock(block: SpaceBlock): SpacesNativeDocument | null {
   const runs = supported(block);
   if (!runs) return null;
-  return {
+  const document: SpacesNativeDocument = {
     version: 1,
     revision: 0,
     runs: mergeRuns(
@@ -82,6 +86,45 @@ export function nativeDocumentForSpaceBlock(block: SpaceBlock): SpacesNativeDocu
     ),
     selection: { start: 0, end: 0 },
   };
+  try {
+    const { text: _text, ...typing } = document.runs[0] ?? {
+      text: "",
+      bold: false,
+      italic: false,
+      code: false,
+    };
+    spaceJsonBytes(
+      {
+        ...document,
+        composing: false,
+        typing,
+      },
+      spaceDraftMaxBytes,
+    );
+    return document;
+  } catch {
+    return null;
+  }
+}
+
+export function canRestoreMobileSpaceBlock(current: SpaceBlock, target: SpaceBlock): boolean {
+  if (
+    !nativeDocumentForSpaceBlock(current) ||
+    !nativeDocumentForSpaceBlock(target) ||
+    !isKnownSpaceBlock(current) ||
+    !isKnownSpaceBlock(target) ||
+    !("runs" in current.content) ||
+    !("runs" in target.content)
+  )
+    return false;
+  const { runs: _currentRuns, ...before } = current.content;
+  const { runs: _targetRuns, ...after } = target.content;
+  const normalize = (block: SpaceBlock, content: Record<string, unknown>) => {
+    const rest = { ...content };
+    if (block.type === "todo_item") delete rest.checked;
+    return { ...block, content: rest };
+  };
+  return stableStringify(normalize(current, before)) === stableStringify(normalize(target, after));
 }
 
 export function applySpacesNativeSnapshot(block: SpaceBlock, value: unknown): SpaceBlock {

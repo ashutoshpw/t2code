@@ -44,12 +44,14 @@ export function SpacesNativeBlockEditor({
   onDone,
   onCompositionChange,
   onPublicationBlockedChange,
+  assertCurrent,
 }: {
   publication: SpacesNativePublication;
   editable?: boolean;
   onDone?: () => Promise<void>;
   onCompositionChange?: (composing: boolean) => void;
   onPublicationBlockedChange?: (blocked: boolean) => void;
+  assertCurrent?: () => void;
 }) {
   const editor = useRef<EditorHandle>(null);
   const state = useSyncExternalStore(publication.subscribe, publication.getSnapshot);
@@ -76,7 +78,11 @@ export function SpacesNativeBlockEditor({
       return Promise.resolve();
     }
     return Promise.resolve()
-      .then(() => run(handle))
+      .then(() => {
+        if (editor.current !== handle) throw new Error("This native input is no longer mounted");
+        assertCurrent?.();
+        return run(handle);
+      })
       .then(
         (accepted) =>
           setError(
@@ -89,25 +95,12 @@ export function SpacesNativeBlockEditor({
 
   function format(mark: SpacesNativeMark) {
     const current = publication.getSnapshot().observed;
-    const position = current.selection.start;
-    let offset = 0;
-    const selected =
-      current.runs.find((run) => {
-        const start = offset;
-        offset += run.text.length;
-        return position >= start && position < offset;
-      }) ?? current.runs.at(-1);
-    const active = current.selection.start === current.selection.end ? current.typing : selected;
-    return command((handle) =>
-      handle.format(
-        JSON.stringify({
-          revision: current.revision,
-          selection: current.selection,
-          mark,
-          enabled: !active?.[mark],
-        }),
-      ),
-    );
+    return command((handle) => handle.format(publication.formatCommand(mark, current)));
+  }
+
+  function history(backwards: boolean) {
+    const expected = publication.getSnapshot().observed;
+    return command((handle) => handle.history(backwards, publication.historyRevision(expected)));
   }
 
   function done() {
@@ -119,12 +112,16 @@ export function SpacesNativeBlockEditor({
     }
     setFinishing(true);
     const completion = Promise.resolve()
-      .then(() => handle.freeze())
+      .then(() => {
+        if (editor.current !== handle) throw new Error("This native input is no longer mounted");
+        return handle.freeze();
+      })
       .then(async (frozen) => {
         if (!frozen) {
           setError("Finish the current composition before closing this input");
           return;
         }
+        if (editor.current !== handle) throw new Error("This native input is no longer mounted");
         setPaused(true);
         publication.receive(JSON.parse(frozen), true);
         const current = publication.getSnapshot();
@@ -152,34 +149,35 @@ export function SpacesNativeBlockEditor({
           <Pressable
             key={mark}
             accessibilityRole="button"
-            accessibilityLabel={`Toggle ${mark}`}
-            disabled={disabled}
+            accessibilityLabel={`Toggle ${mark === "code" ? "inline code" : mark}`}
+            accessibilityState={{
+              checked: publication.markState(mark),
+              disabled: disabled || state.blocked,
+            }}
+            disabled={disabled || state.blocked}
             onPress={() => void format(mark)}
           >
-            <Text className="text-foreground">{mark}</Text>
+            <Text className="text-foreground">
+              {mark === "code" ? "Inline code" : mark === "bold" ? "Bold" : "Italic"}
+              {publication.markState(mark) === "mixed" ? " (mixed)" : ""}
+            </Text>
           </Pressable>
         ))}
         <Pressable
           accessibilityRole="button"
           disabled={disabled}
-          onPress={() =>
-            void command((handle) =>
-              handle.history(true, publication.getSnapshot().observed.revision),
-            )
-          }
+          accessibilityLabel="Undo local input"
+          onPress={() => void history(true)}
         >
-          <Text className="text-foreground">Undo</Text>
+          <Text className="text-foreground">Undo input</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
           disabled={disabled}
-          onPress={() =>
-            void command((handle) =>
-              handle.history(false, publication.getSnapshot().observed.revision),
-            )
-          }
+          accessibilityLabel="Redo local input"
+          onPress={() => void history(false)}
         >
-          <Text className="text-foreground">Redo</Text>
+          <Text className="text-foreground">Redo input</Text>
         </Pressable>
         {onDone ? (
           <Pressable
