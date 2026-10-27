@@ -1,3 +1,7 @@
+import { restoreComposerSendRecovery } from "../../lib/composerSendRecovery";
+import { useNavigate } from "@tanstack/react-router";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { buildThreadRouteParams } from "../../threadRoutes";
 import type { SpaceContextSelector } from "@t2code/contracts";
 import type { ChatComposerProps } from "./ChatComposer";
 import {
@@ -125,6 +129,7 @@ export function useComposerStash(input: {
     importContextRecords,
     expandMobileComposer,
   } = input;
+  const navigate = useNavigate();
   const getComposerDraft = useComposerDraftStore((store) => store.getComposerDraft);
   const setComposerDraftPrompt = useComposerDraftStore((store) => store.setPrompt);
   const addComposerDraftImages = useComposerDraftStore((store) => store.addImages);
@@ -157,6 +162,50 @@ export function useComposerStash(input: {
   };
 
   const restoreStashEntry = async (menuEntry: PromptStashEntry) => {
+    if (menuEntry.recovery) {
+      try {
+        const restored = await restoreComposerSendRecovery({
+          entryId: menuEntry.id,
+          environmentId,
+          target: composerDraftTarget,
+          isCurrent: () =>
+            !isRevertingCheckpoint() &&
+            isComposerDraftTargetOpen(composerTargetKey(composerDraftTarget)),
+        });
+        promptRef.current = restored.prompt;
+        setComposerCursor(collapseExpandedComposerCursor(restored.prompt, restored.prompt.length));
+        setComposerTrigger(null);
+        setIsStashMenuOpen(false);
+        toastManager.add({
+          type: restored.expiredFiles.length ? "warning" : "info",
+          title: "Recovery prompt copied to the composer",
+          description: `The recovery copy stays in the stash until you delete it.${restored.expiredFiles.length ? ` Attach expired files again: ${restored.expiredFiles.join(", ")}.` : ""}`,
+        });
+      } catch (error) {
+        const origin = menuEntry.recovery;
+        toastManager.add({
+          type: "error",
+          title: "Recovery prompt remains in the stash",
+          description: error instanceof Error ? error.message : "Could not restore this prompt.",
+          actionProps: {
+            children: "Open original composer",
+            onClick: () => {
+              void navigate(
+                origin.draftId
+                  ? { to: "/draft/$draftId", params: { draftId: origin.draftId } }
+                  : {
+                      to: "/$environmentId/$threadId",
+                      params: buildThreadRouteParams(
+                        scopeThreadRef(origin.environmentId, origin.threadId),
+                      ),
+                    },
+              );
+            },
+          },
+        });
+      }
+      return;
+    }
     const filesToVerify = menuEntry.files ?? [];
     if (filesToVerify.some((file) => file.environmentId !== environmentId)) {
       toastManager.add({
@@ -421,6 +470,14 @@ export function useComposerStash(input: {
   const restoreStashEntryStable = useStableCallback(restoreStashEntry);
 
   const deleteStashEntry = (entry: PromptStashEntry) => {
+    if (usePromptStashStore.getState().activeRecoveryIds.includes(entry.id)) {
+      toastManager.add({
+        type: "info",
+        title: "Wait for this send to finish",
+        description: "Its recovery copy can be deleted after the send finishes.",
+      });
+      return;
+    }
     const { entry: removed, durable } = takeStashEntry(entry.id);
     if (!stashQueue.some((candidate) => candidate.id !== entry.id)) {
       setIsStashMenuOpen(false);

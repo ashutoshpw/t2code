@@ -231,15 +231,19 @@ const PersistedTerminalContextDraft = Schema.Struct({
 });
 type PersistedTerminalContextDraft = typeof PersistedTerminalContextDraft.Type;
 
-const PersistedComposerThreadDraftState = Schema.Struct({
-  prompt: Schema.String,
-  attachments: Schema.Array(PersistedComposerImageAttachment),
-  files: Schema.optionalKey(Schema.Array(PersistedComposerDraftFileAttachment)),
+export const PersistedComposerContext = Schema.Struct({
   terminalContexts: Schema.optionalKey(Schema.Array(PersistedTerminalContextDraft)),
   previewAnnotations: Schema.optionalKey(Schema.Array(PreviewAnnotationPayloadSchema)),
   reviewComments: Schema.optionalKey(Schema.Array(ReviewCommentContextSchema)),
   threadContexts: Schema.optionalKey(Schema.Array(ThreadContextRecord)),
   contextDraft: Schema.optionalKey(ComposerContextDraft),
+});
+
+const PersistedComposerThreadDraftState = Schema.Struct({
+  prompt: Schema.String,
+  attachments: Schema.Array(PersistedComposerImageAttachment),
+  files: Schema.optionalKey(Schema.Array(PersistedComposerDraftFileAttachment)),
+  ...PersistedComposerContext.fields,
   modelSelectionByProvider: Schema.optionalKey(Schema.Record(ProviderInstanceId, ModelSelection)),
   activeProvider: Schema.optionalKey(Schema.NullOr(ProviderInstanceId)),
   modelSelectionExplicit: Schema.optionalKey(Schema.Boolean),

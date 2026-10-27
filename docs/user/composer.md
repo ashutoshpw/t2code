@@ -196,6 +196,23 @@ Stashes containing uploaded files must be restored in their original environment
 Those files are retained for 24 hours. After an upload expires, restore the prompt
 and use **Attach again** or remove the missing file before sending.
 
+Normal sends and proposed-plan follow-ups first save a recovery copy in the prompt
+stash before clearing the composer. If sending fails, your newer typing stays in
+place and the original prompt remains available after a reload. Open the stash in
+the original thread or draft and restore into an empty composer. Restoration copies
+the prompt; delete the recovery entry when you no longer need it. If the connection
+closed during a send, check the thread before sending the recovery copy again. A
+restored Spaces reference captures current content on the next send; an old snapshot is not reused
+as current source.
+
+Recovery shares the stash's 20-entry limit and browser storage quota. Sending stops
+with the composer intact if a durable recovery copy cannot be saved, including
+when images exceed the recovery size limit. Free stash space or reduce attachments
+and try again. Clearing browser site data removes these local copies. Expired file
+uploads still need **Attach again**. Multiple-model background sends and queued edits
+that leave the queue keep their existing recovery behavior; this durable recovery
+applies to normal sends and proposed-plan follow-ups on web and desktop.
+
 ## Voice input on iPhone
 
 On supported iPhones with iOS 26 or later, use the composer's microphone to record,

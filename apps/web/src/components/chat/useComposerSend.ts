@@ -1,4 +1,9 @@
 import {
+  reserveComposerSendRecovery,
+  restoreComposerSendRecovery,
+} from "../../lib/composerSendRecovery";
+import { usePromptStashStore } from "../../promptStashStore";
+import {
   composerDraftSendGuard,
   prepareComposerSendContext,
 } from "../../lib/prepareComposerSendContext";
@@ -7,7 +12,6 @@ import {
   mergeDirectPreviewAnnotation,
   resolveBackgroundDraftWorkspaceOptions,
   shouldDockDraftHeroForSubmission,
-  restorePlanFollowUpComposer,
   buildExpiredTerminalContextToastCopy,
   deriveComposerSendState,
   boundAttachmentIds,
@@ -122,7 +126,6 @@ import {
   type MultipleModelTarget,
   resolveMultipleModelTargets,
   prepareTurnAttachments,
-  restoreComposerDraft,
 } from "./chatViewSend";
 import type {
   EnvironmentProject,
@@ -342,14 +345,6 @@ export function useComposerSend(input: ComposerSendInput) {
     reportFailure: false,
   });
   const setComposerDraftPrompt = useComposerDraftStore((store) => store.setPrompt);
-  const setComposerDraftTerminalContexts = useComposerDraftStore(
-    (store) => store.setTerminalContexts,
-  );
-  const setComposerDraftPreviewAnnotations = useComposerDraftStore(
-    (store) => store.setPreviewAnnotations,
-  );
-  const setComposerDraftReviewComments = useComposerDraftStore((store) => store.setReviewComments);
-  const setComposerDraftThreadContexts = useComposerDraftStore((store) => store.setThreadContexts);
   const clearComposerDraftContent = useComposerDraftStore((store) => store.clearComposerContent);
   const sendToMultipleModels = useMultipleModelSend({
     environmentId,
@@ -394,37 +389,98 @@ export function useComposerSend(input: ComposerSendInput) {
     respondingRequestIdsRef.current = respondingRequestIds;
   }, [pendingApprovals, respondingRequestIds]);
 
-  const recoverFailedSend = (threadIdForSend: ThreadId, restore: () => void) => {
+  const finishRecovery = (entryId: string) => {
+    if (!usePromptStashStore.getState().settleSendRecovery(entryId, true).durable) {
+      toastManager.add(
+        stackedThreadToast({
+          type: "warning",
+          title: "Recovery copy remains in the prompt stash",
+          description:
+            "Browser storage rejected removal of this send’s recovery copy. Delete it from the stash when storage is available.",
+        }),
+      );
+    }
+  };
+  const reserveRecovery = async (
+    contents: Parameters<typeof reserveComposerSendRecovery>[0]["contents"],
+    assertCurrent: () => void,
+  ) => {
+    const id = `send:${newMessageId()}`;
+    let reserved = false;
+    try {
+      await reserveComposerSendRecovery({
+        id,
+        environmentId,
+        threadId: activeThread!.id,
+        draftId,
+        target: composerDraftTarget,
+        contents,
+        assertCurrent,
+      });
+      reserved = true;
+      assertCurrent();
+      return id;
+    } catch (error) {
+      if (reserved) usePromptStashStore.getState().settleSendRecovery(id, true);
+      setDockedDraftHeroThreadKey((current) => (current === activeThreadKey ? null : current));
+      sendInFlightRef.current = false;
+      const description =
+        error instanceof Error
+          ? error.message
+          : "Could not save send recovery. Your draft is unchanged.";
+      setThreadError(activeThread!.id, description);
+      toastManager.add(
+        stackedThreadToast({ type: "error", title: "Message was not sent", description }),
+      );
+      return null;
+    }
+  };
+  const recoverFailedSend = async (threadIdForSend: ThreadId, entryId: string) => {
+    usePromptStashStore.getState().settleSendRecovery(entryId, false);
+    const restore = async (recoveringSend = false) => {
+      const restored = await restoreComposerSendRecovery({
+        entryId,
+        environmentId,
+        target: composerDraftTarget,
+        isCurrent: () => recoveringSend || !sendInFlightRef.current,
+      });
+      if (currentRouteThreadKeyRef.current === routeThreadKey) {
+        promptRef.current = restored.prompt;
+        composerImagesRef.current = restored.images;
+        composerFilesRef.current = restored.files;
+        composerTerminalContextsRef.current = restored.terminalContexts;
+        composerRef.current?.resetCursorState({
+          cursor: collapseExpandedComposerCursor(restored.prompt, restored.prompt.length),
+          prompt: restored.prompt,
+          detectTrigger: true,
+        });
+      }
+      if (restored.expiredFiles.length)
+        toastManager.add({
+          type: "warning",
+          title: "Attach expired files again",
+          description: restored.expiredFiles.join(", "),
+        });
+    };
     if (
       !composerDraftHasUserContent(
         useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
       )
     ) {
-      restore();
-    } else {
-      const recoveryToastId = toastManager.add(
-        stackedThreadToast({
-          type: "error",
-          title: "Message was not sent",
-          description:
-            "Your newer draft is unchanged. Restore the failed prompt when the original composer is empty.",
-          timeout: 0,
-          actionProps: {
-            children: "Restore prompt",
-            onClick: () => {
-              if (
-                sendInFlightRef.current ||
-                composerDraftHasUserContent(
-                  useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
-                )
-              ) {
-                toastManager.update(recoveryToastId, {
-                  description:
-                    "Send or clear the current prompt in the original thread before restoring.",
-                });
-                return;
-              }
-              restore();
+      await restore(true).catch(() => {});
+    }
+    const recoveryToastId = toastManager.add(
+      stackedThreadToast({
+        type: "error",
+        title: "Message was not sent",
+        timeout: 0,
+        description:
+          "Your prompt is saved in the prompt stash, including after a reload. Restore into the empty original composer; delete the recovery copy when you no longer need it.",
+        actionProps: {
+          children: "Restore prompt",
+          onClick: async () => {
+            try {
+              await restore();
               void navigate(
                 draftId
                   ? { to: "/draft/$draftId", params: { draftId } }
@@ -436,11 +492,18 @@ export function useComposerSend(input: ComposerSendInput) {
                     },
               );
               toastManager.close(recoveryToastId);
-            },
+            } catch (error) {
+              toastManager.update(recoveryToastId, {
+                description:
+                  error instanceof Error
+                    ? error.message
+                    : "The recovery prompt remains in the stash.",
+              });
+            }
           },
-        }),
-      );
-    }
+        },
+      }),
+    );
   };
 
   const onSend = async (
@@ -728,14 +791,6 @@ export function useComposerSend(input: ComposerSendInput) {
       if (composerRef.current?.validateProviderInput(outgoingFollowUpText) === false) {
         return;
       }
-      const followUpPromptSnapshot = promptRef.current;
-      const followUpContextDraft = composerContextDraft
-        ? structuredClone(composerContextDraft)
-        : undefined;
-      const followUpTerminalContexts = [...sendableComposerTerminalContexts];
-      const followUpReviewComments = [...composerReviewComments];
-      const followUpPreviewAnnotations = [...composerPreviewAnnotations];
-      const followUpThreadContexts = [...composerThreadContexts];
       const followUpDraftCurrent = composerDraftSendGuard(composerDraftTarget);
       let followUpContext: Awaited<ReturnType<typeof prepareComposerSendContext>>;
       sendInFlightRef.current = true;
@@ -762,6 +817,30 @@ export function useComposerSend(input: ComposerSendInput) {
         );
         return;
       }
+      const recoveryId = await reserveRecovery(
+        {
+          prompt: promptForSend,
+          images: composerImages,
+          files: composerFiles,
+          terminalContexts: composerTerminalContexts,
+          reviewComments: composerReviewComments,
+          previewAnnotations: composerPreviewAnnotations,
+          threadContexts: composerThreadContexts,
+          contextDraft: composerContextDraft,
+        },
+        () => {
+          followUpContext.assertCurrent();
+          if (
+            !followUpDraftCurrent() ||
+            currentRouteThreadKeyRef.current !== routeThreadKey ||
+            promptRef.current !== promptAtSend
+          )
+            throw new Error(
+              "The draft changed before sending. Send again to include your latest draft.",
+            );
+        },
+      );
+      if (recoveryId === null) return;
       promptRef.current = "";
       clearComposerDraftContent(composerDraftTarget);
       composerRef.current?.resetCursorState();
@@ -774,43 +853,16 @@ export function useComposerSend(input: ComposerSendInput) {
       });
       sendInFlightRef.current = false;
       if (!followUpSent) {
-        recoverFailedSend(activeThread.id, () => {
-          useComposerDraftStore
-            .getState()
-            .setContextDraft(composerDraftTarget, followUpContextDraft);
-          const showingOriginalComposer = currentRouteThreadKeyRef.current === routeThreadKey;
-          if (showingOriginalComposer) {
-            promptRef.current = followUpPromptSnapshot;
-            composerTerminalContextsRef.current = [...followUpTerminalContexts];
-          }
-          restorePlanFollowUpComposer({
-            snapshot: {
-              prompt: followUpPromptSnapshot,
-              terminalContexts: followUpTerminalContexts,
-              reviewComments: followUpReviewComments,
-              previewAnnotations: followUpPreviewAnnotations,
-              threadContexts: followUpThreadContexts,
-            },
-            writePrompt: (prompt) => setComposerDraftPrompt(composerDraftTarget, prompt),
-            writeTerminalContexts: (contexts) =>
-              setComposerDraftTerminalContexts(composerDraftTarget, [...contexts]),
-            writeReviewComments: (comments) =>
-              setComposerDraftReviewComments(composerDraftTarget, [...comments]),
-            writePreviewAnnotations: (annotations) =>
-              setComposerDraftPreviewAnnotations(composerDraftTarget, [...annotations]),
-            writeThreadContexts: (records) =>
-              setComposerDraftThreadContexts(composerDraftTarget, [...records]),
-            resetCursor: (options) => {
-              if (showingOriginalComposer) composerRef.current?.resetCursorState(options);
-            },
-          });
-        });
-      } else if (
-        followUpSent &&
-        submissionIntent === "background" &&
-        currentRouteThreadKeyRef.current === routeThreadKey
-      ) {
-        handleNewThreadInActiveProject();
+        sendInFlightRef.current = true;
+        await recoverFailedSend(activeThread.id, recoveryId);
+        sendInFlightRef.current = false;
+      } else {
+        finishRecovery(recoveryId);
+        if (
+          submissionIntent === "background" &&
+          currentRouteThreadKeyRef.current === routeThreadKey
+        )
+          handleNewThreadInActiveProject();
       }
       return;
     }
@@ -1101,6 +1153,38 @@ export function useComposerSend(input: ComposerSendInput) {
       );
       return;
     }
+    const recoveryId =
+      multipleModelSelections === null && approvalFeedbackTarget === undefined
+        ? await reserveRecovery(
+            {
+              prompt: promptForSend,
+              images: composerImages,
+              files: composerFiles,
+              terminalContexts: composerTerminalContexts,
+              reviewComments: composerReviewComments,
+              previewAnnotations: composerPreviewAnnotations,
+              threadContexts: composerThreadContexts,
+              contextDraft: composerContextDraft,
+            },
+            () => {
+              preparedContext.assertCurrent();
+              if (
+                !draftStillCurrent() ||
+                currentRouteThreadKeyRef.current !== routeThreadKey ||
+                promptRef.current !== promptAtSend
+              )
+                throw new Error(
+                  "The draft changed before sending. Send again to include your latest draft.",
+                );
+            },
+          )
+        : null;
+    if (
+      multipleModelSelections === null &&
+      approvalFeedbackTarget === undefined &&
+      recoveryId === null
+    )
+      return;
     // A message sent while approvals are pending redirects the agent. They are declined only
     // here, after everything above has accepted the send, so local commands and rejected
     // drafts leave them alone. After navigating away during an upload, the shown approvals
@@ -1205,6 +1289,7 @@ export function useComposerSend(input: ComposerSendInput) {
         approvalArrived ||
         currentRouteThreadKeyRef.current !== routeThreadKey
       ) {
+        if (recoveryId) finishRecovery(recoveryId);
         sendInFlightRef.current = false;
         setDockedDraftHeroThreadKey((currentThreadKey) =>
           currentThreadKey === activeThreadKey ? null : currentThreadKey,
@@ -1480,6 +1565,7 @@ export function useComposerSend(input: ComposerSendInput) {
         failure = startResult;
       } else {
         turnStartSucceeded = true;
+        finishRecovery(recoveryId!);
         setKeepFullHistory(routeThreadKey, false);
         clearUsageLimitsFor(routeThreadKey);
         if (turnUsesAttachmentUploads) {
@@ -1538,21 +1624,7 @@ export function useComposerSend(input: ComposerSendInput) {
         return next.length === existing.length ? existing : next;
       });
       optimisticBlobPreviews.release(optimisticMessage);
-      const restoreFailedSnapshot = () => {
-        const retryComposerImages = restoreComposerDraft(composerDraftTarget, sendSnapshot);
-        if (currentRouteThreadKeyRef.current === routeThreadKey) {
-          promptRef.current = messageTextForSend;
-          composerImagesRef.current = retryComposerImages;
-          composerFilesRef.current = composerFilesSnapshot;
-          composerTerminalContextsRef.current = composerTerminalContextsSnapshot;
-          composerRef.current?.resetCursorState({
-            cursor: collapseExpandedComposerCursor(messageTextForSend, messageTextForSend.length),
-            prompt: messageTextForSend,
-            detectTrigger: true,
-          });
-        }
-      };
-      recoverFailedSend(threadIdForSend, restoreFailedSnapshot);
+      await recoverFailedSend(threadIdForSend, recoveryId!);
       if (!isAtomCommandInterrupted(failure)) {
         const error = squashAtomCommandFailure(failure);
         setThreadError(
