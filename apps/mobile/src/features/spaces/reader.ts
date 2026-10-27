@@ -91,6 +91,7 @@ export class SpacesPageReader {
       access: () => this.ports.access,
       readWindow: () => this.readCurrentWindow(),
       assertMutable: () => this.assertContentReady(),
+      completeWindow: () => this.completeImageWindow(),
     });
   }
 

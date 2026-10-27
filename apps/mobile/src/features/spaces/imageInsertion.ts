@@ -2,7 +2,7 @@ import { SpaceBlockId } from "@t2code/contracts/spaces";
 import { mediaAssetId, type SpaceImageInsertion } from "@t2code/client-runtime/spaces";
 import type { SpacesPageReader } from "./reader";
 
-function allocateOrder(before: string | null) {
+export function allocateMobileSpaceRootOrder(before: string | null) {
   if (before !== null && !/^[0-9a-f]{32}$/.test(before)) throw new Error("Unsupported block rank");
   const lower = before === null ? -1n : BigInt(`0x${before}`);
   const upper = 1n << 128n;
@@ -55,7 +55,7 @@ export function mobileSpaceImageInsertion(
         block: {
           id: SpaceBlockId.make(newId()),
           parentId: null,
-          order: allocateOrder(last?.order ?? null),
+          order: allocateMobileSpaceRootOrder(last?.order ?? null),
           type: kind,
           version: 1,
           content: { assetId },
@@ -77,7 +77,7 @@ export function mobileSpaceImageInsertion(
         snapshot.blocks.some((b) => b.id === placement.block.id) ||
         placement.block.parentId !== null ||
         mediaAssetId(placement.block) === null ||
-        placement.block.order !== allocateOrder(last?.order ?? null)
+        placement.block.order !== allocateMobileSpaceRootOrder(last?.order ?? null)
       )
         throw new Error("The frozen media placement changed; original retained");
       reader.session.apply([{ kind: "insert", block: placement.block }]);

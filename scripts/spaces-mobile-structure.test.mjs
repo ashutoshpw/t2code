@@ -70,6 +70,10 @@ vi.mock("../apps/mobile/src/native/NativeScrollViewMarker.tsx", () => ({
 vi.mock("../apps/mobile/src/features/spaces/SpacesLibraryActions.tsx", () => ({
   SpacesLibraryActions: () => null,
 }));
+vi.mock("../apps/mobile/src/features/spaces/SpacesCoreBlockControls.tsx", () => ({
+  SpacesCoreBlockControls: () => null,
+  SpacesCoreBlockDelete: () => null,
+}));
 vi.mock("../apps/mobile/src/features/spaces/SpacesHeavyMediaViewer.tsx", () => ({
   SpacesHeavyMediaViewer: () => null,
 }));
@@ -158,6 +162,364 @@ const withFixture = Effect.fn("MobileStructureTest.fixture")(function* (use) {
     yield* use({ fixture, environmentId, service, run, db, capability });
   }).pipe(Effect.provide(layer));
 }, Effect.scoped);
+
+it.effect(
+  "inserts native core blocks into an empty page, edits and reopens exact receipts without losing newer input or opaque siblings",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const page = await root(context, runtime, space, "Empty native page");
+        const target = { environmentId: context.environmentId, spaceId: space.id, pageId: page.id };
+        const lease = runtime.documents.acquire(target);
+        const reader = lease.reader;
+        await reader.first();
+        expect(reader.session.getSnapshot().blocks).toEqual([]);
+        const id = SpaceBlockId.make(NodeCrypto.randomUUID());
+        await reader.editing.insertCore("paragraph", id, () => true);
+        expect(runtime.control.contentRequests).toEqual([]);
+        const key = { environmentId: context.environmentId, pageId: page.id };
+        expect((await context.db.store.load(key)).mutations).toMatchObject([
+          { kind: "insert", block: { id, type: "paragraph", parentId: null } },
+        ]);
+        const input = reader.editing.focus(Symbol("new paragraph"), id);
+        input.publication.receive(
+          {
+            ...input.publication.getSnapshot().observed,
+            revision: 1,
+            runs: [{ text: "First native😀 text", bold: true, italic: true, code: false }],
+          },
+          true,
+        );
+        await reader.editing.finish(input.owner, input.token);
+        await reader.editing.save();
+        expect(reader.editing.getSnapshot().error).toBeNull();
+        const saved = await pageWindow(context, page.id);
+        expect(saved.blocks[0]).toMatchObject({
+          id,
+          content: {
+            runs: [
+              {
+                text: "First native😀 text",
+                marks: [
+                  { type: "bold", version: 1 },
+                  { type: "italic", version: 1 },
+                ],
+              },
+            ],
+          },
+        });
+        const legacy = paragraph("preserved-future-sibling");
+        await seedBlocks(context, page, [legacy]);
+        const opaque = {
+          ...legacy,
+          type: "future_widget",
+          content: { original: ["界", { keep: true }] },
+        };
+        legacyOpaque(context, page.id, opaque);
+        await reader.first();
+        const kinds = [
+          "heading1",
+          "heading2",
+          "heading3",
+          "bulleted_item",
+          "numbered_item",
+          "todo_item",
+          "divider",
+        ];
+        const ids = [];
+        for (const kind of kinds) {
+          const next = SpaceBlockId.make(NodeCrypto.randomUUID());
+          ids.push(next);
+          await reader.editing.insertCore(kind, next, () => true);
+        }
+        const inserted = reader.session
+          .getSnapshot()
+          .blocks.filter((block) => ids.includes(block.id));
+        expect(inserted.map((block) => block.type)).toEqual([
+          "heading",
+          "heading",
+          "heading",
+          "bulleted_item",
+          "numbered_item",
+          "todo_item",
+          "divider",
+        ]);
+        expect(inserted.slice(0, 3).map((block) => block.content.level)).toEqual([1, 2, 3]);
+        expect(inserted[5].content.checked).toBe(false);
+        expect(
+          inserted.every((block) => block.parentId === null && block.order > legacy.order),
+        ).toBe(true);
+        runtime.control.afterContentSend = async () => {
+          throw new Error("Lost native core insert ACK");
+        };
+        await reader.editing.save();
+        expect(reader.editing.getSnapshot().error).toContain("Lost native core insert ACK");
+        const pending = (await context.db.store.load(key)).pending;
+        await expect(
+          reader.editing.insertCore(
+            "paragraph",
+            SpaceBlockId.make(NodeCrypto.randomUUID()),
+            () => true,
+          ),
+        ).rejects.toThrow("pending");
+        const newer = reader.editing.focus(Symbol("newer inserted heading"), ids[0]);
+        newer.publication.receive(
+          {
+            ...newer.publication.getSnapshot().observed,
+            revision: 1,
+            runs: [{ text: "Newer suffix", bold: false, italic: true, code: false }],
+          },
+          true,
+        );
+        await reader.editing.finish(newer.owner, newer.token);
+        lease.release();
+        await context.run(context.db.close);
+        const reopened = await context.run(context.fixture.open());
+        const restarted = client(context, reopened);
+        const nextLease = restarted.documents.acquire(target);
+        await nextLease.reader.first();
+        expect(nextLease.reader.session.getSnapshot().pending).toEqual(pending);
+        await nextLease.reader.editing.save();
+        expect(restarted.control.contentRequests).toEqual([]);
+        expect(restarted.control.contentAdmissions).toBe(0);
+        expect(restarted.control.contentReceipts).toEqual(["found"]);
+        expect(nextLease.reader.session.getSnapshot()).toMatchObject({
+          dirty: true,
+          pending: null,
+        });
+        expect(
+          nextLease.reader.session.getSnapshot().blocks.find((block) => block.id === ids[0]).content
+            .runs[0].text,
+        ).toBe("Newer suffix");
+        await nextLease.reader.editing.save();
+        expect(restarted.control.contentRequests).toHaveLength(1);
+        const final = await pageWindow(context, page.id);
+        expect(final.blocks.find((block) => block.id === opaque.id)).toEqual(opaque);
+        expect(final.blocks.find((block) => block.id === ids[0]).content.runs[0].text).toBe(
+          "Newer suffix",
+        );
+        expect(final.blocks.map((block) => block.id)).toEqual([id, opaque.id, ...ids]);
+        expect(nextLease.reader.editing.compensationAvailability("undo")).toBeNull();
+        nextLease.release();
+      }),
+    ),
+);
+
+it.effect(
+  "confirms only current complete native core deletions and retains failed writes and uncertain deletion receipts",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const page = await root(context, runtime, space, "Delete native blocks");
+        const list = {
+          ...paragraph("core-list"),
+          type: "bulleted_item",
+          order: "10000000000000000000000000000000",
+        };
+        const nested = {
+          ...paragraph("core-nested-list"),
+          type: "todo_item",
+          parentId: list.id,
+          content: { checked: true, runs: [] },
+          order: "20000000000000000000000000000000",
+        };
+        const child = {
+          ...paragraph("core-nested-text"),
+          parentId: nested.id,
+          order: "30000000000000000000000000000000",
+        };
+        const divider = {
+          ...paragraph("core-divider"),
+          type: "divider",
+          content: {},
+          order: "40000000000000000000000000000000",
+        };
+        const unsupported = {
+          ...paragraph("core-unsupported-child"),
+          parentId: list.id,
+          order: "50000000000000000000000000000000",
+        };
+        const survivor = paragraph("core-survivor");
+        await seedBlocks(context, page, [list, nested, child, divider, unsupported, survivor]);
+        legacyOpaque(context, page.id, {
+          ...unsupported,
+          type: "future_widget",
+          content: { keep: [1, 2] },
+        });
+        const target = { environmentId: context.environmentId, spaceId: space.id, pageId: page.id };
+        const lease = runtime.documents.acquire(target);
+        const reader = lease.reader;
+        await reader.first();
+        expect(() => reader.editing.prepareCoreDeletion(list.id, () => true)).toThrow("read-only");
+        expect(() => reader.editing.prepareCoreDeletion(unsupported.id, () => true)).toThrow(
+          "read-only",
+        );
+        let current = true;
+        const stale = reader.editing.prepareCoreDeletion(divider.id, () => current);
+        reader.editing.toggleTodo(nested.id);
+        await expect(reader.editing.deleteCore(stale)).rejects.toThrow("changed");
+        const input = reader.editing.focus(Symbol("retained input"), survivor.id);
+        expect(() => reader.editing.prepareCoreDeletion(divider.id, () => true)).toThrow("input");
+        await expect(
+          reader.editing.insertCore(
+            "divider",
+            SpaceBlockId.make(NodeCrypto.randomUUID()),
+            () => true,
+          ),
+        ).rejects.toThrow("input");
+        expect(reader.editing.getSnapshot().focus).toBe(input);
+        await reader.editing.finish(input.owner, input.token);
+        const selected = reader.editing.prepareCoreDeletion(divider.id, () => current);
+        current = false;
+        await expect(reader.editing.deleteCore(selected)).rejects.toThrow("source");
+        current = true;
+        runtime.control.writable = false;
+        await expect(reader.editing.deleteCore(selected)).rejects.toThrow("permission");
+        runtime.control.writable = true;
+        expect(runtime.control.contentRequests).toEqual([]);
+        await reader.editing.save();
+        await reader.first();
+        const release = runtime.documents.reserve(context.environmentId, [page.id]);
+        await expect(
+          reader.editing.insertCore(
+            "paragraph",
+            SpaceBlockId.make(NodeCrypto.randomUUID()),
+            () => true,
+          ),
+        ).rejects.toThrow("reserved");
+        release();
+        context.fixture.control.beforeCommit = async () => {
+          throw new Error("Core draft COMMIT refused");
+        };
+        const failed = reader.editing.prepareCoreDeletion(divider.id, () => true);
+        const sentBeforeFailure = runtime.control.contentRequests.length;
+        await expect(reader.editing.deleteCore(failed)).rejects.toThrow("write-space-draft");
+        expect(reader.session.getSnapshot().blocks.some((block) => block.id === divider.id)).toBe(
+          false,
+        );
+        expect(
+          (await pageWindow(context, page.id)).blocks.some((block) => block.id === divider.id),
+        ).toBe(true);
+        expect(reader.session.getSnapshot().persistenceError).not.toBeNull();
+        expect(runtime.control.contentRequests).toHaveLength(sentBeforeFailure);
+        expect(
+          (
+            await context.db.store.load({ environmentId: context.environmentId, pageId: page.id })
+          ).blocks.some((block) => block.id === divider.id),
+        ).toBe(true);
+        context.fixture.control.beforeCommit = null;
+        await reader.editing.retryPersistence();
+        await reader.editing.save();
+        await reader.first();
+        const supported = reader.editing.prepareCoreDeletion(nested.id, () => true);
+        expect(supported.ids).toEqual([nested.id, child.id]);
+        await reader.editing.deleteCore(supported);
+        runtime.control.afterContentSend = async () => {
+          throw new Error("Lost core delete ACK");
+        };
+        await reader.editing.save();
+        const key = { environmentId: context.environmentId, pageId: page.id };
+        const pending = (await context.db.store.load(key)).pending;
+        expect(pending.mutations).toEqual([
+          { kind: "delete", blockId: nested.id },
+          { kind: "delete", blockId: child.id },
+        ]);
+        lease.release();
+        await context.run(context.db.close);
+        const reopened = await context.run(context.fixture.open());
+        const restarted = client(context, reopened);
+        const recovered = restarted.documents.acquire(target);
+        await recovered.reader.first();
+        expect(recovered.reader.session.getSnapshot().pending).toEqual(pending);
+        await recovered.reader.editing.save();
+        expect(restarted.control.contentRequests).toEqual([]);
+        expect(restarted.control.contentAdmissions).toBe(0);
+        expect(restarted.control.contentReceipts).toEqual(["found"]);
+        const final = await pageWindow(context, page.id);
+        expect(final.blocks.map((block) => block.id)).toEqual([
+          list.id,
+          unsupported.id,
+          survivor.id,
+        ]);
+        expect(recovered.reader.editing.compensationAvailability("undo")).not.toBeNull();
+        recovered.release();
+      }),
+    ),
+);
+
+it.effect(
+  "refuses native core changes in partial first or final windows and exhausted root ranks without changing any draft",
+  () =>
+    withFixture((context) =>
+      Effect.promise(async () => {
+        const runtime = client(context);
+        const space = await defaultSpace(context);
+        const page = await root(context, runtime, space, "Bounded partial page");
+        const rootId = SpaceBlockId.make("partial-native-list");
+        const blocks = Array.from({ length: 101 }, (_, index) => ({
+          ...paragraph(`partial-core-${index}`),
+          ...(index === 0 ? { id: rootId, type: "bulleted_item" } : {}),
+          ...(index > 0 ? { parentId: rootId } : {}),
+          order: (index + 1).toString(16).padStart(32, "0"),
+        }));
+        await seedBlocks(context, page, blocks.slice(0, 100));
+        await seedBlocks(context, page, blocks.slice(100));
+        const target = { environmentId: context.environmentId, spaceId: space.id, pageId: page.id };
+        const lease = runtime.documents.acquire(target);
+        const reader = lease.reader;
+        await reader.first();
+        expect(reader.getSnapshot().window.nextCursor).not.toBeNull();
+        const state = reader.session.getSnapshot();
+        expect(() => reader.editing.prepareCoreDeletion(rootId, () => true)).toThrow("complete");
+        await expect(
+          reader.editing.insertCore(
+            "paragraph",
+            SpaceBlockId.make(NodeCrypto.randomUUID()),
+            () => true,
+          ),
+        ).rejects.toThrow("complete");
+        expect(reader.session.getSnapshot()).toBe(state);
+        await reader.next();
+        expect(reader.getSnapshot().window.nextCursor).toBeNull();
+        expect(reader.session.getSnapshot().blocks.map((block) => block.id)).toEqual([
+          blocks[100].id,
+        ]);
+        expect(() => reader.editing.prepareCoreDeletion(blocks[100].id, () => true)).toThrow(
+          "complete",
+        );
+        await expect(
+          reader.editing.insertCore(
+            "divider",
+            SpaceBlockId.make(NodeCrypto.randomUUID()),
+            () => true,
+          ),
+        ).rejects.toThrow("complete");
+        expect(runtime.control.contentRequests).toEqual([]);
+        lease.release();
+        const exhausted = await root(context, runtime, await defaultSpace(context), "No rank gap");
+        const last = { ...paragraph("last-root-rank"), order: "ffffffffffffffffffffffffffffffff" };
+        await seedBlocks(context, exhausted, [last]);
+        const final = runtime.documents.acquire({ ...target, pageId: exhausted.id });
+        await final.reader.first();
+        const original = final.reader.session.getSnapshot();
+        await expect(
+          final.reader.editing.insertCore(
+            "paragraph",
+            SpaceBlockId.make(NodeCrypto.randomUUID()),
+            () => true,
+          ),
+        ).rejects.toThrow("rank gap");
+        expect(final.reader.session.getSnapshot()).toBe(original);
+        expect((await pageWindow(context, exhausted.id)).blocks).toEqual([last]);
+        expect(runtime.control.contentRequests).toEqual([]);
+        final.release();
+      }),
+    ),
+);
 
 it.effect(
   "resolves actual moved/merged/deleted search references while retaining a dirty mounted native reader and latest selected identity",

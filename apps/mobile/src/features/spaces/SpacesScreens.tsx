@@ -2,6 +2,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation, usePreventRemove, type StaticScreenProps } from "@react-navigation/native";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { SpacePageNavigation, type SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
+import { SpacesCoreBlockControls, SpacesCoreBlockDelete } from "./SpacesCoreBlockControls";
 import { EnvironmentId } from "@t2code/contracts";
 import type { SpaceCursor, SpaceId, SpacePageId, SpaceBlock } from "@t2code/contracts/spaces";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -474,6 +475,11 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
   }, [reader, access]);
   const location = access.current() ? snapshot.location : null;
   const blocks = snapshot.session.hydrated ? snapshot.session.blocks : [];
+  const currentCoreSource = () =>
+    navigation.isFocused() &&
+    access.current() &&
+    reader.getSnapshot().location === location &&
+    location?.current() != null;
   const currentTarget = location
     ? {
         ...target,
@@ -660,6 +666,9 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
                 onPress={() => void editing.compensate("redo")}
               />
             </View>
+            {spacesNativeEditorAvailable ? (
+              <SpacesCoreBlockControls reader={reader} current={currentCoreSource} />
+            ) : null}
             <Notice>
               {snapshot.session.history.action
                 ? `Retained saved ${snapshot.session.history.action}. Use Save or Retry exact save to resolve it; the attempted change is kept.`
@@ -807,6 +816,7 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
         }
         renderItem={({ item }) => (
           <View>
+            <SpacesCoreBlockDelete reader={reader} current={currentCoreSource} blockId={item.id} />
             <SpaceBlockReader
               block={item}
               onImage={(block) => {

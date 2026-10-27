@@ -1,14 +1,42 @@
-import type { SpaceBlockId, SpaceBlockWindow } from "@t2code/contracts/spaces";
+import type { SpaceBlock, SpaceBlockId, SpaceBlockWindow } from "@t2code/contracts/spaces";
 import {
   isKnownSpaceBlock,
   spaceJsonBytes,
   savedCompensation,
   type SpaceCompensation,
   type SpaceDocumentSession,
+  type SpaceMutation,
+  type SpaceSessionSnapshot,
 } from "@t2code/client-runtime/spaces";
 import { SpacesNativePublication } from "./nativeSpacesPublication";
 import { canRestoreMobileSpaceBlock, nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
 import type { SpacesReadAccess } from "./reader";
+import { allocateMobileSpaceRootOrder } from "./imageInsertion";
+
+export type MobileCoreBlockKind =
+  | "paragraph"
+  | "heading1"
+  | "heading2"
+  | "heading3"
+  | "bulleted_item"
+  | "numbered_item"
+  | "todo_item"
+  | "divider";
+
+interface CoreDeletionPlan {
+  readonly state: SpaceSessionSnapshot;
+  readonly rootId: SpaceBlockId;
+  readonly ids: readonly SpaceBlockId[];
+  readonly label: string;
+  readonly current: () => boolean;
+}
+
+function deletableCore(block: SpaceBlock) {
+  return (
+    nativeDocumentForSpaceBlock(block) !== null ||
+    (isKnownSpaceBlock(block) && block.type === "divider")
+  );
+}
 
 interface FocusedBlock {
   readonly owner: symbol;
@@ -36,6 +64,7 @@ export class MobileSpaceEditing {
       readonly access: () => SpacesReadAccess;
       readonly readWindow: () => Promise<SpaceBlockWindow>;
       readonly assertMutable?: () => void;
+      readonly completeWindow?: () => boolean;
     },
   ) {}
 
@@ -69,6 +98,139 @@ export class MobileSpaceEditing {
     )
       throw new Error("Resolve the conflict or local storage error before editing");
     return access;
+  }
+
+  #coreReady(current: () => boolean) {
+    if (!current()) throw new Error("The page source changed; choose the action again");
+    const access = this.#editable();
+    const state = this.ports.session.getSnapshot();
+    if (this.#snapshot.focus) throw new Error("Finish the active native input first");
+    if (this.#snapshot.busy || state.pending || state.recoveryReason || state.status === "saving")
+      throw new Error("Finish the pending page operation before adding or deleting blocks");
+    if (state.baseRevision === null || !this.ports.completeWindow?.())
+      throw new Error(
+        "Use First / refresh to load a complete page before adding or deleting blocks",
+      );
+    return access;
+  }
+
+  coreAvailability(current: () => boolean): string | null {
+    try {
+      this.#coreReady(current);
+      return null;
+    } catch (cause) {
+      return cause instanceof Error ? cause.message : "Core block actions are unavailable";
+    }
+  }
+
+  canDeleteCoreBlock(blockId: SpaceBlockId) {
+    const block = this.ports.session.getSnapshot().blocks.find((item) => item.id === blockId);
+    return !!block && deletableCore(block);
+  }
+
+  async insertCore(kind: MobileCoreBlockKind, id: SpaceBlockId, current: () => boolean) {
+    const access = this.#coreReady(current);
+    const state = this.ports.session.getSnapshot();
+    if (state.blocks.length >= Math.min(100, access.capability!.limits.maxPageBlocks))
+      throw new Error("This complete page has no room for another mobile block");
+    const base = {
+      id,
+      parentId: null,
+      version: 1,
+      order: allocateMobileSpaceRootOrder(
+        state.blocks.findLast((b) => b.parentId === null)?.order ?? null,
+      ),
+    } as const;
+    let block: SpaceBlock;
+    switch (kind) {
+      case "heading1":
+      case "heading2":
+      case "heading3":
+        block = { ...base, type: "heading", content: { level: Number(kind.at(-1)), runs: [] } };
+        break;
+      case "todo_item":
+        block = { ...base, type: kind, content: { checked: false, runs: [] } };
+        break;
+      case "divider":
+        block = { ...base, type: kind, content: {} };
+        break;
+      case "paragraph":
+      case "bulleted_item":
+      case "numbered_item":
+        block = { ...base, type: kind, content: { runs: [] } };
+        break;
+      default:
+        throw new Error("Unsupported native core block kind");
+    }
+    await this.#applyCore([{ kind: "insert", block }], access);
+  }
+
+  prepareCoreDeletion(rootId: SpaceBlockId, current: () => boolean): CoreDeletionPlan {
+    const access = this.#coreReady(current);
+    const state = this.ports.session.getSnapshot();
+    const root = state.blocks.find((block) => block.id === rootId);
+    if (!root) throw new Error("This block is not loaded");
+    const ids = new Set([rootId]);
+    for (let previous = 0; previous !== ids.size;) {
+      previous = ids.size;
+      for (const block of state.blocks)
+        if (block.parentId !== null && ids.has(block.parentId)) ids.add(block.id);
+    }
+    const selected = state.blocks.filter((block) => ids.has(block.id));
+    if (selected.some((block) => !deletableCore(block)))
+      throw new Error(
+        "This subtree contains read-only or unsupported content; original blocks retained",
+      );
+    if (ids.size > access.capability!.limits.maxMutationNodes)
+      throw new Error("This subtree exceeds the current mutation budget");
+    const text =
+      isKnownSpaceBlock(root) && "runs" in root.content
+        ? root.content.runs
+            .map((run) => run.text)
+            .join("")
+            .slice(0, 80)
+        : "";
+    return Object.freeze({
+      state,
+      rootId,
+      ids: Object.freeze(selected.map((block) => block.id)),
+      label: `${root.type}${text ? `: ${text}` : ""}`,
+      current,
+    });
+  }
+
+  async deleteCore(plan: CoreDeletionPlan) {
+    const access = this.#coreReady(plan.current);
+    if (plan.state !== this.ports.session.getSnapshot())
+      throw new Error("The page changed after confirmation; select the block again");
+    const checked = this.prepareCoreDeletion(plan.rootId, plan.current);
+    if (JSON.stringify(checked.ids) !== JSON.stringify(plan.ids))
+      throw new Error("The selected subtree changed; select it again");
+    await this.#applyCore(
+      plan.ids.map((blockId) => ({ kind: "delete", blockId })),
+      access,
+    );
+  }
+
+  async #applyCore(mutations: readonly SpaceMutation[], access: SpacesReadAccess) {
+    for (const mutation of mutations)
+      if (mutation.kind !== "delete")
+        spaceJsonBytes(mutation.block, access.capability!.limits.maxBlockBytes);
+    if (mutations.length > access.capability!.limits.maxMutationNodes)
+      throw new Error("This change exceeds the current mutation budget");
+    spaceJsonBytes({ mutations }, access.capability!.limits.maxMutationBytes);
+    this.ports.session.apply(mutations);
+    this.#update({ busy: "persist", error: null });
+    try {
+      await this.ports.session.persistDraft();
+    } catch (cause) {
+      this.#update({
+        error: cause instanceof Error ? cause.message : "Could not retain the draft",
+      });
+      throw cause;
+    } finally {
+      this.#update({ busy: null });
+    }
   }
 
   focus(owner: symbol, blockId: SpaceBlockId) {
