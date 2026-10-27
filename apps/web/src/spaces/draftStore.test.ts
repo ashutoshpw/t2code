@@ -67,4 +67,63 @@ describe("Spaces draft decoding and unavailable storage", () => {
     await expect(store.write(key, draft())).rejects.toThrow("IndexedDB is unavailable");
     await expect(store.write(key, null)).rejects.toThrow("IndexedDB is unavailable");
   });
+  it("retains invalid saved-history data instead of admitting a mismatched or oversized compensation", () => {
+    const before = {
+      id: SpaceBlockId.make("a"),
+      parentId: null,
+      order: "40000000000000000000000000000000",
+      type: "paragraph",
+      version: 1,
+      content: { runs: [{ text: "before", marks: [] }] },
+    };
+    const after = { ...before, content: { runs: [{ text: "after", marks: [] }] } };
+    const history = {
+      base: [after],
+      undo: { before: [before], after: [after], revision: 7 },
+      redo: null,
+      action: null,
+      reason: null,
+    };
+    const value = { ...draft(), blocks: [after], mutations: [], pending: null, history };
+    expect(decodeSpaceDocumentDraft(value, key)).toEqual(value);
+    for (const invalid of [
+      { ...history, action: "redo" },
+      { ...history, redo: history.undo },
+      { ...history, base: [before] },
+      { ...history, undo: { ...history.undo, before: [{ ...before, id: "retired-other" }] } },
+      {
+        ...history,
+        undo: {
+          ...history.undo,
+          before: [{ ...before, type: "image", content: { assetId: "a" } }],
+          after: [{ ...after, type: "image", content: { assetId: "b" } }],
+        },
+      },
+      {
+        ...history,
+        undo: {
+          ...history.undo,
+          before: [
+            {
+              ...before,
+              content: { runs: [{ text: "unknown", marks: [{ type: "future", version: 7 }] }] },
+            },
+          ],
+        },
+      },
+      {
+        ...history,
+        undo: {
+          ...history.undo,
+          before: [{ ...before, content: { runs: [{ text: "x".repeat(65536), marks: [] }] } }],
+        },
+      },
+      { ...history, future: true },
+    ]) {
+      const stored = { ...value, history: invalid },
+        original = JSON.stringify(stored);
+      expect(() => decodeSpaceDocumentDraft(stored, key)).toThrow();
+      expect(JSON.stringify(stored)).toBe(original);
+    }
+  });
 });

@@ -69,7 +69,7 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
     !session.pending &&
     session.persistenceError === null &&
     session.status !== "saving";
-  const run = (operation: Promise<void>) => {
+  const run = (operation: Promise<unknown>) => {
     void operation.catch(() => {});
   };
   return (
@@ -97,6 +97,17 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
       {session.persistenceError ? (
         <p role="alert">Draft storage failed: {message(session.persistenceError)}</p>
       ) : null}
+      <p>
+        Saved undo/redo covers only the last content or formatting save. Saved structural changes
+        are not supported.
+      </p>
+      {session.history.reason ? <p role="status">{session.history.reason}</p> : null}
+      {session.history.action ? (
+        <p role="status">
+          Saved {session.history.action} draft. A conflict keeps this attempted change; retry save
+          or discard it explicitly.
+        </p>
+      ) : null}
       {session.hydrated ? (
         <SpaceEditor
           adapter={bridge.adapter}
@@ -112,6 +123,25 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
         />
       ) : null}
       <div className="flex flex-wrap gap-2">
+        {(["undo", "redo"] as const).map((direction) => (
+          <Button
+            key={direction}
+            variant="outline"
+            disabled={
+              !permission ||
+              loading ||
+              !!error ||
+              controller.session.compensationAvailability(direction) !== null
+            }
+            title={
+              controller.session.compensationAvailability(direction) ??
+              "Submit a new revision-checked saved change"
+            }
+            onClick={() => run(bridge.compensate(direction))}
+          >
+            {direction === "undo" ? "Undo saved change" : "Redo saved change"}
+          </Button>
+        ))}
         <Button
           variant="outline"
           disabled={loading || (!clean && session.hydrated)}

@@ -406,7 +406,11 @@ describe("SpaceDocumentSession", () => {
       mutations: [{ kind: "replace", block: paragraph("typed during save") }],
     });
     expect(requests[1]?.mutationId).not.toBe(sent.mutationId);
-    expect(writes.at(-1)).toBeNull();
+    expect(writes.at(-1)).toMatchObject({
+      mutations: [],
+      pending: null,
+      history: { undo: { revision: 3 } },
+    });
   });
 
   it("retains a conflicted draft and requires an explicit discard before refreshing the window", async () => {

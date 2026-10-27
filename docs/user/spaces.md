@@ -8,7 +8,7 @@ Browse existing spaces and pages in the selected environment. Scroll through the
 
 With the environment's operate permission, edit a page's text and formatting, then choose **Save draft** to commit your changes. An empty page can start with **Add paragraph**. Partial page windows allow text edits but restrict block insertion, splitting and joining. Unsupported content stays read-only.
 
-Local undo covers edits made in the current view; undoing saved changes is not available. A conflict keeps your draft. Keep the page open if draft storage fails, and retry storage before continuing. An uncertain save must resolve its receipt before you can discard the draft.
+Local undo covers edits made in the current view. **Undo saved change** and **Redo saved change** submit a new revision-checked change for the last content or formatting save, when no draft is open. Saved structural changes are unsupported, and large saves may exceed the retained-history limit. A conflict keeps the attempted draft without overwriting newer server work. Keep the page open if draft storage fails, and retry storage before continuing. An uncertain save must resolve its receipt before you can discard the draft.
 
 After opening a saved chat, visit a page and choose **Open beside chat** to keep the page in a panel. Both views share the same draft. Threads returns to your previous chat. Page links can include a block target in the URL query. The page location shows its current space and parent pages; refresh the location if it changes elsewhere.
 

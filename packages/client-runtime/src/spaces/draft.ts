@@ -8,6 +8,7 @@ import {
   SpaceReceiptEpoch,
 } from "@t2code/contracts/spaces";
 import type { SpaceDocumentDraft } from "./session.ts";
+import { savedHistorySchema, validateSavedHistory } from "./savedHistory.ts";
 
 const requestSchema = Schema.Struct({
   key: SpacePageTarget,
@@ -27,6 +28,7 @@ const decode = Schema.decodeUnknownSync(
     blocks: Schema.Array(SpaceBlock),
     mutations: Schema.Array(SpaceBlockMutation),
     pending: Schema.NullOr(requestSchema),
+    history: Schema.optionalKey(savedHistorySchema),
   }),
   { onExcessProperty: "error" },
 );
@@ -135,5 +137,6 @@ export function decodeSpaceDocumentDraft(
         pending.generation === draft.generation))
   )
     throw new Error("Invalid pending draft prefix or generation");
+  if (draft.history) validateSavedHistory(draft.history, limits.maxLoadedBlocks, draft);
   return draft;
 }

@@ -7,7 +7,7 @@ import {
 } from "@tiptap/pm/state";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { SpaceBlockId } from "@t2code/contracts/spaces";
-import { spaceJsonBytes } from "@t2code/client-runtime/spaces";
+import { spaceJsonBytes, type SpaceCompensation } from "@t2code/client-runtime/spaces";
 import { SpaceEditorAdapter } from "./adapter";
 import { sameSpaceValue, spaceDocumentBlocks, spaceWindowDocument } from "./document";
 import type { SpaceDocumentController } from "./documentController";
@@ -93,11 +93,27 @@ export class SpaceEditorBridge {
       session.persistenceError === null &&
       session.status !== "conflict" &&
       session.status !== "uncertain" &&
-      !session.recoveryReason
+      !session.recoveryReason &&
+      !(session.history.action && !session.pending)
     );
   }
   canStructure() {
     return this.canEdit() && this.controller.session.getSnapshot().pending === null;
+  }
+  async compensate(direction: SpaceCompensation): Promise<boolean> {
+    const reason = !this.canEdit()
+      ? "Saved undo/redo requires edit permission and a resolved writable document."
+      : this.controller.session.compensationAvailability(direction);
+    if (reason) {
+      this.#message(reason);
+      return false;
+    }
+    try {
+      return await this.controller.compensate(direction);
+    } catch (error) {
+      this.#message(error instanceof Error ? error.message : "Saved undo/redo could not be saved");
+      throw error;
+    }
   }
   getSnapshot = () => this.#notice;
   subscribe = (listener: () => void) => {
@@ -123,7 +139,7 @@ export class SpaceEditorBridge {
     const selection = changed ? preserveSelection(state, doc) : state.selection;
     this.#message(
       acknowledged
-        ? "Saved changes cannot be undone here. Local undo restarts from the current draft."
+        ? "Use saved undo/redo for the last supported save. Local undo restarts from the current draft."
         : "Another view or loaded window changed this document. Local undo restarts from the current content.",
     );
     return EditorState.create({

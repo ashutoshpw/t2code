@@ -210,7 +210,9 @@ it.layer(NodeServices.layer)("Production Spaces editor adapter", (it) => {
             await recovered.save();
             assert.equal(sends, 2);
             assert.equal(recovered.getSnapshot().baseRevision, 3);
-            assert.isNull(stored);
+            assert.deepEqual(stored?.mutations, []);
+            assert.isNull(stored?.pending);
+            assert.equal(stored?.history?.undo?.revision, 3);
             assert.deepEqual((await run(service.readBlocks({ ...key, revision: 3 }))).blocks, [
               block("typed after send"),
               opaque,

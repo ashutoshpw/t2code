@@ -246,7 +246,7 @@ export function SpaceEditor({
       </div>
       {historyNotice ? <p role="status">{historyNotice}</p> : null}
       {bridge ? (
-        <p>Local undo covers edits made in this view. Undoing saved changes is not available.</p>
+        <p>Local undo covers edits made in this view. Saved undo/redo has separate controls.</p>
       ) : null}
       {notice ? <p role="alert">{notice}</p> : null}
       {bridge && !bridge.controller.editorWindow().completeParents.includes(null) ? (

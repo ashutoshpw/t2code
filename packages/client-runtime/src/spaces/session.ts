@@ -9,6 +9,14 @@ import type {
 
 import { canEditSpaceBlock, isKnownSpaceBlock, isSpaceListItem } from "./values.ts";
 import { decodeSpaceDocumentDraft, spaceDraftMaxBytes, spaceJsonBytes } from "./draft.ts";
+import {
+  acknowledgeSavedHistory,
+  adoptHistoryWindow,
+  emptySavedHistory,
+  savedCompensation,
+  type SpaceCompensation,
+  type SpaceSavedHistory,
+} from "./savedHistory.ts";
 
 export type SpaceMutation =
   | { readonly kind: "insert"; readonly block: SpaceBlock }
@@ -51,6 +59,7 @@ export interface SpaceDocumentDraft {
   readonly blocks: readonly SpaceBlock[];
   readonly mutations: readonly SpaceMutation[];
   readonly pending: SpaceSaveRequest | null;
+  readonly history?: SpaceSavedHistory;
 }
 
 export interface SpaceDraftStore {
@@ -80,6 +89,7 @@ export interface SpaceSessionSnapshot {
   readonly recoveryReason: "legacy-epoch-missing" | null;
   readonly acknowledgedGeneration: number | null;
   readonly persistenceError: unknown;
+  readonly history: SpaceSavedHistory;
 }
 
 function own<T>(value: T): T {
@@ -128,6 +138,7 @@ export class SpaceDocumentSession {
     recoveryReason: null,
     acknowledgedGeneration: null,
     persistenceError: null,
+    history: emptySavedHistory,
   });
   #mutations: readonly SpaceMutation[] = [];
   #hydration: Promise<void> | null = null;
@@ -175,6 +186,8 @@ export class SpaceDocumentSession {
       )
     )
       return;
+    if (patch.history && patch.history !== this.#snapshot.history)
+      patch = { ...patch, history: own(patch.history) };
     this.#snapshot = Object.freeze({ ...this.#snapshot, ...patch });
     for (const listener of this.#listeners) listener();
   }
@@ -206,9 +219,15 @@ export class SpaceDocumentSession {
                 ? "uncertain"
                 : draft.baseRevision !== initial.revision
                   ? "conflict"
-                  : "draft",
+                  : draft.mutations.length
+                    ? "draft"
+                    : "saved",
               conflictRevision: draft.baseRevision !== initial.revision ? initial.revision : null,
               persistenceError: null,
+              history: draft.history ?? {
+                ...emptySavedHistory,
+                reason: "This restored draft has no retained saved preimage.",
+              },
             }),
           );
         } else {
@@ -219,6 +238,7 @@ export class SpaceDocumentSession {
             memberIds: own(initial.blocks.map((block) => block.id)),
             status: "saved",
             persistenceError: null,
+            history: adoptHistoryWindow(emptySavedHistory, initial.blocks),
           });
         }
       })
@@ -232,7 +252,14 @@ export class SpaceDocumentSession {
 
   #draft(): SpaceDocumentDraft | null {
     const snapshot = this.#snapshot;
-    if (!snapshot.dirty && !snapshot.pending) return null;
+    if (
+      !snapshot.dirty &&
+      !snapshot.pending &&
+      !snapshot.history.undo &&
+      !snapshot.history.redo &&
+      !snapshot.history.reason
+    )
+      return null;
     return Object.freeze({
       version: 1,
       key: this.key,
@@ -242,6 +269,7 @@ export class SpaceDocumentSession {
       memberIds: snapshot.memberIds,
       mutations: this.#mutations,
       pending: snapshot.pending,
+      history: snapshot.history,
     });
   }
 
@@ -277,7 +305,45 @@ export class SpaceDocumentSession {
   }
 
   apply(mutations: readonly SpaceMutation[], order?: readonly SpaceBlockId[]): void {
+    this.#apply(mutations, order);
+  }
+
+  compensationAvailability(direction: SpaceCompensation): string | null {
+    const state = this.#snapshot;
+    if (
+      !state.hydrated ||
+      state.dirty ||
+      state.pending ||
+      this.#saving ||
+      state.status !== "saved" ||
+      state.persistenceError !== null
+    )
+      return "Resolve or save the current draft before saved undo/redo.";
+    if (!state.history.base)
+      return state.history.reason ?? "No saved compensation baseline is retained.";
+    return savedCompensation(state.history, direction, state.blocks, state.baseRevision).reason;
+  }
+
+  prepareCompensation(direction: SpaceCompensation): void {
+    const reason = this.compensationAvailability(direction);
+    if (reason) throw new Error(reason);
+    const { mutations } = savedCompensation(
+      this.#snapshot.history,
+      direction,
+      this.#snapshot.blocks,
+      this.#snapshot.baseRevision,
+    );
+    this.#apply(mutations, undefined, direction);
+  }
+
+  #apply(
+    mutations: readonly SpaceMutation[],
+    order?: readonly SpaceBlockId[],
+    compensation?: SpaceCompensation,
+  ): void {
     this.#assertHydrated();
+    if (this.#snapshot.history.action && !this.#snapshot.pending && !compensation)
+      throw new Error("Finish saving or discard the prepared saved compensation before editing");
     if (mutations.length === 0) return;
     const owned = own(mutations);
     let blocks = [...this.#snapshot.blocks];
@@ -391,6 +457,9 @@ export class SpaceDocumentSession {
     }
     if (nextMutations.length > this.#options.maxMutations)
       throw new Error("Mutation window exceeds limit");
+    const history = compensation
+      ? { ...this.#snapshot.history, action: compensation }
+      : this.#snapshot.history;
     spaceJsonBytes(
       {
         version: 1,
@@ -401,6 +470,7 @@ export class SpaceDocumentSession {
         blocks,
         mutations: nextMutations,
         pending: this.#snapshot.pending,
+        history,
       },
       spaceDraftMaxBytes,
     );
@@ -409,6 +479,7 @@ export class SpaceDocumentSession {
       blocks: Object.freeze(blocks),
       generation: this.#snapshot.generation + 1,
       dirty: nextMutations.length > 0,
+      history,
       status:
         this.#snapshot.status === "saved" || this.#snapshot.status === "draft"
           ? nextMutations.length
@@ -435,6 +506,7 @@ export class SpaceDocumentSession {
       memberIds: own(window.blocks.map((block) => block.id)),
       status: "saved",
       conflictRevision: null,
+      history: adoptHistoryWindow(this.#snapshot.history, window.blocks),
     });
   }
 
@@ -507,10 +579,38 @@ export class SpaceDocumentSession {
       this.#update({ status: "conflict", conflictRevision: result.revision, pending: null });
     } else {
       this.#mutations = Object.freeze(this.#mutations.slice(request.mutations.length));
+      let history = acknowledgeSavedHistory(
+        this.#snapshot.history,
+        request.mutations,
+        result.revision,
+        this.#snapshot.blocks,
+        this.#mutations.length > 0,
+      );
       const members = new Set(this.#snapshot.memberIds);
       for (const mutation of request.mutations) {
         if (mutation.kind === "insert") members.add(mutation.block.id);
         if (mutation.kind === "delete") members.delete(mutation.blockId);
+      }
+      try {
+        spaceJsonBytes(
+          {
+            version: 1,
+            key: this.key,
+            baseRevision: result.revision,
+            generation: this.#snapshot.generation,
+            blocks: this.#snapshot.blocks,
+            memberIds: [...members],
+            mutations: this.#mutations,
+            pending: null,
+            history,
+          },
+          spaceDraftMaxBytes,
+        );
+      } catch {
+        history = {
+          ...emptySavedHistory,
+          reason: "Saved history exceeds the atomic draft budget. Your newer draft is retained.",
+        };
       }
       this.#update({
         baseRevision: result.revision,
@@ -520,6 +620,7 @@ export class SpaceDocumentSession {
         dirty: this.#mutations.length > 0,
         status: this.#mutations.length > 0 ? "draft" : "saved",
         conflictRevision: null,
+        history,
       });
     }
     await this.#persist();
@@ -539,6 +640,7 @@ export class SpaceDocumentSession {
       pending: null,
       status: "saved",
       conflictRevision: null,
+      history: adoptHistoryWindow(emptySavedHistory, window.blocks),
     });
     await this.persistDraft();
   }

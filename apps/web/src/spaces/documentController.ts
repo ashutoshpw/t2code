@@ -12,6 +12,7 @@ import type {
   SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
 import type { SpaceEditorWindow } from "./document";
+import type { SpaceCompensation } from "@t2code/client-runtime/spaces";
 
 export interface SpaceDocumentPorts {
   readonly getPage: () => Promise<SpacePageGetResult>;
@@ -175,6 +176,12 @@ export class SpaceDocumentController {
       this.#update({ error });
       throw error;
     }
+  }
+  async compensate(direction: SpaceCompensation) {
+    this.session.prepareCompensation(direction);
+    const generation = this.session.getSnapshot().generation;
+    await this.save();
+    return this.session.getSnapshot().acknowledgedGeneration === generation;
   }
   async discard() {
     if (this.session.getSnapshot().pending)

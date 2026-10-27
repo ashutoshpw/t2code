@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { it, assert } from "@effect/vitest";
+import { it, assert, expect } from "@effect/vitest";
 import { EnvironmentId, WS_METHODS } from "@t2code/contracts";
 import {
   AVAILABLE_CONNECTION_STATE,
@@ -18,6 +18,7 @@ import {
   createSpaceServiceSessionAdapter,
   type SpaceDocumentDraft,
   type SpaceServicePorts,
+  copySpaceBlocks,
 } from "@t2code/client-runtime/spaces";
 import * as Effect from "effect/Effect";
 import * as Cause from "effect/Cause";
@@ -199,7 +200,497 @@ function signal() {
   return { promise, resolve };
 }
 
+function savedParagraph(
+  id: string,
+  text: string,
+  order = "40000000000000000000000000000000",
+): C.SpaceBlock {
+  return {
+    id: C.SpaceBlockId.make(id),
+    parentId: null,
+    order,
+    type: "paragraph",
+    version: 1,
+    content: { runs: [{ text, marks: [] }] },
+  };
+}
+const savedUndoFixture = Effect.fn("SpaceEditorServiceTest.savedUndo")(function* (
+  service: SpacesService.SpacesService["Service"],
+  blocks: readonly C.SpaceBlock[] = [savedParagraph("a", "original")],
+) {
+  const h = yield* boot(service);
+  const admission = yield* service.getPage(h.key);
+  yield* service.applyBlockBatch({
+    ...h.key,
+    mutationId: "seed-undo",
+    receiptEpoch: admission.mutationAdmission.epoch,
+    baseRevision: 0,
+    generation: 1,
+    mutations: blocks.map((block) => ({ kind: "insert", block })),
+  });
+  let stored: SpaceDocumentDraft | null = null,
+    ids = 0,
+    admissions = 0;
+  const requests: C.SpaceApplyBlockBatchInput[] = [];
+  const lookups: C.SpaceReceiptLookupInput[] = [];
+  const transport = {
+    lose: null as "before" | "after" | null,
+    hold: false,
+    committed: signal(),
+    reply: signal(),
+  };
+  const createController = () =>
+    new SpaceDocumentController(
+      h.key,
+      {
+        adapter: createSpaceServiceSessionAdapter(h.key, {
+          ...h.ports,
+          getPage: async (input) => {
+            admissions++;
+            return h.ports.getPage(input);
+          },
+          applyBlockBatch: async (input) => {
+            assert.deepEqual(stored?.pending, {
+              key: h.key,
+              mutationId: input.mutationId,
+              receiptEpoch: input.receiptEpoch,
+              baseRevision: input.baseRevision,
+              generation: input.generation,
+              mutations: input.mutations,
+            });
+            requests.push(input);
+            const lose = transport.lose;
+            transport.lose = null;
+            if (lose === "before") throw new Error("request interrupted");
+            const result = await h.ports.applyBlockBatch(input);
+            if (lose === "after") throw new Error("reply interrupted");
+            if (transport.hold) {
+              transport.hold = false;
+              transport.committed.resolve();
+              await transport.reply.promise;
+            }
+            return result;
+          },
+          lookupMutationReceipt: async (input) => {
+            lookups.push(input);
+            return h.ports.lookupMutationReceipt(input);
+          },
+        }),
+        drafts: {
+          load: async () => stored,
+          write: async (_key, value) => {
+            stored = value;
+          },
+        },
+        createMutationId: () => `saved-history-${++ids}`,
+        maxLoadedBlocks: 100,
+        maxMutations: 100,
+      },
+      {
+        getPage: () => h.ports.getPage(h.key),
+        readBlocks: (input) => h.run(service.readBlocks(input)),
+        windowLimit: () => 100,
+      },
+    );
+  return {
+    ...h,
+    createController,
+    transport,
+    requests,
+    lookups,
+    admissions: () => admissions,
+    stored: () => stored,
+  };
+});
+function savedView(controller: SpaceDocumentController) {
+  let ids = 0;
+  const bridge = new SpaceEditorBridge(controller, () => C.SpaceBlockId.make(`saved-new-${++ids}`));
+  bridge.setWritable(true);
+  let state = EditorState.create({
+    doc: bridge.adapter.document,
+    plugins: bridge.adapter.plugins(),
+  });
+  const stop = controller.subscribe(() => {
+    state = bridge.synchronize(state);
+  });
+  const dispatch = (tr: Transaction) => {
+    state = bridge.apply(state, tr).state;
+  };
+  return {
+    bridge,
+    stop,
+    get state() {
+      return state;
+    },
+    dispatch,
+    edit(text: string) {
+      dispatch(state.tr.insertText(text));
+    },
+  };
+}
+
 it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => {
+  it.effect.each(["delete", "join", "insert"] as const)(
+    "refuses saved %s compensation rather than resurrecting retired identities",
+    (operation) =>
+      fixture((service) =>
+        Effect.gen(function* () {
+          const a = savedParagraph("a", "left"),
+            b = {
+              ...savedParagraph("b", "right", "c0000000000000000000000000000000"),
+              content: {
+                runs: [
+                  {
+                    text: "right",
+                    marks: [
+                      {
+                        type: "block_mention",
+                        version: 1,
+                        target: {
+                          environmentId,
+                          pageId: C.SpacePageId.make("self"),
+                          blockId: C.SpaceBlockId.make("b"),
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            };
+          const h = yield* savedUndoFixture(service, [a, b]);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              if (operation === "delete")
+                assert.isTrue(view.bridge.adapter.remove(b.id)(view.state, view.dispatch));
+              else if (operation === "insert")
+                assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              else {
+                let position = -1;
+                view.state.doc.descendants((node, pos) => {
+                  if (node.attrs.block?.id === b.id) position = pos + 1;
+                });
+                view.dispatch(
+                  view.state.tr.setSelection(TextSelection.create(view.state.doc, position)),
+                );
+                assert.isTrue(view.bridge.adapter.joinBackward()(view.state, view.dispatch));
+              }
+              await controller.save();
+              const before = controller.session.getSnapshot();
+              assert.isFalse(await view.bridge.compensate("undo"));
+              assert.equal(controller.session.getSnapshot(), before);
+              assert.include(controller.session.compensationAvailability("undo")!, "structural");
+              assert.equal(h.requests.length, 1);
+              if (operation !== "insert") {
+                const admission = await h.ports.getPage(h.key);
+                const rejected = await h.run(
+                  service
+                    .applyBlockBatch({
+                      ...h.key,
+                      mutationId: "retired-undo",
+                      receiptEpoch: admission.mutationAdmission.epoch,
+                      baseRevision: 2,
+                      generation: 1,
+                      mutations: [{ kind: "insert", block: b }],
+                    })
+                    .pipe(Effect.flip),
+                );
+                assert.equal(rejected._tag, "SpaceValidationError");
+                if (rejected._tag === "SpaceValidationError")
+                  assert.equal(rejected.reason, "duplicate_id");
+                const self = {
+                  ...b,
+                  content: {
+                    runs: [
+                      {
+                        text: "copy",
+                        marks: [
+                          {
+                            type: "block_mention",
+                            version: 1,
+                            target: { ...h.key, blockId: b.id },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                };
+                const copied = copySpaceBlocks([self], h.key, () =>
+                  C.SpaceBlockId.make("restored-copy"),
+                );
+                const copy = await h.run(
+                  service.applyBlockBatch({
+                    ...h.key,
+                    mutationId: "fresh-copy",
+                    receiptEpoch: admission.mutationAdmission.epoch,
+                    baseRevision: 2,
+                    generation: 1,
+                    mutations: copied.map((block) => ({ kind: "insert", block })),
+                  }),
+                );
+                assert.equal(copy.status, "saved");
+                assert.deepEqual(
+                  (await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks.find(
+                    (block) => block.id === "restored-copy",
+                  ),
+                  {
+                    ...self,
+                    id: C.SpaceBlockId.make("restored-copy"),
+                    content: {
+                      runs: [
+                        {
+                          text: "copy",
+                          marks: [
+                            {
+                              type: "block_mention",
+                              version: 1,
+                              target: { ...h.key, blockId: "restored-copy" },
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                );
+              }
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+  );
+  it.effect.each([65536, 65537])(
+    "admits saved history through the exact %i-byte window and retains only the last save",
+    (bytes) =>
+      fixture((service) =>
+        Effect.gen(function* () {
+          const ranks = [
+            "40000000000000000000000000000000",
+            "80000000000000000000000000000000",
+            "c0000000000000000000000000000000",
+          ];
+          const empty = ranks.map((rank, i) => savedParagraph(`byte-${i}`, "", rank));
+          const padding = bytes - new TextEncoder().encode(JSON.stringify(empty)).length;
+          const blocks = ranks.map((rank, i) =>
+            savedParagraph(
+              `byte-${i}`,
+              "x".repeat(Math.floor(padding / 3) + (i < padding % 3 ? 1 : 0)),
+              rank,
+            ),
+          );
+          assert.equal(new TextEncoder().encode(JSON.stringify(blocks)).length, bytes);
+          const h = yield* savedUndoFixture(service, blocks);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 2)));
+              view.edit("y");
+              await controller.save();
+              assert.isFalse(controller.session.getSnapshot().dirty);
+              if (bytes === 65537) {
+                assert.isFalse(await view.bridge.compensate("undo"));
+                assert.include(controller.session.compensationAvailability("undo")!, "64 KiB");
+                return;
+              }
+              const first = view.state.doc.textContent;
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 2)));
+              view.edit("z");
+              await controller.save();
+              const second = view.state.doc.textContent;
+              assert.isTrue(await view.bridge.compensate("undo"));
+              assert.equal(view.state.doc.textContent, first);
+              assert.isFalse(await view.bridge.compensate("undo"));
+              assert.isTrue(await view.bridge.compensate("redo"));
+              assert.equal(view.state.doc.textContent, second);
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+  );
+  it.effect(
+    "submits saved content undo and redo as distinct guarded saves shared across views and reload",
+    () =>
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* savedUndoFixture(service);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller),
+              peer = savedView(controller);
+            try {
+              view.edit("first-");
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.equal(view.state.doc.textContent, "original");
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              await controller.save();
+              assert.equal(controller.session.getSnapshot().baseRevision, 2);
+              assert.isTrue(await peer.bridge.compensate("undo"));
+              assert.equal(view.state.doc.textContent, "original");
+              assert.equal(peer.state.doc.textContent, "original");
+              assert.equal(controller.session.getSnapshot().baseRevision, 3);
+              assert.isFalse(await view.bridge.compensate("undo"));
+              assert.isTrue(await view.bridge.compensate("redo"));
+              assert.equal(peer.state.doc.textContent, "first-original");
+              assert.deepEqual(
+                h.requests.map((request) => request.baseRevision),
+                [1, 2, 3],
+              );
+              assert.equal(new Set(h.requests.map((request) => request.mutationId)).size, 3);
+              assert.equal(h.admissions(), 3);
+              assert.isTrue(
+                h.requests.every((request) =>
+                  request.mutations.every((mutation) => mutation.kind === "replace"),
+                ),
+              );
+              peer.bridge.setWritable(false);
+              assert.isFalse(await peer.bridge.compensate("undo"));
+              assert.equal(h.requests.length, 3);
+              const restored = h.createController();
+              await restored.open();
+              const reopened = savedView(restored);
+              try {
+                assert.isTrue(await reopened.bridge.compensate("undo"));
+                assert.equal(reopened.state.doc.textContent, "original");
+              } finally {
+                reopened.stop();
+              }
+            } finally {
+              view.stop();
+              peer.stop();
+            }
+          });
+        }),
+      ),
+  );
+  it.effect("keeps the attempted saved undo draft on a real revision conflict without rebase", () =>
+    fixture((service) =>
+      Effect.gen(function* () {
+        const h = yield* savedUndoFixture(service);
+        yield* Effect.promise(async () => {
+          const controller = h.createController();
+          await controller.open();
+          const view = savedView(controller);
+          try {
+            view.edit("saved-");
+            await controller.save();
+            const current = await h.ports.getPage(h.key);
+            const external = savedParagraph("a", "external");
+            await h.run(
+              service.applyBlockBatch({
+                ...h.key,
+                mutationId: "external",
+                receiptEpoch: current.mutationAdmission.epoch,
+                baseRevision: 2,
+                generation: 1,
+                mutations: [{ kind: "replace", block: external }],
+              }),
+            );
+            assert.isFalse(await view.bridge.compensate("undo"));
+            assert.equal(controller.session.getSnapshot().status, "conflict");
+            assert.equal(controller.session.getSnapshot().baseRevision, 2);
+            assert.equal(controller.session.getSnapshot().history.action, "undo");
+            assert.equal(view.state.doc.textContent, "original");
+            assert.deepEqual(h.stored()?.blocks, [savedParagraph("a", "original")]);
+            assert.deepEqual((await h.run(service.readBlocks({ ...h.key, revision: 3 }))).blocks, [
+              external,
+            ]);
+            const admissions = h.admissions();
+            await expect(controller.save()).rejects.toThrow("conflict");
+            assert.equal(h.admissions(), admissions);
+            assert.equal(h.requests.length, 2);
+            await controller.discard();
+            assert.equal(view.state.doc.textContent, "external");
+            assert.isFalse(await view.bridge.compensate("undo"));
+          } finally {
+            view.stop();
+          }
+        });
+      }),
+    ),
+  );
+  it.effect.each(["before", "after"] as const)(
+    "recovers saved undo after %s interruption using the exact persisted receipt intent",
+    (lose) =>
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* savedUndoFixture(service);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              view.edit("saved-");
+              await controller.save();
+              h.transport.lose = lose;
+              await expect(view.bridge.compensate("undo")).rejects.toThrow("interrupted");
+              const pending = controller.session.getSnapshot().pending!;
+              const wire = JSON.stringify(h.requests[1]);
+              assert.equal(h.stored()?.history?.action, "undo");
+              assert.isFalse(await view.bridge.compensate("redo"));
+              const restored = h.createController();
+              await restored.open();
+              assert.equal(restored.session.getSnapshot().status, "uncertain");
+              const admissionCount = h.admissions();
+              await restored.save();
+              assert.equal(h.admissions(), admissionCount);
+              assert.equal(JSON.stringify(h.lookups[0]?.request.input), wire);
+              assert.equal(restored.session.getSnapshot().baseRevision, 3);
+              assert.isNull(restored.session.getSnapshot().pending);
+              assert.isNull(restored.session.compensationAvailability("redo"));
+              if (lose === "before") {
+                assert.equal(h.requests.length, 3);
+                assert.equal(JSON.stringify(h.requests[2]), wire);
+              } else assert.equal(h.requests.length, 2);
+              assert.equal(pending.receiptEpoch, h.requests[1]!.receiptEpoch);
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+  );
+  it.effect(
+    "keeps edits typed during saved undo acknowledgement and guards redo until that draft is resolved",
+    () =>
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* savedUndoFixture(service);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              view.edit("saved-");
+              await controller.save();
+              h.transport.hold = true;
+              const undoing = view.bridge.compensate("undo");
+              await h.transport.committed.promise;
+              view.edit("late-");
+              h.transport.reply.resolve();
+              assert.isTrue(await undoing);
+              assert.isTrue(controller.session.getSnapshot().dirty);
+              assert.include(view.state.doc.textContent, "late-");
+              assert.isFalse(await view.bridge.compensate("redo"));
+              await controller.save();
+              assert.equal(h.requests[2]!.baseRevision, 3);
+              assert.isTrue(await view.bridge.compensate("undo"));
+              assert.equal(view.state.doc.textContent, "original");
+            } finally {
+              h.transport.reply.resolve();
+              view.stop();
+            }
+          });
+        }),
+      ),
+  );
   it.effect(
     "keeps two document views and exact pending intent across fresh v2 location ownership and moves",
     () =>
@@ -653,7 +1144,7 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
               if (resurrection._tag === "SpaceValidationError")
                 assert.equal(resurrection.reason, "duplicate_id");
               assert.isFalse(bridge.adapter.undoLocal()(state, dispatch));
-              assert.include(bridge.getSnapshot()!, "Saved changes cannot be undone");
+              assert.include(bridge.getSnapshot()!, "Use saved undo/redo");
               if (late) {
                 assert.isTrue(controller.session.getSnapshot().dirty);
                 assert.include(state.doc.textContent, "late");
@@ -672,7 +1163,8 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
                 (await run(service.readBlocks({ ...key, revision: 2 }))).blocks,
                 expected,
               );
-              assert.isNull(stored);
+              assert.isNull(stored?.pending);
+              assert.isNotNull(stored?.history?.undo);
               assert.isFalse(bridge.adapter.redoLocal()(state, dispatch));
             } finally {
               unsubscribe();
