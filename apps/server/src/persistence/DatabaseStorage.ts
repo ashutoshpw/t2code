@@ -77,7 +77,7 @@ const make = Effect.gen(function* () {
     Effect.catch((cause) => Effect.logWarning("Database storage inspection failed", { cause })),
   );
 
-  const reclaim = Effect.gen(function* () {
+  const reclaimChat = Effect.gen(function* () {
     const mode = yield* sql<{ readonly auto_vacuum: number }>`PRAGMA auto_vacuum`;
     if (mode[0]?.auto_vacuum !== 2) return;
     // The driver steps once per statement; incremental_vacuum frees one page per step. Yield between pages.
@@ -89,6 +89,18 @@ const make = Effect.gen(function* () {
     }
   }).pipe(
     Effect.catch((cause) => Effect.logWarning("Database space reclamation failed", { cause })),
+  );
+
+  const reclaim = reclaimChat.pipe(
+    Effect.andThen(
+      Option.isSome(spaces)
+        ? spaces.value.reclaimExistingStorage.pipe(
+            Effect.catch((cause) =>
+              Effect.logWarning("Spaces database space reclamation failed", { cause }),
+            ),
+          )
+        : Effect.void,
+    ),
   );
 
   // Even a pass that deletes nothing scans the event store. Persist completion

@@ -12,7 +12,9 @@ import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
-import type * as Scope from "effect/Scope";
+import * as Scope from "effect/Scope";
+import * as Ref from "effect/Ref";
+import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";
 import type * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import { openMediaFile } from "../assets/MediaFile.ts";
@@ -47,6 +49,7 @@ import * as Sqlite from "./Sqlite.ts";
 export class SpacesService extends Context.Service<
   SpacesService,
   {
+    readonly reclaimExistingStorage: Effect.Effect<void, C.SpaceServiceError>;
     readonly maintainAssets: Effect.Effect<SpacesStorageStatus | null, C.SpaceServiceError>;
     readonly createAssetUpload: (
       input: unknown,
@@ -310,6 +313,7 @@ const make = Effect.fn("SpacesService.make")(function* (
   const scope = yield* Effect.scope;
   const platform = yield* Effect.context<FileSystem.FileSystem | Path.Path>();
   const mutex = yield* Semaphore.make(1);
+  const acquiredSql = yield* Ref.make(Option.none<SpacesSql.SpacesSql["Service"]>());
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const assetDirectories = directories ?? {
@@ -377,6 +381,11 @@ const make = Effect.fn("SpacesService.make")(function* (
               Effect.provideService(SpacesSql.SpacesSql, sql),
               Effect.catch(() => Effect.logWarning("Spaces asset recovery remains pending.")),
             );
+          yield* Effect.uninterruptible(
+            Ref.set(acquiredSql, Option.some(sql)).pipe(
+              Effect.andThen(Scope.addFinalizer(scope, Ref.set(acquiredSql, Option.none()))),
+            ),
+          );
           return sql;
         }),
       ),
@@ -1593,6 +1602,7 @@ const make = Effect.fn("SpacesService.make")(function* (
               referenceResolution: true,
               recovery: true,
               search: true,
+              assets: true,
             },
           } satisfies C.SpaceCapability;
         }),
@@ -1603,6 +1613,29 @@ const make = Effect.fn("SpacesService.make")(function* (
       SpacesUnavailableError: () => Effect.succeed(null),
     }),
   );
+  const reclaimExistingStorage = Effect.fn("SpacesService.reclaimExistingStorage")(function* () {
+    for (let page = 0; page < 64; page++) {
+      const reclaimed = yield* mutex.withPermits(1)(
+        Effect.gen(function* () {
+          const current = yield* Ref.get(acquiredSql);
+          if (Option.isNone(current)) return false;
+          const snapshot = yield* settings.getSettings.pipe(
+            Effect.mapError(() => new C.SpacesUnavailableError({ stage: "settings" })),
+          );
+          if (!snapshot.spacesEnabled) return false;
+          const sql = current.value;
+          const [mode] = yield* sql<{ readonly auto_vacuum: number }>`PRAGMA auto_vacuum`;
+          if (mode?.auto_vacuum !== 2) return false;
+          const [free] = yield* sql<{ readonly freelist_count: number }>`PRAGMA freelist_count`;
+          if (!free || free.freelist_count === 0) return false;
+          yield* sql`PRAGMA incremental_vacuum(1)`;
+          return true;
+        }),
+      );
+      if (!reclaimed) return;
+      yield* Effect.yieldNow;
+    }
+  }, assetErrors);
   const maintainAssets = maintenanceMutex.withPermits(1)(
     Effect.gen(function* () {
       const snapshot = yield* settings.getSettings.pipe(
@@ -1715,9 +1748,15 @@ const make = Effect.fn("SpacesService.make")(function* (
       }
       const accounting = yield* run(environmentId, () =>
         Effect.gen(function* () {
+          const sql = yield* SpacesSql.SpacesSql;
           const usage = yield* Catalog.usage().pipe(assetErrors);
           const current = yield* Reconciliation.state();
+          const [free] = yield* sql<{ readonly freelist_count: number }>`PRAGMA freelist_count`;
+          const [size] = yield* sql<{ readonly page_size: number }>`PRAGMA page_size`;
+          const [mode] = yield* sql<{ readonly auto_vacuum: number }>`PRAGMA auto_vacuum`;
           return {
+            reclaimableBytes: (free?.freelist_count ?? 0) * (size?.page_size ?? 0),
+            incrementalVacuumEnabled: mode?.auto_vacuum === 2,
             registeredAssetBytes: usage.physical_bytes,
             reservedBytes: usage.reserved_bytes,
             observedAssetFileBytes: current.assets_bytes,
@@ -1741,6 +1780,7 @@ const make = Effect.fn("SpacesService.make")(function* (
     }),
   );
   return SpacesService.of({
+    reclaimExistingStorage: reclaimExistingStorage(),
     maintainAssets,
     createAssetUpload,
     getAssetUpload,

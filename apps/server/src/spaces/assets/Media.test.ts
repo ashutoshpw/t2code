@@ -10,6 +10,8 @@ import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 import * as SqlClient from "effect/sql/SqlClient";
+import * as Statement from "effect/sql/Statement";
+import * as Tracer from "effect/Tracer";
 
 import * as Config from "../../config.ts";
 import * as Secrets from "../../auth/ServerSecretStore.ts";
@@ -888,6 +890,88 @@ it.effect(
           unresolved: false,
           gcEnabled: false,
         });
+      }).pipe(Effect.provide(live())),
+    ),
+);
+
+it.effect(
+  "bounds already-acquired physical reclaim to64 steps without touching retained media, history or receipts",
+  () =>
+    fixture(({ config, live }) =>
+      Effect.gen(function* () {
+        const { service, pageId, request } = yield* boot();
+        const a = yield* upload("reclaim-a"),
+          b = yield* upload("reclaim-b");
+        yield* service.applyBlockBatch(
+          request("reclaim-insert", 0, [{ kind: "insert", block: media("a", a.assetId) }]),
+        );
+        yield* service.applyBlockBatch(
+          request("reclaim-replace", 1, [{ kind: "replace", block: media("a", b.assetId) }]),
+        );
+        yield* service.createAssetUpload(
+          {
+            ...env,
+            requestId: "reclaim-reserved",
+            expectedBytes: pdf.length,
+            mimeType: "application/pdf",
+            mediaKind: "pdf",
+            name: "pending.pdf",
+          },
+          "owner",
+        );
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          yield* sql`CREATE TABLE reclaim_churn(value BLOB)`;
+          yield* sql`INSERT INTO reclaim_churn VALUES (zeroblob(1048576))`;
+          yield* sql`DROP TABLE reclaim_churn`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath })));
+        const physical = Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          return {
+            free: (yield* sql<{ readonly freelist_count: number }>`PRAGMA freelist_count`)[0]!
+              .freelist_count,
+            size: (yield* sql<{ readonly page_size: number }>`PRAGMA page_size`)[0]!.page_size,
+          };
+        }).pipe(
+          Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath, readonly: true })),
+        );
+        const before = yield* inspect(config),
+          initial = yield* physical;
+        expect(initial.free).toBeGreaterThan(128);
+        yield* TestClock.adjust("8 days");
+        const steps: string[] = [];
+        const observe: Statement.Transformer = (statement) => {
+          const [query] = statement.compile();
+          steps.push(query);
+          return Effect.succeed(statement);
+        };
+        yield* service.reclaimExistingStorage.pipe(
+          Effect.provideService(Statement.CurrentTransformer, observe),
+          Effect.withTracer(Tracer.nativeTracer),
+        );
+        expect(steps.filter((query) => query === "PRAGMA incremental_vacuum(1)")).toHaveLength(64);
+        expect(steps.some((query) => /^(?:VACUUM|DELETE|UPDATE|INSERT|CREATE)/i.test(query))).toBe(
+          false,
+        );
+        const after = yield* physical;
+        expect(initial.free - after.free).toBe(64);
+        expect(yield* inspect(config)).toEqual(before);
+        yield* service.reclaimExistingStorage;
+        expect(after.free - (yield* physical).free).toBe(64);
+        expect(yield* inspect(config)).toEqual(before);
+        const fs = yield* FileSystem.FileSystem;
+        expect(new Uint8Array(yield* fs.readFile(`${config.spacesAssetsDir}/${a.digest}`))).toEqual(
+          pdf,
+        );
+        const report = yield* service.maintainAssets;
+        const measured = yield* physical;
+        expect(report).toMatchObject({
+          reclaimableBytes: measured.free * measured.size,
+          incrementalVacuumEnabled: true,
+          registeredAssetBytes: pdf.length,
+          reconciliation: { gcEnabled: false },
+        });
+        expect((yield* service.getPage({ ...env, pageId })).page.revision).toBe(2);
       }).pipe(Effect.provide(live())),
     ),
 );

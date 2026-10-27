@@ -1056,6 +1056,8 @@ const NULLABLE_PROJECT_SETTINGS_OVERRIDES: ReadonlySet<ProjectScopedServerSettin
 export const DATABASE_COMPACTION_RECOMMENDED_BYTES = 1024 ** 3;
 
 export const SpacesStorageStatus = Schema.Struct({
+  reclaimableBytes: Schema.optionalKey(Schema.Number),
+  incrementalVacuumEnabled: Schema.optionalKey(Schema.Boolean),
   databaseBytes: Schema.Number,
   walBytes: Schema.Number,
   sharedMemoryBytes: Schema.Number,

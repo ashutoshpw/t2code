@@ -318,6 +318,9 @@ describe("Spaces public asset wiring", () => {
       fixture(({ request, config }) =>
         Effect.gen(function* () {
           const service = yield* Service.SpacesService;
+          const capability = yield* service.getCapability(environmentId);
+          expect(capability?.features?.assets).toBe(true);
+          expect(capability?.features?.contextCapture).toBeUndefined();
           const data =
             kind === "pdf"
               ? pdf

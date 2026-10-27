@@ -1,4 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
+import * as Context from "effect/Context";
 import { assert, it } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -166,4 +168,114 @@ it.effect("remembers completion only after the paced pass finishes", () =>
       }),
     );
   }).pipe(Effect.provide(testConfig.pipe(Layer.provideMerge(NodeServices.layer)))),
+);
+
+it.effect.each(["valid", "foreign", "busy"] as const)(
+  "keeps the existing minute reclaim/status opportunity independent with %s Spaces and nonincremental chat",
+  (mode) =>
+    Effect.gen(function* () {
+      yield* TestClock.setTime(0);
+      const config = yield* ServerConfig.ServerConfig;
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      yield* fs.makeDirectory(path.dirname(config.dbPath), { recursive: true });
+      yield* fs.writeFileString(path.join(path.dirname(config.dbPath), "compacted-at"), "0");
+      yield* Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        yield* sql`CREATE TABLE keep_chat(value TEXT)`;
+        yield* sql`INSERT INTO keep_chat VALUES ('keep')`;
+      }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.dbPath })), Effect.scoped);
+      if (mode === "foreign")
+        yield* fs.writeFileString(config.spacesDbPath, "foreign Spaces bytes");
+      const system = DatabaseStorage.layer.pipe(
+        Layer.provideMerge(
+          SpacesService.layerFromPath(config.spacesDbPath).pipe(
+            Layer.provide(Settings.layerTest({ spacesEnabled: true })),
+            Layer.provide(
+              Layer.succeed(Identity.ServerEnvironmentIdentity, {
+                getEnvironmentId: Effect.succeed(EnvironmentId.make("reclaim-opportunity")),
+              }),
+            ),
+          ),
+        ),
+        Layer.provide(ProjectionMaintenance.layer),
+        Layer.provide(Layer.merge(EventStore.layer, ProjectionStore.layer)),
+        Layer.provideMerge(Sqlite.layerFromPath(config.dbPath)),
+      );
+      yield* Effect.gen(function* () {
+        const storage = yield* DatabaseStorage.DatabaseStorage;
+        const spaces = yield* SpacesService.SpacesService;
+        const chat = yield* SqlClient.SqlClient;
+        const first = Option.getOrThrow(
+          yield* Stream.runHead(storage.status.pipe(Stream.filter((status) => status !== null))),
+        )!;
+        assert.isFalse(first.incrementalVacuumEnabled);
+        assert.deepEqual(yield* chat`PRAGMA auto_vacuum`, [{ auto_vacuum: 0 }]);
+        if (mode !== "foreign")
+          yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            yield* sql`CREATE TABLE reclaim_churn(value BLOB)`;
+            yield* sql`INSERT INTO reclaim_churn VALUES (zeroblob(1048576))`;
+            yield* sql`DROP TABLE reclaim_churn`;
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath })));
+        const free = Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          return (yield* sql<{ readonly freelist_count: number }>`PRAGMA freelist_count`)[0]!
+            .freelist_count;
+        }).pipe(
+          Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath, readonly: true })),
+        );
+        const initialFree = mode === "foreign" ? 0 : yield* free;
+        if (mode !== "foreign") assert.isAbove(initialFree, 128);
+        yield* Effect.scoped(
+          Effect.gen(function* () {
+            if (mode === "busy") {
+              const context = yield* Layer.buildWithScope(
+                NodeSqliteClient.layer({ filename: config.spacesDbPath }),
+                yield* Effect.scope,
+              );
+              const lock = Context.get(context, SqlClient.SqlClient);
+              yield* Effect.acquireRelease(lock`BEGIN IMMEDIATE`, () =>
+                lock`ROLLBACK`.pipe(Effect.ignore),
+              );
+            }
+            yield* storage.reclaim;
+            if (mode === "valid") assert.equal(initialFree - (yield* free), 64);
+            if (mode === "busy") assert.equal(yield* free, initialFree);
+            yield* chat`INSERT INTO keep_chat VALUES (zeroblob(262144))`;
+            yield* TestClock.adjust("1 minute");
+            const next = Option.getOrThrow(
+              yield* Stream.runHead(
+                storage.status.pipe(
+                  Stream.filter(
+                    (status) => status !== null && status.databaseBytes > first.databaseBytes,
+                  ),
+                ),
+              ),
+            )!;
+            assert.isFalse(next.incrementalVacuumEnabled);
+            assert.deepEqual(yield* chat`SELECT value FROM keep_chat WHERE value='keep'`, [
+              { value: "keep" },
+            ]);
+            assert.equal(
+              yield* fs.readFileString(path.join(path.dirname(config.dbPath), "compacted-at")),
+              "0",
+            );
+            if (mode === "valid") {
+              assert.isTrue(next.spaces?.incrementalVacuumEnabled);
+              assert.isAbove(next.spaces?.reclaimableBytes ?? 0, 0);
+              assert.isBelow(yield* free, initialFree - 64);
+              assert.isFalse(next.spaces?.reconciliation.gcEnabled);
+            } else assert.isNull(next.spaces);
+          }),
+        );
+        if (mode === "busy") {
+          yield* storage.reclaim;
+          assert.equal(initialFree - (yield* free), 64);
+          assert.isTrue((yield* spaces.maintainAssets)?.incrementalVacuumEnabled);
+        }
+        if (mode === "foreign")
+          assert.equal(yield* fs.readFileString(config.spacesDbPath), "foreign Spaces bytes");
+      }).pipe(Effect.provide(system));
+    }).pipe(Effect.provide(testConfig.pipe(Layer.provideMerge(NodeServices.layer)))),
 );

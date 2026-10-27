@@ -15,6 +15,7 @@ import {
   resolveProjectProviderInstanceEnabled,
   resolveProviderInstanceEnabled,
   ServerSettings,
+  SpacesStorageStatus,
   ServerSettingsPatch,
   withIdleCompaction,
 } from "./settings.ts";
@@ -433,4 +434,29 @@ describe("server model preferences", () => {
     expect(encodeServerSettings(decodeServerSettings(input))).toMatchObject(input);
     expect(decodeServerSettingsPatch(input)).toEqual(input);
   });
+});
+
+it("preserves old Spaces storage reports without defaulting optional reclaim metadata", () => {
+  const decode = Schema.decodeUnknownSync(SpacesStorageStatus, { onExcessProperty: "error" });
+  const old = {
+    databaseBytes: 4096,
+    walBytes: 0,
+    sharedMemoryBytes: 0,
+    registeredAssetBytes: 0,
+    reservedBytes: 0,
+    observedAssetFileBytes: 0,
+    observedStagingFileBytes: 0,
+    observedAt: 0,
+    reconciliation: {
+      currentPending: false,
+      historyPending: false,
+      catalogPending: false,
+      inventoryPending: false,
+      unresolved: false,
+      gcEnabled: false,
+    },
+  };
+  expect(decode(old)).toEqual(old);
+  const current = { ...old, reclaimableBytes: 4096, incrementalVacuumEnabled: true };
+  expect(decode(current)).toEqual(current);
 });
