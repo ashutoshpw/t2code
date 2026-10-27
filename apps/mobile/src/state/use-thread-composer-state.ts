@@ -160,6 +160,31 @@ function activeComposerDraftKey(thread: {
   return edit === null ? threadKey : queuedEditDraftKey(threadKey, edit.runId);
 }
 
+async function enqueueComposerOutboxSend(
+  preparing: { current: boolean },
+  threadKey: string,
+  draft: ReturnType<typeof getComposerDraftSnapshot>,
+  messageId: MessageId,
+  enqueue: () => ReturnType<typeof enqueueThreadOutboxMessage>,
+): Promise<MessageId | null> {
+  preparing.current = true;
+  try {
+    await enqueue();
+  } catch (error) {
+    setThreadComposerError(
+      threadKey,
+      error instanceof Error ? error.message : "Failed to save the queued message.",
+    );
+    return null;
+  } finally {
+    preparing.current = false;
+  }
+  if (sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft))
+    clearComposerDraftContent(threadKey, { deferAttachmentCleanup: true });
+  scheduleUnusedComposerAttachmentCleanup(draft.attachments);
+  return messageId;
+}
+
 export function useThreadDraftForThread(input: {
   readonly environmentId?: EnvironmentId;
   readonly threadId?: ThreadId;
@@ -709,9 +734,8 @@ export function useThreadComposerState() {
     const metadata = makeQueuedMessageMetadata();
     const messageId = MessageId.make(metadata.messageId);
     clearThreadComposerError(threadKey);
-    preparingSendRef.current = true;
-    try {
-      await enqueueThreadOutboxMessage(
+    return enqueueComposerOutboxSend(preparingSendRef, threadKey, draft, messageId, () =>
+      enqueueThreadOutboxMessage(
         {
           environmentId: selectedThreadShell.environmentId,
           threadId: selectedThreadShell.id,
@@ -733,20 +757,8 @@ export function useThreadComposerState() {
           contextDraft: draft.contextDraft,
           isCurrentDraft: () => sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft),
         },
-      );
-    } catch (error) {
-      setThreadComposerError(
-        threadKey,
-        error instanceof Error ? error.message : "Failed to save the queued message.",
-      );
-      return null;
-    } finally {
-      preparingSendRef.current = false;
-    }
-    if (sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft))
-      clearComposerDraftContent(threadKey, { deferAttachmentCleanup: true });
-    scheduleUnusedComposerAttachmentCleanup(attachments);
-    return messageId;
+      ),
+    );
   };
 
   const onChangeDraftMessage = (value: string) => {

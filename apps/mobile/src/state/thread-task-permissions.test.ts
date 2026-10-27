@@ -457,6 +457,39 @@ it("keeps newer native typing when an earlier send is still being prepared or pe
   expect(state.draft.text).toBe("Newer typing");
 });
 
+it("releases a failed send for an explicit retry without clearing newer text or selectors", async () => {
+  state.grantedEnvironments.add("secondary");
+  state.draft = { ...state.draft, contextDraft: selectorDraft() };
+  const reply = Promise.withResolvers<undefined>();
+  state.enqueue.mockImplementationOnce(() => reply.promise);
+  const composer = useThreadComposerState();
+  const pending = composer.onSendMessage();
+  expect(await composer.onSendMessage()).toBeNull();
+  expect(state.enqueue).toHaveBeenCalledOnce();
+
+  const newerContext: ComposerContextDraft = {
+    ...selectorDraft(),
+    selectors: selectorDraft().selectors.map((selector) => ({
+      ...selector,
+      includeChildPages: true,
+    })),
+  };
+  state.draft = { ...state.draft, text: "Newer typing", contextDraft: newerContext };
+  reply.reject(new Error("Outbox persistence failed"));
+  expect(await pending).toBeNull();
+  expect(state.clearDraft).not.toHaveBeenCalled();
+  expect(state.draft.text).toBe("Newer typing");
+  expect(state.draft.contextDraft).toEqual(newerContext);
+
+  expect(await composer.onSendMessage()).toBe("message");
+  expect(state.enqueue).toHaveBeenCalledTimes(2);
+  expect(state.enqueue).toHaveBeenLastCalledWith(
+    expect.objectContaining({ text: "Newer typing" }),
+    expect.objectContaining({ contextDraft: newerContext }),
+  );
+  expect(state.clearDraft).toHaveBeenCalledOnce();
+});
+
 function selectorDraft(): ComposerContextDraft {
   return {
     selectors: [
