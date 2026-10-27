@@ -60,10 +60,11 @@ interface Frame {
   depth: number;
   only?: C.SpaceBlockId;
 }
-type Row = Omit<BlockStore.BlockRow, "payload"> & {
-  payload: string | null;
-  payload_bytes: number;
-};
+interface Header {
+  readonly block_id: string;
+  readonly rank: string;
+  readonly payload_bytes: number;
+}
 
 export const capture = Effect.fn("SpacesContextSnapshot.capture")(function* (
   input: SpaceContextCaptureInput,
@@ -135,32 +136,38 @@ export const capture = Effect.fn("SpacesContextSnapshot.capture")(function* (
       break;
     }
     const frame = stack[stack.length - 1]!;
-    const selector = frame.only
-      ? sql`block_id = ${frame.only}`
-      : sql`parent_id IS ${frame.parentId} ${
-          frame.after ? sql`AND (rank,block_id) > (${frame.after.rank},${frame.after.id})` : sql``
-        }`;
-    const canMaterialize =
-      frame.depth <= captureLimits.depth && blocks.size < SPACE_CONTEXT_LIMITS.maxBlockIds;
-    const [row] =
-      yield* sql<Row>`SELECT block_id,page_id,parent_id,rank,logical_bytes,deleted,merged_into,
-      length(CAST(payload AS BLOB)) AS payload_bytes,
-      CASE WHEN ${canMaterialize} AND length(CAST(payload AS BLOB)) <= ${captureLimits.bytes - inspectedBytes} THEN payload END AS payload
-      FROM spaces_blocks WHERE page_id=${frame.pageId} AND deleted=0 AND ${selector}
-      ORDER BY rank,block_id LIMIT 1`;
-    if (!row) {
+    const after = frame.after
+      ? sql`AND (rank,block_id) > (${frame.after.rank},${frame.after.id})`
+      : sql``;
+    // octet_length reads only the record header; a cast would fetch overflow pages.
+    // Root-block liveness was resolved in this transaction; deleted is stored after payload.
+    const [header] = frame.only
+      ? yield* sql<Header>`SELECT block_id,rank,octet_length(payload) AS payload_bytes
+          FROM spaces_blocks WHERE block_id=${frame.only} AND page_id=${frame.pageId}`
+      : yield* sql<Header>`SELECT block_id,rank,octet_length(payload) AS payload_bytes
+          FROM spaces_blocks INDEXED BY spaces_blocks_children
+          WHERE page_id=${frame.pageId} AND deleted=0 AND parent_id IS ${frame.parentId} ${after}
+          ORDER BY rank,block_id LIMIT 1`;
+    if (!header) {
       stack.pop();
       continue;
     }
     inspected++;
-    if (row.payload === null || !canMaterialize) {
+    if (
+      frame.depth > captureLimits.depth ||
+      blocks.size >= SPACE_CONTEXT_LIMITS.maxBlockIds ||
+      header.payload_bytes > captureLimits.bytes - inspectedBytes
+    ) {
       truncated = true;
       break;
     }
-    inspectedBytes += row.payload_bytes;
+    const [row] =
+      yield* sql<BlockStore.BlockRow>`SELECT * FROM spaces_blocks WHERE block_id=${header.block_id}`;
+    if (!row) return yield* new C.SpacesUnavailableError({ stage: "storage" });
+    inspectedBytes += header.payload_bytes;
     if (frame.only) stack.pop();
-    else frame.after = { rank: row.rank, id: row.block_id };
-    const value = yield* BlockStore.blockFromRow({ ...row, payload: row.payload });
+    else frame.after = { rank: header.rank, id: header.block_id };
+    const value = yield* BlockStore.blockFromRow(row);
     if (blocks.has(value.id)) return yield* new C.SpacesUnavailableError({ stage: "storage" });
     blocks.add(value.id);
     const source = sources.find((source) => source.pageId === frame.pageId)!;

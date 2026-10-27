@@ -4,6 +4,7 @@ import { assert, it } from "@effect/vitest";
 import { EnvironmentId, PageContextRecord, BlockContextRecord } from "@t2code/contracts";
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- independently verify the capture hash with platform SHA-256.
 import * as NodeCrypto from "node:crypto";
+import * as NodeSqlite from "node:sqlite";
 import { serializeSpaceContextSnapshotForHash } from "@t2code/shared/composerContextReferences";
 
 import * as C from "@t2code/contracts/spaces";
@@ -386,6 +387,96 @@ const recoveryIntent = Effect.fn("SpacesServiceTest.recoveryIntent")(function* (
 });
 
 it.layer(NodeServices.layer)("Spaces core service", (it) => {
+  it.effect("rejects oversized capture payloads using only index and record-header metadata", () =>
+    fixture((dbPath) =>
+      Effect.gen(function* () {
+        const { service, page, request } = yield* boot();
+        yield* service.applyBlockBatch(
+          request("overflow-seed", 0, [{ kind: "insert", block: block("overflow") }]),
+        );
+        const payload = JSON.stringify({
+          ...block("overflow"),
+          type: "future-block",
+          version: 3,
+          content: { opaque: "x".repeat(4 * 1024 * 1024) },
+        });
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          const [old] = yield* sql<{
+            logical_bytes: number;
+          }>`SELECT logical_bytes FROM spaces_blocks WHERE block_id='overflow'`;
+          yield* sql`UPDATE spaces_blocks SET payload=${payload},logical_bytes=${Buffer.byteLength(payload, "utf8")} WHERE block_id='overflow'`;
+          yield* sql`UPDATE spaces_pages SET block_bytes=block_bytes+${Buffer.byteLength(payload, "utf8") - old!.logical_bytes} WHERE page_id=${page.id}`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
+        const statements: string[] = [];
+        const tracer = Tracer.make({
+          span(options) {
+            const span = new Tracer.NativeSpan(options);
+            const end = span.end.bind(span);
+            span.end = (time, exit) => {
+              end(time, exit);
+              const parent = Option.getOrUndefined(span.parent);
+              const query = span.attributes.get("db.query.text");
+              if (
+                parent?._tag === "Span" &&
+                parent.name === "SpacesContextSnapshot.capture" &&
+                typeof query === "string"
+              )
+                statements.push(query);
+            };
+            return span;
+          },
+        });
+        const captured = yield* service
+          .captureContextSnapshot({
+            ...env,
+            contextId: "ctx",
+            target: { kind: "page", pageId: page.id },
+          })
+          .pipe(Effect.withTracer(tracer));
+        if (captured.status !== "captured") return yield* Effect.die("Expected capture");
+        assert.isTrue(captured.record.snapshot.truncated);
+        assert.deepEqual(captured.record.snapshot.sources[0]?.blockIds, []);
+        assert.isNotEmpty(statements);
+        const db = new NodeSqlite.DatabaseSync(dbPath, { readOnly: true });
+        try {
+          const payloadColumn = Number(
+            db
+              .prepare("PRAGMA table_info(spaces_blocks)")
+              .all()
+              .find((column) => column.name === "payload")!.cid,
+          );
+          const tableRoot = Number(
+            db
+              .prepare(
+                "SELECT rootpage FROM sqlite_schema WHERE type='table' AND name='spaces_blocks'",
+              )
+              .get()!.rootpage,
+          );
+          for (const query of statements) {
+            const ops = db.prepare(`EXPLAIN ${query}`).all();
+            const tableCursors = new Set(
+              ops
+                .filter((op) => op.opcode === "OpenRead" && Number(op.p2) === tableRoot)
+                .map((op) => Number(op.p1)),
+            );
+            for (const op of ops.filter(
+              (op) => op.opcode === "Column" && tableCursors.has(Number(op.p1)),
+            )) {
+              assert.isAtMost(Number(op.p2), payloadColumn);
+              if (Number(op.p2) === payloadColumn) {
+                // SQLite marks byte-length argument reads as metadata-only (0xc0).
+                assert.equal(Number(op.p5) & 0xc0, 0xc0);
+              }
+            }
+          }
+        } finally {
+          db.close();
+        }
+      }),
+    ),
+  );
+
   it.effect("captures context snapshots with child opt-in and moved merged block identity", () =>
     fixture(() =>
       Effect.gen(function* () {
