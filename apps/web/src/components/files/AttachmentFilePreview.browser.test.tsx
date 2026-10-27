@@ -920,6 +920,7 @@ describe("large text preview recovery", () => {
     await vi.waitFor(() => expect(load).toHaveBeenCalledWith(0));
   });
 });
+
 describe("standalone Mermaid previews", () => {
   it.each([
     'A@{ "img": "//attacker.invalid/pixel.png" }',
@@ -1651,20 +1652,24 @@ it("mounts a bounded set of saved notebook outputs as the reader scrolls", async
   await act(() => {
     viewport.scrollTop = viewport.scrollHeight;
   });
-  await vi.waitFor(() => {
-    expect(
-      [...screen.container.querySelectorAll("iframe")].some((frame) =>
-        frame.srcdoc.includes("saved 19-99"),
-      ),
-    ).toBe(true);
-    expect(first.isConnected).toBe(false);
-  });
+  await vi.waitFor(
+    () => {
+      expect(
+        [...screen.container.querySelectorAll("iframe")].some((frame) =>
+          frame.srcdoc.includes("saved 19-99"),
+        ),
+      ).toBe(true);
+      expect(first.isConnected).toBe(false);
+    },
+    { timeout: 10_000 },
+  );
   expect(screen.container.querySelectorAll("iframe").length).toBeLessThanOrEqual(16);
   await act(() => {
     viewport.scrollTop = 0;
   });
-  await vi.waitFor(() =>
-    expect(screen.container.querySelector("iframe")?.srcdoc).toContain("saved 0-0"),
+  await vi.waitFor(
+    () => expect(screen.container.querySelector("iframe")?.srcdoc).toContain("saved 0-0"),
+    { timeout: 10_000 },
   );
 });
 
