@@ -36,7 +36,7 @@ import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { useEffect, useMemo, useState } from "react";
 
-import { assetEnvironment } from "./assets";
+import { createSpacesMediaReads } from "../rpc/spacesMedia";
 import { MobileSpaceImageBudget, MobileSpaceImageViewer } from "../features/spaces/media";
 import { connectionAtomRuntime } from "../connection/runtime";
 import { environmentCatalog } from "../connection/catalog";
@@ -542,14 +542,21 @@ export function useSpacesReferenceController(environmentId: EnvironmentId, attem
 }
 
 const imageViewBudget = new MobileSpaceImageBudget();
-const imageMetadata = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
-  label: "mobile:spaces:imageMetadata",
-  tag: WS_METHODS.spacesAssetsGet,
-  idleTtlMs: 0,
-  staleTimeMs: 0,
-});
-
 export function createSpacesImageViewer(environmentId: EnvironmentId) {
+  const reads = createSpacesMediaReads(
+    connectionAtomRuntime,
+    appAtomRegistry,
+    environmentId,
+    () => {
+      const access = requireAccess(environmentId);
+      if (
+        access.capability.version !== 2 ||
+        access.capability.features?.assets !== true ||
+        !access.capability.limits.assets
+      )
+        throw new Error("Images require current assets support and destination read permission.");
+    },
+  );
   return new MobileSpaceImageViewer({
     budget: imageViewBudget,
     now: Date.now,
@@ -575,16 +582,7 @@ export function createSpacesImageViewer(environmentId: EnvironmentId) {
         },
       };
     },
-    metadata: (assetId, signal) =>
-      query(imageMetadata({ environmentId, input: { environmentId, assetId } }), signal),
-    mint: (assetId, disposition, signal) =>
-      query(
-        assetEnvironment.createUrl({
-          environmentId,
-          input: { resource: { _tag: "spaces-asset", environmentId, assetId, disposition } },
-        }),
-        signal,
-      ),
+    ...reads,
     share: async (input) => {
       const { downloadAttachmentForPreview } = await import("../lib/attachmentDownload");
       if (!input.current() || input.signal.aborted) return;
