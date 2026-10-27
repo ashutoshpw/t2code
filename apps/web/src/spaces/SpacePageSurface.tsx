@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import type { ScopedThreadRef } from "@t2code/contracts";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
@@ -14,6 +14,8 @@ import { useMainAppThreadRef, useNavigateToMainApp } from "../components/sidebar
 import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
+
+const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
 
 interface SpacePageSurfaceProps {
   target: SpacePageNavigationTarget;
@@ -163,6 +165,22 @@ function SpacePageMetadata({ target, fullPage = false, threadRef }: SpacePageSur
           Refresh location
         </Button>
       </div>
+      {version === 2 ? (
+        <Suspense fallback={<p role="status">Loading page placement…</p>}>
+          <SpaceStructureControls
+            key={JSON.stringify([target.environmentId, target.pageId])}
+            target={resolvedTarget}
+            current={() => {
+              const live = query.isPending ? null : query.data?.current();
+              return (
+                live?.page.id === target.pageId &&
+                live.page.spaceId === resolvedTarget.spaceId &&
+                live.page.location?.kind === "root"
+              );
+            }}
+          />
+        </Suspense>
+      ) : null}
       <h1 className="mt-3 break-words text-xl font-semibold">{page.title || "Untitled page"}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Revision {page.revision} · Updated {page.updatedAt}

@@ -15,6 +15,7 @@ import type { SpaceEditorWindow } from "./document";
 import type { SpaceCompensation } from "@t2code/client-runtime/spaces";
 
 export interface SpaceDocumentPorts {
+  readonly beforeRead?: () => Promise<void>;
   readonly getPage: () => Promise<SpacePageGetResult>;
   readonly readBlocks: (input: SpaceReadBlocksInput) => Promise<SpaceReadBlocksResult>;
   readonly windowLimit: () => number;
@@ -35,9 +36,43 @@ export class SpaceDocumentController {
   #snapshot: DocumentSnapshot;
   #request = 0;
   #opening: Promise<void> | null = null;
+  #reserved = false;
+  reserveStructure(restoring: boolean) {
+    if (this.#reserved) throw new Error("Page already has a placement reservation");
+    const state = this.getSnapshot();
+    if (
+      !restoring &&
+      (state.loading || state.error !== null || this.session.structureAvailability())
+    )
+      throw new Error("Resolve or finish loading the affected document before moving the page");
+    this.#reserved = true;
+    this.#update({});
+    return () => {
+      this.#reserved = false;
+      this.#update({});
+    };
+  }
+  structureBlocked() {
+    return this.#reserved;
+  }
+  #assertUnreserved() {
+    if (this.#reserved)
+      throw new Error("Page placement is reserved; finish its receipt recovery first");
+  }
+  async refreshStructure() {
+    this.#assertClean();
+    await this.#load(undefined, true);
+  }
 
   constructor(key: SpacePageTarget, options: SpaceSessionOptions, ports: SpaceDocumentPorts) {
-    this.session = new SpaceDocumentSession(key, options);
+    this.session = new SpaceDocumentSession(key, {
+      ...options,
+      assertMutable: () => {
+        options.assertMutable?.();
+        if (this.#reserved)
+          throw new Error("Page placement is reserved; finish its receipt recovery first");
+      },
+    });
     this.#ports = ports;
     this.#snapshot = {
       session: this.session.getSnapshot(),
@@ -100,6 +135,7 @@ export class SpaceDocumentController {
       throw new Error("Resolve the draft before replacing its loaded window");
   }
   open(): Promise<void> {
+    this.#assertUnreserved();
     if (this.#opening) return this.#opening;
     if (
       this.session.getSnapshot().hydrated &&
@@ -114,11 +150,13 @@ export class SpaceDocumentController {
     return opening;
   }
   refresh(): Promise<void> {
+    this.#assertUnreserved();
     if (this.#opening) return this.#opening;
     this.#assertClean();
     return this.#load();
   }
   next(): Promise<void> {
+    this.#assertUnreserved();
     this.#assertClean();
     if (!this.#snapshot.nextCursor) return Promise.resolve();
     return this.#load(this.#snapshot.nextCursor);
@@ -135,10 +173,12 @@ export class SpaceDocumentController {
       throw new Error("Spaces window revision changed");
     return { metadata, blocks };
   }
-  async #load(cursor?: SpaceCursor) {
+  async #load(cursor?: SpaceCursor, structure = false) {
     const request = ++this.#request;
     this.#update({ loading: true, error: null });
     try {
+      await this.#ports.beforeRead?.();
+      if (!structure) this.#assertUnreserved();
       const { metadata, blocks } = await this.#read(cursor);
       if (request !== this.#request) return;
       if (this.session.getSnapshot().hydrated) {
@@ -167,6 +207,7 @@ export class SpaceDocumentController {
     }
   }
   async save() {
+    this.#assertUnreserved();
     this.#update({ error: null, nextCursor: null });
     try {
       await this.session.save();
@@ -184,6 +225,7 @@ export class SpaceDocumentController {
     return this.session.getSnapshot().acknowledgedGeneration === generation;
   }
   async discard() {
+    this.#assertUnreserved();
     if (this.session.getSnapshot().pending)
       throw new Error("Resolve the pending receipt before discarding");
     const request = ++this.#request;
@@ -208,6 +250,46 @@ export class SpaceDocumentController {
 }
 
 export class SpaceDocumentControllers {
+  readonly #reservations = new Set<string>();
+  reserve(
+    environmentId: SpacePageTarget["environmentId"],
+    pages: readonly SpacePageTarget["pageId"][],
+    restoring = false,
+  ) {
+    if (pages.length > 8 || new Set(pages).size !== pages.length)
+      throw new Error("Placement exceeds eight affected pages");
+    const ids = pages.map((pageId) => JSON.stringify([environmentId, pageId]));
+    if (ids.some((id) => this.#reservations.has(id)))
+      throw new Error("Affected document already reserved");
+    const releases: (() => void)[] = [];
+    try {
+      for (const id of ids) {
+        this.#reservations.add(id);
+        const item = this.#documents.get(id);
+        if (item) releases.push(item.controller.reserveStructure(restoring));
+      }
+    } catch (error) {
+      for (const release of releases) release();
+      for (const id of ids) this.#reservations.delete(id);
+      throw error;
+    }
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      for (const release of releases) release();
+      for (const id of ids) this.#reservations.delete(id);
+    };
+  }
+  async refreshStructure(
+    environmentId: SpacePageTarget["environmentId"],
+    pages: readonly SpacePageTarget["pageId"][],
+  ) {
+    for (const pageId of new Set(pages)) {
+      const item = this.#documents.get(JSON.stringify([environmentId, pageId]));
+      if (item) await item.controller.refreshStructure();
+    }
+  }
   readonly #documents = new Map<string, { controller: SpaceDocumentController; readers: number }>();
   constructor(readonly create: (key: SpacePageTarget) => SpaceDocumentController) {}
   open(key: SpacePageTarget) {
@@ -227,6 +309,8 @@ export class SpaceDocumentControllers {
   }
   acquire(key: SpacePageTarget) {
     const id = JSON.stringify([key.environmentId, key.pageId]);
+    if (this.#reservations.has(id))
+      throw new Error("Page placement is reserved; recover its receipt first");
     const existing = this.#documents.get(id);
     if (existing) {
       existing.readers++;
@@ -234,6 +318,7 @@ export class SpaceDocumentControllers {
     }
     for (const [unusedId, item] of this.#documents) {
       if (
+        !this.#reservations.has(unusedId) &&
         item.readers === 0 &&
         !item.controller.getSnapshot().loading &&
         item.controller.canRelease()
@@ -252,6 +337,7 @@ export class SpaceDocumentControllers {
     if (!item || item.controller !== controller) return;
     item.readers = Math.max(0, item.readers - 1);
     if (item.readers > 0) return;
+    if (this.#reservations.has(id)) return;
     controller.invalidate();
     if (controller.canRelease()) this.#documents.delete(id);
   }

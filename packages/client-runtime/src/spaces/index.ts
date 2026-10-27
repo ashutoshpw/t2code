@@ -7,3 +7,4 @@ export type { SpaceCompensation, SpaceSavedHistory } from "./savedHistory.ts";
 export * from "./navigation.ts";
 export * from "./pageNavigation.ts";
 export * from "./pageLocation.ts";
+export * from "./structure.ts";

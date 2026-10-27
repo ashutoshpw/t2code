@@ -1,6 +1,11 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it, assert, expect } from "@effect/vitest";
-import { EnvironmentId, WS_METHODS } from "@t2code/contracts";
+import {
+  AuthOrchestrationReadScope,
+  AuthOrchestrationOperateScope,
+  EnvironmentId,
+  WS_METHODS,
+} from "@t2code/contracts";
 import {
   AVAILABLE_CONNECTION_STATE,
   PrimaryConnectionTarget,
@@ -18,9 +23,14 @@ import {
   createSpaceServiceSessionAdapter,
   type SpaceDocumentDraft,
   type SpaceServicePorts,
+  SpaceRootReorder,
+  decodeSpaceStructureJournal,
+  checkSpaceStructureDrafts,
+  type SpaceStructureJournal,
   copySpaceBlocks,
   decodeSpaceDocumentDraft,
 } from "@t2code/client-runtime/spaces";
+import * as Schema from "effect/Schema";
 import * as Effect from "effect/Effect";
 import * as Cause from "effect/Cause";
 import * as Queue from "effect/Queue";
@@ -35,6 +45,13 @@ import * as Path from "effect/Path";
 import type * as Scope from "effect/Scope";
 import * as ServerEnvironment from "../../server/src/environment/ServerEnvironment.ts";
 import * as Settings from "../../server/src/serverSettings.ts";
+import * as SpacesRpc from "../../server/src/spaces/Rpc.ts";
+import * as RpcAuthorization from "../../server/src/auth/RpcAuthorization.ts";
+import { WS_RPC_SERVER_OPTIONS } from "../../server/src/ws.ts";
+import * as RpcMessage from "effect/rpc/RpcMessage";
+import * as RpcSerialization from "effect/rpc/RpcSerialization";
+import * as RpcServer from "effect/rpc/RpcServer";
+import * as TestClock from "effect/testing/TestClock";
 import * as SpacesService from "../../server/src/spaces/SpacesService.ts";
 import { EditorState, TextSelection, type Command, type Transaction } from "@tiptap/pm/state";
 import {
@@ -1257,3 +1274,743 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
       ),
   );
 });
+
+const encodedRootRpc = Effect.fn("SpaceEditorServiceTest.encodedRootRpc")(function* (
+  service: SpacesService.SpacesService["Service"],
+) {
+  const responses = yield* Queue.unbounded<string | Uint8Array>();
+  const receive = yield* Deferred.make<Parameters<RpcServer.Protocol["Service"]["run"]>[0]>();
+  const parser = RpcSerialization.json.makeUnsafe();
+  const protocol = yield* RpcServer.Protocol.make((send) =>
+    Effect.gen(function* () {
+      yield* Deferred.succeed(receive, send);
+      return {
+        disconnects: yield* Queue.unbounded<number>(),
+        send: (_id, response) => Queue.offer(responses, parser.encode(response)!),
+        end: () => Effect.void,
+        clientIds: Effect.succeed(new Set([0])),
+        initialMessage: Effect.succeedNone,
+        supportsAck: true,
+        supportsTransferables: false,
+        supportsSpanPropagation: false,
+        supportsNotifications: true,
+        codecFor: RpcSerialization.json.codecFor,
+      };
+    }),
+  );
+  const handlers = yield* SpacesRpc.handlers.pipe(
+    Effect.provideService(SpacesService.SpacesService, service),
+  );
+  const context = yield* SpacesRpc.group.toHandlers(handlers);
+  yield* RpcServer.make(SpacesRpc.group, WS_RPC_SERVER_OPTIONS).pipe(
+    Effect.provide(
+      Layer.mergeAll(
+        Layer.succeedContext(context),
+        Layer.succeed(RpcServer.Protocol, protocol),
+        RpcAuthorization.layer([AuthOrchestrationReadScope, AuthOrchestrationOperateScope]),
+      ),
+    ),
+    Effect.forkScoped,
+  );
+  const write = yield* Deferred.await(receive);
+  let sequence = 0;
+  return Effect.fn("SpaceEditorServiceTest.encodedRootRequest")(function* (
+    tag: string,
+    payload: unknown,
+  ) {
+    const frame = parser.encode({
+      _tag: "Request",
+      id: String(++sequence),
+      tag,
+      payload,
+      headers: [],
+    })!;
+    for (const message of parser.decode(frame))
+      yield* write(0, message as RpcMessage.FromClientEncoded);
+    const response = parser.decode(yield* Queue.take(responses))[0] as RpcMessage.FromServerEncoded;
+    if (response._tag !== "Exit" || response.exit._tag !== "Success")
+      throw new Error(JSON.stringify(response));
+    return response.exit.value;
+  });
+});
+
+const decodeRootList = Schema.decodeUnknownSync(C.SpacePageListResult);
+const decodeRootInspect = Schema.decodeUnknownSync(C.SpaceInspectStructureResult);
+const decodeRootRequest = Schema.decodeUnknownSync(C.SpaceMutationRequest, {
+  onExcessProperty: "error",
+});
+const decodeRootResult = Schema.decodeUnknownSync(C.SpaceMovePageResult, {
+  onExcessProperty: "error",
+});
+const decodeRootReceipt = Schema.decodeUnknownSync(C.SpaceReceiptLookupResult);
+
+const rootReorderFixture = Effect.fn("SpaceEditorServiceTest.rootReorder")(function* (
+  service: SpacesService.SpacesService["Service"],
+) {
+  const h = yield* boot(service);
+  const pages = [h.key.pageId];
+  for (const title of ["Second", "Third", "Fourth"]) {
+    const current = yield* service.getPage(h.key);
+    const created = yield* service.createPage({
+      environmentId,
+      spaceId: current.space.id,
+      title,
+      mutationId: C.SpaceMutationId.make(`root-${title}`),
+      receiptEpoch: current.mutationAdmission.epoch,
+      baseRootOrderRevision: current.space.rootOrderRevision,
+    });
+    if (created.status !== "saved") throw new Error("Root fixture conflict");
+    pages.push(created.page.id);
+  }
+  const initial = yield* service.getPage(h.key);
+  const rpc = yield* encodedRootRpc(service);
+  let stored: SpaceStructureJournal | null = null;
+  let ids = 0,
+    admissions = 0,
+    rows = 50,
+    writable = true,
+    refreshed = 0,
+    maxBytes = h.capability.limits.maxMutationBytes;
+  const requests: C.SpaceMovePageInput[] = [],
+    lookups: C.SpaceReceiptLookupInput[] = [];
+  const disk = { fail: false, hold: false, started: signal(), release: signal() };
+  const network = {
+    lose: null as "before" | "after" | null,
+    after: null as (() => Promise<void>) | null,
+  };
+  const draftRecords = new Map<string, SpaceDocumentDraft>();
+  const drafts = {
+    load: async (key: C.SpacePageTarget) => {
+      const value = draftRecords.get(key.pageId);
+      return value ? decodeSpaceDocumentDraft(value, key) : null;
+    },
+    write: async (key: C.SpacePageTarget, draft: SpaceDocumentDraft | null) => {
+      if (draft) draftRecords.set(key.pageId, decodeSpaceDocumentDraft(draft, key));
+      else draftRecords.delete(key.pageId);
+    },
+  };
+  const makeDocuments = () =>
+    new SpaceDocumentControllers(
+      (key) =>
+        new SpaceDocumentController(
+          key,
+          {
+            adapter: createSpaceServiceSessionAdapter(key, h.ports),
+            drafts,
+            createMutationId: () => `content-${++ids}`,
+            maxLoadedBlocks: 100,
+            maxMutations: 100,
+          },
+          {
+            getPage: () => h.ports.getPage(key),
+            windowLimit: () => 100,
+            readBlocks: (input) => h.run(service.readBlocks(input)),
+          },
+        ),
+    );
+  let documents = makeDocuments();
+  const make = () =>
+    new SpaceRootReorder(environmentId, {
+      store: {
+        load: async () => stored,
+        write: async (env, journal) => {
+          const encoded = JSON.parse(JSON.stringify(journal)) as unknown;
+          const value = decodeSpaceStructureJournal(encoded, env);
+          if (disk.hold) {
+            disk.started.resolve();
+            await disk.release.promise;
+          }
+          if (disk.fail) throw new Error("Controlled transaction abort");
+          stored = value;
+        },
+      },
+      list: async (input) => decodeRootList(await h.run(rpc(WS_METHODS.spacesPagesList, input))),
+      inspect: async (input) =>
+        decodeRootInspect(await h.run(rpc(WS_METHODS.spacesStructureInspect, input))),
+      getPage: (pageId) => {
+        admissions++;
+        return h.ports.getPage({ environmentId, pageId });
+      },
+      move: async (input) => {
+        // Exercise the strict wire envelope as well as the real SQLite service.
+        const request = decodeRootRequest(
+          JSON.parse(JSON.stringify({ operation: "movePage", input })),
+        );
+        if (request.operation !== "movePage") throw new Error("Wrong wire operation");
+        requests.push(request.input);
+        const lose = network.lose;
+        network.lose = null;
+        if (lose === "before") throw new Error("Lost before server received request");
+        const result = await h.run(rpc(WS_METHODS.spacesPagesMove, request.input));
+        if (network.after) {
+          const after = network.after;
+          network.after = null;
+          await after();
+        }
+        if (lose === "after") throw new Error("Lost committed response");
+        return decodeRootResult(JSON.parse(JSON.stringify(result)));
+      },
+      receipt: async (input) => {
+        lookups.push(input);
+        return decodeRootReceipt(await h.run(rpc(WS_METHODS.spacesReceiptsGet, input)));
+      },
+      assertAccess: (write) => {
+        if (write && !writable) throw new Error("Operate revoked");
+      },
+      maxMutationBytes: () => maxBytes,
+      maxRows: () => rows,
+      newId: () => `placement-${++ids}`,
+      reserve: (pages, restoring) => documents.reserve(environmentId, pages, restoring),
+      checkDrafts: (pages) => checkSpaceStructureDrafts(drafts, environmentId, pages),
+      refresh: async (pages) => {
+        refreshed++;
+        await documents.refreshStructure(environmentId, pages);
+      },
+      changed: () => {},
+    });
+  return {
+    ...h,
+    pages,
+    spaceId: initial.space.id,
+    make,
+    documents,
+    drafts,
+    draftRecords,
+    requests,
+    lookups,
+    disk,
+    network,
+    counts: () => ({ admissions, refreshed }),
+    stored: () => stored,
+    setMaxBytes: (value: number) => {
+      maxBytes = value;
+    },
+    setRows: (value: number) => {
+      rows = value;
+    },
+    setWritable: (value: boolean) => {
+      writable = value;
+    },
+    reload: () => {
+      documents = makeDocuments();
+      return make();
+    },
+    order: async () =>
+      (await h.run(service.listPages({ environmentId, spaceId: initial.space.id }))).items.map(
+        (p) => p.id,
+      ),
+  };
+});
+
+it.effect(
+  "reorders real roots and saves guarded inverse/redo with new identities and stable page IDs",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            await owner.move(h.pages[0]!, h.spaceId, null);
+            assert.deepEqual(await h.order(), [h.pages[1], h.pages[2], h.pages[3], h.pages[0]]);
+            assert.equal(owner.getSnapshot().journal.history?.direction, "undo");
+            await owner.compensate("undo");
+            assert.deepEqual(await h.order(), h.pages);
+            assert.equal(owner.getSnapshot().journal.history?.direction, "redo");
+            await owner.compensate("redo");
+            assert.deepEqual(await h.order(), [h.pages[1], h.pages[2], h.pages[3], h.pages[0]]);
+            assert.equal(new Set(h.requests.map((r) => r.mutationId)).size, 3);
+            assert.equal(h.counts().admissions, 3);
+            assert.equal(h.counts().refreshed, 3);
+            assert.isTrue(
+              h.requests.every(
+                (r) => r.destination.kind === "root" && r.destination.spaceId === h.spaceId,
+              ),
+            );
+            assert.isTrue(
+              (await h.run(service.listPages({ environmentId, spaceId: h.spaceId }))).items.every(
+                (p) => /^[0-9a-f]{32}$/.test(p.rootOrder!),
+              ),
+            );
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retains a stale inverse conflict without renewing guards and requires explicit new-position intent",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            await owner.move(h.pages[0]!, h.spaceId, null);
+            const expected = owner.getSnapshot().journal.history!.guards;
+            const peer = await h.ports.getPage({ environmentId, pageId: h.pages[1]! });
+            await h.run(
+              service.updatePage({
+                environmentId,
+                pageId: peer.page.id,
+                mutationId: "concurrent-title",
+                receiptEpoch: peer.mutationAdmission.epoch,
+                baseRevision: peer.page.revision,
+                title: "Newer title",
+              }),
+            );
+            await owner.compensate("undo");
+            assert.isTrue(owner.getSnapshot().journal.pending?.conflict);
+            assert.deepEqual(h.requests[1]!.guards, expected);
+            assert.deepEqual(await h.order(), [h.pages[1], h.pages[2], h.pages[3], h.pages[0]]);
+            await expect(owner.compensate("undo")).rejects.toThrow("retained placement");
+            await owner.reinspect();
+            assert.isNull(owner.getSnapshot().journal.pending);
+            assert.isNull(owner.getSnapshot().journal.history);
+            await owner.browse(h.spaceId, h.pages[0]!);
+            await owner.move(h.pages[0]!, h.spaceId, h.pages[1]!);
+            assert.deepEqual(await h.order(), h.pages);
+            assert.notEqual(h.requests[1]!.mutationId, h.requests[2]!.mutationId);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "journals before sending and interlocks two real controllers through aborted persistence and exact unsent retry",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const first = h.documents.open(h.key),
+              second = h.documents.open(h.key);
+            const doc = await first.ready;
+            assert.equal(await second.ready, doc);
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            h.disk.hold = true;
+            h.disk.fail = true;
+            const moving = owner.move(h.pages[0]!, h.spaceId, null);
+            await h.disk.started.promise;
+            const pending = owner.getSnapshot().journal.pending!;
+            assert.equal(h.requests.length, 0);
+            assert.isTrue(doc.structureBlocked());
+            assert.throws(
+              () =>
+                doc.session.apply([{ kind: "insert", block: savedParagraph("blocked", "unsent") }]),
+              "reserved",
+            );
+            await expect(doc.save()).rejects.toThrow("reserved");
+            assert.throws(() => h.documents.open(h.key), "reserved");
+            first.release();
+            h.disk.release.resolve();
+            await expect(moving).rejects.toThrow("abort");
+            assert.equal(h.requests.length, 0);
+            assert.deepEqual(owner.getSnapshot().journal.pending, pending);
+            h.disk.hold = false;
+            h.disk.fail = false;
+            await owner.recover();
+            assert.deepEqual(h.requests[0], pending.request.input);
+            assert.equal(h.lookups.length, 0);
+            assert.isFalse(doc.structureBlocked());
+            assert.equal(
+              doc.session.getSnapshot().baseRevision,
+              (await h.ports.getPage(h.key)).page.revision,
+            );
+            assert.equal(h.counts().refreshed, 1);
+            second.release();
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "recovers a lost committed response after reload using exact receipt in read-only mode without another write",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            h.network.lose = "after";
+            await expect(owner.move(h.pages[0]!, h.spaceId, null)).rejects.toThrow(
+              "Lost committed",
+            );
+            const pending = h.stored()!.pending!;
+            const revision = (await h.ports.getPage(h.key)).page.revision;
+            const restored = h.reload();
+            h.setWritable(false);
+            await restored.hydrate();
+            await restored.recover();
+            assert.deepEqual(h.lookups[0], { request: pending.request });
+            assert.equal(h.requests.length, 1);
+            assert.equal(h.counts().admissions, 1);
+            assert.isNull(h.stored()!.pending);
+            assert.equal((await h.ports.getPage(h.key)).page.revision, revision);
+            assert.deepEqual(await h.order(), [h.pages[1], h.pages[2], h.pages[3], h.pages[0]]);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "replays an absent receipt only with operate permission and the original guards, ID and epoch",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            h.network.lose = "before";
+            await expect(owner.move(h.pages[0]!, h.spaceId, null)).rejects.toThrow("Lost before");
+            const original = h.stored()!.pending!.request.input;
+            const restored = h.reload();
+            h.setWritable(false);
+            await expect(restored.recover()).rejects.toThrow("Operate revoked");
+            assert.equal(h.requests.length, 1);
+            h.setWritable(true);
+            h.setMaxBytes(1);
+            await restored.recover();
+            assert.deepEqual(h.requests, [original, original]);
+            assert.equal(h.counts().admissions, 1);
+            assert.equal(h.lookups.length, 2);
+            assert.isNull(restored.getSnapshot().journal.pending);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses hidden durable dirty drafts and resident dirty state without publishing a pending structural intent",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const hidden = h.documents.open({ environmentId, pageId: h.pages[1]! });
+            const doc = await hidden.ready;
+            doc.session.apply([
+              { kind: "insert", block: savedParagraph("hidden-dirty", "retained") },
+            ]);
+            await doc.session.persistDraft();
+            hidden.release();
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            await expect(owner.move(h.pages[0]!, h.spaceId, h.pages[1]!)).rejects.toThrow(
+              "affected document",
+            );
+            const restored = h.reload();
+            await restored.browse(h.spaceId, h.pages[0]!);
+            await expect(restored.move(h.pages[0]!, h.spaceId, h.pages[1]!)).rejects.toThrow(
+              "retained draft",
+            );
+            assert.equal(h.requests.length, 0);
+            assert.isNull(restored.getSnapshot().journal.pending);
+            assert.isNotNull(h.draftRecords.get(h.pages[1]!)?.mutations.length);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "does not infer a successor at a partial window and learns it only through explicit next pagination",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            h.setRows(1);
+            await owner.browse(h.spaceId, h.pages[0]!);
+            assert.isNull(owner.getSnapshot().position);
+            await expect(owner.move(h.pages[0]!, h.spaceId, null)).rejects.toThrow(
+              "proven destination",
+            );
+            await owner.browse(h.spaceId, h.pages[0]!, true);
+            assert.equal(owner.getSnapshot().position?.beforePageId, h.pages[1]);
+            assert.equal(owner.getSnapshot().window!.items.length, 1);
+            await owner.move(h.pages[0]!, h.spaceId, h.pages[1]!);
+            assert.deepEqual(await h.order(), h.pages);
+            assert.isNull(owner.getSnapshot().journal.history);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "keeps an expired absent root receipt unresolved rather than capturing a new epoch or identity",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            h.network.lose = "before";
+            await expect(owner.move(h.pages[0]!, h.spaceId, null)).rejects.toThrow("Lost before");
+            const original = h.stored()!.pending!;
+            await h.run(TestClock.adjust(86_400_001));
+            const restored = h.reload();
+            await restored.recover();
+            assert.include(restored.getSnapshot().notice!, "unknown");
+            assert.deepEqual(h.stored()!.pending, original);
+            assert.equal(h.requests.length, 1);
+            assert.equal(h.counts().admissions, 1);
+            await expect(restored.reinspect()).rejects.toThrow("definite conflict");
+            assert.deepEqual(await h.order(), h.pages);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "keeps saved content compensation on its old revision after clean structural refresh",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const opened = h.documents.open(h.key);
+            const doc = await opened.ready;
+            doc.session.apply([
+              { kind: "insert", block: savedParagraph("initial-content", "initial") },
+            ]);
+            await doc.save();
+            doc.session.apply([
+              { kind: "replace", block: savedParagraph("initial-content", "saved edit") },
+            ]);
+            await doc.save();
+            assert.isNull(doc.session.compensationAvailability("undo"));
+            const history = doc.session.getSnapshot().history.undo;
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            await owner.move(h.pages[0]!, h.spaceId, null);
+            assert.deepEqual(doc.session.getSnapshot().history.undo, history);
+            assert.isNotNull(doc.session.compensationAvailability("undo"));
+            opened.release();
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "refuses a changed inverse context after a definite commit rather than admitting refreshed compensation guards",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            h.network.after = async () => {
+              const peer = await h.ports.getPage({ environmentId, pageId: h.pages[1]! });
+              await h.run(
+                service.updatePage({
+                  environmentId,
+                  pageId: peer.page.id,
+                  mutationId: "late-inverse-peer",
+                  receiptEpoch: peer.mutationAdmission.epoch,
+                  baseRevision: peer.page.revision,
+                  title: "Newer inverse anchor",
+                }),
+              );
+            };
+            await owner.move(h.pages[0]!, h.spaceId, null);
+            assert.isNull(owner.getSnapshot().journal.pending);
+            assert.isNull(owner.getSnapshot().journal.history);
+            assert.include(owner.getSnapshot().notice!, "inverse placement changed");
+            await expect(owner.compensate("undo")).rejects.toThrow("No guarded placement");
+            assert.equal(h.requests.length, 1);
+            assert.deepEqual(await h.order(), [h.pages[1], h.pages[2], h.pages[3], h.pages[0]]);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "admits an eight-page observed root closure and refuses nine before durable intent or network mutation",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          const placement = { pageId: h.pages[0]!, parentId: null, beforeBlockId: null };
+          const addChild = (index: number) =>
+            Effect.gen(function* () {
+              const inspected = yield* service.inspectStructure({
+                environmentId,
+                target: { kind: "blocks", pageId: placement.pageId, blockIds: [] },
+                destination: { kind: "child", placement },
+              });
+              const page = yield* service.getPage(h.key);
+              const child = yield* service.createChildPage({
+                environmentId,
+                mutationId: C.SpaceMutationId.make(`budget-child-${index}`),
+                receiptEpoch: page.mutationAdmission.epoch,
+                title: "Child",
+                placement,
+                guards: inspected.guards,
+              });
+              if (child.status !== "saved") throw new Error("Unexpected child fixture conflict");
+            });
+          for (let i = 0; i < 5; i++) yield* addChild(i);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            await owner.move(h.pages[0]!, h.spaceId, null);
+            assert.equal(owner.getSnapshot().journal.history?.observed.pages.length, 8);
+            await owner.compensate("undo");
+            assert.deepEqual(await h.order(), h.pages);
+          });
+          yield* addChild(5);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            const writes = h.requests.length;
+            await expect(owner.move(h.pages[0]!, h.spaceId, null)).rejects.toThrow("eight-page");
+            assert.equal(h.requests.length, writes);
+            assert.isNull(owner.getSnapshot().journal.pending);
+            assert.deepEqual(await h.order(), h.pages);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("does not replace the saved inverse on a definite no-op root placement", () =>
+  Effect.scoped(
+    fixture((service) =>
+      Effect.gen(function* () {
+        const h = yield* rootReorderFixture(service);
+        yield* Effect.promise(async () => {
+          const owner = h.make();
+          await owner.browse(h.spaceId, h.pages[0]!);
+          await owner.move(h.pages[0]!, h.spaceId, null);
+          const history = owner.getSnapshot().journal.history;
+          await owner.browse(h.spaceId, h.pages[0]!);
+          await owner.move(h.pages[0]!, h.spaceId, null);
+          assert.deepEqual(owner.getSnapshot().journal.history, history);
+          assert.include(owner.getSnapshot().notice!, "already");
+          await owner.compensate("undo");
+          assert.deepEqual(await h.order(), h.pages);
+        });
+      }),
+    ),
+  ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "retains the attempted original move when a real remote root/anchor change occurs during journal persistence",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const owner = h.make();
+            await owner.browse(h.spaceId, h.pages[0]!);
+            h.disk.hold = true;
+            const moving = owner.move(h.pages[0]!, h.spaceId, h.pages[2]!);
+            await h.disk.started.promise;
+            const original = owner.getSnapshot().journal.pending!;
+            const peer = h.pages[2]!;
+            const destination = { kind: "root" as const, spaceId: h.spaceId, beforePageId: null };
+            const inspected = await h.run(
+              service.inspectStructure({
+                environmentId,
+                target: { kind: "page", pageId: peer },
+                destination,
+              }),
+            );
+            const admission = await h.ports.getPage({ environmentId, pageId: peer });
+            await h.run(
+              service.movePage({
+                environmentId,
+                pageId: peer,
+                destination,
+                guards: inspected.guards,
+                mutationId: "remote-anchor-move",
+                receiptEpoch: admission.mutationAdmission.epoch,
+              }),
+            );
+            h.disk.release.resolve();
+            await moving;
+            assert.isTrue(owner.getSnapshot().journal.pending?.conflict);
+            assert.deepEqual(h.requests[0], original.request.input);
+            assert.deepEqual(await h.order(), [h.pages[0], h.pages[1], h.pages[3], h.pages[2]]);
+            assert.isNull(owner.getSnapshot().journal.history);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "blocks actual PM commands in two views and retains their shared editor when root metadata refreshes",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* rootReorderFixture(service);
+          yield* Effect.promise(async () => {
+            const route = h.documents.open(h.key),
+              panel = h.documents.open(h.key);
+            const controller = await route.ready;
+            assert.equal(await panel.ready, controller);
+            const a = savedView(controller),
+              b = savedView(controller);
+            try {
+              const owner = h.make();
+              await owner.browse(h.spaceId, h.pages[0]!);
+              h.disk.hold = true;
+              const moving = owner.move(h.pages[0]!, h.spaceId, null);
+              await h.disk.started.promise;
+              const beforeA = a.state.doc.toJSON(),
+                beforeB = b.state.doc.toJSON();
+              assert.isFalse(a.bridge.adapter.append()(a.state, a.dispatch));
+              assert.isFalse(b.bridge.adapter.append()(b.state, b.dispatch));
+              assert.deepEqual(a.state.doc.toJSON(), beforeA);
+              assert.deepEqual(b.state.doc.toJSON(), beforeB);
+              h.disk.release.resolve();
+              await moving;
+              assert.isTrue(a.bridge.adapter.append()(a.state, a.dispatch));
+              assert.deepEqual(a.state.doc.toJSON(), b.state.doc.toJSON());
+              assert.isTrue(controller.session.getSnapshot().dirty);
+              const third = h.documents.open(h.key);
+              assert.equal(await third.ready, controller);
+              third.release();
+              assert.isTrue(controller.session.getSnapshot().dirty);
+            } finally {
+              a.stop();
+              b.stop();
+              route.release();
+              panel.release();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);

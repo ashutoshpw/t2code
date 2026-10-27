@@ -65,6 +65,7 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
   );
   const clean =
     session.hydrated &&
+    !controller.structureBlocked() &&
     !session.dirty &&
     !session.pending &&
     session.persistenceError === null &&
@@ -87,6 +88,11 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
                   ? "Saving draft…"
                   : "Local draft"}
       </p>
+      {controller.structureBlocked() ? (
+        <p role="status">
+          Page placement is pending. Editing is paused until its receipt is resolved.
+        </p>
+      ) : null}
       {session.recoveryReason ? (
         <p role="alert">
           This older pending draft has no receipt epoch. It is retained and cannot be retried
@@ -98,8 +104,8 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
         <p role="alert">Draft storage failed: {message(session.persistenceError)}</p>
       ) : null}
       <p>
-        Saved undo/redo covers only the last content or formatting save. Saved structural changes
-        are not supported.
+        Saved undo/redo covers only the last content or formatting save. Use page placement controls
+        for root ordering; saved block structure undo is not supported.
       </p>
       {session.history.reason ? <p role="status">{session.history.reason}</p> : null}
       {session.history.action ? (
@@ -114,6 +120,7 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
           bridge={bridge}
           editable={
             permission &&
+            !controller.structureBlocked() &&
             !loading &&
             !error &&
             session.persistenceError === null &&
@@ -129,6 +136,7 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
             variant="outline"
             disabled={
               !permission ||
+              controller.structureBlocked() ||
               loading ||
               !!error ||
               controller.session.compensationAvailability(direction) !== null
@@ -161,6 +169,7 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
             variant="outline"
             disabled={
               !session.hydrated ||
+              controller.structureBlocked() ||
               loading ||
               session.status === "saving" ||
               !!session.recoveryReason ||
@@ -179,7 +188,7 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
         {session.dirty && !session.pending ? (
           <Button
             variant="outline"
-            disabled={loading || session.status === "saving"}
+            disabled={controller.structureBlocked() || loading || session.status === "saving"}
             onClick={() => run(controller.discard())}
           >
             Discard local draft

@@ -48,12 +48,40 @@ export function createSpacesEnvironmentAtoms<R, E>(
   const refreshTrigger = ({ environmentId }: { environmentId: EnvironmentId }) =>
     changed(environmentId);
   return {
+    changed,
+    blocks: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:blocks",
+      tag: WS_METHODS.spacesBlocksRead,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    receipt: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:receipt",
+      tag: WS_METHODS.spacesReceiptsGet,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    inspect: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:inspect",
+      tag: WS_METHODS.spacesStructureInspect,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    movePage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:move-page",
+      tag: WS_METHODS.spacesPagesMove,
+    }),
+    apply: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:apply",
+      tag: WS_METHODS.spacesBlocksApply,
+    }),
     // Each caller owns this query; sharing its SWR cache could authorize an obsolete location.
     location: (target: {
       environmentId: EnvironmentId;
       input: { environmentId: EnvironmentId; pageId: SpacePageId; version: 1 | 2 };
     }) =>
       createEnvironmentQueryAtomFamily(runtime, {
+        refreshTrigger,
         label: "environment-data:spaces:location",
         idleTtlMs: 0,
         staleTimeMs: 0,
@@ -88,23 +116,6 @@ export function createSpacesEnvironmentAtoms<R, E>(
           );
         }),
       })(target),
-    changed,
-    blocks: createEnvironmentRpcQueryAtomFamily(runtime, {
-      label: "environment-data:spaces:blocks",
-      tag: WS_METHODS.spacesBlocksRead,
-      idleTtlMs: 0,
-      staleTimeMs: 0,
-    }),
-    receipt: createEnvironmentRpcQueryAtomFamily(runtime, {
-      label: "environment-data:spaces:receipt",
-      tag: WS_METHODS.spacesReceiptsGet,
-      idleTtlMs: 0,
-      staleTimeMs: 0,
-    }),
-    apply: createEnvironmentRpcCommand(runtime, {
-      label: "environment-data:spaces:apply",
-      tag: WS_METHODS.spacesBlocksApply,
-    }),
     list: createEnvironmentRpcQueryAtomFamily(runtime, {
       refreshTrigger,
       label: "environment-data:spaces:list",

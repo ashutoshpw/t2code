@@ -87,6 +87,7 @@ export class SpaceEditorBridge {
     const { session, loading, error } = this.controller.getSnapshot();
     return (
       this.#writable &&
+      !this.controller.structureBlocked() &&
       !loading &&
       error === null &&
       session.hydrated &&

@@ -69,6 +69,7 @@ export interface SpaceDraftStore {
 }
 
 export interface SpaceSessionOptions {
+  readonly assertMutable?: () => void;
   readonly adapter: SpaceSessionAdapter;
   readonly drafts: SpaceDraftStore;
   readonly createMutationId: () => string;
@@ -308,6 +309,19 @@ export class SpaceDocumentSession {
     this.#apply(mutations, order);
   }
 
+  structureAvailability(): string | null {
+    const state = this.#snapshot;
+    return !state.hydrated ||
+      state.dirty ||
+      state.pending ||
+      this.#saving ||
+      this.#persistence ||
+      state.persistenceError !== null ||
+      state.status !== "saved"
+      ? "Resolve or finish loading the document before changing page placement"
+      : null;
+  }
+
   compensationAvailability(direction: SpaceCompensation): string | null {
     const state = this.#snapshot;
     if (
@@ -341,6 +355,7 @@ export class SpaceDocumentSession {
     order?: readonly SpaceBlockId[],
     compensation?: SpaceCompensation,
   ): void {
+    this.#options.assertMutable?.();
     this.#assertHydrated();
     if (this.#snapshot.history.action && !this.#snapshot.pending && !compensation)
       throw new Error("Finish saving or discard the prepared saved compensation before editing");
@@ -511,6 +526,7 @@ export class SpaceDocumentSession {
   }
 
   save(): Promise<void> {
+    this.#options.assertMutable?.();
     this.#assertHydrated();
     if (this.#saving) return this.#saving;
     this.#saving = Promise.resolve()
@@ -522,6 +538,7 @@ export class SpaceDocumentSession {
   }
 
   async #save(): Promise<void> {
+    this.#options.assertMutable?.();
     if (this.#snapshot.status === "conflict") throw new Error("Resolve the conflict before saving");
     if (!this.#snapshot.dirty && !this.#snapshot.pending) return;
     let request = this.#snapshot.pending;
@@ -630,6 +647,7 @@ export class SpaceDocumentSession {
   }
 
   async discardDraft(window: SpaceBlockWindow): Promise<void> {
+    this.#options.assertMutable?.();
     this.#assertHydrated();
     if (this.#saving || this.#snapshot.pending)
       throw new Error("Resolve the pending receipt before discarding");

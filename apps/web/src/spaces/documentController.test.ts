@@ -294,3 +294,35 @@ describe("Spaces document controller lifecycle", () => {
     ).toEqual([block("draft-0")]);
   });
 });
+
+it("reserves hydration and both shared edit/save owners without leaking capacity through release or a stale release", async () => {
+  const h = hydratingDocuments();
+  const opening = h.documents.open(key);
+  await h.started.promise;
+  expect(() => h.documents.reserve(key.environmentId, [key.pageId])).toThrow("finish loading");
+  h.loaded.resolve(null);
+  const doc = await opening.ready;
+  const second = h.documents.open(key);
+  await second.ready;
+  const release = h.documents.reserve(key.environmentId, [key.pageId]);
+  opening.release();
+  expect(() => doc.session.apply([{ kind: "replace", block: block("blocked") }])).toThrow(
+    "reserved",
+  );
+  await expect(doc.save()).rejects.toThrow("reserved");
+  expect(() => h.documents.open(key)).toThrow("reserved");
+  release();
+  const nextReservation = h.documents.reserve(key.environmentId, [key.pageId]);
+  release();
+  expect(() => doc.open()).toThrow("reserved");
+  nextReservation();
+  second.release();
+  for (let i = 0; i < 8; i++) {
+    const owner = h.documents.open({
+      ...key,
+      pageId: SpacePageId.make(`clean-after-reservation-${i}`),
+    });
+    await owner.ready;
+    owner.release();
+  }
+});
