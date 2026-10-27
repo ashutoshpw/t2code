@@ -432,19 +432,36 @@ export const layerOtlpTracesProxyRoute = HttpRouter.add(
 
 const UNTRACED_REQUEST_PATHS: ReadonlySet<string> = new Set([OTLP_TRACES_PROXY_PATH]);
 
+const isAssetBearerPath = (url: string) => {
+  const path = url.split("?", 1)[0]!;
+  return [ASSET_ROUTE_PREFIX, SPACES_UPLOAD_ROUTE_PREFIX].some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+};
+
 // HttpRouter.serve builds routes privately; provide the server-wide TracerDisabledWhen to the served layer.
 const layerUntracedRequests = Layer.succeed(HttpMiddleware.TracerDisabledWhen)((request) => {
   const queryIndex = request.url.indexOf("?");
   const path = queryIndex === -1 ? request.url : request.url.slice(0, queryIndex);
-  // Webhook URLs carry their secret token in the path, so they never reach a trace.
+  // Webhook and asset URLs carry bearer tokens in the path, so they never reach a trace.
   return (
     UNTRACED_REQUEST_PATHS.has(path) ||
     path.startsWith(`${WEBHOOK_ROUTE_PREFIX}/`) ||
-    path.startsWith(`${SPACES_UPLOAD_ROUTE_PREFIX}/`)
+    isAssetBearerPath(path)
   );
 });
 
 export const withUntracedRequests = Layer.provide(layerUntracedRequests);
+
+const layerAssetRequestPrivacy = HttpRouter.middleware(
+  (effect) =>
+    Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
+      isAssetBearerPath(request.url)
+        ? effect.pipe(HttpMiddleware.withLoggerDisabled, Effect.withTracerEnabled(false))
+        : effect,
+    ),
+  { global: true },
+);
 
 export const layerAssetRoute = HttpRouter.add(
   "GET",
@@ -502,7 +519,7 @@ export const layerAssetRoute = HttpRouter.add(
       Effect.orElseSucceed(() => HttpServerResponse.text("Internal Server Error", { status: 500 })),
     );
   }),
-);
+).pipe(Layer.merge(layerAssetRequestPrivacy));
 
 export const layerSpacesUploadRoute = HttpRouter.add(
   "POST",

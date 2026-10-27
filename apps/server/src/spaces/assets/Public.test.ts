@@ -1,3 +1,10 @@
+import * as Schema from "effect/Schema";
+import * as NodeHttpClient from "@effect/platform-node/NodeHttpClient";
+import * as Console from "effect/Console";
+import * as Tracer from "effect/Tracer";
+import * as NodeUtil from "node:util";
+import { makeLocalFileTracer, makeTraceSink } from "@t2code/shared/observability";
+import * as ServerLogger from "../../serverLogger.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeHttpPlatform from "@effect/platform-node/NodeHttpPlatform";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
@@ -14,7 +21,13 @@ import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 import * as SqlClient from "effect/sql/SqlClient";
-import { HttpRouter } from "effect/http";
+import {
+  HttpRouter,
+  HttpServerRequest,
+  HttpServerResponse,
+  HttpServerError,
+  HttpMiddleware,
+} from "effect/http";
 
 import * as Config from "../../config.ts";
 import * as Settings from "../../serverSettings.ts";
@@ -34,6 +47,16 @@ import * as Sqlite from "../Sqlite.ts";
 import * as Catalog from "./Catalog.ts";
 import * as Upload from "./Upload.ts";
 import * as GC from "./GC.ts";
+
+const isControlHttpTrace = Schema.is(
+  Schema.Struct({
+    type: Schema.Literal("effect-span"),
+    attributes: Schema.Struct({
+      "url.path": Schema.Literal("/api/assets-info"),
+      "http.response.status_code": Schema.Literal(200),
+    }),
+  }),
+);
 
 const environmentId = EnvironmentId.make("public-assets");
 const pdf = new TextEncoder().encode("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n");
@@ -68,6 +91,7 @@ const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(function* <A, E, R>(
     readonly request: (relative: string, init?: RequestInit) => Effect.Effect<Response>;
   }) => Effect.Effect<A, E, R>,
   enabled = true,
+  logRequests = false,
 ) {
   const scope = yield* Effect.scope;
   const clock = yield* Clock.Clock;
@@ -103,6 +127,9 @@ const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(function* <A, E, R>(
       Layer.mock(Orchestrator.OrchestratorV2)({}),
       Layer.succeed(BuiltInDrivers.SourceControlDrivers, []),
       Layer.succeed(Clock.Clock, clock),
+      Layer.effect(HttpMiddleware.TracerDisabledWhen, HttpMiddleware.TracerDisabledWhen).pipe(
+        ServerHttp.withUntracedRequests,
+      ),
     ).pipe(Layer.provideMerge(NodeServices.layer)),
     scope,
   );
@@ -111,12 +138,29 @@ const fixture = Effect.fn("SpacesAssetsPublicTest.fixture")(function* <A, E, R>(
       ServerHttp.layerSpacesUploadRoute,
       ServerHttp.layerAssetRoute,
       ServerHttp.layerHttpCompression,
-    ).pipe(Layer.provideMerge(Layer.succeedContext(context))),
-    { disableLogger: true },
+      HttpRouter.add("GET", "/api/assets-info", HttpServerResponse.text("public control")),
+      HttpRouter.add(
+        "GET",
+        "/api/assets/:token/trace-error",
+        Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
+          Effect.fail(
+            new HttpServerError.HttpServerError({
+              reason: new HttpServerError.InternalError({
+                request,
+                description: "Synthetic response failure",
+              }),
+            }),
+          ),
+        ),
+      ),
+    ).pipe(ServerHttp.withUntracedRequests, Layer.provideMerge(Layer.succeedContext(context))),
+    { disableLogger: !logRequests },
   );
   yield* Effect.addFinalizer(() => Effect.promise(dispose));
   const request = (relative: string, init?: RequestInit) =>
-    Effect.promise(() => handler(new Request(`http://assets.test${relative}`, init)));
+    Effect.contextWith((current: Context.Context<never>) =>
+      Effect.promise(() => handler(new Request(`http://assets.test${relative}`, init), current)),
+    );
   return yield* use({ config, request }).pipe(Effect.provide(context));
 }, Effect.provide(NodeServices.layer));
 const usage = Effect.fn("SpacesAssetsPublicTest.usage")(function* (
@@ -136,6 +180,103 @@ const usage = Effect.fn("SpacesAssetsPublicTest.usage")(function* (
 });
 
 describe("Spaces public asset wiring", () => {
+  it.effect(
+    "keeps bearer paths and queries out of real HTTP traces and access logs without suppressing unrelated requests",
+    () =>
+      fixture(
+        ({ config, request }) =>
+          Effect.gen(function* () {
+            const fs = yield* FileSystem.FileSystem;
+            const filePath = config.serverTracePath;
+            const options = { filePath, maxBytes: 1_048_576, maxFiles: 1, batchWindowMs: 10_000 };
+            const sink = yield* makeTraceSink(options);
+            const tracer = yield* makeLocalFileTracer({ ...options, sink });
+            const printed: string[] = [];
+            const testConsole = {
+              ...globalThis.console,
+              log: (...args: ReadonlyArray<unknown>) => {
+                printed.push(NodeUtil.format(...args));
+              },
+            } satisfies Console.Console;
+            const secrets = ["SYNTHETIC_ASSET_QUERY", "SYNTHETIC_ASSET_BEARER"];
+            yield* Effect.gen(function* () {
+              const service = yield* Service.SpacesService;
+              const grant = yield* service.createAssetUpload(
+                common("trace-policy"),
+                "trace-fixture",
+              );
+              secrets.push(grant.relativeUrl.split("/").at(-1)!);
+              expect(
+                (yield* request(grant.relativeUrl, {
+                  method: "POST",
+                  headers: { "content-length": String(pdf.length) },
+                  body: new Uint8Array(pdf),
+                })).status,
+              ).toBe(204);
+              const signed = yield* issueAssetUrl({
+                resource: { _tag: "spaces-asset", environmentId, assetId: grant.assetId },
+              });
+              secrets.push(signed.relativeUrl.split("/")[3]!);
+              const target = `${signed.relativeUrl}?query=${secrets[0]}`;
+              const full = yield* request(target);
+              expect(full.status).toBe(200);
+              expect(new Uint8Array(yield* Effect.promise(() => full.arrayBuffer()))).toEqual(pdf);
+              expect(full.headers.get("cache-control")).toContain("private");
+              const head = yield* request(target, { method: "HEAD" });
+              expect(head.status).toBe(200);
+              expect(yield* Effect.promise(() => head.text())).toBe("");
+              const range = yield* request(target, { headers: { range: "bytes=0-4" } });
+              expect(range.status).toBe(206);
+              expect(new Uint8Array(yield* Effect.promise(() => range.arrayBuffer()))).toEqual(
+                pdf.subarray(0, 5),
+              );
+              expect((yield* request(target, { headers: { range: "bytes=999999-" } })).status).toBe(
+                416,
+              );
+              expect((yield* request(target, { method: "POST" })).status).toBe(404);
+              for (const [path, status] of [
+                [`/api/assets/${secrets[1]}/missing.pdf?query=${secrets[0]}`, 404],
+                [`/api/assets/${secrets[1]}/trace-error?query=${secrets[0]}`, 500],
+                [`/api/assets?query=${secrets[0]}`, 404],
+              ] as const)
+                expect((yield* request(path)).status).toBe(status);
+              const control = yield* request("/api/assets-info?query=public");
+              expect(control.status).toBe(200);
+              expect(yield* Effect.promise(() => control.text())).toBe("public control");
+            }).pipe(
+              Effect.provide(
+                ServerLogger.layer.pipe(
+                  Layer.provide(Config.layer({ ...config, logLevel: "Info" })),
+                  Layer.provide(NodeHttpClient.layerUndici),
+                ),
+              ),
+              Effect.provideService(Tracer.Tracer, tracer),
+              Effect.provideService(Console.Console, testConsole),
+            );
+            yield* sink.flush;
+            const text = yield* fs.readFileString(filePath);
+            const logs = printed.join("\n");
+            for (const secret of secrets) {
+              expect(text.includes(secret), "bearer material persisted in HTTP trace records").toBe(
+                false,
+              );
+              expect(logs.includes(secret), "bearer material entered HTTP access/error logs").toBe(
+                false,
+              );
+            }
+            const records = text
+              .trim()
+              .split("\n")
+              .filter(Boolean)
+              .map((line): unknown => JSON.parse(line));
+            expect(records.some(isControlHttpTrace)).toBe(true);
+            expect(logs.includes("/api/assets-info")).toBe(true);
+          }),
+        true,
+        true,
+      ),
+  );
+
   it.effect("keeps healthy uploads readable through repeated complete sanity audits", () =>
     fixture(({ request }) =>
       Effect.gen(function* () {
