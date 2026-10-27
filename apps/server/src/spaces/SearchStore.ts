@@ -108,12 +108,12 @@ export const advance = Effect.fn("SpacesSearch.advance")(function* () {
     return "building";
   }
   if (state.phase !== "blocks") return "storage";
+  // octet_length reads record metadata; fields after payload can traverse overflow pages.
   const rows = yield* sql<{
     readonly block_id: string;
     readonly page_id: string;
-    readonly deleted: number;
     readonly payload_bytes: number;
-  }>`SELECT block_id,page_id,deleted,length(CAST(payload AS BLOB)) AS payload_bytes FROM spaces_blocks
+  }>`SELECT block_id,page_id,octet_length(payload) AS payload_bytes FROM spaces_blocks
     WHERE block_id>${after} ORDER BY block_id LIMIT ${searchLimits.backfillRows + 1}`;
   bytes = byteLength(rows.map((row) => ({ ...row })));
   checkSearchLimit("backfillBytes", bytes);
@@ -124,11 +124,12 @@ export const advance = Effect.fn("SpacesSearch.advance")(function* () {
     }
     const [body] = yield* sql<{
       readonly payload: string;
-    }>`SELECT payload FROM spaces_blocks WHERE block_id=${row.block_id}`;
+      readonly deleted: number;
+    }>`SELECT payload,deleted FROM spaces_blocks WHERE block_id=${row.block_id}`;
     if (!body) return "storage";
-    const value: unknown = row.deleted ? null : parseJson(body.payload);
+    const value: unknown = body.deleted ? null : parseJson(body.payload);
     if (known(value)) yield* writeBlock(row.page_id, row.block_id, value);
-    else if (row.deleted) yield* writeBlock(row.page_id, row.block_id, null);
+    else if (body.deleted) yield* writeBlock(row.page_id, row.block_id, null);
     else yield* clearText(row.page_id, row.block_id);
     consumed++;
     bytes += row.payload_bytes;

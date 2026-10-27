@@ -1,3 +1,4 @@
+import * as NodeSqlite from "node:sqlite";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import { EnvironmentId } from "@t2code/contracts";
@@ -15,6 +16,8 @@ import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
+import * as Tracer from "effect/Tracer";
+import * as Statement from "effect/sql/Statement";
 import * as TestClock from "effect/testing/TestClock";
 import * as SqlClient from "effect/sql/SqlClient";
 
@@ -373,6 +376,124 @@ const recoveryIntent = Effect.fn("SpacesServiceTest.recoveryIntent")(function* (
 });
 
 it.layer(NodeServices.layer)("Spaces core service", (it) => {
+  it.effect("admits search backfill bodies using only index and record-header metadata", () =>
+    fixture((dbPath) =>
+      Effect.gen(function* () {
+        const { service, request } = yield* boot();
+        const values = Array.from({ length: 101 }, (_, i) => ({
+          ...block(`overflow-${String(i).padStart(3, "0")}`, i + 1),
+          type: "code",
+          content: { text: "overflowneedle " + "x".repeat(32000), language: "" },
+        }));
+        for (let offset = 0; offset < values.length; offset += 7)
+          yield* service.applyBlockBatch(
+            request(
+              `overflow-seed-${offset}`,
+              offset / 7,
+              values
+                .slice(offset, offset + 7)
+                .map((value) => ({ kind: "insert" as const, block: value })),
+            ),
+          );
+        const pages = yield* Effect.flip(service.search({ ...env, query: "overflowneedle" }));
+        assert.equal(pages._tag, "SpaceSearchUnavailableError");
+        const statements: ReturnType<Statement.Statement<unknown>["compile"]>[] = [];
+        const observe: Statement.Transformer = (statement, _sql, _fiber, span) => {
+          const parent = Option.getOrUndefined(span.parent);
+          if (parent?._tag === "Span" && parent.name === "SpacesSearch.advance")
+            statements.push(statement.compile());
+          return Effect.succeed(statement);
+        };
+        const pending = yield* Effect.flip(
+          service
+            .search({ ...env, query: "overflowneedle" })
+            .pipe(
+              Effect.provideService(Statement.CurrentTransformer, observe),
+              Effect.withTracer(Tracer.nativeTracer),
+            ),
+        );
+        assert.equal(pending._tag, "SpaceSearchUnavailableError");
+        if (pending._tag === "SpaceSearchUnavailableError")
+          assert.equal(pending.reason, "building");
+        assert.isNotEmpty(statements);
+        const db = new NodeSqlite.DatabaseSync(dbPath, { readOnly: true });
+        try {
+          const payloadColumn = Number(
+            db
+              .prepare("PRAGMA table_info(spaces_blocks)")
+              .all()
+              .find((row) => row.name === "payload")!.cid,
+          );
+          const roots = db
+            .prepare(
+              "SELECT rootpage,type FROM sqlite_schema WHERE tbl_name='spaces_blocks' AND type IN ('table','index')",
+            )
+            .all();
+          const sourceRoots = new Set(roots.map((row) => Number(row.rootpage)));
+          const tableRoot = Number(roots.find((row) => row.type === "table")!.rootpage);
+          const sourceQueries = statements.flatMap(([query, params]) => {
+            const args = params.map((value) => {
+              if (typeof value !== "string" && typeof value !== "number")
+                throw new Error("Unexpected backfill parameter");
+              return value;
+            });
+            const ops = db.prepare(`EXPLAIN ${query}`).all(...args);
+            if (!ops.some((op) => op.opcode === "OpenRead" && sourceRoots.has(Number(op.p2))))
+              return [];
+            const cursors = new Set(
+              ops
+                .filter((op) => op.opcode === "OpenRead" && Number(op.p2) === tableRoot)
+                .map((op) => Number(op.p1)),
+            );
+            const columns = ops.filter(
+              (op) => op.opcode === "Column" && cursors.has(Number(op.p1)),
+            );
+            return [{ query, args, columns }];
+          });
+          assert.isAbove(sourceQueries.length, 1);
+          const header = sourceQueries[0]!;
+          const unadmittedLoads = header.columns.filter(
+            (op) =>
+              Number(op.p2) > payloadColumn ||
+              (Number(op.p2) === payloadColumn && (Number(op.p5) & 0xc0) !== 0xc0),
+          );
+          assert.deepEqual(
+            unadmittedLoads.map((op) => ({ column: op.p2, flags: op.p5 })),
+            [],
+          );
+          const headers = db.prepare(header.query).all(...header.args);
+          assert.equal(headers.length, 101);
+          const bodies = sourceQueries
+            .slice(1)
+            .filter((source) =>
+              source.columns.some(
+                (op) => Number(op.p2) === payloadColumn && (Number(op.p5) & 0xc0) !== 0xc0,
+              ),
+            );
+          assert.isAbove(bodies.length, 0);
+          assert.isBelow(bodies.length, 101);
+          let bodyBytes = 0;
+          for (const body of bodies) {
+            const rows = db.prepare(body.query).all(...body.args);
+            assert.lengthOf(rows, 1);
+            const payload = Object.values(rows[0]!).find(
+              (value) => typeof value === "string" && Buffer.byteLength(value, "utf8") > 32000,
+            );
+            assert.isString(payload);
+            bodyBytes += Buffer.byteLength(String(payload), "utf8");
+          }
+          assert.isAtMost(bytes(headers) + bodyBytes, 262144);
+          assert.equal(
+            db.prepare("SELECT after_id FROM spaces_search_build").get()!.after_id,
+            values[bodies.length - 1]!.id,
+          );
+        } finally {
+          db.close();
+        }
+      }),
+    ),
+  );
+
   it.effect(
     "keeps ordinary Spaces writes usable with an unsupported search projection and never scans as fallback",
     () =>
