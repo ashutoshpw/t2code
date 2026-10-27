@@ -12,6 +12,12 @@ import {
   type SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
 import { spacesAvailability } from "@t2code/client-runtime/state/spaces";
+import {
+  SpaceDocumentSession,
+  type SpaceDraftStore,
+  type SpaceDocumentDraft,
+} from "@t2code/client-runtime/spaces";
+import { MobileSpaceDocuments } from "./documents";
 import { SpacesPageReader, type SpacesReadAccess } from "./reader";
 
 const target = {
@@ -74,11 +80,35 @@ function located(pageId = target.pageId) {
   });
   return { ...metadata, ancestors: [], current: () => metadata };
 }
+function pageSession(
+  pageId = target.pageId,
+  drafts: SpaceDraftStore = { load: async () => null, write: async () => {} },
+) {
+  return new SpaceDocumentSession(
+    { environmentId: target.environmentId, pageId },
+    {
+      drafts,
+      adapter: {
+        getMutationAdmission: async () => located().mutationAdmission,
+        save: async () => {
+          throw new Error("Reader tests must not write to the server");
+        },
+        lookupReceipt: async () => {
+          throw new Error("Reader tests must not resolve a fabricated receipt");
+        },
+      },
+      createMutationId: () => "unused-reader-mutation",
+      maxLoadedBlocks: 100,
+      maxMutations: 100,
+    },
+  );
+}
 function setup(access?: SpacesReadAccess) {
   const inputs: SpaceReadBlocksInput[] = [];
   const responses: SpaceReadBlocksResult[] = [];
   let locations = 0;
   const reader = new SpacesPageReader(target, {
+    session: pageSession(),
     access: access ?? { availability: "read-only", capability, current: () => true },
     locate: async () => {
       locations++;
@@ -168,6 +198,7 @@ describe("mobile Spaces page reader", () => {
     const started = Promise.withResolvers<AbortSignal>();
     let first = true;
     const reader = new SpacesPageReader(target, {
+      session: pageSession(),
       access: { availability: "read-only", capability, current: () => true },
       locate: async () => located(),
       blocks: async (_input, signal) => {
@@ -192,6 +223,7 @@ describe("mobile Spaces page reader", () => {
   it("does not request a body when current-location authority is lost", async () => {
     let reads = 0;
     const reader = new SpacesPageReader(target, {
+      session: pageSession(),
       access: { availability: "read-only", capability, current: () => true },
       locate: async () => ({ ...located(), current: () => null }),
       blocks: async () => {
@@ -209,6 +241,7 @@ describe("mobile Spaces page reader", () => {
     const started = Promise.withResolvers<void>();
     let current = true;
     const reader = new SpacesPageReader(target, {
+      session: pageSession(),
       access: { availability: "read-only", capability, current: () => current },
       locate: async () => located(),
       blocks: async () => {
@@ -260,6 +293,7 @@ describe("mobile Spaces page reader", () => {
     const reader = new SpacesPageReader(
       { ...target, blockId: SpaceBlockId.make("merged") },
       {
+        session: pageSession(SpacePageId.make("moved-page")),
         access: { availability: "read-only", capability, current: () => true },
         locate: async () => ({
           ...located(SpacePageId.make("moved-page")),
@@ -275,5 +309,191 @@ describe("mobile Spaces page reader", () => {
     expect(inputs.map((input) => input.pageId)).toEqual(["moved-page"]);
     expect(reader.getSnapshot().location?.resolvedBlockId).toBe("survivor");
     expect(reader.getSnapshot().window?.blocks).toEqual([]);
+  });
+});
+
+function retainedDraft(pageId = target.pageId): SpaceDocumentDraft {
+  const key = { environmentId: target.environmentId, pageId };
+  const block = {
+    id: SpaceBlockId.make("retained"),
+    type: "paragraph",
+    version: 1,
+    parentId: null,
+    order: "a",
+    content: { runs: [{ text: "Local draft", marks: [] }] },
+  };
+  return {
+    version: 1,
+    key,
+    baseRevision: 6,
+    generation: 1,
+    memberIds: [block.id],
+    blocks: [block],
+    mutations: [{ kind: "replace", block }],
+    pending: {
+      key,
+      baseRevision: 6,
+      generation: 1,
+      mutationId: "uncertain-original",
+      mutations: [{ kind: "replace", block }],
+    },
+  };
+}
+
+describe("mobile document ownership", () => {
+  it("shares one hydration across two views and does not let a stale release retire the remaining owner", async () => {
+    const loadStarted = Promise.withResolvers<void>();
+    const hydrate = Promise.withResolvers<SpaceDocumentDraft | null>();
+    let loads = 0;
+    let bodyReads = 0;
+    const bodySignal = Promise.withResolvers<AbortSignal>();
+    const documents = new MobileSpaceDocuments(
+      (page) =>
+        new SpacesPageReader(page, {
+          session: pageSession(page.pageId, {
+            load: async () => {
+              loads++;
+              loadStarted.resolve();
+              return hydrate.promise;
+            },
+            write: async () => {
+              throw new Error("Viewing must not rewrite a draft");
+            },
+          }),
+          access: { availability: "read-only", capability, current: () => true },
+          locate: async () => located(),
+          blocks: async (_input, currentSignal) => {
+            bodyReads++;
+            bodySignal.resolve(currentSignal);
+            return { revision: 7, blocks: [], nextCursor: SpaceCursor.make("unloaded") };
+          },
+        }),
+    );
+    const first = documents.acquire(target);
+    const second = documents.acquire({ ...target, spaceId: SpaceId.make("renamed-hint") });
+    expect(first.reader).toBe(second.reader);
+    const opening = first.reader.first();
+    const otherOpening = second.reader.first();
+    await loadStarted.promise;
+    expect(second.reader.getSnapshot().window).toBeNull();
+    expect(second.reader.getSnapshot().session.hydrated).toBe(false);
+    first.release();
+    first.release();
+    expect((await bodySignal.promise).aborted).toBe(false);
+    hydrate.resolve(retainedDraft());
+    await Promise.all([opening, otherOpening]);
+    expect(loads).toBe(1);
+    expect(bodyReads).toBe(1);
+    expect(second.reader.getSnapshot().window?.blocks).toEqual(retainedDraft().blocks);
+    expect(second.reader.getSnapshot().session).toMatchObject({
+      status: "uncertain",
+      recoveryReason: "legacy-epoch-missing",
+      pending: { mutationId: "uncertain-original" },
+    });
+    await second.reader.next();
+    expect(bodyReads).toBe(1);
+    second.release();
+    const reopened = documents.acquire(target);
+    expect(reopened.reader).toBe(second.reader);
+    expect(reopened.reader.session.getSnapshot().pending?.mutationId).toBe("uncertain-original");
+    first.release();
+    reopened.release();
+  });
+
+  it("retains the canonical owner when the last view leaves during hydration and reconnects", async () => {
+    const loadStarted = Promise.withResolvers<void>();
+    const hydrate = Promise.withResolvers<SpaceDocumentDraft | null>();
+    let loads = 0;
+    let connection = 1;
+    const documents = new MobileSpaceDocuments(
+      (page) =>
+        new SpacesPageReader(page, {
+          session: pageSession(page.pageId, {
+            load: async () => {
+              loads++;
+              loadStarted.resolve();
+              return hydrate.promise;
+            },
+            write: async () => {
+              throw new Error("Reader must retain this pending draft");
+            },
+          }),
+          get access(): SpacesReadAccess {
+            const owner = connection;
+            return { availability: "read-only", capability, current: () => owner === connection };
+          },
+          locate: async () => located(),
+          blocks: async () => ({ revision: 7, blocks: [], nextCursor: null }),
+        }),
+    );
+    const old = documents.acquire(target);
+    const oldOpening = old.reader.first();
+    await loadStarted.promise;
+    old.release();
+    connection++;
+    const current = documents.acquire(target);
+    expect(current.reader).toBe(old.reader);
+    const opening = current.reader.first();
+    hydrate.resolve(retainedDraft());
+    await Promise.all([oldOpening, opening]);
+    expect(loads).toBe(1);
+    expect(current.reader.getSnapshot().session.pending).toEqual(retainedDraft().pending);
+    expect(current.reader.getSnapshot().window?.blocks).toEqual(retainedDraft().blocks);
+    old.release();
+    expect(current.reader.getSnapshot().location?.current()).not.toBeNull();
+    current.release();
+  });
+
+  it("does not show a server window over a failed local draft load and permits an explicit retry", async () => {
+    let failed = true;
+    const session = pageSession(target.pageId, {
+      load: async () => {
+        if (failed) throw new Error("Corrupt retained draft");
+        return retainedDraft();
+      },
+      write: async () => {},
+    });
+    const reader = new SpacesPageReader(target, {
+      session,
+      access: { availability: "read-only", capability, current: () => true },
+      locate: async () => located(),
+      blocks: async () => ({ revision: 7, blocks: [], nextCursor: null }),
+    });
+    await reader.first();
+    expect(reader.getSnapshot().window).toBeNull();
+    expect(reader.getSnapshot().session.persistenceError).toBeInstanceOf(Error);
+    failed = false;
+    await reader.first();
+    expect(reader.getSnapshot().window?.blocks).toEqual(retainedDraft().blocks);
+    expect(reader.session.getSnapshot().pending).toEqual(retainedDraft().pending);
+  });
+
+  it("refuses a ninth retained page without scanning or evicting hidden drafts", async () => {
+    const loaded: string[] = [];
+    const documents = new MobileSpaceDocuments(
+      (page) =>
+        new SpacesPageReader(page, {
+          session: pageSession(page.pageId, {
+            load: async (key) => {
+              loaded.push(key.pageId);
+              return retainedDraft(key.pageId);
+            },
+            write: async () => {},
+          }),
+          access: { availability: "read-only", capability, current: () => true },
+          locate: async () => located(page.pageId),
+          blocks: async () => ({ revision: 7, blocks: [], nextCursor: null }),
+        }),
+    );
+    for (let index = 0; index < 8; index++) {
+      const lease = documents.acquire({ ...target, pageId: SpacePageId.make(`page-${index}`) });
+      await lease.reader.first();
+      lease.release();
+    }
+    expect(() => documents.acquire(target)).toThrow("Close or resolve");
+    expect(loaded).toHaveLength(8);
+    const retained = documents.acquire({ ...target, pageId: SpacePageId.make("page-0") });
+    expect(retained.reader.session.getSnapshot().pending?.mutationId).toBe("uncertain-original");
+    retained.release();
   });
 });

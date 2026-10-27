@@ -14,7 +14,11 @@ import { SettingsScreen } from "../settings/components/SettingsScreen";
 import { appAtomRegistry } from "../../state/atom-registry";
 import { useEnvironments } from "../../state/environments";
 import { useEnvironmentQuery } from "../../state/query";
-import { createSpacesPageReader, spacesEnvironment, useSpacesReadAccess } from "../../state/spaces";
+import {
+  acquireSpacesPageReader,
+  spacesEnvironment,
+  useSpacesReadAccess,
+} from "../../state/spaces";
 import { type SpacesReadAccess, spacesAvailabilityMessage } from "./reader";
 import { readSpacesPageTarget, readSpacesLibraryTarget } from "./navigation";
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
@@ -321,18 +325,66 @@ function blockDepth(block: SpaceBlock, blocks: readonly SpaceBlock[]) {
   return depth;
 }
 
+type PageLease = Awaited<ReturnType<typeof acquireSpacesPageReader>>;
+
 function PageReader({ target }: { target: SpacePageNavigationTarget }) {
-  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
   const access = useSpacesReadAccess(target.environmentId);
-  const reader = useMemo(() => createSpacesPageReader(target, access), [target, access]);
-  const snapshot = useSyncExternalStore(reader.subscribe, reader.getSnapshot);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Own the remote page read and invalidate outstanding results when this view or connection leaves.
+  const stamp = useMemo(() => ({ target, access }), [target, access]);
+  const [view, setView] = useState<{
+    stamp: typeof stamp;
+    lease: PageLease | null;
+    error: string | null;
+  } | null>(null);
+  // oxlint-disable-next-line t2code/react-effect-budget -- Acquire the shared remote document owner and release only this view's lease on navigation or connection changes.
   useEffect(() => {
-    void reader.first();
-    return () => reader.invalidate();
-  }, [reader]);
+    const abort = new AbortController();
+    let owned: PageLease | null = null;
+    if (canBrowseSpaces(access.availability)) {
+      void acquireSpacesPageReader(target, access, abort.signal).then(
+        (lease) => {
+          if (abort.signal.aborted) {
+            lease.release();
+            return;
+          }
+          owned = lease;
+          setView({ stamp, lease, error: null });
+        },
+        (cause: unknown) => {
+          if (!abort.signal.aborted)
+            setView({
+              stamp,
+              lease: null,
+              error: cause instanceof Error ? cause.message : "Could not open this page.",
+            });
+        },
+      );
+    }
+    return () => {
+      abort.abort();
+      owned?.release();
+    };
+  }, [target, access, stamp]);
   if (!canBrowseSpaces(access.availability))
-    return <AccessNotice access={access} environmentId={target.environmentId} />;
+    return (
+      <>
+        <AccessNotice access={access} environmentId={target.environmentId} />
+        {view?.lease?.reader.session.getSnapshot().dirty ||
+        view?.lease?.reader.session.getSnapshot().pending ? (
+          <Notice>
+            Your local draft remains on this device. Reconnect with read access to open it.
+          </Notice>
+        ) : null}
+      </>
+    );
+  if (view?.stamp !== stamp) return <Notice>Opening page and local draft…</Notice>;
+  if (!view.lease) return <Notice>{view.error ?? "Could not open this page."}</Notice>;
+  return <DocumentReader lease={view.lease} access={access} />;
+}
+
+function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesReadAccess }) {
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  const { reader, target } = lease;
+  const snapshot = useSyncExternalStore(reader.subscribe, reader.getSnapshot);
   const location = access.current() ? snapshot.location : null;
   const blocks = location ? (snapshot.window?.blocks ?? []) : [];
   const currentTarget = location
@@ -362,6 +414,34 @@ function PageReader({ target }: { target: SpacePageNavigationTarget }) {
             </Text>
           ) : null}
           <Notice>{spacesAvailabilityMessage[access.availability]}</Notice>
+          <Notice>
+            {snapshot.session.persistenceError !== null
+              ? "The local draft could not be loaded or stored. Existing data is retained; try refreshing."
+              : !snapshot.session.hydrated
+                ? "Loading the local draft before showing page content…"
+                : snapshot.session.status === "uncertain"
+                  ? "The previous save outcome is uncertain. Its exact request and your local draft are retained."
+                  : snapshot.session.status === "conflict"
+                    ? "This page changed elsewhere. Your local draft is retained read-only."
+                    : snapshot.session.status === "draft"
+                      ? "Local draft restored. It remains read-only on mobile."
+                      : snapshot.session.status === "saving"
+                        ? "A save is pending; newer local content remains retained."
+                        : "Saved page · read-only on mobile."}
+          </Notice>
+          {snapshot.session.recoveryReason ? (
+            <Notice>
+              This older draft cannot be retried automatically. It remains on this device.
+            </Notice>
+          ) : null}
+          {location &&
+          snapshot.session.hydrated &&
+          snapshot.session.baseRevision !== location.page.revision ? (
+            <Notice>
+              The saved page has a different revision from this local draft. Refreshing will not
+              replace your draft.
+            </Notice>
+          ) : null}
           {snapshot.loading ? (
             <Notice>Loading page…</Notice>
           ) : snapshot.error ? (

@@ -5,7 +5,11 @@ import type {
   SpaceReadBlocksInput,
   SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
-import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
+import type {
+  SpaceDocumentSession,
+  SpaceSessionSnapshot,
+  SpacePageNavigationTarget,
+} from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces, type SpacesAvailability } from "@t2code/client-runtime/state/spaces";
 
 export interface SpacesReadAccess {
@@ -34,28 +38,86 @@ interface ReaderSnapshot {
   readonly error: string | null;
   readonly location: LocatedPage | null;
   readonly window: SpaceReadBlocksResult | null;
+  readonly session: SpaceSessionSnapshot;
 }
 
 export class SpacesPageReader {
   readonly #listeners = new Set<() => void>();
   #request = 0;
   #abort: AbortController | null = null;
-  #snapshot: ReaderSnapshot = { loading: false, error: null, location: null, window: null };
+  #opening: Promise<void> | null = null;
+  #hydration: Promise<void> | null = null;
+  #access: SpacesReadAccess | null = null;
+  #stopSession: (() => void) | null = null;
+  #serverWindow: SpaceReadBlocksResult | null = null;
+  #snapshot: ReaderSnapshot;
 
   constructor(
     readonly target: SpacePageNavigationTarget,
     readonly ports: {
+      session: SpaceDocumentSession;
       access: SpacesReadAccess;
       locate: (signal: AbortSignal) => Promise<LocatedPage>;
       blocks: (input: SpaceReadBlocksInput, signal: AbortSignal) => Promise<SpaceReadBlocksResult>;
     },
-  ) {}
+  ) {
+    this.#snapshot = {
+      loading: false,
+      error: null,
+      location: null,
+      window: null,
+      session: ports.session.getSnapshot(),
+    };
+  }
+
+  get session() {
+    return this.ports.session;
+  }
 
   getSnapshot = () => this.#snapshot;
   subscribe = (listener: () => void) => {
+    if (this.#listeners.size === 0)
+      this.#stopSession = this.session.subscribe(() => this.#publishSession());
     this.#listeners.add(listener);
-    return () => this.#listeners.delete(listener);
+    return () => {
+      this.#listeners.delete(listener);
+      if (this.#listeners.size === 0) {
+        this.#stopSession?.();
+        this.#stopSession = null;
+      }
+    };
   };
+  canRelease() {
+    const state = this.session.getSnapshot();
+    return (
+      this.#listeners.size === 0 &&
+      !this.#opening &&
+      !this.#hydration &&
+      (this.session.canRelease() || (!state.hydrated && state.persistenceError === null))
+    );
+  }
+  #publishSession() {
+    const session = this.session.getSnapshot();
+    const source = this.#serverWindow;
+    this.#publish({
+      ...this.#snapshot,
+      session,
+      window:
+        source && session.hydrated
+          ? {
+              revision: session.baseRevision ?? source.revision,
+              blocks: session.blocks,
+              nextCursor:
+                !session.dirty &&
+                !session.pending &&
+                session.persistenceError === null &&
+                session.baseRevision === source.revision
+                  ? source.nextCursor
+                  : null,
+            }
+          : null,
+    });
+  }
   #publish(snapshot: ReaderSnapshot) {
     this.#snapshot = snapshot;
     for (const listener of this.#listeners) listener();
@@ -63,13 +125,32 @@ export class SpacesPageReader {
   invalidate() {
     this.#request++;
     this.#abort?.abort();
-    this.#publish({ loading: false, error: null, location: null, window: null });
+    this.#opening = null;
+    this.#serverWindow = null;
+    this.#publish({
+      loading: false,
+      error: null,
+      location: null,
+      window: null,
+      session: this.session.getSnapshot(),
+    });
   }
-  first = () => this.#load();
+  first = () => this.#start();
   next = () => {
     if (this.#snapshot.loading || !this.#snapshot.window?.nextCursor) return Promise.resolve();
-    return this.#load(this.#snapshot.window.nextCursor);
+    const state = this.session.getSnapshot();
+    if (state.dirty || state.pending || state.persistenceError !== null) return Promise.resolve();
+    return this.#start(this.#snapshot.window.nextCursor);
   };
+
+  #start(cursor?: SpaceCursor) {
+    if (this.#opening && this.#access?.current()) return this.#opening;
+    const opening = this.#load(cursor).finally(() => {
+      if (this.#opening === opening) this.#opening = null;
+    });
+    this.#opening = opening;
+    return opening;
+  }
 
   async #load(cursor?: SpaceCursor): Promise<void> {
     const request = ++this.#request;
@@ -77,8 +158,16 @@ export class SpacesPageReader {
     const abort = new AbortController();
     this.#abort = abort;
     const { access } = this.ports;
+    this.#access = access;
     const current = () => request === this.#request && access.current();
-    this.#publish({ loading: true, error: null, location: null, window: null });
+    this.#serverWindow = null;
+    this.#publish({
+      loading: true,
+      error: null,
+      location: null,
+      window: null,
+      session: this.session.getSnapshot(),
+    });
     try {
       if (!canBrowseSpaces(access.availability) || !access.capability || !current())
         throw new Error(spacesAvailabilityMessage[access.availability]);
@@ -107,7 +196,22 @@ export class SpacesPageReader {
           Math.min(2 * 1024 * 1024, access.capability.limits.maxBlockWindowResponseBytes)
       )
         throw new Error("The page window changed or exceeds its read limit. Refresh to try again.");
-      this.#publish({ loading: false, error: null, location, window });
+      if (!this.session.getSnapshot().hydrated) {
+        const hydration = this.session.hydrate(window);
+        this.#hydration = hydration;
+        try {
+          await hydration;
+        } finally {
+          if (this.#hydration === hydration) this.#hydration = null;
+        }
+      }
+      if (!current() || !location.current()) return;
+      const state = this.session.getSnapshot();
+      if (!state.dirty && !state.pending && state.persistenceError === null)
+        this.session.replaceWindow(window);
+      this.#serverWindow = window;
+      this.#snapshot = { ...this.#snapshot, loading: false, error: null, location };
+      this.#publishSession();
     } catch (error) {
       if (!current()) return;
       this.#publish({
@@ -124,6 +228,7 @@ export class SpacesPageReader {
               : "Could not load this page.",
         location: null,
         window: null,
+        session: this.session.getSnapshot(),
       });
     }
   }

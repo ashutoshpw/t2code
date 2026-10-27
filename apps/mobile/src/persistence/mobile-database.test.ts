@@ -1,11 +1,12 @@
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
-import { vi } from "vite-plus/test";
+import * as NodeSqlite from "node:sqlite";
+import { EnvironmentId } from "@t2code/contracts";
+import { SpaceBlockId, SpacePageId, SpaceReceiptEpoch } from "@t2code/contracts/spaces";
+import { spaceDraftMaxBytes, type SpaceDocumentDraft } from "@t2code/client-runtime/spaces";
 
-const openDatabaseAsync = vi.hoisted(() => vi.fn());
-
-vi.mock("expo-sqlite", () => ({ openDatabaseAsync }));
+import { diskDatabase, openDatabaseAsync } from "./mobile-database.test-support";
 
 import * as MobileDatabase from "./mobile-database";
 
@@ -84,6 +85,234 @@ describe("offline pull request cache", () => {
         expect((yield* database.loadCache(otherEnvironment, "pull-request", "v1:list"))._tag).toBe(
           "Some",
         );
+      }),
+    ),
+  );
+});
+
+const draftPage = {
+  environmentId: EnvironmentId.make("draft-environment"),
+  pageId: SpacePageId.make("page"),
+};
+function pageDraft(key = draftPage, text = "Retained"): SpaceDocumentDraft {
+  const block = {
+    id: SpaceBlockId.make("block"),
+    parentId: null,
+    order: "a",
+    type: "paragraph",
+    version: 1,
+    content: { runs: [{ text, marks: [{ type: "bold", version: 1 }] }] },
+  };
+  return {
+    version: 1,
+    key,
+    baseRevision: 4,
+    generation: 2,
+    memberIds: [block.id],
+    blocks: [block],
+    mutations: [{ kind: "replace", block }],
+    pending: {
+      key,
+      mutationId: "exact-pending-id",
+      receiptEpoch: SpaceReceiptEpoch.make("original-epoch"),
+      baseRevision: 4,
+      generation: 1,
+      mutations: [{ kind: "replace", block }],
+    },
+  };
+}
+
+describe("durable mobile Spaces page drafts", () => {
+  it.effect(
+    "migrates an existing database, reopens exact pending drafts and leaves them outside all cache clearing",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fixture = yield* diskDatabase();
+          const seed = new NodeSqlite.DatabaseSync(fixture.file);
+          seed.exec(
+            'CREATE TABLE client_preferences (singleton INTEGER PRIMARY KEY, payload TEXT NOT NULL, updated_at INTEGER NOT NULL); INSERT INTO client_preferences VALUES (1, \'{"theme":"dark"}\', 1)',
+          );
+          seed.close();
+          const first = yield* fixture.open();
+          const otherKey = {
+            ...draftPage,
+            environmentId: EnvironmentId.make("another-environment"),
+          };
+          yield* Effect.promise(async () => {
+            expect(await first.store.load(draftPage)).toBeNull();
+            await first.store.write(draftPage, pageDraft());
+            await first.store.write(otherKey, pageDraft(otherKey, "Different environment"));
+          });
+          yield* first.database.saveCache(draftPage.environmentId, "thread", "page", 1, "clear me");
+          yield* first.database.clearCacheKind(draftPage.environmentId, "thread");
+          yield* first.database.clearEnvironmentCache(draftPage.environmentId);
+          yield* first.database.clearAllCaches;
+          expect(yield* first.database.loadPreferencesJson).toEqual(
+            Option.some({ payload: '{"theme":"dark"}', updatedAt: 1 }),
+          );
+          yield* first.close;
+          const reopened = yield* fixture.open();
+          yield* Effect.promise(async () => {
+            expect(await reopened.store.load(draftPage)).toEqual(pageDraft());
+            expect(await reopened.store.load(otherKey)).toEqual(
+              pageDraft(otherKey, "Different environment"),
+            );
+          });
+          const inspect = new NodeSqlite.DatabaseSync(fixture.file);
+          expect(inspect.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: 2 });
+          inspect.close();
+        }),
+      ),
+  );
+
+  it.effect(
+    "does not report durability before COMMIT and rolls back a failed commit without losing the previous record",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fixture = yield* diskDatabase();
+          const { store } = yield* fixture.open();
+          yield* Effect.promise(async () => {
+            const original = pageDraft();
+            await store.write(draftPage, original);
+            const reached = Promise.withResolvers<void>();
+            const commit = Promise.withResolvers<void>();
+            fixture.control.beforeCommit = async () => {
+              reached.resolve();
+              await commit.promise;
+            };
+            let completed = false;
+            const replacement = pageDraft(draftPage, "Committed replacement");
+            const writing = store.write(draftPage, replacement).then(() => {
+              completed = true;
+            });
+            await reached.promise;
+            expect(completed).toBe(false);
+            expect(await store.load(draftPage)).toEqual(original);
+            commit.resolve();
+            await writing;
+            expect(await store.load(draftPage)).toEqual(replacement);
+            fixture.control.beforeCommit = async () => {
+              throw new Error("Commit refused");
+            };
+            await expect(
+              store.write(draftPage, pageDraft(draftPage, "Never committed")),
+            ).rejects.toBeDefined();
+            fixture.control.beforeCommit = null;
+            expect(await store.load(draftPage)).toEqual(replacement);
+          });
+        }),
+      ),
+  );
+
+  it.effect.each(["json", "future", "size", "identity"] as const)(
+    "retains a %s-invalid stored record and refuses implicit replacement or deletion",
+    (invalid) =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fixture = yield* diskDatabase();
+          const { store } = yield* fixture.open();
+          yield* Effect.promise(async () => {
+            const sqlite = new NodeSqlite.DatabaseSync(fixture.file);
+            const valid = pageDraft();
+            const payload =
+              invalid === "json"
+                ? "{broken"
+                : invalid === "size"
+                  ? "x".repeat(spaceDraftMaxBytes + 1)
+                  : JSON.stringify(
+                      invalid === "future"
+                        ? { ...valid, version: 2 }
+                        : { ...valid, key: { ...draftPage, environmentId: "wrong" } },
+                    );
+            sqlite.exec("PRAGMA ignore_check_constraints = ON");
+            sqlite
+              .prepare("INSERT INTO spaces_page_drafts VALUES (?, ?, 1, ?, ?, 0)")
+              .run(draftPage.environmentId, draftPage.pageId, payload, Buffer.byteLength(payload));
+            sqlite.close();
+            await expect(store.load(draftPage)).rejects.toBeDefined();
+            await expect(store.write(draftPage, null)).rejects.toBeDefined();
+            await expect(store.write(draftPage, valid)).rejects.toBeDefined();
+            const inspect = new NodeSqlite.DatabaseSync(fixture.file);
+            expect(inspect.prepare("SELECT payload FROM spaces_page_drafts").get()).toEqual({
+              payload,
+            });
+            inspect.close();
+          });
+        }),
+      ),
+  );
+
+  it.effect(
+    "admits exact record and total byte bounds, refusing overflow without evicting a retained draft",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fixture = yield* diskDatabase();
+          const { store } = yield* fixture.open();
+          yield* Effect.promise(async () => {
+            function maximal(key: typeof draftPage) {
+              const block = {
+                id: SpaceBlockId.make("opaque"),
+                type: "future",
+                version: 2,
+                parentId: null,
+                order: "a",
+                content: { padding: "" },
+              };
+              const draft: SpaceDocumentDraft = {
+                version: 1,
+                key,
+                baseRevision: 1,
+                generation: 0,
+                memberIds: [block.id],
+                blocks: [block],
+                mutations: [],
+                pending: null,
+              };
+              block.content.padding = "x".repeat(
+                spaceDraftMaxBytes - Buffer.byteLength(JSON.stringify(draft)),
+              );
+              return draft;
+            }
+            const keys = Array.from({ length: 8 }, (_, index) => ({
+              ...draftPage,
+              pageId: SpacePageId.make(`p${index}`),
+            }));
+            for (const key of keys) await store.write(key, maximal(key));
+            const first = maximal(keys[0]!);
+            await expect(
+              store.write(keys[0]!, {
+                ...first,
+                blocks: [
+                  { ...first.blocks[0]!, content: { padding: "x".repeat(spaceDraftMaxBytes) } },
+                ],
+              }),
+            ).rejects.toBeDefined();
+            const overflow = { ...draftPage, pageId: SpacePageId.make("overflow") };
+            await expect(store.write(overflow, pageDraft(overflow))).rejects.toBeDefined();
+            expect(await store.load(overflow)).toBeNull();
+            expect(await store.load(keys[0]!)).toEqual(first);
+          });
+        }),
+      ),
+  );
+
+  it.effect("bounds retained row admission without evicting another page", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fixture = yield* diskDatabase();
+        const { store } = yield* fixture.open();
+        yield* Effect.promise(async () => {
+          for (let index = 0; index < 128; index++) {
+            const key = { ...draftPage, pageId: SpacePageId.make(`small-${index}`) };
+            await store.write(key, pageDraft(key));
+          }
+          await expect(store.write(draftPage, pageDraft())).rejects.toBeDefined();
+          const retained = { ...draftPage, pageId: SpacePageId.make("small-0") };
+          expect(await store.load(retained)).toEqual(pageDraft(retained));
+        });
       }),
     ),
   );

@@ -5,9 +5,18 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import type { SQLiteDatabase } from "expo-sqlite";
+import {
+  decodeSpaceDocumentDraft,
+  spaceDraftMaxBytes,
+  type SpaceDocumentDraft,
+} from "@t2code/client-runtime/spaces";
+import { SpacePageTarget } from "@t2code/contracts/spaces";
 
 const DATABASE_NAME = "t2code-client.db";
-const DATABASE_SCHEMA_VERSION = 1;
+const DATABASE_SCHEMA_VERSION = 2;
+const SPACE_DRAFT_TOTAL_BYTES = 16 * 1024 * 1024;
+const SPACE_DRAFT_MAX_ROWS = 128;
+const decodeDraftKey = Schema.decodeUnknownSync(SpacePageTarget, { onExcessProperty: "error" });
 const LEGACY_CACHE_DIRECTORIES = [
   "connection-shell-snapshots",
   "shell-snapshots",
@@ -60,6 +69,8 @@ const MobileDatabaseOperation = Schema.Literals([
   "inspect-caches",
   "load-preferences",
   "save-preferences",
+  "load-space-draft",
+  "write-space-draft",
 ]);
 
 export class MobileDatabaseError extends Schema.TaggedError<MobileDatabaseError>()(
@@ -76,6 +87,39 @@ export class MobileDatabaseError extends Schema.TaggedError<MobileDatabaseError>
 
 function databaseError(operation: typeof MobileDatabaseOperation.Type) {
   return (cause: unknown) => new MobileDatabaseError({ operation, cause });
+}
+
+function draftKey(key: SpacePageTarget) {
+  const checked = decodeDraftKey(key);
+  if (Object.values(checked).some((value) => new TextEncoder().encode(value).byteLength > 256))
+    throw new Error("Spaces draft identity exceeds the storage limit");
+  return checked;
+}
+
+async function readSpaceDraft(database: SQLiteDatabase, key: SpacePageTarget) {
+  const row = await database.getFirstAsync<{
+    readonly schemaVersion: number;
+    readonly payloadBytes: number;
+    readonly actualBytes: number;
+    readonly payload: string | null;
+  }>(
+    `SELECT schema_version AS schemaVersion, payload_bytes AS payloadBytes,
+       LENGTH(CAST(payload AS BLOB)) AS actualBytes,
+       CASE WHEN LENGTH(CAST(payload AS BLOB)) <= ? THEN payload END AS payload
+     FROM spaces_page_drafts WHERE environment_id = ? AND page_id = ?`,
+    spaceDraftMaxBytes,
+    key.environmentId,
+    key.pageId,
+  );
+  if (row === null) return null;
+  if (
+    row.schemaVersion !== 1 ||
+    row.actualBytes !== row.payloadBytes ||
+    row.actualBytes > spaceDraftMaxBytes ||
+    typeof row.payload !== "string"
+  )
+    throw new Error("Invalid Spaces draft; stored data has been retained");
+  return { draft: decodeSpaceDocumentDraft(JSON.parse(row.payload), key), bytes: row.actualBytes };
 }
 
 interface LegacyCacheRecord {
@@ -195,6 +239,13 @@ async function migrateLegacyFileCaches(database: SQLiteDatabase): Promise<boolea
 export class MobileDatabase extends Context.Service<
   MobileDatabase,
   {
+    readonly loadSpacePageDraft: (
+      key: SpacePageTarget,
+    ) => Effect.Effect<SpaceDocumentDraft | null, MobileDatabaseError>;
+    readonly writeSpacePageDraft: (
+      key: SpacePageTarget,
+      draft: SpaceDocumentDraft | null,
+    ) => Effect.Effect<void, MobileDatabaseError>;
     readonly loadCache: (
       environmentId: EnvironmentId,
       kind: ClientCacheKind,
@@ -256,6 +307,8 @@ const makeAvailable = Effect.gen(function* () {
       const schema = await database.getFirstAsync<{ readonly user_version: number }>(
         "PRAGMA user_version",
       );
+      if ((schema?.user_version ?? 0) > DATABASE_SCHEMA_VERSION)
+        throw new Error("The mobile database was created by a newer app");
       await database.withExclusiveTransactionAsync(async (transaction) => {
         await transaction.execAsync(`
               CREATE TABLE IF NOT EXISTS client_cache (
@@ -276,19 +329,82 @@ const makeAvailable = Effect.gen(function* () {
                 payload TEXT NOT NULL,
                 updated_at INTEGER NOT NULL
               );
+
+              CREATE TABLE IF NOT EXISTS spaces_page_drafts (
+                environment_id TEXT NOT NULL,
+                page_id TEXT NOT NULL,
+                schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+                payload TEXT NOT NULL,
+                payload_bytes INTEGER NOT NULL CHECK (payload_bytes BETWEEN 1 AND 2097152),
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (environment_id, page_id),
+                CHECK (LENGTH(CAST(payload AS BLOB)) = payload_bytes)
+              ) WITHOUT ROWID;
             `);
       });
       if ((schema?.user_version ?? 0) < DATABASE_SCHEMA_VERSION) {
-        const migrated = await migrateLegacyFileCaches(database);
-        if (migrated) {
-          await database.execAsync(`PRAGMA user_version = ${DATABASE_SCHEMA_VERSION};`);
-        }
+        const migrated =
+          (schema?.user_version ?? 0) >= 1 || (await migrateLegacyFileCaches(database));
+        if (migrated) await database.execAsync(`PRAGMA user_version = ${DATABASE_SCHEMA_VERSION};`);
       }
     },
     catch: databaseError("migrate"),
   });
 
   return MobileDatabase.of({
+    loadSpacePageDraft: Effect.fn("MobileDatabase.loadSpacePageDraft")((key) =>
+      Effect.tryPromise({
+        try: async () => (await readSpaceDraft(database, draftKey(key)))?.draft ?? null,
+        catch: databaseError("load-space-draft"),
+      }),
+    ),
+    writeSpacePageDraft: Effect.fn("MobileDatabase.writeSpacePageDraft")((key, draft) =>
+      Effect.tryPromise({
+        try: async () => {
+          const checkedKey = draftKey(key);
+          const payload =
+            draft === null ? null : JSON.stringify(decodeSpaceDocumentDraft(draft, checkedKey));
+          const bytes = payload === null ? 0 : new TextEncoder().encode(payload).byteLength;
+          await database.withExclusiveTransactionAsync(async (transaction) => {
+            const previous = await readSpaceDraft(transaction, checkedKey);
+            if (payload === null) {
+              await transaction.runAsync(
+                "DELETE FROM spaces_page_drafts WHERE environment_id = ? AND page_id = ?",
+                checkedKey.environmentId,
+                checkedKey.pageId,
+              );
+              return;
+            }
+            const usage = await transaction.getFirstAsync<{
+              readonly rows: number;
+              readonly bytes: number;
+            }>(
+              `SELECT COUNT(*) AS rows, COALESCE(SUM(actual_bytes), 0) AS bytes FROM
+               (SELECT LENGTH(CAST(payload AS BLOB)) AS actual_bytes FROM spaces_page_drafts LIMIT ?)`,
+              SPACE_DRAFT_MAX_ROWS + 1,
+            );
+            if (
+              usage === null ||
+              usage.rows + (previous === null ? 1 : 0) > SPACE_DRAFT_MAX_ROWS ||
+              usage.bytes - (previous?.bytes ?? 0) + bytes > SPACE_DRAFT_TOTAL_BYTES
+            )
+              throw new Error("Local Spaces drafts are full; existing drafts have been retained");
+            await transaction.runAsync(
+              `INSERT INTO spaces_page_drafts (environment_id, page_id, schema_version, payload, payload_bytes, updated_at)
+               VALUES (?, ?, 1, ?, ?, ?)
+               ON CONFLICT (environment_id, page_id) DO UPDATE SET
+                 payload = excluded.payload, payload_bytes = excluded.payload_bytes, updated_at = excluded.updated_at`,
+              checkedKey.environmentId,
+              checkedKey.pageId,
+              payload,
+              bytes,
+              Date.now(),
+            );
+          });
+        },
+        catch: databaseError("write-space-draft"),
+      }),
+    ),
     loadCache: Effect.fn("MobileDatabase.loadCache")((environmentId, kind, cacheKey) =>
       Effect.tryPromise({
         try: () =>
@@ -455,6 +571,8 @@ const makeAvailable = Effect.gen(function* () {
 function makeUnavailable(error: MobileDatabaseError): MobileDatabase["Service"] {
   const fail = Effect.fail(error);
   return MobileDatabase.of({
+    loadSpacePageDraft: () => fail,
+    writeSpacePageDraft: () => fail,
     loadCache: () => fail,
     listCache: () => fail,
     saveCache: () => fail,
