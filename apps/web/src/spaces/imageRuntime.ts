@@ -6,7 +6,7 @@ import {
 import {
   SpaceImageUploads,
   SpaceImagePreviewBudget,
-  imageAssetId,
+  mediaAssetId,
 } from "@t2code/client-runtime/spaces";
 import { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
 import {
@@ -167,7 +167,7 @@ export function spaceImages(registry: AtomRegistry.AtomRegistry): SpaceImageUplo
       return (
         access(key.environmentId, false).session === session &&
         window.revision === metadata.page.revision &&
-        window.blocks.some((b) => b.id === blockId && imageAssetId(b) === assetId)
+        window.blocks.some((b) => b.id === blockId && mediaAssetId(b) === assetId)
       );
     },
   });

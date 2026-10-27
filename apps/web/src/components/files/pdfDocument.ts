@@ -43,3 +43,21 @@ export function openPdf(bytes: ArrayBuffer) {
     useWasm: true,
   });
 }
+
+export function openPdfUrl(url: string, length: number) {
+  if (!Number.isSafeInteger(length) || length < 1 || length > 25 * 1024 * 1024)
+    throw new Error("PDF preview exceeds its 25 MiB limit");
+  return getDocument({
+    url,
+    withCredentials: false,
+    disableAutoFetch: true,
+    disableStream: true,
+    rangeChunkSize: 64 * 1024,
+    useSystemFonts: true,
+    useWorkerFetch: false,
+    BinaryDataFactory,
+    wasmUrl: new URL(".", new URL(fallbackUrl, window.location.href)).href,
+    canvasMaxAreaInBytes: 32 * 1024 * 1024,
+    useWasm: true,
+  });
+}

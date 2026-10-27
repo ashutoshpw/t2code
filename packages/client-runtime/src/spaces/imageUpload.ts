@@ -18,7 +18,7 @@ const placementSchema = Schema.Struct({
   windowIds: Schema.Array(C.SpaceBlockId),
 });
 const recordSchema = Schema.Struct({
-  version: Schema.Literal(1),
+  version: Schema.Literals([1, 2]),
   slot: Schema.Literals([0, 1]),
   sequence: Schema.Number,
   id: Schema.String,
@@ -38,6 +38,23 @@ export type SpaceImageRecord = Omit<typeof recordSchema.Type, "original"> & {
 const decodeRecord = Schema.decodeUnknownSync(recordSchema, { onExcessProperty: "error" });
 class SpaceImageAdmissionError extends SpaceIntentAdmissionError {}
 export const spaceImageMaxBytes = 10 * 1024 * 1024;
+const spaceMediaOriginalMaxBytes = 75 * 1024 * 1024;
+export function spaceMediaKind(mime: string): "image" | "pdf" | "video" | null {
+  if (["image/png", "image/jpeg", "image/gif", "image/webp"].includes(mime)) return "image";
+  if (mime === "application/pdf") return "pdf";
+  if (mime === "video/mp4" || mime === "video/webm") return "video";
+  return null;
+}
+function mediaMaxBytes(kind: "image" | "pdf" | "video") {
+  return kind === "image" ? spaceImageMaxBytes : (kind === "pdf" ? 25 : 50) * 1024 * 1024;
+}
+export function mediaAssetId(block: C.SpaceBlock) {
+  return isKnownSpaceBlock(block) &&
+    (block.type === "image" || block.type === "pdf" || block.type === "video") &&
+    typeof block.content.assetId === "string"
+    ? C.SpaceAssetId.make(block.content.assetId)
+    : null;
+}
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 export function imageAssetId(block: C.SpaceBlock) {
   return isKnownSpaceBlock(block) &&
@@ -51,11 +68,11 @@ export function decodeSpaceImageRecord(input: unknown): SpaceImageRecord {
   if (
     !(value.original instanceof Blob) ||
     value.original.size < 1 ||
-    value.original.size > spaceImageMaxBytes ||
+    value.original.size > mediaMaxBytes(value.intent.mediaKind) ||
     value.original.size !== value.intent.expectedBytes ||
     value.original.type !== value.intent.mimeType ||
-    value.intent.mediaKind !== "image" ||
-    !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(value.intent.mimeType) ||
+    spaceMediaKind(value.intent.mimeType) !== value.intent.mediaKind ||
+    (value.version === 1) !== (value.intent.mediaKind === "image") ||
     value.intent.environmentId !== value.key.environmentId ||
     value.intent.requestId !== value.id ||
     !Number.isSafeInteger(value.sequence) ||
@@ -90,13 +107,14 @@ export function decodeSpaceImageRecord(input: unknown): SpaceImageRecord {
       value.ready.assetId !== value.handle?.assetId ||
       value.ready.byteSize !== value.original.size ||
       value.ready.mimeType !== value.intent.mimeType ||
-      !value.ready.imageDimensions)
+      (value.intent.mediaKind === "image" && !value.ready.imageDimensions))
   )
     throw new Error("Invalid ready image identity");
   if (
     ["preparing", "drafted"].includes(value.phase) &&
     (!value.placement ||
-      imageAssetId(value.placement.block) !== value.handle?.assetId ||
+      mediaAssetId(value.placement.block) !== value.handle?.assetId ||
+      value.placement.block.type !== value.intent.mediaKind ||
       value.placement.block.parentId !== null ||
       !/^[0-9a-f]{32}$/.test(value.placement.block.order) ||
       value.placement.windowIds.length > 99 ||
@@ -124,6 +142,20 @@ export function decodeSpaceImageRecord(input: unknown): SpaceImageRecord {
   freeze(metadata);
   return Object.freeze({ ...metadata, original });
 }
+export function decodeSpaceMediaRecords(values: readonly unknown[]): readonly SpaceImageRecord[] {
+  if (values.length > 2)
+    throw new Error("Media original storage exceeds two slots; all data retained");
+  const records = values.map(decodeSpaceImageRecord);
+  if (
+    new Set(records.map((r) => r.slot)).size !== records.length ||
+    new Set(records.map((r) => r.id)).size !== records.length ||
+    records.reduce((n, r) => n + r.original.size, 0) > spaceMediaOriginalMaxBytes
+  )
+    throw new Error(
+      "Media original storage exceeds its identity or 75 MiB budget; all data retained",
+    );
+  return Object.freeze(records);
+}
 export interface SpaceImageStore {
   readonly load: () => Promise<readonly SpaceImageRecord[]>;
   readonly put: (record: SpaceImageRecord, expected: number | null) => Promise<void>;
@@ -134,7 +166,7 @@ export interface SpaceImageInsertion {
   readonly key: C.SpacePageTarget;
   readonly state: () => SpaceSessionSnapshot;
   readonly complete: () => boolean;
-  readonly plan: (assetId: C.SpaceAssetId) => SpaceImagePlacement;
+  readonly plan: (assetId: C.SpaceAssetId, kind?: "image" | "pdf" | "video") => SpaceImagePlacement;
   readonly apply: (placement: SpaceImagePlacement) => void;
   readonly persist: () => Promise<void>;
 }
@@ -200,14 +232,8 @@ export class SpaceImageUploads {
       this.#hydration = this.#ports.store
         .load()
         .then((records) => {
-          if (
-            records.length > 2 ||
-            new Set(records.map((r) => r.slot)).size !== records.length ||
-            new Set(records.map((r) => r.id)).size !== records.length
-          )
-            throw new Error("Image storage exceeds two slots; all data retained");
           this.#update({
-            records: records.map(decodeSpaceImageRecord),
+            records: decodeSpaceMediaRecords(records),
             hydrated: true,
             error: null,
           });
@@ -297,15 +323,28 @@ export class SpaceImageUploads {
       await this.#ports.connect?.(key.environmentId);
       const { limits } = this.#ports.access(key.environmentId, true);
       if (this.#reserved.has(this.#key(key))) throw new Error("Page placement is reserved");
-      if (original.size > Math.min(spaceImageMaxBytes, limits.maxImageBytes))
-        throw new Error("Image exceeds current byte policy");
+      const kind = spaceMediaKind(original.type);
+      if (!kind) throw new Error("Unsupported media MIME type; original was not admitted");
+      const advertised =
+        kind === "image"
+          ? limits.maxImageBytes
+          : kind === "pdf"
+            ? limits.maxPdfBytes
+            : limits.maxVideoBytes;
+      if (original.size > Math.min(mediaMaxBytes(kind), advertised))
+        throw new Error("Media exceeds current byte policy");
+      if (
+        original.size + this.#snapshot.records.reduce((n, r) => n + r.original.size, 0) >
+        spaceMediaOriginalMaxBytes
+      )
+        throw new Error("Retained originals exceed the 75 MiB budget; resolve an original first");
       const slot = [0, 1].find((s) => !this.#snapshot.records.some((r) => r.slot === s));
       if (slot === undefined)
         throw new Error("Two image originals are retained; resolve one before adding another");
       const id = this.#ports.newId();
       return this.#write(
         decodeSpaceImageRecord({
-          version: 1,
+          version: kind === "image" ? 1 : 2,
           slot,
           sequence: 1,
           id,
@@ -317,7 +356,7 @@ export class SpaceImageUploads {
             requestId: id,
             expectedBytes: original.size,
             mimeType: original.type,
-            mediaKind: "image",
+            mediaKind: kind,
             name,
           },
         }),
@@ -337,9 +376,10 @@ export class SpaceImageUploads {
       value.assetId !== r.handle?.assetId ||
       value.byteSize !== r.original.size ||
       value.mimeType !== r.intent.mimeType ||
-      !value.imageDimensions ||
-      value.imageDimensions.width * value.imageDimensions.height >
-        Math.min(24000000, limits.maxImagePixels)
+      (r.intent.mediaKind === "image" &&
+        (!value.imageDimensions ||
+          value.imageDimensions.width * value.imageDimensions.height >
+            Math.min(24000000, limits.maxImagePixels)))
     )
       throw new Error("Ready image does not match its retained original or pixel policy");
     return value;
@@ -469,23 +509,27 @@ export class SpaceImageUploads {
   }
   async validateNewRequest(request: SpaceSaveRequest) {
     try {
-      const assets = new Set(
-        request.mutations.flatMap((m) =>
-          m.kind === "delete" ? [] : imageAssetId(m.block) ? [imageAssetId(m.block)!] : [],
-        ),
-      );
+      const assets = new Map<C.SpaceAssetId, string>();
+      for (const mutation of request.mutations) {
+        if (mutation.kind === "delete") continue;
+        const assetId = mediaAssetId(mutation.block);
+        if (!assetId) continue;
+        if (assets.has(assetId) && assets.get(assetId) !== mutation.block.type)
+          throw new Error("Media kind mismatch in new intent");
+        assets.set(assetId, mutation.block.type);
+      }
       if (!assets.size) return;
       await this.#ports.connect?.(request.key.environmentId);
       const { session } = this.#ports.access(request.key.environmentId, true);
-      for (const assetId of assets) {
+      for (const [assetId, kind] of assets) {
         const value = await this.#ports.metadata({
           environmentId: request.key.environmentId,
           assetId,
         });
         if (
           value.assetId !== assetId ||
-          !value.mimeType.startsWith("image/") ||
-          !value.imageDimensions
+          spaceMediaKind(value.mimeType) !== kind ||
+          (kind === "image" && !value.imageDimensions)
         )
           throw new Error(
             "Image is no longer ready; original/draft retained for explicit recovery",
@@ -516,7 +560,7 @@ export class SpaceImageUploads {
           }),
         );
         this.#sameSession(r, session, true);
-        const placement = target.plan(r.handle!.assetId);
+        const placement = target.plan(r.handle!.assetId, r.intent.mediaKind);
         this.#binding = { id, key: r.key };
         this.#ports.changed();
         await target.persist();
@@ -624,7 +668,7 @@ export class SpaceImageUploads {
           throw new Error("Resolve the exact pending document receipt first");
         const absent =
           !s.memberIds.includes(p.block.id) &&
-          !s.blocks.some((b) => b.id === p.block.id || imageAssetId(b) === r.handle!.assetId);
+          !s.blocks.some((b) => b.id === p.block.id || mediaAssetId(b) === r.handle!.assetId);
         const unsentRemoved = s.baseRevision === p.revision && absent;
         // A clean complete window is authoritative absence after a save or discarded conflict.
         const cancelled =

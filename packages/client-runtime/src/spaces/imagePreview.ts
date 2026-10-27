@@ -1,4 +1,5 @@
 export class SpaceImagePreviewBudget {
+  #heavy: object | null = null;
   readonly #leases = new Map<object, { pixels: number; enlarged: boolean }>();
   watch(pixels: number) {
     const listeners = new Set<() => void>();
@@ -38,6 +39,40 @@ export class SpaceImagePreviewBudget {
         lease.enlarge(value);
         enlarged = value;
       },
+    };
+  }
+  watchHeavy() {
+    const listeners = new Set<() => void>();
+    let token: object | null = null;
+    let snapshot: { active: boolean; error: unknown } = { active: false, error: null };
+    const admit = () => {
+      if (token || !listeners.size) return;
+      if (this.#heavy)
+        snapshot = {
+          active: false,
+          error: new Error("Close the other PDF or video preview first"),
+        };
+      else {
+        token = {};
+        this.#heavy = token;
+        snapshot = { active: true, error: null };
+      }
+      for (const listener of listeners) listener();
+    };
+    return {
+      getSnapshot: () => snapshot,
+      subscribe: (listener: () => void) => {
+        listeners.add(listener);
+        admit();
+        return () => {
+          listeners.delete(listener);
+          if (listeners.size) return;
+          if (this.#heavy === token) this.#heavy = null;
+          token = null;
+          snapshot = { active: false, error: null };
+        };
+      },
+      retry: admit,
     };
   }
   acquire(pixels: number) {

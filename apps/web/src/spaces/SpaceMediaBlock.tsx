@@ -13,11 +13,13 @@ import {
   isKnownSpaceBlock,
   canEditSpaceBlock,
   isSafeSpaceLink,
+  spaceMediaKind,
 } from "@t2code/client-runtime/spaces";
 import { useAssetUrlState, useAssetUrlRefresh } from "../assets/assetUrls";
 import { useEnvironment } from "../state/environments";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogPopup, DialogTitle } from "../components/ui/dialog";
+import { SpaceHeavyMediaView } from "./SpaceHeavyMediaView";
 import { spaceImages, spaceImagePreviews } from "./imageRuntime";
 
 function Caption({ runs }: { runs: SpaceRichText }) {
@@ -213,44 +215,44 @@ export function SpaceMediaBlock({
       const result = await images.readMetadata(environmentId, assetId);
       if (request !== lifetime.current || !current() || !result.current()) return;
       if (
-        block.type !== "image" ||
-        !result.metadata.mimeType.startsWith("image/") ||
-        !result.metadata.imageDimensions ||
-        result.metadata.byteSize > 10 * 1024 * 1024
+        spaceMediaKind(result.metadata.mimeType) !== block.type ||
+        (block.type === "image" &&
+          (!result.metadata.imageDimensions || result.metadata.byteSize > 10 * 1024 * 1024)) ||
+        (block.type === "pdf" && result.metadata.byteSize > 25 * 1024 * 1024) ||
+        (block.type === "video" && result.metadata.byteSize > 50 * 1024 * 1024)
       )
-        throw new Error("This media has no image preview");
+        throw new Error("This media exceeds its supported preview policy");
       setSource(result);
       setError(null);
     } catch (e) {
       if (request === lifetime.current && current())
-        setError(e instanceof Error ? e.message : "Image unavailable");
+        setError(e instanceof Error ? e.message : "Media unavailable");
     } finally {
       pending.current = false;
     }
   };
   return (
     <section aria-label={`${block.type} block`} className="space-y-2">
-      <p>
-        {block.type === "image"
-          ? "Image"
-          : `${block.type.toUpperCase()} preview is not implemented; download is available.`}
-      </p>
-      {block.type === "image" ? (
-        <Button
-          variant="outline"
-          disabled={!allowed}
-          onClick={() => {
-            if (active) {
-              setSource(null);
-            } else {
-              void preview();
-            }
-          }}
-        >
-          {active ? "Close image" : "Preview image"}
-        </Button>
-      ) : null}
-      {active ? (
+      <p>{block.type.toUpperCase()} · read-only media</p>
+      <Button
+        variant="outline"
+        disabled={!allowed}
+        onClick={() => {
+          if (active) setSource(null);
+          else void preview();
+        }}
+      >
+        {active ? "Close preview" : `Open ${block.type} preview`}
+      </Button>
+      {active && block.type !== "image" ? (
+        <SpaceHeavyMediaView
+          key={JSON.stringify([environmentId, assetId, active.metadata.digest])}
+          environmentId={environmentId}
+          metadata={active.metadata}
+          kind={block.type === "pdf" ? "pdf" : "video"}
+          current={() => current() && active.current()}
+        />
+      ) : active ? (
         <ImagePreview
           key={JSON.stringify([environmentId, assetId, active.metadata.digest])}
           environmentId={environmentId}

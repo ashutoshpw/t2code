@@ -25,6 +25,7 @@ import {
   SpaceImageUploads,
   decodeSpaceImageRecord,
   imageAssetId,
+  mediaAssetId,
   type SpaceImageRecord,
   type SpaceImageStore,
   type SpaceReferenceAccess,
@@ -6337,6 +6338,24 @@ const decodeImageBatch = Schema.decodeUnknownSync(C.SpaceApplyBlockBatchResult);
 const decodeImageMetadata = Schema.decodeUnknownSync(C.SpaceAssetMetadata);
 const decodeImageGrant = Schema.decodeUnknownSync(C.SpaceAssetUploadCreateResult);
 const decodeImageStatus = Schema.decodeUnknownSync(C.SpaceAssetUploadStatus);
+const pdfBytes = new TextEncoder().encode("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n");
+const videoBytes = new Uint8Array([
+  0,
+  0,
+  0,
+  24,
+  ...new TextEncoder().encode("ftypisom"),
+  0,
+  0,
+  0,
+  0,
+  ...new TextEncoder().encode("isommp42"),
+  0,
+  0,
+  0,
+  8,
+  ...new TextEncoder().encode("mdat"),
+]);
 const imageBytes = new Uint8Array([
   137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 4, 0, 0,
   0, 181, 28, 12, 2, 0, 0, 0, 11, 73, 68, 65, 84, 120, 218, 99, 252, 255, 31, 0, 3, 3, 2, 0, 239,
@@ -6460,7 +6479,7 @@ const imageWorkflowFixture = Effect.fn("SpaceImageWorkflowTest.fixture")(functio
         : null,
     write: async (key: C.SpacePageTarget, value: SpaceDocumentDraft | null) => {
       const decoded = value === null ? null : decodeSpaceDocumentDraft(value, key);
-      if (control.failDraft && decoded?.blocks.some((b) => imageAssetId(b)))
+      if (control.failDraft && decoded?.blocks.some((b) => mediaAssetId(b)))
         throw new Error("Page draft persistence failed");
       if (decoded === null) {
         if (await h.run(fs.exists(draftPath))) await h.run(fs.remove(draftPath));
@@ -6545,7 +6564,7 @@ const imageWorkflowFixture = Effect.fn("SpaceImageWorkflowTest.fixture")(functio
         const window = await h.run(
           service.readBlocks({ ...key, revision: page.page.revision, limit: 100 }),
         );
-        return window.blocks.some((b) => b.id === blockId && imageAssetId(b) === assetId);
+        return window.blocks.some((b) => b.id === blockId && mediaAssetId(b) === assetId);
       },
     });
   let images = make();
@@ -6570,7 +6589,7 @@ const imageWorkflowFixture = Effect.fn("SpaceImageWorkflowTest.fixture")(functio
             return result;
           },
           validateNewRequest: (request) =>
-            request.mutations.some((m) => m.kind !== "delete" && imageAssetId(m.block))
+            request.mutations.some((m) => m.kind !== "delete" && mediaAssetId(m.block))
               ? images.validateNewRequest(request)
               : undefined,
         }),
@@ -6605,7 +6624,10 @@ const imageWorkflowFixture = Effect.fn("SpaceImageWorkflowTest.fixture")(functio
     },
     counts: () => ({ mintCalls, posts }),
     documentRequests,
-    file: () => new Blob([imageBytes], { type: "image/png" }),
+    file: (kind: "image" | "pdf" | "video" = "image") =>
+      new Blob([kind === "image" ? imageBytes : kind === "pdf" ? pdfBytes : videoBytes], {
+        type: kind === "image" ? "image/png" : kind === "pdf" ? "application/pdf" : "video/mp4",
+      }),
   };
 });
 
@@ -7380,6 +7402,323 @@ it.effect.each([false, true])(
             } finally {
               view.stop();
             }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["pdf", "video"] as const)(
+  "uploads a durable %s through real HTTP, recovers finalize, inserts once with local Undo and saves current/history pins",
+  (kind) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            let controller = h.createController();
+            await controller.open();
+            let view = savedView(controller);
+            let peer = savedView(controller);
+            try {
+              assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              view.edit("prior-text");
+              const record = await h.images.add(
+                h.key,
+                h.file(kind),
+                `document.${kind === "pdf" ? "pdf" : "mp4"}`,
+              );
+              assert.equal(record.version, 2);
+              assert.equal(record.intent.mediaKind, kind);
+              assert.equal(h.counts().mintCalls, 0);
+              h.control.loseFinalize = true;
+              await expect(h.images.upload(record.id)).rejects.toThrow("Lost finalize");
+              const handle = (await h.originals.load())[0]!.handle;
+              h.reload();
+              await h.images.upload(record.id);
+              assert.deepEqual(h.images.getSnapshot().records[0]!.handle, handle);
+              assert.deepEqual(
+                new Uint8Array(await h.images.getSnapshot().records[0]!.original.arrayBuffer()),
+                kind === "pdf" ? pdfBytes : videoBytes,
+              );
+              assert.deepEqual(h.counts(), { mintCalls: 1, posts: 1 });
+              let port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+              await h.images.insert(record.id, port);
+              const binding = h.images.getSnapshot().records[0]!;
+              const block = binding.placement!.block;
+              assert.equal(block.type, kind);
+              assert.deepEqual(
+                spaceDocumentBlocks(peer.state.doc),
+                controller.session.getSnapshot().blocks,
+              );
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              assert.equal(controller.session.getSnapshot().blocks.length, 1);
+              assert.include(view.state.doc.textContent, "prior-text");
+              assert.isTrue(view.bridge.adapter.redoLocal()(view.state, view.dispatch));
+              assert.equal(controller.session.getSnapshot().blocks[1]!.id, block.id);
+              h.control.holdDocument = true;
+              h.control.loseDocument = true;
+              const saving = controller.save();
+              const lost = expect(saving).rejects.toThrow("Lost image document");
+              await h.control.committed.promise;
+              const pending = controller.session.getSnapshot().pending!;
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
+              view.edit("next-");
+              assert.strictEqual(controller.session.getSnapshot().pending, pending);
+              h.control.documentReply.resolve();
+              await lost;
+              await controller.session.persistDraft();
+              view.stop();
+              peer.stop();
+              h.reload();
+              controller = h.createController();
+              await controller.open();
+              view = savedView(controller);
+              peer = savedView(controller);
+              port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+              assert.deepEqual(controller.session.getSnapshot().pending, pending);
+              await expect(h.images.release(record.id, port)).rejects.toThrow(
+                "pending document receipt",
+              );
+              await controller.save();
+              assert.equal(h.documentRequests.length, 1);
+              assert.isTrue(controller.session.getSnapshot().dirty);
+              assert.include(view.state.doc.textContent, "next-");
+              await expect(h.images.release(record.id, port)).rejects.toThrow("newer image drafts");
+              assert.isFalse(peer.bridge.adapter.remove(block.id)(peer.state, peer.dispatch));
+              await controller.save();
+              assert.equal(h.documentRequests.length, 2);
+              assert.deepEqual(
+                h.documentRequests[0]!.mutations.find(
+                  (m) => m.kind === "insert" && m.block.type === kind,
+                ),
+                { kind: "insert", block },
+              );
+              assert.isTrue(
+                h.documentRequests[1]!.mutations.every(
+                  (m) => m.kind === "replace" && m.block.type === "paragraph",
+                ),
+              );
+              const current = await h.ports.getPage(h.key);
+              const captioned: C.SpaceBlock = {
+                ...block,
+                content: {
+                  assetId: handle!.assetId,
+                  caption: [
+                    {
+                      text: "retained caption",
+                      marks: [
+                        { type: "bold", version: 1 },
+                        { type: "italic", version: 1 },
+                      ],
+                    },
+                  ],
+                },
+              };
+              const updated = await h.ports.applyBlockBatch({
+                ...h.key,
+                baseRevision: current.page.revision,
+                receiptEpoch: current.mutationAdmission.epoch,
+                mutationId: C.SpaceMutationId.make("caption-pin-fixture"),
+                generation: 1,
+                mutations: [{ kind: "replace", block: captioned }],
+              });
+              assert.equal(updated.status, "saved");
+              await controller.refresh();
+              assert.deepEqual(
+                controller.session.getSnapshot().blocks.find((b) => b.id === block.id),
+                captioned,
+              );
+              const sql = new NodeSqlite.DatabaseSync(databasePath, { readOnly: true });
+              try {
+                assert.equal(
+                  sql
+                    .prepare(
+                      "SELECT COUNT(*) AS n FROM spaces_block_asset_refs WHERE block_id=? AND asset_id=?",
+                    )
+                    .get(block.id, handle!.assetId)!.n,
+                  1,
+                );
+                assert.isAtLeast(
+                  Number(
+                    sql
+                      .prepare(
+                        "SELECT COUNT(*) AS n FROM spaces_revision_asset_refs WHERE asset_id=?",
+                      )
+                      .get(handle!.assetId)!.n,
+                  ),
+                  1,
+                );
+              } finally {
+                sql.close();
+              }
+              await h.images.release(record.id, port);
+              assert.equal((await h.originals.load()).length, 0);
+            } finally {
+              h.control.documentReply.resolve();
+              view.stop();
+              peer.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
+  "admits two shared originals up to 75 MiB and refuses oversized/new originals without evicting or minting",
+  () =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const original = await h.images.add(h.key, h.file(), "kept.png");
+            for (const [mime, cap] of [
+              ["application/pdf", 25],
+              ["video/mp4", 50],
+            ] as const) {
+              await expect(
+                h.images.add(
+                  h.key,
+                  new Blob([new Uint8Array(cap * 1024 * 1024 + 1)], { type: mime }),
+                  "too-big",
+                ),
+              ).rejects.toThrow("byte policy");
+              assert.equal((await h.originals.load())[0]!.id, original.id);
+              assert.equal((await h.originals.load()).length, 1);
+            }
+            await h.images.release(original.id);
+            const full = await h.images.add(
+              h.key,
+              new Blob([new Uint8Array(50 * 1024 * 1024)], { type: "video/mp4" }),
+              "full.mp4",
+            );
+            await expect(h.images.add(h.key, full.original, "second.mp4")).rejects.toThrow(
+              "75 MiB",
+            );
+            assert.equal((await h.originals.load()).length, 1);
+            await h.images.add(
+              h.key,
+              new Blob([new Uint8Array(25 * 1024 * 1024)], { type: "application/pdf" }),
+              "full.pdf",
+            );
+            const stored = await h.originals.load();
+            assert.equal(stored.length, 2);
+            assert.equal(
+              stored.reduce((n, r) => n + r.original.size, 0),
+              75 * 1024 * 1024,
+            );
+            await expect(h.images.add(h.key, h.file(), "third.png")).rejects.toThrow();
+            assert.deepEqual(h.counts(), { mintCalls: 0, posts: 0 });
+            assert.equal((await h.originals.load())[0]!.id, full.id);
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["pdf", "video"] as const)(
+  "releases a cancelled %s after saving other text, without replaying its unsent insertion",
+  (kind) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          yield* Effect.promise(async () => {
+            const controller = h.createController();
+            await controller.open();
+            const view = savedView(controller);
+            try {
+              assert.isTrue(view.bridge.adapter.append()(view.state, view.dispatch));
+              view.edit("keep-text");
+              const original = await h.images.add(h.key, h.file(kind), `cancel.${kind}`);
+              await h.images.upload(original.id);
+              const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+              await h.images.insert(original.id, port);
+              const placementRevision = h.images.getSnapshot().records[0]!.placement!.revision;
+              assert.isTrue(view.bridge.adapter.undoLocal()(view.state, view.dispatch));
+              await controller.save();
+              assert.isTrue(
+                h.documentRequests[0]!.mutations.every(
+                  (m) => m.kind === "insert" && m.block.type === "paragraph",
+                ),
+              );
+              assert.isAbove(controller.session.getSnapshot().baseRevision!, placementRevision);
+              assert.isTrue(controller.getSnapshot().completeWindow);
+              h.reload();
+              await h.images.release(original.id, port);
+              assert.equal((await h.originals.load()).length, 0);
+            } finally {
+              view.stop();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect.each(["pdf", "video"] as const)(
+  "retains the exact %s pending intent and original when GC wins after readiness preflight",
+  (kind) =>
+    Effect.scoped(
+      fixture((service, databasePath) =>
+        Effect.gen(function* () {
+          const h = yield* imageWorkflowFixture(service, databasePath);
+          const controller = h.createController();
+          yield* Effect.promise(() => controller.open());
+          const view = savedView(controller);
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              h.control.metadataReply.resolve();
+              view.stop();
+            }),
+          );
+          const original = yield* Effect.promise(async () => {
+            const r = await h.images.add(h.key, h.file(kind), `retained.${kind}`);
+            await h.images.upload(r.id);
+            await h.images.insert(
+              r.id,
+              view.bridge.imageInsertion(() => view.state, view.dispatch),
+            );
+            return h.images.getSnapshot().records[0]!;
+          });
+          h.control.holdMetadata = true;
+          const saving = controller.save().then(
+            () => null,
+            (error) => error,
+          );
+          yield* Effect.promise(() =>
+            Promise.race([
+              h.control.metadataEntered.promise,
+              saving.then((error) => {
+                throw error ?? new Error("Save completed before held metadata");
+              }),
+            ]),
+          );
+          for (const _step of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) yield* service.maintainAssets;
+          yield* TestClock.adjust("24 hours");
+          yield* service.maintainAssets;
+          h.control.metadataReply.resolve();
+          const error = yield* Effect.promise(() => saving);
+          assert.isNotNull(error);
+          const pending = controller.session.getSnapshot().pending!;
+          assert.isNotNull(pending);
+          yield* Effect.promise(async () => {
+            const port = view.bridge.imageInsertion(() => view.state, view.dispatch);
+            await expect(h.images.newAttempt(original.id, port)).rejects.toThrow(
+              "Resolve the original",
+            );
+            await expect(h.images.release(original.id, port)).rejects.toThrow(
+              "pending document receipt",
+            );
+            await controller.save();
+            assert.deepEqual(controller.session.getSnapshot().pending, pending);
+            assert.equal(h.documentRequests.length, 1);
+            assert.equal(h.documentRequests[0]!.mutationId, pending.mutationId);
+            assert.equal(h.documentRequests[0]!.receiptEpoch, pending.receiptEpoch);
+            assert.deepEqual((await h.originals.load())[0]!.handle, original.handle);
+            assert.deepEqual(h.counts(), { mintCalls: 1, posts: 1 });
           });
         }),
       ),

@@ -188,12 +188,12 @@ export class SpaceEditorBridge {
       current,
       state: () => this.controller.session.getSnapshot(),
       complete: () => this.controller.editorWindow().completeParents.includes(null),
-      plan: (assetId) => {
+      plan: (assetId, kind = "image") => {
         if (!current() || !this.canStructure())
           throw new Error("Resolve the current document before inserting an image");
         const snapshot = this.controller.session.getSnapshot();
         return {
-          block: this.adapter.planImage(state(), assetId),
+          block: this.adapter.planImage(state(), assetId, kind),
           revision: snapshot.baseRevision!,
           generation: snapshot.generation,
           windowIds: snapshot.blocks.map((b) => b.id),

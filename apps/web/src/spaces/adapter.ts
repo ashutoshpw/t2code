@@ -429,7 +429,11 @@ export class SpaceEditorAdapter {
     });
   }
 
-  planImage(state: EditorState, assetId: SpaceAssetId): SpaceBlock {
+  planImage(
+    state: EditorState,
+    assetId: SpaceAssetId,
+    kind: "image" | "pdf" | "video" = "image",
+  ): SpaceBlock {
     if (
       this.#options.canChangeStructure?.() === false ||
       !this.#isComplete(null, state.doc) ||
@@ -441,7 +445,7 @@ export class SpaceEditorAdapter {
       id: this.#options.allocateId(),
       parentId: null,
       order: this.#rank(null, previous, undefined),
-      type: "image",
+      type: kind,
       version: 1,
       content: { assetId },
     };
@@ -451,7 +455,7 @@ export class SpaceEditorAdapter {
       if (
         this.#options.canChangeStructure?.() === false ||
         !isKnownSpaceBlock(block) ||
-        block.type !== "image" ||
+        !["image", "pdf", "video"].includes(block.type) ||
         block.parentId !== null ||
         !this.#isComplete(null, state.doc) ||
         entries(state.doc).length >= this.#options.maxBlocks ||
@@ -707,7 +711,7 @@ export class SpaceEditorAdapter {
         (entry.node.type.name === "spaceAtom" &&
           entry.block.type !== "divider" &&
           !(
-            entry.block.type === "image" &&
+            ["image", "pdf", "video"].includes(entry.block.type) &&
             isKnownSpaceBlock(entry.block) &&
             !this.#committed.has(id)
           )) ||
@@ -721,7 +725,10 @@ export class SpaceEditorAdapter {
           (item) =>
             !canEditSpaceEditorBlock(item.block) ||
             (["child_page", "image", "pdf", "video"].includes(item.block.type) &&
-              !(item.block.type === "image" && !this.#committed.has(item.block.id))),
+              !(
+                ["image", "pdf", "video"].includes(item.block.type) &&
+                !this.#committed.has(item.block.id)
+              )),
         )
       )
         return false;

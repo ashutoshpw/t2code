@@ -33,19 +33,20 @@ export function SpaceImageControls({
     void operation.catch(setLocalError);
   };
   const error = localError ?? state.error;
-  if (!supported) return <p>Image uploads are not advertised by this environment.</p>;
+  if (!supported) return <p>Media uploads are not advertised by this environment.</p>;
   return (
-    <section aria-label="Page images" className="space-y-2">
+    <section aria-label="Page media" className="space-y-2">
       <p>
-        Image originals use two local slots (10 MiB each). They remain until saved or explicitly
-        released. Upload cancellation does not delete remote bytes.
+        Media originals share two local slots and 75 MiB total (image 10 MiB, PDF 25 MiB, video 50
+        MiB). They remain until saved or explicitly released. Upload cancellation does not delete
+        remote bytes.
       </p>
       <label>
-        Choose image
+        Choose image, PDF or video
         <Input
           key={state.records.length}
           type="file"
-          accept="image/png,image/jpeg,image/gif,image/webp"
+          accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,video/mp4,video/webm"
           disabled={!writable || state.busy}
           onChange={(event) => {
             setFile(event.target.files?.[0] ?? null);
@@ -69,7 +70,7 @@ export function SpaceImageControls({
         Keep original locally
       </Button>
       {file ? <p>{file.name} is selected but not yet stored.</p> : null}
-      {state.busy ? <p role="status">Finishing one image operation…</p> : null}
+      {state.busy ? <p role="status">Finishing one media operation…</p> : null}
       {state.busy ? (
         <Button variant="outline" onClick={() => owner.abort()}>
           Abort active byte upload
@@ -87,7 +88,7 @@ export function SpaceImageControls({
                 upload: "Upload retained",
                 ready: "Ready to insert",
                 preparing: "Insertion needs recovery",
-                drafted: "Image draft ready",
+                drafted: "Media draft ready",
               }[record.phase]
             }{" "}
             · original retained
@@ -115,7 +116,7 @@ export function SpaceImageControls({
               >
                 {record.phase === "preparing"
                   ? "Finish retained insertion"
-                  : "Insert image at page end"}
+                  : "Insert media at page end"}
               </Button>
             ) : null}
             <Button
@@ -149,7 +150,7 @@ export function SpaceImageControls({
           ) : null}
           {record.phase === "drafted" ? (
             <p>
-              Save the page draft. Release verifies the acknowledged image or an unsent removal;
+              Save the page draft. Release verifies the acknowledged media or an unsent removal;
               unresolved receipts retain the original.
             </p>
           ) : null}

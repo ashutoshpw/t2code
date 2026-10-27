@@ -1,6 +1,6 @@
 import {
   SpaceRootReorder,
-  imageAssetId,
+  mediaAssetId,
   checkSpaceStructureDrafts,
   createSpaceServiceSessionAdapter,
 } from "@t2code/client-runtime/spaces";
@@ -90,7 +90,7 @@ export function spaceDocuments(registry: AtomRegistry.AtomRegistry): SpaceDocume
       getPage,
       limits: () => access(true),
       validateNewRequest: (request) =>
-        request.mutations.some((m) => m.kind !== "delete" && imageAssetId(m.block))
+        request.mutations.some((m) => m.kind !== "delete" && mediaAssetId(m.block))
           ? spaceImages(registry).validateNewRequest(request)
           : undefined,
       applyBlockBatch: async (input) => {

@@ -458,13 +458,13 @@ export class SpaceDocumentSession {
         }
         // Unsent identities may already be referenced by the draft or clipboard history.
         if (!members.has(id) && !intent.inserted) continue;
-        // A cancelled unsent image must not require its unpinned asset to survive GC.
+        // A cancelled unsent media must not require its unpinned asset to survive GC.
         if (
           !members.has(id) &&
           !into &&
           intent.inserted &&
           isKnownSpaceBlock(intent.inserted) &&
-          intent.inserted.type === "image"
+          ["image", "pdf", "video"].includes(intent.inserted.type)
         )
           continue;
         if (!members.has(id)) nextMutations.push({ kind: "insert", block: intent.inserted! });
