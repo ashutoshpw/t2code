@@ -1,11 +1,11 @@
 import * as Effect from "effect/Effect";
 import * as SpacesSql from "../SpacesSql.ts";
 
-// Provisional unpublished slot; restack and renumber after the final storage migration tail.
 export default Effect.gen(function* () {
   const sql = yield* SpacesSql.SpacesSql;
   yield* sql`CREATE TABLE spaces_asset_reconciliation (
     singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+    format_version INTEGER NOT NULL DEFAULT 0 CHECK(format_version >= 0),
     block_cursor TEXT NOT NULL DEFAULT '', blocks_done INTEGER NOT NULL DEFAULT 0,
     history_page TEXT NOT NULL DEFAULT '', history_revision INTEGER NOT NULL DEFAULT -1,
     history_done INTEGER NOT NULL DEFAULT 0, blob_cursor TEXT NOT NULL DEFAULT '', blobs_done INTEGER NOT NULL DEFAULT 0,

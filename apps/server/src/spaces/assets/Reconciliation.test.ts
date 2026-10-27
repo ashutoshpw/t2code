@@ -155,6 +155,7 @@ const progress = Effect.fn("SpacesReconciliationTest.progress")(function* (
     const sql = yield* SqlClient.SqlClient;
     return {
       state: (yield* sql<{
+        readonly format_version: number;
         readonly block_cursor: string;
         readonly blocks_done: number;
         readonly history_revision: number;
@@ -831,4 +832,90 @@ it.effect("invalidates an open staging sweep after actual staging becomes verifi
       );
     }),
   ),
+);
+
+it.effect(
+  "reopens an older completed reconciliation format and discovers future history behind its cursor",
+  () =>
+    fixture(({ config, live }) =>
+      Effect.gen(function* () {
+        const first = yield* Effect.gen(function* () {
+          const { service, pageId, request } = yield* boot();
+          const asset = yield* upload("format-a");
+          yield* service.applyBlockBatch(
+            request("format-insert", 0, [{ kind: "insert", block: media("a", asset.assetId) }]),
+          );
+          yield* service.applyBlockBatch(
+            request("format-delete", 1, [{ kind: "delete", blockId: C.SpaceBlockId.make("a") }]),
+          );
+          for (const _pass of [0, 1, 2, 3, 4, 5]) yield* service.maintainAssets;
+          expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+            currentPending: false,
+            historyPending: false,
+            unresolved: false,
+          });
+          return { pageId, asset };
+        }).pipe(Effect.provide(live()), Effect.scoped);
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          const [row] = yield* sql<{
+            readonly mutation_id: string;
+            readonly created_at_ms: number;
+            readonly expires_at_ms: number;
+            readonly payload: string;
+            readonly logical_bytes: number;
+          }>`SELECT * FROM spaces_revisions WHERE page_id=${first.pageId} AND to_revision=2`;
+          const payload = JSON.stringify({ ...JSON.parse(row!.payload), version: 999 });
+          const logicalBytes = Buffer.byteLength(
+            JSON.stringify({
+              pageId: first.pageId,
+              toRevision: 2,
+              mutationId: row!.mutation_id,
+              createdAtMs: row!.created_at_ms,
+              expiresAtMs: row!.expires_at_ms,
+              payload,
+              assetIds: [first.asset.assetId],
+            }),
+          );
+          const delta = logicalBytes - row!.logical_bytes;
+          yield* sql`UPDATE spaces_revisions SET payload=${payload},logical_bytes=${logicalBytes} WHERE page_id=${first.pageId} AND to_revision=2`;
+          yield* sql`UPDATE spaces_pages SET retained_revision_bytes=retained_revision_bytes+${delta} WHERE page_id=${first.pageId}`;
+          yield* sql`UPDATE spaces_core SET revision_bytes=revision_bytes+${delta}`;
+          yield* sql`UPDATE spaces_asset_reconciliation SET format_version=2,block_cursor='zzzz',blocks_done=1,history_page='zzzz',history_revision=999,history_done=1`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath })));
+        yield* Effect.gen(function* () {
+          const service = yield* Service.SpacesService;
+          expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+            currentPending: true,
+            historyPending: true,
+            gcEnabled: false,
+          });
+          expect((yield* progress(config)).state).toMatchObject({
+            format_version: 3,
+            block_cursor: "",
+            history_revision: -1,
+          });
+          const before = yield* inspect(config);
+          for (const _pass of [0, 1, 2, 3, 4]) yield* service.maintainAssets;
+          expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+            currentPending: false,
+            historyPending: false,
+            unresolved: true,
+            gcEnabled: false,
+          });
+          expect((yield* progress(config)).issues).toEqual([
+            {
+              kind: "history",
+              entity: JSON.stringify([first.pageId, 2]),
+              reason: "unknown_payload",
+            },
+          ]);
+          expect((yield* inspect(config)).history).toEqual(before.history);
+          expect((yield* inspect(config)).revisions).toEqual(before.revisions);
+          expect(yield* service.getAssetMetadata({ ...env, assetId: first.asset.assetId })).toEqual(
+            first.asset,
+          );
+        }).pipe(Effect.provide(live()), Effect.scoped);
+      }),
+    ),
 );

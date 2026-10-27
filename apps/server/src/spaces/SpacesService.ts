@@ -357,6 +357,9 @@ const make = Effect.fn("SpacesService.make")(function* (
         Effect.gen(function* () {
           const sql = Context.get(context, SpacesSql.SpacesSql);
           yield* sql.withTransaction(
+            Reconciliation.initialize().pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+          );
+          yield* sql.withTransaction(
             SearchStore.checkModule().pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
           );
           yield* sql`UPDATE spaces_asset_reconciliation SET assets_done = 0,staging_done = 0 WHERE singleton = 1`;

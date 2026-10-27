@@ -35,16 +35,22 @@ export const createCaptureBudget = () => ({
   bytes: 0,
   protectedRevisions: new Set<string>(),
 });
-function reserve(used: ReturnType<typeof createCaptureBudget>, row: RevisionRow) {
+const reserve = Effect.fn("SpacesRevisions.reserveCleanup")(function* (
+  used: ReturnType<typeof createCaptureBudget>,
+  row: RevisionRow,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  const issues =
+    yield* sql`SELECT 1 FROM spaces_asset_reconciliation_issues WHERE kind='history' AND entity=${canonical([row.page_id, row.to_revision])}`;
   if (
-    used.rows + 1 + row.asset_count > limits.cleanupBatchRows ||
+    used.rows + 1 + row.asset_count + issues.length > limits.cleanupBatchRows ||
     used.bytes + row.logical_bytes > limits.cleanupBatchBytes
   )
     return false;
-  used.rows += 1 + row.asset_count;
+  used.rows += 1 + row.asset_count + issues.length;
   used.bytes += row.logical_bytes;
   return true;
-}
+});
 
 const remove = Effect.fn("SpacesRevisions.remove")(function* (rows: readonly RevisionRow[]) {
   const sql = yield* SpacesSql.SpacesSql;
@@ -67,7 +73,7 @@ export const prune = Effect.fn("SpacesRevisions.prune")(function* (now: number) 
   const used = createCaptureBudget();
   const selected: RevisionRow[] = [];
   for (const row of expired) {
-    if (!reserve(used, row)) break;
+    if (!(yield* reserve(used, row))) break;
     selected.push(row);
   }
   yield* remove(selected);
@@ -182,7 +188,7 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
       pageBytes <= limits.maxPageBytes
     )
       continue;
-    if (!reserve(used, row)) capacity(pageBytes);
+    if (!(yield* reserve(used, row))) capacity(pageBytes);
     selected.push(row);
     count--;
     pageBytes -= row.logical_bytes;
@@ -202,7 +208,7 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
     for (const row of oldest) {
       if (environmentBytes <= limits.maxEnvironmentBytes) break;
       if (used.protectedRevisions.has(canonical([row.page_id, row.to_revision]))) continue;
-      if (!reserve(used, row)) capacity(pageBytes, environmentBytes);
+      if (!(yield* reserve(used, row))) capacity(pageBytes, environmentBytes);
       evicted.push(row);
       environmentBytes -= row.logical_bytes;
     }
@@ -219,4 +225,8 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
   yield* sql`UPDATE spaces_core SET revision_bytes = revision_bytes + ${bytes} WHERE singleton = 1`;
   used.protectedRevisions.add(canonical([input.pageId, input.toRevision]));
   yield* Reconciliation.noteRevision(input.pageId, input.toRevision, payload);
+  const issues =
+    yield* sql`SELECT 1 FROM spaces_asset_reconciliation_issues WHERE kind='history' AND entity=${canonical([input.pageId, input.toRevision])}`;
+  if (assetIds.length + 1 + issues.length > limits.cleanupBatchRows)
+    return yield* new C.SpacesUnavailableError({ stage: "capacity" });
 });

@@ -5,6 +5,7 @@ import { EnvironmentId } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
@@ -553,4 +554,340 @@ it.effect("preserves rich caption extensions and keeps opaque/future media read-
       }
     }).pipe(Effect.provide(live())),
   ),
+);
+
+const recoveryInput = Effect.fn("SpacesMediaTest.recoveryInput")(function* (
+  pageId: C.SpacePageId,
+  recovery: C.SpaceRecoveryOperation,
+  mutationId: string,
+) {
+  const service = yield* Service.SpacesService;
+  const library = yield* service.listSpaces(env);
+  const inspected = yield* service.inspectStructure({
+    ...env,
+    target: { kind: "page", pageId },
+    recovery,
+  });
+  return {
+    ...env,
+    receiptEpoch: library.mutationAdmission.epoch,
+    pageId,
+    mutationId,
+    guards: inspected.guards,
+  };
+});
+
+it.effect(
+  "retains uploaded media through cross-space moves, nested recovery, purge and revision pruning",
+  () =>
+    fixture(({ config, live }) =>
+      Effect.gen(function* () {
+        const first = yield* Effect.gen(function* () {
+          const { service, pageId, request } = yield* boot();
+          const library = yield* service.listSpaces(env);
+          const common = { ...env, receiptEpoch: library.mutationAdmission.epoch };
+          const a = yield* upload("lifecycle-a"),
+            b = yield* upload("lifecycle-b");
+          yield* service.applyBlockBatch(
+            request("lifecycle-insert", 0, [
+              { kind: "insert", block: media("a", a.assetId, "originalneedle") },
+              { kind: "insert", block: media("b", a.assetId, "sharedneedle") },
+            ]),
+          );
+          yield* service.applyBlockBatch(
+            request("lifecycle-replace", 1, [
+              { kind: "replace", block: media("a", b.assetId, "captionneedle") },
+            ]),
+          );
+          const placement = { pageId, parentId: null, beforeBlockId: null };
+          const childPlan = yield* service.inspectStructure({
+            ...env,
+            target: { kind: "blocks", pageId, blockIds: [] },
+            destination: { kind: "child", placement },
+          });
+          const child = yield* service.createChildPage({
+            ...common,
+            mutationId: "lifecycle-child",
+            title: "Child",
+            placement,
+            guards: childPlan.guards,
+          });
+          if (child.status !== "saved") return yield* Effect.die("Expected child");
+          const createdSpace = yield* service.createSpace({
+            ...common,
+            mutationId: "lifecycle-space",
+            title: "Elsewhere",
+          });
+          if (createdSpace.status !== "saved") return yield* Effect.die("Expected space");
+          const destination = {
+            kind: "root" as const,
+            spaceId: createdSpace.space.id,
+            beforePageId: null,
+          };
+          const pagePlan = yield* service.inspectStructure({
+            ...env,
+            target: { kind: "page", pageId },
+            destination,
+          });
+          expect(
+            (yield* service.movePage({
+              ...common,
+              mutationId: "lifecycle-page-move",
+              pageId,
+              destination,
+              guards: pagePlan.guards,
+            })).status,
+          ).toBe("saved");
+          const childPlacement = { pageId: child.page.id, parentId: null, beforeBlockId: null };
+          const blockIds = [C.SpaceBlockId.make("a")];
+          const blockPlan = yield* service.inspectStructure({
+            ...env,
+            target: { kind: "blocks", pageId, blockIds },
+            destination: { kind: "child", placement: childPlacement },
+          });
+          const move = {
+            ...common,
+            mutationId: "lifecycle-block-move",
+            sourcePageId: pageId,
+            blockIds,
+            destination: childPlacement,
+            guards: blockPlan.guards,
+          };
+          const moved = yield* service.moveBlocks(move);
+          expect(moved.status).toBe("saved");
+          const afterMove = yield* inspect(config);
+          expect(afterMove.current).toEqual([
+            { block_id: "a", asset_id: b.assetId },
+            { block_id: "b", asset_id: a.assetId },
+          ]);
+          expect(afterMove.history.map((row) => row.asset_id)).toContain(a.assetId);
+          expect(afterMove.history.map((row) => row.asset_id)).toContain(b.assetId);
+          expect((yield* service.getPage({ ...env, pageId: child.page.id })).page.spaceId).toBe(
+            createdSpace.space.id,
+          );
+          expect(yield* service.moveBlocks(move)).toEqual(moved);
+          expect(yield* inspect(config)).toEqual(afterMove);
+          const current = (yield* service.readBlocks({
+            ...env,
+            pageId: child.page.id,
+            revision: (yield* service.getPage({ ...env, pageId: child.page.id })).page.revision,
+          })).blocks[0]!;
+          yield* service.applyBlockBatch({
+            ...common,
+            mutationId: "lifecycle-caption",
+            pageId: child.page.id,
+            baseRevision: (yield* service.getPage({ ...env, pageId: child.page.id })).page.revision,
+            generation: 0,
+            mutations: [
+              {
+                kind: "replace",
+                block: {
+                  ...current,
+                  content: { assetId: b.assetId, caption: [{ text: "editedneedle", marks: [] }] },
+                },
+              },
+            ],
+          });
+          for (const _pass of [0, 1]) {
+            const result = yield* service
+              .search({ ...env, query: "editedneedle" })
+              .pipe(Effect.result);
+            if (result._tag === "Failure")
+              expect(result.failure).toMatchObject({
+                _tag: "SpaceSearchUnavailableError",
+                reason: "building",
+              });
+          }
+          expect(
+            (yield* service.search({ ...env, query: "editedneedle" })).items.map(
+              (row) => row.blockId,
+            ),
+          ).toEqual(blockIds);
+          expect((yield* service.search({ ...env, query: "captionneedle" })).items).toEqual([]);
+          const beforeTrash = (yield* inspect(config)).current;
+          expect(
+            (yield* service.trashPage(
+              yield* recoveryInput(child.page.id, "trash", "lifecycle-trash"),
+            )).status,
+          ).toBe("saved");
+          expect((yield* inspect(config)).current).toEqual(beforeTrash);
+          expect((yield* service.search({ ...env, query: "editedneedle" })).items).toEqual([]);
+          return { a, b, childId: child.page.id, pageId, beforeTrash };
+        }).pipe(Effect.provide(live()), Effect.scoped);
+        yield* Effect.gen(function* () {
+          const service = yield* Service.SpacesService;
+          expect((yield* inspect(config)).current).toEqual(first.beforeTrash);
+          expect(
+            (yield* service.restorePage(
+              yield* recoveryInput(first.childId, "restore", "lifecycle-restore"),
+            )).status,
+          ).toBe("saved");
+          expect(
+            (yield* service.search({ ...env, query: "editedneedle" })).items.map(
+              (row) => row.blockId,
+            ),
+          ).toEqual(["a"]);
+          const resolved = yield* service.resolveAssetFile({ ...env, assetId: first.b.assetId });
+          const fs = yield* FileSystem.FileSystem;
+          expect(new Uint8Array(yield* fs.readFile(resolved.path))).toEqual(pdf);
+          expect(yield* service.getAssetMetadata({ ...env, assetId: first.b.assetId })).toEqual(
+            first.b,
+          );
+          for (const _pass of Array.from({ length: 20 }, (_, i) => i))
+            yield* service.maintainAssets;
+          expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+            historyPending: false,
+            unresolved: false,
+            gcEnabled: false,
+          });
+          yield* service.trashPage(
+            yield* recoveryInput(first.childId, "trash", "lifecycle-retrash"),
+          );
+          const purge = yield* recoveryInput(first.childId, "permanentlyDelete", "lifecycle-purge");
+          const purged = yield* service.permanentlyDeletePage(purge);
+          expect(purged.status).toBe("saved");
+          const after = yield* inspect(config);
+          expect(after.current).toEqual([{ block_id: "b", asset_id: first.a.assetId }]);
+          expect(after.blocks.map((row) => row.block_id)).not.toContain("a");
+          expect(after.blocks.some((row) => row.deleted === 1)).toBe(false);
+          expect(after.history.map((row) => row.asset_id)).toContain(first.b.assetId);
+          expect((yield* service.search({ ...env, query: "editedneedle" })).items).toEqual([]);
+          expect(yield* service.permanentlyDeletePage(purge)).toEqual(purged);
+          expect(yield* inspect(config)).toEqual(after);
+          yield* TestClock.adjust("8 days");
+          expect(yield* service.permanentlyDeletePage(purge)).toEqual(purged);
+          expect((yield* inspect(config)).history).toEqual(after.history);
+          yield* service.getPage({ ...env, pageId: first.pageId });
+          const pruned = yield* inspect(config);
+          expect(pruned.history).toEqual([]);
+          expect(pruned.current).toEqual(after.current);
+          expect(pruned.core[0]?.revision_bytes).toBe(0);
+          expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+            unresolved: false,
+            gcEnabled: false,
+          });
+          expect(new Uint8Array(yield* fs.readFile(resolved.path))).toEqual(pdf);
+        }).pipe(Effect.provide(live()), Effect.scoped);
+      }),
+    ),
+);
+
+it.effect(
+  "keeps opaque moved media pinned and removes only purged or pruned reconciliation issues",
+  () =>
+    fixture(({ config, live }) =>
+      Effect.gen(function* () {
+        const { service, pageId, request } = yield* boot();
+        const asset = yield* upload("opaque-move");
+        yield* service.applyBlockBatch(
+          request("opaque-seed", 0, [{ kind: "insert", block: media("a", asset.assetId) }]),
+        );
+        const common = {
+          ...env,
+          receiptEpoch: (yield* service.listSpaces(env)).mutationAdmission.epoch,
+        };
+        const placement = { pageId, parentId: null, beforeBlockId: null };
+        const childPlan = yield* service.inspectStructure({
+          ...env,
+          target: { kind: "blocks", pageId, blockIds: [] },
+          destination: { kind: "child", placement },
+        });
+        const child = yield* service.createChildPage({
+          ...common,
+          mutationId: "opaque-child",
+          title: "Child",
+          placement,
+          guards: childPlan.guards,
+        });
+        if (child.status !== "saved") return yield* Effect.die("Expected child");
+        const payload = JSON.stringify({
+          ...media("a", asset.assetId),
+          version: 2,
+          futureEnvelope: { keep: ["界", 7] },
+        });
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          yield* sql`UPDATE spaces_pages SET block_bytes=block_bytes+${Buffer.byteLength(payload)}-(SELECT logical_bytes FROM spaces_blocks WHERE block_id='a') WHERE page_id=${pageId}`;
+          yield* sql`UPDATE spaces_blocks SET payload=${payload},logical_bytes=${Buffer.byteLength(payload)} WHERE block_id='a'`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath })));
+        const destination = { pageId: child.page.id, parentId: null, beforeBlockId: null };
+        const blockIds = [C.SpaceBlockId.make("a")];
+        const plan = yield* service.inspectStructure({
+          ...env,
+          target: { kind: "blocks", pageId, blockIds },
+          destination: { kind: "child", placement: destination },
+        });
+        expect(
+          (yield* service.moveBlocks({
+            ...common,
+            mutationId: "opaque-move",
+            sourcePageId: pageId,
+            blockIds,
+            destination,
+            guards: plan.guards,
+          })).status,
+        ).toBe("saved");
+        const moved = yield* inspect(config);
+        const movedPayload = JSON.parse(
+          String(moved.blocks.find((row) => row.block_id === "a")?.payload),
+        );
+        expect({ ...movedPayload, order: JSON.parse(payload).order }).toEqual(JSON.parse(payload));
+        expect(moved.current).toEqual([{ block_id: "a", asset_id: asset.assetId }]);
+        const issues = Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          return yield* sql<{
+            readonly kind: string;
+            readonly entity: string;
+            readonly reason: string;
+          }>`SELECT * FROM spaces_asset_reconciliation_issues ORDER BY kind,entity`;
+        }).pipe(
+          Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath, readonly: true })),
+        );
+        expect(yield* issues).toContainEqual({
+          kind: "block",
+          entity: "a",
+          reason: "unknown_payload",
+        });
+        for (const _pass of Array.from({ length: 10 }, (_, i) => i)) yield* service.maintainAssets;
+        expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+          unresolved: true,
+          gcEnabled: false,
+        });
+        yield* service.trashPage(yield* recoveryInput(child.page.id, "trash", "opaque-trash"));
+        const purge = yield* recoveryInput(child.page.id, "permanentlyDelete", "opaque-purge");
+        const before = yield* inspect(config),
+          beforeIssues = yield* issues;
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          yield* sql`CREATE TRIGGER refuse_purge BEFORE DELETE ON spaces_pages BEGIN SELECT RAISE(ABORT,'purge interrupted'); END`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath })));
+        expect(yield* service.permanentlyDeletePage(purge).pipe(Effect.flip)).toMatchObject({
+          _tag: "SpacesUnavailableError",
+        });
+        expect(yield* inspect(config)).toEqual(before);
+        expect(yield* issues).toEqual(beforeIssues);
+        yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          yield* sql`DROP TRIGGER refuse_purge`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath })));
+        expect((yield* service.permanentlyDeletePage(purge)).status).toBe("saved");
+        const retained = yield* issues;
+        expect(retained.length).toBeGreaterThan(0);
+        expect(
+          retained.every((row) => row.kind === "history" && JSON.parse(row.entity)[0] === pageId),
+        ).toBe(true);
+        expect((yield* inspect(config)).history.map((row) => row.asset_id)).toContain(
+          asset.assetId,
+        );
+        expect(yield* service.getAssetMetadata({ ...env, assetId: asset.assetId })).toEqual(asset);
+        yield* TestClock.adjust("8 days");
+        yield* service.getPage({ ...env, pageId });
+        expect(yield* issues).toEqual([]);
+        expect((yield* inspect(config)).history).toEqual([]);
+        expect((yield* service.getCapability(environmentId))?.assetReconciliation).toMatchObject({
+          unresolved: false,
+          gcEnabled: false,
+        });
+      }).pipe(Effect.provide(live())),
+    ),
 );

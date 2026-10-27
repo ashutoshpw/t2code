@@ -7,6 +7,7 @@ import { canonical, historyLimits, limits } from "../CorePolicy.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 
 export interface State {
+  readonly format_version: number;
   readonly block_cursor: string;
   readonly blocks_done: number;
   readonly history_page: string;
@@ -30,6 +31,14 @@ export const state = Effect.fn("SpacesReconciliation.state")(function* () {
   const [row] = yield* sql<State>`SELECT * FROM spaces_asset_reconciliation WHERE singleton = 1`;
   if (!row) return yield* new C.SpacesUnavailableError({ stage: "storage" });
   return row;
+});
+export const initialize = Effect.fn("SpacesReconciliation.initialize")(function* () {
+  const sql = yield* SpacesSql.SpacesSql;
+  const current = yield* state();
+  if (current.format_version > 3) return yield* new C.SpacesUnavailableError({ stage: "storage" });
+  if (current.format_version < 3)
+    yield* sql`UPDATE spaces_asset_reconciliation SET format_version = 3,
+      block_cursor = '',blocks_done = 0,history_page = '',history_revision = -1,history_done = 0 WHERE singleton = 1`;
 });
 export const issue = Effect.fn("SpacesReconciliation.issue")(function* (
   kind: string,
@@ -55,11 +64,23 @@ const tombstone = Schema.decodeUnknownOption(
   ),
   { onExcessProperty: "error" },
 );
+const normalizedChild = Schema.decodeUnknownOption(
+  Schema.Struct({
+    id: C.SpaceBlockId,
+    parentId: Schema.NullOr(C.SpaceBlockId),
+    order: Schema.String,
+    type: Schema.Literal("child_page"),
+    version: Schema.Literal(1),
+    content: Schema.Struct({}),
+  }),
+  { onExcessProperty: "error" },
+);
 const strictMark = Schema.decodeUnknownOption(C.SpaceKnownMark, { onExcessProperty: "error" });
 function references(payload: string) {
   if (Buffer.byteLength(payload) > limits.maxBlockBytes) return { assetId: null, unresolved: true };
   try {
     const value = Option.getOrNull(raw(payload));
+    if (value && Option.isSome(normalizedChild(value))) return { assetId: null, unresolved: false };
     const block = value && Option.getOrNull(known(value));
     if (!block) return { assetId: null, unresolved: true };
     const runs =
@@ -116,14 +137,33 @@ const Page = Schema.Struct({
   createdAt: Schema.String,
   updatedAt: Schema.String,
 });
-const Preimage = Schema.Struct({
-  version: Schema.Literals([1, 2]),
+const before = {
   pageBefore: Schema.NullOr(Page),
-  ownerBefore: Schema.optionalKey(
-    Schema.NullOr(Schema.Struct({ childPageId: Schema.String, ownerBlockId: Schema.String })),
-  ),
   blocksBefore: Schema.Array(Schema.Struct({ id: Schema.String, row: Schema.NullOr(Row) })),
-});
+};
+const Owner = Schema.NullOr(
+  Schema.Struct({ childPageId: Schema.String, ownerBlockId: Schema.String }),
+);
+const Preimage = Schema.Union([
+  Schema.Struct({
+    ...before,
+    version: Schema.Literals([1, 2]),
+    ownerBefore: Schema.optionalKey(Owner),
+  }),
+  Schema.Struct({
+    ...before,
+    version: Schema.Literal(3),
+    ownerBefore: Owner,
+    trashBefore: Schema.NullOr(
+      Schema.Struct({
+        batchId: Schema.String,
+        rootPageId: Schema.String,
+        trashedAtMs: Schema.Int,
+        origin: Schema.String,
+      }),
+    ),
+  }),
+]);
 const decodePreimage = Schema.decodeUnknownOption(Schema.fromJsonString(Preimage), {
   onExcessProperty: "error",
 });
@@ -138,8 +178,17 @@ function historical(payload: string) {
     let unresolved = false;
     for (const block of value.blocksBefore) {
       if (!block.row) continue;
-      if (block.row.deleted || block.row.block_id !== block.id) {
+      if (block.row.block_id !== block.id) {
         unresolved = true;
+        continue;
+      }
+      if (block.row.deleted) {
+        const deleted = Option.getOrNull(tombstone(block.row.payload));
+        unresolved ||=
+          !deleted ||
+          deleted.id !== block.id ||
+          deleted.pageId !== block.row.page_id ||
+          deleted.mergedInto !== block.row.merged_into;
         continue;
       }
       const ref = references(block.row.payload);

@@ -2,7 +2,6 @@ import * as Effect from "effect/Effect";
 
 import * as SpacesSql from "../SpacesSql.ts";
 
-// The final storage migration tail determines the numbered wrapper and ledger entry.
 export default Effect.gen(function* () {
   const sql = yield* SpacesSql.SpacesSql;
   yield* sql`CREATE TABLE spaces_asset_usage (

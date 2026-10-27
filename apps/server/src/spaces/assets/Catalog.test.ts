@@ -96,8 +96,11 @@ describe("Spaces asset catalog", () => {
             { migration_id: 2, name: "Core" },
             { migration_id: 3, name: "RevisionPreimages" },
             { migration_id: 4, name: "PageOwners" },
-            { migration_id: 5, name: "Assets" },
-            { migration_id: 6, name: "AssetReconciliation" },
+            { migration_id: 5, name: "ReferenceIdentity" },
+            { migration_id: 6, name: "Recovery" },
+            { migration_id: 7, name: "Search" },
+            { migration_id: 8, name: "Assets" },
+            { migration_id: 9, name: "AssetReconciliation" },
           ]);
           expect(yield* sql`SELECT 1 FROM spaces WHERE is_default = 1`).toHaveLength(1);
           expect(yield* Catalog.usage()).toEqual({
