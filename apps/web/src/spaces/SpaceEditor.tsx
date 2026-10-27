@@ -1,6 +1,6 @@
 import { EditorContent, useEditor, useEditorState, ReactNodeViewRenderer } from "@tiptap/react";
 import { Extension, Node as TiptapNode } from "@tiptap/core";
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { NodeSelection, type Command } from "@tiptap/pm/state";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
 import { SpaceAtomContext, SpaceAtomView } from "./SpaceAtomView";
@@ -20,12 +20,12 @@ export function SpaceEditor({
   onMoveBlocks,
   targetBlockId,
   current,
-  revealOwner,
+  sourceOwner,
   renderChild,
 }: {
   readonly targetBlockId?: SpaceBlockId | undefined;
   readonly current?: (() => boolean) | undefined;
-  readonly revealOwner?: object | null | undefined;
+  readonly sourceOwner?: { current(): boolean } | null | undefined;
   readonly renderChild?: ((block: SpaceBlock) => ReactNode) | undefined;
   readonly onMoveBlocks?: ((state: import("@tiptap/pm/state").EditorState) => void) | undefined;
   readonly adapter: SpaceEditorAdapter;
@@ -33,11 +33,6 @@ export function SpaceEditor({
   readonly editable?: boolean;
   readonly onBatch?: (batch: SpaceEditorBatch) => void;
 }) {
-  const revealed = useRef<{
-    editor: object;
-    blockId: SpaceBlockId;
-    owner: object | null | undefined;
-  } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const historyNotice = useSyncExternalStore(
     bridge?.subscribe ?? noSubscribe,
@@ -141,12 +136,12 @@ export function SpaceEditor({
     const result = bridge.revealBlock(
       editor.state,
       { ...adapter.target, blockId: targetBlockId },
-      () => current?.() === true,
+      () => sourceOwner?.current() === true && current?.() === true,
     );
     if (result.status === "loaded") {
-      revealed.current = { editor, blockId: targetBlockId, owner: revealOwner };
-      if (result.transaction && current?.()) editor.view.dispatch(result.transaction);
-      if (focus && current?.()) editor.view.focus();
+      if (result.transaction && sourceOwner?.current() && current?.())
+        editor.view.dispatch(result.transaction);
+      if (focus && sourceOwner?.current() && current?.()) editor.view.focus();
     }
   };
   const document = state?.doc;
@@ -155,32 +150,23 @@ export function SpaceEditor({
       ? bridge.revealBlock(
           state,
           { ...adapter.target, blockId: targetBlockId },
-          () => current?.() === true,
+          () => sourceOwner?.current() === true && current?.() === true,
         ).status
       : null;
   // oxlint-disable-next-line t2code/react-effect-budget -- Reveal a current URL/panel block target once in the already loaded PM view without replacing its draft.
   useEffect(() => {
-    if (!editor || !bridge || !targetBlockId) {
-      revealed.current = null;
-      return;
-    }
-    if (!document || editor.state.doc !== document || !current?.()) return;
-    if (
-      revealed.current?.editor === editor &&
-      revealed.current.blockId === targetBlockId &&
-      revealed.current.owner === revealOwner
-    )
-      return;
-    const result = bridge.revealBlock(
+    if (!editor || !bridge || editor.isDestroyed) return;
+    if (document && editor.state.doc !== document) return;
+    const result = bridge.revealNavigation(
+      editor,
       editor.state,
-      { ...adapter.target, blockId: targetBlockId },
+      targetBlockId ? { ...adapter.target, blockId: targetBlockId } : null,
+      sourceOwner,
       () => current?.() === true,
     );
-    if (result.status === "loaded") {
-      revealed.current = { editor, blockId: targetBlockId, owner: revealOwner };
-      if (result.transaction && current?.()) editor.view.dispatch(result.transaction);
-    }
-  }, [adapter, bridge, current, document, editor, revealOwner, targetBlockId]);
+    if (result?.transaction && sourceOwner?.current() && current?.())
+      editor.view.dispatch(result.transaction);
+  }, [adapter, bridge, current, document, editor, sourceOwner, targetBlockId]);
   const run = (command: Command) => {
     if (!editor || !editable) return;
     try {

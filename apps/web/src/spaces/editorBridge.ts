@@ -64,6 +64,11 @@ export class SpaceEditorBridge {
   #applying = false;
   #acknowledged: number | null;
   #notice: string | null = null;
+  #navigationReveal: {
+    view: object;
+    target: string | null;
+    pending: boolean;
+  } | null = null;
   readonly #listeners = new Set<() => void>();
   constructor(controller: SpaceDocumentController, allocateId: () => SpaceBlockId) {
     this.controller = controller;
@@ -149,6 +154,28 @@ export class SpaceEditorBridge {
         .setMeta("addToHistory", false)
         .scrollIntoView(),
     };
+  }
+  revealNavigation(
+    view: object,
+    state: EditorState,
+    target: (SpacePageTarget & { blockId: SpaceBlockId }) | null,
+    source: { current(): boolean } | null | undefined,
+    current: () => boolean,
+  ) {
+    const identity = target
+      ? JSON.stringify([target.environmentId, target.pageId, target.blockId])
+      : null;
+    if (
+      !this.#navigationReveal ||
+      this.#navigationReveal.view !== view ||
+      this.#navigationReveal.target !== identity
+    ) {
+      this.#navigationReveal = { view, target: identity, pending: target !== null };
+    }
+    if (!target || !this.#navigationReveal.pending) return null;
+    const result = this.revealBlock(state, target, () => source?.current() === true && current());
+    if (result.status === "loaded") this.#navigationReveal.pending = false;
+    return result;
   }
   blockMoveSelection(state: EditorState) {
     const snapshot = this.controller.getSnapshot();
@@ -269,6 +296,11 @@ export class SpaceEditorBridge {
           this.#applying = false;
         }
       }
+      if (
+        this.#navigationReveal &&
+        (transaction.docChanged || !state.selection.eq(result.state.selection))
+      )
+        this.#navigationReveal.pending = false;
       return result;
     } catch (error) {
       this.#message(error instanceof Error ? error.message : "This edit could not be applied");

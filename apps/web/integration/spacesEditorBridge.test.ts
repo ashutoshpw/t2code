@@ -5905,6 +5905,92 @@ it.effect(
 );
 
 it.effect(
+  "keeps user selection after a saved edit and actual rename replace the source owner for an unchanged linked target",
+  () =>
+    Effect.scoped(
+      fixture((service) =>
+        Effect.gen(function* () {
+          const h = yield* sourceFixture(service);
+          const metadata = yield* service.getPage(h.key);
+          const a = savedParagraph("navigation-a", "First", "20000000000000000000000000000000"),
+            b = savedParagraph("navigation-b", "Second", "80000000000000000000000000000000");
+          yield* service.applyBlockBatch({
+            ...h.key,
+            mutationId: "navigation-seed",
+            receiptEpoch: metadata.mutationAdmission.epoch,
+            baseRevision: 0,
+            generation: 1,
+            mutations: [a, b].map((block) => ({ kind: "insert" as const, block })),
+          });
+          yield* Effect.promise(async () => {
+            const acquired = h.documents.open(h.key),
+              doc = await acquired.ready,
+              view = savedView(doc);
+            const mounted = {},
+              target = { ...h.key, blockId: a.id };
+            const reveal = (source: SpaceReferenceController) => {
+              const result = view.bridge.revealNavigation(
+                mounted,
+                view.state,
+                target,
+                source,
+                () => true,
+              );
+              if (result?.transaction) view.dispatch(result.transaction);
+              return result;
+            };
+            try {
+              assert.equal(reveal(h.sources)?.status, "loaded");
+              assert.equal((view.state.selection as NodeSelection).node.attrs.block.id, a.id);
+              let position = -1;
+              view.state.doc.descendants((node, pos) => {
+                if (node.attrs.block?.id === b.id) position = pos + 1;
+              });
+              view.dispatch(
+                view.state.tr.setSelection(TextSelection.create(view.state.doc, position)),
+              );
+              view.edit("local-");
+              const dirty = doc.session.getSnapshot(),
+                caret = view.state.selection.toJSON();
+              const afterEdit = reveal(h.sources);
+              assert.deepEqual(view.state.selection.toJSON(), caret);
+              assert.isUndefined(afterEdit?.transaction);
+              assert.strictEqual(doc.session.getSnapshot(), dirty);
+              await doc.save();
+              const current = await h.ports.getPage(h.key);
+              await h
+                .make(h.changed)
+                .renamePage(current.page, "Renamed while editing the linked page");
+              assert.isFalse(h.sources.current());
+              const saved = doc.session.getSnapshot(),
+                before = view.state;
+              const afterSave = reveal(h.makeSources());
+              assert.deepEqual(view.state.selection.toJSON(), caret);
+              assert.isUndefined(afterSave?.transaction);
+              assert.strictEqual(view.state, before);
+              assert.strictEqual(doc.session.getSnapshot(), saved);
+              assert.isFalse(saved.dirty);
+              assert.equal(
+                (await h.run(service.getPage(h.key))).page.title,
+                "Renamed while editing the linked page",
+              );
+              const peer = h.documents.open(h.key);
+              try {
+                assert.strictEqual(await peer.ready, doc);
+              } finally {
+                peer.release();
+              }
+            } finally {
+              view.stop();
+              acquired.release();
+            }
+          });
+        }),
+      ),
+    ).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect(
   "keeps actual unloaded targets explicit and preserves a shared dirty draft until a deliberate bounded window advance",
   () =>
     Effect.scoped(

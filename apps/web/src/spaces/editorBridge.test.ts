@@ -803,6 +803,84 @@ it("reveals a loaded block without replacing a shared dirty draft or its local h
   expect(view.controller.session.getSnapshot().blocks).toEqual([a, b]);
 });
 
+it.each([false, true])(
+  "keeps navigation reveal pending through unavailable/unloaded states unless the user takes selection ownership (%s)",
+  async (userSelected) => {
+    const a = paragraph("a", "first"),
+      b = paragraph("b", "next", "80000000000000000000000000000000");
+    const view = await model([a], true),
+      mounted = {};
+    let readable = false;
+    let source = { current: () => readable };
+    view.bridge.setWritable(false);
+    const automatic = (
+      id: SpaceBlockId | null,
+      route = true,
+      owner = source,
+      instance = mounted,
+    ) => {
+      const result = view.bridge.revealNavigation(
+        instance,
+        view.state,
+        id ? { ...key, blockId: id } : null,
+        owner,
+        () => route,
+      );
+      if (result?.transaction) view.dispatch(result.transaction);
+      return result;
+    };
+    const before = view.controller.session.getSnapshot();
+    expect(automatic(b.id)?.status).toBe("unavailable");
+    expect(view.controller.session.getSnapshot()).toBe(before);
+    readable = true;
+    source = { current: () => readable };
+    expect(automatic(b.id)?.status).toBe("not-loaded");
+    if (userSelected)
+      view.dispatch(
+        view.state.tr.setSelection(
+          TextSelection.create(view.state.doc, position(view.state, a.id, 2)),
+        ),
+      );
+    view.controller.session.replaceWindow({ revision: 1, blocks: [a, b] });
+    view.synchronize();
+    const selection = view.state.selection.toJSON(),
+      snapshot = view.controller.session.getSnapshot();
+    const loaded = automatic(b.id);
+    if (userSelected) {
+      expect(loaded).toBeNull();
+      expect(view.state.selection.toJSON()).toEqual(selection);
+    } else {
+      expect(loaded?.status).toBe("loaded");
+      expect((view.state.selection as NodeSelection).node.attrs.block.id).toBe(b.id);
+    }
+    // Explicit reveal remains available after the user has taken selection ownership.
+    const explicit = view.bridge.revealBlock(view.state, { ...key, blockId: b.id }, () => readable);
+    expect(explicit.status).toBe("loaded");
+    if (explicit.transaction) view.dispatch(explicit.transaction);
+    expect(automatic(a.id, false)?.status).toBe("unavailable");
+    expect(automatic(a.id)?.status).toBe("loaded");
+    view.dispatch(
+      view.state.tr.setSelection(
+        TextSelection.create(view.state.doc, position(view.state, b.id, 1)),
+      ),
+    );
+    const caret = view.state.selection.toJSON();
+    readable = false;
+    expect(automatic(a.id)).toBeNull();
+    readable = true;
+    source = { current: () => readable };
+    expect(automatic(a.id)).toBeNull();
+    expect(view.state.selection.toJSON()).toEqual(caret);
+    expect(automatic(null)).toBeNull();
+    expect(automatic(a.id)?.status).toBe("loaded");
+    expect(automatic(a.id, true, source, {})?.status).toBe("loaded");
+    const denied = view.bridge.revealBlock(view.state, { ...key, blockId: b.id }, () => false);
+    expect(denied.status).toBe("unavailable");
+    expect(view.controller.session.getSnapshot()).toBe(snapshot);
+    expect([undoDepth(view.state), redoDepth(view.state)]).toEqual([0, 0]);
+  },
+);
+
 it("opens only known current child-marker identities and preserves opaque marker payloads", async () => {
   const known = {
     ...paragraph("child", ""),

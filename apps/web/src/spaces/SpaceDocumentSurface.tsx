@@ -192,7 +192,7 @@ function DocumentContent({
           adapter={bridge.adapter}
           bridge={bridge}
           targetBlockId={targetBlockId}
-          revealOwner={sources}
+          sourceOwner={sources}
           current={canReadSource}
           renderChild={renderChild}
           onMoveBlocks={
