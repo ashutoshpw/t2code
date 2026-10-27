@@ -1,3 +1,4 @@
+import { SpaceContextCaptureInput, SpaceContextCaptureResult } from "./composerContext.ts";
 import {
   OrchestrationV2SearchThreadError,
   OrchestrationV2SearchThreadInput,
@@ -411,6 +412,7 @@ export const WS_METHODS = {
   spacesPagesPermanentlyDelete: "spaces.pages.permanentlyDelete",
   spacesTrashList: "spaces.trash.list",
   spacesSearch: "spaces.search",
+  spacesContextCapture: "spaces.context.capture",
 
   projectsList: "projects.list",
   projectsAdd: "projects.add",
@@ -729,6 +731,12 @@ export const WsSpacesSearchRpc = Rpc.make(WS_METHODS.spacesSearch, {
 export const WsSpacesTrashListRpc = Rpc.make(WS_METHODS.spacesTrashList, {
   payload: Spaces.SpaceTrashListInput,
   success: Spaces.SpaceTrashListResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesContextCaptureRpc = Rpc.make(WS_METHODS.spacesContextCapture, {
+  payload: SpaceContextCaptureInput,
+  success: SpaceContextCaptureResult,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
 
@@ -2118,6 +2126,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesPagesPermanentlyDeleteRpc,
   WsSpacesTrashListRpc,
   WsSpacesSearchRpc,
+  WsSpacesContextCaptureRpc,
 
   WsGuestShareCreateRpc,
   WsServerProbeRpc,

@@ -26,6 +26,8 @@ import {
   WsSpacesPagesPermanentlyDeleteRpc,
   WsSpacesTrashListRpc,
   WsSpacesSearchRpc,
+  WsSpacesContextCaptureRpc,
+  SpaceContextCaptureInput,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
@@ -67,6 +69,7 @@ export const group = RpcGroup.make(
   WsSpacesAssetsUploadGetRpc.setPayload(strictPayload(C.SpaceAssetUploadInput)),
   WsSpacesAssetsUploadFinalizeRpc.setPayload(strictPayload(C.SpaceAssetUploadInput)),
   WsSpacesAssetsGetRpc.setPayload(strictPayload(C.SpaceAssetGetInput)),
+  WsSpacesContextCaptureRpc.setPayload(strictPayload(SpaceContextCaptureInput)),
   WsSpacesListRpc.setPayload(strictPayload(C.SpaceListInput)),
   WsSpacesCreateRpc.setPayload(
     strictPayload(C.SpaceCreateInput, (input) => ({ operation: "createSpace", input })),
@@ -131,6 +134,7 @@ export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: str
     [WS_METHODS.spacesAssetsUploadFinalize]: (input) =>
       service.finalizeAssetUpload(input, callerId),
     [WS_METHODS.spacesAssetsGet]: (input) => service.getAssetMetadata(input),
+    [WS_METHODS.spacesContextCapture]: (input) => service.captureContextSnapshot(input),
     [WS_METHODS.spacesList]: (input) => service.listSpaces(input),
     [WS_METHODS.spacesCreate]: (input) => service.createSpace(input),
     [WS_METHODS.spacesRename]: (input) => service.renameSpace(input),

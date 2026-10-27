@@ -7,6 +7,7 @@ import {
   WS_METHODS,
   WsServerRefreshProvidersRpc,
   RpcScopeAuthorization,
+  SpaceContextCaptureResult,
   type AuthEnvironmentScope,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
@@ -31,6 +32,9 @@ import { WS_RPC_SERVER_OPTIONS } from "../ws.ts";
 import { canonical } from "./CorePolicy.ts";
 import * as SpacesRpc from "./Rpc.ts";
 import * as SpacesService from "./SpacesService.ts";
+
+const decodeCapture = Schema.decodeUnknownSync(SpaceContextCaptureResult);
+const isCapture = Schema.is(SpaceContextCaptureResult);
 
 const environmentId = EnvironmentId.make("encoded-spaces");
 const env = { environmentId };
@@ -144,7 +148,7 @@ const fixture = Effect.fn("SpacesRpcTest.fixture")(function* <A, E>(
   use: Effect.Effect<
     A,
     E,
-    SpacesService.SpacesService | ServerSecretStore.ServerSecretStore | import("effect/Scope").Scope
+    SpacesService.SpacesService | ServerSecretStore.ServerSecretStore | Settings.ServerSettingsService | import("effect/Scope").Scope
   >,
 ) {
   const fs = yield* FileSystem.FileSystem;
@@ -164,7 +168,7 @@ const fixture = Effect.fn("SpacesRpcTest.fixture")(function* <A, E>(
               getEnvironmentId: Effect.succeed(environmentId),
             }),
           ),
-          Layer.provide(Settings.layerTest({ spacesEnabled: true })),
+          Layer.provideMerge(Settings.layerTest({ spacesEnabled: true })),
         ),
       ),
     ),
@@ -172,6 +176,102 @@ const fixture = Effect.fn("SpacesRpcTest.fixture")(function* <A, E>(
 });
 
 it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
+  it.effect("captures context snapshots through an authorized strict read RPC", () =>
+    fixture(
+      Effect.gen(function* () {
+        const service = yield* SpacesService.SpacesService;
+        const library = yield* service.listSpaces(env);
+        const created = yield* service.createPage({
+          ...env,
+          receiptEpoch: library.mutationAdmission.epoch,
+          mutationId: "capture-page",
+          title: "Capture",
+          spaceId: library.defaultSpaceId,
+          baseRootOrderRevision: 0,
+        });
+        if (created.status !== "saved") return yield* Effect.die("Expected page");
+        yield* service.applyBlockBatch({
+          ...env,
+          receiptEpoch: library.mutationAdmission.epoch,
+          mutationId: "capture-text",
+          pageId: created.page.id,
+          baseRevision: 0,
+          generation: 0,
+          mutations: [
+            {
+              kind: "insert",
+              block: {
+                id: "large-text",
+                parentId: null,
+                order: "00000000000000000000000000000001",
+                type: "paragraph",
+                version: 1,
+                content: { runs: [{ text: "x".repeat(16_001), marks: [] }] },
+              },
+            },
+          ],
+        });
+        const { request } = yield* encodedServer([AuthOrchestrationReadScope]);
+        const input = {
+          ...env,
+          contextId: "ctx_capture",
+          target: { kind: "page", pageId: created.page.id },
+        };
+        const wire = savedValue(yield* request("spaces.context.capture", input));
+        const captured = decodeCapture(wire);
+        if (captured.status !== "captured") return yield* Effect.die("Expected wire capture");
+        assert.equal(captured.record.contextId, input.contextId);
+        assert.isTrue(captured.record.snapshot.truncated);
+        assert.lengthOf(captured.record.snapshot.text, 16_000);
+        assert.isAtMost(frameBytes(captured.record), 65_536);
+        assert.equal(captured.record.snapshot.sources[0]?.revision, 1);
+        assert.isTrue(
+          isCapture(
+            savedValue(
+              yield* request(WS_METHODS.spacesContextCapture, {
+                ...input,
+                contextId: "x".repeat(128),
+              }),
+            ),
+          ),
+        );
+        for (const invalid of [
+          { ...input, contextId: "x".repeat(129) },
+          { ...input, contextId: "x".repeat(500_000) },
+          { ...input, includeChildPages: "true" },
+        ])
+          expectDefect(yield* request(WS_METHODS.spacesContextCapture, invalid));
+        assert.equal(
+          (
+            typedFailure(
+              yield* request(WS_METHODS.spacesContextCapture, { ...input, environmentId: "other" }),
+            ) as { _tag: string }
+          )._tag,
+          "SpaceEnvironmentMismatchError",
+        );
+        expectDefect(
+          yield* request("spaces.context.capture", {
+            ...input,
+            target: { ...input.target, revision: 99 },
+          }),
+        );
+        const denied = yield* encodedServer([AuthOrchestrationOperateScope]);
+        assert.equal(
+          (typedFailure(yield* denied.request("spaces.context.capture", input)) as { _tag: string })
+            ._tag,
+          "EnvironmentAuthorizationError",
+        );
+        const settings = yield* Settings.ServerSettingsService;
+        yield* settings.updateSettings({ spacesEnabled: false });
+        assert.equal(
+          (typedFailure(yield* request(WS_METHODS.spacesContextCapture, input)) as { _tag: string })
+            ._tag,
+          "SpacesDisabledError",
+        );
+      }),
+    ),
+  );
+
   it.effect(
     "serves typed search with read scope and bounds the original search payload before decode",
     () =>

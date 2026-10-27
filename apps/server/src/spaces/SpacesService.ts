@@ -1,7 +1,12 @@
 // @effect-diagnostics nodeBuiltinImport:off -- stable IDs are allocated by the platform cryptographic generator.
 import * as NodeCrypto from "node:crypto";
 
-import { EnvironmentId, type SpacesStorageStatus } from "@t2code/contracts";
+import {
+  EnvironmentId,
+  type SpacesStorageStatus,
+  SpaceContextCaptureInput,
+  type SpaceContextCaptureResult,
+} from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -45,6 +50,7 @@ import * as PageStore from "./PageStore.ts";
 import * as PageStructure from "./PageStructure.ts";
 import * as PageRecovery from "./PageRecovery.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
+import * as ContextSnapshot from "./ContextSnapshot.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as SearchStore from "./SearchStore.ts";
 import * as Sqlite from "./Sqlite.ts";
@@ -137,6 +143,9 @@ export class SpacesService extends Context.Service<
     readonly moveBlocks: (
       input: unknown,
     ) => Effect.Effect<C.SpaceMoveBlocksResult, C.SpaceServiceError>;
+    readonly captureContextSnapshot: (
+      input: unknown,
+    ) => Effect.Effect<SpaceContextCaptureResult, C.SpaceServiceError>;
     readonly resolveReference: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReferenceResolveResult, C.SpaceServiceError>;
@@ -1295,6 +1304,20 @@ const make = Effect.fn("SpacesService.make")(function* (
     checkLimit("maxMutationBytes", byteLength(input));
     return yield* run(environmentId, () => ReferenceStore.resolve(input.target));
   });
+  const captureContextSnapshot = Effect.fn("SpacesService.captureContextSnapshot")(function* (
+    raw: unknown,
+  ) {
+    const environmentId = yield* admit();
+    const input = yield* validateRaw(raw).pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(SpaceContextCaptureInput, strict)),
+      Effect.mapError((error) =>
+        isServiceError(error) ? error : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+    yield* checkEnvironment(environmentId, input.environmentId);
+    checkLimit("maxMutationBytes", byteLength(input), 2_048);
+    return yield* run(environmentId, () => ContextSnapshot.capture(input));
+  });
   const execute = Effect.fn("SpacesService.execute")(function* (
     request: C.SpaceMutationRequest,
     meta: Receipts.Metadata,
@@ -1965,6 +1988,7 @@ const make = Effect.fn("SpacesService.make")(function* (
     restorePage,
     permanentlyDeletePage,
     listTrash,
+    captureContextSnapshot,
   });
 });
 

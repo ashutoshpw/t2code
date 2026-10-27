@@ -215,7 +215,7 @@ export const ThreadContextRecord = Schema.Struct({
 export type ThreadContextRecord = typeof ThreadContextRecord.Type;
 
 // Provisional wire ceilings; capture traversal budgets belong to SpacesService.
-const SPACE_CONTEXT_LIMITS = {
+export const SPACE_CONTEXT_LIMITS = {
   maxRecords: 8,
   maxSourcePages: 8,
   maxBlockIds: 100,
@@ -310,6 +310,25 @@ export const BlockContextRecord = Schema.Struct({
   ),
 );
 export type BlockContextRecord = typeof BlockContextRecord.Type;
+
+export const SpaceContextCaptureInput = Schema.Struct({
+  environmentId: EnvironmentId.check(spaceIdBounds),
+  contextId: ComposerContextId,
+  target: Schema.Union([
+    Schema.Struct({ kind: Schema.Literal("page"), pageId: SpacePageId.check(spaceIdBounds) }),
+    Schema.Struct({ kind: Schema.Literal("block"), blockId: SpaceBlockId.check(spaceIdBounds) }),
+  ]),
+  includeChildPages: Schema.optionalKey(Schema.Boolean),
+});
+export type SpaceContextCaptureInput = typeof SpaceContextCaptureInput.Type;
+export const SpaceContextCaptureResult = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("captured"),
+    record: Schema.Union([PageContextRecord, BlockContextRecord]),
+  }),
+  Schema.Struct({ status: Schema.Literals(["deleted", "unavailable"]) }),
+]);
+export type SpaceContextCaptureResult = typeof SpaceContextCaptureResult.Type;
 
 const spaceEnvelopeWithinLimits = (records: readonly unknown[]) => {
   const spaces = records.filter(
