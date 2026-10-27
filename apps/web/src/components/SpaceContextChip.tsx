@@ -50,7 +50,7 @@ export function SpaceContextChip({
     resolved?.controller === controller && resolved.identity === identity
       ? resolved.current()
       : null;
-  const label = record.label;
+  const label = record.label || ("title" in record ? record.title : "");
   if (!current)
     return (
       <UnresolvedChip
