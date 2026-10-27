@@ -1,3 +1,4 @@
+import { ComposerSpaceContextOptions } from "./ComposerSpaceContextOptions";
 import { ComposerContextId } from "@t2code/contracts";
 import type { ComposerContextDraft } from "@t2code/contracts";
 import { useComposerTypingGuard } from "./useComposerTypingGuard";
@@ -3695,6 +3696,15 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
               {composerAttachmentMediaRow}
 
               {composerAttachmentFileList}
+
+              {!isComposerCollapsedMobile && !isLiteralPendingAnswer && (
+                <ComposerSpaceContextOptions
+                  target={attachmentDraftTarget}
+                  context={attachmentDraft.contextDraft}
+                  prompt={prompt}
+                  disabled={!canOperateThread || isConnecting}
+                />
+              )}
 
               <div
                 className={cn("relative", isComposerResting && "flex min-w-0 items-center gap-1")}

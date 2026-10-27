@@ -49,6 +49,16 @@ also send files to T2 Code through another app's system share sheet.
 
 See [images and videos](#images-and-videos-in-messages) for previewing and saving media.
 
+## Spaces context
+
+On web and desktop, type `@` to find a Spaces page or block in the chat's environment.
+Enable Spaces in **Settings → Beta** first. Child pages are excluded unless you turn
+on **Include child pages** for that selection; you can change this in the draft
+before sending. The message receives a bounded snapshot captured at send time.
+Opening its chip visits the current source, so its content may have changed since
+the message. See [Spaces context](./spaces.md#use-a-page-or-block-in-chat) for scope,
+shortened excerpts and unavailable sources.
+
 ## Send while the agent is working
 
 On web and desktop, choose **Settings → Chat → Follow-up behavior** to queue

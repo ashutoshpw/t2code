@@ -99,6 +99,38 @@ it("maps mixed hits to persisted selectors without capturing or trusting link hi
   expect(result.status).toBe("ready");
   if (result.status !== "ready") return;
   expect(h.calls).toEqual([{ environmentId, query: "word", limit: 20 }]);
+  expect(result.select(0, ComposerContextId.make("child-page"), true)?.includeChildPages).toBe(
+    true,
+  );
+  expect(result.select(1, ComposerContextId.make("child-block"), true)?.includeChildPages).toBe(
+    true,
+  );
+  const { prepareSpaceContextSend } = await import("./sendContext.ts");
+  for (const index of [0, 1]) {
+    const selected = result.select(index, ComposerContextId.make("opted-in"), true)!;
+    let captured: import("@t2code/contracts").SpaceContextCaptureInput | undefined;
+    const pending = prepareSpaceContextSend({
+      environmentId,
+      text: "[Selected](t2-context://v1/page/opted-in)",
+      selectors: [selected],
+      access: () => ({ session: h.controller, canRead: true, supportsCapture: true }),
+      isCurrentDraft: () => true,
+      capture: async (input) => {
+        captured = input;
+        return { status: "unavailable" };
+      },
+    });
+    await expect(pending).rejects.toThrow("source is unavailable");
+    expect(captured).toEqual({
+      environmentId,
+      contextId: selected.contextId,
+      includeChildPages: true,
+      target:
+        selected.kind === "page"
+          ? { kind: "page", pageId: selected.pageId }
+          : { kind: "block", blockId: selected.blockId },
+    });
+  }
   const p = result.select(0, ComposerContextId.make("p"));
   const b = result.select(1, ComposerContextId.make("b"));
   expect(p).toMatchObject({

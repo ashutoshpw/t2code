@@ -21,6 +21,7 @@ import {
   RuntimeMode,
   ThreadContextRecord,
   ComposerContextDraft,
+  type SpaceContextSelector,
   type ServerProvider,
   type ScopedProjectRef,
   type ScopedThreadRef,
@@ -617,6 +618,11 @@ interface ComposerDraftStoreState {
     threadRef: ComposerThreadTarget,
     records: ReadonlyArray<ThreadContextRecord>,
     options?: ComposerContextAddOptions,
+  ) => void;
+  setSpaceContextIncludeChildPages: (
+    target: ComposerThreadTarget,
+    selector: SpaceContextSelector,
+    includeChildPages: boolean,
   ) => void;
   setContextDraft: (
     threadRef: ComposerThreadTarget,
@@ -3882,6 +3888,37 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
               },
             },
           }));
+        },
+        setSpaceContextIncludeChildPages: (target, selector, includeChildPages) => {
+          const key = resolveComposerDraftKey(get(), target);
+          if (!key) return;
+          set((state) => {
+            const draft = state.draftsByThreadKey[key];
+            const context = draft?.contextDraft;
+            if (
+              !draft ||
+              !context?.selectors.includes(selector) ||
+              context.selectors.filter((item) => item.contextId === selector.contextId).length !==
+                1 ||
+              context.records.some((item) => item.contextId === selector.contextId) ||
+              selector.includeChildPages === includeChildPages
+            )
+              return state;
+            return {
+              draftsByThreadKey: {
+                ...state.draftsByThreadKey,
+                [key]: {
+                  ...draft,
+                  contextDraft: {
+                    ...context,
+                    selectors: context.selectors.map((item) =>
+                      item === selector ? { ...item, includeChildPages } : item,
+                    ),
+                  },
+                },
+              },
+            };
+          });
         },
         setContextDraft: (threadRef, contextDraft) => {
           const threadKey = resolveComposerDraftKey(get(), threadRef);

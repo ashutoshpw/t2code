@@ -114,6 +114,34 @@ the message to read it from stdin.
 2 when the agent waits for an answer you give in the app. Add `--json` for a
 result that always includes the thread id.
 
+## Spaces
+
+Enable **Spaces** in **Settings → Beta** on the destination environment. A connected
+agent with Spaces access can search, read pages and blocks, resolve their current
+locations and capture bounded context. Read-only clients can inspect content and
+ready media; they cannot create or change documents, reserve uploads or finalize
+them. Editing requires a client allowed to write. If another editor changes the
+same revision, inspect the returned conflict and current content before choosing a
+new change. An uncertain write should be checked by its receipt before retrying.
+
+For an image, PDF or video, ask the agent to prepare a staged upload, then POST the
+original bytes to the returned relative URL on that environment's HTTP address.
+The upload needs the exact Content-Length; file bytes and server filesystem paths
+are not MCP arguments. Keep the same agent sign-in for upload creation, status and
+finalization. Reuse the same request ID for a retry of the same upload, check its
+status and finalize it before using the ready asset in a page. Finalization does
+not insert a block automatically. Upload grants expire after ten minutes, and the
+server enforces file-type, size and storage limits.
+
+Ready media can return metadata or a signed read URL, resolved against that same
+environment's HTTP address. Signed reads support downloads and byte ranges. Keep
+these bearer links private: anyone holding one can use it until it expires or the
+resource becomes unavailable. Revoking the agent's sign-in does not cancel an
+already issued link. Disabling Spaces or removing media can make a link unavailable
+before expiry. These links and context snapshots do not retain deleted media.
+
+For chat selection scope and child-page opt-in, see [Spaces context](./spaces.md#use-a-page-or-block-in-chat).
+
 ## Remove an agent
 
 Approved agents appear under **Settings → Sharing & access** like other clients.

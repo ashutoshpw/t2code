@@ -5,10 +5,21 @@ import { SpaceReferenceController, type SpaceSearchWindow } from "@t2code/client
 const state = vi.hoisted(() => ({
   window: null as SpaceSearchWindow | null,
   loading: false,
+  includeChildPages: false,
   next: vi.fn(),
   retry: vi.fn(),
 }));
-vi.mock("react", () => ({ useState: <A>(initial: () => A) => [initial(), () => {}] }));
+vi.mock("react", () => ({
+  useState: <A>(initial: A | (() => A)) =>
+    typeof initial === "function"
+      ? [(initial as () => A)(), () => {}]
+      : [
+          state.includeChildPages,
+          (next: boolean) => {
+            state.includeChildPages = next;
+          },
+        ],
+}));
 vi.mock("../../spaces/useSpaceReferences", () => ({
   useSpaceContextSearch: () => state,
 }));
@@ -34,6 +45,7 @@ const environmentId = EnvironmentId.make("env");
 function setup() {
   state.window = null;
   state.loading = false;
+  state.includeChildPages = false;
   state.next.mockReset();
   state.retry.mockReset();
 }
@@ -95,6 +107,25 @@ it("offers Page and Block selectors alongside files and refuses obsolete choices
   expect(items.some((item) => item.type === "path")).toBe(true);
   expect(
     items.some((item) => item.type === "space-action" && item.label === "More Spaces results"),
+  ).toBe(true);
+  expect(
+    choices.map((item) => item.select(ComposerContextId.make("default"))?.includeChildPages),
+  ).toEqual([false, false]);
+  const toggle = menu().items.find((item) => item.id === "space:include-children");
+  if (toggle?.type !== "space-action") throw Error("Missing child-page option");
+  toggle.perform();
+  const optedIn = menu().items.filter((item) => item.type === "space-context");
+  expect(optedIn[0]?.select(ComposerContextId.make("child-page"))?.includeChildPages).toBe(true);
+  expect(
+    menu()
+      .items.filter((item) => item.type === "space-context")[1]
+      ?.select(ComposerContextId.make("next-default"))?.includeChildPages,
+  ).toBe(false);
+  toggle.perform();
+  expect(
+    menu()
+      .items.filter((item) => item.type === "space-context")[1]
+      ?.select(ComposerContextId.make("child-block"))?.includeChildPages,
   ).toBe(true);
   controller.invalidate();
   expect(choices[0]?.select(ComposerContextId.make("late"))).toBeNull();

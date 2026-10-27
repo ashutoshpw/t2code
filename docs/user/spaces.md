@@ -23,3 +23,37 @@ Page and block placement controls offer one guarded Undo or Redo for the last bo
 After opening a saved chat, visit a page and choose **Open beside chat** to keep the page in a panel. Both views share the same draft. Threads returns to your previous chat. Page links can include a block target in the URL query. An already loaded target is selected without replacing the shared draft. An unloaded target stays explicit: resolve the current source if it moved, then save or resolve any draft before using First/Next windows. The app does not scan the page to find it. The page location shows its current space and parent pages; refresh the location if it changes elsewhere.
 
 Turning Spaces off keeps its data. Reading pages requires the destination environment's read permission; changing the setting requires permission to change its settings.
+
+## Use a page or block in chat
+
+On web and desktop, type `@` and search for a page or block in the chat's environment.
+Spaces results appear alongside files and threads. Search reads one window at a time;
+use **More Spaces results** to continue, including after an empty window. If the index
+is building, retry when it is ready.
+
+A Page reference includes its own blocks. A Block reference includes that block's
+subtree. Child pages are excluded by default. Turn **Include child pages** on in the
+picker for the next selection, or change the selected reference's checkbox above the
+composer before sending. The picker returns to off after a selection. These choices
+are saved with your draft. To change the scope of a copied sent snapshot, remove it
+and select its source again.
+
+Content is captured when you send, using the environment's current read access.
+The message keeps that text excerpt and the source revisions; later page edits do
+not change the sent snapshot. Opening its chip visits the current source, which may
+have moved or merged. If Spaces is disabled, disconnected, denied or the source is
+no longer available, the stored snapshot remains, but its current-source link is
+unavailable. A new send recaptures current content; it stops and keeps the draft if
+a referenced source cannot be captured.
+
+A message can reference at most eight Spaces selections. Each snapshot includes at
+most eight source pages and 100 block IDs, with additional text and traversal limits.
+Large or deep selections can be shortened, including with child pages enabled; the
+chip's details say when its stored snapshot was shortened. Select a smaller page or
+subtree when the omitted content matters. Media contributes its caption and type,
+not file bytes. Snapshots do not keep deleted source pages or media available.
+
+The Spaces context picker is available on web and desktop. A native mobile picker
+is not available yet. See [prompt recovery](./composer.md#prompt-stash) for local
+storage, attachment and retry limits, and [outside agents](./outside-agents.md#spaces)
+for MCP access.

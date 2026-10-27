@@ -2430,7 +2430,7 @@ describe("composerDraftStore attachment references", () => {
   });
 });
 
-it("hydrates Spaces selectors and copied snapshots without promoting snapshots to selectors", () => {
+it("persists child-page selector edits without changing completed snapshots or newer selectors", async () => {
   const selector = {
     version: 1,
     selection: "current",
@@ -2488,10 +2488,36 @@ it("hydrates Spaces selectors and copied snapshots without promoting snapshots t
     useComposerDraftStore.getInitialState(),
   );
   expect(merged.draftsByThreadKey[key]?.contextDraft).toEqual(contextDraft);
-  const persisted = partializeComposerDraftStoreState(merged);
-  const restored = useComposerDraftStore.persist.getOptions().merge!(
-    persisted,
-    useComposerDraftStore.getInitialState(),
-  );
-  expect(restored.draftsByThreadKey[key]?.contextDraft).toEqual(contextDraft);
+  vi.useFakeTimers();
+  try {
+    useComposerDraftStore.setState(merged);
+    const store = useComposerDraftStore.getState();
+    const target = scopeThreadRef(TEST_ENVIRONMENT_ID, ThreadId.make("spaces-recovery"));
+    const original = store.getComposerDraft(target)!.contextDraft!.selectors[0]!;
+    store.setSpaceContextIncludeChildPages(target, original, true);
+    const changed = store.getComposerDraft(target)!.contextDraft!;
+    expect(changed.selectors[0]?.includeChildPages).toBe(true);
+    expect(changed.records).toEqual(contextDraft.records);
+    expect(store.getComposerDraft(target)?.prompt).toBe(merged.draftsByThreadKey[key]?.prompt);
+    store.setSpaceContextIncludeChildPages(target, original, false);
+    expect(store.getComposerDraft(target)?.contextDraft).toEqual(changed);
+    await vi.advanceTimersByTimeAsync(300);
+    const saved = await useComposerDraftStore.persist
+      .getOptions()
+      .storage?.getItem(COMPOSER_DRAFT_STORAGE_KEY);
+    expect(saved).not.toBeNull();
+    resetComposerDraftStore();
+    await useComposerDraftStore.persist.rehydrate();
+    expect(store.getComposerDraft(target)?.contextDraft).toEqual(changed);
+    const current = store.getComposerDraft(target)!.contextDraft!.selectors[0]!;
+    store.setSpaceContextIncludeChildPages(target, current, false);
+    expect(store.getComposerDraft(target)?.contextDraft?.selectors[0]?.includeChildPages).toBe(
+      false,
+    );
+    expect(store.getComposerDraft(target)?.contextDraft?.records).toEqual(contextDraft.records);
+  } finally {
+    await useComposerDraftStore.persist.clearStorage();
+    resetComposerDraftStore();
+    vi.useRealTimers();
+  }
 });

@@ -80,6 +80,7 @@ export function useComposerMenuItems({
 }) {
   // Thread mentions rank by recency as of when the composer mounted.
   const [now] = useState(() => Date.now());
+  const [includeChildPages, setIncludeChildPages] = useState(false);
   const composerTriggerKind = composerTrigger?.kind ?? null;
   const pathTriggerQuery = composerTrigger?.kind === "path" ? composerTrigger.query : "";
   const pullRequestTriggerQuery =
@@ -179,11 +180,24 @@ export function useComposerMenuItems({
             id: `space:${hit.page.id}:${hit.blockId ?? "page"}`,
             type: "space-context" as const,
             label: hit.page.title || "Untitled page",
-            description: `${hit.blockId ? "Block" : "Page"} · ${hit.snippet}`,
+            description: `${hit.blockId ? "Block" : "Page"}${includeChildPages ? " + child pages" : ""} · ${hit.snippet}`,
             query: window.query,
-            select: (id: import("@t2code/contracts").ComposerContextId) => window.select(index, id),
+            select: (id: import("@t2code/contracts").ComposerContextId) => {
+              const selector = window.select(index, id, includeChildPages);
+              setIncludeChildPages(false);
+              return selector;
+            },
           })),
         );
+        if (window.result.items.length)
+          spaces.push({
+            id: "space:include-children",
+            type: "space-action",
+            query: window.query,
+            label: `Include child pages: ${includeChildPages ? "on" : "off"}`,
+            description: "For the next Spaces selection; capture limits still apply",
+            perform: () => setIncludeChildPages(!includeChildPages),
+          });
         if (window.result.nextCursor)
           spaces.push({
             id: "space:next",

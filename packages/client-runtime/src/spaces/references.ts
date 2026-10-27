@@ -42,7 +42,11 @@ export type SpaceSearchWindow =
       readonly query: string;
       readonly result: SpaceSearchResult;
       readonly current: () => boolean;
-      readonly select: (index: number, contextId: ComposerContextId) => SpaceContextSelector | null;
+      readonly select: (
+        index: number,
+        contextId: ComposerContextId,
+        includeChildPages?: boolean,
+      ) => SpaceContextSelector | null;
       readonly target: (index: number) => SpaceReferenceResolveInput["target"] | null;
       readonly next: () => Promise<SpaceSearchWindow>;
     };
@@ -193,7 +197,7 @@ export class SpaceReferenceController {
         query,
         result,
         current,
-        select: (index, contextId) => {
+        select: (index, contextId, includeChildPages = false) => {
           const hit = result.items[index];
           if (!current() || !this.canCapture() || !hit) return null;
           const label = Array.from(hit.page.title || "Untitled page")
@@ -205,7 +209,7 @@ export class SpaceReferenceController {
             environmentId: this.options.environmentId,
             contextId,
             label,
-            includeChildPages: false,
+            includeChildPages,
           };
           return hit.blockId
             ? { ...common, kind: "block", blockId: hit.blockId }

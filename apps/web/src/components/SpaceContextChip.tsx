@@ -51,12 +51,20 @@ export function SpaceContextChip({
       ? resolved.current()
       : null;
   const label = record.label || ("title" in record ? record.title : "");
+  const detail =
+    "snapshot" in record
+      ? record.snapshot.truncated
+        ? "Stored snapshot was shortened to fit capture limits."
+        : "Stored snapshot is preserved."
+      : record.includeChildPages
+        ? "Child pages will be included within capture limits when sent."
+        : "Child pages are excluded. Content is captured when sent.";
   if (!current)
     return (
       <UnresolvedChip
         label={label}
         {...(copyMarkdown === undefined ? {} : { copyMarkdown })}
-        tooltip="Current Spaces content is unavailable. Stored context is preserved."
+        tooltip={`Current Spaces content is unavailable. ${detail}`}
       />
     );
   return (
@@ -94,7 +102,7 @@ export function SpaceContextChip({
         }
       />
       <TooltipPopup side="top">
-        Open current {record.kind}. Stored context is preserved.
+        Open current {record.kind}. {detail}
       </TooltipPopup>
     </Tooltip>
   );
