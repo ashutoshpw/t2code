@@ -1,4 +1,4 @@
-import type { SpaceCapability } from "@t2code/contracts/spaces";
+import { SpacesUnavailableError, type SpaceCapability } from "@t2code/contracts/spaces";
 import { WS_METHODS, type EnvironmentId } from "@t2code/contracts";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
 import { Atom } from "effect/reactivity";
@@ -8,7 +8,7 @@ import * as SubscriptionRef from "effect/SubscriptionRef";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
 import { readSpacePageLocation } from "../spaces/pageLocation.ts";
 import type { SpacePageId } from "@t2code/contracts/spaces";
-import { request } from "../rpc/client.ts";
+import { request, requestGuarded } from "../rpc/client.ts";
 import {
   createEnvironmentQueryAtomFamily,
   createEnvironmentRpcCommand,
@@ -43,6 +43,11 @@ export function canBrowseSpaces(availability: SpacesAvailability) {
 
 export function createSpacesEnvironmentAtoms<R, E>(
   runtime: Atom.AtomRuntime<EnvironmentRegistry | R, E>,
+  options?: {
+    readonly capabilityAtom: (
+      environmentId: EnvironmentId,
+    ) => Atom.Atom<SpaceCapability | undefined>;
+  },
 ) {
   const changed = Atom.family((_environmentId: EnvironmentId) => Atom.make(0));
   const refreshTrigger = ({ environmentId }: { environmentId: EnvironmentId }) =>
@@ -66,6 +71,19 @@ export function createSpacesEnvironmentAtoms<R, E>(
       tag: WS_METHODS.spacesStructureInspect,
       idleTtlMs: 0,
       staleTimeMs: 0,
+    }),
+    moveBlocks: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:move-blocks",
+      tag: WS_METHODS.spacesBlocksMove,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 2 && capability.features?.blockMoves === true
+            ? requestGuarded(WS_METHODS.spacesBlocksMove, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
     }),
     movePage: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:move-page",

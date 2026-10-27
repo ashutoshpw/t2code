@@ -1,5 +1,5 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import { useContext, useEffect, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useContext, useEffect, useState, useSyncExternalStore } from "react";
 import { SpaceBlockId } from "@t2code/contracts/spaces";
 import type { SpacePageTarget } from "@t2code/contracts/spaces";
 import { Button } from "../components/ui/button";
@@ -7,8 +7,12 @@ import { spacesEnvironment } from "../state/spaces";
 import { randomUUID } from "../lib/utils";
 import { SpaceEditorBridge } from "./editorBridge";
 import { SpaceEditor } from "./SpaceEditor";
-import { spaceDocuments } from "./sessionRuntime";
+import type { SpaceBlockMoveProof } from "@t2code/client-runtime/spaces";
+import { useEnvironment } from "../state/environments";
+import { spaceRootReorder, spaceDocuments } from "./sessionRuntime";
 import type { SpaceDocumentController } from "./documentController";
+
+const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
 
 export function SpaceDocumentSurface({ target }: { target: SpacePageTarget }) {
   const registry = useContext(RegistryContext);
@@ -65,6 +69,14 @@ function message(error: unknown) {
 
 function DocumentContent({ controller }: { controller: SpaceDocumentController }) {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const registry = useContext(RegistryContext);
+  const environment = useEnvironment(controller.session.key.environmentId);
+  const capability = environment?.serverConfig?.environment.capabilities.spaces;
+  const blockPermission = useAtomValue(
+    spacesEnvironment.moveBlocks.permissionAtom(controller.session.key.environmentId),
+  );
+  const [blockMove, setBlockMove] = useState<SpaceBlockMoveProof | null>(null);
+  const [moveError, setMoveError] = useState<unknown>(null);
   const [bridge] = useState(
     () => new SpaceEditorBridge(controller, () => SpaceBlockId.make(randomUUID())),
   );
@@ -127,6 +139,27 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
         <SpaceEditor
           adapter={bridge.adapter}
           bridge={bridge}
+          onMoveBlocks={
+            capability?.version === 2 && capability.features?.blockMoves === true && blockPermission
+              ? async (state) => {
+                  try {
+                    setMoveError(null);
+                    const selected = bridge.blockMoveSelection(state);
+                    const proof = await spaceRootReorder(
+                      registry,
+                      controller.session.key.environmentId,
+                    ).selectBlocks(
+                      controller.session.key.pageId,
+                      selected.revision,
+                      selected.blockIds,
+                    );
+                    setBlockMove(proof);
+                  } catch (error) {
+                    setMoveError(error);
+                  }
+                }
+              : undefined
+          }
           editable={
             permission &&
             !controller.structureBlocked() &&
@@ -137,6 +170,23 @@ function DocumentContent({ controller }: { controller: SpaceDocumentController }
             session.status !== "uncertain"
           }
         />
+      ) : null}
+      {capability?.version === 2 && capability.features?.blockMoves !== true ? (
+        <p>Block moves are unavailable until this environment advertises support.</p>
+      ) : null}
+      {moveError ? <p role="alert">{message(moveError)}</p> : null}
+      {blockMove && snapshot.metadata ? (
+        <Suspense fallback={<p role="status">Loading move placement…</p>}>
+          <SpaceStructureControls
+            target={{ ...controller.session.key, spaceId: snapshot.metadata.page.spaceId }}
+            location={snapshot.metadata.page.location}
+            current={() =>
+              controller.getSnapshot().error === null && controller.session.getSnapshot().hydrated
+            }
+            blocks={blockMove}
+            onClose={() => setBlockMove(null)}
+          />
+        </Suspense>
       ) : null}
       <div className="flex flex-wrap gap-2">
         {(["undo", "redo"] as const).map((direction) => (

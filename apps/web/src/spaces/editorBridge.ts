@@ -101,6 +101,52 @@ export class SpaceEditorBridge {
   canStructure() {
     return this.canEdit() && this.controller.session.getSnapshot().pending === null;
   }
+  blockMoveSelection(state: EditorState) {
+    const snapshot = this.controller.getSnapshot();
+    if (
+      !this.canEdit() ||
+      this.controller.session.structureAvailability() ||
+      !this.controller.editorWindow().completeParents.includes(null)
+    )
+      throw new Error("Block moves require a clean, current and complete loaded document");
+    if (!sameSpaceValue(spaceDocumentBlocks(state.doc), snapshot.session.blocks))
+      throw new Error("Synchronize the editor before selecting a block move");
+    const selected = new Set<SpaceBlockId>();
+    if (state.selection instanceof NodeSelection && state.selection.node.attrs.block?.id)
+      selected.add(state.selection.node.attrs.block.id);
+    if (!(state.selection instanceof NodeSelection))
+      for (const point of [state.selection.$from, state.selection.$to]) {
+        for (let depth = point.depth; depth > 0; depth--) {
+          const id = point.node(depth).attrs.block?.id as SpaceBlockId | undefined;
+          if (id) {
+            selected.add(id);
+            break;
+          }
+        }
+      }
+    state.doc.nodesBetween(state.selection.from, state.selection.to, (node, pos) => {
+      if (
+        node.attrs.block?.id &&
+        pos >= state.selection.from &&
+        pos + node.nodeSize <= state.selection.to
+      )
+        selected.add(node.attrs.block.id);
+    });
+    const byId = new Map(snapshot.session.blocks.map((b) => [b.id, b]));
+    const blockIds = snapshot.session.blocks
+      .filter((block) => {
+        if (!selected.has(block.id)) return false;
+        let parent = block.parentId;
+        while (parent !== null) {
+          if (selected.has(parent)) return false;
+          parent = byId.get(parent)?.parentId ?? null;
+        }
+        return true;
+      })
+      .map((b) => b.id);
+    if (!blockIds.length) throw new Error("Select at least one loaded block");
+    return { revision: snapshot.session.baseRevision!, blockIds };
+  }
   async compensate(direction: SpaceCompensation): Promise<boolean> {
     const reason = !this.canEdit()
       ? "Saved undo/redo requires edit permission and a resolved writable document."

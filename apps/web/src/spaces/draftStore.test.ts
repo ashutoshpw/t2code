@@ -510,3 +510,91 @@ it("decodes exact nested placement receipts with zero root guards and refuses mi
   ).toThrow();
   expect(JSON.stringify(value)).toBe(before);
 });
+
+it("retains the exact block-move operation and selected-root order and rejects malformed ownership or duplicate roots", () => {
+  const destination = SpacePageId.make("block-destination");
+  const guards = {
+    pages: [
+      { pageId: key.pageId, revision: 1 },
+      { pageId: destination, revision: 2 },
+    ],
+    roots: [],
+  };
+  const ids = [SpaceBlockId.make("a"), SpaceBlockId.make("b")];
+  const value: SpaceStructureJournal = {
+    version: 1,
+    environmentId: key.environmentId,
+    history: null,
+    pending: {
+      request: {
+        operation: "moveBlocks",
+        input: {
+          environmentId: key.environmentId,
+          sourcePageId: key.pageId,
+          blockIds: ids,
+          destination: { pageId: destination, parentId: null, beforeBlockId: null },
+          guards,
+          mutationId: SpaceMutationId.make("original-block-move"),
+          receiptEpoch: SpaceReceiptEpoch.make("original-block-epoch"),
+        },
+      },
+      inverse: {
+        kind: "child",
+        placement: { pageId: key.pageId, parentId: null, beforeBlockId: null },
+      },
+      observed: guards,
+      direction: "move",
+      conflict: false,
+    },
+  };
+  const pending = value.pending;
+  if (!pending || pending.request.operation !== "moveBlocks")
+    throw new Error("Expected block move");
+  const input = pending.request.input;
+  const exact = { ...value, pending };
+  expect(decodeSpaceStructureJournal(exact, key.environmentId)).toEqual(exact);
+  const before = JSON.stringify(exact);
+  expect(() =>
+    decodeSpaceStructureJournal(
+      {
+        ...exact,
+        pending: {
+          ...exact.pending,
+          request: { ...exact.pending.request, input: { ...input, blockIds: [...ids, ids[0]] } },
+        },
+      },
+      key.environmentId,
+    ),
+  ).toThrow();
+  expect(() =>
+    decodeSpaceStructureJournal(
+      {
+        ...exact,
+        pending: {
+          ...exact.pending,
+          inverse: {
+            kind: "child",
+            placement: { pageId: destination, parentId: null, beforeBlockId: null },
+          },
+        },
+      },
+      key.environmentId,
+    ),
+  ).toThrow("ownership or inverse");
+  expect(() =>
+    decodeSpaceStructureJournal(
+      {
+        ...exact,
+        pending: {
+          ...exact.pending,
+          request: {
+            ...exact.pending.request,
+            input: { ...input, guards: { pages: [guards.pages[0]], roots: [] } },
+          },
+        },
+      },
+      key.environmentId,
+    ),
+  ).toThrow();
+  expect(JSON.stringify(exact)).toBe(before);
+});

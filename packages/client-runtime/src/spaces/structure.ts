@@ -10,6 +10,8 @@ const context = {
   sourceLocation: Schema.optionalKey(C.SpacePageLocation),
 };
 const placement = Schema.Struct({
+  operation: Schema.optionalKey(Schema.Literals(["movePage", "moveBlocks"])),
+  blockIds: Schema.optionalKey(Schema.Array(C.SpaceBlockId)),
   ...context,
   pageId: C.SpacePageId,
   destination: C.SpacePageDestination,
@@ -19,8 +21,11 @@ const placement = Schema.Struct({
 });
 const pendingSchema = Schema.Struct({
   ...context,
-  request: Schema.Struct({ operation: Schema.Literal("movePage"), input: C.SpaceMovePageInput }),
-  inverse: C.SpacePageDestination,
+  request: Schema.Union([
+    Schema.Struct({ operation: Schema.Literal("movePage"), input: C.SpaceMovePageInput }),
+    Schema.Struct({ operation: Schema.Literal("moveBlocks"), input: C.SpaceMoveBlocksInput }),
+  ]),
+  inverse: Schema.NullOr(C.SpacePageDestination),
   observed: C.SpaceStructureGuards,
   direction: Schema.Literals(["move", "undo", "redo"]),
   conflict: Schema.Boolean,
@@ -36,6 +41,9 @@ const journalSchema = Schema.Struct({
 export type SpaceStructureJournal = typeof journalSchema.Type;
 type Pending = typeof pendingSchema.Type;
 type Destination = C.SpacePageDestination;
+type MoveReceipt =
+  | { operation: "movePage"; result: C.SpaceMovePageResult }
+  | { operation: "moveBlocks"; result: C.SpaceMoveBlocksResult };
 const sameLocation = (a: C.SpacePageLocation, b: C.SpacePageLocation) =>
   a.kind === b.kind &&
   a.spaceId === b.spaceId &&
@@ -108,49 +116,84 @@ export function decodeSpaceStructureJournal(
     )
       throw new Error("Retained ownership does not match its placement");
   };
+  const roots = (ids: readonly C.SpaceBlockId[]) => {
+    if (ids.length < 1 || ids.length > 100 || new Set(ids).size !== ids.length)
+      throw new Error("Invalid selected move roots");
+  };
   const p = journal.pending;
   if (p) {
-    const input = p.request.input;
+    const request = p.request,
+      input = request.input;
     if (
       input.environmentId !== environmentId ||
       input.mutationId.length > 128 ||
-      !p.observed.pages.some((row) => row.pageId === input.pageId) ||
-      !covered(p.observed, input.guards) ||
-      (input.destination.kind === "child" && (!p.targetSpaceId || !p.sourceLocation))
+      !covered(p.observed, input.guards)
     )
-      throw new Error("Invalid retained page placement");
+      throw new Error("Invalid retained placement");
     guards(input.guards);
     guards(p.observed);
-    destination(input.destination, input.pageId, input.guards);
-    destination(p.inverse, input.pageId, p.observed);
-    source(p.sourceLocation, p.inverse);
-    if (
-      p.targetSpaceId &&
-      input.destination.kind === "root" &&
-      p.targetSpaceId !== input.destination.spaceId
-    )
-      throw new Error("Invalid retained destination space");
-    spaceJsonBytes(p.request, 1024 * 1024);
+    if (request.operation === "moveBlocks") {
+      const i = request.input;
+      roots(i.blockIds);
+      if (
+        (p.inverse !== null &&
+          (p.inverse.kind !== "child" || p.inverse.placement.pageId !== i.sourcePageId)) ||
+        !i.guards.pages.some((g) => g.pageId === i.sourcePageId) ||
+        !i.guards.pages.some((g) => g.pageId === i.destination.pageId)
+      )
+        throw new Error("Invalid retained block ownership or inverse");
+    } else {
+      const i = request.input;
+      if (
+        !p.observed.pages.some((row) => row.pageId === i.pageId) ||
+        (i.destination.kind === "child" && (!p.targetSpaceId || !p.sourceLocation))
+      )
+        throw new Error("Invalid retained page placement");
+      if (!p.inverse) throw new Error("A page move must retain its original placement");
+      destination(i.destination, i.pageId, i.guards);
+      destination(p.inverse, i.pageId, p.observed);
+      source(p.sourceLocation, p.inverse);
+      if (
+        p.targetSpaceId &&
+        i.destination.kind === "root" &&
+        p.targetSpaceId !== i.destination.spaceId
+      )
+        throw new Error("Invalid retained destination space");
+    }
+    spaceJsonBytes(request, 1024 * 1024);
   }
   const h = journal.history;
   if (h) {
-    if (
-      !h.guards.pages.some((p) => p.pageId === h.pageId) ||
-      !covered(h.observed, h.guards) ||
-      (h.destination.kind === "child" && (!h.targetSpaceId || !h.sourceLocation))
-    )
-      throw new Error("Invalid retained placement history");
     guards(h.guards);
     guards(h.observed);
-    destination(h.destination, h.pageId, h.guards);
-    destination(h.opposite, h.pageId, h.observed);
-    source(h.sourceLocation, h.opposite);
-    if (
-      h.targetSpaceId &&
-      h.destination.kind === "root" &&
-      h.targetSpaceId !== h.destination.spaceId
-    )
-      throw new Error("Invalid retained inverse space");
+    if (!h.guards.pages.some((p) => p.pageId === h.pageId) || !covered(h.observed, h.guards))
+      throw new Error("Invalid retained placement history");
+    if (h.operation === "moveBlocks") {
+      if (
+        !h.blockIds ||
+        h.destination.kind !== "child" ||
+        h.opposite.kind !== "child" ||
+        h.opposite.placement.pageId !== h.pageId ||
+        !h.guards.pages.some(
+          (g) =>
+            g.pageId === (h.destination.kind === "child" ? h.destination.placement.pageId : null),
+        )
+      )
+        throw new Error("Invalid retained block history");
+      roots(h.blockIds);
+    } else {
+      if (h.destination.kind === "child" && (!h.targetSpaceId || !h.sourceLocation))
+        throw new Error("Invalid retained placement history");
+      destination(h.destination, h.pageId, h.guards);
+      destination(h.opposite, h.pageId, h.observed);
+      source(h.sourceLocation, h.opposite);
+      if (
+        h.targetSpaceId &&
+        h.destination.kind === "root" &&
+        h.targetSpaceId !== h.destination.spaceId
+      )
+        throw new Error("Invalid retained inverse space");
+    }
     spaceJsonBytes(h, 256 * 1024);
   }
   return journal;
@@ -186,6 +229,8 @@ export interface SpaceRootReorderPorts {
   readonly list: (input: C.SpacePageListInput) => Promise<C.SpacePageListResult>;
   readonly inspect: (input: C.SpaceInspectStructureInput) => Promise<C.SpaceInspectStructureResult>;
   readonly getPage: (pageId: C.SpacePageId) => Promise<C.SpacePageGetResult>;
+  readonly capability: () => Pick<C.SpaceCapability, "version" | "features"> | undefined;
+  readonly moveBlocks: (input: C.SpaceMoveBlocksInput) => Promise<C.SpaceMoveBlocksResult>;
   readonly move: (input: C.SpaceMovePageInput) => Promise<C.SpaceMovePageResult>;
   readonly receipt: (input: C.SpaceReceiptLookupInput) => Promise<C.SpaceReceiptLookupResult>;
   readonly newId: () => string;
@@ -206,7 +251,17 @@ interface Position {
   readonly destination: Destination;
   readonly guards: C.SpaceStructureGuards;
 }
+export interface SpaceBlockMoveProof {
+  readonly sourcePageId: C.SpacePageId;
+  readonly revision: number;
+  readonly blockIds: readonly C.SpaceBlockId[];
+  readonly selectedIds: readonly C.SpaceBlockId[];
+  readonly inverse: C.SpaceBlockPlacement | null;
+  readonly indent: C.SpaceBlockPlacement | null;
+  readonly outdent: C.SpaceBlockPlacement | null;
+}
 interface Snapshot {
+  readonly blockSelection: SpaceBlockMoveProof | null;
   readonly hydrated: boolean;
   readonly busy: boolean;
   readonly journal: SpaceStructureJournal;
@@ -234,13 +289,14 @@ export class SpaceRootReorder {
   #work: Promise<void> | null = null;
   #release: (() => void) | null = null;
   #unsent = false;
-  #accepted: C.SpaceMovePageResult | null = null;
+  #accepted: MoveReceipt | null = null;
   #read = 0;
   #edge: Position | null = null;
   constructor(environmentId: EnvironmentId, ports: SpaceRootReorderPorts) {
     this.environmentId = environmentId;
     this.#ports = ports;
     this.#snapshot = {
+      blockSelection: null,
       hydrated: false,
       busy: false,
       window: null,
@@ -552,6 +608,157 @@ export class SpaceRootReorder {
       );
     });
   }
+  #assertBlocks(write: boolean) {
+    this.#ports.assertAccess(write);
+    const capability = this.#ports.capability();
+    if (capability?.version !== 2 || capability.features?.blockMoves !== true)
+      throw new Error(
+        "This environment does not advertise block moves; update it before moving blocks",
+      );
+  }
+  async selectBlocks(
+    sourcePageId: C.SpacePageId,
+    revision: number,
+    selected: readonly C.SpaceBlockId[],
+  ) {
+    await this.#exclusive(async () => {
+      this.#assertBlocks(false);
+      const body = await this.#body(sourcePageId);
+      if (body.revision !== revision || body.nextCursor !== null)
+        throw new Error("Block moves require the current complete source window");
+      const ids = new Set(selected),
+        byId = new Map(body.blocks.map((b) => [b.id, b]));
+      if (
+        ids.size !== selected.length ||
+        ids.size < 1 ||
+        ids.size > 100 ||
+        selected.some((id) => !byId.has(id))
+      )
+        throw new Error("Invalid selected roots");
+      const roots = body.blocks.filter((b) => ids.has(b.id));
+      const parentId = roots[0]!.parentId,
+        siblings = body.blocks.filter((b) => b.parentId === parentId);
+      const start = siblings.findIndex((b) => b.id === roots[0]!.id);
+      if (
+        selected.some((id, i) => roots[i]?.id !== id) ||
+        roots.some(
+          (b) =>
+            b.parentId !== null &&
+            !body.blocks.some((parent) => parent.id === b.parentId && isSpaceListItem(parent)),
+        )
+      )
+        throw new Error("Selected roots must follow document order and use permitted parent lists");
+      const contiguous = roots.every(
+        (b, i) => b.parentId === parentId && siblings[start + i]?.id === b.id,
+      );
+      const selectedIds = new Set(roots.map((b) => b.id));
+      for (const block of body.blocks)
+        if (block.parentId && selectedIds.has(block.parentId)) selectedIds.add(block.id);
+      if (roots.some((b) => b.parentId !== null && selectedIds.has(b.parentId)))
+        throw new Error("Select subtree roots, not both ancestor and descendant");
+      const before = siblings[start - 1],
+        parent = parentId === null ? undefined : byId.get(parentId);
+      const parentPeers = parent ? body.blocks.filter((b) => b.parentId === parent.parentId) : [];
+      const proof: SpaceBlockMoveProof = freeze({
+        sourcePageId,
+        revision,
+        blockIds: roots.map((b) => b.id),
+        selectedIds: [...selectedIds],
+        inverse: contiguous
+          ? {
+              pageId: sourcePageId,
+              parentId,
+              beforeBlockId: siblings[start + roots.length]?.id ?? null,
+            }
+          : null,
+        indent:
+          contiguous && before && isSpaceListItem(before)
+            ? { pageId: sourcePageId, parentId: before.id, beforeBlockId: null }
+            : null,
+        outdent:
+          contiguous && parent
+            ? {
+                pageId: sourcePageId,
+                parentId: parent.parentId,
+                beforeBlockId:
+                  parentPeers[parentPeers.findIndex((b) => b.id === parent.id) + 1]?.id ?? null,
+              }
+            : null,
+      });
+      this.#update({ blockSelection: proof, body, position: null });
+    });
+    return this.#snapshot.blockSelection!;
+  }
+  moveSelectedBlocks(proof: SpaceBlockMoveProof, destination: C.SpaceBlockPlacement) {
+    return this.#exclusive(async () => {
+      this.#assertBlocks(true);
+      if (this.#snapshot.blockSelection !== proof)
+        throw new Error("The selected move roots changed; select them again");
+      const body = this.#snapshot.body;
+      if (
+        !body ||
+        body.pageId !== destination.pageId ||
+        body.nextCursor !== null ||
+        (destination.parentId !== null &&
+          !body.blocks.some((b) => b.id === destination.parentId && isSpaceListItem(b))) ||
+        (destination.beforeBlockId !== null &&
+          !body.blocks.some(
+            (b) => b.id === destination.beforeBlockId && b.parentId === destination.parentId,
+          ))
+      )
+        throw new Error("Block moves require a complete destination body and known list placement");
+      if (
+        proof.sourcePageId === destination.pageId &&
+        ((destination.parentId && proof.selectedIds.includes(destination.parentId)) ||
+          (destination.beforeBlockId && proof.selectedIds.includes(destination.beforeBlockId)))
+      )
+        throw new Error("The destination intersects the selected subtree");
+      const forward = await this.#inspectBlocks(proof.sourcePageId, proof.blockIds, destination);
+      const back = proof.inverse
+        ? await this.#inspectBlocks(proof.sourcePageId, proof.blockIds, proof.inverse)
+        : forward;
+      const shared = {
+        pages: back.guards.pages.filter((p) =>
+          forward.guards.pages.some((f) => f.pageId === p.pageId),
+        ),
+        roots: back.guards.roots.filter((p) =>
+          forward.guards.roots.some((f) => f.spaceId === p.spaceId),
+        ),
+      };
+      if (
+        !covered(forward.guards, shared) ||
+        forward.guards.pages.find((p) => p.pageId === proof.sourcePageId)?.revision !==
+          proof.revision ||
+        forward.guards.pages.find((p) => p.pageId === body.pageId)?.revision !== body.revision
+      )
+        throw new Error("The selected subtree or destination changed");
+      const observed = merge(forward.guards, back.guards);
+      guards(observed);
+      await this.#prepareBlocks(
+        proof.sourcePageId,
+        proof.blockIds,
+        destination,
+        proof.inverse,
+        forward.guards,
+        observed,
+        "move",
+      );
+    });
+  }
+  async #inspectBlocks(
+    sourcePageId: C.SpacePageId,
+    blockIds: readonly C.SpaceBlockId[],
+    destination: C.SpaceBlockPlacement,
+  ) {
+    this.#assertBlocks(false);
+    const result = await this.#ports.inspect({
+      environmentId: this.environmentId,
+      target: { kind: "blocks", pageId: sourcePageId, blockIds },
+      destination: { kind: "child", placement: destination },
+    });
+    guards(result.guards);
+    return result;
+  }
   compensate(direction: "undo" | "redo") {
     return this.#exclusive(async () => {
       const h = this.#snapshot.journal.history;
@@ -559,7 +766,10 @@ export class SpaceRootReorder {
         throw new Error("No guarded placement is retained for this direction");
       let current: C.SpaceInspectStructureResult;
       try {
-        current = await this.#inspect(h.pageId, h.destination);
+        current =
+          h.operation === "moveBlocks" && h.blockIds && h.destination.kind === "child"
+            ? await this.#inspectBlocks(h.pageId, h.blockIds, h.destination.placement)
+            : await this.#inspect(h.pageId, h.destination);
       } catch {
         throw new Error(
           "The retained inverse placement is unavailable; inspect a new move explicitly",
@@ -572,6 +782,23 @@ export class SpaceRootReorder {
         !current.guards.roots.every((p) => h.guards.roots.some((k) => k.spaceId === p.spaceId))
       )
         throw new Error("The retained inverse closure changed; inspect a new move explicitly");
+      if (
+        h.operation === "moveBlocks" &&
+        h.blockIds &&
+        h.destination.kind === "child" &&
+        h.opposite.kind === "child"
+      ) {
+        await this.#prepareBlocks(
+          h.pageId,
+          h.blockIds,
+          h.destination.placement,
+          h.opposite.placement,
+          h.guards,
+          h.observed,
+          direction,
+        );
+        return;
+      }
       await this.#prepare(
         h.pageId,
         h.destination,
@@ -626,11 +853,7 @@ export class SpaceRootReorder {
     targetSpaceId?: C.SpaceId,
     sourceLocation?: C.SpacePageLocation,
   ) {
-    const pages = observed.pages.map((p) => p.pageId);
-    this.#release = this.#ports.reserve(pages, false);
-    try {
-      await this.#ports.checkDrafts(pages);
-      const admission = await this.#ports.getPage(pageId);
+    await this.#prepareIntent(pageId, observed, (admission) => {
       const expectedLocation =
         sourceLocation ??
         (inverse.kind === "root"
@@ -642,8 +865,7 @@ export class SpaceRootReorder {
         !sameLocation(expectedLocation, admission.page.location)
       )
         throw new Error("Source ownership changed; inspect a new intent explicitly");
-      this.#ports.assertAccess(true);
-      const pending: Pending = {
+      return {
         ...(targetSpaceId ? { targetSpaceId } : {}),
         ...(sourceLocation ? { sourceLocation } : {}),
         request: {
@@ -662,6 +884,51 @@ export class SpaceRootReorder {
         direction,
         conflict: false,
       };
+    });
+  }
+  async #prepareBlocks(
+    sourcePageId: C.SpacePageId,
+    blockIds: readonly C.SpaceBlockId[],
+    destination: C.SpaceBlockPlacement,
+    inverse: C.SpaceBlockPlacement | null,
+    expected: C.SpaceStructureGuards,
+    observed: C.SpaceStructureGuards,
+    direction: Pending["direction"],
+  ) {
+    this.#assertBlocks(true);
+    await this.#prepareIntent(sourcePageId, observed, (admission) => ({
+      request: {
+        operation: "moveBlocks",
+        input: {
+          environmentId: this.environmentId,
+          sourcePageId,
+          blockIds,
+          destination,
+          guards: expected,
+          mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+          receiptEpoch: admission.mutationAdmission.epoch,
+        },
+      },
+      inverse: inverse ? { kind: "child", placement: inverse } : null,
+      observed,
+      direction,
+      conflict: false,
+    }));
+  }
+  async #prepareIntent(
+    pageId: C.SpacePageId,
+    observed: C.SpaceStructureGuards,
+    make: (admission: C.SpacePageGetResult) => Pending,
+  ) {
+    this.#release = this.#ports.reserve(
+      observed.pages.map((p) => p.pageId),
+      false,
+    );
+    try {
+      await this.#ports.checkDrafts(observed.pages.map((p) => p.pageId));
+      const admission = await this.#ports.getPage(pageId);
+      this.#ports.assertAccess(true);
+      const pending = make(admission);
       spaceJsonBytes(pending.request, Math.min(1024 * 1024, this.#ports.maxMutationBytes()));
       const journal = decodeSpaceStructureJournal(
         { ...this.#snapshot.journal, pending },
@@ -687,8 +954,18 @@ export class SpaceRootReorder {
     const pending = this.#snapshot.journal.pending!;
     this.#ports.assertAccess(true);
     this.#unsent = false;
-    const result = await this.#ports.move(copy(pending.request.input));
-    await this.#ack(result);
+    const request = pending.request;
+    if (request.operation === "moveBlocks") {
+      this.#assertBlocks(true);
+      await this.#ack({
+        operation: "moveBlocks",
+        result: await this.#ports.moveBlocks(copy(request.input)),
+      });
+    } else
+      await this.#ack({
+        operation: "movePage",
+        result: await this.#ports.move(copy(request.input)),
+      });
   }
   recover(): Promise<void> {
     if (this.#work) return Promise.reject(new Error("Another placement operation is in progress"));
@@ -698,6 +975,7 @@ export class SpaceRootReorder {
       if (this.#snapshot.busy) throw new Error("Wait for the current root window");
       const p = this.#snapshot.journal.pending;
       if (!p || p.conflict) throw new Error("No uncertain placement to recover");
+      if (p.request.operation === "moveBlocks") this.#assertBlocks(false);
       this.#update({ busy: true, error: null });
       if (this.#accepted) {
         await this.#ack(this.#accepted);
@@ -717,9 +995,12 @@ export class SpaceRootReorder {
         return;
       }
       if (receipt.status === "found") {
-        if (receipt.receipt.operation !== "movePage")
+        if (
+          receipt.receipt.operation !== p.request.operation ||
+          (receipt.receipt.operation !== "movePage" && receipt.receipt.operation !== "moveBlocks")
+        )
           throw new Error("Mismatched structural receipt operation");
-        await this.#ack(receipt.receipt.result);
+        await this.#ack(receipt.receipt);
       } else await this.#send();
     })()
       .catch((error: unknown) => {
@@ -733,15 +1014,17 @@ export class SpaceRootReorder {
     this.#work = work;
     return work;
   }
-  async #ack(result: C.SpaceMovePageResult) {
-    const p = this.#snapshot.journal.pending!;
+  async #ack(receipt: MoveReceipt) {
+    const p = this.#snapshot.journal.pending!,
+      result = receipt.result;
     if (
+      receipt.operation !== p.request.operation ||
       result.mutationId !== p.request.input.mutationId ||
       result.receiptEpoch !== p.request.input.receiptEpoch
     )
       throw new Error("Mismatched structural receipt identity");
     if (result.status === "conflict") {
-      this.#accepted = result;
+      this.#accepted = receipt;
       const journal = { ...this.#snapshot.journal, pending: { ...p, conflict: true } };
       await this.#ports.store.write(this.environmentId, journal);
       this.#update({
@@ -753,24 +1036,50 @@ export class SpaceRootReorder {
       this.#unlock();
       return;
     }
-    const destination = p.request.input.destination;
-    const targetSpaceId =
-      p.targetSpaceId ?? (destination.kind === "root" ? destination.spaceId : null);
-    const location = result.page.location;
     if (
-      result.page.id !== p.request.input.pageId ||
-      !location ||
-      result.page.spaceId !== targetSpaceId ||
-      (destination.kind === "root"
-        ? location.kind !== "root" || result.ownerBlockId !== null
-        : location.kind !== "child" ||
-          location.parentPageId !== destination.placement.pageId ||
-          !result.ownerBlockId ||
-          location.ownerBlockId !== result.ownerBlockId ||
-          (p.sourceLocation?.kind === "child" &&
-            p.sourceLocation.ownerBlockId !== result.ownerBlockId))
-    )
-      throw new Error("Mismatched structural receipt page or owner");
+      receipt.operation === "moveBlocks" &&
+      receipt.result.status === "saved" &&
+      p.request.operation === "moveBlocks"
+    ) {
+      const input = p.request.input;
+      if (
+        (result.changed.pages.length || result.changed.roots.length) &&
+        ![input.sourcePageId, input.destination.pageId].every((pageId) =>
+          result.changed.pages.some((row) => row.pageId === pageId),
+        )
+      )
+        throw new Error("Missing affected block-owner acknowledgement");
+      if (
+        receipt.result.blockIds.length !== p.request.input.blockIds.length ||
+        !receipt.result.blockIds.every(
+          (id, i) => id === (p.request.input as C.SpaceMoveBlocksInput).blockIds[i],
+        )
+      )
+        throw new Error("Mismatched acknowledged selected roots");
+    } else if (
+      receipt.operation === "movePage" &&
+      receipt.result.status === "saved" &&
+      p.request.operation === "movePage"
+    ) {
+      const r = receipt.result,
+        d = p.request.input.destination,
+        location = r.page.location;
+      const targetSpaceId = p.targetSpaceId ?? (d.kind === "root" ? d.spaceId : null);
+      if (
+        r.page.id !== p.request.input.pageId ||
+        !location ||
+        r.page.spaceId !== targetSpaceId ||
+        (d.kind === "root"
+          ? location.kind !== "root" || r.ownerBlockId !== null
+          : location.kind !== "child" ||
+            location.parentPageId !== d.placement.pageId ||
+            !r.ownerBlockId ||
+            location.ownerBlockId !== r.ownerBlockId ||
+            (p.sourceLocation?.kind === "child" &&
+              p.sourceLocation.ownerBlockId !== r.ownerBlockId))
+      )
+        throw new Error("Mismatched structural receipt page or owner");
+    }
     for (const row of result.changed.pages)
       if (!p.observed.pages.some((k) => k.pageId === row.pageId && row.revision === k.revision + 1))
         throw new Error("Unobserved structural page acknowledgement");
@@ -782,51 +1091,95 @@ export class SpaceRootReorder {
       )
         throw new Error("Unobserved structural root acknowledgement");
     const observed = merge(p.observed, result.changed);
+    const savedPage =
+      receipt.operation === "movePage" && receipt.result.status === "saved"
+        ? receipt.result.page
+        : null;
     if (
-      observed.pages.find((row) => row.pageId === result.page.id)?.revision !==
-        result.page.revision ||
-      new Set(result.changed.pages.map((row) => row.pageId)).size !== result.changed.pages.length ||
-      new Set(result.changed.roots.map((row) => row.spaceId)).size !== result.changed.roots.length
+      new Set(result.changed.pages.map((p) => p.pageId)).size !== result.changed.pages.length ||
+      new Set(result.changed.roots.map((p) => p.spaceId)).size !== result.changed.roots.length ||
+      (savedPage &&
+        observed.pages.find((p) => p.pageId === savedPage.id)?.revision !== savedPage.revision)
     )
       throw new Error("Inconsistent structural acknowledgement guards");
-    this.#accepted = result;
-    let history: SpaceStructureJournal["history"] = null;
-    let notice = "Placement accepted. No compensating placement could be retained.";
+    this.#accepted = receipt;
+    let history: SpaceStructureJournal["history"] = null,
+      notice = "Placement accepted. No compensating placement could be retained.";
     if (result.changed.pages.length || result.changed.roots.length) {
       try {
-        const inverse = await this.#inspect(p.request.input.pageId, p.inverse);
-        if (!covered(observed, inverse.guards))
-          throw new Error("The inverse placement changed after acknowledgement");
-        history = {
-          pageId: p.request.input.pageId,
-          destination: p.inverse,
-          opposite: p.request.input.destination,
-          targetSpaceId:
-            p.sourceLocation?.spaceId ??
-            (p.inverse.kind === "root" ? p.inverse.spaceId : result.page.spaceId),
-          sourceLocation: location,
-          guards: inverse.guards,
-          observed,
-          direction: p.direction === "undo" ? "redo" : "undo",
-        };
-        notice =
-          "Placement accepted. One guarded placement undo/redo is retained." +
-          (p.sourceLocation && p.sourceLocation.kind !== location.kind
-            ? " Root/child undo restores page placement, not retired owner-marker IDs or their links."
-            : "");
+        if (p.request.operation === "moveBlocks" && p.inverse?.kind === "child") {
+          const input = p.request.input;
+          const inverse = await this.#inspectBlocks(
+            input.destination.pageId,
+            input.blockIds,
+            p.inverse.placement,
+          );
+          if (!covered(observed, inverse.guards))
+            throw new Error("The inverse placement changed after acknowledgement");
+          history = {
+            operation: "moveBlocks",
+            pageId: input.destination.pageId,
+            blockIds: input.blockIds,
+            destination: p.inverse,
+            opposite: { kind: "child", placement: input.destination },
+            guards: inverse.guards,
+            observed,
+            direction: p.direction === "undo" ? "redo" : "undo",
+          };
+        } else if (
+          p.inverse &&
+          p.request.operation === "movePage" &&
+          receipt.operation === "movePage" &&
+          receipt.result.status === "saved"
+        ) {
+          const input = p.request.input,
+            location = receipt.result.page.location!;
+          const inverse = await this.#inspect(input.pageId, p.inverse);
+          if (!covered(observed, inverse.guards))
+            throw new Error("The inverse placement changed after acknowledgement");
+          history = {
+            pageId: input.pageId,
+            destination: p.inverse,
+            opposite: input.destination,
+            targetSpaceId:
+              p.sourceLocation?.spaceId ??
+              (p.inverse.kind === "root" ? p.inverse.spaceId : receipt.result.page.spaceId),
+            sourceLocation: location,
+            guards: inverse.guards,
+            observed,
+            direction: p.direction === "undo" ? "redo" : "undo",
+          };
+          if (p.sourceLocation && p.sourceLocation.kind !== location.kind)
+            notice =
+              "Root/child undo restores page placement, not retired owner-marker IDs or their links.";
+        }
+        if (p.request.operation === "moveBlocks" && !p.inverse)
+          notice =
+            "Placement accepted. Undo is unavailable because the roots came from multiple original placements.";
+        if (history)
+          notice =
+            "Placement accepted. One guarded placement undo/redo is retained. " +
+            (notice.startsWith("Root/child") ? notice : "");
       } catch (error) {
         notice = error instanceof Error ? error.message : notice;
       }
     } else {
       if (p.direction === "move") history = this.#snapshot.journal.history;
-      notice = "The page was already in that position.";
+      notice = "The selection was already in that position.";
     }
     const journal = decodeSpaceStructureJournal(
       { version: 1, environmentId: this.environmentId, pending: null, history },
       this.environmentId,
     );
     await this.#ports.store.write(this.environmentId, journal);
-    this.#update({ journal, window: null, body: null, position: null, notice });
+    this.#update({
+      journal,
+      window: null,
+      body: null,
+      position: null,
+      blockSelection: null,
+      notice,
+    });
     this.#accepted = null;
     this.#ports.changed();
     try {

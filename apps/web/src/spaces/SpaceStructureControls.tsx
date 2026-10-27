@@ -2,10 +2,12 @@ import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { useContext, useEffect, useState, useSyncExternalStore } from "react";
 import {
   isSpaceListItem,
+  type SpaceBlockMoveProof,
   type SpaceRootReorder,
   type SpacePageNavigationTarget,
 } from "@t2code/client-runtime/spaces";
 import type {
+  SpaceBlockPlacement,
   SpaceBlockId,
   SpacePageLocation,
   SpacePageDestination,
@@ -13,9 +15,12 @@ import type {
 import { Button } from "../components/ui/button";
 import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
+import { useEnvironment } from "../state/environments";
 import { spaceRootReorder } from "./sessionRuntime";
 
 interface Props {
+  blocks?: SpaceBlockMoveProof;
+  onClose?: () => void;
   target: SpacePageNavigationTarget;
   current: () => boolean;
   location: SpacePageLocation | undefined;
@@ -45,29 +50,64 @@ function StructureControls({
   current,
   location,
   owner,
+  blocks,
+  onClose,
 }: Props & { owner: SpaceRootReorder }) {
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!blocks);
   const [container, setContainer] = useState<SpaceBlockId | null>(null);
   const availability = useSpacesAvailability(target.environmentId);
   const permission = useAtomValue(spacesEnvironment.movePage.permissionAtom(target.environmentId));
-  const writable = permission && availability === "writable" && current();
+  const blockPermission = useAtomValue(
+    spacesEnvironment.moveBlocks.permissionAtom(target.environmentId),
+  );
+  const capability = useEnvironment(target.environmentId)?.serverConfig?.environment.capabilities
+    .spaces;
+  const blockAvailable =
+    capability?.version === 2 && capability.features?.blockMoves === true && blockPermission;
+  const writable =
+    (!blocks || blockAvailable) && permission && availability === "writable" && current();
   // oxlint-disable-next-line t2code/react-effect-budget -- Load the shared durable structural journal independently of this metadata view.
   useEffect(() => {
     run(owner.hydrate());
   }, [owner]);
   const { journal, window, position, busy, hydrated, spaces, body, parentPageId } = snapshot;
   const pending = journal.pending;
-  const pendingDestination = pending?.request.input.destination;
+  const pendingRequest = pending?.request;
+  const pendingDestination =
+    pendingRequest?.operation === "movePage"
+      ? pendingRequest.input.destination
+      : pendingRequest
+        ? { kind: "child" as const, placement: pendingRequest.input.destination }
+        : null;
+  const pendingPageId =
+    pendingRequest?.operation === "movePage"
+      ? pendingRequest.input.pageId
+      : pendingRequest?.input.sourcePageId;
   const name = (pageId: typeof target.pageId) =>
     window?.items.find((page) => page.id === pageId)?.title || pageId;
-  const history = journal.history?.pageId === target.pageId ? journal.history : null;
+  const retained = journal.history;
+  const history =
+    retained &&
+    (retained.pageId === target.pageId ||
+      (retained.operation === "moveBlocks" &&
+        retained.destination.kind === "child" &&
+        retained.destination.placement.pageId === target.pageId))
+      ? retained
+      : null;
+  const selectionReady = blocks
+    ? snapshot.blockSelection === blocks
+    : position?.pageId === target.pageId;
   const blocked = !hydrated || busy || !!pending;
   const load = (next = false) => {
     if (current() && window) run(owner.browse(window.space.id, target.pageId, next, parentPageId));
   };
   const place = (destination: SpacePageDestination) => {
-    if (current()) run(owner.moveTo(target.pageId, destination));
+    if (!current()) return;
+    if (blocks) {
+      if (destination.kind === "child")
+        run(owner.moveSelectedBlocks(blocks, destination.placement));
+    } else run(owner.moveTo(target.pageId, destination));
   };
   const loadSource = () => {
     if (!current()) return;
@@ -76,6 +116,15 @@ function StructureControls({
         ? owner.loadSource(target.pageId)
         : owner.browse(target.spaceId, target.pageId),
     );
+  };
+  const placementDirect = (destination: SpaceBlockPlacement) => {
+    if (blocks && current())
+      run(
+        (async () => {
+          await owner.loadBody(blocks.sourcePageId);
+          if (current()) await owner.moveSelectedBlocks(blocks, destination);
+        })(),
+      );
   };
   const placement = (beforeBlockId: SpaceBlockId | null) => {
     if (body)
@@ -87,13 +136,17 @@ function StructureControls({
   return (
     <div className="mt-3 space-y-2">
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" disabled={!writable || blocked} onClick={() => setOpen(true)}>
-          Move page
-        </Button>
+        {!blocks ? (
+          <Button variant="outline" disabled={!writable || blocked} onClick={() => setOpen(true)}>
+            Move page
+          </Button>
+        ) : null}
         {history ? (
           <Button
             variant="outline"
-            disabled={!writable || blocked}
+            disabled={
+              !writable || blocked || (history.operation === "moveBlocks" && !blockAvailable)
+            }
             onClick={() => {
               if (current()) run(owner.compensate(history.direction));
             }}
@@ -135,7 +188,7 @@ function StructureControls({
       ) : null}
       {pending && pendingDestination ? (
         <p>
-          Attempted {pending.direction}: {name(pending.request.input.pageId)}{" "}
+          Attempted {pending.direction}: {name(pendingPageId!)}{" "}
           {pendingDestination.kind === "root"
             ? `to space ${pendingDestination.spaceId}, ${pendingDestination.beforePageId ? `before ${name(pendingDestination.beforePageId)}` : "at the end"}`
             : `inside page ${pendingDestination.placement.pageId}, ${pendingDestination.placement.beforeBlockId ? `before block ${pendingDestination.placement.beforeBlockId}` : "at the list end"}`}
@@ -150,23 +203,59 @@ function StructureControls({
             : "Page placement failed; retained data has been kept."}
         </p>
       ) : null}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(value) => {
+          setOpen(value);
+          if (!value) onClose?.();
+        }}
+      >
         <DialogPopup>
-          <DialogTitle>Move page</DialogTitle>
+          <DialogTitle>{blocks ? "Move selected block subtrees" : "Move page"}</DialogTitle>
           <DialogDescription>
-            Save or resolve affected drafts first. Page IDs stay stable. Moving a child to root
-            retires its owner marker; nesting creates a fresh marker when needed. Undo restores
-            placement, not retired marker links. One guarded undo/redo is retained.
+            {blocks
+              ? "Move complete selected subtrees through the guarded service. IDs and opaque/media payloads are preserved. One inverse is retained only for a proven original contiguous placement. Save or resolve affected drafts first."
+              : "Save or resolve affected drafts first. Page IDs stay stable. Moving a child to root retires its owner marker; nesting creates a fresh marker when needed. Undo restores placement, not retired marker links. One guarded undo/redo is retained."}
           </DialogDescription>
           <div className="mt-4 space-y-3">
-            <Button variant="outline" disabled={blocked || !writable} onClick={loadSource}>
-              Load original position
-            </Button>
-            <p role="status">
-              {position?.pageId === target.pageId
-                ? "Original placement and successor are known."
-                : "Find the source using First / Next roots, or load its complete parent body. Partial windows do not prove list completeness."}
-            </p>
+            {!blocks ? (
+              <Button variant="outline" disabled={blocked || !writable} onClick={loadSource}>
+                Load original position
+              </Button>
+            ) : (
+              <>
+                <p>
+                  {selectionReady
+                    ? `${blocks.blockIds.length} roots with complete subtrees are selected.${blocks.inverse ? " Guarded placement undo is available if its guards remain provable." : " Undo is unavailable for multiple original placements."}`
+                    : "This selection changed. Close and select again."}
+                </p>
+                <Button
+                  variant="outline"
+                  disabled={blocked || !writable || !selectionReady || !blocks.indent}
+                  onClick={() => {
+                    if (blocks.indent) placementDirect(blocks.indent);
+                  }}
+                >
+                  Indent selection
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={blocked || !writable || !selectionReady || !blocks.outdent}
+                  onClick={() => {
+                    if (blocks.outdent) placementDirect(blocks.outdent);
+                  }}
+                >
+                  Outdent selection
+                </Button>
+              </>
+            )}
+            {!blocks ? (
+              <p role="status">
+                {position?.pageId === target.pageId
+                  ? "Original placement and successor are known."
+                  : "Find the source using First / Next roots, or load its complete parent body. Partial windows do not prove list completeness."}
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
@@ -233,14 +322,11 @@ function StructureControls({
                     <li key={page.id}>
                       <p>{page.title || "Untitled page"}</p>
                       <div className="flex flex-wrap gap-2">
-                        {parentPageId === null ? (
+                        {!blocks && parentPageId === null ? (
                           <Button
                             variant="outline"
                             disabled={
-                              !writable ||
-                              blocked ||
-                              position?.pageId !== target.pageId ||
-                              page.id === target.pageId
+                              !writable || blocked || !selectionReady || page.id === target.pageId
                             }
                             onClick={() =>
                               place({
@@ -264,7 +350,7 @@ function StructureControls({
                         </Button>
                         <Button
                           variant="outline"
-                          disabled={blocked || page.id === target.pageId}
+                          disabled={blocked || (!blocks && page.id === target.pageId)}
                           onClick={() => {
                             setContainer(null);
                             if (current()) run(owner.loadBody(page.id));
@@ -276,10 +362,10 @@ function StructureControls({
                     </li>
                   ))}
                 </ul>
-                {parentPageId === null && window.nextCursor === null ? (
+                {!blocks && parentPageId === null && window.nextCursor === null ? (
                   <Button
                     variant="outline"
-                    disabled={!writable || blocked || position?.pageId !== target.pageId}
+                    disabled={!writable || blocked || !selectionReady}
                     onClick={() =>
                       place({ kind: "root", spaceId: window.space.id, beforePageId: null })
                     }
@@ -320,7 +406,7 @@ function StructureControls({
                           <li key={block.id}>
                             <Button
                               variant="outline"
-                              disabled={!writable || blocked || position?.pageId !== target.pageId}
+                              disabled={!writable || blocked || !selectionReady}
                               onClick={() => placement(block.id)}
                             >
                               Place before {block.type} ({block.id})
@@ -330,7 +416,7 @@ function StructureControls({
                     </ul>
                     <Button
                       variant="outline"
-                      disabled={!writable || blocked || position?.pageId !== target.pageId}
+                      disabled={!writable || blocked || !selectionReady}
                       onClick={() => placement(null)}
                     >
                       Place at list end

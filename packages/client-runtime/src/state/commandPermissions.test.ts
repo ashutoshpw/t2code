@@ -1,3 +1,12 @@
+import { createSpacesEnvironmentAtoms } from "./spaces.ts";
+import {
+  SpaceBlockId,
+  SpacePageId,
+  SpaceMutationId,
+  SpaceReceiptEpoch,
+  type SpaceCapability,
+  type SpaceMoveBlocksInput,
+} from "@t2code/contracts/spaces";
 import { requestGuarded, runStreamGuarded } from "../rpc/client.ts";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
 import * as SubscriptionRef from "effect/SubscriptionRef";
@@ -403,4 +412,73 @@ it.effect("rejects protected unary and streamed RPCs outside a guarded command",
     expect(streamed._tag).toBe("EnvironmentAuthorizationError");
     expect(writes).toBe(0);
   }),
+);
+
+it.effect(
+  "checks the latest explicit block-move feature after destination authorization before reaching the transport",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const registry = yield* setup;
+        let calls = 0;
+        const transport = {
+          client: {
+            [WS_METHODS.spacesBlocksMove]: () =>
+              Effect.sync(() => {
+                calls++;
+                throw new Error("Transport reached");
+              }),
+          },
+        } as unknown as RpcSession;
+        const supervisor = {
+          target: { environmentId: env, label: "destination" },
+          session: yield* SubscriptionRef.make(Option.some(transport)),
+        } as unknown as EnvironmentSupervisor["Service"];
+        const runtime = Atom.runtime(
+          Layer.succeed(EnvironmentRegistry, {
+            run: (_id: EnvironmentId, operation: Effect.Effect<unknown>) =>
+              Effect.provideService(operation, EnvironmentSupervisor, supervisor),
+          } as unknown as EnvironmentRegistry["Service"]),
+        );
+        const capability = Atom.make<SpaceCapability | undefined>(undefined);
+        const spaces = createSpacesEnvironmentAtoms(runtime, { capabilityAtom: () => capability });
+        const input: SpaceMoveBlocksInput = {
+          environmentId: env,
+          sourcePageId: SpacePageId.make("source"),
+          blockIds: [SpaceBlockId.make("root")],
+          destination: {
+            pageId: SpacePageId.make("destination"),
+            parentId: null,
+            beforeBlockId: null,
+          },
+          guards: { pages: [], roots: [] },
+          mutationId: SpaceMutationId.make("move"),
+          receiptEpoch: SpaceReceiptEpoch.make("epoch"),
+        };
+        registry.set(sessions(env), AsyncResult.success(grant(true)));
+        const run = () =>
+          Effect.promise(() => spaces.moveBlocks.run(registry, { environmentId: env, input }));
+        const missing = yield* run();
+        expect(missing._tag).toBe("Failure");
+        if (missing._tag === "Failure")
+          expect(Cause.squash(missing.cause)).toMatchObject({
+            _tag: "SpacesUnavailableError",
+            stage: "settings",
+          });
+        const old = { version: 2, limits: {} } as SpaceCapability;
+        registry.set(capability, old);
+        yield* run();
+        expect(calls).toBe(0);
+        registry.set(capability, { ...old, version: 3, features: { blockMoves: true } });
+        yield* run();
+        expect(calls).toBe(0);
+        registry.set(capability, { ...old, features: { blockMoves: true } });
+        const reached = yield* run();
+        expect(reached._tag).toBe("Failure");
+        expect(calls).toBe(1);
+        registry.set(sessions(env), AsyncResult.success(grant(false)));
+        yield* run();
+        expect(calls).toBe(1);
+      }),
+    ),
 );

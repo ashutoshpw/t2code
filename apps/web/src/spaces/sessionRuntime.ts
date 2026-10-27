@@ -215,6 +215,19 @@ export function spaceRootReorder(
     list: (input) => read(spacesEnvironment.pages({ environmentId, input })),
     inspect: (input) => read(spacesEnvironment.inspect({ environmentId, input })),
     receipt: (input) => read(spacesEnvironment.receipt({ environmentId, input })),
+    capability: () =>
+      registry.get(environmentPresentations.presentationAtom(environmentId))?.serverConfig
+        ?.environment.capabilities.spaces,
+    moveBlocks: async (input) => {
+      access(true);
+      const previous = connection();
+      const result = unwrap(
+        await spacesEnvironment.moveBlocks.run(registry, { environmentId, input }),
+      );
+      if (connection() !== previous)
+        throw new Error("Spaces connection changed; recover the exact block-move receipt");
+      return result;
+    },
     move: async (input) => {
       access(true);
       const previous = connection();

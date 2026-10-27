@@ -14,7 +14,9 @@ export function SpaceEditor({
   bridge,
   editable = true,
   onBatch,
+  onMoveBlocks,
 }: {
+  readonly onMoveBlocks?: ((state: import("@tiptap/pm/state").EditorState) => void) | undefined;
   readonly adapter: SpaceEditorAdapter;
   readonly bridge?: SpaceEditorBridge;
   readonly editable?: boolean;
@@ -144,6 +146,20 @@ export function SpaceEditor({
   return (
     <section aria-label="Page contents" className="space-y-3" data-space-editor="">
       <div className="flex flex-wrap gap-2">
+        {bridge ? (
+          <Button
+            variant="outline"
+            disabled={
+              !onMoveBlocks ||
+              !structure ||
+              !!bridge.controller.session.structureAvailability() ||
+              !bridge.controller.editorWindow().completeParents.includes(null)
+            }
+            onClick={() => onMoveBlocks?.(state)}
+          >
+            Move selected blocks
+          </Button>
+        ) : null}
         {(["bold", "italic", "strike", "code"] as const).map((mark) => (
           <Button
             key={mark}
