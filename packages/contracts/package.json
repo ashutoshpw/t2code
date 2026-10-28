@@ -1,6 +1,6 @@
 {
   "name": "@t2code/contracts",
-  "version": "0.1.9",
+  "version": "0.1.5",
   "private": true,
   "files": [
     "dist"
@@ -18,6 +18,10 @@
     "./relay": {
       "types": "./src/relay.ts",
       "import": "./src/relay.ts"
+    },
+    "./spaces": {
+      "types": "./src/spaces.ts",
+      "import": "./src/spaces.ts"
     }
   },
   "scripts": {
