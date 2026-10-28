@@ -334,9 +334,8 @@ export class SpaceDocumentSession {
       state.status !== "saved" ||
       state.persistenceError !== null
     )
-      return "Resolve or save the current draft before saved undo/redo.";
-    if (!state.history.base)
-      return state.history.reason ?? "No saved compensation baseline is retained.";
+      return "Wait for your changes to save, then try again.";
+    if (!state.history.base) return state.history.reason ?? "There's nothing to undo.";
     return savedCompensation(state.history, direction, state.blocks, state.baseRevision).reason;
   }
 

@@ -140,7 +140,13 @@ function DocumentContent({
   const [blockMove, setBlockMove] = useState<SpaceBlockMoveProof | null>(null);
   const [moveError, setMoveError] = useState<unknown>(null);
   const [bridge] = useState(
-    () => new SpaceEditorBridge(controller, () => SpaceBlockId.make(randomUUID())),
+    () =>
+      new SpaceEditorBridge(
+        controller,
+        () => SpaceBlockId.make(randomUUID()),
+        (description) =>
+          toastManager.add({ type: "error", title: "Couldn't apply that change", description }),
+      ),
   );
   const canReadSource = () => !!sources?.current() && current();
   const renderChild = (block: SpaceBlock, captionInEditor = false) => {
