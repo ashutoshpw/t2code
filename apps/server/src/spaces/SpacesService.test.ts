@@ -1745,6 +1745,51 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
       ),
   );
 
+  it.effect("isolates pin and recent cursor revisions", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const { service, common, page } = yield* boot();
+        const other = yield* rootPage(service, common, page.spaceId, "cursor-other");
+        const third = yield* rootPage(service, common, page.spaceId, "cursor-third");
+        const target = { ...env, pageId: page.id };
+        const otherTarget = { ...env, pageId: other.id };
+        yield* service.addPin(target);
+        yield* service.addPin(otherTarget);
+        yield* service.recordRecent(target);
+        yield* service.recordRecent(otherTarget);
+        const pins = yield* service.listPins({ ...env, limit: 1 });
+        const recents = yield* service.listRecents({ ...env, limit: 1 });
+        yield* service.addPin(target);
+        yield* service.removePin({ ...env, pageId: third.id });
+        yield* service.listPins({ ...env, limit: 1, cursor: pins.nextCursor! });
+        yield* service.recordRecent(target);
+        assert.equal(
+          (yield* service.listPins({ ...env, limit: 1, cursor: pins.nextCursor! })).items[0]?.page
+            .id,
+          page.id,
+        );
+        assert.equal(
+          (yield* Effect.flip(
+            service.listRecents({ ...env, limit: 1, cursor: recents.nextCursor! }),
+          ))._tag,
+          "SpaceCursorStaleError",
+        );
+        const freshRecents = yield* service.listRecents({ ...env, limit: 1 });
+        yield* service.addPin({ ...env, pageId: third.id });
+        assert.equal(
+          (yield* Effect.flip(service.listPins({ ...env, limit: 1, cursor: pins.nextCursor! })))
+            ._tag,
+          "SpaceCursorStaleError",
+        );
+        assert.equal(
+          (yield* service.listRecents({ ...env, limit: 1, cursor: freshRecents.nextCursor! }))
+            .items[0]?.page.id,
+          other.id,
+        );
+      }),
+    ),
+  );
+
   it.effect("bounds recents and moves a revisited page to the front", () =>
     fixture(() =>
       Effect.gen(function* () {

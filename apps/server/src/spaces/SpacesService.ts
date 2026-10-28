@@ -307,6 +307,7 @@ function cursorFrom(
   operation: string,
   filter: string,
   revision: number,
+  filterRevision = false,
 ) {
   if (cursor === undefined) return undefined;
   checkLimit("maxCursorBytes", byteLength(cursor));
@@ -316,12 +317,17 @@ function cursorFrom(
   } catch {
     throw new C.SpaceValidationError({ reason: "invalid_cursor" });
   }
-  if (
-    decoded.environmentId !== environmentId ||
-    decoded.operation !== operation ||
-    decoded.filter !== filter
-  )
+  if (decoded.environmentId !== environmentId || decoded.operation !== operation)
     throw new C.SpaceValidationError({ reason: "invalid_cursor" });
+  if (decoded.filter !== filter) {
+    if (
+      filterRevision &&
+      /^(0|[1-9]\d*)$/.test(decoded.filter) &&
+      Number.isSafeInteger(Number(decoded.filter))
+    )
+      throw new C.SpaceCursorStaleError({ revision });
+    throw new C.SpaceValidationError({ reason: "invalid_cursor" });
+  }
   if (decoded.revision !== revision) throw new C.SpaceCursorStaleError({ revision });
   return decoded;
 }
@@ -916,7 +922,10 @@ const make = Effect.fn("SpacesService.make")(function* (
           const existing = yield* sql`SELECT 1 FROM spaces_pins WHERE page_id=${input.pageId}`;
           if (!existing.length) return {};
         }
-        yield* sql`UPDATE spaces_library_sequence SET sequence=sequence+1 WHERE singleton=1`;
+        if (operation === "record")
+          yield* sql`UPDATE spaces_library_sequence SET sequence=sequence+1, recents_revision=recents_revision+1 WHERE singleton=1`;
+        else
+          yield* sql`UPDATE spaces_library_sequence SET sequence=sequence+1, pins_revision=pins_revision+1 WHERE singleton=1`;
         const [state] = yield* sql<{
           readonly sequence: number;
         }>`SELECT sequence FROM spaces_library_sequence WHERE singleton=1`;
@@ -958,16 +967,18 @@ const make = Effect.fn("SpacesService.make")(function* (
         const limit = input.limit ?? limits.maxListRows;
         checkLimit("maxListRows", limit);
         const [state] = yield* sql<{
-          readonly sequence: number;
-        }>`SELECT sequence FROM spaces_library_sequence WHERE singleton=1`;
+          readonly pins_revision: number;
+          readonly recents_revision: number;
+        }>`SELECT pins_revision, recents_revision FROM spaces_library_sequence WHERE singleton=1`;
         if (!state) return yield* new C.SpacesUnavailableError({ stage: "storage" });
-        const filter = String(state.sequence);
+        const filter = String(kind === "pins" ? state.pins_revision : state.recents_revision);
         const cursor = cursorFrom(
           input.cursor,
           environmentId,
           `listLibrary:${kind}`,
           filter,
           meta.catalog_revision,
+          true,
         );
         const sequence = cursor ? Number(cursor.key) : 0;
         if (cursor && (!Number.isSafeInteger(sequence) || String(sequence) !== cursor.key))

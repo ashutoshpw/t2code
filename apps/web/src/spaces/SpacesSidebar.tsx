@@ -275,6 +275,16 @@ function LibraryGroup({
       input: { environmentId, limit, ...(cursor ? { cursor } : {}) },
     }),
   );
+  if (
+    cursor &&
+    typeof query.failure === "object" &&
+    query.failure !== null &&
+    "_tag" in query.failure &&
+    query.failure._tag === "SpaceCursorStaleError"
+  ) {
+    setCursor(undefined);
+    return null;
+  }
   return (
     <div className="mb-2">
       <h2 className="px-2 pb-1 text-xs font-medium text-sidebar-muted-foreground">
