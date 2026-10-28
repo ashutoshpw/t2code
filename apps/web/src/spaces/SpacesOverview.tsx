@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { FileIcon, FileTextIcon, ImageIcon, VideoIcon } from "lucide-react";
 import type { EnvironmentId } from "@t2code/contracts";
@@ -8,6 +8,8 @@ import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment } from "../state/spaces";
 import { formatRelativeTimeLabel } from "../timestampFormat";
 import { Button } from "../components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../components/ui/empty";
+import { Toggle, ToggleGroup } from "../components/ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -17,6 +19,15 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { SpacePinButton } from "./SpacePinButton";
+
+const SpaceSearch = lazy(() => import("./SpaceSearch"));
+
+const mediaFilters = [
+  [undefined, "All"],
+  ["image", "Images"],
+  ["pdf", "PDFs"],
+  ["video", "Videos"],
+] as const;
 
 export function SpacesOverview({
   environmentId,
@@ -61,23 +72,28 @@ export function SpacesOverview({
     >
       <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
         <h1 className="text-3xl font-semibold">{view === "all" ? "All pages" : "Media"}</h1>
-        {view === "media" ? (
-          <div className="flex gap-2">
-            {([undefined, "image", "pdf", "video"] as const).map((type) => (
-              <Button
-                key={type ?? "all"}
-                variant={mediaType === type ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => {
-                  setMediaType(type);
-                  setCursor(undefined);
-                }}
-              >
-                {type ?? "All"}
-              </Button>
+        {view === "all" ? (
+          <Suspense fallback={null}>
+            <SpaceSearch environmentId={environmentId} />
+          </Suspense>
+        ) : (
+          <ToggleGroup
+            aria-label="Media type"
+            value={[mediaType ?? "all"]}
+            onValueChange={(next) => {
+              const value = next[0];
+              if (!value) return;
+              setMediaType(value === "all" ? undefined : (value as "image" | "pdf" | "video"));
+              setCursor(undefined);
+            }}
+          >
+            {mediaFilters.map(([type, label]) => (
+              <Toggle key={type ?? "all"} value={type ?? "all"}>
+                {label}
+              </Toggle>
             ))}
-          </div>
-        ) : null}
+          </ToggleGroup>
+        )}
         {query.error ? (
           <div role="alert">
             {query.error}{" "}
@@ -94,16 +110,14 @@ export function SpacesOverview({
           </div>
         ) : null}
         {!query.data && !query.error ? <p role="status">Loading…</p> : null}
-        {view === "all" && all.data ? (
+        {view === "all" && all.data?.items.length ? (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Space</TableHead>
                 <TableHead>Last activity</TableHead>
-                <TableHead>
-                  <span className="sr-only">Pin</span>
-                </TableHead>
+                <TableHead className="w-12">Pinned</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -130,7 +144,7 @@ export function SpacesOverview({
             </TableBody>
           </Table>
         ) : null}
-        {view === "media" && media.data ? (
+        {view === "media" && media.data?.items.length ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -167,8 +181,23 @@ export function SpacesOverview({
             </TableBody>
           </Table>
         ) : null}
-        {query.data && !query.data.items.length ? (
-          <p className="text-sm text-muted-foreground">Nothing here yet.</p>
+        {query.data && !query.data.items.length && !cursor ? (
+          <Empty size="compact">
+            <EmptyHeader>
+              <EmptyTitle>
+                {view === "all"
+                  ? "No pages yet"
+                  : mediaType
+                    ? "No media of this type"
+                    : "No media yet"}
+              </EmptyTitle>
+              <EmptyDescription>
+                {view === "all"
+                  ? "Create a page from the sidebar and it will show up here."
+                  : "Add an image, PDF or video to a page to see it here."}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : null}
         {cursor || query.data?.nextCursor ? (
           <div className="flex gap-2">

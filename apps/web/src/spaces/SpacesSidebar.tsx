@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { Link, useParams, useSearch } from "@tanstack/react-router";
 import { EnvironmentId } from "@t2code/contracts";
-import { SpaceId, type SpaceCursor } from "@t2code/contracts/spaces";
+import { SpaceId, type SpaceCursor, type SpacePageSummary } from "@t2code/contracts/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesEnvironments } from "../state/spaces";
 import { usePrimaryEnvironmentId } from "../state/environments";
@@ -245,46 +245,96 @@ function LibraryNavigation({ environmentId }: { environmentId: EnvironmentId }) 
           </SidebarMenuItem>
         ) : null}
       </SidebarMenu>
-      {capability?.features?.pins ? (
-        <LibraryGroup environmentId={environmentId} kind="pins" />
-      ) : null}
-      {capability?.features?.recents ? (
-        <LibraryGroup environmentId={environmentId} kind="recents" />
+      <PinnedAndRecents
+        environmentId={environmentId}
+        pins={!!capability?.features?.pins}
+        recents={!!capability?.features?.recents}
+      />
+    </>
+  );
+}
+
+function PinnedAndRecents({
+  environmentId,
+  pins,
+  recents,
+}: {
+  environmentId: EnvironmentId;
+  pins: boolean;
+  recents: boolean;
+}) {
+  const limit = Math.min(
+    50,
+    useEnvironment(environmentId)?.serverConfig?.environment.capabilities.spaces?.limits
+      .maxListRows ?? 50,
+  );
+  const pinned = useEnvironmentQuery(
+    pins ? spacesEnvironment.pins({ environmentId, input: { environmentId, limit } }) : null,
+  );
+  const pinnedIds = new Set(pinned.data?.items.map(({ page }) => page.id));
+  return (
+    <>
+      {pins ? <LibraryGroup environmentId={environmentId} kind="pins" query={pinned} /> : null}
+      {recents ? (
+        <LibraryGroup environmentId={environmentId} kind="recents" exclude={pinnedIds} />
       ) : null}
     </>
   );
 }
+
+type LibraryQuery = {
+  readonly data: {
+    readonly items: readonly { readonly page: SpacePageSummary }[];
+    readonly nextCursor?: SpaceCursor | null;
+  } | null;
+  readonly error: string | null;
+  readonly refresh: () => void;
+};
+
 function LibraryGroup({
   environmentId,
   kind,
+  query: provided,
+  exclude,
 }: {
   environmentId: EnvironmentId;
   kind: "pins" | "recents";
+  query?: LibraryQuery;
+  exclude?: ReadonlySet<string>;
 }) {
   const [cursor, setCursor] = useState<SpaceCursor>();
   const [expanded, setExpanded] = useState(false);
   const { isMobile, setOpenMobile } = useSidebar();
+  const { pageId: activePageId } = useParams({ strict: false });
   const limit = Math.min(
-    expanded ? 50 : 5,
+    expanded ? 50 : 10,
     useEnvironment(environmentId)?.serverConfig?.environment.capabilities.spaces?.limits
       .maxListRows ?? 50,
   );
-  const query = useEnvironmentQuery(
-    (kind === "pins" ? spacesEnvironment.pins : spacesEnvironment.recents)({
-      environmentId,
-      input: { environmentId, limit, ...(cursor ? { cursor } : {}) },
-    }),
+  const own = useEnvironmentQuery(
+    provided
+      ? null
+      : spacesEnvironment.recents({
+          environmentId,
+          input: { environmentId, limit, ...(cursor ? { cursor } : {}) },
+        }),
   );
+  const query: LibraryQuery = provided ?? own;
   if (
     cursor &&
-    typeof query.failure === "object" &&
-    query.failure !== null &&
-    "_tag" in query.failure &&
-    query.failure._tag === "SpaceCursorStaleError"
+    !provided &&
+    typeof own.failure === "object" &&
+    own.failure !== null &&
+    "_tag" in own.failure &&
+    own.failure._tag === "SpaceCursorStaleError"
   ) {
     setCursor(undefined);
     return null;
   }
+  const filtered = query.data?.items.filter(({ page }) => !exclude?.has(page.id)) ?? [];
+  const items = expanded ? filtered : filtered.slice(0, 5);
+  const more = items.length < filtered.length || (!provided && !!query.data?.nextCursor);
+  if (!query.error && (!query.data || (!items.length && !cursor && !more))) return null;
   return (
     <div className="mb-2">
       <h2 className="px-2 pb-1 text-xs font-medium text-sidebar-muted-foreground">
@@ -303,9 +353,10 @@ function LibraryGroup({
         </Button>
       ) : (
         <SidebarMenu>
-          {query.data?.items.map(({ page }) => (
+          {items.map(({ page }) => (
             <SidebarMenuItem key={page.id}>
               <SidebarMenuButton
+                isActive={page.id === activePageId}
                 render={
                   <Link
                     to="/spaces/$environmentId/$spaceId/$pageId"
@@ -329,13 +380,13 @@ function LibraryGroup({
           First
         </Button>
       ) : null}
-      {query.data?.nextCursor ? (
+      {more && !query.error ? (
         <Button
           variant="ghost"
           size="sm"
           onClick={() => {
             if (!expanded) setExpanded(true);
-            else setCursor(query.data!.nextCursor!);
+            else if (!provided && query.data?.nextCursor) setCursor(query.data.nextCursor);
           }}
         >
           {expanded ? "Next" : "Show more"}
