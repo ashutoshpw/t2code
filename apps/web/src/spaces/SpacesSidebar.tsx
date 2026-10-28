@@ -5,7 +5,15 @@ import { SpaceId, type SpaceCursor } from "@t2code/contracts/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesEnvironments } from "../state/spaces";
 import { usePrimaryEnvironmentId } from "../state/environments";
-import { SidebarHeader, useSidebar } from "../components/ui/sidebar";
+import { LibraryIcon, ServerIcon } from "lucide-react";
+import { useEnvironment } from "../state/environments";
+import {
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "../components/ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "../components/sidebar/SidebarChrome";
 import { Button } from "../components/ui/button";
 import { SpacePageTree } from "./SpacePageTree";
@@ -24,29 +32,33 @@ export function SpacesSidebar() {
         <SidebarChromeHeader isElectron={isElectron} />
       </SidebarHeader>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="max-h-1/2 min-h-0 shrink-0 space-y-3 overflow-y-auto p-3">
-          <h2 className="text-sm font-semibold">Spaces</h2>
-          {environments.map((entry) => (
-            <div key={entry.environmentId}>
-              <Link
-                to="/spaces"
-                search={{ environmentId: entry.environmentId }}
-                className="text-sm underline"
-              >
-                {entry.label}
-              </Link>
-            </div>
-          ))}
+        <div className="max-h-1/2 min-h-0 shrink-0 overflow-y-auto px-2 py-2">
+          <h2 className="px-2 pb-1 text-xs font-medium text-sidebar-muted-foreground">Spaces</h2>
+          {environments.length > 1 ? (
+            <SidebarMenu className="mb-2">
+              {environments.map((entry) => (
+                <SidebarMenuItem key={entry.environmentId}>
+                  <SidebarMenuButton
+                    isActive={entry.environmentId === environment?.environmentId}
+                    render={<Link to="/spaces" search={{ environmentId: entry.environmentId }} />}
+                  >
+                    <ServerIcon />
+                    <span>{entry.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          ) : null}
           {environment ? (
             <SpaceWindows
               key={environment.environmentId}
               environmentId={environment.environmentId}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">No available environments.</p>
+            <p className="px-2 text-sm text-muted-foreground">No available environments.</p>
           )}
         </div>
-        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">
+        <div className="flex min-h-0 flex-1 flex-col px-2 pb-2">
           {environment && params.spaceId ? (
             <SpacePageTree
               key={JSON.stringify([environment.environmentId, params.spaceId])}
@@ -64,19 +76,26 @@ export function SpacesSidebar() {
 function SpaceWindows({ environmentId }: { environmentId: EnvironmentId }) {
   const [cursor, setCursor] = useState<SpaceCursor>();
   const { isMobile, setOpenMobile } = useSidebar();
+  const params = useParams({ strict: false });
+  const environment = useEnvironment(environmentId);
+  const limit =
+    environment?.serverConfig?.environment.capabilities.spaces?.limits.maxListRows ?? 50;
   const query = useEnvironmentQuery(
     spacesEnvironment.list({
       environmentId,
-      input: { environmentId, limit: 1, ...(cursor ? { cursor } : {}) },
+      input: { environmentId, limit, ...(cursor ? { cursor } : {}) },
     }),
   );
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {query.error ? (
-        <>
-          <p role="alert">{query.error}</p>
+        <div className="px-2">
+          <p role="alert" className="text-sm">
+            {query.error}
+          </p>
           <Button
-            variant="outline"
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setCursor(undefined);
               query.refresh();
@@ -84,41 +103,53 @@ function SpaceWindows({ environmentId }: { environmentId: EnvironmentId }) {
           >
             Retry
           </Button>
-        </>
+        </div>
       ) : !query.data ? (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="px-2 text-sm text-muted-foreground">
           Loading spaces…
         </p>
       ) : (
-        query.data.items.map((space) => (
-          <div key={space.id}>
-            <Link
-              to="/spaces/$environmentId/$spaceId"
-              params={{ environmentId, spaceId: space.id }}
-              search={{}}
-              onClick={() => {
-                if (isMobile) setOpenMobile(false);
-              }}
-              className="break-words text-sm underline"
-            >
-              {space.title}
-            </Link>
-          </div>
-        ))
+        <SidebarMenu>
+          {query.data.items.map((space) => (
+            <SidebarMenuItem key={space.id}>
+              <SidebarMenuButton
+                isActive={space.id === params.spaceId}
+                render={
+                  <Link
+                    to="/spaces/$environmentId/$spaceId"
+                    params={{ environmentId, spaceId: space.id }}
+                    search={{}}
+                    onClick={() => {
+                      if (isMobile) setOpenMobile(false);
+                    }}
+                  />
+                }
+              >
+                <LibraryIcon />
+                <span>{space.title}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
       )}
-      {cursor ? (
-        <Button variant="outline" onClick={() => setCursor(undefined)}>
-          First spaces
-        </Button>
-      ) : null}
-      {query.data?.nextCursor && !query.error ? (
-        <Button
-          variant="outline"
-          disabled={query.isPending}
-          onClick={() => setCursor(query.data!.nextCursor!)}
-        >
-          Next spaces
-        </Button>
+      {cursor || (query.data?.nextCursor && !query.error) ? (
+        <div className="flex gap-1 px-1">
+          {cursor ? (
+            <Button variant="ghost" size="sm" onClick={() => setCursor(undefined)}>
+              First spaces
+            </Button>
+          ) : null}
+          {query.data?.nextCursor && !query.error ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={query.isPending}
+              onClick={() => setCursor(query.data!.nextCursor!)}
+            >
+              Next spaces
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
