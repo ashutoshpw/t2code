@@ -30,7 +30,7 @@ import {
   SERVICE_LAUNCHER_CONTEXT_ENV,
   SERVICE_LAUNCHER_PROTOCOL,
 } from "../cloud/serviceProtocol.ts";
-import { deriveServerPaths } from "../config.ts";
+import { deriveServerPaths, ensureServerDirectories } from "../config.ts";
 import { resolveServerConfig } from "./config.ts";
 
 const deriveExplicitServerPaths = (baseDir: string, devUrl: URL | undefined) =>
@@ -85,6 +85,34 @@ const liveProcess = Effect.acquireRelease(
 );
 
 it.layer(NodeServices.layer)("cli config resolution", (it) => {
+  it.effect("keeps Spaces beside the selected chat database without initializing it", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-spaces-paths-" });
+      for (const [name, devUrl, baseDirIsExplicit, directory] of [
+        ["installed", undefined, false, "userdata"],
+        ["implicit-dev", new URL("http://localhost:5173"), false, "dev"],
+        ["explicit-dev", new URL("http://localhost:5173"), true, "userdata"],
+      ] as const) {
+        const baseDir = path.join(root, name);
+        const paths = yield* deriveServerPaths(baseDir, devUrl, { baseDirIsExplicit });
+        const stateDir = path.join(baseDir, directory);
+        expect(paths.spacesDbPath).toBe(path.join(stateDir, "spaces.sqlite"));
+        expect(path.dirname(paths.spacesDbPath)).toBe(path.dirname(paths.dbPath));
+        expect(paths.spacesAssetsDir).toBe(path.join(stateDir, "spaces", "assets"));
+        expect(paths.spacesStagingDir).toBe(path.join(stateDir, "spaces", "staging"));
+        yield* ensureServerDirectories(paths);
+        expect(yield* fs.exists(paths.spacesDbPath)).toBe(false);
+        expect(yield* fs.exists(paths.spacesAssetsDir)).toBe(false);
+        expect(yield* fs.exists(paths.spacesStagingDir)).toBe(false);
+        yield* fs.writeFileString(path.join(stateDir, "spaces"), "unavailable");
+        yield* ensureServerDirectories(paths);
+        expect(yield* fs.readFileString(path.join(stateDir, "spaces"))).toBe("unavailable");
+      }
+    }),
+  );
+
   const defaultObservabilityConfig = {
     traceMinLevel: "Info",
     traceTimingEnabled: true,

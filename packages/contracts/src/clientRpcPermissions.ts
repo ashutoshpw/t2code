@@ -14,6 +14,20 @@ import { WS_METHODS } from "./rpc.ts";
 
 /** Incremental client enforcement; the server still authorizes every request. */
 export const CLIENT_GUARDED_RPC_SCOPES = {
+  [WS_METHODS.spacesSearch]: AuthOrchestrationReadScope,
+  [WS_METHODS.spacesCreate]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesRename]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesSetDefault]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesPagesCreate]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesPagesUpdate]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesBlocksApply]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesPagesCreateChild]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesPagesMove]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesBlocksMove]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesPagesTrash]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesPagesRestore]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesPagesPermanentlyDelete]: AuthOrchestrationOperateScope,
+
   [WS_METHODS.previewClose]: AuthPreviewOperateScope,
   [WS_METHODS.serverRunStorageCleanup]: AuthSettingsWriteScope,
   [WS_METHODS.serverCheckOtlpEndpoint]: AuthSettingsWriteScope,

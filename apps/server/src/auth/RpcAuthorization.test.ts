@@ -5,6 +5,7 @@ import {
   AuthProvidersManageScope,
   AuthSettingsWriteScope,
   DEFAULT_SERVER_SETTINGS,
+  EnvironmentId,
   ProviderInstanceId,
   ThreadId,
   AuthOrchestrationOperateScope,
@@ -17,6 +18,8 @@ import {
 } from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
+import * as C from "@t2code/contracts/spaces";
+import * as SpacesRpc from "../spaces/Rpc.ts";
 import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
 import * as RpcTest from "effect/rpc/RpcTest";
@@ -166,6 +169,11 @@ describe("settings mutation authorization", () => {
           patch: { defaultRuntimeMode: "full-access" },
           providerInstanceMutation,
         }).pipe(Effect.flip),
+      ).toMatchObject({ requiredPermission: AuthSettingsWriteScope });
+      expect(
+        yield* client[WS_METHODS.serverUpdateSettings]({ patch: { spacesEnabled: true } }).pipe(
+          Effect.flip,
+        ),
       ).toMatchObject({ requiredPermission: AuthSettingsWriteScope });
       expect(handled).toBe(1);
     }).pipe(Effect.scoped),
@@ -369,5 +377,208 @@ it.effect("denies manual cleanup before the handler without settings permission"
       requiredPermission: AuthSettingsWriteScope,
     });
     expect(handled).toBe(false);
+  }).pipe(Effect.scoped),
+);
+
+it.effect("denies every Spaces mutation with read-only grants before its handler", () =>
+  Effect.gen(function* () {
+    let handled = 0;
+    const deniedHandler = () =>
+      Effect.sync(() => {
+        handled++;
+      }).pipe(Effect.andThen(Effect.fail(new C.SpaceValidationError({ reason: "invalid_input" }))));
+    const group = SpacesRpc.group.omit(
+      WS_METHODS.spacesList,
+      WS_METHODS.spacesPagesList,
+      WS_METHODS.spacesPagesGet,
+      WS_METHODS.spacesBlocksRead,
+      WS_METHODS.spacesReceiptsGet,
+      WS_METHODS.spacesStructureInspect,
+      WS_METHODS.spacesReferencesResolve,
+      WS_METHODS.spacesTrashList,
+      WS_METHODS.spacesSearch,
+    );
+    const client = yield* RpcTest.makeClient(group).pipe(
+      Effect.provide(
+        Layer.merge(
+          group.toLayer({
+            "spaces.create": deniedHandler,
+            "spaces.rename": deniedHandler,
+            "spaces.setDefault": deniedHandler,
+            "spaces.pages.create": deniedHandler,
+            "spaces.pages.update": deniedHandler,
+            "spaces.blocks.apply": deniedHandler,
+            "spaces.pages.createChild": deniedHandler,
+            "spaces.pages.move": deniedHandler,
+            "spaces.blocks.move": deniedHandler,
+            "spaces.pages.trash": deniedHandler,
+            "spaces.pages.restore": deniedHandler,
+            "spaces.pages.permanentlyDelete": deniedHandler,
+          }),
+          RpcAuthorization.layer([AuthOrchestrationReadScope]),
+        ),
+      ),
+    );
+    const common = {
+      environmentId: EnvironmentId.make("authorization"),
+      mutationId: C.SpaceMutationId.make("write"),
+      receiptEpoch: C.SpaceReceiptEpoch.make("epoch"),
+    };
+    const spaceId = C.SpaceId.make("space");
+    const pageId = C.SpacePageId.make("page");
+    for (const call of [
+      client[WS_METHODS.spacesCreate]({ ...common, title: "" }),
+      client[WS_METHODS.spacesRename]({ ...common, spaceId, baseRevision: 0, title: "" }),
+      client[WS_METHODS.spacesSetDefault]({
+        ...common,
+        spaceId,
+        baseRevision: 0,
+        defaultSpaceId: spaceId,
+        baseDefaultRevision: 0,
+      }),
+      client[WS_METHODS.spacesPagesCreate]({
+        ...common,
+        spaceId,
+        baseRootOrderRevision: 0,
+        title: "",
+      }),
+      client[WS_METHODS.spacesPagesUpdate]({ ...common, pageId, baseRevision: 0, title: "" }),
+      client[WS_METHODS.spacesPagesCreateChild]({
+        ...common,
+        title: "",
+        placement: { pageId, parentId: null, beforeBlockId: null },
+        guards: { pages: [], roots: [] },
+      }),
+      client[WS_METHODS.spacesPagesMove]({
+        ...common,
+        pageId,
+        destination: { kind: "root", spaceId, beforePageId: null },
+        guards: { pages: [], roots: [] },
+      }),
+      client[WS_METHODS.spacesBlocksMove]({
+        ...common,
+        sourcePageId: pageId,
+        blockIds: [C.SpaceBlockId.make("block")],
+        destination: { pageId, parentId: null, beforeBlockId: null },
+        guards: { pages: [], roots: [] },
+      }),
+      client[WS_METHODS.spacesPagesTrash]({ ...common, pageId, guards: { pages: [], roots: [] } }),
+      client[WS_METHODS.spacesPagesRestore]({
+        ...common,
+        pageId,
+        guards: { pages: [], roots: [] },
+      }),
+      client[WS_METHODS.spacesPagesPermanentlyDelete]({
+        ...common,
+        pageId,
+        guards: { pages: [], roots: [] },
+      }),
+      client[WS_METHODS.spacesBlocksApply]({
+        ...common,
+        pageId,
+        baseRevision: 0,
+        generation: 0,
+        mutations: [],
+      }),
+    ] as ReadonlyArray<
+      Effect.Effect<
+        unknown,
+        C.SpaceServiceError | import("@t2code/contracts").EnvironmentAuthorizationError
+      >
+    >) {
+      const failure = yield* call.pipe(
+        Effect.match({ onFailure: (error) => error, onSuccess: () => null }),
+      );
+      expect(failure).toMatchObject({
+        _tag: "EnvironmentAuthorizationError",
+        requiredPermission: AuthOrchestrationOperateScope,
+      });
+    }
+    expect(handled).toBe(0);
+  }).pipe(Effect.scoped),
+);
+
+it.effect("keeps Spaces reads behind read scope even for operate-only clients", () =>
+  Effect.gen(function* () {
+    let handled = 0;
+    const deniedHandler = () =>
+      Effect.sync(() => {
+        handled++;
+      }).pipe(Effect.andThen(Effect.fail(new C.SpaceValidationError({ reason: "invalid_input" }))));
+    const group = SpacesRpc.group.omit(
+      WS_METHODS.spacesCreate,
+      WS_METHODS.spacesRename,
+      WS_METHODS.spacesSetDefault,
+      WS_METHODS.spacesPagesCreate,
+      WS_METHODS.spacesPagesUpdate,
+      WS_METHODS.spacesBlocksApply,
+      WS_METHODS.spacesPagesCreateChild,
+      WS_METHODS.spacesPagesMove,
+      WS_METHODS.spacesBlocksMove,
+      WS_METHODS.spacesPagesTrash,
+      WS_METHODS.spacesPagesRestore,
+      WS_METHODS.spacesPagesPermanentlyDelete,
+    );
+    const client = yield* RpcTest.makeClient(group).pipe(
+      Effect.provide(
+        Layer.merge(
+          group.toLayer({
+            "spaces.list": deniedHandler,
+            "spaces.pages.list": deniedHandler,
+            "spaces.pages.get": deniedHandler,
+            "spaces.blocks.read": deniedHandler,
+            "spaces.receipts.get": deniedHandler,
+            "spaces.structure.inspect": deniedHandler,
+            "spaces.references.resolve": deniedHandler,
+            "spaces.trash.list": deniedHandler,
+            "spaces.search": deniedHandler,
+          }),
+          RpcAuthorization.layer([AuthOrchestrationOperateScope]),
+        ),
+      ),
+    );
+    const environmentId = EnvironmentId.make("authorization");
+    const pageId = C.SpacePageId.make("page");
+    for (const call of [
+      client[WS_METHODS.spacesList]({ environmentId }),
+      client[WS_METHODS.spacesTrashList]({ environmentId }),
+      client[WS_METHODS.spacesSearch]({ environmentId, query: "needle" }),
+      client[WS_METHODS.spacesPagesList]({ environmentId, spaceId: C.SpaceId.make("space") }),
+      client[WS_METHODS.spacesPagesGet]({ environmentId, pageId }),
+      client[WS_METHODS.spacesReferencesResolve]({
+        environmentId,
+        target: { kind: "page", pageId },
+      }),
+      client[WS_METHODS.spacesStructureInspect]({
+        environmentId,
+        target: { kind: "page", pageId },
+      }),
+      client[WS_METHODS.spacesBlocksRead]({ environmentId, pageId, revision: 0 }),
+      client[WS_METHODS.spacesReceiptsGet]({
+        request: {
+          operation: "createSpace",
+          input: {
+            environmentId,
+            mutationId: C.SpaceMutationId.make("write"),
+            receiptEpoch: C.SpaceReceiptEpoch.make("epoch"),
+            title: "",
+          },
+        },
+      }),
+    ] as ReadonlyArray<
+      Effect.Effect<
+        unknown,
+        C.SpaceServiceError | import("@t2code/contracts").EnvironmentAuthorizationError
+      >
+    >) {
+      const failure = yield* call.pipe(
+        Effect.match({ onFailure: (error) => error, onSuccess: () => null }),
+      );
+      expect(failure).toMatchObject({
+        _tag: "EnvironmentAuthorizationError",
+        requiredPermission: AuthOrchestrationReadScope,
+      });
+    }
+    expect(handled).toBe(0);
   }).pipe(Effect.scoped),
 );

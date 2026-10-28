@@ -221,6 +221,8 @@ import * as ProjectCloneTracker from "./project/ProjectCloneTracker.ts";
 import * as RepositoryIdentityResolver from "./project/RepositoryIdentityResolver.ts";
 import * as WorktreeSetupTracker from "./project/WorktreeSetupTracker.ts";
 import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
+import * as SpacesService from "./spaces/SpacesService.ts";
+import * as SpacesRpc from "./spaces/Rpc.ts";
 import * as DirectEndpoints from "./environment/DirectEndpoints.ts";
 import * as RemoteOpenTargets from "./environment/RemoteOpenTargets.ts";
 import * as DefectReporter from "./observability/DefectReporter.ts";
@@ -349,8 +351,20 @@ export const withLateEditorConfig = <E, R>(
             return [{ ...current, ...event.payload }, [event]];
           case "providerStatuses":
             return [{ ...current, providers: event.payload.providers }, [event]];
-          case "settingsUpdated":
-            return [{ ...current, settings: event.payload.settings }, [event]];
+          case "settingsUpdated": {
+            let environment = current.environment;
+            if (event.payload.spaces !== undefined) {
+              const { spaces: _spaces, ...capabilities } = environment.capabilities;
+              environment = {
+                ...environment,
+                capabilities: {
+                  ...capabilities,
+                  ...(event.payload.spaces === null ? {} : { spaces: event.payload.spaces }),
+                },
+              };
+            }
+            return [{ ...current, settings: event.payload.settings, environment }, [event]];
+          }
           // Themes and usage-limit sources survive snapshots because snapshots never include them.
           default:
             return [current, [event]];
@@ -553,7 +567,30 @@ function projectFileFailureContext(
 const PROVIDER_STATUS_DEBOUNCE_MS = 200;
 
 // Middleware added later wraps middleware added earlier, so instrumentation wraps authorization.
-const ServerWsRpcGroup = WsRpcGroup.middleware(RpcInstrumentation);
+const ServerWsRpcGroup = WsRpcGroup.omit(
+  WS_METHODS.spacesList,
+  WS_METHODS.spacesCreate,
+  WS_METHODS.spacesRename,
+  WS_METHODS.spacesSetDefault,
+  WS_METHODS.spacesPagesList,
+  WS_METHODS.spacesPagesGet,
+  WS_METHODS.spacesPagesCreate,
+  WS_METHODS.spacesPagesUpdate,
+  WS_METHODS.spacesBlocksRead,
+  WS_METHODS.spacesBlocksApply,
+  WS_METHODS.spacesReceiptsGet,
+  WS_METHODS.spacesPagesCreateChild,
+  WS_METHODS.spacesPagesMove,
+  WS_METHODS.spacesStructureInspect,
+  WS_METHODS.spacesBlocksMove,
+  WS_METHODS.spacesReferencesResolve,
+  WS_METHODS.spacesPagesTrash,
+  WS_METHODS.spacesPagesRestore,
+  WS_METHODS.spacesPagesPermanentlyDelete,
+  WS_METHODS.spacesTrashList,
+)
+  .merge(SpacesRpc.group)
+  .middleware(RpcInstrumentation);
 
 // RpcGroup.toLayer derives each handler's requirements by scanning every RPC in
 // the group, so its type cost grows with handlers × RPCs. Near 200 methods that
@@ -1345,6 +1382,7 @@ export const layerWsRpc = (
       const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
       const workspaceFileSystem = yield* WorkspaceFileSystem.WorkspaceFileSystem;
       const serverEnvironment = yield* ServerEnvironment.ServerEnvironment;
+      const spacesService = yield* SpacesService.SpacesService;
       const backgroundPolicy = yield* BackgroundPolicy.BackgroundPolicy;
       const rpcClientIds = yield* Ref.make(new Set<RpcClientId>());
       yield* Effect.addFinalizer(() =>
@@ -1899,7 +1937,10 @@ export const layerWsRpc = (
         return result;
       });
 
+      const spacesHandlers = yield* SpacesRpc.handlers;
       const handlers = ServerWsRpcGroup.of({
+        ...spacesHandlers,
+
         [ORCHESTRATION_V2_WS_METHODS.dispatchCommand]: (command) =>
           Effect.annotateCurrentSpan({
             "orchestration_v2.command_id": command.commandId,
@@ -3191,14 +3232,24 @@ export const layerWsRpc = (
                     )
                   : Stream.empty;
               const settingsUpdates = settingsChanges.pipe(
-                Stream.map((settings) => ServerSettings.redactServerSettingsForClient(settings)),
-                Stream.map((settings) => ({
-                  version: 1 as const,
-                  type: "settingsUpdated" as const,
-                  payload: {
-                    settings: ServerSettings.redactServerSettingsForClient(settings),
-                  },
-                })),
+                Stream.mapEffect((settings) =>
+                  Effect.gen(function* () {
+                    const environmentId = config.environment.environmentId;
+                    const spaces = settings.spacesEnabled
+                      ? yield* spacesService
+                          .getCapability(environmentId)
+                          .pipe(Effect.orElseSucceed(() => null))
+                      : null;
+                    return {
+                      version: 1 as const,
+                      type: "settingsUpdated" as const,
+                      payload: {
+                        settings: ServerSettings.redactServerSettingsForClient(settings),
+                        spaces,
+                      },
+                    };
+                  }),
+                ),
               );
               const environmentLabelUpdates = serverSettings.streamChanges.pipe(
                 Stream.map((settings) => settings.environmentLabel),

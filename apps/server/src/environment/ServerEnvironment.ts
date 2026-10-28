@@ -21,6 +21,7 @@ import { readAgentActivityPublishingActive } from "../cloud/config.ts";
 import { resolveServerSelfUpdateCapability } from "../cloud/selfUpdate.ts";
 import { resolveServiceLauncherMode } from "../cloud/serviceLauncherClient.ts";
 import * as ServerConfig from "../config.ts";
+import * as SpacesService from "../spaces/SpacesService.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import { resolveServerEnvironmentLabel } from "./ServerEnvironmentLabel.ts";
 import { detectServerEnvironmentMachineKind } from "./ServerEnvironmentMachine.ts";
@@ -188,6 +189,7 @@ export const make = Effect.gen(function* () {
   const serverConfig = yield* ServerConfig.ServerConfig;
   const secrets = yield* ServerSecretStore.ServerSecretStore;
   const identity = yield* ServerEnvironmentIdentity;
+  const spacesService = yield* SpacesService.SpacesService;
   const hostPlatform = yield* HostProcess.Platform;
   const hostArchitecture = yield* HostProcess.Architecture;
   const environmentId = yield* identity.getEnvironmentId;
@@ -284,11 +286,16 @@ export const make = Effect.gen(function* () {
     getDescriptor: Effect.all({
       agentActivityPublishing: readAgentActivityPublishingActive(secrets),
       customLabel: Ref.get(environmentLabel),
+      spaces: spacesService.getCapability(environmentId).pipe(Effect.orElseSucceed(() => null)),
     }).pipe(
-      Effect.map(({ agentActivityPublishing, customLabel }) => ({
+      Effect.map(({ agentActivityPublishing, customLabel, spaces }) => ({
         ...descriptor,
         label: customLabel || descriptor.label,
-        capabilities: { ...descriptor.capabilities, agentActivityPublishing },
+        capabilities: {
+          ...descriptor.capabilities,
+          agentActivityPublishing,
+          ...(spaces === null ? {} : { spaces }),
+        },
       })),
     ),
   });
