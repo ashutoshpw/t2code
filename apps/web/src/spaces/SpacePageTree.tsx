@@ -1,4 +1,12 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+} from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { Link } from "@tanstack/react-router";
 import type { EnvironmentId } from "@t2code/contracts";
@@ -11,6 +19,8 @@ import { useSidebar } from "../components/ui/sidebar";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { spacePageTreeRows, type SpacePageTreeRow } from "./SpacePageTree.logic";
 import { SpacePageFocusOwner } from "./SpacePageTree.focus";
+
+const SpaceLibraryControls = lazy(() => import("./SpaceLibraryControls"));
 
 export function SpacePageTree({
   environmentId,
@@ -166,6 +176,13 @@ function PageTree({
         >
           Refresh pages
         </Button>
+        <Suspense fallback={<p role="status">Loading library controls…</p>}>
+          <SpaceLibraryControls
+            key={environmentId}
+            environmentId={environmentId}
+            spaceId={spaceId}
+          />
+        </Suspense>
       </div>
       {snapshot.error ? (
         <p role="alert" className="shrink-0 text-sm">

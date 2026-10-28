@@ -3,18 +3,33 @@ import type {
   SpaceBlockId,
   SpaceBlockWindow,
   SpacePageTarget,
+  SpaceReceiptEpoch,
+  SpaceMutationAdmission,
 } from "@t2code/contracts/spaces";
 
 import { canEditSpaceBlock, isKnownSpaceBlock, isSpaceListItem } from "./values.ts";
+import { decodeSpaceDocumentDraft, spaceDraftMaxBytes, spaceJsonBytes } from "./draft.ts";
+import {
+  acknowledgeSavedHistory,
+  adoptHistoryWindow,
+  emptySavedHistory,
+  savedCompensation,
+  type SpaceCompensation,
+  type SpaceSavedHistory,
+} from "./savedHistory.ts";
 
 export type SpaceMutation =
   | { readonly kind: "insert"; readonly block: SpaceBlock }
   | { readonly kind: "replace"; readonly block: SpaceBlock }
   | { readonly kind: "delete"; readonly blockId: SpaceBlockId; readonly mergedInto?: SpaceBlockId };
 
+export class SpaceIntentAdmissionError extends Error {}
+
 export interface SpaceSaveRequest {
   readonly key: SpacePageTarget;
   readonly mutationId: string;
+  // Missing only on legacy pending drafts, whose original intent cannot be reconstructed.
+  readonly receiptEpoch?: SpaceReceiptEpoch;
   readonly baseRevision: number;
   readonly generation: number;
   readonly mutations: readonly SpaceMutation[];
@@ -30,6 +45,8 @@ export type SpaceReceiptResult =
   | { readonly status: "unknown" };
 
 export interface SpaceSessionAdapter {
+  readonly getMutationAdmission: () => Promise<SpaceMutationAdmission>;
+  readonly validateNewRequest?: (request: SpaceSaveRequest) => void | Promise<void>;
   readonly save: (request: SpaceSaveRequest) => Promise<SpaceSaveResult>;
   // "absent" must be authoritative; timeouts and expired receipt windows are "unknown".
   readonly lookupReceipt: (request: SpaceSaveRequest) => Promise<SpaceReceiptResult>;
@@ -44,6 +61,7 @@ export interface SpaceDocumentDraft {
   readonly blocks: readonly SpaceBlock[];
   readonly mutations: readonly SpaceMutation[];
   readonly pending: SpaceSaveRequest | null;
+  readonly history?: SpaceSavedHistory;
 }
 
 export interface SpaceDraftStore {
@@ -53,6 +71,7 @@ export interface SpaceDraftStore {
 }
 
 export interface SpaceSessionOptions {
+  readonly assertMutable?: () => void;
   readonly adapter: SpaceSessionAdapter;
   readonly drafts: SpaceDraftStore;
   readonly createMutationId: () => string;
@@ -70,7 +89,10 @@ export interface SpaceSessionSnapshot {
   readonly status: "loading" | "saved" | "draft" | "saving" | "uncertain" | "conflict";
   readonly pending: SpaceSaveRequest | null;
   readonly conflictRevision: number | null;
+  readonly recoveryReason: "legacy-epoch-missing" | null;
+  readonly acknowledgedGeneration: number | null;
   readonly persistenceError: unknown;
+  readonly history: SpaceSavedHistory;
 }
 
 function own<T>(value: T): T {
@@ -81,10 +103,6 @@ function own<T>(value: T): T {
     ) as T;
   }
   return value;
-}
-
-function sameKey(a: SpacePageTarget, b: SpacePageTarget) {
-  return a.environmentId === b.environmentId && a.pageId === b.pageId;
 }
 
 function validateWindow(blocks: readonly SpaceBlock[], max: number) {
@@ -120,7 +138,10 @@ export class SpaceDocumentSession {
     status: "loading",
     pending: null,
     conflictRevision: null,
+    recoveryReason: null,
+    acknowledgedGeneration: null,
     persistenceError: null,
+    history: emptySavedHistory,
   });
   #mutations: readonly SpaceMutation[] = [];
   #hydration: Promise<void> | null = null;
@@ -168,6 +189,8 @@ export class SpaceDocumentSession {
       )
     )
       return;
+    if (patch.history && patch.history !== this.#snapshot.history)
+      patch = { ...patch, history: own(patch.history) };
     this.#snapshot = Object.freeze({ ...this.#snapshot, ...patch });
     for (const listener of this.#listeners) listener();
   }
@@ -178,22 +201,11 @@ export class SpaceDocumentSession {
     validateWindow(initial.blocks, this.#options.maxLoadedBlocks);
     this.#hydration = this.#options.drafts
       .load(this.key)
-      .then((draft) => {
-        if (draft !== null && (!sameKey(draft.key, this.key) || draft.version !== 1))
-          throw new Error("Draft belongs to another document or version");
+      .then((stored) => {
+        const draft =
+          stored === null ? null : decodeSpaceDocumentDraft(stored, this.key, this.#options);
         if (draft) {
           validateWindow(draft.blocks, this.#options.maxLoadedBlocks);
-          if (
-            draft.memberIds.length > this.#options.maxLoadedBlocks ||
-            draft.mutations.length > this.#options.maxMutations
-          )
-            throw new Error("Draft exceeds session limits");
-          if (
-            draft.pending &&
-            (!sameKey(draft.pending.key, this.key) ||
-              draft.pending.baseRevision !== draft.baseRevision)
-          )
-            throw new Error("Invalid pending draft save");
           this.#mutations = own(draft.mutations);
           this.#update(
             own({
@@ -204,13 +216,21 @@ export class SpaceDocumentSession {
               memberIds: draft.memberIds,
               dirty: draft.mutations.length > 0,
               pending: draft.pending,
+              recoveryReason:
+                draft.pending && !draft.pending.receiptEpoch ? "legacy-epoch-missing" : null,
               status: draft.pending
                 ? "uncertain"
                 : draft.baseRevision !== initial.revision
                   ? "conflict"
-                  : "draft",
+                  : draft.mutations.length
+                    ? "draft"
+                    : "saved",
               conflictRevision: draft.baseRevision !== initial.revision ? initial.revision : null,
               persistenceError: null,
+              history: draft.history ?? {
+                ...emptySavedHistory,
+                reason: "This restored draft has no retained saved preimage.",
+              },
             }),
           );
         } else {
@@ -221,6 +241,7 @@ export class SpaceDocumentSession {
             memberIds: own(initial.blocks.map((block) => block.id)),
             status: "saved",
             persistenceError: null,
+            history: adoptHistoryWindow(emptySavedHistory, initial.blocks),
           });
         }
       })
@@ -234,7 +255,14 @@ export class SpaceDocumentSession {
 
   #draft(): SpaceDocumentDraft | null {
     const snapshot = this.#snapshot;
-    if (!snapshot.dirty && !snapshot.pending) return null;
+    if (
+      !snapshot.dirty &&
+      !snapshot.pending &&
+      !snapshot.history.undo &&
+      !snapshot.history.redo &&
+      !snapshot.history.reason
+    )
+      return null;
     return Object.freeze({
       version: 1,
       key: this.key,
@@ -244,6 +272,7 @@ export class SpaceDocumentSession {
       memberIds: snapshot.memberIds,
       mutations: this.#mutations,
       pending: snapshot.pending,
+      history: snapshot.history,
     });
   }
 
@@ -278,8 +307,60 @@ export class SpaceDocumentSession {
     if (!this.#snapshot.hydrated) throw new Error("Hydrate the document before editing");
   }
 
-  apply(mutations: readonly SpaceMutation[]): void {
+  apply(mutations: readonly SpaceMutation[], order?: readonly SpaceBlockId[]): void {
+    this.#apply(mutations, order);
+  }
+
+  structureAvailability(): string | null {
+    const state = this.#snapshot;
+    return !state.hydrated ||
+      state.dirty ||
+      state.pending ||
+      this.#saving ||
+      this.#persistence ||
+      state.persistenceError !== null ||
+      state.status !== "saved"
+      ? "Resolve or finish loading the document before changing page placement"
+      : null;
+  }
+
+  compensationAvailability(direction: SpaceCompensation): string | null {
+    const state = this.#snapshot;
+    if (
+      !state.hydrated ||
+      state.dirty ||
+      state.pending ||
+      this.#saving ||
+      state.status !== "saved" ||
+      state.persistenceError !== null
+    )
+      return "Resolve or save the current draft before saved undo/redo.";
+    if (!state.history.base)
+      return state.history.reason ?? "No saved compensation baseline is retained.";
+    return savedCompensation(state.history, direction, state.blocks, state.baseRevision).reason;
+  }
+
+  prepareCompensation(direction: SpaceCompensation): void {
+    const reason = this.compensationAvailability(direction);
+    if (reason) throw new Error(reason);
+    const { mutations } = savedCompensation(
+      this.#snapshot.history,
+      direction,
+      this.#snapshot.blocks,
+      this.#snapshot.baseRevision,
+    );
+    this.#apply(mutations, undefined, direction);
+  }
+
+  #apply(
+    mutations: readonly SpaceMutation[],
+    order?: readonly SpaceBlockId[],
+    compensation?: SpaceCompensation,
+  ): void {
+    this.#options.assertMutable?.();
     this.#assertHydrated();
+    if (this.#snapshot.history.action && !this.#snapshot.pending && !compensation)
+      throw new Error("Finish saving or discard the prepared saved compensation before editing");
     if (mutations.length === 0) return;
     const owned = own(mutations);
     let blocks = [...this.#snapshot.blocks];
@@ -288,7 +369,12 @@ export class SpaceDocumentSession {
       const id = mutation.kind === "delete" ? mutation.blockId : mutation.block.id;
       const index = blocks.findIndex((block) => block.id === id);
       if (mutation.kind === "insert") {
-        if (reserved.has(id)) throw new Error("Insert requires a fresh block ID");
+        const unsent = this.#mutations.slice(this.#snapshot.pending?.mutations.length ?? 0);
+        const previous = unsent.findLast(
+          (item) => (item.kind === "delete" ? item.blockId : item.block.id) === id,
+        );
+        if (index >= 0 || (reserved.has(id) && previous?.kind !== "delete"))
+          throw new Error("Insert requires a fresh block ID");
         if (!canEditSpaceBlock(mutation.block))
           throw new Error("Cannot insert opaque content as a copy");
         if (
@@ -332,37 +418,112 @@ export class SpaceDocumentSession {
     )
       throw new Error("Explicitly move or delete loaded children with their parent");
     validateWindow(blocks, this.#options.maxLoadedBlocks);
-    const nextMutations = [...this.#mutations];
     const sentCount = this.#snapshot.pending?.mutations.length ?? 0;
-    for (const mutation of owned) {
-      const last = nextMutations.at(-1);
-      if (
-        mutation.kind === "replace" &&
-        nextMutations.length > sentCount &&
-        last &&
-        last.kind !== "delete" &&
-        last.block.id === mutation.block.id
-      ) {
-        nextMutations[nextMutations.length - 1] = { ...last, block: mutation.block };
-      } else {
-        nextMutations.push(mutation);
+    const prefix = this.#mutations.slice(0, sentCount);
+    const members = new Set(this.#snapshot.memberIds);
+    for (const mutation of prefix) {
+      if (mutation.kind === "insert") members.add(mutation.block.id);
+      if (mutation.kind === "delete") members.delete(mutation.blockId);
+    }
+    const intents = new Map<
+      SpaceBlockId,
+      { block: SpaceBlock | null; inserted?: SpaceBlock; mergedInto?: SpaceBlockId }
+    >();
+    for (const mutation of [...this.#mutations.slice(sentCount), ...owned]) {
+      const id = mutation.kind === "delete" ? mutation.blockId : mutation.block.id;
+      const previous = intents.get(id);
+      if (mutation.kind === "delete")
+        intents.set(id, {
+          block: null,
+          ...(previous?.inserted ? { inserted: previous.inserted } : {}),
+          ...(mutation.mergedInto ? { mergedInto: mutation.mergedInto } : {}),
+        });
+      else
+        intents.set(id, {
+          block: mutation.block,
+          ...(!members.has(id) ? { inserted: mutation.block } : {}),
+        });
+    }
+    const nextMutations = [...prefix];
+    for (const [id, intent] of intents) {
+      if (intent.block)
+        nextMutations.push({ kind: members.has(id) ? "replace" : "insert", block: intent.block });
+      else {
+        let into = intent.mergedInto;
+        const visited = new Set([id]);
+        while (into && intents.get(into)?.block === null) {
+          if (visited.has(into)) throw new Error("Local merge cycle");
+          visited.add(into);
+          into = intents.get(into)?.mergedInto;
+        }
+        // Unsent identities may already be referenced by the draft or clipboard history.
+        if (!members.has(id) && !intent.inserted) continue;
+        // A cancelled unsent media must not require its unpinned asset to survive GC.
+        if (
+          !members.has(id) &&
+          !into &&
+          intent.inserted &&
+          isKnownSpaceBlock(intent.inserted) &&
+          ["image", "pdf", "video"].includes(intent.inserted.type)
+        )
+          continue;
+        if (!members.has(id)) nextMutations.push({ kind: "insert", block: intent.inserted! });
+        nextMutations.push({ kind: "delete", blockId: id, ...(into ? { mergedInto: into } : {}) });
       }
+    }
+    if (order) {
+      const byId = new Map(blocks.map((block) => [block.id, block]));
+      if (
+        order.length !== blocks.length ||
+        new Set(order).size !== blocks.length ||
+        order.some((id) => !byId.has(id))
+      )
+        throw new Error("Editor order must contain exactly the loaded blocks");
+      blocks = order.map((id) => byId.get(id)!);
     }
     if (nextMutations.length > this.#options.maxMutations)
       throw new Error("Mutation window exceeds limit");
+    const history = compensation
+      ? { ...this.#snapshot.history, action: compensation }
+      : this.#snapshot.history;
+    spaceJsonBytes(
+      {
+        version: 1,
+        key: this.key,
+        baseRevision: this.#snapshot.baseRevision,
+        generation: this.#snapshot.generation + 1,
+        memberIds: this.#snapshot.memberIds,
+        blocks,
+        mutations: nextMutations,
+        pending: this.#snapshot.pending,
+        history,
+      },
+      spaceDraftMaxBytes,
+    );
     this.#mutations = Object.freeze(nextMutations);
     this.#update({
       blocks: Object.freeze(blocks),
       generation: this.#snapshot.generation + 1,
-      dirty: true,
-      status: this.#snapshot.status === "saved" ? "draft" : this.#snapshot.status,
+      dirty: nextMutations.length > 0,
+      history,
+      status:
+        this.#snapshot.status === "saved" || this.#snapshot.status === "draft"
+          ? nextMutations.length
+            ? "draft"
+            : "saved"
+          : this.#snapshot.status,
     });
     void this.#persist();
   }
 
   replaceWindow(window: SpaceBlockWindow): void {
     this.#assertHydrated();
-    if (this.#snapshot.dirty || this.#snapshot.pending || this.#saving)
+    if (
+      this.#snapshot.dirty ||
+      this.#snapshot.pending ||
+      this.#saving ||
+      this.#snapshot.persistenceError !== null
+    )
       throw new Error("Resolve the draft before replacing its loaded window");
     validateWindow(window.blocks, this.#options.maxLoadedBlocks);
     this.#update({
@@ -371,10 +532,12 @@ export class SpaceDocumentSession {
       memberIds: own(window.blocks.map((block) => block.id)),
       status: "saved",
       conflictRevision: null,
+      history: adoptHistoryWindow(this.#snapshot.history, window.blocks),
     });
   }
 
   save(): Promise<void> {
+    this.#options.assertMutable?.();
     this.#assertHydrated();
     if (this.#saving) return this.#saving;
     this.#saving = Promise.resolve()
@@ -386,35 +549,60 @@ export class SpaceDocumentSession {
   }
 
   async #save(): Promise<void> {
+    this.#options.assertMutable?.();
     if (this.#snapshot.status === "conflict") throw new Error("Resolve the conflict before saving");
     if (!this.#snapshot.dirty && !this.#snapshot.pending) return;
     let request = this.#snapshot.pending;
     const createdRequest = request === null;
-    if (request) {
+    // Only an in-process persistence failure can leave compensation known unsent; reloads are uncertain.
+    const unsentCompensation =
+      request && this.#snapshot.history.action && this.#snapshot.status === "draft";
+    if (request && !unsentCompensation) {
       this.#update({ status: "uncertain" });
+      if (!request.receiptEpoch) return;
       const receipt = await this.#options.adapter.lookupReceipt(request);
       if (receipt.status === "unknown") return;
       if (receipt.status !== "absent") {
         await this.#acknowledge(request, receipt);
         return;
       }
-    } else {
+    } else if (!request) {
+      const admission = await this.#options.adapter.getMutationAdmission();
+      this.#options.assertMutable?.();
+      if (!admission.epoch) throw new Error("Missing Spaces mutation admission");
+      if (this.getSnapshot().status === "conflict")
+        throw new Error("Resolve the conflict before saving");
+      if (!this.#snapshot.dirty) return;
       const mutationId = this.#options.createMutationId();
       if (!mutationId) throw new Error("Mutation ID must not be empty");
       request = own({
         key: this.key,
         mutationId,
+        receiptEpoch: admission.epoch,
         baseRevision: this.#snapshot.baseRevision!,
         generation: this.#snapshot.generation,
         mutations: this.#mutations,
       });
+      const validation = this.#options.adapter.validateNewRequest?.(request);
+      if (validation) {
+        await validation;
+        if (
+          this.#snapshot.generation !== request.generation ||
+          this.#snapshot.baseRevision !== request.baseRevision ||
+          this.#snapshot.pending
+        )
+          throw new SpaceIntentAdmissionError(
+            "Draft changed during image admission; retry the new intent explicitly",
+          );
+        this.#options.assertMutable?.();
+      }
       this.#update({ pending: request });
     }
     try {
       await this.persistDraft();
     } catch (error) {
       if (createdRequest) {
-        this.#update({ pending: null, status: "draft" });
+        this.#update({ pending: this.#snapshot.history.action ? request : null, status: "draft" });
         await this.#persist();
       }
       throw error;
@@ -435,24 +623,55 @@ export class SpaceDocumentSession {
       this.#update({ status: "conflict", conflictRevision: result.revision, pending: null });
     } else {
       this.#mutations = Object.freeze(this.#mutations.slice(request.mutations.length));
+      let history = acknowledgeSavedHistory(
+        this.#snapshot.history,
+        request.mutations,
+        result.revision,
+        this.#snapshot.blocks,
+        this.#mutations.length > 0,
+      );
       const members = new Set(this.#snapshot.memberIds);
       for (const mutation of request.mutations) {
         if (mutation.kind === "insert") members.add(mutation.block.id);
         if (mutation.kind === "delete") members.delete(mutation.blockId);
       }
+      try {
+        spaceJsonBytes(
+          {
+            version: 1,
+            key: this.key,
+            baseRevision: result.revision,
+            generation: this.#snapshot.generation,
+            blocks: this.#snapshot.blocks,
+            memberIds: [...members],
+            mutations: this.#mutations,
+            pending: null,
+            history,
+          },
+          spaceDraftMaxBytes,
+        );
+      } catch {
+        history = {
+          ...emptySavedHistory,
+          reason: "Saved history exceeds the atomic draft budget. Your newer draft is retained.",
+        };
+      }
       this.#update({
         baseRevision: result.revision,
+        acknowledgedGeneration: request.generation,
         memberIds: own([...members]),
         pending: null,
         dirty: this.#mutations.length > 0,
         status: this.#mutations.length > 0 ? "draft" : "saved",
         conflictRevision: null,
+        history,
       });
     }
     await this.#persist();
   }
 
   async discardDraft(window: SpaceBlockWindow): Promise<void> {
+    this.#options.assertMutable?.();
     this.#assertHydrated();
     if (this.#saving || this.#snapshot.pending)
       throw new Error("Resolve the pending receipt before discarding");
@@ -466,6 +685,7 @@ export class SpaceDocumentSession {
       pending: null,
       status: "saved",
       conflictRevision: null,
+      history: adoptHistoryWindow(emptySavedHistory, window.blocks),
     });
     await this.persistDraft();
   }
