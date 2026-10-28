@@ -573,6 +573,7 @@ const ServerWsRpcGroup = WsRpcGroup.omit(
   WS_METHODS.spacesRename,
   WS_METHODS.spacesSetDefault,
   WS_METHODS.spacesPagesList,
+  WS_METHODS.spacesPagesListAll,
   WS_METHODS.spacesPagesGet,
   WS_METHODS.spacesPagesCreate,
   WS_METHODS.spacesPagesUpdate,

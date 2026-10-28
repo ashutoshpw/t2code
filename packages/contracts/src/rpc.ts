@@ -392,6 +392,7 @@ export const WS_METHODS = {
   spacesRename: "spaces.rename",
   spacesSetDefault: "spaces.setDefault",
   spacesPagesList: "spaces.pages.list",
+  spacesPagesListAll: "spaces.pages.listAll",
   spacesPagesGet: "spaces.pages.get",
   spacesPagesCreate: "spaces.pages.create",
   spacesPagesUpdate: "spaces.pages.update",
@@ -647,6 +648,12 @@ export const WsSpacesSetDefaultRpc = Rpc.make(WS_METHODS.spacesSetDefault, {
 export const WsSpacesPagesListRpc = Rpc.make(WS_METHODS.spacesPagesList, {
   payload: Spaces.SpacePageListInput,
   success: Spaces.SpacePageListResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesPagesListAllRpc = Rpc.make(WS_METHODS.spacesPagesListAll, {
+  payload: Spaces.SpaceListInput,
+  success: Spaces.SpaceAllPagesResult,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
 
@@ -2106,6 +2113,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesRenameRpc,
   WsSpacesSetDefaultRpc,
   WsSpacesPagesListRpc,
+  WsSpacesPagesListAllRpc,
   WsSpacesPagesGetRpc,
   WsSpacesPagesCreateRpc,
   WsSpacesPagesUpdateRpc,

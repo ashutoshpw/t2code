@@ -109,6 +109,9 @@ export class SpacesService extends Context.Service<
     readonly listPages: (
       input: unknown,
     ) => Effect.Effect<C.SpacePageListResult, C.SpaceServiceError>;
+    readonly listAllPages: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceAllPagesResult, C.SpaceServiceError>;
     readonly getPage: (input: unknown) => Effect.Effect<C.SpacePageGetResult, C.SpaceServiceError>;
     readonly readBlocks: (
       input: unknown,
@@ -860,6 +863,75 @@ const make = Effect.fn("SpacesService.make")(function* (
           if (take <= 1) {
             checkLimit("maxListResponseBytes", size);
           }
+          take--;
+        }
+      }),
+    );
+  });
+  const listAllPages = Effect.fn("SpacesService.listAllPages")(function* (raw: unknown) {
+    const environmentId = yield* admit();
+    const input = yield* validateRaw(raw).pipe(
+      Effect.flatMap(decodeList),
+      Effect.mapError((e) =>
+        isServiceError(e) ? e : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+    yield* checkEnvironment(environmentId, input.environmentId);
+    return yield* run(environmentId, (meta) =>
+      Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        checkIds(input);
+        const limit = input.limit ?? limits.maxListRows;
+        checkLimit("maxListRows", limit);
+        const cursor = cursorFrom(
+          input.cursor,
+          environmentId,
+          "listAllPages",
+          "",
+          meta.catalog_revision,
+        );
+        const after = cursor
+          ? sql`AND (p.updated_at < ${cursor.key} OR (p.updated_at = ${cursor.key} AND p.page_id > ${cursor.id}))`
+          : sql``;
+        const rows = yield* sql<
+          PageRow & { readonly space_title: string; readonly has_children: number }
+        >`SELECT p.*, s.title AS space_title,
+        EXISTS(SELECT 1 FROM spaces_blocks cb JOIN spaces_page_owners co ON co.owner_block_id=cb.block_id
+          JOIN spaces_pages cp ON cp.page_id=co.child_page_id WHERE cb.page_id=p.page_id
+          AND cb.deleted=0 AND json_extract(cb.payload,'$.type')='child_page'
+          AND cp.trash_batch_id IS NULL AND cp.space_id=p.space_id AND cp.root_order IS NULL) AS has_children,
+        o.owner_block_id, b.page_id AS parent_page_id, b.deleted AS owner_deleted,
+        parent.space_id AS parent_space_id, json_extract(b.payload,'$.type') AS owner_type
+        FROM spaces_pages p JOIN spaces s ON s.space_id = p.space_id
+        LEFT JOIN spaces_page_owners o ON o.child_page_id = p.page_id
+        LEFT JOIN spaces_blocks b ON b.block_id = o.owner_block_id
+        LEFT JOIN spaces_pages parent ON parent.page_id = b.page_id
+        WHERE p.trash_batch_id IS NULL ${after}
+        ORDER BY p.updated_at DESC, p.page_id ASC LIMIT ${limit + 1}`;
+        let take = Math.min(limit, rows.length);
+        while (true) {
+          const last = rows[take - 1];
+          const result: C.SpaceAllPagesResult = {
+            items: rows.slice(0, take).map((row) => ({
+              page: { ...pageSummary(row), hasChildren: row.has_children === 1 },
+              spaceTitle: row.space_title,
+            })),
+            catalogRevision: meta.catalog_revision,
+            nextCursor:
+              take < rows.length && last
+                ? cursorFor(
+                    environmentId,
+                    "listAllPages",
+                    "",
+                    meta.catalog_revision,
+                    last.updated_at,
+                    last.page_id,
+                  )
+                : null,
+          };
+          const size = byteLength(result);
+          if (size <= limits.maxListResponseBytes) return result;
+          if (take <= 1) checkLimit("maxListResponseBytes", size);
           take--;
         }
       }),
@@ -1711,6 +1783,7 @@ const make = Effect.fn("SpacesService.make")(function* (
             assetRecoveryPending,
             assetReconciliation: yield* Reconciliation.status(),
             features: {
+              allPages: true,
               blockMoves: true,
               referenceResolution: true,
               recovery: true,
@@ -1971,6 +2044,7 @@ const make = Effect.fn("SpacesService.make")(function* (
     search,
     listSpaces,
     listPages,
+    listAllPages,
     getPage,
     readBlocks,
     createSpace,

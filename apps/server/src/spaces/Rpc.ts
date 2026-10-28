@@ -6,6 +6,7 @@ import {
   WsSpacesRenameRpc,
   WsSpacesSetDefaultRpc,
   WsSpacesPagesListRpc,
+  WsSpacesPagesListAllRpc,
   WsSpacesPagesGetRpc,
   WsSpacesPagesCreateRpc,
   WsSpacesPagesUpdateRpc,
@@ -53,6 +54,7 @@ export const group = RpcGroup.make(
     strictPayload(C.SpaceSetDefaultInput, (input) => ({ operation: "setDefaultSpace", input })),
   ),
   WsSpacesPagesListRpc.setPayload(strictPayload(C.SpacePageListInput)),
+  WsSpacesPagesListAllRpc.setPayload(strictPayload(C.SpaceListInput)),
   WsSpacesPagesGetRpc.setPayload(strictPayload(C.SpacePageGetInput)),
   WsSpacesPagesCreateRpc.setPayload(
     strictPayload(C.SpacePageCreateInput, (input) => ({ operation: "createPage", input })),
@@ -112,6 +114,7 @@ export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: str
     [WS_METHODS.spacesRename]: (input) => service.renameSpace(input),
     [WS_METHODS.spacesSetDefault]: (input) => service.setDefaultSpace(input),
     [WS_METHODS.spacesPagesList]: (input) => service.listPages(input),
+    [WS_METHODS.spacesPagesListAll]: (input) => service.listAllPages(input),
     [WS_METHODS.spacesPagesGet]: (input) => service.getPage(input),
     [WS_METHODS.spacesPagesCreate]: (input) => service.createPage(input),
     [WS_METHODS.spacesPagesUpdate]: (input) => service.updatePage(input),

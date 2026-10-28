@@ -163,6 +163,7 @@ export const SpacePageSummary = Schema.Struct({
   title: Schema.String,
   revision: NonNegativeInt,
   rootOrder: Schema.NullOr(StableId),
+  hasChildren: Schema.optionalKey(Schema.Boolean),
   location: Schema.optionalKey(SpacePageLocation),
   trash: Schema.optionalKey(SpacePageTrashStatus),
   createdAt: IsoDateTime,
@@ -223,6 +224,12 @@ export const SpacePageListResult = Schema.Struct({
   mutationAdmission: SpaceMutationAdmission,
 });
 export type SpacePageListResult = typeof SpacePageListResult.Type;
+export const SpaceAllPagesResult = Schema.Struct({
+  items: Schema.Array(Schema.Struct({ page: SpacePageSummary, spaceTitle: Schema.String })),
+  catalogRevision: NonNegativeInt,
+  nextCursor: Schema.NullOr(SpaceCursor),
+});
+export type SpaceAllPagesResult = typeof SpaceAllPagesResult.Type;
 export const SpaceSearchInput = Schema.Struct({
   ...SpaceListInput.fields,
   spaceId: Schema.optionalKey(SpaceId),
@@ -723,6 +730,7 @@ export const SpaceCapability = Schema.Struct({
   // Flags describe implemented methods, independently of permissions and index readiness.
   features: Schema.optionalKey(
     Schema.Struct({
+      allPages: Schema.optionalKey(Schema.Literal(true)),
       blockMoves: Schema.optionalKey(Schema.Literal(true)),
       referenceResolution: Schema.optionalKey(Schema.Literal(true)),
       recovery: Schema.optionalKey(Schema.Literal(true)),

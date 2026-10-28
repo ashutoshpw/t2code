@@ -20,6 +20,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.spacesRename]: "spaces",
   [WS_METHODS.spacesSetDefault]: "spaces",
   [WS_METHODS.spacesPagesList]: "spaces",
+  [WS_METHODS.spacesPagesListAll]: "spaces",
   [WS_METHODS.spacesPagesGet]: "spaces",
   [WS_METHODS.spacesPagesCreate]: "spaces",
   [WS_METHODS.spacesPagesUpdate]: "spaces",

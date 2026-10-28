@@ -1409,6 +1409,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           const capability = yield* service.getCapability(environmentId);
           assert.equal(capability?.version, 2);
           assert.deepEqual(capability?.features, {
+            allPages: true,
             blockMoves: true,
             referenceResolution: true,
             recovery: true,
@@ -1739,6 +1740,54 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           );
         }),
       ),
+  );
+
+  it.effect("lists active pages across spaces with revision-bound cursors", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const { service, common, page } = yield* boot();
+        const other = yield* service.createSpace({
+          ...common,
+          mutationId: "all-space",
+          title: "Other",
+        });
+        const second = yield* rootPage(service, common, other.space.id, "all-second");
+        const child = yield* childPage(service, common, page.id, "all-child");
+        assert.isTrue(
+          (yield* service.listAllPages(env)).items.find((item) => item.page.id === page.id)?.page
+            .hasChildren,
+        );
+        yield* service.trashPage(
+          yield* recoveryIntent(service, common, child.page.id, "trash", "all-trash"),
+        );
+        const first = yield* service.listAllPages({ ...env, limit: 1 });
+        assert.lengthOf(first.items, 1);
+        assert.isNotNull(first.nextCursor);
+        const next = yield* service.listAllPages({ ...env, limit: 1, cursor: first.nextCursor! });
+        assert.deepEqual(
+          new Set([...first.items, ...next.items].map((item) => item.page.id)),
+          new Set([page.id, second.id]),
+        );
+        assert.equal(
+          [...first.items, ...next.items].find((item) => item.page.id === second.id)?.spaceTitle,
+          "Other",
+        );
+        assert.isNull(next.nextCursor);
+        assert.isFalse(
+          [...first.items, ...next.items].find((item) => item.page.id === page.id)?.page
+            .hasChildren,
+        );
+        const wrong = yield* Effect.flip(
+          service.listPages({ ...env, spaceId: page.spaceId, cursor: first.nextCursor! }),
+        );
+        assert.equal(wrong._tag, "SpaceValidationError");
+        yield* rootPage(service, common, other.space.id, "all-new");
+        const stale = yield* Effect.flip(
+          service.listAllPages({ ...env, cursor: first.nextCursor! }),
+        );
+        assert.equal(stale._tag, "SpaceCursorStaleError");
+      }),
+    ),
   );
 
   it.effect(
