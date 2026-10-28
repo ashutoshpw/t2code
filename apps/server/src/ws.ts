@@ -584,6 +584,7 @@ const ServerWsRpcGroup = WsRpcGroup.omit(
   WS_METHODS.spacesAssetsUploadGet,
   WS_METHODS.spacesAssetsUploadFinalize,
   WS_METHODS.spacesAssetsGet,
+  WS_METHODS.spacesAssetsList,
   WS_METHODS.spacesPagesCreateChild,
   WS_METHODS.spacesPagesMove,
   WS_METHODS.spacesStructureInspect,

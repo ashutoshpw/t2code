@@ -399,6 +399,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesTrashList,
       WS_METHODS.spacesSearch,
       WS_METHODS.spacesAssetsGet,
+      WS_METHODS.spacesAssetsList,
       WS_METHODS.spacesAssetsUploadGet,
       WS_METHODS.spacesContextCapture,
     );
@@ -544,6 +545,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
         Layer.merge(
           group.toLayer({
             "spaces.assets.get": deniedHandler,
+            "spaces.assets.list": deniedHandler,
             "spaces.assets.upload.get": deniedHandler,
             "spaces.list": deniedHandler,
             "spaces.pages.list": deniedHandler,
@@ -565,6 +567,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
     const pageId = C.SpacePageId.make("page");
     for (const call of [
       client[WS_METHODS.spacesAssetsGet]({ environmentId, assetId: C.SpaceAssetId.make("asset") }),
+      client[WS_METHODS.spacesAssetsList]({ environmentId }),
       client[WS_METHODS.spacesAssetsUploadGet]({
         environmentId,
         uploadId: C.SpaceAssetUploadId.make("upload"),

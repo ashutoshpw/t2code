@@ -1409,6 +1409,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           const capability = yield* service.getCapability(environmentId);
           assert.equal(capability?.version, 2);
           assert.deepEqual(capability?.features, {
+            assetList: true,
             allPages: true,
             blockMoves: true,
             referenceResolution: true,

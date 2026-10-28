@@ -670,6 +670,27 @@ export const SpaceAssetMetadata = Schema.Struct({
   imageDimensions: Schema.optionalKey(Schema.Struct({ width: PositiveInt, height: PositiveInt })),
 });
 export type SpaceAssetMetadata = typeof SpaceAssetMetadata.Type;
+export const SpaceAssetListInput = Schema.Struct({
+  ...SpaceListInput.fields,
+  mediaType: Schema.optionalKey(Schema.Literals(["image", "pdf", "video"])),
+});
+export type SpaceAssetListInput = typeof SpaceAssetListInput.Type;
+export const SpaceAssetListResult = Schema.Struct({
+  items: Schema.Array(
+    Schema.Struct({
+      assetId: SpaceAssetId,
+      name: Schema.String,
+      mimeType: SpaceAssetMimeType,
+      byteSize: PositiveInt,
+      createdAt: IsoDateTime,
+      pageId: SpacePageId,
+      spaceId: SpaceId,
+    }),
+  ),
+  catalogRevision: NonNegativeInt,
+  nextCursor: Schema.NullOr(SpaceCursor),
+});
+export type SpaceAssetListResult = typeof SpaceAssetListResult.Type;
 export const SpaceAssetUploadCreateResult = Schema.Struct({
   uploadId: SpaceAssetUploadId,
   assetId: SpaceAssetId,
@@ -730,6 +751,7 @@ export const SpaceCapability = Schema.Struct({
   // Flags describe implemented methods, independently of permissions and index readiness.
   features: Schema.optionalKey(
     Schema.Struct({
+      assetList: Schema.optionalKey(Schema.Literal(true)),
       allPages: Schema.optionalKey(Schema.Literal(true)),
       blockMoves: Schema.optionalKey(Schema.Literal(true)),
       referenceResolution: Schema.optionalKey(Schema.Literal(true)),

@@ -17,6 +17,7 @@ import {
   WsSpacesAssetsUploadGetRpc,
   WsSpacesAssetsUploadFinalizeRpc,
   WsSpacesAssetsGetRpc,
+  WsSpacesAssetsListRpc,
   WsSpacesPagesCreateChildRpc,
   WsSpacesPagesMoveRpc,
   WsSpacesStructureInspectRpc,
@@ -42,6 +43,7 @@ export const group = RpcGroup.make(
   WsSpacesAssetsUploadGetRpc.setPayload(strictPayload(C.SpaceAssetUploadInput)),
   WsSpacesAssetsUploadFinalizeRpc.setPayload(strictPayload(C.SpaceAssetUploadInput)),
   WsSpacesAssetsGetRpc.setPayload(strictPayload(C.SpaceAssetGetInput)),
+  WsSpacesAssetsListRpc.setPayload(strictPayload(C.SpaceAssetListInput)),
   WsSpacesContextCaptureRpc.setPayload(strictPayload(SpaceContextCaptureInput)),
   WsSpacesListRpc.setPayload(strictPayload(C.SpaceListInput)),
   WsSpacesCreateRpc.setPayload(
@@ -108,6 +110,7 @@ export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: str
     [WS_METHODS.spacesAssetsUploadFinalize]: (input) =>
       service.finalizeAssetUpload(input, callerId),
     [WS_METHODS.spacesAssetsGet]: (input) => service.getAssetMetadata(input),
+    [WS_METHODS.spacesAssetsList]: (input) => service.listAssets(input),
     [WS_METHODS.spacesContextCapture]: (input) => service.captureContextSnapshot(input),
     [WS_METHODS.spacesList]: (input) => service.listSpaces(input),
     [WS_METHODS.spacesCreate]: (input) => service.createSpace(input),

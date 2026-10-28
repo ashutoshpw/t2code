@@ -15,6 +15,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.spacesAssetsUploadGet]: "spaces",
   [WS_METHODS.spacesAssetsUploadFinalize]: "spaces",
   [WS_METHODS.spacesAssetsGet]: "spaces",
+  [WS_METHODS.spacesAssetsList]: "spaces",
   [WS_METHODS.spacesList]: "spaces",
   [WS_METHODS.spacesCreate]: "spaces",
   [WS_METHODS.spacesRename]: "spaces",

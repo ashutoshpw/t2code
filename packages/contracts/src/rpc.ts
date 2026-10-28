@@ -403,6 +403,7 @@ export const WS_METHODS = {
   spacesAssetsUploadGet: "spaces.assets.upload.get",
   spacesAssetsUploadFinalize: "spaces.assets.upload.finalize",
   spacesAssetsGet: "spaces.assets.get",
+  spacesAssetsList: "spaces.assets.list",
   spacesPagesCreateChild: "spaces.pages.createChild",
   spacesPagesMove: "spaces.pages.move",
   spacesStructureInspect: "spaces.structure.inspect",
@@ -768,6 +769,12 @@ export const WsSpacesAssetsUploadFinalizeRpc = Rpc.make(WS_METHODS.spacesAssetsU
   success: Spaces.SpaceAssetMetadata,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
+export const WsSpacesAssetsListRpc = Rpc.make(WS_METHODS.spacesAssetsList, {
+  payload: Spaces.SpaceAssetListInput,
+  success: Spaces.SpaceAssetListResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
 export const WsSpacesAssetsGetRpc = Rpc.make(WS_METHODS.spacesAssetsGet, {
   payload: Spaces.SpaceAssetGetInput,
   success: Spaces.SpaceAssetMetadata,
@@ -2124,6 +2131,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesAssetsUploadGetRpc,
   WsSpacesAssetsUploadFinalizeRpc,
   WsSpacesAssetsGetRpc,
+  WsSpacesAssetsListRpc,
   WsSpacesPagesCreateChildRpc,
   WsSpacesPagesMoveRpc,
   WsSpacesStructureInspectRpc,

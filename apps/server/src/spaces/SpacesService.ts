@@ -76,6 +76,9 @@ export class SpacesService extends Context.Service<
       input: unknown,
       callerId: string,
     ) => Effect.Effect<C.SpaceAssetMetadata, C.SpaceServiceError>;
+    readonly listAssets: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceAssetListResult, C.SpaceServiceError>;
     readonly getAssetMetadata: (
       input: unknown,
     ) => Effect.Effect<C.SpaceAssetMetadata, C.SpaceServiceError>;
@@ -312,6 +315,18 @@ function cursorFrom(
     throw new C.SpaceValidationError({ reason: "invalid_cursor" });
   if (decoded.revision !== revision) throw new C.SpaceCursorStaleError({ revision });
   return decoded;
+}
+function decodeAssetCursor(cursor: typeof Cursor.Type) {
+  try {
+    const ids = Schema.decodeUnknownSync(Schema.Tuple([Schema.String, Schema.String]))(
+      JSON.parse(cursor.id),
+    );
+    if (!Number.isSafeInteger(Number(cursor.key)) || String(Number(cursor.key)) !== cursor.key)
+      throw new Error();
+    return ids;
+  } catch {
+    throw new C.SpaceValidationError({ reason: "invalid_cursor" });
+  }
 }
 function checkIds(input: object) {
   for (const [key, value] of Object.entries(input)) {
@@ -863,6 +878,85 @@ const make = Effect.fn("SpacesService.make")(function* (
           if (take <= 1) {
             checkLimit("maxListResponseBytes", size);
           }
+          take--;
+        }
+      }),
+    );
+  });
+  const listAssets = Effect.fn("SpacesService.listAssets")(function* (raw: unknown) {
+    const environmentId = yield* admit();
+    const input = yield* validateRaw(raw).pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(C.SpaceAssetListInput, strict)),
+      Effect.mapError((e) =>
+        isServiceError(e) ? e : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+    yield* checkEnvironment(environmentId, input.environmentId);
+    return yield* run(environmentId, (meta) =>
+      Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        const limit = input.limit ?? limits.maxListRows;
+        checkLimit("maxListRows", limit);
+        const filter = canonical({ mediaType: input.mediaType ?? null });
+        const cursor = cursorFrom(
+          input.cursor,
+          environmentId,
+          "listAssets",
+          filter,
+          meta.catalog_revision,
+        );
+        const [assetId, pageId] = cursor ? decodeAssetCursor(cursor) : ["", ""];
+        const after = cursor
+          ? sql`AND (a.created_at_ms < ${Number(cursor.key)} OR (a.created_at_ms = ${Number(cursor.key)} AND (a.asset_id,p.page_id) > (${assetId},${pageId})))`
+          : sql``;
+        const media = input.mediaType ? sql`AND b.media_kind = ${input.mediaType}` : sql``;
+        const rows = yield* sql<{
+          readonly asset_id: C.SpaceAssetId;
+          readonly name: string;
+          readonly mime_type: C.SpaceAssetMetadata["mimeType"];
+          readonly byte_size: number;
+          readonly created_at_ms: number;
+          readonly page_id: C.SpacePageId;
+          readonly space_id: C.SpaceId;
+        }>`
+        SELECT DISTINCT a.asset_id,a.name,b.mime_type,b.byte_size,a.created_at_ms,p.page_id,p.space_id
+        FROM spaces_assets a JOIN spaces_asset_blobs b ON b.digest=a.digest
+        JOIN spaces_block_asset_refs r ON r.asset_id=a.asset_id
+        JOIN spaces_blocks block ON block.block_id=r.block_id
+        JOIN spaces_pages p ON p.page_id=block.page_id
+        WHERE a.state='ready' AND b.state='ready' AND block.deleted=0 AND p.trash_batch_id IS NULL
+          AND COALESCE(a.blob_generation,(SELECT u.blob_generation FROM spaces_asset_uploads u WHERE u.asset_id=a.asset_id AND u.digest=a.digest AND u.state='ready'))=b.generation
+          ${media} ${after}
+        ORDER BY a.created_at_ms DESC,a.asset_id,p.page_id LIMIT ${limit + 1}`;
+        let take = Math.min(limit, rows.length);
+        while (true) {
+          const last = rows[take - 1];
+          const result: C.SpaceAssetListResult = {
+            items: rows.slice(0, take).map((row) => ({
+              assetId: row.asset_id,
+              name: row.name,
+              mimeType: row.mime_type,
+              byteSize: row.byte_size,
+              createdAt: DateTime.formatIso(DateTime.makeUnsafe(row.created_at_ms)),
+              pageId: row.page_id,
+              spaceId: row.space_id,
+            })),
+            catalogRevision: meta.catalog_revision,
+            nextCursor:
+              take < rows.length && last
+                ? cursorFor(
+                    environmentId,
+                    "listAssets",
+                    filter,
+                    meta.catalog_revision,
+                    String(last.created_at_ms),
+                    canonical([last.asset_id, last.page_id]),
+                  )
+                : null,
+          };
+          const size = byteLength(result);
+          if (size <= limits.maxListResponseBytes) return result;
+          if (take <= 1) checkLimit("maxListResponseBytes", size);
           take--;
         }
       }),
@@ -1783,6 +1877,7 @@ const make = Effect.fn("SpacesService.make")(function* (
             assetRecoveryPending,
             assetReconciliation: yield* Reconciliation.status(),
             features: {
+              assetList: true,
               allPages: true,
               blockMoves: true,
               referenceResolution: true,
@@ -2045,6 +2140,7 @@ const make = Effect.fn("SpacesService.make")(function* (
     listSpaces,
     listPages,
     listAllPages,
+    listAssets,
     getPage,
     readBlocks,
     createSpace,

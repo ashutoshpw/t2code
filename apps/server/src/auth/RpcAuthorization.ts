@@ -41,6 +41,7 @@ export const RPC_REQUIRED_SCOPES = {
   ...CLIENT_GUARDED_RPC_SCOPES,
   [WS_METHODS.spacesAssetsUploadGet]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesAssetsGet]: AuthOrchestrationReadScope,
+  [WS_METHODS.spacesAssetsList]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesList]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesPagesList]: AuthOrchestrationReadScope,
   [WS_METHODS.spacesPagesListAll]: AuthOrchestrationReadScope,
