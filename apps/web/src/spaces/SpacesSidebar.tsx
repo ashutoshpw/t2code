@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { EnvironmentId } from "@t2code/contracts";
 import { SpaceId, type SpaceCursor } from "@t2code/contracts/spaces";
@@ -19,6 +19,15 @@ import { Button } from "../components/ui/button";
 import { SpacePageTree } from "./SpacePageTree";
 import { isElectron } from "../env";
 
+const CreateControls = lazy(() =>
+  import("./SpaceCreateControls").then((module) => ({
+    default: module.SidebarCreateControls,
+  })),
+);
+const NewSpaceButton = lazy(() =>
+  import("./SpaceCreateControls").then((module) => ({ default: module.NewSpaceButton })),
+);
+
 export function SpacesSidebar() {
   const params = useParams({ strict: false });
   const environments = useSpacesEnvironments();
@@ -26,14 +35,41 @@ export function SpacesSidebar() {
   const environment = params.environmentId
     ? environments.find((entry) => entry.environmentId === params.environmentId)
     : (environments.find((entry) => entry.environmentId === primaryId) ?? environments[0]);
+  const { isMobile, setOpenMobile } = useSidebar();
+  const closeMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
   return (
     <>
       <SidebarHeader>
         <SidebarChromeHeader isElectron={isElectron} />
       </SidebarHeader>
+      {environment ? (
+        <div className="space-y-2 px-2 pt-2">
+          <Suspense fallback={null}>
+            <CreateControls
+              key={environment.environmentId}
+              environmentId={environment.environmentId}
+              spaceId={params.spaceId ? SpaceId.make(params.spaceId) : undefined}
+              onNavigate={closeMobile}
+            />
+          </Suspense>
+        </div>
+      ) : null}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="max-h-1/2 min-h-0 shrink-0 overflow-y-auto px-2 py-2">
-          <h2 className="px-2 pb-1 text-xs font-medium text-sidebar-muted-foreground">Spaces</h2>
+          <div className="flex items-center justify-between pb-1 pl-2">
+            <h2 className="text-xs font-medium text-sidebar-muted-foreground">Spaces</h2>
+            {environment ? (
+              <Suspense fallback={null}>
+                <NewSpaceButton
+                  key={environment.environmentId}
+                  environmentId={environment.environmentId}
+                  onNavigate={closeMobile}
+                />
+              </Suspense>
+            ) : null}
+          </div>
           {environments.length > 1 ? (
             <SidebarMenu className="mb-2">
               {environments.map((entry) => (
