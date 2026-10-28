@@ -309,6 +309,54 @@ it.effect.each([
     ),
 );
 
+it.effect("lists referenced finalized media with filtered revision-bound cursors", () =>
+  fixture(({ live }) =>
+    Effect.gen(function* () {
+      const { service, request, pageId } = yield* boot();
+      const first = yield* upload("list-first");
+      const second = yield* upload("list-second");
+      const unused = yield* upload("list-unused");
+      yield* service.applyBlockBatch(
+        request("list-insert", 0, [
+          { kind: "insert", block: media("a", first.assetId) },
+          { kind: "insert", block: media("b", first.assetId) },
+          { kind: "insert", block: media("c", second.assetId) },
+        ]),
+      );
+      const list = yield* service.listAssets({ ...env, mediaType: "pdf", limit: 1 });
+      expect(list.items).toHaveLength(1);
+      expect(list.nextCursor).not.toBeNull();
+      const next = yield* service.listAssets({
+        ...env,
+        mediaType: "pdf",
+        limit: 1,
+        cursor: list.nextCursor!,
+      });
+      expect(new Set([...list.items, ...next.items].map((item) => item.assetId))).toEqual(
+        new Set([first.assetId, second.assetId]),
+      );
+      expect([...list.items, ...next.items].every((item) => item.pageId === pageId)).toBe(true);
+      expect([...list.items, ...next.items].some((item) => item.assetId === unused.assetId)).toBe(
+        false,
+      );
+      expect((yield* service.listAssets({ ...env, mediaType: "image" })).items).toEqual([]);
+      expect(
+        (yield* Effect.flip(
+          service.listAssets({ ...env, mediaType: "video", cursor: list.nextCursor! }),
+        ))._tag,
+      ).toBe("SpaceValidationError");
+      yield* service.applyBlockBatch(
+        request("list-remove", 1, [{ kind: "delete", blockId: C.SpaceBlockId.make("c") }]),
+      );
+      expect(
+        (yield* Effect.flip(
+          service.listAssets({ ...env, mediaType: "pdf", cursor: list.nextCursor! }),
+        ))._tag,
+      ).toBe("SpaceCursorStaleError");
+    }).pipe(Effect.provide(live())),
+  ),
+);
+
 it.effect(
   "persists bounded current-reference progress and retains concurrent writes behind its cursor",
   () =>
