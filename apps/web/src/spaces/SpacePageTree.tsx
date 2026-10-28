@@ -6,6 +6,7 @@ import {
   useState,
   useSyncExternalStore,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { Link, useParams } from "@tanstack/react-router";
@@ -26,9 +27,11 @@ const SpaceLibraryControls = lazy(() => import("./SpaceLibraryControls"));
 export function SpacePageTree({
   environmentId,
   spaceId,
+  header,
 }: {
   environmentId: EnvironmentId;
   spaceId: SpaceId;
+  header?: ReactNode;
 }) {
   const availability = useSpacesAvailability(environmentId);
   const environment = useEnvironment(environmentId);
@@ -38,7 +41,12 @@ export function SpacePageTree({
     !capability ||
     (capability.version !== 1 && capability.version !== 2)
   )
-    return <SpacesUnavailable availability={availability} />;
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {header}
+        <SpacesUnavailable availability={availability} />
+      </div>
+    );
   return (
     <PageTree
       key={JSON.stringify([
@@ -51,6 +59,7 @@ export function SpacePageTree({
       spaceId={spaceId}
       version={capability.version}
       maxRows={capability.limits.maxListRows}
+      header={header}
     />
   );
 }
@@ -60,11 +69,13 @@ function PageTree({
   spaceId,
   version,
   maxRows,
+  header,
 }: {
   environmentId: EnvironmentId;
   spaceId: SpaceId;
   version: 1 | 2;
   maxRows: number;
+  header?: ReactNode;
 }) {
   const [navigation] = useState(() =>
     spacePageNavigation({ environmentId, spaceId, version, maxRows }),
@@ -163,25 +174,30 @@ function PageTree({
   };
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1">
-      <div className="flex shrink-0 items-center gap-1 px-2">
-        <h2 className="min-w-0 flex-1 truncate text-xs font-medium text-sidebar-muted-foreground">
-          {snapshot.windows.find((window) => window.parentPageId === null)?.data?.space.title ??
-            "Pages"}
-        </h2>
-        <Suspense fallback={<p role="status">Loading library controls…</p>}>
-          <SpaceLibraryControls
-            key={environmentId}
-            environmentId={environmentId}
-            spaceId={spaceId}
-          />
-        </Suspense>
-      </div>
-      {snapshot.error ? (
-        <p role="alert" className="shrink-0 px-2 text-sm">
-          {snapshot.error}
-        </p>
-      ) : null}
       <LegendList<SpacePageTreeRow>
+        ListHeaderComponent={
+          <>
+            {header}
+            <div className="flex items-center gap-1 px-2">
+              <h2 className="min-w-0 flex-1 truncate text-xs font-medium text-sidebar-muted-foreground">
+                {snapshot.windows.find((window) => window.parentPageId === null)?.data?.space
+                  .title ?? "Pages"}
+              </h2>
+              <Suspense fallback={<p role="status">Loading library controls…</p>}>
+                <SpaceLibraryControls
+                  key={environmentId}
+                  environmentId={environmentId}
+                  spaceId={spaceId}
+                />
+              </Suspense>
+            </div>
+            {snapshot.error ? (
+              <p role="alert" className="px-2 text-sm">
+                {snapshot.error}
+              </p>
+            ) : null}
+          </>
+        }
         ref={attachList}
         data={rows}
         keyExtractor={(row) => row.key}
