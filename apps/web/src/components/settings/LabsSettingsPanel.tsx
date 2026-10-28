@@ -9,6 +9,7 @@ import { useT2ConnectAuthPrompt } from "../clerk/useT2ConnectAuthPrompt";
 import { Button } from "../ui/button";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
+import { useSettingsScope } from "./SettingsScopeContext";
 import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
@@ -24,12 +25,9 @@ export function LabsSettingsPanel() {
       <SettingsSection id="beta" title="Beta">
         <BoringSidebarRow />
         <BoringSidebarMultilineRow />
-<<<<<<< HEAD
         <ToolCallVisibilityRow />
-        {/* Clerk is only mounted when this build has T3 Connect. */}
-=======
+        <SpacesRow />
         {/* Clerk is only mounted when this build has T2 Connect. */}
->>>>>>> cfeb9e40 (fix(rebrand): repair the round-7 rebase seams and finish the t2 namespace)
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
         <LinkedEnvironmentsRow />
         <SimlockHostsRow />
@@ -80,7 +78,6 @@ function BoringSidebarMultilineRow() {
   );
 }
 
-<<<<<<< HEAD
 const TOOL_CALL_VISIBILITY_LABELS: Record<ToolCallVisibility, string> = {
   showAll: "Show all",
   hideSuccessful: "Hide successful",
@@ -121,10 +118,7 @@ function ToolCallVisibilityRow() {
   );
 }
 
-/** Signed out of T3 Connect, the row offers to sign in instead of its switch. */
-=======
 /** Signed out of T2 Connect, the row offers to sign in instead of its switch. */
->>>>>>> cfeb9e40 (fix(rebrand): repair the round-7 rebase seams and finish the t2 namespace)
 function GuestLinksRowWithSignIn() {
   const { isSignedIn } = useAuth();
   const { openAuthPrompt } = useT2ConnectAuthPrompt();
@@ -133,11 +127,7 @@ function GuestLinksRowWithSignIn() {
   return (
     <SettingsRow
       {...searchableSetting("guest-links")}
-<<<<<<< HEAD
-      description="Share a thread with a guest who watches it live in a browser and sends messages you approve. Sign in to T3 Connect to use guest links."
-=======
-      description="Share a thread with a guest who watches it live in their browser and sends messages you approve. Sign in to T2 Connect to use guest links."
->>>>>>> cfeb9e40 (fix(rebrand): repair the round-7 rebase seams and finish the t2 namespace)
+      description="Share a thread with a guest who watches it live in a browser and sends messages you approve. Sign in to T2 Connect to use guest links."
       control={
         <Button size="sm" variant="outline" onClick={openAuthPrompt}>
           Sign in
@@ -152,7 +142,7 @@ function GuestLinksRow() {
   const updateSettings = useUpdateScopedSettings();
   const scope = useOptionalSettingsScope();
   const primaryPolicy = usePrimaryManagedPolicy();
-  // Guests arrive through T3 Connect, so a policy that turns Connect off turns this off too.
+  // Guests arrive through T2 Connect, so a policy that turns Connect off turns this off too.
   const connectDenial = firstManagedDenial(
     scope
       ? scope.connectedEnvironments.map((environment) => environment.serverConfig?.managedPolicy)
@@ -164,17 +154,12 @@ function GuestLinksRow() {
       serverScoped
       {...searchableSetting("guest-links")}
       settingKeys={["guestSharingEnabled"]}
-      // Turning guest links off still works without T3 Connect.
+      // Turning guest links off still works without T2 Connect.
       managed={settings.guestSharingEnabled ? undefined : connectDenial}
       description={
         <>
-<<<<<<< HEAD
           Share a thread with a guest who watches it live in a browser and sends messages you
-          approve. Needs T3 Connect: sign in and link this machine in{" "}
-=======
-          Share a thread with a guest who watches it live in their browser and sends messages you
           approve. Needs T2 Connect: sign in and link this machine in{" "}
->>>>>>> cfeb9e40 (fix(rebrand): repair the round-7 rebase seams and finish the t2 namespace)
           <Link to="/settings/access" className="underline underline-offset-2">
             Sharing & access
           </Link>
@@ -248,7 +233,7 @@ function SimlockHostsRow() {
           <Link to="/settings/devices" className="underline underline-offset-2">
             Devices
           </Link>
-          . An alpha that may change or break. T3 Code never installs Simlock.
+          . An alpha that may change or break. T2 Code never installs Simlock.
         </>
       }
       control={
@@ -259,6 +244,38 @@ function SimlockHostsRow() {
             updateSettings({ simlockDeviceHostsEnabled: Boolean(checked) })
           }
           aria-label="Simlock device hosts"
+        />
+      }
+    />
+  );
+}
+
+function SpacesRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  const { connectedEnvironments } = useSettingsScope();
+  const supported =
+    connectedEnvironments.length > 0 &&
+    connectedEnvironments.every(
+      (environment) => environment.serverConfig?.environment.capabilities.spacesSettings === true,
+    );
+  return (
+    <SettingsRow
+      serverScoped
+      {...searchableSetting("spaces")}
+      settingKeys={["spacesEnabled"]}
+      description={
+        supported
+          ? "Browse pages in this environment. Turning Spaces off keeps its data."
+          : "Update every selected environment to enable Spaces."
+      }
+      control={
+        <ScopedSwitch
+          settingKeys={["spacesEnabled"]}
+          checked={settings.spacesEnabled}
+          disabled={!supported}
+          aria-label="Spaces"
+          onCheckedChange={(checked) => updateSettings({ spacesEnabled: Boolean(checked) })}
         />
       }
     />
