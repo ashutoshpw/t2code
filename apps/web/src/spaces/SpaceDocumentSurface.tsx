@@ -33,6 +33,7 @@ import { SpaceMentionController } from "./mentions";
 import { SpaceEditorBridge } from "./editorBridge";
 import { spaceImages } from "./imageRuntime";
 import { SpaceMediaBlock } from "./SpaceMediaBlock";
+import { SpaceChildPageRow } from "./SpaceAtomView";
 import { SpaceEditor } from "./SpaceEditor";
 import type { SpaceBlockMoveProof } from "@t2code/client-runtime/spaces";
 import { useEnvironment } from "../state/environments";
@@ -155,16 +156,15 @@ function DocumentContent({
       );
     if (block.type !== "child_page") return null;
     return (
-      <SpaceSourceOpen
-        owner={sources}
-        target={{ kind: "page", pageId: block.content.pageId }}
+      <SpaceChildPageRow
+        environmentId={controller.session.key.environmentId}
+        pageId={block.content.pageId}
         current={() =>
           !!sources?.current() &&
           current() &&
           bridge.childPageTarget(block.id) === block.content.pageId
         }
         onOpen={onOpenSource}
-        label="child page"
       />
     );
   };
