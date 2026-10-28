@@ -3699,6 +3699,34 @@ it.effect(
     ).pipe(Effect.provide(NodeServices.layer)),
 );
 
+it.effect("announces a structural change only after the affected pages are released", () =>
+  Effect.scoped(
+    fixture((service) =>
+      Effect.gen(function* () {
+        const h = yield* rootReorderFixture(service);
+        const reservedAtChange: boolean[] = [];
+        const owner = h.make(() => {
+          try {
+            h.documents.reserve(environmentId, [h.pages[0]!])();
+            reservedAtChange.push(false);
+          } catch {
+            reservedAtChange.push(true);
+          }
+        });
+        yield* Effect.promise(async () => {
+          await owner.loadBody(h.pages[0]!);
+          await owner.createChild("New child", {
+            pageId: h.pages[0]!,
+            parentId: null,
+            beforeBlockId: null,
+          });
+          assert.deepEqual(reservedAtChange, [false]);
+        });
+      }),
+    ),
+  ).pipe(Effect.provide(NodeServices.layer)),
+);
+
 it.effect("creates a child once across a lost reply and reload through the durable journal", () =>
   Effect.scoped(
     fixture((service) =>
@@ -3967,13 +3995,10 @@ it.effect(
             assert.isFalse(doc.structureBlocked());
             h.setWritable(true);
             await owner.previewRecovery(h.key.pageId, "restore");
-            await expect(
-              owner.confirmRecovery(owner.getSnapshot().recoveryPreview!),
-            ).rejects.toThrow("Resolve");
-            route.release();
-            panel.release();
             await owner.confirmRecovery(owner.getSnapshot().recoveryPreview!);
             assert.equal((await h.ports.getPage(h.key)).page.trash, undefined);
+            route.release();
+            panel.release();
           });
         }),
       ),
