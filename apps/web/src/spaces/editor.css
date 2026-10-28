@@ -27,33 +27,67 @@
 [data-space-editor] [data-space-checked="true"]::before {
   content: "☑";
 }
-[data-space-editor] h1 {
-  font-size: 1.5rem;
+[data-space-editor] .tiptap {
+  line-height: 1.65;
+}
+[data-space-editor] [data-space-block] {
+  margin-block: 0.25rem;
+}
+[data-space-editor] h1,
+[data-space-editor] h2,
+[data-space-editor] h3 {
   font-weight: 600;
+  line-height: 1.3;
+  margin-block-start: 1.5rem;
+  margin-block-end: 0.25rem;
+}
+[data-space-editor] h1 {
+  font-size: 1.875rem;
 }
 [data-space-editor] h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.5rem;
 }
 [data-space-editor] h3 {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.25rem;
 }
 [data-space-editor] blockquote {
-  border-inline-start: 2px solid currentColor;
-  padding-inline-start: 0.75rem;
+  border-inline-start: 3px solid var(--border);
+  padding-inline-start: 1rem;
+  color: var(--muted-foreground);
 }
 [data-space-editor] [data-space-type="callout"] {
-  padding-inline-start: 1.5rem;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border-radius: 0.5rem;
+  background: var(--muted);
 }
 [data-space-editor] [data-space-type="callout"]::before {
   content: attr(data-space-icon);
   position: absolute;
-  inset-inline-start: 0;
+  inset-inline-start: 0.875rem;
 }
 [data-space-editor] pre {
   white-space: pre-wrap;
   font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--muted);
+}
+[data-space-editor] code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  background: var(--muted);
+}
+[data-space-editor] pre code {
+  padding: 0;
+  background: none;
+}
+[data-space-editor] hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: 1rem;
 }
 [data-space-editor] [contenteditable="false"] {
   color: var(--muted-foreground);

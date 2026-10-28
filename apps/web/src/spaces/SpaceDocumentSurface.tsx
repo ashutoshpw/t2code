@@ -5,6 +5,7 @@ import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
 import { useSpaceReferenceController } from "./useSpaceReferences";
 import { SpaceSourceOpen } from "./SpaceSourceOpen";
+import { ChevronsDownIcon, RefreshCwIcon, Redo2Icon, SaveIcon, Undo2Icon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { spacesEnvironment } from "../state/spaces";
 import { randomUUID } from "../lib/utils";
@@ -63,7 +64,9 @@ export function SpaceDocumentSurface({
   if ("error" in result)
     return (
       <div>
-        <p role="alert">{message(result.error)}</p>
+        <p role="alert" className="text-sm text-destructive-foreground">
+          {message(result.error)}
+        </p>
         <Button variant="outline" onClick={() => setAttempt((value) => value + 1)}>
           Retry opening document
         </Button>
@@ -160,53 +163,65 @@ function DocumentContent({
     void operation.catch(() => {});
   };
   return (
-    <div className="mt-4 space-y-3">
-      {!sources?.current() ? (
-        <Button variant="outline" onClick={() => setSourceAttempt((value) => value + 1)}>
-          Retry source connection
-        </Button>
-      ) : null}
-      <p role="status">
-        {!session.hydrated
-          ? "Loading document…"
-          : session.status === "saved"
-            ? "Saved"
-            : session.status === "uncertain"
-              ? "Save outcome unresolved"
-              : session.status === "conflict"
-                ? "The server has a newer revision. Your local draft is retained."
-                : session.status === "saving"
-                  ? "Saving draft…"
-                  : "Local draft"}
-      </p>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {!sources?.current() ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSourceAttempt((value) => value + 1)}
+          >
+            Retry source connection
+          </Button>
+        ) : null}
+        <p role="status" className="text-xs text-muted-foreground">
+          {!session.hydrated
+            ? "Loading document…"
+            : session.status === "saved"
+              ? "Saved"
+              : session.status === "uncertain"
+                ? "Save outcome unresolved"
+                : session.status === "conflict"
+                  ? "The server has a newer revision. Your local draft is retained."
+                  : session.status === "saving"
+                    ? "Saving draft…"
+                    : "Local draft"}
+        </p>
+      </div>
       {controller.structureBlocked() ? (
-        <p role="status">
+        <p role="status" className="text-sm text-muted-foreground">
           Page placement is pending. Editing is paused until its receipt is resolved.
         </p>
       ) : null}
       {session.recoveryReason ? (
-        <p role="alert">
+        <p role="alert" className="text-sm text-destructive-foreground">
           This older pending draft has no receipt epoch. It is retained and cannot be retried
           automatically.
         </p>
       ) : null}
-      {error ? <p role="alert">{message(error)}</p> : null}
+      {error ? (
+        <p role="alert" className="text-sm text-destructive-foreground">
+          {message(error)}
+        </p>
+      ) : null}
       {snapshot.imageAdmissionError ? (
-        <p role="alert">
+        <p role="alert" className="text-sm text-destructive-foreground">
           {message(snapshot.imageAdmissionError)} You can edit the unsent draft; no pending request
           was changed.
         </p>
       ) : null}
       {session.persistenceError ? (
-        <p role="alert">Draft storage failed: {message(session.persistenceError)}</p>
+        <p role="alert" className="text-sm text-destructive-foreground">
+          Draft storage failed: {message(session.persistenceError)}
+        </p>
       ) : null}
-      <p>
-        Saved undo/redo covers only the last content or formatting save. Use page placement controls
-        for root ordering; saved block structure undo is not supported.
-      </p>
-      {session.history.reason ? <p role="status">{session.history.reason}</p> : null}
+      {session.history.reason ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          {session.history.reason}
+        </p>
+      ) : null}
       {session.history.action ? (
-        <p role="status">
+        <p role="status" className="text-sm text-muted-foreground">
           Saved {session.history.action} draft. A conflict keeps this attempted change; retry save
           or discard it explicitly.
         </p>
@@ -265,9 +280,15 @@ function DocumentContent({
         />
       ) : null}
       {capability?.version === 2 && capability.features?.blockMoves !== true ? (
-        <p>Block moves are unavailable until this environment advertises support.</p>
+        <p className="text-sm text-muted-foreground">
+          Block moves are unavailable until this environment advertises support.
+        </p>
       ) : null}
-      {moveError ? <p role="alert">{message(moveError)}</p> : null}
+      {moveError ? (
+        <p role="alert" className="text-sm text-destructive-foreground">
+          {message(moveError)}
+        </p>
+      ) : null}
       {blockMove && snapshot.metadata ? (
         <Suspense fallback={<p role="status">Loading move placement…</p>}>
           <SpaceStructureControls
@@ -281,11 +302,12 @@ function DocumentContent({
           />
         </Suspense>
       ) : null}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-1 border-t pt-3">
         {(["undo", "redo"] as const).map((direction) => (
           <Button
             key={direction}
-            variant="outline"
+            variant="ghost"
+            size="sm"
             disabled={
               !permission ||
               controller.structureBlocked() ||
@@ -297,31 +319,38 @@ function DocumentContent({
             title={
               !mediaSupported && bridge.compensationUsesMedia(direction)
                 ? "This saved change requires asset support"
-                : (controller.session.compensationAvailability(direction) ??
-                  "Submit a new revision-checked saved change")
+                : `${
+                    controller.session.compensationAvailability(direction) ??
+                    "Submit a new revision-checked saved change"
+                  }. Saved undo/redo covers only the last content or formatting save. Use page placement controls for root ordering; saved block structure undo is not supported.`
             }
             onClick={() => run(bridge.compensate(direction))}
           >
+            {direction === "undo" ? <Undo2Icon /> : <Redo2Icon />}
             {direction === "undo" ? "Undo saved change" : "Redo saved change"}
           </Button>
         ))}
         <Button
-          variant="outline"
+          variant="ghost"
+          size="sm"
           disabled={loading || (!clean && session.hydrated)}
           onClick={() => run(session.hydrated ? controller.refresh() : controller.open())}
         >
+          <RefreshCwIcon />
           Reload first window
         </Button>
         <Button
-          variant="outline"
+          variant="ghost"
+          size="sm"
           disabled={!clean || loading || !snapshot.nextCursor}
           onClick={() => run(controller.next())}
         >
+          <ChevronsDownIcon />
           Next window
         </Button>
         {session.dirty || session.pending ? (
           <Button
-            variant="outline"
+            size="sm"
             disabled={
               !session.hydrated ||
               controller.structureBlocked() ||
@@ -333,6 +362,7 @@ function DocumentContent({
             }
             onClick={() => run(controller.save())}
           >
+            <SaveIcon />
             {session.pending
               ? session.status === "draft"
                 ? "Retry unsent save"
@@ -342,7 +372,8 @@ function DocumentContent({
         ) : null}
         {session.dirty && !session.pending ? (
           <Button
-            variant="outline"
+            variant="ghost"
+            size="sm"
             disabled={controller.structureBlocked() || loading || session.status === "saving"}
             onClick={() => run(controller.discard())}
           >
@@ -350,7 +381,11 @@ function DocumentContent({
           </Button>
         ) : null}
         {session.persistenceError && session.hydrated ? (
-          <Button variant="outline" onClick={() => run(controller.session.persistDraft())}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => run(controller.session.persistDraft())}
+          >
             Retry draft storage
           </Button>
         ) : null}
