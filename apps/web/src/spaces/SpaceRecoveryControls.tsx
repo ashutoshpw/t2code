@@ -1,15 +1,18 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { useContext, useEffect, useState, useSyncExternalStore } from "react";
-import type { SpacePageId, SpaceRecoveryOperation } from "@t2code/contracts/spaces";
+import { useRouter } from "@tanstack/react-router";
+import type { SpaceId, SpacePageId, SpaceTrashEntry } from "@t2code/contracts/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
-import { Input } from "../components/ui/input";
 import { Trash2Icon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
+import { toastManager } from "../components/ui/toast";
+import { RelativeTime } from "../components/RelativeTime";
+import { requestConfirmDialog } from "../confirmDialog";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
 import { useEnvironment } from "../state/environments";
 import { spaceRootReorder } from "./sessionRuntime";
-import type { SpaceRootReorder, SpaceRecoveryPreview } from "@t2code/client-runtime/spaces";
+import type { SpaceRootReorder } from "@t2code/client-runtime/spaces";
 
 const run = (work: Promise<unknown>) => {
   void work.catch(() => {});
@@ -17,6 +20,8 @@ const run = (work: Promise<unknown>) => {
 interface Props {
   environmentId: EnvironmentId;
   pageId?: SpacePageId;
+  spaceId?: SpaceId;
+  parentPageId?: SpacePageId | null;
   current?: () => boolean;
 }
 export default function SpaceRecoveryControls(props: Props) {
@@ -39,16 +44,25 @@ function RecoveryOwner(props: Props) {
   if (!result.owner)
     return (
       <p role="alert">
-        {result.error instanceof Error ? result.error.message : "Recovery journal is unavailable."}
+        {result.error instanceof Error ? result.error.message : "Trash is unavailable right now."}
       </p>
     );
   return <Recovery {...props} owner={result.owner} />;
 }
-function Recovery({ environmentId, owner, pageId, current }: Props & { owner: SpaceRootReorder }) {
+const failed = (title: string) =>
+  toastManager.add({ type: "error", title, description: "Try again in a moment." });
+
+function Recovery({
+  environmentId,
+  owner,
+  pageId,
+  spaceId,
+  parentPageId,
+  current,
+}: Props & { owner: SpaceRootReorder }) {
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [confirmation, setConfirmation] = useState("");
-  const [selected, setSelected] = useState<SpaceRecoveryPreview | null>(null);
   const availability = useSpacesAvailability(environmentId);
   const capability = useEnvironment(environmentId)?.serverConfig?.environment.capabilities.spaces;
   const supported = capability?.version === 2 && capability.features?.recovery === true;
@@ -64,248 +78,182 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
     run(owner.hydrate());
   }, [owner]);
   const { busy, hydrated, journal, trash } = snapshot;
-  const preview = selected === snapshot.recoveryPreview ? selected : null;
-  const inspect = async (id: SpacePageId, operation: SpaceRecoveryOperation) => {
-    if (operation === "trash" && current && !current()) return;
-    setSelected(null);
-    setConfirmation("");
-    await owner.previewRecovery(id, operation);
-    if (operation !== "trash" || !current || current())
-      setSelected(owner.getSnapshot().recoveryPreview);
-  };
   const pending = journal.pending;
-  const writable =
-    supported &&
-    availability === "writable" &&
-    ((preview?.operation ?? (pageId ? "trash" : "restore")) === "trash"
-      ? trashPermission
-      : preview?.operation === "permanentlyDelete"
-        ? purgePermission
-        : restorePermission);
   const blocked = !hydrated || busy || !!pending;
-  const retained = journal.history;
-  const history = retained && "pageIds" in retained ? retained : null;
+  const writable = supported && availability === "writable";
+
+  const commit = async (
+    pageId: SpacePageId,
+    operation: "trash" | "restore" | "permanentlyDelete",
+  ) => {
+    const before = owner.getSnapshot().journal;
+    try {
+      await owner.previewRecovery(pageId, operation);
+      const preview = owner.getSnapshot().recoveryPreview;
+      if (preview?.pageId !== pageId || preview.operation !== operation) return false;
+      if (operation === "trash" && current && !current()) return false;
+      await owner.confirmRecovery(preview, operation === "permanentlyDelete");
+      return true;
+    } catch {
+      const after = owner.getSnapshot().journal;
+      return after !== before && after.pending === null;
+    }
+  };
+  const viewing = (id: SpacePageId) => {
+    const params = router.state.matches.at(-1)?.params ?? {};
+    return "pageId" in params && params.pageId === id;
+  };
+  const show = (target: { spaceId: SpaceId; pageId: SpacePageId | null }) =>
+    void router.navigate(
+      target.pageId
+        ? {
+            to: "/spaces/$environmentId/$spaceId/$pageId",
+            params: { environmentId, spaceId: target.spaceId, pageId: target.pageId },
+            search: {},
+          }
+        : {
+            to: "/spaces/$environmentId/$spaceId",
+            params: { environmentId, spaceId: target.spaceId },
+          },
+    );
+  const trashPage = async (id: SpacePageId, inSpace: SpaceId, parent: SpacePageId | null) => {
+    if (current && !current()) return;
+    if (!(await commit(id, "trash"))) return failed("Couldn't move to trash");
+    if (viewing(id)) show({ spaceId: inSpace, pageId: parent });
+    const toastId = toastManager.add({
+      type: "success",
+      title: "Moved to trash",
+      actionProps: {
+        children: "Undo",
+        onClick: () => {
+          toastManager.close(toastId);
+          void commit(id, "restore").then((done) => {
+            if (done) show({ spaceId: inSpace, pageId: id });
+            else failed("Couldn't restore the page");
+          });
+        },
+      },
+    });
+  };
+  const restore = async (entry: SpaceTrashEntry) => {
+    if (!(await commit(entry.pageId, "restore"))) return failed("Couldn't restore the page");
+    const toastId = toastManager.add({
+      type: "success",
+      title: "Page restored",
+      actionProps: {
+        children: "Open",
+        onClick: () => {
+          toastManager.close(toastId);
+          setOpen(false);
+          show({ spaceId: entry.spaceId, pageId: entry.pageId });
+        },
+      },
+    });
+    run(owner.browseTrash());
+  };
+  const remove = async (entry: SpaceTrashEntry) => {
+    const message = `Delete “${entry.title || "Untitled page"}” permanently?\nThis can't be undone.`;
+    const confirmed =
+      (await requestConfirmDialog(message, { variant: "destructive" })) ?? window.confirm(message);
+    if (!confirmed) return;
+    if (!(await commit(entry.pageId, "permanentlyDelete")))
+      return failed("Couldn't delete the page");
+    toastManager.add({ type: "success", title: "Page deleted permanently" });
+    run(owner.browseTrash());
+  };
+
+  if (pageId && spaceId)
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={blocked || !writable || !trashPermission || (!!current && !current())}
+        onClick={() => void trashPage(pageId, spaceId, parentPageId ?? null)}
+      >
+        <Trash2Icon />
+        <span className="sr-only">Move to trash</span>
+      </Button>
+    );
   return (
     <>
       <Button
         variant="ghost"
         size="sm"
-        disabled={!!pageId && (blocked || !writable || (!!current && !current()))}
         onClick={() => {
-          if (pageId && current && !current()) return;
           setOpen(true);
-          if (pageId) run(inspect(pageId, "trash"));
+          if (supported) run(owner.browseTrash());
         }}
       >
         <Trash2Icon />
-        {pageId ? (
-          <span className="sr-only">Move page to trash…</span>
-        ) : supported ? (
-          <>
-            Trash<span className="sr-only"> and recovery</span>
-          </>
-        ) : (
-          "Structural receipt recovery"
-        )}
+        Trash
       </Button>
-      <Dialog
-        open={open}
-        onOpenChange={(value) => {
-          setOpen(value);
-          if (!value) setSelected(null);
-        }}
-      >
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogPopup>
-          <DialogTitle>Trash and recovery</DialogTitle>
+          <DialogTitle>Trash</DialogTitle>
           <DialogDescription>
-            Inspect the current selected batch before confirming. Save or resolve affected drafts
-            first. Close unavailable page views before recovery. One guarded visibility inverse may
-            be retained for the last bounded action. It does not undo content or placement.
-            Permanent deletion is irreversible and has no Undo.
+            Pages you move to trash stay here until you delete them permanently.
           </DialogDescription>
           <div className="mt-4 space-y-3">
-            {history ? (
-              <div className="space-y-2">
-                <p>
-                  Last bounded {history.scope} action · {history.pageIds.length} page(s) ·{" "}
-                  {history.pageId}. Visibility only; existing content and placement histories are
-                  separate. Trashing creates a new batch.
-                </p>
-                <Button
-                  variant="outline"
-                  disabled={
-                    blocked ||
-                    !supported ||
-                    availability !== "writable" ||
-                    (history.operation === "trashPage" ? !trashPermission : !restorePermission)
-                  }
-                  onClick={() => run(owner.compensate(history.direction))}
-                >
-                  {history.direction === "undo" ? "Undo" : "Redo"} last {history.scope} visibility (
-                  {history.operation === "trashPage" ? "move to trash" : "restore"})
-                </Button>
-              </div>
-            ) : null}
-            {!supported ? (
-              <p role="status">
-                This environment does not advertise Trash support. Retained receipt recovery remains
-                available.
-              </p>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                disabled={blocked || !supported}
-                onClick={() => run(owner.browseTrash())}
-              >
-                First trash pages
-              </Button>
-              <Button
-                variant="outline"
-                disabled={blocked || !supported || !trash?.nextCursor}
-                onClick={() => run(owner.browseTrash(true))}
-              >
-                Next trash pages
-              </Button>
-              {!hydrated && snapshot.error ? (
-                <Button variant="outline" disabled={busy} onClick={() => run(owner.hydrate())}>
-                  Retry recovery storage
-                </Button>
-              ) : null}
-            </div>
-            {trash ? (
-              <>
-                {trash.items.length === 0 ? (
-                  <p>
-                    {trash.nextCursor
-                      ? "No trash roots in this window. Next continues the bounded list."
-                      : "No trash roots in this window; this list has ended."}
-                  </p>
-                ) : null}
-                <ul className="space-y-2">
-                  {trash.items.map((page) => (
-                    <li key={page.pageId}>
-                      <p>
-                        {page.title || "Untitled page"} · {page.pageId} · Revision {page.revision}
-                      </p>
-                      <Button
-                        variant="outline"
-                        disabled={blocked || !supported}
-                        onClick={() => run(inspect(page.pageId, "restore"))}
-                      >
-                        Inspect restore
-                      </Button>
-                      <Button
-                        variant="outline"
-                        disabled={blocked || !supported}
-                        onClick={() => run(inspect(page.pageId, "permanentlyDelete"))}
-                      >
-                        Inspect permanent deletion…
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-            {preview ? (
-              <div className="space-y-2">
-                <p>
-                  {preview.operation === "trash"
-                    ? "Move to trash"
-                    : preview.operation === "restore"
-                      ? "Restore"
-                      : "Permanently delete"}
-                  : {preview.pageId}
-                </p>
-                <p>{preview.placement}</p>
-                <p>Current selected pages ({preview.inspection.recovery!.pageIds.length}):</p>
-                <ul>
-                  {preview.inspection.recovery!.pageIds.map((id) => (
-                    <li key={id}>
-                      {preview.inspection.pages.find((p) => p.id === id)?.title || "Untitled page"}{" "}
-                      · {id}
-                      {preview.operation === "restore" && id !== preview.pageId ? (
-                        <Button
-                          variant="outline"
-                          disabled={blocked || !supported}
-                          onClick={() => run(inspect(id, "restore"))}
-                        >
-                          Inspect restore starting here
-                        </Button>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-                {preview.operation === "permanentlyDelete" ? (
-                  <label>
-                    This permanently deletes the named {preview.inspection.recovery!.pageIds.length}{" "}
-                    page(s), including their inspected descendants. This cannot be undone. Type
-                    DELETE to confirm
-                    <Input
-                      value={confirmation}
-                      onChange={(event) => setConfirmation(event.target.value)}
-                    />
-                  </label>
-                ) : null}
-                <Button
-                  variant="outline"
-                  disabled={
-                    blocked ||
-                    (preview.operation === "permanentlyDelete" && confirmation !== "DELETE") ||
-                    !writable ||
-                    (preview.operation === "trash" && !!current && !current())
-                  }
-                  onClick={() => {
-                    if (preview.operation !== "trash" || !current || current())
-                      run(
-                        owner.confirmRecovery(
-                          preview,
-                          preview.operation === "permanentlyDelete" && confirmation === "DELETE",
-                        ),
-                      );
-                  }}
-                >
-                  {preview.operation === "trash"
-                    ? "Confirm move to trash"
-                    : preview.operation === "restore"
-                      ? "Confirm restore"
-                      : `Permanently delete ${preview.inspection.recovery!.pageIds.length} page(s) (irreversible)`}
-                </Button>
-              </div>
-            ) : null}
+            {!supported ? <p role="status">Trash isn't available on this server.</p> : null}
             {pending ? (
               <div className="space-y-2">
-                <p role="status">
-                  Retained {pending.request.operation}.{" "}
-                  {pending.rejection
-                    ? "Rejected before commit by the server; reinspection starts a new intent."
-                    : pending.conflict
-                      ? "Conflicted; reinspection starts a new intent."
-                      : "Resolve the exact receipt before editing affected pages."}
-                </p>
+                <p role="status">The last change didn't finish.</p>
                 <Button
                   variant="outline"
                   disabled={busy || !hydrated || (pending.conflict && availability !== "writable")}
                   onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
                 >
-                  {pending.rejection
-                    ? pending.request.operation === "permanentlyDeletePage"
-                      ? "Reinspect rejected deletion"
-                      : "Inspect rejected operation"
-                    : pending.conflict
-                      ? "Reinspect conflicted operation"
-                      : "Recover exact receipt"}
+                  {pending.conflict ? "Dismiss" : "Finish now"}
                 </Button>
               </div>
             ) : null}
-            {snapshot.notice ? <p role="status">{snapshot.notice}</p> : null}
-            {snapshot.error ? (
-              <p role="alert">
-                {snapshot.error instanceof Error
-                  ? snapshot.error.message
-                  : "Recovery failed; retained data has been kept."}
-              </p>
+            {trash && trash.items.length === 0 ? <p>Trash is empty.</p> : null}
+            <ul className="space-y-2">
+              {trash?.items.map((entry) => (
+                <li key={entry.pageId} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate">{entry.title || "Untitled page"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Deleted <RelativeTime timestamp={entry.trash.trashedAt} />
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={blocked || !writable || !restorePermission}
+                      onClick={() => void restore(entry)}
+                    >
+                      Restore
+                    </Button>
+                    <Button
+                      variant="destructive-outline"
+                      size="sm"
+                      disabled={blocked || !writable || !purgePermission}
+                      onClick={() => void remove(entry)}
+                    >
+                      Delete permanently
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {trash?.nextCursor ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={blocked}
+                onClick={() => run(owner.browseTrash(true))}
+              >
+                Show more
+              </Button>
             ) : null}
+            {!hydrated && snapshot.error ? (
+              <Button variant="outline" disabled={busy} onClick={() => run(owner.hydrate())}>
+                Try again
+              </Button>
+            ) : null}
+            {snapshot.error ? <p role="alert">Something went wrong. Try again.</p> : null}
           </div>
         </DialogPopup>
       </Dialog>
