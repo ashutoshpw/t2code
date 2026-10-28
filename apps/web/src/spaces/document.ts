@@ -4,6 +4,7 @@ import {
   isKnownSpaceBlock,
   isSpaceListItem,
   spaceBlockRuns,
+  mediaAssetId,
 } from "@t2code/client-runtime/spaces";
 import type {
   SpaceBlock,
@@ -16,6 +17,7 @@ import type {
 import { spaceSchema } from "./schema";
 
 export interface SpaceEditorWindow extends SpaceBlockWindow {
+  readonly committedIds?: readonly SpaceBlockId[];
   // Membership alone cannot prove adjacency or that a container has no unloaded children.
   readonly completeParents: readonly (SpaceBlockId | null)[];
 }
@@ -42,12 +44,48 @@ export function sameSpaceValue(a: unknown, b: unknown): boolean {
   return false;
 }
 
+export function spaceEditorRuns(block: SpaceBlock): SpaceRichText | null {
+  if (
+    isKnownSpaceBlock(block) &&
+    (block.type === "image" || block.type === "pdf" || block.type === "video")
+  )
+    return block.content.caption ?? [];
+  return spaceBlockRuns(block);
+}
 export function canEditSpaceEditorBlock(block: SpaceBlock) {
-  const runs = spaceBlockRuns(block);
+  const runs = spaceEditorRuns(block);
   return (
     canEditSpaceBlock(block) &&
     (!runs ||
-      runs.every((run) => new Set(run.marks.map((mark) => mark.type)).size === run.marks.length))
+      runs.every(
+        (run) =>
+          new Set(run.marks.map((mark) => mark.type)).size === run.marks.length &&
+          run.marks.filter((m) => m.type === "page_mention" || m.type === "block_mention").length <=
+            1,
+      ))
+  );
+}
+
+export function spaceMentionSpans(doc: ProseMirrorNode) {
+  const spans: { from: number; to: number; mark: SpaceMark }[] = [];
+  doc.descendants((node, from) => {
+    if (!node.isText) return;
+    const mark = node.marks.find(
+      (m) => m.type.name === "space_page_mention" || m.type.name === "space_block_mention",
+    )?.attrs.value as SpaceMark | undefined;
+    if (!mark) return;
+    const previous = spans.at(-1),
+      to = from + node.nodeSize;
+    if (previous?.to === from && sameSpaceValue(previous.mark, mark)) previous.to = to;
+    else spans.push({ from, to, mark });
+  });
+  return spans;
+}
+export function spaceMentionRangeSafe(doc: ProseMirrorNode, from: number, to: number) {
+  return spaceMentionSpans(doc).every((span) =>
+    from === to
+      ? from <= span.from || from >= span.to
+      : from >= span.to || to <= span.from || (from <= span.from && to >= span.to),
   );
 }
 
@@ -72,6 +110,8 @@ export function spaceBlockNode(
 ): ProseMirrorNode {
   const attrs = { block };
   const runs = spaceBlockRuns(block);
+  if (!readOnly && canEditSpaceEditorBlock(block) && mediaAssetId(block))
+    return schema.nodes.spaceMedia!.create(attrs, richTextNodes(spaceEditorRuns(block)!, schema));
   if (!readOnly && canEditSpaceEditorBlock(block) && runs) {
     const inline = richTextNodes(runs, schema);
     return schema.nodes[block.type]!.create(
@@ -168,9 +208,12 @@ export function spaceDocumentBlocks(doc: ProseMirrorNode): readonly SpaceBlock[]
         const originalNode = spaceBlockNode(original, [], false, node.type.schema);
         const originalBody = isSpaceListItem(original) ? originalNode.firstChild! : originalNode;
         if (!body.content.eq(originalBody.content)) {
-          if (!isKnownSpaceBlock(original) || !("runs" in original.content))
-            throw new Error("Read-only content");
-          block = { ...block, content: { ...original.content, runs: nodeRuns(body) } };
+          if (!isKnownSpaceBlock(original)) throw new Error("Read-only content");
+          if (mediaAssetId(original))
+            block = { ...block, content: { ...original.content, caption: nodeRuns(body) } };
+          else if ("runs" in original.content)
+            block = { ...block, content: { ...original.content, runs: nodeRuns(body) } };
+          else throw new Error("Read-only content");
         }
       }
     }
