@@ -12,7 +12,7 @@ import { Input } from "~/components/ui/input";
 import { observeResize } from "~/lib/observeResize";
 import { FileSurfaceAction, FileSurfaceFailure, FileSurfaceLoading } from "./fileSurfaceChrome";
 import { readBoundedDocument } from "./readBoundedDocument";
-import { openPdf } from "./pdfDocument";
+import { openPdf, openPdfUrl } from "./pdfDocument";
 import {
   currentPdfPage,
   pdfFindIncludes,
@@ -134,6 +134,10 @@ export default function PdfViewer(props: {
   positionKey?: string;
   initialView?: PdfViewState;
   onViewChange?: (view: PdfViewState) => void;
+  rangeBytes?: number;
+  initialPage?: () => number;
+  onPageChange?: (page: number) => void;
+  onRetry?: () => void;
 }) {
   const [savedPosition] = useState(() =>
     props.positionKey === undefined ? undefined : positions.get(props.positionKey),
@@ -168,20 +172,27 @@ export default function PdfViewer(props: {
       controller.abort();
       void task?.destroy();
     }, 30_000);
-    void readBoundedDocument(
-      props.src,
-      controller.signal,
-      50 * 1024 * 1024,
-      revision > 0 ? "reload" : "default",
-    )
-      .then(async (bytes) => {
+    const load = async () => {
+      if (props.rangeBytes !== undefined) {
+        task = openPdfUrl(props.src, props.rangeBytes);
+      } else {
+        const bytes = await readBoundedDocument(
+          props.src,
+          controller.signal,
+          50 * 1024 * 1024,
+          revision > 0 ? "reload" : "default",
+        );
         controller.signal.throwIfAborted();
         task = openPdf(bytes);
-        const document = await task.promise;
-        if (document.numPages > MAX_PAGES)
-          throw new Error("Preview limited to 2,000 pages. Save this PDF to read it in full.");
-        const first = (await document.getPage(1)).getViewport({ scale: 1 });
-        const sizes = await Promise.all(
+      }
+      const document = await task.promise;
+      if (document.numPages > MAX_PAGES)
+        throw new Error("Preview limited to 2,000 pages. Save this PDF to read it in full.");
+      const first = (await document.getPage(1)).getViewport({ scale: 1 });
+      let sizes: number[] | undefined;
+      if (props.rangeBytes === undefined) {
+        // Range-loaded Spaces documents only fetch pages on demand, so only measure up to the retained page.
+        sizes = await Promise.all(
           Array.from({ length: Math.min(initialPage + 1, document.numPages) }, async (_, index) => {
             const size = (await document.getPage(index + 1)).getViewport({ scale: 1 });
             return size.height / size.width;
@@ -200,6 +211,7 @@ export default function PdfViewer(props: {
         setPdf(document);
       })
       .catch((cause: unknown) => {
+        void task?.destroy();
         if (!disposed && !controller.signal.aborted)
           setError(cause instanceof Error ? cause.message : "Unable to open PDF.");
       })
@@ -210,8 +222,8 @@ export default function PdfViewer(props: {
       clearTimeout(timeout);
       void task?.destroy();
     };
-  }, [props.src, revision, initialPage, savedPosition]);
-  // oxlint-disable-next-line t3code/react-effect-budget -- Measure the PDF viewport before paint and observe resizes for fit-width sizing and visible-page selection.
+  }, [props.src, props.rangeBytes, revision, initialPage, savedPosition]);
+  // oxlint-disable-next-line t2code/react-effect-budget -- Measure the PDF viewport before paint and observe resizes for fit-width sizing and visible-page selection.
   useLayoutEffect(() => {
     const node = scroll.current;
     if (!node) return;
@@ -222,7 +234,9 @@ export default function PdfViewer(props: {
   const { scale, width } = pdfPageWidth(viewport.width, pageWidth, zoom);
   const offsets = pdfPageOffsets(ratios, width);
   const current = currentPdfPage(offsets, ratios.length, scrollTop);
-  const visible = visiblePdfPages(ratios, offsets, scrollTop, viewport.height);
+  const visible = visiblePdfPages(ratios, offsets, scrollTop, viewport.height).filter(
+    ({ index }) => props.rangeBytes === undefined || Math.abs(index - current) <= 2,
+  );
   // Stable callbacks let page canvases survive scroll and find updates.
   const [onSize] = useState(
     () => (index: number, ratio: number) =>
@@ -253,6 +267,10 @@ export default function PdfViewer(props: {
   const restoreView = useEffectEvent(() => {
     const node = scroll.current;
     if (!pdf || !node) return;
+    if (props.initialPage) {
+      jumpToPage(Math.min(Math.max(0, props.initialPage()), Math.max(0, ratios.length - 1)));
+      return;
+    }
     const page = Math.min(initialPage, pdf.numPages - 1);
     node.scrollTo({
       top:
@@ -438,6 +456,12 @@ export default function PdfViewer(props: {
         onScroll={(event) => {
           const top = event.currentTarget.scrollTop;
           setScrollTop(top);
+          props.onPageChange?.(
+            Math.max(
+              0,
+              ratios.findIndex((_, i) => offsets[i + 1]! > top + 17),
+            ),
+          );
           saveView(event.currentTarget);
         }}
         onKeyDown={(event) => {
@@ -452,6 +476,10 @@ export default function PdfViewer(props: {
           <FileSurfaceFailure
             message={error}
             onRetry={() => {
+              if (props.onRetry) {
+                props.onRetry();
+                return;
+              }
               setError(null);
               setPdf(null);
               setRevision((value) => value + 1);

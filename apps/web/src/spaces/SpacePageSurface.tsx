@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import type { ScopedThreadRef } from "@t2code/contracts";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
@@ -13,16 +13,78 @@ import { Button } from "../components/ui/button";
 import { useMainAppThreadRef, useNavigateToMainApp } from "../components/sidebar/mainAppLocation";
 import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
 import { SpacesUnavailable } from "./SpacesUnavailable";
+import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
 
-export default function SpacePageSurface({
-  target,
-  fullPage = false,
-  threadRef,
-}: {
+const SpaceLibraryControls = lazy(() => import("./SpaceLibraryControls"));
+const SpaceRecoveryControls = lazy(() => import("./SpaceRecoveryControls"));
+const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
+
+interface SpacePageSurfaceProps {
   target: SpacePageNavigationTarget;
   fullPage?: boolean;
   threadRef?: ScopedThreadRef;
-}) {
+}
+
+export default function SpacePageSurface(props: SpacePageSurfaceProps) {
+  const availability = useSpacesAvailability(props.target.environmentId);
+  const router = useRouter();
+  const current = () => {
+    if (!canBrowseSpaces(availability)) return false;
+    if (props.threadRef) {
+      const panel = selectThreadRightPanelState(
+        useRightPanelStore.getState().byThreadKey,
+        props.threadRef,
+      ).surfaces.find(
+        (surface) =>
+          surface.kind === "space-page" &&
+          surface.target.environmentId === props.target.environmentId &&
+          surface.target.pageId === props.target.pageId,
+      );
+      return panel?.kind === "space-page" && panel.target === props.target;
+    }
+    const params = router.state.matches.at(-1)?.params ?? {};
+    return (
+      !!props.fullPage &&
+      "environmentId" in params &&
+      params.environmentId === props.target.environmentId &&
+      "pageId" in params &&
+      params.pageId === props.target.pageId &&
+      "spaceId" in params &&
+      params.spaceId === props.target.spaceId &&
+      validateSpacePageSearch(router.state.location.search).block === props.target.blockId
+    );
+  };
+  const openSource = (target: SpacePageNavigationTarget) => {
+    if (!current() || target.environmentId !== props.target.environmentId) return;
+    if (props.threadRef) useRightPanelStore.getState().openSpacePage(props.threadRef, target);
+    else
+      void router.navigate({
+        to: "/spaces/$environmentId/$spaceId/$pageId",
+        params: target,
+        search: target.blockId ? { block: target.blockId } : {},
+      });
+  };
+  if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
+  return (
+    <section className="min-w-0 p-4" aria-label="Space page">
+      <Suspense fallback={<p role="status">Loading recovery…</p>}>
+        <SpaceRecoveryControls
+          key={props.target.environmentId}
+          environmentId={props.target.environmentId}
+        />
+      </Suspense>
+      <SpacePageMetadata {...props} />
+      <SpaceDocumentSurface
+        key={JSON.stringify([props.target.environmentId, props.target.pageId])}
+        target={props.target}
+        current={current}
+        onOpenSource={openSource}
+      />
+    </section>
+  );
+}
+
+function SpacePageMetadata({ target, fullPage = false, threadRef }: SpacePageSurfaceProps) {
   const availability = useSpacesAvailability(target.environmentId);
   const environment = useEnvironment(target.environmentId);
   const version = environment?.serverConfig?.environment.capabilities.spaces?.version;
@@ -119,7 +181,7 @@ export default function SpacePageSurface({
   const { page, space, ancestors } = current;
   const resolvedTarget = { ...target, spaceId: page.spaceId };
   return (
-    <section className="min-w-0 p-4" aria-label="Space page">
+    <>
       <Link
         to="/spaces/$environmentId/$spaceId"
         params={{ environmentId: target.environmentId, spaceId: space.id }}
@@ -150,11 +212,39 @@ export default function SpacePageSurface({
           Refresh location
         </Button>
       </div>
+      <Suspense fallback={<p role="status">Loading page controls…</p>}>
+        <SpaceLibraryControls
+          key={JSON.stringify([target.environmentId, target.pageId])}
+          environmentId={target.environmentId}
+          spaceId={page.spaceId}
+          page={page}
+          current={() => {
+            const live = query.isPending ? null : query.data?.current();
+            return live?.page.id === target.pageId && live.page.spaceId === resolvedTarget.spaceId;
+          }}
+        />
+      </Suspense>
+      {version === 2 ? (
+        <Suspense fallback={<p role="status">Loading page placement…</p>}>
+          <SpaceStructureControls
+            key={JSON.stringify([target.environmentId, target.pageId])}
+            target={resolvedTarget}
+            location={page.location}
+            current={() => {
+              const live = query.isPending ? null : query.data?.current();
+              return (
+                live?.page.id === target.pageId &&
+                live.page.spaceId === resolvedTarget.spaceId &&
+                (live.page.location?.kind === "root" || live.page.location?.kind === "child")
+              );
+            }}
+          />
+        </Suspense>
+      ) : null}
       <h1 className="mt-3 break-words text-xl font-semibold">{page.title || "Untitled page"}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Revision {page.revision} · Updated {page.updatedAt}
       </p>
-      <p className="mt-3 text-sm text-muted-foreground">This page is read-only.</p>
       {target.blockId ? (
         <p className="mt-2 break-words text-sm text-muted-foreground">
           Linked block: {target.blockId}
@@ -187,6 +277,6 @@ export default function SpacePageSurface({
           </Link>
         ) : null}
       </div>
-    </section>
+    </>
   );
 }
