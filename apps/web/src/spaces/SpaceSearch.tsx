@@ -14,7 +14,7 @@ export default function SpaceSearch({
   spaceId,
 }: {
   environmentId: EnvironmentId;
-  spaceId: SpaceId;
+  spaceId?: SpaceId;
 }) {
   const [attempt, setAttempt] = useState(0);
   const owner = useSpaceReferenceController(environmentId, attempt);
@@ -28,6 +28,7 @@ export default function SpaceSearch({
   const request = useRef(0);
   const current = () => {
     const params = router.state.matches.at(-1)?.params ?? {};
+    if (!spaceId) return router.state.location.pathname === "/spaces" && !("pageId" in params);
     return (
       "environmentId" in params &&
       params.environmentId === environmentId &&
@@ -74,7 +75,7 @@ export default function SpaceSearch({
         <Button
           type="submit"
           variant="outline"
-          aria-label="Search / First results"
+          aria-label="Search"
           disabled={!owner || saved?.busy}
         >
           Search
