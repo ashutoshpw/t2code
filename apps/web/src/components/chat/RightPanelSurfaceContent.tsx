@@ -23,6 +23,8 @@ import { PullRequestDetailGhost } from "../pullRequest/PullRequestGhosts";
 import { PullRequestsUnavailableState } from "../pullRequest/PullRequestsUnavailableState";
 import { ThreadPullRequestsPanel } from "../pullRequest/ThreadPullRequestsPanel";
 
+const SpacePageSurface = lazy(() => import("../../spaces/SpacePageSurface"));
+
 const PreviewPanel = lazy(() =>
   import("../preview/PreviewPanel").then((module) => ({ default: module.PreviewPanel })),
 );
@@ -79,6 +81,12 @@ export function RightPanelSurfaceContent(props: {
   const { surface, threadRef, visible } = props;
   if (surface === null) return null;
   switch (surface.kind) {
+    case "space-page":
+      return (
+        <Suspense fallback={null}>
+          <SpacePageSurface target={surface.target} threadRef={threadRef} />
+        </Suspense>
+      );
     case "preview":
       return (
         <Suspense fallback={null}>

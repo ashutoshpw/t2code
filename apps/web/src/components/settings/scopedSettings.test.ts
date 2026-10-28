@@ -782,3 +782,29 @@ describe("model selection patches at project scope", () => {
     ).toEqual({ ...saved, options });
   });
 });
+
+describe("Spaces settings compatibility", () => {
+  it("refuses the entire mixed selection when a destination has no support signal", async () => {
+    const supported = {
+      ...laptop,
+      serverConfig: {
+        ...laptop.serverConfig!,
+        environment: { capabilities: { spacesSettings: true as const } },
+      },
+    };
+    const selected = [supported, server];
+    const scope = resolveSettingsScope({}, [], selected);
+    const plan = planScopedSettingsPatch(scope, selected, { spacesEnabled: true });
+    expect(plan.unavailableReason).toContain("Update every selected environment");
+    const persist = vi.fn();
+    await persistScopedSettingsPatch(plan, persist, () => {});
+    expect(persist).not.toHaveBeenCalled();
+    const onlySupported = resolveSettingsScope({ machine: supported.environmentId }, [], selected);
+    const allowed = planScopedSettingsPatch(onlySupported, selected, { spacesEnabled: true });
+    expect(allowed.unavailableReason).toBeNull();
+    expect(allowed.serverWrites.map((write) => [write.environmentId, write.patch])).toEqual([
+      [supported.environmentId, { spacesEnabled: true }],
+    ]);
+    expect(server.serverConfig!.settings.spacesEnabled).toBe(false);
+  });
+});

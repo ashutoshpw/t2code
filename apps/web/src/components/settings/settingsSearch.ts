@@ -456,6 +456,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["beta boring sidebar folder rows multiline branch pull request details"],
   },
   {
+    id: "spaces",
+    title: "Spaces",
+    to: "/settings/labs",
+    scope: "environment",
+    searchTerms: ["pages documents library enable disable"],
+  },
+  {
     id: "guest-links",
     title: "Guest links",
     to: "/settings/labs",

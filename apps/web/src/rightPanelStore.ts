@@ -4,6 +4,8 @@ import {
   scopeThreadRef,
 } from "@t2code/client-runtime/environment";
 import { EnvironmentId, RunId, ThreadId, type ScopedThreadRef } from "@t2code/contracts";
+import * as Schema from "effect/Schema";
+import { SpacePageNavigationTarget, spacePageSurfaceId } from "@t2code/client-runtime/spaces";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -11,6 +13,9 @@ import { useClosedViewStore } from "./closedViewStore";
 import { resolveStorage } from "./lib/storage";
 import type { ThreadPanelPresentation } from "./rightPanelLayout";
 import type { ChatFileAttachment } from "./types";
+
+const decodeSpacePageTarget = Schema.decodeSync(SpacePageNavigationTarget);
+const decodeSpacePageTargetOption = Schema.decodeOption(SpacePageNavigationTarget);
 
 const RIGHT_PANEL_KINDS = [
   "diff",
@@ -21,6 +26,7 @@ const RIGHT_PANEL_KINDS = [
   "terminal",
   "pull-request",
   "pull-requests",
+  "space-page",
 ] as const;
 export type RightPanelKind = (typeof RIGHT_PANEL_KINDS)[number];
 
@@ -74,10 +80,11 @@ export type RightPanelSurface =
       url?: string;
       detailTab?: PullRequestDetailTab;
     }
-  | { id: "pull-requests"; kind: "pull-requests" };
+  | { id: "pull-requests"; kind: "pull-requests" }
+  | { id: `space-page:${string}`; kind: "space-page"; target: SpacePageNavigationTarget };
 
 const RIGHT_PANEL_STORAGE_KEY = "t2code:right-panel-state:v2";
-const RIGHT_PANEL_STORAGE_VERSION = 14;
+const RIGHT_PANEL_STORAGE_VERSION = 15;
 
 export const PULL_REQUESTS_PANEL_REF = scopeThreadRef(
   EnvironmentId.make("pull-requests-panel"),
@@ -121,7 +128,7 @@ interface RightPanelStoreState {
   ) => boolean;
   open: (
     ref: ScopedThreadRef,
-    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request">,
+    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request" | "space-page">,
   ) => void;
   openDevice: (ref: ScopedThreadRef, target: DeviceTabTarget, automatic?: boolean) => void;
   renameDevice: (ref: ScopedThreadRef, surfaceId: string, title: string) => void;
@@ -136,6 +143,11 @@ interface RightPanelStoreState {
     keepSource?: boolean,
   ) => void;
   openAttachment: (ref: ScopedThreadRef, attachment: ChatFileAttachment) => void;
+  openSpacePage: (ref: ScopedThreadRef, target: SpacePageNavigationTarget) => void;
+  updateSpacePageLocation: (
+    ref: ScopedThreadRef,
+    target: Omit<SpacePageNavigationTarget, "blockId">,
+  ) => void;
   openPullRequest: (
     ref: ScopedThreadRef,
     target: {
@@ -180,7 +192,7 @@ interface RightPanelStoreState {
   toggleVisibility: (ref: ScopedThreadRef) => void;
   toggle: (
     ref: ScopedThreadRef,
-    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request">,
+    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request" | "space-page">,
   ) => void;
   setThreadPanelOpen: (
     ref: ScopedThreadRef,
@@ -203,7 +215,7 @@ const DEFAULT_THREAD_PANEL_VISIBILITY: ThreadPanelVisibility = {
 };
 
 const singletonSurface = (
-  kind: Exclude<RightPanelKind, "file" | "preview" | "terminal" | "pull-request">,
+  kind: Exclude<RightPanelKind, "file" | "preview" | "terminal" | "pull-request" | "space-page">,
 ): RightPanelSurface => {
   switch (kind) {
     case "diff":
@@ -452,6 +464,17 @@ export function migratePersistedRightPanelState(persistedState: unknown): {
                 ? validThreadState.surfaces.flatMap<RightPanelSurface>((surface) => {
                     const kind = (surface as { kind?: string }).kind;
                     if (kind === "plan" || kind === "agents") return [];
+                    if (surface.kind === "space-page") {
+                      const decoded = decodeSpacePageTargetOption(surface.target);
+                      if (decoded._tag === "None") return [];
+                      return [
+                        {
+                          id: spacePageSurfaceId(decoded.value),
+                          kind: "space-page",
+                          target: decoded.value,
+                        },
+                      ];
+                    }
                     if (
                       (surface.kind === "file" || surface.kind === "files") &&
                       "folderTrail" in surface &&
@@ -701,6 +724,38 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
               ? current.surfaces.filter((entry) => entry.id !== "browser:new")
               : current.surfaces;
             return upsertSurface({ ...current, surfaces: withoutPlaceholder }, surface);
+          }),
+        ),
+      updateSpacePageLocation: (ref, target) =>
+        set((state) =>
+          automaticUpdate(state, scopedThreadKey(ref), (current) => {
+            const id = spacePageSurfaceId(target);
+            const surface = current.surfaces.find((entry) => entry.id === id);
+            if (surface?.kind !== "space-page" || surface.target.spaceId === target.spaceId)
+              return current;
+            return {
+              ...current,
+              surfaces: current.surfaces.map((entry) =>
+                entry.id === id
+                  ? { ...surface, target: { ...surface.target, spaceId: target.spaceId } }
+                  : entry,
+              ),
+            };
+          }),
+        ),
+      openSpacePage: (ref, target) =>
+        set((state) =>
+          userAction(state, scopedThreadKey(ref), (current) => {
+            const surface = {
+              id: spacePageSurfaceId(target),
+              kind: "space-page" as const,
+              target: decodeSpacePageTarget(target),
+            };
+            const next = upsertSurface(current, surface);
+            return {
+              ...next,
+              surfaces: next.surfaces.map((entry) => (entry.id === surface.id ? surface : entry)),
+            };
           }),
         ),
       openPullRequest: (ref, target) =>
