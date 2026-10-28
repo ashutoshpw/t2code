@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { FileTextIcon, RefreshCwIcon } from "lucide-react";
 import type { EnvironmentId } from "@t2code/contracts";
@@ -20,6 +20,10 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { SpacesUnavailable } from "./SpacesUnavailable";
+
+const CreatePageButton = lazy(() =>
+  import("./SpaceCreateControls").then((module) => ({ default: module.CreatePageButton })),
+);
 
 export function SpacePageTable({
   environmentId,
@@ -93,6 +97,9 @@ function Pages({
           <EmptyHeader>
             <EmptyTitle>No pages in this space.</EmptyTitle>
           </EmptyHeader>
+          <Suspense fallback={null}>
+            <CreatePageButton environmentId={environmentId} spaceId={spaceId} label="New page" />
+          </Suspense>
         </Empty>
       ) : (
         <Table>
