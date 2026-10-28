@@ -1,11 +1,11 @@
 import { lazy, Suspense, useState } from "react";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useParams, useSearch } from "@tanstack/react-router";
 import { EnvironmentId } from "@t2code/contracts";
 import { SpaceId, type SpaceCursor } from "@t2code/contracts/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesEnvironments } from "../state/spaces";
 import { usePrimaryEnvironmentId } from "../state/environments";
-import { LibraryIcon, ServerIcon } from "lucide-react";
+import { LibraryIcon, ServerIcon, FilesIcon, ImageIcon, FileTextIcon } from "lucide-react";
 import { useEnvironment } from "../state/environments";
 import {
   SidebarHeader,
@@ -31,9 +31,11 @@ const NewSpaceButton = lazy(() =>
 export function SpacesSidebar() {
   const params = useParams({ strict: false });
   const environments = useSpacesEnvironments();
+  const search = useSearch({ strict: false });
   const primaryId = usePrimaryEnvironmentId();
-  const environment = params.environmentId
-    ? environments.find((entry) => entry.environmentId === params.environmentId)
+  const selectedId = params.environmentId ?? search.environmentId;
+  const environment = selectedId
+    ? environments.find((entry) => entry.environmentId === selectedId)
     : (environments.find((entry) => entry.environmentId === primaryId) ?? environments[0]);
   const { isMobile, setOpenMobile } = useSidebar();
   const closeMobile = () => {
@@ -58,6 +60,12 @@ export function SpacesSidebar() {
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="max-h-1/2 min-h-0 shrink-0 overflow-y-auto px-2 py-2">
+          {environment ? (
+            <LibraryNavigation
+              key={environment.environmentId}
+              environmentId={environment.environmentId}
+            />
+          ) : null}
           <div className="flex items-center justify-between pb-1 pl-2">
             <h2 className="text-xs font-medium text-sidebar-muted-foreground">Spaces</h2>
             {environment ? (
@@ -186,6 +194,152 @@ function SpaceWindows({ environmentId }: { environmentId: EnvironmentId }) {
             </Button>
           ) : null}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+function LibraryNavigation({ environmentId }: { environmentId: EnvironmentId }) {
+  const capability = useEnvironment(environmentId)?.serverConfig?.environment.capabilities.spaces;
+  const search = useSearch({ strict: false });
+  const { isMobile, setOpenMobile } = useSidebar();
+  return (
+    <>
+      <SidebarMenu className="mb-2">
+        {capability?.features?.allPages ? (
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={search.view === "all"}
+              render={
+                <Link
+                  to="/spaces"
+                  search={{ environmentId, view: "all" }}
+                  onClick={() => {
+                    if (isMobile) setOpenMobile(false);
+                  }}
+                />
+              }
+            >
+              <FilesIcon />
+              <span>All pages</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ) : null}
+        {capability?.features?.assetList ? (
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={search.view === "media"}
+              render={
+                <Link
+                  to="/spaces"
+                  search={{ environmentId, view: "media" }}
+                  onClick={() => {
+                    if (isMobile) setOpenMobile(false);
+                  }}
+                />
+              }
+            >
+              <ImageIcon />
+              <span>Media</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ) : null}
+      </SidebarMenu>
+      {capability?.features?.pins ? (
+        <LibraryGroup environmentId={environmentId} kind="pins" />
+      ) : null}
+      {capability?.features?.recents ? (
+        <LibraryGroup environmentId={environmentId} kind="recents" />
+      ) : null}
+    </>
+  );
+}
+function LibraryGroup({
+  environmentId,
+  kind,
+}: {
+  environmentId: EnvironmentId;
+  kind: "pins" | "recents";
+}) {
+  const [cursor, setCursor] = useState<SpaceCursor>();
+  const [expanded, setExpanded] = useState(false);
+  const { isMobile, setOpenMobile } = useSidebar();
+  const limit = Math.min(
+    expanded ? 50 : 5,
+    useEnvironment(environmentId)?.serverConfig?.environment.capabilities.spaces?.limits
+      .maxListRows ?? 50,
+  );
+  const query = useEnvironmentQuery(
+    (kind === "pins" ? spacesEnvironment.pins : spacesEnvironment.recents)({
+      environmentId,
+      input: { environmentId, limit, ...(cursor ? { cursor } : {}) },
+    }),
+  );
+  if (
+    cursor &&
+    typeof query.failure === "object" &&
+    query.failure !== null &&
+    "_tag" in query.failure &&
+    query.failure._tag === "SpaceCursorStaleError"
+  ) {
+    setCursor(undefined);
+    return null;
+  }
+  return (
+    <div className="mb-2">
+      <h2 className="px-2 pb-1 text-xs font-medium text-sidebar-muted-foreground">
+        {kind === "pins" ? "Pinned" : "Recents"}
+      </h2>
+      {query.error ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setCursor(undefined);
+            query.refresh();
+          }}
+        >
+          Retry
+        </Button>
+      ) : (
+        <SidebarMenu>
+          {query.data?.items.map(({ page }) => (
+            <SidebarMenuItem key={page.id}>
+              <SidebarMenuButton
+                render={
+                  <Link
+                    to="/spaces/$environmentId/$spaceId/$pageId"
+                    params={{ environmentId, spaceId: page.spaceId, pageId: page.id }}
+                    search={{}}
+                    onClick={() => {
+                      if (isMobile) setOpenMobile(false);
+                    }}
+                  />
+                }
+              >
+                <FileTextIcon />
+                <span>{page.title || "Untitled page"}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      )}
+      {cursor ? (
+        <Button variant="ghost" size="sm" onClick={() => setCursor(undefined)}>
+          First
+        </Button>
+      ) : null}
+      {query.data?.nextCursor ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            if (!expanded) setExpanded(true);
+            else setCursor(query.data!.nextCursor!);
+          }}
+        >
+          {expanded ? "Next" : "Show more"}
+        </Button>
       ) : null}
     </div>
   );

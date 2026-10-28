@@ -58,8 +58,13 @@ export function createSpacesEnvironmentAtoms<R, E>(
   const changed = Atom.family((_environmentId: EnvironmentId) => Atom.make(0));
   const refreshTrigger = ({ environmentId }: { environmentId: EnvironmentId }) =>
     changed(environmentId);
+  const libraryChanged = Atom.family((_environmentId: EnvironmentId) => Atom.make(0));
+  const libraryRefresh = Atom.family((environmentId: EnvironmentId) =>
+    Atom.make((get) => get(changed(environmentId)) + get(libraryChanged(environmentId))),
+  );
   return {
     changed,
+    libraryChanged,
     createImageUpload: createEnvironmentRpcCommand(runtime, {
       label: "spaces.image-upload-create",
       tag: WS_METHODS.spacesAssetsUploadCreate,
@@ -345,6 +350,67 @@ export function createSpacesEnvironmentAtoms<R, E>(
           );
         }),
       })(target),
+    allPages: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger: ({ environmentId }) => libraryRefresh(environmentId),
+      label: "environment-data:spaces:allPages",
+      tag: WS_METHODS.spacesPagesListAll,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    assets: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger: ({ environmentId }) => libraryRefresh(environmentId),
+      label: "environment-data:spaces:assets",
+      tag: WS_METHODS.spacesAssetsList,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    pins: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger: ({ environmentId }) => libraryRefresh(environmentId),
+      label: "environment-data:spaces:pins",
+      tag: WS_METHODS.spacesPinsList,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    recents: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger: ({ environmentId }) => libraryRefresh(environmentId),
+      label: "environment-data:spaces:recents",
+      tag: WS_METHODS.spacesRecentsList,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    addPin: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:addPin",
+      tag: WS_METHODS.spacesPinsAdd,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.features?.pins === true
+            ? requestGuarded(WS_METHODS.spacesPinsAdd, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    removePin: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:removePin",
+      tag: WS_METHODS.spacesPinsRemove,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.features?.pins === true
+            ? requestGuarded(WS_METHODS.spacesPinsRemove, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    recordRecent: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:recordRecent",
+      tag: WS_METHODS.spacesRecentsRecord,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.features?.recents === true
+            ? requestGuarded(WS_METHODS.spacesRecentsRecord, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
     list: createEnvironmentRpcQueryAtomFamily(runtime, {
       refreshTrigger,
       label: "environment-data:spaces:list",
