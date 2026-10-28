@@ -420,6 +420,9 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
     const group = SpacesRpc.group.omit(
       WS_METHODS.spacesList,
       WS_METHODS.spacesPagesList,
+      WS_METHODS.spacesPagesListAll,
+      WS_METHODS.spacesPinsList,
+      WS_METHODS.spacesRecentsList,
       WS_METHODS.spacesPagesGet,
       WS_METHODS.spacesBlocksRead,
       WS_METHODS.spacesReceiptsGet,
@@ -428,6 +431,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesTrashList,
       WS_METHODS.spacesSearch,
       WS_METHODS.spacesAssetsGet,
+      WS_METHODS.spacesAssetsList,
       WS_METHODS.spacesAssetsUploadGet,
       WS_METHODS.spacesContextCapture,
     );
@@ -435,6 +439,9 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       Effect.provide(
         Layer.merge(
           group.toLayer({
+            "spaces.pins.add": deniedHandler,
+            "spaces.pins.remove": deniedHandler,
+            "spaces.recents.record": deniedHandler,
             "spaces.assets.upload.create": deniedHandler,
             "spaces.assets.upload.finalize": deniedHandler,
             "spaces.create": deniedHandler,
@@ -489,6 +496,9 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
         baseRootOrderRevision: 0,
         title: "",
       }),
+      client[WS_METHODS.spacesPinsAdd]({ environmentId: common.environmentId, pageId }),
+      client[WS_METHODS.spacesPinsRemove]({ environmentId: common.environmentId, pageId }),
+      client[WS_METHODS.spacesRecentsRecord]({ environmentId: common.environmentId, pageId }),
       client[WS_METHODS.spacesPagesUpdate]({ ...common, pageId, baseRevision: 0, title: "" }),
       client[WS_METHODS.spacesPagesCreateChild]({
         ...common,
@@ -556,6 +566,9 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
       WS_METHODS.spacesCreate,
       WS_METHODS.spacesRename,
       WS_METHODS.spacesSetDefault,
+      WS_METHODS.spacesPinsAdd,
+      WS_METHODS.spacesPinsRemove,
+      WS_METHODS.spacesRecentsRecord,
       WS_METHODS.spacesPagesCreate,
       WS_METHODS.spacesPagesUpdate,
       WS_METHODS.spacesBlocksApply,
@@ -573,9 +586,13 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
         Layer.merge(
           group.toLayer({
             "spaces.assets.get": deniedHandler,
+            "spaces.assets.list": deniedHandler,
             "spaces.assets.upload.get": deniedHandler,
             "spaces.list": deniedHandler,
             "spaces.pages.list": deniedHandler,
+            "spaces.pages.listAll": deniedHandler,
+            "spaces.pins.list": deniedHandler,
+            "spaces.recents.list": deniedHandler,
             "spaces.pages.get": deniedHandler,
             "spaces.blocks.read": deniedHandler,
             "spaces.receipts.get": deniedHandler,
@@ -593,6 +610,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
     const pageId = C.SpacePageId.make("page");
     for (const call of [
       client[WS_METHODS.spacesAssetsGet]({ environmentId, assetId: C.SpaceAssetId.make("asset") }),
+      client[WS_METHODS.spacesAssetsList]({ environmentId }),
       client[WS_METHODS.spacesAssetsUploadGet]({
         environmentId,
         uploadId: C.SpaceAssetUploadId.make("upload"),
@@ -601,6 +619,9 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
       client[WS_METHODS.spacesTrashList]({ environmentId }),
       client[WS_METHODS.spacesSearch]({ environmentId, query: "needle" }),
       client[WS_METHODS.spacesPagesList]({ environmentId, spaceId: C.SpaceId.make("space") }),
+      client[WS_METHODS.spacesPagesListAll]({ environmentId }),
+      client[WS_METHODS.spacesPinsList]({ environmentId }),
+      client[WS_METHODS.spacesRecentsList]({ environmentId }),
       client[WS_METHODS.spacesPagesGet]({ environmentId, pageId }),
       client[WS_METHODS.spacesReferencesResolve]({
         environmentId,

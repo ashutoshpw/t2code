@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
+import { SpacePinButton } from "./SpacePinButton";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 
 const CreatePageButton = lazy(() =>
@@ -107,6 +108,9 @@ function Pages({
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead className="w-40 text-right">Last activity</TableHead>
+              <TableHead>
+                <span className="sr-only">Pin</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -127,6 +131,9 @@ function Pages({
                   <span className="text-muted-foreground">
                     {formatRelativeTimeLabel(page.updatedAt)}
                   </span>
+                </TableCell>
+                <TableCell>
+                  <SpacePinButton environmentId={environmentId} page={page} />
                 </TableCell>
               </TableRow>
             ))}
