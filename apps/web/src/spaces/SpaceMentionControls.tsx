@@ -221,7 +221,7 @@ export function SpaceMentionControls({
                     "invalid-query": "Query exceeds the byte or term limit.",
                     unsupported: "Search/reference resolution is unavailable.",
                     unavailable: "Results became unavailable. Retry First results explicitly.",
-                    building: "Search index is building. Retry First results explicitly.",
+                    building: "Search is still getting ready. Try again in a moment.",
                     error: "Search failed. Retry explicitly.",
                   }[window.status]
                 }
@@ -232,8 +232,8 @@ export function SpaceMentionControls({
                 {!ready.result.items.length ? (
                   <li>
                     {ready.result.nextCursor
-                      ? "No results in this window. Next results continues the search."
-                      : "No results; this search has ended."}
+                      ? "No matches yet. Choose Next results to keep searching."
+                      : "No results."}
                   </li>
                 ) : null}
                 {ready.result.items.map((hit, index) => (

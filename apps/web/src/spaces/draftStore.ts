@@ -21,7 +21,7 @@ export function createSpaceDraftStore(): SpaceDraftStore {
   };
 }
 
-export const AUTOSAVE_IDLE_MS = 1000;
+const AUTOSAVE_IDLE_MS = 1000;
 
 export interface AutosaveTimers {
   set(run: () => void, ms: number): unknown;

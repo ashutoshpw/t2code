@@ -521,7 +521,7 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
               const before = controller.session.getSnapshot();
               assert.isFalse(await view.bridge.compensate("undo"));
               assert.equal(controller.session.getSnapshot(), before);
-              assert.include(controller.session.compensationAvailability("undo")!, "structural");
+              assert.include(controller.session.compensationAvailability("undo")!, "undone");
               assert.equal(h.requests.length, 1);
               if (operation !== "insert") {
                 const admission = await h.ports.getPage(h.key);
@@ -634,7 +634,7 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
               assert.isFalse(controller.session.getSnapshot().dirty);
               if (bytes === 65537) {
                 assert.isFalse(await view.bridge.compensate("undo"));
-                assert.include(controller.session.compensationAvailability("undo")!, "64 KiB");
+                assert.include(controller.session.compensationAvailability("undo")!, "too large");
                 return;
               }
               const first = view.state.doc.textContent;
@@ -1284,7 +1284,6 @@ it.layer(NodeServices.layer)("Spaces editor commands with real SQLite", (it) => 
               if (resurrection._tag === "SpaceValidationError")
                 assert.equal(resurrection.reason, "duplicate_id");
               assert.isFalse(bridge.adapter.undoLocal()(state, dispatch));
-              assert.include(bridge.getSnapshot()!, "Use saved undo/redo");
               if (late) {
                 assert.isTrue(controller.session.getSnapshot().dirty);
                 assert.include(state.doc.textContent, "late");

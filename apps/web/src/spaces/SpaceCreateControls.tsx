@@ -7,7 +7,14 @@ import type { SpaceId } from "@t2code/contracts/spaces";
 import type { SpaceRootReorder } from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { Button } from "../components/ui/button";
-import { Dialog, DialogDescription, DialogPopup, DialogTitle } from "../components/ui/dialog";
+import {
+  Dialog,
+  DialogDescription,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { useEnvironmentQuery } from "../state/query";
@@ -229,25 +236,29 @@ function SpaceButton({
       </Reason>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogPopup>
-          <DialogTitle>New space</DialogTitle>
-          <DialogDescription>Spaces group pages. You can rename it later.</DialogDescription>
-          <form
-            className="mt-4 flex gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!reason) run(submit());
-            }}
-          >
-            <Input
-              autoFocus
-              aria-label="Space title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-            />
-            <Button type="submit" disabled={!!reason || !title.trim()}>
-              Create space
-            </Button>
-          </form>
+          <DialogHeader>
+            <DialogTitle>New space</DialogTitle>
+            <DialogDescription>Spaces group pages. You can rename it later.</DialogDescription>
+          </DialogHeader>
+          <DialogPanel>
+            <form
+              className="flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!reason) run(submit());
+              }}
+            >
+              <Input
+                autoFocus
+                aria-label="Space title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+              <Button type="submit" disabled={!!reason || !title.trim()}>
+                Create space
+              </Button>
+            </form>
+          </DialogPanel>
         </DialogPopup>
       </Dialog>
     </>
@@ -292,13 +303,11 @@ function Status({
             }
             onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
           >
-            {pending.conflict ? "Inspect" : "Recover"}
+            {pending.conflict ? "Dismiss" : "Finish it"}
           </Button>
         </>
       ) : snapshot.error ? (
-        <p role="alert">
-          {snapshot.error instanceof Error ? snapshot.error.message : "Library change failed."}
-        </p>
+        <p role="alert">Couldn't finish that change. Reload the page and try again.</p>
       ) : null}
     </div>
   );
