@@ -104,14 +104,28 @@ export function applyServerConfigProjection(
         source: "live",
       }));
     case "settingsUpdated":
-      return Option.map(current, (projection) => ({
-        config: {
-          ...projection.config,
-          settings: reuseUnchanged(projection.config.settings, event.payload.settings),
-        },
-        latestEvent: event,
-        source: "live",
-      }));
+      return Option.map(current, (projection) => {
+        let environment = projection.config.environment;
+        if (event.payload.spaces !== undefined) {
+          const { spaces: _spaces, ...capabilities } = environment.capabilities;
+          environment = reuseUnchanged(environment, {
+            ...environment,
+            capabilities: {
+              ...capabilities,
+              ...(event.payload.spaces === null ? {} : { spaces: event.payload.spaces }),
+            },
+          });
+        }
+        return {
+          config: {
+            ...projection.config,
+            settings: reuseUnchanged(projection.config.settings, event.payload.settings),
+            environment,
+          },
+          latestEvent: event,
+          source: "live",
+        };
+      });
     case "environmentThemesUpdated":
       return Option.map(current, (projection) => ({
         config: {

@@ -41,6 +41,32 @@ const encodeServerSettingsPatch = Schema.encodeSync(ServerSettingsPatch);
 const decodeClaudeSettings = Schema.decodeUnknownSync(ClaudeSettings);
 const decodeFxSettings = Schema.decodeUnknownSync(FxSettings);
 
+describe("ServerSettings spaces", () => {
+  it("keeps Spaces disabled for legacy settings without resetting omitted patches", () => {
+    expect(decodeServerSettings({}).spacesEnabled).toBe(false);
+    expect(decodeServerSettingsPatch({})).not.toHaveProperty("spacesEnabled");
+  });
+
+  it.each([true, false])(
+    "preserves explicit spacesEnabled=%s in settings and patches",
+    (enabled) => {
+      const input = { spacesEnabled: enabled };
+      const settings = decodeServerSettings(input);
+
+      expect(settings.spacesEnabled).toBe(enabled);
+      expect(encodeServerSettings(settings)).toMatchObject(input);
+      expect(decodeServerSettingsPatch(input)).toEqual(input);
+    },
+  );
+
+  it("rejects non-boolean Spaces values in stored settings and patches", () => {
+    for (const spacesEnabled of [null, "true", 1]) {
+      expect(() => decodeServerSettings({ spacesEnabled })).toThrow();
+      expect(() => decodeServerSettingsPatch({ spacesEnabled })).toThrow();
+    }
+  });
+});
+
 describe("storage cleanup settings", () => {
   it("keeps cleanup disabled for existing installations", () => {
     expect(decodeServerSettings({}).worktreeCleanup).toBeNull();

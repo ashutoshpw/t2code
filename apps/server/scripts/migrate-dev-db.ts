@@ -23,6 +23,7 @@ import * as SqlClient from "effect/sql/SqlClient";
 import { Command, Flag } from "effect/cli";
 
 import * as ProjectionStore from "../src/orchestration-v2/ProjectionStore.ts";
+import * as SpacesDatabaseTools from "../src/spaces/SpacesDatabaseTools.ts";
 import { rebuildMessageSearch } from "../src/orchestration-v2/messageSearchIndex.ts";
 import { migrationManifest, runMigrations } from "../src/persistence/Migrations.ts";
 import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
@@ -64,6 +65,33 @@ export class MigrateDevDbSourceIsDestinationError extends Schema.TaggedError<Mig
 ) {
   override get message(): string {
     return `Source database '${this.sourcePath}' resolves to a path this command rewrites. Pick a different --source or --base-dir.`;
+  }
+}
+
+export class MigrateDevDbDestinationOutsideSandboxError extends Schema.TaggedError<MigrateDevDbDestinationOutsideSandboxError>()(
+  "MigrateDevDbDestinationOutsideSandboxError",
+  { destinationPath: Schema.String },
+) {
+  override get message() {
+    return "Refusing to access a database destination outside the isolated sandbox.";
+  }
+}
+
+export class MigrateDevDbDatabaseOverlapError extends Schema.TaggedError<MigrateDevDbDatabaseOverlapError>()(
+  "MigrateDevDbDatabaseOverlapError",
+  { path: Schema.String },
+) {
+  override get message() {
+    return "Refusing to migrate overlapping database file families.";
+  }
+}
+
+export class MigrateDevDbFileIdentityUnavailableError extends Schema.TaggedError<MigrateDevDbFileIdentityUnavailableError>()(
+  "MigrateDevDbFileIdentityUnavailableError",
+  { path: Schema.String },
+) {
+  override get message() {
+    return "Cannot safely migrate because the filesystem does not report a usable file identity.";
   }
 }
 
@@ -112,7 +140,7 @@ export class MigrateDevDbSlotCollisionError extends Schema.TaggedError<MigrateDe
 export class MigrateDevDbPhaseError extends Schema.TaggedError<MigrateDevDbPhaseError>()(
   "MigrateDevDbPhaseError",
   {
-    phase: Schema.Literals(["snapshot", "prune", "compact", "migrate", "verify"]),
+    phase: Schema.Literals(["snapshot", "prune", "compact", "migrate", "verify", "spaces"]),
     databasePath: Schema.String,
     cause: Schema.Defect(),
   },
@@ -139,9 +167,13 @@ interface KeptProject {
   readonly threads: number;
 }
 
+const DATABASE_FILE_SUFFIXES = ["", "-wal", "-shm"] as const;
+// Fresh chat snapshots use rollback journals before WAL mode is restored.
+const DATABASE_ACCESS_SUFFIXES = [...DATABASE_FILE_SUFFIXES, "-journal"];
+
 const removeDatabaseFiles = Effect.fn("removeDatabaseFiles")(function* (databasePath: string) {
   const fs = yield* FileSystem.FileSystem;
-  for (const suffix of ["", "-wal", "-shm"]) {
+  for (const suffix of DATABASE_FILE_SUFFIXES) {
     yield* fs.remove(`${databasePath}${suffix}`).pipe(Effect.orElseSucceed(() => undefined));
   }
 });
@@ -435,6 +467,90 @@ const verifyMigrationSlots = Effect.fn("verifyMigrationSlots")(function* () {
   }
 });
 
+const resolveCanonicalPath = Effect.fn("migrateDevDb.resolveCanonicalPath")(function* (
+  filePath: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  let current = path.resolve(filePath);
+  const suffix: string[] = [];
+  for (;;) {
+    const canonical = yield* fs.realPath(current).pipe(
+      Effect.asSome,
+      Effect.catchIf(
+        (error) => error.reason._tag === "NotFound",
+        () => Effect.succeedNone,
+      ),
+    );
+    if (Option.isSome(canonical)) return path.join(canonical.value, ...suffix);
+    const link = yield* fs.readLink(current).pipe(
+      Effect.asSome,
+      Effect.catchIf(
+        (error) => error.reason._tag === "NotFound",
+        () => Effect.succeedNone,
+      ),
+    );
+    if (Option.isSome(link)) {
+      // Preserve .. until realpath resolves any symlinked ancestors.
+      current = path.isAbsolute(link.value)
+        ? link.value
+        : `${path.dirname(current)}${path.sep}${link.value}`;
+      continue;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return path.join(yield* fs.realPath(current), ...suffix);
+    suffix.unshift(path.basename(current));
+    current = parent;
+  }
+});
+
+const readFileIdentity = Effect.fn("migrateDevDb.readFileIdentity")(function* (file: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const info = yield* fs.stat(file).pipe(
+    Effect.asSome,
+    Effect.catchIf(
+      (error) => error.reason._tag === "NotFound",
+      () => Effect.succeedNone,
+    ),
+  );
+  if (Option.isNone(info)) return null;
+  if (Option.isNone(info.value.ino) || info.value.ino.value <= 0n) {
+    return yield* new MigrateDevDbFileIdentityUnavailableError({ path: file });
+  }
+  return `${info.value.dev}:${info.value.ino.value}`;
+});
+
+const resolveDatabaseFamily = Effect.fn("migrateDevDb.resolveDatabaseFamily")(function* (
+  databasePath: string,
+) {
+  const path = yield* Path.Path;
+  const canonicalPath = yield* resolveCanonicalPath(databasePath);
+  const members = [...new Set([databasePath, canonicalPath])].flatMap((root) =>
+    DATABASE_ACCESS_SUFFIXES.map((member) => ({ file: `${root}${member}`, member })),
+  );
+  const files = yield* Effect.forEach(members, ({ file, member }) =>
+    Effect.all([
+      resolveCanonicalPath(file),
+      resolveCanonicalPath(path.dirname(file)).pipe(
+        Effect.map((directory) => path.join(directory, path.basename(file))),
+      ),
+    ]).pipe(
+      Effect.flatMap((paths) =>
+        Effect.forEach([...new Set(paths)], (file) =>
+          readFileIdentity(file).pipe(Effect.map((identity) => ({ path: file, member, identity }))),
+        ),
+      ),
+    ),
+  );
+  return { databasePath: canonicalPath, files: files.flat() };
+});
+
+type DatabaseFileRole = {
+  readonly family: string;
+  readonly member: string;
+  readonly access: "read-only" | "metadata-only" | "read-write";
+};
+
 export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   input: RunMigrateDevDbInput,
   options: RunMigrateDevDbOptions = {},
@@ -461,33 +577,89 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   const stateDir = path.join(baseDir, "userdata");
   const databasePath = path.join(stateDir, "statev2.sqlite");
   const snapshotPath = `${databasePath}.migrate-dev-db-tmp`;
+  const spacesDatabasePath = path.join(stateDir, "spaces.sqlite");
 
   if (!(yield* fs.exists(sourcePath))) {
     return yield* new MigrateDevDbSourceMissingError({ sourcePath });
   }
   const [canonicalBaseDir, canonicalSharedHome] = yield* Effect.all([
-    fs.realPath(baseDir).pipe(Effect.orElseSucceed(() => baseDir)),
-    fs.realPath(sharedHome).pipe(Effect.orElseSucceed(() => sharedHome)),
+    resolveCanonicalPath(baseDir),
+    resolveCanonicalPath(sharedHome),
   ]);
   if (canonicalBaseDir === canonicalSharedHome) {
     return yield* new MigrateDevDbSharedHomeError();
   }
-  // Both destination and snapshot are deleted below; reject sources resolving to either.
-  const canonicalSourcePath = yield* fs
-    .realPath(sourcePath)
-    .pipe(Effect.orElseSucceed(() => sourcePath));
-  for (const destination of [databasePath, snapshotPath]) {
-    const canonicalDestination = yield* fs
-      .realPath(destination)
-      .pipe(Effect.orElseSucceed(() => destination));
-    if (canonicalSourcePath === canonicalDestination) {
-      return yield* new MigrateDevDbSourceIsDestinationError({ sourcePath });
+  const [canonicalStateDir, canonicalSharedStateDir] = yield* Effect.all([
+    resolveCanonicalPath(stateDir),
+    resolveCanonicalPath(path.join(sharedHome, "userdata")),
+  ]);
+  if (canonicalStateDir === canonicalSharedStateDir) {
+    return yield* new MigrateDevDbSharedHomeError();
+  }
+  const [canonicalSourcePath, canonicalSpacesDatabasePath] = yield* Effect.all([
+    resolveCanonicalPath(sourcePath),
+    resolveCanonicalPath(spacesDatabasePath),
+  ]);
+  const sourceSpacesPaths = [
+    ...new Set(
+      [sourcePath, canonicalSourcePath].map((source) =>
+        path.join(path.dirname(source), "spaces.sqlite"),
+      ),
+    ),
+  ];
+  const families = yield* Effect.forEach(
+    [
+      { name: "chat", access: "read-write", databasePath },
+      { name: "snapshot", access: "read-write", databasePath: snapshotPath },
+      { name: "spaces", access: "read-write", databasePath: spacesDatabasePath },
+      { name: "source-chat", access: "read-only", databasePath: sourcePath },
+      ...sourceSpacesPaths.map((databasePath) => ({
+        name: "source-spaces",
+        access: "metadata-only" as const,
+        databasePath,
+      })),
+    ] as const,
+    ({ name, access, databasePath }) =>
+      resolveDatabaseFamily(databasePath).pipe(
+        Effect.map((family) => ({ ...family, name, access })),
+      ),
+  );
+  for (const family of families) {
+    if (family.access !== "read-write") continue;
+    for (const file of family.files) {
+      const relative = path.relative(canonicalBaseDir, file.path);
+      if (
+        relative === "" ||
+        relative === ".." ||
+        relative.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relative)
+      ) {
+        return yield* new MigrateDevDbDestinationOutsideSandboxError({
+          destinationPath: file.path,
+        });
+      }
     }
   }
-
-  yield* fs.makeDirectory(stateDir, { recursive: true });
-  yield* ensureNotInUse(databasePath);
-
+  const occupiedPaths = new Map<string, DatabaseFileRole>();
+  const occupiedFiles = new Map<string, DatabaseFileRole>();
+  for (const family of families) {
+    for (const file of family.files) {
+      for (const { key, occupied } of [
+        { key: file.path, occupied: occupiedPaths },
+        { key: file.identity, occupied: occupiedFiles },
+      ]) {
+        if (key === null) continue;
+        const previous = occupied.get(key);
+        if (previous && (previous.family !== family.name || previous.member !== file.member)) {
+          if ((previous.access === "read-write") !== (family.access === "read-write")) {
+            return yield* new MigrateDevDbSourceIsDestinationError({ sourcePath });
+          }
+          return yield* new MigrateDevDbDatabaseOverlapError({ path: file.path });
+        }
+        occupied.set(key, { family: family.name, member: file.member, access: family.access });
+      }
+    }
+  }
   const wrapPhase =
     (phase: MigrateDevDbPhaseError["phase"], phaseDatabasePath: string) =>
     <A, E, R>(effect: Effect.Effect<A, E, R>) =>
@@ -497,6 +669,17 @@ export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
         ),
       );
 
+  const spaces = yield* SpacesDatabaseTools.SpacesDatabaseTools;
+  const existingSpaces = yield* spaces
+    .inspect(canonicalSpacesDatabasePath)
+    .pipe(wrapPhase("spaces", spacesDatabasePath));
+  yield* fs.makeDirectory(stateDir, { recursive: true });
+  yield* ensureNotInUse(databasePath);
+  if (existingSpaces === null) {
+    yield* spaces
+      .initializeIfMissing(canonicalSpacesDatabasePath)
+      .pipe(wrapPhase("spaces", spacesDatabasePath));
+  }
   yield* removeDatabaseFiles(snapshotPath);
   const { executedMigrations, pruned } = yield* Effect.gen(function* () {
     yield* Console.log(`Copying visible threads from ${sourcePath} (read-only)...`);
@@ -630,7 +813,7 @@ export const migrateDevDbCommand = Command.make(
 
 if (import.meta.main) {
   Command.run(migrateDevDbCommand, { version: "0.0.0" }).pipe(
-    Effect.provide(NodeServices.layer),
+    Effect.provide(SpacesDatabaseTools.layer.pipe(Layer.provideMerge(NodeServices.layer))),
     NodeRuntime.runMain,
   );
 }
