@@ -3,10 +3,11 @@ import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesEnvironments } from "../state/spaces";
 import { usePrimaryEnvironmentId } from "../state/environments";
 import { Button } from "../components/ui/button";
+import { SpacesOverview } from "./SpacesOverview";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 
 export function SpacesLanding() {
-  const { environmentId: selectedId } = useSearch({ from: "/_chat/spaces" });
+  const { environmentId: selectedId, view } = useSearch({ from: "/_chat/spaces" });
   const environments = useSpacesEnvironments();
   const primaryId = usePrimaryEnvironmentId();
   const environment = selectedId
@@ -19,6 +20,15 @@ export function SpacesLanding() {
       : null,
   );
   if (!environmentId) return <SpacesUnavailable availability="unavailable" />;
+  if (
+    view &&
+    environment?.serverConfig?.environment.capabilities.spaces?.features?.[
+      view === "all" ? "allPages" : "assetList"
+    ]
+  )
+    return (
+      <SpacesOverview key={`${environmentId}:${view}`} environmentId={environmentId} view={view} />
+    );
   if (query.error)
     return (
       <div className="p-4">

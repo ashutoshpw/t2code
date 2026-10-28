@@ -1773,6 +1773,16 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
         const other = yield* rootPage(service, common, page.spaceId, "library-other");
         const target = { ...env, pageId: page.id };
         yield* service.addPin(target);
+        assert.isTrue((yield* service.getPage(target)).page.isPinned);
+        assert.isTrue(
+          (yield* service.listAllPages(env)).items.find((item) => item.page.id === page.id)?.page
+            .isPinned,
+        );
+        assert.isTrue(
+          (yield* service.listPages({ ...env, spaceId: page.spaceId })).items.find(
+            (item) => item.id === page.id,
+          )?.isPinned,
+        );
         yield* service.addPin(target);
         yield* service.addPin({ ...env, pageId: other.id });
         yield* service.recordRecent(target);

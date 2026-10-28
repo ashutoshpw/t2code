@@ -325,11 +325,10 @@ function cursorFrom(
   if (decoded.revision !== revision) throw new C.SpaceCursorStaleError({ revision });
   return decoded;
 }
+const decodeAssetCursorIds = Schema.decodeUnknownSync(Schema.Tuple([Schema.String, Schema.String]));
 function decodeAssetCursor(cursor: typeof Cursor.Type) {
   try {
-    const ids = Schema.decodeUnknownSync(Schema.Tuple([Schema.String, Schema.String]))(
-      JSON.parse(cursor.id),
-    );
+    const ids = decodeAssetCursorIds(JSON.parse(cursor.id));
     if (!Number.isSafeInteger(Number(cursor.key)) || String(Number(cursor.key)) !== cursor.key)
       throw new Error();
     return ids;
@@ -979,7 +978,7 @@ const make = Effect.fn("SpacesService.make")(function* (
         const table = kind === "pins" ? sql`spaces_pins` : sql`spaces_recents`;
         const rows = yield* sql<
           PageRow & { readonly space_title: string; readonly sequence: number }
-        >`SELECT p.*,s.title AS space_title,l.sequence,
+        >`SELECT p.*,s.title AS space_title,l.sequence, EXISTS(SELECT 1 FROM spaces_pins pin WHERE pin.page_id=p.page_id) AS is_pinned,
         o.owner_block_id,b.page_id AS parent_page_id,b.deleted AS owner_deleted,parent.space_id AS parent_space_id,json_extract(b.payload,'$.type') AS owner_type
         FROM ${table} l JOIN spaces_pages p ON p.page_id=l.page_id JOIN spaces s ON s.space_id=p.space_id
         LEFT JOIN spaces_page_owners o ON o.child_page_id=p.page_id LEFT JOIN spaces_blocks b ON b.block_id=o.owner_block_id
@@ -1125,7 +1124,7 @@ const make = Effect.fn("SpacesService.make")(function* (
           : sql``;
         const rows = yield* sql<
           PageRow & { readonly space_title: string; readonly has_children: number }
-        >`SELECT p.*, s.title AS space_title,
+        >`SELECT p.*, s.title AS space_title, EXISTS(SELECT 1 FROM spaces_pins pin WHERE pin.page_id=p.page_id) AS is_pinned,
         EXISTS(SELECT 1 FROM spaces_blocks cb JOIN spaces_page_owners co ON co.owner_block_id=cb.block_id
           JOIN spaces_pages cp ON cp.page_id=co.child_page_id WHERE cb.page_id=p.page_id
           AND cb.deleted=0 AND json_extract(cb.payload,'$.type')='child_page'
@@ -1209,12 +1208,12 @@ const make = Effect.fn("SpacesService.make")(function* (
               : sql`AND (b.rank,b.block_id) > (${cursor.key},${cursor.id})`;
         const rows =
           input.parentPageId === undefined
-            ? yield* sql<PageListCandidate>`SELECT p.*, p.root_order AS list_order, p.page_id AS list_id, o.owner_block_id, b.page_id AS parent_page_id, b.deleted AS owner_deleted, parent.space_id AS parent_space_id, json_extract(b.payload,'$.type') AS owner_type
+            ? yield* sql<PageListCandidate>`SELECT p.*, EXISTS(SELECT 1 FROM spaces_pins pin WHERE pin.page_id=p.page_id) AS is_pinned, p.root_order AS list_order, p.page_id AS list_id, o.owner_block_id, b.page_id AS parent_page_id, b.deleted AS owner_deleted, parent.space_id AS parent_space_id, json_extract(b.payload,'$.type') AS owner_type
               FROM spaces_pages p LEFT JOIN spaces_page_owners o ON o.child_page_id = p.page_id
               LEFT JOIN spaces_blocks b ON b.block_id = o.owner_block_id LEFT JOIN spaces_pages parent ON parent.page_id = b.page_id WHERE p.space_id = ${input.spaceId} AND p.root_order IS NOT NULL AND p.trash_batch_id IS NULL
               ${after}
               ORDER BY p.root_order,p.page_id LIMIT ${limit + 1}`
-            : yield* sql<PageListCandidate>`SELECT p.*, b.rank AS list_order, b.block_id AS list_id, o.owner_block_id,
+            : yield* sql<PageListCandidate>`SELECT p.*, EXISTS(SELECT 1 FROM spaces_pins pin WHERE pin.page_id=p.page_id) AS is_pinned, b.rank AS list_order, b.block_id AS list_id, o.owner_block_id,
               b.page_id AS parent_page_id, 0 AS owner_deleted, parent.space_id AS parent_space_id,
               'child_page' AS owner_type
               FROM (SELECT b.block_id,b.page_id,b.rank FROM spaces_blocks b

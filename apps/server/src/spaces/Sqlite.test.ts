@@ -75,6 +75,8 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
       { migration_id: 8, name: "Assets" },
       { migration_id: 9, name: "AssetReconciliation" },
       { migration_id: 10, name: "AssetCollection" },
+      { migration_id: 11, name: "PageActivity" },
+      { migration_id: 12, name: "PageLibrary" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -717,7 +719,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            10,
+            12,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -831,7 +833,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (11, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (13, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;

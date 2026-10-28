@@ -164,6 +164,7 @@ export const SpacePageSummary = Schema.Struct({
   revision: NonNegativeInt,
   rootOrder: Schema.NullOr(StableId),
   hasChildren: Schema.optionalKey(Schema.Boolean),
+  isPinned: Schema.optionalKey(Schema.Boolean),
   location: Schema.optionalKey(SpacePageLocation),
   trash: Schema.optionalKey(SpacePageTrashStatus),
   createdAt: IsoDateTime,
