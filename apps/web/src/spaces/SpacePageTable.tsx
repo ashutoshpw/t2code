@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { FileTextIcon, RefreshCwIcon } from "lucide-react";
+import { FileTextIcon } from "lucide-react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceCursor, SpaceId } from "@t2code/contracts/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
@@ -9,7 +9,7 @@ import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
 import { formatRelativeTimeLabel } from "../timestampFormat";
 import { Button } from "../components/ui/button";
-import { Empty, EmptyHeader, EmptyTitle } from "../components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../components/ui/empty";
 import { Skeleton } from "../components/ui/skeleton";
 import {
   Table,
@@ -61,16 +61,6 @@ function Pages({
   const items = query.data?.items;
   return (
     <div className="space-y-2">
-      <div className="flex justify-end">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Refresh pages"
-          onClick={() => query.refresh()}
-        >
-          <RefreshCwIcon />
-        </Button>
-      </div>
       {query.error ? (
         <div className="flex items-center gap-2">
           <p role="alert" className="text-sm text-destructive-foreground">
@@ -96,7 +86,8 @@ function Pages({
       ) : !items.length && !cursor ? (
         <Empty size="compact">
           <EmptyHeader>
-            <EmptyTitle>No pages in this space.</EmptyTitle>
+            <EmptyTitle>No pages in this space</EmptyTitle>
+            <EmptyDescription>Create a page to start writing.</EmptyDescription>
           </EmptyHeader>
           <Suspense fallback={null}>
             <CreatePageButton environmentId={environmentId} spaceId={spaceId} label="New page" />
@@ -108,9 +99,7 @@ function Pages({
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead className="w-40 text-right">Last activity</TableHead>
-              <TableHead>
-                <span className="sr-only">Pin</span>
-              </TableHead>
+              <TableHead className="w-12">Pinned</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

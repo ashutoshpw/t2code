@@ -718,19 +718,20 @@ export class SpaceEditorAdapter {
       .parent.textBetween(0, state.doc.resolve(from).parentOffset);
     const trigger = text === "`" ? (before === "``" ? "```" : null) : text === " " ? before : null;
     if (trigger === null) return false;
-    const target = (
-      {
-        "-": "bulleted_item",
-        "*": "bulleted_item",
-        "1.": "numbered_item",
-        "[]": "todo_item",
-        ">": "quote",
-        "#": "heading",
-        "##": "heading",
-        "###": "heading",
-        "```": "code",
-      } as const
-    )[trigger as "-"];
+    const table: Partial<
+      Record<string, "bulleted_item" | "numbered_item" | "todo_item" | "quote" | "heading" | "code">
+    > = {
+      "-": "bulleted_item",
+      "*": "bulleted_item",
+      "1.": "numbered_item",
+      "[]": "todo_item",
+      ">": "quote",
+      "#": "heading",
+      "##": "heading",
+      "###": "heading",
+      "```": "code",
+    };
+    const target = table[trigger];
     if (!target || state.doc.resolve(from).parentOffset !== before.length) return false;
     const stripped = state.apply(state.tr.delete(from - before.length, from));
     if (stripped === state) return false;
