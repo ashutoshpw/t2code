@@ -1,3 +1,4 @@
+import * as SpacesService from "../spaces/SpacesService.ts";
 import type { AssetResource } from "@t2code/contracts";
 import {
   AssetAttachmentNotFoundError,
@@ -109,6 +110,16 @@ const PREVIEW_ASSET_EXTENSIONS = new Set([
 ]);
 
 const AssetClaimsSchema = Schema.Union([
+  Schema.Struct({
+    version: Schema.Literal(1),
+    kind: Schema.Literal("spaces-asset"),
+    environmentId: Schema.String,
+    assetId: Schema.String,
+    digest: Schema.String,
+    fileName: Schema.String,
+    download: Schema.Boolean,
+    expiresAt: Schema.Number,
+  }),
   Schema.Struct({
     version: Schema.Literal(1),
     kind: Schema.Literal("workspace-file"),
@@ -556,6 +567,28 @@ export const issueAssetUrl = Effect.fn("AssetAccess.issueAssetUrl")(function* (i
   let fileRevision: string | undefined;
 
   switch (input.resource._tag) {
+    case "spaces-asset": {
+      const service = yield* SpacesService.SpacesService;
+      const asset = yield* service
+        .resolveAssetFile({
+          environmentId: input.resource.environmentId,
+          assetId: input.resource.assetId,
+        })
+        .pipe(Effect.scoped);
+      fileName = asset.name.toWellFormed();
+      fileRevision = asset.digest;
+      claims = {
+        version: 1,
+        kind: "spaces-asset",
+        environmentId: input.resource.environmentId,
+        assetId: input.resource.assetId,
+        digest: asset.digest,
+        fileName,
+        download: input.resource.disposition === "attachment",
+        expiresAt,
+      };
+      break;
+    }
     case "media-file": {
       let requestedPath = expandHomePath(input.resource.path, yield* HostProcess.HomeDirectory);
       if (!path.isAbsolute(requestedPath)) {
@@ -901,6 +934,26 @@ export const resolveAsset = Effect.fn("AssetAccess.resolveAsset")(function* (
 
   const claims = decodeClaims(encodedPayload);
   if (!claims || claims.expiresAt <= (yield* Clock.currentTimeMillis)) return null;
+
+  if (claims.kind === "spaces-asset") {
+    const name = decodeRelativePath(relativePath);
+    if (name !== claims.fileName) return null;
+    const service = yield* SpacesService.SpacesService;
+    const asset = yield* service
+      .resolveAssetFile({ environmentId: claims.environmentId, assetId: claims.assetId })
+      .pipe(Effect.orElseSucceed(() => null));
+    if (!asset || asset.digest !== claims.digest || asset.name.toWellFormed() !== claims.fileName)
+      return null;
+    return {
+      kind: "file",
+      path: asset.path,
+      file: asset.file,
+      mimeType: asset.mimeType,
+      immutableDigest: asset.digest,
+      fileName: claims.fileName,
+      ...(claims.download ? { download: true } : {}),
+    } satisfies ResolvedAsset;
+  }
 
   if (claims.kind === "attachment") {
     const config = yield* ServerConfig.ServerConfig;
