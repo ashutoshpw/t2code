@@ -7,6 +7,7 @@ import { useSpaceReferenceController } from "./useSpaceReferences";
 import { SpaceSourceOpen } from "./SpaceSourceOpen";
 import { ChevronsDownIcon, RefreshCwIcon, Redo2Icon, SaveIcon, Undo2Icon } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { MenuItem } from "../components/ui/menu";
 import { spacesEnvironment } from "../state/spaces";
 import { randomUUID } from "../lib/utils";
 import { SpaceMentionController } from "./mentions";
@@ -162,6 +163,26 @@ function DocumentContent({
   const run = (operation: Promise<unknown>) => {
     void operation.catch(() => {});
   };
+  const statusText = !session.hydrated
+    ? "Loading document…"
+    : session.status === "saved"
+      ? "Saved"
+      : session.status === "uncertain"
+        ? "Save outcome unresolved"
+        : session.status === "conflict"
+          ? "The server has a newer revision. Your local draft is retained."
+          : session.status === "saving"
+            ? "Saving draft…"
+            : "Local draft";
+  const moreWindows =
+    !session.hydrated ||
+    !controller.editorWindow().completeParents.includes(null) ||
+    !!snapshot.nextCursor;
+  const showFooter =
+    moreWindows ||
+    session.dirty ||
+    session.pending ||
+    (session.persistenceError && session.hydrated);
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -174,19 +195,11 @@ function DocumentContent({
             Retry source connection
           </Button>
         ) : null}
-        <p role="status" className="text-xs text-muted-foreground">
-          {!session.hydrated
-            ? "Loading document…"
-            : session.status === "saved"
-              ? "Saved"
-              : session.status === "uncertain"
-                ? "Save outcome unresolved"
-                : session.status === "conflict"
-                  ? "The server has a newer revision. Your local draft is retained."
-                  : session.status === "saving"
-                    ? "Saving draft…"
-                    : "Local draft"}
-        </p>
+        {!session.hydrated ? (
+          <p role="status" className="text-xs text-muted-foreground">
+            {statusText}
+          </p>
+        ) : null}
       </div>
       {controller.structureBlocked() ? (
         <p role="status" className="text-sm text-muted-foreground">
@@ -228,6 +241,32 @@ function DocumentContent({
       ) : null}
       {session.hydrated ? (
         <SpaceEditor
+          status={statusText}
+          savedHistory={(["undo", "redo"] as const).map((direction) => (
+            <MenuItem
+              key={direction}
+              disabled={
+                !permission ||
+                controller.structureBlocked() ||
+                loading ||
+                !!error ||
+                (!mediaSupported && bridge.compensationUsesMedia(direction)) ||
+                controller.session.compensationAvailability(direction) !== null
+              }
+              title={
+                !mediaSupported && bridge.compensationUsesMedia(direction)
+                  ? "This saved change requires asset support"
+                  : `${
+                      controller.session.compensationAvailability(direction) ??
+                      "Submit a new revision-checked saved change"
+                    }. Saved undo/redo covers only the last content or formatting save. Use page placement controls for root ordering; saved block structure undo is not supported.`
+              }
+              onClick={() => run(bridge.compensate(direction))}
+            >
+              {direction === "undo" ? <Undo2Icon /> : <Redo2Icon />}
+              {direction === "undo" ? "Undo saved change" : "Redo saved change"}
+            </MenuItem>
+          ))}
           mentions={mentions}
           onOpenSource={onOpenSource}
           mediaEditable={mediaSupported}
@@ -302,94 +341,73 @@ function DocumentContent({
           />
         </Suspense>
       ) : null}
-      <div className="flex flex-wrap items-center gap-1 border-t pt-3">
-        {(["undo", "redo"] as const).map((direction) => (
-          <Button
-            key={direction}
-            variant="ghost"
-            size="sm"
-            disabled={
-              !permission ||
-              controller.structureBlocked() ||
-              loading ||
-              !!error ||
-              (!mediaSupported && bridge.compensationUsesMedia(direction)) ||
-              controller.session.compensationAvailability(direction) !== null
-            }
-            title={
-              !mediaSupported && bridge.compensationUsesMedia(direction)
-                ? "This saved change requires asset support"
-                : `${
-                    controller.session.compensationAvailability(direction) ??
-                    "Submit a new revision-checked saved change"
-                  }. Saved undo/redo covers only the last content or formatting save. Use page placement controls for root ordering; saved block structure undo is not supported.`
-            }
-            onClick={() => run(bridge.compensate(direction))}
-          >
-            {direction === "undo" ? <Undo2Icon /> : <Redo2Icon />}
-            {direction === "undo" ? "Undo saved change" : "Redo saved change"}
-          </Button>
-        ))}
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={loading || (!clean && session.hydrated)}
-          onClick={() => run(session.hydrated ? controller.refresh() : controller.open())}
-        >
-          <RefreshCwIcon />
-          Reload first window
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={!clean || loading || !snapshot.nextCursor}
-          onClick={() => run(controller.next())}
-        >
-          <ChevronsDownIcon />
-          Next window
-        </Button>
-        {session.dirty || session.pending ? (
-          <Button
-            size="sm"
-            disabled={
-              !session.hydrated ||
-              controller.structureBlocked() ||
-              loading ||
-              session.status === "saving" ||
-              !!session.recoveryReason ||
-              (!session.pending || session.status === "draft" ? !permission : false) ||
-              session.status === "conflict"
-            }
-            onClick={() => run(controller.save())}
-          >
-            <SaveIcon />
-            {session.pending
-              ? session.status === "draft"
-                ? "Retry unsent save"
-                : "Check save receipt"
-              : "Save draft"}
-          </Button>
-        ) : null}
-        {session.dirty && !session.pending ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={controller.structureBlocked() || loading || session.status === "saving"}
-            onClick={() => run(controller.discard())}
-          >
-            Discard local draft
-          </Button>
-        ) : null}
-        {session.persistenceError && session.hydrated ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => run(controller.session.persistDraft())}
-          >
-            Retry draft storage
-          </Button>
-        ) : null}
-      </div>
+      {showFooter ? (
+        <div className="flex flex-wrap items-center gap-1 border-t pt-3">
+          {moreWindows ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={loading || (!clean && session.hydrated)}
+                onClick={() => run(session.hydrated ? controller.refresh() : controller.open())}
+              >
+                <RefreshCwIcon />
+                Reload first window
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!clean || loading || !snapshot.nextCursor}
+                onClick={() => run(controller.next())}
+              >
+                <ChevronsDownIcon />
+                Next window
+              </Button>
+            </>
+          ) : null}
+          {session.dirty || session.pending ? (
+            <Button
+              size="sm"
+              disabled={
+                !session.hydrated ||
+                controller.structureBlocked() ||
+                loading ||
+                session.status === "saving" ||
+                !!session.recoveryReason ||
+                (!session.pending || session.status === "draft" ? !permission : false) ||
+                session.status === "conflict"
+              }
+              onClick={() => run(controller.save())}
+            >
+              <SaveIcon />
+              {session.pending
+                ? session.status === "draft"
+                  ? "Retry unsent save"
+                  : "Check save receipt"
+                : "Save draft"}
+            </Button>
+          ) : null}
+          {session.dirty && !session.pending ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={controller.structureBlocked() || loading || session.status === "saving"}
+              onClick={() => run(controller.discard())}
+            >
+              Discard local draft
+            </Button>
+          ) : null}
+          {session.persistenceError && session.hydrated ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => run(controller.session.persistDraft())}
+            >
+              Retry draft storage
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -8,18 +8,20 @@ import {
 import { Extension, Node as TiptapNode, Mark as TiptapMark } from "@tiptap/core";
 import {
   useEffect,
-  useRef,
   useState,
   useSyncExternalStore,
   type ComponentProps,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
-  type RefObject,
 } from "react";
 import {
   BoldIcon,
   ChevronDownIcon,
   CodeIcon,
+  EllipsisIcon,
   Heading1Icon,
+  Heading2Icon,
+  Heading3Icon,
   ItalicIcon,
   LinkIcon,
   ListIcon,
@@ -35,7 +37,8 @@ import {
   Trash2Icon,
   Undo2Icon,
 } from "lucide-react";
-import { NodeSelection, type Command } from "@tiptap/pm/state";
+import { NodeSelection, Plugin, type Command, type EditorState } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
 import {
   SpaceAtomContext,
@@ -46,7 +49,7 @@ import {
 import type { SpaceBlock, SpaceBlockId } from "@t2code/contracts/spaces";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
-import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
+import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "~/components/ui/menu";
 import { Separator } from "~/components/ui/separator";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { SpaceEditorAdapter, type SpaceEditorBatch } from "./adapter";
@@ -61,6 +64,48 @@ import {
 } from "./SpaceMentionControls";
 import type { SpaceMentionController } from "./mentions";
 import "./editor.css";
+
+const placeholder = "Write, or press '/' for commands…";
+
+const spacePlaceholder = Extension.create({
+  name: "spacePlaceholder",
+  addProseMirrorPlugins() {
+    const editor = this.editor;
+    return [
+      new Plugin({
+        props: {
+          decorations(state) {
+            const { $from, empty } = state.selection;
+            if (!empty || !editor.isEditable || $from.depth === 0) return null;
+            const node = $from.parent;
+            if (node.type.name !== "paragraph" || node.content.size > 0) return null;
+            return DecorationSet.create(state.doc, [
+              Decoration.node($from.before(), $from.after(), {
+                class: "is-empty",
+                "data-placeholder": placeholder,
+              }),
+            ]);
+          },
+        },
+      }),
+    ];
+  },
+});
+
+function slashMatch(state: EditorState) {
+  const { $from, empty } = state.selection;
+  if (!empty || !$from.parent.isTextblock || $from.parent.type.name === "code") return null;
+  const before = $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc");
+  const match = /(?:^|\s)\/([^\s/]*)$/.exec(before);
+  return match ? { from: $from.pos - match[1]!.length - 1, query: match[1]! } : null;
+}
+
+type SlashItem = {
+  readonly label: string;
+  readonly icon: typeof PilcrowIcon;
+  readonly keywords: string;
+  readonly apply: (id: SpaceBlockId | null) => void;
+};
 
 function createSpaceSessionDispatch(
   adapter: SpaceEditorAdapter,
@@ -119,6 +164,8 @@ function createSpaceSessionDispatch(
 }
 
 export function SpaceEditor({
+  status,
+  savedHistory,
   adapter,
   bridge,
   editable = true,
@@ -133,6 +180,8 @@ export function SpaceEditor({
   mentions,
   onOpenSource,
 }: {
+  readonly status?: string | undefined;
+  readonly savedHistory?: ReactNode;
   readonly mentions?: SpaceMentionController | null;
   readonly onOpenSource?: (
     target: import("@t2code/client-runtime/spaces").SpacePageNavigationTarget,
@@ -150,7 +199,10 @@ export function SpaceEditor({
   readonly onBatch?: (batch: SpaceEditorBatch) => void;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
-  const linkInput = useRef<HTMLInputElement>(null);
+  const [wrapper, setWrapper] = useState<HTMLDivElement | null>(null);
+  const [linkOpen, setLinkOpen] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<number | null>(null);
+  const [slashSel, setSlashSel] = useState({ query: "", index: 0 });
   const historyNotice = useSyncExternalStore(
     bridge?.subscribe ?? noSubscribe,
     bridge?.getSnapshot ?? noNotice,
@@ -170,6 +222,7 @@ export function SpaceEditor({
                   ? extension.extend({ addMarkView: () => ReactMarkViewRenderer(SpaceMentionView) })
                   : extension,
           ),
+        spacePlaceholder,
         createSpaceSessionDispatch(adapter, bridge, onBatch),
       ],
       content: adapter.document.toJSON(),
@@ -200,7 +253,7 @@ export function SpaceEditor({
     };
     synchronize();
     return bridge?.controller.subscribe(synchronize);
-  }, [editor, bridge, editable, mediaEditable]);
+  }, [editor, bridge, editable]);
   useEditorState({ editor, selector: ({ transactionNumber }) => transactionNumber });
   const state = editor?.state ?? null;
   const revealTarget = (focus = false) => {
@@ -286,121 +339,182 @@ export function SpaceEditor({
     if (empty && structure && complete) adapter.append()(editor.state, editor.view.dispatch);
   };
   const media = !!selectedId && !!known && ["image", "pdf", "video"].includes(known.type);
+  const box = wrapper?.getBoundingClientRect();
+  const place = (pos: number, width: number) => {
+    if (!box) return null;
+    try {
+      const at = editor.view.coordsAtPos(pos);
+      return {
+        left: Math.max(0, Math.min(at.left - box.left, box.width - width)),
+        top: at.top - box.top,
+        bottom: at.bottom - box.top,
+      };
+    } catch {
+      return null;
+    }
+  };
+  const { from, to } = state.selection;
+  const linkKey = `${from}-${to}`;
+  const bubbleAt =
+    writable && !(state.selection instanceof NodeSelection) && (from !== to || link?.hasLink)
+      ? place(from, 320)
+      : null;
+  const bubble = bubbleAt
+    ? bubbleAt.top > 48
+      ? { left: bubbleAt.left, top: bubbleAt.top - 6, transform: "translateY(-100%)" }
+      : { left: bubbleAt.left, top: bubbleAt.bottom + 6 }
+    : undefined;
+  const convertTo =
+    (type: Parameters<SpaceEditorAdapter["convert"]>[1]) => (id: SpaceBlockId | null) => {
+      if (id && selected?.type !== type) run(adapter.convert(id, type));
+    };
+  const headingTo = (level: 1 | 2 | 3) => (id: SpaceBlockId | null) => {
+    if (!id) return;
+    run(adapter.convert(id, "heading"));
+    try {
+      adapter.setHeadingLevel(level)(editor.state, editor.view.dispatch);
+    } catch {}
+  };
+  const allSlashItems: readonly SlashItem[] = [
+    {
+      label: "Text",
+      icon: PilcrowIcon,
+      keywords: "paragraph plain",
+      apply: convertTo("paragraph"),
+    },
+    { label: "Heading 1", icon: Heading1Icon, keywords: "h1 title", apply: headingTo(1) },
+    { label: "Heading 2", icon: Heading2Icon, keywords: "h2 subtitle", apply: headingTo(2) },
+    { label: "Heading 3", icon: Heading3Icon, keywords: "h3", apply: headingTo(3) },
+    {
+      label: "Bulleted list",
+      icon: ListIcon,
+      keywords: "bullet ul",
+      apply: convertTo("bulleted_item"),
+    },
+    {
+      label: "Numbered list",
+      icon: ListOrderedIcon,
+      keywords: "ordered ol",
+      apply: convertTo("numbered_item"),
+    },
+    {
+      label: "To-do",
+      icon: ListTodoIcon,
+      keywords: "task checkbox todo",
+      apply: convertTo("todo_item"),
+    },
+    { label: "Quote", icon: QuoteIcon, keywords: "blockquote", apply: convertTo("quote") },
+    { label: "Callout", icon: MessageSquareIcon, keywords: "note", apply: convertTo("callout") },
+    {
+      label: "Code",
+      icon: SquareCodeIcon,
+      keywords: "snippet",
+      apply: () => run(adapter.append("code")),
+    },
+    {
+      label: "Divider",
+      icon: MinusIcon,
+      keywords: "separator hr line",
+      apply: () => run(adapter.append("divider")),
+    },
+  ];
+  const slash = writable && structure ? slashMatch(state) : null;
+  const slashItems = slash
+    ? allSlashItems.filter((item) =>
+        `${item.label} ${item.keywords}`.toLowerCase().includes(slash.query.toLowerCase()),
+      )
+    : [];
+  const slashOpen = !!slash && dismissed !== slash.from && slashItems.length > 0;
+  const slashIndex =
+    slash && slashSel.query === slash.query ? Math.min(slashSel.index, slashItems.length - 1) : 0;
+  const slashAt = slashOpen ? place(from, 240) : null;
+  const slashMenu = slashAt ? { left: slashAt.left, top: slashAt.bottom + 4 } : undefined;
+  const pickSlash = (item: SlashItem) => {
+    if (!slash) return;
+    editor.view.dispatch(editor.state.tr.delete(slash.from, editor.state.selection.from));
+    item.apply(selectedId);
+  };
+  const onSlashKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "/") setDismissed(null);
+    if (!slashOpen || event.nativeEvent.isComposing) return;
+    const count = slashItems.length;
+    const step = (delta: number) =>
+      setSlashSel({ query: slash.query, index: (slashIndex + delta + count) % count });
+    if (event.key === "ArrowDown") step(1);
+    else if (event.key === "ArrowUp") step(-1);
+    else if (event.key === "Enter") pickSlash(slashItems[slashIndex]!);
+    else if (event.key === "Escape") setDismissed(slash.from);
+    else return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
   return (
     <section aria-label="Page contents" className="space-y-2" data-space-editor="">
-      <div className="flex flex-wrap items-center gap-0.5 rounded-lg border bg-background p-1">
-        {(
-          [
-            ["bold", "Bold", BoldIcon],
-            ["italic", "Italic", ItalicIcon],
-            ["strike", "Strikethrough", StrikethroughIcon],
-            ["code", "Inline code", CodeIcon],
-          ] as const
-        ).map(([mark, label, Icon]) => (
-          <ToolbarIconButton
-            key={mark}
-            label={label}
-            disabled={!writable || !can(adapter.mark(mark))}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => run(adapter.mark(mark))}
-          >
-            <Icon />
-          </ToolbarIconButton>
-        ))}
-        <ToolbarIconButton
-          label="Link"
-          hint="Select text to add a link, or place the caret inside an existing link to edit or remove it."
-          aria-disabled={!link}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => {
-            linkInput.current?.focus();
-            linkInput.current?.select();
-          }}
-        >
-          <LinkIcon />
-        </ToolbarIconButton>
-        <ToolbarSeparator />
-        <ToolbarIconButton
-          label="Local undo"
-          hint={
-            bridge
-              ? "Local undo covers edits made in this view. Saved undo/redo has separate controls."
-              : undefined
-          }
-          disabled={!can(adapter.undoLocal())}
-          onClick={() => run(adapter.undoLocal())}
-        >
-          <Undo2Icon />
-        </ToolbarIconButton>
-        <ToolbarIconButton
-          label="Local redo"
-          hint={
-            bridge
-              ? "Local undo covers edits made in this view. Saved undo/redo has separate controls."
-              : undefined
-          }
-          disabled={!can(adapter.redoLocal())}
-          onClick={() => run(adapter.redoLocal())}
-        >
-          <Redo2Icon />
-        </ToolbarIconButton>
-        <ToolbarSeparator />
+      <div className="flex flex-wrap items-center justify-end gap-1">
+        {status ? (
+          <p role="status" className="text-xs text-muted-foreground">
+            {status}
+          </p>
+        ) : null}
+        {images && bridge ? (
+          <SpaceImageControls
+            owner={images}
+            insertion={bridge.imageInsertion(
+              () => editor.state,
+              editor.view.dispatch,
+              () => !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
+            )}
+            current={() => sourceOwner?.current() === true && current?.() === true}
+            replacementTarget={media && known ? known.id : null}
+          />
+        ) : null}
+        {bridge && mentions ? (
+          <SpaceMentionControls
+            owner={mentions}
+            available={writable && !!adapter.mentionRange(state)}
+            capture={() =>
+              bridge.mentionInsertion(
+                () => editor.state,
+                editor.view.dispatch,
+                () =>
+                  !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
+              )
+            }
+            onInserted={() => {
+              if (!editor.isDestroyed) editor.view.focus();
+            }}
+          />
+        ) : null}
         <Menu>
-          <MenuTrigger render={<Button variant="ghost" size="sm" />}>
-            Turn into
-            <ChevronDownIcon />
+          <MenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="More" />}>
+            <EllipsisIcon />
           </MenuTrigger>
-          <MenuPopup align="start">
-            {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
-              const [label, Icon] = turnInto[type];
-              return (
-                <MenuItem
-                  key={type}
-                  disabled={!structure || !selectedId || !can(adapter.convert(selectedId, type))}
-                  onClick={() => selectedId && run(adapter.convert(selectedId, type))}
-                >
-                  <Icon />
-                  {label}
-                </MenuItem>
-              );
-            })}
-          </MenuPopup>
-        </Menu>
-        <Menu>
-          <MenuTrigger render={<Button variant="ghost" size="sm" />}>
-            Insert
-            <ChevronDownIcon />
-          </MenuTrigger>
-          <MenuPopup align="start">
+          <MenuPopup align="end">
             <MenuItem
-              disabled={!structure || !can(adapter.append())}
-              onClick={() => run(adapter.append())}
+              disabled={!can(adapter.undoLocal())}
+              title={
+                bridge
+                  ? "Local undo covers edits made in this view. Saved undo/redo has separate controls."
+                  : undefined
+              }
+              onClick={() => run(adapter.undoLocal())}
             >
-              <PilcrowIcon />
-              Add paragraph
+              <Undo2Icon />
+              Local undo
             </MenuItem>
             <MenuItem
-              disabled={!structure || !can(adapter.append("code"))}
-              onClick={() => run(adapter.append("code"))}
+              disabled={!can(adapter.redoLocal())}
+              title={
+                bridge
+                  ? "Local undo covers edits made in this view. Saved undo/redo has separate controls."
+                  : undefined
+              }
+              onClick={() => run(adapter.redoLocal())}
             >
-              <SquareCodeIcon />
-              Add code
+              <Redo2Icon />
+              Local redo
             </MenuItem>
-            <MenuItem
-              disabled={!structure || !can(adapter.append("divider"))}
-              onClick={() => run(adapter.append("divider"))}
-            >
-              <MinusIcon />
-              Add divider
-            </MenuItem>
-          </MenuPopup>
-        </Menu>
-        <Menu>
-          <MenuTrigger render={<Button variant="ghost" size="sm" />}>
-            Block
-            <ChevronDownIcon />
-          </MenuTrigger>
-          <MenuPopup align="start">
+            <MenuSeparator />
             <MenuItem
               disabled={!structure || !can(adapter.split())}
               onClick={() => run(adapter.split())}
@@ -455,40 +569,16 @@ export function SpaceEditor({
                 </MenuItem>
               )
             ) : null}
+            {savedHistory ? (
+              <>
+                <MenuSeparator />
+                {savedHistory}
+              </>
+            ) : null}
           </MenuPopup>
         </Menu>
-        <ToolbarSeparator />
-        {images && bridge ? (
-          <SpaceImageControls
-            owner={images}
-            insertion={bridge.imageInsertion(
-              () => editor.state,
-              editor.view.dispatch,
-              () => !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
-            )}
-            current={() => sourceOwner?.current() === true && current?.() === true}
-            replacementTarget={media && known ? known.id : null}
-          />
-        ) : null}
-        {bridge && mentions ? (
-          <SpaceMentionControls
-            owner={mentions}
-            available={writable && !!adapter.mentionRange(state)}
-            capture={() =>
-              bridge.mentionInsertion(
-                () => editor.state,
-                editor.view.dispatch,
-                () =>
-                  !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
-              )
-            }
-            onInserted={() => {
-              if (!editor.isDestroyed) editor.view.focus();
-            }}
-          />
-        ) : null}
       </div>
-      {known?.type === "heading" || known?.type === "callout" || known?.type === "code" || link ? (
+      {known?.type === "heading" || known?.type === "callout" || known?.type === "code" ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           {known?.type === "heading" ? (
             <div className="flex items-center gap-0.5" role="group" aria-label="Heading level">
@@ -526,18 +616,6 @@ export function SpaceEditor({
               initial={known.content.language}
               writable={writable}
               command={(value) => adapter.setCodeLanguage(value)}
-              can={can}
-              run={run}
-            />
-          ) : null}
-          {link ? (
-            <LinkValue
-              key={JSON.stringify([selectedId, link.from, link.to, link.href])}
-              href={link.href ?? ""}
-              hasLink={link.hasLink}
-              inputRef={linkInput}
-              adapter={adapter}
-              writable={writable}
               can={can}
               run={run}
             />
@@ -592,14 +670,121 @@ export function SpaceEditor({
           }
         >
           <SpaceMediaWritableContext.Provider value={mediaEditable && writable}>
-            <div className="relative" onFocus={startWriting}>
+            <div
+              ref={setWrapper}
+              className="relative"
+              onFocus={startWriting}
+              onBlur={(event) => {
+                if (slash && !event.currentTarget.contains(event.relatedTarget))
+                  setDismissed(slash.from);
+              }}
+              onKeyDownCapture={onSlashKey}
+            >
               {empty && writable ? (
-                <p className="pointer-events-none absolute text-muted-foreground">Start writing…</p>
+                <p className="pointer-events-none absolute text-muted-foreground/60">
+                  {placeholder}
+                </p>
               ) : null}
               <EditorContent
                 editor={editor}
                 className="min-h-40 whitespace-pre-wrap break-words [&_.tiptap]:min-h-40 [&_.tiptap]:outline-none"
               />
+              {bubble ? (
+                <div
+                  className="absolute z-20 flex w-max max-w-[calc(100%-1rem)] flex-col gap-1 rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
+                  style={bubble}
+                  onMouseDown={(event) => {
+                    if (!(event.target instanceof HTMLInputElement)) event.preventDefault();
+                  }}
+                >
+                  <div className="flex items-center gap-0.5">
+                    {(
+                      [
+                        ["bold", "Bold", BoldIcon],
+                        ["italic", "Italic", ItalicIcon],
+                        ["strike", "Strikethrough", StrikethroughIcon],
+                        ["code", "Inline code", CodeIcon],
+                      ] as const
+                    ).map(([mark, label, Icon]) => (
+                      <ToolbarIconButton
+                        key={mark}
+                        label={label}
+                        disabled={!can(adapter.mark(mark))}
+                        onClick={() => run(adapter.mark(mark))}
+                      >
+                        <Icon />
+                      </ToolbarIconButton>
+                    ))}
+                    <ToolbarIconButton
+                      label="Link"
+                      hint="Select text to add a link, or place the caret inside an existing link to edit or remove it."
+                      aria-disabled={!link}
+                      onClick={() => link && setLinkOpen(linkKey)}
+                    >
+                      <LinkIcon />
+                    </ToolbarIconButton>
+                    <Separator orientation="vertical" className="mx-1 h-5" />
+                    <Menu>
+                      <MenuTrigger render={<Button variant="ghost" size="sm" />}>
+                        Turn into
+                        <ChevronDownIcon />
+                      </MenuTrigger>
+                      <MenuPopup align="start">
+                        {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
+                          const [label, Icon] = turnInto[type];
+                          return (
+                            <MenuItem
+                              key={type}
+                              disabled={
+                                !structure || !selectedId || !can(adapter.convert(selectedId, type))
+                              }
+                              onClick={() => selectedId && run(adapter.convert(selectedId, type))}
+                            >
+                              <Icon />
+                              {label}
+                            </MenuItem>
+                          );
+                        })}
+                      </MenuPopup>
+                    </Menu>
+                  </div>
+                  {link && (linkOpen === linkKey || link.hasLink) ? (
+                    <LinkValue
+                      key={JSON.stringify([selectedId, link.from, link.to, link.href])}
+                      href={link.href ?? ""}
+                      hasLink={link.hasLink}
+                      focus={linkOpen === linkKey}
+                      adapter={adapter}
+                      writable={writable}
+                      can={can}
+                      run={run}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+              {slashMenu ? (
+                <div
+                  role="listbox"
+                  aria-label="Commands"
+                  className="absolute z-20 max-h-72 w-60 overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
+                  style={slashMenu}
+                  onMouseDown={(event) => event.preventDefault()}
+                >
+                  {slashItems.map((item, index) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      role="option"
+                      aria-selected={index === slashIndex}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm aria-selected:bg-accent"
+                      onClick={() => pickSlash(item)}
+                    >
+                      <item.icon className="size-4 text-muted-foreground" />
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </SpaceMediaWritableContext.Provider>
         </SpaceMentionContext.Provider>
@@ -623,13 +808,9 @@ function ToolbarIconButton({
       >
         {children}
       </TooltipTrigger>
-      <TooltipPopup side="bottom">{hint ?? label}</TooltipPopup>
+      <TooltipPopup side="top">{hint ?? label}</TooltipPopup>
     </Tooltip>
   );
-}
-
-function ToolbarSeparator() {
-  return <Separator orientation="vertical" className="mx-1 h-5" />;
 }
 
 function noSubscribe() {
@@ -687,7 +868,7 @@ function FormatValue({
 function LinkValue({
   href,
   hasLink,
-  inputRef,
+  focus,
   adapter,
   writable,
   can,
@@ -695,7 +876,7 @@ function LinkValue({
 }: {
   href: string;
   hasLink: boolean;
-  inputRef: RefObject<HTMLInputElement | null>;
+  focus: boolean;
   adapter: SpaceEditorAdapter;
   writable: boolean;
   can: (command: Command) => boolean;
@@ -713,7 +894,7 @@ function LinkValue({
       <label className="flex items-center gap-2">
         Link URL
         <Input
-          ref={inputRef}
+          autoFocus={focus}
           size="sm"
           value={value}
           disabled={!writable}
