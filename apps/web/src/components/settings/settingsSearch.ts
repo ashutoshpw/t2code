@@ -483,6 +483,11 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: [
       "hide tool calls commands edits searches work log activity quiet chat zen final answers only",
     ],
+    id: "spaces",
+    title: "Spaces",
+    to: "/settings/labs",
+    scope: "environment",
+    searchTerms: ["pages documents library enable disable"],
   },
   {
     id: "screen-reader-announcements",
