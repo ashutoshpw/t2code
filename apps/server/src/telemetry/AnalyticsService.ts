@@ -23,7 +23,7 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
 
 import packageJson from "../../package.json" with { type: "json" };
-import * as ServerConfig from "../config.ts";
+import { ServerConfig, telemetryChannel } from "../config.ts";
 import { getTelemetryIdentity, type TelemetryOwner } from "./Identify.ts";
 
 interface BufferedAnalyticsEvent {
@@ -69,7 +69,7 @@ const TelemetryEnvConfig = Config.all({
     Config.withDefault("phc_XOWci4oZP4VvLiEyrFqkFjP4CZn55mjYYBMREK5Wd6m"),
   ),
   posthogHost: Config.String("T2CODE_POSTHOG_HOST").pipe(
-    Config.withDefault("https://ingest.t2.codes"),
+    Config.withDefault("https://ingest.t3.codes"),
   ),
   enabled: Config.Boolean("T2CODE_TELEMETRY_ENABLED").pipe(Config.withDefault(true)),
   flushBatchSize: Config.Number("T2CODE_TELEMETRY_FLUSH_BATCH_SIZE").pipe(Config.withDefault(20)),
@@ -101,6 +101,19 @@ export class AnalyticsService extends Context.Service<
   }
 >()("@t2code/cli/telemetry/AnalyticsService") {
   /** No-op layer for callers that intentionally disable telemetry. */
+  static readonly layerTest = Layer.succeed(
+    AnalyticsService,
+    AnalyticsService.of({
+      record: Effect.fn("AnalyticsService.record")(function () {
+        return Effect.void;
+      }),
+      flush: Effect.void,
+      recordOwners: Effect.fn("AnalyticsService.recordOwners")(function () {
+        return Effect.void;
+      }),
+    }),
+  );
+}
 
 function serverOsFromNodePlatform(platform: string): ClientOs {
   switch (platform) {
@@ -193,7 +206,7 @@ export const make = Effect.gen(function* () {
           wsl: Option.getOrUndefined(telemetryConfig.wslDistroName),
           arch: hostArchitecture,
           t2CodeVersion: packageJson.version,
-          telemetryChannel: ServerConfig.telemetryChannel,
+          telemetryChannel,
           clientType,
           serverOs: serverOsFromNodePlatform(hostPlatform),
           serverArch: hostArchitecture,

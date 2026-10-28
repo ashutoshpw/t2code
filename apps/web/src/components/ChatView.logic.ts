@@ -1,3 +1,4 @@
+import type { ComposerContextDraft } from "@t2code/contracts";
 import { type OrchestrationV2ProviderTurn, type RunAttemptId } from "@t2code/contracts";
 import {
   deriveLatestThreadRun,
@@ -93,7 +94,7 @@ import {
 } from "../lib/composerContextRecords";
 import type { ComposerDispatchMode } from "@t2code/client-runtime/state/composer-dispatch";
 import type { DraftThreadEnvMode } from "../composerDraftStore";
-import { collapseExpandedComposerCursor, type ComposerSubmissionIntent } from "../composer-logic";
+import type { ComposerSubmissionIntent } from "../composer-logic";
 import type { ReviewCommentContext } from "../reviewCommentContext";
 import { derivePhase, type TimelineEntry } from "../session-logic";
 import type { PreviewMiniPlayerSource } from "../previewMiniPlayerStore";
@@ -729,22 +730,6 @@ export function resolveBackgroundDraftWorkspaceOptions(input: {
   };
 }
 
-export function cloneComposerImageForRetry(
-  image: ComposerImageAttachment,
-): ComposerImageAttachment {
-  if (typeof URL === "undefined" || !image.previewUrl.startsWith("blob:")) {
-    return image;
-  }
-  try {
-    return {
-      ...image,
-      previewUrl: URL.createObjectURL(image.file),
-    };
-  } catch {
-    return image;
-  }
-}
-
 export function deriveComposerSendState(options: {
   prompt: string;
   imageCount: number;
@@ -1166,42 +1151,6 @@ export function shouldRefocusComposerOnWindowFocus(
   );
 }
 
-export interface PlanFollowUpComposerSnapshot {
-  readonly prompt: string;
-  readonly terminalContexts: ReadonlyArray<TerminalContextDraft>;
-  readonly reviewComments: ReadonlyArray<ReviewCommentContext>;
-  readonly previewAnnotations: ReadonlyArray<PreviewAnnotationPayload>;
-  readonly threadContexts: ReadonlyArray<ThreadContextRecord>;
-  readonly environmentContexts: ReadonlyArray<EnvironmentContextRecord>;
-}
-
-export function restorePlanFollowUpComposer(input: {
-  readonly snapshot: PlanFollowUpComposerSnapshot;
-  readonly writePrompt: (prompt: string) => void;
-  readonly writeTerminalContexts: (contexts: ReadonlyArray<TerminalContextDraft>) => void;
-  readonly writeReviewComments: (comments: ReadonlyArray<ReviewCommentContext>) => void;
-  readonly writePreviewAnnotations: (annotations: ReadonlyArray<PreviewAnnotationPayload>) => void;
-  readonly writeThreadContexts: (records: ReadonlyArray<ThreadContextRecord>) => void;
-  readonly writeEnvironmentContexts: (records: ReadonlyArray<EnvironmentContextRecord>) => void;
-  readonly resetCursor: (options: {
-    cursor: number;
-    prompt: string;
-    detectTrigger: boolean;
-  }) => void;
-}): void {
-  input.writePrompt(input.snapshot.prompt);
-  input.writeTerminalContexts(input.snapshot.terminalContexts);
-  input.writeReviewComments(input.snapshot.reviewComments);
-  input.writePreviewAnnotations(input.snapshot.previewAnnotations);
-  input.writeThreadContexts(input.snapshot.threadContexts);
-  input.writeEnvironmentContexts(input.snapshot.environmentContexts);
-  input.resetCursor({
-    cursor: collapseExpandedComposerCursor(input.snapshot.prompt, input.snapshot.prompt.length),
-    prompt: input.snapshot.prompt,
-    detectTrigger: true,
-  });
-}
-
 /** Includes the annotation screenshot only within the attachment cap; exceeding it rejects the whole turn. */
 export function mergeDirectPreviewAnnotation(input: {
   readonly images: ReadonlyArray<ComposerImageAttachment>;
@@ -1346,6 +1295,7 @@ export function makeModelDisabledReason(
 
 /** What the composer held when the user pressed send, after a direct annotation merged in. */
 export interface ComposerSendContents {
+  readonly contextDraft?: ComposerContextDraft | undefined;
   readonly prompt: string;
   readonly images: ReadonlyArray<ComposerImageAttachment>;
   readonly files: ReadonlyArray<ComposerFileAttachment>;
@@ -1375,6 +1325,7 @@ export function snapshotComposerSend(contents: ComposerSendContents) {
     reviewComments: [...contents.reviewComments],
     threadContexts: [...contents.threadContexts],
     environmentContexts: [...contents.environmentContexts],
+    contextDraft: contents.contextDraft ? structuredClone(contents.contextDraft) : undefined,
     messageText: contents.terminalContexts
       .filter((context) => !terminalContexts.includes(context))
       .reduce(

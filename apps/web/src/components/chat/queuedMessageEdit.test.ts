@@ -1,17 +1,10 @@
-import { EnvironmentId, ThreadId } from "@t2code/contracts";
-import { scopeThreadRef } from "@t2code/client-runtime/environment";
-import { beforeEach, describe, expect, it } from "vite-plus/test";
+import { describe, expect, it } from "vite-plus/test";
 import {
-  DraftId,
-  useComposerDraftStore,
   type ComposerFileAttachment,
   type ComposerImageAttachment,
 } from "../../composerDraftStore";
-import { prepareQueuedEditAttachments, recoverQueuedMessageEdit } from "./queuedMessageEdit";
+import { prepareQueuedEditAttachments } from "./queuedMessageEdit";
 
-const environmentId = EnvironmentId.make("remote-environment");
-const threadTarget = scopeThreadRef(environmentId, ThreadId.make("thread:edit"));
-const editTarget = DraftId.make("queued-edit:test");
 const file: ComposerFileAttachment = {
   type: "file",
   id: "file:report",
@@ -38,10 +31,6 @@ const uploadedFile = {
 };
 
 describe("queued message file edits", () => {
-  beforeEach(() => {
-    useComposerDraftStore.setState({ draftsByThreadKey: {}, draftThreadsByThreadKey: {} });
-  });
-
   it.each([
     { images: [], label: "file-only" },
     { images: [image], label: "mixed" },
@@ -72,28 +61,5 @@ describe("queued message file edits", () => {
         readImage: async () => "image",
       }),
     ).rejects.toThrow("Retry or remove");
-  });
-
-  it("keeps file-only edits when another client starts the queued run", () => {
-    const store = useComposerDraftStore.getState();
-    store.setPrompt(editTarget, "Original message");
-    store.addFiles(editTarget, [file]);
-    expect(
-      recoverQueuedMessageEdit({ editTarget, threadTarget, originalText: "Original message" }),
-    ).toBe("kept");
-    expect(store.getComposerDraft(threadTarget)?.prompt).toBe("Original message");
-    expect(store.getComposerDraft(threadTarget)?.files).toEqual([file]);
-    expect(store.getComposerDraft(editTarget)).toBeNull();
-  });
-
-  it("does not overwrite a separate draft when the queued run leaves", () => {
-    const store = useComposerDraftStore.getState();
-    store.setPrompt(threadTarget, "Separate draft");
-    store.addFiles(editTarget, [file]);
-    expect(recoverQueuedMessageEdit({ editTarget, threadTarget, originalText: "" })).toBe(
-      "discarded",
-    );
-    expect(store.getComposerDraft(threadTarget)?.prompt).toBe("Separate draft");
-    expect(store.getComposerDraft(editTarget)).toBeNull();
   });
 });

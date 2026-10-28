@@ -1,8 +1,19 @@
-import { ComposerContextRecord, ForwardCompatibleArray } from "@t2code/contracts";
+import { FanoutRecovery, type FanoutOutcome } from "./lib/composerFanout";
+import {
+  ComposerContextRecord,
+  ChatAttachment,
+  RunId,
+  MessageId,
+  EnvironmentId,
+  ThreadId,
+  ForwardCompatibleArray,
+  SpaceContextSelector,
+} from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import { create } from "zustand";
 
 import {
+  PersistedComposerContext,
   PersistedComposerFileAttachment,
   PersistedComposerImageAttachment,
 } from "./composerDraftStore";
@@ -25,7 +36,26 @@ const StashEntrySchema = Schema.Struct({
   droppedImageNames: Schema.Array(Schema.String),
   unreadableImageNames: Schema.optionalKey(Schema.Array(Schema.String)),
   pendingImageCount: Schema.optionalKey(Schema.Number),
+  selectors: Schema.optionalKey(Schema.Array(SpaceContextSelector).check(Schema.isMaxLength(200))),
   records: Schema.optionalKey(ForwardCompatibleArray(ComposerContextRecord)),
+  recovery: Schema.optionalKey(
+    Schema.Struct({
+      environmentId: EnvironmentId,
+      threadId: ThreadId,
+      draftId: Schema.optionalKey(Schema.String),
+      targetKey: Schema.String,
+      context: PersistedComposerContext,
+      fanout: Schema.optionalKey(FanoutRecovery),
+      queuedEdit: Schema.optionalKey(
+        Schema.Struct({
+          runId: RunId,
+          messageId: MessageId,
+          attachments: Schema.Array(ChatAttachment).check(Schema.isMaxLength(100)),
+          saveOutcome: Schema.Literals(["not-sent", "uncertain", "accepted"]),
+        }),
+      ),
+    }),
+  ),
 });
 export type PromptStashEntry = typeof StashEntrySchema.Type;
 
@@ -124,6 +154,14 @@ function readPersistedEntries(): ReadonlyArray<PromptStashEntry> | null {
 
 interface PromptStashStoreState {
   entries: ReadonlyArray<PromptStashEntry>;
+  activeRecoveryIds: ReadonlyArray<string>;
+  reserveSendRecovery: (entry: PromptStashEntry) => { written: boolean; durable: boolean };
+  settleSendRecovery: (entryId: string, sent: boolean) => { durable: boolean };
+  recordFanoutOutcome: (
+    entryId: string,
+    attemptId: string,
+    outcome: FanoutOutcome,
+  ) => { durable: boolean; updated: boolean };
   stashEntry: (entry: PromptStashEntry) => {
     evicted: PromptStashEntry | null;
     /** False when the write failed outright (e.g. quota); nothing was kept. */
@@ -146,9 +184,82 @@ interface PromptStashStoreState {
 
 export const usePromptStashStore = create<PromptStashStoreState>()((set, get) => ({
   entries: [],
+  activeRecoveryIds: [],
+  reserveSendRecovery: (entry) => {
+    const entries = get().entries;
+    if (
+      !storageIsDurable ||
+      !entry.recovery ||
+      entries.length >= MAX_STASH_ENTRIES ||
+      entries.some((candidate) => candidate.id === entry.id)
+    ) {
+      return { written: false, durable: false };
+    }
+    const nextEntries = [entry, ...entries];
+    const result = persistEntries(nextEntries);
+    if (result.durable)
+      set({ entries: nextEntries, activeRecoveryIds: [...get().activeRecoveryIds, entry.id] });
+    return result;
+  },
+  recordFanoutOutcome: (entryId, attemptId, outcome) => {
+    const entries = get().entries;
+    const index = entries.findIndex((entry) => entry.id === entryId);
+    const entry = entries[index];
+    const recovery = entry?.recovery;
+    const fanout = recovery?.fanout;
+    const attempt = fanout?.attempts.find((value) => value.id === attemptId);
+    if (
+      !entry ||
+      !recovery ||
+      !fanout ||
+      !attempt ||
+      !get().activeRecoveryIds.includes(entryId) ||
+      !(
+        (attempt.outcome === "not-sent" && outcome === "uncertain") ||
+        (attempt.outcome === "uncertain" && outcome !== "uncertain")
+      )
+    )
+      return { updated: false, durable: false };
+    const nextEntries = [...entries];
+    nextEntries[index] = {
+      ...entry,
+      recovery: {
+        ...recovery,
+        fanout: {
+          ...fanout,
+          attempts: fanout.attempts.map((value) =>
+            value.id === attemptId ? { ...value, outcome } : value,
+          ),
+        },
+      },
+    };
+    const result = persistEntries(nextEntries);
+    // Dispatch requires the durable uncertainty marker; acknowledgements can still be shown live.
+    if (result.durable || outcome !== "uncertain") set({ entries: nextEntries });
+    return { updated: true, durable: result.durable };
+  },
+  settleSendRecovery: (entryId, sent) => {
+    set({ activeRecoveryIds: get().activeRecoveryIds.filter((id) => id !== entryId) });
+    if (!sent) return { durable: true };
+    const entries = get().entries;
+    if (!entries.some((entry) => entry.id === entryId && entry.recovery)) return { durable: true };
+    const nextEntries = entries.filter((entry) => entry.id !== entryId);
+    const result = persistEntries(nextEntries);
+    if (result.durable) set({ entries: nextEntries });
+    return { durable: result.durable };
+  },
   stashEntry: (entry) => {
+    if (get().entries.some((candidate) => candidate.id === entry.id))
+      return { evicted: null, written: false, durable: false };
     const nextEntries = [entry, ...get().entries];
-    const evicted = nextEntries.length > MAX_STASH_ENTRIES ? (nextEntries.pop() ?? null) : null;
+    let evicted: PromptStashEntry | null = null;
+    if (nextEntries.length > MAX_STASH_ENTRIES) {
+      const index = nextEntries.findLastIndex(
+        (candidate) => !candidate.recovery && candidate.id !== entry.id,
+      );
+      if (index === -1) return { evicted: null, written: false, durable: false };
+      evicted = nextEntries.splice(index, 1)[0] ?? null;
+    }
     const { written, durable } = persistEntries(nextEntries);
     // Failed writes must not duplicate the intact composer; eviction also commits only on success.
     if (!written) {
@@ -158,6 +269,7 @@ export const usePromptStashStore = create<PromptStashStoreState>()((set, get) =>
     return { evicted, written: true, durable };
   },
   takeEntry: (entryId) => {
+    if (get().activeRecoveryIds.includes(entryId)) return { entry: null, durable: false };
     const entries = get().entries;
     const entry = entries.find((candidate) => candidate.id === entryId) ?? null;
     if (!entry) return { entry: null, durable: true };

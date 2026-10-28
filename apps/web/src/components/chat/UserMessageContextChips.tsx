@@ -1,3 +1,4 @@
+import { SpaceContextChip } from "../SpaceContextChip";
 import { documentChipKindForFileName } from "~/pierre-icons";
 import { isSvgAttachment } from "@t2code/shared/image";
 import { useRenderedAppearance } from "../../hooks/useTheme";
@@ -292,6 +293,24 @@ const userMessageContextPresentationRegistry = createContextPresentationRegistry
 >({
   requiredKinds: COMPOSER_CONTEXT_KINDS,
   handlers: [
+    {
+      kind: "page",
+      render: (record, context) =>
+        record.kind === "page" ? (
+          <SpaceContextChip record={record} copyMarkdown={context.copyMarkdown} />
+        ) : (
+          <UnavailableUserMessageContextChip {...context} />
+        ),
+    },
+    {
+      kind: "block",
+      render: (record, context) =>
+        record.kind === "block" ? (
+          <SpaceContextChip record={record} copyMarkdown={context.copyMarkdown} />
+        ) : (
+          <UnavailableUserMessageContextChip {...context} />
+        ),
+    },
     {
       kind: "mention",
       canRender: (record) => record.kind === "mention",

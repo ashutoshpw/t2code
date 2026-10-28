@@ -1,3 +1,4 @@
+import { runAtomCommand } from "../state/runtime.ts";
 import { describe, expect, it } from "@effect/vitest";
 import {
   SpaceBlockId,
@@ -248,6 +249,8 @@ const setupLocationRuntime = Effect.fn("SpacePageLocationTest.setupRuntime")(fun
     makeSession,
     executions: () => executions,
     location: () => queries.location(target),
+    captureSession: queries.captureSession,
+    environmentId,
   };
 });
 
@@ -337,4 +340,48 @@ it.effect(
         expect(h.registry.getNodes().get(thirdOwner)?.listeners.size ?? 0).toBe(0);
       }),
     ),
+);
+
+it.effect("invalidates send capture ownership on a replacement session or disconnect", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const h = yield* setupLocationRuntime();
+      const result = yield* Effect.promise(() =>
+        runAtomCommand(h.registry, h.captureSession, {
+          environmentId: h.environmentId,
+          input: undefined,
+        }),
+      );
+      if (result._tag !== "Success") return yield* Effect.die("Expected capture session ownership");
+      const original = result.value();
+      expect(original).not.toBeNull();
+      yield* SubscriptionRef.set(h.sessions, Option.some(h.makeSession()));
+      expect(result.value()).toBeNull();
+      const replacement = yield* Effect.promise(() =>
+        runAtomCommand(h.registry, h.captureSession, {
+          environmentId: h.environmentId,
+          input: undefined,
+        }),
+      );
+      if (replacement._tag !== "Success")
+        return yield* Effect.die("Expected replacement session ownership");
+      expect(replacement.value()).not.toBe(original);
+      yield* SubscriptionRef.update(h.state, (state) => ({
+        ...state,
+        generation: state.generation + 1,
+      }));
+      expect(replacement.value()).toBeNull();
+      const latest = yield* Effect.promise(() =>
+        runAtomCommand(h.registry, h.captureSession, {
+          environmentId: h.environmentId,
+          input: undefined,
+        }),
+      );
+      if (latest._tag !== "Success")
+        return yield* Effect.die("Expected current generation ownership");
+      expect(latest.value()).not.toBeNull();
+      yield* SubscriptionRef.set(h.state, AVAILABLE_CONNECTION_STATE);
+      expect(latest.value()).toBeNull();
+    }),
+  ),
 );

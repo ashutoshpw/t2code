@@ -2464,3 +2464,95 @@ describe("composerDraftStore attachment references", () => {
     );
   });
 });
+
+it("persists child-page selector edits without changing completed snapshots or newer selectors", async () => {
+  const selector = {
+    version: 1,
+    selection: "current",
+    kind: "page",
+    contextId: "p",
+    label: "Page",
+    environmentId: TEST_ENVIRONMENT_ID,
+    pageId: "page",
+    includeChildPages: false,
+  };
+  const copied = {
+    version: 1,
+    kind: "page",
+    contextId: "copied",
+    label: "Copied",
+    environmentId: TEST_ENVIRONMENT_ID,
+    spaceId: "s",
+    pageId: "page",
+    title: "Old title",
+    snapshot: {
+      version: 1,
+      includeChildPages: false,
+      truncated: false,
+      text: "Old snapshot",
+      contentHash: `sha256:${"a".repeat(64)}`,
+      sources: [
+        {
+          environmentId: TEST_ENVIRONMENT_ID,
+          spaceId: "s",
+          pageId: "page",
+          revision: 1,
+          blockIds: [],
+        },
+      ],
+    },
+  };
+  const contextDraft = {
+    selectors: [selector],
+    records: [
+      copied,
+      { version: 1, kind: "future", contextId: "future", label: "Future", payload: { keep: true } },
+    ],
+  };
+  const key = threadKeyFor(ThreadId.make("spaces-recovery"), TEST_ENVIRONMENT_ID);
+  const merged = useComposerDraftStore.persist.getOptions().merge!(
+    {
+      draftsByThreadKey: {
+        [key]: {
+          prompt: "[Page](t2-context://v1/page/p) [Copied](t2-context://v1/page/copied)",
+          attachments: [],
+          contextDraft,
+        },
+      },
+    },
+    useComposerDraftStore.getInitialState(),
+  );
+  expect(merged.draftsByThreadKey[key]?.contextDraft).toEqual(contextDraft);
+  vi.useFakeTimers();
+  try {
+    useComposerDraftStore.setState(merged);
+    const store = useComposerDraftStore.getState();
+    const target = scopeThreadRef(TEST_ENVIRONMENT_ID, ThreadId.make("spaces-recovery"));
+    const original = store.getComposerDraft(target)!.contextDraft!.selectors[0]!;
+    store.setSpaceContextIncludeChildPages(target, original, true);
+    const changed = store.getComposerDraft(target)!.contextDraft!;
+    expect(changed.selectors[0]?.includeChildPages).toBe(true);
+    expect(changed.records).toEqual(contextDraft.records);
+    expect(store.getComposerDraft(target)?.prompt).toBe(merged.draftsByThreadKey[key]?.prompt);
+    store.setSpaceContextIncludeChildPages(target, original, false);
+    expect(store.getComposerDraft(target)?.contextDraft).toEqual(changed);
+    await vi.advanceTimersByTimeAsync(300);
+    const saved = await useComposerDraftStore.persist
+      .getOptions()
+      .storage?.getItem(COMPOSER_DRAFT_STORAGE_KEY);
+    expect(saved).not.toBeNull();
+    resetComposerDraftStore();
+    await useComposerDraftStore.persist.rehydrate();
+    expect(store.getComposerDraft(target)?.contextDraft).toEqual(changed);
+    const current = store.getComposerDraft(target)!.contextDraft!.selectors[0]!;
+    store.setSpaceContextIncludeChildPages(target, current, false);
+    expect(store.getComposerDraft(target)?.contextDraft?.selectors[0]?.includeChildPages).toBe(
+      false,
+    );
+    expect(store.getComposerDraft(target)?.contextDraft?.records).toEqual(contextDraft.records);
+  } finally {
+    await useComposerDraftStore.persist.clearStorage();
+    resetComposerDraftStore();
+    vi.useRealTimers();
+  }
+});

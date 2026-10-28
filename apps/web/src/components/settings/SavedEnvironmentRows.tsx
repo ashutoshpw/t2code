@@ -89,8 +89,6 @@ import {
 } from "../ServerUpdateAction";
 import { CloudEnvironmentConnectRows } from "../cloud/CloudEnvironmentConnectList";
 import { useT2ConnectAuthPrompt } from "../clerk/useT2ConnectAuthPrompt";
-import { useEnvironmentSessionState } from "~/state/session";
-import { Input } from "../ui/input";
 
 type SavedBackendListRowProps = {
   environment: EnvironmentPresentation;
@@ -545,7 +543,7 @@ function T3ConnectTunnelUsage({ tunnelLimit }: { readonly tunnelLimit: number | 
             <TunnelLimitAlert
               upgrade={usage.upgrade}
               onLinkT3Chat={openAccountPage ? () => openAccountPage("t3-chat") : null}
-              onManageTunnels={openAccountPage ? () => openAccountPage("t3-connect") : null}
+              onManageTunnels={openAccountPage ? () => openAccountPage("t2-connect") : null}
             />
           ) : null}
         </div>

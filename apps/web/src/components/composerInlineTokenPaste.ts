@@ -34,6 +34,9 @@ export function readPastedComposerContext(
   return {
     ...decodedFragment,
     records: decodedFragment.records.filter((record) => pastedIds.has(record.contextId)),
+    ...(decodedFragment.selectors
+      ? { selectors: decodedFragment.selectors.filter((record) => pastedIds.has(record.contextId)) }
+      : {}),
   };
 }
 
@@ -46,7 +49,9 @@ export function importPastedComposerText(
   const pastedText = clipboardData.getData("text/plain");
   const fragment = importContextFragment ? readPastedComposerContext(clipboardData) : null;
   const rewrittenIds =
-    fragment && fragment.records.length > 0 ? importContextFragment!(fragment) : null;
+    fragment && (fragment.records.length > 0 || (fragment.selectors?.length ?? 0) > 0)
+      ? importContextFragment!(fragment)
+      : null;
   const text =
     rewrittenIds && rewrittenIds.size > 0
       ? replaceComposerContextReferences(pastedText, (occurrence) => {

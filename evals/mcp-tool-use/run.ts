@@ -39,6 +39,7 @@ import { EnvironmentId, ORCHESTRATOR_MCP_RUNNING_TASK_NEXT, ThreadId } from "@t2
 import { projectComposerContextForProvider } from "@t2code/shared/composerContextReferences";
 import { formatThreadLink } from "@t2code/shared/threadLinks";
 import { buildCodexAdditionalContext } from "../../apps/server/src/provider/CodexDeveloperInstructions.ts";
+import { SpacesToolkit } from "../../apps/server/src/mcp/toolkits/spaces/tools.ts";
 import { AttachmentToolkit } from "../../apps/server/src/mcp/toolkits/attachment/tools.ts";
 import { DeviceToolkit } from "../../apps/server/src/mcp/toolkits/device/tools.ts";
 import { EnvironmentToolkit } from "../../apps/server/src/mcp/toolkits/environment/tools.ts";
@@ -353,6 +354,7 @@ export const normalizeToolInput = (name: string, input: unknown) =>
 // McpHttpServer advertises each tool's JSON schema, and Claude Code passes the MCP name,
 // description, and schema through unchanged.
 const t3SourceTools: ReadonlyArray<Tool.Any> = [
+  SpacesToolkit,
   OrchestratorToolkit,
   ThreadToolkit,
   AttachmentToolkit,

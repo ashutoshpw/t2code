@@ -5,6 +5,8 @@ import {
 import { EnvironmentRpcUnavailableError } from "@t2code/client-runtime/rpc";
 import * as Cause from "effect/Cause";
 import * as Schema from "effect/Schema";
+import { SpaceContextSelector } from "@t2code/contracts";
+import { ComposerContextId } from "@t2code/contracts";
 import type { RefObject } from "react";
 import type { ChatComposerProps } from "./ChatComposer";
 import {
@@ -59,6 +61,7 @@ import { countPreparingComposerImages } from "./preparingComposerImages";
 const isUnreachable = Schema.is(
   Schema.Union([ConnectionTransientError, ConnectionBlockedError, EnvironmentRpcUnavailableError]),
 );
+const isSpaceContextSelector = Schema.is(SpaceContextSelector);
 
 async function downloadAttachmentBlob(url: string): Promise<Blob | null> {
   try {
@@ -271,8 +274,30 @@ export function useComposerContextImport(input: {
     records: ReadonlyArray<ComposerContextRecord>,
     sourceEnvironmentId: EnvironmentId | null,
     threadDraftTarget = attachmentDraftTarget,
+    selectors: ReadonlyArray<SpaceContextSelector> = [],
   ): ReadonlyMap<string, string> => {
     const rewritten = new Map<string, string>();
+    const store = useComposerDraftStore.getState();
+    const previousDraft = store.getComposerDraft(threadDraftTarget)?.contextDraft;
+    const contextDraft = {
+      selectors: [...(previousDraft?.selectors ?? [])],
+      records: [...(previousDraft?.records ?? [])],
+    };
+    const occupied = new Set([
+      ...composerContextRecords.keys(),
+      ...contextDraft.records.map((record) => record.contextId),
+      ...contextDraft.selectors.map((record) => record.contextId),
+    ]);
+    const importStored = (record: ComposerContextRecord | SpaceContextSelector) => {
+      const contextId = occupied.has(record.contextId)
+        ? ComposerContextId.make(randomUUID())
+        : record.contextId;
+      occupied.add(contextId);
+      rewritten.set(record.contextId, contextId);
+      if (isSpaceContextSelector(record)) contextDraft.selectors.push({ ...record, contextId });
+      else contextDraft.records.push({ ...record, contextId } as ComposerContextRecord);
+    };
+    for (const selector of selectors) importStored(selector);
     const dependentAttachmentLocalIds = new Map<string, string>();
     const skippedDependentAttachmentIds = new Set<string>();
     // Resolve annotations before their dependent screenshot records even if a foreign
@@ -289,7 +314,10 @@ export function useComposerContextImport(input: {
       // when the draft already holds the same payload; a colliding but different record is
       // re-minted under a fresh id so both survive the paste.
       const record = asKnownContextRecord(candidate);
-      if (!record) continue;
+      if (!record || record.kind === "page" || record.kind === "block") {
+        importStored(candidate);
+        continue;
+      }
       // A reminted annotation needs its screenshot under the new annotation id.
       const existing = dependentAttachmentLocalIds.has(record.contextId)
         ? undefined
@@ -414,12 +442,19 @@ export function useComposerContextImport(input: {
           break;
       }
     }
+    if (contextDraft.selectors.length || contextDraft.records.length)
+      store.setContextDraft(threadDraftTarget, contextDraft);
     return rewritten;
   };
   const importContextFragment = (
     fragment: ComposerContextClipboardFragment,
   ): ReadonlyMap<string, string> =>
-    importContextRecords(fragment.records, fragment.source.environmentId);
+    importContextRecords(
+      fragment.records,
+      fragment.source.environmentId,
+      attachmentDraftTarget,
+      fragment.selectors,
+    );
   const importContextFragmentStable = useStableCallback(importContextFragment);
 
   return {

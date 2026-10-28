@@ -1,3 +1,10 @@
+import { readLocalApi } from "../../localApi";
+import { isQueuedEditDraftOwned } from "./queuedRunEditState";
+import { restoreComposerSendRecovery } from "../../lib/composerSendRecovery";
+import { useNavigate } from "@tanstack/react-router";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
+import { buildThreadRouteParams } from "../../threadRoutes";
+import type { SpaceContextSelector } from "@t2code/contracts";
 import type { ChatComposerProps } from "./ChatComposer";
 import {
   type ComposerContextRecord,
@@ -94,6 +101,7 @@ export function useComposerStash(input: {
     records: ReadonlyArray<ComposerContextRecord>,
     sourceEnvironmentId: EnvironmentId | null,
     threadDraftTarget?: ChatComposerProps["composerDraftTarget"],
+    selectors?: ReadonlyArray<SpaceContextSelector>,
   ) => ReadonlyMap<string, string>;
   readonly expandMobileComposer: () => void;
 }) {
@@ -123,6 +131,7 @@ export function useComposerStash(input: {
     importContextRecords,
     expandMobileComposer,
   } = input;
+  const navigate = useNavigate();
   const getComposerDraft = useComposerDraftStore((store) => store.getComposerDraft);
   const setComposerDraftPrompt = useComposerDraftStore((store) => store.setPrompt);
   const addComposerDraftImages = useComposerDraftStore((store) => store.addImages);
@@ -154,7 +163,123 @@ export function useComposerStash(input: {
     setStashPulseKey((key) => key + 1);
   };
 
-  const restoreStashEntry = async (menuEntry: PromptStashEntry) => {
+  const refuseOwnedEditMutation = () => {
+    if (!isQueuedEditDraftOwned(composerDraftTarget)) return false;
+    toastManager.add({
+      type: "info",
+      title: "Finish the queued edit first",
+      description:
+        "Save the queued message or use Save recovery before stashing or restoring into this edit. You can still delete other stash entries to free space.",
+    });
+    return true;
+  };
+
+  const restoreStashEntry = async (
+    menuEntry: PromptStashEntry,
+    options?: { fanoutAttemptIds?: ReadonlyArray<string>; allowUncertain?: boolean },
+  ) => {
+    if (refuseOwnedEditMutation()) return;
+    if (menuEntry.recovery) {
+      if (menuEntry.recovery.fanout && !options) {
+        for (const attempt of menuEntry.recovery.fanout.attempts) {
+          const uncertain = attempt.outcome === "uncertain";
+          toastManager.add({
+            type: uncertain || attempt.outcome === "failed" ? "warning" : "info",
+            title: `${attempt.selection.model.slice(0, 160)}: ${attempt.outcome}`,
+            description: `Saved model options: ${JSON.stringify(attempt.selection.options ?? []).slice(0, 1000)}.${uncertain ? " The environment may have accepted this send. Check its thread before retrying." : " Accepted models are excluded from recovery sends."}`,
+            ...(uncertain
+              ? {
+                  timeout: 0,
+                  data: {
+                    secondaryActionProps: {
+                      children: "Restore this model anyway",
+                      onClick: async () => {
+                        const confirmed = await readLocalApi()?.dialogs.confirm(
+                          "This model's earlier request may already be running. Check its thread first. Restore it for a new send that could create a duplicate thread?",
+                        );
+                        if (confirmed)
+                          await restoreStashEntry(menuEntry, {
+                            fanoutAttemptIds: [attempt.id],
+                            allowUncertain: true,
+                          });
+                      },
+                    },
+                  },
+                }
+              : attempt.outcome === "failed" || attempt.outcome === "not-sent"
+                ? {
+                    data: {
+                      secondaryActionProps: {
+                        children: "Restore only this model",
+                        onClick: () =>
+                          restoreStashEntry(menuEntry, { fanoutAttemptIds: [attempt.id] }),
+                      },
+                    },
+                  }
+                : {}),
+            ...(uncertain || attempt.outcome === "accepted"
+              ? {
+                  actionProps: {
+                    children: "Open thread",
+                    onClick: () => {
+                      void navigate({
+                        to: "/$environmentId/$threadId",
+                        params: buildThreadRouteParams(
+                          scopeThreadRef(menuEntry.recovery!.environmentId, attempt.threadId),
+                        ),
+                      });
+                    },
+                  },
+                }
+              : {}),
+          });
+        }
+      }
+      try {
+        const restored = await restoreComposerSendRecovery({
+          entryId: menuEntry.id,
+          ...options,
+          environmentId,
+          target: composerDraftTarget,
+          isCurrent: () =>
+            !isRevertingCheckpoint() &&
+            !isQueuedEditDraftOwned(composerDraftTarget) &&
+            isComposerDraftTargetOpen(composerTargetKey(composerDraftTarget)),
+        });
+        promptRef.current = restored.prompt;
+        setComposerCursor(collapseExpandedComposerCursor(restored.prompt, restored.prompt.length));
+        setComposerTrigger(null);
+        setIsStashMenuOpen(false);
+        toastManager.add({
+          type: restored.expiredFiles.length ? "warning" : "info",
+          title: "Recovery prompt copied to the composer",
+          description: `The recovery copy stays in the stash until you delete it.${menuEntry.recovery.queuedEdit ? (menuEntry.recovery.queuedEdit.saveOutcome === "uncertain" ? " The earlier queued-edit request may have committed; check the thread before a new send." : " The old run left the queue. This is a separate draft for a new send.") : ""}${restored.fanoutRetry ? (restored.fanoutRetry.uncertain ? " You explicitly selected an uncertain model; a new send may duplicate it." : " Only definite failures and unsent models were selected.") : ""}${restored.expiredFiles.length ? ` Attach expired files again: ${restored.expiredFiles.join(", ")}.` : ""}`,
+        });
+      } catch (error) {
+        const origin = menuEntry.recovery;
+        toastManager.add({
+          type: "error",
+          title: "Could not restore the recovery prompt",
+          description: error instanceof Error ? error.message : "Could not restore this prompt.",
+          actionProps: {
+            children: "Open original composer",
+            onClick: () => {
+              void navigate(
+                origin.draftId
+                  ? { to: "/draft/$draftId", params: { draftId: origin.draftId } }
+                  : {
+                      to: "/$environmentId/$threadId",
+                      params: buildThreadRouteParams(
+                        scopeThreadRef(origin.environmentId, origin.threadId),
+                      ),
+                    },
+              );
+            },
+          },
+        });
+      }
+      return;
+    }
     const filesToVerify = menuEntry.files ?? [];
     if (filesToVerify.some((file) => file.environmentId !== environmentId)) {
       toastManager.add({
@@ -185,6 +310,7 @@ export function useComposerStash(input: {
     // prompt with this invocation's captured target. Nothing was taken yet,
     // so abort and leave the entry restorable where the user now is.
     if (
+      refuseOwnedEditMutation() ||
       isRevertingCheckpoint() ||
       !isComposerDraftTargetOpen(composerTargetKey(composerDraftTarget))
     ) {
@@ -203,9 +329,10 @@ export function useComposerStash(input: {
       });
     }
 
-    const rewrittenContextIds = entry.records
-      ? importContextRecords(entry.records, null, composerDraftTarget)
-      : new Map<string, string>();
+    const rewrittenContextIds =
+      entry.records || entry.selectors
+        ? importContextRecords(entry.records ?? [], null, composerDraftTarget, entry.selectors)
+        : new Map<string, string>();
     const restoredPrompt = replaceComposerContextReferences(entry.prompt, (reference) => {
       const contextId = rewrittenContextIds.get(reference.contextId);
       return contextId
@@ -418,6 +545,14 @@ export function useComposerStash(input: {
   const restoreStashEntryStable = useStableCallback(restoreStashEntry);
 
   const deleteStashEntry = (entry: PromptStashEntry) => {
+    if (usePromptStashStore.getState().activeRecoveryIds.includes(entry.id)) {
+      toastManager.add({
+        type: "info",
+        title: "Wait for this send to finish",
+        description: "Its recovery copy can be deleted after the send finishes.",
+      });
+      return;
+    }
     const { entry: removed, durable } = takeStashEntry(entry.id);
     if (!stashQueue.some((candidate) => candidate.id !== entry.id)) {
       setIsStashMenuOpen(false);
@@ -444,6 +579,7 @@ export function useComposerStash(input: {
   const deleteStashEntryStable = useStableCallback(deleteStashEntry);
 
   const stashCurrentPrompt = async () => {
+    if (refuseOwnedEditMutation()) return;
     // Stashing clears the draft. A pasted attachment still downloading would then land in the
     // emptied composer instead of travelling with the entry it belongs to.
     if (pendingDraftWork.has(attachmentTargetKey)) {
@@ -454,11 +590,25 @@ export function useComposerStash(input: {
       });
       return;
     }
+    if (useComposerDraftStore.getState().getComposerDraft(composerDraftTarget)?.fanoutRetry) {
+      toastManager.add({
+        type: "info",
+        title: "Keep the recovered fanout in this composer",
+        description:
+          "Its original recovery is in the stash. Send this retry, or open a fresh draft to choose different models; manual stashing cannot discard its exact retry choices.",
+      });
+      return;
+    }
     const prompt = promptRef.current.trim();
     const attachmentDraft = readAttachmentDraft();
     const images = [...attachmentDraft.images];
     const files = [...attachmentDraft.files];
+    const storedContextDraft = useComposerDraftStore
+      .getState()
+      .getComposerDraft(composerDraftTarget)?.contextDraft;
+    const stashedSelectors = storedContextDraft?.selectors;
     const stashedRecords: ComposerContextRecord[] = [
+      ...(storedContextDraft?.records ?? []),
       ...composerThreadContexts,
       ...readTerminalContexts().map(terminalContextRecord),
       ...composerReviewComments.map(reviewCommentContextRecord),
@@ -533,6 +683,7 @@ export function useComposerStash(input: {
         droppedImageNames: [],
         unreadableImageNames: [],
         pendingImageCount: images.length,
+        ...(stashedSelectors?.length ? { selectors: stashedSelectors } : {}),
         ...(stashedRecords.length > 0 ? { records: stashedRecords } : {}),
       });
 
@@ -563,6 +714,7 @@ export function useComposerStash(input: {
       clearComposerDraftPromptAndImages(stashTarget);
       clearComposerDraftTerminalContexts(stashTarget);
       setComposerDraftThreadContexts(stashTarget, []);
+      useComposerDraftStore.getState().setContextDraft(stashTarget, undefined);
       for (const comment of composerReviewComments) {
         removeComposerDraftReviewComment(stashTarget, comment.id);
       }

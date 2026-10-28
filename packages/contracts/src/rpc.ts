@@ -1,3 +1,4 @@
+import { SpaceContextCaptureInput, SpaceContextCaptureResult } from "./composerContext.ts";
 import {
   OrchestrationV2SearchThreadError,
   OrchestrationV2SearchThreadInput,
@@ -405,6 +406,35 @@ import { VcsError } from "./vcs.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
 export const WS_METHODS = {
+  spacesList: "spaces.list",
+  spacesCreate: "spaces.create",
+  spacesRename: "spaces.rename",
+  spacesSetDefault: "spaces.setDefault",
+  spacesPagesList: "spaces.pages.list",
+  spacesPagesGet: "spaces.pages.get",
+  spacesPagesCreate: "spaces.pages.create",
+  spacesPagesUpdate: "spaces.pages.update",
+  spacesBlocksRead: "spaces.blocks.read",
+  spacesBlocksApply: "spaces.blocks.apply",
+  spacesReceiptsGet: "spaces.receipts.get",
+  spacesAssetsUploadCreate: "spaces.assets.upload.create",
+  spacesAssetsUploadGet: "spaces.assets.upload.get",
+  spacesAssetsUploadFinalize: "spaces.assets.upload.finalize",
+  spacesAssetsGet: "spaces.assets.get",
+  spacesPagesCreateChild: "spaces.pages.createChild",
+  spacesPagesMove: "spaces.pages.move",
+  spacesStructureInspect: "spaces.structure.inspect",
+  spacesBlocksMove: "spaces.blocks.move",
+  spacesReferencesResolve: "spaces.references.resolve",
+  spacesPagesTrash: "spaces.pages.trash",
+  spacesPagesRestore: "spaces.pages.restore",
+  spacesPagesPermanentlyDelete: "spaces.pages.permanentlyDelete",
+  spacesTrashList: "spaces.trash.list",
+  spacesSearch: "spaces.search",
+  spacesContextCapture: "spaces.context.capture",
+
+  projectsList: "projects.list",
+
   projectsListEntries: "projects.listEntries",
   projectsListIgnoredFiles: "projects.listIgnoredFiles",
   projectsReadFile: "projects.readFile",
@@ -722,6 +752,12 @@ export const WsSpacesSearchRpc = Rpc.make(WS_METHODS.spacesSearch, {
 export const WsSpacesTrashListRpc = Rpc.make(WS_METHODS.spacesTrashList, {
   payload: Spaces.SpaceTrashListInput,
   success: Spaces.SpaceTrashListResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesContextCaptureRpc = Rpc.make(WS_METHODS.spacesContextCapture, {
+  payload: SpaceContextCaptureInput,
+  success: SpaceContextCaptureResult,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
 
@@ -2128,6 +2164,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesPagesPermanentlyDeleteRpc,
   WsSpacesTrashListRpc,
   WsSpacesSearchRpc,
+  WsSpacesContextCaptureRpc,
 
   WsGuestShareCreateRpc,
   WsServerProbeRpc,

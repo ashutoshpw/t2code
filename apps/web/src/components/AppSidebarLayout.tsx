@@ -419,7 +419,6 @@ function ProjectProjectionRetention() {
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const spacesPage = useLocation({ select: (location) => isSpacesPage(location.pathname) });
-  const legacySidebarEnabled = useLegacySidebarEnabled();
   const sidebarArea = workspaceAreaProps("sidebar", 0, "Threads");
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
@@ -506,13 +505,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           }}
           style={windowControlsInsetStyle}
         >
-          {spacesPage ? (
-            <SpacesSidebar />
-          ) : legacySidebarEnabled ? (
-            <LegacyThreadSidebar routeReveal={sidebarRouteReveal} />
-          ) : (
-            <ThreadSidebar routeReveal={sidebarRouteReveal} />
-          )}
+          {spacesPage ? <SpacesSidebar /> : <ThreadSidebar routeReveal={sidebarRouteReveal} />}
           <SidebarRail onDoubleClick={resetSidebarWidth} />
         </Sidebar>
         {children}

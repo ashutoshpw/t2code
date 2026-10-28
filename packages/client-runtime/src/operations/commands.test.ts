@@ -1,4 +1,12 @@
 import {
+  ComposerContextId,
+  PageContextRecord,
+  OrchestrationV2Command as CommandSchema,
+} from "@t2code/contracts";
+import { SpacePageId, SpaceId } from "@t2code/contracts/spaces";
+import * as Schema from "effect/Schema";
+import { prepareSpaceContextSend } from "../spaces/sendContext.ts";
+import {
   CheckpointId,
   CheckpointRef,
   CheckpointScopeId,
@@ -37,6 +45,7 @@ import type { WsRpcProtocolClient } from "../rpc/protocol.ts";
 import { v2Now, v2Projection, v2ThreadId } from "../state/orchestrationV2TestFixtures.ts";
 import {
   archiveThread,
+  editQueuedRun,
   interruptThreadTurn,
   revertThreadCheckpoint,
   resumeThreadQueue,
@@ -562,3 +571,127 @@ describe("V2 environment commands", () => {
     }).pipe(Effect.provide(layerTestCrypto)),
   );
 });
+
+it.effect(
+  "carries one captured snapshot through delivery modes and fanout, recaptures queued edits, and never captures queue start",
+  () =>
+    Effect.gen(function* () {
+      const environmentId = TARGET.environmentId;
+      const contextId = ComposerContextId.make("space-context");
+      const pageId = SpacePageId.make("source-page");
+      const spaceId = SpaceId.make("source-space");
+      const text = "[Page](t2-context://v1/terminal/space-context)";
+      const session = {};
+      let captures = 0;
+      const capture = async () => {
+        captures++;
+        const record: PageContextRecord = {
+          version: 1,
+          kind: "page",
+          contextId,
+          environmentId,
+          spaceId,
+          pageId,
+          title: "Page",
+          label: "Page",
+          snapshot: {
+            version: 1,
+            includeChildPages: false,
+            truncated: false,
+            text: `source revision ${captures}`,
+            contentHash: `sha256:${"a".repeat(64)}`,
+            sources: [{ environmentId, spaceId, pageId, revision: captures, blockIds: [] }],
+          },
+        };
+        return { status: "captured" as const, record };
+      };
+      const options = {
+        environmentId,
+        text,
+        access: () => ({ session, canRead: true, supportsCapture: true }),
+        isCurrentDraft: () => true,
+        capture,
+      };
+      const context = yield* Effect.promise(() =>
+        prepareSpaceContextSend({
+          ...options,
+          selectors: [
+            {
+              version: 1,
+              selection: "current",
+              kind: "page",
+              contextId,
+              label: "Page",
+              environmentId,
+              pageId,
+              includeChildPages: false,
+            },
+          ],
+        }),
+      );
+      const commands: OrchestrationV2Command[] = [];
+      const supervisor = yield* makeSupervisor({ commands, projects: [] });
+      for (const mode of ["auto", "queue", "steer", "restart"] as const) {
+        yield* startThreadTurn({
+          commandId: CommandId.make(`captured-${mode}`),
+          threadId: v2ThreadId,
+          message: {
+            messageId: MessageId.make(`captured-${mode}`),
+            role: "user",
+            text,
+            attachments: [],
+            ...(context ? { context } : {}),
+          },
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          dispatchMode: mode,
+        }).pipe(Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor));
+      }
+      for (const threadId of [ThreadId.make("fanout-a"), ThreadId.make("fanout-b")]) {
+        yield* startThreadTurn({
+          commandId: CommandId.make(`captured-${threadId}`),
+          threadId,
+          message: {
+            messageId: MessageId.make(`captured-${threadId}`),
+            role: "user",
+            text,
+            attachments: [],
+            ...(context ? { context } : {}),
+          },
+          runtimeMode: "full-access",
+          interactionMode: "default",
+        }).pipe(Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor));
+      }
+      expect(captures).toBe(1);
+      const decode = Schema.decodeUnknownEffect(CommandSchema);
+      for (const command of commands)
+        expect(yield* decode(JSON.parse(JSON.stringify(command)))).toMatchObject({
+          type: "message.dispatch",
+          context,
+        });
+      const edited = yield* Effect.promise(() => prepareSpaceContextSend({ ...options, context }));
+      yield* editQueuedRun({
+        commandId: CommandId.make("edit-captured"),
+        threadId: v2ThreadId,
+        runId: RunId.make("queued"),
+        text,
+        edit: {
+          messageId: MessageId.make("queued-message"),
+          attachments: [],
+          ...(edited ? { context: edited } : {}),
+        },
+      }).pipe(Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor));
+      expect(yield* decode(JSON.parse(JSON.stringify(commands.at(-1))))).toMatchObject({
+        type: "queued-run.edit",
+        context: { records: [{ snapshot: { text: "source revision 2" } }] },
+      });
+      expect(context?.records[0]).toMatchObject({ snapshot: { text: "source revision 1" } });
+      yield* resumeThreadQueue({
+        commandId: CommandId.make("start-captured"),
+        threadId: v2ThreadId,
+        runId: RunId.make("queued"),
+      }).pipe(Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor));
+      expect(captures).toBe(2);
+      expect(commands.at(-1)).toMatchObject({ type: "queued-run.start" });
+    }).pipe(Effect.provide(layerTestCrypto)),
+);

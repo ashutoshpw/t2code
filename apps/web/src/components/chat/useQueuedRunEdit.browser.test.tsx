@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { act, render } from "../../../test/render";
 import { useComposerDraftStore } from "../../composerDraftStore";
+import { usePromptStashStore } from "../../promptStashStore";
 import { AppAtomRegistryProvider, appAtomRegistry } from "../../rpc/atomRegistry";
 import { useQueuedRunEdit } from "./useQueuedRunEdit";
 
@@ -29,6 +30,11 @@ const mocks = await vi.hoisted(async () => {
     ),
   };
 });
+
+vi.mock("../../state/session", async () => ({
+  ...(await vi.importActual<typeof import("../../state/session")>("../../state/session")),
+  readEnvironmentScope: () => true,
+}));
 
 vi.mock("../../state/use-atom-command", () => ({
   useAtomCommand: () => mocks.editQueuedRun,
@@ -102,6 +108,7 @@ function view(threadRef: ScopedThreadRef, runStatus: string, hook: { current: Ho
 function setup() {
   mocks.editQueuedRun.mockReset();
   useComposerDraftStore.setState({ draftsByThreadKey: {}, draftThreadsByThreadKey: {} });
+  usePromptStashStore.setState({ entries: [], activeRecoveryIds: [] });
   setRuns(THREAD_A, "queued");
   setRuns(THREAD_B, "queued");
   return { hook: { current: null as HookResult | null } };
@@ -156,7 +163,7 @@ describe("useQueuedRunEdit", () => {
     ).toBe("changed");
   });
 
-  it("moves a changed edit into the thread draft when its run starts while the user is away", async () => {
+  it("saves a changed edit in recovery when its run starts while the user is away", async () => {
     const { hook } = setup();
     await using screen = await render(view(THREAD_A, "queued", hook));
     await beginChangedEdit(hook);
@@ -165,7 +172,10 @@ describe("useQueuedRunEdit", () => {
     expect(promptOf(THREAD_A)).toBe("");
     await act(() => setRuns(THREAD_A, "running"));
 
-    expect(promptOf(THREAD_A)).toBe("changed");
+    await vi.waitFor(() =>
+      expect(usePromptStashStore.getState().entries[0]?.prompt).toBe("changed"),
+    );
+    expect(promptOf(THREAD_A)).toBe("");
   });
 
   it("does not copy a saved edit into the thread draft when the run starts mid-save", async () => {

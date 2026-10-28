@@ -593,6 +593,7 @@ const ServerWsRpcGroup = WsRpcGroup.omit(
   WS_METHODS.spacesPagesRestore,
   WS_METHODS.spacesPagesPermanentlyDelete,
   WS_METHODS.spacesTrashList,
+  WS_METHODS.spacesContextCapture,
 )
   .merge(SpacesRpc.group)
   .middleware(RpcInstrumentation);

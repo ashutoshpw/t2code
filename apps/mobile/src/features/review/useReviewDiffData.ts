@@ -2,6 +2,7 @@ import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { formatDiffCount } from "@t2code/client-runtime/diff-count";
 
 import { countReviewCommentContexts, parseReviewInlineComments } from "./reviewCommentSelection";
+import { markReviewEvent, measureReviewWork } from "./reviewPerf";
 import { getCachedNativeReviewDiffData } from "./nativeReviewDiffAdapter";
 import { getCachedReviewParsedDiff } from "./reviewState";
 import {
@@ -127,13 +128,19 @@ export function useReviewDiffData(input: {
   const selectedSectionId = selectedSection?.id ?? null;
   const source = selectedSection?.source;
   const lazySource = source?.truncated && source.files ? source : null;
-  const previewDiff: ReviewParsedDiff = lazySource
-    ? { kind: "empty" }
-    : getCachedReviewParsedDiff({
-        threadKey,
-        sectionId: selectedSection?.id ?? null,
-        diff: selectedSection?.diff,
-      });
+  const previewDiff = useMemo<ReviewParsedDiff>(
+    () =>
+      lazySource
+        ? { kind: "empty" }
+        : measureReviewWork("parse-diff", () =>
+            getCachedReviewParsedDiff({
+              threadKey,
+              sectionId: selectedSection?.id ?? null,
+              diff: selectedSection?.diff,
+            }),
+          ),
+    [lazySource, selectedSection?.diff, selectedSection?.id, threadKey],
+  );
   const registry = useContext(RegistryContext);
   const { environmentId, cwd } = input;
   const scope = JSON.stringify([
@@ -233,11 +240,20 @@ export function useReviewDiffData(input: {
     }
     return inlineReviewComments.filter((comment) => comment.sectionId === selectedSectionId);
   }, [inlineReviewComments, selectedSectionId]);
-  const nativeReviewDiffData = getCachedNativeReviewDiffData({
-    parsedDiff,
-    comments: selectedSectionInlineComments,
-  });
-  const pendingReviewCommentCount = countReviewCommentContexts(draftMessage);
+  const nativeReviewDiffData = useMemo(
+    () =>
+      measureReviewWork("build-native-diff-data", () =>
+        getCachedNativeReviewDiffData({
+          parsedDiff,
+          comments: selectedSectionInlineComments,
+        }),
+      ),
+    [parsedDiff, selectedSectionInlineComments],
+  );
+  const pendingReviewCommentCount = useMemo(
+    () => countReviewCommentContexts(draftMessage),
+    [draftMessage],
+  );
 
   // oxlint-disable-next-line t2code/react-effect-budget -- records review perf marks and diagnostic logs once a parsed diff has committed
   useEffect(() => {
@@ -245,12 +261,19 @@ export function useReviewDiffData(input: {
       return;
     }
 
+    markReviewEvent("parsed-diff-ready", {
+      sectionId: selectedSection?.id ?? null,
+      fileCount: parsedDiff.fileCount,
+      additions: parsedDiff.additions,
+      deletions: parsedDiff.deletions,
+      renderedItems: nativeReviewDiffData.rows.length,
+    });
     logReviewDiffDiagnostic("parsed diff files", {
       selectedSectionId: selectedSection?.id ?? null,
       fileCount: parsedDiff.fileCount,
       renderableFileCount: parsedDiff.files.length,
     });
-  }, [parsedDiff, selectedSection?.id]);
+  }, [nativeReviewDiffData.rows.length, parsedDiff, selectedSection?.id]);
 
   return {
     parsedDiff,

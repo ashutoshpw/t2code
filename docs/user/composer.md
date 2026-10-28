@@ -50,6 +50,16 @@ also send files to T2 Code through another app's system share sheet.
 
 See [images and videos](#images-and-videos-in-messages) for previewing and saving media.
 
+## Spaces context
+
+On web and desktop, type `@` to find a Spaces page or block in the chat's environment.
+Enable Spaces in **Settings → Labs** first. Child pages are excluded unless you turn
+on **Include child pages** for that selection; you can change this in the draft
+before sending. The message receives a bounded snapshot captured at send time.
+Opening its chip visits the current source, so its content may have changed since
+the message. See [Spaces context](./spaces.md#use-a-page-or-block-in-chat) for scope,
+shortened excerpts and unavailable sources.
+
 ## Send while the agent is working
 
 On web and desktop, choose **Settings → Chat → Follow-up behavior** to queue
@@ -196,6 +206,52 @@ stash menu when there are several.
 Stashes containing uploaded files must be restored in their original environment.
 Those files are retained for 24 hours. After an upload expires, restore the prompt
 and use **Attach again** or remove the missing file before sending.
+
+Normal sends, proposed-plan follow-ups and multi-model sends first save a recovery
+copy in the prompt stash before clearing the composer. If sending fails, your newer typing stays in
+place and the original prompt remains available after a reload. Open the stash in
+the original thread or draft and restore into an empty composer. Restoration copies
+the prompt; delete the recovery entry when you no longer need it. If the connection
+closed during a send, check the thread before sending the recovery copy again. A
+restored Spaces reference captures current content on the next send; an old snapshot is not reused
+as current source.
+
+Multi-model recovery records which sends the environment accepted, which definitely
+failed or were never sent, and which have an uncertain outcome. Default restoration
+selects only failed and unsent models. For an uncertain model, use **Open thread** to
+check what happened; **Restore this model anyway** asks you to confirm a retry that
+could create a duplicate thread. Accepted models are never selected by recovery.
+Nothing retries automatically. A new retry captures current referenced content.
+Retry outcomes stay in the stash even when accepted, so an older restored prompt
+cannot resend them after a reload. Review newer recovery entries before retrying
+an older copy; delete copies only when you no longer need that protection.
+
+Saved model choices, options and workspace must still match before a recovered
+fanout can send. If they cannot be restored exactly, sending stops with the draft
+intact. Use **Restore only this model** for a particular failed model, or open a fresh
+draft to choose different models. Manual stashing of a recovered fanout is refused
+rather than dropping its exact retry choices. Multi-model sends support at most 16
+models; very large model options can also exceed the recovery limit.
+
+Recovery shares the stash's 20-entry limit and browser storage quota. Sending stops
+with the composer intact if a durable recovery copy cannot be saved, including
+when images exceed the recovery size limit. Recovery keeps original image bytes and
+currently supports roughly 2 MB of combined original images. Free stash space or
+reduce attachments and try again. Clearing browser site data removes these local copies. Expired file
+uploads still need **Attach again**.
+
+If a run starts or leaves the queue while you are editing its message, the unsaved
+edit is saved separately in the prompt stash. Your normal composer stays intact.
+Restore the copy in the original thread into an empty composer, then send it as a
+new message; it does not update the run that already left the queue. While a queued edit stays open, save it or its recovery copy before using stash or restore. You can still delete other stash entries to free space. If an earlier
+save reply was lost, check the thread before sending the copy again.
+
+Recovery waits for local file uploads and saves original image bytes, subject to
+the same image limit and storage quota above. If it cannot finish, the edit stays
+open with **Retry recovery**. Keep that tab open and free stash space, reconnect,
+or reduce attachments before retrying. Navigation inside the app keeps the edit;
+a browser warning before reload or close is best effort. Closing the tab or a
+browser crash before recovery succeeds can still lose unsaved local bytes.
 
 ## Voice input on iPhone
 

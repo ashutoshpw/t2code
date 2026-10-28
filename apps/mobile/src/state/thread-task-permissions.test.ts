@@ -9,6 +9,7 @@ import {
   RuntimeRequestId,
   TurnItemId,
   type ModelSelection,
+  type ComposerContextDraft,
   type OrchestrationV2ThreadProjection,
   type ServerConfig,
 } from "@t2code/contracts";
@@ -29,11 +30,14 @@ const state = vi.hoisted(() => ({
     text: "Keep my draft",
     attachments: [] as DraftComposerImageAttachment[],
     modelSelection: undefined as ModelSelection | undefined,
+    contextDraft: undefined as ComposerContextDraft | undefined,
   },
   serverConfig: null as ServerConfig | null,
   projection: null as OrchestrationV2ThreadProjection | null,
   pendingRequests: { approvals: [], userInputs: [] } as PendingThreadRequests,
   enqueue: vi.fn(async () => undefined),
+  capture: vi.fn(),
+  alert: vi.fn(),
   clearDraft: vi.fn(),
   approve: vi.fn(),
   answer: vi.fn(),
@@ -53,6 +57,7 @@ const state = vi.hoisted(() => ({
     modelSelection: { instanceId: "codex", model: "gpt-5.4" },
     runtimeMode: "full-access",
     interactionMode: "default",
+    activeProviderThreadId: "provider-thread",
     runtime: null,
     latestRun: null,
   },
@@ -80,6 +85,7 @@ vi.mock("./preferences", async () => {
   const { Atom, AsyncResult } = await import("effect/reactivity");
   return { mobilePreferencesAtom: Atom.make(AsyncResult.success({})) };
 });
+vi.mock("../components/ui/Dialog", () => ({ alert: state.alert }));
 vi.mock("react-native", () => ({ Alert: { alert: vi.fn() } }));
 vi.mock("@effect/atom-react", async () => {
   const { appAtomRegistry } = await import("./atom-registry");
@@ -127,6 +133,7 @@ vi.mock("./use-thread-outbox", async () => {
   const { Atom } = await import("effect/reactivity");
   return { dispatchingQueuedMessageIdAtom: Atom.make(null), useThreadOutboxMessages: () => ({}) };
 });
+vi.mock("./spaces", () => ({ prepareMobileComposerContext: state.capture }));
 vi.mock("./thread-outbox", () => ({ enqueueThreadOutboxMessage: state.enqueue }));
 vi.mock("./composer-attachment-uploads", async () => {
   const { Atom } = await import("effect/reactivity");
@@ -142,6 +149,7 @@ vi.mock("./use-composer-drafts", async () => {
     composerDraftsAtom: Atom.make({}),
     composerContextImportsAtom: Atom.make({}),
     getComposerDraftSnapshot: () => state.draft,
+    sameComposerDraftState: (left: unknown, right: unknown) => left === right,
     clearComposerDraftContent: state.clearDraft,
     clearComposerDraft: state.clearDraft,
     setComposerDraftText: (_key: string, text: string) => {
@@ -180,7 +188,12 @@ import { useSelectedThreadRequests } from "./use-selected-thread-requests";
 beforeEach(() => {
   state.grantedEnvironments = new Set(["primary"]);
   state.connectionState = "connected";
-  state.draft = { text: "Keep my draft", attachments: [], modelSelection: undefined };
+  state.draft = {
+    text: "Keep my draft",
+    attachments: [],
+    modelSelection: undefined,
+    contextDraft: undefined,
+  };
   state.projection = null;
   state.serverConfig = {
     providers: [{ instanceId: "codex", driver: "codex", enabled: true }],
@@ -269,6 +282,7 @@ describe("mobile task permissions", () => {
         threadId: "thread",
         text: "Keep my draft",
       }),
+      expect.anything(),
     );
   });
 
@@ -424,7 +438,182 @@ describe("mobile handoff preview and submission", () => {
         modelSelection: selection,
         text: "Keep my draft",
       }),
+      expect.anything(),
     );
     expect(state.clearDraft).toHaveBeenCalledTimes(1);
   });
 });
+
+it("keeps newer native typing when an earlier send is still being prepared or persisted", async () => {
+  state.grantedEnvironments.add("secondary");
+  const reply = Promise.withResolvers<undefined>();
+  state.enqueue.mockImplementationOnce(() => reply.promise);
+  const composer = useThreadComposerState();
+  const pending = composer.onSendMessage();
+  state.draft = { ...state.draft, text: "Newer typing" };
+  reply.resolve(undefined);
+  expect(await pending).toBe("message");
+  expect(state.clearDraft).not.toHaveBeenCalled();
+  expect(state.draft.text).toBe("Newer typing");
+});
+
+it("releases a failed send for an explicit retry without clearing newer text or selectors", async () => {
+  state.grantedEnvironments.add("secondary");
+  state.draft = { ...state.draft, contextDraft: selectorDraft() };
+  const reply = Promise.withResolvers<undefined>();
+  state.enqueue.mockImplementationOnce(() => reply.promise);
+  const composer = useThreadComposerState();
+  const pending = composer.onSendMessage();
+  expect(await composer.onSendMessage()).toBeNull();
+  expect(state.enqueue).toHaveBeenCalledOnce();
+
+  const newerContext: ComposerContextDraft = {
+    ...selectorDraft(),
+    selectors: selectorDraft().selectors.map((selector) => ({
+      ...selector,
+      includeChildPages: true,
+    })),
+  };
+  state.draft = { ...state.draft, text: "Newer typing", contextDraft: newerContext };
+  reply.reject(new Error("Outbox persistence failed"));
+  expect(await pending).toBeNull();
+  expect(state.clearDraft).not.toHaveBeenCalled();
+  expect(state.draft.text).toBe("Newer typing");
+  expect(state.draft.contextDraft).toEqual(newerContext);
+
+  expect(await composer.onSendMessage()).toBe("message");
+  expect(state.enqueue).toHaveBeenCalledTimes(2);
+  expect(state.enqueue).toHaveBeenLastCalledWith(
+    expect.objectContaining({ text: "Newer typing" }),
+    expect.objectContaining({ contextDraft: newerContext }),
+  );
+  expect(state.clearDraft).toHaveBeenCalledOnce();
+});
+
+function selectorDraft(): ComposerContextDraft {
+  return {
+    selectors: [
+      {
+        version: 1,
+        selection: "current",
+        kind: "page",
+        contextId: "page" as never,
+        label: "Page",
+        environmentId: "secondary" as never,
+        pageId: "source" as never,
+        includeChildPages: false,
+      },
+    ],
+    records: [],
+  };
+}
+
+it("refuses selector-only context as approval feedback without capture, send, or draft clearing", async () => {
+  state.grantedEnvironments.add("secondary");
+  state.draft = {
+    ...state.draft,
+    text: "Use [Page](t2-context://v1/page/page)",
+    contextDraft: selectorDraft(),
+  };
+  const composer = useThreadComposerState();
+  const requests = useSelectedThreadRequests();
+  const approval = { ...state.pendingRequests.approvals[0]!, supportsFeedback: true };
+  const flags: boolean[] = [];
+  await composer.onSendMessage(undefined, async (text, hasAddedContext) => {
+    flags.push(hasAddedContext);
+    if (hasAddedContext) return false;
+    return (await sendApprovalFeedback(approval, text, requests.onRespondToApproval))
+      ? "responded"
+      : false;
+  });
+  expect(flags).toEqual([true]);
+  expect(state.approve).not.toHaveBeenCalled();
+  expect(state.capture).not.toHaveBeenCalled();
+  expect(state.enqueue).not.toHaveBeenCalled();
+  expect(state.clearDraft).not.toHaveBeenCalled();
+  expect(state.draft.contextDraft).toEqual(selectorDraft());
+});
+
+it("retains selectors added while an approval-feedback response is deferred", async () => {
+  state.grantedEnvironments.add("secondary");
+  const entered = Promise.withResolvers<undefined>();
+  const reply = Promise.withResolvers<ReturnType<typeof AsyncResult.success<undefined>>>();
+  state.approve.mockImplementationOnce(() => {
+    entered.resolve(undefined);
+    return reply.promise;
+  });
+  const composer = useThreadComposerState();
+  const requests = useSelectedThreadRequests();
+  const approval = { ...state.pendingRequests.approvals[0]!, supportsFeedback: true };
+  const pending = composer.onSendMessage(undefined, async (text) =>
+    (await sendApprovalFeedback(approval, text, requests.onRespondToApproval))
+      ? "responded"
+      : false,
+  );
+  await entered.promise;
+  state.draft = { ...state.draft, contextDraft: selectorDraft() };
+  reply.resolve(AsyncResult.success(undefined));
+  await pending;
+  expect(state.approve).toHaveBeenCalledOnce();
+  expect(state.capture).not.toHaveBeenCalled();
+  expect(state.enqueue).not.toHaveBeenCalled();
+  expect(state.clearDraft).not.toHaveBeenCalled();
+  expect(state.draft.contextDraft).toEqual(selectorDraft());
+});
+
+it.each(["selectors", "records"] as const)(
+  "refuses /feedback with added %s while retaining the draft",
+  async (kind) => {
+    state.grantedEnvironments.add("secondary");
+    const selected = selectorDraft();
+    const contextDraft: ComposerContextDraft =
+      kind === "selectors"
+        ? selected
+        : {
+            selectors: [],
+            records: [
+              {
+                version: 1,
+                kind: "page",
+                contextId: "page" as never,
+                label: "Page",
+                title: "Page",
+                environmentId: "secondary" as never,
+                spaceId: "space" as never,
+                pageId: "source" as never,
+                snapshot: {
+                  version: 1,
+                  includeChildPages: false,
+                  truncated: false,
+                  text: "Copied snapshot",
+                  contentHash: `sha256:${"a".repeat(64)}`,
+                  sources: [
+                    {
+                      environmentId: "secondary" as never,
+                      spaceId: "space" as never,
+                      pageId: "source" as never,
+                      revision: 1,
+                      blockIds: [],
+                    },
+                  ],
+                },
+              },
+            ],
+          };
+    state.draft = {
+      ...state.draft,
+      text: "/feedback Inspect [Page](t2-context://v1/page/page)",
+      contextDraft,
+    };
+    const draft = structuredClone(state.draft);
+    const approvalGuard = vi.fn(async () => "responded" as const);
+    expect(await useThreadComposerState().onSendMessage(undefined, approvalGuard)).toBeNull();
+    expect(state.feedback).not.toHaveBeenCalled();
+    expect(state.clearDraft).not.toHaveBeenCalled();
+    expect(state.capture).not.toHaveBeenCalled();
+    expect(state.enqueue).not.toHaveBeenCalled();
+    expect(approvalGuard).not.toHaveBeenCalled();
+    expect(state.alert).toHaveBeenCalledOnce();
+    expect(state.draft).toEqual(draft);
+  },
+);

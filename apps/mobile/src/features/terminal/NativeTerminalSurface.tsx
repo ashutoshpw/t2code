@@ -25,6 +25,7 @@ import {
   type TerminalTheme,
 } from "./terminalTheme";
 import { useTerminalSurfaceBuffer } from "./useTerminalSurfaceBuffer";
+import { terminalDebugLog } from "./terminalDebugLog";
 import { createTerminalOutputWriter } from "./terminalOutputWriter";
 
 interface TerminalInputEvent {
@@ -205,6 +206,7 @@ const ReadyTerminalSurface = memo(function ReadyTerminalSurface(props: ReadyTerm
   const theme = props.theme ?? getMobileTerminalTheme(themeId, themeAppearance);
   const { onInput, onResize } = props;
   const NativeTerminalSurfaceView = resolveNativeTerminalSurfaceView();
+  const hasNativeSurface = Boolean(NativeTerminalSurfaceView);
   const gridCols = props.grid?.cols;
   const gridRows = props.grid?.rows;
   const sharedGrid = useMemo(
@@ -236,10 +238,23 @@ const ReadyTerminalSurface = memo(function ReadyTerminalSurface(props: ReadyTerm
     });
   }, [nativeReady, props.output, streaming]);
 
+  // oxlint-disable-next-line t2code/react-effect-budget -- records native surface state for terminal debugging
+  useEffect(() => {
+    terminalDebugLog("native:surface", {
+      terminalKey: props.terminalKey,
+      native: hasNativeSurface,
+      hardwareKeyRevision: getNativeTerminalHardwareKeyRevision(),
+      bufferLen: props.buffer.length,
+      isRunning: props.isRunning,
+    });
+  }, [props.buffer.length, props.isRunning, props.terminalKey]);
   const handleNativeInput = (event: NativeSyntheticEvent<TerminalInputEvent>) => {
     if (!props.isRunning || props.readOnly) {
       return;
     }
+    terminalDebugLog("native:onInput", {
+      codes: Array.from(event.nativeEvent.data, (char) => char.codePointAt(0)),
+    });
     onInput(event.nativeEvent.data);
   };
   const handleNativeResize = (event: NativeSyntheticEvent<TerminalResizeEvent>) => {

@@ -429,6 +429,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesSearch,
       WS_METHODS.spacesAssetsGet,
       WS_METHODS.spacesAssetsUploadGet,
+      WS_METHODS.spacesContextCapture,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
       Effect.provide(
@@ -582,6 +583,7 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
             "spaces.references.resolve": deniedHandler,
             "spaces.trash.list": deniedHandler,
             "spaces.search": deniedHandler,
+            "spaces.context.capture": deniedHandler,
           }),
           RpcAuthorization.layer([AuthOrchestrationOperateScope]),
         ),

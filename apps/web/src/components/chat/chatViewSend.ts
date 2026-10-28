@@ -1,3 +1,4 @@
+export { draftFanoutSelectionsAtom } from "../../lib/composerFanout";
 import {
   CommandId,
   type EnvironmentId,
@@ -8,21 +9,13 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
 } from "@t2code/contracts";
 import {
-  wasBootstrapThreadDeleted,
-  wasBootstrapThreadNotCreated,
-} from "@t2code/client-runtime/errors";
-import { Atom } from "effect/reactivity";
-import {
   squashAtomCommandFailure,
   type AtomCommandResult,
 } from "@t2code/client-runtime/state/runtime";
-import { readLocalApi } from "../../localApi";
 import { getUploadedAttachments } from "../../lib/attachmentUploadQueue";
 import { findRevertCheckpoint } from "../../session-logic";
 import { type ChatMessage } from "../../types";
 import { randomUUID } from "~/lib/utils";
-import { stackedThreadToast, toastManager } from "../ui/toast";
-import { newThreadId } from "~/lib/utils";
 import {
   type ComposerFileAttachment,
   type ComposerImageAttachment,
@@ -37,8 +30,6 @@ import {
   formatOutgoingPrompt,
   getAntigravitySendBlockReason,
   resolveComposerInteractionMode,
-  cloneComposerImageForRetry,
-  type ComposerSendSnapshot,
   readFileAsDataUrl,
   prepareRevertedMessageAttachments,
   waitForRevertedMessage,
@@ -48,104 +39,19 @@ import { recallableComposerPrompt } from "./composerPromptHistory";
 
 // Kept per route so a send in flight, and the multiple-model selections, survive
 // ChatView remounting while the user navigates.
-export const draftFanoutSelectionsAtom = Atom.family((_routeKey: string) =>
-  Atom.make<ReadonlyArray<ModelSelection> | null>(null).pipe(Atom.keepAlive),
-);
 const draftSendStateByRouteKey = new Map<
   string,
   {
     readonly sendInFlight: { current: boolean };
-    readonly uncertainSubmissions: { current: Map<string, ThreadId> };
   }
 >();
 export function draftSendState(routeKey: string) {
   let state = draftSendStateByRouteKey.get(routeKey);
   if (!state) {
-    state = { sendInFlight: { current: false }, uncertainSubmissions: { current: new Map() } };
+    state = { sendInFlight: { current: false } };
     draftSendStateByRouteKey.set(routeKey, state);
   }
   return state;
-}
-
-/**
- * Starts one thread of a multiple-model send. A request that may have
- * reached the server before failing is remembered by `retryKey`, so sending
- * again cannot silently create a duplicate thread; its failure toast offers
- * to open that thread or to allow the retry.
- */
-export async function startFanoutThread(input: {
-  readonly retryKey: string;
-  readonly model: string;
-  readonly uncertainSubmissions: Map<string, ThreadId>;
-  readonly start: (threadId: ThreadId) => Promise<AtomCommandResult<unknown, unknown>>;
-  readonly openThread: (threadId: ThreadId) => void;
-}): Promise<boolean> {
-  const { retryKey, uncertainSubmissions } = input;
-  const uncertainThreadId = uncertainSubmissions.get(retryKey);
-  const targetThreadId = uncertainThreadId ?? newThreadId();
-  let requestMayHaveStarted = false;
-  try {
-    if (uncertainThreadId) {
-      throw new Error(
-        "The previous request may have started. Open its thread to check before sending again.",
-      );
-    }
-    requestMayHaveStarted = true;
-    const result = await input.start(targetThreadId);
-    if (result._tag === "Failure") {
-      const error = squashAtomCommandFailure(result);
-      if (wasBootstrapThreadDeleted(error) || wasBootstrapThreadNotCreated(error)) {
-        requestMayHaveStarted = false;
-      }
-      throw error;
-    }
-    return true;
-  } catch (error) {
-    if (requestMayHaveStarted && !uncertainSubmissions.has(retryKey)) {
-      uncertainSubmissions.set(retryKey, targetThreadId);
-    }
-    const retainedThreadId = uncertainSubmissions.get(retryKey);
-    const failureToastId = toastManager.add(
-      stackedThreadToast({
-        type: "error",
-        title: `Could not start ${input.model}`,
-        description: error instanceof Error ? error.message : "Failed to send message.",
-        ...(retainedThreadId
-          ? {
-              timeout: 0,
-              data: {
-                secondaryActionProps: {
-                  children: "Allow retry",
-                  onClick: () => {
-                    void readLocalApi()
-                      ?.dialogs.confirm(
-                        "The previous request may already be running. Check its thread first. Allow another send that could create a duplicate thread?",
-                      )
-                      .then(
-                        (confirmed) => {
-                          if (
-                            confirmed &&
-                            uncertainSubmissions.get(retryKey) === retainedThreadId
-                          ) {
-                            uncertainSubmissions.delete(retryKey);
-                            toastManager.close(failureToastId);
-                          }
-                        },
-                        () => undefined,
-                      );
-                  },
-                },
-              },
-              actionProps: {
-                children: "Open thread",
-                onClick: () => input.openThread(retainedThreadId),
-              },
-            }
-          : {}),
-      }),
-    );
-    return false;
-  }
 }
 
 /**
@@ -249,28 +155,6 @@ export async function rewindToMessage(input: {
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Failed to revert thread state." };
   }
-}
-
-/**
- * Writes a failed send's composer contents back into its draft. Returns the
- * restored images, which are fresh copies so their preview URLs outlive the
- * optimistic row that held the originals.
- */
-export function restoreComposerDraft(
-  draftTarget: ScopedThreadRef | DraftId,
-  snapshot: ComposerSendSnapshot,
-): ComposerImageAttachment[] {
-  const store = useComposerDraftStore.getState();
-  const images = snapshot.images.map(cloneComposerImageForRetry);
-  store.setPrompt(draftTarget, snapshot.messageText);
-  store.addImages(draftTarget, images);
-  store.addFiles(draftTarget, snapshot.files);
-  store.setTerminalContexts(draftTarget, snapshot.terminalContexts);
-  store.setPreviewAnnotations(draftTarget, snapshot.previewAnnotations);
-  store.setReviewComments(draftTarget, snapshot.reviewComments);
-  store.setThreadContexts(draftTarget, snapshot.threadContexts);
-  store.setEnvironmentContexts(draftTarget, snapshot.environmentContexts);
-  return images;
 }
 
 export interface MultipleModelTarget {

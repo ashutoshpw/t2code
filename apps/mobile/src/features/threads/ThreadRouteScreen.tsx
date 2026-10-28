@@ -1,5 +1,7 @@
 import * as Dialog from "../../components/ui/Dialog";
 import { useRememberThreadProject } from "./useRememberThreadProject";
+import { terminalDebugLog } from "../terminal/terminalDebugLog";
+import { useThreadPromptLink } from "../prompt-links/useThreadPromptLink";
 import { useOpenPullRequest } from "../../native/useOpenPullRequest";
 import { makeTurnCommandMetadata } from "../../lib/commandMetadata";
 import { buildProjectThreadStartTurnInput } from "../../lib/projectThreadStartTurn";
@@ -269,6 +271,7 @@ function LiveThreadRouteController(props: ThreadRouteScreenProps) {
       ? null
       : scopedThreadKey(selectedThread.environmentId, selectedThread.id);
   const selectedThreadDetailState = useSelectedThreadDetailState();
+  useThreadPromptLink(params, routeThreadKey);
   const detailError = selectedThreadDetailState.error;
   const [errorBeforeConnected, setErrorBeforeConnected] = useState(() =>
     routeConnectionState === "connected" ? Option.none<string>() : detailError,
@@ -696,6 +699,12 @@ function ThreadRouteContent(
   };
 
   const handleOpenTerminal = (nextTerminalId?: string | null) => {
+    terminalDebugLog("terminal-menu:open-existing", {
+      terminalId: nextTerminalId ?? null,
+      hasThread: Boolean(selectedThread),
+      hasWorkspaceRoot: Boolean(selectedThreadProject?.workspaceRoot),
+    });
+
     if (
       !selectedThread ||
       !selectedThreadProject?.workspaceRoot ||
@@ -713,6 +722,12 @@ function ThreadRouteContent(
   };
 
   const handleOpenNewTerminal = () => {
+    terminalDebugLog("terminal-menu:open-new", {
+      hasThread: Boolean(selectedThread),
+      hasWorkspaceRoot: Boolean(selectedThreadProject?.workspaceRoot),
+      listedTerminalIds: terminalMenuSessions.map((session) => session.terminalId),
+    });
+
     if (
       !selectedThread ||
       !selectedThreadProject?.workspaceRoot ||
@@ -736,11 +751,22 @@ function ThreadRouteContent(
   };
 
   const handleRunProjectScript = async (script: ProjectScript) => {
+    terminalDebugLog("project-script:press", {
+      scriptId: script.id,
+      command: script.command,
+      hasThread: Boolean(selectedThread),
+      hasWorkspaceRoot: Boolean(selectedThreadProject?.workspaceRoot),
+    });
+
     if (
       !selectedThread ||
       !selectedThreadProject?.workspaceRoot ||
       !readEnvironmentScope(selectedThread.environmentId, AuthTerminalOperateScope)
     ) {
+      terminalDebugLog("project-script:abort", {
+        scriptId: script.id,
+        reason: "no-thread-workspace-or-terminal-access",
+      });
       return;
     }
 
@@ -778,6 +804,12 @@ function ThreadRouteContent(
         env,
         initialInput: projectScriptTerminalInput(script.command),
       },
+    });
+    terminalDebugLog("project-script:staged", {
+      scriptId: script.id,
+      terminalId: targetTerminalId,
+      cwd,
+      worktreePath: preferredWorktreePath,
     });
 
     void navigation.navigate("ThreadTerminal", {

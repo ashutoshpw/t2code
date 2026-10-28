@@ -3,6 +3,7 @@ import {
   matchComposerThreadItems,
 } from "@t2code/client-runtime/composerThreadItems";
 import { useAtomValue } from "@effect/atom-react";
+import { useSpaceContextSearch } from "../../spaces/useSpaceReferences";
 import { useState } from "react";
 import type {
   EnvironmentId,
@@ -70,6 +71,7 @@ export function useComposerMenuItems({
   selectedProviderSlashCommands,
   showSkillsInSlashMenu,
   questionAttachmentTarget,
+  spacesContextEnabled = true,
 }: {
   readonly composerTrigger: ComposerTrigger | null;
   readonly environmentId: EnvironmentId;
@@ -86,9 +88,11 @@ export function useComposerMenuItems({
   readonly selectedProviderSlashCommands: ServerProvider["slashCommands"];
   readonly showSkillsInSlashMenu: boolean;
   readonly questionAttachmentTarget: DraftId | null;
+  readonly spacesContextEnabled?: boolean;
 }) {
   // Thread mentions rank by recency as of when the composer mounted.
   const [now] = useState(() => Date.now());
+  const [includeChildPages, setIncludeChildPages] = useState(false);
   const composerTriggerKind = composerTrigger?.kind ?? null;
   const pathTriggerQuery = composerTrigger?.kind === "path" ? composerTrigger.query : "";
   const pullRequestTriggerQuery =
@@ -103,6 +107,13 @@ export function useComposerMenuItems({
   const settledPullRequestTextQuery =
     pullRequestTextQuery === debouncedPullRequestTextQuery ? pullRequestTextQuery : null;
   const isPathTrigger = composerTriggerKind === "path";
+  const debouncedSpaceQuery = useDebouncedValue(isPathTrigger ? pathTriggerQuery : null, 180);
+  const spaceSearch = useSpaceContextSearch(
+    environmentId,
+    spacesContextEnabled && isPathTrigger && debouncedSpaceQuery === pathTriggerQuery
+      ? pathTriggerQuery
+      : null,
+  );
   const environmentThreadShells = useThreadShells(isPathTrigger);
   // Mounts older settled threads matching the mention, which shells may leave out.
   useThreadSearch(isPathTrigger ? [environmentId] : [], pathTriggerQuery, { titlesOnly: true });
@@ -181,6 +192,69 @@ export function useComposerMenuItems({
   const items = ((): ComposerCommandItem[] => {
     if (!composerTrigger) return [];
     if (composerTrigger.kind === "path") {
+      const spaces: ComposerCommandItem[] = [];
+      const window = spaceSearch.window;
+      if (window?.status === "ready" && window.current()) {
+        spaces.push(
+          ...window.result.items.map((hit, index) => ({
+            id: `space:${hit.page.id}:${hit.blockId ?? "page"}`,
+            type: "space-context" as const,
+            label: hit.page.title || "Untitled page",
+            description: `${hit.blockId ? "Block" : "Page"}${includeChildPages ? " + child pages" : ""} · ${hit.snippet}`,
+            query: window.query,
+            select: (id: import("@t2code/contracts").ComposerContextId) => {
+              const selector = window.select(index, id, includeChildPages);
+              setIncludeChildPages(false);
+              return selector;
+            },
+          })),
+        );
+        if (window.result.items.length)
+          spaces.push({
+            id: "space:include-children",
+            type: "space-action",
+            query: window.query,
+            label: `Include child pages: ${includeChildPages ? "on" : "off"}`,
+            description: "For the next Spaces selection; capture limits still apply",
+            perform: () => setIncludeChildPages(!includeChildPages),
+          });
+        if (window.result.nextCursor)
+          spaces.push({
+            id: "space:next",
+            type: "space-action",
+            query: composerTrigger.query,
+            label: "More Spaces results",
+            description: window.result.items.length
+              ? "Continue search"
+              : "No hits in this window; continue search",
+            perform: () => {
+              void spaceSearch.next();
+            },
+          });
+      } else if (window && window.status !== "idle" && !spaceSearch.loading) {
+        spaces.push({
+          id: "space:status",
+          type: "space-notice",
+          label:
+            window.status === "building"
+              ? "Spaces search is building"
+              : window.status === "invalid-query"
+                ? "Spaces query exceeds search limits"
+                : "Spaces search unavailable",
+          description: "Files and threads can still be searched",
+        });
+        if (window.status === "building" || window.status === "unavailable")
+          spaces.push({
+            id: "space:retry",
+            type: "space-action",
+            query: composerTrigger.query,
+            label: "Retry Spaces search",
+            description: "Request one search window",
+            perform: () => {
+              void spaceSearch.retry();
+            },
+          });
+      }
       return [
         ...matchComposerThreadItems({
           shells: environmentThreadShells,
@@ -207,6 +281,7 @@ export function useComposerMenuItems({
           label: basenameOfPath(entry.path),
           description: entry.path.slice(0, Math.max(0, entry.path.lastIndexOf("/"))),
         })),
+        ...spaces,
       ];
     }
     if (composerTrigger.kind === "slash-command") {
@@ -350,7 +425,9 @@ export function useComposerMenuItems({
     return [];
   })();
   const isLoading =
-    (composerTriggerKind === "path" && pathTriggerQuery.length > 0 && workspaceEntries.isPending) ||
+    (composerTriggerKind === "path" &&
+      pathTriggerQuery.length > 0 &&
+      (workspaceEntries.isPending || spaceSearch.loading)) ||
     (composerTriggerKind === "pull-request" &&
       pullRequestProjectId !== null &&
       pullRequestRepository !== null &&

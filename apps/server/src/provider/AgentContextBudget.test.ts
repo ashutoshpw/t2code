@@ -11,6 +11,9 @@ import { ServerConfig } from "../config.ts";
 import { DeviceService } from "../device/DeviceService.ts";
 import { ServerEnvironment } from "../environment/ServerEnvironment.ts";
 import { GitWorkflowService } from "../git/GitWorkflowService.ts";
+import { SpacesService } from "../spaces/SpacesService.ts";
+import { WorkspacePaths } from "../workspace/WorkspacePaths.ts";
+import { ProjectFaviconResolver } from "../project/ProjectFaviconResolver.ts";
 import * as McpHttpServer from "../mcp/McpHttpServer.ts";
 import { PreviewAutomationBroker } from "../mcp/PreviewAutomationBroker.ts";
 import {
@@ -45,6 +48,9 @@ import budget from "./agentContextBudget.json" with { type: "json" };
 
 // Registration only stores tool definitions, so the handlers' services are never called.
 const toolHandlerServices = Layer.mergeAll(
+  Layer.mock(SpacesService)({}),
+  Layer.mock(WorkspacePaths)({}),
+  Layer.mock(ProjectFaviconResolver)({}),
   Layer.mock(DeviceService)({}),
   Layer.mock(DocumentText)({}),
   Layer.mock(GitVcsDriver)({}),
