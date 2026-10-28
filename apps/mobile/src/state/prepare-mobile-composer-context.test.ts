@@ -25,6 +25,10 @@ vi.mock("./atom-registry", () => ({
 vi.mock("./server", () => ({ environmentServerConfigsAtom: {} }));
 vi.mock("./session", () => ({ readEnvironmentScope: () => state.read }));
 vi.mock("../connection/runtime", () => ({ connectionAtomRuntime: {} }));
+vi.mock("../connection/catalog", () => ({ environmentCatalog: {} }));
+vi.mock("./presentation", () => ({ environmentPresentations: {} }));
+vi.mock("../lib/runtime", () => ({ runtime: {} }));
+vi.mock("../lib/uuid", () => ({ uuidv4: () => "unused-native-view-id" }));
 vi.mock("@t2code/client-runtime/state/spaces", () => ({
   createSpacesEnvironmentAtoms: () => ({ captureSession: "session", capture: "capture" }),
 }));
@@ -35,7 +39,7 @@ vi.mock("@t2code/client-runtime/state/runtime", () => ({
     return { _tag: "Failure" };
   },
 }));
-import { prepareMobileComposerContext } from "./spaces";
+import { prepareMobileComposerContext } from "./prepare-mobile-composer-context";
 it.each(["missing-flag", "wrong-version", "no-inline", "denied"])(
   "retains selectors and makes no capture RPC for %s",
   async (reason) => {

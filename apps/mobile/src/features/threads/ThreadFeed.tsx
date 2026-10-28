@@ -63,8 +63,10 @@ import {
   collectComposerContextReferences,
   replaceComposerContextReferences,
   formatComposerContextReference,
+  sanitizeComposerContextLabel,
 } from "@t2code/shared/composerContextReferences";
 import { ComposerContextSheet } from "../../components/ComposerContextSheet";
+import { composerContextEntry, spaceContextEntry } from "../../lib/composerSpaceContext";
 import { writeComposerContextClipboard } from "../../lib/composerContextClipboard";
 import {
   codexArtifactTemplatePresentationLabel,
@@ -1879,8 +1881,10 @@ function UserMessageContent(props: UserMessageContentProps) {
   const liveText = useLiveThreadLinkLabels(props.text, props.environmentId);
   const threadIcons = useThreadChipIcons(props.environmentId, liveText, props.context?.records);
   const text = replaceComposerContextReferences(liveText, (ref) => {
-    const available = props.context?.records.some((record) => record.contextId === ref.contextId);
-    return `[${ref.label}${available ? "" : " (unavailable)"}](${formatComposerContextHref(ref.kind, ref.contextId)})`;
+    const entry = composerContextEntry(ref.kind, ref.contextId, props.context);
+    const space = spaceContextEntry(entry);
+    const label = space?.label || (space && "title" in space ? space.title : ref.label);
+    return `[${sanitizeComposerContextLabel(label, "Context")}${entry ? "" : " (unavailable)"}](${formatComposerContextHref(ref.kind, ref.contextId)})`;
   });
   const onLinkPress = (href: string) => {
     const reference = parseComposerContextHref(href);
@@ -1971,6 +1975,11 @@ function UserMessageContent(props: UserMessageContentProps) {
       {selected ? (
         <ComposerContextSheet
           label={selected.label}
+          sourceCurrent={() =>
+            collectComposerContextReferences(props.text).some(
+              (reference) => reference.contextId === selected.contextId,
+            )
+          }
           environmentId={props.environmentId}
           records={props.context?.records}
           record={props.context?.records.find((record) => record.contextId === selected.contextId)}

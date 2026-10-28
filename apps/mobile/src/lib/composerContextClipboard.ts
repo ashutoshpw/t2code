@@ -2,6 +2,10 @@ import { requireNativeModule } from "expo";
 import {
   type ComposerContextClipboardFragment,
   type ComposerContextRecord,
+  type SpaceContextSelector,
+  ComposerContextId,
+  SPACE_CONTEXT_LIMITS,
+  PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_FILE_BYTES,
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
@@ -13,7 +17,12 @@ import {
   decodeComposerContextFragment,
   encodeComposerContextFragment,
 } from "@t2code/shared/composerContextClipboard";
-import { threadContextsOutsideEnvironment } from "@t2code/shared/composerContextReferences";
+import {
+  collectComposerContextReferences,
+  formatComposerContextReference,
+  replaceComposerContextReferences,
+  threadContextsOutsideEnvironment,
+} from "@t2code/shared/composerContextReferences";
 import { executeAtomQuery, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
 import * as Option from "effect/Option";
@@ -68,11 +77,83 @@ export async function importComposerContextClipboard(
   existingContextCount = 0,
   destinationEnvironmentId?: EnvironmentId,
 ) {
-  const fragment =
-    decodeComposerContextFragment(input.fragment) ?? decodeComposerContextClipboardHtml(input.html);
-  if (!fragment) return null;
+  const primary = decodeComposerContextFragment(input.fragment);
+  const fragment = primary ?? decodeComposerContextClipboardHtml(input.html);
+  const references = collectComposerContextReferences(input.text);
+  const spaceReferences = references.filter((ref) => ref.kind === "page" || ref.kind === "block");
+  if (!fragment) {
+    if (spaceReferences.length)
+      throw new Error("Spaces context cannot be hydrated. Copy the reference again.");
+    return null;
+  }
+  if (input.text.length > PROVIDER_SEND_TURN_MAX_INPUT_CHARS)
+    throw new Error("Context text is too large to paste.");
+  const selectors = fragment.selectors ?? [];
+  if (
+    new TextEncoder().encode(JSON.stringify(selectors)).byteLength >
+    SPACE_CONTEXT_LIMITS.maxEnvelopeBytes
+  )
+    throw new Error("Selector context is too large to paste.");
+  // Inspect raw identities before forward-compatible decoding can omit an unsupported record.
+  const rawText = primary
+    ? input.fragment
+    : decodeURIComponent(/data-t2-context-fragment=["']([^"']+)["']/.exec(input.html)?.[1] ?? "");
+  const raw: { records: readonly unknown[]; selectors?: readonly Record<string, unknown>[] } =
+    JSON.parse(rawText);
+  const rawEntries = [...raw.records, ...(raw.selectors ?? [])];
+  const rawIds = rawEntries.flatMap((entry) =>
+    typeof entry === "object" &&
+    entry !== null &&
+    "contextId" in entry &&
+    typeof entry.contextId === "string"
+      ? [entry.contextId]
+      : [],
+  );
+  if (new Set(rawIds).size !== rawIds.length)
+    throw new Error("Context contains duplicate or ambiguous identities.");
+  for (const selector of raw.selectors ?? []) {
+    const keys = new Set([
+      "version",
+      "selection",
+      "kind",
+      "contextId",
+      "label",
+      "environmentId",
+      "includeChildPages",
+      selector.kind === "page" ? "pageId" : "blockId",
+    ]);
+    if (Object.keys(selector).some((key) => !keys.has(key)))
+      throw new Error("This selector shape is not supported. Copy its completed context instead.");
+  }
+  const entries = [...fragment.records, ...selectors];
+  for (const ref of spaceReferences) {
+    if (
+      entries.filter((entry) => entry.contextId === ref.contextId && entry.kind === ref.kind)
+        .length !== 1
+    )
+      throw new Error("A Spaces reference is missing its context or selector.");
+  }
   const selected = referencedComposerContext(input.text, { version: 1, records: fragment.records });
   const imported = reidentifyComposerContext(input.text, selected?.records ?? [], uuidv4);
+  const selectedSelectors = selectors.filter((selector) =>
+    references.some((ref) => ref.contextId === selector.contextId && ref.kind === selector.kind),
+  );
+  const importedSelectors: SpaceContextSelector[] = selectedSelectors.map((selector) => ({
+    ...selector,
+    contextId: ComposerContextId.make(uuidv4()),
+  }));
+  const selectorIds = new Map(
+    selectedSelectors.map((selector, index) => [
+      selector.contextId,
+      importedSelectors[index]!.contextId,
+    ]),
+  );
+  const text = replaceComposerContextReferences(imported.text, (ref) =>
+    formatComposerContextReference({
+      ...ref,
+      contextId: selectorIds.get(ref.contextId) ?? ref.contextId,
+    }),
+  );
   const skippedThreads =
     destinationEnvironmentId === undefined
       ? []
@@ -83,7 +164,10 @@ export async function importComposerContextClipboard(
         });
   const skippedIds = new Set(skippedThreads.map((record) => record.contextId));
   const retained = imported.context.records.filter((record) => !skippedIds.has(record.contextId));
-  if (existingContextCount + retained.length > COMPOSER_CONTEXT_MAX_RECORDS)
+  if (
+    existingContextCount + retained.length + importedSelectors.length >
+    COMPOSER_CONTEXT_MAX_RECORDS
+  )
     throw new Error("Remove some context items from the draft before pasting more.");
   const attachments: DraftComposerAttachment[] = [];
   const records: ComposerContextRecord[] = [];
@@ -109,8 +193,11 @@ export async function importComposerContextClipboard(
     // The last copy can be cancelled after its own check; a cancelled import must not return files nobody will release.
     checkAborted(signal);
     return {
-      text: imported.text,
+      text,
       context: { version: 1 as const, records },
+      ...(importedSelectors.length
+        ? { contextDraft: { selectors: importedSelectors, records: [] } }
+        : {}),
       attachments,
       failures,
       skippedThreads: skippedThreads.map((record) => record.title),

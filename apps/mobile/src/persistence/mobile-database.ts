@@ -1,13 +1,33 @@
-import type { EnvironmentId } from "@t2code/contracts";
+import { EnvironmentId } from "@t2code/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import type { SQLiteDatabase } from "expo-sqlite";
+import {
+  decodeSpaceDocumentDraft,
+  spaceDraftMaxBytes,
+  type SpaceDocumentDraft,
+  decodeSpaceStructureJournal,
+  spaceStructureMaxBytes,
+  type SpaceStructureJournal,
+} from "@t2code/client-runtime/spaces";
+import { SpacePageTarget } from "@t2code/contracts/spaces";
+
+import {
+  decodeNativeSpaceMediaRecords,
+  nativeSpaceMediaRecordBytes,
+  type NativeSpaceImageRecord,
+} from "../features/spaces/originals";
 
 const DATABASE_NAME = "t2code-client.db";
-const DATABASE_SCHEMA_VERSION = 1;
+const DATABASE_SCHEMA_VERSION = 4;
+const SPACE_STRUCTURE_MAX_ROWS = 8;
+const decodeEnvironmentId = Schema.decodeUnknownSync(EnvironmentId);
+const SPACE_DRAFT_TOTAL_BYTES = 16 * 1024 * 1024;
+const SPACE_DRAFT_MAX_ROWS = 128;
+const decodeDraftKey = Schema.decodeUnknownSync(SpacePageTarget, { onExcessProperty: "error" });
 const LEGACY_CACHE_DIRECTORIES = [
   "connection-shell-snapshots",
   "shell-snapshots",
@@ -31,6 +51,103 @@ export interface ClientCacheSummaryRow {
   readonly kind: ClientCacheKind;
   readonly recordCount: number;
   readonly payloadBytes: number;
+}
+
+async function readSpaceMedia(database: SQLiteDatabase) {
+  const rows = await database.getAllAsync<{
+    slot: number;
+    recordId: string;
+    sequence: number;
+    environmentId: string;
+    pageId: string;
+    payloadBytes: number;
+    actualBytes: number;
+    payload: string | null;
+  }>(
+    `SELECT slot, record_id AS recordId, sequence, environment_id AS environmentId, page_id AS pageId,
+       payload_bytes AS payloadBytes, LENGTH(CAST(payload AS BLOB)) AS actualBytes,
+       CASE WHEN LENGTH(CAST(payload AS BLOB)) <= ? THEN payload END AS payload
+     FROM spaces_media_originals ORDER BY slot LIMIT 3`,
+    nativeSpaceMediaRecordBytes,
+  );
+  const values = rows.map((row) => {
+    if (
+      row.payload === null ||
+      row.payloadBytes !== row.actualBytes ||
+      row.actualBytes < 1 ||
+      row.actualBytes > nativeSpaceMediaRecordBytes
+    )
+      throw new Error("Corrupt Spaces original record; all stored data retained");
+    const [record] = decodeNativeSpaceMediaRecords([JSON.parse(row.payload)]);
+    if (
+      !record ||
+      record.slot !== row.slot ||
+      record.id !== row.recordId ||
+      record.sequence !== row.sequence ||
+      record.key.environmentId !== row.environmentId ||
+      record.key.pageId !== row.pageId
+    )
+      throw new Error("Spaces original identity mismatch; all stored data retained");
+    draftKey(record.key);
+    return record;
+  });
+  return decodeNativeSpaceMediaRecords(values);
+}
+async function mutateSpaceMedia(
+  database: SQLiteDatabase,
+  record: NativeSpaceImageRecord,
+  expected: number | null,
+  remove = false,
+) {
+  const [value] = decodeNativeSpaceMediaRecords([record]);
+  if (!value) throw new Error("Missing Spaces original record");
+  draftKey(value.key);
+  const payload = JSON.stringify(value);
+  const bytes = new TextEncoder().encode(payload).byteLength;
+  if (bytes > nativeSpaceMediaRecordBytes)
+    throw new Error("Spaces original metadata exceeds its bound");
+  await database.withExclusiveTransactionAsync(async (transaction) => {
+    const all = await readSpaceMedia(transaction);
+    const previous = all.find((r) => r.slot === value.slot);
+    if (
+      expected === null
+        ? previous || all.some((r) => r.id === value.id) || value.sequence !== 1
+        : !previous ||
+          previous.id !== value.id ||
+          previous.sequence !== expected ||
+          value.sequence !== expected + (remove ? 0 : 1)
+    )
+      throw new Error("Spaces original changed; reload its exact intent");
+    if (remove)
+      await transaction.runAsync(
+        "DELETE FROM spaces_media_originals WHERE slot = ? AND record_id = ? AND sequence = ?",
+        value.slot,
+        value.id,
+        expected,
+      );
+    else {
+      decodeNativeSpaceMediaRecords([...all.filter((r) => r.slot !== value.slot), value]);
+      if (
+        previous &&
+        (JSON.stringify(previous.original) !== JSON.stringify(value.original) ||
+          JSON.stringify(previous.key) !== JSON.stringify(value.key) ||
+          JSON.stringify(previous.intent) !== JSON.stringify(value.intent) ||
+          previous.version !== value.version)
+      )
+        throw new Error("A retained original cannot be replaced");
+      await transaction.runAsync(
+        `INSERT INTO spaces_media_originals (slot, record_id, sequence, environment_id, page_id, payload, payload_bytes)
+        VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(slot) DO UPDATE SET record_id=excluded.record_id, sequence=excluded.sequence, environment_id=excluded.environment_id, page_id=excluded.page_id, payload=excluded.payload, payload_bytes=excluded.payload_bytes`,
+        value.slot,
+        value.id,
+        value.sequence,
+        value.key.environmentId,
+        value.key.pageId,
+        payload,
+        bytes,
+      );
+    }
+  });
 }
 
 export interface StoredPreferencesJson {
@@ -60,6 +177,12 @@ const MobileDatabaseOperation = Schema.Literals([
   "inspect-caches",
   "load-preferences",
   "save-preferences",
+  "load-space-media",
+  "write-space-media",
+  "load-space-draft",
+  "write-space-draft",
+  "load-space-structure",
+  "write-space-structure",
 ]);
 
 export class MobileDatabaseError extends Schema.TaggedError<MobileDatabaseError>()(
@@ -76,6 +199,74 @@ export class MobileDatabaseError extends Schema.TaggedError<MobileDatabaseError>
 
 function databaseError(operation: typeof MobileDatabaseOperation.Type) {
   return (cause: unknown) => new MobileDatabaseError({ operation, cause });
+}
+
+function draftKey(key: SpacePageTarget) {
+  const checked = decodeDraftKey(key);
+  if (Object.values(checked).some((value) => new TextEncoder().encode(value).byteLength > 256))
+    throw new Error("Spaces draft identity exceeds the storage limit");
+  return checked;
+}
+
+function structureKey(environmentId: EnvironmentId) {
+  const key = decodeEnvironmentId(environmentId);
+  if (new TextEncoder().encode(key).byteLength > 256)
+    throw new Error("Spaces journal identity exceeds the storage limit");
+  return key;
+}
+
+async function readSpaceStructure(database: SQLiteDatabase, environmentId: EnvironmentId) {
+  const row = await database.getFirstAsync<{
+    readonly schemaVersion: number;
+    readonly payloadBytes: number;
+    readonly actualBytes: number;
+    readonly payload: string | null;
+  }>(
+    `SELECT schema_version AS schemaVersion, payload_bytes AS payloadBytes,
+       LENGTH(CAST(payload AS BLOB)) AS actualBytes,
+       CASE WHEN LENGTH(CAST(payload AS BLOB)) <= ? THEN payload END AS payload
+     FROM spaces_structure_journals WHERE environment_id = ?`,
+    spaceStructureMaxBytes,
+    environmentId,
+  );
+  if (row === null) return null;
+  if (
+    row.schemaVersion !== 1 ||
+    row.actualBytes !== row.payloadBytes ||
+    row.actualBytes > spaceStructureMaxBytes ||
+    typeof row.payload !== "string"
+  )
+    throw new Error("Invalid Spaces journal; stored data has been retained");
+  return {
+    journal: decodeSpaceStructureJournal(JSON.parse(row.payload), environmentId),
+    bytes: row.actualBytes,
+  };
+}
+
+async function readSpaceDraft(database: SQLiteDatabase, key: SpacePageTarget) {
+  const row = await database.getFirstAsync<{
+    readonly schemaVersion: number;
+    readonly payloadBytes: number;
+    readonly actualBytes: number;
+    readonly payload: string | null;
+  }>(
+    `SELECT schema_version AS schemaVersion, payload_bytes AS payloadBytes,
+       LENGTH(CAST(payload AS BLOB)) AS actualBytes,
+       CASE WHEN LENGTH(CAST(payload AS BLOB)) <= ? THEN payload END AS payload
+     FROM spaces_page_drafts WHERE environment_id = ? AND page_id = ?`,
+    spaceDraftMaxBytes,
+    key.environmentId,
+    key.pageId,
+  );
+  if (row === null) return null;
+  if (
+    row.schemaVersion !== 1 ||
+    row.actualBytes !== row.payloadBytes ||
+    row.actualBytes > spaceDraftMaxBytes ||
+    typeof row.payload !== "string"
+  )
+    throw new Error("Invalid Spaces draft; stored data has been retained");
+  return { draft: decodeSpaceDocumentDraft(JSON.parse(row.payload), key), bytes: row.actualBytes };
 }
 
 interface LegacyCacheRecord {
@@ -195,6 +386,31 @@ async function migrateLegacyFileCaches(database: SQLiteDatabase): Promise<boolea
 export class MobileDatabase extends Context.Service<
   MobileDatabase,
   {
+    readonly loadSpaceMediaRecords: Effect.Effect<
+      readonly NativeSpaceImageRecord[],
+      MobileDatabaseError
+    >;
+    readonly writeSpaceMediaRecord: (
+      record: NativeSpaceImageRecord,
+      expected: number | null,
+    ) => Effect.Effect<void, MobileDatabaseError>;
+    readonly removeSpaceMediaRecord: (
+      record: NativeSpaceImageRecord,
+    ) => Effect.Effect<void, MobileDatabaseError>;
+    readonly loadSpaceStructureJournal: (
+      environmentId: EnvironmentId,
+    ) => Effect.Effect<SpaceStructureJournal | null, MobileDatabaseError>;
+    readonly writeSpaceStructureJournal: (
+      environmentId: EnvironmentId,
+      journal: SpaceStructureJournal,
+    ) => Effect.Effect<void, MobileDatabaseError>;
+    readonly loadSpacePageDraft: (
+      key: SpacePageTarget,
+    ) => Effect.Effect<SpaceDocumentDraft | null, MobileDatabaseError>;
+    readonly writeSpacePageDraft: (
+      key: SpacePageTarget,
+      draft: SpaceDocumentDraft | null,
+    ) => Effect.Effect<void, MobileDatabaseError>;
     readonly loadCache: (
       environmentId: EnvironmentId,
       kind: ClientCacheKind,
@@ -256,6 +472,8 @@ const makeAvailable = Effect.gen(function* () {
       const schema = await database.getFirstAsync<{ readonly user_version: number }>(
         "PRAGMA user_version",
       );
+      if ((schema?.user_version ?? 0) > DATABASE_SCHEMA_VERSION)
+        throw new Error("The mobile database was created by a newer app");
       await database.withExclusiveTransactionAsync(async (transaction) => {
         await transaction.execAsync(`
               CREATE TABLE IF NOT EXISTS client_cache (
@@ -276,19 +494,167 @@ const makeAvailable = Effect.gen(function* () {
                 payload TEXT NOT NULL,
                 updated_at INTEGER NOT NULL
               );
+
+              CREATE TABLE IF NOT EXISTS spaces_media_originals (
+                slot INTEGER PRIMARY KEY NOT NULL CHECK (slot IN (0,1)),
+                record_id TEXT NOT NULL UNIQUE,
+                sequence INTEGER NOT NULL CHECK (sequence >= 1),
+                environment_id TEXT NOT NULL,
+                page_id TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                payload_bytes INTEGER NOT NULL CHECK (payload_bytes BETWEEN 1 AND 34816),
+                CHECK (LENGTH(CAST(payload AS BLOB)) = payload_bytes)
+              );
+
+              CREATE TABLE IF NOT EXISTS spaces_page_drafts (
+                environment_id TEXT NOT NULL,
+                page_id TEXT NOT NULL,
+                schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+                payload TEXT NOT NULL,
+                payload_bytes INTEGER NOT NULL CHECK (payload_bytes BETWEEN 1 AND 2097152),
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (environment_id, page_id),
+                CHECK (LENGTH(CAST(payload AS BLOB)) = payload_bytes)
+              ) WITHOUT ROWID;
+
+              CREATE TABLE IF NOT EXISTS spaces_structure_journals (
+                environment_id TEXT PRIMARY KEY NOT NULL,
+                schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+                payload TEXT NOT NULL,
+                payload_bytes INTEGER NOT NULL CHECK (payload_bytes BETWEEN 1 AND 2097152),
+                updated_at INTEGER NOT NULL,
+                CHECK (LENGTH(CAST(payload AS BLOB)) = payload_bytes)
+              ) WITHOUT ROWID;
             `);
       });
       if ((schema?.user_version ?? 0) < DATABASE_SCHEMA_VERSION) {
-        const migrated = await migrateLegacyFileCaches(database);
-        if (migrated) {
-          await database.execAsync(`PRAGMA user_version = ${DATABASE_SCHEMA_VERSION};`);
-        }
+        const migrated =
+          (schema?.user_version ?? 0) >= 1 || (await migrateLegacyFileCaches(database));
+        if (migrated) await database.execAsync(`PRAGMA user_version = ${DATABASE_SCHEMA_VERSION};`);
       }
     },
     catch: databaseError("migrate"),
   });
 
   return MobileDatabase.of({
+    loadSpaceMediaRecords: Effect.tryPromise({
+      try: () => readSpaceMedia(database),
+      catch: databaseError("load-space-media"),
+    }),
+    writeSpaceMediaRecord: Effect.fn("MobileDatabase.writeSpaceMediaRecord")((record, expected) =>
+      Effect.tryPromise({
+        try: () => mutateSpaceMedia(database, record, expected),
+        catch: databaseError("write-space-media"),
+      }),
+    ),
+    removeSpaceMediaRecord: Effect.fn("MobileDatabase.removeSpaceMediaRecord")((record) =>
+      Effect.tryPromise({
+        try: () => mutateSpaceMedia(database, record, record.sequence, true),
+        catch: databaseError("write-space-media"),
+      }),
+    ),
+    loadSpaceStructureJournal: Effect.fn("MobileDatabase.loadSpaceStructureJournal")(
+      (environmentId) =>
+        Effect.tryPromise({
+          try: async () =>
+            (await readSpaceStructure(database, structureKey(environmentId)))?.journal ?? null,
+          catch: databaseError("load-space-structure"),
+        }),
+    ),
+    writeSpaceStructureJournal: Effect.fn("MobileDatabase.writeSpaceStructureJournal")(
+      (environmentId, journal) =>
+        Effect.tryPromise({
+          try: async () => {
+            const key = structureKey(environmentId);
+            const payload = JSON.stringify(decodeSpaceStructureJournal(journal, key));
+            const bytes = new TextEncoder().encode(payload).byteLength;
+            await database.withExclusiveTransactionAsync(async (transaction) => {
+              const previous = await readSpaceStructure(transaction, key);
+              const usage = await transaction.getFirstAsync<{
+                readonly rows: number;
+                readonly bytes: number;
+              }>(
+                `SELECT COUNT(*) AS rows, COALESCE(SUM(actual_bytes), 0) AS bytes FROM
+               (SELECT LENGTH(CAST(payload AS BLOB)) AS actual_bytes FROM spaces_structure_journals LIMIT ?)`,
+                SPACE_STRUCTURE_MAX_ROWS + 1,
+              );
+              if (
+                usage === null ||
+                usage.rows + (previous === null ? 1 : 0) > SPACE_STRUCTURE_MAX_ROWS ||
+                usage.bytes - (previous?.bytes ?? 0) + bytes >
+                  SPACE_STRUCTURE_MAX_ROWS * spaceStructureMaxBytes
+              )
+                throw new Error(
+                  "Local Spaces journals are full; existing journals have been retained",
+                );
+              await transaction.runAsync(
+                `INSERT INTO spaces_structure_journals (environment_id, schema_version, payload, payload_bytes, updated_at)
+               VALUES (?, 1, ?, ?, ?)
+               ON CONFLICT (environment_id) DO UPDATE SET payload = excluded.payload,
+                 payload_bytes = excluded.payload_bytes, updated_at = excluded.updated_at`,
+                key,
+                payload,
+                bytes,
+                Date.now(),
+              );
+            });
+          },
+          catch: databaseError("write-space-structure"),
+        }),
+    ),
+    loadSpacePageDraft: Effect.fn("MobileDatabase.loadSpacePageDraft")((key) =>
+      Effect.tryPromise({
+        try: async () => (await readSpaceDraft(database, draftKey(key)))?.draft ?? null,
+        catch: databaseError("load-space-draft"),
+      }),
+    ),
+    writeSpacePageDraft: Effect.fn("MobileDatabase.writeSpacePageDraft")((key, draft) =>
+      Effect.tryPromise({
+        try: async () => {
+          const checkedKey = draftKey(key);
+          const payload =
+            draft === null ? null : JSON.stringify(decodeSpaceDocumentDraft(draft, checkedKey));
+          const bytes = payload === null ? 0 : new TextEncoder().encode(payload).byteLength;
+          await database.withExclusiveTransactionAsync(async (transaction) => {
+            const previous = await readSpaceDraft(transaction, checkedKey);
+            if (payload === null) {
+              await transaction.runAsync(
+                "DELETE FROM spaces_page_drafts WHERE environment_id = ? AND page_id = ?",
+                checkedKey.environmentId,
+                checkedKey.pageId,
+              );
+              return;
+            }
+            const usage = await transaction.getFirstAsync<{
+              readonly rows: number;
+              readonly bytes: number;
+            }>(
+              `SELECT COUNT(*) AS rows, COALESCE(SUM(actual_bytes), 0) AS bytes FROM
+               (SELECT LENGTH(CAST(payload AS BLOB)) AS actual_bytes FROM spaces_page_drafts LIMIT ?)`,
+              SPACE_DRAFT_MAX_ROWS + 1,
+            );
+            if (
+              usage === null ||
+              usage.rows + (previous === null ? 1 : 0) > SPACE_DRAFT_MAX_ROWS ||
+              usage.bytes - (previous?.bytes ?? 0) + bytes > SPACE_DRAFT_TOTAL_BYTES
+            )
+              throw new Error("Local Spaces drafts are full; existing drafts have been retained");
+            await transaction.runAsync(
+              `INSERT INTO spaces_page_drafts (environment_id, page_id, schema_version, payload, payload_bytes, updated_at)
+               VALUES (?, ?, 1, ?, ?, ?)
+               ON CONFLICT (environment_id, page_id) DO UPDATE SET
+                 payload = excluded.payload, payload_bytes = excluded.payload_bytes, updated_at = excluded.updated_at`,
+              checkedKey.environmentId,
+              checkedKey.pageId,
+              payload,
+              bytes,
+              Date.now(),
+            );
+          });
+        },
+        catch: databaseError("write-space-draft"),
+      }),
+    ),
     loadCache: Effect.fn("MobileDatabase.loadCache")((environmentId, kind, cacheKey) =>
       Effect.tryPromise({
         try: () =>
@@ -455,6 +821,13 @@ const makeAvailable = Effect.gen(function* () {
 function makeUnavailable(error: MobileDatabaseError): MobileDatabase["Service"] {
   const fail = Effect.fail(error);
   return MobileDatabase.of({
+    loadSpaceMediaRecords: fail,
+    writeSpaceMediaRecord: () => fail,
+    removeSpaceMediaRecord: () => fail,
+    loadSpaceStructureJournal: () => fail,
+    writeSpaceStructureJournal: () => fail,
+    loadSpacePageDraft: () => fail,
+    writeSpacePageDraft: () => fail,
     loadCache: () => fail,
     listCache: () => fail,
     saveCache: () => fail,
