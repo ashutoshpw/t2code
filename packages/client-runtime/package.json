@@ -486,6 +486,10 @@
     "./spaces": {
       "types": "./src/spaces/index.ts",
       "default": "./src/spaces/index.ts"
+    },
+    "./state/spaces": {
+      "types": "./src/state/spaces.ts",
+      "default": "./src/state/spaces.ts"
     }
   },
   "scripts": {

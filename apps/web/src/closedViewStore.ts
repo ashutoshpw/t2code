@@ -9,6 +9,7 @@ import * as Schema from "effect/Schema";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { SpacePageNavigationTarget, spacePageSurfaceId } from "@t2code/client-runtime/spaces";
 import { resolveStorage } from "./lib/storage";
 import { randomUUID } from "./lib/utils";
 import { type RightPanelSurface } from "./rightPanelStore";
@@ -48,6 +49,7 @@ const sameTarget = (entry: ClosedViewEntry, view: ClosedView): boolean => {
 const isPersistentView = (entry: ClosedViewEntry) =>
   entry.kind !== "browser" || entry.snapshot.profileId !== INCOGNITO_BROWSER_PROFILE_ID;
 
+const isSpacePageTarget = Schema.is(SpacePageNavigationTarget);
 const isThreadRef = Schema.is(ScopedThreadRef);
 const isSnapshot = Schema.is(PreviewSessionSnapshot);
 const isAttachment = Schema.is(ChatFileAttachment);
@@ -60,6 +62,8 @@ const isClosedViewEntry = (entry: unknown): entry is ClosedViewEntry => {
   const surface = view.surface;
   if (!surface || typeof surface.id !== "string") return false;
   switch (surface.kind) {
+    case "space-page":
+      return isSpacePageTarget(surface.target) && surface.id === spacePageSurfaceId(surface.target);
     case "diff":
     case "files":
     case "pull-requests":

@@ -131,6 +131,9 @@ export async function reopenClosedView(
         if (surface.title) panels.renameDevice(ref, surface.id, surface.title);
       } else panels.open(ref, "device");
       break;
+    case "space-page":
+      panels.openSpacePage(ref, surface.target);
+      break;
     case "pull-request":
       panels.openPullRequest(ref, surface);
       break;

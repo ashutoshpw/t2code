@@ -416,6 +416,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["hide fold running monitoring threads inbox sidebar shelf"],
   },
   {
+    id: "spaces",
+    title: "Spaces",
+    to: "/settings/labs",
+    scope: "environment",
+    searchTerms: ["pages documents library enable disable"],
+  },
+  {
     id: "guest-links",
     title: "Guest links",
     to: "/settings/labs",
