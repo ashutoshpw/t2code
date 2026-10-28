@@ -608,6 +608,12 @@ it.layer(layer)("migrate-dev-db", (it) => {
         assert.deepEqual(yield* sql`SELECT title, is_default FROM spaces`, [
           { title: "My space", is_default: 1 },
         ]);
+        assert.deepEqual(yield* sql`SELECT * FROM spaces_pins`, []);
+        assert.deepEqual(yield* sql`SELECT * FROM spaces_recents`, []);
+        assert.deepEqual(
+          yield* sql`SELECT sequence, pins_revision, recents_revision FROM spaces_library_sequence`,
+          [{ sequence: 0, pins_revision: 0, recents_revision: 0 }],
+        );
         yield* sql`UPDATE spaces SET title = 'Sandbox work', revision = 1 WHERE is_default = 1`;
       }).pipe(Effect.provide(SpacesSqlite.layerFromPath(destination)));
       const before = yield* fs.readFile(destination);
@@ -635,6 +641,9 @@ it.layer(layer)("migrate-dev-db", (it) => {
               { migration_id: 8, name: "Assets" },
               { migration_id: 9, name: "AssetReconciliation" },
               { migration_id: 10, name: "AssetCollection" },
+              { migration_id: 11, name: "PageActivity" },
+              { migration_id: 12, name: "PageLibrary" },
+              { migration_id: 13, name: "LibraryRevisions" },
             ],
           );
         }),

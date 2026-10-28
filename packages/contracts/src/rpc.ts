@@ -411,6 +411,12 @@ export const WS_METHODS = {
   spacesRename: "spaces.rename",
   spacesSetDefault: "spaces.setDefault",
   spacesPagesList: "spaces.pages.list",
+  spacesPagesListAll: "spaces.pages.listAll",
+  spacesPinsAdd: "spaces.pins.add",
+  spacesPinsRemove: "spaces.pins.remove",
+  spacesPinsList: "spaces.pins.list",
+  spacesRecentsRecord: "spaces.recents.record",
+  spacesRecentsList: "spaces.recents.list",
   spacesPagesGet: "spaces.pages.get",
   spacesPagesCreate: "spaces.pages.create",
   spacesPagesUpdate: "spaces.pages.update",
@@ -421,6 +427,7 @@ export const WS_METHODS = {
   spacesAssetsUploadGet: "spaces.assets.upload.get",
   spacesAssetsUploadFinalize: "spaces.assets.upload.finalize",
   spacesAssetsGet: "spaces.assets.get",
+  spacesAssetsList: "spaces.assets.list",
   spacesPagesCreateChild: "spaces.pages.createChild",
   spacesPagesMove: "spaces.pages.move",
   spacesStructureInspect: "spaces.structure.inspect",
@@ -671,6 +678,38 @@ export const WsSpacesPagesListRpc = Rpc.make(WS_METHODS.spacesPagesList, {
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
 
+export const WsSpacesPagesListAllRpc = Rpc.make(WS_METHODS.spacesPagesListAll, {
+  payload: Spaces.SpaceListInput,
+  success: Spaces.SpaceAllPagesResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesPinsAddRpc = Rpc.make(WS_METHODS.spacesPinsAdd, {
+  payload: Spaces.SpacePageGetInput,
+  success: Schema.Struct({}),
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesPinsRemoveRpc = Rpc.make(WS_METHODS.spacesPinsRemove, {
+  payload: Spaces.SpacePageGetInput,
+  success: Schema.Struct({}),
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesRecentsRecordRpc = Rpc.make(WS_METHODS.spacesRecentsRecord, {
+  payload: Spaces.SpacePageGetInput,
+  success: Schema.Struct({}),
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesPinsListRpc = Rpc.make(WS_METHODS.spacesPinsList, {
+  payload: Spaces.SpaceListInput,
+  success: Spaces.SpaceAllPagesResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesRecentsListRpc = Rpc.make(WS_METHODS.spacesRecentsList, {
+  payload: Spaces.SpaceListInput,
+  success: Spaces.SpaceAllPagesResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
 export const WsSpacesPagesGetRpc = Rpc.make(WS_METHODS.spacesPagesGet, {
   payload: Spaces.SpacePageGetInput,
   success: Spaces.SpacePageGetResult,
@@ -782,6 +821,12 @@ export const WsSpacesAssetsUploadFinalizeRpc = Rpc.make(WS_METHODS.spacesAssetsU
   success: Spaces.SpaceAssetMetadata,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
+export const WsSpacesAssetsListRpc = Rpc.make(WS_METHODS.spacesAssetsList, {
+  payload: Spaces.SpaceAssetListInput,
+  success: Spaces.SpaceAssetListResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
 export const WsSpacesAssetsGetRpc = Rpc.make(WS_METHODS.spacesAssetsGet, {
   payload: Spaces.SpaceAssetGetInput,
   success: Spaces.SpaceAssetMetadata,
@@ -2144,6 +2189,12 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesRenameRpc,
   WsSpacesSetDefaultRpc,
   WsSpacesPagesListRpc,
+  WsSpacesPagesListAllRpc,
+  WsSpacesPinsAddRpc,
+  WsSpacesPinsRemoveRpc,
+  WsSpacesPinsListRpc,
+  WsSpacesRecentsRecordRpc,
+  WsSpacesRecentsListRpc,
   WsSpacesPagesGetRpc,
   WsSpacesPagesCreateRpc,
   WsSpacesPagesUpdateRpc,
@@ -2154,6 +2205,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesAssetsUploadGetRpc,
   WsSpacesAssetsUploadFinalizeRpc,
   WsSpacesAssetsGetRpc,
+  WsSpacesAssetsListRpc,
   WsSpacesPagesCreateChildRpc,
   WsSpacesPagesMoveRpc,
   WsSpacesStructureInspectRpc,

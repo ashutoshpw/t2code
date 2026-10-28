@@ -375,6 +375,7 @@ export const finish = Effect.fn("SpacesAssetCatalog.finish")(function* (
   yield* sql`INSERT INTO spaces_assets(asset_id,digest,name,state,created_at_ms,width,height,blob_generation)
     VALUES (${row.asset_id},${row.digest},${row.name},'ready',${now},${row.width},${row.height},${row.blob_generation})`;
   yield* sql`UPDATE spaces_asset_blobs SET state = 'ready',physical_charged = 1 WHERE digest = ${row.digest}`;
+  yield* sql`UPDATE spaces_core SET catalog_revision = catalog_revision + 1 WHERE singleton = 1`;
   yield* sql`DELETE FROM spaces_asset_reconciliation_issues WHERE kind = 'blob' AND entity = ${row.digest}`;
   yield* sql`UPDATE spaces_asset_reconciliation SET assets_done = 0,assets_generation = assets_generation + 1 WHERE singleton = 1`;
   if (!blob.physical_charged)

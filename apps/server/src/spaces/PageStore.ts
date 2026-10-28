@@ -6,6 +6,7 @@ import * as Schema from "effect/Schema";
 import * as SpacesSql from "./SpacesSql.ts";
 
 export interface PageRow {
+  readonly is_pinned?: number;
   readonly page_id: C.SpacePageId;
   readonly space_id: C.SpaceId;
   readonly title: string;
@@ -28,6 +29,7 @@ export interface PageRow {
 
 export type SummaryRow = Pick<
   PageRow,
+  | "is_pinned"
   | "page_id"
   | "space_id"
   | "title"
@@ -70,6 +72,7 @@ export function summary(row: SummaryRow, allowOrphanedTrash = false): C.SpacePag
     title: row.title,
     revision: row.revision,
     rootOrder: row.root_order,
+    ...(row.is_pinned === 1 ? { isPinned: true } : {}),
     ...(location ? { location } : {}),
     ...(row.trash_batch_id !== null ? { trash: trashStatus(row) } : {}),
     createdAt: row.created_at,
@@ -79,7 +82,8 @@ export function summary(row: SummaryRow, allowOrphanedTrash = false): C.SpacePag
 
 export const load = Effect.fn("SpacesPages.load")(function* (id: C.SpacePageId) {
   const sql = yield* SpacesSql.SpacesSql;
-  const [row] = yield* sql<PageRow>`SELECT p.*, o.owner_block_id, b.page_id AS parent_page_id,
+  const [row] =
+    yield* sql<PageRow>`SELECT p.*, EXISTS(SELECT 1 FROM spaces_pins pin WHERE pin.page_id=p.page_id) AS is_pinned, o.owner_block_id, b.page_id AS parent_page_id,
     b.deleted AS owner_deleted, parent.space_id AS parent_space_id,
     json_extract(b.payload,'$.type') AS owner_type
     FROM spaces_pages p LEFT JOIN spaces_page_owners o ON o.child_page_id = p.page_id
