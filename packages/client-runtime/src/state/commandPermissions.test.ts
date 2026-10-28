@@ -72,6 +72,42 @@ const setup = Effect.gen(function* () {
 
 describe("command permissions", () => {
   it.effect(
+    "captures and resolves Spaces context only while the destination grants read access",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const registry = yield* setup;
+          for (const method of [
+            WS_METHODS.spacesContextCapture,
+            WS_METHODS.spacesReferencesResolve,
+          ]) {
+            const permission = createCommandPermissions(runtime, method);
+            registry.set(
+              sessions(env),
+              AsyncResult.success({
+                ...grant(false),
+                scopes: [AuthOrchestrationReadScope],
+                permissions: [AuthOrchestrationReadScope],
+              }),
+            );
+            registry.set(sessions(other), AsyncResult.success(grant(true)));
+            expect(registry.get(permission.permissionAtom(env))).toBe(true);
+            yield* permission.authorize(registry, env);
+            expect(registry.get(permission.permissionAtom(other))).toBe(false);
+            expect((yield* permission.authorize(registry, other).pipe(Effect.flip))._tag).toBe(
+              "EnvironmentAuthorizationError",
+            );
+            registry.set(sessions(env), AsyncResult.success(grant(false)));
+            expect(registry.get(permission.permissionAtom(env))).toBe(false);
+            expect((yield* permission.authorize(registry, env).pipe(Effect.flip))._tag).toBe(
+              "EnvironmentAuthorizationError",
+            );
+          }
+        }),
+      ),
+  );
+
+  it.effect(
     "uses destination operate grants for Spaces writes and revokes availability with the grant",
     () =>
       Effect.scoped(

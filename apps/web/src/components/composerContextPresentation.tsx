@@ -1,3 +1,15 @@
+import * as Schema from "effect/Schema";
+import {
+  PageContextRecord as PageContextRecordSchema,
+  BlockContextRecord as BlockContextRecordSchema,
+} from "@t2code/contracts";
+import { SpaceContextChip } from "./SpaceContextChip";
+import type {
+  ComposerContextDraft,
+  PageContextRecord,
+  BlockContextRecord,
+  SpaceContextSelector,
+} from "@t2code/contracts";
 import ChatMarkdown from "./ChatMarkdown";
 import { isSvgAttachment } from "@t2code/shared/image";
 import { ReadOnlySourcePreview } from "./files/AttachmentFilePreview";
@@ -49,6 +61,9 @@ import {
   UnresolvedChip,
 } from "./contextChipParts";
 
+const isPageContextRecord = Schema.is(PageContextRecordSchema);
+const isBlockContextRecord = Schema.is(BlockContextRecordSchema);
+
 export type ComposerDraftContextRecord =
   | { kind: "terminal"; record: TerminalContextDraft }
   | { kind: "review-comment"; record: ReviewCommentContext }
@@ -59,7 +74,11 @@ export type ComposerDraftContextRecord =
     }
   | { kind: "image"; record: ComposerImageAttachment; upload?: AttachmentUploadState | undefined }
   | { kind: "file"; record: ComposerFileAttachment; upload?: AttachmentUploadState | undefined }
-  | { kind: "thread"; record: ThreadContextRecord };
+  | { kind: "thread"; record: ThreadContextRecord }
+  | {
+      kind: "page" | "block";
+      record: SpaceContextSelector | PageContextRecord | BlockContextRecord;
+    };
 
 export interface ComposerContextActions {
   environmentId: EnvironmentId | null;
@@ -94,6 +113,7 @@ export const ComposerContextRecordsContext = createContext<ComposerDraftContextR
 );
 
 export function composerContextRecordsFromDraft(input: {
+  contextDraft?: ComposerContextDraft | undefined;
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
   reviewComments?: ReadonlyArray<ReviewCommentContext>;
   previewAnnotations?: ReadonlyArray<PreviewAnnotationPayload>;
@@ -103,6 +123,17 @@ export function composerContextRecordsFromDraft(input: {
   uploadsByImageId?: Readonly<Record<string, AttachmentUploadState>>;
 }): ComposerDraftContextRecords {
   const records = new Map<string, ComposerDraftContextRecord>();
+  for (const record of [
+    ...(input.contextDraft?.records ?? []),
+    ...(input.contextDraft?.selectors ?? []),
+  ]) {
+    if (
+      ("selection" in record && (record.kind === "page" || record.kind === "block")) ||
+      isPageContextRecord(record) ||
+      isBlockContextRecord(record)
+    )
+      records.set(record.contextId, { kind: record.kind, record });
+  }
   for (const record of input.images ?? []) {
     records.set(imageContextReference(record).contextId, {
       kind: "image",
@@ -361,8 +392,35 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
   ComposerContextRenderContext,
   ReactElement
 >({
-  requiredKinds: ["image", "file", "terminal", "review-comment", "preview-annotation", "thread"],
+  requiredKinds: [
+    "image",
+    "file",
+    "terminal",
+    "review-comment",
+    "preview-annotation",
+    "thread",
+    "page",
+    "block",
+  ],
   handlers: [
+    {
+      kind: "page",
+      render: (entry, context) =>
+        entry.kind === "page" ? (
+          <SpaceContextChip record={entry.record} />
+        ) : (
+          <UnresolvedContextChip label={context.label} />
+        ),
+    },
+    {
+      kind: "block",
+      render: (entry, context) =>
+        entry.kind === "block" ? (
+          <SpaceContextChip record={entry.record} />
+        ) : (
+          <UnresolvedContextChip label={context.label} />
+        ),
+    },
     {
       kind: "terminal",
       canRender: (entry) => entry.kind === "terminal",

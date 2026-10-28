@@ -432,19 +432,45 @@ export const layerOtlpTracesProxyRoute = HttpRouter.add(
 
 const UNTRACED_REQUEST_PATHS: ReadonlySet<string> = new Set([OTLP_TRACES_PROXY_PATH]);
 
+const isAssetBearerPath = (url: string) => {
+  const segments = url
+    .replace(/^https?:\/\/.*?\//, "/")
+    .split(/[?#;]/, 1)[0]!
+    .replace(/\/{2,}/g, "/")
+    .split("/", 5);
+  // Decode only static prefix segments; decodeURI preserves the router's encoded-separator boundaries.
+  return [ASSET_ROUTE_PREFIX, SPACES_UPLOAD_ROUTE_PREFIX].some((prefix) =>
+    prefix.split("/").every((part, index) => {
+      try {
+        return decodeURI(segments[index] ?? "").toLowerCase() === part;
+      } catch {
+        return false;
+      }
+    }),
+  );
+};
+
 // HttpRouter.serve builds routes privately; provide the server-wide TracerDisabledWhen to the served layer.
 const layerUntracedRequests = Layer.succeed(HttpMiddleware.TracerDisabledWhen)((request) => {
   const queryIndex = request.url.indexOf("?");
   const path = queryIndex === -1 ? request.url : request.url.slice(0, queryIndex);
-  // Webhook URLs carry their secret token in the path, so they never reach a trace.
+  // Webhook and asset URLs carry bearer tokens in the path, so they never reach a trace.
   return (
     UNTRACED_REQUEST_PATHS.has(path) ||
     path.startsWith(`${WEBHOOK_ROUTE_PREFIX}/`) ||
-    path.startsWith(`${SPACES_UPLOAD_ROUTE_PREFIX}/`)
+    isAssetBearerPath(path)
   );
 });
 
 export const withUntracedRequests = Layer.provide(layerUntracedRequests);
+
+// Server middleware must mark the request before CORS or other router middleware can short-circuit.
+export const assetRequestPrivacy = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) =>
+    isAssetBearerPath(request.url)
+      ? effect.pipe(HttpMiddleware.withLoggerDisabled, Effect.withTracerEnabled(false))
+      : effect,
+  );
 
 export const layerAssetRoute = HttpRouter.add(
   "GET",

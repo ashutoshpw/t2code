@@ -127,3 +127,50 @@ describe("composerContextClipboard", () => {
     expect(COMPOSER_CONTEXT_CLIPBOARD_MIME).toMatch(/^web application\//);
   });
 });
+
+it("round-trips draft selectors separately from copied completed snapshots", () => {
+  const selector = {
+    version: 1,
+    selection: "current",
+    kind: "page",
+    contextId: "page",
+    label: "Page",
+    environmentId: "env",
+    pageId: "p",
+    includeChildPages: false,
+  };
+  const record = {
+    version: 1,
+    kind: "block",
+    contextId: "block",
+    label: "Block",
+    environmentId: "env",
+    spaceId: "s",
+    pageId: "p",
+    blockId: "requested",
+    resolvedBlockId: "survivor",
+    title: "Page",
+    snapshot: {
+      version: 1,
+      includeChildPages: false,
+      truncated: false,
+      text: "Copied snapshot",
+      contentHash: `sha256:${"a".repeat(64)}`,
+      sources: [
+        { environmentId: "env", spaceId: "s", pageId: "p", revision: 1, blockIds: ["survivor"] },
+      ],
+    },
+  };
+  const raw = JSON.stringify({
+    version: 1,
+    source: { environmentId: "env" },
+    selectors: [selector],
+    records: [record],
+  });
+  const decoded = decodeComposerContextFragment(raw);
+  expect(decoded).toEqual(JSON.parse(raw));
+  expect(
+    decodeComposerContextFragment(JSON.stringify({ ...JSON.parse(raw), records: [selector] }))
+      ?.records,
+  ).toEqual([]);
+});

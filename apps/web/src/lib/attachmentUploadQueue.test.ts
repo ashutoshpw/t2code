@@ -1,4 +1,5 @@
-import { EnvironmentId } from "@t2code/contracts";
+import { EnvironmentId, ThreadId } from "@t2code/contracts";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { Atom, AsyncResult } from "effect/reactivity";
 import { appAtomRegistry } from "../rpc/atomRegistry";
@@ -294,6 +295,43 @@ describe("attachmentUploadQueue", () => {
       { environmentId: secondEnvironment, input: { attachmentId: "persisted-file" } },
       expect.anything(),
     );
+  });
+
+  it("releases an obsolete handle without deleting a replacement handle held by another composer", () => {
+    const store = useComposerDraftStore.getState();
+    const target = scopeThreadRef(firstEnvironment, ThreadId.make("replacement-owner"));
+    const file: ComposerFileAttachment = {
+      ...makeFile("obsolete-local-id"),
+      file: null,
+      uploadedAttachmentId: "pending-obsolete",
+      uploadEnvironmentId: firstEnvironment,
+    };
+    store.addFiles(target, [
+      { ...file, id: "replacement-local-id", uploadedAttachmentId: "pending-replacement" },
+    ]);
+    useAttachmentUploadStore.setState({
+      uploadsByImageId: {
+        [file.id]: {
+          status: "ready",
+          environmentId: firstEnvironment,
+          attachmentId: "pending-replacement",
+        },
+      },
+    });
+    try {
+      releaseDraftAttachment(file);
+      const deletes = mocks.runAtomCommand.mock.calls
+        .filter(([, command]) => command === mocks.removeUpload)
+        .map(([, , target]) => target);
+      expect(deletes).toEqual([
+        { environmentId: firstEnvironment, input: { attachmentId: "pending-obsolete" } },
+      ]);
+      expect(store.getComposerDraft(target)?.files[0]?.uploadedAttachmentId).toBe(
+        "pending-replacement",
+      );
+    } finally {
+      store.clearComposerContent(target);
+    }
   });
 
   it("uploads images immediately and sends attachment references", async () => {

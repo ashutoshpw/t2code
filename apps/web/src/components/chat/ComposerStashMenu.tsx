@@ -19,7 +19,10 @@ function stashEntrySnippet(entry: PromptStashEntry): string {
     return trimmed.length > SNIPPET_MAX_CHARS ? `${trimmed.slice(0, SNIPPET_MAX_CHARS)}…` : trimmed;
   }
   const imageCount = entry.attachments.length + entry.droppedImageNames.length;
-  const fileCount = entry.files?.length ?? 0;
+  const fileCount =
+    (entry.files?.length ?? 0) +
+    (entry.recovery?.queuedEdit?.attachments.filter((attachment) => attachment.type === "file")
+      .length ?? 0);
   const attachmentCount = imageCount + fileCount;
   if (attachmentCount === 0) {
     return "(empty)";
@@ -184,6 +187,37 @@ export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
                   </button>
                 </ComposerBanner.Content>
                 <ComposerBanner.Actions>
+                  {entry.recovery?.queuedEdit ? (
+                    <span className="text-xs text-muted-foreground">
+                      Queued edit recovery
+                      {entry.recovery.queuedEdit.saveOutcome === "uncertain"
+                        ? " · earlier save uncertain"
+                        : ""}
+                    </span>
+                  ) : null}
+                  {entry.recovery?.fanout ? (
+                    <span className="shrink-0 text-muted-foreground">
+                      {
+                        entry.recovery.fanout.attempts.filter(
+                          (attempt) => attempt.outcome === "accepted",
+                        ).length
+                      }{" "}
+                      accepted ·{" "}
+                      {
+                        entry.recovery.fanout.attempts.filter(
+                          (attempt) => attempt.outcome === "uncertain",
+                        ).length
+                      }{" "}
+                      uncertain ·{" "}
+                      {
+                        entry.recovery.fanout.attempts.filter(
+                          (attempt) =>
+                            attempt.outcome === "failed" || attempt.outcome === "not-sent",
+                        ).length
+                      }{" "}
+                      retryable
+                    </span>
+                  ) : null}
                   {entry.pendingImageCount ? (
                     <span className="shrink-0 text-muted-foreground">
                       saving {entry.pendingImageCount} image

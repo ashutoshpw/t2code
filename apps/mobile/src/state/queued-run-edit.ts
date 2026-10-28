@@ -78,12 +78,15 @@ function exitQueuedRunEdit(threadKey: string, edit: QueuedRunEdit): void {
     editChanged:
       editDraft.text !== edit.originalText ||
       editDraft.attachments.length > 0 ||
+      (editDraft.contextDraft?.selectors.length ?? 0) > 0 ||
+      (editDraft.contextDraft?.records.length ?? 0) > 0 ||
       edit.removedExistingAttachment === true,
     // A cleared edit has nothing to put back, so it can only be discarded.
     threadDraftEmpty:
       editRestorable &&
       threadDraft.text.trim().length === 0 &&
-      threadDraft.attachments.length === 0,
+      threadDraft.attachments.length === 0 &&
+      !(threadDraft.contextDraft?.selectors.length || threadDraft.contextDraft?.records.length),
   });
   if (recovery === "kept") {
     // The merge publishes the draft before writing it, so a failed write only delays persistence to the next one.
@@ -91,6 +94,7 @@ function exitQueuedRunEdit(threadKey: string, edit: QueuedRunEdit): void {
       text: editDraft.text,
       attachments: editDraft.attachments,
       ...(editDraft.context ? { context: editDraft.context } : {}),
+      ...(editDraft.contextDraft ? { contextDraft: editDraft.contextDraft } : {}),
     }).catch((error: unknown) => {
       console.warn("[queued-run-edit] could not persist the recovered edit", error);
     });

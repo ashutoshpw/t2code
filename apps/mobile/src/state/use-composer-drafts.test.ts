@@ -20,6 +20,7 @@ import {
   EnvironmentId,
   MessageId,
   ProjectId,
+  RunId,
   ProviderInstanceId,
   ThreadId,
   type OrchestrationV2ThreadShell,
@@ -170,6 +171,8 @@ import {
   collectComposerContextReferences,
   formatComposerContextReference,
 } from "@t2code/shared/composerContextReferences";
+import { SpacePageId } from "@t2code/contracts/spaces";
+import { beginQueuedRunEdit, getQueuedRunEdit, queuedEditDraftKey } from "./queued-run-edit";
 import { appAtomRegistry } from "./atom-registry";
 import { startComposerDraftOperation } from "./composerDraftOperations";
 import { threadOutboxManager } from "./thread-outbox";
@@ -196,6 +199,7 @@ import {
   flushComposerDrafts,
   getComposerDraftSnapshot,
   mergeComposerDraftContentState,
+  mergeComposerDraftContent,
   migrateLegacyNewTaskDraft,
   modelOptionMemoryAtom,
   releaseUnusedComposerAttachmentFiles,
@@ -2641,4 +2645,91 @@ describe("mobile composer drafts", () => {
     });
     expect(composerAttachmentCleanupMocks.remove).not.toHaveBeenCalled();
   });
+});
+
+it("recovers native Spaces selectors independently from completed copied snapshots", () => {
+  const selector = {
+    version: 1,
+    selection: "current",
+    kind: "block",
+    contextId: "selector",
+    label: "Block",
+    environmentId: "env",
+    blockId: "b",
+    includeChildPages: false,
+  };
+  const record = {
+    version: 1,
+    kind: "page",
+    contextId: "copied",
+    label: "Page",
+    environmentId: "env",
+    spaceId: "s",
+    pageId: "p",
+    title: "Copied title",
+    snapshot: {
+      version: 1,
+      includeChildPages: false,
+      truncated: false,
+      text: "Copied text",
+      contentHash: `sha256:${"a".repeat(64)}`,
+      sources: [{ environmentId: "env", spaceId: "s", pageId: "p", revision: 1, blockIds: [] }],
+    },
+  };
+  const draft = {
+    text: "[Block](t2-context://v1/block/selector) [Page](t2-context://v1/page/copied)",
+    attachments: [],
+    contextDraft: { selectors: [selector], records: [record] },
+  };
+  const recovered = decodePersistedComposerState({ schemaVersion: 1, drafts: { thread: draft } })
+    .drafts.thread;
+  expect(recovered).toEqual(draft);
+});
+
+it("transfers Spaces selectors through main's queue-exit draft owner", async () => {
+  await waitForComposerDraftsLoaded();
+  const threadKey = "queue-selectors:thread";
+  const runId = RunId.make("queue-selectors-run");
+  const runs = Atom.make<ReadonlyArray<{ readonly id: RunId; readonly status: string }> | null>([
+    { id: runId, status: "queued" },
+  ]);
+  setComposerDraftText(threadKey, "");
+  beginQueuedRunEdit(
+    threadKey,
+    {
+      runId,
+      messageId: MessageId.make("queue-selectors-message"),
+      originalText: "original",
+      existingAttachments: [],
+    },
+    runs,
+  );
+  const contextDraft = {
+    selectors: [
+      {
+        version: 1 as const,
+        selection: "current" as const,
+        kind: "page" as const,
+        environmentId: EnvironmentId.make("queue-selectors"),
+        contextId: ComposerContextId.make("p"),
+        label: "Page",
+        pageId: SpacePageId.make("page"),
+        includeChildPages: true,
+      },
+    ],
+    records: [],
+  };
+  await mergeComposerDraftContent(queuedEditDraftKey(threadKey, runId), {
+    text: "changed [Page](t2-context://v1/page/p)",
+    attachments: [],
+    contextDraft,
+  });
+  const original = getComposerDraftSnapshot(queuedEditDraftKey(threadKey, runId));
+  const recoveredWrite = new Promise<void>((resolve) => composerDraftFileMocks.setOnWrite(resolve));
+  appAtomRegistry.set(runs, [{ id: runId, status: "running" }]);
+  await recoveredWrite;
+  expect(getQueuedRunEdit(threadKey)).toBeNull();
+  expect(getComposerDraftSnapshot(threadKey).text).toBe(original.text);
+  expect(getComposerDraftSnapshot(threadKey).contextDraft).toEqual(contextDraft);
+  await flushComposerDrafts();
 });

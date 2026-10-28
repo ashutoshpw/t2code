@@ -1,3 +1,4 @@
+import { ComposerBanner } from "./ComposerBanner";
 import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { deriveThreadQueueWorkflowState } from "@t2code/client-runtime/state/thread-workflows";
 import { assistantCitationsToPlainText } from "@t2code/shared/assistantCitations";
@@ -521,5 +522,29 @@ export function QueuedRunsControl({
         </div>
       ) : null}
     </section>
+  );
+}
+
+export function QueuedEditRecoveryBanner(props: {
+  busy: boolean;
+  onRecover: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    <ComposerBanner.Root role="status">
+      <ComposerBanner.Row>
+        <ComposerBanner.Content>
+          This run left the queue. Your unsaved edit stays open until recovery is saved.
+        </ComposerBanner.Content>
+        <ComposerBanner.Actions>
+          <Button size="xs" variant="ghost" disabled={props.busy} onClick={props.onRecover}>
+            Save recovery
+          </Button>
+          <Button size="xs" variant="ghost" disabled={props.busy} onClick={props.onDiscard}>
+            Discard edit
+          </Button>
+        </ComposerBanner.Actions>
+      </ComposerBanner.Row>
+    </ComposerBanner.Root>
   );
 }

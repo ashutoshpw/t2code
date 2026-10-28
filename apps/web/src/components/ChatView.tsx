@@ -298,7 +298,11 @@ import {
   isThreadErrorBannerDismissedForSession,
   shouldShowThreadErrorBanner,
 } from "./chat/ThreadErrorBanner";
-import { QueuedRunsControl, type QueuedRunsControlHandle } from "./chat/QueuedRunsControl";
+import {
+  QueuedEditRecoveryBanner,
+  QueuedRunsControl,
+  type QueuedRunsControlHandle,
+} from "./chat/QueuedRunsControl";
 import { useThreadLinkedPullRequest } from "./pullRequest/useThreadLinkedPullRequest";
 import { useProactivePanels } from "../hooks/useProactivePanels";
 import { useIncrementalTimelineEntries } from "../hooks/useIncrementalTimelineEntries";
@@ -712,13 +716,27 @@ export default function ChatView(props: ChatViewProps) {
   const [timelineOverflows, setTimelineOverflows] = useState(false);
   const fanoutSelectionsAtom = draftFanoutSelectionsAtom(routeThreadKey);
   const { sendInFlight: sendInFlightRef } = draftSendState(routeThreadKey);
-  const multipleModelSelections = useAtomValue(fanoutSelectionsAtom);
+  const recoveredFanoutSelections = useComposerDraftStore(
+    (store) => store.getComposerDraft(composerDraftTarget)?.fanoutRetry?.selections ?? null,
+  );
+  const multipleModelSelections = useAtomValue(fanoutSelectionsAtom) ?? recoveredFanoutSelections;
   const setMultipleModelSelections = (
     selections: SetStateAction<ReadonlyArray<ModelSelection> | null>,
   ) => {
-    appAtomRegistry.update(fanoutSelectionsAtom, (current) =>
-      typeof selections === "function" ? selections(current) : selections,
-    );
+    const next =
+      typeof selections === "function"
+        ? selections(appAtomRegistry.get(fanoutSelectionsAtom) ?? recoveredFanoutSelections)
+        : selections;
+    if (recoveredFanoutSelections && next === null) {
+      toastManager.add({
+        type: "warning",
+        title: "Keep the recovered fanout choices",
+        description:
+          "Restore a specific failed model from the stash, or start a fresh draft to choose different models.",
+      });
+      return;
+    }
+    appAtomRegistry.set(fanoutSelectionsAtom, next);
   };
   const setMultipleModelSelectionsStable = useStableCallback(setMultipleModelSelections);
   const feedbackUploadsInFlightRef = useRef(new Set<string>());
@@ -2872,6 +2890,17 @@ export default function ChatView(props: ChatViewProps) {
           onEditQueuedRun={queuedRunEdit.beginEdit}
           onCancelEdit={queuedRunEdit.cancelEdit}
         />
+        {queuedRunEdit.hasLeftQueue ? (
+          <QueuedEditRecoveryBanner
+            busy={queuedRunEdit.isSaving}
+            onRecover={() => {
+              void queuedRunEdit.recoverEdit();
+            }}
+            onDiscard={() => {
+              void queuedRunEdit.cancelEdit();
+            }}
+          />
+        ) : null}
       </>
     ) : null;
   const resendAfterWorkLocally = () => {
