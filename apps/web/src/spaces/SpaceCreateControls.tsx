@@ -14,6 +14,12 @@ import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
 import { spaceRootReorder } from "./sessionRuntime";
 
+declare module "@tanstack/react-router" {
+  interface HistoryState {
+    focusTitle?: string;
+  }
+}
+
 const run = (work: Promise<unknown>) => {
   void work.catch(() => {});
 };
@@ -150,6 +156,7 @@ function PageButton({
       to: "/spaces/$environmentId/$spaceId/$pageId",
       params: { environmentId, spaceId: page.spaceId, pageId: page.id },
       search: {},
+      state: { focusTitle: page.id },
     });
   };
   return (
