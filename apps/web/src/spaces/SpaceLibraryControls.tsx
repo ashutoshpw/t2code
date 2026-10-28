@@ -1,58 +1,178 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import { useContext, useEffect, useState, useSyncExternalStore } from "react";
-import { Link } from "@tanstack/react-router";
+import { useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceId, SpacePageSummary, SpaceSummary } from "@t2code/contracts/spaces";
 import type { SpaceRootReorder } from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
-import { EllipsisIcon, PencilIcon } from "lucide-react";
+import { EllipsisIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { Input } from "../components/ui/input";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../components/ui/menu";
 import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
+import { toastManager } from "../components/ui/toast";
 import { spaceRootReorder } from "./sessionRuntime";
 
 interface Props {
   environmentId: EnvironmentId;
   spaceId: SpaceId;
-  page?: SpacePageSummary;
-  current?: () => boolean;
 }
 type Intent =
   | { kind: "renameSpace"; space: SpaceSummary }
-  | { kind: "setDefaultSpace"; space: SpaceSummary; previous: SpaceSummary }
-  | { kind: "updatePage"; page: SpacePageSummary };
+  | { kind: "setDefaultSpace"; space: SpaceSummary; previous: SpaceSummary };
+const focusedTitles = new Set<string>();
 const run = (work: Promise<unknown>) => {
   void work.catch(() => {});
 };
 
-export default function SpaceLibraryControls(props: Props) {
+function useOwner(environmentId: EnvironmentId) {
   const registry = useContext(RegistryContext);
   const [result] = useState(() => {
     try {
-      return { owner: spaceRootReorder(registry, props.environmentId) };
+      return { owner: spaceRootReorder(registry, environmentId) };
     } catch (error) {
       return { error };
     }
   });
-  if (!result.owner)
-    return (
-      <p role="alert">
-        {result.error instanceof Error ? result.error.message : "Library storage unavailable."}
-      </p>
-    );
+  return result;
+}
+
+export default function SpaceLibraryControls(props: Props) {
+  const result = useOwner(props.environmentId);
+  if (!result.owner) return null;
   return <Library {...props} owner={result.owner} />;
 }
-function Library({
+
+export function PageTitleField({
   environmentId,
-  spaceId,
+  page,
+  current,
+  autoFocus,
+}: {
+  environmentId: EnvironmentId;
+  page: SpacePageSummary;
+  current: () => boolean;
+  autoFocus: boolean;
+}) {
+  const result = useOwner(environmentId);
+  if (!result.owner) return <TitleInput page={page} readOnly autoFocus={false} />;
+  return (
+    <EditableTitle
+      environmentId={environmentId}
+      page={page}
+      current={current}
+      owner={result.owner}
+      autoFocus={autoFocus}
+    />
+  );
+}
+
+function TitleInput({
+  page,
+  value = page.title,
+  readOnly,
+  autoFocus,
+  onChange,
+  onCommit,
+  onCancel,
+}: {
+  page: SpacePageSummary;
+  value?: string;
+  readOnly: boolean;
+  autoFocus: boolean;
+  onChange?: (value: string) => void;
+  onCommit?: () => void;
+  onCancel?: () => void;
+}) {
+  return (
+    <textarea
+      ref={(element) => {
+        if (!element || !autoFocus || focusedTitles.has(page.id)) return;
+        focusedTitles.add(page.id);
+        element.focus();
+        element.select();
+      }}
+      rows={1}
+      aria-label="Page title"
+      placeholder="Untitled"
+      readOnly={readOnly || !!page.trash}
+      value={value}
+      onChange={(event) => onChange?.(event.target.value.replace(/\n/g, " "))}
+      onBlur={onCommit}
+      onKeyDown={(event) => {
+        if (event.nativeEvent.isComposing) return;
+        if (event.key === "Enter") {
+          event.preventDefault();
+          event.currentTarget.blur();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          onCancel?.();
+          event.currentTarget.blur();
+        }
+      }}
+      className="block w-full resize-none break-words bg-transparent text-4xl font-bold leading-tight outline-none [field-sizing:content] placeholder:text-muted-foreground/50"
+    />
+  );
+}
+
+function EditableTitle({
+  environmentId,
   page,
   current,
   owner,
-}: Props & { owner: SpaceRootReorder }) {
+  autoFocus,
+}: {
+  environmentId: EnvironmentId;
+  page: SpacePageSummary;
+  current: () => boolean;
+  owner: SpaceRootReorder;
+  autoFocus: boolean;
+}) {
+  const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
+  const availability = useSpacesAvailability(environmentId);
+  const allowed = useAtomValue(spacesEnvironment.updatePage.permissionAtom(environmentId));
+  const [edit, setEdit] = useState<{ base: string; value: string; saved: boolean } | null>(null);
+  const cancelled = useRef(false);
+  const shown = edit && edit.base === page.title ? edit.value : page.title;
+  const writable = allowed && availability === "writable";
+  const commit = () => {
+    if (cancelled.current) {
+      cancelled.current = false;
+      return setEdit(null);
+    }
+    if (!edit || edit.saved || edit.base !== page.title) return setEdit(null);
+    const value = edit.value.trim();
+    if (value === page.title || !current() || snapshot.busy || snapshot.journal.pending)
+      return setEdit(null);
+    setEdit({ ...edit, value, saved: true });
+    owner.renamePage(page, value).catch((error: unknown) => {
+      setEdit(null);
+      toastManager.add({
+        type: "error",
+        title: "Couldn't rename page",
+        description: error instanceof Error ? error.message : undefined,
+      });
+    });
+  };
+  return (
+    <TitleInput
+      page={page}
+      value={shown}
+      readOnly={!writable}
+      autoFocus={autoFocus}
+      onChange={(value) => setEdit({ base: page.title, value, saved: false })}
+      onCommit={commit}
+      onCancel={() => {
+        cancelled.current = true;
+        setEdit(null);
+      }}
+    />
+  );
+}
+
+function Library({ environmentId, spaceId, owner }: Props & { owner: SpaceRootReorder }) {
   const [open, setOpen] = useState(false);
   const [intent, setIntent] = useState<Intent | null>(null);
   const [title, setTitle] = useState("");
@@ -61,21 +181,18 @@ function Library({
   const readable = canBrowseSpaces(availability);
   const renameSpace = useAtomValue(spacesEnvironment.renameSpace.permissionAtom(environmentId));
   const setDefault = useAtomValue(spacesEnvironment.setDefaultSpace.permissionAtom(environmentId));
-  const renamePage = useAtomValue(spacesEnvironment.updatePage.permissionAtom(environmentId));
   const selected = useEnvironmentQuery(
-    readable && !page
+    readable
       ? spacesEnvironment.pages({ environmentId, input: { environmentId, spaceId, limit: 1 } })
       : null,
   );
   const catalog = useEnvironmentQuery(
-    readable && !page
-      ? spacesEnvironment.list({ environmentId, input: { environmentId, limit: 1 } })
-      : null,
+    readable ? spacesEnvironment.list({ environmentId, input: { environmentId, limit: 1 } }) : null,
   );
   const defaultId =
     catalog.isSuccess && !catalog.isPending ? catalog.data?.defaultSpaceId : undefined;
   const previous = useEnvironmentQuery(
-    readable && defaultId && !page
+    readable && defaultId
       ? spacesEnvironment.pages({
           environmentId,
           input: { environmentId, spaceId: defaultId, limit: 1 },
@@ -90,73 +207,62 @@ function Library({
   }, [owner]);
   const { journal, busy, hydrated } = snapshot;
   const pending = journal.pending;
-  const blocked =
-    busy || !hydrated || !!pending || availability !== "writable" || (!!current && !current());
+  const blocked = busy || !hydrated || !!pending || availability !== "writable";
   const choose = (value: Intent, initial = "") => {
     setIntent(value);
     setTitle(initial);
+    setOpen(true);
   };
-  const allowed =
-    intent?.kind === "renameSpace"
-      ? renameSpace
-      : intent?.kind === "setDefaultSpace"
-        ? setDefault
-        : renamePage;
+  const allowed = intent?.kind === "renameSpace" ? renameSpace : setDefault;
   const submit = async () => {
-    if (!intent || blocked || !allowed || (current && !current())) return;
-    if (intent.kind === "renameSpace") await owner.renameSpace(intent.space, title);
-    else if (intent.kind === "setDefaultSpace")
-      await owner.setDefaultSpace(intent.space, intent.previous);
-    else await owner.renamePage(intent.page, title);
-    setIntent(null);
+    if (!intent || blocked || !allowed) return;
+    try {
+      if (intent.kind === "renameSpace") await owner.renameSpace(intent.space, title.trim());
+      else await owner.setDefaultSpace(intent.space, intent.previous);
+      setOpen(false);
+      setIntent(null);
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: "Couldn't update space",
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
-  const result = snapshot.libraryResult;
   return (
     <>
-      {page ? (
-        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-          <PencilIcon />
-          Rename
-          <span className="sr-only"> page…</span>
-        </Button>
-      ) : (
-        <Menu>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <MenuTrigger
-                  render={<Button variant="ghost" size="icon-xs" aria-label="Space actions" />}
-                />
-              }
-            >
-              <EllipsisIcon />
-            </TooltipTrigger>
-            <TooltipPopup side="bottom">Space actions</TooltipPopup>
-          </Tooltip>
-          <MenuPopup align="end">
+      <Menu>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <MenuTrigger
+                render={<Button variant="ghost" size="icon-xs" aria-label="Space actions" />}
+              />
+            }
+          >
+            <EllipsisIcon />
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">Space actions</TooltipPopup>
+        </Tooltip>
+        <MenuPopup align="end">
+          <MenuItem
+            disabled={blocked || !renameSpace || !space}
+            onClick={() => {
+              if (space) choose({ kind: "renameSpace", space }, space.title);
+            }}
+          >
+            Rename space…
+          </MenuItem>
+          {space && !space.isDefault && defaultSpace && setDefault ? (
             <MenuItem
-              disabled={blocked || !renameSpace || !space}
-              onClick={() => {
-                if (!space) return;
-                choose({ kind: "renameSpace", space }, space.title);
-                setOpen(true);
-              }}
-            >
-              Rename space…
-            </MenuItem>
-            <MenuItem
-              disabled={blocked || !setDefault || !space || space.isDefault || !defaultSpace}
-              onClick={() => {
-                if (!space || !defaultSpace) return;
-                choose({ kind: "setDefaultSpace", space, previous: defaultSpace });
-                setOpen(true);
-              }}
+              disabled={blocked}
+              onClick={() => choose({ kind: "setDefaultSpace", space, previous: defaultSpace })}
             >
               Make default space…
             </MenuItem>
-          </MenuPopup>
-        </Menu>
-      )}
+          ) : null}
+        </MenuPopup>
+      </Menu>
       <Dialog
         open={open}
         onOpenChange={(value) => {
@@ -165,125 +271,68 @@ function Library({
         }}
       >
         <DialogPopup>
-          <DialogTitle>{page ? "Page title" : "Space settings"}</DialogTitle>
-          <DialogDescription>
-            Changes use the details selected here. If another device changes them, refresh and
-            choose again. Resolve affected page drafts first. Metadata changes have no Undo. The
-            default space cannot be deleted.
-          </DialogDescription>
-          <div className="mt-4 space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {page ? (
-                <Button
-                  variant="outline"
-                  disabled={blocked || !renamePage || !!page.trash}
-                  onClick={() => choose({ kind: "updatePage", page }, page.title)}
-                >
-                  Rename {page.title || "Untitled page"}
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  disabled={busy || !readable}
-                  onClick={() => {
-                    selected.refresh();
-                    catalog.refresh();
-                    previous.refresh();
-                  }}
-                >
-                  Refresh library metadata
-                </Button>
-              )}
-            </div>
-            {intent ? (
-              <div className="space-y-2">
-                {intent.kind === "setDefaultSpace" ? (
-                  <p>
-                    Make {intent.space.title || "Untitled space"} the default instead of{" "}
-                    {intent.previous.title || "Untitled space"}? This changes the environment's
-                    default; both spaces and their pages remain.
-                  </p>
-                ) : (
-                  <label>
-                    New title
-                    <Input value={title} onChange={(event) => setTitle(event.target.value)} />
-                  </label>
-                )}
-                <Button
-                  variant="outline"
-                  disabled={blocked || !allowed}
-                  onClick={() => run(submit())}
-                >
-                  {intent.kind === "setDefaultSpace" ? "Confirm default space" : "Confirm rename"}
-                </Button>
-              </div>
+          <DialogTitle>
+            {intent?.kind === "setDefaultSpace" ? "Make default space" : "Rename space"}
+          </DialogTitle>
+          {intent?.kind === "setDefaultSpace" ? (
+            <DialogDescription>
+              Make {intent.space.title || "Untitled space"} the default instead of{" "}
+              {intent.previous.title || "Untitled space"}? Both spaces and their pages stay.
+            </DialogDescription>
+          ) : (
+            <DialogDescription>Choose a new name for this space.</DialogDescription>
+          )}
+          <form
+            className="mt-4 flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              run(submit());
+            }}
+          >
+            {intent?.kind === "renameSpace" ? (
+              <Input
+                autoFocus
+                aria-label="Space title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
             ) : null}
-            {pending ? (
-              <div className="space-y-2">
-                <p role="status">
-                  Retained {pending.request.operation}.{" "}
-                  {pending.rejection
-                    ? "The server refused this intent before commit. Inspect explicitly to choose a new intent."
-                    : pending.conflict
-                      ? "Conflicted. Inspect explicitly to choose a new intent."
-                      : "Resolve the exact receipt before changing affected pages."}
-                </p>
-                {"title" in pending.request.input ? (
-                  <p>Attempted title: {pending.request.input.title || "(empty title)"}</p>
-                ) : null}
-                <Button
-                  variant="outline"
-                  disabled={
-                    busy ||
-                    !hydrated ||
-                    !readable ||
-                    (pending.conflict && availability !== "writable")
-                  }
-                  onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
-                >
-                  {pending.conflict ? "Inspect new intent" : "Recover exact receipt"}
-                </Button>
-              </div>
-            ) : null}
-            {!hydrated && snapshot.error ? (
-              <Button variant="outline" disabled={busy} onClick={() => run(owner.hydrate())}>
-                Retry library storage
-              </Button>
-            ) : null}
-            {snapshot.notice ? (
+            <Button
+              type="submit"
+              disabled={blocked || !allowed || (intent?.kind === "renameSpace" && !title.trim())}
+            >
+              {intent?.kind === "setDefaultSpace" ? "Make default" : "Save"}
+            </Button>
+          </form>
+          {pending ? (
+            <div className="mt-3 space-y-2">
               <p role="status" className="text-sm text-muted-foreground">
-                {snapshot.notice}
+                A previous change is still waiting to be confirmed.
               </p>
-            ) : null}
-            {result?.page ? (
-              <Link
-                to="/spaces/$environmentId/$spaceId/$pageId"
-                params={{ environmentId, spaceId: result.page.spaceId, pageId: result.page.id }}
-                search={{}}
-                className="underline"
+              <Button
+                variant="outline"
+                disabled={
+                  busy ||
+                  !hydrated ||
+                  !readable ||
+                  (pending.conflict && availability !== "writable")
+                }
+                onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
               >
-                Open {result.page.title || "Untitled page"}
-              </Link>
-            ) : result?.space ? (
-              <Link
-                to="/spaces/$environmentId/$spaceId"
-                params={{ environmentId, spaceId: result.space.id }}
-                className="underline"
-              >
-                Open {result.space.title || "Untitled space"}
-              </Link>
-            ) : null}
-            {snapshot.error ? (
-              <p role="alert">
-                {snapshot.error instanceof Error
-                  ? snapshot.error.message
-                  : "Library operation failed; retained data has been kept."}
-              </p>
-            ) : null}
-            {selected.error || catalog.error || previous.error ? (
-              <p role="alert">{selected.error || catalog.error || previous.error}</p>
-            ) : null}
-          </div>
+                {pending.conflict ? "Check again" : "Retry"}
+              </Button>
+            </div>
+          ) : null}
+          {!hydrated && snapshot.error ? (
+            <Button
+              className="mt-3"
+              variant="outline"
+              disabled={busy}
+              onClick={() => run(owner.hydrate())}
+            >
+              Retry
+            </Button>
+          ) : null}
         </DialogPopup>
       </Dialog>
     </>
