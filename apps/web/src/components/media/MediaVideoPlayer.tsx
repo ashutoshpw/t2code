@@ -11,6 +11,7 @@ import { OpenMediaLink } from "./OpenMediaLink";
 import { MediaActions, type MediaActionSource } from "./MediaActions";
 
 interface MediaVideoPlayerProps {
+  readonly bindVideo?: ((video: HTMLVideoElement) => (() => void) | undefined) | undefined;
   readonly src: string | null;
   readonly label: string;
   readonly sourceFailed?: boolean | undefined;
@@ -29,6 +30,7 @@ interface MediaVideoPlayerProps {
 }
 
 export function MediaVideoPlayer({
+  bindVideo,
   src: latestSrc,
   label,
   sourceFailed = false,
@@ -73,6 +75,7 @@ export function MediaVideoPlayer({
 
   // Retry and failure remount the element, so its listeners live and die with it.
   const attachVideo = (video: HTMLVideoElement) => {
+    const releaseBinding = bindVideo?.(video);
     const pauseWhenHidden = () => {
       // Native fullscreen can hide the inline page while this video is still visible.
       const fullscreen =
@@ -84,6 +87,7 @@ export function MediaVideoPlayer({
     document.addEventListener("fullscreenchange", pauseWhenHidden);
     video.addEventListener("webkitendfullscreen", pauseWhenHidden);
     return () => {
+      releaseBinding?.();
       document.removeEventListener("visibilitychange", pauseWhenHidden);
       document.removeEventListener("fullscreenchange", pauseWhenHidden);
       video.removeEventListener("webkitendfullscreen", pauseWhenHidden);

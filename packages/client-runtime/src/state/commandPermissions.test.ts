@@ -1,3 +1,14 @@
+import { createSpacesEnvironmentAtoms } from "./spaces.ts";
+import {
+  SpaceId,
+  SpaceAssetUploadId,
+  SpaceBlockId,
+  SpacePageId,
+  SpaceMutationId,
+  SpaceReceiptEpoch,
+  type SpaceCapability,
+  type SpaceMoveBlocksInput,
+} from "@t2code/contracts/spaces";
 import { requestGuarded, runStreamGuarded } from "../rpc/client.ts";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
 import * as SubscriptionRef from "effect/SubscriptionRef";
@@ -99,15 +110,21 @@ describe("command permissions", () => {
             expect(registry.get(permission.permissionAtom(other))).toBe(true);
             yield* permission.authorize(registry, other);
           }
-          const search = createCommandPermissions(runtime, WS_METHODS.spacesSearch);
-          expect(registry.get(search.permissionAtom(env))).toBe(true);
-          yield* search.authorize(registry, env);
-          expect(registry.get(search.permissionAtom(other))).toBe(false);
-          expect((yield* search.authorize(registry, other).pipe(Effect.flip))._tag).toBe(
-            "EnvironmentAuthorizationError",
-          );
+          for (const tag of [WS_METHODS.spacesSearch, WS_METHODS.spacesReferencesResolve]) {
+            const search = createCommandPermissions(runtime, tag);
+            expect(registry.get(search.permissionAtom(env))).toBe(true);
+            yield* search.authorize(registry, env);
+            expect(registry.get(search.permissionAtom(other))).toBe(false);
+            expect((yield* search.authorize(registry, other).pipe(Effect.flip))._tag).toBe(
+              "EnvironmentAuthorizationError",
+            );
+          }
           registry.set(sessions(env), AsyncResult.success(grant(false)));
-          expect(registry.get(search.permissionAtom(env))).toBe(false);
+          for (const tag of [WS_METHODS.spacesSearch, WS_METHODS.spacesReferencesResolve]) {
+            expect(registry.get(createCommandPermissions(runtime, tag).permissionAtom(env))).toBe(
+              false,
+            );
+          }
           registry.set(sessions(other), AsyncResult.success(grant(false)));
           expect(
             registry.get(
@@ -403,4 +420,301 @@ it.effect("rejects protected unary and streamed RPCs outside a guarded command",
     expect(streamed._tag).toBe("EnvironmentAuthorizationError");
     expect(writes).toBe(0);
   }),
+);
+
+it.effect.each([
+  "moveBlocks",
+  "createSpace",
+  "renameSpace",
+  "setDefaultSpace",
+  "createPage",
+  "updatePage",
+  "trashPage",
+  "restorePage",
+  "createChild",
+  "permanentlyDeletePage",
+] as const)(
+  "checks the latest %s capability after destination authorization before reaching the transport",
+  (operation) =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const registry = yield* setup;
+        let calls = 0;
+        const reachedTransport = () =>
+          Effect.sync(() => {
+            calls++;
+            throw new Error("Transport reached");
+          });
+        const transport = {
+          client: {
+            [WS_METHODS.spacesBlocksMove]: reachedTransport,
+            [WS_METHODS.spacesCreate]: reachedTransport,
+            [WS_METHODS.spacesRename]: reachedTransport,
+            [WS_METHODS.spacesSetDefault]: reachedTransport,
+            [WS_METHODS.spacesPagesCreate]: reachedTransport,
+            [WS_METHODS.spacesPagesUpdate]: reachedTransport,
+            [WS_METHODS.spacesPagesCreateChild]: reachedTransport,
+            [WS_METHODS.spacesPagesTrash]: reachedTransport,
+            [WS_METHODS.spacesPagesRestore]: reachedTransport,
+            [WS_METHODS.spacesPagesPermanentlyDelete]: reachedTransport,
+          },
+        } as unknown as RpcSession;
+        const supervisor = {
+          target: { environmentId: env, label: "destination" },
+          session: yield* SubscriptionRef.make(Option.some(transport)),
+        } as unknown as EnvironmentSupervisor["Service"];
+        const runtime = Atom.runtime(
+          Layer.succeed(EnvironmentRegistry, {
+            run: (_id: EnvironmentId, operation: Effect.Effect<unknown>) =>
+              Effect.provideService(operation, EnvironmentSupervisor, supervisor),
+          } as unknown as EnvironmentRegistry["Service"]),
+        );
+        const capability = Atom.make<SpaceCapability | undefined>(undefined);
+        const spaces = createSpacesEnvironmentAtoms(runtime, { capabilityAtom: () => capability });
+        const input: SpaceMoveBlocksInput = {
+          environmentId: env,
+          sourcePageId: SpacePageId.make("source"),
+          blockIds: [SpaceBlockId.make("root")],
+          destination: {
+            pageId: SpacePageId.make("destination"),
+            parentId: null,
+            beforeBlockId: null,
+          },
+          guards: { pages: [], roots: [] },
+          mutationId: SpaceMutationId.make("move"),
+          receiptEpoch: SpaceReceiptEpoch.make("epoch"),
+        };
+        registry.set(sessions(env), AsyncResult.success(grant(true)));
+        const run = () =>
+          Effect.promise(async () => {
+            const metadata = {
+              environmentId: env,
+              mutationId: input.mutationId,
+              receiptEpoch: input.receiptEpoch,
+            };
+            const spaceId = SpaceId.make("selected");
+            if (operation === "createSpace")
+              return spaces.createSpace.run(registry, {
+                environmentId: env,
+                input: { ...metadata, title: "New" },
+              });
+            if (operation === "renameSpace")
+              return spaces.renameSpace.run(registry, {
+                environmentId: env,
+                input: { ...metadata, spaceId, baseRevision: 0, title: "Rename" },
+              });
+            if (operation === "setDefaultSpace")
+              return spaces.setDefaultSpace.run(registry, {
+                environmentId: env,
+                input: {
+                  ...metadata,
+                  spaceId,
+                  baseRevision: 0,
+                  defaultSpaceId: SpaceId.make("default"),
+                  baseDefaultRevision: 0,
+                },
+              });
+            if (operation === "createPage")
+              return spaces.createPage.run(registry, {
+                environmentId: env,
+                input: { ...metadata, spaceId, baseRootOrderRevision: 0, title: "Root" },
+              });
+            if (operation === "updatePage")
+              return spaces.updatePage.run(registry, {
+                environmentId: env,
+                input: {
+                  ...metadata,
+                  pageId: input.sourcePageId,
+                  baseRevision: 0,
+                  title: "Rename",
+                },
+              });
+            if (operation === "moveBlocks")
+              return spaces.moveBlocks.run(registry, { environmentId: env, input });
+            if (operation === "createChild")
+              return spaces.createChild.run(registry, {
+                environmentId: env,
+                input: {
+                  environmentId: env,
+                  mutationId: input.mutationId,
+                  receiptEpoch: input.receiptEpoch,
+                  guards: input.guards,
+                  title: "Child",
+                  placement: input.destination,
+                },
+              });
+            return spaces[operation].run(registry, {
+              environmentId: env,
+              input: {
+                environmentId: env,
+                mutationId: input.mutationId,
+                receiptEpoch: input.receiptEpoch,
+                guards: input.guards,
+                pageId: input.sourcePageId,
+              },
+            });
+          });
+        const missing = yield* run();
+        expect(missing._tag).toBe("Failure");
+        if (missing._tag === "Failure")
+          expect(Cause.squash(missing.cause)).toMatchObject({
+            _tag: "SpacesUnavailableError",
+            stage: "settings",
+          });
+        const old = { version: 2, limits: {} } as SpaceCapability;
+        registry.set(capability, { ...old, version: 1 });
+        yield* run();
+        const library = [
+          "createSpace",
+          "renameSpace",
+          "setDefaultSpace",
+          "createPage",
+          "updatePage",
+        ].includes(operation);
+        expect(calls).toBe(library ? 1 : 0);
+        calls = 0;
+        registry.set(capability, old);
+        yield* run();
+        expect(calls).toBe(operation === "createChild" || library ? 1 : 0);
+        calls = 0;
+        registry.set(capability, {
+          ...old,
+          version: 3,
+          features: { blockMoves: true, recovery: true },
+        });
+        yield* run();
+        expect(calls).toBe(0);
+        registry.set(capability, { ...old, features: { blockMoves: true, recovery: true } });
+        const reached = yield* run();
+        expect(reached._tag).toBe("Failure");
+        expect(calls).toBe(1);
+        registry.set(capability, undefined);
+        yield* run();
+        expect(calls).toBe(1);
+        registry.set(capability, { ...old, features: { blockMoves: true, recovery: true } });
+        registry.set(sessions(env), AsyncResult.success(grant(false)));
+        yield* run();
+        expect(calls).toBe(1);
+      }),
+    ),
+);
+
+it.effect.each(["search", "resolve", "createImageUpload", "finalizeImageUpload"] as const)(
+  "uses the latest destination grant and exact %s capability at the real command boundary",
+  (operation) =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const registry = yield* setup;
+        const image = operation === "createImageUpload" || operation === "finalizeImageUpload";
+        let calls = 0;
+        const reached = () =>
+          Effect.sync(() => {
+            calls++;
+            throw Error("Transport reached");
+          });
+        const transport = {
+          client: {
+            [WS_METHODS.spacesSearch]: reached,
+            [WS_METHODS.spacesReferencesResolve]: reached,
+            [WS_METHODS.spacesAssetsUploadCreate]: reached,
+            [WS_METHODS.spacesAssetsUploadFinalize]: reached,
+          },
+        } as unknown as RpcSession;
+        const supervisor = {
+          target: { environmentId: env, label: "destination" },
+          session: yield* SubscriptionRef.make(Option.some(transport)),
+        } as unknown as EnvironmentSupervisor["Service"];
+        const runtime = Atom.runtime(
+          Layer.succeed(EnvironmentRegistry, {
+            run: (_id: EnvironmentId, effect: Effect.Effect<unknown>) =>
+              Effect.provideService(effect, EnvironmentSupervisor, supervisor),
+          } as unknown as EnvironmentRegistry["Service"]),
+        );
+        const capability = Atom.make<SpaceCapability | undefined>(undefined),
+          spaces = createSpacesEnvironmentAtoms(runtime, { capabilityAtom: () => capability });
+        const run = () =>
+          Effect.promise(async () =>
+            operation === "createImageUpload"
+              ? spaces.createImageUpload.run(registry, {
+                  environmentId: env,
+                  input: {
+                    environmentId: env,
+                    requestId: "image",
+                    expectedBytes: 68,
+                    mimeType: "image/png",
+                    mediaKind: "image",
+                    name: "image.png",
+                  },
+                })
+              : operation === "finalizeImageUpload"
+                ? spaces.finalizeImageUpload.run(registry, {
+                    environmentId: env,
+                    input: { environmentId: env, uploadId: SpaceAssetUploadId.make("upload") },
+                  })
+                : operation === "search"
+                  ? spaces.search.run(registry, {
+                      environmentId: env,
+                      input: { environmentId: env, query: "word" },
+                    })
+                  : spaces.resolve.run(registry, {
+                      environmentId: env,
+                      input: {
+                        environmentId: env,
+                        target: { kind: "page", pageId: SpacePageId.make("page") },
+                      },
+                    }),
+          );
+        registry.set(
+          sessions(env),
+          AsyncResult.success({
+            ...grant(false),
+            scopes: [AuthOrchestrationReadScope],
+            permissions: [AuthOrchestrationReadScope],
+          }),
+        );
+        if (image) registry.set(sessions(env), AsyncResult.success(grant(true)));
+        yield* run();
+        registry.set(capability, { version: 1, limits: {} } as SpaceCapability);
+        yield* run();
+        registry.set(capability, { version: 2, limits: {} } as SpaceCapability);
+        yield* run();
+        expect(calls).toBe(0);
+        registry.set(capability, {
+          version: 2,
+          features: { search: true, referenceResolution: true, assets: true },
+          limits: { assets: {} },
+        } as SpaceCapability);
+        yield* run();
+        expect(calls).toBe(1);
+        registry.set(capability, undefined);
+        yield* run();
+        expect(calls).toBe(1);
+        registry.set(capability, {
+          version: 3,
+          features: { search: true, referenceResolution: true, assets: true },
+          limits: { assets: {} },
+        } as SpaceCapability);
+        yield* run();
+        expect(calls).toBe(1);
+        registry.set(capability, {
+          version: 2,
+          features: { search: true, referenceResolution: true, assets: true },
+          limits: { assets: {} },
+        } as SpaceCapability);
+        registry.set(
+          sessions(env),
+          AsyncResult.success(
+            image
+              ? {
+                  ...grant(false),
+                  scopes: [AuthOrchestrationReadScope],
+                  permissions: [AuthOrchestrationReadScope],
+                }
+              : grant(true),
+          ),
+        );
+        yield* run();
+        expect(calls).toBe(1);
+      }),
+    ),
 );

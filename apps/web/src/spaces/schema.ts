@@ -1,6 +1,7 @@
 import { getSchema, Mark, Node, type Extensions } from "@tiptap/core";
 
 import type { SpaceBlock, SpaceKnownMark } from "@t2code/contracts/spaces";
+import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
 
 const blockAttributes = () => ({ block: { default: null, rendered: false } });
 const listTypes = new Set(["bulleted_item", "numbered_item", "todo_item"]);
@@ -32,12 +33,24 @@ export const spaceSchemaExtensions: Extensions = [
       addAttributes: blockAttributes,
       renderHTML({ node }) {
         const block = node.attrs.block as SpaceBlock;
-        const tag = name === "heading" ? "h2" : name === "quote" ? "blockquote" : "div";
-        return [
-          tag,
-          { "data-space-block": block.id, "data-space-type": name, style: "white-space: pre-wrap" },
-          0,
-        ];
+        const known = isKnownSpaceBlock(block) ? block : null;
+        const tag =
+          name === "heading"
+            ? `h${known?.type === "heading" ? known.content.level : 2}`
+            : name === "quote"
+              ? "blockquote"
+              : "div";
+        const attributes = {
+          "data-space-block": block.id,
+          "data-space-type": name,
+          "data-space-checked":
+            known?.type === "todo_item" ? String(known.content.checked) : undefined,
+          "data-space-icon": known?.type === "callout" ? known.content.icon : undefined,
+          style: "white-space: pre-wrap",
+        };
+        if (listTypes.has(name))
+          return ["div", attributes, ["div", { "data-space-list-content": "" }, 0]];
+        return [tag, attributes, 0];
       },
     }),
   ),
@@ -56,6 +69,19 @@ export const spaceSchemaExtensions: Extensions = [
     ],
   }),
   Node.create({
+    name: "spaceMedia",
+    group: "spaceBlock",
+    content: "inline*",
+    defining: true,
+    isolating: true,
+    addAttributes: blockAttributes,
+    renderHTML: ({ node }) => [
+      "figure",
+      { "data-space-block": (node.attrs.block as SpaceBlock).id },
+      ["figcaption", {}, 0],
+    ],
+  }),
+  Node.create({
     name: "spaceAtom",
     group: "spaceBlock",
     atom: true,
@@ -64,6 +90,8 @@ export const spaceSchemaExtensions: Extensions = [
     addAttributes: blockAttributes,
     renderHTML({ node }) {
       const block = node.attrs.block as SpaceBlock;
+      if (isKnownSpaceBlock(block) && block.type === "divider")
+        return ["hr", { "data-space-block": block.id, contenteditable: "false" }];
       return [
         "div",
         { "data-space-block": block.id, contenteditable: "false" },
