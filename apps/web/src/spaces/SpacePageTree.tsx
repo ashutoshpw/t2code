@@ -9,15 +9,14 @@ import {
 } from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { Link, useParams } from "@tanstack/react-router";
-import { ChevronRightIcon, FileTextIcon, RefreshCwIcon } from "lucide-react";
+import { ChevronRightIcon, FileTextIcon } from "lucide-react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceId, SpacePageId } from "@t2code/contracts/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { useEnvironment } from "../state/environments";
 import { spacePageNavigation, useSpacesAvailability } from "../state/spaces";
 import { Button } from "../components/ui/button";
-import { useSidebar } from "../components/ui/sidebar";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
+import { SidebarMenuButton, useSidebar } from "../components/ui/sidebar";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { spacePageTreeRows, type SpacePageTreeRow } from "./SpacePageTree.logic";
 import { SpacePageFocusOwner } from "./SpacePageTree.focus";
@@ -169,24 +168,6 @@ function PageTree({
           {snapshot.windows.find((window) => window.parentPageId === null)?.data?.space.title ??
             "Pages"}
         </h2>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Refresh pages"
-                onClick={() => {
-                  focusList();
-                  navigation.refresh();
-                }}
-              >
-                <RefreshCwIcon />
-              </Button>
-            }
-          />
-          <TooltipPopup side="top">Refresh pages</TooltipPopup>
-        </Tooltip>
         <Suspense fallback={<p role="status">Loading library controls…</p>}>
           <SpaceLibraryControls
             key={environmentId}
@@ -245,47 +226,60 @@ function PageTree({
             }}
           >
             {row.kind === "page" ? (
-              <div
-                className={`group flex min-w-0 items-center gap-0.5 rounded-md hover:bg-sidebar-row-hover ${
-                  row.page.id === activePageId ? "bg-sidebar-row-selected" : ""
-                }`}
-              >
+              <div className="group flex min-w-0 items-center gap-0.5">
                 {version === 2 ? (
-                  <Button
-                    data-space-action
-                    tabIndex={focusedKey === row.key ? 0 : -1}
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={`${row.expanded ? "Hide" : "Show"} child pages of ${row.page.title || "Untitled page"}`}
-                    aria-expanded={row.expanded}
-                    disabled={row.window.pending && !row.expanded}
-                    onClick={() => navigation.expand(row.window.parentPageId, row.page.id)}
+                  <span
+                    className={
+                      !row.expanded && row.page.hasChildren === false
+                        ? "invisible"
+                        : !row.expanded && row.page.hasChildren === undefined
+                          ? "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+                          : undefined
+                    }
                   >
-                    <ChevronRightIcon className={row.expanded ? "rotate-90" : undefined} />
-                  </Button>
+                    <Button
+                      data-space-action
+                      tabIndex={focusedKey === row.key ? 0 : -1}
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={`${row.expanded ? "Hide" : "Show"} child pages of ${row.page.title || "Untitled page"}`}
+                      aria-expanded={row.expanded}
+                      disabled={
+                        (row.window.pending && !row.expanded) ||
+                        (!row.expanded && row.page.hasChildren === false)
+                      }
+                      onClick={() => navigation.expand(row.window.parentPageId, row.page.id)}
+                    >
+                      <ChevronRightIcon className={row.expanded ? "rotate-90" : undefined} />
+                    </Button>
+                  </span>
                 ) : (
                   <span aria-hidden className="w-2" />
                 )}
-                <Link
+                <SidebarMenuButton
                   data-space-action
+                  isActive={row.page.id === activePageId}
                   tabIndex={focusedKey === row.key ? 0 : -1}
-                  to="/spaces/$environmentId/$spaceId/$pageId"
-                  params={{ environmentId, spaceId: row.page.spaceId, pageId: row.page.id }}
-                  search={{}}
                   aria-label={
                     row.parentTitle
                       ? `${row.page.title || "Untitled page"}, child of ${row.parentTitle}`
                       : undefined
                   }
                   aria-current={row.page.id === activePageId ? "page" : undefined}
-                  onClick={() => {
-                    if (isMobile) setOpenMobile(false);
-                  }}
-                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-1 pr-2 text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  render={
+                    <Link
+                      to="/spaces/$environmentId/$spaceId/$pageId"
+                      params={{ environmentId, spaceId: row.page.spaceId, pageId: row.page.id }}
+                      search={{}}
+                      onClick={() => {
+                        if (isMobile) setOpenMobile(false);
+                      }}
+                    />
+                  }
                 >
-                  <FileTextIcon className="size-4 shrink-0 text-sidebar-muted-foreground" />
-                  <span className="truncate">{row.page.title || "Untitled page"}</span>
-                </Link>
+                  <FileTextIcon />
+                  <span>{row.page.title || "Untitled page"}</span>
+                </SidebarMenuButton>
               </div>
             ) : (
               <PageWindowRow row={row} next={next} first={first} focused={focusedKey === row.key} />
