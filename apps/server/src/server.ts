@@ -646,9 +646,6 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   DatabaseStorage.layer.pipe(
     Layer.provide(layerSpaces),
     Layer.provide(ProjectionMaintenance.layer),
-    Layer.provide(
-      Layer.merge(EventStoreV2.layerFromOrchestrationEventStore, ProjectionStoreV2.layer),
-    ),
   ),
   layerThreadPullRequestWorker,
   DelegatedTaskAnalytics.layer,
