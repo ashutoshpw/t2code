@@ -8,7 +8,8 @@ import {
   type KeyboardEvent,
 } from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
-import { Link } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
+import { ChevronRightIcon, FileTextIcon, RefreshCwIcon } from "lucide-react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceId, SpacePageId } from "@t2code/contracts/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
@@ -16,6 +17,7 @@ import { useEnvironment } from "../state/environments";
 import { spacePageNavigation, useSpacesAvailability } from "../state/spaces";
 import { Button } from "../components/ui/button";
 import { useSidebar } from "../components/ui/sidebar";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { spacePageTreeRows, type SpacePageTreeRow } from "./SpacePageTree.logic";
 import { SpacePageFocusOwner } from "./SpacePageTree.focus";
@@ -70,6 +72,7 @@ function PageTree({
   );
   const snapshot = useSyncExternalStore(navigation.subscribe, navigation.getSnapshot);
   const { isMobile, setOpenMobile } = useSidebar();
+  const { pageId: activePageId } = useParams({ strict: false });
   const rows = spacePageTreeRows(snapshot.windows);
   const listRef = useRef<LegendListRef | null>(null);
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
@@ -160,22 +163,30 @@ function PageTree({
     void focusRow(next, event.key === "Tab" && event.shiftKey);
   };
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <h2 className="min-w-0 break-words text-sm font-semibold">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1">
+      <div className="flex shrink-0 items-center gap-1 px-2">
+        <h2 className="min-w-0 flex-1 truncate text-xs font-medium text-sidebar-muted-foreground">
           {snapshot.windows.find((window) => window.parentPageId === null)?.data?.space.title ??
             "Pages"}
         </h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            focusList();
-            navigation.refresh();
-          }}
-        >
-          Refresh pages
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Refresh pages"
+                onClick={() => {
+                  focusList();
+                  navigation.refresh();
+                }}
+              >
+                <RefreshCwIcon />
+              </Button>
+            }
+          />
+          <TooltipPopup side="top">Refresh pages</TooltipPopup>
+        </Tooltip>
         <Suspense fallback={<p role="status">Loading library controls…</p>}>
           <SpaceLibraryControls
             key={environmentId}
@@ -185,7 +196,7 @@ function PageTree({
         </Suspense>
       </div>
       {snapshot.error ? (
-        <p role="alert" className="shrink-0 text-sm">
+        <p role="alert" className="shrink-0 px-2 text-sm">
           {snapshot.error}
         </p>
       ) : null}
@@ -194,8 +205,8 @@ function PageTree({
         data={rows}
         keyExtractor={(row) => row.key}
         getItemType={(row) => row.kind}
-        extraData={{ focusedKey, version, isMobile, setOpenMobile }}
-        estimatedItemSize={40}
+        extraData={{ focusedKey, version, isMobile, setOpenMobile, activePageId }}
+        estimatedItemSize={32}
         drawDistance={320}
         {...(focusedKey || pendingKey
           ? { alwaysRender: { keys: [focusedKey, pendingKey].filter((key) => key !== null) } }
@@ -225,7 +236,7 @@ function PageTree({
             }
             data-space-row={row.key}
             tabIndex={-1}
-            className="min-w-0 py-1"
+            className="min-w-0 py-0.5"
             style={{ paddingInlineStart: `min(${row.depth * 12}px, 25%)` }}
             onFocusCapture={() => {
               focusOwner.cancel();
@@ -234,7 +245,11 @@ function PageTree({
             }}
           >
             {row.kind === "page" ? (
-              <div className="flex min-w-0 items-start gap-2">
+              <div
+                className={`group flex min-w-0 items-center gap-0.5 rounded-md hover:bg-sidebar-row-hover ${
+                  row.page.id === activePageId ? "bg-sidebar-row-selected" : ""
+                }`}
+              >
                 {version === 2 ? (
                   <Button
                     data-space-action
@@ -246,9 +261,11 @@ function PageTree({
                     disabled={row.window.pending && !row.expanded}
                     onClick={() => navigation.expand(row.window.parentPageId, row.page.id)}
                   >
-                    {row.expanded ? "−" : "+"}
+                    <ChevronRightIcon className={row.expanded ? "rotate-90" : undefined} />
                   </Button>
-                ) : null}
+                ) : (
+                  <span aria-hidden className="w-2" />
+                )}
                 <Link
                   data-space-action
                   tabIndex={focusedKey === row.key ? 0 : -1}
@@ -260,12 +277,14 @@ function PageTree({
                       ? `${row.page.title || "Untitled page"}, child of ${row.parentTitle}`
                       : undefined
                   }
+                  aria-current={row.page.id === activePageId ? "page" : undefined}
                   onClick={() => {
                     if (isMobile) setOpenMobile(false);
                   }}
-                  className="min-w-0 break-words text-sm underline"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-1 pr-2 text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
-                  {row.page.title || "Untitled page"}
+                  <FileTextIcon className="size-4 shrink-0 text-sidebar-muted-foreground" />
+                  <span className="truncate">{row.page.title || "Untitled page"}</span>
                 </Link>
               </div>
             ) : (
@@ -293,16 +312,17 @@ function PageWindowRow({
   const { window } = row;
   const label = row.parentTitle ? `Child pages of ${row.parentTitle}` : "Pages";
   return (
-    <div className="min-w-0 space-y-2">
+    <div className="min-w-0 space-y-1 px-2">
       {window.error ? (
         <div>
-          <p role="alert" className="text-sm">
+          <p role="alert" className="text-xs">
             {window.error}
           </p>
           <Button
             data-space-action
             tabIndex={focused ? 0 : -1}
-            variant="outline"
+            variant="ghost"
+            size="xs"
             aria-label={`Retry from first pages: ${label}`}
             onClick={() => first(window.parentPageId)}
           >
@@ -310,11 +330,11 @@ function PageWindowRow({
           </Button>
         </div>
       ) : !window.data ? (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-xs text-muted-foreground">
           Loading pages…
         </p>
       ) : window.data.items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {window.cursor !== undefined || window.data.nextCursor !== null
             ? "No pages in this window."
             : window.parentPageId === null
@@ -322,12 +342,13 @@ function PageWindowRow({
               : "No child pages."}
         </p>
       ) : null}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1">
         {window.cursor ? (
           <Button
             data-space-action
             tabIndex={focused ? 0 : -1}
-            variant="outline"
+            variant="ghost"
+            size="xs"
             aria-label={`First pages: ${label}`}
             disabled={window.pending}
             onClick={() => first(window.parentPageId)}
@@ -339,7 +360,8 @@ function PageWindowRow({
           <Button
             data-space-action
             tabIndex={focused ? 0 : -1}
-            variant="outline"
+            variant="ghost"
+            size="xs"
             aria-label={`Next pages: ${label}`}
             disabled={window.pending}
             onClick={() => next(window.parentPageId)}
