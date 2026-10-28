@@ -1,5 +1,12 @@
 import { threadChipCopyTarget } from "@t2code/client-runtime/thread-reference";
-import { type ComposerContextClipboardFragment, EnvironmentId, ThreadId } from "@t2code/contracts";
+import {
+  type ComposerContextClipboardFragment,
+  ComposerContextId,
+  EnvironmentId,
+  type SpaceContextSelector,
+  ThreadId,
+} from "@t2code/contracts";
+import { SpacePageId } from "@t2code/contracts/spaces";
 import {
   COMPOSER_CONTEXT_CLIPBOARD_MIME,
   encodeComposerContextFragment,
@@ -7,7 +14,7 @@ import {
 import { threadContextRecord } from "@t2code/shared/composerContextReferences";
 import { describe, expect, it } from "vite-plus/test";
 
-import { importPastedComposerText } from "./composerInlineTokenPaste";
+import { importPastedComposerText, readPastedComposerContext } from "./composerInlineTokenPaste";
 
 const thread = {
   environmentId: EnvironmentId.make("env-1"),
@@ -17,7 +24,7 @@ const clipboard = (data: Record<string, string>) => ({
   getData: (type: string) => data[type] ?? "",
 });
 const chip = (title: string) =>
-  `[${title}](t3-context://v1/thread/${threadContextRecord(thread, title).contextId})`;
+  `[${title}](t2-context://v1/thread/${threadContextRecord(thread, title).contextId})`;
 
 /** Imports every record it is offered, as the composer does for a thread its agent can read. */
 const importAll =
@@ -42,18 +49,54 @@ describe("importPastedComposerText", () => {
     expect(imported.map((fragment) => fragment.records)).toEqual([target.fragment!.records]);
   });
 
-  it("makes a chip of a v2 link pasted without T3's clipboard format", () => {
+  it("makes a chip of a v2 link pasted without T2's clipboard format", () => {
     const text = importPastedComposerText(
-      clipboard({ "text/plain": "[Login](t3-thread://v2/env-1/thread-1)" }),
+      clipboard({ "text/plain": "[Login](t2-thread://v2/env-1/thread-1)" }),
       importAll([]),
     );
     expect(text).toBe(chip("Login"));
   });
 
   it("keeps the link when the composer cannot take the thread", () => {
-    const pasted = "https://app.t3.codes/threads/env-1/thread-1";
+    const pasted = "https://app.t2.codes/threads/env-1/thread-1";
     expect(importPastedComposerText(clipboard({ "text/plain": pasted }), () => new Map())).toBe(
       pasted,
     );
   });
+});
+
+it("imports selector-only clipboard context and rewrites collisions without importing removed references", () => {
+  const environmentId = EnvironmentId.make("env");
+  const selector = (id: string): SpaceContextSelector => ({
+    version: 1,
+    selection: "current",
+    kind: "page",
+    environmentId,
+    contextId: ComposerContextId.make(id),
+    pageId: SpacePageId.make("page"),
+    label: "Page",
+    includeChildPages: false,
+  });
+  const fragment = encodeComposerContextFragment({
+    version: 1,
+    source: { environmentId },
+    records: [],
+    selectors: [selector("p"), selector("removed")],
+  })!;
+  const data = {
+    getData: (type: string) =>
+      type === "text/plain"
+        ? "[Page](t2-context://v1/page/p)"
+        : type === COMPOSER_CONTEXT_CLIPBOARD_MIME
+          ? fragment
+          : "",
+  };
+  expect(readPastedComposerContext(data)?.selectors?.map((record) => record.contextId)).toEqual([
+    "p",
+  ]);
+  const pasted = importPastedComposerText(
+    data,
+    (parsed) => new Map((parsed.selectors ?? []).map((record) => [record.contextId, "new-p"])),
+  );
+  expect(pasted).toBe("[Page](t2-context://v1/page/new-p)");
 });
