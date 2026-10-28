@@ -172,6 +172,12 @@ export function splitSpaceTextBlock(
   if (!("runs" in known.content) || !hasSupportedRuns(known.content.runs, false))
     throw new Error("Block cannot be split losslessly");
   if (next.id === block.id) throw new Error("Split requires a new block ID");
+  const text = spacePlainText(known.content.runs);
+  if (known.type === "heading" && offset >= text.length)
+    return [
+      known,
+      { ...next, version: 1, parentId: known.parentId, type: "paragraph", content: { runs: [] } },
+    ];
   return [
     {
       ...known,
