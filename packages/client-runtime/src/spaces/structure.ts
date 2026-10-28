@@ -883,34 +883,42 @@ export class SpaceRootReorder {
       if (preview.operation === "permanentlyDelete" && !confirmPermanentDeletion)
         throw new Error("Permanent deletion requires explicit irreversible confirmation");
       const observed = preview.inspection.guards;
-      await this.#stage(observed, async () => {
-        const admission = await this.#ports.spaces({ environmentId: this.environmentId, limit: 1 });
-        this.#assertRecovery(true);
-        return {
-          request: {
-            operation:
-              preview.operation === "trash"
-                ? "trashPage"
-                : preview.operation === "restore"
-                  ? "restorePage"
-                  : "permanentlyDeletePage",
-            input: {
-              environmentId: this.environmentId,
-              pageId: preview.pageId,
-              guards: observed,
-              mutationId: C.SpaceMutationId.make(this.#ports.newId()),
-              receiptEpoch: admission.mutationAdmission.epoch,
+      await this.#stage(
+        observed,
+        async () => {
+          const admission = await this.#ports.spaces({
+            environmentId: this.environmentId,
+            limit: 1,
+          });
+          this.#assertRecovery(true);
+          return {
+            request: {
+              operation:
+                preview.operation === "trash"
+                  ? "trashPage"
+                  : preview.operation === "restore"
+                    ? "restorePage"
+                    : "permanentlyDeletePage",
+              input: {
+                environmentId: this.environmentId,
+                pageId: preview.pageId,
+                guards: observed,
+                mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+                receiptEpoch: admission.mutationAdmission.epoch,
+              },
             },
-          },
-          recoveryPageIds: preview.inspection.recovery!.pageIds,
-          recoveryBefore: preview.inspection.pages,
-          recoveryScope: "page recovery",
-          inverse: null,
-          observed,
-          direction: "move",
-          conflict: false,
-        };
-      });
+            recoveryPageIds: preview.inspection.recovery!.pageIds,
+            recoveryBefore: preview.inspection.pages,
+            recoveryScope: "page recovery",
+            inverse: null,
+            observed,
+            direction: "move",
+            conflict: false,
+          };
+        },
+        false,
+        preview.operation !== "trash",
+      );
     });
   }
   createChild(title: string, placement: C.SpaceBlockPlacement) {
@@ -1237,32 +1245,37 @@ export class SpaceRootReorder {
           throw new Error(
             "The retained recovery closure, ownership or batch changed; inverse is unavailable",
           );
-        await this.#stage(h.observed, async () => {
-          const admission = await this.#ports.spaces({
-            environmentId: this.environmentId,
-            limit: 1,
-          });
-          this.#assertRecovery(true);
-          return {
-            request: {
-              operation: h.operation,
-              input: {
-                environmentId: this.environmentId,
-                pageId: h.pageId,
-                guards: h.guards,
-                mutationId: C.SpaceMutationId.make(this.#ports.newId()),
-                receiptEpoch: admission.mutationAdmission.epoch,
+        await this.#stage(
+          h.observed,
+          async () => {
+            const admission = await this.#ports.spaces({
+              environmentId: this.environmentId,
+              limit: 1,
+            });
+            this.#assertRecovery(true);
+            return {
+              request: {
+                operation: h.operation,
+                input: {
+                  environmentId: this.environmentId,
+                  pageId: h.pageId,
+                  guards: h.guards,
+                  mutationId: C.SpaceMutationId.make(this.#ports.newId()),
+                  receiptEpoch: admission.mutationAdmission.epoch,
+                },
               },
-            },
-            recoveryPageIds: h.pageIds,
-            recoveryBefore: h.pages,
-            recoveryScope: h.scope,
-            observed: h.observed,
-            inverse: null,
-            direction,
-            conflict: false,
-          };
-        });
+              recoveryPageIds: h.pageIds,
+              recoveryBefore: h.pages,
+              recoveryScope: h.scope,
+              observed: h.observed,
+              inverse: null,
+              direction,
+              conflict: false,
+            };
+          },
+          false,
+          h.operation === "restorePage",
+        );
         return;
       }
       let current: C.SpaceInspectStructureResult;
@@ -1579,10 +1592,15 @@ export class SpaceRootReorder {
   ) {
     return this.#stage(observed, async () => make(await this.#ports.getPage(pageId)));
   }
-  async #stage(observed: C.SpaceStructureGuards, make: () => Promise<Pending>, library = false) {
+  async #stage(
+    observed: C.SpaceStructureGuards,
+    make: () => Promise<Pending>,
+    library = false,
+    restoring = false,
+  ) {
     this.#release = this.#ports.reserve(
       observed.pages.map((p) => p.pageId),
-      false,
+      restoring,
     );
     try {
       await this.#ports.checkDrafts(observed.pages.map((p) => p.pageId));
@@ -2198,11 +2216,11 @@ export class SpaceRootReorder {
       notice,
     });
     this.#accepted = null;
-    this.#ports.changed();
     try {
       await this.#ports.refresh(refresh);
     } finally {
       this.#unlock();
+      this.#ports.changed();
     }
   }
   reinspect(): Promise<void> {
