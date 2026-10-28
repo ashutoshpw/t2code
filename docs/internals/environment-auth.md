@@ -147,3 +147,10 @@ Host videos can change in place. Their [HTTP
 responses](../../apps/server/src/http.ts) omit cache validators because file
 metadata cannot prove byte-for-byte identity for `If-Range`. Adding weak
 validators would turn native-player seeks into full downloads.
+
+Spaces media uses the same session-independent bearer URLs, but
+[resolution](../../apps/server/src/assets/AssetAccess.ts) also checks the current enabled state
+and catalog generation on each network request. Disabling Spaces or collecting the generation
+therefore rejects later requests, including requests through an old URL after identical bytes are
+uploaded again. This cannot withdraw bytes already downloaded or held in an immutable client cache;
+revoking the minting session still does not revoke its unexpired bearer URL.

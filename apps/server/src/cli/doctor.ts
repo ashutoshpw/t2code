@@ -41,6 +41,14 @@ export const runDoctor = Effect.fn("runDoctor")(function* (
       ? "Spaces database: not found."
       : `Spaces database: ${formatBytes(spacesStatus.databaseBytes)}, WAL ${formatBytes(spacesStatus.walBytes)}, shared memory ${formatBytes(spacesStatus.sharedMemoryBytes)}, ${formatBytes(spacesStatus.reclaimableBytes)} reclaimable.`,
   );
+  if (spacesStatus !== null) {
+    const assets = spacesStatus.assetAccounting;
+    yield* Console.log(
+      assets === null
+        ? "Spaces media accounting: unavailable."
+        : `Spaces media: ${formatBytes(assets.registeredAssetBytes)} registered unique bytes, ${formatBytes(assets.reservedBytes)} reserved; observed files ${formatBytes(assets.observedAssetFileBytes)} assets, ${formatBytes(assets.observedStagingFileBytes)} staging (${assets.reconciliation.inventoryPending ? "inventory pending" : "completed observation"}); collection ${assets.reconciliation.gcEnabled ? "enabled" : "blocked"}${assets.reconciliation.gcPending ? " (work pending)" : ""}.`,
+    );
+  }
   if (status !== null && status.legacyDatabaseBytes !== null) {
     yield* Console.log(
       `Database from before 0.1.0: ${formatBytes(status.legacyDatabaseBytes)}, kept for rolling back.`,

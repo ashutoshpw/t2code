@@ -427,11 +427,15 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesReferencesResolve,
       WS_METHODS.spacesTrashList,
       WS_METHODS.spacesSearch,
+      WS_METHODS.spacesAssetsGet,
+      WS_METHODS.spacesAssetsUploadGet,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
       Effect.provide(
         Layer.merge(
           group.toLayer({
+            "spaces.assets.upload.create": deniedHandler,
+            "spaces.assets.upload.finalize": deniedHandler,
             "spaces.create": deniedHandler,
             "spaces.rename": deniedHandler,
             "spaces.setDefault": deniedHandler,
@@ -457,6 +461,18 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
     const spaceId = C.SpaceId.make("space");
     const pageId = C.SpacePageId.make("page");
     for (const call of [
+      client[WS_METHODS.spacesAssetsUploadCreate]({
+        environmentId: common.environmentId,
+        requestId: "upload",
+        expectedBytes: 1,
+        mediaKind: "pdf",
+        mimeType: "application/pdf",
+        name: "report.pdf",
+      }),
+      client[WS_METHODS.spacesAssetsUploadFinalize]({
+        environmentId: common.environmentId,
+        uploadId: C.SpaceAssetUploadId.make("upload"),
+      }),
       client[WS_METHODS.spacesCreate]({ ...common, title: "" }),
       client[WS_METHODS.spacesRename]({ ...common, spaceId, baseRevision: 0, title: "" }),
       client[WS_METHODS.spacesSetDefault]({
@@ -548,11 +564,15 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
       WS_METHODS.spacesPagesTrash,
       WS_METHODS.spacesPagesRestore,
       WS_METHODS.spacesPagesPermanentlyDelete,
+      WS_METHODS.spacesAssetsUploadCreate,
+      WS_METHODS.spacesAssetsUploadFinalize,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
       Effect.provide(
         Layer.merge(
           group.toLayer({
+            "spaces.assets.get": deniedHandler,
+            "spaces.assets.upload.get": deniedHandler,
             "spaces.list": deniedHandler,
             "spaces.pages.list": deniedHandler,
             "spaces.pages.get": deniedHandler,
@@ -570,6 +590,11 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
     const environmentId = EnvironmentId.make("authorization");
     const pageId = C.SpacePageId.make("page");
     for (const call of [
+      client[WS_METHODS.spacesAssetsGet]({ environmentId, assetId: C.SpaceAssetId.make("asset") }),
+      client[WS_METHODS.spacesAssetsUploadGet]({
+        environmentId,
+        uploadId: C.SpaceAssetUploadId.make("upload"),
+      }),
       client[WS_METHODS.spacesList]({ environmentId }),
       client[WS_METHODS.spacesTrashList]({ environmentId }),
       client[WS_METHODS.spacesSearch]({ environmentId, query: "needle" }),

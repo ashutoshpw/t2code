@@ -1,7 +1,7 @@
 // @effect-diagnostics nodeBuiltinImport:off -- stable IDs are allocated by the platform cryptographic generator.
 import * as NodeCrypto from "node:crypto";
 
-import { EnvironmentId } from "@t2code/contracts";
+import { EnvironmentId, type SpacesStorageStatus } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -12,6 +12,21 @@ import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
+import * as Scope from "effect/Scope";
+import * as Ref from "effect/Ref";
+import * as Deferred from "effect/Deferred";
+import * as Fiber from "effect/Fiber";
+import * as Option from "effect/Option";
+import * as Stream from "effect/Stream";
+import type * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import { openMediaFile } from "../assets/MediaFile.ts";
+import * as Catalog from "./assets/Catalog.ts";
+import * as Upload from "./assets/Upload.ts";
+import * as Tokens from "./assets/Tokens.ts";
+import * as AssetReferences from "./assets/References.ts";
+import * as Reconciliation from "./assets/Reconciliation.ts";
+import * as Inventory from "./assets/Inventory.ts";
+import * as GC from "./assets/GC.ts";
 
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as ServerSettings from "../serverSettings.ts";
@@ -37,6 +52,48 @@ import * as Sqlite from "./Sqlite.ts";
 export class SpacesService extends Context.Service<
   SpacesService,
   {
+    readonly reclaimExistingStorage: Effect.Effect<void, C.SpaceServiceError>;
+    readonly maintainAssets: Effect.Effect<SpacesStorageStatus | null, C.SpaceServiceError>;
+    readonly createAssetUpload: (
+      input: unknown,
+      callerId: string,
+    ) => Effect.Effect<
+      C.SpaceAssetUploadCreateResult,
+      C.SpaceServiceError,
+      ServerSecretStore.ServerSecretStore
+    >;
+    readonly getAssetUpload: (
+      input: unknown,
+      callerId: string,
+    ) => Effect.Effect<C.SpaceAssetUploadStatus, C.SpaceServiceError>;
+    readonly finalizeAssetUpload: (
+      input: unknown,
+      callerId: string,
+    ) => Effect.Effect<C.SpaceAssetMetadata, C.SpaceServiceError>;
+    readonly getAssetMetadata: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceAssetMetadata, C.SpaceServiceError>;
+    readonly resolveAssetFile: (input: unknown) => Effect.Effect<
+      {
+        readonly path: string;
+        readonly digest: string;
+        readonly byteSize: number;
+        readonly name: string;
+        readonly mimeType: C.SpaceAssetMetadata["mimeType"];
+        readonly file: NonNullable<Effect.Success<ReturnType<typeof openMediaFile>>>;
+      },
+      C.SpaceServiceError,
+      Scope.Scope
+    >;
+    readonly receiveAssetUpload: <E, R>(
+      token: string,
+      contentLength: string | undefined,
+      body: Stream.Stream<Uint8Array, E, R>,
+    ) => Effect.Effect<
+      C.SpaceAssetMetadata,
+      C.SpaceServiceError,
+      R | ServerSecretStore.ServerSecretStore
+    >;
     readonly getCapability: (
       environmentId: EnvironmentId,
     ) => Effect.Effect<C.SpaceCapability | null, C.SpaceServiceError>;
@@ -131,6 +188,41 @@ const decodeSearch = Schema.decodeUnknownEffect(C.SpaceSearchInput, strict);
 const decodeTrashList = Schema.decodeUnknownEffect(C.SpaceTrashListInput, strict);
 const decodeRecoveryResult = Schema.decodeUnknownSync(C.SpacePageRecoveryResult, strict);
 const decodePurgeResult = Schema.decodeUnknownSync(C.SpacePagePurgeResult, strict);
+const decodeAssetCreate = Schema.decodeUnknownEffect(C.SpaceAssetUploadCreateInput, strict);
+const decodeAssetUpload = Schema.decodeUnknownEffect(C.SpaceAssetUploadInput, strict);
+const decodeAssetGet = Schema.decodeUnknownEffect(C.SpaceAssetGetInput, strict);
+type AssetOperationError =
+  | Catalog.AssetCatalogError
+  | Upload.AssetUploadError
+  | import("./assets/Files.ts").AssetFileError
+  | SqlError.SqlError
+  | C.SpaceServiceError;
+const mapAssetError = (error: AssetOperationError): C.SpaceServiceError => {
+  switch (error._tag) {
+    case "AssetCatalogError":
+    case "AssetUploadError":
+    case "AssetFileError":
+      return new C.SpaceAssetError({ reason: error.reason });
+    case "SqlError":
+      return new C.SpacesUnavailableError({ stage: "storage" });
+    default:
+      return error;
+  }
+};
+const assetErrors = <A, E extends AssetOperationError, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.mapError(effect, mapAssetError);
+const metadata = (row: Catalog.UploadRow): C.SpaceAssetMetadata => ({
+  assetId: C.SpaceAssetId.make(row.asset_id),
+  digest: row.digest!,
+  byteSize: row.expected_bytes,
+  mimeType: row.mime_type,
+  name: row.name,
+  ...(row.width !== null && row.height !== null
+    ? { imageDimensions: { width: row.width, height: row.height } }
+    : {}),
+});
+const claimFrom = (row: Catalog.UploadRow) =>
+  row.attempt_id === null ? null : { ...row, attempt_id: row.attempt_id };
 const decodeList = Schema.decodeUnknownEffect(C.SpaceListInput, strict);
 const decodePages = Schema.decodeUnknownEffect(C.SpacePageListInput, strict);
 const decodeGet = Schema.decodeUnknownEffect(C.SpacePageGetInput, strict);
@@ -215,22 +307,137 @@ function checkIds(input: object) {
   }
 }
 
-const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
+const make = Effect.fn("SpacesService.make")(function* (
+  dbPath: string,
+  directories?: { readonly assetsDir: string; readonly stagingDir: string },
+) {
   const settings = yield* ServerSettings.ServerSettingsService;
   const identity = yield* ServerEnvironment.ServerEnvironmentIdentity;
   const scope = yield* Effect.scope;
   const platform = yield* Effect.context<FileSystem.FileSystem | Path.Path>();
   const mutex = yield* Semaphore.make(1);
+  const acquiredSql = yield* Ref.make(Option.none<SpacesSql.SpacesSql["Service"]>());
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const assetDirectories = directories ?? {
+    assetsDir: path.join(path.dirname(dbPath), "spaces", "assets"),
+    stagingDir: path.join(path.dirname(dbPath), "spaces", "staging"),
+  };
+  const activeUploads = new Set<string>();
+  const uploadFibers = new Map<string, Fiber.Fiber<unknown, unknown>>();
+  const collectionOwner = NodeCrypto.randomUUID();
+  let closing = false;
+  let startupRecoveryGeneration = 0;
+  let uploadsIdle = yield* Deferred.make<void>();
+  yield* Deferred.succeed(uploadsIdle, undefined);
+  const inventory = yield* Inventory.make(assetDirectories);
+  const maintenanceMutex = yield* Semaphore.make(1);
+  const recover = Effect.fn("SpacesService.recoverAsset")(
+    function* (row: Catalog.UploadRow, now: number) {
+      const sql = yield* SpacesSql.SpacesSql;
+      const transaction = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+        mutex.withPermits(1)(sql.withTransaction(effect));
+      const claim = claimFrom(row);
+      if (!claim || !row.attempt_owner || !(yield* GC.owns(collectionOwner)))
+        return yield* new C.SpaceAssetError({ reason: "not_ready" });
+      if (row.state === "receiving" && !row.staging_identity) {
+        const absent = yield* Upload.confirmNoStaging(claim, assetDirectories.stagingDir);
+        yield* transaction(Catalog.abort(claim, absent, now));
+        return;
+      }
+      if (!row.staging_identity) return yield* new C.SpaceAssetError({ reason: "not_ready" });
+      if (row.state === "receiving") {
+        const absent = yield* Upload.discardAbandonedStaging(claim, assetDirectories);
+        yield* transaction(Catalog.abort(claim, absent, now));
+        return;
+      }
+      const recovered = yield* Upload.recoverPublication(claim, assetDirectories).pipe(
+        Effect.result,
+      );
+      if (recovered._tag === "Failure") {
+        if (recovered.failure.reason !== "missing_file") return yield* recovered.failure;
+        const missing = yield* Upload.confirmMissingPublication(claim, assetDirectories);
+        yield* transaction(Catalog.resetMissing(claim, missing, now));
+        return;
+      }
+      yield* transaction(Catalog.finish(claim, recovered.success, now));
+      const ready = claimFrom(yield* Catalog.getUpload(row.caller_id, row.upload_id));
+      if (!ready) return yield* new C.SpaceAssetError({ reason: "not_ready" });
+      const absent = yield* Upload.discardAbandonedStaging(
+        ready,
+        assetDirectories,
+        recovered.success,
+      );
+      yield* transaction(Catalog.releaseStaging(ready, absent));
+    },
+    assetErrors,
+    Effect.uninterruptible,
+  );
   const acquire = yield* Effect.cached(
     Layer.buildWithScope(Sqlite.layerFromPath(dbPath), scope).pipe(
       Effect.provide(platform),
-      Effect.map((context) => Context.get(context, SpacesSql.SpacesSql)),
-      Effect.tap((sql) =>
-        sql.withTransaction(
-          SearchStore.checkModule().pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
-        ),
+      Effect.flatMap((context) =>
+        Effect.gen(function* () {
+          const sql = Context.get(context, SpacesSql.SpacesSql);
+          yield* sql.withTransaction(
+            Reconciliation.initialize().pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+          );
+          yield* sql.withTransaction(
+            SearchStore.checkModule().pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+          );
+          yield* sql`UPDATE spaces_asset_reconciliation SET assets_done = 0,staging_done = 0 WHERE singleton = 1`;
+          const ownerAcquired = yield* sql
+            .withTransaction(GC.initializeOwner(collectionOwner))
+            .pipe(Effect.provideService(SpacesSql.SpacesSql, sql));
+          const environmentId = yield* identity.getEnvironmentId;
+          const meta = yield* sql
+            .withTransaction(Receipts.observe(environmentId))
+            .pipe(Effect.provideService(SpacesSql.SpacesSql, sql));
+          yield* sql`UPDATE spaces_asset_reconciliation SET cycle_started_ms = ${meta.observed_time_ms} WHERE singleton = 1 AND cycle_started_ms = 0`;
+          const rows = yield* Catalog.recoveryBatch().pipe(
+            Effect.provideService(SpacesSql.SpacesSql, sql),
+          );
+          // One complete hash/publication/cleanup unit fits both startup work budgets.
+          for (const row of (ownerAcquired ? rows : []).slice(0, 1)) {
+            startupRecoveryGeneration++;
+            yield* sql`UPDATE spaces_asset_collection SET last_work_rows=90,last_planned_bytes=${row.expected_bytes * 3} WHERE singleton=1`;
+            yield* recover(row, meta.observed_time_ms).pipe(
+              Effect.provideService(SpacesSql.SpacesSql, sql),
+              Effect.catch(() => Effect.logWarning("Spaces asset recovery remains pending.")),
+            );
+          }
+          yield* Effect.uninterruptible(
+            Ref.set(acquiredSql, Option.some(sql)).pipe(
+              Effect.andThen(Scope.addFinalizer(scope, Ref.set(acquiredSql, Option.none()))),
+            ),
+          );
+          yield* Scope.addFinalizer(
+            scope,
+            Effect.uninterruptible(
+              Effect.gen(function* () {
+                closing = true;
+                const self = yield* Effect.fiber;
+                yield* Fiber.interruptAll(
+                  [...uploadFibers.values()].filter((fiber) => fiber !== self),
+                );
+                yield* Deferred.await(uploadsIdle);
+                yield* maintenanceMutex.withPermits(1)(
+                  mutex
+                    .withPermits(1)(sql.withTransaction(GC.retireOwner(collectionOwner)))
+                    .pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+                );
+              }).pipe(
+                Effect.catch(() =>
+                  Effect.logWarning("Spaces collection owner remains conservatively active."),
+                ),
+              ),
+            ),
+          );
+          return sql;
+        }),
       ),
       Effect.mapError(() => new C.SpacesUnavailableError({ stage: "initializing" })),
+      Effect.provide(platform),
     ),
   );
   const admit = Effect.fn("SpacesService.admit")(function* () {
@@ -275,6 +482,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           if (maintenance === true) yield* sql.withTransaction(Receipts.cleanup(meta));
           yield* sql.withTransaction(RevisionStore.prune(meta.observed_time_ms));
           yield* sql.withTransaction(ReferenceStore.maintain());
+          yield* sql.withTransaction(Catalog.expireIdle(meta.observed_time_ms).pipe(assetErrors));
         }
         return yield* sql.withTransaction(
           Effect.gen(function* () {
@@ -295,6 +503,287 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
           ),
         ),
       ),
+    );
+  });
+  const leaseUpload = Effect.fn("SpacesService.leaseUpload")(function* (uploadId: string) {
+    if (closing || activeUploads.has(uploadId))
+      return yield* new C.SpaceAssetError({ reason: "already_claimed" });
+    if (activeUploads.size === 0) uploadsIdle = yield* Deferred.make<void>();
+    activeUploads.add(uploadId);
+    uploadFibers.set(uploadId, yield* Effect.fiber);
+    yield* Effect.gen(function* () {
+      const current = yield* Ref.get(acquiredSql);
+      if (Option.isNone(current)) return;
+      const sql = current.value;
+      yield* mutex.withPermits(1)(
+        sql.withTransaction(
+          GC.uploadActivity(collectionOwner, uploadId, null).pipe(
+            Effect.provideService(SpacesSql.SpacesSql, sql),
+          ),
+        ),
+      );
+    }).pipe(
+      assetErrors,
+      Effect.onError(() =>
+        Effect.gen(function* () {
+          activeUploads.delete(uploadId);
+          uploadFibers.delete(uploadId);
+          if (activeUploads.size === 0) yield* Deferred.succeed(uploadsIdle, undefined);
+        }),
+      ),
+    );
+  }, Effect.uninterruptible);
+  const releaseUpload = Effect.fn("SpacesService.releaseUpload")(function* (uploadId: string) {
+    yield* Effect.gen(function* () {
+      const current = yield* Ref.get(acquiredSql);
+      if (Option.isNone(current)) return;
+      const environmentId = yield* identity.getEnvironmentId;
+      const sql = current.value;
+      yield* mutex.withPermits(1)(
+        sql
+          .withTransaction(
+            Effect.gen(function* () {
+              const meta = yield* Receipts.observe(environmentId);
+              yield* GC.uploadActivity(collectionOwner, uploadId, meta.observed_time_ms);
+            }),
+          )
+          .pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+      );
+    }).pipe(Effect.catch(() => Effect.logWarning("Spaces upload quiescence remains unconfirmed.")));
+    activeUploads.delete(uploadId);
+    uploadFibers.delete(uploadId);
+    if (activeUploads.size === 0) yield* Deferred.succeed(uploadsIdle, undefined);
+  }, Effect.uninterruptible);
+  const decodeAsset = <A, E>(raw: unknown, decode: (value: unknown) => Effect.Effect<A, E>) =>
+    validateRaw(raw).pipe(
+      Effect.flatMap(decode),
+      Effect.mapError((e) =>
+        isServiceError(e) ? e : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+  const createAssetUpload = Effect.fn("SpacesService.createAssetUpload")(function* (
+    raw: unknown,
+    callerId: string,
+  ) {
+    const environmentId = yield* admit();
+    const input = yield* decodeAsset(raw, decodeAssetCreate);
+    yield* checkEnvironment(environmentId, input.environmentId);
+    const row = yield* run(environmentId, (meta) =>
+      Catalog.reserve(
+        {
+          callerId,
+          requestId: input.requestId,
+          expectedBytes: input.expectedBytes,
+          mimeType: input.mimeType,
+          mediaKind: input.mediaKind,
+          name: input.name,
+        },
+        meta.observed_time_ms,
+      ).pipe(assetErrors),
+    );
+    const relativeUrl = yield* Tokens.issue(environmentId, row);
+    return {
+      uploadId: C.SpaceAssetUploadId.make(row.upload_id),
+      assetId: C.SpaceAssetId.make(row.asset_id),
+      expiresAt: row.expires_at_ms,
+      relativeUrl,
+    };
+  });
+  const getAssetUpload = Effect.fn("SpacesService.getAssetUpload")(function* (
+    raw: unknown,
+    callerId: string,
+  ) {
+    const environmentId = yield* admit();
+    const input = yield* decodeAsset(raw, decodeAssetUpload);
+    yield* checkEnvironment(environmentId, input.environmentId);
+    const row = yield* run(environmentId, () =>
+      Catalog.getUpload(callerId, input.uploadId).pipe(assetErrors),
+    );
+    return {
+      uploadId: C.SpaceAssetUploadId.make(row.upload_id),
+      assetId: C.SpaceAssetId.make(row.asset_id),
+      expiresAt: row.expires_at_ms,
+      state: row.state,
+      recoveryPending:
+        !activeUploads.has(row.upload_id) &&
+        (row.state === "receiving" || row.state === "verified" || row.cleanup_pending === 1),
+    };
+  });
+  const getAssetMetadata = Effect.fn("SpacesService.getAssetMetadata")(function* (raw: unknown) {
+    const environmentId = yield* admit();
+    const input = yield* decodeAsset(raw, decodeAssetGet);
+    yield* checkEnvironment(environmentId, input.environmentId);
+    const row = yield* run(environmentId, () =>
+      Catalog.readyAsset(input.assetId).pipe(assetErrors),
+    );
+    return {
+      assetId: C.SpaceAssetId.make(row.asset_id),
+      digest: row.digest,
+      byteSize: row.byte_size,
+      mimeType: row.mime_type,
+      name: row.name,
+      ...(row.width !== null && row.height !== null
+        ? { imageDimensions: { width: row.width, height: row.height } }
+        : {}),
+    };
+  });
+  const resolveAssetFile = Effect.fn("SpacesService.resolveAssetFile")(function* (raw: unknown) {
+    const asset = yield* getAssetMetadata(raw);
+    const filePath = path.join(
+      yield* fs
+        .realPath(assetDirectories.assetsDir)
+        .pipe(Effect.mapError(() => new C.SpaceAssetError({ reason: "missing_file" }))),
+      asset.digest,
+    );
+    const file = yield* openMediaFile(filePath).pipe(
+      Effect.mapError(() => new C.SpaceAssetError({ reason: "missing_file" })),
+    );
+    if (!file || file.info.size !== BigInt(asset.byteSize))
+      return yield* new C.SpaceAssetError({ reason: "missing_file" });
+    return {
+      path: filePath,
+      file,
+      digest: asset.digest,
+      byteSize: asset.byteSize,
+      name: asset.name,
+      mimeType: asset.mimeType,
+    };
+  });
+  const finalizeAssetUpload = Effect.fn("SpacesService.finalizeAssetUpload")(function* (
+    raw: unknown,
+    callerId: string,
+  ) {
+    const environmentId = yield* admit();
+    const input = yield* decodeAsset(raw, decodeAssetUpload);
+    yield* checkEnvironment(environmentId, input.environmentId);
+    return yield* Effect.acquireUseRelease(
+      leaseUpload(input.uploadId),
+      () =>
+        Effect.gen(function* () {
+          let row = yield* run(environmentId, () =>
+            Catalog.getUpload(callerId, input.uploadId).pipe(assetErrors),
+          );
+          if (row.state === "ready" && !row.cleanup_pending) return metadata(row);
+          if (
+            row.state === "verified" ||
+            row.state === "receiving" ||
+            (row.state === "ready" && row.cleanup_pending === 1)
+          ) {
+            const sql = yield* acquire;
+            const now = yield* run(environmentId, (meta) => Effect.succeed(meta.observed_time_ms));
+            yield* recover(row, now).pipe(
+              Effect.provide(platform),
+              Effect.provideService(SpacesSql.SpacesSql, sql),
+            );
+            row = yield* run(environmentId, () =>
+              Catalog.getUpload(callerId, input.uploadId).pipe(assetErrors),
+            );
+          }
+          if (row.state !== "ready")
+            return yield* new C.SpaceAssetError({
+              reason: row.state === "expired" ? "expired" : "not_ready",
+            });
+          return metadata(row);
+        }),
+      () => releaseUpload(input.uploadId),
+    );
+  });
+  const receiveAssetUpload = Effect.fn("SpacesService.receiveAssetUpload")(function* <E, R>(
+    token: string,
+    contentLength: string | undefined,
+    body: Stream.Stream<Uint8Array, E, R>,
+  ) {
+    const environmentId = yield* admit();
+    const grant = yield* Tokens.read(token);
+    if (!grant) return yield* new C.SpaceAssetError({ reason: "invalid_token" });
+    yield* checkEnvironment(environmentId, grant.environmentId);
+    if (contentLength !== String(grant.expectedBytes))
+      return yield* new C.SpaceAssetError({ reason: "invalid_content_length" });
+    return yield* Effect.acquireUseRelease(
+      leaseUpload(grant.uploadId),
+      () =>
+        Effect.gen(function* () {
+          const claim = yield* run(environmentId, (meta) =>
+            Effect.gen(function* () {
+              const row = yield* Catalog.getUpload(grant.callerId, grant.uploadId);
+              if (
+                row.fingerprint !== grant.fingerprint ||
+                row.expected_bytes !== grant.expectedBytes ||
+                row.mime_type !== grant.mimeType ||
+                row.media_kind !== grant.mediaKind ||
+                row.expires_at_ms !== grant.expiresAt
+              )
+                return yield* new C.SpaceAssetError({ reason: "invalid_token" });
+              return yield* Catalog.claim(
+                grant.callerId,
+                grant.uploadId,
+                meta.observed_time_ms,
+                collectionOwner,
+              );
+            }).pipe(assetErrors),
+          );
+          let verified = false;
+          return yield* Effect.scoped(
+            Effect.gen(function* () {
+              const staged = yield* Upload.stage(
+                claim,
+                assetDirectories.stagingDir,
+                body,
+                (identity) =>
+                  run(environmentId, () =>
+                    Catalog.recordCreated(claim, identity).pipe(assetErrors),
+                  ),
+              ).pipe(assetErrors);
+              const accepted = yield* run(environmentId, (meta) =>
+                Catalog.recordVerified(claim, staged, meta.observed_time_ms).pipe(assetErrors),
+              );
+              verified = true;
+              const proof = yield* Upload.publish(
+                accepted,
+                staged,
+                assetDirectories.assetsDir,
+              ).pipe(assetErrors, Effect.uninterruptible);
+              const result = yield* run(environmentId, (meta) =>
+                Catalog.finish(accepted, proof, meta.observed_time_ms).pipe(assetErrors),
+              );
+              yield* staged.release.pipe(assetErrors);
+              const ready = claimFrom(
+                yield* run(environmentId, () =>
+                  Catalog.getUpload(grant.callerId, grant.uploadId).pipe(assetErrors),
+                ),
+              );
+              if (ready) {
+                const absent = yield* Upload.confirmNoStaging(
+                  ready,
+                  assetDirectories.stagingDir,
+                ).pipe(assetErrors);
+                yield* run(environmentId, () =>
+                  Catalog.releaseStaging(ready, absent).pipe(assetErrors),
+                );
+              }
+              return { ...result, assetId: C.SpaceAssetId.make(result.assetId) };
+            }),
+          ).pipe(
+            Effect.provide(platform),
+            Effect.onExit((exit) =>
+              exit._tag === "Failure" && !verified
+                ? Effect.gen(function* () {
+                    const absent = yield* Upload.confirmNoStaging(
+                      claim,
+                      assetDirectories.stagingDir,
+                    );
+                    yield* run(environmentId, (meta) =>
+                      Catalog.abort(claim, absent, meta.observed_time_ms).pipe(assetErrors),
+                    );
+                  }).pipe(
+                    Effect.provide(platform),
+                    Effect.catch(() => Effect.logWarning("Spaces upload cleanup remains pending.")),
+                  )
+                : Effect.void,
+            ),
+          );
+        }),
+      () => releaseUpload(grant.uploadId),
     );
   });
   const getSpace = Effect.fn("SpacesService.space")(function* (id: C.SpaceId) {
@@ -1063,6 +1552,9 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
             },
             meta.observed_time_ms,
           );
+          yield* AssetReferences.publish(result.assetRefsAfter);
+          for (const changedBlock of result.blocksAfter)
+            yield* Reconciliation.noteBlock(changedBlock.id, changedBlock.payload);
           yield* ReferenceStore.release(result.retiredIds);
           yield* changed();
         }
@@ -1188,14 +1680,19 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       return yield* run(environmentId, (meta) =>
         Effect.gen(function* () {
           yield* Receipts.issue(meta);
+          const assetRecoveryPending =
+            yield* Catalog.hasRecoveryPending(activeUploads).pipe(assetErrors);
           return {
             version: 2,
             limits,
+            assetRecoveryPending,
+            assetReconciliation: yield* Reconciliation.status(),
             features: {
               blockMoves: true,
               referenceResolution: true,
               recovery: true,
               search: true,
+              assets: true,
             },
           } satisfies C.SpaceCapability;
         }),
@@ -1206,7 +1703,246 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
       SpacesUnavailableError: () => Effect.succeed(null),
     }),
   );
+  const reclaimExistingStorage = Effect.fn("SpacesService.reclaimExistingStorage")(function* () {
+    for (let page = 0; page < 64; page++) {
+      const reclaimed = yield* mutex.withPermits(1)(
+        Effect.gen(function* () {
+          const current = yield* Ref.get(acquiredSql);
+          if (Option.isNone(current)) return false;
+          const snapshot = yield* settings.getSettings.pipe(
+            Effect.mapError(() => new C.SpacesUnavailableError({ stage: "settings" })),
+          );
+          if (!snapshot.spacesEnabled) return false;
+          const sql = current.value;
+          const [mode] = yield* sql<{ readonly auto_vacuum: number }>`PRAGMA auto_vacuum`;
+          if (mode?.auto_vacuum !== 2) return false;
+          const [free] = yield* sql<{ readonly freelist_count: number }>`PRAGMA freelist_count`;
+          if (!free || free.freelist_count === 0) return false;
+          yield* sql`PRAGMA incremental_vacuum(1)`;
+          return true;
+        }),
+      );
+      if (!reclaimed) return;
+      yield* Effect.yieldNow;
+    }
+  }, assetErrors);
+  const maintainAssets = maintenanceMutex.withPermits(1)(
+    Effect.gen(function* () {
+      const snapshot = yield* settings.getSettings.pipe(
+        Effect.mapError(() => new C.SpacesUnavailableError({ stage: "settings" })),
+      );
+      if (!snapshot.spacesEnabled) return null;
+      const environmentId = yield* identity.getEnvironmentId;
+      const beforeStartup = startupRecoveryGeneration;
+      const sql = yield* acquire;
+      const collectionTransaction = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+        mutex.withPermits(1)(
+          sql.withTransaction(effect).pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+        );
+      const collection = yield* collectionTransaction(
+        Effect.gen(function* () {
+          yield* admit();
+          const meta = yield* Receipts.observe(environmentId);
+          if (beforeStartup !== startupRecoveryGeneration)
+            return { handled: true, ticket: null, staged: undefined, now: meta.observed_time_ms };
+          const plan = yield* GC.plan(collectionOwner, meta.observed_time_ms);
+          const staged = plan.handled
+            ? { handled: false, row: undefined }
+            : yield* GC.staging(collectionOwner, meta.observed_time_ms, activeUploads);
+          return {
+            ...plan,
+            handled: plan.handled || staged.handled,
+            staged: staged.row,
+            now: meta.observed_time_ms,
+          };
+        }),
+      ).pipe(assetErrors);
+      if (collection.ticket)
+        yield* Effect.uninterruptible(
+          Effect.gen(function* () {
+            const ticket = collection.ticket!;
+            yield* collectionTransaction(GC.assertTicket(ticket));
+            const proof = yield* GC.erase(ticket, assetDirectories.assetsDir).pipe(
+              Effect.provide(platform),
+              Effect.provideService(SpacesSql.SpacesSql, sql),
+              Effect.result,
+            );
+            if (proof._tag === "Failure") yield* collectionTransaction(GC.failed(ticket));
+            else yield* collectionTransaction(GC.complete(ticket, proof.success, collection.now));
+          }),
+        ).pipe(assetErrors);
+      if (collection.staged) {
+        const row = collection.staged;
+        yield* Effect.acquireUseRelease(
+          leaseUpload(row.upload_id),
+          () =>
+            Effect.uninterruptible(
+              recover(row, collection.now).pipe(
+                Effect.provide(platform),
+                Effect.provideService(SpacesSql.SpacesSql, sql),
+                Effect.andThen(
+                  collectionTransaction(Reconciliation.issue("staging", row.upload_id, null)),
+                ),
+                Effect.catch(() =>
+                  collectionTransaction(
+                    Reconciliation.issue("staging", row.upload_id, "cleanup_failed"),
+                  ),
+                ),
+              ),
+            ),
+          () => releaseUpload(row.upload_id),
+        ).pipe(assetErrors);
+      }
+      const progress = collection.handled
+        ? yield* collectionTransaction(Reconciliation.state()).pipe(assetErrors)
+        : yield* run(environmentId, (meta) =>
+            Effect.gen(function* () {
+              const sql = yield* SpacesSql.SpacesSql;
+              const current = yield* Reconciliation.state();
+              if (
+                current.blocks_done &&
+                current.history_done &&
+                current.blobs_done &&
+                current.assets_done &&
+                current.staging_done &&
+                meta.observed_time_ms - current.cycle_started_ms >= 86_400_000
+              )
+                yield* sql`UPDATE spaces_asset_reconciliation SET block_cursor = '',blocks_done = 0,history_page = '',history_revision = -1,history_done = 0,
+            blob_cursor = '',blobs_done = 0,assets_done = 0,staging_done = 0,cycle_started_ms = ${meta.observed_time_ms} WHERE singleton = 1`;
+              return yield* Reconciliation.state();
+            }),
+          );
+      if (collection.handled) {
+        // This opportunity spent its bounded work on collection, not another maintenance prefix.
+      } else if (!progress.blocks_done || !progress.history_done) {
+        yield* run(environmentId, () => Reconciliation.referencesPass());
+      } else if (!progress.blobs_done) {
+        const [blob] = yield* run(environmentId, () =>
+          Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            return yield* sql<{
+              readonly digest: string;
+              readonly byte_size: number;
+              readonly generation: number;
+              readonly state: string;
+              readonly mime_type: string;
+              readonly media_kind: string;
+            }>`
+          SELECT digest,byte_size,generation,state,mime_type,media_kind FROM spaces_asset_blobs WHERE state='ready' AND digest > ${progress.blob_cursor} ORDER BY digest LIMIT 1`;
+          }),
+        );
+        const valid = blob ? yield* inventory.verify(blob) : true;
+        yield* run(environmentId, () =>
+          Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            if (!blob)
+              yield* sql`UPDATE spaces_asset_reconciliation SET blobs_done = 1 WHERE singleton = 1`;
+            else {
+              const [current] = yield* sql<{
+                readonly generation: number;
+                readonly state: string;
+              }>`SELECT generation,state FROM spaces_asset_blobs WHERE digest = ${blob.digest}`;
+              if (current?.generation === blob.generation && current.state === blob.state)
+                yield* Reconciliation.issue(
+                  "blob",
+                  blob.digest,
+                  blob.state === "ready" && valid ? null : "unavailable_file",
+                );
+              yield* sql`UPDATE spaces_asset_reconciliation SET blob_cursor = ${blob.digest} WHERE singleton = 1`;
+            }
+          }),
+        );
+      } else {
+        const now = yield* run(environmentId, (meta) => Effect.succeed(meta.observed_time_ms));
+        for (const kind of ["assets", "staging"] as const) {
+          if ((kind === "assets" ? progress.assets_done : progress.staging_done) === 1) continue;
+          const found = yield* inventory
+            .discover(
+              kind,
+              now,
+              kind === "assets" ? progress.assets_generation : progress.staging_generation,
+            )
+            .pipe(Effect.mapError(() => new C.SpacesUnavailableError({ stage: "storage" })));
+          yield* run(environmentId, () =>
+            Effect.gen(function* () {
+              const sql = yield* SpacesSql.SpacesSql;
+              for (const entry of found.entries) yield* inventory.record(entry);
+              if (found.done) {
+                if (kind === "assets")
+                  yield* sql`UPDATE spaces_asset_reconciliation SET assets_done = 1 WHERE singleton = 1 AND assets_generation = ${found.generation}`;
+                else
+                  yield* sql`UPDATE spaces_asset_reconciliation SET staging_done = 1 WHERE singleton = 1 AND staging_generation = ${found.generation}
+                    AND NOT EXISTS (SELECT 1 FROM spaces_asset_uploads WHERE state = 'receiving')`;
+              }
+            }),
+          );
+          yield* inventory.acknowledge(kind);
+        }
+        const entries = yield* run(environmentId, () =>
+          Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            return yield* sql<{
+              readonly kind: string;
+              readonly name: string;
+            }>`SELECT kind,name FROM spaces_asset_file_observations
+          WHERE (kind,name) > (${progress.file_kind},${progress.file_cursor}) ORDER BY kind,name LIMIT 8`;
+          }),
+        );
+        const observations = yield* inventory
+          .refresh(entries, now)
+          .pipe(Effect.mapError(() => new C.SpacesUnavailableError({ stage: "storage" })));
+        yield* run(environmentId, () =>
+          Effect.gen(function* () {
+            const sql = yield* SpacesSql.SpacesSql;
+            for (const entry of observations) yield* inventory.record(entry);
+            const last = entries.at(-1);
+            yield* sql`UPDATE spaces_asset_reconciliation SET file_kind = ${last?.kind ?? ""},file_cursor = ${last?.name ?? ""} WHERE singleton = 1`;
+          }),
+        );
+      }
+      const readAccounting = Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        const usage = yield* Catalog.usage().pipe(assetErrors);
+        const current = yield* Reconciliation.state();
+        const [free] = yield* sql<{ readonly freelist_count: number }>`PRAGMA freelist_count`;
+        const [size] = yield* sql<{ readonly page_size: number }>`PRAGMA page_size`;
+        const [mode] = yield* sql<{ readonly auto_vacuum: number }>`PRAGMA auto_vacuum`;
+        return {
+          reclaimableBytes: (free?.freelist_count ?? 0) * (size?.page_size ?? 0),
+          incrementalVacuumEnabled: mode?.auto_vacuum === 2,
+          registeredAssetBytes: usage.physical_bytes,
+          reservedBytes: usage.reserved_bytes,
+          observedAssetFileBytes: current.assets_bytes,
+          observedStagingFileBytes: current.staging_bytes,
+          observedAt: current.observed_at_ms,
+          reconciliation: yield* Reconciliation.status(),
+        };
+      });
+      const accounting = collection.handled
+        ? yield* collectionTransaction(readAccounting).pipe(assetErrors)
+        : yield* run(environmentId, () => readAccounting);
+      const bytes = (file: string) =>
+        fs.stat(file).pipe(
+          Effect.map((info) => Number(info.size)),
+          Effect.mapError(() => new C.SpacesUnavailableError({ stage: "storage" })),
+        );
+      return {
+        ...accounting,
+        databaseBytes: yield* bytes(dbPath),
+        walBytes: yield* bytes(`${dbPath}-wal`).pipe(Effect.orElseSucceed(() => 0)),
+        sharedMemoryBytes: yield* bytes(`${dbPath}-shm`).pipe(Effect.orElseSucceed(() => 0)),
+      };
+    }),
+  );
   return SpacesService.of({
+    reclaimExistingStorage: reclaimExistingStorage(),
+    maintainAssets,
+    createAssetUpload,
+    getAssetUpload,
+    finalizeAssetUpload,
+    getAssetMetadata,
+    resolveAssetFile,
+    receiveAssetUpload,
     getCapability,
     search,
     listSpaces,
@@ -1232,4 +1968,7 @@ const make = Effect.fn("SpacesService.make")(function* (dbPath: string) {
   });
 });
 
-export const layerFromPath = (dbPath: string) => Layer.effect(SpacesService, make(dbPath));
+export const layerFromPath = (
+  dbPath: string,
+  directories?: { readonly assetsDir: string; readonly stagingDir: string },
+) => Layer.effect(SpacesService, make(dbPath, directories));
