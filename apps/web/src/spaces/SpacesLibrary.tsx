@@ -7,7 +7,12 @@ import { SpacePageTable } from "./SpacePageTable";
 
 const SpaceSearch = lazy(() => import("./SpaceSearch"));
 const SpaceRecoveryControls = lazy(() => import("./SpaceRecoveryControls"));
-const SpaceLibraryControls = lazy(() => import("./SpaceLibraryControls"));
+const CreatePageButton = lazy(() =>
+  import("./SpaceCreateControls").then((module) => ({ default: module.CreatePageButton })),
+);
+const CreateStatus = lazy(() =>
+  import("./SpaceCreateControls").then((module) => ({ default: module.CreateStatus })),
+);
 
 export function SpacesLibrary({
   environmentId,
@@ -38,10 +43,13 @@ export function SpacesLibrary({
               <SpaceRecoveryControls key={environmentId} environmentId={environmentId} />
             </Suspense>
             <Suspense fallback={null}>
-              <SpaceLibraryControls environmentId={environmentId} spaceId={spaceId} />
+              <CreatePageButton environmentId={environmentId} spaceId={spaceId} label="New page" />
             </Suspense>
           </div>
         </header>
+        <Suspense fallback={null}>
+          <CreateStatus environmentId={environmentId} />
+        </Suspense>
         <Suspense
           fallback={
             <p role="status" className="text-sm text-muted-foreground">
