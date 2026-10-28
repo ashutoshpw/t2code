@@ -1,17 +1,23 @@
-import type { SpaceCapability } from "@t2code/contracts/spaces";
-import { WS_METHODS } from "@t2code/contracts";
+import {
+  SpacesUnavailableError,
+  type SpaceCapability,
+  type SpaceAssetUploadInput,
+  type SpaceAssetGetInput,
+} from "@t2code/contracts/spaces";
+import { WS_METHODS, type EnvironmentId } from "@t2code/contracts";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
-import { Atom } from "effect/reactivity";
+import { Atom, AtomRegistry } from "effect/reactivity";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
 import { readSpacePageLocation } from "../spaces/pageLocation.ts";
-import type { EnvironmentId } from "@t2code/contracts";
 import type { SpacePageId } from "@t2code/contracts/spaces";
-import { request } from "../rpc/client.ts";
+import { request, requestGuarded } from "../rpc/client.ts";
 import {
+  createEnvironmentCommand,
   createEnvironmentQueryAtomFamily,
+  createEnvironmentRpcCommand,
   createEnvironmentRpcQueryAtomFamily,
 } from "./runtime.ts";
 
@@ -43,14 +49,264 @@ export function canBrowseSpaces(availability: SpacesAvailability) {
 
 export function createSpacesEnvironmentAtoms<R, E>(
   runtime: Atom.AtomRuntime<EnvironmentRegistry | R, E>,
+  options?: {
+    readonly capabilityAtom: (
+      environmentId: EnvironmentId,
+    ) => Atom.Atom<SpaceCapability | undefined>;
+  },
 ) {
+  const changed = Atom.family((_environmentId: EnvironmentId) => Atom.make(0));
+  const refreshTrigger = ({ environmentId }: { environmentId: EnvironmentId }) =>
+    changed(environmentId);
   return {
+    changed,
+    createImageUpload: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.image-upload-create",
+      tag: WS_METHODS.spacesAssetsUploadCreate,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.assets === true && c.limits.assets
+            ? requestGuarded(WS_METHODS.spacesAssetsUploadCreate, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    finalizeImageUpload: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.image-upload-finalize",
+      tag: WS_METHODS.spacesAssetsUploadFinalize,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.assets === true && c.limits.assets
+            ? requestGuarded(WS_METHODS.spacesAssetsUploadFinalize, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    imageUpload: createEnvironmentQueryAtomFamily(runtime, {
+      label: "spaces.image-upload-status",
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+      execute: Effect.fn("Spaces.imageUpload")(function* (input: SpaceAssetUploadInput) {
+        const registry = yield* AtomRegistry.AtomRegistry;
+        const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+        if (c?.version !== 2 || c.features?.assets !== true || !c.limits.assets)
+          return yield* new SpacesUnavailableError({ stage: "settings" });
+        return yield* requestGuarded(WS_METHODS.spacesAssetsUploadGet, input);
+      }),
+    }),
+    imageMetadata: createEnvironmentQueryAtomFamily(runtime, {
+      label: "spaces.image-metadata",
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+      execute: Effect.fn("Spaces.imageMetadata")(function* (input: SpaceAssetGetInput) {
+        const registry = yield* AtomRegistry.AtomRegistry;
+        const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+        if (c?.version !== 2 || c.features?.assets !== true || !c.limits.assets)
+          return yield* new SpacesUnavailableError({ stage: "settings" });
+        return yield* requestGuarded(WS_METHODS.spacesAssetsGet, input);
+      }),
+    }),
+    captureSession: createEnvironmentCommand(runtime, {
+      label: "spaces.captureSession",
+      execute: Effect.fn("Spaces.captureSession")(function* (_input: undefined) {
+        const supervisor = yield* EnvironmentSupervisor;
+        const session = Option.getOrNull(SubscriptionRef.getUnsafe(supervisor.session));
+        const initial = SubscriptionRef.getUnsafe(supervisor.state);
+        return () => {
+          const now = SubscriptionRef.getUnsafe(supervisor.state);
+          return now.phase === "connected" &&
+            now.generation === initial.generation &&
+            now.attempt === initial.attempt &&
+            Option.getOrNull(SubscriptionRef.getUnsafe(supervisor.session)) === session
+            ? session
+            : null;
+        };
+      }),
+    }),
+    search: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.search",
+      tag: WS_METHODS.spacesSearch,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.search === true
+            ? requestGuarded(WS_METHODS.spacesSearch, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    resolve: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.resolve",
+      tag: WS_METHODS.spacesReferencesResolve,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.referenceResolution === true
+            ? requestGuarded(WS_METHODS.spacesReferencesResolve, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+
+    blocks: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:blocks",
+      tag: WS_METHODS.spacesBlocksRead,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    receipt: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:receipt",
+      tag: WS_METHODS.spacesReceiptsGet,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    inspect: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:inspect",
+      tag: WS_METHODS.spacesStructureInspect,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    createSpace: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:createSpace",
+      tag: WS_METHODS.spacesCreate,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesCreate, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    renameSpace: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:renameSpace",
+      tag: WS_METHODS.spacesRename,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesRename, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    setDefaultSpace: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:setDefaultSpace",
+      tag: WS_METHODS.spacesSetDefault,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesSetDefault, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    createPage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:createPage",
+      tag: WS_METHODS.spacesPagesCreate,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesPagesCreate, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    updatePage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:updatePage",
+      tag: WS_METHODS.spacesPagesUpdate,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 1 || capability?.version === 2
+            ? requestGuarded(WS_METHODS.spacesPagesUpdate, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    moveBlocks: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:move-blocks",
+      tag: WS_METHODS.spacesBlocksMove,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const capability = options
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          return capability?.version === 2 && capability.features?.blockMoves === true
+            ? requestGuarded(WS_METHODS.spacesBlocksMove, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    createChild: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:create-child",
+      tag: WS_METHODS.spacesPagesCreateChild,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2
+            ? requestGuarded(WS_METHODS.spacesPagesCreateChild, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    trashPage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:trash-page",
+      tag: WS_METHODS.spacesPagesTrash,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.recovery === true
+            ? requestGuarded(WS_METHODS.spacesPagesTrash, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    restorePage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:restore-page",
+      tag: WS_METHODS.spacesPagesRestore,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.recovery === true
+            ? requestGuarded(WS_METHODS.spacesPagesRestore, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    permanentlyDeletePage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:permanently-delete-page",
+      tag: WS_METHODS.spacesPagesPermanentlyDelete,
+      execute: (input, registry) =>
+        Effect.suspend(() => {
+          const c = options ? registry.get(options.capabilityAtom(input.environmentId)) : undefined;
+          return c?.version === 2 && c.features?.recovery === true
+            ? requestGuarded(WS_METHODS.spacesPagesPermanentlyDelete, input)
+            : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+    }),
+    trash: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:spaces:trash",
+      tag: WS_METHODS.spacesTrashList,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    movePage: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:move-page",
+      tag: WS_METHODS.spacesPagesMove,
+    }),
+    apply: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:spaces:apply",
+      tag: WS_METHODS.spacesBlocksApply,
+    }),
     // Each caller owns this query; sharing its SWR cache could authorize an obsolete location.
     location: (target: {
       environmentId: EnvironmentId;
       input: { environmentId: EnvironmentId; pageId: SpacePageId; version: 1 | 2 };
     }) =>
       createEnvironmentQueryAtomFamily(runtime, {
+        refreshTrigger,
         label: "environment-data:spaces:location",
         idleTtlMs: 0,
         staleTimeMs: 0,
@@ -86,18 +342,21 @@ export function createSpacesEnvironmentAtoms<R, E>(
         }),
       })(target),
     list: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger,
       label: "environment-data:spaces:list",
       tag: WS_METHODS.spacesList,
       idleTtlMs: 0,
       staleTimeMs: 0,
     }),
     pages: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger,
       label: "environment-data:spaces:pages",
       tag: WS_METHODS.spacesPagesList,
       idleTtlMs: 0,
       staleTimeMs: 0,
     }),
     page: createEnvironmentRpcQueryAtomFamily(runtime, {
+      refreshTrigger,
       label: "environment-data:spaces:page",
       tag: WS_METHODS.spacesPagesGet,
       idleTtlMs: 0,

@@ -177,8 +177,15 @@ describe("Spaces ProseMirror adapter", () => {
       }),
       paragraph("b", "nested list", { type: "bulleted_item", parentId: id("a") }),
       paragraph("c", "nested leaf", { parentId: id("b") }),
+      paragraph("d", "", {
+        parentId: id("b"),
+        type: "image",
+        content: { assetId: "opaque-descendant" },
+      }),
     ];
-    const editor = setup(blocks);
+    const editor = setup(blocks, { canEditMedia: () => true });
+    expect(editor.blocks()).toEqual(blocks);
+    expect(editor.run(editor.adapter.removeMedia(id("d")))).toBe(false);
     expect(editor.blocks()).toEqual(blocks);
     expect(editor.run(editor.adapter.move(id("a"), null))).toBe(false);
     expect(() => editor.adapter.copyBlocks(editor.state, [id("a")])).toThrow();
@@ -542,3 +549,61 @@ describe("Spaces ProseMirror adapter", () => {
     expect(small.run(small.adapter.pasteBlocks([paragraph("b", "large")], target))).toBe(false);
   });
 });
+
+it.each(["envelope", "content", "run", "mark", "duplicate-mark"] as const)(
+  "refuses media editing without stripping unsupported %s data",
+  (rest) => {
+    const caption = [{ text: "caption", marks: [{ type: "bold", version: 1 }] }];
+    const base = paragraph("media", "", {
+      type: "image",
+      content: { assetId: "asset-before", caption },
+    });
+    const block: SpaceBlock =
+      rest === "envelope"
+        ? { ...base, opaque: { future: true } }
+        : rest === "content"
+          ? { ...base, content: { assetId: "asset-before", caption, crop: [1, 2] } }
+          : rest === "run"
+            ? {
+                ...base,
+                content: {
+                  assetId: "asset-before",
+                  caption: [{ ...caption[0], language: "opaque" }],
+                },
+              }
+            : {
+                ...base,
+                content: {
+                  assetId: "asset-before",
+                  caption: [
+                    {
+                      text: "caption",
+                      marks:
+                        rest === "mark"
+                          ? [
+                              {
+                                type: "link",
+                                version: 1,
+                                href: "https://example.test",
+                                future: true,
+                              },
+                            ]
+                          : [
+                              { type: "bold", version: 1 },
+                              { type: "bold", version: 1 },
+                            ],
+                    },
+                  ],
+                },
+              };
+    const editor = setup([block], { canEditMedia: () => true });
+    expect(editor.state.doc.firstChild!.type.name).toBe("spaceAtom");
+    expect(editor.run(editor.adapter.removeMedia(block.id))).toBe(false);
+    expect(
+      editor.run(editor.adapter.replaceMedia(block, { ...base, content: { assetId: "new" } })),
+    ).toBe(false);
+    editor.dispatch(editor.state.tr.setNodeMarkup(0, undefined, { block: base }));
+    expect(editor.blocks()).toEqual([block]);
+    expect(editor.run(editor.adapter.undoLocal())).toBe(false);
+  },
+);

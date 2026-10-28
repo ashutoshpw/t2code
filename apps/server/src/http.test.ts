@@ -207,6 +207,108 @@ describe("untraced requests", () => {
     }).pipe(Effect.provide(NodeServices.layer)),
   );
 });
+it.each([false, true])(
+  "exposes immutable asset range metadata to cross-origin JavaScript without changing origin or credential policy (dev: %s)",
+  async (dev) => {
+    const origin = "https://app.t2.codes";
+    const digest = "a".repeat(64);
+    const layerRoute = Layer.effectDiscard(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "pdf-cors-" });
+        const file = `${directory}/report.pdf`;
+        yield* fs.writeFileString(file, "%PDF-1.7\n" + "x".repeat(200000));
+        const router = yield* HttpRouter.HttpRouter;
+        yield* router.add(
+          "GET",
+          "/api/assets/signed/report.pdf",
+          Effect.gen(function* () {
+            const request = yield* HttpServerRequest.HttpServerRequest;
+            return yield* assetFileResponse(
+              { path: file, mimeType: "application/pdf", immutableDigest: digest },
+              request.headers.range,
+              request.headers["if-range"],
+              request.method === "HEAD" ? "HEAD" : "GET",
+            );
+          }),
+        );
+      }),
+    );
+    const config = Layer.unwrap(
+      Effect.gen(function* () {
+        const base = yield* ServerConfig.ServerConfig;
+        return ServerConfig.layer({
+          ...base,
+          ...(dev ? { devUrl: new URL("http://localhost:5173"), devAllowedOrigins: [origin] } : {}),
+        });
+      }),
+    ).pipe(Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "pdf-cors-config-" })));
+    const http = HttpRouter.toWebHandler(
+      Layer.mergeAll(
+        layerRoute,
+        ServerHttp.layerBrowserApiCors,
+        ServerHttp.layerHttpCompression,
+      ).pipe(
+        Layer.provide(config),
+        Layer.provideMerge(NodeHttpPlatform.layer),
+        Layer.provideMerge(NodeServices.layer),
+      ),
+      { disableLogger: true },
+    );
+    try {
+      for (const mode of ["GET", "HEAD", "range"] as const) {
+        const response = await http.handler(
+          new Request("https://destination.example/api/assets/signed/report.pdf", {
+            method: mode === "HEAD" ? "HEAD" : "GET",
+            headers: {
+              origin,
+              ...(mode === "range" ? { range: "bytes=0-8", "if-range": `"${digest}"` } : {}),
+            },
+          }),
+        );
+        expect(response.status).toBe(mode === "range" ? 206 : 200);
+        expect(response.headers.get("access-control-allow-origin")).toBe(dev ? origin : "*");
+        expect(response.headers.get("access-control-allow-credentials")).toBe(dev ? "true" : null);
+        const exposed = new Set(
+          (response.headers.get("access-control-expose-headers") ?? "")
+            .toLowerCase()
+            .split(",")
+            .map((h) => h.trim()),
+        );
+        for (const name of [
+          "accept-ranges",
+          "content-range",
+          "content-length",
+          "content-encoding",
+          "etag",
+        ])
+          expect(exposed.has(name)).toBe(true);
+        for (const name of ["*", "authorization", "set-cookie", "dpop"])
+          expect(exposed.has(name)).toBe(false);
+        expect(response.headers.get("accept-ranges")).toBe("bytes");
+        expect(Number(response.headers.get("content-length"))).toBe(mode === "range" ? 9 : 200009);
+        expect(response.headers.get("content-encoding") ?? "identity").toBe("identity");
+        expect(response.headers.get("etag")).toBe(`"${digest}"`);
+        expect(response.headers.get("cache-control")).toContain("immutable");
+        if (mode === "range")
+          expect(response.headers.get("content-range")).toBe("bytes 0-8/200009");
+        await response.body?.cancel();
+      }
+      if (dev) {
+        const denied = await http.handler(
+          new Request("https://destination.example/api/assets/signed/report.pdf", {
+            method: "HEAD",
+            headers: { origin: "https://untrusted.example" },
+          }),
+        );
+        expect(denied.headers.get("access-control-allow-origin")).toBeNull();
+        await denied.body?.cancel();
+      }
+    } finally {
+      await http.dispose();
+    }
+  },
+);
 
 const layerFileResponse = Layer.mergeAll(NodeHttpPlatform.layer, NodeServices.layer);
 
