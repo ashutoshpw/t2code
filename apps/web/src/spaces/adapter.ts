@@ -1256,7 +1256,7 @@ export class SpaceEditorAdapter {
       const tr = state.tr.split($from.pos, splitDepth);
       tr.setNodeMarkup(pos, undefined, { block: first });
       const nextPos = tr.mapping.map($from.pos, 1) - (splitDepth === 2 ? 2 : 1);
-      tr.setNodeMarkup(nextPos, undefined, { block: second });
+      tr.setNodeMarkup(nextPos, state.schema.nodes[second.type], { block: second });
       return this.#dispatch(tr, dispatch);
     };
   }

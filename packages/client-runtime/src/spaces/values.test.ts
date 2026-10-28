@@ -157,6 +157,20 @@ describe("shared Spaces editing", () => {
     ).toBe("hello world");
   });
 
+  it("starts a paragraph when a heading is split at its end", () => {
+    const heading = {
+      ...paragraph("Title"),
+      type: "heading",
+      content: { level: 2, runs: [{ text: "Title", marks: [] }] },
+    } as never;
+    const [first, second] = splitSpaceTextBlock(heading, 5, {
+      id: SpaceBlockId.make("b"),
+      order: "b",
+    });
+    expect(first).toBe(heading);
+    expect(second).toMatchObject({ id: "b", type: "paragraph", content: { runs: [] } });
+  });
+
   it("copies fresh subtree identities and remaps only internal mentions in the same page", () => {
     const parent = { ...paragraph("parent"), type: "bulleted_item" };
     const child = {
