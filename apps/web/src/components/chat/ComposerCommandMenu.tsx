@@ -1,3 +1,4 @@
+import type { ComposerContextId, SpaceContextSelector } from "@t2code/contracts";
 import { formatProviderSkillDisplayName } from "@t2code/shared/inlineSkills";
 import type { ComposerPathSearchTarget } from "@t2code/client-runtime/state/threads";
 import {
@@ -35,6 +36,23 @@ import { ComposerBanner } from "./ComposerBanner";
 import { resolvePullRequestState } from "../pullRequest/pullRequestPresentation";
 
 export type ComposerCommandItem =
+  | {
+      id: string;
+      type: "space-context";
+      label: string;
+      description: string;
+      query: string;
+      select: (id: ComposerContextId) => SpaceContextSelector | null;
+    }
+  | {
+      id: string;
+      type: "space-action";
+      query: string;
+      label: string;
+      description: string;
+      perform: () => void;
+    }
+  | { id: string; type: "space-notice"; label: string; description: string }
   | {
       id: string;
       type: "path";
@@ -194,6 +212,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
       value={props.item.id}
       data-composer-item-id={props.item.id}
       active={props.isActive}
+      disabled={props.item.type === "space-notice"}
       onMouseMove={() => {
         if (!props.isActive) props.onHighlight(props.item.id);
       }}

@@ -106,10 +106,12 @@ export function usePlanFollowUpSend(input: PlanFollowUpSendInput) {
   return async function submitPlanFollowUp({
     text,
     context,
+    assertContextCurrent,
     interactionMode: nextInteractionMode,
   }: {
     text: string;
     context?: ReturnType<typeof buildMessageContext>;
+    assertContextCurrent?: () => void;
     interactionMode: "default" | "plan";
   }) {
     if (
@@ -176,6 +178,10 @@ export function usePlanFollowUpSend(input: PlanFollowUpSendInput) {
     let failure: AtomCommandResult<unknown, unknown> | null =
       settingsResult._tag === "Failure" ? settingsResult : null;
 
+    if (failure === null && assertContextCurrent) {
+      const accessCheck = await settlePromise(async () => assertContextCurrent());
+      if (accessCheck._tag === "Failure") failure = accessCheck;
+    }
     if (failure === null) {
       setComposerDraftInteractionMode(
         scopeThreadRef(activeThread.environmentId, threadIdForSend),

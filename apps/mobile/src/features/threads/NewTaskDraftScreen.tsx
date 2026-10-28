@@ -58,6 +58,7 @@ import { makeTurnCommandMetadata } from "../../lib/commandMetadata";
 import {
   clearComposerDraftContent,
   getComposerDraftSnapshot,
+  sameComposerDraftState,
   updateComposerDraftSettings,
   scheduleUnusedComposerAttachmentCleanup,
 } from "../../state/use-composer-drafts";
@@ -651,7 +652,12 @@ export function NewTaskDraftScreen(props: {
     }
     // Persist locally before clearing or leaving the draft; server setup runs on the thread.
     flow.setSubmitting(true);
-    const queued = await settlePromise(() => enqueueThreadOutboxMessage(message));
+    const queued = await settlePromise(() =>
+      enqueueThreadOutboxMessage(message, {
+        contextDraft: draft.contextDraft,
+        isCurrentDraft: () => sameComposerDraftState(getComposerDraftSnapshot(draftKey), draft),
+      }),
+    );
     flow.setSubmitting(false);
     if (AsyncResult.isFailure(queued)) {
       const error = squashAtomCommandFailure(queued);
@@ -661,6 +667,8 @@ export function NewTaskDraftScreen(props: {
       );
       return null;
     }
+    if (!sameComposerDraftState(getComposerDraftSnapshot(draftKey), draft))
+      return message.messageId;
     promptInputRef.current?.blur();
     navigation.dispatch(
       CommonActions.setParams(
