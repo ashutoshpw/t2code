@@ -171,7 +171,7 @@ function Recovery({
         onClick={() => void trashPage(pageId, spaceId, parentPageId ?? null)}
       >
         <Trash2Icon />
-        <span className="sr-only">Move to trash</span>
+        <span className="sr-only">Move page to trash</span>
       </Button>
     );
   return (
@@ -185,7 +185,7 @@ function Recovery({
         }}
       >
         <Trash2Icon />
-        Trash
+        Trash<span className="sr-only"> and recovery</span>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogPopup>

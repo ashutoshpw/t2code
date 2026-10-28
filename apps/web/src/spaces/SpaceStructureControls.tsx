@@ -254,7 +254,7 @@ function StructureControls({
           <>
             <Button variant="ghost" size="sm" disabled={!writable || blocked} onClick={openMove}>
               <MoveIcon />
-              Move to…
+              Move page
             </Button>
             <Button
               variant="ghost"
@@ -267,7 +267,7 @@ function StructureControls({
               }}
             >
               <FilePlusIcon />
-              Add child page
+              Create child page
             </Button>
             <SpaceRecoveryControls
               environmentId={target.environmentId}
