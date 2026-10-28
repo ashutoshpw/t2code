@@ -7,10 +7,11 @@ import type { SpaceRootReorder } from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
-import { PencilIcon, PlusIcon } from "lucide-react";
+import { EllipsisIcon, PencilIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { Input } from "../components/ui/input";
+import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../components/ui/menu";
 import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { spaceRootReorder } from "./sessionRuntime";
 
@@ -21,8 +22,6 @@ interface Props {
   current?: () => boolean;
 }
 type Intent =
-  | { kind: "createSpace" }
-  | { kind: "createPage"; space: SpaceSummary }
   | { kind: "renameSpace"; space: SpaceSummary }
   | { kind: "setDefaultSpace"; space: SpaceSummary; previous: SpaceSummary }
   | { kind: "updatePage"; page: SpacePageSummary };
@@ -60,25 +59,23 @@ function Library({
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
   const availability = useSpacesAvailability(environmentId);
   const readable = canBrowseSpaces(availability);
-  const newSpace = useAtomValue(spacesEnvironment.createSpace.permissionAtom(environmentId));
   const renameSpace = useAtomValue(spacesEnvironment.renameSpace.permissionAtom(environmentId));
   const setDefault = useAtomValue(spacesEnvironment.setDefaultSpace.permissionAtom(environmentId));
-  const newPage = useAtomValue(spacesEnvironment.createPage.permissionAtom(environmentId));
   const renamePage = useAtomValue(spacesEnvironment.updatePage.permissionAtom(environmentId));
   const selected = useEnvironmentQuery(
-    open && readable && !page
+    readable && !page
       ? spacesEnvironment.pages({ environmentId, input: { environmentId, spaceId, limit: 1 } })
       : null,
   );
   const catalog = useEnvironmentQuery(
-    open && readable && !page
+    readable && !page
       ? spacesEnvironment.list({ environmentId, input: { environmentId, limit: 1 } })
       : null,
   );
   const defaultId =
     catalog.isSuccess && !catalog.isPending ? catalog.data?.defaultSpaceId : undefined;
   const previous = useEnvironmentQuery(
-    open && readable && defaultId && !page
+    readable && defaultId && !page
       ? spacesEnvironment.pages({
           environmentId,
           input: { environmentId, spaceId: defaultId, limit: 1 },
@@ -100,22 +97,16 @@ function Library({
     setTitle(initial);
   };
   const allowed =
-    intent?.kind === "createSpace"
-      ? newSpace
-      : intent?.kind === "renameSpace"
-        ? renameSpace
-        : intent?.kind === "setDefaultSpace"
-          ? setDefault
-          : intent?.kind === "createPage"
-            ? newPage
-            : renamePage;
+    intent?.kind === "renameSpace"
+      ? renameSpace
+      : intent?.kind === "setDefaultSpace"
+        ? setDefault
+        : renamePage;
   const submit = async () => {
     if (!intent || blocked || !allowed || (current && !current())) return;
-    if (intent.kind === "createSpace") await owner.createSpace(title);
-    else if (intent.kind === "renameSpace") await owner.renameSpace(intent.space, title);
+    if (intent.kind === "renameSpace") await owner.renameSpace(intent.space, title);
     else if (intent.kind === "setDefaultSpace")
       await owner.setDefaultSpace(intent.space, intent.previous);
-    else if (intent.kind === "createPage") await owner.createRootPage(intent.space, title);
     else await owner.renamePage(intent.page, title);
     setIntent(null);
   };
@@ -129,21 +120,42 @@ function Library({
           <span className="sr-only"> page…</span>
         </Button>
       ) : (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Create and manage…"
-                onClick={() => setOpen(true)}
-              />
-            }
-          >
-            <PlusIcon />
-          </TooltipTrigger>
-          <TooltipPopup side="bottom">Create and manage…</TooltipPopup>
-        </Tooltip>
+        <Menu>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <MenuTrigger
+                  render={<Button variant="ghost" size="icon-xs" aria-label="Space actions" />}
+                />
+              }
+            >
+              <EllipsisIcon />
+            </TooltipTrigger>
+            <TooltipPopup side="bottom">Space actions</TooltipPopup>
+          </Tooltip>
+          <MenuPopup align="end">
+            <MenuItem
+              disabled={blocked || !renameSpace || !space}
+              onClick={() => {
+                if (!space) return;
+                choose({ kind: "renameSpace", space }, space.title);
+                setOpen(true);
+              }}
+            >
+              Rename space…
+            </MenuItem>
+            <MenuItem
+              disabled={blocked || !setDefault || !space || space.isDefault || !defaultSpace}
+              onClick={() => {
+                if (!space || !defaultSpace) return;
+                choose({ kind: "setDefaultSpace", space, previous: defaultSpace });
+                setOpen(true);
+              }}
+            >
+              Make default space…
+            </MenuItem>
+          </MenuPopup>
+        </Menu>
       )}
       <Dialog
         open={open}
@@ -153,7 +165,7 @@ function Library({
         }}
       >
         <DialogPopup>
-          <DialogTitle>{page ? "Page title" : "Space library"}</DialogTitle>
+          <DialogTitle>{page ? "Page title" : "Space settings"}</DialogTitle>
           <DialogDescription>
             Changes use the details selected here. If another device changes them, refresh and
             choose again. Resolve affected page drafts first. Metadata changes have no Undo. The
@@ -170,54 +182,17 @@ function Library({
                   Rename {page.title || "Untitled page"}
                 </Button>
               ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    disabled={blocked || !newSpace}
-                    onClick={() => choose({ kind: "createSpace" })}
-                  >
-                    New space
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={blocked || !newPage || !space}
-                    onClick={() => {
-                      if (space) choose({ kind: "createPage", space });
-                    }}
-                  >
-                    New root page
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={blocked || !renameSpace || !space}
-                    onClick={() => {
-                      if (space) choose({ kind: "renameSpace", space }, space.title);
-                    }}
-                  >
-                    Rename space
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={blocked || !setDefault || !space || space.isDefault || !defaultSpace}
-                    onClick={() => {
-                      if (space && defaultSpace)
-                        choose({ kind: "setDefaultSpace", space, previous: defaultSpace });
-                    }}
-                  >
-                    Make default space
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={busy || !readable}
-                    onClick={() => {
-                      selected.refresh();
-                      catalog.refresh();
-                      previous.refresh();
-                    }}
-                  >
-                    Refresh library metadata
-                  </Button>
-                </>
+                <Button
+                  variant="ghost"
+                  disabled={busy || !readable}
+                  onClick={() => {
+                    selected.refresh();
+                    catalog.refresh();
+                    previous.refresh();
+                  }}
+                >
+                  Refresh library metadata
+                </Button>
               )}
             </div>
             {intent ? (
@@ -230,11 +205,7 @@ function Library({
                   </p>
                 ) : (
                   <label>
-                    {intent.kind === "createSpace"
-                      ? "New space title"
-                      : intent.kind === "createPage"
-                        ? "New root page title"
-                        : "New title"}
+                    New title
                     <Input value={title} onChange={(event) => setTitle(event.target.value)} />
                   </label>
                 )}
@@ -243,13 +214,7 @@ function Library({
                   disabled={blocked || !allowed}
                   onClick={() => run(submit())}
                 >
-                  {intent.kind === "setDefaultSpace"
-                    ? "Confirm default space"
-                    : intent.kind === "createSpace"
-                      ? "Create space"
-                      : intent.kind === "createPage"
-                        ? "Create root page"
-                        : "Confirm rename"}
+                  {intent.kind === "setDefaultSpace" ? "Confirm default space" : "Confirm rename"}
                 </Button>
               </div>
             ) : null}
