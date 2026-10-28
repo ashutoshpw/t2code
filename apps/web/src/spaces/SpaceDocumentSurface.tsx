@@ -1,13 +1,32 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import { lazy, Suspense, useContext, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  lazy,
+  Suspense,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { SpaceBlockId, type SpaceBlock } from "@t2code/contracts/spaces";
 import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
 import { useSpaceReferenceController } from "./useSpaceReferences";
 import { SpaceSourceOpen } from "./SpaceSourceOpen";
-import { ChevronsDownIcon, RefreshCwIcon, Redo2Icon, SaveIcon, Undo2Icon } from "lucide-react";
+import { Redo2Icon, Undo2Icon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { MenuItem } from "../components/ui/menu";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogPopup,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
+import { toastManager } from "../components/ui/toast";
+import { createAutosave } from "./draftStore";
 import { spacesEnvironment } from "../state/spaces";
 import { randomUUID } from "../lib/utils";
 import { SpaceMentionController } from "./mentions";
@@ -153,95 +172,95 @@ function DocumentContent({
   const permission = useAtomValue(
     spacesEnvironment.apply.permissionAtom(controller.session.key.environmentId),
   );
-  const clean =
-    session.hydrated &&
-    !controller.structureBlocked() &&
-    !session.dirty &&
-    !session.pending &&
-    session.persistenceError === null &&
-    session.status !== "saving";
   const run = (operation: Promise<unknown>) => {
     void operation.catch(() => {});
   };
-  const statusText = !session.hydrated
-    ? "Loading document…"
-    : session.status === "saved"
-      ? "Saved"
-      : session.status === "uncertain"
-        ? "Save outcome unresolved"
-        : session.status === "conflict"
-          ? "The server has a newer revision. Your local draft is retained."
-          : session.status === "saving"
-            ? "Saving draft…"
-            : "Local draft";
+  const autosave = useRef<ReturnType<typeof createAutosave> | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // oxlint-disable-next-line t2code/react-effect-budget -- Debounced autosave subscribes to the external document session and flushes on leave.
+  useEffect(() => {
+    const failure = (error: unknown) => {
+      toastManager.add({
+        type: "error",
+        title: "Couldn't save",
+        description: message(error),
+        actionProps: { children: "Retry", onClick: () => autosave.current?.retry() },
+      });
+    };
+    const saver = createAutosave({
+      save: () =>
+        controller.save().catch((error: unknown) => {
+          failure(error);
+          throw error;
+        }),
+    });
+    autosave.current = saver;
+    const sync = () => {
+      const state = controller.session.getSnapshot();
+      const ready =
+        state.hydrated &&
+        state.dirty &&
+        !state.pending &&
+        state.status === "draft" &&
+        !state.recoveryReason &&
+        state.persistenceError === null &&
+        !controller.structureBlocked() &&
+        !controller.getSnapshot().loading;
+      saver.update(ready ? state.generation : null);
+    };
+    const leave = () => {
+      if (document.visibilityState === "hidden") saver.flush();
+    };
+    const unsubscribe = controller.subscribe(sync);
+    document.addEventListener("visibilitychange", leave);
+    window.addEventListener("pagehide", saver.flush);
+    sync();
+    return () => {
+      unsubscribe();
+      document.removeEventListener("visibilitychange", leave);
+      window.removeEventListener("pagehide", saver.flush);
+      saver.dispose();
+      autosave.current = null;
+    };
+  }, [controller]);
+  const needsAttention =
+    session.hydrated &&
+    (session.status === "conflict" ||
+      session.status === "uncertain" ||
+      !!session.persistenceError ||
+      !!error ||
+      (!!session.pending && session.status === "draft"));
+  const canDiscard = session.dirty && !session.pending;
   const moreWindows =
     !session.hydrated ||
     !controller.editorWindow().completeParents.includes(null) ||
     !!snapshot.nextCursor;
-  const showFooter =
-    moreWindows ||
-    session.dirty ||
-    session.pending ||
-    (session.persistenceError && session.hydrated);
+  const showFooter = moreWindows || needsAttention || !!snapshot.imageAdmissionError;
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {!sources?.current() ? (
+    <div className="space-y-3" onBlur={() => autosave.current?.flush()}>
+      {!sources?.current() ? (
+        <div className="flex justify-end">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setSourceAttempt((value) => value + 1)}
           >
-            Retry source connection
+            Reconnect
           </Button>
-        ) : null}
-        {!session.hydrated ? (
-          <p role="status" className="text-xs text-muted-foreground">
-            {statusText}
-          </p>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+      {!session.hydrated ? (
+        <p role="status" className="text-xs text-muted-foreground">
+          Loading document…
+        </p>
+      ) : null}
       {controller.structureBlocked() ? (
         <p role="status" className="text-sm text-muted-foreground">
-          Page placement is pending. Editing is paused until its receipt is resolved.
-        </p>
-      ) : null}
-      {session.recoveryReason ? (
-        <p role="alert" className="text-sm text-destructive-foreground">
-          This older pending draft has no receipt epoch. It is retained and cannot be retried
-          automatically.
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" className="text-sm text-destructive-foreground">
-          {message(error)}
-        </p>
-      ) : null}
-      {snapshot.imageAdmissionError ? (
-        <p role="alert" className="text-sm text-destructive-foreground">
-          {message(snapshot.imageAdmissionError)} You can edit the unsent draft; no pending request
-          was changed.
-        </p>
-      ) : null}
-      {session.persistenceError ? (
-        <p role="alert" className="text-sm text-destructive-foreground">
-          Draft storage failed: {message(session.persistenceError)}
-        </p>
-      ) : null}
-      {session.history.reason ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {session.history.reason}
-        </p>
-      ) : null}
-      {session.history.action ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          Saved {session.history.action} draft. A conflict keeps this attempted change; retry save
-          or discard it explicitly.
+          This page is being updated. Editing resumes shortly.
         </p>
       ) : null}
       {session.hydrated ? (
         <SpaceEditor
-          status={statusText}
           savedHistory={(["undo", "redo"] as const).map((direction) => (
             <MenuItem
               key={direction}
@@ -256,10 +275,7 @@ function DocumentContent({
               title={
                 !mediaSupported && bridge.compensationUsesMedia(direction)
                   ? "This saved change requires asset support"
-                  : `${
-                      controller.session.compensationAvailability(direction) ??
-                      "Submit a new revision-checked saved change"
-                    }. Saved undo/redo covers only the last content or formatting save. Use page placement controls for root ordering; saved block structure undo is not supported.`
+                  : (controller.session.compensationAvailability(direction) ?? undefined)
               }
               onClick={() => run(bridge.compensate(direction))}
             >
@@ -302,7 +318,6 @@ function DocumentContent({
             permission &&
             !controller.structureBlocked() &&
             !loading &&
-            !error &&
             session.persistenceError === null &&
             session.status !== "conflict" &&
             session.status !== "uncertain"
@@ -318,18 +333,13 @@ function DocumentContent({
           label="current linked source"
         />
       ) : null}
-      {capability?.version === 2 && capability.features?.blockMoves !== true ? (
-        <p className="text-sm text-muted-foreground">
-          Block moves are unavailable until this environment advertises support.
-        </p>
-      ) : null}
       {moveError ? (
         <p role="alert" className="text-sm text-destructive-foreground">
           {message(moveError)}
         </p>
       ) : null}
       {blockMove && snapshot.metadata ? (
-        <Suspense fallback={<p role="status">Loading move placement…</p>}>
+        <Suspense fallback={null}>
           <SpaceStructureControls
             target={{ ...controller.session.key, spaceId: snapshot.metadata.page.spaceId }}
             location={snapshot.metadata.page.location}
@@ -342,72 +352,94 @@ function DocumentContent({
         </Suspense>
       ) : null}
       {showFooter ? (
-        <div className="flex flex-wrap items-center gap-1 border-t pt-3">
-          {moreWindows ? (
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3 text-sm">
+          {needsAttention || snapshot.imageAdmissionError ? (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={loading || (!clean && session.hydrated)}
-                onClick={() => run(session.hydrated ? controller.refresh() : controller.open())}
-              >
-                <RefreshCwIcon />
-                Reload first window
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={!clean || loading || !snapshot.nextCursor}
-                onClick={() => run(controller.next())}
-              >
-                <ChevronsDownIcon />
-                Next window
-              </Button>
+              <span role="alert" className="text-destructive-foreground">
+                Couldn't save
+                {session.status === "conflict"
+                  ? " · This page changed somewhere else. Your edits are kept on this device."
+                  : error
+                    ? ` · ${message(error)}`
+                    : snapshot.imageAdmissionError
+                      ? ` · ${message(snapshot.imageAdmissionError)}`
+                      : session.persistenceError
+                        ? " · Couldn't keep a copy on this device."
+                        : ""}
+              </span>
+              {session.status !== "conflict" ? (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={
+                    session.status === "saving" ||
+                    controller.structureBlocked() ||
+                    !session.hydrated ||
+                    !!session.recoveryReason
+                  }
+                  onClick={() =>
+                    session.persistenceError
+                      ? run(controller.session.persistDraft())
+                      : autosave.current?.retry()
+                  }
+                >
+                  Retry
+                </Button>
+              ) : null}
+              {canDiscard ? (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  disabled={controller.structureBlocked() || loading || session.status === "saving"}
+                  onClick={() => setConfirmDiscard(true)}
+                >
+                  Discard changes
+                </Button>
+              ) : null}
             </>
           ) : null}
-          {session.dirty || session.pending ? (
-            <Button
-              size="sm"
-              disabled={
-                !session.hydrated ||
-                controller.structureBlocked() ||
-                loading ||
-                session.status === "saving" ||
-                !!session.recoveryReason ||
-                (!session.pending || session.status === "draft" ? !permission : false) ||
-                session.status === "conflict"
-              }
-              onClick={() => run(controller.save())}
-            >
-              <SaveIcon />
-              {session.pending
-                ? session.status === "draft"
-                  ? "Retry unsent save"
-                  : "Check save receipt"
-                : "Save draft"}
-            </Button>
-          ) : null}
-          {session.dirty && !session.pending ? (
+          {moreWindows ? (
             <Button
               variant="ghost"
-              size="sm"
-              disabled={controller.structureBlocked() || loading || session.status === "saving"}
-              onClick={() => run(controller.discard())}
+              size="xs"
+              disabled={
+                loading ||
+                (session.hydrated && (session.dirty || !!session.pending || !snapshot.nextCursor))
+              }
+              onClick={() =>
+                run(
+                  !session.hydrated
+                    ? controller.open()
+                    : snapshot.nextCursor
+                      ? controller.next()
+                      : controller.refresh(),
+                )
+              }
             >
-              Discard local draft
-            </Button>
-          ) : null}
-          {session.persistenceError && session.hydrated ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => run(controller.session.persistDraft())}
-            >
-              Retry draft storage
+              {session.hydrated ? "Load more" : "Retry"}
             </Button>
           ) : null}
         </div>
       ) : null}
+      <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your edits on this device will be lost and the page will show its last saved version.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="ghost" />}>Keep editing</AlertDialogClose>
+            <AlertDialogClose
+              render={<Button variant="destructive" />}
+              onClick={() => run(controller.discard())}
+            >
+              Discard changes
+            </AlertDialogClose>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
     </div>
   );
 }
