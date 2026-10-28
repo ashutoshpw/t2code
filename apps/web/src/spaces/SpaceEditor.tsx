@@ -5,11 +5,11 @@ import {
   ReactNodeViewRenderer,
   ReactMarkViewRenderer,
 } from "@tiptap/react";
+import { toastManager } from "../components/ui/toast";
 import { Extension, Node as TiptapNode, Mark as TiptapMark } from "@tiptap/core";
 import {
   useEffect,
   useState,
-  useSyncExternalStore,
   type ComponentProps,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
@@ -162,7 +162,6 @@ function createSpaceSessionDispatch(
 }
 
 export function SpaceEditor({
-  status,
   savedHistory,
   adapter,
   bridge,
@@ -178,7 +177,6 @@ export function SpaceEditor({
   mentions,
   onOpenSource,
 }: {
-  readonly status?: string | undefined;
   readonly savedHistory?: ReactNode;
   readonly mentions?: SpaceMentionController | null;
   readonly onOpenSource?: (
@@ -196,17 +194,12 @@ export function SpaceEditor({
   readonly mediaEditable?: boolean;
   readonly onBatch?: (batch: SpaceEditorBatch) => void;
 }) {
-  const [notice, setNotice] = useState<string | null>(null);
   const [wrapper, setWrapper] = useState<HTMLDivElement | null>(null);
   const [linkOpen, setLinkOpen] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<number | null>(null);
   const [slashSel, setSlashSel] = useState({ query: "", index: 0 });
   const [focused, setFocused] = useState(false);
   const [turnIntoOpen, setTurnIntoOpen] = useState(false);
-  const historyNotice = useSyncExternalStore(
-    bridge?.subscribe ?? noSubscribe,
-    bridge?.getSnapshot ?? noNotice,
-  );
   const editor = useEditor(
     {
       extensions: [
@@ -295,13 +288,14 @@ export function SpaceEditor({
   const run = (command: Command) => {
     if (!editor || !editable) return;
     try {
-      setNotice(
-        command(editor.state, editor.view.dispatch)
-          ? null
-          : "This action is unavailable in the current page window.",
-      );
+      if (!command(editor.state, editor.view.dispatch))
+        toastManager.add({ type: "error", title: "That action isn't available here" });
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "This edit could not be applied.");
+      toastManager.add({
+        type: "error",
+        title: "Couldn't apply that change",
+        description: error instanceof Error ? error.message : undefined,
+      });
     }
     editor.view.focus();
   };
@@ -469,11 +463,6 @@ export function SpaceEditor({
   return (
     <section aria-label="Page contents" className="space-y-2" data-space-editor="">
       <div className="flex flex-wrap items-center justify-end gap-1">
-        {status ? (
-          <p role="status" className="text-xs text-muted-foreground">
-            {status}
-          </p>
-        ) : null}
         {images && bridge ? (
           <SpaceImageControls
             owner={images}
@@ -581,39 +570,24 @@ export function SpaceEditor({
           ) : null}
         </div>
       ) : null}
-      {targetBlockId ? (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <p role="status">
-            {reveal === "loaded"
-              ? "Linked block is loaded. Its content and draft were retained."
-              : reveal === "not-loaded"
-                ? "Linked block is not in this draft/window. No target-window locator is available. Save or resolve the draft before using First/Next windows; this view does not scan the page."
-                : "Linked block reveal is waiting for a current readable document."}
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={!current?.()}
-            onClick={() => revealTarget(true)}
-          >
-            Reveal loaded target
-          </Button>
-        </div>
+      {targetBlockId && reveal === "loaded" ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={!current?.()}
+          onClick={() => revealTarget(true)}
+        >
+          Show linked block
+        </Button>
       ) : null}
-      {historyNotice ? (
+      {targetBlockId && reveal === "not-loaded" ? (
         <p role="status" className="text-sm text-muted-foreground">
-          {historyNotice}
-        </p>
-      ) : null}
-      {notice ? (
-        <p role="alert" className="text-sm">
-          {notice}
+          The linked block isn't on this part of the page.
         </p>
       ) : null}
       {!complete ? (
         <p className="text-sm text-muted-foreground">
-          This window does not include the complete page. Text edits are available; inserting,
-          splitting and joining are unavailable.
+          Only part of this page is loaded. Use Load more below to see the rest.
         </p>
       ) : null}
       <SpaceAtomContext.Provider value={renderChild}>
@@ -774,13 +748,6 @@ function ToolbarIconButton({
       <TooltipPopup side="top">{hint ?? label}</TooltipPopup>
     </Tooltip>
   );
-}
-
-function noSubscribe() {
-  return () => {};
-}
-function noNotice() {
-  return null;
 }
 
 function FormatValue({

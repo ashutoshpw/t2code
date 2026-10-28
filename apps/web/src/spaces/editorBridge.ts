@@ -72,14 +72,16 @@ export class SpaceEditorBridge {
   #mediaWritable = false;
   #applying = false;
   #acknowledged: number | null;
-  #notice: string | null = null;
   #navigationReveal: {
     view: object;
     target: string | null;
     pending: boolean;
   } | null = null;
-  readonly #listeners = new Set<() => void>();
-  constructor(controller: SpaceDocumentController, allocateId: () => SpaceBlockId) {
+  constructor(
+    controller: SpaceDocumentController,
+    allocateId: () => SpaceBlockId,
+    private readonly notify: (description: string) => void = () => {},
+  ) {
     this.controller = controller;
     this.#acknowledged = controller.session.getSnapshot().acknowledgedGeneration;
     this.adapter = new SpaceEditorAdapter({
@@ -400,9 +402,9 @@ export class SpaceEditorBridge {
   }
   async compensate(direction: SpaceCompensation): Promise<boolean> {
     const reason = !this.canEdit()
-      ? "Saved undo/redo requires edit permission and a resolved writable document."
+      ? "You need edit access to undo or redo a saved change."
       : this.compensationUsesMedia(direction) && !this.canEditMedia()
-        ? "Saved media undo/redo requires current asset support and edit permission."
+        ? "Undoing a media change needs media support and edit access."
         : this.controller.session.compensationAvailability(direction);
     if (reason) {
       this.#message(reason);
@@ -411,20 +413,12 @@ export class SpaceEditorBridge {
     try {
       return await this.controller.compensate(direction);
     } catch (error) {
-      this.#message(error instanceof Error ? error.message : "Saved undo/redo could not be saved");
+      this.#message(error instanceof Error ? error.message : "Couldn't undo or redo that change");
       throw error;
     }
   }
-  getSnapshot = () => this.#notice;
-  subscribe = (listener: () => void) => {
-    this.#listeners.add(listener);
-    return () => {
-      this.#listeners.delete(listener);
-    };
-  };
-  #message(value: string) {
-    this.#notice = value;
-    for (const listener of this.#listeners) listener();
+  #message(description: string) {
+    this.notify(description);
   }
   synchronize(state: EditorState): EditorState {
     if (this.#applying) return state;
@@ -438,11 +432,6 @@ export class SpaceEditorBridge {
     this.adapter.clearMediaHistory();
     const doc = changed ? spaceWindowDocument(window, 100, 16, state.schema) : state.doc;
     const selection = changed ? preserveSelection(state, doc) : state.selection;
-    this.#message(
-      acknowledged
-        ? "Use saved undo/redo for the last supported save. Local undo restarts from the current draft."
-        : "Another view or loaded window changed this document. Local undo restarts from the current content.",
-    );
     return EditorState.create({
       schema: state.schema,
       doc,
@@ -482,7 +471,7 @@ export class SpaceEditorBridge {
         this.#navigationReveal.pending = false;
       return result;
     } catch (error) {
-      this.#message(error instanceof Error ? error.message : "This edit could not be applied");
+      this.#message(error instanceof Error ? error.message : "Try again.");
       return { state, transactions: [] as readonly Transaction[] };
     }
   }

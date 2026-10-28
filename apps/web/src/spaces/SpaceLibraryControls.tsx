@@ -11,7 +11,14 @@ import { Button } from "../components/ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { Input } from "../components/ui/input";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../components/ui/menu";
-import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
+import {
+  Dialog,
+  DialogDescription,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { toastManager } from "../components/ui/toast";
 import { spaceRootReorder } from "./sessionRuntime";
 
@@ -253,7 +260,11 @@ function Library({ environmentId, spaceId, owner }: Props & { owner: SpaceRootRe
           >
             Rename space…
           </MenuItem>
-          {space && !space.isDefault && defaultSpace && setDefault ? (
+          {space &&
+          !space.isDefault &&
+          defaultSpace &&
+          setDefault &&
+          availability === "writable" ? (
             <MenuItem
               disabled={blocked}
               onClick={() => choose({ kind: "setDefaultSpace", space, previous: defaultSpace })}
@@ -271,68 +282,72 @@ function Library({ environmentId, spaceId, owner }: Props & { owner: SpaceRootRe
         }}
       >
         <DialogPopup>
-          <DialogTitle>
-            {intent?.kind === "setDefaultSpace" ? "Make default space" : "Rename space"}
-          </DialogTitle>
-          {intent?.kind === "setDefaultSpace" ? (
-            <DialogDescription>
-              Make {intent.space.title || "Untitled space"} the default instead of{" "}
-              {intent.previous.title || "Untitled space"}? Both spaces and their pages stay.
-            </DialogDescription>
-          ) : (
-            <DialogDescription>Choose a new name for this space.</DialogDescription>
-          )}
-          <form
-            className="mt-4 flex gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              run(submit());
-            }}
-          >
-            {intent?.kind === "renameSpace" ? (
-              <Input
-                autoFocus
-                aria-label="Space title"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-            ) : null}
-            <Button
-              type="submit"
-              disabled={blocked || !allowed || (intent?.kind === "renameSpace" && !title.trim())}
+          <DialogHeader>
+            <DialogTitle>
+              {intent?.kind === "setDefaultSpace" ? "Make default space" : "Rename space"}
+            </DialogTitle>
+            {intent?.kind === "setDefaultSpace" ? (
+              <DialogDescription>
+                Make {intent.space.title || "Untitled space"} the default instead of{" "}
+                {intent.previous.title || "Untitled space"}? Both spaces and their pages stay.
+              </DialogDescription>
+            ) : (
+              <DialogDescription>Choose a new name for this space.</DialogDescription>
+            )}
+          </DialogHeader>
+          <DialogPanel>
+            <form
+              className="flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                run(submit());
+              }}
             >
-              {intent?.kind === "setDefaultSpace" ? "Make default" : "Save"}
-            </Button>
-          </form>
-          {pending ? (
-            <div className="mt-3 space-y-2">
-              <p role="status" className="text-sm text-muted-foreground">
-                A previous change is still waiting to be confirmed.
-              </p>
+              {intent?.kind === "renameSpace" ? (
+                <Input
+                  autoFocus
+                  aria-label="Space title"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+              ) : null}
               <Button
-                variant="outline"
-                disabled={
-                  busy ||
-                  !hydrated ||
-                  !readable ||
-                  (pending.conflict && availability !== "writable")
-                }
-                onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
+                type="submit"
+                disabled={blocked || !allowed || (intent?.kind === "renameSpace" && !title.trim())}
               >
-                {pending.conflict ? "Check again" : "Retry"}
+                {intent?.kind === "setDefaultSpace" ? "Make default" : "Save"}
               </Button>
-            </div>
-          ) : null}
-          {!hydrated && snapshot.error ? (
-            <Button
-              className="mt-3"
-              variant="outline"
-              disabled={busy}
-              onClick={() => run(owner.hydrate())}
-            >
-              Retry
-            </Button>
-          ) : null}
+            </form>
+            {pending ? (
+              <div className="mt-3 space-y-2">
+                <p role="status" className="text-sm text-muted-foreground">
+                  A previous change is still waiting to be confirmed.
+                </p>
+                <Button
+                  variant="outline"
+                  disabled={
+                    busy ||
+                    !hydrated ||
+                    !readable ||
+                    (pending.conflict && availability !== "writable")
+                  }
+                  onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
+                >
+                  {pending.conflict ? "Dismiss" : "Finish it"}
+                </Button>
+              </div>
+            ) : null}
+            {!hydrated && snapshot.error ? (
+              <Button
+                className="mt-3"
+                variant="outline"
+                disabled={busy}
+                onClick={() => run(owner.hydrate())}
+              >
+                Retry
+              </Button>
+            ) : null}
+          </DialogPanel>
         </DialogPopup>
       </Dialog>
     </>
