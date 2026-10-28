@@ -1,7 +1,9 @@
 import { createContext, useContext, useRef, useState, useSyncExternalStore } from "react";
 import { MarkViewContent, type MarkViewProps } from "@tiptap/react";
 import type { SpacePageNavigationTarget, SpaceSearchWindow } from "@t2code/client-runtime/spaces";
+import { AtSignIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { Input } from "../components/ui/input";
 import { Dialog, DialogPopup, DialogTitle } from "../components/ui/dialog";
 import type { SpaceMentionController, SpaceMentionMark, SpaceMentionSelection } from "./mentions";
@@ -126,14 +128,23 @@ export function SpaceMentionControls({
   };
   return (
     <>
-      <Button
-        variant="outline"
-        disabled={!available || !owner?.supported()}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={select}
-      >
-        Insert page or block mention…
-      </Button>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Insert page or block mention…"
+              disabled={!available || !owner?.supported()}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={select}
+            />
+          }
+        >
+          <AtSignIcon />
+        </TooltipTrigger>
+        <TooltipPopup side="bottom">Insert page or block mention…</TooltipPopup>
+      </Tooltip>
       {selection ? (
         <Dialog
           open
@@ -244,7 +255,9 @@ export function SpaceMentionControls({
           </DialogPopup>
         </Dialog>
       ) : error ? (
-        <p role="alert">{error}</p>
+        <p role="alert" className="basis-full text-sm">
+          {error}
+        </p>
       ) : null}
     </>
   );
