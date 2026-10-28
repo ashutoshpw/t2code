@@ -181,10 +181,11 @@ export function SpaceEditor({
     },
     [adapter, bridge],
   );
+  // The first render reads canEdit(), so permission must be applied before it, not in the effect.
+  bridge?.setWritable(editable, mediaEditable);
   // oxlint-disable-next-line t2code/react-effect-budget -- Synchronize the mounted editor view with the shared document and destination edit permission.
   useEffect(() => {
     if (!editor) return;
-    bridge?.setWritable(editable, mediaEditable);
     const synchronize = () => {
       if (editor.isDestroyed) return;
       if (bridge) {
