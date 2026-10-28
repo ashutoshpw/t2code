@@ -1,4 +1,14 @@
-import { Fragment, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import { RegistryContext, useAtomValue } from "@effect/atom-react";
+import {
+  Fragment,
+  lazy,
+  Suspense,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { ArrowUpRightIcon, ChevronRightIcon, PanelRightIcon, RefreshCwIcon } from "lucide-react";
 import type { EnvironmentId, ScopedThreadRef } from "@t2code/contracts";
 import { Link, useRouter } from "@tanstack/react-router";
@@ -16,6 +26,7 @@ import { cn } from "../lib/utils";
 import { useRelativeTimeState } from "../hooks/useRelativeTimeState";
 import { useMainAppThreadRef, useNavigateToMainApp } from "../components/sidebar/mainAppLocation";
 import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
+import { SpacePinButton } from "./SpacePinButton";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
 
@@ -230,6 +241,32 @@ function SpacePageMetadata({
         replace: true,
       });
   }, [query.data, query.isSuccess, query.isPending, target, threadRef, fullPage, router]);
+  const registry = useContext(RegistryContext);
+  const canRecord = useAtomValue(
+    spacesEnvironment.recordRecent.permissionAtom(target.environmentId),
+  );
+  const recentEnabled =
+    environment?.serverConfig?.environment.capabilities.spaces?.features?.recents === true;
+  const pageReady = query.isSuccess && !query.isPending && !!query.data?.current();
+  const recordedPage = useRef<string | null>(null);
+  // oxlint-disable-next-line t2code/react-effect-budget -- Record a successfully opened page in the environment's shared recents.
+  useEffect(() => {
+    const key = JSON.stringify([target.environmentId, target.pageId]);
+    if (!recentEnabled || !canRecord || !pageReady || recordedPage.current === key) return;
+    recordedPage.current = key;
+    void spacesEnvironment.recordRecent
+      .run(registry, {
+        environmentId: target.environmentId,
+        input: { environmentId: target.environmentId, pageId: target.pageId },
+      })
+      .then((result) => {
+        if (result._tag === "Success")
+          registry.update(
+            spacesEnvironment.libraryChanged(target.environmentId),
+            (value) => value + 1,
+          );
+      });
+  }, [registry, target.environmentId, target.pageId, recentEnabled, canRecord, pageReady]);
   if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
   if (query.error)
     return (
@@ -301,6 +338,7 @@ function SpacePageMetadata({
           </nav>
         }
       >
+        <SpacePinButton environmentId={target.environmentId} page={page} />
         {fullPage && mainAppThreadRef ? (
           <Button
             variant="ghost"
