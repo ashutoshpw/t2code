@@ -1,4 +1,6 @@
 import * as Schema from "effect/Schema";
+import { EnvironmentId } from "./baseSchemas.ts";
+import { SpaceAssetId } from "./spaces.ts";
 
 import { NonNegativeInt, ThreadId, TrimmedNonEmptyString, TurnItemId } from "./baseSchemas.ts";
 import {
@@ -26,6 +28,11 @@ export const NativeAppIconReference = Schema.Union([
 export type NativeAppIconReference = typeof NativeAppIconReference.Type;
 
 export const AssetResource = Schema.Union([
+  Schema.TaggedStruct("spaces-asset", {
+    environmentId: EnvironmentId,
+    assetId: SpaceAssetId,
+    disposition: Schema.optionalKey(Schema.Literals(["inline", "attachment"])),
+  }),
   Schema.TaggedStruct("workspace-file", {
     threadId: ThreadId,
     path: TrimmedNonEmptyString.check(Schema.isMaxLength(ASSET_PATH_MAX_LENGTH)),

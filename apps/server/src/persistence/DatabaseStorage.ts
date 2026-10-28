@@ -12,6 +12,7 @@ import * as Schedule from "effect/Schedule";
 import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import * as SqlClient from "effect/sql/SqlClient";
+import * as SpacesService from "../spaces/SpacesService.ts";
 
 import { resolveHostCliCommand } from "../cli/invocation.ts";
 import * as ServerConfig from "../config.ts";
@@ -49,6 +50,7 @@ const make = Effect.gen(function* () {
   const config = yield* ServerConfig.ServerConfig;
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
+  const spaces = yield* Effect.serviceOption(SpacesService.SpacesService);
   const statusRef = yield* SubscriptionRef.make<DatabaseStorageStatus | null>(null);
   const restart = yield* ServerRestart;
   const reclaimFiles = DatabaseMaintenance.reclaimFiles(path, config.dbPath);
@@ -100,6 +102,9 @@ const make = Effect.gen(function* () {
   });
   const publishStatus = Effect.gen(function* () {
     if (!doctorTargetsThisDatabase) return;
+    const spacesStatus = Option.isSome(spaces)
+      ? yield* spaces.value.maintainAssets.pipe(Effect.orElseSucceed(() => null))
+      : undefined;
     const { databaseBytes, reclaimableBytes, incrementalVacuum } = yield* readPages;
     const next: DatabaseStorageStatus = {
       databaseBytes,
@@ -108,6 +113,7 @@ const make = Effect.gen(function* () {
       compactCommand,
       canReclaim: restart !== null,
       ...(reclaimFailure === undefined ? {} : { reclaimFailure }),
+      ...(spacesStatus === undefined ? {} : { spaces: spacesStatus }),
     };
     // Every set reaches each open Storage page; most passes change nothing.
     if (!Equal.equals(yield* SubscriptionRef.get(statusRef), next)) {
@@ -117,7 +123,7 @@ const make = Effect.gen(function* () {
     Effect.catch((cause) => Effect.logWarning("Database storage inspection failed", { cause })),
   );
 
-  const reclaim = Effect.suspend(() => {
+  const reclaimChat = Effect.suspend(() => {
     let page = 0;
     return Effect.gen(function* () {
       if (!(yield* readLayout).incrementalVacuum) return;
@@ -136,6 +142,18 @@ const make = Effect.gen(function* () {
       Effect.withSpan("DatabaseStorage.reclaim"),
     );
   });
+
+  const reclaim = reclaimChat.pipe(
+    Effect.andThen(
+      Option.isSome(spaces)
+        ? spaces.value.reclaimExistingStorage.pipe(
+            Effect.catch((cause) =>
+              Effect.logWarning("Spaces database space reclamation failed", { cause }),
+            ),
+          )
+        : Effect.void,
+    ),
+  );
 
   // Even a pass that deletes nothing scans the event store. Persist completion
   // so restarting does not trigger another scan before the six-hour interval.
