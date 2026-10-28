@@ -14,6 +14,7 @@ import type {
 } from "@t2code/contracts/spaces";
 import SpaceRecoveryControls from "./SpaceRecoveryControls";
 import { Input } from "../components/ui/input";
+import { FilePlusIcon, MoveIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
@@ -152,22 +153,25 @@ function StructureControls({
       });
   };
   return (
-    <div className="mt-3 space-y-2">
-      <div className="flex flex-wrap gap-2">
+    <div className={blocks ? "space-y-2" : "contents"}>
+      <div className={blocks ? "flex flex-wrap gap-2" : "contents"}>
         {!blocks ? (
           <>
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
               disabled={!writable || blocked}
               onClick={() => {
                 setCreating(false);
                 setOpen(true);
               }}
             >
+              <MoveIcon />
               Move page
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
               disabled={!writable || blocked || !createPermission}
               onClick={() => {
                 if (!current()) return;
@@ -177,6 +181,7 @@ function StructureControls({
                 run(owner.loadBody(target.pageId));
               }}
             >
+              <FilePlusIcon />
               Create child page
             </Button>
             <SpaceRecoveryControls
@@ -224,7 +229,7 @@ function StructureControls({
         ) : null}
       </div>
       {pending ? (
-        <p role="status">
+        <p role="status" className="basis-full text-sm text-muted-foreground">
           Structural operation is retained.{" "}
           {pending.rejection
             ? "The server rejected it before commit; reinspection starts a new intent."
@@ -234,7 +239,7 @@ function StructureControls({
         </p>
       ) : null}
       {pending && pendingDestination ? (
-        <p>
+        <p className="basis-full text-sm text-muted-foreground">
           Attempted {pending.request.operation}:{" "}
           {pending.request.operation === "createChildPage"
             ? `new child “${pending.request.input.title}”`
@@ -245,9 +250,13 @@ function StructureControls({
           .
         </p>
       ) : null}
-      {snapshot.notice ? <p role="status">{snapshot.notice}</p> : null}
+      {snapshot.notice ? (
+        <p role="status" className="basis-full text-sm text-muted-foreground">
+          {snapshot.notice}
+        </p>
+      ) : null}
       {snapshot.error ? (
-        <p role="alert">
+        <p role="alert" className="basis-full text-sm">
           {snapshot.error instanceof Error
             ? snapshot.error.message
             : "Page placement failed; retained data has been kept."}

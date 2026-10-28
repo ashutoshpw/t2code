@@ -6,7 +6,35 @@ import {
   ReactMarkViewRenderer,
 } from "@tiptap/react";
 import { Extension, Node as TiptapNode, Mark as TiptapMark } from "@tiptap/core";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ComponentProps,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import {
+  BoldIcon,
+  ChevronDownIcon,
+  CodeIcon,
+  Heading1Icon,
+  ItalicIcon,
+  LinkIcon,
+  ListIcon,
+  ListOrderedIcon,
+  ListTodoIcon,
+  MessageSquareIcon,
+  MinusIcon,
+  PilcrowIcon,
+  QuoteIcon,
+  Redo2Icon,
+  SquareCodeIcon,
+  StrikethroughIcon,
+  Trash2Icon,
+  Undo2Icon,
+} from "lucide-react";
 import { NodeSelection, type Command } from "@tiptap/pm/state";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
 import {
@@ -18,6 +46,9 @@ import {
 import type { SpaceBlock, SpaceBlockId } from "@t2code/contracts/spaces";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
+import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
+import { Separator } from "~/components/ui/separator";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { SpaceEditorAdapter, type SpaceEditorBatch } from "./adapter";
 import { canEditSpaceEditorBlock, spaceDocumentBlocks } from "./document";
 import { SpaceImageControls } from "./SpaceImageControls";
@@ -119,6 +150,7 @@ export function SpaceEditor({
   readonly onBatch?: (batch: SpaceEditorBatch) => void;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
+  const linkInput = useRef<HTMLInputElement>(null);
   const historyNotice = useSyncExternalStore(
     bridge?.subscribe ?? noSubscribe,
     bridge?.getSnapshot ?? noNotice,
@@ -238,209 +270,277 @@ export function SpaceEditor({
   const writable = editable && (bridge?.canEdit() ?? true);
   const structure = writable && (bridge?.canStructure() ?? true);
   const can = (command: Command) => writable && command(state);
+  const complete = !bridge || bridge.controller.editorWindow().completeParents.includes(null);
+  const turnInto = {
+    paragraph: ["Paragraph", PilcrowIcon],
+    heading: ["Heading", Heading1Icon],
+    quote: ["Quote", QuoteIcon],
+    callout: ["Callout", MessageSquareIcon],
+    bulleted_item: ["Bullet list", ListIcon],
+    numbered_item: ["Numbered list", ListOrderedIcon],
+    todo_item: ["To-do", ListTodoIcon],
+  } as const;
+  const media = !!selectedId && !!known && ["image", "pdf", "video"].includes(known.type);
   return (
-    <section aria-label="Page contents" className="space-y-3" data-space-editor="">
-      {images && bridge ? (
-        <SpaceImageControls
-          owner={images}
-          insertion={bridge.imageInsertion(
-            () => editor.state,
-            editor.view.dispatch,
-            () => !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
-          )}
-          current={() => sourceOwner?.current() === true && current?.() === true}
-          replacementTarget={
-            known && ["image", "pdf", "video"].includes(known.type) ? known.id : null
-          }
-        />
-      ) : null}
-      {bridge && mentions ? (
-        <SpaceMentionControls
-          owner={mentions}
-          available={writable && !!adapter.mentionRange(state)}
-          capture={() =>
-            bridge.mentionInsertion(
-              () => editor.state,
-              editor.view.dispatch,
-              () => !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
-            )
-          }
-          onInserted={() => {
-            if (!editor.isDestroyed) editor.view.focus();
-          }}
-        />
-      ) : null}
-      <div className="flex flex-wrap gap-2">
-        {bridge ? (
-          <Button
-            variant="outline"
-            disabled={
-              !onMoveBlocks ||
-              !structure ||
-              !!bridge.controller.session.structureAvailability() ||
-              !bridge.controller.editorWindow().completeParents.includes(null)
-            }
-            onClick={() => onMoveBlocks?.(state)}
-          >
-            Move selected blocks
-          </Button>
-        ) : null}
-        {(["bold", "italic", "strike", "code"] as const).map((mark) => (
-          <Button
+    <section aria-label="Page contents" className="space-y-2" data-space-editor="">
+      <div className="flex flex-wrap items-center gap-0.5 rounded-lg border bg-background p-1">
+        {(
+          [
+            ["bold", "Bold", BoldIcon],
+            ["italic", "Italic", ItalicIcon],
+            ["strike", "Strikethrough", StrikethroughIcon],
+            ["code", "Inline code", CodeIcon],
+          ] as const
+        ).map(([mark, label, Icon]) => (
+          <ToolbarIconButton
             key={mark}
-            variant="outline"
+            label={label}
             disabled={!writable || !can(adapter.mark(mark))}
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => run(adapter.mark(mark))}
           >
-            {mark === "strike" ? "Strikethrough" : mark === "code" ? "Inline code" : mark}
-          </Button>
+            <Icon />
+          </ToolbarIconButton>
         ))}
-        <Button
-          variant="outline"
-          disabled={!structure || !can(adapter.append())}
-          onClick={() => run(adapter.append())}
+        <ToolbarIconButton
+          label="Link"
+          hint="Select text to add a link, or place the caret inside an existing link to edit or remove it."
+          aria-disabled={!link}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            linkInput.current?.focus();
+            linkInput.current?.select();
+          }}
         >
-          Add paragraph
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!structure || !can(adapter.append("code"))}
-          onClick={() => run(adapter.append("code"))}
-        >
-          Add code
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!structure || !can(adapter.append("divider"))}
-          onClick={() => run(adapter.append("divider"))}
-        >
-          Add divider
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!structure || !can(adapter.split())}
-          onClick={() => run(adapter.split())}
-        >
-          Split
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!structure || !can(adapter.joinBackward())}
-          onClick={() => run(adapter.joinBackward())}
-        >
-          Join previous
-        </Button>
-        <Button
-          variant="outline"
+          <LinkIcon />
+        </ToolbarIconButton>
+        <ToolbarSeparator />
+        <ToolbarIconButton
+          label="Local undo"
+          hint={
+            bridge
+              ? "Local undo covers edits made in this view. Saved undo/redo has separate controls."
+              : undefined
+          }
           disabled={!can(adapter.undoLocal())}
           onClick={() => run(adapter.undoLocal())}
         >
-          Local undo
-        </Button>
-        <Button
-          variant="outline"
+          <Undo2Icon />
+        </ToolbarIconButton>
+        <ToolbarIconButton
+          label="Local redo"
+          hint={
+            bridge
+              ? "Local undo covers edits made in this view. Saved undo/redo has separate controls."
+              : undefined
+          }
           disabled={!can(adapter.redoLocal())}
           onClick={() => run(adapter.redoLocal())}
         >
-          Local redo
-        </Button>
-        {(
-          [
-            "paragraph",
-            "heading",
-            "quote",
-            "callout",
-            "bulleted_item",
-            "numbered_item",
-            "todo_item",
-          ] as const
-        ).map((type) => (
-          <Button
-            key={type}
-            variant="outline"
-            disabled={!structure || !selectedId || !can(adapter.convert(selectedId, type))}
-            onClick={() => selectedId && run(adapter.convert(selectedId, type))}
-          >
-            {
-              {
-                paragraph: "Paragraph",
-                heading: "Heading",
-                quote: "Quote",
-                callout: "Callout",
-                bulleted_item: "Bullet list",
-                numbered_item: "Numbered list",
-                todo_item: "To-do",
-              }[type]
+          <Redo2Icon />
+        </ToolbarIconButton>
+        <ToolbarSeparator />
+        <Menu>
+          <MenuTrigger render={<Button variant="ghost" size="sm" />}>
+            Turn into
+            <ChevronDownIcon />
+          </MenuTrigger>
+          <MenuPopup align="start">
+            {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
+              const [label, Icon] = turnInto[type];
+              return (
+                <MenuItem
+                  key={type}
+                  disabled={!structure || !selectedId || !can(adapter.convert(selectedId, type))}
+                  onClick={() => selectedId && run(adapter.convert(selectedId, type))}
+                >
+                  <Icon />
+                  {label}
+                </MenuItem>
+              );
+            })}
+          </MenuPopup>
+        </Menu>
+        <Menu>
+          <MenuTrigger render={<Button variant="ghost" size="sm" />}>
+            Insert
+            <ChevronDownIcon />
+          </MenuTrigger>
+          <MenuPopup align="start">
+            <MenuItem
+              disabled={!structure || !can(adapter.append())}
+              onClick={() => run(adapter.append())}
+            >
+              <PilcrowIcon />
+              Add paragraph
+            </MenuItem>
+            <MenuItem
+              disabled={!structure || !can(adapter.append("code"))}
+              onClick={() => run(adapter.append("code"))}
+            >
+              <SquareCodeIcon />
+              Add code
+            </MenuItem>
+            <MenuItem
+              disabled={!structure || !can(adapter.append("divider"))}
+              onClick={() => run(adapter.append("divider"))}
+            >
+              <MinusIcon />
+              Add divider
+            </MenuItem>
+          </MenuPopup>
+        </Menu>
+        <Menu>
+          <MenuTrigger render={<Button variant="ghost" size="sm" />}>
+            Block
+            <ChevronDownIcon />
+          </MenuTrigger>
+          <MenuPopup align="start">
+            <MenuItem
+              disabled={!structure || !can(adapter.split())}
+              onClick={() => run(adapter.split())}
+            >
+              Split
+            </MenuItem>
+            <MenuItem
+              disabled={!structure || !can(adapter.joinBackward())}
+              onClick={() => run(adapter.joinBackward())}
+            >
+              Join previous
+            </MenuItem>
+            {bridge ? (
+              <MenuItem
+                disabled={
+                  !onMoveBlocks ||
+                  !structure ||
+                  !!bridge.controller.session.structureAvailability() ||
+                  !complete
+                }
+                onClick={() => onMoveBlocks?.(state)}
+              >
+                Move selected blocks…
+              </MenuItem>
+            ) : null}
+            {selected?.type === "todo_item" && selectedId ? (
+              <MenuItem
+                disabled={!writable || !can(adapter.toggleTodo(selectedId))}
+                onClick={() => run(adapter.toggleTodo(selectedId))}
+              >
+                Toggle to-do
+              </MenuItem>
+            ) : null}
+            {selectedId ? (
+              media ? (
+                <MenuItem
+                  variant="destructive"
+                  disabled={!mediaEditable || !structure || !can(adapter.removeMedia(selectedId))}
+                  onClick={() => run(adapter.removeMedia(selectedId))}
+                >
+                  <Trash2Icon />
+                  Remove media block
+                </MenuItem>
+              ) : (
+                <MenuItem
+                  variant="destructive"
+                  disabled={!structure || !can(adapter.remove(selectedId))}
+                  onClick={() => run(adapter.remove(selectedId))}
+                >
+                  <Trash2Icon />
+                  Delete block
+                </MenuItem>
+              )
+            ) : null}
+          </MenuPopup>
+        </Menu>
+        <ToolbarSeparator />
+        {images && bridge ? (
+          <SpaceImageControls
+            owner={images}
+            insertion={bridge.imageInsertion(
+              () => editor.state,
+              editor.view.dispatch,
+              () => !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
+            )}
+            current={() => sourceOwner?.current() === true && current?.() === true}
+            replacementTarget={media && known ? known.id : null}
+          />
+        ) : null}
+        {bridge && mentions ? (
+          <SpaceMentionControls
+            owner={mentions}
+            available={writable && !!adapter.mentionRange(state)}
+            capture={() =>
+              bridge.mentionInsertion(
+                () => editor.state,
+                editor.view.dispatch,
+                () =>
+                  !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
+              )
             }
-          </Button>
-        ))}
-        {selected?.type === "todo_item" && selectedId ? (
-          <Button
-            variant="outline"
-            disabled={!writable || !can(adapter.toggleTodo(selectedId))}
-            onClick={() => run(adapter.toggleTodo(selectedId))}
-          >
-            Toggle to-do
-          </Button>
+            onInserted={() => {
+              if (!editor.isDestroyed) editor.view.focus();
+            }}
+          />
         ) : null}
       </div>
-      {known?.type === "heading" ? (
-        <div className="flex flex-wrap gap-2" aria-label="Heading level">
-          {([1, 2, 3] as const).map((level) => (
-            <Button
-              key={level}
-              variant="outline"
-              aria-pressed={known.content.level === level}
-              disabled={!can(adapter.setHeadingLevel(level))}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => run(adapter.setHeadingLevel(level))}
-            >
-              Heading {level}
-            </Button>
-          ))}
+      {known?.type === "heading" || known?.type === "callout" || known?.type === "code" || link ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          {known?.type === "heading" ? (
+            <div className="flex items-center gap-0.5" role="group" aria-label="Heading level">
+              {([1, 2, 3] as const).map((level) => (
+                <Button
+                  key={level}
+                  variant={known.content.level === level ? "outline" : "ghost"}
+                  size="sm"
+                  aria-label={`Heading ${level}`}
+                  aria-pressed={known.content.level === level}
+                  disabled={!can(adapter.setHeadingLevel(level))}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => run(adapter.setHeadingLevel(level))}
+                >
+                  H{level}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {known?.type === "callout" ? (
+            <FormatValue
+              key={JSON.stringify([known.id, known.content.icon])}
+              label="Callout icon"
+              initial={known.content.icon}
+              writable={writable}
+              command={(value) => adapter.setCalloutIcon(value)}
+              can={can}
+              run={run}
+            />
+          ) : null}
+          {known?.type === "code" ? (
+            <FormatValue
+              key={JSON.stringify([known.id, known.content.language])}
+              label="Code language label"
+              initial={known.content.language}
+              writable={writable}
+              command={(value) => adapter.setCodeLanguage(value)}
+              can={can}
+              run={run}
+            />
+          ) : null}
+          {link ? (
+            <LinkValue
+              key={JSON.stringify([selectedId, link.from, link.to, link.href])}
+              href={link.href ?? ""}
+              hasLink={link.hasLink}
+              inputRef={linkInput}
+              adapter={adapter}
+              writable={writable}
+              can={can}
+              run={run}
+            />
+          ) : null}
         </div>
       ) : null}
-      {known?.type === "callout" ? (
-        <FormatValue
-          key={JSON.stringify([known.id, known.content.icon])}
-          label="Callout icon"
-          initial={known.content.icon}
-          writable={writable}
-          command={(value) => adapter.setCalloutIcon(value)}
-          can={can}
-          run={run}
-        />
-      ) : null}
-      {known?.type === "code" ? (
-        <FormatValue
-          key={JSON.stringify([known.id, known.content.language])}
-          label="Code language label"
-          initial={known.content.language}
-          writable={writable}
-          command={(value) => adapter.setCodeLanguage(value)}
-          can={can}
-          run={run}
-        />
-      ) : null}
-      {link ? (
-        <LinkValue
-          key={JSON.stringify([selectedId, link.from, link.to, link.href])}
-          href={link.href ?? ""}
-          hasLink={link.hasLink}
-          adapter={adapter}
-          writable={writable}
-          can={can}
-          run={run}
-        />
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Select text to add a link, or place the caret inside an existing link to edit or remove
-          it.
-        </p>
-      )}
       {targetBlockId ? (
-        <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <p role="status">
             {reveal === "loaded"
               ? "Linked block is loaded. Its content and draft were retained."
@@ -448,38 +548,31 @@ export function SpaceEditor({
                 ? "Linked block is not in this draft/window. No target-window locator is available. Save or resolve the draft before using First/Next windows; this view does not scan the page."
                 : "Linked block reveal is waiting for a current readable document."}
           </p>
-          <Button variant="outline" disabled={!current?.()} onClick={() => revealTarget(true)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!current?.()}
+            onClick={() => revealTarget(true)}
+          >
             Reveal loaded target
           </Button>
         </div>
       ) : null}
-      {historyNotice ? <p role="status">{historyNotice}</p> : null}
-      {bridge ? (
-        <p>Local undo covers edits made in this view. Saved undo/redo has separate controls.</p>
+      {historyNotice ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          {historyNotice}
+        </p>
       ) : null}
-      {notice ? <p role="alert">{notice}</p> : null}
-      {bridge && !bridge.controller.editorWindow().completeParents.includes(null) ? (
-        <p>
+      {notice ? (
+        <p role="alert" className="text-sm">
+          {notice}
+        </p>
+      ) : null}
+      {!complete ? (
+        <p className="text-sm text-muted-foreground">
           This window does not include the complete page. Text edits are available; inserting,
           splitting and joining are unavailable.
         </p>
-      ) : null}
-      {selectedId && known && ["image", "pdf", "video"].includes(known.type) ? (
-        <Button
-          variant="outline"
-          disabled={!mediaEditable || !structure || !can(adapter.removeMedia(selectedId))}
-          onClick={() => run(adapter.removeMedia(selectedId))}
-        >
-          Remove media block
-        </Button>
-      ) : selectedId ? (
-        <Button
-          variant="outline"
-          disabled={!structure || !can(adapter.remove(selectedId))}
-          onClick={() => selectedId && run(adapter.remove(selectedId))}
-        >
-          Delete block
-        </Button>
       ) : null}
       <SpaceAtomContext.Provider value={renderChild}>
         <SpaceMentionContext.Provider
@@ -496,7 +589,7 @@ export function SpaceEditor({
           <SpaceMediaWritableContext.Provider value={mediaEditable && writable}>
             <EditorContent
               editor={editor}
-              className="min-h-24 whitespace-pre-wrap break-words [&_.tiptap]:outline-none"
+              className="min-h-40 whitespace-pre-wrap break-words [&_.tiptap]:min-h-40 [&_.tiptap]:outline-none"
             />
           </SpaceMediaWritableContext.Provider>
         </SpaceMentionContext.Provider>
@@ -504,6 +597,31 @@ export function SpaceEditor({
     </section>
   );
 }
+function ToolbarIconButton({
+  label,
+  hint,
+  children,
+  ...props
+}: Omit<ComponentProps<typeof Button>, "aria-label" | "render"> & {
+  label: string;
+  hint?: string | undefined;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<Button variant="ghost" size="icon-sm" aria-label={label} {...props} />}
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipPopup side="bottom">{hint ?? label}</TooltipPopup>
+    </Tooltip>
+  );
+}
+
+function ToolbarSeparator() {
+  return <Separator orientation="vertical" className="mx-1 h-5" />;
+}
+
 function noSubscribe() {
   return () => {};
 }
@@ -529,15 +647,16 @@ function FormatValue({
   const [value, setValue] = useState(initial);
   return (
     <form
-      className="flex flex-wrap items-end gap-2"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         run(command(value));
       }}
     >
-      <label>
+      <label className="flex items-center gap-2">
         {label}
         <Input
+          size="sm"
           value={value}
           disabled={!writable}
           onChange={(event) => setValue(event.target.value)}
@@ -546,6 +665,7 @@ function FormatValue({
       <Button
         type="submit"
         variant="outline"
+        size="sm"
         disabled={!can(command(value))}
         onMouseDown={(event) => event.preventDefault()}
       >
@@ -557,6 +677,7 @@ function FormatValue({
 function LinkValue({
   href,
   hasLink,
+  inputRef,
   adapter,
   writable,
   can,
@@ -564,6 +685,7 @@ function LinkValue({
 }: {
   href: string;
   hasLink: boolean;
+  inputRef: RefObject<HTMLInputElement | null>;
   adapter: SpaceEditorAdapter;
   writable: boolean;
   can: (command: Command) => boolean;
@@ -572,43 +694,42 @@ function LinkValue({
   const [value, setValue] = useState(href);
   return (
     <form
-      className="space-y-2"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         run(adapter.setLink(value));
       }}
     >
-      <label>
+      <label className="flex items-center gap-2">
         Link URL
         <Input
+          ref={inputRef}
+          size="sm"
           value={value}
           disabled={!writable}
+          aria-description="HTTP, HTTPS or mailto links. Applies to the selected text, or the whole existing link at the caret."
           onChange={(event) => setValue(event.target.value)}
         />
       </label>
-      <p className="text-sm text-muted-foreground">
-        HTTP, HTTPS or mailto links. Applies to the selected text, or the whole existing link at the
-        caret.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="submit"
-          variant="outline"
-          disabled={!can(adapter.setLink(value))}
-          onMouseDown={(event) => event.preventDefault()}
-        >
-          {hasLink ? "Apply link" : "Add link"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={!can(adapter.removeLink())}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => run(adapter.removeLink())}
-        >
-          Remove link
-        </Button>
-      </div>
+      <Button
+        type="submit"
+        variant="outline"
+        size="sm"
+        disabled={!can(adapter.setLink(value))}
+        onMouseDown={(event) => event.preventDefault()}
+      >
+        {hasLink ? "Apply link" : "Add link"}
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={!can(adapter.removeLink())}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => run(adapter.removeLink())}
+      >
+        Remove link
+      </Button>
     </form>
   );
 }
