@@ -41,6 +41,48 @@ export function SpacesSidebar() {
   const closeMobile = () => {
     if (isMobile) setOpenMobile(false);
   };
+  const top = (
+    <div className="py-2">
+      {environment ? (
+        <LibraryNavigation
+          key={environment.environmentId}
+          environmentId={environment.environmentId}
+        />
+      ) : null}
+      <div className="flex items-center justify-between pb-1 pl-2">
+        <h2 className="text-xs font-medium text-sidebar-muted-foreground">Spaces</h2>
+        {environment ? (
+          <Suspense fallback={null}>
+            <NewSpaceButton
+              key={environment.environmentId}
+              environmentId={environment.environmentId}
+              onNavigate={closeMobile}
+            />
+          </Suspense>
+        ) : null}
+      </div>
+      {environments.length > 1 ? (
+        <SidebarMenu className="mb-2">
+          {environments.map((entry) => (
+            <SidebarMenuItem key={entry.environmentId}>
+              <SidebarMenuButton
+                isActive={entry.environmentId === environment?.environmentId}
+                render={<Link to="/spaces" search={{ environmentId: entry.environmentId }} />}
+              >
+                <ServerIcon />
+                <span>{entry.label}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      ) : null}
+      {environment ? (
+        <SpaceWindows key={environment.environmentId} environmentId={environment.environmentId} />
+      ) : (
+        <p className="px-2 text-sm text-muted-foreground">No available environments.</p>
+      )}
+    </div>
+  );
   return (
     <>
       <SidebarHeader>
@@ -59,58 +101,18 @@ export function SpacesSidebar() {
         </div>
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="max-h-1/2 min-h-0 shrink-0 overflow-y-auto px-2 py-2">
-          {environment ? (
-            <LibraryNavigation
-              key={environment.environmentId}
-              environmentId={environment.environmentId}
-            />
-          ) : null}
-          <div className="flex items-center justify-between pb-1 pl-2">
-            <h2 className="text-xs font-medium text-sidebar-muted-foreground">Spaces</h2>
-            {environment ? (
-              <Suspense fallback={null}>
-                <NewSpaceButton
-                  key={environment.environmentId}
-                  environmentId={environment.environmentId}
-                  onNavigate={closeMobile}
-                />
-              </Suspense>
-            ) : null}
-          </div>
-          {environments.length > 1 ? (
-            <SidebarMenu className="mb-2">
-              {environments.map((entry) => (
-                <SidebarMenuItem key={entry.environmentId}>
-                  <SidebarMenuButton
-                    isActive={entry.environmentId === environment?.environmentId}
-                    render={<Link to="/spaces" search={{ environmentId: entry.environmentId }} />}
-                  >
-                    <ServerIcon />
-                    <span>{entry.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          ) : null}
-          {environment ? (
-            <SpaceWindows
-              key={environment.environmentId}
-              environmentId={environment.environmentId}
-            />
-          ) : (
-            <p className="px-2 text-sm text-muted-foreground">No available environments.</p>
-          )}
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col px-2 pb-2">
-          {environment && params.spaceId ? (
+        {environment && params.spaceId ? (
+          <div className="flex min-h-0 flex-1 flex-col px-2">
             <SpacePageTree
               key={JSON.stringify([environment.environmentId, params.spaceId])}
               environmentId={environment.environmentId}
               spaceId={SpaceId.make(params.spaceId)}
+              header={top}
             />
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">{top}</div>
+        )}
       </div>
       <SidebarChromeFooter />
     </>
