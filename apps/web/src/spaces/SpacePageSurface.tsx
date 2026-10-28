@@ -8,10 +8,20 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react";
-import { ArrowUpRightIcon, ChevronRightIcon, PanelRightIcon, RefreshCwIcon } from "lucide-react";
-import type { EnvironmentId, ScopedThreadRef } from "@t2code/contracts";
-import { Link, useRouter } from "@tanstack/react-router";
+import {
+  ArrowUpRightIcon,
+  ChevronRightIcon,
+  EllipsisIcon,
+  FilePlusIcon,
+  FolderInputIcon,
+  LinkIcon,
+  PanelRightIcon,
+  Trash2Icon,
+} from "lucide-react";
+import type { ScopedThreadRef } from "@t2code/contracts";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import {
   validateSpacePageSearch,
   type SpacePageNavigationTarget,
@@ -22,6 +32,8 @@ import { useEnvironment } from "../state/environments";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
 import { Button } from "../components/ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
+import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "../components/ui/menu";
+import { toastManager } from "../components/ui/toast";
 import { cn } from "../lib/utils";
 import { useRelativeTimeState } from "../hooks/useRelativeTimeState";
 import { useMainAppThreadRef, useNavigateToMainApp } from "../components/sidebar/mainAppLocation";
@@ -30,7 +42,9 @@ import { SpacePinButton } from "./SpacePinButton";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
 
-const SpaceLibraryControls = lazy(() => import("./SpaceLibraryControls"));
+const PageTitleField = lazy(() =>
+  import("./SpaceLibraryControls").then((module) => ({ default: module.PageTitleField })),
+);
 const SpaceRecoveryControls = lazy(() => import("./SpaceRecoveryControls"));
 const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
 
@@ -99,35 +113,22 @@ export default function SpacePageSurface(props: SpacePageSurfaceProps) {
 
 function PageBar({
   fullPage,
-  environmentId,
   breadcrumb,
   children,
 }: {
   fullPage: boolean;
-  environmentId: EnvironmentId;
   breadcrumb?: ReactNode;
   children?: ReactNode;
 }) {
   return (
     <header
       className={cn(
-        "z-10 flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b bg-background px-4 py-1",
+        "z-10 flex h-12 shrink-0 items-center justify-between gap-2 border-b bg-background px-4 max-md:pl-24",
         fullPage && "sticky top-0",
       )}
     >
       <div className="min-w-0 flex-1">{breadcrumb}</div>
-      <div className="flex min-w-0 flex-wrap items-center gap-1">
-        {children}
-        <Suspense
-          fallback={
-            <p role="status" className="text-xs text-muted-foreground">
-              Loading recovery…
-            </p>
-          }
-        >
-          <SpaceRecoveryControls key={environmentId} environmentId={environmentId} />
-        </Suspense>
-      </div>
+      <div className="flex shrink-0 items-center gap-1">{children}</div>
     </header>
   );
 }
@@ -142,11 +143,11 @@ function PageColumn({ fullPage, children }: { fullPage: boolean; children: React
   );
 }
 
-function EditedMeta({ updatedAt, revision }: { updatedAt: string; revision: number }) {
+function EditedMeta({ updatedAt }: { updatedAt: string }) {
   const relative = useRelativeTimeState(updatedAt);
   return (
     <Tooltip>
-      <TooltipTrigger render={<p className="mt-2 w-fit text-sm text-muted-foreground" />}>
+      <TooltipTrigger render={<span className="text-xs text-muted-foreground max-sm:hidden" />}>
         Edited{" "}
         {relative.status === "relative"
           ? relative.suffix
@@ -154,10 +155,17 @@ function EditedMeta({ updatedAt, revision }: { updatedAt: string; revision: numb
             : relative.value
           : updatedAt}
       </TooltipTrigger>
-      <TooltipPopup side="bottom">{`Revision ${revision} · ${updatedAt}`}</TooltipPopup>
+      <TooltipPopup side="bottom">{new Date(updatedAt).toLocaleString()}</TooltipPopup>
     </Tooltip>
   );
 }
+
+const pressHidden = (root: RefObject<HTMLElement | null>, label: RegExp) => {
+  const button = [...(root.current?.querySelectorAll("button") ?? [])].find((element) =>
+    label.test(element.textContent?.trim() ?? ""),
+  );
+  button?.click();
+};
 
 function SpacePageMetadata({
   target,
@@ -198,6 +206,8 @@ function SpacePageMetadata({
   }
   const query = useEnvironmentQuery(owner.query);
   const router = useRouter();
+  const locationState = useRouterState({ select: (state) => state.location.state });
+  const actions = useRef<HTMLDivElement>(null);
   const mainAppThreadRef = useMainAppThreadRef();
   const navigateToMainApp = useNavigateToMainApp();
   // oxlint-disable-next-line t2code/react-effect-budget -- apply current location to the persisted panel hint and canonical route.
@@ -271,7 +281,7 @@ function SpacePageMetadata({
   if (query.error)
     return (
       <>
-        <PageBar fullPage={fullPage} environmentId={target.environmentId} />
+        <PageBar fullPage={fullPage} />
         <PageColumn fullPage={fullPage}>
           <p role="alert">{query.error}</p>
           <Button variant="outline" size="sm" onClick={query.refresh}>
@@ -285,7 +295,7 @@ function SpacePageMetadata({
   if (!current)
     return (
       <>
-        <PageBar fullPage={fullPage} environmentId={target.environmentId} />
+        <PageBar fullPage={fullPage} />
         <PageColumn fullPage={fullPage}>
           <p role="status" className="text-sm text-muted-foreground">
             Loading page…
@@ -297,26 +307,26 @@ function SpacePageMetadata({
   const { page, space, ancestors } = current;
   const resolvedTarget = { ...target, spaceId: page.spaceId };
   const crumb = "truncate rounded-sm hover:text-foreground";
+  const focusTitle = locationState.focusTitle === page.id;
   return (
     <>
       <PageBar
         fullPage={fullPage}
-        environmentId={target.environmentId}
         breadcrumb={
           <nav
             aria-label="Page location"
-            className="flex min-w-0 items-center gap-1 text-sm text-muted-foreground"
+            className="flex min-w-0 items-center gap-1 overflow-hidden text-sm text-muted-foreground"
           >
             <Link
               to="/spaces/$environmentId/$spaceId"
               params={{ environmentId: target.environmentId, spaceId: space.id }}
-              className={cn(crumb, "max-w-40 shrink-0")}
+              className={cn(crumb, "max-w-40 max-sm:hidden")}
             >
               {space.title}
             </Link>
             {ancestors.map((ancestor) => (
               <Fragment key={ancestor.id}>
-                <ChevronRightIcon className="size-3.5 shrink-0" aria-hidden />
+                <ChevronRightIcon className="size-3.5 shrink-0 max-sm:hidden" aria-hidden />
                 <Link
                   to="/spaces/$environmentId/$spaceId/$pageId"
                   params={{
@@ -325,121 +335,151 @@ function SpacePageMetadata({
                     pageId: ancestor.id,
                   }}
                   search={{}}
-                  className={cn(crumb, "max-w-40 shrink-0")}
+                  className={cn(crumb, "max-w-40 max-sm:hidden")}
                 >
                   {ancestor.title || "Untitled page"}
                 </Link>
               </Fragment>
             ))}
-            <ChevronRightIcon className="size-3.5 shrink-0" aria-hidden />
+            <ChevronRightIcon className="size-3.5 shrink-0 max-sm:hidden" aria-hidden />
             <span aria-current="page" className="truncate text-foreground">
               {page.title || "Untitled page"}
             </span>
           </nav>
         }
       >
+        <EditedMeta updatedAt={page.updatedAt} />
         <SpacePinButton environmentId={target.environmentId} page={page} />
-        {fullPage && mainAppThreadRef ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const current = query.isPending ? null : query.data?.current();
-              if (!current) return;
-              useRightPanelStore
-                .getState()
-                .openSpacePage(mainAppThreadRef, { ...target, spaceId: current.page.spaceId });
-              void navigateToMainApp();
-            }}
-          >
-            <PanelRightIcon />
-            Open beside chat
-          </Button>
-        ) : null}
-        {!fullPage ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            render={
-              <Link
-                to="/spaces/$environmentId/$spaceId/$pageId"
-                params={resolvedTarget}
-                search={target.blockId ? { block: target.blockId } : {}}
-              />
-            }
-          >
-            <ArrowUpRightIcon />
-            Open page
-          </Button>
-        ) : null}
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Refresh location"
-                onClick={query.refresh}
-              />
-            }
-          >
-            <RefreshCwIcon />
-          </TooltipTrigger>
-          <TooltipPopup side="bottom">Refresh location</TooltipPopup>
-        </Tooltip>
-        <Suspense
-          fallback={
-            <p role="status" className="text-xs text-muted-foreground">
-              Loading page controls…
-            </p>
-          }
-        >
-          <SpaceLibraryControls
-            key={JSON.stringify([target.environmentId, target.pageId])}
-            environmentId={target.environmentId}
-            spaceId={page.spaceId}
-            page={page}
-            current={() => {
-              const live = query.isPending ? null : query.data?.current();
-              return (
-                live?.page.id === target.pageId && live.page.spaceId === resolvedTarget.spaceId
-              );
-            }}
-          />
-        </Suspense>
+        <Menu>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <MenuTrigger
+                  render={<Button variant="ghost" size="icon-sm" aria-label="More actions" />}
+                />
+              }
+            >
+              <EllipsisIcon />
+            </TooltipTrigger>
+            <TooltipPopup side="bottom">More actions</TooltipPopup>
+          </Tooltip>
+          <MenuPopup align="end">
+            {version === 2 ? (
+              <>
+                <MenuItem onClick={() => pressHidden(actions, /^Move page$/)}>
+                  <FolderInputIcon />
+                  Move to…
+                </MenuItem>
+                <MenuItem onClick={() => pressHidden(actions, /^Create child page$/)}>
+                  <FilePlusIcon />
+                  Add sub-page
+                </MenuItem>
+              </>
+            ) : null}
+            <MenuItem
+              onClick={() => {
+                const href = router.buildLocation({
+                  to: "/spaces/$environmentId/$spaceId/$pageId",
+                  params: resolvedTarget,
+                  search: target.blockId ? { block: target.blockId } : {},
+                }).href;
+                void navigator.clipboard
+                  .writeText(new URL(href, window.location.origin).toString())
+                  .then(
+                    () => toastManager.add({ type: "success", title: "Link copied" }),
+                    () => toastManager.add({ type: "error", title: "Couldn't copy link" }),
+                  );
+              }}
+            >
+              <LinkIcon />
+              Copy link
+            </MenuItem>
+            {fullPage && mainAppThreadRef ? (
+              <MenuItem
+                onClick={() => {
+                  const live = query.isPending ? null : query.data?.current();
+                  if (!live) return;
+                  useRightPanelStore
+                    .getState()
+                    .openSpacePage(mainAppThreadRef, { ...target, spaceId: live.page.spaceId });
+                  void navigateToMainApp();
+                }}
+              >
+                <PanelRightIcon />
+                Open beside chat
+              </MenuItem>
+            ) : null}
+            {!fullPage ? (
+              <MenuItem
+                render={
+                  <Link
+                    to="/spaces/$environmentId/$spaceId/$pageId"
+                    params={resolvedTarget}
+                    search={target.blockId ? { block: target.blockId } : {}}
+                  />
+                }
+              >
+                <ArrowUpRightIcon />
+                Open as full page
+              </MenuItem>
+            ) : null}
+            {version === 2 ? (
+              <>
+                <MenuItem onClick={() => pressHidden(actions, /^Move page to trash/)}>
+                  <Trash2Icon />
+                  Move to trash
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem onClick={() => pressHidden(actions, /^Trash and recovery$/)}>
+                  View trash
+                </MenuItem>
+              </>
+            ) : null}
+          </MenuPopup>
+        </Menu>
         {version === 2 ? (
+          <div hidden ref={actions}>
+            <Suspense fallback={null}>
+              <SpaceStructureControls
+                key={JSON.stringify([target.environmentId, target.pageId])}
+                target={resolvedTarget}
+                location={page.location}
+                current={() => {
+                  const live = query.isPending ? null : query.data?.current();
+                  return (
+                    live?.page.id === target.pageId &&
+                    live.page.spaceId === resolvedTarget.spaceId &&
+                    (live.page.location?.kind === "root" || live.page.location?.kind === "child")
+                  );
+                }}
+              />
+              <SpaceRecoveryControls
+                key={target.environmentId}
+                environmentId={target.environmentId}
+              />
+            </Suspense>
+          </div>
+        ) : null}
+      </PageBar>
+      <PageColumn fullPage={fullPage}>
+        <h1>
           <Suspense
-            fallback={
-              <p role="status" className="text-xs text-muted-foreground">
-                Loading page placement…
-              </p>
-            }
+            fallback={<span className="block text-4xl font-bold">{page.title || "Untitled"}</span>}
           >
-            <SpaceStructureControls
-              key={JSON.stringify([target.environmentId, target.pageId])}
-              target={resolvedTarget}
-              location={page.location}
+            <PageTitleField
+              environmentId={target.environmentId}
+              page={page}
+              autoFocus={focusTitle}
               current={() => {
                 const live = query.isPending ? null : query.data?.current();
                 return (
-                  live?.page.id === target.pageId &&
-                  live.page.spaceId === resolvedTarget.spaceId &&
-                  (live.page.location?.kind === "root" || live.page.location?.kind === "child")
+                  live?.page.id === target.pageId && live.page.spaceId === resolvedTarget.spaceId
                 );
               }}
             />
           </Suspense>
-        ) : null}
-      </PageBar>
-      <PageColumn fullPage={fullPage}>
-        <h1 className="break-words text-4xl font-bold">{page.title || "Untitled page"}</h1>
-        <EditedMeta updatedAt={page.updatedAt} revision={page.revision} />
-        {target.blockId ? (
-          <p className="mt-1 break-words text-sm text-muted-foreground">
-            Linked block: {target.blockId}
-          </p>
-        ) : null}
-        <div className="mt-8">{children}</div>
+        </h1>
+        <div className="mt-4">{children}</div>
       </PageColumn>
     </>
   );
