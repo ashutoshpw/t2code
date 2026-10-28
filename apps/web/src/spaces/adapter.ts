@@ -10,6 +10,7 @@ import {
   type Command,
   type Transaction,
 } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
 import { canSplit, AddMarkStep, RemoveMarkStep } from "@tiptap/pm/transform";
 import { toggleMark } from "@tiptap/pm/commands";
 import { Schema } from "effect";
@@ -365,7 +366,18 @@ export class SpaceEditorAdapter {
           }
           return true;
         },
+        handleTextInput: (view, from, to, text) =>
+          from === to && this.#applyShortcut(view, from, text),
         handleDOMEvents: {
+          click: (view, event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement) || !target.hasAttribute("data-space-todo"))
+              return false;
+            event.preventDefault();
+            const id = target.closest("[data-space-block]")?.getAttribute("data-space-block");
+            if (id) this.toggleTodo(id as SpaceBlockId)(view.state, view.dispatch);
+            return true;
+          },
           copy: (view, event) => {
             const selected = entries(view.state.doc).filter(
               ({ pos, node }) =>
@@ -436,6 +448,7 @@ export class SpaceEditorAdapter {
           const run = (command: Command) => command(this.editor.state, this.editor.view.dispatch);
           return {
             Enter: () => {
+              if (run(thisAdapter.exitEmptyBlock("enter"))) return true;
               if (this.editor.state.selection.$from.parent.type.name === "code")
                 this.editor.view.dispatch(this.editor.state.tr.insertText("\n"));
               else run(split);
@@ -446,6 +459,7 @@ export class SpaceEditorAdapter {
             Delete: () => run(thisAdapter.mentionBoundary(1, true)),
             Backspace: () => {
               if (run(thisAdapter.mentionBoundary(-1, true))) return true;
+              if (run(thisAdapter.exitEmptyBlock("backspace"))) return true;
               if (
                 this.editor.state.selection.empty &&
                 this.editor.state.selection.$from.parentOffset === 0
@@ -592,6 +606,147 @@ export class SpaceEditorAdapter {
       );
       return this.#dispatch(tr, dispatch);
     };
+  }
+
+  #ownerOf(state: EditorState) {
+    const { $from, empty } = state.selection;
+    if (!empty || !$from.parent.isTextblock) return null;
+    const node =
+      $from.parent.type.name === "spaceBody" ? $from.node($from.depth - 1) : $from.parent;
+    const id = (node.attrs.block as SpaceBlock | undefined)?.id;
+    const entry = id ? entries(state.doc).find((item) => item.block.id === id) : undefined;
+    return entry && entry.node === node ? entry : null;
+  }
+
+  #toParagraph(id: SpaceBlockId): Command {
+    const convert = this.convert(id, "paragraph");
+    return (state, dispatch) =>
+      convert(
+        state,
+        dispatch &&
+          ((tr) => {
+            const pos = entries(tr.doc).find((item) => item.block.id === id)?.pos;
+            if (pos !== undefined) tr.setSelection(TextSelection.near(tr.doc.resolve(pos + 1)));
+            dispatch(tr);
+          }),
+      );
+  }
+
+  exitEmptyBlock(key: "enter" | "backspace"): Command {
+    return (state, dispatch) => {
+      const owner = this.#ownerOf(state);
+      if (!owner || state.selection.$from.parent.content.size > 0) return false;
+      const types =
+        key === "enter"
+          ? ["quote", "bulleted_item", "numbered_item", "todo_item"]
+          : ["heading", "quote", "callout", "bulleted_item", "numbered_item", "todo_item"];
+      return types.includes(owner.block.type)
+        ? this.#toParagraph(owner.block.id)(state, dispatch)
+        : false;
+    };
+  }
+
+  placeBlock(type: "code" | "divider"): Command {
+    return (state, dispatch) => {
+      if (
+        this.#options.canChangeStructure?.() === false ||
+        entries(state.doc).length >= this.#options.maxBlocks - 1 ||
+        !this.#isComplete(null, state.doc)
+      )
+        return false;
+      const $pos = state.doc.resolve(state.selection.from);
+      const pos = $pos.depth >= 1 ? $pos.before(1) : $pos.pos;
+      const top = entries(state.doc).find(
+        (item) => item.pos === pos && item.block.parentId === null,
+      );
+      if (!top) return this.append(type)(state, dispatch);
+      const roots = spaceDocumentBlocks(state.doc).filter((item) => item.parentId === null);
+      const index = roots.findIndex((item) => item.id === top.block.id);
+      const following = roots[index + 1];
+      const replace =
+        top.block.type === "paragraph" && top.node.textContent === "" && top.node.childCount === 0;
+      let order: string;
+      try {
+        order = replace ? top.block.order : this.#rank(null, top.block, following);
+      } catch {
+        return false;
+      }
+      const block: SpaceBlock = {
+        id: replace ? top.block.id : this.#options.allocateId(),
+        parentId: null,
+        order,
+        type,
+        version: 1,
+        content: type === "code" ? { text: "", language: "" } : {},
+      };
+      let tail: SpaceBlock | null = null;
+      if (type === "divider" && !following) {
+        try {
+          tail = {
+            id: this.#options.allocateId(),
+            parentId: null,
+            order: this.#rank(null, block, undefined),
+            type: "paragraph",
+            version: 1,
+            content: { runs: [] },
+          };
+        } catch {
+          return false;
+        }
+      }
+      if (!dispatch) return true;
+      const nodes = [spaceBlockNode(block, [], false, state.schema)];
+      if (tail) nodes.push(spaceBlockNode(tail, [], false, state.schema));
+      const from = replace ? top.pos : top.pos + top.node.nodeSize;
+      const tr = state.tr.replaceWith(from, replace ? top.pos + top.node.nodeSize : from, nodes);
+      tr.setSelection(
+        type === "code"
+          ? TextSelection.create(tr.doc, from + 1)
+          : TextSelection.near(tr.doc.resolve(from + nodes[0]!.nodeSize), 1),
+      );
+      return this.#dispatch(tr, dispatch);
+    };
+  }
+
+  #applyShortcut(view: EditorView, from: number, text: string) {
+    const state = view.state;
+    const owner = this.#ownerOf(state);
+    if (!owner || owner.block.type !== "paragraph" || owner.node.type.name !== "paragraph")
+      return false;
+    const before = state.doc
+      .resolve(from)
+      .parent.textBetween(0, state.doc.resolve(from).parentOffset);
+    const trigger = text === "`" ? (before === "``" ? "```" : null) : text === " " ? before : null;
+    if (trigger === null) return false;
+    const target = (
+      {
+        "-": "bulleted_item",
+        "*": "bulleted_item",
+        "1.": "numbered_item",
+        "[]": "todo_item",
+        ">": "quote",
+        "#": "heading",
+        "##": "heading",
+        "###": "heading",
+        "```": "code",
+      } as const
+    )[trigger as "-"];
+    if (!target || state.doc.resolve(from).parentOffset !== before.length) return false;
+    const stripped = state.apply(state.tr.delete(from - before.length, from));
+    if (stripped === state) return false;
+    const id = owner.block.id;
+    const command = target === "code" ? this.placeBlock("code") : this.convert(id, target);
+    if (!command(stripped)) return false;
+    view.dispatch(state.tr.delete(from - before.length, from));
+    command(view.state, view.dispatch);
+    if (target === "heading" && trigger.length > 1)
+      this.setHeadingLevel(trigger.length as 2 | 3)(view.state, view.dispatch);
+    const pos = entries(view.state.doc).find((item) => item.block.id === id)?.pos;
+    if (pos !== undefined && target !== "code")
+      view.dispatch(
+        view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(pos + 1))),
+      );
+    return true;
   }
 
   mark(type: "bold" | "italic" | "strike" | "code"): Command {
