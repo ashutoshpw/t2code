@@ -6,6 +6,7 @@ import type { SpaceImageInsertion, SpaceImageUploads } from "@t2code/client-runt
 import { ImageIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Popover, PopoverPopup, PopoverTrigger } from "../components/ui/popover";
 
 export function SpaceImageControls({
   owner,
@@ -37,34 +38,45 @@ export function SpaceImageControls({
     void operation.catch(setLocalError);
   };
   const error = localError ?? state.error;
-  if (!supported)
-    return (
-      <p className="basis-full text-xs text-muted-foreground">
-        Media uploads are not advertised by this environment.
-      </p>
+  if (!supported) return null;
+  const attach = (replace: boolean) => {
+    if (!file || !current()) return;
+    const upload = file;
+    run(
+      (async () => {
+        await (replace && replacementTarget
+          ? owner.addReplacement(insertion, replacementTarget, upload, upload.name)
+          : owner.add(insertion.key, upload, upload.name));
+        setFile(null);
+        const record = owner
+          .getSnapshot()
+          .records.findLast(
+            (r) =>
+              r.key.pageId === insertion.key.pageId &&
+              r.phase === "original" &&
+              r.intent.name === upload.name,
+          );
+        if (!record) return;
+        await owner.upload(record.id);
+        await owner.insert(record.id, insertion);
+        setOpen(false);
+      })(),
     );
-  const expanded = open || !!file || !!error || state.busy || state.records.length > 0;
+  };
   return (
-    <section aria-label="Page media" className="contents">
-      <Button
-        variant="ghost"
-        size="sm"
-        aria-expanded={expanded}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={() => setOpen(!open)}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button variant="ghost" size="sm" onMouseDown={(event) => event.preventDefault()} />
+        }
       >
         <ImageIcon />
         Media
-      </Button>
-      {expanded ? (
-        <div className="basis-full space-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
-          <p className="text-xs text-muted-foreground">
-            Media originals share two local slots and 75 MiB total (image 10 MiB, PDF 25 MiB, video
-            50 MiB). They remain until saved or explicitly released. Upload cancellation does not
-            delete remote bytes.
-          </p>
-          <label>
-            Choose image, PDF or video
+      </PopoverTrigger>
+      <PopoverPopup align="end" width="md">
+        <div className="space-y-3 text-sm">
+          <label className="block space-y-1">
+            <span className="font-medium">Upload image, PDF or video</span>
             <Input
               key={state.records.length}
               type="file"
@@ -76,161 +88,115 @@ export function SpaceImageControls({
               }}
             />
           </label>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!file || !writable || state.busy || !state.hydrated}
-            onClick={() => {
-              if (!file || !current()) return;
-              setLocalError(null);
-              run(
-                owner.add(insertion.key, file, file.name).then(() => {
-                  setFile(null);
-                }),
-              );
-            }}
-          >
-            Keep original locally
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={
-              !file ||
-              !replacementTarget ||
-              !writable ||
-              state.busy ||
-              !state.hydrated ||
-              !!insertion.state().pending
-            }
-            onClick={() => {
-              if (!file || !replacementTarget || !current()) return;
-              run(
-                owner
-                  .addReplacement(insertion, replacementTarget, file, file.name)
-                  .then(() => setFile(null)),
-              );
-            }}
-          >
-            Keep original to replace selected media
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Choose a saved known media block to replace it. Its ID, placement and rich caption
-            remain; changed targets require a new explicit attempt.
-          </p>
-          {file ? <p className="text-xs">{file.name} is selected but not yet stored.</p> : null}
-          {state.busy ? <p role="status">Finishing one media operation…</p> : null}
-          {state.busy ? (
-            <Button variant="outline" onClick={() => owner.abort()}>
-              Abort active byte upload
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              disabled={!file || !writable || state.busy || !state.hydrated}
+              onClick={() => attach(false)}
+            >
+              {state.busy ? "Uploading…" : "Upload"}
             </Button>
-          ) : null}
+            {replacementTarget ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={
+                  !file || !writable || state.busy || !state.hydrated || !!insertion.state().pending
+                }
+                onClick={() => attach(true)}
+              >
+                Replace selected media
+              </Button>
+            ) : null}
+            {state.busy ? (
+              <Button variant="ghost" size="sm" onClick={() => owner.abort()}>
+                Cancel
+              </Button>
+            ) : null}
+          </div>
           {error ? (
-            <p role="alert">{error instanceof Error ? error.message : String(error)}</p>
+            <p role="alert" className="text-destructive-foreground">
+              {error instanceof Error ? error.message : String(error)}
+            </p>
           ) : null}
           {records.map((record) => (
-            <div key={record.id} className="space-y-2">
+            <div key={record.id} className="space-y-2 border-t pt-3">
               <p>
-                {record.intent.name} ·{" "}
-                {record.replacement
-                  ? `Replacement for ${record.replacement.before.id}`
-                  : "New media"}{" "}
-                ·{" "}
-                {
-                  {
-                    original: "Stored locally",
-                    minting: "Upload reply unresolved",
-                    upload: "Upload retained",
-                    ready: "Ready to insert",
-                    preparing: "Insertion needs recovery",
-                    drafted: "Media draft ready",
-                  }[record.phase]
-                }{" "}
-                · original retained
+                {record.intent.name}
+                {record.phase === "drafted" ? " was added. Save the page to finish." : null}
+                {record.phase === "ready" || record.phase === "preparing"
+                  ? " is uploaded but not yet added to the page."
+                  : null}
+                {["original", "minting", "upload"].includes(record.phase)
+                  ? " has not finished uploading."
+                  : null}
               </p>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  disabled={
-                    !writable || state.busy || ["preparing", "drafted"].includes(record.phase)
-                  }
-                  onClick={() => run(owner.upload(record.id))}
-                >
-                  Upload / retry original
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={!current() || state.busy || !record.handle}
-                  onClick={() => run(owner.recover(record.id))}
-                >
-                  Check original upload
-                </Button>
+                {["original", "upload", "minting"].includes(record.phase) ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!writable || state.busy}
+                    onClick={() => run(owner.upload(record.id))}
+                  >
+                    Retry upload
+                  </Button>
+                ) : null}
                 {["ready", "preparing"].includes(record.phase) ? (
                   <Button
                     variant="outline"
+                    size="sm"
                     disabled={!writable || state.busy}
                     onClick={() => run(owner.insert(record.id, insertion))}
                   >
-                    {record.phase === "preparing"
-                      ? "Finish retained insertion"
-                      : record.replacement
-                        ? "Apply retained replacement"
-                        : "Insert media at page end"}
+                    {record.replacement ? "Replace media" : "Add to page"}
+                  </Button>
+                ) : null}
+                {error && record.handle ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!current() || state.busy}
+                    onClick={() => run(owner.recover(record.id))}
+                  >
+                    Check upload
+                  </Button>
+                ) : null}
+                {error &&
+                !["original", "minting", "preparing"].includes(record.phase) &&
+                !insertion.state().pending ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!writable || state.busy}
+                    onClick={() => run(owner.newAttempt(record.id, insertion))}
+                  >
+                    Upload again
+                  </Button>
+                ) : null}
+                {record.phase === "preparing" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!writable || state.busy}
+                    onClick={() => run(owner.reselectPlacement(record.id, insertion))}
+                  >
+                    Choose placement again
                   </Button>
                 ) : null}
                 <Button
-                  variant="outline"
-                  disabled={
-                    !writable ||
-                    state.busy ||
-                    ["original", "minting", "preparing"].includes(record.phase) ||
-                    !!insertion.state().pending
-                  }
-                  onClick={() => run(owner.newAttempt(record.id, insertion))}
-                >
-                  Upload a NEW copy
-                </Button>
-                <Button
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
                   disabled={state.busy || ["minting", "preparing"].includes(record.phase)}
                   onClick={() => run(owner.release(record.id, insertion))}
                 >
-                  Release local original
+                  Discard
                 </Button>
               </div>
-              {record.phase === "preparing" ? (
-                <Button
-                  variant="outline"
-                  disabled={!writable || state.busy}
-                  onClick={() => run(owner.reselectPlacement(record.id, insertion))}
-                >
-                  Release unused placement and choose again
-                </Button>
-              ) : null}
-              {record.phase === "drafted" ? (
-                <p className="text-xs text-muted-foreground">
-                  Save the page draft. Release verifies the acknowledged media or an unsent removal;
-                  unresolved receipts retain the original.
-                </p>
-              ) : null}
-              {record.phase === "minting" ? (
-                <p className="text-xs text-muted-foreground">
-                  A missing mint reply can only be retried with the same live caller.
-                  Reconnect/reload cannot prove that caller without a known upload handle.
-                </p>
-              ) : null}
             </div>
           ))}
-          {state.records
-            .filter((r) => !records.includes(r))
-            .map((r) => (
-              <p key={r.id}>
-                Another original is retained for page {r.key.pageId} in environment{" "}
-                {r.key.environmentId}. Open that page to resolve it.
-              </p>
-            ))}
         </div>
-      ) : null}
-    </section>
+      </PopoverPopup>
+    </Popover>
   );
 }

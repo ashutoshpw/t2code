@@ -31,11 +31,9 @@ import {
   MinusIcon,
   PilcrowIcon,
   QuoteIcon,
-  Redo2Icon,
   SquareCodeIcon,
   StrikethroughIcon,
   Trash2Icon,
-  Undo2Icon,
 } from "lucide-react";
 import { NodeSelection, Plugin, type Command, type EditorState } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
@@ -203,6 +201,8 @@ export function SpaceEditor({
   const [linkOpen, setLinkOpen] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<number | null>(null);
   const [slashSel, setSlashSel] = useState({ query: "", index: 0 });
+  const [focused, setFocused] = useState(false);
+  const [turnIntoOpen, setTurnIntoOpen] = useState(false);
   const historyNotice = useSyncExternalStore(
     bridge?.subscribe ?? noSubscribe,
     bridge?.getSnapshot ?? noNotice,
@@ -339,6 +339,21 @@ export function SpaceEditor({
     if (empty && structure && complete) adapter.append()(editor.state, editor.view.dispatch);
   };
   const media = !!selectedId && !!known && ["image", "pdf", "video"].includes(known.type);
+  const canSplit = structure && can(adapter.split());
+  const canJoin = structure && can(adapter.joinBackward());
+  const canMove =
+    !!bridge &&
+    !!onMoveBlocks &&
+    structure &&
+    !bridge.controller.session.structureAvailability() &&
+    complete;
+  const canRemove =
+    !!selectedId &&
+    structure &&
+    (media
+      ? mediaEditable && can(adapter.removeMedia(selectedId))
+      : can(adapter.remove(selectedId)));
+  const moreItems = canSplit || canJoin || canMove || canRemove;
   const box = wrapper?.getBoundingClientRect();
   const place = (pos: number, width: number) => {
     if (!box) return null;
@@ -356,7 +371,10 @@ export function SpaceEditor({
   const { from, to } = state.selection;
   const linkKey = `${from}-${to}`;
   const bubbleAt =
-    writable && !(state.selection instanceof NodeSelection) && (from !== to || link?.hasLink)
+    writable &&
+    (focused || turnIntoOpen) &&
+    !(state.selection instanceof NodeSelection) &&
+    (from !== to || link?.hasLink)
       ? place(from, 320)
       : null;
   const bubble = bubbleAt
@@ -409,13 +427,13 @@ export function SpaceEditor({
       label: "Code",
       icon: SquareCodeIcon,
       keywords: "snippet",
-      apply: () => run(adapter.append("code")),
+      apply: () => run(adapter.placeBlock("code")),
     },
     {
       label: "Divider",
       icon: MinusIcon,
       keywords: "separator hr line",
-      apply: () => run(adapter.append("divider")),
+      apply: () => run(adapter.placeBlock("divider")),
     },
   ];
   const slash = writable && structure ? slashMatch(state) : null;
@@ -485,98 +503,39 @@ export function SpaceEditor({
             }}
           />
         ) : null}
-        <Menu>
-          <MenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="More" />}>
-            <EllipsisIcon />
-          </MenuTrigger>
-          <MenuPopup align="end">
-            <MenuItem
-              disabled={!can(adapter.undoLocal())}
-              title={
-                bridge
-                  ? "Local undo covers edits made in this view. Saved undo/redo has separate controls."
-                  : undefined
-              }
-              onClick={() => run(adapter.undoLocal())}
-            >
-              <Undo2Icon />
-              Local undo
-            </MenuItem>
-            <MenuItem
-              disabled={!can(adapter.redoLocal())}
-              title={
-                bridge
-                  ? "Local undo covers edits made in this view. Saved undo/redo has separate controls."
-                  : undefined
-              }
-              onClick={() => run(adapter.redoLocal())}
-            >
-              <Redo2Icon />
-              Local redo
-            </MenuItem>
-            <MenuSeparator />
-            <MenuItem
-              disabled={!structure || !can(adapter.split())}
-              onClick={() => run(adapter.split())}
-            >
-              Split
-            </MenuItem>
-            <MenuItem
-              disabled={!structure || !can(adapter.joinBackward())}
-              onClick={() => run(adapter.joinBackward())}
-            >
-              Join previous
-            </MenuItem>
-            {bridge ? (
-              <MenuItem
-                disabled={
-                  !onMoveBlocks ||
-                  !structure ||
-                  !!bridge.controller.session.structureAvailability() ||
-                  !complete
-                }
-                onClick={() => onMoveBlocks?.(state)}
-              >
-                Move selected blocks…
-              </MenuItem>
-            ) : null}
-            {selected?.type === "todo_item" && selectedId ? (
-              <MenuItem
-                disabled={!writable || !can(adapter.toggleTodo(selectedId))}
-                onClick={() => run(adapter.toggleTodo(selectedId))}
-              >
-                Toggle to-do
-              </MenuItem>
-            ) : null}
-            {selectedId ? (
-              media ? (
+        {moreItems || savedHistory ? (
+          <Menu>
+            <MenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="More" />}>
+              <EllipsisIcon />
+            </MenuTrigger>
+            <MenuPopup align="end">
+              {canSplit ? <MenuItem onClick={() => run(adapter.split())}>Split</MenuItem> : null}
+              {canJoin ? (
+                <MenuItem onClick={() => run(adapter.joinBackward())}>Join previous</MenuItem>
+              ) : null}
+              {canMove ? (
+                <MenuItem onClick={() => onMoveBlocks?.(state)}>Move selected blocks…</MenuItem>
+              ) : null}
+              {canRemove && selectedId ? (
                 <MenuItem
                   variant="destructive"
-                  disabled={!mediaEditable || !structure || !can(adapter.removeMedia(selectedId))}
-                  onClick={() => run(adapter.removeMedia(selectedId))}
+                  onClick={() =>
+                    run(media ? adapter.removeMedia(selectedId) : adapter.remove(selectedId))
+                  }
                 >
                   <Trash2Icon />
-                  Remove media block
+                  {media ? "Remove media block" : "Delete block"}
                 </MenuItem>
-              ) : (
-                <MenuItem
-                  variant="destructive"
-                  disabled={!structure || !can(adapter.remove(selectedId))}
-                  onClick={() => run(adapter.remove(selectedId))}
-                >
-                  <Trash2Icon />
-                  Delete block
-                </MenuItem>
-              )
-            ) : null}
-            {savedHistory ? (
-              <>
-                <MenuSeparator />
-                {savedHistory}
-              </>
-            ) : null}
-          </MenuPopup>
-        </Menu>
+              ) : null}
+              {savedHistory ? (
+                <>
+                  {moreItems ? <MenuSeparator /> : null}
+                  {savedHistory}
+                </>
+              ) : null}
+            </MenuPopup>
+          </Menu>
+        ) : null}
       </div>
       {known?.type === "heading" || known?.type === "callout" || known?.type === "code" ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -673,10 +632,14 @@ export function SpaceEditor({
             <div
               ref={setWrapper}
               className="relative"
-              onFocus={startWriting}
+              onFocus={() => {
+                setFocused(true);
+                startWriting();
+              }}
               onBlur={(event) => {
-                if (slash && !event.currentTarget.contains(event.relatedTarget))
-                  setDismissed(slash.from);
+                if (event.currentTarget.contains(event.relatedTarget)) return;
+                setFocused(false);
+                if (slash) setDismissed(slash.from);
               }}
               onKeyDownCapture={onSlashKey}
             >
@@ -724,7 +687,7 @@ export function SpaceEditor({
                       <LinkIcon />
                     </ToolbarIconButton>
                     <Separator orientation="vertical" className="mx-1 h-5" />
-                    <Menu>
+                    <Menu open={turnIntoOpen} onOpenChange={setTurnIntoOpen}>
                       <MenuTrigger render={<Button variant="ghost" size="sm" />}>
                         Turn into
                         <ChevronDownIcon />
