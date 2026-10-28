@@ -1,5 +1,6 @@
 included:
   - modules/t2-composer-editor/ios
+  - modules/t2-spaces-editor/ios
   - modules/t2-highlights/ios
   - modules/t2-native-controls/ios
   - modules/t2-terminal/ios
