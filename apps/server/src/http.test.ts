@@ -14,7 +14,13 @@ import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 import * as Queue from "effect/Queue";
 import * as Tracer from "effect/Tracer";
-import { HttpClient, HttpClientRequest, HttpRouter, HttpServerResponse } from "effect/http";
+import {
+  HttpClient,
+  HttpClientRequest,
+  HttpRouter,
+  HttpServerRequest,
+  HttpServerResponse,
+} from "effect/http";
 import { ASSET_ROUTE_PREFIX } from "./assets/AssetAccess.ts";
 import { ATTACHMENT_UPLOAD_ROUTE_PREFIX } from "./assets/AttachmentUpload.ts";
 import { openMediaFile } from "./assets/MediaFile.ts";
@@ -497,6 +503,159 @@ it.layer(
   );
 });
 
+describe("immutable asset byte ranges", () => {
+  it.effect("serves strong validators and conditional single ranges for video, audio and PDF", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-immutable-range-" });
+      const immutableDigest = "84d89877f0d4041efb6bf91a16f0248f2fd573e6af05c19f96bedb9f882f7882";
+      const etag = `"${immutableDigest}"`;
+      for (const mimeType of ["video/mp4", "audio/wav", "application/pdf"]) {
+        const filePath = path.join(directory, "asset.bin");
+        yield* fs.writeFileString(filePath, "0123456789");
+        const canonicalPath = yield* fs.realPath(filePath);
+        for (const useDescriptor of [false, true]) {
+          const asset = { path: canonicalPath, mimeType, immutableDigest };
+          for (const [method, range, ifRange, status, contentRange, expected] of [
+            ["GET", undefined, undefined, 200, null, "0123456789"],
+            ["HEAD", "bytes=0-1", etag, 200, null, ""],
+            ["GET", "bytes=0-1", undefined, 206, "bytes 0-1/10", "01"],
+            ["GET", "bytes=4-", etag, 206, "bytes 4-9/10", "456789"],
+            ["GET", "bytes=-3", ` ${etag} `, 206, "bytes 7-9/10", "789"],
+            ["GET", "bytes=0-1", '"other-digest"', 200, null, "0123456789"],
+            ["GET", "bytes=0-1", `W/${etag}`, 200, null, "0123456789"],
+            ["GET", "bytes=0-1", "Wed, 21 Oct 2015 07:28:00 GMT", 200, null, "0123456789"],
+            ["GET", "bytes=10-", etag, 416, "bytes */10", ""],
+            ["GET", "bytes=-0", undefined, 416, "bytes */10", ""],
+            ["GET", "bytes=10-", '"other-digest"', 200, null, "0123456789"],
+            ["GET", "bytes=0-1,4-5", etag, 200, null, "0123456789"],
+            ["GET", "bytes=8-2", etag, 200, null, "0123456789"],
+          ] as const) {
+            const file = useDescriptor ? yield* openMediaFile(canonicalPath) : undefined;
+            if (useDescriptor && !file) throw new Error("Expected an opened media file");
+            const response = HttpServerResponse.toWeb(
+              yield* assetFileResponse(
+                { ...asset, ...(file ? { file } : {}) },
+                range,
+                ifRange,
+                method,
+              ),
+            );
+            expect(response.status).toBe(status);
+            expect(response.headers.get("etag")).toBe(etag);
+            expect(response.headers.get("cache-control")).toBe("private, immutable, no-transform");
+            expect(response.headers.get("accept-ranges")).toBe("bytes");
+            expect(response.headers.get("content-type")).toBe(mimeType);
+            expect(response.headers.get("content-range")).toBe(contentRange);
+            if (status !== 416) {
+              expect(response.headers.get("content-length")).toBe(
+                String(method === "HEAD" ? 10 : expected.length),
+              );
+            }
+            expect(yield* Effect.promise(() => response.text())).toBe(expected);
+          }
+        }
+      }
+    }).pipe(Effect.provide(layerFileResponse)),
+  );
+
+  it.effect("keeps immutable and mutable media bytes unchanged through global compression", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-media-compression-" });
+      const body = "0123456789abcdef".repeat(256);
+      const fixtures = [
+        ["video", "video/mp4", true],
+        ["audio", "audio/wav", true],
+        ["pdf", "application/pdf", true],
+        ["immutable-text", "text/plain", true],
+        ["mutable-video", "video/mp4", false],
+        ["mutable-pdf", "application/pdf", false],
+        ["text", "text/plain", false],
+      ] as const;
+      for (const [name] of fixtures) {
+        yield* fs.writeFileString(path.join(directory, `${name}.txt`), body);
+      }
+      const layerRoute = Layer.effectDiscard(
+        Effect.gen(function* () {
+          const router = yield* HttpRouter.HttpRouter;
+          for (const [name, mimeType, immutable] of fixtures) {
+            yield* router.add(
+              "GET",
+              `/${name}`,
+              Effect.gen(function* () {
+                const request = yield* HttpServerRequest.HttpServerRequest;
+                const asset = {
+                  path: path.join(directory, `${name}.txt`),
+                  mimeType,
+                  ...(immutable ? { immutableDigest: "a".repeat(64) } : {}),
+                };
+                return yield* assetFileResponse(
+                  asset,
+                  request.headers.range,
+                  request.headers["if-range"],
+                  request.method === "HEAD" ? "HEAD" : "GET",
+                );
+              }),
+            );
+          }
+        }),
+      );
+      const { handler, dispose } = HttpRouter.toWebHandler(
+        Layer.merge(layerRoute, ServerHttp.layerHttpCompression).pipe(
+          Layer.provideMerge(layerFileResponse),
+        ),
+        { disableLogger: true },
+      );
+      yield* Effect.addFinalizer(() => Effect.promise(dispose));
+      const request = (name: string, headers?: Record<string, string>, method = "GET") =>
+        Effect.promise(() =>
+          handler(
+            new Request(`http://assets.test/${name}`, {
+              method,
+              headers: { "accept-encoding": "gzip", ...headers },
+            }),
+          ),
+        );
+      const control = yield* request("text");
+      expect(control.headers.get("content-encoding")).toBe("gzip");
+      expect((yield* Effect.promise(() => control.arrayBuffer())).byteLength).toBeLessThan(
+        body.length,
+      );
+      for (const [name, , immutable] of fixtures) {
+        if (name === "text") continue;
+        for (const method of ["GET", "HEAD"] as const) {
+          const full = yield* request(name, undefined, method);
+          expect(full.status).toBe(200);
+          if (immutable) {
+            expect(full.headers.get("etag")).toBe(`"${"a".repeat(64)}"`);
+          }
+          expect(full.headers.get("content-encoding")).toBeNull();
+          expect(full.headers.get("content-length")).toBe(String(body.length));
+          expect(yield* Effect.promise(() => full.text())).toBe(method === "HEAD" ? "" : body);
+        }
+        const partial = yield* request(name, { range: "bytes=0-2047" });
+        expect(partial.status).toBe(206);
+        expect(partial.headers.get("content-encoding")).toBeNull();
+        expect(partial.headers.get("content-range")).toBe("bytes 0-2047/4096");
+        expect(partial.headers.get("content-length")).toBe("2048");
+        expect(yield* Effect.promise(() => partial.text())).toBe(body.slice(0, 2048));
+        const conditional = yield* request(name, {
+          range: "bytes=0-2047",
+          "if-range": partial.headers.get("etag")!,
+        });
+        expect(conditional.status).toBe(immutable ? 206 : 200);
+        expect(conditional.headers.get("content-encoding")).toBeNull();
+        expect(yield* Effect.promise(() => conditional.text())).toBe(
+          immutable ? body.slice(0, 2048) : body,
+        );
+      }
+    }).pipe(Effect.provide(layerFileResponse)),
+  );
+});
+
 describe("video asset byte ranges", () => {
   it.effect("uses current descriptor metadata after an in-place truncate or extension", () =>
     Effect.gen(function* () {
@@ -528,6 +687,9 @@ describe("video asset byte ranges", () => {
           ),
         );
         expect(response.status).toBe(status);
+        expect(response.headers.get("cache-control")).toBe("private, no-store");
+        expect(response.headers.get("etag")).toBeNull();
+        expect(response.headers.get("last-modified")).toBeNull();
         expect(response.headers.get("content-range")).toBe(contentRange);
         if (status !== 416) {
           expect(response.headers.get("content-length")).toBe(

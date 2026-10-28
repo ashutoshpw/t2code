@@ -30,9 +30,14 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { OtlpTracer, OtlpSerialization } from "effect/observability";
 
 import * as ServerConfig from "./config.ts";
-import { ASSET_ROUTE_PREFIX, readMcpAppHtml, resolveAsset } from "./assets/AssetAccess.ts";
+import {
+  ASSET_ROUTE_PREFIX,
+  readMcpAppHtml,
+  resolveAsset,
+  type ResolvedAsset,
+} from "./assets/AssetAccess.ts";
 import { sourceControlMediaResponse } from "./assets/sourceControlMediaResponse.ts";
-import { statMediaFile, streamMediaFile, type OpenMediaFile } from "./assets/MediaFile.ts";
+import { statMediaFile, streamMediaFile } from "./assets/MediaFile.ts";
 import {
   ATTACHMENT_UPLOAD_ROUTE_PREFIX,
   storeAttachmentUpload,
@@ -164,14 +169,7 @@ function assetByteRange(header: string, size: bigint) {
 }
 
 export const assetFileResponse = Effect.fn("assetFileResponse")(function* (
-  asset: {
-    readonly path: string;
-    readonly download?: boolean;
-    readonly fileName?: string;
-    readonly mimeType?: string;
-    readonly file?: OpenMediaFile;
-    readonly renderIntent?: "mcp-app";
-  },
+  asset: Omit<Extract<ResolvedAsset, { readonly kind: "file" }>, "kind">,
   rangeHeader?: string,
   ifRangeHeader?: string,
   method: "GET" | "HEAD" = "GET",
@@ -197,10 +195,20 @@ export const assetFileResponse = Effect.fn("assetFileResponse")(function* (
       ? HttpServerResponse.empty({ status: 200, headers })
       : HttpServerResponse.uint8Array(body, { headers });
   }
+  const immutableEtag =
+    asset.immutableDigest === undefined ? undefined : `"${asset.immutableDigest}"`;
+  if (immutableEtag !== undefined) {
+    headers.ETag = immutableEtag;
+    headers["Cache-Control"] = "private, immutable, no-transform";
+    headers["Content-Type"] ??= Option.getOrElse(
+      Mime.getType(asset.path),
+      () => "application/octet-stream",
+    );
+  }
   const mediaFile = asset.file;
   const mediaInfo = mediaFile ? yield* statMediaFile(asset.path, mediaFile) : undefined;
   const isMedia = /^(?:audio|video)\//i.test(headers["Content-Type"] ?? "");
-  if (isMedia) {
+  if (isMedia && immutableEtag === undefined) {
     // Without file identity, validators cannot guarantee byte equality; attachments must also expire with their URL.
     headers["Cache-Control"] = "private, no-store";
   }
@@ -209,8 +217,12 @@ export const assetFileResponse = Effect.fn("assetFileResponse")(function* (
   let bytesToRead: bigint | undefined;
   {
     headers["Accept-Ranges"] = "bytes";
-    // If-Range requires a matching validator. A full response is safe when we cannot validate it.
-    if (method === "GET" && rangeHeader && ifRangeHeader === undefined) {
+    if (
+      method === "GET" &&
+      rangeHeader &&
+      (ifRangeHeader === undefined ||
+        (immutableEtag !== undefined && ifRangeHeader.trim() === immutableEtag))
+    ) {
       const fs = yield* FileSystem.FileSystem;
       const info = mediaInfo ?? (yield* fs.stat(asset.path));
       const range = assetByteRange(rangeHeader, info.size);
@@ -228,6 +240,12 @@ export const assetFileResponse = Effect.fn("assetFileResponse")(function* (
       }
     }
   }
+  if (method === "HEAD" && immutableEtag !== undefined) {
+    const fs = yield* FileSystem.FileSystem;
+    const info = mediaInfo ?? (yield* fs.stat(asset.path));
+    headers["Content-Length"] = String(info.size);
+    return HttpServerResponse.empty({ status: 200, headers });
+  }
   if (mediaFile && mediaInfo) {
     const size = bytesToRead ?? mediaInfo.size;
     headers["Content-Type"] ??= Option.getOrElse(
@@ -235,7 +253,7 @@ export const assetFileResponse = Effect.fn("assetFileResponse")(function* (
       () => "application/octet-stream",
     );
     headers["Content-Length"] = String(size);
-    if (!isMedia) {
+    if (!isMedia && immutableEtag === undefined) {
       headers["Last-Modified"] = mediaInfo.mtime.toUTCString();
       headers.ETag = `W/"${mediaInfo.size.toString(16)}-${mediaInfo.mtimeMs.toString(16)}"`;
     }
@@ -251,7 +269,20 @@ export const assetFileResponse = Effect.fn("assetFileResponse")(function* (
       headers,
     });
   }
-  return yield* HttpServerResponse.file(asset.path, { status, offset, bytesToRead, headers });
+  const response = yield* HttpServerResponse.file(asset.path, {
+    status,
+    offset,
+    bytesToRead,
+    headers,
+  });
+  // The platform file helper replaces caller validators with filesystem metadata.
+  return immutableEtag === undefined
+    ? response
+    : HttpServerResponse.setHeader(
+        HttpServerResponse.removeHeader(response, "last-modified"),
+        "etag",
+        immutableEtag,
+      );
 });
 
 export const layerHttpCompression = HttpRouter.middleware(HttpMiddleware.compression(), {

@@ -192,6 +192,8 @@ export type ResolvedAsset =
       readonly mimeType?: string;
       readonly file?: OpenMediaFile;
       readonly renderIntent?: "mcp-app";
+      /** Resolver-guaranteed immutable bytes, identified by their unquoted hexadecimal content digest. */
+      readonly immutableDigest?: string;
     }
   | {
       readonly kind: "bytes";

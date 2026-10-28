@@ -518,6 +518,10 @@
     "./provider-clients": {
       "types": "./src/providerClients.ts",
       "default": "./src/providerClients.ts"
+    },
+    "./spaces": {
+      "types": "./src/spaces/index.ts",
+      "default": "./src/spaces/index.ts"
     }
   },
   "scripts": {
