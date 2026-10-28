@@ -11,6 +11,7 @@ import * as PageStore from "./PageStore.ts";
 import * as RevisionStore from "./RevisionStore.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
+import * as Reconciliation from "./assets/Reconciliation.ts";
 import * as SearchStore from "./SearchStore.ts";
 
 interface Peer {
@@ -780,6 +781,8 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
       historyBudget,
     );
   }
+  for (const row of writes.values())
+    yield* Reconciliation.noteBlock(row.block_id, row.deleted ? null : row.payload);
   yield* ReferenceStore.release(
     [...writes.values()].filter((row) => row.deleted).map((row) => row.block_id),
   );

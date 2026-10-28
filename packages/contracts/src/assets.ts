@@ -1,4 +1,6 @@
 import * as Schema from "effect/Schema";
+import { EnvironmentId } from "./baseSchemas.ts";
+import { SpaceAssetId } from "./spaces.ts";
 
 import { NonNegativeInt, ThreadId, TrimmedNonEmptyString, TurnItemId } from "./baseSchemas.ts";
 import {
@@ -18,6 +20,11 @@ const ASSET_PATH_MAX_LENGTH = 1024;
 export const SOURCE_CONTROL_MEDIA_ASSET = "github-media" as const;
 
 export const AssetResource = Schema.Union([
+  Schema.TaggedStruct("spaces-asset", {
+    environmentId: EnvironmentId,
+    assetId: SpaceAssetId,
+    disposition: Schema.optionalKey(Schema.Literals(["inline", "attachment"])),
+  }),
   Schema.TaggedStruct("workspace-file", {
     threadId: ThreadId,
     path: TrimmedNonEmptyString.check(Schema.isMaxLength(ASSET_PATH_MAX_LENGTH)),
