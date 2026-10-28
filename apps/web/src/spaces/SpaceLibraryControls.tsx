@@ -7,7 +7,9 @@ import type { SpaceRootReorder } from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
+import { PencilIcon, PlusIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { Input } from "../components/ui/input";
 import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { spaceRootReorder } from "./sessionRuntime";
@@ -120,9 +122,29 @@ function Library({
   const result = snapshot.libraryResult;
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        {page ? "Rename page…" : "Create and manage…"}
-      </Button>
+      {page ? (
+        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+          <PencilIcon />
+          Rename
+          <span className="sr-only"> page…</span>
+        </Button>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Create and manage…"
+                onClick={() => setOpen(true)}
+              />
+            }
+          >
+            <PlusIcon />
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">Create and manage…</TooltipPopup>
+        </Tooltip>
+      )}
       <Dialog
         open={open}
         onOpenChange={(value) => {
@@ -263,7 +285,11 @@ function Library({
                 Retry library storage
               </Button>
             ) : null}
-            {snapshot.notice ? <p role="status">{snapshot.notice}</p> : null}
+            {snapshot.notice ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                {snapshot.notice}
+              </p>
+            ) : null}
             {result?.page ? (
               <Link
                 to="/spaces/$environmentId/$spaceId/$pageId"

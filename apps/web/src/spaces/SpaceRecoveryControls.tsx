@@ -3,6 +3,7 @@ import { useContext, useEffect, useState, useSyncExternalStore } from "react";
 import type { SpacePageId, SpaceRecoveryOperation } from "@t2code/contracts/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
 import { Input } from "../components/ui/input";
+import { Trash2Icon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
@@ -85,9 +86,10 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
   const retained = journal.history;
   const history = retained && "pageIds" in retained ? retained : null;
   return (
-    <div className="mt-3">
+    <>
       <Button
-        variant="outline"
+        variant="ghost"
+        size="sm"
         disabled={!!pageId && (blocked || !writable || (!!current && !current()))}
         onClick={() => {
           if (pageId && current && !current()) return;
@@ -95,11 +97,16 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
           if (pageId) run(inspect(pageId, "trash"));
         }}
       >
-        {pageId
-          ? "Move page to trash…"
-          : supported
-            ? "Trash and recovery"
-            : "Structural receipt recovery"}
+        <Trash2Icon />
+        {pageId ? (
+          <span className="sr-only">Move page to trash…</span>
+        ) : supported ? (
+          <>
+            Trash<span className="sr-only"> and recovery</span>
+          </>
+        ) : (
+          "Structural receipt recovery"
+        )}
       </Button>
       <Dialog
         open={open}
@@ -302,6 +309,6 @@ function Recovery({ environmentId, owner, pageId, current }: Props & { owner: Sp
           </div>
         </DialogPopup>
       </Dialog>
-    </div>
+    </>
   );
 }
