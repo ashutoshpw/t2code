@@ -148,4 +148,63 @@ describe("SpaceEditor", () => {
     await userEvent.click(screen.getByRole("button", { name: "Bold" }));
     expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain("bold");
   });
+
+  it("turns markdown shortcuts at the start of a block into styled blocks", async () => {
+    const onBatch = vi.fn();
+    await using screen = await render(<SpaceEditor adapter={adapter(false)} onBatch={onBatch} />, {
+      router: false,
+    });
+    await userEvent.click(screen.getByRole("textbox", { name: "Page editor" }));
+    await userEvent.keyboard("- item");
+    expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain("bulleted_item");
+    await userEvent.keyboard("{Enter}{Enter}## Title");
+    const batch = JSON.stringify(onBatch.mock.calls.at(-1)?.[0]);
+    expect(batch).toContain('"level":2');
+    expect(batch).not.toContain("## ");
+  });
+
+  it("exits an empty list item on Enter and an empty quote on Backspace", async () => {
+    const onBatch = vi.fn();
+    await using screen = await render(<SpaceEditor adapter={adapter(false)} onBatch={onBatch} />, {
+      router: false,
+    });
+    await userEvent.click(screen.getByRole("textbox", { name: "Page editor" }));
+    await userEvent.keyboard("[[] task{Enter}");
+    expect(screen.getByRole("checkbox").elements()).toHaveLength(2);
+    await userEvent.keyboard("{Enter}after");
+    expect(screen.getByRole("checkbox").elements()).toHaveLength(1);
+    expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain("after");
+    await userEvent.keyboard("{Enter}> ");
+    expect(document.querySelectorAll("blockquote")).toHaveLength(1);
+    await userEvent.keyboard("{Backspace}more");
+    expect(document.querySelectorAll("blockquote")).toHaveLength(0);
+    await expect.element(screen.getByText("more")).toBeVisible();
+  });
+
+  it("toggles a to-do from its checkbox", async () => {
+    await using screen = await render(<SpaceEditor adapter={adapter(false)} />, { router: false });
+    await userEvent.click(screen.getByRole("textbox", { name: "Page editor" }));
+    await userEvent.keyboard("[[] task");
+    const box = screen.getByRole("checkbox", { name: "Done" });
+    await userEvent.click(box);
+    await expect.element(screen.getByRole("checkbox", { name: "Done" })).toBeChecked();
+  });
+
+  it("inserts a code block at the caret instead of the end of the page", async () => {
+    const onBatch = vi.fn();
+    await using screen = await render(<SpaceEditor adapter={adapter()} onBatch={onBatch} />, {
+      router: false,
+    });
+    await userEvent.click(screen.getByText("Hello page"));
+    await userEvent.keyboard("{Enter}/code{Enter}");
+    expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain('"type":"code"');
+  });
+
+  it("hides the selection toolbar when the editor loses focus", async () => {
+    await using screen = await render(<SpaceEditor adapter={adapter()} />, { router: false });
+    await userEvent.dblClick(screen.getByText("Hello page"));
+    await expect.element(screen.getByRole("button", { name: "Bold" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    await expect.element(screen.getByRole("button", { name: "Bold" })).not.toBeInTheDocument();
+  });
 });

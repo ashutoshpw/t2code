@@ -48,6 +48,22 @@ export const spaceSchemaExtensions: Extensions = [
           "data-space-icon": known?.type === "callout" ? known.content.icon : undefined,
           style: "white-space: pre-wrap",
         };
+        if (name === "todo_item")
+          return [
+            "div",
+            attributes,
+            [
+              "input",
+              {
+                type: "checkbox",
+                "data-space-todo": "",
+                "aria-label": "Done",
+                contenteditable: "false",
+                ...(known?.type === "todo_item" && known.content.checked ? { checked: "" } : {}),
+              },
+            ],
+            ["div", { "data-space-list-content": "" }, 0],
+          ];
         if (listTypes.has(name))
           return ["div", attributes, ["div", { "data-space-list-content": "" }, 0]];
         return [tag, attributes, 0];

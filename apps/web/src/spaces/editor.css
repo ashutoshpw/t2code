@@ -20,12 +20,18 @@
   content: counter(spaces-numbered) ".";
   position: absolute;
 }
-[data-space-editor] [data-space-type="todo_item"]::before {
-  content: "☐";
+[data-space-editor] input[data-space-todo] {
   position: absolute;
+  inset-block-start: 0.45em;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--primary);
 }
-[data-space-editor] [data-space-checked="true"]::before {
-  content: "☑";
+[data-space-editor] [data-space-checked="true"] > [data-space-list-content] {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
 }
 [data-space-editor] .tiptap {
   line-height: 1.65;
