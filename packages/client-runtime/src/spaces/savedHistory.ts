@@ -21,8 +21,7 @@ export const savedHistorySchema = Schema.Struct({
 export type SpaceSavedHistory = typeof savedHistorySchema.Type;
 const windowBytes = 65536;
 const historyBytes = 262144;
-const structuralReason =
-  "Saved structural changes cannot be undone here. Deleted and joined IDs are permanently retired; restoring as a copy needs separate support.";
+const structuralReason = "This change can't be undone from here.";
 export const emptySavedHistory: SpaceSavedHistory = {
   base: null,
   undo: null,
@@ -175,9 +174,9 @@ export function acknowledgeSavedHistory(
     (history.base && after && !replaceable(history.base, after))
       ? structuralReason
       : !history.base || !after
-        ? "Saved undo exceeds the 64 KiB retained-window limit or has no retained preimage."
+        ? "This change is too large to undo."
         : sameWindow(history.base, after)
-          ? "There is no saved content change to undo."
+          ? "There's nothing to undo."
           : null;
   return {
     base,

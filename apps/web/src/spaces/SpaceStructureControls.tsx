@@ -1,5 +1,12 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import { useContext, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useState,
+  useSyncExternalStore,
+  type Ref,
+} from "react";
 import {
   type SpaceBlockMoveProof,
   type SpaceRootReorder,
@@ -11,17 +18,28 @@ import type {
   SpacePageLocation,
   SpaceId,
 } from "@t2code/contracts/spaces";
-import SpaceRecoveryControls from "./SpaceRecoveryControls";
 import { Input } from "../components/ui/input";
-import { ChevronRightIcon, FilePlusIcon, MoveIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
+import {
+  Dialog,
+  DialogDescription,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { toastManager } from "../components/ui/toast";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
 import { useEnvironment } from "../state/environments";
 import { spaceRootReorder } from "./sessionRuntime";
 
+export interface SpaceStructureHandle {
+  openMove(): void;
+  openChild(): void;
+}
 interface Props {
+  ref?: Ref<SpaceStructureHandle>;
   blocks?: SpaceBlockMoveProof;
   onClose?: () => void;
   target: SpacePageNavigationTarget;
@@ -56,6 +74,7 @@ const plain = (error: unknown, fallback: string) =>
     : fallback;
 
 function StructureControls({
+  ref,
   target,
   current,
   location,
@@ -120,6 +139,11 @@ function StructureControls({
     if (!blocks && location?.kind === "child") await owner.loadSource(target.pageId);
     await browseRoots(target.spaceId);
   };
+  const openChild = () => {
+    if (!current()) return;
+    setCreating(true);
+    setOpen(true);
+  };
   const openMove = () => {
     if (!current()) return;
     setCreating(false);
@@ -135,6 +159,7 @@ function StructureControls({
       }),
     );
   };
+  useImperativeHandle(ref, () => ({ openMove, openChild }));
   const showMoved = () => {
     setOpen(false);
     onClose?.();
@@ -248,62 +273,32 @@ function StructureControls({
   const otherSpaces =
     spaces?.items.filter((space) => space.id !== window?.space.id && matches(space.title)) ?? [];
   return (
-    <div className={blocks ? "space-y-2" : "contents"}>
-      <div className={blocks ? "flex flex-wrap gap-2" : "contents"}>
-        {!blocks ? (
-          <>
-            <Button variant="ghost" size="sm" disabled={!writable || blocked} onClick={openMove}>
-              <MoveIcon />
-              Move page
+    <>
+      {pending || (!hydrated && snapshot.error) ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          {pending ? (
+            <>
+              <span role="status">
+                {pending.conflict
+                  ? "Your last page change couldn't be completed."
+                  : "Your last page change didn't finish."}
+              </span>
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={busy || !hydrated || (pending.conflict && !writable)}
+                onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
+              >
+                {pending.conflict ? "Dismiss" : "Finish it"}
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" size="xs" onClick={() => run(owner.hydrate())}>
+              Try again
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!writable || blocked || !createPermission}
-              onClick={() => {
-                if (!current()) return;
-                setCreating(true);
-                setOpen(true);
-              }}
-            >
-              <FilePlusIcon />
-              Create child page
-            </Button>
-            <SpaceRecoveryControls
-              environmentId={target.environmentId}
-              pageId={target.pageId}
-              spaceId={target.spaceId}
-              parentPageId={location?.kind === "child" ? location.parentPageId : null}
-              current={current}
-            />
-          </>
-        ) : null}
-        {pending && !pending.conflict ? (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy || !hydrated}
-            onClick={() => run(owner.recover())}
-          >
-            Finish last change
-          </Button>
-        ) : null}
-        {pending?.conflict ? (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy || !writable}
-            onClick={() => run(owner.reinspect())}
-          >
-            Dismiss last change
-          </Button>
-        ) : null}
-        {!hydrated && snapshot.error ? (
-          <Button variant="outline" size="sm" onClick={() => run(owner.hydrate())}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
+          )}
+        </div>
+      ) : null}
       <Dialog
         open={open}
         onOpenChange={(value) => {
@@ -312,168 +307,172 @@ function StructureControls({
         }}
       >
         <DialogPopup>
-          <DialogTitle>
-            {creating ? "Add child page" : blocks ? "Move blocks to…" : "Move to…"}
-          </DialogTitle>
-          <DialogDescription>
-            {creating
-              ? "The new page is added at the end of this page."
-              : blocks
-                ? "Choose a page to move the selected blocks to. They are added at the end of it."
-                : "Choose a page or space to move this page into."}
-          </DialogDescription>
-          <div className="mt-4 space-y-3">
-            {creating ? (
-              <form
-                className="space-y-3"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  run(createChild());
-                }}
-              >
-                <label className="block space-y-1">
-                  <span className="text-sm">Title</span>
-                  <Input
-                    value={title}
-                    placeholder="Untitled page"
-                    onChange={(event) => setTitle(event.target.value)}
-                  />
-                </label>
-                <Button type="submit" disabled={!writable || blocked}>
-                  Add page
-                </Button>
-              </form>
-            ) : (
-              <>
-                {blocks ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={blocked || !writable || !selectionReady || !blocks.indent}
-                      onClick={() => {
-                        if (blocks.indent) placementDirect(blocks.indent);
-                      }}
-                    >
-                      Indent
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={blocked || !writable || !selectionReady || !blocks.outdent}
-                      onClick={() => {
-                        if (blocks.outdent) placementDirect(blocks.outdent);
-                      }}
-                    >
-                      Outdent
-                    </Button>
-                  </div>
-                ) : null}
-                {!selectionReady && blocks ? (
-                  <p role="status">The selection changed. Close this and select again.</p>
-                ) : null}
-                <Input
-                  type="search"
-                  aria-label="Search pages"
-                  placeholder="Search pages…"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-                {!window ? <p role="status">Loading…</p> : null}
-                {window ? (
-                  <ul className="max-h-72 space-y-1 overflow-y-auto">
-                    {parentPageId ? (
-                      <li>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-start"
-                          disabled={blocked}
-                          onClick={() => enterSpace(window.space.id)}
-                        >
-                          Back to {window.space.title || "Untitled space"}
-                        </Button>
-                      </li>
-                    ) : null}
-                    {atTop && !blocks && matches(window.space.title || "Untitled space") ? (
-                      <li>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-start"
-                          disabled={
-                            !writable || blocked || !selectionReady || window.nextCursor !== null
-                          }
-                          onClick={() => run(moveToTop(window.space.id))}
-                        >
-                          {window.space.title || "Untitled space"} (top level)
-                        </Button>
-                      </li>
-                    ) : null}
-                    {visiblePages.map((page) => (
-                      <li key={page.id} className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="min-w-0 flex-1 justify-start"
-                          disabled={
-                            !writable ||
-                            blocked ||
-                            !selectionReady ||
-                            (!blocks && page.id === target.pageId)
-                          }
-                          onClick={() => run(moveInside(page.id))}
-                        >
-                          <span className="truncate">{page.title || "Untitled page"}</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Show pages inside ${page.title || "Untitled page"}`}
-                          disabled={blocked || (!blocks && page.id === target.pageId)}
-                          onClick={() => enterPage(page.id)}
-                        >
-                          <ChevronRightIcon />
-                        </Button>
-                      </li>
-                    ))}
-                    {!parentPageId
-                      ? otherSpaces.map((space) => (
-                          <li key={space.id}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-full justify-start"
-                              disabled={blocked}
-                              onClick={() => enterSpace(space.id)}
-                            >
-                              {space.title || "Untitled space"}
-                            </Button>
-                          </li>
-                        ))
-                      : null}
-                    {visiblePages.length === 0 && otherSpaces.length === 0 ? (
-                      <li className="px-2 text-sm text-muted-foreground">No pages found.</li>
-                    ) : null}
-                  </ul>
-                ) : null}
-                {window?.nextCursor ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={blocked}
-                    onClick={() =>
-                      run(owner.browse(window.space.id, target.pageId, true, parentPageId))
-                    }
-                  >
-                    Show more
+          <DialogHeader>
+            <DialogTitle>
+              {creating ? "Add sub-page" : blocks ? "Move blocks to…" : "Move to…"}
+            </DialogTitle>
+            <DialogDescription>
+              {creating
+                ? "The new page is added inside this page."
+                : blocks
+                  ? "Choose a page to move the selected blocks to. They are added at the end of it."
+                  : "Choose a page or space to move this page into."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogPanel>
+            <div className="space-y-3">
+              {creating ? (
+                <form
+                  className="space-y-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    run(createChild());
+                  }}
+                >
+                  <label className="block space-y-1">
+                    <span className="text-sm">Title</span>
+                    <Input
+                      value={title}
+                      placeholder="Untitled page"
+                      onChange={(event) => setTitle(event.target.value)}
+                    />
+                  </label>
+                  <Button type="submit" disabled={!writable || blocked}>
+                    Add page
                   </Button>
-                ) : null}
-              </>
-            )}
-          </div>
+                </form>
+              ) : (
+                <>
+                  {blocks ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={blocked || !writable || !selectionReady || !blocks.indent}
+                        onClick={() => {
+                          if (blocks.indent) placementDirect(blocks.indent);
+                        }}
+                      >
+                        Indent
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={blocked || !writable || !selectionReady || !blocks.outdent}
+                        onClick={() => {
+                          if (blocks.outdent) placementDirect(blocks.outdent);
+                        }}
+                      >
+                        Outdent
+                      </Button>
+                    </div>
+                  ) : null}
+                  {!selectionReady && blocks ? (
+                    <p role="status">The selection changed. Close this and select again.</p>
+                  ) : null}
+                  <Input
+                    type="search"
+                    aria-label="Search pages"
+                    placeholder="Search pages…"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                  {!window ? <p role="status">Loading…</p> : null}
+                  {window ? (
+                    <ul className="max-h-72 space-y-1 overflow-y-auto">
+                      {parentPageId ? (
+                        <li>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start"
+                            disabled={blocked}
+                            onClick={() => enterSpace(window.space.id)}
+                          >
+                            Back to {window.space.title || "Untitled space"}
+                          </Button>
+                        </li>
+                      ) : null}
+                      {atTop && !blocks && matches(window.space.title || "Untitled space") ? (
+                        <li>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start"
+                            disabled={
+                              !writable || blocked || !selectionReady || window.nextCursor !== null
+                            }
+                            onClick={() => run(moveToTop(window.space.id))}
+                          >
+                            {window.space.title || "Untitled space"} (top level)
+                          </Button>
+                        </li>
+                      ) : null}
+                      {visiblePages.map((page) => (
+                        <li key={page.id} className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="min-w-0 flex-1 justify-start"
+                            disabled={
+                              !writable ||
+                              blocked ||
+                              !selectionReady ||
+                              (!blocks && page.id === target.pageId)
+                            }
+                            onClick={() => run(moveInside(page.id))}
+                          >
+                            <span className="truncate">{page.title || "Untitled page"}</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Show pages inside ${page.title || "Untitled page"}`}
+                            disabled={blocked || (!blocks && page.id === target.pageId)}
+                            onClick={() => enterPage(page.id)}
+                          >
+                            <ChevronRightIcon />
+                          </Button>
+                        </li>
+                      ))}
+                      {!parentPageId
+                        ? otherSpaces.map((space) => (
+                            <li key={space.id}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start"
+                                disabled={blocked}
+                                onClick={() => enterSpace(space.id)}
+                              >
+                                {space.title || "Untitled space"}
+                              </Button>
+                            </li>
+                          ))
+                        : null}
+                      {visiblePages.length === 0 && otherSpaces.length === 0 ? (
+                        <li className="px-2 text-sm text-muted-foreground">No pages found.</li>
+                      ) : null}
+                    </ul>
+                  ) : null}
+                  {window?.nextCursor ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={blocked}
+                      onClick={() =>
+                        run(owner.browse(window.space.id, target.pageId, true, parentPageId))
+                      }
+                    >
+                      Show more
+                    </Button>
+                  ) : null}
+                </>
+              )}
+            </div>
+          </DialogPanel>
         </DialogPopup>
       </Dialog>
-    </div>
+    </>
   );
 }
