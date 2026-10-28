@@ -37,6 +37,9 @@ export type StartupPresentation = typeof StartupPresentation.Type;
 export interface ServerDerivedPaths {
   readonly stateDir: string;
   readonly dbPath: string;
+  readonly spacesDbPath: string;
+  readonly spacesAssetsDir: string;
+  readonly spacesStagingDir: string;
   readonly keybindingsConfigPath: string;
   readonly settingsPath: string;
   readonly environmentThemesDir: string;
@@ -154,6 +157,9 @@ export const deriveServerPaths = Effect.fn(function* (
   return {
     stateDir,
     dbPath,
+    spacesDbPath: join(stateDir, "spaces.sqlite"),
+    spacesAssetsDir: join(stateDir, "spaces", "assets"),
+    spacesStagingDir: join(stateDir, "spaces", "staging"),
     keybindingsConfigPath: join(stateDir, "keybindings.json"),
     settingsPath: join(stateDir, "settings.json"),
     environmentThemesDir: join(stateDir, "themes"),
