@@ -302,7 +302,7 @@ function SpacePageMetadata({
   const { page, space, ancestors } = current;
   const resolvedTarget = { ...target, spaceId: page.spaceId };
   const crumb = "truncate rounded-sm hover:text-foreground";
-  const focusTitle = locationState.focusTitle === page.id;
+  const focusTitle = locationState.focusTitle === page.id && page.title === "";
   return (
     <>
       <PageBar
