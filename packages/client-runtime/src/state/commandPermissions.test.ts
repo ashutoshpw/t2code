@@ -83,6 +83,8 @@ describe("command permissions", () => {
           );
           registry.set(sessions(other), AsyncResult.success(grant(true)));
           for (const tag of [
+            WS_METHODS.spacesAssetsUploadCreate,
+            WS_METHODS.spacesAssetsUploadFinalize,
             WS_METHODS.spacesCreate,
             WS_METHODS.spacesRename,
             WS_METHODS.spacesSetDefault,

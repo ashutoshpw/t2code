@@ -347,6 +347,28 @@ describe("Spaces core protocol", () => {
         limits: { ...old.limits, history: { ...history, maxDeltaBytes: 0 } },
       }),
     ).toThrow();
+    const assets = {
+      maxImageBytes: 17,
+      maxPdfBytes: 19,
+      maxVideoBytes: 23,
+      maxImagePixels: 29,
+      maxHeaderBytes: 31,
+      maxEnvironmentBytes: 37,
+      maxPendingPerCaller: 2,
+      maxPendingUploads: 5,
+      maxActiveUploads: 3,
+      uploadTtlMs: 41,
+      recoveryBatchRows: 7,
+      recoveryBatchBytes: 43,
+    };
+    const withAssets = { ...next, limits: { ...next.limits, assets }, assetRecoveryPending: true };
+    expect(decodeCapability(withAssets)).toEqual(withAssets);
+    expect(() =>
+      decodeCapability({
+        ...withAssets,
+        limits: { ...withAssets.limits, assets: { ...assets, maxEnvironmentBytes: 0 } },
+      }),
+    ).toThrow();
     const receipt = {
       operation: "updatePage",
       result: { status: "saved", ...acknowledgement, page },

@@ -1,11 +1,14 @@
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
+import * as Option from "effect/Option";
 
 import { byteLength, checkLimit, canonical, limits } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SearchStore from "./SearchStore.ts";
+import * as AssetReferences from "./assets/References.ts";
+import * as Reconciliation from "./assets/Reconciliation.ts";
 
 export interface BlockRow {
   readonly block_id: string;
@@ -24,7 +27,8 @@ const decodeKnown = Schema.decodeUnknownSync(C.SpaceKnownBlock);
 const knownMark = Schema.is(C.SpaceKnownMark);
 const decodeKnownMark = Schema.decodeUnknownSync(C.SpaceKnownMark);
 const containers = new Set(["bulleted_item", "numbered_item", "todo_item"]);
-const unsupported = new Set(["image", "pdf", "video", "child_page"]);
+const media = new Set(["image", "pdf", "video"]);
+const strictKnown = Schema.decodeUnknownOption(C.SpaceKnownBlock, { onExcessProperty: "error" });
 
 function ownValue(value: unknown, key: PropertyKey) {
   return value !== null && typeof value === "object" && Object.hasOwn(value, key)
@@ -33,16 +37,19 @@ function ownValue(value: unknown, key: PropertyKey) {
 }
 
 function editable(block: C.SpaceBlock) {
-  if (unsupported.has(block.type) || !knownBlock(block)) return false;
+  if (block.type === "child_page" || !knownBlock(block)) return false;
+  if (media.has(block.type) && Option.isNone(strictKnown(block))) return false;
   const content = block.content as Schema.Json;
   if (
     content !== null &&
     typeof content === "object" &&
     !Array.isArray(content) &&
-    "runs" in content &&
-    Array.isArray(content.runs)
+    (("runs" in content && Array.isArray(content.runs)) ||
+      ("caption" in content && Array.isArray(content.caption)))
   ) {
-    for (const run of content.runs) {
+    const runs = "runs" in content ? content.runs : content.caption;
+    if (!Array.isArray(runs)) return false;
+    for (const run of runs) {
       if (
         run === null ||
         typeof run !== "object" ||
@@ -130,6 +137,7 @@ export const apply = Effect.fnUntraced(function* (
       const block = mutation.block;
       if (!editable(block))
         return yield* new C.SpaceValidationError({ reason: "unsupported_block" });
+      if (media.has(block.type)) yield* AssetReferences.validate(decodeKnown(block));
       checkLimit("maxIdBytes", byteLength(block.id));
       if (block.parentId !== null) checkLimit("maxIdBytes", byteLength(block.parentId));
       checkLimit("maxOrderBytes", byteLength(block.order));
@@ -140,9 +148,15 @@ export const apply = Effect.fnUntraced(function* (
       if (previous) {
         const decoded = decodeKnown(previous);
         const projected = { ...decoded, content: { ...decoded.content } };
-        if ("runs" in decoded.content) {
+        const runs =
+          "runs" in decoded.content
+            ? decoded.content.runs
+            : "caption" in decoded.content
+              ? decoded.content.caption
+              : undefined;
+        if (runs !== undefined) {
           Object.assign(projected.content, {
-            runs: decoded.content.runs.map((run) => ({
+            ["runs" in decoded.content ? "runs" : "caption"]: runs.map((run) => ({
               text: run.text,
               marks: run.marks.map((mark) => {
                 const keys =
@@ -235,12 +249,24 @@ export const apply = Effect.fnUntraced(function* (
     payload: string;
     size: number;
   }> = [];
+  const assetRefsAfter: Array<{ blockId: string; assetId: C.SpaceAssetId | null }> = [];
   for (const [id, block] of final) {
     const old = original.get(id);
     const payload = block
       ? canonical(block)
       : canonical({ id, pageId, mergedInto: merges.get(id) ?? null });
     if (old?.payload === payload) continue;
+    if (block) yield* Reconciliation.admitBlock(payload);
+    const previous = old && !old.deleted ? storedBlockFromRow(old) : null;
+    const wasMedia = previous !== null && media.has(previous.type);
+    if (wasMedia) yield* AssetReferences.requireCurrent(decodeKnown(previous));
+    if (wasMedia || (block !== null && media.has(block.type))) {
+      const known = block ? decodeKnown(block) : null;
+      assetRefsAfter.push({
+        blockId: id,
+        assetId: known && "assetId" in known.content ? known.content.assetId : null,
+      });
+    }
     const size = Buffer.byteLength(payload, "utf8");
     count += (block ? 1 : 0) - (old && !old.deleted ? 1 : 0);
     bytes += (block ? size : 0) - (old && !old.deleted ? old.logical_bytes : 0);
@@ -262,5 +288,7 @@ export const apply = Effect.fnUntraced(function* (
     bytes,
     retiredIds: changes.filter((change) => change.block === null).map((change) => change.id),
     blocksBefore: changes.map(({ id, old }) => ({ id, row: old ? { ...old } : null })),
+    assetRefsAfter,
+    blocksAfter: changes.map(({ id, block, payload }) => ({ id, payload: block ? payload : null })),
   };
 });

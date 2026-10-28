@@ -62,6 +62,13 @@ Persisted events must remain decodable on replay. Changing a schema affects old 
 startup as well as live RPC traffic. Compatibility work must account for stored history, not just
 what the newest client sends.
 
+Spaces is a separate durable authority, not an orchestration projection. Its
+[database tag](../../apps/server/src/spaces/SpacesSql.ts) and migration ledger must stay separate
+from chat persistence; a chat receipt cannot certify a Spaces write. Asset publication also spans
+SQLite and the filesystem without a shared commit. Preserve the
+[service's](../../apps/server/src/spaces/SpacesService.ts) durable upload and generation checks
+during recovery rather than treating file presence as proof of readiness.
+
 ## Turn completion and checkpoints
 
 A provider turn ending and its follow-up work settling are separate milestones. Orchestration

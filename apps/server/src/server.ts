@@ -483,7 +483,10 @@ const layerProjectFaviconResolver = ProjectFaviconResolver.layer.pipe(
 const layerSpaces = Layer.unwrap(
   Effect.gen(function* () {
     const config = yield* ServerConfig.ServerConfig;
-    return SpacesService.layerFromPath(config.spacesDbPath);
+    return SpacesService.layerFromPath(config.spacesDbPath, {
+      assetsDir: config.spacesAssetsDir,
+      stagingDir: config.spacesStagingDir,
+    });
   }),
 ).pipe(Layer.provide(layerServerSettings), Layer.provide(ServerEnvironment.layerIdentity));
 
@@ -599,6 +602,7 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   layerIdleCompactionWorker,
   StorageCleanup.layer.pipe(Layer.provide(ProjectionStoreV2.layer)),
   DatabaseStorage.layer.pipe(
+    Layer.provide(layerSpaces),
     Layer.provide(ProjectionMaintenance.layer),
     Layer.provide(
       Layer.merge(EventStoreV2.layerFromOrchestrationEventStore, ProjectionStoreV2.layer),
@@ -743,6 +747,7 @@ const layerMakeRoutes = Layer.mergeAll(
     ServerHttp.layerOtlpTracesProxyRoute,
     ServerHttp.layerAssetRoute,
     ServerHttp.layerAttachmentUploadRoute,
+    ServerHttp.layerSpacesUploadRoute,
     ServerHttp.projectFileUploadRouteLayer,
 
     GuestHttp.layer,

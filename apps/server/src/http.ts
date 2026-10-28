@@ -1,3 +1,5 @@
+import * as SpacesService from "./spaces/SpacesService.ts";
+import { UPLOAD_ROUTE_PREFIX as SPACES_UPLOAD_ROUTE_PREFIX } from "./spaces/assets/Tokens.ts";
 import * as Mime from "effect/http/Mime";
 import {
   AuthOrchestrationOperateScope,
@@ -78,6 +80,8 @@ const DOWNLOAD_MIME_TYPE_PATTERN = /^[\w!#$&^.+-]+\/[\w!#$&^.+-]+$/;
 const isSafeDownloadMimeType = (mimeType: string): boolean =>
   DOWNLOAD_MIME_TYPE_PATTERN.test(mimeType) &&
   !/(?:^text\/html$|\/xml(?:$|-)|\+xml$)/i.test(mimeType.trim().toLowerCase());
+const isSafeInlineImageMimeType = (mimeType: string): boolean =>
+  /^image\/(?:png|jpeg|gif|webp)$/i.test(mimeType);
 const isSafeInlineMediaMimeType = (mimeType: string): boolean =>
   DOWNLOAD_MIME_TYPE_PATTERN.test(mimeType) && /^(?:audio|video)\//i.test(mimeType);
 const isSafeInlineDocumentMimeType = (mimeType: string): boolean =>
@@ -122,7 +126,8 @@ export function assetResponseHeaders(
               ? options.mimeType
               : "application/octet-stream",
         }
-      : inlineMimeType !== undefined && isSafeInlineMediaMimeType(inlineMimeType)
+      : inlineMimeType !== undefined &&
+          (isSafeInlineMediaMimeType(inlineMimeType) || isSafeInlineImageMimeType(inlineMimeType))
         ? { "Content-Type": inlineMimeType }
         : inlineMimeType !== undefined && isSafeInlineDocumentMimeType(inlineMimeType)
           ? {
@@ -432,7 +437,8 @@ const layerUntracedRequests = Layer.succeed(HttpMiddleware.TracerDisabledWhen)((
     UNTRACED_REQUEST_PATHS.has(path) ||
     path.startsWith(`${WEBHOOK_ROUTE_PREFIX}/`) ||
     path.startsWith(`${ASSET_ROUTE_PREFIX}/`) ||
-    path.startsWith(`${ATTACHMENT_UPLOAD_ROUTE_PREFIX}/`)
+    path.startsWith(`${ATTACHMENT_UPLOAD_ROUTE_PREFIX}/`) ||
+    path.startsWith(`${SPACES_UPLOAD_ROUTE_PREFIX}/`)
   );
 });
 
@@ -493,6 +499,45 @@ export const layerAssetRoute = HttpRouter.add(
     ).pipe(
       Effect.orElseSucceed(() => HttpServerResponse.text("Internal Server Error", { status: 500 })),
     );
+  }),
+);
+
+export const layerSpacesUploadRoute = HttpRouter.add(
+  "POST",
+  `${SPACES_UPLOAD_ROUTE_PREFIX}/*`,
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const url = HttpServerRequest.toURL(request);
+    if (Option.isNone(url)) return HttpServerResponse.empty({ status: 400 });
+    const token = url.value.pathname.slice(`${SPACES_UPLOAD_ROUTE_PREFIX}/`.length);
+    const service = yield* SpacesService.SpacesService;
+    const pull = yield* Stream.toPull(request.stream);
+    return yield* service
+      .receiveAssetUpload(
+        token,
+        request.headers["content-length"],
+        Stream.fromPull(Effect.succeed(pull)),
+      )
+      .pipe(
+        Effect.as(HttpServerResponse.empty({ status: 204 })),
+        Effect.catchTags({
+          SpaceAssetError: (error) =>
+            Effect.succeed(
+              HttpServerResponse.text(error.message, {
+                status:
+                  error.reason === "invalid_token" || error.reason === "expired"
+                    ? 404
+                    : error.reason === "already_claimed"
+                      ? 409
+                      : 400,
+              }),
+            ),
+          SpacesDisabledError: () => Effect.succeed(HttpServerResponse.empty({ status: 404 })),
+          SpaceEnvironmentMismatchError: () =>
+            Effect.succeed(HttpServerResponse.empty({ status: 404 })),
+        }),
+        Effect.orElseSucceed(() => HttpServerResponse.empty({ status: 503 })),
+      );
   }),
 );
 

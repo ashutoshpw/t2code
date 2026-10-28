@@ -731,6 +731,27 @@ export const WsSpacesReceiptsGetRpc = Rpc.make(WS_METHODS.spacesReceiptsGet, {
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
 
+export const WsSpacesAssetsUploadCreateRpc = Rpc.make(WS_METHODS.spacesAssetsUploadCreate, {
+  payload: Spaces.SpaceAssetUploadCreateInput,
+  success: Spaces.SpaceAssetUploadCreateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesAssetsUploadGetRpc = Rpc.make(WS_METHODS.spacesAssetsUploadGet, {
+  payload: Spaces.SpaceAssetUploadInput,
+  success: Spaces.SpaceAssetUploadStatus,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesAssetsUploadFinalizeRpc = Rpc.make(WS_METHODS.spacesAssetsUploadFinalize, {
+  payload: Spaces.SpaceAssetUploadInput,
+  success: Spaces.SpaceAssetMetadata,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesAssetsGetRpc = Rpc.make(WS_METHODS.spacesAssetsGet, {
+  payload: Spaces.SpaceAssetGetInput,
+  success: Spaces.SpaceAssetMetadata,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
 const WsServerUpsertKeybindingRpc = Rpc.make(WS_METHODS.serverUpsertKeybinding, {
   payload: ServerUpsertKeybindingInput,
   success: ServerUpsertKeybindingResult,
@@ -1496,7 +1517,7 @@ const WsAgentSessionsImportRpc = Rpc.make(WS_METHODS.agentSessionsImport, {
 const WsAssetsCreateUrlRpc = Rpc.make(WS_METHODS.assetsCreateUrl, {
   payload: AssetCreateUrlInput,
   success: AssetCreateUrlResult,
-  error: Schema.Union([AssetAccessError, EnvironmentAuthorizationError]),
+  error: Schema.Union([Spaces.SpaceServiceError, AssetAccessError, EnvironmentAuthorizationError]),
 });
 
 const WsAssetsPersistChatAttachmentsRpc = Rpc.make(WS_METHODS.assetsPersistChatAttachments, {
@@ -2093,6 +2114,10 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesBlocksReadRpc,
   WsSpacesBlocksApplyRpc,
   WsSpacesReceiptsGetRpc,
+  WsSpacesAssetsUploadCreateRpc,
+  WsSpacesAssetsUploadGetRpc,
+  WsSpacesAssetsUploadFinalizeRpc,
+  WsSpacesAssetsGetRpc,
   WsSpacesPagesCreateChildRpc,
   WsSpacesPagesMoveRpc,
   WsSpacesStructureInspectRpc,

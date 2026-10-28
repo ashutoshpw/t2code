@@ -1,3 +1,7 @@
+import * as SpacesService from "../spaces/SpacesService.ts";
+import * as Settings from "../serverSettings.ts";
+import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
+import { EnvironmentId } from "@t2code/contracts";
 // @effect-diagnostics nodeBuiltinImport:off - tests inject swaps at the native open boundary.
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeHttpPlatform from "@effect/platform-node/NodeHttpPlatform";
@@ -100,6 +104,20 @@ const oversizedScreenshotItem = {
 };
 
 const layerTest = Layer.mergeAll(
+  Layer.unwrap(
+    Effect.gen(function* () {
+      const config = yield* ServerConfig.ServerConfig;
+      return SpacesService.layerFromPath(config.spacesDbPath);
+    }),
+  ).pipe(
+    Layer.provide(layerConfig),
+    Layer.provide(Settings.layerTest({ spacesEnabled: false })),
+    Layer.provide(
+      Layer.succeed(ServerEnvironment.ServerEnvironmentIdentity, {
+        getEnvironmentId: Effect.succeed(EnvironmentId.make("assets-test")),
+      }),
+    ),
+  ),
   NodeHttpPlatform.layer,
   Layer.mock(Orchestrator.OrchestratorV2)({
     getTurnItem: ({ itemId }) =>
@@ -1485,6 +1503,8 @@ describe("AssetAccess", () => {
           resource: { _tag: SOURCE_CONTROL_MEDIA_ASSET, cwd: "/repo", url },
         }).pipe(Effect.flip);
         expect(error._tag).toBe("AssetGitHubMediaUrlValidationError");
+        if (error._tag !== "AssetGitHubMediaUrlValidationError")
+          return yield* Effect.die("Expected source-control media denial");
         const encoded = yield* encodeAssetAccessError(error);
         expect(encoded).not.toContain(url);
       }

@@ -11,6 +11,10 @@ type WsRpcMethod = RpcGroup.Rpcs<typeof WsRpcGroup>["_tag"];
 
 // Trace queries and dashboards depend on these labels, including deviations from method prefixes.
 const RPC_AGGREGATES = {
+  [WS_METHODS.spacesAssetsUploadCreate]: "spaces",
+  [WS_METHODS.spacesAssetsUploadGet]: "spaces",
+  [WS_METHODS.spacesAssetsUploadFinalize]: "spaces",
+  [WS_METHODS.spacesAssetsGet]: "spaces",
   [WS_METHODS.spacesList]: "spaces",
   [WS_METHODS.spacesCreate]: "spaces",
   [WS_METHODS.spacesRename]: "spaces",

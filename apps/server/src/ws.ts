@@ -580,6 +580,10 @@ const ServerWsRpcGroup = WsRpcGroup.omit(
   WS_METHODS.spacesBlocksRead,
   WS_METHODS.spacesBlocksApply,
   WS_METHODS.spacesReceiptsGet,
+  WS_METHODS.spacesAssetsUploadCreate,
+  WS_METHODS.spacesAssetsUploadGet,
+  WS_METHODS.spacesAssetsUploadFinalize,
+  WS_METHODS.spacesAssetsGet,
   WS_METHODS.spacesPagesCreateChild,
   WS_METHODS.spacesPagesMove,
   WS_METHODS.spacesStructureInspect,
@@ -1899,7 +1903,7 @@ export const layerWsRpc = (
         return result;
       });
 
-      const spacesHandlers = yield* SpacesRpc.handlers;
+      const spacesHandlers = yield* SpacesRpc.handlers(currentSessionId);
       const handlers = ServerWsRpcGroup.of({
         ...spacesHandlers,
 
@@ -2891,6 +2895,7 @@ export const layerWsRpc = (
           Effect.fnUntraced(function* (input) {
             const path = yield* Path.Path;
             if (
+              input.resource._tag === "spaces-asset" ||
               input.resource._tag === "attachment" ||
               input.resource._tag === "native-app-icon" ||
               input.resource._tag === "tool-output-image" ||
