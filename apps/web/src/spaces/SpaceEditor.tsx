@@ -280,6 +280,10 @@ export function SpaceEditor({
     numbered_item: ["Numbered list", ListOrderedIcon],
     todo_item: ["To-do", ListTodoIcon],
   } as const;
+  const empty = state.doc.childCount === 0;
+  const startWriting = () => {
+    if (empty && structure && complete) adapter.append()(editor.state, editor.view.dispatch);
+  };
   const media = !!selectedId && !!known && ["image", "pdf", "video"].includes(known.type);
   return (
     <section aria-label="Page contents" className="space-y-2" data-space-editor="">
@@ -587,10 +591,15 @@ export function SpaceEditor({
           }
         >
           <SpaceMediaWritableContext.Provider value={mediaEditable && writable}>
-            <EditorContent
-              editor={editor}
-              className="min-h-40 whitespace-pre-wrap break-words [&_.tiptap]:min-h-40 [&_.tiptap]:outline-none"
-            />
+            <div className="relative" onFocus={startWriting}>
+              {empty && writable ? (
+                <p className="pointer-events-none absolute text-muted-foreground">Start writing…</p>
+              ) : null}
+              <EditorContent
+                editor={editor}
+                className="min-h-40 whitespace-pre-wrap break-words [&_.tiptap]:min-h-40 [&_.tiptap]:outline-none"
+              />
+            </div>
           </SpaceMediaWritableContext.Provider>
         </SpaceMentionContext.Provider>
       </SpaceAtomContext.Provider>
