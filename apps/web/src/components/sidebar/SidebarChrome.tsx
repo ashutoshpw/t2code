@@ -1,9 +1,16 @@
-import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  BookOpenIcon,
+  ChartNoAxesColumnIcon,
+  SettingsIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 
 import { useAtomValue } from "@effect/atom-react";
+import { useSpacesEnvironments } from "../../state/spaces";
 import { useEnvironmentIdentificationMode, useAppRailEnabled } from "../../hooks/useSettings";
 import { shortcutLabelForCommand } from "../../keybindings";
 import {
@@ -226,6 +233,7 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
     select: (location) => isSidebarUtilityPage(location.pathname),
   });
   const appRailEnabled = useAppRailEnabled();
+  const spacesSupported = useSpacesEnvironments().length > 0;
   const pullRequestsSupported = usePullRequestsSupported();
   const closeMobileSidebar = () => {
     if (isMobile) {
@@ -281,6 +289,16 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
               icon={<PullRequestGlyph.pullRequest />}
               label="Pull requests"
               onClick={handlePullRequestsClick}
+            />
+          ) : null}
+          {spacesSupported ? (
+            <SidebarUtilityItem
+              icon={<BookOpenIcon />}
+              label="Spaces"
+              onClick={() => {
+                closeMobileSidebar();
+                void navigate({ to: "/spaces" });
+              }}
             />
           ) : null}
           <SidebarUtilityItem

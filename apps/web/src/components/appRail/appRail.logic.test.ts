@@ -12,6 +12,8 @@ describe("resolveAppRailActiveItem", () => {
   it("resolves utility pages", () => {
     expect(resolveAppRailActiveItem("/pull-requests")).toBe("pull-requests");
     expect(resolveAppRailActiveItem("/usage")).toBe("usage");
+    expect(resolveAppRailActiveItem("/spaces")).toBe("spaces");
+    expect(resolveAppRailActiveItem("/spaces/env/space/page")).toBe("spaces");
     expect(resolveAppRailActiveItem("/scheduled-tasks")).toBe("scheduled-tasks");
     expect(resolveAppRailActiveItem("/settings")).toBe("settings");
     expect(resolveAppRailActiveItem("/settings/general")).toBe("settings");
@@ -19,6 +21,7 @@ describe("resolveAppRailActiveItem", () => {
 
   it("does not match prefixes of other paths", () => {
     expect(resolveAppRailActiveItem("/usages")).toBe("threads");
+    expect(resolveAppRailActiveItem("/spaces-extra")).toBe("threads");
     expect(resolveAppRailActiveItem("/settingsx")).toBe("threads");
     expect(resolveAppRailActiveItem("/scheduled-tasks-extra")).toBe("threads");
   });
