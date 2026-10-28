@@ -118,7 +118,7 @@ export default function SpaceSearch({
               unsupported: "Search is not advertised by this environment.",
               unavailable:
                 "Search became unavailable or exceeded client limits; refine the query or retry First results.",
-              building: "Search index is building. Retry explicitly when ready.",
+              building: "Search is still getting ready. Try again in a moment.",
               error: "Search failed. Retry First results.",
             }[window.status]
           }
@@ -135,8 +135,8 @@ export default function SpaceSearch({
           {!ready.result.items.length ? (
             <p className="text-sm text-muted-foreground">
               {ready.result.nextCursor
-                ? "No results in this window. Next results continues the bounded search."
-                : "No results in this window; the search has ended."}
+                ? "No matches yet. Choose Next results to keep searching."
+                : "No results."}
             </p>
           ) : null}
           <ul className="divide-y rounded-lg border">
