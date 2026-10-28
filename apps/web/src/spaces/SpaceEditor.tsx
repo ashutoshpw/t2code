@@ -143,7 +143,9 @@ export function SpaceEditor({
       content: adapter.document.toJSON(),
       immediatelyRender: false,
       editable,
-      editorProps: { attributes: { "aria-label": "Page editor", "aria-multiline": "true" } },
+      editorProps: {
+        attributes: { role: "textbox", "aria-label": "Page editor", "aria-multiline": "true" },
+      },
     },
     [adapter, bridge],
   );
@@ -166,11 +168,8 @@ export function SpaceEditor({
     synchronize();
     return bridge?.controller.subscribe(synchronize);
   }, [editor, bridge, editable, mediaEditable]);
-  const state = useEditorState({
-    editor,
-    selector: ({ editor }) => editor?.state ?? null,
-    equalityFn: Object.is,
-  });
+  useEditorState({ editor, selector: ({ transactionNumber }) => transactionNumber });
+  const state = editor?.state ?? null;
   const revealTarget = (focus = false) => {
     if (!editor || !bridge || !targetBlockId || editor.isDestroyed) return;
     const result = bridge.revealBlock(
