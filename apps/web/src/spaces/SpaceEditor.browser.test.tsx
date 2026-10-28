@@ -121,4 +121,31 @@ describe("SpaceEditor", () => {
     await userEvent.keyboard("Hello");
     await expect.element(screen.getByText("Hello")).toBeVisible();
   });
+
+  it("turns a slash command into the chosen block and removes the slash text", async () => {
+    const onBatch = vi.fn();
+    // The bare editor renders no links or navigation.
+    await using screen = await render(<SpaceEditor adapter={adapter(false)} onBatch={onBatch} />, {
+      router: false,
+    });
+    await userEvent.click(screen.getByRole("textbox", { name: "Page editor" }));
+    await userEvent.keyboard("/");
+    await expect.element(screen.getByRole("option", { name: "Heading 1" })).toBeVisible();
+    await userEvent.keyboard("h1{Enter}");
+    await expect.element(screen.getByRole("heading", { level: 1 })).toBeVisible();
+    const batch = JSON.stringify(onBatch.mock.calls.at(-1)?.[0]);
+    expect(batch).toContain("heading");
+    expect(batch).not.toContain("/");
+  });
+
+  it("formats selected text from the selection toolbar", async () => {
+    const onBatch = vi.fn();
+    // The bare editor renders no links or navigation.
+    await using screen = await render(<SpaceEditor adapter={adapter()} onBatch={onBatch} />, {
+      router: false,
+    });
+    await userEvent.dblClick(screen.getByText("Hello page"));
+    await userEvent.click(screen.getByRole("button", { name: "Bold" }));
+    expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain("bold");
+  });
 });
