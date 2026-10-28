@@ -1,11 +1,25 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import { useContext, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useState,
+  useSyncExternalStore,
+  type Ref,
+} from "react";
 import { useRouter } from "@tanstack/react-router";
 import type { SpaceId, SpacePageId, SpaceTrashEntry } from "@t2code/contracts/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
 import { Trash2Icon } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Dialog, DialogPopup, DialogTitle, DialogDescription } from "../components/ui/dialog";
+import {
+  Dialog,
+  DialogDescription,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { toastManager } from "../components/ui/toast";
 import { RelativeTime } from "../components/RelativeTime";
 import { requestConfirmDialog } from "../confirmDialog";
@@ -17,7 +31,12 @@ import type { SpaceRootReorder } from "@t2code/client-runtime/spaces";
 const run = (work: Promise<unknown>) => {
   void work.catch(() => {});
 };
+export interface SpaceRecoveryHandle {
+  trash(): void;
+  openTrash(): void;
+}
 interface Props {
+  ref?: Ref<SpaceRecoveryHandle>;
   environmentId: EnvironmentId;
   pageId?: SpacePageId;
   spaceId?: SpaceId;
@@ -53,6 +72,7 @@ const failed = (title: string) =>
   toastManager.add({ type: "error", title, description: "Try again in a moment." });
 
 function Recovery({
+  ref,
   environmentId,
   owner,
   pageId,
@@ -162,99 +182,99 @@ function Recovery({
     run(owner.browseTrash());
   };
 
-  if (pageId && spaceId)
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={blocked || !writable || !trashPermission || (!!current && !current())}
-        onClick={() => void trashPage(pageId, spaceId, parentPageId ?? null)}
-      >
-        <Trash2Icon />
-        <span className="sr-only">Move page to trash</span>
-      </Button>
-    );
+  const openTrash = () => {
+    setOpen(true);
+    if (supported) run(owner.browseTrash());
+  };
+  useImperativeHandle(ref, () => ({
+    openTrash,
+    trash: () => {
+      if (!trashPermission || !writable) return void failed("Couldn't move to trash");
+      if (pageId && spaceId) void trashPage(pageId, spaceId, parentPageId ?? null);
+    },
+  }));
   return (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => {
-          setOpen(true);
-          if (supported) run(owner.browseTrash());
-        }}
-      >
-        <Trash2Icon />
-        Trash<span className="sr-only"> and recovery</span>
-      </Button>
+      {pageId ? null : (
+        <Button variant="ghost" size="sm" onClick={openTrash}>
+          <Trash2Icon />
+          Trash
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogPopup>
-          <DialogTitle>Trash</DialogTitle>
-          <DialogDescription>
-            Pages you move to trash stay here until you delete them permanently.
-          </DialogDescription>
-          <div className="mt-4 space-y-3">
-            {!supported ? <p role="status">Trash isn't available on this server.</p> : null}
-            {pending ? (
-              <div className="space-y-2">
-                <p role="status">The last change didn't finish.</p>
+          <DialogHeader>
+            <DialogTitle>Trash</DialogTitle>
+            <DialogDescription>
+              Pages you move to trash stay here until you delete them permanently.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogPanel>
+            <div className="space-y-3">
+              {!supported ? <p role="status">Trash isn't available on this server.</p> : null}
+              {pending ? (
+                <div className="space-y-2">
+                  <p role="status">The last change didn't finish.</p>
+                  <Button
+                    variant="outline"
+                    disabled={
+                      busy || !hydrated || (pending.conflict && availability !== "writable")
+                    }
+                    onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
+                  >
+                    {pending.conflict ? "Dismiss" : "Finish now"}
+                  </Button>
+                </div>
+              ) : null}
+              {trash && trash.items.length === 0 ? <p>Trash is empty.</p> : null}
+              <ul className="space-y-2">
+                {trash?.items.map((entry) => (
+                  <li key={entry.pageId} className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate">{entry.title || "Untitled page"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Deleted <RelativeTime timestamp={entry.trash.trashedAt} />
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={blocked || !writable || !restorePermission}
+                        onClick={() => void restore(entry)}
+                      >
+                        Restore
+                      </Button>
+                      <Button
+                        variant="destructive-outline"
+                        size="sm"
+                        disabled={blocked || !writable || !purgePermission}
+                        onClick={() => void remove(entry)}
+                      >
+                        Delete permanently
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {trash?.nextCursor ? (
                 <Button
                   variant="outline"
-                  disabled={busy || !hydrated || (pending.conflict && availability !== "writable")}
-                  onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
+                  size="sm"
+                  disabled={blocked}
+                  onClick={() => run(owner.browseTrash(true))}
                 >
-                  {pending.conflict ? "Dismiss" : "Finish now"}
+                  Show more
                 </Button>
-              </div>
-            ) : null}
-            {trash && trash.items.length === 0 ? <p>Trash is empty.</p> : null}
-            <ul className="space-y-2">
-              {trash?.items.map((entry) => (
-                <li key={entry.pageId} className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate">{entry.title || "Untitled page"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Deleted <RelativeTime timestamp={entry.trash.trashedAt} />
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={blocked || !writable || !restorePermission}
-                      onClick={() => void restore(entry)}
-                    >
-                      Restore
-                    </Button>
-                    <Button
-                      variant="destructive-outline"
-                      size="sm"
-                      disabled={blocked || !writable || !purgePermission}
-                      onClick={() => void remove(entry)}
-                    >
-                      Delete permanently
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {trash?.nextCursor ? (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={blocked}
-                onClick={() => run(owner.browseTrash(true))}
-              >
-                Show more
-              </Button>
-            ) : null}
-            {!hydrated && snapshot.error ? (
-              <Button variant="outline" disabled={busy} onClick={() => run(owner.hydrate())}>
-                Try again
-              </Button>
-            ) : null}
-            {snapshot.error ? <p role="alert">Something went wrong. Try again.</p> : null}
-          </div>
+              ) : null}
+              {!hydrated && snapshot.error ? (
+                <Button variant="outline" disabled={busy} onClick={() => run(owner.hydrate())}>
+                  Try again
+                </Button>
+              ) : null}
+              {snapshot.error ? <p role="alert">Something went wrong. Try again.</p> : null}
+            </div>
+          </DialogPanel>
         </DialogPopup>
       </Dialog>
     </>

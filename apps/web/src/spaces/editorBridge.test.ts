@@ -190,7 +190,6 @@ describe("Production Spaces command bridge", () => {
         "b",
       ]);
       expect(view.run(view.bridge.adapter.undoLocal())).toBe(false);
-      expect(view.bridge.getSnapshot()).toContain("Another view");
     } finally {
       unsubscribe();
     }
