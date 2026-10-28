@@ -14,6 +14,7 @@ import Migration0008 from "./Migrations/008_Assets.ts";
 import Migration0009 from "./Migrations/009_AssetReconciliation.ts";
 import Migration0010 from "./Migrations/010_AssetCollection.ts";
 import Migration0011 from "./Migrations/011_PageActivity.ts";
+import Migration0012 from "./Migrations/012_PageLibrary.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 
 const APPLICATION_ID = 0x53504143;
@@ -29,6 +30,7 @@ const migrationEntries = [
   [9, "AssetReconciliation", Migration0009],
   [10, "AssetCollection", Migration0010],
   [11, "PageActivity", Migration0011],
+  [12, "PageLibrary", Migration0012],
 ] as const;
 
 export class SpacesDatabaseMismatchError extends Schema.TaggedError<SpacesDatabaseMismatchError>()(

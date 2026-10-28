@@ -112,6 +112,15 @@ export class SpacesService extends Context.Service<
     readonly listPages: (
       input: unknown,
     ) => Effect.Effect<C.SpacePageListResult, C.SpaceServiceError>;
+    readonly addPin: (input: unknown) => Effect.Effect<{}, C.SpaceServiceError>;
+    readonly removePin: (input: unknown) => Effect.Effect<{}, C.SpaceServiceError>;
+    readonly recordRecent: (input: unknown) => Effect.Effect<{}, C.SpaceServiceError>;
+    readonly listPins: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceAllPagesResult, C.SpaceServiceError>;
+    readonly listRecents: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceAllPagesResult, C.SpaceServiceError>;
     readonly listAllPages: (
       input: unknown,
     ) => Effect.Effect<C.SpaceAllPagesResult, C.SpaceServiceError>;
@@ -883,6 +892,133 @@ const make = Effect.fn("SpacesService.make")(function* (
       }),
     );
   });
+  const mutateLibrary = Effect.fn("SpacesService.mutateLibrary")(function* (
+    raw: unknown,
+    operation: "add" | "remove" | "record",
+  ) {
+    const environmentId = yield* admit();
+    const input = yield* validateRaw(raw).pipe(
+      Effect.flatMap(decodeGet),
+      Effect.mapError((e) =>
+        isServiceError(e) ? e : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+    yield* checkEnvironment(environmentId, input.environmentId);
+    return yield* run(environmentId, () =>
+      Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        checkIds(input);
+        PageStore.assertActive(yield* getPageRow(input.pageId));
+        if (operation === "add") {
+          const existing = yield* sql`SELECT 1 FROM spaces_pins WHERE page_id=${input.pageId}`;
+          if (existing.length) return {};
+        }
+        if (operation === "remove") {
+          const existing = yield* sql`SELECT 1 FROM spaces_pins WHERE page_id=${input.pageId}`;
+          if (!existing.length) return {};
+        }
+        yield* sql`UPDATE spaces_library_sequence SET sequence=sequence+1 WHERE singleton=1`;
+        const [state] = yield* sql<{
+          readonly sequence: number;
+        }>`SELECT sequence FROM spaces_library_sequence WHERE singleton=1`;
+        if (!state) return yield* new C.SpacesUnavailableError({ stage: "storage" });
+        if (operation === "add")
+          yield* sql`INSERT INTO spaces_pins(page_id,sequence) VALUES (${input.pageId},${state.sequence})`;
+        else if (operation === "remove")
+          yield* sql`DELETE FROM spaces_pins WHERE page_id=${input.pageId}`;
+        else {
+          yield* sql`INSERT INTO spaces_recents(page_id,sequence) VALUES (${input.pageId},${state.sequence}) ON CONFLICT(page_id) DO UPDATE SET sequence=excluded.sequence`;
+          yield* sql`DELETE FROM spaces_recents WHERE page_id IN (SELECT page_id FROM spaces_recents ORDER BY sequence DESC,page_id LIMIT -1 OFFSET 50)`;
+        }
+        return {};
+      }),
+    );
+  });
+  const addPin = Effect.fn("SpacesService.addPin")((input: unknown) => mutateLibrary(input, "add"));
+  const removePin = Effect.fn("SpacesService.removePin")((input: unknown) =>
+    mutateLibrary(input, "remove"),
+  );
+  const recordRecent = Effect.fn("SpacesService.recordRecent")((input: unknown) =>
+    mutateLibrary(input, "record"),
+  );
+  const listLibrary = Effect.fn("SpacesService.listLibrary")(function* (
+    raw: unknown,
+    kind: "pins" | "recents",
+  ) {
+    const environmentId = yield* admit();
+    const input = yield* validateRaw(raw).pipe(
+      Effect.flatMap(decodeList),
+      Effect.mapError((e) =>
+        isServiceError(e) ? e : new C.SpaceValidationError({ reason: "invalid_input" }),
+      ),
+    );
+    yield* checkEnvironment(environmentId, input.environmentId);
+    return yield* run(environmentId, (meta) =>
+      Effect.gen(function* () {
+        const sql = yield* SpacesSql.SpacesSql;
+        const limit = input.limit ?? limits.maxListRows;
+        checkLimit("maxListRows", limit);
+        const [state] = yield* sql<{
+          readonly sequence: number;
+        }>`SELECT sequence FROM spaces_library_sequence WHERE singleton=1`;
+        if (!state) return yield* new C.SpacesUnavailableError({ stage: "storage" });
+        const filter = String(state.sequence);
+        const cursor = cursorFrom(
+          input.cursor,
+          environmentId,
+          `listLibrary:${kind}`,
+          filter,
+          meta.catalog_revision,
+        );
+        const sequence = cursor ? Number(cursor.key) : 0;
+        if (cursor && (!Number.isSafeInteger(sequence) || String(sequence) !== cursor.key))
+          return yield* new C.SpaceValidationError({ reason: "invalid_cursor" });
+        const after = cursor
+          ? sql`AND (l.sequence < ${sequence} OR (l.sequence = ${sequence} AND l.page_id > ${cursor.id}))`
+          : sql``;
+        const table = kind === "pins" ? sql`spaces_pins` : sql`spaces_recents`;
+        const rows = yield* sql<
+          PageRow & { readonly space_title: string; readonly sequence: number }
+        >`SELECT p.*,s.title AS space_title,l.sequence,
+        o.owner_block_id,b.page_id AS parent_page_id,b.deleted AS owner_deleted,parent.space_id AS parent_space_id,json_extract(b.payload,'$.type') AS owner_type
+        FROM ${table} l JOIN spaces_pages p ON p.page_id=l.page_id JOIN spaces s ON s.space_id=p.space_id
+        LEFT JOIN spaces_page_owners o ON o.child_page_id=p.page_id LEFT JOIN spaces_blocks b ON b.block_id=o.owner_block_id
+        LEFT JOIN spaces_pages parent ON parent.page_id=b.page_id WHERE p.trash_batch_id IS NULL ${after}
+        ORDER BY l.sequence DESC,l.page_id LIMIT ${limit + 1}`;
+        let take = Math.min(limit, rows.length);
+        while (true) {
+          const last = rows[take - 1];
+          const result: C.SpaceAllPagesResult = {
+            items: rows
+              .slice(0, take)
+              .map((row) => ({ page: pageSummary(row), spaceTitle: row.space_title })),
+            catalogRevision: meta.catalog_revision,
+            nextCursor:
+              take < rows.length && last
+                ? cursorFor(
+                    environmentId,
+                    `listLibrary:${kind}`,
+                    filter,
+                    meta.catalog_revision,
+                    String(last.sequence),
+                    last.page_id,
+                  )
+                : null,
+          };
+          const size = byteLength(result);
+          if (size <= limits.maxListResponseBytes) return result;
+          if (take <= 1) checkLimit("maxListResponseBytes", size);
+          take--;
+        }
+      }),
+    );
+  });
+  const listPins = Effect.fn("SpacesService.listPins")((input: unknown) =>
+    listLibrary(input, "pins"),
+  );
+  const listRecents = Effect.fn("SpacesService.listRecents")((input: unknown) =>
+    listLibrary(input, "recents"),
+  );
   const listAssets = Effect.fn("SpacesService.listAssets")(function* (raw: unknown) {
     const environmentId = yield* admit();
     const input = yield* validateRaw(raw).pipe(
@@ -1877,6 +2013,8 @@ const make = Effect.fn("SpacesService.make")(function* (
             assetRecoveryPending,
             assetReconciliation: yield* Reconciliation.status(),
             features: {
+              pins: true,
+              recents: true,
               assetList: true,
               allPages: true,
               blockMoves: true,
@@ -2140,6 +2278,11 @@ const make = Effect.fn("SpacesService.make")(function* (
     listSpaces,
     listPages,
     listAllPages,
+    addPin,
+    removePin,
+    listPins,
+    recordRecent,
+    listRecents,
     listAssets,
     getPage,
     readBlocks,

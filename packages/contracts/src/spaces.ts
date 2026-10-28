@@ -751,6 +751,8 @@ export const SpaceCapability = Schema.Struct({
   // Flags describe implemented methods, independently of permissions and index readiness.
   features: Schema.optionalKey(
     Schema.Struct({
+      pins: Schema.optionalKey(Schema.Literal(true)),
+      recents: Schema.optionalKey(Schema.Literal(true)),
       assetList: Schema.optionalKey(Schema.Literal(true)),
       allPages: Schema.optionalKey(Schema.Literal(true)),
       blockMoves: Schema.optionalKey(Schema.Literal(true)),

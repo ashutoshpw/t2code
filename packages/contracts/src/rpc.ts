@@ -393,6 +393,11 @@ export const WS_METHODS = {
   spacesSetDefault: "spaces.setDefault",
   spacesPagesList: "spaces.pages.list",
   spacesPagesListAll: "spaces.pages.listAll",
+  spacesPinsAdd: "spaces.pins.add",
+  spacesPinsRemove: "spaces.pins.remove",
+  spacesPinsList: "spaces.pins.list",
+  spacesRecentsRecord: "spaces.recents.record",
+  spacesRecentsList: "spaces.recents.list",
   spacesPagesGet: "spaces.pages.get",
   spacesPagesCreate: "spaces.pages.create",
   spacesPagesUpdate: "spaces.pages.update",
@@ -653,6 +658,32 @@ export const WsSpacesPagesListRpc = Rpc.make(WS_METHODS.spacesPagesList, {
 });
 
 export const WsSpacesPagesListAllRpc = Rpc.make(WS_METHODS.spacesPagesListAll, {
+  payload: Spaces.SpaceListInput,
+  success: Spaces.SpaceAllPagesResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesPinsAddRpc = Rpc.make(WS_METHODS.spacesPinsAdd, {
+  payload: Spaces.SpacePageGetInput,
+  success: Schema.Struct({}),
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesPinsRemoveRpc = Rpc.make(WS_METHODS.spacesPinsRemove, {
+  payload: Spaces.SpacePageGetInput,
+  success: Schema.Struct({}),
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesRecentsRecordRpc = Rpc.make(WS_METHODS.spacesRecentsRecord, {
+  payload: Spaces.SpacePageGetInput,
+  success: Schema.Struct({}),
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesPinsListRpc = Rpc.make(WS_METHODS.spacesPinsList, {
+  payload: Spaces.SpaceListInput,
+  success: Spaces.SpaceAllPagesResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+export const WsSpacesRecentsListRpc = Rpc.make(WS_METHODS.spacesRecentsList, {
   payload: Spaces.SpaceListInput,
   success: Spaces.SpaceAllPagesResult,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
@@ -2121,6 +2152,11 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesSetDefaultRpc,
   WsSpacesPagesListRpc,
   WsSpacesPagesListAllRpc,
+  WsSpacesPinsAddRpc,
+  WsSpacesPinsRemoveRpc,
+  WsSpacesPinsListRpc,
+  WsSpacesRecentsRecordRpc,
+  WsSpacesRecentsListRpc,
   WsSpacesPagesGetRpc,
   WsSpacesPagesCreateRpc,
   WsSpacesPagesUpdateRpc,

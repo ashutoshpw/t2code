@@ -1409,6 +1409,8 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           const capability = yield* service.getCapability(environmentId);
           assert.equal(capability?.version, 2);
           assert.deepEqual(capability?.features, {
+            pins: true,
+            recents: true,
             assetList: true,
             allPages: true,
             blockMoves: true,
@@ -1741,6 +1743,86 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           );
         }),
       ),
+  );
+
+  it.effect("bounds recents and moves a revisited page to the front", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const { service, common, page } = yield* boot();
+        yield* service.recordRecent({ ...env, pageId: page.id });
+        for (let i = 0; i < 50; i++) {
+          const next = yield* rootPage(service, common, page.spaceId, `recent-${i}`);
+          yield* service.recordRecent({ ...env, pageId: next.id });
+        }
+        const before = yield* service.listRecents({ ...env, limit: 50 });
+        assert.lengthOf(before.items, 50);
+        assert.isFalse(before.items.some((item) => item.page.id === page.id));
+        yield* service.recordRecent({ ...env, pageId: page.id });
+        const after = yield* service.listRecents({ ...env, limit: 50 });
+        assert.lengthOf(after.items, 50);
+        assert.equal(after.items[0]?.page.id, page.id);
+        assert.isNull(after.nextCursor);
+      }),
+    ),
+  );
+
+  it.effect("persists pins and deduplicated recents across trash, restore and purge", () =>
+    fixture((dbPath) =>
+      Effect.gen(function* () {
+        const { service, common, page } = yield* boot();
+        const other = yield* rootPage(service, common, page.spaceId, "library-other");
+        const target = { ...env, pageId: page.id };
+        yield* service.addPin(target);
+        yield* service.addPin(target);
+        yield* service.addPin({ ...env, pageId: other.id });
+        yield* service.recordRecent(target);
+        yield* service.recordRecent({ ...env, pageId: other.id });
+        yield* service.recordRecent(target);
+        assert.deepEqual(
+          (yield* service.listRecents(env)).items.map((item) => item.page.id),
+          [page.id, other.id],
+        );
+        const first = yield* service.listPins({ ...env, limit: 1 });
+        assert.deepEqual(
+          first.items.map((item) => item.page.id),
+          [other.id],
+        );
+        const second = yield* service.listPins({ ...env, limit: 1, cursor: first.nextCursor! });
+        assert.deepEqual(
+          second.items.map((item) => item.page.id),
+          [page.id],
+        );
+        yield* service.trashPage(
+          yield* recoveryIntent(service, common, page.id, "trash", "library-trash"),
+        );
+        assert.deepEqual(
+          (yield* service.listPins(env)).items.map((item) => item.page.id),
+          [other.id],
+        );
+        assert.deepEqual(
+          (yield* service.listRecents(env)).items.map((item) => item.page.id),
+          [other.id],
+        );
+        yield* service.restorePage(
+          yield* recoveryIntent(service, common, page.id, "restore", "library-restore"),
+        );
+        assert.lengthOf((yield* service.listPins(env)).items, 2);
+        yield* service.removePin({ ...env, pageId: other.id });
+        yield* service.trashPage(
+          yield* recoveryIntent(service, common, page.id, "trash", "library-trash-again"),
+        );
+        yield* service.permanentlyDeletePage(
+          yield* recoveryIntent(service, common, page.id, "permanentlyDelete", "library-purge"),
+        );
+        const counts = yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          return yield* sql<{
+            readonly count: number;
+          }>`SELECT (SELECT count(*) FROM spaces_pins) + (SELECT count(*) FROM spaces_recents WHERE page_id=${page.id}) AS count`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
+        assert.equal(counts[0]?.count, 0);
+      }),
+    ),
   );
 
   it.effect("lists active pages across spaces with revision-bound cursors", () =>
