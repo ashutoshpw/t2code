@@ -108,12 +108,23 @@ export function applyServerConfigProjection(
       }));
     case "settingsUpdated":
       return Option.map(current, (projection) => {
+        let environment = projection.config.environment;
+        if (event.payload.spaces !== undefined) {
+          const { spaces: _spaces, ...capabilities } = environment.capabilities;
+          environment = reuseUnchanged(environment, {
+            ...environment,
+            capabilities: {
+              ...capabilities,
+              ...(event.payload.spaces === null ? {} : { spaces: event.payload.spaces }),
+            },
+          });
+        }
         const settings = reuseUnchanged(projection.config.settings, event.payload.settings);
         return {
           config:
-            settings === projection.config.settings
+            settings === projection.config.settings && environment === projection.config.environment
               ? projection.config
-              : { ...projection.config, settings },
+              : { ...projection.config, settings, environment },
           latestEvent: event,
           source: "live",
         };

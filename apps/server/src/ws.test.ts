@@ -129,6 +129,9 @@ import * as Keybindings from "./keybindings.ts";
 import { USAGE_LIMITS_COMMAND } from "@t3tools/shared/usageLimits";
 import * as ServerSettings from "./serverSettings.ts";
 import * as ManagedPolicy from "./policy/ManagedPolicy.ts";
+import * as SpacesService from "./spaces/SpacesService.ts";
+import { limits as spacesLimits } from "./spaces/CorePolicy.ts";
+import type { SpaceCapability } from "@t2code/contracts/spaces";
 
 import * as ThreadManagement from "./orchestration-v2/ThreadManagementService.ts";
 import * as ProjectStore from "./orchestration-v2/ProjectStore.ts";
@@ -149,18 +152,31 @@ import {
 const snapshotConfig = (fields: Partial<ServerConfig>) =>
   ({ availableEditors: [], settings: {}, ...fields }) as unknown as ServerConfig;
 
-const settingsUpdated = (settings: object): ServerConfigStreamEvent => ({
+const settingsUpdated = (
+  settings: object,
+  spaces?: SpaceCapability | null,
+): ServerConfigStreamEvent => ({
   version: 1,
   type: "settingsUpdated",
-  payload: { settings: settings as ServerConfig["settings"] },
+  payload: {
+    settings: settings as ServerConfig["settings"],
+    ...(spaces === undefined ? {} : { spaces }),
+  },
 });
 
 it.effect("resends late editors without rolling back updates already sent", () =>
   Effect.gen(function* () {
     const settingsSent = yield* Deferred.make<void>();
     const events = yield* withLateConfigDiscovery(
-      snapshotConfig({ settings: { enableProviderUpdateChecks: true } as never }),
-      Stream.make(settingsUpdated({ enableProviderUpdateChecks: false })),
+      snapshotConfig({
+        settings: { enableProviderUpdateChecks: true, spacesEnabled: true } as never,
+        environment: {
+          capabilities: { repositoryIdentity: true, spaces: { version: 1, limits: spacesLimits } },
+        } as ServerConfig["environment"],
+      }),
+      Stream.make(
+        settingsUpdated({ enableProviderUpdateChecks: false, spacesEnabled: false }, null),
+      ),
       {
         resolveAvailableEditors: () => Effect.succeed(["file-manager"]),
         resolveFileManagerRevealKind: () =>
@@ -182,7 +198,12 @@ it.effect("resends late editors without rolling back updates already sent", () =
     if (second?.type === "snapshot") {
       assert.deepEqual(second.config.availableEditors, ["file-manager"]);
       assert.equal(second.config.shellRevealInFileManagerKind, "file-explorer");
-      assert.deepEqual(second.config.settings, { enableProviderUpdateChecks: false } as never);
+      assert.deepEqual(second.config.settings, {
+        enableProviderUpdateChecks: false,
+        spacesEnabled: false,
+      } as never);
+      assert.isFalse(Object.hasOwn(second.config.environment.capabilities, "spaces"));
+      assert.isTrue(second.config.environment.capabilities.repositoryIdentity);
     }
   }),
 );
@@ -765,6 +786,7 @@ it.effect("shell snapshots omit idle children and older settled threads only on 
 
 // Build the production RPC layer; unrelated capabilities fail if this test calls them.
 const layerUnusedConfigRpcServices = Layer.mergeAll(
+  Layer.mock(SpacesService.SpacesService)({ getCapability: () => Effect.succeed(null) }),
   Layer.mock(DocumentText.DocumentText)({}),
   Layer.mock(ServerSecretStore.ServerSecretStore)({}),
   Layer.mock(WorkspacePaths.WorkspacePaths)({}),
@@ -1014,7 +1036,10 @@ it.effect.each([
       yield* Deferred.await(discoveryStarted);
       assert.isTrue(yield* Deferred.isDone(remoteDiscoveryStarted));
 
-      const duringDiscovery = yield* settings.updateSettings({ defaultAutoPull: true });
+      const duringDiscovery = yield* settings.updateSettings({
+        defaultAutoPull: true,
+        spacesEnabled: true,
+      });
       yield* Deferred.succeed(finishDiscovery, undefined);
       const snapshot = yield* Queue.take(responses);
       assert.equal(snapshot.type, "snapshot");
@@ -1038,7 +1063,10 @@ it.effect.each([
       yield* Deferred.await(settingsSubscribed);
 
       // Later updates expose a dropped buffered event as a value mismatch, not a timeout.
-      const latestSettings = yield* settings.updateSettings({ enableProviderUpdateChecks: false });
+      const latestSettings = yield* settings.updateSettings({
+        enableProviderUpdateChecks: false,
+        spacesEnabled: false,
+      });
       const latestKeybindings = yield* keybindings.upsertKeybindingRule({
         key: "mod+alt+z",
         command: "terminal.split",
@@ -1052,6 +1080,7 @@ it.effect.each([
         const event = yield* Queue.take(responses);
         if (event.type === "settingsUpdated") {
           assert.deepEqual(event.payload.settings, expectedSettings.shift());
+          assert.isNull(event.payload.spaces);
         } else {
           assert.equal(event.type, "keybindingsUpdated");
           if (event.type !== "keybindingsUpdated")
