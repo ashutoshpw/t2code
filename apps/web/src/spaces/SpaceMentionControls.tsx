@@ -126,25 +126,27 @@ export function SpaceMentionControls({
         setState({ owner, busy: false, window: ready });
       });
   };
+  const showButton = available && !!owner?.supported();
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Insert page or block mention…"
-              disabled={!available || !owner?.supported()}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={select}
-            />
-          }
-        >
-          <AtSignIcon />
-        </TooltipTrigger>
-        <TooltipPopup side="bottom">Insert page or block mention…</TooltipPopup>
-      </Tooltip>
+      {showButton ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Insert page or block mention…"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={select}
+              />
+            }
+          >
+            <AtSignIcon />
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">Insert page or block mention…</TooltipPopup>
+        </Tooltip>
+      ) : null}
       {selection ? (
         <Dialog
           open
