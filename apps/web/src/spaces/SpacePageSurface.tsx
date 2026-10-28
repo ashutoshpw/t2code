@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type RefObject,
 } from "react";
 import {
   ArrowUpRightIcon,
@@ -41,6 +40,8 @@ import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelSt
 import { SpacePinButton } from "./SpacePinButton";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
+import type { SpaceRecoveryHandle } from "./SpaceRecoveryControls";
+import type { SpaceStructureHandle } from "./SpaceStructureControls";
 
 const PageTitleField = lazy(() =>
   import("./SpaceLibraryControls").then((module) => ({ default: module.PageTitleField })),
@@ -160,13 +161,6 @@ function EditedMeta({ updatedAt }: { updatedAt: string }) {
   );
 }
 
-const pressHidden = (root: RefObject<HTMLElement | null>, label: RegExp) => {
-  const button = [...(root.current?.querySelectorAll("button") ?? [])].find((element) =>
-    label.test(element.textContent?.trim() ?? ""),
-  );
-  button?.click();
-};
-
 function SpacePageMetadata({
   target,
   fullPage = false,
@@ -207,7 +201,8 @@ function SpacePageMetadata({
   const query = useEnvironmentQuery(owner.query);
   const router = useRouter();
   const locationState = useRouterState({ select: (state) => state.location.state });
-  const actions = useRef<HTMLDivElement>(null);
+  const structure = useRef<SpaceStructureHandle>(null);
+  const recovery = useRef<SpaceRecoveryHandle>(null);
   const mainAppThreadRef = useMainAppThreadRef();
   const navigateToMainApp = useNavigateToMainApp();
   // oxlint-disable-next-line t2code/react-effect-budget -- apply current location to the persisted panel hint and canonical route.
@@ -291,7 +286,7 @@ function SpacePageMetadata({
         </PageColumn>
       </>
     );
-  const current = query.isSuccess && !query.isPending ? query.data?.current() : null;
+  const current = query.isSuccess ? query.data?.current() : null;
   if (!current)
     return (
       <>
@@ -366,11 +361,11 @@ function SpacePageMetadata({
           <MenuPopup align="end">
             {version === 2 ? (
               <>
-                <MenuItem onClick={() => pressHidden(actions, /^Move page$/)}>
+                <MenuItem onClick={() => structure.current?.openMove()}>
                   <FolderInputIcon />
                   Move to…
                 </MenuItem>
-                <MenuItem onClick={() => pressHidden(actions, /^Create child page$/)}>
+                <MenuItem onClick={() => structure.current?.openChild()}>
                   <FilePlusIcon />
                   Add sub-page
                 </MenuItem>
@@ -425,43 +420,50 @@ function SpacePageMetadata({
             ) : null}
             {version === 2 ? (
               <>
-                <MenuItem onClick={() => pressHidden(actions, /^Move page to trash/)}>
+                <MenuItem onClick={() => recovery.current?.trash()}>
                   <Trash2Icon />
                   Move to trash
                 </MenuItem>
                 <MenuSeparator />
-                <MenuItem onClick={() => pressHidden(actions, /^Trash and recovery$/)}>
-                  View trash
-                </MenuItem>
+                <MenuItem onClick={() => recovery.current?.openTrash()}>View trash</MenuItem>
               </>
             ) : null}
           </MenuPopup>
         </Menu>
-        {version === 2 ? (
-          <div hidden ref={actions}>
-            <Suspense fallback={null}>
-              <SpaceStructureControls
-                key={JSON.stringify([target.environmentId, target.pageId])}
-                target={resolvedTarget}
-                location={page.location}
-                current={() => {
-                  const live = query.isPending ? null : query.data?.current();
-                  return (
-                    live?.page.id === target.pageId &&
-                    live.page.spaceId === resolvedTarget.spaceId &&
-                    (live.page.location?.kind === "root" || live.page.location?.kind === "child")
-                  );
-                }}
-              />
-              <SpaceRecoveryControls
-                key={target.environmentId}
-                environmentId={target.environmentId}
-              />
-            </Suspense>
-          </div>
-        ) : null}
       </PageBar>
       <PageColumn fullPage={fullPage}>
+        {version === 2 ? (
+          <Suspense fallback={null}>
+            <SpaceStructureControls
+              ref={structure}
+              key={JSON.stringify([target.environmentId, target.pageId])}
+              target={resolvedTarget}
+              location={page.location}
+              current={() => {
+                const live = query.isPending ? null : query.data?.current();
+                return (
+                  live?.page.id === target.pageId &&
+                  live.page.spaceId === resolvedTarget.spaceId &&
+                  (live.page.location?.kind === "root" || live.page.location?.kind === "child")
+                );
+              }}
+            />
+            <SpaceRecoveryControls
+              ref={recovery}
+              key={target.environmentId}
+              environmentId={target.environmentId}
+              pageId={target.pageId}
+              spaceId={resolvedTarget.spaceId}
+              parentPageId={page.location?.kind === "child" ? page.location.parentPageId : null}
+              current={() => {
+                const live = query.isPending ? null : query.data?.current();
+                return (
+                  live?.page.id === target.pageId && live.page.spaceId === resolvedTarget.spaceId
+                );
+              }}
+            />
+          </Suspense>
+        ) : null}
         <h1>
           <Suspense
             fallback={<span className="block text-4xl font-bold">{page.title || "Untitled"}</span>}

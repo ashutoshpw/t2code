@@ -346,7 +346,7 @@ function PageWindowRow({
       ) : window.data.items.length === 0 ? (
         <p className="text-xs text-muted-foreground">
           {window.cursor !== undefined || window.data.nextCursor !== null
-            ? "No pages in this window."
+            ? "No pages here."
             : window.parentPageId === null
               ? "No pages in this space."
               : "No child pages."}
