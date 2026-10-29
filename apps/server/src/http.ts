@@ -5,6 +5,7 @@ import {
   AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
   EnvironmentHttpApi,
+  SPACE_PAGE_SHARE_ROUTE_PREFIX,
 } from "@t2code/contracts";
 import { isDevProxiedPath } from "@t2code/shared/devProxy";
 import { injectMcpAppCookieBootstrap, injectMcpAppThemeBootstrap } from "@t2code/shared/mcpApp";
@@ -442,7 +443,12 @@ const isAssetBearerPath = (url: string) => {
     .replace(/\/{2,}/g, "/")
     .split("/", 5);
   // Decode only static prefix segments; decodeURI preserves the router's encoded-separator boundaries.
-  return [ASSET_ROUTE_PREFIX, ATTACHMENT_UPLOAD_ROUTE_PREFIX, SPACES_UPLOAD_ROUTE_PREFIX].some(
+  return [
+    ASSET_ROUTE_PREFIX,
+    ATTACHMENT_UPLOAD_ROUTE_PREFIX,
+    SPACES_UPLOAD_ROUTE_PREFIX,
+    SPACE_PAGE_SHARE_ROUTE_PREFIX,
+  ].some(
     (prefix) =>
       prefix.split("/").every((part, index) => {
         try {
