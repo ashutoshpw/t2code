@@ -282,7 +282,12 @@ jobs:
           # The executable bundles the server again, so it needs the same stamp
           # as release.yml's JS bundle.
           T2CODE_TELEMETRY_CHANNEL: ${{ github.repository == 'pingdotgg/t3code' && inputs.release_channel || 'dev' }}
-        run: node apps/server/scripts/cli.ts build-exe --verbose ${{ inputs.platform == 'win' && format('--target win-{0}', inputs.arch) || '' }}
+        run: |
+          # Git Bash's GNU tar reads "D:\..." as a remote host and cannot unpack the Node.js zip.
+          if [[ "${{ inputs.platform }}" == "win" ]]; then
+            export PATH="$(cygpath -u "$SYSTEMROOT")/System32:$PATH"
+          fi
+          node apps/server/scripts/cli.ts build-exe --verbose ${{ inputs.platform == 'win' && format('--target win-{0}', inputs.arch) || '' }}
 
       - name: Import macOS signing certificate for the CLI archive
         if: inputs.cli_archive && inputs.platform == 'mac'
