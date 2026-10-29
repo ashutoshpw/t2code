@@ -78,7 +78,7 @@ export function PageTitleField({
 
 function TitleInput({
   page,
-  value = page.title,
+  value,
   readOnly,
   autoFocus,
   onChange,
@@ -105,7 +105,7 @@ function TitleInput({
       aria-label="Page title"
       placeholder="Untitled"
       readOnly={readOnly || !!page.trash}
-      value={value}
+      value={value ?? page.title}
       onChange={(event) => onChange?.(event.target.value.replace(/\n/g, " "))}
       onBlur={onCommit}
       onKeyDown={(event) => {
