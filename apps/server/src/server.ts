@@ -128,6 +128,7 @@ import * as Observability from "./observability/Observability.ts";
 import * as HeapSnapshot from "./observability/HeapSnapshot.ts";
 import * as EventLoopMonitor from "./observability/EventLoopMonitor.ts";
 import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
+import * as SpacePageShareService from "./spaces/PageShareService.ts";
 import * as SpacesService from "./spaces/SpacesService.ts";
 import * as DirectEndpoints from "./environment/DirectEndpoints.ts";
 import * as RemoteOpenTargets from "./environment/RemoteOpenTargets.ts";
@@ -609,6 +610,7 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
     ),
   ),
   layerThreadPullRequestWorker,
+  SpacePageShareService.layer.pipe(Layer.provide(layerSpaces)),
   DelegatedTaskAnalytics.layer,
   Layer.effectDiscard(
     Effect.gen(function* () {
