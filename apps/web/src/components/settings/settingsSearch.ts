@@ -470,6 +470,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["beta share guest invite link teammate watch t2 connect tunnel"],
   },
   {
+    id: "page-links",
+    title: "Page links",
+    to: "/settings/labs",
+    scope: "environment",
+    searchTerms: ["beta share page spaces link read only public t2 connect tunnel"],
+  },
+  {
     id: "app-rail",
     title: "App rail",
     to: "/settings/general",
