@@ -39,6 +39,10 @@ tokens never enter `SessionStore`, so no RPC, WebSocket, or MCP path can accept
 one. Guest routes also require T2 Connect to still serve the link's hostname;
 the request's Host header is not checked, because a LAN client can forge it.
 
+### Page share links are public and read-only
+
+`/api/shared-page/*` ([pageShareHttp](../../apps/server/src/spaces/pageShareHttp.ts)) is reachable by anyone who can reach the tunnel, so it only reads. The credential is an HMAC of the share id under a server key and lives in the link's URL hash, which browsers never send in the page request. Every request re-checks the share, the Labs setting and the Connect hostname. A page is served only inside the shared root's tree, and an asset only when a live block of that page references it.
+
 ### MCP clients are a separate audience
 
 Agents T2 Code did not launch sign in to `/mcp` through a narrow OAuth
