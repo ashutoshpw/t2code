@@ -9,6 +9,7 @@ import type {
   EnvironmentId,
   ProjectId,
   ScopedThreadRef,
+  SpaceContextSelector,
 } from "@t2code/contracts";
 import { formatAttachmentSize } from "@t2code/client-runtime/state/attachments";
 import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
@@ -30,6 +31,8 @@ import { AppText as Text } from "./ui/AppText";
 import { Sheet } from "./ui/Sheet";
 import { useAppearancePreferences } from "../features/settings/appearance/AppearancePreferencesProvider";
 import { getMobileTerminalTheme } from "../features/terminal/terminalTheme";
+import { SpaceChatContext } from "../features/spaces/SpaceChatContext";
+import { spaceContextEntry } from "../lib/composerSpaceContext";
 
 function ContextField(props: { label: string; value: string | null | undefined; code?: boolean }) {
   if (!props.value) return null;
@@ -78,6 +81,9 @@ function ContextSource(props: { source: ElementContextSource | null }) {
 export function ComposerContextSheet(props: {
   readonly label: string;
   readonly record: ComposerContextRecord | undefined;
+  readonly selector?: SpaceContextSelector;
+  readonly sourceCurrent?: () => boolean;
+  readonly onIncludeChildPages?: (include: boolean) => void;
   readonly onClose: () => void;
   readonly onRemove?: () => void;
   readonly onOpenAttachment?: () => void;
@@ -101,6 +107,7 @@ export function ComposerContextSheet(props: {
   const { themeId, themeAppearance } = useAppearancePreferences();
   const terminalTheme = getMobileTerminalTheme(themeId, themeAppearance);
   const record = props.record;
+  const space = spaceContextEntry(props.selector ?? record);
   const localAttachment =
     record && "attachmentId" in record
       ? props.attachments?.find((entry) => entry.id === record.attachmentId)
@@ -206,7 +213,14 @@ export function ComposerContextSheet(props: {
             Lines {terminal.lineStart}–{terminal.lineEnd}
           </Text>
         ) : null}
-        {!record ? (
+        {space ? (
+          <SpaceChatContext
+            entry={space}
+            onOpen={props.onClose}
+            current={props.sourceCurrent}
+            onIncludeChildPages={props.onIncludeChildPages}
+          />
+        ) : !record ? (
           <Text className="text-foreground">
             Context unavailable. The reference was copied without its payload. Copy it again from
             the original message or remove it.

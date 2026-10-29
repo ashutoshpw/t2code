@@ -12,12 +12,15 @@ import { useMediaActions } from "../state/mediaActions";
 import { fitVideoFrame } from "../lib/videoFrameFit";
 import { loadVideoThumbnail } from "../lib/videoThumbnails";
 import { type MediaActionsSource } from "../lib/mediaActionsSource";
+import type { RetainedMediaVideoSource } from "../lib/mediaVideoSource";
 import { useMediaVideoPlayback } from "../lib/useMediaVideoPlayback";
 import { MediaActionsMenu } from "./MediaActionsMenu";
 import { createAudioPlaybackSession } from "../lib/audioSession";
 
 function LoadedMediaVideo(props: {
   readonly uri: string;
+  readonly retainedSource?: RetainedMediaVideoSource;
+  readonly renewalKey?: number;
   readonly resolvePlaybackUri?: () => Promise<string | null>;
   readonly playRequested: boolean;
   readonly paused: boolean;
@@ -34,6 +37,8 @@ function LoadedMediaVideo(props: {
   const playback = createAudioPlaybackSession(player, true);
   const { active, fullscreen, createPlayRequest, onFullscreenEnter, onFullscreenExit } =
     useMediaVideoPlayback(player, props, playback);
+  // oxlint-disable-next-line t2code/react-effect-budget -- Bind the optional retained source to the mounted native player and its cleanup.
+  useEffect(() => props.retainedSource?.attach(player), [player, props.retainedSource]);
   const previousPlaybackRequested = useRef(false);
   const onPlaybackStart = useEffectEvent(() => props.onPlaybackStart?.());
   // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to native video player events to keep the shared audio session in step
@@ -69,6 +74,10 @@ function LoadedMediaVideo(props: {
   const { status } = useEvent(player, "statusChange", { status: player.status });
   const loadSource = useEffectEvent(async (signal: AbortSignal) => {
     const playIfUninterrupted = createPlayRequest();
+    if (props.retainedSource) {
+      await props.retainedSource.load(player, signal, playIfUninterrupted, () => playback.pause());
+      return;
+    }
     const uri = props.resolvePlaybackUri ? await props.resolvePlaybackUri() : props.uri;
     if (signal.aborted) return;
     if (uri === null) throw new Error("Video unavailable");
@@ -94,7 +103,7 @@ function LoadedMediaVideo(props: {
     );
     return () => controller.abort();
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- A play request or Retry (attempt) reloads the source into the same player.
-  }, [player, props.playRequested, attempt]);
+  }, [player, props.playRequested, attempt, props.renewalKey, props.retainedSource]);
 
   return (
     <View collapsable={false} style={{ flex: 1 }}>
@@ -131,6 +140,8 @@ function LoadedMediaVideo(props: {
 }
 
 interface MediaVideoPlayerProps {
+  readonly retainedSource?: RetainedMediaVideoSource;
+  readonly renewalKey?: number;
   readonly uri: string | null;
   readonly resolvePlaybackUri?: () => Promise<string | null>;
   readonly name: string;
@@ -191,6 +202,8 @@ function MediaVideoPlayerContent(props: MediaVideoPlayerProps) {
       {playbackUri ? (
         <LoadedMediaVideo
           uri={props.uri ?? playbackUri}
+          retainedSource={props.retainedSource}
+          renewalKey={props.renewalKey}
           resolvePlaybackUri={props.resolvePlaybackUri}
           playRequested={!props.expanded || props.autoPlay === true}
           paused={(props.paused ?? false) || mediaActions.sharing}

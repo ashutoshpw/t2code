@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as Schema from "effect/Schema";
 import { SpaceBlock } from "@t2code/contracts/spaces";
+import { spaceDraftMaxBytes } from "@t2code/client-runtime/spaces";
 
 import {
   applySpacesNativeSnapshot,
@@ -239,6 +240,7 @@ describe("Spaces native adapter public boundary", () => {
         split,
         [{ ...first, text: "x".repeat(SPACES_NATIVE_MAX_UTF16 + 1) }],
         [{ ...first, link: "javascript:alert(1)" }],
+        [{ ...first, text: "x", link: `https://t2.codes/${"a".repeat(spaceDraftMaxBytes)}` }],
       ]) {
         expect(() =>
           receiveSpacesNativeSnapshot(previous, { ...previous, revision: 1, composing, runs }),
@@ -246,6 +248,24 @@ describe("Spaces native adapter public boundary", () => {
       }
     }
     expect(applySpacesNativeSnapshot(original, previous)).toEqual(original);
+    expect(
+      nativeDocumentForSpaceBlock(
+        block({
+          runs: [
+            {
+              text: "x",
+              marks: [
+                {
+                  type: "link",
+                  version: 1,
+                  href: `https://t2.codes/${"a".repeat(spaceDraftMaxBytes)}`,
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toBeNull();
     const recovered = receiveSpacesNativeSnapshot(previous, { ...previous, revision: 2 });
     expect(recovered.revision).toBe(2);
     expect(applySpacesNativeSnapshot(original, recovered)).toEqual(original);

@@ -2,6 +2,7 @@ import { uuidv4 } from "../../lib/uuid";
 import { ThreadUndoNotice } from "./ThreadUndoNotice";
 import { use } from "react";
 import { NativePrimaryColumnContext } from "../../native/v5-workspace-context";
+import { SpacesEntry } from "../spaces/SpacesEntry";
 import * as Arr from "effect/Array";
 import * as Order from "effect/Order";
 import { useNavigation } from "@react-navigation/native";
@@ -189,6 +190,7 @@ export function HomeRouteScreen() {
           }}
         />
 
+        <SpacesEntry />
         <HomeScreen
           catalogState={catalogState}
           environments={environments}

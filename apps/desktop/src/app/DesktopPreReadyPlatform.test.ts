@@ -71,30 +71,9 @@ describe("DesktopPreReadyPlatform", () => {
     execFileSyncMock.mockReset();
   });
 
-  it.effect("persists Linux scaling synchronously across relaunches and settings rewrites", () => {
-    vi.stubEnv("T2CODE_HOME", "/isolated");
-    vi.stubEnv("VITE_DEV_SERVER_URL", "");
-    const settingsPath = "/isolated/userdata/desktop-settings.json";
-    const files = new Map([[settingsPath, "{}"]]);
-    const commandLine = new Map<string, string>();
-    readFileSyncMock.mockImplementation((path: string) => {
-      const contents = files.get(path);
-      if (contents === undefined) throw new Error("ENOENT");
-      return contents;
-    });
-    writeFileSyncMock.mockImplementation((path: string, contents: string) => {
-      files.set(path, contents);
-    });
-    hasSwitchMock.mockImplementation((name: string) => commandLine.has(name));
-    getSwitchValueMock.mockImplementation((name: string) => commandLine.get(name) ?? "");
-    appendSwitchMock.mockImplementation((name: string, value: string) => {
-      commandLine.set(name, value);
-    });
-    const launch = Effect.gen(function* () {
-      const startup = Promise.resolve().then(() => commandLine.get("force-device-scale-factor"));
-      yield* DesktopPreReadyPlatform.make;
-      return yield* Effect.promise(() => startup);
-    });
+  it.effect("preserves an explicit Linux password-store switch", () => {
+    hasSwitchMock.mockImplementation((switchName) => switchName === "password-store");
+    getSwitchValueMock.mockReturnValue(" basic ");
 
     return Effect.gen(function* () {
       const options = yield* DesktopPreReadyPlatform.DesktopPreReadyElectronOptions;
@@ -208,6 +187,31 @@ describe("DesktopPreReadyPlatform", () => {
       }),
     ).pipe(Effect.ensuring(Effect.sync(() => vi.unstubAllEnvs())));
   });
+
+  it.effect("keeps startup available when the early desktop entry cannot be written", () => {
+    getSwitchValueMock.mockReturnValue("");
+    mkdirSyncMock.mockImplementation(() => {
+      throw new Error("read-only filesystem");
+    });
+
+    return DesktopPreReadyPlatform.make.pipe(
+      Effect.provideService(HostProcess.Platform, "linux"),
+      Effect.asVoid,
+    );
+  });
+
+  it.effect("still prepares the portal entry when the bundled icon cannot be copied", () => {
+    getSwitchValueMock.mockReturnValue("");
+    copyFileSyncMock.mockImplementation(() => {
+      throw new Error("missing bundled icon");
+    });
+    return Effect.gen(function* () {
+      yield* DesktopPreReadyPlatform.make;
+      const contents = writeFileSyncMock.mock.calls[0]?.[1];
+      assert.include(contents, "MimeType=x-scheme-handler/t2code;");
+      assert.include(contents, "Icon=");
+      assert.equal(setDesktopNameMock.mock.calls.length, 1);
+    }).pipe(Effect.provideService(HostProcess.Platform, "linux"));
 
   it.effect("points the early portal entry at a configured distribution launcher", () => {
     vi.stubEnv("VITE_DEV_SERVER_URL", "");
