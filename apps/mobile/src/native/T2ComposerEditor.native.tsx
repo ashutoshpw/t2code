@@ -2,6 +2,7 @@ import { PASTED_TEXT_ATTACHMENT_THRESHOLD_BYTES } from "@t2code/client-runtime/t
 import { PROVIDER_SEND_TURN_MAX_INPUT_CHARS } from "@t2code/contracts";
 import { collectComposerInlineTokens } from "@t2code/shared/composerInlineTokens";
 import { composerContextEditorTokens, composerSkillLabels } from "../lib/composerContext";
+import { composerContextEntry } from "../lib/composerSpaceContext";
 import { requireNativeView } from "expo";
 import { TextInputWrapper } from "expo-paste-input";
 import {
@@ -178,7 +179,7 @@ export function ComposerEditor({
       composerContextEditorTokens(props.value, tokens, skillLabels).map((token) => {
         const record =
           token.type === "context"
-            ? props.context?.records.find((record) => record.contextId === token.contextId)
+            ? composerContextEntry(token.kind, token.contextId, props.context, props.contextDraft)
             : undefined;
         const presentation = contextChipPresentation(
           token.type === "context" ? token.kind : token.type,
@@ -198,15 +199,20 @@ export function ComposerEditor({
             token.type === "skill"
               ? (skillLabels.get(token.value) ?? token.value)
               : token.type === "context"
-                ? `${token.label}${props.context?.records.some((record) => record.contextId === token.contextId) ? "" : " · unavailable"}`
+                ? `${record?.label || (record && "title" in record ? record.title : token.label)}${record ? "" : " · unavailable"}`
                 : basename(token.value),
-          detail: token.type === "context" ? composerChipSizeSuffix(record) : "",
+          detail:
+            token.type === "context"
+              ? record && "selection" in record
+                ? "at send"
+                : composerChipSizeSuffix(record)
+              : "",
           iconUri: contextChipIconUri(icon),
           tintsIcon: icon.kind === "chip",
         };
       }),
     );
-  }, [props.value, tokens, props.context, skillLabels, theme, chipTextColor]);
+  }, [props.value, tokens, props.context, props.contextDraft, skillLabels, theme, chipTextColor]);
   // Every render resolves against the snapshot history, so a render whose
   // (value, selection) lags the acknowledged native state is stamped behind
   // the native revision and rejected by the editor instead of re-applying a
@@ -234,7 +240,7 @@ export function ComposerEditor({
     mostRecentEventCount: controlledEventCount,
     isNativeEcho,
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- prunes native editor event snapshots once a committed payload acknowledges them
+  // oxlint-disable-next-line t2code/react-effect-budget -- Releases acknowledged native-event snapshots; the snapshot log lives outside React, in the native component.
   useEffect(() => {
     if (!acknowledgesLatestNativeEvent) return;
     nativeEventSnapshotsRef.current = pruneAcknowledgedComposerNativeEvents(
@@ -243,7 +249,7 @@ export function ComposerEditor({
     );
   }, [acknowledgesLatestNativeEvent, mostRecentEventCount, nativeEventSnapshotsRef]);
   const assumedValue = props.value;
-  // oxlint-disable-next-line t2code/react-effect-budget -- records the committed controlled payload as the native editor's assumed state
+  // oxlint-disable-next-line t2code/react-effect-budget -- Records the assumed native state after each controlled commit; the authoritative state lives in the native component.
   useEffect(() => {
     // Newer native events make this payload stale; do not record it as applied.
     if (isNativeEcho || controlledEventCount !== mostRecentEventCountRef.current) return;

@@ -20,6 +20,8 @@ import {
   type ProviderOptionSelection,
   type RuntimeMode,
   type ScopedThreadRef,
+  type SpaceContextSelector,
+  PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
 } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import { useEffect } from "react";
@@ -34,6 +36,10 @@ import { draftModelPickMatchesThread } from "@t2code/shared/model";
 
 import { writeFileAtomically } from "../lib/atomic-file";
 import { createComposerContextHistory, referencedComposerContext } from "../lib/composerContext";
+import {
+  composerContextEntries,
+  referencedComposerContextDraft,
+} from "../lib/composerSpaceContext";
 import { isQueuedEditDraftKey } from "./queued-edit-draft-key";
 import {
   collectComposerContextReferences,
@@ -74,6 +80,7 @@ import { flushThreadOutbox, threadOutboxManager } from "./thread-outbox";
 import { composerDraftEnvironmentId } from "../lib/composerAttachmentUploadQueue";
 
 const COMPOSER_DRAFTS_SCHEMA_VERSION = 1;
+const isComposerContextDraft = Schema.is(ComposerContextDraft);
 const COMPOSER_DRAFTS_DIRECTORY = "composer-drafts";
 const COMPOSER_DRAFTS_FILE = "drafts.json";
 const PERSIST_DEBOUNCE_MS = 200;
@@ -172,6 +179,16 @@ function contextInsertionRange(
   return { start, end: Math.max(start, Math.min(selection?.end ?? start, draft.text.length)) };
 }
 
+function safeSelectorInsertion(text: string, target?: ComposerDraftInsertion) {
+  if (!target || target.text !== text || target.start > target.end) return false;
+  return [target.start, target.end].every((offset) => {
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > text.length) return false;
+    const before = text.charCodeAt(offset - 1);
+    const after = text.charCodeAt(offset);
+    return !(before >= 0xd800 && before <= 0xdbff && after >= 0xdc00 && after <= 0xdfff);
+  });
+}
+
 function draftWithoutInsertionSelection(
   draftKey: string,
   draft: ComposerDraft,
@@ -220,6 +237,7 @@ function withReferencedContextFiles(
     ...draft,
     text,
     context,
+    contextDraft: referencedComposerContextDraft(text, draft.contextDraft),
     attachments: attachments.length === draft.attachments.length ? draft.attachments : attachments,
   };
 }
@@ -227,6 +245,8 @@ function withReferencedContextFiles(
 /** Retains file bytes while native text undo can restore their references. */
 export function createComposerDraftContextHistory() {
   const restoreContext = createComposerContextHistory();
+  const restoreDraftRecords = createComposerContextHistory();
+  const selectors = new Map<string, SpaceContextSelector>();
   const files = new Map<
     string,
     { attachment: FileBackedComposerAttachment; release: () => void }
@@ -255,6 +275,21 @@ export function createComposerDraftContextHistory() {
         files.delete(oldest);
       }
       const context = restoreContext(text, draft.context);
+      for (const selector of draft.contextDraft?.selectors ?? []) {
+        selectors.delete(selector.contextId);
+        selectors.set(selector.contextId, selector);
+      }
+      const selectorLimit = Math.max(
+        COMPOSER_CONTEXT_MAX_RECORDS,
+        draft.contextDraft?.selectors.length ?? 0,
+      );
+      while (selectors.size > selectorLimit) selectors.delete(selectors.keys().next().value!);
+      const contextDraft = referencedComposerContextDraft(text, {
+        selectors: [...selectors.values()],
+        records:
+          restoreDraftRecords(text, { version: 1, records: draft.contextDraft?.records ?? [] })
+            ?.records ?? [],
+      });
       const liveIds = new Set(draft.attachments.map((attachment) => attachment.id));
       const attachments = (context?.records ?? []).flatMap((record) => {
         if (
@@ -269,7 +304,7 @@ export function createComposerDraftContextHistory() {
           ? [{ ...saved, uploadedAttachmentId: undefined, uploadEnvironmentId: undefined }]
           : [];
       });
-      return { context, attachments };
+      return { context, contextDraft, attachments };
     },
     dispose() {
       for (const file of files.values()) file.release();
@@ -288,19 +323,71 @@ export function setComposerDraftContext(
   }));
 }
 
+export function setComposerDraftContextDraft(
+  draftKey: string,
+  contextDraft: ComposerContextDraft | undefined,
+): void {
+  updateComposerDrafts((current) => ({
+    ...current,
+    [draftKey]: { ...normalizeDraft(current[draftKey]), contextDraft },
+  }));
+}
+
+export function setComposerDraftSpaceIncludeChildPages(
+  draftKey: string,
+  selector: SpaceContextSelector,
+  includeChildPages: boolean,
+): boolean {
+  let changed = false;
+  updateComposerDrafts((current) => {
+    const draft = current[draftKey];
+    if (
+      !draft?.contextDraft?.selectors.includes(selector) ||
+      selector.includeChildPages === includeChildPages ||
+      composerContextEntries(draft.context, draft.contextDraft).filter(
+        (entry) => entry.contextId === selector.contextId,
+      ).length !== 1 ||
+      !collectComposerContextReferences(draft.text).some(
+        (ref) => ref.contextId === selector.contextId && ref.kind === selector.kind,
+      )
+    )
+      return current;
+    changed = true;
+    return {
+      ...current,
+      [draftKey]: {
+        ...draft,
+        contextDraft: {
+          ...draft.contextDraft,
+          selectors: draft.contextDraft.selectors.map((entry) =>
+            entry === selector ? { ...entry, includeChildPages } : entry,
+          ),
+        },
+      },
+    };
+  });
+  return changed;
+}
+
 export function insertComposerDraftContext(
   draftKey: string,
   content: {
     text: string;
     context: OrchestrationMessageContext;
+    contextDraft?: ComposerContextDraft;
     attachments?: ReadonlyArray<DraftComposerAttachment>;
   },
   target?: ComposerDraftInsertion,
+  options?: { expectedDraft: ComposerDraft; current: () => boolean },
 ): boolean {
   let inserted = false;
   let removed: ReadonlyArray<DraftComposerAttachment> = [];
   updateComposerDrafts((current) => {
     const draft = normalizeDraft(current[draftKey]);
+    if (options && (!options.current() || !sameComposerDraftState(draft, options.expectedDraft)))
+      return current;
+    if (content.contextDraft?.selectors.length && !safeSelectorInsertion(draft.text, target))
+      return current;
     const attachments = content.attachments ?? [];
     const retained = draftWithoutInsertionSelection(draftKey, draft, target);
     if (
@@ -326,7 +413,11 @@ export function insertComposerDraftContext(
 function draftWithInsertedContext(
   draftKey: string,
   draft: ComposerDraft,
-  content: { text: string; context: OrchestrationMessageContext },
+  content: {
+    text: string;
+    context: OrchestrationMessageContext;
+    contextDraft?: ComposerContextDraft;
+  },
   target?: ComposerDraftInsertion,
 ): ComposerDraft | null {
   const { start, end } = contextInsertionRange(draftKey, draft, target);
@@ -334,15 +425,29 @@ function draftWithInsertedContext(
   const after = draft.text.slice(end);
   const insertion = `${before.length > 0 && !/\s$/.test(before) && !/^\s/.test(content.text) ? " " : ""}${content.text}${!/\s$/.test(content.text) && (after.length === 0 || !/^\s/.test(after)) ? " " : ""}`;
   const text = before + insertion + after;
+  if (text.length > PROVIDER_SEND_TURN_MAX_INPUT_CHARS) return null;
+  const contextDraft = referencedComposerContextDraft(text, {
+    selectors: [
+      ...(draft.contextDraft?.selectors ?? []),
+      ...(content.contextDraft?.selectors ?? []),
+    ],
+    records: [...(draft.contextDraft?.records ?? []), ...(content.contextDraft?.records ?? [])],
+  });
   const records = new Map(draft.context?.records.map((record) => [record.contextId, record]));
   for (const record of content.context.records) records.set(record.contextId, record);
   const context = referencedComposerContext(text, { version: 1, records: [...records.values()] });
-  if ((context?.records.length ?? 0) > COMPOSER_CONTEXT_MAX_RECORDS) return null;
+  const entries = composerContextEntries(context, contextDraft);
+  if (
+    entries.length > COMPOSER_CONTEXT_MAX_RECORDS ||
+    new Set(entries.map((entry) => entry.contextId)).size !== entries.length ||
+    (contextDraft && !isComposerContextDraft(contextDraft))
+  )
+    return null;
   rememberComposerDraftSelection(draftKey, text, {
     start: start + insertion.length,
     end: start + insertion.length,
   });
-  return withReferencedContextFiles(draft, text, context);
+  return { ...withReferencedContextFiles(draft, text, context), contextDraft };
 }
 
 export class ComposerDraftPersistenceError extends Schema.TaggedError<ComposerDraftPersistenceError>()(

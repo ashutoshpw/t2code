@@ -1,3 +1,4 @@
+import { TrackedPdfPreview, type PdfTrackingOwner } from "./TrackedPdfPreview";
 import { useAtomRefresh, useAtomValue } from "@effect/atom-react";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -39,7 +40,7 @@ const preparedPdfAtom = Atom.family((uri: string) =>
   ).pipe(Atom.withLabel(`android-pdf-preview:${uri}`)),
 );
 
-export function PdfPreview(props: { readonly uri: string }) {
+function UntrackedPdfPreview(props: { readonly uri: string }) {
   const atom = preparedPdfAtom(props.uri);
   const prepared = useAtomValue(atom);
   const refresh = useAtomRefresh(atom);
@@ -83,5 +84,13 @@ export function PdfPreview(props: { readonly uri: string }) {
       }}
       style={{ flex: 1, width: "100%" }}
     />
+  );
+}
+
+export function PdfPreview(props: { readonly uri: string; readonly tracking?: PdfTrackingOwner }) {
+  return props.tracking ? (
+    <TrackedPdfPreview uri={props.uri} owner={props.tracking} />
+  ) : (
+    <UntrackedPdfPreview uri={props.uri} />
   );
 }

@@ -30,10 +30,6 @@ allowBuilds:
   workerd: false
 
 catalog:
-  "@alchemy.run/axiom": 2.0.0-beta.84
-  "@alchemy.run/cloudflare": 2.0.0-beta.84
-  "@alchemy.run/drizzle": 2.0.0-beta.84
-  "@alchemy.run/neon": 2.0.0-beta.84
   "@clerk/backend": 3.25.0
   "@clerk/clerk-js": 6.40.0
   "@clerk/electron": 0.1.3
@@ -43,6 +39,7 @@ catalog:
   "@clerk/shared": 4.41.0
   # Must match the version alchemy depends on: the relay overrides its
   # Cloudflare retry policy through this package's Retry service.
+  "@alchemy.run/neon": 2.0.0-beta.85
   "@distilled.cloud/cloudflare": 1.0.0-rc.18
   "@effect/atom-react": 4.1.2
   "@effect/graphql-generator": 4.1.2
@@ -106,6 +103,7 @@ minimumReleaseAgeExclude:
   - "@alchemy.run/cloudflare-runtime@2.0.0-beta.85"
   - "@alchemy.run/docker@2.0.0-beta.85"
   - "@alchemy.run/drizzle@2.0.0-beta.85"
+  - "@alchemy.run/neon@2.0.0-beta.85"
   - "@alchemy.run/node-utils@2.0.0-beta.85"
   - "@alchemy.run/planetscale@2.0.0-beta.85"
   - "@alchemy.run/sql@2.0.0-beta.85"
@@ -292,6 +290,10 @@ overrides:
   "@alchemy.run/sigil>react": "-"
   "@alchemy.run/sigil>react-reconciler": "-"
   "@alchemy.run/sigil>scheduler": "-"
+  # Alchemy only reaches @prisma/dev through a lazy import inside the Prisma
+  # database provider, which the relay never deploys. Its exact hono/valibot
+  # pins are also the bulk of our open dependency advisories.
+  "alchemy>@prisma/dev": "-"
   "@clerk/backend": "catalog:"
   "@clerk/clerk-js": "catalog:"
   "@clerk/clerk-js>@base-org/account": "-"

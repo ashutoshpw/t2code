@@ -17,7 +17,8 @@ import type { EnvironmentThreadShell } from "@t2code/client-runtime/state/models
 const EMPTY_THREAD_SHELLS: ReadonlyArray<EnvironmentThreadShell> = [];
 const EMPTY_ENVIRONMENTS: ReadonlyArray<ComposerEnvironmentCandidate> = [];
 const NO_LINKED_ENVIRONMENTS: ReadonlyMap<EnvironmentId, string> = new Map();
-import { COMPOSER_CONTEXT_MAX_RECORDS } from "@t2code/contracts";
+import { COMPOSER_CONTEXT_MAX_RECORDS, ComposerContextId } from "@t2code/contracts";
+import type { SpaceSearchWindow } from "@t2code/client-runtime/spaces";
 import {
   formatComposerContextReference,
   threadContextRecord,
@@ -28,6 +29,7 @@ import {
   getComposerDraftSnapshot,
   setComposerDraftContext,
   useComposerDraftSelection,
+  insertComposerDraftContext,
 } from "../../state/use-composer-drafts";
 import { USAGE_LIMITS_COMMAND } from "@t2code/shared/usageLimits";
 import {
@@ -251,6 +253,11 @@ export function useComposerCommandMenu({
     ownerKey,
     ...composerSelectionAtEnd(draftMessage),
   }));
+  const [spaceMode, setSpaceMode] = useState<{
+    ownerKey: string | null;
+    start: number;
+    kind: "page" | "block";
+  } | null>(null);
   // Thread mentions rank by recency as of when the composer mounted.
   const [now] = useState(() => Date.now());
   const insertedSelection = useComposerDraftSelection(ownerKey, draftMessage);
@@ -472,6 +479,20 @@ export function useComposerCommandMenu({
         ? matchComposerEnvironmentItems({ environments, environmentId, query: trigger.query })
         : [];
       return [
+        {
+          id: "spaces:page",
+          type: "spaces",
+          kind: "page",
+          label: "Page…",
+          description: "Search Spaces pages",
+        },
+        {
+          id: "spaces:block",
+          type: "spaces",
+          kind: "block",
+          label: "Block…",
+          description: "Search Spaces blocks",
+        },
         ...threadItems,
         ...environmentItems,
         ...pathSearch.entries.map((entry) => {
@@ -517,6 +538,10 @@ export function useComposerCommandMenu({
         });
       }
       setSelection({ start: result.cursor, end: result.cursor });
+    }
+    if (item.type === "spaces") {
+      if (trigger.kind === "path" && ownerKey && environmentId)
+        setSpaceMode({ ownerKey, start: trigger.rangeStart, kind: item.kind });
       return;
     }
     if (item.type === "thread") {
@@ -610,6 +635,36 @@ export function useComposerCommandMenu({
   };
 
   return {
+    spaceKind:
+      trigger?.kind === "path" &&
+      spaceMode?.ownerKey === ownerKey &&
+      spaceMode.start === trigger.rangeStart
+        ? spaceMode.kind
+        : null,
+    closeSpaces: () => setSpaceMode(null),
+    onSelectSpace: (
+      window: Extract<SpaceSearchWindow, { status: "ready" }>,
+      index: number,
+      includeChildPages: boolean,
+    ) => {
+      if (!enabled || !ownerKey || trigger?.kind !== "path") return false;
+      const expectedDraft = getComposerDraftSnapshot(ownerKey);
+      if (expectedDraft.text !== draftMessage) return false;
+      const selector = window.select(index, ComposerContextId.make(uuidv4()), includeChildPages);
+      if (!selector) return false;
+      const inserted = insertComposerDraftContext(
+        ownerKey,
+        {
+          text: formatComposerContextReference(selector),
+          context: { version: 1, records: [] },
+          contextDraft: { selectors: [selector], records: [] },
+        },
+        { text: draftMessage, start: trigger.rangeStart, end: trigger.rangeEnd },
+        { expectedDraft, current: window.current },
+      );
+      if (inserted) setSpaceMode(null);
+      return inserted;
+    },
     selection,
     onSelectionChange,
     trigger,
