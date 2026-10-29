@@ -644,6 +644,7 @@ it.layer(layer)("migrate-dev-db", (it) => {
               { migration_id: 11, name: "PageActivity" },
               { migration_id: 12, name: "PageLibrary" },
               { migration_id: 13, name: "LibraryRevisions" },
+              { migration_id: 14, name: "PageShares" },
             ],
           );
         }),

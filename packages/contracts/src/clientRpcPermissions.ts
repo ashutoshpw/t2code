@@ -36,6 +36,10 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.spacesPagesTrash]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesPagesRestore]: AuthOrchestrationOperateScope,
   [WS_METHODS.spacesPagesPermanentlyDelete]: AuthOrchestrationOperateScope,
+  // A page link hands page content to anyone holding it; operate scope can already trash pages.
+  [WS_METHODS.spacesSharesCreate]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesSharesStop]: AuthOrchestrationOperateScope,
+  [WS_METHODS.spacesSharesGet]: AuthOrchestrationReadScope,
 
   [WS_METHODS.previewClose]: AuthPreviewOperateScope,
   [WS_METHODS.serverRunStorageCleanup]: AuthSettingsWriteScope,

@@ -3,6 +3,9 @@ import * as NodeCrypto from "node:crypto";
 
 import {
   EnvironmentId,
+  type SpacePageShare,
+  type SpacePageShareId,
+  type SpaceSharedPage,
   type SpacesStorageStatus,
   SpaceContextCaptureInput,
   type SpaceContextCaptureResult,
@@ -49,11 +52,21 @@ import * as RevisionStore from "./RevisionStore.ts";
 import * as PageStore from "./PageStore.ts";
 import * as PageStructure from "./PageStructure.ts";
 import * as PageRecovery from "./PageRecovery.ts";
+import * as PageShares from "./PageShares.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as ContextSnapshot from "./ContextSnapshot.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as SearchStore from "./SearchStore.ts";
 import * as Sqlite from "./Sqlite.ts";
+
+export interface ResolvedAssetFile {
+  readonly path: string;
+  readonly digest: string;
+  readonly byteSize: number;
+  readonly name: string;
+  readonly mimeType: C.SpaceAssetMetadata["mimeType"];
+  readonly file: NonNullable<Effect.Success<ReturnType<typeof openMediaFile>>>;
+}
 
 export class SpacesService extends Context.Service<
   SpacesService,
@@ -82,18 +95,9 @@ export class SpacesService extends Context.Service<
     readonly getAssetMetadata: (
       input: unknown,
     ) => Effect.Effect<C.SpaceAssetMetadata, C.SpaceServiceError>;
-    readonly resolveAssetFile: (input: unknown) => Effect.Effect<
-      {
-        readonly path: string;
-        readonly digest: string;
-        readonly byteSize: number;
-        readonly name: string;
-        readonly mimeType: C.SpaceAssetMetadata["mimeType"];
-        readonly file: NonNullable<Effect.Success<ReturnType<typeof openMediaFile>>>;
-      },
-      C.SpaceServiceError,
-      Scope.Scope
-    >;
+    readonly resolveAssetFile: (
+      input: unknown,
+    ) => Effect.Effect<ResolvedAssetFile, C.SpaceServiceError, Scope.Scope>;
     readonly receiveAssetUpload: <E, R>(
       token: string,
       contentLength: string | undefined,
@@ -179,6 +183,28 @@ export class SpacesService extends Context.Service<
     readonly lookupMutationReceipt: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReceiptLookupResult, C.SpaceServiceError>;
+    /** Replaces the page's share, which ends its previous link. */
+    readonly replacePageShare: (share: SpacePageShare) => Effect.Effect<void, C.SpaceServiceError>;
+    readonly stopPageShare: (pageId: C.SpacePageId) => Effect.Effect<void, C.SpaceServiceError>;
+    readonly findPageShare: (
+      by: { readonly pageId: C.SpacePageId } | { readonly shareId: SpacePageShareId },
+    ) => Effect.Effect<SpacePageShare | null, C.SpaceServiceError>;
+    /** The breadcrumb from the shared root to the page, or null when the page is not in the tree. */
+    readonly locateSharedPage: (input: {
+      readonly rootPageId: C.SpacePageId;
+      readonly pageId: C.SpacePageId;
+    }) => Effect.Effect<SpaceSharedPage["breadcrumb"] | null, C.SpaceServiceError>;
+    readonly readSharedPage: (input: {
+      readonly rootPageId: C.SpacePageId;
+      readonly expiresAt: string;
+      readonly pageId: C.SpacePageId;
+      readonly breadcrumb: SpaceSharedPage["breadcrumb"];
+    }) => Effect.Effect<SpaceSharedPage, C.SpaceServiceError>;
+    /** Resolves an asset only when a live block of the page references it. */
+    readonly resolveSharedAssetFile: (input: {
+      readonly pageId: C.SpacePageId;
+      readonly assetId: C.SpaceAssetId;
+    }) => Effect.Effect<ResolvedAssetFile, C.SpaceServiceError, Scope.Scope>;
   }
 >()("@t2code/cli/spaces/SpacesService") {}
 
@@ -1630,6 +1656,52 @@ const make = Effect.fn("SpacesService.make")(function* (
     checkLimit("maxMutationBytes", byteLength(input), 2_048);
     return yield* run(environmentId, () => ContextSnapshot.capture(input));
   });
+  const replacePageShare = Effect.fn("SpacesService.replacePageShare")(function* (
+    share: SpacePageShare,
+  ) {
+    const environmentId = yield* admit();
+    yield* run(environmentId, () => PageShares.replace(share));
+  });
+  const stopPageShare = Effect.fn("SpacesService.stopPageShare")(function* (pageId: C.SpacePageId) {
+    const environmentId = yield* admit();
+    yield* run(environmentId, () => PageShares.remove(pageId));
+  });
+  const findPageShare = Effect.fn("SpacesService.findPageShare")(function* (
+    by: { readonly pageId: C.SpacePageId } | { readonly shareId: SpacePageShareId },
+  ) {
+    const environmentId = yield* admit();
+    return yield* run(environmentId, () =>
+      "pageId" in by ? PageShares.findByPage(by.pageId) : PageShares.findById(by.shareId),
+    );
+  });
+  const locateSharedPage = Effect.fn("SpacesService.locateSharedPage")(function* (input: {
+    readonly rootPageId: C.SpacePageId;
+    readonly pageId: C.SpacePageId;
+  }) {
+    const environmentId = yield* admit();
+    return yield* run(environmentId, () => PageShares.locate(input.rootPageId, input.pageId));
+  });
+  const readSharedPage = Effect.fn("SpacesService.readSharedPage")(function* (input: {
+    readonly rootPageId: C.SpacePageId;
+    readonly expiresAt: string;
+    readonly pageId: C.SpacePageId;
+    readonly breadcrumb: SpaceSharedPage["breadcrumb"];
+  }) {
+    const environmentId = yield* admit();
+    return yield* run(environmentId, () =>
+      PageShares.read(input.rootPageId, input.expiresAt, input.pageId, input.breadcrumb),
+    );
+  });
+  const resolveSharedAssetFile = Effect.fn("SpacesService.resolveSharedAssetFile")(
+    function* (input: { readonly pageId: C.SpacePageId; readonly assetId: C.SpaceAssetId }) {
+      const environmentId = yield* admit();
+      const referenced = yield* run(environmentId, () =>
+        PageShares.referencesAsset(input.pageId, input.assetId),
+      );
+      if (!referenced) return yield* new C.SpaceAssetError({ reason: "not_found" });
+      return yield* resolveAssetFile({ environmentId, assetId: input.assetId });
+    },
+  );
   const execute = Effect.fn("SpacesService.execute")(function* (
     request: C.SpaceMutationRequest,
     meta: Receipts.Metadata,
@@ -2313,6 +2385,12 @@ const make = Effect.fn("SpacesService.make")(function* (
     permanentlyDeletePage,
     listTrash,
     captureContextSnapshot,
+    replacePageShare,
+    stopPageShare,
+    findPageShare,
+    locateSharedPage,
+    readSharedPage,
+    resolveSharedAssetFile,
   });
 });
 

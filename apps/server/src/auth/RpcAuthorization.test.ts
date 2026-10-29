@@ -13,8 +13,12 @@ import {
   AuthSourceControlWriteScope,
   AuthTerminalReadScope,
   AuthTerminalOperateScope,
+  RpcScopeAuthorization,
   WS_METHODS,
   WsRpcGroup,
+  WsSpacesSharesCreateRpc,
+  WsSpacesSharesGetRpc,
+  WsSpacesSharesStopRpc,
 } from "@t2code/contracts";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
@@ -22,6 +26,7 @@ import * as C from "@t2code/contracts/spaces";
 import * as SpacesRpc from "../spaces/Rpc.ts";
 import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
+import * as RpcGroup from "effect/rpc/RpcGroup";
 import * as RpcTest from "effect/rpc/RpcTest";
 
 import {
@@ -628,5 +633,60 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
       });
     }
     expect(handled).toBe(0);
+  }).pipe(Effect.scoped),
+);
+
+it.effect("gates page share links: managing needs operate scope and viewing needs read scope", () =>
+  Effect.gen(function* () {
+    let handled = 0;
+    const handler = () =>
+      Effect.sync(() => {
+        handled++;
+        return {};
+      });
+    const group = RpcGroup.make(
+      WsSpacesSharesCreateRpc,
+      WsSpacesSharesStopRpc,
+      WsSpacesSharesGetRpc,
+    ).middleware(RpcScopeAuthorization);
+    const clientWith = (
+      scope: typeof AuthOrchestrationReadScope | typeof AuthOrchestrationOperateScope,
+    ) =>
+      RpcTest.makeClient(group).pipe(
+        Effect.provide(
+          Layer.merge(
+            group.toLayer({
+              "spaces.shares.create": handler as never,
+              "spaces.shares.stop": handler as never,
+              "spaces.shares.get": handler as never,
+            }),
+            RpcAuthorization.layer([scope]),
+          ),
+        ),
+      );
+    const input = { pageId: C.SpacePageId.make("page") };
+    const denied = <A, E>(call: Effect.Effect<A, E>) =>
+      call.pipe(Effect.match({ onFailure: (error) => error, onSuccess: () => null }));
+
+    const reader = yield* clientWith(AuthOrchestrationReadScope);
+    for (const call of [
+      reader[WS_METHODS.spacesSharesCreate](input),
+      reader[WS_METHODS.spacesSharesStop](input),
+    ]) {
+      expect(yield* denied(call)).toMatchObject({
+        _tag: "EnvironmentAuthorizationError",
+        requiredPermission: AuthOrchestrationOperateScope,
+      });
+    }
+    const operator = yield* clientWith(AuthOrchestrationOperateScope);
+    expect(yield* denied(operator[WS_METHODS.spacesSharesGet](input))).toMatchObject({
+      _tag: "EnvironmentAuthorizationError",
+      requiredPermission: AuthOrchestrationReadScope,
+    });
+    expect(handled).toBe(0);
+    yield* reader[WS_METHODS.spacesSharesGet](input);
+    yield* operator[WS_METHODS.spacesSharesCreate](input);
+    yield* operator[WS_METHODS.spacesSharesStop](input);
+    expect(handled).toBe(3);
   }).pipe(Effect.scoped),
 );

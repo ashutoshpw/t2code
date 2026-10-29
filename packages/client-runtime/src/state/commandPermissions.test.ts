@@ -140,6 +140,8 @@ describe("command permissions", () => {
             WS_METHODS.spacesPagesTrash,
             WS_METHODS.spacesPagesRestore,
             WS_METHODS.spacesPagesPermanentlyDelete,
+            WS_METHODS.spacesSharesCreate,
+            WS_METHODS.spacesSharesStop,
           ]) {
             const permission = createCommandPermissions(runtime, tag);
             expect(registry.get(permission.permissionAtom(env))).toBe(false);
@@ -149,7 +151,11 @@ describe("command permissions", () => {
             expect(registry.get(permission.permissionAtom(other))).toBe(true);
             yield* permission.authorize(registry, other);
           }
-          for (const tag of [WS_METHODS.spacesSearch, WS_METHODS.spacesReferencesResolve]) {
+          for (const tag of [
+            WS_METHODS.spacesSearch,
+            WS_METHODS.spacesReferencesResolve,
+            WS_METHODS.spacesSharesGet,
+          ]) {
             const search = createCommandPermissions(runtime, tag);
             expect(registry.get(search.permissionAtom(env))).toBe(true);
             yield* search.authorize(registry, env);
