@@ -1,4 +1,3 @@
-import { T3CHAT_PLAN_TUNNEL_LIMITS } from "@t2code/contracts/relay";
 import { TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -10,19 +9,7 @@ import { Button } from "../ui/button";
 // Above this, one slot per tunnel is too thin to read, so the bar fills instead.
 const MAX_SEGMENTS = 10;
 
-export const T3CHAT_SUBSCRIPTION_URL = "https://t3.chat/settings/subscription";
-
-export function tunnelUpgradeCopy(upgrade: Exclude<ManagedTunnelUpgrade, null>): string {
-  const { pro, premier } = T3CHAT_PLAN_TUNNEL_LIMITS;
-  switch (upgrade) {
-    case "link":
-      return `Link T3 Chat Pro for up to ${pro} tunnels, or Premier for up to ${premier}.`;
-    case "pro":
-      return `Upgrade to T3 Chat Pro for up to ${pro} tunnels, or Premier for up to ${premier}.`;
-    case "premier":
-      return `Upgrade to T3 Chat Premier for up to ${premier} tunnels.`;
-  }
-}
+const T3CHAT_SUBSCRIPTION_URL = "https://t3.chat/settings/subscription";
 
 /** "2 of 3 tunnels in use" with one bar slot per tunnel. */
 export function TunnelUsageMeter({

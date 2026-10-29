@@ -1,5 +1,5 @@
 import * as Alchemy from "alchemy";
-import * as Axiom from "@alchemy.run/axiom";
+import * as Axiom from "alchemy/Axiom";
 import * as Output from "alchemy/Output";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
@@ -8,7 +8,7 @@ import * as Option from "effect/Option";
 import { relayResourceNameForStage } from "./deploymentConfig.ts";
 
 const RUNBOOK_URL =
-  "https://github.com/pingdotgg/t2code/blob/main/docs/operations/relay-observability.md#alerts";
+  "https://github.com/pingdotgg/t3code/blob/main/docs/operations/relay-observability.md#alerts";
 
 const LINK_ROUTE = `"/v1/client/environment-links"`;
 const TUNNEL_ROUTES = `"/v1/environments/:environmentId/tunnel", "/v1/environments/:environmentId/tunnel/recovery"`;
@@ -343,7 +343,7 @@ const relayDashboardCharts = (dataset: string): ReadonlyArray<QueryChart> => {
   ];
 };
 
-export const notifierConfig = (name: string) =>
+const notifierConfig = (name: string) =>
   Config.String(name).pipe(
     Config.option,
     Config.map(Option.flatMap((value) => Option.liftPredicate(value.trim(), Boolean))),

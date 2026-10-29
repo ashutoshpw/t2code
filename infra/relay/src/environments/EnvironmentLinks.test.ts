@@ -214,7 +214,8 @@ describe("EnvironmentLinks", () => {
               where: (condition: unknown) => {
                 whereConditions.push(condition);
                 return {
-                  returning: () => {
+                  returning: (selection: unknown) => {
+                    expect(selection).toBeDefined();
                     return Effect.succeed([{ environmentId: "env-1" }]);
                   },
                 };
