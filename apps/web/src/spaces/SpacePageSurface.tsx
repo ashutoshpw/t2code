@@ -17,6 +17,7 @@ import {
   FolderInputIcon,
   LinkIcon,
   PanelRightIcon,
+  Share2Icon,
   Trash2Icon,
 } from "lucide-react";
 import type { ScopedThreadRef } from "@t2code/contracts";
@@ -38,6 +39,8 @@ import { useRelativeTimeState } from "../hooks/useRelativeTimeState";
 import { useMainAppThreadRef, useNavigateToMainApp } from "../components/sidebar/mainAppLocation";
 import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
 import { SpacePinButton } from "./SpacePinButton";
+import { SpacePageShareStatus } from "./SpacePageShareStatus";
+import { openSpacePageShareDialog } from "./spacePageShareDialogState";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
 import type { SpaceRecoveryHandle } from "./SpaceRecoveryControls";
@@ -344,6 +347,7 @@ function SpacePageMetadata({
         }
       >
         <EditedMeta updatedAt={page.updatedAt} />
+        <SpacePageShareStatus environmentId={target.environmentId} pageId={page.id} />
         <SpacePinButton environmentId={target.environmentId} page={page} />
         <Menu>
           <Tooltip>
@@ -388,6 +392,14 @@ function SpacePageMetadata({
             >
               <LinkIcon />
               Copy link
+            </MenuItem>
+            <MenuItem
+              onClick={() =>
+                openSpacePageShareDialog({ environmentId: target.environmentId, pageId: page.id })
+              }
+            >
+              <Share2Icon />
+              Share…
             </MenuItem>
             {fullPage && mainAppThreadRef ? (
               <MenuItem
