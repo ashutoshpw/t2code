@@ -390,6 +390,7 @@
   "apps/web/src/components/settings/ThemeSearchSection.tsx": 3,
   "apps/web/src/components/settings/TypographySettings.tsx": 2,
   "apps/web/src/components/settings/settingsLayout.tsx": 1,
+  "apps/web/src/components/sharedPage/SharedPage.tsx": 1,
   "apps/web/src/components/settings/useSnapShotShortcutRecorder.tsx": 1,
   "apps/web/src/components/sidebar/SidebarProviderUpdatePill.tsx": 2,
   "apps/web/src/components/sidebar/SidebarThreadRow.tsx": 5,
