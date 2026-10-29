@@ -89,7 +89,7 @@ export class SpacePageShareService extends Context.Service<
     /** An asset that a live block of an authorized page references. */
     readonly asset: (
       token: string,
-      pageId: C.SpacePageId,
+      pageId: C.SpacePageId | undefined,
       assetId: C.SpaceAssetId,
     ) => Effect.Effect<SpacesService.ResolvedAssetFile, SpacePageShareAccessError, Scope.Scope>;
   }
@@ -205,10 +205,10 @@ const make = Effect.gen(function* () {
 
   const asset = Effect.fn("SpacePageShareService.asset")(function* (
     token: string,
-    pageId: C.SpacePageId,
+    requested: C.SpacePageId | undefined,
     assetId: C.SpaceAssetId,
   ) {
-    yield* authorize(token, pageId);
+    const { pageId } = yield* authorize(token, requested);
     return yield* spaces
       .resolveSharedAssetFile({ pageId, assetId })
       .pipe(Effect.mapError(() => unavailable));
