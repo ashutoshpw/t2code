@@ -49,13 +49,14 @@ import {
   AuthSourceControlWriteScope,
   AuthFilesystemReadScope,
   type DesktopWslState,
-  type EnvironmentId,
+  EnvironmentId,
   type FilesystemBrowseResult,
   SourceControlProviderKind,
   PRIMARY_LOCAL_ENVIRONMENT_ID,
   resolveEnvironmentMachineKind,
 } from "@t2code/contracts";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { SpacePageId } from "@t2code/contracts/spaces";
+import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
   BugIcon,
@@ -80,6 +81,7 @@ import {
   PlugIcon,
   SquarePenIcon,
   TextSearchIcon,
+  Share2Icon,
   UserPlusIcon,
 } from "lucide-react";
 import { openThreadFind } from "./chat/threadFindStore";
@@ -258,6 +260,7 @@ import { EnvironmentMachineIcon } from "./EnvironmentMachineIcon";
 import { Checkbox } from "./ui/checkbox";
 import { ProjectFilePicker } from "./files/ProjectFilePicker";
 import { openLinkPullRequestDialog } from "./pullRequest/LinkPullRequestDialog";
+import { openSpacePageShareDialog } from "../spaces/spacePageShareDialogState";
 import { canShareWithGuestAtom } from "./chat/guestShareAvailability";
 import { openGuestShareDialog } from "./chat/guestShareDialogState";
 import { openUseInAnotherApp } from "./mcp/UseInAnotherAppDialog";
@@ -478,6 +481,16 @@ function OpenCommandPaletteDialog(props: {
   });
   const { environments } = useEnvironments();
   const spacesSupported = useSpacesEnvironments().length > 0;
+  const openSpacePage = useParams({
+    strict: false,
+    select: (params) =>
+      "environmentId" in params && "pageId" in params && !("threadId" in params)
+        ? {
+            environmentId: EnvironmentId.make(params.environmentId),
+            pageId: SpacePageId.make(params.pageId),
+          }
+        : null,
+  });
   const desktopLocalBootstraps = useDesktopLocalBootstraps();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const availableSettingsSearchItems = useAvailableSettingsSearchItems();
@@ -1640,6 +1653,17 @@ function OpenCommandPaletteDialog(props: {
     });
   }
 
+  if (spacesSupported && openSpacePage !== null && pathname.startsWith("/spaces/"))
+    actionItems.push({
+      kind: "action",
+      value: "action:share-space-page",
+      title: "Share page",
+      searchTerms: ["share", "page", "link", "spaces", "publish", "read only"],
+      icon: <Share2Icon className={ITEM_ICON_CLASS} />,
+      run: async () => {
+        openSpacePageShareDialog(openSpacePage);
+      },
+    });
   if (spacesSupported)
     actionItems.push({
       kind: "action",
