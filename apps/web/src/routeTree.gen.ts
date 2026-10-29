@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as SharedPageRouteImport } from './routes/shared-page'
 import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as GuestRouteImport } from './routes/guest'
@@ -65,6 +66,11 @@ import { Route as ChatSpacesEnvironmentIdSpaceIdPageIdRouteImport } from './rout
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SharedPageRoute = SharedPageRouteImport.update({
+  id: '/shared-page',
+  path: '/shared-page',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScheduledTasksRoute = ScheduledTasksRouteImport.update({
@@ -326,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/guest': typeof GuestRoute
   '/pair': typeof PairRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
+  '/shared-page': typeof SharedPageRoute
   '/welcome': typeof WelcomeRoute
   '/new': typeof ChatNewRoute
   '/pull-requests': typeof ChatPullRequestsRoute
@@ -378,6 +385,7 @@ export interface FileRoutesByTo {
   '/guest': typeof GuestRoute
   '/pair': typeof PairRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
+  '/shared-page': typeof SharedPageRoute
   '/welcome': typeof WelcomeRoute
   '/new': typeof ChatNewRoute
   '/pull-requests': typeof ChatPullRequestsRoute
@@ -431,6 +439,7 @@ export interface FileRoutesById {
   '/guest': typeof GuestRoute
   '/pair': typeof PairRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
+  '/shared-page': typeof SharedPageRoute
   '/welcome': typeof WelcomeRoute
   '/_chat/new': typeof ChatNewRoute
   '/_chat/pull-requests': typeof ChatPullRequestsRoute
@@ -487,6 +496,7 @@ export interface FileRouteTypes {
     | '/guest'
     | '/pair'
     | '/scheduled-tasks'
+    | '/shared-page'
     | '/welcome'
     | '/new'
     | '/pull-requests'
@@ -539,6 +549,7 @@ export interface FileRouteTypes {
     | '/guest'
     | '/pair'
     | '/scheduled-tasks'
+    | '/shared-page'
     | '/welcome'
     | '/new'
     | '/pull-requests'
@@ -591,6 +602,7 @@ export interface FileRouteTypes {
     | '/guest'
     | '/pair'
     | '/scheduled-tasks'
+    | '/shared-page'
     | '/welcome'
     | '/_chat/new'
     | '/_chat/pull-requests'
@@ -646,6 +658,7 @@ export interface RootRouteChildren {
   GuestRoute: typeof GuestRoute
   PairRoute: typeof PairRoute
   ScheduledTasksRoute: typeof ScheduledTasksRoute
+  SharedPageRoute: typeof SharedPageRoute
   WelcomeRoute: typeof WelcomeRoute
   ProjectsProjectKeyRoute: typeof ProjectsProjectKeyRoute
   ThreadsEnvironmentIdThreadIdRoute: typeof ThreadsEnvironmentIdThreadIdRoute
@@ -658,6 +671,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome'
       preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shared-page': {
+      id: '/shared-page'
+      path: '/shared-page'
+      fullPath: '/shared-page'
+      preLoaderRoute: typeof SharedPageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/scheduled-tasks': {
@@ -1129,6 +1149,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuestRoute: GuestRoute,
   PairRoute: PairRoute,
   ScheduledTasksRoute: ScheduledTasksRoute,
+  SharedPageRoute: SharedPageRoute,
   WelcomeRoute: WelcomeRoute,
   ProjectsProjectKeyRoute: ProjectsProjectKeyRoute,
   ThreadsEnvironmentIdThreadIdRoute: ThreadsEnvironmentIdThreadIdRoute,
