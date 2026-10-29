@@ -29,6 +29,7 @@ import {
   useSpacesReadAccess,
 } from "../../state/spaces";
 import { NativeScrollView } from "../../native/NativeScrollViewMarker";
+import { SpacesPageShareControls } from "./SpacesPageShareControls";
 import { SpacesRecoveryControls } from "./SpacesRecoveryControls";
 import { selectMobileSpacesBlockMove } from "./structure";
 
@@ -335,6 +336,13 @@ function Actions({
                   }
                   onPress={() => choose({ kind: "blocks", page })}
                 />
+                {!page.trash ? (
+                  <SpacesPageShareControls
+                    environmentId={environmentId}
+                    pageId={page.id}
+                    disabled={blocked || !allowedContext()}
+                  />
+                ) : null}
                 {!sourceComplete ? (
                   <Text className="text-foreground-muted">
                     Block moves require the current complete loaded window.
