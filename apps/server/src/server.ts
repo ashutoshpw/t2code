@@ -133,6 +133,7 @@ import * as Observability from "./observability/Observability.ts";
 import * as HeapSnapshot from "./observability/HeapSnapshot.ts";
 import * as EventLoopMonitor from "./observability/EventLoopMonitor.ts";
 import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
+import * as SpacePageShareHttp from "./spaces/pageShareHttp.ts";
 import * as SpacePageShareService from "./spaces/PageShareService.ts";
 import * as SpacesService from "./spaces/SpacesService.ts";
 import * as DirectEndpoints from "./environment/DirectEndpoints.ts";
@@ -794,6 +795,7 @@ const layerMakeRoutes = Layer.mergeAll(
     ServerHttp.projectFileUploadRouteLayer,
 
     GuestHttp.layer,
+    SpacePageShareHttp.layer,
     DeviceHubProxy.layer,
     ServerBrowserStream.routeLayer,
     PreviewHostRoute.routeLayer.pipe(Layer.provide(DesktopBrowserChannel.layer)),

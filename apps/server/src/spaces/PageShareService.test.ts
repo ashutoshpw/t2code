@@ -1,11 +1,22 @@
+import * as NodeHttpPlatform from "@effect/platform-node/NodeHttpPlatform";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import { EnvironmentId, SPACE_PAGE_SHARE_TTL_MS } from "@t2code/contracts";
+import {
+  EnvironmentId,
+  SPACE_PAGE_SHARE_ASSET_ROUTE,
+  SPACE_PAGE_SHARE_PAGE_ROUTE,
+  SPACE_PAGE_SHARE_TTL_MS,
+  SpaceSharedPage,
+} from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
+import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
+import * as Schema from "effect/Schema";
+import * as Stream from "effect/Stream";
+import { HttpPlatform, HttpRouter } from "effect/http";
 import * as Ref from "effect/Ref";
 import * as TestClock from "effect/testing/TestClock";
 
@@ -14,6 +25,7 @@ import { CloudManagedEndpointRuntime } from "../cloud/ManagedEndpointRuntime.ts"
 import * as ServerConfig from "../config.ts";
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as Settings from "../serverSettings.ts";
+import * as PageShareHttp from "./pageShareHttp.ts";
 import * as PageShareService from "./PageShareService.ts";
 import * as SpacesService from "./SpacesService.ts";
 
@@ -48,9 +60,10 @@ const layerSpaces = Layer.unwrap(
 const layerTest = PageShareService.layer.pipe(
   Layer.provideMerge(layerSpaces),
   Layer.provide(layerConnect),
-  Layer.provide(ServerSecretStore.layer),
+  Layer.provideMerge(ServerSecretStore.layer),
   Layer.provideMerge(ServerConfig.layerTest(process.cwd(), { prefix: "page-share-" })),
   Layer.provideMerge(NodeServices.layer),
+  Layer.provideMerge(NodeHttpPlatform.layer),
 );
 
 const paragraph = (id: string, text: string): C.SpaceBlock => ({
@@ -313,4 +326,191 @@ it.effect("refuses forged credentials and unshareable pages", () =>
     );
     assert.isTrue(Exit.isSuccess(yield* Effect.exit(shares.stop({ pageId: shared }))));
   }).pipe(Effect.provide(layerTest)),
+);
+
+const decodePage = Schema.decodeUnknownSync(SpaceSharedPage);
+const jsonOf = (response: Response) => Effect.promise(() => response.json());
+const decodeFailure = Schema.decodeUnknownSync(Schema.Struct({ reason: Schema.String }));
+const failureReason = (response: Response) =>
+  Effect.promise(async () => decodeFailure(await response.json()).reason);
+const pdf = new TextEncoder().encode("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n");
+
+const httpHarness = Effect.fn("PageShareTest.httpHarness")(function* () {
+  const context = yield* Effect.context<
+    PageShareService.SpacePageShareService | FileSystem.FileSystem | HttpPlatform.HttpPlatform
+  >();
+  const { handler, dispose } = HttpRouter.toWebHandler(
+    PageShareHttp.layer.pipe(Layer.provide(Layer.succeedContext(context))),
+    { disableLogger: true },
+  );
+  yield* Effect.addFinalizer(() => Effect.promise(dispose));
+  const get = (relative: string) =>
+    Effect.promise(() => handler(new Request(`http://t2.test${relative}`), context));
+  const pageUrl = (token: string, page?: string) =>
+    `${SPACE_PAGE_SHARE_PAGE_ROUTE}?share=${encodeURIComponent(token)}${page === undefined ? "" : `&page=${encodeURIComponent(page)}`}`;
+  const assetUrl = (token: string, id: string, page?: string) =>
+    `${SPACE_PAGE_SHARE_ASSET_ROUTE}?share=${encodeURIComponent(token)}&id=${encodeURIComponent(id)}${page === undefined ? "" : `&page=${encodeURIComponent(page)}`}`;
+  return { get, pageUrl, assetUrl };
+});
+
+const uploadPdf = Effect.fn("PageShareTest.uploadPdf")(function* (
+  spaces: SpacesService.SpacesService["Service"],
+  requestId: string,
+) {
+  const minted = yield* spaces.createAssetUpload(
+    {
+      environmentId,
+      requestId,
+      expectedBytes: pdf.length,
+      mediaKind: "pdf",
+      mimeType: "application/pdf",
+      name: "report.pdf",
+    },
+    "owner",
+  );
+  yield* spaces.receiveAssetUpload(
+    minted.relativeUrl.split("/").at(-1)!,
+    String(pdf.length),
+    Stream.make(new Uint8Array(pdf)),
+  );
+  return yield* spaces.finalizeAssetUpload({ environmentId, uploadId: minted.uploadId }, "owner");
+});
+
+it.effect("serves the page route as JSON with no caching and refuses everything else", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { shares, rootPage, childPage, write, trash, credentialOf } = yield* workspace();
+      const { get, pageUrl } = yield* httpHarness();
+      const parent = yield* rootPage("Parent");
+      const shared = yield* childPage(parent, "Shared");
+      const nested = yield* childPage(shared, "Nested");
+      const elsewhere = yield* rootPage("Elsewhere");
+      yield* write(shared, "intro", "hello viewers");
+      const token = credentialOf((yield* shares.create({ pageId: shared })).url);
+
+      const root = yield* get(pageUrl(token));
+      assert.equal(root.status, 200);
+      assert.equal(root.headers.get("cache-control"), "no-store");
+      const body = decodePage(yield* jsonOf(root));
+      assert.equal(body.page.title, "Shared");
+      assert.deepEqual(
+        body.children.map((child) => child.id),
+        [nested],
+      );
+
+      const inner = decodePage(yield* jsonOf(yield* get(pageUrl(token, nested))));
+      assert.deepEqual(
+        inner.breadcrumb.map((crumb) => crumb.title),
+        ["Shared", "Nested"],
+      );
+
+      for (const outside of [parent, elsewhere]) {
+        const refused = yield* get(pageUrl(token, outside));
+        assert.equal(refused.status, 403);
+        assert.equal(refused.headers.get("cache-control"), "no-store");
+        assert.equal(yield* failureReason(refused), "unavailable");
+      }
+      const forged = yield* get(pageUrl(`${token}x`));
+      assert.equal(forged.status, 403);
+      assert.equal(yield* failureReason(forged), "invalid");
+      assert.equal((yield* get(pageUrl(""))).status, 400);
+      assert.equal((yield* get(`${SPACE_PAGE_SHARE_PAGE_ROUTE}`)).status, 400);
+
+      yield* trash(shared);
+      const ended = yield* get(pageUrl(token));
+      assert.equal(ended.status, 403);
+      assert.equal(yield* failureReason(ended), "inactive");
+    }),
+  ).pipe(Effect.provide(layerTest)),
+);
+
+it.effect("stops serving a replaced, stopped or expired link", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { shares, rootPage, credentialOf } = yield* workspace();
+      const { get, pageUrl } = yield* httpHarness();
+      const shared = yield* rootPage("Shared");
+      const first = credentialOf((yield* shares.create({ pageId: shared })).url);
+      const second = credentialOf((yield* shares.create({ pageId: shared })).url);
+      assert.equal((yield* get(pageUrl(first))).status, 403);
+      assert.equal((yield* get(pageUrl(second))).status, 200);
+      yield* shares.stop({ pageId: shared });
+      assert.equal((yield* get(pageUrl(second))).status, 403);
+
+      const third = credentialOf((yield* shares.create({ pageId: shared })).url);
+      yield* TestClock.adjust(Duration.millis(SPACE_PAGE_SHARE_TTL_MS));
+      assert.equal((yield* get(pageUrl(third))).status, 403);
+    }),
+  ).pipe(Effect.provide(layerTest)),
+);
+
+it.effect("serves only assets that a live block of the requested page references", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { spaces, shares, rootPage, childPage, credentialOf } = yield* workspace();
+      const { get, assetUrl } = yield* httpHarness();
+      const shared = yield* rootPage("Shared");
+      const nested = yield* childPage(shared, "Nested");
+      const outside = yield* rootPage("Outside");
+      const used = yield* uploadPdf(spaces, "used");
+      const foreign = yield* uploadPdf(spaces, "foreign");
+      const orphan = yield* uploadPdf(spaces, "orphan");
+      const library = yield* spaces.listSpaces(env);
+      const attach = Effect.fn("PageShareTest.attach")(function* (
+        pageId: C.SpacePageId,
+        blockId: string,
+        assetId: C.SpaceAssetId,
+      ) {
+        const page = yield* spaces.getPage({ ...env, pageId });
+        yield* spaces.applyBlockBatch({
+          ...env,
+          receiptEpoch: library.mutationAdmission.epoch,
+          mutationId: `attach-${blockId}`,
+          pageId,
+          baseRevision: page.page.revision,
+          generation: 0,
+          mutations: [
+            {
+              kind: "insert",
+              block: {
+                id: C.SpaceBlockId.make(blockId),
+                parentId: null,
+                order: "00000000000000000000000000000001",
+                type: "pdf",
+                version: 1,
+                content: { assetId },
+              },
+            },
+          ],
+        });
+      });
+      yield* attach(shared, "used-block", used.assetId);
+      yield* attach(outside, "foreign-block", foreign.assetId);
+      const token = credentialOf((yield* shares.create({ pageId: shared })).url);
+
+      const served = yield* get(assetUrl(token, used.assetId));
+      assert.equal(served.status, 200);
+      assert.equal(served.headers.get("cache-control"), "no-store");
+      assert.equal(served.headers.get("content-security-policy"), "default-src 'none'; sandbox");
+      assert.deepEqual(new Uint8Array(yield* Effect.promise(() => served.arrayBuffer())), pdf);
+
+      const refused = [
+        assetUrl(token, foreign.assetId),
+        assetUrl(token, foreign.assetId, outside),
+        assetUrl(token, orphan.assetId),
+        assetUrl(token, used.assetId, nested),
+        assetUrl(token, used.assetId, outside),
+        assetUrl(`${token}x`, used.assetId),
+      ];
+      for (const url of refused) {
+        const response = yield* get(url);
+        assert.equal(response.status, 403, url);
+        assert.equal(response.headers.get("cache-control"), "no-store");
+      }
+      assert.equal((yield* get(`${SPACE_PAGE_SHARE_ASSET_ROUTE}?share=${token}`)).status, 400);
+
+      yield* shares.stop({ pageId: shared });
+      assert.equal((yield* get(assetUrl(token, used.assetId))).status, 403);
+    }),
+  ).pipe(Effect.provide(layerTest)),
 );
