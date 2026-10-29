@@ -97,3 +97,12 @@ it("counts the owner's guest share actions, and only guest message sends", () =>
     feature: "guest_share.create",
   });
 });
+
+it("counts creating and stopping a page share without the page", () => {
+  expect(featureUsage(WS_METHODS.spacesSharesCreate, { pageId: "page-private" })).toEqual({
+    feature: "page_share.create",
+  });
+  expect(featureUsage(WS_METHODS.spacesSharesStop, { pageId: "page-private" })).toEqual({
+    feature: "page_share.stop",
+  });
+});
