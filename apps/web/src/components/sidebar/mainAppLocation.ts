@@ -1,6 +1,7 @@
 import { useRouter, type AnyRouter } from "@tanstack/react-router";
 import type { ScopedThreadRef } from "@t2code/contracts";
 import { resolveThreadRouteRef } from "../../threadRoutes";
+import { SPACE_PAGE_SHARE_PAGE_PATH } from "@t2code/contracts";
 import { GUEST_PAGE_PATH } from "../../guestPage";
 
 export function isAppModalPage(pathname: string) {
@@ -21,7 +22,13 @@ export function isSidebarUtilityPage(pathname: string) {
 }
 
 // Shell-less pages must never replace the chat or utility page to return to.
-const SHELL_LESS_PATHS = new Set(["/pair", "/connect", "/connect-agent", GUEST_PAGE_PATH]);
+const SHELL_LESS_PATHS = new Set([
+  "/pair",
+  "/connect",
+  "/connect-agent",
+  GUEST_PAGE_PATH,
+  SPACE_PAGE_SHARE_PAGE_PATH,
+]);
 const locations = new WeakMap<
   AnyRouter,
   { mainAppHref: string | null; modalReturnHref: string | null; threadRef: ScopedThreadRef | null }
