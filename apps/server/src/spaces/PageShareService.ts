@@ -23,6 +23,7 @@ import { base64UrlEncode, signPayload, timingSafeEqualBase64Url } from "../auth/
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import { CloudManagedEndpointRuntime } from "../cloud/ManagedEndpointRuntime.ts";
 import * as ServerSettings from "../serverSettings.ts";
+import * as AnalyticsService from "../telemetry/AnalyticsService.ts";
 import * as SpacesService from "./SpacesService.ts";
 
 const SIGNING_SECRET_NAME = "space-page-share-signing-key";
@@ -96,6 +97,7 @@ export class SpacePageShareService extends Context.Service<
 >()("@t2code/cli/spaces/PageShareService/SpacePageShareService") {}
 
 const make = Effect.gen(function* () {
+  const analytics = yield* AnalyticsService.AnalyticsService;
   const spaces = yield* SpacesService.SpacesService;
   const serverSettings = yield* ServerSettings.ServerSettingsService;
   const managedEndpoint = yield* CloudManagedEndpointRuntime;
@@ -198,6 +200,8 @@ const make = Effect.gen(function* () {
     requested?: C.SpacePageId,
   ) {
     const { share, pageId, breadcrumb } = yield* authorize(token, requested);
+    // Viewers have no client connection, so their events carry no surface and no page details.
+    yield* analytics.record("feature.used", { feature: "page_share.view" });
     return yield* spaces
       .readSharedPage({ rootPageId: share.pageId, expiresAt: share.expiresAt, pageId, breadcrumb })
       .pipe(Effect.mapError(() => unavailable));
