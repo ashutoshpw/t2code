@@ -137,7 +137,7 @@ export class FcmDeliveries extends Context.Service<
   }
 >()("t2code-relay/agentActivity/FcmDeliveries") {}
 
-const make = Effect.gen(function* () {
+export const make = Effect.gen(function* () {
   const config = yield* RelayConfiguration.RelayConfiguration;
   const crypto = yield* Crypto.Crypto;
   const sender = yield* FcmDeliveryQueueSender.FcmDeliveryQueueSender;

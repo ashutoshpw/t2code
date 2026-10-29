@@ -4,7 +4,6 @@ import type {
   DesktopPreviewPointerEvent,
   DesktopPreviewRecordingInputEvent,
   DesktopPreviewHostState,
-  DesktopPreviewRecordingFrame,
   DesktopPreviewTabState,
   DesktopSnapShotEvent,
 } from "@t2code/contracts";

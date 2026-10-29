@@ -139,6 +139,7 @@ export const relayEnvironmentCredentials = pgTable(
   },
   (table) => [
     uniqueIndex("idx_relay_environment_credentials_hash").on(table.credentialHash),
+    index("idx_relay_environment_credentials_environment").on(table.environmentId, table.revokedAt),
     index("idx_relay_environment_credentials_environment_key").on(
       table.environmentId,
       table.environmentPublicKey,
@@ -159,6 +160,7 @@ export const relayAgentActivityRows = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.environmentId, table.environmentPublicKey, table.threadId] }),
+    index("idx_relay_agent_activity_rows_updated").on(table.updatedAt),
   ],
 );
 
@@ -180,7 +182,11 @@ export const relayDeliveryAttempts = pgTable(
     transportError: text("transport_error"),
   },
   (table) => [
-    index("idx_relay_delivery_attempts_created").on(table.createdAt),
+    index("idx_relay_delivery_attempts_environment").on(
+      table.environmentId,
+      table.threadId,
+      table.createdAt,
+    ),
     uniqueIndex("idx_relay_delivery_attempts_source_job").on(table.sourceJobId),
   ],
 );

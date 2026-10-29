@@ -151,6 +151,8 @@ it("keeps inline change attribution whole at a message boundary", () => {
   assert.equal(payloads[1]?.embeds[0]?.description, `${title} by ${contributor}`);
   assert.equal(payloadDescription(payloads), `${intro}\n\n${filler}\n${title} by ${contributor}`);
   assertDiscordLimits(payloads);
+});
+
 it("posts a generated summary without its folded full list", () => {
   const summary = "**v1.2.3** · 4 changes\n\n## Fixes\n- Stop works again (#1)";
   const releaseNotes = `${summary}\n\n<details>\n<summary>Full changelog</summary>\n\n* fix: raw by @someone in https://github.com/ashutoshpw/t2code/pull/1\n\n</details>\n`;

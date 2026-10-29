@@ -2467,6 +2467,11 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     const startResult = yield* Effect.result(
       increment(terminalSessionsTotal, { lifecycle: eventType }).pipe(
         Effect.andThen(
+          eventType === "restarted"
+            ? increment(terminalRestartsTotal, { scope: "thread" })
+            : Effect.void,
+        ),
+        Effect.andThen(
           Effect.gen(function* () {
             const shellCandidates = resolveShellCandidates(shellResolver, platform, baseEnv);
             const terminalEnv = createTerminalSpawnEnv(

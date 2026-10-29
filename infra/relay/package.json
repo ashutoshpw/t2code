@@ -12,10 +12,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alchemy.run/axiom": "catalog:",
-    "@alchemy.run/cloudflare": "catalog:",
-    "@alchemy.run/drizzle": "catalog:",
-    "@alchemy.run/neon": "catalog:",
     "@clerk/backend": "catalog:",
     "@distilled.cloud/cloudflare": "catalog:",
     "@effect/sql-pg": "catalog:",
@@ -25,7 +21,7 @@
     "@t2code/client-runtime": "workspace:*",
     "@t2code/contracts": "workspace:*",
     "@t2code/shared": "workspace:*",
-    "alchemy": "catalog:",
+    "alchemy": "2.0.0-beta.80",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
     "effect": "catalog:"
   },
@@ -33,7 +29,6 @@
     "@cloudflare/workers-types": "^4.20260601.1",
     "@effect/platform-node": "catalog:",
     "@effect/vitest": "catalog:",
-    "@electric-sql/pglite": "0.3.15",
     "@types/node": "catalog:",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "typescript": "catalog:",

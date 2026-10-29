@@ -1,4 +1,9 @@
 export {
+  resetPrimaryEnvironmentDescriptorForTests,
+  resolveInitialPrimaryEnvironmentDescriptor,
+} from "./context";
+
+export {
   createServerPairingCredential,
   peekPairingTokenFromUrl,
   PrimaryEnvironmentPairingCredentialRejectedError,

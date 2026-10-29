@@ -154,7 +154,8 @@ describe("EnvironmentCredentials", () => {
               where: (condition: unknown) => {
                 whereConditions.push(condition);
                 return {
-                  returning: () => {
+                  returning: (selection: unknown) => {
+                    expect(selection).toBeDefined();
                     return Effect.succeed([{ credentialId: "credential-1" }]);
                   },
                 };

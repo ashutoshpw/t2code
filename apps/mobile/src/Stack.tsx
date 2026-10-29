@@ -1,4 +1,6 @@
 import { isDraftThreadRoute } from "./features/threads/thread-route-state";
+import { SpacesLibraryRouteScreen, SpacesPageRouteScreen } from "./features/spaces/SpacesScreens";
+import { spacesLibraryLinking, spacesPageLinking } from "./features/spaces/navigation";
 import { ComponentCatalogScreen } from "./features/development/ComponentCatalogScreen";
 import { PullRequestGuideStopScreen } from "./features/pull-requests/guide/PullRequestGuideScreen";
 import { PullRequestInlineCommentScreen } from "./features/pull-requests/PullRequestInlineCommentScreen";
@@ -47,6 +49,7 @@ import {
 } from "./components/RenderErrorBoundary";
 import { ArchivedThreadsRouteScreen } from "./features/archive/ArchivedThreadsRouteScreen";
 import { ConnectOnboardingRouteScreen } from "./features/cloud/ConnectOnboardingRouteScreen";
+import { useConnectOnboardingNavigation } from "./features/cloud/connectOnboardingNavigation";
 import { AttachmentFileScreen } from "./features/files/AttachmentFileScreen";
 import { ThreadFilesTreeScreen, ThreadFileScreen } from "./features/files/ThreadFilesRouteScreen";
 import { AdaptiveWorkspaceLayout } from "./features/layout/AdaptiveWorkspaceLayout";
@@ -522,6 +525,8 @@ function RootStackLayout(props: {
     ? draftParams.draftId[0]
     : draftParams?.draftId;
 
+  useConnectOnboardingNavigation();
+
   return (
     <NewTaskFlowProvider
       active={draftRouteOnTop}
@@ -599,6 +604,14 @@ const RootStackConfig = createWorkspaceStackNavigator({
     headerShown: false,
   },
   screens: {
+    SpacesLibrary: createNativeStackScreen({
+      screen: SpacesLibraryRouteScreen,
+      linking: spacesLibraryLinking,
+    }),
+    SpacesPage: createNativeStackScreen({
+      screen: SpacesPageRouteScreen,
+      linking: spacesPageLinking,
+    }),
     ...(__DEV__
       ? {
           ComponentCatalog: createNativeStackScreen({

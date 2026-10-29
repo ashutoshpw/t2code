@@ -14,7 +14,7 @@ import { withoutRedirects } from "../environments/EnvironmentConnector.ts";
 const RELAY_DELIVERY_ID_HEADER = "x-t2-relay-delivery-id";
 const RELAY_RECEIVED_AT_HEADER = "x-t2-relay-received-at";
 const MAX_RESPONSE_BYTES = 64 * 1024;
-const RELAY_HOOK_UPSTREAM_TIMEOUT_MS = 8_000;
+export const RELAY_HOOK_UPSTREAM_TIMEOUT_MS = 8_000;
 // Cloudflare answers 530 when the tunnel for a hostname has no connected origin.
 export const TUNNEL_OFFLINE_STATUS = 530;
 

@@ -39,8 +39,21 @@ const recordSchema = Schema.Struct({
   replacement: Schema.optionalKey(replacementSchema),
 });
 export type SpaceImagePlacement = typeof placementSchema.Type;
-export type SpaceImageRecord = Omit<typeof recordSchema.Type, "original"> & {
-  readonly original: Blob;
+export interface SpaceMediaOriginal {
+  readonly size: number;
+  readonly type: string;
+}
+export type SpaceOriginalCodec<Original extends SpaceMediaOriginal> = (input: unknown) => Original;
+const blobOriginal: SpaceOriginalCodec<Blob> = (input) => {
+  if (typeof Blob === "undefined" || !(input instanceof Blob))
+    throw new Error("Invalid retained Blob original; data is retained");
+  return input;
+};
+export type SpaceImageRecord<Original extends SpaceMediaOriginal = Blob> = Omit<
+  typeof recordSchema.Type,
+  "original"
+> & {
+  readonly original: Original;
 };
 const decodeRecord = Schema.decodeUnknownSync(recordSchema, { onExcessProperty: "error" });
 class SpaceImageAdmissionError extends SpaceIntentAdmissionError {}
@@ -70,10 +83,19 @@ export function imageAssetId(block: C.SpaceBlock) {
     ? C.SpaceAssetId.make(block.content.assetId)
     : null;
 }
-export function decodeSpaceImageRecord(input: unknown): SpaceImageRecord {
-  const value = decodeRecord(input);
+export function decodeSpaceImageRecord(input: unknown): SpaceImageRecord;
+export function decodeSpaceImageRecord<Original extends SpaceMediaOriginal>(
+  input: unknown,
+  original: SpaceOriginalCodec<Original>,
+): SpaceImageRecord<Original>;
+export function decodeSpaceImageRecord(
+  input: unknown,
+  codec: SpaceOriginalCodec<SpaceMediaOriginal> = blobOriginal,
+): SpaceImageRecord<SpaceMediaOriginal> {
+  const decoded = decodeRecord(input);
+  const value = { ...decoded, original: codec(decoded.original) };
   if (
-    !(value.original instanceof Blob) ||
+    !Number.isSafeInteger(value.original.size) ||
     value.original.size < 1 ||
     value.original.size > mediaMaxBytes(value.intent.mediaKind) ||
     value.original.size !== value.intent.expectedBytes ||
@@ -168,10 +190,18 @@ export function decodeSpaceImageRecord(input: unknown): SpaceImageRecord {
   freeze(metadata);
   return Object.freeze({ ...metadata, original });
 }
-export function decodeSpaceMediaRecords(values: readonly unknown[]): readonly SpaceImageRecord[] {
+export function decodeSpaceMediaRecords(values: readonly unknown[]): readonly SpaceImageRecord[];
+export function decodeSpaceMediaRecords<Original extends SpaceMediaOriginal>(
+  values: readonly unknown[],
+  original: SpaceOriginalCodec<Original>,
+): readonly SpaceImageRecord<Original>[];
+export function decodeSpaceMediaRecords(
+  values: readonly unknown[],
+  codec: SpaceOriginalCodec<SpaceMediaOriginal> = blobOriginal,
+): readonly SpaceImageRecord<SpaceMediaOriginal>[] {
   if (values.length > 2)
     throw new Error("Media original storage exceeds two slots; all data retained");
-  const records = values.map(decodeSpaceImageRecord);
+  const records = values.map((value) => decodeSpaceImageRecord(value, codec));
   if (
     new Set(records.map((r) => r.slot)).size !== records.length ||
     new Set(records.map((r) => r.id)).size !== records.length ||
@@ -182,10 +212,10 @@ export function decodeSpaceMediaRecords(values: readonly unknown[]): readonly Sp
     );
   return Object.freeze(records);
 }
-export interface SpaceImageStore {
-  readonly load: () => Promise<readonly SpaceImageRecord[]>;
-  readonly put: (record: SpaceImageRecord, expected: number | null) => Promise<void>;
-  readonly remove: (record: SpaceImageRecord) => Promise<void>;
+export interface SpaceImageStore<Original extends SpaceMediaOriginal = Blob> {
+  readonly load: () => Promise<readonly SpaceImageRecord<Original>[]>;
+  readonly put: (record: SpaceImageRecord<Original>, expected: number | null) => Promise<void>;
+  readonly remove: (record: SpaceImageRecord<Original>) => Promise<void>;
 }
 function replacementBlock(
   target: SpaceMediaReplacement,
@@ -214,8 +244,8 @@ export interface SpaceImageInsertion {
   ) => void;
   readonly persist: () => Promise<void>;
 }
-export interface SpaceImagePorts {
-  readonly store: SpaceImageStore;
+export type SpaceImagePorts<Original extends SpaceMediaOriginal = Blob> = {
+  readonly store: SpaceImageStore<Original>;
   readonly connect?: (environmentId: EnvironmentId) => Promise<void>;
   readonly access: (
     environmentId: EnvironmentId,
@@ -228,7 +258,7 @@ export interface SpaceImagePorts {
   readonly post: (
     environmentId: EnvironmentId,
     relativeUrl: string,
-    original: Blob,
+    original: Original,
     name: string,
   ) => { done: Promise<void>; abort: () => void };
   readonly draft: (key: C.SpacePageTarget) => Promise<SpaceDocumentDraft | null>;
@@ -239,15 +269,21 @@ export interface SpaceImagePorts {
   ) => Promise<boolean>;
   readonly newId: () => string;
   readonly changed: () => void;
-}
-interface ImageSnapshot {
-  readonly records: readonly SpaceImageRecord[];
+} & ([Original] extends [Blob]
+  ? { readonly original?: SpaceOriginalCodec<Original> }
+  : { readonly original: SpaceOriginalCodec<Original> });
+interface ImageSnapshot<Original extends SpaceMediaOriginal> {
+  readonly records: readonly SpaceImageRecord<Original>[];
   readonly hydrated: boolean;
   readonly busy: boolean;
   readonly error: unknown;
 }
-export class SpaceImageUploads {
-  readonly #ports: SpaceImagePorts;
+export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
+  readonly #original: SpaceOriginalCodec<Original>;
+  #decode(input: unknown) {
+    return decodeSpaceImageRecord(input, this.#original);
+  }
+  readonly #ports: SpaceImagePorts<Original>;
   readonly #listeners = new Set<() => void>();
   readonly #mintOwners = new Map<string, object>();
   readonly #reserved = new Set<string>();
@@ -255,9 +291,11 @@ export class SpaceImageUploads {
   #permit: string | null = null;
   #binding: { id: string; key: C.SpacePageTarget } | null = null;
   #abort: (() => void) | null = null;
-  #snapshot: ImageSnapshot = { records: [], hydrated: false, busy: false, error: null };
-  constructor(ports: SpaceImagePorts) {
+  #snapshot: ImageSnapshot<Original> = { records: [], hydrated: false, busy: false, error: null };
+  constructor(ports: SpaceImagePorts<Original>) {
     this.#ports = ports;
+    // The conditional ports contract requires a codec for every non-Blob original.
+    this.#original = ports.original ?? (blobOriginal as unknown as SpaceOriginalCodec<Original>);
   }
   getSnapshot = () => this.#snapshot;
   subscribe = (listener: () => void) => {
@@ -266,7 +304,7 @@ export class SpaceImageUploads {
       this.#listeners.delete(listener);
     };
   };
-  #update(patch: Partial<ImageSnapshot>) {
+  #update(patch: Partial<ImageSnapshot<Original>>) {
     this.#snapshot = { ...this.#snapshot, ...patch };
     for (const listener of this.#listeners) listener();
     this.#ports.changed();
@@ -277,7 +315,7 @@ export class SpaceImageUploads {
         .load()
         .then((records) => {
           this.#update({
-            records: decodeSpaceMediaRecords(records),
+            records: decodeSpaceMediaRecords(records, this.#original),
             hydrated: true,
             error: null,
           });
@@ -334,13 +372,13 @@ export class SpaceImageUploads {
     if (!r) throw new Error("Image original is unavailable");
     return r;
   }
-  async #write(record: SpaceImageRecord, previous: SpaceImageRecord | null) {
-    const value = decodeSpaceImageRecord(record);
+  async #write(record: SpaceImageRecord<Original>, previous: SpaceImageRecord<Original> | null) {
+    const value = this.#decode(record);
     await this.#ports.store.put(value, previous?.sequence ?? null);
     this.#update({ records: [...this.#snapshot.records.filter((r) => r.id !== value.id), value] });
     return value;
   }
-  #next(r: SpaceImageRecord, patch: Partial<SpaceImageRecord>) {
+  #next(r: SpaceImageRecord<Original>, patch: Partial<SpaceImageRecord<Original>>) {
     return this.#write({ ...r, ...patch, sequence: r.sequence + 1 }, r);
   }
   #run<A>(use: () => Promise<A>): Promise<A> {
@@ -361,13 +399,13 @@ export class SpaceImageUploads {
   abort() {
     this.#abort?.();
   }
-  add(key: C.SpacePageTarget, original: Blob, name: string) {
+  add(key: C.SpacePageTarget, original: Original, name: string) {
     return this.#add(key, original, name);
   }
   addReplacement(
     target: SpaceImageInsertion,
     blockId: C.SpaceBlockId,
-    original: Blob,
+    original: Original,
     name: string,
   ) {
     try {
@@ -381,7 +419,7 @@ export class SpaceImageUploads {
   }
   #add(
     key: C.SpacePageTarget,
-    original: Blob,
+    original: Original,
     name: string,
     replacing?: { target: SpaceImageInsertion; replacement: SpaceMediaReplacement },
   ) {
@@ -421,7 +459,7 @@ export class SpaceImageUploads {
       }
       const id = this.#ports.newId();
       return this.#write(
-        decodeSpaceImageRecord({
+        this.#decode({
           version: replacing ? 3 : kind === "image" ? 1 : 2,
           ...(replacing ? { replacement: replacing.replacement } : {}),
           slot,
@@ -443,13 +481,13 @@ export class SpaceImageUploads {
       );
     });
   }
-  #sameSession(r: Pick<SpaceImageRecord, "key">, session: object, write: boolean) {
+  #sameSession(r: Pick<SpaceImageRecord<Original>, "key">, session: object, write: boolean) {
     const access = this.#ports.access(r.key.environmentId, write);
     if (access.session !== session)
       throw new Error("Image connection changed; recover the original upload explicitly");
     return access;
   }
-  #ready(r: SpaceImageRecord, value: C.SpaceAssetMetadata) {
+  #ready(r: SpaceImageRecord<Original>, value: C.SpaceAssetMetadata) {
     const limits = this.#ports.access(r.key.environmentId, false).limits;
     if (
       value.assetId !== r.handle?.assetId ||

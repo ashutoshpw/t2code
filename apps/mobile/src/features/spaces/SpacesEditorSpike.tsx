@@ -6,10 +6,32 @@ import { FlatList, Pressable, Text, View, type FlatListProps } from "react-nativ
 
 import { nativeDocumentForSpaceBlock } from "./nativeSpacesAdapter";
 import { SpacesNativeBlockEditor } from "./SpacesNativeBlockEditor";
+import { SpacesNativePublication } from "./nativeSpacesPublication";
 
 type SpacesCellProps = ComponentProps<
   NonNullable<FlatListProps<SpaceBlock>["CellRendererComponent"]>
 >;
+
+function SpikeBlockInput({
+  block,
+  onChange,
+  onCompositionChange,
+  onPublicationBlockedChange,
+}: {
+  block: SpaceBlock;
+  onChange: (block: SpaceBlock) => void;
+  onCompositionChange: (value: boolean) => void;
+  onPublicationBlockedChange: (value: boolean) => void;
+}) {
+  const [publication] = useState(() => new SpacesNativePublication(block, onChange));
+  return (
+    <SpacesNativeBlockEditor
+      publication={publication}
+      onCompositionChange={onCompositionChange}
+      onPublicationBlockedChange={onPublicationBlockedChange}
+    />
+  );
+}
 
 // Deliberately unregistered: the feasibility harness owns mounting and draft persistence.
 export function SpacesEditorSpike({
@@ -154,10 +176,9 @@ export function SpacesEditorSpike({
           return (
             <View className="px-4 py-3">
               {focusedId === block.id && document ? (
-                <SpacesNativeBlockEditor
+                <SpikeBlockInput
                   key={block.id}
-                  initialBlock={block}
-                  initialDocument={document}
+                  block={block}
                   onChange={onChange}
                   onCompositionChange={(value) => {
                     if (value) pendingFocus.current = null;

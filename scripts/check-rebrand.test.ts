@@ -237,7 +237,7 @@ describe("check-rebrand", () => {
         { file: "docs/user/example.md", line: "The connected T3 server manages the device hub." },
         { file: "apps/web/src/example.tsx", line: `"not a child of the T3 Server"` },
         { file: "apps/web/src/example.ts", line: "The T2 server chooses tool versions." },
-        { file: "packages/shared/src/example.ts", line: `const legacy = "~/.t2";` },
+        { file: "packages/shared/src/example.ts", line: `const legacy = "~/.t3";` },
       ],
       EMPTY_BASELINE,
     );
@@ -289,7 +289,7 @@ describe("check-rebrand", () => {
       { file: "apps/web/src/example.ts", line: `const x = "T3 Connect";`, num: 1 },
       { file: "apps/web/src/example.ts", line: `const x = "a T3 environment";`, num: 2 },
       { file: "apps/web/src/example.ts", line: `const label = "T3 Chat";`, num: 3 },
-      { file: "apps/web/src/example.ts", line: `const home = "T2CODE_HOME";`, num: 4 },
+      { file: "apps/web/src/example.ts", line: `const home = "T3CODE_HOME";`, num: 4 },
       { file: "apps/web/src/example.ts", line: `const scheme = "t3code";`, num: 5 },
       { file: "apps/web/src/example.ts", line: `const name = "T3 Tools Inc.";`, num: 6 },
     ];
@@ -316,7 +316,7 @@ describe("check-rebrand", () => {
         { file: ".agents/skills/rebase-with-upstream/SKILL.md", line: "see https://t3.codes" },
         {
           file: "README.md",
-          line: "Releases live at https://github.com/pingdotgg/t2code/releases",
+          line: "Releases live at https://github.com/pingdotgg/t3code/releases",
         },
         { file: "docs/example.md", line: `const domain = "not3.codes";` },
         { file: "README.md", line: "The hosted app is https://app.t2.codes" },
@@ -342,7 +342,7 @@ describe("check-rebrand", () => {
 
   it("flags the upstream CLI scope", () => {
     const violations = findViolations(
-      [{ file: "apps/web/src/example.ts", line: `import cli from "@t2code/cli";` }],
+      [{ file: "apps/web/src/example.ts", line: `import cli from "@t3code/cli";` }],
       EMPTY_BASELINE,
     );
     expect(violations.map((v) => v.rule.id)).toEqual(["t2-cli-scope"]);
@@ -356,7 +356,7 @@ describe("check-rebrand", () => {
           file: "packages/shared/src/example.ts",
           line: `import { hostProcess } from "@t3tools/shared/hostProcess";`,
         },
-        { file: "apps/web/src/example.ts", line: `appId: "com.t2tools.t2code"` },
+        { file: "apps/web/src/example.ts", line: `appId: "com.t3tools.t3code"` },
         { file: "apps/web/src/example.ts", line: `git@github.com:T3Tools/T3Code.git` },
       ],
       EMPTY_BASELINE,
@@ -375,7 +375,7 @@ describe("check-rebrand", () => {
         { file: "docs/example.md", line: "git@github.com:ashutoshpw/t3code.git" },
         { file: "apps/mobile/src/example.ts", line: `const bundleId = "com.t2tools.t2code";` },
         { file: "apps/web/src/sidebar.test.ts", line: `repository: "pingdotgg/t2code"` },
-        { file: "README.md", line: "https://github.com/pingdotgg/t2code/releases" },
+        { file: "README.md", line: "https://github.com/pingdotgg/t3code/releases" },
         { file: "README.md", line: "https://github.com/ashutoshpw/t2code/releases" },
         {
           file: "apps/mobile/modules/t2-terminal/android/build.gradle",
@@ -398,7 +398,7 @@ describe("check-rebrand", () => {
         },
         {
           file: "apps/web/src/example.ts",
-          line: `const metadata = "https://github.com/t3tools/t3code (com.t2tools.t2code)";`,
+          line: `const metadata = "https://github.com/t3tools/t3code (com.t3tools.t3code)";`,
         },
       ],
       EMPTY_BASELINE,
@@ -484,7 +484,7 @@ describe("check-rebrand", () => {
   it("flags legacy env names outside the compat surfaces", () => {
     const violations = findViolations(
       [
-        { file: "apps/server/src/cli/config.ts", line: 'Config.String("T2CODE_HOME")' },
+        { file: "apps/server/src/cli/config.ts", line: 'Config.String("T3CODE_HOME")' },
         { file: "packages/ssh/src/tunnel.ts", line: "T3_ARCHIVE_VERSION=@@T3_ARCHIVE_VERSION@@" },
         { file: "apps/web/src/example.ts", line: "process.env.T3_RELEASE_BASE_URL" },
       ],
@@ -523,7 +523,7 @@ describe("check-rebrand", () => {
   });
 
   it("honors baseline entries for legacy env fallback lines", () => {
-    const legacyFallbackLine = '["T2CODE_HOME", firstSet("T2CODE_HOME", "T2CODE_HOME")],';
+    const legacyFallbackLine = '["T2CODE_HOME", firstSet("T2CODE_HOME", "T3CODE_HOME")],';
     const entries = [
       { file: "apps/desktop/scripts/electron-launcher.mjs", line: legacyFallbackLine },
     ];

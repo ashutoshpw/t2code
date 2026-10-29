@@ -941,6 +941,46 @@ export function createEnvironmentRpcSubscriptionAtomFamily<
   });
 }
 
+export async function executeScopedEnvironmentRpc<R, ER, TTag extends EnvironmentUnaryRpcTag>(
+  runtime: Atom.AtomRuntime<EnvironmentRegistry.EnvironmentRegistry | R, ER>,
+  registry: AtomRegistry.AtomRegistry,
+  tag: TTag,
+  target: { readonly environmentId: EnvironmentIdType; readonly input: EnvironmentRpcInput<TTag> },
+  options: AtomCommandOptions & {
+    readonly signal: AbortSignal;
+    readonly assertCurrent: () => void;
+  },
+) {
+  const permissions = createCommandPermissions(runtime, tag);
+  const request = permissions.authorize(registry, target.environmentId, target.input).pipe(
+    Effect.andThen(() => Effect.sync(options.assertCurrent)),
+    Effect.andThen(() => requestGuarded(tag, target.input)),
+    Effect.provideService(RpcPermissionGuard, {
+      authorize: (id, method, input) =>
+        createCommandPermissions(runtime, method).authorize(registry, id, input),
+    }),
+  );
+  // Caller settlement includes RPC interruption finalizers; no cached query can retain the work.
+  return executeAtomCommand(
+    () =>
+      Effect.runPromiseExit(
+        Effect.scoped(
+          Effect.gen(function* () {
+            yield* AtomRegistry.mount(registry, runtime);
+            const context = yield* AtomRegistry.getResult(registry, runtime, {
+              suspendOnWaiting: true,
+            });
+            return yield* runInEnvironment(target.environmentId, request).pipe(
+              Effect.provide(context),
+            );
+          }),
+        ),
+        { signal: options.signal },
+      ),
+    options,
+  );
+}
+
 export function createEnvironmentRpcCommand<
   R,
   ER,

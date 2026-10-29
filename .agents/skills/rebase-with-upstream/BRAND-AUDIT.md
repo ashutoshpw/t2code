@@ -33,8 +33,8 @@ Line rules run on every added line (pre-commit: staged; pre-push: pushed ranges;
 Grep for brand strings across tests and copy-bearing files:
 
 ```sh
-rg -n "T3 Code|T3_CODE|@t2code/cli|@t3tools/|t3tools|@t2code/" -g '!node_modules' -g '!.t2' -g '!.repos' -g '!patches/**'
-rg -no "(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+" -g '!node_modules' -g '!.t2' -g '!.repos' -g '!.agents' -g '!patches/**'
+rg -n "T3 Code|T3_CODE|@t3code/cli|@t3tools/|t3tools|@t2code/" -g '!node_modules' -g '!.t3' -g '!.repos' -g '!patches/**'
+rg -no "(?<![A-Za-z0-9_])T3(?:CODE)?_[A-Z0-9_]+" -g '!node_modules' -g '!.t3' -g '!.repos' -g '!.agents' -g '!patches/**'
 ```
 
 - **Intentional, leave alone:** upstream repo URLs, compatibility-bound platform identifiers (bundle ids like `com.t3tools.t3code`, the AUR `t3code-bin` package name), vendored `.repos/`, git blob SHAs inside `patches/`, historical validation notes in comments, mock strings echoed verbatim by both source and test, and the stored-data spellings listed under "The audit's expected remainder".

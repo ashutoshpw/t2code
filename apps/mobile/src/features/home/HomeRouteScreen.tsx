@@ -3,6 +3,7 @@ import { ThreadUndoNotice } from "./ThreadUndoNotice";
 import { Toolbar } from "../../components/ui/Toolbar";
 import { use } from "react";
 import { NativePrimaryColumnContext } from "../../native/v5-workspace-context";
+import { SpacesEntry } from "../spaces/SpacesEntry";
 import * as Arr from "effect/Array";
 import * as Order from "effect/Order";
 import { useNavigation } from "@react-navigation/native";
@@ -229,6 +230,7 @@ export function HomeRouteScreen() {
           onStartNewTask={startNewTask}
         />
 
+        <SpacesEntry />
         <HomeScreen
           catalogState={catalogState}
           environments={environments}

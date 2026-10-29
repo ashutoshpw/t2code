@@ -1,3 +1,4 @@
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   navigationCustomizationAvailable,
   overflowNavigationTabs,
@@ -106,7 +107,7 @@ interface SettingsListSection {
 }
 
 function ConfiguredSettingsRouteScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const { user } = useUser();
   const { savedConnectionsById } = useSavedRemoteConnections();
@@ -210,6 +211,7 @@ function SettingsList(props: { readonly connections: readonly SettingsListRow[] 
 }
 
 function useSettingsIndexSections(): SettingsListSection[] {
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
   const { selectedTargets, projectGroups, selectedProjectKey } = useSettingsEnvironmentFilter();
   const noServerTargets = selectedTargets.length === 0;
   const selectedProject = projectGroups.find((group) => group.key === selectedProjectKey);
@@ -250,6 +252,17 @@ function useSettingsIndexSections(): SettingsListSection[] {
               page("SettingsMicrophone", "mic", "Microphone"),
             ]
           : []),
+      ],
+    },
+    {
+      title: "Pages",
+      rows: [
+        {
+          id: "SpacesLibrary",
+          icon: "doc.text",
+          label: "Spaces",
+          onPress: () => navigation.push("SpacesLibrary"),
+        },
       ],
     },
     {

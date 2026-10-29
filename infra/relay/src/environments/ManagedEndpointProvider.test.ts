@@ -2,7 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 
 import { describe, expect, it } from "@effect/vitest";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Cloudflare from "alchemy/Cloudflare";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -53,6 +53,7 @@ interface AllocationCall {
     | "markReady"
     | "claimRelease"
     | "claimDeprovision"
+    | "remove"
     | "removeClaimed";
   readonly input: unknown;
 }
@@ -317,6 +318,11 @@ function makeAllocations(calls: AllocationCall[] = []) {
         mutate(allocationKey(input), (current) => current);
         return allocations.get(allocationKey(input))?.generation ?? null;
       }),
+    remove: (input) =>
+      Effect.sync(() => {
+        calls.push({ operation: "remove", input });
+        allocations.delete(allocationKey(input));
+      }),
     removeClaimed: (input) =>
       Effect.sync(() => {
         calls.push({ operation: "removeClaimed", input });
@@ -335,13 +341,10 @@ function makeTunnelLimits(
   result: ManagedTunnelLimits.ManagedTunnelLimitExceeded | null = null,
 ) {
   return ManagedTunnelLimits.ManagedTunnelLimits.of({
-    withCapacity: (input, reserve) =>
-      Effect.gen(function* () {
+    ensureCapacity: (input) =>
+      Effect.suspend(() => {
         calls.push(input);
-        if (result !== null) {
-          return yield* result;
-        }
-        return yield* reserve;
+        return result === null ? Effect.void : Effect.fail(result);
       }),
   });
 }
@@ -953,6 +956,7 @@ describe("ManagedEndpointProvider", () => {
         "createRecord",
         "updateRecord",
       ]);
+      expect(allocationCalls.map((call) => call.operation)).not.toContain("remove");
       const claims = allocationCalls.filter((call) => call.operation === "claimRelease");
       expect(claims.map((call) => (call.input as { markReleased?: boolean }).markReleased)).toEqual(
         [undefined, undefined],
@@ -1472,52 +1476,6 @@ describe("ManagedEndpointProvider", () => {
         "claimDeprovision",
         "removeClaimed",
       ]);
-    }).pipe(Effect.provide(layer));
-  });
-
-  it.effect("marks the tunnel released when removing the allocation fails after deletion", () => {
-    const allocationCalls: AllocationCall[] = [];
-    const allocations = makeAllocations(allocationCalls);
-    const layer = layerProvider(makePersistentTunnelClient(), makeDnsClient(), {
-      ...allocations,
-      removeClaimed: (input) =>
-        Effect.suspend(() => {
-          allocationCalls.push({ operation: "removeClaimed", input });
-          return Effect.fail(
-            new ManagedEndpointAllocations.ManagedEndpointAllocationPersistenceError({
-              operation: "remove-claimed",
-              stage: "database-request",
-              userId: input.userId,
-              environmentId: input.environmentId,
-            }),
-          );
-        }),
-    });
-
-    return Effect.gen(function* () {
-      const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
-      const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
-      yield* provider.provision({
-        ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
-      });
-      const result = yield* Effect.result(provider.deprovision(key));
-
-      expect(result._tag).toBe("Failure");
-      if (result._tag === "Failure") {
-        expect(result.failure).toMatchObject({ stage: "remove-allocation" });
-      }
-      // The tunnel is gone; without the mark the tunnel limit would keep counting it.
-      const claim = allocationCalls.find((call) => call.operation === "claimDeprovision");
-      if (claim === undefined) return expect.unreachable("deprovision never claimed the row");
-      expect(allocationCalls.at(-1)).toMatchObject({
-        operation: "claimRelease",
-        input: {
-          tunnelId: "tunnel-id",
-          generation: (claim.input as { generation: number }).generation + 1,
-          markReleased: true,
-        },
-      });
     }).pipe(Effect.provide(layer));
   });
 

@@ -9,7 +9,7 @@ import {
   usePullRequestMediaUrl,
 } from "./PullRequestMedia";
 import { videoMimeType } from "@t2code/shared/video";
-import { createContext, useContext, useCallback, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { changeRequestReferenceAutolinker } from "@t2code/client-runtime/pull-request-markdown";
 import type { ReferenceAutolink } from "@t2code/client-runtime/source-control-clients";
 import { linkReferenceAutolinks } from "./pullRequestAutolinks";

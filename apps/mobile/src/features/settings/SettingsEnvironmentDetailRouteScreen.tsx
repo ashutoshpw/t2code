@@ -1,4 +1,5 @@
 import * as Dialog from "../../components/ui/Dialog";
+import { SpacesEnvironmentSettings } from "../spaces/SpacesEnvironmentSettings";
 import { useAtom, useAtomValue } from "@effect/atom-react";
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import {
@@ -201,6 +202,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                 navigation.navigate("SettingsEnvironmentNew", { routeFor: environmentId })
               }
             />
+            <SpacesEnvironmentSettings environmentId={environmentId} />
             {outdated ? (
               <OutdatedServerUpdateSection
                 environmentId={environmentId}

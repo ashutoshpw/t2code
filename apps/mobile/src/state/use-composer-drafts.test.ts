@@ -144,6 +144,12 @@ vi.mock("../lib/composerImages", async (importOriginal) => ({
 }));
 
 vi.mock("../lib/uuid", () => ({ uuidv4: () => "uuid", randomHex: () => "0000" }));
+vi.mock("./prepare-mobile-composer-context", () => ({
+  prepareMobileComposerContext: async (input: { text: string; context?: unknown }) => ({
+    text: input.text,
+    context: input.context,
+  }),
+}));
 vi.mock("./assets", () => ({ assetEnvironment: {} }));
 vi.mock("./attachments", () => ({ attachmentEnvironment: {} }));
 vi.mock("./session", () => ({ environmentSession: {} }));
@@ -192,6 +198,9 @@ import {
   createNewTaskDraft,
   createComposerDraftContextHistory,
   setComposerDraftContext,
+  setComposerDraftContextDraft,
+  setComposerDraftSpaceIncludeChildPages,
+  sameComposerDraftState,
   decodePersistedComposerState,
   ensureComposerDraftsLoaded,
   type ComposerDraft,
@@ -2732,4 +2741,155 @@ it("transfers Spaces selectors through main's queue-exit draft owner", async () 
   expect(getComposerDraftSnapshot(threadKey).text).toBe(original.text);
   expect(getComposerDraftSnapshot(threadKey).contextDraft).toEqual(contextDraft);
   await flushComposerDrafts();
+});
+
+it("atomically inserts a current Spaces selector with its link and preserves it through draft persistence", async () => {
+  const key = "spaces-picker-owner";
+  const selector = {
+    version: 1 as const,
+    selection: "current" as const,
+    kind: "page" as const,
+    contextId: ComposerContextId.make("selected-page"),
+    label: "Design",
+    environmentId: EnvironmentId.make("source"),
+    pageId: SpacePageId.make("page-id"),
+    includeChildPages: false,
+  };
+  setComposerDraftText(key, "Compare @Design");
+  const content = {
+    text: formatComposerContextReference(selector),
+    context: { version: 1 as const, records: [] },
+    contextDraft: { selectors: [selector], records: [] },
+  };
+  expect(
+    insertComposerDraftContext(key, content, { text: "Compare @Design", start: 8, end: 15 }),
+  ).toBe(true);
+  const inserted = getComposerDraftSnapshot(key);
+  expect(inserted.contextDraft?.selectors).toEqual([selector]);
+  expect(collectComposerContextReferences(inserted.text).map((ref) => ref.contextId)).toEqual([
+    selector.contextId,
+  ]);
+  await flushComposerDrafts();
+  const decoded = decodePersistedComposerState(JSON.parse(composerDraftFileMocks.getDocument()));
+  expect(decoded.drafts[key]?.contextDraft).toEqual(content.contextDraft);
+});
+
+it("invalidates a captured draft on child-option edits without mutating selectors or accepting stale option owners", () => {
+  const key = "spaces-option-owner";
+  const selector = {
+    version: 1 as const,
+    selection: "current" as const,
+    kind: "page" as const,
+    contextId: ComposerContextId.make("option-page"),
+    label: "Design",
+    environmentId: EnvironmentId.make("source"),
+    pageId: SpacePageId.make("page-id"),
+    includeChildPages: false,
+  };
+  const text = formatComposerContextReference(selector);
+  setComposerDraftText(key, text);
+  setComposerDraftContextDraft(key, { selectors: [selector], records: [] });
+  const captured = getComposerDraftSnapshot(key);
+  expect(setComposerDraftSpaceIncludeChildPages(key, selector, true)).toBe(true);
+  const changed = getComposerDraftSnapshot(key);
+  expect(sameComposerDraftState(captured, changed)).toBe(false);
+  expect(selector.includeChildPages).toBe(false);
+  expect(changed.contextDraft?.selectors[0]?.includeChildPages).toBe(true);
+  expect(setComposerDraftSpaceIncludeChildPages(key, selector, false)).toBe(false);
+  expect(getComposerDraftSnapshot(key).contextDraft).toBe(changed.contextDraft);
+  const history = createComposerDraftContextHistory();
+  history.restore(text, changed);
+  setComposerDraftText(key, "removed");
+  expect(getComposerDraftSnapshot(key).contextDraft).toBeUndefined();
+  expect(
+    history.restore(text, getComposerDraftSnapshot(key)).contextDraft?.selectors[0]
+      ?.includeChildPages,
+  ).toBe(true);
+  history.dispose();
+});
+
+it("refuses stale, revoked, ambiguous and unsafe selector insertions without replacing newer draft state", () => {
+  const key = "spaces-stale-owner";
+  const selector = {
+    version: 1 as const,
+    selection: "current" as const,
+    kind: "page" as const,
+    contextId: ComposerContextId.make("selected-page"),
+    label: "Design",
+    environmentId: EnvironmentId.make("source"),
+    pageId: SpacePageId.make("page-id"),
+    includeChildPages: false,
+  };
+  const content = {
+    text: formatComposerContextReference(selector),
+    context: { version: 1 as const, records: [] },
+    contextDraft: { selectors: [selector], records: [] },
+  };
+  setComposerDraftText(key, "@Design");
+  const captured = getComposerDraftSnapshot(key);
+  setComposerDraftText(key, "newer suffix");
+  expect(
+    insertComposerDraftContext(
+      key,
+      content,
+      { text: captured.text, start: 0, end: captured.text.length },
+      { expectedDraft: captured, current: () => true },
+    ),
+  ).toBe(false);
+  const newer = getComposerDraftSnapshot(key);
+  expect(
+    insertComposerDraftContext(
+      key,
+      content,
+      { text: newer.text, start: 0, end: 0 },
+      { expectedDraft: newer, current: () => false },
+    ),
+  ).toBe(false);
+  expect(sameComposerDraftState(newer, getComposerDraftSnapshot(key))).toBe(true);
+  setComposerDraftText(key, "😀");
+  expect(insertComposerDraftContext(key, content, { text: "😀", start: 1, end: 1 })).toBe(false);
+  expect(getComposerDraftSnapshot(key).text).toBe("😀");
+  setComposerDraftText(key, content.text);
+  setComposerDraftContextDraft(key, content.contextDraft);
+  const original = getComposerDraftSnapshot(key);
+  expect(
+    insertComposerDraftContext(key, content, {
+      text: original.text,
+      start: original.text.length,
+      end: original.text.length,
+    }),
+  ).toBe(false);
+  expect(sameComposerDraftState(original, getComposerDraftSnapshot(key))).toBe(true);
+});
+
+it("preserves a retained context-draft annotation's indirectly referenced screenshot on text edits", () => {
+  const key = "selector-record-dependencies";
+  const screenshot = {
+    version: 1 as const,
+    kind: "image" as const,
+    contextId: ComposerContextId.make("screenshot"),
+    label: "Screenshot",
+    name: "screen.png",
+    mimeType: "image/png",
+    sizeBytes: 1,
+    attachmentId: "image-file",
+  };
+  const annotation = {
+    version: 1 as const,
+    kind: "preview-annotation" as const,
+    contextId: ComposerContextId.make("annotation"),
+    label: "Comment",
+    annotationId: "annotation-id",
+    pageUrl: "https://preview.example",
+    pageTitle: null,
+    comment: "Keep the screenshot",
+    targetSummary: "button",
+    styleChanges: [],
+    screenshotContextId: screenshot.contextId,
+  };
+  const text = formatComposerContextReference(annotation);
+  setComposerDraftText(key, text);
+  setComposerDraftContextDraft(key, { selectors: [], records: [annotation, screenshot] });
+  setComposerDraftText(key, `${text} More text`);
+  expect(getComposerDraftSnapshot(key).contextDraft?.records).toEqual([annotation, screenshot]);
 });
