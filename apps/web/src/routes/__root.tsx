@@ -19,6 +19,7 @@ import { CommandPalette } from "../components/CommandPalette";
 import { CustomSnoozeDialogHost } from "../components/CustomSnoozeDialog";
 import { SendLaterDialogHost } from "../components/chat/SendLaterDialog";
 import { GuestShareDialogHost } from "../components/chat/GuestShareControls";
+import { SpacePageShareDialogHost } from "../spaces/SpacePageShareDialog";
 import { AddProjectToMachineDialogHost } from "../components/AddProjectToMachineDialog";
 import { ConfirmDialogHost } from "../components/ConfirmDialogHost";
 import { FirstRunGate } from "../components/onboarding/FirstRunGate";
@@ -169,6 +170,7 @@ function RootRouteBranch() {
         <CustomSnoozeDialogHost />
         <SendLaterDialogHost />
         <GuestShareDialogHost />
+        <SpacePageShareDialogHost />
         <CommandPalette>
           <AppSidebarLayout>
             <Outlet />
@@ -209,6 +211,7 @@ function RootRouteBranch() {
         <CustomSnoozeDialogHost />
         <SendLaterDialogHost />
         <GuestShareDialogHost />
+        <SpacePageShareDialogHost />
         <ProjectCloneToastCoordinator />
         <AddProjectToMachineDialogHost />
         {primaryEnvironmentAuthenticated ? (

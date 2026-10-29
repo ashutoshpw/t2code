@@ -17,6 +17,7 @@ export function LabsSettingsPanel() {
     <SettingsPageContainer>
       <SettingsSection id="beta" title="Beta">
         <SpacesRow />
+        <PageLinksRow />
         {/* Clerk is only mounted when this build has T2 Connect. */}
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
       </SettingsSection>
@@ -68,6 +69,38 @@ function GuestLinksRow() {
           checked={settings.guestSharingEnabled}
           onCheckedChange={(checked) => updateSettings({ guestSharingEnabled: Boolean(checked) })}
           aria-label="Guest links"
+        />
+      }
+    />
+  );
+}
+
+function PageLinksRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      serverScoped
+      {...searchableSetting("page-links")}
+      settingKeys={["spacesPageSharingEnabled"]}
+      description={
+        <>
+          Share a Spaces page and its sub-pages as a read-only link anyone can open in a browser.
+          Needs T2 Connect: sign in and link this machine in{" "}
+          <Link to="/settings/access" className="underline underline-offset-2">
+            Sharing & access
+          </Link>
+          . While it is off, every page link stops working.
+        </>
+      }
+      control={
+        <ScopedSwitch
+          settingKeys={["spacesPageSharingEnabled"]}
+          checked={settings.spacesPageSharingEnabled}
+          onCheckedChange={(checked) =>
+            updateSettings({ spacesPageSharingEnabled: Boolean(checked) })
+          }
+          aria-label="Page links"
         />
       }
     />

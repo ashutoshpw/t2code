@@ -4,7 +4,7 @@ import {
   type SpaceAssetUploadInput,
   type SpaceAssetGetInput,
 } from "@t2code/contracts/spaces";
-import { WS_METHODS, type EnvironmentId } from "@t2code/contracts";
+import { WS_METHODS, type EnvironmentId, type SpacePageShareLink } from "@t2code/contracts";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
 import { Atom, AtomRegistry } from "effect/reactivity";
 import * as Effect from "effect/Effect";
@@ -62,9 +62,41 @@ export function createSpacesEnvironmentAtoms<R, E>(
   const libraryRefresh = Atom.family((environmentId: EnvironmentId) =>
     Atom.make((get) => get(changed(environmentId)) + get(libraryChanged(environmentId))),
   );
+  const pageShares = Atom.family((_key: string) =>
+    Atom.make<SpacePageShareLink | null | undefined>(undefined).pipe(Atom.keepAlive),
+  );
+  const pageShare = (environmentId: EnvironmentId, pageId: SpacePageId) =>
+    pageShares(`${environmentId}\n${pageId}`);
   return {
     changed,
     libraryChanged,
+    /**
+     * The page's current share link as last read or written here: undefined before the first
+     * read, null once stopped. An expired link stays until the owner stops or replaces it.
+     */
+    pageShare,
+    getPageShare: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.shares.get",
+      tag: WS_METHODS.spacesSharesGet,
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() =>
+          registry.set(pageShare(target.environmentId, target.input.pageId), result.link),
+        ),
+    }),
+    createPageShare: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.shares.create",
+      tag: WS_METHODS.spacesSharesCreate,
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() =>
+          registry.set(pageShare(target.environmentId, target.input.pageId), result),
+        ),
+    }),
+    stopPageShare: createEnvironmentRpcCommand(runtime, {
+      label: "spaces.shares.stop",
+      tag: WS_METHODS.spacesSharesStop,
+      onSuccess: (target, registry) =>
+        Effect.sync(() => registry.set(pageShare(target.environmentId, target.input.pageId), null)),
+    }),
     createImageUpload: createEnvironmentRpcCommand(runtime, {
       label: "spaces.image-upload-create",
       tag: WS_METHODS.spacesAssetsUploadCreate,
