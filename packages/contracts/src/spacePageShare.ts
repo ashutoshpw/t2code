@@ -9,8 +9,17 @@ import { SpaceBlockWindow, SpacePageId } from "./spaces.ts";
  * the share id with a server key and never stored.
  */
 export const SPACE_PAGE_SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const SPACE_PAGE_SHARE_ROUTE_PREFIX = "/api/shared-page";
 /** The viewer page; the link carries the credential after `#` so servers never log it. */
 export const SPACE_PAGE_SHARE_PAGE_PATH = "/shared-page";
+/** The routes and viewer name the share's credential and the page they mean with these parameters. */
+export const SPACE_PAGE_SHARE_PARAM = "share";
+export const SPACE_PAGE_SHARE_PAGE_PARAM = "page";
+export const SPACE_PAGE_SHARE_ASSET_PARAM = "id";
+/** The page title, edited time, blocks, breadcrumb and sub-pages: `?share=<credential>&page=<id>`. */
+export const SPACE_PAGE_SHARE_PAGE_ROUTE = `${SPACE_PAGE_SHARE_ROUTE_PREFIX}/page`;
+/** An image, PDF or video shown on the page: `?share=<credential>&page=<id>&id=<asset id>`. */
+export const SPACE_PAGE_SHARE_ASSET_ROUTE = `${SPACE_PAGE_SHARE_ROUTE_PREFIX}/asset`;
 
 export const SpacePageShareId = TrimmedNonEmptyString.pipe(Schema.brand("SpacePageShareId"));
 export type SpacePageShareId = typeof SpacePageShareId.Type;
