@@ -25,6 +25,7 @@ import { CloudManagedEndpointRuntime } from "../cloud/ManagedEndpointRuntime.ts"
 import * as ServerConfig from "../config.ts";
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as Settings from "../serverSettings.ts";
+import * as AnalyticsService from "../telemetry/AnalyticsService.ts";
 import * as PageShareHttp from "./pageShareHttp.ts";
 import * as PageShareService from "./PageShareService.ts";
 import * as SpacesService from "./SpacesService.ts";
@@ -57,7 +58,18 @@ const layerSpaces = Layer.unwrap(
   ),
   Layer.provideMerge(Settings.layerTest({ spacesEnabled: true, spacesPageSharingEnabled: true })),
 );
+const recorded = Ref.makeUnsafe<ReadonlyArray<Readonly<Record<string, unknown>>>>([]);
+const layerAnalytics = Layer.succeed(
+  AnalyticsService.AnalyticsService,
+  AnalyticsService.AnalyticsService.of({
+    record: (event, properties) =>
+      Ref.update(recorded, (events) => [...events, { event, ...properties }]),
+    flush: Effect.void,
+    recordOwners: () => Effect.void,
+  }),
+);
 const layerTest = PageShareService.layer.pipe(
+  Layer.provide(layerAnalytics),
   Layer.provideMerge(layerSpaces),
   Layer.provide(layerConnect),
   Layer.provideMerge(ServerSecretStore.layer),
@@ -213,6 +225,21 @@ it.effect("shows the shared page and its sub-pages but nothing outside the tree"
       assert.equal(yield* reason(shares.page(token, outside)), "unavailable");
     }
     assert.equal(yield* reason(shares.page(token, C.SpacePageId.make("missing"))), "unavailable");
+  }).pipe(Effect.provide(layerTest)),
+);
+
+it.effect("counts a viewer opening a page without naming it", () =>
+  Effect.gen(function* () {
+    const { shares, rootPage, credentialOf } = yield* workspace();
+    const shared = yield* rootPage("Private title");
+    yield* Ref.set(recorded, []);
+    const token = credentialOf((yield* shares.create({ pageId: shared })).url);
+    assert.deepEqual(yield* Ref.get(recorded), []);
+    yield* shares.page(token);
+    yield* shares.page(token, C.SpacePageId.make("missing")).pipe(Effect.ignore);
+    assert.deepEqual(yield* Ref.get(recorded), [
+      { event: "feature.used", feature: "page_share.view" },
+    ]);
   }).pipe(Effect.provide(layerTest)),
 );
 
