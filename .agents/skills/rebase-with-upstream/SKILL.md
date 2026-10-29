@@ -59,9 +59,33 @@ Upstream's new tests hardcode `T3` copy that the rebrand commits predate. These 
 
 ## Verify and push
 
-1. Run targeted typecheck for the packages the rebase touched (e.g. `pnpm --filter @t2code/cli run typecheck`).
+1. Run the repo's pre-push gate for the files the rebase touched: `vp run check:changed` (format, lint, knip, typecheck, and the tests beside the changes). `*.browser.test.tsx` cannot run locally without `libatk`; CI's `Test Web` job is their only verifier.
 2. Update `origin/main` with `git push --force-with-lease origin main` — a rebase always rewrites the fork's main.
-3. Poll CI on the pushed head. When a job fails, check whether it is a new rebrand gap (fix, fixup into the right commit, push) or a masked suite that now runs for the first time (expect a few rounds on busy rebases). Stop when every check is green on the latest commit.
+3. Run the CI loop below until `main` is green.
+
+## CI loop after the push
+
+Pushing a rebase hands the last mile to GitHub Actions. A round is not finished until every run for the pushed head has concluded `success` (or `skipped`). Report run links, not impressions.
+
+1. List the runs for the pushed SHA and watch the gating ones to completion:
+   ```sh
+   gh run list --repo ashutoshpw/t2code --branch main --commit "$(git rev-parse HEAD)"
+   gh run watch <run-id> --repo ashutoshpw/t2code --exit-status
+   ```
+   `CI` and `Rebrand check` gate the rebase. Deploy/publish runs (relay, mobile, labels) report separately: chase them only when the rebase plausibly caused the failure (rebranded build args, renamed workflow inputs), and flag credential or infra failures instead of papering over them.
+2. `queued` for hours is a red flag, not progress. Hosted jobs finishing while a whole run never starts means a `blacksmith-*` label survived — grep `.github/workflows/`, map it (see Rebase → runners), cancel the stranded runs, and push the label fix.
+3. For each failure, read the log (`gh run view <run-id> --repo ashutoshpw/t2code --log-failed`) and classify before editing:
+   - **Rebrand gap** — a `T3` string or id on a surface the guard's rules miss: generated schemas, replay `.ndjson` fixtures, `t3code/` lint directive scopes, manifest keys like `t3CodeRange`. Fix the string and, when the class can recur, add a rule in `scripts/check-rebrand.ts`.
+   - **Structural resolution bug** — a conflict resolution that compiles but lies: a dropped test, an id the fixtures still expect, a budget JSON that measured the pre-rebrand text. Reproduce with the failing test file locally (`vp test run --root <pkg> <file>`) before pushing a guess.
+   - **Masked suite** — a suite that runs for the first time on this head because the rebase changed its inputs. Expect several rounds on busy rebases; fix each as it surfaces.
+   - **Environment-only** — the failure depends on the runner (browser launch, native toolchains). Read the log, fix what is real, and let CI confirm; do not add `it.skip` to get green.
+4. Land every fix as a **separate commit** on `main` — the head is already published, so no `--fixup` and no force-push:
+   ```sh
+   git commit -m "fix(<area>): <the CI failure in plain language>"
+   git push origin main
+   ```
+   Hooks stay on. A CI failure is never fixed by bypassing the guard (`--no-verify`, widening the baseline) unless the hit is genuinely intentional. Only fold the fix into an earlier fork commit when the user explicitly asks to keep the fork's commit count, which means another `--fixup`, autosquash, and `--force-with-lease`.
+5. Each push starts a new set of runs. Loop from step 1 until every run for the newest head is green, then close the round with the report below, citing the final run links and listing the fix commits the loop needed.
 
 ## Report what changed
 
@@ -70,7 +94,7 @@ A finished rebase is not just a green push — close every run with a short summ
 1. **The rebase**: upstream range (old tip → new tip), how many upstream commits were picked up, how many fork commits replayed, and the pushed head SHA.
 2. **Conflict work**: the resolutions that mattered, not every file — structural calls (whose side won and why), rebrands re-applied inside upstream's new shape, and any fork commit that became obsolete, was dropped, or was folded away.
 3. **Rebrand gaps found**: what the audit caught and fixed, plus keeper classifications worth remembering (things that look like gaps but are intentional).
-4. **Verification**: what actually ran — guard, typechecks, test suites — and their results. Note anything that could not be verified locally and is only covered by CI.
+4. **Verification**: what ran locally — guard, typechecks, test suites — and what CI covered: run links for the final green head, plus the fix commits the CI loop needed.
 5. **Flags for the user**: pre-existing failures, deliberate deviations from upstream, removed legacy seams, and anything that needs a decision (e.g. a URL a rename would 404).
 
 If a round was aborted, or CI is not green on the latest commit, say so explicitly instead of implying success.
