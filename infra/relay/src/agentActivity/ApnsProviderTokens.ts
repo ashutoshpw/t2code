@@ -31,11 +31,11 @@ export function __resetApnsProviderTokenCacheForTest(): void {
   isolateTokenCache.clear();
 }
 
-function quantizedApnsJwtIssuedAt(nowUnixSeconds: number): number {
+export function quantizedApnsJwtIssuedAt(nowUnixSeconds: number): number {
   return Math.floor(nowUnixSeconds / APNS_JWT_REUSE_SECONDS) * APNS_JWT_REUSE_SECONDS;
 }
 
-const make = () =>
+export const make = () =>
   ApnsProviderTokens.of({
     getJwt: Effect.fnUntraced(function* (input) {
       const issuedAtUnixSeconds = quantizedApnsJwtIssuedAt(input.issuedAtUnixSeconds);

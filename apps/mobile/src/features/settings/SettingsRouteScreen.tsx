@@ -15,6 +15,7 @@ import { useWorkspaceTabs } from "../layout/workspace/WorkspaceTabsContext";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { useAuth, useUser } from "@clerk/expo";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { use, type ComponentProps } from "react";
 import { Platform, View } from "react-native";
@@ -34,7 +35,7 @@ import { useSettingsEnvironmentFilter } from "./settings-environment-filter";
 import { filterSettingsSections } from "./settings-search";
 import { usePaneRole } from "../../components/ui/Pane";
 import { I18nProvider, useGT, useLanguagePreference } from "../../i18n/I18nProvider";
-import { nativeLanguageName } from "@t3tools/client-runtime/locales";
+import { nativeLanguageName } from "@t2code/client-runtime/locales";
 import { SUPPORTED_LOCALES } from "../../i18n/locales";
 
 export function SettingsRouteScreen() {
@@ -126,7 +127,7 @@ interface SettingsListSection {
 
 function ConfiguredSettingsRouteScreen() {
   const gt = useGT();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const { user } = useUser();
   const { savedConnectionsById } = useSavedRemoteConnections();
@@ -242,6 +243,7 @@ function SettingsList(props: { readonly connections: readonly SettingsListRow[] 
 function useSettingsIndexSections(): SettingsListSection[] {
   const gt = useGT();
   const language = useLanguagePreference();
+  const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
   const { selectedTargets, projectGroups, selectedProjectKey } = useSettingsEnvironmentFilter();
   const noServerTargets = selectedTargets.length === 0;
   const selectedProject = projectGroups.find((group) => group.key === selectedProjectKey);
@@ -283,6 +285,17 @@ function useSettingsIndexSections(): SettingsListSection[] {
           : []),
         page("SettingsKeyboard", "keyboard", gt("Keyboard")),
         page("SettingsVoice", "mic", gt("Voice")),
+      ],
+    },
+    {
+      title: gt("Pages"),
+      rows: [
+        {
+          id: "SpacesLibrary",
+          icon: "doc.text",
+          label: gt("Spaces"),
+          onPress: () => navigation.push("SpacesLibrary"),
+        },
       ],
     },
     {

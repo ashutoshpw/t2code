@@ -1,6 +1,6 @@
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "@alchemy.run/cloudflare";
-import * as SecureRandom from "effect/crypto/SecureRandom";
+import * as Cloudflare from "alchemy/Cloudflare";
+import * as Crypto from "effect/Crypto";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Mac from "effect/crypto/Mac";
@@ -77,7 +77,7 @@ export class ApnsDeliveryQueue extends Context.Service<
   }
 >()("t2code-relay/agentActivity/ApnsDeliveryQueue") {}
 
-const make = Effect.gen(function* () {
+export const make = Effect.gen(function* () {
   const sender = yield* ApnsDeliveryQueueSender;
   const random = yield* SecureRandom.SecureRandom;
   const config = yield* RelayConfiguration.RelayConfiguration;

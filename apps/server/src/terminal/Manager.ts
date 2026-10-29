@@ -69,7 +69,7 @@ import { resolveCodexHomeLayout } from "../provider/Drivers/CodexHomeLayout.ts";
 import { makeClaudeEnvironment } from "../provider/Drivers/ClaudeHome.ts";
 import { deriveProviderInstanceConfigMap } from "../provider/ProviderInstanceRegistryHydration.ts";
 import * as ServerSettings from "../serverSettings.ts";
-mport {
+import {
   increment,
   terminalRestartsTotal,
   terminalSessionsTotal,
@@ -1375,8 +1375,8 @@ function createTerminalSpawnEnv(
     spawnEnv[key] = value;
   }
   // The server inherits its launcher's identity (e.g. Apple_Terminal); shells
-  // and tools inside the integrated terminal should see T3 Code instead.
-  spawnEnv.TERM_PROGRAM = "t3code";
+  // and tools inside the integrated terminal should see T2 Code instead.
+  spawnEnv.TERM_PROGRAM = "t2code";
   spawnEnv.TERM_PROGRAM_VERSION = packageJson.version;
   if (runtimeEnv) {
     for (const [key, value] of Object.entries(runtimeEnv)) {
@@ -2457,6 +2457,11 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
 
     const startResult = yield* Effect.result(
       increment(terminalSessionsTotal, { lifecycle: eventType }).pipe(
+        Effect.andThen(
+          eventType === "restarted"
+            ? increment(terminalRestartsTotal, { scope: "thread" })
+            : Effect.void,
+        ),
         Effect.andThen(
           Effect.gen(function* () {
             const shellCandidates = resolveShellCandidates(shellResolver, platform, baseEnv);

@@ -43,6 +43,8 @@ const CONTEXT_CHIP_PRESENTATIONS = {
     accent: "#009c96",
     icon: "messages-square",
   },
+  page: { accent: "#009c96", icon: "message-circle" },
+  block: { accent: "#009c96", icon: "message-circle" },
   // A machine: the record carries only its identity, so every machine wears one glyph.
   environment: { accent: "#3f9a4f", icon: "server" },
   // An earlier response the message replies to. Mobile shows it as a plain labelled chip.

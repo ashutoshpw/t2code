@@ -25,6 +25,13 @@ import { pullRequestStatus } from "../pull-requests/pullRequestStatus";
 export type ComposerCommandItem =
   | {
       readonly id: string;
+      readonly type: "spaces";
+      readonly kind: "page" | "block";
+      readonly label: string;
+      readonly description: string;
+    }
+  | {
+      readonly id: string;
       readonly type: "pull-request";
       readonly pullRequest: PullRequestContextMetadata;
       readonly label: string;
@@ -83,6 +90,7 @@ export type ComposerCommandItem =
     };
 
 interface ComposerCommandPopoverProps {
+  readonly spacePicker?: React.ReactNode;
   readonly items: ReadonlyArray<ComposerCommandItem>;
   readonly triggerKind: ComposerTriggerKind | null;
   readonly isLoading: boolean;
@@ -133,6 +141,8 @@ function itemIcon(item: ComposerCommandItem): AppSymbolName | null {
       return "text.bubble";
     case "environment":
       return ENVIRONMENT_MACHINE_SYMBOLS[item.machine];
+    case "spaces":
+      return "doc.text";
   }
 }
 
@@ -148,7 +158,7 @@ function groupLabel(
     case "skill":
       return "Skills";
     case "path":
-      return items.every((item) => item.type === "path") ? "Files" : "Mentions";
+      return "Files and context";
     default:
       return null;
   }
@@ -233,35 +243,41 @@ export const ComposerCommandPopover = memo(function ComposerCommandPopover(
 
   return (
     <PopoverSurface>
-      {label ? (
-        <View className="px-3.5 pt-2.5 pb-1">
-          <Text className="text-3xs font-t2-bold tracking-[0.8px] uppercase text-foreground-muted">
-            {label}
-          </Text>
-        </View>
-      ) : null}
-      {props.items.length > 0 ? (
-        <ScrollView
-          className="max-h-[180px]"
-          keyboardShouldPersistTaps="always"
-          showsVerticalScrollIndicator={false}
-        >
-          {props.items.map((item, index) => (
-            <CommandRow
-              key={item.id}
-              item={item}
-              onPress={() => props.onSelect(item)}
-              isLast={index === props.items.length - 1}
-              isSlashSkill={props.triggerKind === "slash-command" && item.type === "skill"}
-            />
-          ))}
-        </ScrollView>
+      {props.spacePicker ? (
+        props.spacePicker
       ) : (
-        <View className="px-3.5 py-2.5">
-          <Text className="text-xs text-foreground-tertiary">
-            {props.error ?? emptyText(props.triggerKind, props.isLoading)}
-          </Text>
-        </View>
+        <>
+          {label ? (
+            <View className="px-3.5 pt-2.5 pb-1">
+              <Text className="text-3xs font-t2-bold tracking-[0.8px] uppercase text-foreground-muted">
+                {label}
+              </Text>
+            </View>
+          ) : null}
+          {props.items.length > 0 ? (
+            <ScrollView
+              className="max-h-[180px]"
+              keyboardShouldPersistTaps="always"
+              showsVerticalScrollIndicator={false}
+            >
+              {props.items.map((item, index) => (
+                <CommandRow
+                  key={item.id}
+                  item={item}
+                  onPress={() => props.onSelect(item)}
+                  isLast={index === props.items.length - 1}
+                  isSlashSkill={props.triggerKind === "slash-command" && item.type === "skill"}
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <View className="px-3.5 py-2.5">
+              <Text className="text-xs text-foreground-tertiary">
+                {props.error ?? emptyText(props.triggerKind, props.isLoading)}
+              </Text>
+            </View>
+          )}
+        </>
       )}
     </PopoverSurface>
   );

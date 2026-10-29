@@ -24,7 +24,9 @@ export type SpacesNativeSnapshot = typeof SpacesNativeSnapshot.Type;
 export type SpacesNativeDocument = Omit<SpacesNativeSnapshot, "composing" | "typing">;
 export type SpacesNativeMark = "bold" | "italic" | "code";
 
-const decode = Schema.decodeUnknownSync(SpacesNativeSnapshot, { onExcessProperty: "error" });
+export const decodeSpacesNativeEnvelope = Schema.decodeUnknownSync(SpacesNativeSnapshot, {
+  onExcessProperty: "error",
+});
 
 function validBoundary(text: string, offset: number): boolean {
   return (
@@ -39,7 +41,7 @@ function validBoundary(text: string, offset: number): boolean {
 }
 
 export function decodeSpacesNativeSnapshot(value: unknown): SpacesNativeSnapshot {
-  const snapshot = decode(value);
+  const snapshot = decodeSpacesNativeEnvelope(value);
   const text = snapshot.runs.map((run) => run.text).join("");
   if (
     snapshot.selection.end < snapshot.selection.start ||

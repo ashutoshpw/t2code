@@ -103,6 +103,7 @@ import {
 } from "./composerSendPresentation";
 import { compactEditorInsets } from "./compactEditorInsets";
 import { ComposerCommandPopover } from "./ComposerCommandPopover";
+import { ComposerSpacePicker } from "./ComposerSpacePicker";
 import { ComposerPopoverAnchor } from "./ComposerPopoverAnchor";
 import { ComposerQueuedEditAttachments } from "./ComposerQueuedEdit";
 import { useComposerCommandMenu } from "./use-composer-command-menu";
@@ -851,6 +852,22 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
               isLoading={composerMenu.isLoading}
               error={composerMenu.error}
               onSelect={composerMenu.onSelect}
+              spacePicker={
+                composerMenu.spaceKind ? (
+                  <ComposerSpacePicker
+                    key={JSON.stringify([
+                      composerDraftKey,
+                      props.environmentId,
+                      composerMenu.spaceKind,
+                    ])}
+                    environmentId={props.environmentId}
+                    kind={composerMenu.spaceKind}
+                    query={composerMenu.trigger.query}
+                    onSelect={composerMenu.onSelectSpace}
+                    onCancel={composerMenu.closeSpaces}
+                  />
+                ) : undefined
+              }
             />
           </ComposerPopoverAnchor>
         ) : null}

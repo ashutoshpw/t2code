@@ -4,18 +4,25 @@ import * as NodePath from "node:path";
 
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { TRIAGE_PROMPT_FILE_NAME } from "@t3tools/contracts";
-import * as NetService from "@t3tools/shared/Net";
+import { TRIAGE_PROMPT_FILE_NAME } from "@t2code/contracts";
+import * as NetService from "@t2code/shared/Net";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
+import * as Path from "effect/Path";
 import * as Layer from "effect/Layer";
 import * as TestConsole from "effect/testing/TestConsole";
 import { Command } from "effect/cli";
 import { vi } from "vite-plus/test";
 
+import packageJson from "../../package.json" with { type: "json" };
 import { cli } from "../binCli.ts";
+import {
+  makePersistedServerRuntimeState,
+  persistServerRuntimeState,
+} from "../serverRuntimeState.ts";
 import { buildTriageLaunchPrompt } from "../triage/triagePrompt.ts";
+import { describeServerProcess } from "./triage.ts";
 
 const FAILING_AGENT_POSIX = `#!/bin/sh
 echo "Error: There is not enough space on the disk. (os error 112)" >&2
@@ -28,8 +35,8 @@ const FAILING_AGENT_WINDOWS = `@echo Error: There is not enough space on the dis
 it.live("a failed agent launch points at the prompt it could not run", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-triage-cli-" });
-    const binDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-triage-bin-" });
+    const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-triage-cli-" });
+    const binDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-triage-bin-" });
     const codexHome = NodePath.join(baseDir, "codex-home");
     NodeFS.writeFileSync(NodePath.join(binDir, "codex"), FAILING_AGENT_POSIX, { mode: 0o755 });
     NodeFS.writeFileSync(NodePath.join(binDir, "codex.cmd"), FAILING_AGENT_WINDOWS);
@@ -72,4 +79,51 @@ it.live("a failed agent launch points at the prompt it could not run", () =>
       Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer, TestConsole.layer),
     ),
   ),
+);
+
+it.effect("reports the version the running server recorded, not the CLI's", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const statePath = path.join(
+      yield* fs.makeTempDirectoryScoped({ prefix: "t2-triage-" }),
+      "server-runtime.json",
+    );
+    const state = yield* makePersistedServerRuntimeState({
+      config: { host: undefined, devUrl: undefined },
+      port: 3772,
+    });
+    yield* persistServerRuntimeState({ path: statePath, state });
+
+    assert.equal(
+      yield* describeServerProcess(statePath),
+      `running (pid ${String(process.pid)}, http://127.0.0.1:3772, version ${packageJson.version})`,
+    );
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("says the server version is unknown when the state file has none", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const statePath = path.join(
+      yield* fs.makeTempDirectoryScoped({ prefix: "t2-triage-" }),
+      "server-runtime.json",
+    );
+    yield* fs.writeFileString(
+      statePath,
+      JSON.stringify({
+        version: 1,
+        pid: process.pid,
+        port: 3772,
+        origin: "http://127.0.0.1:3772",
+        startedAt: "2026-09-24T00:08:56.777Z",
+      }),
+    );
+
+    assert.equal(
+      yield* describeServerProcess(statePath),
+      `running (pid ${String(process.pid)}, http://127.0.0.1:3772, version not recorded)`,
+    );
+  }).pipe(Effect.provide(NodeServices.layer)),
 );
