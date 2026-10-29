@@ -174,6 +174,15 @@ import {
   GuestShareCreateInput,
   GuestShareCreateResult,
 } from "./guestShare.ts";
+import {
+  SpacePageShareCreateInput,
+  SpacePageShareCreateResult,
+  SpacePageShareError,
+  SpacePageShareGetInput,
+  SpacePageShareGetResult,
+  SpacePageShareStopInput,
+  SpacePageShareStopResult,
+} from "./spacePageShare.ts";
 import { PullRequestReviewGuideResult } from "./pullRequestReviewGuide.ts";
 import {
   PullRequestActionInput,
@@ -451,6 +460,9 @@ export const WS_METHODS = {
   spacesTrashList: "spaces.trash.list",
   spacesSearch: "spaces.search",
   spacesContextCapture: "spaces.context.capture",
+  spacesSharesCreate: "spaces.shares.create",
+  spacesSharesStop: "spaces.shares.stop",
+  spacesSharesGet: "spaces.shares.get",
 
   projectsList: "projects.list",
 
@@ -2249,6 +2261,24 @@ const WsScheduledTasksRotateWebhookTokenRpc = Rpc.make(
   },
 );
 
+export const WsSpacesSharesCreateRpc = Rpc.make(WS_METHODS.spacesSharesCreate, {
+  payload: SpacePageShareCreateInput,
+  success: SpacePageShareCreateResult,
+  error: Schema.Union([SpacePageShareError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesSharesStopRpc = Rpc.make(WS_METHODS.spacesSharesStop, {
+  payload: SpacePageShareStopInput,
+  success: SpacePageShareStopResult,
+  error: Schema.Union([SpacePageShareError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesSharesGetRpc = Rpc.make(WS_METHODS.spacesSharesGet, {
+  payload: SpacePageShareGetInput,
+  success: SpacePageShareGetResult,
+  error: Schema.Union([SpacePageShareError, EnvironmentAuthorizationError]),
+});
+
 const WsGuestShareCreateRpc = Rpc.make(WS_METHODS.guestShareCreate, {
   payload: GuestShareCreateInput,
   success: GuestShareCreateResult,
@@ -2331,6 +2361,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesTrashListRpc,
   WsSpacesSearchRpc,
   WsSpacesContextCaptureRpc,
+  WsSpacesSharesCreateRpc,
+  WsSpacesSharesStopRpc,
+  WsSpacesSharesGetRpc,
 
   WsGuestShareCreateRpc,
   WsServerProbeRpc,
