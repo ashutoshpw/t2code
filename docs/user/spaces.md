@@ -36,6 +36,26 @@ After opening a saved chat, visit a page and choose **Open beside chat** to keep
 
 Turning Spaces off keeps its data. Reading pages requires the destination environment's read permission; changing the setting requires permission to change its settings.
 
+## Share a page
+
+Share a page and its sub-pages with someone who has no T2 Code account. Page links are a beta, and they need [T2 Connect](./remote-access.md) linked on the machine that runs T2 Code.
+
+1. On that machine, turn on **Settings → Labs → Page links**.
+2. Choose **Share…** in the page's **…** menu, or **Share page** in the command palette. On mobile, choose **Share** on the page.
+3. Copy the link, or send it from the share sheet on mobile.
+
+Anyone with the link can read the page and all its sub-pages, read-only, without signing in. Nothing above or beside the page is reachable. Viewers see the page as it was when they opened it and reload to see changes. A **Shared** button on the page shows the link again. Use **Create new link** to replace it, or **Stop sharing** to end it.
+
+A link stops working when:
+
+- you stop sharing or create a new link,
+- seven days pass,
+- the shared page is moved to trash or deleted,
+- **Page links** is turned off, or
+- the machine's T2 Connect address changes.
+
+The machine must stay online for viewers to open the link. Images, PDFs and videos on the shared pages are visible to viewers, so share only what you are comfortable showing.
+
 ## Use a page or block in chat
 
 On web and desktop, type `@` and search for a page or block in the chat's environment.
