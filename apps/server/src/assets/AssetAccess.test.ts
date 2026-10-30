@@ -284,8 +284,8 @@ describe("AssetAccess", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-download-root-" });
-      const outside = yield* fs.makeTempDirectoryScoped({ prefix: "t3-download-outside-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-download-root-" });
+      const outside = yield* fs.makeTempDirectoryScoped({ prefix: "t2-download-outside-" });
       for (const name of [
         "data.csv",
         "report.docx",
@@ -369,7 +369,7 @@ describe("AssetAccess", () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-draft-media-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-draft-media-" });
       for (const [name, mimeType] of [
         ["video.mp4", "video/mp4"],
         ["audio.wav", "audio/wav"],
@@ -417,7 +417,7 @@ describe("AssetAccess", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-draft-boundary-" });
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-draft-boundary-" });
         const root = path.join(directory, "workspace");
         yield* fs.makeDirectory(root);
         for (const name of ["video.mp4", "audio.wav", "secret.txt"]) {
@@ -451,7 +451,7 @@ describe("AssetAccess", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-draft-symlink-" });
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-draft-symlink-" });
         const root = path.join(directory, "workspace");
         yield* fs.makeDirectory(root);
         const outside = path.join(directory, "outside.mp4");
@@ -480,7 +480,7 @@ describe("AssetAccess", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-draft-absolute-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-draft-absolute-" });
         for (const extension of ["png", "mp4", "wav"]) {
           const target = path.join(root, `target.${extension}`);
           const alias = path.join(root, `alias.${extension}`);
@@ -505,7 +505,7 @@ describe("AssetAccess", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-draft-swap-" });
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-draft-swap-" });
         const root = path.join(directory, "workspace");
         yield* fs.makeDirectory(root);
         const filePath = path.join(root, "video.mp4");
@@ -1092,7 +1092,7 @@ describe("AssetAccess", () => {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const root = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "t3-asset-image-workspace-",
+        prefix: "t2-asset-image-workspace-",
       });
       const assetsDirectory = path.join(root, "assets");
       yield* fileSystem.makeDirectory(assetsDirectory, { recursive: true });
@@ -1270,7 +1270,7 @@ describe("AssetAccess", () => {
         const config = yield* ServerConfig.ServerConfig;
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-attachments-link-" });
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-attachments-link-" });
         const realAttachmentsDir = path.join(root, "real");
         const linkedAttachmentsDir = path.join(root, "linked");
         yield* fs.makeDirectory(realAttachmentsDir);

@@ -185,7 +185,7 @@ it.effect("starts fresh without V1 and never imports over existing V2 state", ()
 });
 
 it.effect("removes copies left by a killed start, but not one that is still running", () => {
-  const directory = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-v2-abandoned-"));
+  const directory = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-v2-abandoned-"));
   const killed = NodeChildProcess.spawnSync(process.execPath, ["-e", ""]).pid;
   const running = `.v2-import-${process.pid}-Kq81Zx`;
   const unrelated = ".v2-import-not-a-copy";

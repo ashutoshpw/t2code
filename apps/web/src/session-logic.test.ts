@@ -1315,7 +1315,7 @@ describe("HTML renders in the timeline", () => {
       resourceUri: "ui://github-mcp-server/pr-create",
     };
     const call = renderCall("failed", {
-      t3McpApp: mcpApp,
+      t2McpApp: mcpApp,
       result: { content: [], isError: true },
     });
     const entries = turn(
