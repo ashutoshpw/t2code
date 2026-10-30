@@ -19,6 +19,7 @@ import { useEffect, useState, type MouseEvent } from "react";
 
 import { SpaceEditorAdapter } from "~/spaces/adapter";
 import { SpaceEditor } from "~/spaces/SpaceEditor";
+import { SpacePageGlyph } from "~/spaces/SpacePageGlyph";
 import { Button } from "../ui/button";
 
 const decodePage = Schema.decodeUnknownSync(Schema.toCodecJson(SpaceSharedPage));
@@ -170,7 +171,7 @@ function SharedDocument({
 }) {
   const { page, window: blocks, breadcrumb, children } = shared;
   const [adapter] = useState(() => staticAdapter(shared));
-  const titles = new Map(children.map((child) => [child.id, child.title]));
+  const childById = new Map(children.map((child) => [child.id, child]));
   const assetUrl = (assetId: string) =>
     `${SPACE_PAGE_SHARE_ASSET_ROUTE}?${new URLSearchParams({
       [SPACE_PAGE_SHARE_PARAM]: credential,
@@ -182,7 +183,12 @@ function SharedDocument({
     if (block.type === "child_page") {
       const id = block.content.pageId;
       return (
-        <PageRow title={titles.get(id) ?? ""} href={hrefFor(id)} onOpen={(e) => onOpen(e, id)} />
+        <PageRow
+          title={childById.get(id)?.title ?? ""}
+          icon={childById.get(id)?.icon}
+          href={hrefFor(id)}
+          onOpen={(e) => onOpen(e, id)}
+        />
       );
     }
     if (block.type === "image" || block.type === "video" || block.type === "pdf") {
@@ -214,7 +220,7 @@ function SharedDocument({
 
   return (
     <article className="mx-auto w-full max-w-3xl px-6 pt-10 pb-24 sm:px-10">
-      <title>{page.title || "Untitled page"}</title>
+      <title>{`${page.icon ? `${page.icon} ` : ""}${page.title || "Untitled page"}`}</title>
       {breadcrumb.length > 1 ? (
         <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-1 text-sm">
           {breadcrumb.map((crumb, index) => {
@@ -224,6 +230,7 @@ function SharedDocument({
                 {index > 0 ? <ChevronRightIcon className="size-3.5 text-muted-foreground" /> : null}
                 {last ? (
                   <span aria-current="page" className="text-foreground">
+                    {crumb.icon ? `${crumb.icon} ` : ""}
                     {crumb.title || "Untitled page"}
                   </span>
                 ) : (
@@ -232,6 +239,7 @@ function SharedDocument({
                     onClick={(e) => onOpen(e, crumb.id)}
                     className="text-muted-foreground hover:text-foreground hover:underline"
                   >
+                    {crumb.icon ? `${crumb.icon} ` : ""}
                     {crumb.title || "Untitled page"}
                   </a>
                 )}
@@ -239,6 +247,11 @@ function SharedDocument({
             );
           })}
         </nav>
+      ) : null}
+      {page.icon ? (
+        <p aria-hidden className="mb-2 text-6xl leading-tight">
+          {page.icon}
+        </p>
       ) : null}
       <h1 className="mb-6 font-bold text-4xl leading-tight">{page.title || "Untitled page"}</h1>
       <SpaceEditor adapter={adapter} editable={false} renderChild={renderBlock} />
@@ -248,6 +261,7 @@ function SharedDocument({
             <PageRow
               key={child.id}
               title={child.title}
+              icon={child.icon}
               href={hrefFor(child.id)}
               onOpen={(e) => onOpen(e, child.id)}
             />
@@ -260,10 +274,12 @@ function SharedDocument({
 
 function PageRow({
   title,
+  icon,
   href,
   onOpen,
 }: {
   title: string;
+  icon: string | undefined;
   href: string;
   onOpen: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
@@ -273,7 +289,7 @@ function PageRow({
       onClick={onOpen}
       className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
     >
-      <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+      <SpacePageGlyph icon={icon} className="size-4 text-center text-muted-foreground" />
       <span className="truncate">{title || "Untitled page"}</span>
     </a>
   );
