@@ -49,6 +49,9 @@ import type { SpaceStructureHandle } from "./SpaceStructureControls";
 const PageTitleField = lazy(() =>
   import("./SpaceLibraryControls").then((module) => ({ default: module.PageTitleField })),
 );
+const PageIconField = lazy(() =>
+  import("./SpaceLibraryControls").then((module) => ({ default: module.PageIconField })),
+);
 const SpaceRecoveryControls = lazy(() => import("./SpaceRecoveryControls"));
 const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
 
@@ -335,12 +338,14 @@ function SpacePageMetadata({
                   search={{}}
                   className={cn(crumb, "max-w-40 max-sm:hidden")}
                 >
+                  {ancestor.icon ? `${ancestor.icon} ` : ""}
                   {ancestor.title || "Untitled page"}
                 </Link>
               </Fragment>
             ))}
             <ChevronRightIcon className="size-3.5 shrink-0 max-sm:hidden" aria-hidden />
             <span aria-current="page" className="truncate text-foreground">
+              {page.icon ? `${page.icon} ` : ""}
               {page.title || "Untitled page"}
             </span>
           </nav>
@@ -476,14 +481,13 @@ function SpacePageMetadata({
             />
           </Suspense>
         ) : null}
-        <h1>
+        <div className="group/icon">
           <Suspense
-            fallback={<span className="block text-4xl font-bold">{page.title || "Untitled"}</span>}
+            fallback={page.icon ? <span className="block text-6xl">{page.icon}</span> : null}
           >
-            <PageTitleField
+            <PageIconField
               environmentId={target.environmentId}
               page={page}
-              autoFocus={focusTitle}
               current={() => {
                 const live = query.isPending ? null : query.data?.current();
                 return (
@@ -492,7 +496,26 @@ function SpacePageMetadata({
               }}
             />
           </Suspense>
-        </h1>
+          <h1>
+            <Suspense
+              fallback={
+                <span className="block text-4xl font-bold">{page.title || "Untitled"}</span>
+              }
+            >
+              <PageTitleField
+                environmentId={target.environmentId}
+                page={page}
+                autoFocus={focusTitle}
+                current={() => {
+                  const live = query.isPending ? null : query.data?.current();
+                  return (
+                    live?.page.id === target.pageId && live.page.spaceId === resolvedTarget.spaceId
+                  );
+                }}
+              />
+            </Suspense>
+          </h1>
+        </div>
         <div className="mt-4">{children}</div>
       </PageColumn>
     </>

@@ -3,7 +3,7 @@ import { NodeViewWrapper, NodeViewContent, type NodeViewProps } from "@tiptap/re
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceBlock, SpacePageId } from "@t2code/contracts/spaces";
 import { isKnownSpaceBlock, type SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
-import { FileTextIcon } from "lucide-react";
+import { SpacePageGlyph } from "./SpacePageGlyph";
 import { Button } from "../components/ui/button";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment } from "../state/spaces";
@@ -54,7 +54,7 @@ export function SpaceChildPageRow({
           if (page && current()) onOpen({ environmentId, spaceId: page.spaceId, pageId });
         }}
       >
-        <FileTextIcon />
+        <SpacePageGlyph icon={page?.icon} />
         <span className="truncate">{page ? page.title || "Untitled page" : "Loading…"}</span>
       </Button>
     </div>

@@ -176,10 +176,13 @@ export const SpacePageTrashStatus = Schema.Struct({
   trashedAt: IsoDateTime,
 });
 export type SpacePageTrashStatus = typeof SpacePageTrashStatus.Type;
+export const SpacePageIcon = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(32));
+export type SpacePageIcon = typeof SpacePageIcon.Type;
 export const SpacePageSummary = Schema.Struct({
   id: SpacePageId,
   spaceId: SpaceId,
   title: Schema.String,
+  icon: Schema.optionalKey(SpacePageIcon),
   revision: NonNegativeInt,
   rootOrder: Schema.NullOr(StableId),
   hasChildren: Schema.optionalKey(Schema.Boolean),
@@ -344,6 +347,8 @@ export const SpacePageUpdateInput = Schema.Struct({
   pageId: SpacePageId,
   baseRevision: NonNegativeInt,
   title: Schema.String,
+  /** Absent keeps the icon, null clears it. */
+  icon: Schema.optionalKey(Schema.NullOr(SpacePageIcon)),
 });
 export type SpacePageUpdateInput = typeof SpacePageUpdateInput.Type;
 export const SpacePageUpdateResult = Schema.Union([

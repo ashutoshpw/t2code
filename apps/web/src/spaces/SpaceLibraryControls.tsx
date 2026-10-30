@@ -2,14 +2,19 @@ import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceId, SpacePageSummary, SpaceSummary } from "@t2code/contracts/spaces";
-import type { SpaceRootReorder } from "@t2code/client-runtime/spaces";
+import {
+  SPACE_PAGE_ICONS,
+  normalizeSpacePageIcon,
+  type SpaceRootReorder,
+} from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
-import { EllipsisIcon } from "lucide-react";
+import { EllipsisIcon, SmilePlusIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { Input } from "../components/ui/input";
+import { Popover, PopoverPopup, PopoverTrigger } from "../components/ui/popover";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../components/ui/menu";
 import {
   Dialog,
@@ -73,6 +78,129 @@ export function PageTitleField({
       owner={result.owner}
       autoFocus={autoFocus}
     />
+  );
+}
+
+export function PageIconField({
+  environmentId,
+  page,
+  current,
+}: {
+  environmentId: EnvironmentId;
+  page: SpacePageSummary;
+  current: () => boolean;
+}) {
+  const result = useOwner(environmentId);
+  if (!result.owner) return page.icon ? <span className="block text-6xl">{page.icon}</span> : null;
+  return (
+    <EditableIcon
+      environmentId={environmentId}
+      page={page}
+      current={current}
+      owner={result.owner}
+    />
+  );
+}
+
+function EditableIcon({
+  environmentId,
+  page,
+  current,
+  owner,
+}: {
+  environmentId: EnvironmentId;
+  page: SpacePageSummary;
+  current: () => boolean;
+  owner: SpaceRootReorder;
+}) {
+  const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
+  const availability = useSpacesAvailability(environmentId);
+  const allowed = useAtomValue(spacesEnvironment.updatePage.permissionAtom(environmentId));
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const writable = allowed && availability === "writable" && !page.trash;
+  if (!writable) return page.icon ? <span className="block text-6xl">{page.icon}</span> : null;
+  const choose = (icon: string | null) => {
+    if (!current() || snapshot.busy || snapshot.journal.pending) return;
+    setOpen(false);
+    setText("");
+    owner.setPageIcon(page, icon).catch((error: unknown) => {
+      toastManager.add({
+        type: "error",
+        title: "Couldn't change the icon",
+        description: error instanceof Error ? error.message : undefined,
+      });
+    });
+  };
+  const typed = normalizeSpacePageIcon(text);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <span
+        className={
+          page.icon
+            ? "block"
+            : "block opacity-0 group-hover/icon:opacity-100 has-[:focus-visible]:opacity-100 pointer-coarse:opacity-100"
+        }
+      >
+        <PopoverTrigger
+          render={
+            page.icon ? (
+              <button
+                type="button"
+                aria-label="Change page icon"
+                className="block rounded-md text-6xl leading-tight hover:bg-accent"
+              />
+            ) : (
+              <Button variant="ghost" size="sm" />
+            )
+          }
+        >
+          {page.icon ?? (
+            <>
+              <SmilePlusIcon />
+              Add icon
+            </>
+          )}
+        </PopoverTrigger>
+      </span>
+      <PopoverPopup align="start" width="md">
+        <div className="grid grid-cols-8 gap-1" role="group" aria-label="Icons">
+          {SPACE_PAGE_ICONS.map((icon) => (
+            <Button
+              key={icon}
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Use ${icon}`}
+              onClick={() => choose(icon)}
+            >
+              {icon}
+            </Button>
+          ))}
+        </div>
+        <form
+          className="mt-3 flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (typed) choose(typed);
+          }}
+        >
+          <Input
+            aria-label="Type an emoji"
+            placeholder="Type an emoji"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+          />
+          <Button type="submit" variant="outline" disabled={!typed}>
+            Use
+          </Button>
+        </form>
+        {page.icon ? (
+          <Button className="mt-2" variant="ghost" size="sm" onClick={() => choose(null)}>
+            Remove
+          </Button>
+        ) : null}
+      </PopoverPopup>
+    </Popover>
   );
 }
 

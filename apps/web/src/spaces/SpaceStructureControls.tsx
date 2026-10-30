@@ -422,7 +422,10 @@ function StructureControls({
                             }
                             onClick={() => run(moveInside(page.id))}
                           >
-                            <span className="truncate">{page.title || "Untitled page"}</span>
+                            <span className="truncate">
+                              {page.icon ? `${page.icon} ` : ""}
+                              {page.title || "Untitled page"}
+                            </span>
                           </Button>
                           <Button
                             variant="ghost"

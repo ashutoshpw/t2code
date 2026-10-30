@@ -154,7 +154,7 @@ export const candidates = Effect.fn("SpacesSearch.candidates")(function* (
   after: number,
 ) {
   const sql = yield* SpacesSql.SpacesSql;
-  return yield* sql<Candidate>`SELECT p.page_id,p.space_id,p.title,p.revision,p.root_order,p.created_at,p.updated_at,
+  return yield* sql<Candidate>`SELECT p.page_id,p.space_id,p.title,p.icon,p.revision,p.root_order,p.created_at,p.updated_at,
     p.trash_batch_id,p.trash_root_id,p.trashed_at_ms,d.doc_id,d.block_id,d.text_json_bytes,o.owner_block_id,
     b.page_id AS parent_page_id,b.deleted AS owner_deleted,parent.space_id AS parent_space_id,
     json_extract(b.payload,'$.type') AS owner_type

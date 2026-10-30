@@ -9,7 +9,7 @@ export interface SpaceMentionSelection {
   readonly insert: (mark: SpaceMentionMark, label: string) => boolean;
 }
 type Presentation =
-  | { status: "resolved"; title: string }
+  | { status: "resolved"; title: string; icon?: string }
   | { status: "unavailable" }
   | { status: "idle" };
 const decode = Schema.decodeOption(SpaceKnownMark, { onExcessProperty: "error" });
@@ -74,7 +74,11 @@ export class SpaceMentionController {
     this.#titles.set(
       key,
       valid && result && result.page.title.length <= 512
-        ? { status: "resolved", title: result.page.title || "Untitled page" }
+        ? {
+            status: "resolved",
+            title: result.page.title || "Untitled page",
+            ...(result.page.icon ? { icon: result.page.icon } : {}),
+          }
         : { status: "unavailable" },
     );
     if (this.#titles.size > 20) this.#titles.delete(this.#titles.keys().next().value!);
