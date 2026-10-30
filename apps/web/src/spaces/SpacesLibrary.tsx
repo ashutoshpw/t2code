@@ -4,6 +4,7 @@ import type { SpaceId } from "@t2code/contracts/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment } from "../state/spaces";
 import { SpacePageTable } from "./SpacePageTable";
+import { SpaceListSkeleton } from "./SpaceSkeletons";
 
 const SpaceSearch = lazy(() => import("./SpaceSearch"));
 const SpaceRecoveryControls = lazy(() => import("./SpaceRecoveryControls"));
@@ -33,13 +34,7 @@ export function SpacesLibrary({
         <header className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="min-w-0 truncate text-3xl font-semibold">{title}</h1>
           <div className="flex items-center gap-2">
-            <Suspense
-              fallback={
-                <span role="status" className="text-sm text-muted-foreground">
-                  Loading recovery…
-                </span>
-              }
-            >
+            <Suspense fallback={null}>
               <SpaceRecoveryControls key={environmentId} environmentId={environmentId} />
             </Suspense>
             <Suspense fallback={null}>
@@ -50,13 +45,7 @@ export function SpacesLibrary({
         <Suspense fallback={null}>
           <CreateStatus environmentId={environmentId} />
         </Suspense>
-        <Suspense
-          fallback={
-            <p role="status" className="text-sm text-muted-foreground">
-              Loading search…
-            </p>
-          }
-        >
+        <Suspense fallback={<SpaceListSkeleton label="Loading search" />}>
           <SpaceSearch
             key={JSON.stringify([environmentId, spaceId])}
             environmentId={environmentId}
