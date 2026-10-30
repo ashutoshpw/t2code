@@ -2,7 +2,7 @@ import { Skeleton } from "../components/ui/skeleton";
 
 export function SpaceDocumentSkeleton() {
   return (
-    <div role="status" aria-label="Loading document" className="space-y-2">
+    <div role="status" aria-label="Loading document" className="space-y-1.5">
       <Skeleton className="h-6 w-full" />
       <Skeleton className="h-6 w-5/6" />
       <Skeleton className="h-6 w-2/3" />
@@ -10,8 +10,14 @@ export function SpaceDocumentSkeleton() {
   );
 }
 
+// The icon control above the title reserves a 28px row even when a page has no icon.
 export function SpaceTitleSkeleton() {
-  return <Skeleton className="h-11 w-2/3" />;
+  return (
+    <>
+      <div className="h-7" />
+      <Skeleton className="h-11 w-2/3" />
+    </>
+  );
 }
 
 export function SpaceListSkeleton({ label }: { label: string }) {
