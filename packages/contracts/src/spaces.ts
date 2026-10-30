@@ -176,7 +176,15 @@ export const SpacePageTrashStatus = Schema.Struct({
   trashedAt: IsoDateTime,
 });
 export type SpacePageTrashStatus = typeof SpacePageTrashStatus.Type;
-export const SpacePageIcon = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(32));
+const pictograph = String.raw`\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?`;
+export const SPACE_PAGE_ICON_PATTERN = new RegExp(
+  String.raw`^(?:${pictograph}(?:\u200D${pictograph})*|\p{Regional_Indicator}{2}|[0-9#*]\uFE0F?\u20E3)$`,
+  "u",
+);
+export const SpacePageIcon = Schema.String.check(
+  Schema.isMaxLength(32),
+  Schema.isPattern(SPACE_PAGE_ICON_PATTERN),
+);
 export type SpacePageIcon = typeof SpacePageIcon.Type;
 export const SpacePageSummary = Schema.Struct({
   id: SpacePageId,

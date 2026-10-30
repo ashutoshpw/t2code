@@ -1452,7 +1452,8 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           title: "Iconpage2",
         });
         assert.equal(renamed.status === "saved" && renamed.page.icon, "🚀");
-        yield* Effect.flip(service.search({ ...env, query: "Iconpage2" }));
+        const pending = yield* Effect.flip(service.search({ ...env, query: "Iconpage2" }));
+        assert.equal(pending._tag, "SpaceSearchUnavailableError");
         assert.equal(
           (yield* service.search({ ...env, query: "Iconpage2" })).items[0]?.page.icon,
           "🚀",
@@ -1470,6 +1471,20 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
           same.status === "saved" && same.page.revision,
           renamed.status === "saved" ? renamed.page.revision : -1,
         );
+
+        for (const icon of ["hello", " ", "🚀🚀", "\n", "🚀\u0000"]) {
+          const rejected = yield* Effect.flip(
+            service.updatePage({
+              ...common,
+              mutationId: "icon-bad",
+              pageId: page.id,
+              baseRevision: same.status === "saved" ? same.page.revision : 0,
+              title: "Iconpage2",
+              icon,
+            }),
+          );
+          assert.equal(rejected._tag, "SpaceValidationError");
+        }
 
         const cleared = yield* service.updatePage({
           ...common,
