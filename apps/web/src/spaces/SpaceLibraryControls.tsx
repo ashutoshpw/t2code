@@ -212,6 +212,7 @@ function TitleInput({
   onChange,
   onCommit,
   onCancel,
+  onEnter,
 }: {
   page: SpacePageSummary;
   value?: string;
@@ -220,6 +221,7 @@ function TitleInput({
   onChange?: (value: string) => void;
   onCommit?: () => void;
   onCancel?: () => void;
+  onEnter?: (focusBody: () => void) => void;
 }) {
   return (
     <textarea
@@ -240,9 +242,12 @@ function TitleInput({
         if (event.nativeEvent.isComposing) return;
         if (event.key === "Enter") {
           event.preventDefault();
-          const page = event.currentTarget.closest("section");
+          const section = event.currentTarget.closest("section");
+          const focusBody = () =>
+            section?.querySelector<HTMLElement>("[data-space-editor] .tiptap")?.focus();
+          onEnter?.(focusBody);
           event.currentTarget.blur();
-          page?.querySelector<HTMLElement>("[data-space-editor] .tiptap")?.focus();
+          if (!onEnter) focusBody();
         } else if (event.key === "Escape") {
           event.preventDefault();
           onCancel?.();
@@ -272,26 +277,42 @@ function EditableTitle({
   const allowed = useAtomValue(spacesEnvironment.updatePage.permissionAtom(environmentId));
   const [edit, setEdit] = useState<{ base: string; value: string; saved: boolean } | null>(null);
   const cancelled = useRef(false);
+  // A rename locks the page's editor until it finishes, so Enter moves into the body only afterwards.
+  const afterCommit = useRef<(() => void) | null>(null);
+  const finishEnter = () => {
+    const focusBody = afterCommit.current;
+    afterCommit.current = null;
+    if (focusBody) window.setTimeout(focusBody, 0);
+  };
   const shown = edit && edit.base === page.title ? edit.value : page.title;
   const writable = allowed && availability === "writable";
   const commit = () => {
     if (cancelled.current) {
       cancelled.current = false;
+      afterCommit.current = null;
       return setEdit(null);
     }
-    if (!edit || edit.saved || edit.base !== page.title) return setEdit(null);
-    const value = edit.value.trim();
-    if (value === page.title || !current() || snapshot.busy || snapshot.journal.pending)
+    if (!edit || edit.saved || edit.base !== page.title) {
+      finishEnter();
       return setEdit(null);
+    }
+    const value = edit.value.trim();
+    if (value === page.title || !current() || snapshot.busy || snapshot.journal.pending) {
+      finishEnter();
+      return setEdit(null);
+    }
     setEdit({ ...edit, value, saved: true });
-    owner.renamePage(page, value).catch((error: unknown) => {
-      setEdit(null);
-      toastManager.add({
-        type: "error",
-        title: "Couldn't rename page",
-        description: error instanceof Error ? error.message : undefined,
-      });
-    });
+    owner
+      .renamePage(page, value)
+      .catch((error: unknown) => {
+        setEdit(null);
+        toastManager.add({
+          type: "error",
+          title: "Couldn't rename page",
+          description: error instanceof Error ? error.message : undefined,
+        });
+      })
+      .finally(finishEnter);
   };
   return (
     <TitleInput
@@ -301,6 +322,9 @@ function EditableTitle({
       autoFocus={autoFocus}
       onChange={(value) => setEdit({ base: page.title, value, saved: false })}
       onCommit={commit}
+      onEnter={(focusBody) => {
+        afterCommit.current = focusBody;
+      }}
       onCancel={() => {
         cancelled.current = true;
         setEdit(null);
