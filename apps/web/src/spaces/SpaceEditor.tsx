@@ -22,6 +22,7 @@ import {
   Heading1Icon,
   Heading2Icon,
   Heading3Icon,
+  FileTextIcon,
   ItalicIcon,
   LinkIcon,
   ListIcon,
@@ -176,7 +177,9 @@ export function SpaceEditor({
   renderChild,
   mentions,
   onOpenSource,
+  onCreatePage,
 }: {
+  readonly onCreatePage?: ((blockId: SpaceBlockId | null) => void) | undefined;
   readonly savedHistory?: ReactNode;
   readonly mentions?: SpaceMentionController | null;
   readonly onOpenSource?: (
@@ -429,6 +432,16 @@ export function SpaceEditor({
       keywords: "separator hr line",
       apply: () => run(adapter.placeBlock("divider")),
     },
+    ...(onCreatePage
+      ? [
+          {
+            label: "Page",
+            icon: FileTextIcon,
+            keywords: "subpage new child",
+            apply: onCreatePage,
+          },
+        ]
+      : []),
   ];
   const slash = writable && structure ? slashMatch(state) : null;
   const slashItems = slash
