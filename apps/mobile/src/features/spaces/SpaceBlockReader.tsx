@@ -4,12 +4,37 @@ import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
 import { SpaceKnownMark, type SpaceBlock, type SpaceRichText } from "@t2code/contracts/spaces";
 import * as Schema from "effect/Schema";
 import { useState } from "react";
-import { View } from "react-native";
+import { View, useColorScheme } from "react-native";
 
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
 import type { MobileSpaceReference } from "./references";
 import { tryOpenExternalUrl } from "../../lib/openExternalUrl";
+
+const textColors = {
+  light: {
+    gray: "#787774",
+    brown: "#9f6b53",
+    orange: "#d9730d",
+    yellow: "#b8860b",
+    green: "#448361",
+    blue: "#337ea9",
+    purple: "#9065b0",
+    pink: "#c14c8a",
+    red: "#d44c47",
+  },
+  dark: {
+    gray: "#9b9b9b",
+    brown: "#ba856f",
+    orange: "#c77d48",
+    yellow: "#ca9849",
+    green: "#529e72",
+    blue: "#5e87c9",
+    purple: "#9d68d3",
+    pink: "#d15796",
+    red: "#df5452",
+  },
+} as const;
 
 const decodeMark = Schema.decodeUnknownOption(SpaceKnownMark, { onExcessProperty: "error" });
 
@@ -19,6 +44,7 @@ function RichText(props: {
   target: SpacePageNavigationTarget;
   onOpen: (target: MobileSpaceReference) => void;
 }) {
+  const palette = textColors[useColorScheme() === "dark" ? "dark" : "light"];
   const runs: { run: SpaceRichText[number]; start: number }[] = [];
   let offset = 0;
   for (const run of props.runs) {
@@ -44,6 +70,14 @@ function RichText(props: {
           const known = decodeMark(mark);
           return known._tag === "Some" ? [known.value] : [];
         });
+        const colorOf = (type: "color" | "highlight") =>
+          marks.flatMap((mark) => (mark.type === type && "value" in mark ? [mark.value] : []))[0];
+        const color = colorOf("color");
+        const highlight = colorOf("highlight");
+        const decorations = [
+          marks.some((mark) => mark.type === "underline") ? "underline" : null,
+          marks.some((mark) => mark.type === "strike") ? "line-through" : null,
+        ].filter((value) => value !== null);
         const link = marks.find((mark) => mark.type === "link" && isSafeSpaceLink(mark.href));
         const mention = marks.find(
           (mark) => mark.type === "page_mention" || mark.type === "block_mention",
@@ -55,9 +89,11 @@ function RichText(props: {
             style={{
               fontWeight: marks.some((mark) => mark.type === "bold") ? "bold" : undefined,
               fontStyle: marks.some((mark) => mark.type === "italic") ? "italic" : undefined,
-              textDecorationLine: marks.some((mark) => mark.type === "strike")
-                ? "line-through"
+              textDecorationLine: decorations.length
+                ? (decorations.join(" ") as "underline line-through")
                 : undefined,
+              color: color ? palette[color] : undefined,
+              backgroundColor: highlight ? `${palette[highlight]}38` : undefined,
             }}
             className={marks.some((mark) => mark.type === "code") ? "font-mono" : undefined}
             onPress={

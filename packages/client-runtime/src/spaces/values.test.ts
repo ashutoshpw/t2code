@@ -11,6 +11,7 @@ import {
   canEditSpaceBlockOnMobile,
   copySpaceBlocks,
   editSpaceMobileText,
+  isKnownSpaceBlock,
   isSpaceListItem,
   joinSpaceTextBlocks,
   spaceBlockRuns,
@@ -64,6 +65,18 @@ describe("shared Spaces editing", () => {
     ]);
     expect(edited.id).toBe(block.id);
     expect(() => editSpaceMobileText(block, { start: 2, end: 3, text: "x" })).toThrow("UTF-16");
+  });
+
+  it("knows underline and palette colors, keeps unknown colors opaque, and leaves them read-only on mobile", () => {
+    const red = paragraph("x", [{ type: "color", version: 1, value: "red" }]);
+    expect(isKnownSpaceBlock(red)).toBe(true);
+    expect(isKnownSpaceBlock(paragraph("x", [{ type: "underline", version: 1 }]))).toBe(true);
+    const teal = paragraph("x", [{ type: "color", version: 1, value: "teal" }]);
+    expect(isKnownSpaceBlock(teal)).toBe(true);
+    expect(spaceBlockRuns(teal)?.[0]?.marks).toEqual([
+      { type: "color", version: 1, value: "teal" },
+    ]);
+    expect(canEditSpaceBlockOnMobile(red)).toBe(false);
   });
 
   it("nests under toggles but keeps them read-only on mobile", () => {

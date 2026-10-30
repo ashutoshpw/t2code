@@ -1,3 +1,4 @@
+import { spaceBlockRuns } from "@t2code/client-runtime/spaces";
 import { describe, expect, it } from "vite-plus/test";
 import {
   EditorState,
@@ -143,6 +144,31 @@ describe("Production Spaces command bridge", () => {
       },
     ]);
     await view.controller.session.persistDraft();
+  });
+  it("applies underline, one text color and one highlight, replaces and clears them", async () => {
+    const view = await model([paragraph("a", "hello")]);
+    const select = () =>
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 6)));
+    const marks = () => {
+      const block = view.controller.session.getSnapshot().blocks[0];
+      return (block && spaceBlockRuns(block)?.[0]?.marks) || [];
+    };
+    select();
+    const { adapter } = view.bridge;
+    expect(view.run(adapter.mark("underline"))).toBe(true);
+    expect(view.run(adapter.textStyle("color", "red"))).toBe(true);
+    expect(view.run(adapter.textStyle("color", "blue"))).toBe(true);
+    expect(view.run(adapter.textStyle("highlight", "yellow"))).toBe(true);
+    expect(marks()).toEqual(
+      expect.arrayContaining([
+        { type: "underline", version: 1 },
+        { type: "color", version: 1, value: "blue" },
+        { type: "highlight", version: 1, value: "yellow" },
+      ]),
+    );
+    expect(marks()).toHaveLength(3);
+    expect(view.run(adapter.textStyle("color", null))).toBe(true);
+    expect(marks().some((mark) => mark.type === "color")).toBe(false);
   });
   it("propagates ordered splits and edits between views without echo and preserves the other selection", async () => {
     const view = await model([
