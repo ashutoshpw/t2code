@@ -3,9 +3,12 @@ import { ProjectId, type PullRequestSummary, type VcsStatusResult } from "@t2cod
 import { describe, expect, it } from "@effect/vitest";
 
 import {
+  prStatusIndicator,
   resolveDisplayedThreadPr,
   resolveDisplayedThreadPrProvider,
+  resolveThreadPullRequestBadgePresentation,
 } from "./ThreadStatusIndicators";
+import { PullRequestGlyph } from "./pullRequest/pullRequestIcons";
 import { newestPullRequestSummary } from "../state/pullRequests";
 
 function status(overrides: Partial<VcsStatusResult> = {}): VcsStatusResult {
@@ -119,28 +122,6 @@ describe("resolveDisplayedThreadPr", () => {
       }),
     ).toBeNull();
   });
-});
-
-describe("threadChangeRequestSnapshotsAtom", () => {
-  it.effect("retains snapshots while sidebar and chat consumers are unmounted", () =>
-    Effect.gen(function* () {
-      const registry = AtomRegistry.make();
-      const threadKey = "environment-1:thread-1";
-      const snapshot = snapshotFor("feature/current", mergedFeaturePr());
-
-      const unmount = registry.mount(threadChangeRequestSnapshotsAtom);
-      registry.set(threadChangeRequestSnapshotsAtom, new Map([[threadKey, snapshot]]));
-      unmount();
-
-      yield* Effect.yieldNow;
-
-      const remount = registry.mount(threadChangeRequestSnapshotsAtom);
-      expect(registry.get(threadChangeRequestSnapshotsAtom).get(threadKey)).toEqual(snapshot);
-
-      remount();
-      registry.dispose();
-    }),
-  );
 });
 
 describe("prStatusIndicator", () => {

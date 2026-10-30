@@ -1,15 +1,12 @@
 import { TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { ManagedTunnelUpgrade } from "../../cloud/managedRelayState";
 import { cn } from "../../lib/utils";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button } from "../ui/button";
 
 // Above this, one slot per tunnel is too thin to read, so the bar fills instead.
 const MAX_SEGMENTS = 10;
-
-const T3CHAT_SUBSCRIPTION_URL = "https://t3.chat/settings/subscription";
 
 /** "2 of 3 tunnels in use" with one bar slot per tunnel. */
 export function TunnelUsageMeter({
@@ -35,7 +32,7 @@ export function TunnelUsageMeter({
       </div>
       <div
         role="meter"
-        aria-label="T3 Connect tunnels in use"
+        aria-label="T2 Connect tunnels in use"
         aria-valuemin={0}
         aria-valuemax={limit}
         aria-valuenow={used}
@@ -63,43 +60,24 @@ export function TunnelUsageMeter({
 
 /** Shown when the relay refuses a new tunnel because the account is at its cap. */
 export function TunnelLimitAlert({
-  upgrade,
-  onLinkT3Chat,
   onManageTunnels,
 }: {
-  readonly upgrade: ManagedTunnelUpgrade;
-  readonly onLinkT3Chat: (() => void) | null;
   readonly onManageTunnels: (() => void) | null;
 }) {
-  const action =
-    upgrade === "link" && onLinkT3Chat ? (
-      <Button size="sm" onClick={onLinkT3Chat}>
-        Link T3 Chat
-      </Button>
-    ) : upgrade === "pro" || upgrade === "premier" ? (
-      <Button
-        size="sm"
-        render={<a href={T3CHAT_SUBSCRIPTION_URL} target="_blank" rel="noopener noreferrer" />}
-      >
-        Upgrade on T3 Chat
-      </Button>
-    ) : onManageTunnels ? (
-      <Button size="sm" variant="outline" onClick={onManageTunnels}>
-        Manage tunnels
-      </Button>
-    ) : null;
   return (
     <Alert variant="warning">
       <TriangleAlertIcon />
       <AlertTitle>You&apos;re out of tunnels (they cost us money).</AlertTitle>
       <AlertDescription>
-        {upgrade === "link"
-          ? "Switch to Tailscale or get more tunnels by linking your T3 Chat sub (sorry!)"
-          : upgrade
-            ? "Switch to Tailscale or get more tunnels by upgrading your T3 Chat sub (sorry!)"
-            : "Switch to Tailscale or deregister an environment you no longer use (sorry!)"}
+        Switch to Tailscale or deregister an environment you no longer use (sorry!)
       </AlertDescription>
-      {action ? <AlertAction>{action}</AlertAction> : null}
+      {onManageTunnels ? (
+        <AlertAction>
+          <Button size="sm" variant="outline" onClick={onManageTunnels}>
+            Manage tunnels
+          </Button>
+        </AlertAction>
+      ) : null}
     </Alert>
   );
 }

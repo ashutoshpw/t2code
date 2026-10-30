@@ -25,6 +25,10 @@ export function withoutPromptLinkParams(params: object | undefined): Record<stri
   );
 }
 
+export function clearedPromptLinkParams(keys: ReadonlyArray<string> = PROMPT_LINK_PARAM_KEYS) {
+  return Object.fromEntries(keys.map((key) => [key, undefined]));
+}
+
 export function promptLinkNotice(input: {
   readonly hiddenCharacters: number;
   readonly modelUnavailable?: boolean;
