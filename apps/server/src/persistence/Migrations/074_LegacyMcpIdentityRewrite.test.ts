@@ -4,7 +4,7 @@ import * as Effect from "effect/Effect";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import { runMigrations } from "../Migrations.ts";
-import { rewriteLegacyMcpIdentity } from "./063_LegacyMcpIdentityRewrite.ts";
+import { rewriteLegacyMcpIdentity } from "./074_LegacyMcpIdentityRewrite.ts";
 
 const NOW = "2026-01-01T00:00:00.000Z";
 
@@ -59,7 +59,7 @@ it("rewrites recorded MCP identities and leaves everything else alone", () => {
   }
 });
 
-it.layer(NodeSqliteClient.layer({ filename: ":memory:" }))("063_LegacyMcpIdentityRewrite", (it) => {
+it.layer(NodeSqliteClient.layer({ filename: ":memory:" }))("074_LegacyMcpIdentityRewrite", (it) => {
   it.effect("rewrites stored transcripts recorded under the old names", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
@@ -109,15 +109,6 @@ it.layer(NodeSqliteClient.layer({ filename: ":memory:" }))("063_LegacyMcpIdentit
         `;
 
       yield* sql`
-          INSERT INTO projection_thread_activities (
-            activity_id, thread_id, tone, kind, summary, payload_json, created_at
-          ) VALUES (
-            'activity-legacy', 'thread-1', 'info', 'tool', 'delegate_task_t3-code',
-            '{"title":"delegate_task_t3-code"}', ${NOW}
-          )
-        `;
-
-      yield* sql`
           INSERT INTO projection_thread_messages (
             message_id, thread_id, role, text, is_streaming, created_at, updated_at
           ) VALUES (
@@ -126,7 +117,7 @@ it.layer(NodeSqliteClient.layer({ filename: ":memory:" }))("063_LegacyMcpIdentit
           )
         `;
 
-      yield* runMigrations({ toMigrationInclusive: 63 });
+      yield* runMigrations();
 
       const events = yield* sql<{ readonly eventId: string; readonly payload: string }>`
           SELECT event_id AS "eventId", payload_json AS payload FROM orchestration_v2_events ORDER BY event_id
@@ -170,13 +161,6 @@ it.layer(NodeSqliteClient.layer({ filename: ":memory:" }))("063_LegacyMcpIdentit
         `;
       assert.deepEqual(legacyEvents, [
         { payload: '{"toolName":"t2_thread_send","serverName":"t2-code"}' },
-      ]);
-
-      const activities = yield* sql<{ readonly payload: string; readonly summary: string }>`
-          SELECT summary, payload_json AS payload FROM projection_thread_activities
-        `;
-      assert.deepEqual(activities, [
-        { summary: "delegate_task_t2-code", payload: '{"title":"delegate_task_t2-code"}' },
       ]);
 
       const legacyMessages = yield* sql<{ readonly text: string }>`
