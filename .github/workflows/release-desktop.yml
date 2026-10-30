@@ -159,7 +159,7 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup-ci-deps
         with:
-          install-args: --filter=@t2code/desktop... --filter=t2... --filter=@t2code/scripts...
+          install-args: --filter=@t2code/desktop... --filter=@t2code/cli... --filter=@t2code/scripts...
         env:
           pnpm_config_cache_dir: ${{ runner.temp }}/pnpm-metadata
 
