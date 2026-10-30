@@ -13,6 +13,7 @@ import {
   isKnownSpaceBlock,
   canEditSpaceBlock,
   isSafeSpaceLink,
+  isSpaceTextColor,
   spaceMediaKind,
 } from "@t2code/client-runtime/spaces";
 import { useAssetUrlState, useAssetUrlRefresh } from "../assets/assetUrls";
@@ -30,6 +31,11 @@ function Caption({ runs }: { runs: SpaceRichText }) {
         for (const mark of run.marks) {
           if (mark.type === "bold") content = <strong>{content}</strong>;
           else if (mark.type === "italic") content = <em>{content}</em>;
+          else if (mark.type === "underline") content = <u>{content}</u>;
+          else if (mark.type === "color" && isSpaceTextColor(mark.value))
+            content = <span data-space-color={mark.value}>{content}</span>;
+          else if (mark.type === "highlight" && isSpaceTextColor(mark.value))
+            content = <span data-space-highlight={mark.value}>{content}</span>;
           else if (mark.type === "strike") content = <del>{content}</del>;
           else if (mark.type === "code") content = <code>{content}</code>;
           else if (

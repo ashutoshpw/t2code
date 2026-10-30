@@ -128,3 +128,88 @@
 [data-space-editor] [data-space-collapsed] > [data-space-list-content] > [data-space-block] {
   display: none;
 }
+html {
+  --space-gray: #787774;
+  --space-brown: #9f6b53;
+  --space-orange: #d9730d;
+  --space-yellow: #b8860b;
+  --space-green: #448361;
+  --space-blue: #337ea9;
+  --space-purple: #9065b0;
+  --space-pink: #c14c8a;
+  --space-red: #d44c47;
+}
+html.dark {
+  --space-gray: #9b9b9b;
+  --space-brown: #ba856f;
+  --space-orange: #c77d48;
+  --space-yellow: #ca9849;
+  --space-green: #529e72;
+  --space-blue: #5e87c9;
+  --space-purple: #9d68d3;
+  --space-pink: #d15796;
+  --space-red: #df5452;
+}
+[data-space-color="gray"] {
+  color: var(--space-gray);
+}
+[data-space-highlight="gray"] {
+  background-color: color-mix(in srgb, var(--space-gray) 22%, transparent);
+  border-radius: 0.2em;
+}
+[data-space-color="brown"] {
+  color: var(--space-brown);
+}
+[data-space-highlight="brown"] {
+  background-color: color-mix(in srgb, var(--space-brown) 22%, transparent);
+  border-radius: 0.2em;
+}
+[data-space-color="orange"] {
+  color: var(--space-orange);
+}
+[data-space-highlight="orange"] {
+  background-color: color-mix(in srgb, var(--space-orange) 22%, transparent);
+  border-radius: 0.2em;
+}
+[data-space-color="yellow"] {
+  color: var(--space-yellow);
+}
+[data-space-highlight="yellow"] {
+  background-color: color-mix(in srgb, var(--space-yellow) 22%, transparent);
+  border-radius: 0.2em;
+}
+[data-space-color="green"] {
+  color: var(--space-green);
+}
+[data-space-highlight="green"] {
+  background-color: color-mix(in srgb, var(--space-green) 22%, transparent);
+  border-radius: 0.2em;
+}
+[data-space-color="blue"] {
+  color: var(--space-blue);
+}
+[data-space-highlight="blue"] {
+  background-color: color-mix(in srgb, var(--space-blue) 22%, transparent);
+  border-radius: 0.2em;
+}
+[data-space-color="purple"] {
+  color: var(--space-purple);
+}
+[data-space-highlight="purple"] {
+  background-color: color-mix(in srgb, var(--space-purple) 22%, transparent);
+  border-radius: 0.2em;
+}
+[data-space-color="pink"] {
+  color: var(--space-pink);
+}
+[data-space-highlight="pink"] {
+  background-color: color-mix(in srgb, var(--space-pink) 22%, transparent);
+  border-radius: 0.2em;
+}
+[data-space-color="red"] {
+  color: var(--space-red);
+}
+[data-space-highlight="red"] {
+  background-color: color-mix(in srgb, var(--space-red) 22%, transparent);
+  border-radius: 0.2em;
+}
