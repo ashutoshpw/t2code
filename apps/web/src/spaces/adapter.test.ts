@@ -430,6 +430,59 @@ describe("Spaces ProseMirror adapter", () => {
     });
   });
 
+  it("reorders blocks among siblings by id or by the caret block, keeping the caret", () => {
+    const editor = setup([paragraph("a", "one"), paragraph("b", "two"), paragraph("c", "three")]);
+    expect(editor.run(editor.adapter.shift(-1, id("a")))).toBe(false);
+    expect(editor.run(editor.adapter.shift(1, id("c")))).toBe(false);
+    expect(editor.run(editor.adapter.shift(1, id("a")))).toBe(true);
+    expect(editor.blocks().map((block) => block.id)).toEqual(["b", "a", "c"]);
+    editor.dispatch(
+      editor.state.tr.setSelection(
+        TextSelection.create(editor.state.doc, editor.state.doc.firstChild!.nodeSize + 3),
+      ),
+    );
+    expect(editor.run(editor.adapter.shift(-1))).toBe(true);
+    expect(editor.blocks().map((block) => block.id)).toEqual(["a", "b", "c"]);
+    expect(editor.state.selection.$from.parent.textContent).toBe("one");
+    expect(editor.state.selection.$from.parentOffset).toBe(2);
+  });
+
+  it("refuses to reorder or duplicate when structure changes are not allowed", () => {
+    const blocks = [paragraph("a", "one"), paragraph("b", "two")];
+    const editor = setup(blocks, { canChangeStructure: () => false });
+    expect(editor.adapter.shift(1, id("a"))(editor.state)).toBe(false);
+    expect(editor.adapter.move(id("a"), null)(editor.state)).toBe(false);
+    expect(editor.adapter.duplicate(id("a"))(editor.state)).toBe(false);
+    expect(editor.adapter.insertAfter(id("a"))(editor.state)).toBe(false);
+    expect(editor.blocks()).toEqual(blocks);
+  });
+
+  it("duplicates a block subtree after the original with fresh ids", () => {
+    const editor = setup([
+      paragraph("a", "parent", { type: "bulleted_item" }),
+      paragraph("b", "child", { parentId: id("a") }),
+      paragraph("z", "last"),
+    ]);
+    expect(editor.run(editor.adapter.duplicate(id("a")))).toBe(true);
+    expect(editor.blocks().map((block) => [block.id, block.parentId])).toEqual([
+      ["a", null],
+      ["b", "a"],
+      ["new-1", null],
+      ["new-2", "new-1"],
+      ["z", null],
+    ]);
+    const orders = editor.blocks().filter((block) => block.parentId === null);
+    expect(orders[1]!.order > orders[0]!.order).toBe(true);
+  });
+
+  it("inserts an empty paragraph below a block and parks the caret after the seed text", () => {
+    const editor = setup([paragraph("a", "one"), paragraph("b", "two")]);
+    expect(editor.run(editor.adapter.insertAfter(id("a"), "/"))).toBe(true);
+    expect(editor.blocks().map((block) => block.id)).toEqual(["a", "new-1", "b"]);
+    expect(editor.state.selection.$from.parent.textContent).toBe("/");
+    expect(editor.state.selection.$from.parentOffset).toBe(1);
+  });
+
   it("splits list item bodies with no duplicate IDs and reparents loaded descendants in the same transaction", () => {
     const blocks = [
       paragraph("a", "abcd", { type: "bulleted_item" }),
