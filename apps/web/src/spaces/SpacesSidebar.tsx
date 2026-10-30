@@ -19,6 +19,7 @@ import { SidebarChromeFooter, SidebarChromeHeader } from "../components/sidebar/
 import { Button } from "../components/ui/button";
 import { SpacePageTree } from "./SpacePageTree";
 import { isElectron } from "../env";
+import { SpaceListSkeleton } from "./SpaceSkeletons";
 
 const CreateControls = lazy(() =>
   import("./SpaceCreateControls").then((module) => ({
@@ -152,9 +153,9 @@ function SpaceWindows({ environmentId }: { environmentId: EnvironmentId }) {
           </Button>
         </div>
       ) : !query.data ? (
-        <p role="status" className="px-2 text-sm text-muted-foreground">
-          Loading spaces…
-        </p>
+        <div className="px-2">
+          <SpaceListSkeleton label="Loading spaces" />
+        </div>
       ) : (
         <SidebarMenu>
           {query.data.items.map((space) => (

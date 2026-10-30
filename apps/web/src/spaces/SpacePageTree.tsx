@@ -22,6 +22,7 @@ import { SidebarMenuButton, useSidebar } from "../components/ui/sidebar";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { spacePageTreeRows, type SpacePageTreeRow } from "./SpacePageTree.logic";
 import { SpacePageFocusOwner } from "./SpacePageTree.focus";
+import { SpaceListSkeleton } from "./SpaceSkeletons";
 
 const SpaceLibraryControls = lazy(() => import("./SpaceLibraryControls"));
 
@@ -184,7 +185,7 @@ function PageTree({
                 {snapshot.windows.find((window) => window.parentPageId === null)?.data?.space
                   .title ?? "Pages"}
               </h2>
-              <Suspense fallback={<p role="status">Loading library controls…</p>}>
+              <Suspense fallback={null}>
                 <SpaceLibraryControls
                   key={environmentId}
                   environmentId={environmentId}
@@ -341,9 +342,7 @@ function PageWindowRow({
           </Button>
         </div>
       ) : !window.data ? (
-        <p role="status" className="text-xs text-muted-foreground">
-          Loading pages…
-        </p>
+        <SpaceListSkeleton label="Loading pages" />
       ) : window.data.items.length === 0 ? (
         <p className="text-xs text-muted-foreground">
           {window.cursor !== undefined || window.data.nextCursor !== null

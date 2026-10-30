@@ -240,7 +240,9 @@ function TitleInput({
         if (event.nativeEvent.isComposing) return;
         if (event.key === "Enter") {
           event.preventDefault();
+          const page = event.currentTarget.closest("section");
           event.currentTarget.blur();
+          page?.querySelector<HTMLElement>("[data-space-editor] .tiptap")?.focus();
         } else if (event.key === "Escape") {
           event.preventDefault();
           onCancel?.();

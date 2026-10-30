@@ -43,6 +43,8 @@ import { SpacePageShareStatus } from "./SpacePageShareStatus";
 import { openSpacePageShareDialog } from "./spacePageShareDialogState";
 import { SpacesUnavailable } from "./SpacesUnavailable";
 import { SpaceDocumentSurface } from "./SpaceDocumentSurface";
+import { SpaceTitleSkeleton } from "./SpaceSkeletons";
+import { SpacePageToolbarSlotProvider } from "./SpacePageToolbarSlot";
 import type { SpaceRecoveryHandle } from "./SpaceRecoveryControls";
 import type { SpaceStructureHandle } from "./SpaceStructureControls";
 
@@ -90,7 +92,10 @@ export default function SpacePageSurface(props: SpacePageSurfaceProps) {
       validateSpacePageSearch(router.state.location.search).block === props.target.blockId
     );
   };
-  const openSource = (target: SpacePageNavigationTarget) => {
+  const openSource = (
+    target: SpacePageNavigationTarget,
+    options?: { readonly focusTitle?: boolean },
+  ) => {
     if (!current() || target.environmentId !== props.target.environmentId) return;
     if (props.threadRef) useRightPanelStore.getState().openSpacePage(props.threadRef, target);
     else
@@ -98,6 +103,7 @@ export default function SpacePageSurface(props: SpacePageSurfaceProps) {
         to: "/spaces/$environmentId/$spaceId/$pageId",
         params: target,
         search: target.blockId ? { block: target.blockId } : {},
+        ...(options?.focusTitle ? { state: { focusTitle: target.pageId } } : {}),
       });
   };
   if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
@@ -121,10 +127,12 @@ export default function SpacePageSurface(props: SpacePageSurfaceProps) {
 function PageBar({
   fullPage,
   breadcrumb,
+  toolbarSlot,
   children,
 }: {
   fullPage: boolean;
   breadcrumb?: ReactNode;
+  toolbarSlot: (element: HTMLElement | null) => void;
   children?: ReactNode;
 }) {
   return (
@@ -135,7 +143,10 @@ function PageBar({
       )}
     >
       <div className="min-w-0 flex-1">{breadcrumb}</div>
-      <div className="flex shrink-0 items-center gap-1">{children}</div>
+      <div className="flex shrink-0 items-center gap-1">
+        <div ref={toolbarSlot} className="flex items-center gap-1" />
+        {children}
+      </div>
     </header>
   );
 }
@@ -143,7 +154,10 @@ function PageBar({
 function PageColumn({ fullPage, children }: { fullPage: boolean; children: ReactNode }) {
   return (
     <div
-      className={cn("mx-auto w-full min-w-0 max-w-3xl px-4", fullPage ? "py-10 sm:px-6" : "py-6")}
+      className={cn(
+        "mx-auto w-full min-w-0 max-w-3xl px-4",
+        fullPage ? "py-10 sm:px-12" : "py-6 sm:px-12",
+      )}
     >
       {children}
     </div>
@@ -205,6 +219,7 @@ function SpacePageMetadata({
     setLocationOwner(owner);
   }
   const query = useEnvironmentQuery(owner.query);
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null);
   const router = useRouter();
   const locationState = useRouterState({ select: (state) => state.location.state });
   const structure = useRef<SpaceStructureHandle>(null);
@@ -281,8 +296,8 @@ function SpacePageMetadata({
   if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
   if (query.error)
     return (
-      <>
-        <PageBar fullPage={fullPage} />
+      <SpacePageToolbarSlotProvider value={toolbarSlot}>
+        <PageBar fullPage={fullPage} toolbarSlot={setToolbarSlot} />
         <PageColumn fullPage={fullPage}>
           <p role="alert">{query.error}</p>
           <Button variant="outline" size="sm" onClick={query.refresh}>
@@ -290,29 +305,34 @@ function SpacePageMetadata({
           </Button>
           {children}
         </PageColumn>
-      </>
+      </SpacePageToolbarSlotProvider>
     );
   const current = query.isSuccess ? query.data?.current() : null;
+  // Edits to the title and icon check the last good location, so a refetch in flight does not drop them.
+  const liveLocation = () => (query.isSuccess ? query.data?.current() : null);
+  // Same element positions as the loaded page, so the document below never remounts when the location arrives.
   if (!current)
     return (
-      <>
-        <PageBar fullPage={fullPage} />
+      <SpacePageToolbarSlotProvider value={toolbarSlot}>
+        <PageBar fullPage={fullPage} toolbarSlot={setToolbarSlot} />
         <PageColumn fullPage={fullPage}>
-          <p role="status" className="text-sm text-muted-foreground">
-            Loading page…
-          </p>
-          {children}
+          {null}
+          <div className="group/icon" role="status" aria-label="Loading page">
+            <SpaceTitleSkeleton />
+          </div>
+          <div className="mt-4">{children}</div>
         </PageColumn>
-      </>
+      </SpacePageToolbarSlotProvider>
     );
   const { page, space, ancestors } = current;
   const resolvedTarget = { ...target, spaceId: page.spaceId };
   const crumb = "truncate rounded-sm hover:text-foreground";
   const focusTitle = locationState.focusTitle === page.id && page.title === "";
   return (
-    <>
+    <SpacePageToolbarSlotProvider value={toolbarSlot}>
       <PageBar
         fullPage={fullPage}
+        toolbarSlot={setToolbarSlot}
         breadcrumb={
           <nav
             aria-label="Page location"
@@ -409,7 +429,7 @@ function SpacePageMetadata({
             {fullPage && mainAppThreadRef ? (
               <MenuItem
                 onClick={() => {
-                  const live = query.isPending ? null : query.data?.current();
+                  const live = liveLocation();
                   if (!live) return;
                   useRightPanelStore
                     .getState()
@@ -489,7 +509,7 @@ function SpacePageMetadata({
               environmentId={target.environmentId}
               page={page}
               current={() => {
-                const live = query.isPending ? null : query.data?.current();
+                const live = liveLocation();
                 return (
                   live?.page.id === target.pageId && live.page.spaceId === resolvedTarget.spaceId
                 );
@@ -507,7 +527,7 @@ function SpacePageMetadata({
                 page={page}
                 autoFocus={focusTitle}
                 current={() => {
-                  const live = query.isPending ? null : query.data?.current();
+                  const live = liveLocation();
                   return (
                     live?.page.id === target.pageId && live.page.spaceId === resolvedTarget.spaceId
                   );
@@ -518,6 +538,6 @@ function SpacePageMetadata({
         </div>
         <div className="mt-4">{children}</div>
       </PageColumn>
-    </>
+    </SpacePageToolbarSlotProvider>
   );
 }
