@@ -82,6 +82,8 @@ import {
   SpaceMentionView,
 } from "./SpaceMentionControls";
 import type { SpaceMentionController } from "./mentions";
+import { SpaceDocumentSkeleton } from "./SpaceSkeletons";
+import { SpacePageToolbar } from "./SpacePageToolbarSlot";
 import "./editor.css";
 
 const BLOCK_DRAG_TYPE = "application/x-t2-space-block";
@@ -410,7 +412,7 @@ export function SpaceEditor({
     if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)))
       setDrop(null);
   };
-  if (!editor || !state) return <p role="status">Loading editor…</p>;
+  if (!editor || !state) return <SpaceDocumentSkeleton />;
   let selectedId: SpaceBlockId | null =
     state.selection instanceof NodeSelection
       ? (state.selection.node.attrs.block?.id ?? null)
@@ -625,7 +627,7 @@ export function SpaceEditor({
   };
   return (
     <section aria-label="Page contents" className="space-y-2" data-space-editor="">
-      <div className="flex flex-wrap items-center justify-end gap-1">
+      <SpacePageToolbar>
         {images && bridge ? (
           <SpaceImageControls
             owner={images}
@@ -688,7 +690,7 @@ export function SpaceEditor({
             </MenuPopup>
           </Menu>
         ) : null}
-      </div>
+      </SpacePageToolbar>
       {known?.type === "heading" || known?.type === "callout" || known?.type === "code" ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           {known?.type === "heading" ? (
@@ -768,7 +770,7 @@ export function SpaceEditor({
           <SpaceMediaWritableContext.Provider value={mediaEditable && writable}>
             <div
               ref={setWrapper}
-              className={structure ? "relative ps-12" : "relative"}
+              className={structure ? "relative -ms-12 ps-12" : "relative"}
               onMouseMove={trackHover}
               onMouseLeave={clearHover}
               onDragOverCapture={dragOverBlock}
