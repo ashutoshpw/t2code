@@ -281,7 +281,8 @@ function Status({
   owner: SpaceRootReorder;
 }) {
   const { snapshot, availability } = useLibraryGate(environmentId, owner);
-  const pending = snapshot.journal.pending;
+  // While an operation is in flight its own journal entry is pending; only a leftover one needs the banner.
+  const pending = snapshot.busy ? null : snapshot.journal.pending;
   if (!pending && !snapshot.error) return null;
   return (
     <div className="space-y-1 text-sm">

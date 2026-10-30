@@ -5,6 +5,8 @@ import {
   type SpaceSessionOptions,
   type SpaceSessionSnapshot,
 } from "@t2code/client-runtime/spaces";
+import * as Schema from "effect/Schema";
+import { SpaceValidationError } from "@t2code/contracts/spaces";
 import type {
   SpaceCursor,
   SpacePageGetResult,
@@ -311,7 +313,9 @@ export class SpaceDocumentControllers {
       try {
         await item.controller.refreshStructure();
       } catch (error) {
-        errors.push(error);
+        // A page the operation just trashed has nothing left to refresh.
+        if (!(Schema.is(SpaceValidationError)(error) && error.reason === "trashed"))
+          errors.push(error);
       }
     }
     if (errors.length)
