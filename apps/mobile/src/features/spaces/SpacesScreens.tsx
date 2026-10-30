@@ -251,7 +251,7 @@ function PageLibrary({
           <View style={{ marginLeft: item.window.path.length * 12 }}>
             <ListRow
               icon="doc.text"
-              label={item.page.title || "Untitled page"}
+              label={`${item.page.icon ? `${item.page.icon} ` : ""}${item.page.title || "Untitled page"}`}
               onPress={() =>
                 navigation.push("SpacesPage", { environmentId, spaceId, pageId: item.page!.id })
               }
@@ -534,13 +534,17 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
         ListHeaderComponent={
           <View className="gap-2 p-4">
             <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
+              {location?.page.icon ? `${location.page.icon} ` : ""}
               {location?.page.title || "Space page"}
             </Text>
             {location ? (
               <Text className="text-sm text-foreground-muted">
-                {[location.space.title, ...location.ancestors.map((page) => page.title)].join(
-                  " / ",
-                )}{" "}
+                {[
+                  location.space.title,
+                  ...location.ancestors.map(
+                    (page) => `${page.icon ? `${page.icon} ` : ""}${page.title}`,
+                  ),
+                ].join(" / ")}{" "}
                 · Revision {location.page.revision}
               </Text>
             ) : null}
