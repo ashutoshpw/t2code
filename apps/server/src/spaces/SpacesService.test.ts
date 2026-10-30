@@ -876,6 +876,33 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
     ),
   );
 
+  it.effect("accepts children under a toggle and includes them in context snapshots", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const { service, page, request } = yield* boot();
+        const toggle = { ...block("toggle", 1), type: "toggle" };
+        yield* service.applyBlockBatch(
+          request(
+            "seed-toggle",
+            0,
+            [toggle, block("inside", 1, toggle.id)].map((value) => ({
+              kind: "insert",
+              block: value,
+            })),
+          ),
+        );
+        const captured = yield* service.captureContextSnapshot({
+          ...env,
+          contextId: "toggle_ctx",
+          target: { kind: "page", pageId: page.id },
+        });
+        assert.equal(captured.status, "captured");
+        if (captured.status !== "captured") return;
+        assert.equal(captured.record.snapshot.text, "toggle\ninside");
+      }),
+    ),
+  );
+
   it.effect(
     "captures context snapshots from deterministic page-own blocks and a selected subtree",
     () =>

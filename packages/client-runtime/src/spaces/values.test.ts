@@ -11,6 +11,7 @@ import {
   canEditSpaceBlockOnMobile,
   copySpaceBlocks,
   editSpaceMobileText,
+  isSpaceListItem,
   joinSpaceTextBlocks,
   spaceBlockRuns,
   splitSpaceTextBlock,
@@ -63,6 +64,13 @@ describe("shared Spaces editing", () => {
     ]);
     expect(edited.id).toBe(block.id);
     expect(() => editSpaceMobileText(block, { start: 2, end: 3, text: "x" })).toThrow("UTF-16");
+  });
+
+  it("nests under toggles but keeps them read-only on mobile", () => {
+    const toggle = { ...paragraph("summary"), type: "toggle" };
+    expect(isSpaceListItem(toggle)).toBe(true);
+    expect(canEditSpaceBlockOnMobile(toggle)).toBe(false);
+    expect(spaceBlockRuns(toggle)).toEqual([{ text: "summary", marks: [] }]);
   });
 
   it.each([
