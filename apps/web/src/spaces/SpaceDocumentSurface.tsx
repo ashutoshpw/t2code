@@ -285,7 +285,7 @@ function DocumentContent({
   const showFooter = moreWindows || needsAttention || !!snapshot.imageAdmissionError;
   return (
     <div className="space-y-3" onBlur={() => autosave.current?.flush()}>
-      {!sources?.current() ? (
+      {session.hydrated && !sources?.current() ? (
         <div className="flex justify-end">
           <Button
             variant="outline"
