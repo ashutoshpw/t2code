@@ -259,6 +259,14 @@ describe("Spaces document controller lifecycle", () => {
     expect(() => document.next()).toThrow("Resolve");
     await document.session.persistDraft();
   });
+  it("revalidates silently after a save so the editor never turns read-only", async () => {
+    const document = controller();
+    await document.open();
+    const loading: boolean[] = [];
+    document.subscribe(() => loading.push(document.getSnapshot().loading));
+    await document.save();
+    expect(loading).not.toContain(true);
+  });
   it("replaces one bounded window explicitly and refuses a ninth resident dirty document", async () => {
     const inputs: unknown[] = [];
     const document = controller(key, {
