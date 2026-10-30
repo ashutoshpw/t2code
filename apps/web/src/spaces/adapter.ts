@@ -31,6 +31,7 @@ import {
   type SpaceBlockId,
   type SpacePageTarget,
   type SpaceRichText,
+  type SpaceTextColor,
 } from "@t2code/contracts/spaces";
 
 import {
@@ -438,6 +439,7 @@ export class SpaceEditorAdapter {
     const redo = this.redoLocal();
     const bold = this.mark("bold"),
       italic = this.mark("italic"),
+      underline = this.mark("underline"),
       strike = this.mark("strike"),
       code = this.mark("code");
     return [
@@ -476,6 +478,10 @@ export class SpaceEditorAdapter {
             },
             "Mod-i": () => {
               run(italic);
+              return true;
+            },
+            "Mod-u": () => {
+              run(underline);
               return true;
             },
             "Mod-Shift-x": () => {
@@ -763,17 +769,39 @@ export class SpaceEditorAdapter {
     return true;
   }
 
-  mark(type: "bold" | "italic" | "strike" | "code"): Command {
+  mark(type: "bold" | "italic" | "underline" | "strike" | "code"): Command {
     return (state, dispatch) =>
-      this.#options.canEdit?.() !== false &&
-      captionBoundary(state.doc, state.selection.from) &&
-      captionBoundary(state.doc, state.selection.to) &&
-      this.#mediaSelectionAllowed(state) &&
-      spaceMentionRangeSafe(state.doc, state.selection.from, state.selection.to) &&
+      this.#markAllowed(state) &&
       toggleMark(state.schema.marks[`space_${type}`]!, { value: { type, version: 1 } })(
         state,
         dispatch,
       );
+  }
+
+  textStyle(type: "color" | "highlight", value: SpaceTextColor | null): Command {
+    return (state, dispatch) => {
+      const markType = state.schema.marks[`space_${type}`]!;
+      const { from, to, empty } = state.selection;
+      if (empty || !this.#markAllowed(state)) return false;
+      if (dispatch)
+        dispatch(
+          (value
+            ? state.tr.addMark(from, to, markType.create({ value: { type, version: 1, value } }))
+            : state.tr.removeMark(from, to, markType)
+          ).scrollIntoView(),
+        );
+      return true;
+    };
+  }
+
+  #markAllowed(state: EditorState) {
+    return (
+      this.#options.canEdit?.() !== false &&
+      captionBoundary(state.doc, state.selection.from) &&
+      captionBoundary(state.doc, state.selection.to) &&
+      this.#mediaSelectionAllowed(state) &&
+      spaceMentionRangeSafe(state.doc, state.selection.from, state.selection.to)
+    );
   }
 
   #mediaSelectionAllowed(state: EditorState) {

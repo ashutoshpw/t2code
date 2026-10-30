@@ -23,10 +23,29 @@ export const SpaceBlockTarget = Schema.Struct({
 });
 export type SpaceBlockTarget = typeof SpaceBlockTarget.Type;
 
+export const SPACE_TEXT_COLORS = [
+  "gray",
+  "brown",
+  "orange",
+  "yellow",
+  "green",
+  "blue",
+  "purple",
+  "pink",
+  "red",
+] as const;
+export const SpaceTextColor = Schema.Literals(SPACE_TEXT_COLORS);
+export type SpaceTextColor = typeof SpaceTextColor.Type;
+
 export const SpaceKnownMark = Schema.Union([
   Schema.Struct({
-    type: Schema.Literals(["bold", "italic", "strike", "code"]),
+    type: Schema.Literals(["bold", "italic", "underline", "strike", "code"]),
     version: Schema.Literal(1),
+  }),
+  Schema.Struct({
+    type: Schema.Literals(["color", "highlight"]),
+    version: Schema.Literal(1),
+    value: SpaceTextColor,
   }),
   Schema.Struct({ type: Schema.Literal("link"), version: Schema.Literal(1), href: Schema.String }),
   Schema.Struct({
