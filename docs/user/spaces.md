@@ -12,17 +12,18 @@ Choose **Create** at the top of the sidebar to add an untitled page with its tit
 
 ## Write on a page
 
-Click the title at the top of a page to rename it. Click the page body to start writing; changes save automatically a moment after you stop typing and when you leave the page. If a save fails, **Retry** appears below the page. After a conflict with another device, your edits stay on this device and you can discard them.
+Click the title at the top of a page to rename it. Hover above the title and choose **Add icon** to give the page an emoji icon. Click the page body to start writing; changes save automatically a moment after you stop typing and when you leave the page. If a save fails, **Retry** appears below the page. After a conflict with another device, your edits stay on this device and you can discard them.
 
-- Type **/** for a command menu: headings, lists, to-do, toggle list, quote, callout, code and divider. Markdown shortcuts also work, such as `# `, `- `, `1. `, `[] `, `> ` and three backticks. Type `>> ` for a toggle list: Enter at the end of an open toggle's first line starts its first nested block, and the arrow collapses or expands it for you only. Toggles open as expanded and are read-only on mobile. Press Enter on an empty block to leave a list or quote.
+- Type **/** for a command menu: headings, lists, to-do, toggle list, quote, callout, code, divider and **Page**, which creates a sub-page below the block and opens it with its title selected. Markdown shortcuts also work, such as `# `, `- `, `1. `, `[] `, `> ` and three backticks. Type `>> ` for a toggle list: Enter at the end of an open toggle's first line starts its first nested block, and the arrow collapses or expands it for you only. Toggles open as expanded and are read-only on mobile. Press Enter on an empty block to leave a list or quote.
 - Select text for a toolbar with bold, italic, strikethrough, inline code, links and **Turn into**. Press Cmd/Ctrl+Z to undo and Cmd/Ctrl+Shift+Z to redo.
 - Select a heading to choose its level, a callout to change its icon, or code to set its language label. Code is not run.
-- To mention a page or block, choose **Insert page or block mention…** from the page's toolbar.
-- The editor's **More** menu has split, join, move, delete, **Remove media block** and **Undo saved change** for the last saved edit.
+- Hover a block to show **+** (add a block below) and a handle. Drag the handle to reorder blocks, or click it for **Turn into**, duplicate, delete and move.
+- To mention a page or block, choose **Insert page or block mention…** from the page header's **@** button.
+- The editing **More** menu in the page header has split, join, move, delete, **Remove media block** and **Undo saved change** for the last saved edit.
 
 ## Media
 
-Choose **Media → Upload** to add an image, PDF or video to the page. To swap a file, select its block and choose **Replace selected media**. The block keeps its place and caption. Edit the caption in the page. To remove media, select its block and choose **More → Remove media block**; the file itself is not deleted. Previews open when you ask for them; if a preview link expires, refresh it.
+Choose **Media → Upload** in the page header to add an image, PDF or video to the page. To swap a file, select its block and choose **Replace selected media**. The block keeps its place and caption. Edit the caption in the page. To remove media, select its block and choose **More → Remove media block**; the file itself is not deleted. Previews open when you ask for them; if a preview link expires, refresh it.
 
 ## Pages: move, trash and restore
 
