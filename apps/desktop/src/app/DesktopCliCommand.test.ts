@@ -358,21 +358,21 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const command = yield* commandIn({ home, env });
       const installed = yield* command.install;
 
-      expect(yield* fs.exists(launcher)).toBe(true);
-      expect(installed).toMatchObject({
-        onPath: true,
-        installedPath: path.join(home, ".local", "bin", "t2code"),
-      });
-      expect(installed.shadowedBy).toBeUndefined();
-      expect(yield* command.state).toEqual(installed);
+        expect(yield* fs.exists(launcher)).toBe(true);
+        expect(installed).toMatchObject({
+          onPath: true,
+          installedPath: path.join(home, ".local", "bin", "t2code"),
+        });
+        expect(installed.shadowedBy).toBeUndefined();
+        expect(yield* command.state).toEqual(installed);
 
-      const removed = yield* command.uninstall;
-      expect(removed.installedPath).toBeNull();
-      expect(removed.onPath).toBe(true);
-      expect(yield* command.state).toEqual(removed);
-      expect(yield* fs.exists(installed.installedPath!)).toBe(false);
-      expect(yield* fs.exists(launcher)).toBe(true);
-    }).pipe(Effect.scoped),
+        const removed = yield* command.uninstall;
+        expect(removed.installedPath).toBeNull();
+        expect(removed.onPath).toBe(true);
+        expect(yield* command.state).toEqual(removed);
+        expect(yield* fs.exists(installed.installedPath!)).toBe(false);
+        expect(yield* fs.exists(launcher)).toBe(true);
+      }).pipe(Effect.scoped),
   );
 
   it.effect("leaves the Windows PATH alone when it cannot be read", () =>
