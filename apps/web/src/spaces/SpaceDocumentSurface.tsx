@@ -41,6 +41,12 @@ import type { SpaceBlockMoveProof } from "@t2code/client-runtime/spaces";
 import { useEnvironment } from "../state/environments";
 import { spaceRootReorder, spaceDocuments } from "./sessionRuntime";
 import type { SpaceDocumentController } from "./documentController";
+import { SpaceDocumentSkeleton } from "./SpaceSkeletons";
+
+type OpenSpaceSource = (
+  target: SpacePageNavigationTarget,
+  options?: { readonly focusTitle?: boolean },
+) => void;
 
 const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
 
@@ -51,7 +57,7 @@ export function SpaceDocumentSurface({
 }: {
   target: SpacePageNavigationTarget;
   current: () => boolean;
-  onOpenSource: (target: SpacePageNavigationTarget) => void;
+  onOpenSource: OpenSpaceSource;
 }) {
   const registry = useContext(RegistryContext);
   const [attempt, setAttempt] = useState(0);
@@ -82,7 +88,7 @@ export function SpaceDocumentSurface({
     };
   }, [environmentId, pageId, registry, stamp]);
   if (!opened || opened.registry !== registry || opened.stamp !== stamp)
-    return <p role="status">Loading document…</p>;
+    return <SpaceDocumentSkeleton />;
   const result = opened.result;
   if ("error" in result)
     return (
@@ -99,7 +105,7 @@ export function SpaceDocumentSurface({
     result.controller.session.key.environmentId !== environmentId ||
     result.controller.session.key.pageId !== pageId
   )
-    return <p role="status">Loading document…</p>;
+    return <SpaceDocumentSkeleton />;
   return (
     <DocumentContent
       controller={result.controller}
@@ -137,7 +143,7 @@ function DocumentContent({
   controller: SpaceDocumentController;
   targetBlockId?: SpaceBlockId | undefined;
   current: () => boolean;
-  onOpenSource: (target: SpacePageNavigationTarget) => void;
+  onOpenSource: OpenSpaceSource;
 }) {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const [sourceAttempt, setSourceAttempt] = useState(0);
@@ -200,7 +206,7 @@ function DocumentContent({
         spaceRootReorder(registry, controller.session.key.environmentId),
         blockId,
       );
-      if (created && current()) onOpenSource(created);
+      if (created && current()) onOpenSource(created, { focusTitle: true });
     } catch (failure) {
       toastManager.add({
         type: "error",
@@ -290,13 +296,9 @@ function DocumentContent({
           </Button>
         </div>
       ) : null}
-      {!session.hydrated ? (
-        <p role="status" className="text-xs text-muted-foreground">
-          Loading document…
-        </p>
-      ) : null}
+      {!session.hydrated ? <SpaceDocumentSkeleton /> : null}
       {controller.structureBlocked() ? (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="sr-only">
           This page is being updated. Editing resumes shortly.
         </p>
       ) : null}

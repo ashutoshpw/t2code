@@ -5,6 +5,7 @@ import { usePrimaryEnvironmentId } from "../state/environments";
 import { Button } from "../components/ui/button";
 import { SpacesOverview } from "./SpacesOverview";
 import { SpacesUnavailable } from "./SpacesUnavailable";
+import { SpaceListSkeleton } from "./SpaceSkeletons";
 
 export function SpacesLanding() {
   const { environmentId: selectedId, view } = useSearch({ from: "/_chat/spaces" });
@@ -40,9 +41,9 @@ export function SpacesLanding() {
     );
   if (!query.data)
     return (
-      <p role="status" className="p-4 text-sm text-muted-foreground">
-        Loading Spaces…
-      </p>
+      <div className="p-4">
+        <SpaceListSkeleton label="Loading Spaces" />
+      </div>
     );
   return (
     <Navigate
