@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import "~/index.css";
-import { act, render } from "../../test/render";
+import { render } from "../../test/render";
 
 type Branched = { readonly branch: string };
 type GitActionInput = { featureBranch?: boolean; threadId?: string; action: string };
@@ -115,7 +115,7 @@ vi.mock(import("~/state/server"), async (original) => {
     serverEnvironment: { ...actual.serverEnvironment, configValueAtom: (() => config) as never },
   };
 });
-vi.mock(import("~/lib/sourceControlActions"), async (original) => ({
+vi.mock(import("~/state/sourceControlActions"), async (original) => ({
   ...(await original()),
   useSourceControlActionRunning: () => false,
   useGitStackedAction: ((scope: { cwd: string | null }) => ({
@@ -129,6 +129,7 @@ vi.mock(import("~/lib/sourceControlActions"), async (original) => ({
           branch: input.featureBranch
             ? { status: "created", name: "feature" }
             : { status: "skipped_not_requested" },
+          pr: { status: "skipped_not_requested" },
           toast: {
             title: "Committed",
             description: "Committed",
@@ -209,16 +210,13 @@ function setup() {
 describe("Git action targets across thread navigation", () => {
   const quickAction = () => button(/^Commit, push & /);
 
-  it("runs a retained PR toast in the thread that produced it", async () => {
+  it("runs the quick action against the thread that mounted the control", async () => {
+    // Upstream replaced the retained success toast with an inline success chip, so the
+    // surviving invariant is that the action targets the thread that mounted the control.
     setup();
-    await using screen = await render(control("first", "/first"));
+    await using _screen = await render(control("first", "/first"));
     await userEvent.click(quickAction());
-    await vi.waitFor(() => expect(state.toasts.some((toast) => toast.actionProps)).toBe(true));
-    const toast = state.toasts.find((toast) => toast.actionProps)!;
-
-    await screen.rerender(control("second", "/second"));
-    await act(async () => toast.actionProps!.onClick());
-
+    await vi.waitFor(() => expect(state.actions).toHaveLength(1));
     expect(state.actions.at(-1)).toMatchObject({
       scope: { cwd: "/first" },
       input: { threadId: "first", action: "commit_push_pr" },
