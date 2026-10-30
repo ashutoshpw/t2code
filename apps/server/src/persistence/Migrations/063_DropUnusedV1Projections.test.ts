@@ -7,7 +7,7 @@ import { runMigrations } from "../Migrations.ts";
 
 const layer = it.layer(NodeSqliteClient.layer({ filename: ":memory:" }));
 
-layer("064_DropUnusedV1Projections", (it) => {
+layer("063_DropUnusedV1Projections", (it) => {
   it.effect("drops V1 projections nothing reads and keeps the transcript import sources", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;

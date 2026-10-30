@@ -9,7 +9,7 @@ import * as EventStore from "../../orchestration-v2/EventStore.ts";
 import * as ProjectionMaintenance from "../../orchestration-v2/ProjectionMaintenance.ts";
 import * as ProjectionStore from "../../orchestration-v2/ProjectionStore.ts";
 import { runMigrations } from "../Migrations.ts";
-import Migration0066 from "./067_RepairClientSettlementTimestamps.ts";
+import Migration0066 from "./066_RepairClientSettlementTimestamps.ts";
 
 const layer = it.layer(
   ProjectionMaintenance.layer.pipe(
@@ -28,7 +28,7 @@ const manualAt = "2026-10-01T00:00:00.000Z";
 const plusSeconds = (iso: string, seconds: number) =>
   DateTime.makeUnsafe(iso).pipe(DateTime.add({ seconds }), DateTime.formatIso);
 
-layer("067_RepairClientSettlementTimestamps", (it) => {
+layer("066_RepairClientSettlementTimestamps", (it) => {
   it.effect("repairs only sweep stamps, preserves overrides, and survives a V2 rebuild", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
