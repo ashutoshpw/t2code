@@ -7,6 +7,7 @@ import { SpacePageGlyph } from "./SpacePageGlyph";
 import { Button } from "../components/ui/button";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment } from "../state/spaces";
+import { Skeleton } from "../components/ui/skeleton";
 
 export const SpaceAtomContext = createContext<
   ((block: SpaceBlock, captionInEditor?: boolean) => ReactNode) | undefined
@@ -55,7 +56,11 @@ export function SpaceChildPageRow({
         }}
       >
         <SpacePageGlyph icon={page?.icon} />
-        <span className="truncate">{page ? page.title || "Untitled page" : "Loading…"}</span>
+        {page ? (
+          <span className="truncate">{page.title || "Untitled page"}</span>
+        ) : (
+          <Skeleton className="h-4 w-32" aria-label="Loading page" role="status" />
+        )}
       </Button>
     </div>
   );

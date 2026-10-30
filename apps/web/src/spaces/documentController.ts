@@ -188,9 +188,10 @@ export class SpaceDocumentController {
       throw new Error("Spaces window revision changed");
     return { metadata, blocks };
   }
-  async #load(cursor?: SpaceCursor, structure = false) {
+  // A silent load revalidates a hydrated document without flipping `loading`, which makes the editor read-only.
+  async #load(cursor?: SpaceCursor, structure = false, silent = false) {
     const request = ++this.#request;
-    this.#update({ loading: true, error: null });
+    this.#update(silent ? { error: null } : { loading: true, error: null });
     try {
       await this.#ports.beforeRead?.();
       if (!structure) this.#assertUnreserved();
@@ -218,7 +219,7 @@ export class SpaceDocumentController {
       if (request === this.#request) this.#update({ error });
       throw error;
     } finally {
-      if (request === this.#request) this.#update({ loading: false });
+      if (request === this.#request && !silent) this.#update({ loading: false });
     }
   }
   async save() {
@@ -227,7 +228,8 @@ export class SpaceDocumentController {
     try {
       await this.session.save();
       const state = this.session.getSnapshot();
-      if (!state.dirty && !state.pending && state.persistenceError === null) await this.#load();
+      if (!state.dirty && !state.pending && state.persistenceError === null)
+        await this.#load(undefined, false, true);
     } catch (error) {
       if (error instanceof SpaceIntentAdmissionError && !this.session.getSnapshot().pending)
         this.#update({ imageAdmissionError: error });
