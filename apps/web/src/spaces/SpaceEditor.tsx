@@ -242,7 +242,13 @@ export function SpaceEditor({
   const [focused, setFocused] = useState(false);
   const [turnIntoOpen, setTurnIntoOpen] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
-  const [hoverId, setHoverId] = useState<SpaceBlockId | null>(null);
+  // Measured when the pointer moves, so the handle never uses a layout from an earlier render.
+  const [hover, setHover] = useState<{
+    readonly id: SpaceBlockId;
+    readonly top: number;
+    readonly left: number;
+  } | null>(null);
+  const hoverId = hover?.id ?? null;
   const [handleMenuOpen, setHandleMenuOpen] = useState(false);
   const [dragId, setDragId] = useState<SpaceBlockId | null>(null);
   const [drop, setDrop] = useState<BlockDrop | null>(null);
@@ -347,11 +353,21 @@ export function SpaceEditor({
   };
   const trackHover = (event: ReactMouseEvent) => {
     if (handleMenuOpen || dragId || !(event.target instanceof Element)) return;
-    const id = event.target.closest("[data-space-block]")?.getAttribute("data-space-block");
-    if (id) setHoverId(id as SpaceBlockId);
+    const block = event.target.closest("[data-space-block]");
+    const id = block?.getAttribute("data-space-block");
+    if (!block || !id || !wrapper) return;
+    const rect = block.getBoundingClientRect();
+    const box = wrapper.getBoundingClientRect();
+    const top = rect.top - box.top + 2;
+    const left = Math.max(0, rect.left - box.left - SPACE_BLOCK_HANDLE_WIDTH);
+    setHover((current) =>
+      current && current.id === id && current.top === top && current.left === left
+        ? current
+        : { id: id as SpaceBlockId, top, left },
+    );
   };
   const clearHover = () => {
-    if (!handleMenuOpen && !dragId) setHoverId(null);
+    if (!handleMenuOpen && !dragId) setHover(null);
   };
   const clearDrag = () => {
     setDragId(null);
@@ -443,7 +459,6 @@ export function SpaceEditor({
     todo_item: ["To-do", ListTodoIcon],
     toggle: ["Toggle list", ListCollapseIcon],
   } as const;
-  const box = wrapper?.getBoundingClientRect();
   const empty = state.doc.childCount === 0;
   const startWriting = () => {
     if (empty && structure && complete) adapter.append()(editor.state, editor.view.dispatch);
@@ -468,15 +483,7 @@ export function SpaceEditor({
     setDragId(null);
     setDrop(null);
   }
-  const handleElement = handleBlock ? blockElement(wrapper, handleBlock.id) : null;
-  const handleRect = handleElement?.getBoundingClientRect();
-  const handleAt =
-    handleBlock && handleRect && box
-      ? {
-          top: handleRect.top - box.top + 2,
-          left: Math.max(0, handleRect.left - box.left - SPACE_BLOCK_HANDLE_WIDTH),
-        }
-      : null;
+  const handleAt = handleBlock && hover ? { top: hover.top, left: hover.left } : null;
   const handleMedia =
     !!handleBlock &&
     isKnownSpaceBlock(handleBlock) &&
@@ -499,6 +506,7 @@ export function SpaceEditor({
   };
   const moreItems = canSplit || canJoin || canMove || canRemove;
   const place = (pos: number, width: number) => {
+    const box = wrapper?.getBoundingClientRect();
     if (!box) return null;
     try {
       const at = editor.view.coordsAtPos(pos);
