@@ -125,16 +125,15 @@ const JSON_PAYLOAD_TARGETS = [
     idColumn: "scope_id",
     table: "orchestration_v2_projection_checkpoint_scopes",
   },
-  // The V1 tables are still imported into V2 on first open, so they have to be
-  // rewritten too or the importer reintroduces the old names.
+  // The V1 events table is still imported into V2 on first open, so it has to
+  // be rewritten too or the importer reintroduces the old names. The other V1
+  // projections are dropped by 063_DropUnusedV1Projections before this runs.
   { idColumn: "sequence", table: "orchestration_events" },
-  { idColumn: "activity_id", table: "projection_thread_activities" },
 ] as const;
 
-// Free text that records an identity: activity summaries and message bodies.
-// Thread titles are prose, so they stay as the user wrote them.
+// Free text that records an identity: message bodies. Thread titles are prose,
+// so they stay as the user wrote them.
 const TEXT_TARGETS = [
-  { column: "summary", idColumn: "activity_id", table: "projection_thread_activities" },
   { column: "text", idColumn: "message_id", table: "projection_thread_messages" },
 ] as const;
 

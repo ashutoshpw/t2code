@@ -44,7 +44,6 @@ if (packExecutable && !cliAssetDir) throw new Error("Build the executable with b
 const SEA_TARGETS = {
   "darwin-arm64": { platform: "darwin", arch: "arm64" },
   "darwin-x64": { platform: "darwin", arch: "x64" },
-  "linux-arm64": { platform: "linux", arch: "arm64" },
   "linux-x64": { platform: "linux", arch: "x64" },
   "win-arm64": { platform: "win", arch: "arm64" },
   "win-x64": { platform: "win", arch: "x64" },
