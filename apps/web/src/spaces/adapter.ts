@@ -492,6 +492,12 @@ export class SpaceEditorAdapter {
               run(code);
               return true;
             },
+            "Mod-Shift-ArrowUp": () => {
+              return run(thisAdapter.shift(-1));
+            },
+            "Mod-Shift-ArrowDown": () => {
+              return run(thisAdapter.shift(1));
+            },
             "Mod-z": () => {
               run(undo);
               return true;
@@ -1447,6 +1453,7 @@ export class SpaceEditorAdapter {
     beforeId: SpaceBlockId | null = null,
   ): Command {
     return (state, dispatch) => {
+      if (this.#options.canChangeStructure?.() === false) return false;
       const all = entries(state.doc);
       const entry = all.find((item) => item.block.id === id);
       const parent = parentId === null ? undefined : all.find((item) => item.block.id === parentId);
@@ -1480,11 +1487,18 @@ export class SpaceEditorAdapter {
           ? siblings.length
           : siblings.findIndex((item) => item.block.id === beforeId);
       if (index < 0) return false;
+      if (!dispatch) return this.#options.canEdit?.() !== false;
       const before = siblings[index - 1];
       const after = siblings[index];
       const block = spaceDocumentBlocks(state.doc).find((item) => item.id === id)!;
+      let order: string;
+      try {
+        order = this.#rank(parentId, before?.block, after?.block);
+      } catch {
+        return false;
+      }
       const moved = entry.node.type.create(
-        { block: { ...block, parentId, order: this.#rank(parentId, before?.block, after?.block) } },
+        { block: { ...block, parentId, order } },
         entry.node.content,
       );
       const insertAt =
@@ -1493,6 +1507,136 @@ export class SpaceEditorAdapter {
       tr.insert(tr.mapping.map(insertAt), moved);
       return this.#dispatch(tr, dispatch);
     };
+  }
+
+  shift(direction: -1 | 1, id?: SpaceBlockId): Command {
+    return (state, dispatch) => {
+      const all = entries(state.doc);
+      const selection = state.selection;
+      let target = id;
+      if (!target && selection instanceof NodeSelection)
+        target = selection.node.attrs.block?.id as SpaceBlockId | undefined;
+      for (let depth = selection.$from.depth; !target && depth > 0; depth--)
+        target = selection.$from.node(depth).attrs.block?.id as SpaceBlockId | undefined;
+      const entry = all.find((item) => item.block.id === target);
+      if (!entry) return false;
+      const siblings = all.filter((item) => item.block.parentId === entry.block.parentId);
+      const index = siblings.findIndex((item) => item === entry);
+      const beforeId =
+        direction < 0 ? siblings[index - 1]?.block.id : (siblings[index + 2]?.block.id ?? null);
+      if (beforeId === undefined || !siblings[index + direction]) return false;
+      const move = this.move(entry.block.id, entry.block.parentId, beforeId);
+      return move(
+        state,
+        dispatch &&
+          ((tr) => {
+            const moved = entries(tr.doc).find((item) => item.block.id === entry.block.id);
+            if (
+              moved &&
+              selection.from >= entry.pos &&
+              selection.to <= entry.pos + entry.node.nodeSize
+            ) {
+              const delta = moved.pos - entry.pos;
+              tr.setSelection(
+                selection instanceof NodeSelection
+                  ? NodeSelection.create(tr.doc, moved.pos)
+                  : TextSelection.create(tr.doc, selection.anchor + delta, selection.head + delta),
+              );
+            }
+            dispatch(tr);
+          }),
+      );
+    };
+  }
+
+  duplicate(id: SpaceBlockId): Command {
+    return (state, dispatch) => {
+      const all = entries(state.doc);
+      const entry = all.find((item) => item.block.id === id);
+      if (
+        this.#options.canChangeStructure?.() === false ||
+        !entry ||
+        !this.#isComplete(entry.block.parentId, state.doc) ||
+        !this.#subtreeComplete(entry.node, state.doc)
+      )
+        return false;
+      try {
+        const subtree = this.copyBlocks(state, [id]);
+        if (
+          all.length + subtree.length > this.#options.maxBlocks ||
+          subtree.some((block) => mediaAssetId(block) !== null)
+        )
+          return false;
+        if (!dispatch) return this.#options.canEdit?.() !== false;
+        const next = all
+          .filter((item) => item.block.parentId === entry.block.parentId)
+          .find((item) => item.pos > entry.pos);
+        const [root, ...rest] = copySpaceBlocks(
+          subtree,
+          this.#options.target,
+          this.#options.allocateId,
+        );
+        const copied = [
+          {
+            ...root!,
+            parentId: entry.block.parentId,
+            order: this.#rank(entry.block.parentId, entry.block, next?.block),
+          },
+          ...rest,
+        ];
+        const doc = spaceWindowDocument(
+          { revision: this.#window.revision, blocks: copied, completeParents: [] },
+          this.#options.maxBlocks,
+          this.#options.maxDepth,
+          state.schema,
+        );
+        const at = entry.pos + entry.node.nodeSize;
+        const tr = state.tr.insert(at, Fragment.from(doc.content));
+        return this.#dispatch(tr.setSelection(this.#caretIn(tr.doc, at)), dispatch);
+      } catch {
+        return false;
+      }
+    };
+  }
+
+  insertAfter(id: SpaceBlockId, text = ""): Command {
+    return (state, dispatch) => {
+      const all = entries(state.doc);
+      const entry = all.find((item) => item.block.id === id);
+      if (
+        this.#options.canChangeStructure?.() === false ||
+        !entry ||
+        all.length >= this.#options.maxBlocks ||
+        !this.#isComplete(entry.block.parentId, state.doc)
+      )
+        return false;
+      if (!dispatch) return this.#options.canEdit?.() !== false;
+      const next = all
+        .filter((item) => item.block.parentId === entry.block.parentId)
+        .find((item) => item.pos > entry.pos);
+      try {
+        const block: SpaceBlock = {
+          id: this.#options.allocateId(),
+          parentId: entry.block.parentId,
+          order: this.#rank(entry.block.parentId, entry.block, next?.block),
+          type: "paragraph",
+          version: 1,
+          content: { runs: text ? [{ text, marks: [] }] : [] },
+        };
+        const at = entry.pos + entry.node.nodeSize;
+        const tr = state.tr.insert(at, spaceBlockNode(block, [], false, state.schema));
+        tr.setSelection(TextSelection.create(tr.doc, at + 1 + text.length));
+        return this.#dispatch(tr, dispatch);
+      } catch {
+        return false;
+      }
+    };
+  }
+
+  #caretIn(doc: ProseMirrorNode, pos: number) {
+    return doc.nodeAt(pos)?.type.name === "spaceAtom"
+      ? NodeSelection.create(doc, pos)
+      : TextSelection.near(doc.resolve(pos + 1));
   }
 
   copyBlocks(state: EditorState, ids: readonly SpaceBlockId[]): readonly SpaceBlock[] {
