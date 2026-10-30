@@ -11,13 +11,18 @@ import {
   useEffect,
   useState,
   type ComponentProps,
+  type DragEvent as ReactDragEvent,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
 import {
   BoldIcon,
   ChevronDownIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
   CodeIcon,
+  CopyIcon,
   EllipsisIcon,
   Heading1Icon,
   Heading2Icon,
@@ -58,12 +63,16 @@ import {
   MenuItem,
   MenuPopup,
   MenuSeparator,
+  MenuSub,
+  MenuSubPopup,
+  MenuSubTrigger,
   MenuTrigger,
 } from "~/components/ui/menu";
 import { Separator } from "~/components/ui/separator";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { SpaceEditorAdapter, type SpaceEditorBatch } from "./adapter";
 import { canEditSpaceEditorBlock, spaceDocumentBlocks } from "./document";
+import { SPACE_BLOCK_HANDLE_WIDTH, SpaceBlockHandle } from "./SpaceBlockHandle";
 import { SpaceImageControls } from "./SpaceImageControls";
 import type { SpaceImageUploads } from "@t2code/client-runtime/spaces";
 import type { SpaceEditorBridge } from "./editorBridge";
@@ -74,6 +83,22 @@ import {
 } from "./SpaceMentionControls";
 import type { SpaceMentionController } from "./mentions";
 import "./editor.css";
+
+const BLOCK_DRAG_TYPE = "application/x-t2-space-block";
+
+type BlockDrop = {
+  readonly key: string;
+  readonly allowed: boolean;
+  readonly parentId: SpaceBlockId | null;
+  readonly beforeId: SpaceBlockId | null;
+  readonly top: number;
+  readonly left: number;
+  readonly width: number;
+};
+
+function blockElement(wrapper: HTMLElement | null, id: SpaceBlockId | null) {
+  return id && wrapper ? wrapper.querySelector(`[data-space-block="${CSS.escape(id)}"]`) : null;
+}
 
 const placeholder = "Write, or press '/' for commands…";
 
@@ -215,6 +240,10 @@ export function SpaceEditor({
   const [focused, setFocused] = useState(false);
   const [turnIntoOpen, setTurnIntoOpen] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
+  const [hoverId, setHoverId] = useState<SpaceBlockId | null>(null);
+  const [handleMenuOpen, setHandleMenuOpen] = useState(false);
+  const [dragId, setDragId] = useState<SpaceBlockId | null>(null);
+  const [drop, setDrop] = useState<BlockDrop | null>(null);
   const editor = useEditor(
     {
       extensions: [
@@ -314,6 +343,73 @@ export function SpaceEditor({
     }
     editor.view.focus();
   };
+  const trackHover = (event: ReactMouseEvent) => {
+    if (handleMenuOpen || dragId || !(event.target instanceof Element)) return;
+    const id = event.target.closest("[data-space-block]")?.getAttribute("data-space-block");
+    if (id) setHoverId(id as SpaceBlockId);
+  };
+  const clearHover = () => {
+    if (!handleMenuOpen && !dragId) setHoverId(null);
+  };
+  const clearDrag = () => {
+    setDragId(null);
+    setDrop(null);
+  };
+  const startDrag = (event: ReactDragEvent) => {
+    if (!hoverId) return event.preventDefault();
+    event.dataTransfer.setData(BLOCK_DRAG_TYPE, hoverId);
+    event.dataTransfer.effectAllowed = "move";
+    const element = blockElement(wrapper, hoverId);
+    if (element) event.dataTransfer.setDragImage(element, 0, 0);
+    setDragId(hoverId);
+  };
+  const dragOverBlock = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!dragId || !editor || !wrapper) return;
+    event.stopPropagation();
+    const element =
+      event.target instanceof Element ? event.target.closest("[data-space-block]") : null;
+    const targetId = element?.getAttribute("data-space-block") as SpaceBlockId | null | undefined;
+    if (!element || !targetId) {
+      if (drop?.allowed) event.preventDefault();
+      return;
+    }
+    const rect = element.getBoundingClientRect();
+    const after = event.clientY > rect.top + rect.height / 2;
+    const key = `${targetId}:${after}`;
+    if (drop?.key !== key) {
+      const blocks = spaceDocumentBlocks(editor.state.doc);
+      const target =
+        targetId === dragId ? undefined : blocks.find((block) => block.id === targetId);
+      if (!target) return setDrop(null);
+      const siblings = blocks.filter((block) => block.parentId === target.parentId);
+      const index = siblings.indexOf(target);
+      const beforeId = after ? (siblings[index + 1]?.id ?? null) : targetId;
+      const unchanged = siblings[index + (after ? 1 : -1)]?.id === dragId;
+      const box = wrapper.getBoundingClientRect();
+      return setDrop({
+        key,
+        allowed: !unchanged && adapter.move(dragId, target.parentId, beforeId)(editor.state),
+        parentId: target.parentId,
+        beforeId,
+        top: (after ? rect.bottom : rect.top) - box.top,
+        left: rect.left - box.left,
+        width: rect.width,
+      });
+    }
+    if (drop.allowed) event.preventDefault();
+  };
+  const dropBlock = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!dragId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const target = drop;
+    clearDrag();
+    if (target?.allowed) run(adapter.move(dragId, target.parentId, target.beforeId));
+  };
+  const leaveDrag = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)))
+      setDrop(null);
+  };
   if (!editor || !state) return <p role="status">Loading editor…</p>;
   let selectedId: SpaceBlockId | null =
     state.selection instanceof NodeSelection
@@ -326,7 +422,8 @@ export function SpaceEditor({
       break;
     }
   }
-  const selected = spaceDocumentBlocks(state.doc).find((block) => block.id === selectedId);
+  const documentBlocks = spaceDocumentBlocks(state.doc);
+  const selected = documentBlocks.find((block) => block.id === selectedId);
   const known =
     selected && isKnownSpaceBlock(selected) && canEditSpaceEditorBlock(selected) ? selected : null;
   const link = adapter.linkSelection(state);
@@ -344,6 +441,7 @@ export function SpaceEditor({
     todo_item: ["To-do", ListTodoIcon],
     toggle: ["Toggle list", ListCollapseIcon],
   } as const;
+  const box = wrapper?.getBoundingClientRect();
   const empty = state.doc.childCount === 0;
   const startWriting = () => {
     if (empty && structure && complete) adapter.append()(editor.state, editor.view.dispatch);
@@ -363,8 +461,37 @@ export function SpaceEditor({
     (media
       ? mediaEditable && can(adapter.removeMedia(selectedId))
       : can(adapter.remove(selectedId)));
+  const handleBlock = structure && hoverId ? documentBlocks.find((b) => b.id === hoverId) : null;
+  const handleElement = handleBlock ? blockElement(wrapper, handleBlock.id) : null;
+  const handleRect = handleElement?.getBoundingClientRect();
+  const handleAt =
+    handleBlock && handleRect && box
+      ? {
+          top: handleRect.top - box.top + 2,
+          left: Math.max(0, handleRect.left - box.left - SPACE_BLOCK_HANDLE_WIDTH),
+        }
+      : null;
+  const handleMedia =
+    !!handleBlock &&
+    isKnownSpaceBlock(handleBlock) &&
+    ["image", "pdf", "video"].includes(handleBlock.type);
+  const selectBlock = (id: SpaceBlockId) => {
+    let at = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (at >= 0 || node.attrs.block?.id !== id) return at < 0;
+      at = pos;
+      return false;
+    });
+    if (at >= 0)
+      editor.view.dispatch(
+        editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, at)),
+      );
+  };
+  const addBelow = (id: SpaceBlockId) => {
+    setDismissed(null);
+    run(adapter.insertAfter(id, "/"));
+  };
   const moreItems = canSplit || canJoin || canMove || canRemove;
-  const box = wrapper?.getBoundingClientRect();
   const place = (pos: number, width: number) => {
     if (!box) return null;
     try {
@@ -637,7 +764,12 @@ export function SpaceEditor({
           <SpaceMediaWritableContext.Provider value={mediaEditable && writable}>
             <div
               ref={setWrapper}
-              className="relative"
+              className={structure ? "relative ps-12" : "relative"}
+              onMouseMove={trackHover}
+              onMouseLeave={clearHover}
+              onDragOverCapture={dragOverBlock}
+              onDropCapture={dropBlock}
+              onDragLeave={leaveDrag}
               onFocus={() => {
                 setFocused(true);
                 startWriting();
@@ -658,6 +790,94 @@ export function SpaceEditor({
                 editor={editor}
                 className="min-h-40 whitespace-pre-wrap break-words [&_.tiptap]:min-h-40 [&_.tiptap]:outline-none"
               />
+              {handleAt && handleBlock ? (
+                <SpaceBlockHandle
+                  top={handleAt.top}
+                  left={handleAt.left}
+                  menuOpen={handleMenuOpen}
+                  onMenuOpenChange={setHandleMenuOpen}
+                  onAdd={
+                    can(adapter.insertAfter(handleBlock.id)) ? () => addBelow(handleBlock.id) : null
+                  }
+                  onDragStart={startDrag}
+                  onDragEnd={clearDrag}
+                >
+                  <MenuSub>
+                    <MenuSubTrigger>Turn into</MenuSubTrigger>
+                    <MenuSubPopup>
+                      {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
+                        const [label, Icon] = turnInto[type];
+                        return (
+                          <MenuItem
+                            key={type}
+                            disabled={!can(adapter.convert(handleBlock.id, type))}
+                            onClick={() => run(adapter.convert(handleBlock.id, type))}
+                          >
+                            <Icon />
+                            {label}
+                          </MenuItem>
+                        );
+                      })}
+                    </MenuSubPopup>
+                  </MenuSub>
+                  <MenuItem
+                    disabled={!can(adapter.duplicate(handleBlock.id))}
+                    onClick={() => run(adapter.duplicate(handleBlock.id))}
+                  >
+                    <CopyIcon />
+                    Duplicate
+                  </MenuItem>
+                  <MenuItem
+                    disabled={!can(adapter.shift(-1, handleBlock.id))}
+                    onClick={() => run(adapter.shift(-1, handleBlock.id))}
+                  >
+                    <ArrowUpIcon />
+                    Move up
+                  </MenuItem>
+                  <MenuItem
+                    disabled={!can(adapter.shift(1, handleBlock.id))}
+                    onClick={() => run(adapter.shift(1, handleBlock.id))}
+                  >
+                    <ArrowDownIcon />
+                    Move down
+                  </MenuItem>
+                  {canMove ? (
+                    <MenuItem
+                      onClick={() => {
+                        selectBlock(handleBlock.id);
+                        onMoveBlocks?.(editor.state);
+                      }}
+                    >
+                      Move to…
+                    </MenuItem>
+                  ) : null}
+                  <MenuSeparator />
+                  <MenuItem
+                    variant="destructive"
+                    disabled={
+                      !(handleMedia
+                        ? mediaEditable && can(adapter.removeMedia(handleBlock.id))
+                        : can(adapter.remove(handleBlock.id)))
+                    }
+                    onClick={() =>
+                      run(
+                        handleMedia
+                          ? adapter.removeMedia(handleBlock.id)
+                          : adapter.remove(handleBlock.id),
+                      )
+                    }
+                  >
+                    <Trash2Icon />
+                    {handleMedia ? "Remove media block" : "Delete block"}
+                  </MenuItem>
+                </SpaceBlockHandle>
+              ) : null}
+              {drop?.allowed ? (
+                <div
+                  className="pointer-events-none absolute z-10 h-0.5 rounded-full bg-primary"
+                  style={{ top: drop.top - 1, left: drop.left, width: drop.width }}
+                />
+              ) : null}
               {bubble ? (
                 <div
                   className="absolute z-20 flex w-max max-w-[calc(100%-1rem)] flex-col gap-1 rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
