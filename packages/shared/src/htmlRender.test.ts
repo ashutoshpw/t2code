@@ -21,6 +21,13 @@ describe("injectHtmlRenderBootstrap", () => {
     expect(injected).toContain('name="viewport"');
   });
 
+  it("injects a bootstrap script that looks up the style id it injects", () => {
+    const injected = injectHtmlRenderBootstrap("<!doctype html><html><body>x</body></html>");
+    const themeStyleId = /<style id="([^"]+)">/.exec(injected)?.[1];
+    expect(themeStyleId).toBeDefined();
+    expect(injected).toContain(`getElementById("${themeStyleId}")`);
+  });
+
   it("wraps fragments without a head and keeps existing meta tags", () => {
     const fragment =
       '<meta charset="utf-8"><meta name="viewport" content="width=device-width"><p>hi</p>';
