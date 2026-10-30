@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { SpacePinButton } from "./SpacePinButton";
+import { SpaceListSkeleton } from "./SpaceSkeletons";
 
 const SpaceSearch = lazy(() => import("./SpaceSearch"));
 
@@ -110,7 +111,7 @@ export function SpacesOverview({
             </Button>
           </div>
         ) : null}
-        {!query.data && !query.error ? <p role="status">Loading…</p> : null}
+        {!query.data && !query.error ? <SpaceListSkeleton label="Loading spaces" /> : null}
         {view === "all" && all.data?.items.length ? (
           <Table>
             <TableHeader>
