@@ -7,6 +7,8 @@ import {
   type SpaceMark,
   type SpacePageTarget,
   type SpaceRichText,
+  type SpaceTextColor,
+  SPACE_TEXT_COLORS,
 } from "@t2code/contracts/spaces";
 
 const decodeKnownBlock = Schema.decodeUnknownOption(SpaceKnownBlock, { onExcessProperty: "error" });
@@ -16,6 +18,10 @@ export function isKnownSpaceBlock(value: unknown): value is SpaceKnownBlock {
 }
 function isKnownSpaceMark(value: unknown): value is SpaceKnownMark {
   return Option.isSome(decodeKnownMark(value));
+}
+
+export function isSpaceTextColor(value: unknown): value is SpaceTextColor {
+  return SPACE_TEXT_COLORS.some((color) => color === value);
 }
 
 export function isSafeSpaceLink(href: string): boolean {
