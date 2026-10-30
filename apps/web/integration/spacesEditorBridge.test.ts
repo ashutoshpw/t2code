@@ -3997,8 +3997,8 @@ it.effect(
             h.network.lose = "after";
             await expect(owner.recover()).rejects.toThrow("Lost committed response");
             h.setWritable(false);
-            // The definite receipt is persisted before every resident refresh is attempted.
-            await expect(owner.recover()).rejects.toThrow("could not refresh");
+            // The definite receipt is persisted before every resident refresh is attempted; a trashed page has nothing to refresh.
+            await owner.recover();
             assert.equal(owner.getSnapshot().journal.pending, null);
             assert.deepEqual(h.lookups.at(-1)!.request, pending.request);
             assert.equal(h.recoveryRequests.length, 1);
