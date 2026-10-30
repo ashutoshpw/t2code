@@ -777,7 +777,7 @@ describe("composerDraftStore environment contexts", () => {
     expect(draft?.environmentContexts).toEqual([vps]);
     expect(vps.label).toBe("Hetzner vps");
     expect(draft?.prompt).toBe(
-      `Run it on [${vps.label}](t3-context://v1/environment/${vps.contextId}) `,
+      `Run it on [${vps.label}](t2-context://v1/environment/${vps.contextId}) `,
     );
 
     const merge = useComposerDraftStore.persist.getOptions().merge!;

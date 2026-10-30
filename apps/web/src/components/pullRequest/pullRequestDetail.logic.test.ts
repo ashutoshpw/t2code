@@ -1,4 +1,6 @@
 import { SourceControlProviderKind } from "@t2code/contracts";
+import { resolvePlanFollowUpSubmission } from "../../proposedPlan";
+import { serializeLegacyContextMessage } from "@t2code/shared/composerContextLegacySend";
 import {
   GitCommandError,
   ProjectId,

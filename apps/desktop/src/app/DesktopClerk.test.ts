@@ -144,6 +144,7 @@ describe("DesktopClerk", () => {
         "setPath:userData:/tmp/app-data/t2code-dev",
         "requestSingleInstanceLock",
         "on:second-instance",
+        "on:open-url",
         "createClerkBridge",
       ]);
       storageMock.mockClear();

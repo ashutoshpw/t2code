@@ -36,7 +36,7 @@ export const T2_CODE_BROWSER_TOOL_INSTRUCTIONS = `
 When browser work was asked, \`preview_*\` is the browser you share with the user: \`preview_status\` first, then \`preview_open\` if no tab can be automated. Prefer snapshot locators over coordinates. Switch browsers only if the tools are absent or \`preview_open\` says unsupported, the user asks, or two preview calls fail on one step. Then quote the error and switch.
 `;
 
-const T3_CODE_DEVICE_TOOLS = ["device_list", "device_open", "device_screenshot", "device_close"];
+const T2_CODE_DEVICE_TOOLS = ["device_list", "device_open", "device_screenshot", "device_close"];
 
 const deviceToolInstructions = (loadTools: string) => `## T2 Code devices
 
@@ -52,7 +52,7 @@ export const T2_CODE_DEVICE_TOOL_INSTRUCTIONS = deviceToolInstructions("");
 
 /** Claude Code defers MCP tools behind ToolSearch, so Claude's copy says how to load them. */
 export const T2_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH = deviceToolInstructions(
-  ` Load them with ToolSearch \`select:${T3_CODE_DEVICE_TOOLS.map((tool) => `mcp__t2-code__${tool}`).join(",")}\`.`,
+  ` Load them with ToolSearch \`select:${T2_CODE_DEVICE_TOOLS.map((tool) => `mcp__t2-code__${tool}`).join(",")}\`.`,
 );
 
 // ACP only: some ACP agents accept the injected MCP server but never expose

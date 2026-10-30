@@ -175,7 +175,10 @@ describe("linkCreatedPullRequest", () => {
       }).pipe(Effect.provide(layerDependencies));
       yield* linkCreatedPullRequest({
         threadId: THREAD_ID,
-        result: prResult({ status: "created", url: "https://github.com/ashutoshpw/t2code/pull/42" }),
+        result: prResult({
+          status: "created",
+          url: "https://github.com/ashutoshpw/t2code/pull/42",
+        }),
         commandId,
       }).pipe(Effect.provide(layerDependencies));
 
