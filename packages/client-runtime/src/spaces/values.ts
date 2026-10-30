@@ -28,7 +28,8 @@ export function isSafeSpaceLink(href: string): boolean {
 
 export function isSpaceListItem(block: SpaceBlock): boolean {
   return (
-    isKnownSpaceBlock(block) && ["bulleted_item", "numbered_item", "todo_item"].includes(block.type)
+    isKnownSpaceBlock(block) &&
+    ["bulleted_item", "numbered_item", "todo_item", "toggle"].includes(block.type)
   );
 }
 
@@ -64,7 +65,12 @@ export function canEditSpaceBlock(block: SpaceBlock): boolean {
 
 export function canEditSpaceBlockOnMobile(block: SpaceBlock): boolean {
   const runs = spaceBlockRuns(block);
-  return runs !== null && block.type !== "callout" && hasSupportedRuns(runs, true);
+  return (
+    runs !== null &&
+    block.type !== "callout" &&
+    block.type !== "toggle" &&
+    hasSupportedRuns(runs, true)
+  );
 }
 
 export function spacePlainText(runs: SpaceRichText): string {

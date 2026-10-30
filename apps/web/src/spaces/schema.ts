@@ -4,7 +4,7 @@ import type { SpaceBlock, SpaceKnownMark } from "@t2code/contracts/spaces";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
 
 const blockAttributes = () => ({ block: { default: null, rendered: false } });
-const listTypes = new Set(["bulleted_item", "numbered_item", "todo_item"]);
+const listTypes = new Set(["bulleted_item", "numbered_item", "todo_item", "toggle"]);
 export const richBlockTypes = [
   "paragraph",
   "heading",
@@ -13,6 +13,7 @@ export const richBlockTypes = [
   "bulleted_item",
   "numbered_item",
   "todo_item",
+  "toggle",
 ] as const;
 
 export const spaceSchemaExtensions: Extensions = [

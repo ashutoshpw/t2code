@@ -106,3 +106,25 @@
   opacity: 0.6;
   pointer-events: none;
 }
+[data-space-editor] button[data-space-toggle-button] {
+  position: absolute;
+  inset-inline-start: 0;
+  width: 1.5rem;
+  height: 1.65em;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+[data-space-editor] button[data-space-toggle-button]::before {
+  content: "▸";
+  display: inline-block;
+  transform: rotate(90deg);
+}
+[data-space-editor] [data-space-collapsed] button[data-space-toggle-button]::before {
+  transform: none;
+}
+[data-space-editor] [data-space-collapsed] > [data-space-list-content] > [data-space-block] {
+  display: none;
+}

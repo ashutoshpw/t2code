@@ -145,13 +145,16 @@ export function SpaceBlockReader(props: {
           ) : null}
           {block.type === "bulleted_item" ||
           block.type === "numbered_item" ||
+          block.type === "toggle" ||
           block.type === "quote" ? (
             <Text className="text-foreground-muted">
               {block.type === "quote"
                 ? "Quote"
                 : block.type === "numbered_item"
                   ? "Numbered item"
-                  : "•"}
+                  : block.type === "toggle"
+                    ? "▸ Toggle"
+                    : "•"}
             </Text>
           ) : null}
           <RichText
