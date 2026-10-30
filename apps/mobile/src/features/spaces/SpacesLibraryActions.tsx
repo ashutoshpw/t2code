@@ -163,11 +163,13 @@ function Actions({
         work = owner.renamePage(intent.page, title);
         break;
       case "child":
-        work = owner.createChild(title, {
-          pageId: intent.page.id,
-          parentId: null,
-          beforeBlockId: null,
-        });
+        work = owner
+          .createChild(title, {
+            pageId: intent.page.id,
+            parentId: null,
+            beforeBlockId: null,
+          })
+          .then(() => {});
         break;
       case "move":
       case "blocks":
