@@ -573,6 +573,7 @@ export class SpaceRootReorder {
   #release: (() => void) | null = null;
   #unsent = false;
   #accepted: MoveReceipt | SpaceLibraryReceipt | null = null;
+  #createdPageId: C.SpacePageId | null = null;
   #read = 0;
   #edge: Position | null = null;
   constructor(environmentId: EnvironmentId, ports: SpaceRootReorderPorts) {
@@ -921,8 +922,9 @@ export class SpaceRootReorder {
       );
     });
   }
-  createChild(title: string, placement: C.SpaceBlockPlacement) {
+  createChild(title: string, placement: C.SpaceBlockPlacement): Promise<C.SpacePageId | null> {
     return this.#exclusive(async () => {
+      this.#createdPageId = null;
       const capability = this.#ports.capability();
       if (capability?.version !== 2)
         throw new Error("Child creation requires a known v2 environment");
@@ -985,7 +987,7 @@ export class SpaceRootReorder {
           conflict: false,
         };
       });
-    });
+    }).then(() => this.#createdPageId);
   }
   move(pageId: C.SpacePageId, spaceId: C.SpaceId, beforePageId: C.SpacePageId | null) {
     return this.moveTo(pageId, { kind: "root", spaceId, beforePageId });
@@ -2103,6 +2105,7 @@ export class SpaceRootReorder {
     )
       throw new Error("Inconsistent structural acknowledgement guards");
     this.#accepted = receipt;
+    if (receipt.operation === "createChildPage" && savedPage) this.#createdPageId = savedPage.id;
     let history: SpaceStructureJournal["history"] = null,
       notice = "Placement accepted. No compensating placement could be retained.";
     if (result.changed.pages.length || result.changed.roots.length) {
