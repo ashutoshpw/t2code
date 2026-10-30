@@ -68,7 +68,7 @@ export default function SpaceStructureControls(props: Props) {
     );
   return <StructureControls {...props} owner={result.owner} />;
 }
-const plain = (error: unknown, fallback: string) =>
+export const plain = (error: unknown, fallback: string) =>
   error instanceof Error && /draft|resolve|saving|finish loading|unsaved/i.test(error.message)
     ? "Save your changes first, then try again."
     : fallback;

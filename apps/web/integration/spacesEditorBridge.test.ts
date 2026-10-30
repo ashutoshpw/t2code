@@ -3715,12 +3715,23 @@ it.effect("announces a structural change only after the affected pages are relea
         });
         yield* Effect.promise(async () => {
           await owner.loadBody(h.pages[0]!);
-          await owner.createChild("New child", {
+          const created = await owner.createChild("New child", {
             pageId: h.pages[0]!,
             parentId: null,
             beforeBlockId: null,
           });
           assert.deepEqual(reservedAtChange, [false]);
+          const children = await h.run(
+            service.listPages({
+              environmentId,
+              spaceId: h.spaceId,
+              parentPageId: h.pages[0]!,
+            }),
+          );
+          assert.deepEqual(
+            children.items.map((page) => page.id),
+            [created],
+          );
         });
       }),
     ),
