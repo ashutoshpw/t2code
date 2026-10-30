@@ -116,24 +116,38 @@ export const spaceSchemaExtensions: Extensions = [
       ];
     },
   }),
-  ...(["bold", "italic", "strike", "code", "link", "page_mention", "block_mention"] as const).map(
-    (name) =>
-      Mark.create({
-        name: `space_${name}`,
-        inclusive: name !== "link" && !name.endsWith("mention"),
-        excludes: `space_${name}`,
-        addAttributes: () => ({ value: { default: null, rendered: false } }),
-        renderHTML({ mark }) {
-          const value = mark.attrs.value as SpaceKnownMark;
-          if (value.type === "link")
-            return ["a", { href: value.href, rel: "noopener noreferrer" }, 0];
-          const tag =
-            { bold: "strong", italic: "em", strike: "s", code: "code" }[
-              name as "bold" | "italic" | "strike" | "code"
-            ] ?? "span";
-          return [tag, {}, 0];
-        },
-      }),
+  ...(
+    [
+      "bold",
+      "italic",
+      "underline",
+      "strike",
+      "code",
+      "color",
+      "highlight",
+      "link",
+      "page_mention",
+      "block_mention",
+    ] as const
+  ).map((name) =>
+    Mark.create({
+      name: `space_${name}`,
+      inclusive: name !== "link" && !name.endsWith("mention"),
+      excludes: `space_${name}`,
+      addAttributes: () => ({ value: { default: null, rendered: false } }),
+      renderHTML({ mark }) {
+        const value = mark.attrs.value as SpaceKnownMark;
+        if (value.type === "link")
+          return ["a", { href: value.href, rel: "noopener noreferrer" }, 0];
+        if (value.type === "color") return ["span", { "data-space-color": value.value }, 0];
+        if (value.type === "highlight") return ["span", { "data-space-highlight": value.value }, 0];
+        const tag =
+          { bold: "strong", italic: "em", underline: "u", strike: "s", code: "code" }[
+            name as "bold" | "italic" | "underline" | "strike" | "code"
+          ] ?? "span";
+        return [tag, {}, 0];
+      },
+    }),
   ),
 ];
 

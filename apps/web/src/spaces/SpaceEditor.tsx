@@ -34,7 +34,9 @@ import {
   PilcrowIcon,
   QuoteIcon,
   SquareCodeIcon,
+  PaletteIcon,
   StrikethroughIcon,
+  UnderlineIcon,
   Trash2Icon,
 } from "lucide-react";
 import { NodeSelection, Plugin, type Command, type EditorState } from "@tiptap/pm/state";
@@ -46,10 +48,18 @@ import {
   SpaceMediaView,
   SpaceMediaWritableContext,
 } from "./SpaceAtomView";
-import type { SpaceBlock, SpaceBlockId } from "@t2code/contracts/spaces";
+import { SPACE_TEXT_COLORS, type SpaceBlock, type SpaceBlockId } from "@t2code/contracts/spaces";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
-import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "~/components/ui/menu";
+import {
+  Menu,
+  MenuGroup,
+  MenuGroupLabel,
+  MenuItem,
+  MenuPopup,
+  MenuSeparator,
+  MenuTrigger,
+} from "~/components/ui/menu";
 import { Separator } from "~/components/ui/separator";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { SpaceEditorAdapter, type SpaceEditorBatch } from "./adapter";
@@ -204,6 +214,7 @@ export function SpaceEditor({
   const [slashSel, setSlashSel] = useState({ query: "", index: 0 });
   const [focused, setFocused] = useState(false);
   const [turnIntoOpen, setTurnIntoOpen] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
   const editor = useEditor(
     {
       extensions: [
@@ -371,7 +382,7 @@ export function SpaceEditor({
   const linkKey = `${from}-${to}`;
   const bubbleAt =
     writable &&
-    (focused || turnIntoOpen) &&
+    (focused || turnIntoOpen || colorOpen) &&
     !(state.selection instanceof NodeSelection) &&
     (from !== to || link?.hasLink)
       ? place(from, 320)
@@ -660,6 +671,7 @@ export function SpaceEditor({
                       [
                         ["bold", "Bold", BoldIcon],
                         ["italic", "Italic", ItalicIcon],
+                        ["underline", "Underline", UnderlineIcon],
                         ["strike", "Strikethrough", StrikethroughIcon],
                         ["code", "Inline code", CodeIcon],
                       ] as const
@@ -681,6 +693,46 @@ export function SpaceEditor({
                     >
                       <LinkIcon />
                     </ToolbarIconButton>
+                    <Menu open={colorOpen} onOpenChange={setColorOpen}>
+                      <MenuTrigger
+                        render={<Button variant="ghost" size="icon-sm" aria-label="Text color" />}
+                      >
+                        <PaletteIcon />
+                      </MenuTrigger>
+                      <MenuPopup align="start">
+                        {(
+                          [
+                            ["color", "Text color"],
+                            ["highlight", "Background"],
+                          ] as const
+                        ).map(([style, heading]) => (
+                          <MenuGroup key={style}>
+                            <MenuGroupLabel>{heading}</MenuGroupLabel>
+                            {[null, ...SPACE_TEXT_COLORS].map((value) => (
+                              <MenuItem
+                                key={value ?? "default"}
+                                disabled={!can(adapter.textStyle(style, value))}
+                                onClick={() => run(adapter.textStyle(style, value))}
+                              >
+                                <span
+                                  className="w-5 rounded-sm text-center font-semibold"
+                                  {...(value
+                                    ? {
+                                        [style === "color"
+                                          ? "data-space-color"
+                                          : "data-space-highlight"]: value,
+                                      }
+                                    : {})}
+                                >
+                                  A
+                                </span>
+                                <span className="capitalize">{value ?? "Default"}</span>
+                              </MenuItem>
+                            ))}
+                          </MenuGroup>
+                        ))}
+                      </MenuPopup>
+                    </Menu>
                     <Separator orientation="vertical" className="mx-1 h-5" />
                     <Menu open={turnIntoOpen} onOpenChange={setTurnIntoOpen}>
                       <MenuTrigger render={<Button variant="ghost" size="sm" />}>
