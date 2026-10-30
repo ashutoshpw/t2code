@@ -356,7 +356,7 @@ it.effect("rejects an unknown organize target instead of archiving the calling t
     const server = yield* McpServer.McpServer;
     const outcome = yield* server
       .callTool({
-        name: "t3_thread_organize",
+        name: "t2_thread_organize",
         arguments: { action: "archive", threadIds: ["other-thread"] },
       })
       .pipe(

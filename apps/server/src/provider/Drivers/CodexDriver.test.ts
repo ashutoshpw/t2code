@@ -383,7 +383,7 @@ it.layer(layerTest)("CodexDriver", (it) => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const tempDir = yield* fs
-          .makeTempDirectoryScoped({ prefix: "t3-codex-driver-" })
+          .makeTempDirectoryScoped({ prefix: "t2-codex-driver-" })
           .pipe(Effect.flatMap((directory) => fs.realPath(directory)));
         // One standalone install, linked onto PATH and used by two account homes.
         // `İ` gets longer when lowercased, so the home must not be sliced from a
@@ -438,7 +438,7 @@ it.layer(layerTest)("CodexDriver", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const tempDir = yield* fs
-        .makeTempDirectoryScoped({ prefix: "t3-codex-update-home-" })
+        .makeTempDirectoryScoped({ prefix: "t2-codex-update-home-" })
         .pipe(Effect.flatMap((directory) => fs.realPath(directory)));
       const linkedInstallHome = NodePath.join(tempDir, "install");
       const fixtures = [

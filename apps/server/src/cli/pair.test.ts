@@ -557,11 +557,11 @@ describe("auth scope options", () => {
 });
 
 describe("auth pairing create --base-url", () => {
-  it.effect.each(["192.168.1.5:3773", "localhost:3773", "ftp://localhost:3773"])(
+  it.effect.each(["192.168.1.5:3772", "localhost:3772", "ftp://localhost:3772"])(
     "rejects %s before issuing a token",
     (baseUrl) =>
       Effect.gen(function* () {
-        const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-cli-base-url-test-"));
+        const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-cli-base-url-test-"));
         const error = yield* runCli([
           "auth",
           "pairing",
@@ -589,11 +589,11 @@ describe("auth pairing create --base-url", () => {
       }),
   );
 
-  it.effect.each(["http://192.168.1.5:3773", "https://example.com", "http:localhost:3773"])(
+  it.effect.each(["http://192.168.1.5:3772", "https://example.com", "http:localhost:3772"])(
     "prints a pair URL for %s",
     (baseUrl) =>
       Effect.gen(function* () {
-        const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-cli-base-url-test-"));
+        const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-cli-base-url-test-"));
         const output = yield* captureStdout(
           runCli([
             "auth",

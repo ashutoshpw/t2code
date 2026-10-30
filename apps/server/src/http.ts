@@ -448,15 +448,14 @@ const isAssetBearerPath = (url: string) => {
     ATTACHMENT_UPLOAD_ROUTE_PREFIX,
     SPACES_UPLOAD_ROUTE_PREFIX,
     SPACE_PAGE_SHARE_ROUTE_PREFIX,
-  ].some(
-    (prefix) =>
-      prefix.split("/").every((part, index) => {
-        try {
-          return decodeURI(segments[index] ?? "").toLowerCase() === part;
-        } catch {
-          return false;
-        }
-      }),
+  ].some((prefix) =>
+    prefix.split("/").every((part, index) => {
+      try {
+        return decodeURI(segments[index] ?? "").toLowerCase() === part;
+      } catch {
+        return false;
+      }
+    }),
   );
 };
 

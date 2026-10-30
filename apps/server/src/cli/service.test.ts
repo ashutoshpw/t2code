@@ -90,10 +90,10 @@ it.layer(Layer.mergeAll(NodeServices.layer, NetService.layer))("service commands
       }),
   );
 
-  it.effect("protect refuses root before creating any T3 directories", () =>
+  it.effect("protect refuses root before creating any T2 directories", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-cli-test-" });
+      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t2-service-cli-test-" });
       const baseDir = `${parent}/t3`;
       vi.spyOn(BootService, "layer").mockReturnValue(
         Layer.succeed(BootService.BootService, makeTestService(status).service),

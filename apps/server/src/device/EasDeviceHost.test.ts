@@ -294,7 +294,7 @@ describe("EAS Simulator host", () => {
       const [ios, android] = (yield* ready.devices.list).devices;
       expect(yield* ready.devices.boot(ios!)).toBe("session-1");
       expect(yield* ready.devices.boot(android!)).toBe("session-2");
-      expect(expo.named("T3CreateEasSimulatorSession")[1]?.variables.input).toMatchObject({
+      expect(expo.named("T2CreateEasSimulatorSession")[1]?.variables.input).toMatchObject({
         platform: "ANDROID",
       });
       const running = (yield* ready.devices.list).devices.find(

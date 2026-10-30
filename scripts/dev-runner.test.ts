@@ -857,16 +857,16 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       }),
     );
 
-    it.effect("expands a home-relative T3 home the way the server does", () =>
+    it.effect("expands a home-relative T2 home the way the server does", () =>
       Effect.gen(function* () {
         const path = yield* Path.Path;
-        const homeFor = (t3Home: string) =>
+        const homeFor = (t2Home: string) =>
           createDevRunnerEnv({
             mode: "dev",
             baseEnv: {},
             serverOffset: 0,
             webOffset: 0,
-            t3Home,
+            t2Home,
             browser: undefined,
             autoBootstrapProjectFromCwd: undefined,
             logWebSocketEvents: undefined,
@@ -875,13 +875,13 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
             devUrl: undefined,
           }).pipe(
             Effect.provideService(HostProcess.HomeDirectory, "/home/dev"),
-            Effect.map((env) => env.T3CODE_HOME),
+            Effect.map((env) => env.T2CODE_HOME),
           );
 
-        assert.equal(yield* homeFor("~/t3-dev"), path.join("/home/dev", "t3-dev"));
+        assert.equal(yield* homeFor("~/t2-dev"), path.join("/home/dev", "t2-dev"));
         assert.equal(yield* homeFor("~"), "/home/dev");
-        assert.equal(yield* homeFor("~\\t3-dev"), path.join("/home/dev", "t3-dev"));
-        assert.equal(yield* homeFor("  ~/t3-dev  "), path.join("/home/dev", "t3-dev"));
+        assert.equal(yield* homeFor("~\\t2-dev"), path.join("/home/dev", "t2-dev"));
+        assert.equal(yield* homeFor("  ~/t2-dev  "), path.join("/home/dev", "t2-dev"));
         assert.equal(yield* homeFor("~someone/t3-dev"), path.resolve("~someone/t3-dev"));
         assert.equal(yield* homeFor("relative/t3-dev"), path.resolve("relative/t3-dev"));
         assert.equal(yield* homeFor("/tmp/t3-dev"), path.resolve("/tmp/t3-dev"));

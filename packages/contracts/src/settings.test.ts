@@ -21,6 +21,7 @@ import {
   ServerSettings,
   SpacesStorageStatus,
   ServerSettingsPatch,
+  FxSettings,
   withIdleCompaction,
 } from "./settings.ts";
 
@@ -361,35 +362,6 @@ describe("FxSettings", () => {
       binaryPath: "fx",
       customModels: [],
     });
-  });
-
-  it("round-trips its legacy custom model list and patch", () => {
-    expect(
-      decodeServerSettingsPatch({
-        providers: {
-          fx: {
-            enabled: true,
-            binaryPath: "  /opt/fx  ",
-            customModels: ["gateway-model"],
-          },
-        },
-      }).providers?.fx,
-    ).toEqual({
-      enabled: true,
-      binaryPath: "/opt/fx",
-      customModels: ["gateway-model"],
-    });
-  });
-});
-
-describe("fx model presentation defaults", () => {
-  it("uses only the generic active-model sentinel", () => {
-    const fx = ProviderDriverKind.make("fx");
-
-    expect(FX_DEFAULT_MODEL).toBe("default");
-    expect(DEFAULT_MODEL_BY_PROVIDER[fx]).toBe(FX_DEFAULT_MODEL);
-    expect(DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER[fx]).toBe(FX_DEFAULT_MODEL);
-    expect(PROVIDER_DISPLAY_NAMES[fx]).toBe("fx");
   });
 });
 

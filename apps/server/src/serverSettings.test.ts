@@ -1087,7 +1087,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
       Layer.provideMerge(Layer.fresh(SqlitePersistence.layerMemory)),
       Layer.provideMerge(
         Layer.fresh(
-          ServerConfig.layerTest(process.cwd(), { prefix: "t3code-settings-secret-cache-test-" }),
+          ServerConfig.layerTest(process.cwd(), { prefix: "t2code-settings-secret-cache-test-" }),
         ),
       ),
     );

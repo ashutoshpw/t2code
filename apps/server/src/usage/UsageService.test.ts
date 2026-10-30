@@ -488,7 +488,7 @@ describe("UsageService", () => {
               home,
               settings,
               hostname,
-              environment: override === undefined ? {} : { T3CODE_HOST_ID: override },
+              environment: override === undefined ? {} : { T2CODE_HOST_ID: override },
             }),
           ),
         );

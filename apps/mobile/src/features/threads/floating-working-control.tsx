@@ -491,7 +491,7 @@ function FloatingStatusLabel(props: {
         ) : (
           <AppActivityIndicator size="small" colorClassName="accent-icon-muted" />
         )}
-        <Text className="shrink font-t3-medium text-xs text-foreground" numberOfLines={1}>
+        <Text className="shrink font-t2-medium text-xs text-foreground" numberOfLines={1}>
           {props.status.label}
         </Text>
       </StatusLabelRow>

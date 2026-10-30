@@ -147,7 +147,7 @@ it.effect.skipIf(windowsHost)(
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
+      const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t2-editors-" });
       const codiumPath = path.join(binDir, "codium");
       yield* fileSystem.writeFileString(codiumPath, "#!/bin/sh\n");
       yield* fileSystem.chmod(codiumPath, 0o755);
@@ -430,7 +430,7 @@ for (const { layout, pathNames, fallbackNames, expected } of [
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-zed-linux-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-zed-linux-" });
       const binDir = path.join(home, "bin");
       const fallbackDir = path.join(home, ".local/bin");
       for (const [dir, names] of [
@@ -474,7 +474,7 @@ it.effect.skipIf(windowsHost)("prefers zeditor in a later Linux fallback directo
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-zed-fallback-" });
+    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-zed-fallback-" });
     const localBin = path.join(home, ".local/bin");
     const systemBin = path.join(home, "system-bin");
     for (const [dir, name] of [

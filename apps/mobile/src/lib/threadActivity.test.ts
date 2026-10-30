@@ -51,7 +51,7 @@ it("shows a captured MCP app for a failed deferred write", () => {
     toolName: "github.create_pull_request",
     status: "failed",
     input: {},
-    output: { t3McpApp: mcpApp, result: { content: [], isError: true } },
+    output: { t2McpApp: mcpApp, result: { content: [], isError: true } },
   };
   expect(buildThreadFeed([projected(item, 0)])).toMatchObject([{ type: "mcp-app", app: mcpApp }]);
 });

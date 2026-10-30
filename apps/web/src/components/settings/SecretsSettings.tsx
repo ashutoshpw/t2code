@@ -1,4 +1,4 @@
-import type { SecretProviderConfig, SecretProviderId } from "@t3tools/contracts";
+import type { SecretProviderConfig, SecretProviderId } from "@t2code/contracts";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -43,7 +43,7 @@ export function SecretsSettingsPanel() {
       environment.serverConfig.secretProviderSettings !== true ? (
         <SettingsSection {...searchableSetting("secret-providers")}>
           <p className="px-4 py-3 text-sm text-muted-foreground">
-            Update T3 Code on {environment.label} to manage its secret providers.
+            Update T2 Code on {environment.label} to manage its secret providers.
           </p>
         </SettingsSection>
       ) : connected ? (

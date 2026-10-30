@@ -66,7 +66,7 @@ import {
 } from "./ThreadActivityBanners";
 import { useForceStopThread } from "./useForceStopThread";
 import { useAtomValue } from "@effect/atom-react";
-import type { RunStopPresentation } from "@t3tools/client-runtime/state/thread-execution";
+import type { RunStopPresentation } from "@t2code/client-runtime/state/thread-execution";
 import { Atom } from "effect/reactivity";
 import { environmentThreadDetails } from "../../state/threads";
 import type { useLocalDispatchState } from "./useLocalDispatchState";

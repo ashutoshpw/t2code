@@ -44,7 +44,7 @@ describe("mobile model options", () => {
       ],
     } as unknown as ServerConfig;
 
-    expect(buildModelOptions(config, null)).toMatchObject([
+    expect(buildModelOptions(config, null, undefined, null)).toMatchObject([
       {
         key: "fx:default",
         label: "Default",

@@ -2,7 +2,7 @@ import { EnvironmentId, ProjectId } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { findScopedProject } from "./pullRequestList.logic";
-import { pullRequestFilterProjects } from "@t3tools/client-runtime/pull-request-project-filter";
+import { pullRequestFilterProjects } from "@t2code/client-runtime/pull-request-project-filter";
 
 const cups = EnvironmentId.make("env-cups");
 const nucbox = EnvironmentId.make("env-nucbox");

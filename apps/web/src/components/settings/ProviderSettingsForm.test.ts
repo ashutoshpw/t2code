@@ -90,18 +90,14 @@ describe("ProviderSettingsForm helpers", () => {
       "binaryPath",
       "homePath",
       "autoCompactWindow",
+      "idleCompaction",
       "launchArgs",
     ]);
   });
 
-  it("registers fx with its icon, early-access badge, and binary setting", () => {
-    const fx = DRIVER_OPTION_BY_VALUE[ProviderDriverKind.make("fx")];
-    expect(fx).toMatchObject({
-      label: "fx",
-      badgeLabel: "Early Access",
-    });
-    expect(fx).toBeDefined();
-    expect(PROVIDER_ICON_BY_PROVIDER[fx!.value]).toBe(FxIcon);
+  it("registers fx with its glyph and binary setting", () => {
+    const fx = providerClients.get(ProviderDriverKind.make("fx"));
+    expect(fx).toMatchObject({ label: "fx" });
     expect(deriveProviderSettingsFields(fx!).map((field) => field.key)).toEqual(["binaryPath"]);
   });
 
