@@ -33,6 +33,7 @@ import { toastManager } from "../components/ui/toast";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
 import { useEnvironment } from "../state/environments";
 import { spaceRootReorder } from "./sessionRuntime";
+import { SpaceListSkeleton } from "./SpaceSkeletons";
 
 export interface SpaceStructureHandle {
   openMove(): void;
@@ -377,7 +378,7 @@ function StructureControls({
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                   />
-                  {!window ? <p role="status">Loading…</p> : null}
+                  {!window ? <SpaceListSkeleton label="Loading pages" /> : null}
                   {window ? (
                     <ul className="max-h-72 space-y-1 overflow-y-auto">
                       {parentPageId ? (
