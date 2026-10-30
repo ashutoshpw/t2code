@@ -139,7 +139,7 @@ html {
   --space-pink: #c14c8a;
   --space-red: #d44c47;
 }
-.dark html {
+html.dark {
   --space-gray: #9b9b9b;
   --space-brown: #ba856f;
   --space-orange: #c77d48;
