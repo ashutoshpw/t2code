@@ -5,7 +5,8 @@ import { SpaceId, type SpaceCursor, type SpacePageSummary } from "@t2code/contra
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesEnvironments } from "../state/spaces";
 import { usePrimaryEnvironmentId } from "../state/environments";
-import { LibraryIcon, ServerIcon, FilesIcon, ImageIcon, FileTextIcon } from "lucide-react";
+import { LibraryIcon, ServerIcon, FilesIcon, ImageIcon } from "lucide-react";
+import { SpacePageGlyph } from "./SpacePageGlyph";
 import { useEnvironment } from "../state/environments";
 import {
   SidebarHeader,
@@ -370,7 +371,7 @@ function LibraryGroup({
                   />
                 }
               >
-                <FileTextIcon />
+                <SpacePageGlyph icon={page.icon} />
                 <span>{page.title || "Untitled page"}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>

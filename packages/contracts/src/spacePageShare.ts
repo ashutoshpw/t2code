@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema";
 
 import { IsoDateTime, TrimmedNonEmptyString } from "./baseSchemas.ts";
-import { SpaceBlockWindow, SpacePageId } from "./spaces.ts";
+import { SpaceBlockWindow, SpacePageIcon, SpacePageId } from "./spaces.ts";
 
 /**
  * A page share lets anyone holding the link read one Spaces page and its sub-pages over T2
@@ -76,20 +76,34 @@ export class SpacePageShareError extends Schema.TaggedError<SpacePageShareError>
   }
 }
 
-export const SpaceSharedPageRef = Schema.Struct({ id: SpacePageId, title: Schema.String });
+export const SpaceSharedPageRef = Schema.Struct({
+  id: SpacePageId,
+  title: Schema.String,
+  icon: Schema.optionalKey(SpacePageIcon),
+});
 export type SpaceSharedPageRef = typeof SpaceSharedPageRef.Type;
 
 /** What the page route returns. Every page and asset it names is inside the shared tree. */
 export const SpaceSharedPage = Schema.Struct({
   rootPageId: SpacePageId,
   expiresAt: IsoDateTime,
-  page: Schema.Struct({ id: SpacePageId, title: Schema.String, updatedAt: IsoDateTime }),
+  page: Schema.Struct({
+    id: SpacePageId,
+    title: Schema.String,
+    icon: Schema.optionalKey(SpacePageIcon),
+    updatedAt: IsoDateTime,
+  }),
   window: SpaceBlockWindow,
   /** From the shared root down to this page, both included. */
   breadcrumb: Schema.Array(SpaceSharedPageRef),
   /** Sub-pages in page order, without trashed ones. */
   children: Schema.Array(
-    Schema.Struct({ id: SpacePageId, title: Schema.String, updatedAt: IsoDateTime }),
+    Schema.Struct({
+      id: SpacePageId,
+      title: Schema.String,
+      icon: Schema.optionalKey(SpacePageIcon),
+      updatedAt: IsoDateTime,
+    }),
   ),
 });
 export type SpaceSharedPage = typeof SpaceSharedPage.Type;

@@ -5,6 +5,7 @@ import type { SpaceDraftStore } from "./session.ts";
 import { isSpaceListItem } from "./values.ts";
 import { spaceDraftMaxBytes, spaceJsonBytes } from "./draft.ts";
 
+const isPageIcon = Schema.is(C.SpacePageIcon);
 const context = {
   targetSpaceId: Schema.optionalKey(C.SpaceId),
   sourceLocation: Schema.optionalKey(C.SpacePageLocation),
@@ -1470,12 +1471,23 @@ export class SpaceRootReorder {
     );
   }
   renamePage(page: C.SpacePageSummary, title: string): Promise<void> {
+    return this.#updatePage(page, { title });
+  }
+  setPageIcon(page: C.SpacePageSummary, icon: string | null): Promise<void> {
+    return this.#updatePage(page, { icon });
+  }
+  #updatePage(
+    page: C.SpacePageSummary,
+    patch: { readonly title?: string; readonly icon?: string | null },
+  ): Promise<void> {
     const selected = copy(page);
     return this.#libraryIntent(
       { pages: [{ pageId: selected.id, revision: selected.revision }], roots: [] },
       async () => {
         const version = this.#libraryVersion();
+        const title = patch.title ?? selected.title;
         this.#title(title);
+        if (patch.icon && !isPageIcon(patch.icon)) throw new Error("Invalid page icon");
         const admission = await this.#ports.getPage(selected.id);
         return {
           library: { version, page: selected },
@@ -1488,6 +1500,7 @@ export class SpaceRootReorder {
               pageId: selected.id,
               baseRevision: selected.revision,
               title,
+              ...(patch.icon === undefined ? {} : { icon: patch.icon }),
             },
           },
         };
@@ -1943,9 +1956,16 @@ export class SpaceRootReorder {
         page.id !== before.id ||
         page.spaceId !== before.spaceId ||
         page.title !== request.input.title ||
+        page.icon !==
+          (request.input.icon === undefined ? before.icon : (request.input.icon ?? undefined)) ||
         page.trash ||
         page.createdAt !== before.createdAt ||
-        page.revision !== before.revision + Number(before.title !== request.input.title)
+        page.revision !==
+          before.revision +
+            Number(
+              before.title !== request.input.title ||
+                (request.input.icon !== undefined && request.input.icon !== (before.icon ?? null)),
+            )
       )
         throw new Error("Invalid renamed-page receipt");
     } else throw new Error("Mismatched library receipt operation");
