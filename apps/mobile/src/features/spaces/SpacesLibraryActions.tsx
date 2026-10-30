@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
 import {
   isSpaceListItem,
+  normalizeSpacePageIcon,
   type SpaceRootReorder,
   type SpaceBlockMoveProof,
 } from "@t2code/client-runtime/spaces";
@@ -36,7 +37,7 @@ import { selectMobileSpacesBlockMove } from "./structure";
 type Intent =
   | { kind: "createSpace" }
   | { kind: "createPage" | "renameSpace"; space: SpaceSummary }
-  | { kind: "renamePage" | "child" | "move" | "blocks"; page: SpacePageSummary };
+  | { kind: "renamePage" | "iconPage" | "child" | "move" | "blocks"; page: SpacePageSummary };
 interface Props {
   readonly environmentId: EnvironmentId;
   readonly spaceId?: SpaceId;
@@ -139,7 +140,7 @@ function Actions({
         ? renameSpace
         : intent?.kind === "createPage"
           ? createPage
-          : intent?.kind === "renamePage"
+          : intent?.kind === "renamePage" || intent?.kind === "iconPage"
             ? renamePage
             : intent?.kind === "child"
               ? createChild
@@ -162,6 +163,15 @@ function Actions({
       case "renamePage":
         work = owner.renamePage(intent.page, title);
         break;
+      case "iconPage": {
+        const icon = title.trim() === "" ? null : normalizeSpacePageIcon(title);
+        if (icon === null && title.trim() !== "") {
+          setError("Enter a single emoji, or leave this empty to remove the icon.");
+          return;
+        }
+        work = owner.setPageIcon(intent.page, icon);
+        break;
+      }
       case "child":
         work = owner
           .createChild(title, {
@@ -312,6 +322,12 @@ function Actions({
                   label="Rename page"
                   disabled={disabled || !renamePage || !!page.trash}
                   onPress={() => choose({ kind: "renamePage", page }, page.title)}
+                />
+                <ControlPill
+                  variant="pill"
+                  label={page.icon ? "Change icon" : "Add icon"}
+                  disabled={disabled || !renamePage || !!page.trash}
+                  onPress={() => choose({ kind: "iconPage", page }, page.icon ?? "")}
                 />
                 <ControlPill
                   variant="pill"
@@ -836,12 +852,16 @@ function Actions({
             ) : (
               <>
                 <TextInput
-                  accessibilityLabel="Title"
+                  accessibilityLabel={intent?.kind === "iconPage" ? "Page icon" : "Title"}
                   value={title}
                   onChangeText={setTitle}
                   editable={writable && !snapshot.busy && !pending}
-                  maxLength={Math.min(1024, access.capability?.limits.maxTitleBytes ?? 256)}
-                  placeholder="Title"
+                  maxLength={
+                    intent?.kind === "iconPage"
+                      ? 32
+                      : Math.min(1024, access.capability?.limits.maxTitleBytes ?? 256)
+                  }
+                  placeholder={intent?.kind === "iconPage" ? "Emoji (empty removes)" : "Title"}
                   className="rounded-lg border border-border p-3 text-foreground"
                 />
                 {intent?.kind === "child" ? (
@@ -867,9 +887,11 @@ function Actions({
                 <ControlPill
                   variant="pill"
                   label={
-                    intent?.kind === "renamePage" || intent?.kind === "renameSpace"
-                      ? "Confirm rename"
-                      : "Create"
+                    intent?.kind === "iconPage"
+                      ? "Save icon"
+                      : intent?.kind === "renamePage" || intent?.kind === "renameSpace"
+                        ? "Confirm rename"
+                        : "Create"
                   }
                   disabled={disabled || !permitted || (intent?.kind === "child" && !bodyReady)}
                   onPress={submit}

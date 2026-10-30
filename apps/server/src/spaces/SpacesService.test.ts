@@ -1427,6 +1427,78 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
       ),
   );
 
+  it.effect("sets, keeps and clears a page icon and surfaces it in search", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const { service, common, page } = yield* boot();
+        const set = yield* service.updatePage({
+          ...common,
+          mutationId: "icon-set",
+          pageId: page.id,
+          baseRevision: page.revision,
+          title: "Iconpage",
+          icon: "🚀",
+        });
+        assert.equal(set.status, "saved");
+        if (set.status !== "saved") return;
+        assert.equal(set.page.icon, "🚀");
+        assert.equal(set.page.revision, page.revision + 1);
+
+        const renamed = yield* service.updatePage({
+          ...common,
+          mutationId: "icon-keep",
+          pageId: page.id,
+          baseRevision: set.page.revision,
+          title: "Iconpage2",
+        });
+        assert.equal(renamed.status === "saved" && renamed.page.icon, "🚀");
+        const pending = yield* Effect.flip(service.search({ ...env, query: "Iconpage2" }));
+        assert.equal(pending._tag, "SpaceSearchUnavailableError");
+        assert.equal(
+          (yield* service.search({ ...env, query: "Iconpage2" })).items[0]?.page.icon,
+          "🚀",
+        );
+
+        const same = yield* service.updatePage({
+          ...common,
+          mutationId: "icon-same",
+          pageId: page.id,
+          baseRevision: renamed.status === "saved" ? renamed.page.revision : 0,
+          title: "Iconpage2",
+          icon: "🚀",
+        });
+        assert.equal(
+          same.status === "saved" && same.page.revision,
+          renamed.status === "saved" ? renamed.page.revision : -1,
+        );
+
+        for (const icon of ["hello", " ", "🚀🚀", "\n", "🚀\u0000"]) {
+          const rejected = yield* Effect.flip(
+            service.updatePage({
+              ...common,
+              mutationId: "icon-bad",
+              pageId: page.id,
+              baseRevision: same.status === "saved" ? same.page.revision : 0,
+              title: "Iconpage2",
+              icon,
+            }),
+          );
+          assert.equal(rejected._tag, "SpaceValidationError");
+        }
+
+        const cleared = yield* service.updatePage({
+          ...common,
+          mutationId: "icon-clear",
+          pageId: page.id,
+          baseRevision: same.status === "saved" ? same.page.revision : 0,
+          title: "Iconpage2",
+          icon: null,
+        });
+        assert.equal(cleared.status === "saved" && "icon" in cleared.page, false);
+      }),
+    ),
+  );
+
   it.effect(
     "keeps search document identity and current locations through edits, moves and recovery",
     () =>

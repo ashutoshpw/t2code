@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { FileTextIcon } from "lucide-react";
+import { SpacePageGlyph } from "./SpacePageGlyph";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceCursor, SpaceId } from "@t2code/contracts/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
@@ -112,7 +112,10 @@ function Pages({
                     search={{}}
                     className="flex min-w-0 items-center gap-2 hover:underline"
                   >
-                    <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+                    <SpacePageGlyph
+                      icon={page.icon}
+                      className="size-4 text-center text-muted-foreground"
+                    />
                     <span className="truncate">{page.title || "Untitled page"}</span>
                   </Link>
                 </TableCell>

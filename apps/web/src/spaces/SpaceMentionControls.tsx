@@ -50,7 +50,8 @@ export function SpaceMentionView({ mark }: MarkViewProps) {
       {presentation?.status === "resolved" ? (
         <span>
           {" "}
-          · {presentation.title}
+          · {presentation.icon ? `${presentation.icon} ` : ""}
+          {presentation.title}
           {value.type === "block_mention" ? " (block)" : ""}
         </span>
       ) : presentation?.status === "unavailable" ? (
@@ -239,6 +240,7 @@ export function SpaceMentionControls({
                 {ready.result.items.map((hit, index) => (
                   <li key={JSON.stringify([hit.page.id, hit.blockId, index])}>
                     <p>
+                      {hit.page.icon ? `${hit.page.icon} ` : ""}
                       {hit.page.title || "Untitled page"} · {hit.blockId ? "Block" : "Page"}
                     </p>
                     <p>{hit.snippet}</p>

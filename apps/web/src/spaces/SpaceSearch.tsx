@@ -149,6 +149,7 @@ export default function SpaceSearch({
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">
+                      {hit.page.icon ? `${hit.page.icon} ` : ""}
                       {hit.page.title || "Untitled page"} · {hit.blockId ? "Block" : "Page"}
                     </p>
                     <p className="line-clamp-2 text-xs text-muted-foreground">{hit.snippet}</p>
