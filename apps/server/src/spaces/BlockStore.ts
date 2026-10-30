@@ -26,7 +26,7 @@ const knownBlock = Schema.is(C.SpaceKnownBlock);
 const decodeKnown = Schema.decodeUnknownSync(C.SpaceKnownBlock);
 const knownMark = Schema.is(C.SpaceKnownMark);
 const decodeKnownMark = Schema.decodeUnknownSync(C.SpaceKnownMark);
-const containers = new Set(["bulleted_item", "numbered_item", "todo_item"]);
+const containers = new Set(["bulleted_item", "numbered_item", "todo_item", "toggle"]);
 const media = new Set(["image", "pdf", "video"]);
 const strictKnown = Schema.decodeUnknownOption(C.SpaceKnownBlock, { onExcessProperty: "error" });
 
