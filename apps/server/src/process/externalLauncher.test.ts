@@ -7,6 +7,7 @@ import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as TestClock from "effect/testing/TestClock";
 import * as Exit from "effect/Exit";
+import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
@@ -512,7 +513,7 @@ for (const { layout, pathNames, fallbackNames, expected } of [
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-zed-linux-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-zed-linux-" });
       const binDir = path.join(home, "bin");
       const fallbackDir = path.join(home, ".local/bin");
       for (const [dir, names] of [
@@ -568,7 +569,7 @@ it.effect.skipIf(windowsHost)("prefers zeditor in a later Linux fallback directo
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-zed-fallback-" });
+    const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-zed-fallback-" });
     const localBin = path.join(home, ".local/bin");
     const systemBin = path.join(home, "system-bin");
     for (const [dir, name] of [
