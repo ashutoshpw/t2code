@@ -1297,6 +1297,12 @@ export class SpaceEditorAdapter {
       tr.setNodeMarkup(pos, undefined, { block: first });
       const nextPos = tr.mapping.map($from.pos, 1) - (splitDepth === 2 ? 2 : 1);
       tr.setNodeMarkup(nextPos, state.schema.nodes[second.type], { block: second });
+      const created = tr.doc.nodeAt(nextPos);
+      if (block.type === "toggle" && created && created.childCount > 1) {
+        const rest = created.content.cut(created.firstChild!.nodeSize);
+        tr.delete(nextPos + 1 + created.firstChild!.nodeSize, nextPos + created.nodeSize - 1);
+        tr.insert(nextPos - 1, rest);
+      }
       return this.#dispatch(tr, dispatch);
     };
   }

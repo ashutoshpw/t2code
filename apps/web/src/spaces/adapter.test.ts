@@ -13,7 +13,7 @@ import { SpaceBlockId, SpacePageId, type SpaceBlock } from "@t2code/contracts/sp
 
 import { SpaceEditorAdapter, type SpaceEditorOptions } from "./adapter";
 import { spaceDocumentBlocks } from "./document";
-import { spaceToggleCollapseKey } from "./toggleCollapse";
+import { isSpaceToggleCollapsed, spaceToggleCollapseKey } from "./toggleCollapse";
 
 const id = SpaceBlockId.make;
 const target = { environmentId: EnvironmentId.make("env"), pageId: SpacePageId.make("page") };
@@ -226,7 +226,7 @@ describe("Spaces ProseMirror adapter", () => {
     ]);
   });
 
-  it("creates the first child when splitting at the end of an expanded toggle, and a sibling when collapsed", () => {
+  it("creates the first child when splitting at the end of an expanded toggle, and a sibling that leaves the children behind when collapsed", () => {
     const blocks = [
       paragraph("a", "hi", { type: "toggle" }),
       paragraph("b", "old", { parentId: id("a"), order: "b" }),
@@ -252,9 +252,17 @@ describe("Spaces ProseMirror adapter", () => {
     expect(collapsed.run(collapsed.adapter.split())).toBe(true);
     expect(collapsed.blocks().map((block) => [block.id, block.parentId])).toEqual([
       ["a", null],
+      ["b", "a"],
       ["new-1", null],
-      ["b", "new-1"],
     ]);
+  });
+
+  it("keeps collapse state through edits", () => {
+    const editor = setup([paragraph("a", "hi", { type: "toggle" }), paragraph("z", "tail")]);
+    editor.dispatch(editor.state.tr.setMeta(spaceToggleCollapseKey(), "a"));
+    editor.dispatch(editor.state.tr.insertText("x", 4));
+    expect(isSpaceToggleCollapsed(editor.state, "a")).toBe(true);
+    expect(isSpaceToggleCollapsed(editor.state, "z")).toBe(false);
   });
 
   it("rejects reparenting through generic transforms even when IDs and traversal order stay unchanged", () => {
