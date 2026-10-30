@@ -8,6 +8,7 @@ import {
   type SpaceRootReorder,
 } from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
+import { executeAtomQuery } from "@t2code/client-runtime/state/runtime";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
 import { EllipsisIcon, SmilePlusIcon } from "lucide-react";
@@ -288,6 +289,8 @@ function EditableTitle({
   const allowed = useAtomValue(spacesEnvironment.updatePage.permissionAtom(environmentId));
   const [edit, setEdit] = useState<{ base: string; value: string; saved: boolean } | null>(null);
   const cancelled = useRef(false);
+  const registry = useContext(RegistryContext);
+  const lastBase = useRef<number | null>(null);
   // A rename locks the page's editor until it finishes, so Enter moves into the body only afterwards.
   const afterCommit = useRef<(() => void) | null>(null);
   const finishEnter = () => {
@@ -313,8 +316,21 @@ function EditableTitle({
       return setEdit(null);
     }
     setEdit({ ...edit, value, saved: true });
-    owner
-      .renamePage(page, value)
+    const rename = async () => {
+      let base = page;
+      if (lastBase.current === page.revision) {
+        // This device's previous rename already advanced the page; the location has not refetched yet.
+        const fresh = await executeAtomQuery(
+          registry,
+          spacesEnvironment.page({ environmentId, input: { environmentId, pageId: page.id } }),
+          { refresh: true, reportFailure: false },
+        );
+        if (fresh._tag === "Success") base = fresh.value.page;
+      }
+      lastBase.current = base.revision;
+      await owner.renamePage(base, value);
+    };
+    rename()
       .catch((error: unknown) => {
         setEdit(null);
         toastManager.add({

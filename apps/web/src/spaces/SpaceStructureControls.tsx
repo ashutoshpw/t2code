@@ -112,6 +112,8 @@ function StructureControls({
   }, [owner]);
   const { journal, window, position, busy, hydrated, spaces, parentPageId } = snapshot;
   const pending = journal.pending;
+  // An operation in flight has its own pending entry; only a leftover or conflicted one needs the notice.
+  const notice = busy && !pending?.conflict ? null : pending;
   const selectionReady = blocks
     ? snapshot.blockSelection === blocks
     : creating || position?.pageId === target.pageId;
@@ -275,22 +277,22 @@ function StructureControls({
     spaces?.items.filter((space) => space.id !== window?.space.id && matches(space.title)) ?? [];
   return (
     <>
-      {pending || (!hydrated && snapshot.error) ? (
+      {notice || (!hydrated && snapshot.error) ? (
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          {pending ? (
+          {notice ? (
             <>
               <span role="status">
-                {pending.conflict
+                {notice.conflict
                   ? "Your last page change couldn't be completed."
                   : "Your last page change didn't finish."}
               </span>
               <Button
                 variant="outline"
                 size="xs"
-                disabled={busy || !hydrated || (pending.conflict && !writable)}
-                onClick={() => run(pending.conflict ? owner.reinspect() : owner.recover())}
+                disabled={busy || !hydrated || (notice.conflict && !writable)}
+                onClick={() => run(notice.conflict ? owner.reinspect() : owner.recover())}
               >
-                {pending.conflict ? "Dismiss" : "Finish it"}
+                {notice.conflict ? "Dismiss" : "Finish it"}
               </Button>
             </>
           ) : (
