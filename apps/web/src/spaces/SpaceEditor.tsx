@@ -462,6 +462,10 @@ export function SpaceEditor({
       ? mediaEditable && can(adapter.removeMedia(selectedId))
       : can(adapter.remove(selectedId)));
   const handleBlock = structure && hoverId ? documentBlocks.find((b) => b.id === hoverId) : null;
+  if (dragId && !documentBlocks.some((b) => b.id === dragId)) {
+    setDragId(null);
+    setDrop(null);
+  }
   const handleElement = handleBlock ? blockElement(wrapper, handleBlock.id) : null;
   const handleRect = handleElement?.getBoundingClientRect();
   const handleAt =

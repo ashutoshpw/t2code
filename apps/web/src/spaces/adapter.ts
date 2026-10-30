@@ -493,12 +493,10 @@ export class SpaceEditorAdapter {
               return true;
             },
             "Mod-Shift-ArrowUp": () => {
-              run(thisAdapter.shift(-1));
-              return true;
+              return run(thisAdapter.shift(-1));
             },
             "Mod-Shift-ArrowDown": () => {
-              run(thisAdapter.shift(1));
-              return true;
+              return run(thisAdapter.shift(1));
             },
             "Mod-z": () => {
               run(undo);

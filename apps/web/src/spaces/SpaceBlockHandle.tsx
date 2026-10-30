@@ -1,5 +1,5 @@
 import { GripVerticalIcon, PlusIcon } from "lucide-react";
-import { useState, type DragEvent, type ReactNode } from "react";
+import { useRef, useState, type DragEvent, type ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Menu, MenuPopup } from "~/components/ui/menu";
@@ -22,11 +22,12 @@ export function SpaceBlockHandle({
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onAdd: (() => void) | null;
-  onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
+  onDragStart: (event: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
   children: ReactNode;
 }) {
   const [grip, setGrip] = useState<HTMLElement | null>(null);
+  const openedOnPress = useRef(false);
   return (
     <div
       className="absolute z-10 flex items-center"
@@ -50,20 +51,25 @@ export function SpaceBlockHandle({
         </TooltipTrigger>
         <TooltipPopup side="top">Add block below</TooltipPopup>
       </Tooltip>
-      <Button
-        ref={setGrip}
-        variant="ghost"
-        size="icon-micro"
-        aria-label="Block menu"
-        aria-haspopup="menu"
-        aria-expanded={menuOpen}
-        draggable
-        onClick={() => onMenuOpenChange(!menuOpen)}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-      >
-        <GripVerticalIcon />
-      </Button>
+      <div draggable onDragStart={onDragStart} onDragEnd={onDragEnd}>
+        <Button
+          ref={setGrip}
+          variant="ghost"
+          size="icon-micro"
+          aria-label="Block menu"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onPointerDown={() => {
+            openedOnPress.current = menuOpen;
+          }}
+          onClick={() => {
+            if (!openedOnPress.current) onMenuOpenChange(true);
+            openedOnPress.current = false;
+          }}
+        >
+          <GripVerticalIcon />
+        </Button>
+      </div>
       <Menu open={menuOpen} onOpenChange={onMenuOpenChange}>
         <MenuPopup align="start" anchor={grip}>
           {children}
