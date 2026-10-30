@@ -138,6 +138,36 @@ describe("SpaceEditor", () => {
     expect(batch).not.toContain("/");
   });
 
+  it("offers a Page slash command that reports the cursor block after removing the slash text", async () => {
+    const onCreatePage = vi.fn();
+    const bridge = await emptyPageBridge();
+    // The bare editor renders no links or navigation.
+    await using screen = await render(
+      <SpaceEditor adapter={bridge.adapter} bridge={bridge} onCreatePage={onCreatePage} />,
+      { router: false },
+    );
+    await userEvent.click(screen.getByRole("textbox", { name: "Page editor" }));
+    await userEvent.keyboard("/page");
+    await expect.element(screen.getByRole("option", { name: "Page" })).toBeVisible();
+    await userEvent.keyboard("{Enter}");
+    expect(onCreatePage).toHaveBeenCalledTimes(1);
+    expect(onCreatePage.mock.calls[0]?.[0]).toEqual(expect.any(String));
+    expect(
+      screen.getByRole("textbox", { name: "Page editor" }).element().textContent,
+    ).not.toContain("/page");
+  });
+
+  it("hides the Page slash command without a create handler", async () => {
+    // The bare editor renders no links or navigation.
+    await using screen = await render(<SpaceEditor adapter={adapter(false)} />, {
+      router: false,
+    });
+    await userEvent.click(screen.getByRole("textbox", { name: "Page editor" }));
+    await userEvent.keyboard("/");
+    await expect.element(screen.getByRole("option", { name: "Heading 1" })).toBeVisible();
+    await expect.element(screen.getByRole("option", { name: "Page" })).not.toBeInTheDocument();
+  });
+
   it("formats selected text from the selection toolbar", async () => {
     const onBatch = vi.fn();
     // The bare editor renders no links or navigation.
