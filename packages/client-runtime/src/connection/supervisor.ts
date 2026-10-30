@@ -603,12 +603,6 @@ export const make = Effect.fn("EnvironmentSupervisor.make")(function* (
     if (next._tag !== "Wakeup") {
       return undefined;
     }
-    if (next.reason === "application-active-reconnect") {
-      // Mobile operating systems often kill a suspended socket without a close
-      // event. A probe would show a dead socket as "Resuming" until it times
-      // out, so a long background resume replaces the session at once.
-      return "reset" as const;
-    }
     // Only a session over T2 Connect holds the old account's credential.
     if (next.reason === "credentials-changed" && isRelayLease(lease)) {
       yield* logManagedRelayAccountChange;

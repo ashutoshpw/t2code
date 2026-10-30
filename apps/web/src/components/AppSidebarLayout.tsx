@@ -32,10 +32,7 @@ import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../termina
 import { cn, isMacPlatform } from "../lib/utils";
 import { primaryServerKeybindingsAtom } from "../state/server";
 import { useProjects } from "../state/entities";
-import {
-  useAppRailEnabled,
-  useEnvironmentIdentificationMode,
-} from "../hooks/useSettings";
+import { useAppRailEnabled, useEnvironmentIdentificationMode } from "../hooks/useSettings";
 import {
   PanelAnimationSuppressionProvider,
   usePanelAnimationSettings,

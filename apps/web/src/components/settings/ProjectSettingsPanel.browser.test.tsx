@@ -1,8 +1,5 @@
 import { RegistryContext } from "@effect/atom-react";
-import type {
-  DeleteProjectInput,
-  UpdateProjectInput,
-} from "@t2code/client-runtime/state/projects";
+import type { DeleteProjectInput, UpdateProjectInput } from "@t2code/client-runtime/state/projects";
 import {
   AuthOrchestrationOperateScope,
   AuthSettingsWriteScope,

@@ -22,7 +22,7 @@ import {
 
 const exec = NodeUtil.promisify(NodeChildProcess.execFile);
 
-/** A loopback port that accepts connections until the scope closes, like T3's device connection. */
+/** A loopback port that accepts connections until the scope closes, like T2's device connection. */
 const listeningPort = Effect.acquireRelease(
   Effect.promise(
     () =>
@@ -240,7 +240,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
       ]) {
         yield* Effect.promise(() =>
           expect(launch(managed)).rejects.toThrow(
-            `T3 Code manages this command's connection to the device, so \`${managed.find((arg) => ["connect", "disconnect", "auth", "daemon"].includes(arg))}\` is not available through it.`,
+            `T2 Code manages this command's connection to the device, so \`${managed.find((arg) => ["connect", "disconnect", "auth", "daemon"].includes(arg))}\` is not available through it.`,
           ),
         );
       }
@@ -272,7 +272,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
     expect(agentDeviceCloseOutcome(result(null, "", true))).toBe("timed-out");
   });
 
-  it.live("stops before agent-device when T3's device connection is down", () =>
+  it.live("stops before agent-device when T2's device connection is down", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -310,7 +310,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
         expect(launch(["screenshot", "/tmp/shot.png"])).rejects.toMatchObject({
           code: 1,
           stdout: "",
-          stderr: `T3 Code's device connection at 127.0.0.1:${port} is not reachable from this shell (connect ECONNREFUSED). Call device_open again to reconnect; if that succeeds and this repeats, this shell runs in a network sandbox, so run the command with network access, outside the sandbox.\n`,
+          stderr: `T2 Code's device connection at 127.0.0.1:${port} is not reachable from this shell (connect ECONNREFUSED). Call device_open again to reconnect; if that succeeds and this repeats, this shell runs in a network sandbox, so run the command with network access, outside the sandbox.\n`,
         }),
       );
       // An explicit --daemon-base-url wins over the config, as it does in agent-device.
@@ -330,7 +330,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
           "t3-a",
         ]);
       }
-      // cdp talks to Metro, not to T3's connection, so it still runs.
+      // cdp talks to Metro, not to T2's connection, so it still runs.
       expect(
         JSON.parse((yield* Effect.promise(() => launch(["cdp", "target", "list"]))).stdout),
       ).toEqual(["cdp", "target", "list"]);

@@ -9,7 +9,8 @@ const state = vi.hoisted(() => ({
   next: vi.fn(),
   retry: vi.fn(),
 }));
-vi.mock("react", () => ({
+vi.mock("react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react")>()),
   useState: <A>(initial: A | (() => A)) =>
     typeof initial === "function"
       ? [(initial as () => A)(), () => {}]
@@ -22,6 +23,16 @@ vi.mock("react", () => ({
 }));
 vi.mock("../../spaces/useSpaceReferences", () => ({
   useSpaceContextSearch: () => state,
+}));
+vi.mock("~/state/environments", () => ({
+  useEnvironmentIdentities: () => [],
+  useEnvironmentMachines: () => new Map(),
+}));
+vi.mock("~/state/peerLinks", () => ({
+  offersLinkedEnvironmentsAtom: () => null,
+}));
+vi.mock("@effect/atom-react", () => ({
+  useAtomValue: () => false,
 }));
 vi.mock("~/state/entities", () => ({ useThreadShells: () => [] }));
 vi.mock("~/state/queries", () => ({
@@ -53,6 +64,7 @@ function menu() {
   return useComposerMenuItems({
     composerTrigger: { kind: "path", query: "word", rangeStart: 0, rangeEnd: 5 },
     environmentId,
+    linkedEnvironments: new Map(),
     gitCwd: "/project",
     activeThreadId: null,
     pullRequestProjectId: null,
@@ -64,6 +76,7 @@ function menu() {
     selectedProviderSkills: [],
     selectedProviderSlashCommands: [],
     showSkillsInSlashMenu: false,
+    questionAttachmentTarget: null,
   });
 }
 it("offers Page and Block selectors alongside files and refuses obsolete choices", async () => {

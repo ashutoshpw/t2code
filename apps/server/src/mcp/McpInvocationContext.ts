@@ -37,7 +37,7 @@ export interface McpClientCaller {
   readonly label: string;
   readonly access: AuthMcpClientAccess;
   /**
-   * Another T3 Code environment's peer link. What it starts here carries its
+   * Another T2 Code environment's peer link. What it starts here carries its
    * session as `linkOrigin`, and it changes only that work (`linkOrigin.ts`).
    */
   readonly linked?: boolean | undefined;
@@ -110,7 +110,7 @@ export interface McpInvocationScope {
 }
 
 /**
- * T3 Code renders `t2-thread://` links as thread chips. Other MCP clients cannot open them, so
+ * T2 Code renders `t2-thread://` links as thread chips. Other MCP clients cannot open them, so
  * they get a web URL on the origin they reached instead.
  */
 export const threadLinkFor = (

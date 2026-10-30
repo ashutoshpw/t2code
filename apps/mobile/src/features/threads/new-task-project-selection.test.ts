@@ -76,7 +76,9 @@ describe("getProjectScopeSelectionTarget", () => {
 
 describe("resolveEnvironmentProjectMatch", () => {
   it("follows the same repository onto the target machine", () => {
-    const selected = makeProject("t2code", "mac", { repositoryKey: "github.com/ashutoshpw/t2code" });
+    const selected = makeProject("t2code", "mac", {
+      repositoryKey: "github.com/ashutoshpw/t2code",
+    });
     const target = [
       makeProject("other", "server", { repositoryKey: "github.com/t2tools/other" }),
       makeProject("t2code-clone", "server", { repositoryKey: "github.com/ashutoshpw/t2code" }),
@@ -145,7 +147,7 @@ describe("resolveDraftProjectSelection", () => {
 
   it("keeps the draft when the picker closes after a choice", () => {
     expect(
-      resolveDraftProjectSelection("environment:t3code-2", projects, [makeScope(projects)], {
+      resolveDraftProjectSelection("environment:t2code-2", projects, [makeScope(projects)], {
         ...draft,
         pickerClosed: true,
       }),

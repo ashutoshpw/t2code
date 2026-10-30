@@ -1,5 +1,6 @@
 import { SourceControlProviderKind } from "@t2code/contracts";
 import { resolvePlanFollowUpSubmission } from "../../proposedPlan";
+import { serializeLegacyContextMessage } from "@t2code/shared/composerContextLegacySend";
 import {
   GitCommandError,
   ProjectId,
@@ -19,6 +20,7 @@ import { buildMessageContext, reviewCommentContextReference } from "~/lib/compos
 
 import {
   buildAddSelectionToAgentHandoff,
+  buildAskAboutPullRequestHandoff,
   buildExplainPullRequestHandoff,
   buildResolveConflictsPrompt,
   resolveThreadPanelPullRequestAction,

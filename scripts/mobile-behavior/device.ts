@@ -1,6 +1,6 @@
 // @effect-diagnostics nodeBuiltinImport:off preferSchemaOverJson:off - drives agent-device and the Hermes inspector; the probe types its own JSON.
 /**
- * One simulator, driven two ways: T3's `agent-device` CLI for real touches and system actions,
+ * One simulator, driven two ways: T2's `agent-device` CLI for real touches and system actions,
  * and the dev-only behavior probe (`apps/mobile/src/features/development/behavior-probe.ts`)
  * through Metro's Hermes inspector for exact app state.
  */
@@ -29,8 +29,8 @@ export class DeviceError extends Schema.TaggedError<DeviceError>()("DeviceError"
   message: Schema.String,
 }) {}
 
-export const APP_ID = "com.t2tools.t2code.dev";
-export const SCHEME = "t3code-dev";
+export const APP_ID = "codes.t2.mobile.dev";
+export const SCHEME = "t2code-dev";
 
 export interface ProbeState {
   readonly route: {

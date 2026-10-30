@@ -7,15 +7,31 @@ import {
   ProviderInstanceId,
   ThreadId,
 } from "@t2code/contracts";
+import { Option } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { PreparedTurnAttachments } from "../lib/attachmentUpload";
 
+const EMPTY_HISTORY = {
+  historyCursor: null,
+  hasMoreHistory: false,
+  loading: false,
+  error: null,
+  expanded: false,
+  latestLocalTurnOrdinal: null,
+};
+
+type HarnessThreadState = {
+  data: Option.Option<{ readonly messages: ReadonlyArray<{ readonly id: string }> }>;
+  status: "empty" | "live";
+  error: Option.Option<string>;
+  history: typeof EMPTY_HISTORY;
+  sequence: number;
+};
+
 const harness = vi.hoisted(() => ({
   canOperate: true,
-  threadProjection: null as unknown as import("effect/reactivity").Atom.Writable<{
-    readonly projection: { readonly messages: ReadonlyArray<{ readonly id: string }> };
-  } | null>,
+  threadState: null as unknown as import("effect/reactivity").Atom.Writable<HarnessThreadState>,
   manager: null as unknown as ReturnType<
     typeof import("./thread-outbox-manager").createThreadOutboxManager
   >,
@@ -91,13 +107,35 @@ vi.mock("./server", async () => {
 vi.mock("./git", () => ({ gitEnvironment: {} }));
 
 vi.mock("./threads", async () => {
+  const { Option } = await import("effect");
   const { Atom } = await import("effect/reactivity");
-  harness.threadProjection = Atom.make<{
-    readonly projection: { readonly messages: ReadonlyArray<{ readonly id: string }> };
-  } | null>(null).pipe(Atom.keepAlive);
+  const emptyState: HarnessThreadState = {
+    data: Option.none(),
+    status: "empty",
+    error: Option.none(),
+    history: {
+      historyCursor: null,
+      hasMoreHistory: false,
+      loading: false,
+      error: null,
+      expanded: false,
+      latestLocalTurnOrdinal: null,
+    },
+    sequence: 0,
+  };
+  harness.threadState = Atom.make(emptyState).pipe(Atom.keepAlive);
+  const threadAtom = Atom.make((get) =>
+    Option.match(get(harness.threadState).data, {
+      onNone: () => null,
+      onSome: (projection) => ({ environmentId: "env" as never, projection }),
+    }),
+  ).pipe(Atom.keepAlive);
   return {
     threadEnvironment: {},
-    environmentThreadDetails: { threadAtom: () => harness.threadProjection },
+    environmentThreadDetails: {
+      threadAtom: () => threadAtom,
+      stateAtom: () => harness.threadState,
+    },
   };
 });
 
@@ -204,7 +242,13 @@ function remainingMessages(): ReadonlyArray<QueuedThreadMessage> {
 
 beforeEach(() => {
   appAtomRegistry.set(acknowledgedThreadMessagesAtom, []);
-  appAtomRegistry.set(harness.threadProjection, null);
+  appAtomRegistry.set(harness.threadState, {
+    data: Option.none(),
+    status: "empty",
+    error: Option.none(),
+    history: EMPTY_HISTORY,
+    sequence: 0,
+  });
   harness.canOperate = true;
   harness.draftFile.setDocument({ schemaVersion: 1, drafts: {} });
 });
@@ -341,8 +385,14 @@ describe("thread outbox drain delivery cleanup", () => {
     ).resolves.toBe("removed");
     expect(appAtomRegistry.get(acknowledgedThreadMessagesAtom)).toEqual([first]);
 
-    appAtomRegistry.set(harness.threadProjection, {
-      projection: { messages: [{ id: "unrelated" }, { id: first.messageId }] },
+    appAtomRegistry.set(harness.threadState, {
+      data: Option.some({
+        messages: [{ id: "unrelated" }, { id: first.messageId }],
+      } as never),
+      status: "live",
+      error: Option.none(),
+      history: EMPTY_HISTORY,
+      sequence: 1,
     });
     expect(appAtomRegistry.get(acknowledgedThreadMessagesAtom)).toEqual([first]);
 

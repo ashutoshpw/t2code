@@ -11,11 +11,7 @@ import {
   type ScopedProjectRef,
   resolveEnvironmentMachineKind,
 } from "@t2code/contracts";
-import {
-  type CloneProtocol,
-  cloneUrlForProtocol,
-  cloneUrlProtocol,
-} from "@t2code/shared/cloneUrl";
+import { type CloneProtocol, cloneUrlForProtocol, cloneUrlProtocol } from "@t2code/shared/cloneUrl";
 import { ArrowRightIcon } from "lucide-react";
 import { useId, useState } from "react";
 import { create } from "zustand";

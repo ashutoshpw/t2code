@@ -34,7 +34,7 @@ disconnect an otherwise healthy conversation.
 
 ### More machines with T3 Chat
 
-Each T3 Connect account can link up to 3 machines. Phones and browsers do not
+Each T2 Connect account can link up to 3 machines. Phones and browsers do not
 count. A paid T3 Chat plan raises the limit to 10 machines with Pro, or 100 with
 Premier.
 
@@ -90,7 +90,7 @@ A machine can have more than one route: LAN, Tailscale, another VPN, a public
 URL, SSH, or T2 Connect. Tailscale shares its `100.64.0.0/10` address range with
 other VPNs such as Cloudflare WARP, so an address in that range shows as VPN
 unless the machine confirms it is on Tailscale. To add a route, choose **Add
-route** in the machine's route list, or next to it in the T3 Connect list.
+route** in the machine's route list, or next to it in the T2 Connect list.
 A pairing link for a saved machine is refused when it comes from an address
 that machine does not have yet; add that address with **Add route** instead.
 Pairing again over an address the machine already has still works. A new route
@@ -284,11 +284,11 @@ off, its result arrives once it is back on.
 
 On the machine you will work from, open **Settings → Environments → Linked environments**,
 choose **Link**, and pick the other machine or enter its address. The list
-holds the machines this app knows and those on your T3 Connect account. If this
+holds the machines this app knows and those on your T2 Connect account. If this
 app is connected to that machine with a session that manages access there, it
 makes the pairing code itself; otherwise paste one from that machine's
 **Settings → Sharing & access**. From a terminal, use
-`t3 environment link <address> --pairing-code <code> --access <mode>`.
+`t2code environment link <address> --pairing-code <code> --access <mode>`.
 
 You can also ask an agent to link a machine by name, such as "delegate this to
 my vps". It shows a card in the thread where you pick the machine the same way

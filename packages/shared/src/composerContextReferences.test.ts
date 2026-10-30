@@ -262,7 +262,7 @@ describe("provider projection", () => {
 
   it("projects a mentioned machine as its identity and how to use it, never an address", () => {
     const projected = projectComposerContextForProvider({
-      text: "Run the suite on [vps](t3-context://v1/environment/env_vps)",
+      text: "Run the suite on [vps](t2-context://v1/environment/env_vps)",
       records: [
         {
           version: 1,
@@ -356,7 +356,7 @@ describe("threadContextsOutsideEnvironment", () => {
 
     expect(
       threadContextsOutsideEnvironment({
-        text: "[A](t3-context://v1/thread/thread_linked) [B](t3-context://v1/thread/thread_unlinked)",
+        text: "[A](t2-context://v1/thread/thread_linked) [B](t2-context://v1/thread/thread_unlinked)",
         records: [linked, unlinked],
         environmentId: EnvironmentId.make("env-local"),
         linkedEnvironments: new Map([[linked.environmentId, "VPS"]]),

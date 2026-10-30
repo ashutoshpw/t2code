@@ -1,11 +1,5 @@
 import type { ThreadStructure } from "@t2code/client-runtime/state/shell";
-import {
-  EnvironmentId,
-  MessageId,
-  RunId,
-  ThreadId,
-  type ScopedThreadRef,
-} from "@t2code/contracts";
+import { EnvironmentId, MessageId, RunId, ThreadId, type ScopedThreadRef } from "@t2code/contracts";
 import { useImperativeHandle, type RefObject } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 

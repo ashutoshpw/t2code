@@ -136,7 +136,7 @@ later, the first with a lease holder's screen and input.
 
 Turn on **Settings → Labs → Simlock device hosts (alpha)** and **Use devices**
 in Settings → Devices, then choose **Add source → Simlock pool** with an **agent token**
-(`simlock --gateway token create --role agent`). Give each T3 server its own
+(`simlock --gateway token create --role agent`). Give each T2 server its own
 token: Simlock counts every lease made with one token against the same
 requester, and allows one at a time unless the gateway's
 `lease.maxPerRequester` is raised to the host's **Devices at once**. The token

@@ -40,7 +40,7 @@ describe("resolveThreadReferenceCopyTarget", () => {
     expect(
       resolveThreadReferenceCopyTarget({
         ...thread,
-        openPanelPullRequestUrl: "https://github.com/t3/pr/14",
+        openPanelPullRequestUrl: "https://github.com/t2/pr/14",
         pullRequests: [crossRepositoryPullRequest],
         linkedPullRequestUrl: "https://github.com/t2/pr/12",
       }),

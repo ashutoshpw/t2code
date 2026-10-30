@@ -2,10 +2,7 @@ import { pipe } from "effect/Function";
 import { ChevronsLeftRightEllipsisIcon, PlusIcon, TerminalIcon } from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
-import {
-  type DesktopDiscoveredSshHost,
-  type DesktopSshEnvironmentTarget,
-} from "@t2code/contracts";
+import { type DesktopDiscoveredSshHost, type DesktopSshEnvironmentTarget } from "@t2code/contracts";
 import {
   RelayConnectionRegistration,
   RelayConnectionTarget,

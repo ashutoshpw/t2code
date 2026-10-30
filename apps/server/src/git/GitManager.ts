@@ -180,7 +180,7 @@ const isSourceControlProviderError = Schema.is(SourceControlProviderError);
  * Throttled lookups fail fast, so a flat failure TTL would retry faster than a healthy
  * lookup refreshes. Backing off per branch keeps a 429 from becoming sustained pressure.
  */
-function prLookupFailureTtl(consecutiveFailures: number): Duration.Duration {
+export function prLookupFailureTtl(consecutiveFailures: number): Duration.Duration {
   const exponent = Math.max(0, consecutiveFailures - 1);
   const backoffMs = Duration.toMillis(PR_LOOKUP_FAILURE_BASE_TTL) * Math.pow(2, exponent);
   return Duration.min(Duration.millis(backoffMs), PR_LOOKUP_FAILURE_MAX_TTL);

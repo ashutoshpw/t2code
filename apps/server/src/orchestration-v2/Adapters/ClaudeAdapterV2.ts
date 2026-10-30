@@ -1650,7 +1650,7 @@ const decodeClaudeLaunchArgSettings = Schema.decodeUnknownEffect(
 /**
  * Reads the --settings launch argument: a value starting with a brace is inline
  * JSON, anything else is a file path relative to the cwd. makeClaudeQueryOptions
- * merges the result beneath T3's own settings.
+ * merges the result beneath T2's own settings.
  */
 const readClaudeLaunchArgSettings = Effect.fn("ClaudeAdapterV2.readLaunchArgSettings")(
   function* (input: {
@@ -1694,6 +1694,7 @@ export const CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
   "mcp__t2-code__t2_thread_search",
   "mcp__t2-code__t2_preview_list",
   "mcp__t2-code__t2_environment_read",
+  "mcp__t2-code__t2_environment_links",
   "mcp__t2-code__html_preview",
   "mcp__t2-code__html_render",
 ];

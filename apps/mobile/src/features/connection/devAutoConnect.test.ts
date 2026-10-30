@@ -71,7 +71,7 @@ import {
   startDevAutoConnect,
 } from "./devAutoConnect";
 
-const PAIRING_URL = "http://192.168.1.10:3773/pair#token=abc";
+const PAIRING_URL = "http://192.168.1.10:3772/pair#token=abc";
 
 function settingsLink(params: object): PartialState<NavigationState> {
   return {
@@ -204,7 +204,7 @@ it("a success that waited for navigation leaves a newer link's form open", async
   harness.dispatch.mockClear();
   harness.deferred = [];
   await pairSuccessfully(settingsLink({ pairingUrl: PAIRING_URL, autoConnect: "1" }));
-  startDevAutoConnect(settingsLink({ pairingUrl: "http://192.168.1.11:3773/pair#token=def" }));
+  startDevAutoConnect(settingsLink({ pairingUrl: "http://192.168.1.11:3772/pair#token=def" }));
 
   const deferred = harness.deferred;
   harness.deferred = null;

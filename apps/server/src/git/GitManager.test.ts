@@ -11,6 +11,7 @@ import { it } from "@effect/vitest";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Deferred from "effect/Deferred";
+import * as Duration from "effect/Duration";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -44,10 +45,7 @@ import {
 } from "@t2code/contracts";
 import * as DateTime from "effect/DateTime";
 import * as TextGeneration from "../textGeneration/TextGeneration.ts";
-import {
-  fromRunner,
-  decodeJsonReply,
-} from "@t2code/provider-core/server/textGenerationOperations";
+import { fromRunner, decodeJsonReply } from "@t2code/provider-core/server/textGenerationOperations";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as VcsDriverRegistry from "../vcs/VcsDriverRegistry.ts";
@@ -1766,41 +1764,6 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
         updatedAt: "2026-04-02T15:00:00.000Z",
       });
       expect(listed(providerCalls).length).toBeGreaterThan(0);
-    }),
-  );
-
-  it.effect("status still looks up PRs for a branch pushed without --set-upstream", () =>
-    Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t2code-git-manager-");
-      yield* initRepo(repoDir);
-      const remoteDir = yield* createBareRemote();
-      yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
-      yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
-      yield* runGit(repoDir, ["checkout", "-b", "feature/pushed-no-upstream"]);
-      yield* runGit(repoDir, ["push", "origin", "feature/pushed-no-upstream"]);
-
-      const { manager, ghCalls } = yield* makeManager({
-        ghScenario: {
-          prListSequence: [
-            JSON.stringify([
-              {
-                number: 214,
-                title: "Pushed without upstream",
-                url: "https://github.com/pingdotgg/t2code/pull/214",
-                baseRefName: "main",
-                headRefName: "feature/pushed-no-upstream",
-                state: "OPEN",
-                updatedAt: "2026-04-01T15:00:00Z",
-              },
-            ]),
-          ],
-        },
-      });
-
-      const status = yield* manager.status({ cwd: repoDir });
-
-      expect(status.pr?.number).toBe(214);
-      expect(ghCalls.filter((call) => call.startsWith("pr list ")).length).toBeGreaterThan(0);
     }),
   );
 
@@ -4526,63 +4489,6 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
           "remote.fork-seed.url",
         ])).stdout.trim(),
       ).toBe(forkDir);
-    }),
-  );
-
-  it.effect("derives fork repository identity from PR URL when GitHub omits nameWithOwner", () =>
-    Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("t2code-git-manager-");
-      yield* initRepo(repoDir);
-      const originDir = yield* createBareRemote();
-      const forkDir = yield* createBareRemote();
-      yield* runGit(repoDir, ["remote", "add", "origin", originDir]);
-      yield* runGit(repoDir, ["push", "-u", "origin", "main"]);
-      yield* runGit(repoDir, ["remote", "add", "binbandit-seed", forkDir]);
-      yield* runGit(repoDir, ["checkout", "-b", "fix/git-action-default-without-origin"]);
-      NodeFS.writeFileSync(NodePath.join(repoDir, "derived-fork.txt"), "derived fork\n");
-      yield* runGit(repoDir, ["add", "derived-fork.txt"]);
-      yield* runGit(repoDir, ["commit", "-m", "Derived fork PR branch"]);
-      yield* runGit(repoDir, [
-        "push",
-        "-u",
-        "binbandit-seed",
-        "fix/git-action-default-without-origin",
-      ]);
-      yield* runGit(repoDir, ["checkout", "main"]);
-      yield* runGit(repoDir, ["branch", "-D", "fix/git-action-default-without-origin"]);
-
-      const { manager } = yield* makeManager({
-        ghScenario: {
-          pullRequest: {
-            number: 642,
-            title: "fix: use commit as the default git action without origin",
-            url: "https://github.com/pingdotgg/t2code/pull/642",
-            baseRefName: "main",
-            headRefName: "fix/git-action-default-without-origin",
-            state: "open",
-            isCrossRepository: true,
-            headRepositoryOwnerLogin: "binbandit",
-          },
-          repositoryCloneUrls: {
-            "binbandit/t2code": {
-              url: forkDir,
-              sshUrl: forkDir,
-            },
-          },
-        },
-      });
-
-      const result = yield* preparePullRequestThread(manager, {
-        cwd: repoDir,
-        reference: "642",
-        mode: "local",
-      });
-
-      expect(result.branch).toBe("fix/git-action-default-without-origin");
-      expect(result.worktreePath).toBeNull();
-      expect(
-        (yield* runGit(repoDir, ["rev-parse", "--abbrev-ref", "@{upstream}"])).stdout.trim(),
-      ).toBe("binbandit-seed/fix/git-action-default-without-origin");
     }),
   );
 

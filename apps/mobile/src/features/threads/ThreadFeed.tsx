@@ -1204,7 +1204,7 @@ function ThreadAutomationMessageRow(props: {
   );
 }
 
-/** Leads with why T3 Code compacted, when it did so without being asked. */
+/** Leads with why T2 Code compacted, when it did so without being asked. */
 function compactionLabel(label: string, title: string | undefined) {
   return title !== undefined && label.startsWith("Context compacted")
     ? title + label.slice("Context compacted".length)

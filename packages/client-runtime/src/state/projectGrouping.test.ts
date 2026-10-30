@@ -78,11 +78,11 @@ describe("load balancing shared project machines", () => {
   });
 });
 const repositoryIdentity = {
-  canonicalKey: "github.com/ashutoshpw/t2code",
+  canonicalKey: "github.com/t2tools/t2code",
   locator: {
     source: "git-remote" as const,
     remoteName: "upstream",
-    remoteUrl: "https://github.com/ashutoshpw/t2code.git",
+    remoteUrl: "https://github.com/t2tools/t2code.git",
   },
   provider: SourceControlProviderKind.make("github"),
   owner: "t2tools",

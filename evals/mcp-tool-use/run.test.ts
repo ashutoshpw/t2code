@@ -249,7 +249,7 @@ it("rebuilds the template from this checkout and sends a child T2's task prompt"
     `Main prompt.\n - Primary working directory: /home/user/app\n\n${t3SystemAppend("claude-sonnet-5-5")}`,
   ]);
   // The eval offers the device tools, so Claude's append carries the device block.
-  assert.include(t3SystemAppend("claude-sonnet-5-5"), "## T3 Code devices");
+  assert.include(t3SystemAppend("claude-sonnet-5-5"), "## T2 Code devices");
   assert.equal(base.environment.cwd, "/home/user/app");
   assert.include(system[2], "model named Sonnet 5.5. The exact model ID is claude-sonnet-5-5.");
   const deferred = system[2]?.split("Load them first:\n")[1]?.split("\n\n")[0]?.split("\n") ?? [];
@@ -286,17 +286,17 @@ it("lists link tools only while a case turns the beta on, and sends chips as T3 
   });
   assert.notInclude(
     off.t3.map((tool) => tool.name),
-    "mcp__t3-code__t3_environment_link",
+    "mcp__t3-code__t2_environment_link",
   );
   assert.include(
     on.t3.map((tool) => tool.name),
-    "mcp__t3-code__t3_environment_link",
+    "mcp__t3-code__t2_environment_link",
   );
 
   const testCase: McpToolUseCase = {
     ...childCase,
     setup: { role: "top", linkedEnvironments: true },
-    prompt: "Continue [Deploy](t3-context://v1/thread/thread_deploy)",
+    prompt: "Continue [Deploy](t2-context://v1/thread/thread_deploy)",
     promptContext: {
       records: [
         {
@@ -1294,8 +1294,8 @@ it("does not credit a capture attempt on a different host", () => {
 });
 
 it.each([
-  ["T3's result names the remote device", { hostId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }, true],
-  ["T3's result names a local device", { hostId: "local" }, false],
+  ["T2's result names the remote device", { hostId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }, true],
+  ["T2's result names a local device", { hostId: "local" }, false],
   ["failed attempt uses the matching open session", undefined, true],
 ] as const)(
   "credits a device_screenshot without hostId by the device T3 reached: %s",
@@ -1730,7 +1730,7 @@ it("OWN-03 passes a reported conflict and fails reuse or close of the owner's se
     deviceId: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB",
   };
   const launcher = "/home/user/.t2/userdata/device/targets/t3-acme/agent-device";
-  const owner = "t3-a062c547ef0b6bf8ee839b67";
+  const owner = "t2-a062c547ef0b6bf8ee839b67";
   const trace = (command: string, finalText: string): SampleRun => ({
     calls: [
       {
@@ -2656,7 +2656,7 @@ it("fleet OWN-01 allows contention discovery but forbids reusing the occupied se
           step: 4,
           tool: "Bash",
           input: {
-            command: "agent-device --session t3-a062c547ef0b6bf8ee839b67 screenshot /tmp/a.png",
+            command: "agent-device --session t2-a062c547ef0b6bf8ee839b67 screenshot /tmp/a.png",
           },
           failed: false,
         },
@@ -2832,7 +2832,7 @@ it.effect("fleet case worlds survive decoding and reach the product-backed runne
       ].join(" ");
       const error = tools.sessionError(sample.shell, command) ?? "";
       assert.include(error, id === "OWN-01" ? "DEVICE_IN_USE" : "SESSION_NOT_FOUND");
-      if (id === "OWN-01") assert.equal(tools.owners[0]!.session, "t3-a062c547ef0b6bf8ee839b67");
+      if (id === "OWN-01") assert.equal(tools.owners[0]!.session, "t2-a062c547ef0b6bf8ee839b67");
     }
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );

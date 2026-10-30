@@ -50,6 +50,7 @@ const emitContentThenHang = process.env.T2_ACP_EMIT_CONTENT_THEN_HANG === "1";
 const emitPlanThenHang = process.env.T2_ACP_EMIT_PLAN_THEN_HANG === "1";
 const grokKillTaskShape = process.env.T2_ACP_GROK_KILL_TASK_SHAPE;
 const emitActiveToolThenHang = process.env.T2_ACP_EMIT_ACTIVE_TOOL_THEN_HANG === "1";
+const emitTrackedToolCallKindThenHang = process.env.T2_ACP_EMIT_TRACKED_TOOL_CALL_KIND_THEN_HANG;
 const emitGrokMonitorPostTurnPoll = process.env.T2_ACP_EMIT_GROK_MONITOR_POST_TURN_POLL === "1";
 const emitGrokBackgroundTaskStarted = process.env.T2_ACP_EMIT_GROK_BACKGROUND_TASK_STARTED === "1";
 const emitGrokBackgroundTaskPoll = process.env.T2_ACP_GROK_BACKGROUND_TASK_COMPLETION === "poll";
@@ -1579,6 +1580,21 @@ const program = Effect.gen(function* () {
             agentResult: null,
           });
         }
+        return yield* Effect.never;
+      }
+
+      if (emitTrackedToolCallKindThenHang !== undefined) {
+        yield* agent.client.sessionUpdate({
+          sessionId: requestedSessionId,
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId: "tracked-tool-call",
+            title: "git status",
+            kind: emitTrackedToolCallKindThenHang as AcpSchema.ToolKind,
+            status: "pending",
+            rawInput: { command: "git status" },
+          },
+        });
         return yield* Effect.never;
       }
 

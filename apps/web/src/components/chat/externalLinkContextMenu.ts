@@ -1,6 +1,6 @@
 import type { ContextMenuItem } from "@t2code/contracts";
 
-type ExternalLinkContextMenuAction =
+export type ExternalLinkContextMenuAction =
   | "open-in-preview"
   | "open-external"
   | "copy-link"

@@ -287,7 +287,7 @@ On web and desktop, the thread details card lists the web servers that the
 thread's terminals or its Claude agent started, with their ports. A server the
 agent started stays listed after the agent's turn ends.
 Select a server to open it in the browser panel. **Stop** ends the server's job
-and keeps the agent, the terminal, and T3 Code running. Stop needs terminal
+and keeps the agent, the terminal, and T2 Code running. Stop needs terminal
 access to the environment and is not available on Windows.
 
 To choose what the thread details card shows, right-click the card or open

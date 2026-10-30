@@ -303,7 +303,7 @@ it.each(["decode", "write"] as const)(
     const message = queuedMessage();
     expect(message.attachments[0]?.uploadedAttachmentId).toBe("pending-1");
     await enqueueThreadOutboxMessage(message);
-    const prepared = await prepareQueuedMessageAttachments(message);
+    const prepared = await prepareQueuedMessageAttachments(message, true);
     expect(prepared.status).toBe("ready");
     if (prepared.status !== "ready") throw new Error("Outbox preparation abandoned");
     expect(prepared.prepared.pendingAttachmentIds).toEqual(["pending-1"]);

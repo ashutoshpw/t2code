@@ -138,7 +138,7 @@ it.effect("links with a pairing code, and the peer holds its agents to the limit
       });
       // B lists the link under A's name, where it can be revoked.
       expect((yield* linkedSessions(b)).map((session) => session.client.label)).toEqual([
-        "T3 Code · Laptop",
+        "T2 Code · Laptop",
       ]);
       expect(
         (yield* a.links.list).map(({ environmentId, status }) => [environmentId, status]),
@@ -147,8 +147,8 @@ it.effect("links with a pairing code, and the peer holds its agents to the limit
       // The caller's limits narrow the link's access; they never widen it.
       expect(
         yield* probe(a, { runtimeMode: "approval-required", interactionMode: "plan" }),
-      ).toEqual({ caller: "T3 Code · Laptop", modes: "approval-required/plan" });
-      expect(yield* probe(a)).toEqual({ caller: "T3 Code · Laptop", modes: "auto/default" });
+      ).toEqual({ caller: "T2 Code · Laptop", modes: "approval-required/plan" });
+      expect(yield* probe(a)).toEqual({ caller: "T2 Code · Laptop", modes: "auto/default" });
 
       // A refusal keeps the peer's reason.
       const notFound = yield* probe(a, undefined, "refuse").pipe(Effect.flip);
@@ -189,7 +189,7 @@ it.effect(
         expect(waiting.code).toBe("orchestration_error");
         expect(waiting.message).toContain("has Linked environments turned off");
         yield* b.settings.updateSettings({ linkedEnvironmentsEnabled: true });
-        expect(yield* probe(a)).toEqual({ caller: "T3 Code · Laptop", modes: "auto/default" });
+        expect(yield* probe(a)).toEqual({ caller: "T2 Code · Laptop", modes: "auto/default" });
       }),
     ).pipe(Effect.provide(NodeHttpServer.layerTest)),
 );
@@ -291,7 +291,7 @@ it.effect("never follows a peer's redirect with the pairing code", () =>
       );
       // Answers as B, then sends every linking request on to another address.
       const front = yield* serveRaw((request) =>
-        request.url.startsWith("/.well-known/t3/environment")
+        request.url.startsWith("/.well-known/t2/environment")
           ? HttpClient.get(`${b.url}${request.url}`).pipe(
               Effect.flatMap((response) => response.text),
               Effect.map((body) =>
@@ -437,7 +437,7 @@ it.effect(
         // Plain http to a LAN address would carry the code and token in clear.
         const lan = yield* a.links
           .link({
-            url: "http://192.168.1.20:3773",
+            url: "http://192.168.1.20:3772",
             pairingCode: pairing.credential,
             access: "auto",
           })
@@ -446,7 +446,7 @@ it.effect(
         const lanAlternate = yield* a.links
           .link({
             url: b.url,
-            alternateUrls: ["http://192.168.1.20:3773"],
+            alternateUrls: ["http://192.168.1.20:3772"],
             pairingCode: pairing.credential,
             access: "auto",
           })
@@ -497,7 +497,7 @@ it.effect("linking a picked machine that answers nowhere names it and links noth
       const failed = yield* a.links
         .link({
           url: impostor.url,
-          alternateUrls: ["http://192.168.1.20:3773"],
+          alternateUrls: ["http://192.168.1.20:3772"],
           pairingCode: "unused",
           access: "auto",
           expectedEnvironmentId: box.environmentId,
@@ -506,7 +506,7 @@ it.effect("linking a picked machine that answers nowhere names it and links noth
         .pipe(Effect.flip);
       expect(failed.reason).toBe("unreachable");
       expect(failed.message).toBe(
-        `This environment could not reach Box at ${impostor.url}, http://192.168.1.20:3773.`,
+        `This environment could not reach Box at ${impostor.url}, http://192.168.1.20:3772.`,
       );
       expect(yield* a.links.list).toEqual([]);
       expect(yield* linkedSessions(impostor)).toEqual([]);
@@ -514,7 +514,7 @@ it.effect("linking a picked machine that answers nowhere names it and links noth
       // Every address refused: the message says why.
       const refused = yield* a.links
         .link({
-          url: "http://192.168.1.20:3773",
+          url: "http://192.168.1.20:3772",
           pairingCode: "unused",
           access: "auto",
           expectedEnvironmentId: box.environmentId,

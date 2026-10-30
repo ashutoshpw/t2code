@@ -63,6 +63,7 @@ vi.mock("react", async () => ({
 }));
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => state.navigate }));
 vi.mock("../../hooks/useHandleNewThread", () => ({ useNewThreadHandler: () => vi.fn() }));
+vi.mock("../../state/peerLinks", () => ({ useLinkedEnvironments: () => new Map() }));
 vi.mock("../../hooks/useSettings", () => ({
   useClientSettingsHydrated: () => true,
   useEnvironmentSettings: () => state.planMode,

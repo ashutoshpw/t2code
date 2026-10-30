@@ -417,7 +417,7 @@ jobs:
       - uses: ./.github/actions/setup-apt-mirrors
         if: inputs.platform == 'linux'
 
-      # The Linux archive ships libatomic.so.1 and points t3's RUNPATH at it.
+      # The Linux archive ships libatomic.so.1 and points t2's RUNPATH at it.
       - name: Install patchelf
         if: inputs.cli_archive && inputs.platform == 'linux'
         shell: bash

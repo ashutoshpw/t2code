@@ -121,7 +121,7 @@ export type OrchestrationV2LinkOrigin = typeof OrchestrationV2LinkOrigin.Type;
 /**
  * Work from a link paired below full access may change only work from the same
  * link. A full-access link's agents already run as this environment's user,
- * so fencing T3's own tools would stop nothing they could not do anyway. An
+ * so fencing T2's own tools would stop nothing they could not do anyway. An
  * origin stamped before access was recorded stays fenced.
  */
 export const linkOriginIsFenced = (origin: OrchestrationV2LinkOrigin) =>

@@ -1,6 +1,22 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 
-import { resolveExternalWebLinkHref } from "./externalLinkContextMenu";
+import {
+  type ExternalLinkContextMenuAction,
+  resolveExternalWebLinkHost,
+  resolveExternalWebLinkHref,
+  showExternalLinkContextMenu,
+} from "./externalLinkContextMenu";
+
+function createHarness(action: ExternalLinkContextMenuAction | null) {
+  return {
+    showContextMenu: vi.fn(() => Promise.resolve(action)),
+    openInPreview: vi.fn(() => Promise.resolve()),
+    openExternal: vi.fn(() => Promise.resolve()),
+    copyLink: vi.fn(() => Promise.resolve()),
+    updateThreadLink: vi.fn(() => Promise.resolve()),
+    reportFailure: vi.fn(),
+  };
+}
 
 describe("external chat link context menu", () => {
   it("offers both open actions and Copy Link", async () => {

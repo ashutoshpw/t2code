@@ -41,7 +41,7 @@ export interface ManagedRelaySnapshotState<A> {
 }
 
 export interface ManagedRelayQueryEvent {
-  readonly operation: "environments" | "devices" | "t3chat-link";
+  readonly operation: "environments" | "devices";
   readonly stage: "clerk-token" | "relay-request";
   readonly phase: "start" | "success" | "failure";
   readonly accountId: string;
@@ -185,7 +185,7 @@ function requireSessionClerkToken(
   const session = registry.get(managedRelaySessionAtom);
   if (!session || session.accountId !== accountId) {
     return Effect.fail(
-      new ManagedRelaySessionError({ message: `Sign in to T3 Connect before ${action}.` }),
+      new ManagedRelaySessionError({ message: `Sign in to T2 Connect before ${action}.` }),
     );
   }
   return readSessionClerkToken(session);
@@ -344,41 +344,14 @@ export function createManagedRelayQueryManager(
       ),
   );
 
-  const t3ChatLinkAtom = Atom.family((accountId: string) =>
-    runtime
-      .atom((get) =>
-        Effect.gen(function* () {
-          const base = { operation: "t3chat-link" as const, accountId };
-          const clerkToken = yield* observe(
-            { ...base, stage: "clerk-token" },
-            requireClerkToken(get, accountId),
-          );
-          const relay = yield* ManagedRelay.ManagedRelayClient;
-          return yield* observe(
-            { ...base, stage: "relay-request" },
-            relay.getT3ChatLink({ clerkToken }),
-          );
-        }),
-      )
-      .pipe(
-        Atom.swr({ staleTime, revalidateOnMount: true }),
-        Atom.setIdleTTL(idleTtl),
-        Atom.withLabel(`managed-relay:t3chat-link:${accountId}`),
-      ),
-  );
-
   return {
     environmentsAtom,
     devicesAtom,
-    t3ChatLinkAtom,
     refreshEnvironments(registry: AtomRegistry.AtomRegistry, accountId: string): void {
       registry.refresh(environmentsAtom(accountId));
     },
     refreshDevices(registry: AtomRegistry.AtomRegistry, accountId: string): void {
       registry.refresh(devicesAtom(accountId));
-    },
-    refreshT3ChatLink(registry: AtomRegistry.AtomRegistry, accountId: string): void {
-      registry.refresh(t3ChatLinkAtom(accountId));
     },
   };
 }

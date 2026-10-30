@@ -3,10 +3,13 @@ import {
   mergeDirectPreviewAnnotation,
   planComposerTurn,
   snapshotComposerSend,
+  threadShellHasStarted,
+  shouldRetargetThreadPullRequestPanel,
   withMessageContext,
   deriveAvailableRevertTurnCounts,
   deriveWorkspaceMutationId,
 } from "./ChatView.logic";
+import type { RightPanelSurface } from "../rightPanelStore";
 import { recallCheckoutIsRepo, rememberCheckoutIsRepo } from "./ChatView.logic";
 import { ProviderDriverKind, type ServerProvider } from "@t2code/contracts";
 import { deriveProviderInstanceEntries } from "../providerInstances";

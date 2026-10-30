@@ -25,14 +25,7 @@ Yes.
 
 ## How much does T2 Code cost?
 
-Nothing. There's no way to pay us to use T2 Code. You bring your own sub. It is free and open source (MIT). You still pay your provider like you already do. T2 Connect is free too, for now. Every account can connect up to 3 machines running T2 Code. Phones and browsers that connect to them do not count. Need more? Link a paid T3 Chat account. [More machines](#can-i-connect-more-than-3-machines-with-t2-connect) We don't want to charge for this, but if the bill gets unacceptable we may have to change course. If you hit limits or have issues, you can always fork it, self host, or use Tailscale. [Install](./install.md)
-
-## Can I connect more than 3 machines with T2 Connect?
-
-Yes. Link your T3 Chat account and T2 Connect raises your limit: up to 10 machines with T3 Chat Pro, or 100 with Premier. Open your account menu in T2 Code, go to **T3 Chat**, and select **Link T3 Chat**. Sign in to T3 Chat and approve. The free T3 Chat plan keeps the normal limit of 3. [More machines with T3 Chat](./remote-access.md#more-machines-with-t3-chat)
-=======
 Nothing. There's no way to pay us to use T2 Code. You bring your own sub. It is free and open source (MIT). You still pay your provider like you already do. T2 Connect is free too, for now. Every account can connect up to 3 machines running T2 Code. Phones and browsers that connect to them do not count. We don't want to charge for this, but if the bill gets unacceptable we may have to change course. If you hit limits or have issues, you can always fork it, self host, or use Tailscale. [Install](./install.md)
->>>>>>> 2ae3a979 (fix(rebrand): repair the round-7 rebase seams and finish the t2 namespace)
 
 ## Why is my Claude 5-hour limit draining so fast?
 
@@ -44,7 +37,7 @@ Your agents run wherever T2 Code runs: your desktop, a server, a VPS. You connec
 
 ## How do I use T2 Code on my phone?
 
-Get the [iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Android](https://play.google.com/store/apps/details?id=com.t2tools.t2code) app, then connect it to your computer with T2 Connect or a pairing link. The phone is a remote. Your computer does the work and needs to stay on. [Mobile setup](./install.md#mobile-app) · [Remote access](./remote-access.md)
+Get the [iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code) app, then connect it to your computer with T2 Connect or a pairing link. The phone is a remote. Your computer does the work and needs to stay on. [Mobile setup](./install.md#mobile-app) · [Remote access](./remote-access.md)
 
 ## Why does T2 Connect keep disconnecting?
 
@@ -70,7 +63,7 @@ Yes. Add another provider instance in Settings and give it its own keys and endp
 
 No. T2 Code is a serious developer tool. Locally runnable models are not capable of meaningful engineering work.
 
-## Does my code go to T2 servers?
+## Does my code go to T3 servers?
 
 No. Your code and prompts go from your machine to your provider (Anthropic, OpenAI, etc.), not to us. With T2 Connect, traffic rides a Cloudflare tunnel (`cloudflared` on your machine). Our relay sets up the link. It does not proxy your HTTP or WebSocket sessions. T2 Code does send basic product usage events (provider, model, token totals, that kind of thing). No prompts, no file contents. That is the same on Tailscale, LAN, or T2 Connect. Set `T2CODE_TELEMETRY_ENABLED=false` if you want it off. [Product usage data](./telemetry.md)
 

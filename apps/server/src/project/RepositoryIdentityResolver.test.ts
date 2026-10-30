@@ -41,7 +41,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       const resolvedCwd = NodeFS.realpathSync.native(cwd);
 
       expect(identity).not.toBeNull();
-      expect(identity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
+      expect(identity?.canonicalKey).toBe("github.com/t2tools/t2code");
       expect(normalizeResolvedPath(resolvedIdentityRoot)).toBe(normalizeResolvedPath(resolvedCwd));
       expect(identity?.displayName).toBe("T2Tools/t2code");
       expect(identity?.provider).toBe("github");
@@ -69,7 +69,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       const identity = yield* resolver.resolve(cwd);
-      expect(identity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
+      expect(identity?.canonicalKey).toBe("github.com/t2tools/t2code");
       expect(identity?.locator.remoteUrl).toBe("git@github.com:T2Tools/t2code.git");
       expect(identity?.locator.remoteName).toBe("origin");
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
@@ -95,7 +95,7 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       const resolvedRepoRoot = NodeFS.realpathSync.native(repoRoot);
 
       expect(identity).not.toBeNull();
-      expect(identity?.canonicalKey).toBe("github.com/ashutoshpw/t2code");
+      expect(identity?.canonicalKey).toBe("github.com/t2tools/t2code");
       expect(normalizeResolvedPath(resolvedIdentityRoot)).toBe(
         normalizeResolvedPath(resolvedRepoRoot),
       );

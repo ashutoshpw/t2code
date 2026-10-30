@@ -101,7 +101,7 @@ Unlinking on the linking side only forgets the token.
   so idempotency keys are hashed with the caller's namespace before they
   leave. Without that, two agents reusing a key would collide on the far side.
 - **A forwarded wait is split into calls of at most 50 s**, because the
-  receiving `/mcp` sends nothing while a wait is open and T3 Connect's edge
+  receiving `/mcp` sends nothing while a wait is open and T2 Connect's edge
   drops idle requests after about 100 s.
 
 **Work a link paired below full access starts stays within that link.** The
@@ -136,7 +136,7 @@ also what keeps restart recovery from treating them as abandoned provider work.
 The link is routing, not isolation: an agent the link starts runs as the
 receiving environment's user. **A full-access link is therefore not fenced**:
 its agents can already do anything that user can, so the fence would only stop
-T3's own tools. Its work still carries `linkOrigin`, so clients show where it
+T2's own tools. Its work still carries `linkOrigin`, so clients show where it
 came from. A stamp without the access, from before it was recorded, is fenced.
 
 ## Hosted web is a client

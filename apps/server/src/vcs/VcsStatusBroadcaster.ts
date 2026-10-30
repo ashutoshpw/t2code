@@ -146,7 +146,7 @@ interface ActiveRemotePoller {
 }
 
 export class VcsAutomaticFetchInterval extends Context.Reference<Effect.Effect<Duration.Duration>>(
-  "t2/vcs/VcsAutomaticFetchInterval",
+  "@t2code/cli/vcs/VcsAutomaticFetchInterval",
   { defaultValue: () => Effect.succeed(DEFAULT_AUTOMATIC_GIT_FETCH_INTERVAL) },
 ) {}
 
