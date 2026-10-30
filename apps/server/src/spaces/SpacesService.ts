@@ -1907,9 +1907,10 @@ const make = Effect.fn("SpacesService.make")(function* (
             operation: request.operation,
             result: yield* conflict([yield* getSpace(page.space_id)], [page]),
           });
-        if (page.title !== input.title) {
-          yield* SearchStore.writeTitle(input.pageId, input.title);
-          yield* sql`UPDATE spaces_pages SET title = ${input.title}, revision = revision + 1, updated_at = ${now} WHERE page_id = ${input.pageId}`;
+        const icon = input.icon === undefined ? (page.icon ?? null) : input.icon;
+        if (page.title !== input.title || icon !== (page.icon ?? null)) {
+          if (page.title !== input.title) yield* SearchStore.writeTitle(input.pageId, input.title);
+          yield* sql`UPDATE spaces_pages SET title = ${input.title}, icon = ${icon}, revision = revision + 1, updated_at = ${now} WHERE page_id = ${input.pageId}`;
           yield* RevisionStore.capture(
             {
               pageId: input.pageId,

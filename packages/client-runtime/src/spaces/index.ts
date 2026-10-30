@@ -1,4 +1,5 @@
 export * from "./values.ts";
+export * from "./pageIcon.ts";
 export * from "./session.ts";
 export * from "./draft.ts";
 export * from "./serviceAdapter.ts";

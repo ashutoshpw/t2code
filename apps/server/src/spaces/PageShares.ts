@@ -61,14 +61,22 @@ export const locate = Effect.fn("SpacesPageShares.locate")(function* (
   rootPageId: C.SpacePageId,
   pageId: C.SpacePageId,
 ) {
-  const breadcrumb: Array<{ readonly id: C.SpacePageId; readonly title: string }> = [];
+  const breadcrumb: Array<{
+    readonly id: C.SpacePageId;
+    readonly title: string;
+    readonly icon?: string;
+  }> = [];
   let current: C.SpacePageId | null = pageId;
   while (current !== null && breadcrumb.length < limits.maxDepth) {
     const row: PageStore.PageRow | null = yield* PageStore.load(current).pipe(
       Effect.catchTags({ SpaceNotFoundError: () => Effect.succeed(null) }),
     );
     if (row === null || row.trash_batch_id !== null) return null;
-    breadcrumb.unshift({ id: row.page_id, title: row.title });
+    breadcrumb.unshift({
+      id: row.page_id,
+      title: row.title,
+      ...(row.icon ? { icon: row.icon } : {}),
+    });
     if (row.page_id === rootPageId) return breadcrumb;
     if (row.parent_page_id === null || row.owner_deleted !== 0) return null;
     current = row.parent_page_id;
@@ -102,8 +110,9 @@ export const read = Effect.fn("SpacesPageShares.read")(function* (
   const children = yield* sql<{
     readonly page_id: C.SpacePageId;
     readonly title: string;
+    readonly icon: string | null;
     readonly updated_at: string;
-  }>`SELECT p.page_id, p.title, p.updated_at FROM spaces_blocks b
+  }>`SELECT p.page_id, p.title, p.icon, p.updated_at FROM spaces_blocks b
     JOIN spaces_page_owners o ON o.owner_block_id = b.block_id
     JOIN spaces_pages p ON p.page_id = o.child_page_id
     WHERE b.page_id = ${pageId} AND b.deleted = 0 AND json_extract(b.payload,'$.type') = 'child_page'
@@ -112,12 +121,18 @@ export const read = Effect.fn("SpacesPageShares.read")(function* (
   return {
     rootPageId,
     expiresAt,
-    page: { id: page.page_id, title: page.title, updatedAt: page.updated_at },
+    page: {
+      id: page.page_id,
+      title: page.title,
+      ...(page.icon ? { icon: page.icon } : {}),
+      updatedAt: page.updated_at,
+    },
     window: { revision: page.revision, blocks },
     breadcrumb,
     children: children.map((child) => ({
       id: child.page_id,
       title: child.title,
+      ...(child.icon ? { icon: child.icon } : {}),
       updatedAt: child.updated_at,
     })),
   } satisfies SpaceSharedPage;

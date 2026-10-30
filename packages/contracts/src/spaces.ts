@@ -176,10 +176,21 @@ export const SpacePageTrashStatus = Schema.Struct({
   trashedAt: IsoDateTime,
 });
 export type SpacePageTrashStatus = typeof SpacePageTrashStatus.Type;
+const pictograph = String.raw`\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?`;
+export const SPACE_PAGE_ICON_PATTERN = new RegExp(
+  String.raw`^(?:${pictograph}(?:\u200D${pictograph})*|\p{Regional_Indicator}{2}|[0-9#*]\uFE0F?\u20E3)$`,
+  "u",
+);
+export const SpacePageIcon = Schema.String.check(
+  Schema.isMaxLength(32),
+  Schema.isPattern(SPACE_PAGE_ICON_PATTERN),
+);
+export type SpacePageIcon = typeof SpacePageIcon.Type;
 export const SpacePageSummary = Schema.Struct({
   id: SpacePageId,
   spaceId: SpaceId,
   title: Schema.String,
+  icon: Schema.optionalKey(SpacePageIcon),
   revision: NonNegativeInt,
   rootOrder: Schema.NullOr(StableId),
   hasChildren: Schema.optionalKey(Schema.Boolean),
@@ -344,6 +355,8 @@ export const SpacePageUpdateInput = Schema.Struct({
   pageId: SpacePageId,
   baseRevision: NonNegativeInt,
   title: Schema.String,
+  /** Absent keeps the icon, null clears it. */
+  icon: Schema.optionalKey(Schema.NullOr(SpacePageIcon)),
 });
 export type SpacePageUpdateInput = typeof SpacePageUpdateInput.Type;
 export const SpacePageUpdateResult = Schema.Union([
