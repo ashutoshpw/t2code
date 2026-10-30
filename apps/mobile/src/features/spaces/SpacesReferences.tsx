@@ -185,6 +185,7 @@ export function SpacesSearch({ environmentId }: { environmentId: EnvironmentId }
           renderItem={({ item, index }) => (
             <View className="gap-1 px-4 py-2">
               <Text selectable className="text-foreground">
+                {item.page.icon ? `${item.page.icon} ` : ""}
                 {item.page.title || "Untitled page"} · {item.blockId ? "Block" : "Page"}
               </Text>
               <Text selectable className="text-foreground-muted">
