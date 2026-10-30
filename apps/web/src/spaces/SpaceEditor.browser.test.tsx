@@ -230,6 +230,39 @@ describe("SpaceEditor", () => {
     expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain('"type":"code"');
   });
 
+  it("adds a block below from the hover handle and opens the slash menu", async () => {
+    const onBatch = vi.fn();
+    await using screen = await render(<SpaceEditor adapter={adapter()} onBatch={onBatch} />, {
+      router: false,
+    });
+    await userEvent.hover(screen.getByText("Hello page"));
+    await userEvent.click(screen.getByRole("button", { name: "Add block below" }));
+    await expect.element(screen.getByRole("option", { name: "Heading 1" })).toBeVisible();
+    expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).toContain('"kind":"insert"');
+  });
+
+  it("duplicates and deletes a block from the handle menu", async () => {
+    await using screen = await render(<SpaceEditor adapter={adapter()} />, { router: false });
+    await userEvent.hover(screen.getByText("Hello page"));
+    await userEvent.click(screen.getByRole("button", { name: "Block menu" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Duplicate" }));
+    expect(screen.getByText("Hello page").elements()).toHaveLength(2);
+    await userEvent.hover(screen.getByText("Hello page").first());
+    await userEvent.click(screen.getByRole("button", { name: "Block menu" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Delete block" }));
+    expect(screen.getByText("Hello page").elements()).toHaveLength(1);
+  });
+
+  it("shows no block handle on a read-only editor", async () => {
+    await using screen = await render(<SpaceEditor adapter={adapter()} editable={false} />, {
+      router: false,
+    });
+    await userEvent.hover(screen.getByText("Hello page"));
+    await expect
+      .element(screen.getByRole("button", { name: "Block menu" }))
+      .not.toBeInTheDocument();
+  });
+
   it("hides the selection toolbar when the editor loses focus", async () => {
     await using screen = await render(<SpaceEditor adapter={adapter()} />, { router: false });
     await userEvent.dblClick(screen.getByText("Hello page"));
