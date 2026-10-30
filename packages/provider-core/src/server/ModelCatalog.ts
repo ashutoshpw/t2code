@@ -1,8 +1,4 @@
-import type {
-  ModelCapabilities,
-  ProviderDriverKind,
-  ServerProviderModel,
-} from "@t2code/contracts";
+import type { ModelCapabilities, ProviderDriverKind, ServerProviderModel } from "@t2code/contracts";
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
 

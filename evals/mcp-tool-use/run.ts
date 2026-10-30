@@ -217,7 +217,7 @@ const McpToolUseWorld = Schema.StructWithRest(
     /**
      * Hosts whose hub fails to list devices, by id, with the error, such as F1's
      * `{"_tag": "DeviceOperationError", "operation": "list", "reason": "request_failed", "cause": null}`.
-     * T3 marks each one failed on every call and lists none of its devices.
+     * T2 marks each one failed on every call and lists none of its devices.
      */
     deviceDiscoveryFailures: Schema.optional(Schema.Record(Schema.String, DeviceOperationError)),
     /** false: agent device access is off. T3 denies every device call and drops its device text. */
@@ -600,7 +600,7 @@ export const buildBase = (
     nativeTools: template.tools.filter((tool) => !isT3Name(tool.name)),
     /** Tools ToolSearch loads: T3 tools from source, and native tools the template only names. */
     t3,
-    deferred: [...t2, ...nativeDeferred.map((name) => ({ name, ...nativeSchema(name) }))],
+    deferred: [...t3, ...nativeDeferred.map((name) => ({ name, ...nativeSchema(name) }))],
   };
 };
 
@@ -684,7 +684,7 @@ const buildCodexBase = (
     },
     nativeTools,
     t3,
-    deferred: [...t2],
+    deferred: [...t3],
     codex: { ...template, input, reasoning: { ...template.reasoning, effort } },
   };
 };

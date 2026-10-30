@@ -15,6 +15,7 @@ import { AppText as Text } from "../../components/ui/AppText";
 import { MOBILE_TYPOGRAPHY } from "../../lib/typography";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import {
+  getNativeTerminalHardwareKeyRevision,
   resolveNativeTerminalSurfaceView,
   supportsNativeTerminalOutput,
   type NativeTerminalSurfaceHandle,

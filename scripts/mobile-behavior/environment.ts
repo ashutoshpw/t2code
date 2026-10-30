@@ -1,6 +1,6 @@
 // @effect-diagnostics nodeBuiltinImport:off globalTimers:off - the eval owns a server subprocess and a scratch workspace.
 /**
- * An isolated T3 server for one device run. Its only provider is `evalbot`, an Fx instance
+ * An isolated T2 server for one device run. Its only provider is `evalbot`, an Fx instance
  * backed by `fake-fx.ts`, so every reply is scripted. State lives under the run's `--out`.
  */
 import * as NodeChildProcess from "node:child_process";
@@ -111,7 +111,7 @@ function writeScratch(baseDir: string) {
         [EVAL_INSTANCE]: {
           driver: "fx",
           displayName: "Eval Bot",
-          environment: [{ name: "T3_EVAL_FX_CONTROL_DIR", value: control }],
+          environment: [{ name: "T2_EVAL_FX_CONTROL_DIR", value: control }],
           config: { enabled: true, binaryPath: launcher },
         },
       },

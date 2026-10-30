@@ -149,7 +149,8 @@ describe("remote", () => {
     const appLink = buildPairingAppLink(pairingUrl);
     expect(appLink.startsWith("t2code://pair?")).toBe(true);
     expect(readPairingAppLink(appLink)).toBe(pairingUrl);
-    expect(readPairingAppLink(appLink.replace("t3code:", "t3code-dev:"))).toBe(pairingUrl);
+    expect(readPairingAppLink(appLink.replace("t2code:", "t2code-dev:"))).toBe(pairingUrl);
+    expect(readPairingAppLink(appLink.replace("t2code:", "t3code-dev:"))).toBe(pairingUrl);
     expect(readPairingAppLink("t2code://pair")).toBeNull();
     expect(readPairingAppLink(appLink.replace("//pair?", "//pair/other?"))).toBeNull();
     expect(

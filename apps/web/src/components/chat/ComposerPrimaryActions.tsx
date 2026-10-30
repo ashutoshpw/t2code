@@ -366,7 +366,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               size="icon-xs"
               aria-label="More send options"
               {...pointerFocusProps}
-              disabled={isSendBusy || isConnecting || isEnvironmentUnavailable}
+              disabled={isSendBusy || isEnvironmentUnavailable}
             />
           }
         >

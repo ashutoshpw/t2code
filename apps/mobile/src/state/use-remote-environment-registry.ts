@@ -184,35 +184,43 @@ export function useRemoteConnections() {
     [controller],
   );
 
-  const onRemoveEnvironmentPress = (environmentId: EnvironmentId) => {
-    const environment = connectedEnvironments.find(
-      (candidate) => candidate.environmentId === environmentId,
-    );
-    if (!environment) {
-      return;
-    }
-    const remove = {
-      text: "Remove",
-      style: "destructive",
-      onPress: () => {
-        void controller.removeEnvironment(environmentId);
-      },
-    } as const;
-    if (environment.isRelayManaged) {
-      const registration = Discovery.relayEnvironmentRegistration(
-        appAtomRegistry.get(relayEnvironmentDiscovery.stateValueAtom),
-        environmentId,
+  const onRemoveEnvironmentPress = useCallback(
+    (environmentId: EnvironmentId) => {
+      const environment = connectedEnvironments.find(
+        (candidate) => candidate.environmentId === environmentId,
       );
-      const openAccount = {
-        text: "Open T3 Account",
-        onPress: () => navigation.navigate("SettingsAuth"),
-      };
+      if (!environment) {
+        return;
+      }
+      const remove = {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => {
+          void controller.removeEnvironment(environmentId);
+        },
+      } as const;
+      if (environment.isRelayManaged) {
+        const registration = Discovery.relayEnvironmentRegistration(
+          appAtomRegistry.get(relayEnvironmentDiscovery.stateValueAtom),
+          environmentId,
+        );
+        const openAccount = {
+          text: "Open T3 Account",
+          onPress: () => navigation.navigate("SettingsAuth"),
+        };
+        Dialog.alert(
+          "Remove from this device?",
+          `Forget ${environment.environmentLabel} and its cached threads on this device.\n\n${RELAY_REMOVAL_ACCOUNT_NOTE[registration]}`,
+          registration === "unregistered" || !hasCloudPublicConfig()
+            ? [{ text: "Cancel", style: "cancel" }, remove]
+            : [{ text: "Cancel", style: "cancel" }, openAccount, remove],
+        );
+        return;
+      }
       Dialog.alert(
         "Remove from this device?",
-        `Forget ${environment.environmentLabel} and its cached threads on this device.\n\n${RELAY_REMOVAL_ACCOUNT_NOTE[registration]}`,
-        registration === "unregistered" || !hasCloudPublicConfig()
-          ? [{ text: "Cancel", style: "cancel" }, remove]
-          : [{ text: "Cancel", style: "cancel" }, openAccount, remove],
+        `Forget ${environment.environmentLabel} and its cached threads on this device. Switch it off instead to keep it saved.`,
+        [{ text: "Cancel", style: "cancel" }, remove],
       );
     },
     [connectedEnvironments, controller, navigation],

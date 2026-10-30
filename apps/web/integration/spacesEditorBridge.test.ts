@@ -196,6 +196,7 @@ const queryRuntime = Effect.fn("SpaceEditorServiceTest.queryRuntime")(function* 
     ready: Effect.void,
     probe: Effect.void,
     closed: Effect.never,
+    inboundFrames: Effect.never,
   });
   const sessions = yield* SubscriptionRef.make(Option.some(makeSession()));
   const state = yield* SubscriptionRef.make<SupervisorConnectionState>({

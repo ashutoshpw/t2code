@@ -35,7 +35,6 @@ import {
 } from "../../lib/composerSendRecovery";
 import { usePromptStashStore } from "../../promptStashStore";
 import { appAtomRegistry } from "../../rpc/atomRegistry";
-import { environmentServerConfigsAtom } from "../../state/server";
 import { environmentProjects } from "../../state/projects";
 import { composerDraftSendGuard } from "../../lib/prepareComposerSendContext";
 import { readEnvironmentScope, readPreparedConnection } from "../../state/session";
@@ -285,9 +284,6 @@ function createMultipleModelSend(
                 ...withMessageContext({
                   text: target.text,
                   context,
-                  supportsInlineMessageContext:
-                    appAtomRegistry.get(environmentServerConfigsAtom).get(environmentId)
-                      ?.environment.capabilities.inlineMessageContext === true,
                 }),
               },
               modelSelection: attempt.selection,

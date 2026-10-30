@@ -143,6 +143,7 @@ const setupRuntime = Effect.fn("SpacePageNavigationTest.setupRuntime")(function*
     subscribeServerConfig: () => Stream.never,
     ready: Effect.void,
     probe: Effect.void,
+    inboundFrames: Effect.never,
     closed: Effect.never,
   });
   const sessions = yield* SubscriptionRef.make(Option.some(makeSession()));

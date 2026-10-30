@@ -398,7 +398,6 @@ export const makeAntigravityInstallation = Effect.fn("AntigravityInstallation.ma
                   }),
                 )
               : spawner,
-          clientInfo: { name: "t2-code", version: "0.0.0" },
         });
         const initialized = yield* runtime.initialize();
         if (

@@ -47,7 +47,7 @@ the device's machine, which EAS does not expose, so they are unavailable there.
 ## Simlock hosts lease through the agent-device front
 
 A [Simlock host](../../apps/server/src/device/SimlockDeviceHost.ts) (alpha) opens a
-device by running T3's own agent-device CLI against the gateway's agent-device
+device by running T2's own agent-device CLI against the gateway's agent-device
 front (`connect proxy`, then `open`), not with Simlock's lease HTTP API:
 agent-device cannot adopt a lease it did not allocate. The lease is bound to
 that one agent-device session and to the directory `open` ran in, so
@@ -117,7 +117,7 @@ always-loaded prompt or skill: it costs nothing in threads that never open a
 device and cannot drift from the pinned CLI version. `device_open` returns a
 launcher bound to its agent-device session, so agents need no target flags.
 The launcher leaves out the flags a command refuses (`cdp` talks to Metro, not
-to the device), refuses the commands that would replace T3's connection, and
+to the device), refuses the commands that would replace T2's connection, and
 checks that connection first: agent-device reports a sandboxed shell and a
 dropped tunnel alike as an unreachable daemon, so the launcher names which one it
 is. Ending a session (`device_close`, the Device panel, a shutdown) also closes

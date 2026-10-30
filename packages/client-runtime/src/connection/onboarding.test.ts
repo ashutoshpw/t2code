@@ -319,7 +319,7 @@ describe("connection onboarding", () => {
       expect(error).toMatchObject({ _tag: "ConnectionBlockedError", reason: "configuration" });
       expect(yield* SubscriptionRef.get(registry.entries)).toEqual(before);
       expect(calls.map((call) => call.url)).toEqual([
-        "https://attacker.example.test/.well-known/t3/environment",
+        "https://attacker.example.test/.well-known/t2/environment",
       ]);
     }).pipe(Effect.provide(layerPairingOnboarding(undefined, calls)));
   });
@@ -418,8 +418,8 @@ describe("connection onboarding", () => {
         target: new PrimaryConnectionTarget({
           environmentId: PAIRED_ENVIRONMENT_ID,
           label: "Host environment",
-          httpBaseUrl: "http://127.0.0.1:3773",
-          wsBaseUrl: "ws://127.0.0.1:3773",
+          httpBaseUrl: "http://127.0.0.1:3772",
+          wsBaseUrl: "ws://127.0.0.1:3772",
         }),
       }),
     },
