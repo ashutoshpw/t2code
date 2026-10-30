@@ -14,7 +14,7 @@ Choose **Create** at the top of the sidebar to add an untitled page with its tit
 
 Click the title at the top of a page to rename it. Click the page body to start writing; changes save automatically a moment after you stop typing and when you leave the page. If a save fails, **Retry** appears below the page. After a conflict with another device, your edits stay on this device and you can discard them.
 
-- Type **/** for a command menu: headings, lists, to-do, quote, callout, code and divider. Markdown shortcuts also work, such as `# `, `- `, `1. `, `[] `, `> ` and three backticks. Press Enter on an empty block to leave a list or quote.
+- Type **/** for a command menu: headings, lists, to-do, toggle list, quote, callout, code and divider. Markdown shortcuts also work, such as `# `, `- `, `1. `, `[] `, `> ` and three backticks. Type `>> ` for a toggle list: Enter at the end of an open toggle's first line starts its first nested block, and the arrow collapses or expands it for you only. Toggles open as expanded and are read-only on mobile. Press Enter on an empty block to leave a list or quote.
 - Select text for a toolbar with bold, italic, strikethrough, inline code, links and **Turn into**. Press Cmd/Ctrl+Z to undo and Cmd/Ctrl+Shift+Z to redo.
 - Select a heading to choose its level, a callout to change its icon, or code to set its language label. Code is not run.
 - To mention a page or block, choose **Insert page or block mention…** from the page's toolbar.

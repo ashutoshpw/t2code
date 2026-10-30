@@ -45,6 +45,7 @@ import {
   type SpaceEditorWindow,
 } from "./document";
 import { richBlockTypes, spaceSchemaExtensions } from "./schema";
+import { isSpaceToggleCollapsed, spaceToggleCollapsePlugin } from "./toggleCollapse";
 
 export interface SpaceEditorOptions {
   readonly target: SpacePageTarget;
@@ -425,7 +426,7 @@ export class SpaceEditorAdapter {
   }
 
   plugins() {
-    return [history({ depth: localHistoryDepth }), this.#plugin()];
+    return [history({ depth: localHistoryDepth }), this.#plugin(), spaceToggleCollapsePlugin()];
   }
 
   extensions(): Extensions {
@@ -638,8 +639,16 @@ export class SpaceEditorAdapter {
       if (!owner || state.selection.$from.parent.content.size > 0) return false;
       const types =
         key === "enter"
-          ? ["quote", "bulleted_item", "numbered_item", "todo_item"]
-          : ["heading", "quote", "callout", "bulleted_item", "numbered_item", "todo_item"];
+          ? ["quote", "bulleted_item", "numbered_item", "todo_item", "toggle"]
+          : [
+              "heading",
+              "quote",
+              "callout",
+              "bulleted_item",
+              "numbered_item",
+              "todo_item",
+              "toggle",
+            ];
       return types.includes(owner.block.type)
         ? this.#toParagraph(owner.block.id)(state, dispatch)
         : false;
@@ -719,13 +728,17 @@ export class SpaceEditorAdapter {
     const trigger = text === "`" ? (before === "``" ? "```" : null) : text === " " ? before : null;
     if (trigger === null) return false;
     const table: Partial<
-      Record<string, "bulleted_item" | "numbered_item" | "todo_item" | "quote" | "heading" | "code">
+      Record<
+        string,
+        "bulleted_item" | "numbered_item" | "todo_item" | "toggle" | "quote" | "heading" | "code"
+      >
     > = {
       "-": "bulleted_item",
       "*": "bulleted_item",
       "1.": "numbered_item",
       "[]": "todo_item",
       ">": "quote",
+      ">>": "toggle",
       "#": "heading",
       "##": "heading",
       "###": "heading",
@@ -1237,6 +1250,33 @@ export class SpaceEditorAdapter {
         !this.#subtreeComplete(node, state.doc)
       )
         return false;
+      if (
+        block.type === "toggle" &&
+        $from.parent.type.name === "spaceBody" &&
+        $from.parentOffset === $from.parent.content.size &&
+        !isSpaceToggleCollapsed(state, block.id)
+      ) {
+        const firstChild = blocks.find((item) => item.parentId === block.id);
+        let childOrder: string;
+        try {
+          childOrder = this.#rank(block.id, undefined, firstChild);
+        } catch {
+          return false;
+        }
+        if (!dispatch) return true;
+        const child: SpaceBlock = {
+          id: this.#options.allocateId(),
+          parentId: block.id,
+          order: childOrder,
+          type: "paragraph",
+          version: 1,
+          content: { runs: [] },
+        };
+        const at = $from.after();
+        const tr = state.tr.insert(at, spaceBlockNode(child, [], false, state.schema));
+        tr.setSelection(TextSelection.near(tr.doc.resolve(at + 1)));
+        return this.#dispatch(tr, dispatch);
+      }
       const pos = $from.before(depth);
       const siblings = blocks.filter((item) => item.parentId === block.parentId);
       const sibling = siblings[siblings.findIndex((item) => item.id === block.id) + 1];
@@ -1308,13 +1348,14 @@ export class SpaceEditorAdapter {
       | "callout"
       | "bulleted_item"
       | "numbered_item"
-      | "todo_item",
+      | "todo_item"
+      | "toggle",
   ): Command {
     return (state, dispatch) => {
       if (this.#options.canChangeStructure?.() === false) return false;
       const entry = entries(state.doc).find((item) => item.block.id === id);
       const block = spaceDocumentBlocks(state.doc).find((item) => item.id === id);
-      const targetIsList = ["bulleted_item", "numbered_item", "todo_item"].includes(type);
+      const targetIsList = ["bulleted_item", "numbered_item", "todo_item", "toggle"].includes(type);
       if (
         !entry ||
         !block ||

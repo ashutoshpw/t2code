@@ -13,6 +13,7 @@ import { SpaceBlockId, SpacePageId, type SpaceBlock } from "@t2code/contracts/sp
 
 import { SpaceEditorAdapter, type SpaceEditorOptions } from "./adapter";
 import { spaceDocumentBlocks } from "./document";
+import { spaceToggleCollapseKey } from "./toggleCollapse";
 
 const id = SpaceBlockId.make;
 const target = { environmentId: EnvironmentId.make("env"), pageId: SpacePageId.make("page") };
@@ -36,7 +37,9 @@ function setup(blocks: readonly SpaceBlock[], overrides: Partial<SpaceEditorOpti
       blocks,
       completeParents: [
         null,
-        ...blocks.filter((block) => block.type.endsWith("_item")).map((block) => block.id),
+        ...blocks
+          .filter((block) => block.type.endsWith("_item") || block.type === "toggle")
+          .map((block) => block.id),
       ],
     },
     maxBlocks: 50,
@@ -208,6 +211,50 @@ describe("Spaces ProseMirror adapter", () => {
     expect(editor.run(editor.adapter.convert(id("a"), "paragraph"))).toBe(false);
     expect(editor.run(editor.adapter.undoLocal())).toBe(true);
     expect(editor.blocks()).toEqual(blocks);
+  });
+
+  it("turns a paragraph into a toggle that keeps its children when converted to another list", () => {
+    const editor = setup([paragraph("a", "hi")]);
+    expect(editor.run(editor.adapter.convert(id("a"), "toggle"))).toBe(true);
+    expect(editor.blocks()).toEqual([paragraph("a", "hi", { type: "toggle" })]);
+    editor.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, 4)));
+    expect(editor.run(editor.adapter.split())).toBe(true);
+    expect(editor.run(editor.adapter.convert(id("a"), "bulleted_item"))).toBe(true);
+    expect(editor.blocks().map((block) => [block.id, block.type, block.parentId])).toEqual([
+      ["a", "bulleted_item", null],
+      ["new-2", "paragraph", "a"],
+    ]);
+  });
+
+  it("creates the first child when splitting at the end of an expanded toggle, and a sibling when collapsed", () => {
+    const blocks = [
+      paragraph("a", "hi", { type: "toggle" }),
+      paragraph("b", "old", { parentId: id("a"), order: "b" }),
+    ];
+    const editor = setup(blocks, {
+      allocateOrder: ({ parentId, before, after }) =>
+        `${parentId ?? "root"}:${before ?? "start"}:${after ?? "end"}`,
+    });
+    editor.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, 4)));
+    expect(editor.run(editor.adapter.split())).toBe(true);
+    expect(editor.blocks().map((block) => [block.id, block.type, block.parentId])).toEqual([
+      ["a", "toggle", null],
+      ["new-1", "paragraph", "a"],
+      ["b", "paragraph", "a"],
+    ]);
+    expect(editor.state.selection.$from.parent.attrs.block.id).toBe("new-1");
+
+    const collapsed = setup(blocks);
+    collapsed.dispatch(collapsed.state.tr.setMeta(spaceToggleCollapseKey(), "a"));
+    collapsed.dispatch(
+      collapsed.state.tr.setSelection(TextSelection.create(collapsed.state.doc, 4)),
+    );
+    expect(collapsed.run(collapsed.adapter.split())).toBe(true);
+    expect(collapsed.blocks().map((block) => [block.id, block.parentId])).toEqual([
+      ["a", null],
+      ["new-1", null],
+      ["b", "new-1"],
+    ]);
   });
 
   it("rejects reparenting through generic transforms even when IDs and traversal order stay unchanged", () => {

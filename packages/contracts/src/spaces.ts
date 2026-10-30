@@ -65,7 +65,7 @@ const textContent = { runs: SpaceRichText };
 export const SpaceKnownBlock = Schema.Union([
   Schema.Struct({
     ...blockBase,
-    type: Schema.Literals(["paragraph", "quote", "bulleted_item", "numbered_item"]),
+    type: Schema.Literals(["paragraph", "quote", "bulleted_item", "numbered_item", "toggle"]),
     content: Schema.Struct(textContent),
   }),
   Schema.Struct({

@@ -27,6 +27,7 @@ import {
   LinkIcon,
   ListIcon,
   ListOrderedIcon,
+  ListCollapseIcon,
   ListTodoIcon,
   MessageSquareIcon,
   MinusIcon,
@@ -330,6 +331,7 @@ export function SpaceEditor({
     bulleted_item: ["Bullet list", ListIcon],
     numbered_item: ["Numbered list", ListOrderedIcon],
     todo_item: ["To-do", ListTodoIcon],
+    toggle: ["Toggle list", ListCollapseIcon],
   } as const;
   const empty = state.doc.childCount === 0;
   const startWriting = () => {
@@ -417,6 +419,12 @@ export function SpaceEditor({
       icon: ListTodoIcon,
       keywords: "task checkbox todo",
       apply: convertTo("todo_item"),
+    },
+    {
+      label: "Toggle list",
+      icon: ListCollapseIcon,
+      keywords: "toggle collapse expand disclosure",
+      apply: convertTo("toggle"),
     },
     { label: "Quote", icon: QuoteIcon, keywords: "blockquote", apply: convertTo("quote") },
     { label: "Callout", icon: MessageSquareIcon, keywords: "note", apply: convertTo("callout") },
