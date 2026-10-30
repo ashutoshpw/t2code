@@ -5,6 +5,7 @@
 import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
+import * as NodeSqlite from "node:sqlite";
 import * as NodeTimersPromises from "node:timers/promises";
 import * as NodeUtil from "node:util";
 import { _electron, type ElectronApplication } from "playwright-core";
@@ -30,7 +31,18 @@ const artifactsDir = NodePath.resolve(values["artifacts-dir"] ?? "desktop-launch
 const home = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-desktop-launch-"));
 const t2Home = NodePath.join(home, "t3");
 NodeFS.mkdirSync(NodePath.join(t2Home, "userdata"), { recursive: true });
-NodeFS.copyFileSync(FIXTURE_DB, NodePath.join(t2Home, "userdata/statev2.sqlite"));
+const fixtureCopy = NodePath.join(t2Home, "userdata/statev2.sqlite");
+NodeFS.copyFileSync(FIXTURE_DB, fixtureCopy);
+// The snapshot ages while it sits on main, and the settlement service files
+// threads under the collapsed Settled group once they are a few days stale,
+// which is not what this check is about. Keep the copied threads active; the
+// committed snapshot itself stays a faithful old build.
+const seededThreads = new NodeSqlite.DatabaseSync(fixtureCopy);
+seededThreads.exec(`
+  UPDATE orchestration_v2_projection_threads
+  SET payload_json = json_set(payload_json, '$.autoSettleDisabledAt', '2020-01-01T00:00:00.000Z')
+`);
+seededThreads.close();
 
 let step = "launching the app";
 let app: ElectronApplication | undefined;
