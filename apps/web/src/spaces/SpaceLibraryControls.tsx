@@ -243,8 +243,19 @@ function TitleInput({
         if (event.key === "Enter") {
           event.preventDefault();
           const section = event.currentTarget.closest("section");
-          const focusBody = () =>
-            section?.querySelector<HTMLElement>("[data-space-editor] .tiptap")?.focus();
+          const focusBody = () => {
+            const editor = section?.querySelector<HTMLElement>("[data-space-editor] .tiptap");
+            if (!editor) return;
+            editor.focus({ preventScroll: true });
+            const first = editor.querySelector("[data-space-block]");
+            const selection = window.getSelection();
+            if (!first || !selection) return;
+            const caret = document.createRange();
+            caret.selectNodeContents(first);
+            caret.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(caret);
+          };
           onEnter?.(focusBody);
           event.currentTarget.blur();
           if (!onEnter) focusBody();
