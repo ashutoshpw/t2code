@@ -78,6 +78,23 @@ describe("runMigrations", () => {
     }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
   );
 
+  it.effect("upgrades a database written by v0.1.1", () =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* runMigrations({ toMigrationInclusive: 62 });
+      yield* sql`
+        INSERT INTO effect_sql_migrations (migration_id, name)
+        VALUES (63, 'LegacyMcpIdentityRewrite')
+      `;
+
+      assert.deepStrictEqual(
+        yield* runMigrations(),
+        migrationManifest.filter(([id]) => id >= 63),
+      );
+      assert.deepStrictEqual(yield* history, migrationManifest);
+    }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
+  );
+
   it.effect.each([30, 54])("still starts with a site-local migration at id %s", (id) =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
@@ -124,6 +141,43 @@ describe("runMigrations", () => {
 
       assert.deepStrictEqual(yield* runMigrations(), []);
     }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
+  );
+});
+
+// Databases record migrations by id, and the migrator skips every id below the highest recorded.
+// Renumbering a shipped migration strands those databases (v0.1.1 id 63). Append each release's
+// new ids here; to change an id on purpose, add a reconcile step like reconcileV2PreviewMigration.
+const shippedV2Migrations: ReadonlyArray<readonly [number, string]> = [
+  [55, "OrchestrationV2"],
+  [56, "RemoveRedundantProjectionIndexes"],
+  [57, "ScheduledTaskWebhooks"],
+  [58, "WebhookRelayDeliveries"],
+  [59, "McpAppModelContext"],
+  [60, "ThreadSnapshotWindowIndexes"],
+  [61, "PullRequestReviewGuides"],
+  [62, "ThreadFailureLookupIndex"],
+  [63, "DropUnusedV1Projections"],
+  [64, "CanonicalizeThreadPullRequestLinks"],
+  [65, "CodexUsageNativeTurnIndex"],
+  [66, "RepairClientSettlementTimestamps"],
+  [67, "WebhookDedupe"],
+  [68, "ShellStopRequestIndex"],
+  [69, "ThreadMessageSearch"],
+  [70, "PeerLinks"],
+  [71, "PeerLinkFence"],
+  [72, "WaitingLinkRequestIndex"],
+  [73, "ActiveTurnItemIndexes"],
+  [74, "LegacyMcpIdentityRewrite"],
+];
+
+it("keeps the id of every shipped V2 migration", () => {
+  const label = ([id, name]: readonly [number, string]) => `${id}_${name}`;
+  assert.deepStrictEqual(
+    migrationManifest
+      .filter(([id]) => id >= 55)
+      .slice(0, shippedV2Migrations.length)
+      .map(label),
+    shippedV2Migrations.map(label),
   );
 });
 
