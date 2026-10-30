@@ -10,7 +10,8 @@ import {
 } from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { Link, useParams } from "@tanstack/react-router";
-import { ChevronRightIcon, FileTextIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
+import { SpacePageGlyph } from "./SpacePageGlyph";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceId, SpacePageId } from "@t2code/contracts/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
@@ -293,7 +294,7 @@ function PageTree({
                     />
                   }
                 >
-                  <FileTextIcon />
+                  <SpacePageGlyph icon={row.page.icon} />
                   <span>{row.page.title || "Untitled page"}</span>
                 </SidebarMenuButton>
               </div>

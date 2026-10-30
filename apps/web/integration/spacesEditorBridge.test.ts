@@ -5056,6 +5056,34 @@ it.effect(
     ).pipe(Effect.provide(NodeServices.layer)),
 );
 
+it.effect("sets and clears a page icon through the library receipt without extra revisions", () =>
+  Effect.scoped(
+    fixture((service) =>
+      Effect.gen(function* () {
+        const h = yield* rootReorderFixture(service);
+        yield* Effect.promise(async () => {
+          const owner = h.make();
+          const selected = await h.ports.getPage(h.key);
+          await owner.setPageIcon(selected.page, "🚀");
+          const set = owner.getSnapshot().libraryResult!.page!;
+          assert.equal(set.icon, "🚀");
+          assert.equal(set.revision, selected.page.revision + 1);
+
+          await owner.setPageIcon(set, "🚀");
+          assert.equal(owner.getSnapshot().libraryResult!.page!.revision, set.revision);
+
+          await owner.setPageIcon(set, null);
+          const cleared = owner.getSnapshot().libraryResult!.page!;
+          assert.isFalse("icon" in cleared);
+          assert.equal(cleared.revision, set.revision + 1);
+
+          await expect(owner.setPageIcon(cleared, "hello")).rejects.toThrow("Invalid page icon");
+        });
+      }),
+    ),
+  ).pipe(Effect.provide(NodeServices.layer)),
+);
+
 it.effect(
   "retains a page-rename conflict against the chosen revision instead of refreshing its guard",
   () =>

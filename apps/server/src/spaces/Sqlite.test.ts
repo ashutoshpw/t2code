@@ -79,6 +79,7 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
       { migration_id: 12, name: "PageLibrary" },
       { migration_id: 13, name: "LibraryRevisions" },
       { migration_id: 14, name: "PageShares" },
+      { migration_id: 15, name: "PageIcon" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -141,7 +142,9 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           return {
             spaces: yield* sql`SELECT * FROM spaces ORDER BY space_id`,
             ids: yield* sql`SELECT * FROM spaces_ids ORDER BY id`,
-            pages: yield* sql`SELECT * FROM spaces_pages ORDER BY page_id`,
+            pages: yield* sql`SELECT * FROM spaces_pages ORDER BY page_id`.pipe(
+              Effect.map((rows) => rows.map(({ icon: _icon, ...page }) => page)),
+            ),
             blocks: yield* sql`SELECT * FROM spaces_blocks ORDER BY block_id`,
             owners: yield* sql`SELECT * FROM spaces_page_owners ORDER BY child_page_id`,
           };
@@ -623,6 +626,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
                 trash_root_id: null,
                 trashed_at_ms: null,
                 trash_origin: null,
+                icon: null,
               })),
             );
             assert.deepEqual(yield* sql`SELECT * FROM spaces_blocks`, before.blocks);
@@ -721,7 +725,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            14,
+            15,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -835,7 +839,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (15, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (16, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;

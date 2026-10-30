@@ -101,7 +101,10 @@ export class MobileSpaceReferenceNavigation {
       });
       return;
     }
-    this.#update({ busy: false, title: result.page.title || "Untitled page" });
+    this.#update({
+      busy: false,
+      title: `${result.page.icon ? `${result.page.icon} ` : ""}${result.page.title || "Untitled page"}`,
+    });
     this.ports.open(destination);
   }
   mount() {

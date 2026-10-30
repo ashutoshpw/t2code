@@ -10,6 +10,7 @@ export interface PageRow {
   readonly page_id: C.SpacePageId;
   readonly space_id: C.SpaceId;
   readonly title: string;
+  readonly icon?: string | null;
   readonly revision: number;
   readonly root_order: string | null;
   readonly block_count: number;
@@ -33,6 +34,7 @@ export type SummaryRow = Pick<
   | "page_id"
   | "space_id"
   | "title"
+  | "icon"
   | "revision"
   | "root_order"
   | "created_at"
@@ -70,6 +72,7 @@ export function summary(row: SummaryRow, allowOrphanedTrash = false): C.SpacePag
     id: row.page_id,
     spaceId: row.space_id,
     title: row.title,
+    ...(row.icon ? { icon: row.icon } : {}),
     revision: row.revision,
     rootOrder: row.root_order,
     ...(row.is_pinned === 1 ? { isPinned: true } : {}),

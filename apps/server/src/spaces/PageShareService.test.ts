@@ -171,6 +171,20 @@ const workspace = Effect.fn("PageShareTest.workspace")(function* () {
       guards: inspected.guards,
     });
   });
+  const setIcon = Effect.fn("PageShareTest.setIcon")(function* (
+    pageId: C.SpacePageId,
+    icon: string,
+  ) {
+    const { page } = yield* spaces.getPage({ ...env, pageId });
+    yield* spaces.updatePage({
+      ...common,
+      mutationId: C.SpaceMutationId.make(`icon-${pageId}`),
+      pageId,
+      baseRevision: page.revision,
+      title: page.title,
+      icon,
+    });
+  });
   const credentialOf = (url: string) => url.slice(url.indexOf("#") + 1);
   return {
     spaces,
@@ -181,6 +195,7 @@ const workspace = Effect.fn("PageShareTest.workspace")(function* () {
     write,
     move,
     trash,
+    setIcon,
     credentialOf,
   };
 });
@@ -225,6 +240,38 @@ it.effect("shows the shared page and its sub-pages but nothing outside the tree"
       assert.equal(yield* reason(shares.page(token, outside)), "unavailable");
     }
     assert.equal(yield* reason(shares.page(token, C.SpacePageId.make("missing"))), "unavailable");
+  }).pipe(Effect.provide(layerTest)),
+);
+
+it.effect("carries page icons in the shared page, breadcrumb and children", () =>
+  Effect.gen(function* () {
+    const { shares, rootPage, childPage, setIcon, credentialOf } = yield* workspace();
+    const shared = yield* rootPage("Shared");
+    const withIcon = yield* childPage(shared, "With icon");
+    const nested = yield* childPage(withIcon, "Nested");
+    const plain = yield* childPage(shared, "Plain");
+    yield* setIcon(shared, "🚀");
+    yield* setIcon(withIcon, "📚");
+    yield* setIcon(nested, "🔥");
+
+    const token = credentialOf((yield* shares.create({ pageId: shared })).url);
+    const root = yield* shares.page(token);
+    assert.equal(root.page.icon, "🚀");
+    assert.deepEqual(root.breadcrumb, [{ id: shared, title: "Shared", icon: "🚀" }]);
+    const icons = new Map(root.children.map((child) => [child.id, child.icon]));
+    assert.deepEqual(icons.get(withIcon), "📚");
+    assert.isFalse("icon" in root.children.find((child) => child.id === plain)!);
+
+    const inner = yield* shares.page(token, nested);
+    assert.equal(inner.page.icon, "🔥");
+    assert.deepEqual(
+      inner.breadcrumb.map((crumb) => crumb.icon),
+      ["🚀", "📚", "🔥"],
+    );
+
+    const unmarked = yield* shares.page(token, plain);
+    assert.isFalse("icon" in unmarked.page);
+    assert.isFalse("icon" in unmarked.breadcrumb[1]!);
   }).pipe(Effect.provide(layerTest)),
 );
 
