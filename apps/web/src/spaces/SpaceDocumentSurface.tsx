@@ -35,6 +35,8 @@ import { spaceImages } from "./imageRuntime";
 import { SpaceMediaBlock } from "./SpaceMediaBlock";
 import { SpaceChildPageRow } from "./SpaceAtomView";
 import { SpaceEditor } from "./SpaceEditor";
+import { plain } from "./SpaceStructureControls";
+import { placementAfterBlock } from "./pagePlacement";
 import type { SpaceBlockMoveProof } from "@t2code/client-runtime/spaces";
 import { useEnvironment } from "../state/environments";
 import { spaceRootReorder, spaceDocuments } from "./sessionRuntime";
@@ -112,6 +114,20 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : "Could not load or save this document.";
 }
 
+async function createChildAfter(
+  controller: SpaceDocumentController,
+  owner: ReturnType<typeof spaceRootReorder>,
+  blockId: SpaceBlockId | null,
+): Promise<SpacePageNavigationTarget | null> {
+  const { environmentId, pageId } = controller.session.key;
+  await controller.save();
+  await owner.loadBody(pageId);
+  const body = owner.getSnapshot().body;
+  if (!body) return null;
+  const createdId = await owner.createChild("", placementAfterBlock(pageId, body.blocks, blockId));
+  return createdId ? { environmentId, spaceId: body.spaceId, pageId: createdId } : null;
+}
+
 function DocumentContent({
   controller,
   targetBlockId,
@@ -136,6 +152,9 @@ function DocumentContent({
     capability?.version === 2 && capability.features?.assets === true && !!capability.limits.assets;
   const blockPermission = useAtomValue(
     spacesEnvironment.moveBlocks.permissionAtom(controller.session.key.environmentId),
+  );
+  const createPermission = useAtomValue(
+    spacesEnvironment.createChild.permissionAtom(controller.session.key.environmentId),
   );
   const [blockMove, setBlockMove] = useState<SpaceBlockMoveProof | null>(null);
   const [moveError, setMoveError] = useState<unknown>(null);
@@ -173,6 +192,22 @@ function DocumentContent({
         onOpen={onOpenSource}
       />
     );
+  };
+  const createPage = async (blockId: SpaceBlockId | null) => {
+    try {
+      const created = await createChildAfter(
+        controller,
+        spaceRootReorder(registry, controller.session.key.environmentId),
+        blockId,
+      );
+      if (created && current()) onOpenSource(created);
+    } catch (failure) {
+      toastManager.add({
+        type: "error",
+        title: "Couldn't create the page",
+        description: plain(failure, "Try again in a moment."),
+      });
+    }
   };
   const { session, loading, error } = snapshot;
   const permission = useAtomValue(
@@ -299,6 +334,11 @@ function DocumentContent({
           images={spaceImages(registry)}
           current={canReadSource}
           renderChild={renderChild}
+          onCreatePage={
+            capability?.version === 2 && createPermission
+              ? (blockId) => void createPage(blockId)
+              : undefined
+          }
           onMoveBlocks={
             capability?.version === 2 && capability.features?.blockMoves === true && blockPermission
               ? async (state) => {
