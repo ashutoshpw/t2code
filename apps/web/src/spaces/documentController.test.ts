@@ -7,6 +7,7 @@ import {
   SpacePageId,
   SpaceReceiptEpoch,
   SpaceCursor,
+  SpaceValidationError,
   type SpacePageGetResult,
   type SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
@@ -392,4 +393,23 @@ it("retains dirty content and visibly gates a refused structural refresh while r
   });
   a.release();
   b.release();
+});
+
+it("does not fail a structural refresh for a page that was just trashed", async () => {
+  let trashed = false;
+  const documents = new SpaceDocumentControllers((target) =>
+    controller(target, {
+      getPage: async () => {
+        if (trashed) throw new SpaceValidationError({ reason: "trashed" });
+        return metadata();
+      },
+    }),
+  );
+  const opened = documents.open(key);
+  await opened.ready;
+  trashed = true;
+  await expect(
+    documents.refreshStructure(key.environmentId, [key.pageId]),
+  ).resolves.toBeUndefined();
+  opened.release();
 });
