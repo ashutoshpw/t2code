@@ -17,6 +17,8 @@ import type {
 import type { SpaceEditorWindow } from "./document";
 import type { SpaceCompensation } from "@t2code/client-runtime/spaces";
 
+const isSpaceValidationError = Schema.is(SpaceValidationError);
+
 export interface SpaceDocumentPorts {
   readonly beforeRead?: () => Promise<void>;
   readonly getPage: () => Promise<SpacePageGetResult>;
@@ -314,8 +316,7 @@ export class SpaceDocumentControllers {
         await item.controller.refreshStructure();
       } catch (error) {
         // A page the operation just trashed has nothing left to refresh.
-        if (!(Schema.is(SpaceValidationError)(error) && error.reason === "trashed"))
-          errors.push(error);
+        if (!(isSpaceValidationError(error) && error.reason === "trashed")) errors.push(error);
       }
     }
     if (errors.length)
