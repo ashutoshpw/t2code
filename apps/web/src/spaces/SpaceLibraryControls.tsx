@@ -271,7 +271,7 @@ function TitleInput({
   );
 }
 
-function EditableTitle({
+export function EditableTitle({
   environmentId,
   page,
   current,
