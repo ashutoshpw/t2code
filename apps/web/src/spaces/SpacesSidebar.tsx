@@ -9,7 +9,6 @@ import { LibraryIcon, ServerIcon, FilesIcon, ImageIcon } from "lucide-react";
 import { SpacePageGlyph } from "./SpacePageGlyph";
 import { useEnvironment } from "../state/environments";
 import {
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -87,9 +86,7 @@ export function SpacesSidebar() {
   );
   return (
     <>
-      <SidebarHeader>
-        <SidebarChromeHeader isElectron={isElectron} />
-      </SidebarHeader>
+      <SidebarChromeHeader isElectron={isElectron} title="Spaces" />
       {environment ? (
         <div className="space-y-2 px-2 pt-2">
           <Suspense fallback={null}>
