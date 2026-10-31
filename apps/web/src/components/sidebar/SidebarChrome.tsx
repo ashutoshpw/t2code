@@ -49,8 +49,10 @@ import { observeResize } from "~/lib/observeResize";
 
 export const SidebarChromeHeader = memo(function SidebarChromeHeader({
   isElectron,
+  title,
 }: {
   isElectron: boolean;
+  title?: string;
 }) {
   const stageLabel = useEnvironmentStageLabel();
   const environmentIdentificationMode = useEnvironmentIdentificationMode();
@@ -80,7 +82,7 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
       </div>
       <div className="relative z-10 flex h-8 min-w-0 flex-1 flex-wrap content-start items-center gap-x-2 overflow-hidden py-0.5">
         <div className="flex shrink-0 items-center gap-1">
-          <SidebarBrand onBackdrop={backdropVariant !== null} />
+          <SidebarBrand onBackdrop={backdropVariant !== null} title={title} />
           {isElectron ? (
             <div className="hidden items-center md:flex">
               <HistoryNavigationButton direction="back" onBackdrop={backdropVariant !== null} />
@@ -169,7 +171,19 @@ function HistoryNavigationButton({
   );
 }
 
-function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
+function SidebarBrand({ onBackdrop, title }: { onBackdrop: boolean; title: string | undefined }) {
+  if (title) {
+    return (
+      <span
+        className={cn(
+          "relative z-10 ml-[var(--workspace-titlebar-content-left)] hidden h-7 min-w-0 shrink-0 items-center text-sm font-medium tracking-tight md:flex",
+          onBackdrop ? "text-white" : "text-foreground",
+        )}
+      >
+        {title}
+      </span>
+    );
+  }
   return (
     <Link
       aria-label="T2 Code home"
