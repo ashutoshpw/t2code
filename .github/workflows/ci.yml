@@ -500,11 +500,16 @@ jobs:
           retention-days: 30
 
   # Split out of Check and Test: both paid ~7-9s to install a Rust toolchain
-  # for checks that take under 3s, on the critical path of every PR.
+  # for checks that take under 3s, on the critical path of every PR. Release
+  # Smoke shares the runner: it is one script, and it used to pay its own
+  # runner start and sparse checkout.
   rust:
-    name: Rust
+    permissions:
+      contents: read
+      id-token: write
+    name: Rust + Release Smoke
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.rust != 'false' }}
+    if: ${{ !cancelled() && (needs.changes.outputs.rust != 'false' || needs.changes.outputs.release_smoke != 'false') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -518,21 +523,37 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Setup Rust
+        if: ${{ needs.changes.outputs.rust != 'false' }}
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
 
       - name: Check Rust formatting
+        if: ${{ needs.changes.outputs.rust != 'false' }}
         run: |
           for crate in resource-monitor kde-snap-shot hyprland-snap-shot; do
             cargo fmt --manifest-path "native/$crate/Cargo.toml" -- --check
           done
 
       - name: Test Rust crates
+        if: ${{ needs.changes.outputs.rust != 'false' }}
         run: |
           for crate in resource-monitor kde-snap-shot hyprland-snap-shot; do
             cargo test --locked --manifest-path "native/$crate/Cargo.toml"
           done
+
+      # Each half runs only when its gate is on, and a Rust failure does not
+      # hide the smoke result.
+      - name: Setup Vite+
+        id: smoke_deps
+        if: ${{ !cancelled() && needs.changes.outputs.release_smoke != 'false' }}
+        uses: ./.github/actions/setup-ci-deps
+        with:
+          task-cache-read-token: ${{ secrets.T2_TASK_CACHE_READ_TOKEN }}
+
+      - name: Exercise release-only workflow steps
+        if: ${{ !cancelled() && steps.smoke_deps.outcome == 'success' }}
+        run: node scripts/release-smoke.ts
 
   mobile_native_static_analysis:
     name: Mobile Native Static Analysis
@@ -564,33 +585,6 @@ jobs:
       - name: Lint mobile native sources
         run: vp run lint:mobile
 
-  release_smoke:
-    permissions:
-      contents: read
-      id-token: write
-    name: Release Smoke
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.release_smoke != 'false' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          sparse-checkout: |
-            /*
-            !/.repos/
-            !/apps/mobile/modules/t2-terminal/Vendor/**/*.a
-          sparse-checkout-cone-mode: false
-
-      - name: Setup Vite+
-        uses: ./.github/actions/setup-ci-deps
-        with:
-          task-cache-read-token: ${{ secrets.T2_TASK_CACHE_READ_TOKEN }}
-
-      - name: Exercise release-only workflow steps
-        run: node scripts/release-smoke.ts
-
   # Branch protection requires this job by its name, `Check`. It fails when any
   # other job fails, is cancelled, or is skipped without a reason, so splitting
   # or resharding jobs needs no ruleset change. Add every new job to `needs`.
@@ -599,18 +593,7 @@ jobs:
   check:
     name: Check
     if: ${{ always() }}
-    needs:
-      [
-        changes,
-        lint,
-        build,
-        test,
-        test_web,
-        test_server,
-        rust,
-        mobile_native_static_analysis,
-        release_smoke,
-      ]
+    needs: [changes, lint, build, test, test_web, test_server, rust, mobile_native_static_analysis]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -620,10 +603,10 @@ jobs:
         run: |
           echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
           # A job may skip only when `changes` said every gate it represents was
-          # not needed. Gates are keyed by job name, except merged Build and the
-          # macOS lint.
+          # not needed. Gates are keyed by job name, except merged Build, merged
+          # Rust + Release Smoke, and the macOS lint.
           echo "$RESULTS" | jq -e '.changes.outputs as $gates
-            | {build: ["build", "typecheck"], mobile_native_static_analysis: ["mobile_native"]} as $renamed
+            | {build: ["build", "typecheck"], rust: ["rust", "release_smoke"], mobile_native_static_analysis: ["mobile_native"]} as $renamed
             | all(to_entries[];
                 .value.result == "success"
                 or (.value.result == "skipped"
