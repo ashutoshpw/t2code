@@ -7,7 +7,6 @@ import {
   type ScopedThreadRef,
   type ServerProviderModel,
 } from "@t2code/contracts";
-import type { EffortDisplay } from "@t2code/contracts/settings";
 import {
   buildExplicitProviderOptionSelectionsFromDescriptors,
   getProviderOptionCurrentValue,
@@ -15,7 +14,6 @@ import {
   isClaudeUltrathinkPrompt,
   normalizeModelSlug,
 } from "@t2code/shared/model";
-import type { ReactNode } from "react";
 
 import type { DraftId } from "../../composerDraftStore";
 import { getProviderModelCapabilities } from "../../providerModels";

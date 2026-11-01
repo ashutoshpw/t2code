@@ -783,6 +783,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           logWebSocketEvents: Option.none(),
           tailscaleServeEnabled: Option.none(),
           tailscaleServePort: Option.none(),
+          lan: Option.none(),
         },
         Option.none(),
       ).pipe(
@@ -981,7 +982,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       }),
   );
 
-  it.effect("listens on private networks per T3CODE_LAN, else under the service launcher", () =>
+  it.effect("listens on private networks per T2CODE_LAN, else under the service launcher", () =>
     Effect.gen(function* () {
       const { join } = yield* Path.Path;
       const baseDir = join(NodeOS.tmpdir(), "t3-cli-config-service-host");
@@ -1011,7 +1012,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           }),
         );
 
-      // A service installed before T3CODE_LAN existed.
+      // A service installed before T2CODE_LAN existed.
       expect(yield* resolveHost({ connected: true })).toEqual({
         host: "0.0.0.0",
         privateNetworkOnly: true,
@@ -1021,11 +1022,11 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         host: "127.0.0.1",
         privateNetworkOnly: undefined,
       });
-      expect(yield* resolveHost({ connected: true, env: { T3CODE_LAN: "false" } })).toEqual({
+      expect(yield* resolveHost({ connected: true, env: { T2CODE_LAN: "false" } })).toEqual({
         host: undefined,
         privateNetworkOnly: undefined,
       });
-      expect(yield* resolveHost({ connected: false, env: { T3CODE_LAN: "true" } })).toEqual({
+      expect(yield* resolveHost({ connected: false, env: { T2CODE_LAN: "true" } })).toEqual({
         host: "0.0.0.0",
         privateNetworkOnly: true,
       });

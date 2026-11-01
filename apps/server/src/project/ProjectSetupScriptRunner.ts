@@ -1,5 +1,4 @@
 import { linkOriginIsFenced, ProjectId, type ProjectScript, ThreadId } from "@t2code/contracts";
-import * as HostProcess from "@t2code/shared/HostProcess";
 import {
   projectScriptRuntimeEnv,
   projectScriptTerminalInput,

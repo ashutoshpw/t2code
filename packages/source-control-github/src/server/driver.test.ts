@@ -34,11 +34,11 @@ describe("starred", () => {
       const star = yield* makeStarRepository;
       assert.isTrue(yield* isStarred("github.com", "pingdotgg/t3code"));
       assert.isFalse(yield* isStarred("github.com", "pingdotgg/uploadthing"));
-      assert.isFalse(yield* isStarred("github.com", "pingdotgg/t3code/../../user"));
+      assert.isFalse(yield* isStarred("github.com", "pingdotgg/t2code/../../user"));
       assert.isFalse(yield* isStarred("github.com", "../repos"));
-      assert.isTrue(yield* star("github.com", "pingdotgg/t3code"));
+      assert.isTrue(yield* star("github.com", "pingdotgg/t2code"));
       assert.isFalse(yield* star("github.com", "pingdotgg/uploadthing"));
-      assert.isFalse(yield* star("github.com", "pingdotgg/t3code/../../user"));
+      assert.isFalse(yield* star("github.com", "pingdotgg/t2code/../../user"));
       assert.isFalse(yield* star("github.com", "../repos"));
       assert.deepStrictEqual(paths, [
         "GET user/starred/pingdotgg/t3code",

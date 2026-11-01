@@ -21,13 +21,14 @@ const RUNS_EVERYTHING = [
 // Includes cross-package reads absent from package.json dependencies.
 const EXTRA_OWNERS = [
   // Vite configs and tsconfigs of these apps import scripts/lib directly.
-  [/^scripts\/lib\//, ["@t2code/desktop", "@t2code/mobile", "@t2code/web", "@t2code/cli"]],  // scripts/build-desktop-artifact.ts reads the GNOME extension manifest.
+  [/^scripts\/lib\//, ["@t2code/desktop", "@t2code/mobile", "@t2code/web", "@t2code/cli"]],
+  // scripts/build-desktop-artifact.ts reads the GNOME extension manifest.
   [/^apps\/desktop\/gnome-extension\//, ["@t2code/scripts"]],
   [/^native\/browser-secret\//, ["@t2code/desktop"]],
   [/^native\/kde-snap-shot\//, ["@t2code/desktop"]],
   [/^native\/libghostty-vt\//, ["@t2code/web"]],
   // apps/server/src/cloud/ConnectReachability.test.ts checks the guide's headings.
-  [/^docs\/user\/t2-connect-troubleshooting\.md$/, ["t2"]],
+  [/^docs\/user\/t2-connect-troubleshooting\.md$/, ["@t2code/cli"]],
 ];
 const RUST = /^native\/(resource-monitor|kde-snap-shot|hyprland-snap-shot)\//;
 

@@ -42,7 +42,7 @@ const make = Effect.gen(function* () {
   const spaces = yield* Effect.serviceOption(SpacesService.SpacesService);
   const statusRef = yield* SubscriptionRef.make<DatabaseStorageStatus | null>(null);
 
-  // The notice shows host-shell quoting verbatim; desktop needs its launcher because t3 is absent from PATH.
+  // The notice shows host-shell quoting verbatim; desktop needs its launcher because t2 is absent from PATH.
   const { command: compactCommand } = yield* resolveHostCliCommand("doctor", [
     "--base-dir",
     config.baseDir,

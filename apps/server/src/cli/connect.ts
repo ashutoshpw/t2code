@@ -9,7 +9,6 @@ import {
   type RelayClientInstallProgressStage,
 } from "@t2code/contracts";
 import { RelayOkResponse } from "@t2code/contracts/relay";
-import * as HostProcess from "@t2code/shared/HostProcess";
 import * as RelayClient from "@t2code/shared/relayClient";
 import { withRelayClientTracing } from "@t2code/shared/relayTracing";
 import * as Cause from "effect/Cause";
@@ -90,7 +89,7 @@ function formatDeviceAuthorizationPrompt(
 ): string {
   const minutes = Math.max(1, Math.round(Duration.toMinutes(prompt.expiresIn)));
   return [
-    "Sign in to T3 Connect. Open on any device:",
+    "Sign in to T2 Connect. Open on any device:",
     `  ${prompt.verificationUriComplete ?? prompt.verificationUri}`,
     `Code: ${prompt.userCode}`,
     `Waiting for approval. Expires in ${minutes} min. Ctrl+C cancels.`,
@@ -367,14 +366,14 @@ function formatAlertBox(text: string): string {
  * can reach it, so a broken tunnel fails setup instead of looking green.
  */
 export const waitForReachability = Effect.fn("cloud.cli.wait_for_reachability")(function* () {
-  yield* Console.log("Checking T3 Connect...");
+  yield* Console.log("Checking T2 Connect...");
   const deadline =
     (yield* Clock.currentTimeMillis) + Duration.toMillis(CLOUD_CLI_REACHABILITY_WAIT);
   let last: EnvironmentConnectReachability | null = null;
   while (true) {
     last = (yield* checkLiveReachability()) ?? last;
     if (last?.status === "reachable") {
-      yield* Console.log("✓ T3 Connect is reachable.");
+      yield* Console.log("✓ T2 Connect is reachable.");
       return;
     }
     if ((yield* Clock.currentTimeMillis) >= deadline) break;
@@ -570,7 +569,7 @@ function formatRelayClientReady(version: string): string {
 const linkEnvironmentForConnect = Effect.fn("cloud.cli.link_environment")(function* (options: {
   readonly headless: boolean;
   readonly publishOnly?: boolean;
-  /** For `t3 up`, where the user already chose T3 Connect: install it quietly, without asking. */
+  /** For `t2 up`, where the user already chose T2 Connect: install it quietly, without asking. */
   readonly installRelayClient?: boolean;
 }) {
   const publishOnly = options.publishOnly ?? false;
@@ -582,7 +581,7 @@ const linkEnvironmentForConnect = Effect.fn("cloud.cli.link_environment")(functi
       options.installRelayClient === true
         ? (event) =>
             event.type === "progress" && event.stage === "downloading"
-              ? Console.log("Installing the T3 Connect relay client...")
+              ? Console.log("Installing the T2 Connect relay client...")
               : Effect.void
         : reportRelayClientInstallProgress,
     );

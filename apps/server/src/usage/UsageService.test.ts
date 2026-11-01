@@ -30,6 +30,7 @@ import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Context from "effect/Context";
+import * as DateTime from "effect/DateTime";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Scheduler from "effect/Scheduler";
@@ -77,7 +78,7 @@ function claudeLine(
 ): string {
   return `${JSON.stringify({
     type: "assistant",
-    timestamp: "2026-08-01T10:00:00Z",
+    timestamp,
     requestId: `req_${id}`,
     sessionId,
     message: {
@@ -239,6 +240,7 @@ function totalOutputTokens(summary: { buckets: readonly { totals: { outputTokens
 
 const CURSOR_NOW = Date.parse("2026-08-02T12:00:00Z");
 const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 function makeFakeCursor() {
   const state = {
@@ -3069,26 +3071,36 @@ describe("UsageService", () => {
       // Saved usage is pruned after the retention window, so pin "now" near the write.
       yield* TestClock.setTime(Date.parse("2026-08-15T00:00:00Z"));
       yield* Effect.promise(async () => {
-        await NodeFSP.writeFile(transcript, claudeLine(1, 5));
-        const lastWrite = Date.parse("2026-08-01T10:00:00Z") / 1000;
-        await NodeFSP.utimes(transcript, lastWrite, lastWrite);
+        await NodeFSP.writeFile(
+          transcript,
+          claudeLine(1, 5, "claude-fable-5", DateTime.formatIso(DateTime.makeUnsafe(savedAtMs))),
+        );
+        await NodeFSP.utimes(transcript, savedAtMs / 1000, savedAtMs / 1000);
       });
       const service = yield* UsageService.make.pipe(
         Effect.provide(layerService({ prefix: "usage-service-saved-window-test", home, settings })),
       );
-      const first = yield* service.readSummary(WINDOW);
+      const first = yield* service.readSummary({
+        timeZone: "UTC",
+        sinceDay: dayAt(0),
+        untilDay: dayAt(1),
+      });
       yield* Effect.promise(() =>
         NodeFSP.rm(NodePath.join(home, "claude", "projects"), { recursive: true }),
       );
 
-      const reached = yield* service.readSummary(WINDOW);
+      const reached = yield* service.readSummary({
+        timeZone: "UTC",
+        sinceDay: dayAt(0),
+        untilDay: dayAt(1),
+      });
       assert.deepStrictEqual(reached.buckets, first.buckets);
       assert.strictEqual(reached.sources[0]?.status, "ok");
 
       const later = yield* service.readSummary({
         timeZone: "UTC",
-        sinceDay: UsageDay.make("2026-08-10"),
-        untilDay: UsageDay.make("2026-08-12"),
+        sinceDay: dayAt(9),
+        untilDay: dayAt(11),
       });
       assert.deepStrictEqual(later.buckets, []);
       assert.strictEqual(later.sources[0]?.status, "missing");

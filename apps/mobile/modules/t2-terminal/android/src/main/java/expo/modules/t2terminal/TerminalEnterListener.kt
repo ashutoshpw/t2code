@@ -1,4 +1,4 @@
-package expo.modules.t3terminal
+package expo.modules.t2terminal
 
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo

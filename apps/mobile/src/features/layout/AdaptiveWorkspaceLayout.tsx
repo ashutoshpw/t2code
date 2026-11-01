@@ -156,7 +156,6 @@ export function Inspector(props: {
     deactivateRef.current = registerWorkspaceInspector(content, route?.key, props.revealKey);
   });
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Navigation focus events own the inspector registration lifetime.
   useEffect(() => {
     if (navigation === undefined) return;
     const focus = () => {

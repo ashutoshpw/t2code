@@ -1,6 +1,5 @@
 import { projectChangeRequestUrl } from "@t2code/client-runtime/change-request-links";
 import { normalizeThreadPullRequestKey } from "@t2code/client-runtime/thread-pull-requests";
-import { changeRequestReferenceAutolinker } from "@t2code/client-runtime/pull-request-markdown";
 import { useAtomValue } from "@effect/atom-react";
 import { usePullRequestStack } from "~/state/usePullRequestStack";
 import {

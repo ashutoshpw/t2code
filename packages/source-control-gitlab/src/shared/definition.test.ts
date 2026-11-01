@@ -37,7 +37,7 @@ describe("GitLab change request URLs", () => {
       "https://gitlab.com/g/p#/-/merge_requests/5",
       "https://gitlab.com?x=/g/p/-/merge_requests/5",
       "https://gitlab.com#/g/p/-/merge_requests/5",
-      "https://gitlab.com/t3code/-/merge_requests/12",
+      "https://gitlab.com/t2code/-/merge_requests/12",
       "https://gitlab.com/g//-/merge_requests/5",
     ]) {
       expect(definition.isChangeRequestReference(url), url).toBe(false);
