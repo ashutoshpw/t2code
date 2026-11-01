@@ -93,6 +93,8 @@ vi.mock("../state/session", async (original) => ({
   ...(await original<typeof import("../state/session")>()),
   useEnvironmentScope: (_environmentId: unknown, scope: string) => scope !== scopes.denied,
   readEnvironmentScope: () => true,
+  // Spaces listing reads the scope set directly; the palette tests do not exercise it.
+  useEnvironmentsWithScope: () => new Set(),
 }));
 vi.mock("../state/filesystem", async (original) => ({
   ...(await original<typeof import("../state/filesystem")>()),
