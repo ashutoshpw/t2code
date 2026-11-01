@@ -44,7 +44,7 @@ import * as AcpRegistrySupport from "@t2code/provider-acp-registry/server/AcpReg
 import * as AcpRegistryRuntimeCoordinator from "@t2code/provider-acp-registry/server/AcpRegistryRuntimeCoordinator";
 import { ACP_SESSION_MODE_OPTION_ID } from "@t2code/provider-acp/server/sessionConfig";
 import * as AcpSessionRuntime from "@t2code/provider-acp/server/AcpSessionRuntime";
-import { t3AcpPromptWithInstructions } from "@t2code/provider-core/server/orchestrationInstructions";
+import { t2AcpPromptWithInstructions } from "@t2code/provider-core/server/orchestrationInstructions";
 import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
 import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import {
@@ -1119,7 +1119,7 @@ describe("AcpRegistryAdapterV2", () => {
     }).pipe(Effect.provide(layerTest), Effect.scoped),
   );
 
-  it.effect("gives Copilot T3's MCP server over HTTP when it advertises HTTP", () =>
+  it.effect("gives Copilot T2's MCP server over HTTP when it advertises HTTP", () =>
     Effect.gen(function* () {
       const selfInvocation = yield* resolveSelfInvocation();
       const mockAgentPath = yield* (yield* Path.Path).fromFileUrl(
@@ -1163,7 +1163,7 @@ describe("AcpRegistryAdapterV2", () => {
                   spawn: {
                     command: process.execPath,
                     args: [mockAgentPath],
-                    env: { T3_ACP_SESSION_LIFECYCLE: "1", ...agentEnvironment },
+                    env: { T2_ACP_SESSION_LIFECYCLE: "1", ...agentEnvironment },
                   },
                 }),
             }),
@@ -1208,33 +1208,33 @@ describe("AcpRegistryAdapterV2", () => {
       const http = (authorization: string) => [
         {
           type: "http",
-          name: "t3-code",
+          name: "t2-code",
           url: endpoint,
           headers: [{ name: "Authorization", value: authorization }],
         },
       ];
       const stdio = (authorization: string) => [
         {
-          name: "t3-code",
+          name: "t2-code",
           command: selfInvocation.command,
           args: [...selfInvocationArgs(selfInvocation, ["acp-mcp-bridge"])],
           env: [
             { name: "ELECTRON_RUN_AS_NODE", value: "1" },
-            { name: "T3_ACP_MCP_ENDPOINT", value: endpoint },
-            { name: "T3_ACP_MCP_AUTHORIZATION", value: authorization },
+            { name: "T2_ACP_MCP_ENDPOINT", value: endpoint },
+            { name: "T2_ACP_MCP_AUTHORIZATION", value: authorization },
           ],
         },
       ];
 
       assert.deepEqual(
-        yield* sessionMcpServers({ agentId: "github-copilot-cli" }, { T3_ACP_MCP_HTTP: "1" }),
+        yield* sessionMcpServers({ agentId: "github-copilot-cli" }, { T2_ACP_MCP_HTTP: "1" }),
         { new: http("Bearer opened-token"), load: http("Bearer rotated-token") },
       );
-      const acp = [{ type: "acp", name: "t3-code", serverId: "t3-code" }];
+      const acp = [{ type: "acp", name: "t2-code", serverId: "t2-code" }];
       assert.deepEqual(
         yield* sessionMcpServers(
           { agentId: "github-copilot-cli" },
-          { T3_ACP_MCP_HTTP: "1", T3_ACP_MCP_ACP: "1" },
+          { T2_ACP_MCP_HTTP: "1", T2_ACP_MCP_ACP: "1" },
         ),
         { new: acp, load: acp },
       );
@@ -1242,7 +1242,7 @@ describe("AcpRegistryAdapterV2", () => {
         new: stdio("Bearer opened-token"),
         load: stdio("Bearer rotated-token"),
       });
-      assert.deepEqual(yield* sessionMcpServers({ agentId: "gemini" }, { T3_ACP_MCP_HTTP: "1" }), {
+      assert.deepEqual(yield* sessionMcpServers({ agentId: "gemini" }, { T2_ACP_MCP_HTTP: "1" }), {
         new: stdio("Bearer opened-token"),
         load: stdio("Bearer rotated-token"),
       });
@@ -1341,9 +1341,9 @@ describe("AcpRegistryAdapterV2", () => {
             type: "text",
             text:
               ordinal === 1
-                ? t3AcpPromptWithInstructions({
+                ? t2AcpPromptWithInstructions({
                     prompt: "test prompt",
-                    state: { interactionMode: "default", hasT3Mcp: false, hasDeviceTools: false },
+                    state: { interactionMode: "default", hasT2Mcp: false, hasDeviceTools: false },
                   })
                 : "test prompt",
           },

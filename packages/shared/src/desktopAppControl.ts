@@ -34,7 +34,8 @@ export function resolveDesktopAppControlAddress(input: {
   let directory = input.joinPath(input.tempDir, `t2code-${userKey}`);
   if (new TextEncoder().encode(input.joinPath(directory, socketName)).byteLength > maxPathBytes) {
     directory = input.joinPath("/tmp", `t2code-${userKey}`);
-  }  return {
+  }
+  return {
     address: input.joinPath(directory, socketName),
     directory,
   };

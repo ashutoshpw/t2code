@@ -1165,7 +1165,7 @@ effectIt.effect(
                 yield* git(worktreePath, ["rev-parse", "--symbolic-full-name", "@{upstream}"]),
               ).toBe(expected.upstream);
             }
-            expect(yield* branchConfig("t3-merge-base")).toBe(expected.base);
+            expect(yield* branchConfig("t2-merge-base")).toBe(expected.base);
             return yield* open();
           }).pipe(Effect.orDie),
         );

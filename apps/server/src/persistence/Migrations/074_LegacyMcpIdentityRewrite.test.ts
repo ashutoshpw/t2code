@@ -44,10 +44,10 @@ it("rewrites recorded MCP identities and leaves everything else alone", () => {
   }
 
   const untouched = [
-    "/home/dev/t3code/apps/server",
+    "/home/dev/t2code/apps/server",
     "Checkout pingdotgg/t3code and rebrand it.",
     "The t3code repository keeps its own history.",
-    "https://github.com/t3code/t3code",
+    "https://github.com/t2code/t3code",
     "mcp__github__search_issues",
     "t2-code.t2_thread_send",
     "mcp__t2-code__t2_thread_send",

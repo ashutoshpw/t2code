@@ -965,29 +965,6 @@ export type RelayOkResponse = typeof RelayOkResponse.Type;
 
 export const DEFAULT_MANAGED_TUNNEL_LIMIT = 3;
 
-// A linked paid T3 Chat plan raises the default managed tunnel cap.
-export const T3CHAT_PLAN_TUNNEL_LIMITS = { pro: 10, premier: 100 } as const;
-
-export const RelayT3ChatLink = Schema.Struct({
-  email: Schema.String,
-  plan: RelayT3ChatPlan,
-});
-export type RelayT3ChatLink = typeof RelayT3ChatLink.Type;
-
-export const RelayT3ChatLinkResponse = Schema.Struct({
-  // False when this relay has no T3 Chat secret, so clients hide the feature.
-  available: Schema.Boolean,
-  link: Schema.NullOr(RelayT3ChatLink),
-  // A manual cap that replaces the plan's; T3 Chat upgrades do not raise it.
-  maxTunnelsOverride: Schema.optionalKey(Schema.Number),
-});
-export type RelayT3ChatLinkResponse = typeof RelayT3ChatLinkResponse.Type;
-
-export const RelayT3ChatLinkRequestResponse = Schema.Struct({
-  url: TrimmedNonEmptyString,
-});
-export type RelayT3ChatLinkRequestResponse = typeof RelayT3ChatLinkRequestResponse.Type;
-
 export const RelayEnvironmentLabelUpdateRequest = Schema.Struct({
   label: TrimmedNonEmptyString,
 });

@@ -460,8 +460,8 @@ it.effect("sends a self-hosted Bitbucket remote nowhere unless an API base url i
       remoteUrl,
     };
     const cloudEnv = {
-      T3CODE_BITBUCKET_EMAIL: "user@example.com",
-      T3CODE_BITBUCKET_API_TOKEN: "t",
+      T2CODE_BITBUCKET_EMAIL: "user@example.com",
+      T2CODE_BITBUCKET_API_TOKEN: "t",
     };
     const response = (request: HttpClientRequest.HttpClientRequest) =>
       Response.json(request.url.endsWith("/branching-model") ? {} : repositoryJson);

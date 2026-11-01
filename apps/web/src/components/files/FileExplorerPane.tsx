@@ -33,9 +33,9 @@ export function FileExplorerPane({
   const [maxWidth, setMaxWidth] = useState(MAX_WIDTH);
   const [responsiveDefaultWidth, setResponsiveDefaultWidth] = useState(defaultWidth);
   const { width, setWidth, handlers } = useResizableWidth({
-    storageKey: "t2code.fileExplorerWidth",
-    defaultWidth: 256,
-    minWidth: MIN_WIDTH,
+    storageKey,
+    defaultWidth: responsiveDefaultWidth,
+    minWidth,
     maxWidth,
     edge: "left",
   });

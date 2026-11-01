@@ -38,7 +38,7 @@ import { AgentScope, AgentScopeThreadId } from "@t2code/shared/AgentScope";
 import { HTML_RENDER_TOOL_NAME } from "@t2code/shared/htmlRender";
 import { modelSelectionsEqual } from "@t2code/shared/model";
 import { type SelfInvocation, selfInvocationArgs } from "@t2code/shared/nodeRuntime";
-import { resolveT3McpToolId } from "@t2code/shared/t3McpToolPresentation";
+import { resolveT2McpToolId } from "@t2code/shared/t2McpToolPresentation";
 import {
   compactDynamicToolOutput,
   htmlRenderFromToolItem,

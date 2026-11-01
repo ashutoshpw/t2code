@@ -1123,7 +1123,7 @@ describe("CodexAdapterV2 session initialize", () => {
               frame: {
                 id: 1,
                 result: {
-                  userAgent: "T3 Code/0.144.3 (Mac OS 15.5.0; x86_64) unknown (T3 Code; 0.1.5)",
+                  userAgent: "T2 Code/0.144.3 (Mac OS 15.5.0; x86_64) unknown (T2 Code; 0.1.5)",
                   codexHome: "/tmp/codex-home",
                   platformFamily: "unix",
                   platformOs: "macos",
@@ -1147,7 +1147,7 @@ describe("CodexAdapterV2 session initialize", () => {
       assert.instanceOf(failure.cause, ProviderSetupError);
       assert.equal(
         failure.cause.message,
-        "Codex 0.144.3 does not work with this T3 Code release. Update Codex to >=0.159.0, then retry.",
+        "Codex 0.144.3 does not work with this T2 Code release. Update Codex to >=0.159.0, then retry.",
       );
     }).pipe(
       Effect.scoped,

@@ -646,7 +646,7 @@ const make = Effect.gen(function* () {
       const { frameTree } = await tab.cdp.send("Page.getFrameTree");
       const { executionContextId } = await tab.cdp.send("Page.createIsolatedWorld", {
         frameId: frameTree.frame.id,
-        worldName: "t3-preview-viewport",
+        worldName: "t2-preview-viewport",
       });
       const { result } = await tab.cdp.send("Runtime.evaluate", {
         expression: "({ width: innerWidth, height: innerHeight })",

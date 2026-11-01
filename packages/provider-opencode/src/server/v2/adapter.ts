@@ -60,7 +60,7 @@ import * as OpenCodeRuntime from "../OpenCodeRuntime.ts";
 import { readableProviderErrorMessage } from "../providerErrorMessage.ts";
 import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
 import { buildRuntimeInstructions } from "@t2code/provider-core/server/runtimeInstructions";
-import { t3OrchestrationSystemPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
+import { t2OrchestrationSystemPrompt } from "@t2code/provider-core/server/orchestrationInstructions";
 import { SKILL_MENTION_PATTERN } from "@t2code/shared/composerInlineTokens";
 import { compareSemverVersions } from "@t2code/shared/semver";
 import * as KeyedLock from "@t2code/shared/KeyedLock";

@@ -138,12 +138,12 @@ directory and pair with the running server.
 
 ### macOS app does not reopen after an Alpha update
 
-Updating an older **T3 Code (Alpha)** installation can replace it with
-**T3 Code (Beta)** without reopening the app. Open **T3 Code (Beta)** from
+Updating an older **T2 Code (Alpha)** installation can replace it with
+**T2 Code (Beta)** without reopening the app. Open **T2 Code (Beta)** from
 Applications, or run:
 
 ```sh
-open "/Applications/T3 Code (Beta).app"
+open "/Applications/T2 Code (Beta).app"
 ```
 
 If an old Dock shortcut no longer opens the app, remove it and add the Beta app
@@ -159,12 +159,12 @@ details** to include the error in a bug report.
 
 ## Registries and proxies
 
-Each server checks T3 Code releases, and providers installed with npm, through
+Each server checks T2 Code releases, and providers installed with npm, through
 its own npm, so the checks use npm's configured registry, authentication, and
 proxy settings. Providers installed with Homebrew or pnpm check through those
 tools.
 Configure npm on the server's machine. If that registry cannot be reached, the
-release shows as unavailable; T3 Code does not try the public registry instead.
+release shows as unavailable; T2 Code does not try the public registry instead.
 Machines without npm check the public npm registry directly.
 
 ## Update providers
