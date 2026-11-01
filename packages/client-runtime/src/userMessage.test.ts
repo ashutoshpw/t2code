@@ -85,7 +85,7 @@ describe("resolveUserMessageFileCards", () => {
     attachmentId: file.id,
   };
   const context = { version: 1 as const, records: [record] };
-  const reference = "[report.pdf](t3-context://v1/file/report)";
+  const reference = "[report.pdf](t2-context://v1/file/report)";
 
   it("shows file cards for bare attachments and bound file references", () => {
     for (const text of ["", " \n", reference]) {
@@ -103,8 +103,8 @@ describe("resolveUserMessageFileCards", () => {
   it("keeps words and unavailable or non-file references in the bubble", () => {
     for (const text of [
       `read ${reference}`,
-      "[missing.pdf](t3-context://v1/file/missing)",
-      "[report.pdf](t3-context://v1/mention/report)",
+      "[missing.pdf](t2-context://v1/file/missing)",
+      "[report.pdf](t2-context://v1/mention/report)",
     ]) {
       expect(resolveUserMessageFileCards({ text, attachments: [file], context })).toBeNull();
     }

@@ -76,6 +76,9 @@ function menu() {
     selectedProviderSkills: [],
     selectedProviderSlashCommands: [],
     showSkillsInSlashMenu: false,
+    sideChatAvailable: false,
+    sideChatDisabledReason: null,
+    workspaceSkillsScanning: false,
     questionAttachmentTarget: null,
   });
 }

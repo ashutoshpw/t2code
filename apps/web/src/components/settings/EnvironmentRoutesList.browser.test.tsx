@@ -44,7 +44,7 @@ function direct(id: string, httpBaseUrl: string): ConnectionRoute {
   };
 }
 
-const LAN = direct("lan", "http://192.168.1.10:3773/");
+const LAN = direct("lan", "http://192.168.1.10:3772/");
 const TAILNET = direct("tailnet", "https://desk.tail1234.ts.net/");
 const PUBLIC = direct("public", "https://desk.example.com/");
 

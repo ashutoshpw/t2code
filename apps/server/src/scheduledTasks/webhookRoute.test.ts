@@ -267,7 +267,7 @@ describe("webhook route", () => {
       );
       expect(response.status).toBe(405);
       expect(response.headers.get("allow")).toBe("GET, POST, PUT, PATCH");
-      expect(response.headers.get("x-t3-hook-outcome")).toBe("method_not_allowed");
+      expect(response.headers.get("x-t2-hook-outcome")).toBe("method_not_allowed");
       expect(calls).toBe(0);
       const get = await handler(new Request("http://env.local/api/hooks/id/tok"));
       expect(get.status).toBe(202);

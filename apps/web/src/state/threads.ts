@@ -15,6 +15,7 @@ import {
 import type { EnvironmentId, OrchestrationV2ThreadShell, ThreadId } from "@t2code/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";
+import { useEffect } from "react";
 
 import { environmentCatalog } from "../connection/catalog";
 import { connectionAtomRuntime } from "../connection/runtime";

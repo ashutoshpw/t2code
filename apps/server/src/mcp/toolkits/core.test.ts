@@ -1029,7 +1029,7 @@ it.effect("only the caller that prepared a pending upload can discard it", () =>
 );
 
 it.effect(
-  "t3_thread_list settled:false with an empty statuses list lists the unsettled threads",
+  "t2_thread_list settled:false with an empty statuses list lists the unsettled threads",
   () => {
     const unsettled = McpToolAccessTestkit.liveThreadShell(ThreadId.make("unsettled-thread"));
     const settled = {
@@ -1040,7 +1040,7 @@ it.effect(
       const server = yield* McpServer.McpServer;
       const result = yield* server
         .callTool({
-          name: "t3_thread_list",
+          name: "t2_thread_list",
           arguments: { projectId: unsettled.projectId, settled: false, statuses: [] },
         })
         .pipe(

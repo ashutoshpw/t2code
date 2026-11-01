@@ -394,7 +394,7 @@ export const make = Effect.gen(function* () {
       // Announcing the tab again would reconnect Playwright, and the page could
       // replay the same oversized event, so the tab stays detached.
       () => {
-        if (tab.relay !== relay || tabs.get(keyOf(tab.key)) !== tab) return;
+        if (tab.relay !== relay || tabs.get(tabIdOf(tab)) !== tab) return;
         // Disabling auto-attach detaches child sessions and releases their debugger pauses.
         void debuggee
           .sendCommand("Target.setAutoAttach", {

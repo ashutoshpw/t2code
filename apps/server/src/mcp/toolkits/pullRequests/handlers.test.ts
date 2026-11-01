@@ -548,13 +548,13 @@ describe("pull request toolkit handlers", () => {
       const harness = yield* makeHarness({
         thread: makeThread([makeLink(1), { ...makeLink(2), source: "stack-dismissed" }]),
       });
-      const url = (number: number) => `https://github.com/t3tools/t3code/pull/${number}`;
+      const url = (number: number) => `https://github.com/t2tools/t2code/pull/${number}`;
       const result = yield* harness.call("link_pull_requests", {
         urls: [url(1), url(2), url(3), url(3), "https://example.com/not-a-pr"],
       });
       expect(result).toEqual({
-        linked: [{ host: "github.com", repository: "t3tools/t3code", numbers: [2, 3] }],
-        alreadyLinked: [{ host: "github.com", repository: "t3tools/t3code", numbers: [1] }],
+        linked: [{ host: "github.com", repository: "t2tools/t2code", numbers: [2, 3] }],
+        alreadyLinked: [{ host: "github.com", repository: "t2tools/t2code", numbers: [1] }],
         linkedCount: 3,
         invalidUrls: ["https://example.com/not-a-pr"],
       });
@@ -585,8 +585,8 @@ describe("pull request toolkit handlers", () => {
       });
       expect(result).toEqual({
         unlinked: [
-          { host: "github.com", repository: "t3tools/t3code", state: "merged", numbers: [1] },
-          { host: "github.com", repository: "t3tools/t3code", state: "closed", numbers: [3] },
+          { host: "github.com", repository: "t2tools/t2code", state: "merged", numbers: [1] },
+          { host: "github.com", repository: "t2tools/t2code", state: "closed", numbers: [3] },
         ],
         unlinkedCount: 2,
         remaining: 2,

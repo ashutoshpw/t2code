@@ -1242,7 +1242,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "T2 Connect",
     to: "/settings/access",
     targetId: "connections-environment",
-    searchTerms: ["managed tunnel cloud other devices remote tunnels limit t3 chat"],
+    searchTerms: ["managed tunnel cloud other devices remote tunnels limit"],
     desktopOnly: true,
     cloudOnly: true,
   },

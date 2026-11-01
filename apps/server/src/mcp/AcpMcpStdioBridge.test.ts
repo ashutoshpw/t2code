@@ -50,8 +50,8 @@ describe("AcpMcpStdioBridge", () => {
     };
     process.env = {
       ...originalEnvironment,
-      T3_ACP_MCP_ENDPOINT: "http://127.0.0.1:1/mcp",
-      T3_ACP_MCP_AUTHORIZATION: "Bearer bridge-test",
+      T2_ACP_MCP_ENDPOINT: "http://127.0.0.1:1/mcp",
+      T2_ACP_MCP_AUTHORIZATION: "Bearer bridge-test",
     };
     const structuredContent = { taskId: "task-1", status: "failed" };
     const explanation = { type: "text", text: "The command failed." };

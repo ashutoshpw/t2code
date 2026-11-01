@@ -3,11 +3,17 @@ import * as NodePath from "node:path";
 import { assert, it } from "@effect/vitest";
 import { PNG } from "pngjs";
 
-import {
+import showcaseConfig, {
   SHOWCASE_THEMES,
   resolveShowcaseAndroidAbi,
+  type ShowcaseConfig,
   type ShowcaseStoreAssetSpec,
 } from "./mobile-showcase.config.ts";
+import {
+  SHOWCASE_ENVIRONMENTS,
+  SHOWCASE_PROJECTS,
+  SHOWCASE_THREADS,
+} from "./mobile-showcase-environment.ts";
 import {
   encodeAndroidPairingUrls,
   normalizeStorePng,
@@ -51,7 +57,7 @@ const config: ShowcaseConfig = {
       platform: "ios",
       simulator: "iPhone Test",
       appearance: "dark",
-      theme: "t3-code",
+      theme: "t2-code",
       scenes: ["thread", "review"],
       storeAsset: appleSpec,
     },
@@ -60,7 +66,7 @@ const config: ShowcaseConfig = {
       platform: "android",
       avd: "Pixel_Test",
       appearance: "light",
-      theme: "t3-code",
+      theme: "t2-code",
       scenes: ["thread", "terminal"],
       storeAsset: googleSpec,
     },
@@ -161,11 +167,11 @@ it("expands both appearances into independent upload-ready directories", () => {
     [
       {
         appearance: "light",
-        directory: NodePath.join("/captures", "apple", "iphone-test", "light", "t3-code"),
+        directory: NodePath.join("/captures", "apple", "iphone-test", "light", "t2-code"),
       },
       {
         appearance: "dark",
-        directory: NodePath.join("/captures", "apple", "iphone-test", "dark", "t3-code"),
+        directory: NodePath.join("/captures", "apple", "iphone-test", "dark", "t2-code"),
       },
     ],
   );

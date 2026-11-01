@@ -349,7 +349,9 @@ interface WorkspaceProjects {
 const sharedProjectReads = Context.Reference<{
   open: boolean;
   readonly reads: Map<string, Effect.Effect<WorkspaceProjects, PullRequestError>>;
-} | null>("t3/PullRequestService/sharedProjectReads", { defaultValue: () => null });
+} | null>("@t2code/cli/pullRequest/PullRequestService/sharedProjectReads", {
+  defaultValue: () => null,
+});
 
 interface RepositoryBatch {
   readonly key: string;
