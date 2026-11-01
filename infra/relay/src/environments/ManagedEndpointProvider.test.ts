@@ -382,10 +382,13 @@ function makeTunnelLimits(
   result: ManagedTunnelLimits.ManagedTunnelLimitExceeded | null = null,
 ) {
   return ManagedTunnelLimits.ManagedTunnelLimits.of({
-    ensureCapacity: (input) =>
-      Effect.suspend(() => {
+    withCapacity: (input, reserve) =>
+      Effect.gen(function* () {
         calls.push(input);
-        return result === null ? Effect.void : Effect.fail(result);
+        if (result !== null) {
+          return yield* result;
+        }
+        return yield* reserve;
       }),
     getOverride: () => Effect.die("unused"),
   });
@@ -1053,7 +1056,7 @@ describe("ManagedEndpointProvider", () => {
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
       yield* provider.provision({
         ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3773 },
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
       });
       expect(yield* provider.release({ ...key, markReleased: true })).toBe(true);
       expect((yield* allocations.get(key))?.tunnelReleasedAt).toBe("2026-06-02T00:00:00.000Z");
