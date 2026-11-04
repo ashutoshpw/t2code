@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  addedLinesFromDiff,
   collectBaselineEntries,
   findUncoveredT3References,
   findViolations,
@@ -118,6 +119,19 @@ describe("check-rebrand", () => {
       EMPTY_BASELINE,
     );
     expect(violations.map((v) => v.rule.id)).toEqual(["t2-sentinel"]);
+  });
+
+  it("decodes git's C-quoted diff paths, octal bytes included", () => {
+    const diff = [
+      'diff --git a/x b/"p\\342\\231\\253 dir/x.ts"',
+      "index 0000000..1111111 100644",
+      "--- /dev/null",
+      '+++ "b/p\\342\\231\\253 dir/x.ts"',
+      '+const brand = "T2 Code";',
+    ].join("\n");
+    expect(addedLinesFromDiff(diff)).toEqual([
+      { file: "p♫ dir/x.ts", line: 'const brand = "T2 Code";' },
+    ]);
   });
 
   it("flags T3-named paths once per file, including binary assets", () => {
