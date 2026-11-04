@@ -195,7 +195,7 @@ it.layer(NodeServices.layer)("server self update", (it) => {
       for (const harness of [service, desktop]) {
         expect(
           (yield* harness.selfUpdate.update({ targetVersion: "1.1.0" }).pipe(Effect.flip)).reason,
-        ).toBe("Example Corp manages T3 Code updates.");
+        ).toBe("Example Corp manages T2 Code updates.");
       }
       expect([...service.order, ...desktop.order]).toEqual([]);
     }),
@@ -219,11 +219,11 @@ it.layer(NodeServices.layer)("server self update", (it) => {
       expect(
         (yield* selfUpdate.update({ targetVersion: "1.2.0-nightly.20261028.1" }).pipe(Effect.flip))
           .reason,
-      ).toBe("Example Corp manages T3 Code updates. Only stable releases can be installed.");
+      ).toBe("Example Corp manages T2 Code updates. Only stable releases can be installed.");
       expect(order).toEqual([]);
       // The mirror lists only 1.1.0's archive.
       expect((yield* selfUpdate.update({ targetVersion: "1.2.0" }).pipe(Effect.flip)).reason).toBe(
-        "Example Corp's update mirror has no t3@1.2.0 for this machine.",
+        "Example Corp's update mirror has no @t2code/cli@1.2.0 for this machine.",
       );
       expect((yield* selfUpdate.update({ targetVersion: "1.1.0" })).updateId).toBe("launcher-id");
       // The release comes from the policy's mirror, not GitHub.

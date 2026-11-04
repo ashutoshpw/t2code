@@ -171,11 +171,11 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         assert.equal(second.exitCode, 0);
         assert.equal(release.requests.length, requestsAfterFirst);
         assert.deepStrictEqual(
-          (yield* fs.readFileString(env.T3CODE_TEST_CALLS)).trim().split("\n"),
+          (yield* fs.readFileString(env.T2CODE_TEST_CALLS)).trim().split("\n"),
           ["--version|", `serve a b|${launcher}`, `--version|${launcher}`],
         );
 
-        yield* fs.writeFileString(path.join(versionDir, "t3"), "#!/t3-test-missing-loader\n");
+        yield* fs.writeFileString(path.join(versionDir, "t2"), "#!/t2-test-missing-loader\n");
         for (const _attempt of [1, 2]) {
           const cached = yield* run(process.execPath, [launcher, "serve"], { cwd: root, env });
           assert.equal(cached.exitCode, 1, cached.stderr);
@@ -349,12 +349,12 @@ fs.readFileSync = (file, ...rest) => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         for (const executable of [
-          "#!/t3-test-missing-loader\n",
+          "#!/t2-test-missing-loader\n",
           '#!/bin/sh\necho "runtime loader failed" >&2\nexit 42\n',
           "#!/bin/sh\nkill -TERM $$\n",
-          '#!/bin/sh\ntrap \'echo caught > "$T3CODE_TEST_TERM"; exit 42\' TERM\necho ready > "$T3CODE_TEST_READY"\nwhile :; do :; done\n',
+          '#!/bin/sh\ntrap \'echo caught > "$T2CODE_TEST_TERM"; exit 42\' TERM\necho ready > "$T2CODE_TEST_READY"\nwhile :; do :; done\n',
         ]) {
-          const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-npm-validation-test-" });
+          const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-npm-validation-test-" });
           const output = yield* buildNpmLauncher({
             version: VERSION,
             outputDir: path.join(root, "out"),
@@ -375,12 +375,12 @@ syncBuiltinESMExports();
           );
           const env = {
             PATH: (yield* HostProcess.Environment).PATH,
-            T3CODE_HOME: home,
-            T3CODE_RELEASE_BASE_URL: release.baseUrl,
-            T3CODE_TEST_READY: path.join(root, "probe-ready"),
-            T3CODE_TEST_TERM: path.join(root, "probe-term"),
+            T2CODE_HOME: home,
+            T2CODE_RELEASE_BASE_URL: release.baseUrl,
+            T2CODE_TEST_READY: path.join(root, "probe-ready"),
+            T2CODE_TEST_TERM: path.join(root, "probe-term"),
           };
-          const launcher = path.join(output.packageDir, "bin/t3.mjs");
+          const launcher = path.join(output.packageDir, "bin/t2code.mjs");
           const failed = yield* run(
             process.execPath,
             ["--import", probeTimeoutHook, launcher, "serve"],
@@ -393,8 +393,8 @@ syncBuiltinESMExports();
             assert.include(failed.stderr, "runtime loader failed");
           }
           if (executable.includes("trap")) {
-            assert.isTrue(yield* fs.exists(env.T3CODE_TEST_READY));
-            assert.isFalse(yield* fs.exists(env.T3CODE_TEST_TERM));
+            assert.isTrue(yield* fs.exists(env.T2CODE_TEST_READY));
+            assert.isFalse(yield* fs.exists(env.T2CODE_TEST_TERM));
           }
           if ((yield* HostProcess.Platform) === "linux") {
             assert.include(failed.stderr, "glibc");

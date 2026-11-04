@@ -309,7 +309,7 @@ const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).
           path.resolve(installedBaseDir) !== path.resolve(baseDir)
         ) {
           yield* Console.log(
-            `The T3 Code service serves ${installedBaseDir}, so it was not removed. Pass \`${BootService.formatBootServiceBaseDirOption(installedBaseDir)}\` to remove it.`,
+            `The T2 Code service serves ${installedBaseDir}, so it was not removed. Pass \`${BootService.formatBootServiceBaseDirOption(installedBaseDir)}\` to remove it.`,
           );
           return;
         }

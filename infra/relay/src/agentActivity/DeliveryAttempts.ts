@@ -5,7 +5,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import { and, eq, inArray, isNull, lt } from "drizzle-orm";
 import { QueryBuilder } from "drizzle-orm/pg-core";
-import * as Crypto from "effect/Crypto";
+import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Schema from "effect/Schema";
 
 import * as RelayDb from "../db.ts";
@@ -130,7 +130,7 @@ export const make = Effect.gen(function* () {
         ...(input.threadId ? { "relay.thread_id": input.threadId } : {}),
       });
       yield* Effect.gen(function* () {
-        const id = yield* crypto.randomUUIDv4();
+        const id = yield* random.uuidV4();
         const createdAt = DateTime.formatIso(yield* DateTime.now);
         yield* db.insert(relayDeliveryAttempts).values(insertValues(input, id, createdAt));
       }).pipe(

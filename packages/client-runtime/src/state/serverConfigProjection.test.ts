@@ -7,7 +7,6 @@ import {
 } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
-import * as Schema from "effect/Schema";
 import { describe, expect, it } from "vite-plus/test";
 
 import { applyServerConfigProjection, reuseUnchanged } from "./serverConfigProjection.ts";

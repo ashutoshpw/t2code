@@ -284,7 +284,7 @@ speech recognition. If the chosen environment disconnects, dictation stops; it n
 switches hosts. Choose **This device** to revoke access and discard pending audio.
 For [cloud dictation](./voice-input.md#choose-where-audio-goes), open **Cloud providers**
 under the environment in **Settings → Voice** and confirm which provider may receive recordings.
-On Android, keep T3 Code open while recording and transcribing.
+On Android, keep T2 Code open while recording and transcribing.
 
 On-device dictation may need a network connection to download a speech model the
 first time. After that it works offline for that language. iPhone dictates in the

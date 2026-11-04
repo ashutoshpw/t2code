@@ -1,4 +1,4 @@
-/* oxlint-disable t3code/no-global-process-runtime -- Packaging must compare the build host with the executable target. */
+/* oxlint-disable t2code/no-global-process-runtime -- Packaging must compare the build host with the executable target. */
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 const fs = require("node:fs");
@@ -45,10 +45,10 @@ module.exports = async ({ appOutDir, electronPlatformName, arch, packager }) => 
   );
   const env = { ...process.env, ELECTRON_RUN_AS_NODE: "1" };
   for (const name of Object.keys(env)) {
-    if (name.startsWith("NODE_") || name.startsWith("T3CODE_")) delete env[name];
+    if (name.startsWith("NODE_") || name.startsWith("T2CODE_")) delete env[name];
   }
   const state = fs.mkdtempSync(path.join(os.tmpdir(), "t3-release-cache-"));
-  env.T3CODE_HOME = state;
+  env.T2CODE_HOME = state;
   let result;
   try {
     // Run a script file, not -e: -e defines a global __filename of "[eval]", which

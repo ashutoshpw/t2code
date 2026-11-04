@@ -909,7 +909,7 @@ it.effect.each([
       const finishRemoteDiscovery = yield* Deferred.make<void>();
       const targets = [{ kind: "mdns" as const, host: "test.local" }];
       const direct = discovery.startsWith("direct-");
-      const bound = [{ kind: "lan" as const, httpBaseUrl: "http://192.168.1.10:3773/" }];
+      const bound = [{ kind: "lan" as const, httpBaseUrl: "http://192.168.1.10:3772/" }];
       const endpoints = [
         ...bound,
         { kind: "tailnet" as const, httpBaseUrl: "https://test.ts.net/" },
@@ -974,6 +974,7 @@ it.effect.each([
             serverVersion: "0.0.0",
             capabilities: { repositoryIdentity: false },
           }),
+          setEnvironmentLabel: () => Effect.void,
         }),
         Layer.mock(EnvironmentAuth.EnvironmentAuth)({
           getDescriptor: () =>

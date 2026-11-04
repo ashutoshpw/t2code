@@ -554,7 +554,7 @@ export interface AcpAdapterV2Flavor {
    */
   readonly supportsImagePrompts?: boolean;
   /**
-   * True when this session's native system prompt carries T3's PR-linking instructions, so
+   * True when this session's native system prompt carries T2's PR-linking instructions, so
    * turns omit them. Must use the same negotiated check that sent them on session setup.
    */
   readonly sessionCarriesPullRequestLinking?: (

@@ -423,7 +423,7 @@ export const normalizeToolInput = (name: string, input: unknown) => {
 
 // McpHttpServer advertises each tool's JSON schema, and Claude Code passes the MCP name,
 // description, and schema through unchanged.
-const t3SourceTools: ReadonlyArray<Tool.Any> = [
+const t2SourceTools: ReadonlyArray<Tool.Any> = [
   SpacesToolkit,
   OrchestratorToolkit,
   ThreadToolkit,
@@ -439,21 +439,21 @@ const t3SourceTools: ReadonlyArray<Tool.Any> = [
 ].flatMap((toolkit): ReadonlyArray<Tool.Any> => Object.values(toolkit.tools));
 // McpHttpServer decodes arguments with each tool's JSON codec, which drops undeclared keys.
 const t3InputDecoders = new Map(
-  t3SourceTools.map((tool) => [
+  t2SourceTools.map((tool) => [
     tool.name,
     Schema.decodeUnknownOption(
       Schema.toCodecJson(tool.parametersSchema as Schema.Codec<unknown, unknown>),
     ),
   ]),
 );
-const t3Tools: ReadonlyArray<ApiTool> = t3SourceTools.map((tool) => ({
+const t2Tools: ReadonlyArray<ApiTool> = t2SourceTools.map((tool) => ({
   name: `${T2_PREFIX}${tool.name}`,
   description: Tool.getDescription(tool) ?? "",
   input_schema: advertisedJsonSchema(tool),
 }));
 const enabledWhen = (predicate: () => boolean) =>
   new Set(
-    t3SourceTools
+    t2SourceTools
       .filter(
         (tool) => Context.getOrUndefined(tool.annotations, McpSchema.EnabledWhen) === predicate,
       )

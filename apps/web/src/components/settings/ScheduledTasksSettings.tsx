@@ -99,7 +99,6 @@ import {
   type ScheduleMode,
   type WorkspaceMode,
 } from "./scheduledTasksSettings.logic";
-import { defaultOnceInputValue, onceTaskStatus } from "./scheduledTaskOnce.logic";
 import { Label } from "../ui/label";
 import { Menu, MenuTrigger, MenuPopup, MenuItem, MenuSeparator } from "../ui/menu";
 import { ToggleGroup, Toggle } from "../ui/toggle-group";
@@ -736,8 +735,6 @@ function ScheduledTaskRow({
   const [busy, setBusy] = useState(false);
   const [deliveriesOpen, setDeliveriesOpen] = useState(false);
   const isWebhook = task.schedule.type === "webhook";
-  // oxlint-disable-next-line react/purity -- The status samples now at render; the list re-renders on every schedule refresh, which is when the label should move.
-  const onceStatus = task.schedule.type === "once" ? onceTaskStatus(task, new Date()) : null;
   const toggle = useAtomCommand(serverEnvironment.setScheduledTaskEnabled, {
     label: "scheduled task enabled",
   });
@@ -1405,7 +1402,7 @@ function ScheduledTaskEditorForm({
     if (schedule.type === "once" && !offersOnce) {
       reportFailure(
         "Once is not available here",
-        "This environment runs an older T3 Code. Update it to schedule a one-time task, or pick another schedule.",
+        "This environment runs an older T2 Code. Update it to schedule a one-time task, or pick another schedule.",
       );
       return;
     }

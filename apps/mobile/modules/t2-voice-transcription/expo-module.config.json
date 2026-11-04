@@ -5,6 +5,6 @@
     "podspecPath": "ios/T3VoiceTranscription.podspec"
   },
   "android": {
-    "modules": ["expo.modules.t3voicetranscription.T3VoiceTranscriptionModule"]
+    "modules": ["expo.modules.t2voicetranscription.T2VoiceTranscriptionModule"]
   }
 }

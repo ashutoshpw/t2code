@@ -1003,41 +1003,16 @@ export function useComposerSend(input: ComposerSendInput) {
       });
       sendInFlightRef.current = false;
       if (!followUpSent) {
-        restorePlanFollowUpComposer({
-          snapshot: {
-            prompt: followUpPromptSnapshot,
-            terminalContexts: followUpTerminalContexts,
-            reviewComments: followUpReviewComments,
-            previewAnnotations: followUpPreviewAnnotations,
-            threadContexts: followUpThreadContexts,
-            environmentContexts: followUpEnvironmentContexts,
-          },
-          draftHasUserContent: composerDraftHasUserContent(
-            useComposerDraftStore.getState().getComposerDraft(composerDraftTarget),
-          ),
-          routeIsCurrent: currentRouteThreadKeyRef.current === routeThreadKey,
-          writeComposerRefs: (snapshot) => {
-            promptRef.current = snapshot.prompt;
-            composerTerminalContextsRef.current = [...snapshot.terminalContexts];
-          },
-          writePrompt: (prompt) => setComposerDraftPrompt(composerDraftTarget, prompt),
-          writeTerminalContexts: (contexts) =>
-            setComposerDraftTerminalContexts(composerDraftTarget, [...contexts]),
-          writeReviewComments: (comments) =>
-            setComposerDraftReviewComments(composerDraftTarget, [...comments]),
-          writePreviewAnnotations: (annotations) =>
-            setComposerDraftPreviewAnnotations(composerDraftTarget, [...annotations]),
-          writeThreadContexts: (records) =>
-            setComposerDraftThreadContexts(composerDraftTarget, [...records]),
-          writeEnvironmentContexts: (records) =>
-            setComposerDraftEnvironmentContexts(composerDraftTarget, [...records]),
-          resetCursor: (options) => composerRef.current?.resetCursorState(options),
-        });
-      } else if (
-        submissionIntent === "background" &&
-        currentRouteThreadKeyRef.current === routeThreadKey
-      ) {
-        handleNewThreadInActiveProject();
+        sendInFlightRef.current = true;
+        await recoverFailedSend(activeThread.id, recoveryId);
+        sendInFlightRef.current = false;
+      } else {
+        finishRecovery(recoveryId);
+        if (
+          submissionIntent === "background" &&
+          currentRouteThreadKeyRef.current === routeThreadKey
+        )
+          handleNewThreadInActiveProject();
       }
       return;
     }

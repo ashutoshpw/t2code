@@ -121,9 +121,9 @@ const analyticsLayerWith = (client: HttpClient.HttpClient, policy?: ManagedPolic
     Layer.provide(
       ConfigProvider.layer(
         ConfigProvider.fromUnknown({
-          T3CODE_TELEMETRY_ENABLED: true,
-          T3CODE_POSTHOG_KEY: "phc_test_key",
-          T3CODE_POSTHOG_HOST: "http://localhost",
+          T2CODE_TELEMETRY_ENABLED: true,
+          T2CODE_POSTHOG_KEY: "phc_test_key",
+          T2CODE_POSTHOG_HOST: "http://localhost",
         }),
       ),
     ),
@@ -179,7 +179,7 @@ const sendFor = (
 it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("AnalyticsService test", (it) => {
   it.effect("waits for desktop shell consent and honors a late telemetry opt-out", () =>
     Effect.gen(function* () {
-      const env: NodeJS.ProcessEnv = { T3CODE_DESKTOP_SHELL_DISCOVERY_PENDING: "1" };
+      const env: NodeJS.ProcessEnv = { T2CODE_DESKTOP_SHELL_DISCOVERY_PENDING: "1" };
       const batches = yield* sendFor(
         0,
         respondWithStatus(204),
@@ -187,11 +187,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("AnalyticsService
           const analytics = yield* AnalyticsService.AnalyticsService;
           yield* analytics.record("test.before-discovery");
           yield* analytics.flush;
-          env.T3CODE_TELEMETRY_ENABLED = "false";
-          delete env.T3CODE_DESKTOP_SHELL_DISCOVERY_PENDING;
+          env.T2CODE_TELEMETRY_ENABLED = "false";
+          delete env.T2CODE_DESKTOP_SHELL_DISCOVERY_PENDING;
           yield* analytics.record("test.opted-out");
           yield* analytics.flush;
-          env.T3CODE_TELEMETRY_ENABLED = "true";
+          env.T2CODE_TELEMETRY_ENABLED = "true";
           yield* analytics.record("test.allowed");
           yield* analytics.flush;
         }),

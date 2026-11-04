@@ -535,7 +535,7 @@ describe("pull request toolkit handlers", () => {
         thread: makeThread([makeLink(9, { source: "stack-dismissed" })]),
       });
       const result = yield* harness.call("unlink_pull_request", {
-        repository: "t3tools/t3code",
+        repository: "t2tools/t2code",
         number: 9,
       });
       expect(result.wasLinked).toBe(false);

@@ -26,7 +26,7 @@ export interface ConnectionDiagnosis {
   readonly hops: ReadonlyArray<ConnectionDiagnosisHop>;
   readonly steps: ReadonlyArray<string>;
   readonly facts: ReadonlyArray<readonly [label: string, value: string]>;
-  /** The troubleshooting guide section for this failure. Null for direct routes, except a pending T3 Connect sign-in. */
+  /** The troubleshooting guide section for this failure. Null for direct routes, except a pending T2 Connect sign-in. */
   readonly moreInfoUrl: string | null;
 }
 
@@ -100,7 +100,7 @@ function headline(host: string, located: Located, failure: ConnectionAttemptErro
     case "offline":
       return "This device is offline";
     case "session_pending":
-      return "This device is still loading its T3 Connect sign-in";
+      return "This device is still loading its T2 Connect sign-in";
     case "outdated":
       return `${host} runs an older T2 Code`;
     case "clock_skew":
@@ -359,7 +359,7 @@ export function presentConnectionDiagnosis(
     facts,
     moreInfoUrl:
       relayPath || located.cause === "session_pending"
-        ? t3ConnectTroubleshootingUrl(helpSection(located, failure))
+        ? t2ConnectTroubleshootingUrl(helpSection(located, failure))
         : null,
   };
 }

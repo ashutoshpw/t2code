@@ -443,7 +443,7 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t3-codex-install-test-" });
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "t2-codex-install-test-" });
       const baseDir = `${directory}/not-a-directory`;
       yield* fs.writeFileString(baseDir, "existing file");
       const h = yield* makeHarness({ baseDir });

@@ -4402,7 +4402,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function* 
           // The base key names a branch on the host; this one keeps the remote it came from.
           yield* writeConfigValue({
             cwd: input.cwd,
-            key: `branch.${newRefName}.t3-merge-base-ref`,
+            key: `branch.${newRefName}.t2-merge-base-ref`,
             value: base.baseRef,
           });
         }

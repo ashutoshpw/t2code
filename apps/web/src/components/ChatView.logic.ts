@@ -95,7 +95,7 @@ import {
 } from "../lib/composerContextRecords";
 import type { ComposerDispatchMode } from "@t2code/client-runtime/state/composer-dispatch";
 import type { DraftThreadEnvMode } from "../composerDraftStore";
-import type { ComposerSubmissionIntent } from "../composer-logic";
+import { collapseExpandedComposerCursor, type ComposerSubmissionIntent } from "../composer-logic";
 import type { ReviewCommentContext } from "../reviewCommentContext";
 import { derivePhase, type TimelineEntry } from "../session-logic";
 import type { PreviewMiniPlayerSource } from "../previewMiniPlayerStore";

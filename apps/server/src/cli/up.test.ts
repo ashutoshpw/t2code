@@ -61,8 +61,8 @@ const SERVICE = {
   supported: true,
   installed: true,
   current: true,
-  unitPath: "/home/me/.config/systemd/user/t3code.service",
-  logPath: "/home/me/.t3/userdata/logs/boot-service.log",
+  unitPath: "/home/me/.config/systemd/user/t2code.service",
+  logPath: "/home/me/.t2/userdata/logs/boot-service.log",
 } as const;
 
 it.each([
@@ -184,7 +184,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     },
     {
       label: "the local network opens",
-      prints: "Run `t3 pair --base-dir <baseDir>`.",
+      prints: "Run `t2code pair --base-dir <baseDir>`.",
       installed: true,
       env: "T2CODE_LAN=false\n",
       args: ["--lan"],

@@ -122,15 +122,6 @@ function describeSchedule(task: ScheduledTask): string {
     return `Once, ${formatRunAtDate(runAt)} at ${formatRunAtTime(runAt)}`;
   }
   if (task.schedule.type === "interval") return formatScheduledTaskInterval(task.schedule.everyMs);
-  if (task.schedule.type === "once") {
-    return `Once, ${new Date(task.schedule.at).toLocaleString([], {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    })}`;
-  }
   const days = task.schedule.weekdays?.length ? repeatLabel(task.schedule.weekdays) : "Every day";
   return `${days} at ${formatTime(task.schedule.timeOfDay)}`;
 }
@@ -734,7 +725,7 @@ function TaskForm({
     if (draft.schedule.mode === "once" && !offersOnce) {
       Dialog.alert(
         "Once is not available here",
-        "This environment runs an older T3 Code. Update it to schedule a one-time task, or pick another schedule.",
+        "This environment runs an older T2 Code. Update it to schedule a one-time task, or pick another schedule.",
       );
       return;
     }

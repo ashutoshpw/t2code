@@ -96,7 +96,7 @@ and vendor frames, so Grok and fx recordings lose their vendor-only behavior.
 Run `vp run profile:startup` to capture the first 20 seconds of inherited Node processes under
 `.t3/startup-profiles/<timestamp>`. Workers that execute the preload get separate profiles.
 It starts the normal dev runner and accepts its flags.
-Stop it with Ctrl+C after the capture. Set `T3CODE_STARTUP_PROFILE_DIR` to choose another output
+Stop it with Ctrl+C after the capture. Set `T2CODE_STARTUP_PROFILE_DIR` to choose another output
 directory. Profiling adds overhead, so compare readiness with an ordinary `vp run dev` run.
 
 Open a `.cpuprofile` in Chrome DevTools' Performance panel for sampled function stacks and source

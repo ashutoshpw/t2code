@@ -35,17 +35,17 @@ describe("folderDropTarget", () => {
     ],
     [
       "a saved loopback server on desktop",
-      { ...thinClient, connection: savedServer("http://127.0.0.1:3773") },
+      { ...thinClient, connection: savedServer("http://127.0.0.1:3772") },
       "local",
     ],
     [
       "a saved LAN server",
-      { ...thinClient, connection: savedServer("http://192.168.1.20:3773") },
+      { ...thinClient, connection: savedServer("http://192.168.1.20:3772") },
       "remote",
     ],
     [
       "a saved loopback server in a browser",
-      { ...thinClient, isDesktopRenderer: false, connection: savedServer("http://localhost:3773") },
+      { ...thinClient, isDesktopRenderer: false, connection: savedServer("http://localhost:3772") },
       "remote",
     ],
     [
@@ -70,7 +70,7 @@ describe("folderDropTarget", () => {
         ...thinClient,
         connection: {
           target: new RelayConnectionTarget(base),
-          httpBaseUrl: "https://relay.t3.codes",
+          httpBaseUrl: "https://relay.t2.codes",
         },
       },
       "remote",

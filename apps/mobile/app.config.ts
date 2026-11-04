@@ -118,8 +118,8 @@ function resolveAppVariant(value: string | undefined): AppVariant {
 }
 
 const variant = VARIANT_CONFIG[APP_VARIANT];
-// Copied thread links open the app. app.t3.codes/.well-known lists every variant's identifiers.
-const HOSTED_APP_HOST = "app.t3.codes";
+// Copied thread links open the app. app.t2.codes/.well-known lists every variant's identifiers.
+const HOSTED_APP_HOST = "app.t2.codes";
 const iosBundleIdentifier = isIosPersonalTeamBuild
   ? personalTeamBundleIdentifier!
   : variant.iosBundleIdentifier;
@@ -381,13 +381,8 @@ const config: ExpoConfig = {
     [
       "expo-audio",
       {
-<<<<<<< HEAD
-        microphonePermission: "Allow T3 Code to use your microphone for voice input.",
-        recordAudioAndroid: true,
-=======
         microphonePermission: "Allow T2 Code to use your microphone for voice input.",
         recordAudioAndroid: false,
->>>>>>> bf374d3c8d (rebrand: sweep remaining T3 Code copy to T2 Code)
         enableBackgroundPlayback: false,
         enableBackgroundRecording: false,
       },
@@ -406,7 +401,7 @@ const config: ExpoConfig = {
       {
         photosPermission: false,
         // `false` makes this plugin add RECORD_AUDIO to blockedPermissions, breaking Android dictation.
-        microphonePermission: "Allow T3 Code to use your microphone for voice input.",
+        microphonePermission: "Allow T2 Code to use your microphone for voice input.",
       },
     ],
     [

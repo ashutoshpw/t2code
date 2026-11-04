@@ -1,4 +1,4 @@
-package expo.modules.t3voicetranscription
+package expo.modules.t2voicetranscription
 
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer

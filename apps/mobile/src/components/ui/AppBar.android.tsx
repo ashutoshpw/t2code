@@ -84,12 +84,16 @@ function AppBarView(props: AppBarProps & { readonly searchState?: SearchState })
   const closeInspector = use(InspectorCloseContext);
   const inline = search?.mode === "inline";
   const searching = searchState?.searching === true;
-  const actions = props.refresh
-    ? [
-        ...(props.actions ?? []),
-        { ...props.refresh, icon: "arrow.clockwise" as const, overflowOnly: true },
-      ]
-    : props.actions;
+  const refreshAction = props.refresh
+    ? { ...props.refresh, icon: "arrow.clockwise" as const, overflowOnly: true }
+    : search?.refreshInToolbar && search.onRefresh
+      ? {
+          accessibilityLabel: search.refreshAccessibilityLabel ?? "Refresh",
+          icon: "arrow.clockwise" as const,
+          onPress: search.onRefresh,
+        }
+      : null;
+  const actions = refreshAction ? [...(props.actions ?? []), refreshAction] : props.actions;
   const openSearch = () => searchState?.open();
   const closeSearch = () => searchState?.close();
 
