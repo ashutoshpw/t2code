@@ -445,6 +445,7 @@ describe("RelayClient", () => {
         Effect.provide(
           Layer.mergeAll(
             NodeServices.layer,
+            NodeCrypto.layer,
             layerHttpClient(new Uint8Array()),
             layerSpawner([]),
             layerHostRuntime(),

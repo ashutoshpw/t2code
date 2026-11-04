@@ -307,7 +307,6 @@ function iso(value: DateTime.DateTime): string {
 }
 
 /** Absorbs client/server clock skew and request latency for a just-picked time. */
-const ONCE_PAST_TOLERANCE_MS = 30_000;
 
 const localNow = DateTime.withCurrentZoneLocal(DateTime.nowInCurrentZone);
 

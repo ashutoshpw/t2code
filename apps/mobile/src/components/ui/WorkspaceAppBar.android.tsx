@@ -116,7 +116,7 @@ export function WorkspaceAppBar(props: WorkspaceAppBarProps) {
     store?.set(owner, props);
   });
   // Hidden panes destroy their effects, so the tab leaving the screen releases the bar.
-  // oxlint-disable-next-line t2code/react-effect-budget -- releases the workspace bar when this tab hides or unmounts
+  // oxlint-disable-next-line t2code/react-effect-budget -- releases the workspace bar when this tab hides or unmounts, a cleanup only the effect can own
   useLayoutEffect(() => (store ? () => store.clear(owner) : undefined), [store, owner]);
   return store ? null : <WorkspaceAppBarView {...props} />;
 }

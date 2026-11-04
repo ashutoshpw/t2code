@@ -3389,7 +3389,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     (toolName) =>
       Effect.gen(function* () {
         const tool = { sessionID: SESSION, assistantMessageID: "msg_assistant", id: "call-wait" };
-        const name = toolName.startsWith("mcp__") ? toolName : `t3-code-web_${toolName}`;
+        const name = toolName.startsWith("mcp__") ? toolName : `t2-code-web_${toolName}`;
         const input =
           toolName !== "delegate_task"
             ? { html: "<p>Preview</p>" }

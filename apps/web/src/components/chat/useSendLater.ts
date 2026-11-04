@@ -83,7 +83,7 @@ export function useSendLater(input: {
         title: sendLaterTitle(prompt),
         prompt,
         enabled: true,
-        schedule: { type: "once", at },
+        schedule: { type: "once", runAt: at },
         projectId,
         threadId,
         // Ignored for a thread-bound task; the thread keeps its own workspace.

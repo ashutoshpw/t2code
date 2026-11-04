@@ -212,7 +212,7 @@ describe("installRelayTelemetryEnabled", () => {
 
   it.effect("reads the desktop host opt-out before returning the renderer policy", () =>
     Effect.gen(function* () {
-      assert.isFalse(yield* relayTelemetryEnabled({ T3CODE_TELEMETRY_ENABLED: "false" }));
+      assert.isFalse(yield* relayTelemetryEnabled({ T2CODE_TELEMETRY_ENABLED: "false" }));
       assert.isTrue(yield* relayTelemetryEnabled({}));
     }),
   );

@@ -26,7 +26,7 @@ export class NativeChildWorkQuery extends Context.Service<
       OrchestrationV2GetNativeChildWorkError
     >;
   }
->()("t3/orchestration-v2/NativeChildWorkQuery") {}
+>()("@t2code/cli/orchestration-v2/NativeChildWorkQuery") {}
 
 const NO_CHILDREN: OrchestrationV2GetNativeChildWorkResult = { children: [] };
 

@@ -7,6 +7,7 @@ import * as Effect from "effect/Effect";
 import * as Context from "effect/Context";
 import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
+import * as NodePlatformCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { EnvironmentId } from "../packages/contracts/src/index.ts";
 import { SpacePageId } from "../packages/contracts/src/spaces.ts";
@@ -285,7 +286,7 @@ it.effect(
         const db = new NodeSqlite.DatabaseSync(fixture.file);
         expect(db.prepare("PRAGMA user_version").get().user_version).toBe(4);
         db.close();
-      }).pipe(Effect.provide(NodeServices.layer)),
+      }).pipe(Effect.provide(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))),
     ),
 );
 
@@ -313,6 +314,7 @@ it.effect.each([
           Layer.provide(
             Layer.mergeAll(
               NodeServices.layer,
+              NodePlatformCrypto.layer,
               Settings.layerTest({ spacesEnabled: true }),
               Layer.succeed(Identity.ServerEnvironmentIdentity, {
                 getEnvironmentId: Effect.succeed(env),
@@ -576,7 +578,7 @@ it.effect.each([
             ),
           ),
         );
-      }).pipe(Effect.provide(NodeServices.layer)),
+      }).pipe(Effect.provide(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))),
     ),
 );
 
@@ -686,6 +688,6 @@ it.effect(
           expect(NodeFS.existsSync(io.uri(0, false))).toBe(false);
           expect(NodeFS.existsSync(io.uri(1, false))).toBe(false);
         });
-      }).pipe(Effect.provide(NodeServices.layer)),
+      }).pipe(Effect.provide(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))),
     ),
 );

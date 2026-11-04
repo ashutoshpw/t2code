@@ -970,8 +970,8 @@ describe("EnvironmentSupervisor", () => {
       const harness = yield* makeSilentSocketHarness();
       const target = new PrimaryConnectionTarget({
         ...TARGET,
-        httpBaseUrl: "http://127.0.0.1:3773",
-        wsBaseUrl: "ws://127.0.0.1:3773",
+        httpBaseUrl: "http://127.0.0.1:3772",
+        wsBaseUrl: "ws://127.0.0.1:3772",
       });
       const supervisor = yield* EnvironmentSupervisor.make(
         { ...TARGET_ENTRY, target },
@@ -2165,7 +2165,7 @@ describe("EnvironmentSupervisor routes", () => {
                         }
                       : {}),
                     learned: true,
-                    authorization: "t3-connect",
+                    authorization: "t2-connect",
                   }),
                 ),
                 alternateRoutes: [{ target: RELAY_TARGET, profile: Option.none() }],
@@ -2216,7 +2216,7 @@ describe("EnvironmentSupervisor routes", () => {
               directEndpoints:
                 discovery !== "initial"
                   ? []
-                  : [{ kind: "lan", httpBaseUrl: "http://192.168.1.10:3773/" }],
+                  : [{ kind: "lan", httpBaseUrl: "http://192.168.1.10:3772/" }],
             } as unknown as ServerConfig),
         });
         const current = yield* Ref.make(relayEntry);
@@ -2273,7 +2273,7 @@ describe("EnvironmentSupervisor routes", () => {
           "BearerConnectionTarget",
         );
         expect(yield* Ref.get(learned)).toEqual([
-          `learned:${TARGET.environmentId}:${discovery !== "initial" ? "https://fixture.tail1234.ts.net" : "http://192.168.1.10:3773"}`,
+          `learned:${TARGET.environmentId}:${discovery !== "initial" ? "https://fixture.tail1234.ts.net" : "http://192.168.1.10:3772"}`,
         ]);
       }),
   );

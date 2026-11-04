@@ -1,4 +1,4 @@
-package expo.modules.t3voicetranscription
+package expo.modules.t2voicetranscription
 
 import androidx.annotation.OptIn
 import androidx.media3.common.C

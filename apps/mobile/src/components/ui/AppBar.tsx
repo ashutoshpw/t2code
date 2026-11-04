@@ -51,7 +51,7 @@ export function AppBar(props: AppBarProps) {
   const closeInspector = use(InspectorCloseContext);
   const setOptions = useScreenOptionsWriter();
   const ownsInspectorBar = closeInspector !== null && !props.embedded && !props.sheet;
-  // oxlint-disable-next-line t2code/react-effect-budget -- an inspector pane that stops drawing its bar must not leave it in the out-of-tree inspector bar
+  // oxlint-disable-next-line t2code/react-effect-budget -- an inspector pane that stops drawing its bar must not leave it in the out-of-tree inspector bar, and only a layout effect writes the native screen options
   useLayoutEffect(() => {
     if (!ownsInspectorBar || !setOptions) return;
     setOptions({ headerShown: true });
@@ -83,6 +83,7 @@ export function AppBar(props: AppBarProps) {
     (search.compactToolbar ?? !layout.usesSplitView) &&
     usesNativeMailSearchToolbar;
   const visibleMenus = compactSearch ? (menus?.slice(1) ?? []) : (menus ?? []);
+  const refresh = search?.refreshInToolbar ? search.onRefresh : undefined;
   // Where the mail toolbar isn't used, the Duo keeps search at the bottom of the pane like its
   // workspace lists; elsewhere inline search is a button in the bar.
   const duoBottomSearch =
@@ -213,6 +214,14 @@ export function AppBar(props: AppBarProps) {
               />
             ),
           )}
+          {refresh && !compactSearch ? (
+            <ScreenHeaderButton
+              accessibilityLabel={search?.refreshAccessibilityLabel}
+              icon="arrow.clockwise"
+              onPress={refresh}
+              separateBackground
+            />
+          ) : null}
           {visibleMenus.map(createNativeHeaderMenu)}
           {props.trailing}
           {props.confirm?.loading ? (

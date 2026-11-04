@@ -59,7 +59,7 @@ check the `orchestration` capability before reading or mutating state.
 
 ### Codex V2
 
-Codex gets T3's MCP server in each thread's `thread/start`, `thread/resume`,
+Codex gets T2's MCP server in each thread's `thread/start`, `thread/resume`,
 and `thread/fork` config, with the provider-session token in an
 `Authorization` header. The same server is registered twice:
 
@@ -200,7 +200,7 @@ provider selection model-visible without allowing a request that cannot run.
 `OrchestratorToolkit` in
 [`toolkits/orchestrator/tools.ts`](../../apps/server/src/mcp/toolkits/orchestrator/tools.ts)
 is the authoritative list of orchestration tools. The sections below cover
-delegation and thread tools. `t3_thread_launch` is documented with them but
+delegation and thread tools. `t2_thread_launch` is documented with them but
 registered by the project toolkit in
 [`toolkits/project/tools.ts`](../../apps/server/src/mcp/toolkits/project/tools.ts).
 

@@ -113,6 +113,8 @@ describe("runMigrations", () => {
         SELECT correlation_id FROM orchestration_events WHERE event_id = 'event-1'
       `;
       assert.deepStrictEqual(events, [{ correlation_id: "correlation-1" }]);
+    }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
+  );
 
   it.effect("upgrades a database written by v0.1.1", () =>
     Effect.gen(function* () {

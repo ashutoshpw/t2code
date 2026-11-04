@@ -423,7 +423,7 @@ it.effect("lists a peer as reachable at another address while its first one slee
   Effect.scoped(
     Effect.gen(function* () {
       const b = yield* serveB(box);
-      const described = yield* HttpClient.get(`${b.url}/.well-known/t3/environment`).pipe(
+      const described = yield* HttpClient.get(`${b.url}/.well-known/t2/environment`).pipe(
         Effect.flatMap((response) => response.text),
         Effect.provide(FetchHttpClient.layer),
       );
@@ -457,7 +457,7 @@ it.effect("cancelling a descriptor probe aborts its request and leaves later res
         (httpEffect) =>
           Effect.gen(function* () {
             const request = yield* HttpServerRequest.HttpServerRequest;
-            if (request.url.startsWith("/.well-known/t3/environment")) {
+            if (request.url.startsWith("/.well-known/t2/environment")) {
               yield* Ref.update(requests, (count) => count + 1);
               if (yield* Ref.get(hold)) {
                 return yield* Deferred.succeed(entered, undefined).pipe(
@@ -506,7 +506,7 @@ it.live("one dropped descriptor request does not list a live peer as unreachable
           Effect.gen(function* () {
             const request = yield* HttpServerRequest.HttpServerRequest;
             if (
-              request.url.startsWith("/.well-known/t3/environment") &&
+              request.url.startsWith("/.well-known/t2/environment") &&
               (yield* Ref.getAndSet(dropNext, false))
             ) {
               return HttpServerResponse.empty({ status: 503 });

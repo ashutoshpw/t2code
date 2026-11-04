@@ -1,4 +1,4 @@
-package expo.modules.t3voicetranscription
+package expo.modules.t2voicetranscription
 
 import android.os.ParcelFileDescriptor
 import android.system.ErrnoException
