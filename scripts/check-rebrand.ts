@@ -329,13 +329,46 @@ function git(args: string[], input?: string): string {
   return result.stdout;
 }
 
+const GIT_PATH_ESCAPES: Readonly<Record<string, number>> = {
+  a: 0x07,
+  b: 0x08,
+  f: 0x0c,
+  n: 0x0a,
+  r: 0x0d,
+  t: 0x09,
+  v: 0x0b,
+  "\\": 0x5c,
+  '"': 0x22,
+};
+
+// Git C-quotes odd paths, octal bytes included, which JSON.parse cannot read.
 function diffPath(raw: string): string {
-  let p = raw;
-  if (p.startsWith('"') && p.endsWith('"')) p = JSON.parse(p) as string;
-  return p;
+  if (!raw.startsWith('"') || !raw.endsWith('"')) return raw;
+  const bytes: Array<number> = [];
+  let index = 1;
+  while (index < raw.length - 1) {
+    const char = raw[index]!;
+    if (char !== "\\") {
+      bytes.push(...Buffer.from(char, "utf8"));
+      index += 1;
+      continue;
+    }
+    const escape = raw[index + 1] ?? "";
+    const simple = GIT_PATH_ESCAPES[escape];
+    if (simple !== undefined) {
+      bytes.push(simple);
+      index += 2;
+      continue;
+    }
+    const octal = raw.slice(index + 1, index + 4);
+    if (!/^[0-7]{3}$/.test(octal)) throw new Error(`unreadable escape in git path ${raw}`);
+    bytes.push(Number.parseInt(octal, 8));
+    index += 4;
+  }
+  return Buffer.from(bytes).toString("utf8");
 }
 
-function addedLinesFromDiff(diff: string): Entry[] {
+export function addedLinesFromDiff(diff: string): Entry[] {
   const entries: Entry[] = [];
   let file = "";
   for (const raw of diff.split("\n")) {
