@@ -342,8 +342,8 @@ describe("mobile context clipboard imports", () => {
 
   it("pastes a thread link as a chip only where the destination's agent reads its machine", async () => {
     const text = [
-      "https://app.t3.codes/threads/destination/local-thread",
-      "<t3-thread://v2/source/foreign-thread>",
+      "https://app.t2.codes/threads/destination/local-thread",
+      "<t2-thread://v2/source/foreign-thread>",
     ].join(" ");
     const result = await importComposerContextClipboard(
       { text, fragment: "", html: "" },
@@ -359,7 +359,7 @@ describe("mobile context clipboard imports", () => {
       threadId: "local-thread",
     });
     expect(result!.text).toBe(
-      `[Thread](t3-context://v1/thread/${record!.contextId}) <t3-thread://v2/source/foreign-thread>`,
+      `[Thread](t2-context://v1/thread/${record!.contextId}) <t2-thread://v2/source/foreign-thread>`,
     );
     expect(
       await importComposerContextClipboard(

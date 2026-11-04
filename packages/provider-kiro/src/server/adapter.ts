@@ -52,7 +52,7 @@ import {
 } from "./acpSupport.ts";
 
 export const KIRO_PROVIDER = ProviderDriverKind.make("kiro");
-/** T3's slug for "Kiro default", and Kiro's documented default model id. */
+/** T2's slug for "Kiro default", and Kiro's documented default model id. */
 const KIRO_DEFAULT_MODEL = "default";
 const KIRO_COMPACT_METHOD = "_kiro/session/compact";
 const KIRO_STEER_METHOD = "_session/steer";
@@ -558,7 +558,7 @@ function makeKiroAcpAdapterFlavor(options: KiroAdapterV2Options): AcpAdapterV2Fl
     // there would put the agent's own model back.
     ownedModelOptionIds: ["reasoningEffort", KIRO_AGENT_CONFIG_ID],
     // With Autopilot off (Supervised) Kiro asks the user to accept a turn's
-    // changes before it ends. T3's runtime policy answers its per-tool prompts
+    // changes before it ends. T2's runtime policy answers its per-tool prompts
     // either way, and a runtime-mode change reopens the session to reapply it.
     sessionConfigForPolicy: (policy) => [
       { id: KIRO_AUTOPILOT_CONFIG_ID, value: kiroAutopilotValue(policy) },

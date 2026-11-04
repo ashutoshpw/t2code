@@ -65,7 +65,7 @@ describe("labels and reference links", () => {
         ?.label,
     ).toHaveLength(200);
     expect(
-      collectComposerContextReferences(`[${"x".repeat(199)}😀tail](t3-context://v1/file/ctx_1)`)[0]
+      collectComposerContextReferences(`[${"x".repeat(199)}😀tail](t2-context://v1/file/ctx_1)`)[0]
         ?.label,
     ).toBe("x".repeat(199));
   });
@@ -232,7 +232,7 @@ describe("provider projection", () => {
 
   it("keeps a review excerpt's trailing blank line and whitespace", () => {
     const projected = projectComposerContextForProvider({
-      text: "[Comment](t3-context://v1/review-comment/ctx_r)",
+      text: "[Comment](t2-context://v1/review-comment/ctx_r)",
       records: [
         {
           version: 1,
@@ -255,7 +255,7 @@ describe("provider projection", () => {
 
   it("emits no terminal lines when the captured range is inverted", () => {
     const projected = projectComposerContextForProvider({
-      text: "[log](t3-context://v1/terminal/ctx_t)",
+      text: "[log](t2-context://v1/terminal/ctx_t)",
       records: [{ ...terminal, lineStart: 10, lineEnd: 5, text: "a\nb\nc\nd\ne\nf" }],
     });
     expect(projected).toContain('<context kind="terminal" id="ctx_t">');
@@ -543,6 +543,8 @@ describe("threadLinkContextReferences", () => {
       () => undefined,
     );
     expect(pasted).toEqual({ text, records: [] });
+  });
+});
 
 const capturedPage: PageContextRecord = {
   version: 1,

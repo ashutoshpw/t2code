@@ -289,7 +289,7 @@ it.effect("unlinks on startup and refuses to link when the policy turns Connect 
       Layer.mock(EnvironmentAuth.EnvironmentAuth)({}),
       Layer.mock(CliTokenManager.CloudCliTokenManager)({}),
       Layer.mock(HttpServer.HttpServer)({
-        address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3773),
+        address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 3772),
       }),
       Layer.mock(ServerConfig.ServerConfig)({} as ServerConfig.ServerConfig["Service"]),
       Layer.succeed(
@@ -306,7 +306,7 @@ it.effect("unlinks on startup and refuses to link when the policy turns Connect 
 
       const applyError = yield* link.applyRelayConfig({} as never).pipe(Effect.flip);
       const mintError = yield* link.mintCredential({} as never).pipe(Effect.flip);
-      assert.equal(applyError.message, "Example Corp's policy does not allow T3 Connect.");
+      assert.equal(applyError.message, "Example Corp's policy does not allow T2 Connect.");
       assert.equal(mintError._tag, "ManagedPolicyRefusedError");
     }).pipe(
       Effect.provide(

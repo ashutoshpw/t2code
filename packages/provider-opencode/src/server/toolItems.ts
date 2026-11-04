@@ -1,5 +1,5 @@
 import type { OrchestrationV2TurnItem } from "@t2code/contracts";
-import { resolveT3McpToolId } from "@t2code/shared/t3McpToolPresentation";
+import { resolveT2McpToolId } from "@t2code/shared/t2McpToolPresentation";
 import { formatReadToolLabel, formatSearchToolLabel } from "@t2code/shared/toolActivity";
 import {
   MAX_TOOL_OUTPUT_IMAGES,

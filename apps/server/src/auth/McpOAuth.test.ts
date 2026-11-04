@@ -8,7 +8,6 @@ import {
   EnvironmentHttpApi,
   MCP_PEER_LINK_SOFTWARE_ID,
   mcpClientScopes,
-  EnvironmentId,
 } from "@t2code/contracts";
 import { expect, it } from "@effect/vitest";
 import * as Clock from "effect/Clock";
@@ -32,7 +31,6 @@ import * as ServerSettings from "../serverSettings.ts";
 import * as Sqlite from "../persistence/Sqlite.ts";
 import * as EnvironmentAuth from "./EnvironmentAuth.ts";
 import * as McpOAuth from "./McpOAuth.ts";
-import * as McpHttpServer from "../mcp/McpHttpServer.ts";
 import * as McpOAuthHttp from "./mcpOAuthHttp.ts";
 import * as ServerSecretStore from "./ServerSecretStore.ts";
 import * as AuthHttp from "./http.ts";

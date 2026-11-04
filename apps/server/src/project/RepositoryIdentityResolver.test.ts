@@ -59,14 +59,14 @@ it.layer(NodeServices.layer)("RepositoryIdentityResolverLive", (it) => {
       });
 
       yield* git(cwd, ["init"]);
-      yield* git(cwd, ["remote", "add", "origin", "github.com:T3Tools/t3code.git"]);
+      yield* git(cwd, ["remote", "add", "origin", "github.com:T2Tools/t2code.git"]);
 
       const resolver = yield* RepositoryIdentityResolver.RepositoryIdentityResolver;
       const identity = yield* resolver.resolve(cwd);
 
-      expect(identity?.canonicalKey).toBe("github.com/t3tools/t3code");
+      expect(identity?.canonicalKey).toBe("github.com/t2tools/t2code");
       expect(identity?.provider).toBe("github");
-      expect(identity?.displayName).toBe("T3Tools/t3code");
+      expect(identity?.displayName).toBe("T2Tools/t2code");
     }).pipe(Effect.provide(RepositoryIdentityResolver.layer)),
   );
 

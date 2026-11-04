@@ -35,21 +35,21 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))((it) =>
         Effect.gen(function* () {
           const state = yield* makePersistedServerRuntimeState({
             config: { host: undefined, devUrl: undefined },
-            port: 3773,
+            port: 3772,
             ...(managedPolicy === undefined ? {} : { managedPolicy }),
           });
           yield* fs.writeFileString(statePath, yield* encodeState(state));
           return yield* describeRunningServer(statePath, current);
         });
 
-      assert.include(yield* describeRunningServer(statePath, installed), "No T3 Code server");
+      assert.include(yield* describeRunningServer(statePath, installed), "No T2 Code server");
       assert.include(yield* running(installed), "loaded this policy.");
       assert.include(
         yield* running(yield* loaded("Other Corp")),
         "loaded Other Corp's policy from /etc/t3code/policy.json",
       );
-      assert.include(yield* running(null), "loaded no policy. Restart T3 Code");
-      assert.include(yield* running(installed, null), "Restart T3 Code to apply");
+      assert.include(yield* running(null), "loaded no policy. Restart T2 Code");
+      assert.include(yield* running(installed, null), "Restart T2 Code to apply");
       assert.include(yield* running(null, null), "runs without a policy, as installed");
       assert.include(yield* running(undefined), "does not report which policy it loaded");
     }),

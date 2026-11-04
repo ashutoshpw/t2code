@@ -68,6 +68,7 @@ import * as ElectronShell from "../electron/ElectronShell.ts";
 import * as ElectronTheme from "../electron/ElectronTheme.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
 import * as MacPermissions from "../permissions/MacPermissions.ts";
+import * as PreviewHostClient from "../preview/PreviewHostClient.ts";
 import * as PreviewManager from "../preview/Manager.ts";
 
 it.effect.each([false, true])(
@@ -107,7 +108,7 @@ it.effect.each([false, true])(
             platform: "linux",
             isDevelopment: false,
             isPackaged: true,
-            configuredBackendPort: Option.some(3773),
+            configuredBackendPort: Option.some(3772),
             defaultDesktopSettings: { serverExposureMode: "local-only" },
           } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]),
           Effect.provideService(DesktopPreReadyPlatform.DesktopPreReadyElectronOptions, {
@@ -194,7 +195,7 @@ it.effect.each([false, true])(
           } as unknown as DesktopBackendPool.DesktopBackendPool["Service"]),
           Effect.provideService(DesktopServerExposure.DesktopServerExposure, {
             configureFromSettings: () => Effect.succeed({ mode: "local-only" }),
-            backendConfig: Effect.succeed({ httpBaseUrl: new URL("http://127.0.0.1:3773") }),
+            backendConfig: Effect.succeed({ httpBaseUrl: new URL("http://127.0.0.1:3772") }),
           } as unknown as DesktopServerExposure.DesktopServerExposure["Service"]),
           Effect.provideService(DesktopWslBackend.DesktopWslBackend, {
             reconcile: Effect.void,
@@ -235,6 +236,7 @@ it.effect.each([false, true])(
                 throw new Error("unexpected browser partition lookup");
               },
             }),
+            Layer.mock(PreviewHostClient.PreviewHostClient, { states: Stream.empty }),
             FileSystem.layerNoop({}),
             Layer.mock(NetService.NetService, {}),
             Path.layer,

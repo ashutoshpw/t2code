@@ -1,4 +1,4 @@
-package expo.modules.t3voicetranscription
+package expo.modules.t2voicetranscription
 
 import com.google.mlkit.genai.common.GenAiException
 import kotlinx.coroutines.CancellationException

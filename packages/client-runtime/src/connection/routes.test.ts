@@ -90,13 +90,13 @@ describe("connection routes", () => {
   });
 
   it("puts a newly paired route ahead of saved routes of the same kind", () => {
-    const pasted = direct("lan-2", "http://192.168.1.11:3773/");
+    const pasted = direct("lan-2", "http://192.168.1.11:3772/");
     expect(upsertRoute([LAN, TAILNET], pasted)).toEqual([pasted, LAN, TAILNET]);
   });
 
   it("keeps a newly paired route behind a different kind of the same rank", () => {
-    const vpn = direct("vpn", "http://100.101.102.103:3773/");
-    const pasted = direct("ts-2", "http://[fd7a:115c:a1e0::2]:3773/");
+    const vpn = direct("vpn", "http://100.101.102.103:3772/");
+    const pasted = direct("ts-2", "http://[fd7a:115c:a1e0::2]:3772/");
     expect(upsertRoute([vpn, TAILNET], pasted)).toEqual([vpn, pasted, TAILNET]);
   });
 

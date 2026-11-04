@@ -331,7 +331,7 @@ describe("DirectEndpoints Tailscale Serve", () => {
         );
         const resolving = yield* Effect.forkScoped(service.resolve());
         yield* Deferred.await(probeStarted);
-        const bound = { kind: "lan", httpBaseUrl: "http://192.168.1.10:3773/" };
+        const bound = { kind: "lan", httpBaseUrl: "http://192.168.1.10:3772/" };
         expect(yield* service.resolveAvailable()).toEqual([bound]);
         yield* Deferred.succeed(finishProbe, undefined);
         const validated = yield* Fiber.join(resolving);

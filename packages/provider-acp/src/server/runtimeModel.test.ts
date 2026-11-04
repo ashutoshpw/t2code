@@ -1396,7 +1396,7 @@ describe("extractMcpToolCallIdentity", () => {
         sessionUpdate: "tool_call",
         toolCallId: "kiro-1",
         kind: "other",
-        title: `@t3-code/${tool}`,
+        title: `@t2-code/${tool}`,
         status: "pending",
         rawInput: { tool_id: `t2-code::${tool}`, arguments: { threadId: "thread-1" } },
       });

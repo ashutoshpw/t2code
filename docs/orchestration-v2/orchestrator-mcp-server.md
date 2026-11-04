@@ -59,7 +59,7 @@ check the `orchestration` capability before reading or mutating state.
 
 ### Codex V2
 
-Codex gets T3's MCP server in each thread's `thread/start`, `thread/resume`,
+Codex gets T2's MCP server in each thread's `thread/start`, `thread/resume`,
 and `thread/fork` config, with the provider-session token in an
 `Authorization` header. The same server is registered twice:
 

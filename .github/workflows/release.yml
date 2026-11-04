@@ -453,6 +453,8 @@ jobs:
         run: |
           set -euo pipefail
           output="$(npx alchemy state read T2CodeRelay/prod/output --backend cloudflare --log-level error --no-input | sed -n '/^{/,$p')"
+          # jq 1.6 exits 0 on empty input, so guard the empty case before parsing.
+          test -n "$output" || { echo "Relay stack output is missing" >&2; exit 1; }
           field() {
             jq -er --arg key "$1" '.[$key] | if type == "object" then .__redacted__ else . end | select(. != null and . != "")' <<<"$output" \
               || { echo "Relay stack output is missing $1" >&2; exit 1; }
@@ -484,11 +486,11 @@ jobs:
           set -euo pipefail
 
           if [[ "$PREVIEW" == "true" ]]; then
-            env_example() { sed -n "s|^T3CODE_$1=||p" .env.example; }
+            env_example() { sed -n "s|^T2CODE_$1=||p" .env.example; }
             CLERK_PUBLISHABLE_KEY="$(env_example CLERK_PUBLISHABLE_KEY)"
             CLERK_JWT_TEMPLATE="$(env_example CLERK_JWT_TEMPLATE)"
             CLERK_CLI_OAUTH_CLIENT_ID="$(env_example CLERK_CLI_OAUTH_CLIENT_ID)"
-            RELAY_DOMAIN="$(sed -n 's|^T3CODE_RELAY_URL=https://||p' .env.example)"
+            RELAY_DOMAIN="$(sed -n 's|^T2CODE_RELAY_URL=https://||p' .env.example)"
           fi
 
           relay_domain="${RELAY_DOMAIN:-}"
