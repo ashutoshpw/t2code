@@ -854,12 +854,12 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         );
 
       expect(yield* resolvePort({ port: Option.none() })).toBe(50_123);
-      expect(selected).toEqual([3773]);
+      expect(selected).toEqual([3772]);
       expect(yield* resolvePort({ port: Option.some(8788) })).toBe(8788);
       expect(
         yield* resolvePort({ mode: Option.some("desktop" as const), port: Option.none() }),
-      ).toBe(3773);
-      expect(selected).toEqual([3773]);
+      ).toBe(3772);
+      expect(selected).toEqual([3772]);
     }),
   );
 

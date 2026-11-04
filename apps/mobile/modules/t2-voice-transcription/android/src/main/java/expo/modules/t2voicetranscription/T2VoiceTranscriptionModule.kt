@@ -1,4 +1,4 @@
-package expo.modules.t3voicetranscription
+package expo.modules.t2voicetranscription
 
 import android.content.res.Resources
 import android.os.Build
@@ -18,13 +18,13 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class T3VoiceTranscriptionModule : Module() {
+class T2VoiceTranscriptionModule : Module() {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private val lock = Any()
   private var operation: Pair<Int, Job>? = null
 
   override fun definition() = ModuleDefinition {
-    Name("T3VoiceTranscription")
+    Name("T2VoiceTranscription")
 
     AsyncFunction("checkAvailability").Coroutine<Boolean> {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {

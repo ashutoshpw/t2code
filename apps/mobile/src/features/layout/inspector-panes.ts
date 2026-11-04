@@ -35,7 +35,7 @@ export function useMountedInspectorPanes(content: InspectorContent | undefined) 
     setOpened(new Set([...opened, active]));
   }
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- prewarms the other panes on a timer after one opens
+  // oxlint-disable-next-line t2code/react-effect-budget -- prewarms the other panes on a timer after one opens, which only a timeout can observe
   useEffect(() => {
     if (prewarmSignature === "") return;
     const timeout = setTimeout(() => {

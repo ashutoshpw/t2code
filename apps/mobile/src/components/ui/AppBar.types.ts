@@ -50,6 +50,9 @@ export interface AppBarSearch {
   readonly value: string;
   readonly onChangeText: (value: string) => void;
   readonly placeholder: string;
+  readonly onRefresh?: () => void;
+  readonly refreshAccessibilityLabel?: string;
+  readonly refreshInToolbar?: boolean;
   /** Defaults to the placeholder. */
   readonly accessibilityLabel?: string;
   readonly mode?: "inline" | "collapsible";

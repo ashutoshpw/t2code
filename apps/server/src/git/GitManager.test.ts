@@ -1846,6 +1846,13 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
     }),
   );
 
+  it("backs off repeated PR lookup failures past the healthy refresh cadence", () => {
+    expect(Duration.toMillis(GitManager.prLookupFailureTtl(1))).toBe(20_000);
+    expect(Duration.toMillis(GitManager.prLookupFailureTtl(2))).toBe(40_000);
+    expect(Duration.toMillis(GitManager.prLookupFailureTtl(4))).toBeGreaterThan(120_000);
+    expect(Duration.toMillis(GitManager.prLookupFailureTtl(20))).toBe(900_000);
+  });
+
   function squashMergeIntoRemoteMain(repoDir: string, branch: string) {
     return Effect.gen(function* () {
       yield* runGit(repoDir, ["push", "-u", "origin", "main"]);

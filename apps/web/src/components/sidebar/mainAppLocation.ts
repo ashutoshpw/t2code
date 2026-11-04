@@ -45,17 +45,12 @@ export function startMainAppLocationTracking(router: AnyRouter): () => void {
   const record = () => {
     const { pathname } = router.state.location;
     if (isAppModalPage(pathname) || SHELL_LESS_PATHS.has(pathname)) return;
-<<<<<<< HEAD
     const href = withoutAssistantCitationHash(router.state.location.href);
-    appModalReturnHref = href;
-    if (!isSidebarUtilityPage(pathname)) mainAppHref = href;
-=======
     state.modalReturnHref = href;
     if (!isSidebarUtilityPage(pathname)) {
       state.mainAppHref = href;
       state.threadRef = resolveThreadRouteRef(router.state.matches.at(-1)?.params ?? {});
     }
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
   };
   record();
   return router.subscribe("onResolved", record);

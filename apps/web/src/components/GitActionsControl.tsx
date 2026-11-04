@@ -1054,7 +1054,6 @@ export default function GitActionsControl({
     insertions: 0,
     deletions: 0,
   };
-  const changesTotals = gitStatusForActions?.branchChanges ?? gitStatusForActions?.workingTree;
   const primaryServerSettings = useAtomValue(primaryServerSettingsAtom);
   const temporaryBranchPrefixes = temporaryWorktreeBranchPrefixes(
     primaryServerSettings.worktreeBranchPrefix,

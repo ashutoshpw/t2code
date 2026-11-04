@@ -800,7 +800,7 @@ describe("DesktopBackendConfiguration", () => {
           restoreEnv("WSLENV", previousWslEnv);
           for (const [name, value] of ambientOtel) restoreEnv(name, value);
         }
-      }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+      }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
   );
 
   it.effect("resolveWsl preserves existing WSLENV entries when forwarding backend secrets", () =>

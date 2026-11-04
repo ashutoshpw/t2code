@@ -347,7 +347,7 @@ describe("t2 pair", () => {
             ),
             Effect.provide(
               ConfigProvider.layer(
-                ConfigProvider.fromEnv({ env: { T3CODE_DEV_MANAGED_POLICY_PATH: policyPath } }),
+                ConfigProvider.fromEnv({ env: { T2CODE_DEV_MANAGED_POLICY_PATH: policyPath } }),
               ),
             ),
             Effect.flip,

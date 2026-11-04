@@ -442,6 +442,90 @@ const pruneSnapshot = Effect.fn("pruneDevDbSnapshot")(function* (input: RunMigra
   };
 });
 
+const resolveCanonicalPath = Effect.fn("migrateDevDb.resolveCanonicalPath")(function* (
+  filePath: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  let current = path.resolve(filePath);
+  const suffix: string[] = [];
+  for (;;) {
+    const canonical = yield* fs.realPath(current).pipe(
+      Effect.asSome,
+      Effect.catchIf(
+        (error) => error.reason._tag === "NotFound",
+        () => Effect.succeedNone,
+      ),
+    );
+    if (Option.isSome(canonical)) return path.join(canonical.value, ...suffix);
+    const link = yield* fs.readLink(current).pipe(
+      Effect.asSome,
+      Effect.catchIf(
+        (error) => error.reason._tag === "NotFound",
+        () => Effect.succeedNone,
+      ),
+    );
+    if (Option.isSome(link)) {
+      // Preserve .. until realpath resolves any symlinked ancestors.
+      current = path.isAbsolute(link.value)
+        ? link.value
+        : `${path.dirname(current)}${path.sep}${link.value}`;
+      continue;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return path.join(yield* fs.realPath(current), ...suffix);
+    suffix.unshift(path.basename(current));
+    current = parent;
+  }
+});
+
+const readFileIdentity = Effect.fn("migrateDevDb.readFileIdentity")(function* (file: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const info = yield* fs.stat(file).pipe(
+    Effect.asSome,
+    Effect.catchIf(
+      (error) => error.reason._tag === "NotFound",
+      () => Effect.succeedNone,
+    ),
+  );
+  if (Option.isNone(info)) return null;
+  if (Option.isNone(info.value.ino) || info.value.ino.value <= 0n) {
+    return yield* new MigrateDevDbFileIdentityUnavailableError({ path: file });
+  }
+  return `${info.value.dev}:${info.value.ino.value}`;
+});
+
+const resolveDatabaseFamily = Effect.fn("migrateDevDb.resolveDatabaseFamily")(function* (
+  databasePath: string,
+) {
+  const path = yield* Path.Path;
+  const canonicalPath = yield* resolveCanonicalPath(databasePath);
+  const members = [...new Set([databasePath, canonicalPath])].flatMap((root) =>
+    DATABASE_ACCESS_SUFFIXES.map((member) => ({ file: `${root}${member}`, member })),
+  );
+  const files = yield* Effect.forEach(members, ({ file, member }) =>
+    Effect.all([
+      resolveCanonicalPath(file),
+      resolveCanonicalPath(path.dirname(file)).pipe(
+        Effect.map((directory) => path.join(directory, path.basename(file))),
+      ),
+    ]).pipe(
+      Effect.flatMap((paths) =>
+        Effect.forEach([...new Set(paths)], (file) =>
+          readFileIdentity(file).pipe(Effect.map((identity) => ({ path: file, member, identity }))),
+        ),
+      ),
+    ),
+  );
+  return { databasePath: canonicalPath, files: files.flat() };
+});
+
+type DatabaseFileRole = {
+  readonly family: string;
+  readonly member: string;
+  readonly access: "read-only" | "metadata-only" | "read-write";
+};
+
 export const runMigrateDevDb = Effect.fn("runMigrateDevDb")(function* (
   input: RunMigrateDevDbInput,
   options: RunMigrateDevDbOptions = {},

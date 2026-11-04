@@ -3315,10 +3315,10 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
         yield* git(cwd, ["fetch", "origin"]);
         yield* git(cwd, ["fetch", "upstream"]);
         yield* git(cwd, ["checkout", "-b", "t3/temporary"]);
-        yield* git(cwd, ["config", "branch.t3/temporary.t3-merge-base", "main"]);
+        yield* git(cwd, ["config", "branch.t3/temporary.t2-merge-base", "main"]);
         yield* git(cwd, [
           "config",
-          "branch.t3/temporary.t3-merge-base-ref",
+          "branch.t3/temporary.t2-merge-base-ref",
           "refs/remotes/upstream/main",
         ]);
         yield* writeTextFile(cwd, "feature.txt", "thread work\n");

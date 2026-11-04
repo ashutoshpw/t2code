@@ -3,7 +3,8 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 
 import { describe, expect, it } from "@effect/vitest";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as ZeroTrust from "@distilled.cloud/cloudflare/zero-trust";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -1221,7 +1222,7 @@ describe("ManagedEndpointProvider", () => {
     return Effect.gen(function* () {
       const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
       const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
-      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3773 } as const;
+      const origin = { localHttpHost: "127.0.0.1", localHttpPort: 3772 } as const;
       const provisioned = yield* provider.provision({ ...key, origin });
       const reconcile = provider.reconcileOrigin({
         ...key,
@@ -1243,22 +1244,22 @@ describe("ManagedEndpointProvider", () => {
       expect(yield* reconcile).toBe("ready");
       expect(configuration.current).toEqual({
         ingress: [
-          { hostname: expectedManagedHostname("env_ABC"), service: "http://127.0.0.1:3773" },
+          { hostname: expectedManagedHostname("env_ABC"), service: "http://127.0.0.1:3772" },
           { service: "http_status:404" },
         ],
       });
 
       configuration.current = {
         ingress: [
-          { hostname: "*.t3code.test", service: "http://127.0.0.1:4711" },
-          { hostname: expectedManagedHostname("env_ABC"), service: "http://127.0.0.1:3773" },
+          { hostname: "*.t2code.test", service: "http://127.0.0.1:4711" },
+          { hostname: expectedManagedHostname("env_ABC"), service: "http://127.0.0.1:3772" },
           { service: "http_status:404" },
         ],
       };
       expect(yield* reconcile).toBe("ready");
       expect(configuration.current.ingress[0]).toEqual({
         hostname: expectedManagedHostname("env_ABC"),
-        service: "http://127.0.0.1:3773",
+        service: "http://127.0.0.1:3772",
       });
 
       configuration.current = {
@@ -1266,7 +1267,7 @@ describe("ManagedEndpointProvider", () => {
           {
             hostname: expectedManagedHostname("env_ABC"),
             path: "/api",
-            service: "http://127.0.0.1:3773",
+            service: "http://127.0.0.1:3772",
           },
           { service: "http_status:404" },
         ],
@@ -1274,7 +1275,7 @@ describe("ManagedEndpointProvider", () => {
       expect(yield* reconcile).toBe("ready");
       expect(configuration.current.ingress[0]).toEqual({
         hostname: expectedManagedHostname("env_ABC"),
-        service: "http://127.0.0.1:3773",
+        service: "http://127.0.0.1:3772",
       });
     }).pipe(Effect.provide(layer));
   });

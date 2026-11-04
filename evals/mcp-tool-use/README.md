@@ -123,7 +123,7 @@ pnpm mcp-tool-use --cases mcp-tool-use/cases/threads-vs-tasks.ndjson --samples 3
 
 These cases measure routing decisions with simulated tools, not delivered child work. The original PR's paid baseline found Sonnet starting a background native Agent for `tt-background-agent`; the routing fix is stacked separately in #27139. Historical model results and the unresolved top-level reviewer re-check wording are recorded in #27138.
 
-## Where T3's text lives
+## Where T2's text lives
 
 - `packages/provider-core/src/server/runtimeInstructions.ts`
 - `packages/provider-core/src/server/orchestrationInstructions.ts`

@@ -15,7 +15,7 @@ type GoogleTranscriptionModule = {
   cancel(id: number): Promise<void>;
 };
 
-const native = requireOptionalNativeModule<GoogleTranscriptionModule>("T3VoiceTranscription");
+const native = requireOptionalNativeModule<GoogleTranscriptionModule>("T2VoiceTranscription");
 
 const nativeErrorMessages: Readonly<Record<string, string>> = {
   unavailable: "On-device voice transcription is not available for this device language.",

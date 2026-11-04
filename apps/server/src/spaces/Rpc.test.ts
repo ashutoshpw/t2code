@@ -1,3 +1,4 @@
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import {
@@ -178,7 +179,7 @@ const fixture = Effect.fn("SpacesRpcTest.fixture")(function* <A, E>(
   );
 });
 
-it.layer(NodeServices.layer)("encoded Spaces RPC", (it) => {
+it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("encoded Spaces RPC", (it) => {
   it.effect("captures context snapshots through an authorized strict read RPC", () =>
     fixture(
       Effect.gen(function* () {
@@ -1033,5 +1034,5 @@ it.effect(
         });
         assert.include(JSON.stringify(forbidden), "EnvironmentAuthorizationError");
       }),
-    ).pipe(Effect.provide(NodeServices.layer)),
+    ).pipe(Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
 );

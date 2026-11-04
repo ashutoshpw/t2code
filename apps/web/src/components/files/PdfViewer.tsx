@@ -198,18 +198,20 @@ export default function PdfViewer(props: {
             return size.height / size.width;
           }),
         );
-        if (controller.signal.aborted) return;
-        setPageWidth(first.width);
-        setRatios(
-          savedPosition?.ratios.length === document.numPages
-            ? savedPosition.ratios
-            : Array.from(
-                { length: document.numPages },
-                (_, index) => sizes[index] ?? first.height / first.width,
-              ),
-        );
-        setPdf(document);
-      })
+      }
+      if (controller.signal.aborted) return;
+      setPageWidth(first.width);
+      setRatios(
+        savedPosition?.ratios.length === document.numPages
+          ? savedPosition.ratios
+          : Array.from(
+              { length: document.numPages },
+              (_, index) => sizes?.[index] ?? first.height / first.width,
+            ),
+      );
+      setPdf(document);
+    };
+    void load()
       .catch((cause: unknown) => {
         void task?.destroy();
         if (!disposed && !controller.signal.aborted)

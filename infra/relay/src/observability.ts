@@ -2,9 +2,9 @@
 import * as NodeCrypto from "node:crypto";
 
 import * as Alchemy from "alchemy";
-import * as Axiom from "alchemy/Axiom";
+import * as Axiom from "@alchemy.run/axiom";
 import { adopt } from "alchemy/AdoptPolicy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Output from "alchemy/Output";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";

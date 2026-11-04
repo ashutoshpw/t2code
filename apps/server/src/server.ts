@@ -315,7 +315,7 @@ const layerRelayClient = Layer.unwrap(
     const policy = yield* ManagedPolicy.ManagedPolicy;
     const layerCloudflared = RelayClient.layerCloudflared({ baseDir: config.baseDir });
     if (ManagedLimits.allowsConnect(policy)) return layerCloudflared;
-    // The connector only carries T3 Connect, so a policy without Connect never installs one.
+    // The connector only carries T2 Connect, so a policy without Connect never installs one.
     const refused = Effect.fn("RelayClient.installRefusedByPolicy")(function* () {
       return yield* new RelayClient.RelayClientInstallError({
         reason: "managed_by_policy",

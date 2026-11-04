@@ -97,10 +97,7 @@ const makeServerConfig = Effect.fn(function* (baseDir: string) {
 
 const testNodeServices = Layer.mergeAll(
   NodeServices.layer,
-<<<<<<< HEAD
   NodeCrypto.layer,
-=======
->>>>>>> 768cd64783 (rebrand(server): finish the T2 sweep and reconcile the rebase seams)
   Layer.succeed(HostProcess.Environment, {
     ...process.env,
     [SERVICE_LAUNCHER_CONTEXT_ENV]: undefined,

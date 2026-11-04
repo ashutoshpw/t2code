@@ -110,6 +110,8 @@ describe("command permissions", () => {
         );
       }),
     ),
+  );
+
   it.effect(
     "captures and resolves Spaces context only while the destination grants read access",
     () =>

@@ -4,11 +4,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 
-import {
-  DEFAULT_SERVER_SETTINGS,
-  ProviderDriverKind,
-  ProviderInstanceId,
-} from "@t2code/contracts";
+import { DEFAULT_SERVER_SETTINGS, ProviderDriverKind, ProviderInstanceId } from "@t2code/contracts";
 import * as HostProcess from "@t2code/shared/HostProcess";
 
 import { BUILT_IN_DRIVERS } from "../provider/builtInDrivers.ts";
@@ -186,7 +182,7 @@ it.layer(NodeServices.layer)("ManagedPolicy.load", (it) => {
         "environment",
       ]);
       // The host variable that replaces Codex's launch arguments is ignored too.
-      const host = { PATH: "/usr/bin", T3CODE_CODEX_LAUNCH_ARGS: "-c mcp_servers.x.command=sh" };
+      const host = { PATH: "/usr/bin", T2CODE_CODEX_LAUNCH_ARGS: "-c mcp_servers.x.command=sh" };
       assert.deepEqual(providerHostEnvironment(policy.summary, host), { PATH: "/usr/bin" });
       assert.strictEqual(providerHostEnvironment(undefined, host), host);
     }),
@@ -205,7 +201,7 @@ it.layer(NodeServices.layer)("ManagedPolicy.load", (it) => {
               driver: codex,
               environment: [
                 variable("HTTPS_PROXY", "http://mine"),
-                variable("T3CODE_CODEX_LAUNCH_ARGS", "--dangerously-bypass-approvals-and-sandbox"),
+                variable("T2CODE_CODEX_LAUNCH_ARGS", "--dangerously-bypass-approvals-and-sandbox"),
               ],
             },
           },
@@ -257,7 +253,7 @@ it.layer(NodeServices.layer)("ManagedPolicy.load", (it) => {
           saved._tag === "Allowed"
             ? (saved.settings.providerInstances[codexId]?.environment ?? [])
             : [];
-        assert.isTrue(savedEnvironment.some((entry) => entry.name === "T3CODE_CODEX_LAUNCH_ARGS"));
+        assert.isTrue(savedEnvironment.some((entry) => entry.name === "T2CODE_CODEX_LAUNCH_ARGS"));
         // A home path setting would rewrite a locked home variable at launch, so the lock owns it.
         const claude = ProviderDriverKind.make("claudeAgent");
         const homeLocked = yield* ManagedPolicy.fromDocument("/test/policy.json", {
@@ -319,7 +315,7 @@ it.layer(NodeServices.layer)("ManagedPolicy.load", (it) => {
           "config.serverUrl",
         );
         // The same override from the environment that starts the server is ignored too.
-        const host = { PATH: "/usr/bin", T3CODE_CODEX_LAUNCH_ARGS: "--yolo" };
+        const host = { PATH: "/usr/bin", T2CODE_CODEX_LAUNCH_ARGS: "--yolo" };
         assert.deepEqual(providerHostEnvironment((yield* policyOn("linux")).summary, host), {
           PATH: "/usr/bin",
         });

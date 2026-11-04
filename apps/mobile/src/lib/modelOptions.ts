@@ -116,7 +116,7 @@ function isDisabledForProject(
 }
 
 function selectionDriver(
-  config: T3ServerConfig | null | undefined,
+  config: T2ServerConfig | null | undefined,
   instanceId: ModelSelection["instanceId"],
 ): string | undefined {
   return (
@@ -126,7 +126,7 @@ function selectionDriver(
 }
 
 /** Whether the environment's managed policy leaves this driver out; the server refuses its turns. */
-function isDriverDisallowed(config: T3ServerConfig | null | undefined, driver: string | undefined) {
+function isDriverDisallowed(config: T2ServerConfig | null | undefined, driver: string | undefined) {
   return (
     driver !== undefined &&
     isProviderDriverKind(driver) &&

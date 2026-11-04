@@ -187,7 +187,7 @@ export const startEnvironment = Effect.fn("environment.start")(function* (input:
     HttpClient.filterStatusOk,
   );
   const descriptor = yield* http
-    .get(`${origin}/.well-known/t3/environment`)
+    .get(`${origin}/.well-known/t2/environment`)
     .pipe(Effect.flatMap(HttpClientResponse.schemaBodyJson(ExecutionEnvironmentDescriptor)));
   const shell = () =>
     http

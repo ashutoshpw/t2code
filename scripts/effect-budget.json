@@ -124,7 +124,6 @@
   "apps/mobile/src/features/threads/floating-working-control.tsx": 2,
   "apps/mobile/src/features/threads/git/GitOverviewSheet.tsx": 1,
   "apps/mobile/src/features/threads/new-task-flow-provider.tsx": 6,
-  "apps/mobile/src/features/threads/thread-inspector-content-stack.tsx": 1,
   "apps/mobile/src/features/threads/thread-list-v2-items.tsx": 1,
   "apps/mobile/src/features/threads/thread-subagent-group.tsx": 2,
   "apps/mobile/src/features/threads/thread-work-log.tsx": 5,

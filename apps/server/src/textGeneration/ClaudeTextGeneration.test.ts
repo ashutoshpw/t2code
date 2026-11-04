@@ -93,9 +93,9 @@ function withFakeClaudeEnv<A, E, R>(
         process.env.T2_FAKE_CLAUDE_OUTPUT = input.output;
 
         if (input.rejectsNoSessionPersistence) {
-          process.env.T3_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE = "1";
+          process.env.T2_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE = "1";
         } else {
-          delete process.env.T3_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE;
+          delete process.env.T2_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE;
         }
 
         if (input.exitCode !== undefined) {
@@ -145,9 +145,9 @@ function withFakeClaudeEnv<A, E, R>(
           process.env.PATH = previousPath;
 
           if (previousRejectsNoSessionPersistence === undefined) {
-            delete process.env.T3_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE;
+            delete process.env.T2_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE;
           } else {
-            process.env.T3_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE =
+            process.env.T2_FAKE_CLAUDE_REJECTS_NO_SESSION_PERSISTENCE =
               previousRejectsNoSessionPersistence;
           }
 

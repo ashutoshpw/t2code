@@ -97,8 +97,8 @@ const KINDS: Record<
 
 const UNAVAILABLE_EXPLANATION =
   Platform.OS === "android"
-    ? "T3 Code's voice input uses Google's on-device speech recognition, which needs Android 12 or later with compatible Google speech services for the device language. Without it, the composer has no microphone button, and allowing microphone access won't add one. Keyboard voice typing is separate and isn't affected."
-    : "T3 Code's voice input uses Apple's on-device speech transcription, which needs iOS 26 or later on a device that supports it. Without it, the composer has no microphone button, and allowing microphone access won't add one. Apple keyboard dictation is separate and isn't affected.";
+    ? "T2 Code's voice input uses Google's on-device speech recognition, which needs Android 12 or later with compatible Google speech services for the device language. Without it, the composer has no microphone button, and allowing microphone access won't add one. Keyboard voice typing is separate and isn't affected."
+    : "T2 Code's voice input uses Apple's on-device speech transcription, which needs iOS 26 or later on a device that supports it. Without it, the composer has no microphone button, and allowing microphone access won't add one. Apple keyboard dictation is separate and isn't affected.";
 
 export function SettingsMicrophoneRouteScreen() {
   const transcriber = useAtomValue(localVoiceTranscriberAtom);

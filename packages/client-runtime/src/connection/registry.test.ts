@@ -2104,8 +2104,8 @@ describe("EnvironmentRegistry routes", () => {
           new BearerConnectionProfile({
             ...LAN_PROFILE,
             connectionId,
-            httpBaseUrl: `http://${host}:3773/`,
-            wsBaseUrl: `ws://${host}:3773/`,
+            httpBaseUrl: `http://${host}:3772/`,
+            wsBaseUrl: `ws://${host}:3772/`,
           }),
         ] as const;
       const [savedTarget, savedProfile] = loopback("bearer:ip", "127.0.0.1");

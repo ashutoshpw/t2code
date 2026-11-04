@@ -99,14 +99,14 @@ describe("tailscale", () => {
     const status = JSON.stringify({
       TCP: {
         "443": { HTTPS: true },
-        "7000": { TCPForward: "127.0.0.1:3773" },
-        "7001": { TCPForward: "127.0.0.2:3773" },
+        "7000": { TCPForward: "127.0.0.1:3772" },
+        "7001": { TCPForward: "127.0.0.2:3772" },
         "80": { TCPForward: "unix:/run/app.sock" },
       },
       Web: {
         "box.tailnet.ts.net:443": {
           Handlers: {
-            "/t3": { Proxy: "http://127.0.0.1:3773" },
+            "/t3": { Proxy: "http://127.0.0.1:3772" },
             "/dashboard": { Proxy: "http://127.0.0.1:9000" },
           },
         },
@@ -114,41 +114,41 @@ describe("tailscale", () => {
         "box.tailnet.ts.net:10000": {
           Handlers: {
             // Another service on another loopback address, and one on the other family.
-            "/a": { Proxy: "http://127.0.0.2:3773" },
-            "/b": { Proxy: "http://[::1]:3773" },
-            "/c": { Proxy: "http://192.168.1.5:3773" },
-            "/d": { Proxy: "http://0.0.0.0:3773" },
-            "/e": { Proxy: "http://[::ffff:127.0.0.1]:3773" },
-            "/f": { Proxy: "http://localhost:3773" },
+            "/a": { Proxy: "http://127.0.0.2:3772" },
+            "/b": { Proxy: "http://[::1]:3772" },
+            "/c": { Proxy: "http://192.168.1.5:3772" },
+            "/d": { Proxy: "http://0.0.0.0:3772" },
+            "/e": { Proxy: "http://[::ffff:127.0.0.1]:3772" },
+            "/f": { Proxy: "http://localhost:3772" },
             // Shorthand Tailscale expands when it proxies.
-            "/g": { Proxy: "3773" },
-            "/h": { Proxy: "localhost:3773" },
-            "/i": { Proxy: "http://[::]:3773" },
+            "/g": { Proxy: "3772" },
+            "/h": { Proxy: "localhost:3772" },
+            "/i": { Proxy: "http://[::]:3772" },
             // A name can resolve to any address, the bound one included.
-            "/j": { Proxy: "http://ip6-localhost:3773" },
+            "/j": { Proxy: "http://ip6-localhost:3772" },
             // Go resolves these as names; a WHATWG URL rejects the first and rewrites the second.
-            "/k": { Proxy: "http://box.1:3773" },
-            "/l": { Proxy: "http://127.1:3773" },
+            "/k": { Proxy: "http://box.1:3772" },
+            "/l": { Proxy: "http://127.1:3772" },
             "/m": { Proxy: "unix:/run/app.sock" },
             // Credentials before the host, and IPv6 written out in full, still dial here.
-            "/n": { Proxy: "http://user:pass@127.0.0.1:3773" },
-            "/o": { Proxy: "http://[0:0:0:0:0:ffff:7f00:1]:3773" },
-            "/p": { Proxy: "http://127.0.0.1:03773" },
+            "/n": { Proxy: "http://user:pass@127.0.0.1:3772" },
+            "/o": { Proxy: "http://[0:0:0:0:0:ffff:7f00:1]:3772" },
+            "/p": { Proxy: "http://127.0.0.1:03772" },
           },
         },
       },
       Services: {
         "svc:t3": {
           Web: {
-            "t3.tailnet.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3773" } } },
+            "t3.tailnet.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3772" } } },
           },
         },
       },
       Foreground: {
-        session1: { TCP: { "9000": { TCPForward: "localhost:3773" } } },
+        session1: { TCP: { "9000": { TCPForward: "localhost:3772" } } },
       },
     });
-    assert.deepEqual(parseTailscaleServeRoutesTo(status, { host: "127.0.0.1", port: 3773 }), [
+    assert.deepEqual(parseTailscaleServeRoutesTo(status, { host: "127.0.0.1", port: 3772 }), [
       { servePort: 7000 },
       { servePort: 443, mount: "/t3", host: "box.tailnet.ts.net" },
       // `localhost` and `[::]` can dial either loopback, so they might be another service's.
@@ -185,9 +185,9 @@ describe("tailscale", () => {
       ),
       [{ servePort: 443, mount: "/", host: "box" }],
     );
-    assert.deepEqual(parseTailscaleServeRoutesTo("{}", { host: "127.0.0.1", port: 3773 }), []);
-    assert.deepEqual(parseTailscaleServeRoutesTo("null", { host: "127.0.0.1", port: 3773 }), []);
-    assert.isUndefined(parseTailscaleServeRoutesTo("not json", { host: "127.0.0.1", port: 3773 }));
+    assert.deepEqual(parseTailscaleServeRoutesTo("{}", { host: "127.0.0.1", port: 3772 }), []);
+    assert.deepEqual(parseTailscaleServeRoutesTo("null", { host: "127.0.0.1", port: 3772 }), []);
+    assert.isUndefined(parseTailscaleServeRoutesTo("not json", { host: "127.0.0.1", port: 3772 }));
   });
 
   it.effect("parses status facts", () =>

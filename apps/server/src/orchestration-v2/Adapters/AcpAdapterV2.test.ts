@@ -4622,7 +4622,7 @@ describe("AcpAdapterV2", () => {
       const makeRuntime = makeMockRuntime({
         childProcessSpawner,
         mockAgentPath,
-        environment: { T3_ACP_HANG_PROMPT_FOREVER: "1" },
+        environment: { T2_ACP_HANG_PROMPT_FOREVER: "1" },
         wrapRuntime: (runtime) => ({
           ...runtime,
           handleRequestPermission: (handler) =>

@@ -29,7 +29,7 @@ const RepoRoot = Effect.service(Path.Path).pipe(
 
 const runCommand = Effect.fn("runCommand")(function* (
   command: ChildProcess.StandardCommand,
-  errorArgs: ReadonlyArray<string> = command.args,
+  errorArgs: ReadonlyArray<string> = command.args.map(String),
 ) {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const child = yield* spawner.spawn(command);

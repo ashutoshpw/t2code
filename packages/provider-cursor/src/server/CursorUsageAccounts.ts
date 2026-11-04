@@ -286,7 +286,7 @@ const make = Effect.gen(function* () {
         platform === "darwin"
           ? path.join(userHome, ".cursor", "auth.json")
           : path.join(cursorHome, platform === "win32" ? "Cursor" : "cursor", "auth.json");
-      // T3's Cursor sign-in and CURSOR_API_KEY name the account the agent uses, so they win.
+      // T2's Cursor sign-in and CURSOR_API_KEY name the account the agent uses, so they win.
       const apiKeys = yield* Effect.forEach(instances, ({ instanceId, environment }) =>
         environment.CURSOR_API_KEY?.trim()
           ? Effect.succeed(environment.CURSOR_API_KEY.trim())

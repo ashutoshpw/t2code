@@ -489,10 +489,10 @@ const CODEX_TEST_RUNTIME_POLICY = ProviderAdapter.ProviderAdapterV2RuntimePolicy
   interactionMode: "default",
   cwd: "/workspace",
 });
-const T3_THREAD_ENV_KEY = "shell_environment_policy.set.T3CODE_THREAD_ID";
+const T2_THREAD_ENV_KEY = "shell_environment_policy.set.T2CODE_THREAD_ID";
 const threadEnvOf = (params: unknown) =>
-  Predicate.hasProperty(params, "config") && Predicate.hasProperty(params.config, T3_THREAD_ENV_KEY)
-    ? params.config[T3_THREAD_ENV_KEY]
+  Predicate.hasProperty(params, "config") && Predicate.hasProperty(params.config, T2_THREAD_ENV_KEY)
+    ? params.config[T2_THREAD_ENV_KEY]
     : undefined;
 
 function makeCodexTestAppThread(input: {
@@ -1628,13 +1628,13 @@ describe("CodexAdapterV2 post-settle continuation", () => {
               url: "http://127.0.0.1:43123/mcp",
               tool_timeout_sec: 3_900,
               http_headers: { Authorization: "Bearer secret-codex-token" },
-              disabled_tools: ["t3_thread_wait"],
+              disabled_tools: ["t2_thread_wait"],
             },
-            "mcp_servers.t3-code-direct": {
+            "mcp_servers.t2-code-direct": {
               url: "http://127.0.0.1:43123/mcp",
               tool_timeout_sec: 3_900,
               http_headers: { Authorization: "Bearer secret-codex-token" },
-              enabled_tools: ["t3_thread_wait"],
+              enabled_tools: ["t2_thread_wait"],
               omit_tools_from: ["code_mode", "deferred"],
             },
           },

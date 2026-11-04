@@ -85,7 +85,7 @@
     },
     {
       "driver": "kiro",
-      "t3CodeRange": ">=0.0.46",
+      "t2CodeRange": ">=0.0.46",
       "recommendedRange": ">=2.27.0",
       "ranges": [{ "range": ">=2.27.0", "status": "supported" }]
     },

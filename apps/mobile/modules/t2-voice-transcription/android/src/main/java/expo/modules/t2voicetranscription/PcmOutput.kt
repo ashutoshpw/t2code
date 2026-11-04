@@ -1,4 +1,4 @@
-package expo.modules.t3voicetranscription
+package expo.modules.t2voicetranscription
 
 import com.google.mlkit.genai.speechrecognition.SpeechRecognizerResponse
 import kotlinx.coroutines.NonCancellable

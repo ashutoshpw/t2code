@@ -99,7 +99,7 @@ function GuestLinksRow() {
   const updateSettings = useUpdateScopedSettings();
   const scope = useOptionalSettingsScope();
   const primaryPolicy = usePrimaryManagedPolicy();
-  // Guests arrive through T3 Connect, so a policy that turns Connect off turns this off too.
+  // Guests arrive through T2 Connect, so a policy that turns Connect off turns this off too.
   const connectDenial = firstManagedDenial(
     scope
       ? scope.connectedEnvironments.map((environment) => environment.serverConfig?.managedPolicy)
@@ -111,7 +111,7 @@ function GuestLinksRow() {
       serverScoped
       {...searchableSetting("guest-links")}
       settingKeys={["guestSharingEnabled"]}
-      // Turning guest links off still works without T3 Connect.
+      // Turning guest links off still works without T2 Connect.
       managed={settings.guestSharingEnabled ? undefined : connectDenial}
       description={
         <>

@@ -5,13 +5,8 @@ import {
   DesktopPendingSnapShot,
   type ClientSettings,
   type DesktopSnapShotEvent,
-<<<<<<< HEAD
 } from "@t2code/contracts";
 import * as SecureRandom from "effect/crypto/SecureRandom";
-=======
-} from "@t2code/contracts";
-import * as Crypto from "effect/Crypto";
->>>>>>> bf374d3c8d (rebrand: sweep remaining T3 Code copy to T2 Code)
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";

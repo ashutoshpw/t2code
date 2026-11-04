@@ -25,11 +25,8 @@ import { Route as ChatSpacesRouteImport } from './routes/_chat.spaces'
 import { Route as ChatSettingsRouteImport } from './routes/_chat.settings'
 import { Route as ChatPullRequestsRouteImport } from './routes/_chat.pull-requests'
 import { Route as ChatNewRouteImport } from './routes/_chat.new'
-<<<<<<< HEAD
-import { Route as ThreadsEnvironmentIdThreadIdRouteImport } from './routes/threads.$environmentId.$threadId'
-=======
 import { Route as ChatSpacesIndexRouteImport } from './routes/_chat.spaces.index'
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
+import { Route as ThreadsEnvironmentIdThreadIdRouteImport } from './routes/threads.$environmentId.$threadId'
 import { Route as ChatSettingsWorktreesRouteImport } from './routes/_chat.settings.worktrees'
 import { Route as ChatSettingsThreadsRouteImport } from './routes/_chat.settings.threads'
 import { Route as ChatSettingsStorageRouteImport } from './routes/_chat.settings.storage'
@@ -140,20 +137,17 @@ const ChatNewRoute = ChatNewRouteImport.update({
   path: '/new',
   getParentRoute: () => ChatRoute,
 } as any)
-<<<<<<< HEAD
+const ChatSpacesIndexRoute = ChatSpacesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChatSpacesRoute,
+} as any)
 const ThreadsEnvironmentIdThreadIdRoute =
   ThreadsEnvironmentIdThreadIdRouteImport.update({
     id: '/threads/$environmentId/$threadId',
     path: '/threads/$environmentId/$threadId',
     getParentRoute: () => rootRouteImport,
   } as any)
-=======
-const ChatSpacesIndexRoute = ChatSpacesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ChatSpacesRoute,
-} as any)
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
 const ChatSettingsWorktreesRoute = ChatSettingsWorktreesRouteImport.update({
   id: '/worktrees',
   path: '/worktrees',
@@ -355,14 +349,11 @@ export interface FileRoutesByFullPath {
   '/settings/storage': typeof ChatSettingsStorageRoute
   '/settings/threads': typeof ChatSettingsThreadsRoute
   '/settings/worktrees': typeof ChatSettingsWorktreesRoute
-<<<<<<< HEAD
   '/threads/$environmentId/$threadId': typeof ThreadsEnvironmentIdThreadIdRoute
-=======
   '/spaces/': typeof ChatSpacesIndexRoute
   '/spaces/$environmentId/$spaceId': typeof ChatSpacesEnvironmentIdSpaceIdRouteWithChildren
   '/spaces/$environmentId/$spaceId/$pageId': typeof ChatSpacesEnvironmentIdSpaceIdPageIdRoute
   '/spaces/$environmentId/$spaceId/': typeof ChatSpacesEnvironmentIdSpaceIdIndexRoute
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
 }
 export interface FileRoutesByTo {
   '/connect': typeof ConnectRoute
@@ -406,13 +397,10 @@ export interface FileRoutesByTo {
   '/settings/storage': typeof ChatSettingsStorageRoute
   '/settings/threads': typeof ChatSettingsThreadsRoute
   '/settings/worktrees': typeof ChatSettingsWorktreesRoute
-<<<<<<< HEAD
   '/threads/$environmentId/$threadId': typeof ThreadsEnvironmentIdThreadIdRoute
-=======
   '/spaces': typeof ChatSpacesIndexRoute
   '/spaces/$environmentId/$spaceId/$pageId': typeof ChatSpacesEnvironmentIdSpaceIdPageIdRoute
   '/spaces/$environmentId/$spaceId': typeof ChatSpacesEnvironmentIdSpaceIdIndexRoute
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -459,14 +447,11 @@ export interface FileRoutesById {
   '/_chat/settings/storage': typeof ChatSettingsStorageRoute
   '/_chat/settings/threads': typeof ChatSettingsThreadsRoute
   '/_chat/settings/worktrees': typeof ChatSettingsWorktreesRoute
-<<<<<<< HEAD
   '/threads/$environmentId/$threadId': typeof ThreadsEnvironmentIdThreadIdRoute
-=======
   '/_chat/spaces/': typeof ChatSpacesIndexRoute
   '/_chat/spaces/$environmentId/$spaceId': typeof ChatSpacesEnvironmentIdSpaceIdRouteWithChildren
   '/_chat/spaces/$environmentId/$spaceId/$pageId': typeof ChatSpacesEnvironmentIdSpaceIdPageIdRoute
   '/_chat/spaces/$environmentId/$spaceId/': typeof ChatSpacesEnvironmentIdSpaceIdIndexRoute
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -513,14 +498,11 @@ export interface FileRouteTypes {
     | '/settings/storage'
     | '/settings/threads'
     | '/settings/worktrees'
-<<<<<<< HEAD
     | '/threads/$environmentId/$threadId'
-=======
     | '/spaces/'
     | '/spaces/$environmentId/$spaceId'
     | '/spaces/$environmentId/$spaceId/$pageId'
     | '/spaces/$environmentId/$spaceId/'
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/connect'
@@ -564,13 +546,10 @@ export interface FileRouteTypes {
     | '/settings/storage'
     | '/settings/threads'
     | '/settings/worktrees'
-<<<<<<< HEAD
     | '/threads/$environmentId/$threadId'
-=======
     | '/spaces'
     | '/spaces/$environmentId/$spaceId/$pageId'
     | '/spaces/$environmentId/$spaceId'
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
   id:
     | '__root__'
     | '/_chat'
@@ -616,14 +595,11 @@ export interface FileRouteTypes {
     | '/_chat/settings/storage'
     | '/_chat/settings/threads'
     | '/_chat/settings/worktrees'
-<<<<<<< HEAD
     | '/threads/$environmentId/$threadId'
-=======
     | '/_chat/spaces/'
     | '/_chat/spaces/$environmentId/$spaceId'
     | '/_chat/spaces/$environmentId/$spaceId/$pageId'
     | '/_chat/spaces/$environmentId/$spaceId/'
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -636,6 +612,7 @@ export interface RootRouteChildren {
   SharedPageRoute: typeof SharedPageRoute
   WelcomeRoute: typeof WelcomeRoute
   ProjectsProjectKeyRoute: typeof ProjectsProjectKeyRoute
+  SettingsScheduledTasksRoute: typeof SettingsScheduledTasksRoute
   ThreadsEnvironmentIdThreadIdRoute: typeof ThreadsEnvironmentIdThreadIdRoute
 }
 
@@ -753,21 +730,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatNewRouteImport
       parentRoute: typeof ChatRoute
     }
-<<<<<<< HEAD
-    '/threads/$environmentId/$threadId': {
-      id: '/threads/$environmentId/$threadId'
-      path: '/threads/$environmentId/$threadId'
-      fullPath: '/threads/$environmentId/$threadId'
-      preLoaderRoute: typeof ThreadsEnvironmentIdThreadIdRouteImport
-      parentRoute: typeof rootRouteImport
-=======
     '/_chat/spaces/': {
       id: '/_chat/spaces/'
       path: '/'
       fullPath: '/spaces/'
       preLoaderRoute: typeof ChatSpacesIndexRouteImport
       parentRoute: typeof ChatSpacesRoute
->>>>>>> d6ce09a1eb (feat(spaces): add virtualized shell navigation (#20))
+    }
+    '/threads/$environmentId/$threadId': {
+      id: '/threads/$environmentId/$threadId'
+      path: '/threads/$environmentId/$threadId'
+      fullPath: '/threads/$environmentId/$threadId'
+      preLoaderRoute: typeof ThreadsEnvironmentIdThreadIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_chat/settings/worktrees': {
       id: '/_chat/settings/worktrees'
@@ -1109,6 +1084,7 @@ const rootRouteChildren: RootRouteChildren = {
   SharedPageRoute: SharedPageRoute,
   WelcomeRoute: WelcomeRoute,
   ProjectsProjectKeyRoute: ProjectsProjectKeyRoute,
+  SettingsScheduledTasksRoute: SettingsScheduledTasksRoute,
   ThreadsEnvironmentIdThreadIdRoute: ThreadsEnvironmentIdThreadIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -3391,6 +3391,8 @@ export const layerWsRpc = (
                   type: "environmentLabelUpdated" as const,
                   payload: { label: environment.label },
                 })),
+                // The snapshot already carried this label; only later changes are news.
+                Stream.dropWhile((event) => event.payload.label === config.environment.label),
               );
 
               const liveUpdates = Stream.merge(

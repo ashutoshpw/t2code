@@ -252,14 +252,14 @@ const publishedArchive = Effect.fn("cloud.pinned_runtime.published_archive")(fun
       yield* fetchReleaseAsset(
         input.httpClient,
         cliReleaseAssetUrl(input.version, CLI_RELEASE_CHECKSUMS_FILE, input.releaseBaseUrl),
-        "downloading the t3 release checksums",
+        "downloading the t2 release checksums",
       ),
     ),
   );
   const expected = checksums.get(fileName);
   if (expected === undefined) {
     return yield* new PinnedRuntimeInstallError({
-      step: `finding ${fileName} in the t3 release checksums`,
+      step: `finding ${fileName} in the t2 release checksums`,
     });
   }
   return { fileName, expected };
@@ -271,7 +271,7 @@ const isPinnedRuntimeInstallError = Schema.is(PinnedRuntimeInstallError);
 export const isUnpublishedRelease = (error: unknown): error is PinnedRuntimeInstallError =>
   isPinnedRuntimeInstallError(error) &&
   (error.step.startsWith("finding ") ||
-    (error.step.startsWith("downloading the t3 release") &&
+    (error.step.startsWith("downloading the t2 release") &&
       HttpClientError.isHttpClientError(error.cause) &&
       error.cause.response?.status === 404));
 
