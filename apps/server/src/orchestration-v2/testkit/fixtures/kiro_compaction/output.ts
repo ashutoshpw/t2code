@@ -30,7 +30,7 @@ export function assertKiroCompactionOutput(
   );
   // Compaction drops T2's instructions from Kiro's context, so the next prompt carries them again.
   assert.deepEqual(
-    prompts.map((frame) => promptText(frame).startsWith("<t3_code_instructions>")),
+    prompts.map((frame) => promptText(frame).startsWith("<t2_code_instructions>")),
     [true, true],
   );
 
