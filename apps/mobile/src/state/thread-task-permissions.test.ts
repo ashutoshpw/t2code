@@ -197,7 +197,6 @@ vi.mock("../lib/commandMetadata", () => ({
 vi.mock("../lib/copyTextWithHaptic", () => ({ copyTextWithHaptic: vi.fn() }));
 vi.mock("./use-remote-environment-registry", () => ({ setPendingConnectionError: vi.fn() }));
 
-import { Alert } from "react-native";
 import { useThreadComposerState } from "./use-thread-composer-state";
 import { useSelectedThreadRequests } from "./use-selected-thread-requests";
 
@@ -296,10 +295,14 @@ describe("mobile task permissions", () => {
     expect(await composer.onSendMessage(undefined, async () => true)).toBe("message");
     expect(state.enqueue).toHaveBeenLastCalledWith(
       expect.not.objectContaining({ freshContext: true }),
+      expect.anything(),
     );
     expect(state.setFreshPending).not.toHaveBeenCalled();
     expect(await composer.onSendMessage()).toBe("message");
-    expect(state.enqueue).toHaveBeenLastCalledWith(expect.objectContaining({ freshContext: true }));
+    expect(state.enqueue).toHaveBeenLastCalledWith(
+      expect.objectContaining({ freshContext: true }),
+      expect.anything(),
+    );
     expect(state.setFreshPending).toHaveBeenCalledWith("secondary:thread", false);
   });
 
@@ -334,13 +337,18 @@ describe("mobile task permissions", () => {
     await composer.onSendMessage();
     expect(state.enqueue).toHaveBeenLastCalledWith(
       expect.objectContaining({ compactBeforeSend: true }),
+      expect.anything(),
     );
     state.freshPending = true;
     await composer.onSendMessage();
     expect(state.enqueue).toHaveBeenLastCalledWith(
       expect.not.objectContaining({ compactBeforeSend: true }),
+      expect.anything(),
     );
-    expect(state.enqueue).toHaveBeenLastCalledWith(expect.objectContaining({ freshContext: true }));
+    expect(state.enqueue).toHaveBeenLastCalledWith(
+      expect.objectContaining({ freshContext: true }),
+      expect.anything(),
+    );
   });
 
   it("sends a typed /clear with an approval redirect as that reply's text", async () => {
@@ -410,7 +418,7 @@ describe("mobile task permissions", () => {
     state.draft = { ...state.draft, attachments: [] };
     expect(await useThreadComposerState({ startSideChat }).onSendMessage()).toBeNull();
     expect(startSideChat).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledOnce();
+    expect(state.alert).toHaveBeenCalledOnce();
   });
 
   it("rechecks a retained send callback before clearing or queueing the draft", async () => {

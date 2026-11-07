@@ -72,6 +72,7 @@ const makeHarness = Effect.gen(function* () {
       Effect.sync(() => handled.resolve({ transport, message })),
     attach: () => undefined,
     detach: () => undefined,
+    setShown: () => undefined,
     humanStartedDownload: () => false,
     placeDownload: () => false,
     pointers: Stream.empty,

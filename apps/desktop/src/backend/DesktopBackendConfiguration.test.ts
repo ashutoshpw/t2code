@@ -94,6 +94,14 @@ function layerEnvironment(
   );
 }
 
+const restoreEnv = (name: string, value: string | undefined) => {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+};
+
 const withHarness = <A, E, R>(
   effect: Effect.Effect<
     A,
@@ -734,12 +742,15 @@ describe("DesktopBackendConfiguration", () => {
           OTEL_EXPORTER_OTLP_LOGS_HEADERS: "authorization=Bearer%20token",
           T2CODE_OTLP_TRACES_URL: "http://t2.example.com:4318/v1/traces",
         };
+        // @effect-diagnostics-next-line processEnvInEffect:off - simulates the ambient Windows environment the resolver must read.
         const previousWslEnv = process.env.WSLENV;
         const ambientOtel = Object.entries(process.env).filter(
           ([name]) => name.startsWith("OTEL_") || name.startsWith("T2CODE_OTLP_"),
         );
         try {
+          // @effect-diagnostics-next-line processEnvInEffect:off - same ambient-environment simulation.
           for (const [name] of ambientOtel) delete process.env[name];
+          // @effect-diagnostics-next-line processEnvInEffect:off - same ambient-environment simulation.
           delete process.env.WSLENV;
           Object.assign(process.env, standard);
 
@@ -778,6 +789,7 @@ describe("DesktopBackendConfiguration", () => {
             ),
           );
         } finally {
+          // @effect-diagnostics-next-line processEnvInEffect:off - same ambient-environment simulation.
           for (const name of Object.keys(standard)) delete process.env[name];
           restoreEnv("WSLENV", previousWslEnv);
           for (const [name, value] of ambientOtel) restoreEnv(name, value);

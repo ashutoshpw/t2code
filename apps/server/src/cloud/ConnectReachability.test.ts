@@ -96,11 +96,11 @@ describe("classifyReachability", () => {
     ).toMatchObject({ cause: "connector_not_ready" });
   });
 
-  it("does not point an unlinked server at a background service it may not have", () => {
-    // Desktop and `t2 serve` run the server without a background service.
+  it("directs an unlinked server to connect and restart so the link applies", () => {
     const result = classifyReachability(facts({ managedTunnelConfigured: false }), checkedAt);
     expect(result).toMatchObject({ cause: "not_linked" });
-    expect(result.status === "unreachable" && result.fix).not.toContain("t2 service");
+    expect(result.status === "unreachable" && result.fix).toContain("t2 connect");
+    expect(result.status === "unreachable" && result.fix).toContain("t2 service restart");
   });
 });
 
