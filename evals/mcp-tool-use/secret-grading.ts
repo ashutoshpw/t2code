@@ -553,7 +553,7 @@ export const gradeSecretValues = (
   return [...failures];
 };
 
-const SECRET_FILE = /[^\s'"=<>$(){}|;&]*\/\.t3\/userdata\/secrets\/files\/[0-9a-f]{32}/g;
+const SECRET_FILE = /[^\s'"=<>$(){}|;&]*\/\.t2\/userdata\/secrets\/files\/[0-9a-f]{32}/g;
 const fileId = (path: string) => path.slice(-32);
 
 type Part = { readonly text: string; readonly op: string };
@@ -1720,7 +1720,7 @@ export const classifyFileUse = (
       return false;
     }
     for (const [, name = "", value = ""] of parsed.flatMap((match) => (match ? [match] : []))) {
-      const dir = /\/\.t3\/userdata\/secrets\/files\/?$/.test(unquote(value));
+      const dir = /\/\.t2\/userdata\/secrets\/files\/?$/.test(unquote(value));
       const file = !dir && namesFile(value);
       const holds = !dir && !file && holdsValue(value);
       // A reassignment replaces what the name held.

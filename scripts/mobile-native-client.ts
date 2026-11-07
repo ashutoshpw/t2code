@@ -846,10 +846,10 @@ const buildOnBlacksmith = Effect.fn("nativeClient.buildOnBlacksmith")(
   ) {
     const environment = yield* HostProcess.Environment;
     // The workflow itself runs this script: it must build, never dispatch.
-    if (environment.GITHUB_ACTIONS === "true" || environment.T3_NATIVE_CLIENT_BUILD === "local")
+    if (environment.GITHUB_ACTIONS === "true" || environment.T2_NATIVE_CLIENT_BUILD === "local")
       return false;
     if (!(yield* isCommandAvailable("gh"))) return false;
-    const repository = environment.T3_NATIVE_CLIENT_REPOSITORY ?? "pingdotgg/t3code";
+    const repository = environment.T2_NATIVE_CLIENT_REPOSITORY ?? "ashutoshpw/t2code";
     const { repo } = yield* roots;
     const sha = yield* command("git", ["rev-parse", "HEAD"], false, repo);
     const pushed = yield* command(
@@ -995,7 +995,7 @@ export const resolveArtifact = Effect.fn("nativeClient.resolveArtifact")(functio
   yield* prune(path.dirname(directory), fingerprint);
   if (remote && (yield* HostProcess.Environment).T2_NATIVE_CLIENT_CACHE !== "read") {
     // The Blacksmith workflow exists to share the client: there a failed upload fails the run.
-    const required = (yield* HostProcess.Environment).T3_NATIVE_CLIENT_SHARE === "required";
+    const required = (yield* HostProcess.Environment).T2_NATIVE_CLIENT_SHARE === "required";
 
     yield* upload(remote, platform, key, directory).pipe(
       Effect.catch((error) =>

@@ -252,7 +252,7 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
       yield* repointLauncher({
         launchedAs: launcher,
         baseDir: root,
-        targetEntryPath: path.join(root, "runtime/versions/2.0.0/t3"),
+        targetEntryPath: path.join(root, "runtime/versions/2.0.0/t2"),
       }).pipe(
         Effect.provideService(FileSystem.FileSystem, {
           ...fs,
@@ -280,7 +280,7 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
       // macOS temp dirs sit behind the /var -> /private/var symlink, so compare canonical paths.
       assert.equal(
         yield* fs.realPath(launcher),
-        yield* fs.realPath(path.join(root, "runtime/versions/2.0.0/t3")),
+        yield* fs.realPath(path.join(root, "runtime/versions/2.0.0/t2")),
       );
     }).pipe(Effect.scoped, Effect.provideService(HostProcess.Platform, "linux")),
   );
@@ -290,7 +290,7 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
     const path = yield* Path.Path;
     const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" });
     const oldExe = path.join(root, "runtime/versions/1.0.0/t2");
-    const newExe = path.join(root, "runtime/versions/2.0.0/t3");
+    const newExe = path.join(root, "runtime/versions/2.0.0/t2");
     const launcher = path.join(root, "t2");
     for (const file of [oldExe, newExe]) {
       yield* fs.makeDirectory(path.dirname(file), { recursive: true });

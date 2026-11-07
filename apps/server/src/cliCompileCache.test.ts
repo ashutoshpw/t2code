@@ -68,7 +68,7 @@ it.live("loads the CLI with its cache settings only when the command needs it", 
     const launcherHelp = yield* run({ T2CODE_HOME: "" }, ["__service-launcher", "--help"]);
     expect(launcherHelp.exitCode).toBe(0);
     expect(launcherHelp.stderr).toContain("LOADED_CLI_MAIN");
-    expect(launcherHelp.stdout).toContain("t3 __service-launcher [flags]");
+    expect(launcherHelp.stdout).toContain("t2code __service-launcher [flags]");
     const launcherFlags = yield* run({ T2CODE_HOME: "" }, [
       "__service-launcher",
       "--log-level",
@@ -77,7 +77,7 @@ it.live("loads the CLI with its cache settings only when the command needs it", 
     expect(launcherFlags.exitCode).toBe(1);
     expect(launcherFlags.stderr).toContain("LOADED_CLI_MAIN");
     expect(launcherFlags.stderr).toContain("[service-launcher] T2CODE_HOME is required");
-    const appImage = yield* run({ APPIMAGE: `${root}/T3Code.AppImage` });
+    const appImage = yield* run({ APPIMAGE: `${root}/T2Code.AppImage` });
     expect(appImage.exitCode).toBe(0);
     expect(appImage.stderr).toContain("CACHE=disabled");
     const existing = yield* run({ NODE_COMPILE_CACHE: `${root}/explicit` });

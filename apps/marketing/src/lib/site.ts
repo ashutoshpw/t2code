@@ -7,7 +7,7 @@ export const ANDROID_PLAY_STORE_URL =
 async function fetchGithubStars(): Promise<string> {
   const token = process.env.GITHUB_TOKEN;
   try {
-    const response = await fetch("https://api.github.com/repos/pingdotgg/t3code", {
+    const response = await fetch("https://api.github.com/repos/ashutoshpw/t2code", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!response.ok) throw new Error(`GitHub API responded ${response.status}`);

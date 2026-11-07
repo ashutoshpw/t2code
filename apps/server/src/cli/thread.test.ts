@@ -80,9 +80,9 @@ it.effect(
         Effect.succeed({
           call: (tool, args) => {
             switch (tool) {
-              case "t3_project_list":
+              case "t2_project_list":
                 return Effect.succeed({ structuredContent: { projects, nextCursor: null } });
-              case "t3_thread_launch":
+              case "t2_thread_launch":
                 return Effect.succeed({
                   structuredContent: { threadId, projectId: args.projectId, runId: null },
                 });

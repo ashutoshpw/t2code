@@ -75,7 +75,6 @@ import {
   composerContextImportsAtom,
   getComposerDraftSnapshot,
   isFreshSessionPending,
-  mergeComposerDraftContent,
   sameComposerDraftState,
   removeComposerDraftAttachment,
   scheduleUnusedComposerAttachmentCleanup,
@@ -162,6 +161,33 @@ function activeComposerDraftKey(thread: {
   return edit === null ? threadKey : queuedEditDraftKey(threadKey, edit.runId);
 }
 
+// Outbox writes are async, so only one send may clear the draft, and only while the user
+// has not kept typing past the snapshot the send captured.
+async function enqueueComposerOutboxSend(
+  preparing: { current: boolean },
+  threadKey: string,
+  draft: ReturnType<typeof getComposerDraftSnapshot>,
+  messageId: MessageId,
+  enqueue: () => ReturnType<typeof enqueueThreadOutboxMessage>,
+): Promise<MessageId | null> {
+  preparing.current = true;
+  try {
+    await enqueue();
+  } catch (error) {
+    setThreadComposerError(
+      threadKey,
+      error instanceof Error ? error.message : "Failed to save the queued message.",
+    );
+    return null;
+  } finally {
+    preparing.current = false;
+  }
+  if (sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft))
+    clearComposerDraftContent(threadKey, { deferAttachmentCleanup: true });
+  scheduleUnusedComposerAttachmentCleanup(draft.attachments);
+  return messageId;
+}
+
 export function useThreadDraftForThread(input: {
   readonly environmentId?: EnvironmentId;
   readonly threadId?: ThreadId;
@@ -211,6 +237,7 @@ export function useThreadComposerState(input: {
   const [isSavingQueuedEdit, setIsSavingQueuedEdit] = useState(false);
   const savingQueuedEditRef = useRef(false);
   const startingSideChatRef = useRef(false);
+  const preparingSendRef = useRef(false);
 
   const selectedThreadKey = selectedThreadShell
     ? scopedThreadKey(selectedThreadShell.environmentId, selectedThreadShell.id)
@@ -538,6 +565,7 @@ export function useThreadComposerState(input: {
     ) => Promise<boolean | "responded">,
     onWillEnqueue?: () => void,
   ) => {
+    if (preparingSendRef.current) return null;
     if (
       selectedThreadShell &&
       selectedEnvironmentRuntime?.connectionState === "connected" &&
@@ -784,45 +812,44 @@ export function useThreadComposerState(input: {
     const messageId = MessageId.make(metadata.messageId);
     onWillEnqueue?.();
     clearThreadComposerError(threadKey);
-    const enqueuePromise = enqueueThreadOutboxMessage({
-      environmentId: selectedThreadShell.environmentId,
-      threadId: selectedThreadShell.id,
+    const sent = await enqueueComposerOutboxSend(
+      preparingSendRef,
+      threadKey,
+      draft,
       messageId,
-      commandId: CommandId.make(metadata.commandId),
-      text,
-      attachments,
-      context: draft.context,
-      modelSelection,
-      runtimeMode: draft.runtimeMode ?? thread.runtimeMode,
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-      ...(compactBeforeSend
-        ? { compactBeforeSend, dispatchMode: "queue" as const }
-        : followUpDispatchMode === null
-          ? {}
-          : { dispatchMode: followUpDispatchMode }),
-      ...(freshContext ? { freshContext: true } : {}),
-      createdAt: metadata.createdAt,
-    });
-    clearComposerDraftContent(threadKey, { deferAttachmentCleanup: true });
-    if (freshContext) setFreshSessionPending(threadKey, false);
-    enqueuePromise.then(
-      () => scheduleUnusedComposerAttachmentCleanup(attachments),
-      (error: unknown) => {
-        // Restore with uncapped append; capped merge could drop attachments added during the failed write.
-        void mergeComposerDraftContent(threadKey, {
-          text,
-          context: draft.context,
-          attachments: [],
-        });
-        appendComposerDraftAttachments(threadKey, attachments, { allowOverflow: true });
-        if (freshContext) setFreshSessionPending(threadKey, true);
-        setThreadComposerError(
-          threadKey,
-          error instanceof Error ? error.message : "Failed to save the queued message.",
-        );
-      },
+      () =>
+        enqueueThreadOutboxMessage(
+          {
+            environmentId: selectedThreadShell.environmentId,
+            threadId: selectedThreadShell.id,
+            messageId,
+            commandId: CommandId.make(metadata.commandId),
+            text,
+            attachments,
+            context: draft.context,
+            modelSelection,
+            runtimeMode: draft.runtimeMode ?? thread.runtimeMode,
+            interactionMode: resolveProviderInteractionMode(
+              provider,
+              draft.interactionMode ?? thread.interactionMode,
+            ),
+            ...(compactBeforeSend
+              ? { compactBeforeSend, dispatchMode: "queue" as const }
+              : followUpDispatchMode === null
+                ? {}
+                : { dispatchMode: followUpDispatchMode }),
+            ...(freshContext ? { freshContext: true } : {}),
+            createdAt: metadata.createdAt,
+          },
+          {
+            contextDraft: draft.contextDraft,
+            isCurrentDraft: () =>
+              sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft),
+          },
+        ),
     );
-    return messageId;
+    if (sent !== null && freshContext) setFreshSessionPending(threadKey, false);
+    return sent;
   };
 
   // Side chats do not nest or start from subagents, and need a server that forks them.

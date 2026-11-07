@@ -60,7 +60,7 @@ permissions:
 jobs:
   android:
     name: Android ${{ matrix.abi }}
-    if: github.repository == 'pingdotgg/t3code' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'android')
+    if: github.repository == 'ashutoshpw/t2code' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'android')
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 45
     strategy:
@@ -162,7 +162,7 @@ jobs:
         uses: ./.github/actions/setup-ci-deps
         with:
           task-cache-read-token: ${{ secrets.T3_TASK_CACHE_READ_TOKEN }}
-          install-args: --filter=@t3tools/mobile... --filter=@t3tools/scripts...
+          install-args: --filter=@t2code/mobile... --filter=@t2code/scripts...
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -218,7 +218,7 @@ jobs:
 
   ios:
     name: iOS simulator
-    if: github.repository == 'pingdotgg/t3code' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'ios')
+    if: github.repository == 'ashutoshpw/t2code' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'ios')
     runs-on: blacksmith-12vcpu-macos-26
     timeout-minutes: 60
     concurrency:
@@ -277,7 +277,7 @@ jobs:
         uses: ./.github/actions/setup-ci-deps
         with:
           task-cache-read-token: ${{ secrets.T3_TASK_CACHE_READ_TOKEN }}
-          install-args: --filter=@t3tools/mobile... --filter=@t3tools/scripts...
+          install-args: --filter=@t2code/mobile... --filter=@t2code/scripts...
 
       # Only this login can write to the cache; pull requests never get it.
       - id: login

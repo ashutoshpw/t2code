@@ -734,7 +734,7 @@ it("requestSecret saves a pasted value to a file without opening a card", async 
     Effect.map((snapshots) => {
       const found = snapshots.find(
         (snapshot) =>
-          snapshot.id === "t3_secret_requests_total" &&
+          snapshot.id === "t2_secret_requests_total" &&
           snapshot.attributes?.status === "saved_pasted",
       );
       return found?.type === "Counter" ? Number(found.state.count) : 0;
