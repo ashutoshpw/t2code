@@ -22,6 +22,7 @@ import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { SettingsSection } from "./components/SettingsSection";
 import { SettingsSwitchRow } from "./components/SettingsSwitchRow";
+
 import { SettingsScreen } from "./components/SettingsScreen";
 import { planAutoSettleSettingsSync, type AutoSettleSettings } from "./autoSettleSettingsSync";
 import { useSettingsEnvironmentFilter } from "./settings-environment-filter";

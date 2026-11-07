@@ -831,7 +831,7 @@ function claudeRulesMayCoverMcpTools(
 
 /**
  * Claude reports `annotations` as `readOnly`/`destructive`/`openWorld`; apps expect MCP's `*Hint` names.
- * Card calls skip Claude's permission check, so `readOnlyHint`, which skips T3's prompt, needs readable
+ * Card calls skip Claude's permission check, so `readOnlyHint`, which skips T2's prompt, needs readable
  * rules (null when not) with no ask or deny rule that may cover the tool.
  */
 function claudeMcpToolForApps(

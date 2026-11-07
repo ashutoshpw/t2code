@@ -882,7 +882,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
     });
   });
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- the minimap skips refreshes until the restore commits, and the restore can land without a scroll event
+  // oxlint-disable-next-line t2code/react-effect-budget -- the minimap skips refreshes until the restore commits, and the restore can land without a scroll event
   useLayoutEffect(() => {
     if (!restoringThreadPosition) scheduleMinimapRefresh();
   }, [restoringThreadPosition, scheduleMinimapRefresh]);

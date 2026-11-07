@@ -1,11 +1,6 @@
 import * as NodePlatformCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { authScopeResponse, AuthStandardClientScopes } from "@t2code/contracts";
-import {
-  computeDpopAccessTokenHash,
-  computeDpopJwkThumbprint,
-  type DpopPublicJwk,
-} from "@t2code/shared/dpop";
 import { expect, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -772,11 +767,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
             url: "/api/auth/session",
             cookies: {},
             headers: {
-              host: "192.168.1.50:3773",
+              host: "192.168.1.50:3772",
               authorization: `${scheme} ${token}`,
               dpop: key.sign({
                 method: "GET",
-                url: "http://192.168.1.50:3773/api/auth/session",
+                url: "http://192.168.1.50:3772/api/auth/session",
                 token,
                 iat,
               }),

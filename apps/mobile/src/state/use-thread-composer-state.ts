@@ -84,7 +84,7 @@ import {
   useComposerDraft,
   useComposerDraftSettings,
 } from "./use-composer-drafts";
-import { isClearComposerCommand, parseSideChatCommand } from "@t3tools/shared/composerTrigger";
+import { isClearComposerCommand, parseSideChatCommand } from "@t2code/shared/composerTrigger";
 import {
   resolveComposerDispatchMode,
   type ActiveTurnComposerAction,
@@ -160,31 +160,6 @@ function activeComposerDraftKey(thread: {
   const threadKey = scopedThreadKey(thread.environmentId, thread.id);
   const edit = getQueuedRunEdit(threadKey);
   return edit === null ? threadKey : queuedEditDraftKey(threadKey, edit.runId);
-}
-
-async function enqueueComposerOutboxSend(
-  preparing: { current: boolean },
-  threadKey: string,
-  draft: ReturnType<typeof getComposerDraftSnapshot>,
-  messageId: MessageId,
-  enqueue: () => ReturnType<typeof enqueueThreadOutboxMessage>,
-): Promise<MessageId | null> {
-  preparing.current = true;
-  try {
-    await enqueue();
-  } catch (error) {
-    setThreadComposerError(
-      threadKey,
-      error instanceof Error ? error.message : "Failed to save the queued message.",
-    );
-    return null;
-  } finally {
-    preparing.current = false;
-  }
-  if (sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft))
-    clearComposerDraftContent(threadKey, { deferAttachmentCleanup: true });
-  scheduleUnusedComposerAttachmentCleanup(draft.attachments);
-  return messageId;
 }
 
 export function useThreadDraftForThread(input: {
@@ -263,7 +238,6 @@ export function useThreadComposerState(input: {
       ? EMPTY_THREAD_SEQUENCE_ATOM
       : environmentThreadDetails.sequenceAtom(selectedThreadDetailRef),
   );
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- prunes the app-wide acknowledged atom when the mounted thread catches up
   useEffect(() => {
     if (selectedThreadKey === null || acknowledgedMessages.length === 0) return;
     pruneCaughtUpAcknowledgedThreadMessages(selectedThreadKey, {
@@ -564,7 +538,6 @@ export function useThreadComposerState(input: {
     ) => Promise<boolean | "responded">,
     onWillEnqueue?: () => void,
   ) => {
-    if (preparingSendRef.current) return null;
     if (
       selectedThreadShell &&
       selectedEnvironmentRuntime?.connectionState === "connected" &&

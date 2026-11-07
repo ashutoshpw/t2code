@@ -526,7 +526,7 @@ export class BootServiceOtherBaseDirError extends Schema.TaggedError<BootService
   },
 ) {
   override get message(): string {
-    return `The T3 Code service on this machine serves ${this.installedBaseDir}, not ${this.baseDir}. Pass ${formatBootServiceBaseDirOption(this.installedBaseDir)} to manage it, or run \`t3 service uninstall ${formatBootServiceBaseDirOption(this.installedBaseDir)}\` first to move it; both data directories are kept.`;
+    return `The T2 Code service on this machine serves ${this.installedBaseDir}, not ${this.baseDir}. Pass ${formatBootServiceBaseDirOption(this.installedBaseDir)} to manage it, or run \`t3 service uninstall ${formatBootServiceBaseDirOption(this.installedBaseDir)}\` first to move it; both data directories are kept.`;
   }
 
   // A refusal the user fixes by rerunning, so the CLI prints the message, not a stack trace.
@@ -550,7 +550,7 @@ export interface BootServiceStatus {
   readonly current: boolean;
   readonly installedVersion?: string;
   readonly installedBaseDir?: string;
-  /** Set when the installed unit serves a different T3 home than this CLI. */
+  /** Set when the installed unit serves a different T2 home than this CLI. */
   readonly otherBaseDir?: string;
   readonly problems?: ReadonlyArray<BootServiceProblem>;
   readonly unitPath: string;

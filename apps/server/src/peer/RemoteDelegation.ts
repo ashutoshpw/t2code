@@ -25,7 +25,7 @@ import * as Schedule from "effect/Schedule";
 import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
 import type * as Tool from "effect/ai/Tool";
-import { withExecutedModelNote } from "@t3tools/provider-core/server/subagentProjection";
+import { withExecutedModelNote } from "@t2code/provider-core/server/subagentProjection";
 
 import type * as McpInvocationContext from "../mcp/McpInvocationContext.ts";
 import { ProjectToolkit } from "../mcp/toolkits/project/tools.ts";

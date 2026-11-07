@@ -6,8 +6,8 @@ import { WS_METHODS } from "@t2code/contracts";
 import { environmentCatalog } from "../connection/catalog";
 import { connectionAtomRuntime } from "../connection/runtime";
 import { environmentShell, environmentSnapshotAtom, expectsPrimaryEnvironment } from "./shell";
-import { parseScopedProjectKey } from "@t3tools/client-runtime/environment";
-import { AVAILABLE_CONNECTION_STATE } from "@t3tools/client-runtime/connection";
+import { parseScopedProjectKey } from "@t2code/client-runtime/environment";
+import { AVAILABLE_CONNECTION_STATE } from "@t2code/client-runtime/connection";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { serverEnvironment } from "./server";
 

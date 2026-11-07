@@ -2,13 +2,13 @@ import type { MenuAction } from "@react-native-menu/menu";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import {
   isManagedSettingPath,
   type ProviderInstanceId,
   type ProviderInstanceMutation,
   type ServerProvider,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useRef, useState } from "react";
 import { TextInput, View } from "react-native";
 

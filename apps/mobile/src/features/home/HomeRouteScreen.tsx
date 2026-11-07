@@ -169,7 +169,7 @@ export function HomeRouteScreen() {
     <AndroidHomeFabLayout onStartNewTask={startNewTask}>
       <>
         <WorkspaceListHeader
-          accessibilityLabel="T3 Code, Threads"
+          accessibilityLabel="T2 Code, Threads"
           onOpenEnvironments={() => openSettings(navigation, "SettingsEnvironments")}
           search={{
             value: searchQuery,

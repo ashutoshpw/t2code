@@ -73,7 +73,7 @@ it.effect("reads the newest version from the update feed file a mirror publishes
     const requested: string[] = [];
     const mirror = {
       organization: "Example Corp",
-      feedUrl: "https://updates.example.com/t3code/?token=abc",
+      feedUrl: "https://updates.example.com/t2code/?token=abc",
     };
     const resolve = (
       channel: "stable" | "nightly" | "preview",
@@ -104,8 +104,8 @@ it.effect("reads the newest version from the update feed file a mirror publishes
       "1.5.0-nightly.20261101.2",
     );
     assert.deepStrictEqual(requested, [
-      "https://updates.example.com/t3code/latest-mac.yml?token=abc",
-      "https://updates.example.com/t3code/nightly-linux-arm64.yml?token=abc",
+      "https://updates.example.com/t2code/latest-mac.yml?token=abc",
+      "https://updates.example.com/t2code/nightly-linux-arm64.yml?token=abc",
     ]);
     // A feed for the wrong track is not trusted to mean the requested one.
     assert.include(
@@ -177,7 +177,7 @@ it.layer(NodeServices.layer)("t2 update under a managed policy", (it) => {
     Effect.gen(function* () {
       const requested: string[] = [];
       const error = yield* runWithPolicy(
-        { mode: "auto", feedUrl: "https://updates.example.com/t3code" },
+        { mode: "auto", feedUrl: "https://updates.example.com/t2code" },
         { channel: "stable" },
         HttpClient.make((request) => {
           requested.push(new URL(request.url).origin);
@@ -222,22 +222,22 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
   it.effect.each([
     { name: "no launcher records", recorded: undefined },
     { name: "an empty launcher record", recorded: "" },
-    { name: "whole launcher records", recorded: "/opt/t3\n" },
-    { name: "Windows launcher records", recorded: "C:\\t3.cmd\r\n" },
+    { name: "whole launcher records", recorded: "/opt/t2\n" },
+    { name: "Windows launcher records", recorded: "C:\\t2.cmd\r\n" },
     // An interrupted append cut this record short.
     { name: "an unterminated launcher record", recorded: "/opt/t" },
-    // Another process's append is cut short after t3 update reads the records.
-    { name: "a record cut short after the read", recorded: "/opt/t3\n", cut: "/opt/t" },
+    // Another process's append is cut short after t2 update reads the records.
+    { name: "a record cut short after the read", recorded: "/opt/t2\n", cut: "/opt/t" },
   ])("keeps the runtime a repointed launcher off PATH points at with $name", ({ recorded, cut }) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" });
       yield* TestClock.setTime(Duration.toMillis(Duration.days(1)));
       for (const version of ["1.0.0", "2.0.0"]) {
         const directory = path.join(root, "runtime/versions", version);
         yield* fs.makeDirectory(directory, { recursive: true });
-        yield* fs.writeFileString(path.join(directory, "t3"), "");
+        yield* fs.writeFileString(path.join(directory, "t2"), "");
         yield* fs.writeFileString(path.join(directory, ".install-complete"), `${version}\n`);
         yield* fs.utimes(path.join(directory, ".install-complete"), 0, 0);
       }
@@ -245,8 +245,8 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
         yield* fs.writeFileString(path.join(root, "runtime/launchers"), recorded);
       }
       // A launcher in the T2 home itself, which neither PATH nor the default bin dir reaches.
-      const launcher = path.join(root, "t3");
-      yield* fs.symlink(path.join(root, "runtime/versions/1.0.0/t3"), launcher);
+      const launcher = path.join(root, "t2");
+      yield* fs.symlink(path.join(root, "runtime/versions/1.0.0/t2"), launcher);
 
       const launchersFile = path.join(root, "runtime/launchers");
       yield* repointLauncher({
@@ -288,10 +288,10 @@ it.layer(NodeServices.layer)("t2 update launcher", (it) => {
   const launcherFixture = Effect.fnUntraced(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
-    const oldExe = path.join(root, "runtime/versions/1.0.0/t3");
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" });
+    const oldExe = path.join(root, "runtime/versions/1.0.0/t2");
     const newExe = path.join(root, "runtime/versions/2.0.0/t3");
-    const launcher = path.join(root, "t3");
+    const launcher = path.join(root, "t2");
     for (const file of [oldExe, newExe]) {
       yield* fs.makeDirectory(path.dirname(file), { recursive: true });
       yield* fs.writeFileString(file, "");
@@ -462,7 +462,7 @@ it.layer(NodeServices.layer)("t3 update with a background service", (it) => {
       yield* withoutTerminals;
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-update-" });
+      const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t2-update-" });
       const version = packageJson.version;
       const runtime = pinnedRuntimePaths(path, baseDir, version, "linux");
       yield* fs.makeDirectory(runtime.versionDir, { recursive: true });

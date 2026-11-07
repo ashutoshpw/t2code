@@ -70,7 +70,6 @@ export function QuestionAttachments(props: {
   const inputRef = useRef<TextInputInstance>(null);
   const [initialText] = useState(props.value);
   const nativeText = useRef(props.value);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- pushes an option selection's cleared draft into the uncontrolled native input
   useEffect(() => {
     if (props.value !== "" || nativeText.current === "") return;
     nativeText.current = "";

@@ -251,7 +251,10 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       // An old link of ours is updated where it is, not moved to a folder that may be off PATH.
       yield* fs.writeFileString(path.join(home, "bin", "t2.staging"), "mine");
       yield* fs.remove(path.join(home, "bin", "t2code"));
-      yield* fs.symlink(path.join(home, "old-t2", "bin", "t2code"), path.join(home, "bin", "t2code"));
+      yield* fs.symlink(
+        path.join(home, "old-t2", "bin", "t2code"),
+        path.join(home, "bin", "t2code"),
+      );
       env.PATH = "";
       expect((yield* after.install).installedPath).toBe(path.join(home, "bin", "t2code"));
       expect(yield* fs.readLink(path.join(home, "bin", "t2code"))).toBe(
@@ -346,17 +349,19 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       }).pipe(Effect.scoped),
   );
 
-  it.effect("does not treat its own launcher as another t2code when its folder is first on PATH", () =>
-    Effect.gen(function* () {
-      const env: NodeJS.ProcessEnv = { PATH: "", SHELL: "/bin/zsh" };
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped();
-      const launcher = path.join(home, ".t2", "bin", "t2code");
-      env.PATH = [path.dirname(launcher), path.join(home, ".local", "bin")].join(":");
+  it.effect(
+    "does not treat its own launcher as another t2code when its folder is first on PATH",
+    () =>
+      Effect.gen(function* () {
+        const env: NodeJS.ProcessEnv = { PATH: "", SHELL: "/bin/zsh" };
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const home = yield* fs.makeTempDirectoryScoped();
+        const launcher = path.join(home, ".t2", "bin", "t2code");
+        env.PATH = [path.dirname(launcher), path.join(home, ".local", "bin")].join(":");
 
-      const command = yield* commandIn({ home, env });
-      const installed = yield* command.install;
+        const command = yield* commandIn({ home, env });
+        const installed = yield* command.install;
 
         expect(yield* fs.exists(launcher)).toBe(true);
         expect(installed).toMatchObject({

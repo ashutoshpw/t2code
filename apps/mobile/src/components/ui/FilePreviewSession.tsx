@@ -1,4 +1,4 @@
-import { AssetWorkspaceAssetNotFoundError } from "@t3tools/contracts";
+import { AssetWorkspaceAssetNotFoundError } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import * as Dialog from "./Dialog";
 import { useContext, useEffect, useEffectEvent, useState, type ComponentType } from "react";

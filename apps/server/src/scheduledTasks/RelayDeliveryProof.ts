@@ -5,7 +5,7 @@ import {
   RELAY_HOOK_DELIVERY_HEADER,
   RELAY_HOOK_DELIVERY_TYP,
   verifyRelayJwt,
-} from "@t3tools/shared/relayJwt";
+} from "@t2code/shared/relayJwt";
 import * as Context from "effect/Context";
 import * as Signature from "effect/crypto/Signature";
 import * as Effect from "effect/Effect";

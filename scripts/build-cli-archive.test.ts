@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { assert, it } from "@effect/vitest";
+import { assert, describe, it } from "@effect/vitest";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -8,8 +8,6 @@ import * as Path from "effect/Path";
 import * as Sink from "effect/Sink";
 import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
-
-import { describe, expect, it } from "vite-plus/test";
 
 import {
   awaitCliNotarization,
@@ -20,7 +18,7 @@ import {
 } from "./build-cli-archive.ts";
 
 const signedEnv = {
-  T3CODE_CLI_MAC_SIGN_IDENTITY: "Developer ID Application: Test (TEAM)",
+  T2CODE_CLI_MAC_SIGN_IDENTITY: "Developer ID Application: Test (TEAM)",
   APPLE_API_KEY: "/tmp/AuthKey_TEST.p8",
   APPLE_API_KEY_ID: "TEST",
   APPLE_API_ISSUER: "issuer",
@@ -174,7 +172,7 @@ it.layer(NodeServices.layer)("build-cli-archive notarization", (it) => {
         {
           name: "submission without credentials",
           wait: { exitCode: 0, stdout: '{"id":"sub","status":"Accepted"}' },
-          env: { T3CODE_CLI_MAC_SIGN_IDENTITY: signedEnv.T3CODE_CLI_MAC_SIGN_IDENTITY },
+          env: { T2CODE_CLI_MAC_SIGN_IDENTITY: signedEnv.T2CODE_CLI_MAC_SIGN_IDENTITY },
           error: "CliArchiveInputMissingError",
         },
         {
@@ -222,17 +220,17 @@ it.layer(NodeServices.layer)("build-cli-archive notarization", (it) => {
     }).pipe(Effect.scoped),
   );
 
-describe("build-cli-archive naming", () => {
-  it("uses the canonical public archive prefix", () => {
-    expect(cliArchivePlatformKey("linux", "x64")).toBe("linux-x64");
-    expect(cliArchiveStem("1.2.3", "linux", "x64")).toBe("t2-1.2.3-linux-x64");
-    expect(cliArchiveFileName("1.2.3", "win", "arm64")).toBe("t2-1.2.3-win32-arm64.zip");
-  });
+  describe("build-cli-archive naming", () => {
+    it("uses the canonical public archive prefix", () => {
+      assert.strictEqual(cliArchivePlatformKey("linux", "x64"), "linux-x64");
+      assert.strictEqual(cliArchiveStem("1.2.3", "linux", "x64"), "t2-1.2.3-linux-x64");
+      assert.strictEqual(cliArchiveFileName("1.2.3", "win", "arm64"), "t2-1.2.3-win32-arm64.zip");
+    });
 
-  it("does not claim an unsupported macOS x64 release archive", () => {
-    expect(cliArchivePlatformKey("mac", "x64")).toBeUndefined();
-    expect(cliArchiveStem("1.2.3", "mac", "x64")).toBeUndefined();
-    expect(cliArchiveFileName("1.2.3", "mac", "x64")).toBeUndefined();
+    it("does not claim an unsupported macOS x64 release archive", () => {
+      assert.isUndefined(cliArchivePlatformKey("mac", "x64"));
+      assert.isUndefined(cliArchiveStem("1.2.3", "mac", "x64"));
+      assert.isUndefined(cliArchiveFileName("1.2.3", "mac", "x64"));
+    });
   });
-});
 });

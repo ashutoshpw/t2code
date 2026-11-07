@@ -24,8 +24,6 @@ export class CursorKeychainTimeoutError extends Schema.TaggedError<CursorKeychai
   }
 }
 
-export const isCursorKeychainTimeoutError = Schema.is(CursorKeychainTimeoutError);
-
 export class CursorKeychainReadError extends Schema.TaggedError<CursorKeychainReadError>()(
   "CursorKeychainReadError",
   { cause: Schema.Defect() },
@@ -99,4 +97,4 @@ const make = (
   return CursorKeychain.of({ accessToken });
 };
 
-export const layer = Layer.sync(CursorKeychain, () => make());
+export const layer: Layer.Layer<CursorKeychain> = Layer.sync(CursorKeychain)(() => make());

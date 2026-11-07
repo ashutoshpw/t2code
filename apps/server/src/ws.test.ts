@@ -127,7 +127,7 @@ import * as WorkspacePaths from "./workspace/WorkspacePaths.ts";
 import * as ServerSecretStore from "./auth/ServerSecretStore.ts";
 import * as ServerConfigModule from "./config.ts";
 import * as Keybindings from "./keybindings.ts";
-import { USAGE_LIMITS_COMMAND } from "@t3tools/shared/usageLimits";
+import { USAGE_LIMITS_COMMAND } from "@t2code/shared/usageLimits";
 import * as ServerSettings from "./serverSettings.ts";
 import * as ManagedPolicy from "./policy/ManagedPolicy.ts";
 import * as SpacesService from "./spaces/SpacesService.ts";

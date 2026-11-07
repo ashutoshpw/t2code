@@ -2,16 +2,16 @@ import { describe } from "@effect/vitest";
 
 import { createOxlintRuleHarness } from "../test/utils.ts";
 
-const rule = createOxlintRuleHarness("t3code/max-settings-description-length", {
+const rule = createOxlintRuleHarness("t2code/max-settings-description-length", {
   filename: "apps/web/src/components/settings/Example.tsx",
 });
 
 const long = "Agents ".repeat(30);
 
-describe("t3code/max-settings-description-length", () => {
+describe("t2code/max-settings-description-length", () => {
   rule.valid(
     "allows a short description",
-    `const row = <SettingsRow title="Theme" description="Choose how T3 Code looks." />;`,
+    `const row = <SettingsRow title="Theme" description="Choose how T2 Code looks." />;`,
   );
 
   rule.valid(

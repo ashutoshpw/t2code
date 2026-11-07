@@ -100,6 +100,7 @@ export interface NpmPackageVisibilityOptions {
   readonly now?: () => number;
 }
 
+// @effect-diagnostics-next-line extendsNativeError:off - plain async helper throws before any Effect boundary.
 class NpmPackageVisibilityError extends Error {
   readonly packageName: string;
   readonly version: string;
@@ -123,6 +124,7 @@ class NpmPackageVisibilityError extends Error {
   }
 }
 
+// @effect-diagnostics-next-line extendsNativeError:off - plain async helper throws before any Effect boundary.
 export class NpmPackageIntegrityError extends Error {
   readonly packageName: string;
   readonly version: string;

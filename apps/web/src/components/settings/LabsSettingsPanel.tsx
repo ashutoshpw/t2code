@@ -6,12 +6,11 @@ import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useT2ConnectAuthPrompt } from "../clerk/useT2ConnectAuthPrompt";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
-import { useSettingsScope } from "./SettingsScopeContext";
+import { useOptionalSettingsScope, useSettingsScope } from "./SettingsScopeContext";
 import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
-import { useOptionalSettingsScope, useSettingsScope } from "./SettingsScopeContext";
 import { firstManagedDenial, usePrimaryManagedPolicy } from "~/state/managedPolicy";
 
 /** Features still settling in. */
@@ -276,8 +275,8 @@ function PageLinksRow() {
       settingKeys={["spacesPageSharingEnabled"]}
       description={
         <>
-          Share a Spaces page and its sub-pages as a read-only link anyone can open in a browser.
-          Needs T2 Connect: sign in and link this machine in{" "}
+          Share a Spaces page and its sub-pages as a read-only link. Needs T2 Connect: sign in and
+          link this machine in{" "}
           <Link to="/settings/access" className="underline underline-offset-2">
             Sharing & access
           </Link>

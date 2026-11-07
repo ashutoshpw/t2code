@@ -1,4 +1,4 @@
-import { EnvironmentId, ProjectId } from "@t3tools/contracts";
+import { EnvironmentId, ProjectId } from "@t2code/contracts";
 import {
   debouncedPullRequestCompletionSearch,
   detectPullRequestComposerTrigger,
@@ -7,7 +7,7 @@ import {
   pullRequestCompletions,
   type PullRequestCompletion,
   type PullRequestCompletionSupport,
-} from "@t3tools/shared/pullRequestComposerTrigger";
+} from "@t2code/shared/pullRequestComposerTrigger";
 import { useState } from "react";
 import type { TextInputSelectionChangeEvent } from "react-native";
 

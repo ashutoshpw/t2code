@@ -12,7 +12,7 @@ export const PI_T3_SERVICE_TIER_COMMAND = "t3-service-tier";
 // These tools trigger file-change approvals, bypassed by Auto-accept edits.
 export const PI_FILE_CHANGE_TOOLS = ["edit", "write"] as const;
 
-export const PI_T3_MCP_EXTENSION_SOURCE = `\
+export const PI_T2_MCP_EXTENSION_SOURCE = `\
 import { stripFrontmatter, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import * as NodeFSP from "node:fs/promises";
 import * as NodePath from "node:path";

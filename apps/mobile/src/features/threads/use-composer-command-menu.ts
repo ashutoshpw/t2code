@@ -110,7 +110,7 @@ export function buildComposerSlashCommandItems(input: {
   readonly hasThread: boolean;
   readonly hasCompactableConversation?: boolean;
   readonly offersUsageLimits?: boolean;
-  /** T3's `/clear` replaces the provider's, which would clear a session T3 still treats as live. */
+  /** T2's `/clear` replaces the provider's, which would clear a session T2 still treats as live. */
   readonly offersFreshSession?: boolean;
   readonly offersSideChat?: boolean;
   readonly selectedProviderStatus: Pick<ServerProvider, "driver" | "slashCommands"> | null;

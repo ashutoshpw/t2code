@@ -4,8 +4,8 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   type TextGeneratorConfig,
-} from "@t3tools/contracts";
-import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
+} from "@t2code/contracts";
+import * as SecretResolver from "@t2code/secret-provider-core/server/SecretResolver";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";

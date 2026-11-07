@@ -1,9 +1,9 @@
 import { RegistryContext } from "@effect/atom-react";
-import { scopedThreadKey } from "@t3tools/client-runtime/environment";
+import { scopedThreadKey } from "@t2code/client-runtime/environment";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
+} from "@t2code/client-runtime/state/runtime";
 import { useContext } from "react";
 
 import { type ComposerThreadTarget, useComposerDraftStore } from "../../composerDraftStore";

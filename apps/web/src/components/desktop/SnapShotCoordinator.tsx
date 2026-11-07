@@ -18,7 +18,7 @@ import {
   lastUsedProjectKeySchema,
   useHandleNewThread,
 } from "../../hooks/useHandleNewThread";
-import { scopedProjectKey } from "@t3tools/client-runtime/environment";
+import { scopedProjectKey } from "@t2code/client-runtime/environment";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import { getClientSettings, useClientSettings } from "../../hooks/useSettings";
@@ -252,7 +252,7 @@ export function SnapShotCoordinator() {
   const rememberProject = useEffectEvent((projectKey: string) => {
     if (projectKey !== lastUsedProjectKey) setLastUsedProjectKey(projectKey);
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Persist route changes without overwriting project choices from other tabs.
+  // oxlint-disable-next-line t2code/react-effect-budget -- Persist route changes without overwriting project choices from other tabs.
   useEffect(() => {
     if (currentProjectKey) rememberProject(currentProjectKey);
   }, [currentProjectKey]);

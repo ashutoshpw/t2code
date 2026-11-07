@@ -7,6 +7,8 @@ import type {
   SpaceMutationAdmission,
 } from "@t2code/contracts/spaces";
 
+import * as Schema from "effect/Schema";
+
 import { canEditSpaceBlock, isKnownSpaceBlock, isSpaceListItem } from "./values.ts";
 import { decodeSpaceDocumentDraft, spaceDraftMaxBytes, spaceJsonBytes } from "./draft.ts";
 import {
@@ -23,7 +25,10 @@ export type SpaceMutation =
   | { readonly kind: "replace"; readonly block: SpaceBlock }
   | { readonly kind: "delete"; readonly blockId: SpaceBlockId; readonly mergedInto?: SpaceBlockId };
 
-export class SpaceIntentAdmissionError extends Error {}
+export class SpaceIntentAdmissionError extends Schema.TaggedError<SpaceIntentAdmissionError>()(
+  "SpaceIntentAdmissionError",
+  { message: Schema.String, cause: Schema.optional(Schema.Defect()) },
+) {}
 
 export interface SpaceSaveRequest {
   readonly key: SpacePageTarget;
@@ -590,9 +595,9 @@ export class SpaceDocumentSession {
           this.#snapshot.baseRevision !== request.baseRevision ||
           this.#snapshot.pending
         )
-          throw new SpaceIntentAdmissionError(
-            "Draft changed during image admission; retry the new intent explicitly",
-          );
+          throw new SpaceIntentAdmissionError({
+            message: "Draft changed during image admission; retry the new intent explicitly",
+          });
         this.#options.assertMutable?.();
       }
       this.#update({ pending: request });

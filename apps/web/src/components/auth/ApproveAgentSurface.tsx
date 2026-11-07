@@ -1,11 +1,11 @@
 import { useAuth, useClerk } from "@clerk/react";
 import { useAtomValue } from "@effect/atom-react";
-import { managedRelaySessionAtom } from "@t3tools/client-runtime/relay";
+import { managedRelaySessionAtom } from "@t2code/client-runtime/relay";
 import {
   type ConnectMcpApprovalCall,
   ConnectMcpApprovalUnavailableError,
-} from "@t3tools/client-runtime/state/connectMcpApproval";
-import { type AuthMcpApprovalDetails, EnvironmentId } from "@t3tools/contracts";
+} from "@t2code/client-runtime/state/connectMcpApproval";
+import { type AuthMcpApprovalDetails, EnvironmentId } from "@t2code/contracts";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";
@@ -93,7 +93,7 @@ export function ApproveAgentSurface() {
     clerk.openSignIn(resolveClerkSignInProps(window.location.href, isElectron));
   const openSignInOnLoad = useEffectEvent(openSignIn);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- opens Clerk sign-in once Clerk has loaded and nobody is signed in
+  // oxlint-disable-next-line t2code/react-effect-budget -- opens Clerk sign-in once Clerk has loaded and nobody is signed in
   useEffect(() => {
     if (!isLoaded || isSignedIn || signInOpened.current || framed) return;
     signInOpened.current = true;

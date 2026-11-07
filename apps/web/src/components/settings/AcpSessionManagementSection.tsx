@@ -106,7 +106,7 @@ function InstanceSessionManagement(
   const canRead = useEnvironmentScope(props.environmentId, AuthOrchestrationReadScope);
   const { projectId } = props;
   const projectGeneration = useRef(0);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Late continuations must not act on a replaced project scope.
+  // oxlint-disable-next-line t2code/react-effect-budget -- Late continuations must not act on a replaced project scope.
   useLayoutEffect(() => {
     return () => {
       projectGeneration.current += 1;

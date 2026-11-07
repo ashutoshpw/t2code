@@ -13,7 +13,7 @@ const MAX_EVENTS = 64;
 const MAX_BYTES = 1024 * 1024;
 const encodeQueue = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
-export const enabled = Config.Boolean("T3CODE_PROVIDER_COMMIT_BATCHING").pipe(
+export const enabled = Config.Boolean("T2CODE_PROVIDER_COMMIT_BATCHING").pipe(
   Config.withDefault(true),
   Effect.orDie,
 );
@@ -76,7 +76,7 @@ function collect(queue: Queue.Queue<Job>) {
 }
 
 const CurrentWorker = Context.Reference<number | undefined>(
-  "t3/ProviderCommitBatch/CurrentWorker",
+  "@t2code/cli/ProviderCommitBatch/CurrentWorker",
   {
     defaultValue: () => undefined,
   },

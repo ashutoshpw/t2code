@@ -2,8 +2,6 @@ import {
   getPromptControlledTraits,
   getTraitSelectChange,
 } from "@t2code/client-runtime/model-traits";
-import { SheetHeader } from "../../components/ui/SheetHeader";
-import { Toolbar } from "../../components/ui/Toolbar";
 import * as Dialog from "../../components/ui/Dialog";
 import { createV5StackNavigator as createNativeStackNavigator } from "../../native/createV5StackNavigator";
 import { useSheetStackOptions } from "../layout/nested-stacks";
@@ -924,7 +922,7 @@ function ThreadSettingsMainContent(props: {
     if (config?.environment.capabilities.modelCatalogRefresh !== true) return;
     void refreshProvidersCommand({ environmentId, input: { modelCatalogOnly: true } });
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- asks the server for newly released models when the model list opens
+  // oxlint-disable-next-line t2code/react-effect-budget -- asks the server for newly released models when the model list opens
   useEffect(() => {
     refreshModelCatalog();
   }, []);

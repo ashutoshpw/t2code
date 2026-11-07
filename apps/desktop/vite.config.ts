@@ -28,7 +28,7 @@ export default defineConfig({
       // CI bundle jobs skip the Linux browser secret helper; packaging stages one per arch.
       "build:bundle": {
         command: "node scripts/build-preview-annotation-css.mjs && vp pack",
-        dependsOn: ["t3#build"],
+        dependsOn: ["@t2code/cli#build"],
         cache: false,
       },
       dev: {
@@ -129,7 +129,7 @@ export default defineConfig({
         alwaysBundle: (id) =>
           id === "react-grab" ||
           id.startsWith("react-grab/") ||
-          id === "@t3tools/shared/keybindingMatching",
+          id === "@t2code/shared/keybindingMatching",
       },
     },
     {

@@ -81,6 +81,7 @@ function menu() {
     showSkillsInSlashMenu: false,
     sideChatAvailable: false,
     sideChatDisabledReason: null,
+    freshSessionAvailable: false,
     workspaceSkillsScanning: false,
     questionAttachmentTarget: null,
   });

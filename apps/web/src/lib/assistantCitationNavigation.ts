@@ -1,4 +1,4 @@
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { pipe } from "effect/Function";
 import type {
   AssistantCitation,
@@ -135,7 +135,7 @@ export function useSideChatCitationReveal(
   const environmentId = routeThreadRef?.environmentId;
   const threadId = routeThreadRef?.threadId;
   const sideChatThreadId = sourceRef?.threadId;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- moves a side chat quote's router location and parent right panel once per activation, including after its shell loads
+  // oxlint-disable-next-line t2code/react-effect-budget -- moves a side chat quote's router location and parent right panel once per activation, including after its shell loads
   useEffect(() => {
     if (
       environmentId === undefined ||

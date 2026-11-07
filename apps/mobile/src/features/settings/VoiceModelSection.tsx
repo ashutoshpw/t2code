@@ -4,12 +4,12 @@ import {
   cancelEnvironmentSpeechModelDownload,
   downloadEnvironmentSpeechModel,
   selectEnvironmentSpeechModel,
-} from "@t3tools/client-runtime/voice-input";
+} from "@t2code/client-runtime/voice-input";
 import {
   AuthSettingsWriteScope,
   type EnvironmentId,
   type EnvironmentSpeechModel,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { AsyncResult } from "effect/reactivity";
 import { type ReactNode, useEffect, useState } from "react";
 import { Platform, Text as NativeText, View } from "react-native";
@@ -49,7 +49,7 @@ export function useVoiceModels(environmentId: EnvironmentId, label: string) {
   const models = AsyncResult.getOrElse(modelsResult, () => null)?.models ?? [];
   const downloading = requested !== null || models.some(isDownloading);
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- polls the environment's download progress while one runs
+  // oxlint-disable-next-line t2code/react-effect-budget -- polls the environment's download progress while one runs
   useEffect(() => {
     if (!downloading) return;
     const timer = setInterval(refreshModels, 1_000);
@@ -299,7 +299,7 @@ export function VoiceModelSection(props: {
       footer={
         voice.canManage
           ? undefined
-          : `This connection can’t change settings on ${props.label}. Add a transcription model using T3 Code on that machine.`
+          : `This connection can’t change settings on ${props.label}. Add a transcription model using T2 Code on that machine.`
       }
     >
       <ListRow
