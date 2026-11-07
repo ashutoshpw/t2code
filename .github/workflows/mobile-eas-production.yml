@@ -586,7 +586,7 @@ jobs:
       # scripts: some download native assets that the build's fingerprint check hashes.
       - name: Install mobile dependencies
         if: steps.record.outputs.built != 'true'
-        run: pnpm install --frozen-lockfile --prefer-offline --filter=@t3tools/mobile...
+        run: pnpm install --frozen-lockfile --prefer-offline --filter=@t2code/mobile...
 
       - name: Setup Java
         if: steps.record.outputs.built != 'true'
@@ -627,8 +627,8 @@ jobs:
           # hook needs these to upload the bundle's source map.
           MOBILE_SOURCEMAPS_R2: ${{ secrets.MOBILE_SOURCEMAPS_R2 }}
         run: |
-          eas build --local --platform android --profile production --non-interactive --output "$RUNNER_TEMP/t3code.aab"
-          abis="$(unzip -Z1 "$RUNNER_TEMP/t3code.aab" | sed -n 's|^base/lib/\([^/]*\)/.*|\1|p' | sort -u | paste -sd, -)"
+          eas build --local --platform android --profile production --non-interactive --output "$RUNNER_TEMP/t2code.aab"
+          abis="$(unzip -Z1 "$RUNNER_TEMP/t2code.aab" | sed -n 's|^base/lib/\([^/]*\)/.*|\1|p' | sort -u | paste -sd, -)"
           {
             echo "### Android $BUILD_TAG"
             echo "- ABIs: \`$abis\`"
@@ -647,14 +647,14 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: android-store-aab-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/t3code.aab
+          path: ${{ runner.temp }}/t2code.aab
           retention-days: 14
           if-no-files-found: error
 
       - name: Submit to Google Play
         if: steps.record.outputs.built != 'true'
         working-directory: apps/mobile
-        run: eas submit --platform android --profile production --path "$RUNNER_TEMP/t3code.aab" --non-interactive
+        run: eas submit --platform android --profile production --path "$RUNNER_TEMP/t2code.aab" --non-interactive
 
       # The tag means "delivered", so it follows the submit. If it can't be
       # pushed, the next merge rebuilds with a new build number; nothing is lost.
@@ -778,7 +778,7 @@ jobs:
       # scripts: some download native assets that the build's fingerprint check hashes.
       - name: Install mobile dependencies
         if: steps.record.outputs.built != 'true'
-        run: pnpm install --frozen-lockfile --prefer-offline --filter=@t3tools/mobile...
+        run: pnpm install --frozen-lockfile --prefer-offline --filter=@t2code/mobile...
 
       - name: Setup EAS
         if: steps.record.outputs.built != 'true'

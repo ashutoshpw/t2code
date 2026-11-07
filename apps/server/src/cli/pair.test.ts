@@ -375,8 +375,8 @@ describe("t2 pair", () => {
         typeof error === "object" && error !== null && "cause" in error ? error.cause : error,
       );
       assert.include(rendered, "No running T2 Code server found.");
-      assert.include(rendered, "npx @t2code/cli serve");
-      assert.include(rendered, "npx @t2code/cli connect");
+      assert.include(rendered, "t2code serve");
+      assert.include(rendered, "t2code connect");
     }).pipe(Effect.provide(NodeServices.layer)),
   );
 

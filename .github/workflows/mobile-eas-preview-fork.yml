@@ -299,7 +299,7 @@ jobs:
           pnpm --version
 
       - name: Install mobile dependencies
-        run: pnpm install --frozen-lockfile --filter=@t3tools/mobile...
+        run: pnpm install --frozen-lockfile --filter=@t2code/mobile...
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -338,8 +338,8 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_PREVIEW_TOKEN }}
         run: |
-          eas build --local --platform android --profile preview:dev --non-interactive --output "$RUNNER_TEMP/t3code-preview.apk"
-          eas upload --platform android --build-path "$RUNNER_TEMP/t3code-preview.apk" --fingerprint "$FINGERPRINT" --non-interactive --json | tee "$RUNNER_TEMP/upload.json"
+          eas build --local --platform android --profile preview:dev --non-interactive --output "$RUNNER_TEMP/t2code-preview.apk"
+          eas upload --platform android --build-path "$RUNNER_TEMP/t2code-preview.apk" --fingerprint "$FINGERPRINT" --non-interactive --json | tee "$RUNNER_TEMP/upload.json"
           link="$(sed -n '/^{/,$p' "$RUNNER_TEMP/upload.json" | jq -r '.url // empty')"
           if [ -z "$link" ]; then
             echo "::error::eas upload returned no install link"
