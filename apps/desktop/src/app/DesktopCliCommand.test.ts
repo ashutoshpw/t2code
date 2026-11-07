@@ -225,16 +225,18 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       }).pipe(Effect.scoped),
   );
 
-  it.effect("does not treat its own launcher as another t2code when its folder is first on PATH", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped();
-      const launcher = path.join(home, ".t2", "bin", "t2code");
-      const env = { PATH: [path.dirname(launcher), path.join(home, ".local", "bin")].join(":") };
+  it.effect(
+    "does not treat its own launcher as another t2code when its folder is first on PATH",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const home = yield* fs.makeTempDirectoryScoped();
+        const launcher = path.join(home, ".t2", "bin", "t2code");
+        const env = { PATH: [path.dirname(launcher), path.join(home, ".local", "bin")].join(":") };
 
-      const command = yield* commandIn({ home, env });
-      const installed = yield* command.install;
+        const command = yield* commandIn({ home, env });
+        const installed = yield* command.install;
 
         expect(yield* fs.exists(launcher)).toBe(true);
         expect(installed).toMatchObject({

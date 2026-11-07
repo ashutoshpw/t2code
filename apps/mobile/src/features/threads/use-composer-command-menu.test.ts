@@ -94,7 +94,7 @@ describe("mobile slash commands", () => {
     },
   );
 
-  it("offers T3's /clear in place of the provider's, only at the message start", () => {
+  it("offers T2's /clear in place of the provider's, only at the message start", () => {
     const claude = {
       driver: ProviderDriverKind.make("claudeAgent"),
       slashCommands: [{ name: "clear", description: "Clear conversation history" }],
@@ -113,7 +113,6 @@ describe("mobile slash commands", () => {
     expect(build(true, false)).toEqual([]);
   });
 
-  it("still applies the T3 plan command for supported providers", () => {
   it("still applies the T2 plan command for supported providers", () => {
     const items = buildComposerSlashCommandItems({
       query: "plan",

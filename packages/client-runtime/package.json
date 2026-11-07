@@ -541,7 +541,8 @@
     },
     "./provider-instance-ids": {
       "types": "./src/providerInstanceIds.ts",
-      "default": "./src/providerInstanceIds.ts",
+      "default": "./src/providerInstanceIds.ts"
+    },
     "./spaces": {
       "types": "./src/spaces/index.ts",
       "default": "./src/spaces/index.ts"

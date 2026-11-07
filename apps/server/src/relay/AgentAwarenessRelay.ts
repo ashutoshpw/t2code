@@ -16,11 +16,7 @@ import { projectThreadAwarenessV2 } from "@t2code/shared/agentAwareness";
 import { turnItemUpdateCanEndBackgroundWork } from "@t2code/shared/orchestrationV2PendingBackgroundWork";
 import { makeDrainableWorker } from "@t2code/shared/DrainableWorker";
 import { withRelayClientTracing } from "@t2code/shared/relayTracing";
-import {
-  normalizeRelayIssuer,
-  RELAY_ACTIVITY_PUBLISH_TYP,
-  signRelayJwt,
-} from "@t2code/shared/relayJwt";
+import { normalizeRelayIssuer, RELAY_ACTIVITY_PUBLISH_TYP } from "@t2code/shared/relayJwt";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";

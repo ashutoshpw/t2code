@@ -2,8 +2,6 @@ import {
   getPromptControlledTraits,
   getTraitSelectChange,
 } from "@t2code/client-runtime/model-traits";
-import { SheetHeader } from "../../components/ui/SheetHeader";
-import { Toolbar } from "../../components/ui/Toolbar";
 import * as Dialog from "../../components/ui/Dialog";
 import { createV5StackNavigator as createNativeStackNavigator } from "../../native/createV5StackNavigator";
 import { useSheetStackOptions } from "../layout/nested-stacks";

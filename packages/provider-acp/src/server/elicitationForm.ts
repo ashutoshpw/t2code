@@ -1,7 +1,4 @@
-import type {
-  OrchestrationV2UserInputQuestion,
-  ProviderUserInputAnswers,
-} from "@t3tools/contracts";
+import type { OrchestrationV2UserInputQuestion, ProviderUserInputAnswers } from "@t2code/contracts";
 import type * as EffectAcpSchema from "effect-acp/compat";
 
 import { unknownRecord } from "./clientPolicy.ts";

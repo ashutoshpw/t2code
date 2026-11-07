@@ -78,7 +78,6 @@ function NativeFilePreview(props: {
   }, [presented, identifier]);
 
   const images = props.source.kind === "image" ? props.source.images : undefined;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- hands image URLs that resolve after opening to the native viewer
   useEffect(() => {
     images?.forEach((image, index) => {
       const uri = nativeUri(image);

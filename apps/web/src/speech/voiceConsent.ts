@@ -1,4 +1,4 @@
-import { VoiceTranscriptionDestination } from "@t3tools/contracts";
+import { VoiceTranscriptionDestination } from "@t2code/contracts";
 import * as Schema from "effect/Schema";
 import { useSyncExternalStore } from "react";
 import { randomUUID } from "../lib/utils";

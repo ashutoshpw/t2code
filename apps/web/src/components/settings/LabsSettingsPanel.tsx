@@ -261,8 +261,8 @@ function PageLinksRow() {
       settingKeys={["spacesPageSharingEnabled"]}
       description={
         <>
-          Share a Spaces page and its sub-pages as a read-only link anyone can open in a browser.
-          Needs T2 Connect: sign in and link this machine in{" "}
+          Share a Spaces page and its sub-pages as a read-only link. Needs T2 Connect: sign in and
+          link this machine in{" "}
           <Link to="/settings/access" className="underline underline-offset-2">
             Sharing & access
           </Link>

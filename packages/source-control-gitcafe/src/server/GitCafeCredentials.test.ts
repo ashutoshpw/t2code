@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import { SecretProviderId } from "@t3tools/contracts";
+import { SecretProviderId } from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";

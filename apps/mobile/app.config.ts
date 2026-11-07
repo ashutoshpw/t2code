@@ -461,7 +461,7 @@ const config: ExpoConfig = {
   extra: {
     appVariant: APP_VARIANT,
     secretsFeatureEnabled: ["1", "true"].includes(
-      process.env.T3CODE_FEATURE_SECRETS?.trim().toLowerCase() ?? "",
+      process.env.T2CODE_FEATURE_SECRETS?.trim().toLowerCase() ?? "",
     ),
     iosPersonalTeamBuild: isIosPersonalTeamBuild,
     relay: {

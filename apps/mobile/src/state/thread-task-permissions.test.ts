@@ -82,8 +82,8 @@ vi.mock("react", () => ({
   ],
 }));
 vi.mock("expo-crypto", () => ({ randomUUID: () => "uuid" }));
-vi.mock("@t3tools/client-runtime/state/context-window", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@t3tools/client-runtime/state/context-window")>()),
+vi.mock("@t2code/client-runtime/state/context-window", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@t2code/client-runtime/state/context-window")>()),
   shouldCompactBeforeSend: () => state.compactDue,
 }));
 vi.mock("../lib/attachmentUpload", () => ({ prepareTurnAttachments: vi.fn() }));
@@ -211,12 +211,11 @@ beforeEach(() => {
     attachments: [],
     modelSelection: undefined,
     runtimeMode: undefined,
+    contextDraft: undefined,
   };
   state.freshPending = false;
   state.compactDue = false;
   state.thread.latestRun = null;
-    contextDraft: undefined,
-  };
   state.projection = null;
   state.serverConfig = {
     providers: [{ instanceId: "codex", driver: "codex", enabled: true }],
@@ -599,7 +598,7 @@ it("keeps newer native typing when an earlier send is still being prepared or pe
   state.grantedEnvironments.add("secondary");
   const reply = Promise.withResolvers<undefined>();
   state.enqueue.mockImplementationOnce(() => reply.promise);
-  const composer = useThreadComposerState();
+  const composer = useThreadComposerState(NO_SIDE_CHATS);
   const pending = composer.onSendMessage();
   state.draft = { ...state.draft, text: "Newer typing" };
   reply.resolve(undefined);
@@ -613,7 +612,7 @@ it("releases a failed send for an explicit retry without clearing newer text or 
   state.draft = { ...state.draft, contextDraft: selectorDraft() };
   const reply = Promise.withResolvers<undefined>();
   state.enqueue.mockImplementationOnce(() => reply.promise);
-  const composer = useThreadComposerState();
+  const composer = useThreadComposerState(NO_SIDE_CHATS);
   const pending = composer.onSendMessage();
   expect(await composer.onSendMessage()).toBeNull();
   expect(state.enqueue).toHaveBeenCalledOnce();
@@ -666,7 +665,7 @@ it("refuses selector-only context as approval feedback without capture, send, or
     text: "Use [Page](t2-context://v1/page/page)",
     contextDraft: selectorDraft(),
   };
-  const composer = useThreadComposerState();
+  const composer = useThreadComposerState(NO_SIDE_CHATS);
   const requests = useSelectedThreadRequests();
   const approval = { ...state.pendingRequests.approvals[0]!, supportsFeedback: true };
   const flags: boolean[] = [];
@@ -693,7 +692,7 @@ it("retains selectors added while an approval-feedback response is deferred", as
     entered.resolve(undefined);
     return reply.promise;
   });
-  const composer = useThreadComposerState();
+  const composer = useThreadComposerState(NO_SIDE_CHATS);
   const requests = useSelectedThreadRequests();
   const approval = { ...state.pendingRequests.approvals[0]!, supportsFeedback: true };
   const pending = composer.onSendMessage(undefined, async (text) =>
@@ -758,7 +757,9 @@ it.each(["selectors", "records"] as const)(
     };
     const draft = structuredClone(state.draft);
     const approvalGuard = vi.fn(async () => "responded" as const);
-    expect(await useThreadComposerState().onSendMessage(undefined, approvalGuard)).toBeNull();
+    expect(
+      await useThreadComposerState(NO_SIDE_CHATS).onSendMessage(undefined, approvalGuard),
+    ).toBeNull();
     expect(state.feedback).not.toHaveBeenCalled();
     expect(state.clearDraft).not.toHaveBeenCalled();
     expect(state.capture).not.toHaveBeenCalled();

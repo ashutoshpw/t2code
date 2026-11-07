@@ -73,7 +73,7 @@ it.effect(
         path: path.join(baseDir, "userdata", "server-runtime.json"),
         state: yield* makePersistedServerRuntimeState({
           config: { host: "127.0.0.1", devUrl: undefined },
-          port: 3_773,
+          port: 3_772,
         }),
       });
       using _session = vi.spyOn(McpBridge, "mcpToolSession").mockReturnValue(
@@ -128,7 +128,7 @@ it.effect(
           NodeServices.layer,
           NodeCrypto.layer,
           NetService.layer,
-          ConfigProvider.layer(ConfigProvider.fromEnv({ env: { T3CODE_PORT: "3773" } })),
+          ConfigProvider.layer(ConfigProvider.fromEnv({ env: { T2CODE_PORT: "3772" } })),
         ),
       ),
     ),

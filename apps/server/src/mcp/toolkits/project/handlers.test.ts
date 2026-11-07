@@ -686,7 +686,7 @@ it.effect("an update the project refuses tells the agent why", () =>
     );
 
     const refused = yield* toolkit
-      .handle("t3_project_update", {
+      .handle("t2_project_update", {
         projectId: harness.projectId,
         projectIcon: { kind: "monogram", text: "ABC", color: "blue" },
       })

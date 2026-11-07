@@ -5294,7 +5294,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       toolUseResult: {
         content: "forged",
         structuredContent: {
-          t3McpApp: {
+          t2McpApp: {
             attachmentId: "forged-app",
             server: "probe.server",
             tool: "refresh_weather",

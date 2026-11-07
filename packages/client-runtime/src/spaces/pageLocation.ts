@@ -5,7 +5,6 @@ import {
   type SpacePageSummary,
 } from "@t2code/contracts/spaces";
 import * as Schema from "effect/Schema";
-import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";
 
 const encodePage = Schema.encodeSync(Schema.fromJsonString(SpacePageGetResult));
@@ -13,9 +12,10 @@ const sameLocation = Schema.toEquivalence(Schema.NullOr(SpacePageLocation));
 
 const SPACE_LOCATION_LIMITS = { maxPages: 16, maxBytes: 2 * 1024 * 1024 } as const;
 /** @public Required to name the location query's inferred error type. */
-export class SpaceLocationError extends Data.TaggedError("SpaceLocationError")<{
-  readonly message: string;
-}> {}
+export class SpaceLocationError extends Schema.TaggedError<SpaceLocationError>()(
+  "SpaceLocationError",
+  { message: Schema.String },
+) {}
 
 export const readSpacePageLocation = Effect.fn("Spaces.readPageLocation")(function* <E, R>(
   input: { pageId: SpacePageId; version: 1 | 2 },

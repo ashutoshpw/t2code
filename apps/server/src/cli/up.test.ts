@@ -257,19 +257,19 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     {
       label: "a service for another home is refused without a restart",
       installed: true,
-      status: { current: false, otherBaseDir: "/srv/t3 home" },
+      status: { current: false, otherBaseDir: "/srv/t2 home" },
       fails: true,
       answer: "y",
-      env: "T3CODE_LAN=false\n",
+      env: "T2CODE_LAN=false\n",
       args: ["--lan"],
       installs: 0,
       restarts: 0,
-      envAfter: "T3CODE_LAN=false\n",
+      envAfter: "T2CODE_LAN=false\n",
     },
     {
       label: "another home's service supplies no local network default",
       installed: true,
-      status: { current: false, otherBaseDir: "/srv/t3 home" },
+      status: { current: false, otherBaseDir: "/srv/t2 home" },
       reportStatus: true,
       env: "",
       args: ["--json"],
@@ -373,7 +373,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       }
       if (input.reportStatus) {
         expect(JSON.parse(lines.join("\n"))).toMatchObject({
-          service: { otherBaseDir: "/srv/t3 home" },
+          service: { otherBaseDir: "/srv/t2 home" },
           lan: { enabled: false, inheritedDefault: false },
         });
       }

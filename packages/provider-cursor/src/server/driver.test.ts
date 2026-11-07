@@ -33,6 +33,7 @@ import * as ProviderEventLoggers from "@t2code/provider-core/server/ProviderEven
 import * as TestProviderHost from "@t2code/provider-testing/TestProviderHost";
 import { CursorDriver } from "./driver.ts";
 import * as CursorAgentSdk from "./CursorAgentSdk.ts";
+import * as CursorKeychain from "./CursorKeychain.ts";
 import * as CursorSdk from "./CursorSdk.ts";
 import * as IdAllocator from "@t2code/provider-core/server/IdAllocator";
 import * as McpProviderSessions from "@t2code/provider-core/server/McpProviderSessions";
@@ -56,6 +57,11 @@ const layerTest = TestProviderHost.layer({ runBackgroundWork: false }).pipe(
       ProviderEventLoggers.ProviderEventLoggers,
       ProviderEventLoggers.NoOpProviderEventLoggers,
     ),
+  ),
+  Layer.provideMerge(
+    Layer.succeed(CursorKeychain.CursorKeychain, {
+      accessToken: Effect.die("The driver test must not read the Keychain"),
+    }),
   ),
   Layer.provideMerge(
     Layer.succeed(

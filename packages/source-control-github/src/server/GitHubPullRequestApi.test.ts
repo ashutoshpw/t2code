@@ -3507,10 +3507,10 @@ layer("GitHubPullRequestApi.layer", (it) => {
         expect(conversation.reviewers.map((r) => r.login)).toEqual(later ? ["prior"] : []);
         expect(conversation.truncated).toBe(false);
 
-      mockedExecute.mockReturnValueOnce(Effect.succeed(output(reviewThreadsPage([], null))));
-      yield* read;
-      expect(variablesOf("ReviewThreads").at(-1)).toMatchObject({ requestedReviewers: 0 });
-    }),
+        mockedExecute.mockReturnValueOnce(Effect.succeed(output(reviewThreadsPage([], null))));
+        yield* read;
+        expect(variablesOf("ReviewThreads").at(-1)).toMatchObject({ requestedReviewers: 0 });
+      }),
   );
 
   it.effect("decodes reviewers, labels and workflow checks without another detail read", () =>

@@ -154,6 +154,9 @@ const make = Effect.gen(function* () {
           Effect.andThen(PubSub.publish(changes, { key, attached: false })),
         );
       }
+      case "shown":
+        shownTabs.set(id, event.shown);
+        return Effect.void;
     }
   };
 

@@ -208,7 +208,7 @@ import type { ThreadContentPresentation } from "./threadContentPresentation";
 import { resolveThreadFeedSubmissionAnchor } from "./thread-feed-live-follow";
 import { useOpenLinkedThread } from "./useOpenLinkedThread";
 import { useGlobalVoiceInput } from "../voice-input/VoiceInputProvider";
-import type { OrchestrationV2ProviderSession } from "@t3tools/contracts";
+import type { OrchestrationV2ProviderSession } from "@t2code/contracts";
 
 export interface ThreadDetailScreenProps {
   readonly header?: React.ReactNode;

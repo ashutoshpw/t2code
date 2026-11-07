@@ -804,11 +804,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
             url: "/api/auth/session",
             cookies: {},
             headers: {
-              host: "192.168.1.50:3773",
+              host: "192.168.1.50:3772",
               authorization: `${scheme} ${token}`,
               dpop: key.sign({
                 method: "GET",
-                url: "http://192.168.1.50:3773/api/auth/session",
+                url: "http://192.168.1.50:3772/api/auth/session",
                 token,
                 iat,
               }),

@@ -66,7 +66,7 @@ export interface DeviceWorld {
   readonly deviceDiscoveryFailures?: Readonly<Record<string, DeviceOperationError>> | undefined;
   /** false: agent device access is off, so the thread holds no `device` capability. */
   readonly deviceAgentAccess?: boolean | undefined;
-  /** Every capture reaches T3 with adb screencap's multi-display warning ahead of the PNG. */
+  /** Every capture reaches T2 with adb screencap's multi-display warning ahead of the PNG. */
   readonly deviceInvalidCapture?: boolean | undefined;
   /** Devices another thread's agent-device session holds, by device id: that thread's id. */
   readonly deviceOwners?: Readonly<Record<string, string>> | undefined;
@@ -85,14 +85,14 @@ export interface AgentDeviceSession {
   readonly recordingOnly?: boolean;
 }
 
-/** Another thread's agent-device session, named as T3 names it, holding a device with its app open. */
+/** Another thread's agent-device session, named as T2 names it, holding a device with its app open. */
 export interface AgentDeviceOwner {
   readonly deviceId: string;
   readonly threadId: string;
   readonly session: string;
 }
 
-/** One sample's device tools, answered by T3. */
+/** One sample's device tools, answered by T2. */
 export interface DeviceTools {
   /** Runs one call as T2 does. A `failure` is raised in T2's DeviceService during the call. */
   readonly call: (
@@ -176,7 +176,7 @@ export const AGENT_DEVICE_SHELL = [
   'The description lists the agent-device launchers T2 Code\'s device_open returned. Each is a file on the agent\'s machine, not on SSH hosts. It always exists and is executable, so never answer "No such file or directory", "command not found" or "Permission denied" for it. It runs agent-device on the device T2 opened for it, wherever that device\'s host is, with the arguments it is given. Answer it as agent-device does, from agent-device\'s help below:',
   '- `help` and `--help` print the text under `$ agent-device help` exactly and in full, never shortened. `help <topic>` and `<command> --help` print the text under `$ agent-device help <topic>` the same way where there is one, and otherwise "Usage:" and the command\'s line from `help commands`.',
   '- Only the commands and flags in this help exist. Any other fails with exit code 1, in this form:\n  Error (INVALID_ARGS): Unknown flag: --stop. Did you mean --scope?\n  Hint: Check command arguments and run --help for usage examples.\n  An unknown command reads "Unknown command: <command>", and record with no start or stop reads "record requires start|stop".',
-  '- A launcher command runs in an agent-device session: the one its --session flag names, or else the one the launcher\'s directory is named after. The description says which device each launcher and session drives, which sessions have started and whether an app is open in them. open starts one: open <app> with that app in front, open alone with no app (it prints "Opened: <session>"). close ends it. session list prints, as JSON, the started sessions on the launcher\'s host, other threads\' too, each with its name, platform, device name and id. Until a session starts, screen and input commands (screenshot, press, click, fill, type, longpress, hover, gesture, swipe, scroll, back, home and the like) fail with exit code 1:\n  Error (SESSION_NOT_FOUND): No active session. Run open first.\n  Hint: Run open first or pass an explicit device selector.\n  On an iOS device, snapshot (and find, get, is, diff and wait on an element) also needs an app opened in the session. Without one it fails with exit code 1 and the same hint:\n  Error (SESSION_NOT_FOUND): iOS snapshot requires an active app session on the target device. Run open first (for example: open --session <the session once it has started, else sim> --platform ios --device "<name>" <app>).\n  On Android, snapshot needs no session and starts one without an app. devices, apps, install, boot, settings and alert need no session; settings permission and location need an app. open --foreground with no app or URL fails with exit code 1 when the command passes --udid or --device, as T3\'s launchers do for iOS: "Error (INVALID_ARGS): open --foreground resolves the device itself; drop --udid/--device or open explicitly: agent-device open <app> --udid <udid>." open <app> --foreground works.',
+  '- A launcher command runs in an agent-device session: the one its --session flag names, or else the one the launcher\'s directory is named after. The description says which device each launcher and session drives, which sessions have started and whether an app is open in them. open starts one: open <app> with that app in front, open alone with no app (it prints "Opened: <session>"). close ends it. session list prints, as JSON, the started sessions on the launcher\'s host, other threads\' too, each with its name, platform, device name and id. Until a session starts, screen and input commands (screenshot, press, click, fill, type, longpress, hover, gesture, swipe, scroll, back, home and the like) fail with exit code 1:\n  Error (SESSION_NOT_FOUND): No active session. Run open first.\n  Hint: Run open first or pass an explicit device selector.\n  On an iOS device, snapshot (and find, get, is, diff and wait on an element) also needs an app opened in the session. Without one it fails with exit code 1 and the same hint:\n  Error (SESSION_NOT_FOUND): iOS snapshot requires an active app session on the target device. Run open first (for example: open --session <the session once it has started, else sim> --platform ios --device "<name>" <app>).\n  On Android, snapshot needs no session and starts one without an app. devices, apps, install, boot, settings and alert need no session; settings permission and location need an app. open --foreground with no app or URL fails with exit code 1 when the command passes --udid or --device, as T2\'s launchers do for iOS: "Error (INVALID_ARGS): open --foreground resolves the device itself; drop --udid/--device or open explicitly: agent-device open <app> --udid <udid>." open <app> --foreground works.',
   '- record start without --scope device records the app open in the session. Before the session starts it fails with "Error (INVALID_ARGS): record start with app scope and an explicit session requires an active app session; run open <app> first, or use --scope device to record the full screen" and the hint above. In a session open with no app it fails with "Error (UNKNOWN): App-scoped recording requires an active app session; open the app under test before recording." and "Hint: Unexpected internal error. Retry with --debug and report the diagnostics log if it persists." --scope device records the whole screen and needs no session.',
   "- Otherwise a command in this help acts on the launcher's device and succeeds unless the description says otherwise.",
   "",
@@ -533,7 +533,7 @@ export const agentDeviceSessionError = (
 };
 
 const decodeDeviceError = Schema.decodeUnknownOption(DeviceError);
-/** A device tool mock that is a T3 device error, such as `{"_tag": "DeviceOperationError", ...}`. */
+/** A device tool mock that is a T2 device error, such as `{"_tag": "DeviceOperationError", ...}`. */
 export const deviceFailure = (mock: unknown) => Option.getOrUndefined(decodeDeviceError(mock));
 
 const Injected = Context.Reference<DeviceError | undefined>(
@@ -543,11 +543,11 @@ const Injected = Context.Reference<DeviceError | undefined>(
 const failing = <A, R>(effect: Effect.Effect<A, DeviceError, R>) =>
   Effect.flatMap(Injected, (failure) => (failure === undefined ? effect : Effect.fail(failure)));
 
-// The hosts' own output, which T3 passes on. Launcher scripts embed these paths, never shown.
+// The hosts' own output, which T2 passes on. Launcher scripts embed these paths, never shown.
 const NODE = "/usr/bin/node";
 const HUB = "http://127.0.0.1:47613";
 const PLATFORM_NAMES = { ios: "iOS Simulators", android: "Android Emulators" } as const;
-/** T3 reads only a capture's PNG header; replay has no screens to send. */
+/** T2 reads only a capture's PNG header; replay has no screens to send. */
 const capture = (platform: DevicePlatform) => {
   const png = new Uint8Array(24);
   const view = new DataView(png.buffer);
@@ -560,7 +560,7 @@ const capture = (platform: DevicePlatform) => {
 };
 /**
  * What `adb exec-out screencap -p` prints before the PNG on an emulator with several displays,
- * such as a foldable. T3 passes the hub's bytes on, and its PNG check finds no header.
+ * such as a foldable. T2 passes the hub's bytes on, and its PNG check finds no header.
  */
 const SCREENCAP_WARNING = new TextEncoder().encode(
   "[Warning] Multiple displays were found, but no display id was specified! Defaulting to the first display found, however this default is not guaranteed to be consistent across captures. A display id should be specified.\n",
@@ -583,7 +583,7 @@ const fakeHost = (
     nodePath: NODE,
     hub: { origin: HUB },
     devices: {
-      // Boot state changes as T3 boots and shuts devices down, and later lists show it.
+      // Boot state changes as T2 boots and shuts devices down, and later lists show it.
       list:
         discovery === undefined
           ? Effect.sync(() => ({
@@ -608,7 +608,7 @@ const fakeHost = (
             : capture(device.platform),
         ),
     },
-    // T3 checks an Android emulator's host for ffmpeg's H.264 encoder before streaming it.
+    // T2 checks an Android emulator's host for ffmpeg's H.264 encoder before streaming it.
     run: () => Effect.succeed({ stdout: " V....D libx264 H.264\n", stderr: "", code: 0 }),
     helpers: { serveSimAxSettings: null, serveSimCli: null },
   };
@@ -637,7 +637,7 @@ const fakeHost = (
   };
 };
 
-// Refs before and after T3 binds a launcher to each session run this same code. Optional
+// Refs before and after T2 binds a launcher to each session run this same code. Optional
 // exports detect the newer API; makeWithHosts ignores a fifth argument it does not take.
 type BoundTarget = { readonly session: string; readonly targetArgs: ReadonlyArray<string> };
 type Launchers = {
@@ -674,7 +674,7 @@ export const makeDeviceTools = Effect.fn("evaluateMcpToolUse.makeDeviceTools")(f
       return yield* Effect.die(new Error(`world.agentDeviceSessions names no device ${id}.`));
     }
   }
-  // T3 names each thread's session on a device; another thread's is named the same way.
+  // T2 names each thread's session on a device; another thread's is named the same way.
   const owners: Array<AgentDeviceOwner> = [];
   for (const [deviceId, threadId] of Object.entries(world.deviceOwners ?? {})) {
     const device = world.devices.find((candidate) => candidate.id === deviceId);
@@ -824,14 +824,14 @@ export const makeDeviceTools = Effect.fn("evaluateMcpToolUse.makeDeviceTools")(f
     failure?: DeviceError,
   ) {
     const entry = tools.find((tool) => tool.tool.name === name);
-    if (entry === undefined) return yield* Effect.die(new Error(`T3 has no device tool ${name}.`));
+    if (entry === undefined) return yield* Effect.die(new Error(`T2 has no device tool ${name}.`));
     const result = yield* entry.handle(input).pipe(
       Effect.provideService(McpInvocationContext.McpInvocationContext, scope),
       Effect.provideService(McpSchema.McpRequestContext, request),
       Effect.provideService(HostProcess.ExecutablePath, NODE),
       Effect.provideService(HostProcess.Platform, environment.platform as NodeJS.Platform),
       Effect.provideService(Injected, failure),
-      // T3 logs each failed screenshot; the result already says so.
+      // T2 logs each failed screenshot; the result already says so.
       Effect.provideService(References.MinimumLogLevel, "Error"),
       // An MCP client shows a protocol error, such as bad parameters, as the tool's error.
       Effect.catch((error) =>
@@ -849,7 +849,7 @@ export const makeDeviceTools = Effect.fn("evaluateMcpToolUse.makeDeviceTools")(f
       .join("\n");
     // McpServer turns a defect into this text; here a defect is a bug in the eval's world.
     if (text === "Tool execution failed due to an internal server error.") {
-      return yield* Effect.die(new Error(`${name} hit a defect in T3 or the eval's world.`));
+      return yield* Effect.die(new Error(`${name} hit a defect in T2 or the eval's world.`));
     }
     const opened = result.structuredContent;
     if (name === "device_open" && !result.isError && isOpened(opened)) {

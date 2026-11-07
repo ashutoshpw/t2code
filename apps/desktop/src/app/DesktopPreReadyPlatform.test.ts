@@ -212,13 +212,11 @@ describe("DesktopPreReadyPlatform", () => {
       assert.include(contents, "Icon=");
       assert.equal(setDesktopNameMock.mock.calls.length, 1);
     }).pipe(Effect.provideService(HostProcess.Platform, "linux"));
+  });
 
   it.effect("points the early portal entry at a configured distribution launcher", () => {
     vi.stubEnv("VITE_DEV_SERVER_URL", "");
     getSwitchValueMock.mockReturnValue("");
-    mkdirSyncMock.mockImplementation(() => {
-      throw new Error("read-only filesystem");
-    });
 
     return Effect.scoped(
       Effect.gen(function* () {
@@ -232,28 +230,6 @@ describe("DesktopPreReadyPlatform", () => {
                 T2CODE_DESKTOP_LAUNCHER_PATH: " /opt/T2 Code/t2code ",
               }),
             ),
-          ),
-        );
-        const entry = writeFileSyncMock.mock.calls.find(
-          ([path]) => path === "/xdg/applications/t2code.desktop",
-        )?.[1];
-        assert.include(entry, 'Exec="/opt/T2 Code/t2code" %U');
-      }),
-    ).pipe(Effect.ensuring(Effect.sync(() => vi.unstubAllEnvs())));
-  });
-
-  it.effect("points the early portal entry at a configured distribution launcher", () => {
-    vi.stubEnv("VITE_DEV_SERVER_URL", "");
-    vi.stubEnv("XDG_DATA_HOME", "/xdg");
-    vi.stubEnv("APPIMAGE", "/Applications/current.AppImage");
-    vi.stubEnv("T2CODE_DESKTOP_LAUNCHER_PATH", " /opt/T2 Code/t2code ");
-    getSwitchValueMock.mockReturnValue("");
-
-    return Effect.scoped(
-      Effect.gen(function* () {
-        yield* Layer.build(
-          DesktopPreReadyPlatform.layer.pipe(
-            Layer.provide(Layer.succeed(HostProcess.Platform, "linux")),
           ),
         );
         const entry = writeFileSyncMock.mock.calls.find(

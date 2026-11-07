@@ -22,7 +22,7 @@ import { useAtomCommand } from "../../state/use-atom-command";
 import { SettingsSection } from "./components/SettingsSection";
 import { SettingsSwitchRow } from "./components/SettingsSwitchRow";
 import { ListChoiceRow } from "../../components/ui/ListChoiceRow";
-import type { ToolCallVisibility } from "@t3tools/contracts/settings";
+import type { ToolCallVisibility } from "@t2code/contracts/settings";
 import { SettingsScreen } from "./components/SettingsScreen";
 import { planAutoSettleSettingsSync, type AutoSettleSettings } from "./autoSettleSettingsSync";
 import { useSettingsEnvironmentFilter } from "./settings-environment-filter";
