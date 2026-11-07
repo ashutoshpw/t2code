@@ -8,9 +8,9 @@ import {
   selectEnvironmentSpeechModel,
   updateEnvironmentSpeechAcceleration,
   updateEnvironmentSpeechModelUnloadTimeout,
-} from "@t3tools/client-runtime/voice-input";
-import type { PreparedConnection } from "@t3tools/client-runtime/connection";
-import { openRouterIcon } from "@t3tools/client-runtime/provider-clients";
+} from "@t2code/client-runtime/voice-input";
+import type { PreparedConnection } from "@t2code/client-runtime/connection";
+import { openRouterIcon } from "@t2code/client-runtime/provider-clients";
 import {
   AuthFilesystemReadScope,
   AuthSettingsWriteScope,
@@ -27,10 +27,10 @@ import {
   type SpeechCustomWords,
   type SpeechModelUnloadTimeout,
   type VoiceShortcutMode,
-} from "@t3tools/contracts";
-import { createModelSelection } from "@t3tools/shared/model";
-import { resolveSpeechPostProcessingModelSelection } from "@t3tools/shared/serverSettings";
-import { cloudSpeechLanguages } from "@t3tools/shared/speech";
+} from "@t2code/contracts";
+import { createModelSelection } from "@t2code/shared/model";
+import { resolveSpeechPostProcessingModelSelection } from "@t2code/shared/serverSettings";
+import { cloudSpeechLanguages } from "@t2code/shared/speech";
 import {
   ArrowDownUpIcon,
   AudioLinesIcon,
@@ -670,7 +670,7 @@ function useVoiceModels(prepared: PreparedConnection | null) {
   const downloading =
     requestedDownload !== null ||
     models.some((model) => model.state === "downloading" || model.state === "verifying");
-  // oxlint-disable-next-line t2code/react-effect-budget -- polls progress while a local request or the environment reports an active download
+  // oxlint-disable-next-line t2code/react-effect-budget -- loads the environment's model catalog when its connection becomes available
   useEffect(() => {
     if (!prepared || !downloading) return;
     let cancelled = false;
@@ -1072,7 +1072,7 @@ function TranscriptionTest(props: {
   const draft = transcript ?? "";
   const [showTranscript, setShowTranscript] = useState(false);
   const draftRef = useRef(draft);
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes the committed draft to the asynchronous transcription controller
+  // oxlint-disable-next-line t2code/react-effect-budget -- loads the environment's model catalog when its connection becomes available
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
@@ -1212,7 +1212,7 @@ export function VoiceSettingsPanel() {
       setMicrophones([]);
     }
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to microphone device changes while settings are open
+  // oxlint-disable-next-line t2code/react-effect-budget -- loads the environment's model catalog when its connection becomes available
   useEffect(() => {
     queueMicrotask(() => void refreshMicrophones());
     const mediaDevices = navigator.mediaDevices;

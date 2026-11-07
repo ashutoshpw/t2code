@@ -200,7 +200,7 @@ describe("McpAppRequests", () => {
     }).pipe(
       Effect.provide(
         makeLayer({
-          item: appItem({ t3McpApp: app }),
+          item: appItem({ t2McpApp: app }),
           mcpApps: {
             ...mcpApps,
             readResource: () =>

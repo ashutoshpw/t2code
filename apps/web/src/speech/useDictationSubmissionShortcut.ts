@@ -13,7 +13,7 @@ export function useDictationSubmissionShortcut(input: {
   useEffect(() => {
     latest.current = input;
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to window keydown while dictation owns submission
+  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed inputs to the window keydown listener
   useEffect(() => {
     if (!input.enabled) return;
     const onKeyDown = (event: KeyboardEvent) => {

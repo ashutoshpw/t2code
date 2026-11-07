@@ -14,7 +14,7 @@ import type { PlatformError } from "effect/PlatformError";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 
-import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as HostProcess from "@t2code/shared/HostProcess";
 
 import * as ServerConfig from "../config.ts";
 import { expandHomePath } from "../os-jank.ts";
@@ -65,10 +65,10 @@ export class SpeechModelStore extends Context.Service<
     ) => Effect.Effect<ReadonlyArray<string>, PlatformError>;
     /** The outside file a linked model points at. */
     readonly linkedFrom: (model: ModelFile) => Effect.Effect<string | undefined>;
-    /** Removes T3 Code's file or link; a linked file itself is left in place. */
+    /** Removes T2 Code's file or link; a linked file itself is left in place. */
     readonly remove: (model: ModelFile) => Effect.Effect<void, PlatformError>;
   }
->()("t3/speech/SpeechModelStore") {}
+>()("@t2code/cli/speech/SpeechModelStore") {}
 
 const DOWNLOAD_ATTEMPTS = 3;
 const PARTIAL_FILENAME =
@@ -251,7 +251,7 @@ const make = Effect.gen(function* () {
         for (const model of models) {
           if (model.size !== size || linked.includes(model.id)) continue;
           const finalPath = modelPath(model);
-          // Pointing at T3 Code's own model folder must not replace a file with a link to itself.
+          // Pointing at T2 Code's own model folder must not replace a file with a link to itself.
           if ((yield* realPath(file)) === (yield* realPath(finalPath))) continue;
           if (yield* verifiedPath(model, finalPath)) continue;
           const hashed = yield* expectedFile(model, file);

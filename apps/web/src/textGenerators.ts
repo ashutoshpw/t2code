@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
-import { providerClients } from "@t3tools/client-runtime/provider-clients";
-import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
+import { providerClients } from "@t2code/client-runtime/provider-clients";
+import { runAtomCommand } from "@t2code/client-runtime/state/runtime";
 import {
   type EnvironmentId,
   type ModelSelection,
@@ -13,7 +13,7 @@ import {
   type TextGeneratorConfig,
   type TextGeneratorKind,
   type TextGeneratorModel,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";

@@ -852,7 +852,7 @@ jobs:
         timeout-minutes: 5
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          PACKAGE_NAME: com.t2tools.t2code
+          PACKAGE_NAME: codes.t2.mobile
           APK_OUTPUT_DIR: ${{ runner.temp }}/android-apk
         run: |
           if [ -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
@@ -1242,9 +1242,9 @@ jobs:
 
   deploy_web:
     name: Deploy hosted web app
-  # The web deployment is staged early so the release build does not wait on
-  # Vercel, but it must not take the public domains until the release it links
-  # to exists, so the aliasing happens here.
+    # The web deployment is staged early so the release build does not wait on
+    # Vercel, but it must not take the public domains until the release it links
+    # to exists, so the aliasing happens here.
     needs: [preflight, build_web, release, publish_cli]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.build_web.result == 'success' && needs.release.result == 'success' && needs.publish_cli.result == 'success' && needs.preflight.outputs.release_channel != 'preview' }}
     runs-on: ubuntu-24.04

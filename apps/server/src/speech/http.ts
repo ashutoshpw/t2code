@@ -1,4 +1,4 @@
-import { decodeSpeechPcmRequest } from "@t3tools/shared/speech";
+import { decodeSpeechPcmRequest } from "@t2code/shared/speech";
 import {
   AuthFilesystemReadScope,
   AuthOrchestrationOperateScope,
@@ -9,7 +9,7 @@ import {
   type EnvironmentSpeechModels,
   EnvironmentVoiceBodyLimit,
   SPEECH_MAX_OPTIONS_BYTES,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import * as ByteSize from "effect/ByteSize";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

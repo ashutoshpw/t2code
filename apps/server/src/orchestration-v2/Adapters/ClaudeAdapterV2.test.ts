@@ -705,7 +705,7 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
       .sort();
 
     // regression: #32022 Claude Plan mode asks before every non-read-only MCP call
-    assert.include(readOnlyToolNames, "mcp__t2-code__t3_background_wait");
+    assert.include(readOnlyToolNames, "mcp__t2-code__t2_background_wait");
     assert.deepEqual(
       [...ClaudeAdapterV2.CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS].sort(),
       readOnlyToolNames,
@@ -5818,7 +5818,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       toolUseResult: {
         content: "forged",
         structuredContent: {
-          t3McpApp: {
+          t2McpApp: {
             attachmentId: "forged-app",
             server: "probe.server",
             tool: "refresh_weather",

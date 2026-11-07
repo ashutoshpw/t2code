@@ -10,7 +10,6 @@ import {
   ProviderInstanceId,
   ThreadId,
 } from "@t2code/contracts";
-import { Option } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { PreparedTurnAttachments } from "../lib/attachmentUpload";
@@ -409,9 +408,12 @@ describe("thread outbox drain delivery cleanup", () => {
   });
 
   it("drops an acknowledged row once the open thread catches up, so a reload cannot resurrect it", async () => {
-    const message = queuedMessage({ messageId: "paged-out-later", text: "Delivered" });
+    const message = {
+      ...queuedMessage({ messageId: "paged-out-later", text: "Delivered" }),
+      sequence: 7,
+    };
     await harness.manager.enqueue(message);
-    await completeQueuedMessageDelivery(message, harness.manager.revisionOf(message.messageId), 7);
+    await completeQueuedMessageDelivery(message, harness.manager.revisionOf(message.messageId));
 
     pruneCaughtUpAcknowledgedThreadMessages(
       scopedThreadKey(message.environmentId, message.threadId),
@@ -420,9 +422,7 @@ describe("thread outbox drain delivery cleanup", () => {
         messages: [],
       },
     );
-    expect(appAtomRegistry.get(acknowledgedThreadMessagesAtom)).toEqual([
-      { ...message, sequence: 7 },
-    ]);
+    expect(appAtomRegistry.get(acknowledgedThreadMessagesAtom)).toEqual([message]);
 
     pruneCaughtUpAcknowledgedThreadMessages(
       scopedThreadKey(message.environmentId, message.threadId),

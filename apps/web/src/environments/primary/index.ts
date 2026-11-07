@@ -4,7 +4,6 @@ export {
 } from "./context";
 
 export {
-  createServerPairingCredential,
   peekPairingTokenFromUrl,
   PrimaryEnvironmentPairingCredentialRejectedError,
   PrimaryEnvironmentRequestError,

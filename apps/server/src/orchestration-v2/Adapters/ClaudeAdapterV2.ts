@@ -916,7 +916,7 @@ function claudeRulesMayCoverMcpTools(
 
 /**
  * Claude reports `annotations` as `readOnly`/`destructive`/`openWorld`; apps expect MCP's `*Hint` names.
- * Card calls skip Claude's permission check, so `readOnlyHint`, which skips T3's prompt, needs readable
+ * Card calls skip Claude's permission check, so `readOnlyHint`, which skips T2's prompt, needs readable
  * rules (null when not) with no ask or deny rule that may cover the tool.
  */
 function claudeMcpToolForApps(
@@ -2149,7 +2149,7 @@ export const CLAUDE_T2_MCP_TOOL_WILDCARD = "mcp__t2-code__*";
 export const CLAUDE_READ_ONLY_T2_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
   "mcp__t2-code__orchestrator_capabilities",
   "mcp__t2-code__list_scheduled_tasks",
-  "mcp__t2-code__t3_background_wait",
+  "mcp__t2-code__t2_background_wait",
   "mcp__t2-code__t2_thread_list",
   "mcp__t2-code__t2_thread_wait",
   "mcp__t2-code__t2_worktree_status",

@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/react";
 import { useAtomValue } from "@effect/atom-react";
-import { offersLinkedEnvironments } from "@t3tools/client-runtime/link-request";
+import { offersLinkedEnvironments } from "@t2code/client-runtime/link-request";
 import {
   AuthAccessWriteScope,
   AuthMcpClientAccess,
@@ -11,7 +11,7 @@ import {
   managedRuntimeModeDenial,
   mcpClientScopes,
   sessionGrantsScope,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import * as Option from "effect/Option";
@@ -320,7 +320,7 @@ function useGate(environment: EnvironmentPresentation) {
   const discoverIfUnasked = useEffectEvent(() => {
     if (!thisMachine && !discovery.listed && !discovery.refreshing) void refreshDiscovery();
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- asks T3 Connect for its machine list once the wizard opens signed in
+  // oxlint-disable-next-line t2code/react-effect-budget -- asks T2 Connect for its machine list once the wizard opens signed in
   useEffect(() => {
     if (isSignedIn) discoverIfUnasked();
   }, [isSignedIn]);

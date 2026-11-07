@@ -309,7 +309,7 @@ export interface GitRemoteStatusOptions {
 }
 
 /** Set by background discovery so its Git commands run in their own small lane, not the user's. */
-export const BackgroundGitWork = Context.Reference<boolean>("t3/vcs/BackgroundGitWork", {
+export const BackgroundGitWork = Context.Reference<boolean>("@t2code/cli/vcs/BackgroundGitWork", {
   defaultValue: () => false,
 });
 

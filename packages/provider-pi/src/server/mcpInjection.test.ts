@@ -15,10 +15,10 @@ import * as NodeFS from "effect/FileSystem";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   buildPiRpcLaunch,
-  materializePiT3McpExtension,
+  materializePiT2McpExtension,
   resolvePiLaunchArgs,
 } from "./mcpInjection.ts";
-import { PI_T3_MCP_EXTENSION_SOURCE } from "./mcpExtensionSource.ts";
+import { PI_T2_MCP_EXTENSION_SOURCE } from "./mcpExtensionSource.ts";
 
 const threadId = ThreadId.make("thread-pi-t2-mcp");
 
@@ -158,7 +158,7 @@ describe("pi T2 MCP injection", () => {
   });
 });
 
-describe("materializePiT3McpExtension", () => {
+describe("materializePiT2McpExtension", () => {
   // A pi launch concurrent with the materialize reads the extension file from
   // disk; a truncate-then-write exposes an empty or partial file mid-write and
   // the launch loads a broken extension.
@@ -176,7 +176,7 @@ describe("materializePiT3McpExtension", () => {
               .remove(path.join(directory, "pi-t3-mcp-extension.ts"), { force: true })
               .pipe(Effect.ignore);
             yield* Effect.all(
-              [materializePiT3McpExtension(directory), materializePiT3McpExtension(directory)],
+              [materializePiT2McpExtension(directory), materializePiT2McpExtension(directory)],
               { concurrency: "unbounded" },
             );
           }
@@ -193,9 +193,9 @@ describe("materializePiT3McpExtension", () => {
             // partial read means the writer truncated the file mid-write.
             if (text.value.length === 0) {
               anomalies.push("empty: truncated mid-write");
-            } else if (text.value.length !== PI_T3_MCP_EXTENSION_SOURCE.length) {
+            } else if (text.value.length !== PI_T2_MCP_EXTENSION_SOURCE.length) {
               anomalies.push(
-                `partial: ${text.value.length} of ${PI_T3_MCP_EXTENSION_SOURCE.length} chars`,
+                `partial: ${text.value.length} of ${PI_T2_MCP_EXTENSION_SOURCE.length} chars`,
               );
             }
           }),

@@ -2,9 +2,9 @@ import AudioToolbox
 import ExpoModulesCore
 import Foundation
 
-public class T3VoiceTranscriptionModule: Module {
+public class T2VoiceTranscriptionModule: Module {
   public func definition() -> ModuleDefinition {
-    Name("T3VoiceTranscription")
+    Name("T2VoiceTranscription")
 
     AsyncFunction("decodeRecording") { (uri: URL) throws -> Data in
       guard uri.isFileURL else { throw CocoaError(.fileReadUnsupportedScheme) }

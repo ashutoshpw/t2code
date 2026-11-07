@@ -24,6 +24,8 @@ import * as BuiltInDrivers from "../../../sourceControl/builtInDrivers.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeCrypto from "node:crypto";
 import * as NodeSqlite from "node:sqlite";
+import * as AssetSigner from "../../../assets/AssetSigner.ts";
+import * as RepositoryIdentityResolver from "../../../project/RepositoryIdentityResolver.ts";
 import * as NodePlatformCrypto from "@effect/platform-node/NodeCrypto";
 import * as Clock from "effect/Clock";
 import * as SecureRandom from "effect/crypto/SecureRandom";
@@ -156,6 +158,11 @@ const fixture = Effect.fn("SpacesMcpTest.fixture")(function* <A, E>(
     settings,
     threads,
     Secrets.layer.pipe(Layer.provide(configLayer)),
+    AssetSigner.layer.pipe(
+      Layer.provideMerge(Secrets.layer.pipe(Layer.provide(configLayer))),
+      Layer.provide(NodePlatformCrypto.layerMac),
+    ),
+    RepositoryIdentityResolver.layer,
     WorkspacePaths.layer,
     Favicon.layer.pipe(Layer.provide(WorkspacePaths.layer), Layer.provide(ProjectLoader.layer)),
     NativeIcons.layer.pipe(Layer.provide(configLayer)),

@@ -4,12 +4,27 @@
     "line": "const V1_PROFILE_NAMES = [\"T3 Code (Alpha)\", \"t3code\"];"
   },
   {
-    "file": "apps/mobile/deps/react-native-enriched-markdown-1.2.0-t3.16-29ddd424.tgz",
+    "file": "apps/mobile/deps/react-native-enriched-markdown-1.2.0-t3.18-497fbe63.tgz",
     "line": ""
   },
   {
     "file": "apps/mobile/deps/react-native-screens-5.0.0-t3.48.tgz",
     "line": ""
+  },
+  {
+    "file": "apps/mobile/modules/t3-web-socket/expo-module.config.json",
+    "line": "",
+    "reason": "Upstream native module directory; the Expo module name and podspec product name are part of the autolinking identity, so the path keeps upstream's T3 name."
+  },
+  {
+    "file": "apps/mobile/modules/t3-web-socket/ios/T3WebSocket.podspec",
+    "line": "",
+    "reason": "Upstream CocoaPods podspec inside the t3-web-socket module; the pod name must match the module directory."
+  },
+  {
+    "file": "apps/mobile/modules/t3-web-socket/ios/T3WebSocketModule.swift",
+    "line": "",
+    "reason": "Upstream Swift module implementation inside the t3-web-socket module; the class name is referenced by the podspec."
   },
   {
     "file": "apps/server/src/orchestration-v2/testkit/fixtures/claude_background_task_wake/claude_transcript.ndjson",
@@ -18,6 +33,21 @@
   {
     "file": "apps/server/src/telemetry/AnalyticsService.ts",
     "line": "Config.withDefault(\"https://ingest.t3.codes\"),"
+  },
+  {
+    "file": "apps/web/src/cloud/t3ConnectState.ts",
+    "line": "",
+    "reason": "Upstream module filename imported by cloud link state consumers; the path churns upstream on every rebase, so renaming means touching every upstream caller."
+  },
+  {
+    "file": "apps/web/src/cloud/useT3ConnectTurnOn.ts",
+    "line": "",
+    "reason": "Upstream hook filename imported by cloud link consumers; same rebase-cost trade-off as t3ConnectState.ts."
+  },
+  {
+    "file": "apps/web/src/components/InstallT3Commands.tsx",
+    "line": "",
+    "reason": "Upstream component imported by HostedEmptyState.tsx; renaming would conflict with upstream churn at every rebase for no user-visible gain."
   },
   {
     "file": "docs/internals/product-analytics.md",

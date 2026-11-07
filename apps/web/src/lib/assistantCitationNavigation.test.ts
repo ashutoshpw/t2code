@@ -5,7 +5,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { describe, expect, it } from "vite-plus/test";
 
 import { selectActiveRightPanelSurface, useRightPanelStore } from "../rightPanelStore";

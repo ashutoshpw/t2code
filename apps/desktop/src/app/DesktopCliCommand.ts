@@ -15,7 +15,7 @@ import * as Stream from "effect/Stream";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import { pathSetup, readUserLoginShell } from "@t3tools/shared/shell";
+import { pathSetup, readUserLoginShell } from "@t2code/shared/shell";
 
 import * as DesktopCliShim from "./DesktopCliShim.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";

@@ -36,6 +36,7 @@ import { probeCursorSkills } from "./skills.ts";
 import { makeCursorAuth } from "./auth.ts";
 import * as CursorCredentialStore from "./credentialStore.ts";
 import * as CursorAgentSdk from "./CursorAgentSdk.ts";
+import * as CursorKeychain from "./CursorKeychain.ts";
 import * as CursorSdk from "./CursorSdk.ts";
 import * as CursorUsageAccounts from "./CursorUsageAccounts.ts";
 
@@ -55,7 +56,8 @@ export type CursorDriverEnv =
   | Path.Path
   | HttpClient.HttpClient
   | CursorSdk.CursorSdk
-  | ProviderHost.ProviderHost;
+  | ProviderHost.ProviderHost
+  | CursorKeychain.CursorKeychain;
 
 export const CursorDriver: ProviderDriver<
   CursorSettings,
@@ -95,6 +97,7 @@ export const CursorDriver: ProviderDriver<
     const host = yield* ProviderHost.ProviderHost;
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
+    const keychain = yield* CursorKeychain.CursorKeychain;
     const httpClient = yield* HttpClient.HttpClient;
     const sdkRunner = yield* CursorAgentSdk.CursorAgentSdkRunner;
     const processEnv = yield* mergeProviderInstanceEnvironment(environment);
@@ -238,6 +241,7 @@ export const CursorDriver: ProviderDriver<
       ),
       Effect.provideService(FileSystem.FileSystem, fileSystem),
       Effect.provideService(Path.Path, path),
+      Effect.provideService(CursorKeychain.CursorKeychain, keychain),
       Effect.map(stampSnapshot),
       Effect.tap((provider) =>
         Effect.sync(() => {

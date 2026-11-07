@@ -101,7 +101,7 @@ function emit(value: string, resetGeneration = native.resetGeneration) {
 
 vi.mock("expo", () => ({ requireNativeView: () => NativeView }));
 // Vite resolves the platform-neutral module; the race lives in the iOS editor.
-vi.mock("../native/T3ComposerEditor", () => import("../native/T3ComposerEditor.ios"));
+vi.mock("../native/T3ComposerEditor", () => import("../native/T2ComposerEditor.ios"));
 vi.mock("react-native", () => ({ StyleSheet: { flatten: (style: unknown) => style } }));
 vi.mock("expo-file-system", () => ({
   Directory: class {
@@ -134,7 +134,7 @@ vi.mock("../lib/uuid", () => ({ uuidv4: () => "uuid", randomHex: () => "0000" })
 vi.mock("../state/assets", () => ({ assetEnvironment: {} }));
 vi.mock("../state/attachments", () => ({ attachmentEnvironment: {} }));
 vi.mock("../state/session", () => ({ environmentSession: {} }));
-vi.mock("@t3tools/client-runtime/state/runtime", () => ({
+vi.mock("@t2code/client-runtime/state/runtime", () => ({
   createEnvironmentRpcCommand: () => Symbol("rpc-command"),
   settlePromise: vi.fn(),
   squashAtomCommandFailure: vi.fn(),
@@ -148,7 +148,7 @@ import {
   useComposerDraft,
 } from "../state/use-composer-drafts";
 import { ComposerEditor } from "./ComposerEditor";
-import type { ComposerEditorHandle } from "../native/T3ComposerEditor.types";
+import type { ComposerEditorHandle } from "../native/T2ComposerEditor.types";
 
 const DRAFT_KEY = "environment:thread";
 

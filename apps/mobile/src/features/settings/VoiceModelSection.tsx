@@ -4,12 +4,12 @@ import {
   cancelEnvironmentSpeechModelDownload,
   downloadEnvironmentSpeechModel,
   selectEnvironmentSpeechModel,
-} from "@t3tools/client-runtime/voice-input";
+} from "@t2code/client-runtime/voice-input";
 import {
   AuthSettingsWriteScope,
   type EnvironmentId,
   type EnvironmentSpeechModel,
-} from "@t3tools/contracts";
+} from "@t2code/contracts";
 import { AsyncResult } from "effect/reactivity";
 import { type ReactNode, useEffect, useState } from "react";
 import { Platform, Text as NativeText, View } from "react-native";
@@ -305,18 +305,12 @@ export function LocalModelChoice(props: {
   const progress =
     pending?.downloaded === undefined ? undefined : pending.downloaded / pending.size;
   return (
-    <ListRow
-      label={active?.model ?? "Local model"}
-      description={
-        pending
-          ? pending.state === "verifying"
-            ? `Verifying ${pending.name}…`
-            : `Downloading ${pending.name} · ${Math.round((progress ?? 0) * 100)}%`
-          : active
-            ? `Local model · ${formatBytes(active.size)}`
-            : voice.canManage
-              ? "No model installed · Choose one to download"
-              : `No model installed · Add one using T3 Code on ${props.label}`
+    <SettingsSection
+      title={title}
+      footer={
+        voice.canManage
+          ? undefined
+          : `This connection can’t change settings on ${props.label}. Add a transcription model using T2 Code on that machine.`
       }
       selected={props.selected}
       onPress={() => {

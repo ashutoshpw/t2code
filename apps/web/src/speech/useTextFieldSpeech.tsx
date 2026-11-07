@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import type { EnvironmentId, ProjectId } from "@t3tools/contracts";
+import type { EnvironmentId, ProjectId } from "@t2code/contracts";
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 
 import {

@@ -123,6 +123,7 @@ export function QueuedRunsControl({
   const workflow = projection ? deriveThreadQueueWorkflowState(projection) : null;
   const queued = workflow?.queuedRuns ?? [];
   const activeRun = workflow?.activeRun ?? null;
+  const canReorder = workflow?.canReorder === true;
   // A fresh message starts its own turn: it may skip compaction, but not steer into a turn.
   const canSendRun = (freshContext: boolean) =>
     workflow?.canSendNow === true ||
@@ -356,6 +357,39 @@ export function QueuedRunsControl({
                 timestampFormat={props.timestampFormat}
                 onOpenThread={props.onOpenThread}
               >
+                {items.length > 1 && canReorder && rowRunId !== null && rowServerIndex !== null ? (
+                  <Button
+                    size="icon-xs"
+                    variant="ghost-muted"
+                    aria-label={`Reorder queued message ${position + 1} of ${items.length} (drag, or press the arrow keys)`}
+                    className="group/grip cursor-grab active:cursor-grabbing"
+                    // Not `disabled`: that drops keyboard focus mid-move and breaks repeated arrow presses.
+                    aria-disabled={busyRunId !== null || undefined}
+                    onPointerDown={() => {
+                      if (busyRunId === null) dragArmedRunIdRef.current = rowRunId;
+                    }}
+                    onKeyDown={(event) => {
+                      if (busyRunId !== null) return;
+                      if (event.key === "ArrowUp" && rowServerIndex > 0) {
+                        event.preventDefault();
+                        void move(rowRunId, queued[rowServerIndex - 1]?.run.id ?? null);
+                      }
+                      if (event.key === "ArrowDown" && rowServerIndex < queued.length - 1) {
+                        event.preventDefault();
+                        // Moving into the collapsed rows would unmount the focused grip.
+                        if (rowServerIndex + 1 >= visibleItems.length) setShowAll(true);
+                        void move(rowRunId, queued[rowServerIndex + 2]?.run.id ?? null);
+                      }
+                    }}
+                  >
+                    <span className="text-xs font-medium tabular-nums group-hover/queued:hidden group-focus-visible/grip:hidden">
+                      {position + 1}
+                    </span>
+                    <GripVerticalIcon className="hidden group-hover/queued:block group-focus-visible/grip:block" />
+                  </Button>
+                ) : items.length > 1 ? (
+                  <span className="px-1.5 font-medium tabular-nums">{position + 1}</span>
+                ) : null}
                 {canSendRun(item.freshContext) && !isEditing ? (
                   <>
                     <Tooltip>

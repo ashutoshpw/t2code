@@ -1,11 +1,11 @@
-import type { VcsStatusResult } from "@t3tools/contracts";
+import type { VcsStatusResult } from "@t2code/contracts";
 import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { chatGitStatusAtom } from "./vcs";
 
 vi.mock("../connection/runtime", () => ({ connectionAtomRuntime: {} }));
-vi.mock("@t3tools/client-runtime/state/vcs", () => ({
+vi.mock("@t2code/client-runtime/state/vcs", () => ({
   createVcsActionManager: () => ({}),
   createVcsEnvironmentAtoms: () => ({}),
   createVcsStatusRevalidationAtomFamily: () => () => null,

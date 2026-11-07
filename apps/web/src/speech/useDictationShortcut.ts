@@ -1,5 +1,5 @@
-import type { VoiceInputState } from "@t3tools/client-runtime/voice-input";
-import type { ResolvedKeybindingsConfig } from "@t3tools/contracts";
+import type { VoiceInputState } from "@t2code/client-runtime/voice-input";
+import type { ResolvedKeybindingsConfig } from "@t2code/contracts";
 import { useEffect, useRef, type RefObject } from "react";
 
 import { isCommandPaletteOpen } from "../commandPaletteBus";
@@ -78,7 +78,7 @@ export function useDictationShortcut(input: ShortcutInput) {
     starting: Promise<void>;
   } | null>(null);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- owns the window keyboard listeners and dictation target registry entry
+  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed actions to the window keyboard listener and shortcut registry
   useEffect(() => {
     if (typeof window === "undefined") return;
     let disposed = false;

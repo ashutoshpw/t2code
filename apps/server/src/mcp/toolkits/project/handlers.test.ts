@@ -380,7 +380,7 @@ it.effect("a launch with a model its provider does not advertise creates no thre
     );
     const launchWith = (instanceId: string, model: string) =>
       toolkit
-        .handle("t3_thread_launch", {
+        .handle("t2_thread_launch", {
           title: "Fix",
           projectId,
           modelSelection: { instanceId: ProviderInstanceId.make(instanceId), model },
@@ -629,7 +629,7 @@ it.effect("a launch into a new worktree creates nothing when its branch collides
       ),
     );
     const refused = (yield* toolkit
-      .handle("t3_thread_launch", {
+      .handle("t2_thread_launch", {
         title: "Fix",
         projectId,
         workspaceStrategy: { type: "worktree", baseRef: "main", branch: "werkstatt/baseline" },
@@ -662,7 +662,7 @@ it.effect("a launch into an unknown project says the project was not found", () 
       { type: "worktree", baseRef: "main", startFromOrigin: false } as const,
     ]) {
       const result = yield* toolkit
-        .handle("t3_thread_launch", {
+        .handle("t2_thread_launch", {
           title: "Fix",
           message: "Fix the bug",
           projectId: ProjectId.make("current"),
@@ -826,7 +826,7 @@ it.effect("an agent's clone is not cut off while git is still transferring", () 
     );
 
     const clone = yield* toolkit
-      .handle("t3_project_clone", { remoteUrl: "https://example.test/repo.git", destinationPath })
+      .handle("t2_project_clone", { remoteUrl: "https://example.test/repo.git", destinationPath })
       .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(repositories), Effect.forkChild);
     yield* Deferred.await(started);
     // A large repository over a slow link; agents' MCP calls get a far longer budget.
@@ -899,7 +899,7 @@ it.effect("an update the project refuses tells the agent why", () =>
     );
 
     const refused = yield* toolkit
-      .handle("t3_project_update", {
+      .handle("t2_project_update", {
         projectId: harness.projectId,
         projectIcon: { kind: "monogram", text: "ABC", color: "blue" },
       })

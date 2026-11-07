@@ -128,7 +128,7 @@ const trimCodex = (native: Native) => {
     if (item.role === "assistant") return [];
     const text = textOf(item);
     // T2's own text comes from source, and the prompt from each case.
-    if (text.includes("<t3_code_")) return [];
+    if (text.includes("<t2_code_")) return [];
     if (item.role === "user") {
       const env = /<environment_context>[\s\S]*?<\/environment_context>/.exec(text)?.[0];
       return env ? [{ ...item, content: [{ type: "input_text", text: env }] }] : [];
@@ -152,7 +152,7 @@ const trimCodex = (native: Native) => {
   input.push({
     type: "message",
     role: "developer",
-    content: [{ type: "input_text", text: "<t3_code_runtime></t3_code_runtime>" }],
+    content: [{ type: "input_text", text: "<t2_code_runtime></t2_code_runtime>" }],
   });
   const { reasoning, instructions, text, tool_choice } = native;
   return { reasoning, instructions, text, tool_choice, input };

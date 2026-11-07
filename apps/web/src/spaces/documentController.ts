@@ -235,7 +235,7 @@ export class SpaceDocumentController {
       if (!state.dirty && !state.pending && state.persistenceError === null)
         await this.#load(undefined, false, true);
     } catch (error) {
-      if (error instanceof SpaceIntentAdmissionError && !this.session.getSnapshot().pending)
+      if (Schema.is(SpaceIntentAdmissionError)(error) && !this.session.getSnapshot().pending)
         this.#update({ imageAdmissionError: error });
       else this.#update({ error });
       throw error;

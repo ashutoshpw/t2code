@@ -1601,8 +1601,12 @@ function ConnectionsSettingsContent({
               }
             />
           ) : null}
-          {canReadRelay || canManageRelay ? (
-            <CloudLinkRow canReadRelay={canReadRelay} canManageRelay={canManageRelay} />
+          {primaryEnvironmentId !== null && (canReadRelay || canManageRelay) ? (
+            <CloudLinkRow
+              environmentId={primaryEnvironmentId}
+              canReadRelay={canReadRelay}
+              canManageRelay={canManageRelay}
+            />
           ) : null}
         </SettingsSection>
       )}

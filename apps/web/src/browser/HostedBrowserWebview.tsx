@@ -303,7 +303,6 @@ export function HostedBrowserWebview(props: {
     viewportWidth,
   ]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- Report the mounted webview's visibility to the desktop host.
   useEffect(() => {
     const bridge = window.desktopBridge?.preview;
     if (!clientSettingsHydrated || !bridge || !serverDriven) return;

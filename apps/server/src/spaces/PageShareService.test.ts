@@ -38,6 +38,7 @@ const env = { environmentId };
 const hostname = Ref.makeUnsafe<string | null>("env.t2.test");
 const layerConnect = Layer.mock(CloudManagedEndpointRuntime)({
   inspectConnector: Effect.map(Ref.get(hostname), (value) => ({
+    pid: 4242,
     readyConnections: 1,
     hostname: value,
     protocol: "http2",
