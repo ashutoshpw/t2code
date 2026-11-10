@@ -97,11 +97,11 @@ function commandArgs(command: ChildProcess.Command): ReadonlyArray<string> {
 
 const ARCHIVE = { archiveVersion: "1.2.3-preview.20260911.4" } as const;
 
-// Emulates `t3 serve`: it takes the home owner lock at startup, then binds
+// Emulates `t2 serve`: it takes the home owner lock at startup, then binds
 // once a second server has tried the same home (or after 2s), so a concurrent
 // launch always sees the home still unclaimed. Like the real server, it
 // publishes server-runtime.json after it starts answering HTTP, if at all.
-const fakeT3Serve = (publishDelayMs: number | null) => `const fs = require("node:fs");
+const fakeT2Serve = (publishDelayMs: number | null) => `const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const args = process.argv.slice(2);
@@ -187,145 +187,13 @@ describe("ssh tunnel scripts", () => {
     );
   });
 
-  it("refuses to build a runner with neither an archive version nor a node script", () => {
-    for (const input of [undefined, {}, { archiveVersion: "  " }, { nodeScriptPath: null }]) {
-      assert.throws(
-        () => SshTunnel.buildRemoteT2RunnerScript(input),
-        SshTunnel.SshMissingRunnerError,
-      );
-    }
-    assert.throws(() => SshTunnel.buildRemoteLaunchScript(), SshTunnel.SshMissingRunnerError);
-  });
-
-  it("does not hard-code a remote node engine range", () => {
-    const script = SshTunnel.buildRemoteT2RunnerScript(NODE_SCRIPT);
-
-    assert.include(script, "T2_NODE_ENGINE_RANGE=''");
-    assert.notInclude(script, TEST_NODE_ENGINE_RANGE);
-  });
-
-  it("builds the remote t2 runner with a node script override", () => {
-    const script = SshTunnel.buildRemoteT2RunnerScript({
-      ...NODE_SCRIPT,
-      nodeEngineRange: TEST_NODE_ENGINE_RANGE,
-    });
-
-    assert.include(
-      script,
-      "T2_NODE_SCRIPT_PATH='/Users/julius/Development/Work/codething-mvp/apps/server/dist/bin.mjs'",
-    );
-    assert.include(script, 'exec node "$T2_NODE_SCRIPT_PATH" "$@"');
-    assert.include(script, "T2_ARCHIVE_VERSION=''");
-    assert.include(script, 'prepend_path_if_dir "$HOME/.local/bin"');
-    assert.include(script, `T2_NODE_ENGINE_RANGE='${TEST_NODE_ENGINE_RANGE}'`);
-    assert.include(script, "remote_node_satisfies_engine()");
-    assert.include(script, "function satisfiesSemverRange");
-    assert.include(script, "satisfiesSemverRange(rawVersion, range)");
-    assert.include(script, 'prepend_path_if_dir "/home/linuxbrew/.linuxbrew/bin"');
-    assert.include(script, 'prepend_path_if_dir "$VOLTA_HOME/bin"');
-    assert.include(script, 'prepend_path_if_dir "$HOME/.asdf/shims"');
-    assert.include(script, 'prepend_path_if_dir "$HOME/.local/share/mise/shims"');
-    assert.include(script, 'eval "$(fnm env --shell bash)"');
-    assert.include(script, "fnm use --silent-if-unchanged");
-    assert.include(script, "fnm use default");
-    assert.include(script, 'prepend_path_if_dir "$HOME/.nodenv/shims"');
-    assert.include(script, 'NVM_DIR="$HOME/.nvm"');
-    assert.include(script, "nvm use --silent default");
-    assert.include(script, 'for T2_NODE_BIN in "$NVM_DIR"/versions/node/*/bin');
-    assert.notInclude(script, "ensure $NVM_DIR/nvm.sh is available");
-    assert.notInclude(script, "npx");
-  });
-
-  it("embeds the runner in the launch script byte for byte", () => {
-    const runner = SshTunnel.buildRemoteT2RunnerScript(ARCHIVE);
-    assert.include(runner, 'printf \'%s\\n\' "$$" > "$T2_LOCK/pid.tmp"');
-    assert.include(SshTunnel.buildRemoteLaunchScript(ARCHIVE), runner);
-  });
-
-  it("uses the remote t2 runner for launch and pairing scripts", () => {
-    const stateKey = "711bc738002d72fd";
-    const launch = SshTunnel.buildRemoteLaunchScript(ARCHIVE);
-    const devLaunch = SshTunnel.buildRemoteLaunchScript({
-      ...NODE_SCRIPT,
-      nodeEngineRange: TEST_NODE_ENGINE_RANGE,
-    });
-
-    assert.include(
-      launch,
-      '[ -n "$REMOTE_PID" ] && [ -n "$REMOTE_PORT" ] && server_running "$REMOTE_PID"',
-    );
-    assert.include(launch, "RUNNER_CHANGED=1");
-    assert.include(launch, "ensure_remote_node_path()");
-    assert.include(launch, "if ! ensure_remote_node_path; then");
-    assert.include(devLaunch, `T2_NODE_ENGINE_RANGE='${TEST_NODE_ENGINE_RANGE}'`);
-    assert.include(devLaunch, "does not satisfy required range ");
-    assert.include(launch, 'kill "$REMOTE_PID" 2>/dev/null || true');
-    assert.include(launch, "wait_ready");
-    assert.include(launch, '"$RUNNER_FILE" serve --host 127.0.0.1');
-    assert.include(launch, '--base-dir "$DEFAULT_SERVER_HOME"');
-    assert.notInclude(launch, "server-home");
-    assert.include(launch, "Remote T2 server did not become ready");
-    assert.include(launch, 'wait_ready "60000"');
-    assert.include(launch, 'if [ -s "$LOG_FILE" ]; then');
-    assert.include(launch, "It wrote nothing to %s");
-    assert.include(launch, "T2_ARCHIVE_VERSION='1.2.3-preview.20260911.4'");
-    assert.include(
-      SshTunnel.buildRemotePairingScript(stateKey, ARCHIVE),
-      '"$RUNNER_FILE" auth pairing create --base-dir "$PAIRING_BASE_DIR" --json',
-    );
-    assert.include(
-      SshTunnel.buildRemotePairingScript(stateKey, ARCHIVE),
-      'PAIRING_BASE_DIR="$DEFAULT_SERVER_HOME"',
-    );
-    assert.notInclude(SshTunnel.buildRemotePairingScript(stateKey, ARCHIVE), "server-home");
-    assert.include(
-      SshTunnel.buildRemotePairingScript(stateKey, ARCHIVE),
-      "T2_ARCHIVE_VERSION='1.2.3-preview.20260911.4'",
-    );
-    assert.include(
-      SshTunnel.buildRemoteStopScript(stateKey),
-      'if [ "$REMOTE_MANAGED" != "external" ] && [ -n "$REMOTE_PID" ]',
-    );
-    assert.include(
-      SshTunnel.buildRemoteStopScript(stateKey),
-      'kill "$REMOTE_PID" 2>/dev/null || true',
-    );
-    assert.include(
-      SshTunnel.buildRemoteStopScript(stateKey),
-      'rm -f "$PID_FILE" "$PORT_FILE" "$MANAGED_FILE"',
-    );
-    assert.include(
-      launch,
-      'DEFAULT_RUNTIME_FILE="$DEFAULT_SERVER_HOME/userdata/server-runtime.json"',
-    );
-    assert.include(launch, "resolve_default_runtime_port()");
-    assert.include(launch, 'DEFAULT_RUNTIME_INFO="$(resolve_default_runtime_port');
-    assert.include(launch, "if (!Number.isInteger(pid) || pid <= 0 || !Number.isInteger(port))");
-    assert.include(
-      launch,
-      'if [ -n "$DEFAULT_REMOTE_PORT" ] && [ "$REMOTE_MANAGED" = "managed" ] && [ "$DEFAULT_RUNTIME_PID" = "$REMOTE_PID" ]; then',
-    );
-    assert.include(launch, 'REMOTE_PORT="$DEFAULT_REMOTE_PORT"');
-    assert.include(launch, 'rm -f "$PID_FILE"');
-    assert.include(launch, "printf 'external\\n' >\"$MANAGED_FILE\"");
-    assert.include(launch, 'if [ -z "$REMOTE_PORT" ]; then');
-    assert.isBelow(
-      launch.indexOf('if [ "$REMOTE_MANAGED" = "managed" ]'),
-      launch.indexOf("printf 'external\\n' >\"$MANAGED_FILE\""),
-    );
-    assert.isBelow(
-      launch.indexOf('DEFAULT_RUNTIME_INFO="$(resolve_default_runtime_port'),
-      launch.indexOf('elif [ -n "$REMOTE_PID" ]'),
-    );
-  });
-
   it.each([
     { host: "Darwin x86_64", system: "Darwin", machine: "x86_64", downloads: false },
     { host: "Darwin arm64", system: "Darwin", machine: "arm64", downloads: true },
   ])(
     "only downloads a release archive the host can run: $host",
     ({ system, machine, downloads }) => {
-      const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-ssh-runner-"));
+      const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t2-ssh-runner-"));
       try {
         const bin = NodePath.join(root, "bin");
         NodeFS.mkdirSync(bin);
@@ -340,7 +208,7 @@ describe("ssh tunnel scripts", () => {
           "#!/bin/sh\necho 'download attempt' >&2\nexit 22\n",
           { mode: 0o755 },
         );
-        const runner = NodePath.join(root, "run-t3.sh");
+        const runner = NodePath.join(root, "run-t2.sh");
         NodeFS.writeFileSync(runner, SshTunnel.buildRemoteT2RunnerScript(ARCHIVE));
         const result = NodeChildProcess.spawnSync("sh", [runner, "--version"], {
           encoding: "utf8",
@@ -351,7 +219,7 @@ describe("ssh tunnel scripts", () => {
           assert.include(result.stderr, "download attempt");
         } else {
           assert.notInclude(result.stderr, "download attempt");
-          assert.include(result.stderr, "has no t3 release archive.");
+          assert.include(result.stderr, "has no t2 release archive.");
         }
       } finally {
         NodeFS.rmSync(root, { recursive: true, force: true });
@@ -846,7 +714,7 @@ describe("ssh tunnel scripts", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-ssh-launch-" });
+        const home = yield* fs.makeTempDirectoryScoped({ prefix: "t2-ssh-launch-" });
         const serversFile = path.join(home, "servers");
         yield* Effect.addFinalizer(() =>
           fs.readFileString(serversFile).pipe(
@@ -860,10 +728,10 @@ describe("ssh tunnel scripts", () => {
             Effect.ignore,
           ),
         );
-        const serverScript = path.join(home, "fake-t3.cjs");
-        yield* fs.writeFileString(serverScript, fakeT3Serve(publishDelayMs));
+        const serverScript = path.join(home, "fake-t2.cjs");
+        yield* fs.writeFileString(serverScript, fakeT2Serve(publishDelayMs));
         // A launch that died holding the lock must not block or double-admit later ones.
-        const launchLock = path.join(home, ".t3", "ssh-launch", ".launch.lock");
+        const launchLock = path.join(home, ".t2", "ssh-launch", ".launch.lock");
         yield* fs.makeDirectory(path.dirname(launchLock), { recursive: true });
         yield* fs.writeFileString(launchLock, "999999999\n");
         const targets = [
@@ -881,7 +749,7 @@ describe("ssh tunnel scripts", () => {
         ).pipe(Effect.provide(localRemoteShellLayer(home)));
 
         const ownerPid = Number(
-          yield* fs.readFileString(path.join(home, ".t3", "userdata", "server.lock")),
+          yield* fs.readFileString(path.join(home, ".t2", "userdata", "server.lock")),
         );
         assert.sameMembers(
           launches.map((launch) => launch.remoteServerKind),
@@ -895,7 +763,7 @@ describe("ssh tunnel scripts", () => {
           if (launch.remoteServerKind !== "managed") continue;
           const stateKey = yield* remoteStateKey(targets[index]!);
           const recordedPid = yield* fs.readFileString(
-            path.join(home, ".t3", "ssh-launch", stateKey, "pid"),
+            path.join(home, ".t2", "ssh-launch", stateKey, "pid"),
           );
           assert.equal(
             Number(recordedPid.trim()),

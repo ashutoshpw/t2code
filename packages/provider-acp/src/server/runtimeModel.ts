@@ -1147,8 +1147,8 @@ export function extractMcpToolCallIdentity(
   // args; a read of the same path only fetches the tool's docs.
   const devicePath = typeof rawInput?.path === "string" ? rawInput.path : "";
   if (devicePath.startsWith("xd://") && typeof rawInput?.content === "string") {
-    const deviceTool = T3_MCP_TITLE_CALL.exec(devicePath.slice("xd://".length))?.groups?.tool;
-    if (deviceTool !== undefined && T3_MCP_TOOL_NAMES.has(deviceTool)) {
+    const deviceTool = T2_MCP_TITLE_CALL.exec(devicePath.slice("xd://".length))?.groups?.tool;
+    if (deviceTool !== undefined && T2_MCP_TOOL_NAMES.has(deviceTool)) {
       const input = acpMcpFallbackInput(rawInput.content);
       return { server: "t3-code", tool: deviceTool, ...(input === undefined ? {} : { input }) };
     }
