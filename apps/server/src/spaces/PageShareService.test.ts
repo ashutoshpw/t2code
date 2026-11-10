@@ -5,17 +5,21 @@ import { assert, it } from "@effect/vitest";
 import {
   EnvironmentId,
   SPACE_PAGE_SHARE_ASSET_ROUTE,
+  SPACE_PAGE_SHARE_CURSOR_PARAM,
+  SPACE_PAGE_SHARE_HEADER,
   SPACE_PAGE_SHARE_PAGE_ROUTE,
   SPACE_PAGE_SHARE_TTL_MS,
   SpaceSharedPage,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
+import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
+import * as SqlClient from "effect/sql/SqlClient";
 import * as Stream from "effect/Stream";
 import { HttpPlatform, HttpRouter } from "effect/http";
 import * as Ref from "effect/Ref";
@@ -405,6 +409,102 @@ it.effect("refuses forged credentials and unshareable pages", () =>
   }).pipe(Effect.provide(layerTest)),
 );
 
+it.effect("serves readers and viewers while another connection holds the write lock", () =>
+  Effect.gen(function* () {
+    const { spaces, shares, rootPage, write, credentialOf } = yield* workspace();
+    const config = yield* ServerConfig.ServerConfig;
+    const shared = yield* rootPage("Shared");
+    yield* write(shared, "intro", "hello viewers");
+    const token = credentialOf((yield* shares.create({ pageId: shared })).url);
+    yield* spaces.getPage({ ...env, pageId: shared });
+    yield* TestClock.adjust(Duration.minutes(1));
+
+    yield* Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const observed = sql`SELECT observed_time_ms FROM spaces_core WHERE singleton = 1`;
+      yield* sql.withTransaction(
+        Effect.gen(function* () {
+          yield* sql`UPDATE spaces_core SET observed_time_ms = observed_time_ms WHERE singleton = 1`;
+          const before = yield* observed;
+          const view = yield* shares.page(token);
+          assert.isTrue(view.window.blocks.some((block) => block.id === "intro"));
+          assert.equal((yield* spaces.getPage({ ...env, pageId: shared })).page.id, shared);
+          assert.equal(
+            (yield* spaces.listPages({
+              ...env,
+              spaceId: (yield* spaces.listSpaces(env)).defaultSpaceId,
+            })).items.length,
+            1,
+          );
+          assert.deepEqual(yield* observed, before);
+        }),
+      );
+    }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: config.spacesDbPath })));
+  }).pipe(Effect.provide(layerTest)),
+);
+
+it.effect("pages a long shared page through cursors with the token in a header", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { spaces, shares, rootPage, write, credentialOf } = yield* workspace();
+      const { get, pageUrl } = yield* httpHarness();
+      const library = yield* spaces.listSpaces(env);
+      const shared = yield* rootPage("Long");
+      const ids: string[] = [];
+      for (let batch = 0; batch < 3; batch++) {
+        const page = yield* spaces.getPage({ ...env, pageId: shared });
+        const mutations = Array.from({ length: batch === 2 ? 50 : 100 }, (_, i) => {
+          const id = `p${String(batch * 100 + i).padStart(4, "0")}`;
+          ids.push(id);
+          return { kind: "insert" as const, block: paragraph(id, id) };
+        });
+        yield* spaces.applyBlockBatch({
+          ...env,
+          receiptEpoch: library.mutationAdmission.epoch,
+          mutationId: `long-${batch}`,
+          pageId: shared,
+          baseRevision: page.page.revision,
+          generation: 0,
+          mutations,
+        });
+      }
+      const token = credentialOf((yield* shares.create({ pageId: shared })).url);
+
+      const seen: string[] = [];
+      let cursor: string | undefined;
+      let windows = 0;
+      do {
+        const response = yield* get(pageUrl(token, undefined, cursor));
+        assert.equal(response.status, 200);
+        const body = decodePage(yield* jsonOf(response));
+        assert.isAtMost(body.window.blocks.length, 100);
+        seen.push(...body.window.blocks.map((block) => block.id));
+        cursor = body.nextCursor;
+        windows++;
+      } while (cursor !== undefined);
+      assert.deepEqual(seen, ids);
+      assert.equal(windows, 3);
+      assert.equal((yield* get(pageUrl(token, undefined, "short"))).status, 403);
+
+      const first = decodePage(yield* jsonOf(yield* get(pageUrl(token))));
+      yield* write(shared, "late", "edited between windows");
+      assert.equal((yield* get(pageUrl(token, undefined, first.nextCursor))).status, 403);
+    }),
+  ).pipe(Effect.provide(layerTest)),
+);
+
+it.effect("purges expired share rows on the next write", () =>
+  Effect.gen(function* () {
+    const { spaces, shares, rootPage } = yield* workspace();
+    const shared = yield* rootPage("Shared");
+    yield* shares.create({ pageId: shared });
+    yield* TestClock.adjust(Duration.millis(SPACE_PAGE_SHARE_TTL_MS));
+    assert.isNotNull(yield* spaces.findPageShare({ pageId: shared }));
+    yield* spaces.getCapability(environmentId);
+    assert.isNull(yield* spaces.findPageShare({ pageId: shared }));
+  }).pipe(Effect.provide(layerTest)),
+);
+
 const decodePage = Schema.decodeUnknownSync(SpaceSharedPage);
 const jsonOf = (response: Response) => Effect.promise(() => response.json());
 const decodeFailure = Schema.decodeUnknownSync(Schema.Struct({ reason: Schema.String }));
@@ -421,10 +521,24 @@ const httpHarness = Effect.fn("PageShareTest.httpHarness")(function* () {
     { disableLogger: true },
   );
   yield* Effect.addFinalizer(() => Effect.promise(dispose));
-  const get = (relative: string) =>
-    Effect.promise(() => handler(new Request(`http://t2.test${relative}`), context));
-  const pageUrl = (token: string, page?: string) =>
-    `${SPACE_PAGE_SHARE_PAGE_ROUTE}?share=${encodeURIComponent(token)}${page === undefined ? "" : `&page=${encodeURIComponent(page)}`}`;
+  const get = (
+    target: string | { readonly url: string; readonly headers: Record<string, string> },
+  ) =>
+    Effect.promise(() =>
+      handler(
+        typeof target === "string"
+          ? new Request(`http://t2.test${target}`)
+          : new Request(`http://t2.test${target.url}`, { headers: target.headers }),
+        context,
+      ),
+    );
+  const pageUrl = (token: string, page?: string, cursor?: string) => ({
+    url: `${SPACE_PAGE_SHARE_PAGE_ROUTE}?${new URLSearchParams({
+      ...(page === undefined ? {} : { page }),
+      ...(cursor === undefined ? {} : { [SPACE_PAGE_SHARE_CURSOR_PARAM]: cursor }),
+    })}`,
+    headers: { [SPACE_PAGE_SHARE_HEADER]: token },
+  });
   const assetUrl = (token: string, id: string, page?: string) =>
     `${SPACE_PAGE_SHARE_ASSET_ROUTE}?share=${encodeURIComponent(token)}&id=${encodeURIComponent(id)}${page === undefined ? "" : `&page=${encodeURIComponent(page)}`}`;
   return { get, pageUrl, assetUrl };
@@ -492,6 +606,7 @@ it.effect("serves the page route as JSON with no caching and refuses everything 
       assert.equal(yield* failureReason(forged), "invalid");
       assert.equal((yield* get(pageUrl(""))).status, 400);
       assert.equal((yield* get(`${SPACE_PAGE_SHARE_PAGE_ROUTE}`)).status, 400);
+      assert.equal((yield* get(`${SPACE_PAGE_SHARE_PAGE_ROUTE}?share=${token}`)).status, 400);
 
       yield* trash(shared);
       const ended = yield* get(pageUrl(token));

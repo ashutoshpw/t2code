@@ -84,7 +84,7 @@ export function SpacesHeavyMediaViewer({
   access: SpacesReadAccess;
 }) {
   const state = useSyncExternalStore(model.subscribe, model.getSnapshot);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Abort source work and release the heavy decoder when this reader connection changes or unmounts.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Abort source work and release the heavy decoder when this reader connection changes or unmounts.
   useEffect(() => {
     if (!access.current()) model.close();
     return () => model.close();

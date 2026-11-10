@@ -1,5 +1,5 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import { useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useContext, useRef, useState, useSyncExternalStore } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceId, SpacePageSummary, SpaceSummary } from "@t2code/contracts/spaces";
 import {
@@ -8,7 +8,6 @@ import {
   type SpaceRootReorder,
 } from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
-import { executeAtomQuery } from "@t2code/client-runtime/state/runtime";
 import { useEnvironmentQuery } from "../state/query";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
 import { EllipsisIcon, SmilePlusIcon } from "lucide-react";
@@ -289,8 +288,6 @@ export function EditableTitle({
   const allowed = useAtomValue(spacesEnvironment.updatePage.permissionAtom(environmentId));
   const [edit, setEdit] = useState<{ base: string; value: string; saved: boolean } | null>(null);
   const cancelled = useRef(false);
-  const registry = useContext(RegistryContext);
-  const lastBase = useRef<number | null>(null);
   // A rename locks the page's editor until it finishes, so Enter moves into the body only afterwards.
   const afterCommit = useRef<(() => void) | null>(null);
   const finishEnter = () => {
@@ -316,21 +313,8 @@ export function EditableTitle({
       return setEdit(null);
     }
     setEdit({ ...edit, value, saved: true });
-    const rename = async () => {
-      let base = page;
-      if (lastBase.current === page.revision) {
-        // This device's previous rename already advanced the page; the location has not refetched yet.
-        const fresh = await executeAtomQuery(
-          registry,
-          spacesEnvironment.page({ environmentId, input: { environmentId, pageId: page.id } }),
-          { refresh: true, reportFailure: false },
-        );
-        if (fresh._tag === "Success") base = fresh.value.page;
-      }
-      lastBase.current = base.revision;
-      await owner.renamePage(base, value);
-    };
-    rename()
+    owner
+      .renamePage(page, value)
       .catch((error: unknown) => {
         setEdit(null);
         toastManager.add({
@@ -389,10 +373,6 @@ function Library({ environmentId, spaceId, owner }: Props & { owner: SpaceRootRe
   );
   const space = selected.isSuccess && !selected.isPending ? selected.data?.space : undefined;
   const defaultSpace = previous.isSuccess && !previous.isPending ? previous.data?.space : undefined;
-  // oxlint-disable-next-line t2code/react-effect-budget -- Load the same durable operation journal used by page placement before enabling library commands.
-  useEffect(() => {
-    run(owner.hydrate());
-  }, [owner]);
   const { journal, busy, hydrated } = snapshot;
   const pending = journal.pending;
   const blocked = busy || !hydrated || !!pending || availability !== "writable";

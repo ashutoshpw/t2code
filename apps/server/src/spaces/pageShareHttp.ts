@@ -1,6 +1,8 @@
 import {
   SPACE_PAGE_SHARE_ASSET_PARAM,
   SPACE_PAGE_SHARE_ASSET_ROUTE,
+  SPACE_PAGE_SHARE_CURSOR_PARAM,
+  SPACE_PAGE_SHARE_HEADER,
   SPACE_PAGE_SHARE_PAGE_PARAM,
   SPACE_PAGE_SHARE_PAGE_ROUTE,
   SPACE_PAGE_SHARE_PARAM,
@@ -20,16 +22,24 @@ const MAX_PARAM_LENGTH = 512;
 
 const encodePage = Schema.encodeEffect(SpaceSharedPage);
 
+const STATUS = { invalid: 403, inactive: 403, unavailable: 403, busy: 429, failed: 503 } as const;
+
 const errorResponse = (error: SpacePageShareAccessError) =>
   HttpServerResponse.json(
     { reason: error.reason, message: error.message },
-    { status: 403, headers: NO_STORE },
+    {
+      status: STATUS[error.reason],
+      headers: error.reason === "busy" ? { ...NO_STORE, "retry-after": "2" } : NO_STORE,
+    },
   );
 
 const badRequest = HttpServerResponse.json(
   { reason: "invalid", message: "The request was not valid." },
   { status: 400, headers: NO_STORE },
 );
+
+const describe = (error: unknown) =>
+  typeof error === "object" && error !== null && "_tag" in error ? String(error._tag) : "unknown";
 
 const parameters = Effect.map(
   HttpServerRequest.HttpServerRequest,
@@ -45,14 +55,24 @@ const pageRoute = HttpRouter.add(
   "GET",
   SPACE_PAGE_SHARE_PAGE_ROUTE,
   Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
     const query = yield* parameters;
-    const token = within(query.get(SPACE_PAGE_SHARE_PARAM));
+    const token = within(request.headers[SPACE_PAGE_SHARE_HEADER] ?? null);
     const requested = query.get(SPACE_PAGE_SHARE_PAGE_PARAM);
-    if (token === null || (requested !== null && within(requested) === null))
+    const cursor = query.get(SPACE_PAGE_SHARE_CURSOR_PARAM);
+    if (
+      token === null ||
+      (requested !== null && within(requested) === null) ||
+      (cursor !== null && within(cursor) === null)
+    )
       return yield* badRequest;
     const shares = yield* SpacePageShareService;
     return yield* shares
-      .page(token, requested === null ? undefined : C.SpacePageId.make(requested))
+      .page(
+        token,
+        requested === null ? undefined : C.SpacePageId.make(requested),
+        cursor === null ? undefined : cursor,
+      )
       .pipe(
         Effect.flatMap((page) =>
           encodePage(page).pipe(
@@ -102,7 +122,11 @@ const assetRoute = HttpRouter.add(
           }),
         ),
         Effect.catchTags({ SpacePageShareAccessError: errorResponse }),
-        Effect.orElseSucceed(() => HttpServerResponse.empty({ status: 500, headers: NO_STORE })),
+        Effect.catch((error) =>
+          Effect.logError("Shared page asset response failed", { error: describe(error) }).pipe(
+            Effect.as(HttpServerResponse.empty({ status: 500, headers: NO_STORE })),
+          ),
+        ),
       );
   }),
 );

@@ -5,9 +5,9 @@ import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Layer from "effect/Layer";
 import * as Queue from "effect/Queue";
-import * as ServerEnvironment from "../apps/server/src/environment/ServerEnvironment.ts";
-import * as ServerSettings from "../apps/server/src/serverSettings.ts";
-import * as SpacesService from "../apps/server/src/spaces/SpacesService.ts";
+import * as ServerEnvironment from "../../../../server/src/environment/ServerEnvironment.ts";
+import * as ServerSettings from "../../../../server/src/serverSettings.ts";
+import * as SpacesService from "../../../../server/src/spaces/SpacesService.ts";
 
 export function mobileSpacesServiceLayer(file, environmentId) {
   return SpacesService.layerFromPath(NodePath.join(NodePath.dirname(file), "spaces.sqlite")).pipe(

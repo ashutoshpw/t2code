@@ -1,3 +1,4 @@
+import { Profiler } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import { EnvironmentId } from "@t2code/contracts";
@@ -269,5 +270,22 @@ describe("SpaceEditor", () => {
     await expect.element(screen.getByRole("button", { name: "Bold" })).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "More" }));
     await expect.element(screen.getByRole("button", { name: "Bold" })).not.toBeInTheDocument();
+  });
+
+  it("re-renders none of the editor chrome while typing in a block", async () => {
+    const commits = vi.fn();
+    await using screen = await render(
+      <Profiler id="editor" onRender={commits}>
+        <SpaceEditor adapter={adapter()} />
+      </Profiler>,
+      { router: false },
+    );
+    await userEvent.click(screen.getByText("Hello page"));
+    await userEvent.keyboard("{End}");
+    await expect.element(screen.getByRole("textbox", { name: "Page editor" })).toHaveFocus();
+    const before = commits.mock.calls.length;
+    await userEvent.keyboard("abc");
+    await expect.element(screen.getByText("Hello pageabc")).toBeVisible();
+    expect(commits.mock.calls.length).toBe(before);
   });
 });

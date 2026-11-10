@@ -226,7 +226,7 @@ function SpacePageMetadata({
   const recovery = useRef<SpaceRecoveryHandle>(null);
   const mainAppThreadRef = useMainAppThreadRef();
   const navigateToMainApp = useNavigateToMainApp();
-  // oxlint-disable-next-line t2code/react-effect-budget -- apply current location to the persisted panel hint and canonical route.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- apply current location to the persisted panel hint and canonical route.
   useEffect(() => {
     const current = query.isSuccess && !query.isPending ? query.data?.current() : null;
     if (!current) return;
@@ -275,7 +275,7 @@ function SpacePageMetadata({
     environment?.serverConfig?.environment.capabilities.spaces?.features?.recents === true;
   const pageReady = query.isSuccess && !query.isPending && !!query.data?.current();
   const recordedPage = useRef<string | null>(null);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Record a successfully opened page in the environment's shared recents.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Record a successfully opened page in the environment's shared recents.
   useEffect(() => {
     const key = JSON.stringify([target.environmentId, target.pageId]);
     if (!recentEnabled || !canRecord || !pageReady || recordedPage.current === key) return;

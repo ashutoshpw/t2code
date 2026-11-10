@@ -9,29 +9,29 @@ import * as Layer from "effect/Layer";
 import * as Stream from "effect/Stream";
 import * as NodePlatformCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { EnvironmentId } from "../packages/contracts/src/index.ts";
-import { SpacePageId } from "../packages/contracts/src/spaces.ts";
+import { EnvironmentId } from "../../../../../packages/contracts/src/index.ts";
+import { SpacePageId } from "../../../../../packages/contracts/src/spaces.ts";
 import {
   SpaceDocumentSession,
   createSpaceServiceSessionAdapter,
-} from "../packages/client-runtime/src/spaces/index.ts";
-import { diskDatabase } from "../apps/mobile/src/persistence/mobile-database.test-support.ts";
-import { MobileDatabase } from "../apps/mobile/src/persistence/mobile-database.ts";
-import { createMobileSpaceMediaStore } from "../apps/mobile/src/features/spaces/originalStore.ts";
+} from "../../../../../packages/client-runtime/src/spaces/index.ts";
+import { diskDatabase } from "../../persistence/mobile-database.test-support.ts";
+import { MobileDatabase } from "../../persistence/mobile-database.ts";
+import { createMobileSpaceMediaStore } from "../../features/spaces/originalStore.ts";
 import {
   MobileSpaceOriginalFiles,
   withNativeSpaceOriginals,
-} from "../apps/mobile/src/features/spaces/originalFiles.ts";
-import { createMobileSpaceUploads } from "../apps/mobile/src/features/spaces/uploads.ts";
-import { SpacesPageReader } from "../apps/mobile/src/features/spaces/reader.ts";
-import { mobileSpaceImageInsertion } from "../apps/mobile/src/features/spaces/imageInsertion.ts";
-import * as Secrets from "../apps/server/src/auth/ServerSecretStore.ts";
-import * as WorkspacePaths from "../apps/server/src/workspace/WorkspacePaths.ts";
-import * as Config from "../apps/server/src/config.ts";
-import * as Identity from "../apps/server/src/environment/ServerEnvironment.ts";
-import * as Settings from "../apps/server/src/serverSettings.ts";
-import * as Service from "../apps/server/src/spaces/SpacesService.ts";
-import { promiseRunner } from "./spaces-mobile.test-support.mjs";
+} from "../../features/spaces/originalFiles.ts";
+import { createMobileSpaceUploads } from "../../features/spaces/uploads.ts";
+import { SpacesPageReader } from "../../features/spaces/reader.ts";
+import { mobileSpaceImageInsertion } from "../../features/spaces/imageInsertion.ts";
+import * as Secrets from "../../../../server/src/auth/ServerSecretStore.ts";
+import * as WorkspacePaths from "../../../../server/src/workspace/WorkspacePaths.ts";
+import * as Config from "../../../../server/src/config.ts";
+import * as Identity from "../../../../server/src/environment/ServerEnvironment.ts";
+import * as Settings from "../../../../server/src/serverSettings.ts";
+import * as Service from "../../../../server/src/spaces/SpacesService.ts";
+import { promiseRunner } from "./spacesMobile.test-support.mjs";
 
 const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=",

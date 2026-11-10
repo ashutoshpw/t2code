@@ -1,7 +1,7 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { useNavigate } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
-import { useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useContext, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceId } from "@t2code/contracts/spaces";
 import type { SpaceRootReorder } from "@t2code/client-runtime/spaces";
@@ -58,10 +58,6 @@ function OwnerGate({
 function useLibraryGate(environmentId: EnvironmentId, owner: SpaceRootReorder) {
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
   const availability = useSpacesAvailability(environmentId);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Load the durable operation journal so a retained receipt blocks new creates.
-  useEffect(() => {
-    run(owner.hydrate());
-  }, [owner]);
   const { busy, hydrated, journal } = snapshot;
   const blockedReason = !canBrowseSpaces(availability)
     ? "Spaces is unavailable"

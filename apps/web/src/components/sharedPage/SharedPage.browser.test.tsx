@@ -39,7 +39,7 @@ const sharedPage = (id: string, title: string, text: string, breadcrumb: string[
   });
 
 function fakeFetch(inactive = false) {
-  return vi.fn(async (input: RequestInfo | URL) => {
+  return vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
     const url = new URL(String(input), "https://host.example");
     if (inactive) return Response.json({ reason: "inactive", message: "ended" }, { status: 403 });
     const page = url.searchParams.get("page");
@@ -60,7 +60,8 @@ describe("SharedPage", () => {
     await expect.element(screen.getByRole("heading", { name: "Handbook" })).toBeVisible();
     await expect.element(screen.getByText("Welcome aboard")).toBeVisible();
     expect(screen.container.querySelector("[contenteditable='true']")).toBeNull();
-    expect(String(fetch.mock.calls[0]![0])).toContain("share=cred.sig");
+    expect(String(fetch.mock.calls[0]![0])).not.toContain("cred.sig");
+    expect(fetch.mock.calls[0]![1]?.headers).toEqual({ "x-t2-page-share": "cred.sig" });
 
     await userEvent.click(screen.getByRole("link", { name: "Setup" }));
     await expect.element(screen.getByText("Install it")).toBeVisible();

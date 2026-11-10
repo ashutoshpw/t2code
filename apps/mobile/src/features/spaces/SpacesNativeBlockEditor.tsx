@@ -59,7 +59,7 @@ export function SpacesNativeBlockEditor({
   const [finishing, setFinishing] = useState(false);
   const [paused, setPaused] = useState(false);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- Focus the native view after its ref attaches on mount.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Focus the native view after its ref attaches on mount.
   useEffect(() => {
     void editor.current?.focus().catch(() => setError("Could not focus the native editor"));
   }, []);

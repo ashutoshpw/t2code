@@ -3,7 +3,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { SpaceSearchWindow } from "@t2code/client-runtime/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { FlatList, TextInput, View } from "react-native";
+import { LegendList } from "@legendapp/list/react-native";
+import { TextInput, View } from "react-native";
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
 import { useSpacesReferenceController } from "../../state/spaces";
@@ -20,7 +21,7 @@ export function SpacesReferenceOpen({
   const [attempt, setAttempt] = useState(0);
   const destinationEnvironment = state.selection?.environmentId ?? environmentId;
   const owner = useSpacesReferenceController(destinationEnvironment, attempt);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Dispose pending navigation metadata when its mounted source view is removed.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Dispose pending navigation metadata when its mounted source view is removed.
   useEffect(() => model.mount(), [model]);
   if (!state.selection) return null;
   return (
@@ -165,7 +166,8 @@ export function SpacesSearch({ environmentId }: { environmentId: EnvironmentId }
         </Text>
       ) : null}
       {ready ? (
-        <FlatList
+        // oxlint-disable-next-line t2code/require-registered-list-scroll -- A bounded result window inside the page reader or composer sheet, which own the header's scroll view.
+        <LegendList
           ListHeaderComponent={
             <Text className="px-4 text-foreground-muted">
               Titles and snippets belong to this search window. Open current source resolves the
@@ -174,6 +176,7 @@ export function SpacesSearch({ environmentId }: { environmentId: EnvironmentId }
           }
           style={{ maxHeight: 240 }}
           data={ready.result.items}
+          extraData={ready.result}
           keyExtractor={(hit, index) => JSON.stringify([hit.page.id, hit.blockId, index])}
           ListEmptyComponent={
             <Text className="px-4 text-foreground-muted">
