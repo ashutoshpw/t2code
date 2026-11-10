@@ -1,3 +1,4 @@
+import { NPM_PACKAGE_NAME } from "@t2code/shared/cliRelease";
 import {
   ServerSelfUpdateError,
   type ServerSelfUpdateCapability,
@@ -116,10 +117,10 @@ export function trackSwitchBlockReason(input: {
   if (!crossesReleaseTrack(input.serverVersion, input.targetVersion)) return null;
   const databaseMigration = input.databaseMigration();
   if (input.targetDatabaseMigration === undefined || databaseMigration === undefined) {
-    return `Cannot confirm this database works with t3@${input.targetVersion}. Switch tracks from Settings → About → Update track, which checks it first.`;
+    return `Cannot confirm this database works with ${NPM_PACKAGE_NAME}@${input.targetVersion}. Switch tracks from Settings → About → Update track, which checks it first.`;
   }
   return input.targetDatabaseMigration < databaseMigration
-    ? `This database has changes t3@${input.targetVersion} does not support yet; it stays on this release.`
+    ? `This database has changes ${NPM_PACKAGE_NAME}@${input.targetVersion} does not support yet; it stays on this release.`
     : null;
 }
 

@@ -30,7 +30,7 @@ export class NpmLauncherCommandFailedError extends Schema.TaggedError<NpmLaunche
   }
 }
 
-/** engines requires import.meta.dirname and fetch. `t3code` is read back by npmReleaseDatabaseMigration. */
+/** engines requires import.meta.dirname and fetch. `t2code` is read back by npmReleaseDatabaseMigration. */
 export function npmLauncherPackageManifest(version: string, databaseMigration: number) {
   return {
     name: NPM_LAUNCHER_PACKAGE_NAME,
@@ -42,7 +42,7 @@ export function npmLauncherPackageManifest(version: string, databaseMigration: n
     bin: { t2code: "./bin/t2code.mjs" },
     files: ["bin", "dist"],
     engines: { node: ">=20.11" },
-    t3code: { databaseMigration },
+    t2code: { databaseMigration },
   };
 }
 

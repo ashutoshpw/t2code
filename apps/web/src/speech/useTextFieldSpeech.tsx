@@ -22,7 +22,7 @@ export function useTextFieldSpeech(input: {
   readonly disabled?: boolean | undefined;
 }) {
   const latest = useRef(input);
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed field callbacks to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed field callbacks to the asynchronous recording controller
   useEffect(() => {
     latest.current = input;
   });

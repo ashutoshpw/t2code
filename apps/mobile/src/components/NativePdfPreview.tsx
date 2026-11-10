@@ -25,7 +25,7 @@ export function NativePdfPreview(props: {
   const [error, setError] = useState<string | null>(null);
   const cached = useRef<Awaited<ReturnType<typeof preparePdfPreview>>>(null);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- Own the temporary PDF file and admission lease for this exact mounted source.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Own the temporary PDF file and admission lease for this exact mounted source.
   useEffect(() => {
     const controller = new AbortController();
     props.tracking?.mount();

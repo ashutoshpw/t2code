@@ -47,7 +47,7 @@ function NativeFilePreview(props: FilePreviewViewerProps) {
     else Dialog.alert("Could not open preview", "The file could not be loaded. Please try again.");
   });
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- presents the native file preview and dismisses it on cleanup
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- presents the native file preview and dismisses it on cleanup
   useEffect(() => {
     let canceled = false;
     let presentation: Promise<void>;
@@ -85,7 +85,7 @@ function NativeFilePreview(props: FilePreviewViewerProps) {
   }, [presented, identifier]);
 
   const images = props.source.kind === "image" ? props.source.images : undefined;
-  // oxlint-disable-next-line t2code/react-effect-budget -- pushes changed image URIs to the native file preview controller once per image
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- pushes changed image URIs to the native file preview controller once per image
   useEffect(() => {
     images?.forEach((image, index) => {
       const uri = nativeUri(image);

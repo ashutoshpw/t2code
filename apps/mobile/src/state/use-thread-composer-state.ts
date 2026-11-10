@@ -265,6 +265,7 @@ export function useThreadComposerState(input: {
       ? EMPTY_THREAD_SEQUENCE_ATOM
       : environmentThreadDetails.sequenceAtom(selectedThreadDetailRef),
   );
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- prunes the app-wide acknowledged atom when the mounted thread catches up
   useEffect(() => {
     if (selectedThreadKey === null || acknowledgedMessages.length === 0) return;
     pruneCaughtUpAcknowledgedThreadMessages(selectedThreadKey, {

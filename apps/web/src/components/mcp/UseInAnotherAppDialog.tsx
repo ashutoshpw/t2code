@@ -313,7 +313,7 @@ function useGate(environment: EnvironmentPresentation) {
   const checkOnce = useEffectEvent(() => {
     if (check === "idle") void runReachabilityCheck();
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- asks the server to check its tunnel once one exists
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- asks the server to check its tunnel once one exists
   useEffect(() => {
     if (canCheck) queueMicrotask(checkOnce);
   }, [canCheck]);
@@ -321,19 +321,19 @@ function useGate(environment: EnvironmentPresentation) {
   const discoverIfUnasked = useEffectEvent(() => {
     if (!thisMachine && !discovery.listed && !discovery.refreshing) void refreshDiscovery();
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- asks T2 Connect for its machine list once the wizard opens signed in
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- asks T2 Connect for its machine list once the wizard opens signed in
   useEffect(() => {
     if (isSignedIn) discoverIfUnasked();
   }, [isSignedIn]);
   const waiting = gate.kind === "offline" || (connecting && gate.kind === "turn-on");
   const refreshLinkState = useEffectEvent(() => controller.linkState.refresh());
-  // oxlint-disable-next-line t2code/react-effect-budget -- polls the server's link state while the tunnel starts; the server has no push for it
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- polls the server's link state while the tunnel starts; the server has no push for it
   useEffect(() => {
     if (!waiting) return;
     const interval = window.setInterval(() => refreshLinkState(), 5_000);
     return () => window.clearInterval(interval);
   }, [waiting]);
-  // oxlint-disable-next-line t2code/react-effect-budget -- stops showing Connecting once a started tunnel has had time to come up
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- stops showing Connecting once a started tunnel has had time to come up
   useEffect(() => {
     if (!connecting) return;
     const timeout = window.setTimeout(() => setConnecting(false), 90_000);

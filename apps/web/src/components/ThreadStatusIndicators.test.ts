@@ -25,7 +25,7 @@ function status(overrides: Partial<VcsStatusResult> = {}): VcsStatusResult {
     pr: {
       number: 42,
       title: "PR branch",
-      url: "https://github.com/pingdotgg/t2code/pull/42",
+      url: "https://github.com/ashutoshpw/t2code/pull/42",
       baseRef: "main",
       headRef: "feature/current",
       state: "open",
@@ -38,7 +38,7 @@ function mergedFeaturePr(): NonNullable<VcsStatusResult["pr"]> {
   return {
     number: 42,
     title: "Feature PR",
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/ashutoshpw/t2code/pull/42",
     baseRef: "main",
     headRef: "feature/current",
     state: "merged",
@@ -55,7 +55,7 @@ function pullRequestSummary(
     repository: "pingdotgg/t3code",
     number: 42,
     title: "Feature PR",
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/ashutoshpw/t2code/pull/42",
     state,
     headBranch: "feature/current",
     baseBranch: "main",
@@ -86,7 +86,7 @@ describe("resolveDisplayedThreadPr", () => {
     projectId: ProjectId.make("project-1"),
     repository: "pingdotgg/t3code",
     number: 42,
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/ashutoshpw/t2code/pull/42",
   };
   const provider = {
     kind: SourceControlProviderKind.make("github"),
@@ -110,7 +110,7 @@ describe("resolveDisplayedThreadPr", () => {
     const mainPr = {
       number: 99,
       title: "Unrelated main PR",
-      url: "https://github.com/pingdotgg/t2code/pull/99",
+      url: "https://github.com/ashutoshpw/t2code/pull/99",
       baseRef: "develop",
       headRef: "main",
       state: "merged" as const,
@@ -155,7 +155,7 @@ describe("prStatusIndicator", () => {
 });
 
 describe("resolveThreadPullRequestBadgePresentation", () => {
-  const url = "https://github.com/pingdotgg/t2code/pull/42";
+  const url = "https://github.com/ashutoshpw/t2code/pull/42";
 
   it("returns the pending pull-request badge when no snapshot is available", () => {
     expect(

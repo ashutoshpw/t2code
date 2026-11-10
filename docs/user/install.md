@@ -59,11 +59,11 @@ without opening the harness's interactive interface:
 npx @t2code/cli --provider claude exec "Summarize this project"
 ```
 
-`--provider` also accepts `-p` (and `--p`). Supported values are `claude`,
-`codex`, `opencode`, `cursor`, `grok`, and `fx`. For example:
+`--provider` also accepts `-p`. Supported values are `claude`, `codex`,
+`opencode`, `cursor`, and `grok`. For example:
 
 ```bash
-npx @t2code/cli --p codex exec "Explain the failing test"
+npx @t2code/cli -p codex exec "Explain the failing test"
 npx @t2code/cli --provider cursor exec "Review this project"
 ```
 
@@ -71,7 +71,8 @@ The selected CLI must be installed, authenticated, and on the current shell's
 `PATH`. This command runs it in the current directory and uses that CLI's own
 configuration and permissions; it does not use provider instance settings saved
 in T2 Code. Antigravity is not available here because T2 Code connects to its
-ACP runtime directly instead of invoking a prompt-oriented CLI.
+ACP runtime directly instead of invoking a prompt-oriented CLI. If the CLI
+exits with an error, `exec` reports it and exits non-zero.
 
 To try T2 Code once without installing it, run `npx @t2code/cli@latest` instead (needs
 Node.js for `npx`). It offers to install the `t2` command first. If you say no,

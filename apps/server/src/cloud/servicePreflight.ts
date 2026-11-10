@@ -1,3 +1,4 @@
+import { NPM_PACKAGE_NAME } from "@t2code/shared/cliRelease";
 import packageJson from "../../package.json" with { type: "json" };
 import { BUILD_MIGRATION_HEAD, recordedMigrations } from "../persistence/databaseMigrationHead.ts";
 import { SERVICE_LAUNCHER_PROTOCOL } from "./serviceProtocol.ts";
@@ -40,14 +41,14 @@ export function runServicePreflight(input: {
     return {
       status: "blocked",
       version,
-      reason: `Could not read this database to confirm t3@${version} supports it.`,
+      reason: `Could not read this database to confirm ${NPM_PACKAGE_NAME}@${version} supports it.`,
     };
   }
   if (newer.length > 0) {
     return {
       status: "blocked",
       version,
-      reason: `This database has migrations that t3@${version} does not know: ${newer.join(", ")}. A newer build wrote them, and running t3@${version} on this database is not safe. Stay on the newer release, or wait for a release that includes these migrations.`,
+      reason: `This database has migrations that ${NPM_PACKAGE_NAME}@${version} does not know: ${newer.join(", ")}. A newer build wrote them, and running ${NPM_PACKAGE_NAME}@${version} on this database is not safe. Stay on the newer release, or wait for a release that includes these migrations.`,
     };
   }
 

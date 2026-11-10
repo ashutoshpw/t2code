@@ -218,6 +218,7 @@ function UnavailableThreadDraftRedirect(props: { readonly environmentId: Environ
       }),
     );
   });
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- replaces this route with a new draft thread route for the environment's project on mount
   useEffect(() => {
     openDraft();
   }, []);
@@ -489,6 +490,7 @@ function ThreadRouteContent(
     return mode === "files" && selectedThreadCwd === null ? null : mode;
   })();
   const revealPreview = useEffectEvent(() => showInspector());
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- opens the workspace navigator's inspector pane when route params bring a preview target
   useEffect(() => {
     if (previewTarget) revealPreview();
   }, [previewTarget]);

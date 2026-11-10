@@ -34,7 +34,7 @@ export function SpaceContextChip({
     identity: string;
     current: () => SpacePageNavigationTarget | null;
   } | null>(null);
-  // oxlint-disable-next-line t2code/react-effect-budget -- resolve current source metadata without retaining source bodies and discard obsolete owners.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- resolve current source metadata without retaining source bodies and discard obsolete owners.
   useEffect(() => {
     let active = true;
     if (!controller) return;

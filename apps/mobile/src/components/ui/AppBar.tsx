@@ -51,7 +51,7 @@ export function AppBar(props: AppBarProps) {
   const closeInspector = use(InspectorCloseContext);
   const setOptions = useScreenOptionsWriter();
   const ownsInspectorBar = closeInspector !== null && !props.embedded && !props.sheet;
-  // oxlint-disable-next-line t2code/react-effect-budget -- an inspector pane that stops drawing its bar must not leave it in the out-of-tree inspector bar, and only a layout effect writes the native screen options
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- an inspector pane that stops drawing its bar must not leave it in the out-of-tree inspector bar, and only a layout effect writes the native screen options
   useLayoutEffect(() => {
     if (!ownsInspectorBar || !setOptions) return;
     setOptions({ headerShown: true });

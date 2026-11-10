@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema";
 
 import { IsoDateTime, TrimmedNonEmptyString } from "./baseSchemas.ts";
-import { SpaceBlockWindow, SpacePageIcon, SpacePageId } from "./spaces.ts";
+import { SpaceBlockWindow, SpaceCursor, SpacePageIcon, SpacePageId } from "./spaces.ts";
 
 /**
  * A page share lets anyone holding the link read one Spaces page and its sub-pages over T2
@@ -16,7 +16,10 @@ export const SPACE_PAGE_SHARE_PAGE_PATH = "/shared-page";
 export const SPACE_PAGE_SHARE_PARAM = "share";
 export const SPACE_PAGE_SHARE_PAGE_PARAM = "page";
 export const SPACE_PAGE_SHARE_ASSET_PARAM = "id";
-/** The page title, edited time, blocks, breadcrumb and sub-pages: `?share=<credential>&page=<id>`. */
+export const SPACE_PAGE_SHARE_CURSOR_PARAM = "cursor";
+/** The page route reads the credential from this header, so it stays out of proxy and relay URL logs. Asset URLs load from `<img>`/`<video>` and keep the query form. */
+export const SPACE_PAGE_SHARE_HEADER = "x-t2-page-share";
+/** The page title, edited time, one window of blocks, breadcrumb and sub-pages: `?page=<id>&cursor=<next>` with the credential in a header. */
 export const SPACE_PAGE_SHARE_PAGE_ROUTE = `${SPACE_PAGE_SHARE_ROUTE_PREFIX}/page`;
 /** An image, PDF or video shown on the page: `?share=<credential>&page=<id>&id=<asset id>`. */
 export const SPACE_PAGE_SHARE_ASSET_ROUTE = `${SPACE_PAGE_SHARE_ROUTE_PREFIX}/asset`;
@@ -93,7 +96,9 @@ export const SpaceSharedPage = Schema.Struct({
     icon: Schema.optionalKey(SpacePageIcon),
     updatedAt: IsoDateTime,
   }),
+  /** At most one authenticated-reader window; follow `nextCursor` for the rest. */
   window: SpaceBlockWindow,
+  nextCursor: Schema.optionalKey(SpaceCursor),
   /** From the shared root down to this page, both included. */
   breadcrumb: Schema.Array(SpaceSharedPageRef),
   /** Sub-pages in page order, without trashed ones. */
@@ -108,9 +113,9 @@ export const SpaceSharedPage = Schema.Struct({
 });
 export type SpaceSharedPage = typeof SpaceSharedPage.Type;
 
-/** The body of every refused shared-page request, with the status 403 (400 for a bad request). */
+/** The body of every refused shared-page request, with the status 403 (400 for a bad request, 429 when busy, 503 on a server fault). */
 export const SpaceSharedPageFailure = Schema.Struct({
-  reason: Schema.Literals(["invalid", "inactive", "unavailable"]),
+  reason: Schema.Literals(["invalid", "inactive", "unavailable", "busy", "failed"]),
   message: Schema.String,
 });
 export type SpaceSharedPageFailure = typeof SpaceSharedPageFailure.Type;

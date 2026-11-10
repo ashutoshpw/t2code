@@ -14,19 +14,19 @@ const kindOf = (url: string) => sourceControlClients.parseChangeRequestUrl(url)?
 
 describe("sourceControlClients.parseChangeRequestUrl", () => {
   it("reads a GitHub pull request, lower-casing the repository", () => {
-    expect(parse("https://github.com/T2Tools/T2Code/pull/123")).toEqual({
+    expect(parse("https://github.com/Ashutoshpw/T2Code/pull/123")).toEqual({
       host: "github.com",
-      repository: "t2tools/t2code",
+      repository: "ashutoshpw/t2code",
       number: 123,
     });
   });
 
   it("reads a GitCafe pull request at its canonical /pull/ path and the older /pulls/ path", () => {
     for (const path of ["pull", "pulls"]) {
-      const url = `https://git.cafe/PingDotGG/T2Code/${path}/23897`;
+      const url = `https://git.cafe/ashutoshpw/t2code/${path}/23897`;
       expect(parse(url), path).toEqual({
         host: "git.cafe",
-        repository: "pingdotgg/t2code",
+        repository: "ashutoshpw/t2code",
         number: 23897,
       });
       expect(kindOf(url), path).toBe("gitcafe");
@@ -152,28 +152,28 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
   });
 
   it("survives trailing segments, a trailing slash and a query string", () => {
-    expect(parse("https://github.com/t2tools/t2code/pull/123/files?w=1")).toEqual({
+    expect(parse("https://github.com/ashutoshpw/t2code/pull/123/files?w=1")).toEqual({
       host: "github.com",
-      repository: "t2tools/t2code",
+      repository: "ashutoshpw/t2code",
       number: 123,
     });
-    expect(parse("https://github.com/t2tools/t2code/pull/123/")).toEqual({
+    expect(parse("https://github.com/ashutoshpw/t2code/pull/123/")).toEqual({
       host: "github.com",
-      repository: "t2tools/t2code",
+      repository: "ashutoshpw/t2code",
       number: 123,
     });
   });
 
   it("claims nothing it cannot be sure of", () => {
     for (const link of [
-      "https://github.com/t2tools/t2code/issues/123",
-      "https://git.cafe/pingdotgg/t2code/issues/23897",
-      "https://git.cafe/pingdotgg/t2code/pull/abc",
+      "https://github.com/ashutoshpw/t2code/issues/123",
+      "https://git.cafe/ashutoshpw/t2code/issues/23897",
+      "https://git.cafe/ashutoshpw/t2code/pull/abc",
       "https://git.cafe/pingdotgg/t3code",
-      "https://github.com/t2tools/t2code/commit/0a1b2c3",
-      "https://github.com/t2tools/t2code",
-      "https://github.com/t2tools/t2code/pull/abc",
-      "https://gitlab.com/t2tools/t2code/-/issues/12",
+      "https://github.com/ashutoshpw/t2code/commit/0a1b2c3",
+      "https://github.com/ashutoshpw/t2code",
+      "https://github.com/ashutoshpw/t2code/pull/abc",
+      "https://gitlab.com/ashutoshpw/t2code/-/issues/12",
       "https://blog.example.test/2026/updates/archive/pull/3",
       "https://scm.example.test/tfs/Collection/Project/_git/Repo",
       "https://scm.example.test/tfs/Collection/Project/pullrequest/123",
@@ -181,7 +181,7 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
       "https://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/0",
       "https://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/9007199254740992",
       "ftp://scm.example.test/tfs/Collection/Project/_git/Repo/pullrequest/123",
-      "javascript:alert(1)//github.com/t2tools/t2code/pull/1",
+      "javascript:alert(1)//github.com/ashutoshpw/t2code/pull/1",
       "not a url",
     ]) {
       expect(parse(link), link).toBeNull();
@@ -190,13 +190,13 @@ describe("sourceControlClients.parseChangeRequestUrl", () => {
 });
 
 describe("sourceControlClients.isSameChangeRequest", () => {
-  const linked = "https://github.com/pingdotgg/t2code/pull/42";
+  const linked = "https://github.com/ashutoshpw/t2code/pull/42";
 
   it("matches the same pull request whatever its case or trailing path", () => {
     expect(
       sourceControlClients.isSameChangeRequest(
         linked,
-        "https://github.com/PingDotGG/T2Code/pull/42/files",
+        "https://github.com/ashutoshpw/t2code/pull/42/files",
       ),
     ).toBe(true);
   });
@@ -300,7 +300,7 @@ describe("sourceControlClients.recognizeRemote", () => {
 describe("sourceControlClients repository keys", () => {
   // Persisted as `repositoryIdentity.canonicalKey` and in thread pull request keys.
   it.each([
-    ["git@github.com:T2Tools/T2Code.git", "github.com/t2tools/t2code"],
+    ["git@github.com:Ashutoshpw/T2Code.git", "github.com/ashutoshpw/t2code"],
     ["ssh://git@gitlab.company.com:2222/team/project.git", "gitlab.company.com/team/project"],
     [
       "git@ssh.dev.azure.com:v3/T2Tools/Platform/T2Code",

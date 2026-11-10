@@ -92,7 +92,7 @@ export function isMomentumTail(deltas: readonly number[]): boolean {
 export function HistorySwipeNavigation() {
   const [swipe, setSwipe] = useState<SwipeIndicatorState | null>(null);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- window wheel and desktop gesture listeners track trackpad swipes
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- window wheel and desktop gesture listeners track trackpad swipes
   useEffect(() => {
     let gesture: SwipeGesture | null = null;
     const hideIndicator = () =>

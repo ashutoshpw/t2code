@@ -156,6 +156,7 @@ export function Inspector(props: {
     deactivateRef.current = registerWorkspaceInspector(content, route?.key, props.revealKey);
   });
 
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Navigation focus events own the inspector registration lifetime.
   useEffect(() => {
     if (navigation === undefined) return;
     const focus = () => {
@@ -179,6 +180,7 @@ export function Inspector(props: {
     };
   }, [navigation]);
 
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Changed column content replaces the focused inspector registration.
   useEffect(() => {
     if (focusedRef.current) {
       syncRegistration();
@@ -194,7 +196,7 @@ export function Inspector(props: {
  */
 function useStableActions(actions: Required<AdaptiveWorkspaceActions>): AdaptiveWorkspaceActions {
   const latest = useRef(actions);
-  // oxlint-disable-next-line t2code/react-effect-budget -- points the stable actions at the handlers this commit rendered
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- points the stable actions at the handlers this commit rendered
   useLayoutEffect(() => {
     latest.current = actions;
   });
@@ -753,7 +755,7 @@ function AdaptiveWorkspaceLayoutContent(
   const leavingWorkspacePage = useRef(false);
   // The slide starts after the commit that lays the pane out, not in the press handler: Reanimated
   // commits the shadow tree every frame, and that starves a large React commit until it stops.
-  // oxlint-disable-next-line t2code/react-effect-budget -- animates the Reanimated rail and sidebar width shared values toward the layout's targets
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- animates the Reanimated rail and sidebar width shared values toward the layout's targets
   useEffect(() => {
     if (nativeWorkspace) return;
     renderedRailWidth.set(withTiming(navigationRailWidth, WORKSPACE_PANE_TIMING));
@@ -798,11 +800,12 @@ function AdaptiveWorkspaceLayoutContent(
   const floatingSidebarOpen = sidebarFloats && panes.primarySidebarVisible;
   // Its own value, so a sidebar that was beside a list doesn't dim the page as it leaves.
   const scrimOpacity = useSharedValue(0);
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- animates the Reanimated scrim with the floating sidebar
   useEffect(() => {
     scrimOpacity.set(withTiming(floatingSidebarOpen ? 0.32 : 0, WORKSPACE_PANE_TIMING));
   }, [floatingSidebarOpen, scrimOpacity]);
   const scrimAnimatedStyle = useAnimatedStyle(() => ({ opacity: scrimOpacity.value }));
-  // oxlint-disable-next-line t2code/react-effect-budget -- Back closes a floating sidebar before it leaves the page, and the native listener only exists while the effect is mounted
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Back closes a floating sidebar before it leaves the page, and the native listener only exists while the effect is mounted
   useEffect(() => {
     if (!floatingSidebarOpen || nativeWorkspace) return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {

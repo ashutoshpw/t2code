@@ -53,7 +53,7 @@ export function VoiceInputSetup(props: {
     }
     setLoadingMicrophones(false);
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to native microphone changes while the device setup step is visible
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- subscribes to native microphone changes while the device setup step is visible
   useEffect(() => {
     if (!props.open || props.step !== 1) return;
     queueMicrotask(() => void refreshMicrophones());

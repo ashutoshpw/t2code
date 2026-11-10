@@ -386,7 +386,7 @@ function EventRouter({
     })().catch(() => undefined);
   });
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- expands the bootstrap project in the UI store and navigates the router on a server welcome
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- expands the bootstrap project in the UI store and navigates the router on a server welcome
   useEffect(() => {
     handleWelcome(serverWelcome);
   }, [serverWelcome]);
