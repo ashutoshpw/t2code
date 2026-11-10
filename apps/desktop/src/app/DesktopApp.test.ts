@@ -28,6 +28,7 @@ import * as DesktopApp from "./DesktopApp.ts";
 import * as DesktopAppActivation from "./DesktopAppActivation.ts";
 import * as DesktopAppIdentity from "./DesktopAppIdentity.ts";
 import * as DesktopClerk from "./DesktopClerk.ts";
+import * as DesktopConfig from "./DesktopConfig.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 import * as DesktopLegacyLocalStorage from "./DesktopLegacyLocalStorage.ts";
 import * as DesktopLifecycle from "./DesktopLifecycle.ts";
@@ -94,7 +95,12 @@ it.effect.each([false, true])(
         });
       const runApp = DesktopApp.program
         .pipe(
-          Effect.provide(NodeCrypto.layer),
+          Effect.provide(
+            Layer.mergeAll(
+              NodeCrypto.layer,
+              DesktopConfig.layerTest({ T2CODE_HOME: "/isolated/t2-home" }),
+            ),
+          ),
           Effect.provideService(DesktopAppIdentity.DesktopAppIdentity, {
             resolveUserDataPath: Effect.succeed("/isolated/userdata"),
             configure: record("identity"),
@@ -110,6 +116,7 @@ it.effect.each([false, true])(
             platform: "linux",
             isDevelopment: false,
             isPackaged: true,
+            stateDir: "/isolated/userdata",
             configuredBackendPort: Option.some(3772),
             defaultDesktopSettings: { serverExposureMode: "local-only" },
           } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]),

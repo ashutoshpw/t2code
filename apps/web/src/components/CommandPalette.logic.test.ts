@@ -802,7 +802,7 @@ it.each([
   "#10839",
   "10839",
   "pingdotgg/t3code#10839",
-  "https://github.com/pingdotgg/t2code/pull/10839",
+  "https://github.com/ashutoshpw/t2code/pull/10839",
 ])("finds linked threads from PR query %s", (query) => {
   const items = buildThreadActionItems({
     threads: [
@@ -813,7 +813,7 @@ it.each([
             host: "github.com",
             repository: "pingdotgg/t3code",
             number: 10839,
-            url: "https://github.com/pingdotgg/t2code/pull/10839",
+            url: "https://github.com/ashutoshpw/t2code/pull/10839",
             source: "manual",
             linkedAt: "2026-09-08T00:00:00Z",
             snapshot: null,

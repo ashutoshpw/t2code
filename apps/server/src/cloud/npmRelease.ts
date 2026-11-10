@@ -3,7 +3,11 @@ import {
   ServerNpmReleaseInput,
   type ServerNpmRelease,
 } from "@t2code/contracts";
-import { npmReleaseDatabaseMigration } from "@t2code/shared/cliRelease";
+import {
+  NPM_MANIFEST_KEYS,
+  NPM_PACKAGE_NAME,
+  npmReleaseDatabaseMigration,
+} from "@t2code/shared/cliRelease";
 import { resolveCommandPath } from "@t2code/shared/shell";
 import * as Cache from "effect/Cache";
 import * as Context from "effect/Context";
@@ -18,8 +22,12 @@ import { FetchHttpClient, HttpClient } from "effect/http";
 import * as ProcessRunner from "../processRunner.ts";
 
 const Version = Schema.String.check(Schema.isPattern(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/));
-const Manifest = Schema.Struct({ version: Version, t3code: Schema.optionalKey(Schema.Unknown) });
-// npm prints a bare version string when the release has no `t3code` field.
+const Manifest = Schema.Struct({
+  version: Version,
+  t2code: Schema.optionalKey(Schema.Unknown),
+  t3code: Schema.optionalKey(Schema.Unknown),
+});
+// npm prints a bare version string when the release has no migration field.
 const decodeManifest = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Union([Manifest, Schema.Tuple([Manifest]), Version])),
 );
@@ -63,7 +71,9 @@ export const make = Effect.fn("NpmRelease.make")(function* () {
       reason: "npm is not installed and the public npm registry could not be reached.",
     });
     const json = yield* Effect.gen(function* () {
-      const response = yield* http.get(`https://registry.npmjs.org/t3/${spec}`);
+      const response = yield* http.get(
+        `https://registry.npmjs.org/${NPM_PACKAGE_NAME.replace("/", "%2F")}/${spec}`,
+      );
       if (response.status === 404) return Option.none<string>();
       if (response.status < 200 || response.status >= 300) return yield* unreachable;
       return Option.some(yield* response.text);
@@ -87,7 +97,14 @@ export const make = Effect.fn("NpmRelease.make")(function* () {
           runner.run({
             command: npmPath,
             // Named fields keep the output small; the full package document grows with every release.
-            args: ["view", "--global", "--json", `t3@${spec}`, "version", "t3code"],
+            args: [
+              "view",
+              "--global",
+              "--json",
+              `${NPM_PACKAGE_NAME}@${spec}`,
+              "version",
+              ...NPM_MANIFEST_KEYS,
+            ],
             timeout: Duration.seconds(15),
             maxOutputBytes: 256 * 1024,
           }),

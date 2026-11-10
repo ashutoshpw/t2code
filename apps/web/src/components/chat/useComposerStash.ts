@@ -336,6 +336,17 @@ export function useComposerStash(input: {
       entry.records || entry.selectors
         ? importContextRecords(entry.records ?? [], null, composerDraftTarget, entry.selectors)
         : new Map<string, string>();
+    // A reply only makes sense in the thread that holds the response, and one already pending wins.
+    const stashedReply = entry.records?.find(isResponseContextRecord);
+    if (
+      stashedReply &&
+      !getComposerDraft(composerDraftTarget)?.replyTo &&
+      typeof composerDraftTarget !== "string" &&
+      stashedReply.citation.threadId === composerDraftTarget.threadId &&
+      stashedReply.citation.environmentId === composerDraftTarget.environmentId
+    ) {
+      setComposerDraftReplyTo(composerDraftTarget, stashedReply);
+    }
     const restoredPrompt = replaceComposerContextReferences(entry.prompt, (reference) => {
       const contextId = rewrittenContextIds.get(reference.contextId);
       return contextId
@@ -602,6 +613,7 @@ export function useComposerStash(input: {
       });
       return;
     }
+    const replyTo = getComposerDraft(composerDraftTarget)?.replyTo;
     const prompt = promptRef.current.trim();
     const attachmentDraft = readAttachmentDraft();
     const images = [...attachmentDraft.images];
@@ -612,6 +624,7 @@ export function useComposerStash(input: {
     const stashedSelectors = storedContextDraft?.selectors;
     const stashedRecords: ComposerContextRecord[] = [
       ...(storedContextDraft?.records ?? []),
+      ...(replyTo ? [replyTo] : []),
       ...composerThreadContexts,
       ...readTerminalContexts().map(terminalContextRecord),
       ...composerReviewComments.map(reviewCommentContextRecord),
@@ -718,6 +731,7 @@ export function useComposerStash(input: {
       clearComposerDraftTerminalContexts(stashTarget);
       setComposerDraftThreadContexts(stashTarget, []);
       useComposerDraftStore.getState().setContextDraft(stashTarget, undefined);
+      setComposerDraftReplyTo(stashTarget, null);
       for (const comment of composerReviewComments) {
         removeComposerDraftReviewComment(stashTarget, comment.id);
       }
@@ -849,7 +863,7 @@ export function useComposerStash(input: {
       ).terminalOpen,
     ),
   }));
-  // oxlint-disable-next-line t2code/react-effect-budget -- registers the capture-phase stash shortcut with the command registry while the composer is mounted
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- registers the capture-phase stash shortcut with the command registry while the composer is mounted
   useEffect(() => {
     if (backgroundThread) return;
     return registerCommands(

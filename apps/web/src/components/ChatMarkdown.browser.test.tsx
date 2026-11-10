@@ -10,6 +10,7 @@ import "../index.css";
 import { filesystemEnvironment } from "../state/filesystem";
 import { useRightPanelStore } from "../rightPanelStore";
 import { setMarkdownTaskChecked } from "@t2code/shared/markdownTaskList";
+import { remarkEnableOrderedListNumbers } from "@t2code/shared/markdownPipeline";
 import { HostImageUrlContext } from "./chat/hostImageUrl";
 
 const { workspaceSearch, filesystemMetadata } = vi.hoisted(() => ({
@@ -304,7 +305,7 @@ describe("ChatMarkdown favicon privacy", () => {
     }
     await rerender(markdown("https://example.com"));
     expect(container.querySelectorAll("img")).toHaveLength(1);
-    await rerender(markdown("https://github.com/pingdotgg/t2code/pull/1"));
+    await rerender(markdown("https://github.com/ashutoshpw/t2code/pull/1"));
     expect(container.querySelectorAll("img")).toHaveLength(0);
     expect(container.querySelector("a svg")).not.toBeNull();
   });

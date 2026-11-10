@@ -23,10 +23,7 @@ import type {
 import type { LegendListRenderItemProps } from "@legendapp/list/react-native";
 import { RegistryContext, useAtomMount, useAtomValue } from "@effect/atom-react";
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
-import {
-  getProviderOptionCurrentLabel,
-  getProviderOptionCurrentValue,
-} from "@t2code/shared/model";
+import { getProviderOptionCurrentLabel, getProviderOptionCurrentValue } from "@t2code/shared/model";
 import {
   useNavigation,
   useRoute,
@@ -360,7 +357,7 @@ function ThreadSettingsSessionProvider(
     favorites: legacyFavorites,
   }).favorites;
   const saveSettings = useAtomCommand(serverEnvironment.updateSettings, "model favorites update");
-  // oxlint-disable-next-line t2code/react-effect-budget -- writes the one-time legacy model favorites migration to server settings once per connection
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- writes the one-time legacy model favorites migration to server settings once per connection
   useEffect(() => {
     if (
       !props.environmentId ||
@@ -952,7 +949,7 @@ function ThreadSettingsMainContent(props: {
     if (config?.environment.capabilities.modelCatalogRefresh !== true) return;
     void refreshProvidersCommand({ environmentId, input: { modelCatalogOnly: true } });
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- asks the server for newly released models when the model list opens
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- asks the server for newly released models when the model list opens
   useEffect(() => {
     refreshModelCatalog();
   }, []);

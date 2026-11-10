@@ -4,8 +4,6 @@ import * as NodeURL from "node:url";
 import { remoteCacheUrl } from "./infra/task-cache/src/remoteCache.ts";
 import { cachedTestTasks } from "./scripts/lib/cached-tests.ts";
 
-const DOM_TEST_ENVIRONMENT_ALLOWLIST: Array<string> = [];
-
 const TEST_EXCLUDE = [
   "**/.repos/**",
   "**/.t2/**",
@@ -298,8 +296,9 @@ export default defineConfig({
         "error",
         { paths: [...RESTRICTED_IMPORT_PATHS, RESTRICTED_PULL_REQUEST_GLYPH_IMPORTS] },
       ],
+      "t2code/max-file-lines": "error",
       "t2code/no-global-process-runtime": "error",
-      "t2code/no-inline-schema-compile": "warn",
+      "t2code/no-inline-schema-compile": "error",
       "t2code/no-low-value-comments": "error",
       "t2code/no-manual-effect-runtime-in-tests": "error",
       "t2code/no-native-title-tooltip": "error",
@@ -312,6 +311,7 @@ export default defineConfig({
       "t2code/no-rpc-permission-bypass": ["error", { allowRawClientAccess: true }],
       "t2code/no-unscoped-has": "error",
       "t2code/no-wall-clock-in-tests": "error",
+      "t2code/no-workspace-imports-in-scripts-tests": "error",
       "t2code/namespace-node-imports": "error",
       "t2code/prefer-catch-tags": "error",
       "t2code/prefer-effect-fn": "error",
@@ -328,6 +328,11 @@ export default defineConfig({
         rules: { "t2code/prefer-effect-fn": "off" },
       },
       {
+        files: ["apps/server/src/**"],
+        excludeFiles: ["**/*.test.ts", "**/*.test.tsx"],
+        rules: { "t2code/no-throw-in-effect-generator": "error" },
+      },
+      {
         files: ["apps/web/**/*.test.{ts,tsx}"],
         rules: { "t2code/require-disposable-render": "error" },
       },
@@ -337,7 +342,6 @@ export default defineConfig({
       },
       {
         files: ["apps/**/src/**", "packages/**/src/**"],
-        excludeFiles: DOM_TEST_ENVIRONMENT_ALLOWLIST,
         rules: { "t2code/no-dom-test-environment": "error" },
       },
       {
@@ -621,7 +625,7 @@ export default defineConfig({
       },
       {
         files: ["apps/web/src/**", "apps/mobile/src/**", "packages/*/src/**"],
-        rules: { "t2code/react-effect-budget": "error" },
+        rules: { "t2code/no-unreasoned-state-sync": "error" },
       },
       {
         // React Compiler caches use* functions only if they call a hook.

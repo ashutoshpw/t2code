@@ -722,12 +722,12 @@ it("follows a changed server PR link without replacing an unrelated open panel",
     projectId: ProjectId.make("project-1"),
     repository: "pingdotgg/t3code",
     number: 42,
-    url: "https://github.com/pingdotgg/t2code/pull/42",
+    url: "https://github.com/ashutoshpw/t2code/pull/42",
   };
   const current = {
     ...previous,
     number: 43,
-    url: "https://github.com/pingdotgg/t2code/pull/43",
+    url: "https://github.com/ashutoshpw/t2code/pull/43",
   };
   const surface = {
     id: "pull-request:previous",
@@ -1168,7 +1168,7 @@ describe("snapshotComposerSend", () => {
       replyTo,
     });
 
-    expect(snapshot.messageText).toContain(`t3-context://v1/response/${replyTo.contextId}`);
+    expect(snapshot.messageText).toContain(`t2-context://v1/response/${replyTo.contextId}`);
     expect(snapshot.draftText).toBe("why there?");
     expect(snapshot.replyTo).toBe(replyTo);
   });

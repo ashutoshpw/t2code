@@ -41,7 +41,7 @@ export default function SideChatPane(props: {
 }) {
   const { parentRef, threadId } = props;
   const threadRef = scopeThreadRef(parentRef.environmentId, threadId);
-  // oxlint-disable-next-line t2code/react-effect-budget -- registers the parent panel as host in the panel store
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- registers the parent panel as host in the panel store
   useEffect(
     () => hostRightPanel(scopeThreadRef(parentRef.environmentId, threadId), parentRef),
     [parentRef, threadId],

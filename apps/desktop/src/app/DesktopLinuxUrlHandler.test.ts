@@ -504,7 +504,7 @@ const registerWithRealFileSystem = (run: ThemeIconRun) =>
                 Effect.map((path) =>
                   makeEnvironment(path, {
                     linuxApplicationsDir: path.join(run.root, "applications"),
-                    linuxDesktopEntryName: "com.t2tools.T2Code.desktop",
+                    linuxDesktopEntryName: "codes.t2.Desktop.desktop",
                   }),
                 ),
               ),
@@ -613,17 +613,17 @@ it.layer(NodeServices.layer)("DesktopLinuxUrlHandler theme icons", (it) => {
 
       yield* registerWithRealFileSystem(run);
       assert.deepEqual([...(yield* fileSystem.readDirectory(fixture.appsDir))].sort(), [
-        "com.t2tools.T2Code.png",
-        "com.t2tools.t2code.png",
+        "codes.t2.Desktop.png",
+        "codes.t2.desktop.png",
       ]);
-      for (const name of ["com.t2tools.t2code", "com.t2tools.T2Code"]) {
+      for (const name of ["codes.t2.desktop", "codes.t2.Desktop"]) {
         const target = path.join(fixture.appsDir, `${name}.png`);
         assert.deepEqual([...(yield* fileSystem.readFile(target))], [...icon]);
         yield* fileSystem.utimes(target, fixture.pastSeconds, fixture.pastSeconds);
       }
 
       yield* registerWithRealFileSystem(run);
-      for (const name of ["com.t2tools.t2code", "com.t2tools.T2Code"]) {
+      for (const name of ["codes.t2.desktop", "codes.t2.Desktop"]) {
         const info = yield* fileSystem.stat(path.join(fixture.appsDir, `${name}.png`));
         assert.equal(Option.getOrThrow(info.mtime).getTime(), fixture.pastSeconds * 1000);
       }
@@ -638,8 +638,8 @@ it.layer(NodeServices.layer)("DesktopLinuxUrlHandler theme icons", (it) => {
       const path = yield* Path.Path;
       const fixture = yield* themeIconFixture(new Uint8Array([1, 2, 3]));
       yield* fixture.seedCache;
-      const lower = path.join(fixture.appsDir, "com.t2tools.t2code.png");
-      const upper = path.join(fixture.appsDir, "com.t2tools.T2Code.png");
+      const lower = path.join(fixture.appsDir, "codes.t2.desktop.png");
+      const upper = path.join(fixture.appsDir, "codes.t2.Desktop.png");
       yield* fileSystem.writeFile(lower, new Uint8Array([3, 2, 1]));
       yield* fileSystem.writeFile(upper, new Uint8Array([1, 2, 3]));
       for (const target of [lower, upper]) {
@@ -680,7 +680,7 @@ it.layer(NodeServices.layer)("DesktopLinuxUrlHandler theme icons", (it) => {
 
       yield* registerWithRealFileSystem(run);
 
-      assert.isTrue(yield* fileSystem.exists(path.join(fixture.appsDir, "com.t2tools.T2Code.png")));
+      assert.isTrue(yield* fileSystem.exists(path.join(fixture.appsDir, "codes.t2.Desktop.png")));
       assert.equal(iconCacheRuns(run), 1);
     }).pipe(Effect.scoped),
   );

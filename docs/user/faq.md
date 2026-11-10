@@ -33,11 +33,11 @@ T2 Code drives Claude through Anthropic's Agent SDK. I confirmed it's a real bug
 
 ## How do I use T2 Code remotely?
 
-Your agents run wherever T2 Code runs: your desktop, a server, a VPS. You connect to it from anywhere. I do this constantly. Less than 5% of my prompts run on my laptop. Run `npx @t2code/cli connect` on that machine and you get really good remote support. T2 Connect is the easy path. LAN pairing and Tailscale work too, and [app.t2.codes](https://app.t2.codes) is the web client. [Remote access](./remote-access.md)
+Your agents run wherever T2 Code runs: your desktop, a server, a VPS. You connect to it from anywhere. Run `npx @t2code/cli connect` on that machine and you get really good remote support. T2 Connect is the easy path. LAN pairing and Tailscale work too, and [app.t2.codes](https://app.t2.codes) is the web client. [Remote access](./remote-access.md)
 
 ## How do I use T2 Code on my phone?
 
-Get the [iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code) app, then connect it to your computer with T2 Connect or a pairing link. The phone is a remote. Your computer does the work and needs to stay on. [Mobile setup](./install.md#mobile-app) · [Remote access](./remote-access.md)
+Get the [Android](https://play.google.com/store/apps/details?id=codes.t2.mobile) app, then connect it to your computer with T2 Connect or a pairing link. The phone is a remote. Your computer does the work and needs to stay on. [Mobile setup](./install.md#mobile-app) · [Remote access](./remote-access.md)
 
 ## Why does T2 Connect keep disconnecting?
 

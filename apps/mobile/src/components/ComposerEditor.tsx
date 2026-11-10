@@ -75,6 +75,7 @@ export function ComposerEditor({
   if (historyOwner.draftKey !== draftKey)
     setHistoryOwner({ draftKey, history: createComposerDraftContextHistory() });
   const contextHistory = historyOwner.history;
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- releases the attachment file leases held for native text undo when the history is replaced or unmounts
   useEffect(() => () => contextHistory.dispose(), [contextHistory]);
   const changeText = (text: string) => {
     const restored = contextHistory.restore(

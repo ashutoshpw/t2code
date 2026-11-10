@@ -7,11 +7,11 @@ const parse = (url: string) => definition.parseChangeRequestUrl(new URL(url));
 
 describe("GitHub change request URLs", () => {
   it("reads a pull request on any host, lower-casing host and repository", () => {
-    expect(parse("https://github.com/T2Tools/T2Code/pull/123/files?w=1#diff")).toEqual({
+    expect(parse("https://github.com/Ashutoshpw/T2Code/pull/123/files?w=1#diff")).toEqual({
       host: "github.com",
-      repository: "t2tools/t2code",
+      repository: "ashutoshpw/t2code",
       number: 123,
-      repositoryUrl: "https://github.com/T2Tools/T2Code",
+      repositoryUrl: "https://github.com/Ashutoshpw/T2Code",
     });
     expect(parse("https://GHE.Example.com:8443/acme/web/pull/42/")).toEqual({
       host: "ghe.example.com",
@@ -23,12 +23,12 @@ describe("GitHub change request URLs", () => {
 
   it("claims only the two-segment pull route", () => {
     for (const url of [
-      "https://github.com/t2tools/t2code/issues/123",
-      "https://github.com/t2tools/t2code/pulls/123",
-      "https://github.com/t2tools/t2code/pull/abc",
-      "https://github.com/t2tools/t2code/pull/0",
+      "https://github.com/ashutoshpw/t2code/issues/123",
+      "https://github.com/ashutoshpw/t2code/pulls/123",
+      "https://github.com/ashutoshpw/t2code/pull/abc",
+      "https://github.com/ashutoshpw/t2code/pull/0",
       "https://github.com/group/sub/repo/pull/1",
-      "ftp://github.com/t2tools/t2code/pull/1",
+      "ftp://github.com/ashutoshpw/t2code/pull/1",
     ]) {
       expect(parse(url), url).toBeNull();
     }
@@ -85,13 +85,13 @@ describe("GitHub change request URLs", () => {
   it("turns GitHub's shared issue route into a pull request candidate", () => {
     const candidate = (url: string) =>
       definition.changeRequestUrlFromReferenceAutolink(new URL(url));
-    expect(candidate("https://github.com/pingdotgg/t2code/issues/8600#issuecomment-1")).toBe(
-      "https://github.com/pingdotgg/t2code/pull/8600#issuecomment-1",
+    expect(candidate("https://github.com/ashutoshpw/t2code/issues/8600#issuecomment-1")).toBe(
+      "https://github.com/ashutoshpw/t2code/pull/8600#issuecomment-1",
     );
     expect(candidate("https://code.github.example.com/acme/web/issues/42")).toBe(
       "https://code.github.example.com/acme/web/pull/42",
     );
-    expect(candidate("https://github.com/pingdotgg/t2code/issues/not-a-number")).toBeNull();
+    expect(candidate("https://github.com/ashutoshpw/t2code/issues/not-a-number")).toBeNull();
     expect(candidate("https://code.example.test/acme/web/issues/42")).toBeNull();
   });
 });

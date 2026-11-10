@@ -1,3 +1,8 @@
+import {
+  copyLegacyHome,
+  describeLegacyHomeCopy,
+  hasExplicitHomeEnv,
+} from "@t2code/shared/legacyT3Identity";
 import * as Cause from "effect/Cause";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
@@ -13,6 +18,7 @@ import * as ElectronProtocol from "../electron/ElectronProtocol.ts";
 import * as ElectronSafeStorage from "../electron/ElectronSafeStorage.ts";
 import { installDesktopIpcHandlers } from "../ipc/DesktopIpcHandlers.ts";
 import * as DesktopAppActivation from "./DesktopAppActivation.ts";
+import * as DesktopConfig from "./DesktopConfig.ts";
 import * as DesktopAppIdentity from "./DesktopAppIdentity.ts";
 import * as DesktopClerk from "./DesktopClerk.ts";
 import * as DesktopCliCommand from "./DesktopCliCommand.ts";
@@ -230,11 +236,11 @@ const bootstrap = Effect.gen(function* () {
     (yield* DesktopHomeOwner.isHomeOwnershipLocked())
   ) {
     const owner = yield* DesktopHomeOwner.readLiveHomeOwner();
-    yield* logBootstrapWarning("bootstrap found another server owning the T3 home", {
+    yield* logBootstrapWarning("bootstrap found another server owning the T2 home", {
       owner: Option.getOrNull(owner),
     });
     yield* (yield* ElectronDialog.ElectronDialog).showErrorBox(
-      "This T3 home is unavailable",
+      "This T2 home is unavailable",
       DesktopHomeOwner.homeOwnedMessage(owner),
     );
     return yield* (yield* ElectronApp.ElectronApp).quit;
@@ -315,6 +321,18 @@ const startup = Effect.gen(function* () {
   const previewPasskeys = yield* PreviewPasskeys.PreviewPasskeys;
 
   yield* shellEnvironment.installIntoProcess;
+  const desktopConfig = yield* DesktopConfig.DesktopConfig;
+  if (
+    Option.isNone(desktopConfig.t2Home) &&
+    !hasExplicitHomeEnv(process.env) &&
+    !environment.isDevelopment
+  ) {
+    const copyResult = copyLegacyHome({ homeDirectory: environment.homeDirectory });
+    const message = describeLegacyHomeCopy(copyResult);
+    if (message !== undefined) {
+      yield* copyResult._tag === "copied" ? Effect.logInfo(message) : Effect.logWarning(message);
+    }
+  }
   const hasCommandLinePasswordStore =
     preReadyElectronOptions.linuxPasswordStoreCommandLine !== null;
   const linuxElectronOptions =

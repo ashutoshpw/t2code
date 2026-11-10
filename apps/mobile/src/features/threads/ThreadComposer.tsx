@@ -629,7 +629,7 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
     !modelUnavailable;
 
   // A pending sheet presentation or focus restore has no composer left to act on.
-  // oxlint-disable-next-line t2code/react-effect-budget -- disposes the pending settings sheet presentation and focus restore on unmount
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- disposes the pending settings sheet presentation and focus restore on unmount
   useEffect(() => () => disposeSettingsSheetPresentation(), []);
 
   const onPressPreview = (source: FilePreviewSource) => {
@@ -744,7 +744,7 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
     settingsSheetPresentation.onDismissed();
   });
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to the native stack's finishTransitioning event to restore the keyboard after a sheet dismisses
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- subscribes to the native stack's finishTransitioning event to restore the keyboard after a sheet dismisses
   useEffect(
     () =>
       // The native-stack patch exposes UIKit dismissal completion; restore the keyboard then.

@@ -56,15 +56,15 @@ const invocation = (
 
 function makeProject(
   repositoryIdentity: OrchestrationProjectShell["repositoryIdentity"] = {
-    canonicalKey: "github.com/t2tools/t2code",
+    canonicalKey: "github.com/ashutoshpw/t2code",
     locator: {
       source: "git-remote",
       remoteName: "origin",
-      remoteUrl: "git@github.com:T2Tools/T2Code.git",
+      remoteUrl: "git@github.com:Ashutoshpw/T2Code.git",
     },
     provider: SourceControlProviderKind.make("github"),
-    displayName: "T2Tools/T2Code",
-    owner: "T2Tools",
+    displayName: "Ashutoshpw/T2Code",
+    owner: "Ashutoshpw",
     name: "T2Code",
   },
 ): OrchestrationProjectShell {
@@ -110,9 +110,9 @@ function makeLink(
   const { headBranch, baseBranch, ...rest } = overrides;
   return {
     host: "github.com",
-    repository: "t2tools/t2code",
+    repository: "ashutoshpw/t2code",
     number,
-    url: `https://github.com/t2tools/t2code/pull/${number}`,
+    url: `https://github.com/ashutoshpw/t2code/pull/${number}`,
     source: "manual",
     linkedAt: "2026-08-10T00:00:00.000Z",
     snapshot:
@@ -256,13 +256,13 @@ describe("pull request toolkit handlers", () => {
     Effect.gen(function* () {
       const harness = yield* makeHarness();
       const result = yield* harness.call("link_pull_request", {
-        url: "https://github.com/T2Tools/T2Code/pull/123/files",
+        url: "https://github.com/Ashutoshpw/T2Code/pull/123/files",
       });
       expect(result).toEqual({
         host: "github.com",
-        repository: "t2tools/t2code",
+        repository: "ashutoshpw/t2code",
         number: 123,
-        url: "https://github.com/T2Tools/T2Code/pull/123/files",
+        url: "https://github.com/Ashutoshpw/T2Code/pull/123/files",
         alreadyLinked: false,
       });
       expect(yield* Ref.get(harness.commands)).toMatchObject([
@@ -270,7 +270,7 @@ describe("pull request toolkit handlers", () => {
           type: "thread.pull-request.link",
           threadId: THREAD_ID,
           host: "github.com",
-          repository: "t2tools/t2code",
+          repository: "ashutoshpw/t2code",
           number: 123,
           source: "agent",
         },
@@ -282,7 +282,7 @@ describe("pull request toolkit handlers", () => {
     Effect.gen(function* () {
       const harness = yield* makeHarness();
       const result = yield* harness.call("watch_pull_request", {
-        url: "https://github.com/t2tools/t2code/pull/9",
+        url: "https://github.com/ashutoshpw/t2code/pull/9",
       });
       expect(result).toMatchObject({ number: 9, watching: false, wasWatching: false });
       expect(yield* Ref.get(harness.commands)).toMatchObject([
@@ -290,7 +290,7 @@ describe("pull request toolkit handlers", () => {
           type: "thread.pull-request.watch",
           number: 9,
           watching: true,
-          link: { url: "https://github.com/t2tools/t2code/pull/9", source: "agent" },
+          link: { url: "https://github.com/ashutoshpw/t2code/pull/9", source: "agent" },
         },
       ]);
     }),
@@ -318,11 +318,11 @@ describe("pull request toolkit handlers", () => {
         ]),
       });
       const error = yield* harness
-        .call("watch_pull_request", { repository: "t2tools/t2code", number: 1 })
+        .call("watch_pull_request", { repository: "ashutoshpw/t2code", number: 1 })
         .pipe(Effect.flip);
       expect(error).toMatchObject({ _tag: "PullRequestNotOpenError", state: "merged" });
       expect(
-        yield* harness.call("unwatch_pull_request", { repository: "t2tools/t2code", number: 3 }),
+        yield* harness.call("unwatch_pull_request", { repository: "ashutoshpw/t2code", number: 3 }),
       ).toMatchObject({ wasWatching: true });
       expect(yield* Ref.get(harness.commands)).toMatchObject([
         { type: "thread.pull-request.watch", number: 3, watching: false },
@@ -389,16 +389,16 @@ describe("pull request toolkit handlers", () => {
       for (const host of ["git.cafe", "staging.git.cafe"]) {
         for (const project of [makeProject(), makeProject(null)]) {
           for (const target of [
-            { host, repository: "PingDotGG/T2Code", number: 21353 },
-            { url: `https://${host}/PingDotGG/T2Code/pull/21353` },
-            { url: `https://${host}/PingDotGG/T2Code/pulls/21353` },
+            { host, repository: "ashutoshpw/t2code", number: 21353 },
+            { url: `https://${host}/ashutoshpw/t2code/pull/21353` },
+            { url: `https://${host}/ashutoshpw/t2code/pulls/21353` },
           ]) {
             const harness = yield* makeHarness({ project });
             const result = yield* harness.call("link_pull_request", target);
-            const url = `https://${host}/pingdotgg/t2code/pulls/21353`;
+            const url = `https://${host}/ashutoshpw/t2code/pulls/21353`;
             expect(result).toMatchObject({
               host,
-              repository: "pingdotgg/t2code",
+              repository: "ashutoshpw/t2code",
               number: 21353,
               url,
             });
@@ -406,7 +406,7 @@ describe("pull request toolkit handlers", () => {
               {
                 type: "thread.pull-request.link",
                 host,
-                repository: "pingdotgg/t2code",
+                repository: "ashutoshpw/t2code",
                 number: 21353,
                 url,
               },
@@ -494,7 +494,7 @@ describe("pull request toolkit handlers", () => {
           command.type === "thread.pull-request.link" ? "already linked" : null,
       });
       const result = yield* harness.call("link_pull_request", {
-        url: "https://github.com/t2tools/t2code/pull/123",
+        url: "https://github.com/ashutoshpw/t2code/pull/123",
       });
       expect(result.alreadyLinked).toBe(true);
     }),
@@ -510,17 +510,17 @@ describe("pull request toolkit handlers", () => {
             : null,
       });
       const linked = yield* harness.call("unlink_pull_request", {
-        repository: "t2tools/t2code",
+        repository: "ashutoshpw/t2code",
         number: 5,
       });
       expect(linked).toEqual({
         host: "github.com",
-        repository: "t2tools/t2code",
+        repository: "ashutoshpw/t2code",
         number: 5,
         wasLinked: true,
       });
       const missing = yield* harness.call("unlink_pull_request", {
-        url: "https://github.com/t2tools/t2code/pull/9",
+        url: "https://github.com/ashutoshpw/t2code/pull/9",
       });
       expect(missing.wasLinked).toBe(false);
       expect(yield* Ref.get(harness.commands)).toMatchObject([
@@ -535,7 +535,7 @@ describe("pull request toolkit handlers", () => {
         thread: makeThread([makeLink(9, { source: "stack-dismissed" })]),
       });
       const result = yield* harness.call("unlink_pull_request", {
-        repository: "t2tools/t2code",
+        repository: "ashutoshpw/t2code",
         number: 9,
       });
       expect(result.wasLinked).toBe(false);
@@ -548,13 +548,13 @@ describe("pull request toolkit handlers", () => {
       const harness = yield* makeHarness({
         thread: makeThread([makeLink(1), { ...makeLink(2), source: "stack-dismissed" }]),
       });
-      const url = (number: number) => `https://github.com/t2tools/t2code/pull/${number}`;
+      const url = (number: number) => `https://github.com/ashutoshpw/t2code/pull/${number}`;
       const result = yield* harness.call("link_pull_requests", {
         urls: [url(1), url(2), url(3), url(3), "https://example.com/not-a-pr"],
       });
       expect(result).toEqual({
-        linked: [{ host: "github.com", repository: "t2tools/t2code", numbers: [2, 3] }],
-        alreadyLinked: [{ host: "github.com", repository: "t2tools/t2code", numbers: [1] }],
+        linked: [{ host: "github.com", repository: "ashutoshpw/t2code", numbers: [2, 3] }],
+        alreadyLinked: [{ host: "github.com", repository: "ashutoshpw/t2code", numbers: [1] }],
         linkedCount: 3,
         invalidUrls: ["https://example.com/not-a-pr"],
       });
@@ -585,8 +585,8 @@ describe("pull request toolkit handlers", () => {
       });
       expect(result).toEqual({
         unlinked: [
-          { host: "github.com", repository: "t2tools/t2code", state: "merged", numbers: [1] },
-          { host: "github.com", repository: "t2tools/t2code", state: "closed", numbers: [3] },
+          { host: "github.com", repository: "ashutoshpw/t2code", state: "merged", numbers: [1] },
+          { host: "github.com", repository: "ashutoshpw/t2code", state: "closed", numbers: [3] },
         ],
         unlinkedCount: 2,
         remaining: 2,
@@ -603,7 +603,7 @@ describe("pull request toolkit handlers", () => {
       makeThread([
         makeLink(42, {
           host: "forge.example",
-          url: "http://forge.example:3000/t2tools/t2code/pulls/42",
+          url: "http://forge.example:3000/ashutoshpw/t2code/pulls/42",
         }),
       ]),
     );
@@ -625,9 +625,9 @@ describe("pull request toolkit handlers", () => {
       expect(result.pullRequests.map((entry) => entry.number)).toEqual([3, 1, 2, 10]);
       expect(result.pullRequests[0]).toEqual({
         host: "github.com",
-        repository: "t2tools/t2code",
+        repository: "ashutoshpw/t2code",
         number: 3,
-        url: "https://github.com/t2tools/t2code/pull/3",
+        url: "https://github.com/ashutoshpw/t2code/pull/3",
         source: "agent",
         watching: false,
         state: "open",
@@ -658,7 +658,7 @@ describe("listThreadPullRequests", () => {
       kind: "native" as const,
       id: "stack-1",
       number: 1,
-      url: "https://github.com/t2tools/t2code/stack/1",
+      url: "https://github.com/ashutoshpw/t2code/stack/1",
       base: "main",
       layers: [
         { number: 1, headBranch: "a", state: "open" as const },
@@ -719,7 +719,7 @@ describe("pull request guide tools", () => {
         const result = yield* harness.call("write_pull_request_guides", {
           pullRequests: [
             { url: "https://github.com/acme/web/pull/7" },
-            { repository: "t2tools/t2code", number: 12 },
+            { repository: "ashutoshpw/t2code", number: 12 },
             { url: "https://github.com/someone/else/pull/1" },
           ],
         });
@@ -727,7 +727,7 @@ describe("pull request guide tools", () => {
           result.guides.map((guide) => [guide.repository, guide.number, guide.outcome]),
         ).toEqual([
           ["acme/web", 7, "started"],
-          ["t2tools/t2code", 12, "started"],
+          ["ashutoshpw/t2code", 12, "started"],
           ["someone/else", 1, "failed"],
         ]);
         expect(result.guides[2]?.detail).toContain("No project in this environment");
@@ -746,8 +746,8 @@ describe("pull request guide tools", () => {
       const result = yield* harness.call("write_pull_request_guides", {
         pullRequests: [
           { url: "https://example.com/not-a-pull-request" },
-          { repository: "t2tools/t2code" },
-          { repository: "t2tools/t2code", number: 5 },
+          { repository: "ashutoshpw/t2code" },
+          { repository: "ashutoshpw/t2code", number: 5 },
         ],
       });
       expect(result.guides.map((guide) => guide.outcome)).toEqual(["failed", "failed", "started"]);

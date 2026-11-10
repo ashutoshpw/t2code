@@ -1163,7 +1163,7 @@ it.effect("keeps delegated child pull-request links independent of the parent", 
       projectId,
       repository: "pingdotgg/t3code",
       number: 123,
-      url: "https://github.com/pingdotgg/t2code/pull/123",
+      url: "https://github.com/ashutoshpw/t2code/pull/123",
     };
     yield* orchestrator.dispatch({
       type: "thread.create",
@@ -1223,7 +1223,7 @@ it.effect("keeps delegated child pull-request links independent of the parent", 
     const childPullRequest = {
       ...parentPullRequest,
       number: 456,
-      url: "https://github.com/pingdotgg/t2code/pull/456",
+      url: "https://github.com/ashutoshpw/t2code/pull/456",
     };
     yield* orchestrator.dispatch({
       type: "thread.metadata.update",

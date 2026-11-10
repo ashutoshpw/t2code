@@ -208,12 +208,12 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     text?: string;
   } | null>(null);
   const latestRef = useRef({ input, clientSettings, cleanupPrepared, projectWords });
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     latestRef.current = { input, clientSettings, cleanupPrepared, projectWords };
   });
   const draftRevisionRef = useRef({ ownerKey: input.ownerKey, text: input.draftText, revision: 0 });
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     const revision = draftRevisionRef.current;
     if (revision.ownerKey !== input.ownerKey || revision.text !== input.draftText) {
@@ -225,7 +225,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     }
   }, [input.ownerKey, input.draftText]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (!prepared || !grantId || typeof navigator === "undefined") return;
     const hasAudioConsent = bindAudioGrant(grantId);
@@ -376,7 +376,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     };
   }, [prepared, grantId, cloudProvider, cloudModel]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (!prepared || cloudProvider) return;
     let disposed = false;
@@ -394,7 +394,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
   const currentStatus = !cloudProvider && status?.prepared === prepared ? status.value : null;
   const setupModelId = setup.model?.id;
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (!setup.open || !setup.downloading || !prepared || !setupModelId) return;
     let disposed = false;
@@ -420,7 +420,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
   }, [prepared, setup.downloading, setup.open, setupModelId]);
 
   const previousOwnerRef = useRef(input.ownerKey);
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     if (previousOwnerRef.current === input.ownerKey && !input.disabled) return;
     previousOwnerRef.current = input.ownerKey;
@@ -429,7 +429,7 @@ export function useEnvironmentSpeechInput(input: HookInput) {
     controllerRef.current?.ownerChanged();
   }, [input.ownerKey, input.disabled]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed props and settings to the asynchronous recording controller
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed props and settings to the asynchronous recording controller
   useEffect(() => {
     const pending = pendingSubmissionRef.current;
     if (state.phase !== "idle" || !pending) return;

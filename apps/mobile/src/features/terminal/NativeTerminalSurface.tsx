@@ -237,7 +237,7 @@ const ReadyTerminalSurface = memo(function ReadyTerminalSurface({
     },
   }));
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- creates the output writer for the native terminal view once it is ready and disposes it on cleanup
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- creates the output writer for the native terminal view once it is ready and disposes it on cleanup
   useEffect(() => {
     const view = nativeRef.current;
     if (!streaming || !nativeReady || view === null) return;
@@ -249,7 +249,7 @@ const ReadyTerminalSurface = memo(function ReadyTerminalSurface({
     };
   }, [nativeReady, streaming]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- streams new terminal output into the native terminal view through its writer
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- streams new terminal output into the native terminal view through its writer
   useEffect(() => {
     if (!streaming || !nativeReady || props.output === null) return;
     void writerRef.current?.write(props.output).catch((error: unknown) => {
@@ -257,7 +257,7 @@ const ReadyTerminalSurface = memo(function ReadyTerminalSurface({
     });
   }, [nativeReady, props.output, streaming]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- records native surface state for terminal debugging
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- records native surface state for terminal debugging
   useEffect(() => {
     terminalDebugLog("native:surface", {
       terminalKey: props.terminalKey,

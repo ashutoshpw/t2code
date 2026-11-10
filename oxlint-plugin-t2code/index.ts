@@ -1,6 +1,7 @@
 import { definePlugin } from "@oxlint/plugins";
 
 import maxSettingsDescriptionLength from "./rules/max-settings-description-length.ts";
+import maxFileLines from "./rules/max-file-lines.ts";
 import namespaceNodeImports from "./rules/namespace-node-imports.ts";
 import noDomTestEnvironment from "./rules/no-dom-test-environment.ts";
 import noEmDashCopy from "./rules/no-em-dash-copy.ts";
@@ -16,7 +17,6 @@ import noMobileUniwindThemeEscapeHatches from "./rules/no-mobile-uniwind-theme-e
 import noAmbiguousDetailNavigation from "./rules/no-ambiguous-detail-navigation.ts";
 import noMobilePullRequestGlyphLiterals from "./rules/no-mobile-pull-request-glyph-literals.ts";
 import noNativeTitleTooltip from "./rules/no-native-title-tooltip.ts";
-import reactEffectBudget from "./rules/react-effect-budget.ts";
 import requireRegisteredListScroll from "./rules/require-registered-list-scroll.ts";
 import noOutsetStateIndicators from "./rules/no-outset-state-indicators.ts";
 import noPollingLoopInTests from "./rules/no-polling-loop-in-tests.ts";
@@ -26,8 +26,11 @@ import noRealTimeWaitInTests from "./rules/no-real-time-wait-in-tests.ts";
 import noTestInLoop from "./rules/no-test-in-loop.ts";
 import noTestTimeoutOrUnreasonedSkip from "./rules/no-test-timeout-or-unreasoned-skip.ts";
 import noRpcPermissionBypass from "./rules/no-rpc-permission-bypass.ts";
+import noThrowInEffectGenerator from "./rules/no-throw-in-effect-generator.ts";
+import noUnreasonedStateSync from "./rules/no-unreasoned-state-sync.ts";
 import noUnscopedHas from "./rules/no-unscoped-has.ts";
 import noWallClockInTests from "./rules/no-wall-clock-in-tests.ts";
+import noWorkspaceImportsInScriptsTests from "./rules/no-workspace-imports-in-scripts-tests.ts";
 import preferCatchTags from "./rules/prefer-catch-tags.ts";
 import preferEffectFn from "./rules/prefer-effect-fn.ts";
 import requireCenteredScrollGutter from "./rules/require-centered-scroll-gutter.ts";
@@ -40,6 +43,7 @@ export default definePlugin({
   },
   rules: {
     "max-settings-description-length": maxSettingsDescriptionLength,
+    "max-file-lines": maxFileLines,
     "namespace-node-imports": namespaceNodeImports,
     "no-dom-test-environment": noDomTestEnvironment,
     "no-em-dash-copy": noEmDashCopy,
@@ -55,7 +59,6 @@ export default definePlugin({
     "no-ambiguous-detail-navigation": noAmbiguousDetailNavigation,
     "no-mobile-pull-request-glyph-literals": noMobilePullRequestGlyphLiterals,
     "no-native-title-tooltip": noNativeTitleTooltip,
-    "react-effect-budget": reactEffectBudget,
     "require-registered-list-scroll": requireRegisteredListScroll,
     "no-outset-state-indicators": noOutsetStateIndicators,
     "no-polling-loop-in-tests": noPollingLoopInTests,
@@ -65,8 +68,11 @@ export default definePlugin({
     "no-test-in-loop": noTestInLoop,
     "no-test-timeout-or-unreasoned-skip": noTestTimeoutOrUnreasonedSkip,
     "no-rpc-permission-bypass": noRpcPermissionBypass,
+    "no-throw-in-effect-generator": noThrowInEffectGenerator,
+    "no-unreasoned-state-sync": noUnreasonedStateSync,
     "no-unscoped-has": noUnscopedHas,
     "no-wall-clock-in-tests": noWallClockInTests,
+    "no-workspace-imports-in-scripts-tests": noWorkspaceImportsInScriptsTests,
     "prefer-catch-tags": preferCatchTags,
     "prefer-effect-fn": preferEffectFn,
     "require-centered-scroll-gutter": requireCenteredScrollGutter,

@@ -601,7 +601,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     ...incomingPendingUserInputs.map((request) => request.requestId),
   ]);
   // A layout effect so the timeline never paints a held approval as answerable.
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes held requests to the timeline without lifting per-keystroke typing state
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes held requests to the timeline without lifting per-keystroke typing state
   useLayoutEffect(() => {
     onHeldRequestIdsChange(heldRequestIds);
   }, [heldRequestIds, onHeldRequestIdsChange]);
@@ -620,7 +620,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const applyThreadModelPick = useApplyThreadModelPick();
   const composerDraft = useComposerThreadDraft(composerDraftTarget);
   const composerDraftTargetKeyRef = useRef("");
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes the committed draft target key to a ref read by async handlers
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes the committed draft target key to a ref read by async handlers
   useLayoutEffect(() => {
     composerDraftTargetKeyRef.current = composerDraftTargetKey;
   });
@@ -641,7 +641,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     !activePendingIsResponding;
   const questionRequest = pendingUserInputs[0];
   // Publish eligibility before async captures can observe a question the UI has already closed.
-  // oxlint-disable-next-line t2code/react-effect-budget -- registers the open question's attachment draft in the module tracker before async captures read it
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- registers the open question's attachment draft in the module tracker before async captures read it
   useLayoutEffect(() => {
     if (!questionAttachmentTarget || !questionRequest || !questionTakesSnapShots) return;
     return trackOpenQuestionAttachmentDraft(routeThreadRef, {
@@ -666,7 +666,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const attachmentTargetKey = composerTargetKey(attachmentDraftTarget);
   // Reject async imports after a draft switch.
   const attachmentTargetKeyRef = useRef(attachmentTargetKey);
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes the committed attachment target key to a ref so async imports reject after a draft switch
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes the committed attachment target key to a ref so async imports reject after a draft switch
   useLayoutEffect(() => {
     attachmentTargetKeyRef.current = attachmentTargetKey;
   });
@@ -814,7 +814,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const setComposerDraftReplyTo = useComposerDraftStore((store) => store.setReplyTo);
   const navigate = useNavigate();
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- starts or releases server attachment uploads as upload capability, limits and draft attachments change
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- starts or releases server attachment uploads as upload capability, limits and draft attachments change
   useEffect(() => {
     if (!attachmentUploadsCapabilityKnown) {
       return;
@@ -1035,13 +1035,13 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const mobileComposerExpandInFlightRef = useRef(false);
   const pendingThreadImportsRef = useRef<Map<string, number>>(new Map());
   const isRevertingCheckpointRef = useRef(isRevertingCheckpoint);
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes the committed checkpoint revert flag to a ref read by async handlers
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes the committed checkpoint revert flag to a ref read by async handlers
   useLayoutEffect(() => {
     isRevertingCheckpointRef.current = isRevertingCheckpoint;
   });
 
   const backgroundThread = use(BackgroundThreadContext);
-  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to keydown, window blur and the desktop paste-as-text event to arm plain-text paste
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- subscribes to keydown, window blur and the desktop paste-as-text event to arm plain-text paste
   useEffect(() => {
     // A background composer listens on its own form, so it never hears the main composer's keys.
     const target: EventTarget | null = backgroundThread ? composerFormRef.current : window;
@@ -1182,7 +1182,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const activeComposerMenuItem =
     composerMenuItems.find((item) => item.id === activeComposerMenuItemId) ?? null;
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes committed composer menu state to refs read by editor key handlers
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes committed composer menu state to refs read by editor key handlers
   useLayoutEffect(() => {
     composerMenuOpenRef.current = composerMenuOpen;
     composerMenuItemsRef.current = composerMenuItems;
@@ -1406,7 +1406,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     addComposerFilesToDraft,
   });
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- keeps the shared prompt ref in step with the committed draft prompt for imperative handlers
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- keeps the shared prompt ref in step with the committed draft prompt for imperative handlers
   useEffect(() => {
     if (isLiteralPendingAnswer) return;
     promptRef.current = prompt;
@@ -1444,17 +1444,17 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     setProviderInputSubmissionError(null);
   }
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- keeps the shared images ref in step with committed draft images for async handlers
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- keeps the shared images ref in step with committed draft images for async handlers
   useEffect(() => {
     composerImagesRef.current = composerImages;
   }, [composerImages, composerImagesRef]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- keeps the shared files ref in step with committed draft files for async handlers
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- keeps the shared files ref in step with committed draft files for async handlers
   useEffect(() => {
     composerFilesRef.current = composerFiles;
   }, [composerFiles, composerFilesRef]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- keeps the shared terminal contexts ref in step with committed draft contexts for async handlers
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- keeps the shared terminal contexts ref in step with committed draft contexts for async handlers
   useEffect(() => {
     composerTerminalContextsRef.current = composerTerminalContexts;
   }, [composerTerminalContexts, composerTerminalContextsRef]);
@@ -1473,7 +1473,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     questionId: string | null;
   } | null>(null);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- moves the prompt ref and caret to the end when the pending question or its answer changes externally
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- moves the prompt ref and caret to the end when the pending question or its answer changes externally
   useEffect(() => {
     const nextCustomAnswer = activePendingProgress?.customAnswer;
     if (typeof nextCustomAnswer !== "string") {
@@ -1536,7 +1536,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     setIsDragOverComposer(false);
   }
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- observes composer form resizes to switch the footer and primary actions between compact layouts
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- observes composer form resizes to switch the footer and primary actions between compact layouts
   useLayoutEffect(() => {
     const composerForm = composerFormRef.current;
     if (!composerForm) return;
@@ -1554,7 +1554,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     return observeResize(composerForm, measureCompactLayouts);
   }, [composerFooterHasWideActions]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- reads draft images as data URLs and persists them to the draft store, dropping stale results on cleanup
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- reads draft images as data URLs and persists them to the draft store, dropping stale results on cleanup
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -2252,7 +2252,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     return true;
   };
   const submitComposerStable = useStableCallback(submitComposer);
-  // oxlint-disable-next-line t2code/react-effect-budget -- publishes the committed submission handler to the asynchronous dictation completion
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- publishes the committed submission handler to a ref read by imperative callers
   useLayoutEffect(() => {
     submitComposerRef.current = (mode, intent) => submitComposerStable(undefined, mode, intent);
   }, [submitComposerStable]);
@@ -2803,7 +2803,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const setContextInsertionHandler = useComposerDraftStore(
     (store) => store.setContextInsertionHandler,
   );
-  // oxlint-disable-next-line t2code/react-effect-budget -- registers this composer's context insertion handler in the draft store for the current target
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- registers this composer's context insertion handler in the draft store for the current target
   useEffect(() => {
     return setContextInsertionHandler(composerDraftTarget, insertContextReferencesAtCaretStable);
   }, [composerDraftTarget, insertContextReferencesAtCaretStable, setContextInsertionHandler]);
@@ -2947,7 +2947,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   };
 
   // Escape can cancel without dragleave; clear highlights on bubbling dragend.
-  // oxlint-disable-next-line t2code/react-effect-budget -- window dragend listener clears the drop highlight when a drag is cancelled without dragleave
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- window dragend listener clears the drop highlight when a drag is cancelled without dragleave
   useEffect(() => {
     if (!isDragOverComposer) return;
     const onWindowDragEnd = () => {
@@ -2992,13 +2992,13 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
 
   // Question dismissal unmounts focused controls without firing blur.
   const activePendingUserInputRequestId = activePendingUserInput?.requestId ?? null;
-  // oxlint-disable-next-line t2code/react-effect-budget -- schedules the collapse check after a dismissed question unmounts focused controls without a blur
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- schedules the collapse check after a dismissed question unmounts focused controls without a blur
   useEffect(() => {
     if (activePendingUserInputRequestId !== null) return;
     scheduleComposerCollapseCheckStable();
   }, [activePendingUserInputRequestId, scheduleComposerCollapseCheckStable]);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- cancels pending blur and mobile expand animation frames when the composer unmounts
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- cancels pending blur and mobile expand animation frames when the composer unmounts
   useEffect(() => {
     return () => {
       if (composerBlurFrameRef.current !== null) {

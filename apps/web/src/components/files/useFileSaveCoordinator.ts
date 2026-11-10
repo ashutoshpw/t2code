@@ -45,7 +45,9 @@ export function useFileSaveCoordinator({
   const session = current.session;
 
   // StrictMode replay needs a fresh coordinator; retired file sessions stay inert.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- starts the file save session on mount and retires it on cleanup
   useEffect(session.setup, [session]);
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- queues a recovered unsaved draft into the session on mount and cancels it on cleanup
   useEffect(() => {
     if (!canWriteFiles) return;
     let cancelled = false;

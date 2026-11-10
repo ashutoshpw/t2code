@@ -95,6 +95,10 @@
       "types": "./src/editor.ts",
       "import": "./src/editor.ts"
     },
+    "./legacyT3Identity": {
+      "types": "./src/legacyT3Identity.ts",
+      "import": "./src/legacyT3Identity.ts"
+    },
     "./shell": {
       "types": "./src/shell.ts",
       "import": "./src/shell.ts"

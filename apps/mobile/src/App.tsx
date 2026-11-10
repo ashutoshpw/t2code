@@ -208,7 +208,7 @@ disposeOnFoundationReplace(typeof module === "undefined" ? undefined : module.ho
 function SplashScreenCoordinator() {
   const { isReady } = useAppearancePreferences();
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- hides the native splash screen once appearance preferences have loaded
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- hides the native splash screen once appearance preferences have loaded
   useEffect(() => {
     if (isReady) void SplashScreen.hide();
   }, [isReady]);
@@ -232,7 +232,7 @@ function AppContent() {
   const { themeAppearance } = useAppearancePreferences();
   const navigationTheme = useMobileNavigationTheme();
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- matches the Android navigation bar to the app theme, as StatusBar does for the status bar
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- matches the Android navigation bar to the app theme, as StatusBar does for the status bar
   useEffect(() => {
     if (Platform.OS !== "android") return;
     void requireNativeModule<{ setNavigationBarStyle(light: boolean): Promise<void> }>(

@@ -331,7 +331,7 @@ function SidebarControl({ showSidebar }: { readonly showSidebar: boolean }) {
     context: { usagePageOpen },
   });
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- window keydown listener that toggles the sidebar on its shortcut
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- window keydown listener that toggles the sidebar on its shortcut
   useEffect(() => {
     // A hidden sidebar would still save the toggle, so the shortcut does nothing without one.
     if (!showSidebar) return;
@@ -384,7 +384,7 @@ function SidebarControl({ showSidebar }: { readonly showSidebar: boolean }) {
     <div
       ref={appShellCommandsRef}
       className={cn(
-       "pointer-events-none fixed left-[calc(var(--workspace-controls-left)+var(--app-rail-width))] top-[var(--workspace-controls-top)] z-50 ml-px flex h-[var(--workspace-topbar-height)] items-center",
+        "pointer-events-none fixed left-[calc(var(--workspace-controls-left)+var(--app-rail-width))] top-[var(--workspace-controls-top)] z-50 ml-px flex h-[var(--workspace-topbar-height)] items-center",
         mobileSidebarSheetMounted && "hidden",
       )}
       data-sidebar-control=""
@@ -493,7 +493,7 @@ export function AppSidebarLayout({
         storageKey="chat_thread_sidebar_open"
         style={sidebarProviderStyle}
       >
-{showSidebar ? (
+        {showSidebar ? (
           <>
             <SidebarBrandWidthProbe isElectron={isElectron} onWidthChange={setBrandWidth} />
             <ProjectProjectionRetention />
@@ -510,7 +510,8 @@ export function AppSidebarLayout({
                 minWidth: sidebarMinimumWidth,
                 shouldAcceptWidth: ({ currentWidth, nextWidth, wrapper }) =>
                   nextWidth <= currentWidth ||
-                  wrapper.clientWidth - railReservedWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
+                  wrapper.clientWidth - railReservedWidth - nextWidth >=
+                    THREAD_MAIN_CONTENT_MIN_WIDTH,
                 storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
                 onResize: setSidebarWidth,
               }}
@@ -520,7 +521,8 @@ export function AppSidebarLayout({
               <SidebarRail onDoubleClick={resetSidebarWidth} />
             </Sidebar>
           </>
-        ) : null}        {children}
+        ) : null}{" "}
+        {children}
         <BackgroundThreadAnnouncer />
         <SidebarControl showSidebar={showSidebar} />
         {isElectron ? <HistorySwipeNavigation /> : null}

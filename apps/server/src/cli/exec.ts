@@ -5,14 +5,16 @@
 // @effect-diagnostics nodeBuiltinImport:off
 import * as NodeChildProcess from "node:child_process";
 
+import * as Console from "effect/Console";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { Argument, Command, Flag, GlobalFlag } from "effect/cli";
 
+import * as HostProcess from "@t2code/shared/HostProcess";
 import { isCommandAvailable, resolveSpawnCommand } from "@t2code/shared/shell";
 
-const EXEC_PROVIDERS = ["claude", "codex", "opencode", "cursor", "grok", "fx"] as const;
+const EXEC_PROVIDERS = ["claude", "codex", "opencode", "cursor", "grok"] as const;
 export type ExecProvider = (typeof EXEC_PROVIDERS)[number];
 
 export const execProviderGlobalFlag = GlobalFlag.Setting("exec-provider")({
@@ -55,11 +57,6 @@ const HARNESS_INVOCATIONS: Record<ExecProvider, HarnessInvocation> = {
     args: (prompt) => ["-p", prompt, "--output-format", "plain"],
     output: "inherit",
   },
-  fx: {
-    command: "fx",
-    args: (prompt) => ["ask", prompt],
-    output: "inherit",
-  },
 };
 
 export class ExecProviderRequiredError extends Schema.TaggedError<ExecProviderRequiredError>()(
@@ -89,7 +86,25 @@ export class ExecHarnessSpawnError extends Schema.TaggedError<ExecHarnessSpawnEr
   }
 }
 
-const cursorFinalText = (stdout: string): string | undefined => {
+export class ExecHarnessExitError extends Schema.TaggedError<ExecHarnessExitError>()(
+  "ExecHarnessExitError",
+  { provider: Schema.String, exitCode: Schema.Number },
+) {
+  override get message(): string {
+    return `The ${this.provider} CLI exited with code ${this.exitCode}.`;
+  }
+}
+
+export class ExecCursorResponseError extends Schema.TaggedError<ExecCursorResponseError>()(
+  "ExecCursorResponseError",
+  {},
+) {
+  override get message(): string {
+    return "Cursor CLI did not return a final text response.";
+  }
+}
+
+export const cursorFinalText = (stdout: string): string | undefined => {
   try {
     const parsed: unknown = JSON.parse(stdout);
     if (
@@ -110,54 +125,54 @@ const runHarness = (input: {
   readonly invocation: HarnessInvocation;
   readonly args: ReadonlyArray<string>;
   readonly shell: boolean;
+  readonly env: NodeJS.ProcessEnv;
 }) =>
-  Effect.callback<number, ExecHarnessSpawnError>((resume) => {
-    let settled = false;
-    let stdout = "";
-    const finish = (result: Effect.Effect<number, ExecHarnessSpawnError>) => {
-      if (settled) return;
-      settled = true;
-      resume(result);
-    };
+  Effect.callback<{ readonly exitCode: number; readonly stdout: string }, ExecHarnessSpawnError>(
+    (resume) => {
+      let settled = false;
+      let stdout = "";
+      const finish = (
+        result: Effect.Effect<
+          { readonly exitCode: number; readonly stdout: string },
+          ExecHarnessSpawnError
+        >,
+      ) => {
+        if (settled) return;
+        settled = true;
+        resume(result);
+      };
 
-    try {
-      const child = NodeChildProcess.spawn(input.invocation.command, [...input.args], {
-        cwd: process.cwd(),
-        stdio:
-          input.invocation.output === "cursor-json" ? ["inherit", "pipe", "inherit"] : "inherit",
-        shell: input.shell,
-      });
-
-      if (input.invocation.output === "cursor-json" && child.stdout !== null) {
-        child.stdout.setEncoding("utf8");
-        child.stdout.on("data", (chunk) => {
-          stdout += String(chunk);
+      try {
+        const child = NodeChildProcess.spawn(input.invocation.command, [...input.args], {
+          cwd: process.cwd(),
+          env: input.env,
+          stdio:
+            input.invocation.output === "cursor-json" ? ["inherit", "pipe", "inherit"] : "inherit",
+          shell: input.shell,
         });
-      }
 
-      child.once("error", (cause) => {
+        if (input.invocation.output === "cursor-json" && child.stdout !== null) {
+          child.stdout.setEncoding("utf8");
+          child.stdout.on("data", (chunk) => {
+            stdout += String(chunk);
+          });
+        }
+
+        child.once("error", (cause) => {
+          finish(
+            Effect.fail(new ExecHarnessSpawnError({ command: input.invocation.command, cause })),
+          );
+        });
+        child.once("exit", (code, signal) => {
+          finish(Effect.succeed({ exitCode: code ?? (signal === null ? 0 : 1), stdout }));
+        });
+      } catch (cause) {
         finish(
           Effect.fail(new ExecHarnessSpawnError({ command: input.invocation.command, cause })),
         );
-      });
-      child.once("exit", (code, signal) => {
-        if (code === 0 && input.invocation.output === "cursor-json") {
-          const response = cursorFinalText(stdout);
-          if (response === undefined) {
-            process.stderr.write("Cursor CLI did not return a final text response.\n");
-            finish(Effect.succeed(1));
-            return;
-          }
-          process.stdout.write(
-            response.endsWith("\n") || response.length === 0 ? response : `${response}\n`,
-          );
-        }
-        finish(Effect.succeed(code ?? (signal === null ? 0 : 1)));
-      });
-    } catch (cause) {
-      finish(Effect.fail(new ExecHarnessSpawnError({ command: input.invocation.command, cause })));
-    }
-  });
+      }
+    },
+  );
 
 export const execCommand = Command.make("exec", {
   prompt: Argument.String("prompt").pipe(
@@ -190,13 +205,21 @@ export const execCommand = Command.make("exec", {
       }
 
       const spawnSpec = yield* resolveSpawnCommand(invocation.command, invocation.args(prompt));
-      const exitCode = yield* runHarness({
+      const result = yield* runHarness({
         invocation,
         args: spawnSpec.args,
         shell: spawnSpec.shell,
+        env: yield* HostProcess.Environment,
       });
-      if (exitCode !== 0) {
-        process.exitCode = exitCode;
+      if (result.exitCode !== 0) {
+        return yield* new ExecHarnessExitError({ provider, exitCode: result.exitCode });
+      }
+      if (invocation.output === "cursor-json") {
+        const response = cursorFinalText(result.stdout);
+        if (response === undefined) {
+          return yield* new ExecCursorResponseError();
+        }
+        yield* Console.log(response.replace(/\n$/, ""));
       }
     }),
   ),

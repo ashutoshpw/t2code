@@ -255,7 +255,7 @@ describe("pull request list answers across a reload", () => {
       repository: "pingdotgg/t3code",
       number,
       title: `Pull request ${number}`,
-      url: `https://github.com/pingdotgg/t2code/pull/${number}`,
+      url: `https://github.com/ashutoshpw/t2code/pull/${number}`,
       author: { login: "octocat", name: null, avatarUrl: null },
       headBranch: `feat/branch-${number}`,
       baseBranch: "main",

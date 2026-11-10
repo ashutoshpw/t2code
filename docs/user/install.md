@@ -57,11 +57,11 @@ without opening the harness's interactive interface:
 npx @t2code/cli --provider claude exec "Summarize this project"
 ```
 
-`--provider` also accepts `-p` (and `--p`). Supported values are `claude`,
-`codex`, `opencode`, `cursor`, `grok`, and `fx`. For example:
+`--provider` also accepts `-p`. Supported values are `claude`, `codex`,
+`opencode`, `cursor`, and `grok`. For example:
 
 ```bash
-npx @t2code/cli --p codex exec "Explain the failing test"
+npx @t2code/cli -p codex exec "Explain the failing test"
 npx @t2code/cli --provider cursor exec "Review this project"
 ```
 
@@ -69,7 +69,8 @@ The selected CLI must be installed, authenticated, and on the current shell's
 `PATH`. This command runs it in the current directory and uses that CLI's own
 configuration and permissions; it does not use provider instance settings saved
 in T2 Code. Antigravity is not available here because T2 Code connects to its
-ACP runtime directly instead of invoking a prompt-oriented CLI.
+ACP runtime directly instead of invoking a prompt-oriented CLI. If the CLI
+exits with an error, `exec` reports it and exits non-zero.
 
 To try T2 Code once without installing it, run `npx @t2code/cli@latest` instead (needs
 Node.js for `npx`). It offers to install the `t2` command first. If you say no,
@@ -193,7 +194,6 @@ computer.
 | Cursor      | Install [Cursor CLI](https://cursor.com/cli), then run `agent login`.                                                                                     |
 | Grok Build  | Install [Grok Build CLI](https://x.ai/cli), then run `grok login`.                                                                                        |
 | Kiro        | Install [Kiro CLI](https://kiro.dev/docs/cli/), then run `kiro-cli login`.                                                                                |
-| fx          | Install [fx](https://fx.sh), then run `fx login codex`, `fx login grok`, or `fx login`.                                                                   |
 | OpenCode    | Install [OpenCode](https://opencode.ai), then run `opencode auth login`.                                                                                  |
 | Antigravity | Install and sign in with Google from T2 Code's provider settings.                                                                                         |
 | Pi          | Install [Pi](./providers-pi.md#set-up-pi) with Node.js 22.19 or newer, then run `pi` and `/login`.                                                        |

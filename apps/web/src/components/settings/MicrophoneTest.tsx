@@ -1,5 +1,5 @@
 import { MICROPHONE_PERMISSION_ERROR } from "@t2code/client-runtime/voice-input";
-import { CheckIcon, MicIcon, PauseIcon, PlayIcon, RotateCcwIcon, XIcon } from "lucide-react";
+import { MicIcon, PauseIcon, PlayIcon, RotateCcwIcon, SquareIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useStableCallback } from "~/hooks/useStableCallback";
@@ -64,7 +64,7 @@ export function MicrophoneTest({
     setRecording(null);
     setPhase("idle");
   };
-  // oxlint-disable-next-line t2code/react-effect-budget -- releases the microphone and the recording's object URL on unmount
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- releases the microphone and the recording's object URL on unmount
   useEffect(
     () => () => {
       releaseCapture();

@@ -4,7 +4,7 @@ import * as Effect from "effect/Effect";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import { runMigrations } from "../Migrations.ts";
-import { rewriteLegacyMcpIdentity } from "./074_LegacyMcpIdentityRewrite.ts";
+import { rewriteLegacyMcpIdentity } from "./001_LegacyMcpIdentityRewrite.ts";
 
 const NOW = "2026-01-01T00:00:00.000Z";
 
@@ -59,7 +59,7 @@ it("rewrites recorded MCP identities and leaves everything else alone", () => {
   }
 });
 
-it.layer(NodeSqliteClient.layer({ filename: ":memory:" }))("074_LegacyMcpIdentityRewrite", (it) => {
+it.layer(NodeSqliteClient.layer({ filename: ":memory:" }))("001_LegacyMcpIdentityRewrite", (it) => {
   it.effect("rewrites stored transcripts recorded under the old names", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
