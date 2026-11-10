@@ -377,7 +377,7 @@ jobs:
         env:
           # The executable bundles the server again, so it needs the same stamp
           # as release.yml's JS bundle.
-          T2CODE_TELEMETRY_CHANNEL: ${{ github.repository == 'pingdotgg/t3code' && inputs.release_channel || 'dev' }}
+          T2CODE_TELEMETRY_CHANNEL: ${{ vars.T2CODE_TELEMETRY_ENABLED == 'true' && inputs.release_channel || 'dev' }}
         run: |
           # Git Bash's GNU tar reads "D:\..." as a remote host and cannot unpack the Node.js zip.
           if [[ "${{ inputs.platform }}" == "win" ]]; then

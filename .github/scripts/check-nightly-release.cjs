@@ -40,14 +40,18 @@ async function assertReleaseSource({ github, context, releaseChannel }) {
 
 const isNightlyTag = (tag) => /^v.*-nightly\./.test(tag) || tag.startsWith("nightly-v");
 
-async function findLatestNightly({ github, context }) {
+async function listNightlies({ github, context }) {
   const releases = await github.paginate(github.rest.repos.listReleases, {
     ...context.repo,
     per_page: 100,
   });
   return releases
     .filter((release) => !release.draft && release.published_at && isNightlyTag(release.tag_name))
-    .sort((a, b) => Date.parse(b.published_at) - Date.parse(a.published_at))[0];
+    .sort((a, b) => Date.parse(b.published_at) - Date.parse(a.published_at));
+}
+
+async function findLatestNightly(options) {
+  return (await listNightlies(options))[0];
 }
 
 async function shouldReleaseNightly({ github, context, core, now = Date.now() }) {
@@ -68,9 +72,26 @@ async function shouldReleaseNightly({ github, context, core, now = Date.now() })
     basehead: `${lastNightly.tag_name}...${context.sha}`,
     per_page: 1,
   });
+  if (comparison.status === "diverged") {
+    // A rebasing fork leaves every old tag on a pre-rebase commit, so history cannot order them.
+    const [tagCommit, candidateCommit] = await Promise.all([
+      github.rest.repos.getCommit({ ...context.repo, ref: lastNightly.tag_name }),
+      github.rest.repos.getCommit({ ...context.repo, ref: context.sha }),
+    ]);
+    if (tagCommit.data.commit.tree.sha === candidateCommit.data.commit.tree.sha) {
+      core.info(
+        `${lastNightly.tag_name} was cut on a rebased commit with identical content. Skipping.`,
+      );
+      return false;
+    }
+    core.warning(
+      `${lastNightly.tag_name} is not an ancestor of ${context.sha} (history was rewritten), but the content differs. Releasing.`,
+    );
+    return true;
+  }
   if (comparison.status !== "ahead") {
-    core.info(
-      `Candidate commit is ${comparison.status} relative to ${lastNightly.tag_name}. Skipping.`,
+    core.warning(
+      `Candidate commit is ${comparison.status} relative to ${lastNightly.tag_name}. Skipping the nightly release.`,
     );
     return false;
   }
@@ -80,20 +101,31 @@ async function shouldReleaseNightly({ github, context, core, now = Date.now() })
 }
 
 async function resolveLatestNightlyCommit({ github, context, core }) {
-  const lastNightly = await findLatestNightly({ github, context });
-  if (!lastNightly) {
+  const releases = await listNightlies({ github, context });
+  if (releases.length === 0) {
     throw new Error("No published nightly found. Stable releases build the latest nightly commit.");
   }
 
-  const tag = lastNightly.tag_name;
-  const { data: commit } = await github.rest.repos.getCommit({ ...context.repo, ref: tag });
-  const version = /^(?:nightly-)?v(\d+\.\d+\.\d+)-nightly\./.exec(tag)?.[1];
-  if (!version) {
-    throw new Error(`Cannot derive a stable version from nightly tag ${tag}.`);
+  for (const release of releases) {
+    const tag = release.tag_name;
+    const version = /^(?:nightly-)?v(\d+\.\d+\.\d+)-nightly\./.exec(tag)?.[1];
+    if (!version) {
+      throw new Error(`Cannot derive a stable version from nightly tag ${tag}.`);
+    }
+    const { data: commit } = await github.rest.repos.getCommit({ ...context.repo, ref: tag });
+    try {
+      await assertCommitOnDefaultBranch({ github, context, sha: commit.sha });
+    } catch (error) {
+      core.warning(`Skipping nightly ${tag}: ${error.message}`);
+      continue;
+    }
+    core.info(`Latest nightly ${tag} shipped ${commit.sha} as a preview of ${version}.`);
+    return { tag, sha: commit.sha, version };
   }
 
-  core.info(`Latest nightly ${tag} shipped ${commit.sha} as a preview of ${version}.`);
-  return { tag, sha: commit.sha, version };
+  throw new Error(
+    `No published nightly is contained in ${repositoryDefaultBranch(context)}. Run a nightly release first.`,
+  );
 }
 
 module.exports = {

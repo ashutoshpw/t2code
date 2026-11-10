@@ -3,3 +3,6 @@ set -eu
 
 vp staged
 node scripts/check-rebrand.ts --staged
+if git diff --cached --name-only | grep -q 'package\.json$'; then
+  node scripts/check-release-versions.ts
+fi
