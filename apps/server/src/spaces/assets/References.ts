@@ -1,7 +1,7 @@
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 
-import { byteLength, checkLimit } from "../CorePolicy.ts";
+import { byteLength, ensureLimit } from "../CorePolicy.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 import * as Catalog from "./Catalog.ts";
 import { mediaTypes } from "./Policy.ts";
@@ -10,7 +10,7 @@ export const validate = Effect.fn("SpacesAssetReferences.validate")(function* (
   block: C.SpaceKnownBlock,
 ) {
   if (!("assetId" in block.content)) return;
-  checkLimit("maxIdBytes", byteLength(block.content.assetId));
+  yield* ensureLimit("maxIdBytes", byteLength(block.content.assetId));
   const asset = yield* Catalog.readyAsset(block.content.assetId).pipe(
     Effect.catchTags({
       AssetCatalogError: (error) => Effect.fail(new C.SpaceAssetError({ reason: error.reason })),

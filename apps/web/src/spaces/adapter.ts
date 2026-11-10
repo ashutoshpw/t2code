@@ -10,10 +10,9 @@ import {
   type Command,
   type Transaction,
 } from "@tiptap/pm/state";
-import type { EditorView } from "@tiptap/pm/view";
+import { EditorView } from "@tiptap/pm/view";
 import { canSplit, AddMarkStep, RemoveMarkStep } from "@tiptap/pm/transform";
 import { toggleMark } from "@tiptap/pm/commands";
-import { Schema } from "effect";
 import {
   copySpaceBlocks,
   mediaAssetId,
@@ -26,14 +25,12 @@ import {
 } from "@t2code/client-runtime/spaces";
 import {
   SpaceBlock,
-  SpaceKnownMark,
   type SpaceAssetId,
   type SpaceBlockId,
   type SpacePageTarget,
   type SpaceRichText,
   type SpaceTextColor,
 } from "@t2code/contracts/spaces";
-
 import {
   canEditSpaceEditorBlock,
   sameSpaceValue,
@@ -47,88 +44,21 @@ import {
 } from "./document";
 import { richBlockTypes, spaceSchemaExtensions } from "./schema";
 import { isSpaceToggleCollapsed, spaceToggleCollapsePlugin } from "./toggleCollapse";
-
-export interface SpaceEditorOptions {
-  readonly target: SpacePageTarget;
-  readonly window: SpaceEditorWindow;
-  readonly maxBlocks: number;
-  readonly maxDepth: number;
-  readonly maxTextLength: number;
-  readonly maxClipboardBytes: number;
-  readonly allocateId: () => SpaceBlockId;
-  readonly allocateOrder: (gap: {
-    readonly parentId: SpaceBlockId | null;
-    readonly before: string | null;
-    readonly after: string | null;
-  }) => string;
-  readonly canEdit?: () => boolean;
-  readonly canChangeStructure?: () => boolean;
-  readonly canUndo?: () => boolean;
-  readonly canEditMedia?: () => boolean;
-}
-export interface SpaceEditorBatch {
-  readonly baseRevision: number;
-  readonly memberIds: readonly SpaceBlockId[];
-  readonly mutations: readonly SpaceMutation[];
-}
-interface MediaChange {
-  readonly before: SpaceBlock | null;
-  readonly after: SpaceBlock | null;
-}
-interface Operation {
-  readonly media?: MediaChange;
-  readonly history?: boolean;
-  readonly merged?: { readonly from: SpaceBlockId; readonly into: SpaceBlockId };
-}
-interface AdapterState {
-  readonly batch: SpaceEditorBatch;
-  readonly joins: readonly NonNullable<Operation["merged"]>[];
-}
-const decodeMentionMark = Schema.decodeOption(SpaceKnownMark, { onExcessProperty: "error" });
-const localHistoryDepth = 100;
-const clipboardType = "application/x-t2-spaces-blocks+json";
-const decodeClipboard = Schema.decodeUnknownSync(
-  Schema.Struct({
-    source: Schema.Struct({ environmentId: Schema.String, pageId: Schema.String }),
-    blocks: Schema.Array(SpaceBlock),
-  }),
-);
-
-function entries(doc: ProseMirrorNode) {
-  const result: { node: ProseMirrorNode; pos: number; block: SpaceBlock }[] = [];
-  doc.descendants((node, pos, parent) => {
-    const block = node.attrs.block as SpaceBlock | undefined;
-    if (block)
-      result.push({
-        node,
-        pos,
-        block: {
-          ...block,
-          parentId: (parent?.attrs.block as SpaceBlock | undefined)?.id ?? block.parentId,
-        },
-      });
-  });
-  return result;
-}
-
-function mediaIdentity(block: SpaceBlock | null) {
-  return block && isKnownSpaceBlock(block)
-    ? { ...block, content: { ...block.content, caption: [] } }
-    : block;
-}
-
-function captionBoundary(doc: ProseMirrorNode, position: number) {
-  const point = doc.resolve(position);
-  if (point.parent.type.name !== "spaceMedia") return true;
-  const text = point.parent.textContent,
-    offset = point.parentOffset;
-  return !(
-    offset > 0 &&
-    offset < text.length &&
-    /[\uD800-\uDBFF]/.test(text[offset - 1]!) &&
-    /[\uDC00-\uDFFF]/.test(text[offset]!)
-  );
-}
+import {
+  decodeMentionMark,
+  localHistoryDepth,
+  clipboardType,
+  decodeClipboard,
+  entries,
+  mediaIdentity,
+  captionBoundary,
+  type SpaceEditorOptions,
+  type SpaceEditorBatch,
+  type MediaChange,
+  type Operation,
+  type AdapterState,
+} from "./adapterModel";
+export type { SpaceEditorOptions, SpaceEditorBatch } from "./adapterModel";
 
 export class SpaceEditorAdapter {
   readonly #options: SpaceEditorOptions;

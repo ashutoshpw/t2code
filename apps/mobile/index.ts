@@ -15,11 +15,5 @@ if (process.env.EXPO_PUBLIC_SHOWCASE === "1") {
   LogBox.ignoreAllLogs();
 }
 
-if (__DEV__ && process.env.EXPO_PUBLIC_T2_SPACES_FEASIBILITY === "1") {
-  const { SpacesFeasibilityApp } =
-    require("./src/features/spaces/SpacesFeasibilityApp") as typeof import("./src/features/spaces/SpacesFeasibilityApp");
-  registerRootComponent(SpacesFeasibilityApp);
-} else {
-  const { default: App } = require("./src/App") as typeof import("./src/App");
-  registerRootComponent(App);
-}
+const { default: App } = require("./src/App") as typeof import("./src/App");
+registerRootComponent(App);

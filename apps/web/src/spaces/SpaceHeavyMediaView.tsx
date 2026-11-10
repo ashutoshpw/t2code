@@ -33,7 +33,7 @@ export function SpaceHeavyMediaView({
   const url = useLongLivedAssetUrl(enabled ? environmentId : null, resource);
   const refresh = useAssetUrlRefresh(enabled ? environmentId : null, enabled ? resource : null);
   const availableUrl = url._tag === "Success" ? url.url : null;
-  // oxlint-disable-next-line t2code/react-effect-budget -- Adopt the authorized signed source before mounting its decoder; ref cleanup may clear the DOM src.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Adopt the authorized signed source before mounting its decoder; ref cleanup may clear the DOM src.
   useEffect(() => {
     if (source.active && source.url === null && availableUrl) owner.adoptUrl(availableUrl);
   }, [owner, source.active, source.url, availableUrl]);

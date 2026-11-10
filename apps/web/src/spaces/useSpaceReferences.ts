@@ -36,7 +36,7 @@ export function useSpaceReferenceController(environmentId: EnvironmentId, attemp
     registry: typeof registry;
     controller: SpaceReferenceController;
   } | null>(null);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Own bounded source reads by the live connection and read-grant generation.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Own bounded source reads by the live connection and read-grant generation.
   useEffect(() => {
     let active = true,
       controller: SpaceReferenceController | undefined;
@@ -110,7 +110,7 @@ export function useSpaceContextSearch(environmentId: EnvironmentId, query: strin
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const requestGeneration = useRef(0);
-  // oxlint-disable-next-line t2code/react-effect-budget -- synchronize the active composer query with the bounded storage search controller.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- synchronize the active composer query with the bounded storage search controller.
   useEffect(() => {
     let active = true;
     const generation = ++requestGeneration.current;

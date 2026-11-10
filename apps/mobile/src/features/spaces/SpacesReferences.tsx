@@ -20,7 +20,7 @@ export function SpacesReferenceOpen({
   const [attempt, setAttempt] = useState(0);
   const destinationEnvironment = state.selection?.environmentId ?? environmentId;
   const owner = useSpacesReferenceController(destinationEnvironment, attempt);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Dispose pending navigation metadata when its mounted source view is removed.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Dispose pending navigation metadata when its mounted source view is removed.
   useEffect(() => model.mount(), [model]);
   if (!state.selection) return null;
   return (

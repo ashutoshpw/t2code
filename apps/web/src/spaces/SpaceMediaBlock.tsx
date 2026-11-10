@@ -190,7 +190,7 @@ export function SpaceMediaBlock({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pending = useRef(false),
-    lifetime = useRef(0);
+    lifetime = useRef<string | null>(null);
   const capability = useEnvironment(environmentId)?.serverConfig?.environment.capabilities.spaces;
   const supported =
     capability?.version === 2 && capability.features?.assets === true && !!capability.limits.assets;
@@ -205,13 +205,14 @@ export function SpaceMediaBlock({
     allowed ? environmentId : null,
     allowed ? resource : null,
   );
-  // oxlint-disable-next-line t2code/react-effect-budget -- Source ownership changes invalidate late metadata/download work.
+  const sourceKey = JSON.stringify([environmentId, assetId, allowed]);
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Source ownership changes invalidate late metadata/download work.
   useEffect(() => {
+    lifetime.current = sourceKey;
     return () => {
-      lifetime.current++;
+      lifetime.current = null;
     };
-    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- Each source change invalidates late results even though the lifetime ref is stable.
-  }, [assetId, environmentId, allowed]);
+  }, [sourceKey]);
   if (!known || !assetId) return <p>Unsupported media (preserved read only)</p>;
   const active =
     source?.metadata.assetId === assetId && source.current() && allowed ? source : null;

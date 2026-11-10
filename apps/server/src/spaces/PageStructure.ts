@@ -6,7 +6,7 @@ import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 
 import * as BlockStore from "./BlockStore.ts";
-import { byteLength, canonical, checkLimit, limits } from "./CorePolicy.ts";
+import { byteLength, canonical, ensureLimit, limits } from "./CorePolicy.ts";
 import * as PageStore from "./PageStore.ts";
 import * as RevisionStore from "./RevisionStore.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
@@ -22,10 +22,11 @@ interface RankChange extends Peer {
   readonly kind: "page" | "block";
 }
 const maxRank = (1n << 128n) - 1n;
-const rankNumber = (rank: string) => {
-  if (!/^[0-9a-f]{32}$/.test(rank)) throw new C.SpaceValidationError({ reason: "invalid_order" });
+const rankNumber = Effect.fnUntraced(function* (rank: string) {
+  if (!/^[0-9a-f]{32}$/.test(rank))
+    return yield* new C.SpaceValidationError({ reason: "invalid_order" });
   return BigInt(`0x${rank}`);
-};
+});
 const rankString = (rank: bigint) => rank.toString(16).padStart(32, "0");
 const invalid = (reason: C.SpaceValidationError["reason"] = "invalid_input") =>
   new C.SpaceValidationError({ reason });
@@ -43,61 +44,61 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
   let recoveryBatch: string | null = null;
   const nodes = new Set<string>();
   let bytes = initialBytes;
-  const produced = (value: unknown) => {
+  const produced = Effect.fnUntraced(function* (value: unknown) {
     bytes += byteLength(value);
-    checkLimit("maxMutationBytes", bytes);
-  };
-  const touch = (key: string, value: unknown) => {
+    yield* ensureLimit("maxMutationBytes", bytes);
+  });
+  const touch = Effect.fnUntraced(function* (key: string, value: unknown) {
     if (nodes.has(key)) return;
     nodes.add(key);
-    checkLimit("maxMutationNodes", nodes.size);
-    produced(value);
-  };
-  const idLimit = (id: string) => checkLimit("maxIdBytes", byteLength(id));
+    yield* ensureLimit("maxMutationNodes", nodes.size);
+    yield* produced(value);
+  });
+  const idLimit = (id: string) => ensureLimit("maxIdBytes", byteLength(id));
   const pages = new Map<C.SpacePageId, PageStore.PageRow>();
   const blocks = new Map<string, BlockStore.BlockRow>();
   const roots = new Map<C.SpaceId, C.SpaceRootRevisionGuard>();
   const block = Effect.fnUntraced(function* (id: string) {
-    idLimit(id);
+    yield* idLimit(id);
     const cached = blocks.get(id);
     if (cached) return cached;
     const [row] =
       yield* sql<BlockStore.BlockRow>`SELECT * FROM spaces_blocks WHERE block_id = ${id} AND deleted = 0`;
     if (!row) return yield* new C.SpaceNotFoundError({ entity: "block", id });
-    touch(`block:${id}`, { ...row });
+    yield* touch(`block:${id}`, { ...row });
     blocks.set(id, row);
     return row;
   });
   const page = Effect.fnUntraced(function* (id: C.SpacePageId) {
-    idLimit(id);
+    yield* idLimit(id);
     const cached = pages.get(id);
     if (cached) return cached;
     const row = yield* recovery ? PageStore.load(id) : PageStore.read(id);
     if (recovery && row.trash_batch_id === null) PageStore.summary(row);
-    touch(`page:${id}`, { ...row });
+    yield* touch(`page:${id}`, { ...row });
     pages.set(id, row);
     if (row.owner_block_id !== null) {
       if (recovery) {
         const [owner] =
           yield* sql<BlockStore.BlockRow>`SELECT * FROM spaces_blocks WHERE block_id=${row.owner_block_id}`;
         if (owner) {
-          touch(`block:${owner.block_id}`, { ...owner });
+          yield* touch(`block:${owner.block_id}`, { ...owner });
           blocks.set(owner.block_id, owner);
         }
       } else yield* block(row.owner_block_id);
-      touch(`owner:${id}`, { child_page_id: id, owner_block_id: row.owner_block_id });
+      yield* touch(`owner:${id}`, { child_page_id: id, owner_block_id: row.owner_block_id });
     }
     return row;
   });
   const root = Effect.fnUntraced(function* (spaceId: C.SpaceId) {
-    idLimit(spaceId);
+    yield* idLimit(spaceId);
     if (roots.has(spaceId)) return;
     const [row] = yield* sql<{
       readonly root_order_revision: number;
     }>`SELECT root_order_revision FROM spaces WHERE space_id = ${spaceId}`;
     if (!row) return yield* new C.SpaceNotFoundError({ entity: "space", id: spaceId });
     const guard = { spaceId, rootOrderRevision: row.root_order_revision };
-    touch(`root:${spaceId}`, guard);
+    yield* touch(`root:${spaceId}`, guard);
     roots.set(spaceId, guard);
   });
   const ancestry = Effect.fnUntraced(function* (id: C.SpacePageId) {
@@ -106,7 +107,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     while (current !== null) {
       if (seen.has(current)) return yield* invalid("cycle");
       seen.add(current);
-      checkLimit("maxDepth", seen.size);
+      yield* ensureLimit("maxDepth", seen.size);
       current = (yield* page(current)).parent_page_id;
     }
     return seen.size;
@@ -117,7 +118,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     while (current !== null) {
       if (seen.has(current)) return yield* invalid("cycle");
       seen.add(current);
-      checkLimit("maxDepth", seen.size + 1);
+      yield* ensureLimit("maxDepth", seen.size + 1);
       const row = yield* block(current);
       if (row.page_id !== pageId || !BlockStore.isListContainer(BlockStore.storedBlockFromRow(row)))
         return yield* invalid("invalid_parent");
@@ -132,7 +133,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
       const next = queue[i]!;
       if (members.has(next.id)) return yield* invalid("cycle");
       members.add(next.id);
-      checkLimit("maxDepth", next.depth);
+      yield* ensureLimit("maxDepth", next.depth);
       depth = Math.max(depth, next.depth);
       const row = yield* page(next.id);
       if (recovery === "permanentlyDelete" && row.trash_batch_id === null)
@@ -194,7 +195,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
   if (input.target.kind === "blocks") {
     const selected = new Set<string>(input.target.blockIds);
     if (selected.size !== input.target.blockIds.length) return yield* invalid();
-    checkLimit("maxMutationNodes", selected.size);
+    yield* ensureLimit("maxMutationNodes", selected.size);
     const queue = [...selected].map((id) => ({ id, depth: 1 }));
     for (let i = 0; i < queue.length; i++) {
       const { id, depth } = queue[i]!;
@@ -255,24 +256,25 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
           destination.spaceId === source.space_id
         )
       )
-        PageStore.assertActive(source);
+        yield* PageStore.assertActive(source);
     }
-    if (input.target.kind === "blocks") PageStore.assertActive(yield* page(input.target.pageId));
+    if (input.target.kind === "blocks")
+      yield* PageStore.assertActive(yield* page(input.target.pageId));
     if (destination?.kind === "child")
-      PageStore.assertActive(yield* page(destination.placement.pageId));
+      yield* PageStore.assertActive(yield* page(destination.placement.pageId));
   }
   const creating =
     input.target.kind === "blocks" &&
     input.target.blockIds.length === 0 &&
     destination?.kind === "child";
   if (creating) {
-    touch("new:page", null);
-    touch("new:owner", null);
-    touch("new:block", null);
+    yield* touch("new:page", null);
+    yield* touch("new:owner", null);
+    yield* touch("new:block", null);
   }
   if (source?.root_order !== null && source !== undefined && destination?.kind === "child") {
-    touch("new:owner", null);
-    touch("new:block", null);
+    yield* touch("new:owner", null);
+    yield* touch("new:block", null);
   }
   if (destination?.kind === "root") {
     if (input.target.kind !== "page") return yield* invalid();
@@ -282,7 +284,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     if (movingPages.members.has(parent.page_id)) return yield* invalid("cycle");
     const depth = yield* ancestry(parent.page_id);
     const addedPageDepth = movingBlocks ? movingPages.depth : Math.max(1, movingPages.depth);
-    checkLimit("maxDepth", depth + addedPageDepth);
+    yield* ensureLimit("maxDepth", depth + addedPageDepth);
     if (
       destination.placement.parentId !== null &&
       selectedBlocks.has(destination.placement.parentId)
@@ -297,7 +299,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
         listDepth++;
         parentId = (yield* block(parentId)).parent_id;
       }
-      checkLimit("maxDepth", listDepth + blockHeight);
+      yield* ensureLimit("maxDepth", listDepth + blockHeight);
     }
   }
   const ranks: RankChange[] = [];
@@ -314,7 +316,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     const kind = destination.kind === "root" ? "page" : "block";
     const remember = Effect.fnUntraced(function* (peer: Peer | undefined) {
       if (!peer) return undefined;
-      rankNumber(peer.rank);
+      yield* rankNumber(peer.rank);
       if (kind === "page") yield* page(C.SpacePageId.make(peer.id));
       else yield* block(peer.id);
       return peer;
@@ -360,7 +362,7 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
     } else {
       let right: Peer | undefined;
       if (beforeId !== null) {
-        idLimit(beforeId);
+        yield* idLimit(beforeId);
         if (excluded.includes(beforeId)) return yield* invalid("invalid_order");
         if (destination.kind === "root") {
           const next = yield* page(C.SpacePageId.make(beforeId));
@@ -378,8 +380,8 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
         }
       }
       let left = yield* adjacent(right, true);
-      const low = left ? rankNumber(left.rank) : -1n;
-      const high = right ? rankNumber(right.rank) : maxRank + 1n;
+      const low = left ? yield* rankNumber(left.rank) : -1n;
+      const high = right ? yield* rankNumber(right.rank) : maxRank + 1n;
       if (high - low > BigInt(insertionCount)) {
         const step = (high - low) / BigInt(insertionCount + 1);
         placementRanks = Array.from({ length: insertionCount }, (_, i) =>
@@ -399,8 +401,8 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
             window.push(right);
             right = yield* adjacent(right, false);
           }
-          const lower = left ? rankNumber(left.rank) : -1n;
-          const upper = right ? rankNumber(right.rank) : maxRank + 1n;
+          const lower = left ? yield* rankNumber(left.rank) : -1n;
+          const upper = right ? yield* rankNumber(right.rank) : maxRank + 1n;
           const step = (upper - lower) / BigInt(window.length + insertionCount + 1);
           if (step <= 0n) continue;
           placementRanks = Array.from({ length: insertionCount }, (_, i) =>
@@ -480,25 +482,29 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
 
 export type Plan = Effect.Success<ReturnType<typeof plan>>;
 
-export function guardsMatch(plan: Plan, supplied: C.SpaceStructureGuards) {
-  checkLimit("maxMutationNodes", supplied.pages.length + supplied.roots.length);
+export const guardsMatch = Effect.fnUntraced(function* (
+  plan: Plan,
+  supplied: C.SpaceStructureGuards,
+) {
+  yield* ensureLimit("maxMutationNodes", supplied.pages.length + supplied.roots.length);
   const pages = new Map(supplied.pages.map((row) => [row.pageId, row.revision]));
   const roots = new Map(supplied.roots.map((row) => [row.spaceId, row.rootOrderRevision]));
-  for (const id of [...pages.keys(), ...roots.keys()]) checkLimit("maxIdBytes", byteLength(id));
+  for (const id of [...pages.keys(), ...roots.keys()])
+    yield* ensureLimit("maxIdBytes", byteLength(id));
   if (
     pages.size !== supplied.pages.length ||
     roots.size !== supplied.roots.length ||
     [...pages.keys()].some((id) => !plan.pages.has(id)) ||
     [...roots.keys()].some((id) => !plan.roots.has(id))
   )
-    throw invalid();
+    return yield* invalid();
   return (
     pages.size === plan.guards.pages.length &&
     roots.size === plan.guards.roots.length &&
     plan.guards.pages.every((row) => pages.get(row.pageId) === row.revision) &&
     plan.guards.roots.every((row) => roots.get(row.spaceId) === row.rootOrderRevision)
   );
-}
+});
 
 export const apply = Effect.fn("SpacesStructure.apply")(function* (
   plan: Plan,
@@ -526,8 +532,11 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
     if (!changed.has(id)) changed.set(id, new Map());
   };
   const writes = new Map<string, BlockStore.BlockRow>();
-  const writeBlock = (row: BlockStore.BlockRow, old: BlockStore.BlockRow | null) => {
-    checkLimit("maxBlockBytes", row.logical_bytes);
+  const writeBlock = Effect.fnUntraced(function* (
+    row: BlockStore.BlockRow,
+    old: BlockStore.BlockRow | null,
+  ) {
+    yield* ensureLimit("maxBlockBytes", row.logical_bytes);
     const target = C.SpacePageId.make(row.page_id);
     mark(target);
     changed.get(target)!.set(row.block_id, old ? { ...old } : null);
@@ -536,9 +545,9 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
       mark(source);
       changed.get(source)!.set(row.block_id, { ...old });
     }
-    plan.produced({ ...row });
+    yield* plan.produced({ ...row });
     writes.set(row.block_id, row);
-  };
+  });
   const relocate = (
     old: BlockStore.BlockRow,
     pageId: C.SpacePageId,
@@ -568,7 +577,10 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
       mark(C.SpacePageId.make(rank.id));
     } else {
       const old = plan.blocks.get(rank.id)!;
-      writeBlock(relocate(old, C.SpacePageId.make(old.page_id), old.parent_id, rank.rank), old);
+      yield* writeBlock(
+        relocate(old, C.SpacePageId.make(old.page_id), old.parent_id, rank.rank),
+        old,
+      );
     }
   }
   for (const id of plan.rankOwnedPages) mark(id);
@@ -597,7 +609,7 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
             )
           : { ...old, page_id: destination.placement.pageId };
       if (old.page_id === row.page_id && old.payload === row.payload) continue;
-      writeBlock(row, old);
+      yield* writeBlock(row, old);
       const owned = [...plan.pages.values()].find((page) => page.owner_block_id === id);
       if (owned) mark(owned.page_id);
     }
@@ -626,7 +638,7 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
           merged_into: null,
         };
     if (!old) yield* sql`INSERT INTO spaces_ids(id,kind) VALUES (${ownerBlockId},'block')`;
-    writeBlock(row, old);
+    yield* writeBlock(row, old);
   } else if (destination?.kind === "root" && plan.source?.owner_block_id) {
     const old = plan.blocks.get(plan.source.owner_block_id);
     if (old && !old.deleted && BlockStore.storedBlockFromRow(old).type !== "child_page")
@@ -636,7 +648,7 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
     if (old) {
       const mergedInto = old.deleted ? old.merged_into : null;
       const payload = canonical({ id: old.block_id, pageId: old.page_id, mergedInto });
-      writeBlock(
+      yield* writeBlock(
         {
           ...old,
           payload,
@@ -650,7 +662,7 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
   }
   if (!plan.source && !plan.movingBlocks) {
     if (title === undefined) return yield* invalid();
-    plan.produced({
+    yield* plan.produced({
       page_id: pageId,
       space_id: spaceId,
       title,
@@ -718,8 +730,8 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
   for (const [id] of changed) {
     const old = plan.pages.get(id)!;
     const counter = counters.get(id)!;
-    checkLimit("maxPageBlocks", counter.count);
-    checkLimit("maxPageBytes", counter.bytes);
+    yield* ensureLimit("maxPageBlocks", counter.count);
+    yield* ensureLimit("maxPageBytes", counter.bytes);
     const rootRank =
       !plan.movingBlocks && id === pageId && destination
         ? destination.kind === "root"
@@ -747,7 +759,7 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
               }),
             };
     }
-    plan.produced({
+    yield* plan.produced({
       pageId: id,
       spaceId: memberSpace,
       rootOrder: rootRank,
@@ -756,7 +768,7 @@ export const apply = Effect.fn("SpacesStructure.apply")(function* (
       blockBytes: counter.bytes,
       trash,
     });
-    yield* sql`UPDATE spaces_pages SET space_id=${memberSpace},root_order=${rootRank},revision=revision+1,block_count=${counter.count},block_bytes=${counter.bytes},updated_at=${timestamp},trash_batch_id=${trash?.batchId ?? null},trash_root_id=${trash?.rootPageId ?? null},trashed_at_ms=${trash?.trashedAtMs ?? null},trash_origin=${trash?.origin ?? null} WHERE page_id=${id}`;
+    yield* sql`UPDATE spaces_pages SET space_id=${memberSpace},root_order=${rootRank},revision=revision+1,body_revision=revision+1,block_count=${counter.count},block_bytes=${counter.bytes},updated_at=${timestamp},trash_batch_id=${trash?.batchId ?? null},trash_root_id=${trash?.rootPageId ?? null},trashed_at_ms=${trash?.trashedAtMs ?? null},trash_origin=${trash?.origin ?? null} WHERE page_id=${id}`;
   }
   const historyBudget = RevisionStore.createCaptureBudget();
   if (!plan.source && !plan.movingBlocks)

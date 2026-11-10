@@ -886,6 +886,7 @@ describe("Spaces public asset wiring", () => {
             body: new Uint8Array(pdf),
           })).status,
         ).toBe(404);
+        yield* service.getCapability(environmentId);
         expect(
           (yield* service.getAssetUpload({ environmentId, uploadId: pending.uploadId }, "owner"))
             .state,

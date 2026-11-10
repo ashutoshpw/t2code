@@ -124,7 +124,7 @@ function PageTree({
         : null,
     );
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- synchronize focus scroll ownership with the virtualizer's committed data and cancel obsolete requests.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- synchronize focus scroll ownership with the virtualizer's committed data and cancel obsolete requests.
   useLayoutEffect(() => {
     void focusOwner.revalidate(snapshot, rows);
     return focusOwner.invalidate;

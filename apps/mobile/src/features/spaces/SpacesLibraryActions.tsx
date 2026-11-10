@@ -18,7 +18,7 @@ import type {
   SpaceSummary,
   SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { FlatList, Modal, TextInput, View } from "react-native";
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
@@ -117,10 +117,6 @@ function Actions({
       setError(cause instanceof Error ? cause.message : "Could not update Spaces"),
     );
   };
-  // oxlint-disable-next-line t2code/react-effect-budget -- Hydrate the environment's durable structural journal before offering mutations or recovery.
-  useEffect(() => {
-    void owner.hydrate().catch(() => {});
-  }, [owner]);
   function choose(value: Intent, initial = "") {
     if (disabled) return;
     setTitle(initial);
@@ -201,6 +197,8 @@ function Actions({
       : access.capability?.features?.recovery === true &&
         (history.operation === "trashPage" ? trashPage : restorePage));
   const result = snapshot.libraryResult;
+  const resultPage = result?.page;
+  const resultSpace = result?.space;
   const bodyReady =
     intent?.kind === "child" &&
     snapshot.body?.pageId === intent.page.id &&
@@ -426,25 +424,25 @@ function Actions({
               Undo is unavailable for metadata changes or an unproven inverse.
             </Text>
           ) : null}
-          {result?.page && readable ? (
+          {resultPage && readable ? (
             <ControlPill
               variant="pill"
-              label={`Open ${result.page.title || "page"}`}
+              label={`Open ${resultPage.title || "page"}`}
               onPress={() =>
                 navigation.push("SpacesPage", {
                   environmentId,
-                  spaceId: result.page!.spaceId,
-                  pageId: result.page!.id,
+                  spaceId: resultPage.spaceId,
+                  pageId: resultPage.id,
                 })
               }
             />
           ) : null}
-          {result?.space && !result.page && readable ? (
+          {resultSpace && !resultPage && readable ? (
             <ControlPill
               variant="pill"
-              label={`Open ${result.space.title || "space"}`}
+              label={`Open ${resultSpace.title || "space"}`}
               onPress={() =>
-                navigation.push("SpacesLibrary", { environmentId, spaceId: result.space!.id })
+                navigation.push("SpacesLibrary", { environmentId, spaceId: resultSpace.id })
               }
             />
           ) : null}

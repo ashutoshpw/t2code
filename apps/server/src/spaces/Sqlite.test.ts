@@ -80,6 +80,7 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
       { migration_id: 13, name: "LibraryRevisions" },
       { migration_id: 14, name: "PageShares" },
       { migration_id: 15, name: "PageIcon" },
+      { migration_id: 16, name: "PageBodyRevision" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -143,7 +144,9 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             spaces: yield* sql`SELECT * FROM spaces ORDER BY space_id`,
             ids: yield* sql`SELECT * FROM spaces_ids ORDER BY id`,
             pages: yield* sql`SELECT * FROM spaces_pages ORDER BY page_id`.pipe(
-              Effect.map((rows) => rows.map(({ icon: _icon, ...page }) => page)),
+              Effect.map((rows) =>
+                rows.map(({ icon: _icon, body_revision: _body, ...page }) => page),
+              ),
             ),
             blocks: yield* sql`SELECT * FROM spaces_blocks ORDER BY block_id`,
             owners: yield* sql`SELECT * FROM spaces_page_owners ORDER BY child_page_id`,
@@ -290,6 +293,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             environmentId,
             target: { kind: "block", blockId: C.SpaceBlockId.make(ids[0]!) },
           };
+          yield* service.getCapability(environmentId);
           assert.deepEqual(yield* service.resolveReference(reference), { status: "unavailable" });
           let remaining = 46;
           yield* Effect.gen(function* () {
@@ -301,7 +305,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             assert.equal((yield* sql`SELECT block_count FROM spaces_pages`)[0]?.block_count, 47);
           }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
           for (let pass = 0; pass < 16; pass++) {
-            yield* service.getPage({ environmentId, pageId: "legacy-page" });
+            yield* service.getCapability(environmentId);
             const count = yield* Effect.gen(function* () {
               const sql = yield* SqlClient.SqlClient;
               const count = Number(
@@ -627,6 +631,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
                 trashed_at_ms: null,
                 trash_origin: null,
                 icon: null,
+                body_revision: page.revision,
               })),
             );
             assert.deepEqual(yield* sql`SELECT * FROM spaces_blocks`, before.blocks);
@@ -725,7 +730,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            15,
+            16,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -839,7 +844,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (16, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (17, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;
