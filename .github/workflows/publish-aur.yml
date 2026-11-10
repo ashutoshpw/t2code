@@ -14,7 +14,7 @@ on:
         type: string
     secrets:
       AUR_SSH_PRIVATE_KEY:
-        required: true
+        required: false
   workflow_dispatch:
     inputs:
       release_tag:
@@ -56,6 +56,12 @@ jobs:
           install -Dm0440 /dev/stdin /etc/sudoers.d/builder <<'EOF'
           builder ALL=(root) NOPASSWD: /usr/bin/pacman
           EOF
+
+      - name: Note missing AUR key
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        if: env.AUR_SSH_PRIVATE_KEY == ''
+        run: echo "::notice::AUR_SSH_PRIVATE_KEY is not set; the package is validated but not published to the AUR."
 
       - name: Validate and publish package sources
         env:
