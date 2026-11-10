@@ -335,6 +335,7 @@ export function usePromptLinkResolver(params: Readonly<Record<string, unknown>> 
   });
 
   const handledSearchRef = useRef<string | null>(null);
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- consumes the link search param once per value by clearing it on the navigation object and starting the resolver
   useEffect(() => {
     if (search === null) {
       handledSearchRef.current = null;

@@ -3,9 +3,9 @@
     "details": [
       {
         "appIDs": [
-          "ARK85ZXQ4Z.codes.t2.mobile",
-          "ARK85ZXQ4Z.codes.t2.mobile.preview",
-          "ARK85ZXQ4Z.codes.t2.mobile.dev"
+          "APPLE_TEAM_ID_UNSET.codes.t2.mobile",
+          "APPLE_TEAM_ID_UNSET.codes.t2.mobile.preview",
+          "APPLE_TEAM_ID_UNSET.codes.t2.mobile.dev"
         ],
         "components": [{ "/": "/threads/*" }]
       }

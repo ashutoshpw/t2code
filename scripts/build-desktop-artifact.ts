@@ -2936,7 +2936,6 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       // FPM runs outside the staged app directory, so source paths must be absolute.
       fpm: [
         `${path.join(repoRoot, "apps/desktop/resources/linux/codes.t2.desktop.metainfo.xml")}=/usr/share/metainfo/codes.t2.desktop.metainfo.xml`,
-        `${path.join(repoRoot, "LICENSE")}=/usr/share/doc/t2code/copyright`,
       ],
       // Debian 13 and Ubuntu 24.04 use 64-bit-time names; retain old-name fallbacks.
       depends: [

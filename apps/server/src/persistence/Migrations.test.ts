@@ -7,6 +7,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as SqlClient from "effect/sql/SqlClient";
 
+import { forkMigrationManifest } from "./forkMigrations.ts";
 import { migrationManifest, runMigrations } from "./Migrations.ts";
 
 const v2Migrations = migrationManifest.filter(([id]) => id >= 55);
@@ -19,6 +20,22 @@ const history = Effect.gen(function* () {
   `;
   return rows.map((row) => [row.migration_id, row.name] as const);
 });
+
+const forkHistory = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  const rows = yield* sql<{ readonly migration_id: number; readonly name: string }>`
+    SELECT migration_id, name FROM t2_fork_migrations ORDER BY migration_id
+  `;
+  return rows.map((row) => [row.migration_id, row.name] as const);
+});
+
+const shiftLedgerUp = (through: number) =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    for (let id = through; id >= 74; id--) {
+      yield* sql`UPDATE effect_sql_migrations SET migration_id = ${id + 1} WHERE migration_id = ${id}`;
+    }
+  });
 
 const v2TableCount = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -116,7 +133,25 @@ describe("runMigrations", () => {
     }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
   );
 
-  it.effect("upgrades a database written by v0.1.1", () =>
+  it.effect.each([
+    { state: "a fresh database", through: undefined },
+    { state: "an upstream-numbered database at 73", through: 73 },
+    { state: "an upstream-numbered database at 80", through: 80 },
+  ])("runs only the missing migrations on $state", ({ through }) =>
+    Effect.gen(function* () {
+      if (through !== undefined) yield* runMigrations({ toMigrationInclusive: through });
+
+      assert.deepStrictEqual(
+        yield* runMigrations(),
+        migrationManifest.filter(([id]) => through === undefined || id > through),
+      );
+      assert.deepStrictEqual(yield* history, migrationManifest);
+      assert.deepStrictEqual(yield* forkHistory, forkMigrationManifest);
+      assert.deepStrictEqual(yield* runMigrations(), []);
+    }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
+  );
+
+  it.effect("upgrades a database written by v0.1.1 without rerunning the id-63 rewrite", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
       yield* runMigrations({ toMigrationInclusive: 62 });
@@ -130,6 +165,55 @@ describe("runMigrations", () => {
         migrationManifest.filter(([id]) => id >= 63),
       );
       assert.deepStrictEqual(yield* history, migrationManifest);
+      assert.deepStrictEqual(yield* forkHistory, forkMigrationManifest);
+    }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
+  );
+
+  it.effect.each([76, 80])(
+    "renumbers a fork database whose upstream migrations are recorded through %s",
+    (through) =>
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        yield* runMigrations({ toMigrationInclusive: through });
+        yield* shiftLedgerUp(through);
+        yield* sql`
+          INSERT INTO effect_sql_migrations (migration_id, name)
+          VALUES (74, 'LegacyMcpIdentityRewrite')
+        `;
+        yield* sql`
+          INSERT INTO orchestration_events (
+            event_id, aggregate_kind, stream_id, stream_version, event_type,
+            occurred_at, actor_kind, payload_json, metadata_json
+          ) VALUES (
+            'stale', 'thread', 'thread-1', 1, 'item.updated', '2026-01-01T00:00:00.000Z', 'agent',
+            '{"toolName":"t3_thread_send"}', '{}'
+          )
+        `;
+
+        // A rerun of the shifted ScheduledTaskThreadMode would fail on its duplicate column.
+        assert.deepStrictEqual(
+          yield* runMigrations(),
+          migrationManifest.filter(([id]) => id > through),
+        );
+        assert.deepStrictEqual(yield* history, migrationManifest);
+        assert.deepStrictEqual(yield* forkHistory, forkMigrationManifest);
+        const [event] = yield* sql<{ readonly payload: string }>`
+          SELECT payload_json AS payload FROM orchestration_events WHERE event_id = 'stale'
+        `;
+        assert.strictEqual(event?.payload, '{"toolName":"t3_thread_send"}');
+      }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
+  );
+
+  it.effect("still refuses a reconciled database whose recorded names do not match", () =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* runMigrations();
+      yield* sql`UPDATE effect_sql_migrations SET name = 'Foreign' WHERE migration_id = 75`;
+
+      const exit = yield* Effect.exit(runMigrations());
+
+      assert.isTrue(Exit.isFailure(exit));
+      assert.include(String(exit), "75_SubagentDeliveryState (recorded: Foreign)");
     }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
   );
 
@@ -205,7 +289,7 @@ const shippedV2Migrations: ReadonlyArray<readonly [number, string]> = [
   [71, "PeerLinkFence"],
   [72, "WaitingLinkRequestIndex"],
   [73, "ActiveTurnItemIndexes"],
-  [74, "LegacyMcpIdentityRewrite"],
+  [74, "ExcludeAttachmentPlaceholdersFromSearch"],
 ];
 
 it("keeps the id of every shipped V2 migration", () => {
@@ -217,6 +301,11 @@ it("keeps the id of every shipped V2 migration", () => {
       .map(label),
     shippedV2Migrations.map(label),
   );
+});
+
+it("keeps fork-owned migrations out of upstream's id sequence", () => {
+  const mainNames = new Set<string>(migrationManifest.map(([, name]) => name));
+  for (const [, name] of forkMigrationManifest) assert.isFalse(mainNames.has(name), name);
 });
 
 // The npm launcher reads the highest migration id from these file names.

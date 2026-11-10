@@ -42,7 +42,7 @@ export function ComposerSpacePicker({
     busy: boolean;
     error?: string;
   } | null>(null);
-  // oxlint-disable-next-line t2code/react-effect-budget -- The canonical controller owns bounded transport; typing replaces its pending query and unmount invalidates publication.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- The canonical controller owns bounded transport; typing replaces its pending query and unmount invalidates publication.
   useEffect(() => {
     if (!owner?.canCapture() || !owner.canSearch()) return;
     let active = true;

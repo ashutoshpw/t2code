@@ -340,7 +340,7 @@ export function HomeScreen(props: HomeScreenProps) {
   };
   // Status-bar, accessibility and programmatic scrolls bypass the gate; activate visible rows after settling.
   const activationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // oxlint-disable-next-line t2code/react-effect-budget -- clears the row activation timer on unmount
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- clears the row activation timer on unmount
   useEffect(() => () => clearTimeout(activationTimerRef.current), []);
   const handleListScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     onFabScroll?.(event);
@@ -499,7 +499,7 @@ export function HomeScreen(props: HomeScreenProps) {
     onSelectThread(thread);
   };
   useThreadJumpShortcuts(threadListV2Items, selectThread);
-  // oxlint-disable-next-line t2code/react-effect-budget -- reads the list's visible range after commit to enable swipe gestures on those rows
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- reads the list's visible range after commit to enable swipe gestures on those rows
   useEffect(() => {
     if (swipeEnabled) activateVisibleRows(threadListV2Items);
   }, [activateVisibleRows, swipeEnabled, threadListV2Items]);

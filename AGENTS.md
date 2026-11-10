@@ -6,7 +6,7 @@ You can think of T2 Code as an open source "bring-your-own-subscription" alterna
 
 ## What makes T2 Code special?
 
-We have over 500,000 users who love T2 Code. It's important we maintain the things they love as we continue to iterate on the product. Here's a brief list of the things we can never compromise on.
+Users love T2 Code. It's important we maintain the things they love as we continue to iterate on the product. Here's a brief list of the things we can never compromise on.
 
 ### 1. Open at the core
 
@@ -28,9 +28,9 @@ T2 Code has 3 key app surfaces: **web**, **desktop**, and **mobile**.
 
 **Desktop** is the main surface most users install first. It's a full Electron app that bundles the server runner as well. The desktop app can also be used as the host server, allowing remote connections from app.t2.codes or the mobile app.
 
-**Mobile** is a React Native app for both iOS and Android, available on the App Store and Google Play. The mobile app allows for connecting to any T2 Code server to control work remotely.
+**Mobile** is a React Native app for iOS and Android. The mobile app allows for connecting to any T2 Code server to control work remotely.
 
-## A note from Theo
+## How we work
 
 I like ambitious ideas, simple systems, and software that feels obvious. Do not preserve complexity just because it already exists. Do not introduce machinery because it looks architecturally impressive. Understand the real constraint, then fight for the smallest model that makes the correct behavior unsurprising.
 
@@ -45,7 +45,7 @@ Of note: Most T2 Code contributions will come from T2 Code itself, often control
 We need to be on the same page with terminology. When communicating, use this language:
 
 - **you** means the agent reading this file and changing T2 Code.
-- **we, us, and maintainers** mean Theo, Julius and the people building T2 Code. These are who you are talking to now.
+- **we, us, and maintainers** mean the people building T2 Code. These are who you are talking to now.
 - **user** means the person using T2 Code to direct coding agents.
 - **agent** means the coding agent a user runs inside T2 Code. Depending on context, that may also include you.
 - **provider** means the agent runtime or harness T2 Code talks to, such as Codex, Claude, Cursor, or OpenCode.
@@ -203,7 +203,7 @@ Architecture and its constraints: `docs/internals/overview.md`. Glossary: `docs/
   options, and pass combinators as additional function-builder arguments.
 - Inferred types over annotations. `any` is the enemy.
 - Default to no comment. Write one only for a constraint, an external quirk, or an invariant the code can't show, in one line where you can and four at most. Don't restate names or signatures, narrate steps, record history, or explain the fix you just made; the PR carries that. `t2code/no-low-value-comments` enforces the length cap and the mechanical cases.
-- React effects are for synchronizing with something outside React. Derive in render and act in handlers instead of syncing state, but don't hide real lifecycle work in refs or stores to dodge one. The `t2code/react-effect-budget` lint rule holds each file to its count in `scripts/effect-budget.json`; a new effect states its reason with `// oxlint-disable-next-line t2code/react-effect-budget -- <why>`.
+- React effects are for synchronizing with something outside React. Derive in render and act in handlers instead of syncing state, but don't hide real lifecycle work in refs or stores to dodge one. The `t2code/no-unreasoned-state-sync` lint rule reports every effect; one that stays states its reason with `// oxlint-disable-next-line t2code/no-unreasoned-state-sync -- <why>`.
 - Our users drive agents all day and notice a dropped frame, a lying spinner, and a stale label. No continuously repainting animations; they peg the GPU on high-refresh displays.
 - If a rule here fights the task in front of you, say so loudly and get a human sign-off before breaking it.
 

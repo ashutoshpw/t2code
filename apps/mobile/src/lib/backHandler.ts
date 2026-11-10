@@ -14,7 +14,7 @@ export function useHardwareBack(active: boolean, onBack: () => boolean) {
   const inSidebar = usePaneRole() === "sidebar";
   const focused = useIsFocused() || inSidebar;
   const handleBack = useEffectEvent(onBack);
-  // oxlint-disable-next-line t2code/react-effect-budget -- subscribes to BackHandler for the focused screen's lifetime
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- subscribes to BackHandler for the focused screen's lifetime
   useEffect(() => {
     if (!active || !focused) return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => handleBack());

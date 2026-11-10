@@ -4,10 +4,12 @@ import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Effect from "effect/Effect";
+import * as ConfigProvider from "effect/ConfigProvider";
 import * as Layer from "effect/Layer";
 import { Argument, Command } from "effect/cli";
 import * as CliError from "effect/cli/CliError";
 
+import { legacyEnvDeprecationMessage, legacyEnvProvider } from "@t2code/shared/legacyT3Identity";
 import * as NetService from "@t2code/shared/Net";
 import packageJson from "../package.json" with { type: "json" };
 import { acpMcpBridgeCommand, acpMcpCallCommand } from "./cli/acpMcpBridge.ts";
@@ -15,7 +17,7 @@ import { authCommand } from "./cli/auth.ts";
 import { environmentCommand } from "./cli/environment.ts";
 import { appCommand } from "./cli/app.ts";
 import { browserCommand } from "./cli/browser.ts";
-import { execProviderGlobalFlag } from "./cli/exec.ts";
+import { execCommand, execProviderGlobalFlag } from "./cli/exec.ts";
 import { pairCommand } from "./cli/pair.ts";
 import { hasCloudPublicConfig } from "./cloud/publicConfig.ts";
 import { extendConnectionAttemptTimeout, keepOutboundFetchOnHttp1 } from "./outboundHttp.ts";
@@ -108,18 +110,32 @@ export const makeCli = ({ cloudEnabled = hasCloudPublicConfig } = {}) =>
       doctorCommand,
       policyCommand,
       triageCommand,
+      execCommand,
       cloudEnabled ? connectCommand : connectUnavailableCommand,
     ]),
   );
 
 export const cli = makeCli();
 
+const layerLegacyEnvConfig = Layer.unwrap(
+  Effect.sync(() => {
+    const { provider, usedLegacyNames } = legacyEnvProvider(process.env);
+    const layer = ConfigProvider.layer(provider);
+    return usedLegacyNames.length === 0
+      ? layer
+      : Layer.merge(
+          layer,
+          Layer.effectDiscard(Effect.logWarning(legacyEnvDeprecationMessage(usedLegacyNames))),
+        );
+  }),
+);
+
 export function runCli() {
   extendConnectionAttemptTimeout();
   keepOutboundFetchOnHttp1();
   Command.run(cli, { version: packageJson.version }).pipe(
     Effect.scoped,
-    Effect.provide(layerCliRuntime),
+    Effect.provide(Layer.mergeAll(layerCliRuntime, layerLegacyEnvConfig)),
     NodeRuntime.runMain,
   );
 }

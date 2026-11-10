@@ -6,7 +6,12 @@ import assetLinks from "../web/public/.well-known/assetlinks.json";
 
 // Keep config parsing independent of local env files and build credentials.
 vi.mock("../../scripts/lib/public-config.ts", () => ({
-  loadRepoEnv: () => ({ APP_VARIANT: process.env.APP_VARIANT }),
+  loadRepoEnv: () =>
+    Object.fromEntries(
+      ["APP_VARIANT", "T2CODE_EAS_PROJECT_ID", "T2CODE_EXPO_OWNER", "T2CODE_APPLE_TEAM_ID"].flatMap(
+        (key) => (process.env[key] === undefined ? [] : [[key, process.env[key]]]),
+      ),
+    ),
 }));
 
 afterEach(() => {
@@ -38,10 +43,33 @@ it.each([
   const host = new URL(DEFAULT_HOSTED_APP_URL).host;
   expect(config.ios?.associatedDomains).toContain(`applinks:${host}`);
   expect(appleAppSiteAssociation.applinks.details[0]?.appIDs).toContain(
-    `${config.ios?.appleTeamId}.${identifier}`,
+    `APPLE_TEAM_ID_UNSET.${identifier}`,
   );
   expect(config.android?.intentFilters?.[0]?.data).toEqual([
     { scheme: "https", host, pathPrefix: "/threads/" },
   ]);
   expect(assetLinks.map((link) => link.target.package_name)).toContain(identifier);
+});
+
+it("is inert without fork-owned Expo and Apple identities", async () => {
+  const config = await loadConfig(undefined);
+  expect(config.updates?.enabled).toBe(false);
+  expect(config.updates?.url).toBeUndefined();
+  expect(config.owner).toBeUndefined();
+  expect(config.ios?.appleTeamId).toBeUndefined();
+  expect(config.extra?.eas?.projectId).toBeUndefined();
+});
+
+it("binds updates, owner, and team from T2CODE_* env", async () => {
+  vi.stubEnv("T2CODE_EAS_PROJECT_ID", "11111111-2222-3333-4444-555555555555");
+  vi.stubEnv("T2CODE_EXPO_OWNER", "example-owner");
+  vi.stubEnv("T2CODE_APPLE_TEAM_ID", "TEAM123456");
+  const config = await loadConfig(undefined);
+  expect(config.updates).toMatchObject({
+    enabled: true,
+    url: "https://u.expo.dev/11111111-2222-3333-4444-555555555555",
+  });
+  expect(config.owner).toBe("example-owner");
+  expect(config.ios?.appleTeamId).toBe("TEAM123456");
+  expect(config.extra?.eas?.projectId).toBe("11111111-2222-3333-4444-555555555555");
 });

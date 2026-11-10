@@ -597,7 +597,7 @@ function useVoiceModels(prepared: PreparedConnection | null) {
       }
     },
   );
-  // oxlint-disable-next-line t2code/react-effect-budget -- loads the environment's model catalog when its connection becomes available
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- loads the environment's model catalog when its connection becomes available
   useEffect(() => {
     epoch.current += 1;
     if (prepared) void refresh(prepared, "foreground");
@@ -608,7 +608,7 @@ function useVoiceModels(prepared: PreparedConnection | null) {
   const downloading =
     requestedDownload !== null ||
     models.some((model) => model.state === "downloading" || model.state === "verifying");
-  // oxlint-disable-next-line t2code/react-effect-budget -- loads the environment's model catalog when its connection becomes available
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- loads the environment's model catalog when its connection becomes available
   useEffect(() => {
     if (!prepared || !downloading) return;
     let cancelled = false;
@@ -978,7 +978,7 @@ function TranscriptionTest(props: {
   const draft = transcript ?? "";
   const [showTranscript, setShowTranscript] = useState(false);
   const draftRef = useRef(draft);
-  // oxlint-disable-next-line t2code/react-effect-budget -- loads the environment's model catalog when its connection becomes available
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- loads the environment's model catalog when its connection becomes available
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
@@ -1114,7 +1114,7 @@ export function VoiceSettingsPanel() {
       setMicrophones([]);
     }
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- loads the environment's model catalog when its connection becomes available
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- loads the environment's model catalog when its connection becomes available
   useEffect(() => {
     queueMicrotask(() => void refreshMicrophones());
     const mediaDevices = navigator.mediaDevices;

@@ -329,7 +329,7 @@ function SidebarControl() {
     context: { usagePageOpen },
   });
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- window keydown listener that toggles the sidebar on its shortcut
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- window keydown listener that toggles the sidebar on its shortcut
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;

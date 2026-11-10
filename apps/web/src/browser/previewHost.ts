@@ -93,7 +93,7 @@ const applyHostState = (state: DesktopPreviewHostState): void => {
 
 /** Keeps this app's browser pane connected to every remote environment it can preview. */
 export function usePreviewBrowserHost(environmentIds: readonly EnvironmentId[]): void {
-  // oxlint-disable-next-line t2code/react-effect-budget -- Syncs desired browser hosts with the desktop bridge, which lives outside React and reports state through its own events.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Syncs desired browser hosts with the desktop bridge, which lives outside React and reports state through its own events.
   useEffect(() => {
     const preview = isElectron ? window.desktopBridge?.preview : undefined;
     if (!preview?.startBrowserHost) return;

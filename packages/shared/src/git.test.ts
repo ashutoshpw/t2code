@@ -21,14 +21,14 @@ import {
 
 describe("normalizeGitRemoteUrl", () => {
   it("canonicalizes equivalent GitHub remotes across protocol variants", () => {
-    expect(normalizeGitRemoteUrl("git@github.com:T2Tools/T2Code.git")).toBe(
-      "github.com/t2tools/t2code",
+    expect(normalizeGitRemoteUrl("git@github.com:Ashutoshpw/T2Code.git")).toBe(
+      "github.com/ashutoshpw/t2code",
     );
-    expect(normalizeGitRemoteUrl("https://github.com/T2Tools/T2Code.git")).toBe(
-      "github.com/t2tools/t2code",
+    expect(normalizeGitRemoteUrl("https://github.com/Ashutoshpw/T2Code.git")).toBe(
+      "github.com/ashutoshpw/t2code",
     );
-    expect(normalizeGitRemoteUrl("ssh://git@github.com/T2Tools/T2Code")).toBe(
-      "github.com/t2tools/t2code",
+    expect(normalizeGitRemoteUrl("ssh://git@github.com/Ashutoshpw/T2Code")).toBe(
+      "github.com/ashutoshpw/t2code",
     );
   });
 

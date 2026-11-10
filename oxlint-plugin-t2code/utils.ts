@@ -56,3 +56,9 @@ export function isIdentifier(node: Option.Option<AstNode>, name?: string): boole
     (name === undefined || expression.name === name)
   );
 }
+
+// List entries are repo-relative; matching on the path's end also works for files linted elsewhere.
+export const isGrandfathered = (list: ReadonlyArray<string>, filename: string): boolean => {
+  const normalized = filename.replaceAll("\\", "/");
+  return list.some((file) => normalized === file || normalized.endsWith(`/${file}`));
+};

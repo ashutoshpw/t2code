@@ -62,7 +62,7 @@ function StatusFadeIn(props: {
 }) {
   const { animate } = props;
   const [opacity] = useState(() => new Animated.Value(0));
-  // oxlint-disable-next-line t2code/react-effect-budget -- runs the Animated opacity fade-in and stops it on cleanup
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- runs the Animated opacity fade-in and stops it on cleanup
   useEffect(() => {
     if (!animate) return;
     const animation = Animated.timing(opacity, {

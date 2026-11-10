@@ -252,7 +252,7 @@ export function ComposerEditor({
     isNativeEcho,
     resetGeneration,
   });
-  // oxlint-disable-next-line t2code/react-effect-budget -- Releases acknowledged native-event snapshots; the snapshot log lives outside React, in the native component.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Releases acknowledged native-event snapshots; the snapshot log lives outside React, in the native component.
   useEffect(() => {
     if (!acknowledgesLatestNativeEvent) return;
     nativeEventSnapshotsRef.current = pruneAcknowledgedComposerNativeEvents(
@@ -261,7 +261,7 @@ export function ComposerEditor({
     );
   }, [acknowledgesLatestNativeEvent, mostRecentEventCount, nativeEventSnapshotsRef]);
   const assumedValue = props.value;
-  // oxlint-disable-next-line t2code/react-effect-budget -- Records the assumed native state after each controlled commit; the authoritative state lives in the native component.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Records the assumed native state after each controlled commit; the authoritative state lives in the native component.
   useEffect(() => {
     // Newer native events make this payload stale; do not record it as applied.
     if (isNativeEcho || controlledEventCount !== mostRecentEventCountRef.current) return;
