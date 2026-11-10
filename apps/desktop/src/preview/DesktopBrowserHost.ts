@@ -534,7 +534,7 @@ export const make = Effect.gen(function* () {
         [...tabs.values()].filter((tab) => tab.transport === transport),
         (tab) => {
           dropRelay(tab);
-          const shown = shownTabs.get(keyOf(tab.key));
+          const shown = shownTabs.get(`${transport}\u0000${keyOf(tab.key)}`);
           return PubSub.publish(outbox, {
             transport,
             event: {
