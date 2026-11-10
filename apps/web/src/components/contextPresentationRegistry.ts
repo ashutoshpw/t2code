@@ -13,6 +13,14 @@ export interface ContextPresentationDefinition {
 
 const DEFINITIONS = [
   {
+    kind: "page",
+    capabilities: { details: "tooltip", expanded: "none", defaultDraftView: "compact" },
+  },
+  {
+    kind: "block",
+    capabilities: { details: "tooltip", expanded: "none", defaultDraftView: "compact" },
+  },
+  {
     kind: "image",
     capabilities: { details: "tooltip", expanded: "modal", defaultDraftView: "compact" },
   },

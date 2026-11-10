@@ -1,3 +1,4 @@
+import { prepareMobileComposerContext } from "./spaces";
 import { useComposerAttachmentActions } from "./use-composer-attachment-actions";
 import * as Dialog from "../components/ui/Dialog";
 import { AuthOrchestrationOperateScope } from "@t2code/contracts";
@@ -75,6 +76,7 @@ import {
   getComposerDraftSnapshot,
   isFreshSessionPending,
   mergeComposerDraftContent,
+  sameComposerDraftState,
   removeComposerDraftAttachment,
   scheduleUnusedComposerAttachmentCleanup,
   setComposerDraftText,
@@ -158,6 +160,31 @@ function activeComposerDraftKey(thread: {
   const threadKey = scopedThreadKey(thread.environmentId, thread.id);
   const edit = getQueuedRunEdit(threadKey);
   return edit === null ? threadKey : queuedEditDraftKey(threadKey, edit.runId);
+}
+
+async function enqueueComposerOutboxSend(
+  preparing: { current: boolean },
+  threadKey: string,
+  draft: ReturnType<typeof getComposerDraftSnapshot>,
+  messageId: MessageId,
+  enqueue: () => ReturnType<typeof enqueueThreadOutboxMessage>,
+): Promise<MessageId | null> {
+  preparing.current = true;
+  try {
+    await enqueue();
+  } catch (error) {
+    setThreadComposerError(
+      threadKey,
+      error instanceof Error ? error.message : "Failed to save the queued message.",
+    );
+    return null;
+  } finally {
+    preparing.current = false;
+  }
+  if (sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft))
+    clearComposerDraftContent(threadKey, { deferAttachmentCleanup: true });
+  scheduleUnusedComposerAttachmentCleanup(draft.attachments);
+  return messageId;
 }
 
 export function useThreadDraftForThread(input: {
@@ -463,6 +490,30 @@ export function useThreadComposerState(input: {
       draftAttachments: draft.attachments,
       uploaded: prepared.value.attachments,
     });
+    const captured = await settlePromise(() =>
+      prepareMobileComposerContext({
+        environmentId: thread.environmentId,
+        text,
+        context: payload.context,
+        contextDraft: draft.contextDraft,
+        isCurrentDraft: () =>
+          sameComposerDraftState(
+            getComposerDraftSnapshot(queuedEditDraftKey(threadKey, edit.runId)),
+            draft,
+          ),
+      }),
+    );
+    if (AsyncResult.isFailure(captured)) {
+      savingQueuedEditRef.current = false;
+      setIsSavingQueuedEdit(false);
+      finishSave(false);
+      const error = squashAtomCommandFailure(captured);
+      Dialog.alert(
+        "Could not save the queued message",
+        error instanceof Error ? error.message : "Your edit is still in the composer.",
+      );
+      return;
+    }
     const result = await editQueuedRun({
       environmentId: thread.environmentId,
       input: {
@@ -472,7 +523,7 @@ export function useThreadComposerState(input: {
         edit: {
           messageId: edit.messageId,
           attachments: payload.attachments,
-          ...(payload.context ? { context: payload.context } : {}),
+          ...(captured.value ? { context: captured.value } : {}),
         },
       },
     });
@@ -485,6 +536,15 @@ export function useThreadComposerState(input: {
         "Could not save the queued message",
         "It may have already started. Your edit is still in the composer.",
       );
+      return;
+    }
+    if (
+      !sameComposerDraftState(
+        getComposerDraftSnapshot(queuedEditDraftKey(threadKey, edit.runId)),
+        draft,
+      )
+    ) {
+      finishSave(false);
       return;
     }
     // False when the edit was cancelled or begun again meanwhile; its draft is the newer edit's.
@@ -504,6 +564,7 @@ export function useThreadComposerState(input: {
     ) => Promise<boolean | "responded">,
     onWillEnqueue?: () => void,
   ) => {
+    if (preparingSendRef.current) return null;
     if (
       selectedThreadShell &&
       selectedEnvironmentRuntime?.connectionState === "connected" &&
@@ -637,6 +698,10 @@ export function useThreadComposerState(input: {
         ? parseCodexFeedbackCommand(text)
         : null;
     if (feedbackCommand) {
+      if (draft.context !== undefined || draft.contextDraft !== undefined) {
+        Dialog.alert("Feedback", "Send feedback without attachments or added context.");
+        return null;
+      }
       if (!readEnvironmentScope(selectedThreadShell.environmentId, AuthOrchestrationOperateScope))
         return null;
       if (thread.activeProviderThreadId === null) {
@@ -675,7 +740,7 @@ export function useThreadComposerState(input: {
     if (beforeDispatch !== undefined) {
       const response = await beforeDispatch(
         text,
-        attachments.length > 0 || draft.context !== undefined,
+        attachments.length > 0 || draft.context !== undefined || draft.contextDraft !== undefined,
       );
       if (!response) return null;
       // A context paste still landing, or any draft or settings change while approvals were
@@ -685,6 +750,7 @@ export function useThreadComposerState(input: {
       if (
         current.text !== draft.text ||
         JSON.stringify(current.context) !== JSON.stringify(draft.context) ||
+        JSON.stringify(current.contextDraft) !== JSON.stringify(draft.contextDraft) ||
         JSON.stringify(current.modelSelection) !== JSON.stringify(draft.modelSelection) ||
         current.runtimeMode !== draft.runtimeMode ||
         current.interactionMode !== draft.interactionMode ||
@@ -798,7 +864,7 @@ export function useThreadComposerState(input: {
       return "Side chats are not ready yet. Try again in a moment.";
     }
     if (serverConfig.environment.capabilities.sideChats !== true) {
-      return "Update this environment's T3 Code server to use side chats.";
+      return "Update this environment's T2 Code server to use side chats.";
     }
     if (selectedThreadCreation !== null) return "Side chats start after the first message.";
     if (

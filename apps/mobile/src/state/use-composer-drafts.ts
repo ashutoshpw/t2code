@@ -1,3 +1,4 @@
+import { ComposerContextDraft } from "@t2code/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import {
   EnvironmentId as EnvironmentIdSchema,
@@ -399,6 +400,7 @@ const isComposerDraftPersistenceError = Schema.is(ComposerDraftPersistenceError)
 export interface ComposerDraft {
   readonly text: string;
   readonly context?: OrchestrationMessageContext;
+  readonly contextDraft?: ComposerContextDraft;
   readonly attachments: ReadonlyArray<DraftComposerAttachment>;
   readonly importedShareIds?: ReadonlyArray<string>;
   readonly modelSelection?: ModelSelection;
@@ -419,6 +421,7 @@ export interface ComposerDraftProject {
 export interface ComposerDraftContent {
   readonly text: string;
   readonly context?: OrchestrationMessageContext;
+  readonly contextDraft?: ComposerContextDraft;
   readonly attachments: ReadonlyArray<DraftComposerAttachment>;
   readonly sourceShareId?: string;
 }
@@ -471,6 +474,7 @@ const PersistedComposerContextSchema = Schema.Struct({
 const ComposerDraftSchema = Schema.Struct({
   text: Schema.String,
   context: Schema.optional(PersistedComposerContextSchema),
+  contextDraft: Schema.optional(ComposerContextDraft),
   attachments: Schema.Array(DraftComposerAttachmentSchema),
   importedShareIds: Schema.optional(Schema.Array(Schema.String)),
   modelSelection: Schema.optional(ModelSelectionSchema),
@@ -652,6 +656,8 @@ export function isComposerDraftEmpty(draft: ComposerDraft): boolean {
 function isEmptyDraft(draft: ComposerDraft): boolean {
   return (
     draft.text.length === 0 &&
+    !draft.contextDraft?.selectors.length &&
+    !draft.contextDraft?.records.length &&
     draft.attachments.length === 0 &&
     draft.modelSelection === undefined &&
     draft.runtimeMode === undefined &&
@@ -1646,6 +1652,7 @@ export function clearComposerDraftContentState(
   const {
     importedShareIds: _importedShareIds,
     context: _context,
+    contextDraft: _contextDraft,
     modelSelection,
     workspaceSelection,
     project: _project,
@@ -1746,6 +1753,7 @@ export function mergeComposerDraftContentState(
     text === existing.text &&
     attachments.length === existing.attachments.length &&
     content.context === undefined &&
+    content.contextDraft === undefined &&
     importedShareIds === existing.importedShareIds
   ) {
     return current;
@@ -1762,6 +1770,20 @@ export function mergeComposerDraftContentState(
         text,
         attachments,
         context,
+        ...(existing.contextDraft || content.contextDraft
+          ? {
+              contextDraft: {
+                selectors: [
+                  ...(existing.contextDraft?.selectors ?? []),
+                  ...(content.contextDraft?.selectors ?? []),
+                ],
+                records: [
+                  ...(existing.contextDraft?.records ?? []),
+                  ...(content.contextDraft?.records ?? []),
+                ],
+              },
+            }
+          : {}),
         ...(importedShareIds ? { importedShareIds } : {}),
       },
       content.sourceShareId ? attachments.slice(existing.attachments.length) : [],
@@ -1809,6 +1831,7 @@ export function sameComposerDraftState(a: ComposerDraft, b: ComposerDraft): bool
     a.text === b.text &&
     a.attachments === b.attachments &&
     a.context === b.context &&
+    a.contextDraft === b.contextDraft &&
     a.importedShareIds === b.importedShareIds &&
     a.modelSelection === b.modelSelection &&
     a.runtimeMode === b.runtimeMode &&
