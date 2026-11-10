@@ -110,6 +110,9 @@ jobs:
       - name: Check generated Expo GraphQL operations
         run: vp run --filter t2 generate --check
 
+      - name: Check release package versions
+        run: node scripts/check-release-versions.ts
+
       - name: Check
         run: vp check
 
@@ -376,6 +379,7 @@ jobs:
         env:
           TEST_PACKAGES: ${{ needs.changes.outputs.test_packages }}
         run: |
+          set -o pipefail
           filters=(--filter '!@t2code/cli' --filter '!@t2code/monorepo' --filter '!@t2code/web')
           if [[ -n "$TEST_PACKAGES" ]]; then
             filters=()
@@ -401,6 +405,10 @@ jobs:
     if: ${{ !cancelled() && needs.changes.outputs.test_web != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - name: Checkout
         uses: actions/checkout@v6

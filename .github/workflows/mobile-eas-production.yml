@@ -97,6 +97,7 @@ jobs:
     env:
       APP_VARIANT: production
       NODE_OPTIONS: --max-old-space-size=8192
+      HAS_RELEASE_APP: ${{ secrets.RELEASE_APP_ID != '' && secrets.RELEASE_APP_PRIVATE_KEY != '' }}
     steps:
       - name: Validate TestFlight inputs
         if: github.event_name == 'workflow_dispatch' && inputs.profile == 'testflight'
@@ -118,12 +119,18 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "EXPO_PRODUCTION_TOKEN is not available; skipping EAS production job."
+            echo "::notice::EXPO_PRODUCTION_TOKEN is not available; skipping EAS production job."
           fi
+
+      - name: Require release app for version override
+        if: steps.expo-token.outputs.present == 'true' && env.HAS_RELEASE_APP != 'true' && github.event_name == 'workflow_dispatch' && inputs.mode == 'build' && inputs.version != '' && inputs.profile != 'testflight'
+        run: |
+          echo "::error::A version override needs RELEASE_APP_ID and RELEASE_APP_PRIVATE_KEY to push the bump; refusing to build at the committed version."
+          exit 1
 
       - id: version_app_token
         name: Mint release app token for version override
-        if: steps.expo-token.outputs.present == 'true' && github.event_name == 'workflow_dispatch' && inputs.mode == 'build' && inputs.version != '' && inputs.profile != 'testflight'
+        if: steps.expo-token.outputs.present == 'true' && env.HAS_RELEASE_APP == 'true' && github.event_name == 'workflow_dispatch' && inputs.mode == 'build' && inputs.version != '' && inputs.profile != 'testflight'
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.RELEASE_APP_ID }}

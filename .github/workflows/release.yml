@@ -633,7 +633,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: npm-launcher
-          path: npm-packages/t3.tgz
+          path: npm-packages/@t2code/cli.tgz
           if-no-files-found: error
           retention-days: 30
 
@@ -1101,13 +1101,14 @@ jobs:
           path: npm-packages
           digest-mismatch: error
 
+      # A single-file artifact unpacks flat, so the scoped tarball lands as cli.tgz.
       - name: Check the npm launcher version
         env:
           RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
         run: |
-          built="$(tar -xzOf npm-packages/t3.tgz package/package.json | jq -r .version)"
+          built="$(tar -xzOf npm-packages/cli.tgz package/package.json | jq -r .version)"
           if [[ "$built" != "$RELEASE_VERSION" ]]; then
-            echo "::error::npm-launcher holds t3@$built, expected t3@$RELEASE_VERSION." >&2
+            echo "::error::npm-launcher holds @t2code/cli@$built, expected @t2code/cli@$RELEASE_VERSION." >&2
             exit 1
           fi
 
@@ -1116,7 +1117,7 @@ jobs:
           DIST_TAG: ${{ needs.preflight.outputs.cli_dist_tag }}
         run: |
           # The ./ keeps npm from reading the path as a GitHub owner/repo spec.
-          if ! npm publish --access public --tag "$DIST_TAG" --provenance ./npm-packages/@t2code/cli.tgz; then
+          if ! npm publish --access public --tag "$DIST_TAG" --provenance ./npm-packages/cli.tgz; then
             echo "::error::npm publish failed. Make sure package @t2code/cli has a trusted publisher registered for .github/workflows/release.yml (see docs/operations/release.md)." >&2
             exit 1
           fi
@@ -1434,9 +1435,18 @@ jobs:
     needs: [preflight, release]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      HAS_RELEASE_APP: ${{ secrets.RELEASE_APP_ID != '' && secrets.RELEASE_APP_PRIVATE_KEY != '' }}
     steps:
+      - name: Note release token source
+        if: env.HAS_RELEASE_APP != 'true'
+        run: echo "::notice::RELEASE_APP_ID/RELEASE_APP_PRIVATE_KEY are not set; pushing the version bump with GITHUB_TOKEN."
+
       - id: app_token
         name: Mint release app token
+        if: env.HAS_RELEASE_APP == 'true'
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.RELEASE_APP_ID }}
@@ -1448,7 +1458,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ steps.app_token.outputs.token }}
+          token: ${{ steps.app_token.outputs.token || github.token }}
           persist-credentials: true
           sparse-checkout: |
             /*
@@ -1456,11 +1466,16 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - id: app_bot
-        name: Resolve GitHub App bot identity
+        name: Resolve bot identity
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
           APP_SLUG: ${{ steps.app_token.outputs.app-slug }}
         run: |
+          if [ "$HAS_RELEASE_APP" != 'true' ]; then
+            echo "name=github-actions[bot]" >> "$GITHUB_OUTPUT"
+            echo "email=41898282+github-actions[bot]@users.noreply.github.com" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
           echo "name=${APP_SLUG}[bot]" >> "$GITHUB_OUTPUT"
           echo "email=${user_id}+${APP_SLUG}[bot]@users.noreply.github.com" >> "$GITHUB_OUTPUT"
@@ -1526,6 +1541,8 @@ jobs:
     needs: [preflight, relay_public_config, release, deploy_web, finalize]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -1559,8 +1576,12 @@ jobs:
             : > "$RUNNER_TEMP/discord-release-notes.md"
           fi
 
+      - name: Discord announcements unavailable
+        if: env.DISCORD_WEBHOOK_URL == ''
+        run: echo "::notice::DISCORD_RELEASE_WEBHOOK_URL is not set; skipping Discord announcements."
+
       - name: Announce prerelease on Discord
-        if: needs.preflight.outputs.is_prerelease == 'true'
+        if: needs.preflight.outputs.is_prerelease == 'true' && env.DISCORD_WEBHOOK_URL != ''
         continue-on-error: true
         env:
           DISCORD_MENTION_ROLE_ID: ${{ secrets.DISCORD_RELEASE_NIGHTLY_ROLE_ID }}
@@ -1575,7 +1596,7 @@ jobs:
             --release-notes-file "$RUNNER_TEMP/discord-release-notes.md"
 
       - name: Announce latest release on Discord
-        if: needs.preflight.outputs.make_latest == 'true'
+        if: needs.preflight.outputs.make_latest == 'true' && env.DISCORD_WEBHOOK_URL != ''
         continue-on-error: true
         env:
           DISCORD_MENTION_ROLE_ID: ${{ secrets.DISCORD_RELEASE_LATEST_ROLE_ID }}

@@ -74,19 +74,34 @@ for (const comparisonStatus of ["behind", "diverged"]) {
 }
 
 // `pages` holds the GraphQL release pages; `releases` is shorthand for one page.
-function fixture({ releases = [nightly(7)], pages = [releases], comparisonStatus = "ahead" } = {}) {
+function fixture({
+  releases = [nightly(7)],
+  pages = [releases],
+  comparisonStatus = "ahead",
+  trees = {},
+} = {}) {
   const calls = [];
   const cursors = [];
+  const warnings = [];
   return {
     calls,
     cursors,
+    warnings,
     options: {
       now,
       context: { repo: { owner: "example", repo: "app" }, sha: "new" },
-      core: { info() {} },
+      core: {
+        info() {},
+        warning(message) {
+          warnings.push(message);
+        },
+      },
       github: {
         rest: {
           repos: {
+            async getCommit({ ref }) {
+              return { data: { sha: ref, commit: { tree: { sha: trees[ref] ?? ref } } } };
+            },
             async compareCommitsWithBasehead(params) {
               calls.push(params);
               return { data: { status: comparisonStatus } };
@@ -178,23 +193,43 @@ test("fails instead of releasing when GitHub cannot supply release state", async
   await assert.rejects(shouldReleaseNightly(options), /GitHub unavailable/);
 });
 
-for (const status of ["behind", "diverged"]) {
-  test(`skips a candidate commit that is ${status} relative to the last nightly`, async () => {
-    const { options } = fixture({ comparisonStatus: status });
-    assert.equal(await shouldReleaseNightly(options), false);
+test("skips a candidate commit that is behind the last nightly, with a warning", async () => {
+  const { options, warnings } = fixture({ comparisonStatus: "behind" });
+  assert.equal(await shouldReleaseNightly(options), false);
+  assert.equal(warnings.length, 1);
+});
+
+test("releases a diverged candidate whose tree differs from the last nightly", async () => {
+  const { options, warnings } = fixture({
+    comparisonStatus: "diverged",
+    trees: { "v1.0.1-nightly.20260905.123": "old-tree", new: "new-tree" },
   });
-}
+  assert.equal(await shouldReleaseNightly(options), true);
+  assert.equal(warnings.length, 1);
+});
+
+test("skips a diverged candidate whose tree matches the last nightly", async () => {
+  const { options } = fixture({
+    comparisonStatus: "diverged",
+    trees: { "v1.0.1-nightly.20260905.123": "same", new: "same" },
+  });
+  assert.equal(await shouldReleaseNightly(options), false);
+});
 
 const { resolveLatestNightlyCommit } = require("./check-nightly-release.cjs");
 
-function nightlyCommitFixture({ releases, pages, commitSha = "abc123" }) {
+function nightlyCommitFixture({ releases, pages, commitSha = "abc123", offMain = [] }) {
   const refs = [];
-  const { options } = fixture({ releases, pages });
+  const { options, warnings } = fixture({ releases, pages });
+  options.context.payload = { repository: { default_branch: "main" } };
   options.github.rest.repos.getCommit = async ({ ref }) => {
     refs.push(ref);
-    return { data: { sha: commitSha } };
+    return { data: { sha: offMain.includes(ref) ? `off-${ref}` : commitSha } };
   };
-  return { options, refs };
+  options.github.rest.repos.compareCommitsWithBasehead = async ({ basehead }) => ({
+    data: { status: basehead.startsWith("off-") ? "diverged" : "ahead" },
+  });
+  return { options, refs, warnings };
 }
 
 test("stable releases resolve the commit of the newest published nightly", async () => {
@@ -236,4 +271,29 @@ test("stable releases read every page, even after a recent nightly", async () =>
 test("stable releases fail when no nightly is published", async () => {
   const { options } = nightlyCommitFixture({ releases: [nightly(1, { tagName: "v1.0.0" })] });
   await assert.rejects(resolveLatestNightlyCommit(options), /No published nightly found/);
+});
+
+test("stable releases fall back to the newest nightly that is on the default branch", async () => {
+  const newest = "v1.0.1-nightly.20260905.123";
+  const { options, warnings } = nightlyCommitFixture({
+    releases: [
+      nightly(1, { tagName: newest }),
+      nightly(10, { tagName: "v1.0.1-nightly.20260905.100" }),
+    ],
+    offMain: [newest],
+  });
+  assert.equal((await resolveLatestNightlyCommit(options)).tag, "v1.0.1-nightly.20260905.100");
+  assert.equal(warnings.length, 1);
+});
+
+test("stable releases fail loudly when no nightly is on the default branch", async () => {
+  const tag = "v1.0.1-nightly.20260905.123";
+  const { options } = nightlyCommitFixture({
+    releases: [nightly(1, { tagName: tag })],
+    offMain: [tag],
+  });
+  await assert.rejects(
+    resolveLatestNightlyCommit(options),
+    /No published nightly is contained in main/,
+  );
 });
