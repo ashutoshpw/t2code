@@ -209,7 +209,14 @@ export function SpacesOverview({
               </Button>
             ) : null}
             {query.data?.nextCursor ? (
-              <Button variant="ghost" size="sm" onClick={() => setCursor(query.data!.nextCursor!)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const next = query.data?.nextCursor;
+                  if (next) setCursor(next);
+                }}
+              >
                 Next
               </Button>
             ) : null}

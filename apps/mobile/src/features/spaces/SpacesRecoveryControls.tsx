@@ -43,6 +43,7 @@ export function SpacesRecoveryControls({
   const writable = readable && access.availability === "writable";
   const unavailable = !snapshot.hydrated || snapshot.busy || !!snapshot.journal.pending;
   const preview = selected === snapshot.recoveryPreview ? selected : null;
+  const recoveryIds = preview?.inspection.recovery?.pageIds ?? null;
   const history = snapshot.journal.history;
   const visibility = history && !("destination" in history) ? history : null;
   const pageCurrent = () => !current || current();
@@ -68,6 +69,7 @@ export function SpacesRecoveryControls({
   function confirm() {
     if (
       !preview ||
+      !recoveryIds ||
       unavailable ||
       !writable ||
       (preview.operation === "trash"
@@ -87,7 +89,7 @@ export function SpacesRecoveryControls({
         : intent.operation === "trash"
           ? "Move these pages to Trash?"
           : "Restore these pages?",
-      message: `${intent.pageId}: ${intent.inspection.recovery!.pageIds.length} selected page(s). ${intent.placement}${permanent ? " This cannot be undone." : " Independently trashed batches stay separate."}`,
+      message: `${intent.pageId}: ${recoveryIds.length} selected page(s). ${intent.placement}${permanent ? " This cannot be undone." : " Independently trashed batches stay separate."}`,
       confirmText: permanent
         ? "Permanently delete"
         : intent.operation === "trash"
@@ -217,12 +219,12 @@ export function SpacesRecoveryControls({
                 )}
               />
             ) : null}
-            {preview ? (
+            {preview && recoveryIds ? (
               <View className="gap-2">
                 <Text className="text-foreground">{preview.placement}</Text>
                 <FlatList
                   renderScrollComponent={NativeScrollView}
-                  data={preview.inspection.recovery!.pageIds}
+                  data={recoveryIds}
                   keyExtractor={(id) => id}
                   style={{ maxHeight: 120 }}
                   renderItem={({ item: id }) => (
@@ -246,9 +248,8 @@ export function SpacesRecoveryControls({
                 {preview.operation === "permanentlyDelete" ? (
                   <>
                     <Text className="text-destructive">
-                      Permanently delete these {preview.inspection.recovery!.pageIds.length}{" "}
-                      inspected pages, including independent batches in the current subtree. No
-                      Undo. Type DELETE to continue.
+                      Permanently delete these {recoveryIds.length} inspected pages, including
+                      independent batches in the current subtree. No Undo. Type DELETE to continue.
                     </Text>
                     <TextInput
                       accessibilityLabel="Type DELETE to confirm permanent deletion"

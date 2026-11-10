@@ -1,12 +1,5 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import {
-  useContext,
-  useEffect,
-  useImperativeHandle,
-  useState,
-  useSyncExternalStore,
-  type Ref,
-} from "react";
+import { useContext, useImperativeHandle, useState, useSyncExternalStore, type Ref } from "react";
 import { useRouter } from "@tanstack/react-router";
 import type { SpaceId, SpacePageId, SpaceTrashEntry } from "@t2code/contracts/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
@@ -93,10 +86,6 @@ function Recovery({
   const restorePermission = useAtomValue(
     spacesEnvironment.restorePage.permissionAtom(environmentId),
   );
-  // oxlint-disable-next-line t2code/react-effect-budget -- Recover the shared durable journal even when trashed page metadata cannot load.
-  useEffect(() => {
-    run(owner.hydrate());
-  }, [owner]);
   const { busy, hydrated, journal, trash } = snapshot;
   const pending = journal.pending;
   const blocked = !hydrated || busy || !!pending;
