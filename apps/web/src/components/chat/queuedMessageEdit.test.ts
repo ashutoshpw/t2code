@@ -1,7 +1,7 @@
-import { EnvironmentId, ThreadId } from "@t2code/contracts";
+import { EnvironmentId, MessageId, RunId, ThreadId } from "@t2code/contracts";
 import { scopeThreadRef } from "@t2code/client-runtime/environment";
 import { threadContextRecord } from "@t2code/shared/composerContextReferences";
-import { beforeEach, describe, expect, it } from "vite-plus/test";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import {
   DraftId,
   useComposerDraftStore,
@@ -9,6 +9,9 @@ import {
   type ComposerImageAttachment,
 } from "../../composerDraftStore";
 import { prepareQueuedEditAttachments, recoverQueuedMessageEdit } from "./queuedMessageEdit";
+
+const reserveComposerSendRecovery = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("../../lib/composerSendRecovery", () => ({ reserveComposerSendRecovery }));
 
 const environmentId = EnvironmentId.make("remote-environment");
 const threadTarget = scopeThreadRef(environmentId, ThreadId.make("thread:edit"));
@@ -40,6 +43,7 @@ const uploadedFile = {
 
 describe("queued message file edits", () => {
   beforeEach(() => {
+    reserveComposerSendRecovery.mockClear();
     useComposerDraftStore.setState({ draftsByThreadKey: {}, draftThreadsByThreadKey: {} });
   });
 
@@ -75,63 +79,35 @@ describe("queued message file edits", () => {
     ).rejects.toThrow("Retry or remove");
   });
 
-  it("keeps file-only edits when another client starts the queued run", () => {
-    const store = useComposerDraftStore.getState();
-    store.setPrompt(editTarget, "Original message");
-    store.addFiles(editTarget, [file]);
-    expect(
-      recoverQueuedMessageEdit({ editTarget, threadTarget, originalText: "Original message" }),
-    ).toBe("kept");
-    expect(store.getComposerDraft(threadTarget)?.prompt).toBe("Original message");
-    expect(store.getComposerDraft(threadTarget)?.files).toEqual([file]);
-    expect(store.getComposerDraft(editTarget)).toBeNull();
-  });
-
-  it("removes a kept edit draft that held a thread mention", () => {
+  it("removes a kept edit draft that held a thread mention", async () => {
     const store = useComposerDraftStore.getState();
     store.setPrompt(editTarget, "Edited message");
-    store.setThreadContexts(editTarget, [
-      threadContextRecord(scopeThreadRef(environmentId, ThreadId.make("thread:other")), "Other"),
-    ]);
-    expect(
-      recoverQueuedMessageEdit({ editTarget, threadTarget, originalText: "Original message" }),
-    ).toBe("kept");
-    expect(store.getComposerDraft(editTarget)).toBeNull();
-  });
-
-  it("reports a removed queued attachment as an edit when the run leaves", () => {
-    const store = useComposerDraftStore.getState();
-    store.setPrompt(editTarget, "Original message");
-    expect(
-      recoverQueuedMessageEdit({
-        editTarget,
-        threadTarget,
-        originalText: "Original message",
-        removedExistingAttachment: true,
-      }),
-    ).toBe("kept");
-    expect(store.getComposerDraft(threadTarget)?.prompt).toBe("Original message");
-    store.clearComposerContent(threadTarget);
-    // An attachment-only message leaves nothing to put back in the composer.
-    expect(
-      recoverQueuedMessageEdit({
-        editTarget,
-        threadTarget,
-        originalText: "",
-        removedExistingAttachment: true,
-      }),
-    ).toBe("discarded");
-    expect(store.getComposerDraft(threadTarget)).toBeNull();
-  });
-
-  it("does not overwrite a separate draft when the queued run leaves", () => {
-    const store = useComposerDraftStore.getState();
-    store.setPrompt(threadTarget, "Separate draft");
-    store.addFiles(editTarget, [file]);
-    expect(recoverQueuedMessageEdit({ editTarget, threadTarget, originalText: "" })).toBe(
-      "discarded",
+    const mention = threadContextRecord(
+      scopeThreadRef(environmentId, ThreadId.make("thread:other")),
+      "Other",
     );
-    expect(store.getComposerDraft(threadTarget)?.prompt).toBe("Separate draft");
+    store.setThreadContexts(editTarget, [mention]);
+    const recovery = await recoverQueuedMessageEdit({
+      editTarget,
+      threadTarget,
+      environmentId,
+      threadId: ThreadId.make("thread:edit"),
+      runId: RunId.make("run:edit"),
+      messageId: MessageId.make("message:edit"),
+      originalText: "Original message",
+      originalAttachments: [],
+      existingAttachments: [],
+      saveOutcome: "not-sent",
+      isCurrent: () => true,
+    });
+    expect(recovery).not.toBeNull();
+    expect(reserveComposerSendRecovery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contents: expect.objectContaining({ threadContexts: [mention] }),
+      }),
+    );
+    // The caller clears the edit once the recovery copy is saved.
+    store.clearComposerContent(editTarget);
     expect(store.getComposerDraft(editTarget)).toBeNull();
   });
 });

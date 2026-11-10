@@ -431,7 +431,6 @@ export function AppSidebarLayout({
   showSidebar?: boolean;
 }) {
   const spacesPage = useLocation({ select: (location) => isSpacesPage(location.pathname) });
-  const legacySidebarEnabled = useLegacySidebarEnabled();
   const sidebarArea = workspaceAreaProps("sidebar", 0, "Threads");
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
@@ -520,18 +519,11 @@ export function AppSidebarLayout({
               }}
               style={windowControlsInsetStyle}
             >
-              {spacesPage ? (
-                <SpacesSidebar />
-              ) : legacySidebarEnabled ? (
-                <LegacyThreadSidebar routeReveal={sidebarRouteReveal} />
-              ) : (
-                <ThreadSidebar routeReveal={sidebarRouteReveal} />
-              )}
+              {spacesPage ? <SpacesSidebar /> : <ThreadSidebar routeReveal={sidebarRouteReveal} />}
               <SidebarRail onDoubleClick={resetSidebarWidth} />
             </Sidebar>
           </>
-        ) : null}
-        {children}
+        ) : null}        {children}
         <BackgroundThreadAnnouncer />
         <SidebarControl showSidebar={showSidebar} />
         {isElectron ? <HistorySwipeNavigation /> : null}

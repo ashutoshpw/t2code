@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { EnvironmentId, MessageId, ThreadId } from "@t2code/contracts";
 import {
   collectAssistantCitations,
@@ -273,4 +273,88 @@ describe("prompt stash context records", () => {
     const taken = usePromptStashStore.getState().takeEntry("entry-records");
     expect(taken.entry?.records).toEqual(records);
   });
+});
+
+it("refuses automatic recovery in memory-only storage without adding an entry", () => {
+  expect(
+    usePromptStashStore.getState().reserveSendRecovery({
+      ...makeEntry({ id: "automatic" }),
+      recovery: {
+        environmentId: EnvironmentId.make("env"),
+        threadId: ThreadId.make("thread"),
+        targetKey: "target",
+        context: {},
+      },
+    }),
+  ).toEqual({ written: false, durable: false });
+  expect(usePromptStashStore.getState().entries).toEqual([]);
+});
+
+it("rehydrates exact recovery context and never evicts it or removes a different reservation", async () => {
+  const values = new Map<string, string>();
+  let rejectWrites = false;
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      if (rejectWrites) throw new Error("Storage quota exceeded");
+      values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
+    },
+  };
+  vi.stubGlobal("localStorage", storage);
+  vi.resetModules();
+  try {
+    const first = await import("./promptStashStore");
+    const entry = {
+      ...makeEntry({ id: "recovery", prompt: "  Exact prompt  " }),
+      recovery: {
+        environmentId: EnvironmentId.make("env"),
+        threadId: ThreadId.make("thread"),
+        targetKey: "target",
+        context: {},
+      },
+    };
+    expect(first.usePromptStashStore.getState().reserveSendRecovery(entry)).toEqual({
+      written: true,
+      durable: true,
+    });
+    const other = { ...entry, id: "another-recovery", prompt: "A separate failed send" };
+    expect(first.usePromptStashStore.getState().reserveSendRecovery(other).durable).toBe(true);
+    first.usePromptStashStore.getState().settleSendRecovery(other.id, false);
+    expect(
+      first.usePromptStashStore
+        .getState()
+        .reserveSendRecovery({ ...entry, prompt: "Duplicate identity" }).written,
+    ).toBe(false);
+    for (let index = 0; index < 18; index += 1) {
+      first.usePromptStashStore.getState().stashEntry(makeEntry({ id: `manual-${index}` }));
+    }
+    expect(
+      first.usePromptStashStore.getState().reserveSendRecovery({ ...entry, id: "full" }),
+    ).toEqual({ written: false, durable: false });
+    // Manual stashing must not evict an in-flight or failed recovery.
+    first.usePromptStashStore.getState().stashEntry(makeEntry({ id: "manual-overflow" }));
+    expect(first.usePromptStashStore.getState().entries).toContainEqual(entry);
+    expect(first.usePromptStashStore.getState().takeEntry(entry.id).entry).toBeNull();
+    first.usePromptStashStore.getState().settleSendRecovery("missing-id", true);
+    expect(first.usePromptStashStore.getState().entries).toContainEqual(entry);
+    vi.resetModules();
+    const reloaded = await import("./promptStashStore");
+    expect(reloaded.usePromptStashStore.getState().entries).toContainEqual(entry);
+    rejectWrites = true;
+    expect(reloaded.usePromptStashStore.getState().settleSendRecovery(entry.id, true).durable).toBe(
+      false,
+    );
+    expect(reloaded.usePromptStashStore.getState().entries).toContainEqual(entry);
+    rejectWrites = false;
+    reloaded.usePromptStashStore.getState().settleSendRecovery(entry.id, true);
+    expect(reloaded.usePromptStashStore.getState().entries).toHaveLength(19);
+    expect(reloaded.usePromptStashStore.getState().entries).toContainEqual(other);
+    expect(JSON.parse(storage.getItem(PROMPT_STASH_STORAGE_KEY)!).state.entries).toHaveLength(19);
+  } finally {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  }
 });

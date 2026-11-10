@@ -361,6 +361,10 @@ export function formatReviewCommentContext(target: ReviewCommentTarget, comment:
   ].join("\n");
 }
 
+export function countReviewCommentContexts(value: string): number {
+  return Array.from(value.matchAll(/<review_comment\b/g)).length;
+}
+
 export function parseReviewInlineComments(
   value: string,
   context?: OrchestrationMessageContext,

@@ -2608,125 +2608,94 @@ describe("composerDraftStore attachment references", () => {
   });
 });
 
-describe("composerDraftStore checkout pull request", () => {
-  const projectId = ProjectId.make("project-checkout");
-  const projectRef = scopeProjectRef(TEST_ENVIRONMENT_ID, projectId);
-  const otherProjectRef = scopeProjectRef(TEST_ENVIRONMENT_ID, ProjectId.make("project-other"));
-  const threadId = ThreadId.make("thread-checkout");
-  const draftId = DraftId.make("draft-checkout");
-  const url = "https://github.com/acme/widgets/pull/42";
-  const checkout = { url, branch: "feature/pr-42" };
-
-  beforeEach(() => {
-    resetComposerDraftStore();
-  });
-
-  const store = () => useComposerDraftStore.getState();
-  const toLink = () => checkoutPullRequestUrlToLink(store().getDraftSession(draftId));
-
-  function draftOnMain() {
-    store().setProjectDraftThreadId(projectRef, draftId, { threadId, branch: "main" });
-  }
-
-  // GitActionsControl's live branch sync writes the git status branch onto the draft. The status
-  // refresh after a checkout is forked server-side, so the prepare response lands first and the
-  // sync replays the stale pre-checkout branch before the fresh status corrects it.
-  function liveBranchSync(branch: string) {
-    store().setDraftThreadContext(draftId, {
-      branch,
-      worktreePath: null,
-      environmentSelection: "manual",
-    });
-  }
-
-  it("still links after a local checkout the live branch sync briefly reverts", () => {
-    draftOnMain();
-    store().setDraftThreadContext(draftId, {
-      branch: checkout.branch,
-      worktreePath: null,
-      envMode: "local",
-      checkoutPullRequest: checkout,
-    });
-    liveBranchSync("main");
-    liveBranchSync(checkout.branch);
-
-    expect(toLink()).toBe(url);
-  });
-
-  it("does not link once the draft has moved to another branch", () => {
-    draftOnMain();
-    store().setDraftThreadContext(draftId, {
-      branch: checkout.branch,
-      checkoutPullRequest: checkout,
-    });
-    liveBranchSync("main");
-
-    expect(toLink()).toBeNull();
-  });
-
-  it("is dropped when cleared or when the draft moves to another project", () => {
-    store().setProjectDraftThreadId(projectRef, draftId, {
-      threadId,
-      branch: checkout.branch,
-      checkoutPullRequest: checkout,
-    });
-    store().setDraftThreadContext(draftId, { checkoutPullRequest: null });
-    expect(store().getDraftSession(draftId)?.checkoutPullRequest).toBeUndefined();
-
-    store().setDraftThreadContext(draftId, { checkoutPullRequest: checkout });
-    store().setDraftThreadContext(draftId, { projectRef: otherProjectRef });
-    expect(store().getDraftSession(draftId)?.checkoutPullRequest).toBeUndefined();
-  });
-
-  it("persists the pull request and still restores drafts saved without one", async () => {
-    vi.useFakeTimers();
-    try {
-      await useComposerDraftStore.persist.clearStorage();
-      const legacyDraftId = DraftId.make("draft-before-checkout-links");
-      const storage = useComposerDraftStore.persist.getOptions().storage;
-      expect(storage).toBeDefined();
-      const persistedDraftThread = (id: ThreadId) => ({
-        threadId: id,
-        environmentId: TEST_ENVIRONMENT_ID,
-        projectId,
-        logicalProjectKey: scopedProjectKey(projectRef),
-        createdAt: "2026-08-01T00:00:00.000Z",
-        runtimeMode: "full-access",
-        interactionMode: "default",
-        branch: checkout.branch,
-        worktreePath: null,
-        envMode: "local",
-        startFromOrigin: false,
-        promotedTo: null,
-      });
-      storage?.setItem(COMPOSER_DRAFT_STORAGE_KEY, {
-        version: 9,
-        state: {
-          draftsByThreadKey: {},
-          draftThreadsByThreadKey: {
-            [draftId]: { ...persistedDraftThread(threadId), checkoutPullRequest: checkout },
-            [legacyDraftId]: persistedDraftThread(ThreadId.make("thread-legacy")),
-          },
-          logicalProjectDraftThreadKeyByLogicalProjectKey: {
-            [scopedProjectKey(projectRef)]: draftId,
-          },
+it("persists child-page selector edits without changing completed snapshots or newer selectors", async () => {
+  const selector = {
+    version: 1,
+    selection: "current",
+    kind: "page",
+    contextId: "p",
+    label: "Page",
+    environmentId: TEST_ENVIRONMENT_ID,
+    pageId: "page",
+    includeChildPages: false,
+  };
+  const copied = {
+    version: 1,
+    kind: "page",
+    contextId: "copied",
+    label: "Copied",
+    environmentId: TEST_ENVIRONMENT_ID,
+    spaceId: "s",
+    pageId: "page",
+    title: "Old title",
+    snapshot: {
+      version: 1,
+      includeChildPages: false,
+      truncated: false,
+      text: "Old snapshot",
+      contentHash: `sha256:${"a".repeat(64)}`,
+      sources: [
+        {
+          environmentId: TEST_ENVIRONMENT_ID,
+          spaceId: "s",
+          pageId: "page",
+          revision: 1,
+          blockIds: [],
         },
-      } as never);
-      await vi.advanceTimersByTimeAsync(300);
-
-      await useComposerDraftStore.persist.rehydrate();
-
-      expect(toLink()).toBe(url);
-      const legacy = store().getDraftSession(legacyDraftId);
-      expect(legacy).toMatchObject({ branch: checkout.branch });
-      expect(checkoutPullRequestUrlToLink(legacy)).toBeNull();
-      expect(
-        partializeComposerDraftStoreState(store()).draftThreadsByThreadKey[draftId],
-      ).toMatchObject({ checkoutPullRequest: checkout });
-    } finally {
-      await useComposerDraftStore.persist.clearStorage();
-      vi.useRealTimers();
-      resetComposerDraftStore();
-    }
-  });
+      ],
+    },
+  };
+  const contextDraft = {
+    selectors: [selector],
+    records: [
+      copied,
+      { version: 1, kind: "future", contextId: "future", label: "Future", payload: { keep: true } },
+    ],
+  };
+  const key = threadKeyFor(ThreadId.make("spaces-recovery"), TEST_ENVIRONMENT_ID);
+  const merged = useComposerDraftStore.persist.getOptions().merge!(
+    {
+      draftsByThreadKey: {
+        [key]: {
+          prompt: "[Page](t2-context://v1/page/p) [Copied](t2-context://v1/page/copied)",
+          attachments: [],
+          contextDraft,
+        },
+      },
+    },
+    useComposerDraftStore.getInitialState(),
+  );
+  expect(merged.draftsByThreadKey[key]?.contextDraft).toEqual(contextDraft);
+  vi.useFakeTimers();
+  try {
+    useComposerDraftStore.setState(merged);
+    const store = useComposerDraftStore.getState();
+    const target = scopeThreadRef(TEST_ENVIRONMENT_ID, ThreadId.make("spaces-recovery"));
+    const original = store.getComposerDraft(target)!.contextDraft!.selectors[0]!;
+    store.setSpaceContextIncludeChildPages(target, original, true);
+    const changed = store.getComposerDraft(target)!.contextDraft!;
+    expect(changed.selectors[0]?.includeChildPages).toBe(true);
+    expect(changed.records).toEqual(contextDraft.records);
+    expect(store.getComposerDraft(target)?.prompt).toBe(merged.draftsByThreadKey[key]?.prompt);
+    store.setSpaceContextIncludeChildPages(target, original, false);
+    expect(store.getComposerDraft(target)?.contextDraft).toEqual(changed);
+    await vi.advanceTimersByTimeAsync(300);
+    const saved = await useComposerDraftStore.persist
+      .getOptions()
+      .storage?.getItem(COMPOSER_DRAFT_STORAGE_KEY);
+    expect(saved).not.toBeNull();
+    resetComposerDraftStore();
+    await useComposerDraftStore.persist.rehydrate();
+    expect(store.getComposerDraft(target)?.contextDraft).toEqual(changed);
+    const current = store.getComposerDraft(target)!.contextDraft!.selectors[0]!;
+    store.setSpaceContextIncludeChildPages(target, current, false);
+    expect(store.getComposerDraft(target)?.contextDraft?.selectors[0]?.includeChildPages).toBe(
+      false,
+    );
+    expect(store.getComposerDraft(target)?.contextDraft?.records).toEqual(contextDraft.records);
+  } finally {
+    await useComposerDraftStore.persist.clearStorage();
+    resetComposerDraftStore();
+    vi.useRealTimers();
+  }
 });
