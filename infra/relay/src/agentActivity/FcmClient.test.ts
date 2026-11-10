@@ -48,7 +48,7 @@ const config = {
 } satisfies RelayConfiguration.RelayConfiguration["Service"];
 const input = {
   token: "device-token",
-  packageName: "com.t2tools.t2code.dev",
+  packageName: "codes.t2.mobile.dev",
   data: { t2_kind: "agent_activity", active: "true" },
   alert: false,
 };

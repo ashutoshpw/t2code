@@ -1,15 +1,18 @@
 [
   {
-    "file": "apps/desktop/src/app/DesktopLegacyLocalStorage.ts",
-    "line": "const V1_PROFILE_NAMES = [\"T3 Code (Alpha)\", \"t3code\"];"
+    "file": ".task-cache.json",
+    "line": "\"endpoint\": \"https://t3-task-cache.pinglabs.workers.dev/projects/t3code\"",
+    "reason": "Shared task cache endpoint is upstream's; setup-ci-deps leaves the cache off unless T2_TASK_CACHE_REPOSITORY is set. Replace once the fork has its own cache worker."
   },
   {
     "file": "apps/mobile/deps/react-native-enriched-markdown-1.2.0-t3.18-497fbe63.tgz",
-    "line": ""
+    "line": "",
+    "reason": "Third-party patched dependency tarball whose upstream-assigned filename carries a -t3 version suffix; renaming needs a rebuild and republish."
   },
   {
     "file": "apps/mobile/deps/react-native-screens-5.0.0-t3.48.tgz",
-    "line": ""
+    "line": "",
+    "reason": "Third-party patched dependency tarball whose upstream-assigned filename carries a -t3 version suffix; renaming needs a rebuild and republish."
   },
   {
     "file": "apps/mobile/modules/t3-web-socket/expo-module.config.json",
@@ -28,11 +31,8 @@
   },
   {
     "file": "apps/server/src/orchestration-v2/testkit/fixtures/claude_background_task_wake/claude_transcript.ndjson",
-    "line": "{\"type\":\"emit_inbound\",\"label\":\"system\",\"frame\":{\"type\":\"system\",\"subtype\":\"thinking_tokens\",\"estimated_tokens\":40,\"estimated_tokens_delta\":3,\"session_id\":\"7901ee61-9647-498d-b68d-ecdcb93bae84\",\"uuid\":\"8f0b7d72-3773-4e17-b5ee-4112412f570e\"}}"
-  },
-  {
-    "file": "apps/server/src/telemetry/AnalyticsService.ts",
-    "line": "Config.withDefault(\"https://ingest.t3.codes\"),"
+    "line": "{\"type\":\"emit_inbound\",\"label\":\"system\",\"frame\":{\"type\":\"system\",\"subtype\":\"thinking_tokens\",\"estimated_tokens\":40,\"estimated_tokens_delta\":3,\"session_id\":\"7901ee61-9647-498d-b68d-ecdcb93bae84\",\"uuid\":\"8f0b7d72-3773-4e17-b5ee-4112412f570e\"}}",
+    "reason": "Recorded provider transcript; 3773 is part of a UUID, not the upstream port."
   },
   {
     "file": "apps/web/src/cloud/t3ConnectState.ts",
@@ -48,17 +48,5 @@
     "file": "apps/web/src/components/InstallT3Commands.tsx",
     "line": "",
     "reason": "Upstream component imported by HostedEmptyState.tsx; renaming would conflict with upstream churn at every rebase for no user-visible gain."
-  },
-  {
-    "file": "docs/internals/product-analytics.md",
-    "line": "The server sends batches to the ingest endpoint at `ingest.t3.codes`, which archives"
-  },
-  {
-    "file": "docs/user/faq.md",
-    "line": "Get the [iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code) app, then connect it to your computer with T2 Connect or a pairing link. The phone is a remote. Your computer does the work and needs to stay on. [Mobile setup](./install.md#mobile-app) · [Remote access](./remote-access.md)"
-  },
-  {
-    "file": "docs/user/telemetry.md",
-    "line": "The T2 Code server sends product usage events to the shared ingest endpoint at `ingest.t3.codes`,"
   }
 ]
