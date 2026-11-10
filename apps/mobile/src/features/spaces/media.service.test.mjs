@@ -8,19 +8,17 @@ import * as Stream from "effect/Stream";
 import * as Clock from "effect/Clock";
 import * as TestClock from "effect/testing/TestClock";
 import * as FileSystem from "effect/FileSystem";
-import { EnvironmentId } from "../packages/contracts/src/index.ts";
-import * as Config from "../apps/server/src/config.ts";
-import * as Secrets from "../apps/server/src/auth/ServerSecretStore.ts";
-import * as Identity from "../apps/server/src/environment/ServerEnvironment.ts";
-import * as Settings from "../apps/server/src/serverSettings.ts";
-import * as Service from "../apps/server/src/spaces/SpacesService.ts";
-import * as WorkspacePaths from "../apps/server/src/workspace/WorkspacePaths.ts";
-import { issueAssetUrl, resolveAsset } from "../apps/server/src/assets/AssetAccess.ts";
-import { promiseRunner } from "./spaces-mobile.test-support.mjs";
-import {
-  MobileSpaceImageBudget,
-  MobileSpaceImageViewer,
-} from "../apps/mobile/src/features/spaces/media.ts";
+import { EnvironmentId } from "../../../../../packages/contracts/src/index.ts";
+import * as Config from "../../../../server/src/config.ts";
+import * as Secrets from "../../../../server/src/auth/ServerSecretStore.ts";
+import * as Identity from "../../../../server/src/environment/ServerEnvironment.ts";
+import * as Settings from "../../../../server/src/serverSettings.ts";
+import * as Service from "../../../../server/src/spaces/SpacesService.ts";
+import * as WorkspacePaths from "../../../../server/src/workspace/WorkspacePaths.ts";
+import * as AssetSigner from "../../../../server/src/assets/AssetSigner.ts";
+import { issueAssetUrl, resolveAsset } from "../../../../server/src/assets/AssetAccess.ts";
+import { promiseRunner } from "./spacesMobile.test-support.mjs";
+import { MobileSpaceImageBudget, MobileSpaceImageViewer } from "../../features/spaces/media.ts";
 
 it.effect.each(["image", "pdf", "video"])(
   "opens real streamed/finalized %s using actual metadata and signed reads, expires then remints, and reauthorizes original download intent",
@@ -167,6 +165,7 @@ it.effect.each(["image", "pdf", "video"])(
           Layer.mergeAll(
             spaces,
             Secrets.layer.pipe(Layer.provide(configLayer)),
+            AssetSigner.layer.pipe(Layer.provide(Secrets.layer.pipe(Layer.provide(configLayer)))),
             WorkspacePaths.layer,
             configLayer,
           ),

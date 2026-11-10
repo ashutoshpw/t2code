@@ -12,6 +12,8 @@ export interface PageRow {
   readonly title: string;
   readonly icon?: string | null;
   readonly revision: number;
+  /** The revision of the last change to blocks or location; title and icon changes leave it behind. */
+  readonly body_revision: number;
   readonly root_order: string | null;
   readonly block_count: number;
   readonly block_bytes: number;
@@ -102,9 +104,10 @@ export const read = Effect.fn("SpacesService.page")(function* (id: C.SpacePageId
   return row;
 });
 
-export function assertActive(row: PageRow) {
-  if (row.trash_batch_id !== null) throw new C.SpaceValidationError({ reason: "trashed" });
-}
+export const assertActive = (row: PageRow) =>
+  row.trash_batch_id !== null
+    ? Effect.fail(new C.SpaceValidationError({ reason: "trashed" }))
+    : Effect.void;
 export const trashStatus = (
   row: Pick<PageRow, "trash_batch_id" | "trash_root_id" | "trashed_at_ms">,
 ): C.SpacePageTrashStatus => ({

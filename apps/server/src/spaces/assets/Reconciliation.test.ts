@@ -1163,14 +1163,14 @@ it.effect(
           gcEnabled: false,
         });
         yield* TestClock.adjust("8 days");
-        yield* service.getPage({ ...env, pageId });
+        yield* service.getCapability(environmentId);
         expect((yield* inspect(config)).revisions.map((row) => row.to_revision)).toEqual([2, 3]);
-        yield* service.getPage({ ...env, pageId });
+        yield* service.getCapability(environmentId);
         const afterBoundary = yield* inspect(config);
         expect(afterBoundary.revisions.map((row) => row.to_revision)).toEqual([3]);
         expect(afterBoundary.history).toEqual([]);
         expect((yield* progress(config)).issues).toEqual([]);
-        yield* service.getPage({ ...env, pageId });
+        yield* service.getCapability(environmentId);
         const pruned = yield* inspect(config);
         expect(pruned.revisions).toEqual([]);
         expect(pruned.core[0]?.revision_bytes).toBe(0);

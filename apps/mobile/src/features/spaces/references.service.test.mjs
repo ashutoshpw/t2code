@@ -11,32 +11,32 @@ import {
   ComposerContextId,
   AuthOrchestrationReadScope,
   WS_METHODS,
-} from "../packages/contracts/src/index.ts";
-import { createSpacesEnvironmentAtoms } from "../packages/client-runtime/src/state/spaces.ts";
-import { runAtomCommand } from "../packages/client-runtime/src/state/runtime.ts";
-import { createEnvironmentSessionAtoms } from "../packages/client-runtime/src/state/session.ts";
-import { EnvironmentRegistry } from "../packages/client-runtime/src/connection/registry.ts";
-import { EnvironmentSupervisor } from "../packages/client-runtime/src/connection/supervisor.ts";
+} from "../../../../../packages/contracts/src/index.ts";
+import { createSpacesEnvironmentAtoms } from "../../../../../packages/client-runtime/src/state/spaces.ts";
+import { runAtomCommand } from "../../../../../packages/client-runtime/src/state/runtime.ts";
+import { createEnvironmentSessionAtoms } from "../../../../../packages/client-runtime/src/state/session.ts";
+import { EnvironmentRegistry } from "../../../../../packages/client-runtime/src/connection/registry.ts";
+import { EnvironmentSupervisor } from "../../../../../packages/client-runtime/src/connection/supervisor.ts";
 import {
   AVAILABLE_CONNECTION_STATE,
   PrimaryConnectionTarget,
-} from "../packages/client-runtime/src/connection/model.ts";
-import { SpaceBlockId } from "../packages/contracts/src/spaces.ts";
+} from "../../../../../packages/client-runtime/src/connection/model.ts";
+import { SpaceBlockId } from "../../../../../packages/contracts/src/spaces.ts";
 import {
   SpaceDocumentSession,
   createSpaceServiceSessionAdapter,
   prepareSpaceContextSend,
-} from "../packages/client-runtime/src/spaces/index.ts";
-import { formatComposerContextReference } from "../packages/shared/src/composerContextReferences.ts";
-import { MobileSpaceDocuments } from "../apps/mobile/src/features/spaces/documents.ts";
-import { SpacesPageReader } from "../apps/mobile/src/features/spaces/reader.ts";
-import { MobileSpaceReferenceNavigation } from "../apps/mobile/src/features/spaces/references.ts";
-import { createMobileSpaceReferenceController } from "../apps/mobile/src/features/spaces/references.ts";
-import { diskDatabase } from "../apps/mobile/src/persistence/mobile-database.test-support.ts";
-import { mobileSpacesServiceLayer, promiseRunner } from "./spaces-mobile.test-support.mjs";
-import * as SpacesService from "../apps/server/src/spaces/SpacesService.ts";
+} from "../../../../../packages/client-runtime/src/spaces/index.ts";
+import { formatComposerContextReference } from "../../../../../packages/shared/src/composerContextReferences.ts";
+import { MobileSpaceDocuments } from "../../features/spaces/documents.ts";
+import { SpacesPageReader } from "../../features/spaces/reader.ts";
+import { MobileSpaceReferenceNavigation } from "../../features/spaces/references.ts";
+import { createMobileSpaceReferenceController } from "../../features/spaces/references.ts";
+import { diskDatabase } from "../../persistence/mobile-database.test-support.ts";
+import { mobileSpacesServiceLayer, promiseRunner } from "./spacesMobile.test-support.mjs";
+import * as SpacesService from "../../../../server/src/spaces/SpacesService.ts";
 
-vi.mock("../packages/client-runtime/src/state/session.ts", async () => {
+vi.mock("../../../../../packages/client-runtime/src/state/session.ts", async () => {
   const { Atom, AsyncResult } = await import("effect/reactivity");
   const sessions = Atom.family(() => Atom.make(AsyncResult.initial()));
   return { createEnvironmentSessionAtoms: () => ({ sessionStateAtom: sessions }) };

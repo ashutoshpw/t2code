@@ -699,6 +699,7 @@ it.layer(Layer.merge(NodeServices.layer, NodePlatformCrypto.layer))(
               ...update,
               mutationId: "stale",
               title: "Stale",
+              baseRevision: 99,
             }),
           );
           assert.equal(conflict.status, "conflict");

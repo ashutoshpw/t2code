@@ -2,7 +2,7 @@ import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import { byteLength, checkSearchLimit, searchLimits } from "./CorePolicy.ts";
+import { byteLength, ensureSearchLimit, searchLimits } from "./CorePolicy.ts";
 import type { SummaryRow } from "./PageStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 
@@ -10,13 +10,14 @@ const known = Schema.is(C.SpaceKnownBlock);
 const decodeKnown = Schema.decodeUnknownSync(C.SpaceKnownBlock);
 const parseJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json));
 
-export function literalQuery(query: string) {
-  checkSearchLimit("maxQueryBytes", byteLength(query));
+export const literalQuery = Effect.fnUntraced(function* (query: string) {
+  yield* ensureSearchLimit("maxQueryBytes", byteLength(query));
   const terms = query.trim().split(/\s+/u).filter(Boolean);
-  checkSearchLimit("maxTerms", terms.length);
-  if (terms.length === 0) throw new C.SpaceValidationError({ reason: "invalid_search_query" });
+  yield* ensureSearchLimit("maxTerms", terms.length);
+  if (terms.length === 0)
+    return yield* new C.SpaceValidationError({ reason: "invalid_search_query" });
   return terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" AND ");
-}
+});
 
 const put = Effect.fn("SpacesSearch.put")(function* (
   sourceId: string,
@@ -75,6 +76,18 @@ export const checkModule = Effect.fn("SpacesSearch.checkModule")(function* () {
   yield* sql`UPDATE spaces_search_build SET phase='unsupported' WHERE singleton=1`;
 });
 
+export const phase = Effect.fn("SpacesSearch.phase")(function* () {
+  const sql = yield* SpacesSql.SpacesSql;
+  const [state] = yield* sql<{
+    readonly phase: string;
+  }>`SELECT phase FROM spaces_search_build WHERE singleton=1`;
+  if (!state) return "storage" as const;
+  if (state.phase === "unsupported" || state.phase === "ready") return state.phase;
+  return state.phase === "pages" || state.phase === "blocks"
+    ? ("building" as const)
+    : ("storage" as const);
+});
+
 export const advance = Effect.fn("SpacesSearch.advance")(function* () {
   const sql = yield* SpacesSql.SpacesSql;
   const [state] = yield* sql<{
@@ -94,7 +107,7 @@ export const advance = Effect.fn("SpacesSearch.advance")(function* () {
     for (const row of rows.slice(0, searchLimits.backfillRows)) {
       const size = byteLength({ ...row });
       if (bytes + size > searchLimits.backfillBytes) {
-        if (consumed === 0) checkSearchLimit("backfillBytes", size);
+        if (consumed === 0) yield* ensureSearchLimit("backfillBytes", size);
         break;
       }
       yield* writeTitle(row.page_id, row.title);
@@ -116,10 +129,10 @@ export const advance = Effect.fn("SpacesSearch.advance")(function* () {
   }>`SELECT block_id,page_id,octet_length(payload) AS payload_bytes FROM spaces_blocks
     WHERE block_id>${after} ORDER BY block_id LIMIT ${searchLimits.backfillRows + 1}`;
   bytes = byteLength(rows.map((row) => ({ ...row })));
-  checkSearchLimit("backfillBytes", bytes);
+  yield* ensureSearchLimit("backfillBytes", bytes);
   for (const row of rows.slice(0, searchLimits.backfillRows)) {
     if (bytes + row.payload_bytes > searchLimits.backfillBytes) {
-      if (consumed === 0) checkSearchLimit("backfillBytes", bytes + row.payload_bytes);
+      if (consumed === 0) yield* ensureSearchLimit("backfillBytes", bytes + row.payload_bytes);
       break;
     }
     const [body] = yield* sql<{

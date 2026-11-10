@@ -49,6 +49,15 @@ const blobOriginal: SpaceOriginalCodec<Blob> = (input) => {
     throw new Error("Invalid retained Blob original; data is retained");
   return input;
 };
+// The ports contract requires a codec for every non-Blob original, so the Blob default is only reachable when Original is Blob.
+function spaceOriginalCodec<Original extends SpaceMediaOriginal>(
+  codec: SpaceOriginalCodec<Original> | undefined,
+): SpaceOriginalCodec<Original>;
+function spaceOriginalCodec(
+  codec: SpaceOriginalCodec<SpaceMediaOriginal> | undefined,
+): SpaceOriginalCodec<SpaceMediaOriginal> {
+  return codec ?? blobOriginal;
+}
 export type SpaceImageRecord<Original extends SpaceMediaOriginal = Blob> = Omit<
   typeof recordSchema.Type,
   "original"
@@ -158,10 +167,11 @@ export function decodeSpaceImageRecord(
       value.placement.block.type !== value.intent.mediaKind ||
       (!replacement && value.placement.block.parentId !== null) ||
       (replacement &&
-        (!same(
-          value.placement.block,
-          replacementBlock(replacement, value.handle!.assetId, value.intent.mediaKind),
-        ) ||
+        (!value.handle ||
+          !same(
+            value.placement.block,
+            replacementBlock(replacement, value.handle.assetId, value.intent.mediaKind),
+          ) ||
           value.placement.revision !== replacement.revision ||
           value.placement.generation !== replacement.generation)) ||
       !/^[0-9a-f]{32}$/.test(value.placement.block.order) ||
@@ -280,6 +290,10 @@ interface ImageSnapshot<Original extends SpaceMediaOriginal> {
 }
 export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
   readonly #original: SpaceOriginalCodec<Original>;
+  #handleOf(r: SpaceImageRecord<Original>) {
+    if (!r.handle) throw new Error("Image record has no upload handle; data is retained");
+    return r.handle;
+  }
   #decode(input: unknown) {
     return decodeSpaceImageRecord(input, this.#original);
   }
@@ -294,8 +308,7 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
   #snapshot: ImageSnapshot<Original> = { records: [], hydrated: false, busy: false, error: null };
   constructor(ports: SpaceImagePorts<Original>) {
     this.#ports = ports;
-    // The conditional ports contract requires a codec for every non-Blob original.
-    this.#original = ports.original ?? (blobOriginal as unknown as SpaceOriginalCodec<Original>);
+    this.#original = spaceOriginalCodec(ports.original);
   }
   getSnapshot = () => this.#snapshot;
   subscribe = (listener: () => void) => {
@@ -526,19 +539,20 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
         });
       }
       this.#sameSession(r, session, true);
+      const handle = this.#handleOf(r);
       if (r.phase === "ready") {
         await this.#ports
-          .metadata({ environmentId: r.key.environmentId, assetId: r.handle!.assetId })
+          .metadata({ environmentId: r.key.environmentId, assetId: handle.assetId })
           .then((v) => this.#ready(r, v));
         return;
       }
-      const input = { environmentId: r.key.environmentId, uploadId: r.handle!.uploadId };
+      const input = { environmentId: r.key.environmentId, uploadId: handle.uploadId };
       let status: C.SpaceAssetUploadStatus;
       try {
         status = await this.#ports.status(input);
       } catch (error) {
         const ready = await this.#ports
-          .metadata({ environmentId: r.key.environmentId, assetId: r.handle!.assetId })
+          .metadata({ environmentId: r.key.environmentId, assetId: handle.assetId })
           .catch(() => null);
         if (!ready) throw error;
         await this.#next(r, { phase: "ready", ready: this.#ready(r, ready) });
@@ -546,9 +560,9 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
       }
       this.#sameSession(r, session, true);
       if (
-        status.uploadId !== r.handle!.uploadId ||
-        status.assetId !== r.handle!.assetId ||
-        status.expiresAt !== r.handle!.expiresAt
+        status.uploadId !== handle.uploadId ||
+        status.assetId !== handle.assetId ||
+        status.expiresAt !== handle.expiresAt
       )
         throw new Error("Upload status identity mismatch");
       if (status.state === "receiving")
@@ -562,9 +576,9 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
       if (status.state === "reserved") {
         if (!grant) grant = await this.#ports.mint(r.intent);
         if (
-          grant.uploadId !== r.handle!.uploadId ||
-          grant.assetId !== r.handle!.assetId ||
-          grant.expiresAt !== r.handle!.expiresAt
+          grant.uploadId !== handle.uploadId ||
+          grant.assetId !== handle.assetId ||
+          grant.expiresAt !== handle.expiresAt
         )
           throw new Error("Caller-bound mint replay returned a different handle");
         this.#sameSession(r, session, true);
@@ -670,17 +684,12 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
       await this.#ports.connect?.(r.key.environmentId);
       const { session } = this.#ports.access(r.key.environmentId, true);
       if (r.phase === "ready") {
-        this.#ready(
-          r,
-          await this.#ports.metadata({
-            environmentId: r.key.environmentId,
-            assetId: r.handle!.assetId,
-          }),
-        );
+        const { assetId } = this.#handleOf(r);
+        this.#ready(r, await this.#ports.metadata({ environmentId: r.key.environmentId, assetId }));
         this.#sameSession(r, session, true);
         const placement = r.replacement
-          ? target.planReplacement?.(r.replacement, r.handle!.assetId, r.intent.mediaKind)
-          : target.plan(r.handle!.assetId, r.intent.mediaKind);
+          ? target.planReplacement?.(r.replacement, assetId, r.intent.mediaKind)
+          : target.plan(assetId, r.intent.mediaKind);
         if (!placement) throw new Error("Replacement target is unavailable; original retained");
         this.#binding = { id, key: r.key };
         this.#ports.changed();
@@ -743,13 +752,14 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
         this.#key(target.key) !== this.#key(r.key)
       )
         throw new Error("No current unsent image placement to reselect");
+      const { assetId } = this.#handleOf(r);
       await target.persist();
       const state = target.state(),
         draft = await this.#ports.draft(r.key);
       const replacementUnused =
         r.replacement &&
-        !state.blocks.some((b) => mediaAssetId(b) === r.handle!.assetId) &&
-        !draft?.blocks.some((b) => mediaAssetId(b) === r.handle!.assetId) &&
+        !state.blocks.some((b) => mediaAssetId(b) === assetId) &&
+        !draft?.blocks.some((b) => mediaAssetId(b) === assetId) &&
         state.baseRevision !== null &&
         state.baseRevision >= p.revision;
       const insertionUnused =
@@ -804,11 +814,12 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
         this.#binding = { id, key: r.key };
         this.#ports.changed();
         await target.persist();
+        const { assetId } = this.#handleOf(r);
         const s = target.state(),
           p = r.placement!;
         if (s.pending || s.persistenceError)
           throw new Error("Resolve the exact pending document receipt first");
-        const assetAbsent = !s.blocks.some((b) => mediaAssetId(b) === r.handle!.assetId);
+        const assetAbsent = !s.blocks.some((b) => mediaAssetId(b) === assetId);
         const absent =
           !s.memberIds.includes(p.block.id) &&
           !s.blocks.some((b) => b.id === p.block.id) &&
@@ -829,7 +840,7 @@ export class SpaceImageUploads<Original extends SpaceMediaOriginal = Blob> {
           !s.dirty &&
           s.memberIds.includes(p.block.id) &&
           ((s.acknowledgedGeneration ?? -1) >= r.generation! ||
-            (await this.#ports.saved(r.key, p.block.id, r.handle!.assetId)));
+            (await this.#ports.saved(r.key, p.block.id, assetId)));
         if (!unsentRemoved && !cancelled && !acknowledged)
           throw new Error(
             "Save or resolve newer image drafts before releasing the retained original",

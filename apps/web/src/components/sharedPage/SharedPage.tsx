@@ -2,6 +2,8 @@ import {
   EnvironmentId,
   SPACE_PAGE_SHARE_ASSET_PARAM,
   SPACE_PAGE_SHARE_ASSET_ROUTE,
+  SPACE_PAGE_SHARE_CURSOR_PARAM,
+  SPACE_PAGE_SHARE_HEADER,
   SPACE_PAGE_SHARE_PAGE_PARAM,
   SPACE_PAGE_SHARE_PAGE_ROUTE,
   SPACE_PAGE_SHARE_PARAM,
@@ -62,11 +64,7 @@ function loadKey(credential: string, pageId: string | null) {
   return `${credential}\n${pageId ?? ""}`;
 }
 
-function pageQuery(credential: string, pageId: string | null) {
-  const query = new URLSearchParams({ [SPACE_PAGE_SHARE_PARAM]: credential });
-  if (pageId !== null) query.set(SPACE_PAGE_SHARE_PAGE_PARAM, pageId);
-  return query;
-}
+const MAX_WINDOW_RESTARTS = 3;
 
 async function loadSharedPage(
   credential: string,
@@ -75,16 +73,44 @@ async function loadSharedPage(
 ): Promise<Pick<Loaded, "page" | "problem">> {
   if (credential === "") return { problem: "invalid" };
   try {
-    const response = await fetch(
-      `${SPACE_PAGE_SHARE_PAGE_ROUTE}?${pageQuery(credential, pageId)}`,
-      { signal, cache: "no-store" },
-    );
-    if (response.ok) return { page: decodePage(await response.json()) };
-    const failure = Option.getOrNull(decodeFailure(await response.json().catch(() => null)));
-    if (response.status >= 500) return { problem: "offline" };
-    if (failure?.reason === "inactive") return { problem: "ended" };
-    if (failure?.reason === "unavailable") return { problem: "unavailable" };
-    return { problem: "invalid" };
+    let page: SpaceSharedPage | undefined;
+    let cursor: string | undefined;
+    let restarts = 0;
+    for (;;) {
+      const query = new URLSearchParams();
+      if (pageId !== null) query.set(SPACE_PAGE_SHARE_PAGE_PARAM, pageId);
+      if (cursor !== undefined) query.set(SPACE_PAGE_SHARE_CURSOR_PARAM, cursor);
+      const response = await fetch(`${SPACE_PAGE_SHARE_PAGE_ROUTE}?${query}`, {
+        signal,
+        cache: "no-store",
+        headers: { [SPACE_PAGE_SHARE_HEADER]: credential },
+      });
+      if (!response.ok) {
+        const failure = Option.getOrNull(decodeFailure(await response.json().catch(() => null)));
+        if (response.status >= 500 || response.status === 429) return { problem: "offline" };
+        if (failure?.reason === "inactive") return { problem: "ended" };
+        if (failure?.reason === "unavailable") {
+          // The server refuses a cursor once the page was edited mid-walk; start over.
+          if (cursor !== undefined && restarts++ < MAX_WINDOW_RESTARTS) {
+            page = undefined;
+            cursor = undefined;
+            continue;
+          }
+          return { problem: "unavailable" };
+        }
+        return { problem: "invalid" };
+      }
+      const next = decodePage(await response.json());
+      page = page
+        ? {
+            ...page,
+            window: { ...page.window, blocks: [...page.window.blocks, ...next.window.blocks] },
+          }
+        : next;
+      cursor = next.nextCursor;
+      if (cursor === undefined) break;
+    }
+    return { page };
   } catch {
     return { problem: "offline" };
   }
@@ -98,7 +124,7 @@ export function SharedPage() {
   const key = loadKey(credential, requestedPage);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
-  // oxlint-disable-next-line t2code/react-effect-budget -- Fetches the shared page from the network whenever the link or page changes.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Fetches the shared page from the network whenever the link or page changes.
   useEffect(() => {
     const controller = new AbortController();
     void loadSharedPage(credential, requestedPage, controller.signal).then((result) => {

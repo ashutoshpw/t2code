@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
 
-import { byteLength, checkLimit, canonical, limits } from "./CorePolicy.ts";
+import { byteLength, ensureLimit, canonical, limits } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SearchStore from "./SearchStore.ts";
@@ -112,16 +112,16 @@ export const apply = Effect.fnUntraced(function* (
         ? storedBlockFromRow(row)
         : null;
   });
-  const touch = (id: string) => {
+  const touch = Effect.fnUntraced(function* (id: string) {
     affected.add(id);
-    checkLimit("maxMutationNodes", affected.size);
-  };
+    yield* ensureLimit("maxMutationNodes", affected.size);
+  });
   for (const mutation of mutations) {
     const id = mutation.kind === "delete" ? mutation.blockId : mutation.block.id;
-    touch(id);
-    checkLimit("maxIdBytes", byteLength(id));
+    yield* touch(id);
+    yield* ensureLimit("maxIdBytes", byteLength(id));
     if (mutation.kind === "delete" && mutation.mergedInto !== undefined)
-      checkLimit("maxIdBytes", byteLength(mutation.mergedInto));
+      yield* ensureLimit("maxIdBytes", byteLength(mutation.mergedInto));
     const previous = yield* get(id);
     if (mutation.kind === "insert") {
       const exists = yield* sql`SELECT 1 FROM spaces_ids WHERE id = ${id}`;
@@ -138,12 +138,12 @@ export const apply = Effect.fnUntraced(function* (
       if (!editable(block))
         return yield* new C.SpaceValidationError({ reason: "unsupported_block" });
       if (media.has(block.type)) yield* AssetReferences.validate(decodeKnown(block));
-      checkLimit("maxIdBytes", byteLength(block.id));
-      if (block.parentId !== null) checkLimit("maxIdBytes", byteLength(block.parentId));
-      checkLimit("maxOrderBytes", byteLength(block.order));
+      yield* ensureLimit("maxIdBytes", byteLength(block.id));
+      if (block.parentId !== null) yield* ensureLimit("maxIdBytes", byteLength(block.parentId));
+      yield* ensureLimit("maxOrderBytes", byteLength(block.order));
       if (!/^[0-9a-f]{32}$/.test(block.order))
         return yield* new C.SpaceValidationError({ reason: "invalid_order" });
-      checkLimit("maxBlockBytes", byteLength(block));
+      yield* ensureLimit("maxBlockBytes", byteLength(block));
       // Unknown envelope/content fields must survive replacement, including on known block types.
       if (previous) {
         const decoded = decodeKnown(previous);
@@ -207,7 +207,7 @@ export const apply = Effect.fnUntraced(function* (
     for (const child of children) {
       original.set(child.block_id, child);
       if (!affected.has(child.block_id)) {
-        touch(child.block_id);
+        yield* touch(child.block_id);
         queue.push(child.block_id);
       }
     }
@@ -221,22 +221,22 @@ export const apply = Effect.fnUntraced(function* (
     while (node.parentId !== null) {
       if (chain.has(node.parentId)) return yield* new C.SpaceValidationError({ reason: "cycle" });
       chain.add(node.parentId);
-      touch(node.parentId);
+      yield* touch(node.parentId);
       const parent = yield* get(node.parentId);
       if (!parent || !containers.has(parent.type) || !knownBlock(parent))
         return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
       node = parent;
-      checkLimit("maxDepth", ++depth);
+      yield* ensureLimit("maxDepth", ++depth);
     }
   }
   let workBytes = requestBytes;
-  const reserve = (value: unknown) => {
+  const reserve = Effect.fnUntraced(function* (value: unknown) {
     workBytes += byteLength(value);
-    checkLimit("maxMutationBytes", workBytes);
-  };
+    yield* ensureLimit("maxMutationBytes", workBytes);
+  });
   for (const [id, target] of merges) {
     if (target === null) continue;
-    touch(target);
+    yield* touch(target);
     const survivor = yield* get(target);
     if (target === id || !survivor || !editable(survivor))
       return yield* new C.SpaceValidationError({ reason: "invalid_merge" });
@@ -272,8 +272,8 @@ export const apply = Effect.fnUntraced(function* (
     bytes += (block ? size : 0) - (old && !old.deleted ? old.logical_bytes : 0);
     changes.push({ id, block, old, payload, size });
   }
-  checkLimit("maxPageBlocks", count);
-  checkLimit("maxPageBytes", bytes);
+  yield* ensureLimit("maxPageBlocks", count);
+  yield* ensureLimit("maxPageBytes", bytes);
   for (const { id, block, old, payload, size } of changes) {
     yield* SearchStore.writeBlock(pageId, id, block);
     if (!old) yield* sql`INSERT INTO spaces_ids (id, kind) VALUES (${id}, 'block')`;
@@ -291,4 +291,74 @@ export const apply = Effect.fnUntraced(function* (
     assetRefsAfter,
     blocksAfter: changes.map(({ id, block, payload }) => ({ id, payload: block ? payload : null })),
   };
+});
+
+/**
+ * One byte-bounded window of a page's live blocks in tree order, starting after `after` (a block
+ * id and rank from a previous window). `continuation` mints the cursor that resumes after a row.
+ */
+export const readWindow = Effect.fn("SpacesBlocks.readWindow")(function* <E, R>(input: {
+  readonly pageId: string;
+  readonly revision: number;
+  readonly after: { readonly id: string; readonly rank: string } | undefined;
+  readonly limit: number;
+  readonly continuation: (row: BlockRow) => Effect.Effect<C.SpaceCursor, E, R>;
+}) {
+  const sql = yield* SpacesSql.SpacesSql;
+  const { pageId } = input;
+  const firstChild = Effect.fnUntraced(function* (parent: string | null) {
+    const [row] =
+      yield* sql<BlockRow>`SELECT * FROM spaces_blocks WHERE page_id = ${pageId} AND deleted = 0 AND parent_id IS ${parent} ORDER BY rank, block_id LIMIT 1`;
+    return row;
+  });
+  const successor = Effect.fnUntraced(function* (row: BlockRow) {
+    const child = yield* firstChild(row.block_id);
+    if (child) return child;
+    const seen = new Set<string>();
+    let node = row;
+    while (true) {
+      if (seen.has(node.block_id)) return yield* new C.SpaceValidationError({ reason: "cycle" });
+      seen.add(node.block_id);
+      yield* ensureLimit("maxDepth", seen.size);
+      const [sibling] =
+        yield* sql<BlockRow>`SELECT * FROM spaces_blocks WHERE page_id = ${pageId} AND deleted = 0 AND parent_id IS ${node.parent_id} AND (rank, block_id) > (${node.rank}, ${node.block_id}) ORDER BY rank, block_id LIMIT 1`;
+      if (sibling) return sibling;
+      if (node.parent_id === null) return undefined;
+      const [parent] =
+        yield* sql<BlockRow>`SELECT * FROM spaces_blocks WHERE page_id = ${pageId} AND deleted = 0 AND block_id = ${node.parent_id}`;
+      if (!parent) return yield* new C.SpaceValidationError({ reason: "invalid_parent" });
+      node = parent;
+    }
+  });
+  let row: BlockRow | undefined;
+  if (input.after) {
+    const [last] =
+      yield* sql<BlockRow>`SELECT * FROM spaces_blocks WHERE block_id = ${input.after.id} AND page_id = ${pageId} AND deleted = 0`;
+    if (!last || last.rank !== input.after.rank)
+      return yield* new C.SpaceValidationError({ reason: "invalid_cursor" });
+    row = yield* successor(last);
+  } else row = yield* firstChild(null);
+  const blocks: C.SpaceBlock[] = [];
+  const seen = new Set<string>();
+  let nextCursor: C.SpaceCursor | null = null;
+  while (row && blocks.length < input.limit) {
+    if (seen.has(row.block_id)) return yield* new C.SpaceValidationError({ reason: "cycle" });
+    seen.add(row.block_id);
+    const next = yield* successor(row);
+    const candidate = [...blocks, yield* blockFromRow(row)];
+    const continuation = next ? yield* input.continuation(row) : null;
+    const size = byteLength({
+      revision: input.revision,
+      blocks: candidate,
+      nextCursor: continuation,
+    });
+    if (size > limits.maxBlockWindowResponseBytes) {
+      if (!blocks.length) yield* ensureLimit("maxBlockWindowResponseBytes", size);
+      break;
+    }
+    blocks.push(candidate[candidate.length - 1]!);
+    nextCursor = continuation;
+    row = next;
+  }
+  return { revision: input.revision, blocks, nextCursor };
 });

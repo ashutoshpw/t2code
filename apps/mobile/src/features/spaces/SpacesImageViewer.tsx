@@ -13,7 +13,7 @@ export function SpacesImageViewer({
   access: SpacesReadAccess;
 }) {
   const state = useSyncExternalStore(model.subscribe, model.getSnapshot);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Release the decoder and abort metadata/download work when this source connection or mounted reader changes.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Release the decoder and abort metadata/download work when this source connection or mounted reader changes.
   useEffect(() => {
     if (!access.current()) model.close();
     return () => model.close();

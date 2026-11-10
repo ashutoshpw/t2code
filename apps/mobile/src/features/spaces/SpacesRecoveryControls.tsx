@@ -4,7 +4,8 @@ import type { SpaceRecoveryPreview, SpaceRootReorder } from "@t2code/client-runt
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpacePageId, SpacePageSummary } from "@t2code/contracts/spaces";
 import { useState, useSyncExternalStore } from "react";
-import { FlatList, Modal, TextInput, View } from "react-native";
+import { LegendList } from "@legendapp/list/react-native";
+import { Modal, TextInput, View } from "react-native";
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
 import * as Dialog from "../../components/ui/Dialog";
@@ -43,6 +44,7 @@ export function SpacesRecoveryControls({
   const writable = readable && access.availability === "writable";
   const unavailable = !snapshot.hydrated || snapshot.busy || !!snapshot.journal.pending;
   const preview = selected === snapshot.recoveryPreview ? selected : null;
+  const recoveryIds = preview?.inspection.recovery?.pageIds ?? null;
   const history = snapshot.journal.history;
   const visibility = history && !("destination" in history) ? history : null;
   const pageCurrent = () => !current || current();
@@ -68,6 +70,7 @@ export function SpacesRecoveryControls({
   function confirm() {
     if (
       !preview ||
+      !recoveryIds ||
       unavailable ||
       !writable ||
       (preview.operation === "trash"
@@ -87,7 +90,7 @@ export function SpacesRecoveryControls({
         : intent.operation === "trash"
           ? "Move these pages to Trash?"
           : "Restore these pages?",
-      message: `${intent.pageId}: ${intent.inspection.recovery!.pageIds.length} selected page(s). ${intent.placement}${permanent ? " This cannot be undone." : " Independently trashed batches stay separate."}`,
+      message: `${intent.pageId}: ${recoveryIds.length} selected page(s). ${intent.placement}${permanent ? " This cannot be undone." : " Independently trashed batches stay separate."}`,
       confirmText: permanent
         ? "Permanently delete"
         : intent.operation === "trash"
@@ -184,10 +187,11 @@ export function SpacesRecoveryControls({
               />
             </View>
             {snapshot.trash && !preview ? (
-              <FlatList
+              <LegendList
                 renderScrollComponent={NativeScrollView}
                 data={snapshot.trash.items}
                 keyExtractor={(item) => item.pageId}
+                extraData={readable}
                 style={{ maxHeight: 160 }}
                 ListEmptyComponent={
                   <Text className="text-foreground-muted">
@@ -217,13 +221,14 @@ export function SpacesRecoveryControls({
                 )}
               />
             ) : null}
-            {preview ? (
+            {preview && recoveryIds ? (
               <View className="gap-2">
                 <Text className="text-foreground">{preview.placement}</Text>
-                <FlatList
+                <LegendList
                   renderScrollComponent={NativeScrollView}
-                  data={preview.inspection.recovery!.pageIds}
+                  data={recoveryIds}
                   keyExtractor={(id) => id}
+                  extraData={preview}
                   style={{ maxHeight: 120 }}
                   renderItem={({ item: id }) => (
                     <View className="gap-1 py-1">
@@ -246,9 +251,8 @@ export function SpacesRecoveryControls({
                 {preview.operation === "permanentlyDelete" ? (
                   <>
                     <Text className="text-destructive">
-                      Permanently delete these {preview.inspection.recovery!.pageIds.length}{" "}
-                      inspected pages, including independent batches in the current subtree. No
-                      Undo. Type DELETE to continue.
+                      Permanently delete these {recoveryIds.length} inspected pages, including
+                      independent batches in the current subtree. No Undo. Type DELETE to continue.
                     </Text>
                     <TextInput
                       accessibilityLabel="Type DELETE to confirm permanent deletion"

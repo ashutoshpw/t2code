@@ -6,21 +6,15 @@ import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { HttpClient, HttpClientResponse } from "effect/http";
 import { Atom, AtomRegistry } from "effect/reactivity";
-import { EnvironmentId, WS_METHODS } from "../packages/contracts/src/index.ts";
-import { EnvironmentRegistry } from "../packages/client-runtime/src/connection/registry.ts";
-import { EnvironmentSupervisor } from "../packages/client-runtime/src/connection/supervisor.ts";
+import { EnvironmentId, WS_METHODS } from "../../../../../packages/contracts/src/index.ts";
+import { EnvironmentRegistry } from "../../../../../packages/client-runtime/src/connection/registry.ts";
+import { EnvironmentSupervisor } from "../../../../../packages/client-runtime/src/connection/supervisor.ts";
 import {
   AVAILABLE_CONNECTION_STATE,
   PrimaryConnectionTarget,
-} from "../packages/client-runtime/src/connection/model.ts";
-import {
-  MobileSpaceImageBudget,
-  MobileSpaceImageViewer,
-} from "../apps/mobile/src/features/spaces/media.ts";
-import {
-  createSpacesMediaReads,
-  createSpacesReferenceRead,
-} from "../apps/mobile/src/rpc/spacesMedia.ts";
+} from "../../../../../packages/client-runtime/src/connection/model.ts";
+import { MobileSpaceImageBudget, MobileSpaceImageViewer } from "../../features/spaces/media.ts";
+import { createSpacesMediaReads, createSpacesReferenceRead } from "../../rpc/spacesMedia.ts";
 
 it.effect(
   "cancels the actual media signer and holds the global viewer permit until RPC cancellation cleanup ends across distinct assets",

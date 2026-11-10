@@ -20,15 +20,15 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
   const bodies = new Map<string, BlockRow>();
   const revisionKeys: { readonly pageId: string; readonly revision: number }[] = [];
   const budget = RevisionStore.createCaptureBudget();
-  const cleanup = (rows: number) => {
+  const cleanup = Effect.fnUntraced(function* (rows: number) {
     budget.rows += rows;
     if (budget.rows > limits.cleanupBatchRows)
-      throw new C.SpaceLimitExceededError({
+      return yield* new C.SpaceLimitExceededError({
         limit: "cleanupBatchRows",
         maximum: limits.cleanupBatchRows,
         actual: budget.rows,
       });
-  };
+  });
   const reconciliationIssue = Effect.fn("SpacesRecovery.reconciliationIssue")(function* (
     kind: string,
     entity: string,
@@ -37,13 +37,13 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
       readonly reason: string;
     }>`SELECT reason FROM spaces_asset_reconciliation_issues WHERE kind=${kind} AND entity=${entity}`;
     for (const row of rows) {
-      cleanup(1);
-      plan.touch(`asset-issue:${kind}:${entity}`, { kind, entity, reason: row.reason });
+      yield* cleanup(1);
+      yield* plan.touch(`asset-issue:${kind}:${entity}`, { kind, entity, reason: row.reason });
     }
   });
   let retainedBytes = 0;
   for (const id of pageIds) {
-    cleanup(1);
+    yield* cleanup(1);
     const blocks = yield* sql<{
       readonly block_id: string;
     }>`SELECT block_id FROM spaces_blocks WHERE page_id=${id} ORDER BY block_id LIMIT ${limits.maxMutationNodes + 1}`;
@@ -52,17 +52,20 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
         plan.blocks.get(key.block_id) ??
         (yield* sql<BlockRow>`SELECT * FROM spaces_blocks WHERE block_id=${key.block_id}`)[0];
       if (!row) return yield* new C.SpacesUnavailableError({ stage: "storage" });
-      plan.touch(`block:${row.block_id}`, { ...row });
+      yield* plan.touch(`block:${row.block_id}`, { ...row });
       plan.blocks.set(row.block_id, row);
       bodies.set(row.block_id, row);
       yield* reconciliationIssue("block", row.block_id);
-      cleanup(1);
+      yield* cleanup(1);
       const pins = yield* sql<{
         readonly asset_id: string;
       }>`SELECT asset_id FROM spaces_block_asset_refs WHERE block_id=${row.block_id} LIMIT ${limits.cleanupBatchRows + 1}`;
       for (const pin of pins) {
-        plan.touch(`block-pin:${row.block_id}`, { blockId: row.block_id, assetId: pin.asset_id });
-        cleanup(1);
+        yield* plan.touch(`block-pin:${row.block_id}`, {
+          blockId: row.block_id,
+          assetId: pin.asset_id,
+        });
+        yield* cleanup(1);
       }
     }
     const revisions = yield* sql<{
@@ -74,20 +77,20 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
     for (const revision of revisions) {
       revisionKeys.push({ pageId: id, revision: revision.to_revision });
       yield* reconciliationIssue("history", canonical([id, revision.to_revision]));
-      plan.touch(`revision:${id}:${revision.to_revision}`, { pageId: id, ...revision });
-      cleanup(1);
+      yield* plan.touch(`revision:${id}:${revision.to_revision}`, { pageId: id, ...revision });
+      yield* cleanup(1);
       const pins = yield* sql<{
         readonly asset_id: string;
       }>`SELECT asset_id FROM spaces_revision_asset_refs WHERE page_id=${id} AND to_revision=${revision.to_revision} ORDER BY asset_id LIMIT ${limits.cleanupBatchRows + 1}`;
       if (pins.length !== revision.asset_count)
         return yield* new C.SpacesUnavailableError({ stage: "storage" });
       for (const pin of pins) {
-        plan.touch(`revision-pin:${id}:${revision.to_revision}:${pin.asset_id}`, {
+        yield* plan.touch(`revision-pin:${id}:${revision.to_revision}:${pin.asset_id}`, {
           pageId: id,
           toRevision: revision.to_revision,
           assetId: pin.asset_id,
         });
-        cleanup(1);
+        yield* cleanup(1);
       }
       pageBytes += revision.logical_bytes;
     }
@@ -103,7 +106,7 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
     retainedBytes += pageBytes;
     if (retainedBytes > historyLimits.cleanupBatchBytes)
       return yield* new C.SpacesUnavailableError({ stage: "capacity" });
-    if (plan.pages.get(id)!.owner_block_id !== null) cleanup(1);
+    if (plan.pages.get(id)!.owner_block_id !== null) yield* cleanup(1);
   }
   budget.bytes = retainedBytes;
   const marker =
@@ -121,17 +124,17 @@ export const prepare = Effect.fn("SpacesRecovery.preparePurge")(function* (plan:
     return yield* new C.SpacesUnavailableError({ stage: "storage" });
   if (externalMarker) {
     yield* reconciliationIssue("block", externalMarker.block_id);
-    cleanup(1);
-    plan.produced({ retireBlockId: externalMarker.block_id });
+    yield* cleanup(1);
+    yield* plan.produced({ retireBlockId: externalMarker.block_id });
     const pins = yield* sql<{
       readonly asset_id: string;
     }>`SELECT asset_id FROM spaces_block_asset_refs WHERE block_id=${externalMarker.block_id} LIMIT ${limits.cleanupBatchRows + 1}`;
     for (const pin of pins) {
-      plan.touch(`block-pin:${externalMarker.block_id}`, {
+      yield* plan.touch(`block-pin:${externalMarker.block_id}`, {
         blockId: externalMarker.block_id,
         assetId: pin.asset_id,
       });
-      cleanup(1);
+      yield* cleanup(1);
     }
   }
   const [meta] = yield* sql<{
@@ -173,13 +176,13 @@ export const purge = Effect.fn("SpacesRecovery.purge")(function* (
     const count = parent.block_count - 1;
     const bytes = parent.block_bytes - externalMarker.logical_bytes;
     if (count < 0 || bytes < 0) return yield* new C.SpacesUnavailableError({ stage: "storage" });
-    plan.produced({
+    yield* plan.produced({
       pageId: parent.page_id,
       revision: parent.revision + 1,
       blockCount: count,
       blockBytes: bytes,
     });
-    yield* sql`UPDATE spaces_pages SET revision=revision+1,block_count=${count},block_bytes=${bytes},updated_at=${timestamp} WHERE page_id=${parent.page_id}`;
+    yield* sql`UPDATE spaces_pages SET revision=revision+1,body_revision=revision+1,block_count=${count},block_bytes=${bytes},updated_at=${timestamp} WHERE page_id=${parent.page_id}`;
     yield* RevisionStore.capture(
       {
         pageId: parent.page_id,

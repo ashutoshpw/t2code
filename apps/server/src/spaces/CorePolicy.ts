@@ -1,4 +1,5 @@
 import { assetLimits } from "./assets/Policy.ts";
+import * as Effect from "effect/Effect";
 import {
   SpaceLimitExceededError,
   SpaceValidationError,
@@ -28,10 +29,11 @@ export const searchLimits: SpaceSearchLimits = Object.freeze({
   backfillRows: 100,
   backfillBytes: 262_144,
 });
-export function checkSearchLimit(limit: keyof SpaceSearchLimits, actual: number) {
+export function ensureSearchLimit(limit: keyof SpaceSearchLimits, actual: number) {
   const maximum = searchLimits[limit];
-  if (actual > maximum)
-    throw new SpaceLimitExceededError({ limit: `search.${limit}`, actual, maximum });
+  return actual > maximum
+    ? Effect.fail(new SpaceLimitExceededError({ limit: `search.${limit}`, actual, maximum }))
+    : Effect.void;
 }
 type ScalarLimit = Exclude<keyof SpaceLimits, "history" | "search" | "assets" | "maxReferenceHops">;
 
@@ -62,8 +64,10 @@ export const limits: SpaceLimits = Object.freeze({
   cleanupBatchRows: 100,
 });
 
-export function checkLimit(limit: ScalarLimit, actual: number, maximum = limits[limit]) {
-  if (actual > maximum) throw new SpaceLimitExceededError({ limit, actual, maximum });
+export function ensureLimit(limit: ScalarLimit, actual: number, maximum = limits[limit]) {
+  return actual > maximum
+    ? Effect.fail(new SpaceLimitExceededError({ limit, actual, maximum }))
+    : Effect.void;
 }
 
 // Iterative canonicalization bounds raw input before recursive schema decoding, including opaque JSON.

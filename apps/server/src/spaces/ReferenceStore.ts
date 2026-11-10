@@ -2,7 +2,7 @@ import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as SqlError from "effect/sql/SqlError";
 
-import { byteLength, checkLimit, limits } from "./CorePolicy.ts";
+import { byteLength, ensureLimit, limits } from "./CorePolicy.ts";
 import * as PageStore from "./PageStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as Reconciliation from "./assets/Reconciliation.ts";
@@ -35,7 +35,7 @@ export const resolve = Effect.fn("SpacesReferences.resolve")(function* (
   SpacesSql.SpacesSql
 > {
   const requested = target.kind === "page" ? target.pageId : target.blockId;
-  checkLimit("maxIdBytes", byteLength(requested));
+  yield* ensureLimit("maxIdBytes", byteLength(requested));
   let current: string = requested;
   const seen = new Set<string>();
   const maxHops = limits.maxReferenceHops ?? 32;
@@ -84,8 +84,8 @@ const retire = Effect.fn("SpacesReferences.retire")(function* (id: string, targe
 export const flatten = Effect.fn("SpacesReferences.flatten")(function* (
   id: string,
   target: string,
-  touch: (id: string) => void,
-  reserve: (value: unknown) => void,
+  touch: (id: string) => Effect.Effect<void, C.SpaceServiceError>,
+  reserve: (value: unknown) => Effect.Effect<void, C.SpaceServiceError>,
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const queue = [id];
@@ -102,8 +102,8 @@ export const flatten = Effect.fn("SpacesReferences.flatten")(function* (
         return yield* new C.SpaceValidationError({ reason: "invalid_merge" });
       if (seen.has(predecessor.id)) continue;
       seen.add(predecessor.id);
-      touch(predecessor.id);
-      reserve({ id: predecessor.id, mergedInto: target });
+      yield* touch(predecessor.id);
+      yield* reserve({ id: predecessor.id, mergedInto: target });
       queue.push(predecessor.id);
     }
   }
