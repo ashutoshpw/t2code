@@ -5,45 +5,17 @@ import {
   ReactNodeViewRenderer,
   ReactMarkViewRenderer,
 } from "@tiptap/react";
-import { toastManager } from "../components/ui/toast";
 import { Extension, Node as TiptapNode, Mark as TiptapMark } from "@tiptap/core";
 import {
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
-  type ComponentProps,
   type DragEvent as ReactDragEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
-import {
-  BoldIcon,
-  ChevronDownIcon,
-  ArrowDownIcon,
-  ArrowUpIcon,
-  CodeIcon,
-  CopyIcon,
-  EllipsisIcon,
-  Heading1Icon,
-  Heading2Icon,
-  Heading3Icon,
-  FileTextIcon,
-  ItalicIcon,
-  LinkIcon,
-  ListIcon,
-  ListOrderedIcon,
-  ListCollapseIcon,
-  ListTodoIcon,
-  MessageSquareIcon,
-  MinusIcon,
-  PilcrowIcon,
-  QuoteIcon,
-  SquareCodeIcon,
-  PaletteIcon,
-  StrikethroughIcon,
-  UnderlineIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, CopyIcon, EllipsisIcon, Trash2Icon } from "lucide-react";
 import { NodeSelection, Plugin, type Command, type EditorState } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
@@ -53,13 +25,10 @@ import {
   SpaceMediaView,
   SpaceMediaWritableContext,
 } from "./SpaceAtomView";
-import { SPACE_TEXT_COLORS, type SpaceBlock, type SpaceBlockId } from "@t2code/contracts/spaces";
-import { Input } from "~/components/ui/input";
+import { type SpaceBlock, type SpaceBlockId } from "@t2code/contracts/spaces";
 import { Button } from "~/components/ui/button";
 import {
   Menu,
-  MenuGroup,
-  MenuGroupLabel,
   MenuItem,
   MenuPopup,
   MenuSeparator,
@@ -68,8 +37,6 @@ import {
   MenuSubTrigger,
   MenuTrigger,
 } from "~/components/ui/menu";
-import { Separator } from "~/components/ui/separator";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { SpaceEditorAdapter, type SpaceEditorBatch } from "./adapter";
 import { canEditSpaceEditorBlock, spaceDocumentBlocks } from "./document";
 import { SPACE_BLOCK_HANDLE_WIDTH, SpaceBlockHandle } from "./SpaceBlockHandle";
@@ -84,23 +51,17 @@ import {
 import type { SpaceMentionController } from "./mentions";
 import { SpaceDocumentSkeleton } from "./SpaceSkeletons";
 import { SpacePageToolbar } from "./SpacePageToolbarSlot";
+import { BLOCK_DRAG_TYPE, blockElement, planBlockDrop, type BlockDrop } from "./blockDrag";
+import {
+  turnInto,
+  SpaceEditorWrapperContext,
+  selectedBlock,
+  editorCapabilities,
+  runCommand,
+  type SpaceEditorParts,
+} from "./spaceEditorSupport";
+import { BubbleLayer, FormatValue, SlashLayer } from "./SpaceEditorLayers";
 import "./editor.css";
-
-const BLOCK_DRAG_TYPE = "application/x-t2-space-block";
-
-type BlockDrop = {
-  readonly key: string;
-  readonly allowed: boolean;
-  readonly parentId: SpaceBlockId | null;
-  readonly beforeId: SpaceBlockId | null;
-  readonly top: number;
-  readonly left: number;
-  readonly width: number;
-};
-
-function blockElement(wrapper: HTMLElement | null, id: SpaceBlockId | null) {
-  return id && wrapper ? wrapper.querySelector(`[data-space-block="${CSS.escape(id)}"]`) : null;
-}
 
 const placeholder = "Write, or press '/' for commands…";
 
@@ -128,21 +89,6 @@ const spacePlaceholder = Extension.create({
     ];
   },
 });
-
-function slashMatch(state: EditorState) {
-  const { $from, empty } = state.selection;
-  if (!empty || !$from.parent.isTextblock || $from.parent.type.name === "code") return null;
-  const before = $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc");
-  const match = /(?:^|\s)\/([^\s/]*)$/.exec(before);
-  return match ? { from: $from.pos - match[1]!.length - 1, query: match[1]! } : null;
-}
-
-type SlashItem = {
-  readonly label: string;
-  readonly icon: typeof PilcrowIcon;
-  readonly keywords: string;
-  readonly apply: (id: SpaceBlockId | null) => void;
-};
 
 function createSpaceSessionDispatch(
   adapter: SpaceEditorAdapter,
@@ -200,6 +146,19 @@ function createSpaceSessionDispatch(
   });
 }
 
+const MEDIA_TYPES: readonly string[] = ["image", "pdf", "video"];
+
+function findBlock(doc: EditorState["doc"], id: SpaceBlockId): SpaceBlock | null {
+  let found: SpaceBlock | null = null;
+  doc.descendants((node) => {
+    if (found) return false;
+    const block = node.attrs.block as SpaceBlock | undefined;
+    if (block?.id === id) found = block;
+    return !found;
+  });
+  return found;
+}
+
 export function SpaceEditor({
   savedHistory,
   adapter,
@@ -235,23 +194,6 @@ export function SpaceEditor({
   readonly mediaEditable?: boolean;
   readonly onBatch?: (batch: SpaceEditorBatch) => void;
 }) {
-  const [wrapper, setWrapper] = useState<HTMLDivElement | null>(null);
-  const [linkOpen, setLinkOpen] = useState<string | null>(null);
-  const [dismissed, setDismissed] = useState<number | null>(null);
-  const [slashSel, setSlashSel] = useState({ query: "", index: 0 });
-  const [focused, setFocused] = useState(false);
-  const [turnIntoOpen, setTurnIntoOpen] = useState(false);
-  const [colorOpen, setColorOpen] = useState(false);
-  // Measured when the pointer moves, so the handle never uses a layout from an earlier render.
-  const [hover, setHover] = useState<{
-    readonly id: SpaceBlockId;
-    readonly top: number;
-    readonly left: number;
-  } | null>(null);
-  const hoverId = hover?.id ?? null;
-  const [handleMenuOpen, setHandleMenuOpen] = useState(false);
-  const [dragId, setDragId] = useState<SpaceBlockId | null>(null);
-  const [drop, setDrop] = useState<BlockDrop | null>(null);
   const editor = useEditor(
     {
       extensions: [
@@ -279,30 +221,102 @@ export function SpaceEditor({
     },
     [adapter, bridge],
   );
-  // The first render reads canEdit(), so permission must be applied before it, not in the effect.
-  bridge?.setWritable(editable, mediaEditable);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Synchronize the mounted editor view with the shared document and destination edit permission.
+  // Layout phase so permission lands before the first paint that reads canEdit().
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Push destination edit permission into the external bridge before the editor view reads it.
+  useLayoutEffect(() => {
+    bridge?.setWritable(editable, mediaEditable);
+  }, [bridge, editable, mediaEditable]);
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Synchronize the mounted editor view with the shared document and destination edit permission.
   useEffect(() => {
     if (!editor) return;
     const synchronize = () => {
       if (editor.isDestroyed) return;
       if (bridge) {
         const next = bridge.synchronize(editor.state);
-        if (next !== editor.state) {
-          editor.view.updateState(next);
-          editor.emit("transaction", { editor, transaction: next.tr, appendedTransactions: [] });
-        }
+        if (next !== editor.state) editor.view.updateState(next);
       }
       const allowed = editable && (bridge?.canEdit() ?? true);
       if (editor.isEditable !== allowed) editor.setEditable(allowed, false);
+      // Permission lives outside the editor state, so announce it for the state selectors.
+      editor.emit("transaction", {
+        editor,
+        transaction: editor.state.tr,
+        appendedTransactions: [],
+      });
     };
     synchronize();
     return bridge?.controller.subscribe(synchronize);
   }, [editor, bridge, editable]);
-  useEditorState({ editor, selector: ({ transactionNumber }) => transactionNumber });
-  const state = editor?.state ?? null;
+  const shell = useEditorState({
+    editor,
+    selector: ({ editor }) => {
+      if (!editor || editor.isDestroyed) return null;
+      const state = editor.state;
+      const caps = editorCapabilities(bridge, editable, !!onMoveBlocks);
+      const selected = selectedBlock(state);
+      const known =
+        selected && isKnownSpaceBlock(selected) && canEditSpaceEditorBlock(selected)
+          ? selected
+          : null;
+      const can = (command: Command) => caps.writable && command(state);
+      const selectedId = selected?.id ?? null;
+      const media = !!selectedId && !!known && MEDIA_TYPES.includes(known.type);
+      return {
+        ...caps,
+        empty: state.doc.childCount === 0,
+        selectedId,
+        knownId: known?.id ?? null,
+        knownType: known?.type ?? null,
+        media,
+        headingLevel: known?.type === "heading" ? known.content.level : null,
+        headingCan:
+          known?.type === "heading"
+            ? ([1, 2, 3] as const).map((level) => can(adapter.setHeadingLevel(level)))
+            : null,
+        calloutIcon: known?.type === "callout" ? known.content.icon : null,
+        codeLanguage: known?.type === "code" ? known.content.language : null,
+        canSplit: caps.structure && can(adapter.split()),
+        canJoin: caps.structure && can(adapter.joinBackward()),
+        canRemove:
+          !!selectedId &&
+          caps.structure &&
+          (media
+            ? mediaEditable && can(adapter.removeMedia(selectedId))
+            : can(adapter.remove(selectedId))),
+        mentionAvailable: caps.writable && !!adapter.mentionRange(state),
+        reveal:
+          bridge && targetBlockId
+            ? bridge.revealBlock(
+                state,
+                { ...adapter.target, blockId: targetBlockId },
+                () => sourceOwner?.current() === true && current?.() === true,
+              ).status
+            : null,
+      };
+    },
+  });
+  const reveal = shell?.reveal ?? null;
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Reveal a current URL/panel block target once in the already loaded PM view without replacing its draft.
+  useEffect(() => {
+    if (!editor || !bridge || editor.isDestroyed) return;
+    const result = bridge.revealNavigation(
+      editor,
+      editor.state,
+      targetBlockId ? { ...adapter.target, blockId: targetBlockId } : null,
+      sourceOwner,
+      () => current?.() === true,
+    );
+    if (result?.transaction && sourceOwner?.current() && current?.())
+      editor.view.dispatch(result.transaction);
+    // `reveal` is a trigger: the target can finish loading without any other dependency changing.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [adapter, bridge, current, editor, reveal, sourceOwner, targetBlockId]);
+  if (!editor || !shell) return <SpaceDocumentSkeleton />;
+  const parts: SpaceEditorParts = { editor, adapter, bridge, editable };
+  const run = (command: Command) => runCommand(editor, editable, command);
+  const can = (command: Command) => shell.writable && command(editor.state);
   const revealTarget = (focus = false) => {
-    if (!editor || !bridge || !targetBlockId || editor.isDestroyed) return;
+    if (!bridge || !targetBlockId || editor.isDestroyed) return;
     const result = bridge.revealBlock(
       editor.state,
       { ...adapter.target, blockId: targetBlockId },
@@ -314,325 +328,8 @@ export function SpaceEditor({
       if (focus && sourceOwner?.current() && current?.()) editor.view.focus();
     }
   };
-  const document = state?.doc;
-  const reveal =
-    bridge && state && targetBlockId
-      ? bridge.revealBlock(
-          state,
-          { ...adapter.target, blockId: targetBlockId },
-          () => sourceOwner?.current() === true && current?.() === true,
-        ).status
-      : null;
-  // oxlint-disable-next-line t2code/react-effect-budget -- Reveal a current URL/panel block target once in the already loaded PM view without replacing its draft.
-  useEffect(() => {
-    if (!editor || !bridge || editor.isDestroyed) return;
-    if (document && editor.state.doc !== document) return;
-    const result = bridge.revealNavigation(
-      editor,
-      editor.state,
-      targetBlockId ? { ...adapter.target, blockId: targetBlockId } : null,
-      sourceOwner,
-      () => current?.() === true,
-    );
-    if (result?.transaction && sourceOwner?.current() && current?.())
-      editor.view.dispatch(result.transaction);
-  }, [adapter, bridge, current, document, editor, sourceOwner, targetBlockId]);
-  const run = (command: Command) => {
-    if (!editor || !editable) return;
-    try {
-      if (!command(editor.state, editor.view.dispatch))
-        toastManager.add({ type: "error", title: "That action isn't available here" });
-    } catch (error) {
-      toastManager.add({
-        type: "error",
-        title: "Couldn't apply that change",
-        description: error instanceof Error ? error.message : undefined,
-      });
-    }
-    editor.view.focus();
-  };
-  const trackHover = (event: ReactMouseEvent) => {
-    if (handleMenuOpen || dragId || !(event.target instanceof Element)) return;
-    const block = event.target.closest("[data-space-block]");
-    const id = block?.getAttribute("data-space-block");
-    if (!block || !id || !wrapper) return;
-    const rect = block.getBoundingClientRect();
-    const box = wrapper.getBoundingClientRect();
-    const top = rect.top - box.top + 2;
-    const left = Math.max(0, rect.left - box.left - SPACE_BLOCK_HANDLE_WIDTH);
-    setHover((current) =>
-      current && current.id === id && current.top === top && current.left === left
-        ? current
-        : { id: id as SpaceBlockId, top, left },
-    );
-  };
-  const clearHover = () => {
-    if (!handleMenuOpen && !dragId) setHover(null);
-  };
-  const clearDrag = () => {
-    setDragId(null);
-    setDrop(null);
-  };
-  const startDrag = (event: ReactDragEvent) => {
-    if (!hoverId) return event.preventDefault();
-    event.dataTransfer.setData(BLOCK_DRAG_TYPE, hoverId);
-    event.dataTransfer.effectAllowed = "move";
-    const element = blockElement(wrapper, hoverId);
-    if (element) event.dataTransfer.setDragImage(element, 0, 0);
-    setDragId(hoverId);
-  };
-  const dragOverBlock = (event: ReactDragEvent<HTMLDivElement>) => {
-    if (!dragId || !editor || !wrapper) return;
-    event.stopPropagation();
-    const element =
-      event.target instanceof Element ? event.target.closest("[data-space-block]") : null;
-    const targetId = element?.getAttribute("data-space-block") as SpaceBlockId | null | undefined;
-    if (!element || !targetId) {
-      if (drop?.allowed) event.preventDefault();
-      return;
-    }
-    const rect = element.getBoundingClientRect();
-    const after = event.clientY > rect.top + rect.height / 2;
-    const key = `${targetId}:${after}`;
-    if (drop?.key !== key) {
-      const blocks = spaceDocumentBlocks(editor.state.doc);
-      const target =
-        targetId === dragId ? undefined : blocks.find((block) => block.id === targetId);
-      if (!target) return setDrop(null);
-      const siblings = blocks.filter((block) => block.parentId === target.parentId);
-      const index = siblings.indexOf(target);
-      const beforeId = after ? (siblings[index + 1]?.id ?? null) : targetId;
-      const unchanged = siblings[index + (after ? 1 : -1)]?.id === dragId;
-      const box = wrapper.getBoundingClientRect();
-      return setDrop({
-        key,
-        allowed: !unchanged && adapter.move(dragId, target.parentId, beforeId)(editor.state),
-        parentId: target.parentId,
-        beforeId,
-        top: (after ? rect.bottom : rect.top) - box.top,
-        left: rect.left - box.left,
-        width: rect.width,
-      });
-    }
-    if (drop.allowed) event.preventDefault();
-  };
-  const dropBlock = (event: ReactDragEvent<HTMLDivElement>) => {
-    if (!dragId) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const target = drop;
-    clearDrag();
-    if (target?.allowed) run(adapter.move(dragId, target.parentId, target.beforeId));
-  };
-  const leaveDrag = (event: ReactDragEvent<HTMLDivElement>) => {
-    if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)))
-      setDrop(null);
-  };
-  if (!editor || !state) return <SpaceDocumentSkeleton />;
-  let selectedId: SpaceBlockId | null =
-    state.selection instanceof NodeSelection
-      ? (state.selection.node.attrs.block?.id ?? null)
-      : null;
-  for (let depth = state.selection.$from.depth; depth > 0; depth--) {
-    const id = state.selection.$from.node(depth).attrs.block?.id as SpaceBlockId | undefined;
-    if (id) {
-      selectedId = id;
-      break;
-    }
-  }
-  const documentBlocks = spaceDocumentBlocks(state.doc);
-  const selected = documentBlocks.find((block) => block.id === selectedId);
-  const known =
-    selected && isKnownSpaceBlock(selected) && canEditSpaceEditorBlock(selected) ? selected : null;
-  const link = adapter.linkSelection(state);
-  const writable = editable && (bridge?.canEdit() ?? true);
-  const structure = writable && (bridge?.canStructure() ?? true);
-  const can = (command: Command) => writable && command(state);
-  const complete = !bridge || bridge.controller.editorWindow().completeParents.includes(null);
-  const turnInto = {
-    paragraph: ["Paragraph", PilcrowIcon],
-    heading: ["Heading", Heading1Icon],
-    quote: ["Quote", QuoteIcon],
-    callout: ["Callout", MessageSquareIcon],
-    bulleted_item: ["Bullet list", ListIcon],
-    numbered_item: ["Numbered list", ListOrderedIcon],
-    todo_item: ["To-do", ListTodoIcon],
-    toggle: ["Toggle list", ListCollapseIcon],
-  } as const;
-  const empty = state.doc.childCount === 0;
-  const startWriting = () => {
-    if (empty && structure && complete) adapter.append()(editor.state, editor.view.dispatch);
-  };
-  const media = !!selectedId && !!known && ["image", "pdf", "video"].includes(known.type);
-  const canSplit = structure && can(adapter.split());
-  const canJoin = structure && can(adapter.joinBackward());
-  const canMove =
-    !!bridge &&
-    !!onMoveBlocks &&
-    structure &&
-    !bridge.controller.session.structureAvailability() &&
-    complete;
-  const canRemove =
-    !!selectedId &&
-    structure &&
-    (media
-      ? mediaEditable && can(adapter.removeMedia(selectedId))
-      : can(adapter.remove(selectedId)));
-  const handleBlock = structure && hoverId ? documentBlocks.find((b) => b.id === hoverId) : null;
-  if (dragId && !documentBlocks.some((b) => b.id === dragId)) {
-    setDragId(null);
-    setDrop(null);
-  }
-  const handleAt = handleBlock && hover ? { top: hover.top, left: hover.left } : null;
-  const handleMedia =
-    !!handleBlock &&
-    isKnownSpaceBlock(handleBlock) &&
-    ["image", "pdf", "video"].includes(handleBlock.type);
-  const selectBlock = (id: SpaceBlockId) => {
-    let at = -1;
-    editor.state.doc.descendants((node, pos) => {
-      if (at >= 0 || node.attrs.block?.id !== id) return at < 0;
-      at = pos;
-      return false;
-    });
-    if (at >= 0)
-      editor.view.dispatch(
-        editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, at)),
-      );
-  };
-  const addBelow = (id: SpaceBlockId) => {
-    setDismissed(null);
-    run(adapter.insertAfter(id, "/"));
-  };
-  const moreItems = canSplit || canJoin || canMove || canRemove;
-  const place = (pos: number, width: number) => {
-    const box = wrapper?.getBoundingClientRect();
-    if (!box) return null;
-    try {
-      const at = editor.view.coordsAtPos(pos);
-      return {
-        left: Math.max(0, Math.min(at.left - box.left, box.width - width)),
-        top: at.top - box.top,
-        bottom: at.bottom - box.top,
-      };
-    } catch {
-      return null;
-    }
-  };
-  const { from, to } = state.selection;
-  const linkKey = `${from}-${to}`;
-  const bubbleAt =
-    writable &&
-    (focused || turnIntoOpen || colorOpen) &&
-    !(state.selection instanceof NodeSelection) &&
-    (from !== to || link?.hasLink)
-      ? place(from, 320)
-      : null;
-  const bubble = bubbleAt
-    ? bubbleAt.top > 48
-      ? { left: bubbleAt.left, top: bubbleAt.top - 6, transform: "translateY(-100%)" }
-      : { left: bubbleAt.left, top: bubbleAt.bottom + 6 }
-    : undefined;
-  const convertTo =
-    (type: Parameters<SpaceEditorAdapter["convert"]>[1]) => (id: SpaceBlockId | null) => {
-      if (id && selected?.type !== type) run(adapter.convert(id, type));
-    };
-  const headingTo = (level: 1 | 2 | 3) => (id: SpaceBlockId | null) => {
-    if (!id) return;
-    run(adapter.convert(id, "heading"));
-    try {
-      adapter.setHeadingLevel(level)(editor.state, editor.view.dispatch);
-    } catch {}
-  };
-  const allSlashItems: readonly SlashItem[] = [
-    {
-      label: "Text",
-      icon: PilcrowIcon,
-      keywords: "paragraph plain",
-      apply: convertTo("paragraph"),
-    },
-    { label: "Heading 1", icon: Heading1Icon, keywords: "h1 title", apply: headingTo(1) },
-    { label: "Heading 2", icon: Heading2Icon, keywords: "h2 subtitle", apply: headingTo(2) },
-    { label: "Heading 3", icon: Heading3Icon, keywords: "h3", apply: headingTo(3) },
-    {
-      label: "Bulleted list",
-      icon: ListIcon,
-      keywords: "bullet ul",
-      apply: convertTo("bulleted_item"),
-    },
-    {
-      label: "Numbered list",
-      icon: ListOrderedIcon,
-      keywords: "ordered ol",
-      apply: convertTo("numbered_item"),
-    },
-    {
-      label: "To-do",
-      icon: ListTodoIcon,
-      keywords: "task checkbox todo",
-      apply: convertTo("todo_item"),
-    },
-    {
-      label: "Toggle list",
-      icon: ListCollapseIcon,
-      keywords: "toggle collapse expand disclosure",
-      apply: convertTo("toggle"),
-    },
-    { label: "Quote", icon: QuoteIcon, keywords: "blockquote", apply: convertTo("quote") },
-    { label: "Callout", icon: MessageSquareIcon, keywords: "note", apply: convertTo("callout") },
-    {
-      label: "Code",
-      icon: SquareCodeIcon,
-      keywords: "snippet",
-      apply: () => run(adapter.placeBlock("code")),
-    },
-    {
-      label: "Divider",
-      icon: MinusIcon,
-      keywords: "separator hr line",
-      apply: () => run(adapter.placeBlock("divider")),
-    },
-    ...(onCreatePage
-      ? [
-          {
-            label: "Page",
-            icon: FileTextIcon,
-            keywords: "subpage new child",
-            apply: onCreatePage,
-          },
-        ]
-      : []),
-  ];
-  const slash = writable && structure ? slashMatch(state) : null;
-  const slashItems = slash
-    ? allSlashItems.filter((item) =>
-        `${item.label} ${item.keywords}`.toLowerCase().includes(slash.query.toLowerCase()),
-      )
-    : [];
-  const slashOpen = !!slash && dismissed !== slash.from && slashItems.length > 0;
-  const slashIndex =
-    slash && slashSel.query === slash.query ? Math.min(slashSel.index, slashItems.length - 1) : 0;
-  const slashAt = slashOpen ? place(from, 240) : null;
-  const slashMenu = slashAt ? { left: slashAt.left, top: slashAt.bottom + 4 } : undefined;
-  const pickSlash = (item: SlashItem) => {
-    if (!slash) return;
-    editor.view.dispatch(editor.state.tr.delete(slash.from, editor.state.selection.from));
-    item.apply(selectedId);
-  };
-  const onSlashKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "/") setDismissed(null);
-    if (!slashOpen || event.nativeEvent.isComposing) return;
-    const count = slashItems.length;
-    const step = (delta: number) =>
-      setSlashSel({ query: slash.query, index: (slashIndex + delta + count) % count });
-    if (event.key === "ArrowDown") step(1);
-    else if (event.key === "ArrowUp") step(-1);
-    else if (event.key === "Enter") pickSlash(slashItems[slashIndex]!);
-    else if (event.key === "Escape") setDismissed(slash.from);
-    else return;
-    event.preventDefault();
-    event.stopPropagation();
-  };
+  const moreItems = shell.canSplit || shell.canJoin || shell.canMove || shell.canRemove;
+  const { selectedId, media } = shell;
   return (
     <section aria-label="Page contents" className="space-y-2" data-space-editor="">
       <SpacePageToolbar>
@@ -645,13 +342,13 @@ export function SpaceEditor({
               () => !editor.isDestroyed && sourceOwner?.current() === true && current?.() === true,
             )}
             current={() => sourceOwner?.current() === true && current?.() === true}
-            replacementTarget={media && known ? known.id : null}
+            replacementTarget={media ? shell.knownId : null}
           />
         ) : null}
         {bridge && mentions ? (
           <SpaceMentionControls
             owner={mentions}
-            available={writable && !!adapter.mentionRange(state)}
+            available={shell.mentionAvailable}
             capture={() =>
               bridge.mentionInsertion(
                 () => editor.state,
@@ -671,14 +368,18 @@ export function SpaceEditor({
               <EllipsisIcon />
             </MenuTrigger>
             <MenuPopup align="end">
-              {canSplit ? <MenuItem onClick={() => run(adapter.split())}>Split</MenuItem> : null}
-              {canJoin ? (
+              {shell.canSplit ? (
+                <MenuItem onClick={() => run(adapter.split())}>Split</MenuItem>
+              ) : null}
+              {shell.canJoin ? (
                 <MenuItem onClick={() => run(adapter.joinBackward())}>Join previous</MenuItem>
               ) : null}
-              {canMove ? (
-                <MenuItem onClick={() => onMoveBlocks?.(state)}>Move selected blocks…</MenuItem>
+              {shell.canMove ? (
+                <MenuItem onClick={() => onMoveBlocks?.(editor.state)}>
+                  Move selected blocks…
+                </MenuItem>
               ) : null}
-              {canRemove && selectedId ? (
+              {shell.canRemove && selectedId ? (
                 <MenuItem
                   variant="destructive"
                   onClick={() =>
@@ -699,18 +400,20 @@ export function SpaceEditor({
           </Menu>
         ) : null}
       </SpacePageToolbar>
-      {known?.type === "heading" || known?.type === "callout" || known?.type === "code" ? (
+      {shell.knownType === "heading" ||
+      shell.knownType === "callout" ||
+      shell.knownType === "code" ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          {known?.type === "heading" ? (
+          {shell.knownType === "heading" ? (
             <div className="flex items-center gap-0.5" role="group" aria-label="Heading level">
               {([1, 2, 3] as const).map((level) => (
                 <Button
                   key={level}
-                  variant={known.content.level === level ? "outline" : "ghost"}
+                  variant={shell.headingLevel === level ? "outline" : "ghost"}
                   size="sm"
                   aria-label={`Heading ${level}`}
-                  aria-pressed={known.content.level === level}
-                  disabled={!can(adapter.setHeadingLevel(level))}
+                  aria-pressed={shell.headingLevel === level}
+                  disabled={!shell.headingCan?.[level - 1]}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => run(adapter.setHeadingLevel(level))}
                 >
@@ -719,23 +422,23 @@ export function SpaceEditor({
               ))}
             </div>
           ) : null}
-          {known?.type === "callout" ? (
+          {shell.knownType === "callout" ? (
             <FormatValue
-              key={JSON.stringify([known.id, known.content.icon])}
+              key={JSON.stringify([shell.knownId, shell.calloutIcon])}
               label="Callout icon"
-              initial={known.content.icon}
-              writable={writable}
+              initial={shell.calloutIcon ?? ""}
+              writable={shell.writable}
               command={(value) => adapter.setCalloutIcon(value)}
               can={can}
               run={run}
             />
           ) : null}
-          {known?.type === "code" ? (
+          {shell.knownType === "code" ? (
             <FormatValue
-              key={JSON.stringify([known.id, known.content.language])}
+              key={JSON.stringify([shell.knownId, shell.codeLanguage])}
               label="Code language label"
-              initial={known.content.language}
-              writable={writable}
+              initial={shell.codeLanguage ?? ""}
+              writable={shell.writable}
               command={(value) => adapter.setCodeLanguage(value)}
               can={can}
               run={run}
@@ -758,7 +461,7 @@ export function SpaceEditor({
           The linked block isn't on this part of the page.
         </p>
       ) : null}
-      {!complete ? (
+      {!shell.complete ? (
         <p className="text-sm text-muted-foreground">
           Only part of this page is loaded. Use Load more below to see the rest.
         </p>
@@ -775,389 +478,299 @@ export function SpaceEditor({
               : null
           }
         >
-          <SpaceMediaWritableContext.Provider value={mediaEditable && writable}>
-            <div
-              ref={setWrapper}
-              className={structure ? "relative -ms-12 ps-12" : "relative"}
-              onMouseMove={trackHover}
-              onMouseLeave={clearHover}
-              onDragOverCapture={dragOverBlock}
-              onDropCapture={dropBlock}
-              onDragLeave={leaveDrag}
-              onFocus={() => {
-                setFocused(true);
-                startWriting();
-              }}
-              onBlur={(event) => {
-                if (event.currentTarget.contains(event.relatedTarget)) return;
-                setFocused(false);
-                if (slash) setDismissed(slash.from);
-              }}
-              onKeyDownCapture={onSlashKey}
+          <SpaceMediaWritableContext.Provider value={mediaEditable && shell.writable}>
+            <EditorSurface
+              {...parts}
+              structure={shell.structure}
+              mediaEditable={mediaEditable}
+              onMoveBlocks={onMoveBlocks}
             >
-              {empty && writable ? (
+              {shell.empty && shell.writable ? (
                 <p className="pointer-events-none absolute text-muted-foreground/60">
                   {placeholder}
                 </p>
               ) : null}
-              <EditorContent
-                editor={editor}
-                className="min-h-40 whitespace-pre-wrap break-words [&_.tiptap]:min-h-40 [&_.tiptap]:outline-none"
-              />
-              {handleAt && handleBlock ? (
-                <SpaceBlockHandle
-                  top={handleAt.top}
-                  left={handleAt.left}
-                  menuOpen={handleMenuOpen}
-                  onMenuOpenChange={setHandleMenuOpen}
-                  onAdd={
-                    can(adapter.insertAfter(handleBlock.id)) ? () => addBelow(handleBlock.id) : null
-                  }
-                  onDragStart={startDrag}
-                  onDragEnd={clearDrag}
-                >
-                  <MenuSub>
-                    <MenuSubTrigger>Turn into</MenuSubTrigger>
-                    <MenuSubPopup>
-                      {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
-                        const [label, Icon] = turnInto[type];
-                        return (
-                          <MenuItem
-                            key={type}
-                            disabled={!can(adapter.convert(handleBlock.id, type))}
-                            onClick={() => run(adapter.convert(handleBlock.id, type))}
-                          >
-                            <Icon />
-                            {label}
-                          </MenuItem>
-                        );
-                      })}
-                    </MenuSubPopup>
-                  </MenuSub>
-                  <MenuItem
-                    disabled={!can(adapter.duplicate(handleBlock.id))}
-                    onClick={() => run(adapter.duplicate(handleBlock.id))}
-                  >
-                    <CopyIcon />
-                    Duplicate
-                  </MenuItem>
-                  <MenuItem
-                    disabled={!can(adapter.shift(-1, handleBlock.id))}
-                    onClick={() => run(adapter.shift(-1, handleBlock.id))}
-                  >
-                    <ArrowUpIcon />
-                    Move up
-                  </MenuItem>
-                  <MenuItem
-                    disabled={!can(adapter.shift(1, handleBlock.id))}
-                    onClick={() => run(adapter.shift(1, handleBlock.id))}
-                  >
-                    <ArrowDownIcon />
-                    Move down
-                  </MenuItem>
-                  {canMove ? (
-                    <MenuItem
-                      onClick={() => {
-                        selectBlock(handleBlock.id);
-                        onMoveBlocks?.(editor.state);
-                      }}
-                    >
-                      Move to…
-                    </MenuItem>
-                  ) : null}
-                  <MenuSeparator />
-                  <MenuItem
-                    variant="destructive"
-                    disabled={
-                      !(handleMedia
-                        ? mediaEditable && can(adapter.removeMedia(handleBlock.id))
-                        : can(adapter.remove(handleBlock.id)))
-                    }
-                    onClick={() =>
-                      run(
-                        handleMedia
-                          ? adapter.removeMedia(handleBlock.id)
-                          : adapter.remove(handleBlock.id),
-                      )
-                    }
-                  >
-                    <Trash2Icon />
-                    {handleMedia ? "Remove media block" : "Delete block"}
-                  </MenuItem>
-                </SpaceBlockHandle>
-              ) : null}
-              {drop?.allowed ? (
-                <div
-                  className="pointer-events-none absolute z-10 h-0.5 rounded-full bg-primary"
-                  style={{ top: drop.top - 1, left: drop.left, width: drop.width }}
-                />
-              ) : null}
-              {bubble ? (
-                <div
-                  className="absolute z-20 flex w-max max-w-[calc(100%-1rem)] flex-col gap-1 rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
-                  style={bubble}
-                  onMouseDown={(event) => {
-                    if (!(event.target instanceof HTMLInputElement)) event.preventDefault();
-                  }}
-                >
-                  <div className="flex items-center gap-0.5">
-                    {(
-                      [
-                        ["bold", "Bold", BoldIcon],
-                        ["italic", "Italic", ItalicIcon],
-                        ["underline", "Underline", UnderlineIcon],
-                        ["strike", "Strikethrough", StrikethroughIcon],
-                        ["code", "Inline code", CodeIcon],
-                      ] as const
-                    ).map(([mark, label, Icon]) => (
-                      <ToolbarIconButton
-                        key={mark}
-                        label={label}
-                        disabled={!can(adapter.mark(mark))}
-                        onClick={() => run(adapter.mark(mark))}
-                      >
-                        <Icon />
-                      </ToolbarIconButton>
-                    ))}
-                    <ToolbarIconButton
-                      label="Link"
-                      hint="Select text to add a link, or place the caret inside an existing link to edit or remove it."
-                      aria-disabled={!link}
-                      onClick={() => link && setLinkOpen(linkKey)}
-                    >
-                      <LinkIcon />
-                    </ToolbarIconButton>
-                    <Menu open={colorOpen} onOpenChange={setColorOpen}>
-                      <MenuTrigger
-                        render={<Button variant="ghost" size="icon-sm" aria-label="Text color" />}
-                      >
-                        <PaletteIcon />
-                      </MenuTrigger>
-                      <MenuPopup align="start">
-                        {(
-                          [
-                            ["color", "Text color"],
-                            ["highlight", "Background"],
-                          ] as const
-                        ).map(([style, heading]) => (
-                          <MenuGroup key={style}>
-                            <MenuGroupLabel>{heading}</MenuGroupLabel>
-                            {[null, ...SPACE_TEXT_COLORS].map((value) => (
-                              <MenuItem
-                                key={value ?? "default"}
-                                disabled={!can(adapter.textStyle(style, value))}
-                                onClick={() => run(adapter.textStyle(style, value))}
-                              >
-                                <span
-                                  className="w-5 rounded-sm text-center font-semibold"
-                                  {...(value
-                                    ? {
-                                        [style === "color"
-                                          ? "data-space-color"
-                                          : "data-space-highlight"]: value,
-                                      }
-                                    : {})}
-                                >
-                                  A
-                                </span>
-                                <span className="capitalize">{value ?? "Default"}</span>
-                              </MenuItem>
-                            ))}
-                          </MenuGroup>
-                        ))}
-                      </MenuPopup>
-                    </Menu>
-                    <Separator orientation="vertical" className="mx-1 h-5" />
-                    <Menu open={turnIntoOpen} onOpenChange={setTurnIntoOpen}>
-                      <MenuTrigger render={<Button variant="ghost" size="sm" />}>
-                        Turn into
-                        <ChevronDownIcon />
-                      </MenuTrigger>
-                      <MenuPopup align="start">
-                        {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
-                          const [label, Icon] = turnInto[type];
-                          return (
-                            <MenuItem
-                              key={type}
-                              disabled={
-                                !structure || !selectedId || !can(adapter.convert(selectedId, type))
-                              }
-                              onClick={() => selectedId && run(adapter.convert(selectedId, type))}
-                            >
-                              <Icon />
-                              {label}
-                            </MenuItem>
-                          );
-                        })}
-                      </MenuPopup>
-                    </Menu>
-                  </div>
-                  {link && (linkOpen === linkKey || link.hasLink) ? (
-                    <LinkValue
-                      key={JSON.stringify([selectedId, link.from, link.to, link.href])}
-                      href={link.href ?? ""}
-                      hasLink={link.hasLink}
-                      focus={linkOpen === linkKey}
-                      adapter={adapter}
-                      writable={writable}
-                      can={can}
-                      run={run}
-                    />
-                  ) : null}
-                </div>
-              ) : null}
-              {slashMenu ? (
-                <div
-                  role="listbox"
-                  aria-label="Commands"
-                  className="absolute z-20 max-h-72 w-60 overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
-                  style={slashMenu}
-                  onMouseDown={(event) => event.preventDefault()}
-                >
-                  {slashItems.map((item, index) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      role="option"
-                      aria-selected={index === slashIndex}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm aria-selected:bg-accent"
-                      onClick={() => pickSlash(item)}
-                    >
-                      <item.icon className="size-4 text-muted-foreground" />
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+              <BubbleLayer {...parts}>
+                <SlashLayer {...parts} onCreatePage={onCreatePage}>
+                  <EditorContent
+                    editor={editor}
+                    className="min-h-40 whitespace-pre-wrap break-words [&_.tiptap]:min-h-40 [&_.tiptap]:outline-none"
+                  />
+                </SlashLayer>
+              </BubbleLayer>
+            </EditorSurface>
           </SpaceMediaWritableContext.Provider>
         </SpaceMentionContext.Provider>
       </SpaceAtomContext.Provider>
     </section>
   );
 }
-function ToolbarIconButton({
-  label,
-  hint,
+
+function EditorSurface({
+  editor,
+  adapter,
+  bridge,
+  editable,
+  structure,
+  mediaEditable,
+  onMoveBlocks,
   children,
-  ...props
-}: Omit<ComponentProps<typeof Button>, "aria-label" | "render"> & {
-  label: string;
-  hint?: string | undefined;
+}: SpaceEditorParts & {
+  readonly structure: boolean;
+  readonly mediaEditable: boolean;
+  readonly onMoveBlocks: ((state: EditorState) => void) | undefined;
+  readonly children: ReactNode;
 }) {
+  const [wrapper, setWrapper] = useState<HTMLDivElement | null>(null);
+  // Measured when the pointer settles on a block, so the handle never uses a layout from an earlier render.
+  const [hover, setHover] = useState<{
+    readonly id: SpaceBlockId;
+    readonly top: number;
+    readonly left: number;
+  } | null>(null);
+  const hoverId = hover?.id ?? null;
+  const [handleMenuOpen, setHandleMenuOpen] = useState(false);
+  const [dragId, setDragId] = useState<SpaceBlockId | null>(null);
+  const [drop, setDrop] = useState<BlockDrop | null>(null);
+  const pendingHover = useRef<{ frame: number | null; block: Element | null }>({
+    frame: null,
+    block: null,
+  });
+  const measured = useRef<{ block: Element; doc: EditorState["doc"] } | null>(null);
+  const dragBlocks = useRef<readonly SpaceBlock[] | null>(null);
+  const info = useEditorState({
+    editor,
+    selector: ({ editor }) => {
+      const caps = editorCapabilities(bridge, editable, !!onMoveBlocks);
+      const doc = editor.state.doc;
+      const handle = hoverId && caps.structure ? findBlock(doc, hoverId) : null;
+      return {
+        canMove: caps.canMove,
+        handleId: handle?.id ?? null,
+        handleMedia: !!handle && MEDIA_TYPES.includes(handle.type),
+        dragExists: !dragId || !!findBlock(doc, dragId),
+      };
+    },
+  });
+  const run = (command: Command) => runCommand(editor, editable, command);
+  const can = (command: Command) =>
+    editorCapabilities(bridge, editable, false).writable && command(editor.state);
+  const measureHover = (block: Element) => {
+    if (!wrapper || !block.isConnected) return;
+    const id = block.getAttribute("data-space-block") as SpaceBlockId | null;
+    if (!id) return;
+    const rect = block.getBoundingClientRect();
+    const box = wrapper.getBoundingClientRect();
+    const top = rect.top - box.top + 2;
+    const left = Math.max(0, rect.left - box.left - SPACE_BLOCK_HANDLE_WIDTH);
+    measured.current = { block, doc: editor.state.doc };
+    setHover((current) =>
+      current && current.id === id && current.top === top && current.left === left
+        ? current
+        : { id, top, left },
+    );
+  };
+  const trackHover = (event: ReactMouseEvent) => {
+    if (handleMenuOpen || dragId || !(event.target instanceof Element)) return;
+    const block = event.target.closest("[data-space-block]");
+    if (!block || !wrapper) return;
+    if (measured.current?.block === block && measured.current.doc === editor.state.doc) return;
+    const pending = pendingHover.current;
+    pending.block = block;
+    if (pending.frame === null) {
+      pending.frame = requestAnimationFrame(() => {
+        pending.frame = null;
+        if (pending.block) measureHover(pending.block);
+      });
+    }
+  };
+  const clearHover = () => {
+    if (handleMenuOpen || dragId) return;
+    const pending = pendingHover.current;
+    if (pending.frame !== null) cancelAnimationFrame(pending.frame);
+    pending.frame = null;
+    pending.block = null;
+    measured.current = null;
+    setHover(null);
+  };
+  const clearDrag = () => {
+    dragBlocks.current = null;
+    setDragId(null);
+    setDrop(null);
+  };
+  const startDrag = (event: ReactDragEvent) => {
+    if (!hoverId) return event.preventDefault();
+    event.dataTransfer.setData(BLOCK_DRAG_TYPE, hoverId);
+    event.dataTransfer.effectAllowed = "move";
+    const element = blockElement(wrapper, hoverId);
+    if (element) event.dataTransfer.setDragImage(element, 0, 0);
+    dragBlocks.current = spaceDocumentBlocks(editor.state.doc);
+    setDragId(hoverId);
+  };
+  const dragOverBlock = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!dragId || !wrapper) return;
+    event.stopPropagation();
+    const element =
+      event.target instanceof Element ? event.target.closest("[data-space-block]") : null;
+    const targetId = element?.getAttribute("data-space-block") as SpaceBlockId | null | undefined;
+    if (!element || !targetId) {
+      if (drop?.allowed) event.preventDefault();
+      return;
+    }
+    const rect = element.getBoundingClientRect();
+    const after = event.clientY > rect.top + rect.height / 2;
+    const key = `${targetId}:${after}`;
+    if (drop?.key !== key) {
+      const blocks = dragBlocks.current ?? spaceDocumentBlocks(editor.state.doc);
+      dragBlocks.current = blocks;
+      return setDrop(
+        planBlockDrop({
+          blocks,
+          dragId,
+          targetId,
+          after,
+          rect,
+          box: wrapper.getBoundingClientRect(),
+          canMove: (parentId, beforeId) => adapter.move(dragId, parentId, beforeId)(editor.state),
+        }),
+      );
+    }
+    if (drop.allowed) event.preventDefault();
+  };
+  const dropBlock = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!dragId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const target = drop;
+    clearDrag();
+    if (target?.allowed) run(adapter.move(dragId, target.parentId, target.beforeId));
+  };
+  const leaveDrag = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)))
+      setDrop(null);
+  };
+  if (dragId && !info.dragExists) {
+    setDragId(null);
+    setDrop(null);
+  }
+  const handleId = info.handleId;
+  const handleAt = handleId && hover ? { top: hover.top, left: hover.left } : null;
+  const selectBlock = (id: SpaceBlockId) => {
+    let at = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (at >= 0 || node.attrs.block?.id !== id) return at < 0;
+      at = pos;
+      return false;
+    });
+    if (at >= 0)
+      editor.view.dispatch(
+        editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, at)),
+      );
+  };
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={<Button variant="ghost" size="icon-sm" aria-label={label} {...props} />}
+    <SpaceEditorWrapperContext.Provider value={wrapper}>
+      <div
+        ref={setWrapper}
+        className={structure ? "relative -ms-12 ps-12" : "relative"}
+        onMouseMove={trackHover}
+        onMouseLeave={clearHover}
+        onDragOverCapture={dragOverBlock}
+        onDropCapture={dropBlock}
+        onDragLeave={leaveDrag}
+        onFocus={() => {
+          const caps = editorCapabilities(bridge, editable, false);
+          if (editor.state.doc.childCount === 0 && caps.structure && caps.complete)
+            adapter.append()(editor.state, editor.view.dispatch);
+        }}
       >
         {children}
-      </TooltipTrigger>
-      <TooltipPopup side="top">{hint ?? label}</TooltipPopup>
-    </Tooltip>
-  );
-}
-
-function FormatValue({
-  label,
-  initial,
-  writable,
-  command,
-  can,
-  run,
-}: {
-  label: string;
-  initial: string;
-  writable: boolean;
-  command: (value: string) => Command;
-  can: (command: Command) => boolean;
-  run: (command: Command) => void;
-}) {
-  const [value, setValue] = useState(initial);
-  return (
-    <form
-      className="flex flex-wrap items-center gap-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        run(command(value));
-      }}
-    >
-      <label className="flex items-center gap-2">
-        {label}
-        <Input
-          size="sm"
-          value={value}
-          disabled={!writable}
-          onChange={(event) => setValue(event.target.value)}
-        />
-      </label>
-      <Button
-        type="submit"
-        variant="outline"
-        size="sm"
-        disabled={!can(command(value))}
-        onMouseDown={(event) => event.preventDefault()}
-      >
-        Apply {label.toLowerCase()}
-      </Button>
-    </form>
-  );
-}
-function LinkValue({
-  href,
-  hasLink,
-  focus,
-  adapter,
-  writable,
-  can,
-  run,
-}: {
-  href: string;
-  hasLink: boolean;
-  focus: boolean;
-  adapter: SpaceEditorAdapter;
-  writable: boolean;
-  can: (command: Command) => boolean;
-  run: (command: Command) => void;
-}) {
-  const [value, setValue] = useState(href);
-  return (
-    <form
-      className="flex flex-wrap items-center gap-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        run(adapter.setLink(value));
-      }}
-    >
-      <label className="flex items-center gap-2">
-        Link URL
-        <Input
-          autoFocus={focus}
-          size="sm"
-          value={value}
-          disabled={!writable}
-          aria-description="HTTP, HTTPS or mailto links. Applies to the selected text, or the whole existing link at the caret."
-          onChange={(event) => setValue(event.target.value)}
-        />
-      </label>
-      <Button
-        type="submit"
-        variant="outline"
-        size="sm"
-        disabled={!can(adapter.setLink(value))}
-        onMouseDown={(event) => event.preventDefault()}
-      >
-        {hasLink ? "Apply link" : "Add link"}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        disabled={!can(adapter.removeLink())}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={() => run(adapter.removeLink())}
-      >
-        Remove link
-      </Button>
-    </form>
+        {handleAt && handleId ? (
+          <SpaceBlockHandle
+            top={handleAt.top}
+            left={handleAt.left}
+            menuOpen={handleMenuOpen}
+            onMenuOpenChange={setHandleMenuOpen}
+            onAdd={
+              can(adapter.insertAfter(handleId))
+                ? () => run(adapter.insertAfter(handleId, "/"))
+                : null
+            }
+            onDragStart={startDrag}
+            onDragEnd={clearDrag}
+          >
+            <MenuSub>
+              <MenuSubTrigger>Turn into</MenuSubTrigger>
+              <MenuSubPopup>
+                {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
+                  const [label, Icon] = turnInto[type];
+                  return (
+                    <MenuItem
+                      key={type}
+                      disabled={!can(adapter.convert(handleId, type))}
+                      onClick={() => run(adapter.convert(handleId, type))}
+                    >
+                      <Icon />
+                      {label}
+                    </MenuItem>
+                  );
+                })}
+              </MenuSubPopup>
+            </MenuSub>
+            <MenuItem
+              disabled={!can(adapter.duplicate(handleId))}
+              onClick={() => run(adapter.duplicate(handleId))}
+            >
+              <CopyIcon />
+              Duplicate
+            </MenuItem>
+            <MenuItem
+              disabled={!can(adapter.shift(-1, handleId))}
+              onClick={() => run(adapter.shift(-1, handleId))}
+            >
+              <ArrowUpIcon />
+              Move up
+            </MenuItem>
+            <MenuItem
+              disabled={!can(adapter.shift(1, handleId))}
+              onClick={() => run(adapter.shift(1, handleId))}
+            >
+              <ArrowDownIcon />
+              Move down
+            </MenuItem>
+            {info.canMove ? (
+              <MenuItem
+                onClick={() => {
+                  selectBlock(handleId);
+                  onMoveBlocks?.(editor.state);
+                }}
+              >
+                Move to…
+              </MenuItem>
+            ) : null}
+            <MenuSeparator />
+            <MenuItem
+              variant="destructive"
+              disabled={
+                !(info.handleMedia
+                  ? mediaEditable && can(adapter.removeMedia(handleId))
+                  : can(adapter.remove(handleId)))
+              }
+              onClick={() =>
+                run(info.handleMedia ? adapter.removeMedia(handleId) : adapter.remove(handleId))
+              }
+            >
+              <Trash2Icon />
+              {info.handleMedia ? "Remove media block" : "Delete block"}
+            </MenuItem>
+          </SpaceBlockHandle>
+        ) : null}
+        {drop?.allowed ? (
+          <div
+            className="pointer-events-none absolute z-10 h-0.5 rounded-full bg-primary"
+            style={{ top: drop.top - 1, left: drop.left, width: drop.width }}
+          />
+        ) : null}
+      </div>
+    </SpaceEditorWrapperContext.Provider>
   );
 }

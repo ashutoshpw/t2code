@@ -8,7 +8,7 @@ import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import { canonical, checkLimit, limits } from "./CorePolicy.ts";
+import { canonical, ensureLimit, limits } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 
 export interface Metadata {
@@ -66,6 +66,22 @@ export const cleanup = Effect.fnUntraced(function* (meta: Metadata) {
     )`;
 });
 
+const admissionFor = (epoch: {
+  epoch: C.SpaceReceiptEpoch;
+  accepts_until: number;
+  retain_until: number;
+}) => ({
+  epoch: epoch.epoch,
+  acceptsUntil: DateTime.formatIso(DateTime.makeUnsafe(epoch.accepts_until)),
+  retainUntil: DateTime.formatIso(DateTime.makeUnsafe(epoch.retain_until)),
+});
+
+/** The admission a read can hand out without minting an epoch. */
+export const peek = Effect.fnUntraced(function* (meta: Metadata) {
+  const epoch = yield* active(meta);
+  return epoch ? admissionFor(epoch) : undefined;
+});
+
 export const issue = Effect.fnUntraced(function* (
   meta: Metadata,
 ): Effect.fn.Return<
@@ -91,11 +107,7 @@ export const issue = Effect.fnUntraced(function* (
       VALUES (${epoch.epoch}, ${epoch.accepts_until}, ${epoch.retain_until})`;
     yield* sql`UPDATE spaces_core SET active_epoch = ${epoch.epoch} WHERE singleton = 1`;
   }
-  return {
-    epoch: epoch.epoch,
-    acceptsUntil: DateTime.formatIso(DateTime.makeUnsafe(epoch.accepts_until)),
-    retainUntil: DateTime.formatIso(DateTime.makeUnsafe(epoch.retain_until)),
-  };
+  return admissionFor(epoch);
 });
 
 export const find = Effect.fnUntraced(function* (request: C.SpaceMutationRequest) {
@@ -129,7 +141,7 @@ export const store = Effect.fnUntraced(function* (
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const payload = canonical(receipt);
-  checkLimit("maxReceiptBytes", Buffer.byteLength(payload, "utf8"));
+  yield* ensureLimit("maxReceiptBytes", Buffer.byteLength(payload, "utf8"));
   const logical = canonical({
     environmentId: request.input.environmentId,
     mutationId: request.input.mutationId,
@@ -140,8 +152,8 @@ export const store = Effect.fnUntraced(function* (
     receipt,
   });
   const bytes = Buffer.byteLength(logical, "utf8");
-  checkLimit("maxReceiptRows", meta.receipt_rows + 1);
-  checkLimit("maxReceiptStorageBytes", meta.receipt_bytes + bytes);
+  yield* ensureLimit("maxReceiptRows", meta.receipt_rows + 1);
+  yield* ensureLimit("maxReceiptStorageBytes", meta.receipt_bytes + bytes);
   yield* sql`INSERT INTO spaces_receipts (mutation_id, epoch, fingerprint, payload, logical_bytes, retain_until)
     VALUES (${request.input.mutationId}, ${request.input.receiptEpoch}, ${fingerprint(request)}, ${payload}, ${bytes}, ${retainUntil})`;
   yield* sql`UPDATE spaces_core SET receipt_rows = receipt_rows + 1, receipt_bytes = receipt_bytes + ${bytes} WHERE singleton = 1`;

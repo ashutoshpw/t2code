@@ -144,7 +144,10 @@ function Pages({
               variant="ghost"
               size="sm"
               disabled={query.isPending}
-              onClick={() => setCursor(query.data!.nextCursor!)}
+              onClick={() => {
+                const next = query.data?.nextCursor;
+                if (next) setCursor(next);
+              }}
             >
               Next pages
             </Button>

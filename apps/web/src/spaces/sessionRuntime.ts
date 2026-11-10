@@ -381,5 +381,7 @@ export function spaceRootReorder(
     changed: () => registry.update(spacesEnvironment.changed(environmentId), (value) => value + 1),
   });
   entries.set(environmentId, reorder);
+  // Hydration belongs to the owner, not to each view; a failure lands in the owner's snapshot.
+  void reorder.hydrate().catch(() => {});
   return reorder;
 }

@@ -79,21 +79,21 @@ export const prune = Effect.fn("SpacesRevisions.prune")(function* (now: number) 
   yield* remove(selected);
 });
 
-function capacity(pageBytes: number, environmentBytes?: number): never {
+const capacity = (pageBytes: number, environmentBytes?: number) => {
   if (pageBytes > limits.maxPageBytes)
-    throw new C.SpaceLimitExceededError({
+    return new C.SpaceLimitExceededError({
       limit: "history.maxPageBytes",
       actual: pageBytes,
       maximum: limits.maxPageBytes,
     });
   if (environmentBytes !== undefined && environmentBytes > limits.maxEnvironmentBytes)
-    throw new C.SpaceLimitExceededError({
+    return new C.SpaceLimitExceededError({
       limit: "history.maxEnvironmentBytes",
       actual: environmentBytes,
       maximum: limits.maxEnvironmentBytes,
     });
-  throw new C.SpacesUnavailableError({ stage: "capacity" });
-}
+  return new C.SpacesUnavailableError({ stage: "capacity" });
+};
 
 export const capture = Effect.fn("SpacesRevisions.capture")(function* (
   input: {
@@ -188,12 +188,13 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
       pageBytes <= limits.maxPageBytes
     )
       continue;
-    if (!(yield* reserve(used, row))) capacity(pageBytes);
+    if (!(yield* reserve(used, row))) return yield* capacity(pageBytes);
     selected.push(row);
     count--;
     pageBytes -= row.logical_bytes;
   }
-  if (count > limits.maxRevisionsPerPage || pageBytes > limits.maxPageBytes) capacity(pageBytes);
+  if (count > limits.maxRevisionsPerPage || pageBytes > limits.maxPageBytes)
+    return yield* capacity(pageBytes);
   yield* remove(selected);
   const [meta] = yield* sql<{
     readonly revision_bytes: number;
@@ -208,11 +209,12 @@ export const capture = Effect.fn("SpacesRevisions.capture")(function* (
     for (const row of oldest) {
       if (environmentBytes <= limits.maxEnvironmentBytes) break;
       if (used.protectedRevisions.has(canonical([row.page_id, row.to_revision]))) continue;
-      if (!(yield* reserve(used, row))) capacity(pageBytes, environmentBytes);
+      if (!(yield* reserve(used, row))) return yield* capacity(pageBytes, environmentBytes);
       evicted.push(row);
       environmentBytes -= row.logical_bytes;
     }
-    if (environmentBytes > limits.maxEnvironmentBytes) capacity(pageBytes, environmentBytes);
+    if (environmentBytes > limits.maxEnvironmentBytes)
+      return yield* capacity(pageBytes, environmentBytes);
     yield* remove(evicted);
   }
   yield* sql`INSERT INTO spaces_revisions (page_id, to_revision, mutation_id, created_at_ms, expires_at_ms, payload, logical_bytes, asset_count)

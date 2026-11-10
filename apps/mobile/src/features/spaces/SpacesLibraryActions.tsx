@@ -18,8 +18,9 @@ import type {
   SpaceSummary,
   SpaceReadBlocksResult,
 } from "@t2code/contracts/spaces";
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { FlatList, Modal, TextInput, View } from "react-native";
+import { useState, useSyncExternalStore } from "react";
+import { LegendList } from "@legendapp/list/react-native";
+import { Modal, TextInput, View } from "react-native";
 import { AppText as Text } from "../../components/ui/AppText";
 import { ControlPill } from "../../components/ui/ControlPill";
 import * as Dialog from "../../components/ui/Dialog";
@@ -117,10 +118,6 @@ function Actions({
       setError(cause instanceof Error ? cause.message : "Could not update Spaces"),
     );
   };
-  // oxlint-disable-next-line t2code/react-effect-budget -- Hydrate the environment's durable structural journal before offering mutations or recovery.
-  useEffect(() => {
-    void owner.hydrate().catch(() => {});
-  }, [owner]);
   function choose(value: Intent, initial = "") {
     if (disabled) return;
     setTitle(initial);
@@ -201,6 +198,8 @@ function Actions({
       : access.capability?.features?.recovery === true &&
         (history.operation === "trashPage" ? trashPage : restorePage));
   const result = snapshot.libraryResult;
+  const resultPage = result?.page;
+  const resultSpace = result?.space;
   const bodyReady =
     intent?.kind === "child" &&
     snapshot.body?.pageId === intent.page.id &&
@@ -426,25 +425,25 @@ function Actions({
               Undo is unavailable for metadata changes or an unproven inverse.
             </Text>
           ) : null}
-          {result?.page && readable ? (
+          {resultPage && readable ? (
             <ControlPill
               variant="pill"
-              label={`Open ${result.page.title || "page"}`}
+              label={`Open ${resultPage.title || "page"}`}
               onPress={() =>
                 navigation.push("SpacesPage", {
                   environmentId,
-                  spaceId: result.page!.spaceId,
-                  pageId: result.page!.id,
+                  spaceId: resultPage.spaceId,
+                  pageId: resultPage.id,
                 })
               }
             />
           ) : null}
-          {result?.space && !result.page && readable ? (
+          {resultSpace && !resultPage && readable ? (
             <ControlPill
               variant="pill"
-              label={`Open ${result.space.title || "space"}`}
+              label={`Open ${resultSpace.title || "space"}`}
               onPress={() =>
-                navigation.push("SpacesLibrary", { environmentId, spaceId: result.space!.id })
+                navigation.push("SpacesLibrary", { environmentId, spaceId: resultSpace.id })
               }
             />
           ) : null}
@@ -484,10 +483,11 @@ function Actions({
                       Select contiguous subtree roots in one container. Descendants move with their
                       root. Original opaque content is preserved.
                     </Text>
-                    <FlatList
+                    <LegendList
                       renderScrollComponent={NativeScrollView}
                       data={sourceWindow?.blocks ?? []}
                       keyExtractor={(block) => block.id}
+                      extraData={{ selectedBlocks, disabled, sourceComplete }}
                       style={{ maxHeight: 240 }}
                       renderItem={({ item: block }) => (
                         <ControlPill
@@ -594,10 +594,11 @@ function Actions({
                             onPress={() => run(owner.browseSpaces(true))}
                           />
                         </View>
-                        <FlatList
+                        <LegendList
                           renderScrollComponent={NativeScrollView}
                           data={snapshot.spaces?.items ?? []}
                           keyExtractor={(item) => item.id}
+                          extraData={disabled}
                           style={{ maxHeight: 120 }}
                           renderItem={({ item }) => (
                             <ControlPill
@@ -659,13 +660,14 @@ function Actions({
                                 }
                               />
                             </View>
-                            <FlatList
+                            <LegendList
                               renderScrollComponent={NativeScrollView}
                               data={destination.items.filter(
                                 (item) => movingBlocks || item.id !== intent.page.id,
                               )}
                               keyExtractor={(item) => item.id}
                               style={{ maxHeight: 160 }}
+                              extraData={{ movingBlocks, disabled }}
                               ListEmptyComponent={
                                 <Text className="text-foreground-muted">
                                   {destination.nextCursor
@@ -772,10 +774,11 @@ function Actions({
                                   disabled={disabled}
                                   onPress={() => setContainer(null)}
                                 />
-                                <FlatList
+                                <LegendList
                                   renderScrollComponent={NativeScrollView}
                                   data={body.blocks.filter(isSpaceListItem)}
                                   keyExtractor={(block) => block.id}
+                                  extraData={{ container, disabled }}
                                   style={{ maxHeight: 100 }}
                                   renderItem={({ item: block }) => (
                                     <ControlPill
@@ -792,10 +795,11 @@ function Actions({
                                     placement again.
                                   </Text>
                                 ) : null}
-                                <FlatList
+                                <LegendList
                                   renderScrollComponent={NativeScrollView}
                                   data={body.blocks.filter((block) => block.parentId === container)}
                                   keyExtractor={(block) => block.id}
+                                  extraData={{ container, containerAvailable, disabled }}
                                   style={{ maxHeight: 120 }}
                                   renderItem={({ item: block }) => (
                                     <ControlPill

@@ -1,12 +1,5 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import {
-  useContext,
-  useEffect,
-  useImperativeHandle,
-  useState,
-  useSyncExternalStore,
-  type Ref,
-} from "react";
+import { useContext, useImperativeHandle, useState, useSyncExternalStore, type Ref } from "react";
 import {
   type SpaceBlockMoveProof,
   type SpaceRootReorder,
@@ -106,10 +99,6 @@ function StructureControls({
     permission &&
     availability === "writable" &&
     current();
-  // oxlint-disable-next-line t2code/react-effect-budget -- Load the shared durable structural journal independently of this metadata view.
-  useEffect(() => {
-    run(owner.hydrate());
-  }, [owner]);
   const { journal, window, position, busy, hydrated, spaces, parentPageId } = snapshot;
   const pending = journal.pending;
   // An operation in flight has its own pending entry; only a leftover or conflicted one needs the notice.

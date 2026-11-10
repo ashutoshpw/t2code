@@ -1,17 +1,17 @@
 import { expect, it } from "@effect/vitest";
-import { EnvironmentId } from "../packages/contracts/src/index.ts";
-import { SpaceBlockId } from "../packages/contracts/src/spaces.ts";
+import { EnvironmentId } from "../../../../../packages/contracts/src/index.ts";
+import { SpaceBlockId } from "../../../../../packages/contracts/src/spaces.ts";
 import {
   SpaceDocumentSession,
   createSpaceServiceSessionAdapter,
-} from "../packages/client-runtime/src/spaces/index.ts";
+} from "../../../../../packages/client-runtime/src/spaces/index.ts";
 import * as Effect from "effect/Effect";
 
-import { MobileSpaceEditing } from "../apps/mobile/src/features/spaces/editing.ts";
-import { diskDatabase } from "../apps/mobile/src/persistence/mobile-database.test-support.ts";
-import * as SpacesService from "../apps/server/src/spaces/SpacesService.ts";
+import { MobileSpaceEditing } from "../../features/spaces/editing.ts";
+import { diskDatabase } from "../../persistence/mobile-database.test-support.ts";
+import * as SpacesService from "../../../../server/src/spaces/SpacesService.ts";
 
-import { mobileSpacesServiceLayer, promiseRunner } from "./spaces-mobile.test-support.mjs";
+import { mobileSpacesServiceLayer, promiseRunner } from "./spacesMobile.test-support.mjs";
 
 it.effect(
   "publishes rich native edits to mobile SQLite and recovers the actual receipt without losing later input",

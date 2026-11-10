@@ -1,6 +1,7 @@
 import type { SpacePageShare, SpaceSharedPage } from "@t2code/contracts";
 import { SpacePageShareId } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 
 import * as BlockStore from "./BlockStore.ts";
@@ -32,9 +33,7 @@ export const findByPage = Effect.fn("SpacesPageShares.findByPage")(function* (
   return row ? shareFromRow(row) : null;
 });
 
-export const findById = Effect.fn("SpacesPageShares.findById")(function* (
-  shareId: SpacePageShareId,
-) {
+const findById = Effect.fn("SpacesPageShares.findById")(function* (shareId: SpacePageShareId) {
   const sql = yield* SpacesSql.SpacesSql;
   const [row] = yield* sql<ShareRow>`SELECT * FROM spaces_page_shares WHERE share_id = ${shareId}`;
   return row ? shareFromRow(row) : null;
@@ -43,7 +42,7 @@ export const findById = Effect.fn("SpacesPageShares.findById")(function* (
 /** One share per page: the new row ends the old link. */
 export const replace = Effect.fn("SpacesPageShares.replace")(function* (share: SpacePageShare) {
   const sql = yield* SpacesSql.SpacesSql;
-  PageStore.assertActive(yield* PageStore.read(share.pageId));
+  yield* PageStore.assertActive(yield* PageStore.read(share.pageId));
   yield* sql`INSERT OR REPLACE INTO spaces_page_shares (page_id, share_id, host, created_at, expires_at)
     VALUES (${share.pageId}, ${share.id}, ${share.host}, ${share.createdAt}, ${share.expiresAt})`;
 });
@@ -57,7 +56,7 @@ export const remove = Effect.fn("SpacesPageShares.remove")(function* (pageId: C.
  * The titles from the shared root down to the page, or null when the page is not a live
  * descendant of the root. Walks parents upward, so the cost is the page's depth.
  */
-export const locate = Effect.fn("SpacesPageShares.locate")(function* (
+const locate = Effect.fn("SpacesPageShares.locate")(function* (
   rootPageId: C.SpacePageId,
   pageId: C.SpacePageId,
 ) {
@@ -84,29 +83,57 @@ export const locate = Effect.fn("SpacesPageShares.locate")(function* (
   return null;
 });
 
+const RANK_LENGTH = 32;
+// Bound to body_revision like authenticated cursors, so an edit between windows ends the walk.
+const shareCursor = (bodyRevision: number, row: BlockStore.BlockRow) =>
+  C.SpaceCursor.make(`${bodyRevision}:${row.rank}${row.block_id}`);
+
+const parseShareCursor = (cursor: string, bodyRevision: number) => {
+  const split = cursor.indexOf(":");
+  const rest = cursor.slice(split + 1);
+  if (split < 1 || cursor.slice(0, split) !== String(bodyRevision) || rest.length <= RANK_LENGTH)
+    return null;
+  return { rank: rest.slice(0, RANK_LENGTH), id: rest.slice(RANK_LENGTH) };
+};
+
+/** One window of the page, in the byte and block bounds authenticated readers get. */
+/** The share, the page asked for and its place in the tree, so one read answers a viewer's request. */
+export const resolve = Effect.fn("SpacesPageShares.resolve")(function* (
+  shareId: SpacePageShareId,
+  requested: C.SpacePageId | undefined,
+) {
+  const share = yield* findById(shareId);
+  if (share === null) return null;
+  const pageId = requested ?? share.pageId;
+  const breadcrumb = yield* locate(share.pageId, pageId);
+  const rootLive =
+    breadcrumb !== null || pageId === share.pageId
+      ? breadcrumb !== null
+      : (yield* locate(share.pageId, share.pageId)) !== null;
+  return { share, pageId, breadcrumb, rootLive };
+});
+
 export const read = Effect.fn("SpacesPageShares.read")(function* (
   rootPageId: C.SpacePageId,
   expiresAt: string,
   pageId: C.SpacePageId,
   breadcrumb: SpaceSharedPage["breadcrumb"],
+  cursor?: string,
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const page = yield* PageStore.load(pageId);
-  const rows = yield* sql<BlockStore.BlockRow>`SELECT * FROM spaces_blocks
-    WHERE page_id = ${pageId} AND deleted = 0 ORDER BY rank, block_id LIMIT ${limits.maxPageBlocks + 1}`;
-  const byParent = new Map<string | null, BlockStore.BlockRow[]>();
-  for (const row of rows) {
-    const siblings = byParent.get(row.parent_id);
-    if (siblings) siblings.push(row);
-    else byParent.set(row.parent_id, [row]);
-  }
-  const blocks: C.SpaceBlock[] = [];
-  const pending = [...(byParent.get(null) ?? [])].reverse();
-  while (pending.length > 0 && blocks.length < limits.maxPageBlocks) {
-    const row = pending.pop()!;
-    blocks.push(yield* BlockStore.blockFromRow(row));
-    pending.push(...[...(byParent.get(row.block_id) ?? [])].reverse());
-  }
+  if (cursor !== undefined && cursor.length > limits.maxCursorBytes)
+    return yield* new C.SpaceValidationError({ reason: "invalid_cursor" });
+  const after = cursor === undefined ? undefined : parseShareCursor(cursor, page.body_revision);
+  if (cursor !== undefined && after === null)
+    return yield* new C.SpaceValidationError({ reason: "invalid_cursor" });
+  const window = yield* BlockStore.readWindow({
+    pageId,
+    revision: page.revision,
+    after: after ?? undefined,
+    limit: limits.maxBlockWindowBlocks,
+    continuation: (row) => Effect.succeed(shareCursor(page.body_revision, row)),
+  });
   const children = yield* sql<{
     readonly page_id: C.SpacePageId;
     readonly title: string;
@@ -127,7 +154,8 @@ export const read = Effect.fn("SpacesPageShares.read")(function* (
       ...(page.icon ? { icon: page.icon } : {}),
       updatedAt: page.updated_at,
     },
-    window: { revision: page.revision, blocks },
+    window: { revision: window.revision, blocks: window.blocks },
+    ...(window.nextCursor === null ? {} : { nextCursor: window.nextCursor }),
     breadcrumb,
     children: children.map((child) => ({
       id: child.page_id,
@@ -147,4 +175,9 @@ export const referencesAsset = Effect.fn("SpacesPageShares.referencesAsset")(fun
     JOIN spaces_blocks b ON b.block_id = r.block_id
     WHERE b.page_id = ${pageId} AND b.deleted = 0 AND r.asset_id = ${assetId} LIMIT 1`;
   return rows.length > 0;
+});
+
+export const purgeExpired = Effect.fn("SpacesPageShares.purgeExpired")(function* (now: number) {
+  const sql = yield* SpacesSql.SpacesSql;
+  yield* sql`DELETE FROM spaces_page_shares WHERE expires_at <= ${DateTime.formatIso(DateTime.makeUnsafe(now))}`;
 });

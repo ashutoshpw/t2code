@@ -68,7 +68,7 @@ export function SpaceDocumentSurface({
   } | null>(null);
   const { environmentId, pageId } = target;
   const stamp = JSON.stringify([environmentId, pageId, attempt]);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Acquire and release the external document session shared by route and panel mounts.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Acquire and release the external document session shared by route and panel mounts.
   useEffect(() => {
     const key = { environmentId, pageId };
     const documents = spaceDocuments(registry);
@@ -224,7 +224,7 @@ function DocumentContent({
   };
   const autosave = useRef<ReturnType<typeof createAutosave> | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  // oxlint-disable-next-line t2code/react-effect-budget -- Debounced autosave subscribes to the external document session and flushes on leave.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Debounced autosave subscribes to the external document session and flushes on leave.
   useEffect(() => {
     const failure = (error: unknown) => {
       toastManager.add({

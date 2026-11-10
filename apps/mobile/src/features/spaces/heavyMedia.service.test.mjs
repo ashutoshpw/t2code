@@ -1,15 +1,13 @@
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vite-plus/test";
-import * as NodeModule from "node:module";
-import {
-  MobileSpaceImageBudget,
-  MobileSpaceImageViewer,
-} from "../apps/mobile/src/features/spaces/media.ts";
-import { PdfPosition } from "../apps/mobile/src/lib/pdfPosition.ts";
-import { TrackedPdfPreview } from "../apps/mobile/src/components/TrackedPdfPreview.tsx";
+import { MobileSpaceImageBudget, MobileSpaceImageViewer } from "../../features/spaces/media.ts";
+import { PdfPosition } from "../../lib/pdfPosition.ts";
+import { TrackedPdfPreview } from "../../components/TrackedPdfPreview.tsx";
 const platform = vi.hoisted(() => ({ downloads: [], views: [], active: 0 }));
-vi.mock("../apps/mobile/node_modules/react-native", () => ({ View: ({ children }) => children }));
-vi.mock("../apps/mobile/node_modules/react-native-pdf-jsi", async () => {
-  const { useEffect } = await import("../apps/mobile/node_modules/react/index.js");
+vi.mock("react-native", () => ({ View: ({ children }) => children }));
+vi.mock("react-native-pdf-jsi", async () => {
+  const { useEffect } = await import("react");
   return {
     default: (props) => {
       platform.views.push(props);
@@ -23,14 +21,14 @@ vi.mock("../apps/mobile/node_modules/react-native-pdf-jsi", async () => {
     },
   };
 });
-vi.mock("../apps/mobile/src/lib/attachmentDownload.ts", () => ({
+vi.mock("../../lib/attachmentDownload.ts", () => ({
   downloadAttachmentForPreview: (input) => {
     const result = Promise.withResolvers();
     platform.downloads.push({ ...input, result });
     return result.promise;
   },
 }));
-vi.mock("../apps/mobile/node_modules/expo-file-system", () => ({
+vi.mock("expo-file-system", () => ({
   FileMode: { ReadOnly: "r" },
   File: class {
     open() {
@@ -38,24 +36,17 @@ vi.mock("../apps/mobile/node_modules/expo-file-system", () => ({
     }
   },
 }));
-vi.mock("../apps/mobile/src/features/files/FilePreviewFeedback.tsx", () => ({
+vi.mock("../../features/files/FilePreviewFeedback.tsx", () => ({
   FilePreviewLoading: () => null,
   FilePreviewNotice: ({ children }) => children,
 }));
-vi.mock("../apps/mobile/src/components/ui/ControlPill.tsx", () => ({ ControlPill: () => null }));
-vi.mock("../apps/mobile/src/lib/openExternalUrl.ts", () => ({ tryOpenExternalUrl: () => {} }));
-const require = NodeModule.createRequire(new URL("../apps/mobile/package.json", import.meta.url));
-const { act, createElement } = require("react");
-const { createRoot } = require("react-dom/client");
-const { JSDOM } = require("jsdom");
+vi.mock("../../components/ui/ControlPill.tsx", () => ({ ControlPill: () => null }));
+vi.mock("../../lib/openExternalUrl.ts", () => ({ tryOpenExternalUrl: () => {} }));
 
 it("retains PDF file admission across late download cleanup, restores reported page on renewal, ignores retired bindings and unmounts over-page decoders", async () => {
   platform.downloads = [];
   platform.views = [];
   platform.active = 0;
-  const dom = new JSDOM("<!doctype html><html><body></body></html>");
-  vi.stubGlobal("window", dom.window);
-  vi.stubGlobal("document", dom.window.document);
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const root = createRoot(document.createElement("div"));
   const budget = new MobileSpaceImageBudget("PDF or video");
@@ -149,7 +140,6 @@ it("retains PDF file admission across late download cleanup, restores reported p
     next.close();
     for (const download of platform.downloads) download.result.resolve(null);
     await act(async () => root.unmount());
-    dom.window.close();
     vi.unstubAllGlobals();
   }
 });

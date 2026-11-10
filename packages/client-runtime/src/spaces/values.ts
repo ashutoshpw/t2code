@@ -79,10 +79,6 @@ export function canEditSpaceBlockOnMobile(block: SpaceBlock): boolean {
   );
 }
 
-export function spacePlainText(runs: SpaceRichText): string {
-  return runs.map((run) => run.text).join("");
-}
-
 function assertOffset(text: string, offset: number) {
   if (
     !Number.isInteger(offset) ||
@@ -95,6 +91,10 @@ function assertOffset(text: string, offset: number) {
   ) {
     throw new Error("Invalid UTF-16 text boundary");
   }
+}
+
+function spacePlainText(runs: SpaceRichText): string {
+  return runs.map((run) => run.text).join("");
 }
 
 function sliceSpaceRuns(runs: SpaceRichText, start: number, end: number): SpaceRichText {

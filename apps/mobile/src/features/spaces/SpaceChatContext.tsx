@@ -38,7 +38,7 @@ export function SpaceChatContext({
         },
       }),
   );
-  // oxlint-disable-next-line t2code/react-effect-budget -- Navigation metadata belongs to the selected chip, never to its durable document session.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Navigation metadata belongs to the selected chip, never to its durable document session.
   useEffect(() => {
     let active = true;
     const release = model.mount();

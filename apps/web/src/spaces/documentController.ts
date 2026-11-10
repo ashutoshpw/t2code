@@ -18,6 +18,7 @@ import type { SpaceEditorWindow } from "./document";
 import type { SpaceCompensation } from "@t2code/client-runtime/spaces";
 
 const isSpaceValidationError = Schema.is(SpaceValidationError);
+const isSpaceIntentAdmissionError = Schema.is(SpaceIntentAdmissionError);
 
 export interface SpaceDocumentPorts {
   readonly beforeRead?: () => Promise<void>;
@@ -235,7 +236,7 @@ export class SpaceDocumentController {
       if (!state.dirty && !state.pending && state.persistenceError === null)
         await this.#load(undefined, false, true);
     } catch (error) {
-      if (Schema.is(SpaceIntentAdmissionError)(error) && !this.session.getSnapshot().pending)
+      if (isSpaceIntentAdmissionError(error) && !this.session.getSnapshot().pending)
         this.#update({ imageAdmissionError: error });
       else this.#update({ error });
       throw error;
