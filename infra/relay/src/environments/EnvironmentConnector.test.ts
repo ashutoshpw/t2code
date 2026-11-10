@@ -65,7 +65,7 @@ const settings = RelayConfiguration.RelayConfiguration.of({
     teamId: "team-id",
     keyId: "key-id",
     privateKey: Redacted.make("private-key"),
-    bundleId: "com.t2tools.t2code.dev",
+    bundleId: "codes.t2.mobile.dev",
   },
   apnsDeliveryJobSigningSecret: Redacted.make("job-secret"),
   clerkSecretKey: Redacted.make("clerk-secret"),
@@ -204,7 +204,6 @@ function makeAllocations(
     claimRelease: () => Effect.die("unused"),
     withClaimedTunnel: () => Effect.die("unused"),
     claimDeprovision: () => Effect.die("unused"),
-    remove: () => Effect.die("unused"),
     removeClaimed: () => Effect.die("unused"),
   };
 }

@@ -20,7 +20,12 @@ This fork tracks `pingdotgg/t3code` (upstream) and publishes as **T2 Code** on `
    - Any run concluding `failure` or `cancelled`: abort. Report the failing checks and stop — do not rebase until `origin/main` is green or the user explicitly says go.
    - No runs for that SHA at all: suspicious rather than green; confirm with the user first.
 4. Review divergence: `git rev-list --left-right --count origin/main...upstream/main`.
-5. Dry-run the conflict surface (Git < 2.38 lacks `merge-tree --write-tree`; use the legacy form):
+5. Snapshot the fork's delta over upstream. The file lives outside the worktree and is never committed:
+   ```sh
+   node scripts/check-rebase-safety.ts snapshot --file /tmp/t2-rebase-snapshot.json
+   ```
+   It records the fork-added and fork-deleted files, per-file substantive added-line counts (t3/t2 spelling differences ignored), commit subjects, and what is registered at the CLI, RPC, migration, and workflow seams. Pass `--upstream <ref>` if upstream is not `upstream/main`.
+6. Dry-run the conflict surface (Git < 2.38 lacks `merge-tree --write-tree`; use the legacy form):
    ```sh
    git merge-tree "$(git merge-base upstream/main origin/main)" upstream/main origin/main
    ```
@@ -31,19 +36,36 @@ This fork tracks `pingdotgg/t3code` (upstream) and publishes as **T2 Code** on `
 1. `git rebase upstream/main`.
 2. Conflict policy — the fork's rebrand wins for user-facing copy, but upstream's structural changes win:
    - If upstream refactored code the rebrand renamed (extracted variables, moved strings), re-apply the rebrand _inside upstream's new shape_. Example: upstream hoisted an `installArgs` array for an npm fallback path; keep the hoist, keep the `@t2code/cli` package name.
-   - Env vars belong to the T2 namespace (`T2CODE_*`/`T2_*`). Upstream's new env reads and writes must be renamed inside upstream's new shape, and upstream's new tests that assert env names flip with them. External inputs keep working through the legacy-name seam (`@t2code/shared/legacyEnv`, its config helpers in `@t2code/shared/legacyEnvConfig`, and baseline-grandfathered fallback lines) — do not re-widen that seam during a rebase; new upstream variables get T2 names only.
+   - Env vars belong to the T2 namespace (`T2CODE_*`/`T2_*`). Upstream's new env reads and writes must be renamed inside upstream's new shape, and upstream's new tests that assert env names flip with them. The only place legacy `T3CODE_*` names and the `~/.t3` home are read is `packages/shared/src/legacyT3Identity.ts`; do not widen it, and new upstream variables get T2 names only.
+   - Never resolve a conflict by taking either whole file. A conflicted test file keeps every upstream test case; the verify step below fails on a dropped one.
    - Watch for upstream swapping npm packages (`t3` vs `@t2code/cli`) and URLs (keep upstream repo URLs like `github.com/pingdotgg/t3code` — those are intentional).
    - The fork runs CI on GitHub-hosted runners only. Upstream's workflows target `blacksmith-*` labels this repo has no runners for, so adopting them strands every run in `queued` while only the hosted jobs finish. Keep upstream's newest job structure and steps, then map the labels back: `blacksmith-{2,4,8}vcpu-ubuntu-*` → `ubuntu-24.04`, `blacksmith-*vcpu-macos-*` → `macos-26`. New upstream workflows that already use GitHub-hosted labels are fine to take.
    - Ask the user before adopting any other new GitHub Actions entry or edit to an existing one in the fork.
-3. Fold conflict fixes into the fork commit they belong to (`git commit --fixup=<sha>` + `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash upstream/main`) so history stays at the fork's usual 7-ish commits.
+3. Fold every fix into the fork commit it repairs (`git commit --fixup=<sha>` + `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash upstream/main`). A round must not end with "repair rebase damage" commits on top.
+
+## Verify the rebase
+
+Run these in order after the rebase finishes, before pushing. Fix each failure in the commit that caused it, then rerun from the top.
+
+1. **Lost work.** `node scripts/check-rebase-safety.ts verify --file /tmp/t2-rebase-snapshot.json`. It fails on a fork-added file that disappeared, a fork file nothing imports or registers any more, a fork commit with no content left, a large drop in a file's fork delta, an upstream test file or test case missing from the fork while its source remains, and main-chain migrations that differ from upstream's. It also reports whether release tags are ancestors of HEAD (report only). Restore from the commit that lost the item, never by copying a file back wholesale, and never edit the snapshot to pass.
+2. **Brand.** Run the audit in the next section.
+3. **Migrations.** The main chain in `apps/server/src/persistence/Migrations.ts` must carry upstream's ids and names, so upstream migration files and entries merge verbatim and are never renumbered. Fork-only migrations live in the separate ledger in `forkMigrations.ts` (files under `ForkMigrations/`, table `t2_fork_migrations`) and need no change in a rebase. `verify` enforces the id/name match; if it fails, the fork entry is wrong, not upstream's.
+4. **Release versions.** `node scripts/check-release-versions.ts`.
+5. **CLI and docs.** `node apps/server/src/bin.ts --help` must list every subcommand registered in `apps/server/src/binCli.ts`, and `docs/user/install.md` must describe the same set. A command lost in the replay (as `exec` once was) is a missing registration, not a docs problem.
+
+## Never
+
+- Renumber or rename an upstream migration, or give a fork migration an id in the main chain.
+- Add a baseline entry or allowlist line to make a guard pass; fix the code. Only genuinely intentional hits (legacy compat, upstream references) are exempt, with a reason.
+- Restore files blanket-wise (`git checkout <ref> -- dir/`). Restore the specific hunks that were lost.
+- Append repair commits to a rebased head when the damage can be folded into the commit that caused it.
 
 ## Rebrand audit (the part that actually catches failures)
 
-The repo ships a brand guard: pre-commit and pre-push hooks run `scripts/check-rebrand.ts` (added staged lines, pushed ranges, and tracked paths) and fail on re-introduced T3 strings — copy, package scopes, ports, schemes, and T3-named file paths alike. Run the same audit over the whole tree before pushing:
+The repo ships a brand guard: pre-commit and pre-push hooks run `scripts/check-rebrand.ts` (added staged lines, pushed ranges, and tracked paths) and fail on re-introduced T3 strings — copy, package scopes, ports, schemes, and T3-named file paths alike. `--full` is the CI mode (every tracked file plus the baseline check). Run it over the whole tree before pushing:
 
 ```sh
-node scripts/check-rebrand.ts --tree
-node scripts/check-rebrand.ts --check-baseline
+node scripts/check-rebrand.ts --full
 node scripts/check-rebrand.ts --audit
 node scripts/check-doc-links.ts
 ```
@@ -60,32 +82,23 @@ Upstream's new tests hardcode `T3` copy that the rebrand commits predate. These 
 ## Verify and push
 
 1. Run the repo's pre-push gate for the files the rebase touched: `vp run check:changed` (format, lint, knip, typecheck, and the tests beside the changes). `*.browser.test.tsx` cannot run locally without `libatk`; CI's `Test Web` job is their only verifier.
-2. Update `origin/main` with `git push --force-with-lease origin main` — a rebase always rewrites the fork's main.
+2. Update `origin/main` with `git push --force-with-lease origin main`.
 3. Run the CI loop below until `main` is green.
 
 ## CI loop after the push
 
-Pushing a rebase hands the last mile to GitHub Actions. A round is not finished until every run for the pushed head has concluded `success` (or `skipped`). Report run links, not impressions.
+A round is not finished until every run for the pushed head has concluded `success` (or `skipped`). Report run links, not impressions.
 
 1. List the runs for the pushed SHA and watch the gating ones to completion:
    ```sh
    gh run list --repo ashutoshpw/t2code --branch main --commit "$(git rev-parse HEAD)"
    gh run watch <run-id> --repo ashutoshpw/t2code --exit-status
    ```
-   `CI` and `Rebrand check` gate the rebase. Deploy/publish runs (relay, mobile, labels) report separately: chase them only when the rebase plausibly caused the failure (rebranded build args, renamed workflow inputs), and flag credential or infra failures instead of papering over them.
-2. `queued` for hours is a red flag, not progress. Hosted jobs finishing while a whole run never starts means a `blacksmith-*` label survived — grep `.github/workflows/`, map it (see Rebase → runners), cancel the stranded runs, and push the label fix.
-3. For each failure, read the log (`gh run view <run-id> --repo ashutoshpw/t2code --log-failed`) and classify before editing:
-   - **Rebrand gap** — a `T3` string or id on a surface the guard's rules miss: generated schemas, replay `.ndjson` fixtures, `t2code/` lint directive scopes, manifest keys like `t3CodeRange`. Fix the string and, when the class can recur, add a rule in `scripts/check-rebrand.ts`.
-   - **Structural resolution bug** — a conflict resolution that compiles but lies: a dropped test, an id the fixtures still expect, a budget JSON that measured the pre-rebrand text. Reproduce with the failing test file locally (`vp test run --root <pkg> <file>`) before pushing a guess.
-   - **Masked suite** — a suite that runs for the first time on this head because the rebase changed its inputs. Expect several rounds on busy rebases; fix each as it surfaces.
-   - **Environment-only** — the failure depends on the runner (browser launch, native toolchains). Read the log, fix what is real, and let CI confirm; do not add `it.skip` to get green.
-4. Land every fix as a **separate commit** on `main` — the head is already published, so no `--fixup` and no force-push:
-   ```sh
-   git commit -m "fix(<area>): <the CI failure in plain language>"
-   git push origin main
-   ```
-   Hooks stay on. A CI failure is never fixed by bypassing the guard (`--no-verify`, widening the baseline) unless the hit is genuinely intentional. Only fold the fix into an earlier fork commit when the user explicitly asks to keep the fork's commit count, which means another `--fixup`, autosquash, and `--force-with-lease`.
-5. Each push starts a new set of runs. Loop from step 1 until every run for the newest head is green, then close the round with the report below, citing the final run links and listing the fix commits the loop needed.
+   `CI` and `Rebrand check` gate the rebase. Deploy/publish runs (relay, mobile, labels) report separately: chase them only when the rebase plausibly caused the failure, and flag credential or infra failures instead of papering over them.
+2. `queued` for hours is a red flag. Hosted jobs finishing while a whole run never starts means a `blacksmith-*` label survived: grep `.github/workflows/`, map it (see Rebase), cancel the stranded runs, and fix it.
+3. Read each failure (`gh run view <run-id> --repo ashutoshpw/t2code --log-failed`) and classify it: a rebrand gap (fix the string, and add a rule in `scripts/check-rebrand.ts` when the class can recur), a structural resolution bug (a dropped test or hunk: reproduce locally with `vp test run <file>`), a masked suite that runs for the first time on this head, or an environment-only failure (fix what is real; do not add `it.skip`).
+4. Fold the fix into the fork commit it repairs (`--fixup`, autosquash, `--force-with-lease`), rerun the Verify steps, and push. Hooks stay on; never `--no-verify`.
+5. When the head is green, check the nightly release gate: the scheduled `Release` run must either publish or explain itself with a warning annotation from `.github/scripts/check-nightly-release.cjs`. A silent skip means the gate is wrong (for example the last nightly tag is not an ancestor of `main`): investigate before closing the round.
 
 ## Report what changed
 
@@ -94,7 +107,7 @@ A finished rebase is not just a green push — close every run with a short summ
 1. **The rebase**: upstream range (old tip → new tip), how many upstream commits were picked up, how many fork commits replayed, and the pushed head SHA.
 2. **Conflict work**: the resolutions that mattered, not every file — structural calls (whose side won and why), rebrands re-applied inside upstream's new shape, and any fork commit that became obsolete, was dropped, or was folded away.
 3. **Rebrand gaps found**: what the audit caught and fixed, plus keeper classifications worth remembering (things that look like gaps but are intentional).
-4. **Verification**: what ran locally — guard, typechecks, test suites — and what CI covered: run links for the final green head, plus the fix commits the CI loop needed.
+4. **Verification**: the `check-rebase-safety` result, the brand guard, the migration, version, and CLI/docs checks, tests run locally, and CI run links for the final green head.
 5. **Flags for the user**: pre-existing failures, deliberate deviations from upstream, removed legacy seams, and anything that needs a decision (e.g. a URL a rename would 404).
 
 If a round was aborted, or CI is not green on the latest commit, say so explicitly instead of implying success.

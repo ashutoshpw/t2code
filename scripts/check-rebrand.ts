@@ -9,7 +9,8 @@
 // Modes:
 //   --staged            added lines in the git index (pre-commit)
 //   --push              added lines in every pushed ref range on stdin (pre-push)
-//   --tree              every tracked file (local audit / CI)
+//   --tree              every tracked file (local audit)
+//   --full              CI mode: --tree violations plus the baseline check; fails on any hit
 //   --range <a..b>      added lines in one diff range
 //   --check-baseline    fail when scripts/rebrand-baseline.json differs from the tree (CI)
 //   --update-baseline   regenerate scripts/rebrand-baseline.json from the tree
@@ -28,16 +29,91 @@ const SELF_DIR = NodePath.dirname(new URL(import.meta.url).pathname);
 const REPO_ROOT = NodePath.resolve(SELF_DIR, "..");
 const BASELINE_PATH = NodePath.join(SELF_DIR, "rebrand-baseline.json");
 
-// Files that necessarily spell out the T3 strings they guard against.
-const GUARDED_FILES = new Set([
-  "scripts/check-rebrand.ts",
-  "scripts/check-rebrand.test.ts",
-  "scripts/check-doc-links.ts",
-  "scripts/rebrand-baseline.json",
-]);
-// Trees where T3 mentions are the point: fork tooling describing the upstream
-// and the vendored upstream checkout.
-const GUARDED_DIRS = [".agents/", ".repos/"];
+type Exemption = {
+  matches: (file: string) => boolean;
+  rules: "all" | readonly string[];
+  reason: string;
+};
+
+const exactFiles =
+  (...files: string[]) =>
+  (file: string) =>
+    files.includes(file);
+
+// Every exemption is path-scoped and carries a reason. Prefer a rule-scoped
+// exemption over "all", and a baseline entry over either for a single line.
+const EXEMPTIONS: readonly Exemption[] = [
+  {
+    matches: exactFiles(
+      "scripts/check-rebrand.ts",
+      "scripts/check-rebrand.test.ts",
+      "scripts/check-doc-links.ts",
+      "scripts/rebrand-baseline.json",
+    ),
+    rules: "all",
+    reason: "the guard and its fixtures necessarily spell out the strings they reject",
+  },
+  {
+    matches: (file) => file.startsWith(".repos/"),
+    rules: "all",
+    reason: "vendored read-only upstream references",
+  },
+  {
+    matches: (file) => file.startsWith(".agents/skills/rebase-with-upstream/"),
+    rules: "all",
+    reason: "the rebase skill documents the upstream fork relationship and its T3 strings",
+  },
+  {
+    matches: exactFiles(
+      "packages/shared/src/legacyT3Identity.ts",
+      "packages/shared/src/legacyT3Identity.test.ts",
+    ),
+    rules: "all",
+    reason: "the single module that migrates the legacy ~/.t3 home and T3CODE_* env names",
+  },
+  {
+    matches: exactFiles("scripts/check-rebase-safety.ts", "scripts/check-rebase-safety.test.ts"),
+    rules: "all",
+    reason: "the rebase check maps upstream spellings to the fork's to compare the two trees",
+  },
+  {
+    matches: exactFiles(
+      "apps/desktop/src/app/DesktopLegacyLocalStorage.ts",
+      "apps/desktop/src/ipc/methods/legacyLocalStorage.ts",
+      "apps/desktop/src/legacyLocalStorageMerge.ts",
+      "apps/desktop/src/legacyLocalStorageMerge.test.ts",
+    ),
+    rules: "all",
+    reason: "desktop migration of the legacy T3 Code profile and localStorage",
+  },
+  {
+    matches: exactFiles(
+      "packages/shared/src/cliRelease.ts",
+      "apps/server/src/cloud/npmRelease.ts",
+      "apps/server/src/cloud/npmRelease.test.ts",
+    ),
+    rules: ["t2-npm-identity"],
+    reason: "releases published before the rename carry the legacy t3code manifest key",
+  },
+  {
+    matches: exactFiles(
+      "packages/shared/src/promptLinks.test.ts",
+      "packages/client-runtime/src/promptLinks.test.ts",
+      "packages/client-runtime/src/changeRequestLinks.test.ts",
+      "apps/mobile/src/features/prompt-links/prompt-link-model.test.ts",
+    ),
+    rules: ["t2-upstream-host"],
+    reason:
+      "repository-URL normalisation fixtures that need the upstream pingdotgg/t3code identity",
+  },
+];
+
+function isExempt(file: string, ruleId: string): boolean {
+  return EXEMPTIONS.some(
+    (exemption) =>
+      exemption.matches(file) && (exemption.rules === "all" || exemption.rules.includes(ruleId)),
+  );
+}
 
 // These are intentionally narrower than a bare `T3` search: T3 remains in
 // protocol/runtime compatibility names, while these identifiers and the path
@@ -95,16 +171,50 @@ const HALF_RENAMED_REFERENCE_PATTERNS = [
   /pingdotgg\/t2code\b/i,
   /ashutoshpw\/t3code\b/i,
   /com\.t2tools\.t2code\b/i,
+  /\bt2tools\/t2code\b/i,
 ];
 
-function hasHalfRenamedReference(file: string, line: string): boolean {
-  if (file.includes(".test.") || file.includes(".spec.")) return false;
+function hasHalfRenamedReference(line: string): boolean {
   return HALF_RENAMED_REFERENCE_PATTERNS.some((pattern) => pattern.test(line));
 }
+
+function clerkKeyHostIsUpstream(line: string): boolean {
+  for (const match of line.matchAll(/pk_(?:live|test)_([A-Za-z0-9+/=_-]{8,})/g)) {
+    const decoded = Buffer.from(match[1]!.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString(
+      "utf8",
+    );
+    if (/t3\.codes|t3code/i.test(decoded)) return true;
+  }
+  return false;
+}
+
+const UPSTREAM_NPM_IDENTITY_PATTERNS = [
+  /\bnpm (?:view|info|show) t3\b/,
+  /(?<![\w@/.-])t3@(?:[\d^~*<>=$]|latest\b|next\b)/,
+  /registry\.npmjs\.org\/t3\//,
+  /(?<![\w@/."'`-])t3code:\s/,
+  /(?<=[\w)\]?])(?<!tools)\.t3code\b/,
+];
+
+function hasUpstreamNpmIdentity(line: string): boolean {
+  return UPSTREAM_NPM_IDENTITY_PATTERNS.some((pattern) => pattern.test(line));
+}
+
+const UPSTREAM_HOST_AND_ID_PATTERNS = [
+  /u\.expo\.dev\/d763fcb8-d37c-41ea-a773-b54a0ab4a454/i,
+  /d763fcb8-d37c-41ea-a773-b54a0ab4a454/i,
+  /\bARK85ZXQ4Z\b/,
+  /\bowner\s*:\s*["']pingdotgg["']/,
+  /t3-task-cache\.pinglabs\.workers\.dev/i,
+];
+
+const UPSTREAM_REPOSITORY_CONDITION =
+  /github\.(?:repository|repository_owner|event\.repository\.full_name)\s*[!=]=\s*['"]pingdotgg\b|['"]pingdotgg(?:\/[\w.-]+)?['"]\s*[!=]=\s*github\.repository/;
 
 type Rule = {
   id: string;
   hint: string;
+  level?: "warn";
   violates: (file: string, line: string) => boolean;
 };
 
@@ -203,15 +313,43 @@ const RULES: Rule[] = [
     // the fork qualifies every Effect context identity with its package name.
     id: "t2-context-identity",
     hint: 'Effect context identities are package-qualified ("@t2code/cli/..."); a bare "t3/..." tag is upstream\'s package name, not the fork\'s',
-    violates: (file, line) =>
-      !file.includes(".test.") &&
-      !file.includes(".spec.") &&
-      /["'`]t3\/[A-Za-z][\w.-]*\//u.test(line),
+    violates: (_file, line) => /["'`]t3\/[A-Za-z][\w.-]*\//u.test(line),
+  },
+  {
+    id: "t2-npm-identity",
+    hint: 'the fork publishes "@t2code/cli" with manifest key "t2code"; "t3", "t3@<version>", registry.npmjs.org/t3/ and the "t3code" manifest key are upstream\'s npm identity',
+    violates: (_file, line) => hasUpstreamNpmIdentity(line),
+  },
+  {
+    id: "t2-upstream-host",
+    hint: "upstream-owned host or id (ingest/clerk t3.codes, the upstream Expo project, Apple team, EAS owner, task cache); supply the fork's own value",
+    violates: (_file, line) => UPSTREAM_HOST_AND_ID_PATTERNS.some((pattern) => pattern.test(line)),
+  },
+  {
+    id: "t2-clerk-key",
+    hint: "this Clerk publishable key decodes to an upstream host; use the fork's key (clerk.t2.codes)",
+    violates: (_file, line) => clerkKeyHostIsUpstream(line),
+  },
+  {
+    id: "t2-upstream-posthog-key",
+    level: "warn",
+    hint: "this is upstream's PostHog project key; replace it with the fork's once the owner supplies one",
+    violates: (_file, line) => /phc_XOWci4oZ/.test(line),
+  },
+  {
+    id: "t2-repository-condition",
+    hint: 'workflow conditions must test "ashutoshpw/t2code" (or github.repository itself), never an upstream repository, or the job silently never runs',
+    violates: (_file, line) => UPSTREAM_REPOSITORY_CONDITION.test(line),
+  },
+  {
+    id: "t2-upstream-pr-link",
+    hint: '"t2code/pull/<n>" and "t2code/issues/<n>" are upstream PR and issue numbers with the repo name rewritten; link the real upstream "pingdotgg/t3code" item or drop the number',
+    violates: (_file, line) => /(?<!ashutoshpw\/)\bt2code\/(?:pull|issues)\/\d+/.test(line),
   },
   {
     id: "t2-half-rename",
     hint: 'a mechanical rename left a reference that cannot exist (upstream owner + fork repo, fork owner + upstream repo, or the unpublished "com.t2tools.t2code" app id)',
-    violates: (file, line) => hasHalfRenamedReference(file, line),
+    violates: (_file, line) => hasHalfRenamedReference(line),
   },
   {
     id: "t3tools-brand",
@@ -262,6 +400,7 @@ const PATH_RULES: Rule[] = [
 const pathBaselineKey = (file: string): string => `${file}\u0000`;
 
 type Entry = { file: string; line: string };
+type BaselineEntry = Entry & { reason: string };
 type Violation = Entry & { rule: Rule };
 
 function baselineKey(entry: Entry): string {
@@ -272,22 +411,22 @@ function loadBaseline(): Set<string> {
   return new Set(readBaselineEntries().map(baselineKey));
 }
 
-function readBaselineEntries(): Entry[] {
+function readBaselineEntries(): BaselineEntry[] {
   try {
-    return JSON.parse(NodeFS.readFileSync(BASELINE_PATH, "utf8")) as Entry[];
+    return JSON.parse(NodeFS.readFileSync(BASELINE_PATH, "utf8")) as BaselineEntry[];
   } catch {
     return [];
   }
 }
 
 function isExemptPath(file: string): boolean {
-  return GUARDED_FILES.has(file) || GUARDED_DIRS.some((dir) => file.startsWith(dir));
+  return EXEMPTIONS.some((exemption) => exemption.rules === "all" && exemption.matches(file));
 }
 
 function ruleFor(file: string, line: string, baseline: Set<string>): Rule | undefined {
   if (isExemptPath(file)) return undefined;
   if (baseline.has(baselineKey({ file, line }))) return undefined;
-  return RULES.find((rule) => rule.violates(file, line));
+  return RULES.find((rule) => !isExempt(file, rule.id) && rule.violates(file, line));
 }
 
 export function findViolations(entries: Entry[], baseline: Set<string>): Violation[] {
@@ -485,26 +624,36 @@ function scanTree(): {
   return { entries, withLines, files };
 }
 
+const enforces = (rule: Rule, file: string, line: string): boolean =>
+  rule.level !== "warn" && !isExempt(file, rule.id) && rule.violates(file, line);
+
+export function baselineEntriesMissingReason(entries: readonly BaselineEntry[]): BaselineEntry[] {
+  return entries.filter((entry) => !entry.reason || entry.reason.trim().length < 10);
+}
+
+const reasonFor = (reasons: ReadonlyMap<string, string>, key: string) => reasons.get(key) ?? "";
+
 export function collectBaselineEntries(
   withLines: Array<Entry & { num: number }>,
   files: string[],
-): Entry[] {
+  reasons: ReadonlyMap<string, string> = new Map(),
+): BaselineEntry[] {
   const seen = new Set<string>();
-  const entries: Entry[] = [];
+  const entries: BaselineEntry[] = [];
   for (const entry of withLines) {
     const key = baselineKey(entry);
     if (seen.has(key)) continue;
-    if (!RULES.some((rule) => rule.violates(entry.file, entry.line))) continue;
+    if (!RULES.some((rule) => enforces(rule, entry.file, entry.line))) continue;
     seen.add(key);
     const [file, line] = key.split("\u0000");
-    entries.push({ file: file as string, line: line as string });
+    entries.push({ file: file as string, line: line as string, reason: reasonFor(reasons, key) });
   }
   for (const file of files) {
     if (!PATH_RULES.some((rule) => rule.violates(file, ""))) continue;
     const key = pathBaselineKey(file);
     if (seen.has(key)) continue;
     seen.add(key);
-    entries.push({ file, line: "" });
+    entries.push({ file, line: "", reason: reasonFor(reasons, key) });
   }
   entries.sort((a, b) => a.file.localeCompare(b.file) || a.line.localeCompare(b.line));
   return entries;
@@ -519,7 +668,9 @@ export function findUncoveredT3References(
   return entries.filter(
     (entry) =>
       BARE_T3_REFERENCE.test(entry.line) &&
-      !RULES.some((rule) => rule.violates(entry.file, entry.line)),
+      !RULES.some(
+        (rule) => !isExempt(entry.file, rule.id) && rule.violates(entry.file, entry.line),
+      ),
   );
 }
 
@@ -548,9 +699,44 @@ Never bypass with --no-verify. Classification guide:
   return 1;
 }
 
+function currentReasons(): Map<string, string> {
+  return new Map(readBaselineEntries().map((entry) => [baselineKey(entry), entry.reason ?? ""]));
+}
+
+function checkBaseline(): number {
+  const { withLines, files } = scanTree();
+  const expected = collectBaselineEntries(withLines, files);
+  const current = readBaselineEntries();
+  const expectedKeys = new Set(expected.map(baselineKey));
+  const currentKeys = new Set(current.map(baselineKey));
+  const missing = expected.filter((entry) => !currentKeys.has(baselineKey(entry)));
+  const stale = current.filter((entry) => !expectedKeys.has(baselineKey(entry)));
+  const unjustified = baselineEntriesMissingReason(current);
+  if (missing.length > 0 || stale.length > 0 || unjustified.length > 0) {
+    console.error("rebrand guard: baseline is out of date with the tree.");
+    for (const entry of missing) {
+      console.error(`  missing  ${entry.file}: ${entry.line.trim() || "<path>"}`);
+    }
+    for (const entry of stale) {
+      console.error(`  stale    ${entry.file}: ${entry.line.trim() || "<path>"}`);
+    }
+    for (const entry of unjustified) {
+      console.error(`  no reason  ${entry.file}: ${entry.line.trim() || "<path>"}`);
+    }
+    console.error(
+      "\nRefresh it with --update-baseline, write a reason for every entry, and review the diff:\n\n  node scripts/check-rebrand.ts --update-baseline\n",
+    );
+    return 1;
+  }
+  process.stdout.write(
+    `rebrand guard: baseline matches the tree (${expected.length} intentional hit(s), all justified)\n`,
+  );
+  return 0;
+}
+
 function usage(): number {
   console.error(
-    "usage: node scripts/check-rebrand.ts [--staged | --push | --tree | --range <a..b> | --check-baseline | --update-baseline | --audit]",
+    "usage: node scripts/check-rebrand.ts [--staged | --push | --tree | --full | --range <a..b> | --check-baseline | --update-baseline | --audit]",
   );
   return 2;
 }
@@ -581,40 +767,24 @@ export function main(argv: string[]): number {
 
   if (argv.includes("--update-baseline")) {
     const { withLines, files } = scanTree();
-    const entries = collectBaselineEntries(withLines, files);
+    const entries = collectBaselineEntries(withLines, files, currentReasons());
     NodeFS.writeFileSync(BASELINE_PATH, `${JSON.stringify(entries, null, 2)}\n`);
+    const unjustified = baselineEntriesMissingReason(entries);
     process.stdout.write(
       `rebrand guard: baseline refreshed with ${entries.length} intentional hit(s)\n`,
     );
+    for (const entry of unjustified) {
+      console.log(`  needs a reason  ${entry.file}: ${entry.line.trim() || "<path>"}`);
+    }
+    if (unjustified.length > 0) {
+      console.log(
+        'Fill in each empty "reason" in scripts/rebrand-baseline.json; the check fails until you do.',
+      );
+    }
     return 0;
   }
 
-  if (argv.includes("--check-baseline")) {
-    const { withLines, files } = scanTree();
-    const expected = collectBaselineEntries(withLines, files);
-    const current = readBaselineEntries();
-    const expectedKeys = new Set(expected.map(baselineKey));
-    const currentKeys = new Set(current.map(baselineKey));
-    const missing = expected.filter((entry) => !currentKeys.has(baselineKey(entry)));
-    const stale = current.filter((entry) => !expectedKeys.has(baselineKey(entry)));
-    if (missing.length > 0 || stale.length > 0) {
-      console.error("rebrand guard: baseline is out of date with the tree.");
-      for (const entry of missing) {
-        console.error(`  missing  ${entry.file}: ${entry.line.trim() || "<path>"}`);
-      }
-      for (const entry of stale) {
-        console.error(`  stale    ${entry.file}: ${entry.line.trim() || "<path>"}`);
-      }
-      console.error(
-        "\nRefresh it and review the diff:\n\n  node scripts/check-rebrand.ts --update-baseline\n",
-      );
-      return 1;
-    }
-    process.stdout.write(
-      `rebrand guard: baseline matches the tree (${expected.length} intentional hit(s))\n`,
-    );
-    return 0;
-  }
+  if (argv.includes("--check-baseline")) return checkBaseline();
 
   const baseline = loadBaseline();
   let violations: Violation[] = [];
@@ -624,7 +794,7 @@ export function main(argv: string[]): number {
   if (argv.includes("--push")) {
     scope = "push";
     violations = findViolations(collectPush(), baseline);
-  } else if (argv.includes("--tree")) {
+  } else if (argv.includes("--tree") || argv.includes("--full")) {
     scope = "tree change";
     const { entries, withLines } = scanTree();
     violations = findViolations(entries, baseline);
@@ -641,11 +811,19 @@ export function main(argv: string[]): number {
     return usage();
   }
 
-  if (violations.length > 0) return report(violations, scope, withNumbers);
+  const warnings = violations.filter((v) => v.rule.level === "warn");
+  const errors = violations.filter((v) => v.rule.level !== "warn");
+  for (const w of warnings) {
+    const num = withNumbers?.get(baselineKey(w));
+    console.error(
+      `rebrand guard: warning ${w.rule.id}  ${w.file}${num ? `:${num}` : ""}\n    -> ${w.rule.hint}`,
+    );
+  }
+  if (errors.length > 0) return report(errors, scope, withNumbers);
   if (scope.startsWith("tree")) {
     process.stdout.write("rebrand guard: no T3-brand strings on tracked lines\n");
   }
-  return 0;
+  return argv.includes("--full") ? checkBaseline() : 0;
 }
 
 if (import.meta.main) {
