@@ -601,7 +601,7 @@ export const make = Effect.gen(function* () {
           dropRelay(tab);
           // Announced once its first page is up.
           if (tab.stopWaiting !== null) return Effect.void;
-          const shown = shownTabs.get(keyOf(tab.key));
+          const shown = shownTabs.get(tabIdOf(tab));
           return PubSub.publish(outbox, {
             transport,
             event: {
