@@ -444,7 +444,8 @@ export const make = Effect.gen(function* () {
     tab.debuggee.debugger.off("message", tab.onMessage);
     tab.debuggee.webContents.off("did-navigate", tab.onNewDocument);
     syncPainting(tab);
-    if (announced) emit(tab, { type: "detached", threadId: tab.key.threadId, tabId: tab.key.tabId });
+    if (announced)
+      emit(tab, { type: "detached", threadId: tab.key.threadId, tabId: tab.key.tabId });
   };
 
   const attach = (key: DesktopBrowserTabKey, debuggee: DesktopBrowserTabDebugger) => {
@@ -584,7 +585,7 @@ export const make = Effect.gen(function* () {
           dropRelay(tab);
           // Announced once its first page is up.
           if (tab.stopWaiting !== null) return Effect.void;
-          const shown = shownTabs.get(keyOf(tab.key));
+          const shown = shownTabs.get(tabIdOf(tab));
           return PubSub.publish(outbox, {
             transport,
             event: {
