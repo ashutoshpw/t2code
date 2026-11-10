@@ -51,7 +51,7 @@ const target: LiveActivities.TargetRow = {
   platform: "android",
   ios_major_version: null,
   app_version: null,
-  bundle_id: "com.t2tools.t2code.dev",
+  bundle_id: "codes.t2.mobile.dev",
   aps_environment: null,
   push_token: "fcm-token",
   push_to_start_token: null,

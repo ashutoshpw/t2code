@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   addedLinesFromDiff,
+  baselineEntriesMissingReason,
   collectBaselineEntries,
   findUncoveredT3References,
   findViolations,
@@ -81,10 +82,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual([
-      "t2-context-identity",
-      "t2-context-identity",
-    ]);
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t2-context-identity"));
   });
 
   it("flags a stale connect route id, not just stale connect copy", () => {
@@ -156,10 +154,10 @@ describe("check-rebrand", () => {
   it("honors baseline path entries and exempt dirs for t3-named paths", () => {
     const entries = [
       { file: "apps/server/scripts/t3-sqlite-state.ts", line: "const x = 1;" },
-      { file: ".agents/skills/t3-note/SKILL.md", line: "let x = 1" },
+      { file: ".repos/vendor/t3-note/SKILL.md", line: "let x = 1" },
     ];
     const baseline = new Set<string>([
-      ".agents/skills/t3-note/SKILL.md\u0000",
+      ".repos/vendor/t3-note/SKILL.md\u0000",
       "apps/server/scripts/t3-sqlite-state.ts\u0000",
     ]);
     expect(findViolations(entries, baseline)).toEqual([]);
@@ -362,6 +360,23 @@ describe("check-rebrand", () => {
     expect(violations.map((v) => v.rule.id)).toEqual(["t2-cli-scope"]);
   });
 
+  it("flags the upstream wire protocol ids", () => {
+    const violations = findViolations(
+      [
+        {
+          file: "packages/shared/src/example.ts",
+          line: `issuer: "t3-env:env_123"`,
+        },
+        {
+          file: "packages/shared/src/example.ts",
+          line: `AND payload_json LIKE '%t3-citation://%'`,
+        },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(["t2-protocol-id", "t2-protocol-id"]);
+  });
+
   it("flags the upstream internal package scope", () => {
     const violations = findViolations(
       [
@@ -398,7 +413,7 @@ describe("check-rebrand", () => {
       ],
       EMPTY_BASELINE,
     );
-    expect(violations.map((v) => v.rule.id)).toEqual(Array(3).fill("t2-half-rename"));
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(4).fill("t2-half-rename"));
   });
 
   it("flags repository-owned t3tools metadata while retaining upstream repository fixtures", () => {
@@ -530,8 +545,8 @@ describe("check-rebrand", () => {
       ["README.md", "docs/guide.md", "apps/web/src/T3Sidebar.tsx"],
     );
     const expected = [
-      { file: "README.md", line: "See https://t3.codes" },
-      { file: "apps/web/src/T3Sidebar.tsx", line: "" },
+      { file: "README.md", line: "See https://t3.codes", reason: "" },
+      { file: "apps/web/src/T3Sidebar.tsx", line: "", reason: "" },
     ].sort((a, b) => a.file.localeCompare(b.file) || a.line.localeCompare(b.line));
     expect(entries).toEqual(expected);
   });
@@ -548,5 +563,119 @@ describe("check-rebrand", () => {
         new Set([`apps/desktop/scripts/electron-launcher.mjs\u0000${legacyFallbackLine}`]),
       ),
     ).toEqual([]);
+  });
+
+  it("flags upstream's npm identity but not the fork's package or manifest key", () => {
+    const violations = findViolations(
+      [
+        { file: "docs/a.md", line: "run `npm view t3 version`" },
+        { file: "apps/server/src/a.ts", line: "const spec = `t3@${version}`;" },
+        {
+          file: "apps/server/src/a.ts",
+          line: 'const url = "https://registry.npmjs.org/t3/latest";',
+        },
+        { file: "apps/server/src/a.ts", line: "const head = manifest.t3code?.databaseMigration;" },
+        { file: "apps/server/src/b.ts", line: "  t3code: Schema.optionalKey(Schema.Unknown)," },
+        { file: "apps/server/src/a.ts", line: "const spec = `@t2code/cli@${version}`;" },
+        { file: "apps/server/src/a.ts", line: "const head = manifest.t2code?.databaseMigration;" },
+        { file: "apps/web/src/a.ts", line: 'const KEY = "t3code:sidebar:expanded";' },
+        { file: "packages/shared/src/cliRelease.ts", line: "decoded?.t3code" },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(5).fill("t2-npm-identity"));
+  });
+
+  it("flags upstream hosts and ids, and decodes Clerk publishable keys", () => {
+    const violations = findViolations(
+      [
+        { file: "a.ts", line: 'Config.withDefault("https://ingest.t3.codes")' },
+        { file: "a.ts", line: "url: https://u.expo.dev/d763fcb8-d37c-41ea-a773-b54a0ab4a454" },
+        { file: "a.ts", line: 'appleTeamId: "ARK85ZXQ4Z"' },
+        { file: "app.config.ts", line: '  owner: "pingdotgg",' },
+        { file: ".task-cache.json", line: "https://t3-task-cache.pinglabs.workers.dev/p" },
+        { file: ".env.example", line: "KEY=pk_live_Y2xlcmsudDMuY29kZXMk" },
+        { file: ".env.example", line: "KEY=pk_live_Y2xlcmsudDIuY29kZXMk" },
+        { file: "a.ts", line: 'const POSTHOG_KEY = "phc_XOWci4oZabc";' },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => [v.rule.id, v.rule.level])).toEqual([
+      ["t2-first-party-url", undefined],
+      ["t2-upstream-host", undefined],
+      ["t2-upstream-host", undefined],
+      ["t2-upstream-host", undefined],
+      ["t2-upstream-host", undefined],
+      ["t2-clerk-key", undefined],
+      ["t2-upstream-posthog-key", "warn"],
+    ]);
+  });
+
+  it("flags workflow conditions on an upstream repository", () => {
+    const violations = findViolations(
+      [
+        { file: ".github/workflows/a.yml", line: "if: github.repository == 'pingdotgg/t3code'" },
+        { file: ".github/actions/a.yml", line: "if: github.repository_owner == 'pingdotgg'" },
+        { file: ".github/workflows/a.yml", line: "if: github.repository == 'ashutoshpw/t2code'" },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual(Array(2).fill("t2-repository-condition"));
+  });
+
+  it("flags half-renamed repos and upstream PR links in tests and .agents too", () => {
+    const violations = findViolations(
+      [
+        { file: "a.test.ts", line: "https://github.com/pingdotgg/t2code/actions" },
+        { file: ".agents/skills/x/SKILL.md", line: "see github.com/pingdotgg/t2code/compare" },
+        {
+          file: ".agents/skills/x/SKILL.md",
+          line: "see https://github.com/someone/t2code/pull/42",
+        },
+        { file: "a.test.ts", line: "https://github.com/ashutoshpw/t2code/pull/9" },
+      ],
+      EMPTY_BASELINE,
+    );
+    expect(violations.map((v) => v.rule.id)).toEqual([
+      "t2-half-rename",
+      "t2-half-rename",
+      "t2-upstream-pr-link",
+    ]);
+  });
+
+  it("exempts only the named legacy modules, and scans .agents and tests", () => {
+    const line = 'const home = path.join(os.homedir(), ".t3"); // T3CODE_HOME';
+    expect(
+      findViolations(
+        [
+          { file: "packages/shared/src/legacyT3Identity.ts", line },
+          { file: "apps/desktop/src/legacyLocalStorageMerge.ts", line: "T3 Code (Alpha)" },
+        ],
+        EMPTY_BASELINE,
+      ),
+    ).toEqual([]);
+    expect(
+      findViolations(
+        [
+          { file: "packages/shared/src/other.ts", line },
+          { file: ".agents/skills/contribution-triage/SKILL.md", line: "Welcome to T3 Code" },
+          { file: "apps/web/src/a.test.ts", line: "Welcome to T3 Code" },
+        ],
+        EMPTY_BASELINE,
+      ).map((v) => v.file),
+    ).toEqual([
+      "packages/shared/src/other.ts",
+      ".agents/skills/contribution-triage/SKILL.md",
+      "apps/web/src/a.test.ts",
+    ]);
+  });
+
+  it("requires a written reason on every baseline entry", () => {
+    const entries = [
+      { file: "a", line: "x", reason: "" },
+      { file: "b", line: "y", reason: "   " },
+      { file: "c", line: "z", reason: "recorded fixture, not the upstream port" },
+    ];
+    expect(baselineEntriesMissingReason(entries).map((e) => e.file)).toEqual(["a", "b"]);
   });
 });

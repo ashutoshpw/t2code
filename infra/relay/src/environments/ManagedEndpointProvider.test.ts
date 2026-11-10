@@ -24,7 +24,7 @@ const config = RelayConfiguration.RelayConfiguration.of({
     teamId: "team-id",
     keyId: "key-id",
     privateKey: Redacted.make("private-key"),
-    bundleId: "com.t2tools.t2code.dev",
+    bundleId: "codes.t2.mobile.dev",
   },
   apnsDeliveryJobSigningSecret: Redacted.make("job-secret"),
   clerkSecretKey: Redacted.make("clerk-secret"),
@@ -70,7 +70,6 @@ interface AllocationCall {
     | "markReady"
     | "claimRelease"
     | "claimDeprovision"
-    | "remove"
     | "removeClaimed";
   readonly input: unknown;
 }
@@ -359,11 +358,6 @@ function makeAllocations(calls: AllocationCall[] = []) {
         }
         mutate(allocationKey(input), (current) => current);
         return allocations.get(allocationKey(input))?.generation ?? null;
-      }),
-    remove: (input) =>
-      Effect.sync(() => {
-        calls.push({ operation: "remove", input });
-        allocations.delete(allocationKey(input));
       }),
     removeClaimed: (input) =>
       Effect.sync(() => {
@@ -1040,7 +1034,6 @@ describe("ManagedEndpointProvider", () => {
         "createRecord",
         "updateRecord",
       ]);
-      expect(allocationCalls.map((call) => call.operation)).not.toContain("remove");
       const claims = allocationCalls.filter((call) => call.operation === "claimRelease");
       expect(claims.map((call) => (call.input as { markReleased?: boolean }).markReleased)).toEqual(
         [undefined, undefined],
@@ -1445,75 +1438,6 @@ describe("ManagedEndpointProvider", () => {
     }).pipe(Effect.provide(layer));
   });
 
-  it.effect("keeps a tunnel when a new provision replaces the release generation", () => {
-    const tunnelCalls: TunnelCall[] = [];
-    const allocations = makeAllocations();
-    const replaced = ManagedEndpointAllocations.ManagedEndpointAllocations.of({
-      ...allocations,
-      claimRelease: (input) =>
-        allocations.claimRelease(input).pipe(
-          Effect.tap((claimedGeneration) =>
-            claimedGeneration === null
-              ? Effect.void
-              : allocations
-                  .recordTunnel({
-                    userId: input.userId,
-                    environmentId: input.environmentId,
-                    tunnelId: "replacement-tunnel",
-                    generation: claimedGeneration,
-                  })
-                  .pipe(Effect.asVoid),
-          ),
-        ),
-    });
-    const layer = layerProvider(makePersistentTunnelClient(tunnelCalls), makeDnsClient(), replaced);
-
-    return Effect.gen(function* () {
-      const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
-      const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
-      yield* provider.provision({
-        ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
-      });
-
-      expect(
-        yield* provider.release({
-          ...key,
-          expectedTunnelId: "tunnel-id",
-          expectedStatus: "down",
-          expectedInactiveBefore: "2026-06-01T00:05:00.000Z",
-        }),
-      ).toBe(false);
-      expect(tunnelCalls.map((call) => call.operation)).not.toContain("delete");
-    }).pipe(Effect.provide(layer));
-  });
-
-  it.effect("treats an already deleted tunnel as successfully released", () => {
-    const notFound = { _tag: "NotFound" } as const;
-    const tunnelClient = ManagedEndpointProvider.ManagedEndpointTunnelClient.of({
-      ...makeTunnelClient(),
-      delete: (tunnelId) =>
-        Effect.fail(
-          new ManagedEndpointProvider.ManagedEndpointTunnelClientError({
-            operation: "delete",
-            tunnelId,
-            cause: notFound,
-          }),
-        ),
-    });
-    const layer = layerProvider(tunnelClient, makeDnsClient(), makeAllocations());
-
-    return Effect.gen(function* () {
-      const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
-      const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
-      yield* provider.provision({
-        ...key,
-        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
-      });
-      yield* provider.release(key);
-    }).pipe(Effect.provide(layer));
-  });
-
   it.effect.each([
     { name: "the tunnel is gone", tunnelRemoved: true, released: true },
     { name: "the tunnel still exists", tunnelRemoved: false, released: false },
@@ -1650,6 +1574,52 @@ describe("ManagedEndpointProvider", () => {
         "claimDeprovision",
         "removeClaimed",
       ]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("marks the tunnel released when removing the allocation fails after deletion", () => {
+    const allocationCalls: AllocationCall[] = [];
+    const allocations = makeAllocations(allocationCalls);
+    const layer = layerProvider(makePersistentTunnelClient(), makeDnsClient(), {
+      ...allocations,
+      removeClaimed: (input) =>
+        Effect.suspend(() => {
+          allocationCalls.push({ operation: "removeClaimed", input });
+          return Effect.fail(
+            new ManagedEndpointAllocations.ManagedEndpointAllocationPersistenceError({
+              operation: "remove-claimed",
+              stage: "database-request",
+              userId: input.userId,
+              environmentId: input.environmentId,
+            }),
+          );
+        }),
+    });
+
+    return Effect.gen(function* () {
+      const provider = yield* ManagedEndpointProvider.ManagedEndpointProvider;
+      const key = { userId: "user_ABC", environmentId: "env_ABC" } as const;
+      yield* provider.provision({
+        ...key,
+        origin: { localHttpHost: "127.0.0.1", localHttpPort: 3772 },
+      });
+      const result = yield* Effect.result(provider.deprovision(key));
+
+      expect(result._tag).toBe("Failure");
+      if (result._tag === "Failure") {
+        expect(result.failure).toMatchObject({ stage: "remove-allocation" });
+      }
+      // The tunnel is gone; without the mark the tunnel limit would keep counting it.
+      const claim = allocationCalls.find((call) => call.operation === "claimDeprovision");
+      if (claim === undefined) return expect.unreachable("deprovision never claimed the row");
+      expect(allocationCalls.at(-1)).toMatchObject({
+        operation: "claimRelease",
+        input: {
+          tunnelId: "tunnel-id",
+          generation: (claim.input as { generation: number }).generation + 1,
+          markReleased: true,
+        },
+      });
     }).pipe(Effect.provide(layer));
   });
 
