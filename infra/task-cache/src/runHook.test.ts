@@ -321,7 +321,8 @@ it("installs without masking .profile and configures CI through bash", async () 
     const githubEnv = NodePath.join(home, "github-env");
     await run([process.execPath, NodePath.join(import.meta.dirname, "../scripts/install-ci.ts")], {
       T2_TASK_CACHE_READ_TOKEN: "read-only-fixture-token-01234567890123456789",
-      GITHUB_REPOSITORY: "pingdotgg/t3code",
+      GITHUB_REPOSITORY: "ashutoshpw/t2code",
+      T2_TASK_CACHE_REPOSITORY: "ashutoshpw/t2code",
       GITHUB_ACTIONS: "true",
       GITHUB_ENV: githubEnv,
       RUNNER_TEMP: home,
