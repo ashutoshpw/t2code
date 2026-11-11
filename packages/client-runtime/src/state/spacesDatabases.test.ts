@@ -30,6 +30,7 @@ import { EnvironmentRegistry } from "../connection/registry.ts";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
 import { RpcPermissionGuard } from "../rpc/client.ts";
 import type { RpcSession } from "../rpc/session.ts";
+import { createSpacesEnvironmentAtoms } from "./spaces.ts";
 import { createSpacesDatabaseAtoms } from "./spacesDatabases.ts";
 
 vi.mock("./session.ts", () => ({
@@ -62,6 +63,11 @@ const metadata = {
   mutationId: SpaceMutationId.make("write"),
   receiptEpoch: SpaceReceiptEpoch.make("epoch"),
 };
+const admission = {
+  epoch: SpaceReceiptEpoch.make("epoch-2"),
+  acceptsUntil: "2030-01-01T00:00:00.000Z",
+  retainUntil: "2030-02-01T00:00:00.000Z",
+};
 const enabled = { version: 2, limits: {}, features: { databases: true } } as SpaceCapability;
 
 const harness = Effect.gen(function* () {
@@ -90,8 +96,11 @@ const harness = Effect.gen(function* () {
             database: { id: database },
             dataSources: [{ id: source }],
             views: [{ id: view }],
+            mutationAdmission: admission,
           };
         }),
+      [WS_METHODS.spacesDatabasesRowsGet]: () =>
+        Effect.sync(() => ({ dataSource: { id: source }, mutationAdmission: admission })),
       [WS_METHODS.spacesDatabasesQuery]: () =>
         Effect.sync(() => {
           sent.push("query");
@@ -106,6 +115,11 @@ const harness = Effect.gen(function* () {
       [WS_METHODS.spacesDatabasesViewsCreate]: () =>
         Effect.sync(() => ({ status: "saved", viewId: "created" })),
       [WS_METHODS.spacesDatabasesViewsUpdate]: () => Effect.sync(() => ({ status: "saved" })),
+      [WS_METHODS.spacesPagesUpdate]: () => Effect.succeed({ status: "saved" }),
+      [WS_METHODS.spacesPagesTrash]: () => Effect.succeed({ status: "saved" }),
+      [WS_METHODS.spacesPagesRestore]: () => Effect.succeed({ status: "saved" }),
+      [WS_METHODS.spacesPagesPermanentlyDelete]: () =>
+        Effect.succeed({ status: "saved", deletedPageIds: [page, "child"] }),
       [WS_METHODS.spacesDatabasesRowsMove]: () =>
         Effect.sync(() => {
           sent.push("rows.move");
@@ -134,7 +148,7 @@ const harness = Effect.gen(function* () {
   );
   const capability = Atom.make<SpaceCapability | undefined>(undefined);
   const databases = createSpacesDatabaseAtoms(runtime, { capabilityAtom: () => capability });
-  return { registry, sent, capability, databases };
+  return { registry, sent, capability, databases, runtime };
 });
 
 describe("spaces database atoms", () => {
@@ -260,6 +274,76 @@ describe("spaces database atoms", () => {
         yield* read(rowsQuery);
         expect(sent.filter((call) => call === "get").length).toBeGreaterThan(1);
         expect(sent.filter((call) => call === "query").length).toBeGreaterThan(1);
+      }),
+    ),
+  );
+
+  it.effect("keeps the newest admission and refreshes a row's data source on page edits", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { registry, capability, databases } = yield* harness;
+        registry.mount(capability);
+        registry.set(capability, enabled);
+        const rowQuery = databases.row({
+          environmentId: env,
+          input: { environmentId: env, pageId: page },
+        });
+        registry.mount(rowQuery);
+        const changed = databases.dataSourceChanged(env, source);
+        registry.mount(changed);
+        expect(registry.get(databases.admission(env))).toBeUndefined();
+        registry.mount(databases.admission(env));
+        yield* AtomRegistry.getResult(registry, rowQuery, { suspendOnWaiting: true }).pipe(
+          Effect.ignore,
+        );
+        expect(registry.get(databases.admission(env))).toEqual(admission);
+        databases.rowPageChanged(registry, env, page);
+        expect(registry.get(changed)).toBe(1);
+        // A page nobody noted has no known data source to refresh.
+        databases.rowPageChanged(registry, env, SpacePageId.make("unknown"));
+        expect(registry.get(changed)).toBe(1);
+        // The grid notes the source when it trashes a row it never opened as a page.
+        databases.noteRowDataSource(registry, env, SpacePageId.make("never-opened"), source);
+        databases.rowPageChanged(registry, env, SpacePageId.make("never-opened"));
+        expect(registry.get(changed)).toBe(2);
+      }),
+    ),
+  );
+
+  it.effect("refreshes a row's data source after page edits, trash, restore and delete", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { registry, capability, runtime } = yield* harness;
+        const spaces = createSpacesEnvironmentAtoms(runtime, { capabilityAtom: () => capability });
+        registry.set(capability, { ...enabled, features: { ...enabled.features, recovery: true } });
+        const rowQuery = spaces.databases.row({
+          environmentId: env,
+          input: { environmentId: env, pageId: page },
+        });
+        registry.mount(rowQuery);
+        yield* AtomRegistry.getResult(registry, rowQuery, { suspendOnWaiting: true }).pipe(
+          Effect.ignore,
+        );
+        const changed = spaces.databases.dataSourceChanged(env, source);
+        registry.mount(changed);
+        const guards = { page: { revision: 1 } };
+        const input = { ...metadata, pageId: page, guards };
+        const commands: Array<() => Promise<{ readonly _tag: string }>> = [
+          () => spaces.updatePage.run(registry, { environmentId: env, input: input as never }),
+          () => spaces.trashPage.run(registry, { environmentId: env, input: input as never }),
+          () => spaces.restorePage.run(registry, { environmentId: env, input: input as never }),
+          () =>
+            spaces.permanentlyDeletePage.run(registry, {
+              environmentId: env,
+              input: input as never,
+            }),
+        ];
+        let expected = 0;
+        for (const command of commands) {
+          expect((yield* Effect.promise(command))._tag).toBe("Success");
+          expected += 1;
+          expect(registry.get(changed)).toBe(expected);
+        }
       }),
     ),
   );

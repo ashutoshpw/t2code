@@ -4,13 +4,21 @@ import {
   Suspense,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import { SpaceBlockId, type SpaceBlock } from "@t2code/contracts/spaces";
 import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
-import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
+import { isKnownSpaceBlock, isSpaceDatabaseBlock } from "@t2code/client-runtime/spaces";
+import {
+  DatabaseBlockHostProvider,
+  type DatabaseBlockHost,
+} from "./databases/blocks/DatabaseBlockHost";
+import { createDatabaseBlock } from "./databases/blocks/createDatabase";
+import { databasePorts } from "./databases/data/ports";
+import { Latest } from "./databases/data/latest";
 import { useSpaceReferenceController } from "./useSpaceReferences";
 import { SpaceSourceOpen } from "./SpaceSourceOpen";
 import { Redo2Icon, Undo2Icon } from "lucide-react";
@@ -162,6 +170,9 @@ function DocumentContent({
   const createPermission = useAtomValue(
     spacesEnvironment.createChild.permissionAtom(controller.session.key.environmentId),
   );
+  const databaseCreatePermission = useAtomValue(
+    databasePorts.permission.create(controller.session.key.environmentId),
+  );
   const [blockMove, setBlockMove] = useState<SpaceBlockMoveProof | null>(null);
   const [moveError, setMoveError] = useState<unknown>(null);
   const [bridge] = useState(
@@ -173,6 +184,22 @@ function DocumentContent({
           toastManager.add({ type: "error", title: "Couldn't apply that change", description }),
       ),
   );
+  // One stable object: this component re-renders per keystroke and database blocks must not.
+  const [latest] = useState(() => new Latest({ current, onOpenSource }));
+  const [databaseHost] = useState<DatabaseBlockHost>(() => ({
+    environmentId: controller.session.key.environmentId,
+    pageId: controller.session.key.pageId,
+    controller,
+    adapter: bridge.adapter,
+    openPage: (target) => {
+      const { current: isCurrent, onOpenSource: open } = latest.get();
+      if (isCurrent()) open(target);
+    },
+  }));
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Point the stable database host at the latest route callbacks.
+  useLayoutEffect(() => {
+    latest.set({ current, onOpenSource });
+  });
   const canReadSource = () => !!sources?.current() && current();
   const renderChild = (block: SpaceBlock, captionInEditor = false) => {
     if (!isKnownSpaceBlock(block)) return null;
@@ -216,6 +243,8 @@ function DocumentContent({
     }
   };
   const { session, loading, error } = snapshot;
+  const databaseLayout =
+    session.blocks.length === 1 && isSpaceDatabaseBlock(session.blocks[0]) ? "page" : "inline";
   const permission = useAtomValue(
     spacesEnvironment.apply.permissionAtom(controller.session.key.environmentId),
   );
@@ -303,65 +332,9 @@ function DocumentContent({
         </p>
       ) : null}
       {session.hydrated ? (
-        <SpaceEditor
-          savedHistory={(["undo", "redo"] as const).map((direction) => (
-            <MenuItem
-              key={direction}
-              disabled={
-                !permission ||
-                controller.structureBlocked() ||
-                loading ||
-                !!error ||
-                (!mediaSupported && bridge.compensationUsesMedia(direction)) ||
-                controller.session.compensationAvailability(direction) !== null
-              }
-              title={
-                !mediaSupported && bridge.compensationUsesMedia(direction)
-                  ? "This saved change requires asset support"
-                  : (controller.session.compensationAvailability(direction) ?? undefined)
-              }
-              onClick={() => run(bridge.compensate(direction))}
-            >
-              {direction === "undo" ? <Undo2Icon /> : <Redo2Icon />}
-              {direction === "undo" ? "Undo saved change" : "Redo saved change"}
-            </MenuItem>
-          ))}
-          mentions={mentions}
-          onOpenSource={onOpenSource}
-          mediaEditable={mediaSupported}
-          adapter={bridge.adapter}
-          bridge={bridge}
-          targetBlockId={targetBlockId}
-          sourceOwner={sources}
-          images={spaceImages(registry)}
-          current={canReadSource}
-          renderChild={renderChild}
-          onCreatePage={
-            capability?.version === 2 && createPermission
-              ? (blockId) => void createPage(blockId)
-              : undefined
-          }
-          onMoveBlocks={
-            capability?.version === 2 && capability.features?.blockMoves === true && blockPermission
-              ? async (state) => {
-                  try {
-                    setMoveError(null);
-                    const selected = bridge.blockMoveSelection(state);
-                    const proof = await spaceRootReorder(
-                      registry,
-                      controller.session.key.environmentId,
-                    ).selectBlocks(
-                      controller.session.key.pageId,
-                      selected.revision,
-                      selected.blockIds,
-                    );
-                    setBlockMove(proof);
-                  } catch (error) {
-                    setMoveError(error);
-                  }
-                }
-              : undefined
-          }
+        <DatabaseBlockHostProvider
+          host={databaseHost}
+          layout={databaseLayout}
           editable={
             permission &&
             !controller.structureBlocked() &&
@@ -370,7 +343,86 @@ function DocumentContent({
             session.status !== "conflict" &&
             session.status !== "uncertain"
           }
-        />
+        >
+          <SpaceEditor
+            savedHistory={(["undo", "redo"] as const).map((direction) => (
+              <MenuItem
+                key={direction}
+                disabled={
+                  !permission ||
+                  controller.structureBlocked() ||
+                  loading ||
+                  !!error ||
+                  (!mediaSupported && bridge.compensationUsesMedia(direction)) ||
+                  controller.session.compensationAvailability(direction) !== null
+                }
+                title={
+                  !mediaSupported && bridge.compensationUsesMedia(direction)
+                    ? "This saved change requires asset support"
+                    : (controller.session.compensationAvailability(direction) ?? undefined)
+                }
+                onClick={() => run(bridge.compensate(direction))}
+              >
+                {direction === "undo" ? <Undo2Icon /> : <Redo2Icon />}
+                {direction === "undo" ? "Undo saved change" : "Redo saved change"}
+              </MenuItem>
+            ))}
+            mentions={mentions}
+            onOpenSource={onOpenSource}
+            mediaEditable={mediaSupported}
+            adapter={bridge.adapter}
+            bridge={bridge}
+            targetBlockId={targetBlockId}
+            sourceOwner={sources}
+            images={spaceImages(registry)}
+            current={canReadSource}
+            renderChild={renderChild}
+            onCreatePage={
+              capability?.version === 2 && createPermission && !snapshot.metadata?.page.row
+                ? (blockId) => void createPage(blockId)
+                : undefined
+            }
+            onCreateDatabase={
+              capability?.version === 2 &&
+              capability.features?.databases === true &&
+              capability.limits.databases &&
+              databaseCreatePermission
+                ? (place) => void createDatabaseBlock({ registry, controller, place })
+                : undefined
+            }
+            onMoveBlocks={
+              capability?.version === 2 &&
+              capability.features?.blockMoves === true &&
+              blockPermission
+                ? async (state) => {
+                    try {
+                      setMoveError(null);
+                      const selected = bridge.blockMoveSelection(state);
+                      const proof = await spaceRootReorder(
+                        registry,
+                        controller.session.key.environmentId,
+                      ).selectBlocks(
+                        controller.session.key.pageId,
+                        selected.revision,
+                        selected.blockIds,
+                      );
+                      setBlockMove(proof);
+                    } catch (error) {
+                      setMoveError(error);
+                    }
+                  }
+                : undefined
+            }
+            editable={
+              permission &&
+              !controller.structureBlocked() &&
+              !loading &&
+              session.persistenceError === null &&
+              session.status !== "conflict" &&
+              session.status !== "uncertain"
+            }
+          />
+        </DatabaseBlockHostProvider>
       ) : null}
       {targetBlockId ? (
         <SpaceSourceOpen

@@ -15,16 +15,14 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
-import { ArrowDownIcon, ArrowUpIcon, CopyIcon, EllipsisIcon, Trash2Icon } from "lucide-react";
+import { CopyIcon, EllipsisIcon, Trash2Icon } from "lucide-react";
 import { NodeSelection, Plugin, type Command, type EditorState } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
-import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
-import {
-  SpaceAtomContext,
-  SpaceAtomView,
-  SpaceMediaView,
-  SpaceMediaWritableContext,
-} from "./SpaceAtomView";
+import { isKnownSpaceBlock, isSpaceDatabaseBlock } from "@t2code/client-runtime/spaces";
+import { spaceAtomNodeView } from "./databases/blocks/nodeView";
+import { DatabaseHandleItems, MoveBlockItems } from "./databases/blocks/DatabaseHandleItems";
+import { DatabaseDeleteHost } from "./databases/blocks/DeleteDatabaseDialog";
+import { SpaceAtomContext, SpaceMediaView, SpaceMediaWritableContext } from "./SpaceAtomView";
 import { type SpaceBlock, type SpaceBlockId } from "@t2code/contracts/spaces";
 import { Button } from "~/components/ui/button";
 import {
@@ -60,7 +58,12 @@ import {
   runCommand,
   type SpaceEditorParts,
 } from "./spaceEditorSupport";
-import { BubbleLayer, FormatValue, SlashLayer } from "./SpaceEditorLayers";
+import {
+  BubbleLayer,
+  FormatValue,
+  SlashLayer,
+  type SlashDatabaseCreate,
+} from "./SpaceEditorLayers";
 import "./editor.css";
 
 const placeholder = "Write, or press '/' for commands…";
@@ -175,8 +178,10 @@ export function SpaceEditor({
   mentions,
   onOpenSource,
   onCreatePage,
+  onCreateDatabase,
 }: {
   readonly onCreatePage?: ((blockId: SpaceBlockId | null) => void) | undefined;
+  readonly onCreateDatabase?: SlashDatabaseCreate | undefined;
   readonly savedHistory?: ReactNode;
   readonly mentions?: SpaceMentionController | null;
   readonly onOpenSource?: (
@@ -201,7 +206,7 @@ export function SpaceEditor({
           .extensions()
           .map((extension) =>
             extension.name === "spaceAtom" && extension instanceof TiptapNode
-              ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(SpaceAtomView) })
+              ? extension.extend({ addNodeView: () => spaceAtomNodeView() })
               : extension.name === "spaceMedia" && extension instanceof TiptapNode
                 ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(SpaceMediaView) })
                 : ["space_page_mention", "space_block_mention"].includes(extension.name) &&
@@ -491,7 +496,11 @@ export function SpaceEditor({
                 </p>
               ) : null}
               <BubbleLayer {...parts}>
-                <SlashLayer {...parts} onCreatePage={onCreatePage}>
+                <SlashLayer
+                  {...parts}
+                  onCreatePage={onCreatePage}
+                  onCreateDatabase={onCreateDatabase}
+                >
                   <EditorContent
                     editor={editor}
                     className="min-h-40 whitespace-pre-wrap break-words [&_.tiptap]:min-h-40 [&_.tiptap]:outline-none"
@@ -530,6 +539,7 @@ function EditorSurface({
   } | null>(null);
   const hoverId = hover?.id ?? null;
   const [handleMenuOpen, setHandleMenuOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<{ id: SpaceBlockId; open: boolean } | null>(null);
   const [dragId, setDragId] = useState<SpaceBlockId | null>(null);
   const [drop, setDrop] = useState<BlockDrop | null>(null);
   const pendingHover = useRef<{ frame: number | null; block: Element | null }>({
@@ -548,6 +558,7 @@ function EditorSurface({
         canMove: caps.canMove,
         handleId: handle?.id ?? null,
         handleMedia: !!handle && MEDIA_TYPES.includes(handle.type),
+        handleDatabase: !!handle && isSpaceDatabaseBlock(handle),
         dragExists: !dragId || !!findBlock(doc, dragId),
       };
     },
@@ -690,6 +701,7 @@ function EditorSurface({
             left={handleAt.left}
             menuOpen={handleMenuOpen}
             onMenuOpenChange={setHandleMenuOpen}
+            onMenuClosed={() => setDeleteId((request) => request && { ...request, open: true })}
             onAdd={
               can(adapter.insertAfter(handleId))
                 ? () => run(adapter.insertAfter(handleId, "/"))
@@ -698,72 +710,77 @@ function EditorSurface({
             onDragStart={startDrag}
             onDragEnd={clearDrag}
           >
-            <MenuSub>
-              <MenuSubTrigger>Turn into</MenuSubTrigger>
-              <MenuSubPopup>
-                {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
-                  const [label, Icon] = turnInto[type];
-                  return (
-                    <MenuItem
-                      key={type}
-                      disabled={!can(adapter.convert(handleId, type))}
-                      onClick={() => run(adapter.convert(handleId, type))}
-                    >
-                      <Icon />
-                      {label}
-                    </MenuItem>
-                  );
-                })}
-              </MenuSubPopup>
-            </MenuSub>
-            <MenuItem
-              disabled={!can(adapter.duplicate(handleId))}
-              onClick={() => run(adapter.duplicate(handleId))}
-            >
-              <CopyIcon />
-              Duplicate
-            </MenuItem>
-            <MenuItem
-              disabled={!can(adapter.shift(-1, handleId))}
-              onClick={() => run(adapter.shift(-1, handleId))}
-            >
-              <ArrowUpIcon />
-              Move up
-            </MenuItem>
-            <MenuItem
-              disabled={!can(adapter.shift(1, handleId))}
-              onClick={() => run(adapter.shift(1, handleId))}
-            >
-              <ArrowDownIcon />
-              Move down
-            </MenuItem>
-            {info.canMove ? (
-              <MenuItem
-                onClick={() => {
-                  selectBlock(handleId);
-                  onMoveBlocks?.(editor.state);
-                }}
-              >
-                Move to…
-              </MenuItem>
-            ) : null}
-            <MenuSeparator />
-            <MenuItem
-              variant="destructive"
-              disabled={
-                !(info.handleMedia
-                  ? mediaEditable && can(adapter.removeMedia(handleId))
-                  : can(adapter.remove(handleId)))
-              }
-              onClick={() =>
-                run(info.handleMedia ? adapter.removeMedia(handleId) : adapter.remove(handleId))
-              }
-            >
-              <Trash2Icon />
-              {info.handleMedia ? "Remove media block" : "Delete block"}
-            </MenuItem>
+            {info.handleDatabase ? (
+              <DatabaseHandleItems
+                adapter={adapter}
+                blockId={handleId}
+                can={can}
+                run={run}
+                onDelete={(id) => setDeleteId({ id, open: false })}
+              />
+            ) : (
+              <>
+                <MenuSub>
+                  <MenuSubTrigger>Turn into</MenuSubTrigger>
+                  <MenuSubPopup>
+                    {(Object.keys(turnInto) as (keyof typeof turnInto)[]).map((type) => {
+                      const [label, Icon] = turnInto[type];
+                      return (
+                        <MenuItem
+                          key={type}
+                          disabled={!can(adapter.convert(handleId, type))}
+                          onClick={() => run(adapter.convert(handleId, type))}
+                        >
+                          <Icon />
+                          {label}
+                        </MenuItem>
+                      );
+                    })}
+                  </MenuSubPopup>
+                </MenuSub>
+                <MenuItem
+                  disabled={!can(adapter.duplicate(handleId))}
+                  onClick={() => run(adapter.duplicate(handleId))}
+                >
+                  <CopyIcon />
+                  Duplicate
+                </MenuItem>
+                <MoveBlockItems adapter={adapter} blockId={handleId} can={can} run={run} />
+                {info.canMove ? (
+                  <MenuItem
+                    onClick={() => {
+                      selectBlock(handleId);
+                      onMoveBlocks?.(editor.state);
+                    }}
+                  >
+                    Move to…
+                  </MenuItem>
+                ) : null}
+                <MenuSeparator />
+                <MenuItem
+                  variant="destructive"
+                  disabled={
+                    !(info.handleMedia
+                      ? mediaEditable && can(adapter.removeMedia(handleId))
+                      : can(adapter.remove(handleId)))
+                  }
+                  onClick={() =>
+                    run(info.handleMedia ? adapter.removeMedia(handleId) : adapter.remove(handleId))
+                  }
+                >
+                  <Trash2Icon />
+                  {info.handleMedia ? "Remove media block" : "Delete block"}
+                </MenuItem>
+              </>
+            )}
           </SpaceBlockHandle>
         ) : null}
+        <DatabaseDeleteHost
+          request={deleteId}
+          adapter={adapter}
+          run={run}
+          onClose={() => setDeleteId(null)}
+        />
         {drop?.allowed ? (
           <div
             className="pointer-events-none absolute z-10 h-0.5 rounded-full bg-primary"

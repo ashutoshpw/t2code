@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema";
 import { SpaceBlock, type SpaceBlockId } from "@t2code/contracts/spaces";
 import { NonNegativeInt } from "@t2code/contracts";
-import { canEditSpaceBlock } from "./values.ts";
+import { canEditSpaceBlock, isSameSpaceDatabaseBlock } from "./values.ts";
 import { spaceJsonBytes } from "./draft.ts";
 import type { SpaceMutation, SpaceDocumentDraft } from "./session.ts";
 
@@ -60,6 +60,9 @@ function replaceable(before: readonly SpaceBlock[], after: readonly SpaceBlock[]
       return (
         old &&
         (same(old, block) ||
+          (old.parentId === block.parentId &&
+            old.order === block.order &&
+            isSameSpaceDatabaseBlock(old, block)) ||
           (old.parentId === block.parentId &&
             old.order === block.order &&
             old.type !== "child_page" &&

@@ -2,10 +2,12 @@ import { runAtomCommand } from "../state/runtime.ts";
 import { describe, expect, it } from "@effect/vitest";
 import {
   SpaceBlockId,
+  SpaceDataSourceId,
   SpaceId,
   SpacePageId,
   SpaceReceiptEpoch,
   type SpacePageGetResult,
+  type SpacePageSummary,
 } from "@t2code/contracts/spaces";
 import { EnvironmentId, WS_METHODS } from "@t2code/contracts";
 import * as Deferred from "effect/Deferred";
@@ -28,7 +30,7 @@ import type { RpcSession } from "../rpc/session.ts";
 import type { WsRpcProtocolClient } from "../rpc/protocol.ts";
 import { createSpacesEnvironmentAtoms } from "../state/spaces.ts";
 import * as Effect from "effect/Effect";
-import { readSpacePageLocation } from "./pageLocation.ts";
+import { readSpacePageLocation, SpaceLocationError } from "./pageLocation.ts";
 
 const spaceId = SpaceId.make("current-space");
 const timestamp = "2026-10-26T00:00:00Z";
@@ -141,6 +143,63 @@ describe("readSpacePageLocation", () => {
         expect(failure.message).toContain("location changed");
         expect(reads).toBe(3);
       }),
+  );
+
+  it.effect("puts the host page and its ancestors in front of a row", () =>
+    Effect.gen(function* () {
+      const source = SpaceDataSourceId.make("ds");
+      const rowMeta = metadata("row");
+      const { location: _location, ...bare } = rowMeta.page;
+      const row = { ...rowMeta, page: { ...bare, rootOrder: null, row: { dataSourceId: source } } };
+      const pages = [row, metadata("host", "top"), metadata("top")];
+      const hosts: string[] = [];
+      const readRowHost = (page: SpacePageSummary) => {
+        hosts.push(page.id);
+        return Effect.succeed({ hostPageId: SpacePageId.make("host") });
+      };
+      const read = (id: SpacePageId) =>
+        Effect.succeed(pages.find((entry) => entry.page.id === id)!);
+      const result = yield* readSpacePageLocation(
+        { pageId: row.page.id, version: 2 },
+        read,
+        readRowHost,
+      );
+      expect(result.ancestors.map((page) => page.id)).toEqual(["top", "host"]);
+      expect(result.row).toEqual({ dataSourceId: source, hostPageId: "host" });
+      expect(hosts).toEqual(["row"]);
+      const rootHost = yield* readSpacePageLocation(
+        { pageId: row.page.id, version: 2 },
+        (id) => Effect.succeed(id === "row" ? row : metadata("host")),
+        readRowHost,
+      );
+      expect(rootHost.ancestors.map((page) => page.id)).toEqual(["host"]);
+      const withoutReader = yield* readSpacePageLocation(
+        { pageId: row.page.id, version: 2 },
+        read,
+      ).pipe(Effect.flip);
+      expect(withoutReader.message).toContain("unavailable");
+      const dead = yield* readSpacePageLocation({ pageId: row.page.id, version: 2 }, read, () =>
+        Effect.fail(new SpaceLocationError({ message: "dead database" })),
+      ).pipe(Effect.flip);
+      expect(dead.message).toBe("dead database");
+    }),
+  );
+
+  it.effect("still refuses an ancestry cycle through a row host", () =>
+    Effect.gen(function* () {
+      const rowMeta = metadata("row");
+      const { location: _location, ...bare } = rowMeta.page;
+      const row = {
+        ...rowMeta,
+        page: { ...bare, rootOrder: null, row: { dataSourceId: SpaceDataSourceId.make("ds") } },
+      };
+      const failure = yield* readSpacePageLocation(
+        { pageId: row.page.id, version: 2 },
+        (id) => Effect.succeed(id === "row" ? row : metadata("host", "row")),
+        () => Effect.succeed({ hostPageId: SpacePageId.make("host") }),
+      ).pipe(Effect.flip);
+      expect(failure.message).toContain("cycle");
+    }),
   );
 
   it.effect("bounds ancestry reads and UTF8 response bytes", () =>
