@@ -236,6 +236,23 @@ it.layer(NodeServices.layer)("Spaces computed properties in queries", (it) => {
           type: "string",
           value: "2026-11-11 12:00!",
         });
+        // A chain of volatile inputs is evaluated through, though only the last is asked for.
+        yield* kit.schema(dataSourceId, [
+          {
+            op: "addProperty",
+            property: {
+              id: pid("last001"),
+              name: "Last",
+              type: "formula",
+              config: { expression: 'prop("Next") + "?"' },
+            },
+          },
+        ]);
+        const last = yield* query({ limit: 1, properties: [pid("last001")] });
+        assert.deepEqual(last.rows[0]!.cells["last001"], {
+          type: "string",
+          value: "2026-11-11 12:00!?",
+        });
         const hour = (timeZone: string) =>
           query({ timeZone, limit: 1, properties: [pid("hour001")] }).pipe(
             Effect.map((result) => result.rows[0]!.cells["hour001"]),

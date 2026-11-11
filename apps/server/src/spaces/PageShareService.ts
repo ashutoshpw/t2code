@@ -8,6 +8,9 @@ import {
   type SpacePageShareGetInput,
   type SpacePageShareGetResult,
   type SpacePageShareStopInput,
+  type SpaceSharedDatabase,
+  type SpaceSharedDatabaseRowPage,
+  type SpaceSharedDatabaseWindow,
   type SpaceSharedPage,
 } from "@t2code/contracts";
 import type * as C from "@t2code/contracts/spaces";
@@ -26,9 +29,12 @@ import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import { CloudManagedEndpointRuntime } from "../cloud/ManagedEndpointRuntime.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as AnalyticsService from "../telemetry/AnalyticsService.ts";
+import * as PageShareCursor from "./PageShareCursor.ts";
 import * as SpacesService from "./SpacesService.ts";
 
 const SIGNING_SECRET_NAME = "space-page-share-signing-key";
+const CURSOR_SECRET_NAME = "space-page-share-cursor-key";
+const CURSOR_IV_BYTES = 12;
 const SHARE_ID_BYTES = 16;
 const SIGNATURE_BYTES = 16;
 
@@ -55,6 +61,14 @@ const unavailable = new SpacePageShareAccessError({ reason: "unavailable" });
 const busy = new SpacePageShareAccessError({ reason: "busy" });
 const failed = new SpacePageShareAccessError({ reason: "failed" });
 const MAX_CONCURRENT_VIEWER_REQUESTS = 32;
+/** Database work gets its own pool, so anonymous queries can never starve page reads. */
+const MAX_CONCURRENT_DATABASE_REQUESTS = 8;
+
+/** The request is well formed but does not fit the view it names: the route answers 400. */
+export class SharedDatabaseRequestError extends Schema.TaggedError<SharedDatabaseRequestError>()(
+  "SharedDatabaseRequestError",
+  {},
+) {}
 
 const shareError = (error: C.SpaceServiceError) =>
   new SpacePageShareError({
@@ -77,6 +91,28 @@ const accessFailure = (expected: SpacePageShareAccessError) => (error: C.SpaceSe
       (error.reason === "not_found" || error.reason === "missing_file"));
   return gone
     ? Effect.succeed(expected)
+    : Effect.logError("Shared page request failed", { error: error._tag }).pipe(Effect.as(failed));
+};
+
+/**
+ * Every tag a database read can fail with, listed so a new error is a fault and is logged rather
+ * than shown to a viewer as "unavailable".
+ */
+const databaseFailure = (error: C.SpaceServiceError) => {
+  const gone =
+    error._tag === "SpaceNotFoundError" ||
+    error._tag === "SpacesDisabledError" ||
+    error._tag === "SpaceDatabaseError" ||
+    error._tag === "SpaceCursorStaleError" ||
+    error._tag === "SpaceLimitExceededError" ||
+    (error._tag === "SpaceValidationError" &&
+      (error.reason === "trashed" ||
+        error.reason === "invalid_cursor" ||
+        error.reason === "invalid_input")) ||
+    (error._tag === "SpaceAssetError" &&
+      (error.reason === "not_found" || error.reason === "missing_file"));
+  return gone
+    ? Effect.succeed(unavailable)
     : Effect.logError("Shared page request failed", { error: error._tag }).pipe(Effect.as(failed));
 };
 
@@ -109,12 +145,55 @@ export class SpacePageShareService extends Context.Service<
       pageId?: C.SpacePageId,
       cursor?: string,
     ) => Effect.Effect<SpaceSharedPage, SpacePageShareAccessError>;
-    /** An asset that a live block of an authorized page references. */
+    /**
+     * An asset that a live block of an authorized page references. With `row`, the page is a row
+     * of a shared database and must pass the named saved view's filter at this request.
+     */
     readonly asset: (
       token: string,
       pageId: C.SpacePageId | undefined,
       assetId: C.SpaceAssetId,
+      row?: {
+        readonly blockId: C.SpaceBlockId;
+        readonly viewId: C.SpaceViewId;
+        readonly rowId: C.SpacePageId;
+      },
     ) => Effect.Effect<SpacesService.ResolvedAssetFile, SpacePageShareAccessError, Scope.Scope>;
+    /** The views of a database block on a shared page and the properties they show. */
+    readonly database: (
+      token: string,
+      pageId: C.SpacePageId | undefined,
+      blockId: C.SpaceBlockId,
+    ) => Effect.Effect<SpaceSharedDatabase, SpacePageShareAccessError>;
+    /** One window of a saved view: rows, one bucket's rows, or a date range. Cursors are sealed. */
+    readonly databaseQuery: (
+      token: string,
+      input: {
+        readonly pageId?: C.SpacePageId;
+        readonly blockId: C.SpaceBlockId;
+        readonly viewId: C.SpaceViewId;
+        readonly group?: string;
+        readonly from?: string;
+        readonly to?: string;
+        readonly cursor?: string;
+        readonly timeZone?: string;
+      },
+    ) => Effect.Effect<
+      SpaceSharedDatabaseWindow,
+      SpacePageShareAccessError | SharedDatabaseRequestError
+    >;
+    /** A row the saved view returns, read as a page with its exposed properties. */
+    readonly databaseRow: (
+      token: string,
+      input: {
+        readonly pageId?: C.SpacePageId;
+        readonly blockId: C.SpaceBlockId;
+        readonly viewId: C.SpaceViewId;
+        readonly rowId: C.SpacePageId;
+        readonly cursor?: string;
+        readonly timeZone?: string;
+      },
+    ) => Effect.Effect<SpaceSharedDatabaseRowPage, SpacePageShareAccessError>;
   }
 >()("@t2code/cli/spaces/PageShareService/SpacePageShareService") {}
 
@@ -132,6 +211,16 @@ const make = Effect.gen(function* () {
       .pipe(
         Effect.flatMap((result) => (Option.isSome(result) ? Effect.succeed(result.value) : busy)),
       );
+  const databases = yield* Semaphore.make(MAX_CONCURRENT_DATABASE_REQUESTS);
+  const databaseBounded = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    databases
+      .withPermitsIfAvailable(1)(effect)
+      .pipe(
+        Effect.flatMap((result) => (Option.isSome(result) ? Effect.succeed(result.value) : busy)),
+      );
+  const cursorKey = yield* Effect.cached(
+    secretStore.getOrCreateRandom(CURSOR_SECRET_NAME, 32).pipe(Effect.orDie),
+  );
   const signingKey = yield* Effect.cached(
     secretStore.getOrCreateRandom(SIGNING_SECRET_NAME, 32).pipe(Effect.orDie),
   );
@@ -245,14 +334,119 @@ const make = Effect.gen(function* () {
     token: string,
     requested: C.SpacePageId | undefined,
     assetId: C.SpaceAssetId,
+    row?: {
+      readonly blockId: C.SpaceBlockId;
+      readonly viewId: C.SpaceViewId;
+      readonly rowId: C.SpacePageId;
+    },
   ) {
-    const { pageId } = yield* authorize(token, requested);
-    return yield* spaces
-      .resolveSharedAssetFile({ pageId, assetId })
-      .pipe(
-        Effect.catch((error) => Effect.flatMap(accessFailure(unavailable)(error), Effect.fail)),
-      );
+    const { share, pageId } = yield* authorize(token, requested);
+    const file =
+      row === undefined
+        ? spaces.resolveSharedAssetFile({ pageId, assetId })
+        : spaces.resolveSharedRowAssetFile({ rootPageId: share.pageId, pageId, assetId, ...row });
+    return yield* file.pipe(
+      Effect.catch((error) => Effect.flatMap(accessFailure(unavailable)(error), Effect.fail)),
+    );
   }, bounded);
+
+  const database = Effect.fn("SpacePageShareService.database")(function* (
+    token: string,
+    requested: C.SpacePageId | undefined,
+    blockId: C.SpaceBlockId,
+  ) {
+    const { share, pageId } = yield* authorize(token, requested);
+    return yield* spaces
+      .describeSharedDatabase({ rootPageId: share.pageId, pageId, blockId })
+      .pipe(Effect.catch((error) => Effect.flatMap(databaseFailure(error), Effect.fail)));
+  }, databaseBounded);
+
+  const sealCursor = (binding: string, cursor: string | null) =>
+    cursor === null
+      ? Effect.succeed(null)
+      : Effect.gen(function* () {
+          const iv = yield* random.randomBytes(CURSOR_IV_BYTES).pipe(Effect.orDie);
+          return PageShareCursor.seal(yield* cursorKey, iv, binding, cursor);
+        });
+
+  const databaseQuery = Effect.fn("SpacePageShareService.databaseQuery")(function* (
+    token: string,
+    input: {
+      readonly pageId?: C.SpacePageId;
+      readonly blockId: C.SpaceBlockId;
+      readonly viewId: C.SpaceViewId;
+      readonly group?: string;
+      readonly from?: string;
+      readonly to?: string;
+      readonly cursor?: string;
+      readonly timeZone?: string;
+    },
+  ) {
+    const { share, pageId } = yield* authorize(token, input.pageId);
+    const binding = PageShareCursor.cursorBinding(share.id, pageId, input.blockId, input.viewId);
+    let cursor: string | undefined;
+    if (input.cursor !== undefined) {
+      const opened = PageShareCursor.open(yield* cursorKey, binding, input.cursor);
+      if (opened === null) return yield* unavailable;
+      cursor = opened;
+    }
+    const outcome = yield* spaces
+      .querySharedDatabase({
+        rootPageId: share.pageId,
+        pageId,
+        blockId: input.blockId,
+        viewId: input.viewId,
+        params: {
+          ...(input.group === undefined ? {} : { group: input.group }),
+          ...(input.from === undefined ? {} : { from: input.from }),
+          ...(input.to === undefined ? {} : { to: input.to }),
+          ...(cursor === undefined ? {} : { cursor }),
+          ...(input.timeZone === undefined ? {} : { timeZone: input.timeZone }),
+        },
+      })
+      .pipe(Effect.catch((error) => Effect.flatMap(databaseFailure(error), Effect.fail)));
+    if (outcome._tag === "Bad") return yield* new SharedDatabaseRequestError();
+    const { window } = outcome;
+    const groups =
+      window.groups === undefined
+        ? undefined
+        : yield* Effect.forEach(window.groups, (bucket) =>
+            Effect.map(sealCursor(binding, bucket.nextCursor), (nextCursor) => ({
+              ...bucket,
+              nextCursor,
+            })),
+          );
+    return {
+      ...window,
+      ...(groups === undefined ? {} : { groups }),
+      nextCursor: yield* sealCursor(binding, window.nextCursor),
+    } satisfies SpaceSharedDatabaseWindow;
+  }, databaseBounded);
+
+  const databaseRow = Effect.fn("SpacePageShareService.databaseRow")(function* (
+    token: string,
+    input: {
+      readonly pageId?: C.SpacePageId;
+      readonly blockId: C.SpaceBlockId;
+      readonly viewId: C.SpaceViewId;
+      readonly rowId: C.SpacePageId;
+      readonly cursor?: string;
+      readonly timeZone?: string;
+    },
+  ) {
+    const { share, pageId } = yield* authorize(token, input.pageId);
+    return yield* spaces
+      .readSharedDatabaseRow({
+        rootPageId: share.pageId,
+        pageId,
+        blockId: input.blockId,
+        viewId: input.viewId,
+        rowId: input.rowId,
+        ...(input.cursor === undefined ? {} : { cursor: input.cursor }),
+        ...(input.timeZone === undefined ? {} : { timeZone: input.timeZone }),
+      })
+      .pipe(Effect.catch((error) => Effect.flatMap(databaseFailure(error), Effect.fail)));
+  }, databaseBounded);
 
   return SpacePageShareService.of({
     create,
@@ -260,6 +454,9 @@ const make = Effect.gen(function* () {
     get,
     page,
     asset,
+    database,
+    databaseQuery,
+    databaseRow,
   });
 });
 

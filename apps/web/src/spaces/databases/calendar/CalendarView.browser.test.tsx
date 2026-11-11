@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { fixtureView, withProperty } from "../test/fixtures";
 import { datedRow, dragBetween, mountDated } from "./calendarHarness";
 
@@ -36,8 +38,10 @@ async function mount(
   const fake = new FakeDatabase({ quietRowWrites: true, views: [view], rowData: rows, ...options });
   state.fake = fake;
   await page.viewport(1400, 900);
-  const mounted = await mountDated(view, options.permissions?.cells !== false);
-  await vi.waitFor(() => expect(mounted.root.querySelector('[role="grid"]')).not.toBeNull());
+  const mounted = await readyWhen(
+    await mountDated(view, options.permissions?.cells !== false),
+    (dated) => vi.waitFor(() => expect(dated.root.querySelector('[role="grid"]')).not.toBeNull()),
+  );
   return { fake, ...mounted };
 }
 

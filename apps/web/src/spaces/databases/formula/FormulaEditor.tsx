@@ -21,7 +21,7 @@ import {
   DialogPopup,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { databaseErrorDetail, databaseErrorMessage } from "../data/errors";
+import { databaseErrorDetail, databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { nextConfig } from "../controls/propertyConfig";
 import { useDatabase, useDatabaseActions } from "../shell/context";
 import { FormulaCompletions } from "./FormulaCompletions";

@@ -6,6 +6,8 @@ import { page, userEvent } from "vite-plus/test/browser";
 import { act } from "../../../../test/render";
 import { FIXTURE_IDS } from "../test/fixtures";
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { mountTable } from "./tableHarness";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
@@ -34,8 +36,9 @@ async function mount(
     );
   state.fake = fake;
   await page.viewport(1800, 1200);
-  const table = await mountTable(fake);
-  await vi.waitFor(() => expect(table.grid()).toBeTruthy());
+  const table = await readyWhen(await mountTable(fake), (mounted) =>
+    vi.waitFor(() => expect(mounted.grid()).toBeTruthy()),
+  );
   return { fake, ...table };
 }
 const locate = (element: HTMLElement | null) => page.elementLocator(element!);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { databaseErrorMessage } from "./errors";
+import { databaseErrorMessage } from "./errors.ts";
 
 describe("databaseErrorMessage", () => {
   it.each([

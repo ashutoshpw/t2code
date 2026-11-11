@@ -1,8 +1,9 @@
 import {
-  cellForGroupKey,
-  canonicalJson,
-  newRowCells,
   type ViewColumn,
+  canonicalJson,
+  cellForGroupKey,
+  groupLabel,
+  newRowCells,
 } from "@t2code/client-runtime/spaces";
 import { useLayoutEffect, useState } from "react";
 import {
@@ -26,7 +27,6 @@ import { createGridHandlers, type GridModel } from "./gridHandlers";
 import { buildGridItems, visibleBuckets, WRAPPED_ROW_HEIGHT } from "./gridItems";
 import { DEFAULT_COLUMN_WIDTH, TITLE_COLUMN_WIDTH, clampWidth } from "./gridWindow";
 import { GridViewport } from "./GridViewport";
-import { groupLabel } from "./groupLabel";
 import type { TableColumn } from "./tableTypes";
 
 const GROUP_ROWS = 25;

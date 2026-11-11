@@ -41,6 +41,7 @@ export * from "./orchestrationProject.ts";
 export * from "./orchestrationV2.ts";
 export * from "./guestShare.ts";
 export * from "./spacePageShare.ts";
+export * from "./spacePageShareDatabase.ts";
 export * from "./guestStream.ts";
 export * from "./applicationEvent.ts";
 export * from "./orchestratorMcp.ts";

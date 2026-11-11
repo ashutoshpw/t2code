@@ -1,3 +1,4 @@
+import { type GroupLabel } from "@t2code/client-runtime/spaces";
 import { useState, type CSSProperties, type FocusEvent, type ReactNode, type UIEvent } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceAggregateResult, SpaceGroupBucket } from "@t2code/contracts/spaces";
@@ -19,7 +20,6 @@ import { cellOf, handleGridCopy, handleGridKeyDown, handleGridPaste } from "./gr
 import type { GridEditStore } from "./gridEditStore";
 import type { GridLayout } from "./gridItems";
 import { columnRange, itemAt, rowRange, sameRange } from "./gridWindow";
-import type { GroupLabel } from "./groupLabel";
 import { ADD_COLUMN_WIDTH, HeaderRow } from "./HeaderRow";
 import { TableRow } from "./TableRow";
 import type { GridHandlers, OptionHint, TableColumn } from "./tableTypes";

@@ -6,6 +6,8 @@ import { page, userEvent } from "vite-plus/test/browser";
 
 import { datedRow, mountDated } from "../calendar/calendarHarness";
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { fixtureView, withProperty } from "../test/fixtures";
 import { makeScale, xToDay } from "./timelineScale";
 
@@ -48,8 +50,10 @@ async function mount(
   const fake = new FakeDatabase({ quietRowWrites: true, views: [view], rowData: rows, ...options });
   state.fake = fake;
   await page.viewport(1400, 900);
-  const mounted = await mountDated(view, options.permissions?.cells !== false);
-  await vi.waitFor(() => expect(mounted.root.querySelector("[data-today]")).not.toBeNull());
+  const mounted = await readyWhen(
+    await mountDated(view, options.permissions?.cells !== false),
+    (dated) => vi.waitFor(() => expect(dated.root.querySelector("[data-today]")).not.toBeNull()),
+  );
   const bar = (id: string) => mounted.root.querySelector<HTMLElement>(`[data-bar-id="${id}"]`)!;
   return { fake, bar, ...mounted };
 }

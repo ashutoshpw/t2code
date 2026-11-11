@@ -1,12 +1,11 @@
 import { RegistryContext } from "@effect/atom-react";
 import {
   DatabaseQuerySession,
-  applyCellPatches,
+  deriveViewRows,
   canonicalJson,
   queryKey,
   viewDependencies,
   viewQueryInput,
-  EMPTY_PENDING_CELL_EDITS,
   type PendingCellEdits,
   type RowPlacement,
   type ViewColumn,
@@ -26,7 +25,7 @@ import { useContext, useEffect, useState, useSyncExternalStore } from "react";
 
 import { useDatabase } from "../shell/context";
 import type { DatabaseModel } from "./useDatabaseModel";
-import { databaseErrorMessage } from "./errors";
+import { databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { Latest } from "./latest";
 import { databasePorts } from "./ports";
 import { databaseStores } from "./stores";
@@ -79,7 +78,6 @@ export interface ViewQuery {
   readonly pending: PendingCellEdits;
 }
 
-const EMPTY_ROWS: ReadonlyArray<SpaceDatabaseRow> = [];
 const BACKGROUND_REFRESH_MS = 30_000;
 const intersects = (dependencies: ReadonlySet<string>, ids: ReadonlySet<string>) => {
   for (const id of ids) if (dependencies.has(id)) return true;
@@ -199,37 +197,13 @@ export function useViewQuery(
 
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const written = useSyncExternalStore(writer.subscribe, writer.getSnapshot);
-  const own = Object.values(written.pending).some((edit) => edit.dataSourceId === dataSourceId)
-    ? Object.fromEntries(
-        Object.entries(written.pending).filter(([, edit]) => edit.dataSourceId === dataSourceId),
-      )
-    : EMPTY_PENDING_CELL_EDITS;
-  // Acknowledged edits the loaded rows do not hold yet sit under the newer queued ones.
-  const pending = Object.keys(snapshot.acked).length > 0 ? { ...snapshot.acked, ...own } : own;
-
   const windows = snapshot.windows;
-  const placed = snapshot.placed;
-  const loaded = windows?.rows ?? EMPTY_ROWS;
-  const rows = applyCellPatches(
-    options.mode === "rows" && placed.length > 0
-      ? [...loaded, ...placed.map((entry) => entry.row)]
-      : loaded,
-    pending,
-  );
-  const groups =
-    options.mode === "groups" && windows?.groups
-      ? windows.groups.map((bucket) => {
-          const id = canonicalJson(bucket.key);
-          const extra = placed.filter((entry) => entry.group === id).map((entry) => entry.row);
-          const patched = applyCellPatches(
-            extra.length > 0 ? [...bucket.rows, ...extra] : bucket.rows,
-            pending,
-          );
-          return patched === bucket.rows && extra.length === 0
-            ? bucket
-            : { ...bucket, rows: patched, count: bucket.count + extra.length };
-        })
-      : null;
+  const { rows, groups, pending } = deriveViewRows({
+    mode: options.mode,
+    dataSourceId,
+    snapshot,
+    writerPending: written.pending,
+  });
 
   return {
     status: snapshot.status === "idle" ? "loading" : snapshot.status,

@@ -3,7 +3,7 @@ import type { AtomRegistry } from "effect/reactivity";
 
 import { toastManager } from "../../../components/ui/toast";
 import type { SpaceDocumentController } from "../../documentController";
-import { databaseErrorMessage } from "../data/errors";
+import { databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { databasePorts } from "../data/ports";
 
 /**

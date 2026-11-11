@@ -1,6 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 import type { EnvironmentId } from "@t2code/contracts";
-import { canonicalJson, rowTitle } from "@t2code/client-runtime/spaces";
+import { type CellTextContext, canonicalJson, rowTitle } from "@t2code/client-runtime/spaces";
 import { memo } from "react";
 import type {
   SpaceDatabaseRow,
@@ -15,7 +15,6 @@ import { CardCover } from "../primitives/CardCover";
 import { CellValue } from "../primitives/CellValue";
 import { coverOf } from "../primitives/coverSource";
 import { laneCellId } from "./boardLayout";
-import type { CellTextContext } from "../primitives/format";
 
 /** A visible non-title property a card shows when the row has a value for it. */
 export interface CardLine {

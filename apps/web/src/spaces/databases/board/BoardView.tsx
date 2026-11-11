@@ -10,6 +10,7 @@ import {
 import {
   canonicalJson,
   cellForGroupKey,
+  groupLabel,
   laneKeys,
   newRowCells,
   orderBuckets,
@@ -29,7 +30,6 @@ import { Latest } from "../data/latest";
 import { useViewQuery } from "../data/useViewQuery";
 import { useDatabase, useDatabaseActions } from "../shell/context";
 import type { DatabaseViewProps } from "../shell/viewTypes";
-import { groupLabel } from "../table/groupLabel";
 import { CARD_FACE, CardBody, type CardLine } from "./BoardCard";
 import { BoardColumn, ColumnGhost, type BoardHandlers } from "./BoardColumn";
 import { BoardLanes } from "./BoardLanes";

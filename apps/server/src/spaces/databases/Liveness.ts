@@ -56,6 +56,14 @@ export const pageLive = Effect.fn("SpacesDatabases.pageLive")(function* (pageId:
   return (yield* walk(pageId)).live;
 });
 
+/** A page inside a database (a row or something under one) whose database is no longer live. */
+export const insideDeadDatabase = Effect.fn("SpacesDatabases.insideDeadDatabase")(function* (
+  pageId: string,
+) {
+  const { live, databases } = yield* walk(pageId);
+  return databases.length > 0 && !live;
+});
+
 /** The databases a page sits inside, nearest first. */
 export const chain = Effect.fn("SpacesDatabases.chain")(function* (pageId: string) {
   return (yield* walk(pageId)).databases;
