@@ -47,9 +47,12 @@ async function openEditor(options: Parameters<typeof computedFake>[0] = {}) {
 
 /** Dialogs sit under an inert guard that blocks pointer hits; a DOM click is what Enter does. */
 const press = (name: string) =>
-  vi.waitFor(() =>
-    (page.getByRole("button", { name, exact: true }).element() as HTMLElement).click(),
-  );
+  vi.waitFor(() => {
+    const button = page.getByRole("button", { name, exact: true }).element() as HTMLButtonElement;
+    // Save stays disabled until the check of the typed formula lands; a click before that is lost.
+    expect(button.disabled).toBe(false);
+    button.click();
+  });
 const schemaCalls = (fake: ReturnType<typeof computedFake>) => fake.callsOf("updateSchema");
 
 describe("formula editor", () => {

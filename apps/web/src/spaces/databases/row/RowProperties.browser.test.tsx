@@ -104,8 +104,9 @@ describe("row properties", () => {
     await expect.element(done).toHaveAttribute("aria-checked", "true");
     await userEvent.click(done);
     await expect.element(done).toHaveAttribute("aria-checked", "false");
-    await vi.waitFor(() => expect(writes(fake)).toHaveLength(1));
-    expect(JSON.stringify(writes(fake))).toContain('"done":null');
+    // Whether the two edits share a batch depends on timing; the writer's own tests cover that.
+    await vi.waitFor(() => expect(JSON.stringify(writes(fake))).toContain('"done":null'));
+    expect(JSON.stringify(writes(fake))).toContain('"status":"doing"');
   });
 
   it("moves between properties with the arrow keys", async () => {
