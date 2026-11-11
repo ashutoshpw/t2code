@@ -1421,7 +1421,7 @@ describe("extractMcpToolCallIdentity", () => {
       title: "Rendering static SVG",
       kind: "execute",
       status: "pending",
-      rawInput: { path: "xd://mcp__t3_code_html_render", content: JSON.stringify(args) },
+      rawInput: { path: "xd://mcp__t2_code_html_render", content: JSON.stringify(args) },
     });
     const completed = mergeToolCallState(
       created,
@@ -1433,12 +1433,12 @@ describe("extractMcpToolCallIdentity", () => {
           content: [{ type: "text", text }],
           details: {
             xdev: {
-              tool: "mcp__t3_code_html_render",
+              tool: "mcp__t2_code_html_render",
               mode: "execute",
               args,
               tier: "write",
               inner: {
-                serverName: "t3-code",
+                serverName: "t2-code",
                 mcpToolName: "html_render",
                 rawContent: [{ type: "text", text }],
                 provider: "acp",
@@ -1457,10 +1457,10 @@ describe("extractMcpToolCallIdentity", () => {
       title: "Reading html_render schema",
       kind: "read",
       status: "pending",
-      rawInput: { path: "xd://mcp__t3_code_html_render" },
+      rawInput: { path: "xd://mcp__t2_code_html_render" },
     });
 
-    const expected = { server: "t3-code", tool: "html_render", input: args };
+    const expected = { server: "t2-code", tool: "html_render", input: args };
     expect(extractMcpToolCallIdentity(created), "pending write").toEqual(expected);
     expect(extractMcpToolCallIdentity(completed), "completed write").toEqual(expected);
     expect(extractMcpToolCallIdentity(docRead), "doc read").toBeUndefined();
