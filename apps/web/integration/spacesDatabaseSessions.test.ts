@@ -2,6 +2,7 @@ import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it, assert } from "@effect/vitest";
 import { rowTitle } from "@t2code/client-runtime/spaces";
+import { AuthOrchestrationOperateScope } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -112,7 +113,7 @@ it.effect("trashes a row through the structure owner and restores it", () =>
   ).pipe(Effect.provide(live)),
 );
 
-it.effect("shows a second client's edit after its view refreshes", () =>
+it.effect("shows a second client's edit in its open view", () =>
   Effect.scoped(
     withDatabasesWorld((world) =>
       Effect.gen(function* () {
@@ -139,9 +140,6 @@ it.effect("shows a second client's edit after its view refreshes", () =>
           assert.equal(theirs.rows()[0]!.cells[note], undefined);
           a.actions.editCell(row.page.id, note, "from A");
           await a.actions.flushCells();
-          // No push channel: B sees the edit when its view refreshes (focus, interval or retry).
-          assert.equal(theirs.rows()[0]!.cells[note], undefined);
-          theirs.session.refresh();
           await theirs.until(() => theirs.rows()[0]?.cells[note] === "from A");
           mine.dispose();
           theirs.dispose();
@@ -203,7 +201,13 @@ it.effect("refuses writes from a client that only holds the read grant", () =>
               }),
             ),
           );
-          assert.notEqual(refused, undefined);
+          assert.deepEqual(
+            {
+              tag: (refused as { _tag?: string })._tag,
+              scope: (refused as { requiredScope?: string }).requiredScope,
+            },
+            { tag: "EnvironmentAuthorizationError", scope: AuthOrchestrationOperateScope },
+          );
           query.dispose();
         });
       }),

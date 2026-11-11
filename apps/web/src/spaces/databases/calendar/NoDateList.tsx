@@ -63,42 +63,55 @@ function Rows({
       </p>
     );
   return (
-    <ul className="flex max-h-72 w-72 flex-col gap-1 overflow-y-auto">
-      {query.rows.map((row) => {
-        const pageId = row.page.id;
-        return (
-          <li key={pageId} className="relative flex items-center gap-1">
-            <button
-              type="button"
-              className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-start text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              onClick={() => onOpen(pageId)}
-            >
-              {rowTitle(row) || "Untitled"}
-            </button>
-            {canEdit && dateKnown !== null ? (
-              <Button size="xs" variant="outline" onClick={() => setEditing(pageId)}>
-                Set date
-              </Button>
-            ) : null}
-            {editing === pageId && dateKnown !== null ? (
-              <DateEditor
-                known={dateKnown}
-                value={row.cells[dateKnown.id]}
-                pageId={pageId}
-                variant="field"
-                relatedPages={query.relatedPages}
-                onChange={(value) => onSet(pageId, value)}
-                onCommit={(value) => {
-                  onSet(pageId, value);
-                  setEditing(null);
-                }}
-                onClose={() => setEditing(null)}
-              />
-            ) : null}
-          </li>
-        );
-      })}
-    </ul>
+    <div className="flex w-72 flex-col gap-1">
+      <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+        {query.rows.map((row) => {
+          const pageId = row.page.id;
+          return (
+            <li key={pageId} className="relative flex items-center gap-1">
+              <button
+                type="button"
+                className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-start text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                onClick={() => onOpen(pageId)}
+              >
+                {rowTitle(row) || "Untitled"}
+              </button>
+              {canEdit && dateKnown !== null ? (
+                <Button size="xs" variant="outline" onClick={() => setEditing(pageId)}>
+                  Set date
+                </Button>
+              ) : null}
+              {editing === pageId && dateKnown !== null ? (
+                <DateEditor
+                  known={dateKnown}
+                  value={row.cells[dateKnown.id]}
+                  pageId={pageId}
+                  variant="field"
+                  relatedPages={query.relatedPages}
+                  onChange={(value) => onSet(pageId, value)}
+                  onCommit={(value) => {
+                    onSet(pageId, value);
+                    setEditing(null);
+                  }}
+                  onClose={() => setEditing(null)}
+                />
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex items-center justify-between gap-2 px-2 text-xs text-muted-foreground">
+        <span>
+          {query.total === undefined ? query.rows.length : query.total}{" "}
+          {query.total === 1 ? "item" : "items"} without a date
+        </span>
+        {query.hasMore ? (
+          <Button size="xs" variant="outline" disabled={query.loadingMore} onClick={query.loadMore}>
+            Load more
+          </Button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

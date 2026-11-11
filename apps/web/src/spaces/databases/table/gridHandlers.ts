@@ -9,7 +9,7 @@ import type {
 } from "@t2code/contracts/spaces";
 
 import { editorKind } from "../cells/CellEditor";
-import { parseCell } from "@t2code/client-runtime/spaces";
+import { localeDecimal, parseCell } from "@t2code/client-runtime/spaces";
 import type { DatabaseActions } from "../data/actions";
 import type { Latest } from "../data/latest";
 import { GridEditStore } from "./gridEditStore";
@@ -29,6 +29,7 @@ export interface GridModel {
   readonly actions: Pick<DatabaseActions, "editCell" | "createRow" | "trashRow" | "openRow">;
   hold(): () => void;
   placeRow(row: SpaceDatabaseRow, group: SpaceGroupKey | null): void;
+  forgetRow(pageId: string): void;
   loadBucket(key: SpaceGroupKey): void;
   toggleGroup(id: string): void;
   newRowCells(group: SpaceGroupKey | null): Record<string, SpaceCellValue>;
@@ -169,7 +170,7 @@ export function createGridHandlers(
     pasteText: (pageId, propertyId, text) => {
       const known = columnOf(propertyId)?.known;
       if (!writable(propertyId) || known === undefined || known === null) return;
-      const parsed = parseCell(text, known);
+      const parsed = parseCell(text, known, { decimal: localeDecimal(navigator.language) });
       if (parsed.ok && !sameValue(valueOf(pageId, propertyId), parsed.value))
         model().actions.editCell(
           pageId as SpacePageId,
@@ -179,7 +180,11 @@ export function createGridHandlers(
     },
     open: (pageId, mode) => model().actions.openRow(pageId as SpacePageId, mode),
     trash: (pageId) => {
-      void model().actions.trashRow(pageId as SpacePageId);
+      void model()
+        .actions.trashRow(pageId as SpacePageId)
+        .then((trashed) => {
+          if (trashed) model().forgetRow(pageId);
+        });
     },
     addRow: (group) => {
       if (adding || !model().canAdd) return;

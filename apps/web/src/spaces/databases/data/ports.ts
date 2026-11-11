@@ -79,8 +79,11 @@ export const databasePorts = {
   },
   changed: {
     database: db.databaseChanged,
-    dataSource: db.dataSourceChanged,
+    dataSource: db.dataSourceLive,
   },
+  /** The server pushes changes of this environment: sessions poll less and refresh on events. */
+  live: (registry: AtomRegistry.AtomRegistry, environmentId: EnvironmentId) =>
+    db.changesLive(registry, environmentId),
   rowPageChanged: db.rowPageChanged,
   /** Through the structure owner, as "Move to trash" on a page does, so journal and receipts stay whole. */
   trashRow: async (

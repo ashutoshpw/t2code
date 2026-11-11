@@ -93,6 +93,24 @@ export const layerGated = (gate: Deferred.Deferred<void>, entered: Queue.Queue<v
     ).pipe(Layer.provideMerge(layerSpaces)),
   );
 
+/** The same stack with `resolveSharedRowAssetFile` held open, like `layerGated`. */
+export const layerGatedRowAssets = (gate: Deferred.Deferred<void>, entered: Queue.Queue<void>) =>
+  layerShare(
+    Layer.effect(
+      SpacesService.SpacesService,
+      Effect.map(SpacesService.SpacesService, (real) =>
+        SpacesService.SpacesService.of({
+          ...real,
+          resolveSharedRowAssetFile: (input) =>
+            Queue.offer(entered, undefined).pipe(
+              Effect.andThen(Deferred.await(gate)),
+              Effect.andThen(real.resolveSharedRowAssetFile(input)),
+            ),
+        }),
+      ),
+    ).pipe(Layer.provideMerge(layerSpaces)),
+  );
+
 /** The refusal reason a viewer sees, or the tag of a request that did not fit its view. */
 export const reason = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.map(Effect.flip(effect), (error) =>

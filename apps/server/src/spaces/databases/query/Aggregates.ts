@@ -52,23 +52,22 @@ const emptyStats = (total: number): Stats => ({
   hi: undefined,
 });
 
-const identity = (plan: Plan, type: C.SpacePropertyType): Fragment => {
+/** What `COUNT(DISTINCT ...)` compares for each stored type, chosen per property by its id. */
+const identity = (plan: Plan, properties: readonly Prop[]): Fragment => {
   const { sql } = plan.c;
-  switch (type) {
-    case "number":
-      return sql`c.num`;
-    case "date":
-      return sql`c.time_start`;
-    case "select":
-    case "multi_select":
-    case "status":
-    case "relation":
-      return sql`c.ref`;
-    case "files":
-      return sql`c.value`;
-    default:
-      return sql`COALESCE(c.text_full, c.text_key)`;
-  }
+  const idsOf = (...types: C.SpacePropertyType[]) =>
+    properties.filter((property) => types.includes(property.type)).map((property) => property.id);
+  const branches: Fragment[] = [];
+  const when = (ids: readonly string[], value: Fragment) => {
+    if (ids.length > 0) branches.push(sql`WHEN c.property_id IN ${sql.in(ids)} THEN ${value}`);
+  };
+  when(idsOf("number"), sql`c.num`);
+  when(idsOf("date"), sql`c.time_start`);
+  when(idsOf("select", "multi_select", "status", "relation"), sql`c.ref`);
+  when(idsOf("files"), sql`c.value`);
+  if (branches.length === 0) return sql`COALESCE(c.text_full, c.text_key)`;
+  const cases = branches.reduce((acc, branch) => sql`${acc} ${branch}`, sql`CASE`);
+  return sql`${cases} ELSE COALESCE(c.text_full, c.text_key) END`;
 };
 
 const columnsOf = (plan: Plan, levels: Levels, prefix = "f.") => {
@@ -83,55 +82,89 @@ const columnsOf = (plan: Plan, levels: Levels, prefix = "f.") => {
   };
 };
 
-const liveCells = (plan: Plan, type: C.SpacePropertyType) => {
-  const { sql } = plan.c;
-  return type === "relation" ? sql` AND ${liveTarget(sql, sql`c.ref`)}` : sql``;
-};
-
 const needs = (functions: ReadonlySet<string>, ...names: string[]) =>
   names.some((name) => functions.has(name));
 
+interface Prop {
+  readonly id: string;
+  readonly type: C.SpacePropertyType;
+}
+type StatsOf = Map<string, Map<string, Stats>>;
+
+/**
+ * Statistics of every aggregated property in one statement per kind (cells, first and last dates,
+ * medians, creation times), each reading the filtered rows once: the statement count does not
+ * grow with the number of properties.
+ */
 const loadStats = Effect.fn("SpacesDatabases.aggregateStats")(function* (
   plan: Plan,
   levels: Levels,
-  property: { readonly id: string; readonly type: C.SpacePropertyType },
-  functions: ReadonlySet<string>,
+  byProperty: ReadonlyMap<string, ReadonlySet<string>>,
   totalOf: ReadonlyMap<string, number>,
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const cols = columnsOf(plan, levels);
   const cte = filteredRows(plan, levels, false);
-  const stats = new Map<string, Stats>();
-  const at = (id: string) => {
-    const found = stats.get(id) ?? emptyStats(totalOf.get(id) ?? 0);
-    stats.set(id, found);
+  const statsOf: StatsOf = new Map();
+  const properties: Prop[] = [];
+  for (const id of byProperty.keys()) {
+    const property = plan.c.snapshot.byId.get(id)!;
+    properties.push({ id, type: property.type });
+    const stats = new Map<string, Stats>();
+    for (const [bucket, total] of totalOf) stats.set(bucket, emptyStats(total));
+    statsOf.set(id, stats);
+  }
+  const at = (id: string, bucket: string) => {
+    const stats = statsOf.get(id)!;
+    const found = stats.get(bucket) ?? emptyStats(totalOf.get(bucket) ?? 0);
+    stats.set(bucket, found);
     return found;
   };
-  for (const [id, total] of totalOf) stats.set(id, emptyStats(total));
-  if (property.type === "unique_id") return stats;
-  if (property.type === "created_time" || property.type === "last_edited_time") {
-    if (!needs(functions, "earliest", "latest", "date_range")) return stats;
-    const column = property.type === "created_time" ? sql`p.created_at` : sql`p.updated_at`;
+  const funcs = (id: string) => byProperty.get(id)!;
+  const pidOf = (row: Raw) => String(row.pid);
+  const timeless = (type: C.SpacePropertyType) =>
+    type === "created_time" || type === "last_edited_time";
+  const stored = properties.filter(
+    (property) => property.type !== "unique_id" && !timeless(property.type),
+  );
+
+  const created = properties.filter(
+    (property) =>
+      timeless(property.type) && needs(funcs(property.id), "earliest", "latest", "date_range"),
+  );
+  if (created.length > 0) {
     const rows = yield* sql<Raw>`${cte}
-      SELECT ${cols.select}MIN(${column}) AS lo, MAX(${column}) AS hi
+      SELECT ${cols.select}MIN(p.created_at) AS clo, MAX(p.created_at) AS chi,
+        MIN(p.updated_at) AS elo, MAX(p.updated_at) AS ehi
       FROM f JOIN spaces_pages p ON p.page_id = f.page_id${cols.group}`;
-    for (const row of rows) {
-      const found = at(idOf(row));
-      found.createdLo = String(row.lo);
-      found.createdHi = String(row.hi);
-    }
-    return stats;
+    for (const row of rows)
+      for (const property of created) {
+        const found = at(property.id, idOf(row));
+        const edited = property.type === "last_edited_time";
+        found.createdLo = String(edited ? row.elo : row.clo);
+        found.createdHi = String(edited ? row.ehi : row.chi);
+      }
   }
-  const from = sql`FROM f JOIN spaces_db_cells c ON c.page_id = f.page_id
-    AND c.property_id = ${property.id}${liveCells(plan, property.type)}`;
+  if (stored.length === 0) return statsOf;
+  const ids = stored.map((property) => property.id);
+  const relations = stored
+    .filter((property) => property.type === "relation")
+    .map((property) => property.id);
+  const live =
+    relations.length === 0
+      ? sql``
+      : sql` AND (c.property_id NOT IN ${sql.in(relations)} OR ${liveTarget(sql, sql`c.ref`)})`;
+  const from = (only: readonly string[]) =>
+    sql`FROM f JOIN spaces_db_cells c ON c.page_id = f.page_id
+    AND c.property_id IN ${sql.in(only)}${live}`;
   const rows = yield* sql<Raw>`${cte}
-    SELECT ${cols.select}COUNT(DISTINCT f.page_id) AS rwv, COUNT(*) AS items,
-      COUNT(DISTINCT ${identity(plan, property.type)}) AS uniq, SUM(c.num) AS s, MIN(c.num) AS mn,
+    SELECT ${cols.select}c.property_id AS pid, COUNT(DISTINCT f.page_id) AS rwv, COUNT(*) AS items,
+      COUNT(DISTINCT ${identity(plan, stored)}) AS uniq, SUM(c.num) AS s, MIN(c.num) AS mn,
       MAX(c.num) AS mx, COUNT(c.num) AS nn, MIN(c.time_start) AS lo,
       MAX(COALESCE(c.time_end, c.time_start)) AS hi
-    ${from}${cols.group}`;
+    ${from(ids)}${levels === 0 ? sql` GROUP BY c.property_id` : sql`${cols.group}, c.property_id`}`;
   for (const row of rows) {
-    const found = at(idOf(row));
+    const found = at(pidOf(row), idOf(row));
     found.rwv = Number(row.rwv);
     found.items = Number(row.items);
     found.uniq = Number(row.uniq);
@@ -142,36 +175,47 @@ const loadStats = Effect.fn("SpacesDatabases.aggregateStats")(function* (
     found.lo = num(row.lo);
     found.hi = num(row.hi);
   }
-  if (needs(functions, "earliest", "latest") && property.type === "date") {
+  const partition = sql`${cols.partition}, c.property_id`;
+  const dated = stored
+    .filter(
+      (property) => property.type === "date" && needs(funcs(property.id), "earliest", "latest"),
+    )
+    .map((property) => property.id);
+  if (dated.length > 0) {
     const ranked = yield* sql<Raw>`${cte}, ranked AS (
-      SELECT ${cols.select}c.time_start AS lo, COALESCE(c.time_end, c.time_start) AS hi, c.flags AS fl,
-        row_number() OVER (PARTITION BY ${cols.partition} ORDER BY c.time_start, c.ord) AS rl,
-        row_number() OVER (PARTITION BY ${cols.partition}
+      SELECT ${cols.select}c.property_id AS pid, c.time_start AS lo,
+        COALESCE(c.time_end, c.time_start) AS hi, c.flags AS fl,
+        row_number() OVER (PARTITION BY ${partition} ORDER BY c.time_start, c.ord) AS rl,
+        row_number() OVER (PARTITION BY ${partition}
           ORDER BY COALESCE(c.time_end, c.time_start) DESC, c.ord) AS rh
-      ${from})
+      ${from(dated)})
       SELECT * FROM ranked WHERE rl = 1 OR rh = 1`;
     for (const row of ranked) {
-      const found = at(idOf(row));
+      const found = at(pidOf(row), idOf(row));
       const timed = (Number(row.fl) & 1) === 1;
       if (Number(row.rl) === 1) found.earliest = { ms: Number(row.lo), timed };
       if (Number(row.rh) === 1) found.latest = { ms: Number(row.hi), timed };
     }
   }
-  if (functions.has("median")) {
+  const medians = stored
+    .filter((property) => funcs(property.id).has("median"))
+    .map((property) => property.id);
+  if (medians.length > 0) {
     // One statement per level: rank each bucket's values and keep the middle one or two.
+    const keys = levels === 0 ? "" : levels === 1 ? "g, " : "g, sg, ";
     const middles = yield* sql<Raw>`${cte}, v AS (
-      SELECT ${cols.select}c.num AS v,
-        row_number() OVER (PARTITION BY ${cols.partition} ORDER BY c.num) AS rn,
-        count(*) OVER (PARTITION BY ${cols.partition}) AS cnt
-      ${from} AND c.num IS NOT NULL)
-      SELECT ${sql.literal(levels === 0 ? "" : levels === 1 ? "g, " : "g, sg, ")}AVG(v) AS med
-      FROM v WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2)${levels === 0 ? sql`` : sql` GROUP BY ${sql.literal(levels === 1 ? "g" : "g, sg")}`}`;
+      SELECT ${cols.select}c.property_id AS pid, c.num AS v,
+        row_number() OVER (PARTITION BY ${partition} ORDER BY c.num) AS rn,
+        count(*) OVER (PARTITION BY ${partition}) AS cnt
+      ${from(medians)} AND c.num IS NOT NULL)
+      SELECT ${sql.literal(keys)}pid, AVG(v) AS med
+      FROM v WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2) GROUP BY ${sql.literal(keys)}pid`;
     for (const row of middles) {
-      const found = stats.get(idOf(row));
+      const found = statsOf.get(pidOf(row))?.get(idOf(row));
       if (found !== undefined && row.med !== null) found.median = Number(row.med);
     }
   }
-  return stats;
+  return statsOf;
 });
 
 const fraction = (part: number, whole: number) => (whole > 0 ? part / whole : undefined);
@@ -253,11 +297,7 @@ export const aggregates = Effect.fn("SpacesDatabases.aggregates")(function* (
     set.add(aggregate.function);
     byProperty.set(aggregate.property, set);
   }
-  const statsOf = new Map<string, ReadonlyMap<string, Stats>>();
-  for (const [id, functions] of byProperty) {
-    const property = plan.c.snapshot.byId.get(id)!;
-    statsOf.set(id, yield* loadStats(plan, levels, property, functions, totalOf));
-  }
+  const statsOf = yield* loadStats(plan, levels, byProperty, totalOf);
   return (id: string): C.SpaceAggregateResult[] =>
     requested.map((aggregate) => {
       const property = plan.c.snapshot.byId.get(aggregate.property)!;

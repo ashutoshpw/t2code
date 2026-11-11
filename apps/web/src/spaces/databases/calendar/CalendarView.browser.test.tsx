@@ -239,6 +239,26 @@ describe("editing", () => {
     await userEvent.type(input, "2026-11-30{Enter}");
     await vi.waitFor(() => expect(fake.callsOf("updateRows")).toHaveLength(1));
   });
+
+  it("shows how many items have no date and loads the rest on request", async () => {
+    using _now = vi.spyOn(Date, "now").mockReturnValue(NOW);
+    const undated = Array.from({ length: 120 }, (_, index) =>
+      datedRow(`n${index}`, `Item ${index}`),
+    );
+    const { screen, root } = await mount([
+      datedRow("a", "Alpha", { start: "2026-11-12" }),
+      ...undated,
+    ]);
+    await using _screen = screen;
+    await vi.waitFor(() => expect(root.querySelector('[data-item-id="a"]')).not.toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: "No date" }));
+    await expect.element(page.getByText("120 items without a date")).toBeVisible();
+    const list = () => document.querySelectorAll("[aria-label='Items without a date'] li");
+    await vi.waitFor(() => expect(list()).toHaveLength(100));
+    await userEvent.click(page.getByRole("button", { name: "Load more" }));
+    await vi.waitFor(() => expect(list()).toHaveLength(120));
+    await expect.element(page.getByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+  });
 });
 
 describe("read only", () => {

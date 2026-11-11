@@ -70,9 +70,7 @@ const finishDatabaseWork = Effect.fn("SpacesDatabases.finishDatabaseWork")(funct
   touched: Touched.Touched,
   now: number,
 ) {
-  const sql = yield* SpacesSql.SpacesSql;
-  for (const id of touched.sources)
-    yield* sql`UPDATE spaces_db_data_sources SET data_revision = data_revision + 1, updated_at = ${isoNow(now)} WHERE data_source_id = ${id}`;
+  for (const id of touched.sources) yield* DatabaseStore.bumpData(id, isoNow(now));
 });
 
 export const execute = Effect.fn("SpacesDatabases.execute")(function* (
@@ -240,6 +238,9 @@ export const execute = Effect.fn("SpacesDatabases.execute")(function* (
       if (source.row_count > 0) return yield* dbError("data_source_not_empty");
       const siblings = yield* DatabaseStore.sourcesOf(source.database_id);
       if (siblings.length <= 1) return yield* dbError("last_data_source");
+      const databaseViews = yield* ViewStore.viewsOfDatabase(source.database_id);
+      if (databaseViews.every((view) => view.data_source_id === source.data_source_id))
+        return yield* dbError("last_view");
       const snapshot = yield* SchemaStore.load(source.data_source_id);
       const touched = Touched.touched();
       const readers = (yield* Deps.sourcesReading(source.data_source_id)).filter(

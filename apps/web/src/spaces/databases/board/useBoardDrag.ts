@@ -170,7 +170,8 @@ export function useBoardDrag(model: BoardDragModel) {
     const release = ref.current.release;
     ref.current.release = null;
     void Promise.allSettled(jobs).then((results) => {
-      if (results.some((result) => result.status === "rejected"))
+      // `moveRows` reports its failure (and shows the toast) by answering false.
+      if (results.some((result) => result.status === "rejected" || result.value === false))
         model.setPlacement(pageId, undefined);
       release?.();
     });

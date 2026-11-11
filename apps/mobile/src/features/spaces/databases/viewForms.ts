@@ -288,6 +288,8 @@ export type ListItem =
       readonly key: string;
       readonly label: GroupLabel;
       readonly count: number | null;
+      /** The section a grouped view's header stands for; null on an agenda day. */
+      readonly bucket: SpaceGroupKey | null;
     }
   | {
       readonly kind: "row";
@@ -356,6 +358,7 @@ function groupItems(form: ViewForm, source: ListSource): ReadonlyArray<ListItem>
       key: `header:${id}`,
       label: groupLabel(bucket, known, name, source.optionHint),
       count: bucket.count,
+      bucket: bucket.key,
     });
     for (const row of bucket.rows)
       items.push({ kind: "row", key: rowKey(source.dataSourceId, row, `${id}:`), row, span: null });
@@ -391,6 +394,7 @@ function agendaItems(form: ViewForm, source: ListSource): ReadonlyArray<ListItem
       key: `day:${section.day}`,
       label: { text: dayLabel(section.day) },
       count: section.items.length,
+      bucket: null,
     });
     for (const item of section.items)
       items.push({

@@ -21,8 +21,11 @@ export function useDataSourceHomes(
 ): {
   readonly homes: ReadonlyMap<string, DataSourceHome>;
   readonly resolving: boolean;
-  /** The search finished and a missing id really is absent (not a failed read). */
+  /** The search finished and a missing id really is absent (not a failed read or the walk cap). */
   readonly complete: boolean;
+  /** A read failed or the walk was capped: ids not found are unknown. */
+  readonly incomplete: boolean;
+  retry(): void;
 } {
   const registry = useContext(RegistryContext);
   const list = useEnvironmentQuery(
@@ -31,12 +34,18 @@ export function useDataSourceHomes(
       : databasePorts.listAtom(environmentId, spaceId),
   );
   const first = list.data;
-  const key = ids.join(",");
+  // The list's identity, not its object: a refetch that changed nothing does not walk again.
+  const listKey = (first?.items ?? [])
+    .map((item) => `${item.database.id}:${item.database.revision}:${item.dataSources.length}`)
+    .join(",");
+  const [attempt, setAttempt] = useState(0);
+  const key = `${environmentId ?? ""}|${spaceId ?? ""}|${ids.join(",")}|${listKey}|${attempt}`;
   const [settled, setSettled] = useState<{
     readonly key: string;
     readonly homes: ReadonlyMap<string, DataSourceHome> | null;
+    readonly incomplete: boolean;
   } | null>(null);
-  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Pages the server's database list for relation targets; external data, asked again only when the wanted ids or the first page change.
+  // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Pages the server's database list for relation targets; external data, asked again only when the wanted ids, the list's databases or a retry change.
   useEffect(() => {
     if (environmentId === undefined || ids.length === 0 || first === null) return;
     let live = true;
@@ -47,23 +56,27 @@ export function useDataSourceHomes(
         databasePorts.listPage(registry, environmentId, anySpace ? undefined : spaceId, cursor),
     }).then(
       (found) => {
-        if (live) setSettled({ key, homes: found.homes });
+        if (live) setSettled({ key, homes: found.homes, incomplete: found.incomplete });
       },
       () => {
-        if (live) setSettled({ key, homes: null });
+        if (live) setSettled({ key, homes: null, incomplete: true });
       },
     );
     return () => {
       live = false;
     };
-    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `key` stands for `ids`, which is a new array every render.
-  }, [registry, environmentId, spaceId, key, first]);
-  if (ids.length === 0) return { homes: NONE, resolving: false, complete: true };
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `key` stands for `ids` and the list, which are new objects every render.
+  }, [registry, environmentId, spaceId, key]);
+  const retry = () => setAttempt((value) => value + 1);
+  if (ids.length === 0)
+    return { homes: NONE, resolving: false, complete: true, incomplete: false, retry };
   const done = settled?.key === key;
   const stuck = first === null && !list.isPending;
   return {
     homes: (done ? settled.homes : null) ?? NONE,
     resolving: !done && !stuck,
-    complete: done && settled.homes !== null,
+    complete: done && settled.homes !== null && !settled.incomplete,
+    incomplete: done && settled.incomplete,
+    retry,
   };
 }

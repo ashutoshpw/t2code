@@ -83,6 +83,24 @@ describe("bars", () => {
     expect(root.querySelectorAll('[role="listitem"][data-row-id]')).toHaveLength(3);
   });
 
+  it("marks a bar that is scrolled out of view at the edge and scrolls to it", async () => {
+    using _now = vi.spyOn(Date, "now").mockReturnValue(NOW);
+    const { screen, root } = await mount([
+      datedRow("far", "Faraway", { start: "2026-12-30" }),
+      datedRow("near", "Nearby", { start: "2026-11-12" }),
+    ]);
+    await using _screen = screen;
+    await vi.waitFor(() => expect(root.querySelector('[data-offscreen="right"]')).not.toBeNull());
+    expect(root.querySelectorAll("[data-offscreen]")).toHaveLength(1);
+    const scroller = root.querySelector<HTMLElement>("[aria-busy]")!;
+    const before = scroller.scrollLeft;
+    await userEvent.click(screen.getByRole("button", { name: "Scroll to Faraway" }));
+    await vi.waitFor(() => expect(scroller.scrollLeft).toBeGreaterThan(before));
+    // The far bar is in view now; the near one has left it on the other side.
+    await vi.waitFor(() => expect(root.querySelector('[data-offscreen="right"]')).toBeNull());
+    expect(root.querySelector('[data-offscreen="left"]')).not.toBeNull();
+  });
+
   it("windows rows vertically", async () => {
     using _now = vi.spyOn(Date, "now").mockReturnValue(NOW);
     const rows = Array.from({ length: 500 }, (_, i) =>

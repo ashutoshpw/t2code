@@ -35,8 +35,12 @@ export class SubItemTree {
   #snapshot: SubItemSnapshot = EMPTY;
   #disposed = false;
 
-  constructor(ports: QuerySessionPorts) {
+  readonly #maxExpanded: number;
+
+  /** Past `maxExpanded` open parents, expanding one more collapses the least recently expanded. */
+  constructor(ports: QuerySessionPorts, options?: { readonly maxExpanded?: number }) {
     this.#ports = ports;
+    this.#maxExpanded = options?.maxExpanded ?? Number.POSITIVE_INFINITY;
   }
 
   /** The top-level rows query (no scope). A new input re-points every expanded parent. */
@@ -53,6 +57,12 @@ export class SubItemTree {
 
   expand(parentId: SpacePageId): void {
     if (this.#disposed || this.#sessions.has(parentId)) return;
+    // A Map iterates in insertion order, so the first key is the oldest expansion.
+    while (this.#sessions.size >= this.#maxExpanded) {
+      const oldest = this.#sessions.keys().next();
+      if (oldest.done === true) break;
+      this.collapse(oldest.value as SpacePageId);
+    }
     const session = new DatabaseQuerySession(this.#ports);
     const stop = session.subscribe(() => this.#publish());
     this.#sessions.set(parentId, { session, stop });

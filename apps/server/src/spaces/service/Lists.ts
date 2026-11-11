@@ -261,14 +261,22 @@ export const make = (rt: Runtime) => {
         LEFT JOIN spaces_pages parent ON parent.page_id = b.page_id
         WHERE p.trash_batch_id IS NULL AND p.data_source_id IS NULL ${after}
         ORDER BY p.updated_at DESC, p.page_id ASC LIMIT ${limit + 1}`;
+        // Pages inside a dead database are not reachable, so they drop out of the window.
+        const dead = new Set<string>();
+        for (const row of rows)
+          if (row.root_order === null && !(yield* Liveness.pageLive(row.page_id)))
+            dead.add(row.page_id);
         let take = Math.min(limit, rows.length);
         while (true) {
           const last = rows[take - 1];
           const result: C.SpaceAllPagesResult = {
-            items: rows.slice(0, take).map((row) => ({
-              page: { ...pageSummary(row), hasChildren: row.has_children === 1 },
-              spaceTitle: row.space_title,
-            })),
+            items: rows
+              .slice(0, take)
+              .filter((row) => !dead.has(row.page_id))
+              .map((row) => ({
+                page: { ...pageSummary(row), hasChildren: row.has_children === 1 },
+                spaceTitle: row.space_title,
+              })),
             catalogRevision: meta.catalog_revision,
             nextCursor:
               take < rows.length && last
@@ -306,8 +314,11 @@ export const make = (rt: Runtime) => {
         const space = yield* getSpace(input.spaceId);
         const limit = input.limit ?? limits.maxListRows;
         yield* ensureLimit("maxListRows", limit);
-        if (input.parentPageId !== undefined)
-          yield* PageStore.assertActive(yield* getPageRow(input.parentPageId));
+        if (input.parentPageId !== undefined) {
+          const parent = yield* getPageRow(input.parentPageId);
+          yield* PageStore.assertActive(parent);
+          if (parent.root_order === null) yield* Liveness.assertPageLive(parent.page_id);
+        }
         if (
           input.parentPageId !== undefined &&
           (yield* getPageRow(input.parentPageId)).space_id !== input.spaceId
@@ -426,6 +437,11 @@ export const make = (rt: Runtime) => {
         SELECT p.*, CASE WHEN o.owner_block_id IS NULL OR b.block_id IS NULL OR b.deleted!=0 OR parent.trash_batch_id IS NULL OR parent.trash_batch_id!=p.trash_batch_id THEN 1 ELSE 0 END AS is_trash_root
         FROM (SELECT p.* FROM spaces_pages p WHERE p.trash_batch_id IS NOT NULL ${after} ORDER BY p.trashed_at_ms,p.page_id LIMIT ${limit + 1}) p
         LEFT JOIN spaces_page_owners o ON o.child_page_id=p.page_id LEFT JOIN spaces_blocks b ON b.block_id=o.owner_block_id LEFT JOIN spaces_pages parent ON parent.page_id=b.page_id ORDER BY p.trashed_at_ms,p.page_id`;
+        // A trashed page inside a database whose home block is gone cannot be restored into anything.
+        const dead = new Set<string>();
+        for (const row of rows)
+          if (row.is_trash_root === 1 && (yield* Liveness.homeBlockGone(row.page_id)))
+            dead.add(row.page_id);
         let take = Math.min(limit, rows.length);
         while (true) {
           const last = rows[take - 1];
@@ -433,7 +449,7 @@ export const make = (rt: Runtime) => {
             catalogRevision: meta.catalog_revision,
             items: rows
               .slice(0, take)
-              .filter((row) => row.is_trash_root === 1)
+              .filter((row) => row.is_trash_root === 1 && !dead.has(row.page_id))
               .map((row) => ({
                 pageId: row.page_id,
                 spaceId: row.space_id,

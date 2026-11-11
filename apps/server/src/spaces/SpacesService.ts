@@ -19,6 +19,7 @@ import { openMediaFile } from "../assets/MediaFile.ts";
 import * as Runtime from "./service/Runtime.ts";
 import * as AssetOps from "./service/Assets.ts";
 import * as ListOps from "./service/Lists.ts";
+import * as DatabaseChangeOps from "./service/DatabaseChanges.ts";
 import * as DatabaseReadOps from "./service/DatabaseReads.ts";
 import * as ReadOps from "./service/Reads.ts";
 import * as ShareOps from "./service/Shares.ts";
@@ -196,8 +197,19 @@ export class SpacesService extends Context.Service<
     readonly getDatabaseRows: (
       input: unknown,
     ) => Effect.Effect<C.SpaceDatabaseRowGetResult, C.SpaceServiceError>;
+    /** Ids and revisions of what changed, starting with `resync`; refused like a read before it streams. */
+    readonly subscribeDatabaseChanges: (
+      input: unknown,
+    ) => Stream.Stream<C.SpaceDatabaseChangeEvent, C.SpaceServiceError>;
     /** Brings every queued formula and rollup value up to date; returns when the queue is empty. */
     readonly drainComputed: Effect.Effect<void, C.SpaceServiceError>;
+    /**
+     * One pass of the dead-database and orphan-view sweep; true while a purge made progress.
+     * `between` runs after the read half and before the write half.
+     */
+    readonly sweepDatabases: (
+      between?: Effect.Effect<void, C.SpaceServiceError>,
+    ) => Effect.Effect<boolean, C.SpaceServiceError>;
     readonly lookupMutationReceipt: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReceiptLookupResult, C.SpaceServiceError>;
@@ -288,6 +300,7 @@ const make = Effect.fn("SpacesService.make")(function* (
   const sharedDatabases = SharedDatabaseOps.make(runtime, assets);
   const mutations = MutationOps.make(runtime);
   const databaseReads = DatabaseReadOps.make(runtime);
+  const databaseChanges = DatabaseChangeOps.make(runtime);
   const maintenance = MaintenanceOps.make(runtime);
   return SpacesService.of({
     reclaimExistingStorage: maintenance.reclaimExistingStorage(),
@@ -318,6 +331,7 @@ const make = Effect.fn("SpacesService.make")(function* (
     updatePage: mutations.updatePage,
     applyBlockBatch: mutations.applyBlockBatch,
     drainComputed: runtime.drainComputed(),
+    sweepDatabases: runtime.sweepDatabases,
     lookupMutationReceipt: mutations.lookupMutationReceipt,
     createDatabase: mutations.createDatabase,
     updateDatabase: mutations.updateDatabase,
@@ -335,6 +349,7 @@ const make = Effect.fn("SpacesService.make")(function* (
     getDatabase: databaseReads.getDatabase,
     queryDatabase: databaseReads.queryDatabase,
     getDatabaseRows: databaseReads.getDatabaseRows,
+    subscribeDatabaseChanges: databaseChanges.subscribeDatabaseChanges,
     createChildPage: mutations.createChildPage,
     movePage: mutations.movePage,
     inspectStructure: reads.inspectStructure,

@@ -22,6 +22,8 @@ import { Pressable, View } from "react-native";
 import { AppText as Text } from "../../../components/ui/AppText";
 import { ControlPill } from "../../../components/ui/ControlPill";
 import { ListToggleRow } from "../../../components/ui/ListToggleRow";
+import { Notice } from "../../../components/ui/Notice";
+import { DATABASES_NEED_NEWER_SERVER, databaseLimitsOf } from "./capability";
 import { useEnvironmentQuery } from "../../../state/query";
 import { useSpacesReadAccess } from "../../../state/spaces";
 import {
@@ -40,11 +42,25 @@ import { WriteNotices } from "./WriteNotices";
 
 const noHint: CellTextContext["optionHint"] = () => undefined;
 
+export const ACCESS_LOST_MESSAGE = "You can't edit this any more.";
 export const TEMPLATE_NOTE = "Template · edit on desktop";
 const NO_TARGETS: ReadonlySet<string> = new Set();
 
 /** The properties of a row page, above its body. Simple cells edit in place; the rest stay read-only with a note. */
 export function SpacesRowProperties(props: {
+  readonly environmentId: EnvironmentId;
+  readonly pageId: SpacePageId;
+}) {
+  const { environmentId, pageId } = props;
+  const access = useSpacesReadAccess(environmentId);
+  if (databaseLimitsOf(access.capability) === null)
+    return (
+      <Text className="py-2 text-sm text-foreground-muted">{DATABASES_NEED_NEWER_SERVER}</Text>
+    );
+  return <LoadedRowProperties environmentId={environmentId} pageId={pageId} />;
+}
+
+function LoadedRowProperties(props: {
   readonly environmentId: EnvironmentId;
   readonly pageId: SpacePageId;
 }) {
@@ -94,6 +110,7 @@ function RowPropertyList(props: {
   const row = { ...props.row, cells };
   const { model, isPending, refresh } = useDatabaseModel(environmentId, props.databaseId);
   const access = useSpacesReadAccess(environmentId);
+  const [lost, setLost] = useState<string | null>(null);
   const [editing, setEditing] = useState<{
     readonly property: SpaceDatabaseProperty;
     readonly editor: SheetEditor;
@@ -139,14 +156,16 @@ function RowPropertyList(props: {
     navigation.push("SpacesPage", { environmentId, spaceId, pageId: related.pageId });
   };
   // Every handler checks the grant again: it may have changed since the list was drawn.
-  const write = (property: SpaceDatabaseProperty, value: SpaceCellValue | null) => {
-    if (!canEdit || !access.current()) return;
+  const write = (property: SpaceDatabaseProperty, value: SpaceCellValue | null): string | null => {
+    if (!canEdit) return null;
+    if (!access.current()) return ACCESS_LOST_MESSAGE;
     databaseWriter(environmentId).editCell({
       dataSourceId: props.dataSourceId,
       pageId: row.page.id,
       propertyId: property.id,
       value,
     });
+    return null;
   };
   // A related row opens only when its database is one this space lists; otherwise its title is plain text.
   const shown = entries.map((entry) =>
@@ -167,6 +186,9 @@ function RowPropertyList(props: {
   return (
     <View className="gap-2 py-2">
       <WriteNotices environmentId={environmentId} />
+      {lost === null ? null : (
+        <Notice tone="danger" icon="exclamationmark.triangle" message={lost} />
+      )}
       {props.template ? (
         <Text className="text-sm text-foreground-muted">{TEMPLATE_NOTE}</Text>
       ) : null}
@@ -176,7 +198,7 @@ function RowPropertyList(props: {
             key={line.propertyId}
             label={line.name}
             value={editor.checked}
-            onValueChange={(checked) => write(property, commitCheckbox(checked))}
+            onValueChange={(checked) => setLost(write(property, commitCheckbox(checked)))}
           />
         ) : (
           <PropertyRow

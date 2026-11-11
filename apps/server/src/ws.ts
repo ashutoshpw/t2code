@@ -719,6 +719,7 @@ const ServerWsRpcGroup = WsRpcGroup.omit(
   WS_METHODS.spacesDatabasesDataSourcesCreate,
   WS_METHODS.spacesDatabasesDataSourcesUpdate,
   WS_METHODS.spacesDatabasesDataSourcesDelete,
+  WS_METHODS.spacesDatabasesSubscribeChanges,
   WS_METHODS.spacesDatabasesSchemaUpdate,
   WS_METHODS.spacesDatabasesViewsCreate,
   WS_METHODS.spacesDatabasesViewsUpdate,

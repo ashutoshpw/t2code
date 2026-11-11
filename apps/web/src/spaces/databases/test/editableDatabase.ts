@@ -5,7 +5,7 @@ import type {
   SpaceDatabaseView,
 } from "@t2code/contracts/spaces";
 
-import { FakeDatabase } from "../test/fakeDatabase";
+import { FakeDatabase } from "./fakeDatabase";
 
 type Json = Record<string, unknown>;
 type Registry = {

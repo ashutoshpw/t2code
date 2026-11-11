@@ -5,7 +5,7 @@ import * as Effect from "effect/Effect";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import { boot, fixture, recoveryIntent } from "./Spaces.testkit.ts";
-import { databaseError, databaseKit, pid, raw } from "./Databases.testkit.ts";
+import { databaseError, databaseKit, exec, pid, raw } from "./Databases.testkit.ts";
 
 const relationConfig = (target: C.SpaceDataSourceId, extra: object = {}) => ({
   dataSourceId: target,
@@ -450,6 +450,77 @@ it.layer(NodeServices.layer)("Spaces database relations", (it) => {
         assert.isUndefined((restored.config as { twoWay?: unknown }).twoWay);
         yield* kit.setCells(projects, p[1]!, { [back]: [t[0]!] });
         assert.deepEqual(yield* cellsOf(kit, t[0]!, project), [p[0]!]);
+      }),
+    ),
+  );
+
+  it.effect("mirrors a restored half from the side that stayed live", () =>
+    fixture((dbPath) =>
+      Effect.gen(function* () {
+        const { kit, projects, tasks, p, t } = yield* setup();
+        const project = (yield* kit.schema(tasks, [
+          {
+            op: "addProperty",
+            property: {
+              name: "Project",
+              type: "relation",
+              config: relationConfig(projects, { twoWay: { propertyId: "back01" } }),
+            },
+          },
+        ])).created[0]!.propertyId!;
+        const twin = pid("back01");
+        yield* kit.setCells(tasks, t[0]!, { [project]: [p[0]!] });
+        yield* kit.setCells(tasks, t[1]!, { [project]: [p[0]!] });
+        yield* kit.schema(tasks, [{ op: "removeProperty", propertyId: project }]);
+        // The twin side comes back on its own and takes a write while its half is away.
+        yield* exec(
+          dbPath,
+          Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            yield* sql`UPDATE spaces_db_properties SET deleted_at_ms = NULL WHERE property_id = 'back01'`;
+          }),
+        );
+        yield* kit.setCells(projects, p[0]!, { [twin]: [t[2]!] });
+        yield* kit.schema(tasks, [{ op: "restoreProperty", propertyId: project }]);
+        assert.isUndefined(yield* cellsOf(kit, t[0]!, project));
+        assert.isUndefined(yield* cellsOf(kit, t[1]!, project));
+        assert.deepEqual(yield* cellsOf(kit, t[2]!, project), [p[0]!]);
+        assert.deepEqual(yield* cellsOf(kit, p[0]!, twin), [t[2]!]);
+      }),
+    ),
+  );
+
+  it.effect("names a default twin without colliding and refuses a rename into a collision", () =>
+    fixture(() =>
+      Effect.gen(function* () {
+        const { kit, created, projects, tasks } = yield* setup();
+        const addTwin = (name: string, twinId: string) =>
+          kit.schema(tasks, [
+            {
+              op: "addProperty",
+              property: {
+                name,
+                type: "relation",
+                config: relationConfig(projects, { twoWay: { propertyId: twinId } }),
+              },
+            },
+          ]);
+        yield* addTwin("Project", "twin001");
+        yield* addTwin("Owner", "twin002");
+        yield* addTwin("Parent", "twin003");
+        const names = (yield* kit.get(created.databaseId)).dataSources.find(
+          (entry) => entry.id === projects,
+        )!.properties;
+        assert.deepEqual(
+          ["twin001", "twin002", "twin003"].map((id) => names[id]!.name),
+          ["Tasks", "Tasks 2", "Tasks 3"],
+        );
+        const clash = yield* databaseError(
+          kit.schema(projects, [
+            { op: "updateProperty", propertyId: pid("twin003"), name: "tasks" },
+          ]),
+        );
+        assert.equal(clash.reason, "duplicate_name");
       }),
     ),
   );

@@ -14,7 +14,8 @@ import {
   UNSUPPORTED_NOTE,
 } from "./cellEdit";
 import { dataSource, property, view } from "./databaseFixtures.test-support";
-import { newRowInput } from "./addRow";
+import { canAddToGroup, emptyGroupHidden, newRowInput } from "./addRow";
+import type { SpaceGroupKey } from "@t2code/contracts/spaces";
 
 const options = [
   { id: "a", name: "Alpha", color: "blue" },
@@ -284,6 +285,51 @@ describe("newRowInput", () => {
         zone: "UTC",
       }).rows[0]?.cells,
     ).toEqual({ due: { start: "2026-11-05" } });
+  });
+
+  it("dates a calendar row today in the viewed month, else on the month's first day", () => {
+    const due = property("due", "Due", "date");
+    const withDate = dataSource([property("title", "Name", "title"), due]);
+    const calendar = view("calendar", { layout: { datePropertyId: "due" } });
+    const dateFor = (month: string) =>
+      newRowInput({
+        view: calendar,
+        dataSource: withDate,
+        title: "",
+        now: Date.UTC(2026, 10, 11),
+        zone: "UTC",
+        month,
+      }).rows[0]?.cells;
+    expect(dateFor("2026-11-01")).toEqual({ due: { start: "2026-11-11" } });
+    expect(dateFor("2027-01-01")).toEqual({ due: { start: "2027-01-01" } });
+  });
+
+  it("seeds the value of the section a row is added to, and refuses sections it cannot seed", () => {
+    const grouped = view("board", { group: { property: "prio" } });
+    const input = (groupKey: SpaceGroupKey) =>
+      newRowInput({
+        view: grouped,
+        dataSource: source as never,
+        title: "",
+        now: 0,
+        zone: "UTC",
+        groupKey,
+      }).rows[0]?.cells;
+    expect(input({ kind: "option", optionId: "a" })).toEqual({ prio: "a" });
+    expect(input({ kind: "empty" })).toBeUndefined();
+    expect(canAddToGroup(grouped, source as never, { kind: "option", optionId: "a" })).toBe(true);
+    expect(
+      canAddToGroup(grouped, source as never, { kind: "number_range", start: 0, end: 1 }),
+    ).toBe(false);
+    expect(canAddToGroup(grouped, source as never, { kind: "future_kind" })).toBe(false);
+  });
+
+  it("knows when the empty section is not on screen", () => {
+    const group = (extra: object) => view("board", { group: { property: "prio", ...extra } });
+    expect(emptyGroupHidden(group({}))).toBe(false);
+    expect(emptyGroupHidden(group({ hideEmpty: true }))).toBe(true);
+    expect(emptyGroupHidden(group({ hidden: [{ kind: "empty" }] }))).toBe(true);
+    expect(emptyGroupHidden(view("table"))).toBe(false);
   });
 
   it("sends a bare row for an empty title and an unfiltered view", () => {

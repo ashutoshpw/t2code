@@ -57,7 +57,7 @@ export function useViewRows(
     let release: (() => void) | null = null;
     let leftAt: number | null = null;
     const stopChanges = appAtomRegistry.subscribe(
-      databaseAtoms.dataSourceChanged(environmentId, dataSourceId),
+      databaseAtoms.dataSourceLive(environmentId, dataSourceId),
       () => session.invalidate(),
     );
     const stopAppState = subscribeAppState(() => {

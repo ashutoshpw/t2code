@@ -44,6 +44,7 @@ import {
   laneCellId,
 } from "./boardLayout";
 import { BoardSetup } from "./BoardSetup";
+import { GroupsTruncatedNote } from "../primitives/GroupsTruncatedNote";
 import { HiddenGroups } from "./HiddenGroups";
 import { createCard } from "./newCard";
 import { useBoardDrag } from "./useBoardDrag";
@@ -346,11 +347,7 @@ function Board({ search }: DatabaseViewProps) {
           </Button>
         </div>
       ) : null}
-      {query.groupsTruncated ? (
-        <p role="status" className="px-1 text-xs text-muted-foreground">
-          Showing the first {shown.length + hidden.length} groups
-        </p>
-      ) : null}
+      {query.groupsTruncated ? <GroupsTruncatedNote count={shown.length + hidden.length} /> : null}
       <DragOverlay dropAnimation={null}>
         {overlayRow !== undefined ? (
           <div className={`${CARD_FACE} w-64 cursor-grabbing shadow-md`}>

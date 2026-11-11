@@ -1,6 +1,5 @@
 import { RegistryContext } from "@effect/atom-react";
 import {
-  DatabaseQuerySession,
   deriveViewRows,
   canonicalJson,
   queryKey,
@@ -27,8 +26,8 @@ import { useDatabase } from "../shell/context";
 import type { DatabaseModel } from "./useDatabaseModel";
 import { databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { Latest } from "./latest";
-import { databasePorts } from "./ports";
 import { databaseStores } from "./stores";
+import { connectViewSession, createViewSession } from "./viewSession";
 
 export interface ViewQueryOptions {
   readonly mode: "rows" | "groups";
@@ -71,6 +70,7 @@ export interface ViewQuery {
   bucketLoading(key: SpaceGroupKey, subKey?: SpaceGroupKey): boolean;
   hold(): () => void;
   placeRow(row: SpaceDatabaseRow, group: SpaceGroupKey | null): void;
+  forgetRow(pageId: string): void;
   /** Card drops kept until the next refresh answers; clear one with `undefined`. */
   readonly placements: Readonly<Record<string, RowPlacement>>;
   setPlacement(pageId: string, placement: RowPlacement | undefined): void;
@@ -79,10 +79,6 @@ export interface ViewQuery {
 }
 
 const BACKGROUND_REFRESH_MS = 30_000;
-const intersects = (dependencies: ReadonlySet<string>, ids: ReadonlySet<string>) => {
-  for (const id of ids) if (dependencies.has(id)) return true;
-  return false;
-};
 const viewerZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /** The explicit query a view body runs; also what sub-item sessions derive their scope from. */
@@ -128,17 +124,7 @@ export function useViewQuery(
   const writer = databaseStores(registry).writer(environmentId);
   // Read at call time: a view whose data source changes keeps its session.
   const [source] = useState(() => new Latest({ dataSourceId, writer }));
-  const [session] = useState(
-    () =>
-      new DatabaseQuerySession({
-        query: (input) => databasePorts.query(registry, input),
-        schedule: (run, delayMs) => {
-          const timer = setTimeout(run, delayMs);
-          return () => clearTimeout(timer);
-        },
-        busy: () => source.get().writer.busy(source.get().dataSourceId),
-      }),
-  );
+  const [session] = useState(() => createViewSession(registry, environmentId, source));
   const input = viewInputOf(model, view, columns, options);
   const key = queryKey(input);
   const dependencies = viewDependencies(
@@ -160,6 +146,8 @@ export function useViewQuery(
   // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Subscribe the external session to counter bumps, acknowledged own writes and window focus.
   useEffect(() => {
     let leftAt: number | null = null;
+    // A hidden tab keeps receiving pushed changes; the session holds them and refreshes once on return.
+    let release: (() => void) | null = null;
     const left = () => {
       if (leftAt === null) leftAt = Date.now();
     };
@@ -167,26 +155,30 @@ export function useViewQuery(
       if (leftAt !== null && Date.now() - leftAt >= BACKGROUND_REFRESH_MS) session.refresh();
       leftAt = null;
     };
-    const onVisibility = () => (document.visibilityState === "hidden" ? left() : back());
-    const stop = [
-      registry.subscribe(databasePorts.changed.dataSource(environmentId, dataSourceId), () =>
-        session.invalidate(),
-      ),
-      writer.onAck((ack) => {
-        if (ack.dataSourceId !== dataSourceId) return;
-        session.noteAck({
-          dataRevision: ack.dataRevision,
-          affects: intersects(watch.get(), ack.propertyIds),
-          structural: ack.structural,
-          edits: ack.edits,
-        });
-      }),
-    ];
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        if (release === null) release = session.hold();
+        left();
+        return;
+      }
+      release?.();
+      release = null;
+      back();
+    };
+    const stop = connectViewSession({
+      session,
+      registry,
+      environmentId,
+      dataSourceId,
+      writer,
+      watched: () => watch.get(),
+    });
     window.addEventListener("blur", left);
     window.addEventListener("focus", back);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      for (const unsubscribe of stop) unsubscribe();
+      stop();
+      release?.();
       window.removeEventListener("blur", left);
       window.removeEventListener("focus", back);
       document.removeEventListener("visibilitychange", onVisibility);
@@ -231,6 +223,7 @@ export function useViewQuery(
       ),
     hold: () => session.hold(),
     placeRow: (row, group) => session.placeRow(row, group),
+    forgetRow: (pageId) => session.forgetRow(pageId),
     placements: snapshot.placements,
     setPlacement: (pageId, placement) => session.setPlacement(pageId, placement),
     pending,

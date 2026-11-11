@@ -51,6 +51,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.spacesDatabasesList]: "spaces",
   [WS_METHODS.spacesDatabasesGet]: "spaces",
   [WS_METHODS.spacesDatabasesQuery]: "spaces",
+  [WS_METHODS.spacesDatabasesSubscribeChanges]: "spaces",
   [WS_METHODS.spacesDatabasesRowsGet]: "spaces",
   [WS_METHODS.spacesDatabasesCreate]: "spaces",
   [WS_METHODS.spacesDatabasesUpdate]: "spaces",

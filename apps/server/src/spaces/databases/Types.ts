@@ -8,6 +8,8 @@ export interface DatabaseRecord {
   readonly icon: string | null;
   readonly home_block_id: string | null;
   readonly revision: number;
+  readonly orphaned_at_ms: number | null;
+  readonly purge_started_at_ms: number | null;
   readonly created_at: string;
   readonly updated_at: string;
 }
@@ -62,6 +64,7 @@ export interface ViewRecord {
   readonly properties: string;
   readonly layout: string;
   readonly logical_bytes: number;
+  readonly orphaned_at_ms: number | null;
   readonly created_at: string;
   readonly updated_at: string;
 }

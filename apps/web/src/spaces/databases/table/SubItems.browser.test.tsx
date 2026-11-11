@@ -24,7 +24,7 @@ vi.mock(import("../../../state/spaces"), async (original) => ({
   useSpacesAvailability: () => "writable",
 }));
 
-async function mount(layout: Record<string, unknown> = {}, strict = false) {
+async function setup(layout: Record<string, unknown> = {}, strict = false) {
   const fake = new FakeDatabase({
     quietRowWrites: true,
     dataSource: withSubItems(),
@@ -42,7 +42,7 @@ const toggle = () => page.getByRole("button", { name: "Expand sub-items" });
 
 describe("table sub-items", () => {
   it("lists only top-level rows, expands children under their parent and collapses them", async () => {
-    const { fake, screen, cell } = await mount();
+    const { fake, screen, cell } = await setup();
     await using _screen = screen;
     expect(cell("row-4", "title")).toBeNull();
     const first = fake.callsOf("query")[0]!.input;
@@ -69,14 +69,14 @@ describe("table sub-items", () => {
   });
 
   it("still expands after StrictMode re-runs the effect cleanups", async () => {
-    const { screen, cell } = await mount({}, true);
+    const { screen, cell } = await setup({}, true);
     await using _screen = screen;
     await userEvent.click(toggle());
     await vi.waitFor(() => expect(cell("row-4", "title")).not.toBeNull());
   });
 
   it("expands and collapses with the arrow keys on the title cell", async () => {
-    const { screen, cell } = await mount();
+    const { screen, cell } = await setup();
     await using _screen = screen;
     cell("row-1", "title")!.focus();
     await userEvent.keyboard("{ArrowRight}");
@@ -91,7 +91,7 @@ describe("table sub-items", () => {
   });
 
   it("creates a sub-item seeded with its parent", async () => {
-    const { fake, screen, cell } = await mount();
+    const { fake, screen, cell } = await setup();
     await using _screen = screen;
     await userEvent.click(toggle());
     await userEvent.click(screen.getByRole("button", { name: "New sub-item" }));
@@ -107,7 +107,7 @@ describe("table sub-items", () => {
   });
 
   it("is flat while searching and when the view flattens sub-items", async () => {
-    const searching = await mount();
+    const searching = await setup();
     await using _searching = searching.screen;
     await userEvent.fill(searching.screen.getByRole("searchbox", { name: "Search rows" }), "Task");
     await vi.waitFor(() =>
@@ -119,7 +119,7 @@ describe("table sub-items", () => {
   });
 
   it("shows every row when the layout flattens", async () => {
-    const { fake, screen, cell } = await mount({ subItems: "flattened" });
+    const { fake, screen, cell } = await setup({ subItems: "flattened" });
     await using _screen = screen;
     await vi.waitFor(() => expect(cell("row-4", "title")).not.toBeNull());
     expect(fake.callsOf("query")[0]!.input.scope).toBeUndefined();

@@ -11,6 +11,9 @@ import type { ListItem, ViewForm } from "./viewForms";
 export interface DatabaseItemHandlers {
   readonly onOpenRow: (row: SpaceDatabaseRow) => void;
   readonly onMore: (bucket: SpaceGroupKey | null) => void;
+  /** Grouped views on a database the person can add rows to: a header offers a row in its section. */
+  readonly onAddToGroup?: (bucket: SpaceGroupKey, label: string) => void;
+  readonly canAddToGroup?: (bucket: SpaceGroupKey) => boolean;
 }
 
 /** One flat list item; the block maps these in a plain view and the screen hands them to a LegendList. */
@@ -42,6 +45,18 @@ export function DatabaseListItem(props: {
           {item.count === null ? null : (
             <Text className="text-sm text-foreground-muted">{item.count}</Text>
           )}
+          {item.bucket !== null &&
+          props.handlers.onAddToGroup !== undefined &&
+          props.handlers.canAddToGroup?.(item.bucket) === true ? (
+            <ControlPill
+              icon="plus"
+              accessibilityLabel={`New row in ${item.label.text}`}
+              onPress={() => {
+                if (item.bucket !== null)
+                  props.handlers.onAddToGroup?.(item.bucket, item.label.text);
+              }}
+            />
+          ) : null}
         </View>
       );
     }
