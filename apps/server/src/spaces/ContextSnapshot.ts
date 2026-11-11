@@ -24,6 +24,9 @@ import { byteLength } from "./CorePolicy.ts";
 const captureLimits = { pages: 8, blocks: 256, depth: 16, bytes: 2_097_152 } as const;
 const marker = "\n… truncated …";
 const knownBlock = Schema.decodeUnknownOption(C.SpaceKnownBlock);
+const strictDatabase = Schema.decodeUnknownOption(C.SpaceDatabaseBlock, {
+  onExcessProperty: "error",
+});
 const validResult = Schema.is(SpaceContextCaptureResult);
 
 function clip(text: string, chars: number, bytes: number) {
@@ -172,8 +175,18 @@ export const capture = Effect.fn("SpacesContextSnapshot.capture")(function* (
     blocks.add(value.id);
     const source = sources.find((source) => source.pageId === frame.pageId)!;
     source.blockIds.push(value.id);
+    const database = Option.getOrUndefined(strictDatabase(value));
+    const [named] = database
+      ? yield* sql<{
+          readonly title: string;
+        }>`SELECT title FROM spaces_db_databases WHERE database_id=${database.content.databaseId}`
+      : [];
+    // Agents read database rows through the database tools; the snapshot only names the database.
+    const line = database
+      ? `[database ${database.content.databaseId} "${clip(named?.title ?? "", 200, 800).text}"]`
+      : blockText(value);
     const next = clip(
-      `${text}${blocks.size > 1 ? "\n" : ""}${blockText(value)}`,
+      `${text}${blocks.size > 1 ? "\n" : ""}${line}`,
       SPACE_CONTEXT_LIMITS.maxTextChars,
       SPACE_CONTEXT_LIMITS.maxTextBytes,
     );

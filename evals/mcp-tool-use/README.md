@@ -32,6 +32,10 @@ Cases are JSON lines in `cases/`, one file per area. The case schema in `run.ts`
 
 Check that the case builds with `--dry-run --case <id>`. Then run it on the text before your fix, where it must fail, and on the text after, where it must pass.
 
+## Spaces database cases
+
+`cases/spaces-databases.ndjson` checks the `t2_spaces_databases_*` tools: reading the schema before writing a row and passing option ids, filtering on the server instead of paging, renaming a column with one schema operation, and a control that edits page text with the block tools. The sources are the Spaces databases spec's stage e eval list.
+
 ## Device manager cases
 
 `cases/device-manager.ndjson` ports nine mechanisms from the [device-routing investigation described in #25661](https://github.com/ashutoshpw/t2code/pull/25661) and adds seven cases from T3DOTGG_KEEP’s 2026-10-26 fleet device investigation. All prompts, files, hosts and prior turns are authored Acme data; the fleet cases cite finding ids without carrying source transcripts or identifiers.

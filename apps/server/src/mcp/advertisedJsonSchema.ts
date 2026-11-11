@@ -96,6 +96,27 @@ const compact = (schema: Json, optional: boolean): Json => {
   return result;
 };
 
+/** References are root-relative, so definitions nested under a branch must move to the root. */
+const hoistDefinitions = (schema: Json): Json => {
+  if (!Predicate.isObject(schema)) return schema;
+  const collected: JsonObject = {};
+  const strip = (value: Json): Json => {
+    if (Array.isArray(value)) return value.map(strip);
+    if (!Predicate.isObject(value)) return value;
+    const result: JsonObject = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (key === "$defs" && Predicate.isObject(child)) {
+        for (const [name, definition] of Object.entries(child)) {
+          collected[name] ??= strip(definition);
+        }
+      } else result[key] = strip(child);
+    }
+    return result;
+  };
+  const stripped = strip(schema) as JsonObject;
+  return Object.keys(collected).length === 0 ? stripped : { ...stripped, $defs: collected };
+};
+
 /**
  * The input schema T3 advertises for a tool. Drops JSON noise that every thread pays for:
  * `additionalProperties: true`, safe-integer bounds, nested `anyOf`, JSON-string fallbacks, and
@@ -103,4 +124,6 @@ const compact = (schema: Json, optional: boolean): Json => {
  * Decoding still uses the full schema, so each tag's own required fields still apply.
  */
 export const advertisedJsonSchema = (tool: Tool.Any) =>
-  compact(Tool.getJsonSchema(tool), false) as ReturnType<typeof Tool.getJsonSchema>;
+  hoistDefinitions(compact(Tool.getJsonSchema(tool), false)) as ReturnType<
+    typeof Tool.getJsonSchema
+  >;

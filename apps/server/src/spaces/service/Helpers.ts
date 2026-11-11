@@ -33,7 +33,6 @@ export const spaceSummary = (row: SpaceRow): C.SpaceSummary => ({
   updatedAt: row.updated_at,
 });
 export const pageSummary = PageStore.summary;
-export const pagePreimage = PageStore.preimage;
 export const strict = { onExcessProperty: "error" } as const;
 export const decodeSearch = Schema.decodeUnknownEffect(C.SpaceSearchInput, strict);
 export const decodeTrashList = Schema.decodeUnknownEffect(C.SpaceTrashListInput, strict);

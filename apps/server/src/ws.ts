@@ -710,6 +710,22 @@ const ServerWsRpcGroup = WsRpcGroup.omit(
   WS_METHODS.spacesPagesPermanentlyDelete,
   WS_METHODS.spacesTrashList,
   WS_METHODS.spacesContextCapture,
+  WS_METHODS.spacesDatabasesList,
+  WS_METHODS.spacesDatabasesGet,
+  WS_METHODS.spacesDatabasesQuery,
+  WS_METHODS.spacesDatabasesRowsGet,
+  WS_METHODS.spacesDatabasesCreate,
+  WS_METHODS.spacesDatabasesUpdate,
+  WS_METHODS.spacesDatabasesDataSourcesCreate,
+  WS_METHODS.spacesDatabasesDataSourcesUpdate,
+  WS_METHODS.spacesDatabasesDataSourcesDelete,
+  WS_METHODS.spacesDatabasesSchemaUpdate,
+  WS_METHODS.spacesDatabasesViewsCreate,
+  WS_METHODS.spacesDatabasesViewsUpdate,
+  WS_METHODS.spacesDatabasesViewsDelete,
+  WS_METHODS.spacesDatabasesRowsCreate,
+  WS_METHODS.spacesDatabasesRowsUpdate,
+  WS_METHODS.spacesDatabasesRowsMove,
 )
   .merge(SpacesRpc.group)
   .middleware(RpcInstrumentation);

@@ -28,6 +28,11 @@ export interface PageRow {
   readonly owner_deleted: number | null;
   readonly parent_space_id: C.SpaceId | null;
   readonly owner_type: string | null;
+  /** Set for a row page: a page whose parent is a data source. */
+  readonly data_source_id: C.SpaceDataSourceId | null;
+  readonly row_seq: number | null;
+  readonly row_position: number | null;
+  readonly row_template: number;
 }
 
 export type SummaryRow = Pick<
@@ -49,9 +54,11 @@ export type SummaryRow = Pick<
   | "owner_deleted"
   | "parent_space_id"
   | "owner_type"
+  | "data_source_id"
 >;
 export function summary(row: SummaryRow, allowOrphanedTrash = false): C.SpacePageSummary {
   let location: C.SpacePageLocation | undefined;
+  let rowMarker = false;
   if (row.root_order !== null && row.owner_block_id === null) {
     location = { kind: "root", spaceId: row.space_id, order: row.root_order };
   } else if (
@@ -68,6 +75,14 @@ export function summary(row: SummaryRow, allowOrphanedTrash = false): C.SpacePag
       ownerBlockId: row.owner_block_id,
       parentPageId: row.parent_page_id,
     };
+  } else if (
+    row.root_order === null &&
+    row.owner_block_id === null &&
+    row.data_source_id !== null &&
+    row.data_source_id !== undefined
+  ) {
+    // The wire location union stays closed: a row is marked by `row`, with no location.
+    rowMarker = true;
   } else if (!(allowOrphanedTrash && row.trash_batch_id !== null && row.root_order === null))
     throw new C.SpacesUnavailableError({ stage: "storage" });
   return {
@@ -79,6 +94,7 @@ export function summary(row: SummaryRow, allowOrphanedTrash = false): C.SpacePag
     rootOrder: row.root_order,
     ...(row.is_pinned === 1 ? { isPinned: true } : {}),
     ...(location ? { location } : {}),
+    ...(rowMarker ? { row: { dataSourceId: row.data_source_id! } } : {}),
     ...(row.trash_batch_id !== null ? { trash: trashStatus(row) } : {}),
     createdAt: row.created_at,
     updatedAt: row.updated_at,

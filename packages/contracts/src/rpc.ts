@@ -463,6 +463,22 @@ export const WS_METHODS = {
   spacesSharesCreate: "spaces.shares.create",
   spacesSharesStop: "spaces.shares.stop",
   spacesSharesGet: "spaces.shares.get",
+  spacesDatabasesList: "spaces.databases.list",
+  spacesDatabasesGet: "spaces.databases.get",
+  spacesDatabasesQuery: "spaces.databases.query",
+  spacesDatabasesRowsGet: "spaces.databases.rows.get",
+  spacesDatabasesCreate: "spaces.databases.create",
+  spacesDatabasesUpdate: "spaces.databases.update",
+  spacesDatabasesDataSourcesCreate: "spaces.databases.dataSources.create",
+  spacesDatabasesDataSourcesUpdate: "spaces.databases.dataSources.update",
+  spacesDatabasesDataSourcesDelete: "spaces.databases.dataSources.delete",
+  spacesDatabasesSchemaUpdate: "spaces.databases.schema.update",
+  spacesDatabasesViewsCreate: "spaces.databases.views.create",
+  spacesDatabasesViewsUpdate: "spaces.databases.views.update",
+  spacesDatabasesViewsDelete: "spaces.databases.views.delete",
+  spacesDatabasesRowsCreate: "spaces.databases.rows.create",
+  spacesDatabasesRowsUpdate: "spaces.databases.rows.update",
+  spacesDatabasesRowsMove: "spaces.databases.rows.move",
 
   projectsList: "projects.list",
 
@@ -851,6 +867,111 @@ export const WsSpacesAssetsUploadGetRpc = Rpc.make(WS_METHODS.spacesAssetsUpload
 export const WsSpacesAssetsUploadFinalizeRpc = Rpc.make(WS_METHODS.spacesAssetsUploadFinalize, {
   payload: Spaces.SpaceAssetUploadInput,
   success: Spaces.SpaceAssetMetadata,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesListRpc = Rpc.make(WS_METHODS.spacesDatabasesList, {
+  payload: Spaces.SpaceDatabaseListInput,
+  success: Spaces.SpaceDatabaseListResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesGetRpc = Rpc.make(WS_METHODS.spacesDatabasesGet, {
+  payload: Spaces.SpaceDatabaseGetInput,
+  success: Spaces.SpaceDatabaseGetResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesQueryRpc = Rpc.make(WS_METHODS.spacesDatabasesQuery, {
+  payload: Spaces.SpaceDatabaseQueryInput,
+  success: Spaces.SpaceDatabaseQueryResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesRowsGetRpc = Rpc.make(WS_METHODS.spacesDatabasesRowsGet, {
+  payload: Spaces.SpaceDatabaseRowGetInput,
+  success: Spaces.SpaceDatabaseRowGetResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesCreateRpc = Rpc.make(WS_METHODS.spacesDatabasesCreate, {
+  payload: Spaces.SpaceDatabaseCreateInput,
+  success: Spaces.SpaceDatabaseCreateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesUpdateRpc = Rpc.make(WS_METHODS.spacesDatabasesUpdate, {
+  payload: Spaces.SpaceDatabaseUpdateInput,
+  success: Spaces.SpaceDatabaseUpdateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesDataSourcesCreateRpc = Rpc.make(
+  WS_METHODS.spacesDatabasesDataSourcesCreate,
+  {
+    payload: Spaces.SpaceDataSourceCreateInput,
+    success: Spaces.SpaceDataSourceCreateResult,
+    error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+  },
+);
+
+export const WsSpacesDatabasesDataSourcesUpdateRpc = Rpc.make(
+  WS_METHODS.spacesDatabasesDataSourcesUpdate,
+  {
+    payload: Spaces.SpaceDataSourceUpdateInput,
+    success: Spaces.SpaceDataSourceUpdateResult,
+    error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+  },
+);
+
+export const WsSpacesDatabasesDataSourcesDeleteRpc = Rpc.make(
+  WS_METHODS.spacesDatabasesDataSourcesDelete,
+  {
+    payload: Spaces.SpaceDataSourceDeleteInput,
+    success: Spaces.SpaceDataSourceDeleteResult,
+    error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+  },
+);
+
+export const WsSpacesDatabasesSchemaUpdateRpc = Rpc.make(WS_METHODS.spacesDatabasesSchemaUpdate, {
+  payload: Spaces.SpaceSchemaUpdateInput,
+  success: Spaces.SpaceSchemaUpdateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesViewsCreateRpc = Rpc.make(WS_METHODS.spacesDatabasesViewsCreate, {
+  payload: Spaces.SpaceViewCreateInput,
+  success: Spaces.SpaceViewCreateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesViewsUpdateRpc = Rpc.make(WS_METHODS.spacesDatabasesViewsUpdate, {
+  payload: Spaces.SpaceViewUpdateInput,
+  success: Spaces.SpaceViewUpdateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesViewsDeleteRpc = Rpc.make(WS_METHODS.spacesDatabasesViewsDelete, {
+  payload: Spaces.SpaceViewDeleteInput,
+  success: Spaces.SpaceViewDeleteResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesRowsCreateRpc = Rpc.make(WS_METHODS.spacesDatabasesRowsCreate, {
+  payload: Spaces.SpaceRowsCreateInput,
+  success: Spaces.SpaceRowsCreateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesRowsUpdateRpc = Rpc.make(WS_METHODS.spacesDatabasesRowsUpdate, {
+  payload: Spaces.SpaceRowsUpdateInput,
+  success: Spaces.SpaceRowsUpdateResult,
+  error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
+});
+
+export const WsSpacesDatabasesRowsMoveRpc = Rpc.make(WS_METHODS.spacesDatabasesRowsMove, {
+  payload: Spaces.SpaceRowsMoveInput,
+  success: Spaces.SpaceRowsMoveResult,
   error: Schema.Union([Spaces.SpaceServiceError, EnvironmentAuthorizationError]),
 });
 export const WsSpacesAssetsListRpc = Rpc.make(WS_METHODS.spacesAssetsList, {
@@ -2364,6 +2485,22 @@ export const WsRpcGroup = RpcGroup.make(
   WsSpacesSharesCreateRpc,
   WsSpacesSharesStopRpc,
   WsSpacesSharesGetRpc,
+  WsSpacesDatabasesListRpc,
+  WsSpacesDatabasesGetRpc,
+  WsSpacesDatabasesQueryRpc,
+  WsSpacesDatabasesRowsGetRpc,
+  WsSpacesDatabasesCreateRpc,
+  WsSpacesDatabasesUpdateRpc,
+  WsSpacesDatabasesDataSourcesCreateRpc,
+  WsSpacesDatabasesDataSourcesUpdateRpc,
+  WsSpacesDatabasesDataSourcesDeleteRpc,
+  WsSpacesDatabasesSchemaUpdateRpc,
+  WsSpacesDatabasesViewsCreateRpc,
+  WsSpacesDatabasesViewsUpdateRpc,
+  WsSpacesDatabasesViewsDeleteRpc,
+  WsSpacesDatabasesRowsCreateRpc,
+  WsSpacesDatabasesRowsUpdateRpc,
+  WsSpacesDatabasesRowsMoveRpc,
 
   WsGuestShareCreateRpc,
   WsServerProbeRpc,

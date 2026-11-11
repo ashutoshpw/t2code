@@ -148,6 +148,51 @@ export const layer = McpToolAccess.toLayer(SpacesToolkit, {
   t2_spaces_search: McpToolAccess.reads((input) =>
     invoke(input, (service) => service.search(input)),
   ),
+  t2_spaces_databases_list: McpToolAccess.reads((input) =>
+    invoke(input, (service) => service.listDatabases(input)),
+  ),
+  t2_spaces_databases_get: McpToolAccess.reads((input) =>
+    invoke(input, (service) => service.getDatabase(input)),
+  ),
+  t2_spaces_databases_query: McpToolAccess.reads((input) =>
+    invoke(input, (service) => service.queryDatabase(input)),
+  ),
+  t2_spaces_databases_rows_get: McpToolAccess.reads((input) =>
+    invoke(input, (service) => service.getDatabaseRows(input)),
+  ),
+  t2_spaces_databases_create: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.createDatabase(input)),
+  ),
+  t2_spaces_databases_update: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.updateDatabase(input)),
+  ),
+  t2_spaces_databases_data_sources_create: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.createDataSource(input)),
+  ),
+  t2_spaces_databases_data_sources_update: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.updateDataSource(input)),
+  ),
+  t2_spaces_databases_schema_update: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.updateSchema(input)),
+  ),
+  t2_spaces_databases_views_create: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.createView(input)),
+  ),
+  t2_spaces_databases_views_update: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.updateView(input)),
+  ),
+  t2_spaces_databases_views_delete: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.deleteView(input)),
+  ),
+  t2_spaces_databases_rows_create: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.createRows(input)),
+  ),
+  t2_spaces_databases_rows_update: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.updateRows(input)),
+  ),
+  t2_spaces_databases_rows_move: McpToolAccess.writesWithCapability((input) =>
+    invoke(input, (service) => service.moveRows(input)),
+  ),
   t2_spaces_receipts_get: McpToolAccess.reads((input) =>
     invoke(input, (service) => service.lookupMutationReceipt(input)),
   ),

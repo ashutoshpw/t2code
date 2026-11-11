@@ -2,84 +2,59 @@ import * as Schema from "effect/Schema";
 import * as Struct from "effect/Struct";
 
 import { EnvironmentId, IsoDateTime, NonNegativeInt, PositiveInt } from "./baseSchemas.ts";
+import {
+  SpaceAssetId,
+  SpaceBlockId,
+  SpaceCursor,
+  SpaceId,
+  SpaceMutationAdmission,
+  SpaceMutationId,
+  SpacePageIcon,
+  SpacePageId,
+  SpaceReceiptEpoch,
+  SpaceRichText,
+  StableId,
+  mutationAck,
+  mutationInput,
+  spaceBlockBase as blockBase,
+} from "./spacesCore.ts";
 
-// Provisional editor values; order tokens and persistence are owned by the future service.
-const StableId = Schema.String.check(Schema.isMinLength(1));
-export const SpaceId = StableId.pipe(Schema.brand("SpaceId"));
-export type SpaceId = typeof SpaceId.Type;
-export const SpacePageId = StableId.pipe(Schema.brand("SpacePageId"));
-export type SpacePageId = typeof SpacePageId.Type;
-export const SpaceBlockId = StableId.pipe(Schema.brand("SpaceBlockId"));
-export type SpaceBlockId = typeof SpaceBlockId.Type;
-export const SpaceAssetId = StableId.pipe(Schema.brand("SpaceAssetId"));
-export type SpaceAssetId = typeof SpaceAssetId.Type;
+import {
+  SpaceDatabaseCreateInput,
+  SpaceDatabaseCreateResult,
+  SpaceDatabaseError,
+  SpaceDatabaseUpdateInput,
+  SpaceDatabaseUpdateResult,
+  SpaceDataSourceCreateInput,
+  SpaceDataSourceCreateResult,
+  SpaceDataSourceDeleteInput,
+  SpaceDataSourceDeleteResult,
+  SpaceDataSourceUpdateInput,
+  SpaceDataSourceUpdateResult,
+  SpaceRowsCreateInput,
+  SpaceRowsCreateResult,
+  SpaceRowsMoveInput,
+  SpaceRowsMoveResult,
+  SpaceRowsUpdateInput,
+  SpaceRowsUpdateResult,
+  SpaceSchemaUpdateInput,
+  SpaceSchemaUpdateResult,
+  SpaceViewCreateInput,
+  SpaceViewCreateResult,
+  SpaceViewDeleteInput,
+  SpaceViewDeleteResult,
+  SpaceViewUpdateInput,
+  SpaceViewUpdateResult,
+} from "./spacesDatabaseMutations.ts";
+import { SpaceDatabaseLimits, SpaceDataSourceId } from "./spacesDatabases.ts";
 
-export const SpacePageTarget = Schema.Struct({ environmentId: EnvironmentId, pageId: SpacePageId });
-export type SpacePageTarget = typeof SpacePageTarget.Type;
-export const SpaceBlockTarget = Schema.Struct({
-  environmentId: EnvironmentId,
-  pageId: SpacePageId,
-  blockId: SpaceBlockId,
-});
-export type SpaceBlockTarget = typeof SpaceBlockTarget.Type;
+export * from "./spacesCore.ts";
+export * from "./spacesDatabases.ts";
+export * from "./spacesDatabaseFilters.ts";
+export * from "./spacesDatabaseViews.ts";
+export * from "./spacesDatabaseQuery.ts";
+export * from "./spacesDatabaseMutations.ts";
 
-export const SPACE_TEXT_COLORS = [
-  "gray",
-  "brown",
-  "orange",
-  "yellow",
-  "green",
-  "blue",
-  "purple",
-  "pink",
-  "red",
-] as const;
-export const SpaceTextColor = Schema.Literals(SPACE_TEXT_COLORS);
-export type SpaceTextColor = typeof SpaceTextColor.Type;
-
-export const SpaceKnownMark = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literals(["bold", "italic", "underline", "strike", "code"]),
-    version: Schema.Literal(1),
-  }),
-  Schema.Struct({
-    type: Schema.Literals(["color", "highlight"]),
-    version: Schema.Literal(1),
-    value: SpaceTextColor,
-  }),
-  Schema.Struct({ type: Schema.Literal("link"), version: Schema.Literal(1), href: Schema.String }),
-  Schema.Struct({
-    type: Schema.Literal("page_mention"),
-    version: Schema.Literal(1),
-    target: SpacePageTarget,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("block_mention"),
-    version: Schema.Literal(1),
-    target: SpaceBlockTarget,
-  }),
-]);
-export type SpaceKnownMark = typeof SpaceKnownMark.Type;
-
-export const SpaceMark = Schema.StructWithRest(
-  Schema.Struct({ type: StableId, version: PositiveInt }),
-  [Schema.Record(Schema.String, Schema.Json)],
-);
-export type SpaceMark = typeof SpaceMark.Type;
-export const SpaceRichRun = Schema.StructWithRest(
-  Schema.Struct({ text: Schema.String, marks: Schema.Array(SpaceMark) }),
-  [Schema.Record(Schema.String, Schema.Json)],
-);
-export type SpaceRichRun = typeof SpaceRichRun.Type;
-export const SpaceRichText = Schema.Array(SpaceRichRun);
-export type SpaceRichText = typeof SpaceRichText.Type;
-
-const blockBase = {
-  id: SpaceBlockId,
-  parentId: Schema.NullOr(SpaceBlockId),
-  order: StableId,
-  version: Schema.Literal(1),
-};
 const textContent = { runs: SpaceRichText };
 export const SpaceKnownBlock = Schema.Union([
   Schema.Struct({
@@ -136,19 +111,6 @@ export type SpaceBlockWindow = typeof SpaceBlockWindow.Type;
 // Production boundaries must decode with onExcessProperty: "error" before fingerprinting;
 // Struct's default strips fields. Enforce the fixed 1 MiB protocol ceiling before decoding,
 // then replay retained receipts before checking current service limits or epoch deadlines.
-export const SpaceReceiptEpoch = StableId.pipe(Schema.brand("SpaceReceiptEpoch"));
-export type SpaceReceiptEpoch = typeof SpaceReceiptEpoch.Type;
-export const SpaceMutationId = StableId.pipe(Schema.brand("SpaceMutationId"));
-export type SpaceMutationId = typeof SpaceMutationId.Type;
-export const SpaceCursor = StableId.pipe(Schema.brand("SpaceCursor"));
-export type SpaceCursor = typeof SpaceCursor.Type;
-
-export const SpaceMutationAdmission = Schema.Struct({
-  epoch: SpaceReceiptEpoch,
-  acceptsUntil: IsoDateTime,
-  retainUntil: IsoDateTime,
-});
-export type SpaceMutationAdmission = typeof SpaceMutationAdmission.Type;
 
 export const SpaceSummary = Schema.Struct({
   id: SpaceId,
@@ -176,16 +138,6 @@ export const SpacePageTrashStatus = Schema.Struct({
   trashedAt: IsoDateTime,
 });
 export type SpacePageTrashStatus = typeof SpacePageTrashStatus.Type;
-const pictograph = String.raw`\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?`;
-export const SPACE_PAGE_ICON_PATTERN = new RegExp(
-  String.raw`^(?:${pictograph}(?:\u200D${pictograph})*|\p{Regional_Indicator}{2}|[0-9#*]\uFE0F?\u20E3)$`,
-  "u",
-);
-export const SpacePageIcon = Schema.String.check(
-  Schema.isMaxLength(32),
-  Schema.isPattern(SPACE_PAGE_ICON_PATTERN),
-);
-export type SpacePageIcon = typeof SpacePageIcon.Type;
 export const SpacePageSummary = Schema.Struct({
   id: SpacePageId,
   spaceId: SpaceId,
@@ -196,6 +148,8 @@ export const SpacePageSummary = Schema.Struct({
   hasChildren: Schema.optionalKey(Schema.Boolean),
   isPinned: Schema.optionalKey(Schema.Boolean),
   location: Schema.optionalKey(SpacePageLocation),
+  // Set instead of `location` for a database row; the location union stays closed for older clients.
+  row: Schema.optionalKey(Schema.Struct({ dataSourceId: SpaceDataSourceId })),
   trash: Schema.optionalKey(SpacePageTrashStatus),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -213,8 +167,6 @@ export const SpaceBlockMutation = Schema.Union([
 ]);
 export type SpaceBlockMutation = typeof SpaceBlockMutation.Type;
 
-const mutationAck = { mutationId: SpaceMutationId, receiptEpoch: SpaceReceiptEpoch };
-const mutationInput = { environmentId: EnvironmentId, ...mutationAck };
 export const SpaceMutationConflict = Schema.Struct({
   status: Schema.Literal("conflict"),
   ...mutationAck,
@@ -589,6 +541,27 @@ export const SpaceMutationRequest = Schema.Union([
   Schema.Struct({ operation: Schema.Literal("createPage"), input: SpacePageCreateInput }),
   Schema.Struct({ operation: Schema.Literal("updatePage"), input: SpacePageUpdateInput }),
   Schema.Struct({ operation: Schema.Literal("applyBlockBatch"), input: SpaceApplyBlockBatchInput }),
+  Schema.Struct({ operation: Schema.Literal("createDatabase"), input: SpaceDatabaseCreateInput }),
+  Schema.Struct({ operation: Schema.Literal("updateDatabase"), input: SpaceDatabaseUpdateInput }),
+  Schema.Struct({
+    operation: Schema.Literal("createDataSource"),
+    input: SpaceDataSourceCreateInput,
+  }),
+  Schema.Struct({
+    operation: Schema.Literal("updateDataSource"),
+    input: SpaceDataSourceUpdateInput,
+  }),
+  Schema.Struct({
+    operation: Schema.Literal("deleteDataSource"),
+    input: SpaceDataSourceDeleteInput,
+  }),
+  Schema.Struct({ operation: Schema.Literal("updateSchema"), input: SpaceSchemaUpdateInput }),
+  Schema.Struct({ operation: Schema.Literal("createView"), input: SpaceViewCreateInput }),
+  Schema.Struct({ operation: Schema.Literal("updateView"), input: SpaceViewUpdateInput }),
+  Schema.Struct({ operation: Schema.Literal("deleteView"), input: SpaceViewDeleteInput }),
+  Schema.Struct({ operation: Schema.Literal("createRows"), input: SpaceRowsCreateInput }),
+  Schema.Struct({ operation: Schema.Literal("updateRows"), input: SpaceRowsUpdateInput }),
+  Schema.Struct({ operation: Schema.Literal("moveRows"), input: SpaceRowsMoveInput }),
 ]);
 export type SpaceMutationRequest = typeof SpaceMutationRequest.Type;
 export const SpaceMutationReceipt = Schema.Union([
@@ -613,6 +586,27 @@ export const SpaceMutationReceipt = Schema.Union([
     operation: Schema.Literal("applyBlockBatch"),
     result: SpaceApplyBlockBatchResult,
   }),
+  Schema.Struct({ operation: Schema.Literal("createDatabase"), result: SpaceDatabaseCreateResult }),
+  Schema.Struct({ operation: Schema.Literal("updateDatabase"), result: SpaceDatabaseUpdateResult }),
+  Schema.Struct({
+    operation: Schema.Literal("createDataSource"),
+    result: SpaceDataSourceCreateResult,
+  }),
+  Schema.Struct({
+    operation: Schema.Literal("updateDataSource"),
+    result: SpaceDataSourceUpdateResult,
+  }),
+  Schema.Struct({
+    operation: Schema.Literal("deleteDataSource"),
+    result: SpaceDataSourceDeleteResult,
+  }),
+  Schema.Struct({ operation: Schema.Literal("updateSchema"), result: SpaceSchemaUpdateResult }),
+  Schema.Struct({ operation: Schema.Literal("createView"), result: SpaceViewCreateResult }),
+  Schema.Struct({ operation: Schema.Literal("updateView"), result: SpaceViewUpdateResult }),
+  Schema.Struct({ operation: Schema.Literal("deleteView"), result: SpaceViewDeleteResult }),
+  Schema.Struct({ operation: Schema.Literal("createRows"), result: SpaceRowsCreateResult }),
+  Schema.Struct({ operation: Schema.Literal("updateRows"), result: SpaceRowsUpdateResult }),
+  Schema.Struct({ operation: Schema.Literal("moveRows"), result: SpaceRowsMoveResult }),
 ]);
 export type SpaceMutationReceipt = typeof SpaceMutationReceipt.Type;
 export const SpaceReceiptLookupInput = Schema.Struct({ request: SpaceMutationRequest });
@@ -744,6 +738,7 @@ export const SpaceLimits = Schema.Struct({
   assets: Schema.optionalKey(SpaceAssetLimits),
   history: Schema.optionalKey(SpaceHistoryLimits),
   search: Schema.optionalKey(SpaceSearchLimits),
+  databases: Schema.optionalKey(SpaceDatabaseLimits),
   maxReferenceHops: Schema.optionalKey(PositiveInt),
   maxListRows: PositiveInt,
   maxListResponseBytes: PositiveInt,
@@ -794,6 +789,7 @@ export const SpaceCapability = Schema.Struct({
       search: Schema.optionalKey(Schema.Literal(true)),
       contextCapture: Schema.optionalKey(Schema.Literal(true)),
       assets: Schema.optionalKey(Schema.Literal(true)),
+      databases: Schema.optionalKey(Schema.Literal(true)),
     }),
   ),
 });
@@ -825,7 +821,19 @@ export class SpaceEnvironmentMismatchError extends Schema.TaggedError<SpaceEnvir
 }
 export class SpaceNotFoundError extends Schema.TaggedError<SpaceNotFoundError>()(
   "SpaceNotFoundError",
-  { entity: Schema.Literals(["space", "page", "block"]), id: StableId },
+  {
+    entity: Schema.Literals([
+      "space",
+      "page",
+      "block",
+      "database",
+      "data_source",
+      "view",
+      "property",
+      "option",
+    ]),
+    id: StableId,
+  },
 ) {
   override get message(): string {
     return "The Spaces item was not found.";
@@ -858,9 +866,10 @@ export class SpaceLimitExceededError extends Schema.TaggedError<SpaceLimitExceed
   {
     limit: Schema.Literals([
       ...Struct.keys(SpaceLimits.fields).filter(
-        (key) => key !== "history" && key !== "search" && key !== "assets",
+        (key) => key !== "history" && key !== "search" && key !== "assets" && key !== "databases",
       ),
       ...Struct.keys(SpaceSearchLimits.fields).map((key) => `search.${key}` as const),
+      ...Struct.keys(SpaceDatabaseLimits.fields).map((key) => `databases.${key}` as const),
       "history.maxDeltaBytes",
       "history.maxPageBytes",
       "history.maxEnvironmentBytes",
@@ -955,5 +964,6 @@ export const SpaceServiceError = Schema.Union([
   SpaceMutationIdMismatchError,
   SpaceMutationAdmissionError,
   SpaceCursorStaleError,
+  SpaceDatabaseError,
 ]);
 export type SpaceServiceError = typeof SpaceServiceError.Type;

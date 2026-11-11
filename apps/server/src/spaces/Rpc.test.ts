@@ -56,6 +56,14 @@ const decodeRecovery = Schema.decodeUnknownSync(C.SpacePageRecoveryResult);
 const decodePurged = Schema.decodeUnknownSync(C.SpacePagePurgeResult);
 const decodeSearch = Schema.decodeUnknownSync(C.SpaceSearchResult);
 const decodeTrash = Schema.decodeUnknownSync(C.SpaceTrashListResult);
+const decodeDatabaseCreated = Schema.decodeUnknownSync(C.SpaceDatabaseCreateResult);
+const decodeRowsCreated = Schema.decodeUnknownSync(C.SpaceRowsCreateResult);
+const decodeRowsUpdated = Schema.decodeUnknownSync(C.SpaceRowsUpdateResult);
+const decodeRowsMoved = Schema.decodeUnknownSync(C.SpaceRowsMoveResult);
+const decodeQueried = Schema.decodeUnknownSync(C.SpaceDatabaseQueryResult);
+const decodeRow = Schema.decodeUnknownSync(C.SpaceDatabaseRowGetResult);
+const decodeDatabase = Schema.decodeUnknownSync(C.SpaceDatabaseGetResult);
+const decodeDatabaseList = Schema.decodeUnknownSync(C.SpaceDatabaseListResult);
 const control = RpcGroup.make(WsServerRefreshProvidersRpc).middleware(RpcScopeAuthorization);
 const group = SpacesRpc.group.merge(control);
 const frameBytes = (response: unknown) => Buffer.byteLength(JSON.stringify(response), "utf8");
@@ -72,7 +80,7 @@ function expectDefect(response: RpcMessage.FromServerEncoded) {
   if (response._tag !== "Exit") throw new Error("Expected encoded exit");
   assert.equal(response.exit._tag, "Failure");
   assert.isBelow(frameBytes(response), 2_048);
-  assert.include(JSON.stringify(response), "Invalid Spaces RPC payload.");
+  assert.include(JSON.stringify(response), "Invalid Spaces RPC payload");
 }
 
 function typedFailure(response: RpcMessage.FromServerEncoded) {
@@ -958,6 +966,142 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("encoded Spaces R
           assert.deepEqual((yield* service.listSpaces(env)).items, library.items);
         }),
       ),
+  );
+
+  it.effect("round-trips the database methods through strict encoded envelopes", () =>
+    fixture(
+      Effect.gen(function* () {
+        const { request } = yield* encodedServer();
+        const library = decodeLibrary(savedValue(yield* request(WS_METHODS.spacesList, env)));
+        const common = { ...env, receiptEpoch: library.mutationAdmission.epoch };
+        const host = decodePage(
+          savedValue(
+            yield* request(WS_METHODS.spacesPagesCreate, {
+              ...common,
+              mutationId: "db-host",
+              spaceId: library.defaultSpaceId,
+              baseRootOrderRevision: 0,
+              title: "Host",
+            }),
+          ),
+        );
+        if (host.status !== "saved") return yield* Effect.die("Expected host page");
+        const created = decodeDatabaseCreated(
+          savedValue(
+            yield* request(WS_METHODS.spacesDatabasesCreate, {
+              ...common,
+              mutationId: "db-create",
+              spaceId: library.defaultSpaceId,
+              title: "Tasks",
+              appendToPageId: host.page.id,
+              properties: [{ name: "Points", type: "number" }],
+            }),
+          ),
+        );
+        if (created.status !== "saved") return yield* Effect.die("Expected database");
+        const points = created.propertyIds[0]!;
+        expectDefect(
+          yield* request(WS_METHODS.spacesDatabasesRowsCreate, {
+            ...common,
+            mutationId: "db-forged",
+            dataSourceId: created.dataSourceId,
+            beforeRowId: null,
+            rows: [],
+            callerId: "forged",
+          }),
+        );
+        const rows = decodeRowsCreated(
+          savedValue(
+            yield* request(WS_METHODS.spacesDatabasesRowsCreate, {
+              ...common,
+              mutationId: "db-rows",
+              dataSourceId: created.dataSourceId,
+              beforeRowId: null,
+              rows: [
+                { title: "A", cells: { [points]: 1 } },
+                { title: "B", cells: { [points]: 2 } },
+              ],
+            }),
+          ),
+        );
+        if (rows.status !== "saved") return yield* Effect.die("Expected rows");
+        const [first, second] = rows.rows.map((row) => row.pageId);
+        const updated = decodeRowsUpdated(
+          savedValue(
+            yield* request(WS_METHODS.spacesDatabasesRowsUpdate, {
+              ...common,
+              mutationId: "db-update",
+              dataSourceId: created.dataSourceId,
+              rows: [{ pageId: first, cells: { [points]: 5 } }],
+            }),
+          ),
+        );
+        if (updated.status !== "saved") return yield* Effect.die("Expected update");
+        assert.deepEqual(updated.affectedDataSourceIds, [created.dataSourceId]);
+        const moved = decodeRowsMoved(
+          savedValue(
+            yield* request(WS_METHODS.spacesDatabasesRowsMove, {
+              ...common,
+              mutationId: "db-move",
+              dataSourceId: created.dataSourceId,
+              pageIds: [second],
+              beforeRowId: first,
+            }),
+          ),
+        );
+        assert.equal(moved.status, "saved");
+        const queried = decodeQueried(
+          savedValue(
+            yield* request(WS_METHODS.spacesDatabasesQuery, {
+              ...env,
+              dataSourceId: created.dataSourceId,
+              viewId: created.viewId,
+              mode: "rows",
+              timeZone: "UTC",
+            }),
+          ),
+        );
+        assert.deepEqual(
+          queried.rows.map((row) => [row.page.title, row.cells[points]]),
+          [
+            ["B", 2],
+            ["A", 5],
+          ],
+        );
+        assert.equal(queried.dataRevision, moved.dataRevision);
+        const row = decodeRow(
+          savedValue(yield* request(WS_METHODS.spacesDatabasesRowsGet, { ...env, pageId: first })),
+        );
+        assert.equal(row.dataSource.id, created.dataSourceId);
+        assert.equal(row.row.cells[points], 5);
+        const database = decodeDatabase(
+          savedValue(
+            yield* request(WS_METHODS.spacesDatabasesGet, {
+              ...env,
+              databaseId: created.databaseId,
+            }),
+          ),
+        );
+        assert.equal(database.views[0]?.id, created.viewId);
+        const listed = decodeDatabaseList(
+          savedValue(yield* request(WS_METHODS.spacesDatabasesList, env)),
+        );
+        assert.equal(listed.items[0]?.database.id, created.databaseId);
+        const denied = yield* encodedServer([AuthOrchestrationReadScope]);
+        assert.include(
+          JSON.stringify(
+            yield* denied.request(WS_METHODS.spacesDatabasesRowsMove, {
+              ...common,
+              mutationId: "db-denied",
+              dataSourceId: created.dataSourceId,
+              pageIds: [first],
+              beforeRowId: null,
+            }),
+          ),
+          "EnvironmentAuthorizationError",
+        );
+      }),
+    ),
   );
 });
 
