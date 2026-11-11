@@ -6,6 +6,7 @@ import {
   type SpaceLimits,
   type SpaceHistoryLimits,
   type SpaceSearchLimits,
+  type SpaceDatabaseLimits,
 } from "@t2code/contracts/spaces";
 
 export const historyLimits: SpaceHistoryLimits = Object.freeze({
@@ -35,12 +36,51 @@ export function ensureSearchLimit(limit: keyof SpaceSearchLimits, actual: number
     ? Effect.fail(new SpaceLimitExceededError({ limit: `search.${limit}`, actual, maximum }))
     : Effect.void;
 }
-type ScalarLimit = Exclude<keyof SpaceLimits, "history" | "search" | "assets" | "maxReferenceHops">;
+export const databaseLimits: SpaceDatabaseLimits = Object.freeze({
+  maxDataSourcesPerDatabase: 8,
+  maxViewsPerDatabase: 50,
+  maxPropertiesPerDataSource: 100,
+  maxDeletedPropertiesPerDataSource: 50,
+  maxOptionsPerProperty: 200,
+  maxNameBytes: 256,
+  maxRowsPerDataSource: 25_000,
+  maxRowsPerMutation: 100,
+  maxCellsPerMutation: 500,
+  maxSchemaOperations: 50,
+  maxCellTextBytes: 16_384,
+  maxCellItems: 100,
+  maxSortKeyBytes: 128,
+  maxFormulaBytes: 8_192,
+  maxSchemaBytes: 65_536,
+  maxViewBytes: 16_384,
+  maxQueryRows: 100,
+  maxQueryResponseBytes: 262_144,
+  maxFilterDepth: 3,
+  maxFilterConditions: 50,
+  maxSorts: 8,
+  maxGroupBuckets: 200,
+  maxGroupPreviewRows: 25,
+  maxAggregates: 50,
+  maxRelatedPages: 500,
+  maxCursorBytes: 4_096,
+  maxSubItemDepth: 16,
+});
+export function ensureDatabaseLimit(limit: keyof SpaceDatabaseLimits, actual: number) {
+  const maximum = databaseLimits[limit];
+  return actual > maximum
+    ? Effect.fail(new SpaceLimitExceededError({ limit: `databases.${limit}`, actual, maximum }))
+    : Effect.void;
+}
+type ScalarLimit = Exclude<
+  keyof SpaceLimits,
+  "history" | "search" | "assets" | "databases" | "maxReferenceHops"
+>;
 
 export const limits: SpaceLimits = Object.freeze({
   assets: assetLimits,
   history: historyLimits,
   search: searchLimits,
+  databases: databaseLimits,
   maxReferenceHops: 32,
   maxListRows: 50,
   maxListResponseBytes: 65_536,
@@ -57,7 +97,7 @@ export const limits: SpaceLimits = Object.freeze({
   maxOrderBytes: 128,
   maxCursorBytes: 1_024,
   maxReceiptBytes: 65_536,
-  maxReceiptRows: 10_000,
+  maxReceiptRows: 50_000,
   maxReceiptStorageBytes: 67_108_864,
   maxEpochRows: 9,
   receiptRetentionMs: 604_800_000,

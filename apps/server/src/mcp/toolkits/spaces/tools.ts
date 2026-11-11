@@ -19,9 +19,10 @@ import * as Orchestrator from "../../../orchestration-v2/Orchestrator.ts";
 import * as Schema from "effect/Schema";
 import { Tool, Toolkit } from "effect/ai";
 import * as SpacesService from "../../../spaces/SpacesService.ts";
-import { strictSpacePayload } from "../../../spaces/InputCodec.ts";
+import { strictSpacePayload, type AdvertisedDocument } from "../../../spaces/InputCodec.ts";
 import * as ThreadManagement from "../../../orchestration-v2/ThreadManagementService.ts";
 import * as Invocation from "../../McpInvocationContext.ts";
+import { advertiseQuery, advertiseReceiptLookup, advertiseView } from "./advertise.ts";
 
 const SpacesMcpError = Schema.Union([
   C.SpaceServiceError,
@@ -56,12 +57,13 @@ const tool = <const N extends string, P extends Schema.Top, A extends Schema.Top
   operation?: string,
   destructive = false,
   writes = operation !== undefined,
+  advertise?: (document: AdvertisedDocument) => AdvertisedDocument,
 ) =>
   Tool.make(name, {
     parameters: strictSpacePayload(
       parameters,
       operation ? (input) => ({ operation, input }) : undefined,
-      true,
+      advertise ?? true,
     ),
     success: success.check(structuredResult),
     failure,
@@ -285,12 +287,140 @@ export const SpacesToolkit = Toolkit.make(
     false,
   ),
   tool(
+    "t2_spaces_databases_list",
+    C.SpaceDatabaseListInput,
+    C.SpaceDatabaseListResult,
+    "List live databases, optionally in one space, with their data source ids. At most 50 rows per cursor window.",
+    undefined,
+    false,
+  ),
+  tool(
+    "t2_spaces_databases_get",
+    C.SpaceDatabaseGetInput,
+    C.SpaceDatabaseGetResult,
+    "Read one database: its data sources with the full schema (property id -> name, type, config; select and status options carry ids) and its saved views. Call this before querying or writing rows; rows, cells and filters use property ids and option ids, never names.",
+    undefined,
+    false,
+  ),
+  tool(
+    "t2_spaces_databases_query",
+    C.SpaceDatabaseQueryInput,
+    C.SpaceDatabaseQueryResult,
+    "Query rows of one data source through a saved view (viewId) or an ad hoc filter and sorts; filter, sorts and property ids are the ids from databases_get. Always windowed: at most 100 rows per call; continue with nextCursor. Use a filter instead of paging through everything. mode 'rows' returns rows; mode 'groups' returns bucket counts for a group. Filters are {and:[...]}, {or:[...]} or {property, operator, value}; text operators: equals, does_not_equal, contains, does_not_contain, starts_with, ends_with; number: equals, does_not_equal, greater_than, less_than, greater_than_or_equal_to, less_than_or_equal_to; select/status: equals, does_not_equal (value is an option id); multi_select and relation: contains, does_not_contain; checkbox: equals; date: equals, before, after, on_or_before, on_or_after (value 'YYYY-MM-DD' or {relative:'today'}) and within {direction:'past'|'next'|'this', unit:'day'|'week'|'month'|'year', count}; every type except checkbox also has is_empty and is_not_empty. timeZone (IANA) is required. Formula and rollup properties cannot be filtered or sorted yet.",
+    undefined,
+    false,
+    undefined,
+    advertiseQuery,
+  ),
+  tool(
+    "t2_spaces_databases_rows_get",
+    C.SpaceDatabaseRowGetInput,
+    C.SpaceDatabaseRowGetResult,
+    "Read one row's properties. The row's body is a page: read it with the page and block tools using the same pageId.",
+    undefined,
+    false,
+  ),
+  tool(
+    "t2_spaces_databases_create",
+    C.SpaceDatabaseCreateInput,
+    C.SpaceDatabaseCreateResult,
+    "Create a database with one data source, a title property named 'Name' and a table view. Pass properties to define more columns now; the result returns their ids in order. Pass appendToPageId to place it at the end of that page; without it the database is not visible until a database block is inserted for it.",
+    "createDatabase",
+    false,
+  ),
+  tool(
+    "t2_spaces_databases_update",
+    C.SpaceDatabaseUpdateInput,
+    C.SpaceDatabaseUpdateResult,
+    "Rename a database or change its icon.",
+    "updateDatabase",
+    true,
+  ),
+  tool(
+    "t2_spaces_databases_data_sources_create",
+    C.SpaceDataSourceCreateInput,
+    C.SpaceDataSourceCreateResult,
+    "Add another data source (table) to a database.",
+    "createDataSource",
+    false,
+  ),
+  tool(
+    "t2_spaces_databases_data_sources_update",
+    C.SpaceDataSourceUpdateInput,
+    C.SpaceDataSourceUpdateResult,
+    "Rename a data source, or set its sub-items parent property or default template.",
+    "updateDataSource",
+    true,
+  ),
+  tool(
+    "t2_spaces_databases_schema_update",
+    C.SpaceSchemaUpdateInput,
+    C.SpaceSchemaUpdateResult,
+    "Change a data source's schema with ordered operations: addProperty, updateProperty, changePropertyType, moveProperty, removeProperty, restoreProperty, addOption, updateOption, moveOption, removeOption. Renaming a property (updateProperty name) never changes rows; property and option ids stay the same. changePropertyType converts values where it can and clears the rest (clearedCells reports how many). removeProperty can be undone with restoreProperty; removeOption cannot be undone and clears that option from rows. Add an option before writing it into a row. The result's created[] gives the new property and option ids by operation index.",
+    "updateSchema",
+    true,
+  ),
+  tool(
+    "t2_spaces_databases_views_create",
+    C.SpaceViewCreateInput,
+    C.SpaceViewCreateResult,
+    "Create a saved view (table, board, list, gallery, calendar or timeline) of a data source with its filter, sorts, group and visible properties, using property ids. Pass block to add it as a tab of that database block.",
+    "createView",
+    false,
+    undefined,
+    advertiseView,
+  ),
+  tool(
+    "t2_spaces_databases_views_update",
+    C.SpaceViewUpdateInput,
+    C.SpaceViewUpdateResult,
+    "Change a view. Each field you pass replaces that field (null removes a filter or group); properties.set changes single columns by property id.",
+    "updateView",
+    true,
+    undefined,
+    advertiseView,
+  ),
+  tool(
+    "t2_spaces_databases_views_delete",
+    C.SpaceViewDeleteInput,
+    C.SpaceViewDeleteResult,
+    "Delete a view. Rows are not affected. The last view of a database cannot be deleted.",
+    "deleteView",
+    true,
+  ),
+  tool(
+    "t2_spaces_databases_rows_create",
+    C.SpaceRowsCreateInput,
+    C.SpaceRowsCreateResult,
+    "Create up to 100 rows. title sets the row's title; cells maps property id -> value: url/email/phone are strings; text is rich-text runs [{text, marks:[]}]; number is a number; checkbox is a boolean; select and status are one option id; multi_select is an array of option ids; date is {start:'YYYY-MM-DD' or ISO date-time, end?, timeZone?}; relation is an array of row page ids; files is [{name, url}]. created_time, last_edited_time, unique_id, formula and rollup are read-only. Each row is also a page: write its body with the block tools using the returned pageId.",
+    "createRows",
+    false,
+  ),
+  tool(
+    "t2_spaces_databases_rows_update",
+    C.SpaceRowsUpdateInput,
+    C.SpaceRowsUpdateResult,
+    "Set or clear properties of up to 100 rows. Only the properties you pass change; null clears one. Keys are property ids and value shapes are the same as for creating rows. Last writer wins per property. To trash a row use t2_spaces_pages_trash with its pageId.",
+    "updateRows",
+    false,
+  ),
+  tool(
+    "t2_spaces_databases_rows_move",
+    C.SpaceRowsMoveInput,
+    C.SpaceRowsMoveResult,
+    "Change the manual order of rows inside their data source.",
+    "moveRows",
+    false,
+  ),
+  tool(
     "t2_spaces_receipts_get",
     C.SpaceReceiptLookupInput,
     C.SpaceReceiptLookupResult,
     "Look up the retained outcome of the exact original mutation request; never mint IDs, epochs or refresh guards.",
     undefined,
     false,
+    undefined,
+    advertiseReceiptLookup,
   ),
   tool(
     "t2_spaces_capability",

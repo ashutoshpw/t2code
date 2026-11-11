@@ -10,6 +10,7 @@ import { Atom, AtomRegistry } from "effect/reactivity";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as SubscriptionRef from "effect/SubscriptionRef";
+import { createSpacesDatabaseAtoms } from "./spacesDatabases.ts";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
 import { readSpacePageLocation } from "../spaces/pageLocation.ts";
 import type { SpacePageId } from "@t2code/contracts/spaces";
@@ -70,6 +71,7 @@ export function createSpacesEnvironmentAtoms<R, E>(
   return {
     changed,
     libraryChanged,
+    databases: createSpacesDatabaseAtoms(runtime, options),
     /**
      * The page's current share link as last read or written here: undefined before the first
      * read, null once stopped. An expired link stays until the owner stops or replaces it.

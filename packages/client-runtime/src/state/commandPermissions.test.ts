@@ -185,6 +185,18 @@ describe("command permissions", () => {
             WS_METHODS.spacesPagesPermanentlyDelete,
             WS_METHODS.spacesSharesCreate,
             WS_METHODS.spacesSharesStop,
+            WS_METHODS.spacesDatabasesCreate,
+            WS_METHODS.spacesDatabasesUpdate,
+            WS_METHODS.spacesDatabasesDataSourcesCreate,
+            WS_METHODS.spacesDatabasesDataSourcesUpdate,
+            WS_METHODS.spacesDatabasesDataSourcesDelete,
+            WS_METHODS.spacesDatabasesSchemaUpdate,
+            WS_METHODS.spacesDatabasesViewsCreate,
+            WS_METHODS.spacesDatabasesViewsUpdate,
+            WS_METHODS.spacesDatabasesViewsDelete,
+            WS_METHODS.spacesDatabasesRowsCreate,
+            WS_METHODS.spacesDatabasesRowsUpdate,
+            WS_METHODS.spacesDatabasesRowsMove,
           ]) {
             const permission = createCommandPermissions(runtime, tag);
             expect(registry.get(permission.permissionAtom(env))).toBe(false);
@@ -198,6 +210,10 @@ describe("command permissions", () => {
             WS_METHODS.spacesSearch,
             WS_METHODS.spacesReferencesResolve,
             WS_METHODS.spacesSharesGet,
+            WS_METHODS.spacesDatabasesList,
+            WS_METHODS.spacesDatabasesGet,
+            WS_METHODS.spacesDatabasesQuery,
+            WS_METHODS.spacesDatabasesRowsGet,
           ]) {
             const search = createCommandPermissions(runtime, tag);
             expect(registry.get(search.permissionAtom(env))).toBe(true);

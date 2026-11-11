@@ -35,6 +35,22 @@ import {
   WsSpacesSearchRpc,
   WsSpacesContextCaptureRpc,
   SpaceContextCaptureInput,
+  WsSpacesDatabasesListRpc,
+  WsSpacesDatabasesGetRpc,
+  WsSpacesDatabasesQueryRpc,
+  WsSpacesDatabasesRowsGetRpc,
+  WsSpacesDatabasesCreateRpc,
+  WsSpacesDatabasesUpdateRpc,
+  WsSpacesDatabasesDataSourcesCreateRpc,
+  WsSpacesDatabasesDataSourcesUpdateRpc,
+  WsSpacesDatabasesDataSourcesDeleteRpc,
+  WsSpacesDatabasesSchemaUpdateRpc,
+  WsSpacesDatabasesViewsCreateRpc,
+  WsSpacesDatabasesViewsUpdateRpc,
+  WsSpacesDatabasesViewsDeleteRpc,
+  WsSpacesDatabasesRowsCreateRpc,
+  WsSpacesDatabasesRowsUpdateRpc,
+  WsSpacesDatabasesRowsMoveRpc,
 } from "@t2code/contracts";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
@@ -111,6 +127,55 @@ export const group = RpcGroup.make(
   ),
   WsSpacesSearchRpc.setPayload(strictPayload(C.SpaceSearchInput)),
   WsSpacesTrashListRpc.setPayload(strictPayload(C.SpaceTrashListInput)),
+  WsSpacesDatabasesListRpc.setPayload(strictPayload(C.SpaceDatabaseListInput)),
+  WsSpacesDatabasesGetRpc.setPayload(strictPayload(C.SpaceDatabaseGetInput)),
+  WsSpacesDatabasesQueryRpc.setPayload(strictPayload(C.SpaceDatabaseQueryInput)),
+  WsSpacesDatabasesRowsGetRpc.setPayload(strictPayload(C.SpaceDatabaseRowGetInput)),
+  WsSpacesDatabasesCreateRpc.setPayload(
+    strictPayload(C.SpaceDatabaseCreateInput, (input) => ({ operation: "createDatabase", input })),
+  ),
+  WsSpacesDatabasesUpdateRpc.setPayload(
+    strictPayload(C.SpaceDatabaseUpdateInput, (input) => ({ operation: "updateDatabase", input })),
+  ),
+  WsSpacesDatabasesDataSourcesCreateRpc.setPayload(
+    strictPayload(C.SpaceDataSourceCreateInput, (input) => ({
+      operation: "createDataSource",
+      input,
+    })),
+  ),
+  WsSpacesDatabasesDataSourcesUpdateRpc.setPayload(
+    strictPayload(C.SpaceDataSourceUpdateInput, (input) => ({
+      operation: "updateDataSource",
+      input,
+    })),
+  ),
+  WsSpacesDatabasesDataSourcesDeleteRpc.setPayload(
+    strictPayload(C.SpaceDataSourceDeleteInput, (input) => ({
+      operation: "deleteDataSource",
+      input,
+    })),
+  ),
+  WsSpacesDatabasesSchemaUpdateRpc.setPayload(
+    strictPayload(C.SpaceSchemaUpdateInput, (input) => ({ operation: "updateSchema", input })),
+  ),
+  WsSpacesDatabasesViewsCreateRpc.setPayload(
+    strictPayload(C.SpaceViewCreateInput, (input) => ({ operation: "createView", input })),
+  ),
+  WsSpacesDatabasesViewsUpdateRpc.setPayload(
+    strictPayload(C.SpaceViewUpdateInput, (input) => ({ operation: "updateView", input })),
+  ),
+  WsSpacesDatabasesViewsDeleteRpc.setPayload(
+    strictPayload(C.SpaceViewDeleteInput, (input) => ({ operation: "deleteView", input })),
+  ),
+  WsSpacesDatabasesRowsCreateRpc.setPayload(
+    strictPayload(C.SpaceRowsCreateInput, (input) => ({ operation: "createRows", input })),
+  ),
+  WsSpacesDatabasesRowsUpdateRpc.setPayload(
+    strictPayload(C.SpaceRowsUpdateInput, (input) => ({ operation: "updateRows", input })),
+  ),
+  WsSpacesDatabasesRowsMoveRpc.setPayload(
+    strictPayload(C.SpaceRowsMoveInput, (input) => ({ operation: "moveRows", input })),
+  ),
 ).middleware(RpcScopeAuthorization);
 
 export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: string) {
@@ -151,5 +216,21 @@ export const handlers = Effect.fn("SpacesRpc.handlers")(function* (callerId: str
     [WS_METHODS.spacesPagesPermanentlyDelete]: (input) => service.permanentlyDeletePage(input),
     [WS_METHODS.spacesSearch]: (input) => service.search(input),
     [WS_METHODS.spacesTrashList]: (input) => service.listTrash(input),
+    [WS_METHODS.spacesDatabasesList]: (input) => service.listDatabases(input),
+    [WS_METHODS.spacesDatabasesGet]: (input) => service.getDatabase(input),
+    [WS_METHODS.spacesDatabasesQuery]: (input) => service.queryDatabase(input),
+    [WS_METHODS.spacesDatabasesRowsGet]: (input) => service.getDatabaseRows(input),
+    [WS_METHODS.spacesDatabasesCreate]: (input) => service.createDatabase(input),
+    [WS_METHODS.spacesDatabasesUpdate]: (input) => service.updateDatabase(input),
+    [WS_METHODS.spacesDatabasesDataSourcesCreate]: (input) => service.createDataSource(input),
+    [WS_METHODS.spacesDatabasesDataSourcesUpdate]: (input) => service.updateDataSource(input),
+    [WS_METHODS.spacesDatabasesDataSourcesDelete]: (input) => service.deleteDataSource(input),
+    [WS_METHODS.spacesDatabasesSchemaUpdate]: (input) => service.updateSchema(input),
+    [WS_METHODS.spacesDatabasesViewsCreate]: (input) => service.createView(input),
+    [WS_METHODS.spacesDatabasesViewsUpdate]: (input) => service.updateView(input),
+    [WS_METHODS.spacesDatabasesViewsDelete]: (input) => service.deleteView(input),
+    [WS_METHODS.spacesDatabasesRowsCreate]: (input) => service.createRows(input),
+    [WS_METHODS.spacesDatabasesRowsUpdate]: (input) => service.updateRows(input),
+    [WS_METHODS.spacesDatabasesRowsMove]: (input) => service.moveRows(input),
   });
 });

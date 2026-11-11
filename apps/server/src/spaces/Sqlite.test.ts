@@ -81,6 +81,7 @@ it.effect("keeps Spaces and chat connections, transactions, and migration ledger
       { migration_id: 14, name: "PageShares" },
       { migration_id: 15, name: "PageIcon" },
       { migration_id: 16, name: "PageBodyRevision" },
+      { migration_id: 17, name: "Databases" },
     ]);
     assert.equal(
       (yield* chat`SELECT name FROM effect_sql_migrations WHERE migration_id = 1`)[0]?.name,
@@ -145,7 +146,17 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             ids: yield* sql`SELECT * FROM spaces_ids ORDER BY id`,
             pages: yield* sql`SELECT * FROM spaces_pages ORDER BY page_id`.pipe(
               Effect.map((rows) =>
-                rows.map(({ icon: _icon, body_revision: _body, ...page }) => page),
+                rows.map(
+                  ({
+                    icon: _icon,
+                    body_revision: _body,
+                    data_source_id: _source,
+                    row_seq: _seq,
+                    row_position: _position,
+                    row_template: _template,
+                    ...page
+                  }) => page,
+                ),
               ),
             ),
             blocks: yield* sql`SELECT * FROM spaces_blocks ORDER BY block_id`,
@@ -632,6 +643,10 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
                 trash_origin: null,
                 icon: null,
                 body_revision: page.revision,
+                data_source_id: null,
+                row_seq: null,
+                row_position: null,
+                row_template: 0,
               })),
             );
             assert.deepEqual(yield* sql`SELECT * FROM spaces_blocks`, before.blocks);
@@ -730,7 +745,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
           assert.equal((yield* sql`SELECT COUNT(*) AS count FROM spaces`)[0]?.count, 2);
           assert.equal(
             (yield* sql`SELECT COUNT(*) AS count FROM effect_sql_migrations`)[0]?.count,
-            16,
+            17,
           );
           assert.equal(
             (yield* Effect.flip(sql`DELETE FROM spaces WHERE is_default = 1`))._tag,
@@ -844,7 +859,7 @@ it.layer(NodeServices.layer)("Spaces file persistence", (it) => {
             yield* sql`UPDATE effect_sql_migrations SET name = 'Unrelated' WHERE migration_id = 1`;
             break;
           case "newer":
-            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (17, 'NewerSpaces')`;
+            yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (18, 'NewerSpaces')`;
             break;
           case "missing":
             yield* sql`DROP TABLE effect_sql_migrations`;

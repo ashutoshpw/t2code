@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect";
 import * as SqlError from "effect/sql/SqlError";
 
 import { byteLength, ensureLimit, limits } from "./CorePolicy.ts";
+import * as Liveness from "./databases/Liveness.ts";
 import * as PageStore from "./PageStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as Reconciliation from "./assets/Reconciliation.ts";
@@ -55,13 +56,16 @@ export const resolve = Effect.fn("SpacesReferences.resolve")(function* (
       );
       if (page?.trash_batch_id !== null && page !== undefined)
         return { status: "trashed", pageId: page.page_id };
+      if (page && !(yield* Liveness.pageLive(page.page_id)))
+        return { status: "trashed", pageId: page.page_id };
       return page
         ? { status: "resolved", page: PageStore.summary(page) }
         : { status: "unavailable" };
     }
     if (row.page_id === null) return { status: "unavailable" };
     const ownerPage = yield* PageStore.load(row.page_id);
-    if (ownerPage.trash_batch_id !== null) return { status: "trashed", pageId: ownerPage.page_id };
+    if (ownerPage.trash_batch_id !== null || !(yield* Liveness.pageLive(ownerPage.page_id)))
+      return { status: "trashed", pageId: ownerPage.page_id };
     const sql = yield* SpacesSql.SpacesSql;
     const [child] = yield* sql<{
       readonly page_id: C.SpacePageId;

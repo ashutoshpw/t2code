@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as Option from "effect/Option";
 
-import { byteLength, ensureLimit, canonical, limits } from "./CorePolicy.ts";
+import { byteLength, ensureDatabaseLimit, ensureLimit, canonical, limits } from "./CorePolicy.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 import * as ReferenceStore from "./ReferenceStore.ts";
 import * as SearchStore from "./SearchStore.ts";
@@ -36,7 +36,16 @@ function ownValue(value: unknown, key: PropertyKey) {
     : undefined;
 }
 
+const strictDatabase = Schema.decodeUnknownOption(C.SpaceDatabaseBlock, {
+  onExcessProperty: "error",
+});
+const databaseBlock = (block: C.SpaceBlock) => {
+  const decoded = strictDatabase(block);
+  return Option.isSome(decoded) ? decoded.value : undefined;
+};
+
 function editable(block: C.SpaceBlock) {
+  if (databaseBlock(block)) return true;
   if (block.type === "child_page" || !knownBlock(block)) return false;
   if (media.has(block.type) && Option.isNone(strictKnown(block))) return false;
   const content = block.content as Schema.Json;
@@ -144,8 +153,14 @@ export const apply = Effect.fnUntraced(function* (
       if (!/^[0-9a-f]{32}$/.test(block.order))
         return yield* new C.SpaceValidationError({ reason: "invalid_order" });
       yield* ensureLimit("maxBlockBytes", byteLength(block));
+      const database = databaseBlock(block);
+      if (database)
+        yield* ensureDatabaseLimit("maxViewsPerDatabase", database.content.viewIds.length);
+      if (previous && (databaseBlock(previous) === undefined) !== (database === undefined))
+        return yield* new C.SpaceValidationError({ reason: "unsupported_block" });
       // Unknown envelope/content fields must survive replacement, including on known block types.
-      if (previous) {
+      // A database block decodes strictly, so it has none to preserve.
+      if (previous && !database) {
         const decoded = decodeKnown(previous);
         const projected = { ...decoded, content: { ...decoded.content } };
         const runs =

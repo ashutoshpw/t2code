@@ -130,6 +130,37 @@ it.effect("only request_secret asks Claude Code to load it up front", () =>
   }).pipe(Effect.provide(layerAdvertisedTools)),
 );
 
+const unresolvedRefs = (root: unknown): Array<string> => {
+  const missing: Array<string> = [];
+  const visit = (value: unknown) => {
+    if (Array.isArray(value)) return value.forEach(visit);
+    if (typeof value !== "object" || value === null) return;
+    for (const [key, child] of Object.entries(value)) {
+      if (key === "$ref" && typeof child === "string") {
+        let target: unknown = root;
+        for (const part of child.replace(/^#\/?/, "").split("/").filter(Boolean)) {
+          target =
+            typeof target === "object" && target !== null ? Reflect.get(target, part) : undefined;
+        }
+        if (target === undefined) missing.push(child);
+      } else visit(child);
+    }
+  };
+  visit(root);
+  return missing;
+};
+
+it.effect("every advertised tool schema resolves its references from the root", () =>
+  Effect.gen(function* () {
+    const mcp = yield* McpServer.McpServer;
+    const broken = mcp.tools.flatMap(({ tool }) => {
+      const missing = unresolvedRefs(tool.inputSchema);
+      return missing.length > 0 ? [[tool.name, missing]] : [];
+    });
+    expect(broken).toEqual([]);
+  }).pipe(Effect.provide(layerAdvertisedTools)),
+);
+
 // CI rejects a PR that raises any value above main's agentContextBudget.json, so growth
 // needs the agent-context-increase label. Lower the values when the text shrinks.
 it.effect("agent context matches the committed budget", () =>

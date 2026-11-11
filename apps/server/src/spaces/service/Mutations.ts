@@ -1,5 +1,6 @@
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
 import { byteLength, ensureLimit } from "../CorePolicy.ts";
 import * as Receipts from "../Receipts.ts";
 import {
@@ -7,6 +8,7 @@ import {
   decodePurgeResult,
   decodeMoveBlocksResult,
   decodeRequest,
+  strict,
   decodeLookup,
   decodeCreateResult,
   decodeRenameResult,
@@ -99,6 +101,15 @@ export const make = (rt: Runtime) => {
   ) {
     return decodePurgeResult((yield* mutate("permanentlyDeletePage", input)).result);
   });
+  const databaseMutation = <S extends Schema.Decoder<unknown>>(
+    operation: C.SpaceMutationRequest["operation"],
+    result: S,
+  ) => {
+    const decodeResult = Schema.decodeUnknownSync(result, strict);
+    return Effect.fn(`SpacesService.${operation}`)(function* (input: unknown) {
+      return decodeResult((yield* mutate(operation, input)).result);
+    });
+  };
   const lookupMutationReceipt = Effect.fn("SpacesService.lookupMutationReceipt")(function* (
     raw: unknown,
   ): Effect.fn.Return<C.SpaceReceiptLookupResult, C.SpaceServiceError> {
@@ -141,6 +152,18 @@ export const make = (rt: Runtime) => {
     trashPage,
     restorePage,
     permanentlyDeletePage,
+    createDatabase: databaseMutation("createDatabase", C.SpaceDatabaseCreateResult),
+    updateDatabase: databaseMutation("updateDatabase", C.SpaceDatabaseUpdateResult),
+    createDataSource: databaseMutation("createDataSource", C.SpaceDataSourceCreateResult),
+    updateDataSource: databaseMutation("updateDataSource", C.SpaceDataSourceUpdateResult),
+    deleteDataSource: databaseMutation("deleteDataSource", C.SpaceDataSourceDeleteResult),
+    updateSchema: databaseMutation("updateSchema", C.SpaceSchemaUpdateResult),
+    createView: databaseMutation("createView", C.SpaceViewCreateResult),
+    updateView: databaseMutation("updateView", C.SpaceViewUpdateResult),
+    deleteView: databaseMutation("deleteView", C.SpaceViewDeleteResult),
+    createRows: databaseMutation("createRows", C.SpaceRowsCreateResult),
+    updateRows: databaseMutation("updateRows", C.SpaceRowsUpdateResult),
+    moveRows: databaseMutation("moveRows", C.SpaceRowsMoveResult),
     lookupMutationReceipt,
   };
 };
