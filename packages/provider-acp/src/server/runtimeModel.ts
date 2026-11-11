@@ -1167,7 +1167,7 @@ export function extractMcpToolCallIdentity(
 >>>>>>> 39681c5e3d (fix: rebase seams in ssh tunnel tests, acp tool names and the text generator key)
     if (deviceTool !== undefined && T2_MCP_TOOL_NAMES.has(deviceTool)) {
       const input = acpMcpFallbackInput(rawInput.content);
-      return { server: "t3-code", tool: deviceTool, ...(input === undefined ? {} : { input }) };
+      return { server: "t2-code", tool: deviceTool, ...(input === undefined ? {} : { input }) };
     }
   }
   const candidates = [
