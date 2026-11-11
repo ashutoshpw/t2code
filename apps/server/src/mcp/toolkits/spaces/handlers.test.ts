@@ -287,6 +287,119 @@ const call = Effect.fn("SpacesMcpTest.call")(function* (
   }
   return result;
 });
+// Drives every database tool over MCP against the real service: schema ids in, typed cells, filtered windows out.
+const exerciseDatabaseTools = Effect.fn("SpacesMcpTest.databases")(function* <E, R>(
+  send: (name: string, args: unknown) => Effect.Effect<McpSchema.CallToolResult, E, R>,
+  admission: { readonly environmentId: EnvironmentId; readonly receiptEpoch: number },
+  spaceId: string,
+  pageId: string,
+) {
+  const write = (name: string, label: string, args: object) =>
+    send(name, { ...admission, mutationId: `db-${label}`, ...args }).pipe(Effect.map(value));
+  const created = yield* write("t2_spaces_databases_create", "create", {
+    spaceId,
+    title: "Tasks",
+    appendToPageId: pageId,
+    properties: [
+      { name: "Status", type: "select", options: [{ name: "Todo" }, { name: "Done" }] },
+      { name: "Due", type: "date" },
+    ],
+  });
+  const [statusId, dueId] = created.propertyIds as [string, string];
+  const read = yield* send("t2_spaces_databases_get", {
+    ...env,
+    databaseId: created.databaseId,
+  }).pipe(Effect.map(value));
+  const source = read.dataSources[0];
+  assert.equal(source.id, created.dataSourceId);
+  assert.equal(source.properties[statusId].name, "Status");
+  const options = source.properties[statusId].config.options as { id: string; name: string }[];
+  const done = options.find((option) => option.name === "Done")!.id;
+  const todo = options.find((option) => option.name === "Todo")!.id;
+  const rows = yield* write("t2_spaces_databases_rows_create", "rows", {
+    dataSourceId: created.dataSourceId,
+    beforeRowId: null,
+    rows: [
+      { title: "Ship", cells: { [statusId]: done, [dueId]: { start: "2026-11-01" } } },
+      { title: "Plan", cells: { [statusId]: todo, [dueId]: { start: "2027-02-01" } } },
+    ],
+  });
+  const query = (extra: object) =>
+    send("t2_spaces_databases_query", {
+      ...env,
+      dataSourceId: created.dataSourceId,
+      mode: "rows",
+      timeZone: "UTC",
+      ...extra,
+    }).pipe(Effect.map(value));
+  const titles = (result: { rows: { page: { title: string } }[] }) =>
+    result.rows.map((row) => row.page.title);
+  assert.deepEqual(
+    titles(yield* query({ filter: { property: statusId, operator: "equals", value: done } })),
+    ["Ship"],
+  );
+  assert.deepEqual(
+    titles(
+      yield* query({
+        filter: { property: dueId, operator: "on_or_after", value: "2027-01-01" },
+      }),
+    ),
+    ["Plan"],
+  );
+  assert.deepEqual(titles(yield* query({ viewId: created.viewId })), ["Ship", "Plan"]);
+  const planId = rows.rows[1].pageId;
+  yield* write("t2_spaces_databases_rows_update", "update", {
+    dataSourceId: created.dataSourceId,
+    rows: [{ pageId: planId, cells: { [statusId]: done, [dueId]: null } }],
+  });
+  const row = yield* send("t2_spaces_databases_rows_get", { ...env, pageId: planId }).pipe(
+    Effect.map(value),
+  );
+  assert.equal(row.row.cells[statusId], done);
+  assert.notProperty(row.row.cells, dueId);
+  yield* write("t2_spaces_databases_rows_move", "move", {
+    dataSourceId: created.dataSourceId,
+    pageIds: [planId],
+    beforeRowId: rows.rows[0].pageId,
+  });
+  assert.deepEqual(titles(yield* query({})), ["Plan", "Ship"]);
+  const schema = yield* write("t2_spaces_databases_schema_update", "schema", {
+    dataSourceId: created.dataSourceId,
+    operations: [{ op: "updateProperty", propertyId: statusId, name: "Severity" }],
+  });
+  assert.equal(schema.clearedCells, 0);
+  const view = yield* write("t2_spaces_databases_views_create", "view", {
+    dataSourceId: created.dataSourceId,
+    name: "Done",
+    type: "table",
+    beforeViewId: null,
+  });
+  yield* write("t2_spaces_databases_views_update", "view-update", {
+    viewId: view.viewId,
+    name: "Finished",
+  });
+  yield* write("t2_spaces_databases_views_delete", "view-delete", { viewId: view.viewId });
+  yield* write("t2_spaces_databases_update", "db-update", {
+    databaseId: created.databaseId,
+    title: "Work",
+  });
+  const second = yield* write("t2_spaces_databases_data_sources_create", "source", {
+    databaseId: created.databaseId,
+    name: "Archive",
+  });
+  yield* write("t2_spaces_databases_data_sources_update", "source-update", {
+    dataSourceId: second.dataSourceId,
+    name: "Old",
+  });
+  const listed = yield* send("t2_spaces_databases_list", { ...env, spaceId }).pipe(
+    Effect.map(value),
+  );
+  assert.deepEqual(
+    listed.items[0].dataSources.map((entry: { name: string }) => entry.name),
+    ["Tasks", "Old"],
+  );
+  assert.equal(listed.items[0].database.title, "Work");
+});
 it.layer(Layer.merge(NodeServices.layer, NodePlatformCrypto.layer))(
   "registered Spaces MCP",
   (it) => {
@@ -625,6 +738,7 @@ it.layer(Layer.merge(NodeServices.layer, NodePlatformCrypto.layer))(
             ).receipt.result.page.id,
             page.id,
           );
+          yield* exerciseDatabaseTools(send, admission, renamed.space.id, page.id);
           assert.sameMembers(
             [...called],
             server.tools.map((entry) => entry.tool.name),
@@ -826,6 +940,47 @@ it.layer(Layer.merge(NodeServices.layer, NodePlatformCrypto.layer))(
           }),
         ),
     );
+    it.effect("refuses database writes for read-only clients and foreign environments", () =>
+      fixture(() =>
+        Effect.gen(function* () {
+          const readOnly = {
+            ...scope,
+            client: { ...scope.client!, access: "read-only" as const },
+          };
+          const library = decodeList(value(yield* call("t2_spaces_list", env)));
+          const input = {
+            ...env,
+            receiptEpoch: library.mutationAdmission.epoch,
+            mutationId: "db-denied",
+            spaceId: library.defaultSpaceId,
+            title: "Denied",
+          };
+          assert.equal(
+            failure(yield* call("t2_spaces_databases_create", input, readOnly)).code,
+            "capability_denied",
+          );
+          assert.equal(
+            failure(
+              yield* call("t2_spaces_databases_create", {
+                ...input,
+                environmentId: EnvironmentId.make("other"),
+              }),
+            )._tag,
+            "SpaceEnvironmentMismatchError",
+          );
+          assert.equal(
+            failure(
+              yield* call("t2_spaces_databases_list", {
+                environmentId: EnvironmentId.make("other"),
+              }),
+            )._tag,
+            "SpaceEnvironmentMismatchError",
+          );
+          const service = yield* SpacesService.SpacesService;
+          assert.deepEqual((yield* service.listDatabases(env)).items, []);
+        }),
+      ),
+    );
     it.effect("uses the disabled-by-default service gate even with a granted capability", () =>
       fixture(
         () =>
@@ -877,6 +1032,51 @@ it.layer(Layer.merge(NodeServices.layer, NodePlatformCrypto.layer))(
             );
           }),
         ),
+    );
+    it.effect("keeps strict decoding behind the compact advertised database schemas", () =>
+      fixture(() =>
+        Effect.gen(function* () {
+          const library = decodeList(value(yield* call("t2_spaces_list", env)));
+          const base = { ...env, receiptEpoch: library.mutationAdmission.epoch };
+          const messages = [];
+          for (const [name, args] of [
+            [
+              "t2_spaces_databases_views_create",
+              {
+                ...base,
+                mutationId: "bad-view",
+                dataSourceId: "ds",
+                name: "V",
+                type: "table",
+                filter: { and: [{ property: "p", operator: 5 }] },
+              },
+            ],
+            [
+              "t2_spaces_databases_query",
+              {
+                ...env,
+                dataSourceId: "ds",
+                mode: "rows",
+                timeZone: "UTC",
+                sorts: [{ property: "p" }],
+              },
+            ],
+            [
+              "t2_spaces_receipts_get",
+              {
+                request: { operation: "createRows", input: { ...base, mutationId: "m", rows: 1 } },
+              },
+            ],
+          ] as const) {
+            const rejected = yield* call(name, args).pipe(Effect.flip);
+            assert.isBelow(Buffer.byteLength(JSON.stringify(rejected)), 2048);
+            messages.push(JSON.stringify(rejected));
+          }
+          assert.include(messages[0], "filter.and[0].operator");
+          assert.include(messages[1], "sorts[0]");
+          assert.include(messages[2], "request.input");
+        }),
+      ),
     );
     it.effect(
       "preserves dangerous own opaque JSON through MCP decode, storage, reads and receipt fingerprints",

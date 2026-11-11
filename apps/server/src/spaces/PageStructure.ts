@@ -236,7 +236,12 @@ export const plan = Effect.fn("SpacesStructure.plan")(function* (
       BlockStore.storedBlockFromRow(owner).type === "child_page" &&
       parent &&
       parent.space_id === source.space_id;
-    if (!rootValid && (!childValid || parent?.trash_batch_id !== null)) {
+    // A trashed row restores in place: its parent is its data source, never a destination.
+    const rowValid =
+      source.data_source_id !== null &&
+      source.root_order === null &&
+      source.owner_block_id === null;
+    if (!rowValid && !rootValid && (!childValid || parent?.trash_batch_id !== null)) {
       const origin = PageStore.origin(source);
       yield* root(origin.spaceId).pipe(
         Effect.catchTags({
