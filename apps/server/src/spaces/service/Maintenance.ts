@@ -61,6 +61,7 @@ export const make = (rt: Runtime) => {
               assets: true,
               contextCapture: true,
               databases: true,
+              databaseChanges: true,
             },
           } satisfies C.SpaceCapability;
         }),

@@ -546,7 +546,7 @@ it.layer(NodeServices.layer)("Spaces databases", (it) => {
   );
 
   it.effect(
-    "rejects adopting a database into one of its own rows and lets a nested database die with its host",
+    "refuses adopting a database from one of its own rows and lets a nested database die with its host",
     () =>
       fixture(() =>
         Effect.gen(function* () {
@@ -565,7 +565,7 @@ it.layer(NodeServices.layer)("Spaces databases", (it) => {
             yield* recoveryIntent(service, common, page.id, "restore", "restore-outer"),
           );
           assert.isTrue((yield* kit.get(nested.databaseId)).database.live);
-          // With its home block deleted the outer database cannot be adopted by its own row.
+          // With its home block deleted its rows are unreachable, so nothing in one can adopt it.
           yield* service.applyBlockBatch({
             ...common,
             mutationId: "drop-outer-home",
@@ -585,7 +585,7 @@ it.layer(NodeServices.layer)("Spaces databases", (it) => {
                 mutations: [insert(blockFor("self-block", outer.databaseId))],
               }),
             ),
-            "cycle",
+            "trashed",
           );
         }),
       ),

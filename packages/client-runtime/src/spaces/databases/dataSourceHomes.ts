@@ -11,6 +11,8 @@ export interface DataSourceHomes {
   readonly homes: ReadonlyMap<string, DataSourceHome>;
   /** Ids that no listed database owns, after every bounded page was read. */
   readonly missing: ReadonlyArray<string>;
+  /** A page read failed or the page cap was reached: a missing id is unknown, not deleted. */
+  readonly incomplete: boolean;
 }
 
 const MAX_PAGES = 20;
@@ -34,18 +36,24 @@ export function findDataSourceHomes(input: {
               title: item.database.title.trim() || "Untitled",
             });
     };
+    let incomplete = false;
     const walk = async (start: ListPage | null, anySpace: boolean) => {
       let page = start;
-      for (let read = 0; read < MAX_PAGES && homes.size < wanted.size; read += 1) {
-        if (page === null) page = await input.listPage(undefined, anySpace);
-        else if (page.nextCursor === null) return;
-        else page = await input.listPage(page.nextCursor, anySpace);
-        scan(page);
+      try {
+        for (let read = 0; read < MAX_PAGES && homes.size < wanted.size; read += 1) {
+          if (page === null) page = await input.listPage(undefined, anySpace);
+          else if (page.nextCursor === null) return;
+          else page = await input.listPage(page.nextCursor, anySpace);
+          scan(page);
+        }
+        if (homes.size < wanted.size && page?.nextCursor != null) incomplete = true;
+      } catch {
+        incomplete = true;
       }
     };
     if (input.first !== null) scan(input.first);
     await walk(input.first, false);
-    if (homes.size < wanted.size) await walk(null, true);
-    return { homes, missing: input.ids.filter((id) => !homes.has(id)) };
+    if (homes.size < wanted.size && !incomplete) await walk(null, true);
+    return { homes, missing: input.ids.filter((id) => !homes.has(id)), incomplete };
   })();
 }

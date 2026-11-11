@@ -6,6 +6,8 @@ import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { vi } from "vite-plus/test";
+import { databasePorts } from "../src/spaces/databases/data/ports.ts";
+import { environmentId } from "./spacesDatabases.standin.support.ts";
 import { browser, createLiveDatabase, openSurface } from "./spacesDatabases.client.support.ts";
 import { withDatabasesWorld, type DatabasesWorld } from "./spacesDatabases.support.ts";
 
@@ -175,6 +177,77 @@ it.effect(
             projectRows.dispose();
           });
         }),
+      ),
+    ).pipe(Effect.provide(live)),
+);
+
+it.effect(
+  "answers computedPending for a rollup of a changed formula until the drain finishes",
+  () =>
+    Effect.scoped(
+      withDatabasesWorld(
+        (world) =>
+          Effect.gen(function* () {
+            yield* Effect.promise(async () => {
+              const { projects, tasks, estimate, link, twin, p } = await work(world);
+              const double = (await tasks.actions.addProperty({
+                name: "Double",
+                type: "formula",
+                config: { expression: 'prop("Estimate") * 2' },
+              }))!;
+              const total = (await projects.actions.addProperty({
+                name: "Total",
+                type: "rollup",
+                config: { relationPropertyId: twin, targetPropertyId: double, function: "sum" },
+              }))!;
+              await tasks.saved();
+              await projects.saved();
+              await run(world.service.drainComputed);
+
+              // More rows read the formula than one mutation recomputes, so the rest queue.
+              const limit = tasks.model().limits.maxRowsPerMutation;
+              const homes: C.SpacePageId[] = [];
+              for (const title of ["X1", "X2", "X3"])
+                homes.push((await projects.actions.createRow({ cells: { title } }))!.page.id);
+              const extra = Array.from({ length: 250 }, (_, n) => ({
+                title: `Bulk ${n}`,
+                cells: { [estimate]: 1, [link]: [homes[n % 3]!] },
+              }));
+              for (let from = 0; from < extra.length; from += limit)
+                await databasePorts.run.createRows(tasks.registry, environmentId, {
+                  dataSourceId: tasks.dataSource().id,
+                  rows: extra.slice(from, from + limit),
+                });
+              await run(world.service.drainComputed);
+
+              // The definition changes on the rows the rollup reads, in the other data source.
+              await tasks.actions.updateSchema([
+                {
+                  op: "updateProperty",
+                  propertyId: double,
+                  config: { expression: 'prop("Estimate") * 3' },
+                },
+              ]);
+              const rows = projects.openQuery();
+              const taskRows = tasks.openQuery();
+              await taskRows.ready();
+              await rows.ready();
+              assert.isTrue(taskRows.snapshot().computedPending);
+              assert.isTrue(rows.snapshot().computedPending);
+              taskRows.dispose();
+
+              await run(world.service.drainComputed);
+              const first = () => rows.rows().find((row) => row.page.id === p[0]!)?.cells[total];
+              await rows.until(
+                () =>
+                  !rows.snapshot().computedPending &&
+                  JSON.stringify(first()) === JSON.stringify(number(21)),
+              );
+              rows.dispose();
+            });
+          }),
+        // The background drain would finish the queue before the query could see it.
+        { backgroundDrain: false },
       ),
     ).pipe(Effect.provide(live)),
 );

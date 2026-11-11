@@ -77,7 +77,7 @@ const failed = (kind: ComputedRecord["kind"], message: string, old?: ComputedRec
       ...(old?.ast === undefined ? {} : { ast: old.ast }),
       ...(old?.refs === undefined ? {} : { refs: old.refs }),
       type: "text",
-      deps: old?.deps ?? emptyDeps,
+      deps: emptyDeps,
       volatile: false,
       error: message,
     },
@@ -319,7 +319,14 @@ export const define = Effect.fn("SpacesDatabases.defineComputed")(function* (
   if (before !== undefined && before !== queryTypeOf(compiled.record))
     yield* ViewStore.strip(
       ctx.dataSourceId,
-      { propertyId, column: false, filters: true, sorts: true, groups: true },
+      {
+        propertyId,
+        column: false,
+        filters: true,
+        sorts: true,
+        groups: true,
+        dateReference: queryTypeOf(compiled.record) !== "date",
+      },
       isoNow(ctx.now),
     );
   yield* checkGraph(ctx.dataSourceId, propertyId);
@@ -349,11 +356,19 @@ const orderedProperties = Effect.fn("SpacesDatabases.orderComputed")(function* (
   // A Set visits entries added while it is iterated, so this walks to the transitive readers.
   for (const id of reached)
     for (const reader of yield* Deps.sourcesReading(id)) reached.add(reader);
-  const nodes = yield* sql<{
-    readonly data_source_id: string;
-    readonly property_id: string;
-  }>`SELECT data_source_id, property_id FROM spaces_db_properties
+  type Node = { readonly data_source_id: string; readonly property_id: string };
+  const readers = yield* sql<Node>`SELECT data_source_id, property_id FROM spaces_db_properties
     WHERE data_source_id IN ${sql.in([...reached])} AND type IN ('formula', 'rollup') AND deleted_at_ms IS NULL`;
+  // An errored or never-compiled record has no dependencies to find it by; it is rechecked when a
+  // data source it might read through a relation changes.
+  const recoverable =
+    yield* sql<Node>`SELECT p.data_source_id, p.property_id FROM spaces_db_properties p
+    WHERE p.type IN ('formula', 'rollup') AND p.deleted_at_ms IS NULL
+    AND (p.computed IS NULL OR json_extract(p.computed, '$.error') IS NOT NULL)
+    AND p.data_source_id IN (SELECT r.data_source_id FROM spaces_db_properties r
+      WHERE r.type = 'relation' AND r.deleted_at_ms IS NULL
+      AND json_extract(r.config, '$.dataSourceId') IN ${sql.in([...sources])})`;
+  const nodes = [...readers, ...recoverable.filter((node) => !reached.has(node.data_source_id))];
   const ids = new Set(nodes.map((node) => key(node.data_source_id, node.property_id)));
   const remaining = new Map<string, Set<string>>();
   for (const node of nodes) {
@@ -406,7 +421,14 @@ export const refresh = Effect.fn("SpacesDatabases.refreshComputed")(function* (
     if (before !== undefined && before !== queryTypeOf(compiled.record))
       yield* ViewStore.strip(
         dataSourceId!,
-        { propertyId: propertyId!, column: false, filters: true, sorts: true, groups: true },
+        {
+          propertyId: propertyId!,
+          column: false,
+          filters: true,
+          sorts: true,
+          groups: true,
+          dateReference: queryTypeOf(compiled.record) !== "date",
+        },
         iso,
       );
   }

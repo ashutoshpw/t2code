@@ -10,7 +10,7 @@ import type { SpaceDateValue, SpaceFilter, SpacePropertyId } from "@t2code/contr
 const MINUTES_PER_DAY = 1440;
 const DAY_MS = 86_400_000;
 const DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})/;
-const TIME_PATTERN = /T(\d{2}):(\d{2})/;
+const TIME_PATTERN = /T(\d{2}):(\d{2})(:\d{2}(?:\.\d+)?)?/;
 const OFFSET_PATTERN = /(Z|[+-]\d{2}:?\d{2})$/;
 
 const pad = (value: number, size = 2) => String(value).padStart(size, "0");
@@ -108,7 +108,11 @@ export interface WallStamp {
   /** Wall-clock minutes since 1970-01-01; date-only values sit at midnight. */
   readonly serial: number;
   readonly timed: boolean;
+  /** `:SS` or `:SS.mmm` of the stored time; a move keeps it, the serial counts whole minutes. */
+  readonly seconds?: string;
 }
+
+const secondsOf = (text: string | undefined) => (text === undefined ? {} : { seconds: text });
 
 /** Reads a stored `start` or `end`. Strings carrying an offset or `Z` are shown in `zone`. */
 function readStamp(stamp: string, zone: string): WallStamp | null {
@@ -120,9 +124,13 @@ function readStamp(stamp: string, zone: string): WallStamp | null {
     const normalized = stamp.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
     const ms = Date.parse(normalized);
     if (Number.isNaN(ms)) return null;
-    return { serial: wallSerialOf(ms, zone), timed: true };
+    return { serial: wallSerialOf(ms, zone), timed: true, ...secondsOf(time[3]) };
   }
-  return { serial: days * MINUTES_PER_DAY + Number(time[1]) * 60 + Number(time[2]), timed: true };
+  return {
+    serial: days * MINUTES_PER_DAY + Number(time[1]) * 60 + Number(time[2]),
+    timed: true,
+    ...secondsOf(time[3]),
+  };
 }
 
 export interface ReadDate {
@@ -166,9 +174,9 @@ export function rowDaySpan(
   return { startDay, endDay };
 }
 
-function formatSerial(serial: number, timed: boolean): string {
+function formatSerial(serial: number, timed: boolean, seconds = ":00"): string {
   const day = serialDay(serial);
-  return timed ? `${day}T${serialTime(serial)}:00` : day;
+  return timed ? `${day}T${serialTime(serial)}${seconds}` : day;
 }
 
 /**
@@ -193,8 +201,8 @@ export function moveDateValue(
   const end = Math.max(start, moved);
   const keepEnd = end > start;
   return {
-    start: formatSerial(start, timed),
-    ...(keepEnd ? { end: formatSerial(end, timed) } : {}),
+    start: formatSerial(start, timed, read.start.seconds),
+    ...(keepEnd ? { end: formatSerial(end, timed, (read.end ?? read.start).seconds) } : {}),
     ...(timed ? { timeZone: read.zone ?? viewerZone } : {}),
   };
 }

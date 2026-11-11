@@ -135,4 +135,43 @@ describe("deriveViewRows", () => {
     expect(result.groups?.[1]).toBe(other);
     expect(result.rows).toEqual([]);
   });
+
+  it("does not count a surviving placed card twice, nor show it beside its loaded copy", () => {
+    const bucket = { key, rows: [row("a")], count: 30 } as never as SpaceGroupBucket;
+    const group = canonicalJson(bucket.key);
+    const survivor = deriveViewRows({
+      mode: "groups",
+      dataSourceId: source,
+      snapshot: snapshot({
+        groups: [bucket],
+        placed: [{ row: row("p"), group, counted: true }],
+      }),
+      writerPending: EMPTY_PENDING_CELL_EDITS,
+    });
+    expect(survivor.groups?.[0]?.rows.map((entry) => entry.page.id)).toEqual(["a", "p"]);
+    expect(survivor.groups?.[0]?.count).toBe(30);
+    const loadedLater = deriveViewRows({
+      mode: "groups",
+      dataSourceId: source,
+      snapshot: snapshot({
+        groups: [{ ...bucket, rows: [row("a"), row("p")] } as never],
+        placed: [{ row: row("p"), group, counted: true }],
+      }),
+      writerPending: EMPTY_PENDING_CELL_EDITS,
+    });
+    expect(loadedLater.groups?.[0]?.rows).toHaveLength(2);
+  });
+
+  it("keeps the rows of a grouped answer on screen while the view turns flat", () => {
+    const a = { key, rows: [row("a")], count: 1 } as never as SpaceGroupBucket;
+    const b = { key: { kind: "empty" }, rows: [row("b")], count: 1 } as never as SpaceGroupBucket;
+    const result = deriveViewRows({
+      mode: "rows",
+      dataSourceId: source,
+      snapshot: snapshot({ groups: [a, b] }),
+      writerPending: EMPTY_PENDING_CELL_EDITS,
+    });
+    expect(result.rows.map((entry) => entry.page.id)).toEqual(["a", "b"]);
+    expect(result.groups).toBeNull();
+  });
 });

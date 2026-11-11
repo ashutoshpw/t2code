@@ -54,6 +54,7 @@ export * from "./spacesDatabaseFilters.ts";
 export * from "./spacesDatabaseViews.ts";
 export * from "./spacesDatabaseQuery.ts";
 export * from "./spacesDatabaseMutations.ts";
+export * from "./spacesDatabaseChanges.ts";
 
 const textContent = { runs: SpaceRichText };
 export const SpaceKnownBlock = Schema.Union([
@@ -800,6 +801,7 @@ export const SpaceCapability = Schema.Struct({
       contextCapture: Schema.optionalKey(Schema.Literal(true)),
       assets: Schema.optionalKey(Schema.Literal(true)),
       databases: Schema.optionalKey(Schema.Literal(true)),
+      databaseChanges: Schema.optionalKey(Schema.Literal(true)),
     }),
   ),
 });

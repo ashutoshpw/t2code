@@ -56,8 +56,9 @@ export function parseLocalizedNumber(
 }
 
 /** The number as typed in an editor: percent values are shown as whole percents. */
-export function numberToText(value: number, format: string): string {
-  return String(format === "percent" ? Number((value * 100).toPrecision(12)) : value);
+export function numberToText(value: number, format: string, decimal = "."): string {
+  const text = String(format === "percent" ? Number((value * 100).toPrecision(12)) : value);
+  return decimal === "," ? text.replace(".", ",") : text;
 }
 
 type OptionKnown = Extract<
@@ -71,8 +72,26 @@ const optionByName = (known: OptionKnown, name: string) => {
 
 const TRUE_WORDS = new Set(["true", "yes", "y", "1", "x", "checked"]);
 
-/** Plain text (a pasted cell or a typed value) to the cell it stands for; never a partial value. */
-export function parseCell(text: string, known: SpaceKnownDatabaseProperty): ParsedCell {
+/** The decimal separator of a locale tag; "." when the runtime cannot tell. */
+export function localeDecimal(locale?: string): string {
+  try {
+    const part = new Intl.NumberFormat(locale).formatToParts(1.1).find((p) => p.type === "decimal");
+    return part?.value ?? ".";
+  } catch {
+    return ".";
+  }
+}
+
+/**
+ * Plain text (a pasted cell or a typed value) to the cell it stands for; never a partial value.
+ * Under a comma-decimal locale (`decimal: ","`) numbers read strictly by that locale; otherwise a
+ * comma is a grouping mark, so "1,5" is 15.
+ */
+export function parseCell(
+  text: string,
+  known: SpaceKnownDatabaseProperty,
+  locale?: { readonly decimal: string },
+): ParsedCell {
   const trimmed = text.trim();
   switch (known.type) {
     case "title":
@@ -83,7 +102,10 @@ export function parseCell(text: string, known: SpaceKnownDatabaseProperty): Pars
     case "text":
       return done(trimmed === "" ? null : [{ text: trimmed, marks: [] }]);
     case "number": {
-      const number = parseNumber(text, known.config.format);
+      const number =
+        locale?.decimal === ","
+          ? parseLocalizedNumber(text, known.config.format, ",")
+          : parseNumber(text, known.config.format);
       return number === undefined ? FAIL : done(number);
     }
     case "checkbox":

@@ -196,7 +196,11 @@ export const validateLayout = Effect.fn("SpacesDatabases.validateLayout")(functi
   references = true,
 ) {
   const decoded = layoutDecoders[type](layout ?? {});
-  if (decoded === undefined || !isObject(decoded)) return yield* dbError("invalid_view");
+  if (decoded === undefined || !isObject(decoded)) {
+    // A calendar or timeline that lost its date property is a defined state; an untouched layout may stay so.
+    if (!references && isObject(layout)) return layout;
+    return yield* dbError("invalid_view");
+  }
   if (!references) return decoded;
   const named = Effect.fn("SpacesDatabases.layoutProperty")(function* (
     id: string | undefined,

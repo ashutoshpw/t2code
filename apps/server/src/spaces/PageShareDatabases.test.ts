@@ -19,6 +19,7 @@ import {
   hostname,
   ids,
   layerGated,
+  layerGatedRowAssets,
   layerTest,
   options,
   reason,
@@ -1042,4 +1043,64 @@ it.effect("keeps database work in its own pool of eight so page reads are never 
       assert.lengthOf((yield* f.shares.database(f.token, undefined, f.blockId)).views, 1);
     }).pipe(Effect.provide(layerGated(gate, entered)));
   }),
+);
+
+it.effect(
+  "lets row assets wait for their own pool, so covers are never refused and pages stay free",
+  () =>
+    Effect.gen(function* () {
+      const gate = yield* Deferred.make<void>();
+      const entered = yield* Queue.unbounded<void>();
+      return yield* Effect.scoped(
+        Effect.gen(function* () {
+          const f = yield* sharedDatabase();
+          const asset = yield* f.uploadImage("pic");
+          yield* f.attachImage(f.rowIds[0]!, "row-image", asset);
+          const row = { blockId: f.blockId, viewId: f.viewId, rowId: f.rowIds[0]! };
+          const held = yield* Effect.forEach(Array.from({ length: 8 }), () =>
+            f.shares.database(f.token, undefined, f.blockId).pipe(Effect.forkChild),
+          );
+          for (let i = 0; i < 8; i++) yield* Queue.take(entered);
+          yield* Deferred.succeed(gate, undefined);
+          for (const fiber of held) yield* Fiber.join(fiber);
+          const results = yield* Effect.forEach(
+            Array.from({ length: 50 }),
+            () => Effect.result(f.shares.asset(f.token, undefined, asset, row)),
+            { concurrency: "unbounded" },
+          );
+          assert.equal(results.filter((result) => result._tag === "Success").length, 50);
+          assert.equal((yield* f.shares.page(f.token)).page.title, "Host");
+        }),
+      ).pipe(Effect.provide(layerGated(gate, entered)));
+    }),
+);
+
+it.effect(
+  "refuses row assets past eight in flight and 256 waiting, and takes them again after",
+  () =>
+    Effect.gen(function* () {
+      const gate = yield* Deferred.make<void>();
+      const entered = yield* Queue.unbounded<void>();
+      return yield* Effect.scoped(
+        Effect.gen(function* () {
+          const f = yield* sharedDatabase();
+          const asset = yield* f.uploadImage("pic");
+          yield* f.attachImage(f.rowIds[0]!, "row-image", asset);
+          const row = { blockId: f.blockId, viewId: f.viewId, rowId: f.rowIds[0]! };
+          const request = f.shares.asset(f.token, undefined, asset, row);
+          // Fibers that start immediately run to the pool: eight take a permit and announce
+          // themselves, the rest join the queue.
+          const admitted = yield* Effect.forEach(Array.from({ length: 8 + 256 }), () =>
+            request.pipe(Effect.forkChild({ startImmediately: true })),
+          );
+          for (let i = 0; i < 8; i++) yield* Queue.take(entered);
+          assert.equal(yield* reason(request), "busy");
+          assert.equal((yield* f.shares.page(f.token)).page.title, "Host");
+          yield* Deferred.succeed(gate, undefined);
+          for (const fiber of admitted)
+            assert.equal((yield* Fiber.join(fiber)).mimeType, "image/png");
+          assert.equal((yield* request).mimeType, "image/png");
+        }),
+      ).pipe(Effect.provide(layerGatedRowAssets(gate, entered)));
+    }),
 );

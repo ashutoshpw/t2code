@@ -6,6 +6,7 @@ import "~/index.css";
 import { render, stubGlobal } from "../../../../test/render";
 import SharedDatabase, { type SharedDatabaseProps } from "./SharedDatabase";
 import {
+  SOURCE_PROPERTIES,
   description,
   refuse,
   row,
@@ -112,6 +113,30 @@ describe("SharedDatabase", () => {
     await expect.element(screen.getByRole("link", { name: "After restart" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Before" }).elements()).toHaveLength(0);
     expect(share.queries().map((call) => call.params.get("cursor"))).toEqual([null, "c1", null]);
+  });
+
+  it("names the title column after the title property and says the link ended when more rows are refused", async () => {
+    const share = shareFetch({
+      database: () =>
+        description([tableView], "Tasks", {
+          ...SOURCE_PROPERTIES,
+          title: { ...SOURCE_PROPERTIES.title, name: "Task" },
+        }),
+      query: (call) =>
+        call.params.get("cursor") === "c1"
+          ? refuse("inactive")
+          : windowOf([row("r1", "First")], { nextCursor: "c1" }),
+    });
+    using _fetch = stubGlobal("fetch", share.fetch);
+    await using screen = await render(<SharedDatabase {...props} />, { router: "/" });
+    await expect.element(screen.getByRole("columnheader", { name: "Task" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    await expect
+      .element(
+        screen.getByText("This link no longer works. It was stopped, replaced or has expired."),
+      )
+      .toBeVisible();
+    expect(screen.getByText("Couldn't load more rows.").elements()).toHaveLength(0);
   });
 
   it("says when the database is not part of the link while the rest of the page lives", async () => {

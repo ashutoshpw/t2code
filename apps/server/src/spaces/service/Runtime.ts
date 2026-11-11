@@ -23,7 +23,8 @@ import * as Inventory from "../assets/Inventory.ts";
 import * as GC from "../assets/GC.ts";
 import * as ServerEnvironment from "../../environment/ServerEnvironment.ts";
 import * as ServerSettings from "../../serverSettings.ts";
-import { byteLength, computedDrainRows, limits } from "../CorePolicy.ts";
+import { byteLength, computedDrainRows, databaseSweepIntervalMs, limits } from "../CorePolicy.ts";
+import * as Changes from "../databases/Changes.ts";
 import * as DatabaseStore from "../databases/DatabaseStore.ts";
 import * as Drain from "../databases/computed/Drain.ts";
 import { isoNow } from "../databases/Types.ts";
@@ -34,11 +35,14 @@ import * as ReferenceStore from "../ReferenceStore.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 import * as SearchStore from "../SearchStore.ts";
 import * as Sqlite from "../Sqlite.ts";
+import * as DatabaseSweep from "./DatabaseSweep.ts";
 import { assetErrors, claimFrom, isServiceError, needsWrite } from "./Helpers.ts";
 
 export interface RuntimeOptions {
   /** Computes queued formula and rollup values in the background (default). Tests turn it off. */
   readonly backgroundDrain?: boolean;
+  /** Removes dead databases and orphan views once their retention has passed (default). Tests turn it off. */
+  readonly backgroundSweep?: boolean;
 }
 
 export const make = Effect.fnUntraced(function* (
@@ -51,6 +55,7 @@ export const make = Effect.fnUntraced(function* (
   const scope = yield* Effect.scope;
   const platform = yield* Effect.context<FileSystem.FileSystem | Path.Path>();
   const mutex = yield* Semaphore.make(1);
+  const changes = Changes.makeHub();
   const acquiredSql = yield* Ref.make(Option.none<SpacesSql.SpacesSql["Service"]>());
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -59,7 +64,11 @@ export const make = Effect.fnUntraced(function* (
     stagingDir: path.join(path.dirname(dbPath), "spaces", "staging"),
   };
   const backgroundDrain = options?.backgroundDrain !== false;
+  const backgroundSweep = options?.backgroundSweep !== false;
   let draining = false;
+  let sweeping = false;
+  let lastSweepMs: number | undefined;
+  const skippedRows = new Set<string>();
   const activeUploads = new Set<string>();
   const uploadFibers = new Map<string, Fiber.Fiber<unknown, unknown>>();
   const collectionOwner = NodeCrypto.randomUUID();
@@ -215,6 +224,24 @@ export const make = Effect.fnUntraced(function* (
         isServiceError(cause) ? Effect.fail(cause) : Effect.die(cause),
       ),
     );
+  // Records the revisions a write changes, reads them in the same transaction, and hands them to
+  // subscribers only after it commits. A rolled-back transaction publishes nothing. Call under the mutex.
+  const publishing = Effect.fn("SpacesService.publishing")(function* <A, E, R>(
+    sql: SpacesSql.SpacesSql["Service"],
+    body: Effect.Effect<A, E, R>,
+  ) {
+    const collector = Changes.makeCollector();
+    const [value, batch] = yield* sql.withTransaction(
+      Effect.gen(function* () {
+        const result = yield* body.pipe(
+          Effect.provideService(Changes.CurrentChangeCollector, collector),
+        );
+        return [result, yield* Changes.resolve(collector)] as const;
+      }),
+    );
+    yield* changes.publish(batch);
+    return value;
+  });
   const run = Effect.fn("SpacesService.transaction")(function* <A>(
     environmentId: EnvironmentId,
     use: (
@@ -237,7 +264,8 @@ export const make = Effect.fnUntraced(function* (
           yield* sql.withTransaction(Catalog.expireIdle(meta.observed_time_ms).pipe(assetErrors));
           yield* sql.withTransaction(PageShares.purgeExpired(meta.observed_time_ms));
         }
-        return yield* sql.withTransaction(
+        return yield* publishing(
+          sql,
           Effect.gen(function* () {
             const [current] =
               yield* sql<Receipts.Metadata>`SELECT * FROM spaces_core WHERE singleton = 1`;
@@ -257,7 +285,8 @@ export const make = Effect.fnUntraced(function* (
     for (;;) {
       const more = yield* mutex
         .withPermits(1)(
-          sql.withTransaction(
+          publishing(
+            sql,
             Effect.gen(function* () {
               const result = yield* Drain.batch({ limit: computedDrainRows, order: "ASC" });
               if (result.changed.size > 0) {
@@ -273,7 +302,8 @@ export const make = Effect.fnUntraced(function* (
       yield* Effect.yieldNow;
     }
   });
-  background.start = (sql) =>
+  // A defect or an interruption must not leave the flag set, or the drain would never restart.
+  const startDrain = (sql: SpacesSql.SpacesSql["Service"]): Effect.Effect<void> =>
     Effect.suspend(() => {
       if (!backgroundDrain || draining || closing) return Effect.void;
       return Drain.queued().pipe(
@@ -284,22 +314,57 @@ export const make = Effect.fnUntraced(function* (
           draining = true;
           return Effect.forkIn(
             drainComputed().pipe(
-              Effect.matchEffect({
-                onFailure: () =>
-                  Effect.logWarning("Spaces computed values remain queued.").pipe(
-                    Effect.andThen(Effect.sync(() => void (draining = false))),
-                  ),
-                onSuccess: () =>
-                  Effect.sync(() => void (draining = false)).pipe(
-                    Effect.andThen(Effect.suspend(() => background.start(sql))),
-                  ),
-              }),
+              Effect.tapError(() => Effect.logWarning("Spaces computed values remain queued.")),
+              Effect.ensuring(Effect.sync(() => void (draining = false))),
+              Effect.andThen(Effect.suspend(() => startDrain(sql))),
+              Effect.ignore,
             ),
             scope,
           ).pipe(Effect.asVoid);
         }),
       );
     });
+  // One pass: survey on the read path, then re-check and write in one maintenance transaction.
+  // `between` lets a test change the database between the two halves.
+  const sweepDatabases = Effect.fn("SpacesService.sweepDatabases")(function* (
+    between?: Effect.Effect<void, C.SpaceServiceError>,
+  ) {
+    const environmentId = yield* identity.getEnvironmentId;
+    const found = yield* read(environmentId, (meta) =>
+      DatabaseSweep.survey(meta.observed_time_ms, skippedRows),
+    );
+    if (between !== undefined) yield* between;
+    if (DatabaseSweep.idle(found)) return false;
+    return yield* run(environmentId, (meta) =>
+      DatabaseSweep.write(found, environmentId, meta.observed_time_ms, skippedRows),
+    );
+  });
+  // Rides on write activity, at most once per interval; no timer. A purge that made progress
+  // continues in further bounded passes, each its own transaction.
+  const startSweep = Effect.suspend(() => {
+    if (!backgroundSweep || sweeping || closing) return Effect.void;
+    return Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) => {
+        if (lastSweepMs !== undefined && now - lastSweepMs < databaseSweepIntervalMs)
+          return Effect.void;
+        sweeping = true;
+        lastSweepMs = now;
+        return Effect.forkIn(
+          Effect.gen(function* () {
+            while (yield* sweepDatabases()) yield* Effect.yieldNow;
+          }).pipe(
+            Effect.tapError(() =>
+              Effect.logWarning("Spaces dead-database cleanup remains pending."),
+            ),
+            Effect.ensuring(Effect.sync(() => void (sweeping = false))),
+            Effect.ignore,
+          ),
+          scope,
+        ).pipe(Effect.asVoid);
+      }),
+    );
+  });
+  background.start = (sql) => Effect.andThen(startDrain(sql), startSweep);
   // Reads take no mutex and write nothing: one read-only transaction on a WAL reader, with the
   // clock advanced in memory only. Writes own the observed clock and all maintenance.
   const read = Effect.fn("SpacesService.read")(function* <A>(
@@ -422,7 +487,9 @@ export const make = Effect.fnUntraced(function* (
     maintenanceMutex,
     recover,
     acquire,
+    changes,
     drainComputed,
+    sweepDatabases,
     admit,
     checkEnvironment,
     run,

@@ -627,4 +627,39 @@ it.layer(NodeServices.layer)("Spaces database rows", (it) => {
       }),
     ),
   );
+  it.effect("an icon-only row edit moves the data revision and names the data source", () =>
+    fixture((_dbPath) =>
+      Effect.gen(function* () {
+        const { service, common, page } = yield* boot();
+        const kit = databaseKit(service, common, page.spaceId);
+        const created = yield* kit.create("Tasks", { appendToPageId: page.id });
+        const rowId = (yield* kit.addRows(created.dataSourceId, [{ title: "Ship it" }])).rows[0]!
+          .pageId;
+        const before = (yield* kit.get(created.databaseId)).dataSources[0]!.dataRevision;
+        const saved = yield* service.updatePage({
+          ...common,
+          mutationId: "row-icon",
+          pageId: rowId,
+          baseRevision: 0,
+          title: "Ship it",
+          icon: "🚀",
+        });
+        assert.equal(saved.status, "saved");
+        if (saved.status !== "saved") return;
+        assert.deepEqual(saved.affectedDataSourceIds, [created.dataSourceId]);
+        assert.equal((yield* kit.get(created.databaseId)).dataSources[0]!.dataRevision, before + 1);
+        // Saving the same icon again changes nothing.
+        const same = yield* service.updatePage({
+          ...common,
+          mutationId: "row-icon-again",
+          pageId: rowId,
+          baseRevision: 1,
+          title: "Ship it",
+          icon: "🚀",
+        });
+        assert.isUndefined(same.status === "saved" ? same.affectedDataSourceIds : undefined);
+        assert.equal((yield* kit.get(created.databaseId)).dataSources[0]!.dataRevision, before + 1);
+      }),
+    ),
+  );
 });

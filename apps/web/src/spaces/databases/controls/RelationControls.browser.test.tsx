@@ -6,7 +6,7 @@ import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "../../../../test/render";
 import { fixtureOtherDatabase } from "../test/fixtures";
 import { DatabaseHarness, fakeController, testHost } from "../test/harness";
-import { EditableFakeDatabase } from "./controlsFake";
+import { EditableFakeDatabase } from "../test/editableDatabase";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
 

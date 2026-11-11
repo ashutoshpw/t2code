@@ -118,6 +118,8 @@ describe("Spaces asset catalog", () => {
             { migration_id: 16, name: "PageBodyRevision" },
             { migration_id: 17, name: "Databases" },
             { migration_id: 18, name: "ComputedProperties" },
+            { migration_id: 19, name: "DatabaseOrphans" },
+            { migration_id: 20, name: "DatabaseQueryIndexes" },
           ]);
           expect(yield* sql`SELECT 1 FROM spaces WHERE is_default = 1`).toHaveLength(1);
           expect(yield* Catalog.usage()).toEqual({

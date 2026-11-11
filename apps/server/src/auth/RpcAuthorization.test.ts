@@ -1,5 +1,6 @@
 import {
   AuthEnvironmentMaintainScope,
+  CLIENT_GUARDED_RPC_SCOPES,
   AuthDiagnosticsReadScope,
   AuthFilesystemReadScope,
   AuthProvidersManageScope,
@@ -41,6 +42,19 @@ import * as RpcAuthorization from "./RpcAuthorization.ts";
 describe("RPC authorization scopes", () => {
   it("declares exactly one scope for every RPC in the server group", () => {
     expect(new Set(Object.keys(RPC_REQUIRED_SCOPES))).toEqual(new Set(WsRpcGroup.requests.keys()));
+  });
+
+  it("scopes every database method, and guards each one that changes data on the client", () => {
+    const methods = Object.entries(WS_METHODS).filter(([key]) => key.startsWith("spacesDatabases"));
+    expect(methods.length).toBeGreaterThan(0);
+    const unscoped = methods.filter(([, method]) => !Object.hasOwn(RPC_REQUIRED_SCOPES, method));
+    expect(unscoped).toEqual([]);
+    const unguarded = methods.filter(
+      ([, method]) =>
+        requiredScopeForRpcMethod(method) !== AuthOrchestrationReadScope &&
+        !Object.hasOwn(CLIENT_GUARDED_RPC_SCOPES, method),
+    );
+    expect(unguarded).toEqual([]);
   });
 
   it("keeps webhook delivery logs, which hold request bodies, behind operate scope", () => {
@@ -513,6 +527,7 @@ it.effect("denies every Spaces mutation with read-only grants before its handler
       WS_METHODS.spacesDatabasesList,
       WS_METHODS.spacesDatabasesGet,
       WS_METHODS.spacesDatabasesQuery,
+      WS_METHODS.spacesDatabasesSubscribeChanges,
       WS_METHODS.spacesDatabasesRowsGet,
     );
     const client = yield* RpcTest.makeClient(group).pipe(
@@ -762,6 +777,8 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
             "spaces.databases.get": deniedHandler,
             "spaces.databases.query": deniedHandler,
             "spaces.databases.rows.get": deniedHandler,
+            "spaces.databases.subscribeChanges": () =>
+              Stream.fromEffect(Effect.sync(() => void handled++)).pipe(Stream.drain),
           }),
           RpcAuthorization.layer([AuthOrchestrationOperateScope]),
         ),
@@ -823,6 +840,13 @@ it.effect("keeps Spaces reads behind read scope even for operate-only clients", 
         requiredPermission: AuthOrchestrationReadScope,
       });
     }
+    const subscription = yield* client[WS_METHODS.spacesDatabasesSubscribeChanges]({
+      environmentId,
+    }).pipe(Stream.runDrain, Effect.flip);
+    expect(subscription).toMatchObject({
+      _tag: "EnvironmentAuthorizationError",
+      requiredPermission: AuthOrchestrationReadScope,
+    });
     expect(handled).toBe(0);
   }).pipe(Effect.scoped),
 );

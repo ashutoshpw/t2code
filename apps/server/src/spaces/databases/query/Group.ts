@@ -300,6 +300,12 @@ export const member = Effect.fn("SpacesDatabases.groupMember")(function* (
   const id = spec.propertyId;
   const by = spec.by;
   if (!sameKey(spec, key)) return yield* dbError("invalid_scope", id);
+  // Clients send keys taken from answers, so a bucket key that is not the engine's own is a mistake, not a snap.
+  if (
+    (key.kind === "number_range" || key.kind === "date") &&
+    exactKey(spec, key, c.dates.weekStartsOn) === undefined
+  )
+    return yield* dbError("invalid_scope", id);
   if (key.kind === "empty") {
     if (
       spec.type === "unique_id" ||

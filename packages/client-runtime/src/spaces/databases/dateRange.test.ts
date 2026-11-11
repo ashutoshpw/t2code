@@ -155,6 +155,20 @@ describe("moveDateValue", () => {
       ),
     ).toEqual({ start: "2026-03-10T09:45:00", timeZone: "UTC" });
   });
+
+  it("keeps the seconds and milliseconds of the original value", () => {
+    expect(
+      moveDateValue(
+        { start: "2026-03-10T09:00:30.250", end: "2026-03-10T10:00:15", timeZone: "UTC" },
+        { startMinutes: 1440, endMinutes: 1440 },
+        "UTC",
+      ),
+    ).toEqual({
+      start: "2026-03-11T09:00:30.250",
+      end: "2026-03-11T10:00:15",
+      timeZone: "UTC",
+    });
+  });
 });
 
 describe("overlapFilter", () => {

@@ -1,3 +1,4 @@
+import { SPACE_TITLE_PROPERTY_ID } from "@t2code/contracts/spaces";
 import { Fragment } from "react";
 
 import { GroupTitle, renderCell, RowLink, ShowMore, BUCKET_CAP, type ViewProps } from "./parts";
@@ -35,7 +36,7 @@ export function SharedTable(props: ViewProps) {
           <thead>
             <tr className="border-b text-left text-muted-foreground text-xs">
               <th scope="col" className="px-2 py-1.5 font-normal">
-                Name
+                {props.source.properties[SPACE_TITLE_PROPERTY_ID]?.name ?? "Name"}
               </th>
               {columns.map((column) => (
                 <th

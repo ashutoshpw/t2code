@@ -10,6 +10,7 @@ import * as PageUpdate from "../PageUpdate.ts";
 import * as Settle from "../databases/computed/Settle.ts";
 import * as DatabaseStore from "../databases/DatabaseStore.ts";
 import * as DatabaseHooks from "../databases/Hooks.ts";
+import * as Liveness from "../databases/Liveness.ts";
 import * as Touched from "../databases/Touched.ts";
 import { isoNow } from "../databases/Types.ts";
 import * as DatabaseMutations from "../databases/Mutations.ts";
@@ -29,6 +30,25 @@ import {
   getPageRow,
   defaultSpace,
 } from "./Helpers.ts";
+
+/**
+ * Applies a planned trash, restore or permanent delete and the database bookkeeping after it.
+ * The user's mutation and the dead-database sweep both end here, so they cannot drift apart.
+ */
+export const finishRecovery = Effect.fn("SpacesService.finishRecovery")(function* (
+  plan: PageStructure.Plan,
+  operation: "trashPage" | "restorePage" | "permanentlyDeletePage",
+  mutationId: string,
+  nowMs: number,
+) {
+  const recoveryRows = DatabaseHooks.recoveryRows(plan);
+  const result =
+    operation === "permanentlyDeletePage"
+      ? yield* PageRecovery.purge(plan, mutationId, nowMs)
+      : yield* PageStructure.apply(plan, mutationId, nowMs);
+  const affectedDataSourceIds = yield* DatabaseHooks.afterRecovery(operation, recoveryRows, nowMs);
+  return { result, affectedDataSourceIds };
+});
 
 export const execute = Effect.fn("SpacesService.execute")(function* (
   request: C.SpaceMutationRequest,
@@ -121,26 +141,25 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
           },
         });
       }
-      const recoveryRows = DatabaseHooks.recoveryRows(plan);
-      const result =
-        request.operation === "permanentlyDeletePage"
-          ? yield* PageRecovery.purge(plan, request.input.mutationId, meta.observed_time_ms)
-          : yield* PageStructure.apply(
+      const { result, affectedDataSourceIds } =
+        request.operation === "movePage" ||
+        request.operation === "moveBlocks" ||
+        request.operation === "createChildPage"
+          ? {
+              result: yield* PageStructure.apply(
+                plan,
+                request.input.mutationId,
+                meta.observed_time_ms,
+                request.operation === "createChildPage" ? request.input.title : undefined,
+              ),
+              affectedDataSourceIds: [],
+            }
+          : yield* finishRecovery(
               plan,
+              request.operation,
               request.input.mutationId,
               meta.observed_time_ms,
-              request.operation === "createChildPage" ? request.input.title : undefined,
             );
-      const affectedDataSourceIds =
-        request.operation === "trashPage" ||
-        request.operation === "restorePage" ||
-        request.operation === "permanentlyDeletePage"
-          ? yield* DatabaseHooks.afterRecovery(
-              request.operation,
-              recoveryRows,
-              meta.observed_time_ms,
-            )
-          : [];
       return decodeReceipt({
         operation: request.operation,
         result: {
@@ -247,6 +266,7 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
       const input = request.input;
       const page = yield* getPageRow(input.pageId);
       yield* PageStore.assertActive(page);
+      if (page.root_order === null) yield* Liveness.assertPageLive(page.page_id);
       // Title and icon are last-writer-wins: only a base from the future is a conflict.
       if (input.baseRevision > page.revision)
         return decodeReceipt({
@@ -261,7 +281,15 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
         meta.observed_time_ms,
       );
       const affectedDataSourceIds: C.SpaceDataSourceId[] = [];
-      if (page.data_source_id !== null && page.title !== input.title) {
+      if (
+        page.data_source_id !== null &&
+        page.title === input.title &&
+        icon !== (page.icon ?? null)
+      ) {
+        // The row's icon is part of every row read; no computed value reads it.
+        yield* DatabaseStore.bumpData(page.data_source_id, isoNow(meta.observed_time_ms));
+        affectedDataSourceIds.push(C.SpaceDataSourceId.make(page.data_source_id));
+      } else if (page.data_source_id !== null && page.title !== input.title) {
         const touched = Touched.touched();
         Touched.recordCell(touched, page.page_id, page.data_source_id, "title");
         yield* Settle.settleAndDrain(touched);
@@ -284,6 +312,7 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
       const input = request.input;
       const page = yield* getPageRow(input.pageId);
       yield* PageStore.assertActive(page);
+      if (page.root_order === null) yield* Liveness.assertPageLive(page.page_id);
       // Title and icon changes since the base do not touch blocks, so only a newer body or a base from the future conflicts.
       if (input.baseRevision < page.body_revision || input.baseRevision > page.revision)
         return decodeReceipt({

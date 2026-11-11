@@ -26,6 +26,7 @@ import { GridEditStore } from "./gridEditStore";
 import { createGridHandlers, type GridModel } from "./gridHandlers";
 import { buildGridItems, visibleBuckets, WRAPPED_ROW_HEIGHT } from "./gridItems";
 import { DEFAULT_COLUMN_WIDTH, TITLE_COLUMN_WIDTH, clampWidth } from "./gridWindow";
+import { GroupsTruncatedNote } from "../primitives/GroupsTruncatedNote";
 import { GridViewport } from "./GridViewport";
 import type { TableColumn } from "./tableTypes";
 
@@ -135,6 +136,7 @@ export default function TableView({ search }: DatabaseViewProps) {
       actions,
       hold: query.hold,
       placeRow: query.placeRow,
+      forgetRow: query.forgetRow,
       loadBucket: query.loadBucket,
       toggleGroup: (id) =>
         setCollapsed((current) => {
@@ -241,6 +243,10 @@ export default function TableView({ search }: DatabaseViewProps) {
               ? "Nothing matches this view"
               : "No rows yet"}
           </p>
+        ) : query.groupsTruncated && query.groups !== null ? (
+          <div className="px-2 py-1">
+            <GroupsTruncatedNote count={query.groups.length} />
+          </div>
         ) : null
       }
     />

@@ -2,7 +2,7 @@ import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import { byteLength, canonical, ensureDatabaseLimit } from "../CorePolicy.ts";
+import { byteLength, canonical, ensureDatabaseLimit, maxDatabaseViewBytes } from "../CorePolicy.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 import * as Ids from "./Ids.ts";
 import { type Json, type JsonObject, isObject, parseJson } from "./Json.ts";
@@ -37,6 +37,26 @@ export const viewsOfSource = Effect.fn("SpacesDatabases.viewsOfSource")(function
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   return yield* sql<ViewRecord>`SELECT * FROM spaces_db_views WHERE data_source_id = ${dataSourceId}`;
+});
+
+/** A view write may not push the database's views past the bound that keeps `getDatabase` readable. */
+const ensureViewBytes = Effect.fn("SpacesDatabases.ensureViewBytes")(function* (
+  databaseId: string,
+  viewId: string | null,
+  bytes: number,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  const [others] = yield* sql<{
+    readonly total: number;
+  }>`SELECT COALESCE(SUM(logical_bytes), 0) AS total FROM spaces_db_views
+    WHERE database_id = ${databaseId} AND view_id IS NOT ${viewId}`;
+  const total = (others?.total ?? 0) + bytes;
+  if (total > maxDatabaseViewBytes)
+    return yield* new C.SpaceLimitExceededError({
+      limit: "databases.maxViewBytes",
+      actual: total,
+      maximum: maxDatabaseViewBytes,
+    });
 });
 
 export const wireView = (record: ViewRecord): C.SpaceDatabaseView =>
@@ -160,10 +180,12 @@ export const createView = Effect.fn("SpacesDatabases.createView")(function* (inp
     created_at: input.now,
     updated_at: input.now,
     logical_bytes: 0,
+    orphaned_at_ms: null,
     ...draft,
   } satisfies ViewRecord;
   const bytes = byteLength(wireView(wire));
   yield* ensureDatabaseLimit("maxViewBytes", bytes);
+  yield* ensureViewBytes(input.databaseId, null, bytes);
   yield* sql`INSERT INTO spaces_db_views (view_id, database_id, data_source_id, owner_block_id, name, type, position, filter, sorts, grouping, sub_grouping, properties, layout, logical_bytes, created_at, updated_at)
     VALUES (${id}, ${input.databaseId}, ${wire.data_source_id}, ${input.ownerBlockId}, ${name}, ${draft.type}, ${position},
     ${draft.filter}, ${draft.sorts}, ${draft.grouping}, ${draft.sub_grouping}, ${draft.properties}, ${draft.layout}, ${bytes}, ${input.now}, ${input.now})`;
@@ -203,6 +225,9 @@ const save = Effect.fn("SpacesDatabases.saveView")(function* (
   const next = { ...record, name: definition.name, type: definition.type, ...stored };
   const bytes = byteLength(wireView(next));
   yield* ensureDatabaseLimit("maxViewBytes", bytes);
+  // A view that does not grow stays savable in a database that is already over the bound.
+  if (bytes > record.logical_bytes)
+    yield* ensureViewBytes(record.database_id, record.view_id, bytes);
   yield* sql`UPDATE spaces_db_views SET name = ${definition.name}, type = ${definition.type}, filter = ${stored.filter},
     sorts = ${stored.sorts}, grouping = ${stored.grouping}, sub_grouping = ${stored.sub_grouping},
     properties = ${stored.properties}, layout = ${stored.layout}, logical_bytes = ${bytes}, updated_at = ${now}
@@ -341,6 +366,8 @@ interface StripRules {
   readonly filters: boolean;
   readonly sorts: boolean;
   readonly groups: boolean;
+  /** The property is no longer a date: calendar and timeline views stop naming it. */
+  readonly dateReference?: boolean;
 }
 
 /** Optional layout references (card preview property, timeline end) go with their property. */
@@ -356,6 +383,14 @@ const dropLayoutReferences = (
   if (rules.column && isObject(preview) && preview.propertyId === rules.propertyId)
     delete next.cardPreview;
   if (type === "timeline" && next.endPropertyId === rules.propertyId) delete next.endPropertyId;
+  if (rules.column || rules.dateReference === true) {
+    if (type === "calendar" && next.datePropertyId === rules.propertyId) delete next.datePropertyId;
+    if (type === "timeline") {
+      if (next.startPropertyId === rules.propertyId) delete next.startPropertyId;
+      if (rules.dateReference === true && next.endPropertyId === rules.propertyId)
+        delete next.endPropertyId;
+    }
+  }
   return next;
 };
 

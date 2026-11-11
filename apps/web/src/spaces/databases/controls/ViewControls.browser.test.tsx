@@ -1,3 +1,4 @@
+import "~/index.css";
 import { SpacePropertyId } from "@t2code/contracts/spaces";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
@@ -5,7 +6,7 @@ import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "../../../../test/render";
 import { DatabaseHarness, fakeController, testHost } from "../test/harness";
 import { fixtureView } from "../test/fixtures";
-import { EditableFakeDatabase } from "./controlsFake";
+import { EditableFakeDatabase } from "../test/editableDatabase";
 import { dragWithKeyboard } from "./keyboardDrag";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));

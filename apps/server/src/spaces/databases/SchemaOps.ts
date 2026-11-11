@@ -311,7 +311,18 @@ const restoreProperty = Effect.fn("SpacesDatabases.restoreProperty")(function* (
     yield* SchemaStore.setConfig(ctx.dataSourceId, property.id, oneWay);
     return;
   }
-  if (twin.deletedAtMs === null) return;
+  if (twin.deletedAtMs === null) {
+    // The twin stayed live and may have changed while this half was away: it is the truth.
+    yield* RelationStore.mirrorFrom({
+      property,
+      twin,
+      ownSourceId: ctx.dataSourceId,
+      twinSourceId: dataSourceId,
+    });
+    ctx.touched.sources.add(ctx.dataSourceId);
+    ctx.touched.sources.add(dataSourceId);
+    return;
+  }
   yield* restoreIn(other, twin);
   yield* DatabaseStore.bumpSchema(dataSourceId, iso(ctx));
   ctx.touched.schema.add(dataSourceId);
@@ -504,7 +515,14 @@ const changeType = Effect.fn("SpacesDatabases.changePropertyType")(function* (
   if (to === "formula" || to === "rollup") yield* Definitions.define(ctx, from.id);
   yield* ViewStore.strip(
     ctx.dataSourceId,
-    { propertyId: from.id, column: false, filters: true, sorts: true, groups: true },
+    {
+      propertyId: from.id,
+      column: false,
+      filters: true,
+      sorts: true,
+      groups: true,
+      dateReference: to !== "date" && to !== "created_time" && to !== "last_edited_time",
+    },
     iso(ctx),
   );
   if (to === "relation") {

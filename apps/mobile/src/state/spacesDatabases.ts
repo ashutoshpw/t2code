@@ -80,6 +80,7 @@ export function openViewSession(
       return () => clearTimeout(timer);
     },
     busy: () => databaseWriter(environmentId).busy(dataSourceId),
+    live: () => databaseAtoms.changesLive(appAtomRegistry, environmentId),
   });
 }
 

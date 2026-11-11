@@ -14,6 +14,8 @@ interface Target {
   readonly databaseId: SpaceDatabaseId;
 }
 
+const MAX_LOADED_ATOMS = 32;
+/** Least recently used last; bounded so editors opened over a long session do not accumulate. */
 const loadedAtoms = new Map<string, ReturnType<typeof makeLoadedAtom>>();
 
 function makeLoadedAtom(environmentId: EnvironmentId, targets: ReadonlyArray<Target>) {
@@ -32,10 +34,13 @@ function makeLoadedAtom(environmentId: EnvironmentId, targets: ReadonlyArray<Tar
 /** One atom per (environment, targets), so the subscription is stable across renders. */
 function loadedAtom(environmentId: EnvironmentId, targets: ReadonlyArray<Target>, key: string) {
   const id = `${environmentId}|${key}`;
-  let atom = loadedAtoms.get(id);
-  if (atom === undefined) {
-    atom = makeLoadedAtom(environmentId, targets);
-    loadedAtoms.set(id, atom);
+  const kept = loadedAtoms.get(id);
+  const atom = kept ?? makeLoadedAtom(environmentId, targets);
+  loadedAtoms.delete(id);
+  loadedAtoms.set(id, atom);
+  for (const oldest of loadedAtoms.keys()) {
+    if (loadedAtoms.size <= MAX_LOADED_ATOMS) break;
+    loadedAtoms.delete(oldest);
   }
   return atom;
 }
@@ -73,6 +78,7 @@ export function useFormulaSchema(dataSource: SpaceDataSource): {
   const environmentId = model.environmentId;
   const loaded = useAtomValue(loadedAtom(environmentId, targets, targetKey));
   const loading = resolving || loaded.some((entry) => !entry.settled);
+  const databaseTitle = model.database.title;
   const { schema, sourceOf } = (() => {
     const sources = new Map<string, SpaceDataSource>();
     for (const source of own) sources.set(source.id, source);
@@ -88,7 +94,7 @@ export function useFormulaSchema(dataSource: SpaceDataSource): {
       schema: formulaSchemaOf(
         dataSource,
         lookup,
-        (id) => names.get(id) ?? (own.some((s) => s.id === id) ? model.database.title : undefined),
+        (id) => names.get(id) ?? (own.some((s) => s.id === id) ? databaseTitle : undefined),
       ),
     };
   })();

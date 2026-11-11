@@ -28,7 +28,10 @@ import { monthOfNow, stepMonth } from "./agenda";
 import { AgendaHeader } from "./AgendaHeader";
 import { DATABASES_NEED_NEWER_SERVER, databaseLimitsOf } from "./capability";
 import { DatabaseListItem } from "./DatabaseViewList";
+import { canAddToGroup } from "./addRow";
 import { NewRowPill } from "./NewRowPill";
+import { NewRowSheet } from "./NewRowSheet";
+import { WriteNotices } from "./WriteNotices";
 import { DEAD_DATABASE_MESSAGE } from "./SpacesDatabaseBlock";
 import { readSpacesDatabaseTarget, type SpacesDatabaseTarget } from "./navigation";
 import { useDatabaseModel, type DatabaseModel } from "./useDatabaseModel";
@@ -210,6 +213,7 @@ function ViewList(props: {
 }) {
   const { target, model, view, dataSource } = props;
   const navigation = useNavigation<NativeStackNavigationProp<ReactNavigation.RootParamList>>();
+  const [adding, setAdding] = useState<{ readonly key: SpaceGroupKey } | null>(null);
   const { form, rows, items, context } = useViewContent({
     environmentId: target.environmentId,
     model,
@@ -217,15 +221,22 @@ function ViewList(props: {
     dataSource,
     month: props.month,
   });
+  const openPage = (pageId: SpacePageId) => {
+    if (!props.access.current()) return;
+    navigation.push("SpacesPage", {
+      environmentId: target.environmentId,
+      spaceId: model.database.spaceId,
+      pageId,
+    });
+  };
   const handlers = {
-    onOpenRow: (row: SpaceDatabaseRow) => {
-      if (!props.access.current()) return;
-      navigation.push("SpacesPage", {
-        environmentId: target.environmentId,
-        spaceId: model.database.spaceId,
-        pageId: row.page.id,
-      });
-    },
+    onOpenRow: (row: SpaceDatabaseRow) => openPage(row.page.id),
+    ...(model.canAddRows && form.mode === "groups"
+      ? {
+          onAddToGroup: (bucket: SpaceGroupKey) => setAdding({ key: bucket }),
+          canAddToGroup: (bucket: SpaceGroupKey) => canAddToGroup(view, dataSource, bucket),
+        }
+      : {}),
     onMore: (bucket: SpaceGroupKey | null) => {
       if (!props.access.current()) return;
       if (bucket === null) rows.loadMore();
@@ -241,75 +252,101 @@ function ViewList(props: {
           ? "Loading rows…"
           : "No rows.";
   return (
-    <LegendList
-      renderScrollComponent={NativeScrollView}
-      className="flex-1"
-      contentContainerStyle={{ paddingBottom: 32 }}
-      data={items}
-      estimatedItemSize={72}
-      getItemType={(item) => item.kind}
-      keyExtractor={(item) => item.key}
-      recycleItems
-      keyboardShouldPersistTaps="handled"
-      onEndReachedThreshold={0.5}
-      onEndReached={() => {
-        if (form.mode === "rows" && canLoadMore(rows.rows.length, rows.hasMore)) rows.loadMore();
-      }}
-      ListHeaderComponent={
-        <View className="gap-1 pb-2">
-          <Text accessibilityRole="header" className="px-4 pt-3 text-xl font-bold text-foreground">
-            {model.database.icon ? `${model.database.icon} ` : ""}
-            {model.database.title || "Untitled database"}
-          </Text>
-          <ViewSwitcher views={props.views} activeId={view.id} onSelect={props.onSelect} />
-          <View className="flex-row px-4 pt-1">
-            <NewRowPill
-              environmentId={target.environmentId}
-              model={model}
-              view={view}
-              dataSource={dataSource}
-              onCreated={rows.retry}
-            />
-          </View>
-          <Text className="px-4 py-1 text-sm text-foreground-muted">
-            {viewSummary(view, dataSource)}
-          </Text>
-          {form.notes.map((note) => (
-            <Text key={note} className="px-4 text-sm text-foreground-muted">
-              {note}
+    <>
+      <LegendList
+        renderScrollComponent={NativeScrollView}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 32 }}
+        data={items}
+        estimatedItemSize={72}
+        getItemType={(item) => item.kind}
+        keyExtractor={(item) => item.key}
+        recycleItems
+        keyboardShouldPersistTaps="handled"
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (form.mode === "rows" && canLoadMore(rows.rows.length, rows.hasMore)) rows.loadMore();
+        }}
+        ListHeaderComponent={
+          <View className="gap-1 pb-2">
+            <Text
+              accessibilityRole="header"
+              className="px-4 pt-3 text-xl font-bold text-foreground"
+            >
+              {model.database.icon ? `${model.database.icon} ` : ""}
+              {model.database.title || "Untitled database"}
             </Text>
-          ))}
-          {form.kind === "agenda" ? (
-            <AgendaHeader
-              month={props.month}
-              onStep={(direction) => props.onMonth(stepMonth(props.month, direction))}
-              onToday={() => props.onMonth(monthOfNow(Date.now(), viewerZone()))}
-            />
-          ) : null}
-          {rows.loadError !== null ? (
-            <View className="items-start gap-2 px-4 py-2">
-              <Text className="text-sm text-foreground-muted">{rows.loadError}</Text>
-              <ControlPill variant="pill" label="Retry" onPress={rows.retryLoad} />
+            <ViewSwitcher views={props.views} activeId={view.id} onSelect={props.onSelect} />
+            <View className="flex-row px-4 pt-1">
+              <NewRowPill
+                environmentId={target.environmentId}
+                model={model}
+                view={view}
+                dataSource={dataSource}
+                {...(form.kind === "agenda" ? { month: props.month } : {})}
+                onCreated={rows.retry}
+                onOpenPage={openPage}
+              />
             </View>
-          ) : null}
-        </View>
-      }
-      ListEmptyComponent={
-        <View className="items-start gap-2 px-4 py-3">
-          <Text className="text-base text-foreground-muted">{empty}</Text>
-          {rows.error !== null ? (
-            <ControlPill variant="pill" label="Retry" onPress={rows.retry} />
-          ) : null}
-        </View>
-      }
-      ListFooterComponent={
-        rows.loadingMore ? (
-          <Text className="px-4 py-3 text-sm text-foreground-muted">Loading more rows…</Text>
-        ) : null
-      }
-      renderItem={({ item }) => (
-        <DatabaseListItem item={item} form={form} context={context} handlers={handlers} />
+            <View className="px-4">
+              <WriteNotices environmentId={target.environmentId} />
+            </View>
+            {rows.error !== null && items.length > 0 ? (
+              <View className="items-start gap-2 px-4 py-2">
+                <Text className="text-sm text-foreground-muted">{rows.error}</Text>
+                <ControlPill variant="pill" label="Retry" onPress={rows.retry} />
+              </View>
+            ) : null}
+            <Text className="px-4 py-1 text-sm text-foreground-muted">
+              {viewSummary(view, dataSource)}
+            </Text>
+            {form.notes.map((note) => (
+              <Text key={note} className="px-4 text-sm text-foreground-muted">
+                {note}
+              </Text>
+            ))}
+            {form.kind === "agenda" ? (
+              <AgendaHeader
+                month={props.month}
+                onStep={(direction) => props.onMonth(stepMonth(props.month, direction))}
+                onToday={() => props.onMonth(monthOfNow(Date.now(), viewerZone()))}
+              />
+            ) : null}
+            {rows.loadError !== null ? (
+              <View className="items-start gap-2 px-4 py-2">
+                <Text className="text-sm text-foreground-muted">{rows.loadError}</Text>
+                <ControlPill variant="pill" label="Retry" onPress={rows.retryLoad} />
+              </View>
+            ) : null}
+          </View>
+        }
+        ListEmptyComponent={
+          <View className="items-start gap-2 px-4 py-3">
+            <Text className="text-base text-foreground-muted">{empty}</Text>
+            {rows.error !== null ? (
+              <ControlPill variant="pill" label="Retry" onPress={rows.retry} />
+            ) : null}
+          </View>
+        }
+        ListFooterComponent={
+          rows.loadingMore ? (
+            <Text className="px-4 py-3 text-sm text-foreground-muted">Loading more rows…</Text>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <DatabaseListItem item={item} form={form} context={context} handlers={handlers} />
+        )}
+      />
+      {adding === null ? null : (
+        <NewRowSheet
+          environmentId={target.environmentId}
+          view={view}
+          dataSource={dataSource}
+          groupKey={adding.key}
+          onCreated={rows.retry}
+          onClose={() => setAdding(null)}
+        />
       )}
-    />
+    </>
   );
 }

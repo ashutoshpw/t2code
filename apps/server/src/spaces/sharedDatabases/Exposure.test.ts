@@ -79,6 +79,7 @@ const view = (type: string, extra: Partial<ViewRecord> = {}): ViewRecord => ({
   properties: "[]",
   layout: "{}",
   logical_bytes: 0,
+  orphaned_at_ms: null,
   created_at: "",
   updated_at: "",
   ...extra,

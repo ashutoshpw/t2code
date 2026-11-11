@@ -2,14 +2,12 @@ import { RegistryContext } from "@effect/atom-react";
 import { patchRowCells, recordAck, type AckedEdit } from "@t2code/client-runtime/spaces";
 import type { EnvironmentId } from "@t2code/contracts";
 import {
-  SPACE_TITLE_PROPERTY_ID,
   type SpaceCellMap,
   type SpaceDatabaseRowGetResult,
   type SpacePageId,
 } from "@t2code/contracts/spaces";
 import { useContext, useEffect, useState, useSyncExternalStore } from "react";
 
-import { spacesEnvironment } from "../../../state/spaces";
 import { databaseStores } from "../data/stores";
 
 /**
@@ -27,18 +25,8 @@ export function useRowCells(
   const [acked, setAcked] = useState<ReadonlyArray<AckedEdit>>([]);
   // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- The writer is an external store; acknowledgements arrive outside React.
   useEffect(
-    () =>
-      writer.onAck((ack) => {
-        // The title cell is the page title: refresh the page header and the library lists.
-        if (
-          ack.edits.some(
-            (edit) => edit.pageId === pageId && edit.propertyId === SPACE_TITLE_PROPERTY_ID,
-          )
-        )
-          registry.update(spacesEnvironment.changed(environmentId), (value) => value + 1);
-        setAcked((current) => recordAck(current, ack, pageId));
-      }),
-    [writer, pageId, registry, environmentId],
+    () => writer.onAck((ack) => setAcked((current) => recordAck(current, ack, pageId))),
+    [writer, pageId],
   );
   return patchRowCells(data, pending, acked);
 }
