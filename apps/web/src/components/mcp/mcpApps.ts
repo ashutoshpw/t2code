@@ -8,9 +8,9 @@ import museLogo from "./logos/muse.png";
 import openClawLogo from "./logos/openclaw.png";
 import pokeLogo from "./logos/poke.png";
 
-/** How the Connect step hands T3 Code's MCP URL to an app. Every `link` is https. */
+/** How the Connect step hands T2 Code's MCP URL to an app. Every `link` is https. */
 export type McpAppHandoff =
-  /** Opens the app's add form with T3 Code filled in. */
+  /** Opens the app's add form with T2 Code filled in. */
   | { readonly kind: "open"; readonly link: (mcpUrl: string) => string }
   /** Copies the URL, then opens the page it goes on. */
   | { readonly kind: "copy-url"; readonly link: string }
@@ -51,7 +51,7 @@ export const MCP_APPS: readonly McpApp[] = [
     logo: pokeLogo,
     handoff: {
       kind: "open",
-      link: (url) => `https://poke.com/integrations/new?name=T3%20Code&url=${encoded(url)}`,
+      link: (url) => `https://poke.com/integrations/new?name=T2%20Code&url=${encoded(url)}`,
     },
     steps: ["Open poke.com/integrations/new.", "Paste the URL and add the integration."],
     docs: "https://poke.com/docs/mcp-servers",
@@ -63,7 +63,7 @@ export const MCP_APPS: readonly McpApp[] = [
     handoff: {
       kind: "open",
       link: (url) =>
-        `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=T3%20Code&connectorUrl=${encoded(url)}`,
+        `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=T2%20Code&connectorUrl=${encoded(url)}`,
     },
     steps: [
       "In Claude, open Customize, then Connectors.",
@@ -110,7 +110,7 @@ export const MCP_APPS: readonly McpApp[] = [
       "Choose Custom apps, then Add, and paste the URL.",
     ],
     docs: "https://support.google.com/gemini/answer/17209137",
-    // Gemini's sign-in and its tool schema checks do not work with T3 Code yet.
+    // Gemini's sign-in and its tool schema checks do not work with T2 Code yet.
     hidden: true,
   },
   {
@@ -145,8 +145,8 @@ export const MCP_APPS: readonly McpApp[] = [
       commands: (url) => [
         // Its MCP commands refuse to write while the Gateway runs.
         "openclaw gateway stop",
-        `openclaw mcp add t3code --url ${url} --transport streamable-http --auth oauth`,
-        "openclaw mcp login t3code",
+        `openclaw mcp add t2code --url ${url} --transport streamable-http --auth oauth`,
+        "openclaw mcp login t2code",
         "openclaw gateway start",
       ],
     },
@@ -166,12 +166,12 @@ export const MCP_APPS: readonly McpApp[] = [
       commands: (url) => [
         // `add` signs in on its first connection (30 s by default, too short to get a code);
         // `login` would clear that sign-in and need a second code.
-        `hermes mcp add t3code --url ${url} --auth oauth --connect-timeout 315`,
+        `hermes mcp add t2code --url ${url} --auth oauth --connect-timeout 315`,
       ],
     },
     steps: [
-      "Add t3code under mcp_servers in ~/.hermes/config.yaml, with the URL and auth: oauth.",
-      "Run hermes mcp login t3code.",
+      "Add t2code under mcp_servers in ~/.hermes/config.yaml, with the URL and auth: oauth.",
+      "Run hermes mcp login t2code.",
     ],
     note: "On a remote host, paste the final URL back when asked.",
     docs: "https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp",

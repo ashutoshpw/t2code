@@ -139,6 +139,15 @@ export const ProviderAdapterV2Event = Schema.Union([
     messageId: MessageId,
     status: Schema.Literals(["pending", "completed", "cancelled"]),
   }),
+  /** A steer the provider queued stays `pending` until the agent reads it; `cancelled` if dropped unread. */
+  Schema.Struct({
+    type: Schema.Literal("steer.updated"),
+    driver: ProviderDriverKind,
+    threadId: ThreadId,
+    runId: RunId,
+    messageId: MessageId,
+    status: Schema.Literals(["pending", "completed", "cancelled"]),
+  }),
   // Start before the root terminal; clear only after the final covered projection.
   // Consumer lifetime cannot depend on a producer probe that runs ahead of its queue.
   Schema.Struct({

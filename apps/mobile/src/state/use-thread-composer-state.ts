@@ -12,7 +12,7 @@ import { resolvePendingHandoff } from "@t2code/client-runtime/handoff";
 import {
   announcedRun,
   isDetailBehindShell,
-} from "@t3tools/client-runtime/state/thread-activity-announcement";
+} from "@t2code/client-runtime/state/thread-activity-announcement";
 import {
   deriveProviderSubagentStatus,
   deriveProviderExtensionStatuses,
@@ -32,8 +32,10 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type EnvironmentId,
   type ModelSelection,
+  type ProviderInteractionMode,
   type RuntimeMode,
   type ScopedThreadRef,
+  type ServerProvider,
   type ThreadId,
 } from "@t2code/contracts";
 
@@ -54,6 +56,7 @@ import {
   describeUnavailableModelSelection,
   isModelSelectionUnavailable,
 } from "../lib/modelOptions";
+import { resolveProviderInteractionMode } from "./legacy-plan-mode";
 
 import type { DraftComposerImageAttachment } from "../lib/composerImages";
 import { scopedThreadKey } from "../lib/scopedEntities";
@@ -86,10 +89,12 @@ import {
   scheduleUnusedComposerAttachmentCleanup,
   setComposerDraftText,
   setFreshSessionPending,
+  updateComposerDraftSettings,
   useComposerDraft,
   useComposerDraftSettings,
 } from "./use-composer-drafts";
 import { isClearComposerCommand, parseSideChatCommand } from "@t2code/shared/composerTrigger";
+import { orchestrationV2WorktreePending } from "@t2code/shared/orchestrationV2ThreadError";
 import {
   compactionBlocksSteering,
   resolveComposerDispatchMode,
@@ -200,6 +205,7 @@ async function enqueueComposerOutboxSend(
   } finally {
     preparing.current = false;
   }
+  setKeepFullHistory(threadKey, false);
   if (sameComposerDraftState(getComposerDraftSnapshot(threadKey), draft))
     clearComposerDraftContent(threadKey, { deferAttachmentCleanup: true });
   scheduleUnusedComposerAttachmentCleanup(draft.attachments);
@@ -221,6 +227,21 @@ export function useThreadDraftForThread(input: {
     draftContext: draft.context,
     draftAttachments: draft.attachments,
   };
+}
+
+/** A provider without the interaction-mode toggle runs in the default mode. */
+export function updateThreadDraftModelSelection(
+  threadKey: string,
+  value: ModelSelection,
+  providers: ReadonlyArray<ServerProvider>,
+): void {
+  const provider = providers.find((candidate) => candidate.instanceId === value.instanceId);
+  updateComposerDraftSettings(threadKey, {
+    modelSelection: value,
+    ...(provider?.showInteractionModeToggle === false
+      ? { interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE }
+      : {}),
+  });
 }
 
 export function useThreadComposerState(input: {
@@ -356,8 +377,15 @@ export function useThreadComposerState(input: {
     serverConfig?.providers ?? [],
   );
   const runtimeMode = selectedDraft.runtimeMode ?? selectedThread?.runtimeMode ?? null;
-  // Plan mode is not offered to users; every send runs in build mode.
-  const interactionMode = selectedThread ? DEFAULT_PROVIDER_INTERACTION_MODE : null;
+  const selectedProvider = selectedEnvironmentRuntime?.serverConfig?.providers.find(
+    (provider) => provider.instanceId === modelSelection?.instanceId,
+  );
+  const interactionMode = selectedThread
+    ? resolveProviderInteractionMode(
+        selectedProvider,
+        selectedDraft.interactionMode ?? selectedThread.interactionMode,
+      )
+    : null;
   const canSwitchThreadProvider = threadAllowsProviderSwitch({
     thread: selectedThreadShell,
     projection: selectedThreadProjection?.projection,
@@ -952,6 +980,20 @@ export function useThreadComposerState(input: {
     removeComposerDraftAttachment(threadKey, imageId);
   };
 
+  const onUpdateInteractionMode = (value: ProviderInteractionMode) => {
+    if (!selectedThreadKey) {
+      return;
+    }
+    const modelSelection =
+      getComposerDraftSnapshot(selectedThreadKey).modelSelection ?? selectedThread?.modelSelection;
+    const provider = selectedEnvironmentRuntime?.serverConfig?.providers.find(
+      (candidate) => candidate.instanceId === modelSelection?.instanceId,
+    );
+    updateComposerDraftSettings(selectedThreadKey, {
+      interactionMode: resolveProviderInteractionMode(provider, value),
+    });
+  };
+
   return {
     feedbackSubmissions,
     dismissFeedback,
@@ -1000,6 +1042,7 @@ export function useThreadComposerState(input: {
     onNativePasteText,
     onRemoveDraftImage,
     onSendMessage,
+    onUpdateInteractionMode,
     sideChatUnavailableReason,
   };
 }

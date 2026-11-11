@@ -68,6 +68,7 @@ function menu() {
     composerTrigger: { kind: "path", query: "word", rangeStart: 0, rangeEnd: 5 },
     environmentId,
     linkedEnvironments: new Map(),
+    modelMentions: { instanceEntries: [], modelOptionsByInstance: new Map() },
     gitCwd: "/project",
     activeThreadId: null,
     pullRequestProjectId: null,

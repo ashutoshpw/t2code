@@ -361,14 +361,14 @@ describe("RemoteEnvironmentAuthorization", () => {
         yield* remember(Option.none());
         yield* authorize;
         // After a network change, a plain LAN address can belong to another machine.
-        yield* remote.rememberCheckedDescriptor("http://192.168.1.2:3773", Option.some(descriptor));
-        yield* authorizeAt("http://192.168.1.2:3773");
+        yield* remote.rememberCheckedDescriptor("http://192.168.1.2:3772", Option.some(descriptor));
+        yield* authorizeAt("http://192.168.1.2:3772");
       }).pipe(Effect.provide(harness.layer));
 
       expect(harness.fetch.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([
         "/api/auth/websocket-ticket/rpc",
         ...Array.from({ length: 5 }, () => [
-          "/.well-known/t3/environment",
+          "/.well-known/t2/environment",
           "/api/auth/websocket-ticket/rpc",
         ]).flat(),
       ]);

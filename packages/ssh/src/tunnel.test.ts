@@ -409,7 +409,7 @@ describe("ssh tunnel scripts", () => {
               yield* Deferred.succeed(tunnelSpawned, undefined);
               return makeRunningProcess(() => undefined);
             })
-          : Effect.succeed(makeSuccessfulProcess('{"remotePort":3773}\n')),
+          : Effect.succeed(makeSuccessfulProcess('{"remotePort":3772}\n')),
       );
       const httpClient = HttpClient.make((request) =>
         forwardListening(LOCAL_PORT).pipe(
@@ -478,7 +478,7 @@ describe("ssh tunnel scripts", () => {
                 }),
               ),
             )
-          : Effect.succeed(makeSuccessfulProcess('{"remotePort":3773}\n')),
+          : Effect.succeed(makeSuccessfulProcess('{"remotePort":3772}\n')),
       );
       const layer = Layer.mergeAll(
         NodeServices.layer,

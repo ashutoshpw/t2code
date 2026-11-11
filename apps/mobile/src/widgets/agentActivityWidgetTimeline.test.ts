@@ -16,7 +16,7 @@ function row(phase: Row["phase"], status: string): Row {
   return {
     environmentId: "env-1" as EnvironmentId,
     threadId: `thread-${phase}` as ThreadId,
-    projectTitle: "t3code",
+    projectTitle: "t2code",
     threadTitle: `Thread ${phase}`,
     modelTitle: "GPT-5.5",
     phase,
@@ -28,7 +28,7 @@ function row(phase: Row["phase"], status: string): Row {
 
 function aggregate(activities: ReadonlyArray<Row>): RelayAgentActivityAggregateState {
   return {
-    title: "T3 Code",
+    title: "T2 Code",
     subtitle: "Agent work in progress",
     activeCount: activities.length,
     updatedAt: "2026-10-18T09:59:00.000Z",

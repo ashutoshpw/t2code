@@ -200,7 +200,7 @@ it.layer(NodeServices.layer)("server self update", (it) => {
       });
       const error = yield* selfUpdate.update({ targetVersion: "1.1.0" }).pipe(Effect.flip);
       expect(error.reason).toBe(
-        `Could not prepare t3@1.1.0 while downloading the t3 release ${asset} (HTTP ${status} from cdn.example).`,
+        `Could not prepare @t2code/cli@1.1.0 while downloading the t2 release ${asset} (HTTP ${status} from cdn.example).`,
       );
       expect(order).toEqual([]);
       const fs = yield* FileSystem.FileSystem;
@@ -447,9 +447,9 @@ it.layer(NodeServices.layer)("pruning runtimes on start", (it) => {
         ? path.join(tempDir, "alias-home")
         : baseDir;
       if (input.servicePlistThroughLink) yield* fs.symlink(realHome, programHome);
-      const program = path.join(programHome, "runtime", "versions", input.servicePlistStarts, "t3");
+      const program = path.join(programHome, "runtime", "versions", input.servicePlistStarts, "t2");
       yield* fs.writeFileString(
-        path.join(agentsDir, "com.t3tools.t3code.service.plist"),
+        path.join(agentsDir, "codes.t2.desktop.service.plist"),
         `<plist><dict>\n<key>ProgramArguments</key>\n<array>\n<string>${program}</string>\n<string>__service-launcher</string>\n</array>\n</dict></plist>\n`,
       );
     }
@@ -497,7 +497,7 @@ it.layer(NodeServices.layer)("pruning runtimes on start", (it) => {
   // In-place updates move the active version but leave the launch agent on the launcher's runtime.
   it.effect.each([
     { name: "", throughLink: false },
-    { name: " through a symlinked T3 home", throughLink: true },
+    { name: " through a symlinked T2 home", throughLink: true },
   ])("keeps the runtime a stopped service's launch agent starts$name", ({ throughLink }) =>
     Effect.gen(function* () {
       const { removed, remaining } = yield* pruneOnStart({

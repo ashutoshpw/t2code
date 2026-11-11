@@ -158,7 +158,7 @@ function groupLabel(
     case "skill":
       return "Skills";
     case "path":
-      return "Files and context";
+      return items.every((item) => item.type === "path") ? "Files" : "Mentions";
     default:
       return null;
   }

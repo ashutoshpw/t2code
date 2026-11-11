@@ -28,6 +28,7 @@ const emitInterleavedAssistantToolCalls =
   process.env.T2_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS === "1";
 const emitV2Fidelity = process.env.T2_ACP_EMIT_V2_FIDELITY === "1";
 const emitNotice = process.env.T2_ACP_EMIT_NOTICE === "1";
+const hangCloseSession = process.env.T2_ACP_HANG_CLOSE_SESSION === "1";
 const vibeRetryOutcome = process.env.T2_ACP_VIBE_RETRY_OUTCOME;
 const emitGenericToolPlaceholders = process.env.T2_ACP_EMIT_GENERIC_TOOL_PLACEHOLDERS === "1";
 const emitInTurnTaskOutputThenLateDuplicate =
@@ -60,6 +61,7 @@ const emitEmptySuccessfulBash = process.env.T2_ACP_EMIT_EMPTY_SUCCESSFUL_BASH ==
 const emitEmptySuccessfulBashThenHang =
   process.env.T2_ACP_EMIT_EMPTY_SUCCESSFUL_BASH_THEN_HANG === "1";
 const failLoadSession = process.env.T2_ACP_FAIL_LOAD_SESSION === "1";
+const failDeleteSession = process.env.T2_ACP_FAIL_DELETE_SESSION === "1";
 const failLoadSessionAfterConfigReplay =
   process.env.T2_ACP_FAIL_LOAD_SESSION_AFTER_CONFIG_REPLAY === "1";
 const emitLoadReplay = process.env.T2_ACP_EMIT_LOAD_REPLAY === "1";
@@ -97,7 +99,7 @@ const permissionOptionIds = {
 const sessionId = "mock-session-1";
 
 let currentModeId = antigravityProfile
-  ? (process.env.T3_ACP_INITIAL_MODE ?? "default")
+  ? (process.env.T2_ACP_INITIAL_MODE ?? "default")
   : copilotModesProfile
     ? copilotModeId("agent")
     : "ask";

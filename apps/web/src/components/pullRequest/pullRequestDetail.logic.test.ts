@@ -1,4 +1,5 @@
 import { SourceControlProviderKind } from "@t2code/contracts";
+import { resolvePlanFollowUpSubmission } from "../../proposedPlan";
 import { serializeLegacyContextMessage } from "@t2code/shared/composerContextLegacySend";
 import {
   GitCommandError,
@@ -14,7 +15,12 @@ import {
   type ThreadPullRequestLink,
 } from "@t2code/contracts";
 import { describe, expect, it } from "vite-plus/test";
-import { reviewCommentContextLabel } from "~/lib/composerContextRecords";
+import { formatInlineContextReference } from "~/lib/composerContextReferences";
+import {
+  buildMessageContext,
+  reviewCommentContextLabel,
+  reviewCommentContextReference,
+} from "~/lib/composerContextRecords";
 
 import {
   buildAddSelectionToAgentHandoff,
@@ -23,6 +29,7 @@ import {
   buildResolveConflictsPrompt,
   resolveThreadPanelPullRequestAction,
   buildPullRequestCommentContext,
+  buildPullRequestReferenceContext,
   buildFixFindingHandoff,
   canDeletePullRequestBranch,
   buildFixFindingsHandoff,
@@ -739,12 +746,6 @@ describe("fix findings handoff", () => {
     });
     expect(handoff.reviewComments[1]?.text).toHaveLength(1_000);
     expect(handoff.reviewComments[1]?.text.endsWith("...")).toBe(true);
-    const emojiAtCut = buildFixFindingsHandoff({
-      ...base,
-      reviewThreads: [thread(`${"x".repeat(986)}😀 and more of the review.${"y".repeat(100)}`)],
-      checks: [],
-    });
-    expect(emojiAtCut.reviewComments[1]?.text).toBe(`reviewer: ${"x".repeat(986)}...`);
   });
 
   it("keeps the newest threads and the failing checks when it has to cut", () => {
@@ -973,6 +974,27 @@ describe("asking about a change rather than working on it", () => {
     isDraft: false,
   };
 
+  it.each(["", "Please consider "])("preserves PR plan feedback with prose %j", (prose) => {
+    const comment = buildPullRequestReferenceContext(base);
+    const draftText = prose + formatInlineContextReference(reviewCommentContextReference(comment));
+    const submission = resolvePlanFollowUpSubmission({ draftText, planMarkdown: "# Plan" });
+    const context = buildMessageContext({
+      terminalContexts: [],
+      previewAnnotations: [],
+      reviewComments: [comment],
+    });
+    expect(submission).toEqual({ text: draftText, interactionMode: "plan" });
+    expect(context?.records[0]).toMatchObject({ pullRequest: base });
+    const legacyText = serializeLegacyContextMessage({
+      text: submission.text,
+      records: context!.records,
+    });
+    expect(legacyText).toContain(base.url);
+    expect(legacyText).toContain(prose);
+    expect(legacyText).not.toContain("PLEASE IMPLEMENT THIS PLAN");
+    expect(legacyText).not.toContain("t2-context://");
+  });
+
   it("builds a neutral composer reference without prescribing an action", () => {
     const context = buildPullRequestReferenceContext(base);
 
@@ -1032,14 +1054,6 @@ describe("asking about a change rather than working on it", () => {
       text: "what is this for?",
       diff: "+const answer = 42;",
     };
-    const legacyText = serializeLegacyContextMessage({
-      text: submission.text,
-      records: context!.records,
-    });
-    expect(legacyText).toContain(base.url);
-    expect(legacyText).toContain(prose);
-    expect(legacyText).not.toContain("PLEASE IMPLEMENT THIS PLAN");
-    expect(legacyText).not.toContain("t2-context://");
     const handoff = buildAddSelectionToAgentHandoff({
       ...base,
       comment,

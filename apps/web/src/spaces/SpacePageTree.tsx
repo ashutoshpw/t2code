@@ -103,7 +103,8 @@ function PageTree({
               // The pinned LegendList patch retires active targets before assigning a replacement resolver.
               void list.scrollToOffset({ offset: list.getState().scroll, animated: false });
             },
-            containsFocus: () => list.getScrollableNode().contains(document.activeElement),
+            containsFocus: () =>
+              list.getScrollableNode()?.contains(document.activeElement) ?? false,
             focus: (key, last) => {
               const index = list
                 .getState()
@@ -136,7 +137,7 @@ function PageTree({
   const focusList = () => {
     focusOwner.cancel();
     setFocusedKey(null);
-    listRef.current?.getScrollableNode().focus({ preventScroll: true });
+    listRef.current?.getScrollableNode()?.focus({ preventScroll: true });
   };
   const first = (parentPageId: SpacePageId | null) => {
     focusList();

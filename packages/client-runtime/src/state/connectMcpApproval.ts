@@ -1,5 +1,5 @@
 /**
- * The hosted app's side of an agent sign-in on a T3 Connect environment: it reads the request
+ * The hosted app's side of an agent sign-in on a T2 Connect environment: it reads the request
  * and sends the decision with the owner's own Connect session there, so no code is needed.
  */
 import type {
@@ -22,13 +22,13 @@ import { createRuntimeCommand } from "./runtime.ts";
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
-/** The environment cannot be reached through T3 Connect with this account. */
+/** The environment cannot be reached through T2 Connect with this account. */
 export class ConnectMcpApprovalUnavailableError extends Schema.TaggedError<ConnectMcpApprovalUnavailableError>()(
   "ConnectMcpApprovalUnavailableError",
   { cause: Schema.Defect() },
 ) {
   override get message(): string {
-    return "Could not reach that environment through T3 Connect with this account.";
+    return "Could not reach that environment through T2 Connect with this account.";
   }
 }
 
@@ -53,7 +53,7 @@ const refused = (error: { readonly message: string }) =>
   Effect.succeed<ConnectMcpApprovalAnswer>({ kind: "refused", message: error.message });
 
 /**
- * Sends one approval call to `environmentId` with this account's T3 Connect session. Its
+ * Sends one approval call to `environmentId` with this account's T2 Connect session. Its
  * address comes from the relay, which only grants access to the environment's owner.
  */
 const callConnectMcpApproval = Effect.fn("clientRuntime.state.connectMcpApproval")(

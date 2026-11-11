@@ -40,8 +40,6 @@ import { composerDraftSendGuard } from "../../lib/prepareComposerSendContext";
 import { readEnvironmentScope, readPreparedConnection } from "../../state/session";
 import { threadEnvironment } from "../../state/threads";
 import { useOrchestrationCommand } from "../../state/use-orchestration-command";
-import { buildThreadRouteParams } from "../../threadRoutes";
-import { DEFAULT_INTERACTION_MODE } from "../../types";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import {
   boundAttachmentIds,
@@ -298,27 +296,10 @@ function createMultipleModelSend(
                   title,
                   modelSelection: attempt.selection,
                   runtimeMode,
-                  interactionMode: DEFAULT_INTERACTION_MODE,
-                  bootstrap: {
-                    createThread: {
-                      projectId: project.id,
-                      title,
-                      modelSelection: target.selection,
-                      runtimeMode,
-                      interactionMode: DEFAULT_INTERACTION_MODE,
-                      branch,
-                      worktreePath: null,
-                      createdAt: createdAt,
-                    },
-                    prepareWorktree: {
-                      projectCwd: project.workspaceRoot,
-                      baseBranch: branch,
-                      requireWorktree: true,
-                      ...(startFromOrigin ? { startFromOrigin: true } : {}),
-                    },
-                    runSetupScript: true,
-                  },
-                  createdAt: createdAt,
+                  interactionMode: target.interactionMode,
+                  branch: send.branch,
+                  worktreePath: null,
+                  createdAt: send.createdAt,
                 },
                 prepareWorktree: {
                   projectCwd: send.project.workspaceRoot,
