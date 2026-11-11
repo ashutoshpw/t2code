@@ -679,6 +679,7 @@ it.layer(layer)("migrate-dev-db", (it) => {
               { migration_id: 14, name: "PageShares" },
               { migration_id: 15, name: "PageIcon" },
               { migration_id: 16, name: "PageBodyRevision" },
+              { migration_id: 17, name: "Databases" },
             ],
           );
         }),
