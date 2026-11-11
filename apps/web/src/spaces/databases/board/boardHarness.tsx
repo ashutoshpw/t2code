@@ -1,3 +1,6 @@
+// The registry loads the board body lazily; load it here so a cold first render is not timed.
+import "./BoardView";
+
 import { render, type Screen } from "../../../../test/render";
 import type { FakeDatabase } from "../test/fakeDatabase";
 import { DatabaseHarness, fakeController, testHost } from "../test/harness";
