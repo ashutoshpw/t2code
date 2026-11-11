@@ -96,7 +96,9 @@ function DatabaseUnavailable({
   if (unsaved) return <Note>Saving database...</Note>;
   return (
     <div className="space-y-2 rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-      <p role="status">This database is no longer available.</p>
+      <p role="status">
+        The original database was deleted. Restore its page or undo the deletion to use this view.
+      </p>
       {editable ? (
         <Button variant="outline" size="xs" onClick={() => actions.remove()}>
           Remove block

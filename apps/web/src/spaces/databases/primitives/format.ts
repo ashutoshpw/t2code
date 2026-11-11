@@ -1,3 +1,4 @@
+import { knownComputedValue } from "@t2code/client-runtime/spaces";
 import type {
   SpaceAggregateResult,
   SpaceCellValue,
@@ -213,8 +214,14 @@ export function formatAggregate(
   if (result.number === undefined) return "";
   if (PERCENT_AGGREGATES.has(result.function)) return `${Math.round(result.number * 100)}%`;
   if (result.function === "date_range") return days(result.number);
+  const numeric =
+    known?.type === "number"
+      ? known.config
+      : known?.type === "formula" || known?.type === "rollup"
+        ? computedNumberConfig(known)
+        : undefined;
   if (
-    known?.type === "number" &&
+    numeric !== undefined &&
     ![
       "count",
       "count_values",
@@ -225,7 +232,7 @@ export function formatAggregate(
       "unchecked",
     ].includes(result.function)
   )
-    return formatNumber(result.number, known.config);
+    return formatNumber(result.number, numeric);
   return new Intl.NumberFormat("en-US").format(result.number);
 }
 
@@ -316,6 +323,50 @@ export function cellPlainText(
         : "";
     case "formula":
     case "rollup":
-      return "";
+      return computedText(value, known, context);
+  }
+}
+
+type ComputedKnown = Extract<SpaceKnownDatabaseProperty, { type: "formula" | "rollup" }>;
+
+const isPercentRollup = (known: ComputedKnown) =>
+  known.type === "rollup" && known.config.function.startsWith("percent_");
+
+/** The number display of a computed property: its own format, else percent for percent rollups. */
+export function computedNumberConfig(known: ComputedKnown): {
+  readonly format: SpaceNumberFormat;
+  readonly decimals?: number | undefined;
+} {
+  return {
+    format: known.config.format ?? (isPercentRollup(known) ? "percent" : "number"),
+    decimals: known.config.decimals,
+  };
+}
+
+/** A computed value as plain text, for copy and screen readers. Empty when it has no value. */
+function computedText(
+  value: SpaceCellValue | undefined,
+  known: ComputedKnown,
+  context: CellTextContext,
+): string {
+  const parsed = knownComputedValue(value);
+  if (parsed === undefined) return "";
+  switch (parsed.type) {
+    case "string":
+      return parsed.value;
+    case "number":
+      return formatNumber(parsed.value, computedNumberConfig(known));
+    case "boolean":
+      return parsed.value ? "Checked" : "";
+    case "date":
+      return formatDate(parsed.value, {}, context.timeZone);
+    case "page":
+      return context.relatedPages[parsed.value]?.title || "Untitled";
+    case "array": {
+      const items = parsed.value
+        .map((item) => computedText(item, known, context))
+        .filter((text) => text !== "");
+      return items.join(", ") + (parsed.truncated === true ? ", …" : "");
+    }
   }
 }

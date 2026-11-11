@@ -20,6 +20,8 @@ export interface TableColumn {
   readonly width: number;
   /** False for types no editor exists for. */
   readonly writable: boolean;
+  /** Cells show up to three lines. */
+  readonly wrap: boolean;
 }
 
 export type OptionHint = (
@@ -56,6 +58,12 @@ export interface GridHandlers {
   addRow(group: SpaceGroupKey | null): void;
   toggleGroup(id: string): void;
   loadBucket(key: SpaceGroupKey): void;
+  /** Expands or collapses a row's sub-items; true when the key changed something. */
+  toggleRow(pageId: string, expand?: boolean): boolean;
+  addSubItem(parentId: string): void;
+  loadChildren(parentId: string): void;
+  /** Whether the row menu offers `Add sub-item`. */
+  readonly canSubItems: boolean;
   /** Rows a page key moves. */
   pageRows(): number;
 }
@@ -74,6 +82,7 @@ const sameColumn = (a: TableColumn, b: TableColumn) =>
     a.type === b.type &&
     a.width === b.width &&
     a.writable === b.writable &&
+    a.wrap === b.wrap &&
     a.known === b.known);
 
 /**

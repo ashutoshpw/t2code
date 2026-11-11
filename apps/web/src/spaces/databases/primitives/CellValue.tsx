@@ -1,6 +1,5 @@
 import { CheckIcon } from "lucide-react";
 import { memo } from "react";
-import { isSafeSpaceLink } from "@t2code/client-runtime/spaces";
 import type {
   SpaceCellValue,
   SpaceDateValue,
@@ -11,6 +10,8 @@ import type {
 import { cn } from "~/lib/utils";
 import { cellPlainText, formatNumber, optionLabel, type CellTextContext } from "./format";
 import { OptionChip } from "./OptionChip";
+import { TextRuns } from "./TextRuns";
+import { ComputedValue } from "./ComputedValue";
 
 export type CellValueVariant = "cell" | "card" | "field";
 
@@ -21,6 +22,8 @@ interface CellValueProps {
   readonly variant: CellValueVariant;
   readonly optionHint: CellTextContext["optionHint"];
   readonly timeZone: string;
+  /** Up to three lines instead of one; the table sets it for wrapped columns. */
+  readonly wrap?: boolean;
 }
 
 const muted = (text: string) => <span className="text-muted-foreground/70">{text}</span>;
@@ -44,46 +47,6 @@ function Chips({
     const name = option?.name ?? optionLabel(known, id, optionHint);
     return name === undefined ? null : (
       <OptionChip key={id} name={name} color={option?.color ?? hint?.color ?? "default"} />
-    );
-  });
-}
-
-function TextRuns({ runs }: { readonly runs: ReadonlyArray<unknown> }) {
-  let offset = 0;
-  return runs.map((run) => {
-    if (typeof run !== "object" || run === null || !("text" in run)) return null;
-    const key = offset;
-    offset += String(run.text).length;
-    const marks = "marks" in run && Array.isArray(run.marks) ? run.marks : [];
-    const types = new Set(marks.map((mark: { type?: string }) => mark.type));
-    const link = marks.find(
-      (mark: { type?: string; href?: unknown }) =>
-        mark.type === "link" && typeof mark.href === "string" && isSafeSpaceLink(mark.href),
-    ) as { href: string } | undefined;
-    const text = (
-      <span
-        className={cn(
-          types.has("bold") && "font-semibold",
-          types.has("italic") && "italic",
-          types.has("code") && "rounded bg-muted px-1 font-mono text-xs",
-        )}
-      >
-        {String(run.text)}
-      </span>
-    );
-    return link ? (
-      <a
-        key={key}
-        href={link.href}
-        target="_blank"
-        rel="noreferrer"
-        className="underline"
-        onClick={(event) => event.stopPropagation()}
-      >
-        {text}
-      </a>
-    ) : (
-      <span key={key}>{text}</span>
     );
   });
 }
@@ -122,7 +85,10 @@ function NumberValue({
 
 function Content({ known, value, relatedPages, optionHint, timeZone }: CellValueProps) {
   if (known === null) return muted("Unsupported");
-  if (known.type === "formula" || known.type === "rollup") return muted("Not available yet");
+  if (known.type === "formula" || known.type === "rollup")
+    return (
+      <ComputedValue known={known} value={value} relatedPages={relatedPages} timeZone={timeZone} />
+    );
   if (value === undefined || value === null) return null;
   switch (known.type) {
     case "title":
@@ -202,7 +168,10 @@ export const CellValue = memo(function CellValue(props: CellValueProps) {
     <span
       data-variant={props.variant}
       className={cn(
-        "flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap",
+        "flex min-w-0 gap-1 overflow-hidden",
+        props.wrap === true
+          ? "max-h-[3.75rem] flex-wrap items-start whitespace-normal break-words"
+          : "items-center whitespace-nowrap",
         props.variant === "card" && "text-xs text-muted-foreground",
       )}
     >

@@ -10,12 +10,17 @@ import * as CellCodec from "./CellCodec.ts";
 import * as CellStore from "./CellStore.ts";
 import * as DatabaseStore from "./DatabaseStore.ts";
 import * as Ids from "./Ids.ts";
-import type { Json } from "./Json.ts";
+import { type Json, parseJson } from "./Json.ts";
 import { POSITION_GAP, positionsBetween } from "./Position.ts";
 import * as RelationStore from "./RelationStore.ts";
 import * as SchemaStore from "./SchemaStore.ts";
 import type { Property, Snapshot } from "./SchemaStore.ts";
-import type { Touched } from "./Touched.ts";
+import * as Evaluate from "./computed/Evaluate.ts";
+import { isMaterialized } from "./computed/Record.ts";
+import { valueToWire, wirePageIds } from "./computed/Values.ts";
+import { processZone } from "./computed/Zone.ts";
+import * as Templates from "./Templates.ts";
+import { type Touched, recordCell } from "./Touched.ts";
 import { dbError, isoNow, trashed } from "./Types.ts";
 
 /** A page that is a non-trashed row or template of `dataSourceId`. */
@@ -52,7 +57,14 @@ const writeCell = Effect.fn("SpacesDatabases.writeCell")(function* (input: {
       targets: items.flatMap((item) => (item.ref === null ? [] : [item.ref])),
       touched: input.touched,
     });
-  return yield* CellStore.replace(pageId, snapshot.source.data_source_id, property.id, items);
+  const changed = yield* CellStore.replace(
+    pageId,
+    snapshot.source.data_source_id,
+    property.id,
+    items,
+  );
+  if (changed) recordCell(input.touched, pageId, snapshot.source.data_source_id, property.id);
+  return changed;
 });
 
 const renumber = Effect.fn("SpacesDatabases.renumberRows")(function* (dataSourceId: string) {
@@ -101,6 +113,7 @@ export const createRows = Effect.fn("SpacesDatabases.createRows")(function* (inp
   readonly snapshot: Snapshot;
   readonly drafts: readonly C.SpaceRowDraft[];
   readonly beforeRowId: string | null;
+  readonly mutationId: string;
   readonly now: number;
   readonly touched: Touched;
 }) {
@@ -111,7 +124,6 @@ export const createRows = Effect.fn("SpacesDatabases.createRows")(function* (inp
   yield* ensureDatabaseLimit("maxRowsPerMutation", drafts.length);
   yield* ensureDatabaseLimit("maxCellsPerMutation", countCells(drafts));
   yield* ensureDatabaseLimit("maxRowsPerDataSource", source.row_count + drafts.length);
-  if (drafts.some((draft) => draft.templateId !== undefined)) return yield* dbError("unsupported");
   const [database] = yield* sql<{
     readonly space_id: string;
   }>`SELECT space_id FROM spaces_db_databases WHERE database_id = ${source.database_id}`;
@@ -119,7 +131,11 @@ export const createRows = Effect.fn("SpacesDatabases.createRows")(function* (inp
   const positions = yield* placement(source.data_source_id, drafts.length, input.beforeRowId, []);
   const created: { pageId: string; number: number }[] = [];
   for (const [index, draft] of drafts.entries()) {
-    const cells = { ...draft.cells };
+    const template =
+      draft.templateId === undefined
+        ? undefined
+        : yield* Templates.load(snapshot, draft.templateId);
+    const cells = { ...template?.values, ...draft.cells };
     const titleValue = cells.title;
     delete cells.title;
     if (titleValue !== undefined && typeof titleValue !== "string")
@@ -129,10 +145,12 @@ export const createRows = Effect.fn("SpacesDatabases.createRows")(function* (inp
     const pageId = yield* Ids.register("page");
     const seq = source.next_row_seq + index;
     yield* sql`INSERT INTO spaces_pages (page_id, space_id, title, icon, root_order, created_at, updated_at, data_source_id, row_seq, row_position, row_template)
-      VALUES (${pageId}, ${database!.space_id}, ${title}, ${draft.icon ?? null}, NULL, ${iso}, ${iso},
+      VALUES (${pageId}, ${database!.space_id}, ${title}, ${draft.icon ?? template?.icon ?? null}, NULL, ${iso}, ${iso},
       ${source.data_source_id}, ${seq}, ${positions[index]!}, ${draft.asTemplate === true ? 1 : 0})`;
     yield* SearchStore.writeTitle(pageId, title);
     yield* CellStore.writeTitleMirror(pageId, source.data_source_id, title);
+    input.touched.created.set(pageId, source.data_source_id);
+    recordCell(input.touched, pageId, source.data_source_id, "title");
     for (const property of snapshot.live) {
       const supplied = cells[property.id];
       if (property.type === "status" && supplied === undefined) {
@@ -147,6 +165,13 @@ export const createRows = Effect.fn("SpacesDatabases.createRows")(function* (inp
       const property = yield* SchemaStore.liveProperty(snapshot, propertyId);
       yield* writeCell({ snapshot, property, pageId, value, touched: input.touched });
     }
+    if (draft.templateId !== undefined)
+      yield* Templates.copyBody({
+        templateId: draft.templateId,
+        pageId,
+        mutationId: input.mutationId,
+        nowMs: input.now,
+      });
     created.push({ pageId, number: seq });
   }
   yield* sql`UPDATE spaces_db_data_sources SET next_row_seq = next_row_seq + ${drafts.length},
@@ -179,14 +204,15 @@ export const updateRows = Effect.fn("SpacesDatabases.updateRows")(function* (inp
           return yield* dbError("invalid_value", property.id);
         const title = value ?? "";
         yield* ensureLimit("maxTitleBytes", byteLength(title));
-        changed =
-          (yield* PageUpdate.apply(
-            page,
-            { title, icon: page.icon ?? null },
-            input.mutationId,
-            input.now,
-            false,
-          )) || changed;
+        const titleChanged = yield* PageUpdate.apply(
+          page,
+          { title, icon: page.icon ?? null },
+          input.mutationId,
+          input.now,
+          false,
+        );
+        if (titleChanged) recordCell(input.touched, page.page_id, sourceId, "title");
+        changed = titleChanged || changed;
         continue;
       }
       changed =
@@ -270,10 +296,14 @@ export type HydratePage = Pick<
   "page_id" | "title" | "icon" | "revision" | "created_at" | "updated_at" | "row_seq"
 >;
 
+const isComputed = (property: Property) =>
+  property.type === "formula" || property.type === "rollup";
+
 export const hydrate = Effect.fn("SpacesDatabases.hydrate")(function* (
   snapshot: Snapshot,
   pages: readonly HydratePage[],
   propertyIds: readonly string[] | undefined,
+  clock?: { readonly nowMs: number; readonly timeZone: string },
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const wanted =
@@ -283,11 +313,49 @@ export const hydrate = Effect.fn("SpacesDatabases.hydrate")(function* (
   const stored = wanted.filter(
     (property) => !CellCodec.readOnlyTypes.has(property.type) && property.type !== "title",
   );
+  const materialized = wanted.filter(
+    (property) => isComputed(property) && isMaterialized(property.computed),
+  );
   const cells = yield* CellStore.readCells(
     pages.map((page) => page.page_id),
-    stored.map((property) => property.id),
+    [...stored, ...materialized].map((property) => property.id),
   );
+  const volatile = wanted.filter(
+    (property) =>
+      isComputed(property) &&
+      property.computed !== null &&
+      property.computed.volatile &&
+      property.computed.error === undefined,
+  );
+  const volatileWires = new Map<string, Map<string, Json>>();
+  if (volatile.length > 0) {
+    const evaluated = yield* Evaluate.rows({
+      snapshot,
+      pageIds: pages.map((page) => page.page_id),
+      properties: volatile,
+      now: clock?.nowMs ?? 0,
+      timeZone: clock?.timeZone ?? processZone,
+    });
+    for (const [pageId, values] of evaluated.values) {
+      const wires = new Map<string, Json>();
+      for (const [propertyId, value] of values) {
+        const colorOf = evaluated.colorsOf(propertyId);
+        const wire = valueToWire(value, colorOf === undefined ? {} : { colorOf });
+        if (wire !== undefined) wires.set(propertyId, wire);
+      }
+      volatileWires.set(pageId, wires);
+    }
+  }
+  const computedWire = (page: HydratePage, property: Property): Json | undefined => {
+    if (property.computed?.volatile === true)
+      return volatileWires.get(page.page_id)?.get(property.id);
+    const first = cells.get(page.page_id)?.get(property.id)?.[0];
+    return first?.value == null ? undefined : parseJson(first.value);
+  };
   const targets = new Set<string>();
+  for (const page of pages)
+    for (const property of [...materialized, ...volatile])
+      wirePageIds(computedWire(page, property), targets);
   for (const page of pages)
     for (const property of stored)
       if (property.type === "relation")
@@ -312,8 +380,9 @@ export const hydrate = Effect.fn("SpacesDatabases.hydrate")(function* (
   const rows: C.SpaceDatabaseRow[] = pages.map((page) => {
     const values: Record<string, Json> = {};
     for (const property of wanted) {
-      const value =
-        property.type === "title" || CellCodec.readOnlyTypes.has(property.type)
+      const value = isComputed(property)
+        ? computedWire(page, property)
+        : property.type === "title" || CellCodec.readOnlyTypes.has(property.type)
           ? virtualCell(property, page)
           : CellCodec.decode(property, cells.get(page.page_id)?.get(property.id) ?? []);
       if (value === undefined) continue;

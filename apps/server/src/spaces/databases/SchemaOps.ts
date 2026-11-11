@@ -10,6 +10,7 @@ import { fold } from "./Fold.ts";
 import { clientIdPattern, shortId } from "./Ids.ts";
 import { type Json, type JsonObject, isObject } from "./Json.ts";
 import { normalizeConfig, optionTypes } from "./PropertyConfig.ts";
+import * as Definitions from "./computed/Definitions.ts";
 import * as RelationStore from "./RelationStore.ts";
 import * as SchemaStore from "./SchemaStore.ts";
 import type { Property, Snapshot } from "./SchemaStore.ts";
@@ -26,20 +27,6 @@ export interface Context {
 const iso = (ctx: Context) => isoNow(ctx.now);
 
 const reload = (ctx: Context) => SchemaStore.load(ctx.dataSourceId);
-
-const checkRollup = Effect.fn("SpacesDatabases.checkRollup")(function* (
-  snapshot: Snapshot,
-  config: JsonObject,
-  propertyId: string,
-) {
-  const relation = snapshot.byId.get(String(config.relationPropertyId));
-  if (!relation || relation.deletedAtMs !== null || relation.type !== "relation")
-    return yield* dbError("invalid_property_config", propertyId);
-  const target = yield* SchemaStore.load(RelationStore.relationOf(relation).dataSourceId);
-  const picked = target.byId.get(String(config.targetPropertyId));
-  if (!picked || picked.deletedAtMs !== null)
-    return yield* dbError("invalid_property_config", propertyId);
-});
 
 const stripStatusDefault = (
   config: JsonObject,
@@ -78,7 +65,6 @@ export const addProperty = Effect.fn("SpacesDatabases.addProperty")(function* (
   const config = yield* normalizeConfig(draft.type, draft.config, id);
   if (draft.type === "relation")
     yield* RelationStore.checkTarget(snapshot, String(config.dataSourceId), id);
-  if (draft.type === "rollup") yield* checkRollup(snapshot, config, id);
   const optionDrafts =
     draft.type === "status" && (draft.options ?? []).length === 0
       ? SchemaStore.defaultStatusOptions
@@ -106,6 +92,7 @@ export const addProperty = Effect.fn("SpacesDatabases.addProperty")(function* (
         position: 0,
         deletedAtMs: null,
         options: current,
+        computed: null,
       };
       const optionId = yield* SchemaStore.addOption(ctx.dataSourceId, property, optionDraft);
       optionIds.push(optionId);
@@ -134,6 +121,7 @@ export const addProperty = Effect.fn("SpacesDatabases.addProperty")(function* (
       position: 0,
       deletedAtMs: null,
       options: [],
+      computed: null,
     }).twinId;
     if (twinId !== null) {
       const fresh = yield* reload(ctx);
@@ -146,6 +134,7 @@ export const addProperty = Effect.fn("SpacesDatabases.addProperty")(function* (
       });
     }
   }
+  if (draft.type === "formula" || draft.type === "rollup") yield* Definitions.define(ctx, id);
   return id;
 });
 
@@ -221,7 +210,6 @@ const updateProperty = Effect.fn("SpacesDatabases.updateProperty")(function* (
   if (property.type === "relation")
     return yield* updateRelation(ctx, snapshot, property, op.config);
   const config = yield* normalizeConfig(property.type, op.config, property.id);
-  if (property.type === "rollup") yield* checkRollup(snapshot, config, property.id);
   if (property.type === "status")
     yield* stripStatusDefault(
       config,
@@ -229,6 +217,8 @@ const updateProperty = Effect.fn("SpacesDatabases.updateProperty")(function* (
       property.id,
     );
   yield* SchemaStore.setConfig(ctx.dataSourceId, property.id, config);
+  if (property.type === "formula" || property.type === "rollup")
+    yield* Definitions.define(ctx, property.id);
 });
 
 const purgeOverflow = Effect.fn("SpacesDatabases.purgeOverflow")(function* (ctx: Context) {
@@ -431,7 +421,6 @@ const changeType = Effect.fn("SpacesDatabases.changePropertyType")(function* (
   const config = yield* normalizeConfig(to, op.config, from.id);
   if (to === "relation")
     yield* RelationStore.checkTarget(snapshot, String(config.dataSourceId), from.id);
-  if (to === "rollup") yield* checkRollup(snapshot, config, from.id);
   const oldTwin =
     from.type === "relation" ? yield* RelationStore.loadTwin(from, ctx.dataSourceId) : undefined;
   if (oldTwin)
@@ -510,6 +499,9 @@ const changeType = Effect.fn("SpacesDatabases.changePropertyType")(function* (
     after = pages[pages.length - 1]!.page_id;
   }
   yield* SchemaStore.setType(ctx.dataSourceId, from.id, to, storedConfig);
+  if (from.type === "formula" || from.type === "rollup")
+    yield* Definitions.remove(ctx.dataSourceId, from.id);
+  if (to === "formula" || to === "rollup") yield* Definitions.define(ctx, from.id);
   yield* ViewStore.strip(
     ctx.dataSourceId,
     { propertyId: from.id, column: false, filters: true, sorts: true, groups: true },
@@ -544,7 +536,27 @@ export const applyOperations = Effect.fn("SpacesDatabases.applyOperations")(func
   yield* ensureDatabaseLimit("maxSchemaOperations", operations.length);
   const created: SchemaResult["created"] = [];
   let clearedCells = 0;
+  // Properties whose values or meaning changed in place, and restored ones, for computed readers.
+  const changed = new Set<string>();
+  const restored = new Set<string>();
+  const reshapes = operations.some(
+    (op) =>
+      op.op !== "moveProperty" &&
+      op.op !== "moveOption" &&
+      op.op !== "addOption" &&
+      !(op.op === "updateProperty" && op.name === undefined && op.config === undefined),
+  );
   for (const [index, op] of operations.entries()) {
+    if (
+      op.op === "changePropertyType" ||
+      op.op === "removeProperty" ||
+      op.op === "restoreProperty" ||
+      op.op === "updateOption" ||
+      op.op === "removeOption" ||
+      (op.op === "updateProperty" && op.config !== undefined)
+    )
+      changed.add(op.propertyId);
+    if (op.op === "restoreProperty") restored.add(op.propertyId);
     switch (op.op) {
       case "addProperty": {
         const id = yield* addProperty(ctx, op.property, op.beforePropertyId ?? null);
@@ -601,6 +613,7 @@ export const applyOperations = Effect.fn("SpacesDatabases.applyOperations")(func
   }
   yield* DatabaseStore.bumpSchema(ctx.dataSourceId, iso(ctx));
   ctx.touched.schema.add(ctx.dataSourceId);
+  if (reshapes) yield* Definitions.afterSchema(ctx, changed, restored);
   for (const id of ctx.touched.schema) yield* SchemaStore.checkSchemaBytes(id);
   return { created, clearedCells } satisfies SchemaResult;
 });

@@ -152,3 +152,35 @@ export function orderBuckets(
     .map((entry) => entry.bucket);
   return { shown, hidden };
 }
+
+/**
+ * The sub-group lanes of a grouped board: the union of every column's sub-group keys, ordered and
+ * filtered as the sub-group setting says (manual order, hidden lanes, hide empty).
+ */
+export function laneKeys(
+  buckets: ReadonlyArray<SpaceGroupBucket>,
+  subGroup?: Pick<SpaceGroup, "sort" | "order" | "hidden" | "hideEmpty">,
+): ReadonlyArray<SpaceGroupKey> {
+  const lanes = new Map<string, SpaceGroupBucket>();
+  for (const bucket of buckets)
+    for (const sub of bucket.subGroups ?? []) {
+      const id = canonicalJson(sub.key);
+      const known = lanes.get(id);
+      lanes.set(
+        id,
+        known === undefined
+          ? { key: sub.key, count: sub.count, rows: [], nextCursor: null }
+          : { ...known, count: known.count + sub.count },
+      );
+    }
+  return orderBuckets([...lanes.values()], subGroup).shown.map((lane) => lane.key);
+}
+
+/** One column's cell in a lane; undefined when the column has no rows for that lane. */
+export function laneCell(
+  bucket: SpaceGroupBucket,
+  laneKey: SpaceGroupKey,
+): NonNullable<SpaceGroupBucket["subGroups"]>[number] | undefined {
+  const id = canonicalJson(laneKey);
+  return bucket.subGroups?.find((sub) => canonicalJson(sub.key) === id);
+}

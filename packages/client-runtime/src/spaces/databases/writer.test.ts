@@ -51,6 +51,15 @@ const edit = (id: string, value: number | null) => ({
 });
 
 describe("DatabaseWriter", () => {
+  it("sends two cells of one row edited in the same tick as one row of one batch", async () => {
+    const { writer, sent } = setup();
+    writer.editCell(edit("a", 1));
+    writer.editCell({ ...edit("a", 2), propertyId: "q" as SpacePropertyId });
+    await writer.flush();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.rows).toEqual([{ pageId: "a", cells: { p: 1, q: 2 } }]);
+  });
+
   it("debounces, caps the wait and sends one coalesced batch", async () => {
     const { writer, sent, advance } = setup();
     writer.editCell(edit("a", 1));

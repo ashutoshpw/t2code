@@ -1,11 +1,20 @@
 import { RegistryContext } from "@effect/atom-react";
 import { rowTitle } from "@t2code/client-runtime/spaces";
 import { useContext, useEffect, useState, type KeyboardEvent } from "react";
-import type { SpaceCellValue, SpaceDatabaseRow, SpaceRelatedPage } from "@t2code/contracts/spaces";
+import type {
+  SpaceCellValue,
+  SpaceCursor,
+  SpaceDatabaseQueryInput,
+  SpaceDatabaseRow,
+  SpaceDataSourceId,
+  SpaceRelatedPage,
+} from "@t2code/contracts/spaces";
+import type { EnvironmentId } from "@t2code/contracts";
 
 import { cn } from "~/lib/utils";
 import { databasePorts } from "../data/ports";
-import { useOptionalDatabase } from "../shell/context";
+import { useRelationTarget } from "../controls/useRelationTarget";
+import { DatabaseActionsContext, useOptionalDatabase } from "../shell/context";
 import type { CellEditorProps } from "./CellEditor";
 import { EditorPopover } from "./EditorPopover";
 import { useSettleOnce } from "./settle";
@@ -18,17 +27,44 @@ const idsOf = (value: SpaceCellValue | undefined): string[] =>
 
 const viewerZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-/** Pick pages of the related data source by title. Creating rows in the target is not offered. */
+const searchInput = (
+  environmentId: EnvironmentId,
+  dataSourceId: SpaceDataSourceId,
+  query: string,
+): SpaceDatabaseQueryInput => ({
+  environmentId,
+  dataSourceId,
+  mode: "rows",
+  filter: null,
+  sorts: [],
+  group: null,
+  subGroup: null,
+  properties: [],
+  aggregates: [],
+  limit: RESULT_LIMIT,
+  timeZone: viewerZone(),
+  ...(query.trim() === "" ? {} : { search: query.trim() }),
+});
+
+/** Pick pages of the related data source by title, load more, or create one in the target. */
 export function RelationEditor(props: CellEditorProps) {
   const { value, relatedPages, onChange, onPicked } = props;
   const known = props.known as Extract<typeof props.known, { type: "relation" }>;
   const registry = useContext(RegistryContext);
   const database = useOptionalDatabase();
+  const actions = useContext(DatabaseActionsContext);
   const environmentId = props.environmentId ?? database?.model.environmentId;
+  const target = useRelationTarget(
+    environmentId,
+    database?.model.database.spaceId,
+    known.config.dataSourceId,
+  );
   const [query, setQuery] = useState(props.seed ?? "");
   const [active, setActive] = useState(0);
   const [results, setResults] = useState<ReadonlyArray<SpaceDatabaseRow> | null>(null);
   const [failed, setFailed] = useState(false);
+  const [cursor, setCursor] = useState<SpaceCursor | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [picked, setPicked] = useState<Readonly<Record<string, SpaceRelatedPage>>>({});
   const { commit, cancel } = useSettleOnce(props);
   const selected = idsOf(value);
@@ -41,24 +77,12 @@ export function RelationEditor(props: CellEditorProps) {
     const timer = setTimeout(
       () => {
         databasePorts
-          .query(registry, {
-            environmentId,
-            dataSourceId: known.config.dataSourceId,
-            mode: "rows",
-            filter: null,
-            sorts: [],
-            group: null,
-            subGroup: null,
-            properties: [],
-            aggregates: [],
-            limit: RESULT_LIMIT,
-            timeZone: viewerZone(),
-            ...(query.trim() === "" ? {} : { search: query.trim() }),
-          })
+          .query(registry, searchInput(environmentId, known.config.dataSourceId, query))
           .then(
             (result) => {
               if (!current) return;
               setResults(result.rows);
+              setCursor(result.nextCursor ?? null);
               setFailed(false);
             },
             () => {
@@ -73,6 +97,40 @@ export function RelationEditor(props: CellEditorProps) {
       clearTimeout(timer);
     };
   }, [registry, environmentId, known.config.dataSourceId, query]);
+
+  const loadMore = () => {
+    if (environmentId === undefined || cursor === null || loadingMore) return;
+    setLoadingMore(true);
+    databasePorts
+      .query(registry, { ...searchInput(environmentId, known.config.dataSourceId, query), cursor })
+      .then(
+        (result) => {
+          setResults((current) => [...(current ?? []), ...result.rows]);
+          setCursor(result.nextCursor ?? null);
+        },
+        () => setFailed(true),
+      )
+      .finally(() => setLoadingMore(false));
+  };
+  const typed = query.trim();
+  const canCreate =
+    typed !== "" &&
+    actions !== null &&
+    database?.model.permissions.rows === true &&
+    !target.deleted;
+  const create = async () => {
+    const created = await actions?.createRelatedRow(known.config.dataSourceId, typed);
+    if (created === null || created === undefined) return;
+    const page: SpaceRelatedPage = {
+      title: created.title,
+      dataSourceId: known.config.dataSourceId,
+    };
+    setPicked((now) => ({ ...now, [created.pageId]: page }));
+    onPicked?.({ [created.pageId]: page });
+    if (one) return commit([created.pageId]);
+    onChange?.([...selected, created.pageId]);
+    setQuery("");
+  };
 
   const toggle = (row: SpaceDatabaseRow) => {
     const pageId = row.page.id;
@@ -115,6 +173,11 @@ export function RelationEditor(props: CellEditorProps) {
   return (
     <EditorPopover label={known.name} onClose={cancel}>
       <div className="flex w-full flex-col text-sm">
+        {target.title === null ? null : (
+          <p className="truncate border-b px-2.5 py-1 text-xs text-muted-foreground">
+            {target.title}
+          </p>
+        )}
         {selected.length > 0 ? (
           <ul className="flex flex-wrap gap-1 border-b px-2 py-1.5">
             {selected.map((id) => (
@@ -165,12 +228,39 @@ export function RelationEditor(props: CellEditorProps) {
               {rowTitle(row) || "Untitled"}
             </li>
           ))}
+          {cursor === null ? null : (
+            <li role="presentation">
+              <button
+                type="button"
+                className="w-full rounded-md px-2 py-1 text-start text-muted-foreground hover:bg-accent"
+                onClick={loadMore}
+              >
+                {loadingMore ? "Loading" : "Load more"}
+              </button>
+            </li>
+          )}
+          {canCreate ? (
+            <li role="presentation">
+              <button
+                type="button"
+                className="w-full truncate rounded-md px-2 py-1 text-start hover:bg-accent"
+                onClick={() => void create()}
+              >
+                Create "{typed}" in {target.title ?? "the related database"}
+              </button>
+            </li>
+          ) : null}
           {results === null && !failed ? (
             <li role="presentation" className="px-2 py-1 text-muted-foreground">
               Searching
             </li>
           ) : null}
-          {failed ? (
+          {target.deleted ? (
+            <li role="alert" className="px-2 py-1 text-muted-foreground">
+              Related database was deleted
+            </li>
+          ) : null}
+          {failed && !target.deleted ? (
             <li role="alert" className="px-2 py-1 text-muted-foreground">
               Couldn't search pages
             </li>

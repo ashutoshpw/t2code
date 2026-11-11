@@ -7,6 +7,7 @@ import {
   isFilterGroup,
   knownProperty,
   nodeAt,
+  propertyQueryType,
   removeAt,
   setAt,
   setConnective,
@@ -39,11 +40,12 @@ const CONNECTIVES = [
 /** The first property a new rule can start on: the title, else the first filterable one. */
 function startingCondition(properties: FilterContext["properties"]): FilterCondition | null {
   const candidates = Object.values(properties)
-    .filter((property) => filterOperatorsFor(property.type).length > 0)
+    .filter((property) => filterOperatorsFor(propertyQueryType(property) ?? "").length > 0)
     .sort((a, b) => a.position - b.position);
   for (const candidate of candidates) {
     const known = knownProperty(candidate);
-    if (known !== null) return defaultCondition(known);
+    const queryType = propertyQueryType(candidate);
+    if (known !== null && queryType !== undefined) return defaultCondition(known, queryType);
   }
   return null;
 }

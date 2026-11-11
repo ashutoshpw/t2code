@@ -6,6 +6,8 @@ import type * as PageStore from "../PageStore.ts";
 import type { Plan } from "../PageStructure.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 import * as DatabaseStore from "./DatabaseStore.ts";
+import * as Dirty from "./computed/Dirty.ts";
+import * as Drain from "./computed/Drain.ts";
 import { parseJson } from "./Json.ts";
 import * as Liveness from "./Liveness.ts";
 import * as RelationStore from "./RelationStore.ts";
@@ -94,7 +96,10 @@ export const recoveryRows = (plan: Plan): RecoveryRow[] =>
     return { pageId, dataSourceId: row.data_source_id, template: row.row_template === 1 };
   });
 
-/** Bookkeeping for row pages after trash, restore and permanent delete (section 5.9). */
+/**
+ * Bookkeeping for row pages after trash, restore and permanent delete (section 5.9). Returns the
+ * data sources whose rows or computed values changed, for the receipt.
+ */
 export const afterRecovery = Effect.fn("SpacesDatabases.afterRecovery")(function* (
   operation: "trashPage" | "restorePage" | "permanentlyDeletePage",
   rows: readonly RecoveryRow[],
@@ -107,6 +112,10 @@ export const afterRecovery = Effect.fn("SpacesDatabases.afterRecovery")(function
     if (row.dataSourceId !== null)
       sources.set(row.dataSourceId, (sources.get(row.dataSourceId) ?? 0) + 1);
   const affected = new Set(sources.keys());
+  // Rows that read the affected rows through a relation recompute; a restored row recomputes itself.
+  const rowIds = rows.filter((row) => row.dataSourceId !== null).map((row) => row.pageId);
+  yield* Dirty.enqueueReferrersOfPages(rowIds);
+  if (operation === "restorePage") for (const id of rowIds) yield* Dirty.enqueueRow(id);
   if (operation === "permanentlyDeletePage") {
     const ids = rows.map((row) => row.pageId);
     for (const [id, count] of sources)
@@ -116,5 +125,7 @@ export const afterRecovery = Effect.fn("SpacesDatabases.afterRecovery")(function
         WHERE data_source_id = ${id} AND default_template_id IN ${sql.in(ids)}`;
     for (const id of yield* RelationStore.purgeInbound(ids)) affected.add(id);
   }
+  for (const id of yield* Drain.inMutation()) affected.add(id);
   for (const id of affected) yield* DatabaseStore.bumpData(id, now);
+  return [...affected].map((id) => C.SpaceDataSourceId.make(id));
 });

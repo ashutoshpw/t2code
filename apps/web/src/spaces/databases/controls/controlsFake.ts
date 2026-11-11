@@ -1,5 +1,9 @@
 import { applyViewPatch } from "@t2code/client-runtime/spaces";
-import type { SpaceDatabaseProperty, SpaceDatabaseView } from "@t2code/contracts/spaces";
+import type {
+  SpaceDataSource,
+  SpaceDatabaseProperty,
+  SpaceDatabaseView,
+} from "@t2code/contracts/spaces";
 
 import { FakeDatabase } from "../test/fakeDatabase";
 
@@ -8,6 +12,9 @@ type Registry = {
   get<A>(atom: never): A;
   set(atom: never, value: number): void;
 };
+
+/** Mirrors the server's client id rule (`clientIdPattern`), so ids it would refuse fail here too. */
+const SERVER_ID_PATTERN = /^[a-z0-9]{4,12}$/;
 
 const STATUS_DEFAULTS = [
   { id: "d-todo", name: "Not started", color: "gray", group: "todo" },
@@ -48,7 +55,29 @@ export class EditableFakeDatabase extends FakeDatabase {
         updateSchema: async (registry: Registry, _environmentId: string, input: Json) => {
           failIfRequested("updateSchema", input);
           let cleared = 0;
-          for (const operation of input.operations as Json[]) cleared += this.#apply(operation);
+          const otherIndex = this.others.findIndex(
+            (entry) => entry.dataSource.id === input.dataSourceId,
+          );
+          const main = this.dataSource;
+          const rowsBefore = this.rows;
+          if (otherIndex >= 0) this.dataSource = this.others[otherIndex]!.dataSource;
+          try {
+            for (const operation of input.operations as Json[]) cleared += this.#apply(operation);
+          } finally {
+            if (otherIndex >= 0) {
+              const edited = this.dataSource;
+              this.others[otherIndex] = { ...this.others[otherIndex]!, dataSource: edited };
+              this.dataSource = main;
+            }
+          }
+          if (otherIndex < 0)
+            try {
+              this.recomputeFormulas();
+            } catch (refusal) {
+              this.dataSource = main;
+              this.rows = rowsBefore;
+              throw refusal;
+            }
           this.dataSource = {
             ...this.dataSource,
             schemaRevision: this.dataSource.schemaRevision + 1,
@@ -65,6 +94,54 @@ export class EditableFakeDatabase extends FakeDatabase {
         },
       },
     };
+  }
+
+  /** Edits the data source a relation points at (this one, or another database's). */
+  #onTarget(targetId: string, edit: (source: SpaceDataSource) => SpaceDataSource) {
+    if (targetId === this.dataSource.id) {
+      this.dataSource = edit(this.dataSource);
+      return;
+    }
+    this.others = this.others.map((entry) =>
+      entry.dataSource.id === targetId ? { ...entry, dataSource: edit(entry.dataSource) } : entry,
+    );
+  }
+
+  #addTwin(ownerPropertyId: string, config: Json) {
+    const twoWay = config.twoWay as { propertyId: string } | undefined;
+    if (twoWay === undefined) return;
+    const sourceId = this.dataSource.id;
+    const sourceName = this.dataSource.name;
+    this.#onTarget(String(config.dataSourceId), (target) => ({
+      ...target,
+      properties: {
+        ...target.properties,
+        [twoWay.propertyId]: {
+          id: twoWay.propertyId,
+          name: sourceName,
+          type: "relation",
+          config: {
+            dataSourceId: sourceId,
+            limit: "many",
+            twoWay: { propertyId: ownerPropertyId },
+          },
+          position: Object.keys(target.properties).length,
+        } as never,
+      },
+    }));
+  }
+
+  #syncTwin(property: SpaceDatabaseProperty, next: Json) {
+    const before = (property.config as { twoWay?: { propertyId: string } }).twoWay?.propertyId;
+    const after = (next.twoWay as { propertyId: string } | undefined)?.propertyId;
+    const targetId = String((property.config as Json).dataSourceId);
+    if (before !== undefined && after === undefined)
+      this.#onTarget(targetId, (target) => {
+        const { [before]: _gone, ...rest } = target.properties;
+        return { ...target, properties: rest };
+      });
+    else if (before === undefined && after !== undefined)
+      this.#addTwin(property.id, { ...next, dataSourceId: targetId });
   }
 
   #property(id: unknown) {
@@ -95,6 +172,8 @@ export class EditableFakeDatabase extends FakeDatabase {
     switch (operation.op) {
       case "addProperty": {
         const draft = operation.property as Json;
+        if (!SERVER_ID_PATTERN.test(String(draft.id)))
+          throw { _tag: "SpaceDatabaseError", reason: "invalid_property_config" };
         const taken = Object.values(this.dataSource.properties).some(
           (property) => property.name.toLowerCase() === String(draft.name).toLowerCase(),
         );
@@ -110,6 +189,7 @@ export class EditableFakeDatabase extends FakeDatabase {
           config,
           position: Object.keys(this.dataSource.properties).length,
         } as never);
+        if (draft.type === "relation") this.#addTwin(String(draft.id), config);
         return 0;
       }
       case "updateProperty": {
@@ -122,6 +202,8 @@ export class EditableFakeDatabase extends FakeDatabase {
         );
         if (taken) throw { _tag: "SpaceDatabaseError", reason: "duplicate_name" };
         const options = (property.config as Json).options;
+        if (property.type === "relation" && operation.config !== undefined)
+          this.#syncTwin(property, operation.config as Json);
         this.#put({
           ...property,
           ...(typeof operation.name === "string" ? { name: operation.name } : {}),
@@ -187,6 +269,8 @@ export class EditableFakeDatabase extends FakeDatabase {
       case "addOption": {
         const property = this.#property(operation.propertyId);
         const draft = operation.option as Json;
+        if (!SERVER_ID_PATTERN.test(String(draft.id)))
+          throw { _tag: "SpaceDatabaseError", reason: "invalid_property_config" };
         const options = this.#options(property);
         if (
           options.some(

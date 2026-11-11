@@ -192,6 +192,8 @@ export class SpacesService extends Context.Service<
     readonly getDatabaseRows: (
       input: unknown,
     ) => Effect.Effect<C.SpaceDatabaseRowGetResult, C.SpaceServiceError>;
+    /** Brings every queued formula and rollup value up to date; returns when the queue is empty. */
+    readonly drainComputed: Effect.Effect<void, C.SpaceServiceError>;
     readonly lookupMutationReceipt: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReceiptLookupResult, C.SpaceServiceError>;
@@ -237,8 +239,9 @@ export class SpacesService extends Context.Service<
 const make = Effect.fn("SpacesService.make")(function* (
   dbPath: string,
   directories?: { readonly assetsDir: string; readonly stagingDir: string },
+  options?: Runtime.RuntimeOptions,
 ) {
-  const runtime = yield* Runtime.make(dbPath, directories);
+  const runtime = yield* Runtime.make(dbPath, directories, options);
   const assets = AssetOps.make(runtime);
   const lists = ListOps.make(runtime);
   const reads = ReadOps.make(runtime);
@@ -274,6 +277,7 @@ const make = Effect.fn("SpacesService.make")(function* (
     createPage: mutations.createPage,
     updatePage: mutations.updatePage,
     applyBlockBatch: mutations.applyBlockBatch,
+    drainComputed: runtime.drainComputed(),
     lookupMutationReceipt: mutations.lookupMutationReceipt,
     createDatabase: mutations.createDatabase,
     updateDatabase: mutations.updateDatabase,
@@ -313,4 +317,5 @@ const make = Effect.fn("SpacesService.make")(function* (
 export const layerFromPath = (
   dbPath: string,
   directories?: { readonly assetsDir: string; readonly stagingDir: string },
-) => Layer.effect(SpacesService, make(dbPath, directories));
+  options?: Runtime.RuntimeOptions,
+) => Layer.effect(SpacesService, make(dbPath, directories, options));

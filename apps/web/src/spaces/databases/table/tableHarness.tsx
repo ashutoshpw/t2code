@@ -1,5 +1,5 @@
 import { RegistryContext } from "@effect/atom-react";
-import { useContext } from "react";
+import { Fragment, StrictMode, useContext } from "react";
 import type { AtomRegistry } from "effect/reactivity";
 
 import { render, type Screen } from "../../../../test/render";
@@ -30,19 +30,21 @@ function RegistryProbe({
 export async function mountTable(
   _fake: FakeDatabase,
   layout: "inline" | "page" = "page",
+  strict = false,
 ): Promise<MountedTable> {
   const { controller } = fakeController();
   const host = testHost(controller);
   let registry: AtomRegistry.AtomRegistry | null = null;
+  const Mode = strict ? StrictMode : Fragment;
   const screen = await render(
-    <>
+    <Mode>
       <RegistryProbe
         onRegistry={(value) => {
           registry = value;
         }}
       />
       <DatabaseHarness host={host} initialViewIds={["view-table"]} layout={layout} />
-    </>,
+    </Mode>,
   );
   const grid = () => {
     const element = screen.container.querySelector<HTMLElement>('[role="grid"]');

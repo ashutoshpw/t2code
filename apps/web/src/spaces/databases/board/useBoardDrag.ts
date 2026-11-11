@@ -16,10 +16,16 @@ import {
 
 import type { DatabaseActions } from "../data/actions";
 import { columnElement, locateDrop, markDrop } from "./boardDom";
-import { planCardDrop, planColumnMove } from "./boardDrag";
+import { planCardDrop, planColumnMove, planLaneDrop } from "./boardDrag";
+import { laneCellId } from "./boardLayout";
 
 export type ActiveDrag =
-  | { readonly kind: "card"; readonly pageId: string; readonly group: SpaceGroupKey }
+  | {
+      readonly kind: "card";
+      readonly pageId: string;
+      readonly group: SpaceGroupKey;
+      readonly lane?: SpaceGroupKey | undefined;
+    }
   | { readonly kind: "column"; readonly text: string; readonly color: string | undefined };
 
 export interface BoardDragModel {
@@ -28,6 +34,9 @@ export interface BoardDragModel {
   readonly group: SpaceKnownGroup | undefined;
   readonly property: SpacePropertyId;
   readonly known: SpaceKnownDatabaseProperty | null;
+  /** The sub-group property when the board has lanes. */
+  readonly subProperty?: SpacePropertyId | undefined;
+  readonly subKnown?: SpaceKnownDatabaseProperty | null | undefined;
   readonly shown: ReadonlyArray<SpaceGroupBucket>;
   readonly hidden: ReadonlyArray<SpaceGroupBucket>;
   readonly canCards: boolean;
@@ -69,7 +78,7 @@ export function useBoardDrag(model: BoardDragModel) {
     if (data?.type === "card") {
       ref.current.release?.();
       ref.current.release = model.hold();
-      setActive({ kind: "card", pageId: data.pageId, group: data.group });
+      setActive({ kind: "card", pageId: data.pageId, group: data.group, lane: data.lane });
     } else if (data?.type === "column") {
       setActive({ kind: "column", text: data.labelText, color: data.labelColor });
     }
@@ -105,17 +114,36 @@ export function useBoardDrag(model: BoardDragModel) {
     const from = data.group as SpaceGroupKey;
     const to = over.key as SpaceGroupKey;
     if (known === null) return false;
-    const column = columnElement(model.root.current!, canonicalJson(to));
+    const lane = over.lane as SpaceGroupKey | undefined;
+    const column = columnElement(model.root.current!, laneCellId(lane, to));
     const y = centerOf(event);
     let beforeRowId: string | null = null;
     if (over.hidden !== true && column !== null && y !== null) {
       const { cards, index } = locateDrop(column, y, pageId);
       beforeRowId = cards[index]?.dataset.cardId ?? null;
     }
-    const source = model.shown
+    const fromLane = data.lane as SpaceGroupKey | undefined;
+    const fromBucket = model.shown
       .concat(model.hidden)
-      .find((bucket) => canonicalJson(bucket.key) === canonicalJson(from))
-      ?.rows.find((row) => row.page.id === pageId);
+      .find((bucket) => canonicalJson(bucket.key) === canonicalJson(from));
+    const sourceBucket =
+      fromLane === undefined
+        ? fromBucket
+        : fromBucket?.subGroups?.find((sub) => canonicalJson(sub.key) === canonicalJson(fromLane));
+    const source = sourceBucket?.rows.find((row) => row.page.id === pageId);
+    const lanePlan =
+      fromLane === undefined ||
+      lane === undefined ||
+      model.subProperty === undefined ||
+      model.subKnown == null
+        ? undefined
+        : planLaneDrop({
+            cardId: pageId,
+            value: source?.cells[model.subProperty],
+            from: fromLane,
+            to: lane,
+            known: model.subKnown,
+          });
     const plan = planCardDrop({
       cardId: pageId,
       value: source?.cells[property],
@@ -129,9 +157,12 @@ export function useBoardDrag(model: BoardDragModel) {
     const jobs: Promise<unknown>[] = [];
     if (plan.cell !== undefined) {
       actions.editCell(pageId, property, plan.cell as SpaceCellValue | null);
-      jobs.push(actions.flushCells());
     }
-    const move = over.hidden === true ? undefined : plan.move;
+    if (lanePlan !== undefined && model.subProperty !== undefined)
+      actions.editCell(pageId, model.subProperty, lanePlan.cell as SpaceCellValue | null);
+    if (plan.cell !== undefined || lanePlan !== undefined) jobs.push(actions.flushCells());
+    // Lanes show no optimistic position: the refresh after the write places the card.
+    const move = over.hidden === true || model.subProperty !== undefined ? undefined : plan.move;
     if (move !== undefined) {
       jobs.push(actions.moveRows([pageId], move.beforeRowId as SpacePageId | null));
       model.setPlacement(pageId, { group: to, beforeRowId: move.beforeRowId });

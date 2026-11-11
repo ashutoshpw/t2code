@@ -165,9 +165,10 @@ export const filterOperatorsFor = (type: string): ReadonlyArray<string> =>
 function defaultValueFor(
   known: SpaceKnownDatabaseProperty,
   operator: string,
+  type: string,
 ): { readonly value: unknown } | { readonly value?: undefined } | null {
   if (!operatorNeedsValue(operator)) return {};
-  switch (known.type) {
+  switch (type) {
     case "title":
     case "text":
     case "url":
@@ -182,7 +183,7 @@ function defaultValueFor(
     case "select":
     case "multi_select":
     case "status": {
-      if (known.type === "status" && (operator === "in_group" || operator === "not_in_group"))
+      if (type === "status" && (operator === "in_group" || operator === "not_in_group"))
         return { value: "todo" };
       const first = propertyOptions(known)[0];
       return first === undefined ? null : { value: first.id };
@@ -201,13 +202,17 @@ function defaultValueFor(
 /**
  * The first operator the type offers that can be given a value now. Relations only offer the
  * emptiness operators until a page picker exists; a select with no options starts at `is_empty`.
+ * `queryType` is what a formula or rollup filters as; every other property uses its own type.
  */
-export function defaultCondition(known: SpaceKnownDatabaseProperty): FilterCondition {
-  const operators = filterOperatorsFor(known.type).filter(
-    (operator) => known.type !== "relation" || !operatorNeedsValue(operator),
+export function defaultCondition(
+  known: SpaceKnownDatabaseProperty,
+  queryType: string = known.type,
+): FilterCondition {
+  const operators = filterOperatorsFor(queryType).filter(
+    (operator) => queryType !== "relation" || !operatorNeedsValue(operator),
   );
   for (const operator of operators) {
-    const value = defaultValueFor(known, operator);
+    const value = defaultValueFor(known, operator, queryType);
     if (value !== null)
       return {
         property: known.id,
@@ -222,11 +227,14 @@ export function defaultCondition(known: SpaceKnownDatabaseProperty): FilterCondi
 export function conditionForProperty(
   current: FilterCondition,
   known: SpaceKnownDatabaseProperty,
+  queryType: string = known.type,
 ): FilterCondition {
   const keep =
-    filterOperatorsFor(known.type).includes(current.operator) &&
+    filterOperatorsFor(queryType).includes(current.operator) &&
     !operatorNeedsValue(current.operator);
-  return keep ? { property: known.id, operator: current.operator } : defaultCondition(known);
+  return keep
+    ? { property: known.id, operator: current.operator }
+    : defaultCondition(known, queryType);
 }
 
 /** A new operator on the same property: keeps the value only when the shape is the same. */
@@ -234,6 +242,7 @@ export function conditionForOperator(
   current: FilterCondition,
   known: SpaceKnownDatabaseProperty,
   operator: FilterCondition["operator"],
+  queryType: string = known.type,
 ): FilterCondition {
   const { value: _value, ...rest } = current;
   const next = { ...rest, operator };
@@ -245,7 +254,7 @@ export function conditionForOperator(
     (current.operator === "in_group" || current.operator === "not_in_group") ===
       (operator === "in_group" || operator === "not_in_group");
   if (sameShape) return { ...next, value: current.value };
-  const fresh = defaultValueFor(known, operator);
+  const fresh = defaultValueFor(known, operator, queryType);
   return fresh === null || fresh.value === undefined
     ? next
     : { ...next, value: fresh.value as never };

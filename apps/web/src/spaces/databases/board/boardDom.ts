@@ -9,13 +9,17 @@ export const columnCollision: CollisionDetection = ({
   droppableContainers,
 }) => {
   const center = collisionRect.left + collisionRect.width / 2;
+  const middle = collisionRect.top + collisionRect.height / 2;
   const found: Collision[] = [];
+  const inside: Collision[] = [];
   for (const container of droppableContainers) {
     const rect = droppableRects.get(container.id);
-    if (rect !== undefined && center >= rect.left && center <= rect.left + rect.width)
-      found.push({ id: container.id });
+    if (rect === undefined || center < rect.left || center > rect.left + rect.width) continue;
+    found.push({ id: container.id });
+    if (middle >= rect.top && middle <= rect.top + rect.height) inside.push({ id: container.id });
   }
-  return found;
+  // Sub-group lanes stack the same column several times: the cell under the card wins.
+  return found.length > 1 && inside.length > 0 ? inside : found;
 };
 
 const STEP = 8;
@@ -37,17 +41,37 @@ export const boardKeyboardCoordinates: KeyboardCoordinateGetter = (
   }
   if (code !== "ArrowLeft" && code !== "ArrowRight") return undefined;
   event.preventDefault();
-  const columns = droppableContainers
-    .getEnabled()
-    .flatMap((container) => {
-      const rect = droppableRects.get(container.id);
-      return rect === undefined ? [] : [rect];
-    })
-    .sort((a, b) => a.left - b.left);
+  const rects = droppableContainers.getEnabled().flatMap((container) => {
+    const rect = droppableRects.get(container.id);
+    return rect === undefined ? [] : [rect];
+  });
   const center = collisionRect.left + collisionRect.width / 2;
-  const here = columns.findIndex((rect) => center >= rect.left && center <= rect.left + rect.width);
-  const next = columns[here + (code === "ArrowLeft" ? -1 : 1)];
-  if (here < 0 || next === undefined) return undefined;
+  const middle = collisionRect.top + collisionRect.height / 2;
+  const horizontal = rects.filter(
+    (rect) => center >= rect.left && center <= rect.left + rect.width,
+  );
+  const here =
+    horizontal.find((rect) => middle >= rect.top && middle <= rect.top + rect.height) ??
+    horizontal[0];
+  if (here === undefined) return undefined;
+  const beyond = rects.filter((rect) =>
+    code === "ArrowLeft" ? rect.left < here.left - 1 : rect.left > here.left + 1,
+  );
+  if (beyond.length === 0) return undefined;
+  const nearest = beyond.reduce((best, rect) =>
+    Math.abs(rect.left - here.left) < Math.abs(best.left - here.left) ? rect : best,
+  );
+  // Sub-group lanes stack the same column; keep to the lane the card is in.
+  const sameColumn = beyond.filter((rect) => Math.abs(rect.left - nearest.left) <= 1);
+  const next = sameColumn.reduce((best, rect) => {
+    const distance = (box: typeof rect) =>
+      middle < box.top
+        ? box.top - middle
+        : middle > box.top + box.height
+          ? middle - box.top - box.height
+          : 0;
+    return distance(rect) < distance(best) ? rect : best;
+  });
   return {
     x: next.left + (next.width - collisionRect.width) / 2,
     y: Math.min(

@@ -3,6 +3,7 @@ import {
   SPACE_TITLE_PROPERTY_ID,
   SpaceKnownDatabaseProperty,
   SpaceKnownDatabaseView,
+  type SpaceComputedInfo,
   type SpaceDataSource,
   type SpaceDatabaseProperty,
   type SpaceDatabaseRow,
@@ -18,15 +19,24 @@ const decodeView = Schema.decodeUnknownOption(SpaceKnownDatabaseView, {
   onExcessProperty: "error",
 });
 const propertyCache = new WeakMap<object, SpaceKnownDatabaseProperty | null>();
+const computedInfo = new WeakMap<SpaceKnownDatabaseProperty, SpaceComputedInfo>();
 const viewCache = new WeakMap<object, SpaceKnownDatabaseView | null>();
 
 /** The property when its type and config are understood by this client. */
 export function knownProperty(property: SpaceDatabaseProperty): SpaceKnownDatabaseProperty | null {
   const cached = propertyCache.get(property);
   if (cached !== undefined) return cached;
-  const decoded = Option.getOrNull(decodeProperty(property));
+  // The known structs do not carry the server-derived `computed` envelope key.
+  const { computed, ...own } = property;
+  const decoded = Option.getOrNull(decodeProperty(own));
+  if (decoded !== null && computed !== undefined) computedInfo.set(decoded, computed);
   propertyCache.set(property, decoded);
   return decoded;
+}
+
+/** What the server derived for a known formula or rollup: result type, query type, error. */
+export function computedInfoOf(known: SpaceKnownDatabaseProperty): SpaceComputedInfo | undefined {
+  return computedInfo.get(known);
 }
 
 export function knownView(view: SpaceDatabaseView): SpaceKnownDatabaseView | null {
@@ -43,6 +53,7 @@ export interface ViewColumn {
   readonly visible: boolean;
   readonly width: number | undefined;
   readonly aggregate: string | undefined;
+  readonly wrap: boolean | undefined;
 }
 
 /**
@@ -64,6 +75,7 @@ export function viewColumns(
     visible: property.id === SPACE_TITLE_PROPERTY_ID || (entry?.visible ?? false),
     width: entry?.width,
     aggregate: entry?.aggregate,
+    wrap: entry?.wrap,
   });
   for (const entry of view.properties) {
     const property = dataSource.properties[entry.propertyId];

@@ -175,7 +175,11 @@ const leafId = (leaf: Leaf) =>
 
 export const groups = Effect.fn("SpacesDatabases.groups")(function* (
   plan: Plan,
-  options: { readonly rowsPerGroup: number; readonly aggregates: boolean },
+  options: {
+    readonly rowsPerGroup: number;
+    readonly aggregates: boolean;
+    readonly cover?: boolean;
+  },
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   const { snapshot } = plan.c;
@@ -239,7 +243,7 @@ export const groups = Effect.fn("SpacesDatabases.groups")(function* (
       const id = Aggregates.bucketId(norm(row.g), sub ? norm(row.sg) : null);
       fetched.set(id, [...(fetched.get(id) ?? []), hit]);
     }
-    const result = yield* Rows.hydrate(plan, hits);
+    const result = yield* Rows.hydrate(plan, hits, { cover: options.cover === true });
     hydrated = new Map(result.rows.map((row) => [row.page.id, row] as const));
     related = result.related;
   }

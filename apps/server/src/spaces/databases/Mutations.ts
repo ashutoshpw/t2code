@@ -11,6 +11,9 @@ import * as PageStore from "../PageStore.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 import { decodeReceipt, getSpace } from "../service/Helpers.ts";
 import * as BlockEdits from "./BlockEdits.ts";
+import * as Definitions from "./computed/Definitions.ts";
+import * as Deps from "./computed/Deps.ts";
+import * as Settle from "./computed/Settle.ts";
 import * as DatabaseStore from "./DatabaseStore.ts";
 import * as Ids from "./Ids.ts";
 import * as Liveness from "./Liveness.ts";
@@ -239,6 +242,9 @@ export const execute = Effect.fn("SpacesDatabases.execute")(function* (
       if (siblings.length <= 1) return yield* dbError("last_data_source");
       const snapshot = yield* SchemaStore.load(source.data_source_id);
       const touched = Touched.touched();
+      const readers = (yield* Deps.sourcesReading(source.data_source_id)).filter(
+        (id) => id !== source.data_source_id,
+      );
       for (const property of snapshot.live) {
         if (property.type !== "relation") continue;
         const twin = yield* RelationStore.loadTwin(property, source.data_source_id);
@@ -256,6 +262,10 @@ export const execute = Effect.fn("SpacesDatabases.execute")(function* (
       }
       yield* sql`DELETE FROM spaces_db_data_sources WHERE data_source_id = ${source.data_source_id}`;
       yield* Ids.retire(source.data_source_id);
+      // Formulas and rollups that read the deleted data source through a relation are rechecked.
+      yield* Definitions.refresh({ now, touched }, new Set(readers));
+      yield* Settle.settleAndDrain(touched);
+      yield* finishDatabaseWork(touched, now);
       const revision = yield* DatabaseStore.touchDatabase(source.database_id, iso);
       return decodeReceipt({
         operation: request.operation,
@@ -270,6 +280,7 @@ export const execute = Effect.fn("SpacesDatabases.execute")(function* (
         { dataSourceId: source.data_source_id, now, touched },
         input.operations,
       );
+      yield* Settle.settleAndDrain(touched);
       yield* finishDatabaseWork(touched, now);
       const fresh = yield* DatabaseStore.getDataSource(source.data_source_id);
       return decodeReceipt({

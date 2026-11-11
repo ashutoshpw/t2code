@@ -1,6 +1,7 @@
-import { canonicalJson } from "@t2code/client-runtime/spaces";
+import { canonicalJson, propertyQueryType, unqueryableReason } from "@t2code/client-runtime/spaces";
 import {
   SPACE_GROUPABLE_TYPES,
+  type SpaceDatabaseProperty,
   type SpaceKnownGroup,
   type SpaceKnownGroupBy,
   type SpaceKnownGroupKey,
@@ -31,24 +32,31 @@ export function GroupPopover() {
   const column = columns.find((entry) => entry.property.id === groupProperty);
   const groupedKnown = column?.known ?? null;
   const subGroupId = known?.subGroup?.property;
+  const isGroupable = (property: SpaceDatabaseProperty) =>
+    (SPACE_GROUPABLE_TYPES as ReadonlyArray<string>).includes(propertyQueryType(property) ?? "");
   const groupable = columns
     .map((entry) => entry.property)
     .filter(
       (property) =>
-        (SPACE_GROUPABLE_TYPES as ReadonlyArray<string>).includes(property.type) &&
+        (isGroupable(property) || unqueryableReason(property) !== undefined) &&
         property.id !== subGroupId,
     );
+  const typeOf = (id: string) => {
+    const property = groupable.find((entry) => entry.id === id);
+    return property === undefined ? "" : (propertyQueryType(property) ?? "");
+  };
+  const groupedType = groupProperty === null ? "" : typeOf(groupProperty);
   const commit = (next: SpaceKnownGroup) => actions.editView({ group: next });
   /** Changing the grouping invalidates presentation keyed to the old buckets. */
   const withBy = (current: SpaceKnownGroup, by: SpaceKnownGroupBy | undefined): SpaceKnownGroup => {
     const { order: _order, hidden: _hidden, collapsed: _collapsed, by: _by, ...rest } = current;
     return { ...rest, ...(by === undefined ? {} : { by }) };
   };
-  const choices = groupByChoices(groupedKnown?.type ?? "");
+  const choices = groupByChoices(groupedType);
   const buckets =
     groupedKnown === null
       ? null
-      : listedBuckets(groupedKnown, group === null ? undefined : group.by);
+      : listedBuckets(groupedKnown, group === null ? undefined : group.by, groupedType);
   const hidden = group === null ? [] : (group.hidden ?? []);
   const isHidden = (key: SpaceKnownGroupKey) =>
     hidden.some((entry) => canonicalJson(entry) === canonicalJson(key));
@@ -61,12 +69,12 @@ export function GroupPopover() {
           label="Group property"
           placeholder="None"
           properties={groupable}
+          disabledReason={unqueryableReason}
           value={groupProperty}
           disabled={!canEditView}
           onChange={(property) => {
             if (property === group?.property) return;
-            const type = groupable.find((entry) => entry.id === property)?.type ?? "";
-            const by = defaultGroupBy(type);
+            const by = defaultGroupBy(typeOf(property));
             commit({ property, ...(by === undefined ? {} : { by }) });
           }}
         />
@@ -168,6 +176,35 @@ export function GroupPopover() {
               ))}
             </div>
           )}
+          {known?.type === "board" ? (
+            <div className="space-y-1 border-t pt-2">
+              <span className="text-xs text-muted-foreground">Sub-group by</span>
+              <PropertyPicker
+                label="Sub-group property"
+                placeholder="None"
+                properties={groupable.filter((property) => property.id !== groupProperty)}
+                disabledReason={unqueryableReason}
+                value={subGroupId ?? null}
+                disabled={!canEditView}
+                onChange={(property) => {
+                  const by = defaultGroupBy(typeOf(property));
+                  actions.editView({
+                    subGroup: { property, ...(by === undefined ? {} : { by }) },
+                  });
+                }}
+              />
+              {subGroupId === undefined ? null : (
+                <Button
+                  variant="ghost-muted"
+                  size="xs"
+                  disabled={!canEditView}
+                  onClick={() => actions.editView({ subGroup: null })}
+                >
+                  Remove sub-grouping
+                </Button>
+              )}
+            </div>
+          ) : null}
           <Button
             variant="ghost-muted"
             size="xs"

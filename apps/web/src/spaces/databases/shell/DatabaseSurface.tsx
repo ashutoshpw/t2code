@@ -10,10 +10,16 @@ import {
   type ViewEdits,
   type ViewPatch,
 } from "@t2code/client-runtime/spaces";
-import { lazy, Suspense, useContext, useLayoutEffect, useState } from "react";
-import type { SpaceBlockId, SpaceDatabaseView, SpaceViewId } from "@t2code/contracts/spaces";
+import { Suspense, useContext, useLayoutEffect, useState } from "react";
+import type {
+  SpaceBlockId,
+  SpaceDatabaseView,
+  SpaceDataSource,
+  SpaceViewId,
+} from "@t2code/contracts/spaces";
 
 import { Button } from "~/components/ui/button";
+
 import type { DatabaseBlockActions } from "../blocks/actions";
 import type { DatabaseBlockHost, DatabaseLayout } from "../blocks/DatabaseBlockHost";
 import { createDatabaseActions, type ActionsState } from "../data/actions";
@@ -29,13 +35,26 @@ import {
   type OpenControl,
 } from "./context";
 import { DatabaseSkeleton } from "./DatabaseSkeleton";
+import { isLinkedBlock } from "../blocks/useIsLinkedBlock";
+import { AddFirstView } from "./AddFirstView";
 import { DatabaseTitle } from "./DatabaseTitle";
+import { LinkedHeader } from "./LinkedHeader";
 import { DatabaseToolbar } from "./DatabaseToolbar";
 import { ViewTabs } from "./ViewTabs";
+import { viewEntry } from "./viewRegistry";
 import type { DatabaseViewProps } from "./viewTypes";
 
-const TableView = lazy(() => import("../table/TableView"));
-const BoardView = lazy(() => import("../board/BoardView"));
+const placeholderView = (model: DatabaseModel, source: SpaceDataSource): SpaceDatabaseView => ({
+  id: "no-view" as SpaceViewId,
+  databaseId: model.database.id,
+  dataSourceId: source.id,
+  name: "",
+  type: "table",
+  position: 0,
+  sorts: [],
+  properties: [],
+  layout: {},
+});
 
 function UnsupportedView() {
   return (
@@ -48,20 +67,13 @@ function UnsupportedView() {
   );
 }
 
-function ViewBody({
-  search,
-  view,
-  supported,
-}: DatabaseViewProps & { view: SpaceDatabaseView; supported: string | null }) {
-  const body =
-    supported === "table" ? (
-      <TableView key={view.id} search={search} />
-    ) : supported === "board" ? (
-      <BoardView key={view.id} search={search} />
-    ) : (
-      <UnsupportedView />
-    );
-  return <Suspense fallback={<DatabaseSkeleton />}>{body}</Suspense>;
+function ViewBody({ search, type }: DatabaseViewProps & { type: string | null }) {
+  const entry = type === null ? undefined : viewEntry(type);
+  return (
+    <Suspense fallback={<DatabaseSkeleton />}>
+      {entry === undefined ? <UnsupportedView /> : <entry.Body search={search} />}
+    </Suspense>
+  );
 }
 
 export function DatabaseSurface({
@@ -99,6 +111,9 @@ export function DatabaseSurface({
     view === null
       ? null
       : (model.dataSources.find((source) => source.id === view.dataSourceId) ?? null);
+  const linked = isLinkedBlock(model.database.home, blockId);
+  // Without a view the actions still need a data source to create the first one on.
+  const firstSource = model.dataSources[0];
 
   const [latest] = useState(() => new Latest<ActionsState | null>(null));
   const [actions] = useState(() =>
@@ -133,9 +148,19 @@ export function DatabaseSurface({
   // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Keep the stable actions object pointing at the latest model and view without re-creating it.
   useLayoutEffect(() => {
     latest.set(
-      view === null || dataSource === null
-        ? null
-        : { model, dataSource, view, viewIds, block: blockActions, host, peek },
+      view !== null && dataSource !== null
+        ? { model, dataSource, view, viewIds, block: blockActions, host, peek }
+        : firstSource === undefined
+          ? null
+          : {
+              model,
+              dataSource: firstSource,
+              view: placeholderView(model, firstSource),
+              viewIds,
+              block: blockActions,
+              host,
+              peek,
+            },
     );
   });
   const [optionHint] = useState(
@@ -169,7 +194,11 @@ export function DatabaseSurface({
           aria-label={model.database.title || "Database"}
           className="min-w-0 space-y-1.5 text-sm"
         >
-          {layout === "inline" ? <DatabaseTitle model={model} /> : null}
+          {linked ? (
+            <LinkedHeader model={model} host={host} />
+          ) : layout === "inline" ? (
+            <DatabaseTitle model={model} />
+          ) : null}
           <ViewTabs
             tabs={tabs}
             activeId={view?.id ?? null}
@@ -179,30 +208,26 @@ export function DatabaseSurface({
             blockActions={blockActions}
           />
           {context === null ? (
-            <div className="space-y-2 rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-              <p role="status">This database has no views here</p>
-              {model.permissions.views && model.permissions.block ? (
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => void actions.createView("table")}
-                >
-                  Add a table view
-                </Button>
-              ) : null}
-            </div>
+            linked ? (
+              <AddFirstView model={model} actions={actions} />
+            ) : (
+              <div className="space-y-2 rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+                <p role="status">This database has no views here</p>
+                {model.permissions.views && model.permissions.block ? (
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onClick={() => void actions.createView("table")}
+                  >
+                    Add a table view
+                  </Button>
+                ) : null}
+              </div>
+            )
           ) : (
             <DatabaseContext.Provider value={context}>
               <DatabaseToolbar search={search} onSearch={setSearch} />
-              <ViewBody
-                search={search}
-                view={context.view}
-                supported={
-                  context.known?.type === "table" || context.known?.type === "board"
-                    ? context.known.type
-                    : null
-                }
-              />
+              <ViewBody key={context.view.id} search={search} type={context.known?.type ?? null} />
             </DatabaseContext.Provider>
           )}
         </section>

@@ -559,6 +559,7 @@ function EditorSurface({
         handleId: handle?.id ?? null,
         handleMedia: !!handle && MEDIA_TYPES.includes(handle.type),
         handleDatabase: !!handle && isSpaceDatabaseBlock(handle),
+        handleDatabaseId: handle && isSpaceDatabaseBlock(handle) ? handle.content.databaseId : null,
         dragExists: !dragId || !!findBlock(doc, dragId),
       };
     },
@@ -710,10 +711,11 @@ function EditorSurface({
             onDragStart={startDrag}
             onDragEnd={clearDrag}
           >
-            {info.handleDatabase ? (
+            {info.handleDatabase && info.handleDatabaseId !== null ? (
               <DatabaseHandleItems
                 adapter={adapter}
                 blockId={handleId}
+                databaseId={info.handleDatabaseId}
                 can={can}
                 run={run}
                 onDelete={(id) => setDeleteId({ id, open: false })}

@@ -65,6 +65,14 @@ export const databaseLimits: SpaceDatabaseLimits = Object.freeze({
   maxCursorBytes: 4_096,
   maxSubItemDepth: 16,
 });
+/**
+ * Rows one computed batch may recompute, and the evaluation steps it may spend doing so (a step
+ * is roughly a microsecond or two of formula work). Whoever holds the write lock stops at the
+ * first limit reached; the rest stays queued.
+ */
+export const computedDrainRows = 200;
+export const computedDrainSteps = 40_000;
+
 export function ensureDatabaseLimit(limit: keyof SpaceDatabaseLimits, actual: number) {
   const maximum = databaseLimits[limit];
   return actual > maximum

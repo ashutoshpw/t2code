@@ -1079,6 +1079,149 @@ it.layer(Layer.merge(NodeServices.layer, NodePlatformCrypto.layer))(
       ),
     );
     it.effect(
+      "defines relation, rollup and formula properties, reports formula errors by position and creates rows from a template",
+      () =>
+        fixture(() =>
+          Effect.gen(function* () {
+            const service = yield* SpacesService.SpacesService;
+            const library = decodeList(value(yield* call("t2_spaces_list", env)));
+            const base = { ...env, receiptEpoch: library.mutationAdmission.epoch };
+            const ok = (result: McpSchema.CallToolResult) => {
+              if (result.isError) throw Error(JSON.stringify(result.content));
+              return value(result);
+            };
+            const home = yield* service.createPage({
+              ...base,
+              mutationId: "home",
+              spaceId: library.defaultSpaceId,
+              baseRootOrderRevision: 0,
+              title: "Home",
+            });
+            if (home.status !== "saved") return yield* Effect.die("Expected home page");
+            let step = 0;
+            const write = (name: string, args: object) =>
+              call(name, { ...base, mutationId: `agent-${++step}`, ...args });
+            const made = (title: string) =>
+              write("t2_spaces_databases_create", {
+                spaceId: library.defaultSpaceId,
+                title,
+                appendToPageId: home.page.id,
+              }).pipe(Effect.map(ok));
+            const projects = yield* made("Projects");
+            const tasks = yield* made("Tasks");
+            const schema = (dataSourceId: string, operations: ReadonlyArray<object>) =>
+              write("t2_spaces_databases_schema_update", { dataSourceId, operations });
+            ok(
+              yield* schema(tasks.dataSourceId, [
+                { op: "addProperty", property: { id: "est001", name: "Estimate", type: "number" } },
+                {
+                  op: "addProperty",
+                  property: {
+                    id: "prj001",
+                    name: "Project",
+                    type: "relation",
+                    config: {
+                      dataSourceId: projects.dataSourceId,
+                      limit: "many",
+                      twoWay: { propertyId: "tsk001" },
+                    },
+                  },
+                },
+              ]),
+            );
+            ok(
+              yield* schema(projects.dataSourceId, [
+                {
+                  op: "addProperty",
+                  property: {
+                    id: "tot001",
+                    name: "Total",
+                    type: "rollup",
+                    config: {
+                      relationPropertyId: "tsk001",
+                      targetPropertyId: "est001",
+                      function: "sum",
+                    },
+                  },
+                },
+              ]),
+            );
+            const rejected = failure(
+              yield* schema(tasks.dataSourceId, [
+                {
+                  op: "addProperty",
+                  property: {
+                    id: "bad001",
+                    name: "Bad",
+                    type: "formula",
+                    config: { expression: 'prop("Estimate") +' },
+                  },
+                },
+              ]),
+            );
+            assert.equal(rejected._tag, "SpaceDatabaseError", JSON.stringify(rejected));
+            assert.match(rejected.detail, /^\d+:\d+ /);
+            ok(
+              yield* schema(tasks.dataSourceId, [
+                {
+                  op: "addProperty",
+                  property: {
+                    id: "dbl001",
+                    name: "Double",
+                    type: "formula",
+                    config: { expression: 'prop("Estimate") * 2' },
+                  },
+                },
+              ]),
+            );
+            const [project] = ok(
+              yield* write("t2_spaces_databases_rows_create", {
+                dataSourceId: projects.dataSourceId,
+                rows: [{ title: "P1" }],
+              }),
+            ).rows;
+            const template = ok(
+              yield* write("t2_spaces_databases_rows_create", {
+                dataSourceId: tasks.dataSourceId,
+                rows: [{ asTemplate: true, title: "Template", cells: { est001: 5, prj001: [] } }],
+              }),
+            ).rows[0];
+            ok(
+              yield* write("t2_spaces_databases_rows_create", {
+                dataSourceId: tasks.dataSourceId,
+                rows: [
+                  { title: "From template", templateId: template.pageId },
+                  { title: "Explicit", cells: { est001: 3, prj001: [project.pageId] } },
+                ],
+              }),
+            );
+            yield* service.drainComputed;
+            const read = ok(
+              yield* call("t2_spaces_databases_query", {
+                ...env,
+                dataSourceId: tasks.dataSourceId,
+                mode: "rows",
+                timeZone: "UTC",
+                filter: { property: "dbl001", operator: "greater_than", value: 7 },
+              }),
+            );
+            assert.deepEqual(
+              read.rows.map((row: { cells: Record<string, unknown> }) => row.cells),
+              [{ title: "From template", est001: 5, dbl001: { type: "number", value: 10 } }],
+            );
+            const rolled = ok(
+              yield* call("t2_spaces_databases_query", {
+                ...env,
+                dataSourceId: projects.dataSourceId,
+                mode: "rows",
+                timeZone: "UTC",
+              }),
+            );
+            assert.deepEqual(rolled.rows[0].cells.tot001, { type: "number", value: 3 });
+          }),
+        ),
+    );
+    it.effect(
       "preserves dangerous own opaque JSON through MCP decode, storage, reads and receipt fingerprints",
       () =>
         fixture(() =>

@@ -1,4 +1,5 @@
 import { useDraggable } from "@dnd-kit/core";
+import type { EnvironmentId } from "@t2code/contracts";
 import { canonicalJson, rowTitle } from "@t2code/client-runtime/spaces";
 import { memo } from "react";
 import type {
@@ -10,7 +11,10 @@ import type {
 } from "@t2code/contracts/spaces";
 
 import { cn } from "~/lib/utils";
+import { CardCover } from "../primitives/CardCover";
 import { CellValue } from "../primitives/CellValue";
+import { coverOf } from "../primitives/coverSource";
+import { laneCellId } from "./boardLayout";
 import type { CellTextContext } from "../primitives/format";
 
 /** A visible non-title property a card shows when the row has a value for it. */
@@ -39,10 +43,13 @@ export interface CardContent {
   readonly relatedPages: Readonly<Record<string, SpaceRelatedPage>>;
   readonly optionHint: CellTextContext["optionHint"];
   readonly timeZone: string;
+  /** Property lines wrap to three lines instead of one. */
+  readonly wrap?: boolean;
 }
 
 const sameContent = (a: CardContent, b: CardContent) =>
   a.row === b.row &&
+  a.wrap === b.wrap &&
   a.relatedPages === b.relatedPages &&
   a.timeZone === b.timeZone &&
   sameLines(a.lines, b.lines);
@@ -54,6 +61,7 @@ export const CardBody = memo(function CardBody({
   relatedPages,
   optionHint,
   timeZone,
+  wrap,
 }: CardContent) {
   const title = rowTitle(row);
   return (
@@ -76,6 +84,7 @@ export const CardBody = memo(function CardBody({
               variant="card"
               optionHint={optionHint}
               timeZone={timeZone}
+              {...(wrap === true ? { wrap: true } : {})}
             />
           </span>
         ),
@@ -89,19 +98,40 @@ export const CARD_FACE =
 
 interface BoardCardProps extends CardContent {
   readonly group: SpaceGroupKey;
+  /** The sub-group lane the card sits in, when the board has lanes. */
+  readonly lane?: SpaceGroupKey | undefined;
+  readonly coverPropertyId: string | null;
+  readonly coverContent: boolean;
+  readonly coverHeight: number;
+  readonly coverFit: boolean;
+  readonly environmentId: EnvironmentId;
+  readonly intrinsicHeight: number;
   readonly draggable: boolean;
   readonly onOpen: (pageId: SpacePageId) => void;
 }
 
 /** One card: a button that opens the row, and a drag source when the board can write the group. */
 export const BoardCard = memo(
-  function BoardCard({ group, draggable, onOpen, ...content }: BoardCardProps) {
+  function BoardCard({
+    group,
+    lane,
+    draggable,
+    onOpen,
+    coverPropertyId,
+    coverContent,
+    coverHeight,
+    coverFit,
+    environmentId,
+    intrinsicHeight,
+    ...content
+  }: BoardCardProps) {
     const pageId = content.row.page.id;
     const { setNodeRef, setActivatorNodeRef, attributes, listeners, isDragging } = useDraggable({
-      id: `card:${canonicalJson(group)}:${pageId}`,
-      data: { type: "card", pageId, group },
+      id: `card:${laneCellId(lane, group)}:${pageId}`,
+      data: { type: "card", pageId, group, lane },
       disabled: !draggable,
     });
+    const hasCover = coverPropertyId !== null || coverContent;
     return (
       <div
         ref={setNodeRef}
@@ -110,7 +140,7 @@ export const BoardCard = memo(
         className="relative rounded-md data-drop-after:after:absolute data-drop-after:after:inset-x-0 data-drop-after:after:bottom-0 data-drop-after:after:z-10 data-drop-after:after:h-0.5 data-drop-after:after:rounded-full data-drop-after:after:bg-ring data-drop-before:before:absolute data-drop-before:before:inset-x-0 data-drop-before:before:top-0 data-drop-before:before:z-10 data-drop-before:before:h-0.5 data-drop-before:before:rounded-full data-drop-before:before:bg-ring"
         // Offscreen cards skip layout and paint; the intrinsic size keeps the scroll height stable.
         // Paint containment clips anything outside the box, so the drop lines sit inside it.
-        style={{ contentVisibility: "auto", containIntrinsicSize: "auto 4.5rem" }}
+        style={{ contentVisibility: "auto", containIntrinsicSize: `auto ${intrinsicHeight}px` }}
       >
         <button
           ref={setActivatorNodeRef}
@@ -124,6 +154,21 @@ export const BoardCard = memo(
             isDragging && "opacity-40",
           )}
         >
+          {hasCover ? (
+            <span className="-mx-2.5 -mt-2 mb-1 block overflow-hidden rounded-t-md">
+              <CardCover
+                cover={coverOf(
+                  content.row,
+                  coverPropertyId !== null
+                    ? { kind: "property", propertyId: coverPropertyId as never }
+                    : { kind: "page_content" },
+                )}
+                fit={coverFit}
+                height={coverHeight}
+                environmentId={environmentId}
+              />
+            </span>
+          ) : null}
           <CardBody {...content} />
         </button>
       </div>
@@ -132,6 +177,15 @@ export const BoardCard = memo(
   (prev, next) =>
     prev.draggable === next.draggable &&
     prev.onOpen === next.onOpen &&
+    prev.coverPropertyId === next.coverPropertyId &&
+    prev.coverContent === next.coverContent &&
+    prev.coverHeight === next.coverHeight &&
+    prev.coverFit === next.coverFit &&
+    prev.intrinsicHeight === next.intrinsicHeight &&
+    (prev.lane === next.lane ||
+      (prev.lane !== undefined &&
+        next.lane !== undefined &&
+        canonicalJson(prev.lane) === canonicalJson(next.lane))) &&
     (prev.group === next.group || canonicalJson(prev.group) === canonicalJson(next.group)) &&
     sameContent(prev, next),
 );

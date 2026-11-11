@@ -115,11 +115,27 @@ const harness = Effect.gen(function* () {
       [WS_METHODS.spacesDatabasesViewsCreate]: () =>
         Effect.sync(() => ({ status: "saved", viewId: "created" })),
       [WS_METHODS.spacesDatabasesViewsUpdate]: () => Effect.sync(() => ({ status: "saved" })),
-      [WS_METHODS.spacesPagesUpdate]: () => Effect.succeed({ status: "saved" }),
-      [WS_METHODS.spacesPagesTrash]: () => Effect.succeed({ status: "saved" }),
-      [WS_METHODS.spacesPagesRestore]: () => Effect.succeed({ status: "saved" }),
+      [WS_METHODS.spacesDatabasesRowsCreate]: () =>
+        Effect.succeed({
+          status: "saved",
+          dataSourceId: source,
+          dataRevision: 1,
+          rows: [],
+          affectedDataSourceIds: [source, sibling],
+        }),
+      // A rollup in another data source reads these rows, so the receipt names it.
+      [WS_METHODS.spacesPagesUpdate]: () =>
+        Effect.succeed({ status: "saved", affectedDataSourceIds: [sibling] }),
+      [WS_METHODS.spacesPagesTrash]: () =>
+        Effect.succeed({ status: "saved", affectedDataSourceIds: [sibling] }),
+      [WS_METHODS.spacesPagesRestore]: () =>
+        Effect.succeed({ status: "saved", affectedDataSourceIds: [sibling] }),
       [WS_METHODS.spacesPagesPermanentlyDelete]: () =>
-        Effect.succeed({ status: "saved", deletedPageIds: [page, "child"] }),
+        Effect.succeed({
+          status: "saved",
+          deletedPageIds: [page, "child"],
+          affectedDataSourceIds: [sibling],
+        }),
       [WS_METHODS.spacesDatabasesRowsMove]: () =>
         Effect.sync(() => {
           sent.push("rows.move");
@@ -213,6 +229,13 @@ describe("spaces database atoms", () => {
           }),
         );
         expect(counts()).toEqual([2, 1, 0]);
+        yield* Effect.promise(() =>
+          databases.createRows.run(registry, {
+            environmentId: env,
+            input: { ...metadata, dataSourceId: source, rows: [{ title: "new" }] },
+          } as never),
+        );
+        expect(counts()).toEqual([3, 2, 0]);
       }),
     ),
   );
@@ -326,6 +349,8 @@ describe("spaces database atoms", () => {
         );
         const changed = spaces.databases.dataSourceChanged(env, source);
         registry.mount(changed);
+        const siblingChanged = spaces.databases.dataSourceChanged(env, sibling);
+        registry.mount(siblingChanged);
         const guards = { page: { revision: 1 } };
         const input = { ...metadata, pageId: page, guards };
         const commands: Array<() => Promise<{ readonly _tag: string }>> = [
@@ -343,6 +368,7 @@ describe("spaces database atoms", () => {
           expect((yield* Effect.promise(command))._tag).toBe("Success");
           expected += 1;
           expect(registry.get(changed)).toBe(expected);
+          expect(registry.get(siblingChanged)).toBe(expected);
         }
       }),
     ),

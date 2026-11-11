@@ -742,7 +742,18 @@ export function createEnvironmentQueryAtomFamily<R, ER, Input, A, E>(
                           AsyncResult.value,
                         ),
                       )
-                      .pipe(pendingOnceSessionReplaced(session.value)),
+                      .pipe(
+                        // Reads of guarded methods authorize like commands do, against this registry.
+                        Effect.provideService(RpcPermissionGuard, {
+                          authorize: (id, method, payload) =>
+                            createCommandPermissions(runtime, method).authorize(
+                              get.registry,
+                              id,
+                              payload,
+                            ),
+                        }),
+                        pendingOnceSessionReplaced(session.value),
+                      ),
                   )
                 : Effect.never;
             case "connecting":

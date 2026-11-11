@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { SpaceDatabaseView, SpaceKnownDatabaseProperty } from "@t2code/contracts/spaces";
 
-import { canWriteGroup, insertionIndex, planCardDrop, planColumnMove } from "./boardDrag";
+import {
+  canWriteGroup,
+  insertionIndex,
+  planCardDrop,
+  planColumnMove,
+  planLaneDrop,
+} from "./boardDrag";
 
 const known = (type: string, config: object = {}) =>
   ({ id: "p", type, config }) as unknown as SpaceKnownDatabaseProperty;
@@ -170,5 +176,38 @@ describe("insertionIndex", () => {
     expect(insertionIndex([10, 50, 90], 60)).toBe(2);
     expect(insertionIndex([10, 50, 90], 200)).toBe(3);
     expect(insertionIndex([], 5)).toBe(0);
+  });
+});
+
+describe("planLaneDrop", () => {
+  it("writes the sub-group property when the card changes lane, and nothing when it stays", () => {
+    expect(
+      planLaneDrop({ cardId: "r1", value: "a", from: option("a"), to: option("b"), known: status }),
+    ).toEqual({ cell: "b" });
+    expect(
+      planLaneDrop({ cardId: "r1", value: "a", from: option("a"), to: option("a"), known: status }),
+    ).toBeUndefined();
+    expect(
+      planLaneDrop({
+        cardId: "r1",
+        value: "a",
+        from: option("a"),
+        to: { kind: "empty" },
+        known: status,
+      }),
+    ).toEqual({ cell: null });
+  });
+
+  it("edits the list of a multi-select lane instead of replacing it", () => {
+    const tags = known("multi_select", { options: [{ id: "x" }, { id: "y" }] });
+    expect(
+      planLaneDrop({
+        cardId: "r1",
+        value: ["x", "z"],
+        from: option("x"),
+        to: option("y"),
+        known: tags,
+      }),
+    ).toEqual({ cell: ["z", "y"] });
   });
 });
