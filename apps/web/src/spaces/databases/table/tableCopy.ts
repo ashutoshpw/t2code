@@ -1,6 +1,5 @@
+import { type CellTextContext, cellPlainText } from "@t2code/client-runtime/spaces";
 import type { SpaceCellValue, SpaceKnownDatabaseProperty } from "@t2code/contracts/spaces";
-
-import { cellPlainText, type CellTextContext } from "../primitives/format";
 
 /** What Mod+C puts on the clipboard: dates as ISO days so a paste can read them back. */
 export function cellCopyText(

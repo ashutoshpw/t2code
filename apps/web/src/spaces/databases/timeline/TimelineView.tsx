@@ -1,4 +1,4 @@
-import { addDays, canonicalJson, isoDay } from "@t2code/client-runtime/spaces";
+import { addDays, canonicalJson, groupLabel, isoDay } from "@t2code/client-runtime/spaces";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useLayoutEffect, useState } from "react";
 import type {
@@ -22,7 +22,6 @@ import { useDatabase, useDatabaseActions } from "../shell/context";
 import type { DatabaseViewProps } from "../shell/viewTypes";
 import type { TimelineHandlers } from "./TimelineBar";
 import { buildGridItems, visibleBuckets } from "../table/gridItems";
-import { groupLabel } from "../table/groupLabel";
 import { TimelineCanvas } from "./TimelineCanvas";
 import { timelineLines, type TimelineGroupHandlers } from "./timelineLines";
 import { barWrites, type BarMode } from "./timelineDrag";

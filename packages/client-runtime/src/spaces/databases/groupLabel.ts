@@ -1,6 +1,6 @@
 import type { SpaceGroupBucket, SpaceKnownDatabaseProperty } from "@t2code/contracts/spaces";
 
-import type { OptionHint } from "./tableTypes";
+import type { OptionHint } from "./format.ts";
 
 const STATUS_GROUP_LABEL: Record<string, string> = {
   todo: "To-do",

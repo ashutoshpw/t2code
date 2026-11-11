@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { fixtureView, subItemRows, withSubItems } from "../test/fixtures";
 import { mountRows } from "./listHarness";
 
@@ -30,8 +32,10 @@ async function mount(
   const fake = new FakeDatabase({ quietRowWrites: true, ...options, views: [view] });
   state.fake = fake;
   await page.viewport(1400, 900);
-  const mounted = await mountRows(view, options.permissions?.rows !== false);
-  await vi.waitFor(() => expect(mounted.scroller()).toBeTruthy());
+  const mounted = await readyWhen(
+    await mountRows(view, options.permissions?.rows !== false),
+    (rows) => vi.waitFor(() => expect(rows.scroller()).toBeTruthy()),
+  );
   return { fake, ...mounted };
 }
 const inList = (root: HTMLElement) => page.elementLocator(root);

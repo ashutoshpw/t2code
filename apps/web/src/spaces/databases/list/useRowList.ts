@@ -1,9 +1,10 @@
 import {
+  type ViewColumn,
   canonicalJson,
   cellForGroupKey,
+  groupLabel,
   newRowCells,
   subItemCells,
-  type ViewColumn,
 } from "@t2code/client-runtime/spaces";
 import { useLayoutEffect, useState } from "react";
 import {
@@ -20,7 +21,6 @@ import { useNestedSubItems, useSubItems } from "../data/useSubItems";
 import { useViewQuery } from "../data/useViewQuery";
 import { useDatabase, useDatabaseActions } from "../shell/context";
 import { buildGridItems, visibleBuckets } from "../table/gridItems";
-import { groupLabel } from "../table/groupLabel";
 import { moveTarget } from "./listLayout";
 
 const GROUP_ROWS = 25;

@@ -13,7 +13,7 @@ import { useContext, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { useEnvironmentQuery } from "../../../state/query";
-import { databaseErrorMessage } from "../data/errors";
+import { databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { databasePorts } from "../data/ports";
 import { OptionSelect } from "./OptionSelect";
 

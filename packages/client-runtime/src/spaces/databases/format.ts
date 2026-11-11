@@ -1,4 +1,5 @@
-import { knownComputedValue } from "@t2code/client-runtime/spaces";
+// @effect-diagnostics globalDate:off -- Display formatting: a relative date reads the device clock when it is drawn.
+import { knownComputedValue } from "./computed.ts";
 import type {
   SpaceAggregateResult,
   SpaceCellValue,
@@ -236,12 +237,18 @@ export function formatAggregate(
   return new Intl.NumberFormat("en-US").format(result.number);
 }
 
+/** The option name and color a window carries for an option the schema no longer lists. */
+export type OptionHint = (
+  propertyId: string,
+  optionId: string,
+) => { readonly name: string; readonly color: SpaceDatabaseColor | string } | undefined;
+
+const isDateValue = (value: unknown): value is SpaceDateValue =>
+  typeof value === "object" && value !== null && typeof Reflect.get(value, "start") === "string";
+
 export interface CellTextContext {
   readonly relatedPages: Readonly<Record<string, SpaceRelatedPage>>;
-  readonly optionHint: (
-    propertyId: string,
-    optionId: string,
-  ) => { readonly name: string; readonly color: SpaceDatabaseColor | string } | undefined;
+  readonly optionHint: OptionHint;
   readonly timeZone: string;
 }
 
@@ -294,9 +301,7 @@ export function cellPlainText(
             .join(", ")
         : "";
     case "date":
-      return typeof value === "object" && !Array.isArray(value) && "start" in value
-        ? formatDate(value as unknown as SpaceDateValue, known.config, context.timeZone)
-        : "";
+      return isDateValue(value) ? formatDate(value, known.config, context.timeZone) : "";
     case "created_time":
     case "last_edited_time":
       return typeof value === "string"

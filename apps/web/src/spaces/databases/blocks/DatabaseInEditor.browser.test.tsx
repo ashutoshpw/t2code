@@ -10,6 +10,7 @@ import { render } from "../../../../test/render";
 import { SpaceEditorAdapter } from "../../adapter";
 import { SpaceEditor } from "../../SpaceEditor";
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
 import { fakeController, testHost, TestHostProvider } from "../test/harness";
 import { createDatabaseBlock } from "./createDatabase";
 
@@ -171,10 +172,11 @@ describe("database block handle menu", () => {
       </div>,
       { router: false },
     );
-    await userEvent.hover(screen.getByRole("tablist", { name: "Database views" }));
-    await userEvent.click(screen.getByRole("button", { name: "Block menu" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: item }));
-    return { screen, onBatch };
+    return readyWhen({ screen, onBatch }, async () => {
+      await userEvent.hover(screen.getByRole("tablist", { name: "Database views" }));
+      await userEvent.click(screen.getByRole("button", { name: "Block menu" }));
+      await userEvent.click(screen.getByRole("menuitem", { name: item }));
+    });
   }
 
   it("keeps the delete confirmation open after the menu closes and deletes on confirm", async () => {

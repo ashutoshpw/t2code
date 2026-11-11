@@ -13,7 +13,7 @@ import { useEnvironment } from "../../../state/environments";
 import { useEnvironmentQuery } from "../../../state/query";
 import { useSpacesAvailability } from "../../../state/spaces";
 import { useDatabasePageEditable } from "../blocks/DatabaseBlockHost";
-import { databaseErrorMessage } from "./errors";
+import { databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { databasePorts } from "./ports";
 
 export interface DatabasePermissions {

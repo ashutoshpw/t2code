@@ -1,6 +1,6 @@
 import type { SpaceCellValue, SpaceKnownDatabaseProperty } from "@t2code/contracts/spaces";
 
-import { buildDateValue, parseTypedDay, EMPTY_DATE_DRAFT } from "./dateValue";
+import { buildDateValue, parseTypedDay, EMPTY_DATE_DRAFT } from "./dateValue.ts";
 
 export type ParsedCell =
   | { readonly ok: true; readonly value: SpaceCellValue | null }
@@ -17,6 +17,40 @@ export function parseNumber(text: string, format: string): number | null | undef
   value = value.replace(/^([+-]?)[^\d.+-]+/u, "$1");
   if (!/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(value)) return undefined;
   const number = Number(value);
+  if (!Number.isFinite(number)) return undefined;
+  return format === "percent" ? Number((number / 100).toPrecision(12)) : number;
+}
+
+/**
+ * A typed number under a locale whose decimal separator is `decimal` ("," or anything else as "."),
+ * the other of the two being its group separator. Spaces and apostrophes are ignored; a group
+ * separator must sit between a 1-3 digit head and 3-digit groups, the decimal separator may appear
+ * once. Input that breaks this ("1,2,3", "1.5" under a comma locale) is `undefined`, never guessed.
+ */
+export function parseLocalizedNumber(
+  text: string,
+  format: string,
+  decimal: string,
+): number | null | undefined {
+  const dec = decimal === "," ? "," : ".";
+  const group = dec === "," ? "." : ",";
+  let value = text.trim().replace(/[\s_'\u2019]/gu, "");
+  if (value === "") return null;
+  if (value.endsWith("%")) value = value.slice(0, -1);
+  value = value.replace(/^([+-]?)\p{Sc}+/u, "$1");
+  const g = `\\${group}`;
+  const d = `\\${dec}`;
+  const shape = new RegExp(
+    `^([+-]?)(\\d{1,3}(?:${g}\\d{3})+|\\d*)(?:${d}(\\d*))?(e[+-]?\\d+)?$`,
+    "i",
+  ).exec(value);
+  if (shape === null) return undefined;
+  const [, sign = "", whole = "", fraction = "", exponent = ""] = shape;
+  const digits = whole.split(group).join("");
+  if (digits === "" && fraction === "") return undefined;
+  const number = Number(
+    `${sign}${digits || "0"}${fraction === "" ? "" : `.${fraction}`}${exponent}`,
+  );
   if (!Number.isFinite(number)) return undefined;
   return format === "percent" ? Number((number / 100).toPrecision(12)) : number;
 }

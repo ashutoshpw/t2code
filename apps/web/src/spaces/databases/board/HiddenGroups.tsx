@@ -1,10 +1,9 @@
 import { useDroppable } from "@dnd-kit/core";
-import { canonicalJson } from "@t2code/client-runtime/spaces";
+import { type GroupLabel, canonicalJson } from "@t2code/client-runtime/spaces";
 import type { SpaceGroupBucket, SpaceGroupKey } from "@t2code/contracts/spaces";
 
 import { cn } from "~/lib/utils";
 import { OptionChip } from "../primitives/OptionChip";
-import type { GroupLabel } from "../table/groupLabel";
 
 function HiddenGroup({
   bucket,

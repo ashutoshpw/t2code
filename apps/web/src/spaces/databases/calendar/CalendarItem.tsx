@@ -1,5 +1,5 @@
 import { useDraggable } from "@dnd-kit/core";
-import { rowTitle } from "@t2code/client-runtime/spaces";
+import { type CellTextContext, rowTitle } from "@t2code/client-runtime/spaces";
 import { MoreHorizontalIcon } from "lucide-react";
 import { lazy, memo, Suspense, type CSSProperties } from "react";
 import type {
@@ -14,7 +14,6 @@ import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
 import { cn } from "~/lib/utils";
 import { sameLines, type CardLine } from "../board/BoardCard";
 import { CellValue } from "../primitives/CellValue";
-import type { CellTextContext } from "../primitives/format";
 import type { DragData } from "./calendarDrag";
 import type { WeekSegment } from "./calendarLayout";
 

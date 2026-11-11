@@ -5,7 +5,7 @@ import type { AtomRegistry } from "effect/reactivity";
 
 import { toastManager } from "../../../components/ui/toast";
 import { environmentPresentations } from "../../../state/presentation";
-import { databaseErrorMessage } from "./errors";
+import { databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { databasePorts } from "./ports";
 
 // Rows per mutation when the capability has not loaded yet; the server limit applies either way.

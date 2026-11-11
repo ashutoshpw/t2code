@@ -1,11 +1,10 @@
-import { canonicalJson, laneCell } from "@t2code/client-runtime/spaces";
+import { type GroupLabel, canonicalJson, laneCell } from "@t2code/client-runtime/spaces";
 import { ChevronRightIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import type { SpaceGroupBucket, SpaceGroupKey } from "@t2code/contracts/spaces";
 
 import { cn } from "~/lib/utils";
 import { OptionChip } from "../primitives/OptionChip";
-import type { GroupLabel } from "../table/groupLabel";
 
 /** Lanes of a sub-grouped board: a header row of columns, then one section per lane. */
 export function BoardLanes({

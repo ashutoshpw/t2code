@@ -1,3 +1,4 @@
+import { type CellTextContext, cellPlainText } from "@t2code/client-runtime/spaces";
 import { CheckIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
@@ -13,7 +14,6 @@ import { cn } from "~/lib/utils";
 import { CellEditor, editorKind } from "../cells/CellEditor";
 import { PropertyMenu } from "../controls/PropertyMenu";
 import { CellValue } from "../primitives/CellValue";
-import { cellPlainText, type CellTextContext } from "../primitives/format";
 import { PropertyTypeIcon } from "../primitives/PropertyTypeIcon";
 
 export interface RowPropertyFieldProps {

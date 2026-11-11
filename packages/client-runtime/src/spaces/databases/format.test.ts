@@ -7,7 +7,7 @@ import {
   formatNumber,
   formatTimestamp,
   formatUniqueId,
-} from "./format";
+} from "./format.ts";
 
 describe("formatNumber", () => {
   it.each([

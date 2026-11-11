@@ -1,5 +1,5 @@
 import { useDroppable } from "@dnd-kit/core";
-import { addDays, rowTitle } from "@t2code/client-runtime/spaces";
+import { type CellTextContext, addDays, rowTitle } from "@t2code/client-runtime/spaces";
 import { PlusIcon } from "lucide-react";
 import { memo } from "react";
 import type { SpaceKnownDatabaseProperty, SpacePageId } from "@t2code/contracts/spaces";
@@ -7,7 +7,6 @@ import type { SpaceKnownDatabaseProperty, SpacePageId } from "@t2code/contracts/
 import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
 import type { CardLine } from "../board/BoardCard";
-import type { CellTextContext } from "../primitives/format";
 import { DAY_ID_PREFIX } from "./calendarDrag";
 import {
   gridSpan,

@@ -71,6 +71,8 @@ const IDLE: QuerySnapshot = {
 const PENDING_DELAYS_MS = [400, 800, 1600, 3200] as const;
 /** After the backoff, a slow fixed interval: a large recompute can run for minutes. */
 const PENDING_SLOW_DELAY_MS = 5000;
+/** Consecutive follow-up refreshes before the session stops asking until something else refreshes it. */
+export const PENDING_MAX_FOLLOWS = 12;
 const REFRESH_DELAY_MS = 150;
 const ACK_REFRESH_DELAY_MS = 1000;
 const MAX_REFRESH_WINDOWS = 5;
@@ -423,6 +425,7 @@ export class DatabaseQuerySession {
       this.#followAttempt = 0;
       return;
     }
+    if (this.#followAttempt >= PENDING_MAX_FOLLOWS) return;
     const delay = PENDING_DELAYS_MS[this.#followAttempt] ?? PENDING_SLOW_DELAY_MS;
     this.#followAttempt++;
     this.#followRun = true;

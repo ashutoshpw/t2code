@@ -7,6 +7,7 @@ import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "../../../../test/render";
 import { FIXTURE_IDS } from "../test/fixtures";
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
 import { TEST_ENVIRONMENT } from "../test/harness";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
@@ -77,12 +78,13 @@ async function mount() {
   );
   const cell = (rowId: string, column: string) =>
     screen.container.querySelector<HTMLElement>(`[data-row="${rowId}"][data-col="${column}"]`);
-  await vi.waitFor(() => expect(cell("row-1", "title")).not.toBeNull());
   const openRow = async (rowId: string) =>
     userEvent.click(
       page.elementLocator(cell(rowId, "title")!).getByRole("button", { name: "Open row" }),
     );
-  return { fake, screen, cell, openRow };
+  return readyWhen({ fake, screen, cell, openRow }, () =>
+    vi.waitFor(() => expect(cell("row-1", "title")).not.toBeNull()),
+  );
 }
 
 describe("row peek", () => {
