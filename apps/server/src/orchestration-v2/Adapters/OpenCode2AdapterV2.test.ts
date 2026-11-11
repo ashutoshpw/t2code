@@ -2390,7 +2390,7 @@ it.layer(McpProviderSessions.layer)("OpenCode2 adapter", (it) => {
     "reconciles a %s steer after reconnect without losing its execution",
     (delivery) =>
       Effect.gen(function* () {
-        const steerId = `msg_t3_steer_${SESSION}:message:opencode2-adapter:steer`;
+        const steerId = `msg_t2_steer_${SESSION}:message:opencode2-adapter:steer`;
         const reconnect = reconnected(
           {},
           "succeeded",
