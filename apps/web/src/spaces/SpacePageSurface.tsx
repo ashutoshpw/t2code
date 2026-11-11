@@ -27,6 +27,7 @@ import {
   type SpacePageNavigationTarget,
 } from "@t2code/client-runtime/spaces";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
+import type { SpacePageId } from "@t2code/contracts/spaces";
 import { useEnvironmentQuery } from "../state/query";
 import { useEnvironment } from "../state/environments";
 import { spacesEnvironment, useSpacesAvailability } from "../state/spaces";
@@ -38,6 +39,7 @@ import { cn } from "../lib/utils";
 import { useRelativeTimeState } from "../hooks/useRelativeTimeState";
 import { useMainAppThreadRef, useNavigateToMainApp } from "../components/sidebar/mainAppLocation";
 import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
+import { RowPeekContext } from "./databases/row/rowPeekContext";
 import { SpacePinButton } from "./SpacePinButton";
 import { SpacePageShareStatus } from "./SpacePageShareStatus";
 import { openSpacePageShareDialog } from "./spacePageShareDialogState";
@@ -56,18 +58,66 @@ const PageIconField = lazy(() =>
 );
 const SpaceRecoveryControls = lazy(() => import("./SpaceRecoveryControls"));
 const SpaceStructureControls = lazy(() => import("./SpaceStructureControls"));
+const RowProperties = lazy(() => import("./databases/row/RowProperties"));
+const RowPeek = lazy(() => import("./databases/row/RowPeek"));
+
+/** Set on the page a row opens in beside its table: the route stays on the database's page. */
+export interface SpacePagePeek {
+  readonly close: () => void;
+  readonly isOpen: (pageId: SpacePageId) => boolean;
+}
 
 interface SpacePageSurfaceProps {
   target: SpacePageNavigationTarget;
   fullPage?: boolean;
   threadRef?: ScopedThreadRef;
+  peek?: SpacePagePeek;
 }
 
 export default function SpacePageSurface(props: SpacePageSurfaceProps) {
+  const ownerKey = JSON.stringify([props.target.environmentId, props.target.pageId]);
+  const [peekState, setPeekState] = useState<{ key: string; pageId: SpacePageId } | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  // Route mode only: beside the chat or inside a peek a row opens in place.
+  const canPeek = !!props.fullPage && !props.threadRef && !props.peek;
+  const peeked = canPeek && peekState?.key === ownerKey ? peekState.pageId : null;
+  const openPeek = (pageId: SpacePageId) => {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setPeekState({ key: ownerKey, pageId });
+  };
+  const surface = <SpacePageSurfaceBody {...props} />;
+  if (!canPeek) return surface;
+  return (
+    <RowPeekContext.Provider value={openPeek}>
+      <div className="relative flex h-full min-h-0 min-w-0 flex-1">
+        {surface}
+        {peeked === null ? null : (
+          <Suspense fallback={null}>
+            <RowPeek
+              target={{
+                environmentId: props.target.environmentId,
+                spaceId: props.target.spaceId,
+                pageId: peeked,
+              }}
+              onClose={() => {
+                setPeekState(null);
+                const element = opener.current;
+                if (element?.isConnected) element.focus({ preventScroll: true });
+              }}
+            />
+          </Suspense>
+        )}
+      </div>
+    </RowPeekContext.Provider>
+  );
+}
+
+function SpacePageSurfaceBody(props: SpacePageSurfaceProps) {
   const availability = useSpacesAvailability(props.target.environmentId);
   const router = useRouter();
   const current = () => {
     if (!canBrowseSpaces(availability)) return false;
+    if (props.peek) return props.peek.isOpen(props.target.pageId);
     if (props.threadRef) {
       const panel = selectThreadRightPanelState(
         useRightPanelStore.getState().byThreadKey,
@@ -109,7 +159,7 @@ export default function SpacePageSurface(props: SpacePageSurfaceProps) {
   if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
   return (
     <section
-      aria-label="Space page"
+      aria-label={props.peek ? "Row page" : "Space page"}
       className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto"
     >
       <SpacePageMetadata {...props}>
@@ -155,7 +205,7 @@ function PageColumn({ fullPage, children }: { fullPage: boolean; children: React
   return (
     <div
       className={cn(
-        "mx-auto w-full min-w-0 max-w-3xl px-4",
+        "mx-auto w-full min-w-0 max-w-3xl px-4 has-[[data-space-database-page]]:max-w-none",
         fullPage ? "py-10 sm:px-12" : "py-6 sm:px-12",
       )}
     >
@@ -185,6 +235,7 @@ function SpacePageMetadata({
   target,
   fullPage = false,
   threadRef,
+  peek,
   children,
 }: SpacePageSurfaceProps & { children: ReactNode }) {
   const availability = useSpacesAvailability(target.environmentId);
@@ -201,6 +252,7 @@ function SpacePageMetadata({
     threadRef?.environmentId,
     threadRef?.threadId,
     fullPage,
+    peek !== undefined,
   ]);
   const createQuery = () =>
     available && (version === 1 || version === 2)
@@ -278,7 +330,7 @@ function SpacePageMetadata({
   // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Record a successfully opened page in the environment's shared recents.
   useEffect(() => {
     const key = JSON.stringify([target.environmentId, target.pageId]);
-    if (!recentEnabled || !canRecord || !pageReady || recordedPage.current === key) return;
+    if (!recentEnabled || !canRecord || !pageReady || recordedPage.current === key || peek) return;
     recordedPage.current = key;
     void spacesEnvironment.recordRecent
       .run(registry, {
@@ -292,7 +344,7 @@ function SpacePageMetadata({
             (value) => value + 1,
           );
       });
-  }, [registry, target.environmentId, target.pageId, recentEnabled, canRecord, pageReady]);
+  }, [registry, target.environmentId, target.pageId, recentEnabled, canRecord, pageReady, peek]);
   if (!canBrowseSpaces(availability)) return <SpacesUnavailable availability={availability} />;
   if (query.error)
     return (
@@ -320,11 +372,14 @@ function SpacePageMetadata({
           <div className="group/icon" role="status" aria-label="Loading page">
             <SpaceTitleSkeleton />
           </div>
+          {null}
           <div className="mt-4">{children}</div>
         </PageColumn>
       </SpacePageToolbarSlotProvider>
     );
   const { page, space, ancestors } = current;
+  // A row has no place in the page tree: it lives in its database, on the page that hosts it.
+  const isRow = page.row !== undefined;
   const resolvedTarget = { ...target, spaceId: page.spaceId };
   const crumb = "truncate rounded-sm hover:text-foreground";
   const focusTitle = locationState.focusTitle === page.id && page.title === "";
@@ -388,7 +443,7 @@ function SpacePageMetadata({
             <TooltipPopup side="bottom">More actions</TooltipPopup>
           </Tooltip>
           <MenuPopup align="end">
-            {version === 2 ? (
+            {version === 2 && !isRow ? (
               <>
                 <MenuItem onClick={() => structure.current?.openMove()}>
                   <FolderInputIcon />
@@ -441,7 +496,7 @@ function SpacePageMetadata({
                 Open beside chat
               </MenuItem>
             ) : null}
-            {!fullPage ? (
+            {!fullPage && !peek ? (
               <MenuItem
                 render={
                   <Link
@@ -471,27 +526,32 @@ function SpacePageMetadata({
       <PageColumn fullPage={fullPage}>
         {version === 2 ? (
           <Suspense fallback={null}>
-            <SpaceStructureControls
-              ref={structure}
-              key={JSON.stringify([target.environmentId, target.pageId])}
-              target={resolvedTarget}
-              location={page.location}
-              current={() => {
-                const live = query.isPending ? null : query.data?.current();
-                return (
-                  live?.page.id === target.pageId &&
-                  live.page.spaceId === resolvedTarget.spaceId &&
-                  (live.page.location?.kind === "root" || live.page.location?.kind === "child")
-                );
-              }}
-            />
+            {isRow ? null : (
+              <SpaceStructureControls
+                ref={structure}
+                key={JSON.stringify([target.environmentId, target.pageId])}
+                target={resolvedTarget}
+                location={page.location}
+                current={() => {
+                  const live = query.isPending ? null : query.data?.current();
+                  return (
+                    live?.page.id === target.pageId &&
+                    live.page.spaceId === resolvedTarget.spaceId &&
+                    (live.page.location?.kind === "root" || live.page.location?.kind === "child")
+                  );
+                }}
+              />
+            )}
             <SpaceRecoveryControls
               ref={recovery}
               key={target.environmentId}
               environmentId={target.environmentId}
               pageId={target.pageId}
               spaceId={resolvedTarget.spaceId}
-              parentPageId={page.location?.kind === "child" ? page.location.parentPageId : null}
+              parentPageId={
+                current.row?.hostPageId ??
+                (page.location?.kind === "child" ? page.location.parentPageId : null)
+              }
               current={() => {
                 const live = query.isPending ? null : query.data?.current();
                 return (
@@ -536,6 +596,11 @@ function SpacePageMetadata({
             </Suspense>
           </h1>
         </div>
+        {isRow ? (
+          <Suspense fallback={null}>
+            <RowProperties environmentId={target.environmentId} pageId={page.id} />
+          </Suspense>
+        ) : null}
         <div className="mt-4">{children}</div>
       </PageColumn>
     </SpacePageToolbarSlotProvider>

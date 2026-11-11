@@ -6,6 +6,8 @@ import {
   type SpaceDatabaseGetInput,
   type SpaceDatabaseQueryInput,
   type SpaceDatabaseRowGetInput,
+  type SpaceMutationAdmission,
+  type SpacePageId,
   type SpaceViewId,
 } from "@t2code/contracts/spaces";
 import { WS_METHODS, type EnvironmentId } from "@t2code/contracts";
@@ -51,6 +53,12 @@ export function createSpacesDatabaseAtoms<R, E>(
     Atom.make<SpaceDataSourceId | undefined>(undefined).pipe(Atom.keepAlive),
   );
 
+  // The newest admission any answer carried; mutation inputs take their receipt epoch from it.
+  const admissionAtom = Atom.family((_environmentId: EnvironmentId) =>
+    Atom.make<SpaceMutationAdmission | undefined>(undefined).pipe(Atom.keepAlive),
+  );
+  const admission = (environmentId: EnvironmentId) => admissionAtom(environmentId);
+
   const databaseChanged = (environmentId: EnvironmentId, databaseId: SpaceDatabaseId) =>
     databaseCounter(keyOf(environmentId, databaseId));
   const dataSourceChanged = (environmentId: EnvironmentId, dataSourceId: SpaceDataSourceId) =>
@@ -82,6 +90,25 @@ export function createSpacesDatabaseAtoms<R, E>(
     const owner = registry.get(databaseOfView(keyOf(environmentId, viewId)));
     if (owner !== undefined) bump(registry, databaseChanged(environmentId, owner));
   };
+
+  /** A row's page was edited outside the grid (title, icon, trash, restore): refresh its data source. */
+  const rowPageChanged = (
+    registry: Registry,
+    environmentId: EnvironmentId,
+    pageId: SpacePageId,
+  ) => {
+    bump(registry, rowCounter(keyOf(environmentId, pageId)));
+    const source = registry.get(dataSourceOfRow(keyOf(environmentId, pageId)));
+    if (source !== undefined) bump(registry, dataSourceChanged(environmentId, source));
+  };
+
+  /** The grid knows a row's data source before the row was ever opened as a page. */
+  const noteRowDataSource = (
+    registry: Registry,
+    environmentId: EnvironmentId,
+    pageId: SpacePageId,
+    dataSourceId: SpaceDataSourceId,
+  ) => registry.set(dataSourceOfRow(keyOf(environmentId, pageId)), dataSourceId);
 
   const available = (registry: Registry, environmentId: EnvironmentId) => {
     const capability = options ? registry.get(options.capabilityAtom(environmentId)) : undefined;
@@ -128,6 +155,9 @@ export function createSpacesDatabaseAtoms<R, E>(
   return {
     databaseChanged,
     dataSourceChanged,
+    admission,
+    rowPageChanged,
+    noteRowDataSource,
 
     list: createEnvironmentQueryAtomFamily(runtime, {
       ...queryOptions,
@@ -141,6 +171,7 @@ export function createSpacesDatabaseAtoms<R, E>(
         const result = yield* guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesList, input),
         );
+        registry.set(admission(input.environmentId), result.mutationAdmission);
         for (const item of result.items)
           for (const source of item.dataSources)
             registry.set(
@@ -167,6 +198,7 @@ export function createSpacesDatabaseAtoms<R, E>(
         const result = yield* guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesGet, input),
         );
+        registry.set(admission(input.environmentId), result.mutationAdmission);
         for (const source of result.dataSources)
           registry.set(
             databaseOfDataSource(keyOf(input.environmentId, source.id)),
@@ -213,6 +245,7 @@ export function createSpacesDatabaseAtoms<R, E>(
         const result = yield* guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesRowsGet, input),
         );
+        registry.set(admission(input.environmentId), result.mutationAdmission);
         registry.set(
           dataSourceOfRow(keyOf(input.environmentId, input.pageId)),
           result.dataSource.id,

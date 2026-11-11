@@ -28,10 +28,15 @@ import {
   SquareCodeIcon,
   PaletteIcon,
   StrikethroughIcon,
+  TableIcon,
   UnderlineIcon,
 } from "lucide-react";
 import { NodeSelection, type Command } from "@tiptap/pm/state";
-import { SPACE_TEXT_COLORS, type SpaceBlockId } from "@t2code/contracts/spaces";
+import {
+  SPACE_TEXT_COLORS,
+  type SpaceBlockId,
+  type SpaceDatabaseBlock,
+} from "@t2code/contracts/spaces";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import {
@@ -56,6 +61,11 @@ import {
   placeAt,
   type SpaceEditorParts,
 } from "./spaceEditorSupport";
+
+/** Asks the host to create a database, then to place its block with `place`. */
+export type SlashDatabaseCreate = (
+  place: (content: SpaceDatabaseBlock["content"]) => boolean,
+) => void;
 
 export function BubbleLayer({
   editor,
@@ -105,7 +115,11 @@ export function BubbleLayer({
   return (
     <div
       className="contents"
-      onFocus={() => setFocused(true)}
+      onFocus={(event) =>
+        setFocused(
+          !(event.target instanceof Element && event.target.closest("[data-space-database]")),
+        )
+      }
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
       }}
@@ -236,9 +250,11 @@ export function SlashLayer({
   bridge,
   editable,
   onCreatePage,
+  onCreateDatabase,
   children,
 }: SpaceEditorParts & {
   readonly onCreatePage: ((blockId: SpaceBlockId | null) => void) | undefined;
+  readonly onCreateDatabase?: SlashDatabaseCreate | undefined;
   readonly children: ReactNode;
 }) {
   const wrapper = useContext(SpaceEditorWrapperContext);
@@ -332,6 +348,22 @@ export function SlashLayer({
             icon: FileTextIcon,
             keywords: "subpage new child",
             apply: onCreatePage,
+          },
+        ]
+      : []),
+    ...(onCreateDatabase
+      ? [
+          {
+            label: "Database",
+            icon: TableIcon,
+            keywords: "table board grid kanban",
+            apply: (id: SpaceBlockId | null) =>
+              onCreateDatabase(
+                (content) =>
+                  editable &&
+                  !editor.isDestroyed &&
+                  adapter.placeDatabase(id, content)(editor.state, editor.view.dispatch),
+              ),
           },
         ]
       : []),

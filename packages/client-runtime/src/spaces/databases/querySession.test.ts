@@ -1,0 +1,309 @@
+import type {
+  SpaceDatabaseQueryInput,
+  SpaceDatabaseQueryResult,
+  SpaceDatabaseRow,
+} from "@t2code/contracts/spaces";
+import { describe, expect, it } from "vite-plus/test";
+
+import { DatabaseQuerySession } from "./querySession.ts";
+
+const tick = async () => {
+  for (let turn = 0; turn < 8; turn++) await Promise.resolve();
+};
+const row = (id: string, title = id): SpaceDatabaseRow =>
+  ({
+    page: { id, title, revision: 1, createdAt: "t", updatedAt: "t" },
+    number: 1,
+    cells: { title },
+  }) as unknown as SpaceDatabaseRow;
+const input = (extra: Partial<SpaceDatabaseQueryInput> = {}) =>
+  ({
+    environmentId: "e",
+    dataSourceId: "s",
+    mode: "rows",
+    limit: 2,
+    timeZone: "UTC",
+    ...extra,
+  }) as unknown as SpaceDatabaseQueryInput;
+
+function setup(options: { busy?: boolean } = {}) {
+  const calls: SpaceDatabaseQueryInput[] = [];
+  const pending: Array<{
+    input: SpaceDatabaseQueryInput;
+    resolve: (result: Partial<SpaceDatabaseQueryResult>) => void;
+    reject: (error: unknown) => void;
+  }> = [];
+  const timers = new Map<number, { delay: number; run: () => void }>();
+  let nextTimer = 0;
+  const session = new DatabaseQuerySession({
+    query: (request: SpaceDatabaseQueryInput) => {
+      calls.push(request);
+      return new Promise((resolve, reject) =>
+        pending.push({
+          input: request,
+          resolve: (result) =>
+            resolve({
+              dataSourceId: "s",
+              schemaRevision: 1,
+              dataRevision: 1,
+              rows: [],
+              relatedPages: {},
+              nextCursor: null,
+              ...result,
+            } as SpaceDatabaseQueryResult),
+          reject,
+        }),
+      );
+    },
+    schedule: (run: () => void, delay: number) => {
+      const id = nextTimer++;
+      timers.set(id, { delay, run });
+      return () => void timers.delete(id);
+    },
+    busy: () => options.busy === true,
+  } as never);
+  const fire = () => {
+    for (const [id, timer] of Array.from(timers)) {
+      timers.delete(id);
+      timer.run();
+    }
+  };
+  const settle = async (result: Partial<SpaceDatabaseQueryResult>) => {
+    pending.shift()?.resolve(result);
+    await tick();
+  };
+  return { session, calls, pending, timers, fire, settle };
+}
+
+describe("DatabaseQuerySession", () => {
+  it("asks for total and aggregates on the first window only", async () => {
+    const { session, calls, settle } = setup();
+    session.setInput(input());
+    expect(calls[0]?.include).toEqual({ total: true, aggregates: true });
+    await settle({ rows: [row("a"), row("b")], nextCursor: "c1" as never, total: 5 });
+    expect(session.getSnapshot()).toMatchObject({ status: "ready", stale: false });
+    session.loadMore();
+    expect(calls[1]).toMatchObject({ cursor: "c1" });
+    expect(calls[1]?.include).toBeUndefined();
+    await settle({ rows: [row("c")], nextCursor: null });
+    expect(session.getSnapshot().windows?.rows.map((entry) => entry.page.id)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+    session.loadMore();
+    expect(calls).toHaveLength(2);
+  });
+
+  it("keeps the old windows on a key change and drops answers of the old key", async () => {
+    const { session, settle, pending } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a")] });
+    session.setInput(input({ search: "x" }));
+    expect(session.getSnapshot()).toMatchObject({ status: "loading", stale: true });
+    expect(session.getSnapshot().windows?.rows).toHaveLength(1);
+    session.setInput(input({ search: "xy" }));
+    pending.shift()?.resolve({ rows: [row("old")] });
+    await settle({ rows: [row("new")] });
+    expect(session.getSnapshot().windows?.rows.map((entry) => entry.page.id)).toEqual(["new"]);
+    expect(session.getSnapshot().stale).toBe(false);
+  });
+
+  it("does not refetch for an identical input", async () => {
+    const { session, calls, settle } = setup();
+    session.setInput(input());
+    await settle({});
+    session.setInput(input({ cursor: "ignored" as never }));
+    expect(calls).toHaveLength(1);
+  });
+
+  it("ignores a counter bump while busy and refreshes otherwise", async () => {
+    const busy = setup({ busy: true });
+    busy.session.setInput(input());
+    await busy.settle({});
+    busy.session.invalidate();
+    expect(busy.timers.size).toBe(0);
+    const free = setup();
+    free.session.setInput(input());
+    await free.settle({});
+    free.session.invalidate();
+    expect(free.timers.size).toBe(1);
+  });
+
+  it("adopts the next revision silently and refreshes when the edit matters", async () => {
+    const { session, timers, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a")] });
+    session.noteAck({ dataRevision: 2, affects: false, structural: false });
+    expect(timers.size).toBe(0);
+    expect(session.getSnapshot().windows?.dataRevision).toBe(2);
+    session.noteAck({ dataRevision: 3, affects: true, structural: false });
+    expect(timers.size).toBe(1);
+  });
+
+  it("keeps an acknowledged edit on the adopt path without another query", async () => {
+    const { session, calls, timers, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a", "old")] });
+    const edit = { dataSourceId: "s", pageId: "a", propertyId: "title", value: "new", seq: 1 };
+    session.noteAck({ dataRevision: 2, affects: false, structural: false, edits: [edit] as never });
+    expect(session.getSnapshot().windows?.rows[0]?.cells["title" as never]).toBe("new");
+    expect(timers.size).toBe(0);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("overlays an acknowledged edit that matters until a refresh answers with its revision", async () => {
+    const { session, fire, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a", "old")] });
+    const edit = { dataSourceId: "s", pageId: "a", propertyId: "title", value: "new", seq: 1 };
+    session.noteAck({ dataRevision: 2, affects: true, structural: false, edits: [edit] as never });
+    expect(Object.values(session.getSnapshot().acked)).toHaveLength(1);
+    fire();
+    await settle({ rows: [row("a", "old")], dataRevision: 1 });
+    // The answer predates the ack: keep the overlay and ask again.
+    expect(Object.values(session.getSnapshot().acked)).toHaveLength(1);
+    fire();
+    await settle({ rows: [row("a", "new")], dataRevision: 2 });
+    expect(Object.values(session.getSnapshot().acked)).toHaveLength(0);
+  });
+
+  it("refreshes when the first window predates an ack that arrived while loading", async () => {
+    const { session, calls, fire, settle } = setup();
+    session.setInput(input());
+    session.noteAck({ dataRevision: 2, affects: false, structural: false });
+    await settle({ rows: [row("a")], dataRevision: 1 });
+    fire();
+    expect(calls).toHaveLength(2);
+  });
+
+  it("re-grows buckets that held more rows before a groups refresh", async () => {
+    const { session, calls, fire, settle } = setup();
+    const bucket = (rows: string[], nextCursor: unknown) => ({
+      key: "todo",
+      count: 5,
+      rows: rows.map((id) => row(id)),
+      nextCursor,
+    });
+    session.setInput(input({ mode: "groups", rowsPerGroup: 2 }));
+    await settle({ groups: [bucket(["a", "b"], "c1")] as never });
+    session.loadBucket("todo" as never);
+    await settle({ rows: [row("c"), row("d")], nextCursor: "c2" as never });
+    expect(session.getSnapshot().windows?.groups?.[0]?.rows).toHaveLength(4);
+    session.refresh();
+    fire();
+    await settle({ groups: [bucket(["a", "b"], "c1")] as never });
+    expect(calls.at(-1)?.scope).toEqual({ group: "todo" });
+    await settle({ rows: [row("c"), row("d")], nextCursor: "c2" as never });
+    expect(session.getSnapshot().windows?.groups?.[0]?.rows).toHaveLength(4);
+  });
+
+  it("refreshes from the top to the loaded depth, keeps row identity and clears placed rows", async () => {
+    const { session, calls, fire, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a"), row("b")], nextCursor: "c1" as never });
+    session.loadMore();
+    await settle({ rows: [row("c"), row("d")], nextCursor: "c2" as never });
+    session.placeRow(row("n"), null);
+    session.setPlacement("a", { group: { kind: "empty" }, beforeRowId: "c" });
+    expect(Object.keys(session.getSnapshot().placements)).toEqual(["a"]);
+    const before = session.getSnapshot().windows?.rows;
+    session.refresh();
+    fire();
+    expect(calls.at(-1)?.cursor).toBeUndefined();
+    await settle({ rows: [row("a"), row("b", "changed")], nextCursor: "c1" as never });
+    await settle({ rows: [row("c"), row("d")], nextCursor: "c2" as never });
+    const snapshot = session.getSnapshot();
+    expect(snapshot.placed).toEqual([]);
+    expect(snapshot.placements).toEqual({});
+    expect(snapshot.windows?.rows[0]).toBe(before?.[0]);
+    expect(snapshot.windows?.rows[1]).not.toBe(before?.[1]);
+    expect(snapshot.windows?.rows[2]).toBe(before?.[2]);
+    expect(calls).toHaveLength(4);
+  });
+
+  it("defers a refresh while held", async () => {
+    const { session, timers, settle } = setup();
+    session.setInput(input());
+    await settle({});
+    const release = session.hold();
+    session.refresh();
+    expect(timers.size).toBe(0);
+    release();
+    expect(timers.size).toBe(1);
+  });
+
+  it("continues a bucket in rows mode and refreshes once on a stale cursor", async () => {
+    const { session, calls, fire, settle, pending } = setup();
+    const group = { kind: "option", optionId: "o" } as never;
+    session.setInput(input({ mode: "groups", rowsPerGroup: 1 }));
+    await settle({
+      groups: [{ key: group, count: 3, rows: [row("a")], nextCursor: null }],
+    });
+    session.loadBucket(group);
+    expect(session.getSnapshot().loadingBuckets.size).toBe(1);
+    expect(calls[1]).toMatchObject({ mode: "rows", scope: { group } });
+    await settle({ rows: [row("a"), row("b"), row("c")], nextCursor: null });
+    expect(session.getSnapshot().windows?.groups?.[0]?.rows).toHaveLength(3);
+    expect(session.getSnapshot().loadingBuckets.size).toBe(0);
+
+    session.loadBucket(group);
+    pending.shift()?.reject({ _tag: "SpaceCursorStaleError" });
+    await tick();
+    fire();
+    await settle({ groups: [{ key: group, count: 3, rows: [row("a")], nextCursor: null }] });
+    expect(session.getSnapshot().status).toBe("ready");
+    session.loadBucket(group);
+    pending.shift()?.reject({ _tag: "SpaceCursorStaleError" });
+    await tick();
+    expect(session.getSnapshot().status).toBe("ready");
+  });
+
+  it("turns a failed first window into an error and ignores late responses after dispose", async () => {
+    const { session, pending, settle } = setup();
+    session.setInput(input());
+    pending.shift()?.reject(new Error("boom"));
+    await tick();
+    expect(session.getSnapshot().status).toBe("error");
+    session.setInput(input({ search: "z" }));
+    session.dispose();
+    await settle({ rows: [row("a")] });
+    expect(session.getSnapshot().status).toBe("loading");
+  });
+
+  it("keeps the windows when a continuation or refresh fails and retries it", async () => {
+    const { session, calls, pending, settle, fire } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a"), row("b")], nextCursor: "c1" as never });
+    session.loadMore();
+    pending.shift()?.reject(new Error("socket"));
+    await tick();
+    expect(session.getSnapshot()).toMatchObject({ status: "ready", loadingMore: false });
+    expect(session.getSnapshot().loadError).toBeInstanceOf(Error);
+    expect(session.getSnapshot().windows?.rows).toHaveLength(2);
+    session.retryLoad();
+    expect(calls[2]).toMatchObject({ cursor: "c1" });
+    expect(session.getSnapshot().loadError).toBeUndefined();
+    await settle({ rows: [row("c")], nextCursor: null });
+    expect(session.getSnapshot().windows?.rows).toHaveLength(3);
+
+    session.refresh();
+    fire();
+    pending.shift()?.reject(new Error("socket"));
+    await tick();
+    expect(session.getSnapshot()).toMatchObject({ status: "ready", stale: false });
+    expect(session.getSnapshot().loadError).toBeInstanceOf(Error);
+    session.retryLoad();
+    fire();
+    await settle({ rows: [row("a"), row("b")], nextCursor: null });
+    expect(session.getSnapshot().loadError).toBeUndefined();
+  });
+
+  it("merges related pages the UI just picked", async () => {
+    const { session, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a")] });
+    session.noteRelatedPages({ r1: { id: "r1", title: "Task" } as never });
+    expect(session.getSnapshot().relatedPages["r1"]?.title).toBe("Task");
+  });
+});
