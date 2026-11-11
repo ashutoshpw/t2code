@@ -4,7 +4,11 @@ import * as NodeSqliteClient from "@t2code/shared/nodeSqliteClient";
 import * as Effect from "effect/Effect";
 import * as TestClock from "effect/testing/TestClock";
 import * as SqlClient from "effect/sql/SqlClient";
+import * as C from "@t2code/contracts/spaces";
+import * as Schema from "effect/Schema";
+import * as Receipts from "../Receipts.ts";
 import * as SpacesService from "../SpacesService.ts";
+import * as SpacesSql from "../SpacesSql.ts";
 import {
   environmentId,
   env,
@@ -17,6 +21,9 @@ import {
   rootPage,
   recoveryIntent,
 } from "./Spaces.testkit.ts";
+
+const decodeRequest = Schema.decodeUnknownSync(C.SpaceMutationRequest);
+const decodeReceipt = Schema.decodeUnknownSync(C.SpaceMutationReceipt);
 
 it.layer(NodeServices.layer)("Spaces core service", (it) => {
   it.effect(
@@ -294,11 +301,31 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             title: library.items[0]!.title,
           };
           const first = yield* service.renameSpace(input);
-          for (let i = 1; i < 9_997; i++)
-            yield* service.renameSpace({
-              ...input,
-              mutationId: `receipt-${String(i).padStart(5, "0")}`,
-            });
+          // Fill to the quota in one transaction: serving 50,000 mutations one by one would be slow.
+          yield* Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            const [meta] =
+              yield* sql<Receipts.Metadata>`SELECT * FROM spaces_core WHERE singleton = 1`;
+            const [epoch] = yield* sql<{
+              readonly retain_until: number;
+            }>`SELECT retain_until FROM spaces_epochs WHERE epoch = ${common.receiptEpoch}`;
+            yield* sql.withTransaction(
+              Effect.gen(function* () {
+                for (let i = 1; i < 49_997; i++) {
+                  const mutationId = `receipt-${String(i).padStart(5, "0")}`;
+                  yield* Receipts.store(
+                    decodeRequest({ operation: "renameSpace", input: { ...input, mutationId } }),
+                    decodeReceipt({
+                      operation: "renameSpace",
+                      result: { ...first, mutationId },
+                    }),
+                    { ...meta!, receipt_rows: 0, receipt_bytes: 0 },
+                    epoch!.retain_until,
+                  );
+                }
+              }).pipe(Effect.provideService(SpacesSql.SpacesSql, sql)),
+            );
+          }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath })));
           const rejected = { ...common, mutationId: "over-capacity", title: "Must roll back" };
           const error = yield* Effect.flip(service.createSpace(rejected));
           assert.equal(error._tag, "SpaceLimitExceededError");
@@ -402,16 +429,16 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             }>`SELECT receipt_rows AS count, (SELECT COUNT(*) FROM spaces_receipts) AS actual FROM spaces_core`;
             return row;
           }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));
-          assert.deepEqual(yield* inspect, { count: 10_000, actual: 10_000 });
+          assert.deepEqual(yield* inspect, { count: 50_000, actual: 50_000 });
           yield* TestClock.adjust("8 days");
           const rotated = yield* service.listSpaces(env);
           assert.notEqual(rotated.mutationAdmission.epoch, common.receiptEpoch);
-          assert.deepEqual(yield* inspect, { count: 9_900, actual: 9_900 });
+          assert.deepEqual(yield* inspect, { count: 49_900, actual: 49_900 });
           assert.deepEqual(
             yield* service.lookupMutationReceipt({ request: { operation: "renameSpace", input } }),
             { status: "unknown" },
           );
-          const retained = { ...input, mutationId: "receipt-09996" };
+          const retained = { ...input, mutationId: "receipt-49996" };
           assert.equal((yield* service.renameSpace(retained)).status, "saved");
           assert.equal(
             (yield* Effect.flip(service.renameSpace(input)))._tag,
@@ -421,7 +448,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             ...rejected,
             receiptEpoch: rotated.mutationAdmission.epoch,
           });
-          assert.deepEqual(yield* inspect, { count: 9_901, actual: 9_901 });
+          assert.deepEqual(yield* inspect, { count: 49_901, actual: 49_901 });
         }),
       ),
   );

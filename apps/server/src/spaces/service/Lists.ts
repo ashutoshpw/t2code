@@ -1,6 +1,7 @@
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import { byteLength, canonical, ensureLimit, limits } from "../CorePolicy.ts";
+import * as Liveness from "../databases/Liveness.ts";
 import * as PageStore from "../PageStore.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 import {
@@ -180,12 +181,18 @@ export const make = (rt: Runtime) => {
         LEFT JOIN spaces_page_owners o ON o.child_page_id=p.page_id LEFT JOIN spaces_blocks b ON b.block_id=o.owner_block_id
         LEFT JOIN spaces_pages parent ON parent.page_id=b.page_id WHERE p.trash_batch_id IS NULL ${after}
         ORDER BY l.sequence DESC,l.page_id LIMIT ${limit + 1}`;
+        // Pages inside a dead database are not reachable, so they drop out of the window.
+        const dead = new Set<string>();
+        for (const row of rows)
+          if (row.root_order === null && !(yield* Liveness.pageLive(row.page_id)))
+            dead.add(row.page_id);
         let take = Math.min(limit, rows.length);
         while (true) {
           const last = rows[take - 1];
           const result: C.SpaceAllPagesResult = {
             items: rows
               .slice(0, take)
+              .filter((row) => !dead.has(row.page_id))
               .map((row) => ({ page: pageSummary(row), spaceTitle: row.space_title })),
             catalogRevision: meta.catalog_revision,
             nextCursor:
@@ -252,7 +259,7 @@ export const make = (rt: Runtime) => {
         LEFT JOIN spaces_page_owners o ON o.child_page_id = p.page_id
         LEFT JOIN spaces_blocks b ON b.block_id = o.owner_block_id
         LEFT JOIN spaces_pages parent ON parent.page_id = b.page_id
-        WHERE p.trash_batch_id IS NULL ${after}
+        WHERE p.trash_batch_id IS NULL AND p.data_source_id IS NULL ${after}
         ORDER BY p.updated_at DESC, p.page_id ASC LIMIT ${limit + 1}`;
         let take = Math.min(limit, rows.length);
         while (true) {

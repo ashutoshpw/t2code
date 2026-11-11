@@ -93,7 +93,38 @@ const compact = (schema: Json, optional: boolean): Json => {
     const only = branches.length === 1 ? branches[0] : mergeTaggedObjects(branches);
     result = Predicate.isObject(only) ? { ...only, ...rest } : { ...rest, anyOf: branches };
   }
+  // A filtered Record's toJsonSchema override wraps the advertised object in a single-branch
+  // allOf; flatten it or top-level `properties` (strictness and tool listings) read as absent.
+  if (
+    Array.isArray(result.allOf) &&
+    result.allOf.length === 1 &&
+    Predicate.isObject(result.allOf[0])
+  ) {
+    const { allOf: _allOf, ...rest } = result;
+    result = { ...result.allOf[0], ...rest };
+  }
   return result;
+};
+
+/** References are root-relative, so definitions nested under a branch must move to the root. */
+const hoistDefinitions = (schema: Json): Json => {
+  if (!Predicate.isObject(schema)) return schema;
+  const collected: JsonObject = {};
+  const strip = (value: Json): Json => {
+    if (Array.isArray(value)) return value.map(strip);
+    if (!Predicate.isObject(value)) return value;
+    const result: JsonObject = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (key === "$defs" && Predicate.isObject(child)) {
+        for (const [name, definition] of Object.entries(child)) {
+          collected[name] ??= strip(definition);
+        }
+      } else result[key] = strip(child);
+    }
+    return result;
+  };
+  const stripped = strip(schema) as JsonObject;
+  return Object.keys(collected).length === 0 ? stripped : { ...stripped, $defs: collected };
 };
 
 /**
@@ -103,4 +134,6 @@ const compact = (schema: Json, optional: boolean): Json => {
  * Decoding still uses the full schema, so each tag's own required fields still apply.
  */
 export const advertisedJsonSchema = (tool: Tool.Any) =>
-  compact(Tool.getJsonSchema(tool), false) as ReturnType<typeof Tool.getJsonSchema>;
+  hoistDefinitions(compact(Tool.getJsonSchema(tool), false)) as ReturnType<
+    typeof Tool.getJsonSchema
+  >;

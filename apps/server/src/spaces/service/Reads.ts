@@ -14,6 +14,7 @@ import {
   ensureSearchLimit,
 } from "../CorePolicy.ts";
 import * as Receipts from "../Receipts.ts";
+import * as Liveness from "../databases/Liveness.ts";
 import * as PageStore from "../PageStore.ts";
 import * as PageStructure from "../PageStructure.ts";
 import * as PageRecovery from "../PageRecovery.ts";
@@ -93,7 +94,9 @@ export const make = (rt: Runtime) => {
           const visible =
             row.page_id !== null &&
             row.trash_batch_id === null &&
-            (input.spaceId === undefined || row.space_id === input.spaceId);
+            row.row_template !== 1 &&
+            (input.spaceId === undefined || row.space_id === input.spaceId) &&
+            (row.root_order !== null || (yield* Liveness.pageLive(row.page_id)));
           const item = visible
             ? {
                 page: PageStore.summary(row),
@@ -171,6 +174,7 @@ export const make = (rt: Runtime) => {
         yield* checkIds(input);
         const page = yield* getPageRow(input.pageId);
         yield* PageStore.assertActive(page);
+        yield* Liveness.assertPageLive(page.page_id);
         const space = yield* getSpace(page.space_id);
         const result = {
           page: pageSummary(page),
@@ -196,6 +200,7 @@ export const make = (rt: Runtime) => {
         yield* checkIds(input);
         const page = yield* getPageRow(input.pageId);
         yield* PageStore.assertActive(page);
+        yield* Liveness.assertPageLive(page.page_id);
         if (input.revision < page.body_revision || input.revision > page.revision)
           return yield* new C.SpaceCursorStaleError({ revision: page.revision });
         const limit = input.limit ?? limits.maxBlockWindowBlocks;

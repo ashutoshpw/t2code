@@ -3,16 +3,16 @@ import * as NodeCrypto from "node:crypto";
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 import * as DateTime from "effect/DateTime";
-import * as AssetReferences from "../assets/References.ts";
-import * as Reconciliation from "../assets/Reconciliation.ts";
-import * as BlockStore from "../BlockStore.ts";
 import { byteLength } from "../CorePolicy.ts";
 import * as Receipts from "../Receipts.ts";
 import * as RevisionStore from "../RevisionStore.ts";
+import * as PageUpdate from "../PageUpdate.ts";
+import * as DatabaseHooks from "../databases/Hooks.ts";
+import * as DatabaseMutations from "../databases/Mutations.ts";
+import { applyBatch } from "./BlockBatch.ts";
 import * as PageStore from "../PageStore.ts";
 import * as PageStructure from "../PageStructure.ts";
 import * as PageRecovery from "../PageRecovery.ts";
-import * as ReferenceStore from "../ReferenceStore.ts";
 import * as SpacesSql from "../SpacesSql.ts";
 import * as SearchStore from "../SearchStore.ts";
 import {
@@ -20,7 +20,6 @@ import {
   type PageRow,
   spaceSummary,
   pageSummary,
-  pagePreimage,
   decodeReceipt,
   getSpace,
   getPageRow,
@@ -101,6 +100,8 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
                   destination: request.input.destination,
                 };
       const plan = yield* PageStructure.plan(structural, byteLength(request));
+      if (request.operation === "movePage" || request.operation === "moveBlocks")
+        yield* DatabaseHooks.guardMove(plan);
       if (!(yield* PageStructure.guardsMatch(plan, request.input.guards))) {
         const def = yield* defaultSpace();
         return decodeReceipt({
@@ -116,6 +117,7 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
           },
         });
       }
+      const recoveryRows = DatabaseHooks.recoveryRows(plan);
       const result =
         request.operation === "permanentlyDeletePage"
           ? yield* PageRecovery.purge(plan, request.input.mutationId, meta.observed_time_ms)
@@ -125,6 +127,12 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
               meta.observed_time_ms,
               request.operation === "createChildPage" ? request.input.title : undefined,
             );
+      if (
+        request.operation === "trashPage" ||
+        request.operation === "restorePage" ||
+        request.operation === "permanentlyDeletePage"
+      )
+        yield* DatabaseHooks.afterRecovery(request.operation, recoveryRows, meta.observed_time_ms);
       return decodeReceipt({
         operation: request.operation,
         result: { status: "saved", ...ack, ...result },
@@ -233,20 +241,12 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
           result: yield* conflict([yield* getSpace(page.space_id)], [page]),
         });
       const icon = input.icon === undefined ? (page.icon ?? null) : input.icon;
-      if (page.title !== input.title || icon !== (page.icon ?? null)) {
-        if (page.title !== input.title) yield* SearchStore.writeTitle(input.pageId, input.title);
-        yield* sql`UPDATE spaces_pages SET title = ${input.title}, icon = ${icon}, revision = revision + 1, updated_at = ${now} WHERE page_id = ${input.pageId}`;
-        yield* RevisionStore.capture(
-          {
-            pageId: input.pageId,
-            toRevision: page.revision + 1,
-            mutationId: input.mutationId,
-            pageBefore: pagePreimage(page),
-            blocksBefore: [],
-          },
-          meta.observed_time_ms,
-        );
-      }
+      yield* PageUpdate.apply(
+        page,
+        { title: input.title, icon },
+        input.mutationId,
+        meta.observed_time_ms,
+      );
       return decodeReceipt({
         operation: request.operation,
         result: { status: "saved", ...ack, page: pageSummary(yield* getPageRow(input.pageId)) },
@@ -266,41 +266,35 @@ export const execute = Effect.fn("SpacesService.execute")(function* (
             revision: page.revision,
           },
         });
-      const result = yield* BlockStore.apply(
-        input.pageId,
-        input.mutations,
-        page.block_count,
-        page.block_bytes,
-        byteLength(request),
-      );
-      if (result.changed) {
-        yield* sql`UPDATE spaces_pages SET revision = revision + 1, body_revision = revision + 1, block_count = ${result.count}, block_bytes = ${result.bytes}, updated_at = ${now} WHERE page_id = ${input.pageId}`;
-        yield* RevisionStore.capture(
-          {
-            pageId: input.pageId,
-            toRevision: page.revision + 1,
-            mutationId: input.mutationId,
-            pageBefore: pagePreimage(page),
-            blocksBefore: result.blocksBefore,
-          },
-          meta.observed_time_ms,
-        );
-        yield* AssetReferences.publish(result.assetRefsAfter);
-        for (const changedBlock of result.blocksAfter)
-          yield* Reconciliation.noteBlock(changedBlock.id, changedBlock.payload);
-        yield* ReferenceStore.release(result.retiredIds);
-        // The catalog revision guards list cursors; only changes to media references move asset lists.
-        if (result.assetRefsAfter.length > 0) yield* changed();
-      }
+      const result = yield* applyBatch({
+        page,
+        mutations: input.mutations,
+        mutationId: input.mutationId,
+        nowMs: meta.observed_time_ms,
+        requestBytes: byteLength(request),
+      });
       return decodeReceipt({
         operation: request.operation,
         result: {
           status: "saved",
           ...ack,
           generation: input.generation,
-          revision: page.revision + (result.changed ? 1 : 0),
+          revision: result.revision,
         },
       });
     }
+    case "createDatabase":
+    case "updateDatabase":
+    case "createDataSource":
+    case "updateDataSource":
+    case "deleteDataSource":
+    case "updateSchema":
+    case "createView":
+    case "updateView":
+    case "deleteView":
+    case "createRows":
+    case "updateRows":
+    case "moveRows":
+      return yield* DatabaseMutations.execute(request, meta);
   }
 });

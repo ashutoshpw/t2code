@@ -17,6 +17,7 @@ import { openMediaFile } from "../assets/MediaFile.ts";
 import * as Runtime from "./service/Runtime.ts";
 import * as AssetOps from "./service/Assets.ts";
 import * as ListOps from "./service/Lists.ts";
+import * as DatabaseReadOps from "./service/DatabaseReads.ts";
 import * as ReadOps from "./service/Reads.ts";
 import * as ShareOps from "./service/Shares.ts";
 import * as MutationOps from "./service/Mutations.ts";
@@ -143,6 +144,54 @@ export class SpacesService extends Context.Service<
     readonly listTrash: (
       input: unknown,
     ) => Effect.Effect<C.SpaceTrashListResult, C.SpaceServiceError>;
+    readonly createDatabase: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceDatabaseCreateResult, C.SpaceServiceError>;
+    readonly updateDatabase: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceDatabaseUpdateResult, C.SpaceServiceError>;
+    readonly createDataSource: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceDataSourceCreateResult, C.SpaceServiceError>;
+    readonly updateDataSource: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceDataSourceUpdateResult, C.SpaceServiceError>;
+    readonly deleteDataSource: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceDataSourceDeleteResult, C.SpaceServiceError>;
+    readonly updateSchema: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceSchemaUpdateResult, C.SpaceServiceError>;
+    readonly createView: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceViewCreateResult, C.SpaceServiceError>;
+    readonly updateView: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceViewUpdateResult, C.SpaceServiceError>;
+    readonly deleteView: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceViewDeleteResult, C.SpaceServiceError>;
+    readonly createRows: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceRowsCreateResult, C.SpaceServiceError>;
+    readonly updateRows: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceRowsUpdateResult, C.SpaceServiceError>;
+    readonly moveRows: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceRowsMoveResult, C.SpaceServiceError>;
+    readonly listDatabases: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceDatabaseListResult, C.SpaceServiceError>;
+    readonly getDatabase: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceDatabaseGetResult, C.SpaceServiceError>;
+    readonly queryDatabase: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceDatabaseQueryResult, C.SpaceServiceError>;
+    readonly getDatabaseRows: (
+      input: unknown,
+    ) => Effect.Effect<C.SpaceDatabaseRowGetResult, C.SpaceServiceError>;
     readonly lookupMutationReceipt: (
       input: unknown,
     ) => Effect.Effect<C.SpaceReceiptLookupResult, C.SpaceServiceError>;
@@ -195,6 +244,7 @@ const make = Effect.fn("SpacesService.make")(function* (
   const reads = ReadOps.make(runtime);
   const shares = ShareOps.make(runtime, assets);
   const mutations = MutationOps.make(runtime);
+  const databaseReads = DatabaseReadOps.make(runtime);
   const maintenance = MaintenanceOps.make(runtime);
   return SpacesService.of({
     reclaimExistingStorage: maintenance.reclaimExistingStorage(),
@@ -225,6 +275,22 @@ const make = Effect.fn("SpacesService.make")(function* (
     updatePage: mutations.updatePage,
     applyBlockBatch: mutations.applyBlockBatch,
     lookupMutationReceipt: mutations.lookupMutationReceipt,
+    createDatabase: mutations.createDatabase,
+    updateDatabase: mutations.updateDatabase,
+    createDataSource: mutations.createDataSource,
+    updateDataSource: mutations.updateDataSource,
+    deleteDataSource: mutations.deleteDataSource,
+    updateSchema: mutations.updateSchema,
+    createView: mutations.createView,
+    updateView: mutations.updateView,
+    deleteView: mutations.deleteView,
+    createRows: mutations.createRows,
+    updateRows: mutations.updateRows,
+    moveRows: mutations.moveRows,
+    listDatabases: databaseReads.listDatabases,
+    getDatabase: databaseReads.getDatabase,
+    queryDatabase: databaseReads.queryDatabase,
+    getDatabaseRows: databaseReads.getDatabaseRows,
     createChildPage: mutations.createChildPage,
     movePage: mutations.movePage,
     inspectStructure: reads.inspectStructure,

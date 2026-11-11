@@ -572,6 +572,7 @@ it.layer(NodeServices.layer)("Spaces core service", (it) => {
             search: true,
             assets: true,
             contextCapture: true,
+            databases: true,
           });
           const value = {
             ...block("search-moving"),

@@ -157,6 +157,7 @@ export const advance = Effect.fn("SpacesSearch.advance")(function* () {
 });
 
 interface Candidate extends SummaryRow {
+  readonly row_template: number | null;
   readonly doc_id: number;
   readonly block_id: C.SpaceBlockId | null;
   readonly text_json_bytes: number;
@@ -168,7 +169,7 @@ export const candidates = Effect.fn("SpacesSearch.candidates")(function* (
 ) {
   const sql = yield* SpacesSql.SpacesSql;
   return yield* sql<Candidate>`SELECT p.page_id,p.space_id,p.title,p.icon,p.revision,p.root_order,p.created_at,p.updated_at,
-    p.trash_batch_id,p.trash_root_id,p.trashed_at_ms,d.doc_id,d.block_id,d.text_json_bytes,o.owner_block_id,
+    p.trash_batch_id,p.trash_root_id,p.trashed_at_ms,p.data_source_id,p.row_template,d.doc_id,d.block_id,d.text_json_bytes,o.owner_block_id,
     b.page_id AS parent_page_id,b.deleted AS owner_deleted,parent.space_id AS parent_space_id,
     json_extract(b.payload,'$.type') AS owner_type
     FROM (SELECT rowid FROM spaces_search_fts WHERE spaces_search_fts MATCH ${query} AND rowid>CAST(${after} AS INTEGER)
