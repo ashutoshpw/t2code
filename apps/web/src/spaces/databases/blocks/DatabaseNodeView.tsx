@@ -1,7 +1,8 @@
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useContext, useState } from "react";
 import { isSpaceDatabaseBlock } from "@t2code/client-runtime/spaces";
 
+import { SpaceAtomContext } from "../../SpaceAtomView";
 import { DatabaseSkeleton } from "../shell/DatabaseSkeleton";
 import { useDatabaseBlockHost, useDatabaseLayout } from "./DatabaseBlockHost";
 import type { DatabaseBlockActions } from "./actions";
@@ -22,7 +23,15 @@ export function DatabaseNodeView({ node, editor }: NodeViewProps) {
         }
       : null,
   );
+  const renderShared = useContext(SpaceAtomContext);
   if (!isSpaceDatabaseBlock(block)) return null;
+  // Without a host (a shared page) the page's own renderer draws the block, read only.
+  if (host === null)
+    return (
+      <NodeViewWrapper contentEditable={false} data-space-block={block.id} className="my-2">
+        {renderShared?.(block) ?? null}
+      </NodeViewWrapper>
+    );
   return (
     <NodeViewWrapper
       contentEditable={false}

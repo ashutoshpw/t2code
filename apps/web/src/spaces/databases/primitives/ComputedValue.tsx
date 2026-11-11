@@ -1,13 +1,18 @@
 import { CheckIcon, TriangleAlertIcon } from "lucide-react";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
-import { computedInfoOf, knownComputedValue } from "@t2code/client-runtime/spaces";
+import {
+  computedInfoOf,
+  computedNumberConfig,
+  formatDate,
+  formatNumber,
+  knownComputedValue,
+} from "@t2code/client-runtime/spaces";
 import type {
   SpaceCellValue,
   SpaceKnownDatabaseProperty,
   SpaceRelatedPage,
 } from "@t2code/contracts/spaces";
 
-import { computedNumberConfig, formatDate, formatNumber } from "./format";
 import { OptionChip } from "./OptionChip";
 import { TextRuns } from "./TextRuns";
 

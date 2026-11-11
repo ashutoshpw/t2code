@@ -1,7 +1,10 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation, usePreventRemove } from "@react-navigation/native";
 import { canBrowseSpaces } from "@t2code/client-runtime/state/spaces";
-import { type SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
+import {
+  isSpaceDatabaseBlock,
+  type SpacePageNavigationTarget,
+} from "@t2code/client-runtime/spaces";
 import { SpacesCoreBlockControls, SpacesCoreBlockDelete } from "./SpacesCoreBlockControls";
 import type { SpaceBlock } from "@t2code/contracts/spaces";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -27,6 +30,8 @@ import { SpacesReferenceOpen } from "./SpacesReferences";
 import { MobileSpaceReferenceNavigation } from "./references";
 import * as Dialog from "../../components/ui/Dialog";
 import { Notice, AccessNotice } from "./spacesScreenSupport";
+import { SpacesDatabaseBlock } from "./databases/SpacesDatabaseBlock";
+import { SpacesRowProperties } from "./databases/SpacesRowProperties";
 
 function blockDepth(block: SpaceBlock, blocks: readonly SpaceBlock[]) {
   const seen = new Set([block.id]);
@@ -241,6 +246,9 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
                 ].join(" / ")}{" "}
                 · Revision {location.page.revision}
               </Text>
+            ) : null}
+            {location?.page.row ? (
+              <SpacesRowProperties environmentId={target.environmentId} pageId={location.page.id} />
             ) : null}
             <Notice>{spacesAvailabilityMessage[access.availability]}</Notice>
             {snapshot.structureBlocked ? (
@@ -512,90 +520,114 @@ function DocumentReader({ lease, access }: { lease: PageLease; access: SpacesRea
             </Notice>
           ) : undefined
         }
-        renderItem={({ item }) => (
-          <View>
-            <SpacesCoreBlockDelete reader={reader} current={currentCoreSource} blockId={item.id} />
-            <SpaceBlockReader
-              block={item}
-              onImage={(block) => {
-                const source = reader.getSnapshot().location;
-                if (source)
-                  void (
-                    block.type === "pdf" ? heavy.pdf : block.type === "video" ? heavy.video : media
-                  ).open(
-                    block,
-                    () =>
-                      navigation.isFocused() &&
-                      !reader.editing.getSnapshot().focus &&
-                      reader.getSnapshot().location === source &&
-                      source.current() !== null,
-                  );
-              }}
-              target={currentTarget}
-              depth={blockDepth(item, blocks)}
-              selected={item.id === currentTarget.blockId}
-              onOpen={(next) => {
-                const source = reader.getSnapshot().location;
-                if (access.current() && source && !reader.editing.getSnapshot().focus)
-                  references.select(
-                    next,
-                    () => reader.getSnapshot().location === source && source.current() !== null,
-                  );
-              }}
-            />
-            <View className="flex-row gap-2 px-4 pb-3">
-              {nativeDocumentForSpaceBlock(item) ? (
-                <>
-                  <ControlPill
-                    variant="pill"
-                    label="Edit text"
-                    disabled={
-                      !editable ||
-                      !spacesNativeEditorAvailable ||
-                      editorState.focus !== null ||
-                      editorState.busy === "discard"
-                    }
-                    onPress={() => {
-                      try {
-                        editing.focus(owner, item.id);
-                        setActionError(null);
-                      } catch (cause) {
-                        setActionError(
-                          cause instanceof Error ? cause.message : "Could not edit this block",
-                        );
-                        return;
-                      }
-                      list.current?.scrollToOffset({ offset: 0, animated: false });
-                    }}
-                  />
-                  {item.type === "todo_item" ? (
+        renderItem={({ item }) =>
+          isSpaceDatabaseBlock(item) ? (
+            location ? (
+              <SpacesDatabaseBlock
+                block={item}
+                environmentId={target.environmentId}
+                spaceId={location.page.spaceId}
+                pageId={location.page.id}
+                fullPage={blocks.length === 1 && !snapshot.window?.nextCursor}
+              />
+            ) : (
+              <Notice>Loading database…</Notice>
+            )
+          ) : (
+            <View>
+              <SpacesCoreBlockDelete
+                reader={reader}
+                current={currentCoreSource}
+                blockId={item.id}
+              />
+              <SpaceBlockReader
+                block={item}
+                onImage={(block) => {
+                  const source = reader.getSnapshot().location;
+                  if (source)
+                    void (
+                      block.type === "pdf"
+                        ? heavy.pdf
+                        : block.type === "video"
+                          ? heavy.video
+                          : media
+                    ).open(
+                      block,
+                      () =>
+                        navigation.isFocused() &&
+                        !reader.editing.getSnapshot().focus &&
+                        reader.getSnapshot().location === source &&
+                        source.current() !== null,
+                    );
+                }}
+                target={currentTarget}
+                depth={blockDepth(item, blocks)}
+                selected={item.id === currentTarget.blockId}
+                onOpen={(next) => {
+                  const source = reader.getSnapshot().location;
+                  if (access.current() && source && !reader.editing.getSnapshot().focus)
+                    references.select(
+                      next,
+                      () => reader.getSnapshot().location === source && source.current() !== null,
+                    );
+                }}
+              />
+              <View className="flex-row gap-2 px-4 pb-3">
+                {nativeDocumentForSpaceBlock(item) ? (
+                  <>
                     <ControlPill
                       variant="pill"
-                      label="Toggle to-do"
+                      label="Edit text"
                       disabled={
-                        !editable || editorState.focus !== null || editorState.busy === "discard"
+                        !editable ||
+                        !spacesNativeEditorAvailable ||
+                        editorState.focus !== null ||
+                        editorState.busy === "discard"
                       }
                       onPress={() => {
                         try {
-                          editing.toggleTodo(item.id);
+                          editing.focus(owner, item.id);
                           setActionError(null);
                         } catch (cause) {
                           setActionError(
-                            cause instanceof Error ? cause.message : "Could not toggle this to-do",
+                            cause instanceof Error ? cause.message : "Could not edit this block",
                           );
+                          return;
                         }
+                        list.current?.scrollToOffset({ offset: 0, animated: false });
                       }}
                     />
-                  ) : null}
-                </>
-              ) : (
-                <Text className="text-sm text-foreground-muted">
-                  Edit on desktop · original content retained
-                </Text>
-              )}
+                    {item.type === "todo_item" ? (
+                      <ControlPill
+                        variant="pill"
+                        label="Toggle to-do"
+                        disabled={
+                          !editable || editorState.focus !== null || editorState.busy === "discard"
+                        }
+                        onPress={() => {
+                          try {
+                            editing.toggleTodo(item.id);
+                            setActionError(null);
+                          } catch (cause) {
+                            setActionError(
+                              cause instanceof Error
+                                ? cause.message
+                                : "Could not toggle this to-do",
+                            );
+                          }
+                        }}
+                      />
+                    ) : null}
+                  </>
+                ) : (
+                  <Text className="text-sm text-foreground-muted">
+                    Edit on desktop · original content retained
+                  </Text>
+                )}
+              </View>
             </View>
-          </View>
-        )}
+          )
+        }
       />
     </View>
   );

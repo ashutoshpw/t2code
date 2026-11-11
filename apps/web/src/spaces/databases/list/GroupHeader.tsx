@@ -1,3 +1,4 @@
+import { type GroupLabel } from "@t2code/client-runtime/spaces";
 import { ChevronRightIcon } from "lucide-react";
 import { memo } from "react";
 import type { SpaceGroupBucket } from "@t2code/contracts/spaces";
@@ -5,7 +6,6 @@ import type { SpaceGroupBucket } from "@t2code/contracts/spaces";
 import { cn } from "~/lib/utils";
 import { OptionChip } from "../primitives/OptionChip";
 import { GROUP_HEIGHT } from "../table/gridItems";
-import type { GroupLabel } from "../table/groupLabel";
 
 /** A bucket's header: collapse toggle, label and count. */
 export const GroupHeader = memo(function GroupHeader({

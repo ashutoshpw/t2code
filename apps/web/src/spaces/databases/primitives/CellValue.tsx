@@ -1,3 +1,9 @@
+import {
+  type CellTextContext,
+  cellPlainText,
+  formatNumber,
+  optionLabel,
+} from "@t2code/client-runtime/spaces";
 import { CheckIcon } from "lucide-react";
 import { memo } from "react";
 import type {
@@ -8,7 +14,6 @@ import type {
 } from "@t2code/contracts/spaces";
 
 import { cn } from "~/lib/utils";
-import { cellPlainText, formatNumber, optionLabel, type CellTextContext } from "./format";
 import { OptionChip } from "./OptionChip";
 import { TextRuns } from "./TextRuns";
 import { ComputedValue } from "./ComputedValue";

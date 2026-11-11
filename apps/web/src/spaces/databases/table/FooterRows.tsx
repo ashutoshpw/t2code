@@ -1,6 +1,6 @@
 import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import type { SpaceGroupBucket, SpaceGroupKey } from "@t2code/contracts/spaces";
-import { canonicalJson } from "@t2code/client-runtime/spaces";
+import { type GroupLabel, canonicalJson } from "@t2code/client-runtime/spaces";
 
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
@@ -8,7 +8,6 @@ import { OptionChip } from "../primitives/OptionChip";
 import { useAdding, type GridEditStore } from "./gridEditStore";
 import { GROUP_HEIGHT, MAX_TREE_DEPTH, ROW_HEIGHT } from "./gridItems";
 import { INDENT } from "./tree";
-import type { GroupLabel } from "./groupLabel";
 import type { GridHandlers } from "./tableTypes";
 
 const ROW = "absolute start-0 flex w-full items-center border-b border-border/60";

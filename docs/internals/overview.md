@@ -81,7 +81,8 @@ Spaces is a separate durable authority, not an orchestration projection. Its
 from chat persistence; a chat receipt cannot certify a Spaces write. Asset publication also spans
 SQLite and the filesystem without a shared commit. Preserve the
 [service's](../../apps/server/src/spaces/SpacesService.ts) durable upload and generation checks
-during recovery rather than treating file presence as proof of readiness.
+during recovery rather than treating file presence as proof of readiness. Public page links
+that show databases follow [their own boundary rules](./spaces-public-databases.md).
 
 ## Turn completion and checkpoints
 

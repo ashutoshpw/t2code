@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { mountBoard } from "./boardHarness";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
@@ -25,8 +27,9 @@ async function mount(options: ConstructorParameters<typeof FakeDatabase>[0] = {}
   const fake = new FakeDatabase({ quietRowWrites: true, rows: 7, ...options });
   state.fake = fake;
   await page.viewport(1400, 900);
-  const board = await mountBoard(fake);
-  await vi.waitFor(() => expect(board.card("row-1")).not.toBeNull());
+  const board = await readyWhen(await mountBoard(fake), (mounted) =>
+    vi.waitFor(() => expect(mounted.card("row-1")).not.toBeNull()),
+  );
   return { fake, ...board };
 }
 

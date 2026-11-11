@@ -1,8 +1,7 @@
-import { rowTitle } from "@t2code/client-runtime/spaces";
+import { type GroupLabel, rowTitle } from "@t2code/client-runtime/spaces";
 import { memo, useRef, type PointerEvent } from "react";
 import type { SpaceGroupBucket, SpacePageId } from "@t2code/contracts/spaces";
 
-import type { GroupLabel } from "../table/groupLabel";
 import { TimelineLineLabel } from "./TimelineLineLabel";
 import type { TimelineGroupHandlers, TimelineLine } from "./timelineLines";
 import { ROW_HEIGHT } from "./timelineScale";

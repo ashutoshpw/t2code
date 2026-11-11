@@ -7,6 +7,7 @@ import {
   isoDay,
   moveDateValue,
   overlapFilter,
+  rangeOverlapFilter,
   resizeDateValue,
   rowDaySpan,
   shiftDateValue,
@@ -168,6 +169,37 @@ describe("overlapFilter", () => {
 
   it("leaves the part out for created and edited times", () => {
     expect(JSON.stringify(overlapFilter(prop, "created_time", "a", "b"))).not.toContain("part");
+  });
+});
+
+describe("rangeOverlapFilter", () => {
+  const end = "end" as never;
+  it("compares the start property with the last day and the end property with the first", () => {
+    expect(
+      rangeOverlapFilter({ id: prop, type: "number" }, { id: end, type: "created_time" }, "a", "b"),
+    ).toEqual({
+      and: [
+        { property: prop, operator: "on_or_before", value: "b" },
+        { property: end, operator: "on_or_after", value: "a" },
+      ],
+    });
+  });
+
+  it("uses the start property for both ends when there is no end property", () => {
+    expect(rangeOverlapFilter({ id: prop, type: "date" }, undefined, "a", "b")).toEqual(
+      overlapFilter(prop, "date", "a", "b"),
+    );
+  });
+
+  it("filters a date end property by its end part", () => {
+    expect(
+      rangeOverlapFilter({ id: prop, type: "date" }, { id: end, type: "date" }, "a", "b"),
+    ).toEqual({
+      and: [
+        { property: prop, operator: "on_or_before", value: "b", part: "start" },
+        { property: end, operator: "on_or_after", value: "a", part: "end" },
+      ],
+    });
   });
 });
 

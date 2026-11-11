@@ -447,4 +447,21 @@ describe("production native page editing boundary", () => {
       blocks: [todo],
     });
   });
+
+  it("never offers a database block for native editing or deletion", async () => {
+    const database: SpaceBlock = {
+      id: SpaceBlockId.make("database-block"),
+      parentId: null,
+      order: "b",
+      type: "database",
+      version: 1,
+      content: { databaseId: "database-1", viewIds: ["view-1"] },
+    };
+    const test = setup();
+    await test.session.hydrate({ revision: 40, blocks: [block, database] });
+    expect(test.editing.canDeleteCoreBlock(block.id)).toBe(true);
+    expect(test.editing.canDeleteCoreBlock(database.id)).toBe(false);
+    expect(() => test.editing.focus(Symbol(), database.id)).toThrow();
+    expect(test.session.getSnapshot().blocks).toContainEqual(database);
+  });
 });

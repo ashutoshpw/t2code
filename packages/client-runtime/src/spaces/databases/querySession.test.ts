@@ -5,7 +5,7 @@ import type {
 } from "@t2code/contracts/spaces";
 import { describe, expect, it } from "vite-plus/test";
 
-import { DatabaseQuerySession } from "./querySession.ts";
+import { DatabaseQuerySession, PENDING_MAX_FOLLOWS } from "./querySession.ts";
 
 const tick = async () => {
   for (let turn = 0; turn < 8; turn++) await Promise.resolve();
@@ -401,5 +401,22 @@ describe("DatabaseQuerySession", () => {
     expect([...timers.values()][0]?.delay).toBe(800);
     session.setInput(input({ search: "x" }));
     expect(timers.size).toBe(0);
+  });
+
+  it("stops following pending values after the cap, and a user refresh starts it over", async () => {
+    const { session, calls, timers, fire, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a")], computedPending: true });
+    for (let attempt = 0; attempt < PENDING_MAX_FOLLOWS; attempt++) {
+      expect(timers.size).toBe(1);
+      fire();
+      await settle({ rows: [row("a")], computedPending: true });
+    }
+    expect(timers.size).toBe(0);
+    expect(calls.length).toBe(PENDING_MAX_FOLLOWS + 1);
+    session.refresh();
+    fire();
+    await settle({ rows: [row("a")], computedPending: true });
+    expect([...timers.values()][0]?.delay).toBe(400);
   });
 });

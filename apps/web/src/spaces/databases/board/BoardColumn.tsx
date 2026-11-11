@@ -1,6 +1,6 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { EyeOffIcon, MoreHorizontalIcon, PlusIcon } from "lucide-react";
-import { canonicalJson } from "@t2code/client-runtime/spaces";
+import { type CellTextContext, canonicalJson } from "@t2code/client-runtime/spaces";
 import { memo } from "react";
 import type { EnvironmentId } from "@t2code/contracts";
 import type { SpaceGroupBucket, SpaceGroupKey, SpacePageId } from "@t2code/contracts/spaces";
@@ -10,7 +10,6 @@ import { cn } from "~/lib/utils";
 import { OPTION_COLOR_CLASS, isDatabaseColor } from "../primitives/colors";
 import { OptionChip } from "../primitives/OptionChip";
 import { BoardCard, sameLines, type CardLine } from "./BoardCard";
-import type { CellTextContext } from "../primitives/format";
 import type { SpaceRelatedPage } from "@t2code/contracts/spaces";
 
 export interface BoardHandlers {

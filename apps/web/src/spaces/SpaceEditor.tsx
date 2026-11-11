@@ -20,7 +20,8 @@ import { NodeSelection, Plugin, type Command, type EditorState } from "@tiptap/p
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { isKnownSpaceBlock, isSpaceDatabaseBlock } from "@t2code/client-runtime/spaces";
 import { spaceAtomNodeView } from "./databases/blocks/nodeView";
-import { DatabaseHandleItems, MoveBlockItems } from "./databases/blocks/DatabaseHandleItems";
+import { MoveBlockItems } from "./databases/blocks/MoveBlockItems";
+import { DatabaseHandleItems } from "./databases/blocks/LazyDatabaseHandleItems";
 import { DatabaseDeleteHost } from "./databases/blocks/DeleteDatabaseDialog";
 import { SpaceAtomContext, SpaceMediaView, SpaceMediaWritableContext } from "./SpaceAtomView";
 import { type SpaceBlock, type SpaceBlockId } from "@t2code/contracts/spaces";

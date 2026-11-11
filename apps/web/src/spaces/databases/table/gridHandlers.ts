@@ -1,4 +1,4 @@
-import { canonicalJson, subItemCells } from "@t2code/client-runtime/spaces";
+import { type CellTextContext, canonicalJson, subItemCells } from "@t2code/client-runtime/spaces";
 import type {
   SpaceCellValue,
   SpaceDatabaseRow,
@@ -9,10 +9,9 @@ import type {
 } from "@t2code/contracts/spaces";
 
 import { editorKind } from "../cells/CellEditor";
-import { parseCell } from "../cells/parseCell";
+import { parseCell } from "@t2code/client-runtime/spaces";
 import type { DatabaseActions } from "../data/actions";
 import type { Latest } from "../data/latest";
-import type { CellTextContext } from "../primitives/format";
 import { GridEditStore } from "./gridEditStore";
 import type { GridLayout } from "./gridItems";
 import { nextCell } from "./gridNavigation";

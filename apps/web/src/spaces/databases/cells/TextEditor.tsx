@@ -4,7 +4,7 @@ import type { SpaceCellValue, SpaceKnownDatabaseProperty } from "@t2code/contrac
 
 import { cn } from "~/lib/utils";
 import type { CellEditorProps } from "./CellEditor";
-import { numberToText, parseCell } from "./parseCell";
+import { numberToText, parseCell } from "@t2code/client-runtime/spaces";
 import { useSettleOnce } from "./settle";
 
 const textOf = (value: SpaceCellValue | undefined, known: SpaceKnownDatabaseProperty): string => {

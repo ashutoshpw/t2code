@@ -4,6 +4,7 @@ import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "../../../../test/render";
 import { DatabaseHarness, fakeController, testHost } from "../test/harness";
 import { computedFake } from "../test/computedFixtures";
+import { readyWhen } from "../test/readyWhen";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
 
@@ -31,11 +32,17 @@ async function openEditor(options: Parameters<typeof computedFake>[0] = {}) {
     <DatabaseHarness host={testHost(controller)} initialViewIds={["view-table"]} />,
     { router: false },
   );
-  await userEvent.click(page.getByRole("button", { name: "Double", exact: true }));
-  await userEvent.click(page.getByRole("menuitem", { name: "Edit property" }));
-  await userEvent.click(page.getByRole("button", { name: "Edit formula" }));
-  await expect.element(page.getByRole("dialog", { name: "Edit formula: Double" })).toBeVisible();
-  return { fake, screen, input: page.getByRole("combobox", { name: "Formula" }) };
+  return readyWhen(
+    { fake, screen, input: page.getByRole("combobox", { name: "Formula" }) },
+    async () => {
+      await userEvent.click(page.getByRole("button", { name: "Double", exact: true }));
+      await userEvent.click(page.getByRole("menuitem", { name: "Edit property" }));
+      await userEvent.click(page.getByRole("button", { name: "Edit formula" }));
+      await expect
+        .element(page.getByRole("dialog", { name: "Edit formula: Double" }))
+        .toBeVisible();
+    },
+  );
 }
 
 /** Dialogs sit under an inert guard that blocks pointer hits; a DOM click is what Enter does. */

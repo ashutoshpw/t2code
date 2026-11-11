@@ -6,6 +6,8 @@ import { page, userEvent } from "vite-plus/test/browser";
 
 import { startCounting, stopCounting } from "../../../../test/renderCounter";
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { mountTable } from "./tableHarness";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
@@ -28,8 +30,9 @@ async function mount(options: ConstructorParameters<typeof FakeDatabase>[0] = { 
   state.fake = fake;
   // Wide enough that every column of the fixture is inside the column window.
   await page.viewport(1800, 900);
-  const table = await mountTable(fake);
-  await vi.waitFor(() => expect(table.cell("row-1", "title")).not.toBeNull());
+  const table = await readyWhen(await mountTable(fake), (mounted) =>
+    vi.waitFor(() => expect(mounted.cell("row-1", "title")).not.toBeNull()),
+  );
   return { fake, ...table };
 }
 const locate = (element: HTMLElement | null) => page.elementLocator(element!);

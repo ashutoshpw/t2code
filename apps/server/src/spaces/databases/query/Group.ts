@@ -1,6 +1,7 @@
 import * as C from "@t2code/contracts/spaces";
 import * as Effect from "effect/Effect";
 
+import { canonical } from "../../CorePolicy.ts";
 import type { Property } from "../SchemaStore.ts";
 import { dbError } from "../Types.ts";
 import { hasCell, liveTarget, noCell } from "./Cells.ts";
@@ -231,6 +232,62 @@ const sameKey = (spec: GroupSpec, key: C.SpaceKnownGroupKey) => {
     page: ["page", "empty"],
   };
   return wanted[spec.by.kind].includes(key.kind);
+};
+
+const DAY_MS = 86_400_000;
+
+/** The first day of the bucket that contains `day` ("YYYY-MM-DD", already validated). */
+const bucketStartOf = (
+  day: string,
+  unit: "day" | "week" | "month" | "year",
+  weekStartsOn: 0 | 1,
+) => {
+  const [y, m, d] = day.split("-").map(Number) as [number, number, number];
+  switch (unit) {
+    case "day":
+      return day;
+    case "week": {
+      const midnight = Date.UTC(y, m - 1, d);
+      // 1970-01-01 was a Thursday, so the weekday follows from the day count.
+      const weekday = (((Math.floor(midnight / DAY_MS) + 4) % 7) + 7) % 7;
+      const back = (weekday + 7 - weekStartsOn) % 7;
+      return instantIso(midnight - back * DAY_MS).slice(0, 10);
+    }
+    case "month":
+      return `${day.slice(0, 7)}-01`;
+    case "year":
+      return `${day.slice(0, 4)}-01-01`;
+  }
+};
+
+/**
+ * The key a bucket of this grouping really has, when `key` names one exactly. `member` is lenient
+ * (a range matches by its start, a date by its own bounds), so anything that decides by key
+ * identity, such as a hidden-bucket check, must first pass the key through here.
+ */
+export const exactKey = (
+  spec: GroupSpec,
+  key: C.SpaceKnownGroupKey,
+  weekStartsOn: 0 | 1,
+): C.SpaceKnownGroupKey | undefined => {
+  if (!sameKey(spec, key)) return undefined;
+  const by = spec.by;
+  let exact: C.SpaceKnownGroupKey = key;
+  if (key.kind === "number_range" && by.kind === "range") {
+    const index = Math.round((key.start - by.start) / by.size);
+    if (!Number.isSafeInteger(index)) return undefined;
+    exact = toKey(spec, index);
+  } else if (key.kind === "date" && by.kind === "date") {
+    if (key.unit !== by.unit || !validBucketStart(key.start)) return undefined;
+    exact = {
+      kind: "date",
+      start: bucketStartOf(key.start, key.unit, weekStartsOn),
+      unit: key.unit,
+    };
+  } else if (key.kind === "text" && by.kind === "alphabetical") {
+    if ([...key.value].length !== 1) return undefined;
+  }
+  return canonical(exact) === canonical(key) ? exact : undefined;
 };
 
 /** Membership predicate of one bucket on row `p`; the inverse of `keyExpr`. */

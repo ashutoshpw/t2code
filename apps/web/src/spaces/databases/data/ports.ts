@@ -1,8 +1,7 @@
 import { executeAtomQuery, type AtomCommandResult } from "@t2code/client-runtime/state/runtime";
+import { createDatabaseMutations } from "@t2code/client-runtime/state/spaces-database-mutations";
 import type { EnvironmentId } from "@t2code/contracts";
 import {
-  SpaceMutationAdmissionError,
-  SpaceMutationId,
   type SpaceCursor,
   type SpaceDatabaseId,
   type SpaceDataSourceId,
@@ -11,7 +10,6 @@ import {
   type SpacePageId,
 } from "@t2code/contracts/spaces";
 import * as Cause from "effect/Cause";
-import * as Schema from "effect/Schema";
 import type { AtomRegistry } from "effect/reactivity";
 
 import { randomUUID } from "../../../lib/utils";
@@ -29,71 +27,10 @@ function unwrap<A, E>(result: AtomCommandResult<A, E>): A {
   throw Cause.squash(result.cause);
 }
 
-const isAdmissionError = Schema.is(SpaceMutationAdmissionError);
-const ADMISSION_MARGIN_MS = 10_000;
-const PREPARE_FAILED = "Couldn't prepare the change. Try again.";
-
-async function admission(registry: AtomRegistry.AtomRegistry, environmentId: EnvironmentId) {
-  const atom = db.admission(environmentId);
-  const usable = () => {
-    const current = registry.get(atom);
-    return current !== undefined &&
-      Date.parse(current.acceptsUntil) - Date.now() > ADMISSION_MARGIN_MS
-      ? current
-      : undefined;
-  };
-  const known = usable();
-  if (known !== undefined) return known;
-  // Any answer carries a fresh admission; a one-row list is the cheapest.
-  await executeAtomQuery(registry, db.list({ environmentId, input: { environmentId, limit: 1 } }), {
-    refresh: true,
-    reportFailure: false,
-  });
-  const refreshed = usable();
-  if (refreshed === undefined) throw new Error(PREPARE_FAILED);
-  return refreshed;
-}
-
-type MutationFields = "environmentId" | "mutationId" | "receiptEpoch";
-function mutation<
-  Input extends { readonly environmentId: EnvironmentId },
-  Result,
-  Failure,
->(command: {
-  readonly run: (
-    registry: AtomRegistry.AtomRegistry,
-    input: { readonly environmentId: EnvironmentId; readonly input: Input },
-  ) => Promise<AtomCommandResult<Result, Failure>>;
-}) {
-  return async (
-    registry: AtomRegistry.AtomRegistry,
-    environmentId: EnvironmentId,
-    input: Omit<Input, MutationFields>,
-  ): Promise<Result> => {
-    const attempt = async () => {
-      const { epoch } = await admission(registry, environmentId);
-      return unwrap(
-        await command.run(registry, {
-          environmentId,
-          input: {
-            ...input,
-            environmentId,
-            mutationId: SpaceMutationId.make(randomUUID()),
-            receiptEpoch: epoch,
-          } as unknown as Input,
-        }),
-      );
-    };
-    try {
-      return await attempt();
-    } catch (failure) {
-      if (!isAdmissionError(failure)) throw failure;
-      // A stale epoch stays cached until something refetches: drop it and ask for a fresh one once.
-      registry.set(db.admission(environmentId), undefined);
-      return await attempt();
-    }
-  };
-}
+const mutations = createDatabaseMutations(db, {
+  newMutationId: randomUUID,
+  now: () => Date.now(),
+});
 
 export const databasePorts = {
   databaseAtom: (environmentId: EnvironmentId, databaseId: SpaceDatabaseId) =>
@@ -131,18 +68,7 @@ export const databasePorts = {
         reportFailure: false,
       }),
     ),
-  run: {
-    create: mutation(db.create),
-    update: mutation(db.update),
-    updateSchema: mutation(db.updateSchema),
-    updateDataSource: mutation(db.updateDataSource),
-    createView: mutation(db.createView),
-    updateView: mutation(db.updateView),
-    deleteView: mutation(db.deleteView),
-    createRows: mutation(db.createRows),
-    updateRows: mutation(db.updateRows),
-    moveRows: mutation(db.moveRows),
-  },
+  run: mutations,
   permission: {
     cells: db.updateRows.permissionAtom,
     rows: db.createRows.permissionAtom,

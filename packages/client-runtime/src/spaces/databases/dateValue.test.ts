@@ -7,7 +7,7 @@ import {
   dayToDate,
   parseDateValue,
   parseTypedDay,
-} from "./dateValue";
+} from "./dateValue.ts";
 
 describe("parseDateValue and buildDateValue", () => {
   it("round trips a date only value", () => {

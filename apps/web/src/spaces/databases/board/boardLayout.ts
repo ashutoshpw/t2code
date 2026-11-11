@@ -5,9 +5,7 @@ import type {
   SpaceGroupKey,
   SpaceKnownDatabaseProperty,
 } from "@t2code/contracts/spaces";
-import { canonicalJson } from "@t2code/client-runtime/spaces";
-
-import { formatAggregate } from "../primitives/format";
+import { canonicalJson, formatAggregate } from "@t2code/client-runtime/spaces";
 
 export type BoardCardSize = "small" | "medium" | "large";
 

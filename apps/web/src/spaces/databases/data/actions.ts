@@ -32,7 +32,7 @@ import { randomUUID } from "../../../lib/utils";
 import type { DatabaseBlockActions } from "../blocks/actions";
 import type { DatabaseBlockHost } from "../blocks/DatabaseBlockHost";
 import { nextOptionColor } from "../primitives/colors";
-import { databaseErrorMessage } from "./errors";
+import { databaseErrorMessage } from "@t2code/client-runtime/spaces";
 import { databasePorts } from "./ports";
 import { databaseStores } from "./stores";
 import type { DatabaseModel } from "./useDatabaseModel";

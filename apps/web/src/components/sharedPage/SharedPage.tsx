@@ -1,28 +1,36 @@
 import {
-  EnvironmentId,
   SPACE_PAGE_SHARE_ASSET_PARAM,
   SPACE_PAGE_SHARE_ASSET_ROUTE,
   SPACE_PAGE_SHARE_CURSOR_PARAM,
   SPACE_PAGE_SHARE_HEADER,
+  SPACE_PAGE_SHARE_BLOCK_PARAM,
   SPACE_PAGE_SHARE_PAGE_PARAM,
   SPACE_PAGE_SHARE_PAGE_ROUTE,
+  SPACE_PAGE_SHARE_ROW_PARAM,
+  SPACE_PAGE_SHARE_VIEW_PARAM,
   SPACE_PAGE_SHARE_PARAM,
   SpaceSharedPage,
   SpaceSharedPageFailure,
 } from "@t2code/contracts";
 
-import type { SpaceBlock, SpaceBlockId } from "@t2code/contracts/spaces";
-import { isKnownSpaceBlock } from "@t2code/client-runtime/spaces";
+import type { SpaceBlock } from "@t2code/contracts/spaces";
+import { isKnownSpaceBlock, isSpaceDatabaseBlock } from "@t2code/client-runtime/spaces";
 import { useLocation, useRouter } from "@tanstack/react-router";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { ChevronRightIcon, FileTextIcon } from "lucide-react";
-import { useEffect, useState, type MouseEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type MouseEvent } from "react";
 
-import { SpaceEditorAdapter } from "~/spaces/adapter";
 import { SpaceEditor } from "~/spaces/SpaceEditor";
 import { SpacePageGlyph } from "~/spaces/SpacePageGlyph";
 import { Button } from "../ui/button";
+import { staticAdapter } from "./staticAdapter";
+
+// The public viewer loads the database code only for a page that has a database.
+const SharedDatabase = lazy(() => import("./database/SharedDatabase"));
+const SharedRowPage = lazy(() =>
+  import("./database/SharedRowPage").then((module) => ({ default: module.SharedRowPage })),
+);
 
 const decodePage = Schema.decodeUnknownSync(Schema.toCodecJson(SpaceSharedPage));
 const decodeFailure = Schema.decodeUnknownOption(Schema.toCodecJson(SpaceSharedPageFailure));
@@ -121,35 +129,71 @@ export function SharedPage() {
   const location = useLocation();
   const credential = credentialFromHash(location.hash);
   const requestedPage = new URLSearchParams(location.searchStr).get(SPACE_PAGE_SHARE_PAGE_PARAM);
+  const search = new URLSearchParams(location.searchStr);
+  const blockParam = search.get(SPACE_PAGE_SHARE_BLOCK_PARAM);
+  const viewParam = search.get(SPACE_PAGE_SHARE_VIEW_PARAM);
+  const rowParam = search.get(SPACE_PAGE_SHARE_ROW_PARAM);
+  const rowTarget =
+    requestedPage !== null && blockParam !== null && viewParam !== null && rowParam !== null
+      ? {
+          credential,
+          pageId: requestedPage,
+          blockId: blockParam,
+          viewId: viewParam,
+          rowId: rowParam,
+        }
+      : null;
+  const inRow = rowTarget !== null;
   const key = loadKey(credential, requestedPage);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Fetches the shared page from the network whenever the link or page changes.
   useEffect(() => {
+    if (inRow) return;
     const controller = new AbortController();
     void loadSharedPage(credential, requestedPage, controller.signal).then((result) => {
       if (!controller.signal.aborted)
         setLoaded({ key: loadKey(credential, requestedPage), ...result } as Loaded);
     });
     return () => controller.abort();
-  }, [credential, requestedPage]);
+  }, [credential, requestedPage, inRow]);
 
   const current = loaded?.key === key ? loaded : null;
-  const open = (event: MouseEvent<HTMLAnchorElement>, pageId: string) => {
+  const openHref = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
-    void router.navigate({ href: pageHref(location.pathname, credential, pageId) });
+    void router.navigate({ href });
   };
+  const open = (event: MouseEvent<HTMLAnchorElement>, pageId: string) =>
+    openHref(event, pageHref(location.pathname, credential, pageId));
 
   return (
     <main className="min-h-dvh overflow-y-auto bg-background text-foreground">
-      {current?.page ? (
+      {rowTarget !== null ? (
+        <Suspense
+          fallback={
+            <p role="status" className="px-6 py-24 text-center text-muted-foreground text-sm">
+              Loading page…
+            </p>
+          }
+        >
+          <SharedRowPage
+            target={rowTarget}
+            hrefFor={(pageId) => pageHref(location.pathname, credential, pageId)}
+            onOpen={open}
+          />
+        </Suspense>
+      ) : current?.page ? (
         <SharedDocument
           key={`${current.page.page.id}:${current.page.window.revision}`}
           shared={current.page}
           credential={credential}
           hrefFor={(pageId) => pageHref(location.pathname, credential, pageId)}
+          rowHref={(pageId, blockId, viewId, rowId) =>
+            rowHref(location.pathname, credential, pageId, blockId, viewId, rowId)
+          }
           onOpen={open}
+          onOpenHref={openHref}
         />
       ) : current?.problem ? (
         <Notice
@@ -167,6 +211,23 @@ export function SharedPage() {
 
 function pageHref(pathname: string, credential: string, pageId: string) {
   return `${pathname}?${SPACE_PAGE_SHARE_PAGE_PARAM}=${encodeURIComponent(pageId)}#${encodeURIComponent(credential)}`;
+}
+
+function rowHref(
+  pathname: string,
+  credential: string,
+  pageId: string,
+  blockId: string,
+  viewId: string,
+  rowId: string,
+) {
+  const query = new URLSearchParams({
+    [SPACE_PAGE_SHARE_PAGE_PARAM]: pageId,
+    [SPACE_PAGE_SHARE_BLOCK_PARAM]: blockId,
+    [SPACE_PAGE_SHARE_VIEW_PARAM]: viewId,
+    [SPACE_PAGE_SHARE_ROW_PARAM]: rowId,
+  });
+  return `${pathname}?${query}#${encodeURIComponent(credential)}`;
 }
 
 function Notice({ problem, onRetry }: { problem: Problem; onRetry: (() => void) | undefined }) {
@@ -188,15 +249,19 @@ function SharedDocument({
   shared,
   credential,
   hrefFor,
+  rowHref,
   onOpen,
+  onOpenHref,
 }: {
   shared: SpaceSharedPage;
   credential: string;
   hrefFor: (pageId: string) => string;
+  rowHref: (pageId: string, blockId: string, viewId: string, rowId: string) => string;
   onOpen: (event: MouseEvent<HTMLAnchorElement>, pageId: string) => void;
+  onOpenHref: (event: MouseEvent<HTMLAnchorElement>, href: string) => void;
 }) {
   const { page, window: blocks, breadcrumb, children } = shared;
-  const [adapter] = useState(() => staticAdapter(shared));
+  const [adapter] = useState(() => staticAdapter(shared.page.id, shared.window));
   const childById = new Map(children.map((child) => [child.id, child]));
   const assetUrl = (assetId: string) =>
     `${SPACE_PAGE_SHARE_ASSET_ROUTE}?${new URLSearchParams({
@@ -204,7 +269,28 @@ function SharedDocument({
       [SPACE_PAGE_SHARE_PAGE_PARAM]: page.id,
       [SPACE_PAGE_SHARE_ASSET_PARAM]: assetId,
     })}`;
+  const only = blocks.blocks.length === 1 ? blocks.blocks[0] : undefined;
+  const fullPageDatabase = only !== undefined && isSpaceDatabaseBlock(only);
   const renderBlock = (block: SpaceBlock) => {
+    if (isSpaceDatabaseBlock(block))
+      return (
+        <Suspense
+          fallback={
+            <p role="status" className="py-4 text-muted-foreground text-sm">
+              Loading database…
+            </p>
+          }
+        >
+          <SharedDatabase
+            blockId={block.id}
+            pageId={page.id}
+            credential={credential}
+            layout={fullPageDatabase ? "page" : "inline"}
+            rowHref={(blockId, viewId, rowId) => rowHref(page.id, blockId, viewId, rowId)}
+            openRow={onOpenHref}
+          />
+        </Suspense>
+      );
     if (!isKnownSpaceBlock(block)) return null;
     if (block.type === "child_page") {
       const id = block.content.pageId;
@@ -245,7 +331,9 @@ function SharedDocument({
   const unlisted = children.filter((child) => !listed.has(child.id));
 
   return (
-    <article className="mx-auto w-full max-w-3xl px-6 pt-10 pb-24 sm:px-10">
+    <article
+      className={`mx-auto w-full px-6 pt-10 pb-24 sm:px-10 ${fullPageDatabase ? "max-w-6xl" : "max-w-3xl"}`}
+    >
       <title>{`${page.icon ? `${page.icon} ` : ""}${page.title || "Untitled page"}`}</title>
       {breadcrumb.length > 1 ? (
         <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-1 text-sm">
@@ -319,27 +407,4 @@ function PageRow({
       <span className="truncate">{title || "Untitled page"}</span>
     </a>
   );
-}
-
-function staticAdapter(shared: SpaceSharedPage) {
-  const refuse = (): never => {
-    throw new Error("Shared pages are read only");
-  };
-  return new SpaceEditorAdapter({
-    target: { environmentId: EnvironmentId.make("shared"), pageId: shared.page.id },
-    window: {
-      ...shared.window,
-      completeParents: [null, ...shared.window.blocks.map((block) => block.id)],
-    },
-    maxBlocks: Math.max(shared.window.blocks.length, 1),
-    maxDepth: 64,
-    maxTextLength: 1_000_000,
-    maxClipboardBytes: 1_000_000,
-    allocateId: () => refuse() as SpaceBlockId,
-    allocateOrder: refuse,
-    canEdit: () => false,
-    canChangeStructure: () => false,
-    canUndo: () => false,
-    canEditMedia: () => false,
-  });
 }

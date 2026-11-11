@@ -1,4 +1,4 @@
-import { knownQueryType } from "@t2code/client-runtime/spaces";
+import { formatAggregate, knownQueryType } from "@t2code/client-runtime/spaces";
 import {
   SPACE_AGGREGATES_BY_TYPE,
   type SpaceAggregateFunction,
@@ -8,7 +8,6 @@ import type { SpacePropertyId } from "@t2code/contracts/spaces";
 
 import { Menu, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "~/components/ui/menu";
 import { cn } from "~/lib/utils";
-import { formatAggregate } from "../primitives/format";
 import { useDatabaseActions } from "../shell/context";
 import { widthValue } from "./columnResize";
 import { FOOTER_HEIGHT } from "./gridWindow";
