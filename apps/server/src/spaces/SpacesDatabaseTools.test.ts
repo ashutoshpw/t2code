@@ -117,6 +117,7 @@ it.effect("completes competing initializations with one valid default space", ()
           { migration_id: 15, name: "PageIcon" },
           { migration_id: 16, name: "PageBodyRevision" },
           { migration_id: 17, name: "Databases" },
+          { migration_id: 18, name: "ComputedProperties" },
         ],
       );
     }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: dbPath, readonly: true })));

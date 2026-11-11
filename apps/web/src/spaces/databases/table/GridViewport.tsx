@@ -7,7 +7,14 @@ import { cn } from "~/lib/utils";
 import type { DatabaseLayout } from "../blocks/DatabaseBlockHost";
 import { AggregateRow } from "./AggregateRow";
 import { columnVar } from "./columnResize";
-import { AddRow, GroupHeaderRow, MoreRow, SkeletonRow } from "./FooterRows";
+import {
+  AddChildRow,
+  AddRow,
+  GroupHeaderRow,
+  MoreChildrenRow,
+  MoreRow,
+  SkeletonRow,
+} from "./FooterRows";
 import { cellOf, handleGridCopy, handleGridKeyDown, handleGridPaste } from "./gridKeys";
 import type { GridEditStore } from "./gridEditStore";
 import type { GridLayout } from "./gridItems";
@@ -129,6 +136,10 @@ export function GridViewport(props: GridViewportProps) {
             lastColumn={cols.last}
             leftSpace={leftSpace}
             top={top}
+            rowHeight={layout.rowHeight}
+            depth={item.depth ?? 0}
+            expandable={item.expandable ?? false}
+            expanded={item.expanded ?? false}
             ariaRow={ariaRow}
             relatedPages={props.relatedPages}
             optionHint={props.optionHint}
@@ -138,6 +149,44 @@ export function GridViewport(props: GridViewportProps) {
             canEdit={props.canEdit}
             canTrash={props.canTrash}
             store={store}
+            grid={grid}
+          />
+        );
+      case "aggregate":
+        return (
+          <AggregateRow
+            key={`ga:${item.bucket.key.kind}:${index}`}
+            columns={columns}
+            aggregates={item.bucket.aggregates ?? []}
+            total={undefined}
+            canEdit={false}
+            timeZone={props.timeZone}
+            ariaRow={ariaRow}
+            totalWidth={totalWidth}
+            aggregateOf={props.aggregateOf}
+            group={{ top }}
+          />
+        );
+      case "addChild":
+        return (
+          <AddChildRow
+            key={`ac:${item.parentId}`}
+            parentId={item.parentId}
+            depth={item.depth}
+            top={top}
+            ariaRow={ariaRow}
+            grid={grid}
+          />
+        );
+      case "moreChildren":
+        return (
+          <MoreChildrenRow
+            key={`mc:${item.parentId}`}
+            parentId={item.parentId}
+            depth={item.depth}
+            loading={item.loading}
+            top={top}
+            ariaRow={ariaRow}
             grid={grid}
           />
         );

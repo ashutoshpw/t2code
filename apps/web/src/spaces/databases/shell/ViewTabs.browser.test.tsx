@@ -3,6 +3,7 @@ import { page, userEvent } from "vite-plus/test/browser";
 
 import { render } from "../../../../test/render";
 import { FakeDatabase } from "../test/fakeDatabase";
+import { fixtureDataSource } from "../test/fixtures";
 import { DatabaseHarness, fakeController, testHost } from "../test/harness";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
@@ -62,6 +63,62 @@ describe("view tabs", () => {
     await expect
       .element(screen.getByRole("tab", { name: "Board" }))
       .toHaveAttribute("aria-selected", "true");
+  });
+
+  it.each([
+    ["List", "list", {}],
+    ["Gallery", "gallery", {}],
+    ["Calendar", "calendar", { datePropertyId: "due" }],
+    ["Timeline", "timeline", { startPropertyId: "due" }],
+  ])("adds a %s view with the layout its type requires", async (label, type, layout) => {
+    const { fake, host } = setup();
+    await using screen = await render(
+      <DatabaseHarness host={host} initialViewIds={["view-table"]} />,
+      { router: false },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Add a view" }));
+    await userEvent.click(page.getByRole("menuitem", { name: label }));
+    await vi.waitFor(() => expect(fake.callsOf("createView")).toHaveLength(1));
+    expect(fake.callsOf("createView")[0]?.input).toMatchObject({ type, name: label, layout });
+    await expect
+      .element(screen.getByRole("tab", { name: label }))
+      .toHaveAttribute("aria-selected", "true");
+  });
+
+  it("adds a Date property before it creates a calendar on a source without one", async () => {
+    const base = fixtureDataSource();
+    const { due: _due, ...properties } = base.properties;
+    const { fake, host } = setup({ dataSource: { ...base, properties } });
+    await using screen = await render(
+      <DatabaseHarness host={host} initialViewIds={["view-table"]} />,
+      { router: false },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Add a view" }));
+    await userEvent.click(page.getByRole("menuitem", { name: "Calendar" }));
+    await vi.waitFor(() => expect(fake.callsOf("createView")).toHaveLength(1));
+    const added = fake.callsOf("updateSchema")[0]?.input as {
+      operations: { property: { id: string; name: string; type: string } }[];
+    };
+    expect(added.operations[0]?.property).toMatchObject({ name: "Date", type: "date" });
+    expect(fake.callsOf("createView")[0]?.input).toMatchObject({
+      type: "calendar",
+      layout: { datePropertyId: added.operations[0]?.property.id },
+    });
+  });
+
+  it("switches the type of a view and sends the layout with it", async () => {
+    const { fake, host } = setup();
+    await using screen = await render(
+      <DatabaseHarness host={host} initialViewIds={["view-table"]} />,
+      { router: false },
+    );
+    await userEvent.click(screen.getByRole("tab", { name: "Table" }));
+    await userEvent.click(page.getByRole("menuitemradio", { name: "Timeline" }));
+    await vi.waitFor(() => expect(fake.callsOf("updateView")).toHaveLength(1));
+    expect(fake.callsOf("updateView")[0]?.input).toMatchObject({
+      type: "timeline",
+      layout: { startPropertyId: "due" },
+    });
   });
 
   it("renames the active view through its menu", async () => {

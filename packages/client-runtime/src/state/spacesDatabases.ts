@@ -157,6 +157,7 @@ export function createSpacesDatabaseAtoms<R, E>(
     dataSourceChanged,
     admission,
     rowPageChanged,
+    dataSourcesChanged: bumpDataSources,
     noteRowDataSource,
 
     list: createEnvironmentQueryAtomFamily(runtime, {
@@ -383,9 +384,12 @@ export function createSpacesDatabaseAtoms<R, E>(
         guard(registry, input.environmentId, () =>
           requestGuarded(WS_METHODS.spacesDatabasesRowsCreate, input),
         ),
-      onSuccess: (target, registry) =>
+      onSuccess: (target, registry, result) =>
         Effect.sync(() =>
-          bumpDataSources(registry, target.environmentId, [target.input.dataSourceId]),
+          bumpDataSources(registry, target.environmentId, [
+            target.input.dataSourceId,
+            ...(result.affectedDataSourceIds ?? []),
+          ]),
         ),
     }),
     updateRows: createEnvironmentRpcCommand(runtime, {

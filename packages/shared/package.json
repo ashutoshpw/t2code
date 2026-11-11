@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./formula": {
+      "types": "./src/formula/index.ts",
+      "import": "./src/formula/index.ts"
+    },
     "./changedFileKind": {
       "types": "./src/changedFileKind.ts",
       "import": "./src/changedFileKind.ts"

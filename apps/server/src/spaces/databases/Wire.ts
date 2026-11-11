@@ -43,6 +43,17 @@ export const wireDataSource = Effect.fn("SpacesDatabases.wireDataSource")(functi
     readonly icon: string | null;
   }>`SELECT page_id, title, icon FROM spaces_pages WHERE data_source_id = ${source.data_source_id}
     AND row_template = 1 AND trash_batch_id IS NULL ORDER BY row_position, row_seq LIMIT 100`;
+  const others = new Map<string, Snapshot>();
+  for (const property of snapshot.live)
+    for (const ref of property.computed?.refs ?? [])
+      if (ref.dataSourceId !== source.data_source_id && !others.has(ref.dataSourceId)) {
+        const loaded = yield* SchemaStore.load(ref.dataSourceId).pipe(Effect.option);
+        if (loaded._tag === "Some") others.set(ref.dataSourceId, loaded.value);
+      }
+  const nameOf: SchemaStore.NameOf = (dataSourceId, propertyId) =>
+    (dataSourceId === source.data_source_id ? snapshot : others.get(dataSourceId))?.byId.get(
+      propertyId,
+    )?.name;
   const parent =
     source.sub_items_property_id === null
       ? undefined
@@ -56,7 +67,7 @@ export const wireDataSource = Effect.fn("SpacesDatabases.wireDataSource")(functi
     position: source.position,
     schemaRevision: source.schema_revision,
     dataRevision: source.data_revision,
-    properties: SchemaStore.wireProperties(snapshot),
+    properties: SchemaStore.wireProperties(snapshot, nameOf),
     deletedProperties: SchemaStore.wireDeleted(snapshot),
     ...(parent && children !== null
       ? {

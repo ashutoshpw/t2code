@@ -55,11 +55,21 @@ export function fixtureDataSource(): SpaceDataSource {
   } as unknown as SpaceDataSource;
 }
 
+/** The fixture data source plus one more property, for views that need a second date. */
+export function withProperty(id: string, type: string, name = id): SpaceDataSource {
+  const base = fixtureDataSource();
+  return {
+    ...base,
+    properties: { ...base.properties, [id]: property(id, name, type, 99) },
+  };
+}
+
 export function fixtureView(
   id: string,
-  type: "table" | "board",
+  type: "table" | "board" | "list" | "gallery" | "calendar" | "timeline",
   name: string,
   position: number,
+  layout: Record<string, unknown> = {},
 ): SpaceDatabaseView {
   return {
     id,
@@ -74,7 +84,7 @@ export function fixtureView(
       propertyId,
       visible: true,
     })),
-    layout: {},
+    layout,
   } as unknown as SpaceDatabaseView;
 }
 
@@ -110,4 +120,90 @@ export function fixtureRows(count: number): SpaceDatabaseRow[] {
       },
     } as unknown as SpaceDatabaseRow;
   });
+}
+
+/** A second database of the same space with a title property and one page per title. */
+export function fixtureOtherDatabase(id: string, title: string, rowTitles: ReadonlyArray<string>) {
+  const dataSourceId = `${id}-source`;
+  const database = {
+    ...fixtureDatabase(true),
+    id,
+    title,
+    home: { pageId: `${id}-page`, blockId: `${id}-block` },
+  } as unknown as SpaceDatabase;
+  const dataSource = {
+    id: dataSourceId,
+    databaseId: id,
+    name: title,
+    position: 0,
+    schemaRevision: 1,
+    dataRevision: 1,
+    properties: { title: property("title", "Name", "title", 0) },
+    deletedProperties: [],
+    templates: [],
+  } as unknown as SpaceDataSource;
+  const rows = rowTitles.map(
+    (rowTitle, index) =>
+      ({
+        page: {
+          id: `${id}-row-${index + 1}`,
+          title: rowTitle,
+          revision: 1,
+          createdAt: iso,
+          updatedAt: iso,
+        },
+        number: index + 1,
+        cells: { title: rowTitle },
+      }) as unknown as SpaceDatabaseRow,
+  );
+  return { database, dataSource, rows };
+}
+
+/** The fixture data source with a relation property pointing at `targetDataSourceId`. */
+export function withRelation(
+  targetDataSourceId: string,
+  id = "project",
+  name = "Project",
+  limit: "one" | "many" = "many",
+): SpaceDataSource {
+  const base = fixtureDataSource();
+  return {
+    ...base,
+    properties: {
+      ...base.properties,
+      [id]: property(id, name, "relation", 99, { dataSourceId: targetDataSourceId, limit }),
+    },
+  };
+}
+
+/** The fixture data source with sub-items on: `parent` (limit one) and its twin `kids`. */
+export function withSubItems(): SpaceDataSource {
+  const base = fixtureDataSource();
+  const self = { dataSourceId: base.id };
+  return {
+    ...base,
+    subItems: { parentPropertyId: "parent", childrenPropertyId: "kids" },
+    properties: {
+      ...base.properties,
+      parent: property("parent", "Parent item", "relation", 90, {
+        ...self,
+        limit: "one",
+        twoWay: { propertyId: "kids" },
+      }),
+      kids: property("kids", "Sub-items", "relation", 91, {
+        ...self,
+        limit: "many",
+        twoWay: { propertyId: "parent" },
+      }),
+    },
+  } as unknown as SpaceDataSource;
+}
+
+/** Rows `row-1..row-n` where `row-4` and `row-5` are sub-items of `row-1`. */
+export function subItemRows(count = 5): SpaceDatabaseRow[] {
+  return fixtureRows(count).map((row) =>
+    row.page.id === "row-4" || row.page.id === "row-5"
+      ? ({ ...row, cells: { ...row.cells, parent: ["row-1"] } } as SpaceDatabaseRow)
+      : row,
+  );
 }

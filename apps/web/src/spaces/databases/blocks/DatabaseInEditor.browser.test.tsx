@@ -36,14 +36,16 @@ const paragraph = (id: string, text: string, order: string): SpaceBlock => ({
   version: 1,
   content: { runs: [{ text, marks: [] }] },
 });
+// The fixture's home block is `block-1`; any other block of the same database is a linked view.
 const database: SpaceBlock = {
-  id: SpaceBlockId.make("db-block"),
+  id: SpaceBlockId.make("block-1"),
   parentId: null,
   order: "b",
   type: "database",
   version: 1,
   content: { databaseId: "database-1", viewIds: ["view-table"] },
 };
+const linkedDatabase: SpaceBlock = { ...database, id: SpaceBlockId.make("linked-block") };
 
 function adapterFor(blocks: SpaceBlock[]) {
   let sequence = 0;
@@ -104,6 +106,26 @@ describe("database block in the page editor", () => {
     await expect.element(screen.getByRole("option", { name: "Database" })).not.toBeInTheDocument();
   });
 
+  it("asks the host for a linked view from the slash menu", async () => {
+    state.fake = new FakeDatabase();
+    const adapter = adapterFor([]);
+    const { controller } = fakeController();
+    const onCreateDatabase = vi.fn();
+    await using screen = await render(
+      <TestHostProvider host={testHost(controller, adapter)}>
+        <SpaceEditor adapter={adapter} onCreateDatabase={onCreateDatabase} />
+      </TestHostProvider>,
+      { router: false },
+    );
+    await userEvent.click(screen.getByRole("textbox", { name: "Page editor" }));
+    await userEvent.keyboard("/linked");
+    await expect
+      .element(screen.getByRole("option", { name: "Linked view of database" }))
+      .toBeVisible();
+    await userEvent.keyboard("{Enter}");
+    expect(onCreateDatabase).toHaveBeenCalledWith(expect.any(Function), "linked");
+  });
+
   it("keeps keys typed inside the block away from the surrounding document", async () => {
     state.fake = new FakeDatabase();
     const adapter = adapterFor([
@@ -130,13 +152,13 @@ describe("database block in the page editor", () => {
 });
 
 describe("database block handle menu", () => {
-  async function openMenu(item: string) {
+  async function openMenu(item: string, block: SpaceBlock = database) {
     // The handle sits in the gutter left of the column, so the editor needs room on both sides.
     await page.viewport(1200, 800);
     state.fake = new FakeDatabase();
     const adapter = adapterFor([
       paragraph("before", "Before", "a"),
-      database,
+      block,
       paragraph("after", "After", "c"),
     ]);
     const onBatch = vi.fn();
@@ -177,6 +199,14 @@ describe("database block handle menu", () => {
     await expect.element(screen.getByText("Delete this database?")).not.toBeInTheDocument();
     expect(onBatch).not.toHaveBeenCalled();
     await expect.element(screen.getByRole("tablist", { name: "Database views" })).toBeVisible();
+  });
+
+  it("deletes a linked view without confirmation and keeps the database", async () => {
+    const { screen, onBatch } = await openMenu("Delete linked view", linkedDatabase);
+    await using _screen = screen;
+    await vi.waitFor(() => expect(onBatch).toHaveBeenCalled());
+    expect(screen.getByText("Delete this database?").query()).toBeNull();
+    expect(JSON.stringify(onBatch.mock.calls.at(-1)?.[0])).not.toContain('"type":"database"');
   });
 
   it("moves the block up", async () => {

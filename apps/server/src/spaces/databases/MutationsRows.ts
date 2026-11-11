@@ -4,6 +4,8 @@ import * as Effect from "effect/Effect";
 import type * as Receipts from "../Receipts.ts";
 import * as PageStore from "../PageStore.ts";
 import { decodeReceipt } from "../service/Helpers.ts";
+import * as Definitions from "./computed/Definitions.ts";
+import * as Settle from "./computed/Settle.ts";
 import * as DatabaseStore from "./DatabaseStore.ts";
 import * as RowStore from "./RowStore.ts";
 import * as SchemaStore from "./SchemaStore.ts";
@@ -22,17 +24,21 @@ export const rowsMutation = Effect.fn("SpacesDatabases.rowsMutation")(function* 
   const now = meta.observed_time_ms;
   const ack = { mutationId: request.input.mutationId, receiptEpoch: request.input.receiptEpoch };
   const source = yield* DatabaseStore.getLiveDataSource(request.input.dataSourceId);
-  const snapshot = yield* SchemaStore.load(source.data_source_id);
   const touched = Touched.touched();
+  let snapshot = yield* SchemaStore.load(source.data_source_id);
+  if (yield* Definitions.ensureCompiled({ now, touched }, snapshot))
+    snapshot = yield* SchemaStore.load(source.data_source_id);
   switch (request.operation) {
     case "createRows": {
       const created = yield* RowStore.createRows({
         snapshot,
         drafts: request.input.rows,
         beforeRowId: request.input.beforeRowId ?? null,
+        mutationId: request.input.mutationId,
         now,
         touched,
       });
+      yield* Settle.settleAndDrain(touched);
       yield* RowStore.finish(touched, new Set(), now);
       const fresh = yield* DatabaseStore.getDataSource(source.data_source_id);
       return decodeReceipt({
@@ -46,6 +52,9 @@ export const rowsMutation = Effect.fn("SpacesDatabases.rowsMutation")(function* 
             pageId: C.SpacePageId.make(row.pageId),
             number: row.number,
           })),
+          affectedDataSourceIds: Touched.affected(touched, source.data_source_id).map((id) =>
+            C.SpaceDataSourceId.make(id),
+          ),
         },
       });
     }
@@ -57,6 +66,7 @@ export const rowsMutation = Effect.fn("SpacesDatabases.rowsMutation")(function* 
         now,
         touched,
       });
+      yield* Settle.settleAndDrain(touched);
       yield* RowStore.finish(touched, new Set(), now);
       const fresh = yield* DatabaseStore.getDataSource(source.data_source_id);
       const rows = [];
@@ -85,6 +95,7 @@ export const rowsMutation = Effect.fn("SpacesDatabases.rowsMutation")(function* 
         beforeRowId: request.input.beforeRowId,
         touched,
       });
+      yield* Settle.settleAndDrain(touched);
       yield* RowStore.finish(touched, new Set(), now);
       const fresh = yield* DatabaseStore.getDataSource(source.data_source_id);
       return decodeReceipt({

@@ -312,7 +312,13 @@ export const SpacePageUpdateInput = Schema.Struct({
 });
 export type SpacePageUpdateInput = typeof SpacePageUpdateInput.Type;
 export const SpacePageUpdateResult = Schema.Union([
-  Schema.Struct({ status: Schema.Literal("saved"), ...mutationAck, page: SpacePageSummary }),
+  Schema.Struct({
+    status: Schema.Literal("saved"),
+    ...mutationAck,
+    page: SpacePageSummary,
+    /** Data sources whose computed values changed with this edit. */
+    affectedDataSourceIds: Schema.optionalKey(Schema.Array(SpaceDataSourceId)),
+  }),
   SpaceMutationConflict,
 ]);
 export type SpacePageUpdateResult = typeof SpacePageUpdateResult.Type;
@@ -492,6 +498,8 @@ export const SpacePageRecoveryResult = Schema.Union([
     ...mutationAck,
     page: SpacePageSummary,
     changed: SpaceStructureGuards,
+    /** Data sources whose computed values changed with this edit. */
+    affectedDataSourceIds: Schema.optionalKey(Schema.Array(SpaceDataSourceId)),
   }),
   SpaceStructureConflict,
 ]);
@@ -503,6 +511,8 @@ export const SpacePagePurgeResult = Schema.Union([
     pageId: SpacePageId,
     deletedPageIds: Schema.Array(SpacePageId),
     changed: SpaceStructureGuards,
+    /** Data sources whose computed values changed with this edit. */
+    affectedDataSourceIds: Schema.optionalKey(Schema.Array(SpaceDataSourceId)),
   }),
   SpaceStructureConflict,
 ]);

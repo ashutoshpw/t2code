@@ -9,7 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { SpaceBlockId, type SpaceBlock } from "@t2code/contracts/spaces";
+import { SpaceBlockId, type SpaceBlock, type SpaceDatabaseBlock } from "@t2code/contracts/spaces";
 import type { SpacePageNavigationTarget } from "@t2code/client-runtime/spaces";
 import { isKnownSpaceBlock, isSpaceDatabaseBlock } from "@t2code/client-runtime/spaces";
 import {
@@ -17,6 +17,7 @@ import {
   type DatabaseBlockHost,
 } from "./databases/blocks/DatabaseBlockHost";
 import { createDatabaseBlock } from "./databases/blocks/createDatabase";
+import { LinkedViewDialog } from "./databases/blocks/LinkedViewDialog";
 import { databasePorts } from "./databases/data/ports";
 import { Latest } from "./databases/data/latest";
 import { useSpaceReferenceController } from "./useSpaceReferences";
@@ -173,6 +174,9 @@ function DocumentContent({
   const databaseCreatePermission = useAtomValue(
     databasePorts.permission.create(controller.session.key.environmentId),
   );
+  const [linking, setLinking] = useState<{
+    readonly place: (content: SpaceDatabaseBlock["content"]) => boolean;
+  } | null>(null);
   const [blockMove, setBlockMove] = useState<SpaceBlockMoveProof | null>(null);
   const [moveError, setMoveError] = useState<unknown>(null);
   const [bridge] = useState(
@@ -387,7 +391,10 @@ function DocumentContent({
               capability.features?.databases === true &&
               capability.limits.databases &&
               databaseCreatePermission
-                ? (place) => void createDatabaseBlock({ registry, controller, place })
+                ? (place, kind) =>
+                    kind === "linked"
+                      ? setLinking({ place })
+                      : void createDatabaseBlock({ registry, controller, place })
                 : undefined
             }
             onMoveBlocks={
@@ -437,6 +444,19 @@ function DocumentContent({
         <p role="alert" className="text-sm text-destructive-foreground">
           {message(moveError)}
         </p>
+      ) : null}
+      {snapshot.metadata ? (
+        <LinkedViewDialog
+          open={linking !== null}
+          environmentId={controller.session.key.environmentId}
+          spaceId={snapshot.metadata.page.spaceId}
+          onClose={() => setLinking(null)}
+          onPick={(databaseId) => {
+            if (linking?.place({ databaseId, viewIds: [] }) === false)
+              toastManager.add({ type: "error", title: "Couldn't place the linked view" });
+            setLinking(null);
+          }}
+        />
       ) : null}
       {blockMove && snapshot.metadata ? (
         <Suspense fallback={null}>

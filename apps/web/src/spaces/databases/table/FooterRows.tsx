@@ -6,7 +6,8 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import { OptionChip } from "../primitives/OptionChip";
 import { useAdding, type GridEditStore } from "./gridEditStore";
-import { GROUP_HEIGHT, ROW_HEIGHT } from "./gridItems";
+import { GROUP_HEIGHT, MAX_TREE_DEPTH, ROW_HEIGHT } from "./gridItems";
+import { INDENT } from "./tree";
 import type { GroupLabel } from "./groupLabel";
 import type { GridHandlers } from "./tableTypes";
 
@@ -124,6 +125,72 @@ export function SkeletonRow({ top, ariaRow }: { readonly top: number; readonly a
     <div role="row" aria-rowindex={ariaRow} className={ROW} style={{ top, height: ROW_HEIGHT }}>
       <div role="gridcell" className={STICKY}>
         <Skeleton className="h-4 w-56" />
+      </div>
+    </div>
+  );
+}
+
+const indentOf = (depth: number) => Math.min(depth, MAX_TREE_DEPTH) * INDENT;
+
+/** `+ New sub-item` at the end of an expanded parent's children. */
+export function AddChildRow({
+  parentId,
+  depth,
+  top,
+  ariaRow,
+  grid,
+}: {
+  readonly parentId: string;
+  readonly depth: number;
+  readonly top: number;
+  readonly ariaRow: number;
+  readonly grid: GridHandlers;
+}) {
+  return (
+    <div role="row" aria-rowindex={ariaRow} className={ROW} style={{ top, height: ROW_HEIGHT }}>
+      <div role="gridcell" className={STICKY} style={{ paddingInlineStart: 8 + indentOf(depth) }}>
+        <button
+          type="button"
+          className="inline-flex h-6 items-center gap-1 rounded-sm px-1.5 text-sm text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          onClick={() => grid.addSubItem(parentId)}
+        >
+          <PlusIcon className="size-3.5" />
+          New sub-item
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function MoreChildrenRow({
+  parentId,
+  depth,
+  loading,
+  top,
+  ariaRow,
+  grid,
+}: {
+  readonly parentId: string;
+  readonly depth: number;
+  readonly loading: boolean;
+  readonly top: number;
+  readonly ariaRow: number;
+  readonly grid: GridHandlers;
+}) {
+  return (
+    <div role="row" aria-rowindex={ariaRow} className={ROW} style={{ top, height: ROW_HEIGHT }}>
+      <div role="gridcell" className={STICKY} style={{ paddingInlineStart: 8 + indentOf(depth) }}>
+        {loading ? (
+          <Skeleton className="h-5 w-40" />
+        ) : (
+          <button
+            type="button"
+            className="h-6 rounded-sm px-1.5 text-sm text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            onClick={() => grid.loadChildren(parentId)}
+          >
+            Load more
+          </button>
+        )}
       </div>
     </div>
   );

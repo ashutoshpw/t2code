@@ -17,12 +17,13 @@ import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { editorKind } from "../cells/CellEditor";
 import { Latest } from "../data/latest";
+import { useNestedSubItems, useSubItems } from "../data/useSubItems";
 import { useViewQuery } from "../data/useViewQuery";
 import { useDatabase, useDatabaseActions } from "../shell/context";
 import type { DatabaseViewProps } from "../shell/viewTypes";
 import { GridEditStore } from "./gridEditStore";
 import { createGridHandlers, type GridModel } from "./gridHandlers";
-import { buildGridItems, visibleBuckets } from "./gridItems";
+import { buildGridItems, visibleBuckets, WRAPPED_ROW_HEIGHT } from "./gridItems";
 import { DEFAULT_COLUMN_WIDTH, TITLE_COLUMN_WIDTH, clampWidth } from "./gridWindow";
 import { GridViewport } from "./GridViewport";
 import { groupLabel } from "./groupLabel";
@@ -37,7 +38,7 @@ const localDay = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 };
 
-const toTableColumn = (column: ViewColumn): TableColumn => ({
+const toTableColumn = (column: ViewColumn, wrapAll: boolean): TableColumn => ({
   id: column.property.id,
   name: column.property.name,
   known: column.known,
@@ -46,6 +47,7 @@ const toTableColumn = (column: ViewColumn): TableColumn => ({
     column.width ?? (column.property.id === "title" ? TITLE_COLUMN_WIDTH : DEFAULT_COLUMN_WIDTH),
   ),
   writable: column.known !== null && editorKind(column.property.type) !== "none",
+  wrap: wrapAll || column.wrap === true,
 });
 
 function TableLoading() {
@@ -59,7 +61,15 @@ function TableLoading() {
 }
 
 export default function TableView({ search }: DatabaseViewProps) {
-  const { model, view, columns, layout: surfaceLayout, optionHint } = useDatabase();
+  const {
+    model,
+    view,
+    known,
+    columns,
+    dataSource,
+    layout: surfaceLayout,
+    optionHint,
+  } = useDatabase();
   const actions = useDatabaseActions();
   const { permissions, limits, environmentId } = model;
   const groupDef = view.group;
@@ -69,18 +79,23 @@ export default function TableView({ search }: DatabaseViewProps) {
       : columns.find((column) => column.property.id === groupDef.property);
   const groupKnown = groupColumn?.known ?? null;
   const mode = groupColumn === undefined ? "rows" : "groups";
+  const nested = useNestedSubItems(view, search);
   const query = useViewQuery(view, columns, {
     mode,
     rowsPerGroup: Math.min(GROUP_ROWS, limits.maxGroupPreviewRows),
     search,
+    ...(nested ? { scope: { parentRowId: null } } : {}),
   });
+  const subs = useSubItems(view, columns, { enabled: nested });
 
   const visible = columns.filter((column) => column.visible);
   const title = visible.find((column) => column.property.id === "title");
+  const wrapAll = known?.type === "table" && known.layout.wrapCells === true;
   const tableColumns = [
     ...(title === undefined ? [] : [title]),
     ...visible.filter((column) => column !== title),
-  ].map(toTableColumn);
+  ].map((column) => toTableColumn(column, wrapAll));
+  const anyWrapped = tableColumns.some((column) => column.wrap);
 
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
     () => new Set((view.group?.collapsed ?? []).map((key) => canonicalJson(key))),
@@ -97,7 +112,15 @@ export default function TableView({ search }: DatabaseViewProps) {
     loadingMore: query.loadingMore,
     canAdd: buckets === null ? permissions.rows : (key) => permissions.rows && keyWritable(key),
     bucketLoading: query.bucketLoading,
+    ...(anyWrapped ? { rowHeight: WRAPPED_ROW_HEIGHT } : {}),
+    groupAggregates: columns.some((column) => column.visible && column.aggregate !== undefined),
+    ...(subs.tree === undefined ? {} : { tree: subs.tree }),
   });
+  // Keep the query's own object while no sub-item brings pages: memoized rows compare it by identity.
+  const relatedPages =
+    Object.keys(subs.relatedPages).length === 0
+      ? query.relatedPages
+      : { ...query.relatedPages, ...subs.relatedPages };
 
   const [store] = useState(() => new GridEditStore());
   const [latest] = useState(() => new Latest<GridModel | null>(null));
@@ -132,8 +155,17 @@ export default function TableView({ search }: DatabaseViewProps) {
           today: localDay(),
         });
       },
-      text: { relatedPages: query.relatedPages, optionHint, timeZone: VIEWER_ZONE },
-      notePages: query.noteRelatedPages,
+      text: { relatedPages, optionHint, timeZone: VIEWER_ZONE },
+      notePages: (pages) => {
+        query.noteRelatedPages(pages);
+        subs.noteRelatedPages(pages);
+      },
+      subItems:
+        nested && dataSource.subItems !== undefined
+          ? { parentPropertyId: dataSource.subItems.parentPropertyId }
+          : null,
+      setExpanded: (id, expand) => (expand ? subs.expand(id) : subs.collapse(id)),
+      loadChildren: subs.loadMore,
     });
   });
 
@@ -169,7 +201,7 @@ export default function TableView({ search }: DatabaseViewProps) {
     <GridViewport
       layout={layout}
       columns={tableColumns}
-      relatedPages={query.relatedPages}
+      relatedPages={relatedPages}
       optionHint={optionHint}
       timeZone={VIEWER_ZONE}
       environmentId={environmentId}

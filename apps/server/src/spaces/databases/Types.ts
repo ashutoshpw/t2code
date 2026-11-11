@@ -35,6 +35,7 @@ export interface PropertyRecord {
   readonly description: string | null;
   readonly position: number;
   readonly deleted_at_ms: number | null;
+  readonly computed: string | null;
 }
 export interface OptionRecord {
   readonly data_source_id: string;
@@ -65,10 +66,15 @@ export interface ViewRecord {
   readonly updated_at: string;
 }
 
-export const dbError = (reason: C.SpaceDatabaseError["reason"], propertyId?: string) =>
+export const dbError = (
+  reason: C.SpaceDatabaseError["reason"],
+  propertyId?: string,
+  detail?: string,
+) =>
   new C.SpaceDatabaseError({
     reason,
     ...(propertyId === undefined ? {} : { propertyId: C.SpacePropertyId.make(propertyId) }),
+    ...(detail === undefined ? {} : { detail: detail.slice(0, 500) }),
   });
 export const trashed = () => new C.SpaceValidationError({ reason: "trashed" });
 export const notFound = (entity: C.SpaceNotFoundError["entity"], id: string) =>

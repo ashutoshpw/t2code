@@ -16,7 +16,7 @@ const setup = Effect.fn("DatabaseViewsTest.setup")(function* () {
       { name: "Points", type: "number" },
       { name: "Tag", type: "select", options: [{ id: oid("aaaa"), name: "A" }] },
       { name: "When", type: "date" },
-      { name: "Calc", type: "formula", config: { expression: "1" } },
+      { name: "Calc", type: "formula", config: { expression: "now()" } },
       { name: "Attach", type: "files" },
       { name: "Label", type: "text" },
     ],
@@ -280,13 +280,17 @@ it.layer(NodeServices.layer)("Spaces database views", (it) => {
           ),
           "invalid_filter",
         );
-        // A saved view may hold a condition on a computed property; querying it is refused later.
-        const kept = yield* create({
-          name: "Calc",
-          type: "table",
-          filter: { property: calc, operator: "equals", value: 1 },
-        });
-        assert.equal(kept.status, "saved");
+        // A computed property without a query type (here: it reads the clock) cannot be filtered.
+        assert.equal(
+          yield* reason(
+            create({
+              name: "Calc",
+              type: "table",
+              filter: { property: calc, operator: "equals", value: 1 },
+            }),
+          ),
+          "property_not_queryable",
+        );
         const unknown = yield* Effect.flip(
           create({
             name: "x",

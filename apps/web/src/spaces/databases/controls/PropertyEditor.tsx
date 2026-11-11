@@ -1,6 +1,6 @@
-import { knownProperty } from "@t2code/client-runtime/spaces";
+import { computedInfoOf, knownProperty } from "@t2code/client-runtime/spaces";
 import type { SpacePropertyId, SpacePropertyType } from "@t2code/contracts/spaces";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 
 import {
   AlertDialog,
@@ -15,25 +15,68 @@ import { Button } from "~/components/ui/button";
 import { toastManager } from "~/components/ui/toast";
 import { PropertyTypeIcon } from "../primitives/PropertyTypeIcon";
 import { propertyTypeMeta } from "../primitives/propertyTypes";
+import type { SpaceKnownDatabaseProperty } from "@t2code/contracts/spaces";
 import { useDatabase, useDatabaseActions } from "../shell/context";
 import { DateFormatFields } from "./DateFormatFields";
 import { NumberFormatSelect } from "./NumberFormatSelect";
-import { OptionSelect } from "./OptionSelect";
 import { OptionsEditor } from "./OptionsEditor";
 import { PropertyNameField } from "./PropertyNameField";
 import { PropertyTypeMenu } from "./PropertyTypeMenu";
+import { RelationSettings } from "./RelationSettings";
 import {
   CHANGEABLE_TYPES,
   configForType,
+  defaultRollupConfig,
   type ConfigObject,
-  nextConfig,
   typeChangeNeedsConfirmation,
 } from "./propertyConfig";
 
-const LIMITS = [
-  { value: "one", label: "One page" },
-  { value: "many", label: "Many pages" },
-] as const;
+// The formula engine is only needed once a formula or rollup is edited.
+const FormulaEditor = lazy(() => import("../formula/FormulaEditor"));
+const RollupConfig = lazy(() => import("./RollupConfig"));
+
+function FormulaSettings({
+  known,
+  disabled,
+  onConfig,
+}: {
+  readonly known: Extract<SpaceKnownDatabaseProperty, { type: "formula" }>;
+  readonly disabled: boolean;
+  readonly onConfig: (config: ConfigObject) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const info = computedInfoOf(known);
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        disabled={disabled}
+        className="block w-full truncate rounded-md border bg-muted/30 px-2 py-1.5 text-start font-mono text-xs outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-64"
+        aria-label="Edit formula"
+        onClick={() => setEditing(true)}
+      >
+        {known.config.expression === "" ? (
+          <span className="text-muted-foreground">Add a formula</span>
+        ) : (
+          known.config.expression
+        )}
+      </button>
+      {info?.error === undefined ? null : (
+        <p role="alert" className="text-xs text-destructive-foreground">
+          {info.error.message}
+        </p>
+      )}
+      {info?.resultType === "number" ? (
+        <NumberFormatSelect known={known} disabled={disabled} onConfig={onConfig} />
+      ) : null}
+      {editing ? (
+        <Suspense fallback={null}>
+          <FormulaEditor propertyId={known.id} onClose={() => setEditing(false)} />
+        </Suspense>
+      ) : null}
+    </div>
+  );
+}
 
 export function PropertyEditor({ propertyId }: { readonly propertyId: SpacePropertyId }) {
   const { dataSource, model } = useDatabase();
@@ -49,7 +92,7 @@ export function PropertyEditor({ propertyId }: { readonly propertyId: SpacePrope
   const setConfig = (config: ConfigObject) =>
     void actions.updateSchema([{ op: "updateProperty", propertyId, config }]);
   const changeType = async (type: SpacePropertyType) => {
-    const config = configForType(type);
+    const config = configForType(type, dataSource);
     const result = await actions.updateSchema([
       { op: "changePropertyType", propertyId, type, ...(config === undefined ? {} : { config }) },
     ]);
@@ -80,7 +123,11 @@ export function PropertyEditor({ propertyId }: { readonly propertyId: SpacePrope
         ) : (
           <PropertyTypeMenu
             value={property.type}
-            types={CHANGEABLE_TYPES}
+            types={
+              defaultRollupConfig(dataSource) === null
+                ? CHANGEABLE_TYPES.filter((type) => type !== "rollup")
+                : CHANGEABLE_TYPES
+            }
             disabled={disabled}
             onChange={pick}
           />
@@ -97,16 +144,13 @@ export function PropertyEditor({ propertyId }: { readonly propertyId: SpacePrope
         known.type === "last_edited_time" ? (
         <DateFormatFields known={known} disabled={disabled} onConfig={setConfig} />
       ) : known.type === "relation" ? (
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">Limit</span>
-          <OptionSelect
-            label="Relation limit"
-            value={known.config.limit}
-            choices={LIMITS}
-            disabled={disabled}
-            onChange={(limit) => setConfig(nextConfig(known, { limit }))}
-          />
-        </div>
+        <RelationSettings known={known} disabled={disabled} />
+      ) : known.type === "formula" ? (
+        <FormulaSettings known={known} disabled={disabled} onConfig={setConfig} />
+      ) : known.type === "rollup" ? (
+        <Suspense fallback={null}>
+          <RollupConfig known={known} disabled={disabled} />
+        </Suspense>
       ) : null}
       <AlertDialog
         open={pendingType !== null}

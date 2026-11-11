@@ -16,12 +16,16 @@ import type {
   SpaceDatabaseRow,
   SpaceDatabaseView,
   SpaceGroupBucket,
+  SpaceFilter,
   SpaceGroupKey,
+  SpacePageId,
+  SpacePropertyId,
   SpaceRelatedPage,
 } from "@t2code/contracts/spaces";
 import { useContext, useEffect, useState, useSyncExternalStore } from "react";
 
 import { useDatabase } from "../shell/context";
+import type { DatabaseModel } from "./useDatabaseModel";
 import { databaseErrorMessage } from "./errors";
 import { Latest } from "./latest";
 import { databasePorts } from "./ports";
@@ -31,6 +35,16 @@ export interface ViewQueryOptions {
   readonly mode: "rows" | "groups";
   readonly rowsPerGroup?: number;
   readonly search: string;
+  /** ANDed with the view's filter: a calendar's visible range, the rows without a date. */
+  readonly extraFilter?: SpaceFilter;
+  /** Cells to return even when the view hides them (the date a calendar or timeline places rows by). */
+  readonly extraPropertyIds?: ReadonlyArray<SpacePropertyId>;
+  /** Sub-items: the children of one row, or null for the top level. */
+  readonly scope?: { readonly parentRowId: SpacePageId | null };
+  /** Ask for each row's first body image (the gallery's `page_content` preview). */
+  readonly cover?: boolean;
+  /** Keep loading windows until the query is whole or this many rows are loaded. */
+  readonly fillRows?: number;
 }
 
 export interface ViewQuery {
@@ -54,8 +68,8 @@ export interface ViewQuery {
   readonly hasMore: boolean;
   readonly loadingMore: boolean;
   loadMore(): void;
-  loadBucket(key: SpaceGroupKey): void;
-  bucketLoading(key: SpaceGroupKey): boolean;
+  loadBucket(key: SpaceGroupKey, subKey?: SpaceGroupKey): void;
+  bucketLoading(key: SpaceGroupKey, subKey?: SpaceGroupKey): boolean;
   hold(): () => void;
   placeRow(row: SpaceDatabaseRow, group: SpaceGroupKey | null): void;
   /** Card drops kept until the next refresh answers; clear one with `undefined`. */
@@ -72,6 +86,33 @@ const intersects = (dependencies: ReadonlySet<string>, ids: ReadonlySet<string>)
   return false;
 };
 const viewerZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+/** The explicit query a view body runs; also what sub-item sessions derive their scope from. */
+export function viewInputOf(
+  model: DatabaseModel,
+  view: SpaceDatabaseView,
+  columns: ReadonlyArray<ViewColumn>,
+  options: ViewQueryOptions,
+) {
+  return viewQueryInput(view, {
+    environmentId: model.environmentId,
+    mode: options.mode,
+    timeZone: viewerZone(),
+    limit: Math.min(100, model.limits.maxQueryRows),
+    ...(options.rowsPerGroup === undefined ? {} : { rowsPerGroup: options.rowsPerGroup }),
+    search: options.search,
+    visiblePropertyIds: columns
+      .filter((column) => column.visible)
+      .map((column) => column.property.id),
+    includeAggregates: true,
+    ...(options.extraFilter === undefined ? {} : { extraFilter: options.extraFilter }),
+    ...(options.extraPropertyIds === undefined
+      ? {}
+      : { extraPropertyIds: options.extraPropertyIds }),
+    ...(options.scope === undefined ? {} : { scope: options.scope }),
+    ...(options.cover === true ? { cover: true } : {}),
+  });
+}
 
 /**
  * One query session per call site; the view body re-derives rows in render from the session and
@@ -100,20 +141,14 @@ export function useViewQuery(
         busy: () => source.get().writer.busy(source.get().dataSourceId),
       }),
   );
-  const input = viewQueryInput(view, {
-    environmentId,
-    mode: options.mode,
-    timeZone: viewerZone(),
-    limit: Math.min(100, model.limits.maxQueryRows),
-    ...(options.rowsPerGroup === undefined ? {} : { rowsPerGroup: options.rowsPerGroup }),
-    search: options.search,
-    visiblePropertyIds: columns
-      .filter((column) => column.visible)
-      .map((column) => column.property.id),
-    includeAggregates: true,
-  });
+  const input = viewInputOf(model, view, columns, options);
   const key = queryKey(input);
-  const dependencies = viewDependencies(view);
+  const dependencies = viewDependencies(
+    view,
+    options.extraFilter,
+    model.dataSources.find((entry) => entry.id === dataSourceId),
+    columns.filter((column) => column.visible).map((column) => column.property.id),
+  );
   // What the ack listener compares against; refreshed together with the query input.
   const [watch] = useState(() => new Latest(dependencies));
   // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Drive the external query session from the derived input; a key change keeps the old windows until the new ones arrive.
@@ -122,8 +157,8 @@ export function useViewQuery(
     // oxlint-disable-next-line react/exhaustive-effect-dependencies
     watch.set(dependencies);
     source.set({ dataSourceId, writer });
-    session.setInput(input);
-  }, [session, key, watch, source, dataSourceId, writer]);
+    session.setInput(input, { fillRows: options.fillRows ?? 0 });
+  }, [session, key, watch, source, dataSourceId, writer, options.fillRows]);
   // oxlint-disable-next-line t2code/no-unreasoned-state-sync -- Subscribe the external session to counter bumps, acknowledged own writes and window focus.
   useEffect(() => {
     let leftAt: number | null = null;
@@ -213,8 +248,13 @@ export function useViewQuery(
     hasMore: windows?.nextCursor != null,
     loadingMore: snapshot.loadingMore,
     loadMore: () => session.loadMore(),
-    loadBucket: (bucketKey) => session.loadBucket(bucketKey),
-    bucketLoading: (bucketKey) => snapshot.loadingBuckets.has(canonicalJson(bucketKey)),
+    loadBucket: (bucketKey, subKey) => session.loadBucket(bucketKey, subKey),
+    bucketLoading: (bucketKey, subKey) =>
+      snapshot.loadingBuckets.has(
+        subKey === undefined
+          ? canonicalJson(bucketKey)
+          : `${canonicalJson(bucketKey)}/${canonicalJson(subKey)}`,
+      ),
     hold: () => session.hold(),
     placeRow: (row, group) => session.placeRow(row, group),
     placements: snapshot.placements,

@@ -1,3 +1,4 @@
+import { knownQueryType } from "@t2code/client-runtime/spaces";
 import {
   SPACE_AGGREGATES_BY_TYPE,
   type SpaceAggregateFunction,
@@ -38,6 +39,11 @@ const LABELS: Record<string, string> = {
 
 const aggregateLabel = (fn: string) => LABELS[fn] ?? fn;
 
+const aggregatesFor = (type: string | undefined): ReadonlyArray<string> =>
+  type !== undefined && Object.hasOwn(SPACE_AGGREGATES_BY_TYPE, type)
+    ? SPACE_AGGREGATES_BY_TYPE[type as keyof typeof SPACE_AGGREGATES_BY_TYPE]
+    : [];
+
 const CELL =
   "flex h-full shrink-0 items-center border-e border-border/60 bg-background text-xs text-muted-foreground";
 const TRIGGER =
@@ -61,7 +67,7 @@ function AggregateCell({
   const actions = useDatabaseActions();
   const isTitle = column.id === "title";
   const options: ReadonlyArray<string> =
-    column.known === null ? [] : SPACE_AGGREGATES_BY_TYPE[column.known.type];
+    column.known === null ? [] : aggregatesFor(knownQueryType(column.known));
   const text =
     aggregate === undefined
       ? isTitle && total !== undefined
@@ -130,6 +136,7 @@ export function AggregateRow({
   ariaRow,
   totalWidth,
   aggregateOf,
+  group,
 }: {
   readonly columns: ReadonlyArray<TableColumn>;
   readonly aggregates: ReadonlyArray<SpaceAggregateResult>;
@@ -139,13 +146,23 @@ export function AggregateRow({
   readonly ariaRow: number;
   readonly totalWidth: number;
   readonly aggregateOf: (id: string) => string | undefined;
+  /** A group's own line, placed in the rows instead of pinned to the bottom. */
+  readonly group?: { readonly top: number };
 }) {
   return (
     <div
       role="row"
       aria-rowindex={ariaRow}
-      className="sticky bottom-0 z-[2] flex border-t bg-background"
-      style={{ height: FOOTER_HEIGHT, width: totalWidth }}
+      className={
+        group === undefined
+          ? "sticky bottom-0 z-[2] flex border-t bg-background"
+          : "absolute start-0 flex border-b border-border/60 bg-muted/20"
+      }
+      style={{
+        height: FOOTER_HEIGHT,
+        width: totalWidth,
+        ...(group === undefined ? {} : { top: group.top }),
+      }}
     >
       {columns.map((column) => (
         <AggregateCell

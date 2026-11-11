@@ -3,6 +3,8 @@ import {
   conditionForProperty,
   filterOperatorsFor,
   knownProperty,
+  propertyQueryType,
+  unqueryableReason,
   type FilterCondition,
 } from "@t2code/client-runtime/spaces";
 import type { SpaceDatabaseProperty, SpacePropertyId } from "@t2code/contracts/spaces";
@@ -37,12 +39,17 @@ export function FilterRule({
 }) {
   const property = properties[condition.property];
   const known = property === undefined ? null : knownProperty(property);
+  const queryType = property === undefined ? undefined : propertyQueryType(property);
   const filterable = Object.values(properties)
-    .filter((entry) => filterOperatorsFor(entry.type).length > 0)
+    .filter(
+      (entry) =>
+        filterOperatorsFor(propertyQueryType(entry) ?? "").length > 0 ||
+        unqueryableReason(entry) !== undefined,
+    )
     .sort((a, b) => a.position - b.position);
   return (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-      {known === null ? (
+      {known === null || queryType === undefined ? (
         <span className="text-xs text-muted-foreground">This property can't be filtered</span>
       ) : (
         <>
@@ -51,31 +58,39 @@ export function FilterRule({
             value={condition.property}
             disabled={disabled}
             label="Filter property"
+            disabledReason={unqueryableReason}
             onChange={(id: SpacePropertyId) => {
               const next = properties[id];
               const nextKnown = next === undefined ? null : knownProperty(next);
-              if (nextKnown !== null && id !== condition.property)
-                onChange(conditionForProperty(condition, nextKnown));
+              const nextType = next === undefined ? undefined : propertyQueryType(next);
+              if (nextKnown !== null && nextType !== undefined && id !== condition.property)
+                onChange(conditionForProperty(condition, nextKnown, nextType));
             }}
           />
           <OptionSelect
             label="Filter operator"
             disabled={disabled}
             value={condition.operator}
-            choices={filterOperatorsFor(known.type).map((operator) => ({
+            choices={filterOperatorsFor(queryType).map((operator) => ({
               value: operator,
-              label: operatorLabel(operator, known.type),
+              label: operatorLabel(operator, queryType),
               disabled:
-                known.type === "relation" && operator !== "is_empty" && operator !== "is_not_empty",
+                queryType === "relation" && operator !== "is_empty" && operator !== "is_not_empty",
             }))}
             onChange={(operator) =>
               onChange(
-                conditionForOperator(condition, known, operator as FilterCondition["operator"]),
+                conditionForOperator(
+                  condition,
+                  known,
+                  operator as FilterCondition["operator"],
+                  queryType,
+                ),
               )
             }
           />
           <FilterValue
             known={known}
+            queryType={queryType}
             operator={condition.operator}
             value={condition.value}
             disabled={disabled}

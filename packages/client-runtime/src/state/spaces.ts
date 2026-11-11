@@ -269,10 +269,16 @@ export function createSpacesEnvironmentAtoms<R, E>(
             : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
         }),
       // A row's title, icon, trash state or existence is a cell of its data source.
-      onSuccess: (target, registry) =>
-        Effect.sync(() =>
-          databases.rowPageChanged(registry, target.environmentId, target.input.pageId),
-        ),
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() => {
+          databases.rowPageChanged(registry, target.environmentId, target.input.pageId);
+          if (result.status === "saved")
+            databases.dataSourcesChanged(
+              registry,
+              target.environmentId,
+              result.affectedDataSourceIds ?? [],
+            );
+        }),
     }),
     moveBlocks: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:move-blocks",
@@ -308,10 +314,16 @@ export function createSpacesEnvironmentAtoms<R, E>(
             ? requestGuarded(WS_METHODS.spacesPagesTrash, input)
             : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
         }),
-      onSuccess: (target, registry) =>
-        Effect.sync(() =>
-          databases.rowPageChanged(registry, target.environmentId, target.input.pageId),
-        ),
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() => {
+          databases.rowPageChanged(registry, target.environmentId, target.input.pageId);
+          if (result.status === "saved")
+            databases.dataSourcesChanged(
+              registry,
+              target.environmentId,
+              result.affectedDataSourceIds ?? [],
+            );
+        }),
     }),
     restorePage: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:restore-page",
@@ -323,10 +335,16 @@ export function createSpacesEnvironmentAtoms<R, E>(
             ? requestGuarded(WS_METHODS.spacesPagesRestore, input)
             : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
         }),
-      onSuccess: (target, registry) =>
-        Effect.sync(() =>
-          databases.rowPageChanged(registry, target.environmentId, target.input.pageId),
-        ),
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() => {
+          databases.rowPageChanged(registry, target.environmentId, target.input.pageId);
+          if (result.status === "saved")
+            databases.dataSourcesChanged(
+              registry,
+              target.environmentId,
+              result.affectedDataSourceIds ?? [],
+            );
+        }),
     }),
     permanentlyDeletePage: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:permanently-delete-page",
@@ -344,6 +362,12 @@ export function createSpacesEnvironmentAtoms<R, E>(
             result.status === "saved" ? [target.input.pageId, ...result.deletedPageIds] : [];
           for (const id of new Set(ids))
             databases.rowPageChanged(registry, target.environmentId, id);
+          if (result.status === "saved")
+            databases.dataSourcesChanged(
+              registry,
+              target.environmentId,
+              result.affectedDataSourceIds ?? [],
+            );
         }),
     }),
     trash: createEnvironmentRpcQueryAtomFamily(runtime, {

@@ -11,6 +11,7 @@ import { appendPosition } from "./Position.ts";
 import type { Snapshot } from "./SchemaStore.ts";
 import { liveProperty } from "./SchemaStore.ts";
 import { type ViewRecord, dbError, notFound } from "./Types.ts";
+import * as QuerySnapshot from "./computed/QuerySnapshot.ts";
 import * as Validation from "./ViewValidation.ts";
 
 const decodeView = Schema.decodeUnknownSync(C.SpaceDatabaseView);
@@ -68,10 +69,11 @@ interface ViewDefinition {
 
 /** Validates a whole definition against the schema and returns the layout as decoded. */
 const validateDefinition = Effect.fn("SpacesDatabases.validateView")(function* (
-  snapshot: Snapshot,
+  full: Snapshot,
   definition: ViewDefinition,
   layoutReferences = true,
 ) {
+  const snapshot = QuerySnapshot.of(full);
   if (definition.filter) yield* Validation.validateFilter(snapshot, definition.filter);
   yield* Validation.validateSorts(snapshot, definition.sorts);
   if (definition.subGroup && !definition.group) return yield* dbError("invalid_view");

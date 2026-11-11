@@ -6,7 +6,7 @@ import type {
 } from "@t2code/contracts/spaces";
 
 import type { PendingCellEdits } from "./cellEdits.ts";
-import { orderBuckets, regroupBuckets } from "./regroup.ts";
+import { laneCell, laneKeys, orderBuckets, regroupBuckets } from "./regroup.ts";
 
 const row = (id: string) =>
   ({ page: { id, title: id }, number: 1, cells: {} }) as unknown as SpaceDatabaseRow;
@@ -164,5 +164,41 @@ describe("orderBuckets", () => {
   it("keeps the empty bucket with hideEmpty when it has cards", () => {
     const filled = bucket({ kind: "empty" }, ["r9"]);
     expect(orderBuckets([a, filled], { hideEmpty: true }).shown).toEqual([filled, a]);
+  });
+});
+
+describe("laneKeys and laneCell", () => {
+  const sub = (key: object, count: number) =>
+    ({ key, count, rows: [], nextCursor: null }) as unknown as SpaceGroupBucket;
+  const columns = [
+    {
+      ...bucket({ kind: "option", optionId: "a" }, []),
+      subGroups: [sub({ kind: "empty" }, 1), sub({ kind: "option", optionId: "x" }, 2)],
+    },
+    {
+      ...bucket({ kind: "option", optionId: "b" }, []),
+      subGroups: [
+        sub({ kind: "option", optionId: "y" }, 1),
+        sub({ kind: "option", optionId: "x" }, 3),
+      ],
+    },
+  ] as SpaceGroupBucket[];
+  it("takes the union of lanes, honours manual order, and finds a column's cell", () => {
+    expect(laneKeys(columns).map((key) => (key as { optionId?: string }).optionId)).toEqual([
+      undefined,
+      "x",
+      "y",
+    ]);
+    expect(
+      laneKeys(columns, {
+        sort: "manual",
+        order: [
+          { kind: "option", optionId: "y" },
+          { kind: "option", optionId: "x" },
+        ],
+      } as never).map((key) => (key as { optionId?: string }).optionId),
+    ).toEqual([undefined, "y", "x"]);
+    expect(laneCell(columns[0]!, { kind: "option", optionId: "x" })?.count).toBe(2);
+    expect(laneCell(columns[0]!, { kind: "option", optionId: "y" })).toBeUndefined();
   });
 });

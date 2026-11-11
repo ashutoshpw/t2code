@@ -18,19 +18,23 @@ const CHECKED = [
 /** The value editor of one filter rule; renders nothing for operators without a value. */
 export function FilterValue({
   known,
+  queryType: queryTypeProp,
   operator,
   value,
   onChange,
   disabled,
 }: {
   readonly known: SpaceKnownDatabaseProperty;
+  /** What a formula or rollup filters as; defaults to the property's own type. */
+  readonly queryType?: string;
   readonly operator: string;
   readonly value: unknown;
   readonly onChange: (value: unknown) => void;
   readonly disabled: boolean;
 }) {
   if (!operatorNeedsValue(operator)) return null;
-  switch (known.type) {
+  const queryType = queryTypeProp ?? known.type;
+  switch (queryType) {
     case "title":
     case "text":
     case "url":

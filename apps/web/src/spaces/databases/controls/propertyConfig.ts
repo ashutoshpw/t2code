@@ -1,6 +1,7 @@
 import {
   SPACE_NUMBER_FORMATS,
   type SpaceCellValue,
+  type SpaceDatabaseProperty,
   type SpaceKnownDatabaseProperty,
   type SpacePropertyId,
   type SpacePropertyType,
@@ -29,13 +30,33 @@ export const CHANGEABLE_TYPES: ReadonlyArray<SpacePropertyType> = [
   "created_time",
   "last_edited_time",
   "unique_id",
+  "formula",
+  "rollup",
 ];
 
 /** The config a type starts with when the server has no default for it. */
 export type ConfigObject = { [key: string]: SpaceCellValue };
 
-export function configForType(type: SpacePropertyType): ConfigObject | undefined {
-  return type === "number" ? { format: "number" } : undefined;
+/** A rollup starts on the first relation, showing the related pages' titles; null without a relation. */
+export function defaultRollupConfig(dataSource: {
+  readonly properties: Readonly<Record<string, SpaceDatabaseProperty>>;
+}): ConfigObject | null {
+  const relation = Object.values(dataSource.properties)
+    .filter((property) => property.type === "relation")
+    .sort((a, b) => a.position - b.position)[0];
+  return relation === undefined
+    ? null
+    : { relationPropertyId: relation.id, targetPropertyId: "title", function: "show_original" };
+}
+
+export function configForType(
+  type: SpacePropertyType,
+  dataSource?: Parameters<typeof defaultRollupConfig>[0],
+): ConfigObject | undefined {
+  if (type === "number") return { format: "number" };
+  if (type === "formula") return { expression: "" };
+  if (type === "rollup") return (dataSource && defaultRollupConfig(dataSource)) ?? undefined;
+  return undefined;
 }
 
 /**

@@ -4,15 +4,21 @@ import { DebouncedInput } from "./DebouncedInput";
 import { OptionSelect } from "./OptionSelect";
 import { NUMBER_FORMATS, nextConfig, numberFormatLabel, type ConfigObject } from "./propertyConfig";
 
-type NumberProperty = Extract<SpaceKnownDatabaseProperty, { type: "number" }>;
+type NumberProperty = Extract<
+  SpaceKnownDatabaseProperty,
+  { type: "number" | "formula" | "rollup" }
+>;
 const CHOICES = NUMBER_FORMATS.map((value) => ({ value, label: numberFormatLabel(value) }));
 
 export function NumberFormatSelect({
   known,
   disabled,
+  defaultFormat = "number",
   onConfig,
 }: {
   readonly known: NumberProperty;
+  /** What a formula or rollup shows until a format is chosen. */
+  readonly defaultFormat?: string;
   readonly disabled: boolean;
   readonly onConfig: (config: ConfigObject) => void;
 }) {
@@ -22,7 +28,7 @@ export function NumberFormatSelect({
         <span className="text-xs text-muted-foreground">Number format</span>
         <OptionSelect
           label="Number format"
-          value={known.config.format}
+          value={known.config.format ?? defaultFormat}
           choices={CHOICES}
           disabled={disabled}
           onChange={(format) => onConfig(nextConfig(known, { format }))}

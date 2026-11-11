@@ -82,12 +82,15 @@ export function TestHostProvider({
 export function DatabaseHarness({
   host,
   initialViewIds,
+  blockId = "block-1",
   layout = "inline",
   editable = true,
   onSetViews,
 }: {
   readonly host: DatabaseBlockHost;
   readonly initialViewIds: ReadonlyArray<string>;
+  /** Any id but `block-1` makes this a linked view of the fixture database. */
+  readonly blockId?: string;
   readonly layout?: DatabaseLayout;
   readonly editable?: boolean;
   readonly onSetViews?: (viewIds: ReadonlyArray<string>) => void;
@@ -104,7 +107,7 @@ export function DatabaseHarness({
   return (
     <TestHostProvider host={host} layout={layout} editable={editable}>
       <DatabaseBlock
-        blockId={SpaceBlockId.make("block-1")}
+        blockId={SpaceBlockId.make(blockId)}
         databaseId={SpaceDatabaseId.make(FIXTURE_IDS.database)}
         viewIds={viewIds}
         actions={actions}

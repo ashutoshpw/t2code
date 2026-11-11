@@ -84,3 +84,28 @@ export function insertionIndex(mids: ReadonlyArray<number>, y: number): number {
   const index = mids.findIndex((mid) => y < mid);
   return index < 0 ? mids.length : index;
 }
+
+/**
+ * The second write of a card dropped into another sub-group lane: the sub-group property's new
+ * value (a lane has the same buckets a column has), or undefined when the card stays in its
+ * lane or the lane cannot be written.
+ */
+export function planLaneDrop(input: {
+  readonly cardId: string;
+  readonly value: SpaceCellValue | undefined;
+  readonly from: SpaceGroupKey;
+  readonly to: SpaceGroupKey;
+  readonly known: SpaceKnownDatabaseProperty;
+}): { readonly cell: SpaceCellValue | null } | undefined {
+  if (canonicalJson(input.from) === canonicalJson(input.to)) return undefined;
+  const plan = planCardDrop({
+    cardId: input.cardId,
+    value: input.value,
+    from: input.from,
+    to: input.to,
+    beforeRowId: input.cardId,
+    view: { sorts: [{ property: "lane", direction: "ascending" }] as never },
+    known: input.known,
+  });
+  return plan?.cell === undefined ? undefined : { cell: plan.cell };
+}

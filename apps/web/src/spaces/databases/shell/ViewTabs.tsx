@@ -14,7 +14,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ColumnsIcon, PlusIcon, TableIcon } from "lucide-react";
+import { PlusIcon, TableIcon } from "lucide-react";
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import type { SpaceDatabaseView, SpaceViewId } from "@t2code/contracts/spaces";
 
@@ -26,10 +26,16 @@ import type { DatabaseActions } from "../data/actions";
 import type { DatabasePermissions } from "../data/useDatabaseModel";
 import { RenameInput } from "./RenameInput";
 import { DeleteViewDialog, ViewTabMenu } from "./ViewTabMenu";
+import { VIEW_REGISTRY, VIEW_TYPES, viewEntry } from "./viewRegistry";
 
 // Module constants: dnd-kit rebuilds its sensors when the options object changes.
 const POINTER_OPTIONS = { activationConstraint: { distance: 4 } } as const;
 const MODIFIERS = [restrictToHorizontalAxis];
+
+function TabIcon({ type }: { readonly type: string }) {
+  const Icon = viewEntry(type)?.icon ?? TableIcon;
+  return <Icon aria-hidden className="size-3.5 shrink-0" />;
+}
 
 function Tab({
   view,
@@ -118,11 +124,7 @@ function Tab({
   } as const;
   const content = (
     <>
-      {view.type === "board" ? (
-        <ColumnsIcon aria-hidden className="size-3.5 shrink-0" />
-      ) : (
-        <TableIcon aria-hidden className="size-3.5 shrink-0" />
-      )}
+      <TabIcon type={view.type} />
       <span className="truncate">{view.name}</span>
     </>
   );
@@ -235,14 +237,15 @@ export function ViewTabs({
             <PlusIcon className="size-4" />
           </MenuTrigger>
           <MenuPopup align="start">
-            <MenuItem onClick={() => void actions.createView("table")}>
-              <TableIcon />
-              Table
-            </MenuItem>
-            <MenuItem onClick={() => void actions.createView("board")}>
-              <ColumnsIcon />
-              Board
-            </MenuItem>
+            {VIEW_TYPES.map((type) => {
+              const { icon: Icon, label } = VIEW_REGISTRY[type];
+              return (
+                <MenuItem key={type} onClick={() => void actions.createView(type)}>
+                  <Icon />
+                  {label}
+                </MenuItem>
+              );
+            })}
           </MenuPopup>
         </Menu>
       ) : null}

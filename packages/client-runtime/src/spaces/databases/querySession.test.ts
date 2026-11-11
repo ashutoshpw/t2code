@@ -233,6 +233,71 @@ describe("DatabaseQuerySession", () => {
     expect(timers.size).toBe(1);
   });
 
+  it("drops a refresh answer that lands while held and runs it again on release", async () => {
+    const { session, calls, fire, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a")] });
+    session.refresh();
+    fire();
+    const release = session.hold();
+    session.setPlacement("a", { group: { kind: "empty" }, beforeRowId: null });
+    await settle({ rows: [row("a", "changed")] });
+    expect(Object.keys(session.getSnapshot().placements)).toEqual(["a"]);
+    expect(session.getSnapshot().windows?.rows[0]?.page.title).toBe("a");
+    release();
+    fire();
+    expect(calls).toHaveLength(3);
+    await settle({ rows: [row("a", "changed")] });
+    expect(session.getSnapshot().placements).toEqual({});
+    expect(session.getSnapshot().windows?.rows[0]?.page.title).toBe("changed");
+  });
+
+  it("does not let a refresh that began before a placement clear it", async () => {
+    const { session, fire, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a")] });
+    session.refresh();
+    fire();
+    session.setPlacement("a", { group: { kind: "empty" }, beforeRowId: null });
+    await settle({ rows: [row("a")] });
+    expect(Object.keys(session.getSnapshot().placements)).toEqual(["a"]);
+  });
+
+  it("keeps following the cursor up to the fill cap and then stops", async () => {
+    const { session, calls, settle } = setup();
+    session.setInput(input(), { fillRows: 5 });
+    await settle({ rows: [row("a"), row("b")], nextCursor: "c1" as never });
+    await settle({ rows: [row("c"), row("d")], nextCursor: "c2" as never });
+    await settle({ rows: [row("e"), row("f")], nextCursor: "c3" as never });
+    expect(calls).toHaveLength(3);
+    expect(session.getSnapshot().windows?.rows).toHaveLength(6);
+    expect(session.getSnapshot().windows?.nextCursor).toBe("c3");
+  });
+
+  it("stops filling when the query is whole and when a window adds nothing", async () => {
+    const { session, calls, settle } = setup();
+    session.setInput(input(), { fillRows: 50 });
+    await settle({ rows: [row("a")], nextCursor: "c1" as never });
+    await settle({ rows: [row("b")], nextCursor: null });
+    expect(calls).toHaveLength(2);
+    session.setInput(input({ search: "x" }), { fillRows: 50 });
+    await settle({ rows: [row("a")], nextCursor: "c1" as never });
+    await settle({ rows: [], nextCursor: "c2" as never });
+    expect(calls).toHaveLength(4);
+  });
+
+  it("restarts for another extra filter and keeps the include flags of the caller", async () => {
+    const { session, calls, settle } = setup();
+    const filter = (day: string) => ({ property: "d", operator: "on_or_after", value: day });
+    session.setInput(input({ extraFilter: filter("2026-03-01") as never }));
+    await settle({ rows: [row("a")] });
+    session.setInput(input({ extraFilter: filter("2026-04-01") as never }));
+    expect(session.getSnapshot().stale).toBe(true);
+    expect(calls[1]?.extraFilter).toEqual(filter("2026-04-01"));
+    await settle({ rows: [row("b")] });
+    expect(session.getSnapshot().stale).toBe(false);
+  });
+
   it("continues a bucket in rows mode and refreshes once on a stale cursor", async () => {
     const { session, calls, fire, settle, pending } = setup();
     const group = { kind: "option", optionId: "o" } as never;
@@ -305,5 +370,36 @@ describe("DatabaseQuerySession", () => {
     await settle({ rows: [row("a")] });
     session.noteRelatedPages({ r1: { id: "r1", title: "Task" } as never });
     expect(session.getSnapshot().relatedPages["r1"]?.title).toBe("Task");
+  });
+
+  it("asks again with a growing delay while computed values are pending, and stops when done", async () => {
+    const { session, calls, timers, fire, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a")], computedPending: true });
+    expect(session.getSnapshot().computedPending).toBe(true);
+    const delays: number[] = [];
+    for (let attempt = 0; attempt < 6; attempt++) {
+      delays.push([...timers.values()][0]?.delay ?? -1);
+      const before = calls.length;
+      fire();
+      expect(calls.length).toBe(before + 1);
+      await settle({ rows: [row("a")], computedPending: true });
+    }
+    expect(delays).toEqual([400, 800, 1600, 3200, 5000, 5000]);
+    fire();
+    await settle({ rows: [row("a", "done")], computedPending: false });
+    expect(session.getSnapshot().computedPending).toBe(false);
+    expect(timers.size).toBe(0);
+  });
+
+  it("does not follow up on a changed input, and starts the backoff over on a user refresh", async () => {
+    const { session, timers, fire, settle } = setup();
+    session.setInput(input());
+    await settle({ rows: [row("a")], computedPending: true });
+    fire();
+    await settle({ rows: [row("a")], computedPending: true });
+    expect([...timers.values()][0]?.delay).toBe(800);
+    session.setInput(input({ search: "x" }));
+    expect(timers.size).toBe(0);
   });
 });
