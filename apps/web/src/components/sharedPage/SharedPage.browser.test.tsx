@@ -8,11 +8,33 @@ import "~/index.css";
 
 import { render, stubGlobal } from "../../../test/render";
 import { SharedPage } from "./SharedPage";
+import {
+  description,
+  row,
+  shareFetch,
+  view,
+  window as windowOf,
+} from "./database/sharedDatabase.testkit";
 
 const NOW = "2026-10-29T00:00:00.000Z";
 const encode = Schema.encodeSync(Schema.toCodecJson(SpaceSharedPage));
 
-const sharedPage = (id: string, title: string, text: string, breadcrumb: string[]) =>
+const databaseBlock = {
+  id: SpaceBlockId.make("db-b"),
+  parentId: null,
+  order: "b",
+  type: "database",
+  version: 1,
+  content: { databaseId: "db1", viewIds: ["v1"] },
+};
+
+const sharedPage = (
+  id: string,
+  title: string,
+  text: string,
+  breadcrumb: string[],
+  extraBlocks: ReadonlyArray<typeof databaseBlock> = [],
+) =>
   encode({
     rootPageId: SpacePageId.make("root"),
     expiresAt: NOW,
@@ -28,6 +50,7 @@ const sharedPage = (id: string, title: string, text: string, breadcrumb: string[
           version: 1,
           content: { runs: [{ text, marks: [] }] },
         },
+        ...extraBlocks,
       ],
     },
     breadcrumb: breadcrumb.map((crumb) => ({
@@ -73,5 +96,43 @@ describe("SharedPage", () => {
     using _fetch = stubGlobal("fetch", fakeFetch(true));
     await using screen = await render(<SharedPage />, { router: "/#cred.sig" });
     await expect.element(screen.getByText("This link no longer works")).toBeVisible();
+  });
+
+  it("shows a database block read-only and opens one of its rows as a page", async () => {
+    const share = shareFetch({
+      page: () => sharedPage("root", "Handbook", "Welcome aboard", ["root"], [databaseBlock]),
+      database: () => description([view("v1", "table")]),
+      query: () => windowOf([row("r1", "Ship it")]),
+      row: () => ({
+        row: row("r1", "Ship it"),
+        relatedPages: {},
+        options: {},
+        window: { revision: 1, blocks: [] },
+        breadcrumb: [
+          { id: "root", title: "Handbook" },
+          { id: "r1", title: "Ship it" },
+        ],
+      }),
+    });
+    using _fetch = stubGlobal("fetch", share.fetch);
+    await using screen = await render(<SharedPage />, { router: "/#cred.sig" });
+
+    await expect.element(screen.getByText("Welcome aboard")).toBeVisible();
+    await expect.element(screen.getByRole("heading", { name: "Tasks" })).toBeVisible();
+    const link = screen.getByRole("link", { name: "Ship it" });
+    await expect.element(link).toBeVisible();
+    const href = new URL(link.element().getAttribute("href")!, "https://host.example");
+    expect(Object.fromEntries(href.searchParams)).toEqual({
+      page: "root",
+      block: "db-b",
+      view: "v1",
+      row: "r1",
+    });
+    expect(href.hash).toBe("#cred.sig");
+
+    await userEvent.click(link);
+    await expect.element(screen.getByRole("heading", { name: "Ship it" })).toBeVisible();
+    expect(screen.router!.state.location.hash).toBe("cred.sig");
+    expect(share.calls.filter((call) => call.route.endsWith("/row"))).toHaveLength(1);
   });
 });

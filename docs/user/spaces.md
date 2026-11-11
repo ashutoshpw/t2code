@@ -14,7 +14,7 @@ Choose **Create** at the top of the sidebar to add an untitled page with its tit
 
 Click the title at the top of a page to rename it. Hover above the title and choose **Add icon** to give the page an emoji icon. Click the page body to start writing; changes save automatically a moment after you stop typing and when you leave the page. If a save fails, **Retry** appears below the page. After a conflict with another device, your edits stay on this device and you can discard them.
 
-- Type **/** for a command menu: headings, lists, to-do, toggle list, quote, callout, code, divider and **Page**, which creates a sub-page below the block and opens it with its title selected. Markdown shortcuts also work, such as `# `, `- `, `1. `, `[] `, `> ` and three backticks. Type `>> ` for a toggle list: Enter at the end of an open toggle's first line starts its first nested block, and the arrow collapses or expands it for you only. Toggles open as expanded and are read-only on mobile. Press Enter on an empty block to leave a list or quote.
+- Type **/** for a command menu: headings, lists, to-do, toggle list, quote, callout, code, divider, **Database**, **Linked view of database** and **Page**, which creates a sub-page below the block and opens it with its title selected. Markdown shortcuts also work, such as `# `, `- `, `1. `, `[] `, `> ` and three backticks. Type `>> ` for a toggle list: Enter at the end of an open toggle's first line starts its first nested block, and the arrow collapses or expands it for you only. Toggles open as expanded and are read-only on mobile. Press Enter on an empty block to leave a list or quote.
 - Select text for a toolbar with bold, italic, strikethrough, inline code, links and **Turn into**. Press Cmd/Ctrl+Z to undo and Cmd/Ctrl+Shift+Z to redo.
 - Select a heading to choose its level, a callout to change its icon, or code to set its language label. Code is not run.
 - Hover a block to show **+** (add a block below) and a handle. Drag the handle to reorder blocks, or click it for **Turn into**, duplicate, delete and move.
@@ -24,6 +24,47 @@ Click the title at the top of a page to rename it. Hover above the title and cho
 ## Media
 
 Choose **Media → Upload** in the page header to add an image, PDF or video to the page. To swap a file, select its block and choose **Replace selected media**. The block keeps its place and caption. Edit the caption in the page. To remove media, select its block and choose **More → Remove media block**; the file itself is not deleted. Previews open when you ask for them; if a preview link expires, refresh it.
+
+## Databases
+
+A database is a set of pages, called rows, that share properties such as a status, a date or an owner. Type **/** and choose **Database** to add one inline on a page. A page that holds only a database opens as a full-page database. Every row is a page: open it to see its properties above a body you can write in. A database holds up to 25,000 rows, 100 properties and 50 views.
+
+Each database has saved views. Add one to look at the same rows another way, and each view keeps its own filters, sorts, grouping and visible properties.
+
+- **Table** is a grid for editing many rows at once.
+- **Board** groups rows into columns, such as status, and is the one to use for workflow.
+- **List** is a compact line per row.
+- **Gallery** shows cards, with a cover or a property as the preview.
+- **Calendar** places rows on a date property. A range shows up to 500 items.
+- **Timeline** draws rows as bars from a start to an end date.
+
+Views can filter, sort, group and sub-group, and show a calculation (count, sum, average and so on) in a column footer or group header.
+
+### Properties
+
+Properties are text, number, select, multi-select, status, date, checkbox, URL, email, phone, files, relation, rollup, formula, created time, last edited time and unique ID. Deleted properties can be restored.
+
+- **Relation** links rows to rows of another database. Choose the database, whether a row links to one page or has no limit, and whether to show the link on the other database too. The target database cannot be changed afterwards.
+- **Rollup** summarizes a property of the related rows, for example the sum of their estimates or the earliest date. A rollup cannot read another rollup.
+- **Formula** calculates a value from the row's other properties. `prop("Price") * prop("Quantity")` multiplies two numbers, and `dateBetween(prop("Due"), today(), "days")` counts the days from today to the due date. Formulas can chain calls with a dot, name values with `let`, branch with `if` and `ifs`, and work on lists with `current` and `index`. A formula can read properties one relation away; to reach further, add a formula or rollup on the related database. While you type, the editor explains errors and offers completions. Regular expressions in formulas have no lookahead, backreferences or group modifiers.
+
+### Linked views, sub-items and templates
+
+Choose **Linked view of database** from the **/** menu to show an existing database, with its own views, somewhere else. It shows the same rows. While the original database is in the trash, the linked view stops working and shows a message until you restore it.
+
+Sub-items let rows have child rows of the same database. Turn them on in a table or list view's layout settings, then show them in a hierarchy or as plain rows.
+
+Templates pre-fill new rows. Use **New template** in the new-row menu, edit it like any row, and set one as the default. A row made from a template copies its icon, properties and body, but not its title.
+
+### Good to know
+
+- Formulas that use `now()` or `today()` are for display. They cannot be filtered, sorted, grouped or used in a rollup, and they do not appear on shared links.
+- Empty values stay empty through arithmetic.
+- Dates without a time zone, and `formatDate`, use the time zone of the machine running T2 Code.
+- Nested sub-items hide children that do not match the filter, and are off while grouping or searching.
+- After a large change, calculated values fill in over a few seconds.
+
+Agents can read and edit databases through the same Spaces access as pages. Refer to properties by their names when you ask.
 
 ## Pages: move, trash and restore
 
@@ -47,6 +88,8 @@ Share a page and its sub-pages with someone who has no T2 Code account. Page lin
 
 Anyone with the link can read the page and all its sub-pages, read-only, without signing in. Nothing above or beside the page is reachable. Viewers see the page as it was when they opened it and reload to see changes. A **Shared** button on the page shows the link again. Use **Create new link** to replace it, or **Stop sharing** to end it.
 
+Databases on a shared page appear read-only. Viewers can switch between the views saved on the page and open a row to read it, but they cannot search, filter or edit. Each view shows 50 rows at a time and only the properties it displays, up to 500 rows per view, or 200 per board column, so a board can show more than 500. Board columns show 10 rows at a time, and calendars and timelines show as a month list. Sub-pages and databases inside an opened row are not shown. To keep rows off a link, filter them out in every view on the page; hiding a board column is not enough. A relation column shows the titles of related rows even when the view's filter excludes them, so hide the column to keep those titles off the link. Rollup and formula columns show their result as calculated from all related rows, including ones the filter excludes, and a formula can use properties the view hides, so hide those columns too when the values are private. Formulas that use `now()` or `today()` do not appear. A linked view appears only when its original database is also inside the shared page.
+
 A link stops working when:
 
 - you stop sharing or create a new link,
@@ -55,7 +98,7 @@ A link stops working when:
 - **Page links** is turned off, or
 - the machine's T2 Connect address changes.
 
-The machine must stay online for viewers to open the link. Images, PDFs and videos on the shared pages are visible to viewers, so share only what you are comfortable showing.
+A database stops showing when its original is moved to the trash. The machine must stay online for viewers to open the link. Images, PDFs and videos on the shared pages are visible to viewers, so share only what you are comfortable showing.
 
 ## Use a page or block in chat
 
@@ -100,6 +143,8 @@ attachment and retry limits, and [outside agents](./outside-agents.md#spaces) fo
 ## On mobile
 
 On mobile, open **Spaces** from the thread list, Settings, or the command palette, then choose an environment. Enable it from that environment’s Settings page. Use **First** and **Next** to browse windows, including an empty window that offers a continuation. Open child pages from the page or library.
+
+Databases open on mobile in every view type, drawn as lists and cards suited to a phone. Calendars and timelines show as a month agenda, and **Open database** on a page's database shows the full list. Views apply as saved on desktop; change filters, sorting, layout, properties, formulas, relations and templates there. Open a row to read it and edit its title, text, number, checkbox, select, multi-select, status, date, URL, email and phone values, and use **New row** to add one. Cell changes save right away and are not kept as a draft; if one cannot be sent, retry or discard it. Dates are entered as YYYY-MM-DD; dates with a time and formatted text are edited on desktop. Long views stop at 500 rows, or 200 per group, and point you to desktop for the rest.
 
 Search the selected mobile environment with **First results**, then **Next results** for another window. An empty window with a continuation is not the end. If the index is building, retry explicitly. Search titles and snippets belong to that result window; select a result, then **Open current source** to resolve its current title and location. Child-page and mention links select a current-source action too, using the destination environment’s read permission. Deleted, trashed and unavailable references stay explicit. Finish the active input before opening a source; retained page drafts are kept. A linked block outside the loaded window requires manual First/Next browsing. **Reveal loaded block** attempts to show an already loaded row; it does not search other windows.
 

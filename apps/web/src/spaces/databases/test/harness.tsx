@@ -2,6 +2,14 @@ import { useState, type ReactNode } from "react";
 import { SpaceBlockId, SpaceDatabaseId, SpacePageId, SpaceViewId } from "@t2code/contracts/spaces";
 import { vi } from "vite-plus/test";
 
+// The registry loads view bodies lazily; load them here so a cold first render is not timed.
+import "../board/BoardView";
+import "../calendar/CalendarView";
+import "../gallery/GalleryView";
+import "../list/ListView";
+import "../table/TableView";
+import "../timeline/TimelineView";
+
 import type { SpaceEditorAdapter } from "../../adapter";
 import type { SpaceDocumentController } from "../../documentController";
 import type { DatabaseBlockActions } from "../blocks/actions";

@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { fixtureView, subItemRows, withSubItems } from "../test/fixtures";
 import { mountTable } from "./tableHarness";
 
@@ -31,8 +33,9 @@ async function mount(layout: Record<string, unknown> = {}, strict = false) {
   });
   state.fake = fake;
   await page.viewport(1800, 900);
-  const table = await mountTable(fake, "page", strict);
-  await vi.waitFor(() => expect(table.cell("row-1", "title")).not.toBeNull());
+  const table = await readyWhen(await mountTable(fake, "page", strict), (mounted) =>
+    vi.waitFor(() => expect(mounted.cell("row-1", "title")).not.toBeNull()),
+  );
   return { fake, ...table };
 }
 const toggle = () => page.getByRole("button", { name: "Expand sub-items" });

@@ -19,8 +19,8 @@ import * as Rows from "./Rows.ts";
 
 const DEFAULT_LIMIT = 50;
 
-/** Runs a view or an ad hoc query (section 3.8): one data source, one read transaction. */
-export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
+/** Validates the request and compiles it to a plan; `run` and the shared-page reads build on it. */
+export const prepare = Effect.fn("SpacesDatabases.prepareQuery")(function* (input: {
   readonly request: C.SpaceDatabaseQueryInput;
   readonly environmentId: string;
   readonly nowMs: number;
@@ -55,6 +55,17 @@ export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
     environmentId,
     dataRevision: source.data_revision,
   });
+  return { source, snapshot, plan, e, dates };
+});
+
+/** Runs a view or an ad hoc query (section 3.8): one data source, one read transaction. */
+export const run = Effect.fn("SpacesDatabases.query")(function* (input: {
+  readonly request: C.SpaceDatabaseQueryInput;
+  readonly environmentId: string;
+  readonly nowMs: number;
+}) {
+  const { request, environmentId } = input;
+  const { source, plan, e } = yield* prepare(input);
   const base = {
     dataSourceId: source.data_source_id,
     schemaRevision: source.schema_revision,

@@ -5,6 +5,8 @@ import { page, userEvent } from "vite-plus/test/browser";
 
 import { mountTable } from "../table/tableHarness";
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { fixtureDataSource } from "../test/fixtures";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
@@ -37,8 +39,9 @@ async function mount(options: { defaultTemplate?: boolean } = {}) {
     } as never,
   });
   state.fake = fake;
-  const table = await mountTable(fake);
-  await vi.waitFor(() => expect(table.cell("row-1", "title")).not.toBeNull());
+  const table = await readyWhen(await mountTable(fake), (mounted) =>
+    vi.waitFor(() => expect(mounted.cell("row-1", "title")).not.toBeNull()),
+  );
   return { fake, ...table };
 }
 const caret = () => page.getByRole("button", { name: "New row options" });

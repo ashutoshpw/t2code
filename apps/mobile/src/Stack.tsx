@@ -1,5 +1,7 @@
 import { isDraftThreadRoute } from "./features/threads/thread-route-state";
 import { SpacesLibraryRouteScreen, SpacesPageRouteScreen } from "./features/spaces/SpacesScreens";
+import { SpacesDatabaseRouteScreen } from "./features/spaces/databases/SpacesDatabaseScreen";
+import { spacesDatabaseLinking } from "./features/spaces/databases/navigation";
 import { spacesLibraryLinking, spacesPageLinking } from "./features/spaces/navigation";
 import { ComponentCatalogScreen } from "./features/development/ComponentCatalogScreen";
 import { PullRequestGuideStopScreen } from "./features/pull-requests/guide/PullRequestGuideScreen";
@@ -491,6 +493,10 @@ const RootStackConfig = createWorkspaceStackNavigator({
     SpacesPage: createNativeStackScreen({
       screen: SpacesPageRouteScreen,
       linking: spacesPageLinking,
+    }),
+    SpacesDatabase: createNativeStackScreen({
+      screen: SpacesDatabaseRouteScreen,
+      linking: spacesDatabaseLinking,
     }),
     ...(__DEV__
       ? {

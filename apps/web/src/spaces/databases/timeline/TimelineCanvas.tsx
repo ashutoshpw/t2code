@@ -1,11 +1,10 @@
-import { serialDay } from "@t2code/client-runtime/spaces";
+import { type GroupLabel, serialDay } from "@t2code/client-runtime/spaces";
 import { useState, type CSSProperties, type UIEvent } from "react";
 import type { SpaceGroupBucket } from "@t2code/contracts/spaces";
 
 import { observeResize } from "~/lib/observeResize";
 import { rowTitle } from "@t2code/client-runtime/spaces";
 import { TimelineBar, type TimelineHandlers } from "./TimelineBar";
-import type { GroupLabel } from "../table/groupLabel";
 import { TimelineLineLabel } from "./TimelineLineLabel";
 import { TimelineSide } from "./TimelineSide";
 import type { TimelineGroupHandlers, TimelineLine } from "./timelineLines";

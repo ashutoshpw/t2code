@@ -69,6 +69,7 @@ describe("Spaces native adapter public boundary", () => {
     block({ runs: [{ text: "keep", marks: [], future: { retain: true } }] }),
     block({ runs: [{ text: "keep", marks: [] }], icon: "info" }, { type: "callout" }),
     block({ nested: [{ preserve: "verbatim" }] }, { type: "future", version: 3 }),
+    block({ databaseId: "database-1", viewIds: ["view-1"] }, { type: "database" }),
     block({
       runs: [
         {

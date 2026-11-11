@@ -1,7 +1,7 @@
 import type { EnvironmentId } from "@t2code/contracts";
+import type { OptionHint } from "@t2code/client-runtime/spaces";
 import type {
   SpaceCellValue,
-  SpaceDatabaseColor,
   SpaceGroupKey,
   SpaceKnownDatabaseProperty,
   SpacePropertyId,
@@ -10,6 +10,8 @@ import type {
 
 import type { RowOpenMode } from "../data/actions";
 import type { NavigationKey } from "./gridNavigation";
+
+export type { OptionHint };
 
 export interface TableColumn {
   readonly id: SpacePropertyId;
@@ -23,11 +25,6 @@ export interface TableColumn {
   /** Cells show up to three lines. */
   readonly wrap: boolean;
 }
-
-export type OptionHint = (
-  propertyId: SpacePropertyId | string,
-  optionId: string,
-) => { readonly name: string; readonly color: SpaceDatabaseColor | string } | undefined;
 
 export interface CellPoint {
   readonly pageId: string;

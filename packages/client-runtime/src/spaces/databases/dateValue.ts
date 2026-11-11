@@ -64,6 +64,7 @@ export function buildDateValue(draft: DateDraft, timeZone: string): SpaceDateVal
 }
 
 const isRealDay = (year: number, month: number, day: number) => {
+  // @effect-diagnostics-next-line globalDate:off
   const date = new Date(Date.UTC(year, month - 1, day));
   return (
     date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
@@ -90,6 +91,7 @@ export function parseTypedDay(text: string): string | null {
 /** A local-midnight Date for the Calendar; undefined for "". */
 export function dayToDate(day: string): Date | undefined {
   const match = DAY.exec(day);
+  // @effect-diagnostics-next-line globalDate:off
   return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : undefined;
 }
 

@@ -34,6 +34,7 @@ import * as AnalyticsService from "../telemetry/AnalyticsService.ts";
 import * as PageShareHttp from "./pageShareHttp.ts";
 import * as PageShareService from "./PageShareService.ts";
 import * as SpacesService from "./SpacesService.ts";
+import { databaseKit } from "./service/Databases.testkit.ts";
 
 const environmentId = EnvironmentId.make("page-share-environment");
 const env = { environmentId };
@@ -335,6 +336,33 @@ it.effect("ends the link when the root is trashed and hides trashed sub-pages", 
     yield* trash(shared);
     assert.equal(yield* reason(shares.page(token)), "inactive");
     assert.equal(yield* reason(shares.page(token, nested)), "inactive");
+  }).pipe(Effect.provide(layerTest)),
+);
+
+it.effect("ends a link to a row when its database dies and leaves ordinary pages alone", () =>
+  Effect.gen(function* () {
+    const { spaces, shares, library, rootPage, credentialOf } = yield* workspace();
+    const common = { ...env, receiptEpoch: library.mutationAdmission.epoch };
+    const host = yield* rootPage("Host");
+    const plain = yield* rootPage("Plain");
+    const kit = databaseKit(spaces, common, library.defaultSpaceId);
+    const created = yield* kit.create("Tasks", { appendToPageId: host });
+    const row = (yield* kit.addRows(created.dataSourceId, [{ title: "Row" }])).rows[0]!.pageId;
+    const rowToken = credentialOf((yield* shares.create({ pageId: row })).url);
+    const plainToken = credentialOf((yield* shares.create({ pageId: plain })).url);
+    assert.equal((yield* shares.page(rowToken)).page.title, "Row");
+
+    const page = yield* spaces.getPage({ ...env, pageId: host });
+    yield* spaces.applyBlockBatch({
+      ...common,
+      mutationId: "delete-home",
+      pageId: host,
+      baseRevision: page.page.revision,
+      generation: 0,
+      mutations: [{ kind: "delete", blockId: created.block!.blockId }],
+    });
+    assert.equal(yield* reason(shares.page(rowToken)), "inactive");
+    assert.equal((yield* shares.page(plainToken)).page.title, "Plain");
   }).pipe(Effect.provide(layerTest)),
 );
 

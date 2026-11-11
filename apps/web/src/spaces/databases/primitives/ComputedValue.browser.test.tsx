@@ -1,11 +1,10 @@
-import { knownProperty } from "@t2code/client-runtime/spaces";
+import { type CellTextContext, cellPlainText, knownProperty } from "@t2code/client-runtime/spaces";
 import type { SpaceCellValue, SpaceDatabaseProperty } from "@t2code/contracts/spaces";
 import { describe, expect, it } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 
 import { render } from "../../../../test/render";
 import { CellValue } from "./CellValue";
-import { cellPlainText, type CellTextContext } from "./format";
 
 const property = (type: "formula" | "rollup", config: unknown, computed: Record<string, unknown>) =>
   knownProperty({

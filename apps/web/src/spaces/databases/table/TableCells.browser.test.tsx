@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { mountTable } from "./tableHarness";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
@@ -54,8 +56,9 @@ async function mount() {
   })) as never;
   state.fake = fake;
   await page.viewport(2800, 900);
-  const table = await mountTable(fake);
-  await vi.waitFor(() => expect(table.cell("row-1", "made")).not.toBeNull());
+  const table = await readyWhen(await mountTable(fake), (mounted) =>
+    vi.waitFor(() => expect(mounted.cell("row-1", "made")).not.toBeNull()),
+  );
   return { fake, ...table };
 }
 const locate = (element: HTMLElement | null) => page.elementLocator(element!);

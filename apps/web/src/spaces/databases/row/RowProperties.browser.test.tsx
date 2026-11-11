@@ -8,6 +8,7 @@ import { render } from "../../../../test/render";
 import { DatabaseHarness, fakeController, testHost, TEST_ENVIRONMENT } from "../test/harness";
 import { FIXTURE_IDS, fixtureView } from "../test/fixtures";
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
 import RowProperties from "./RowProperties";
 
 const state = vi.hoisted(() => ({ fake: null as unknown }));
@@ -43,12 +44,11 @@ async function mount(options: ConstructorParameters<typeof FakeDatabase>[0] = {}
       <RowProperties environmentId={TEST_ENVIRONMENT} pageId={row} />
     </>,
   );
-  await expect.element(screen.getByRole("region", { name: "Row properties" })).toBeVisible();
   // The table has columns and buttons of the same names.
   const fields = screen.getByRole("region", { name: "Row properties" });
   const cell = (rowId: string, column: string) =>
     screen.container.querySelector<HTMLElement>(`[data-row="${rowId}"][data-col="${column}"]`);
-  return { fake, screen, cell, fields };
+  return readyWhen({ fake, screen, cell, fields }, () => expect.element(fields).toBeVisible());
 }
 const writes = (fake: FakeDatabase) =>
   fake.callsOf("updateRows").map((call) => call.input.rows as unknown[]);

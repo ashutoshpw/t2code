@@ -578,6 +578,10 @@
     "./state/spaces": {
       "types": "./src/state/spaces.ts",
       "default": "./src/state/spaces.ts"
+    },
+    "./state/spaces-database-mutations": {
+      "types": "./src/state/spacesDatabaseMutations.ts",
+      "default": "./src/state/spacesDatabaseMutations.ts"
     }
   },
   "scripts": {

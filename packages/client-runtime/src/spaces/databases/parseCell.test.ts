@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { SpaceKnownDatabaseProperty } from "@t2code/contracts/spaces";
 
-import { numberToText, parseCell, parseNumber } from "./parseCell";
+import { numberToText, parseCell, parseLocalizedNumber, parseNumber } from "./parseCell.ts";
 
 const known = (type: string, config: unknown = {}) =>
   ({ id: type, name: type, type, config, position: 0 }) as unknown as SpaceKnownDatabaseProperty;
@@ -9,6 +9,38 @@ const options = [
   { id: "bug", name: "Bug", color: "red" },
   { id: "idea", name: "Idea", color: "blue" },
 ];
+
+describe("parseLocalizedNumber", () => {
+  it.each<[string, string, string, number | null | undefined]>([
+    [".", "1,234.5", "number", 1234.5],
+    [".", "1,234,567", "number", 1234567],
+    [".", "1.5", "number", 1.5],
+    [".", "-$1,000.25", "dollar", -1000.25],
+    [".", "50%", "percent", 0.5],
+    [".", "1e3", "number", 1000],
+    [".", "", "number", null],
+    [",", "1,5", "number", 1.5],
+    [",", "0,25", "number", 0.25],
+    [",", "1.234,5", "number", 1234.5],
+    [",", "1.234.567", "number", 1234567],
+    [",", "1 234,5", "number", 1234.5],
+    [",", "12,5%", "percent", 0.125],
+    [",", "€ 9,99", "number", 9.99],
+    // Group separators must make 3-digit groups, and the decimal separator appears once.
+    [".", "1,5", "number", undefined],
+    [".", "1,2,3", "number", undefined],
+    [".", "1,23,456", "number", undefined],
+    [".", "1.2.3", "number", undefined],
+    [",", "1.5", "number", undefined],
+    [",", "1,234.5", "number", undefined],
+    [",", "1,2,3", "number", undefined],
+    [",", "1.234,5,6", "number", undefined],
+    [",", "abc5", "number", undefined],
+    [",", ",", "number", undefined],
+  ])("under %j reads %j (%s) as %j", (decimal, text, format, expected) => {
+    expect(parseLocalizedNumber(text, format, decimal)).toBe(expected);
+  });
+});
 
 describe("parseNumber", () => {
   it("reads signs, decimals, exponents, grouping commas and a leading currency sign", () => {

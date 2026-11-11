@@ -11,7 +11,7 @@ import {
   parseDateValue,
   parseTypedDay,
   type DateDraft,
-} from "./dateValue";
+} from "@t2code/client-runtime/spaces";
 import { EditorPopover } from "./EditorPopover";
 import { useSettleOnce } from "./settle";
 

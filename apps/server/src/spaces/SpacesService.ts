@@ -2,6 +2,8 @@ import {
   EnvironmentId,
   type SpacePageShare,
   type SpacePageShareId,
+  type SpaceSharedDatabase,
+  type SpaceSharedDatabaseRowPage,
   type SpaceSharedPage,
   type SpacesStorageStatus,
   type SpaceContextCaptureResult,
@@ -20,6 +22,8 @@ import * as ListOps from "./service/Lists.ts";
 import * as DatabaseReadOps from "./service/DatabaseReads.ts";
 import * as ReadOps from "./service/Reads.ts";
 import * as ShareOps from "./service/Shares.ts";
+import * as SharedDatabaseOps from "./service/SharedDatabases.ts";
+import type { QueryOutcome, QueryParams } from "./sharedDatabases/Read.ts";
 import * as MutationOps from "./service/Mutations.ts";
 import * as MaintenanceOps from "./service/Maintenance.ts";
 
@@ -233,6 +237,41 @@ export class SpacesService extends Context.Service<
       readonly pageId: C.SpacePageId;
       readonly assetId: C.SpaceAssetId;
     }) => Effect.Effect<ResolvedAssetFile, C.SpaceServiceError, Scope.Scope>;
+    /**
+     * Public database reads for a share. Each takes the share's root page, reads only (no write
+     * lock), and answers or fails with `SpaceNotFoundError` for anything outside the shared tree.
+     * Cursors are the raw engine cursors; the share service seals them before they leave.
+     */
+    readonly describeSharedDatabase: (input: {
+      readonly rootPageId: C.SpacePageId;
+      readonly pageId: C.SpacePageId;
+      readonly blockId: C.SpaceBlockId;
+    }) => Effect.Effect<SpaceSharedDatabase, C.SpaceServiceError>;
+    readonly querySharedDatabase: (input: {
+      readonly rootPageId: C.SpacePageId;
+      readonly pageId: C.SpacePageId;
+      readonly blockId: C.SpaceBlockId;
+      readonly viewId: C.SpaceViewId;
+      readonly params: QueryParams;
+    }) => Effect.Effect<QueryOutcome, C.SpaceServiceError>;
+    readonly readSharedDatabaseRow: (input: {
+      readonly rootPageId: C.SpacePageId;
+      readonly pageId: C.SpacePageId;
+      readonly blockId: C.SpaceBlockId;
+      readonly viewId: C.SpaceViewId;
+      readonly rowId: C.SpacePageId;
+      readonly cursor?: string;
+      readonly timeZone?: string;
+    }) => Effect.Effect<SpaceSharedDatabaseRowPage, C.SpaceServiceError>;
+    /** An asset of a row body, only while the row passes the saved view's filter. */
+    readonly resolveSharedRowAssetFile: (input: {
+      readonly rootPageId: C.SpacePageId;
+      readonly pageId: C.SpacePageId;
+      readonly blockId: C.SpaceBlockId;
+      readonly viewId: C.SpaceViewId;
+      readonly rowId: C.SpacePageId;
+      readonly assetId: C.SpaceAssetId;
+    }) => Effect.Effect<ResolvedAssetFile, C.SpaceServiceError, Scope.Scope>;
   }
 >()("@t2code/cli/spaces/SpacesService") {}
 
@@ -246,6 +285,7 @@ const make = Effect.fn("SpacesService.make")(function* (
   const lists = ListOps.make(runtime);
   const reads = ReadOps.make(runtime);
   const shares = ShareOps.make(runtime, assets);
+  const sharedDatabases = SharedDatabaseOps.make(runtime, assets);
   const mutations = MutationOps.make(runtime);
   const databaseReads = DatabaseReadOps.make(runtime);
   const maintenance = MaintenanceOps.make(runtime);
@@ -311,6 +351,10 @@ const make = Effect.fn("SpacesService.make")(function* (
     resolvePageShare: shares.resolvePageShare,
     readSharedPage: shares.readSharedPage,
     resolveSharedAssetFile: shares.resolveSharedAssetFile,
+    describeSharedDatabase: sharedDatabases.describeSharedDatabase,
+    querySharedDatabase: sharedDatabases.querySharedDatabase,
+    readSharedDatabaseRow: sharedDatabases.readSharedDatabaseRow,
+    resolveSharedRowAssetFile: sharedDatabases.resolveSharedRowAssetFile,
   });
 });
 

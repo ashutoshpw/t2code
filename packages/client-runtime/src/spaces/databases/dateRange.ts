@@ -233,20 +233,33 @@ export function overlapFilter(
   firstDay: string,
   lastDay: string,
 ): SpaceFilter {
-  const withPart = propertyType === "date";
+  return rangeOverlapFilter({ id: propertyId, type: propertyType }, undefined, firstDay, lastDay);
+}
+
+/**
+ * Rows whose start falls on or before `lastDay` and whose end (the end property, else the start)
+ * falls on or after `firstDay`. A `date` property carries both ends and is filtered by part.
+ */
+export function rangeOverlapFilter(
+  start: { readonly id: SpacePropertyId; readonly type: string },
+  end: { readonly id: SpacePropertyId; readonly type: string } | undefined,
+  firstDay: string,
+  lastDay: string,
+): SpaceFilter {
+  const endProperty = end ?? start;
   return {
     and: [
       {
-        property: propertyId,
+        property: start.id,
         operator: "on_or_before",
         value: lastDay,
-        ...(withPart ? { part: "start" as const } : {}),
+        ...(start.type === "date" ? { part: "start" as const } : {}),
       },
       {
-        property: propertyId,
+        property: endProperty.id,
         operator: "on_or_after",
         value: firstDay,
-        ...(withPart ? { part: "end" as const } : {}),
+        ...(endProperty.type === "date" ? { part: "end" as const } : {}),
       },
     ],
   };

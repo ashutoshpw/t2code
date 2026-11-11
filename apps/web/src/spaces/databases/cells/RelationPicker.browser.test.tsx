@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { FakeDatabase } from "../test/fakeDatabase";
+import { readyWhen } from "../test/readyWhen";
+
 import { fixtureOtherDatabase, fixtureView, withRelation } from "../test/fixtures";
 import { mountTable } from "../table/tableHarness";
 
@@ -39,8 +41,9 @@ async function mount(projectTitles: ReadonlyArray<string>, limit: "one" | "many"
   });
   state.fake = fake;
   await page.viewport(1800, 900);
-  const mounted = await mountTable(fake);
-  await vi.waitFor(() => expect(mounted.cell("row-1", "project")).not.toBeNull());
+  const mounted = await readyWhen(await mountTable(fake), (table) =>
+    vi.waitFor(() => expect(table.cell("row-1", "project")).not.toBeNull()),
+  );
   return { fake, ...mounted };
 }
 const locate = (element: HTMLElement | null) => page.elementLocator(element!);

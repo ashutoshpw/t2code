@@ -1,42 +1,11 @@
-import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import type { Command } from "@tiptap/pm/state";
 import type { SpaceBlockId, SpaceDatabaseId } from "@t2code/contracts/spaces";
 
 import { MenuItem, MenuSeparator } from "~/components/ui/menu";
 import type { SpaceEditorAdapter } from "../../adapter";
+import { MoveBlockItems } from "./MoveBlockItems";
 import { useIsLinkedBlock } from "./useIsLinkedBlock";
-
-/** Move up and Move down, shared by every block handle menu. */
-export function MoveBlockItems({
-  adapter,
-  blockId,
-  can,
-  run,
-}: {
-  readonly adapter: SpaceEditorAdapter;
-  readonly blockId: SpaceBlockId;
-  readonly can: (command: Command) => boolean;
-  readonly run: (command: Command) => void;
-}) {
-  return (
-    <>
-      <MenuItem
-        disabled={!can(adapter.shift(-1, blockId))}
-        onClick={() => run(adapter.shift(-1, blockId))}
-      >
-        <ArrowUpIcon />
-        Move up
-      </MenuItem>
-      <MenuItem
-        disabled={!can(adapter.shift(1, blockId))}
-        onClick={() => run(adapter.shift(1, blockId))}
-      >
-        <ArrowDownIcon />
-        Move down
-      </MenuItem>
-    </>
-  );
-}
 
 /** The block handle menu of a database block: move and delete only. */
 export function DatabaseHandleItems({

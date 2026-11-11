@@ -67,6 +67,17 @@ export const total = Effect.fn("SpacesDatabases.total")(function* (plan: Plan) {
   return Number(row?.n ?? 0);
 });
 
+/** Whether the plan's rows include the page, for a window that is not paged to it. */
+export const contains = Effect.fn("SpacesDatabases.rowsContain")(function* (
+  plan: Plan,
+  pageId: string,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  const found =
+    yield* sql`SELECT 1 FROM spaces_pages p WHERE ${plan.where} AND p.page_id = ${pageId} LIMIT 1`;
+  return found.length > 0;
+});
+
 /** Hydrates hits in order: page fields, cells and the related pages of relation cells. */
 export const hydrate = Effect.fn("SpacesDatabases.hydrateHits")(function* (
   plan: Plan,

@@ -112,6 +112,14 @@ vi.mock("../../features/spaces/SpaceBlockReader.tsx", () => ({
   SpaceBlockReader: () => null,
 }));
 
+vi.mock("../../features/spaces/databases/SpacesDatabaseBlock.tsx", () => ({
+  SpacesDatabaseBlock: () => null,
+}));
+
+vi.mock("../../features/spaces/databases/SpacesRowProperties.tsx", () => ({
+  SpacesRowProperties: () => null,
+}));
+
 vi.mock("../../features/spaces/SpacesNativeBlockEditor.tsx", () => ({
   SpacesNativeBlockEditor: () => null,
   spacesNativeEditorAvailable: () => false,

@@ -136,6 +136,12 @@ function liveAccess(environmentId: EnvironmentId) {
   });
 }
 
+/** True while this connection and grant can still write Spaces: checked again right before a send. */
+export function spacesWritable(environmentId: EnvironmentId): boolean {
+  const access = liveAccess(environmentId);
+  return access.availability === "writable" && access.current();
+}
+
 function requireAccess(environmentId: EnvironmentId, write = false, library = false) {
   const access = liveAccess(environmentId);
   if (

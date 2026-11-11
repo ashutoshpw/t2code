@@ -1,10 +1,10 @@
+import { type GroupLabel } from "@t2code/client-runtime/spaces";
 import { ChevronRightIcon } from "lucide-react";
 import type { SpaceGroupBucket } from "@t2code/contracts/spaces";
 
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import { OptionChip } from "../primitives/OptionChip";
-import type { GroupLabel } from "../table/groupLabel";
 import type { TimelineGroupHandlers, TimelineLine } from "./timelineLines";
 
 const BUTTON =

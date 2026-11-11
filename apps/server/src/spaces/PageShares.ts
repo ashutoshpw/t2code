@@ -6,6 +6,7 @@ import * as Effect from "effect/Effect";
 
 import * as BlockStore from "./BlockStore.ts";
 import { limits } from "./CorePolicy.ts";
+import * as Liveness from "./databases/Liveness.ts";
 import * as PageStore from "./PageStore.ts";
 import * as SpacesSql from "./SpacesSql.ts";
 
@@ -56,7 +57,7 @@ export const remove = Effect.fn("SpacesPageShares.remove")(function* (pageId: C.
  * The titles from the shared root down to the page, or null when the page is not a live
  * descendant of the root. Walks parents upward, so the cost is the page's depth.
  */
-const locate = Effect.fn("SpacesPageShares.locate")(function* (
+export const locate = Effect.fn("SpacesPageShares.locate")(function* (
   rootPageId: C.SpacePageId,
   pageId: C.SpacePageId,
 ) {
@@ -96,7 +97,6 @@ const parseShareCursor = (cursor: string, bodyRevision: number) => {
   return { rank: rest.slice(0, RANK_LENGTH), id: rest.slice(RANK_LENGTH) };
 };
 
-/** One window of the page, in the byte and block bounds authenticated readers get. */
 /** The share, the page asked for and its place in the tree, so one read answers a viewer's request. */
 export const resolve = Effect.fn("SpacesPageShares.resolve")(function* (
   shareId: SpacePageShareId,
@@ -105,6 +105,9 @@ export const resolve = Effect.fn("SpacesPageShares.resolve")(function* (
   const share = yield* findById(shareId);
   if (share === null) return null;
   const pageId = requested ?? share.pageId;
+  // A row or a page under a row dies with its database; the link ends instead of serving a ghost.
+  if (yield* Liveness.insideDeadDatabase(share.pageId))
+    return { share, pageId, breadcrumb: null, rootLive: false };
   const breadcrumb = yield* locate(share.pageId, pageId);
   const rootLive =
     breadcrumb !== null || pageId === share.pageId
@@ -113,14 +116,11 @@ export const resolve = Effect.fn("SpacesPageShares.resolve")(function* (
   return { share, pageId, breadcrumb, rootLive };
 });
 
-export const read = Effect.fn("SpacesPageShares.read")(function* (
-  rootPageId: C.SpacePageId,
-  expiresAt: string,
+/** One window of the page's blocks, in the byte and block bounds authenticated readers get. */
+export const readBody = Effect.fn("SpacesPageShares.readBody")(function* (
   pageId: C.SpacePageId,
-  breadcrumb: SpaceSharedPage["breadcrumb"],
   cursor?: string,
 ) {
-  const sql = yield* SpacesSql.SpacesSql;
   const page = yield* PageStore.load(pageId);
   if (cursor !== undefined && cursor.length > limits.maxCursorBytes)
     return yield* new C.SpaceValidationError({ reason: "invalid_cursor" });
@@ -134,6 +134,18 @@ export const read = Effect.fn("SpacesPageShares.read")(function* (
     limit: limits.maxBlockWindowBlocks,
     continuation: (row) => Effect.succeed(shareCursor(page.body_revision, row)),
   });
+  return { page, window };
+});
+
+export const read = Effect.fn("SpacesPageShares.read")(function* (
+  rootPageId: C.SpacePageId,
+  expiresAt: string,
+  pageId: C.SpacePageId,
+  breadcrumb: SpaceSharedPage["breadcrumb"],
+  cursor?: string,
+) {
+  const sql = yield* SpacesSql.SpacesSql;
+  const { page, window } = yield* readBody(pageId, cursor);
   const children = yield* sql<{
     readonly page_id: C.SpacePageId;
     readonly title: string;
