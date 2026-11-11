@@ -1150,7 +1150,7 @@ export function extractMcpToolCallIdentity(
     const deviceTool = T2_MCP_TITLE_CALL.exec(devicePath.slice("xd://".length))?.groups?.tool;
     if (deviceTool !== undefined && T2_MCP_TOOL_NAMES.has(deviceTool)) {
       const input = acpMcpFallbackInput(rawInput.content);
-      return { server: "t3-code", tool: deviceTool, ...(input === undefined ? {} : { input }) };
+      return { server: "t2-code", tool: deviceTool, ...(input === undefined ? {} : { input }) };
     }
   }
   const candidates = [
