@@ -1,5 +1,6 @@
 import { Option, Schema } from "effect";
 import {
+  SpaceDatabaseBlock,
   SpaceKnownBlock,
   SpaceKnownMark,
   type SpaceBlock,
@@ -12,9 +13,26 @@ import {
 } from "@t2code/contracts/spaces";
 
 const decodeKnownBlock = Schema.decodeUnknownOption(SpaceKnownBlock, { onExcessProperty: "error" });
+const decodeDatabaseBlock = Schema.decodeUnknownOption(SpaceDatabaseBlock, {
+  onExcessProperty: "error",
+});
 const decodeKnownMark = Schema.decodeUnknownOption(SpaceKnownMark, { onExcessProperty: "error" });
 export function isKnownSpaceBlock(value: unknown): value is SpaceKnownBlock {
   return Option.isSome(decodeKnownBlock(value));
+}
+/** A database block is opaque to generic editing; only insert, move, view list and delete are allowed. */
+export function isSpaceDatabaseBlock(value: unknown): value is SpaceDatabaseBlock {
+  return Option.isSome(decodeDatabaseBlock(value));
+}
+/** Same block identity and database; position and the view list may differ. */
+export function isSameSpaceDatabaseBlock(a: SpaceBlock, b: SpaceBlock): boolean {
+  return (
+    isSpaceDatabaseBlock(a) &&
+    isSpaceDatabaseBlock(b) &&
+    a.id === b.id &&
+    a.version === b.version &&
+    a.content.databaseId === b.content.databaseId
+  );
 }
 function isKnownSpaceMark(value: unknown): value is SpaceKnownMark {
   return Option.isSome(decodeKnownMark(value));

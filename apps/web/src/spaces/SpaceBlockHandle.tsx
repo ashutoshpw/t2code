@@ -12,6 +12,7 @@ export function SpaceBlockHandle({
   left,
   menuOpen,
   onMenuOpenChange,
+  onMenuClosed,
   onAdd,
   onDragStart,
   onDragEnd,
@@ -21,6 +22,8 @@ export function SpaceBlockHandle({
   left: number;
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
+  /** After the close animation: the popup content is unmounted by then. */
+  onMenuClosed?: () => void;
   onAdd: (() => void) | null;
   onDragStart: (event: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
@@ -70,7 +73,13 @@ export function SpaceBlockHandle({
           <GripVerticalIcon />
         </Button>
       </div>
-      <Menu open={menuOpen} onOpenChange={onMenuOpenChange}>
+      <Menu
+        open={menuOpen}
+        onOpenChange={onMenuOpenChange}
+        onOpenChangeComplete={(open) => {
+          if (!open) onMenuClosed?.();
+        }}
+      >
         <MenuPopup align="start" anchor={grip}>
           {children}
         </MenuPopup>

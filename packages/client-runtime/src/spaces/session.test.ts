@@ -291,6 +291,43 @@ describe("SpaceDocumentSession", () => {
     ]);
   });
 
+  it("allows insert, move, view list changes and delete of a database block only", async () => {
+    const { session } = harness({
+      save: async () => ({ status: "saved", revision: 2 }),
+      lookupReceipt: noReceipt,
+    });
+    const database = {
+      ...paragraph("", "db"),
+      type: "database",
+      content: { databaseId: "database-1", viewIds: ["view-1"] },
+    };
+    const arbitrary = { ...database, id: SpaceBlockId.make("other"), type: "future_block" };
+    await session.hydrate({ revision: 1, blocks: [paragraph("first")] });
+    expect(() => session.apply([{ kind: "insert", block: arbitrary }])).toThrow("opaque");
+    session.apply([{ kind: "insert", block: database }]);
+    session.apply([
+      {
+        kind: "replace",
+        block: {
+          ...database,
+          order: "z",
+          content: { ...database.content, viewIds: ["view-1", "view-2"] },
+        },
+      },
+    ]);
+    expect(() =>
+      session.apply([
+        {
+          kind: "replace",
+          block: { ...database, content: { databaseId: "database-2", viewIds: [] } },
+        },
+      ]),
+    ).toThrow("another database");
+    session.apply([{ kind: "delete", blockId: SpaceBlockId.make("db") }]);
+    session.apply([{ kind: "insert", block: database }]);
+    expect(session.getSnapshot().blocks.map((block) => block.id)).toContain("db");
+  });
+
   it("rejects oversized and invalid container batches atomically", async () => {
     const { session } = harness({
       save: async () => ({ status: "saved", revision: 2 }),

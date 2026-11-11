@@ -213,3 +213,8 @@ html.dark {
   background-color: color-mix(in srgb, var(--space-red) 22%, transparent);
   border-radius: 0.2em;
 }
+[data-space-editor] [data-space-database] {
+  white-space: normal;
+  line-height: normal;
+  word-break: normal;
+}

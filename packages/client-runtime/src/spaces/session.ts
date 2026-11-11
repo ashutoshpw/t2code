@@ -9,7 +9,13 @@ import type {
 
 import * as Schema from "effect/Schema";
 
-import { canEditSpaceBlock, isKnownSpaceBlock, isSpaceListItem } from "./values.ts";
+import {
+  canEditSpaceBlock,
+  isKnownSpaceBlock,
+  isSameSpaceDatabaseBlock,
+  isSpaceDatabaseBlock,
+  isSpaceListItem,
+} from "./values.ts";
 import { decodeSpaceDocumentDraft, spaceDraftMaxBytes, spaceJsonBytes } from "./draft.ts";
 import {
   acknowledgeSavedHistory,
@@ -379,7 +385,7 @@ export class SpaceDocumentSession {
         );
         if (index >= 0 || (reserved.has(id) && previous?.kind !== "delete"))
           throw new Error("Insert requires a fresh block ID");
-        if (!canEditSpaceBlock(mutation.block))
+        if (!canEditSpaceBlock(mutation.block) && !isSpaceDatabaseBlock(mutation.block))
           throw new Error("Cannot insert opaque content as a copy");
         if (
           mutation.block.parentId !== null &&
@@ -399,7 +405,11 @@ export class SpaceDocumentSession {
             throw new Error("Merge target must be a different loaded block");
           blocks.splice(index, 1);
         } else {
-          if (!canEditSpaceBlock(blocks[index]!) || !canEditSpaceBlock(mutation.block))
+          const current = blocks[index]!;
+          if (isSpaceDatabaseBlock(current) && isSpaceDatabaseBlock(mutation.block)) {
+            if (!isSameSpaceDatabaseBlock(current, mutation.block))
+              throw new Error("A database block cannot point at another database");
+          } else if (!canEditSpaceBlock(current) || !canEditSpaceBlock(mutation.block))
             throw new Error("Opaque blocks are read-only");
           const oldParent = blocks[index]!.parentId;
           if (

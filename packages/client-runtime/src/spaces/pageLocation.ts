@@ -17,9 +17,18 @@ export class SpaceLocationError extends Schema.TaggedError<SpaceLocationError>()
   { message: Schema.String },
 ) {}
 
-export const readSpacePageLocation = Effect.fn("Spaces.readPageLocation")(function* <E, R>(
+export const readSpacePageLocation = Effect.fn("Spaces.readPageLocation")(function* <
+  E,
+  R,
+  E2 = never,
+  R2 = never,
+>(
   input: { pageId: SpacePageId; version: 1 | 2 },
   read: (pageId: SpacePageId) => Effect.Effect<SpacePageGetResult, E, R>,
+  /** A database row has no location of its own; its host page is where the database lives. */
+  readRowHost?: (
+    page: SpacePageSummary,
+  ) => Effect.Effect<{ readonly hostPageId: SpacePageId }, E2, R2>,
 ) {
   const current = yield* read(input.pageId);
   const ancestors: SpacePageSummary[] = [];
@@ -27,6 +36,13 @@ export const readSpacePageLocation = Effect.fn("Spaces.readPageLocation")(functi
   let result = current;
   let expectedId = input.pageId;
   let bytes = 0;
+  let rowHost: SpacePageId | undefined;
+  let rowSource: SpacePageSummary["row"];
+  if (input.version === 2 && readRowHost && current.page.row && !current.page.location) {
+    rowSource = current.page.row;
+    rowHost = (yield* readRowHost(current.page)).hostPageId;
+  }
+  let first = true;
   while (true) {
     const page = result.page;
     bytes += new TextEncoder().encode(encodePage(result)).byteLength;
@@ -45,6 +61,18 @@ export const readSpacePageLocation = Effect.fn("Spaces.readPageLocation")(functi
       return yield* new SpaceLocationError({
         message: "The page location exceeds the navigation limit.",
       });
+    if (first && rowHost !== undefined) {
+      first = false;
+      if (seen.has(rowHost))
+        return yield* new SpaceLocationError({
+          message: "The page ancestry exceeds the navigation limit or contains a cycle.",
+        });
+      expectedId = rowHost;
+      result = yield* read(rowHost);
+      ancestors.unshift(result.page);
+      continue;
+    }
+    first = false;
     if (input.version === 1) {
       if (page.rootOrder === null || page.location?.kind === "child")
         return yield* new SpaceLocationError({
@@ -86,5 +114,11 @@ export const readSpacePageLocation = Effect.fn("Spaces.readPageLocation")(functi
         });
     }
   }
-  return { ...current, ancestors };
+  return {
+    ...current,
+    ancestors,
+    ...(rowHost === undefined || rowSource === undefined
+      ? {}
+      : { row: { dataSourceId: rowSource.dataSourceId, hostPageId: rowHost } }),
+  };
 });

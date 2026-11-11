@@ -715,3 +715,92 @@ it.each(["envelope", "content", "run", "mark", "duplicate-mark"] as const)(
     expect(editor.run(editor.adapter.undoLocal())).toBe(false);
   },
 );
+
+describe("Spaces ProseMirror adapter database blocks", () => {
+  const database = (key: string, extra: Partial<SpaceBlock> = {}): SpaceBlock =>
+    paragraph(key, "", {
+      type: "database",
+      content: { databaseId: "database-1", viewIds: ["view-1"] },
+      ...extra,
+    });
+  const content = { databaseId: "database-2", viewIds: ["view-2"] } as never;
+  const blocksOf = (editor: ReturnType<typeof setup>) =>
+    editor.blocks().map((block) => `${block.type === "database" ? "db" : block.id}:${block.type}`);
+  const posOf = (editor: ReturnType<typeof setup>, key: string) => {
+    let at = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.attrs.block?.id === key) at = pos;
+    });
+    return at;
+  };
+
+  it("replaces the only empty paragraph without a trailing paragraph (a full-page database)", () => {
+    const editor = setup([paragraph("a", "")]);
+    expect(editor.run(editor.adapter.placeDatabase(id("a"), content))).toBe(true);
+    expect(blocksOf(editor)).toEqual(["db:database"]);
+  });
+
+  it("places after the top-level block holding the anchor and appends a paragraph at the end", () => {
+    const editor = setup([paragraph("a", "first"), paragraph("b", "second")]);
+    expect(editor.run(editor.adapter.placeDatabase(id("a"), content))).toBe(true);
+    expect(blocksOf(editor)).toEqual(["a:paragraph", "db:database", "b:paragraph"]);
+    expect(editor.run(editor.adapter.placeDatabase(id("b"), content))).toBe(true);
+    expect(
+      blocksOf(editor)
+        .slice(3)
+        .map((entry) => entry.split(":")[1]),
+    ).toEqual(["database", "paragraph"]);
+    expect(editor.run(editor.adapter.placeDatabase(null, content))).toBe(true);
+    expect(editor.blocks().at(-2)?.type).toBe("database");
+  });
+
+  it("rewrites the view list, and never another database id", () => {
+    const editor = setup([database("d"), paragraph("a", "x")]);
+    expect(
+      editor.run(editor.adapter.setDatabaseViews(id("d"), ["view-1", "view-2"] as never)),
+    ).toBe(true);
+    expect(editor.blocks()[0]?.content).toEqual({
+      databaseId: "database-1",
+      viewIds: ["view-1", "view-2"],
+    });
+    const pos = posOf(editor, "d");
+    const node = editor.state.doc.nodeAt(pos)!;
+    editor.dispatch(
+      editor.state.tr.setNodeMarkup(pos, undefined, {
+        block: { ...node.attrs.block, content: { databaseId: "other", viewIds: [] } },
+      }),
+    );
+    expect((editor.blocks()[0]!.content as { databaseId: string }).databaseId).toBe("database-1");
+  });
+
+  it("moves with the block commands and refuses generic removal, range deletes and duplicates", () => {
+    const editor = setup([paragraph("a", "x"), database("d"), paragraph("b", "y")]);
+    expect(editor.run(editor.adapter.shift(-1, id("d")))).toBe(true);
+    expect(blocksOf(editor)[0]).toBe("db:database");
+    expect(editor.run(editor.adapter.shift(1, id("d")))).toBe(true);
+    const pos = posOf(editor, "d");
+    const size = editor.state.doc.nodeAt(pos)!.nodeSize;
+    editor.dispatch(editor.state.tr.delete(pos, pos + size));
+    editor.dispatch(editor.state.tr.delete(0, editor.state.doc.content.size));
+    expect(blocksOf(editor)).toContain("db:database");
+    expect(editor.run(editor.adapter.duplicate(id("d")))).toBe(false);
+    expect(editor.run(editor.adapter.remove(id("d")))).toBe(false);
+  });
+
+  it("removes explicitly and undoes and redoes the insert and the delete", () => {
+    const editor = setup([paragraph("a", "")]);
+    editor.run(editor.adapter.placeDatabase(id("a"), content));
+    editor.run(editor.adapter.undoLocal());
+    expect(blocksOf(editor)).toEqual(["a:paragraph"]);
+    editor.run(editor.adapter.redoLocal());
+    expect(blocksOf(editor)).toEqual(["db:database"]);
+    expect(
+      editor.run(
+        editor.adapter.removeDatabase(editor.blocks().find((b) => b.type === "database")!.id),
+      ),
+    ).toBe(true);
+    expect(blocksOf(editor)).toEqual([]);
+    editor.run(editor.adapter.undoLocal());
+    expect(blocksOf(editor)).toEqual(["db:database"]);
+  });
+});

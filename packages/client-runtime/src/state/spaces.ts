@@ -12,8 +12,8 @@ import * as Option from "effect/Option";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { createSpacesDatabaseAtoms } from "./spacesDatabases.ts";
 import { EnvironmentSupervisor } from "../connection/supervisor.ts";
-import { readSpacePageLocation } from "../spaces/pageLocation.ts";
-import type { SpacePageId } from "@t2code/contracts/spaces";
+import { readSpacePageLocation, SpaceLocationError } from "../spaces/pageLocation.ts";
+import type { SpacePageId, SpacePageSummary } from "@t2code/contracts/spaces";
 import { request, requestGuarded } from "../rpc/client.ts";
 import {
   createEnvironmentCommand,
@@ -68,10 +68,11 @@ export function createSpacesEnvironmentAtoms<R, E>(
   );
   const pageShare = (environmentId: EnvironmentId, pageId: SpacePageId) =>
     pageShares(`${environmentId}\n${pageId}`);
+  const databases = createSpacesDatabaseAtoms(runtime, options);
   return {
     changed,
     libraryChanged,
-    databases: createSpacesDatabaseAtoms(runtime, options),
+    databases,
     /**
      * The page's current share link as last read or written here: undefined before the first
      * read, null once stopped. An expired link stays until the owner stops or replaces it.
@@ -267,6 +268,11 @@ export function createSpacesEnvironmentAtoms<R, E>(
             ? requestGuarded(WS_METHODS.spacesPagesUpdate, input)
             : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
         }),
+      // A row's title, icon, trash state or existence is a cell of its data source.
+      onSuccess: (target, registry) =>
+        Effect.sync(() =>
+          databases.rowPageChanged(registry, target.environmentId, target.input.pageId),
+        ),
     }),
     moveBlocks: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:move-blocks",
@@ -302,6 +308,10 @@ export function createSpacesEnvironmentAtoms<R, E>(
             ? requestGuarded(WS_METHODS.spacesPagesTrash, input)
             : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
         }),
+      onSuccess: (target, registry) =>
+        Effect.sync(() =>
+          databases.rowPageChanged(registry, target.environmentId, target.input.pageId),
+        ),
     }),
     restorePage: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:restore-page",
@@ -313,6 +323,10 @@ export function createSpacesEnvironmentAtoms<R, E>(
             ? requestGuarded(WS_METHODS.spacesPagesRestore, input)
             : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
         }),
+      onSuccess: (target, registry) =>
+        Effect.sync(() =>
+          databases.rowPageChanged(registry, target.environmentId, target.input.pageId),
+        ),
     }),
     permanentlyDeletePage: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:spaces:permanently-delete-page",
@@ -323,6 +337,13 @@ export function createSpacesEnvironmentAtoms<R, E>(
           return c?.version === 2 && c.features?.recovery === true
             ? requestGuarded(WS_METHODS.spacesPagesPermanentlyDelete, input)
             : Effect.fail(new SpacesUnavailableError({ stage: "settings" }));
+        }),
+      onSuccess: (target, registry, result) =>
+        Effect.sync(() => {
+          const ids =
+            result.status === "saved" ? [target.input.pageId, ...result.deletedPageIds] : [];
+          for (const id of new Set(ids))
+            databases.rowPageChanged(registry, target.environmentId, id);
         }),
     }),
     trash: createEnvironmentRpcQueryAtomFamily(runtime, {
@@ -371,8 +392,33 @@ export function createSpacesEnvironmentAtoms<R, E>(
               session.value === active.value
             );
           };
-          return yield* readSpacePageLocation(input, (pageId) =>
-            request(WS_METHODS.spacesPagesGet, { environmentId: input.environmentId, pageId }),
+          const registry = yield* AtomRegistry.AtomRegistry;
+          const capability = options?.capabilityAtom
+            ? registry.get(options.capabilityAtom(input.environmentId))
+            : undefined;
+          const unavailable = () =>
+            new SpaceLocationError({ message: "This row's database is unavailable." });
+          // A row lives in a database block of its host page; the database record names that page.
+          const readRowHost = Effect.fn("Spaces.readRowHost")(function* (page: SpacePageSummary) {
+            if (capability?.features?.databases !== true) return yield* unavailable();
+            const row = yield* requestGuarded(WS_METHODS.spacesDatabasesRowsGet, {
+              environmentId: input.environmentId,
+              pageId: page.id,
+              properties: [],
+            }).pipe(Effect.mapError(unavailable));
+            const database = yield* requestGuarded(WS_METHODS.spacesDatabasesGet, {
+              environmentId: input.environmentId,
+              databaseId: row.dataSource.databaseId,
+            }).pipe(Effect.mapError(unavailable));
+            const home = database.database.home;
+            if (home === null || !database.database.live) return yield* unavailable();
+            return { hostPageId: home.pageId };
+          });
+          return yield* readSpacePageLocation(
+            input,
+            (pageId) =>
+              request(WS_METHODS.spacesPagesGet, { environmentId: input.environmentId, pageId }),
+            readRowHost,
           ).pipe(
             Effect.matchEffect({
               onFailure: (error) => (isCurrent() ? Effect.fail(error) : Effect.never),
