@@ -97,7 +97,7 @@ const permissionOptionIds = {
 const sessionId = "mock-session-1";
 
 let currentModeId = antigravityProfile
-  ? (process.env.T3_ACP_INITIAL_MODE ?? "default")
+  ? (process.env.T2_ACP_INITIAL_MODE ?? "default")
   : copilotModesProfile
     ? copilotModeId("agent")
     : "ask";

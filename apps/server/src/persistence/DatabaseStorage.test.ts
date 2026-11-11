@@ -347,5 +347,3 @@ it.effect.each(["valid", "foreign", "busy"] as const)(
       }).pipe(Effect.provide(system));
     }).pipe(Effect.provide(testConfig.pipe(Layer.provideMerge(NodeServices.layer)))),
 );
-    }).pipe(Effect.provide(testConfig.pipe(Layer.provideMerge(NodeServices.layer)))),
-);

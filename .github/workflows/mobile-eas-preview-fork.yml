@@ -223,6 +223,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
+          T2CODE_EAS_PROJECT_ID: ${{ vars.T2CODE_EAS_PROJECT_ID }}
           FINGERPRINT: ${{ steps.client.outputs.fingerprint }}
           CLIENT: ${{ steps.client.outputs.link }}
           GROUP: ${{ steps.update.outputs.group }}
@@ -325,9 +326,9 @@ jobs:
           import { appendFileSync, readFileSync } from "node:fs";
           import { parseEnv } from "node:util";
           const env = parseEnv(readFileSync(".env.local", "utf8"));
-          const googleServicesFile = env.T3CODE_ANDROID_GOOGLE_SERVICES_FILE;
+          const googleServicesFile = env.T2CODE_ANDROID_GOOGLE_SERVICES_FILE;
           if (googleServicesFile) {
-            appendFileSync(process.env.GITHUB_ENV, `T3CODE_ANDROID_GOOGLE_SERVICES_FILE=${googleServicesFile}\n`);
+            appendFileSync(process.env.GITHUB_ENV, `T2CODE_ANDROID_GOOGLE_SERVICES_FILE=${googleServicesFile}\n`);
           }
           NODE
 
@@ -351,5 +352,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
+          T2CODE_EAS_PROJECT_ID: ${{ vars.T2CODE_EAS_PROJECT_ID }}
           CLIENT: ${{ steps.build.outputs.link }}
         run: node .trusted/.github/scripts/mobile-preview-comment.cjs

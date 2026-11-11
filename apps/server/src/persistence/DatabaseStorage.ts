@@ -38,7 +38,7 @@ export class DatabaseStorage extends Context.Service<
 
 /** Stops this server so its desktop app or background service starts it again; null when run by hand. */
 export const ServerRestart = Context.Reference<Effect.Effect<void> | null>(
-  "t3/persistence/DatabaseStorage/ServerRestart",
+  "@t2code/cli/persistence/DatabaseStorage/ServerRestart",
   { defaultValue: () => null },
 );
 
@@ -205,7 +205,7 @@ const make = Effect.gen(function* () {
   const requestReclaim = Effect.gen(function* () {
     if (restart === null || !doctorTargetsThisDatabase) {
       return yield* new DatabaseReclaimError({
-        reason: `Stop T3 Code on this machine, then run: ${compactCommand}`,
+        reason: `Stop T2 Code on this machine, then run: ${compactCommand}`,
       });
     }
     // Only databases without automatic shrinking need it; a stale dialog can ask after another client's repair.

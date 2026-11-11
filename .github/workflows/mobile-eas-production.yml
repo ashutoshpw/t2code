@@ -277,8 +277,8 @@ jobs:
           MOBILE_BUILD_PROFILE: ${{ inputs.profile || 'production' }}
         run: |
           if [ "$MOBILE_BUILD_PROFILE" = "testflight" ]; then
-            T3CODE_MOBILE_VERSION="$(node -p 'require("./eas.json").build.testflight.env.T3CODE_MOBILE_VERSION')"
-            export T3CODE_MOBILE_VERSION
+            T2CODE_MOBILE_VERSION="$(node -p 'require("./eas.json").build.testflight.env.T2CODE_MOBILE_VERSION')"
+            export T2CODE_MOBILE_VERSION
           fi
           version="$(npx expo config --json --type public | jq -r '.version')"
           hash="$(eas fingerprint:generate --platform ios --environment production --json --non-interactive | sed -n '/^{/,$p' | jq -er '.hash | select(type == "string" and length > 0)')"
@@ -617,11 +617,11 @@ jobs:
           import { appendFileSync, readFileSync } from "node:fs";
           import { parseEnv } from "node:util";
           const env = parseEnv(readFileSync(".env.local", "utf8"));
-          const googleServicesFile = env.T3CODE_ANDROID_GOOGLE_SERVICES_FILE;
+          const googleServicesFile = env.T2CODE_ANDROID_GOOGLE_SERVICES_FILE;
           if (!googleServicesFile) {
-            throw new Error("T3CODE_ANDROID_GOOGLE_SERVICES_FILE is missing from the production environment");
+            throw new Error("T2CODE_ANDROID_GOOGLE_SERVICES_FILE is missing from the production environment");
           }
-          appendFileSync(process.env.GITHUB_ENV, `T3CODE_ANDROID_GOOGLE_SERVICES_FILE=${googleServicesFile}\n`);
+          appendFileSync(process.env.GITHUB_ENV, `T2CODE_ANDROID_GOOGLE_SERVICES_FILE=${googleServicesFile}\n`);
           NODE
 
       - name: Build
@@ -816,12 +816,12 @@ jobs:
         run: |
           # A real path: /var -> /private/var symlinks break the expo-widgets bundle step.
           export EAS_LOCAL_BUILD_WORKINGDIR="$RUNNER_TEMP/eas-build"
-          eas build --local --platform ios --profile "$PROFILE" --non-interactive --output "$RUNNER_TEMP/t3code.ipa"
+          eas build --local --platform ios --profile "$PROFILE" --non-interactive --output "$RUNNER_TEMP/t2code.ipa"
 
       - name: Submit to App Store Connect
         if: steps.record.outputs.built != 'true'
         working-directory: apps/mobile
-        run: eas submit --platform ios --profile "$PROFILE" --path "$RUNNER_TEMP/t3code.ipa" --non-interactive
+        run: eas submit --platform ios --profile "$PROFILE" --path "$RUNNER_TEMP/t2code.ipa" --non-interactive
 
       # The tag means "delivered", so it follows the submit. If it can't be
       # pushed, the next merge rebuilds with a new build number; nothing is lost.

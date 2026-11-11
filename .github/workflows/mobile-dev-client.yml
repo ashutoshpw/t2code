@@ -78,9 +78,9 @@ jobs:
       ABI: ${{ matrix.abi }}
       EXPECTED_FINGERPRINT: ${{ inputs.fingerprint }}
       # A pull request checks that the build works: it builds even on a cache hit and shares nothing.
-      T3_NATIVE_CLIENT_CACHE: ${{ github.event_name == 'pull_request' && 'off' || '' }}
+      T2_NATIVE_CLIENT_CACHE: ${{ github.event_name == 'pull_request' && 'off' || '' }}
       # Gradle and Xcode output goes to the job log, not a file on the runner.
-      T3_NATIVE_CLIENT_VERBOSE: "1"
+      T2_NATIVE_CLIENT_VERBOSE: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -161,7 +161,7 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup-ci-deps
         with:
-          task-cache-read-token: ${{ secrets.T3_TASK_CACHE_READ_TOKEN }}
+          task-cache-read-token: ${{ secrets.T2_TASK_CACHE_READ_TOKEN }}
           install-args: --filter=@t2code/mobile... --filter=@t2code/scripts...
 
       - name: Setup Java
@@ -176,10 +176,10 @@ jobs:
         name: Log in to the native client cache
         if: github.event_name != 'pull_request'
         env:
-          WRITE_TOKEN: ${{ secrets.T3_NATIVE_CLIENT_WRITE_TOKEN }}
+          WRITE_TOKEN: ${{ secrets.T2_NATIVE_CLIENT_WRITE_TOKEN }}
         run: |
           if [ -z "$WRITE_TOKEN" ]; then
-            echo "::warning::T3_NATIVE_CLIENT_WRITE_TOKEN is not set; nothing can be shared, so nothing is built."
+            echo "::warning::T2_NATIVE_CLIENT_WRITE_TOKEN is not set; nothing can be shared, so nothing is built."
             exit 0
           fi
           node --input-type=module <<'NODE'
@@ -195,7 +195,7 @@ jobs:
             { mode: 0o600 },
           );
           NODE
-          echo "T3_NATIVE_CLIENT_SHARE=required" >> "$GITHUB_ENV"
+          echo "T2_NATIVE_CLIENT_SHARE=required" >> "$GITHUB_ENV"
           echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Build and share
@@ -227,9 +227,9 @@ jobs:
     env:
       NODE_OPTIONS: --max-old-space-size=8192
       EXPECTED_FINGERPRINT: ${{ inputs.fingerprint }}
-      T3_NATIVE_CLIENT_CACHE: ${{ github.event_name == 'pull_request' && 'off' || '' }}
+      T2_NATIVE_CLIENT_CACHE: ${{ github.event_name == 'pull_request' && 'off' || '' }}
       # Gradle and Xcode output goes to the job log, not a file on the runner.
-      T3_NATIVE_CLIENT_VERBOSE: "1"
+      T2_NATIVE_CLIENT_VERBOSE: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -276,7 +276,7 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup-ci-deps
         with:
-          task-cache-read-token: ${{ secrets.T3_TASK_CACHE_READ_TOKEN }}
+          task-cache-read-token: ${{ secrets.T2_TASK_CACHE_READ_TOKEN }}
           install-args: --filter=@t2code/mobile... --filter=@t2code/scripts...
 
       # Only this login can write to the cache; pull requests never get it.
@@ -284,10 +284,10 @@ jobs:
         name: Log in to the native client cache
         if: github.event_name != 'pull_request'
         env:
-          WRITE_TOKEN: ${{ secrets.T3_NATIVE_CLIENT_WRITE_TOKEN }}
+          WRITE_TOKEN: ${{ secrets.T2_NATIVE_CLIENT_WRITE_TOKEN }}
         run: |
           if [ -z "$WRITE_TOKEN" ]; then
-            echo "::warning::T3_NATIVE_CLIENT_WRITE_TOKEN is not set; nothing can be shared, so nothing is built."
+            echo "::warning::T2_NATIVE_CLIENT_WRITE_TOKEN is not set; nothing can be shared, so nothing is built."
             exit 0
           fi
           node --input-type=module <<'NODE'
@@ -303,7 +303,7 @@ jobs:
             { mode: 0o600 },
           );
           NODE
-          echo "T3_NATIVE_CLIENT_SHARE=required" >> "$GITHUB_ENV"
+          echo "T2_NATIVE_CLIENT_SHARE=required" >> "$GITHUB_ENV"
           echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Build and share

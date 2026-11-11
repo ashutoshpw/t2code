@@ -244,7 +244,6 @@ else
 fi
 
 step "Setting up the t2 command..."
-[ -f "${target_dir}/t2" ] || fail "${target_dir} does not contain a t2 executable"
 mkdir -p "$bin_dir"
 # Replace only this home's own t2 links: into its versions, or the desktop app's launcher.
 # Anything that is not a symlink (a script, a copied binary) belongs to someone else.

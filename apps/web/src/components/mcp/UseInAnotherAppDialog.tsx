@@ -43,7 +43,7 @@ import { useEnvironmentQuery } from "~/state/query";
 import { relayEnvironmentDiscovery } from "~/state/relay";
 import { useEnvironmentScope, useEnvironmentSessionState } from "~/state/session";
 import { useAtomCommand } from "~/state/use-atom-command";
-import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
+import { useT2ConnectAuthPrompt } from "../clerk/useT2ConnectAuthPrompt";
 import { CommandBlock } from "../CommandBlock";
 import { MorphIcon } from "../MorphIcon";
 import { AccessOption, accessConfig } from "../auth/ConnectAgentSurface";
@@ -77,7 +77,7 @@ export function UseInAnotherAppDialogHost() {
 
 function UseInAnotherAppDialog({ requested }: { readonly requested: EnvironmentId | null }) {
   const { environment, label } = useAccessEnvironment(requested);
-  const title = `Use T3 Code in another app (MCP) · ${label ?? "T3 Code"}`;
+  const title = `Use T2 Code in another app (MCP) · ${label ?? "T2 Code"}`;
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : close())}>
       <WizardPopup>
@@ -91,7 +91,7 @@ function UseInAnotherAppDialog({ requested }: { readonly requested: EnvironmentI
                 title={
                   environment === null
                     ? "Connect to an environment first."
-                    : "T3 Connect is not available in this build."
+                    : "T2 Connect is not available in this build."
                 }
               />
             </WizardPanel>
@@ -287,7 +287,7 @@ function useGate(environment: EnvironmentPresentation) {
   });
   const runReachabilityCheck = async () => {
     setCheck("running");
-    // A saved machine's address comes from T3 Connect's list, which can be stale.
+    // A saved machine's address comes from T2 Connect's list, which can be stale.
     if (!thisMachine) void refreshDiscovery();
     const prior = readCachedCloudLinkState({ environmentId });
     const result = await runCheck({ target: { environmentId } });
@@ -317,7 +317,7 @@ function useGate(environment: EnvironmentPresentation) {
   useEffect(() => {
     if (canCheck) queueMicrotask(checkOnce);
   }, [canCheck]);
-  // T3 Connect lists machines only once something asks, and a saved machine's gate reads that list.
+  // T2 Connect lists machines only once something asks, and a saved machine's gate reads that list.
   const discoverIfUnasked = useEffectEvent(() => {
     if (!thisMachine && !discovery.listed && !discovery.refreshing) void refreshDiscovery();
   });
@@ -362,7 +362,7 @@ function GateScreen({
 }) {
   const name = environment.label;
   const turnOnHere = useT3ConnectTurnOn(environment.environmentId);
-  const { openAuthPrompt } = useT3ConnectAuthPrompt();
+  const { openAuthPrompt } = useT2ConnectAuthPrompt();
   const retry = (onClick: () => void) => (
     <Button variant="outline" onClick={onClick}>
       Check again
@@ -374,16 +374,16 @@ function GateScreen({
       return (
         <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
           <Spinner size="sm" tone="muted" />
-          Checking T3 Connect…
+          Checking T2 Connect…
         </p>
       );
     case "sign-in":
       return (
         <GateMessage
-          title="Sign in to T3 Connect"
+          title="Sign in to T2 Connect"
           lines={[
             `Apps like Poke and Claude run in the cloud. They need a public address to reach ${name}.`,
-            `T3 Connect gives ${name} that address. Each app still needs your approval.`,
+            `T2 Connect gives ${name} that address. Each app still needs your approval.`,
           ]}
         >
           {/* Clerk's sign-in is its own modal, so this dialog closes first. */}
@@ -393,7 +393,7 @@ function GateScreen({
               openAuthPrompt();
             }}
           >
-            Sign in to T3 Connect
+            Sign in to T2 Connect
           </Button>
         </GateMessage>
       );
@@ -404,25 +404,25 @@ function GateScreen({
         <GateMessage
           title={
             gate.relay === "offline"
-              ? `${name}'s T3 Connect is offline`
-              : `Can't check T3 Connect on ${name}`
+              ? `${name}'s T2 Connect is offline`
+              : `Can't check T2 Connect on ${name}`
           }
         >
           {retry(refreshList)}
         </GateMessage>
       );
     case "update":
-      return <GateMessage title={`Update T3 Code on ${name}`} />;
+      return <GateMessage title={`Update T2 Code on ${name}`} />;
     case "no-relay-read":
       return (
         <GateMessage
-          title={`Can't check T3 Connect on ${name}`}
+          title={`Can't check T2 Connect on ${name}`}
           lines={[`This device needs the View relay permission on ${name}.`]}
         />
       );
     case "error":
       return (
-        <GateMessage title={`Can't check T3 Connect on ${name}`} lines={[gate.message]}>
+        <GateMessage title={`Can't check T2 Connect on ${name}`} lines={[gate.message]}>
           {checkAgain}
         </GateMessage>
       );
@@ -433,7 +433,7 @@ function GateScreen({
         return (
           <GateMessage
             title={
-              reachability ? `${name}'s T3 Connect is offline` : `Can't check T3 Connect on ${name}`
+              reachability ? `${name}'s T2 Connect is offline` : `Can't check T2 Connect on ${name}`
             }
             lines={reachability ? [reachability.reason, `Fix: ${reachability.fix}`] : []}
           >
@@ -443,7 +443,7 @@ function GateScreen({
       }
       return (
         <GateMessage
-          title={`Turn on T3 Connect for ${name}`}
+          title={`Turn on T2 Connect for ${name}`}
           lines={[
             `${name} gets a public https address, with no router setup.`,
             "Only apps you approve can use it. You can turn it off in Settings.",
@@ -460,7 +460,7 @@ function GateScreen({
               {tunnelLimit !== null ? (
                 <>
                   <p className="text-sm text-destructive-foreground">
-                    Your T3 Connect account is out of tunnels.
+                    Your T2 Connect account is out of tunnels.
                   </p>
                   <ManageAccessButton environment={environment} label="Manage tunnels" />
                 </>
@@ -471,7 +471,7 @@ function GateScreen({
           ) : (
             <div className="space-y-2 text-sm">
               <CommandBlock command="t3 connect link" />
-              <p>Restart T3 Code on {name}.</p>
+              <p>Restart T2 Code on {name}.</p>
               {checkAgain}
             </div>
           )}
@@ -567,7 +567,7 @@ function ConnectStep({
     access === null ? (
       <p className="text-sm text-muted-foreground">
         When {app?.name ?? "the app"} opens the sign-in page, choose what it may do and approve with
-        your T3 Connect account.
+        your T2 Connect account.
       </p>
     ) : (
       <ApprovalCode
@@ -822,7 +822,7 @@ function LinkedLine({
   return <p className="text-xs text-muted-foreground">Linked: {named.join(", ")}</p>;
 }
 
-/** Opens Sharing & access on this environment, where its clients and T3 Connect tunnels live. */
+/** Opens Sharing & access on this environment, where its clients and T2 Connect tunnels live. */
 function ManageAccessButton({
   environment,
   label = "Manage access",

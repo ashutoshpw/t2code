@@ -160,9 +160,10 @@ export const install = Effect.gen(function* () {
   }).pipe(
     // Best-effort: nothing here may block the backend's start; commands then fall back to plain `t2code`.
     Effect.catchCause((cause) =>
-      logWarning("could not install t2code launcher", { shimPath, cause: Cause.pretty(cause) }).pipe(
-        Effect.as(Option.none<string>()),
-      ),
+      logWarning("could not install t2code launcher", {
+        shimPath,
+        cause: Cause.pretty(cause),
+      }).pipe(Effect.as(Option.none<string>())),
     ),
     Effect.withSpan("desktop.cliShim.install"),
   );

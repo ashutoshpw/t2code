@@ -1,6 +1,9 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
+// The script reads the project id at module load; the fork supplies it from a repo variable.
+process.env.T2CODE_EAS_PROJECT_ID = "11111111-2222-3333-4444-555555555555";
+
 const { mergeState, readState, render } = require("./mobile-preview-comment.cjs");
 
 const fingerprint = "c31608b37a8a2dca35ccee39cfd2ec7305042629";
@@ -16,7 +19,7 @@ test("the comment round-trips its state", () => {
   );
   assert.match(
     body,
-    /qr\.expo\.dev\/eas-update\?appScheme=t3-code&projectId=[0-9a-f-]+&groupId=8e413a0a/,
+    /qr\.expo\.dev\/eas-update\?appScheme=t2code-preview&projectId=[0-9a-f-]+&groupId=8e413a0a/,
   );
   assert.equal(readState("🚀 Expo continuous deployment is ready!"), null);
 });

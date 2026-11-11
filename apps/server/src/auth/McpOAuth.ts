@@ -206,7 +206,7 @@ export class McpOAuth extends Context.Service<
       readonly urls: McpOAuthUrls;
       readonly request: AuthMcpAuthorizationRequest;
     }) => Effect.Effect<AuthorizationRequest, McpOAuthPageError | McpOAuthRedirectError>;
-    /** A browser cookie session, or a T3 Connect session from the hosted app, that may approve. */
+    /** A browser cookie session, or a T2 Connect session from the hosted app, that may approve. */
     readonly approvingSession: (
       request: HttpServerRequest.HttpServerRequest,
       authorization: AuthorizationRequest,

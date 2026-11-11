@@ -845,7 +845,7 @@ describe("makeRelayDeviceRegistrationRequest", () => {
     });
 
     const aggregate: RelayAgentActivityAggregateState = {
-      title: "T3 Code",
+      title: "T2 Code",
       subtitle: "Agent work in progress",
       activeCount: 1,
       updatedAt: "2026-10-18T10:00:00.000Z",
@@ -853,7 +853,7 @@ describe("makeRelayDeviceRegistrationRequest", () => {
         {
           environmentId: "env-1" as EnvironmentId,
           threadId: "thread-1" as ThreadId,
-          projectTitle: "t3code",
+          projectTitle: "t2code",
           threadTitle: "Fix the widget",
           modelTitle: "GPT-5.5",
           phase: "running",
@@ -880,9 +880,6 @@ describe("makeRelayDeviceRegistrationRequest", () => {
           relayUrl: "https://relay.example.test",
           listEnvironments: unexpected,
           listDevices: unexpected,
-          getT3ChatLink: unexpected,
-          createT3ChatLinkRequest: unexpected,
-          unlinkT3Chat: unexpected,
           createEnvironmentLinkChallenge: unexpected,
           linkEnvironment: unexpected,
           unlinkEnvironment: unexpected,

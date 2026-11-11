@@ -84,7 +84,7 @@ describe("mobile DPoP", () => {
       secureStore.clear();
       const other = yield* loadOrCreateDpopProofKeyPair();
       secureStore.set(
-        "t3code.cloud.dpop-proof-key",
+        "t2code.cloud.dpop-proof-key",
         JSON.stringify({ ...privateJwk, x: other.publicJwk.x, y: other.publicJwk.y }),
       );
 
@@ -110,7 +110,7 @@ describe("mobile DPoP", () => {
   ])("rejects a persisted key with a $length coordinate", ({ x }) =>
     Effect.gen(function* () {
       secureStore.set(
-        "t3code.cloud.dpop-proof-key",
+        "t2code.cloud.dpop-proof-key",
         JSON.stringify({ ...privateJwkWithZeroEndedX, x: x.toString("base64url") }),
       );
 
@@ -124,7 +124,7 @@ describe("mobile DPoP", () => {
     Effect.gen(function* () {
       secureStore.clear();
       const key = yield* loadOrCreateProofKey();
-      const url = "https://relay.t3.codes/v1/environments";
+      const url = "https://relay.t2.codes/v1/environments";
       const proof = yield* DpopProof.createProof({
         method: "GET",
         url,

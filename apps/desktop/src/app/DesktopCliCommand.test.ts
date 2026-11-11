@@ -129,7 +129,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       yield* Effect.all([command.addToPath, command.addToPath], { concurrency: "unbounded" });
       expect((yield* command.addToPath).pathSetup).toEqual({ file: "~/.zshrc", added: true });
       expect(yield* fs.readFileString(zshrc)).toBe(
-        '# mine\n# Added by T3 Code\nexport PATH="$PATH:$HOME/.local/bin"\n',
+        '# mine\n# Added by T2 Code\nexport PATH="$PATH:$HOME/.local/bin"\n',
       );
 
       expect((yield* command.uninstall).installedPath).toBeNull();
@@ -183,7 +183,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       expect(yield* fs.readLink(path.join(home, "bin", "t2code"))).toBe(path.join(home, "gone"));
 
       // A fresh install beside someone else's t2code (even off PATH or a dangling link) adds no second
-      // launcher in ~/bin.
+      // t2code in ~/bin.
       for (const dangling of [false, true]) {
         const besideHome = yield* fs.makeTempDirectoryScoped();
         const other = path.join(besideHome, ".local", "bin", "t2code");
@@ -211,15 +211,15 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
-      const before = yield* commandIn({ home, baseDir: path.join(home, "old-t2"), env });
+      const before = yield* commandIn({ home, baseDir: path.join(home, "old-t2code"), env });
       const link = (yield* before.install).installedPath;
 
-      const after = yield* commandIn({ home, baseDir: path.join(home, "new-t2"), env });
+      const after = yield* commandIn({ home, baseDir: path.join(home, "new-t2code"), env });
       // A first launch leaves another home's command alone; only Install takes it over.
       yield* after.installOnFirstLaunch;
-      expect(yield* fs.readLink(link!)).toBe(path.join(home, "old-t2", "bin", "t2code"));
+      expect(yield* fs.readLink(link!)).toBe(path.join(home, "old-t2code", "bin", "t2code"));
       // On PATH, it runs the other home's launcher. Settings offers Install (not Remove, and not
-      // "another launcher runs first"), which updates that link in place.
+      // "another t2code runs first"), which updates that link in place.
       env.PATH = path.dirname(link!);
       expect(yield* after.state).toMatchObject({ installedPath: null, onPath: false });
       expect((yield* after.state).shadowedBy).toBeUndefined();
@@ -228,17 +228,17 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       expect((yield* after.state).pathSetup).toBeUndefined();
       yield* Effect.flip(after.addToPath);
       expect(yield* fs.exists(path.join(home, ".zshrc"))).toBe(false);
-      // Behind another launcher the install fails, and the old link still works.
+      // Behind another t2code the install fails, and the old link still works.
       const shadow = path.join(home, "shadow");
       yield* fs.makeDirectory(shadow);
-      yield* fs.writeFileString(path.join(shadow, "t2"), "#!/bin/sh\n", { mode: 0o755 });
+      yield* fs.writeFileString(path.join(shadow, "t2code"), "#!/bin/sh\n", { mode: 0o755 });
       env.PATH = shadow;
       yield* Effect.flip(after.install);
-      expect(yield* fs.readLink(link!)).toBe(path.join(home, "old-t2", "bin", "t2code"));
+      expect(yield* fs.readLink(link!)).toBe(path.join(home, "old-t2code", "bin", "t2code"));
       // Install takes it over, also with its folder first on PATH.
       env.PATH = path.dirname(link!);
       expect((yield* after.install).installedPath).toBe(link);
-      expect(yield* fs.readLink(link!)).toBe(path.join(home, "new-t2", "bin", "t2code"));
+      expect(yield* fs.readLink(link!)).toBe(path.join(home, "new-t2code", "bin", "t2code"));
       env.PATH = "";
       yield* after.uninstall;
       expect(yield* fs.exists(path.join(home, ".local", "bin", "t2code"))).toBe(false);
@@ -249,19 +249,19 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       expect((yield* after.install).installedPath).toBe(path.join(home, "bin", "t2code"));
 
       // An old link of ours is updated where it is, not moved to a folder that may be off PATH.
-      yield* fs.writeFileString(path.join(home, "bin", "t2.staging"), "mine");
+      yield* fs.writeFileString(path.join(home, "bin", "t2code.staging"), "mine");
       yield* fs.remove(path.join(home, "bin", "t2code"));
       yield* fs.symlink(
-        path.join(home, "old-t2", "bin", "t2code"),
+        path.join(home, "old-t2code", "bin", "t2code"),
         path.join(home, "bin", "t2code"),
       );
       env.PATH = "";
       expect((yield* after.install).installedPath).toBe(path.join(home, "bin", "t2code"));
       expect(yield* fs.readLink(path.join(home, "bin", "t2code"))).toBe(
-        path.join(home, "new-t2", "bin", "t2code"),
+        path.join(home, "new-t2code", "bin", "t2code"),
       );
       expect(yield* fs.exists(path.join(home, ".local", "bin", "t2code"))).toBe(false);
-      expect(yield* fs.readFileString(path.join(home, "bin", "t2.staging"))).toBe("mine");
+      expect(yield* fs.readFileString(path.join(home, "bin", "t2code.staging"))).toBe("mine");
     }).pipe(Effect.scoped),
   );
 
@@ -273,7 +273,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const home = yield* fs.makeTempDirectoryScoped();
       const shadow = path.join(home, "shadow");
       yield* fs.makeDirectory(shadow);
-      yield* fs.writeFileString(path.join(shadow, "t2"), "#!/bin/sh\n", { mode: 0o755 });
+      yield* fs.writeFileString(path.join(shadow, "t2code"), "#!/bin/sh\n", { mode: 0o755 });
       env.PATH = [shadow, `${path.join(home, ".local", "bin")}/`].join(":");
 
       const command = yield* commandIn({ home, env });
@@ -285,7 +285,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       expect(yield* fs.exists(path.join(home, ".local", "bin", "t2code"))).toBe(false);
       expect(yield* fs.readFileString(theirs)).toBe("#!/bin/sh\n");
 
-      // Its folder is already on PATH behind theirs; adding it again would change which launcher runs.
+      // Its folder is already on PATH behind theirs; adding it again would change which t2code runs.
       yield* fs.makeDirectory(path.join(home, ".local", "bin"), { recursive: true });
       yield* fs.symlink(
         path.join(home, ".t2", "bin", "t2code"),
@@ -332,7 +332,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
         // Root can execute mode 0o601; other users must honor the owner permissions.
         yield* fs.chmod(path.join(plain, "t2code"), process.getuid?.() === 0 ? 0o600 : 0o601);
         yield* fs.makeDirectory(shadow);
-        yield* fs.writeFileString(path.join(shadow, "t2"), "#!/bin/sh\n", { mode: 0o755 });
+        yield* fs.writeFileString(path.join(shadow, "t2code"), "#!/bin/sh\n", { mode: 0o755 });
         env.PATH = [folder, plain, shadow, path.join(home, ".local", "bin")].join(":");
 
         const command = yield* commandIn({ home, env });
@@ -405,14 +405,14 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       // A `;` in the folder would split it into two PATH entries, so nothing is written.
       const split = fakePowerShell(userPath);
       const semicolon = yield* commandIn(
-        { home, baseDir: `${home}\\T3;Home`, platform: "win32" },
+        { home, baseDir: `${home}\\T2;Home`, platform: "win32" },
         split.spawner,
       );
       expect((yield* Effect.flip(semicolon.install)).message).toContain('has a ";"');
       expect(split.registry).toMatchObject({ path: userPath, writes: 0 });
 
-      // An inherited T3_SET=1 never turns a read into a write of the whole PATH.
-      const inherited = fakePowerShell(userPath, { T3_SET: "1", T3_PATH: "C:\\other" });
+      // An inherited T2_SET=1 never turns a read into a write of the whole PATH.
+      const inherited = fakePowerShell(userPath, { T2_SET: "1", T2_PATH: "C:\\other" });
       const reader = yield* commandIn({ home, platform: "win32" }, inherited.spawner);
       yield* reader.install;
       expect(inherited.registry).toMatchObject({ path: `${userPath};${launcherDir}`, writes: 1 });
@@ -437,11 +437,14 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       yield* command.uninstall;
       expect(registry.path).toBe(userPath);
 
-      // A fresh install beside a standalone t2.cmd (from `t2 install`), even off PATH, leaves
+      // A fresh install beside a standalone t2code.cmd (from `t2code install`), even off PATH, leaves
       // PATH alone.
       const besideHome = yield* fs.makeTempDirectoryScoped();
       yield* fs.makeDirectory(path.join(besideHome, ".local", "bin"), { recursive: true });
-      yield* fs.writeFileString(path.join(besideHome, ".local", "bin", "t2.cmd"), "@echo off\r\n");
+      yield* fs.writeFileString(
+        path.join(besideHome, ".local", "bin", "t2code.cmd"),
+        "@echo off\r\n",
+      );
       const beside = fakePowerShell("C:\\Tools");
       yield* (yield* commandIn({ home: besideHome, platform: "win32" }, beside.spawner))
         .installOnFirstLaunch;
