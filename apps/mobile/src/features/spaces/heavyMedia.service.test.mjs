@@ -116,8 +116,8 @@ it("retains PDF file admission across late download cleanup, restores reported p
     );
     const old = platform.views.at(-1);
     await act(async () => {
-      old.onLoadComplete(30);
-      old.onPageChanged(7, 30);
+      old.onLoad({ pageCount: 30 });
+      old.onPageChange({ page: 6, pageCount: 30 });
     });
     await viewer.refresh();
     await render(viewer.url());
@@ -125,10 +125,10 @@ it("retains PDF file admission across late download cleanup, restores reported p
       platform.downloads[2].result.resolve({ uri: "file:///renewed.pdf", dispose: disposal }),
     );
     const renewed = platform.views.at(-1);
-    expect(renewed.page).toBe(7);
-    await act(async () => old.onPageChanged(18, 30));
+    expect(renewed.initialPage).toBe(6);
+    await act(async () => old.onPageChange({ page: 17, pageCount: 30 }));
     expect(position.bind(() => true).initialPage).toBe(7);
-    await act(async () => renewed.onLoadComplete(2001));
+    await act(async () => renewed.onLoad({ pageCount: 2001 }));
     expect(platform.active).toBe(0);
     viewer.close();
     await render(null);
