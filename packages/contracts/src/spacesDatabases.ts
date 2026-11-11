@@ -28,7 +28,7 @@ export const SpaceOptionId = StableId.pipe(Schema.brand("SpaceOptionId"));
 export type SpaceOptionId = typeof SpaceOptionId.Type;
 export const SPACE_TITLE_PROPERTY_ID = "title";
 
-const SPACE_DATABASE_COLORS = [
+export const SPACE_DATABASE_COLORS = [
   "default",
   "gray",
   "brown",
@@ -72,7 +72,7 @@ const SPACE_VIEW_TYPES = ["table", "board", "list", "gallery", "calendar", "time
 export const SpaceViewType = Schema.Literals(SPACE_VIEW_TYPES);
 export type SpaceViewType = typeof SpaceViewType.Type;
 
-const SPACE_NUMBER_FORMATS = [
+export const SPACE_NUMBER_FORMATS = [
   "number",
   "number_with_commas",
   "percent",

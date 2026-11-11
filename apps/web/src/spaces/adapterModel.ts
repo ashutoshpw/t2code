@@ -39,6 +39,8 @@ export interface MediaChange {
 export interface Operation {
   readonly media?: MediaChange;
   readonly history?: boolean;
+  /** Set by the database block commands, which may insert, delete and rewrite the view list. */
+  readonly database?: boolean;
   readonly merged?: { readonly from: SpaceBlockId; readonly into: SpaceBlockId };
 }
 export interface AdapterState {
