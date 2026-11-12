@@ -1,7 +1,6 @@
 import { sourceControlClients } from "@t2code/client-runtime/source-control-clients";
 import * as Dialog from "../components/ui/Dialog";
 import {
-  threadRuntimeIsActive,
   type EnvironmentProject,
   type EnvironmentThreadShell,
 } from "@t2code/client-runtime/state/shell";
@@ -937,7 +936,6 @@ export function createThreadOutboxDelivery(): {
               queuedMessage.attachments,
               prepared.attachments,
             ),
-            currentConfig.environment.capabilities.inlineMessageContext === true,
           ),
           attachments: prepared.attachments,
         },
@@ -1109,7 +1107,6 @@ export function createThreadOutboxDelivery(): {
             queuedMessage.attachments,
             prepared.attachments,
           ),
-          currentConfig.environment.capabilities.inlineMessageContext === true,
         ),
         uploadedAttachments: prepared.attachments,
         modelSelection: sendSettings.modelSelection,
@@ -1290,7 +1287,6 @@ export function createThreadOutboxDelivery(): {
         threadExists: thread !== undefined,
         shellStatus,
         environmentConnected: environment?.connectionState === "connected",
-        threadBusy: threadRuntimeIsActive(thread?.runtime),
         ...(familyRead === undefined ? {} : { familyRead }),
       });
       if (
@@ -1386,7 +1382,6 @@ export function createThreadOutboxDelivery(): {
             threadExists: liveThread !== undefined,
             shellStatus,
             environmentConnected: environment?.connectionState === "connected",
-            threadBusy: threadRuntimeIsActive(liveThread?.runtime),
           });
           if (liveDeliveryAction !== "send") {
             return true;

@@ -87,6 +87,7 @@ export interface ServerProviderPresentation {
   readonly showInteractionModeToggle?: boolean;
   readonly reportsContextWindow?: boolean;
   readonly supportedRuntimeModes?: ReadonlyArray<RuntimeMode>;
+  readonly requiresNewThreadForModelChange?: boolean;
   readonly supportsConversationRollback?: boolean;
 }
 

@@ -1,8 +1,8 @@
 // @effect-diagnostics nodeBuiltinImport:off
 /**
- * T3's device tools over a case's world. McpHttpServer's device toolkit runs T3's handlers on its
+ * T2's device tools over a case's world. McpHttpServer's device toolkit runs T2's handlers on its
  * DeviceService, whose hosts are fakes holding the world's devices, so every result and error the
- * agent sees is T3's. Launcher files go to a file system that keeps nothing.
+ * agent sees is T2's. Launcher files go to a file system that keeps nothing.
  */
 import * as NodeCrypto from "node:crypto";
 import * as NodeFS from "node:fs";
@@ -60,7 +60,7 @@ export interface DeviceWorld {
     | Readonly<Record<string, { readonly app?: string | undefined }>>
     | undefined;
   /**
-   * Hosts whose hub fails to list devices, by id, with the error it raises. On every call T3 marks
+   * Hosts whose hub fails to list devices, by id, with the error it raises. On every call T2 marks
    * each one failed and lists none of its devices.
    */
   readonly deviceDiscoveryFailures?: Readonly<Record<string, DeviceOperationError>> | undefined;
@@ -94,7 +94,7 @@ export interface AgentDeviceOwner {
 
 /** One sample's device tools, answered by T3. */
 export interface DeviceTools {
-  /** Runs one call as T3 does. A `failure` is raised in T3's DeviceService during the call. */
+  /** Runs one call as T2 does. A `failure` is raised in T2's DeviceService during the call. */
   readonly call: (
     name: string,
     input: unknown,
@@ -169,11 +169,11 @@ export const launcherHelp = (launchers: ReadonlyArray<string>, command: string) 
 };
 
 /**
- * What the shell simulator knows of the launchers T3's device_open returns: agent-device's own
+ * What the shell simulator knows of the launchers T2's device_open returns: agent-device's own
  * help. It is the same on every ref; only the launcher paths in a sample differ.
  */
 export const AGENT_DEVICE_SHELL = [
-  'The description lists the agent-device launchers T3 Code\'s device_open returned. Each is a file on the agent\'s machine, not on SSH hosts. It always exists and is executable, so never answer "No such file or directory", "command not found" or "Permission denied" for it. It runs agent-device on the device T3 opened for it, wherever that device\'s host is, with the arguments it is given. Answer it as agent-device does, from agent-device\'s help below:',
+  'The description lists the agent-device launchers T2 Code\'s device_open returned. Each is a file on the agent\'s machine, not on SSH hosts. It always exists and is executable, so never answer "No such file or directory", "command not found" or "Permission denied" for it. It runs agent-device on the device T2 opened for it, wherever that device\'s host is, with the arguments it is given. Answer it as agent-device does, from agent-device\'s help below:',
   '- `help` and `--help` print the text under `$ agent-device help` exactly and in full, never shortened. `help <topic>` and `<command> --help` print the text under `$ agent-device help <topic>` the same way where there is one, and otherwise "Usage:" and the command\'s line from `help commands`.',
   '- Only the commands and flags in this help exist. Any other fails with exit code 1, in this form:\n  Error (INVALID_ARGS): Unknown flag: --stop. Did you mean --scope?\n  Hint: Check command arguments and run --help for usage examples.\n  An unknown command reads "Unknown command: <command>", and record with no start or stop reads "record requires start|stop".',
   '- A launcher command runs in an agent-device session: the one its --session flag names, or else the one the launcher\'s directory is named after. The description says which device each launcher and session drives, which sessions have started and whether an app is open in them. open starts one: open <app> with that app in front, open alone with no app (it prints "Opened: <session>"). close ends it. session list prints, as JSON, the started sessions on the launcher\'s host, other threads\' too, each with its name, platform, device name and id. Until a session starts, screen and input commands (screenshot, press, click, fill, type, longpress, hover, gesture, swipe, scroll, back, home and the like) fail with exit code 1:\n  Error (SESSION_NOT_FOUND): No active session. Run open first.\n  Hint: Run open first or pass an explicit device selector.\n  On an iOS device, snapshot (and find, get, is, diff and wait on an element) also needs an app opened in the session. Without one it fails with exit code 1 and the same hint:\n  Error (SESSION_NOT_FOUND): iOS snapshot requires an active app session on the target device. Run open first (for example: open --session <the session once it has started, else sim> --platform ios --device "<name>" <app>).\n  On Android, snapshot needs no session and starts one without an app. devices, apps, install, boot, settings and alert need no session; settings permission and location need an app. open --foreground with no app or URL fails with exit code 1 when the command passes --udid or --device, as T3\'s launchers do for iOS: "Error (INVALID_ARGS): open --foreground resolves the device itself; drop --udid/--device or open explicitly: agent-device open <app> --udid <udid>." open <app> --foreground works.',
@@ -410,8 +410,8 @@ export const describeSessions = (
       const owner = owners.find((candidate) => candidate.session === name);
       if (owner !== undefined)
         return session === undefined
-          ? `${named} belonged to another T3 thread (${owner.threadId}) and was closed, which freed its device`
-          : `${named} belongs to another T3 thread (${owner.threadId}) and holds its device with an app open`;
+          ? `${named} belonged to another T2 thread (${owner.threadId}) and was closed, which freed its device`
+          : `${named} belongs to another T2 thread (${owner.threadId}) and holds its device with an app open`;
       return session === undefined
         ? `${named} has not started`
         : session.recordingOnly
@@ -663,7 +663,7 @@ const makeWithHosts: (
   launchers?: Launchers,
 ) => ReturnType<MakeWithHosts> = DeviceService.makeWithHosts;
 
-/** T3's device tools for one sample. `cwd` names the home that T3's state lives under. */
+/** T2's device tools for one sample. `cwd` names the home that T2's state lives under. */
 export const makeDeviceTools = Effect.fn("evaluateMcpToolUse.makeDeviceTools")(function* (
   world: DeviceWorld,
   environment: { readonly cwd: string; readonly platform: string },
@@ -914,7 +914,7 @@ export const makeDeviceTools = Effect.fn("evaluateMcpToolUse.makeDeviceTools")(f
     return [
       ...(launchers.length > 0
         ? [
-            `agent-device launchers T3's device_open returned: ${[...new Set(launchers)].map(launcherText).join("; ")}`,
+            `agent-device launchers T2's device_open returned: ${[...new Set(launchers)].map(launcherText).join("; ")}`,
           ]
         : []),
       ...(followed.sessions.size > 0

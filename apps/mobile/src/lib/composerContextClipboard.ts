@@ -18,15 +18,12 @@ import {
   encodeComposerContextFragment,
 } from "@t2code/shared/composerContextClipboard";
 import {
-<<<<<<< HEAD
-  threadContextsOutsideEnvironment,
-  threadLinkContextReferences,
-=======
+import {
   collectComposerContextReferences,
   formatComposerContextReference,
   replaceComposerContextReferences,
   threadContextsOutsideEnvironment,
->>>>>>> a7064786 (fix: reapply fork files and fixes lost in the round-8 replay)
+  threadLinkContextReferences,
 } from "@t2code/shared/composerContextReferences";
 import { executeAtomQuery, squashAtomCommandFailure } from "@t2code/client-runtime/state/runtime";
 import { resolveAssetUrl } from "@t2code/client-runtime/state/assets";
@@ -86,9 +83,8 @@ export async function importComposerContextClipboard(
   /** The machines the destination links to, whose threads its agent can read too. */
   linkedEnvironments: ReadonlyMap<EnvironmentId, string> = new Map(),
 ) {
-<<<<<<< HEAD
-  const copied =
-    decodeComposerContextFragment(input.fragment) ?? decodeComposerContextClipboardHtml(input.html);
+  const primary = decodeComposerContextFragment(input.fragment);
+  const copied = primary ?? decodeComposerContextClipboardHtml(input.html);
   // A thread link becomes a chip only where this agent can read its machine; others stay links.
   const threads = threadLinkContextReferences(
     input.text,
@@ -101,37 +97,16 @@ export async function importComposerContextClipboard(
         ? record.contextId
         : undefined,
   );
-  const source =
-    copied?.source ??
-    (threads.records[0] ? { environmentId: threads.records[0].environmentId } : null);
-  if (!source) return null;
-  const fragment = {
-    source,
-    records: [
-      ...(copied?.records ?? []).filter((record) =>
-        threads.records.every((thread) => thread.contextId !== record.contextId),
-      ),
-      ...threads.records,
-    ],
-  };
-  const selected = referencedComposerContext(threads.text, {
-    version: 1,
-    records: fragment.records,
-  });
-  const imported = reidentifyComposerContext(threads.text, selected?.records ?? [], uuidv4);
-=======
-  const primary = decodeComposerContextFragment(input.fragment);
-  const fragment = primary ?? decodeComposerContextClipboardHtml(input.html);
-  const references = collectComposerContextReferences(input.text);
+  const references = collectComposerContextReferences(threads.text);
   const spaceReferences = references.filter((ref) => ref.kind === "page" || ref.kind === "block");
-  if (!fragment) {
+  if (!copied) {
     if (spaceReferences.length)
       throw new Error("Spaces context cannot be hydrated. Copy the reference again.");
     return null;
   }
-  if (input.text.length > PROVIDER_SEND_TURN_MAX_INPUT_CHARS)
+  if (threads.text.length > PROVIDER_SEND_TURN_MAX_INPUT_CHARS)
     throw new Error("Context text is too large to paste.");
-  const selectors = fragment.selectors ?? [];
+  const selectors = copied.selectors ?? [];
   if (
     new TextEncoder().encode(JSON.stringify(selectors)).byteLength >
     SPACE_CONTEXT_LIMITS.maxEnvelopeBytes
@@ -168,7 +143,7 @@ export async function importComposerContextClipboard(
     if (Object.keys(selector).some((key) => !keys.has(key)))
       throw new Error("This selector shape is not supported. Copy its completed context instead.");
   }
-  const entries = [...fragment.records, ...selectors];
+  const entries = [...copied.records, ...selectors];
   for (const ref of spaceReferences) {
     if (
       entries.filter((entry) => entry.contextId === ref.contextId && entry.kind === ref.kind)
@@ -176,8 +151,24 @@ export async function importComposerContextClipboard(
     )
       throw new Error("A Spaces reference is missing its context or selector.");
   }
-  const selected = referencedComposerContext(input.text, { version: 1, records: fragment.records });
-  const imported = reidentifyComposerContext(input.text, selected?.records ?? [], uuidv4);
+  const source =
+    copied.source ??
+    (threads.records[0] ? { environmentId: threads.records[0].environmentId } : null);
+  if (!source) return null;
+  const fragment = {
+    source,
+    records: [
+      ...(copied.records ?? []).filter((record) =>
+        threads.records.every((thread) => thread.contextId !== record.contextId),
+      ),
+      ...threads.records,
+    ],
+  };
+  const selected = referencedComposerContext(threads.text, {
+    version: 1,
+    records: fragment.records,
+  });
+  const imported = reidentifyComposerContext(threads.text, selected?.records ?? [], uuidv4);
   const selectedSelectors = selectors.filter((selector) =>
     references.some((ref) => ref.contextId === selector.contextId && ref.kind === selector.kind),
   );
@@ -197,7 +188,6 @@ export async function importComposerContextClipboard(
       contextId: selectorIds.get(ref.contextId) ?? ref.contextId,
     }),
   );
->>>>>>> a7064786 (fix: reapply fork files and fixes lost in the round-8 replay)
   const skippedThreads =
     destinationEnvironmentId === undefined
       ? []

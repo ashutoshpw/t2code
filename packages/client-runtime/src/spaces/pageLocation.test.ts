@@ -190,6 +190,7 @@ const setupLocationRuntime = Effect.fn("SpacePageLocationTest.setupRuntime")(fun
     subscribeServerConfig: () => Stream.never,
     ready: Effect.void,
     probe: Effect.void,
+    inboundFrames: Effect.never,
     closed: Effect.never,
   });
   const sessions = yield* SubscriptionRef.make(Option.some(makeSession()));

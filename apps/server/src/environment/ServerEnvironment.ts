@@ -10,6 +10,7 @@ import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
@@ -191,7 +192,8 @@ export const make = Effect.gen(function* () {
   const serverConfig = yield* ServerConfig.ServerConfig;
   const secrets = yield* ServerSecretStore.ServerSecretStore;
   const identity = yield* ServerEnvironmentIdentity;
-  const spacesService = yield* SpacesService.SpacesService;
+  // The server provides spaces; the CLI builds descriptors without the service.
+  const spacesService = yield* Effect.serviceOption(SpacesService.SpacesService);
   const hostPlatform = yield* HostProcess.Platform;
   const hostArchitecture = yield* HostProcess.Architecture;
   const hostLibc = hostPlatform === "linux" ? yield* HostProcess.LinuxLibc : undefined;
@@ -314,7 +316,11 @@ export const make = Effect.gen(function* () {
     getDescriptor: Effect.all({
       agentActivityPublishing: readAgentActivityPublishingActive(secrets),
       customLabel: Ref.get(environmentLabel),
-      spaces: spacesService.getCapability(environmentId).pipe(Effect.orElseSucceed(() => null)),
+      spaces: Option.match(spacesService, {
+        onNone: () => Effect.succeed(null),
+        onSome: (service) =>
+          service.getCapability(environmentId).pipe(Effect.orElseSucceed(() => null)),
+      }),
     }).pipe(
       Effect.map(({ agentActivityPublishing, customLabel, spaces }) => ({
         ...descriptor,

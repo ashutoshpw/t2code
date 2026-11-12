@@ -630,10 +630,10 @@ it.effect("rejects arguments a tool does not declare instead of dropping them", 
   const calls: Array<unknown> = [];
   return Effect.gen(function* () {
     const launch = yield* Effect.flip(
-      callTool("t3_thread_launch", { title: "Repro", scratch: true, prompt: "say hi" }),
+      callTool("t2_thread_launch", { title: "Repro", scratch: true, prompt: "say hi" }),
     );
     const wait = yield* Effect.flip(
-      callTool("t3_thread_wait", { threadId: "thread-excess-arguments", timeout: 5_000 }),
+      callTool("t2_thread_wait", { threadId: "thread-excess-arguments", timeout: 5_000 }),
     );
 
     expect(calls).toEqual([]);
@@ -646,7 +646,7 @@ it.effect("accepts a nested key the merged advertised schema shows", () => {
   const calls: Array<unknown> = [];
   return Effect.gen(function* () {
     yield* Effect.exit(
-      callTool("t3_thread_launch", {
+      callTool("t2_thread_launch", {
         title: "Root",
         projectId: "project-1",
         message: "say hi",
@@ -1470,7 +1470,7 @@ it.effect(
           environmentId,
           requestNamespace: "client:linked",
           thread: undefined,
-          client: { sessionId: "linked", label: "T3 Code · laptop", access: "auto" },
+          client: { sessionId: "linked", label: "T2 Code · laptop", access: "auto" },
           capabilities: new Set(["orchestration"]),
           issuedAt: 1,
         };

@@ -730,6 +730,14 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
     worktreePath,
   });
 
+  const { serverOffset, webOffset } = yield* resolveModePortOffsets({
+    mode: input.mode,
+    startOffset: offset,
+    hasExplicitServerPort: input.port !== undefined,
+    hasExplicitDevUrl: input.devUrl !== undefined,
+    checkPortAvailability: makeDefaultCheckPortAvailability(input.host),
+  });
+
   const hostEnvironment = yield* HostProcess.Environment;
   // A dev server started inside a worktree defaults to that worktree's own
   // (gitignored) `.t2` — see @t2code/shared/devHome for why this must

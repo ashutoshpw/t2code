@@ -135,7 +135,6 @@ function serverOsFromNodePlatform(platform: string): ClientOs {
 }
 
 /** @public */
-/** @public */
 export const make = Effect.gen(function* () {
   const telemetryConfig = yield* TelemetryEnvConfig;
   const hostEnvironment = yield* HostProcess.Environment;
@@ -162,7 +161,7 @@ export const make = Effect.gen(function* () {
     );
   });
   const httpClient = yield* HttpClient.HttpClient;
-  const serverConfig = yield* ServerConfig.ServerConfig;
+  const serverConfig = yield* ServerConfig;
   const { distinctId, installId } = yield* getTelemetryIdentity;
   const crypto = yield* SecureRandom.SecureRandom;
   const bufferRef = yield* Ref.make<ReadonlyArray<BufferedAnalyticsEvent>>([]);
