@@ -23,6 +23,7 @@ function installedScrolls(bundle: string) {
     scrollingTo: undefined as { index?: number } | undefined,
     pendingScrollResolve: undefined as (() => void) | undefined,
     scrollHistory: [] as number[],
+    endFollowInterrupted: false,
     scrollAdjustHandler: { commitPendingAdjust: () => {} },
     refScroller: { current: {} },
     scheduledWork: {
@@ -35,6 +36,7 @@ function installedScrolls(bundle: string) {
   const core = NodeVM.runInNewContext(
     `${section("function cancelScrollCompletionChecks(", "// src/core/deferredPublicOnScroll.ts")}
      ${section("function finishScrollTo(", "\n// src/")}
+     ${section("// src/core/scrollRequestTracker.ts", "\n// src/")}
      ${section("function createImperativeHandle(", "\n// src/")}
      ({ create: createImperativeHandle, finish: finishScrollTo })`,
     {
@@ -42,6 +44,11 @@ function installedScrolls(bundle: string) {
       PlatformAdjustBreaksScroll: false,
       supersedeInitialScroll: () => {},
       recalculateSettledScroll: () => {},
+      set$: () => {},
+      interruptMaintainScrollAtEnd: (context: typeof ctx) => {
+        context.state.endFollowInterrupted = true;
+      },
+      cancelScroll: () => {},
       scrollToIndex: (_ctx: typeof ctx, target: { index: number }) => {
         dispatched.push(rows[target.index]!.key);
         state.scrollingTo = { index: target.index };
@@ -67,6 +74,11 @@ function installedScrolls(bundle: string) {
     finish: () => core.finish(ctx),
     readinessQueued: () => tasks.has("imperativeScrollReady"),
     queueCompletion: () => tasks.set("platformScrollCompletion", () => core.finish(ctx)),
+    drainCompletion: () => {
+      const task = tasks.get("platformScrollCompletion");
+      tasks.delete("platformScrollCompletion");
+      task?.();
+    },
     completionQueued: () => tasks.has("platformScrollCompletion"),
     ready: () => {
       const task = tasks.get("imperativeScrollReady");
@@ -106,13 +118,14 @@ describe.each([
       list.state.didDataChange = true;
       const replacement = owner.request(item.key);
       expect(list.readinessQueued()).toBe(true);
-      const retired = list.state.scrollingTo === undefined;
-      const canceledCompletion = !list.completionQueued();
-      list.finish();
+      // The queued completion is the replaced target's. Draining it retires that
+      // target and leaves the replacement waiting on its own readiness frames.
+      expect(list.completionQueued()).toBe(true);
+      list.drainCompletion();
+      expect(list.state.scrollingTo).toBeUndefined();
+      expect(list.readinessQueued()).toBe(true);
       await old;
       expect(focused).toEqual([]);
-      expect(retired).toBe(true);
-      expect(canceledCompletion).toBe(true);
       expect(list.dispatched).toEqual([item.key]);
       list.state.didDataChange = false;
       list.ready();
